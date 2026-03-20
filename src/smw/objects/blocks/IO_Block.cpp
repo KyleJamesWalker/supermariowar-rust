@@ -1,0 +1,261 @@
+#include "IO_Block.h"
+
+#include "GameMode.h"
+#include "GameValues.h"
+#include "map.h"
+#include "ObjectContainer.h"
+#include "player.h"
+#include "ResourceManager.h"
+#include "objects/moving/MovingObject.h"
+#include "objects/carriable/CO_Shell.h"
+#include "objects/carriable/CO_ThrowBlock.h"
+#include "objects/carriable/CO_ThrowBox.h"
+#include "objects/walkingenemy/WalkingEnemy.h"
+
+extern CMap* g_map;
+extern CObjectContainer objectcontainer[3];
+
+extern CGameValues game_values;
+extern CResourceManager* rm;
+
+extern std::vector<CPlayer*> players;
+
+extern CPlayer* GetPlayerFromGlobalID(short iGlobalID);
+
+//------------------------------------------------------------------------------
+// class Block base class
+//------------------------------------------------------------------------------
+
+IO_Block::IO_Block(gfxSprite *nspr, Vec2s pos)
+    : CObject(nspr, pos)
+{
+    objectType = object_block;
+
+    iBumpPlayerID = -1;
+    iBumpTeamID = -1;
+
+    fposx = fx;
+    fposy = fy;
+
+    iposx = pos.x;
+    iposy = pos.y;
+
+    col = pos.x / TILESIZE;
+    row = pos.y / TILESIZE;
+
+    hidden = ishiddentype = false;
+    iHiddenTimer = 0;
+}
+
+void IO_Block::draw()
+{
+    spr->draw(ix, iy);
+}
+
+void IO_Block::update()
+{
+    if (ishiddentype && !hidden) {
+        if (game_values.hiddenblockrespawn > 0 && ++iHiddenTimer > game_values.hiddenblockrespawn) {
+            iHiddenTimer = 0;
+            hidden = true;
+            reset();
+
+            g_map->UpdateTileGap(col, row);
+        }
+    }
+}
+
+void IO_Block::reset()
+{
+    state = 0;
+}
+
+bool IO_Block::collide(CPlayer * player, short direction, bool useBehavior)
+{
+    if (direction == 2)
+        return hittop(player, useBehavior);
+    else if (direction == 0)
+        return hitbottom(player, useBehavior);
+    else if (direction == 1)
+        return hitleft(player, useBehavior);
+    else
+        return hitright(player, useBehavior);
+}
+
+bool IO_Block::hittop(CPlayer * player, bool useBehavior)
+{
+    if (useBehavior) {
+        player->setYf((float)(iposy - PH) - 0.2f);
+        player->inair = false;
+        player->fallthrough = false;
+        player->killsinrowinair = 0;
+        player->extrajumps = 0;
+        player->vely = GRAVITATION;
+    }
+
+    return false;
+}
+
+bool IO_Block::hitbottom(CPlayer * player, bool useBehavior)
+{
+    if (useBehavior) {
+        //Player bounces off
+        player->vely = CapFallingVelocity(-player->vely * BOUNCESTRENGTH);
+        player->setYf((float)(iposy + ih) + 0.2f);
+    }
+
+    return false;
+}
+
+bool IO_Block::hitright(CPlayer * player, bool useBehavior)
+{
+    if (useBehavior) {
+        player->setXf((float)(iposx + iw) + 0.2f);
+        player->fOldX = player->fx;
+
+        if (player->velx < 0.0f)
+            player->velx = 0.0f;
+
+        if (player->oldvelx < 0.0f)
+            player->oldvelx = 0.0f;
+    }
+
+    return false;
+}
+
+bool IO_Block::hitleft(CPlayer * player, bool useBehavior)
+{
+    if (useBehavior) {
+        player->setXf((float)(iposx - PW) - 0.2f);
+        player->fOldX = player->fx;
+
+        if (player->velx > 0.0f)
+            player->velx = 0.0f;
+
+        if (player->oldvelx > 0.0f)
+            player->oldvelx = 0.0f;
+    }
+
+    return false;
+}
+
+bool IO_Block::collide(IO_MovingObject * object, short direction)
+{
+    if (direction == 2)
+        return hittop(object);
+    else if (direction == 0)
+        return hitbottom(object);
+    else if (direction == 1)
+        return hitleft(object);
+    else
+        return hitright(object);
+}
+
+bool IO_Block::hittop(IO_MovingObject * object)
+{
+    object->setYf((float)(iposy - object->collisionHeight) - 0.2f);
+    object->fOldY = object->fy;
+    object->vely = object->BottomBounce();
+    return true;
+}
+
+bool IO_Block::hitbottom(IO_MovingObject * object)
+{
+    object->setYf((float)(iposy + ih) + 0.2f);
+    object->fOldY = object->fy;
+    object->vely = -object->vely;
+    return true;
+}
+
+bool IO_Block::hitright(IO_MovingObject * object)
+{
+    object->setXf((float)(iposx + iw) + 0.2f);
+    object->fOldX = object->fx;
+
+    if (object->velx < 0.0f)
+        object->velx = -object->velx;
+
+    return true;
+}
+
+bool IO_Block::hitleft(IO_MovingObject * object)
+{
+    object->setXf((float)(iposx - object->collisionWidth) - 0.2f);
+    object->fOldX = object->fx;
+
+    if (object->velx > 0.0f)
+        object->velx = -object->velx;
+
+    return true;
+}
+
+void IO_Block::BounceMovingObject(IO_MovingObject * object)
+{
+    MovingObjectType type = object->getMovingObjectType();
+    if (type == movingobject_goomba || type == movingobject_koopa || type == movingobject_buzzybeetle || type == movingobject_spiny) {
+        ifSoundOnPlay(rm->sfx_kicksound);
+
+        MO_WalkingEnemy * enemy = (MO_WalkingEnemy *)object;
+        KillStyle style = enemy->getKillStyle();
+
+        enemy->DieAndDropShell(true, true);
+
+        if (!game_values.gamemode->gameover && iBumpPlayerID >= 0) {
+            CPlayer * player = GetPlayerFromGlobalID(iBumpPlayerID);
+
+            if (player) {
+                player->AddKillerAward(NULL, style);
+                player->score->AdjustScore(1);
+            }
+        }
+    } else if (type == movingobject_shell) {
+        CO_Shell * shell = (CO_Shell*)object;
+        shell->Flip();
+    } else if (type == movingobject_throwblock) {
+        CO_ThrowBlock * block = (CO_ThrowBlock*)object;
+        block->Die();
+    } else if (type == movingobject_throwbox) {
+        CO_ThrowBox * box = (CO_ThrowBox*)object;
+        box->Die();
+    } else {
+        object->vely = -VELNOTEBLOCKREPEL;
+    }
+}
+
+void IO_Block::KillPlayersAndObjectsInsideBlock(short playerID)
+{
+    //Loop through players
+    for (CPlayer* player : players) {
+        if (!player->isready())
+            continue;
+
+        short iSwapSides = 0;
+        if (player->fOldX >= iposx + TILESIZE)
+            iSwapSides = -App::screenWidth;
+
+        if (player->fOldX + PW + iSwapSides >= iposx && player->fOldX + iSwapSides < iposx + TILESIZE &&
+                player->fOldY + PH >= iposy && player->fOldY < iposy + TILESIZE) {
+            player->iSuicideCreditPlayerID = playerID;
+            player->iSuicideCreditTimer = 1;
+            player->KillPlayerMapHazard(true, KillStyle::Environment, true);
+        }
+    }
+
+    //Loop through objects
+    for (short iLayer = 0; iLayer < 3; iLayer++) {
+        for (const std::unique_ptr<CObject>& obj : objectcontainer[iLayer].list()) {
+            auto* movingobject = dynamic_cast<IO_MovingObject*>(obj.get());
+            if (!movingobject || !movingobject->CollidesWithMap())
+                continue;
+
+            short iSwapSides = 0;
+            if (movingobject->fOldX >= iposx + TILESIZE)
+                iSwapSides = -App::screenWidth;
+
+            if (movingobject->fOldX + PW + iSwapSides >= iposx && movingobject->fOldX + iSwapSides < iposx + TILESIZE &&
+                    movingobject->fOldY + PH >= iposy && movingobject->fOldY < iposy + TILESIZE) {
+                movingobject->KillObjectMapHazard(playerID);
+            }
+        }
+    }
+}

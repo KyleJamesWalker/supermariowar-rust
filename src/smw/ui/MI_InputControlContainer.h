@@ -1,0 +1,92 @@
+#include "input.h"
+#include "uicontrol.h"
+
+#include <string>
+
+class gfxSprite;
+class MI_Image;
+class MI_Text;
+class MI_Button;
+template<typename T> class MI_SelectField;
+
+class MI_InputControlField : public UI_Control
+{
+	public:
+		MI_InputControlField(gfxSprite * nspr, short x, short y, std::string name, short width, short indent);
+        virtual ~MI_InputControlField();
+
+		void Draw();
+		MenuCodeEnum SendInput(CPlayerInput * playerInput);
+		void SetKey(SDL_Keycode * iSetKey, SDL_Keycode key, short device);
+
+		MenuCodeEnum Modify(bool modify);
+
+    void SetDevice(short device) {
+        iDevice = device;
+    }
+    void SetKey(SDL_Keycode * key) {
+        iKey = key;
+    }
+    void SetType(short type) {
+        iType = type;
+    }
+    void SetKeyIndex(short keyindex) {
+        iKeyIndex = keyindex;
+    }
+    void SetPlayerIndex(short playerindex) {
+        iPlayerIndex = playerindex;
+    }
+
+	private:
+
+		gfxSprite * spr;
+		const std::string szName;
+
+		short iWidth, iIndent;
+
+		short iDevice;
+		SDL_Keycode * iKey;
+		short iType;
+		short iKeyIndex;
+		short iPlayerIndex;
+
+		static const char * Joynames[30];
+};
+
+
+class MI_InputControlContainer : public UI_Control
+{
+	public:
+
+		MI_InputControlContainer(gfxSprite * spr_button, short x, short y, short playerID);
+		virtual ~MI_InputControlContainer();
+
+		void Update();
+		void Draw();
+
+		MenuCodeEnum SendInput(CPlayerInput * playerInput);
+		MenuCodeEnum Modify(bool modify);
+
+		void SetPlayer(short iPlayerID);
+
+		void UpdateDeviceKeys(short iDevice);
+
+	private:
+
+		void SetVisibleInputFields();
+
+		short iPlayerID;
+		short iDevice;
+		short iSelectedInputType;
+
+		UI_Menu * mInputMenu;
+
+		MI_Image * miImage[2];
+		MI_Text * miText;
+		MI_SelectField<short>* miDeviceSelectField;
+		MI_Button * miInputTypeButton;
+		MI_InputControlField * miGameInputControlFields[NUM_KEYS];
+		MI_InputControlField * miMenuInputControlFields[NUM_KEYS];
+
+		MI_Button * miBackButton;
+};
