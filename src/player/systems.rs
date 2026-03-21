@@ -151,8 +151,9 @@ pub fn player_jump(
         }
 
         if input.jump_pressed && grounded.on_ground {
-            // Turbo jump only when running fast (matching C++ velx > VELMOVING check)
-            let jump_vel = if input.turbo && vel.x.abs() > VEL_MOVING {
+            // Turbo jump only when running fast AND pressing a direction
+            // (C++ requires iMove != 0 and turbo held and velx > VELMOVING)
+            let jump_vel = if input.turbo && vel.x.abs() > VEL_MOVING && (input.left || input.right) {
                 VEL_TURBO_JUMP
             } else {
                 JUMP_VELOCITY

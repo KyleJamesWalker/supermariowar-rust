@@ -722,10 +722,9 @@ pub fn enemy_player_touch_system(
                 player_entity: p_entity,
                 player_index: player.index,
                 killer_index: killer,
-                cause: if killer.is_some() {
-                    DeathCause::Killed { by: killer.unwrap() }
-                } else {
-                    DeathCause::Environment
+                cause: match killer {
+                    Some(by) => DeathCause::Killed { by },
+                    None => DeathCause::Environment,
                 },
             });
         }
