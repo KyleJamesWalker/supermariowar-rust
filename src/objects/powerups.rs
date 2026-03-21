@@ -233,7 +233,14 @@ pub fn powerup_movement_system(
                 let drift = (time.elapsed_secs() * 3.0).sin() * 0.5;
                 transform.translation.x += drift * dt * 60.0;
                 transform.translation.y += vel.y;
-                // Floor handled by object_map_collision
+
+                // Screen wrapping
+                let half_w = SCREEN_WIDTH / 2.0;
+                if transform.translation.x > half_w {
+                    transform.translation.x -= SCREEN_WIDTH;
+                } else if transform.translation.x < -half_w {
+                    transform.translation.x += SCREEN_WIDTH;
+                }
             }
             PowerupPhysics::Bouncing => {
                 // Gravity + movement
@@ -248,7 +255,14 @@ pub fn powerup_movement_system(
                 if grounded.0 && vel.y == 0.0 {
                     vel.y = VEL_POWERUP_BOUNCE;
                 }
-                // Wall bounce handled by object_map_collision
+
+                // Screen wrapping
+                let half_w = SCREEN_WIDTH / 2.0;
+                if transform.translation.x > half_w {
+                    transform.translation.x -= SCREEN_WIDTH;
+                } else if transform.translation.x < -half_w {
+                    transform.translation.x += SCREEN_WIDTH;
+                }
             }
             PowerupPhysics::Static => {
                 // No movement

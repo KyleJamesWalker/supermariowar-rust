@@ -265,13 +265,16 @@ pub fn player_respawn_system(
             *shield_state = ShieldState::None;
             carried.entity = None;
 
-            // Remove powerup-specific state components
+            // Remove all transient state components
             commands
                 .entity(entity)
                 .remove::<CapeState>()
                 .remove::<TailState>()
                 .remove::<Invincible>()
                 .remove::<FrozenState>()
+                .remove::<WarpState>()
+                .remove::<FireCooldown>()
+                .remove::<BurnupTimer>()
                 .insert(SpawnProtection::new(SPAWN_PROTECTION_SECS));
 
             sfx_events.send(crate::audio::sfx::SfxEvent::new(
@@ -677,6 +680,12 @@ pub fn warp_system(
     )>,
 ) {
     for (entity, mut warp, mut transform, mut vel, mut action) in query.iter_mut() {
+        // Dead players should not continue warping
+        if *action == PlayerAction::Dead {
+            commands.entity(entity).remove::<WarpState>();
+            continue;
+        }
+
         vel.x = 0.0;
         vel.y = 0.0;
 
