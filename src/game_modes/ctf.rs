@@ -103,6 +103,7 @@ pub fn flag_pickup_system(
     players: Query<(&Player, &Transform)>,
     mut flags: Query<(&mut Flag, &Transform, Entity), Without<Player>>,
     mut commands: Commands,
+    mut sfx_events: EventWriter<crate::audio::sfx::SfxEvent>,
 ) {
     if config.mode_type != GameModeType::CaptureTheFlag {
         return;
@@ -125,6 +126,7 @@ pub fn flag_pickup_system(
             if dx < TILE_SIZE && dy < TILE_SIZE {
                 flag.carried_by = Some(player.index);
                 flag.at_base = false;
+                sfx_events.send(crate::audio::sfx::SfxEvent::new(crate::audio::sfx::SfxId::FlagPickup));
 
                 // Spawn a visual indicator on the carrier
                 commands.spawn((
@@ -177,6 +179,7 @@ pub fn flag_capture_system(
     mut flags: Query<(&mut Flag, &mut Transform), Without<Player>>,
     indicator_query: Query<(Entity, &FlagCarrierIndicator)>,
     mut objective_events: EventWriter<ObjectiveEvent>,
+    mut sfx_events: EventWriter<crate::audio::sfx::SfxEvent>,
 ) {
     if config.mode_type != GameModeType::CaptureTheFlag {
         return;
@@ -247,6 +250,8 @@ pub fn flag_capture_system(
                 }
             }
 
+            sfx_events.send(crate::audio::sfx::SfxEvent::new(crate::audio::sfx::SfxId::FlagCapture));
+
             objective_events.send(ObjectiveEvent {
                 player_index: player.index,
                 objective_type: ObjectiveType::FlagCapture,
@@ -307,6 +312,7 @@ pub fn flag_auto_return_system(
     time: Res<Time>,
     mut flags: Query<(&mut Flag, &mut Transform, Entity, &mut FlagAutoReturnTimer)>,
     mut commands: Commands,
+    mut sfx_events: EventWriter<crate::audio::sfx::SfxEvent>,
 ) {
     if config.mode_type != GameModeType::CaptureTheFlag {
         return;
@@ -325,6 +331,7 @@ pub fn flag_auto_return_system(
             flag_tf.translation.x = flag.base_position.x;
             flag_tf.translation.y = flag.base_position.y;
             commands.entity(entity).remove::<FlagAutoReturnTimer>();
+            sfx_events.send(crate::audio::sfx::SfxEvent::new(crate::audio::sfx::SfxId::FlagReturn));
         }
     }
 }

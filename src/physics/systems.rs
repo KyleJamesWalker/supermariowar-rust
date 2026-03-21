@@ -417,6 +417,7 @@ pub fn warp_zone_detection(
         ),
         With<Player>,
     >,
+    mut sfx_events: EventWriter<crate::audio::sfx::SfxEvent>,
 ) {
     if map_data.warp_exits.is_empty() {
         return;
@@ -481,6 +482,7 @@ pub fn warp_zone_detection(
             commands.entity(entity).insert(WarpState::new_entering(
                 direction, exit_direction, warp_info.id as u32, dest_x, dest_y,
             ));
+            sfx_events.send(crate::audio::sfx::SfxEvent::new(crate::audio::sfx::SfxId::Warp));
         }
     }
 }

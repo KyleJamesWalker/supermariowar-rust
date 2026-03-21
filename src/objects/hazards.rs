@@ -297,7 +297,7 @@ pub fn bullet_cannon_system(
             continue;
         }
 
-        play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Fireball);
+        play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Cannon);
 
         let dir = if cannon.facing_left { -1.0 } else { 1.0 };
         let spawn_x = transform.translation.x + dir * TILE_SIZE;
@@ -337,6 +337,9 @@ pub fn bullet_cannon_system(
 /// Piranha plant: emerges from pipe, stays visible briefly, then retracts.
 pub fn piranha_plant_system(
     time: Res<Time>,
+    mut commands: Commands,
+    sfx: Res<SfxLibrary>,
+    sfx_vol: Res<SfxVolume>,
     mut query: Query<(&mut PiranhaState, &mut Transform, &mut Collider)>,
 ) {
     let dt = time.delta_secs();
@@ -369,6 +372,10 @@ pub fn piranha_plant_system(
                 }
             }
             PiranhaPhase::Visible => {
+                // Play chomp SFX when first becoming visible
+                if piranha.phase_timer < dt * 1.5 {
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::PiranhaChomp);
+                }
                 // Stay visible and dangerous
                 if piranha.phase_timer >= piranha.visible_duration {
                     piranha.phase = PiranhaPhase::Retracting;
