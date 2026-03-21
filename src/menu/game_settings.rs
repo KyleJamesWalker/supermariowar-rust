@@ -431,7 +431,7 @@ pub fn update_game_settings_display(
     game_setup: Res<GameSetupConfig>,
     current_sub: Res<CurrentSubMenu>,
     mut field_query: Query<(&GameSettingField, &mut BackgroundColor, &Children), Without<SettingValueText>>,
-    mut value_query: Query<(&SettingValueText, &mut Text)>,
+    mut value_query: Query<(&SettingValueText, &mut Text, &mut TextColor)>,
     mut desc_query: Query<&mut Text, (With<ModeDescriptionText>, Without<SettingValueText>)>,
     mut text_color_query: Query<&mut TextColor, Without<SettingValueText>>,
 ) {
@@ -462,8 +462,8 @@ pub fn update_game_settings_display(
         }
     }
 
-    // Update value texts
-    for (setting_value, mut text) in value_query.iter_mut() {
+    // Update value texts and their colors
+    for (setting_value, mut text, mut color) in value_query.iter_mut() {
         let new_text = match setting_value.field {
             GameSettingField::Mode => {
                 format!("< {} >", mode_display_name(game_setup.selected_mode))
@@ -476,6 +476,11 @@ pub fn update_game_settings_display(
             _ => continue,
         };
         *text = Text::new(new_text);
+        if setting_value.field == selected_field {
+            *color = TextColor(Color::srgb(1.0, 1.0, 0.0));
+        } else {
+            *color = TextColor(Color::srgba(0.8, 0.8, 0.8, 1.0));
+        }
     }
 
     // Update mode description
