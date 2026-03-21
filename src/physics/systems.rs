@@ -521,17 +521,19 @@ pub fn entity_collision_detection(
 }
 
 /// Applies ride-along velocity from moving platforms to players standing on them.
+/// Checks platform proximity independently of tile-based grounding, since players
+/// on platforms are not over solid tiles and would otherwise fall through.
 pub fn moving_platform_system(
     platform_query: Query<(Entity, &MovingPlatform, &Transform, &Collider)>,
     mut player_query: Query<
-        (Entity, &mut Transform, &Grounded),
+        (Entity, &mut Transform, &mut Grounded, &Velocity),
         (With<Player>, Without<MovingPlatform>),
     >,
     mut commands: Commands,
 ) {
-    for (player_entity, mut player_transform, grounded) in player_query.iter_mut() {
-        if !grounded.on_ground {
-            commands.entity(player_entity).remove::<RidingPlatform>();
+    for (player_entity, mut player_transform, mut grounded, vel) in player_query.iter_mut() {
+        // Skip players moving upward (jumping) — they shouldn't snap to platforms
+        if vel.y > 1.0 {
             continue;
         }
 
@@ -546,14 +548,20 @@ pub fn moving_platform_system(
                 plat_collider.world_rect(&plat_transform.translation);
 
             // In Bevy Y-up, plat_max_y = visual top of platform
-            let on_top = (player_bottom - plat_max_y).abs() < 2.0;
+            // Allow slightly larger tolerance for falling players
+            let tolerance = if grounded.on_ground { 2.0 } else { 4.0 + vel.y.abs() };
+            let on_top = player_bottom >= plat_max_y - tolerance
+                && player_bottom <= plat_max_y + 2.0;
             let horizontally_on =
                 player_px + PLAYER_WIDTH > plat_left && player_px < plat_right;
 
             if on_top && horizontally_on {
-                // Apply platform velocity to player position
+                // Snap player to platform top and apply velocity
+                player_transform.translation.y = plat_max_y;
                 player_transform.translation.x += platform.vel_x;
                 player_transform.translation.y += platform.vel_y;
+
+                grounded.on_ground = true;
 
                 commands
                     .entity(player_entity)

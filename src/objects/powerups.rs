@@ -421,7 +421,9 @@ pub fn powerup_despawn_offscreen_system(
     query: Query<(Entity, &Transform), (With<SpawnedPowerup>, With<DespawnOffScreen>)>,
 ) {
     for (entity, transform) in query.iter() {
-        if transform.translation.y < -(SCREEN_HEIGHT / 2.0 + TILE_SIZE * 2.0) {
+        if transform.translation.y < -(SCREEN_HEIGHT / 2.0 + TILE_SIZE * 2.0)
+            || transform.translation.y > SCREEN_HEIGHT / 2.0 + TILE_SIZE * 4.0
+        {
             commands.entity(entity).despawn_recursive();
         }
     }

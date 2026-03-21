@@ -566,14 +566,30 @@ pub fn enemy_lifetime_system(
     }
 }
 
-/// Despawns enemies that fall off the bottom of the screen.
+/// Despawns enemies that leave the screen vertically.
 pub fn enemy_despawn_offscreen_system(
     mut commands: Commands,
     query: Query<(Entity, &Transform), (With<Enemy>, With<DespawnOffScreen>)>,
 ) {
     for (entity, transform) in query.iter() {
-        if transform.translation.y < -(SCREEN_HEIGHT / 2.0 + TILE_SIZE * 2.0) {
+        if transform.translation.y < -(SCREEN_HEIGHT / 2.0 + TILE_SIZE * 2.0)
+            || transform.translation.y > SCREEN_HEIGHT / 2.0 + TILE_SIZE * 4.0
+        {
             commands.entity(entity).despawn_recursive();
+        }
+    }
+}
+
+/// Ticks stun timers and recovers enemies to Walking state when expired.
+pub fn enemy_stun_recovery_system(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut Enemy, &mut StunTimer)>,
+) {
+    for (entity, mut enemy, mut stun) in query.iter_mut() {
+        if stun.timer.tick(time.delta()).just_finished() {
+            enemy.state = EnemyState::Walking;
+            commands.entity(entity).remove::<StunTimer>();
         }
     }
 }
