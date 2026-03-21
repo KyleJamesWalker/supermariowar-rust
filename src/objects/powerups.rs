@@ -4,6 +4,7 @@ use crate::audio::sfx::{play_sfx, SfxId, SfxLibrary};
 use crate::core::constants::*;
 use crate::objects::components::*;
 use crate::physics::collision::aabb_overlap;
+use crate::map::GameplayEntity;
 use crate::physics::components::{Collider, CollisionLayer, GravityAffected};
 use crate::player::components::{
     DeathCause, Invincible, Player, PlayerAction, PlayerDeathEvent, PowerupState, ShieldState,
@@ -137,6 +138,7 @@ pub fn spawn_powerup(commands: &mut Commands, powerup_type: PowerupType, x: f32,
         InheritedVisibility::default(),
         ViewVisibility::default(),
     ));
+    entity.insert(GameplayEntity);
 
     if gravity_mult > 0.0 {
         entity.insert(GravityAffected {

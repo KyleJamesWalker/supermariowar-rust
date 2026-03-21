@@ -304,10 +304,11 @@ fn handle_round_over(
     }
 }
 
-/// Resource flag set by `round_over_timer_system` to signal that mode state
-/// should be reset. This avoids exceeding Bevy's 16-parameter system limit.
+/// Resource flag set by `round_over_timer_system` (or pause-menu restart) to
+/// signal that mode state should be reset. This avoids exceeding Bevy's
+/// 16-parameter system limit.
 #[derive(Resource, Debug, Default)]
-struct PendingRoundReset(bool);
+pub struct PendingRoundReset(pub bool);
 
 /// During RoundOver state, wait for the display timer to expire, then either
 /// start the next round or end the match.

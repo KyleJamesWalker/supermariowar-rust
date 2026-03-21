@@ -4,6 +4,7 @@ use crate::audio::sfx::{play_sfx, SfxId, SfxLibrary};
 use crate::core::constants::*;
 use crate::objects::components::*;
 use crate::physics::collision::aabb_overlap;
+use crate::map::GameplayEntity;
 use crate::physics::components::{Collider, CollisionLayer, GravityAffected};
 use crate::player::components::{
     DeathCause, Invincible, Player, PlayerAction, PlayerDeathEvent, Velocity,
@@ -153,6 +154,7 @@ pub fn spawn_enemy(commands: &mut Commands, enemy: Enemy, x: f32, y: f32) -> Ent
                 kill: true,
                 owner_player: None,
             },
+            GameplayEntity,
             Transform::from_xyz(x, y, crate::graphics::sprites::z_order::OBJECTS + 2.0),
         ))
         .id();

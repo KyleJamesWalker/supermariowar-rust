@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::audio::sfx::{play_sfx, SfxId, SfxLibrary};
 use crate::core::constants::*;
+use crate::map::GameplayEntity;
 use crate::objects::components::*;
 use crate::objects::enemies::{Enemy, EnemyState};
 use crate::physics::collision::aabb_overlap;
@@ -130,7 +131,7 @@ pub fn spawn_projectile(
     vel_x: f32,
     vel_y: f32,
 ) -> Entity {
-    commands
+    let id = commands
         .spawn((
             GameObject {
                 object_type: ObjectType::Projectile,
@@ -154,7 +155,9 @@ pub fn spawn_projectile(
             InheritedVisibility::default(),
             ViewVisibility::default(),
         ))
-        .id()
+        .id();
+    commands.entity(id).insert(GameplayEntity);
+    id
 }
 
 // ---------------------------------------------------------------------------

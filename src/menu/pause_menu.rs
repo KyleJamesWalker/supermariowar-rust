@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 
 use crate::core::game_state::{GameState, GameplayState};
+use crate::game_modes::PendingRoundReset;
+use crate::game_modes::traits::RoundCountdown;
 use crate::player::components::PauseEvent;
 use super::components::*;
 
@@ -95,6 +97,8 @@ pub fn pause_menu_input(
     mut selection: ResMut<PauseMenuSelection>,
     mut next_gameplay_state: ResMut<NextState<GameplayState>>,
     mut next_game_state: ResMut<NextState<GameState>>,
+    mut pending_reset: ResMut<PendingRoundReset>,
+    mut countdown: ResMut<RoundCountdown>,
     query: Query<&PauseMenuItem>,
 ) {
     // Navigation
@@ -126,7 +130,9 @@ pub fn pause_menu_input(
                     next_gameplay_state.set(GameplayState::Playing);
                 }
                 MenuAction::Restart => {
-                    // Go back to countdown to restart the round
+                    // Signal mode state reset (same path as round-over)
+                    pending_reset.0 = true;
+                    *countdown = RoundCountdown::default();
                     next_gameplay_state.set(GameplayState::Countdown);
                 }
                 MenuAction::QuitToMenu => {
