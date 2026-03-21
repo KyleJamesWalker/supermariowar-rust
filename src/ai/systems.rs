@@ -294,7 +294,7 @@ fn determine_objective_position(
                     continue;
                 }
                 let dist = wrapped_distance_2d(ai_pos, zone.center);
-                if best.is_none() || dist < best.unwrap().1 {
+                if best.is_none() || dist < best.map_or(f32::MAX, |b| b.1) {
                     best = Some((zone.center, dist));
                 }
             }
@@ -302,7 +302,7 @@ fn determine_objective_position(
             if best.is_none() {
                 for zone in domination_zones.iter() {
                     let dist = wrapped_distance_2d(ai_pos, zone.center);
-                    if best.is_none() || dist < best.unwrap().1 {
+                    if best.is_none() || dist < best.map_or(f32::MAX, |b| b.1) {
                         best = Some((zone.center, dist));
                     }
                 }

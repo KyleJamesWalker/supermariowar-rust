@@ -790,6 +790,20 @@ pub fn fire_cooldown_tick_system(
     }
 }
 
+/// Ticks down WarpCooldown timers and removes them when expired.
+pub fn warp_cooldown_tick_system(
+    time: Res<Time>,
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut WarpCooldown)>,
+) {
+    for (entity, mut cooldown) in query.iter_mut() {
+        cooldown.timer.tick(time.delta());
+        if cooldown.timer.finished() {
+            commands.entity(entity).remove::<WarpCooldown>();
+        }
+    }
+}
+
 /// Warp pipe entry/exit animation system.
 pub fn warp_system(
     time: Res<Time>,
@@ -1019,7 +1033,9 @@ pub fn throw_carried_object_system(
             continue;
         }
 
-        let block_entity = carried.entity.take().unwrap();
+        let Some(block_entity) = carried.entity.take() else {
+            continue;
+        };
 
         // Despawn the old block entity
         commands.entity(block_entity).despawn_recursive();

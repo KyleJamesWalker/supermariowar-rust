@@ -124,7 +124,9 @@ pub fn main_menu_input(
 
     // Navigation
     if keyboard.just_pressed(KeyCode::ArrowUp) || keyboard.just_pressed(KeyCode::KeyW) {
-        if selection.selected_index > 0 {
+        if selection.item_count == 0 {
+            // Not yet initialized
+        } else if selection.selected_index > 0 {
             selection.selected_index -= 1;
         } else {
             selection.selected_index = selection.item_count - 1;
@@ -132,7 +134,9 @@ pub fn main_menu_input(
     }
 
     if keyboard.just_pressed(KeyCode::ArrowDown) || keyboard.just_pressed(KeyCode::KeyS) {
-        selection.selected_index = (selection.selected_index + 1) % selection.item_count;
+        if selection.item_count > 0 {
+            selection.selected_index = (selection.selected_index + 1) % selection.item_count;
+        }
     }
 
     // Confirm selection

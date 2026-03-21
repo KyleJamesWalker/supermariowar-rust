@@ -304,7 +304,11 @@ pub fn game_settings_input(
         return;
     }
 
-    // Navigation
+    // Navigation — guard against field_count == 0 (resource not yet initialised)
+    if selection.field_count == 0 {
+        return;
+    }
+
     if keyboard.just_pressed(KeyCode::ArrowUp) || keyboard.just_pressed(KeyCode::KeyW) {
         if selection.selected_index > 0 {
             selection.selected_index -= 1;
@@ -397,7 +401,7 @@ pub fn update_game_settings_display(
     mut desc_query: Query<&mut Text, (With<ModeDescriptionText>, Without<SettingValueText>)>,
     mut text_color_query: Query<(&GameSettingField, &mut TextColor), Without<SettingValueText>>,
 ) {
-    if current_sub.submenu != SubMenu::GameSettings {
+    if current_sub.submenu != SubMenu::GameSettings || selection.field_count == 0 {
         return;
     }
 

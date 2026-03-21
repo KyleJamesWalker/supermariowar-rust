@@ -99,7 +99,11 @@ pub fn pause_menu_input(
     mut countdown: ResMut<RoundCountdown>,
     query: Query<&PauseMenuItem>,
 ) {
-    // Navigation
+    // Navigation — guard against item_count == 0 (resource not yet initialised)
+    if selection.item_count == 0 {
+        return;
+    }
+
     if keyboard.just_pressed(KeyCode::ArrowUp) || keyboard.just_pressed(KeyCode::KeyW) {
         if selection.selected_index > 0 {
             selection.selected_index -= 1;

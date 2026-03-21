@@ -33,22 +33,24 @@ impl Plugin for MenuPlugin {
             )
             .add_systems(OnExit(GameState::Menu), (cleanup_all_menu_ui, cleanup_menu_resources));
 
-        // Main menu input: only runs when the Main submenu is active
-        app.add_systems(
-            Update,
-            main_menu::main_menu_input
-                .run_if(in_state(GameState::Menu))
-                .run_if(resource_equals(CurrentSubMenu {
-                    submenu: SubMenu::Main,
-                })),
-        );
-
-        // Submenu transition system: runs for ALL submenus so it can handle
-        // transitions back to Main (e.g., from GameSettings or PlayerSelect)
+        // Submenu transition system: runs FIRST for ALL submenus so it can
+        // spawn UI and initialise resources before input systems read them.
         app.add_systems(
             Update,
             submenu_transition_system
                 .run_if(in_state(GameState::Menu)),
+        );
+
+        // Main menu input: only runs when the Main submenu is active.
+        // Ordered after submenu_transition_system so resources are initialised.
+        app.add_systems(
+            Update,
+            main_menu::main_menu_input
+                .after(submenu_transition_system)
+                .run_if(in_state(GameState::Menu))
+                .run_if(resource_equals(CurrentSubMenu {
+                    submenu: SubMenu::Main,
+                })),
         );
 
         // =====================================================================
@@ -60,6 +62,7 @@ impl Plugin for MenuPlugin {
                 game_settings::game_settings_input,
                 game_settings::update_game_settings_display,
             )
+                .after(submenu_transition_system)
                 .run_if(in_state(GameState::Menu))
                 .run_if(resource_equals(CurrentSubMenu {
                     submenu: SubMenu::GameSettings,
@@ -75,6 +78,7 @@ impl Plugin for MenuPlugin {
                 player_select::player_select_input,
                 player_select::update_player_select_display,
             )
+                .after(submenu_transition_system)
                 .run_if(in_state(GameState::Menu))
                 .run_if(resource_equals(CurrentSubMenu {
                     submenu: SubMenu::PlayerSelect,
