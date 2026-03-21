@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::core::constants::*;
+use crate::objects::components::EnemyDeathEvent;
 use crate::objects::enemies::{Enemy, EnemyType, spawn_enemy};
 use crate::player::components::PlayerDeathEvent;
 use super::traits::*;
@@ -109,39 +110,43 @@ fn spawn_random_stomp_enemy(commands: &mut Commands) {
     spawn_enemy(commands, enemy, x, y);
 }
 
-/// Processes PlayerKillEvent -- only stomps score.
+/// Processes EnemyDeathEvent -- ENEMY kills score in Stomp mode, not player kills.
+/// In the original C++, playerkilledplayer returns Normal with no scoring.
+/// Scoring comes exclusively from killing spawned enemies via playerextraguy.
 pub fn handle_stomp_kills(
     config: Res<GameModeConfig>,
     mut state: ResMut<StompModeState>,
     mut scoreboard: ResMut<ScoreBoard>,
-    mut kill_events: EventReader<PlayerKillEvent>,
+    mut enemy_death_events: EventReader<EnemyDeathEvent>,
+    mut _kill_events: EventReader<PlayerKillEvent>,
 ) {
     if config.mode_type != GameModeType::Stomp {
         return;
     }
 
-    for event in kill_events.read() {
-        if event.killer >= MAX_PLAYERS || event.victim >= MAX_PLAYERS {
+    // Drain player kill events without scoring (player-vs-player kills don't count)
+    for _event in _kill_events.read() {}
+
+    // Score ENEMY kills
+    for event in enemy_death_events.read() {
+        let Some(killer_idx) = event.killer_player else {
+            continue;
+        };
+        if killer_idx >= MAX_PLAYERS {
             continue;
         }
 
-        if event.method != KillMethod::Stomp {
-            // Non-stomp kills are ignored for scoring in this mode
-            continue;
-        }
-
-        state.stomps[event.killer] += 1;
-        state.combo[event.killer] += 1;
+        state.stomps[killer_idx] += 1;
+        state.combo[killer_idx] += 1;
 
         // Combo bonus: each consecutive stomp without landing gives +1 extra point
-        let combo_count = state.combo[event.killer];
+        let combo_count = state.combo[killer_idx];
         let bonus = if combo_count > 1 { combo_count - 1 } else { 0 };
-        state.combo_bonus[event.killer] += bonus;
+        state.combo_bonus[killer_idx] += bonus;
 
         let total_points = 1 + bonus as i32;
-        scoreboard.kills[event.killer] += 1;
-        scoreboard.deaths[event.victim] += 1;
-        scoreboard.score[event.killer] += total_points;
+        scoreboard.kills[killer_idx] += 1;
+        scoreboard.score[killer_idx] += total_points;
     }
 }
 

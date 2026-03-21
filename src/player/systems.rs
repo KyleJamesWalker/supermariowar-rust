@@ -523,22 +523,20 @@ pub fn stomp_bounce_system(
     }
 }
 
-/// Vertical death detection: players falling off the bottom of the screen.
+/// Vertical screen wrapping: players falling off the bottom wrap to the top.
+/// In the original C++ SMW, falling off the bottom teleports the player to
+/// above the top of the screen so they fall back down (classic wrap-around).
 pub fn vertical_death_system(
-    query: Query<(Entity, &Player, &Transform, &PlayerAction)>,
-    mut death_events: EventWriter<PlayerDeathEvent>,
+    mut query: Query<(&Player, &mut Transform, &PlayerAction)>,
 ) {
-    for (entity, player, transform, action) in query.iter() {
+    let half_h = SCREEN_HEIGHT / 2.0;
+    for (_player, mut transform, action) in query.iter_mut() {
         if *action == PlayerAction::Dead {
             continue;
         }
-        if transform.translation.y < -(SCREEN_HEIGHT / 2.0 + PLAYER_HEIGHT) {
-            death_events.send(PlayerDeathEvent {
-                player_entity: entity,
-                player_index: player.index,
-                killer_index: None,
-                cause: DeathCause::Environment,
-            });
+        // Wrap bottom-to-top: when player falls below the screen, teleport above the top
+        if transform.translation.y < -(half_h + PLAYER_HEIGHT) {
+            transform.translation.y = half_h + PLAYER_HEIGHT;
         }
     }
 }

@@ -305,7 +305,9 @@ fn check_vertical_collision(
                     {
                         transform.translation.y =
                             tile_top - PLAYER_HEIGHT - PLAYER_HEIGHT_OFFSET;
-                        vel.y = 0.0;
+                        // Original C++ sets vely = GRAVITATION on landing so ground
+                        // is re-tested next frame (prevents 1-frame airborne gap)
+                        vel.y = -GRAVITY;
                         grounded.on_ground = true;
                         if tile.is_ice() {
                             grounded.on_ice = true;
@@ -319,7 +321,7 @@ fn check_vertical_collision(
                         if foot_y >= tile_top && foot_y <= tile_top + vel.y.abs() + 1.0 {
                             transform.translation.y =
                                 tile_top - PLAYER_HEIGHT - PLAYER_HEIGHT_OFFSET;
-                            vel.y = 0.0;
+                            vel.y = -GRAVITY;
                             grounded.on_ground = true;
                             if tile.is_ice() {
                                 grounded.on_ice = true;
@@ -340,7 +342,12 @@ fn check_vertical_collision(
                     let tile_bottom = (head_tile_y as f32 + 1.0) * TILE_SIZE;
                     if py <= tile_bottom {
                         transform.translation.y = tile_bottom - PLAYER_HEIGHT_OFFSET;
-                        vel.y = 0.0;
+                        // Original C++ bounces off ceilings: vely = -vely * BOUNCESTRENGTH
+                        if vel.y > 0.0 {
+                            vel.y = -vel.y * BOUNCE_STRENGTH;
+                        } else {
+                            vel.y = 0.0;
+                        }
                     }
                 }
                 // SolidOnTop tiles do NOT block from below

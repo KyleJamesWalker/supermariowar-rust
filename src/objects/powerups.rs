@@ -421,16 +421,30 @@ pub fn powerup_collect_system(
                 }
             }
 
-            // Clean up state components when powerup changes
-            if spawned.powerup_type != PowerupType::Feather {
-                commands.entity(p_entity).remove::<CapeState>();
+            // Only strip ability state when collecting a WEAPON powerup that replaces it.
+            // Utility pickups (coins, shields, extra life, clock, etc.) should NOT
+            // remove existing combat abilities like cape, tail, or invincibility.
+            let is_weapon_powerup = matches!(
+                spawned.powerup_type,
+                PowerupType::Fire
+                    | PowerupType::Hammer
+                    | PowerupType::Boomerang
+                    | PowerupType::IceWand
+                    | PowerupType::Feather
+                    | PowerupType::Leaf
+                    | PowerupType::Bomb
+                    | PowerupType::BobOmb
+            );
+            if is_weapon_powerup {
+                if spawned.powerup_type != PowerupType::Feather {
+                    commands.entity(p_entity).remove::<CapeState>();
+                }
+                if spawned.powerup_type != PowerupType::Leaf {
+                    commands.entity(p_entity).remove::<TailState>();
+                }
             }
-            if spawned.powerup_type != PowerupType::Leaf {
-                commands.entity(p_entity).remove::<TailState>();
-            }
-            if spawned.powerup_type != PowerupType::Star {
-                commands.entity(p_entity).remove::<Invincible>();
-            }
+            // Star invincibility is NEVER removed by collecting other powerups
+            // (it expires on its own timer)
 
             // Despawn the collected powerup
             commands.entity(pu_entity).despawn_recursive();

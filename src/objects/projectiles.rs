@@ -48,7 +48,7 @@ impl Projectile {
             owner,
             owner_team,
             bounces_remaining: 3,
-            speed: 6.0,
+            speed: 5.0, // Original C++ fireball speed
         }
     }
 
@@ -77,8 +77,8 @@ impl Projectile {
             projectile_type: ProjectileType::IceBall,
             owner,
             owner_team,
-            bounces_remaining: 3,
-            speed: 6.0,
+            bounces_remaining: 0, // Ice blasts fly straight, no bouncing
+            speed: 5.0, // Original C++ ice blast speed
         }
     }
 
@@ -133,6 +133,13 @@ impl Default for BombFuse {
 // ---------------------------------------------------------------------------
 
 /// Spawns a projectile entity at the given position with the specified type.
+/// Per-type TTL and map collision behavior match the original C++:
+/// - Fireball: 5.0s TTL, collides with map (bounces)
+/// - Hammer: 0.8s TTL, does NOT collide with map (arcs through terrain)
+/// - IceBall: 1.9s TTL, does NOT collide with map (flies straight)
+/// - Boomerang: 5.0s TTL, does NOT collide with map (flies through terrain)
+/// - Bomb: 3.0s TTL (fuse timer), collides with map
+/// - Others: 5.0s TTL, collides with map
 pub fn spawn_projectile(
     commands: &mut Commands,
     projectile: Projectile,
@@ -141,6 +148,22 @@ pub fn spawn_projectile(
     vel_x: f32,
     vel_y: f32,
 ) -> Entity {
+    // Per-type TTL matching original C++ frame counts at ~62.5 FPS
+    let ttl = match projectile.projectile_type {
+        ProjectileType::Fireball => 5.0,     // fireballttl = 310 frames
+        ProjectileType::Hammer => 0.8,       // hammerttl = 49 frames
+        ProjectileType::IceBall => 1.9,      // iceball TTL = 120 frames
+        ProjectileType::Boomerang => 5.0,    // boomeranglife = 248 frames
+        ProjectileType::Bomb => 5.0,         // bomb has fuse timer, this is fallback
+        _ => 5.0,
+    };
+
+    // Hammer, IceBall, and Boomerang do NOT collide with map tiles in the original
+    let collides_with_map = match projectile.projectile_type {
+        ProjectileType::Hammer | ProjectileType::IceBall | ProjectileType::Boomerang => false,
+        _ => true,
+    };
+
     let id = commands
         .spawn((
             GameObject {
@@ -156,9 +179,8 @@ pub fn spawn_projectile(
                 kill: true,
                 owner_player: None,
             },
-            InteractsWithMap,
             DespawnOffScreen,
-            Lifetime::from_seconds(8.0),
+            Lifetime::from_seconds(ttl),
             Transform::from_xyz(x, y, crate::graphics::sprites::z_order::PROJECTILES),
             GlobalTransform::default(),
             Visibility::default(),
@@ -167,6 +189,10 @@ pub fn spawn_projectile(
         ))
         .id();
     commands.entity(id).insert(GameplayEntity);
+    // Only add map collision for projectile types that interact with terrain
+    if collides_with_map {
+        commands.entity(id).insert(InteractsWithMap);
+    }
     id
 }
 

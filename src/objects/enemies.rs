@@ -42,6 +42,14 @@ pub enum EnemyState {
     Falling,
 }
 
+/// Marker for enemies that bounce when they hit the ground (Paragoomba, Parakoopa).
+/// In the original C++, these enemies walk normally with gravity but bounce
+/// upward with VEL_ENEMY_BOUNCE when they land.
+#[derive(Component, Debug)]
+pub struct BouncingEnemy {
+    pub bounce_velocity: f32,
+}
+
 /// Enemy behavior and stats.
 #[derive(Component, Debug)]
 pub struct Enemy {
@@ -59,7 +67,7 @@ impl Enemy {
             state: EnemyState::Walking,
             stompable: true,
             kills_on_touch: true,
-            speed: 1.5,
+            speed: 1.0, // Original C++ all walking enemies = 1.0
         }
     }
 
@@ -69,7 +77,7 @@ impl Enemy {
             state: EnemyState::Walking,
             stompable: true,
             kills_on_touch: true,
-            speed: 1.5,
+            speed: 1.0,
         }
     }
 
@@ -79,7 +87,7 @@ impl Enemy {
             state: EnemyState::Walking,
             stompable: true,
             kills_on_touch: true,
-            speed: 1.2,
+            speed: 1.0,
         }
     }
 
@@ -89,7 +97,7 @@ impl Enemy {
             state: EnemyState::Walking,
             stompable: false,
             kills_on_touch: true,
-            speed: 1.2,
+            speed: 1.0,
         }
     }
 
@@ -119,7 +127,7 @@ impl Enemy {
             state: EnemyState::Walking,
             stompable: true,
             kills_on_touch: true,
-            speed: 1.5,
+            speed: 1.0,
         }
     }
 
@@ -129,7 +137,7 @@ impl Enemy {
             state: EnemyState::Walking,
             stompable: true,
             kills_on_touch: true,
-            speed: 1.5,
+            speed: 1.0,
         }
     }
 
@@ -208,13 +216,19 @@ impl Default for ShellSpeed {
 
 /// Spawns an enemy entity at the given world position.
 pub fn spawn_enemy(commands: &mut Commands, enemy: Enemy, x: f32, y: f32) -> Entity {
-    // Flying enemies don't have gravity
+    // Only truly flying enemies (no ground interaction) have zero gravity.
+    // Paragoomba/Parakoopa walk on ground with gravity and BOUNCE on landing.
     let gravity = match enemy.enemy_type {
-        EnemyType::Paragoomba | EnemyType::CheepCheep | EnemyType::BulletBill | EnemyType::Podoboo => {
+        EnemyType::CheepCheep | EnemyType::BulletBill | EnemyType::Podoboo => {
             GravityAffected { multiplier: 0.0 }
         }
         _ => GravityAffected::default(),
     };
+
+    let is_bouncing = matches!(
+        enemy.enemy_type,
+        EnemyType::Paragoomba | EnemyType::Parakoopa
+    );
 
     let entity = commands
         .spawn((
@@ -246,6 +260,13 @@ pub fn spawn_enemy(commands: &mut Commands, enemy: Enemy, x: f32, y: f32) -> Ent
         InheritedVisibility::default(),
         ViewVisibility::default(),
     ));
+
+    // Para-enemies bounce when they land instead of staying on the ground
+    if is_bouncing {
+        commands.entity(entity).insert(BouncingEnemy {
+            bounce_velocity: VEL_ENEMY_BOUNCE,
+        });
+    }
 
     entity
 }
@@ -618,6 +639,19 @@ pub fn enemy_map_collision(
             *facing = EnemyFacing::Right;
         } else if vel.x < 0.0 && *facing != EnemyFacing::Left {
             *facing = EnemyFacing::Left;
+        }
+    }
+}
+
+/// Bouncing enemies (Paragoomba, Parakoopa) bounce upward when they land
+/// instead of staying on the ground. Matches original C++ fBouncing behavior.
+pub fn enemy_bounce_system(
+    mut query: Query<(&BouncingEnemy, &ObjectGrounded, &mut ObjectVelocity), With<Enemy>>,
+) {
+    for (bouncing, grounded, mut vel) in query.iter_mut() {
+        if grounded.0 && vel.y >= -GRAVITY {
+            // Just landed: apply upward bounce velocity
+            vel.y = bouncing.bounce_velocity;
         }
     }
 }
