@@ -91,6 +91,16 @@ impl Projectile {
             speed: 5.0,
         }
     }
+
+    pub fn throw_block(owner: usize, owner_team: u8) -> Self {
+        Self {
+            projectile_type: ProjectileType::ThrowBlock,
+            owner,
+            owner_team,
+            bounces_remaining: 0,
+            speed: 7.0,
+        }
+    }
 }
 
 /// Tracks boomerang return behavior.

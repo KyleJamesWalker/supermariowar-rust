@@ -357,7 +357,7 @@ pub fn player_stomp_system(
             let (e_a, p_a, t_a, v_a, act_a, col_a, shield_a, inv_a, sp_a) = &players[i];
             let (e_b, p_b, t_b, v_b, act_b, col_b, shield_b, inv_b, sp_b) = &players[j];
 
-            // Skip if either player is dead, spawning, or has protection
+            // Skip if either player is dead or spawning
             if **act_a == PlayerAction::Dead
                 || **act_a == PlayerAction::Spawning
                 || **act_b == PlayerAction::Dead
@@ -365,7 +365,8 @@ pub fn player_stomp_system(
             {
                 continue;
             }
-            if inv_a.is_some() || sp_a.is_some() || inv_b.is_some() || sp_b.is_some() {
+            // Spawn protection blocks all interactions
+            if sp_a.is_some() || sp_b.is_some() {
                 continue;
             }
 
@@ -376,6 +377,31 @@ pub fn player_stomp_system(
 
             // Check AABB overlap (with screen wrapping consideration)
             if !players_overlap(t_a, col_a, t_b, col_b) {
+                continue;
+            }
+
+            // --- Invincibility star contact kills (C++ behavior) ---
+            // Invincible player kills non-invincible, non-shielded players on touch
+            if inv_a.is_some() && inv_b.is_none() && **shield_b == ShieldState::None {
+                death_events.send(PlayerDeathEvent {
+                    player_entity: *e_b,
+                    player_index: p_b.index,
+                    killer_index: Some(p_a.index),
+                    cause: DeathCause::Killed { by: p_a.index },
+                });
+                continue;
+            }
+            if inv_b.is_some() && inv_a.is_none() && **shield_a == ShieldState::None {
+                death_events.send(PlayerDeathEvent {
+                    player_entity: *e_a,
+                    player_index: p_a.index,
+                    killer_index: Some(p_b.index),
+                    cause: DeathCause::Killed { by: p_b.index },
+                });
+                continue;
+            }
+            // If both invincible, skip (they bounce off each other in C++)
+            if inv_a.is_some() && inv_b.is_some() {
                 continue;
             }
 
@@ -796,6 +822,58 @@ pub fn update_stats_on_death(
     }
 }
 
+/// Shatters frozen players on contact with non-frozen players.
+pub fn frozen_shatter_system(
+    query: Query<(
+        Entity,
+        &Player,
+        &Transform,
+        &PlayerAction,
+        &Collider,
+        Option<&FrozenState>,
+        Option<&SpawnProtection>,
+    )>,
+    mut death_events: EventWriter<PlayerDeathEvent>,
+) {
+    let players: Vec<_> = query.iter().collect();
+
+    for i in 0..players.len() {
+        for j in (i + 1)..players.len() {
+            let (e_a, p_a, t_a, act_a, col_a, frozen_a, sp_a) = &players[i];
+            let (e_b, p_b, t_b, act_b, col_b, frozen_b, sp_b) = &players[j];
+
+            if **act_a == PlayerAction::Dead || **act_b == PlayerAction::Dead {
+                continue;
+            }
+            if sp_a.is_some() || sp_b.is_some() {
+                continue;
+            }
+
+            // Need one frozen and one not frozen
+            let (frozen_entity, frozen_player, non_frozen_player) =
+                if frozen_a.is_some() && frozen_b.is_none() {
+                    (*e_a, *p_a, *p_b)
+                } else if frozen_b.is_some() && frozen_a.is_none() {
+                    (*e_b, *p_b, *p_a)
+                } else {
+                    continue;
+                };
+
+            if !players_overlap(t_a, col_a, t_b, col_b) {
+                continue;
+            }
+
+            // Shatter the frozen player
+            death_events.send(PlayerDeathEvent {
+                player_entity: frozen_entity,
+                player_index: frozen_player.index,
+                killer_index: Some(non_frozen_player.index),
+                cause: DeathCause::Killed { by: non_frozen_player.index },
+            });
+        }
+    }
+}
+
 /// Keeps carried entity positioned on the player.
 pub fn carried_object_sync_system(
     query: Query<(&Transform, &Facing, &CarriedObject), With<Player>>,
@@ -813,6 +891,59 @@ pub fn carried_object_sync_system(
                 obj_tf.translation.z = p_tf.translation.z;
             }
         }
+    }
+}
+
+/// Throws a carried object when the player presses use_item.
+/// Converts the carried block entity into a ThrowBlock projectile.
+pub fn throw_carried_object_system(
+    mut commands: Commands,
+    mut query: Query<(
+        &Player,
+        &PlayerInput,
+        &Facing,
+        &Transform,
+        &PlayerAction,
+        &mut CarriedObject,
+        &PowerupState,
+    )>,
+    mut sfx_events: EventWriter<crate::audio::sfx::SfxEvent>,
+) {
+    for (player, input, facing, transform, action, mut carried, powerup) in query.iter_mut() {
+        if *action == PlayerAction::Dead || *action == PlayerAction::Spawning {
+            continue;
+        }
+        // Only throw on use_item when carrying something and not using a powerup attack
+        if !input.use_item || carried.entity.is_none() {
+            continue;
+        }
+        // Skip if player has Feather/Leaf (use_item triggers cape/tail attack instead)
+        if *powerup == PowerupState::Feather || *powerup == PowerupState::Leaf {
+            continue;
+        }
+
+        let block_entity = carried.entity.take().unwrap();
+
+        // Despawn the old block entity
+        commands.entity(block_entity).despawn_recursive();
+
+        // Spawn a throw block projectile
+        let dir = match facing {
+            Facing::Right => 1.0,
+            Facing::Left => -1.0,
+        };
+        let proj = crate::objects::projectiles::Projectile::throw_block(player.index, player.team);
+        let vel_x = proj.speed * dir;
+        let vel_y = 1.0; // Slight upward arc
+        crate::objects::projectiles::spawn_projectile(
+            &mut commands,
+            proj,
+            transform.translation.x + dir * TILE_SIZE,
+            transform.translation.y + PLAYER_HEIGHT * 0.3,
+            vel_x,
+            vel_y,
+        );
+        sfx_events.send(crate::audio::sfx::SfxEvent::new(crate::audio::sfx::SfxId::Kick));
     }
 }
 
