@@ -8,7 +8,7 @@ use crate::graphics::animation::{
     AnimationController, AnimationBank, AnimationState, AnimatedEntityType, BlinkEffect,
     DeathAnimation,
 };
-use crate::graphics::sprites::SpriteSheets;
+use crate::graphics::sprites::{SpriteSheets, ALL_SKIN_NAMES, load_skin_on_demand};
 
 // ---------------------------------------------------------------------------
 // Player sprite marker
@@ -83,21 +83,35 @@ fn star_power_color(elapsed: f32) -> Color {
 
 /// Attaches sprite visuals to newly spawned Player entities that have a
 /// PlayerSkinIndex but no PlayerSpriteSetup marker yet.
+///
+/// If the requested skin index exceeds the number of preloaded skins, the
+/// system will load the corresponding skin on demand using `ALL_SKIN_NAMES`.
 pub fn setup_player_sprites(
     mut commands: Commands,
-    sprite_sheets: Res<SpriteSheets>,
+    asset_server: Res<AssetServer>,
+    mut layouts: ResMut<Assets<TextureAtlasLayout>>,
+    mut sprite_sheets: ResMut<SpriteSheets>,
     query: Query<
         (Entity, &Player, &PlayerSkinIndex),
         (Without<PlayerSpriteSetup>, With<Player>),
     >,
 ) {
     for (entity, player, skin_index) in query.iter() {
-        let skin_idx = skin_index.0.min(sprite_sheets.player_skins.len().saturating_sub(1));
-
         if sprite_sheets.player_skins.is_empty() {
             // Assets not loaded yet; skip
             continue;
         }
+
+        // If the requested skin index is beyond what's loaded, try to load it on demand.
+        let skin_idx = if skin_index.0 < sprite_sheets.player_skins.len() {
+            skin_index.0
+        } else if skin_index.0 < ALL_SKIN_NAMES.len() {
+            let skin_name = ALL_SKIN_NAMES[skin_index.0];
+            load_skin_on_demand(&asset_server, &mut layouts, &mut sprite_sheets, skin_name)
+        } else {
+            // Index beyond all known skins; fall back to last available skin.
+            sprite_sheets.player_skins.len().saturating_sub(1)
+        };
 
         let skin = &sprite_sheets.player_skins[skin_idx];
 

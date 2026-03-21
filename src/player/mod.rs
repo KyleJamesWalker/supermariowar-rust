@@ -48,6 +48,7 @@ impl Plugin for PlayerPlugin {
                     systems::player_stomp_system,
                     systems::stomp_bounce_system,
                     systems::attack_system,
+                    systems::attack_damage_system,
                     systems::powerup_use_system,
                 )
                     .chain()

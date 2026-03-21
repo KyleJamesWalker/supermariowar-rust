@@ -34,51 +34,57 @@ pub enum ProjectileType {
 pub struct Projectile {
     pub projectile_type: ProjectileType,
     pub owner: usize,
+    pub owner_team: u8,
     pub bounces_remaining: u32,
     pub speed: f32,
 }
 
 impl Projectile {
-    pub fn fireball(owner: usize) -> Self {
+    pub fn fireball(owner: usize, owner_team: u8) -> Self {
         Self {
             projectile_type: ProjectileType::Fireball,
             owner,
+            owner_team,
             bounces_remaining: 3,
             speed: 6.0,
         }
     }
 
-    pub fn hammer(owner: usize) -> Self {
+    pub fn hammer(owner: usize, owner_team: u8) -> Self {
         Self {
             projectile_type: ProjectileType::Hammer,
             owner,
+            owner_team,
             bounces_remaining: 0,
             speed: HAMMER_THROW,
         }
     }
 
-    pub fn boomerang(owner: usize) -> Self {
+    pub fn boomerang(owner: usize, owner_team: u8) -> Self {
         Self {
             projectile_type: ProjectileType::Boomerang,
             owner,
+            owner_team,
             bounces_remaining: 0,
             speed: 5.0,
         }
     }
 
-    pub fn iceball(owner: usize) -> Self {
+    pub fn iceball(owner: usize, owner_team: u8) -> Self {
         Self {
             projectile_type: ProjectileType::IceBall,
             owner,
+            owner_team,
             bounces_remaining: 3,
             speed: 6.0,
         }
     }
 
-    pub fn bomb(owner: usize) -> Self {
+    pub fn bomb(owner: usize, owner_team: u8) -> Self {
         Self {
             projectile_type: ProjectileType::Bomb,
             owner,
+            owner_team,
             bounces_remaining: 0,
             speed: 5.0,
         }
@@ -187,14 +193,14 @@ pub fn fire_projectile_system(
         match powerup {
             PowerupState::Fire => {
                 play_sfx(&mut commands, &sfx, SfxId::Fireball);
-                let proj = Projectile::fireball(player.index);
+                let proj = Projectile::fireball(player.index, player.team);
                 let vel_x = proj.speed * dir;
                 let vel_y = -2.0; // Slight downward angle
                 spawn_projectile(&mut commands, proj, spawn_x, spawn_y, vel_x, vel_y);
             }
             PowerupState::Hammer => {
                 play_sfx(&mut commands, &sfx, SfxId::Fireball);
-                let proj = Projectile::hammer(player.index);
+                let proj = Projectile::hammer(player.index, player.team);
                 let vel_x = proj.speed * dir * 0.7;
                 let vel_y = -HAMMER_THROW; // Thrown upward in parabolic arc
                 let entity = spawn_projectile(
@@ -212,7 +218,7 @@ pub fn fire_projectile_system(
             }
             PowerupState::Boomerang => {
                 play_sfx(&mut commands, &sfx, SfxId::Fireball);
-                let proj = Projectile::boomerang(player.index);
+                let proj = Projectile::boomerang(player.index, player.team);
                 let vel_x = proj.speed * dir;
                 let entity = spawn_projectile(
                     &mut commands,
@@ -231,7 +237,7 @@ pub fn fire_projectile_system(
             }
             PowerupState::Bomb => {
                 play_sfx(&mut commands, &sfx, SfxId::Fireball);
-                let proj = Projectile::bomb(player.index);
+                let proj = Projectile::bomb(player.index, player.team);
                 let vel_x = proj.speed * dir * 0.5;
                 let vel_y = -proj.speed;
                 let entity = spawn_projectile(
@@ -412,8 +418,11 @@ pub fn projectile_collision_system(
         for (p_entity, player, mut p_vel, mut p_action, p_transform, p_collider, invincible) in
             player_query.iter_mut()
         {
-            // Don't hit the owner
+            // Don't hit the owner or teammates
             if player.index == proj.owner {
+                continue;
+            }
+            if player.team == proj.owner_team {
                 continue;
             }
             if *p_action == PlayerAction::Dead {

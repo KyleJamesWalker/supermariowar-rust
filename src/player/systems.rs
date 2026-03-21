@@ -467,6 +467,113 @@ pub fn attack_system(
     }
 }
 
+/// Detects damage from active cape/tail attacks against other players.
+pub fn attack_damage_system(
+    attackers: Query<(
+        Entity,
+        &Player,
+        &Transform,
+        &Facing,
+        &PlayerAction,
+        Option<&CapeState>,
+        Option<&TailState>,
+        Option<&Invincible>,
+        Option<&SpawnProtection>,
+    )>,
+    targets: Query<(
+        Entity,
+        &Player,
+        &Transform,
+        &PlayerAction,
+        &Collider,
+        Option<&Invincible>,
+        Option<&SpawnProtection>,
+    )>,
+    mut death_events: EventWriter<PlayerDeathEvent>,
+) {
+    for (atk_entity, atk_player, atk_transform, facing, atk_action, cape, tail, _atk_inv, _atk_sp) in
+        attackers.iter()
+    {
+        if *atk_action == PlayerAction::Dead || *atk_action == PlayerAction::Spawning {
+            continue;
+        }
+
+        // Determine if an attack is active and its horizontal reach
+        let attack_range = if let Some(cape) = cape {
+            if cape.active { Some(TILE_SIZE) } else { None }
+        } else if let Some(tail) = tail {
+            if tail.active { Some(TILE_SIZE * 0.75) } else { None }
+        } else {
+            None
+        };
+
+        let range = match attack_range {
+            Some(r) => r,
+            None => continue,
+        };
+
+        let dir: f32 = match facing {
+            Facing::Right => 1.0,
+            Facing::Left => -1.0,
+        };
+
+        // Build the attack hitbox (Bevy Y-up, centered coords)
+        let atk_x = atk_transform.translation.x;
+        let atk_y = atk_transform.translation.y;
+
+        // Hitbox starts at the player's edge in the facing direction
+        let hitbox_start_x = atk_x + dir * (PLAYER_WIDTH * 0.5);
+        let hitbox_end_x = hitbox_start_x + dir * range;
+        let hitbox_left = hitbox_start_x.min(hitbox_end_x);
+        let hitbox_right = hitbox_start_x.max(hitbox_end_x);
+        let hitbox_bottom = atk_y;
+        let hitbox_top = atk_y + PLAYER_HEIGHT;
+
+        for (tgt_entity, tgt_player, tgt_transform, tgt_action, tgt_collider, tgt_inv, tgt_sp) in
+            targets.iter()
+        {
+            // Skip self
+            if tgt_entity == atk_entity {
+                continue;
+            }
+            // Skip dead or spawning targets
+            if *tgt_action == PlayerAction::Dead || *tgt_action == PlayerAction::Spawning {
+                continue;
+            }
+            // Skip invincible or spawn-protected targets
+            if tgt_inv.is_some() || tgt_sp.is_some() {
+                continue;
+            }
+            // Skip same team
+            if atk_player.team == tgt_player.team {
+                continue;
+            }
+
+            // Target bounding box
+            let tgt_x = tgt_transform.translation.x;
+            let tgt_y = tgt_transform.translation.y;
+            let tgt_left = tgt_x + tgt_collider.offset_x;
+            let tgt_right = tgt_left + tgt_collider.width;
+            let tgt_bottom = tgt_y + tgt_collider.offset_y;
+            let tgt_top = tgt_bottom + tgt_collider.height;
+
+            // AABB overlap check
+            if hitbox_left < tgt_right
+                && hitbox_right > tgt_left
+                && hitbox_bottom < tgt_top
+                && hitbox_top > tgt_bottom
+            {
+                death_events.send(PlayerDeathEvent {
+                    player_entity: tgt_entity,
+                    player_index: tgt_player.index,
+                    killer_index: Some(atk_player.index),
+                    cause: DeathCause::Killed { by: atk_player.index },
+                });
+            }
+        }
+    }
+}
+
 /// Fires a projectile when the player presses use_item with a projectile-type powerup.
 pub fn powerup_use_system(
     mut commands: Commands,
@@ -503,7 +610,7 @@ pub fn powerup_use_system(
             PowerupState::Fire => {
                 let speed = 6.0_f32;
                 commands.spawn((
-                    Projectile::fireball(player.index),
+                    Projectile::fireball(player.index, player.team),
                     ObjectVelocity {
                         x: speed * dir,
                         y: 0.0,
@@ -520,7 +627,7 @@ pub fn powerup_use_system(
             PowerupState::Hammer => {
                 let speed = 8.5_f32;
                 commands.spawn((
-                    Projectile::hammer(player.index),
+                    Projectile::hammer(player.index, player.team),
                     ObjectVelocity {
                         x: speed * dir,
                         y: HAMMER_THROW,
@@ -537,7 +644,7 @@ pub fn powerup_use_system(
             PowerupState::Boomerang => {
                 let speed = 5.0_f32;
                 commands.spawn((
-                    Projectile::boomerang(player.index),
+                    Projectile::boomerang(player.index, player.team),
                     ObjectVelocity {
                         x: speed * dir,
                         y: 0.0,
@@ -556,6 +663,7 @@ pub fn powerup_use_system(
                     Projectile {
                         projectile_type: ProjectileType::Bomb,
                         owner: player.index,
+                        owner_team: player.team,
                         bounces_remaining: 0,
                         speed: 4.0,
                     },
