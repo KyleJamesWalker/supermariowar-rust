@@ -645,10 +645,16 @@ pub fn bomb_fuse_system(
             fuse.explosion_radius * 2.0,
         ).with_offset(-fuse.explosion_radius, -fuse.explosion_radius);
 
-        // Damage players in blast radius (except owner)
+        // Damage players in blast radius (except owner and teammates)
         for (p_entity, player, mut p_action, mut p_vel, p_transform, p_collider, invincible, spawn_prot, mut shield) in
             player_query.iter_mut()
         {
+            if player.index == proj.owner {
+                continue;
+            }
+            if player.team == proj.owner_team {
+                continue;
+            }
             if *p_action == PlayerAction::Dead || *p_action == PlayerAction::Spawning {
                 continue;
             }

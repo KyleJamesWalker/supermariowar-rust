@@ -642,11 +642,13 @@ fn spawn_map_hazards(commands: &mut Commands, map_data: &MapData) {
         let bx = smw_to_bevy_x(mh.tile_x as f32 * (TILE_SIZE / 2.0));
         let by = smw_to_bevy_y(mh.tile_y as f32 * (TILE_SIZE / 2.0));
 
-        let hazard = Hazard {
-            hazard_type,
-            active: true,
-            cycle_timer: 0.0,
-            cycle_duration: 3.0,
+        let hazard = match hazard_type {
+            HazardType::Thwomp => Hazard::thwomp(),
+            HazardType::BulletCannon => Hazard::bullet_cannon(),
+            HazardType::PiranhaPlant => Hazard::piranha_plant(),
+            HazardType::FireBar => Hazard::fire_bar(),
+            HazardType::Spikes => Hazard::spikes(),
+            HazardType::Fireball => Hazard::fire_bar(), // Use fire_bar timing for fireballs
         };
 
         let entity = spawn_hazard(commands, hazard, bx, by);
