@@ -222,12 +222,11 @@ pub fn player_burnup_system(
         burnup.timer.tick(time.delta());
         if burnup.timer.just_finished() {
             commands.entity(entity).remove::<BurnupTimer>();
-            if player.lives > 0 {
-                respawn_events.send(PlayerRespawnEvent {
-                    player_entity: entity,
-                    player_index: player.index,
-                });
-            }
+            // Always respawn — game modes handle elimination separately
+            respawn_events.send(PlayerRespawnEvent {
+                player_entity: entity,
+                player_index: player.index,
+            });
         }
     }
 }

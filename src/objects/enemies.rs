@@ -183,6 +183,7 @@ pub fn spawn_enemy(commands: &mut Commands, enemy: Enemy, x: f32, y: f32) -> Ent
 /// Moves walking enemies back and forth. Green koopas walk off edges; red koopas
 /// and other types turn at ledge edges.
 pub fn enemy_movement_system(
+    map_data: Res<crate::map::components::MapData>,
     mut query: Query<(
         &mut Enemy,
         &mut EnemyFacing,
@@ -191,6 +192,9 @@ pub fn enemy_movement_system(
         &Transform,
     )>,
 ) {
+    let num_cols = map_data.collision_map.len();
+    let num_rows = if num_cols > 0 { map_data.collision_map[0].len() } else { 0 };
+
     for (enemy, mut facing, mut vel, grounded, transform) in query.iter_mut() {
         match enemy.state {
             EnemyState::Walking => {
@@ -200,15 +204,31 @@ pub fn enemy_movement_system(
                 };
                 vel.x = enemy.speed * direction;
 
-                // Red koopas turn at edges when on the ground
-                // This is a simplified edge detection using screen boundaries
-                if enemy.enemy_type == EnemyType::KoopaRed && grounded.0 {
-                    let left_edge = -(SCREEN_WIDTH / 2.0) + TILE_SIZE;
-                    let right_edge = SCREEN_WIDTH / 2.0 - TILE_SIZE * 2.0;
-                    if transform.translation.x <= left_edge {
-                        *facing = EnemyFacing::Right;
-                    } else if transform.translation.x >= right_edge {
-                        *facing = EnemyFacing::Left;
+                // Red koopas turn at platform edges when on the ground
+                if enemy.enemy_type == EnemyType::KoopaRed && grounded.0 && num_cols > 0 {
+                    // Convert Bevy position to SMW pixel coords for tile lookup
+                    let smw_x = transform.translation.x + SCREEN_WIDTH / 2.0;
+                    let smw_y = SCREEN_HEIGHT / 2.0 - transform.translation.y;
+
+                    // Current tile position
+                    let tile_col = (smw_x / TILE_SIZE).floor() as i32;
+                    // Tile row the enemy is standing on (one tile below feet)
+                    let tile_row = ((smw_y + TILE_SIZE) / TILE_SIZE).floor() as i32;
+
+                    // Check the tile below and ahead in the facing direction
+                    let ahead_col = if direction > 0.0 { tile_col + 1 } else { tile_col - 1 };
+                    // Wrap around for screen wrapping
+                    let wrapped_col = ((ahead_col % num_cols as i32) + num_cols as i32) as usize % num_cols;
+
+                    if tile_row >= 0 && (tile_row as usize) < num_rows {
+                        let below_ahead = map_data.collision_map[wrapped_col][tile_row as usize];
+                        // If there's no solid ground ahead, reverse direction
+                        if !below_ahead.is_solid() && !below_ahead.is_solid_on_top() {
+                            *facing = if direction > 0.0 { EnemyFacing::Left } else { EnemyFacing::Right };
+                        }
+                    } else if tile_row >= num_rows as i32 {
+                        // Below the map — no ground, reverse
+                        *facing = if direction > 0.0 { EnemyFacing::Left } else { EnemyFacing::Right };
                     }
                 }
             }
@@ -367,8 +387,8 @@ pub fn enemy_stomp_system(
                 | EnemyType::KoopaRed
                 | EnemyType::BuzzyBeetle
                 | EnemyType::Parakoopa => {
-                    if enemy.state == EnemyState::InShell {
-                        // Kick the shell — remove re-emerge timer so it stays a shell while moving
+                    if enemy.state == EnemyState::InShell || enemy.state == EnemyState::ShellMoving {
+                        // Kick or re-kick the shell
                         play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Kick);
                         enemy.state = EnemyState::ShellMoving;
                         enemy.kills_on_touch = true;

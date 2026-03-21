@@ -467,6 +467,7 @@ pub fn projectile_collision_system(
         }
 
         // Check vs players
+        let mut proj_consumed = false;
         for (p_entity, player, _p_vel, p_action, p_transform, p_collider, invincible, spawn_prot, mut shield) in
             player_query.iter_mut()
         {
@@ -497,22 +498,21 @@ pub fn projectile_collision_system(
             });
 
             if invincible.is_some() || spawn_prot.is_some() {
-                // Invincible or spawn-protected player destroys the projectile
                 commands.entity(proj_entity).despawn_recursive();
+                proj_consumed = true;
                 break;
             }
 
-            // Shields absorb projectile hits (break the shield instead of killing)
             if *shield != ShieldState::None {
                 play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::BlockBreak);
                 *shield = ShieldState::None;
                 commands.entity(proj_entity).despawn_recursive();
+                proj_consumed = true;
                 break;
             }
 
             match proj.projectile_type {
                 ProjectileType::IceBall => {
-                    // Freeze the player instead of killing
                     play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Transform);
                     commands.entity(p_entity).insert(
                         crate::player::components::FrozenState::new(3.0),
@@ -520,7 +520,6 @@ pub fn projectile_collision_system(
                     commands.entity(proj_entity).despawn_recursive();
                 }
                 _ => {
-                    // Send death event — player_death_system handles state, SFX, and animation
                     player_death_events.send(PlayerDeathEvent {
                         player_entity: p_entity,
                         player_index: player.index,
@@ -530,7 +529,12 @@ pub fn projectile_collision_system(
                     commands.entity(proj_entity).despawn_recursive();
                 }
             }
+            proj_consumed = true;
             break;
+        }
+
+        if proj_consumed {
+            continue;
         }
 
         // Check vs enemies
