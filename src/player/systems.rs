@@ -215,12 +215,24 @@ pub fn player_respawn_system(
         &mut PlayerAction,
         &mut Transform,
         &mut Grounded,
+        &mut PowerupState,
+        &mut ShieldState,
+        &mut CarriedObject,
     )>,
     mut respawn_events: EventReader<PlayerRespawnEvent>,
 ) {
     for event in respawn_events.read() {
-        if let Ok((entity, player, mut vel, mut action, mut transform, mut grounded)) =
-            query.get_mut(event.player_entity)
+        if let Ok((
+            entity,
+            player,
+            mut vel,
+            mut action,
+            mut transform,
+            mut grounded,
+            mut powerup_state,
+            mut shield_state,
+            mut carried,
+        )) = query.get_mut(event.player_entity)
         {
             let (spawn_x, spawn_y) = pick_spawn_location(&map_data, player.index);
 
@@ -231,9 +243,16 @@ pub fn player_respawn_system(
             grounded.on_ground = false;
             grounded.on_ice = false;
             *action = PlayerAction::Spawning;
+            *powerup_state = PowerupState::None;
+            *shield_state = ShieldState::None;
+            carried.entity = None;
 
+            // Remove powerup-specific state components
             commands
                 .entity(entity)
+                .remove::<CapeState>()
+                .remove::<TailState>()
+                .remove::<Invincible>()
                 .insert(SpawnProtection::new(SPAWN_PROTECTION_SECS));
         }
     }
@@ -753,7 +772,7 @@ pub fn warp_system(
     }
 }
 
-/// Updates player stats when stomp events occur.
+/// Updates the stomp counter when stomp events occur.
 pub fn update_stats_on_stomp(
     mut query: Query<(&Player, &mut PlayerStats)>,
     mut stomp_events: EventReader<PlayerStompEvent>,
@@ -762,28 +781,30 @@ pub fn update_stats_on_stomp(
         for (player, mut stats) in query.iter_mut() {
             if player.index == event.stomper_index {
                 stats.stomps += 1;
-                stats.kills += 1;
-            }
-            if player.index == event.stomped_index {
-                stats.deaths += 1;
             }
         }
     }
 }
 
-/// Updates player stats when death events occur (non-stomp deaths like falling).
+/// Updates kill/death/suicide stats for all death events (stomps, attacks, environment).
 pub fn update_stats_on_death(
     mut query: Query<(&Player, &mut PlayerStats)>,
     mut death_events: EventReader<PlayerDeathEvent>,
 ) {
     for event in death_events.read() {
-        if event.killer_index.is_some() {
-            continue; // Stomp deaths are counted in update_stats_on_stomp
-        }
         for (player, mut stats) in query.iter_mut() {
+            // Count victim's death
             if player.index == event.player_index {
                 stats.deaths += 1;
-                stats.suicides += 1;
+                if event.killer_index.is_none() {
+                    stats.suicides += 1;
+                }
+            }
+            // Count killer's kill (stomps, cape/tail attacks, projectiles, etc.)
+            if let Some(killer) = event.killer_index {
+                if player.index == killer {
+                    stats.kills += 1;
+                }
             }
         }
     }
