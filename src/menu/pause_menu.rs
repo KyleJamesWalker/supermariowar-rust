@@ -26,7 +26,7 @@ pub fn handle_pause_toggle(
 }
 
 /// Spawns the pause menu overlay when entering the Paused state.
-pub fn setup_pause_menu(mut commands: Commands) {
+pub fn setup_pause_menu(mut commands: Commands, mut selection: ResMut<PauseMenuSelection>) {
     // Semi-transparent overlay
     commands
         .spawn((
@@ -83,10 +83,10 @@ pub fn setup_pause_menu(mut commands: Commands) {
             }
         });
 
-    commands.insert_resource(PauseMenuSelection {
+    *selection = PauseMenuSelection {
         selected_index: 0,
         item_count: 3,
-    });
+    };
 }
 
 /// Handles input within the pause menu.

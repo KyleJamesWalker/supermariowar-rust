@@ -21,7 +21,8 @@ impl Plugin for MenuPlugin {
             .init_resource::<ScoreboardTimer>()
             .init_resource::<MenuSelection>()
             .init_resource::<GameSettingsSelection>()
-            .init_resource::<PlayerSelectState>();
+            .init_resource::<PlayerSelectState>()
+            .init_resource::<PauseMenuSelection>();
 
         // =====================================================================
         // Main Menu

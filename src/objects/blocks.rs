@@ -477,10 +477,8 @@ pub fn donut_block_timer_system(
                 game_obj.alive = false;
                 commands.entity(entity).despawn_recursive();
             }
-        } else {
-            // Slowly recover when no player is standing on it
-            donut.weight_timer = (donut.weight_timer - dt * 30.0).max(0.0);
         }
+        // C++ original has no recovery — once the timer starts it only goes up.
     }
 }
 
