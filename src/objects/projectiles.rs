@@ -269,20 +269,20 @@ pub fn projectile_movement_system(
     for (proj, mut vel, mut transform, mut grounded, boomerang) in query.iter_mut() {
         match proj.projectile_type {
             ProjectileType::Fireball | ProjectileType::IceBall => {
-                // Gravity
-                vel.y += GRAVITY;
-                if vel.y > MAX_FALL_SPEED {
-                    vel.y = MAX_FALL_SPEED;
+                // Gravity (negative = downward in Bevy Y-up)
+                vel.y -= GRAVITY;
+                if vel.y < -MAX_FALL_SPEED {
+                    vel.y = -MAX_FALL_SPEED;
                 }
 
                 transform.translation.x += vel.x;
                 transform.translation.y += vel.y;
 
-                // Floor bounce
-                let floor_y = SCREEN_HEIGHT - 16.0;
-                if transform.translation.y >= floor_y {
+                // Floor bounce (Bevy centered coords)
+                let floor_y = -(SCREEN_HEIGHT / 2.0 - 16.0);
+                if transform.translation.y <= floor_y {
                     transform.translation.y = floor_y;
-                    vel.y = -FIREBALL_BOUNCE;
+                    vel.y = FIREBALL_BOUNCE;
                     grounded.0 = true;
                 } else {
                     grounded.0 = false;
@@ -335,9 +335,9 @@ pub fn projectile_movement_system(
                 transform.translation.x += vel.x;
                 transform.translation.y += vel.y;
 
-                // Floor collision -- bomb stops on ground
-                let floor_y = SCREEN_HEIGHT - 16.0;
-                if transform.translation.y >= floor_y {
+                // Floor collision -- bomb stops on ground (Bevy centered coords)
+                let floor_y = -(SCREEN_HEIGHT / 2.0 - 16.0);
+                if transform.translation.y <= floor_y {
                     transform.translation.y = floor_y;
                     vel.x *= 0.8; // Friction
                     vel.y = 0.0;
@@ -348,9 +348,9 @@ pub fn projectile_movement_system(
                 transform.translation.x += vel.x;
                 transform.translation.y += vel.y;
 
-                // Floor
-                let floor_y = SCREEN_HEIGHT - 16.0;
-                if transform.translation.y >= floor_y {
+                // Floor (Bevy centered coords)
+                let floor_y = -(SCREEN_HEIGHT / 2.0 - 16.0);
+                if transform.translation.y <= floor_y {
                     transform.translation.y = floor_y;
                     vel.y = 0.0;
                     grounded.0 = true;
@@ -362,11 +362,13 @@ pub fn projectile_movement_system(
             }
         }
 
-        // Screen wrapping
-        if transform.translation.x > SCREEN_WIDTH + TILE_SIZE {
-            transform.translation.x = -TILE_SIZE;
-        } else if transform.translation.x < -TILE_SIZE {
-            transform.translation.x = SCREEN_WIDTH + TILE_SIZE;
+        // Screen wrapping (centered coords)
+        let wrap_right = SCREEN_WIDTH / 2.0 + TILE_SIZE;
+        let wrap_left = -(SCREEN_WIDTH / 2.0 + TILE_SIZE);
+        if transform.translation.x > wrap_right {
+            transform.translation.x = wrap_left;
+        } else if transform.translation.x < wrap_left {
+            transform.translation.x = wrap_right;
         }
     }
 }
@@ -535,8 +537,10 @@ pub fn projectile_bounce_system(
                 if proj.bounces_remaining == 0 && grounded.0 {
                     commands.entity(entity).despawn_recursive();
                 }
-                // Despawn on wall hit
-                if transform.translation.x <= 1.0 || transform.translation.x >= SCREEN_WIDTH - 1.0
+                // Despawn on wall hit (centered coords)
+                let left_wall = -(SCREEN_WIDTH / 2.0) + 1.0;
+                let right_wall = SCREEN_WIDTH / 2.0 - 1.0;
+                if transform.translation.x <= left_wall || transform.translation.x >= right_wall
                 {
                     commands.entity(entity).despawn_recursive();
                 }
@@ -653,8 +657,8 @@ pub fn projectile_despawn_offscreen_system(
     query: Query<(Entity, &Transform), (With<Projectile>, With<DespawnOffScreen>)>,
 ) {
     for (entity, transform) in query.iter() {
-        if transform.translation.y > SCREEN_HEIGHT + TILE_SIZE * 2.0
-            || transform.translation.y < -TILE_SIZE * 4.0
+        if transform.translation.y < -(SCREEN_HEIGHT / 2.0 + TILE_SIZE * 2.0)
+            || transform.translation.y > SCREEN_HEIGHT / 2.0 + TILE_SIZE * 4.0
         {
             commands.entity(entity).despawn_recursive();
         }

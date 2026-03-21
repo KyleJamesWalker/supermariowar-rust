@@ -177,9 +177,9 @@ pub fn block_hit_system(
     for (p_entity, player, mut p_vel, p_transform, p_collider, _facing, mut carried) in
         player_query.iter_mut()
     {
-        // Only check for hits when player is moving upward
-        if p_vel.y >= 0.0 {
-            continue;
+        // Only check for hits when player is moving upward (positive Y = up in Bevy's Y-up system)
+        if p_vel.y <= 0.0 {
+            continue; // Skip if player is NOT moving up
         }
 
         for (b_entity, block_type, mut block_state, b_collider, b_transform, mut game_obj) in
@@ -234,6 +234,11 @@ pub fn block_hit_system(
                         }
                         block_state.hit = true;
                         block_state.hit_timer = 0.0;
+                        commands.entity(b_entity).insert(BlockBumpAnimation {
+                            original_y: b_transform.translation.y,
+                            timer: 0.0,
+                            duration: 0.15,
+                        });
 
                         // Spawn a powerup above the block
                         let spawn_x = b_transform.translation.x;
@@ -250,17 +255,32 @@ pub fn block_hit_system(
                     play_sfx(&mut commands, &sfx, SfxId::BlockHit);
                     block_state.hit = true;
                     block_state.hit_timer = 0.0;
+                    commands.entity(b_entity).insert(BlockBumpAnimation {
+                        original_y: b_transform.translation.y,
+                        timer: 0.0,
+                        duration: 0.15,
+                    });
                     // Entities standing on this block get bounced (handled in separate pass)
                 }
                 BlockType::NoteBlock => {
                     play_sfx(&mut commands, &sfx, SfxId::BlockHit);
                     block_state.hit = true;
                     block_state.hit_timer = 0.0;
+                    commands.entity(b_entity).insert(BlockBumpAnimation {
+                        original_y: b_transform.translation.y,
+                        timer: 0.0,
+                        duration: 0.15,
+                    });
                     // Stronger bounce handled separately
                 }
                 BlockType::FlipBlock => {
                     play_sfx(&mut commands, &sfx, SfxId::BlockHit);
                     block_state.hit = true;
+                    commands.entity(b_entity).insert(BlockBumpAnimation {
+                        original_y: b_transform.translation.y,
+                        timer: 0.0,
+                        duration: 0.15,
+                    });
                     // Flip animation starts -- FlipBlockState is handled in flip_block_system
                 }
                 BlockType::OnOffSwitch => {
@@ -268,6 +288,11 @@ pub fn block_hit_system(
                     on_off_state.active = !on_off_state.active;
                     block_state.hit = true;
                     block_state.hit_timer = 0.0;
+                    commands.entity(b_entity).insert(BlockBumpAnimation {
+                        original_y: b_transform.translation.y,
+                        timer: 0.0,
+                        duration: 0.15,
+                    });
                 }
                 BlockType::ThrowBlock => {
                     play_sfx(&mut commands, &sfx, SfxId::ThrowBlock);
@@ -282,6 +307,11 @@ pub fn block_hit_system(
                 BlockType::DonutBlock => {
                     // Donut blocks aren't typically hit from below, but mark anyway
                     block_state.hit = true;
+                    commands.entity(b_entity).insert(BlockBumpAnimation {
+                        original_y: b_transform.translation.y,
+                        timer: 0.0,
+                        duration: 0.15,
+                    });
                 }
                 BlockType::WeaponBreakable | BlockType::ViewBlock | BlockType::OnOffBlock => {
                     // These blocks respond to other interactions

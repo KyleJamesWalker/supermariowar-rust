@@ -194,9 +194,11 @@ pub fn enemy_movement_system(
                 // Red koopas turn at edges when on the ground
                 // This is a simplified edge detection using screen boundaries
                 if enemy.enemy_type == EnemyType::KoopaRed && grounded.0 {
-                    if transform.translation.x <= TILE_SIZE {
+                    let left_edge = -(SCREEN_WIDTH / 2.0) + TILE_SIZE;
+                    let right_edge = SCREEN_WIDTH / 2.0 - TILE_SIZE * 2.0;
+                    if transform.translation.x <= left_edge {
                         *facing = EnemyFacing::Right;
-                    } else if transform.translation.x >= SCREEN_WIDTH - TILE_SIZE * 2.0 {
+                    } else if transform.translation.x >= right_edge {
                         *facing = EnemyFacing::Left;
                     }
                 }
@@ -221,19 +223,19 @@ pub fn enemy_gravity_system(
     mut query: Query<(&mut ObjectVelocity, &mut Transform, &mut ObjectGrounded), With<Enemy>>,
 ) {
     for (mut vel, mut transform, mut grounded) in query.iter_mut() {
-        // Apply gravity
-        vel.y += GRAVITY;
-        if vel.y > MAX_FALL_SPEED {
-            vel.y = MAX_FALL_SPEED;
+        // Apply gravity (negative = downward in Bevy Y-up)
+        vel.y -= GRAVITY;
+        if vel.y < -MAX_FALL_SPEED {
+            vel.y = -MAX_FALL_SPEED;
         }
 
         // Apply velocity
         transform.translation.x += vel.x;
         transform.translation.y += vel.y;
 
-        // Simplified floor collision
-        let floor_y = SCREEN_HEIGHT - TILE_SIZE;
-        if transform.translation.y >= floor_y {
+        // Simplified floor collision (Bevy centered coords)
+        let floor_y = -(SCREEN_HEIGHT / 2.0 - TILE_SIZE);
+        if transform.translation.y <= floor_y {
             transform.translation.y = floor_y;
             vel.y = 0.0;
             grounded.0 = true;
@@ -241,11 +243,13 @@ pub fn enemy_gravity_system(
             grounded.0 = false;
         }
 
-        // Screen wrapping (horizontal)
-        if transform.translation.x > SCREEN_WIDTH + TILE_SIZE {
-            transform.translation.x = -TILE_SIZE;
-        } else if transform.translation.x < -TILE_SIZE {
-            transform.translation.x = SCREEN_WIDTH + TILE_SIZE;
+        // Screen wrapping (horizontal, centered coords)
+        let wrap_right = SCREEN_WIDTH / 2.0 + TILE_SIZE;
+        let wrap_left = -(SCREEN_WIDTH / 2.0 + TILE_SIZE);
+        if transform.translation.x > wrap_right {
+            transform.translation.x = wrap_left;
+        } else if transform.translation.x < wrap_left {
+            transform.translation.x = wrap_right;
         }
     }
 }
@@ -280,9 +284,9 @@ pub fn enemy_stomp_system(
             continue;
         }
 
-        // Player must be falling to stomp
-        if p_vel.y <= 0.0 {
-            continue;
+        // Player must be falling to stomp (negative Y = falling in Bevy's Y-up system)
+        if p_vel.y >= 0.0 {
+            continue; // Skip if player is NOT falling
         }
 
         for (e_entity, mut enemy, e_collider, e_transform, mut game_obj) in
@@ -464,13 +468,15 @@ pub fn enemy_map_collision(
     mut query: Query<(&mut EnemyFacing, &mut ObjectVelocity, &Transform), With<Enemy>>,
 ) {
     for (mut facing, mut vel, transform) in query.iter_mut() {
+        let left_wall = -(SCREEN_WIDTH / 2.0);
+        let right_wall = SCREEN_WIDTH / 2.0 - TILE_SIZE;
         // Bounce off left wall
-        if transform.translation.x <= 0.0 && vel.x < 0.0 {
+        if transform.translation.x <= left_wall && vel.x < 0.0 {
             vel.x = vel.x.abs();
             *facing = EnemyFacing::Right;
         }
         // Bounce off right wall
-        if transform.translation.x >= SCREEN_WIDTH - TILE_SIZE && vel.x > 0.0 {
+        if transform.translation.x >= right_wall && vel.x > 0.0 {
             vel.x = -vel.x.abs();
             *facing = EnemyFacing::Left;
         }
@@ -565,7 +571,7 @@ pub fn enemy_despawn_offscreen_system(
     query: Query<(Entity, &Transform), (With<Enemy>, With<DespawnOffScreen>)>,
 ) {
     for (entity, transform) in query.iter() {
-        if transform.translation.y > SCREEN_HEIGHT + TILE_SIZE * 2.0 {
+        if transform.translation.y < -(SCREEN_HEIGHT / 2.0 + TILE_SIZE * 2.0) {
             commands.entity(entity).despawn_recursive();
         }
     }

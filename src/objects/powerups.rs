@@ -203,19 +203,19 @@ pub fn powerup_movement_system(
 
         match physics {
             PowerupPhysics::Sliding => {
-                // Apply gravity
-                vel.y += GRAVITY;
-                if vel.y > MAX_FALL_SPEED {
-                    vel.y = MAX_FALL_SPEED;
+                // Apply gravity (negative = downward in Bevy Y-up)
+                vel.y -= GRAVITY;
+                if vel.y < -MAX_FALL_SPEED {
+                    vel.y = -MAX_FALL_SPEED;
                 }
 
                 // Move
                 transform.translation.x += vel.x;
                 transform.translation.y += vel.y;
 
-                // Floor collision (simplified boundary)
-                let floor_y = SCREEN_HEIGHT - TILE_SIZE;
-                if transform.translation.y >= floor_y {
+                // Floor collision (Bevy centered coords: bottom of screen + one tile)
+                let floor_y = -(SCREEN_HEIGHT / 2.0 - TILE_SIZE);
+                if transform.translation.y <= floor_y {
                     transform.translation.y = floor_y;
                     vel.y = 0.0;
                     grounded.0 = true;
@@ -223,67 +223,73 @@ pub fn powerup_movement_system(
                     grounded.0 = false;
                 }
 
-                // Wall bounce (screen edges)
-                if transform.translation.x <= 0.0 {
-                    transform.translation.x = 0.0;
+                // Wall bounce (screen edges in centered coords)
+                let left_wall = -(SCREEN_WIDTH / 2.0);
+                let right_wall = SCREEN_WIDTH / 2.0 - TILE_SIZE;
+                if transform.translation.x <= left_wall {
+                    transform.translation.x = left_wall;
                     vel.x = vel.x.abs();
-                } else if transform.translation.x >= SCREEN_WIDTH - TILE_SIZE {
-                    transform.translation.x = SCREEN_WIDTH - TILE_SIZE;
+                } else if transform.translation.x >= right_wall {
+                    transform.translation.x = right_wall;
                     vel.x = -vel.x.abs();
                 }
 
-                // Screen wrapping (horizontal)
-                if transform.translation.x > SCREEN_WIDTH + TILE_SIZE {
-                    transform.translation.x = -TILE_SIZE;
-                } else if transform.translation.x < -TILE_SIZE {
-                    transform.translation.x = SCREEN_WIDTH + TILE_SIZE;
+                // Screen wrapping (horizontal, centered coords)
+                let wrap_right = SCREEN_WIDTH / 2.0 + TILE_SIZE;
+                let wrap_left = -(SCREEN_WIDTH / 2.0 + TILE_SIZE);
+                if transform.translation.x > wrap_right {
+                    transform.translation.x = wrap_left;
+                } else if transform.translation.x < wrap_left {
+                    transform.translation.x = wrap_right;
                 }
             }
             PowerupPhysics::Floating => {
                 // Gentle float downward with sine-wave horizontal drift
-                vel.y += GRAVITY * 0.15;
-                if vel.y > 2.0 {
-                    vel.y = 2.0;
+                vel.y -= GRAVITY * 0.15;
+                if vel.y < -2.0 {
+                    vel.y = -2.0;
                 }
                 let drift =
                     (time.elapsed_secs() * 3.0).sin() * 0.5;
                 transform.translation.x += drift * dt * 60.0;
                 transform.translation.y += vel.y;
 
-                // Floor
-                let floor_y = SCREEN_HEIGHT - TILE_SIZE;
-                if transform.translation.y >= floor_y {
+                // Floor (Bevy centered coords)
+                let floor_y = -(SCREEN_HEIGHT / 2.0 - TILE_SIZE);
+                if transform.translation.y <= floor_y {
                     transform.translation.y = floor_y;
                     vel.y = 0.0;
                     grounded.0 = true;
                 }
             }
             PowerupPhysics::Bouncing => {
-                // Apply gravity
-                vel.y += GRAVITY;
-                if vel.y > MAX_FALL_SPEED {
-                    vel.y = MAX_FALL_SPEED;
+                // Apply gravity (negative = downward in Bevy Y-up)
+                vel.y -= GRAVITY;
+                if vel.y < -MAX_FALL_SPEED {
+                    vel.y = -MAX_FALL_SPEED;
                 }
 
                 transform.translation.x += vel.x;
                 transform.translation.y += vel.y;
 
-                // Floor bounce
-                let floor_y = SCREEN_HEIGHT - TILE_SIZE;
-                if transform.translation.y >= floor_y {
+                // Floor bounce (Bevy centered coords)
+                let floor_y = -(SCREEN_HEIGHT / 2.0 - TILE_SIZE);
+                if transform.translation.y <= floor_y {
                     transform.translation.y = floor_y;
-                    vel.y = -VEL_POWERUP_BOUNCE;
+                    vel.y = VEL_POWERUP_BOUNCE;
                     grounded.0 = true;
                 } else {
                     grounded.0 = false;
                 }
 
-                // Wall bounce
-                if transform.translation.x <= 0.0 {
-                    transform.translation.x = 0.0;
+                // Wall bounce (centered coords)
+                let left_wall = -(SCREEN_WIDTH / 2.0);
+                let right_wall = SCREEN_WIDTH / 2.0 - TILE_SIZE;
+                if transform.translation.x <= left_wall {
+                    transform.translation.x = left_wall;
                     vel.x = vel.x.abs();
-                } else if transform.translation.x >= SCREEN_WIDTH - TILE_SIZE {
-                    transform.translation.x = SCREEN_WIDTH - TILE_SIZE;
+                } else if transform.translation.x >= right_wall {
+                    transform.translation.x = right_wall;
                     vel.x = -vel.x.abs();
                 }
             }
@@ -450,7 +456,7 @@ pub fn powerup_despawn_offscreen_system(
     query: Query<(Entity, &Transform), (With<SpawnedPowerup>, With<DespawnOffScreen>)>,
 ) {
     for (entity, transform) in query.iter() {
-        if transform.translation.y > SCREEN_HEIGHT + TILE_SIZE * 2.0 {
+        if transform.translation.y < -(SCREEN_HEIGHT / 2.0 + TILE_SIZE * 2.0) {
             commands.entity(entity).despawn_recursive();
         }
     }
