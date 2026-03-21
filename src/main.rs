@@ -1,4 +1,7 @@
+#![allow(dead_code)]
+
 use bevy::prelude::*;
+use bevy::asset::AssetPlugin;
 use bevy::window::{PresentMode, WindowResolution};
 
 mod ai;
@@ -33,6 +36,10 @@ fn main() {
                     }),
                     ..default()
                 })
+                .set(AssetPlugin {
+                    file_path: "data".to_string(),
+                    ..default()
+                })
                 .set(ImagePlugin::default_nearest()),
         )
         // Game plugins
@@ -56,6 +63,14 @@ fn main() {
         .add_systems(
             Update,
             splash_advance.run_if(in_state(GameState::Splash)),
+        )
+        // Gameplay orchestration: reset round countdown when entering Gameplay
+        .add_systems(OnEnter(GameState::Gameplay), reset_countdown_on_enter)
+        // GameOver state: auto-return to menu after a delay
+        .add_systems(OnEnter(GameState::GameOver), game_over_setup)
+        .add_systems(
+            Update,
+            game_over_advance.run_if(in_state(GameState::GameOver)),
         )
         .run();
 }
@@ -81,6 +96,43 @@ fn splash_advance(
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     if timer.0.tick(time.delta()).just_finished() {
+        next_state.set(GameState::Menu);
+    }
+}
+
+/// Resets the round countdown timer when entering Gameplay state so the
+/// 3-2-1-GO! sequence starts fresh each time a game begins.
+fn reset_countdown_on_enter(
+    mut countdown: ResMut<game_modes::traits::RoundCountdown>,
+    mut scoreboard: ResMut<game_modes::traits::ScoreBoard>,
+    mut game_timer: ResMut<game_modes::traits::GameTimer>,
+) {
+    *countdown = game_modes::traits::RoundCountdown::default();
+    *scoreboard = game_modes::traits::ScoreBoard::default();
+    *game_timer = game_modes::traits::GameTimer::default();
+}
+
+/// Resource for game-over screen timing.
+#[derive(Resource)]
+struct GameOverTimer(Timer);
+
+/// Sets up a timer on the GameOver screen so it auto-returns to Menu.
+fn game_over_setup(mut commands: Commands) {
+    commands.insert_resource(GameOverTimer(Timer::from_seconds(5.0, TimerMode::Once)));
+}
+
+/// During GameOver, wait for timer or Enter press, then return to Menu.
+fn game_over_advance(
+    time: Res<Time>,
+    mut timer: ResMut<GameOverTimer>,
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    timer.0.tick(time.delta());
+    if timer.0.just_finished()
+        || keyboard.just_pressed(KeyCode::Enter)
+        || keyboard.just_pressed(KeyCode::Space)
+    {
         next_state.set(GameState::Menu);
     }
 }

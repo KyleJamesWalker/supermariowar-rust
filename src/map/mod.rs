@@ -7,7 +7,9 @@ use std::path::PathBuf;
 
 use crate::core::constants::*;
 use crate::core::game_state::GameState;
+use crate::menu::components::{ControlType, GameSetupConfig};
 use crate::player::components::PlayerBundle;
+use crate::physics::components::Collider;
 use components::*;
 use tileset::*;
 
@@ -70,12 +72,13 @@ fn setup_gameplay(
     mut commands: Commands,
     mut map_data: ResMut<MapData>,
     tileset_mgr: Res<TilesetManager>,
+    game_setup: Res<GameSetupConfig>,
 ) {
-    // Pick a map file – for now default to 0smw.map
+    // Pick a map file -- for now default to 0smw.map
     let map_path = PathBuf::from("data/maps/0smw.map");
     *map_data = loader::load_map_from_file(&map_path);
 
-    // Build the tileset translation (map-file tileset ids → loaded indices)
+    // Build the tileset translation (map-file tileset ids -> loaded indices)
     let translation = build_tileset_translation(&map_data, &tileset_mgr);
 
     // Spawn tile entities for each non-empty tile
@@ -84,8 +87,8 @@ fn setup_gameplay(
     // Spawn moving platform entities
     spawn_platforms(&mut commands, &map_data, &tileset_mgr, &translation);
 
-    // Spawn players at valid spawn areas
-    spawn_players(&mut commands, &map_data);
+    // Spawn players based on GameSetupConfig (respects menu player selection)
+    spawn_players_from_config(&mut commands, &map_data, &game_setup);
 
     info!("Gameplay map setup complete (loaded={})", map_data.loaded);
 }
@@ -256,6 +259,42 @@ fn spawn_platforms(
 // Player spawning
 // ---------------------------------------------------------------------------
 
+fn spawn_players_from_config(commands: &mut Commands, md: &MapData, config: &GameSetupConfig) {
+    // Count active (non-None) player slots
+    let active_slots: Vec<(usize, &crate::menu::components::PlayerSlotConfig)> = config
+        .player_slots
+        .iter()
+        .enumerate()
+        .filter(|(_, slot)| slot.control_type != ControlType::None)
+        .collect();
+
+    let num_players = active_slots.len().max(2);
+    let spawn_positions = pick_spawn_positions(md, num_players);
+
+    for (spawn_idx, (player_index, slot)) in active_slots.iter().enumerate() {
+        let (sx, sy) = spawn_positions[spawn_idx % spawn_positions.len()];
+        let bx = tile_to_bevy_x(sx as u32);
+        let by = tile_to_bevy_y(sy as u32);
+
+        let mut bundle = PlayerBundle::new(*player_index, slot.team, bx, by);
+        bundle.player.lives = config.lives as i32;
+        bundle.skin_index = crate::player::components::PlayerSkinIndex(slot.skin_index);
+
+        commands.spawn((
+            bundle,
+            Collider::new(PLAYER_WIDTH, PLAYER_HEIGHT),
+            crate::physics::components::CollisionLayer::Player,
+            crate::physics::components::GravityAffected::default(),
+            GameplayEntity,
+        ));
+
+        info!(
+            "Spawned player {} (team {}) at tile ({}, {}) -> bevy ({:.0}, {:.0})",
+            player_index, slot.team, sx, sy, bx, by
+        );
+    }
+}
+
 fn spawn_players(commands: &mut Commands, md: &MapData) {
     let spawn_positions = pick_spawn_positions(md, 2);
 
@@ -265,10 +304,13 @@ fn spawn_players(commands: &mut Commands, md: &MapData) {
 
         commands.spawn((
             PlayerBundle::new(i, i as u8, bx, by),
+            Collider::new(PLAYER_WIDTH, PLAYER_HEIGHT),
+            crate::physics::components::CollisionLayer::Player,
+            crate::physics::components::GravityAffected::default(),
             GameplayEntity,
         ));
 
-        info!("Spawned player {} at tile ({}, {}) → bevy ({:.0}, {:.0})", i, sx, sy, bx, by);
+        info!("Spawned player {} at tile ({}, {}) -> bevy ({:.0}, {:.0})", i, sx, sy, bx, by);
     }
 }
 
