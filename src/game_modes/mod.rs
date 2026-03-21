@@ -14,7 +14,12 @@ use bevy::prelude::*;
 
 use crate::core::constants::MAX_PLAYERS;
 use crate::core::game_state::{GameState, GameplayState, MatchResult};
-use crate::player::components::{DeathCause, PlayerDeathEvent, PlayerStompEvent};
+use crate::objects::projectiles::Projectile;
+use crate::objects::powerups::SpawnedPowerup;
+use crate::player::components::{
+    CarriedObject, DeathCause, FrozenState, Grounded, Invincible, Player, PlayerAction,
+    PlayerDeathEvent, PlayerStompEvent, ShieldState, SpawnProtection, Velocity,
+};
 use traits::*;
 
 // ---------------------------------------------------------------------------
@@ -160,17 +165,25 @@ impl Plugin for GameModesPlugin {
                 .run_if(playing_condition),
         );
 
-        // --- RoundOver systems ---
+        // --- RoundOver timer (only ticks in RoundOver state) ---
+        app.add_systems(
+            Update,
+            round_over_timer_system
+                .run_if(in_state(GameState::Gameplay))
+                .run_if(in_state(GameplayState::RoundOver)),
+        );
+
+        // --- Round reset systems (run in ANY gameplay state when PendingRoundReset is set) ---
+        // This allows both RoundOver→Countdown and Paused→Countdown (restart) paths.
         app.add_systems(
             Update,
             (
-                round_over_timer_system,
                 reset_mode_state_on_new_round,
                 cleanup_mode_entities_on_new_round,
+                cleanup_transient_entities_on_new_round,
             )
                 .chain()
-                .run_if(in_state(GameState::Gameplay))
-                .run_if(in_state(GameplayState::RoundOver)),
+                .run_if(in_state(GameState::Gameplay)),
         );
 
         // --- HUD system (runs any time we are in Gameplay) ---
@@ -427,6 +440,55 @@ fn cleanup_mode_entities_on_new_round(
     }
     for entity in tagged_query.iter() {
         commands.entity(entity).remove::<tag::TaggedIt>();
+    }
+}
+
+/// Despawns transient gameplay entities (projectiles, powerups) and resets
+/// player state between rounds. Runs after cleanup_mode_entities_on_new_round.
+fn cleanup_transient_entities_on_new_round(
+    mut commands: Commands,
+    pending_reset: Res<PendingRoundReset>,
+    projectile_query: Query<Entity, With<Projectile>>,
+    powerup_query: Query<Entity, With<SpawnedPowerup>>,
+    mut player_query: Query<(
+        Entity,
+        &mut PlayerAction,
+        &mut Velocity,
+        &mut Grounded,
+        &mut ShieldState,
+        &mut CarriedObject,
+    ), With<Player>>,
+) {
+    // Only run when reset was just consumed (changed from true to false)
+    if !pending_reset.is_changed() || pending_reset.0 {
+        return;
+    }
+
+    // Despawn all projectiles
+    for entity in projectile_query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+    // Despawn all active powerups on the field
+    for entity in powerup_query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+
+    // Reset player state for the new round
+    for (entity, mut action, mut vel, mut grounded, mut shield, mut carried) in player_query.iter_mut() {
+        *action = PlayerAction::Standing;
+        vel.x = 0.0;
+        vel.y = 0.0;
+        grounded.on_ground = true;
+        grounded.on_ice = false;
+        *shield = ShieldState::None;
+        if let Some(block_entity) = carried.entity.take() {
+            commands.entity(block_entity).despawn_recursive();
+        }
+        // Remove transient components
+        commands.entity(entity)
+            .remove::<FrozenState>()
+            .remove::<Invincible>()
+            .remove::<SpawnProtection>();
     }
 }
 
