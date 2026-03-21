@@ -167,11 +167,13 @@ pub fn flag_follow_carrier(
 /// Detects flag capture: carrier brings enemy flag to their own base while
 /// their own flag is still at base.
 pub fn flag_capture_system(
+    mut commands: Commands,
     config: Res<GameModeConfig>,
     mut state: ResMut<CtfModeState>,
     mut scoreboard: ResMut<ScoreBoard>,
     players: Query<(&Player, &Transform)>,
     mut flags: Query<(&mut Flag, &mut Transform), Without<Player>>,
+    indicator_query: Query<(Entity, &FlagCarrierIndicator)>,
     mut objective_events: EventWriter<ObjectiveEvent>,
 ) {
     if config.mode_type != GameModeType::CaptureTheFlag {
@@ -221,6 +223,13 @@ pub fn flag_capture_system(
                     flag.at_base = true;
                     flag_tf.translation.x = flag.base_position.x;
                     flag_tf.translation.y = flag.base_position.y;
+                }
+            }
+
+            // Remove the carrier indicator from this player
+            for (ind_entity, ind) in indicator_query.iter() {
+                if ind.player_index == player.index {
+                    commands.entity(ind_entity).despawn_recursive();
                 }
             }
 

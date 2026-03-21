@@ -389,9 +389,11 @@ fn cleanup_mode_entities_on_new_round(
     mut commands: Commands,
     pending_reset: Res<PendingRoundReset>,
     flag_query: Query<Entity, With<ctf::Flag>>,
+    indicator_query: Query<Entity, With<ctf::FlagCarrierIndicator>>,
     zone_query: Query<Entity, With<domination::DominationZone>>,
     hill_query: Query<Entity, With<king_of_the_hill::HillZone>>,
     coin_query: Query<Entity, With<coins::CoinEntity>>,
+    tagged_query: Query<Entity, With<tag::TaggedIt>>,
 ) {
     // Only run when reset_mode_state_on_new_round just consumed the flag
     // (changed it from true to false) in the same frame.
@@ -402,6 +404,9 @@ fn cleanup_mode_entities_on_new_round(
     for entity in flag_query.iter() {
         commands.entity(entity).despawn_recursive();
     }
+    for entity in indicator_query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
     for entity in zone_query.iter() {
         commands.entity(entity).despawn_recursive();
     }
@@ -410,6 +415,9 @@ fn cleanup_mode_entities_on_new_round(
     }
     for entity in coin_query.iter() {
         commands.entity(entity).despawn_recursive();
+    }
+    for entity in tagged_query.iter() {
+        commands.entity(entity).remove::<tag::TaggedIt>();
     }
 }
 

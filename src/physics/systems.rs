@@ -637,6 +637,27 @@ pub fn object_map_collision(
             }
         }
 
+        // --- Vertical collision (ceiling) ---
+        // Check ceiling (object moving upward in Bevy = vel.y positive)
+        if vel.y > 0.0 {
+            let head_smw_y = to_smw_y(transform.translation.y);
+            let head_tile_y = (head_smw_y / TILE_SIZE).floor() as i32;
+            if head_tile_y >= 0 && (head_tile_y as usize) < num_rows {
+                let ty = head_tile_y as usize;
+                for tx in left_tile..=(right_tile.min(num_cols.saturating_sub(1))) {
+                    let tile = get_collision(&map_data.collision_map, num_cols, num_rows, tx, ty);
+                    if tile == CollisionType::Solid || tile == CollisionType::Ice {
+                        let tile_bottom_smw = (ty as f32 + 1.0) * TILE_SIZE;
+                        if head_smw_y <= tile_bottom_smw {
+                            // Push object below the tile (in SMW space)
+                            transform.translation.y = to_bevy_y(tile_bottom_smw);
+                            vel.y = 0.0;
+                        }
+                    }
+                }
+            }
+        }
+
         // --- Horizontal collision (walls) ---
         // Recalculate SMW position after vertical correction
         let smw_x = to_smw_x(transform.translation.x);
