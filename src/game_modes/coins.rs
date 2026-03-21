@@ -46,9 +46,9 @@ pub fn coin_spawn_system(
 
     state.spawn_timer.tick(time.delta());
     if state.spawn_timer.just_finished() {
-        // Pick a random position on the map grid
-        let x = (rand::random::<f32>() * (SCREEN_WIDTH - TILE_SIZE * 2.0)) + TILE_SIZE;
-        let y = (rand::random::<f32>() * (SCREEN_HEIGHT - TILE_SIZE * 4.0)) + TILE_SIZE;
+        // Pick a random position using Bevy centered coordinates
+        let x = rand::random::<f32>() * (SCREEN_WIDTH - TILE_SIZE * 2.0) - SCREEN_WIDTH / 2.0 + TILE_SIZE;
+        let y = SCREEN_HEIGHT / 2.0 - rand::random::<f32>() * (SCREEN_HEIGHT - TILE_SIZE * 4.0) - TILE_SIZE;
 
         commands.spawn((
             CoinEntity::default(),
@@ -89,7 +89,7 @@ pub fn coins_drop_on_kill(
     config: Res<GameModeConfig>,
     mut state: ResMut<CoinModeState>,
     mut kill_events: EventReader<PlayerKillEvent>,
-    players: Query<&Transform, With<crate::player::components::Player>>,
+    players: Query<(&crate::player::components::Player, &Transform)>,
     mut commands: Commands,
 ) {
     if config.mode_type != GameModeType::CoinCollection {
@@ -111,14 +111,14 @@ pub fn coins_drop_on_kill(
         // Reduce victim's coins
         state.coins[event.victim] = state.coins[event.victim].saturating_sub(drop_count);
 
-        // Find victim position
+        // Find victim position by matching on player index
         let victim_pos = players
             .iter()
-            .find(|_| true) // fallback: spawn at center
-            .map(|t| t.translation)
-            .unwrap_or(Vec3::new(SCREEN_WIDTH * 0.5, SCREEN_HEIGHT * 0.5, 5.0));
+            .find(|(p, _)| p.index == event.victim)
+            .map(|(_, t)| t.translation)
+            .unwrap_or(Vec3::new(0.0, 0.0, 5.0));
 
-        // Spawn scattered coins around the victim
+        // Spawn scattered coins around the victim using Bevy centered coordinates
         for i in 0..drop_count {
             let angle = (i as f32 / drop_count as f32) * std::f32::consts::TAU;
             let offset_x = angle.cos() * TILE_SIZE;
@@ -129,8 +129,8 @@ pub fn coins_drop_on_kill(
                 Collectible,
                 Collider::new(TILE_SIZE * 0.5, TILE_SIZE * 0.5),
                 Transform::from_xyz(
-                    (victim_pos.x + offset_x).clamp(0.0, SCREEN_WIDTH),
-                    (victim_pos.y + offset_y).clamp(0.0, SCREEN_HEIGHT),
+                    (victim_pos.x + offset_x).clamp(-SCREEN_WIDTH / 2.0, SCREEN_WIDTH / 2.0),
+                    (victim_pos.y + offset_y).clamp(-SCREEN_HEIGHT / 2.0, SCREEN_HEIGHT / 2.0),
                     5.0,
                 ),
                 GlobalTransform::default(),

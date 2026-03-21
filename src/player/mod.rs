@@ -20,12 +20,13 @@ impl Plugin for PlayerPlugin {
             .add_event::<components::PlayerStompEvent>()
             .add_event::<components::PlayerRespawnEvent>()
             .add_event::<components::PauseEvent>()
-            // Input phase
+            // Input phase — must run during both Playing and Paused so the
+            // player can unpause.  AI systems have their own Playing-only guard.
             .add_systems(
                 Update,
                 input::read_player_input
                     .in_set(GameSystemSet::Input)
-                    .run_if(gameplay_playing.clone()),
+                    .run_if(in_state(GameState::Gameplay)),
             )
             // Movement phase: timers, movement, jump
             .add_systems(
