@@ -360,10 +360,12 @@ pub fn projectile_movement_system(
                     }
 
                     if boom.returning {
-                        // Curve back toward the owner
+                        // Curve back toward the owner using screen-wrap-aware distance
                         if let Ok(owner_transform) = owner_query.get(boom.owner_entity) {
-                            let diff_x =
-                                owner_transform.translation.x - transform.translation.x;
+                            let diff_x = crate::physics::collision::wrapped_distance_x(
+                                transform.translation.x,
+                                owner_transform.translation.x,
+                            );
                             let diff_y =
                                 owner_transform.translation.y - transform.translation.y;
                             let dist = (diff_x * diff_x + diff_y * diff_y).sqrt().max(1.0);

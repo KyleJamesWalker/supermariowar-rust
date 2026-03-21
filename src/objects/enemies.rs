@@ -491,12 +491,12 @@ pub fn enemy_map_collision(
 }
 
 /// Kills players on lateral contact with walking/shell-moving enemies.
-/// Does not trigger if the player is invincible or the enemy is in a passive state.
+/// Invincible players kill enemies on side contact instead of being hurt.
 pub fn enemy_player_touch_system(
     mut commands: Commands,
     sfx: Res<SfxLibrary>,
     sfx_vol: Res<SfxVolume>,
-    enemy_query: Query<(&Enemy, &Collider, &Transform, &GameObject, Option<&OwnerPlayer>)>,
+    mut enemy_query: Query<(Entity, &mut Enemy, &mut GameObject, &Collider, &Transform, Option<&OwnerPlayer>)>,
     mut player_query: Query<(
         Entity,
         &Player,
@@ -508,10 +508,10 @@ pub fn enemy_player_touch_system(
         Option<&SpawnProtection>,
         &mut ShieldState,
     )>,
-    _death_events: EventWriter<EnemyDeathEvent>,
+    mut death_events: EventWriter<EnemyDeathEvent>,
     mut player_death_events: EventWriter<PlayerDeathEvent>,
 ) {
-    for (enemy, e_collider, e_transform, game_obj, owner) in enemy_query.iter() {
+    for (e_entity, mut enemy, mut game_obj, e_collider, e_transform, owner) in enemy_query.iter_mut() {
         if !game_obj.alive {
             continue;
         }
@@ -557,8 +557,21 @@ pub fn enemy_player_touch_system(
                 }
             }
 
-            if invincible.is_some() || spawn_prot.is_some() {
-                // Invincible or spawn-protected player is immune
+            // Invincible player kills the enemy on side contact (star power)
+            if invincible.is_some() {
+                play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Kick);
+                enemy.state = EnemyState::Dead;
+                game_obj.alive = false;
+                death_events.send(EnemyDeathEvent {
+                    enemy_entity: e_entity,
+                    killer_player: Some(player.index),
+                });
+                commands.entity(e_entity).insert(Lifetime::from_seconds(0.3));
+                break; // Enemy is dead, stop checking other players
+            }
+
+            if spawn_prot.is_some() {
+                // Spawn-protected player is immune
                 continue;
             }
 

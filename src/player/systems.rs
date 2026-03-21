@@ -579,7 +579,7 @@ pub fn attack_system(
     }
 }
 
-/// Detects damage from active cape/tail attacks against other players.
+/// Detects damage from active cape/tail attacks against other players and enemies.
 pub fn attack_damage_system(
     attackers: Query<(
         Entity,
@@ -602,7 +602,17 @@ pub fn attack_damage_system(
         Option<&Invincible>,
         Option<&SpawnProtection>,
     )>,
+    mut enemy_query: Query<(
+        Entity,
+        &mut crate::objects::enemies::Enemy,
+        &mut crate::objects::components::GameObject,
+        &Transform,
+        &Collider,
+    ), Without<Player>>,
+    mut commands: Commands,
     mut death_events: EventWriter<PlayerDeathEvent>,
+    mut enemy_death_events: EventWriter<crate::objects::components::EnemyDeathEvent>,
+    mut sfx_events: EventWriter<crate::audio::sfx::SfxEvent>,
 ) {
     for (atk_entity, atk_player, atk_transform, facing, atk_action, cape, tail, _atk_inv, _atk_sp) in
         attackers.iter()
@@ -611,19 +621,18 @@ pub fn attack_damage_system(
             continue;
         }
 
-        // Determine if an attack is active and its horizontal reach
-        let attack_range = if let Some(cape) = cape {
-            if cape.active { Some(TILE_SIZE) } else { None }
+        // Check if an attack is currently active
+        let attack_active = if let Some(cape) = cape {
+            cape.active
         } else if let Some(tail) = tail {
-            if tail.active { Some(TILE_SIZE * 0.75) } else { None }
+            tail.active
         } else {
-            None
+            false
         };
 
-        let range = match attack_range {
-            Some(r) => r,
-            None => continue,
-        };
+        if !attack_active {
+            continue;
+        }
 
         let dir: f32 = match facing {
             Facing::Right => 1.0,
@@ -631,61 +640,77 @@ pub fn attack_damage_system(
         };
 
         // Build the attack hitbox (Bevy Y-up, centered coords)
+        // C++ original: MO_SpinAttack uses 24×12 pixel hitbox, positioned at player edge
         let atk_x = atk_transform.translation.x;
         let atk_y = atk_transform.translation.y;
 
         // Hitbox starts at the player's edge in the facing direction
-        let hitbox_start_x = atk_x + dir * (PLAYER_WIDTH * 0.5);
-        let hitbox_end_x = hitbox_start_x + dir * range;
-        let hitbox_left = hitbox_start_x.min(hitbox_end_x);
-        let hitbox_right = hitbox_start_x.max(hitbox_end_x);
-        let hitbox_bottom = atk_y;
-        let hitbox_top = atk_y + PLAYER_HEIGHT;
+        // C++ original: 24×12 hitbox, positioned at player edge
+        let hitbox_x = if dir > 0.0 {
+            atk_x + PLAYER_WIDTH * 0.5
+        } else {
+            atk_x - PLAYER_WIDTH * 0.5 - 24.0
+        };
+        let hitbox_y = atk_y + PLAYER_HEIGHT * 0.5 - 6.0; // vertically centered, 12px tall
+        let hitbox_pos = Vec3::new(hitbox_x, hitbox_y, 0.0);
+        let hitbox_collider = Collider::new(24.0, 12.0);
 
+        // --- Hit other players ---
         for (tgt_entity, tgt_player, tgt_transform, tgt_action, tgt_collider, tgt_shield, tgt_inv, tgt_sp) in
             targets.iter()
         {
-            // Skip self
             if tgt_entity == atk_entity {
                 continue;
             }
-            // Skip dead or spawning targets
             if *tgt_action == PlayerAction::Dead || *tgt_action == PlayerAction::Spawning {
                 continue;
             }
-            // Skip invincible or spawn-protected targets
             if tgt_inv.is_some() || tgt_sp.is_some() {
                 continue;
             }
-            // Any shield blocks cape/tail attacks
             if *tgt_shield != ShieldState::None {
                 continue;
             }
-            // Skip same team
             if atk_player.team == tgt_player.team {
                 continue;
             }
 
-            // Target bounding box
-            let tgt_x = tgt_transform.translation.x;
-            let tgt_y = tgt_transform.translation.y;
-            let tgt_left = tgt_x + tgt_collider.offset_x;
-            let tgt_right = tgt_left + tgt_collider.width;
-            let tgt_bottom = tgt_y + tgt_collider.offset_y;
-            let tgt_top = tgt_bottom + tgt_collider.height;
-
-            // AABB overlap check
-            if hitbox_left < tgt_right
-                && hitbox_right > tgt_left
-                && hitbox_bottom < tgt_top
-                && hitbox_top > tgt_bottom
-            {
+            if crate::physics::collision::aabb_overlap_wrapped(
+                &hitbox_pos, &hitbox_collider,
+                &tgt_transform.translation, tgt_collider,
+            ) {
                 death_events.send(PlayerDeathEvent {
                     player_entity: tgt_entity,
                     player_index: tgt_player.index,
                     killer_index: Some(atk_player.index),
                     cause: DeathCause::Killed { by: atk_player.index },
                 });
+            }
+        }
+
+        // --- Hit enemies ---
+        for (e_entity, mut enemy, mut game_obj, e_transform, e_collider) in enemy_query.iter_mut() {
+            if !game_obj.alive {
+                continue;
+            }
+            if enemy.state == crate::objects::enemies::EnemyState::Dead {
+                continue;
+            }
+
+            if crate::physics::collision::aabb_overlap_wrapped(
+                &hitbox_pos, &hitbox_collider,
+                &e_transform.translation, e_collider,
+            ) {
+                sfx_events.send(crate::audio::sfx::SfxEvent::new(crate::audio::sfx::SfxId::Kick));
+                enemy.state = crate::objects::enemies::EnemyState::Dead;
+                game_obj.alive = false;
+                enemy_death_events.send(crate::objects::components::EnemyDeathEvent {
+                    enemy_entity: e_entity,
+                    killer_player: Some(atk_player.index),
+                });
+                commands.entity(e_entity).insert(
+                    crate::objects::components::Lifetime::from_seconds(0.3),
+                );
             }
         }
     }

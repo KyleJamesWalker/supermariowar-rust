@@ -142,7 +142,8 @@ impl Default for CapeState {
     fn default() -> Self {
         Self {
             active: false,
-            timer: Timer::from_seconds(0.3, TimerMode::Once),
+            // C++ original: 12 active frames at ~62fps ≈ 0.19s
+            timer: Timer::from_seconds(0.19, TimerMode::Once),
         }
     }
 }
@@ -158,7 +159,8 @@ impl Default for TailState {
     fn default() -> Self {
         Self {
             active: false,
-            timer: Timer::from_seconds(0.3, TimerMode::Once),
+            // C++ original: 12 active frames at ~62fps ≈ 0.19s
+            timer: Timer::from_seconds(0.19, TimerMode::Once),
         }
     }
 }
