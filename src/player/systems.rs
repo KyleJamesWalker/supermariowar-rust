@@ -33,6 +33,7 @@ pub fn player_movement(
         Option<&FrozenState>,
         Option<&WarpState>,
     )>,
+    mut sfx_events: EventWriter<crate::audio::sfx::SfxEvent>,
 ) {
     for (input, mut vel, mut facing, mut action, grounded, frozen, warp) in query.iter_mut() {
         // Skip dead, spawning, frozen, or warping players
@@ -96,6 +97,9 @@ pub fn player_movement(
 
             if reversed && *action == PlayerAction::Running {
                 *action = PlayerAction::Skidding;
+                sfx_events.send(crate::audio::sfx::SfxEvent::new(
+                    crate::audio::sfx::SfxId::Skid,
+                ));
             } else if vel.x.abs() > 0.1 {
                 if *action == PlayerAction::Skidding {
                     // Stay skidding until velocity matches facing
@@ -124,6 +128,7 @@ pub fn player_jump(
         Option<&FrozenState>,
         Option<&WarpState>,
     )>,
+    mut sfx_events: EventWriter<crate::audio::sfx::SfxEvent>,
 ) {
     for (input, mut vel, mut action, mut grounded, frozen, warp) in query.iter_mut() {
         if *action == PlayerAction::Dead || *action == PlayerAction::Spawning {
@@ -143,6 +148,9 @@ pub fn player_jump(
             vel.y = jump_vel;
             *action = PlayerAction::Jumping;
             grounded.on_ground = false;
+            sfx_events.send(crate::audio::sfx::SfxEvent::new(
+                crate::audio::sfx::SfxId::Jump,
+            ));
         }
 
         // Variable jump height: releasing jump button reduces upward velocity
