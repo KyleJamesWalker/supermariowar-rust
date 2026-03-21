@@ -125,6 +125,7 @@ impl Plugin for GameModesPlugin {
                 timelimit::timelimit_tick,
                 timelimit::handle_timelimit_kills,
                 survival::survival_init,
+                survival::survival_spawn_enemies,
                 survival::handle_survival_kills,
                 survival::handle_survival_death,
             )

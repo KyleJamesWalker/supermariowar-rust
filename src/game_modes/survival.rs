@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
-use crate::core::constants::MAX_PLAYERS;
+use crate::core::constants::*;
+use crate::objects::enemies::{Enemy, EnemyType, spawn_enemy};
 use crate::player::components::{DeathCause, PlayerDeathEvent};
 use super::traits::*;
 
@@ -18,6 +19,8 @@ pub struct SurvivalModeState {
     /// Track eliminations for scoring.
     pub eliminations: [u32; MAX_PLAYERS],
     pub initialised: bool,
+    /// Timer for enemy spawning.
+    pub spawn_timer: f32,
 }
 
 impl Default for SurvivalModeState {
@@ -29,8 +32,72 @@ impl Default for SurvivalModeState {
             total_players: 0,
             eliminations: [0; MAX_PLAYERS],
             initialised: false,
+            spawn_timer: 2.0,
         }
     }
+}
+
+/// Survival enemy spawn rate (seconds between spawns).
+const SURVIVAL_SPAWN_RATE_MIN: f32 = 1.5;
+const SURVIVAL_SPAWN_RATE_MAX: f32 = 3.0;
+/// Max enemies on screen during survival.
+const SURVIVAL_MAX_ENEMIES: usize = 8;
+
+/// Spawns hazard enemies during Survival mode (C++ spawns Thwomps, Podoboos, BowserFire).
+/// Since we have Goomba/Spiny/BuzzyBeetle types, we spawn a mix of dangerous enemies.
+pub fn survival_spawn_enemies(
+    time: Res<Time>,
+    config: Res<GameModeConfig>,
+    mut state: ResMut<SurvivalModeState>,
+    mut commands: Commands,
+    enemy_query: Query<Entity, With<Enemy>>,
+) {
+    if config.mode_type != GameModeType::Survival {
+        return;
+    }
+    if !state.initialised {
+        return;
+    }
+
+    let current_count = enemy_query.iter().count();
+    if current_count >= SURVIVAL_MAX_ENEMIES {
+        return;
+    }
+
+    state.spawn_timer -= time.delta_secs();
+    if state.spawn_timer > 0.0 {
+        return;
+    }
+
+    // Reset timer
+    state.spawn_timer = rand::random::<f32>() * (SURVIVAL_SPAWN_RATE_MAX - SURVIVAL_SPAWN_RATE_MIN)
+        + SURVIVAL_SPAWN_RATE_MIN;
+
+    // Survival enemies are more dangerous: Spiny (unstompable), BuzzyBeetle, Goomba
+    let weights: [(EnemyType, u32); 5] = [
+        (EnemyType::Spiny, 4),
+        (EnemyType::BuzzyBeetle, 3),
+        (EnemyType::Goomba, 3),
+        (EnemyType::Koopa, 2),
+        (EnemyType::KoopaRed, 2),
+    ];
+    let total: u32 = weights.iter().map(|(_, w)| w).sum();
+    let mut roll = rand::random::<u32>() % total;
+    let mut selected = EnemyType::Goomba;
+    for (etype, weight) in &weights {
+        if roll < *weight {
+            selected = *etype;
+            break;
+        }
+        roll -= *weight;
+    }
+
+    // Spawn at random X, top of screen
+    let x = (rand::random::<f32>() * SCREEN_WIDTH) - SCREEN_WIDTH / 2.0;
+    let y = SCREEN_HEIGHT / 2.0 - TILE_SIZE;
+
+    let enemy = Enemy::new(selected);
+    spawn_enemy(&mut commands, enemy, x, y);
 }
 
 /// Initialise lives for all players at the start of a round.

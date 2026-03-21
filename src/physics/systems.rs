@@ -266,7 +266,7 @@ fn get_collision(
     }
 }
 
-/// Checks vertical collision against tiles (floors, ceilings, one-way platforms).
+/// Checks vertical collision against tiles (floors, ceilings, one-way platforms, gaps).
 fn check_vertical_collision(
     collision_map: &[Vec<CollisionType>],
     num_cols: usize,
@@ -289,6 +289,13 @@ fn check_vertical_collision(
 
         if foot_tile_y >= 0 && (foot_tile_y as usize) < num_rows {
             let ty = foot_tile_y as usize;
+
+            // C++ gap support: check if either foot tile is a gap AND player moving at turbo speed
+            let left_t = get_collision(collision_map, num_cols, num_rows, left_tile.min(num_cols.saturating_sub(1)), ty);
+            let right_t = get_collision(collision_map, num_cols, num_rows, right_tile.min(num_cols.saturating_sub(1)), ty);
+            let gap_support = (left_t.is_gap() || right_t.is_gap())
+                && vel.x.abs() >= VEL_TURBO_MOVING;
+
             for tx in left_tile..=(right_tile.min(num_cols.saturating_sub(1))) {
                 let tile = get_collision(collision_map, num_cols, num_rows, tx, ty);
                 if tile.is_solid() {
@@ -304,8 +311,9 @@ fn check_vertical_collision(
                             grounded.on_ice = true;
                         }
                     }
-                } else if tile.is_solid_on_top() {
-                    // Drop through: pressing down on a passthrough platform
+                } else if tile.is_solid_on_top() || (tile.is_gap() && gap_support) {
+                    // SolidOnTop: drop through when pressing down
+                    // Gap: acts as solid-on-top when moving at turbo speed
                     if !input.down {
                         let tile_top = ty as f32 * TILE_SIZE;
                         if foot_y >= tile_top && foot_y <= tile_top + vel.y.abs() + 1.0 {

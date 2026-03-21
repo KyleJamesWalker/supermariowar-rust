@@ -127,6 +127,11 @@ impl CollisionType {
         matches!(self, Self::SolidOnTop | Self::IceOnTop)
     }
 
+    /// Returns true if this is a gap tile (supports players moving at turbo speed).
+    pub fn is_gap(self) -> bool {
+        matches!(self, Self::Gap)
+    }
+
     /// Returns true if this tile kills when the player touches from the top
     /// (player feet on tile top edge).
     pub fn kills_on_top(self) -> bool {

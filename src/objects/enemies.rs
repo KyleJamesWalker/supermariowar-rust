@@ -380,9 +380,10 @@ pub fn enemy_stomp_system(
             continue;
         }
 
-        // Player must be falling to stomp (negative Y = falling in Bevy's Y-up system)
-        if p_vel.y >= 0.0 {
-            continue; // Skip if player is NOT falling
+        // Player must be falling with meaningful downward velocity to stomp
+        // C++ requires vely > 1.0 (in SMW Y-down). In Bevy Y-up, that's vel.y < -1.0.
+        if p_vel.y >= -1.0 {
+            continue;
         }
 
         for (e_entity, mut enemy, e_collider, e_transform, mut game_obj) in
@@ -404,14 +405,17 @@ pub fn enemy_stomp_system(
                 continue;
             }
 
-            // Check that the player is above the enemy (stomp from top).
-            // In Bevy Y-up: visual_bottom = pos + offset_y, visual_top = bottom + height
+            // Check that the player is coming from above (stomp from top).
+            // In Bevy Y-up: visual_bottom = pos + offset_y, visual_top = bottom + height.
+            // Player's feet must be near/above the enemy's top for a valid stomp.
             let player_visual_bottom = p_transform.translation.y + p_collider.offset_y;
-            let enemy_visual_mid =
-                e_transform.translation.y + e_collider.offset_y + e_collider.height * 0.5;
+            let enemy_visual_top =
+                e_transform.translation.y + e_collider.offset_y + e_collider.height;
 
-            if player_visual_bottom < enemy_visual_mid {
-                // Player's feet are below the enemy midpoint -- not a valid stomp
+            // Player's feet must be within a small threshold of the enemy's top.
+            // Allow some tolerance (8px) for the overlap window.
+            if player_visual_bottom < enemy_visual_top - 8.0 {
+                // Player's feet are too deep inside the enemy -- side contact, not stomp
                 continue;
             }
 
