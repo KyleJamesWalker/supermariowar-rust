@@ -1,14 +1,22 @@
 use bevy::prelude::*;
 
 use crate::core::constants::*;
-use crate::player::components::{Grounded, Velocity};
-use super::components::GravityAffected;
+use crate::map::components::{CollisionType, MapData, MovingPlatform};
+use crate::player::components::{
+    Grounded, Player, PlayerAction, PlayerDeathEvent, PlayerInput, Velocity, WarpState,
+};
+use super::collision;
+use super::components::*;
 
 /// Applies gravity to all entities that have the GravityAffected component.
 pub fn apply_gravity(
-    mut query: Query<(&mut Velocity, &GravityAffected)>,
+    mut query: Query<(&mut Velocity, &GravityAffected, Option<&WarpState>)>,
 ) {
-    for (mut vel, gravity) in query.iter_mut() {
+    for (mut vel, gravity, warp) in query.iter_mut() {
+        // Don't apply gravity while warping
+        if warp.is_some() {
+            continue;
+        }
         vel.y += GRAVITY * gravity.multiplier;
         if vel.y > MAX_FALL_SPEED {
             vel.y = MAX_FALL_SPEED;
@@ -17,27 +25,453 @@ pub fn apply_gravity(
 }
 
 /// Detects collision between players and the map tile grid.
-/// Sets the Grounded component when a player lands on a solid tile.
+/// Reads from `MapData.collision_map` which is `[col][row]` (column-major).
+/// Handles Solid, SolidOnTop, Ice, Death, and SuperDeath tiles.
 pub fn map_collision(
-    mut query: Query<(&mut Transform, &mut Velocity, &mut Grounded)>,
+    map_data: Res<MapData>,
+    mut query: Query<(
+        Entity,
+        &Player,
+        &mut Transform,
+        &mut Velocity,
+        &mut Grounded,
+        &PlayerAction,
+        &PlayerInput,
+        Option<&WarpState>,
+    )>,
+    mut death_events: EventWriter<PlayerDeathEvent>,
 ) {
-    for (mut transform, mut vel, mut grounded) in query.iter_mut() {
-        // Floor collision (bottom of screen boundary for now)
-        let floor_y = SCREEN_HEIGHT - PLAYER_HEIGHT - PLAYER_HEIGHT_OFFSET;
-        if transform.translation.y >= floor_y {
-            transform.translation.y = floor_y;
-            vel.y = 0.0;
-            grounded.0 = true;
-        } else {
-            grounded.0 = false;
+    let has_collision_map = !map_data.collision_map.is_empty()
+        && !map_data.collision_map[0].is_empty();
+
+    for (entity, player, mut transform, mut vel, mut grounded, action, input, warp) in
+        query.iter_mut()
+    {
+        if *action == PlayerAction::Dead {
+            continue;
+        }
+        if warp.is_some() {
+            continue;
         }
 
-        // Ceiling collision
+        if !has_collision_map {
+            simple_floor_collision(&mut transform, &mut vel, &mut grounded);
+            continue;
+        }
+
+        let num_cols = map_data.collision_map.len();
+        let num_rows = map_data.collision_map[0].len();
+
+        // Reset grounded before checking tiles
+        grounded.on_ground = false;
+        grounded.on_ice = false;
+
+        // The player's bounding box in pixel coordinates
+        let px = transform.translation.x + PLAYER_WIDTH_OFFSET;
+        let py = transform.translation.y + PLAYER_HEIGHT_OFFSET;
+
+        // Vertical collision (floors/ceilings)
+        check_vertical_collision(
+            &map_data.collision_map,
+            num_cols,
+            num_rows,
+            &mut transform,
+            &mut vel,
+            &mut grounded,
+            input,
+            px,
+            py,
+        );
+
+        // Recalculate player position after vertical correction
+        let px = transform.translation.x + PLAYER_WIDTH_OFFSET;
+        let py = transform.translation.y + PLAYER_HEIGHT_OFFSET;
+
+        // Horizontal collision (walls)
+        check_horizontal_collision(
+            &map_data.collision_map,
+            num_cols,
+            num_rows,
+            &mut transform,
+            &mut vel,
+            px,
+            py,
+        );
+
+        // Death tile check
+        let px = transform.translation.x + PLAYER_WIDTH_OFFSET;
+        let py = transform.translation.y + PLAYER_HEIGHT_OFFSET;
+        if check_death_tiles(&map_data.collision_map, num_cols, num_rows, px, py) {
+            death_events.send(PlayerDeathEvent {
+                player_entity: entity,
+                player_index: player.index,
+                killer_index: None,
+            });
+        }
+
+        // Ceiling collision (top of screen)
         if transform.translation.y < 0.0 {
             transform.translation.y = 0.0;
             if vel.y < 0.0 {
                 vel.y = 0.0;
             }
+        }
+    }
+}
+
+/// Simple floor collision fallback when no map data is loaded.
+fn simple_floor_collision(
+    transform: &mut Transform,
+    vel: &mut Velocity,
+    grounded: &mut Grounded,
+) {
+    let floor_y = SCREEN_HEIGHT - PLAYER_HEIGHT - PLAYER_HEIGHT_OFFSET;
+    if transform.translation.y >= floor_y {
+        transform.translation.y = floor_y;
+        vel.y = 0.0;
+        grounded.on_ground = true;
+    } else {
+        grounded.on_ground = false;
+    }
+    grounded.on_ice = false;
+
+    // Ceiling
+    if transform.translation.y < 0.0 {
+        transform.translation.y = 0.0;
+        if vel.y < 0.0 {
+            vel.y = 0.0;
+        }
+    }
+}
+
+/// Gets the collision type at tile coordinate (tile_x, tile_y).
+/// `collision_map` is `[col][row]` (column-major).
+fn get_collision(
+    collision_map: &[Vec<CollisionType>],
+    num_cols: usize,
+    num_rows: usize,
+    tile_x: usize,
+    tile_y: usize,
+) -> CollisionType {
+    if tile_x < num_cols && tile_y < num_rows {
+        collision_map[tile_x][tile_y]
+    } else {
+        CollisionType::NonSolid
+    }
+}
+
+/// Checks vertical collision against tiles (floors, ceilings, one-way platforms).
+fn check_vertical_collision(
+    collision_map: &[Vec<CollisionType>],
+    num_cols: usize,
+    num_rows: usize,
+    transform: &mut Transform,
+    vel: &mut Velocity,
+    grounded: &mut Grounded,
+    input: &PlayerInput,
+    px: f32,
+    py: f32,
+) {
+    // Tiles the player's feet span horizontally
+    let left_tile = ((px / TILE_SIZE).floor() as i32).max(0) as usize;
+    let right_tile = (((px + PLAYER_WIDTH) / TILE_SIZE).floor() as i32).max(0) as usize;
+
+    if vel.y >= 0.0 {
+        // Moving downward or stationary: check floor beneath feet
+        let foot_y = py + PLAYER_HEIGHT;
+        let foot_tile_y = (foot_y / TILE_SIZE).floor() as i32;
+
+        if foot_tile_y >= 0 && (foot_tile_y as usize) < num_rows {
+            let ty = foot_tile_y as usize;
+            for tx in left_tile..=(right_tile.min(num_cols.saturating_sub(1))) {
+                let tile = get_collision(collision_map, num_cols, num_rows, tx, ty);
+                match tile {
+                    CollisionType::Solid | CollisionType::Ice => {
+                        let tile_top = ty as f32 * TILE_SIZE;
+                        if foot_y >= tile_top
+                            && foot_y <= tile_top + vel.y.abs() + 1.0 + TILE_SIZE * 0.5
+                        {
+                            transform.translation.y =
+                                tile_top - PLAYER_HEIGHT - PLAYER_HEIGHT_OFFSET;
+                            vel.y = 0.0;
+                            grounded.on_ground = true;
+                            if tile == CollisionType::Ice {
+                                grounded.on_ice = true;
+                            }
+                        }
+                    }
+                    CollisionType::SolidOnTop => {
+                        // Drop through: pressing down + jump on a passthrough platform
+                        if !(input.down && input.jump_pressed) {
+                            let tile_top = ty as f32 * TILE_SIZE;
+                            // Only land if feet are at or just below the tile top
+                            if foot_y >= tile_top && foot_y <= tile_top + vel.y.abs() + 1.0 {
+                                transform.translation.y =
+                                    tile_top - PLAYER_HEIGHT - PLAYER_HEIGHT_OFFSET;
+                                vel.y = 0.0;
+                                grounded.on_ground = true;
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+    } else {
+        // Moving upward: check ceiling above head
+        let head_tile_y = ((py / TILE_SIZE).floor() as i32).max(0) as usize;
+
+        if head_tile_y < num_rows {
+            for tx in left_tile..=(right_tile.min(num_cols.saturating_sub(1))) {
+                let tile = get_collision(collision_map, num_cols, num_rows, tx, head_tile_y);
+                if tile == CollisionType::Solid || tile == CollisionType::Ice {
+                    let tile_bottom = (head_tile_y as f32 + 1.0) * TILE_SIZE;
+                    if py <= tile_bottom {
+                        transform.translation.y = tile_bottom - PLAYER_HEIGHT_OFFSET;
+                        vel.y = 0.0;
+                    }
+                }
+                // SolidOnTop tiles do NOT block from below
+            }
+        }
+    }
+}
+
+/// Checks horizontal collision against solid tiles (walls).
+fn check_horizontal_collision(
+    collision_map: &[Vec<CollisionType>],
+    num_cols: usize,
+    num_rows: usize,
+    transform: &mut Transform,
+    vel: &mut Velocity,
+    px: f32,
+    py: f32,
+) {
+    // Tiles the player's body spans vertically
+    let top_tile = ((py / TILE_SIZE).floor() as i32).max(0) as usize;
+    let bottom_tile = (((py + PLAYER_HEIGHT - 1.0) / TILE_SIZE).floor() as i32).max(0) as usize;
+
+    if vel.x > 0.0 {
+        // Moving right: check right edge
+        let right_edge = px + PLAYER_WIDTH;
+        let right_tile_x = (right_edge / TILE_SIZE).floor() as i32;
+
+        if right_tile_x >= 0 && (right_tile_x as usize) < num_cols {
+            let tx = right_tile_x as usize;
+            for ty in top_tile..=(bottom_tile.min(num_rows.saturating_sub(1))) {
+                let tile = get_collision(collision_map, num_cols, num_rows, tx, ty);
+                if tile == CollisionType::Solid || tile == CollisionType::Ice {
+                    let tile_left = tx as f32 * TILE_SIZE;
+                    if right_edge > tile_left {
+                        transform.translation.x = tile_left - PLAYER_WIDTH - PLAYER_WIDTH_OFFSET;
+                        vel.x = 0.0;
+                    }
+                }
+            }
+        }
+    } else if vel.x < 0.0 {
+        // Moving left: check left edge
+        let left_tile_x = ((px / TILE_SIZE).floor() as i32).max(0) as usize;
+
+        if left_tile_x < num_cols {
+            for ty in top_tile..=(bottom_tile.min(num_rows.saturating_sub(1))) {
+                let tile = get_collision(collision_map, num_cols, num_rows, left_tile_x, ty);
+                if tile == CollisionType::Solid || tile == CollisionType::Ice {
+                    let tile_right = (left_tile_x as f32 + 1.0) * TILE_SIZE;
+                    if px < tile_right {
+                        transform.translation.x = tile_right - PLAYER_WIDTH_OFFSET;
+                        vel.x = 0.0;
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Checks if the player is touching any Death or SuperDeath tiles.
+fn check_death_tiles(
+    collision_map: &[Vec<CollisionType>],
+    num_cols: usize,
+    num_rows: usize,
+    px: f32,
+    py: f32,
+) -> bool {
+    let left_tile = ((px / TILE_SIZE).floor() as i32).max(0) as usize;
+    let right_tile = (((px + PLAYER_WIDTH) / TILE_SIZE).floor() as i32).max(0) as usize;
+    let top_tile = ((py / TILE_SIZE).floor() as i32).max(0) as usize;
+    let bottom_tile = (((py + PLAYER_HEIGHT) / TILE_SIZE).floor() as i32).max(0) as usize;
+
+    for tx in left_tile..=(right_tile.min(num_cols.saturating_sub(1))) {
+        for ty in top_tile..=(bottom_tile.min(num_rows.saturating_sub(1))) {
+            let tile = get_collision(collision_map, num_cols, num_rows, tx, ty);
+            if tile == CollisionType::Death
+                || tile == CollisionType::SuperDeath
+                || tile == CollisionType::PlayerDeath
+            {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// Detects warp zone entry: when a player presses down on a warp entrance tile.
+/// Checks against `MapData.warp_data` and `MapData.warp_exits` to find entrance/exit pairs.
+pub fn warp_zone_detection(
+    mut commands: Commands,
+    map_data: Res<MapData>,
+    query: Query<
+        (
+            Entity,
+            &Transform,
+            &PlayerInput,
+            &PlayerAction,
+            Option<&WarpState>,
+        ),
+        With<Player>,
+    >,
+) {
+    if map_data.warp_exits.is_empty() {
+        return;
+    }
+
+    let has_warp_data =
+        !map_data.warp_data.is_empty() && !map_data.warp_data[0].is_empty();
+    if !has_warp_data {
+        return;
+    }
+
+    let warp_cols = map_data.warp_data.len();
+    let warp_rows = map_data.warp_data[0].len();
+
+    for (entity, transform, input, action, existing_warp) in query.iter() {
+        if *action == PlayerAction::Dead || *action == PlayerAction::Spawning {
+            continue;
+        }
+        if existing_warp.is_some() {
+            continue;
+        }
+        if !input.down {
+            continue;
+        }
+
+        // Find the tile the player's center is on
+        let center_x =
+            transform.translation.x + PLAYER_WIDTH_OFFSET + PLAYER_WIDTH * 0.5;
+        let foot_y =
+            transform.translation.y + PLAYER_HEIGHT_OFFSET + PLAYER_HEIGHT;
+        let tile_x = (center_x / TILE_SIZE).floor() as usize;
+        let tile_y = (foot_y / TILE_SIZE).floor() as usize;
+
+        if tile_x >= warp_cols || tile_y >= warp_rows {
+            continue;
+        }
+
+        let warp_info = &map_data.warp_data[tile_x][tile_y];
+        if warp_info.connection < 0 {
+            continue; // No warp at this tile
+        }
+
+        // Find the matching warp exit by connection id
+        let connection = warp_info.connection;
+        if let Some(exit) = map_data
+            .warp_exits
+            .iter()
+            .find(|e| e.connection == connection && e.id != warp_info.id)
+        {
+            let dest_x = exit.warp_x as f32 * TILE_SIZE;
+            let dest_y = exit.warp_y as f32 * TILE_SIZE;
+            let direction =
+                crate::map::components::WarpDirection::from_raw(warp_info.direction);
+
+            commands.entity(entity).insert(WarpState::new_entering(
+                direction, warp_info.id as u32, dest_x, dest_y,
+            ));
+        }
+    }
+}
+
+/// Entity-to-entity collision detection using Collider components.
+/// Sends CollisionEvents when entities with colliders overlap.
+pub fn entity_collision_detection(
+    query: Query<(Entity, &Transform, &Collider, &CollisionLayer)>,
+    mut collision_events: EventWriter<CollisionEvent>,
+) {
+    let entities: Vec<_> = query.iter().collect();
+
+    for i in 0..entities.len() {
+        for j in (i + 1)..entities.len() {
+            let (e_a, t_a, c_a, l_a) = &entities[i];
+            let (e_b, t_b, c_b, l_b) = &entities[j];
+
+            // Skip same-layer collisions for projectiles
+            if *l_a == &CollisionLayer::Projectile && *l_b == &CollisionLayer::Projectile {
+                continue;
+            }
+
+            if let Some(pen) = collision::aabb_penetration(
+                &t_a.translation,
+                c_a,
+                &t_b.translation,
+                c_b,
+            ) {
+                collision_events.send(CollisionEvent {
+                    entity_a: *e_a,
+                    entity_b: *e_b,
+                    layer_a: **l_a,
+                    layer_b: **l_b,
+                    penetration: pen,
+                });
+            }
+        }
+    }
+}
+
+/// Applies ride-along velocity from moving platforms to players standing on them.
+pub fn moving_platform_system(
+    platform_query: Query<(Entity, &MovingPlatform, &Transform, &Collider)>,
+    mut player_query: Query<
+        (Entity, &mut Transform, &Grounded),
+        (With<Player>, Without<MovingPlatform>),
+    >,
+    mut commands: Commands,
+) {
+    for (player_entity, mut player_transform, grounded) in player_query.iter_mut() {
+        if !grounded.on_ground {
+            commands.entity(player_entity).remove::<RidingPlatform>();
+            continue;
+        }
+
+        let player_px = player_transform.translation.x + PLAYER_WIDTH_OFFSET;
+        let player_foot =
+            player_transform.translation.y + PLAYER_HEIGHT_OFFSET + PLAYER_HEIGHT;
+
+        let mut found_platform = false;
+
+        for (platform_entity, platform, plat_transform, plat_collider) in platform_query.iter() {
+            let (plat_left, plat_top, plat_right, _plat_bottom) =
+                plat_collider.world_rect(&plat_transform.translation);
+
+            // Check if player's feet are resting on this platform's top
+            let on_top = (player_foot - plat_top).abs() < 2.0;
+            let horizontally_on =
+                player_px + PLAYER_WIDTH > plat_left && player_px < plat_right;
+
+            if on_top && horizontally_on {
+                // Apply platform velocity to player position
+                player_transform.translation.x += platform.vel_x;
+                player_transform.translation.y += platform.vel_y;
+
+                commands
+                    .entity(player_entity)
+                    .insert(RidingPlatform { platform_entity });
+                found_platform = true;
+                break;
+            }
+        }
+
+        if !found_platform {
+            commands.entity(player_entity).remove::<RidingPlatform>();
         }
     }
 }

@@ -36,6 +36,15 @@ impl Collider {
         self.offset_y = y;
         self
     }
+
+    /// Returns the world-space AABB as (left, top, right, bottom) given a position.
+    pub fn world_rect(&self, pos: &Vec3) -> (f32, f32, f32, f32) {
+        let left = pos.x + self.offset_x;
+        let top = pos.y + self.offset_y;
+        let right = left + self.width;
+        let bottom = top + self.height;
+        (left, top, right, bottom)
+    }
 }
 
 /// The collision layer/group for filtering which entities interact.
@@ -57,6 +66,7 @@ pub struct CollisionEvent {
     pub entity_b: Entity,
     pub layer_a: CollisionLayer,
     pub layer_b: CollisionLayer,
+    pub penetration: Vec2,
 }
 
 /// Marks an entity as a solid that others cannot pass through.
@@ -66,3 +76,9 @@ pub struct Solid;
 /// Marks an entity as a one-way platform (passable from below).
 #[derive(Component, Debug, Default)]
 pub struct OneWayPlatform;
+
+/// Attached to a player when they are riding a moving platform.
+#[derive(Component, Debug)]
+pub struct RidingPlatform {
+    pub platform_entity: Entity,
+}

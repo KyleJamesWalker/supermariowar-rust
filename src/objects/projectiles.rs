@@ -1,5 +1,19 @@
 use bevy::prelude::*;
 
+use crate::audio::sfx::{play_sfx, SfxId, SfxLibrary};
+use crate::core::constants::*;
+use crate::objects::components::*;
+use crate::objects::enemies::{Enemy, EnemyState};
+use crate::physics::collision::aabb_overlap;
+use crate::physics::components::{Collider, CollisionLayer};
+use crate::player::components::{
+    Facing, Invincible, Player, PlayerAction, PlayerInput, PowerupState, Velocity,
+};
+
+// ---------------------------------------------------------------------------
+// Projectile components
+// ---------------------------------------------------------------------------
+
 /// Types of projectiles players can fire.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProjectileType {
@@ -8,11 +22,11 @@ pub enum ProjectileType {
     Boomerang,
     IceBall,
     Bomb,
-    Shell,        // Kicked Koopa shell
-    ThrowBlock,   // Picked-up block being thrown
-    Feather,      // Cape attack
-    TailSwipe,    // Leaf tail attack
-    BulletBill,   // Player-as-bullet
+    Shell,
+    ThrowBlock,
+    Feather,
+    TailSwipe,
+    BulletBill,
 }
 
 /// Projectile behavior data.
@@ -39,7 +53,7 @@ impl Projectile {
             projectile_type: ProjectileType::Hammer,
             owner,
             bounces_remaining: 0,
-            speed: 8.5,
+            speed: HAMMER_THROW,
         }
     }
 
@@ -49,6 +63,600 @@ impl Projectile {
             owner,
             bounces_remaining: 0,
             speed: 5.0,
+        }
+    }
+
+    pub fn iceball(owner: usize) -> Self {
+        Self {
+            projectile_type: ProjectileType::IceBall,
+            owner,
+            bounces_remaining: 3,
+            speed: 6.0,
+        }
+    }
+
+    pub fn bomb(owner: usize) -> Self {
+        Self {
+            projectile_type: ProjectileType::Bomb,
+            owner,
+            bounces_remaining: 0,
+            speed: 5.0,
+        }
+    }
+}
+
+/// Tracks boomerang return behavior.
+#[derive(Component, Debug)]
+pub struct BoomerangState {
+    pub returning: bool,
+    pub distance_traveled: f32,
+    pub max_distance: f32,
+    pub owner_entity: Entity,
+}
+
+/// Tracks bomb fuse timer.
+#[derive(Component, Debug)]
+pub struct BombFuse {
+    pub timer: Timer,
+    pub explosion_radius: f32,
+}
+
+impl Default for BombFuse {
+    fn default() -> Self {
+        Self {
+            timer: Timer::from_seconds(3.0, TimerMode::Once),
+            explosion_radius: TILE_SIZE * 2.0,
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Projectile spawning
+// ---------------------------------------------------------------------------
+
+/// Spawns a projectile entity at the given position with the specified type.
+pub fn spawn_projectile(
+    commands: &mut Commands,
+    projectile: Projectile,
+    x: f32,
+    y: f32,
+    vel_x: f32,
+    vel_y: f32,
+) -> Entity {
+    commands
+        .spawn((
+            GameObject {
+                object_type: ObjectType::Projectile,
+                alive: true,
+            },
+            projectile,
+            ObjectVelocity { x: vel_x, y: vel_y },
+            ObjectGrounded(false),
+            Collider::new(16.0, 16.0),
+            CollisionLayer::Projectile,
+            DamageOnContact {
+                kill: true,
+                owner_player: None,
+            },
+            InteractsWithMap,
+            DespawnOffScreen,
+            Lifetime::from_seconds(8.0),
+            Transform::from_xyz(x, y, 9.0),
+            GlobalTransform::default(),
+            Visibility::default(),
+            InheritedVisibility::default(),
+            ViewVisibility::default(),
+        ))
+        .id()
+}
+
+// ---------------------------------------------------------------------------
+// Systems
+// ---------------------------------------------------------------------------
+
+/// Spawns projectiles when a player with the appropriate powerup presses use_item.
+pub fn fire_projectile_system(
+    mut commands: Commands,
+    sfx: Res<SfxLibrary>,
+    query: Query<(
+        Entity,
+        &Player,
+        &PlayerInput,
+        &PowerupState,
+        &Facing,
+        &Transform,
+        &PlayerAction,
+    )>,
+) {
+    for (p_entity, player, input, powerup, facing, transform, action) in query.iter() {
+        if *action == PlayerAction::Dead {
+            continue;
+        }
+        if !input.use_item {
+            continue;
+        }
+
+        let dir = match facing {
+            Facing::Right => 1.0,
+            Facing::Left => -1.0,
+        };
+
+        let spawn_x = transform.translation.x + dir * PLAYER_WIDTH;
+        let spawn_y = transform.translation.y + PLAYER_HEIGHT * 0.5;
+
+        match powerup {
+            PowerupState::Fire => {
+                play_sfx(&mut commands, &sfx, SfxId::Fireball);
+                let proj = Projectile::fireball(player.index);
+                let vel_x = proj.speed * dir;
+                let vel_y = -2.0; // Slight downward angle
+                spawn_projectile(&mut commands, proj, spawn_x, spawn_y, vel_x, vel_y);
+            }
+            PowerupState::Hammer => {
+                play_sfx(&mut commands, &sfx, SfxId::Fireball);
+                let proj = Projectile::hammer(player.index);
+                let vel_x = proj.speed * dir * 0.7;
+                let vel_y = -HAMMER_THROW; // Thrown upward in parabolic arc
+                let entity = spawn_projectile(
+                    &mut commands,
+                    proj,
+                    spawn_x,
+                    spawn_y,
+                    vel_x,
+                    vel_y,
+                );
+                // Hammer needs gravity
+                commands.entity(entity).insert(
+                    crate::physics::components::GravityAffected { multiplier: 1.0 },
+                );
+            }
+            PowerupState::Boomerang => {
+                play_sfx(&mut commands, &sfx, SfxId::Fireball);
+                let proj = Projectile::boomerang(player.index);
+                let vel_x = proj.speed * dir;
+                let entity = spawn_projectile(
+                    &mut commands,
+                    proj,
+                    spawn_x,
+                    spawn_y,
+                    vel_x,
+                    0.0,
+                );
+                commands.entity(entity).insert(BoomerangState {
+                    returning: false,
+                    distance_traveled: 0.0,
+                    max_distance: SCREEN_WIDTH * 0.4,
+                    owner_entity: p_entity,
+                });
+            }
+            PowerupState::Bomb => {
+                play_sfx(&mut commands, &sfx, SfxId::Fireball);
+                let proj = Projectile::bomb(player.index);
+                let vel_x = proj.speed * dir * 0.5;
+                let vel_y = -proj.speed;
+                let entity = spawn_projectile(
+                    &mut commands,
+                    proj,
+                    spawn_x,
+                    spawn_y,
+                    vel_x,
+                    vel_y,
+                );
+                commands.entity(entity).insert(BombFuse::default());
+                commands.entity(entity).insert(
+                    crate::physics::components::GravityAffected { multiplier: 1.0 },
+                );
+            }
+            _ => {
+                // No projectile for other powerup states
+            }
+        }
+    }
+}
+
+/// Updates projectile positions based on their type-specific movement rules.
+pub fn projectile_movement_system(
+    _time: Res<Time>,
+    mut query: Query<(
+        &Projectile,
+        &mut ObjectVelocity,
+        &mut Transform,
+        &mut ObjectGrounded,
+        Option<&mut BoomerangState>,
+    )>,
+    owner_query: Query<&Transform, (With<Player>, Without<Projectile>)>,
+) {
+    for (proj, mut vel, mut transform, mut grounded, boomerang) in query.iter_mut() {
+        match proj.projectile_type {
+            ProjectileType::Fireball | ProjectileType::IceBall => {
+                // Gravity
+                vel.y += GRAVITY;
+                if vel.y > MAX_FALL_SPEED {
+                    vel.y = MAX_FALL_SPEED;
+                }
+
+                transform.translation.x += vel.x;
+                transform.translation.y += vel.y;
+
+                // Floor bounce
+                let floor_y = SCREEN_HEIGHT - 16.0;
+                if transform.translation.y >= floor_y {
+                    transform.translation.y = floor_y;
+                    vel.y = -FIREBALL_BOUNCE;
+                    grounded.0 = true;
+                } else {
+                    grounded.0 = false;
+                }
+            }
+            ProjectileType::Hammer => {
+                // Gravity applied by GravityAffected component
+                // Just apply velocity to transform
+                transform.translation.x += vel.x;
+                transform.translation.y += vel.y;
+            }
+            ProjectileType::Boomerang => {
+                if let Some(mut boom) = boomerang {
+                    boom.distance_traveled += vel.x.abs();
+
+                    if !boom.returning && boom.distance_traveled >= boom.max_distance {
+                        boom.returning = true;
+                    }
+
+                    if boom.returning {
+                        // Curve back toward the owner
+                        if let Ok(owner_transform) = owner_query.get(boom.owner_entity) {
+                            let diff_x =
+                                owner_transform.translation.x - transform.translation.x;
+                            let diff_y =
+                                owner_transform.translation.y - transform.translation.y;
+                            let dist = (diff_x * diff_x + diff_y * diff_y).sqrt().max(1.0);
+
+                            vel.x = (diff_x / dist) * proj.speed * 1.5;
+                            vel.y = (diff_y / dist) * proj.speed * 1.5;
+
+                            // Despawn if close to owner
+                            if dist < TILE_SIZE {
+                                // Will be cleaned up by lifetime system
+                                vel.x = 0.0;
+                                vel.y = 0.0;
+                            }
+                        }
+                    }
+
+                    transform.translation.x += vel.x;
+                    transform.translation.y += vel.y;
+                } else {
+                    transform.translation.x += vel.x;
+                    transform.translation.y += vel.y;
+                }
+            }
+            ProjectileType::Bomb => {
+                // Gravity applied by GravityAffected component
+                transform.translation.x += vel.x;
+                transform.translation.y += vel.y;
+
+                // Floor collision -- bomb stops on ground
+                let floor_y = SCREEN_HEIGHT - 16.0;
+                if transform.translation.y >= floor_y {
+                    transform.translation.y = floor_y;
+                    vel.x *= 0.8; // Friction
+                    vel.y = 0.0;
+                    grounded.0 = true;
+                }
+            }
+            ProjectileType::Shell | ProjectileType::ThrowBlock => {
+                transform.translation.x += vel.x;
+                transform.translation.y += vel.y;
+
+                // Floor
+                let floor_y = SCREEN_HEIGHT - 16.0;
+                if transform.translation.y >= floor_y {
+                    transform.translation.y = floor_y;
+                    vel.y = 0.0;
+                    grounded.0 = true;
+                }
+            }
+            _ => {
+                transform.translation.x += vel.x;
+                transform.translation.y += vel.y;
+            }
+        }
+
+        // Screen wrapping
+        if transform.translation.x > SCREEN_WIDTH + TILE_SIZE {
+            transform.translation.x = -TILE_SIZE;
+        } else if transform.translation.x < -TILE_SIZE {
+            transform.translation.x = SCREEN_WIDTH + TILE_SIZE;
+        }
+    }
+}
+
+/// Checks projectile collisions against players and enemies.
+pub fn projectile_collision_system(
+    mut commands: Commands,
+    sfx: Res<SfxLibrary>,
+    projectile_query: Query<(
+        Entity,
+        &Projectile,
+        &Collider,
+        &Transform,
+        &GameObject,
+    )>,
+    mut player_query: Query<(
+        Entity,
+        &Player,
+        &mut Velocity,
+        &mut PlayerAction,
+        &Transform,
+        &Collider,
+        Option<&Invincible>,
+    )>,
+    mut enemy_query: Query<(
+        Entity,
+        &mut Enemy,
+        &mut GameObject,
+        &Collider,
+        &Transform,
+    ), Without<Projectile>>,
+    mut hit_events: EventWriter<ProjectileHitEvent>,
+    mut death_events: EventWriter<EnemyDeathEvent>,
+) {
+    for (proj_entity, proj, proj_collider, proj_transform, proj_obj) in projectile_query.iter() {
+        if !proj_obj.alive {
+            continue;
+        }
+
+        // Check vs players
+        for (p_entity, player, mut p_vel, mut p_action, p_transform, p_collider, invincible) in
+            player_query.iter_mut()
+        {
+            // Don't hit the owner
+            if player.index == proj.owner {
+                continue;
+            }
+            if *p_action == PlayerAction::Dead {
+                continue;
+            }
+
+            if !aabb_overlap(
+                &proj_transform.translation,
+                proj_collider,
+                &p_transform.translation,
+                p_collider,
+            ) {
+                continue;
+            }
+
+            hit_events.send(ProjectileHitEvent {
+                projectile_entity: proj_entity,
+                hit_entity: p_entity,
+                projectile_owner: proj.owner,
+            });
+
+            if invincible.is_some() {
+                // Invincible player destroys the projectile
+                commands.entity(proj_entity).despawn_recursive();
+                break;
+            }
+
+            match proj.projectile_type {
+                ProjectileType::IceBall => {
+                    // Freeze the player instead of killing
+                    play_sfx(&mut commands, &sfx, SfxId::Transform);
+                    commands.entity(p_entity).insert(
+                        crate::player::components::FrozenState::new(3.0),
+                    );
+                    commands.entity(proj_entity).despawn_recursive();
+                }
+                _ => {
+                    // Kill the player
+                    play_sfx(&mut commands, &sfx, SfxId::PlayerDeath);
+                    *p_action = PlayerAction::Dead;
+                    p_vel.y = -VEL_PUSHBACK;
+                    commands.entity(proj_entity).despawn_recursive();
+                }
+            }
+            break;
+        }
+
+        // Check vs enemies
+        for (e_entity, mut enemy, mut game_obj, e_collider, e_transform) in
+            enemy_query.iter_mut()
+        {
+            if !game_obj.alive || enemy.state == EnemyState::Dead {
+                continue;
+            }
+
+            if !aabb_overlap(
+                &proj_transform.translation,
+                proj_collider,
+                &e_transform.translation,
+                e_collider,
+            ) {
+                continue;
+            }
+
+            hit_events.send(ProjectileHitEvent {
+                projectile_entity: proj_entity,
+                hit_entity: e_entity,
+                projectile_owner: proj.owner,
+            });
+
+            match proj.projectile_type {
+                ProjectileType::IceBall => {
+                    // Freeze the enemy
+                    play_sfx(&mut commands, &sfx, SfxId::Transform);
+                    enemy.state = EnemyState::Stunned;
+                    enemy.kills_on_touch = false;
+                    commands.entity(e_entity).insert(
+                        crate::objects::enemies::StunTimer {
+                            timer: Timer::from_seconds(5.0, TimerMode::Once),
+                        },
+                    );
+                    commands.entity(proj_entity).despawn_recursive();
+                }
+                _ => {
+                    // Kill the enemy
+                    play_sfx(&mut commands, &sfx, SfxId::Kick);
+                    enemy.state = EnemyState::Dead;
+                    game_obj.alive = false;
+                    death_events.send(EnemyDeathEvent {
+                        enemy_entity: e_entity,
+                        killer_player: Some(proj.owner),
+                    });
+                    commands.entity(e_entity).insert(Lifetime::from_seconds(0.3));
+                    commands.entity(proj_entity).despawn_recursive();
+                }
+            }
+            break;
+        }
+    }
+}
+
+/// Handles fireball/iceball bounce counting. When a fireball has exhausted its
+/// bounces or hits a wall, it is despawned.
+pub fn projectile_bounce_system(
+    mut commands: Commands,
+    mut query: Query<(
+        Entity,
+        &mut Projectile,
+        &ObjectVelocity,
+        &ObjectGrounded,
+        &Transform,
+    )>,
+) {
+    for (entity, mut proj, _vel, grounded, transform) in query.iter_mut() {
+        match proj.projectile_type {
+            ProjectileType::Fireball | ProjectileType::IceBall => {
+                // Count bounces when hitting ground
+                if grounded.0 && proj.bounces_remaining > 0 {
+                    proj.bounces_remaining -= 1;
+                }
+                if proj.bounces_remaining == 0 && grounded.0 {
+                    commands.entity(entity).despawn_recursive();
+                }
+                // Despawn on wall hit
+                if transform.translation.x <= 1.0 || transform.translation.x >= SCREEN_WIDTH - 1.0
+                {
+                    commands.entity(entity).despawn_recursive();
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Ticks bomb fuse timers and triggers explosions.
+pub fn bomb_fuse_system(
+    mut commands: Commands,
+    sfx: Res<SfxLibrary>,
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut BombFuse, &Projectile, &Transform, &Collider)>,
+    mut player_query: Query<(
+        Entity,
+        &mut PlayerAction,
+        &mut Velocity,
+        &Transform,
+        &Collider,
+        Option<&Invincible>,
+    ), With<Player>>,
+    mut enemy_query: Query<(
+        Entity,
+        &mut Enemy,
+        &mut GameObject,
+        &Collider,
+        &Transform,
+    ), Without<Player>>,
+    mut death_events: EventWriter<EnemyDeathEvent>,
+) {
+    for (bomb_entity, mut fuse, proj, bomb_transform, _bomb_collider) in query.iter_mut() {
+        if !fuse.timer.tick(time.delta()).just_finished() {
+            continue;
+        }
+
+        play_sfx(&mut commands, &sfx, SfxId::BlockBreak);
+
+        let blast_collider = Collider::new(
+            fuse.explosion_radius * 2.0,
+            fuse.explosion_radius * 2.0,
+        ).with_offset(-fuse.explosion_radius, -fuse.explosion_radius);
+
+        // Damage players in blast radius (except owner)
+        for (_p_entity, mut p_action, mut p_vel, p_transform, p_collider, invincible) in
+            player_query.iter_mut()
+        {
+            if *p_action == PlayerAction::Dead {
+                continue;
+            }
+            if invincible.is_some() {
+                continue;
+            }
+
+            if aabb_overlap(
+                &bomb_transform.translation,
+                &blast_collider,
+                &p_transform.translation,
+                p_collider,
+            ) {
+                *p_action = PlayerAction::Dead;
+                // Pushback away from explosion
+                let diff_x = p_transform.translation.x - bomb_transform.translation.x;
+                p_vel.x = if diff_x > 0.0 { VEL_PUSHBACK } else { -VEL_PUSHBACK };
+                p_vel.y = -VEL_PUSHBACK;
+            }
+        }
+
+        // Damage enemies in blast radius
+        for (e_entity, mut enemy, mut game_obj, e_collider, e_transform) in
+            enemy_query.iter_mut()
+        {
+            if !game_obj.alive || enemy.state == EnemyState::Dead {
+                continue;
+            }
+
+            if aabb_overlap(
+                &bomb_transform.translation,
+                &blast_collider,
+                &e_transform.translation,
+                e_collider,
+            ) {
+                enemy.state = EnemyState::Dead;
+                game_obj.alive = false;
+                death_events.send(EnemyDeathEvent {
+                    enemy_entity: e_entity,
+                    killer_player: Some(proj.owner),
+                });
+                commands.entity(e_entity).insert(Lifetime::from_seconds(0.3));
+            }
+        }
+
+        commands.entity(bomb_entity).despawn_recursive();
+    }
+}
+
+/// Despawns projectiles when their lifetime expires.
+pub fn projectile_lifetime_system(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut Lifetime), With<Projectile>>,
+) {
+    for (entity, mut lifetime) in query.iter_mut() {
+        if lifetime.timer.tick(time.delta()).just_finished() {
+            commands.entity(entity).despawn_recursive();
+        }
+    }
+}
+
+/// Despawns projectiles that fall off screen.
+pub fn projectile_despawn_offscreen_system(
+    mut commands: Commands,
+    query: Query<(Entity, &Transform), (With<Projectile>, With<DespawnOffScreen>)>,
+) {
+    for (entity, transform) in query.iter() {
+        if transform.translation.y > SCREEN_HEIGHT + TILE_SIZE * 2.0
+            || transform.translation.y < -TILE_SIZE * 4.0
+        {
+            commands.entity(entity).despawn_recursive();
         }
     }
 }
