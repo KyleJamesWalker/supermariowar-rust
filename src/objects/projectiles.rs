@@ -337,7 +337,8 @@ pub fn projectile_movement_system(
                 transform.translation.y += vel.y;
 
                 // Bounce when landing (object_map_collision sets grounded + zeros vel.y)
-                if grounded.0 && vel.y == 0.0 {
+                // Only bounce if there are bounces remaining
+                if grounded.0 && vel.y == 0.0 && proj.bounces_remaining > 0 {
                     vel.y = FIREBALL_BOUNCE;
                 }
             }

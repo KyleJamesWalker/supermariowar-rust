@@ -493,6 +493,35 @@ pub fn shell_movement_system(
             }
         }
     }
+
+    // Shell-to-shell collision: both shells die when they collide
+    for i in 0..shells.len() {
+        for j in (i + 1)..shells.len() {
+            let (entity_a, _, pos_a, col_a, owner_a) = &shells[i];
+            let (entity_b, _, pos_b, col_b, owner_b) = &shells[j];
+
+            if aabb_overlap_wrapped(pos_a, col_a, pos_b, col_b) {
+                play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Kick);
+                // Kill both shells
+                if let Ok((_, mut enemy_a, _, _, _, _, _)) = shell_query.get_mut(*entity_a) {
+                    enemy_a.state = EnemyState::Dead;
+                }
+                if let Ok((_, mut enemy_b, _, _, _, _, _)) = shell_query.get_mut(*entity_b) {
+                    enemy_b.state = EnemyState::Dead;
+                }
+                death_events.send(EnemyDeathEvent {
+                    enemy_entity: *entity_a,
+                    killer_player: *owner_b,
+                });
+                death_events.send(EnemyDeathEvent {
+                    enemy_entity: *entity_b,
+                    killer_player: *owner_a,
+                });
+                commands.entity(*entity_a).insert(Lifetime::from_seconds(0.3));
+                commands.entity(*entity_b).insert(Lifetime::from_seconds(0.3));
+            }
+        }
+    }
 }
 
 /// Handles enemy collision with map boundaries (simplified wall bounce).
