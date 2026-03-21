@@ -447,8 +447,13 @@ pub fn warp_zone_detection(
         let smw_y = to_smw_y(transform.translation.y);
         let center_x = smw_x + PLAYER_WIDTH_OFFSET + PLAYER_WIDTH * 0.5;
         let foot_y = smw_y + PLAYER_HEIGHT_OFFSET + PLAYER_HEIGHT;
-        let tile_x = (center_x / TILE_SIZE).floor() as usize;
-        let tile_y = (foot_y / TILE_SIZE).floor() as usize;
+        let tile_x_i = (center_x / TILE_SIZE).floor() as i32;
+        let tile_y_i = (foot_y / TILE_SIZE).floor() as i32;
+        if tile_x_i < 0 || tile_y_i < 0 {
+            continue;
+        }
+        let tile_x = tile_x_i as usize;
+        let tile_y = tile_y_i as usize;
 
         if tile_x >= warp_cols || tile_y >= warp_rows {
             continue;
@@ -469,7 +474,7 @@ pub fn warp_zone_detection(
             let dest_x = to_bevy_x((exit.warp_x as f32 + 0.5) * TILE_SIZE);
             let dest_y = to_bevy_y((exit.warp_y as f32 + 0.5) * TILE_SIZE);
             let direction =
-                crate::map::components::WarpDirection::from_raw(warp_info.direction);
+                crate::map::components::WarpDirection::from_raw_enter(warp_info.direction);
 
             commands.entity(entity).insert(WarpState::new_entering(
                 direction, warp_info.id as u32, dest_x, dest_y,

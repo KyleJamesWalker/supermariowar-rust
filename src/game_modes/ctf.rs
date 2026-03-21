@@ -224,9 +224,11 @@ pub fn flag_capture_system(
                 }
             }
 
-            state.captures[player.index] += 1;
-            scoreboard.score[player.index] += 1;
-            scoreboard.objective_count[player.index] += 1;
+            if player.index < MAX_PLAYERS {
+                state.captures[player.index] += 1;
+                scoreboard.score[player.index] += 1;
+                scoreboard.objective_count[player.index] += 1;
+            }
 
             objective_events.send(ObjectiveEvent {
                 player_index: player.index,

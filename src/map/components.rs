@@ -119,12 +119,26 @@ pub enum WarpDirection {
 }
 
 impl WarpDirection {
+    /// Converts a raw warp **exit** direction (C++ WarpExitDirection).
+    /// UP=0, RIGHT=1, DOWN=2, LEFT=3.
     pub fn from_raw(v: i32) -> Self {
         match v {
             0 => Self::Up,
             1 => Self::Right,
             2 => Self::Down,
             3 => Self::Left,
+            _ => Self::Undefined,
+        }
+    }
+
+    /// Converts a raw warp **entry** direction (C++ WarpEnterDirection).
+    /// DOWN=0, LEFT=1, UP=2, RIGHT=3.
+    pub fn from_raw_enter(v: i32) -> Self {
+        match v {
+            0 => Self::Down,
+            1 => Self::Left,
+            2 => Self::Up,
+            3 => Self::Right,
             _ => Self::Undefined,
         }
     }
