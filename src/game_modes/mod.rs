@@ -339,7 +339,6 @@ fn round_over_timer_system(
     mut round_over_timer: ResMut<RoundOverTimer>,
     mut round_manager: ResMut<RoundManager>,
     mut next_gameplay_state: ResMut<NextState<GameplayState>>,
-    _next_game_state: ResMut<NextState<GameState>>,
     mut countdown: ResMut<RoundCountdown>,
     mut pending_reset: ResMut<PendingRoundReset>,
     mut sfx_events: EventWriter<crate::audio::sfx::SfxEvent>,

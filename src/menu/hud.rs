@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::core::constants::MAX_PLAYERS;
 use crate::core::game_state::GameplayState;
+use crate::game_modes::survival::SurvivalModeState;
 use crate::game_modes::traits::{
     CountdownPhase, GameModeConfig, GameModeType, GameTimer, RoundCountdown, RoundManager,
     ScoreBoard,
@@ -195,28 +196,28 @@ pub fn update_hud_scores(
 }
 
 /// Updates lives displays in the HUD.
+/// Reads from SurvivalModeState (the authoritative source) rather than
+/// Player.lives which is only set at spawn time and never decremented.
 pub fn update_hud_lives(
     config: Res<GameModeConfig>,
+    survival_state: Res<SurvivalModeState>,
     player_query: Query<&Player>,
     mut lives_query: Query<(&LivesDisplay, &mut Text)>,
 ) {
-    // Only show lives in survival-type modes
     let show_lives = config.mode_type == GameModeType::Survival;
 
-    let mut player_lives = [0i32; MAX_PLAYERS];
     let mut active = [false; MAX_PLAYERS];
     for player in player_query.iter() {
         if player.index < MAX_PLAYERS {
-            player_lives[player.index] = player.lives;
             active[player.index] = true;
         }
     }
 
     for (display, mut text) in lives_query.iter_mut() {
         let i = display.player_index;
-        if show_lives && active[i] {
-            // Render lives as heart symbols
-            let hearts: String = (0..player_lives[i].max(0)).map(|_| "♥").collect();
+        if show_lives && active[i] && survival_state.alive[i] {
+            let lives = survival_state.lives[i].max(0);
+            let hearts: String = (0..lives).map(|_| "♥").collect();
             *text = Text::new(format!("P{}: {}", i + 1, hearts));
         } else {
             *text = Text::new("");
