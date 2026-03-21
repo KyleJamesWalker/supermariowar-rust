@@ -621,8 +621,9 @@ fn spawn_map_hazards(commands: &mut Commands, map_data: &MapData) {
             _ => continue, // Unknown hazard type, skip
         };
 
-        let bx = smw_to_bevy_x(mh.tile_x as f32);
-        let by = smw_to_bevy_y(mh.tile_y as f32);
+        // Hazard ix/iy are half-tile indices; multiply by 16 to get SMW pixel coords
+        let bx = smw_to_bevy_x(mh.tile_x as f32 * (TILE_SIZE / 2.0));
+        let by = smw_to_bevy_y(mh.tile_y as f32 * (TILE_SIZE / 2.0));
 
         let hazard = Hazard {
             hazard_type,
@@ -649,8 +650,9 @@ fn spawn_map_items(commands: &mut Commands, map_data: &MapData) {
     use crate::physics::components::Collider;
 
     for item in &map_data.map_items {
-        let bx = smw_to_bevy_x(item.tile_x as f32);
-        let by = smw_to_bevy_y(item.tile_y as f32);
+        // Item ix/iy are tile indices; multiply by TILE_SIZE to get SMW pixel coords
+        let bx = smw_to_bevy_x(item.tile_x as f32 * TILE_SIZE);
+        let by = smw_to_bevy_y(item.tile_y as f32 * TILE_SIZE);
 
         // Item types: 0=GreenSpring, 1=Spike, 2=KuriboShoe, 3=GoldenSpring, 4=StickyShoe, 5=ThrowBox
         commands.spawn((
