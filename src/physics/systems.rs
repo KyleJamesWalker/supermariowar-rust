@@ -341,36 +341,43 @@ fn check_horizontal_collision(
     let bottom_tile = (((py + PLAYER_HEIGHT - 1.0) / TILE_SIZE).floor() as i32).max(0) as usize;
 
     if vel.x > 0.0 {
-        // Moving right: check right edge
+        // Moving right: check right edge (wrap for screen boundary)
         let right_edge = px + PLAYER_WIDTH;
-        let right_tile_x = (right_edge / TILE_SIZE).floor() as i32;
+        let right_tile_x_raw = (right_edge / TILE_SIZE).floor() as i32;
+        let right_tile_x = ((right_tile_x_raw % num_cols as i32) + num_cols as i32) as usize % num_cols;
 
-        if right_tile_x >= 0 && (right_tile_x as usize) < num_cols {
-            let tx = right_tile_x as usize;
-            for ty in top_tile..=(bottom_tile.min(num_rows.saturating_sub(1))) {
-                let tile = get_collision(collision_map, num_cols, num_rows, tx, ty);
-                if tile.is_solid() {
-                    let tile_left = tx as f32 * TILE_SIZE;
-                    if right_edge > tile_left {
-                        transform.translation.x = tile_left - PLAYER_WIDTH - PLAYER_WIDTH_OFFSET;
-                        vel.x = 0.0;
-                    }
+        for ty in top_tile..=(bottom_tile.min(num_rows.saturating_sub(1))) {
+            let tile = get_collision(collision_map, num_cols, num_rows, right_tile_x, ty);
+            if tile.is_solid() {
+                let tile_left = if right_tile_x_raw >= num_cols as i32 {
+                    // Wrapped: tile is at the left side of screen
+                    right_tile_x as f32 * TILE_SIZE + SCREEN_WIDTH as f32
+                } else {
+                    right_tile_x as f32 * TILE_SIZE
+                };
+                if right_edge > tile_left {
+                    transform.translation.x = tile_left - PLAYER_WIDTH - PLAYER_WIDTH_OFFSET;
+                    vel.x = 0.0;
                 }
             }
         }
     } else if vel.x < 0.0 {
-        // Moving left: check left edge
-        let left_tile_x = ((px / TILE_SIZE).floor() as i32).max(0) as usize;
+        // Moving left: check left edge (wrap for screen boundary)
+        let left_tile_x_raw = (px / TILE_SIZE).floor() as i32;
+        let left_tile_x = ((left_tile_x_raw % num_cols as i32) + num_cols as i32) as usize % num_cols;
 
-        if left_tile_x < num_cols {
-            for ty in top_tile..=(bottom_tile.min(num_rows.saturating_sub(1))) {
-                let tile = get_collision(collision_map, num_cols, num_rows, left_tile_x, ty);
-                if tile.is_solid() {
-                    let tile_right = (left_tile_x as f32 + 1.0) * TILE_SIZE;
-                    if px < tile_right {
-                        transform.translation.x = tile_right - PLAYER_WIDTH_OFFSET;
-                        vel.x = 0.0;
-                    }
+        for ty in top_tile..=(bottom_tile.min(num_rows.saturating_sub(1))) {
+            let tile = get_collision(collision_map, num_cols, num_rows, left_tile_x, ty);
+            if tile.is_solid() {
+                let tile_right = if left_tile_x_raw < 0 {
+                    // Wrapped: tile is at the right side of screen
+                    (left_tile_x as f32 + 1.0) * TILE_SIZE - SCREEN_WIDTH as f32
+                } else {
+                    (left_tile_x as f32 + 1.0) * TILE_SIZE
+                };
+                if px < tile_right {
+                    transform.translation.x = tile_right - PLAYER_WIDTH_OFFSET;
+                    vel.x = 0.0;
                 }
             }
         }
@@ -654,10 +661,10 @@ pub fn moving_platform_system(
                 player_px + PLAYER_WIDTH > plat_left && player_px < plat_right;
 
             if on_top && horizontally_on {
-                // Snap player to platform top and carry them with the platform
+                // Snap player to platform top (plat_max_y is already the new position)
+                // Only apply horizontal carry since vertical snap already accounts for movement
                 player_transform.translation.y = plat_max_y;
                 player_transform.translation.x += platform.vel_x;
-                player_transform.translation.y += platform.vel_y;
 
                 // Zero vertical velocity so gravity doesn't pull player off
                 vel.y = 0.0;

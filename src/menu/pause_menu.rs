@@ -12,7 +12,7 @@ pub fn handle_pause_toggle(
     gameplay_state: Res<State<GameplayState>>,
     mut next_gameplay_state: ResMut<NextState<GameplayState>>,
 ) {
-    for _event in pause_events.read() {
+    if let Some(_event) = pause_events.read().next() {
         match gameplay_state.get() {
             GameplayState::Playing => {
                 next_gameplay_state.set(GameplayState::Paused);
@@ -22,8 +22,6 @@ pub fn handle_pause_toggle(
             }
             _ => {}
         }
-        // Only handle the first pause event per frame
-        return;
     }
 }
 

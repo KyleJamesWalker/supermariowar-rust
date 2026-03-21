@@ -421,12 +421,15 @@ pub fn powerup_collect_system(
                 }
             }
 
-            // Clean up attack state components when powerup changes away from Feather/Leaf
+            // Clean up state components when powerup changes
             if spawned.powerup_type != PowerupType::Feather {
                 commands.entity(p_entity).remove::<CapeState>();
             }
             if spawned.powerup_type != PowerupType::Leaf {
                 commands.entity(p_entity).remove::<TailState>();
+            }
+            if spawned.powerup_type != PowerupType::Star {
+                commands.entity(p_entity).remove::<Invincible>();
             }
 
             // Despawn the collected powerup

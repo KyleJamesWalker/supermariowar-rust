@@ -278,7 +278,7 @@ fn handle_round_over(
     mut round_over_timer: ResMut<RoundOverTimer>,
     mut sfx_events: EventWriter<crate::audio::sfx::SfxEvent>,
 ) {
-    for event in round_over_events.read() {
+    if let Some(event) = round_over_events.read().next() {
         // Store result
         match_result.winning_player = event.winning_player;
         match_result.winning_team = event.winning_team;
@@ -308,9 +308,6 @@ fn handle_round_over(
 
         // Transition to RoundOver
         next_gameplay_state.set(GameplayState::RoundOver);
-
-        // Only process the first event per frame
-        return;
     }
 }
 
