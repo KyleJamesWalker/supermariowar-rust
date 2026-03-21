@@ -111,9 +111,9 @@ pub fn coins_drop_on_kill(
             continue;
         }
 
-        // Reduce victim's coins and scoreboard
+        // Reduce victim's coins and scoreboard (clamp to zero)
         state.coins[event.victim] = state.coins[event.victim].saturating_sub(drop_count);
-        scoreboard.score[event.victim] -= drop_count as i32;
+        scoreboard.score[event.victim] = (scoreboard.score[event.victim] - drop_count as i32).max(0);
 
         // Find victim position by matching on player index
         let victim_pos = players
@@ -166,7 +166,7 @@ pub fn coin_death_penalty(
         }
         if event.player_index < MAX_PLAYERS && state.coins[event.player_index] > 0 {
             state.coins[event.player_index] -= 1;
-            scoreboard.score[event.player_index] -= 1;
+            scoreboard.score[event.player_index] = (scoreboard.score[event.player_index] - 1).max(0);
         }
     }
 }
