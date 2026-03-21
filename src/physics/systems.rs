@@ -466,8 +466,8 @@ pub fn warp_zone_detection(
             .iter()
             .find(|e| e.connection == connection && e.id != warp_info.id)
         {
-            let dest_x = to_bevy_x(exit.warp_x as f32 * TILE_SIZE);
-            let dest_y = to_bevy_y(exit.warp_y as f32 * TILE_SIZE);
+            let dest_x = to_bevy_x((exit.warp_x as f32 + 0.5) * TILE_SIZE);
+            let dest_y = to_bevy_y((exit.warp_y as f32 + 0.5) * TILE_SIZE);
             let direction =
                 crate::map::components::WarpDirection::from_raw(warp_info.direction);
 
