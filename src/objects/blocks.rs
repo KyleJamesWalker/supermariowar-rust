@@ -189,10 +189,11 @@ pub fn block_hit_system(
                 continue;
             }
 
-            // Check if the player's head overlaps the block from below
-            let player_top = p_transform.translation.y + p_collider.offset_y;
-            let block_bottom =
-                b_transform.translation.y + b_collider.offset_y + b_collider.height;
+            // Check if the player's head overlaps the block from below.
+            // In Bevy Y-up: visual_bottom = pos + offset_y, visual_top = bottom + height
+            let player_head =
+                p_transform.translation.y + p_collider.offset_y + p_collider.height;
+            let block_feet = b_transform.translation.y + b_collider.offset_y;
 
             if !aabb_overlap(
                 &p_transform.translation,
@@ -203,8 +204,8 @@ pub fn block_hit_system(
                 continue;
             }
 
-            // Player must be hitting from below: player top near block bottom
-            let vertical_gap = (player_top - block_bottom).abs();
+            // Player must be hitting from below: player head near block bottom
+            let vertical_gap = (player_head - block_feet).abs();
             if vertical_gap > p_vel.y.abs() + 4.0 {
                 continue;
             }
@@ -344,12 +345,13 @@ pub fn block_bounce_system(
                 continue;
             }
 
-            let player_bottom =
-                p_transform.translation.y + p_collider.offset_y + p_collider.height;
-            let block_top = b_transform.translation.y + b_collider.offset_y;
+            // In Bevy Y-up: visual_bottom (feet) = pos + offset_y
+            let player_feet = p_transform.translation.y + p_collider.offset_y;
+            let block_head =
+                b_transform.translation.y + b_collider.offset_y + b_collider.height;
 
-            // Player bottom must be near block top
-            if (player_bottom - block_top).abs() > 4.0 {
+            // Player feet must be near block top
+            if (player_feet - block_head).abs() > 4.0 {
                 continue;
             }
 
