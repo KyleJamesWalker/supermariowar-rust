@@ -327,7 +327,7 @@ fn round_over_timer_system(
     mut round_over_timer: ResMut<RoundOverTimer>,
     mut round_manager: ResMut<RoundManager>,
     mut next_gameplay_state: ResMut<NextState<GameplayState>>,
-    mut next_game_state: ResMut<NextState<GameState>>,
+    _next_game_state: ResMut<NextState<GameState>>,
     mut countdown: ResMut<RoundCountdown>,
     mut pending_reset: ResMut<PendingRoundReset>,
     mut sfx_events: EventWriter<crate::audio::sfx::SfxEvent>,
@@ -342,10 +342,10 @@ fn round_over_timer_system(
     round_manager.current_round += 1;
 
     if round_manager.current_round > round_manager.total_rounds {
-        // Match is over
+        // Match is over — stay in Gameplay state so MatchOver scoreboard input works.
+        // The scoreboard_match_input system transitions to Menu when player presses Enter.
         round_manager.match_finished = true;
         next_gameplay_state.set(GameplayState::MatchOver);
-        next_game_state.set(GameState::GameOver);
         sfx_events.send(crate::audio::sfx::SfxEvent::new(crate::audio::sfx::SfxId::GameOver));
     } else {
         // Signal reset

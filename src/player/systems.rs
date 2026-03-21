@@ -280,6 +280,12 @@ pub fn player_respawn_system(
             sfx_events.send(crate::audio::sfx::SfxEvent::new(
                 crate::audio::sfx::SfxId::PlayerRespawn,
             ));
+
+            // Visual spawn effect
+            crate::graphics::effects::create_spawn_effect(
+                &mut commands,
+                Vec2::new(spawn_x, spawn_y),
+            );
         }
     }
 }
