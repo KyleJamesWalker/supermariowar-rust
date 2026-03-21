@@ -355,11 +355,14 @@ pub fn invincibility_system(
 }
 
 /// Detects player-to-player stomps (one player falling onto another from above).
+/// Uses previous-frame position (like C++ fOldY) for reliable cross-frame detection,
+/// and requires minimum downward velocity > 1.0 (matching C++ threshold).
 pub fn player_stomp_system(
     query: Query<(
         Entity,
         &Player,
         &Transform,
+        &PreviousTransform,
         &Velocity,
         &PlayerAction,
         &Collider,
@@ -374,8 +377,8 @@ pub fn player_stomp_system(
 
     for i in 0..players.len() {
         for j in (i + 1)..players.len() {
-            let (e_a, p_a, t_a, v_a, act_a, col_a, shield_a, inv_a, sp_a) = &players[i];
-            let (e_b, p_b, t_b, v_b, act_b, col_b, shield_b, inv_b, sp_b) = &players[j];
+            let (e_a, p_a, t_a, prev_a, v_a, act_a, col_a, shield_a, inv_a, sp_a) = &players[i];
+            let (e_b, p_b, t_b, prev_b, v_b, act_b, col_b, shield_b, inv_b, sp_b) = &players[j];
 
             // Skip if either player is dead or spawning
             if **act_a == PlayerAction::Dead
@@ -426,58 +429,79 @@ pub fn player_stomp_system(
             }
 
             // In Bevy Y-up: pos + offset_y = visual bottom, pos + offset_y + height = visual top
-            let a_visual_bottom = t_a.translation.y + col_a.offset_y;
-            let a_visual_top = a_visual_bottom + col_a.height;
+            let a_visual_top = t_a.translation.y + col_a.offset_y + col_a.height;
             let b_visual_bottom = t_b.translation.y + col_b.offset_y;
             let b_visual_top = b_visual_bottom + col_b.height;
+            let a_visual_bottom = t_a.translation.y + col_a.offset_y;
 
-            // A stomps B: A is falling (vel.y < 0) and A's bottom is near B's top
-            if v_a.y < 0.0 {
-                let diff = a_visual_bottom - b_visual_top;
-                if diff >= -STOMP_THRESHOLD_Y && diff <= 4.0 {
-                    // Any shield blocks stomps
-                    if **shield_b != ShieldState::None {
+            // C++ stomp check: previous-frame stomper bottom was ABOVE stomped top,
+            // and current-frame they overlap. Plus velocity threshold > 1.0.
+            // In Bevy Y-up: "above" means prev_bottom > other_prev_top (higher Y).
+
+            // A stomps B
+            if v_a.y < -1.0 {
+                let prev_a_bottom = prev_a.translation.y + col_a.offset_y;
+                let prev_b_top = prev_b.translation.y + col_b.offset_y + col_b.height;
+                // Previous frame: A's bottom was at or above B's top
+                if prev_a_bottom >= prev_b_top {
+                    // Current frame: A's bottom is now at or below B's top (overlapping)
+                    if a_visual_bottom <= b_visual_top {
+                        // Shield blocks stomps
+                        if **shield_b != ShieldState::None {
+                            continue;
+                        }
+                        stomp_events.send(PlayerStompEvent {
+                            stomper_entity: *e_a,
+                            stomped_entity: *e_b,
+                            stomper_index: p_a.index,
+                            stomped_index: p_b.index,
+                        });
+                        death_events.send(PlayerDeathEvent {
+                            player_entity: *e_b,
+                            player_index: p_b.index,
+                            killer_index: Some(p_a.index),
+                            cause: DeathCause::Killed { by: p_a.index },
+                        });
                         continue;
                     }
-                    stomp_events.send(PlayerStompEvent {
-                        stomper_entity: *e_a,
-                        stomped_entity: *e_b,
-                        stomper_index: p_a.index,
-                        stomped_index: p_b.index,
-                    });
-                    death_events.send(PlayerDeathEvent {
-                        player_entity: *e_b,
-                        player_index: p_b.index,
-                        killer_index: Some(p_a.index),
-                        cause: DeathCause::Killed { by: p_a.index },
-                    });
-                    continue;
                 }
             }
 
-            // B stomps A: B is falling (vel.y < 0) and B's bottom is near A's top
-            if v_b.y < 0.0 {
-                let diff = b_visual_bottom - a_visual_top;
-                if diff >= -STOMP_THRESHOLD_Y && diff <= 4.0 {
-                    // Any shield blocks stomps
-                    if **shield_a != ShieldState::None {
-                        continue;
+            // B stomps A
+            if v_b.y < -1.0 {
+                let prev_b_bottom = prev_b.translation.y + col_b.offset_y;
+                let prev_a_top = prev_a.translation.y + col_a.offset_y + col_a.height;
+                if prev_b_bottom >= prev_a_top {
+                    if b_visual_bottom <= a_visual_top {
+                        if **shield_a != ShieldState::None {
+                            continue;
+                        }
+                        stomp_events.send(PlayerStompEvent {
+                            stomper_entity: *e_b,
+                            stomped_entity: *e_a,
+                            stomper_index: p_b.index,
+                            stomped_index: p_a.index,
+                        });
+                        death_events.send(PlayerDeathEvent {
+                            player_entity: *e_a,
+                            player_index: p_a.index,
+                            killer_index: Some(p_b.index),
+                            cause: DeathCause::Killed { by: p_b.index },
+                        });
                     }
-                    stomp_events.send(PlayerStompEvent {
-                        stomper_entity: *e_b,
-                        stomped_entity: *e_a,
-                        stomper_index: p_b.index,
-                        stomped_index: p_a.index,
-                    });
-                    death_events.send(PlayerDeathEvent {
-                        player_entity: *e_a,
-                        player_index: p_a.index,
-                        killer_index: Some(p_b.index),
-                        cause: DeathCause::Killed { by: p_b.index },
-                    });
                 }
             }
         }
+    }
+}
+
+/// Snapshots current position into PreviousTransform at end of frame.
+/// Must run in PostUpdate after all movement is finalized.
+pub fn update_previous_transform(
+    mut query: Query<(&Transform, &mut PreviousTransform), With<Player>>,
+) {
+    for (transform, mut prev) in query.iter_mut() {
+        prev.translation = transform.translation;
     }
 }
 

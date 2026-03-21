@@ -701,6 +701,7 @@ fn spawn_blocks_from_object_data(commands: &mut Commands, map_data: &MapData) {
                     block_type,
                     col as u32,
                     row as u32,
+                    obj_block.settings,
                 );
                 commands.entity(entity).insert(GameplayEntity);
 

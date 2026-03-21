@@ -275,6 +275,13 @@ pub struct PauseEvent {
     pub player_index: usize,
 }
 
+/// Stores the player's position from the previous frame for cross-frame collision checks.
+/// C++ original tracks fOldX/fOldY used for reliable stomp detection.
+#[derive(Component, Debug, Default, Clone, Copy)]
+pub struct PreviousTransform {
+    pub translation: Vec3,
+}
+
 /// Bundle for spawning a complete player entity.
 #[derive(Bundle)]
 pub struct PlayerBundle {
@@ -290,6 +297,7 @@ pub struct PlayerBundle {
     pub carried_object: CarriedObject,
     pub jail_key: JailKey,
     pub skin_index: PlayerSkinIndex,
+    pub previous_transform: PreviousTransform,
     pub transform: Transform,
     pub global_transform: GlobalTransform,
     pub visibility: Visibility,
@@ -299,6 +307,7 @@ pub struct PlayerBundle {
 
 impl PlayerBundle {
     pub fn new(index: usize, team: u8, spawn_x: f32, spawn_y: f32) -> Self {
+        let pos = Vec3::new(spawn_x, spawn_y, 10.0);
         Self {
             player: Player {
                 index,
@@ -317,6 +326,7 @@ impl PlayerBundle {
             carried_object: CarriedObject::default(),
             jail_key: JailKey::default(),
             skin_index: PlayerSkinIndex(index),
+            previous_transform: PreviousTransform { translation: pos },
             transform: Transform::from_xyz(spawn_x, spawn_y, 10.0),
             global_transform: GlobalTransform::default(),
             visibility: Visibility::default(),

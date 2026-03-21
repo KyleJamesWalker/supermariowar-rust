@@ -117,6 +117,7 @@ impl Plugin for GameModesPlugin {
         app.add_systems(
             Update,
             (
+                stomp::stomp_enemy_spawn_system,
                 stomp::handle_stomp_kills,
                 stomp::reset_stomp_combo_on_death,
                 stomp::check_stomp_win_condition,

@@ -82,6 +82,12 @@ impl Plugin for PlayerPlugin {
                     systems::update_stats_on_death,
                 )
                     .in_set(GameSystemSet::Scoring)
+                    .run_if(gameplay_playing.clone()),
+            )
+            // Snapshot previous transform at end of frame for next-frame collision checks
+            .add_systems(
+                PostUpdate,
+                systems::update_previous_transform
                     .run_if(gameplay_playing),
             );
     }

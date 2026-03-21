@@ -102,6 +102,72 @@ impl Enemy {
             speed: 1.0,
         }
     }
+
+    pub fn cheep_cheep() -> Self {
+        Self {
+            enemy_type: EnemyType::CheepCheep,
+            state: EnemyState::Walking,
+            stompable: true,
+            kills_on_touch: true,
+            speed: 2.0,
+        }
+    }
+
+    pub fn paragoomba() -> Self {
+        Self {
+            enemy_type: EnemyType::Paragoomba,
+            state: EnemyState::Walking,
+            stompable: true,
+            kills_on_touch: true,
+            speed: 1.5,
+        }
+    }
+
+    pub fn parakoopa() -> Self {
+        Self {
+            enemy_type: EnemyType::Parakoopa,
+            state: EnemyState::Walking,
+            stompable: true,
+            kills_on_touch: true,
+            speed: 1.5,
+        }
+    }
+
+    pub fn bullet_bill() -> Self {
+        Self {
+            enemy_type: EnemyType::BulletBill,
+            state: EnemyState::Walking,
+            stompable: true,
+            kills_on_touch: true,
+            speed: 3.0,
+        }
+    }
+
+    pub fn podoboo() -> Self {
+        Self {
+            enemy_type: EnemyType::Podoboo,
+            state: EnemyState::Walking,
+            stompable: false,
+            kills_on_touch: true,
+            speed: 2.0,
+        }
+    }
+
+    /// Creates an enemy from its type, dispatching to the appropriate constructor.
+    pub fn new(enemy_type: EnemyType) -> Self {
+        match enemy_type {
+            EnemyType::Goomba => Self::goomba(),
+            EnemyType::Koopa => Self::koopa(),
+            EnemyType::KoopaRed => Self::koopa_red(),
+            EnemyType::Spiny => Self::spiny(),
+            EnemyType::BuzzyBeetle => Self::buzzy_beetle(),
+            EnemyType::CheepCheep => Self::cheep_cheep(),
+            EnemyType::Paragoomba => Self::paragoomba(),
+            EnemyType::Parakoopa => Self::parakoopa(),
+            EnemyType::BulletBill => Self::bullet_bill(),
+            EnemyType::Podoboo => Self::podoboo(),
+        }
+    }
 }
 
 /// Direction the enemy is currently moving.

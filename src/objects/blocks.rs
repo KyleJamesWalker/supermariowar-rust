@@ -86,6 +86,19 @@ impl Default for FlipBlockState {
     }
 }
 
+/// Stores per-block settings from the map file (ObjectBlock.settings).
+/// For PowerupBlock, settings[0..NUM_POWERUPS] contain spawn weights per powerup type.
+#[derive(Component, Debug, Clone)]
+pub struct BlockSettings {
+    pub values: [i8; 8],
+}
+
+impl Default for BlockSettings {
+    fn default() -> Self {
+        Self { values: [0; 8] }
+    }
+}
+
 /// On/Off switch state shared across all on/off blocks.
 #[derive(Resource, Debug, Default)]
 pub struct OnOffSwitchState {
@@ -111,6 +124,7 @@ pub fn spawn_block(
     block_type: BlockType,
     grid_x: u32,
     grid_y: u32,
+    settings: [i8; 8],
 ) -> Entity {
     // Convert tile grid coords to Bevy centered coordinates
     let world_x = (grid_x as f32 * TILE_SIZE) - SCREEN_WIDTH / 2.0 + TILE_SIZE / 2.0;
@@ -123,6 +137,7 @@ pub fn spawn_block(
         },
         block_type,
         BlockState::default(),
+        BlockSettings { values: settings },
         Collider::new(TILE_SIZE, TILE_SIZE),
         CollisionLayer::Block,
         Solid,
@@ -162,6 +177,7 @@ pub fn block_hit_system(
         Entity,
         &BlockType,
         &mut BlockState,
+        &BlockSettings,
         &Collider,
         &Transform,
         &mut GameObject,
@@ -185,7 +201,7 @@ pub fn block_hit_system(
             continue; // Skip if player is NOT moving up
         }
 
-        for (b_entity, block_type, mut block_state, b_collider, b_transform, mut game_obj) in
+        for (b_entity, block_type, mut block_state, block_settings, b_collider, b_transform, mut game_obj) in
             block_query.iter_mut()
         {
             if !game_obj.alive || block_state.empty {
@@ -244,7 +260,8 @@ pub fn block_hit_system(
                             duration: 0.15,
                         });
 
-                        // Spawn a random powerup above the block
+                        // Spawn powerup above the block using map settings for weighted selection.
+                        // C++ settings[0..NUM_POWERUPS] contain weight per powerup type.
                         let spawn_x = b_transform.translation.x;
                         let spawn_y = b_transform.translation.y + TILE_SIZE;
                         let powerup_pool = [
@@ -256,12 +273,31 @@ pub fn block_hit_system(
                             PowerupType::Leaf,
                             PowerupType::Star,
                             PowerupType::Bomb,
-                            PowerupType::IceWand,
                         ];
-                        let pick = rand::random::<usize>() % powerup_pool.len();
+                        // Use settings as weights (only first 8 fit in settings array)
+                        let total_weight: i32 = block_settings.values.iter()
+                            .map(|&w| (w as i32).max(0))
+                            .sum();
+                        let selected = if total_weight > 0 {
+                            // Weighted selection from map settings
+                            let mut roll = (rand::random::<u32>() % total_weight as u32) as i32;
+                            let mut pick = 0usize;
+                            for (i, &w) in block_settings.values.iter().enumerate() {
+                                let weight = (w as i32).max(0);
+                                if roll < weight {
+                                    pick = i;
+                                    break;
+                                }
+                                roll -= weight;
+                            }
+                            powerup_pool[pick.min(powerup_pool.len() - 1)]
+                        } else {
+                            // Fallback: equal weight random if no settings configured
+                            powerup_pool[rand::random::<usize>() % powerup_pool.len()]
+                        };
                         crate::objects::powerups::spawn_powerup(
                             &mut commands,
-                            powerup_pool[pick],
+                            selected,
                             spawn_x,
                             spawn_y,
                         );
