@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::audio::sfx::{play_sfx, SfxId, SfxLibrary};
+use crate::audio::sfx::{play_sfx, SfxId, SfxLibrary, SfxVolume};
 use crate::core::constants::*;
 use crate::objects::components::*;
 use crate::objects::powerups::PowerupType;
@@ -154,6 +154,7 @@ pub fn spawn_block(
 pub fn block_hit_system(
     mut commands: Commands,
     sfx: Res<SfxLibrary>,
+    sfx_vol: Res<SfxVolume>,
     mut on_off_state: ResMut<OnOffSwitchState>,
     mut block_query: Query<(
         Entity,
@@ -221,14 +222,14 @@ pub fn block_hit_system(
 
             match block_type {
                 BlockType::Breakable => {
-                    play_sfx(&mut commands, &sfx, SfxId::BlockBreak);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::BlockBreak);
                     game_obj.alive = false;
                     // Award points for breaking
                     commands.entity(b_entity).despawn_recursive();
                 }
                 BlockType::PowerupBlock => {
                     if !block_state.empty {
-                        play_sfx(&mut commands, &sfx, SfxId::PowerupAppear);
+                        play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::PowerupAppear);
                         block_state.item_count = block_state.item_count.saturating_sub(1);
                         if block_state.item_count == 0 {
                             block_state.empty = true;
@@ -253,7 +254,7 @@ pub fn block_hit_system(
                     }
                 }
                 BlockType::BounceBlock => {
-                    play_sfx(&mut commands, &sfx, SfxId::BlockHit);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::BlockHit);
                     block_state.hit = true;
                     block_state.hit_timer = 0.0;
                     commands.entity(b_entity).insert(BlockBumpAnimation {
@@ -264,7 +265,7 @@ pub fn block_hit_system(
                     // Entities standing on this block get bounced (handled in separate pass)
                 }
                 BlockType::NoteBlock => {
-                    play_sfx(&mut commands, &sfx, SfxId::BlockHit);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::BlockHit);
                     block_state.hit = true;
                     block_state.hit_timer = 0.0;
                     commands.entity(b_entity).insert(BlockBumpAnimation {
@@ -275,7 +276,7 @@ pub fn block_hit_system(
                     // Stronger bounce handled separately
                 }
                 BlockType::FlipBlock => {
-                    play_sfx(&mut commands, &sfx, SfxId::BlockHit);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::BlockHit);
                     block_state.hit = true;
                     commands.entity(b_entity).insert(BlockBumpAnimation {
                         original_y: b_transform.translation.y,
@@ -285,7 +286,7 @@ pub fn block_hit_system(
                     // Flip animation starts -- FlipBlockState is handled in flip_block_system
                 }
                 BlockType::OnOffSwitch => {
-                    play_sfx(&mut commands, &sfx, SfxId::BlockHit);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::BlockHit);
                     on_off_state.active = !on_off_state.active;
                     block_state.hit = true;
                     block_state.hit_timer = 0.0;
@@ -296,7 +297,7 @@ pub fn block_hit_system(
                     });
                 }
                 BlockType::ThrowBlock => {
-                    play_sfx(&mut commands, &sfx, SfxId::ThrowBlock);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::ThrowBlock);
                     // Player picks up the block as a carried object
                     if carried.entity.is_none() {
                         carried.entity = Some(b_entity);
@@ -316,7 +317,7 @@ pub fn block_hit_system(
                 }
                 BlockType::WeaponBreakable | BlockType::ViewBlock | BlockType::OnOffBlock => {
                     // These blocks respond to other interactions
-                    play_sfx(&mut commands, &sfx, SfxId::Bump);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Bump);
                 }
             }
         }

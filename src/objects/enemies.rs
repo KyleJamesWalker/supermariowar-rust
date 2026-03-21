@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::audio::sfx::{play_sfx, SfxId, SfxLibrary};
+use crate::audio::sfx::{play_sfx, SfxId, SfxLibrary, SfxVolume};
 use crate::core::constants::*;
 use crate::objects::components::*;
 use crate::physics::collision::aabb_overlap;
@@ -250,6 +250,7 @@ pub fn enemy_gravity_system(
 pub fn enemy_stomp_system(
     mut commands: Commands,
     sfx: Res<SfxLibrary>,
+    sfx_vol: Res<SfxVolume>,
     mut enemy_query: Query<(
         Entity,
         &mut Enemy,
@@ -314,7 +315,7 @@ pub fn enemy_stomp_system(
 
             // Invincible players kill any enemy on contact
             if invincible.is_some() {
-                play_sfx(&mut commands, &sfx, SfxId::Kick);
+                play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Kick);
                 enemy.state = EnemyState::Dead;
                 game_obj.alive = false;
                 death_events.send(EnemyDeathEvent {
@@ -343,7 +344,7 @@ pub fn enemy_stomp_system(
 
             match enemy.enemy_type {
                 EnemyType::Goomba | EnemyType::Paragoomba => {
-                    play_sfx(&mut commands, &sfx, SfxId::Stomp);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Stomp);
                     enemy.state = EnemyState::Dead;
                     game_obj.alive = false;
                     death_events.send(EnemyDeathEvent {
@@ -361,7 +362,7 @@ pub fn enemy_stomp_system(
                 | EnemyType::Parakoopa => {
                     if enemy.state == EnemyState::InShell {
                         // Kick the shell
-                        play_sfx(&mut commands, &sfx, SfxId::Kick);
+                        play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Kick);
                         enemy.state = EnemyState::ShellMoving;
                         enemy.kills_on_touch = true;
                         let kick_dir = if p_transform.translation.x < e_transform.translation.x
@@ -378,7 +379,7 @@ pub fn enemy_stomp_system(
                         });
                     } else {
                         // Enter shell state
-                        play_sfx(&mut commands, &sfx, SfxId::Stomp);
+                        play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Stomp);
                         enemy.state = EnemyState::InShell;
                         enemy.kills_on_touch = false;
                     }
@@ -386,7 +387,7 @@ pub fn enemy_stomp_system(
                 }
                 _ => {
                     // Generic stomp for other stompable enemies
-                    play_sfx(&mut commands, &sfx, SfxId::Stomp);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Stomp);
                     enemy.state = EnemyState::Dead;
                     game_obj.alive = false;
                     p_vel.y = VEL_ENEMY_BOUNCE;
@@ -405,6 +406,7 @@ pub fn enemy_stomp_system(
 pub fn shell_movement_system(
     mut commands: Commands,
     sfx: Res<SfxLibrary>,
+    sfx_vol: Res<SfxVolume>,
     mut shell_query: Query<(
         Entity,
         &mut Enemy,
@@ -412,6 +414,7 @@ pub fn shell_movement_system(
         &mut ObjectVelocity,
         &Collider,
         &Transform,
+        Option<&OwnerPlayer>,
     )>,
     mut other_enemies: Query<
         (Entity, &mut Enemy, &mut GameObject, &Collider, &Transform),
@@ -422,28 +425,27 @@ pub fn shell_movement_system(
     // Collect shell data first to avoid borrow conflicts
     let shells: Vec<(Entity, f32, Vec3, Collider, Option<usize>)> = shell_query
         .iter()
-        .filter(|(_, enemy, _, _, _, _)| enemy.state == EnemyState::ShellMoving)
-        .map(|(entity, _enemy, shell_speed, _vel, collider, transform)| {
-            // Try to get owner from the entity -- we check later
+        .filter(|(_, enemy, _, _, _, _, _)| enemy.state == EnemyState::ShellMoving)
+        .map(|(entity, _enemy, shell_speed, _vel, collider, transform, owner)| {
             (
                 entity,
                 shell_speed.speed,
                 transform.translation,
                 collider.clone(),
-                None::<usize>,
+                owner.map(|o| o.index),
             )
         })
         .collect();
 
     // Update shell velocities
-    for (_entity, _enemy, shell_speed, mut vel, _collider, _transform) in shell_query.iter_mut() {
+    for (_entity, _enemy, shell_speed, mut vel, _collider, _transform, _) in shell_query.iter_mut() {
         if _enemy.state == EnemyState::ShellMoving {
             vel.x = shell_speed.speed;
         }
     }
 
     // Check shell vs other enemy collisions
-    for (_shell_entity, _speed, shell_pos, shell_col, _owner) in &shells {
+    for (_shell_entity, _speed, shell_pos, shell_col, owner) in &shells {
         for (e_entity, mut enemy, mut game_obj, e_collider, e_transform) in
             other_enemies.iter_mut()
         {
@@ -452,12 +454,12 @@ pub fn shell_movement_system(
             }
 
             if aabb_overlap(&shell_pos, &shell_col, &e_transform.translation, e_collider) {
-                play_sfx(&mut commands, &sfx, SfxId::Kick);
+                play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Kick);
                 enemy.state = EnemyState::Dead;
                 game_obj.alive = false;
                 death_events.send(EnemyDeathEvent {
                     enemy_entity: e_entity,
-                    killer_player: None,
+                    killer_player: *owner,
                 });
                 commands.entity(e_entity).insert(Lifetime::from_seconds(0.3));
             }
@@ -485,6 +487,7 @@ pub fn enemy_map_collision(
 pub fn enemy_player_touch_system(
     mut commands: Commands,
     sfx: Res<SfxLibrary>,
+    sfx_vol: Res<SfxVolume>,
     enemy_query: Query<(&Enemy, &Collider, &Transform, &GameObject)>,
     mut player_query: Query<(
         Entity,
@@ -544,7 +547,7 @@ pub fn enemy_player_touch_system(
             }
 
             // Kill the player
-            play_sfx(&mut commands, &sfx, SfxId::PlayerDeath);
+            play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::PlayerDeath);
             *p_action = PlayerAction::Dead;
             player_death_events.send(PlayerDeathEvent {
                 player_entity: p_entity,

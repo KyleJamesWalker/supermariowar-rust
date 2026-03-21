@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::audio::sfx::{play_sfx, SfxId, SfxLibrary};
+use crate::audio::sfx::{play_sfx, SfxId, SfxLibrary, SfxVolume};
 use crate::core::constants::*;
 use crate::map::GameplayEntity;
 use crate::objects::components::*;
@@ -168,6 +168,7 @@ pub fn spawn_projectile(
 pub fn fire_projectile_system(
     mut commands: Commands,
     sfx: Res<SfxLibrary>,
+    sfx_vol: Res<SfxVolume>,
     query: Query<(
         Entity,
         &Player,
@@ -201,7 +202,7 @@ pub fn fire_projectile_system(
 
         match powerup {
             PowerupState::Fire => {
-                play_sfx(&mut commands, &sfx, SfxId::Fireball);
+                play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Fireball);
                 let proj = Projectile::fireball(player.index, player.team);
                 let vel_x = proj.speed * dir;
                 let vel_y = -2.0; // Slight downward angle
@@ -211,7 +212,7 @@ pub fn fire_projectile_system(
                 });
             }
             PowerupState::Hammer => {
-                play_sfx(&mut commands, &sfx, SfxId::Fireball);
+                play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Hammer);
                 let proj = Projectile::hammer(player.index, player.team);
                 let vel_x = proj.speed * dir * 0.7;
                 let vel_y = HAMMER_THROW; // Thrown upward in parabolic arc (positive = up in Bevy)
@@ -232,7 +233,7 @@ pub fn fire_projectile_system(
                 });
             }
             PowerupState::Boomerang => {
-                play_sfx(&mut commands, &sfx, SfxId::Fireball);
+                play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Boomerang);
                 let proj = Projectile::boomerang(player.index, player.team);
                 let vel_x = proj.speed * dir;
                 let entity = spawn_projectile(
@@ -254,7 +255,7 @@ pub fn fire_projectile_system(
                 });
             }
             PowerupState::Bomb => {
-                play_sfx(&mut commands, &sfx, SfxId::Fireball);
+                play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Bomb);
                 let proj = Projectile::bomb(player.index, player.team);
                 let vel_x = proj.speed * dir * 0.5;
                 let vel_y = proj.speed; // Thrown upward (positive = up in Bevy)
@@ -402,6 +403,7 @@ pub fn projectile_movement_system(
 pub fn projectile_collision_system(
     mut commands: Commands,
     sfx: Res<SfxLibrary>,
+    sfx_vol: Res<SfxVolume>,
     projectile_query: Query<(
         Entity,
         &Projectile,
@@ -474,7 +476,7 @@ pub fn projectile_collision_system(
             match proj.projectile_type {
                 ProjectileType::IceBall => {
                     // Freeze the player instead of killing
-                    play_sfx(&mut commands, &sfx, SfxId::Transform);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Transform);
                     commands.entity(p_entity).insert(
                         crate::player::components::FrozenState::new(3.0),
                     );
@@ -482,7 +484,7 @@ pub fn projectile_collision_system(
                 }
                 _ => {
                     // Kill the player
-                    play_sfx(&mut commands, &sfx, SfxId::PlayerDeath);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::PlayerDeath);
                     *p_action = PlayerAction::Dead;
                     player_death_events.send(PlayerDeathEvent {
                         player_entity: p_entity,
@@ -522,7 +524,7 @@ pub fn projectile_collision_system(
             match proj.projectile_type {
                 ProjectileType::IceBall => {
                     // Freeze the enemy
-                    play_sfx(&mut commands, &sfx, SfxId::Transform);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Transform);
                     enemy.state = EnemyState::Stunned;
                     enemy.kills_on_touch = false;
                     commands.entity(e_entity).insert(
@@ -534,7 +536,7 @@ pub fn projectile_collision_system(
                 }
                 _ => {
                     // Kill the enemy
-                    play_sfx(&mut commands, &sfx, SfxId::Kick);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Kick);
                     enemy.state = EnemyState::Dead;
                     game_obj.alive = false;
                     death_events.send(EnemyDeathEvent {
@@ -582,6 +584,7 @@ pub fn projectile_bounce_system(
 pub fn bomb_fuse_system(
     mut commands: Commands,
     sfx: Res<SfxLibrary>,
+    sfx_vol: Res<SfxVolume>,
     time: Res<Time>,
     mut query: Query<(Entity, &mut BombFuse, &Projectile, &Transform, &Collider)>,
     mut player_query: Query<(
@@ -608,7 +611,7 @@ pub fn bomb_fuse_system(
             continue;
         }
 
-        play_sfx(&mut commands, &sfx, SfxId::BlockBreak);
+        play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::BlockBreak);
 
         let blast_collider = Collider::new(
             fuse.explosion_radius * 2.0,

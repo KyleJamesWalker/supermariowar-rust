@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::audio::sfx::{play_sfx, SfxId, SfxLibrary};
+use crate::audio::sfx::{play_sfx, SfxId, SfxLibrary, SfxVolume};
 use crate::core::constants::*;
 use crate::objects::components::*;
 use crate::physics::collision::aabb_overlap;
@@ -261,6 +261,7 @@ pub fn powerup_movement_system(
 pub fn powerup_collect_system(
     mut commands: Commands,
     sfx: Res<SfxLibrary>,
+    sfx_vol: Res<SfxVolume>,
     powerup_query: Query<(
         Entity,
         &SpawnedPowerup,
@@ -310,47 +311,47 @@ pub fn powerup_collect_system(
 
             match spawned.powerup_type {
                 PowerupType::Mushroom => {
-                    play_sfx(&mut commands, &sfx, SfxId::ExtraLife);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::ExtraLife);
                     player.lives += 1;
                 }
                 PowerupType::Fire => {
-                    play_sfx(&mut commands, &sfx, SfxId::PowerupCollect);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::PowerupCollect);
                     *powerup_state = PowerupState::Fire;
                 }
                 PowerupType::Hammer => {
-                    play_sfx(&mut commands, &sfx, SfxId::PowerupCollect);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::PowerupCollect);
                     *powerup_state = PowerupState::Hammer;
                 }
                 PowerupType::Boomerang => {
-                    play_sfx(&mut commands, &sfx, SfxId::PowerupCollect);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::PowerupCollect);
                     *powerup_state = PowerupState::Boomerang;
                 }
                 PowerupType::IceWand => {
-                    play_sfx(&mut commands, &sfx, SfxId::PowerupCollect);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::PowerupCollect);
                     // IceWand mapped to Fire state with ice behavior handled in projectile system
                     *powerup_state = PowerupState::Fire;
                 }
                 PowerupType::Star => {
-                    play_sfx(&mut commands, &sfx, SfxId::Invincible);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Invincible);
                     *powerup_state = PowerupState::Star;
                     commands.entity(p_entity).insert(Invincible {
                         timer: Timer::from_seconds(10.0, TimerMode::Once),
                     });
                 }
                 PowerupType::Coin => {
-                    play_sfx(&mut commands, &sfx, SfxId::Coin);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Coin);
                     player.score += 1;
                 }
                 PowerupType::ShieldSoft => {
-                    play_sfx(&mut commands, &sfx, SfxId::PowerupCollect);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::PowerupCollect);
                     *shield_state = ShieldState::Soft;
                 }
                 PowerupType::ShieldHard => {
-                    play_sfx(&mut commands, &sfx, SfxId::PowerupCollect);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::PowerupCollect);
                     *shield_state = ShieldState::Hard;
                 }
                 PowerupType::Poison => {
-                    play_sfx(&mut commands, &sfx, SfxId::PlayerDeath);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::PlayerDeath);
                     // Kill the player
                     commands.entity(p_entity).insert(PlayerAction::Dead);
                     death_events.send(PlayerDeathEvent {
@@ -361,35 +362,35 @@ pub fn powerup_collect_system(
                     });
                 }
                 PowerupType::OneUp => {
-                    play_sfx(&mut commands, &sfx, SfxId::ExtraLife);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::ExtraLife);
                     player.lives += 1;
                 }
                 PowerupType::TwoUp => {
-                    play_sfx(&mut commands, &sfx, SfxId::ExtraLife);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::ExtraLife);
                     player.lives += 2;
                 }
                 PowerupType::ThreeUp => {
-                    play_sfx(&mut commands, &sfx, SfxId::ExtraLife);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::ExtraLife);
                     player.lives += 3;
                 }
                 PowerupType::FiveUp => {
-                    play_sfx(&mut commands, &sfx, SfxId::ExtraLife);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::ExtraLife);
                     player.lives += 5;
                 }
                 PowerupType::Feather => {
-                    play_sfx(&mut commands, &sfx, SfxId::PowerupCollect);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::PowerupCollect);
                     *powerup_state = PowerupState::Feather;
                 }
                 PowerupType::Leaf => {
-                    play_sfx(&mut commands, &sfx, SfxId::PowerupCollect);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::PowerupCollect);
                     *powerup_state = PowerupState::Leaf;
                 }
                 PowerupType::Bomb | PowerupType::BobOmb => {
-                    play_sfx(&mut commands, &sfx, SfxId::PowerupCollect);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::PowerupCollect);
                     *powerup_state = PowerupState::Bomb;
                 }
                 PowerupType::Jail => {
-                    play_sfx(&mut commands, &sfx, SfxId::PowerupCollect);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::PowerupCollect);
                     *powerup_state = PowerupState::Jail;
                 }
                 PowerupType::Clock
@@ -399,7 +400,7 @@ pub fn powerup_collect_system(
                 | PowerupType::MysteryMushroom
                 | PowerupType::ExtraGuy
                 | PowerupType::SlowDown => {
-                    play_sfx(&mut commands, &sfx, SfxId::PowerupCollect);
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::PowerupCollect);
                     // These powerups have mode-specific or transform effects
                     // that are handled by the game mode systems
                 }

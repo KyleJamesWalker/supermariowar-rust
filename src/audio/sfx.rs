@@ -200,11 +200,15 @@ pub fn load_sfx(mut sfx_library: ResMut<SfxLibrary>, asset_server: Res<AssetServ
 }
 
 /// Plays a one-shot sound effect at the global SFX volume.
-pub fn play_sfx(commands: &mut Commands, library: &SfxLibrary, id: SfxId) {
+pub fn play_sfx(commands: &mut Commands, library: &SfxLibrary, sfx_vol: &SfxVolume, id: SfxId) {
+    let vol = sfx_vol.effective_volume();
+    if vol <= 0.0 {
+        return;
+    }
     if let Some(handle) = library.get(id) {
         commands.spawn((
             AudioPlayer(handle.clone()),
-            PlaybackSettings::DESPAWN,
+            PlaybackSettings::DESPAWN.with_volume(bevy::audio::Volume::new(vol)),
         ));
     }
 }

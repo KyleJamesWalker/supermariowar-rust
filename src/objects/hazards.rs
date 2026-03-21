@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::audio::sfx::{play_sfx, SfxId, SfxLibrary};
+use crate::audio::sfx::{play_sfx, SfxId, SfxLibrary, SfxVolume};
 use crate::core::constants::*;
 use crate::objects::components::*;
 use crate::physics::collision::aabb_overlap;
@@ -284,6 +284,7 @@ pub fn thwomp_system(
 pub fn bullet_cannon_system(
     mut commands: Commands,
     sfx: Res<SfxLibrary>,
+    sfx_vol: Res<SfxVolume>,
     time: Res<Time>,
     mut query: Query<(&mut CannonState, &Transform)>,
 ) {
@@ -292,7 +293,7 @@ pub fn bullet_cannon_system(
             continue;
         }
 
-        play_sfx(&mut commands, &sfx, SfxId::Fireball);
+        play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Fireball);
 
         let dir = if cannon.facing_left { -1.0 } else { 1.0 };
         let spawn_x = transform.translation.x + dir * TILE_SIZE;
@@ -391,6 +392,7 @@ pub fn piranha_plant_system(
 pub fn hazard_collision_system(
     mut commands: Commands,
     sfx: Res<SfxLibrary>,
+    sfx_vol: Res<SfxVolume>,
     hazard_query: Query<(&Hazard, &Collider, &Transform, &GameObject)>,
     mut player_query: Query<(
         Entity,
@@ -441,7 +443,7 @@ pub fn hazard_collision_system(
                 continue;
             }
 
-            play_sfx(&mut commands, &sfx, SfxId::PlayerDeath);
+            play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::PlayerDeath);
             *p_action = PlayerAction::Dead;
             death_events.send(PlayerDeathEvent {
                 player_entity: p_entity,
