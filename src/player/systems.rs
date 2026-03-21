@@ -738,18 +738,10 @@ pub fn warp_system(
         if warp.entering {
             // Animate player moving into the pipe (Bevy Y-up)
             match warp.direction {
-                WarpDirection::Down => {
-                    transform.translation.y -= movement;
-                }
-                WarpDirection::Up => {
-                    transform.translation.y += movement;
-                }
-                WarpDirection::Left => {
-                    transform.translation.x -= movement;
-                }
-                WarpDirection::Right => {
-                    transform.translation.x += movement;
-                }
+                WarpDirection::Down => transform.translation.y -= movement,
+                WarpDirection::Up => transform.translation.y += movement,
+                WarpDirection::Left => transform.translation.x -= movement,
+                WarpDirection::Right => transform.translation.x += movement,
                 WarpDirection::Undefined => {}
             }
 
@@ -761,24 +753,40 @@ pub fn warp_system(
                 warp.progress = 0.0;
             }
         } else {
-            // Animate player moving out of the pipe (reverse direction, Bevy Y-up)
-            match warp.direction {
-                WarpDirection::Down => {
-                    transform.translation.y += movement;
-                }
-                WarpDirection::Up => {
-                    transform.translation.y -= movement;
-                }
-                WarpDirection::Left => {
-                    transform.translation.x += movement;
-                }
-                WarpDirection::Right => {
-                    transform.translation.x -= movement;
-                }
+            // Animate player emerging from the exit pipe using exit_direction
+            match warp.exit_direction {
+                // Exit UP in C++ means player emerges upward (Bevy: +Y)
+                WarpDirection::Up => transform.translation.y += movement,
+                // Exit DOWN means player drops downward (Bevy: -Y)
+                WarpDirection::Down => transform.translation.y -= movement,
+                // Exit LEFT means player slides left (Bevy: -X)
+                WarpDirection::Left => transform.translation.x -= movement,
+                // Exit RIGHT means player slides right (Bevy: +X)
+                WarpDirection::Right => transform.translation.x += movement,
                 WarpDirection::Undefined => {}
             }
 
             if warp.progress >= 1.0 {
+                // Set exit velocity matching C++ original
+                match warp.exit_direction {
+                    WarpDirection::Up => {
+                        vel.x = 0.0;
+                        vel.y = 4.0; // C++ vely = -4.0 (SMW Y-down) → Bevy +4.0 (Y-up)
+                    }
+                    WarpDirection::Down => {
+                        vel.x = 0.0;
+                        vel.y = -1.1; // C++ vely = 1.1 (SMW Y-down) → Bevy -1.1 (Y-up)
+                    }
+                    WarpDirection::Left => {
+                        vel.x = -1.0;
+                        vel.y = -1.0; // C++ vely = 1.0 → Bevy -1.0
+                    }
+                    WarpDirection::Right => {
+                        vel.x = 1.0;
+                        vel.y = -1.0; // C++ vely = 1.0 → Bevy -1.0
+                    }
+                    WarpDirection::Undefined => {}
+                }
                 commands.entity(entity).remove::<WarpState>();
                 *action = PlayerAction::Standing;
             }

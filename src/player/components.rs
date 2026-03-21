@@ -93,6 +93,7 @@ pub struct PlayerInput {
 #[derive(Component, Debug)]
 pub struct WarpState {
     pub direction: WarpDirection,
+    pub exit_direction: WarpDirection,
     pub progress: f32,
     pub warp_id: u32,
     pub dest_x: f32,
@@ -101,9 +102,16 @@ pub struct WarpState {
 }
 
 impl WarpState {
-    pub fn new_entering(direction: WarpDirection, warp_id: u32, dest_x: f32, dest_y: f32) -> Self {
+    pub fn new_entering(
+        direction: WarpDirection,
+        exit_direction: WarpDirection,
+        warp_id: u32,
+        dest_x: f32,
+        dest_y: f32,
+    ) -> Self {
         Self {
             direction,
+            exit_direction,
             progress: 0.0,
             warp_id,
             dest_x,

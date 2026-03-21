@@ -471,13 +471,15 @@ pub fn warp_zone_detection(
             .iter()
             .find(|e| e.connection == connection && e.id != warp_info.id)
         {
-            let dest_x = to_bevy_x((exit.warp_x as f32 + 0.5) * TILE_SIZE);
-            let dest_y = to_bevy_y((exit.warp_y as f32 + 0.5) * TILE_SIZE);
+            // exit.x/y are pixel coordinates (player exit position in SMW space)
+            let dest_x = to_bevy_x(exit.x as f32);
+            let dest_y = to_bevy_y(exit.y as f32);
             let direction =
                 crate::map::components::WarpDirection::from_raw_enter(warp_info.direction);
+            let exit_direction = exit.direction;
 
             commands.entity(entity).insert(WarpState::new_entering(
-                direction, warp_info.id as u32, dest_x, dest_y,
+                direction, exit_direction, warp_info.id as u32, dest_x, dest_y,
             ));
         }
     }
