@@ -252,10 +252,10 @@ pub fn thwomp_system(
                 }
             }
             ThwompPhase::Slamming => {
-                // Move downward rapidly
-                transform.translation.y += thwomp.slam_speed;
+                // Move downward rapidly (negative Y in Bevy)
+                transform.translation.y -= thwomp.slam_speed;
 
-                if transform.translation.y >= thwomp.target_y {
+                if transform.translation.y <= thwomp.target_y {
                     transform.translation.y = thwomp.target_y;
                     thwomp.phase = ThwompPhase::OnGround;
                     thwomp.ground_timer = 0.0;
@@ -268,9 +268,10 @@ pub fn thwomp_system(
                 }
             }
             ThwompPhase::Rising => {
-                transform.translation.y -= thwomp.rise_speed;
+                // Move upward (positive Y in Bevy)
+                transform.translation.y += thwomp.rise_speed;
 
-                if transform.translation.y <= thwomp.home_y {
+                if transform.translation.y >= thwomp.home_y {
                     transform.translation.y = thwomp.home_y;
                     thwomp.phase = ThwompPhase::Waiting;
                 }
