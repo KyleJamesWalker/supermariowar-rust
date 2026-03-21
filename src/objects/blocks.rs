@@ -4,7 +4,7 @@ use crate::audio::sfx::{play_sfx, SfxId, SfxLibrary, SfxVolume};
 use crate::core::constants::*;
 use crate::objects::components::*;
 use crate::objects::powerups::PowerupType;
-use crate::physics::collision::aabb_overlap;
+use crate::physics::collision::aabb_overlap_wrapped;
 use crate::physics::components::{Collider, CollisionLayer, Solid};
 use crate::player::components::{
     CarriedObject, Facing, Grounded, Player, Velocity,
@@ -198,7 +198,7 @@ pub fn block_hit_system(
                 p_transform.translation.y + p_collider.offset_y + p_collider.height;
             let block_feet = b_transform.translation.y + b_collider.offset_y;
 
-            if !aabb_overlap(
+            if !aabb_overlap_wrapped(
                 &p_transform.translation,
                 p_collider,
                 &b_transform.translation,
