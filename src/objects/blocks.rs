@@ -242,7 +242,7 @@ pub fn block_hit_system(
 
                         // Spawn a powerup above the block
                         let spawn_x = b_transform.translation.x;
-                        let spawn_y = b_transform.translation.y - TILE_SIZE;
+                        let spawn_y = b_transform.translation.y + TILE_SIZE;
                         crate::objects::powerups::spawn_powerup(
                             &mut commands,
                             PowerupType::Mushroom,
@@ -511,7 +511,7 @@ pub fn block_bump_animation_system(
             commands.entity(entity).remove::<BlockBumpAnimation>();
         } else {
             // Sine-based bump: move up then back down
-            let offset = (progress * std::f32::consts::PI).sin() * -8.0;
+            let offset = (progress * std::f32::consts::PI).sin() * 8.0;
             transform.translation.y = bump.original_y + offset;
         }
     }

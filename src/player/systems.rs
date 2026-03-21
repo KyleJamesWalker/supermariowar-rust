@@ -802,7 +802,7 @@ fn pick_spawn_location(map_data: &MapData, player_index: usize) -> (f32, f32) {
         let area = &areas[player_index % areas.len()];
         // Convert SMW pixel coords to Bevy coords
         let smw_x = (area.left as f32 + area.width as f32 / 2.0) * TILE_SIZE;
-        let smw_y = (area.top as f32 + 0.5) * TILE_SIZE;
+        let smw_y = (area.top as f32 + area.height as f32 / 2.0) * TILE_SIZE;
         (smw_x - SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0 - smw_y)
     } else {
         // Fallback: distribute players across the top of the screen (Bevy coords)
