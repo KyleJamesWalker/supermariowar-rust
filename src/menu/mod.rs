@@ -211,7 +211,7 @@ fn reset_submenu_to_main(mut current_sub: ResMut<CurrentSubMenu>) {
 /// Handles transitions between submenus: despawns old UI and spawns new UI.
 fn submenu_transition_system(
     mut commands: Commands,
-    current_sub: Res<CurrentSubMenu>,
+    mut current_sub: ResMut<CurrentSubMenu>,
     // Existing UI queries for cleanup
     main_menu_query: Query<Entity, With<MenuRoot>>,
     settings_query: Query<Entity, With<GameSettingsRoot>>,
@@ -221,6 +221,11 @@ fn submenu_transition_system(
 ) {
     if !current_sub.is_changed() {
         return;
+    }
+
+    // Redirect placeholder submenus to Main so input systems work
+    if current_sub.submenu == SubMenu::Options {
+        current_sub.bypass_change_detection().submenu = SubMenu::Main;
     }
 
     // Clean up all submenu UIs
@@ -246,7 +251,7 @@ fn submenu_transition_system(
             player_select::setup_player_select(commands, game_setup, sprite_sheets);
         }
         SubMenu::Options => {
-            // Options menu is a placeholder for now; spawn main menu instead
+            // Redirected to Main above; this arm is unreachable but kept for exhaustive match
             main_menu::setup_main_menu(commands, sprite_sheets);
         }
     }
