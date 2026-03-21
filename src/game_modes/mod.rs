@@ -82,6 +82,7 @@ impl Plugin for GameModesPlugin {
                 classic::handle_classic_score,
                 classic::check_classic_win_condition,
                 coins::coin_spawn_system,
+                coins::coin_collect_system,
                 coins::handle_coin_collect,
                 coins::coins_drop_on_kill,
                 coins::handle_coin_score,

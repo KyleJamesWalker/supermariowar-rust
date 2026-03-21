@@ -244,12 +244,24 @@ pub fn block_hit_system(
                             duration: 0.15,
                         });
 
-                        // Spawn a powerup above the block
+                        // Spawn a random powerup above the block
                         let spawn_x = b_transform.translation.x;
                         let spawn_y = b_transform.translation.y + TILE_SIZE;
+                        let powerup_pool = [
+                            PowerupType::Mushroom,
+                            PowerupType::Fire,
+                            PowerupType::Hammer,
+                            PowerupType::Boomerang,
+                            PowerupType::Feather,
+                            PowerupType::Leaf,
+                            PowerupType::Star,
+                            PowerupType::Bomb,
+                            PowerupType::IceWand,
+                        ];
+                        let pick = rand::random::<usize>() % powerup_pool.len();
                         crate::objects::powerups::spawn_powerup(
                             &mut commands,
-                            PowerupType::Mushroom,
+                            powerup_pool[pick],
                             spawn_x,
                             spawn_y,
                         );

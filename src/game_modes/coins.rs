@@ -164,6 +164,35 @@ pub fn handle_coin_score(
     }
 }
 
+/// Detects player overlap with coin entities and sends ItemCollectEvent.
+pub fn coin_collect_system(
+    config: Res<GameModeConfig>,
+    mut commands: Commands,
+    players: Query<(&crate::player::components::Player, &Transform, &Collider), With<crate::player::components::PlayerAction>>,
+    coins: Query<(Entity, &Transform, &Collider), With<CoinEntity>>,
+    mut item_events: EventWriter<ItemCollectEvent>,
+    mut sfx_events: EventWriter<crate::audio::sfx::SfxEvent>,
+) {
+    if config.mode_type != GameModeType::CoinCollection {
+        return;
+    }
+
+    for (player, p_tf, p_col) in players.iter() {
+        for (coin_entity, c_tf, c_col) in coins.iter() {
+            if crate::physics::collision::aabb_overlap(
+                &p_tf.translation, p_col, &c_tf.translation, c_col,
+            ) {
+                item_events.send(ItemCollectEvent {
+                    player_index: player.index,
+                    item_type: CollectibleItemType::Coin,
+                });
+                sfx_events.send(crate::audio::sfx::SfxEvent::new(crate::audio::sfx::SfxId::Coin));
+                commands.entity(coin_entity).despawn_recursive();
+            }
+        }
+    }
+}
+
 /// Checks if any player has collected enough coins.
 pub fn check_coin_win_condition(
     config: Res<GameModeConfig>,

@@ -719,5 +719,13 @@ pub fn object_map_collision(
                 grounded.0 = true;
             }
         }
+
+        // --- Horizontal screen wrapping ---
+        let half_w = SCREEN_WIDTH / 2.0;
+        if transform.translation.x > half_w {
+            transform.translation.x -= SCREEN_WIDTH;
+        } else if transform.translation.x < -half_w {
+            transform.translation.x += SCREEN_WIDTH;
+        }
     }
 }
