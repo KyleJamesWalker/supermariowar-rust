@@ -414,6 +414,7 @@ pub fn hazard_collision_system(
         &Collider,
         Option<&Invincible>,
         Option<&SpawnProtection>,
+        &mut crate::player::components::ShieldState,
     ), With<Player>>,
     mut contact_events: EventWriter<HazardContactEvent>,
     mut death_events: EventWriter<PlayerDeathEvent>,
@@ -428,7 +429,7 @@ pub fn hazard_collision_system(
             continue;
         }
 
-        for (p_entity, player, mut p_action, _p_vel, p_transform, p_collider, invincible, spawn_prot) in
+        for (p_entity, player, mut p_action, _p_vel, p_transform, p_collider, invincible, spawn_prot, mut shield) in
             player_query.iter_mut()
         {
             if *p_action == PlayerAction::Dead || *p_action == PlayerAction::Spawning {
@@ -451,6 +452,13 @@ pub fn hazard_collision_system(
 
             if invincible.is_some() || spawn_prot.is_some() {
                 // Invincible or spawn-protected players survive hazard contact
+                continue;
+            }
+
+            // Hard shield absorbs hazard damage; soft shield does not protect from hazards
+            if *shield == crate::player::components::ShieldState::Hard {
+                play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::BlockBreak);
+                *shield = crate::player::components::ShieldState::None;
                 continue;
             }
 

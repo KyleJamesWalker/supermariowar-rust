@@ -7,7 +7,8 @@ use crate::physics::collision::aabb_overlap;
 use crate::map::GameplayEntity;
 use crate::physics::components::{Collider, CollisionLayer, GravityAffected};
 use crate::player::components::{
-    DeathCause, Invincible, Player, PlayerAction, PlayerDeathEvent, SpawnProtection, Velocity,
+    DeathCause, Invincible, Player, PlayerAction, PlayerDeathEvent, ShieldState, SpawnProtection,
+    Velocity,
 };
 
 // ---------------------------------------------------------------------------
@@ -498,6 +499,7 @@ pub fn enemy_player_touch_system(
         &Collider,
         Option<&Invincible>,
         Option<&SpawnProtection>,
+        &mut ShieldState,
     )>,
     _death_events: EventWriter<EnemyDeathEvent>,
     mut player_death_events: EventWriter<PlayerDeathEvent>,
@@ -513,7 +515,7 @@ pub fn enemy_player_touch_system(
             continue;
         }
 
-        for (p_entity, player, p_vel, mut p_action, p_transform, p_collider, invincible, spawn_prot) in
+        for (p_entity, player, p_vel, mut p_action, p_transform, p_collider, invincible, spawn_prot, mut shield) in
             player_query.iter_mut()
         {
             if *p_action == PlayerAction::Dead || *p_action == PlayerAction::Spawning {
@@ -543,6 +545,13 @@ pub fn enemy_player_touch_system(
 
             if invincible.is_some() || spawn_prot.is_some() {
                 // Invincible or spawn-protected player is immune
+                continue;
+            }
+
+            // Shield absorbs enemy contact damage
+            if *shield != ShieldState::None {
+                play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::BlockBreak);
+                *shield = ShieldState::None;
                 continue;
             }
 

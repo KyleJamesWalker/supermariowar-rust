@@ -9,7 +9,7 @@ use crate::physics::collision::aabb_overlap;
 use crate::physics::components::{Collider, CollisionLayer};
 use crate::player::components::{
     DeathCause, Facing, Invincible, Player, PlayerAction, PlayerDeathEvent, PlayerInput,
-    PowerupState, SpawnProtection, Velocity,
+    PowerupState, ShieldState, SpawnProtection, Velocity,
 };
 
 // ---------------------------------------------------------------------------
@@ -426,6 +426,7 @@ pub fn projectile_collision_system(
         &Collider,
         Option<&Invincible>,
         Option<&SpawnProtection>,
+        &mut ShieldState,
     )>,
     mut enemy_query: Query<(
         Entity,
@@ -444,7 +445,7 @@ pub fn projectile_collision_system(
         }
 
         // Check vs players
-        for (p_entity, player, _p_vel, mut p_action, p_transform, p_collider, invincible, spawn_prot) in
+        for (p_entity, player, _p_vel, mut p_action, p_transform, p_collider, invincible, spawn_prot, mut shield) in
             player_query.iter_mut()
         {
             // Don't hit the owner or teammates
@@ -475,6 +476,14 @@ pub fn projectile_collision_system(
 
             if invincible.is_some() || spawn_prot.is_some() {
                 // Invincible or spawn-protected player destroys the projectile
+                commands.entity(proj_entity).despawn_recursive();
+                break;
+            }
+
+            // Shields absorb projectile hits (break the shield instead of killing)
+            if *shield != ShieldState::None {
+                play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::BlockBreak);
+                *shield = ShieldState::None;
                 commands.entity(proj_entity).despawn_recursive();
                 break;
             }
@@ -602,6 +611,7 @@ pub fn bomb_fuse_system(
         &Collider,
         Option<&Invincible>,
         Option<&SpawnProtection>,
+        &mut ShieldState,
     ), With<Player>>,
     mut bomb_death_events: EventWriter<PlayerDeathEvent>,
     mut enemy_query: Query<(
@@ -626,7 +636,7 @@ pub fn bomb_fuse_system(
         ).with_offset(-fuse.explosion_radius, -fuse.explosion_radius);
 
         // Damage players in blast radius (except owner)
-        for (p_entity, player, mut p_action, mut p_vel, p_transform, p_collider, invincible, spawn_prot) in
+        for (p_entity, player, mut p_action, mut p_vel, p_transform, p_collider, invincible, spawn_prot, mut shield) in
             player_query.iter_mut()
         {
             if *p_action == PlayerAction::Dead || *p_action == PlayerAction::Spawning {
@@ -642,6 +652,11 @@ pub fn bomb_fuse_system(
                 &p_transform.translation,
                 p_collider,
             ) {
+                // Shield absorbs bomb blast
+                if *shield != ShieldState::None {
+                    *shield = ShieldState::None;
+                    continue;
+                }
                 *p_action = PlayerAction::Dead;
                 // Pushback away from explosion
                 let diff_x = p_transform.translation.x - bomb_transform.translation.x;
