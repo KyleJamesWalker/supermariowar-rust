@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use std::collections::HashMap;
 
 use crate::player::components::{
-    Facing, Player, PlayerAction, SpawnProtection,
+    Facing, Invincible, Player, PlayerAction, PowerupState, SpawnProtection,
 };
 
 // ---------------------------------------------------------------------------
@@ -366,16 +366,26 @@ pub fn sprite_flip_system(
     }
 }
 
-/// Toggles visibility for entities with BlinkEffect (spawn protection blinking).
+/// Toggles visibility for entities with BlinkEffect (spawn protection or invincibility blinking).
 pub fn blink_system(
     time: Res<Time>,
     mut commands: Commands,
-    mut query: Query<(Entity, &mut BlinkEffect, &mut Visibility, Option<&SpawnProtection>)>,
+    mut query: Query<(
+        Entity,
+        &mut BlinkEffect,
+        &mut Visibility,
+        Option<&SpawnProtection>,
+        Option<&Invincible>,
+        &PowerupState,
+    )>,
 ) {
     let dt = time.delta_secs();
-    for (entity, mut blink, mut visibility, spawn_prot) in query.iter_mut() {
-        // Remove blink effect if spawn protection has expired
-        if spawn_prot.is_none() {
+    for (entity, mut blink, mut visibility, spawn_prot, invincible, powerup) in query.iter_mut() {
+        // Blink continues while player has spawn protection OR non-star invincibility.
+        // Star invincibility uses rainbow color cycling instead of blinking.
+        let should_blink = spawn_prot.is_some()
+            || (invincible.is_some() && *powerup != PowerupState::Star);
+        if !should_blink {
             *visibility = Visibility::Inherited;
             commands.entity(entity).remove::<BlinkEffect>();
             continue;

@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
 use crate::player::components::{
-    CarriedObject, CapeState, Facing, FrozenState, Player, PlayerAction, PlayerSkinIndex,
-    PowerupState, ShieldState, SpawnProtection, TailState,
+    CarriedObject, CapeState, Facing, FrozenState, Invincible, Player, PlayerAction,
+    PlayerSkinIndex, PowerupState, ShieldState, SpawnProtection, TailState,
 };
 use crate::graphics::animation::{
     AnimationController, AnimationBank, AnimationState, AnimatedEntityType, BlinkEffect,
@@ -240,18 +240,21 @@ pub fn star_power_visual_system(
     }
 }
 
-/// Adds/removes BlinkEffect based on SpawnProtection presence.
+/// Adds/removes BlinkEffect based on SpawnProtection or Invincible (non-star) presence.
 pub fn manage_spawn_blink(
     mut commands: Commands,
     query: Query<
-        (Entity, &PlayerAction, Option<&SpawnProtection>, Option<&BlinkEffect>),
+        (Entity, &PlayerAction, &PowerupState, Option<&SpawnProtection>, Option<&Invincible>, Option<&BlinkEffect>),
         With<PlayerSpriteSetup>,
     >,
 ) {
-    for (entity, action, spawn_prot, blink) in query.iter() {
-        if *action == PlayerAction::Spawning && spawn_prot.is_some() && blink.is_none() {
+    for (entity, action, powerup, spawn_prot, invincible, blink) in query.iter() {
+        // Should blink: spawning with protection, OR invincible without star power
+        let needs_blink = (*action == PlayerAction::Spawning && spawn_prot.is_some())
+            || (invincible.is_some() && *powerup != PowerupState::Star);
+        if needs_blink && blink.is_none() {
             commands.entity(entity).insert(BlinkEffect::default());
-        } else if *action != PlayerAction::Spawning && blink.is_some() {
+        } else if !needs_blink && blink.is_some() {
             commands.entity(entity).remove::<BlinkEffect>();
         }
     }

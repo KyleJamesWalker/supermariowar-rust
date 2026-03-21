@@ -4,7 +4,8 @@ use crate::core::constants::*;
 use crate::map::components::{CollisionType, MapData, MovingPlatform};
 use crate::objects::components::{InteractsWithMap, ObjectGrounded, ObjectVelocity};
 use crate::player::components::{
-    DeathCause, FrozenState, Grounded, Player, PlayerAction, PlayerDeathEvent, PlayerInput, Velocity, WarpState,
+    DeathCause, FrozenState, Grounded, Invincible, Player, PlayerAction, PlayerDeathEvent,
+    PlayerInput, ShieldState, Velocity, WarpState,
 };
 use super::collision;
 use super::components::*;
@@ -86,14 +87,16 @@ pub fn map_collision(
         &mut Grounded,
         &PlayerAction,
         &PlayerInput,
+        &ShieldState,
         Option<&WarpState>,
+        Option<&Invincible>,
     )>,
     mut death_events: EventWriter<PlayerDeathEvent>,
 ) {
     let has_collision_map = !map_data.collision_map.is_empty()
         && !map_data.collision_map[0].is_empty();
 
-    for (entity, player, mut transform, mut vel, mut grounded, action, input, warp) in
+    for (entity, player, mut transform, mut vel, mut grounded, action, input, shield, warp, invincible) in
         query.iter_mut()
     {
         if *action == PlayerAction::Dead {
@@ -166,8 +169,9 @@ pub fn map_collision(
             let px = smw_x + PLAYER_WIDTH_OFFSET;
             let py = smw_y + PLAYER_HEIGHT_OFFSET;
 
-            // Horizontal collision (walls)
-            check_horizontal_collision(
+            // Horizontal collision (walls + directional death tiles)
+            let is_protected = invincible.is_some() || *shield != ShieldState::None;
+            let horiz_death = check_horizontal_collision(
                 &map_data.collision_map,
                 num_cols,
                 num_rows,
@@ -175,17 +179,28 @@ pub fn map_collision(
                 &mut vel,
                 px,
                 py,
+                is_protected,
             );
+            if horiz_death {
+                death_events.send(PlayerDeathEvent {
+                    player_entity: entity,
+                    player_index: player.index,
+                    killer_index: None,
+                    cause: DeathCause::Environment,
+                });
+            }
 
             // Read back after horizontal correction
             smw_x = transform.translation.x;
             smw_y = transform.translation.y;
             smw_vel_y = vel.y;
 
-            // Death tile check
+            // Death tile check — respects invincibility and shields.
+            // SuperDeath always kills; regular death tiles are blocked by invincible/shield.
             let px = smw_x + PLAYER_WIDTH_OFFSET;
             let py = smw_y + PLAYER_HEIGHT_OFFSET;
-            if check_death_tiles(&map_data.collision_map, num_cols, num_rows, px, py) {
+            let is_protected = invincible.is_some() || *shield != ShieldState::None;
+            if check_death_tiles(&map_data.collision_map, num_cols, num_rows, px, py, is_protected) {
                 death_events.send(PlayerDeathEvent {
                     player_entity: entity,
                     player_index: player.index,
@@ -326,7 +341,8 @@ fn check_vertical_collision(
     }
 }
 
-/// Checks horizontal collision against solid tiles (walls).
+/// Checks horizontal collision against solid tiles (walls) and directional death tiles.
+/// Returns true if the player hit a directional death tile during horizontal movement.
 fn check_horizontal_collision(
     collision_map: &[Vec<CollisionType>],
     num_cols: usize,
@@ -335,7 +351,9 @@ fn check_horizontal_collision(
     vel: &mut Velocity,
     px: f32,
     py: f32,
-) {
+    is_protected: bool,
+) -> bool {
+    let mut hit_death = false;
     // Tiles the player's body spans vertically
     let top_tile = ((py / TILE_SIZE).floor() as i32).max(0) as usize;
     let bottom_tile = (((py + PLAYER_HEIGHT - 1.0) / TILE_SIZE).floor() as i32).max(0) as usize;
@@ -348,9 +366,25 @@ fn check_horizontal_collision(
 
         for ty in top_tile..=(bottom_tile.min(num_rows.saturating_sub(1))) {
             let tile = get_collision(collision_map, num_cols, num_rows, right_tile_x, ty);
+
+            // Check directional death tiles BEFORE solid collision (C++ behavior)
+            if tile.kills_on_left() || matches!(tile, CollisionType::SuperDeath | CollisionType::SuperDeathLeft) {
+                // Moving right, hitting tile from its left side
+                let tile_left = if right_tile_x_raw >= num_cols as i32 {
+                    right_tile_x as f32 * TILE_SIZE + SCREEN_WIDTH as f32
+                } else {
+                    right_tile_x as f32 * TILE_SIZE
+                };
+                if right_edge > tile_left {
+                    // SuperDeath always kills; regular death respects protection
+                    if matches!(tile, CollisionType::SuperDeath | CollisionType::SuperDeathLeft) || !is_protected {
+                        hit_death = true;
+                    }
+                }
+            }
+
             if tile.is_solid() {
                 let tile_left = if right_tile_x_raw >= num_cols as i32 {
-                    // Wrapped: tile is at the left side of screen
                     right_tile_x as f32 * TILE_SIZE + SCREEN_WIDTH as f32
                 } else {
                     right_tile_x as f32 * TILE_SIZE
@@ -368,9 +402,23 @@ fn check_horizontal_collision(
 
         for ty in top_tile..=(bottom_tile.min(num_rows.saturating_sub(1))) {
             let tile = get_collision(collision_map, num_cols, num_rows, left_tile_x, ty);
+
+            // Check directional death tiles from right side
+            if tile.kills_on_right() || matches!(tile, CollisionType::SuperDeath | CollisionType::SuperDeathRight) {
+                let tile_right = if left_tile_x_raw < 0 {
+                    (left_tile_x as f32 + 1.0) * TILE_SIZE - SCREEN_WIDTH as f32
+                } else {
+                    (left_tile_x as f32 + 1.0) * TILE_SIZE
+                };
+                if px < tile_right {
+                    if matches!(tile, CollisionType::SuperDeath | CollisionType::SuperDeathRight) || !is_protected {
+                        hit_death = true;
+                    }
+                }
+            }
+
             if tile.is_solid() {
                 let tile_right = if left_tile_x_raw < 0 {
-                    // Wrapped: tile is at the right side of screen
                     (left_tile_x as f32 + 1.0) * TILE_SIZE - SCREEN_WIDTH as f32
                 } else {
                     (left_tile_x as f32 + 1.0) * TILE_SIZE
@@ -382,15 +430,19 @@ fn check_horizontal_collision(
             }
         }
     }
+    hit_death
 }
 
 /// Checks if the player is touching any Death or SuperDeath tiles.
+/// `is_protected` = true when player has invincibility or shield; regular death tiles
+/// are skipped but SuperDeath tiles always kill (matching C++ behavior).
 fn check_death_tiles(
     collision_map: &[Vec<CollisionType>],
     num_cols: usize,
     num_rows: usize,
     px: f32,
     py: f32,
+    is_protected: bool,
 ) -> bool {
     // In SMW coords (Y-down), determine which tiles the player overlaps
     let left_tile = ((px / TILE_SIZE).floor() as i32).max(0) as usize;
@@ -408,6 +460,17 @@ fn check_death_tiles(
                 continue;
             }
 
+            let is_super = matches!(tile,
+                CollisionType::SuperDeath | CollisionType::SuperDeathTop
+                | CollisionType::SuperDeathBottom | CollisionType::SuperDeathLeft
+                | CollisionType::SuperDeathRight
+            );
+
+            // Protected players survive regular death tiles but not super death
+            if is_protected && !is_super {
+                continue;
+            }
+
             // For omnidirectional death (Death, SuperDeath, PlayerDeath), always kill
             if matches!(tile,
                 CollisionType::Death | CollisionType::SuperDeath | CollisionType::PlayerDeath
@@ -416,7 +479,6 @@ fn check_death_tiles(
             }
 
             // For directional death tiles, check which side the player approaches from.
-            // Compare player center to tile center to determine approach direction.
             let tile_center_x = tx as f32 * TILE_SIZE + TILE_SIZE * 0.5;
             let tile_center_y = ty as f32 * TILE_SIZE + TILE_SIZE * 0.5;
 
@@ -427,16 +489,16 @@ fn check_death_tiles(
             if dx.abs() > dy.abs() {
                 // Horizontal approach
                 if dx > 0.0 && tile.kills_on_right() {
-                    return true; // Player approaching from right (player is to the right)
+                    return true;
                 } else if dx < 0.0 && tile.kills_on_left() {
-                    return true; // Player approaching from left
+                    return true;
                 }
             } else {
                 // Vertical approach (SMW Y-down: dy > 0 means player below tile)
                 if dy > 0.0 && tile.kills_on_bottom() {
-                    return true; // Player below tile, hitting bottom
+                    return true;
                 } else if dy < 0.0 && tile.kills_on_top() {
-                    return true; // Player above tile, hitting top
+                    return true;
                 }
             }
         }
