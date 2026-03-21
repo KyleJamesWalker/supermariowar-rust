@@ -222,9 +222,9 @@ pub fn enemy_movement_system(
 
 /// Applies gravity to enemies, making them fall when not on solid ground.
 pub fn enemy_gravity_system(
-    mut query: Query<(&mut ObjectVelocity, &mut Transform, &mut ObjectGrounded), With<Enemy>>,
+    mut query: Query<(&mut ObjectVelocity, &mut Transform), With<Enemy>>,
 ) {
-    for (mut vel, mut transform, mut grounded) in query.iter_mut() {
+    for (mut vel, mut transform) in query.iter_mut() {
         // Apply gravity (negative = downward in Bevy Y-up)
         vel.y -= GRAVITY;
         if vel.y < -MAX_FALL_SPEED {
@@ -235,17 +235,8 @@ pub fn enemy_gravity_system(
         transform.translation.x += vel.x;
         transform.translation.y += vel.y;
 
-        // Simplified floor collision (Bevy centered coords)
-        let floor_y = -(SCREEN_HEIGHT / 2.0 - TILE_SIZE);
-        if transform.translation.y <= floor_y {
-            transform.translation.y = floor_y;
-            vel.y = 0.0;
-            grounded.0 = true;
-        } else {
-            grounded.0 = false;
-        }
-
         // Screen wrapping (horizontal, centered coords)
+        // Floor/wall collision handled by object_map_collision in physics plugin
         let wrap_right = SCREEN_WIDTH / 2.0 + TILE_SIZE;
         let wrap_left = -(SCREEN_WIDTH / 2.0 + TILE_SIZE);
         if transform.translation.x > wrap_right {

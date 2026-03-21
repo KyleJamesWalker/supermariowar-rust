@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::core::constants::*;
 use crate::map::components::{CollisionType, MapData, MovingPlatform};
+use crate::objects::components::{InteractsWithMap, ObjectGrounded, ObjectVelocity};
 use crate::player::components::{
     DeathCause, Grounded, Player, PlayerAction, PlayerDeathEvent, PlayerInput, Velocity, WarpState,
 };
@@ -564,6 +565,124 @@ pub fn moving_platform_system(
 
         if !found_platform {
             commands.entity(player_entity).remove::<RidingPlatform>();
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Object map collision (enemies, powerups, projectiles)
+// ---------------------------------------------------------------------------
+
+/// Applies map tile collision to non-player objects that have InteractsWithMap.
+/// Replaces the hardcoded floor/wall checks in individual object systems with
+/// proper tile-based collision using the same collision map as player physics.
+pub fn object_map_collision(
+    map_data: Res<MapData>,
+    mut query: Query<
+        (&mut ObjectVelocity, &mut Transform, &mut ObjectGrounded, &Collider),
+        With<InteractsWithMap>,
+    >,
+) {
+    if map_data.collision_map.is_empty() {
+        return;
+    }
+
+    let num_cols = map_data.collision_map.len();
+    let num_rows = map_data.collision_map[0].len();
+
+    for (mut vel, mut transform, mut grounded, collider) in query.iter_mut() {
+        // Object dimensions (use collider size or default to TILE_SIZE)
+        let obj_w = collider.width;
+        let obj_h = collider.height;
+
+        // Convert Bevy position → SMW pixel space for tile lookups
+        let smw_x = to_smw_x(transform.translation.x);
+        let smw_y = to_smw_y(transform.translation.y);
+
+        // --- Vertical collision (floor) ---
+        // In SMW Y-down: feet = smw_y + obj_h
+        let foot_y = smw_y + obj_h;
+        let foot_tile_y = (foot_y / TILE_SIZE).floor() as i32;
+        let left_tile = ((smw_x / TILE_SIZE).floor() as i32).max(0) as usize;
+        let right_tile = (((smw_x + obj_w) / TILE_SIZE).floor() as i32).max(0) as usize;
+
+        grounded.0 = false;
+
+        // Check floor (object moving downward in SMW = vel.y negative in Bevy)
+        if vel.y <= 0.0 && foot_tile_y >= 0 && (foot_tile_y as usize) < num_rows {
+            let ty = foot_tile_y as usize;
+            for tx in left_tile..=(right_tile.min(num_cols.saturating_sub(1))) {
+                let tile = get_collision(&map_data.collision_map, num_cols, num_rows, tx, ty);
+                match tile {
+                    CollisionType::Solid | CollisionType::SolidOnTop | CollisionType::Ice => {
+                        let tile_top_smw = ty as f32 * TILE_SIZE;
+                        if foot_y >= tile_top_smw && foot_y <= tile_top_smw + vel.y.abs() + 2.0 {
+                            // Snap to top of tile (convert back to Bevy)
+                            let corrected_smw_y = tile_top_smw - obj_h;
+                            transform.translation.y = to_bevy_y(corrected_smw_y);
+                            vel.y = 0.0;
+                            grounded.0 = true;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        // --- Horizontal collision (walls) ---
+        // Recalculate SMW position after vertical correction
+        let smw_x = to_smw_x(transform.translation.x);
+        let smw_y = to_smw_y(transform.translation.y);
+        let top_tile = ((smw_y / TILE_SIZE).floor() as i32).max(0) as usize;
+        let bottom_tile =
+            (((smw_y + obj_h - 1.0) / TILE_SIZE).floor() as i32).max(0) as usize;
+
+        if vel.x > 0.0 {
+            // Moving right: check right edge
+            let right_edge = smw_x + obj_w;
+            let right_tile_x = (right_edge / TILE_SIZE).floor() as i32;
+            if right_tile_x >= 0 && (right_tile_x as usize) < num_cols {
+                let tx = right_tile_x as usize;
+                for ty in top_tile..=(bottom_tile.min(num_rows.saturating_sub(1))) {
+                    let tile =
+                        get_collision(&map_data.collision_map, num_cols, num_rows, tx, ty);
+                    if tile == CollisionType::Solid || tile == CollisionType::Ice {
+                        let tile_left_smw = tx as f32 * TILE_SIZE;
+                        if right_edge >= tile_left_smw {
+                            transform.translation.x =
+                                to_bevy_x(tile_left_smw - obj_w);
+                            vel.x = -vel.x; // Bounce off wall
+                        }
+                    }
+                }
+            }
+        } else if vel.x < 0.0 {
+            // Moving left: check left edge
+            let left_tile_x = (smw_x / TILE_SIZE).floor() as i32;
+            if left_tile_x >= 0 && (left_tile_x as usize) < num_cols {
+                let tx = left_tile_x as usize;
+                for ty in top_tile..=(bottom_tile.min(num_rows.saturating_sub(1))) {
+                    let tile =
+                        get_collision(&map_data.collision_map, num_cols, num_rows, tx, ty);
+                    if tile == CollisionType::Solid || tile == CollisionType::Ice {
+                        let tile_right_smw = (tx as f32 + 1.0) * TILE_SIZE;
+                        if smw_x <= tile_right_smw {
+                            transform.translation.x = to_bevy_x(tile_right_smw);
+                            vel.x = -vel.x; // Bounce off wall
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- Fallback: screen-edge floor when below all tiles ---
+        if !grounded.0 {
+            let floor_y = -(SCREEN_HEIGHT / 2.0 - TILE_SIZE);
+            if transform.translation.y <= floor_y {
+                transform.translation.y = floor_y;
+                vel.y = 0.0;
+                grounded.0 = true;
+            }
         }
     }
 }

@@ -184,19 +184,21 @@ pub fn powerup_spawn_system(
     }
 }
 
-/// Moves powerups horizontally, applies gravity, and bounces off screen edges.
+/// Moves powerups: applies gravity and velocity. Floor/wall collision is
+/// handled by `object_map_collision` in the physics plugin. This system only
+/// handles type-specific behaviors (floating drift, bounce on landing).
 pub fn powerup_movement_system(
     time: Res<Time>,
     mut query: Query<(
         &SpawnedPowerup,
         &mut ObjectVelocity,
         &mut Transform,
-        &mut ObjectGrounded,
+        &ObjectGrounded,
     )>,
 ) {
     let dt = time.delta_secs();
 
-    for (spawned, mut vel, mut transform, mut grounded) in query.iter_mut() {
+    for (spawned, mut vel, mut transform, grounded) in query.iter_mut() {
         if spawned.spawning {
             continue;
         }
@@ -205,38 +207,16 @@ pub fn powerup_movement_system(
 
         match physics {
             PowerupPhysics::Sliding => {
-                // Apply gravity (negative = downward in Bevy Y-up)
+                // Gravity + movement
                 vel.y -= GRAVITY;
                 if vel.y < -MAX_FALL_SPEED {
                     vel.y = -MAX_FALL_SPEED;
                 }
-
-                // Move
                 transform.translation.x += vel.x;
                 transform.translation.y += vel.y;
+                // Wall bounce and floor snap handled by object_map_collision
 
-                // Floor collision (Bevy centered coords: bottom of screen + one tile)
-                let floor_y = -(SCREEN_HEIGHT / 2.0 - TILE_SIZE);
-                if transform.translation.y <= floor_y {
-                    transform.translation.y = floor_y;
-                    vel.y = 0.0;
-                    grounded.0 = true;
-                } else {
-                    grounded.0 = false;
-                }
-
-                // Wall bounce (screen edges in centered coords)
-                let left_wall = -(SCREEN_WIDTH / 2.0);
-                let right_wall = SCREEN_WIDTH / 2.0 - TILE_SIZE;
-                if transform.translation.x <= left_wall {
-                    transform.translation.x = left_wall;
-                    vel.x = vel.x.abs();
-                } else if transform.translation.x >= right_wall {
-                    transform.translation.x = right_wall;
-                    vel.x = -vel.x.abs();
-                }
-
-                // Screen wrapping (horizontal, centered coords)
+                // Screen wrapping (horizontal)
                 let wrap_right = SCREEN_WIDTH / 2.0 + TILE_SIZE;
                 let wrap_left = -(SCREEN_WIDTH / 2.0 + TILE_SIZE);
                 if transform.translation.x > wrap_right {
@@ -251,52 +231,28 @@ pub fn powerup_movement_system(
                 if vel.y < -2.0 {
                     vel.y = -2.0;
                 }
-                let drift =
-                    (time.elapsed_secs() * 3.0).sin() * 0.5;
+                let drift = (time.elapsed_secs() * 3.0).sin() * 0.5;
                 transform.translation.x += drift * dt * 60.0;
                 transform.translation.y += vel.y;
-
-                // Floor (Bevy centered coords)
-                let floor_y = -(SCREEN_HEIGHT / 2.0 - TILE_SIZE);
-                if transform.translation.y <= floor_y {
-                    transform.translation.y = floor_y;
-                    vel.y = 0.0;
-                    grounded.0 = true;
-                }
+                // Floor handled by object_map_collision
             }
             PowerupPhysics::Bouncing => {
-                // Apply gravity (negative = downward in Bevy Y-up)
+                // Gravity + movement
                 vel.y -= GRAVITY;
                 if vel.y < -MAX_FALL_SPEED {
                     vel.y = -MAX_FALL_SPEED;
                 }
-
                 transform.translation.x += vel.x;
                 transform.translation.y += vel.y;
 
-                // Floor bounce (Bevy centered coords)
-                let floor_y = -(SCREEN_HEIGHT / 2.0 - TILE_SIZE);
-                if transform.translation.y <= floor_y {
-                    transform.translation.y = floor_y;
+                // Bounce on landing (object_map_collision sets grounded + zeros vel.y)
+                if grounded.0 && vel.y == 0.0 {
                     vel.y = VEL_POWERUP_BOUNCE;
-                    grounded.0 = true;
-                } else {
-                    grounded.0 = false;
                 }
-
-                // Wall bounce (centered coords)
-                let left_wall = -(SCREEN_WIDTH / 2.0);
-                let right_wall = SCREEN_WIDTH / 2.0 - TILE_SIZE;
-                if transform.translation.x <= left_wall {
-                    transform.translation.x = left_wall;
-                    vel.x = vel.x.abs();
-                } else if transform.translation.x >= right_wall {
-                    transform.translation.x = right_wall;
-                    vel.x = -vel.x.abs();
-                }
+                // Wall bounce handled by object_map_collision
             }
             PowerupPhysics::Static => {
-                // No movement -- stays in place
+                // No movement
             }
         }
     }
