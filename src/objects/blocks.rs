@@ -317,7 +317,6 @@ pub fn block_hit_system(
                         carried.entity = Some(b_entity);
                         // Remove Solid so it doesn't collide while carried
                         commands.entity(b_entity).remove::<Solid>();
-                        game_obj.alive = false;
                     }
                 }
                 BlockType::DonutBlock => {
@@ -415,11 +414,12 @@ pub fn donut_block_timer_system(
                 continue;
             }
 
-            let player_bottom =
-                p_transform.translation.y + p_collider.offset_y + p_collider.height;
-            let block_top = b_transform.translation.y + b_collider.offset_y;
+            // In Bevy Y-up: feet = pos + offset_y, top = pos + offset_y + height
+            let player_feet = p_transform.translation.y + p_collider.offset_y;
+            let block_top =
+                b_transform.translation.y + b_collider.offset_y + b_collider.height;
 
-            if (player_bottom - block_top).abs() > 4.0 {
+            if (player_feet - block_top).abs() > 4.0 {
                 continue;
             }
 
