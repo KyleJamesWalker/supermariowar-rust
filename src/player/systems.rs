@@ -163,6 +163,7 @@ pub fn player_death_system(
         Option<&BurnupTimer>,
     )>,
     mut death_events: EventReader<PlayerDeathEvent>,
+    mut sfx_events: EventWriter<crate::audio::sfx::SfxEvent>,
 ) {
     // Process incoming death events
     for event in death_events.read() {
@@ -178,6 +179,9 @@ pub fn player_death_system(
             vel.y = DEATH_BOUNCE_VEL_Y; // Bounce upward
             player.lives -= 1;
 
+            sfx_events.send(crate::audio::sfx::SfxEvent::new(
+                crate::audio::sfx::SfxId::PlayerDeath,
+            ));
             commands.entity(entity).insert(BurnupTimer::default());
         }
     }
@@ -419,10 +423,14 @@ pub fn player_stomp_system(
 pub fn stomp_bounce_system(
     mut query: Query<(Entity, &mut Velocity)>,
     mut stomp_events: EventReader<PlayerStompEvent>,
+    mut sfx_events: EventWriter<crate::audio::sfx::SfxEvent>,
 ) {
     for event in stomp_events.read() {
         if let Ok((_entity, mut vel)) = query.get_mut(event.stomper_entity) {
             vel.y = STOMP_BOUNCE_VEL;
+            sfx_events.send(crate::audio::sfx::SfxEvent::new(
+                crate::audio::sfx::SfxId::Stomp,
+            ));
         }
     }
 }

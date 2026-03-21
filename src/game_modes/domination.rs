@@ -199,7 +199,7 @@ pub fn domination_score_tick(
     }
 }
 
-/// Checks if any player has reached the point limit.
+/// Checks if any player or team has reached the point limit.
 pub fn check_domination_win_condition(
     config: Res<GameModeConfig>,
     state: Res<DominationModeState>,
@@ -209,6 +209,24 @@ pub fn check_domination_win_condition(
         return;
     }
 
+    // Check team points first (domination supports team play)
+    for (team_idx, &points) in state.team_points.iter().enumerate() {
+        if points >= config.point_limit {
+            // Find the highest-scoring player on the winning team
+            let best_player = state.points.iter().enumerate()
+                .filter(|(_, &p)| p > 0)
+                .max_by_key(|(_, &p)| p)
+                .map(|(i, _)| i);
+
+            round_over.send(RoundOverEvent {
+                winning_player: best_player,
+                winning_team: Some(team_idx as u8),
+            });
+            return;
+        }
+    }
+
+    // Also check individual points (for free-for-all)
     for (i, &points) in state.points.iter().enumerate() {
         if points >= config.point_limit {
             round_over.send(RoundOverEvent {
