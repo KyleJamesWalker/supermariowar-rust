@@ -282,24 +282,19 @@ pub fn player_respawn_system(
 }
 
 /// Updates spawn protection timers and transitions out of Spawning state.
+/// Visual blinking is handled by the graphics BlinkEffect system.
 pub fn player_spawn_protection_system(
     time: Res<Time>,
     mut commands: Commands,
-    mut query: Query<(Entity, &mut PlayerAction, &mut SpawnProtection, &mut Visibility)>,
+    mut query: Query<(Entity, &mut PlayerAction, &mut SpawnProtection)>,
 ) {
-    for (entity, mut action, mut protection, mut visibility) in query.iter_mut() {
+    for (entity, mut action, mut protection) in query.iter_mut() {
         protection.timer.tick(time.delta());
-
-        // Flash visibility during spawn protection (toggle every ~0.1s)
-        let elapsed = protection.timer.elapsed_secs();
-        let flash = ((elapsed * 10.0) as u32) % 2 == 0;
-        *visibility = if flash { Visibility::Visible } else { Visibility::Hidden };
 
         if protection.timer.just_finished() {
             if *action == PlayerAction::Spawning {
                 *action = PlayerAction::Standing;
             }
-            *visibility = Visibility::Visible;
             commands.entity(entity).remove::<SpawnProtection>();
         }
     }

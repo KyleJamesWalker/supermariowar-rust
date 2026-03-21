@@ -203,6 +203,7 @@ pub fn domination_score_tick(
 pub fn check_domination_win_condition(
     config: Res<GameModeConfig>,
     state: Res<DominationModeState>,
+    player_query: Query<&Player>,
     mut round_over: EventWriter<RoundOverEvent>,
 ) {
     if config.mode_type != GameModeType::Domination {
@@ -213,10 +214,11 @@ pub fn check_domination_win_condition(
     for (team_idx, &points) in state.team_points.iter().enumerate() {
         if points >= config.point_limit {
             // Find the highest-scoring player on the winning team
-            let best_player = state.points.iter().enumerate()
-                .filter(|(_, &p)| p > 0)
-                .max_by_key(|(_, &p)| p)
-                .map(|(i, _)| i);
+            let best_player = player_query
+                .iter()
+                .filter(|p| p.team as usize == team_idx)
+                .max_by_key(|p| state.points.get(p.index).copied().unwrap_or(0))
+                .map(|p| p.index);
 
             round_over.send(RoundOverEvent {
                 winning_player: best_player,

@@ -239,6 +239,12 @@ pub fn flag_capture_system(
                 state.captures[player.index] += 1;
                 scoreboard.score[player.index] += 1;
                 scoreboard.objective_count[player.index] += 1;
+
+                // Track team captures for team-based win condition
+                let team = player.team as usize;
+                if team < MAX_PLAYERS {
+                    state.team_captures[team] += 1;
+                }
             }
 
             objective_events.send(ObjectiveEvent {
