@@ -464,20 +464,15 @@ pub fn shell_movement_system(
 }
 
 /// Handles enemy collision with map boundaries (simplified wall bounce).
+/// Syncs enemy facing direction to their current velocity.
+/// Wall collision (velocity reversal) is handled by `object_map_collision`.
 pub fn enemy_map_collision(
-    mut query: Query<(&mut EnemyFacing, &mut ObjectVelocity, &Transform), With<Enemy>>,
+    mut query: Query<(&mut EnemyFacing, &ObjectVelocity), With<Enemy>>,
 ) {
-    for (mut facing, mut vel, transform) in query.iter_mut() {
-        let left_wall = -(SCREEN_WIDTH / 2.0);
-        let right_wall = SCREEN_WIDTH / 2.0 - TILE_SIZE;
-        // Bounce off left wall
-        if transform.translation.x <= left_wall && vel.x < 0.0 {
-            vel.x = vel.x.abs();
+    for (mut facing, vel) in query.iter_mut() {
+        if vel.x > 0.0 && *facing != EnemyFacing::Right {
             *facing = EnemyFacing::Right;
-        }
-        // Bounce off right wall
-        if transform.translation.x >= right_wall && vel.x > 0.0 {
-            vel.x = -vel.x.abs();
+        } else if vel.x < 0.0 && *facing != EnemyFacing::Left {
             *facing = EnemyFacing::Left;
         }
     }

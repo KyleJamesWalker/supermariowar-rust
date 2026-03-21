@@ -56,7 +56,7 @@ pub fn default_mappings() -> [KeyboardMapping; 4] {
             down: KeyCode::Numpad2,
             turbo: KeyCode::Numpad0,
             use_item: KeyCode::NumpadDecimal,
-            pause: KeyCode::Escape,
+            pause: KeyCode::NumpadSubtract,
         },
     ]
 }
