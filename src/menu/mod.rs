@@ -18,7 +18,10 @@ impl Plugin for MenuPlugin {
         // --- Resources ---
         app.init_resource::<GameSetupConfig>()
             .init_resource::<CurrentSubMenu>()
-            .init_resource::<ScoreboardTimer>();
+            .init_resource::<ScoreboardTimer>()
+            .init_resource::<MenuSelection>()
+            .init_resource::<GameSettingsSelection>()
+            .init_resource::<PlayerSelectState>();
 
         // =====================================================================
         // Main Menu
@@ -180,12 +183,16 @@ fn cleanup_all_menu_ui(
     }
 }
 
-/// Removes menu-related resources when leaving the Menu state so they don't
-/// leak into other states (e.g. Gameplay).
-fn cleanup_menu_resources(mut commands: Commands) {
-    commands.remove_resource::<MenuSelection>();
-    commands.remove_resource::<GameSettingsSelection>();
-    commands.remove_resource::<PlayerSelectState>();
+/// Resets menu-related resources when leaving the Menu state so they start
+/// fresh next time the Menu state is entered.
+fn cleanup_menu_resources(
+    mut menu_sel: ResMut<MenuSelection>,
+    mut game_sel: ResMut<GameSettingsSelection>,
+    mut player_sel: ResMut<PlayerSelectState>,
+) {
+    *menu_sel = MenuSelection::default();
+    *game_sel = GameSettingsSelection::default();
+    *player_sel = PlayerSelectState::default();
 }
 
 /// Resets the active submenu to Main when (re-)entering the Menu state.

@@ -329,7 +329,7 @@ pub fn enemy_stomp_system(
                     enemy_entity: e_entity,
                     killer_player: Some(player.index),
                 });
-                p_vel.y = -VEL_ENEMY_BOUNCE;
+                p_vel.y = VEL_ENEMY_BOUNCE;
                 commands.entity(e_entity).despawn_recursive();
                 continue;
             }
@@ -356,7 +356,7 @@ pub fn enemy_stomp_system(
                         killer_player: Some(player.index),
                     });
                     // Bounce player upward
-                    p_vel.y = -VEL_ENEMY_BOUNCE;
+                    p_vel.y = VEL_ENEMY_BOUNCE;
                     // Despawn after brief squish animation (using lifetime)
                     commands.entity(e_entity).insert(Lifetime::from_seconds(0.3));
                 }
@@ -387,14 +387,14 @@ pub fn enemy_stomp_system(
                         enemy.state = EnemyState::InShell;
                         enemy.kills_on_touch = false;
                     }
-                    p_vel.y = -VEL_ENEMY_BOUNCE;
+                    p_vel.y = VEL_ENEMY_BOUNCE;
                 }
                 _ => {
                     // Generic stomp for other stompable enemies
                     play_sfx(&mut commands, &sfx, SfxId::Stomp);
                     enemy.state = EnemyState::Dead;
                     game_obj.alive = false;
-                    p_vel.y = -VEL_ENEMY_BOUNCE;
+                    p_vel.y = VEL_ENEMY_BOUNCE;
                     death_events.send(EnemyDeathEvent {
                         enemy_entity: e_entity,
                         killer_player: Some(player.index),
