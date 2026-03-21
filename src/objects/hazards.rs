@@ -108,7 +108,7 @@ impl ThwompState {
         Self {
             phase: ThwompPhase::Waiting,
             home_y,
-            target_y: SCREEN_HEIGHT - TILE_SIZE * 2.0,
+            target_y: -(SCREEN_HEIGHT / 2.0 - TILE_SIZE * 2.0),
             slam_speed: 12.0,
             rise_speed: 2.0,
             ground_wait: 1.0,

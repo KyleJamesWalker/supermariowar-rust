@@ -44,7 +44,7 @@ impl Plugin for MapPlugin {
 // ---------------------------------------------------------------------------
 
 #[derive(Component)]
-struct GameplayEntity;
+pub struct GameplayEntity;
 
 // ---------------------------------------------------------------------------
 // Animation timer resource

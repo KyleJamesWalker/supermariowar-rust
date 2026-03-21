@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::core::constants::{MAX_PLAYERS, TILE_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT};
+use crate::map::GameplayEntity;
 use crate::player::components::Player;
 use crate::physics::components::Collider;
 use super::traits::*;
@@ -72,9 +73,9 @@ pub fn spawn_domination_zones(
 
     // Place 3 zones spread across the map
     let zone_positions = [
-        Vec2::new(SCREEN_WIDTH * 0.2, SCREEN_HEIGHT - TILE_SIZE * 3.0),
-        Vec2::new(SCREEN_WIDTH * 0.5, SCREEN_HEIGHT - TILE_SIZE * 5.0),
-        Vec2::new(SCREEN_WIDTH * 0.8, SCREEN_HEIGHT - TILE_SIZE * 3.0),
+        Vec2::new(SCREEN_WIDTH * 0.2 - SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0 - (SCREEN_HEIGHT - TILE_SIZE * 3.0)),
+        Vec2::new(SCREEN_WIDTH * 0.5 - SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0 - (SCREEN_HEIGHT - TILE_SIZE * 5.0)),
+        Vec2::new(SCREEN_WIDTH * 0.8 - SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0 - (SCREEN_HEIGHT - TILE_SIZE * 3.0)),
     ];
 
     let zone_radius = TILE_SIZE * 2.0;
@@ -89,6 +90,7 @@ pub fn spawn_domination_zones(
                 center: *pos,
                 radius: zone_radius,
             },
+            GameplayEntity,
             Collider::new(zone_radius * 2.0, zone_radius * 2.0),
             Transform::from_xyz(pos.x, pos.y, 2.0),
             GlobalTransform::default(),

@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::core::constants::{MAX_PLAYERS, SCREEN_WIDTH, SCREEN_HEIGHT, TILE_SIZE};
+use crate::map::GameplayEntity;
 use crate::objects::components::Collectible;
 use crate::physics::components::Collider;
 use super::traits::*;
@@ -52,6 +53,7 @@ pub fn coin_spawn_system(
 
         commands.spawn((
             CoinEntity::default(),
+            GameplayEntity,
             Collectible,
             Collider::new(TILE_SIZE * 0.5, TILE_SIZE * 0.5),
             Transform::from_xyz(x, y, 5.0),
@@ -126,6 +128,7 @@ pub fn coins_drop_on_kill(
 
             commands.spawn((
                 CoinEntity::default(),
+                GameplayEntity,
                 Collectible,
                 Collider::new(TILE_SIZE * 0.5, TILE_SIZE * 0.5),
                 Transform::from_xyz(

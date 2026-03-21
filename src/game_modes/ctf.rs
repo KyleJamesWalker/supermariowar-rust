@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::core::constants::{MAX_PLAYERS, TILE_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT};
+use crate::map::GameplayEntity;
 use crate::player::components::Player;
 use crate::physics::components::Collider;
 use super::traits::*;
@@ -71,8 +72,8 @@ pub fn spawn_flags(
     state.flags_spawned = true;
 
     let flag_positions: [(u8, Vec2); 2] = [
-        (0, Vec2::new(TILE_SIZE * 2.0, SCREEN_HEIGHT - TILE_SIZE * 3.0)),
-        (1, Vec2::new(SCREEN_WIDTH - TILE_SIZE * 3.0, SCREEN_HEIGHT - TILE_SIZE * 3.0)),
+        (0, Vec2::new(TILE_SIZE * 2.0 - SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0 - (SCREEN_HEIGHT - TILE_SIZE * 3.0))),
+        (1, Vec2::new(SCREEN_WIDTH - TILE_SIZE * 3.0 - SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0 - (SCREEN_HEIGHT - TILE_SIZE * 3.0))),
     ];
 
     for (team, pos) in &flag_positions {
@@ -83,6 +84,7 @@ pub fn spawn_flags(
                 at_base: true,
                 base_position: *pos,
             },
+            GameplayEntity,
             Collider::new(TILE_SIZE, TILE_SIZE),
             Transform::from_xyz(pos.x, pos.y, 6.0),
             GlobalTransform::default(),
@@ -127,6 +129,7 @@ pub fn flag_pickup_system(
                     FlagCarrierIndicator {
                         player_index: player.index,
                     },
+                    GameplayEntity,
                     Transform::default(),
                     GlobalTransform::default(),
                     Visibility::default(),

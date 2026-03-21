@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::core::constants::{MAX_PLAYERS, TILE_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT};
+use crate::map::GameplayEntity;
 use crate::player::components::Player;
 use crate::physics::components::Collider;
 use super::traits::*;
@@ -66,7 +67,7 @@ pub fn spawn_hill(
         TimerMode::Repeating,
     );
 
-    let center = Vec2::new(SCREEN_WIDTH * 0.5, SCREEN_HEIGHT - TILE_SIZE * 4.0);
+    let center = Vec2::new(SCREEN_WIDTH * 0.5 - SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0 - (SCREEN_HEIGHT - TILE_SIZE * 4.0));
     let radius = TILE_SIZE * 2.5;
 
     commands.spawn((
@@ -75,6 +76,7 @@ pub fn spawn_hill(
             radius,
             occupant: None,
         },
+        GameplayEntity,
         Collider::new(radius * 2.0, radius * 2.0),
         Transform::from_xyz(center.x, center.y, 2.0),
         GlobalTransform::default(),
@@ -159,8 +161,10 @@ pub fn hill_relocation_system(
     }
 
     for (mut hill, mut tf) in hills.iter_mut() {
-        let new_x = (rand::random::<f32>() * (SCREEN_WIDTH - TILE_SIZE * 6.0)) + TILE_SIZE * 3.0;
-        let new_y = (rand::random::<f32>() * (SCREEN_HEIGHT - TILE_SIZE * 8.0)) + TILE_SIZE * 3.0;
+        let smw_x = (rand::random::<f32>() * (SCREEN_WIDTH - TILE_SIZE * 6.0)) + TILE_SIZE * 3.0;
+        let smw_y = (rand::random::<f32>() * (SCREEN_HEIGHT - TILE_SIZE * 8.0)) + TILE_SIZE * 3.0;
+        let new_x = smw_x - SCREEN_WIDTH / 2.0;
+        let new_y = SCREEN_HEIGHT / 2.0 - smw_y;
 
         hill.center = Vec2::new(new_x, new_y);
         hill.occupant = None;
