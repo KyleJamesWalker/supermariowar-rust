@@ -440,7 +440,7 @@ pub fn hazard_collision_system(
 
             play_sfx(&mut commands, &sfx, SfxId::PlayerDeath);
             *p_action = PlayerAction::Dead;
-            p_vel.y = -VEL_PUSHBACK;
+            p_vel.y = VEL_PUSHBACK;
         }
     }
 }

@@ -482,7 +482,7 @@ fn cleanup_gameplay(
     query: Query<Entity, With<GameplayEntity>>,
 ) {
     for entity in &query {
-        commands.entity(entity).despawn();
+        commands.entity(entity).despawn_recursive();
     }
 }
 
@@ -618,8 +618,8 @@ fn spawn_map_hazards(commands: &mut Commands, map_data: &MapData) {
             _ => continue, // Unknown hazard type, skip
         };
 
-        let bx = tile_to_bevy_x(mh.tile_x as u32);
-        let by = tile_to_bevy_y(mh.tile_y as u32);
+        let bx = smw_to_bevy_x(mh.tile_x as f32);
+        let by = smw_to_bevy_y(mh.tile_y as f32);
 
         let hazard = Hazard {
             hazard_type,
