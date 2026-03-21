@@ -342,8 +342,7 @@ pub fn powerup_collect_system(
                 }
                 PowerupType::IceWand => {
                     play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::PowerupCollect);
-                    // IceWand mapped to Fire state with ice behavior handled in projectile system
-                    *powerup_state = PowerupState::Fire;
+                    *powerup_state = PowerupState::Ice;
                 }
                 PowerupType::Star => {
                     play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Invincible);

@@ -58,6 +58,7 @@ pub enum PowerupState {
     #[default]
     None,
     Fire,
+    Ice,
     Hammer,
     Boomerang,
     Feather,

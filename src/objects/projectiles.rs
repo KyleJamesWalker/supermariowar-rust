@@ -212,6 +212,16 @@ pub fn fire_projectile_system(
                     timer: Timer::from_seconds(0.25, TimerMode::Once),
                 });
             }
+            PowerupState::Ice => {
+                play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Fireball);
+                let proj = Projectile::iceball(player.index, player.team);
+                let vel_x = proj.speed * dir;
+                let vel_y = -2.0;
+                spawn_projectile(&mut commands, proj, spawn_x, spawn_y, vel_x, vel_y);
+                commands.entity(p_entity).insert(crate::player::systems::FireCooldown {
+                    timer: Timer::from_seconds(0.25, TimerMode::Once),
+                });
+            }
             PowerupState::Hammer => {
                 play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Hammer);
                 let proj = Projectile::hammer(player.index, player.team);

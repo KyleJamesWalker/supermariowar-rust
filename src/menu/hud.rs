@@ -258,6 +258,7 @@ pub fn update_hud_powerups(
             powerup_text[player.index] = match powerup {
                 PowerupState::None => "",
                 PowerupState::Fire => "[Fire]",
+                PowerupState::Ice => "[Ice]",
                 PowerupState::Hammer => "[Hammer]",
                 PowerupState::Boomerang => "[Boomerang]",
                 PowerupState::Feather => "[Feather]",
