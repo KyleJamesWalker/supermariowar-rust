@@ -40,6 +40,7 @@ pub struct FlagCarrierIndicator {
 #[derive(Resource, Debug)]
 pub struct CtfModeState {
     pub captures: [u32; MAX_PLAYERS],
+    pub team_captures: [u32; MAX_PLAYERS],
     pub flags_spawned: bool,
 }
 
@@ -47,6 +48,7 @@ impl Default for CtfModeState {
     fn default() -> Self {
         Self {
             captures: [0; MAX_PLAYERS],
+            team_captures: [0; MAX_PLAYERS],
             flags_spawned: false,
         }
     }
@@ -326,6 +328,7 @@ pub fn handle_ctf_score(
     config: Res<GameModeConfig>,
     mut state: ResMut<CtfModeState>,
     mut score_events: EventReader<ScoreEvent>,
+    player_query: Query<&Player>,
 ) {
     if config.mode_type != GameModeType::CaptureTheFlag {
         return;
@@ -335,6 +338,13 @@ pub fn handle_ctf_score(
         if let ScoreReason::FlagCapture = event.reason {
             if event.player_index < MAX_PLAYERS {
                 state.captures[event.player_index] += 1;
+
+                // Also track team captures
+                if let Some(team) = player_query.iter().find(|p| p.index == event.player_index).map(|p| p.team as usize) {
+                    if team < MAX_PLAYERS {
+                        state.team_captures[team] += 1;
+                    }
+                }
             }
         }
     }
@@ -344,17 +354,26 @@ pub fn handle_ctf_score(
 pub fn check_ctf_win_condition(
     config: Res<GameModeConfig>,
     state: Res<CtfModeState>,
+    player_query: Query<&Player>,
     mut round_over: EventWriter<RoundOverEvent>,
 ) {
     if config.mode_type != GameModeType::CaptureTheFlag {
         return;
     }
 
-    for (i, &captures) in state.captures.iter().enumerate() {
+    // Check team captures first (CTF is team-based)
+    for (team_idx, &captures) in state.team_captures.iter().enumerate() {
         if captures >= config.point_limit {
+            // Find the best-scoring player on the winning team
+            let best_player = player_query
+                .iter()
+                .filter(|p| p.team as usize == team_idx)
+                .max_by_key(|p| state.captures.get(p.index).copied().unwrap_or(0))
+                .map(|p| p.index);
+
             round_over.send(RoundOverEvent {
-                winning_player: Some(i),
-                winning_team: None,
+                winning_player: best_player,
+                winning_team: Some(team_idx as u8),
             });
             return;
         }

@@ -527,12 +527,12 @@ pub fn entity_collision_detection(
 pub fn moving_platform_system(
     platform_query: Query<(Entity, &MovingPlatform, &Transform, &Collider)>,
     mut player_query: Query<
-        (Entity, &mut Transform, &mut Grounded, &Velocity),
+        (Entity, &mut Transform, &mut Grounded, &mut Velocity),
         (With<Player>, Without<MovingPlatform>),
     >,
     mut commands: Commands,
 ) {
-    for (player_entity, mut player_transform, mut grounded, vel) in player_query.iter_mut() {
+    for (player_entity, mut player_transform, mut grounded, mut vel) in player_query.iter_mut() {
         // Skip players moving upward (jumping) — they shouldn't snap to platforms
         if vel.y > 1.0 {
             continue;
@@ -549,19 +549,22 @@ pub fn moving_platform_system(
                 plat_collider.world_rect(&plat_transform.translation);
 
             // In Bevy Y-up, plat_max_y = visual top of platform
-            // Allow slightly larger tolerance for falling players
+            // Allow slightly larger tolerance for falling players and fast platforms
             let tolerance = if grounded.on_ground { 2.0 } else { 4.0 + vel.y.abs() };
+            let upper_tolerance = 2.0 + platform.vel_y.abs();
             let on_top = player_bottom >= plat_max_y - tolerance
-                && player_bottom <= plat_max_y + 2.0;
+                && player_bottom <= plat_max_y + upper_tolerance;
             let horizontally_on =
                 player_px + PLAYER_WIDTH > plat_left && player_px < plat_right;
 
             if on_top && horizontally_on {
-                // Snap player to platform top and apply velocity
+                // Snap player to platform top and carry them with the platform
                 player_transform.translation.y = plat_max_y;
                 player_transform.translation.x += platform.vel_x;
                 player_transform.translation.y += platform.vel_y;
 
+                // Zero vertical velocity so gravity doesn't pull player off
+                vel.y = 0.0;
                 grounded.on_ground = true;
 
                 commands
