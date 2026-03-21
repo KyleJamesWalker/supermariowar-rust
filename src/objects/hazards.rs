@@ -6,7 +6,7 @@ use crate::objects::components::*;
 use crate::physics::collision::aabb_overlap;
 use crate::physics::components::{Collider, CollisionLayer};
 use crate::player::components::{
-    Invincible, Player, PlayerAction, Velocity,
+    DeathCause, Invincible, Player, PlayerAction, PlayerDeathEvent, Velocity,
 };
 
 // ---------------------------------------------------------------------------
@@ -394,6 +394,7 @@ pub fn hazard_collision_system(
     hazard_query: Query<(&Hazard, &Collider, &Transform, &GameObject)>,
     mut player_query: Query<(
         Entity,
+        &Player,
         &mut PlayerAction,
         &mut Velocity,
         &Transform,
@@ -401,6 +402,7 @@ pub fn hazard_collision_system(
         Option<&Invincible>,
     ), With<Player>>,
     mut contact_events: EventWriter<HazardContactEvent>,
+    mut death_events: EventWriter<PlayerDeathEvent>,
 ) {
     for (hazard, h_collider, h_transform, game_obj) in hazard_query.iter() {
         if !game_obj.alive || !hazard.active {
@@ -412,7 +414,7 @@ pub fn hazard_collision_system(
             continue;
         }
 
-        for (p_entity, mut p_action, mut p_vel, p_transform, p_collider, invincible) in
+        for (p_entity, player, mut p_action, _p_vel, p_transform, p_collider, invincible) in
             player_query.iter_mut()
         {
             if *p_action == PlayerAction::Dead {
@@ -440,7 +442,12 @@ pub fn hazard_collision_system(
 
             play_sfx(&mut commands, &sfx, SfxId::PlayerDeath);
             *p_action = PlayerAction::Dead;
-            p_vel.y = VEL_PUSHBACK;
+            death_events.send(PlayerDeathEvent {
+                player_entity: p_entity,
+                player_index: player.index,
+                killer_index: None,
+                cause: DeathCause::Environment,
+            });
         }
     }
 }

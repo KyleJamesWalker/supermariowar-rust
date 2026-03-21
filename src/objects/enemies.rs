@@ -6,7 +6,7 @@ use crate::objects::components::*;
 use crate::physics::collision::aabb_overlap;
 use crate::physics::components::{Collider, CollisionLayer, GravityAffected};
 use crate::player::components::{
-    Invincible, Player, PlayerAction, Velocity,
+    DeathCause, Invincible, Player, PlayerAction, PlayerDeathEvent, Velocity,
 };
 
 // ---------------------------------------------------------------------------
@@ -276,6 +276,7 @@ pub fn enemy_stomp_system(
         Option<&Invincible>,
     )>,
     mut death_events: EventWriter<EnemyDeathEvent>,
+    mut player_death_events: EventWriter<PlayerDeathEvent>,
 ) {
     for (p_entity, player, mut p_vel, p_transform, p_collider, p_action, invincible) in
         player_query.iter_mut()
@@ -336,6 +337,12 @@ pub fn enemy_stomp_system(
             if !enemy.stompable {
                 // Spiny and similar -- hurt the player instead
                 commands.entity(p_entity).insert(PlayerAction::Dead);
+                player_death_events.send(PlayerDeathEvent {
+                    player_entity: p_entity,
+                    player_index: player.index,
+                    killer_index: None,
+                    cause: DeathCause::Environment,
+                });
                 continue;
             }
 
@@ -499,6 +506,7 @@ pub fn enemy_player_touch_system(
         Option<&Invincible>,
     )>,
     _death_events: EventWriter<EnemyDeathEvent>,
+    mut player_death_events: EventWriter<PlayerDeathEvent>,
 ) {
     for (enemy, e_collider, e_transform, game_obj) in enemy_query.iter() {
         if !game_obj.alive {
@@ -511,7 +519,7 @@ pub fn enemy_player_touch_system(
             continue;
         }
 
-        for (_p_entity, _player, mut p_vel, mut p_action, p_transform, p_collider, invincible) in
+        for (p_entity, player, p_vel, mut p_action, p_transform, p_collider, invincible) in
             player_query.iter_mut()
         {
             if *p_action == PlayerAction::Dead {
@@ -547,7 +555,12 @@ pub fn enemy_player_touch_system(
             // Kill the player
             play_sfx(&mut commands, &sfx, SfxId::PlayerDeath);
             *p_action = PlayerAction::Dead;
-            p_vel.y = -VEL_PUSHBACK;
+            player_death_events.send(PlayerDeathEvent {
+                player_entity: p_entity,
+                player_index: player.index,
+                killer_index: None,
+                cause: DeathCause::Environment,
+            });
         }
     }
 }

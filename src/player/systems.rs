@@ -164,8 +164,8 @@ pub fn player_death_system(
         if let Ok((entity, mut player, mut vel, mut action, burnup)) =
             query.get_mut(event.player_entity)
         {
-            if *action == PlayerAction::Dead {
-                continue; // Already dead
+            if burnup.is_some() {
+                continue; // Already processed this death
             }
 
             *action = PlayerAction::Dead;
@@ -173,10 +173,7 @@ pub fn player_death_system(
             vel.y = DEATH_BOUNCE_VEL_Y; // Bounce upward
             player.lives -= 1;
 
-            // Add burnup timer if not already present
-            if burnup.is_none() {
-                commands.entity(entity).insert(BurnupTimer::default());
-            }
+            commands.entity(entity).insert(BurnupTimer::default());
         }
     }
 }

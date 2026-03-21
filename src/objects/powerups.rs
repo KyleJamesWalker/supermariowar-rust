@@ -6,7 +6,7 @@ use crate::objects::components::*;
 use crate::physics::collision::aabb_overlap;
 use crate::physics::components::{Collider, CollisionLayer, GravityAffected};
 use crate::player::components::{
-    Invincible, Player, PlayerAction, PowerupState, ShieldState,
+    DeathCause, Invincible, Player, PlayerAction, PlayerDeathEvent, PowerupState, ShieldState,
 };
 
 // ---------------------------------------------------------------------------
@@ -321,6 +321,7 @@ pub fn powerup_collect_system(
         &Collider,
     )>,
     mut collect_events: EventWriter<PowerupCollectEvent>,
+    mut death_events: EventWriter<PlayerDeathEvent>,
 ) {
     for (pu_entity, spawned, pu_collider, pu_transform, game_obj) in powerup_query.iter() {
         if !game_obj.alive || spawned.spawning {
@@ -395,6 +396,12 @@ pub fn powerup_collect_system(
                     play_sfx(&mut commands, &sfx, SfxId::PlayerDeath);
                     // Kill the player
                     commands.entity(p_entity).insert(PlayerAction::Dead);
+                    death_events.send(PlayerDeathEvent {
+                        player_entity: p_entity,
+                        player_index: player.index,
+                        killer_index: None,
+                        cause: DeathCause::Environment,
+                    });
                 }
                 PowerupType::OneUp => {
                     play_sfx(&mut commands, &sfx, SfxId::ExtraLife);

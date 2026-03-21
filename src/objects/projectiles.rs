@@ -7,7 +7,8 @@ use crate::objects::enemies::{Enemy, EnemyState};
 use crate::physics::collision::aabb_overlap;
 use crate::physics::components::{Collider, CollisionLayer};
 use crate::player::components::{
-    Facing, Invincible, Player, PlayerAction, PlayerInput, PowerupState, Velocity,
+    DeathCause, Facing, Invincible, Player, PlayerAction, PlayerDeathEvent, PlayerInput,
+    PowerupState, Velocity,
 };
 
 // ---------------------------------------------------------------------------
@@ -407,6 +408,7 @@ pub fn projectile_collision_system(
         &Transform,
     ), Without<Projectile>>,
     mut hit_events: EventWriter<ProjectileHitEvent>,
+    mut player_death_events: EventWriter<PlayerDeathEvent>,
     mut death_events: EventWriter<EnemyDeathEvent>,
 ) {
     for (proj_entity, proj, proj_collider, proj_transform, proj_obj) in projectile_query.iter() {
@@ -415,7 +417,7 @@ pub fn projectile_collision_system(
         }
 
         // Check vs players
-        for (p_entity, player, mut p_vel, mut p_action, p_transform, p_collider, invincible) in
+        for (p_entity, player, _p_vel, mut p_action, p_transform, p_collider, invincible) in
             player_query.iter_mut()
         {
             // Don't hit the owner or teammates
@@ -463,7 +465,12 @@ pub fn projectile_collision_system(
                     // Kill the player
                     play_sfx(&mut commands, &sfx, SfxId::PlayerDeath);
                     *p_action = PlayerAction::Dead;
-                    p_vel.y = -VEL_PUSHBACK;
+                    player_death_events.send(PlayerDeathEvent {
+                        player_entity: p_entity,
+                        player_index: player.index,
+                        killer_index: Some(proj.owner),
+                        cause: DeathCause::Killed { by: proj.owner },
+                    });
                     commands.entity(proj_entity).despawn_recursive();
                 }
             }
@@ -567,12 +574,14 @@ pub fn bomb_fuse_system(
     mut query: Query<(Entity, &mut BombFuse, &Projectile, &Transform, &Collider)>,
     mut player_query: Query<(
         Entity,
+        &Player,
         &mut PlayerAction,
         &mut Velocity,
         &Transform,
         &Collider,
         Option<&Invincible>,
     ), With<Player>>,
+    mut bomb_death_events: EventWriter<PlayerDeathEvent>,
     mut enemy_query: Query<(
         Entity,
         &mut Enemy,
@@ -595,7 +604,7 @@ pub fn bomb_fuse_system(
         ).with_offset(-fuse.explosion_radius, -fuse.explosion_radius);
 
         // Damage players in blast radius (except owner)
-        for (_p_entity, mut p_action, mut p_vel, p_transform, p_collider, invincible) in
+        for (p_entity, player, mut p_action, mut p_vel, p_transform, p_collider, invincible) in
             player_query.iter_mut()
         {
             if *p_action == PlayerAction::Dead {
@@ -615,7 +624,12 @@ pub fn bomb_fuse_system(
                 // Pushback away from explosion
                 let diff_x = p_transform.translation.x - bomb_transform.translation.x;
                 p_vel.x = if diff_x > 0.0 { VEL_PUSHBACK } else { -VEL_PUSHBACK };
-                p_vel.y = -VEL_PUSHBACK;
+                bomb_death_events.send(PlayerDeathEvent {
+                    player_entity: p_entity,
+                    player_index: player.index,
+                    killer_index: Some(proj.owner),
+                    cause: DeathCause::Killed { by: proj.owner },
+                });
             }
         }
 
