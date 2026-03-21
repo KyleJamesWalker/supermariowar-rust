@@ -323,12 +323,15 @@ pub fn frozen_state_system(
 pub fn invincibility_system(
     time: Res<Time>,
     mut commands: Commands,
-    mut query: Query<(Entity, &mut Invincible)>,
+    mut query: Query<(Entity, &mut Invincible, &mut PowerupState)>,
 ) {
-    for (entity, mut invincible) in query.iter_mut() {
+    for (entity, mut invincible, mut powerup) in query.iter_mut() {
         invincible.timer.tick(time.delta());
         if invincible.timer.just_finished() {
             commands.entity(entity).remove::<Invincible>();
+            if *powerup == PowerupState::Star {
+                *powerup = PowerupState::None;
+            }
         }
     }
 }
@@ -482,6 +485,7 @@ pub fn attack_system(
         Option<&mut CapeState>,
         Option<&mut TailState>,
     )>,
+    mut sfx_events: EventWriter<crate::audio::sfx::SfxEvent>,
 ) {
     for (entity, input, powerup, action, cape, tail) in query.iter_mut() {
         if *action == PlayerAction::Dead || *action == PlayerAction::Spawning {
@@ -498,11 +502,13 @@ pub fn attack_system(
                     if input.use_item && !cape.active {
                         cape.active = true;
                         cape.timer.reset();
+                        sfx_events.send(crate::audio::sfx::SfxEvent::new(crate::audio::sfx::SfxId::Kick));
                     }
                 } else if input.use_item {
                     let mut state = CapeState::default();
                     state.active = true;
                     commands.entity(entity).insert(state);
+                    sfx_events.send(crate::audio::sfx::SfxEvent::new(crate::audio::sfx::SfxId::Kick));
                 }
             }
             PowerupState::Leaf => {
@@ -514,11 +520,13 @@ pub fn attack_system(
                     if input.use_item && !tail.active {
                         tail.active = true;
                         tail.timer.reset();
+                        sfx_events.send(crate::audio::sfx::SfxEvent::new(crate::audio::sfx::SfxId::Kick));
                     }
                 } else if input.use_item {
                     let mut state = TailState::default();
                     state.active = true;
                     commands.entity(entity).insert(state);
+                    sfx_events.send(crate::audio::sfx::SfxEvent::new(crate::audio::sfx::SfxId::Kick));
                 }
             }
             _ => {}
