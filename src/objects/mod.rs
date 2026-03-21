@@ -61,6 +61,7 @@ impl Plugin for ObjectsPlugin {
                 enemies::enemy_gravity_system,
                 enemies::enemy_stomp_system,
                 enemies::enemy_stun_recovery_system,
+                enemies::shell_reemerge_system,
                 enemies::shell_movement_system,
                 enemies::enemy_map_collision,
                 enemies::enemy_player_touch_system,

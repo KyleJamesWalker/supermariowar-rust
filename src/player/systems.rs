@@ -790,6 +790,26 @@ pub fn update_stats_on_death(
     }
 }
 
+/// Keeps carried entity positioned on the player.
+pub fn carried_object_sync_system(
+    query: Query<(&Transform, &Facing, &CarriedObject), With<Player>>,
+    mut transforms: Query<&mut Transform, Without<Player>>,
+) {
+    for (p_tf, facing, carried) in query.iter() {
+        if let Some(entity) = carried.entity {
+            if let Ok(mut obj_tf) = transforms.get_mut(entity) {
+                let dir = match facing {
+                    Facing::Right => 1.0,
+                    Facing::Left => -1.0,
+                };
+                obj_tf.translation.x = p_tf.translation.x + dir * TILE_SIZE * 0.75;
+                obj_tf.translation.y = p_tf.translation.y + PLAYER_HEIGHT * 0.3;
+                obj_tf.translation.z = p_tf.translation.z;
+            }
+        }
+    }
+}
+
 // --------------------------------------------------------------------------
 // Helper functions
 // --------------------------------------------------------------------------

@@ -52,6 +52,7 @@ impl Plugin for PlayerPlugin {
                     systems::attack_system,
                     systems::attack_damage_system,
                     systems::fire_cooldown_tick_system,
+                    systems::carried_object_sync_system,
                 )
                     .chain()
                     .in_set(GameSystemSet::Combat)

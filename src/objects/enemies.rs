@@ -124,6 +124,12 @@ pub struct ShellSpeed {
     pub speed: f32,
 }
 
+/// Timer for shells to re-emerge as walking enemies.
+#[derive(Component, Debug)]
+pub struct ShellTimer {
+    pub timer: Timer,
+}
+
 impl Default for ShellSpeed {
     fn default() -> Self {
         Self { speed: 7.0 }
@@ -383,6 +389,9 @@ pub fn enemy_stomp_system(
                         play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Stomp);
                         enemy.state = EnemyState::InShell;
                         enemy.kills_on_touch = false;
+                        commands.entity(e_entity).insert(ShellTimer {
+                            timer: Timer::from_seconds(5.0, TimerMode::Once),
+                        });
                     }
                     p_vel.y = VEL_ENEMY_BOUNCE;
                 }
@@ -489,7 +498,7 @@ pub fn enemy_player_touch_system(
     mut commands: Commands,
     sfx: Res<SfxLibrary>,
     sfx_vol: Res<SfxVolume>,
-    enemy_query: Query<(&Enemy, &Collider, &Transform, &GameObject)>,
+    enemy_query: Query<(&Enemy, &Collider, &Transform, &GameObject, Option<&OwnerPlayer>)>,
     mut player_query: Query<(
         Entity,
         &Player,
@@ -504,7 +513,7 @@ pub fn enemy_player_touch_system(
     _death_events: EventWriter<EnemyDeathEvent>,
     mut player_death_events: EventWriter<PlayerDeathEvent>,
 ) {
-    for (enemy, e_collider, e_transform, game_obj) in enemy_query.iter() {
+    for (enemy, e_collider, e_transform, game_obj, owner) in enemy_query.iter() {
         if !game_obj.alive {
             continue;
         }
@@ -541,6 +550,13 @@ pub fn enemy_player_touch_system(
             // handled by enemy_stomp_system, so skip here
             if player_visual_bottom >= enemy_visual_mid && p_vel.y < 0.0 {
                 continue;
+            }
+
+            // Shell owner immunity: the player who kicked this shell is immune
+            if let Some(own) = owner {
+                if own.index == player.index {
+                    continue;
+                }
             }
 
             if invincible.is_some() || spawn_prot.is_some() {
@@ -591,6 +607,25 @@ pub fn enemy_despawn_offscreen_system(
             || transform.translation.y > SCREEN_HEIGHT / 2.0 + TILE_SIZE * 4.0
         {
             commands.entity(entity).despawn_recursive();
+        }
+    }
+}
+
+/// Ticks shell timers and re-emerges Koopas from their shells.
+pub fn shell_reemerge_system(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut Enemy, &mut ShellTimer)>,
+) {
+    for (entity, mut enemy, mut shell_timer) in query.iter_mut() {
+        if shell_timer.timer.tick(time.delta()).just_finished() {
+            enemy.state = EnemyState::Walking;
+            enemy.kills_on_touch = true;
+            commands
+                .entity(entity)
+                .remove::<ShellTimer>()
+                .remove::<ShellSpeed>()
+                .remove::<OwnerPlayer>();
         }
     }
 }
