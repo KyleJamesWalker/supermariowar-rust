@@ -382,13 +382,22 @@ fn spawn_players_from_config(commands: &mut Commands, md: &MapData, config: &Gam
     let num_players = active_slots.len().max(2);
     let spawn_positions = pick_spawn_positions(md, num_players);
 
+    if spawn_positions.is_empty() {
+        warn!("No spawn positions available! Using center of map as fallback.");
+    }
+
     for (spawn_idx, (player_index, slot)) in active_slots.iter().enumerate() {
-        let (sx, sy) = spawn_positions[spawn_idx % spawn_positions.len()];
+        let (sx, sy) = if spawn_positions.is_empty() {
+            (10, 7) // Center of 20x15 tile grid
+        } else {
+            spawn_positions[spawn_idx % spawn_positions.len()]
+        };
         let bx = tile_to_bevy_x(sx as u32);
         let by = tile_to_bevy_y(sy as u32);
 
         let mut bundle = PlayerBundle::new(*player_index, slot.team, bx, by);
         bundle.player.lives = config.lives as i32;
+        bundle.action = crate::player::components::PlayerAction::Spawning;
         bundle.skin_index = crate::player::components::PlayerSkinIndex(slot.skin_index);
 
         let entity_id = commands.spawn((
@@ -396,6 +405,7 @@ fn spawn_players_from_config(commands: &mut Commands, md: &MapData, config: &Gam
             Collider::new(PLAYER_WIDTH, PLAYER_HEIGHT),
             crate::physics::components::CollisionLayer::Player,
             crate::physics::components::GravityAffected::default(),
+            crate::player::components::SpawnProtection::default(),
             GameplayEntity,
         )).id();
 
@@ -429,11 +439,15 @@ fn spawn_players(commands: &mut Commands, md: &MapData) {
         let bx = tile_to_bevy_x(sx as u32);
         let by = tile_to_bevy_y(sy as u32);
 
+        let mut bundle = PlayerBundle::new(i, i as u8, bx, by);
+        bundle.action = crate::player::components::PlayerAction::Spawning;
+
         commands.spawn((
-            PlayerBundle::new(i, i as u8, bx, by),
+            bundle,
             Collider::new(PLAYER_WIDTH, PLAYER_HEIGHT),
             crate::physics::components::CollisionLayer::Player,
             crate::physics::components::GravityAffected::default(),
+            crate::player::components::SpawnProtection::default(),
             GameplayEntity,
         ));
 

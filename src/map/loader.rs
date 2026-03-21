@@ -307,6 +307,13 @@ fn parse_v18(r: &mut Cursor<&[u8]>, patch: i32) -> io::Result<MapData> {
         let h = read_i32_le(r)?;
         md.draw_areas.push(DrawArea { x, y, w, h });
     }
+    // Skip surplus draw areas to keep the stream aligned
+    for _ in clamped_da..num_draw_areas {
+        let _ = read_i32_le(r);
+        let _ = read_i32_le(r);
+        let _ = read_i32_le(r);
+        let _ = read_i32_le(r);
+    }
 
     // The remaining sections (extra tile data, gamemode settings) are
     // optional and not critical for rendering.  We silently ignore parse
