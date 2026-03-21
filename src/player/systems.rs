@@ -1049,21 +1049,42 @@ pub fn throw_carried_object_system(
 
 /// Pick a spawn location from the map's spawn areas, or use a fallback.
 /// Returns Bevy coordinates (centered, Y-up).
+/// After selecting the spawn point, checks for solid tiles and adjusts upward
+/// if the player would spawn inside terrain (matches C++ checksides behavior).
 fn pick_spawn_location(map_data: &MapData, player_index: usize) -> (f32, f32) {
-    // spawn_areas[0] = "All players" spawn areas
-    if !map_data.spawn_areas.is_empty() && !map_data.spawn_areas[0].is_empty() {
+    let (x, mut y) = if !map_data.spawn_areas.is_empty() && !map_data.spawn_areas[0].is_empty() {
         let areas = &map_data.spawn_areas[0];
         let area = &areas[player_index % areas.len()];
-        // Convert SMW pixel coords to Bevy coords
         let smw_x = (area.left as f32 + area.width as f32 / 2.0) * TILE_SIZE;
         let smw_y = (area.top as f32 + area.height as f32 / 2.0) * TILE_SIZE;
         (smw_x - SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0 - smw_y)
     } else {
-        // Fallback: distribute players across the top of the screen (Bevy coords)
         let smw_x = (SCREEN_WIDTH / (MAX_PLAYERS as f32 + 1.0)) * (player_index as f32 + 1.0);
         let smw_y = TILE_SIZE * 2.0;
         (smw_x - SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0 - smw_y)
+    };
+
+    // Check if spawn point is inside a solid tile and push upward if so
+    // (matches C++ checksides behavior after FindSpawnPoint).
+    // Convert Bevy coords to SMW tile coords for the map collision lookup.
+    let num_cols = map_data.collision_map.len();
+    let num_rows = if num_cols > 0 { map_data.collision_map[0].len() } else { 0 };
+    let smw_px_x = x + SCREEN_WIDTH / 2.0;
+    let smw_px_y = SCREEN_HEIGHT / 2.0 - y;
+    let tile_x = (smw_px_x / TILE_SIZE) as usize;
+    let tile_y = (smw_px_y / TILE_SIZE) as usize;
+
+    // Check foot-level tile and one tile above; push up (Bevy Y+) if solid
+    for check_y in [tile_y, tile_y.wrapping_sub(1)] {
+        if tile_x < num_cols && check_y < num_rows {
+            let col = map_data.collision_map[tile_x][check_y];
+            if col.is_solid() {
+                y += TILE_SIZE;
+            }
+        }
     }
+
+    (x, y)
 }
 
 /// Check if two players' colliders overlap, accounting for screen wrapping.

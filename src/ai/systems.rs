@@ -878,24 +878,36 @@ fn navigate_flee(
     _map_data: &MapData,
 ) {
     let dx = wrapped_distance_x(ai_pos.x, threat_pos.x);
-    let flee_dir = if dx.abs() < 1.0 {
-        // Flee toward nearest screen edge (Bevy centered: 0 is center)
+    let preferred_flee = if dx.abs() < 1.0 {
         if ai_pos.x < 0.0 { -1.0 } else { 1.0 }
     } else {
         -dx.signum()
     };
 
+    // Predictive wall check: if the preferred flee direction is blocked,
+    // try the opposite. If both are blocked, keep preferred and jump.
+    let flee_dir = if preferred_flee < 0.0 && perception.path_blocked_left {
+        if !perception.path_blocked_right {
+            1.0 // Flee right instead
+        } else {
+            intent.want_jump = grounded.on_ground;
+            preferred_flee // Both blocked, jump over
+        }
+    } else if preferred_flee > 0.0 && perception.path_blocked_right {
+        if !perception.path_blocked_left {
+            -1.0 // Flee left instead
+        } else {
+            intent.want_jump = grounded.on_ground;
+            preferred_flee // Both blocked, jump over
+        }
+    } else {
+        preferred_flee
+    };
+
     intent.move_direction = flee_dir;
     intent.want_turbo = true;
 
-    // Jump if blocked or near edges
-    if (perception.path_blocked_left && flee_dir < 0.0)
-        || (perception.path_blocked_right && flee_dir > 0.0)
-    {
-        intent.want_jump = grounded.on_ground;
-    }
-
-    // Don't flee into pits
+    // Don't flee into pits — reverse direction and jump
     if perception.on_edge && perception.above_pit {
         intent.move_direction = -intent.move_direction;
         intent.want_jump = grounded.on_ground;
