@@ -7,7 +7,8 @@ use crate::physics::collision::aabb_overlap;
 use crate::map::GameplayEntity;
 use crate::physics::components::{Collider, CollisionLayer, GravityAffected};
 use crate::player::components::{
-    DeathCause, Invincible, Player, PlayerAction, PlayerDeathEvent, PowerupState, ShieldState,
+    CapeState, DeathCause, Invincible, Player, PlayerAction, PlayerDeathEvent, PowerupState,
+    ShieldState, TailState,
 };
 
 // ---------------------------------------------------------------------------
@@ -406,17 +407,26 @@ pub fn powerup_collect_system(
                     play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::PowerupCollect);
                     *powerup_state = PowerupState::Jail;
                 }
+                PowerupType::ExtraGuy => {
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::ExtraLife);
+                    player.lives += 1;
+                }
                 PowerupType::Clock
                 | PowerupType::BulletBill
                 | PowerupType::Podoboo
                 | PowerupType::Tanooki
                 | PowerupType::MysteryMushroom
-                | PowerupType::ExtraGuy
                 | PowerupType::SlowDown => {
                     play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::PowerupCollect);
-                    // These powerups have mode-specific or transform effects
-                    // that are handled by the game mode systems
                 }
+            }
+
+            // Clean up attack state components when powerup changes away from Feather/Leaf
+            if spawned.powerup_type != PowerupType::Feather {
+                commands.entity(p_entity).remove::<CapeState>();
+            }
+            if spawned.powerup_type != PowerupType::Leaf {
+                commands.entity(p_entity).remove::<TailState>();
             }
 
             // Despawn the collected powerup

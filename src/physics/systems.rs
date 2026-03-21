@@ -4,7 +4,7 @@ use crate::core::constants::*;
 use crate::map::components::{CollisionType, MapData, MovingPlatform};
 use crate::objects::components::{InteractsWithMap, ObjectGrounded, ObjectVelocity};
 use crate::player::components::{
-    DeathCause, Grounded, Player, PlayerAction, PlayerDeathEvent, PlayerInput, Velocity, WarpState,
+    DeathCause, FrozenState, Grounded, Player, PlayerAction, PlayerDeathEvent, PlayerInput, Velocity, WarpState,
 };
 use super::collision;
 use super::components::*;
@@ -37,9 +37,13 @@ fn to_bevy_y(smw_y: f32) -> f32 {
 /// Runs AFTER gravity and BEFORE map collision so that collision resolution
 /// operates on the correct position.
 pub fn apply_player_velocity(
-    mut query: Query<(&Velocity, &mut Transform), With<Player>>,
+    mut query: Query<(&Velocity, &mut Transform, Option<&FrozenState>), With<Player>>,
 ) {
-    for (vel, mut transform) in query.iter_mut() {
+    for (vel, mut transform, frozen) in query.iter_mut() {
+        // Frozen players don't move
+        if frozen.is_some() {
+            continue;
+        }
         transform.translation.x += vel.x;
         transform.translation.y += vel.y;
 
@@ -55,11 +59,11 @@ pub fn apply_player_velocity(
 
 /// Applies gravity to all entities that have the GravityAffected component.
 pub fn apply_gravity(
-    mut query: Query<(&mut Velocity, &GravityAffected, Option<&WarpState>)>,
+    mut query: Query<(&mut Velocity, &GravityAffected, Option<&WarpState>, Option<&FrozenState>)>,
 ) {
-    for (mut vel, gravity, warp) in query.iter_mut() {
-        // Don't apply gravity while warping
-        if warp.is_some() {
+    for (mut vel, gravity, warp, frozen) in query.iter_mut() {
+        // Don't apply gravity while warping or frozen
+        if warp.is_some() || frozen.is_some() {
             continue;
         }
         vel.y -= GRAVITY * gravity.multiplier;
