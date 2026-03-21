@@ -167,7 +167,7 @@ pub fn powerup_spawn_system(
 
         // Rise up animation: move upward until one tile above spawn point
         let rise_speed = 1.0;
-        transform.translation.y -= rise_speed;
+        transform.translation.y += rise_speed;
         spawned.spawn_rise_target -= rise_speed;
 
         if spawned.spawn_rise_target <= 0.0 {

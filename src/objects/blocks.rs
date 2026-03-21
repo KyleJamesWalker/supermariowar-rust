@@ -333,8 +333,8 @@ pub fn block_bounce_system(
         }
 
         let bounce_vel = match block_type {
-            BlockType::BounceBlock => -VEL_BLOCK_BOUNCE,
-            BlockType::NoteBlock => -VEL_NOTE_BLOCK_BOUNCE * 2.5,
+            BlockType::BounceBlock => VEL_BLOCK_BOUNCE,
+            BlockType::NoteBlock => VEL_NOTE_BLOCK_BOUNCE * 2.5,
             _ => continue,
         };
 
