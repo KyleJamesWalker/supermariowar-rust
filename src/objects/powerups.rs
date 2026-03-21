@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::audio::sfx::{play_sfx, SfxId, SfxLibrary, SfxVolume};
 use crate::core::constants::*;
 use crate::objects::components::*;
-use crate::physics::collision::aabb_overlap;
+use crate::physics::collision::aabb_overlap_wrapped;
 use crate::map::GameplayEntity;
 use crate::physics::components::{Collider, CollisionLayer, GravityAffected};
 use crate::player::components::{
@@ -308,7 +308,7 @@ pub fn powerup_collect_system(
                 continue;
             }
 
-            if !aabb_overlap(
+            if !aabb_overlap_wrapped(
                 &p_transform.translation,
                 p_collider,
                 &pu_transform.translation,

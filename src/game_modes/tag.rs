@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::core::constants::{MAX_PLAYERS, TILE_SIZE};
+use crate::core::constants::{MAX_PLAYERS, SCREEN_WIDTH, TILE_SIZE};
 use crate::player::components::Player;
 use super::traits::*;
 
@@ -142,7 +142,8 @@ pub fn tag_transfer_system(
             continue;
         }
 
-        let dx = (tf.translation.x - it_pos.x).abs();
+        let raw_dx = (tf.translation.x - it_pos.x).abs();
+        let dx = raw_dx.min(SCREEN_WIDTH - raw_dx); // Screen-wrap aware distance
         let dy = (tf.translation.y - it_pos.y).abs();
 
         if dx < TILE_SIZE * 1.2 && dy < TILE_SIZE * 1.2 {

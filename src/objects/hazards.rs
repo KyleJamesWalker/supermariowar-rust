@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::audio::sfx::{play_sfx, SfxId, SfxLibrary, SfxVolume};
 use crate::core::constants::*;
 use crate::objects::components::*;
-use crate::physics::collision::aabb_overlap;
+use crate::physics::collision::aabb_overlap_wrapped;
 use crate::physics::components::{Collider, CollisionLayer};
 use crate::player::components::{
     DeathCause, Invincible, Player, PlayerAction, PlayerDeathEvent, SpawnProtection, Velocity,
@@ -436,7 +436,7 @@ pub fn hazard_collision_system(
                 continue;
             }
 
-            if !aabb_overlap(
+            if !aabb_overlap_wrapped(
                 &h_transform.translation,
                 h_collider,
                 &p_transform.translation,

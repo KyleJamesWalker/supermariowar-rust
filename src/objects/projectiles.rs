@@ -5,7 +5,7 @@ use crate::core::constants::*;
 use crate::map::GameplayEntity;
 use crate::objects::components::*;
 use crate::objects::enemies::{Enemy, EnemyState};
-use crate::physics::collision::aabb_overlap;
+use crate::physics::collision::aabb_overlap_wrapped;
 use crate::physics::components::{Collider, CollisionLayer};
 use crate::player::components::{
     DeathCause, Facing, Invincible, Player, PlayerAction, PlayerDeathEvent, PlayerInput,
@@ -479,7 +479,7 @@ pub fn projectile_collision_system(
                 continue;
             }
 
-            if !aabb_overlap(
+            if !aabb_overlap_wrapped(
                 &proj_transform.translation,
                 proj_collider,
                 &p_transform.translation,
@@ -541,7 +541,7 @@ pub fn projectile_collision_system(
                 continue;
             }
 
-            if !aabb_overlap(
+            if !aabb_overlap_wrapped(
                 &proj_transform.translation,
                 proj_collider,
                 &e_transform.translation,
@@ -672,7 +672,7 @@ pub fn bomb_fuse_system(
                 continue;
             }
 
-            if aabb_overlap(
+            if aabb_overlap_wrapped(
                 &bomb_transform.translation,
                 &blast_collider,
                 &p_transform.translation,
@@ -704,7 +704,7 @@ pub fn bomb_fuse_system(
                 continue;
             }
 
-            if aabb_overlap(
+            if aabb_overlap_wrapped(
                 &bomb_transform.translation,
                 &blast_collider,
                 &e_transform.translation,
