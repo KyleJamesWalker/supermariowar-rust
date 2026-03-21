@@ -274,11 +274,19 @@ fn handle_round_over(
     mut match_result: ResMut<MatchResult>,
     mut round_manager: ResMut<RoundManager>,
     mut round_over_timer: ResMut<RoundOverTimer>,
+    mut sfx_events: EventWriter<crate::audio::sfx::SfxEvent>,
 ) {
     for event in round_over_events.read() {
         // Store result
         match_result.winning_player = event.winning_player;
         match_result.winning_team = event.winning_team;
+
+        // Play appropriate SFX
+        if event.winning_player.is_some() || event.winning_team.is_some() {
+            sfx_events.send(crate::audio::sfx::SfxEvent::new(crate::audio::sfx::SfxId::Winner));
+        } else {
+            sfx_events.send(crate::audio::sfx::SfxEvent::new(crate::audio::sfx::SfxId::Draw));
+        }
 
         // Update round wins
         if let Some(player) = event.winning_player {

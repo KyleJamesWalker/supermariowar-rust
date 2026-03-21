@@ -30,7 +30,7 @@ pub fn aabb_overlap_wrapped(
         return true;
     }
 
-    let wrap_amount = SCREEN_WIDTH + PLAYER_WIDTH * 2.0;
+    let wrap_amount = SCREEN_WIDTH;
 
     // Check A wrapped right
     let mut wrapped = *pos_a;
@@ -83,7 +83,7 @@ pub fn aabb_penetration(
 /// Computes the shortest horizontal distance between two x-positions, accounting
 /// for screen wrapping. Returns a signed value (positive = b is to the right of a).
 pub fn wrapped_distance_x(x_a: f32, x_b: f32) -> f32 {
-    let wrap_width = SCREEN_WIDTH + PLAYER_WIDTH * 2.0;
+    let wrap_width = SCREEN_WIDTH;
     let direct = x_b - x_a;
 
     // Check the three candidate distances: direct, and wrapped in both directions

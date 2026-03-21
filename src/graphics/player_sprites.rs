@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::player::components::{
-    CarriedObject, CapeState, Facing, Player, PlayerAction, PlayerSkinIndex,
+    CarriedObject, CapeState, Facing, FrozenState, Player, PlayerAction, PlayerSkinIndex,
     PowerupState, ShieldState, SpawnProtection, TailState,
 };
 use crate::graphics::animation::{
@@ -178,11 +178,17 @@ pub fn sync_player_facing(
 /// Applies team color tint to player sprites.
 pub fn apply_team_tint(
     mut query: Query<
-        (&Player, &PowerupState, &mut Sprite, Option<&StarPowerVisual>),
+        (&Player, &PowerupState, &mut Sprite, Option<&StarPowerVisual>, Option<&FrozenState>),
         With<PlayerSpriteSetup>,
     >,
 ) {
-    for (player, powerup, mut sprite, star_visual) in query.iter_mut() {
+    for (player, powerup, mut sprite, star_visual, frozen) in query.iter_mut() {
+        // Frozen players get an icy blue tint regardless of powerup
+        if frozen.is_some() {
+            sprite.color = Color::srgb(0.5, 0.7, 1.0);
+            continue;
+        }
+
         match powerup {
             PowerupState::Star => {
                 // Star power uses rainbow cycling (handled by star_power_visual_system)

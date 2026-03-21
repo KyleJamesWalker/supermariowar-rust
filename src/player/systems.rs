@@ -817,7 +817,7 @@ fn players_overlap(
     }
 
     // Check with screen wrapping (player A wrapped, Bevy centered coords)
-    let wrap_amount = SCREEN_WIDTH + PLAYER_WIDTH * 2.0;
+    let wrap_amount = SCREEN_WIDTH;
     let mut wrapped_a = t_a.translation;
     if wrapped_a.x < 0.0 {
         wrapped_a.x += wrap_amount;
