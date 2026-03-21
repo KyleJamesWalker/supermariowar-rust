@@ -808,16 +808,6 @@ pub fn object_map_collision(
             }
         }
 
-        // --- Fallback: screen-edge floor when below all tiles ---
-        if !grounded.0 {
-            let floor_y = -(SCREEN_HEIGHT / 2.0 - TILE_SIZE);
-            if transform.translation.y <= floor_y {
-                transform.translation.y = floor_y;
-                vel.y = 0.0;
-                grounded.0 = true;
-            }
-        }
-
         // --- Horizontal screen wrapping ---
         let half_w = SCREEN_WIDTH / 2.0;
         if transform.translation.x > half_w {
