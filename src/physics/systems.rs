@@ -288,8 +288,8 @@ fn check_vertical_collision(
                         }
                     }
                     CollisionType::SolidOnTop => {
-                        // Drop through: pressing down + jump on a passthrough platform
-                        if !(input.down && input.jump_pressed) {
+                        // Drop through: pressing down on a passthrough platform
+                        if !input.down {
                             let tile_top = ty as f32 * TILE_SIZE;
                             // Only land if feet are at or just below the tile top
                             if foot_y >= tile_top && foot_y <= tile_top + vel.y.abs() + 1.0 {

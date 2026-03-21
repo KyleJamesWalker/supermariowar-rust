@@ -44,7 +44,7 @@ pub fn player_movement(
         }
 
         let max_speed = if input.turbo { VEL_TURBO_MOVING } else { VEL_MOVING };
-        let accel = VEL_MOVING_ADD;
+        let accel = if grounded.on_ice { VEL_MOVING_ADD * 0.25 } else { VEL_MOVING_ADD };
 
         // Choose friction based on surface
         let friction = if !grounded.on_ground {
@@ -134,7 +134,12 @@ pub fn player_jump(
         }
 
         if input.jump_pressed && grounded.on_ground {
-            let jump_vel = if input.turbo { VEL_TURBO_JUMP } else { JUMP_VELOCITY };
+            // Turbo jump only when running fast (matching C++ velx > VELMOVING check)
+            let jump_vel = if input.turbo && vel.x.abs() > VEL_MOVING {
+                VEL_TURBO_JUMP
+            } else {
+                JUMP_VELOCITY
+            };
             vel.y = jump_vel;
             *action = PlayerAction::Jumping;
             grounded.on_ground = false;
