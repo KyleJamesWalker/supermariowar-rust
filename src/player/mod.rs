@@ -50,7 +50,6 @@ impl Plugin for PlayerPlugin {
                     systems::stomp_bounce_system,
                     systems::attack_system,
                     systems::attack_damage_system,
-                    systems::powerup_use_system,
                     systems::fire_cooldown_tick_system,
                 )
                     .chain()

@@ -176,10 +176,15 @@ pub fn fire_projectile_system(
         &Facing,
         &Transform,
         &PlayerAction,
+        Option<&crate::player::components::FrozenState>,
+        Option<&crate::player::systems::FireCooldown>,
     )>,
 ) {
-    for (p_entity, player, input, powerup, facing, transform, action) in query.iter() {
-        if *action == PlayerAction::Dead {
+    for (p_entity, player, input, powerup, facing, transform, action, frozen, cooldown) in query.iter() {
+        if *action == PlayerAction::Dead || *action == PlayerAction::Spawning {
+            continue;
+        }
+        if frozen.is_some() || cooldown.is_some() {
             continue;
         }
         if !input.use_item {
@@ -201,6 +206,9 @@ pub fn fire_projectile_system(
                 let vel_x = proj.speed * dir;
                 let vel_y = -2.0; // Slight downward angle
                 spawn_projectile(&mut commands, proj, spawn_x, spawn_y, vel_x, vel_y);
+                commands.entity(p_entity).insert(crate::player::systems::FireCooldown {
+                    timer: Timer::from_seconds(0.25, TimerMode::Once),
+                });
             }
             PowerupState::Hammer => {
                 play_sfx(&mut commands, &sfx, SfxId::Fireball);
@@ -219,6 +227,9 @@ pub fn fire_projectile_system(
                 commands.entity(entity).insert(
                     crate::physics::components::GravityAffected { multiplier: 1.0 },
                 );
+                commands.entity(p_entity).insert(crate::player::systems::FireCooldown {
+                    timer: Timer::from_seconds(0.35, TimerMode::Once),
+                });
             }
             PowerupState::Boomerang => {
                 play_sfx(&mut commands, &sfx, SfxId::Fireball);
@@ -238,6 +249,9 @@ pub fn fire_projectile_system(
                     max_distance: SCREEN_WIDTH * 0.4,
                     owner_entity: p_entity,
                 });
+                commands.entity(p_entity).insert(crate::player::systems::FireCooldown {
+                    timer: Timer::from_seconds(0.5, TimerMode::Once),
+                });
             }
             PowerupState::Bomb => {
                 play_sfx(&mut commands, &sfx, SfxId::Fireball);
@@ -256,6 +270,9 @@ pub fn fire_projectile_system(
                 commands.entity(entity).insert(
                     crate::physics::components::GravityAffected { multiplier: 1.0 },
                 );
+                commands.entity(p_entity).insert(crate::player::systems::FireCooldown {
+                    timer: Timer::from_seconds(0.5, TimerMode::Once),
+                });
             }
             _ => {
                 // No projectile for other powerup states
