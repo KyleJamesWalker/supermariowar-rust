@@ -342,8 +342,8 @@ pub fn check_ctf_win_condition(
     for (i, &captures) in state.captures.iter().enumerate() {
         if captures >= config.point_limit {
             round_over.send(RoundOverEvent {
-                winning_player: None,
-                winning_team: Some(i as u8),
+                winning_player: Some(i),
+                winning_team: None,
             });
             return;
         }

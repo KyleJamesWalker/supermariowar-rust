@@ -164,6 +164,7 @@ impl Plugin for GameModesPlugin {
             (
                 round_over_timer_system,
                 reset_mode_state_on_new_round,
+                cleanup_mode_entities_on_new_round,
             )
                 .chain()
                 .run_if(in_state(GameState::Gameplay))
@@ -378,6 +379,37 @@ fn reset_mode_state_on_new_round(
     *frenzy_state = frenzy::FrenzyModeState::default();
     *game_timer = GameTimer::default();
     *scoreboard = ScoreBoard::default();
+}
+
+/// Despawns game-mode entities (flags, zones, coins) between rounds so they
+/// can be re-spawned fresh. Runs after `reset_mode_state_on_new_round` which
+/// resets the `*_spawned` flags that guard the spawn systems.
+fn cleanup_mode_entities_on_new_round(
+    mut commands: Commands,
+    pending_reset: Res<PendingRoundReset>,
+    flag_query: Query<Entity, With<ctf::Flag>>,
+    zone_query: Query<Entity, With<domination::DominationZone>>,
+    hill_query: Query<Entity, With<king_of_the_hill::HillZone>>,
+    coin_query: Query<Entity, With<coins::CoinEntity>>,
+) {
+    // Only run when reset_mode_state_on_new_round just consumed the flag
+    // (changed it from true to false) in the same frame.
+    if !pending_reset.is_changed() || pending_reset.0 {
+        return;
+    }
+
+    for entity in flag_query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+    for entity in zone_query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+    for entity in hill_query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+    for entity in coin_query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
 }
 
 // ---------------------------------------------------------------------------
