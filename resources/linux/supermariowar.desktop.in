@@ -1,8 +1,0 @@
-[Desktop Entry]
-Type=Application
-Exec=smw --datadir @SMW_DATADIR@
-Terminal=false
-Name=Super Mario War
-Comment=Launch Super Mario War
-Icon=smw
-Categories=Game;

@@ -1,0 +1,13 @@
+[package]
+name = "supermariowar"
+version = "0.1.0"
+edition = "2021"
+description = "Super Mario War - Bevy/Rust port"
+
+[dependencies]
+bevy = { version = "0.15", features = ["default"] }
+bevy_ecs_tilemap = "0.15"
+rand = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
+bitflags = "2"
