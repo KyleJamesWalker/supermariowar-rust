@@ -465,7 +465,7 @@ pub fn projectile_collision_system(
         }
 
         // Check vs players
-        for (p_entity, player, _p_vel, mut p_action, p_transform, p_collider, invincible, spawn_prot, mut shield) in
+        for (p_entity, player, _p_vel, p_action, p_transform, p_collider, invincible, spawn_prot, mut shield) in
             player_query.iter_mut()
         {
             // Don't hit the owner or teammates
@@ -518,9 +518,7 @@ pub fn projectile_collision_system(
                     commands.entity(proj_entity).despawn_recursive();
                 }
                 _ => {
-                    // Kill the player
-                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::PlayerDeath);
-                    *p_action = PlayerAction::Dead;
+                    // Send death event — player_death_system handles state, SFX, and animation
                     player_death_events.send(PlayerDeathEvent {
                         player_entity: p_entity,
                         player_index: player.index,

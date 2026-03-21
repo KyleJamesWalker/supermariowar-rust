@@ -263,7 +263,10 @@ pub fn player_respawn_system(
             *action = PlayerAction::Spawning;
             *powerup_state = PowerupState::None;
             *shield_state = ShieldState::None;
-            carried.entity = None;
+            // Despawn carried block entity before clearing reference
+            if let Some(block_entity) = carried.entity.take() {
+                commands.entity(block_entity).despawn_recursive();
+            }
 
             // Remove all transient state components
             commands
