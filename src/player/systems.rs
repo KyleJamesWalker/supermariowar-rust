@@ -312,6 +312,7 @@ pub fn player_stomp_system(
         &Velocity,
         &PlayerAction,
         &Collider,
+        &ShieldState,
         Option<&Invincible>,
         Option<&SpawnProtection>,
     )>,
@@ -322,8 +323,8 @@ pub fn player_stomp_system(
 
     for i in 0..players.len() {
         for j in (i + 1)..players.len() {
-            let (e_a, p_a, t_a, v_a, act_a, col_a, inv_a, sp_a) = &players[i];
-            let (e_b, p_b, t_b, v_b, act_b, col_b, inv_b, sp_b) = &players[j];
+            let (e_a, p_a, t_a, v_a, act_a, col_a, shield_a, inv_a, sp_a) = &players[i];
+            let (e_b, p_b, t_b, v_b, act_b, col_b, shield_b, inv_b, sp_b) = &players[j];
 
             // Skip if either player is dead, spawning, or has protection
             if **act_a == PlayerAction::Dead
@@ -357,6 +358,10 @@ pub fn player_stomp_system(
             if v_a.y < 0.0 {
                 let diff = a_visual_bottom - b_visual_top;
                 if diff >= -STOMP_THRESHOLD_Y && diff <= 4.0 {
+                    // Soft shield blocks stomps
+                    if **shield_b == ShieldState::Soft {
+                        continue;
+                    }
                     stomp_events.send(PlayerStompEvent {
                         stomper_entity: *e_a,
                         stomped_entity: *e_b,
@@ -377,6 +382,10 @@ pub fn player_stomp_system(
             if v_b.y < 0.0 {
                 let diff = b_visual_bottom - a_visual_top;
                 if diff >= -STOMP_THRESHOLD_Y && diff <= 4.0 {
+                    // Soft shield blocks stomps
+                    if **shield_a == ShieldState::Soft {
+                        continue;
+                    }
                     stomp_events.send(PlayerStompEvent {
                         stomper_entity: *e_b,
                         stomped_entity: *e_a,
@@ -502,6 +511,7 @@ pub fn attack_damage_system(
         &Transform,
         &PlayerAction,
         &Collider,
+        &ShieldState,
         Option<&Invincible>,
         Option<&SpawnProtection>,
     )>,
@@ -545,7 +555,7 @@ pub fn attack_damage_system(
         let hitbox_bottom = atk_y;
         let hitbox_top = atk_y + PLAYER_HEIGHT;
 
-        for (tgt_entity, tgt_player, tgt_transform, tgt_action, tgt_collider, tgt_inv, tgt_sp) in
+        for (tgt_entity, tgt_player, tgt_transform, tgt_action, tgt_collider, tgt_shield, tgt_inv, tgt_sp) in
             targets.iter()
         {
             // Skip self
@@ -558,6 +568,10 @@ pub fn attack_damage_system(
             }
             // Skip invincible or spawn-protected targets
             if tgt_inv.is_some() || tgt_sp.is_some() {
+                continue;
+            }
+            // Soft shield blocks cape/tail attacks
+            if *tgt_shield == ShieldState::Soft {
                 continue;
             }
             // Skip same team

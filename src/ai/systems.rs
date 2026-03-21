@@ -781,10 +781,12 @@ fn navigate_patrol(
     intent.want_jump = false;
     intent.want_down = false;
 
-    // Reverse at screen edges
-    if ai_pos.x < TILE_SIZE * 2.0 && dir < 0.0 {
+    // Reverse at screen edges (Bevy centered coords: -SCREEN_WIDTH/2 to SCREEN_WIDTH/2)
+    let left_edge = -(SCREEN_WIDTH / 2.0 - TILE_SIZE * 2.0);
+    let right_edge = SCREEN_WIDTH / 2.0 - TILE_SIZE * 2.0;
+    if ai_pos.x < left_edge && dir < 0.0 {
         intent.move_direction = 1.0;
-    } else if ai_pos.x > SCREEN_WIDTH - TILE_SIZE * 2.0 && dir > 0.0 {
+    } else if ai_pos.x > right_edge && dir > 0.0 {
         intent.move_direction = -1.0;
     }
 
@@ -820,8 +822,8 @@ fn navigate_avoid(
     // Move away from the hazard
     let dx = wrapped_distance_x(ai_pos.x, hazard_pos.x);
     let flee_dir = if dx.abs() < 1.0 {
-        // Hazard is right on top -- pick a direction
-        if ai_pos.x < SCREEN_WIDTH * 0.5 { 1.0 } else { -1.0 }
+        // Hazard is right on top -- pick a direction (Bevy centered: 0 is center)
+        if ai_pos.x < 0.0 { -1.0 } else { 1.0 }
     } else {
         -dx.signum()
     };
@@ -846,7 +848,8 @@ fn navigate_flee(
 ) {
     let dx = wrapped_distance_x(ai_pos.x, threat_pos.x);
     let flee_dir = if dx.abs() < 1.0 {
-        if ai_pos.x < SCREEN_WIDTH * 0.5 { 1.0 } else { -1.0 }
+        // Flee toward nearest screen edge (Bevy centered: 0 is center)
+        if ai_pos.x < 0.0 { -1.0 } else { 1.0 }
     } else {
         -dx.signum()
     };
