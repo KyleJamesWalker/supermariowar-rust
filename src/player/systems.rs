@@ -728,8 +728,9 @@ pub fn warp_system(
     )>,
 ) {
     for (entity, mut warp, mut transform, mut vel, mut action, mut visibility) in query.iter_mut() {
-        // Dead players should not continue warping
+        // Dead players should not continue warping — restore visibility
         if *action == PlayerAction::Dead {
+            *visibility = Visibility::Inherited;
             commands.entity(entity).remove::<WarpState>();
             continue;
         }

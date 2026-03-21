@@ -223,7 +223,7 @@ pub fn fire_projectile_system(
                 });
             }
             PowerupState::Ice => {
-                play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Fireball);
+                play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::IceBall);
                 let proj = Projectile::iceball(player.index, player.team);
                 let vel_x = proj.speed * dir;
                 let vel_y = -2.0;

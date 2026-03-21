@@ -213,8 +213,8 @@ pub fn block_hit_system(
                 continue;
             }
 
-            // Bounce player downward off the block
-            p_vel.y = -(p_vel.y.abs().min(4.0));
+            // Bounce player downward off the block (C++ BOUNCESTRENGTH = 0.5)
+            p_vel.y = -(p_vel.y.abs() * 0.5).min(MAX_FALL_SPEED);
 
             hit_events.send(BlockHitEvent {
                 block_entity: b_entity,
