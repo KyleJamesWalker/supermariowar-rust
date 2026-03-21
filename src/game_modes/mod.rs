@@ -361,7 +361,6 @@ fn reset_mode_state_on_new_round(
     mut tag_state: ResMut<tag::TagModeState>,
     mut frenzy_state: ResMut<frenzy::FrenzyModeState>,
     mut game_timer: ResMut<GameTimer>,
-    mut scoreboard: ResMut<ScoreBoard>,
 ) {
     if !pending_reset.0 {
         return;
@@ -379,7 +378,8 @@ fn reset_mode_state_on_new_round(
     *tag_state = tag::TagModeState::default();
     *frenzy_state = frenzy::FrenzyModeState::default();
     *game_timer = GameTimer::default();
-    *scoreboard = ScoreBoard::default();
+    // ScoreBoard is NOT reset between rounds -- it accumulates across the match.
+    // It's reset in reset_countdown_on_enter() when starting a new game.
 }
 
 /// Despawns game-mode entities (flags, zones, coins) between rounds so they

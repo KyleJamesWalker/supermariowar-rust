@@ -216,13 +216,12 @@ pub fn powerup_movement_system(
                 transform.translation.y += vel.y;
                 // Wall bounce and floor snap handled by object_map_collision
 
-                // Screen wrapping (horizontal)
-                let wrap_right = SCREEN_WIDTH / 2.0 + TILE_SIZE;
-                let wrap_left = -(SCREEN_WIDTH / 2.0 + TILE_SIZE);
-                if transform.translation.x > wrap_right {
-                    transform.translation.x = wrap_left;
-                } else if transform.translation.x < wrap_left {
-                    transform.translation.x = wrap_right;
+                // Screen wrapping (horizontal, Bevy centered coords)
+                let half_w = SCREEN_WIDTH / 2.0;
+                if transform.translation.x > half_w {
+                    transform.translation.x -= SCREEN_WIDTH;
+                } else if transform.translation.x < -half_w {
+                    transform.translation.x += SCREEN_WIDTH;
                 }
             }
             PowerupPhysics::Floating => {

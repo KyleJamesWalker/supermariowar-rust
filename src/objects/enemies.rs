@@ -235,14 +235,12 @@ pub fn enemy_gravity_system(
         transform.translation.x += vel.x;
         transform.translation.y += vel.y;
 
-        // Screen wrapping (horizontal, centered coords)
-        // Floor/wall collision handled by object_map_collision in physics plugin
-        let wrap_right = SCREEN_WIDTH / 2.0 + TILE_SIZE;
-        let wrap_left = -(SCREEN_WIDTH / 2.0 + TILE_SIZE);
-        if transform.translation.x > wrap_right {
-            transform.translation.x = wrap_left;
-        } else if transform.translation.x < wrap_left {
-            transform.translation.x = wrap_right;
+        // Screen wrapping (horizontal, Bevy centered coords)
+        let half_w = SCREEN_WIDTH / 2.0;
+        if transform.translation.x > half_w {
+            transform.translation.x -= SCREEN_WIDTH;
+        } else if transform.translation.x < -half_w {
+            transform.translation.x += SCREEN_WIDTH;
         }
     }
 }

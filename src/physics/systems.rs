@@ -43,13 +43,12 @@ pub fn apply_player_velocity(
         transform.translation.x += vel.x;
         transform.translation.y += vel.y;
 
-        // Screen wrapping (horizontal) -- always active (Bevy centered coords)
+        // Screen wrapping (horizontal, Bevy centered coords)
         let half_w = SCREEN_WIDTH / 2.0;
-        if transform.translation.x > half_w + PLAYER_WIDTH {
-            transform.translation.x -= SCREEN_WIDTH + PLAYER_WIDTH * 2.0;
-        }
-        if transform.translation.x < -(half_w + PLAYER_WIDTH) {
-            transform.translation.x += SCREEN_WIDTH + PLAYER_WIDTH * 2.0;
+        if transform.translation.x > half_w {
+            transform.translation.x -= SCREEN_WIDTH;
+        } else if transform.translation.x < -half_w {
+            transform.translation.x += SCREEN_WIDTH;
         }
     }
 }
