@@ -244,7 +244,7 @@ pub fn thwomp_system(
                     let px = p_transform.translation.x;
                     if px >= thwomp_x - half_detect
                         && px <= thwomp_x + half_detect
-                        && p_transform.translation.y > transform.translation.y
+                        && p_transform.translation.y < transform.translation.y
                     {
                         thwomp.phase = ThwompPhase::Slamming;
                         break;
@@ -351,13 +351,13 @@ pub fn piranha_plant_system(
                 }
             }
             PiranhaPhase::Emerging => {
-                // Rise upward from pipe
-                transform.translation.y -= piranha.move_speed;
-                let emerged = piranha.base_y - transform.translation.y;
+                // Rise upward from pipe (positive Y in Bevy)
+                transform.translation.y += piranha.move_speed;
+                let emerged = transform.translation.y - piranha.base_y;
                 collider.height = emerged.max(1.0);
 
                 if emerged >= piranha.emerge_height {
-                    transform.translation.y = piranha.base_y - piranha.emerge_height;
+                    transform.translation.y = piranha.base_y + piranha.emerge_height;
                     collider.height = piranha.emerge_height;
                     piranha.phase = PiranhaPhase::Visible;
                     piranha.phase_timer = 0.0;
@@ -371,12 +371,12 @@ pub fn piranha_plant_system(
                 }
             }
             PiranhaPhase::Retracting => {
-                // Sink back into pipe
-                transform.translation.y += piranha.move_speed;
-                let emerged = piranha.base_y - transform.translation.y;
+                // Sink back into pipe (negative Y in Bevy)
+                transform.translation.y -= piranha.move_speed;
+                let emerged = transform.translation.y - piranha.base_y;
                 collider.height = emerged.max(0.0);
 
-                if transform.translation.y >= piranha.base_y {
+                if transform.translation.y <= piranha.base_y {
                     transform.translation.y = piranha.base_y;
                     collider.height = 0.0;
                     piranha.phase = PiranhaPhase::Hidden;
