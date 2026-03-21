@@ -180,6 +180,7 @@ pub fn fire_projectile_system(
         Option<&crate::player::components::FrozenState>,
         Option<&crate::player::systems::FireCooldown>,
     )>,
+    active_boomerangs: Query<&Projectile, With<BoomerangState>>,
 ) {
     for (p_entity, player, input, powerup, facing, transform, action, frozen, cooldown) in query.iter() {
         if *action == PlayerAction::Dead || *action == PlayerAction::Spawning {
@@ -233,6 +234,11 @@ pub fn fire_projectile_system(
                 });
             }
             PowerupState::Boomerang => {
+                // Only allow 1 active boomerang per player (matching C++ behavior)
+                let has_active = active_boomerangs.iter().any(|p| p.owner == player.index);
+                if has_active {
+                    continue;
+                }
                 play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Boomerang);
                 let proj = Projectile::boomerang(player.index, player.team);
                 let vel_x = proj.speed * dir;
