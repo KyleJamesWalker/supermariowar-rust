@@ -540,7 +540,7 @@ pub fn entity_collision_detection(
                 continue;
             }
 
-            if let Some(pen) = collision::aabb_penetration(
+            if let Some(pen) = collision::aabb_penetration_wrapped(
                 &t_a.translation,
                 c_a,
                 &t_b.translation,
@@ -554,6 +554,65 @@ pub fn entity_collision_detection(
                     penetration: pen,
                 });
             }
+        }
+    }
+}
+
+/// Consumes CollisionEvents between two players and pushes them apart horizontally.
+/// Matches C++ handle_p2p_pushback: find midpoint, separate by half each, apply
+/// velocity pushback with 1.5x multiplier capped at ±10.0.
+pub fn player_pushback_system(
+    mut collision_events: EventReader<CollisionEvent>,
+    mut players: Query<(&Player, &mut Transform, &mut Velocity), Without<WarpState>>,
+) {
+    const PUSHBACK_MULTIPLIER: f32 = 1.5;
+    const MAX_SIDE_VEL: f32 = 10.0;
+
+    for event in collision_events.read() {
+        // Only handle Player-Player collisions
+        if event.layer_a != CollisionLayer::Player || event.layer_b != CollisionLayer::Player {
+            continue;
+        }
+
+        // Only resolve horizontal penetration
+        if event.penetration.x.abs() < 0.1 {
+            continue;
+        }
+
+        let Ok([mut a, mut b]) = players.get_many_mut([event.entity_a, event.entity_b]) else {
+            continue;
+        };
+
+        // Determine which player is "left" using wrapped distance
+        let dx = collision::wrapped_distance_x(
+            a.1.translation.x,
+            b.1.translation.x,
+        );
+
+        // left_player is the one with smaller x (dx > 0 means b is to the right of a)
+        let half_pen = event.penetration.x.abs() / 2.0 + 0.5; // +0.5 for 1px separation buffer
+
+        if dx >= 0.0 {
+            // a is left, b is right — push a left, b right
+            a.1.translation.x -= half_pen;
+            b.1.translation.x += half_pen;
+
+            // Velocity pushback
+            let push_a = (if a.2.x > 0.0 { a.2.x } else { 1.0 }) * PUSHBACK_MULTIPLIER;
+            let push_b = (if b.2.x < 0.0 { -b.2.x } else { 1.0 }) * PUSHBACK_MULTIPLIER;
+
+            a.2.x = (-push_b).clamp(-MAX_SIDE_VEL, MAX_SIDE_VEL);
+            b.2.x = push_a.clamp(-MAX_SIDE_VEL, MAX_SIDE_VEL);
+        } else {
+            // b is left, a is right — push b left, a right
+            b.1.translation.x -= half_pen;
+            a.1.translation.x += half_pen;
+
+            let push_b = (if b.2.x > 0.0 { b.2.x } else { 1.0 }) * PUSHBACK_MULTIPLIER;
+            let push_a = (if a.2.x < 0.0 { -a.2.x } else { 1.0 }) * PUSHBACK_MULTIPLIER;
+
+            b.2.x = (-push_a).clamp(-MAX_SIDE_VEL, MAX_SIDE_VEL);
+            a.2.x = push_b.clamp(-MAX_SIDE_VEL, MAX_SIDE_VEL);
         }
     }
 }

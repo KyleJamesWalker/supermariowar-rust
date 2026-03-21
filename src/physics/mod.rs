@@ -26,6 +26,7 @@ impl Plugin for PhysicsPlugin {
                     systems::object_map_collision,
                     systems::warp_zone_detection,
                     systems::entity_collision_detection,
+                    systems::player_pushback_system,
                 )
                     .chain()
                     .in_set(GameSystemSet::Physics)

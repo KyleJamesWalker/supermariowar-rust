@@ -80,6 +80,38 @@ pub fn aabb_penetration(
     }
 }
 
+/// Returns the overlap penetration vector accounting for horizontal screen wrapping.
+/// Tries direct position and wrapped positions, returning the penetration for
+/// whichever overlap is found first (or None if no overlap).
+pub fn aabb_penetration_wrapped(
+    pos_a: &Vec3,
+    col_a: &Collider,
+    pos_b: &Vec3,
+    col_b: &Collider,
+) -> Option<Vec2> {
+    // Direct check
+    if let Some(pen) = aabb_penetration(pos_a, col_a, pos_b, col_b) {
+        return Some(pen);
+    }
+
+    let wrap_amount = SCREEN_WIDTH;
+
+    // Check A wrapped right
+    let mut wrapped = *pos_a;
+    wrapped.x += wrap_amount;
+    if let Some(pen) = aabb_penetration(&wrapped, col_a, pos_b, col_b) {
+        return Some(pen);
+    }
+
+    // Check A wrapped left
+    wrapped.x = pos_a.x - wrap_amount;
+    if let Some(pen) = aabb_penetration(&wrapped, col_a, pos_b, col_b) {
+        return Some(pen);
+    }
+
+    None
+}
+
 /// Computes the shortest horizontal distance between two x-positions, accounting
 /// for screen wrapping. Returns a signed value (positive = b is to the right of a).
 pub fn wrapped_distance_x(x_a: f32, x_b: f32) -> f32 {
