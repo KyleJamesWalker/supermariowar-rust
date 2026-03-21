@@ -22,6 +22,7 @@ impl Plugin for PlayerPlugin {
             .add_event::<components::PauseEvent>()
             // Input phase — must run during both Playing and Paused so the
             // player can unpause.  AI systems have their own Playing-only guard.
+            .add_systems(Update, input::gamepad_connection_system)
             .add_systems(
                 Update,
                 input::read_player_input

@@ -146,3 +146,28 @@ pub fn read_player_input(
         }
     }
 }
+
+/// Assigns newly connected gamepads to player slots and cleans up disconnected ones.
+pub fn gamepad_connection_system(
+    mut assignments: ResMut<GamepadAssignments>,
+    gamepads: Query<(Entity, &Gamepad), Added<Gamepad>>,
+    mut removed: RemovedComponents<Gamepad>,
+) {
+    // Assign newly connected gamepads to the first available slot
+    for (entity, _gamepad) in gamepads.iter() {
+        if let Some(slot) = assignments.assignments.iter_mut().find(|s| s.is_none()) {
+            *slot = Some(entity);
+            info!("[Input] Gamepad {:?} assigned to player slot", entity);
+        }
+    }
+
+    // Clean up disconnected gamepads
+    for entity in removed.read() {
+        for slot in assignments.assignments.iter_mut() {
+            if *slot == Some(entity) {
+                *slot = None;
+                info!("[Input] Gamepad {:?} disconnected", entity);
+            }
+        }
+    }
+}
