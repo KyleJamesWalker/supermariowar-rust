@@ -8,6 +8,7 @@ use crate::game_modes::tag::TaggedIt;
 use crate::game_modes::traits::{GameModeConfig, GameModeType};
 use crate::map::components::{CollisionType, MapData};
 use crate::objects::components::{Collectible, DamageOnContact, GameObject};
+use crate::objects::projectiles::Projectile;
 use crate::physics::collision::wrapped_distance_x;
 use crate::player::components::{
     Grounded, Player, PlayerAction, PlayerDeathEvent, PlayerInput, PowerupState, Velocity,
@@ -103,6 +104,7 @@ pub fn ai_perception_update(
     ai_players: Query<(Entity, &Transform, &Player, &PlayerAction), With<AiControlled>>,
     collectible_query: Query<(Entity, &Transform), With<Collectible>>,
     hazard_query: Query<(&Transform, &DamageOnContact, &GameObject)>,
+    projectile_query: Query<(&Transform, &Projectile)>,
     config: Res<GameModeConfig>,
     domination_zones: Query<&DominationZone>,
     hill_zones: Query<&HillZone>,
@@ -169,6 +171,17 @@ pub fn ai_perception_update(
         for (tf, dmg, obj) in hazard_query.iter() {
             if !obj.alive || !dmg.kill {
                 continue;
+            }
+            let pos = tf.translation.truncate();
+            let dist = wrapped_distance_2d(ai_pos, pos);
+            if dist <= PERCEPTION_RADIUS {
+                perception.nearby_hazards.push((pos, dist));
+            }
+        }
+        // Also treat enemy projectiles as hazards
+        for (tf, proj) in projectile_query.iter() {
+            if proj.owner == ai_player.index {
+                continue; // Skip own projectiles
             }
             let pos = tf.translation.truncate();
             let dist = wrapped_distance_2d(ai_pos, pos);
@@ -419,7 +432,7 @@ pub fn ai_mode_awareness(
         With<AiControlled>,
     >,
 ) {
-    for (player, mut intent, perception, powerup) in query.iter_mut() {
+    for (player, mut intent, perception, _powerup) in query.iter_mut() {
         match config.mode_type {
             GameModeType::CaptureTheFlag => {
                 let carrying_enemy_flag = flags
@@ -477,11 +490,9 @@ pub fn ai_mode_awareness(
                 }
             }
             GameModeType::Frenzy => {
-                // Bias toward collecting powerups; also be aggressive
-                if *powerup == PowerupState::None {
-                    if let Some(&(entity, _, _)) = perception.visible_items.first() {
-                        intent.current_goal = AiGoal::CollectItem(entity);
-                    }
+                // Aggressively collect powerups even when already armed
+                if let Some(&(entity, _, _)) = perception.visible_items.first() {
+                    intent.current_goal = AiGoal::CollectItem(entity);
                 }
             }
             GameModeType::Survival => {
@@ -647,6 +658,20 @@ pub fn ai_goal_selection(
 
         // Nothing visible -- patrol
         intent.current_goal = AiGoal::Patrol;
+
+        // Use powerup opportunistically: if armed and any enemy is nearby
+        if *powerup != PowerupState::None && *powerup != PowerupState::Star {
+            for &(_entity, pos, _dist, same_team) in &perception.visible_players {
+                if same_team {
+                    continue;
+                }
+                let dx = wrapped_distance_x(tf.translation.x, pos.x);
+                if dx.abs() < TILE_SIZE * 5.0 {
+                    intent.want_use_item = true;
+                    break;
+                }
+            }
+        }
     }
 }
 
