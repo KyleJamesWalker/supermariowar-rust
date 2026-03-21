@@ -300,7 +300,7 @@ pub fn flag_drop_on_kill(
         // Remove carrier indicator for the victim
         for (entity, indicator) in indicator_query.iter() {
             if indicator.player_index == event.victim {
-                commands.entity(entity).despawn();
+                commands.entity(entity).despawn_recursive();
             }
         }
     }

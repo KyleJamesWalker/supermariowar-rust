@@ -10,6 +10,7 @@ use crate::map::components::{CollisionType, MapData};
 use crate::objects::components::{Collectible, DamageOnContact, GameObject};
 use crate::objects::projectiles::Projectile;
 use crate::physics::collision::wrapped_distance_x;
+use crate::physics::components::Collider;
 use crate::player::components::{
     Grounded, Player, PlayerAction, PlayerDeathEvent, PlayerInput, PowerupState, Velocity,
 };
@@ -100,7 +101,7 @@ pub fn ai_perception_update(
     all_players: Query<(Entity, &Transform, &Player, &PlayerAction), Without<AiControlled>>,
     ai_players: Query<(Entity, &Transform, &Player, &PlayerAction), With<AiControlled>>,
     collectible_query: Query<(Entity, &Transform), With<Collectible>>,
-    hazard_query: Query<(&Transform, &DamageOnContact, &GameObject)>,
+    hazard_query: Query<(&Transform, &DamageOnContact, &GameObject, &Collider)>,
     projectile_query: Query<(&Transform, &Projectile)>,
     config: Res<GameModeConfig>,
     domination_zones: Query<&DominationZone>,
@@ -165,8 +166,8 @@ pub fn ai_perception_update(
 
         // ---- nearby hazards ----
         perception.nearby_hazards.clear();
-        for (tf, dmg, obj) in hazard_query.iter() {
-            if !obj.alive || !dmg.kill {
+        for (tf, dmg, obj, collider) in hazard_query.iter() {
+            if !obj.alive || !dmg.kill || collider.height <= 0.0 {
                 continue;
             }
             let pos = tf.translation.truncate();
@@ -828,8 +829,9 @@ fn navigate_patrol(
         intent.want_jump = grounded.on_ground;
     }
 
-    // Don't walk into pits
-    if perception.on_edge && perception.above_pit {
+    // Don't walk into pits — only reverse if still moving toward the pit edge
+    // (perception detects pits in the original movement direction, avoid double-reversal)
+    if perception.on_edge && perception.above_pit && intent.move_direction == dir {
         intent.move_direction = -intent.move_direction;
     }
 
