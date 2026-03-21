@@ -5,6 +5,8 @@ use bevy::prelude::*;
 // ---------------------------------------------------------------------------
 
 /// Collision/behaviour type stored per map cell in the top-layer collision map.
+/// Collision/behaviour type stored per map cell.
+/// Values match C++ TileType enum (0-19).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(i32)]
 pub enum CollisionType {
@@ -13,9 +15,24 @@ pub enum CollisionType {
     SolidOnTop = 2,
     Ice = 3,
     Death = 4,
-    SuperDeath = 5,
-    PlayerDeath = 6,
-    Gap = 10,
+    /// Solid + death (directional variants mapped here for simplicity)
+    DeathOnTop = 5,
+    DeathOnBottom = 6,
+    DeathOnLeft = 7,
+    DeathOnRight = 8,
+    /// SolidOnTop + ice
+    IceOnTop = 9,
+    /// Solid + ice + death (directional variants)
+    IceDeathOnBottom = 10,
+    IceDeathOnLeft = 11,
+    IceDeathOnRight = 12,
+    SuperDeath = 13,
+    SuperDeathTop = 14,
+    SuperDeathBottom = 15,
+    SuperDeathLeft = 16,
+    SuperDeathRight = 17,
+    PlayerDeath = 18,
+    Gap = 19,
 }
 
 impl Default for CollisionType {
@@ -31,11 +48,83 @@ impl CollisionType {
             2 => Self::SolidOnTop,
             3 => Self::Ice,
             4 => Self::Death,
-            5 => Self::SuperDeath,
-            6 => Self::PlayerDeath,
-            10 => Self::Gap,
+            5 => Self::DeathOnTop,
+            6 => Self::DeathOnBottom,
+            7 => Self::DeathOnLeft,
+            8 => Self::DeathOnRight,
+            9 => Self::IceOnTop,
+            10 => Self::IceDeathOnBottom,
+            11 => Self::IceDeathOnLeft,
+            12 => Self::IceDeathOnRight,
+            13 => Self::SuperDeath,
+            14 => Self::SuperDeathTop,
+            15 => Self::SuperDeathBottom,
+            16 => Self::SuperDeathLeft,
+            17 => Self::SuperDeathRight,
+            18 => Self::PlayerDeath,
+            19 => Self::Gap,
             _ => Self::NonSolid,
         }
+    }
+
+    /// Returns true if this tile type blocks movement (is solid).
+    pub fn is_solid(self) -> bool {
+        matches!(
+            self,
+            Self::Solid
+                | Self::Ice
+                | Self::Death
+                | Self::DeathOnTop
+                | Self::DeathOnBottom
+                | Self::DeathOnLeft
+                | Self::DeathOnRight
+                | Self::IceDeathOnBottom
+                | Self::IceDeathOnLeft
+                | Self::IceDeathOnRight
+                | Self::SuperDeath
+                | Self::SuperDeathTop
+                | Self::SuperDeathBottom
+                | Self::SuperDeathLeft
+                | Self::SuperDeathRight
+        )
+    }
+
+    /// Returns true if this tile has ice physics.
+    pub fn is_ice(self) -> bool {
+        matches!(
+            self,
+            Self::Ice
+                | Self::IceOnTop
+                | Self::IceDeathOnBottom
+                | Self::IceDeathOnLeft
+                | Self::IceDeathOnRight
+        )
+    }
+
+    /// Returns true if this tile kills on contact.
+    pub fn is_death(self) -> bool {
+        matches!(
+            self,
+            Self::Death
+                | Self::DeathOnTop
+                | Self::DeathOnBottom
+                | Self::DeathOnLeft
+                | Self::DeathOnRight
+                | Self::IceDeathOnBottom
+                | Self::IceDeathOnLeft
+                | Self::IceDeathOnRight
+                | Self::SuperDeath
+                | Self::SuperDeathTop
+                | Self::SuperDeathBottom
+                | Self::SuperDeathLeft
+                | Self::SuperDeathRight
+                | Self::PlayerDeath
+        )
+    }
+
+    /// Returns true if this is a solid-on-top (one-way) platform.
+    pub fn is_solid_on_top(self) -> bool {
+        matches!(self, Self::SolidOnTop | Self::IceOnTop)
     }
 }
 

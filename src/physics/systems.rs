@@ -272,35 +272,33 @@ fn check_vertical_collision(
             let ty = foot_tile_y as usize;
             for tx in left_tile..=(right_tile.min(num_cols.saturating_sub(1))) {
                 let tile = get_collision(collision_map, num_cols, num_rows, tx, ty);
-                match tile {
-                    CollisionType::Solid | CollisionType::Ice => {
+                if tile.is_solid() {
+                    let tile_top = ty as f32 * TILE_SIZE;
+                    if foot_y >= tile_top
+                        && foot_y <= tile_top + vel.y.abs() + 1.0
+                    {
+                        transform.translation.y =
+                            tile_top - PLAYER_HEIGHT - PLAYER_HEIGHT_OFFSET;
+                        vel.y = 0.0;
+                        grounded.on_ground = true;
+                        if tile.is_ice() {
+                            grounded.on_ice = true;
+                        }
+                    }
+                } else if tile.is_solid_on_top() {
+                    // Drop through: pressing down on a passthrough platform
+                    if !input.down {
                         let tile_top = ty as f32 * TILE_SIZE;
-                        if foot_y >= tile_top
-                            && foot_y <= tile_top + vel.y.abs() + 1.0
-                        {
+                        if foot_y >= tile_top && foot_y <= tile_top + vel.y.abs() + 1.0 {
                             transform.translation.y =
                                 tile_top - PLAYER_HEIGHT - PLAYER_HEIGHT_OFFSET;
                             vel.y = 0.0;
                             grounded.on_ground = true;
-                            if tile == CollisionType::Ice {
+                            if tile.is_ice() {
                                 grounded.on_ice = true;
                             }
                         }
                     }
-                    CollisionType::SolidOnTop => {
-                        // Drop through: pressing down on a passthrough platform
-                        if !input.down {
-                            let tile_top = ty as f32 * TILE_SIZE;
-                            // Only land if feet are at or just below the tile top
-                            if foot_y >= tile_top && foot_y <= tile_top + vel.y.abs() + 1.0 {
-                                transform.translation.y =
-                                    tile_top - PLAYER_HEIGHT - PLAYER_HEIGHT_OFFSET;
-                                vel.y = 0.0;
-                                grounded.on_ground = true;
-                            }
-                        }
-                    }
-                    _ => {}
                 }
             }
         }
@@ -311,7 +309,7 @@ fn check_vertical_collision(
         if head_tile_y < num_rows {
             for tx in left_tile..=(right_tile.min(num_cols.saturating_sub(1))) {
                 let tile = get_collision(collision_map, num_cols, num_rows, tx, head_tile_y);
-                if tile == CollisionType::Solid || tile == CollisionType::Ice {
+                if tile.is_solid() {
                     let tile_bottom = (head_tile_y as f32 + 1.0) * TILE_SIZE;
                     if py <= tile_bottom {
                         transform.translation.y = tile_bottom - PLAYER_HEIGHT_OFFSET;
@@ -347,7 +345,7 @@ fn check_horizontal_collision(
             let tx = right_tile_x as usize;
             for ty in top_tile..=(bottom_tile.min(num_rows.saturating_sub(1))) {
                 let tile = get_collision(collision_map, num_cols, num_rows, tx, ty);
-                if tile == CollisionType::Solid || tile == CollisionType::Ice {
+                if tile.is_solid() {
                     let tile_left = tx as f32 * TILE_SIZE;
                     if right_edge > tile_left {
                         transform.translation.x = tile_left - PLAYER_WIDTH - PLAYER_WIDTH_OFFSET;
@@ -363,7 +361,7 @@ fn check_horizontal_collision(
         if left_tile_x < num_cols {
             for ty in top_tile..=(bottom_tile.min(num_rows.saturating_sub(1))) {
                 let tile = get_collision(collision_map, num_cols, num_rows, left_tile_x, ty);
-                if tile == CollisionType::Solid || tile == CollisionType::Ice {
+                if tile.is_solid() {
                     let tile_right = (left_tile_x as f32 + 1.0) * TILE_SIZE;
                     if px < tile_right {
                         transform.translation.x = tile_right - PLAYER_WIDTH_OFFSET;
@@ -391,10 +389,7 @@ fn check_death_tiles(
     for tx in left_tile..=(right_tile.min(num_cols.saturating_sub(1))) {
         for ty in top_tile..=(bottom_tile.min(num_rows.saturating_sub(1))) {
             let tile = get_collision(collision_map, num_cols, num_rows, tx, ty);
-            if tile == CollisionType::Death
-                || tile == CollisionType::SuperDeath
-                || tile == CollisionType::PlayerDeath
-            {
+            if tile.is_death() {
                 return true;
             }
         }
@@ -627,18 +622,15 @@ pub fn object_map_collision(
             let ty = foot_tile_y as usize;
             for tx in left_tile..=(right_tile.min(num_cols.saturating_sub(1))) {
                 let tile = get_collision(&map_data.collision_map, num_cols, num_rows, tx, ty);
-                match tile {
-                    CollisionType::Solid | CollisionType::SolidOnTop | CollisionType::Ice => {
-                        let tile_top_smw = ty as f32 * TILE_SIZE;
-                        if foot_y >= tile_top_smw && foot_y <= tile_top_smw + vel.y.abs() + 2.0 {
-                            // Snap to top of tile (convert back to Bevy)
-                            let corrected_smw_y = tile_top_smw - obj_h;
-                            transform.translation.y = to_bevy_y(corrected_smw_y);
-                            vel.y = 0.0;
-                            grounded.0 = true;
-                        }
+                if tile.is_solid() || tile.is_solid_on_top() {
+                    let tile_top_smw = ty as f32 * TILE_SIZE;
+                    if foot_y >= tile_top_smw && foot_y <= tile_top_smw + vel.y.abs() + 2.0 {
+                        // Snap to top of tile (convert back to Bevy)
+                        let corrected_smw_y = tile_top_smw - obj_h;
+                        transform.translation.y = to_bevy_y(corrected_smw_y);
+                        vel.y = 0.0;
+                        grounded.0 = true;
                     }
-                    _ => {}
                 }
             }
         }
@@ -652,7 +644,7 @@ pub fn object_map_collision(
                 let ty = head_tile_y as usize;
                 for tx in left_tile..=(right_tile.min(num_cols.saturating_sub(1))) {
                     let tile = get_collision(&map_data.collision_map, num_cols, num_rows, tx, ty);
-                    if tile == CollisionType::Solid || tile == CollisionType::Ice {
+                    if tile.is_solid() {
                         let tile_bottom_smw = (ty as f32 + 1.0) * TILE_SIZE;
                         if head_smw_y <= tile_bottom_smw {
                             // Push object below the tile (in SMW space)
@@ -681,7 +673,7 @@ pub fn object_map_collision(
                 for ty in top_tile..=(bottom_tile.min(num_rows.saturating_sub(1))) {
                     let tile =
                         get_collision(&map_data.collision_map, num_cols, num_rows, tx, ty);
-                    if tile == CollisionType::Solid || tile == CollisionType::Ice {
+                    if tile.is_solid() {
                         let tile_left_smw = tx as f32 * TILE_SIZE;
                         if right_edge >= tile_left_smw {
                             transform.translation.x =
@@ -699,7 +691,7 @@ pub fn object_map_collision(
                 for ty in top_tile..=(bottom_tile.min(num_rows.saturating_sub(1))) {
                     let tile =
                         get_collision(&map_data.collision_map, num_cols, num_rows, tx, ty);
-                    if tile == CollisionType::Solid || tile == CollisionType::Ice {
+                    if tile.is_solid() {
                         let tile_right_smw = (tx as f32 + 1.0) * TILE_SIZE;
                         if smw_x <= tile_right_smw {
                             transform.translation.x = to_bevy_x(tile_right_smw);

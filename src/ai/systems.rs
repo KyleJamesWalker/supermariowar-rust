@@ -79,14 +79,11 @@ fn tile_collision_at(map: &MapData, tx: i32, ty: i32) -> CollisionType {
 }
 
 fn is_solid(ct: CollisionType) -> bool {
-    matches!(ct, CollisionType::Solid | CollisionType::SolidOnTop | CollisionType::Ice)
+    ct.is_solid() || ct.is_solid_on_top()
 }
 
 fn is_death_tile(ct: CollisionType) -> bool {
-    matches!(
-        ct,
-        CollisionType::Death | CollisionType::SuperDeath | CollisionType::PlayerDeath
-    )
+    ct.is_death()
 }
 
 // =========================================================================
@@ -972,7 +969,7 @@ fn navigate_toward(
         let tile_x = (smw_x / TILE_SIZE) as i32;
         let tile_y = (smw_y / TILE_SIZE) as i32 + 1; // +1 = tile below in SMW Y-down
         let below = tile_collision_at(map_data, tile_x, tile_y);
-        if below == CollisionType::SolidOnTop {
+        if below.is_solid_on_top() {
             pathfinding.should_drop_through = true;
         }
     }

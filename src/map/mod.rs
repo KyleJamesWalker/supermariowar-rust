@@ -764,14 +764,15 @@ fn tile_to_bevy_y(row: u32) -> f32 {
 
 /// Map a CollisionType to the legacy TileType enum.
 fn tile_type_from_collision(c: CollisionType) -> TileType {
-    match c {
-        CollisionType::NonSolid => TileType::NonSolid,
-        CollisionType::Solid => TileType::Solid,
-        CollisionType::SolidOnTop => TileType::SolidOnTop,
-        CollisionType::Ice => TileType::Ice,
-        CollisionType::Death => TileType::Death,
-        CollisionType::SuperDeath => TileType::SuperDeath,
-        CollisionType::PlayerDeath => TileType::Death,
-        CollisionType::Gap => TileType::NonSolid,
+    if c.is_death() {
+        TileType::Death
+    } else if c == CollisionType::Ice || c == CollisionType::IceOnTop {
+        TileType::Ice
+    } else if c.is_solid() {
+        TileType::Solid
+    } else if c.is_solid_on_top() {
+        TileType::SolidOnTop
+    } else {
+        TileType::NonSolid
     }
 }
