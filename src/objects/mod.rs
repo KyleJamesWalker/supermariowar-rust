@@ -55,16 +55,16 @@ impl Plugin for ObjectsPlugin {
                 .run_if(gameplay_playing.clone()),
         );
 
-        // Enemy systems: movement -> gravity -> stomp -> shell -> map collision -> touch -> cleanup
+        // Enemy systems: movement -> shell vel -> gravity -> stomp -> stun -> reemerge -> map collision -> touch -> cleanup
         app.add_systems(
             Update,
             (
                 enemies::enemy_movement_system,
+                enemies::shell_movement_system,
                 enemies::enemy_gravity_system,
                 enemies::enemy_stomp_system,
                 enemies::enemy_stun_recovery_system,
                 enemies::shell_reemerge_system,
-                enemies::shell_movement_system,
                 enemies::enemy_map_collision,
                 enemies::enemy_player_touch_system,
                 enemies::enemy_lifetime_system,

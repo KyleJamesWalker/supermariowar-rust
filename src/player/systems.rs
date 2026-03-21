@@ -633,9 +633,18 @@ pub fn attack_damage_system(
         &Transform,
         &Collider,
     ), Without<Player>>,
+    block_query: Query<(
+        Entity,
+        &crate::objects::blocks::BlockType,
+        &crate::objects::blocks::BlockState,
+        &Collider,
+        &Transform,
+        &crate::objects::components::GameObject,
+    ), (Without<Player>, Without<crate::objects::enemies::Enemy>)>,
     mut commands: Commands,
     mut death_events: EventWriter<PlayerDeathEvent>,
     mut enemy_death_events: EventWriter<crate::objects::components::EnemyDeathEvent>,
+    mut block_hit_events: EventWriter<crate::objects::components::BlockHitEvent>,
     mut sfx_events: EventWriter<crate::audio::sfx::SfxEvent>,
 ) {
     for (atk_entity, atk_player, atk_transform, facing, atk_action, cape, tail, _atk_inv, _atk_sp) in
@@ -708,6 +717,23 @@ pub fn attack_damage_system(
                     player_index: tgt_player.index,
                     killer_index: Some(atk_player.index),
                     cause: DeathCause::Killed { by: atk_player.index },
+                });
+            }
+        }
+
+        // --- Hit blocks ---
+        for (blk_entity, _blk_type, blk_state, blk_collider, blk_transform, blk_game_obj) in block_query.iter() {
+            if !blk_game_obj.alive || blk_state.empty {
+                continue;
+            }
+            if crate::physics::collision::aabb_overlap_wrapped(
+                &hitbox_pos, &hitbox_collider,
+                &blk_transform.translation, blk_collider,
+            ) {
+                block_hit_events.send(crate::objects::components::BlockHitEvent {
+                    block_entity: blk_entity,
+                    player_entity: atk_entity,
+                    player_index: atk_player.index,
                 });
             }
         }

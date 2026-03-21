@@ -640,7 +640,7 @@ pub fn entity_collision_detection(
 /// velocity pushback with 1.5x multiplier capped at ±10.0.
 pub fn player_pushback_system(
     mut collision_events: EventReader<CollisionEvent>,
-    mut players: Query<(&Player, &mut Transform, &mut Velocity), Without<WarpState>>,
+    mut players: Query<(&Player, &mut Transform, &mut Velocity, Option<&FrozenState>), Without<WarpState>>,
 ) {
     const PUSHBACK_MULTIPLIER: f32 = 1.5;
     const MAX_SIDE_VEL: f32 = 10.0;
@@ -659,6 +659,12 @@ pub fn player_pushback_system(
         let Ok([mut a, mut b]) = players.get_many_mut([event.entity_a, event.entity_b]) else {
             continue;
         };
+
+        // Skip pushback if either player is frozen (frozen players are killed
+        // on contact by frozen_shatter_system; pushback would move them first)
+        if a.3.is_some() || b.3.is_some() {
+            continue;
+        }
 
         // Determine which player is "left" using wrapped distance
         let dx = collision::wrapped_distance_x(
