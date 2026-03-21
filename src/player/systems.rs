@@ -147,24 +147,6 @@ pub fn player_jump(
     }
 }
 
-/// Applies velocity to player transform and handles screen wrapping.
-pub fn apply_player_velocity(
-    mut query: Query<(&Velocity, &mut Transform), With<Player>>,
-) {
-    for (vel, mut transform) in query.iter_mut() {
-        transform.translation.x += vel.x;
-        transform.translation.y += vel.y;
-
-        // Screen wrapping (horizontal) -- always active (Bevy centered coords)
-        let half_w = SCREEN_WIDTH / 2.0;
-        if transform.translation.x > half_w + PLAYER_WIDTH {
-            transform.translation.x = -half_w - PLAYER_WIDTH;
-        } else if transform.translation.x < -half_w - PLAYER_WIDTH {
-            transform.translation.x = half_w + PLAYER_WIDTH;
-        }
-    }
-}
-
 /// Handles player death state: apply death bounce velocity, prevent input.
 pub fn player_death_system(
     mut commands: Commands,

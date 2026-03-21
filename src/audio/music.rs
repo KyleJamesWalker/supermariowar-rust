@@ -79,9 +79,11 @@ impl MusicTrackMap {
 
 /// Startup system that registers known music asset paths.
 pub fn load_music_tracks(mut track_map: ResMut<MusicTrackMap>) {
+    // NOTE: menu.ogg is encoded with libVorbis I (1.1.2) which lewton cannot
+    // decode.  tournamentmenu.ogg uses a newer encoder and works correctly.
     track_map.tracks.insert(
         MusicCategory::Menu,
-        vec!["music/game/Standard/Menu/menu.ogg".to_string()],
+        vec!["music/game/Standard/Menu/tournamentmenu.ogg".to_string()],
     );
 
     track_map.tracks.insert(

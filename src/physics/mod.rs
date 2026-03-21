@@ -5,29 +5,30 @@ pub mod systems;
 use bevy::prelude::*;
 
 use crate::core::game_state::{GameState, GameplayState};
+use crate::core::GameSystemSet;
 
 pub struct PhysicsPlugin;
 
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
+        let gameplay_playing = in_state(GameState::Gameplay)
+            .and(in_state(GameplayState::Playing));
+
         app.add_event::<components::CollisionEvent>()
             .add_systems(
                 Update,
                 (
-                    // Phase 1: Gravity
+                    // Gravity → apply velocity → map collision → warps → platforms → entity collision
                     systems::apply_gravity,
-                    // Phase 2: Tile-based collision detection
+                    systems::apply_player_velocity,
                     systems::map_collision,
-                    // Phase 3: Warp zone detection
                     systems::warp_zone_detection,
-                    // Phase 4: Moving platform ride-along
                     systems::moving_platform_system,
-                    // Phase 5: Entity-to-entity collision
                     systems::entity_collision_detection,
                 )
                     .chain()
-                    .run_if(in_state(GameState::Gameplay))
-                    .run_if(in_state(GameplayState::Playing)),
+                    .in_set(GameSystemSet::Physics)
+                    .run_if(gameplay_playing),
             );
     }
 }

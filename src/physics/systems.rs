@@ -32,6 +32,26 @@ fn to_bevy_y(smw_y: f32) -> f32 {
     SCREEN_HEIGHT / 2.0 - smw_y
 }
 
+/// Applies velocity to player transform and handles screen wrapping.
+/// Runs AFTER gravity and BEFORE map collision so that collision resolution
+/// operates on the correct position.
+pub fn apply_player_velocity(
+    mut query: Query<(&Velocity, &mut Transform), With<Player>>,
+) {
+    for (vel, mut transform) in query.iter_mut() {
+        transform.translation.x += vel.x;
+        transform.translation.y += vel.y;
+
+        // Screen wrapping (horizontal) -- always active (Bevy centered coords)
+        let half_w = SCREEN_WIDTH / 2.0;
+        if transform.translation.x > half_w + PLAYER_WIDTH {
+            transform.translation.x = -half_w - PLAYER_WIDTH;
+        } else if transform.translation.x < -half_w - PLAYER_WIDTH {
+            transform.translation.x = half_w + PLAYER_WIDTH;
+        }
+    }
+}
+
 /// Applies gravity to all entities that have the GravityAffected component.
 pub fn apply_gravity(
     mut query: Query<(&mut Velocity, &GravityAffected, Option<&WarpState>)>,
