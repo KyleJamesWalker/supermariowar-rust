@@ -196,7 +196,6 @@ fn spawn_tile_entities(
                         AnimatedTile {
                             frame: 0,
                             num_frames: 4,
-                            timer: Timer::from_seconds(0.133, TimerMode::Repeating),
                         },
                         GameplayEntity,
                     ));

@@ -245,7 +245,6 @@ pub struct Tile {
 pub struct AnimatedTile {
     pub frame: u32,
     pub num_frames: u32,
-    pub timer: Timer,
 }
 
 // ---------------------------------------------------------------------------

@@ -8,11 +8,15 @@ pub mod projectiles;
 use bevy::prelude::*;
 
 use crate::core::game_state::{GameState, GameplayState};
+use crate::core::GameSystemSet;
 
 pub struct ObjectsPlugin;
 
 impl Plugin for ObjectsPlugin {
     fn build(&self, app: &mut App) {
+        let gameplay_playing = in_state(GameState::Gameplay)
+            .and(in_state(GameplayState::Playing));
+
         // Resources
         app.init_resource::<blocks::OnOffSwitchState>();
 
@@ -35,8 +39,7 @@ impl Plugin for ObjectsPlugin {
                 blocks::block_bump_animation_system,
             )
                 .chain()
-                .run_if(in_state(GameState::Gameplay))
-                .run_if(in_state(GameplayState::Playing)),
+                .run_if(gameplay_playing.clone()),
         );
 
         // Powerup systems: spawn -> movement -> collection -> cleanup
@@ -49,8 +52,7 @@ impl Plugin for ObjectsPlugin {
                 powerups::powerup_despawn_offscreen_system,
             )
                 .chain()
-                .run_if(in_state(GameState::Gameplay))
-                .run_if(in_state(GameplayState::Playing)),
+                .run_if(gameplay_playing.clone()),
         );
 
         // Enemy systems: movement -> gravity -> stomp -> shell -> map collision -> touch -> cleanup
@@ -69,25 +71,44 @@ impl Plugin for ObjectsPlugin {
                 enemies::enemy_despawn_offscreen_system,
             )
                 .chain()
-                .run_if(in_state(GameState::Gameplay))
-                .run_if(in_state(GameplayState::Playing)),
+                .run_if(gameplay_playing.clone()),
         );
 
-        // Projectile systems: fire -> movement -> collision -> bounce -> bomb -> lifetime -> offscreen
+        // Projectile systems — split across GameSystemSets so they interleave
+        // correctly with Physics (object_map_collision):
+        //   Movement: fire + move projectiles (before Physics resolves map collisions)
+        //   Combat:   collision + bounce + bomb (after Physics sets grounded flags)
+        //   DeathRespawn: lifetime + offscreen cleanup
         app.add_systems(
             Update,
             (
                 projectiles::fire_projectile_system,
                 projectiles::projectile_movement_system,
+            )
+                .chain()
+                .in_set(GameSystemSet::Movement)
+                .run_if(gameplay_playing.clone()),
+        );
+        app.add_systems(
+            Update,
+            (
                 projectiles::projectile_collision_system,
                 projectiles::projectile_bounce_system,
                 projectiles::bomb_fuse_system,
+            )
+                .chain()
+                .in_set(GameSystemSet::Combat)
+                .run_if(gameplay_playing.clone()),
+        );
+        app.add_systems(
+            Update,
+            (
                 projectiles::projectile_lifetime_system,
                 projectiles::projectile_despawn_offscreen_system,
             )
                 .chain()
-                .run_if(in_state(GameState::Gameplay))
-                .run_if(in_state(GameplayState::Playing)),
+                .in_set(GameSystemSet::DeathRespawn)
+                .run_if(gameplay_playing.clone()),
         );
 
         // Hazard systems: thwomp -> cannon -> piranha -> collision -> cycle
@@ -101,8 +122,7 @@ impl Plugin for ObjectsPlugin {
                 hazards::hazard_cycle_system,
             )
                 .chain()
-                .run_if(in_state(GameState::Gameplay))
-                .run_if(in_state(GameplayState::Playing)),
+                .run_if(gameplay_playing),
         );
     }
 }
