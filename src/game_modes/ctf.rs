@@ -156,7 +156,7 @@ pub fn flag_follow_carrier(
             for (player, player_tf) in players.iter() {
                 if player.index == carrier_idx {
                     flag_tf.translation.x = player_tf.translation.x;
-                    flag_tf.translation.y = player_tf.translation.y - TILE_SIZE * 0.5;
+                    flag_tf.translation.y = player_tf.translation.y + TILE_SIZE * 0.5;
                     break;
                 }
             }
