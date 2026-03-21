@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use bevy::prelude::*;
 
 use crate::core::constants::MAX_PLAYERS;
@@ -162,6 +164,8 @@ pub struct GameSetupConfig {
     pub num_players: usize,
     pub player_slots: [PlayerSlotConfig; MAX_PLAYERS],
     pub total_rounds: u32,
+    /// Path to the map file to load for gameplay.
+    pub map_path: PathBuf,
 }
 
 impl Default for GameSetupConfig {
@@ -200,6 +204,7 @@ impl Default for GameSetupConfig {
                 },
             ],
             total_rounds: 3,
+            map_path: PathBuf::from("data/maps/0smw.map"),
         }
     }
 }

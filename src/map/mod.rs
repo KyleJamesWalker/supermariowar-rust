@@ -3,7 +3,6 @@ pub mod loader;
 pub mod tileset;
 
 use bevy::prelude::*;
-use std::path::PathBuf;
 
 use crate::ai::components::{AiControlled, AiIntent, AiMemory, AiPathfinding, AiPerception};
 use crate::core::constants::*;
@@ -75,8 +74,8 @@ fn setup_gameplay(
     tileset_mgr: Res<TilesetManager>,
     game_setup: Res<GameSetupConfig>,
 ) {
-    // Pick a map file -- for now default to 0smw.map
-    let map_path = PathBuf::from("data/maps/0smw.map");
+    // Use map path from game setup config (defaults to 0smw.map)
+    let map_path = game_setup.map_path.clone();
     *map_data = loader::load_map_from_file(&map_path);
 
     // Build the tileset translation (map-file tileset ids -> loaded indices)
