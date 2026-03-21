@@ -70,9 +70,9 @@ impl Plugin for GraphicsPlugin {
                 player_sprites::sync_player_facing,
                 // Enemy facing direction → sprite flip
                 object_sprites::sync_enemy_facing,
-                // Visual effects on players
-                player_sprites::apply_team_tint,
+                // Visual effects on players (star visual runs first so apply_team_tint can skip)
                 player_sprites::star_power_visual_system,
+                player_sprites::apply_team_tint,
                 player_sprites::manage_spawn_blink,
                 player_sprites::manage_death_animation,
                 // Animation-driven effects

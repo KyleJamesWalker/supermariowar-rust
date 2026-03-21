@@ -359,6 +359,7 @@ pub fn enemy_stomp_system(
         &Collider,
         &Transform,
         &mut GameObject,
+        &mut ObjectVelocity,
     )>,
     mut player_query: Query<(
         Entity,
@@ -386,7 +387,7 @@ pub fn enemy_stomp_system(
             continue;
         }
 
-        for (e_entity, mut enemy, e_collider, e_transform, mut game_obj) in
+        for (e_entity, mut enemy, e_collider, e_transform, mut game_obj, mut e_vel) in
             enemy_query.iter_mut()
         {
             if !game_obj.alive {
@@ -477,6 +478,9 @@ pub fn enemy_stomp_system(
                         } else {
                             -1.0
                         };
+                        // Set velocity immediately (not deferred) so the shell
+                        // moves this frame rather than waiting one frame.
+                        e_vel.x = 7.0 * kick_dir;
                         commands.entity(e_entity)
                             .insert(ShellSpeed { speed: 7.0 * kick_dir })
                             .insert(OwnerPlayer { index: player.index })

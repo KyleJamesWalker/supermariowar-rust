@@ -13,7 +13,6 @@ use crate::player::components::{
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AnimationState {
     Idle,
-    Walk,
     Run,
     Jump,
     Fall,
@@ -114,14 +113,6 @@ pub fn build_default_animation_bank() -> AnimationBank {
                 frames: vec![0],
                 frame_duration: 1.0,
                 looping: false,
-            },
-        ),
-        (
-            AnimationState::Walk,
-            AnimationFrameData {
-                frames: vec![0, 1, 2, 3],
-                frame_duration: 0.12,
-                looping: true,
             },
         ),
         (

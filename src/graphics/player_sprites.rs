@@ -178,11 +178,11 @@ pub fn sync_player_facing(
 /// Applies team color tint to player sprites.
 pub fn apply_team_tint(
     mut query: Query<
-        (&Player, &PowerupState, &mut Sprite, Option<&StarPowerVisual>, Option<&FrozenState>),
+        (&Player, &PowerupState, &mut Sprite, Option<&FrozenState>),
         With<PlayerSpriteSetup>,
     >,
 ) {
-    for (player, powerup, mut sprite, star_visual, frozen) in query.iter_mut() {
+    for (player, powerup, mut sprite, frozen) in query.iter_mut() {
         // Frozen players get an icy blue tint regardless of powerup
         if frozen.is_some() {
             sprite.color = Color::srgb(0.5, 0.7, 1.0);
@@ -191,11 +191,9 @@ pub fn apply_team_tint(
 
         match powerup {
             PowerupState::Star => {
-                // Star power uses rainbow cycling (handled by star_power_visual_system)
-                // Don't override here if StarPowerVisual is present
-                if star_visual.is_none() {
-                    sprite.color = Color::WHITE;
-                }
+                // Star power uses rainbow cycling (handled by star_power_visual_system
+                // which runs before this system). Never override star colors here.
+                continue;
             }
             PowerupState::Fire => {
                 // Fire powerup: warm red-orange tint
