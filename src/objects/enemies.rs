@@ -309,14 +309,14 @@ pub fn enemy_stomp_system(
                 continue;
             }
 
-            // Check that the player is above the enemy (stomp from top)
-            let player_bottom =
-                p_transform.translation.y + p_collider.offset_y + p_collider.height;
-            let enemy_top = e_transform.translation.y + e_collider.offset_y;
-            let enemy_mid = enemy_top + e_collider.height * 0.5;
+            // Check that the player is above the enemy (stomp from top).
+            // In Bevy Y-up: visual_bottom = pos + offset_y, visual_top = bottom + height
+            let player_visual_bottom = p_transform.translation.y + p_collider.offset_y;
+            let enemy_visual_mid =
+                e_transform.translation.y + e_collider.offset_y + e_collider.height * 0.5;
 
-            if player_bottom > enemy_mid {
-                // Player is not above the enemy midpoint -- this isn't a stomp
+            if player_visual_bottom < enemy_visual_mid {
+                // Player's feet are below the enemy midpoint -- not a valid stomp
                 continue;
             }
 
@@ -535,15 +535,15 @@ pub fn enemy_player_touch_system(
                 continue;
             }
 
-            // Check that this is a lateral touch, not a stomp (player not above enemy)
-            let player_bottom =
-                p_transform.translation.y + p_collider.offset_y + p_collider.height;
-            let enemy_top = e_transform.translation.y + e_collider.offset_y;
-            let enemy_mid = enemy_top + e_collider.height * 0.5;
+            // Check that this is a lateral touch, not a stomp (player not above enemy).
+            // In Bevy Y-up: visual_bottom = pos + offset_y (feet)
+            let player_visual_bottom = p_transform.translation.y + p_collider.offset_y;
+            let enemy_visual_mid =
+                e_transform.translation.y + e_collider.offset_y + e_collider.height * 0.5;
 
-            // If player bottom is above enemy midpoint and falling, this is a stomp
+            // If player's feet are above enemy midpoint and falling, this is a stomp
             // handled by enemy_stomp_system, so skip here
-            if player_bottom <= enemy_mid && p_vel.y > 0.0 {
+            if player_visual_bottom >= enemy_visual_mid && p_vel.y < 0.0 {
                 continue;
             }
 

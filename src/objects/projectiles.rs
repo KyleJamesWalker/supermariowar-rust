@@ -203,7 +203,7 @@ pub fn fire_projectile_system(
                 play_sfx(&mut commands, &sfx, SfxId::Fireball);
                 let proj = Projectile::hammer(player.index, player.team);
                 let vel_x = proj.speed * dir * 0.7;
-                let vel_y = -HAMMER_THROW; // Thrown upward in parabolic arc
+                let vel_y = HAMMER_THROW; // Thrown upward in parabolic arc (positive = up in Bevy)
                 let entity = spawn_projectile(
                     &mut commands,
                     proj,
@@ -240,7 +240,7 @@ pub fn fire_projectile_system(
                 play_sfx(&mut commands, &sfx, SfxId::Fireball);
                 let proj = Projectile::bomb(player.index, player.team);
                 let vel_x = proj.speed * dir * 0.5;
-                let vel_y = -proj.speed;
+                let vel_y = proj.speed; // Thrown upward (positive = up in Bevy)
                 let entity = spawn_projectile(
                     &mut commands,
                     proj,
