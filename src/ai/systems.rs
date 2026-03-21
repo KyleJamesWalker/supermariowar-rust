@@ -182,10 +182,13 @@ pub fn ai_perception_update(
 
         // ---- map tile queries ----
         if map_data.loaded && !map_data.collision_map.is_empty() {
-            let tile_x = (ai_pos.x / TILE_SIZE) as i32;
-            let tile_y = (ai_pos.y / TILE_SIZE) as i32;
+            // Convert Bevy coords to SMW tile coords
+            let smw_x = ai_pos.x + SCREEN_WIDTH / 2.0;
+            let smw_y = SCREEN_HEIGHT / 2.0 - ai_pos.y;
+            let tile_x = (smw_x / TILE_SIZE) as i32;
+            let tile_y = (smw_y / TILE_SIZE) as i32;
 
-            // Below feet (one tile below center)
+            // Below feet (one tile below in SMW Y-down = +1 row)
             let foot_ty = tile_y + 1;
 
             // On-edge detection: check one tile ahead on both sides at foot level
