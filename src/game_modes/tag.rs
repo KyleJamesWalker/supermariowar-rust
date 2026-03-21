@@ -17,15 +17,14 @@ pub struct TaggedIt;
 // ---------------------------------------------------------------------------
 
 /// Resource tracking Tag mode state.
-/// The player who is "it" scores points over time.
-/// Touch another player to transfer the tag.
+/// In C++ original: the "it" player's score counts DOWN from the goal.
+/// When a player's score reaches 0, they are eliminated.
+/// Last player standing wins.
 #[derive(Resource, Debug)]
 pub struct TagModeState {
-    /// Points accumulated per player while they were "it".
-    pub points: [u32; MAX_PLAYERS],
     /// Index of the player who is currently "it" (None before first tag).
     pub it_player: Option<usize>,
-    /// Timer that awards a point each time it fires to the "it" player.
+    /// Timer that decrements the "it" player's score each tick.
     pub score_tick_timer: Timer,
     pub initialised: bool,
 }
@@ -33,7 +32,6 @@ pub struct TagModeState {
 impl Default for TagModeState {
     fn default() -> Self {
         Self {
-            points: [0; MAX_PLAYERS],
             it_player: None,
             score_tick_timer: Timer::from_seconds(1.0, TimerMode::Repeating),
             initialised: false,
@@ -49,6 +47,7 @@ impl Default for TagModeState {
 pub fn tag_init(
     config: Res<GameModeConfig>,
     mut state: ResMut<TagModeState>,
+    mut scoreboard: ResMut<ScoreBoard>,
     players: Query<(Entity, &Player)>,
     mut commands: Commands,
 ) {
@@ -70,7 +69,14 @@ pub fn tag_init(
 
     state.initialised = true;
 
-    // Pick a random player
+    // C++ behavior: all scores start at goal value and count down
+    for &(_entity, idx) in &player_list {
+        if idx < MAX_PLAYERS {
+            scoreboard.score[idx] = config.point_limit as i32;
+        }
+    }
+
+    // Pick a random player to be "it"
     let pick = rand::random::<usize>() % player_list.len();
     let (entity, idx) = player_list[pick];
     state.it_player = Some(idx);
@@ -96,8 +102,7 @@ pub fn tag_score_tick(
 
     if let Some(it) = state.it_player {
         if it < MAX_PLAYERS {
-            state.points[it] += 1;
-            scoreboard.score[it] += 1;
+            scoreboard.score[it] -= 1;
         }
     }
 }
@@ -197,23 +202,31 @@ pub fn tag_transfer_on_kill(
     }
 }
 
-/// Checks if any player has reached the point limit.
+/// Checks if the "it" player's score has reached 0 (eliminated).
+/// Last player standing wins.
 pub fn check_tag_win_condition(
     config: Res<GameModeConfig>,
-    state: Res<TagModeState>,
+    scoreboard: Res<ScoreBoard>,
+    players: Query<&Player>,
     mut round_over: EventWriter<RoundOverEvent>,
 ) {
     if config.mode_type != GameModeType::Tag {
         return;
     }
 
-    for (i, &points) in state.points.iter().enumerate() {
-        if points >= config.point_limit {
-            round_over.send(RoundOverEvent {
-                winning_player: Some(i),
-                winning_team: None,
-            });
-            return;
+    // Count players still alive (score > 0)
+    let mut alive_players: Vec<usize> = Vec::new();
+    for player in players.iter() {
+        if player.index < MAX_PLAYERS && scoreboard.score[player.index] > 0 {
+            alive_players.push(player.index);
         }
+    }
+
+    // If only one player remains, they win
+    if alive_players.len() == 1 {
+        round_over.send(RoundOverEvent {
+            winning_player: Some(alive_players[0]),
+            winning_team: None,
+        });
     }
 }

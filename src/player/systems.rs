@@ -678,9 +678,10 @@ pub fn warp_system(
         &mut Transform,
         &mut Velocity,
         &mut PlayerAction,
+        &mut Visibility,
     )>,
 ) {
-    for (entity, mut warp, mut transform, mut vel, mut action) in query.iter_mut() {
+    for (entity, mut warp, mut transform, mut vel, mut action, mut visibility) in query.iter_mut() {
         // Dead players should not continue warping
         if *action == PlayerAction::Dead {
             commands.entity(entity).remove::<WarpState>();
@@ -689,6 +690,9 @@ pub fn warp_system(
 
         vel.x = 0.0;
         vel.y = 0.0;
+
+        // Hide player sprite during warp animation
+        *visibility = Visibility::Hidden;
 
         warp.progress += WARP_SPEED * time.delta_secs();
 
@@ -748,6 +752,7 @@ pub fn warp_system(
                 }
                 commands.entity(entity).remove::<WarpState>();
                 *action = PlayerAction::Standing;
+                *visibility = Visibility::Inherited;
             }
         }
     }
