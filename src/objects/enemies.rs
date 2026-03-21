@@ -368,7 +368,7 @@ pub fn enemy_stomp_system(
                 | EnemyType::BuzzyBeetle
                 | EnemyType::Parakoopa => {
                     if enemy.state == EnemyState::InShell {
-                        // Kick the shell
+                        // Kick the shell — remove re-emerge timer so it stays a shell while moving
                         play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Kick);
                         enemy.state = EnemyState::ShellMoving;
                         enemy.kills_on_touch = true;
@@ -378,12 +378,10 @@ pub fn enemy_stomp_system(
                         } else {
                             -1.0
                         };
-                        commands.entity(e_entity).insert(ShellSpeed {
-                            speed: 7.0 * kick_dir,
-                        });
-                        commands.entity(e_entity).insert(OwnerPlayer {
-                            index: player.index,
-                        });
+                        commands.entity(e_entity)
+                            .insert(ShellSpeed { speed: 7.0 * kick_dir })
+                            .insert(OwnerPlayer { index: player.index })
+                            .remove::<ShellTimer>();
                     } else {
                         // Enter shell state
                         play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Stomp);

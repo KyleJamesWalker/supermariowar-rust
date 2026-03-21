@@ -208,10 +208,16 @@ pub fn tag_transfer_on_kill(
 pub fn check_tag_win_condition(
     config: Res<GameModeConfig>,
     scoreboard: Res<ScoreBoard>,
+    state: Res<TagModeState>,
     players: Query<&Player>,
     mut round_over: EventWriter<RoundOverEvent>,
 ) {
     if config.mode_type != GameModeType::Tag {
+        return;
+    }
+
+    // Only check after initialization
+    if !state.initialised {
         return;
     }
 
@@ -223,10 +229,17 @@ pub fn check_tag_win_condition(
         }
     }
 
-    // If only one player remains, they win
+    // If only one player remains, they win (send event once — handle_round_over consumes first)
     if alive_players.len() == 1 {
         round_over.send(RoundOverEvent {
             winning_player: Some(alive_players[0]),
+            winning_team: None,
+        });
+    }
+    // Also end if no one is alive (draw)
+    if alive_players.is_empty() {
+        round_over.send(RoundOverEvent {
+            winning_player: None,
             winning_team: None,
         });
     }

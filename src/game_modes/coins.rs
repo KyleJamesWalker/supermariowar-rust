@@ -90,6 +90,7 @@ pub fn handle_coin_collect(
 pub fn coins_drop_on_kill(
     config: Res<GameModeConfig>,
     mut state: ResMut<CoinModeState>,
+    mut scoreboard: ResMut<ScoreBoard>,
     mut kill_events: EventReader<PlayerKillEvent>,
     players: Query<(&crate::player::components::Player, &Transform)>,
     mut commands: Commands,
@@ -110,8 +111,9 @@ pub fn coins_drop_on_kill(
             continue;
         }
 
-        // Reduce victim's coins
+        // Reduce victim's coins and scoreboard
         state.coins[event.victim] = state.coins[event.victim].saturating_sub(drop_count);
+        scoreboard.score[event.victim] -= drop_count as i32;
 
         // Find victim position by matching on player index
         let victim_pos = players
@@ -145,7 +147,8 @@ pub fn coins_drop_on_kill(
     }
 }
 
-/// Applies a -1 coin penalty when a player dies (matches C++ behavior).
+/// Death penalty for coins mode — applied on death even if no killer (environment death).
+/// Only applies when coin_drop_on_kill didn't already handle it (i.e., environment deaths).
 pub fn coin_death_penalty(
     config: Res<GameModeConfig>,
     mut state: ResMut<CoinModeState>,
@@ -157,6 +160,10 @@ pub fn coin_death_penalty(
     }
 
     for event in death_events.read() {
+        // Only penalize environment deaths (no killer) — kill-based drops handled in coins_drop_on_kill
+        if event.killer_index.is_some() {
+            continue;
+        }
         if event.player_index < MAX_PLAYERS && state.coins[event.player_index] > 0 {
             state.coins[event.player_index] -= 1;
             scoreboard.score[event.player_index] -= 1;
