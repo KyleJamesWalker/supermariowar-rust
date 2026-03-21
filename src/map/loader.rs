@@ -415,8 +415,8 @@ fn read_platform(r: &mut Cursor<&[u8]>, patch: i32) -> io::Result<MovingPlatform
     let (cx, cy) = match &path {
         PlatformPath::Straight { start_x, start_y, .. } => (*start_x, *start_y),
         PlatformPath::Continuous { start_x, start_y, .. } => (*start_x, *start_y),
-        PlatformPath::Ellipse { center_x, center_y, radius_x, start_angle, .. } => {
-            (center_x + radius_x * start_angle.cos(), center_y + radius_x * start_angle.sin())
+        PlatformPath::Ellipse { center_x, center_y, radius_x, radius_y, start_angle, .. } => {
+            (center_x + radius_x * start_angle.cos(), center_y + radius_y * start_angle.sin())
         }
     };
 

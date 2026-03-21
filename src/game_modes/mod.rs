@@ -325,7 +325,7 @@ fn round_over_timer_system(
         return;
     }
 
-    if round_manager.current_round >= round_manager.total_rounds {
+    if round_manager.current_round > round_manager.total_rounds {
         // Match is over
         round_manager.match_finished = true;
         next_gameplay_state.set(GameplayState::MatchOver);
@@ -359,6 +359,7 @@ fn reset_mode_state_on_new_round(
     mut tag_state: ResMut<tag::TagModeState>,
     mut frenzy_state: ResMut<frenzy::FrenzyModeState>,
     mut game_timer: ResMut<GameTimer>,
+    mut scoreboard: ResMut<ScoreBoard>,
 ) {
     if !pending_reset.0 {
         return;
@@ -376,6 +377,7 @@ fn reset_mode_state_on_new_round(
     *tag_state = tag::TagModeState::default();
     *frenzy_state = frenzy::FrenzyModeState::default();
     *game_timer = GameTimer::default();
+    *scoreboard = ScoreBoard::default();
 }
 
 // ---------------------------------------------------------------------------

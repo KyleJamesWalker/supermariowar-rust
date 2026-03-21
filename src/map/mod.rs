@@ -136,24 +136,10 @@ fn spawn_tile_entities(
         for row in 0..h {
             let layers = &md.tiles[col][row];
             for (layer_idx, tref) in layers.iter().enumerate() {
-                // Skip empty tiles (id < 0 means TILESETNONE)
-                if tref.id < 0 {
+                // Skip truly empty tiles: -2 = TILESETNONE, <= -3 = TILESETUNKNOWN
+                if tref.id <= -2 {
                     continue;
                 }
-
-                let resolved_idx = translate_tileset_id(translation, tref.id)
-                    .or(mgr.classic_index)
-                    .unwrap_or(0);
-
-                let Some(loaded) = mgr.get(resolved_idx) else {
-                    continue;
-                };
-
-                let atlas_index = (tref.row as u32) * loaded.definition.columns + (tref.col as u32);
-
-                let px = tile_to_bevy_x(col as u32);
-                let py = tile_to_bevy_y(row as u32);
-                let pz = layer_idx as f32 * 0.1;
 
                 // Determine collision for this cell
                 let collision = if col < md.collision_map.len()
@@ -164,28 +150,82 @@ fn spawn_tile_entities(
                     CollisionType::NonSolid
                 };
 
-                commands.spawn((
-                    Sprite {
-                        image: loaded.texture.clone(),
-                        texture_atlas: Some(TextureAtlas {
-                            layout: loaded.atlas_layout.clone(),
-                            index: atlas_index as usize,
-                        }),
-                        ..default()
-                    },
-                    Transform::from_xyz(px, py, pz),
-                    Tile {
-                        grid_x: col as u32,
-                        grid_y: row as u32,
-                        layer: layer_idx as u32,
-                        tile_type: tile_type_from_collision(collision),
-                        tileset_index: tref.id,
-                        tileset_col: tref.col,
-                        tileset_row: tref.row,
-                        collision,
-                    },
-                    GameplayEntity,
-                ));
+                let px = tile_to_bevy_x(col as u32);
+                let py = tile_to_bevy_y(row as u32);
+                let pz = layer_idx as f32 * 0.1;
+
+                if tref.id == -1 {
+                    // TILESETANIMATED: spawn with the first loaded tileset
+                    // and attach an AnimatedTile component
+                    let resolved_idx = mgr.classic_index.unwrap_or(0);
+                    let Some(loaded) = mgr.get(resolved_idx) else {
+                        continue;
+                    };
+
+                    let atlas_index = (tref.row as u32) * loaded.definition.columns + (tref.col as u32);
+
+                    commands.spawn((
+                        Sprite {
+                            image: loaded.texture.clone(),
+                            texture_atlas: Some(TextureAtlas {
+                                layout: loaded.atlas_layout.clone(),
+                                index: atlas_index as usize,
+                            }),
+                            ..default()
+                        },
+                        Transform::from_xyz(px, py, pz),
+                        Tile {
+                            grid_x: col as u32,
+                            grid_y: row as u32,
+                            layer: layer_idx as u32,
+                            tile_type: TileType::Animated,
+                            tileset_index: tref.id,
+                            tileset_col: tref.col,
+                            tileset_row: tref.row,
+                            collision,
+                        },
+                        AnimatedTile {
+                            frame: 0,
+                            num_frames: 4,
+                            timer: Timer::from_seconds(0.133, TimerMode::Repeating),
+                        },
+                        GameplayEntity,
+                    ));
+                } else {
+                    // Normal tile (id >= 0)
+                    let resolved_idx = translate_tileset_id(translation, tref.id)
+                        .or(mgr.classic_index)
+                        .unwrap_or(0);
+
+                    let Some(loaded) = mgr.get(resolved_idx) else {
+                        continue;
+                    };
+
+                    let atlas_index = (tref.row as u32) * loaded.definition.columns + (tref.col as u32);
+
+                    commands.spawn((
+                        Sprite {
+                            image: loaded.texture.clone(),
+                            texture_atlas: Some(TextureAtlas {
+                                layout: loaded.atlas_layout.clone(),
+                                index: atlas_index as usize,
+                            }),
+                            ..default()
+                        },
+                        Transform::from_xyz(px, py, pz),
+                        Tile {
+                            grid_x: col as u32,
+                            grid_y: row as u32,
+                            layer: layer_idx as u32,
+                            tile_type: tile_type_from_collision(collision),
+                            tileset_index: tref.id,
+                            tileset_col: tref.col,
+                            tileset_row: tref.row,
+                            collision,
+                        },
+                        GameplayEntity,
+                    ));
+                }
             }
         }
     }

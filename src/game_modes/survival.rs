@@ -80,13 +80,6 @@ pub fn handle_survival_death(
         state.lives[idx] -= 1;
         scoreboard.deaths[idx] += 1;
 
-        // Credit the killer with an elimination if the victim is now at 0
-        if let DeathCause::Killed { by } = event.cause {
-            if by < MAX_PLAYERS {
-                scoreboard.kills[by] += 1;
-            }
-        }
-
         if state.lives[idx] <= 0 {
             state.alive[idx] = false;
             state.alive_count = state.alive_count.saturating_sub(1);

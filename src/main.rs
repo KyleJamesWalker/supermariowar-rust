@@ -110,10 +110,12 @@ fn reset_countdown_on_enter(
     mut countdown: ResMut<game_modes::traits::RoundCountdown>,
     mut scoreboard: ResMut<game_modes::traits::ScoreBoard>,
     mut game_timer: ResMut<game_modes::traits::GameTimer>,
+    mut round_over_timer: ResMut<game_modes::traits::RoundOverTimer>,
 ) {
     *countdown = game_modes::traits::RoundCountdown::default();
     *scoreboard = game_modes::traits::ScoreBoard::default();
     *game_timer = game_modes::traits::GameTimer::default();
+    *round_over_timer = game_modes::traits::RoundOverTimer::default();
 }
 
 /// Resource for game-over screen timing.

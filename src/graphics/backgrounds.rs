@@ -68,8 +68,8 @@ pub fn spawn_background(
         Transform::from_xyz(0.0, 0.0, z_order::BACKGROUND),
         Background {
             name: bg_name,
-            scrolling: false,
-            scroll_speed: Vec2::ZERO,
+            scrolling: true,
+            scroll_speed: Vec2::new(0.5, 0.0),
         },
         BackgroundEntity,
     ));
