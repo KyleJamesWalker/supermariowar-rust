@@ -928,11 +928,14 @@ fn navigate_toward(
         }
     }
 
-    // Drop through platforms when target is significantly below
-    if grounded.on_ground && dy > TILE_SIZE * 2.0 && abs_dx < TILE_SIZE * 3.0 {
+    // Drop through platforms when target is significantly below (negative dy in Bevy Y-up)
+    if grounded.on_ground && dy < -TILE_SIZE * 2.0 && abs_dx < TILE_SIZE * 3.0 {
         // Check if the tile below is a SolidOnTop platform
-        let tile_x = (ai_pos.x / TILE_SIZE) as i32;
-        let tile_y = (ai_pos.y / TILE_SIZE) as i32 + 1;
+        // Convert Bevy coords to SMW tile indices
+        let smw_x = ai_pos.x + SCREEN_WIDTH / 2.0;
+        let smw_y = SCREEN_HEIGHT / 2.0 - ai_pos.y;
+        let tile_x = (smw_x / TILE_SIZE) as i32;
+        let tile_y = (smw_y / TILE_SIZE) as i32 + 1; // +1 = tile below in SMW Y-down
         let below = tile_collision_at(map_data, tile_x, tile_y);
         if below == CollisionType::SolidOnTop {
             pathfinding.should_drop_through = true;
