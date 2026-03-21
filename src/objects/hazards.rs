@@ -192,7 +192,7 @@ pub fn spawn_hazard(commands: &mut Commands, hazard: Hazard, x: f32, y: f32) -> 
             kill: true,
             owner_player: None,
         },
-        Transform::from_xyz(x, y, 6.0),
+        Transform::from_xyz(x, y, crate::graphics::sprites::z_order::OBJECTS + 1.0),
         GlobalTransform::default(),
         Visibility::default(),
         InheritedVisibility::default(),

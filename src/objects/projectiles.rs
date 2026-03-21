@@ -148,7 +148,7 @@ pub fn spawn_projectile(
             InteractsWithMap,
             DespawnOffScreen,
             Lifetime::from_seconds(8.0),
-            Transform::from_xyz(x, y, 9.0),
+            Transform::from_xyz(x, y, crate::graphics::sprites::z_order::PROJECTILES),
             GlobalTransform::default(),
             Visibility::default(),
             InheritedVisibility::default(),

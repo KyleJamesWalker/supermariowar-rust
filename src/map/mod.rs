@@ -654,8 +654,11 @@ fn spawn_map_items(commands: &mut Commands, map_data: &MapData) {
 
         // Item types: 0=GreenSpring, 1=Spike, 2=KuriboShoe, 3=GoldenSpring, 4=StickyShoe, 5=ThrowBox
         commands.spawn((
-            Transform::from_xyz(bx, by, 5.0),
+            Transform::from_xyz(bx, by, crate::graphics::sprites::z_order::OBJECTS),
+            GlobalTransform::default(),
             Visibility::default(),
+            InheritedVisibility::default(),
+            ViewVisibility::default(),
             Collider::new(TILE_SIZE, TILE_SIZE),
             GameObject {
                 object_type: crate::objects::components::ObjectType::Block,

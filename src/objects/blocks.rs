@@ -124,7 +124,7 @@ pub fn spawn_block(
         Collider::new(TILE_SIZE, TILE_SIZE),
         CollisionLayer::Block,
         Solid,
-        Transform::from_xyz(world_x, world_y, 5.0),
+        Transform::from_xyz(world_x, world_y, crate::graphics::sprites::z_order::OBJECTS),
         GlobalTransform::default(),
         Visibility::default(),
         InheritedVisibility::default(),

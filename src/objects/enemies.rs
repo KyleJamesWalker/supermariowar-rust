@@ -153,7 +153,7 @@ pub fn spawn_enemy(commands: &mut Commands, enemy: Enemy, x: f32, y: f32) -> Ent
                 kill: true,
                 owner_player: None,
             },
-            Transform::from_xyz(x, y, 7.0),
+            Transform::from_xyz(x, y, crate::graphics::sprites::z_order::OBJECTS + 2.0),
         ))
         .id();
 
