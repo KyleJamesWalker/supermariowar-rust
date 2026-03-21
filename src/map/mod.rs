@@ -457,6 +457,7 @@ fn spawn_players(commands: &mut Commands, md: &MapData) {
 }
 
 /// Pick spawn positions for `count` players from the map's spawn areas.
+/// Uses random placement within spawn areas, matching original C++ findspawnpoint().
 pub fn pick_spawn_positions(md: &MapData, count: usize) -> Vec<(i32, i32)> {
     let mut positions = Vec::new();
 
@@ -470,14 +471,41 @@ pub fn pick_spawn_positions(md: &MapData, count: usize) -> Vec<(i32, i32)> {
 
     // Try to use the "all players" spawn areas (index 0)
     if let Some(areas) = md.spawn_areas.first() {
-        for area in areas.iter() {
-            if positions.len() >= count {
-                break;
+        if !areas.is_empty() {
+            // Weighted random selection across spawn areas (like original C++)
+            let total_size: u32 = areas.iter().map(|a| a.size as u32).sum();
+
+            for _ in 0..count {
+                if total_size > 0 {
+                    // Pick a random area weighted by size
+                    let mut roll = rand::random::<u32>() % total_size;
+                    let mut selected_area = &areas[0];
+                    for area in areas.iter() {
+                        if roll < area.size as u32 {
+                            selected_area = area;
+                            break;
+                        }
+                        roll -= area.size as u32;
+                    }
+
+                    // Random position within the selected area (tile coordinates)
+                    let rand_x = if selected_area.width > 0 {
+                        selected_area.left + (rand::random::<u32>() % selected_area.width as u32) as i32
+                    } else {
+                        selected_area.left
+                    };
+                    let rand_y = if selected_area.height > 0 {
+                        selected_area.top + (rand::random::<u32>() % selected_area.height as u32) as i32
+                    } else {
+                        selected_area.top
+                    };
+                    positions.push((rand_x, rand_y));
+                } else {
+                    // Fallback: center of first area
+                    let area = &areas[0];
+                    positions.push((area.left + area.width / 2, area.top + area.height / 2));
+                }
             }
-            // Place player roughly in the center of the spawn area
-            let cx = area.left + area.width / 2;
-            let cy = area.top + area.height / 2;
-            positions.push((cx, cy));
         }
     }
 

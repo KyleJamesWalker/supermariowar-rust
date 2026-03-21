@@ -1069,9 +1069,35 @@ pub fn throw_carried_object_system(
 fn pick_spawn_location(map_data: &MapData, player_index: usize) -> (f32, f32) {
     let (x, mut y) = if !map_data.spawn_areas.is_empty() && !map_data.spawn_areas[0].is_empty() {
         let areas = &map_data.spawn_areas[0];
-        let area = &areas[player_index % areas.len()];
-        let smw_x = (area.left as f32 + area.width as f32 / 2.0) * TILE_SIZE;
-        let smw_y = (area.top as f32 + area.height as f32 / 2.0) * TILE_SIZE;
+        // Weighted random area selection (like original C++ findspawnpoint)
+        let total_size: u32 = areas.iter().map(|a| a.size as u32).sum();
+        let area = if total_size > 0 {
+            let mut roll = rand::random::<u32>() % total_size;
+            let mut selected = &areas[0];
+            for a in areas.iter() {
+                if roll < a.size as u32 {
+                    selected = a;
+                    break;
+                }
+                roll -= a.size as u32;
+            }
+            selected
+        } else {
+            &areas[0]
+        };
+        // Random position within selected area
+        let rand_x = if area.width > 0 {
+            area.left as f32 + (rand::random::<u32>() % area.width as u32) as f32
+        } else {
+            area.left as f32
+        };
+        let rand_y = if area.height > 0 {
+            area.top as f32 + (rand::random::<u32>() % area.height as u32) as f32
+        } else {
+            area.top as f32
+        };
+        let smw_x = rand_x * TILE_SIZE + TILE_SIZE / 2.0;
+        let smw_y = rand_y * TILE_SIZE + TILE_SIZE / 2.0;
         (smw_x - SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0 - smw_y)
     } else {
         let smw_x = (SCREEN_WIDTH / (MAX_PLAYERS as f32 + 1.0)) * (player_index as f32 + 1.0);

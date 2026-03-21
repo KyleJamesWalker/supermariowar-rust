@@ -744,13 +744,19 @@ pub fn moving_platform_system(
                 player_px + PLAYER_WIDTH > plat_left && player_px < plat_right;
 
             if on_top && horizontally_on {
-                // Snap player to platform top (plat_max_y is already the new position)
-                // Only apply horizontal carry since vertical snap already accounts for movement
+                // Snap player to platform top and transfer platform velocity
                 player_transform.translation.y = plat_max_y;
                 player_transform.translation.x += platform.vel_x;
 
-                // Zero vertical velocity so gravity doesn't pull player off
-                vel.y = 0.0;
+                // Transfer platform vertical velocity to player (original C++ behavior).
+                // For upward-moving platforms, player needs the upward velocity to stay on.
+                // For downward-moving platforms, player follows the platform down.
+                // Use -GRAVITY as minimum (like landing on tiles) for ground re-testing.
+                if platform.vel_y.abs() > GRAVITY {
+                    vel.y = platform.vel_y;
+                } else {
+                    vel.y = -GRAVITY;
+                }
                 grounded.on_ground = true;
 
                 commands

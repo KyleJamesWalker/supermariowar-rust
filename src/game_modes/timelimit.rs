@@ -9,6 +9,9 @@ use super::traits::*;
 pub struct TimeLimitModeState {
     pub kills: [u32; MAX_PLAYERS],
     pub timer_started: bool,
+    /// When true, the timer has expired with a tie and sudden_death is enabled.
+    /// The next kill wins instantly.
+    pub in_sudden_death: bool,
 }
 
 impl Default for TimeLimitModeState {
@@ -16,6 +19,7 @@ impl Default for TimeLimitModeState {
         Self {
             kills: [0; MAX_PLAYERS],
             timer_started: false,
+            in_sudden_death: false,
         }
     }
 }
@@ -41,14 +45,15 @@ pub fn timelimit_tick(
     config: Res<GameModeConfig>,
     time: Res<Time>,
     mut game_timer: ResMut<GameTimer>,
-    state: Res<TimeLimitModeState>,
+    mut state: ResMut<TimeLimitModeState>,
     mut round_over: EventWriter<RoundOverEvent>,
 ) {
     if config.mode_type != GameModeType::TimeLimit {
         return;
     }
 
-    if game_timer.expired {
+    // Don't tick if already in sudden death or expired
+    if game_timer.expired || state.in_sudden_death {
         return;
     }
 
@@ -73,10 +78,11 @@ pub fn timelimit_tick(
         }
 
         if tied && config.sudden_death {
-            // In sudden death, no winner is declared yet -- the game continues
-            // until the next kill. Reset the expired flag to keep the round going.
-            game_timer.expired = false;
-            // The sudden death period has no time limit; the next kill wins.
+            // Enter sudden death: next kill wins instantly.
+            // Use a separate flag so game_timer.expired stays true
+            // (preventing timer re-tick) while the kill handler can detect
+            // sudden death mode.
+            state.in_sudden_death = true;
         } else {
             round_over.send(RoundOverEvent {
                 winning_player: best_player,
@@ -91,7 +97,6 @@ pub fn handle_timelimit_kills(
     config: Res<GameModeConfig>,
     mut state: ResMut<TimeLimitModeState>,
     mut scoreboard: ResMut<ScoreBoard>,
-    game_timer: Res<GameTimer>,
     mut kill_events: EventReader<PlayerKillEvent>,
     mut round_over: EventWriter<RoundOverEvent>,
 ) {
@@ -109,8 +114,8 @@ pub fn handle_timelimit_kills(
         scoreboard.deaths[event.victim] += 1;
         scoreboard.score[event.killer] += 1;
 
-        // In sudden death (timer expired but no winner), the next kill wins immediately
-        if game_timer.expired {
+        // In sudden death, the next kill wins immediately
+        if state.in_sudden_death {
             round_over.send(RoundOverEvent {
                 winning_player: Some(event.killer),
                 winning_team: None,

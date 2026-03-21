@@ -326,8 +326,9 @@ pub fn powerup_collect_system(
 
             match spawned.powerup_type {
                 PowerupType::Mushroom => {
-                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::ExtraLife);
-                    player.lives += 1;
+                    // Mushroom is a generic powerup in the original C++, NOT extra life.
+                    // ExtraGuy/OneUp is the extra-life powerup.
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::PowerupCollect);
                 }
                 PowerupType::Fire => {
                     play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::PowerupCollect);

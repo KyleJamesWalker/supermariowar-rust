@@ -168,9 +168,11 @@ pub fn tag_transfer_system(
 }
 
 /// If the "it" player is killed, transfer the tag to the killer.
+/// Also applies a -5 point penalty to the killed player (original C++ behavior).
 pub fn tag_transfer_on_kill(
     config: Res<GameModeConfig>,
     mut state: ResMut<TagModeState>,
+    mut scoreboard: ResMut<ScoreBoard>,
     mut kill_events: EventReader<PlayerKillEvent>,
     players: Query<(Entity, &Player)>,
     tagged_query: Query<Entity, With<TaggedIt>>,
@@ -181,6 +183,13 @@ pub fn tag_transfer_on_kill(
     }
 
     for event in kill_events.read() {
+        // Apply kill penalty: victim loses 5 points (original C++ Tag.cpp lines 106-145)
+        if event.victim < MAX_PLAYERS {
+            scoreboard.score[event.victim] = (scoreboard.score[event.victim] - 5).max(0);
+            scoreboard.deaths[event.victim] += 1;
+            scoreboard.kills[event.killer] += 1;
+        }
+
         let it_index = match state.it_player {
             Some(idx) => idx,
             None => continue,

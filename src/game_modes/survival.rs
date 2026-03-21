@@ -179,31 +179,24 @@ pub fn handle_survival_death(
     }
 }
 
-/// Kill events also feed into death tracking (bridge from PlayerKillEvent).
+/// Processes kill events for scoreboard tracking in Survival mode.
+/// NOTE: Does NOT re-emit PlayerDeathEvent (that would create an infinite
+/// loop with bridge_death_to_kill_events). Life tracking is handled by
+/// handle_survival_death which reads the original PlayerDeathEvent directly.
 pub fn handle_survival_kills(
     config: Res<GameModeConfig>,
     mut kill_events: EventReader<PlayerKillEvent>,
-    mut death_events: EventWriter<PlayerDeathEvent>,
-    players: Query<(Entity, &crate::player::components::Player)>,
+    mut scoreboard: ResMut<ScoreBoard>,
 ) {
     if config.mode_type != GameModeType::Survival {
         return;
     }
 
     for event in kill_events.read() {
-        // Look up the victim's entity
-        let victim_entity = players
-            .iter()
-            .find(|(_, p)| p.index == event.victim)
-            .map(|(e, _)| e);
-
-        if let Some(entity) = victim_entity {
-            death_events.send(PlayerDeathEvent {
-                player_entity: entity,
-                player_index: event.victim,
-                killer_index: Some(event.killer),
-                cause: DeathCause::Killed { by: event.killer },
-            });
+        if event.killer >= MAX_PLAYERS {
+            continue;
         }
+        // Track killer stats on the scoreboard (lives handled by handle_survival_death)
+        scoreboard.kills[event.killer] += 1;
     }
 }

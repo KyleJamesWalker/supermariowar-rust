@@ -206,7 +206,7 @@ pub struct ShellTimer {
 
 impl Default for ShellSpeed {
     fn default() -> Self {
-        Self { speed: 7.0 }
+        Self { speed: 5.0 } // Original C++ CO_Shell::Kick() base speed = 5.0
     }
 }
 
@@ -501,9 +501,10 @@ pub fn enemy_stomp_system(
                         };
                         // Set velocity immediately (not deferred) so the shell
                         // moves this frame rather than waiting one frame.
-                        e_vel.x = 7.0 * kick_dir;
+                        // Original C++ base shell kick speed = 5.0
+                        e_vel.x = 5.0 * kick_dir;
                         commands.entity(e_entity)
-                            .insert(ShellSpeed { speed: 7.0 * kick_dir })
+                            .insert(ShellSpeed { speed: 5.0 * kick_dir })
                             .insert(OwnerPlayer { index: player.index })
                             .remove::<ShellTimer>();
                     } else {
