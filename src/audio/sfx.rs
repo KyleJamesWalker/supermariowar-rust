@@ -322,6 +322,7 @@ pub fn countdown_sfx_system(
         }
         crate::game_modes::traits::CountdownPhase::Go => {
             sfx_events.send(SfxEvent::new(SfxId::CountdownGo));
+            sfx_events.send(SfxEvent::new(SfxId::GameStart));
         }
         crate::game_modes::traits::CountdownPhase::Done => {}
     }

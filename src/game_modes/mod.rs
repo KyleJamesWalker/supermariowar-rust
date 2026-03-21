@@ -320,6 +320,7 @@ fn round_over_timer_system(
     mut next_game_state: ResMut<NextState<GameState>>,
     mut countdown: ResMut<RoundCountdown>,
     mut pending_reset: ResMut<PendingRoundReset>,
+    mut sfx_events: EventWriter<crate::audio::sfx::SfxEvent>,
 ) {
     round_over_timer.timer.tick(time.delta());
 
@@ -335,6 +336,7 @@ fn round_over_timer_system(
         round_manager.match_finished = true;
         next_gameplay_state.set(GameplayState::MatchOver);
         next_game_state.set(GameState::GameOver);
+        sfx_events.send(crate::audio::sfx::SfxEvent::new(crate::audio::sfx::SfxId::GameOver));
     } else {
         // Signal reset
         pending_reset.0 = true;

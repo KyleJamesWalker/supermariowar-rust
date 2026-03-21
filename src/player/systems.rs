@@ -225,6 +225,7 @@ pub fn player_respawn_system(
         &mut CarriedObject,
     )>,
     mut respawn_events: EventReader<PlayerRespawnEvent>,
+    mut sfx_events: EventWriter<crate::audio::sfx::SfxEvent>,
 ) {
     for event in respawn_events.read() {
         if let Ok((
@@ -260,6 +261,10 @@ pub fn player_respawn_system(
                 .remove::<Invincible>()
                 .remove::<FrozenState>()
                 .insert(SpawnProtection::new(SPAWN_PROTECTION_SECS));
+
+            sfx_events.send(crate::audio::sfx::SfxEvent::new(
+                crate::audio::sfx::SfxId::PlayerRespawn,
+            ));
         }
     }
 }
