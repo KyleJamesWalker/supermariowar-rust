@@ -223,6 +223,9 @@ pub fn spawn_hazard(commands: &mut Commands, hazard: Hazard, x: f32, y: f32) -> 
 /// Thwomp behavior: waits at ceiling, slams down when a player is below, then
 /// slowly rises back to its home position.
 pub fn thwomp_system(
+    mut commands: Commands,
+    sfx: Res<SfxLibrary>,
+    sfx_vol: Res<SfxVolume>,
     time: Res<Time>,
     mut query: Query<(&mut ThwompState, &mut Transform, &Collider)>,
     player_query: Query<(&Transform, &PlayerAction), (With<Player>, Without<ThwompState>)>,
@@ -259,6 +262,7 @@ pub fn thwomp_system(
                     transform.translation.y = thwomp.target_y;
                     thwomp.phase = ThwompPhase::OnGround;
                     thwomp.ground_timer = 0.0;
+                    play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Thwomp);
                 }
             }
             ThwompPhase::OnGround => {

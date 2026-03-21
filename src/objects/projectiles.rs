@@ -595,6 +595,7 @@ pub fn bomb_fuse_system(
         &Transform,
         &Collider,
         Option<&Invincible>,
+        Option<&SpawnProtection>,
     ), With<Player>>,
     mut bomb_death_events: EventWriter<PlayerDeathEvent>,
     mut enemy_query: Query<(
@@ -611,7 +612,7 @@ pub fn bomb_fuse_system(
             continue;
         }
 
-        play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::BlockBreak);
+        play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::BombExplode);
 
         let blast_collider = Collider::new(
             fuse.explosion_radius * 2.0,
@@ -619,13 +620,13 @@ pub fn bomb_fuse_system(
         ).with_offset(-fuse.explosion_radius, -fuse.explosion_radius);
 
         // Damage players in blast radius (except owner)
-        for (p_entity, player, mut p_action, mut p_vel, p_transform, p_collider, invincible) in
+        for (p_entity, player, mut p_action, mut p_vel, p_transform, p_collider, invincible, spawn_prot) in
             player_query.iter_mut()
         {
-            if *p_action == PlayerAction::Dead {
+            if *p_action == PlayerAction::Dead || *p_action == PlayerAction::Spawning {
                 continue;
             }
-            if invincible.is_some() {
+            if invincible.is_some() || spawn_prot.is_some() {
                 continue;
             }
 
