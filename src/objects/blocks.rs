@@ -105,14 +105,16 @@ pub struct BlockBumpAnimation {
 // ---------------------------------------------------------------------------
 
 /// Spawns a block entity at the given grid position with the specified type.
+/// Grid coordinates are tile indices (0-19 cols, 0-14 rows) in SMW layout.
 pub fn spawn_block(
     commands: &mut Commands,
     block_type: BlockType,
     grid_x: u32,
     grid_y: u32,
 ) -> Entity {
-    let world_x = grid_x as f32 * TILE_SIZE;
-    let world_y = grid_y as f32 * TILE_SIZE;
+    // Convert tile grid coords to Bevy centered coordinates
+    let world_x = (grid_x as f32 * TILE_SIZE) - SCREEN_WIDTH / 2.0 + TILE_SIZE / 2.0;
+    let world_y = (SCREEN_HEIGHT / 2.0) - (grid_y as f32 * TILE_SIZE) - TILE_SIZE / 2.0;
 
     let mut entity_commands = commands.spawn((
         GameObject {

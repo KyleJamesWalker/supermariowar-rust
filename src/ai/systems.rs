@@ -549,10 +549,14 @@ pub fn ai_goal_selection(
         let _ai_pos = tf.translation.truncate();
 
         // ---- Phase 1: Immediate hazard avoidance (overrides everything) ----
-        if let Some(&(hazard_pos, hazard_dist)) = perception.nearby_hazards.first() {
-            if hazard_dist < HAZARD_FLEE_DISTANCE {
-                intent.current_goal = AiGoal::AvoidHazard(hazard_pos);
-                continue;
+        // Reaction cooldown gates new threat responses (easier AIs react slower)
+        if ai.reaction_cooldown <= 0.0 {
+            if let Some(&(hazard_pos, hazard_dist)) = perception.nearby_hazards.first() {
+                if hazard_dist < HAZARD_FLEE_DISTANCE {
+                    intent.current_goal = AiGoal::AvoidHazard(hazard_pos);
+                    ai.reaction_cooldown = ai.difficulty.reaction_time();
+                    continue;
+                }
             }
         }
 
@@ -1028,11 +1032,18 @@ pub fn ai_apply_intent(
 
         // Stuck detection response: if stuck, force a direction change + jump
         if memory.stuck_timer > STUCK_THRESHOLD_SECS * 2.0 && grounded.on_ground {
-            // Emergency unstuck: jump and reverse
+            // Emergency unstuck: jump and pick opposite of current patrol direction
             input.jump = true;
             input.jump_pressed = true;
-            input.left = !input.left;
-            input.right = !input.right;
+            if memory.patrol_direction >= 0.0 {
+                input.left = true;
+                input.right = false;
+            } else {
+                input.left = false;
+                input.right = true;
+            }
+            memory.patrol_direction = -memory.patrol_direction;
+            memory.stuck_timer = 0.0;
             memory.jump_cooldown = JUMP_COOLDOWN_SECS;
         }
     }

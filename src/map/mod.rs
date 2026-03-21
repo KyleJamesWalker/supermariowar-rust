@@ -91,6 +91,9 @@ fn setup_gameplay(
     // Spawn map hazards (thwomps, piranha plants, etc.)
     spawn_map_hazards(&mut commands, &map_data);
 
+    // Spawn interactive blocks from object_data
+    spawn_blocks_from_object_data(&mut commands, &map_data);
+
     // Spawn map items (coins, powerup boxes, etc.)
     spawn_map_items(&mut commands, &map_data);
 
@@ -657,6 +660,62 @@ fn spawn_map_hazards(commands: &mut Commands, map_data: &MapData) {
 
 // ---------------------------------------------------------------------------
 // Map item spawning (springs, spikes, kuribo shoes, etc.)
+// ---------------------------------------------------------------------------
+
+/// Convert raw block_type (i8) from map data to a BlockType enum variant.
+/// Returns None for empty/unrecognized block types.
+fn raw_block_to_type(raw: i8) -> Option<crate::objects::blocks::BlockType> {
+    use crate::objects::blocks::BlockType;
+    match raw {
+        1 => Some(BlockType::Breakable),         // MapBlock_BrickYellow
+        2 => Some(BlockType::PowerupBlock),       // MapBlock_Powerup
+        3 => Some(BlockType::DonutBlock),         // MapBlock_Donut
+        4 => Some(BlockType::FlipBlock),          // MapBlock_Flip
+        5 => Some(BlockType::BounceBlock),        // MapBlock_Bounce
+        6..=9 => Some(BlockType::NoteBlock),      // MapBlock_NoteGray/Red/Blue + spare
+        10 => Some(BlockType::ThrowBlock),        // MapBlock_BrickBlue
+        11..=14 => Some(BlockType::OnOffSwitch),  // MapBlock_SwitchToggle (Red/Green/Yellow/Blue)
+        15..=18 => Some(BlockType::OnOffBlock),   // MapBlock_SwitchBlock (Red/Green/Yellow/Blue)
+        19 => Some(BlockType::ViewBlock),         // MapBlock_View
+        20 => Some(BlockType::ThrowBlock),        // MapBlock_BrickRed
+        21..=23 => Some(BlockType::NoteBlock),    // Note variants
+        24 => Some(BlockType::ThrowBlock),        // MapBlock_BrickGray
+        25..=34 => Some(BlockType::WeaponBreakable), // MapBlock_WpnBreak variants
+        _ => None,
+    }
+}
+
+/// Spawns block entities from the map's object_data array.
+fn spawn_blocks_from_object_data(commands: &mut Commands, map_data: &MapData) {
+    let mut count = 0u32;
+    for (col, column) in map_data.object_data.iter().enumerate() {
+        for (row, obj_block) in column.iter().enumerate() {
+            if obj_block.block_type <= 0 {
+                continue; // No block at this tile
+            }
+            if let Some(block_type) = raw_block_to_type(obj_block.block_type) {
+                let entity = crate::objects::blocks::spawn_block(
+                    commands,
+                    block_type,
+                    col as u32,
+                    row as u32,
+                );
+                commands.entity(entity).insert(GameplayEntity);
+
+                // Hidden blocks start invisible
+                if obj_block.hidden {
+                    commands.entity(entity).insert(Visibility::Hidden);
+                }
+
+                count += 1;
+            }
+        }
+    }
+    if count > 0 {
+        info!("Spawned {} blocks from object_data", count);
+    }
+}
+
 // ---------------------------------------------------------------------------
 
 fn spawn_map_items(commands: &mut Commands, map_data: &MapData) {
