@@ -6,7 +6,7 @@ use crate::objects::components::*;
 use crate::physics::collision::aabb_overlap;
 use crate::physics::components::{Collider, CollisionLayer};
 use crate::player::components::{
-    DeathCause, Invincible, Player, PlayerAction, PlayerDeathEvent, Velocity,
+    DeathCause, Invincible, Player, PlayerAction, PlayerDeathEvent, SpawnProtection, Velocity,
 };
 
 // ---------------------------------------------------------------------------
@@ -400,6 +400,7 @@ pub fn hazard_collision_system(
         &Transform,
         &Collider,
         Option<&Invincible>,
+        Option<&SpawnProtection>,
     ), With<Player>>,
     mut contact_events: EventWriter<HazardContactEvent>,
     mut death_events: EventWriter<PlayerDeathEvent>,
@@ -414,10 +415,10 @@ pub fn hazard_collision_system(
             continue;
         }
 
-        for (p_entity, player, mut p_action, _p_vel, p_transform, p_collider, invincible) in
+        for (p_entity, player, mut p_action, _p_vel, p_transform, p_collider, invincible, spawn_prot) in
             player_query.iter_mut()
         {
-            if *p_action == PlayerAction::Dead {
+            if *p_action == PlayerAction::Dead || *p_action == PlayerAction::Spawning {
                 continue;
             }
 
@@ -435,8 +436,8 @@ pub fn hazard_collision_system(
                 player_entity: p_entity,
             });
 
-            if invincible.is_some() {
-                // Invincible players survive hazard contact
+            if invincible.is_some() || spawn_prot.is_some() {
+                // Invincible or spawn-protected players survive hazard contact
                 continue;
             }
 

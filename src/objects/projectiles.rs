@@ -9,7 +9,7 @@ use crate::physics::collision::aabb_overlap;
 use crate::physics::components::{Collider, CollisionLayer};
 use crate::player::components::{
     DeathCause, Facing, Invincible, Player, PlayerAction, PlayerDeathEvent, PlayerInput,
-    PowerupState, Velocity,
+    PowerupState, SpawnProtection, Velocity,
 };
 
 // ---------------------------------------------------------------------------
@@ -268,8 +268,10 @@ pub fn fire_projectile_system(
 /// Floor/wall collision is handled by `object_map_collision` in the physics
 /// plugin. This system applies gravity, velocity, and type-specific behaviors.
 pub fn projectile_movement_system(
+    mut commands: Commands,
     _time: Res<Time>,
     mut query: Query<(
+        Entity,
         &Projectile,
         &mut ObjectVelocity,
         &mut Transform,
@@ -278,7 +280,7 @@ pub fn projectile_movement_system(
     )>,
     owner_query: Query<&Transform, (With<Player>, Without<Projectile>)>,
 ) {
-    for (proj, mut vel, mut transform, grounded, boomerang) in query.iter_mut() {
+    for (entity, proj, mut vel, mut transform, grounded, boomerang) in query.iter_mut() {
         match proj.projectile_type {
             ProjectileType::Fireball | ProjectileType::IceBall => {
                 // Gravity (negative = downward in Bevy Y-up)
@@ -325,10 +327,9 @@ pub fn projectile_movement_system(
                             vel.x = (diff_x / dist) * proj.speed * 1.5;
                             vel.y = (diff_y / dist) * proj.speed * 1.5;
 
-                            // Despawn if close to owner
+                            // Despawn when returning to owner
                             if dist < TILE_SIZE {
-                                vel.x = 0.0;
-                                vel.y = 0.0;
+                                commands.entity(entity).despawn_recursive();
                             }
                         }
                     }
@@ -400,6 +401,7 @@ pub fn projectile_collision_system(
         &Transform,
         &Collider,
         Option<&Invincible>,
+        Option<&SpawnProtection>,
     )>,
     mut enemy_query: Query<(
         Entity,
@@ -418,7 +420,7 @@ pub fn projectile_collision_system(
         }
 
         // Check vs players
-        for (p_entity, player, _p_vel, mut p_action, p_transform, p_collider, invincible) in
+        for (p_entity, player, _p_vel, mut p_action, p_transform, p_collider, invincible, spawn_prot) in
             player_query.iter_mut()
         {
             // Don't hit the owner or teammates
@@ -428,7 +430,7 @@ pub fn projectile_collision_system(
             if player.team == proj.owner_team {
                 continue;
             }
-            if *p_action == PlayerAction::Dead {
+            if *p_action == PlayerAction::Dead || *p_action == PlayerAction::Spawning {
                 continue;
             }
 
@@ -447,8 +449,8 @@ pub fn projectile_collision_system(
                 projectile_owner: proj.owner,
             });
 
-            if invincible.is_some() {
-                // Invincible player destroys the projectile
+            if invincible.is_some() || spawn_prot.is_some() {
+                // Invincible or spawn-protected player destroys the projectile
                 commands.entity(proj_entity).despawn_recursive();
                 break;
             }

@@ -7,7 +7,7 @@ use crate::physics::collision::aabb_overlap;
 use crate::map::GameplayEntity;
 use crate::physics::components::{Collider, CollisionLayer, GravityAffected};
 use crate::player::components::{
-    DeathCause, Invincible, Player, PlayerAction, PlayerDeathEvent, Velocity,
+    DeathCause, Invincible, Player, PlayerAction, PlayerDeathEvent, SpawnProtection, Velocity,
 };
 
 // ---------------------------------------------------------------------------
@@ -267,14 +267,15 @@ pub fn enemy_stomp_system(
         &Collider,
         &PlayerAction,
         Option<&Invincible>,
+        Option<&SpawnProtection>,
     )>,
     mut death_events: EventWriter<EnemyDeathEvent>,
     mut player_death_events: EventWriter<PlayerDeathEvent>,
 ) {
-    for (p_entity, player, mut p_vel, p_transform, p_collider, p_action, invincible) in
+    for (p_entity, player, mut p_vel, p_transform, p_collider, p_action, invincible, spawn_prot) in
         player_query.iter_mut()
     {
-        if *p_action == PlayerAction::Dead {
+        if *p_action == PlayerAction::Dead || *p_action == PlayerAction::Spawning {
             continue;
         }
 
@@ -328,7 +329,10 @@ pub fn enemy_stomp_system(
             }
 
             if !enemy.stompable {
-                // Spiny and similar -- hurt the player instead
+                // Spiny and similar -- hurt the player unless spawn-protected
+                if spawn_prot.is_some() {
+                    continue;
+                }
                 commands.entity(p_entity).insert(PlayerAction::Dead);
                 player_death_events.send(PlayerDeathEvent {
                     player_entity: p_entity,
@@ -492,6 +496,7 @@ pub fn enemy_player_touch_system(
         &Transform,
         &Collider,
         Option<&Invincible>,
+        Option<&SpawnProtection>,
     )>,
     _death_events: EventWriter<EnemyDeathEvent>,
     mut player_death_events: EventWriter<PlayerDeathEvent>,
@@ -507,10 +512,10 @@ pub fn enemy_player_touch_system(
             continue;
         }
 
-        for (p_entity, player, p_vel, mut p_action, p_transform, p_collider, invincible) in
+        for (p_entity, player, p_vel, mut p_action, p_transform, p_collider, invincible, spawn_prot) in
             player_query.iter_mut()
         {
-            if *p_action == PlayerAction::Dead {
+            if *p_action == PlayerAction::Dead || *p_action == PlayerAction::Spawning {
                 continue;
             }
 
@@ -535,8 +540,8 @@ pub fn enemy_player_touch_system(
                 continue;
             }
 
-            if invincible.is_some() {
-                // Invincible player kills the enemy (handled in stomp system)
+            if invincible.is_some() || spawn_prot.is_some() {
+                // Invincible or spawn-protected player is immune
                 continue;
             }
 
