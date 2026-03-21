@@ -88,6 +88,9 @@ fn setup_gameplay(
     // Spawn moving platform entities
     spawn_platforms(&mut commands, &map_data, &tileset_mgr, &translation);
 
+    // Spawn map hazards (thwomps, piranha plants, etc.)
+    spawn_map_hazards(&mut commands, &map_data);
+
     // Spawn players based on GameSetupConfig (respects menu player selection)
     spawn_players_from_config(&mut commands, &map_data, &game_setup);
 
@@ -594,6 +597,43 @@ fn update_moving_platforms(
         // Write the Bevy-space position directly to the transform
         xf.translation.x = platform.current_x;
         xf.translation.y = platform.current_y;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Map hazard spawning
+// ---------------------------------------------------------------------------
+
+fn spawn_map_hazards(commands: &mut Commands, map_data: &MapData) {
+    use crate::objects::hazards::{Hazard, HazardType, spawn_hazard};
+
+    for mh in &map_data.map_hazards {
+        let hazard_type = match mh.hazard_type {
+            0 => HazardType::FireBar,
+            1 => HazardType::Thwomp,
+            2 => HazardType::PiranhaPlant,
+            3 => HazardType::BulletCannon,
+            4 => HazardType::Fireball,
+            5 => HazardType::Spikes,
+            _ => continue, // Unknown hazard type, skip
+        };
+
+        let bx = tile_to_bevy_x(mh.tile_x as u32);
+        let by = tile_to_bevy_y(mh.tile_y as u32);
+
+        let hazard = Hazard {
+            hazard_type,
+            active: true,
+            cycle_timer: 0.0,
+            cycle_duration: 3.0,
+        };
+
+        let entity = spawn_hazard(commands, hazard, bx, by);
+        commands.entity(entity).insert(GameplayEntity);
+    }
+
+    if !map_data.map_hazards.is_empty() {
+        info!("Spawned {} map hazards", map_data.map_hazards.len());
     }
 }
 
