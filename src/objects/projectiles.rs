@@ -265,18 +265,20 @@ pub fn fire_projectile_system(
 }
 
 /// Updates projectile positions based on their type-specific movement rules.
+/// Floor/wall collision is handled by `object_map_collision` in the physics
+/// plugin. This system applies gravity, velocity, and type-specific behaviors.
 pub fn projectile_movement_system(
     _time: Res<Time>,
     mut query: Query<(
         &Projectile,
         &mut ObjectVelocity,
         &mut Transform,
-        &mut ObjectGrounded,
+        &ObjectGrounded,
         Option<&mut BoomerangState>,
     )>,
     owner_query: Query<&Transform, (With<Player>, Without<Projectile>)>,
 ) {
-    for (proj, mut vel, mut transform, mut grounded, boomerang) in query.iter_mut() {
+    for (proj, mut vel, mut transform, grounded, boomerang) in query.iter_mut() {
         match proj.projectile_type {
             ProjectileType::Fireball | ProjectileType::IceBall => {
                 // Gravity (negative = downward in Bevy Y-up)
@@ -288,19 +290,18 @@ pub fn projectile_movement_system(
                 transform.translation.x += vel.x;
                 transform.translation.y += vel.y;
 
-                // Floor bounce (Bevy centered coords)
-                let floor_y = -(SCREEN_HEIGHT / 2.0 - 16.0);
-                if transform.translation.y <= floor_y {
-                    transform.translation.y = floor_y;
+                // Bounce when landing (object_map_collision sets grounded + zeros vel.y)
+                if grounded.0 && vel.y == 0.0 {
                     vel.y = FIREBALL_BOUNCE;
-                    grounded.0 = true;
-                } else {
-                    grounded.0 = false;
                 }
             }
             ProjectileType::Hammer => {
-                // Gravity applied by GravityAffected component
-                // Just apply velocity to transform
+                // Hammer arcs: apply gravity manually (GravityAffected doesn't
+                // work on ObjectVelocity)
+                vel.y -= GRAVITY;
+                if vel.y < -MAX_FALL_SPEED {
+                    vel.y = -MAX_FALL_SPEED;
+                }
                 transform.translation.x += vel.x;
                 transform.translation.y += vel.y;
             }
@@ -326,7 +327,6 @@ pub fn projectile_movement_system(
 
                             // Despawn if close to owner
                             if dist < TILE_SIZE {
-                                // Will be cleaned up by lifetime system
                                 vel.x = 0.0;
                                 vel.y = 0.0;
                             }
@@ -341,30 +341,28 @@ pub fn projectile_movement_system(
                 }
             }
             ProjectileType::Bomb => {
-                // Gravity applied by GravityAffected component
+                // Apply gravity
+                vel.y -= GRAVITY;
+                if vel.y < -MAX_FALL_SPEED {
+                    vel.y = -MAX_FALL_SPEED;
+                }
                 transform.translation.x += vel.x;
                 transform.translation.y += vel.y;
 
-                // Floor collision -- bomb stops on ground (Bevy centered coords)
-                let floor_y = -(SCREEN_HEIGHT / 2.0 - 16.0);
-                if transform.translation.y <= floor_y {
-                    transform.translation.y = floor_y;
-                    vel.x *= 0.8; // Friction
-                    vel.y = 0.0;
-                    grounded.0 = true;
+                // Apply friction when grounded (floor snap by object_map_collision)
+                if grounded.0 {
+                    vel.x *= 0.8;
                 }
             }
             ProjectileType::Shell | ProjectileType::ThrowBlock => {
+                // Gravity for falling shells/blocks
+                vel.y -= GRAVITY;
+                if vel.y < -MAX_FALL_SPEED {
+                    vel.y = -MAX_FALL_SPEED;
+                }
                 transform.translation.x += vel.x;
                 transform.translation.y += vel.y;
-
-                // Floor (Bevy centered coords)
-                let floor_y = -(SCREEN_HEIGHT / 2.0 - 16.0);
-                if transform.translation.y <= floor_y {
-                    transform.translation.y = floor_y;
-                    vel.y = 0.0;
-                    grounded.0 = true;
-                }
+                // Floor collision handled by object_map_collision
             }
             _ => {
                 transform.translation.x += vel.x;
@@ -543,10 +541,9 @@ pub fn projectile_bounce_system(
         &mut Projectile,
         &ObjectVelocity,
         &ObjectGrounded,
-        &Transform,
     )>,
 ) {
-    for (entity, mut proj, _vel, grounded, transform) in query.iter_mut() {
+    for (entity, mut proj, _vel, grounded) in query.iter_mut() {
         match proj.projectile_type {
             ProjectileType::Fireball | ProjectileType::IceBall => {
                 // Count bounces when hitting ground
@@ -556,13 +553,7 @@ pub fn projectile_bounce_system(
                 if proj.bounces_remaining == 0 && grounded.0 {
                     commands.entity(entity).despawn_recursive();
                 }
-                // Despawn on wall hit (centered coords)
-                let left_wall = -(SCREEN_WIDTH / 2.0) + 1.0;
-                let right_wall = SCREEN_WIDTH / 2.0 - 1.0;
-                if transform.translation.x <= left_wall || transform.translation.x >= right_wall
-                {
-                    commands.entity(entity).despawn_recursive();
-                }
+                // Wall bounce handled by object_map_collision (reverses velocity)
             }
             _ => {}
         }

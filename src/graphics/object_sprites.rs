@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::graphics::sprites::SpriteSheets;
 use crate::objects::blocks::BlockType;
-use crate::objects::enemies::{Enemy, EnemyType};
+use crate::objects::enemies::{Enemy, EnemyFacing, EnemyType};
 use crate::objects::hazards::{Hazard, HazardType};
 use crate::objects::powerups::{PowerupType, SpawnedPowerup};
 use crate::objects::projectiles::{Projectile, ProjectileType};
@@ -319,5 +319,21 @@ pub fn setup_hazard_sprites(
                 ObjectSpriteSetup,
             ));
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Enemy facing → sprite flip
+// ---------------------------------------------------------------------------
+
+/// Syncs enemy facing direction to sprite horizontal flip.
+pub fn sync_enemy_facing(
+    mut query: Query<
+        (&EnemyFacing, &mut Sprite),
+        (With<Enemy>, With<ObjectSpriteSetup>, Changed<EnemyFacing>),
+    >,
+) {
+    for (facing, mut sprite) in query.iter_mut() {
+        sprite.flip_x = *facing == EnemyFacing::Left;
     }
 }

@@ -68,6 +68,8 @@ impl Plugin for GraphicsPlugin {
                 player_sprites::sync_player_sprite_action,
                 // Player-specific sprite facing flip
                 player_sprites::sync_player_facing,
+                // Enemy facing direction → sprite flip
+                object_sprites::sync_enemy_facing,
                 // Visual effects on players
                 player_sprites::apply_team_tint,
                 player_sprites::star_power_visual_system,
