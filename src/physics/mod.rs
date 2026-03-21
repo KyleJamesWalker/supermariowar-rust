@@ -18,13 +18,13 @@ impl Plugin for PhysicsPlugin {
             .add_systems(
                 Update,
                 (
-                    // Gravity → apply velocity → map collision → object collision → warps → platforms → entity collision
+                    // Platforms first (so rider velocity includes platform delta) → gravity → velocity → collisions → warps
+                    systems::moving_platform_system,
                     systems::apply_gravity,
                     systems::apply_player_velocity,
                     systems::map_collision,
                     systems::object_map_collision,
                     systems::warp_zone_detection,
-                    systems::moving_platform_system,
                     systems::entity_collision_detection,
                 )
                     .chain()

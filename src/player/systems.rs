@@ -389,8 +389,8 @@ pub fn player_stomp_system(
             if v_a.y < 0.0 {
                 let diff = a_visual_bottom - b_visual_top;
                 if diff >= -STOMP_THRESHOLD_Y && diff <= 4.0 {
-                    // Soft shield blocks stomps
-                    if **shield_b == ShieldState::Soft {
+                    // Any shield blocks stomps
+                    if **shield_b != ShieldState::None {
                         continue;
                     }
                     stomp_events.send(PlayerStompEvent {
@@ -413,8 +413,8 @@ pub fn player_stomp_system(
             if v_b.y < 0.0 {
                 let diff = b_visual_bottom - a_visual_top;
                 if diff >= -STOMP_THRESHOLD_Y && diff <= 4.0 {
-                    // Soft shield blocks stomps
-                    if **shield_a == ShieldState::Soft {
+                    // Any shield blocks stomps
+                    if **shield_a != ShieldState::None {
                         continue;
                     }
                     stomp_events.send(PlayerStompEvent {
@@ -610,8 +610,8 @@ pub fn attack_damage_system(
             if tgt_inv.is_some() || tgt_sp.is_some() {
                 continue;
             }
-            // Soft shield blocks cape/tail attacks
-            if *tgt_shield == ShieldState::Soft {
+            // Any shield blocks cape/tail attacks
+            if *tgt_shield != ShieldState::None {
                 continue;
             }
             // Skip same team
