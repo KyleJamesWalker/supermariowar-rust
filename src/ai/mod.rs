@@ -4,6 +4,7 @@ pub mod systems;
 use bevy::prelude::*;
 
 use crate::core::game_state::{GameState, GameplayState};
+use crate::core::GameSystemSet;
 
 pub struct AiPlugin;
 
@@ -12,8 +13,9 @@ impl Plugin for AiPlugin {
         // AI systems run during gameplay in a fixed order:
         //   perception -> memory -> mode_awareness -> goal_selection -> navigation -> apply_intent
         //
-        // They are scheduled to run *before* the player input system so that
-        // `PlayerInput` is populated before the movement systems consume it.
+        // They are scheduled in GameSystemSet::Input and ordered *before* the
+        // human input reader so that `PlayerInput` written by `ai_apply_intent`
+        // is not overwritten by `read_player_input` (which skips AI players).
         app.add_systems(
             Update,
             (
@@ -26,6 +28,8 @@ impl Plugin for AiPlugin {
                 systems::ai_apply_intent,
             )
                 .chain()
+                .in_set(GameSystemSet::Input)
+                .before(crate::player::input::read_player_input)
                 .run_if(in_state(GameState::Gameplay))
                 .run_if(in_state(GameplayState::Playing)),
         );

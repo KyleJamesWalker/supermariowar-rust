@@ -27,7 +27,7 @@ impl Plugin for MenuPlugin {
                 OnEnter(GameState::Menu),
                 (reset_submenu_to_main, main_menu::setup_main_menu).chain(),
             )
-            .add_systems(OnExit(GameState::Menu), cleanup_all_menu_ui);
+            .add_systems(OnExit(GameState::Menu), (cleanup_all_menu_ui, cleanup_menu_resources));
 
         // Main menu input: only runs when the Main submenu is active
         app.add_systems(
@@ -178,6 +178,14 @@ fn cleanup_all_menu_ui(
     for entity in player_select_query.iter() {
         commands.entity(entity).despawn_recursive();
     }
+}
+
+/// Removes menu-related resources when leaving the Menu state so they don't
+/// leak into other states (e.g. Gameplay).
+fn cleanup_menu_resources(mut commands: Commands) {
+    commands.remove_resource::<MenuSelection>();
+    commands.remove_resource::<GameSettingsSelection>();
+    commands.remove_resource::<PlayerSelectState>();
 }
 
 /// Resets the active submenu to Main when (re-)entering the Menu state.

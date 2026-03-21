@@ -412,6 +412,8 @@ fn read_platform(r: &mut Cursor<&[u8]>, patch: i32) -> io::Result<MovingPlatform
         },
     };
 
+    // Compute initial SMW pixel position, then leave it in SMW space for now.
+    // The spawner (spawn_platforms) converts to Bevy coordinates.
     let (cx, cy) = match &path {
         PlatformPath::Straight { start_x, start_y, .. } => (*start_x, *start_y),
         PlatformPath::Continuous { start_x, start_y, .. } => (*start_x, *start_y),
@@ -430,6 +432,8 @@ fn read_platform(r: &mut Cursor<&[u8]>, patch: i32) -> io::Result<MovingPlatform
         current_y: cy,
         vel_x: 0.0,
         vel_y: 0.0,
+        angle: 0.0,
+        direction: 1.0,
     })
 }
 

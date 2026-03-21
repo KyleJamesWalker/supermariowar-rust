@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy::input::gamepad::Gamepad;
 
 use super::components::{PauseEvent, Player, PlayerInput};
+use crate::ai::components::AiControlled;
 
 /// Keyboard mapping for a single player.
 pub struct KeyboardMapping {
@@ -87,7 +88,7 @@ pub fn read_player_input(
     mappings: Res<InputMappings>,
     gamepad_assignments: Res<GamepadAssignments>,
     gamepad_query: Query<&Gamepad>,
-    mut query: Query<(&Player, &mut PlayerInput)>,
+    mut query: Query<(&Player, &mut PlayerInput), Without<AiControlled>>,
     mut pause_events: EventWriter<PauseEvent>,
 ) {
     for (player, mut input) in query.iter_mut() {

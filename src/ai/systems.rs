@@ -725,6 +725,11 @@ pub fn ai_navigation(
                         &map_data,
                         true,
                     );
+                } else {
+                    // Target entity despawned -- stop and fall back to patrol
+                    intent.move_direction = 0.0;
+                    intent.want_jump = false;
+                    intent.current_goal = AiGoal::Patrol;
                 }
             }
             AiGoal::CollectItem(_)
@@ -744,6 +749,11 @@ pub fn ai_navigation(
                         &map_data,
                         false,
                     );
+                } else {
+                    // Target entity despawned -- stop and fall back to patrol
+                    intent.move_direction = 0.0;
+                    intent.want_jump = false;
+                    intent.current_goal = AiGoal::Patrol;
                 }
             }
         }

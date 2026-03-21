@@ -235,6 +235,16 @@ fn spawn_tile_entities(
 // Platform entity spawning
 // ---------------------------------------------------------------------------
 
+/// Convert SMW pixel X (0..SCREEN_WIDTH, left-origin) to Bevy X (centered).
+fn smw_to_bevy_x(smw_x: f32) -> f32 {
+    smw_x - SCREEN_WIDTH / 2.0
+}
+
+/// Convert SMW pixel Y (0..SCREEN_HEIGHT, top-origin, Y-down) to Bevy Y (centered, Y-up).
+fn smw_to_bevy_y(smw_y: f32) -> f32 {
+    SCREEN_HEIGHT / 2.0 - smw_y
+}
+
 fn spawn_platforms(
     commands: &mut Commands,
     md: &MapData,
@@ -278,12 +288,53 @@ fn spawn_platforms(
         let collider_w = platform.tile_width as f32 * TILE_SIZE;
         let collider_h = platform.tile_height as f32 * TILE_SIZE;
 
+        // Convert platform data from SMW pixel space to Bevy coordinates
+        let mut bevy_platform = platform.clone();
+
+        // Convert current position to Bevy space
+        bevy_platform.current_x = smw_to_bevy_x(platform.current_x);
+        bevy_platform.current_y = smw_to_bevy_y(platform.current_y);
+
+        // Convert path coordinates to Bevy space
+        bevy_platform.path = match &platform.path {
+            PlatformPath::Straight { start_x, start_y, end_x, end_y, speed } => {
+                PlatformPath::Straight {
+                    start_x: smw_to_bevy_x(*start_x),
+                    start_y: smw_to_bevy_y(*start_y),
+                    end_x: smw_to_bevy_x(*end_x),
+                    end_y: smw_to_bevy_y(*end_y),
+                    speed: *speed,
+                }
+            }
+            PlatformPath::Continuous { start_x, start_y, angle, speed } => {
+                PlatformPath::Continuous {
+                    start_x: smw_to_bevy_x(*start_x),
+                    start_y: smw_to_bevy_y(*start_y),
+                    angle: *angle,
+                    speed: *speed,
+                }
+            }
+            PlatformPath::Ellipse { radius_x, radius_y, center_x, center_y, start_angle, speed } => {
+                PlatformPath::Ellipse {
+                    radius_x: *radius_x,
+                    radius_y: *radius_y,
+                    center_x: smw_to_bevy_x(*center_x),
+                    center_y: smw_to_bevy_y(*center_y),
+                    start_angle: *start_angle,
+                    speed: *speed,
+                }
+            }
+        };
+
+        let bx = bevy_platform.current_x;
+        let by = bevy_platform.current_y;
+
         // Spawn a parent entity for the platform with a Collider
         let platform_entity = commands
             .spawn((
-                Transform::from_xyz(platform.current_x, platform.current_y, base_z),
+                Transform::from_xyz(bx, by, base_z),
                 Visibility::default(),
-                platform.clone(),
+                bevy_platform,
                 Collider::new(collider_w, collider_h),
                 crate::physics::components::CollisionLayer::Platform,
                 GameplayEntity,
@@ -463,71 +514,86 @@ fn update_moving_platforms(
     mut query: Query<(&mut MovingPlatform, &mut Transform)>,
 ) {
     let dt = time.delta_secs();
+    let half_w = SCREEN_WIDTH / 2.0;
+    let half_h = SCREEN_HEIGHT / 2.0;
 
     for (mut platform, mut xf) in &mut query {
+        // Save old position to derive velocity later
+        let old_x = platform.current_x;
+        let old_y = platform.current_y;
+
         // Clone the path to avoid borrow-checker conflict when mutating
         // platform fields while reading path parameters.
         let path = platform.path.clone();
 
         match &path {
             PlatformPath::Straight { start_x, start_y, end_x, end_y, speed } => {
+                // All coordinates are already in Bevy space (converted at spawn).
                 let dx = end_x - start_x;
                 let dy = end_y - start_y;
                 let len = (dx * dx + dy * dy).sqrt();
                 if len > 0.0 {
                     let nx = dx / len;
                     let ny = dy / len;
-                    platform.current_x += nx * speed * dt * 60.0;
-                    platform.current_y += ny * speed * dt * 60.0;
 
-                    // Bounce at endpoints
-                    let progress = if dx.abs() > 0.001 {
+                    // Move along the direction, scaled by the direction flag
+                    platform.current_x += nx * speed * platform.direction * dt * 60.0;
+                    platform.current_y += ny * speed * platform.direction * dt * 60.0;
+
+                    // Compute progress along the segment (0.0 = start, 1.0 = end)
+                    let progress = if dx.abs() > dy.abs() {
                         (platform.current_x - start_x) / dx
                     } else {
                         (platform.current_y - start_y) / dy
                     };
-                    if progress >= 1.0 || progress <= 0.0 {
-                        platform.vel_x = -platform.vel_x;
-                        platform.current_x = platform.current_x.clamp(
-                            start_x.min(*end_x),
-                            start_x.max(*end_x),
-                        );
-                        platform.current_y = platform.current_y.clamp(
-                            start_y.min(*end_y),
-                            start_y.max(*end_y),
-                        );
+
+                    // Bounce at endpoints: reverse direction and clamp
+                    if progress >= 1.0 {
+                        platform.direction = -1.0;
+                        platform.current_x = *end_x;
+                        platform.current_y = *end_y;
+                    } else if progress <= 0.0 {
+                        platform.direction = 1.0;
+                        platform.current_x = *start_x;
+                        platform.current_y = *start_y;
                     }
                 }
             }
             PlatformPath::Continuous { angle, speed, .. } => {
+                // Angle is in SMW space (Y-down). In Bevy Y-up, negate the Y component.
                 platform.current_x += angle.cos() * speed * dt * 60.0;
-                platform.current_y += angle.sin() * speed * dt * 60.0;
-                // Wrap around screen
-                if platform.current_x > SCREEN_WIDTH {
+                platform.current_y -= angle.sin() * speed * dt * 60.0;
+
+                // Wrap around screen (Bevy coords: -half_w..+half_w, -half_h..+half_h)
+                if platform.current_x > half_w {
                     platform.current_x -= SCREEN_WIDTH;
-                } else if platform.current_x < 0.0 {
+                } else if platform.current_x < -half_w {
                     platform.current_x += SCREEN_WIDTH;
                 }
-                if platform.current_y > SCREEN_HEIGHT {
+                if platform.current_y > half_h {
                     platform.current_y -= SCREEN_HEIGHT;
-                } else if platform.current_y < 0.0 {
+                } else if platform.current_y < -half_h {
                     platform.current_y += SCREEN_HEIGHT;
                 }
             }
             PlatformPath::Ellipse { radius_x, radius_y, center_x, center_y, start_angle, speed } => {
-                // Accumulate angle in vel_x as scratch storage
-                platform.vel_x += speed * dt * 60.0;
-                let a = start_angle + platform.vel_x;
+                // Accumulate angle in the dedicated field
+                platform.angle += speed * dt * 60.0;
+                let a = start_angle + platform.angle;
+                // center_x/center_y are in Bevy space (converted at spawn).
+                // radius_y is negated because SMW Y-down ellipse motion maps to Bevy Y-up.
                 platform.current_x = center_x + radius_x * a.cos();
-                platform.current_y = center_y + radius_y * a.sin();
+                platform.current_y = center_y - radius_y * a.sin();
             }
         }
 
-        // Convert original pixel coords to Bevy coords for the transform
-        let bx = platform.current_x - SCREEN_WIDTH / 2.0;
-        let by = SCREEN_HEIGHT / 2.0 - platform.current_y;
-        xf.translation.x = bx;
-        xf.translation.y = by;
+        // Derive velocity from position delta (Bevy-space units per frame)
+        platform.vel_x = platform.current_x - old_x;
+        platform.vel_y = platform.current_y - old_y;
+
+        // Write the Bevy-space position directly to the transform
+        xf.translation.x = platform.current_x;
+        xf.translation.y = platform.current_y;
     }
 }
 

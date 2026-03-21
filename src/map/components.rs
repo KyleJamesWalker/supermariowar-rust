@@ -246,12 +246,16 @@ pub struct MovingPlatform {
     pub tiles: Vec<PlatformTile>,
     pub draw_layer: i32,
     pub path: PlatformPath,
-    /// Current position offset from path origin.
+    /// Current position in Bevy coordinates (centered, Y-up).
     pub current_x: f32,
     pub current_y: f32,
-    /// Current velocity.
+    /// Frame-to-frame velocity in Bevy coordinates (derived from position delta).
     pub vel_x: f32,
     pub vel_y: f32,
+    /// Accumulated angle for ellipse paths (radians).
+    pub angle: f32,
+    /// Direction multiplier for straight-segment paths (+1 or -1).
+    pub direction: f32,
 }
 
 // ---------------------------------------------------------------------------
