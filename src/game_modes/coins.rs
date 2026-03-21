@@ -145,6 +145,25 @@ pub fn coins_drop_on_kill(
     }
 }
 
+/// Applies a -1 coin penalty when a player dies (matches C++ behavior).
+pub fn coin_death_penalty(
+    config: Res<GameModeConfig>,
+    mut state: ResMut<CoinModeState>,
+    mut scoreboard: ResMut<ScoreBoard>,
+    mut death_events: EventReader<crate::player::components::PlayerDeathEvent>,
+) {
+    if config.mode_type != GameModeType::CoinCollection {
+        return;
+    }
+
+    for event in death_events.read() {
+        if event.player_index < MAX_PLAYERS && state.coins[event.player_index] > 0 {
+            state.coins[event.player_index] -= 1;
+            scoreboard.score[event.player_index] -= 1;
+        }
+    }
+}
+
 /// Also handle legacy ScoreEvent for backward compat.
 pub fn handle_coin_score(
     config: Res<GameModeConfig>,

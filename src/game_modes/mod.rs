@@ -85,6 +85,7 @@ impl Plugin for GameModesPlugin {
                 coins::coin_collect_system,
                 coins::handle_coin_collect,
                 coins::coins_drop_on_kill,
+                coins::coin_death_penalty,
                 coins::handle_coin_score,
                 coins::check_coin_win_condition,
             )

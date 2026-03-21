@@ -126,6 +126,55 @@ impl CollisionType {
     pub fn is_solid_on_top(self) -> bool {
         matches!(self, Self::SolidOnTop | Self::IceOnTop)
     }
+
+    /// Returns true if this tile kills when the player touches from the top
+    /// (player feet on tile top edge).
+    pub fn kills_on_top(self) -> bool {
+        matches!(
+            self,
+            Self::Death | Self::DeathOnTop | Self::SuperDeath | Self::SuperDeathTop | Self::PlayerDeath
+        )
+    }
+
+    /// Returns true if this tile kills when the player touches from the bottom
+    /// (player head hits tile bottom edge).
+    pub fn kills_on_bottom(self) -> bool {
+        matches!(
+            self,
+            Self::Death
+                | Self::DeathOnBottom
+                | Self::IceDeathOnBottom
+                | Self::SuperDeath
+                | Self::SuperDeathBottom
+                | Self::PlayerDeath
+        )
+    }
+
+    /// Returns true if this tile kills when the player touches from the left.
+    pub fn kills_on_left(self) -> bool {
+        matches!(
+            self,
+            Self::Death
+                | Self::DeathOnLeft
+                | Self::IceDeathOnLeft
+                | Self::SuperDeath
+                | Self::SuperDeathLeft
+                | Self::PlayerDeath
+        )
+    }
+
+    /// Returns true if this tile kills when the player touches from the right.
+    pub fn kills_on_right(self) -> bool {
+        matches!(
+            self,
+            Self::Death
+                | Self::DeathOnRight
+                | Self::IceDeathOnRight
+                | Self::SuperDeath
+                | Self::SuperDeathRight
+                | Self::PlayerDeath
+        )
+    }
 }
 
 // ---------------------------------------------------------------------------

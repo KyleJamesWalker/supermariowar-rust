@@ -385,16 +385,52 @@ fn check_death_tiles(
     px: f32,
     py: f32,
 ) -> bool {
+    // In SMW coords (Y-down), determine which tiles the player overlaps
     let left_tile = ((px / TILE_SIZE).floor() as i32).max(0) as usize;
     let right_tile = (((px + PLAYER_WIDTH) / TILE_SIZE).floor() as i32).max(0) as usize;
     let top_tile = ((py / TILE_SIZE).floor() as i32).max(0) as usize;
     let bottom_tile = (((py + PLAYER_HEIGHT) / TILE_SIZE).floor() as i32).max(0) as usize;
 
+    let player_center_x = px + PLAYER_WIDTH * 0.5;
+    let player_center_y = py + PLAYER_HEIGHT * 0.5;
+
     for tx in left_tile..=(right_tile.min(num_cols.saturating_sub(1))) {
         for ty in top_tile..=(bottom_tile.min(num_rows.saturating_sub(1))) {
             let tile = get_collision(collision_map, num_cols, num_rows, tx, ty);
-            if tile.is_death() {
+            if !tile.is_death() {
+                continue;
+            }
+
+            // For omnidirectional death (Death, SuperDeath, PlayerDeath), always kill
+            if matches!(tile,
+                CollisionType::Death | CollisionType::SuperDeath | CollisionType::PlayerDeath
+            ) {
                 return true;
+            }
+
+            // For directional death tiles, check which side the player approaches from.
+            // Compare player center to tile center to determine approach direction.
+            let tile_center_x = tx as f32 * TILE_SIZE + TILE_SIZE * 0.5;
+            let tile_center_y = ty as f32 * TILE_SIZE + TILE_SIZE * 0.5;
+
+            let dx = player_center_x - tile_center_x;
+            let dy = player_center_y - tile_center_y;
+
+            // Determine dominant approach direction
+            if dx.abs() > dy.abs() {
+                // Horizontal approach
+                if dx > 0.0 && tile.kills_on_right() {
+                    return true; // Player approaching from right (player is to the right)
+                } else if dx < 0.0 && tile.kills_on_left() {
+                    return true; // Player approaching from left
+                }
+            } else {
+                // Vertical approach (SMW Y-down: dy > 0 means player below tile)
+                if dy > 0.0 && tile.kills_on_bottom() {
+                    return true; // Player below tile, hitting bottom
+                } else if dy < 0.0 && tile.kills_on_top() {
+                    return true; // Player above tile, hitting top
+                }
             }
         }
     }
