@@ -7,8 +7,9 @@ use super::components::*;
 
 // --------------------------------------------------------------------------
 // Death bounce velocity (player bounces upward then falls off screen)
+// C++ original uses VELTURBOJUMP = 10.2
 // --------------------------------------------------------------------------
-const DEATH_BOUNCE_VEL_Y: f32 = 9.0;
+const DEATH_BOUNCE_VEL_Y: f32 = 10.2;
 
 // Spawn protection duration in seconds
 const SPAWN_PROTECTION_SECS: f32 = 3.0;

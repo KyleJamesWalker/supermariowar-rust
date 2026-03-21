@@ -142,6 +142,14 @@ impl Default for ShellSpeed {
 
 /// Spawns an enemy entity at the given world position.
 pub fn spawn_enemy(commands: &mut Commands, enemy: Enemy, x: f32, y: f32) -> Entity {
+    // Flying enemies don't have gravity
+    let gravity = match enemy.enemy_type {
+        EnemyType::Paragoomba | EnemyType::CheepCheep | EnemyType::BulletBill | EnemyType::Podoboo => {
+            GravityAffected { multiplier: 0.0 }
+        }
+        _ => GravityAffected::default(),
+    };
+
     let entity = commands
         .spawn((
             GameObject {
@@ -154,7 +162,7 @@ pub fn spawn_enemy(commands: &mut Commands, enemy: Enemy, x: f32, y: f32) -> Ent
             ObjectGrounded(false),
             Collider::new(TILE_SIZE, TILE_SIZE),
             CollisionLayer::Enemy,
-            GravityAffected::default(),
+            gravity,
             InteractsWithMap,
             DespawnOffScreen,
             DamageOnContact {
@@ -248,12 +256,13 @@ pub fn enemy_movement_system(
 }
 
 /// Applies gravity to enemies, making them fall when not on solid ground.
+/// Respects GravityAffected multiplier (flying enemies can use 0.0).
 pub fn enemy_gravity_system(
-    mut query: Query<(&mut ObjectVelocity, &mut Transform), With<Enemy>>,
+    mut query: Query<(&mut ObjectVelocity, &mut Transform, &GravityAffected), With<Enemy>>,
 ) {
-    for (mut vel, mut transform) in query.iter_mut() {
-        // Apply gravity (negative = downward in Bevy Y-up)
-        vel.y -= GRAVITY;
+    for (mut vel, mut transform, gravity) in query.iter_mut() {
+        // Apply gravity scaled by multiplier (negative = downward in Bevy Y-up)
+        vel.y -= GRAVITY * gravity.multiplier;
         if vel.y < -MAX_FALL_SPEED {
             vel.y = -MAX_FALL_SPEED;
         }
