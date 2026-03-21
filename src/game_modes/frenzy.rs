@@ -86,8 +86,8 @@ pub fn frenzy_spawn_powerups(
     state.spawn_timer.tick(time.delta());
 
     if state.spawn_timer.just_finished() {
-        let x = (rand::random::<f32>() * (SCREEN_WIDTH - TILE_SIZE * 2.0)) + TILE_SIZE;
-        let y = (rand::random::<f32>() * (SCREEN_HEIGHT - TILE_SIZE * 4.0)) + TILE_SIZE;
+        let x = rand::random::<f32>() * (SCREEN_WIDTH - TILE_SIZE * 2.0) - SCREEN_WIDTH / 2.0 + TILE_SIZE;
+        let y = SCREEN_HEIGHT / 2.0 - rand::random::<f32>() * (SCREEN_HEIGHT - TILE_SIZE * 2.0) - TILE_SIZE;
 
         let powerup_type = random_frenzy_powerup();
 
@@ -104,8 +104,8 @@ pub fn frenzy_spawn_powerups(
 
         // In chaos mode, spawn a second powerup per tick
         if state.chaos_mode {
-            let x2 = (rand::random::<f32>() * (SCREEN_WIDTH - TILE_SIZE * 2.0)) + TILE_SIZE;
-            let y2 = (rand::random::<f32>() * (SCREEN_HEIGHT - TILE_SIZE * 4.0)) + TILE_SIZE;
+            let x2 = rand::random::<f32>() * (SCREEN_WIDTH - TILE_SIZE * 2.0) - SCREEN_WIDTH / 2.0 + TILE_SIZE;
+            let y2 = SCREEN_HEIGHT / 2.0 - rand::random::<f32>() * (SCREEN_HEIGHT - TILE_SIZE * 2.0) - TILE_SIZE;
             let powerup_type2 = random_frenzy_powerup();
 
             commands.spawn((

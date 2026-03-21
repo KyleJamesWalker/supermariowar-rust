@@ -338,36 +338,42 @@ pub fn player_stomp_system(
             let b_visual_top = b_visual_bottom + col_b.height;
 
             // A stomps B: A is falling (vel.y < 0) and A's bottom is near B's top
-            if v_a.y < 0.0 && (a_visual_bottom - b_visual_top).abs() < STOMP_THRESHOLD_Y {
-                stomp_events.send(PlayerStompEvent {
-                    stomper_entity: *e_a,
-                    stomped_entity: *e_b,
-                    stomper_index: p_a.index,
-                    stomped_index: p_b.index,
-                });
-                death_events.send(PlayerDeathEvent {
-                    player_entity: *e_b,
-                    player_index: p_b.index,
-                    killer_index: Some(p_a.index),
-                    cause: DeathCause::Killed { by: p_a.index },
-                });
-                continue;
+            if v_a.y < 0.0 {
+                let diff = a_visual_bottom - b_visual_top;
+                if diff >= -STOMP_THRESHOLD_Y && diff <= 4.0 {
+                    stomp_events.send(PlayerStompEvent {
+                        stomper_entity: *e_a,
+                        stomped_entity: *e_b,
+                        stomper_index: p_a.index,
+                        stomped_index: p_b.index,
+                    });
+                    death_events.send(PlayerDeathEvent {
+                        player_entity: *e_b,
+                        player_index: p_b.index,
+                        killer_index: Some(p_a.index),
+                        cause: DeathCause::Killed { by: p_a.index },
+                    });
+                    continue;
+                }
             }
 
             // B stomps A: B is falling (vel.y < 0) and B's bottom is near A's top
-            if v_b.y < 0.0 && (b_visual_bottom - a_visual_top).abs() < STOMP_THRESHOLD_Y {
-                stomp_events.send(PlayerStompEvent {
-                    stomper_entity: *e_b,
-                    stomped_entity: *e_a,
-                    stomper_index: p_b.index,
-                    stomped_index: p_a.index,
-                });
-                death_events.send(PlayerDeathEvent {
-                    player_entity: *e_a,
-                    player_index: p_a.index,
-                    killer_index: Some(p_b.index),
-                    cause: DeathCause::Killed { by: p_b.index },
-                });
+            if v_b.y < 0.0 {
+                let diff = b_visual_bottom - a_visual_top;
+                if diff >= -STOMP_THRESHOLD_Y && diff <= 4.0 {
+                    stomp_events.send(PlayerStompEvent {
+                        stomper_entity: *e_b,
+                        stomped_entity: *e_a,
+                        stomper_index: p_b.index,
+                        stomped_index: p_a.index,
+                    });
+                    death_events.send(PlayerDeathEvent {
+                        player_entity: *e_a,
+                        player_index: p_a.index,
+                        killer_index: Some(p_b.index),
+                        cause: DeathCause::Killed { by: p_b.index },
+                    });
+                }
             }
         }
     }
@@ -666,12 +672,13 @@ pub fn update_stats_on_death(
     mut death_events: EventReader<PlayerDeathEvent>,
 ) {
     for event in death_events.read() {
+        if event.killer_index.is_some() {
+            continue; // Stomp deaths are counted in update_stats_on_stomp
+        }
         for (player, mut stats) in query.iter_mut() {
             if player.index == event.player_index {
                 stats.deaths += 1;
-                if event.killer_index.is_none() {
-                    stats.suicides += 1;
-                }
+                stats.suicides += 1;
             }
         }
     }

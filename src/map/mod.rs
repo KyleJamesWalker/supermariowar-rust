@@ -5,9 +5,10 @@ pub mod tileset;
 use bevy::prelude::*;
 use std::path::PathBuf;
 
+use crate::ai::components::{AiControlled, AiIntent, AiMemory, AiPathfinding, AiPerception};
 use crate::core::constants::*;
 use crate::core::game_state::GameState;
-use crate::menu::components::{ControlType, GameSetupConfig};
+use crate::menu::components::{ControlType, CpuDifficulty, GameSetupConfig};
 use crate::player::components::PlayerBundle;
 use crate::physics::components::Collider;
 use components::*;
@@ -203,17 +204,8 @@ fn spawn_platforms(
     for platform in &md.platforms {
         let base_z = platform.draw_layer as f32 * 0.1 + 0.5;
 
-        // Spawn a parent entity for the platform
-        let _platform_entity = commands
-            .spawn((
-                Transform::from_xyz(platform.current_x, platform.current_y, base_z),
-                Visibility::default(),
-                platform.clone(),
-                GameplayEntity,
-            ))
-            .id();
-
-        // Spawn child tile sprites
+        // Pre-collect child tile data so we can spawn them as children
+        let mut child_tiles = Vec::new();
         for cx in 0..platform.tile_width {
             for ry in 0..platform.tile_height {
                 let idx = (cx * platform.tile_height + ry) as usize;
@@ -238,20 +230,42 @@ fn spawn_platforms(
                 let local_x = cx as f32 * TILE_SIZE;
                 let local_y = -(ry as f32 * TILE_SIZE);
 
-                commands.spawn((
+                child_tiles.push((loaded.texture.clone(), loaded.atlas_layout.clone(), atlas_index, local_x, local_y));
+            }
+        }
+
+        // Compute collider size from tile dimensions
+        let collider_w = platform.tile_width as f32 * TILE_SIZE;
+        let collider_h = platform.tile_height as f32 * TILE_SIZE;
+
+        // Spawn a parent entity for the platform with a Collider
+        let platform_entity = commands
+            .spawn((
+                Transform::from_xyz(platform.current_x, platform.current_y, base_z),
+                Visibility::default(),
+                platform.clone(),
+                Collider::new(collider_w, collider_h),
+                crate::physics::components::CollisionLayer::Platform,
+                GameplayEntity,
+            ))
+            .id();
+
+        // Spawn child tile sprites parented to the platform entity
+        commands.entity(platform_entity).with_children(|parent| {
+            for (texture, atlas_layout, atlas_index, local_x, local_y) in child_tiles {
+                parent.spawn((
                     Sprite {
-                        image: loaded.texture.clone(),
+                        image: texture,
                         texture_atlas: Some(TextureAtlas {
-                            layout: loaded.atlas_layout.clone(),
+                            layout: atlas_layout,
                             index: atlas_index as usize,
                         }),
                         ..default()
                     },
                     Transform::from_xyz(local_x, local_y, 0.01),
-                    GameplayEntity,
                 ));
             }
-        }
+        });
     }
 }
 
@@ -280,17 +294,33 @@ fn spawn_players_from_config(commands: &mut Commands, md: &MapData, config: &Gam
         bundle.player.lives = config.lives as i32;
         bundle.skin_index = crate::player::components::PlayerSkinIndex(slot.skin_index);
 
-        commands.spawn((
+        let entity_id = commands.spawn((
             bundle,
             Collider::new(PLAYER_WIDTH, PLAYER_HEIGHT),
             crate::physics::components::CollisionLayer::Player,
             crate::physics::components::GravityAffected::default(),
             GameplayEntity,
-        ));
+        )).id();
+
+        // Add AI components for CPU-controlled players
+        if slot.control_type == ControlType::Cpu {
+            let ai_difficulty = match slot.cpu_difficulty {
+                CpuDifficulty::Easy => crate::ai::components::AiDifficulty::Easy,
+                CpuDifficulty::Medium => crate::ai::components::AiDifficulty::Medium,
+                CpuDifficulty::Hard => crate::ai::components::AiDifficulty::Hard,
+            };
+            commands.entity(entity_id).insert((
+                AiControlled::new(ai_difficulty),
+                AiIntent::default(),
+                AiPerception::default(),
+                AiMemory::default(),
+                AiPathfinding::default(),
+            ));
+        }
 
         info!(
-            "Spawned player {} (team {}) at tile ({}, {}) -> bevy ({:.0}, {:.0})",
-            player_index, slot.team, sx, sy, bx, by
+            "Spawned player {} (team {}, {:?}) at tile ({}, {}) -> bevy ({:.0}, {:.0})",
+            player_index, slot.team, slot.control_type, sx, sy, bx, by
         );
     }
 }

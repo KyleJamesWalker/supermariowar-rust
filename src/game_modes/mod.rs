@@ -14,6 +14,7 @@ use bevy::prelude::*;
 
 use crate::core::constants::MAX_PLAYERS;
 use crate::core::game_state::{GameState, GameplayState, MatchResult};
+use crate::player::components::{DeathCause, PlayerDeathEvent, PlayerStompEvent};
 use traits::*;
 
 // ---------------------------------------------------------------------------
@@ -63,6 +64,15 @@ impl Plugin for GameModesPlugin {
 
         let playing_condition = in_state(GameState::Gameplay)
             .and(in_state(GameplayState::Playing));
+
+        // --- Bridge system: convert death/stomp events into kill events ---
+        // Must run BEFORE any game mode handler so that PlayerKillEvent is
+        // available in the same frame.
+        app.add_systems(
+            PreUpdate,
+            bridge_death_to_kill_events
+                .run_if(playing_condition.clone()),
+        );
 
         // --- Gameplay systems: Group 1 (Classic + Coins) ---
         app.add_systems(
@@ -166,6 +176,52 @@ impl Plugin for GameModesPlugin {
             hud_display_system
                 .run_if(in_state(GameState::Gameplay)),
         );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Bridge: convert PlayerDeathEvent + PlayerStompEvent -> PlayerKillEvent
+// ---------------------------------------------------------------------------
+
+/// Reads `PlayerDeathEvent` and `PlayerStompEvent` each frame and emits
+/// corresponding `PlayerKillEvent`s so that all game modes can react uniformly.
+fn bridge_death_to_kill_events(
+    mut death_events: EventReader<PlayerDeathEvent>,
+    mut stomp_events: EventReader<PlayerStompEvent>,
+    mut kill_events: EventWriter<PlayerKillEvent>,
+) {
+    // Collect stomp events first so we can check if a kill was a stomp.
+    // Each stomp event records (stomper_index, stomped_index).
+    let stomps: Vec<(usize, usize)> = stomp_events
+        .read()
+        .map(|e| (e.stomper_index, e.stomped_index))
+        .collect();
+
+    for event in death_events.read() {
+        let Some(killer) = event.killer_index else {
+            // No killer -- environment death, no PlayerKillEvent needed
+            continue;
+        };
+
+        // Determine the kill method by checking if a matching stomp event exists
+        let is_stomp = stomps
+            .iter()
+            .any(|&(stomper, stomped)| stomper == killer && stomped == event.player_index);
+
+        let method = if is_stomp {
+            KillMethod::Stomp
+        } else {
+            match event.cause {
+                DeathCause::Environment => KillMethod::Environment,
+                _ => KillMethod::Other,
+            }
+        };
+
+        kill_events.send(PlayerKillEvent {
+            killer,
+            victim: event.player_index,
+            method,
+        });
     }
 }
 

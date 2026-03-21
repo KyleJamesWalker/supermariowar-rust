@@ -57,12 +57,9 @@ impl Plugin for GraphicsPlugin {
                 player_sprites::setup_player_sprites,
                 // Player visual overlays
                 player_sprites::spawn_player_overlays,
-                // Animation state sync (reads PlayerAction, updates AnimationController)
-                animation::animation_state_sync,
-                // Sprite facing flip
-                animation::sprite_flip_system,
-                // Player-specific sprite sync
+                // Player-specific sprite sync (reads PlayerAction, updates AnimationController)
                 player_sprites::sync_player_sprite_action,
+                // Player-specific sprite facing flip
                 player_sprites::sync_player_facing,
                 // Visual effects on players
                 player_sprites::apply_team_tint,

@@ -98,14 +98,31 @@ pub fn map_collision(
             continue;
         }
 
-        // Convert Bevy position → SMW pixel space for tile collision.
+        // Convert Bevy position → SMW pixel space using local variables.
         // All collision helpers expect SMW coords (top-left origin, Y-down).
-        transform.translation.x = to_smw_x(transform.translation.x);
-        transform.translation.y = to_smw_y(transform.translation.y);
-        vel.y = -vel.y; // Bevy Y-up → SMW Y-down
+        let mut smw_x = to_smw_x(transform.translation.x);
+        let mut smw_y = to_smw_y(transform.translation.y);
+        let mut smw_vel_y = -vel.y; // Bevy Y-up → SMW Y-down
 
         if !has_collision_map {
-            simple_floor_collision(&mut transform, &mut vel, &mut grounded);
+            // Simple floor collision (inline with local vars)
+            let floor_y = SCREEN_HEIGHT - PLAYER_HEIGHT - PLAYER_HEIGHT_OFFSET;
+            if smw_y >= floor_y {
+                smw_y = floor_y;
+                smw_vel_y = 0.0;
+                grounded.on_ground = true;
+            } else {
+                grounded.on_ground = false;
+            }
+            grounded.on_ice = false;
+
+            // Ceiling
+            if smw_y < 0.0 {
+                smw_y = 0.0;
+                if smw_vel_y < 0.0 {
+                    smw_vel_y = 0.0;
+                }
+            }
         } else {
             let num_cols = map_data.collision_map.len();
             let num_rows = map_data.collision_map[0].len();
@@ -114,9 +131,14 @@ pub fn map_collision(
             grounded.on_ground = false;
             grounded.on_ice = false;
 
+            // Write local SMW position into transform temporarily for collision helpers
+            transform.translation.x = smw_x;
+            transform.translation.y = smw_y;
+            vel.y = smw_vel_y;
+
             // The player's bounding box in SMW pixel coordinates
-            let px = transform.translation.x + PLAYER_WIDTH_OFFSET;
-            let py = transform.translation.y + PLAYER_HEIGHT_OFFSET;
+            let px = smw_x + PLAYER_WIDTH_OFFSET;
+            let py = smw_y + PLAYER_HEIGHT_OFFSET;
 
             // Vertical collision (floors/ceilings)
             check_vertical_collision(
@@ -131,9 +153,13 @@ pub fn map_collision(
                 py,
             );
 
+            // Read back position after vertical correction
+            smw_x = transform.translation.x;
+            smw_y = transform.translation.y;
+
             // Recalculate player position after vertical correction
-            let px = transform.translation.x + PLAYER_WIDTH_OFFSET;
-            let py = transform.translation.y + PLAYER_HEIGHT_OFFSET;
+            let px = smw_x + PLAYER_WIDTH_OFFSET;
+            let py = smw_y + PLAYER_HEIGHT_OFFSET;
 
             // Horizontal collision (walls)
             check_horizontal_collision(
@@ -146,9 +172,14 @@ pub fn map_collision(
                 py,
             );
 
+            // Read back after horizontal correction
+            smw_x = transform.translation.x;
+            smw_y = transform.translation.y;
+            smw_vel_y = vel.y;
+
             // Death tile check
-            let px = transform.translation.x + PLAYER_WIDTH_OFFSET;
-            let py = transform.translation.y + PLAYER_HEIGHT_OFFSET;
+            let px = smw_x + PLAYER_WIDTH_OFFSET;
+            let py = smw_y + PLAYER_HEIGHT_OFFSET;
             if check_death_tiles(&map_data.collision_map, num_cols, num_rows, px, py) {
                 death_events.send(PlayerDeathEvent {
                     player_entity: entity,
@@ -159,18 +190,18 @@ pub fn map_collision(
             }
 
             // Ceiling collision (top of screen, SMW Y=0)
-            if transform.translation.y < 0.0 {
-                transform.translation.y = 0.0;
-                if vel.y < 0.0 {
-                    vel.y = 0.0;
+            if smw_y < 0.0 {
+                smw_y = 0.0;
+                if smw_vel_y < 0.0 {
+                    smw_vel_y = 0.0;
                 }
             }
         }
 
-        // Convert SMW pixel space → Bevy position
-        transform.translation.x = to_bevy_x(transform.translation.x);
-        transform.translation.y = to_bevy_y(transform.translation.y);
-        vel.y = -vel.y; // SMW Y-down → Bevy Y-up
+        // Convert SMW pixel space → Bevy position (write back once)
+        transform.translation.x = to_bevy_x(smw_x);
+        transform.translation.y = to_bevy_y(smw_y);
+        vel.y = -smw_vel_y; // SMW Y-down → Bevy Y-up
     }
 }
 
@@ -244,7 +275,7 @@ fn check_vertical_collision(
                     CollisionType::Solid | CollisionType::Ice => {
                         let tile_top = ty as f32 * TILE_SIZE;
                         if foot_y >= tile_top
-                            && foot_y <= tile_top + vel.y.abs() + 1.0 + TILE_SIZE * 0.5
+                            && foot_y <= tile_top + vel.y.abs() + 1.0
                         {
                             transform.translation.y =
                                 tile_top - PLAYER_HEIGHT - PLAYER_HEIGHT_OFFSET;
