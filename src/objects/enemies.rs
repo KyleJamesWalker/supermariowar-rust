@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::audio::sfx::{play_sfx, SfxId, SfxLibrary, SfxVolume};
 use crate::core::constants::*;
 use crate::objects::components::*;
-use crate::physics::collision::{aabb_overlap, aabb_overlap_wrapped};
+use crate::physics::collision::aabb_overlap_wrapped;
 use crate::map::GameplayEntity;
 use crate::physics::components::{Collider, CollisionLayer, GravityAffected};
 use crate::player::components::{
@@ -463,7 +463,7 @@ pub fn shell_movement_system(
                 continue;
             }
 
-            if aabb_overlap(&shell_pos, &shell_col, &e_transform.translation, e_collider) {
+            if aabb_overlap_wrapped(&shell_pos, &shell_col, &e_transform.translation, e_collider) {
                 play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::Kick);
                 enemy.state = EnemyState::Dead;
                 game_obj.alive = false;

@@ -37,7 +37,7 @@ pub fn handle_stomp_kills(
     }
 
     for event in kill_events.read() {
-        if event.killer >= MAX_PLAYERS {
+        if event.killer >= MAX_PLAYERS || event.victim >= MAX_PLAYERS {
             continue;
         }
 

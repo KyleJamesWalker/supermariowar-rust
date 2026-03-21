@@ -404,7 +404,7 @@ pub fn hazard_collision_system(
     mut commands: Commands,
     sfx: Res<SfxLibrary>,
     sfx_vol: Res<SfxVolume>,
-    hazard_query: Query<(&Hazard, &Collider, &Transform, &GameObject)>,
+    hazard_query: Query<(Entity, &Hazard, &Collider, &Transform, &GameObject)>,
     mut player_query: Query<(
         Entity,
         &Player,
@@ -419,7 +419,7 @@ pub fn hazard_collision_system(
     mut contact_events: EventWriter<HazardContactEvent>,
     mut death_events: EventWriter<PlayerDeathEvent>,
 ) {
-    for (hazard, h_collider, h_transform, game_obj) in hazard_query.iter() {
+    for (h_entity, hazard, h_collider, h_transform, game_obj) in hazard_query.iter() {
         if !game_obj.alive || !hazard.active {
             continue;
         }
@@ -446,7 +446,7 @@ pub fn hazard_collision_system(
             }
 
             contact_events.send(HazardContactEvent {
-                hazard_entity: Entity::PLACEHOLDER,
+                hazard_entity: h_entity,
                 player_entity: p_entity,
             });
 

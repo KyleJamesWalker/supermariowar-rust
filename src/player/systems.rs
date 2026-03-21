@@ -92,8 +92,8 @@ pub fn player_movement(
             // Enter skid state if player reversed direction while running
             let now_moving_left = vel.x < -0.5;
             let now_moving_right = vel.x > 0.5;
-            let reversed = (was_moving_right && input.left && now_moving_right)
-                || (was_moving_left && input.right && now_moving_left);
+            let reversed = (was_moving_right && input.left && now_moving_left)
+                || (was_moving_left && input.right && now_moving_right);
 
             if reversed && *action == PlayerAction::Running {
                 *action = PlayerAction::Skidding;
@@ -114,6 +114,17 @@ pub fn player_movement(
             } else {
                 *action = PlayerAction::Standing;
             }
+        }
+
+        // Airborne state: transition from Jumping to Falling when descending
+        if !grounded.on_ground && *action == PlayerAction::Jumping && vel.y < 0.0 {
+            *action = PlayerAction::Falling;
+        }
+        // Also set Falling if player walked off a ledge (was standing/running, now airborne)
+        if !grounded.on_ground
+            && matches!(*action, PlayerAction::Standing | PlayerAction::Running | PlayerAction::Skidding)
+        {
+            *action = PlayerAction::Falling;
         }
     }
 }
