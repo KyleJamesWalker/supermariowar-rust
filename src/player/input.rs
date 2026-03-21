@@ -92,7 +92,9 @@ pub fn read_player_input(
     mut pause_events: EventWriter<PauseEvent>,
 ) {
     for (player, mut input) in query.iter_mut() {
-        if player.index >= mappings.mappings.len() {
+        if player.index >= mappings.mappings.len()
+            || player.index >= gamepad_assignments.assignments.len()
+        {
             continue;
         }
         let map = &mappings.mappings[player.index];

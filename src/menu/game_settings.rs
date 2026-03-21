@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::game_modes::traits::GameModeType;
+use crate::graphics::sprites::SpriteSheets;
 use super::components::*;
 
 /// All game mode types in order, for cycling through.
@@ -125,7 +126,10 @@ const SETTINGS_FIELDS: [GameSettingField; 8] = [
 pub fn setup_game_settings(
     mut commands: Commands,
     game_setup: Res<GameSetupConfig>,
+    sprite_sheets: Res<SpriteSheets>,
 ) {
+    let bg_handle = sprite_sheets.menu_images.get("menu_background").cloned();
+
     commands
         .spawn((
             GameSettingsRoot,
@@ -141,6 +145,19 @@ pub fn setup_game_settings(
             BackgroundColor(Color::srgb(0.05, 0.05, 0.2)),
         ))
         .with_children(|parent| {
+            // Background image
+            if let Some(bg) = bg_handle {
+                parent.spawn((
+                    ImageNode::new(bg),
+                    Node {
+                        position_type: PositionType::Absolute,
+                        width: Val::Percent(100.0),
+                        height: Val::Percent(100.0),
+                        ..default()
+                    },
+                ));
+            }
+
             // Title
             parent.spawn((
                 Text::new("GAME SETTINGS"),

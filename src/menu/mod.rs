@@ -217,6 +217,7 @@ fn submenu_transition_system(
     settings_query: Query<Entity, With<GameSettingsRoot>>,
     player_select_query: Query<Entity, With<PlayerSelectRoot>>,
     game_setup: Res<GameSetupConfig>,
+    sprite_sheets: Res<crate::graphics::sprites::SpriteSheets>,
 ) {
     if !current_sub.is_changed() {
         return;
@@ -236,17 +237,17 @@ fn submenu_transition_system(
     // Spawn the appropriate submenu
     match current_sub.submenu {
         SubMenu::Main => {
-            main_menu::setup_main_menu(commands);
+            main_menu::setup_main_menu(commands, sprite_sheets);
         }
         SubMenu::GameSettings => {
-            game_settings::setup_game_settings(commands, game_setup);
+            game_settings::setup_game_settings(commands, game_setup, sprite_sheets);
         }
         SubMenu::PlayerSelect => {
-            player_select::setup_player_select(commands, game_setup);
+            player_select::setup_player_select(commands, game_setup, sprite_sheets);
         }
         SubMenu::Options => {
             // Options menu is a placeholder for now; spawn main menu instead
-            main_menu::setup_main_menu(commands);
+            main_menu::setup_main_menu(commands, sprite_sheets);
         }
     }
 }
