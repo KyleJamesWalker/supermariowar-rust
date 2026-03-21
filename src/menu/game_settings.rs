@@ -430,10 +430,10 @@ pub fn update_game_settings_display(
     selection: Res<GameSettingsSelection>,
     game_setup: Res<GameSetupConfig>,
     current_sub: Res<CurrentSubMenu>,
-    mut field_query: Query<(&GameSettingField, &mut BackgroundColor), Without<SettingValueText>>,
+    mut field_query: Query<(&GameSettingField, &mut BackgroundColor, &Children), Without<SettingValueText>>,
     mut value_query: Query<(&SettingValueText, &mut Text)>,
     mut desc_query: Query<&mut Text, (With<ModeDescriptionText>, Without<SettingValueText>)>,
-    mut text_color_query: Query<(&GameSettingField, &mut TextColor), Without<SettingValueText>>,
+    mut text_color_query: Query<&mut TextColor, Without<SettingValueText>>,
 ) {
     if current_sub.submenu != SubMenu::GameSettings || selection.field_count == 0 {
         return;
@@ -441,22 +441,24 @@ pub fn update_game_settings_display(
 
     let selected_field = SETTINGS_FIELDS[selection.selected_index];
 
-    // Update highlight colors on field/button containers
-    for (field, mut bg) in field_query.iter_mut() {
-        if *field == selected_field {
+    // Update highlight colors on field/button containers and their child text
+    for (field, mut bg, children) in field_query.iter_mut() {
+        let is_selected = *field == selected_field;
+        if is_selected {
             *bg = BackgroundColor(Color::srgba(0.15, 0.4, 0.15, 0.65));
         } else {
             *bg = BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.4));
         }
-    }
 
-    // Update text colors on entities that have GameSettingField + TextColor
-    // (these may be on setting row labels or standalone button text children)
-    for (field, mut color) in text_color_query.iter_mut() {
-        if *field == selected_field {
-            *color = TextColor(Color::srgb(1.0, 1.0, 1.0));
-        } else {
-            *color = TextColor(Color::srgba(0.8, 0.8, 0.8, 1.0));
+        // Update text colors on child label/button text (not SettingValueText)
+        for &child in children.iter() {
+            if let Ok(mut color) = text_color_query.get_mut(child) {
+                if is_selected {
+                    *color = TextColor(Color::srgb(1.0, 1.0, 1.0));
+                } else {
+                    *color = TextColor(Color::srgba(0.8, 0.8, 0.8, 1.0));
+                }
+            }
         }
     }
 

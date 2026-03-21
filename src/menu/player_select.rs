@@ -273,8 +273,7 @@ pub fn player_select_input(
         select_state.active_field = match select_state.active_field {
             PlayerSelectField::ControlType => PlayerSelectField::Team,
             PlayerSelectField::Team => PlayerSelectField::CpuDifficulty,
-            PlayerSelectField::CpuDifficulty => PlayerSelectField::Ready,
-            PlayerSelectField::Ready => PlayerSelectField::ControlType,
+            PlayerSelectField::CpuDifficulty => PlayerSelectField::ControlType,
         };
     }
 
@@ -308,7 +307,6 @@ pub fn player_select_input(
                     CpuDifficulty::Hard => CpuDifficulty::Medium,
                 };
             }
-            PlayerSelectField::Ready => {}
         }
     }
 
@@ -326,7 +324,6 @@ pub fn player_select_input(
                 game_setup.player_slots[slot_idx].cpu_difficulty =
                     game_setup.player_slots[slot_idx].cpu_difficulty.cycle_next();
             }
-            PlayerSelectField::Ready => {}
         }
     }
 
@@ -405,7 +402,6 @@ pub fn update_player_select_display(
                     *text = Text::new("---");
                 }
             }
-            PlayerSelectField::Ready => {}
         }
 
         if is_active_field {

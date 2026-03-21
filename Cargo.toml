@@ -5,7 +5,7 @@ edition = "2021"
 description = "Super Mario War - Bevy/Rust port"
 
 [dependencies]
-bevy = { version = "0.15", features = ["default", "bevy_remote"] }
+bevy = { version = "0.15", features = ["default", "bevy_remote", "wav"] }
 bevy_ecs_tilemap = "0.15"
 rand = "0.8"
 serde = { version = "1", features = ["derive"] }

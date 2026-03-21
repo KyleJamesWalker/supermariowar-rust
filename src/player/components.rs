@@ -225,6 +225,20 @@ pub struct JailKey {
     pub has_key: bool,
 }
 
+/// Cooldown timer after exiting a warp pipe to prevent immediate re-entry.
+#[derive(Component, Debug)]
+pub struct WarpCooldown {
+    pub timer: Timer,
+}
+
+impl WarpCooldown {
+    pub fn new(duration: f32) -> Self {
+        Self {
+            timer: Timer::from_seconds(duration, TimerMode::Once),
+        }
+    }
+}
+
 /// Which skin/sprite set to render for this player.
 #[derive(Component, Debug)]
 pub struct PlayerSkinIndex(pub usize);

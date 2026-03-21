@@ -257,7 +257,6 @@ pub enum PlayerSelectField {
     ControlType,
     Team,
     CpuDifficulty,
-    Ready,
 }
 
 /// Resource tracking selection state for the player select screen.
