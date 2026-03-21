@@ -227,12 +227,15 @@ pub fn setup_game_settings(
                     font_size: 14.0,
                     ..default()
                 },
-                TextColor(Color::srgba(0.7, 0.7, 0.7, 0.8)),
+                TextColor(Color::srgba(0.9, 0.9, 0.9, 0.9)),
                 Node {
                     margin: UiRect::vertical(Val::Px(10.0)),
                     max_width: Val::Px(500.0),
+                    padding: UiRect::all(Val::Px(6.0)),
                     ..default()
                 },
+                BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.3)),
+                BorderRadius::all(Val::Px(3.0)),
                 ModeDescriptionText,
             ));
 
@@ -265,12 +268,15 @@ fn spawn_setting_row(parent: &mut ChildBuilder, field: GameSettingField, label: 
             field,
             Node {
                 width: Val::Px(450.0),
+                height: Val::Px(30.0),
                 flex_direction: FlexDirection::Row,
                 justify_content: JustifyContent::SpaceBetween,
                 align_items: AlignItems::Center,
                 padding: UiRect::horizontal(Val::Px(10.0)),
                 ..default()
             },
+            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.4)),
+            BorderRadius::all(Val::Px(3.0)),
         ))
         .with_children(|row| {
             row.spawn((
@@ -294,19 +300,30 @@ fn spawn_setting_row(parent: &mut ChildBuilder, field: GameSettingField, label: 
 }
 
 fn spawn_button_row(parent: &mut ChildBuilder, field: GameSettingField, label: &str) {
-    parent.spawn((
-        field,
-        Text::new(label),
-        TextFont {
-            font_size: 24.0,
-            ..default()
-        },
-        TextColor(Color::srgba(0.6, 0.6, 0.6, 1.0)),
-        Node {
-            margin: UiRect::top(Val::Px(6.0)),
-            ..default()
-        },
-    ));
+    parent
+        .spawn((
+            field,
+            Node {
+                width: Val::Px(300.0),
+                height: Val::Px(32.0),
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                margin: UiRect::top(Val::Px(6.0)),
+                ..default()
+            },
+            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.4)),
+            BorderRadius::all(Val::Px(4.0)),
+        ))
+        .with_children(|btn| {
+            btn.spawn((
+                Text::new(label),
+                TextFont {
+                    font_size: 24.0,
+                    ..default()
+                },
+                TextColor(Color::srgba(0.8, 0.8, 0.8, 1.0)),
+            ));
+        });
 }
 
 /// Handles input in the game settings submenu.
@@ -424,21 +441,22 @@ pub fn update_game_settings_display(
 
     let selected_field = SETTINGS_FIELDS[selection.selected_index];
 
-    // Update highlight colors on field rows
+    // Update highlight colors on field/button containers
     for (field, mut bg) in field_query.iter_mut() {
         if *field == selected_field {
-            *bg = BackgroundColor(Color::srgba(0.3, 0.3, 0.5, 0.4));
+            *bg = BackgroundColor(Color::srgba(0.15, 0.4, 0.15, 0.65));
         } else {
-            *bg = BackgroundColor(Color::NONE);
+            *bg = BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.4));
         }
     }
 
-    // Update button text colors (Start, Back)
+    // Update text colors on entities that have GameSettingField + TextColor
+    // (these may be on setting row labels or standalone button text children)
     for (field, mut color) in text_color_query.iter_mut() {
         if *field == selected_field {
-            *color = TextColor(Color::srgb(1.0, 1.0, 0.0));
+            *color = TextColor(Color::srgb(1.0, 1.0, 1.0));
         } else {
-            *color = TextColor(Color::srgba(0.6, 0.6, 0.6, 1.0));
+            *color = TextColor(Color::srgba(0.8, 0.8, 0.8, 1.0));
         }
     }
 
