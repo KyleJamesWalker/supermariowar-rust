@@ -3,10 +3,34 @@ use bevy::prelude::*;
 use crate::core::constants::*;
 use crate::map::components::{CollisionType, MapData, MovingPlatform};
 use crate::player::components::{
-    Grounded, Player, PlayerAction, PlayerDeathEvent, PlayerInput, Velocity, WarpState,
+    DeathCause, Grounded, Player, PlayerAction, PlayerDeathEvent, PlayerInput, Velocity, WarpState,
 };
 use super::collision;
 use super::components::*;
+
+// ---------------------------------------------------------------------------
+// Coordinate conversion helpers: Bevy (centered, Y-up) ↔ SMW (top-left, Y-down)
+// ---------------------------------------------------------------------------
+
+/// Convert Bevy X → SMW pixel X (0..SCREEN_WIDTH)
+fn to_smw_x(bevy_x: f32) -> f32 {
+    bevy_x + SCREEN_WIDTH / 2.0
+}
+
+/// Convert Bevy Y → SMW pixel Y (0..SCREEN_HEIGHT, Y-down)
+fn to_smw_y(bevy_y: f32) -> f32 {
+    SCREEN_HEIGHT / 2.0 - bevy_y
+}
+
+/// Convert SMW pixel X → Bevy X
+fn to_bevy_x(smw_x: f32) -> f32 {
+    smw_x - SCREEN_WIDTH / 2.0
+}
+
+/// Convert SMW pixel Y → Bevy Y
+fn to_bevy_y(smw_y: f32) -> f32 {
+    SCREEN_HEIGHT / 2.0 - smw_y
+}
 
 /// Applies gravity to all entities that have the GravityAffected component.
 pub fn apply_gravity(
@@ -17,9 +41,9 @@ pub fn apply_gravity(
         if warp.is_some() {
             continue;
         }
-        vel.y += GRAVITY * gravity.multiplier;
-        if vel.y > MAX_FALL_SPEED {
-            vel.y = MAX_FALL_SPEED;
+        vel.y -= GRAVITY * gravity.multiplier;
+        if vel.y < -MAX_FALL_SPEED {
+            vel.y = -MAX_FALL_SPEED;
         }
     }
 }
@@ -54,68 +78,79 @@ pub fn map_collision(
             continue;
         }
 
+        // Convert Bevy position → SMW pixel space for tile collision.
+        // All collision helpers expect SMW coords (top-left origin, Y-down).
+        transform.translation.x = to_smw_x(transform.translation.x);
+        transform.translation.y = to_smw_y(transform.translation.y);
+        vel.y = -vel.y; // Bevy Y-up → SMW Y-down
+
         if !has_collision_map {
             simple_floor_collision(&mut transform, &mut vel, &mut grounded);
-            continue;
-        }
+        } else {
+            let num_cols = map_data.collision_map.len();
+            let num_rows = map_data.collision_map[0].len();
 
-        let num_cols = map_data.collision_map.len();
-        let num_rows = map_data.collision_map[0].len();
+            // Reset grounded before checking tiles
+            grounded.on_ground = false;
+            grounded.on_ice = false;
 
-        // Reset grounded before checking tiles
-        grounded.on_ground = false;
-        grounded.on_ice = false;
+            // The player's bounding box in SMW pixel coordinates
+            let px = transform.translation.x + PLAYER_WIDTH_OFFSET;
+            let py = transform.translation.y + PLAYER_HEIGHT_OFFSET;
 
-        // The player's bounding box in pixel coordinates
-        let px = transform.translation.x + PLAYER_WIDTH_OFFSET;
-        let py = transform.translation.y + PLAYER_HEIGHT_OFFSET;
+            // Vertical collision (floors/ceilings)
+            check_vertical_collision(
+                &map_data.collision_map,
+                num_cols,
+                num_rows,
+                &mut transform,
+                &mut vel,
+                &mut grounded,
+                input,
+                px,
+                py,
+            );
 
-        // Vertical collision (floors/ceilings)
-        check_vertical_collision(
-            &map_data.collision_map,
-            num_cols,
-            num_rows,
-            &mut transform,
-            &mut vel,
-            &mut grounded,
-            input,
-            px,
-            py,
-        );
+            // Recalculate player position after vertical correction
+            let px = transform.translation.x + PLAYER_WIDTH_OFFSET;
+            let py = transform.translation.y + PLAYER_HEIGHT_OFFSET;
 
-        // Recalculate player position after vertical correction
-        let px = transform.translation.x + PLAYER_WIDTH_OFFSET;
-        let py = transform.translation.y + PLAYER_HEIGHT_OFFSET;
+            // Horizontal collision (walls)
+            check_horizontal_collision(
+                &map_data.collision_map,
+                num_cols,
+                num_rows,
+                &mut transform,
+                &mut vel,
+                px,
+                py,
+            );
 
-        // Horizontal collision (walls)
-        check_horizontal_collision(
-            &map_data.collision_map,
-            num_cols,
-            num_rows,
-            &mut transform,
-            &mut vel,
-            px,
-            py,
-        );
+            // Death tile check
+            let px = transform.translation.x + PLAYER_WIDTH_OFFSET;
+            let py = transform.translation.y + PLAYER_HEIGHT_OFFSET;
+            if check_death_tiles(&map_data.collision_map, num_cols, num_rows, px, py) {
+                death_events.send(PlayerDeathEvent {
+                    player_entity: entity,
+                    player_index: player.index,
+                    killer_index: None,
+                    cause: DeathCause::Environment,
+                });
+            }
 
-        // Death tile check
-        let px = transform.translation.x + PLAYER_WIDTH_OFFSET;
-        let py = transform.translation.y + PLAYER_HEIGHT_OFFSET;
-        if check_death_tiles(&map_data.collision_map, num_cols, num_rows, px, py) {
-            death_events.send(PlayerDeathEvent {
-                player_entity: entity,
-                player_index: player.index,
-                killer_index: None,
-            });
-        }
-
-        // Ceiling collision (top of screen)
-        if transform.translation.y < 0.0 {
-            transform.translation.y = 0.0;
-            if vel.y < 0.0 {
-                vel.y = 0.0;
+            // Ceiling collision (top of screen, SMW Y=0)
+            if transform.translation.y < 0.0 {
+                transform.translation.y = 0.0;
+                if vel.y < 0.0 {
+                    vel.y = 0.0;
+                }
             }
         }
+
+        // Convert SMW pixel space → Bevy position
+        transform.translation.x = to_bevy_x(transform.translation.x);
+        transform.translation.y = to_bevy_y(transform.translation.y);
+        vel.y = -vel.y; // SMW Y-down → Bevy Y-up
     }
 }
 
@@ -355,11 +390,11 @@ pub fn warp_zone_detection(
             continue;
         }
 
-        // Find the tile the player's center is on
-        let center_x =
-            transform.translation.x + PLAYER_WIDTH_OFFSET + PLAYER_WIDTH * 0.5;
-        let foot_y =
-            transform.translation.y + PLAYER_HEIGHT_OFFSET + PLAYER_HEIGHT;
+        // Convert Bevy position to SMW pixel space for tile lookups
+        let smw_x = to_smw_x(transform.translation.x);
+        let smw_y = to_smw_y(transform.translation.y);
+        let center_x = smw_x + PLAYER_WIDTH_OFFSET + PLAYER_WIDTH * 0.5;
+        let foot_y = smw_y + PLAYER_HEIGHT_OFFSET + PLAYER_HEIGHT;
         let tile_x = (center_x / TILE_SIZE).floor() as usize;
         let tile_y = (foot_y / TILE_SIZE).floor() as usize;
 
@@ -379,8 +414,8 @@ pub fn warp_zone_detection(
             .iter()
             .find(|e| e.connection == connection && e.id != warp_info.id)
         {
-            let dest_x = exit.warp_x as f32 * TILE_SIZE;
-            let dest_y = exit.warp_y as f32 * TILE_SIZE;
+            let dest_x = to_bevy_x(exit.warp_x as f32 * TILE_SIZE);
+            let dest_y = to_bevy_y(exit.warp_y as f32 * TILE_SIZE);
             let direction =
                 crate::map::components::WarpDirection::from_raw(warp_info.direction);
 
@@ -442,18 +477,18 @@ pub fn moving_platform_system(
             continue;
         }
 
-        let player_px = player_transform.translation.x + PLAYER_WIDTH_OFFSET;
-        let player_foot =
-            player_transform.translation.y + PLAYER_HEIGHT_OFFSET + PLAYER_HEIGHT;
+        let player_px = player_transform.translation.x;
+        // In Bevy Y-up, player's visual bottom is at translation.y (collider offset_y = 0)
+        let player_bottom = player_transform.translation.y;
 
         let mut found_platform = false;
 
         for (platform_entity, platform, plat_transform, plat_collider) in platform_query.iter() {
-            let (plat_left, plat_top, plat_right, _plat_bottom) =
+            let (plat_left, _plat_min_y, plat_right, plat_max_y) =
                 plat_collider.world_rect(&plat_transform.translation);
 
-            // Check if player's feet are resting on this platform's top
-            let on_top = (player_foot - plat_top).abs() < 2.0;
+            // In Bevy Y-up, plat_max_y = visual top of platform
+            let on_top = (player_bottom - plat_max_y).abs() < 2.0;
             let horizontally_on =
                 player_px + PLAYER_WIDTH > plat_left && player_px < plat_right;
 

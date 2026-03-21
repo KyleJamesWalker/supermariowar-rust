@@ -23,21 +23,28 @@ impl Plugin for MenuPlugin {
         // =====================================================================
         // Main Menu
         // =====================================================================
-        app.add_systems(OnEnter(GameState::Menu), main_menu::setup_main_menu)
-            .add_systems(OnExit(GameState::Menu), main_menu::cleanup_main_menu);
+        app.add_systems(
+                OnEnter(GameState::Menu),
+                (reset_submenu_to_main, main_menu::setup_main_menu).chain(),
+            )
+            .add_systems(OnExit(GameState::Menu), cleanup_all_menu_ui);
 
-        // Menu update systems: run the appropriate input handler based on current submenu
+        // Main menu input: only runs when the Main submenu is active
         app.add_systems(
             Update,
-            (
-                main_menu::main_menu_input,
-                submenu_transition_system,
-            )
-                .chain()
+            main_menu::main_menu_input
                 .run_if(in_state(GameState::Menu))
                 .run_if(resource_equals(CurrentSubMenu {
                     submenu: SubMenu::Main,
                 })),
+        );
+
+        // Submenu transition system: runs for ALL submenus so it can handle
+        // transitions back to Main (e.g., from GameSettings or PlayerSelect)
+        app.add_systems(
+            Update,
+            submenu_transition_system
+                .run_if(in_state(GameState::Menu)),
         );
 
         // =====================================================================
@@ -152,6 +159,33 @@ impl Plugin for MenuPlugin {
         // =====================================================================
         app.add_systems(OnEnter(GameState::Gameplay), apply_game_setup_config);
     }
+}
+
+/// Despawns all menu-related UI when leaving the Menu state, regardless of
+/// which submenu is currently active (Main, GameSettings, PlayerSelect, etc.).
+fn cleanup_all_menu_ui(
+    mut commands: Commands,
+    main_menu_query: Query<Entity, With<MenuRoot>>,
+    settings_query: Query<Entity, With<GameSettingsRoot>>,
+    player_select_query: Query<Entity, With<PlayerSelectRoot>>,
+) {
+    for entity in main_menu_query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+    for entity in settings_query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+    for entity in player_select_query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+}
+
+/// Resets the active submenu to Main when (re-)entering the Menu state.
+/// Uses `bypass_change_detection` so that the transition system does not
+/// see this as a change and redundantly despawn/respawn the main menu UI
+/// that `setup_main_menu` is about to create in the same OnEnter schedule.
+fn reset_submenu_to_main(mut current_sub: ResMut<CurrentSubMenu>) {
+    current_sub.bypass_change_detection().submenu = SubMenu::Main;
 }
 
 /// Handles transitions between submenus: despawns old UI and spawns new UI.

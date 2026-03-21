@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::core::constants::MAX_PLAYERS;
+use crate::player::components::PlayerDeathEvent;
 use super::traits::*;
 
 /// Resource tracking state for Stomp mode.

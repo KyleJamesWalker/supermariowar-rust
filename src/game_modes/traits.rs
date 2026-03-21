@@ -96,21 +96,6 @@ pub struct PlayerKillEvent {
     pub method: KillMethod,
 }
 
-/// Fired when a player dies (may have no killer for suicides / environment).
-#[derive(Event, Debug)]
-pub struct PlayerDeathEvent {
-    pub player_index: usize,
-    pub cause: DeathCause,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DeathCause {
-    Killed { by: usize },
-    Suicide,
-    Environment,
-    OutOfLives,
-}
-
 /// Fired when a player collects an item.
 #[derive(Event, Debug)]
 pub struct ItemCollectEvent {

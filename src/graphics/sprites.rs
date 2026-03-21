@@ -283,22 +283,30 @@ pub fn load_game_assets(
     }
 
     // -----------------------------------------------------------------------
-    // Projectile sprite sheets
+    // Projectile sprite sheets (per-image atlas dimensions from original SMW)
     // -----------------------------------------------------------------------
     for name in PROJECTILE_FILES {
         let path = format!("gfx/packs/Classic/projectiles/{}.png", name);
         let texture: Handle<Image> = asset_server.load(&path);
 
-        // Most projectile sheets are small grids; use a reasonable default
-        // that can be adjusted per-projectile. Common sizes:
-        //   fireball: 72x144 (could be 4 cols x 9 rows at ~18x16, or various)
-        //   hammer: variable
-        // We'll use 32x32 grid as a safe default; actual frame selection
-        // happens via animation bank configuration.
-        let columns = 4u32;
-        let rows = 4u32;
+        // Tile sizes and grid dimensions sourced from the original SMW C++
+        // constructors (MO_Fireball, MO_Hammer, MO_Boomerang, CO_Shell,
+        // CO_Bomb, MO_BulletBill, CO_ThrowBlock, MO_IceBlast, tanooki).
+        let (tile_w, tile_h, columns, rows): (u32, u32, u32, u32) = match *name {
+            "fireball"   => (18, 18, 4, 8),   // 72x144: width>>2, height>>3
+            "hammer"     => (28, 28, 6, 4),   // 168x112: width/6, height>>2
+            "boomerang"  => (32, 32, 4, 8),   // 128x256: width/4, height>>3
+            "shell"      => (32, 32, 4, 8),   // 128x256: 32x32 frames
+            "bomb"       => (28, 38, 5, 5),   // 140x190: iw=28, ih=38
+            "bulletbill" => (32, 32, 4, 8),   // 128x256: 32x32 frames
+            "throwblock" => (32, 32, 4, 3),   // 128x96: 32x32 frames
+            "wandblast"  => (32, 32, 4, 5),   // 128x160: 32x32 frames
+            "statue"     => (32, 58, 4, 1),   // 128x58: 32 wide, 58 tall
+            _            => (32, 32, 4, 4),   // fallback
+        };
+
         let layout = TextureAtlasLayout::from_grid(
-            UVec2::new(16, 16),
+            UVec2::new(tile_w, tile_h),
             columns,
             rows,
             None,
@@ -318,15 +326,29 @@ pub fn load_game_assets(
     }
 
     // -----------------------------------------------------------------------
-    // Block sprite sheets
+    // Block sprite sheets (per-image atlas dimensions from original SMW)
     // -----------------------------------------------------------------------
     for name in BLOCK_FILES {
         let path = format!("gfx/packs/Classic/blocks/{}.png", name);
         let texture: Handle<Image> = asset_server.load(&path);
 
-        // Block sheets are typically 128x32 (4 frames of 32x32)
-        let columns = 4u32;
-        let rows = 1u32;
+        // All blocks use 32x32 (TILESIZE) frames. Grid dimensions vary
+        // based on the number of animation frames (columns) and block
+        // type variants (rows) in each sheet.
+        let (columns, rows): (u32, u32) = match *name {
+            "breakableblock"       => (4, 1),   // 128x32
+            "powerupblock"         => (4, 2),   // 128x64
+            "noteblock"            => (4, 3),   // 128x96
+            "switchblock"          => (4, 4),   // 128x128
+            "flipblock"            => (4, 1),   // 128x32
+            "bounceblock"          => (1, 1),   // 32x32
+            "donutblock"           => (1, 1),   // 32x32
+            "throwblock"           => (4, 3),   // 128x96
+            "viewblock"            => (1, 2),   // 32x64
+            "weaponbreakableblock" => (10, 1),  // 320x32
+            _                      => (4, 1),   // fallback
+        };
+
         let layout = TextureAtlasLayout::from_grid(
             UVec2::new(32, 32),
             columns,
@@ -348,16 +370,27 @@ pub fn load_game_assets(
     }
 
     // -----------------------------------------------------------------------
-    // Hazard / enemy sprites
+    // Hazard / enemy sprites (per-image atlas dimensions from original SMW)
     // -----------------------------------------------------------------------
     for name in HAZARD_FILES {
         let path = format!("gfx/packs/Classic/hazards/{}.png", name);
         let texture: Handle<Image> = asset_server.load(&path);
 
-        let columns = 4u32;
-        let rows = 1u32;
+        // Hazard sheets use varying tile sizes and layouts. The flame and
+        // piranha plant sprites have non-uniform sub-regions in the original
+        // game, but we use the dominant tile size for the Bevy atlas grid.
+        let (tile_w, tile_h, columns, rows): (u32, u32, u32, u32) = match *name {
+            "fireball"       => (18, 18, 4, 2),   // 72x36: 18x18 frames
+            "flame"          => (32, 32, 8, 7),    // 256x224: 32x32 grid
+            "pirhanaplant"   => (32, 32, 11, 8),   // 352x256: 32x32 grid
+            "rotodisc"       => (32, 32, 21, 1),   // 672x32: 32x32 frames
+            "bulletbill"     => (32, 32, 1, 2),    // 32x64: 32x32 frames
+            "bulletbilldead" => (32, 32, 2, 1),    // 64x32: 32x32 frames
+            _                => (32, 32, 4, 1),    // fallback
+        };
+
         let layout = TextureAtlasLayout::from_grid(
-            UVec2::new(32, 32),
+            UVec2::new(tile_w, tile_h),
             columns,
             rows,
             None,

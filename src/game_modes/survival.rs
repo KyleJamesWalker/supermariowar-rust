@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::core::constants::MAX_PLAYERS;
+use crate::player::components::{DeathCause, PlayerDeathEvent};
 use super::traits::*;
 
 /// Resource tracking state for Survival mode.
@@ -123,15 +124,26 @@ pub fn handle_survival_kills(
     config: Res<GameModeConfig>,
     mut kill_events: EventReader<PlayerKillEvent>,
     mut death_events: EventWriter<PlayerDeathEvent>,
+    players: Query<(Entity, &crate::player::components::Player)>,
 ) {
     if config.mode_type != GameModeType::Survival {
         return;
     }
 
     for event in kill_events.read() {
-        death_events.send(PlayerDeathEvent {
-            player_index: event.victim,
-            cause: DeathCause::Killed { by: event.killer },
-        });
+        // Look up the victim's entity
+        let victim_entity = players
+            .iter()
+            .find(|(_, p)| p.index == event.victim)
+            .map(|(e, _)| e);
+
+        if let Some(entity) = victim_entity {
+            death_events.send(PlayerDeathEvent {
+                player_entity: entity,
+                player_index: event.victim,
+                killer_index: Some(event.killer),
+                cause: DeathCause::Killed { by: event.killer },
+            });
+        }
     }
 }

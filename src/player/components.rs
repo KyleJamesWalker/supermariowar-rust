@@ -226,12 +226,22 @@ impl Default for PlayerSkinIndex {
     }
 }
 
+/// How a player died.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DeathCause {
+    Killed { by: usize },
+    Suicide,
+    Environment,
+    OutOfLives,
+}
+
 /// Event: a player has died.
 #[derive(Event, Debug)]
 pub struct PlayerDeathEvent {
     pub player_entity: Entity,
     pub player_index: usize,
     pub killer_index: Option<usize>,
+    pub cause: DeathCause,
 }
 
 /// Event: a player has stomped another player.

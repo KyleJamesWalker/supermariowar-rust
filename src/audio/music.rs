@@ -81,33 +81,39 @@ impl MusicTrackMap {
 pub fn load_music_tracks(mut track_map: ResMut<MusicTrackMap>) {
     track_map.tracks.insert(
         MusicCategory::Menu,
-        vec!["music/menu.ogg".to_string()],
+        vec!["music/game/Standard/Menu/menu.ogg".to_string()],
     );
 
     track_map.tracks.insert(
         MusicCategory::Gameplay,
         vec![
-            "music/game0.ogg".to_string(),
-            "music/game1.ogg".to_string(),
-            "music/game2.ogg".to_string(),
-            "music/game3.ogg".to_string(),
-            "music/game4.ogg".to_string(),
+            "music/game/Standard/SMB_Overground.ogg".to_string(),
+            "music/game/Standard/SMB_Athletic.ogg".to_string(),
+            "music/game/Standard/SMB_Underground.ogg".to_string(),
+            "music/game/Standard/SMB_Castle.ogg".to_string(),
+            "music/game/Standard/SMB_Battle.ogg".to_string(),
         ],
     );
 
     track_map.tracks.insert(
         MusicCategory::World,
-        vec!["music/world.ogg".to_string()],
+        vec![
+            "music/world/Standard/GrassLand.ogg".to_string(),
+            "music/world/Standard/DesertHill.ogg".to_string(),
+            "music/world/Standard/SeaSide.ogg".to_string(),
+            "music/world/Standard/IceLand.ogg".to_string(),
+            "music/world/Standard/StarWorld.ogg".to_string(),
+        ],
     );
 
     track_map.tracks.insert(
         MusicCategory::Bonus,
-        vec!["music/bonus.ogg".to_string()],
+        vec!["music/world/Standard/BonusGame.ogg".to_string()],
     );
 
     track_map.tracks.insert(
         MusicCategory::GameOver,
-        vec!["music/gameover.ogg".to_string()],
+        vec!["music/game/Standard/Special/tournamentover.ogg".to_string()],
     );
 
     info!(

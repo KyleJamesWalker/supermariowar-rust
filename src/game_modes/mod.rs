@@ -45,8 +45,8 @@ impl Plugin for GameModesPlugin {
             .init_resource::<PendingRoundReset>();
 
         // --- Events ---
+        // NOTE: PlayerDeathEvent is registered by PlayerPlugin (player/mod.rs).
         app.add_event::<PlayerKillEvent>()
-            .add_event::<PlayerDeathEvent>()
             .add_event::<ItemCollectEvent>()
             .add_event::<ObjectiveEvent>()
             .add_event::<ScoreEvent>()

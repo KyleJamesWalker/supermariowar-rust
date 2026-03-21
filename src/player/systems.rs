@@ -8,7 +8,7 @@ use super::components::*;
 // --------------------------------------------------------------------------
 // Death bounce velocity (player bounces upward then falls off screen)
 // --------------------------------------------------------------------------
-const DEATH_BOUNCE_VEL_Y: f32 = -9.0;
+const DEATH_BOUNCE_VEL_Y: f32 = 9.0;
 
 // Spawn protection duration in seconds
 const SPAWN_PROTECTION_SECS: f32 = 3.0;
@@ -20,7 +20,7 @@ const WARP_SPEED: f32 = 2.5;
 const STOMP_THRESHOLD_Y: f32 = 8.0;
 
 // How much velocity the stomper gets after a successful stomp
-const STOMP_BOUNCE_VEL: f32 = -7.0;
+const STOMP_BOUNCE_VEL: f32 = 7.0;
 
 /// Applies horizontal movement based on player input.
 pub fn player_movement(
@@ -141,8 +141,8 @@ pub fn player_jump(
         }
 
         // Variable jump height: releasing jump button reduces upward velocity
-        if !input.jump && vel.y < -VEL_STOP_JUMP {
-            vel.y = -VEL_STOP_JUMP;
+        if !input.jump && vel.y > VEL_STOP_JUMP {
+            vel.y = VEL_STOP_JUMP;
         }
     }
 }
@@ -155,11 +155,12 @@ pub fn apply_player_velocity(
         transform.translation.x += vel.x;
         transform.translation.y += vel.y;
 
-        // Screen wrapping (horizontal) -- always active
-        if transform.translation.x > SCREEN_WIDTH + PLAYER_WIDTH {
-            transform.translation.x = -PLAYER_WIDTH;
-        } else if transform.translation.x < -PLAYER_WIDTH {
-            transform.translation.x = SCREEN_WIDTH + PLAYER_WIDTH;
+        // Screen wrapping (horizontal) -- always active (Bevy centered coords)
+        let half_w = SCREEN_WIDTH / 2.0;
+        if transform.translation.x > half_w + PLAYER_WIDTH {
+            transform.translation.x = -half_w - PLAYER_WIDTH;
+        } else if transform.translation.x < -half_w - PLAYER_WIDTH {
+            transform.translation.x = half_w + PLAYER_WIDTH;
         }
     }
 }
@@ -348,14 +349,14 @@ pub fn player_stomp_system(
                 continue;
             }
 
-            // Determine who is stomping whom based on vertical position and velocity
-            let a_bottom = t_a.translation.y + col_a.offset_y + col_a.height;
-            let b_top = t_b.translation.y + col_b.offset_y;
-            let b_bottom = t_b.translation.y + col_b.offset_y + col_b.height;
-            let a_top = t_a.translation.y + col_a.offset_y;
+            // In Bevy Y-up: pos + offset_y = visual bottom, pos + offset_y + height = visual top
+            let a_visual_bottom = t_a.translation.y + col_a.offset_y;
+            let a_visual_top = a_visual_bottom + col_a.height;
+            let b_visual_bottom = t_b.translation.y + col_b.offset_y;
+            let b_visual_top = b_visual_bottom + col_b.height;
 
-            // A stomps B: A is falling and A's bottom is near B's top
-            if v_a.y > 0.0 && (a_bottom - b_top).abs() < STOMP_THRESHOLD_Y {
+            // A stomps B: A is falling (vel.y < 0) and A's bottom is near B's top
+            if v_a.y < 0.0 && (a_visual_bottom - b_visual_top).abs() < STOMP_THRESHOLD_Y {
                 stomp_events.send(PlayerStompEvent {
                     stomper_entity: *e_a,
                     stomped_entity: *e_b,
@@ -366,12 +367,13 @@ pub fn player_stomp_system(
                     player_entity: *e_b,
                     player_index: p_b.index,
                     killer_index: Some(p_a.index),
+                    cause: DeathCause::Killed { by: p_a.index },
                 });
                 continue;
             }
 
-            // B stomps A: B is falling and B's bottom is near A's top
-            if v_b.y > 0.0 && (b_bottom - a_top).abs() < STOMP_THRESHOLD_Y {
+            // B stomps A: B is falling (vel.y < 0) and B's bottom is near A's top
+            if v_b.y < 0.0 && (b_visual_bottom - a_visual_top).abs() < STOMP_THRESHOLD_Y {
                 stomp_events.send(PlayerStompEvent {
                     stomper_entity: *e_b,
                     stomped_entity: *e_a,
@@ -382,6 +384,7 @@ pub fn player_stomp_system(
                     player_entity: *e_a,
                     player_index: p_a.index,
                     killer_index: Some(p_b.index),
+                    cause: DeathCause::Killed { by: p_b.index },
                 });
             }
         }
@@ -409,11 +412,12 @@ pub fn vertical_death_system(
         if *action == PlayerAction::Dead {
             continue;
         }
-        if transform.translation.y > SCREEN_HEIGHT + PLAYER_HEIGHT {
+        if transform.translation.y < -(SCREEN_HEIGHT / 2.0 + PLAYER_HEIGHT) {
             death_events.send(PlayerDeathEvent {
                 player_entity: entity,
                 player_index: player.index,
                 killer_index: None,
+                cause: DeathCause::Environment,
             });
         }
     }
@@ -531,7 +535,7 @@ pub fn powerup_use_system(
                     Projectile::hammer(player.index),
                     ObjectVelocity {
                         x: speed * dir,
-                        y: -HAMMER_THROW,
+                        y: HAMMER_THROW,
                     },
                     Transform::from_xyz(spawn_x, spawn_y, 11.0),
                     GlobalTransform::default(),
@@ -569,7 +573,7 @@ pub fn powerup_use_system(
                     },
                     ObjectVelocity {
                         x: 4.0 * dir,
-                        y: -3.0,
+                        y: 3.0,
                     },
                     Transform::from_xyz(spawn_x, spawn_y, 11.0),
                     GlobalTransform::default(),
@@ -606,13 +610,13 @@ pub fn warp_system(
         let movement = WARP_SPEED * TILE_SIZE * time.delta_secs();
 
         if warp.entering {
-            // Animate player moving into the pipe
+            // Animate player moving into the pipe (Bevy Y-up)
             match warp.direction {
                 WarpDirection::Down => {
-                    transform.translation.y += movement;
+                    transform.translation.y -= movement;
                 }
                 WarpDirection::Up => {
-                    transform.translation.y -= movement;
+                    transform.translation.y += movement;
                 }
                 WarpDirection::Left => {
                     transform.translation.x -= movement;
@@ -631,13 +635,13 @@ pub fn warp_system(
                 warp.progress = 0.0;
             }
         } else {
-            // Animate player moving out of the pipe (reverse direction)
+            // Animate player moving out of the pipe (reverse direction, Bevy Y-up)
             match warp.direction {
                 WarpDirection::Down => {
-                    transform.translation.y -= movement;
+                    transform.translation.y += movement;
                 }
                 WarpDirection::Up => {
-                    transform.translation.y += movement;
+                    transform.translation.y -= movement;
                 }
                 WarpDirection::Left => {
                     transform.translation.x += movement;
@@ -696,19 +700,21 @@ pub fn update_stats_on_death(
 // --------------------------------------------------------------------------
 
 /// Pick a spawn location from the map's spawn areas, or use a fallback.
+/// Returns Bevy coordinates (centered, Y-up).
 fn pick_spawn_location(map_data: &MapData, player_index: usize) -> (f32, f32) {
     // spawn_areas[0] = "All players" spawn areas
     if !map_data.spawn_areas.is_empty() && !map_data.spawn_areas[0].is_empty() {
         let areas = &map_data.spawn_areas[0];
         let area = &areas[player_index % areas.len()];
-        let x = (area.left as f32 + area.width as f32 / 2.0) * TILE_SIZE;
-        let y = area.top as f32 * TILE_SIZE;
-        (x, y)
+        // Convert SMW pixel coords to Bevy coords
+        let smw_x = (area.left as f32 + area.width as f32 / 2.0) * TILE_SIZE;
+        let smw_y = area.top as f32 * TILE_SIZE;
+        (smw_x - SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0 - smw_y)
     } else {
-        // Fallback: distribute players across the top of the screen
-        let x = (SCREEN_WIDTH / (MAX_PLAYERS as f32 + 1.0)) * (player_index as f32 + 1.0);
-        let y = TILE_SIZE * 2.0;
-        (x, y)
+        // Fallback: distribute players across the top of the screen (Bevy coords)
+        let smw_x = (SCREEN_WIDTH / (MAX_PLAYERS as f32 + 1.0)) * (player_index as f32 + 1.0);
+        let smw_y = TILE_SIZE * 2.0;
+        (smw_x - SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0 - smw_y)
     }
 }
 
@@ -724,10 +730,10 @@ fn players_overlap(
         return true;
     }
 
-    // Check with screen wrapping (player A wrapped)
+    // Check with screen wrapping (player A wrapped, Bevy centered coords)
     let wrap_amount = SCREEN_WIDTH + PLAYER_WIDTH * 2.0;
     let mut wrapped_a = t_a.translation;
-    if wrapped_a.x < SCREEN_WIDTH * 0.5 {
+    if wrapped_a.x < 0.0 {
         wrapped_a.x += wrap_amount;
     } else {
         wrapped_a.x -= wrap_amount;

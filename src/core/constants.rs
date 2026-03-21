@@ -39,10 +39,10 @@ pub const VEL_AIR_FRICTION: f32 = 0.06;
 pub const MAX_RUN_SPEED: f32 = 5.5;
 
 // Jump velocities
-pub const JUMP_VELOCITY: f32 = -9.0;
-pub const VEL_SLOW_JUMP: f32 = -7.0;
-pub const VEL_TURBO_JUMP: f32 = -10.2;
-pub const VEL_SUPER_JUMP: f32 = -13.0;
+pub const JUMP_VELOCITY: f32 = 9.0;
+pub const VEL_SLOW_JUMP: f32 = 7.0;
+pub const VEL_TURBO_JUMP: f32 = 10.2;
+pub const VEL_SUPER_JUMP: f32 = 13.0;
 pub const VEL_STOP_JUMP: f32 = 5.0;
 
 // Combat / interaction velocities

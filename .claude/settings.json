@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "bevy-debugger": {
+      "command": "bevy-debugger-mcp",
+      "args": ["--stdio"],
+      "type": "stdio",
+      "env": {
+        "BEVY_BRP_HOST": "localhost",
+        "BEVY_BRP_PORT": "15702",
+        "RUST_LOG": "info"
+      }
+    }
+  }
+}

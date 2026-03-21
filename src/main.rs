@@ -2,6 +2,7 @@
 
 use bevy::prelude::*;
 use bevy::asset::AssetPlugin;
+use bevy::remote::{RemotePlugin, http::RemoteHttpPlugin};
 use bevy::window::{PresentMode, WindowResolution};
 
 mod ai;
@@ -42,6 +43,9 @@ fn main() {
                 })
                 .set(ImagePlugin::default_nearest()),
         )
+        // Remote debugging (BRP over HTTP on port 15702)
+        .add_plugins(RemotePlugin::default())
+        .add_plugins(RemoteHttpPlugin::default())
         // Game plugins
         .add_plugins((
             core::CorePlugin,

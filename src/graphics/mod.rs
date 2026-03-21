@@ -1,5 +1,6 @@
 pub mod animation;
 pub mod backgrounds;
+pub mod color_key;
 pub mod effects;
 pub mod player_sprites;
 pub mod sprites;
@@ -17,6 +18,7 @@ impl Plugin for GraphicsPlugin {
             .init_resource::<sprites::GameAssets>()
             .init_resource::<effects::ScreenShake>()
             .init_resource::<effects::ScreenFade>()
+            .init_resource::<color_key::ProcessedColorKeyImages>()
             .insert_resource(animation::build_default_animation_bank());
 
         // Startup: load all game assets
@@ -32,6 +34,8 @@ impl Plugin for GraphicsPlugin {
         app.add_systems(
             Update,
             (
+                // Magenta color-key → alpha transparency conversion
+                color_key::process_color_key_transparency,
                 // Core animation tick
                 animation::animate_sprites,
                 // Screen effects

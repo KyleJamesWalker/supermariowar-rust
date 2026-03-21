@@ -107,10 +107,6 @@ pub fn setup_main_menu(mut commands: Commands) {
         selected_index: 0,
         item_count: 5,
     });
-
-    commands.insert_resource(CurrentSubMenu {
-        submenu: SubMenu::Main,
-    });
 }
 
 /// Handles keyboard/gamepad navigation in the main menu.
