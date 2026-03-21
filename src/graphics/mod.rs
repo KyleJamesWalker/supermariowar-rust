@@ -2,6 +2,7 @@ pub mod animation;
 pub mod backgrounds;
 pub mod color_key;
 pub mod effects;
+pub mod object_sprites;
 pub mod player_sprites;
 pub mod sprites;
 
@@ -55,6 +56,12 @@ impl Plugin for GraphicsPlugin {
             (
                 // Player sprite setup (runs once per new player entity)
                 player_sprites::setup_player_sprites,
+                // Object sprite setup (runs once per new object entity)
+                object_sprites::setup_powerup_sprites,
+                object_sprites::setup_enemy_sprites,
+                object_sprites::setup_projectile_sprites,
+                object_sprites::setup_block_sprites,
+                object_sprites::setup_hazard_sprites,
                 // Player visual overlays
                 player_sprites::spawn_player_overlays,
                 // Player-specific sprite sync (reads PlayerAction, updates AnimationController)

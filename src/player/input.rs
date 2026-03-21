@@ -51,7 +51,7 @@ pub fn default_mappings() -> [KeyboardMapping; 4] {
         KeyboardMapping {
             left: KeyCode::Numpad1,
             right: KeyCode::Numpad3,
-            jump: KeyCode::Numpad5,
+            jump: KeyCode::NumpadAdd,
             down: KeyCode::Numpad2,
             turbo: KeyCode::Numpad0,
             use_item: KeyCode::NumpadDecimal,

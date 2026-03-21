@@ -1,9 +1,7 @@
 use bevy::prelude::*;
 
 use crate::core::constants::{MAX_PLAYERS, TILE_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT};
-use crate::objects::powerups::{PowerupType, SpawnedPowerup};
-use crate::objects::components::Collectible;
-use crate::physics::components::Collider;
+use crate::objects::powerups::{spawn_powerup, PowerupType};
 use super::traits::*;
 
 // ---------------------------------------------------------------------------
@@ -91,16 +89,7 @@ pub fn frenzy_spawn_powerups(
 
         let powerup_type = random_frenzy_powerup();
 
-        commands.spawn((
-            SpawnedPowerup::new(powerup_type),
-            Collectible,
-            Collider::new(TILE_SIZE, TILE_SIZE),
-            Transform::from_xyz(x, y, 5.0),
-            GlobalTransform::default(),
-            Visibility::default(),
-            InheritedVisibility::default(),
-            ViewVisibility::default(),
-        ));
+        spawn_powerup(&mut commands, powerup_type, x, y);
 
         // In chaos mode, spawn a second powerup per tick
         if state.chaos_mode {
@@ -108,16 +97,7 @@ pub fn frenzy_spawn_powerups(
             let y2 = SCREEN_HEIGHT / 2.0 - rand::random::<f32>() * (SCREEN_HEIGHT - TILE_SIZE * 2.0) - TILE_SIZE;
             let powerup_type2 = random_frenzy_powerup();
 
-            commands.spawn((
-                SpawnedPowerup::new(powerup_type2),
-                Collectible,
-                Collider::new(TILE_SIZE, TILE_SIZE),
-                Transform::from_xyz(x2, y2, 5.0),
-                GlobalTransform::default(),
-                Visibility::default(),
-                InheritedVisibility::default(),
-                ViewVisibility::default(),
-            ));
+            spawn_powerup(&mut commands, powerup_type2, x2, y2);
         }
     }
 }

@@ -94,7 +94,6 @@ pub struct PlayerInput {
 pub struct WarpState {
     pub direction: WarpDirection,
     pub progress: f32,
-    pub locked: bool,
     pub warp_id: u32,
     pub dest_x: f32,
     pub dest_y: f32,
@@ -106,7 +105,6 @@ impl WarpState {
         Self {
             direction,
             progress: 0.0,
-            locked: true,
             warp_id,
             dest_x,
             dest_y,

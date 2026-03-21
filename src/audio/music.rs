@@ -258,6 +258,10 @@ pub fn game_over_music_system(
     mut music_player: ResMut<MusicPlayer>,
     track_map: Res<MusicTrackMap>,
 ) {
+    if music_player.category == MusicCategory::GameOver && music_player.current_entity.is_some() {
+        return;
+    }
+
     if let Some(path) = track_map.get_random_track(MusicCategory::GameOver) {
         let path = path.clone();
         play_music_oneshot(
