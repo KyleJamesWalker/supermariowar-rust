@@ -251,11 +251,11 @@ pub fn sfx_event_handler(
 
 /// Plays the Jump sound when a player enters the Jumping action.
 pub fn jump_sfx_system(
-    query: Query<(&crate::player::components::PlayerAction, &crate::player::components::PlayerInput)>,
+    query: Query<&crate::player::components::PlayerAction, Changed<crate::player::components::PlayerAction>>,
     mut sfx_events: EventWriter<SfxEvent>,
 ) {
-    for (action, input) in query.iter() {
-        if *action == crate::player::components::PlayerAction::Jumping && input.jump_pressed {
+    for action in query.iter() {
+        if *action == crate::player::components::PlayerAction::Jumping {
             sfx_events.send(SfxEvent::new(SfxId::Jump));
         }
     }

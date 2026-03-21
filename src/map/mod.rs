@@ -91,6 +91,9 @@ fn setup_gameplay(
     // Spawn map hazards (thwomps, piranha plants, etc.)
     spawn_map_hazards(&mut commands, &map_data);
 
+    // Spawn map items (coins, powerup boxes, etc.)
+    spawn_map_items(&mut commands, &map_data);
+
     // Spawn players based on GameSetupConfig (respects menu player selection)
     spawn_players_from_config(&mut commands, &map_data, &game_setup);
 
@@ -634,6 +637,36 @@ fn spawn_map_hazards(commands: &mut Commands, map_data: &MapData) {
 
     if !map_data.map_hazards.is_empty() {
         info!("Spawned {} map hazards", map_data.map_hazards.len());
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Map item spawning (springs, spikes, kuribo shoes, etc.)
+// ---------------------------------------------------------------------------
+
+fn spawn_map_items(commands: &mut Commands, map_data: &MapData) {
+    use crate::objects::components::GameObject;
+    use crate::physics::components::Collider;
+
+    for item in &map_data.map_items {
+        let bx = smw_to_bevy_x(item.tile_x as f32);
+        let by = smw_to_bevy_y(item.tile_y as f32);
+
+        // Item types: 0=GreenSpring, 1=Spike, 2=KuriboShoe, 3=GoldenSpring, 4=StickyShoe, 5=ThrowBox
+        commands.spawn((
+            Transform::from_xyz(bx, by, 5.0),
+            Visibility::default(),
+            Collider::new(TILE_SIZE, TILE_SIZE),
+            GameObject {
+                object_type: crate::objects::components::ObjectType::Block,
+                alive: true,
+            },
+            GameplayEntity,
+        ));
+    }
+
+    if !map_data.map_items.is_empty() {
+        info!("Spawned {} map items (placeholder entities)", map_data.map_items.len());
     }
 }
 
