@@ -309,16 +309,19 @@ pub fn player_select_input(
         }
     }
 
-    // Enter: confirm and go back
+    // Enter: confirm and go back (require at least 2 active players)
     if keyboard.just_pressed(KeyCode::Enter) || keyboard.just_pressed(KeyCode::Space) {
-        // Count active players
         let active_count = game_setup
             .player_slots
             .iter()
             .filter(|s| s.control_type != ControlType::None)
             .count();
-        game_setup.num_players = active_count.max(2);
-        current_sub.submenu = SubMenu::Main;
+        if active_count >= 2 {
+            game_setup.num_players = active_count;
+            current_sub.submenu = SubMenu::Main;
+        } else {
+            info!("Need at least 2 active players to start a game");
+        }
     }
 
     // Escape: go back without confirming

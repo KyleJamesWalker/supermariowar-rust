@@ -327,15 +327,15 @@ fn round_over_timer_system(
         return;
     }
 
+    // Advance to next round first, then check if match is over
+    round_manager.current_round += 1;
+
     if round_manager.current_round > round_manager.total_rounds {
         // Match is over
         round_manager.match_finished = true;
         next_gameplay_state.set(GameplayState::MatchOver);
         next_game_state.set(GameState::GameOver);
     } else {
-        // Advance to next round
-        round_manager.current_round += 1;
-
         // Signal reset
         pending_reset.0 = true;
 

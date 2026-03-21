@@ -81,7 +81,7 @@ impl Default for FlipBlockState {
         Self {
             flipping: false,
             flip_timer: 0.0,
-            flip_duration: 3.0,
+            flip_duration: 4.0,
         }
     }
 }
@@ -210,8 +210,8 @@ pub fn block_hit_system(
                 continue;
             }
 
-            // Stop upward velocity
-            p_vel.y = 1.0;
+            // Bounce player downward off the block
+            p_vel.y = -(p_vel.y.abs().min(4.0));
 
             hit_events.send(BlockHitEvent {
                 block_entity: b_entity,
@@ -335,7 +335,7 @@ pub fn block_bounce_system(
 
         let bounce_vel = match block_type {
             BlockType::BounceBlock => VEL_BLOCK_BOUNCE,
-            BlockType::NoteBlock => VEL_NOTE_BLOCK_BOUNCE * 2.5,
+            BlockType::NoteBlock => VEL_NOTE_BLOCK_REPEL,
             _ => continue,
         };
 

@@ -664,9 +664,9 @@ fn spawn_map_items(commands: &mut Commands, map_data: &MapData) {
     use crate::physics::components::Collider;
 
     for item in &map_data.map_items {
-        // Item ix/iy are tile indices; multiply by TILE_SIZE to get SMW pixel coords
-        let bx = smw_to_bevy_x(item.tile_x as f32 * TILE_SIZE);
-        let by = smw_to_bevy_y(item.tile_y as f32 * TILE_SIZE);
+        // Item ix/iy are tile indices; use tile_to_bevy for proper centering
+        let bx = tile_to_bevy_x(item.tile_x as u32);
+        let by = tile_to_bevy_y(item.tile_y as u32);
 
         // Item types: 0=GreenSpring, 1=Spike, 2=KuriboShoe, 3=GoldenSpring, 4=StickyShoe, 5=ThrowBox
         commands.spawn((
