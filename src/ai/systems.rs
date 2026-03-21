@@ -412,7 +412,7 @@ pub fn ai_record_death(
 /// active game mode. Runs before goal selection so mode context is available.
 pub fn ai_mode_awareness(
     config: Res<GameModeConfig>,
-    tagged_query: Query<&Player, With<TaggedIt>>,
+    tagged_query: Query<(Entity, &Player), With<TaggedIt>>,
     flags: Query<&Flag>,
     mut query: Query<
         (&Player, &mut AiIntent, &AiPerception, &PowerupState),
@@ -441,7 +441,7 @@ pub fn ai_mode_awareness(
             GameModeType::Tag => {
                 let we_are_it = tagged_query
                     .iter()
-                    .any(|p| p.index == player.index);
+                    .any(|(_, p)| p.index == player.index);
 
                 if we_are_it {
                     // Chase the nearest non-team player
@@ -453,12 +453,15 @@ pub fn ai_mode_awareness(
                         intent.current_goal = AiGoal::Chase(entity);
                     }
                 } else {
-                    // Flee from "it"
-                    if let Some(&(entity, _, _, _)) = perception
-                        .visible_players
-                        .first()
-                    {
-                        intent.current_goal = AiGoal::Flee(entity);
+                    // Flee from the tagged ("it") player specifically
+                    let tagged_entity: Option<Entity> = tagged_query
+                        .iter()
+                        .next()
+                        .map(|(e, _)| e);
+                    if let Some(it_entity) = tagged_entity {
+                        if perception.visible_players.iter().any(|(e, _, _, _)| *e == it_entity) {
+                            intent.current_goal = AiGoal::Flee(it_entity);
+                        }
                     }
                 }
             }

@@ -258,6 +258,7 @@ pub fn player_respawn_system(
                 .remove::<CapeState>()
                 .remove::<TailState>()
                 .remove::<Invincible>()
+                .remove::<FrozenState>()
                 .insert(SpawnProtection::new(SPAWN_PROTECTION_SECS));
         }
     }
@@ -609,24 +610,39 @@ pub fn attack_damage_system(
     }
 }
 
+/// Cooldown timer for projectile firing (prevents spam).
+#[derive(Component, Debug)]
+pub struct FireCooldown {
+    pub timer: Timer,
+}
+
 /// Fires a projectile when the player presses use_item with a projectile-type powerup.
 pub fn powerup_use_system(
     mut commands: Commands,
-    query: Query<(
+    mut query: Query<(
+        Entity,
         &PlayerInput,
         &Player,
         &PowerupState,
         &Facing,
         &Transform,
         &PlayerAction,
+        Option<&FrozenState>,
+        Option<&FireCooldown>,
     )>,
 ) {
     use crate::objects::components::ObjectVelocity;
     use crate::objects::projectiles::{Projectile, ProjectileType};
     use crate::physics::components::CollisionLayer;
 
-    for (input, player, powerup, facing, transform, action) in query.iter() {
+    for (entity, input, player, powerup, facing, transform, action, frozen, cooldown) in query.iter_mut() {
         if *action == PlayerAction::Dead || *action == PlayerAction::Spawning {
+            continue;
+        }
+        if frozen.is_some() {
+            continue;
+        }
+        if cooldown.is_some() {
             continue;
         }
         if !input.use_item {
@@ -658,6 +674,9 @@ pub fn powerup_use_system(
                     Collider::new(8.0, 8.0),
                     CollisionLayer::Projectile,
                 ));
+                commands.entity(entity).insert(FireCooldown {
+                    timer: Timer::from_seconds(0.25, TimerMode::Once),
+                });
             }
             PowerupState::Hammer => {
                 let speed = 8.5_f32;
@@ -675,6 +694,9 @@ pub fn powerup_use_system(
                     Collider::new(16.0, 16.0),
                     CollisionLayer::Projectile,
                 ));
+                commands.entity(entity).insert(FireCooldown {
+                    timer: Timer::from_seconds(0.35, TimerMode::Once),
+                });
             }
             PowerupState::Boomerang => {
                 let speed = 5.0_f32;
@@ -692,6 +714,9 @@ pub fn powerup_use_system(
                     Collider::new(16.0, 16.0),
                     CollisionLayer::Projectile,
                 ));
+                commands.entity(entity).insert(FireCooldown {
+                    timer: Timer::from_seconds(0.5, TimerMode::Once),
+                });
             }
             PowerupState::Bomb => {
                 commands.spawn((
@@ -714,8 +739,25 @@ pub fn powerup_use_system(
                     Collider::new(16.0, 16.0),
                     CollisionLayer::Projectile,
                 ));
+                commands.entity(entity).insert(FireCooldown {
+                    timer: Timer::from_seconds(0.5, TimerMode::Once),
+                });
             }
             _ => {}
+        }
+    }
+}
+
+/// Ticks down FireCooldown timers and removes them when expired.
+pub fn fire_cooldown_tick_system(
+    time: Res<Time>,
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut FireCooldown)>,
+) {
+    for (entity, mut cooldown) in query.iter_mut() {
+        cooldown.timer.tick(time.delta());
+        if cooldown.timer.finished() {
+            commands.entity(entity).remove::<FireCooldown>();
         }
     }
 }
