@@ -450,16 +450,19 @@ fn cleanup_mode_entities_on_new_round(
 fn cleanup_transient_entities_on_new_round(
     mut commands: Commands,
     pending_reset: Res<PendingRoundReset>,
+    map_data: Res<crate::map::components::MapData>,
     projectile_query: Query<Entity, With<Projectile>>,
     powerup_query: Query<Entity, With<SpawnedPowerup>>,
     mut player_query: Query<(
         Entity,
+        &Player,
         &mut PlayerAction,
         &mut Velocity,
+        &mut Transform,
         &mut Grounded,
         &mut ShieldState,
         &mut CarriedObject,
-    ), With<Player>>,
+    )>,
 ) {
     // Only run when reset was just consumed (changed from true to false)
     if !pending_reset.is_changed() || pending_reset.0 {
@@ -475,8 +478,12 @@ fn cleanup_transient_entities_on_new_round(
         commands.entity(entity).despawn_recursive();
     }
 
+    // Pick spawn positions for players
+    let player_count = player_query.iter().count();
+    let spawn_positions = crate::map::pick_spawn_positions(&map_data, player_count);
+
     // Reset player state for the new round
-    for (entity, mut action, mut vel, mut grounded, mut shield, mut carried) in player_query.iter_mut() {
+    for (entity, player, mut action, mut vel, mut transform, mut grounded, mut shield, mut carried) in player_query.iter_mut() {
         *action = PlayerAction::Standing;
         vel.x = 0.0;
         vel.y = 0.0;
@@ -486,6 +493,15 @@ fn cleanup_transient_entities_on_new_round(
         if let Some(block_entity) = carried.entity.take() {
             commands.entity(block_entity).despawn_recursive();
         }
+
+        // Reposition to spawn point
+        if let Some(&(sx, sy)) = spawn_positions.get(player.index) {
+            let bx = crate::map::tile_to_bevy_x(sx as u32);
+            let by = crate::map::tile_to_bevy_y(sy as u32);
+            transform.translation.x = bx;
+            transform.translation.y = by;
+        }
+
         // Remove transient components
         commands.entity(entity)
             .remove::<FrozenState>()

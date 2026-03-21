@@ -459,7 +459,7 @@ fn spawn_players(commands: &mut Commands, md: &MapData) {
 }
 
 /// Pick spawn positions for `count` players from the map's spawn areas.
-fn pick_spawn_positions(md: &MapData, count: usize) -> Vec<(i32, i32)> {
+pub fn pick_spawn_positions(md: &MapData, count: usize) -> Vec<(i32, i32)> {
     let mut positions = Vec::new();
 
     // Default positions if we can't find valid spawn areas
@@ -756,12 +756,12 @@ fn spawn_map_items(commands: &mut Commands, map_data: &MapData) {
 // ---------------------------------------------------------------------------
 
 /// Convert tile grid column to Bevy X (centred on screen).
-fn tile_to_bevy_x(col: u32) -> f32 {
+pub fn tile_to_bevy_x(col: u32) -> f32 {
     (col as f32 * TILE_SIZE) - SCREEN_WIDTH / 2.0 + TILE_SIZE / 2.0
 }
 
 /// Convert tile grid row to Bevy Y (Y-up, centred on screen).
-fn tile_to_bevy_y(row: u32) -> f32 {
+pub fn tile_to_bevy_y(row: u32) -> f32 {
     (SCREEN_HEIGHT / 2.0) - (row as f32 * TILE_SIZE) - TILE_SIZE / 2.0
 }
 

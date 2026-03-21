@@ -710,14 +710,19 @@ pub fn enemy_player_touch_system(
                 continue;
             }
 
-            // Kill the player
+            // Kill the player. Credit the shell owner if this was a kicked shell.
             play_sfx(&mut commands, &sfx, &sfx_vol, SfxId::PlayerDeath);
             *p_action = PlayerAction::Dead;
+            let killer = owner.map(|o| o.index);
             player_death_events.send(PlayerDeathEvent {
                 player_entity: p_entity,
                 player_index: player.index,
-                killer_index: None,
-                cause: DeathCause::Environment,
+                killer_index: killer,
+                cause: if killer.is_some() {
+                    DeathCause::Killed { by: killer.unwrap() }
+                } else {
+                    DeathCause::Environment
+                },
             });
         }
     }
