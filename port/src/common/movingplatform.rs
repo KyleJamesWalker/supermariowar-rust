@@ -1474,38 +1474,3 @@ impl Drop for MovingPlatform {
         }
     }
 }
-
-// PLACEHOLDER(foundation): CPlayer methods this file needs until the player port defines them in smw/player.rs.
-// The player porter deletes this block when adding the real ones.
-impl CPlayer {
-    pub fn isready(&self) -> bool {
-        self.state == crate::smw::player::PlayerState::Ready
-    }
-
-    pub fn is_invincible(&self) -> bool {
-        todo!("port CPlayer::isInvincible")
-    }
-
-    pub fn is_shielded(&self) -> bool {
-        todo!("port CPlayer::isShielded")
-    }
-
-    pub fn set_xf(&mut self, xf: f32) {
-        self.fx = xf;
-        self.ix = self.fx as i16;
-    }
-
-    pub fn set_yf(&mut self, yf: f32) {
-        self.fy = yf;
-        self.iy = self.fy as i16;
-    }
-
-    pub fn flipsidesifneeded(&mut self) {
-        todo!("port CPlayer::flipsidesifneeded")
-    }
-
-    /// `KillPlayerMapHazard(bool fForce, KillStyle ks, bool fKillCarriedItem, short iPlayerId = -1)`
-    pub fn kill_player_map_hazard(&mut self, _fForce: bool, _ks: KillStyle, _fKillCarriedItem: bool, _iPlayerId: i16) -> PlayerKillType {
-        todo!("port CPlayer::KillPlayerMapHazard")
-    }
-}
