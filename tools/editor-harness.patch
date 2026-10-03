@@ -1,6 +1,7 @@
-diff -ruN supermariowar/src/common/CMakeLists.txt smw-ref-editors/src/common/CMakeLists.txt
---- supermariowar/src/common/CMakeLists.txt	2026-03-20 16:50:46
-+++ smw-ref-editors/src/common/CMakeLists.txt	2026-10-03 02:33:29
+diff --git a/src/common/CMakeLists.txt b/src/common/CMakeLists.txt
+index dbf465a6..4690a9b5 100644
+--- a/src/common/CMakeLists.txt
++++ b/src/common/CMakeLists.txt
 @@ -1,6 +1,8 @@
  add_library(CommonFiles STATIC
      CmdArgs.cpp
@@ -10,9 +11,11 @@ diff -ruN supermariowar/src/common/CMakeLists.txt smw-ref-editors/src/common/CMa
      eyecandy.cpp
      eyecandy.h
      EyecandyStyles.h
-diff -ruN supermariowar/src/common/EditorHarness.cpp smw-ref-editors/src/common/EditorHarness.cpp
---- supermariowar/src/common/EditorHarness.cpp	1969-12-31 16:00:00
-+++ smw-ref-editors/src/common/EditorHarness.cpp	2026-10-03 03:03:01
+diff --git a/src/common/EditorHarness.cpp b/src/common/EditorHarness.cpp
+new file mode 100644
+index 00000000..3e1141d1
+--- /dev/null
++++ b/src/common/EditorHarness.cpp
 @@ -0,0 +1,309 @@
 +#include "EditorHarness.h"
 +
@@ -323,9 +326,11 @@ diff -ruN supermariowar/src/common/EditorHarness.cpp smw-ref-editors/src/common/
 +}
 +
 +} // namespace editorharness
-diff -ruN supermariowar/src/common/EditorHarness.h smw-ref-editors/src/common/EditorHarness.h
---- supermariowar/src/common/EditorHarness.h	1969-12-31 16:00:00
-+++ smw-ref-editors/src/common/EditorHarness.h	2026-10-03 03:03:01
+diff --git a/src/common/EditorHarness.h b/src/common/EditorHarness.h
+new file mode 100644
+index 00000000..e9b3f92b
+--- /dev/null
++++ b/src/common/EditorHarness.h
 @@ -0,0 +1,25 @@
 +#pragma once
 +
@@ -352,10 +357,11 @@ diff -ruN supermariowar/src/common/EditorHarness.h smw-ref-editors/src/common/Ed
 +void frameDelay(unsigned delay);
 +
 +} // namespace editorharness
-diff -ruN supermariowar/src/common/map.h smw-ref-editors/src/common/map.h
---- supermariowar/src/common/map.h	2026-03-20 16:50:46
-+++ smw-ref-editors/src/common/map.h	2026-10-03 02:51:55
-@@ -367,6 +367,7 @@
+diff --git a/src/common/map.h b/src/common/map.h
+index 5f607cdb..a3901bd1 100644
+--- a/src/common/map.h
++++ b/src/common/map.h
+@@ -367,6 +367,7 @@ class CMap
  		friend void loadmap(char * szMapFile);
  		friend void SetNoSpawn(short nospawnmode, short col, short row, bool value);
  		friend int editor_platforms();
@@ -363,10 +369,11 @@ diff -ruN supermariowar/src/common/map.h smw-ref-editors/src/common/map.h
  
  		friend class B_BreakableBlock;
  		friend class B_DonutBlock;
-diff -ruN supermariowar/src/leveleditor/leveleditor.cpp smw-ref-editors/src/leveleditor/leveleditor.cpp
---- supermariowar/src/leveleditor/leveleditor.cpp	2026-03-20 16:50:46
-+++ smw-ref-editors/src/leveleditor/leveleditor.cpp	2026-10-03 02:51:55
-@@ -36,6 +36,7 @@
+diff --git a/src/leveleditor/leveleditor.cpp b/src/leveleditor/leveleditor.cpp
+index 335e868f..c0f82564 100644
+--- a/src/leveleditor/leveleditor.cpp
++++ b/src/leveleditor/leveleditor.cpp
+@@ -37,6 +37,7 @@
  #include "sfx.h"
  #include "TilesetManager.h"
  #include "GameValues.h"
@@ -374,12 +381,10 @@ diff -ruN supermariowar/src/leveleditor/leveleditor.cpp smw-ref-editors/src/leve
  
  // Included only for movingplatform
  // TODO: Remove and fix linker errors
-@@ -74,7 +75,17 @@
- #ifdef __EMSCRIPTEN__
- #include <emscripten.h>
+@@ -77,6 +78,16 @@ void removeifprojectile(IO_MovingObject * object, bool playsound, bool forcedead
  #endif
-+
-+
+ 
+ 
 +#define SDL_Delay(n) editorharness::frameDelay(n)
 +#define SDL_GetKeyboardState(x) editorharness::keyboardState()
 +#define SDL_GetMouseState(x, y) editorharness::mouseState()
@@ -387,22 +392,23 @@ diff -ruN supermariowar/src/leveleditor/leveleditor.cpp smw-ref-editors/src/leve
 +namespace harness {
 +bool noLimit() { return editorharness::noLimit(); }
 +}
- 
++
 +void dumpLevelEditorState(void* out);
- 
++
  #define MAPTITLESTRING "Level Editor"
  
-@@ -552,6 +563,9 @@
- 	resetselectedtiles();
+ 
+@@ -562,6 +573,9 @@ void inner_main()
  
  	game_values.init(); // Needed for FPSLimiter
-+
+ 
 +	editorharness::init();
 +	editorharness::setDumper([](FILE* out) { dumpLevelEditorState(out); });
- 
++
  	printf("entering level editor loop...\n");
  #ifdef __EMSCRIPTEN__
-@@ -651,7 +665,8 @@
+     emscripten_set_main_loop(gameloop_frame, 0, 1);
+@@ -660,7 +674,8 @@ void gameloop_frame()
  			break;
  		}
  
@@ -412,7 +418,7 @@ diff -ruN supermariowar/src/leveleditor/leveleditor.cpp smw-ref-editors/src/leve
          gfx_flipscreen();
          FPSLimiter::instance().afterFlip();
  
-@@ -2158,6 +2173,7 @@
+@@ -2162,6 +2177,7 @@ int editor_properties(short iBlockCol, short iBlockRow)
  		rm->menu_font_small.drawRightJustified(640, 0, maplist->currentFilename().c_str());
  
  		DrawMessage();
@@ -420,7 +426,7 @@ diff -ruN supermariowar/src/leveleditor/leveleditor.cpp smw-ref-editors/src/leve
  		FPSLimiter::instance().beforeFlip();
  		gfx_flipscreen();
  		FPSLimiter::instance().afterFlip();
-@@ -2354,7 +2370,8 @@
+@@ -2358,7 +2374,8 @@ int editor_platforms()
                      if (PLATFORM_EDIT_STATE_EDIT == iPlatformEditState || PLATFORM_EDIT_STATE_ANIMATED == iPlatformEditState || PLATFORM_EDIT_STATE_TILETYPE == iPlatformEditState) {
  							FPSLimiter::instance().frameStart();
  							while (editor_tiles() == EDITOR_TILES) {
@@ -430,7 +436,7 @@ diff -ruN supermariowar/src/leveleditor/leveleditor.cpp smw-ref-editors/src/leve
  								gfx_flipscreen();
  								FPSLimiter::instance().afterFlip();
  								FPSLimiter::instance().frameStart();
-@@ -2367,7 +2384,8 @@
+@@ -2371,7 +2388,8 @@ int editor_platforms()
                      if (PLATFORM_EDIT_STATE_EDIT == iPlatformEditState || PLATFORM_EDIT_STATE_ANIMATED == iPlatformEditState || PLATFORM_EDIT_STATE_TILETYPE == iPlatformEditState) {
  							FPSLimiter::instance().frameStart();
  							while (editor_animation() == EDITOR_ANIMATION) {
@@ -440,7 +446,7 @@ diff -ruN supermariowar/src/leveleditor/leveleditor.cpp smw-ref-editors/src/leve
  								gfx_flipscreen();
  								FPSLimiter::instance().afterFlip();
  								FPSLimiter::instance().frameStart();
-@@ -2378,7 +2396,8 @@
+@@ -2382,7 +2400,8 @@ int editor_platforms()
                      if (PLATFORM_EDIT_STATE_EDIT == iPlatformEditState || PLATFORM_EDIT_STATE_ANIMATED == iPlatformEditState || PLATFORM_EDIT_STATE_TILETYPE == iPlatformEditState) {
  							FPSLimiter::instance().frameStart();
  							while (editor_tiletype() == EDITOR_TILETYPE) {
@@ -450,11 +456,10 @@ diff -ruN supermariowar/src/leveleditor/leveleditor.cpp smw-ref-editors/src/leve
  								gfx_flipscreen();
  								FPSLimiter::instance().afterFlip();
  								FPSLimiter::instance().frameStart();
-@@ -5279,4 +5298,126 @@
- 	}
+@@ -5256,3 +5275,127 @@ bool WriteAnimatedTileTypeFile(const char * szFile)
  
  	return true;
-+}
+ }
 +
 +namespace {
 +struct Fnv {
@@ -472,7 +477,7 @@ diff -ruN supermariowar/src/leveleditor/leveleditor.cpp smw-ref-editors/src/leve
 +		add(v);
 +	}
 +};
- }
++}
 +
 +// Replay-harness E/T/X/P/H records (port/EDITOR_REPLAY.md).
 +void dumpLevelEditorState(void* outp)
@@ -503,8 +508,10 @@ diff -ruN supermariowar/src/leveleditor/leveleditor.cpp smw-ref-editors/src/leve
 +			hm.add((int)g_map->mapdatatop[x][y]);
 +			const MapBlock& b = g_map->objectdata[x][y];
 +			hm.add(b.iType);
-+			for (short s : b.iSettings)
-+				hm.add(s);
++			// Only the settings the map format stores: the rest keep stale heap bytes.
++			const int stored = (b.iType == 1 || b.iType == 15) ? NUM_BLOCK_SETTINGS : (b.iType >= 11 && b.iType <= 14) ? 1 : 0;
++			for (int s = 0; s < stored; s++)
++				hm.add(b.iSettings[s]);
 +			hm.add(b.fHidden ? 1 : 0);
 +			const Warp& w = g_map->warpdata[x][y];
 +			hm.add((int)w.direction);
@@ -577,9 +584,10 @@ diff -ruN supermariowar/src/leveleditor/leveleditor.cpp smw-ref-editors/src/leve
 +
 +	fprintf(out, "H map=%08x plat=%08x anim=%08x\n", hm.h, hp.h, ha.h);
 +}
-diff -ruN supermariowar/src/worldeditor/worldeditor.cpp smw-ref-editors/src/worldeditor/worldeditor.cpp
---- supermariowar/src/worldeditor/worldeditor.cpp	2026-03-20 16:50:46
-+++ smw-ref-editors/src/worldeditor/worldeditor.cpp	2026-10-03 02:34:19
+diff --git a/src/worldeditor/worldeditor.cpp b/src/worldeditor/worldeditor.cpp
+index b0383f8f..5230d00b 100644
+--- a/src/worldeditor/worldeditor.cpp
++++ b/src/worldeditor/worldeditor.cpp
 @@ -17,6 +17,7 @@
  #endif
  
@@ -588,35 +596,35 @@ diff -ruN supermariowar/src/worldeditor/worldeditor.cpp smw-ref-editors/src/worl
  #include "FileIO.h"
  #include "FileList.h"
  #include "GameMode.h"
-@@ -73,6 +74,8 @@
- #ifdef __EMSCRIPTEN__
+@@ -74,6 +75,8 @@
  #define SDL_Delay(n) ;
  #endif
-+
-+#define SDL_Delay(n) editorharness::frameDelay(n)
  
++#define SDL_Delay(n) editorharness::frameDelay(n)
++
  #define MAPTITLESTRING "World Editor"
  
-@@ -421,6 +424,13 @@
- 		sm->options[iModeOption].iValue = (iModeOption + 1) * iIncrement;
- 		sprintf(sm->options[iModeOption].szName, "%d", sm->options[iModeOption].iValue);
+ enum {EDITOR_EDIT, EDITOR_WATER, EDITOR_BACKGROUND, EDITOR_STAGEFOREGROUND, EDITOR_STRUCTUREFOREGROUND, EDITOR_BRIDGES, EDITOR_PATHSPRITE, EDITOR_VEHICLES, EDITOR_QUIT, SAVE_AS, FIND, CLEAR_WORLD, NEW_WORLD, RESIZE_WORLD, SAVE, EDITOR_WARP, DISPLAY_HELP, EDITOR_PATH, EDITOR_TYPE, EDITOR_BOUNDARY, EDITOR_START_ITEMS, EDITOR_STAGE};
+@@ -423,6 +426,13 @@ void SetStageMode(short iIndex, const char * szModeName, const char * szGoalName
  	}
-+}
-+
+ }
+ 
 +void dumpEditorState(FILE* out)
 +{
 +	fprintf(out, "E state=%d edit_mode=%d set_tile=%d auto=%d col=%d row=%d w=%d h=%d stages=%zu vehicles=%zu warps=%zu world=%s\n",
 +		state, edit_mode, set_tile, fAutoPaint ? 1 : 0, draw_offset_col, draw_offset_row, iWorldWidth, iWorldHeight,
 +		game_values.tourstops.size(), vehiclelist.size(), warplist.size(), worldlist->currentPath().filename().string().c_str());
- }
++}
++
+ void inner_main();
  
  //main main main
-@@ -481,6 +491,8 @@
+@@ -495,6 +505,8 @@ void inner_main()
  
  	gfx_init(640,480, g_fFullScreen);
  	blitdest = screen;
 +	editorharness::init();
 +	editorharness::setDumper(&dumpEditorState);
- 	g_tilesetmanager->init(convertPath("gfx/Classic/tilesets").c_str());
  
- 	char title[128];
+         rm = new CResourceManager();
+ 
