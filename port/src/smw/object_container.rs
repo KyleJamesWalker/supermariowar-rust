@@ -2,7 +2,7 @@
 
 use crate::common::moving_object_types::MovingObjectType;
 use crate::common::object_base::{CObjectTrait, ObjectType};
-use crate::globals::Ptr;
+use crate::globals::{Aliased, Ptr};
 
 pub const MAXOBJECTS: usize = 300;
 
@@ -10,6 +10,7 @@ pub const MAXOBJECTS: usize = 300;
 /// object and deletes it in `clean` / `clean_dead_objects`.
 pub struct CObjectContainer {
     m_list: Vec<Ptr<dyn CObjectTrait>>,
+    pub _alias: Aliased,
 }
 
 impl Default for CObjectContainer {
@@ -20,7 +21,7 @@ impl Default for CObjectContainer {
 
 impl CObjectContainer {
     pub const fn new() -> Self {
-        CObjectContainer { m_list: Vec::new() }
+        CObjectContainer { m_list: Vec::new(), _alias: Aliased::new() }
     }
 
     /// libc++ `reserve(300)` gives exactly 300 and `add` never grows past it.
