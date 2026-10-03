@@ -9,7 +9,7 @@ pub mod gfx_sprite;
 use crate::common::gfx::color::{colors, RGB};
 use crate::common::gfx::gfx_palette::{gfxPalette, PlayerPalette};
 use crate::common::gfx::gfx_sdl::GraphicsSDL;
-use crate::common::gfx::gfx_sprite::{gfxSprite, ClipEdge, SpriteBuilder};
+use crate::common::gfx::gfx_sprite::{gfxSprite, ClipEdge, ImageLoader};
 use crate::common::global_constants::PGFX_LAST;
 use crate::common::util::sdl_helpers::SdlSurfacePtr;
 use crate::globals::*;
@@ -220,7 +220,7 @@ pub fn gfx_save_screen_bmp(path: &str) -> bool {
 }
 
 fn load_skin(path: &Path) -> Result<gfxSprite, String> {
-    let skin = SpriteBuilder::new(path).without_color_key().without_optimization().try_create()?;
+    let skin = ImageLoader::new(path).without_color_key().without_optimization().try_create()?;
 
     if !valid_skin_surface(&skin) {
         return Err(format!("Invalid skin file: {} has incorrect dimensions", path.display()));

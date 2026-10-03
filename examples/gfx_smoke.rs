@@ -5,7 +5,7 @@
 
 use sdl2::sys::SDL_Rect;
 use smw::common::gfx::gfx_font::gfxFont;
-use smw::common::gfx::gfx_sprite::{ClipEdge, SpriteBuilder};
+use smw::common::gfx::gfx_sprite::{ClipEdge, ImageLoader};
 use smw::common::gfx::*;
 use smw::globals::*;
 use std::path::Path;
@@ -26,11 +26,11 @@ fn main() {
     let pack = format!("{}/gfx/packs/Classic", data);
     assert!(gfx_loadpalette(Path::new(&format!("{}/palette.png", pack))));
 
-    let backdrop = SpriteBuilder::new(format!("{}/menu/menu_background.png", pack)).without_color_key().create();
-    let smw_logo = SpriteBuilder::new(format!("{}/menu/menu_smw.png", pack)).create();
-    let shade = SpriteBuilder::new(format!("{}/menu/menu_shade.png", pack)).with_alpha(72).without_color_key().create();
-    let ghost = SpriteBuilder::new(format!("{}/eyecandy/ghost.png", pack)).with_alpha(128).with_wrapping(640).create();
-    let overlay = SpriteBuilder::new(format!("{}/eyecandy/overlayholes.png", pack))
+    let backdrop = ImageLoader::new(format!("{}/menu/menu_background.png", pack)).without_color_key().create();
+    let smw_logo = ImageLoader::new(format!("{}/menu/menu_smw.png", pack)).create();
+    let shade = ImageLoader::new(format!("{}/menu/menu_shade.png", pack)).with_alpha(72).without_color_key().create();
+    let ghost = ImageLoader::new(format!("{}/eyecandy/ghost.png", pack)).with_alpha(128).with_wrapping(640).create();
+    let overlay = ImageLoader::new(format!("{}/eyecandy/overlayholes.png", pack))
         .with_color_key(smw::common::gfx::color::RGB { r: 0, g: 255, b: 0 })
         .create();
 

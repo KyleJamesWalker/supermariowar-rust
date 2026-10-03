@@ -109,11 +109,6 @@ impl gfxSprite {
         gfxSprite { _alias: Aliased::new(), m_picture: SdlSurfacePtr::null(), m_wrap_x: None }
     }
 
-    /// `gfxSprite(filename, color_key, alpha, wrap)`
-    pub fn from_file(filename: &Path, color_key: Option<RGB>, alpha: Option<u8>, wrap: Option<i32>) -> Self {
-        Self::from_surface(load_image(filename, true, color_key, alpha), wrap)
-    }
-
     /// `gfxSprite(SdlSurfacePtr image, wrap = 640)`
     pub fn from_surface(image: SdlSurfacePtr, wrap: Option<i32>) -> Self {
         gfxSprite { _alias: Aliased::new(), m_picture: image, m_wrap_x: wrap }
@@ -277,7 +272,7 @@ impl gfxSprite {
     }
 }
 
-pub struct SpriteBuilder {
+pub struct ImageLoader {
     m_path: PathBuf,
     m_optimize: bool,
     m_color_key: Option<RGB>,
@@ -285,9 +280,9 @@ pub struct SpriteBuilder {
     m_wrap_x: Option<i32>,
 }
 
-impl SpriteBuilder {
+impl ImageLoader {
     pub fn new(path: impl Into<PathBuf>) -> Self {
-        SpriteBuilder { m_path: path.into(), m_optimize: true, m_color_key: Some(colors::MAGENTA), m_alpha: None, m_wrap_x: None }
+        ImageLoader { m_path: path.into(), m_optimize: true, m_color_key: Some(colors::MAGENTA), m_alpha: None, m_wrap_x: None }
     }
 
     pub fn with_color_key(mut self, key: RGB) -> Self {

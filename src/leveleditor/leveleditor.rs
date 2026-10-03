@@ -8,7 +8,7 @@ use crate::common::game::ensure_settings_dir;
 use crate::common::game_values::{default_powerup_setting, TITLESTRING};
 use crate::common::gfx::color::colors;
 use crate::common::gfx::gfx_font::gfxFont;
-use crate::common::gfx::gfx_sprite::{gfxSprite, SpriteBuilder};
+use crate::common::gfx::gfx_sprite::{gfxSprite, ImageLoader};
 use crate::common::gfx::{gfx_changefullscreen, gfx_flipscreen, gfx_init, gfx_settitle, gfx_show_catched_error};
 use crate::common::global::g_szMusicCategoryNames;
 use crate::common::global_constants::*;
@@ -394,77 +394,77 @@ pub fn inner_main() {
 
         println!("\n---------------- loading graphics ----------------");
 
-        rm.spr_tiletypes = SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_tile_types.png")).without_color_key().create();
-        rm.spr_transparenttiles = SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_transparent_tiles.png")).with_alpha(160).create();
+        rm.spr_tiletypes = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_tile_types.png")).without_color_key().create();
+        rm.spr_transparenttiles = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_transparent_tiles.png")).with_alpha(160).create();
 
-        rm.spr_backgroundlevel = SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_background_levels.png")).create();
-        rm.spr_tilesetlevel = SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_tileset_levels.png")).create();
+        rm.spr_backgroundlevel = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_background_levels.png")).create();
+        rm.spr_tilesetlevel = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_tileset_levels.png")).create();
 
-        rm.spr_eyecandy = SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_eyecandy.png")).create();
+        rm.spr_eyecandy = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_eyecandy.png")).create();
 
-        s_platform.init(SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_platform.png")).create());
-        s_platformpathbuttons.init(SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_pathtype_buttons.png")).create());
-        s_maphazardbuttons.init(SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_maphazard_buttons.png")).create());
+        s_platform.init(ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_platform.png")).create());
+        s_platformpathbuttons.init(ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_pathtype_buttons.png")).create());
+        s_maphazardbuttons.init(ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_maphazard_buttons.png")).create());
 
-        rm.spr_warps[0] = SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_warp.png")).create();
-        rm.spr_warps[1] = SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_warp_preview.png")).create();
-        rm.spr_warps[2] = SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_warp_thumbnail.png")).create();
+        rm.spr_warps[0] = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_warp.png")).create();
+        rm.spr_warps[1] = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_warp_preview.png")).create();
+        rm.spr_warps[2] = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_warp_thumbnail.png")).create();
 
-        rm.spr_platformpath = SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_platform_path.png")).with_alpha(128).create();
+        rm.spr_platformpath = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_platform_path.png")).with_alpha(128).create();
 
-        rm.spr_selectedtile = SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_selectedtile.png")).with_color_key(colors::BLACK).with_alpha(128).create();
-        rm.spr_nospawntile = SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_nospawntile.png")).with_color_key(colors::BLACK).with_alpha(128).create();
-        rm.spr_noitemspawntile = SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_noitemspawntile.png")).with_color_key(colors::BLACK).with_alpha(128).create();
-        rm.spr_platformstarttile = SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_platformstarttile.png")).with_color_key(colors::BLACK).with_alpha(64).with_wrapping(640).create();
-        rm.spr_platformendtile = SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_selectedtile.png")).with_color_key(colors::BLACK).with_alpha(64).with_wrapping(640).create();
+        rm.spr_selectedtile = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_selectedtile.png")).with_color_key(colors::BLACK).with_alpha(128).create();
+        rm.spr_nospawntile = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_nospawntile.png")).with_color_key(colors::BLACK).with_alpha(128).create();
+        rm.spr_noitemspawntile = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_noitemspawntile.png")).with_color_key(colors::BLACK).with_alpha(128).create();
+        rm.spr_platformstarttile = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_platformstarttile.png")).with_color_key(colors::BLACK).with_alpha(64).with_wrapping(640).create();
+        rm.spr_platformendtile = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_selectedtile.png")).with_color_key(colors::BLACK).with_alpha(64).with_wrapping(640).create();
 
-        rm.spr_mapitems[0] = SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_mapitems.png")).create();
-        rm.spr_mapitems[1] = SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_mapitems_preview.png")).create();
-        rm.spr_mapitems[2] = SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_mapitems_thumbnail.png")).create();
+        rm.spr_mapitems[0] = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_mapitems.png")).create();
+        rm.spr_mapitems[1] = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_mapitems_preview.png")).create();
+        rm.spr_mapitems[2] = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_mapitems_thumbnail.png")).create();
 
-        rm.spr_dialog = SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_dialog.png")).with_alpha(255).create();
-        rm.menu_shade = SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_shade.png")).with_alpha(128).create();
+        rm.spr_dialog = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_dialog.png")).with_alpha(255).create();
+        rm.menu_shade = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_shade.png")).with_alpha(128).create();
 
-        rm.spr_tileanimation[0] = SpriteBuilder::new(convert_path("gfx/packs/Classic/tilesets/tile_animation.png")).create();
-        rm.spr_tileanimation[1] = SpriteBuilder::new(convert_path("gfx/packs/Classic/tilesets/tile_animation_preview.png")).create();
-        rm.spr_tileanimation[2] = SpriteBuilder::new(convert_path("gfx/packs/Classic/tilesets/tile_animation_thumbnail.png")).create();
+        rm.spr_tileanimation[0] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/tile_animation.png")).create();
+        rm.spr_tileanimation[1] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/tile_animation_preview.png")).create();
+        rm.spr_tileanimation[2] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/tile_animation_thumbnail.png")).create();
 
-        rm.spr_blocks[0] = SpriteBuilder::new(convert_path("gfx/packs/Classic/tilesets/blocks.png")).create();
-        rm.spr_blocks[1] = SpriteBuilder::new(convert_path("gfx/packs/Classic/tilesets/blocks_preview.png")).create();
-        rm.spr_blocks[2] = SpriteBuilder::new(convert_path("gfx/packs/Classic/tilesets/blocks_thumbnail.png")).create();
+        rm.spr_blocks[0] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/blocks.png")).create();
+        rm.spr_blocks[1] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/blocks_preview.png")).create();
+        rm.spr_blocks[2] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/blocks_thumbnail.png")).create();
 
-        rm.spr_unknowntile[0] = SpriteBuilder::new(convert_path("gfx/packs/Classic/tilesets/unknown_tile.png")).create();
-        rm.spr_unknowntile[1] = SpriteBuilder::new(convert_path("gfx/packs/Classic/tilesets/unknown_tile_preview.png")).create();
-        rm.spr_unknowntile[2] = SpriteBuilder::new(convert_path("gfx/packs/Classic/tilesets/unknown_tile_thumbnail.png")).create();
+        rm.spr_unknowntile[0] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/unknown_tile.png")).create();
+        rm.spr_unknowntile[1] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/unknown_tile_preview.png")).create();
+        rm.spr_unknowntile[2] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/unknown_tile_thumbnail.png")).create();
 
-        rm.spr_powerups = SpriteBuilder::new(convert_path("gfx/packs/Classic/powerups/large.png")).create();
-        rm.spr_powerupselector = SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_powerup_selector.png")).with_alpha(128).create();
-        rm.spr_hidden_marker = SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_hidden_marker.png")).create();
+        rm.spr_powerups = ImageLoader::new(convert_path("gfx/packs/Classic/powerups/large.png")).create();
+        rm.spr_powerupselector = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_powerup_selector.png")).with_alpha(128).create();
+        rm.spr_hidden_marker = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_hidden_marker.png")).create();
 
-        rm.spr_flagbases = SpriteBuilder::new(convert_path("gfx/packs/Classic/modeobjects/flagbases.png")).create();
-        rm.spr_racegoals = SpriteBuilder::new(convert_path("gfx/packs/Classic/modeobjects/racegoal.png")).create();
+        rm.spr_flagbases = ImageLoader::new(convert_path("gfx/packs/Classic/modeobjects/flagbases.png")).create();
+        rm.spr_racegoals = ImageLoader::new(convert_path("gfx/packs/Classic/modeobjects/racegoal.png")).create();
 
-        rm.spr_hazard_fireball[0] = SpriteBuilder::new(convert_path("gfx/packs/Classic/hazards/fireball.png")).create();
-        rm.spr_hazard_fireball[1] = SpriteBuilder::new(convert_path("gfx/packs/Classic/hazards/fireball_preview.png")).create();
-        rm.spr_hazard_fireball[2] = SpriteBuilder::new(convert_path("gfx/packs/Classic/hazards/fireball_thumbnail.png")).create();
+        rm.spr_hazard_fireball[0] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/fireball.png")).create();
+        rm.spr_hazard_fireball[1] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/fireball_preview.png")).create();
+        rm.spr_hazard_fireball[2] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/fireball_thumbnail.png")).create();
 
-        rm.spr_hazard_rotodisc[0] = SpriteBuilder::new(convert_path("gfx/packs/Classic/hazards/rotodisc.png")).create();
-        rm.spr_hazard_rotodisc[1] = SpriteBuilder::new(convert_path("gfx/packs/Classic/hazards/rotodisc_preview.png")).create();
-        rm.spr_hazard_rotodisc[2] = SpriteBuilder::new(convert_path("gfx/packs/Classic/hazards/rotodisc_thumbnail.png")).create();
+        rm.spr_hazard_rotodisc[0] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/rotodisc.png")).create();
+        rm.spr_hazard_rotodisc[1] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/rotodisc_preview.png")).create();
+        rm.spr_hazard_rotodisc[2] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/rotodisc_thumbnail.png")).create();
 
-        rm.spr_hazard_bulletbill[0] = SpriteBuilder::new(convert_path("gfx/packs/Classic/hazards/bulletbill.png")).create();
-        rm.spr_hazard_bulletbill[1] = SpriteBuilder::new(convert_path("gfx/packs/Classic/hazards/bulletbill_preview.png")).create();
-        rm.spr_hazard_bulletbill[2] = SpriteBuilder::new(convert_path("gfx/packs/Classic/hazards/bulletbill_thumbnail.png")).create();
+        rm.spr_hazard_bulletbill[0] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/bulletbill.png")).create();
+        rm.spr_hazard_bulletbill[1] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/bulletbill_preview.png")).create();
+        rm.spr_hazard_bulletbill[2] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/bulletbill_thumbnail.png")).create();
 
-        rm.spr_hazard_flame[0] = SpriteBuilder::new(convert_path("gfx/packs/Classic/hazards/flame.png")).create();
-        rm.spr_hazard_flame[1] = SpriteBuilder::new(convert_path("gfx/packs/Classic/hazards/flame_preview.png")).create();
-        rm.spr_hazard_flame[2] = SpriteBuilder::new(convert_path("gfx/packs/Classic/hazards/flame_thumbnail.png")).create();
+        rm.spr_hazard_flame[0] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/flame.png")).create();
+        rm.spr_hazard_flame[1] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/flame_preview.png")).create();
+        rm.spr_hazard_flame[2] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/flame_thumbnail.png")).create();
 
-        rm.spr_hazard_pirhanaplant[0] = SpriteBuilder::new(convert_path("gfx/packs/Classic/hazards/pirhanaplant.png")).create();
-        rm.spr_hazard_pirhanaplant[1] = SpriteBuilder::new(convert_path("gfx/packs/Classic/hazards/pirhanaplant_preview.png")).create();
-        rm.spr_hazard_pirhanaplant[2] = SpriteBuilder::new(convert_path("gfx/packs/Classic/hazards/pirhanaplant_thumbnail.png")).create();
+        rm.spr_hazard_pirhanaplant[0] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/pirhanaplant.png")).create();
+        rm.spr_hazard_pirhanaplant[1] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/pirhanaplant_preview.png")).create();
+        rm.spr_hazard_pirhanaplant[2] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/pirhanaplant_thumbnail.png")).create();
 
-        rm.spr_number_icons = SpriteBuilder::new(convert_path("gfx/packs/Classic/awards/killsinrownumbers.png")).create();
+        rm.spr_number_icons = ImageLoader::new(convert_path("gfx/packs/Classic/awards/killsinrownumbers.png")).create();
 
         for i in 0..3usize {
             rm.spr_hazard_fireball[i].set_wrap((640 >> i) as i16);
@@ -801,7 +801,7 @@ pub fn editor_edit() -> i32 {
                         if key == k(SDLK_g) {
                             backgroundlist.next();
 
-                            rm.spr_background = SpriteBuilder::new(backgroundlist.current_path()).without_color_key().create();
+                            rm.spr_background = ImageLoader::new(backgroundlist.current_path()).without_color_key().create();
                             g_map.szBackgroundFile = get_filename_from_path(&backgroundlist.current_path().to_string_lossy());
 
                             if !check_key(keystate, SDLK_LSHIFT) && !check_key(keystate, SDLK_RSHIFT) {
@@ -3997,7 +3997,7 @@ pub fn editor_backgrounds() -> i32 {
                             if event.button.x >= d.x && event.button.x < d.x + d.w && event.button.y >= d.y && event.button.y < d.y + d.h {
                                 backgroundlist.set_current_index((iPage as i32 * 16 + iBackground) as usize);
 
-                                rm.spr_background = SpriteBuilder::new(backgroundlist.current_path()).without_color_key().create();
+                                rm.spr_background = ImageLoader::new(backgroundlist.current_path()).without_color_key().create();
                                 g_map.szBackgroundFile = get_filename_from_path(&backgroundlist.current_path().to_string_lossy());
 
                                 if event.button.button == BUTTON_LEFT {
@@ -4234,7 +4234,7 @@ pub fn load_background_page(iPage_: i16) {
                 return;
             }
 
-            let temp = SpriteBuilder::new(path).without_color_key().create();
+            let temp = ImageLoader::new(path).without_color_key().create();
 
             SDL_FillRect(sBackgrounds[iIndex as usize].get_surface(), null(), 0x0);
 
@@ -4506,7 +4506,7 @@ pub fn loadcurrentmap() {
             backgroundlist.set_current_path(Path::new("gfx/packs/Classic/backgrounds/Land_Classic.png"));
         }
 
-        rm.spr_background = SpriteBuilder::new(&path).without_color_key().create();
+        rm.spr_background = ImageLoader::new(&path).without_color_key().create();
 
         g_iNumPlatforms = g_map.platforms.len() as i16;
 

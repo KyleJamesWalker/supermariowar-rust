@@ -1,7 +1,7 @@
 //! Port of src/common/TilesetManager.cpp
 
 use crate::common::file_io::BinaryFile;
-use crate::common::gfx::gfx_sprite::{gfxSprite, SpriteBuilder};
+use crate::common::gfx::gfx_sprite::{gfxSprite, ImageLoader};
 use crate::common::global_constants::*;
 use crate::common::path::{convert_path, convert_path_pack};
 use crate::common::tile_types::*;
@@ -58,7 +58,7 @@ fn read_tile_type_file(path: &Path) -> Vec<TileType> {
 }
 
 fn load_image_or_downscale(path: &Path, largeRes: &gfxSprite) -> gfxSprite {
-    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| SpriteBuilder::new(path).create())) {
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| ImageLoader::new(path).create())) {
         Ok(sprite) => sprite,
         Err(err) => {
             let msg = err.downcast_ref::<String>().cloned().unwrap_or_default();
@@ -134,7 +134,7 @@ impl CTileset {
 
         self.m_tiletypes = read_tile_type_file(&self.m_tileset_dir.join("tileset.tls"));
 
-        self.m_sprite_large = SpriteBuilder::new(self.m_tileset_dir.join("large.png")).create();
+        self.m_sprite_large = ImageLoader::new(self.m_tileset_dir.join("large.png")).create();
         self.m_sprite_medium = load_image_or_downscale(&self.m_tileset_dir.join("medium.png"), &self.m_sprite_large);
         self.m_sprite_small = load_image_or_downscale(&self.m_tileset_dir.join("small.png"), &self.m_sprite_medium);
 

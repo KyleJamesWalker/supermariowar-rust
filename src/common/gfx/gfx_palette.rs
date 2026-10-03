@@ -4,7 +4,7 @@ use crate::globals::Aliased;
 use crate::common::gfx::color::RGB;
 use crate::common::gfx::get_rgb;
 use crate::common::global_constants::MAX_PLAYERS;
-use crate::common::gfx::gfx_sprite::SpriteBuilder;
+use crate::common::gfx::gfx_sprite::ImageLoader;
 use sdl2::sys::{SDL_LockSurface, SDL_UnlockSurface, SDL_RLEACCEL};
 use std::collections::HashMap;
 use std::path::Path;
@@ -61,7 +61,7 @@ impl gfxPalette {
     pub fn load(&mut self, path: &Path) -> bool {
         self.m_colorsheets.clear();
 
-        let sprite = SpriteBuilder::new(path).without_color_key().without_optimization().create();
+        let sprite = ImageLoader::new(path).without_color_key().without_optimization().create();
 
         unsafe {
             let surf = sprite.get_surface();

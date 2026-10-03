@@ -9,7 +9,7 @@ pub mod map_reader_constants;
 
 use crate::common::file_io::BinaryFile;
 use crate::common::game::App;
-use crate::common::gfx::gfx_sprite::{gfxSprite, SpriteBuilder};
+use crate::common::gfx::gfx_sprite::{gfxSprite, ImageLoader};
 use crate::common::global::*;
 use crate::common::global_constants::*;
 use crate::common::io_block::IO_BlockTrait;
@@ -1592,7 +1592,7 @@ impl CMap {
             }
 
             {
-                let sBackground = SpriteBuilder::new(path).create();
+                let sBackground = ImageLoader::new(path).without_color_key().create();
                 let srcRectBackground = SDL_Rect { x: 0, y: 0, w: App::screenWidth, h: App::screenHeight };
                 let dstRectBackground = SDL_Rect { x: 0, y: 0, w: 160, h: 120 };
                 sBackground.draw_stretch(&srcRectBackground, sThumbnail.get_surface(), &dstRectBackground);

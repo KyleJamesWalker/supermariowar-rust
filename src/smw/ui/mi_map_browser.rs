@@ -1,7 +1,7 @@
 //! Port of src/smw/ui/MI_MapBrowser.cpp
 
 use crate::common::game::App;
-use crate::common::gfx::gfx_sprite::{gfxSprite, SpriteBuilder};
+use crate::common::gfx::gfx_sprite::{gfxSprite, ImageLoader};
 use crate::common::input::CPlayerInput;
 use crate::common::map::read_type_preview;
 use crate::common::path::{convert_path, file_exists, get_name_from_file_name};
@@ -111,7 +111,7 @@ impl MI_MapBrowser {
                 }
 
                 let m = iMap as usize;
-                self.mapSurfaces[m] = SpriteBuilder::new(&sConvertedPath).without_color_key().create();
+                self.mapSurfaces[m] = ImageLoader::new(&sConvertedPath).without_color_key().create();
 
                 self.mapNames[m] = maplist.key_at(itr).to_string();
                 self.mapListItr[m] = itr;
