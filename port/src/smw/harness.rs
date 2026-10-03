@@ -177,10 +177,6 @@ fn dump_frame(out: &mut impl Write) -> std::io::Result<()> {
         GameplayState::instance().harness_dump(out)?;
     }
 
-    for line in unsafe { sfx::sfx_events.iter() } {
-        writeln!(out, "{}", line)?;
-    }
-
     writeln!(out, "R calls={} last={}", RandomNumberGenerator::call_count(), RandomNumberGenerator::last_value())
 }
 
@@ -194,7 +190,6 @@ pub fn init() {
             RandomNumberGenerator::reset_call_count();
             sfx::sfx_ticks = virtual_ticks;
             sfx::sfx_ignore_channel_failure = true;
-            sfx::sfx_virtual_mixer = true;
         }
 
         h.noLimit = env("SMW_NOLIMIT").is_some();
@@ -254,8 +249,6 @@ pub fn forced_map() -> Option<&'static str> {
 }
 
 pub fn frame_start() {
-    sfx::sfx_virtual_advance();
-
     unsafe {
         while h.nextEvent < h.events.len() && h.events[h.nextEvent].frame <= h.frame {
             if h.events[h.nextEvent].frame == h.frame {
@@ -273,7 +266,6 @@ pub fn frame_end() {
             let _ = out.flush();
             h.dump = Some(out);
         }
-        sfx::sfx_events.clear();
 
         if h.shotFrames.contains(&h.frame) {
             let path = format!("{}/frame_{}.bmp", h.shotDir, h.frame);
