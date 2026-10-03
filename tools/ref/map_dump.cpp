@@ -117,8 +117,7 @@ int main(int argc, char** argv) {
     filterslist = new FiltersList();
     game_values.init();
     rm = new CResourceManager();
-    g_tilesetmanager = new CTilesetManager();
-    g_tilesetmanager->init(convertPath("gfx/packs/Classic"));
+    g_tilesetmanager = new CTilesetManager(convertPath("gfx/packs/Classic"));
     // Zeroed so members CMap leaves default-initialized compare equal to the port's zeroed CMap.
     g_map = new (calloc(1, sizeof(CMap))) CMap();
     int readtype = atoi(argv[3]);
