@@ -112,17 +112,14 @@ pub fn io_over_map_object_draw<T: IO_OverMapObjectTrait + ?Sized>(this: &mut T) 
 pub fn io_over_map_object_draw_offset<T: IO_OverMapObjectTrait + ?Sized>(this: &mut T, iOffsetX: i16, iOffsetY: i16) {
     let o = this.omo();
     gfx_drawpreview(
-        o.spr.get_surface(),
+        &*o.spr,
         (((o.ix - o.collisionOffsetX) as i32 >> 1) + iOffsetX as i32) as i16,
         (((o.iy - o.collisionOffsetY) as i32 >> 1) + iOffsetY as i32) as i16,
         o.drawframe >> 1,
         o.animationOffsetY >> 1,
         o.iw >> 1,
         o.ih >> 1,
-        iOffsetX,
-        iOffsetY,
-        320,
-        240,
+        &SDL_Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: 320, h: 240 },
         true,
         None,
     );

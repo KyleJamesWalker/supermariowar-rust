@@ -3,7 +3,7 @@
 use crate::common::game::App;
 use crate::common::game_values::{if_sound_on_play, AppState};
 use crate::common::gfx::gfx_changefullscreen;
-use crate::common::gfx::gfx_sprite::{gfxSprite, SpriteBuilder};
+use crate::common::gfx::gfx_sprite::{gfxSprite, ImageLoader};
 use crate::common::path::convert_path_pack;
 use crate::common::sfx::sfxMusic;
 use crate::globals::*;
@@ -57,7 +57,7 @@ impl GameState for SplashScreenState {
 
             self.menu_credits = Ptr::new_box(gfxSprite::new());
             *self.menu_credits =
-                SpriteBuilder::new(convert_path_pack("gfx/packs/menu/splash_credits.png", &menugraphicspacklist.current_path().to_string_lossy())).create();
+                ImageLoader::new(convert_path_pack("gfx/packs/menu/splash_credits.png", &menugraphicspacklist.current_path().to_string_lossy())).create();
         }
 
         true
@@ -128,7 +128,7 @@ impl GameState for SplashScreenState {
                 rm.menu_version.setalpha(self.alpha as u8);
                 rm.menu_version.draw(628 - rm.menu_version.get_width(), 10); //smw logo
 
-                rm.menu_font_large.setalpha(self.alpha as u8);
+                rm.menu_font_large.set_alpha(self.alpha as u8);
 
                 self.menu_credits.setalpha(self.alpha as u8);
                 self.menu_credits.draw(227, 200);

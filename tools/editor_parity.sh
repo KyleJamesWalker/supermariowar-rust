@@ -2,6 +2,7 @@
 # Run the Rust editors on every editor script and diff against the C++ golden output:
 # per-frame dump, screenshots, and every saved file (byte for byte).
 # Usage: editor_parity.sh [editor_replays/<editor>/<x>.txt ...]   (default: all)
+# GOLDEN_ROOT=<dir> reads <dir>/editor_golden/ instead.
 # Exit status 1 if anything differs.
 set -uo pipefail
 
@@ -20,7 +21,7 @@ failed=0
 for script in "${scripts[@]}"; do
     editor="$(basename "$(dirname "$script")")"
     name="$(basename "$script" .txt)"
-    golden="$tools/editor_golden/$editor/$name"
+    golden="${GOLDEN_ROOT:-$tools}/editor_golden/$editor/$name"
     out="$out_root/$editor/$name"
     echo "=== $editor/$name"
 

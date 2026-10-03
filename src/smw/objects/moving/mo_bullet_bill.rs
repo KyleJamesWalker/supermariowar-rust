@@ -105,7 +105,8 @@ impl MO_BulletBill {
 
     // For preview drawing
     pub fn draw_offset(&mut self, iOffsetX: i16, iOffsetY: i16) {
-        let surface = self.spr.get_surface();
+        let surface = &*self.spr;
+        let clipRect = SDL_Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: 320, h: 240 };
         let dstX = ((self.ix as i32 >> 1) + iOffsetX as i32) as i16;
         let dstY = ((self.iy as i32 >> 1) + iOffsetY as i32) as i16;
         let srcX = (self.drawframe as i32 >> 1) as i16;
@@ -114,9 +115,9 @@ impl MO_BulletBill {
         let h = (self.ih as i32 >> 1) as i16;
         if self.fIsSpawned {
             let edge = unsafe { std::mem::transmute::<i32, ClipEdge>(self.iHiddenDirection as i32) };
-            gfx_drawpreview(surface, dstX, dstY, srcX, srcY, w, h, iOffsetX, iOffsetY, 320, 240, false, Some((edge, (self.iHiddenPlane as i32 >> 1) + iOffsetX as i32)));
+            gfx_drawpreview(surface, dstX, dstY, srcX, srcY, w, h, &clipRect, false, Some((edge, (self.iHiddenPlane as i32 >> 1) + iOffsetX as i32)));
         } else {
-            gfx_drawpreview(surface, dstX, dstY, srcX, srcY, w, h, iOffsetX, iOffsetY, 320, 240, false, None);
+            gfx_drawpreview(surface, dstX, dstY, srcX, srcY, w, h, &clipRect, false, None);
         }
     }
 

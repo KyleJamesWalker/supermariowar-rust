@@ -2,6 +2,7 @@
 # Run the Rust port on every replay and diff it against the C++ golden output.
 # Usage: parity.sh [replay.txt ...]   (default: every replays/*.txt); JOBS=n runs n at once.
 # Goldens: replays/<x>.txt -> golden/<x>/, replays_sweep/<x>.txt -> golden_sweep/<x>/.
+# GOLDEN_ROOT=<dir> reads <dir>/golden/<x>/ instead.
 # Output per replay: first divergence (diffreplay.py), screenshot check, then a summary.
 # Exit status 1 if any replay diverges.
 set -uo pipefail
@@ -32,7 +33,7 @@ failed=0
 for replay in "${replays[@]}"; do
     name="$(basename "$replay" .txt)"
     dir="$(cd "$(dirname "$replay")" && pwd)"
-    golden="$(dirname "$dir")/$(basename "$dir" | sed 's/^replays/golden/')/$name"
+    golden="${GOLDEN_ROOT:-$(dirname "$dir")}/$(basename "$dir" | sed 's/^replays/golden/')/$name"
     out="$out_root/$name"
     echo "=== $name"
 

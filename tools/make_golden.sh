@@ -2,6 +2,7 @@
 # Regenerate golden output from the C++ reference build: replays/<x>.txt -> golden/<x>/,
 # replays_sweep/<x>.txt -> golden_sweep/<x>/.
 # Usage: make_golden.sh [replay.txt ...]   (default: every replays/*.txt); JOBS=n runs n at once.
+# GOLDEN_ROOT=<dir> writes <dir>/golden/<x>/ instead (e.g. goldens from another C++ build via SMW_BIN).
 set -euo pipefail
 
 tools="$(cd "$(dirname "$0")" && pwd)"
@@ -15,7 +16,7 @@ one() {
     local dir name out
     dir="$(cd "$(dirname "$replay")" && pwd)"
     name="$(basename "$replay" .txt)"
-    out="$(dirname "$dir")/$(basename "$dir" | sed 's/^replays/golden/')/$name"
+    out="${GOLDEN_ROOT:-$(dirname "$dir")}/$(basename "$dir" | sed 's/^replays/golden/')/$name"
     rm -rf "$out"
     "$tools/run_ref.sh" "$replay" "$out" > /dev/null
     for bmp in "$out"/frame_*.bmp; do

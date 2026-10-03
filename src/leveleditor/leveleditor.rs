@@ -7,8 +7,9 @@ use crate::common::file_list::BackgroundList;
 use crate::common::game::ensure_settings_dir;
 use crate::common::game_values::{default_powerup_setting, TITLESTRING};
 use crate::common::gfx::color::colors;
-use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::gfx::{gfx_changefullscreen, gfx_flipscreen, gfx_init, gfx_settitle};
+use crate::common::gfx::gfx_font::gfxFont;
+use crate::common::gfx::gfx_sprite::{gfxSprite, ImageLoader};
+use crate::common::gfx::{gfx_changefullscreen, gfx_flipscreen, gfx_init, gfx_settitle, gfx_show_catched_error};
 use crate::common::global::g_szMusicCategoryNames;
 use crate::common::global_constants::*;
 use crate::common::map::{
@@ -25,11 +26,11 @@ use crate::common::tile_types::{next_tile_type, prev_tile_type, TileType};
 use crate::common::tileset_manager::{CTileset, CTilesetManager};
 use crate::globals::*;
 use crate::smw::fps_limiter::FPSLimiter;
-use sdl2::sys::image::{IMG_Load, IMG_SavePNG};
+use sdl2::sys::image::IMG_SavePNG;
 use sdl2::sys::SDL_KeyCode::*;
 use sdl2::sys::{
-    SDL_ConvertSurfaceFormat, SDL_CreateRGBSurface, SDL_Event, SDL_EventType, SDL_FillRect, SDL_FreeSurface, SDL_GetError, SDL_GetScancodeFromKey, SDL_KeyCode,
-    SDL_Keycode, SDL_MapRGB, SDL_PixelFormatEnum, SDL_PollEvent, SDL_Rect, SDL_SetColorKey, SDL_Surface, SDL_UpperBlit, SDL_UpperBlitScaled, SDL_bool, SDL_Keymod,
+    SDL_Event, SDL_EventType, SDL_FillRect, SDL_GetError, SDL_GetScancodeFromKey, SDL_KeyCode,
+    SDL_Keycode, SDL_MapRGB, SDL_PollEvent, SDL_Rect, SDL_SetColorKey, SDL_Surface, SDL_UpperBlit, SDL_bool, SDL_Keymod,
     SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT,
 };
 use std::ffi::{CStr, CString};
@@ -202,7 +203,7 @@ pub struct MapPlatform {
     pub iDrawLayer: i16,
 
     pub rIcon: [SDL_Rect; 2],
-    pub preview: *mut SDL_Surface,
+    pub preview: gfxSprite,
     pub _alias: Aliased,
 }
 
@@ -222,18 +223,18 @@ impl MapPlatform {
             fRadiusY: 0.0,
             iDrawLayer: 0,
             rIcon: [SDL_Rect { x: 0, y: 0, w: 0, h: 0 }; 2],
-            preview: null_mut(),
+            preview: gfxSprite::new(),
         }
     }
 
     pub fn update_preview(&mut self) {
         unsafe {
-            if self.preview.is_null() {
-                self.preview = SDL_CreateRGBSurface((*screen).flags, 160, 120, (*(*screen).format).BitsPerPixel as i32, 0, 0, 0, 0);
-                SDL_SetColorKey(self.preview, SDL_bool::SDL_TRUE as i32, SDL_MapRGB((*self.preview).format, 255, 0, 255));
+            if self.preview.get_surface().is_null() {
+                self.preview = gfxSprite::blank(160, 120);
+                SDL_SetColorKey(self.preview.get_surface(), SDL_bool::SDL_TRUE as i32, SDL_MapRGB((*self.preview.get_surface()).format, 255, 0, 255));
             }
 
-            SDL_FillRect(self.preview, null(), SDL_MapRGB((*self.preview).format, 255, 0, 255));
+            SDL_FillRect(self.preview.get_surface(), null(), SDL_MapRGB((*self.preview.get_surface()).format, 255, 0, 255));
 
             for iPlatformX in 0..MAPWIDTH as i16 {
                 for iPlatformY in 0..MAPHEIGHT as i16 {
@@ -242,25 +243,17 @@ impl MapPlatform {
                     let mut bltrect = SDL_Rect { x: (iPlatformX as i32) << 3, y: (iPlatformY as i32) << 3, w: THUMBTILESIZE, h: THUMBTILESIZE };
                     if tile.iID >= 0 {
                         let src = g_tilesetmanager.rect(2, tile.iCol, tile.iRow);
-                        SDL_UpperBlit(g_tilesetmanager.tileset(tile.iID as usize).surface(2), src, self.preview, &mut bltrect);
+                        SDL_UpperBlit(g_tilesetmanager.tileset(tile.iID as usize).surface(2), src, self.preview.get_surface(), &mut bltrect);
                     } else if tile.iID as i32 == TILESETANIMATED {
                         let src = g_tilesetmanager.rect(2, (tile.iCol as i32 * 4) as i16, tile.iRow);
-                        SDL_UpperBlit(rm.spr_tileanimation[2].get_surface(), src, self.preview, &mut bltrect);
+                        rm.spr_tileanimation[2].draw_src_to(&*src, self.preview.get_surface(), &bltrect);
                     } else if tile.iID as i32 == TILESETUNKNOWN {
                         //Draw unknown tile
                         let src = g_tilesetmanager.rect(2, 0, 0);
-                        SDL_UpperBlit(rm.spr_unknowntile[2].get_surface(), src, self.preview, &mut bltrect);
+                        rm.spr_unknowntile[2].draw_src_to(&*src, self.preview.get_surface(), &bltrect);
                     }
                 }
             }
-        }
-    }
-}
-
-impl Drop for MapPlatform {
-    fn drop(&mut self) {
-        if !self.preview.is_null() {
-            unsafe { SDL_FreeSurface(self.preview) };
         }
     }
 }
@@ -281,9 +274,9 @@ pub fn check_key(keystate: *const u8, key: SDL_KeyCode) -> bool {
     unsafe { *keystate.add(SDL_GetScancodeFromKey(key as SDL_Keycode) as usize) != 0 }
 }
 
-pub static mut s_platform: *mut SDL_Surface = null_mut();
-pub static mut s_platformpathbuttons: *mut SDL_Surface = null_mut();
-pub static mut s_maphazardbuttons: *mut SDL_Surface = null_mut();
+pub static mut s_platform: Global<gfxSprite> = Global::uninit();
+pub static mut s_platformpathbuttons: Global<gfxSprite> = Global::uninit();
+pub static mut s_maphazardbuttons: Global<gfxSprite> = Global::uninit();
 
 pub static mut viewblocks: bool = true;
 pub static mut view_only_layer: bool = false;
@@ -313,23 +306,6 @@ pub fn clear_tileset_tile(tile: &mut TilesetTile) {
 }
 
 pub static mut g_fFullScreen: bool = false;
-
-fn load_surface(path: &str) -> *mut SDL_Surface {
-    let c = CString::new(path).unwrap();
-    unsafe { IMG_Load(c.as_ptr()) }
-}
-
-fn sprite(path: &str) -> gfxSprite {
-    gfxSprite::from_file(Path::new(path), Some(colors::MAGENTA), None, None)
-}
-
-fn sprite_key(path: &str, key: crate::common::gfx::color::RGB) -> gfxSprite {
-    gfxSprite::from_file(Path::new(path), Some(key), None, None)
-}
-
-fn sprite_key_alpha(path: &str, key: crate::common::gfx::color::RGB, alpha: u8) -> gfxSprite {
-    gfxSprite::from_file(Path::new(path), Some(key), Some(alpha), None)
-}
 
 fn sdl_error() -> String {
     unsafe { CStr::from_ptr(SDL_GetError()).to_string_lossy().into_owned() }
@@ -361,19 +337,26 @@ pub fn main() {
         cmd::show_windows_console();
     }
 
+    if !cmd.data_root.is_empty() {
+        unsafe { RootDataDirectory = cmd.data_root.clone() };
+    }
+
+    // C++ catches `const char*`, `std::string`, `std::exception` and `...` around inner_main().
+    let result = std::panic::catch_unwind(inner_main);
+    if let Err(payload) = result {
+        let what = payload
+            .downcast_ref::<String>()
+            .cloned()
+            .or_else(|| payload.downcast_ref::<&str>().map(|s| s.to_string()))
+            .unwrap_or_default();
+        gfx_show_catched_error(&what);
+        std::process::exit(1);
+    }
+}
+
+pub fn inner_main() {
     unsafe {
-        if !cmd.data_root.is_empty() {
-            RootDataDirectory = cmd.data_root.clone();
-        }
-
         ensure_settings_dir();
-
-        rm = Ptr::new_box(CResourceManager::new());
-        g_map = Ptr::from_box(CMap::new());
-        g_tilesetmanager = Ptr::new_box(CTilesetManager::new());
-        filterslist = Ptr::new_box(crate::common::file_list::FiltersList::new());
-        maplist = Ptr::new_box(MapList::new(false));
-        backgroundlist = Ptr::new_box(BackgroundList::new());
 
         /* This must occur before any data files are loaded */
         initialize_paths();
@@ -396,7 +379,13 @@ pub fn main() {
 
         gfx_init(640, 480, g_fFullScreen);
         blitdest = screen;
-        g_tilesetmanager.init(&convert_path("gfx/Classic/tilesets"));
+
+        rm = Ptr::new_box(CResourceManager::new());
+        g_tilesetmanager = Ptr::new_box(CTilesetManager::new(&convert_path("gfx/Classic/tilesets")));
+        g_map = Ptr::from_box(CMap::new());
+        filterslist = Ptr::new_box(crate::common::file_list::FiltersList::new());
+        maplist = Ptr::new_box(MapList::new(false));
+        backgroundlist = Ptr::new_box(BackgroundList::new());
 
         //Add all of the maps that are world only so we can edit them
         maplist.add_world_maps();
@@ -405,79 +394,77 @@ pub fn main() {
 
         println!("\n---------------- loading graphics ----------------");
 
-        rm.spr_tiletypes = sprite(&convert_path("gfx/leveleditor/leveleditor_tile_types.png"));
-        rm.spr_transparenttiles = sprite_key_alpha(&convert_path("gfx/leveleditor/leveleditor_transparent_tiles.png"), colors::MAGENTA, 160);
+        rm.spr_tiletypes = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_tile_types.png")).without_color_key().create();
+        rm.spr_transparenttiles = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_transparent_tiles.png")).with_alpha(160).create();
 
-        rm.spr_backgroundlevel = sprite_key(&convert_path("gfx/leveleditor/leveleditor_background_levels.png"), colors::MAGENTA);
-        rm.spr_tilesetlevel = sprite_key(&convert_path("gfx/leveleditor/leveleditor_tileset_levels.png"), colors::MAGENTA);
+        rm.spr_backgroundlevel = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_background_levels.png")).create();
+        rm.spr_tilesetlevel = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_tileset_levels.png")).create();
 
-        rm.spr_eyecandy = sprite_key(&convert_path("gfx/leveleditor/leveleditor_eyecandy.png"), colors::MAGENTA);
+        rm.spr_eyecandy = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_eyecandy.png")).create();
 
-        s_platform = load_surface(&convert_path("gfx/leveleditor/leveleditor_platform.png"));
-        s_platformpathbuttons = load_surface(&convert_path("gfx/leveleditor/leveleditor_pathtype_buttons.png"));
-        s_maphazardbuttons = load_surface(&convert_path("gfx/leveleditor/leveleditor_maphazard_buttons.png"));
+        s_platform.init(ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_platform.png")).create());
+        s_platformpathbuttons.init(ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_pathtype_buttons.png")).create());
+        s_maphazardbuttons.init(ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_maphazard_buttons.png")).create());
 
-        rm.spr_warps[0] = sprite_key(&convert_path("gfx/leveleditor/leveleditor_warp.png"), colors::MAGENTA);
-        rm.spr_warps[1] = sprite_key(&convert_path("gfx/leveleditor/leveleditor_warp_preview.png"), colors::MAGENTA);
-        rm.spr_warps[2] = sprite_key(&convert_path("gfx/leveleditor/leveleditor_warp_thumbnail.png"), colors::MAGENTA);
+        rm.spr_warps[0] = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_warp.png")).create();
+        rm.spr_warps[1] = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_warp_preview.png")).create();
+        rm.spr_warps[2] = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_warp_thumbnail.png")).create();
 
-        rm.spr_platformpath = sprite_key_alpha(&convert_path("gfx/leveleditor/leveleditor_platform_path.png"), colors::MAGENTA, 128);
+        rm.spr_platformpath = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_platform_path.png")).with_alpha(128).create();
 
-        rm.spr_selectedtile = sprite_key_alpha(&convert_path("gfx/leveleditor/leveleditor_selectedtile.png"), colors::BLACK, 128);
-        rm.spr_nospawntile = sprite_key_alpha(&convert_path("gfx/leveleditor/leveleditor_nospawntile.png"), colors::BLACK, 128);
-        rm.spr_noitemspawntile = sprite_key_alpha(&convert_path("gfx/leveleditor/leveleditor_noitemspawntile.png"), colors::BLACK, 128);
-        rm.spr_platformstarttile = sprite_key_alpha(&convert_path("gfx/leveleditor/leveleditor_platformstarttile.png"), colors::BLACK, 64);
-        rm.spr_platformstarttile.set_wrap(640);
-        rm.spr_platformendtile = sprite_key_alpha(&convert_path("gfx/leveleditor/leveleditor_selectedtile.png"), colors::BLACK, 64);
-        rm.spr_platformendtile.set_wrap(640);
+        rm.spr_selectedtile = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_selectedtile.png")).with_color_key(colors::BLACK).with_alpha(128).create();
+        rm.spr_nospawntile = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_nospawntile.png")).with_color_key(colors::BLACK).with_alpha(128).create();
+        rm.spr_noitemspawntile = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_noitemspawntile.png")).with_color_key(colors::BLACK).with_alpha(128).create();
+        rm.spr_platformstarttile = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_platformstarttile.png")).with_color_key(colors::BLACK).with_alpha(64).with_wrapping(640).create();
+        rm.spr_platformendtile = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_selectedtile.png")).with_color_key(colors::BLACK).with_alpha(64).with_wrapping(640).create();
 
-        rm.spr_mapitems[0] = sprite_key(&convert_path("gfx/leveleditor/leveleditor_mapitems.png"), colors::MAGENTA);
-        rm.spr_mapitems[1] = sprite_key(&convert_path("gfx/leveleditor/leveleditor_mapitems_preview.png"), colors::MAGENTA);
-        rm.spr_mapitems[2] = sprite_key(&convert_path("gfx/leveleditor/leveleditor_mapitems_thumbnail.png"), colors::MAGENTA);
+        rm.spr_mapitems[0] = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_mapitems.png")).create();
+        rm.spr_mapitems[1] = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_mapitems_preview.png")).create();
+        rm.spr_mapitems[2] = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_mapitems_thumbnail.png")).create();
 
-        rm.spr_dialog = sprite_key_alpha(&convert_path("gfx/leveleditor/leveleditor_dialog.png"), colors::MAGENTA, 255);
-        rm.menu_shade = sprite_key_alpha(&convert_path("gfx/leveleditor/leveleditor_shade.png"), colors::MAGENTA, 128);
+        rm.spr_dialog = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_dialog.png")).with_alpha(255).create();
+        rm.menu_shade = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_shade.png")).with_alpha(128).create();
 
-        rm.spr_tileanimation[0] = sprite_key(&convert_path("gfx/packs/Classic/tilesets/tile_animation.png"), colors::MAGENTA);
-        rm.spr_tileanimation[1] = sprite_key(&convert_path("gfx/packs/Classic/tilesets/tile_animation_preview.png"), colors::MAGENTA);
-        rm.spr_tileanimation[2] = sprite_key(&convert_path("gfx/packs/Classic/tilesets/tile_animation_thumbnail.png"), colors::MAGENTA);
+        rm.spr_tileanimation[0] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/tile_animation.png")).create();
+        rm.spr_tileanimation[1] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/tile_animation_preview.png")).create();
+        rm.spr_tileanimation[2] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/tile_animation_thumbnail.png")).create();
 
-        rm.spr_blocks[0] = sprite_key(&convert_path("gfx/packs/Classic/tilesets/blocks.png"), colors::MAGENTA);
-        rm.spr_blocks[1] = sprite_key(&convert_path("gfx/packs/Classic/tilesets/blocks_preview.png"), colors::MAGENTA);
-        rm.spr_blocks[2] = sprite_key(&convert_path("gfx/packs/Classic/tilesets/blocks_thumbnail.png"), colors::MAGENTA);
+        rm.spr_blocks[0] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/blocks.png")).create();
+        rm.spr_blocks[1] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/blocks_preview.png")).create();
+        rm.spr_blocks[2] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/blocks_thumbnail.png")).create();
 
-        rm.spr_unknowntile[0] = sprite_key(&convert_path("gfx/packs/Classic/tilesets/unknown_tile.png"), colors::MAGENTA);
-        rm.spr_unknowntile[1] = sprite_key(&convert_path("gfx/packs/Classic/tilesets/unknown_tile_preview.png"), colors::MAGENTA);
-        rm.spr_unknowntile[2] = sprite_key(&convert_path("gfx/packs/Classic/tilesets/unknown_tile_thumbnail.png"), colors::MAGENTA);
+        rm.spr_unknowntile[0] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/unknown_tile.png")).create();
+        rm.spr_unknowntile[1] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/unknown_tile_preview.png")).create();
+        rm.spr_unknowntile[2] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/unknown_tile_thumbnail.png")).create();
 
-        rm.spr_powerups = sprite_key(&convert_path("gfx/packs/Classic/powerups/large.png"), colors::MAGENTA);
-        rm.spr_powerupselector = sprite_key_alpha(&convert_path("gfx/leveleditor/leveleditor_powerup_selector.png"), colors::MAGENTA, 128);
-        rm.spr_hidden_marker = sprite_key(&convert_path("gfx/leveleditor/leveleditor_hidden_marker.png"), colors::MAGENTA);
+        rm.spr_powerups = ImageLoader::new(convert_path("gfx/packs/Classic/powerups/large.png")).create();
+        rm.spr_powerupselector = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_powerup_selector.png")).with_alpha(128).create();
+        rm.spr_hidden_marker = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_hidden_marker.png")).create();
 
-        rm.spr_flagbases = sprite_key(&convert_path("gfx/packs/Classic/modeobjects/flagbases.png"), colors::MAGENTA);
-        rm.spr_racegoals = sprite_key(&convert_path("gfx/packs/Classic/modeobjects/racegoal.png"), colors::MAGENTA);
+        rm.spr_flagbases = ImageLoader::new(convert_path("gfx/packs/Classic/modeobjects/flagbases.png")).create();
+        rm.spr_racegoals = ImageLoader::new(convert_path("gfx/packs/Classic/modeobjects/racegoal.png")).create();
 
-        rm.spr_hazard_fireball[0] = sprite_key(&convert_path("gfx/packs/Classic/hazards/fireball.png"), colors::MAGENTA);
-        rm.spr_hazard_fireball[1] = sprite_key(&convert_path("gfx/packs/Classic/hazards/fireball_preview.png"), colors::MAGENTA);
-        rm.spr_hazard_fireball[2] = sprite_key(&convert_path("gfx/packs/Classic/hazards/fireball_thumbnail.png"), colors::MAGENTA);
+        rm.spr_hazard_fireball[0] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/fireball.png")).create();
+        rm.spr_hazard_fireball[1] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/fireball_preview.png")).create();
+        rm.spr_hazard_fireball[2] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/fireball_thumbnail.png")).create();
 
-        rm.spr_hazard_rotodisc[0] = sprite_key(&convert_path("gfx/packs/Classic/hazards/rotodisc.png"), colors::MAGENTA);
-        rm.spr_hazard_rotodisc[1] = sprite_key(&convert_path("gfx/packs/Classic/hazards/rotodisc_preview.png"), colors::MAGENTA);
-        rm.spr_hazard_rotodisc[2] = sprite_key(&convert_path("gfx/packs/Classic/hazards/rotodisc_thumbnail.png"), colors::MAGENTA);
+        rm.spr_hazard_rotodisc[0] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/rotodisc.png")).create();
+        rm.spr_hazard_rotodisc[1] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/rotodisc_preview.png")).create();
+        rm.spr_hazard_rotodisc[2] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/rotodisc_thumbnail.png")).create();
 
-        rm.spr_hazard_bulletbill[0] = sprite_key(&convert_path("gfx/packs/Classic/hazards/bulletbill.png"), colors::MAGENTA);
-        rm.spr_hazard_bulletbill[1] = sprite_key(&convert_path("gfx/packs/Classic/hazards/bulletbill_preview.png"), colors::MAGENTA);
-        rm.spr_hazard_bulletbill[2] = sprite_key(&convert_path("gfx/packs/Classic/hazards/bulletbill_thumbnail.png"), colors::MAGENTA);
+        rm.spr_hazard_bulletbill[0] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/bulletbill.png")).create();
+        rm.spr_hazard_bulletbill[1] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/bulletbill_preview.png")).create();
+        rm.spr_hazard_bulletbill[2] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/bulletbill_thumbnail.png")).create();
 
-        rm.spr_hazard_flame[0] = sprite_key(&convert_path("gfx/packs/Classic/hazards/flame.png"), colors::MAGENTA);
-        rm.spr_hazard_flame[1] = sprite_key(&convert_path("gfx/packs/Classic/hazards/flame_preview.png"), colors::MAGENTA);
-        rm.spr_hazard_flame[2] = sprite_key(&convert_path("gfx/packs/Classic/hazards/flame_thumbnail.png"), colors::MAGENTA);
+        rm.spr_hazard_flame[0] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/flame.png")).create();
+        rm.spr_hazard_flame[1] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/flame_preview.png")).create();
+        rm.spr_hazard_flame[2] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/flame_thumbnail.png")).create();
 
-        rm.spr_hazard_pirhanaplant[0] = sprite_key(&convert_path("gfx/packs/Classic/hazards/pirhanaplant.png"), colors::MAGENTA);
-        rm.spr_hazard_pirhanaplant[1] = sprite_key(&convert_path("gfx/packs/Classic/hazards/pirhanaplant_preview.png"), colors::MAGENTA);
-        rm.spr_hazard_pirhanaplant[2] = sprite_key(&convert_path("gfx/packs/Classic/hazards/pirhanaplant_thumbnail.png"), colors::MAGENTA);
+        rm.spr_hazard_pirhanaplant[0] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/pirhanaplant.png")).create();
+        rm.spr_hazard_pirhanaplant[1] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/pirhanaplant_preview.png")).create();
+        rm.spr_hazard_pirhanaplant[2] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/pirhanaplant_thumbnail.png")).create();
 
-        rm.spr_number_icons = sprite_key(&convert_path("gfx/packs/Classic/awards/killsinrownumbers.png"), colors::MAGENTA);
+        rm.spr_number_icons = ImageLoader::new(convert_path("gfx/packs/Classic/awards/killsinrownumbers.png")).create();
 
         for i in 0..3usize {
             rm.spr_hazard_fireball[i].set_wrap((640 >> i) as i16);
@@ -485,20 +472,10 @@ pub fn main() {
             rm.spr_hazard_flame[i].set_wrap((640 >> i) as i16);
             rm.spr_hazard_pirhanaplant[i].set_wrap((640 >> i) as i16);
         }
-        if SDL_SetColorKey(s_platform, SDL_bool::SDL_TRUE as i32, SDL_MapRGB((*s_platform).format, 255, 0, 255)) < 0 {
-            println!("\n ERROR: Couldn't set ColorKey + RLE: {}", sdl_error());
-        }
 
-        if SDL_SetColorKey(s_platformpathbuttons, SDL_bool::SDL_TRUE as i32, SDL_MapRGB((*s_platformpathbuttons).format, 255, 0, 255)) < 0 {
-            println!("\n ERROR: Couldn't set ColorKey + RLE: {}", sdl_error());
-        }
 
-        if SDL_SetColorKey(s_maphazardbuttons, SDL_bool::SDL_TRUE as i32, SDL_MapRGB((*s_maphazardbuttons).format, 255, 0, 255)) < 0 {
-            println!("\n ERROR: Couldn't set ColorKey + RLE: {}", sdl_error());
-        }
-
-        rm.menu_font_small.init(&convert_path("gfx/packs/Classic/fonts/font_small.png"));
-        rm.menu_font_large.init(&convert_path("gfx/packs/Classic/fonts/font_large.png"));
+        rm.menu_font_small = gfxFont::from_path(&convert_path("gfx/packs/Classic/fonts/font_small.png"));
+        rm.menu_font_large = gfxFont::from_path(&convert_path("gfx/packs/Classic/fonts/font_large.png"));
 
         println!("\n---------------- load map ----------------");
 
@@ -824,7 +801,7 @@ pub fn editor_edit() -> i32 {
                         if key == k(SDLK_g) {
                             backgroundlist.next();
 
-                            rm.spr_background = sprite(&backgroundlist.current_path().to_string_lossy());
+                            rm.spr_background = ImageLoader::new(backgroundlist.current_path()).without_color_key().create();
                             g_map.szBackgroundFile = get_filename_from_path(&backgroundlist.current_path().to_string_lossy());
 
                             if !check_key(keystate, SDLK_LSHIFT) && !check_key(keystate, SDLK_RSHIFT) {
@@ -1529,12 +1506,9 @@ pub fn drawmap(fScreenshot: bool, iBlockSize: i16, fWithPlatforms: bool) {
         let bs = iBlockSize as i32;
         if bs != TILESIZE {
             let srcrect = rect(0, 0, 640, 480);
-            let mut dstrect = rect(0, 0, bs * 20, bs * 15);
+            let dstrect = rect(0, 0, bs * 20, bs * 15);
 
-            if SDL_UpperBlitScaled(rm.spr_background.get_surface(), &srcrect, blitdest, &mut dstrect) < 0 {
-                eprintln!("SDL_SCALEBLIT error: {}", sdl_error());
-                return;
-            }
+            rm.spr_background.draw_stretch(&srcrect, blitdest, &dstrect);
         } else {
             rm.spr_background.draw(0, 0);
         }
@@ -1694,7 +1668,7 @@ pub fn drawmap(fScreenshot: bool, iBlockSize: i16, fWithPlatforms: bool) {
 
                     if warp.connection != -1 {
                         let rSrcWarp = rect(warp.connection as i32 * bs, warp.direction as i32 * bs, bs, bs);
-                        let mut rDstWarp = rect(i * bs, j * bs, bs, bs);
+                        let rDstWarp = rect(i * bs, j * bs, bs, bs);
 
                         let idx = if bs == TILESIZE {
                             0
@@ -1703,7 +1677,7 @@ pub fn drawmap(fScreenshot: bool, iBlockSize: i16, fWithPlatforms: bool) {
                         } else {
                             2
                         };
-                        SDL_UpperBlit(rm.spr_warps[idx].get_surface(), &rSrcWarp, screen, &mut rDstWarp);
+                        rm.spr_warps[idx].draw_src_to(&rSrcWarp, screen, &rDstWarp);
                     }
                 }
             }
@@ -1757,7 +1731,7 @@ pub fn editor_warp() -> i32 {
         r.w = 640;
         r.h = 480;
 
-        SDL_UpperBlit(rm.spr_warps[0].get_surface(), null(), screen, &mut r);
+        rm.spr_warps[0].draw_to(screen, &r);
         rm.menu_font_small.draw_right_justified(640, 0, maplist.current_filename());
 
         draw_message();
@@ -2146,8 +2120,8 @@ pub fn editor_platforms_draw_background_section(src_area: &SDL_Rect, dst_area: &
             let w = (dst_area.w - offset_x).min(src_area.w);
 
             let src = rect(src_area.x, src_area.y, w, h);
-            let mut dst = rect(dst_area.x + offset_x, dst_area.y + offset_y, w, h);
-            unsafe { SDL_UpperBlit(s_platform, &src, screen, &mut dst) };
+            let dst = rect(dst_area.x + offset_x, dst_area.y + offset_y, w, h);
+            unsafe { s_platform.draw_src_to(&src, screen, &dst) };
 
             offset_x += w;
         }
@@ -2629,12 +2603,12 @@ pub fn editor_platforms() -> i32 {
             for iPlatform in 0..g_iNumPlatforms as usize {
                 let p = &mut g_Platforms[iPlatform];
                 let src = p.rIcon[0];
-                SDL_UpperBlit(s_platform, &src, screen, &mut p.rIcon[1]);
+                s_platform.draw_src_to(&src, screen, &p.rIcon[1]);
             }
 
             if (g_iNumPlatforms as i32) < MAX_PLATFORMS && PLATFORM_EDIT_STATE_SELECT == iPlatformEditState {
                 let src = rNewButton[0];
-                SDL_UpperBlit(s_platform, &src, screen, &mut rNewButton[1]);
+                s_platform.draw_src_to(&src, screen, &rNewButton[1]);
             }
 
             if PLATFORM_EDIT_STATE_MOVE == iPlatformEditState {
@@ -2654,9 +2628,9 @@ pub fn editor_platforms() -> i32 {
             //Draw path options
             for iType in 0..3usize {
                 let s0 = rTypeButton[iType][0];
-                SDL_UpperBlit(s_platformpathbuttons, &s0, screen, &mut rTypeButton[iType][1]);
+                s_platformpathbuttons.draw_src_to(&s0, screen, &rTypeButton[iType][1]);
                 let s2 = rTypeButton[iType][2];
-                SDL_UpperBlit(s_platformpathbuttons, &s2, screen, &mut rTypeButton[iType][3]);
+                s_platformpathbuttons.draw_src_to(&s2, screen, &rTypeButton[iType][3]);
 
                 rm.menu_font_large.draw(rTypeButton[iType][1].x + 36, rTypeButton[iType][1].y + 6, szPathNames[iType]);
             }
@@ -2673,11 +2647,11 @@ pub fn editor_platforms() -> i32 {
 
                 let rVel = [rect(0, 400, 244, 17), rect(198, 10, 244, 17)];
                 let mut d = rVel[1];
-                SDL_UpperBlit(s_platform, &rVel[0], screen, &mut d);
+                s_platform.draw_src_to(&rVel[0], screen, &d);
 
                 let rMarker = [rect(244, 400, 8, 18), rect(iVelMarkerX as i32, 10, 8, 18)];
                 let mut d = rMarker[1];
-                SDL_UpperBlit(s_platform, &rMarker[0], screen, &mut d);
+                s_platform.draw_src_to(&rMarker[0], screen, &d);
 
                 rm.menu_font_small.draw_right_justified(198, 10, "Counter");
                 rm.menu_font_small.draw(442, 10, "Clockwise");
@@ -2686,11 +2660,11 @@ pub fn editor_platforms() -> i32 {
 
                 let rVel = [rect(12, 384, 172, 13), rect(234, 10, 172, 13)];
                 let mut d = rVel[1];
-                SDL_UpperBlit(s_platform, &rVel[0], screen, &mut d);
+                s_platform.draw_src_to(&rVel[0], screen, &d);
 
                 let rMarker = [rect(184, 384, 8, 16), rect(iVelMarkerX as i32, 8, 8, 16)];
                 let mut d = rMarker[1];
-                SDL_UpperBlit(s_platform, &rMarker[0], screen, &mut d);
+                s_platform.draw_src_to(&rMarker[0], screen, &d);
 
                 rm.menu_font_small.draw_right_justified(234, 10, "Slow");
                 rm.menu_font_small.draw(406, 10, "Fast");
@@ -2715,6 +2689,7 @@ pub fn editor_platforms() -> i32 {
                 iPlatformHeight,
                 false,
                 true,
+                blitdest,
             );
 
             if platform.iPathType == PlatformPathType::Straight {
@@ -2755,8 +2730,8 @@ fn path_type_from(v: u8) -> PlatformPathType {
 pub fn display_platform_preview(iPlatformId: i16, iMouseX: i16, iMouseY: i16) {
     unsafe {
         let srcRect = rect(0, 0, 160, 120);
-        let mut dstRect = rect(iMouseX as i32, iMouseY as i32, 160, 120);
-        SDL_UpperBlit(g_Platforms[iPlatformId as usize].preview, &srcRect, screen, &mut dstRect);
+        let dstRect = rect(iMouseX as i32, iMouseY as i32, 160, 120);
+        g_Platforms[iPlatformId as usize].preview.draw_src_to(&srcRect, screen, &dstRect);
     }
 }
 
@@ -3239,18 +3214,18 @@ pub fn editor_maphazards() -> i32 {
 
         if MAPHAZARD_EDIT_STATE_SELECT == iEditState {
             let s = rBackground[0];
-            SDL_UpperBlit(s_platform, &s, screen, &mut rBackground[1]);
+            s_platform.draw_src_to(&s, screen, &rBackground[1]);
 
             rm.menu_font_small.draw(0, 480 - rm.menu_font_small.get_height(), "Map Hazard Mode: [esc] Exit");
 
             for iMapHazard in 0..g_map.maphazards.len() {
                 let s = rIconRects[iMapHazard][0];
-                SDL_UpperBlit(s_platform, &s, screen, &mut rIconRects[iMapHazard][1]);
+                s_platform.draw_src_to(&s, screen, &rIconRects[iMapHazard][1]);
             }
 
             if (g_map.maphazards.len() as i32) < MAXMAPHAZARDS {
                 let s = rNewButton[0];
-                SDL_UpperBlit(s_platform, &s, screen, &mut rNewButton[1]);
+                s_platform.draw_src_to(&s, screen, &rNewButton[1]);
             }
 
             rm.menu_font_small.draw_centered(320, rBackground[1].y - 18, "Hazards");
@@ -3258,9 +3233,9 @@ pub fn editor_maphazards() -> i32 {
             //Draw map hazard options
             for iType in 0..8usize {
                 let s0 = rTypeButton[iType][0];
-                SDL_UpperBlit(s_maphazardbuttons, &s0, screen, &mut rTypeButton[iType][1]);
+                s_maphazardbuttons.draw_src_to(&s0, screen, &rTypeButton[iType][1]);
                 let s2 = rTypeButton[iType][2];
-                SDL_UpperBlit(s_maphazardbuttons, &s2, screen, &mut rTypeButton[iType][3]);
+                s_maphazardbuttons.draw_src_to(&s2, screen, &rTypeButton[iType][3]);
 
                 rm.menu_font_large.draw(rTypeButton[iType][1].x + 36, rTypeButton[iType][1].y + 6, szHazardNames[iType]);
             }
@@ -3268,13 +3243,13 @@ pub fn editor_maphazards() -> i32 {
             rm.menu_font_small.draw(0, 480 - rm.menu_font_small.get_height(), "Choose Hazard Type");
         } else if MAPHAZARD_EDIT_STATE_LOCATION == iEditState {
             let hazard = g_map.maphazards[iEditMapHazard as usize];
-            draw_map_hazard(&hazard, 0, true);
+            draw_map_hazard(&hazard, 0, true, blitdest);
             draw_map_hazard_controls(&hazard);
 
             rm.menu_font_small.draw(0, 480 - rm.menu_font_small.get_height(), "Location: [esc] Exit, [p] Properties, [LMB] Set Location");
         } else if MAPHAZARD_EDIT_STATE_PROPERTIES == iEditState {
             let hazard = g_map.maphazards[iEditMapHazard as usize];
-            draw_map_hazard(&hazard, 0, true);
+            draw_map_hazard(&hazard, 0, true, blitdest);
             draw_map_hazard_controls(&hazard);
 
             if hazard.itype == 0 || hazard.itype == 1 {
@@ -3332,11 +3307,11 @@ pub fn draw_map_hazard_controls(hazard: &MapHazard) {
 
             let rVel = [rect(0, 400, 244, 17), rect(198, 420, 244, 17)];
             let mut d = rVel[1];
-            SDL_UpperBlit(s_platform, &rVel[0], screen, &mut d);
+            s_platform.draw_src_to(&rVel[0], screen, &d);
 
             let rMarker = [rect(244, 400, 8, 18), rect(iVelMarkerX as i32, 418, 8, 18)];
             let mut d = rMarker[1];
-            SDL_UpperBlit(s_platform, &rMarker[0], screen, &mut d);
+            s_platform.draw_src_to(&rMarker[0], screen, &d);
 
             if hazard.itype == 2 {
                 rm.menu_font_small.draw_right_justified(190, 420, "Left");
@@ -3353,11 +3328,11 @@ pub fn draw_map_hazard_controls(hazard: &MapHazard) {
 
             let rVel = [rect(0, 384, 184, 13), rect(198, 390, 184, 13)];
             let mut d = rVel[1];
-            SDL_UpperBlit(s_platform, &rVel[0], screen, &mut d);
+            s_platform.draw_src_to(&rVel[0], screen, &d);
 
             let rMarker = [rect(244, 400, 8, 18), rect(iFreqMarkerX as i32, 388, 8, 18)];
             let mut d = rMarker[1];
-            SDL_UpperBlit(s_platform, &rMarker[0], screen, &mut d);
+            s_platform.draw_src_to(&rMarker[0], screen, &d);
 
             rm.menu_font_small.draw_right_justified(190, 390, "More Frequent");
             rm.menu_font_small.draw(388, 390, "Less Frequent");
@@ -3680,12 +3655,11 @@ pub fn editor_blocks() -> i32 {
         drawmap(false, TILESIZE as i16, false);
         rm.menu_shade.draw(0, 0);
 
-        let blocks = rm.spr_blocks[0].get_surface();
-        SDL_UpperBlit(blocks, &rect(0, 0, 224, 32), screen, &mut rect(0, 0, 224, 32));
-        SDL_UpperBlit(blocks, &rect(224, 0, 128, 64), screen, &mut rect(0, 32, 128, 64));
-        SDL_UpperBlit(blocks, &rect(352, 0, 128, 64), screen, &mut rect(128, 32, 128, 64));
-        SDL_UpperBlit(blocks, &rect(0, 32, 160, 32), screen, &mut rect(224, 0, 160, 32));
-        SDL_UpperBlit(blocks, &rect(0, 64, 320, 32), screen, &mut rect(0, 96, 320, 32));
+        rm.spr_blocks[0].draw_src_to(&rect(0, 0, 224, 32), screen, &rect(0, 0, 224, 32));
+        rm.spr_blocks[0].draw_src_to(&rect(224, 0, 128, 64), screen, &rect(0, 32, 128, 64));
+        rm.spr_blocks[0].draw_src_to(&rect(352, 0, 128, 64), screen, &rect(128, 32, 128, 64));
+        rm.spr_blocks[0].draw_src_to(&rect(0, 32, 160, 32), screen, &rect(224, 0, 160, 32));
+        rm.spr_blocks[0].draw_src_to(&rect(0, 64, 320, 32), screen, &rect(0, 96, 320, 32));
 
         rm.menu_font_small.draw_right_justified(640, 0, maplist.current_filename());
 
@@ -3945,7 +3919,7 @@ pub fn editor_tiletype() -> i32 {
 }
 
 pub static mut iPage: i16 = 0;
-pub static mut sBackgrounds: [*mut SDL_Surface; 16] = [null_mut(); 16];
+pub static mut sBackgrounds: Global<[gfxSprite; 16]> = Global::uninit();
 pub static mut rSrc: SDL_Rect = SDL_Rect { x: 0, y: 0, w: 160, h: 120 };
 pub static mut rDst: [SDL_Rect; 16] = [SDL_Rect { x: 0, y: 0, w: 0, h: 0 }; 16];
 
@@ -3964,9 +3938,7 @@ pub fn init_editor_backgrounds() {
             }
         }
 
-        for iSurface in 0..16usize {
-            sBackgrounds[iSurface] = SDL_CreateRGBSurface((*screen).flags, 160, 120, 16, 0, 0, 0, 0);
-        }
+        sBackgrounds.init(std::array::from_fn(|_| gfxSprite::blank(160, 120)));
 
         load_background_page(iPage);
 
@@ -3976,7 +3948,7 @@ pub fn init_editor_backgrounds() {
 
 unsafe fn free_background_surfaces() {
     for iSurface in 0..16usize {
-        SDL_FreeSurface(sBackgrounds[iSurface]);
+        sBackgrounds[iSurface] = gfxSprite::new();
     }
 }
 
@@ -4025,7 +3997,7 @@ pub fn editor_backgrounds() -> i32 {
                             if event.button.x >= d.x && event.button.x < d.x + d.w && event.button.y >= d.y && event.button.y < d.y + d.h {
                                 backgroundlist.set_current_index((iPage as i32 * 16 + iBackground) as usize);
 
-                                rm.spr_background = sprite(&backgroundlist.current_path().to_string_lossy());
+                                rm.spr_background = ImageLoader::new(backgroundlist.current_path()).without_color_key().create();
                                 g_map.szBackgroundFile = get_filename_from_path(&backgroundlist.current_path().to_string_lossy());
 
                                 if event.button.button == BUTTON_LEFT {
@@ -4057,7 +4029,7 @@ pub fn editor_backgrounds() -> i32 {
             }
 
             let s = rSrc;
-            SDL_UpperBlit(sBackgrounds[iBackground as usize], &s, screen, &mut rDst[iBackground as usize]);
+            sBackgrounds[iBackground as usize].draw_src_to(&s, screen, &rDst[iBackground as usize]);
         }
 
         rm.menu_font_small.draw(0, 480 - rm.menu_font_small.get_height() * 2, "[Page Up] next page, [Page Down] previous page");
@@ -4250,50 +4222,28 @@ pub fn editor_animation() -> i32 {
 pub fn load_background_page(iPage_: i16) {
     unsafe {
         let srcRectBackground = rect(0, 0, 640, 480);
-        let mut dstRectBackground = rect(0, 0, 160, 120);
+        let dstRectBackground = rect(0, 0, 160, 120);
 
         for iIndex in 0..16i32 {
             if iPage_ as i32 * 16 + iIndex >= backgroundlist.count() as i32 {
                 break;
             }
 
-            let szFileName = backgroundlist.at((iPage_ as i32 * 16 + iIndex) as usize).to_string_lossy().into_owned();
-
-            if szFileName.is_empty() {
+            let path = backgroundlist.at((iPage_ as i32 * 16 + iIndex) as usize);
+            if path.as_os_str().is_empty() {
                 return;
             }
 
-            let temp = load_surface(&szFileName);
+            let temp = ImageLoader::new(path).without_color_key().create();
 
-            if temp.is_null() {
-                println!("ERROR: Couldn't load thumbnail background: {}", sdl_error());
-                return;
-            }
+            SDL_FillRect(sBackgrounds[iIndex as usize].get_surface(), null(), 0x0);
 
-            let sBackground = SDL_ConvertSurfaceFormat(temp, SDL_PixelFormatEnum::SDL_PIXELFORMAT_ARGB8888 as u32, 0);
-            SDL_FreeSurface(temp);
-
-            if sBackground.is_null() {
-                println!("ERROR: Couldn't convert thumbnail background to display pixel format: {}", sdl_error());
-                return;
-            }
-
-            SDL_FillRect(sBackgrounds[iIndex as usize], null(), 0x0);
-
-            if (*sBackground).w != 640 || (*sBackground).h != 480 {
-                println!("WARNING: Background {} is {}x{} but must be 640x480. Skipping.", szFileName, (*sBackground).w, (*sBackground).h);
-
-                SDL_FreeSurface(sBackground);
+            if temp.get_width() != 640 || temp.get_height() != 480 {
+                println!("WARNING: Background {} is {}x{} but must be 640x480. Skipping.", path.display(), temp.get_width(), temp.get_height());
                 continue;
             }
 
-            if SDL_UpperBlitScaled(sBackground, &srcRectBackground, sBackgrounds[iIndex as usize], &mut dstRectBackground) < 0 {
-                eprintln!("SDL_SCALEBLIT error: {}", sdl_error());
-                SDL_FreeSurface(sBackground);
-                return;
-            }
-
-            SDL_FreeSurface(sBackground);
+            temp.draw_stretch(&srcRectBackground, sBackgrounds[iIndex as usize].get_surface(), &dstRectBackground);
         }
     }
 }
@@ -4556,7 +4506,7 @@ pub fn loadcurrentmap() {
             backgroundlist.set_current_path(Path::new("gfx/packs/Classic/backgrounds/Land_Classic.png"));
         }
 
-        rm.spr_background = sprite(&path);
+        rm.spr_background = ImageLoader::new(&path).without_color_key().create();
 
         g_iNumPlatforms = g_map.platforms.len() as i16;
 
@@ -5039,9 +4989,9 @@ pub fn takescreenshot() {
             rm.spr_platformpath.set_wrap((640 >> iScreenshotSize) as i16);
 
             //Create new screenshot surface
-            let screenshot = SDL_CreateRGBSurface((*old_screen).flags, iTileSize as i32 * 20, iTileSize as i32 * 15, (*(*old_screen).format).BitsPerPixel as i32, 0, 0, 0, 0);
-            blitdest = screenshot;
-            screen = screenshot;
+            let screenshot = gfxSprite::blank(iTileSize as u32 * 20, iTileSize as u32 * 15);
+            blitdest = screenshot.get_surface();
+            screen = screenshot.get_surface();
 
             //Draw map to screenshot
             drawmap(true, iTileSize, false);
@@ -5064,12 +5014,13 @@ pub fn takescreenshot() {
                     g_map.platforms[iPlatform].iTileHeight,
                     true,
                     true,
+                    blitdest,
                 );
             }
 
             //Draw map hazards
             for hazard in g_map.maphazards.clone().iter() {
-                draw_map_hazard(hazard, iScreenshotSize, false);
+                draw_map_hazard(hazard, iScreenshotSize, false, blitdest);
             }
 
             //Save the screenshot with the same name as the map file
@@ -5084,15 +5035,13 @@ pub fn takescreenshot() {
 
             szSaveFile.push_str(".png");
             let c = CString::new(convert_path(&szSaveFile)).unwrap();
-            IMG_SavePNG(screenshot, c.as_ptr());
-
-            SDL_FreeSurface(screenshot);
+            IMG_SavePNG(screenshot.get_surface(), c.as_ptr());
 
             println!("Screenshot taken: {}", szSaveFile);
-        }
 
-        screen = old_screen;
-        blitdest = screen;
+            screen = old_screen;
+            blitdest = screen;
+        }
     }
 }
 
@@ -5230,7 +5179,13 @@ pub fn dump_editor_state(out: &mut dyn Write) {
                 hm.add(g_map.mapdatatop[x][y].0 as i32);
                 let b = &g_map.objectdata[x][y];
                 hm.add(b.iType as i32);
-                for s in b.iSettings.iter() {
+                // Only the settings the map format stores: the rest keep stale heap bytes in the C++.
+                let stored = match b.iType {
+                    1 | 15 => b.iSettings.len(),
+                    11..=14 => 1,
+                    _ => 0,
+                };
+                for s in &b.iSettings[..stored] {
                     hm.add(*s as i32);
                 }
                 hm.add(b.fHidden as i32);

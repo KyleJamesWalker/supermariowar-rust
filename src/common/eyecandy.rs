@@ -13,7 +13,7 @@ use crate::common::tile_types::TileType;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gs_gameplay::eyecandy;
-use sdl2::sys::{SDL_FillRect, SDL_Rect, SDL_UpperBlit};
+use sdl2::sys::{SDL_FillRect, SDL_Rect};
 use std::ptr::null;
 
 const screenWidth: i32 = App::screenWidth;
@@ -1768,15 +1768,15 @@ impl Spotlight {
     pub fn draw(&mut self) {
         unsafe {
             let (ix, iy, hw, w) = (self.ix as i32, self.iy as i32, self.iHalfWidth as i32, self.iWidth as i32);
-            let mut rDst = SDL_Rect { x: ix - hw, y: iy - hw, w, h: w };
-            SDL_UpperBlit(rm.spr_overlayhole.get_surface(), &self.rSrc, rm.spr_overlay.get_surface(), &mut rDst);
+            let rDst = SDL_Rect { x: ix - hw, y: iy - hw, w, h: w };
+            rm.spr_overlayhole.draw_src_to(&self.rSrc, rm.spr_overlay.get_surface(), &rDst);
 
             if ix - hw < 0 {
-                let mut rDstWrap = SDL_Rect { x: ix - hw + screenWidth, y: iy - hw, w, h: w };
-                SDL_UpperBlit(rm.spr_overlayhole.get_surface(), &self.rSrc, rm.spr_overlay.get_surface(), &mut rDstWrap);
+                let rDstWrap = SDL_Rect { x: ix - hw + screenWidth, y: iy - hw, w, h: w };
+                rm.spr_overlayhole.draw_src_to(&self.rSrc, rm.spr_overlay.get_surface(), &rDstWrap);
             } else if ix + hw >= screenWidth {
-                let mut rDstWrap = SDL_Rect { x: ix - hw - screenWidth, y: iy - hw, w, h: w };
-                SDL_UpperBlit(rm.spr_overlayhole.get_surface(), &self.rSrc, rm.spr_overlay.get_surface(), &mut rDstWrap);
+                let rDstWrap = SDL_Rect { x: ix - hw - screenWidth, y: iy - hw, w, h: w };
+                rm.spr_overlayhole.draw_src_to(&self.rSrc, rm.spr_overlay.get_surface(), &rDstWrap);
             }
         }
     }

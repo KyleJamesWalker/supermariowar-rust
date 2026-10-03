@@ -115,7 +115,19 @@
 #Stages
 #Stage Type 0,Map,Mode,Goal,Points,Bonus List(Max 10),Name,End World, then mode settings (see sample tour file for details)
 #Stage Type 1,Bonus House Name,Sequential/Random Order,Display Text,Powerup List(Max 5)
-0
+12
+0,Buster_Beetle_s_Tower,1,10,1,0,Polar Base,0,0,0
+0,Ice Shelf,16,12,1,0,Ice Shelf,0,2,1,0,30,1,1
+0,Im freezing,2,70,1,0,Freezie Path,0,0,0,0
+0,Phendrana Cave,9,99,1,0,Phendrana Cave,0,1
+0,Ice Fortress,15,25,2,1w14|1w12|2w13|2w11|3w10|4w9,Ice Fortress,0,3,180,0,1,10,10,3,5,0,0,0,0,0,0,0,10,0,1,0,3,1,0
+0,Aisland,8,155,1,0,Arctic Isle,0,1,0
+0,Melting Artic_,11,50,1,0,Melting Arctic,0,1,150,1,1,1
+0,Mt Bananavision!,4,10,1,0,Mount Banana,0,1,3
+0,FrozenSomething,5,35,1,0,Something Frozen,0,45,10,1,0,0,0,0,5,0,0
+0,The Arctic,0,15,3,0,The Arctic,1,0
+1,Toad's House,1,||Pick an item to help you on your way!||,p6,p11,p12
+1,Ice House,1,||*frozen*||,p0,p10,p9,p16,p0
 
 #Warps
 #location 1 x, y, location 2 x, y

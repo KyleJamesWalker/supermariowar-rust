@@ -44,7 +44,6 @@ fn main() {
         blitdest = screen;
         rm = Ptr::new_box(CResourceManager::new());
         g_map = Ptr::from_box(CMap::new());
-        g_tilesetmanager = Ptr::new_box(CTilesetManager::new());
         filterslist = Ptr::new_box(FiltersList::new());
         skinlist = Ptr::new_box(SkinList::new());
         menugraphicspacklist = Ptr::new_box(GraphicsList::new());
@@ -83,9 +82,8 @@ fn main() {
             save_bmp(screen, &format!("{}/{}_f40.bmp", outdir, n));
 
             let thumb = g_map.create_thumbnail_surface(false);
-            if !thumb.is_null() {
-                save_bmp(thumb, &format!("{}/{}_thumb.bmp", outdir, n));
-                SDL_FreeSurface(thumb);
+            if !thumb.get_surface().is_null() {
+                save_bmp(thumb.get_surface(), &format!("{}/{}_thumb.bmp", outdir, n));
             }
         }
         println!("\n---\nrendered {}", args.len() - 3);

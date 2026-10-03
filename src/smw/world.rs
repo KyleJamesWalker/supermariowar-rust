@@ -12,7 +12,7 @@ use crate::common::version::Version;
 use crate::common::world_tour_stop::{parse_tour_stop_line, reset_tour_stops, write_tour_stop_line};
 use crate::globals::*;
 use crate::common::util::grid::Grid;
-use sdl2::sys::{SDL_Rect, SDL_Surface, SDL_UpperBlit};
+use sdl2::sys::{SDL_Rect, SDL_Surface};
 use std::collections::{BTreeMap, VecDeque};
 
 pub const WORLD_BACKGROUND_SPRITE_SET_SIZE: i16 = 60;
@@ -107,11 +107,6 @@ fn world_music_category_from_int(v: i32) -> WorldMusicCategory {
     } else {
         WorldMusicCategory::Grass
     }
-}
-
-#[inline]
-unsafe fn blit_surface(src: *mut SDL_Surface, srcrect: *const SDL_Rect, dst: *mut SDL_Surface, dstrect: &mut SDL_Rect) {
-    SDL_UpperBlit(src, srcrect, dst, dstrect);
 }
 
 #[derive(Clone, Copy, Default, Debug)]
@@ -493,11 +488,11 @@ impl WorldVehicle {
         unsafe {
             let ts = self.iTileSize as i32;
             if fVehiclesSleeping {
-                let mut rDst = SDL_Rect { x: self.pos.x as i32 + iWorldOffsetX as i32, y: self.pos.y as i32 + iWorldOffsetY as i32, w: ts, h: ts };
-                blit_surface(rm.spr_worldvehicle[self.iTileSheet as usize].get_surface(), &self.srcRects[4], blitdest, &mut rDst);
+                let rDst = SDL_Rect { x: self.pos.x as i32 + iWorldOffsetX as i32, y: self.pos.y as i32 + iWorldOffsetY as i32, w: ts, h: ts };
+                rm.spr_worldvehicle[self.iTileSheet as usize].draw_src_to(&self.srcRects[4], blitdest, &rDst);
             } else {
-                let mut rDst = SDL_Rect { x: self.pos.x as i32 + iWorldOffsetX as i32 + self.iPaceOffset as i32, y: self.pos.y as i32 + iWorldOffsetY as i32, w: ts, h: ts };
-                blit_surface(rm.spr_worldvehicle[self.iTileSheet as usize].get_surface(), &self.srcRects[(self.iDrawDirection + self.iAnimationFrame) as usize], blitdest, &mut rDst);
+                let rDst = SDL_Rect { x: self.pos.x as i32 + iWorldOffsetX as i32 + self.iPaceOffset as i32, y: self.pos.y as i32 + iWorldOffsetY as i32, w: ts, h: ts };
+                rm.spr_worldvehicle[self.iTileSheet as usize].draw_src_to(&self.srcRects[(self.iDrawDirection + self.iAnimationFrame) as usize], blitdest, &rDst);
             }
         }
     }
@@ -630,6 +625,8 @@ impl WorldMap {
         if bytes.last() == Some(&b'\n') || bytes.is_empty() {
             lines.pop();
         }
+
+        reset_tour_stops();
 
         let mut iReadType: i16 = 0;
         let mut version = Version::default();
@@ -982,7 +979,6 @@ impl WorldMap {
             throw_runtime_error("Invalid world file");
         }
 
-        reset_tour_stops(); // FIXME
         this
     }
 
@@ -1321,7 +1317,7 @@ impl WorldMap {
         let iAnimationFrame = iAnimationFrame as i32;
         let sheet = self.iTileSheet as usize;
 
-        let mut r = SDL_Rect { x: iCol as i32 * ts, y: iRow as i32 * ts, w: ts, h: ts };
+        let r = SDL_Rect { x: iCol as i32 * ts, y: iRow as i32 * ts, w: ts, h: ts };
 
         let mut iBackgroundSprite = tile.iBackgroundSprite;
         let iBackgroundWater = tile.iBackgroundWater;
@@ -1335,40 +1331,40 @@ impl WorldMap {
         unsafe {
             //The solid background tile is not animated, but all the rest are
             if iLayer != 2 {
-                let bg = rm.spr_worldbackground[sheet].get_surface();
+                let bg = &rm.spr_worldbackground[sheet];
                 if iBackgroundSprite == 1 {
                     let rSrc = SDL_Rect { x: ts + iBackgroundStyleOffset, y: ts, w: ts, h: ts };
-                    blit_surface(bg, &rSrc, surface, &mut r);
+                    bg.draw_src_to(&rSrc, surface, &r);
                 } else {
                     let mut rSrc = SDL_Rect { x: iAnimationFrame + ((iBackgroundWater as i32) << (2 + shift)), y: 0, w: ts, h: ts };
-                    blit_surface(bg, &rSrc, surface, &mut r);
+                    bg.draw_src_to(&rSrc, surface, &r);
 
                     if iBackgroundSprite >= 2 && iBackgroundSprite <= 48 {
                         let b = iBackgroundSprite as i32;
                         if iBackgroundSprite >= 45 {
                             rSrc = SDL_Rect { x: (3 << shift) + iBackgroundStyleOffset, y: (b - 44) << shift, w: ts, h: ts };
-                            blit_surface(bg, &rSrc, surface, &mut r);
+                            bg.draw_src_to(&rSrc, surface, &r);
                         } else if iBackgroundSprite >= 30 {
                             rSrc = SDL_Rect { x: (2 << shift) + iBackgroundStyleOffset, y: (b - 29) << shift, w: ts, h: ts };
-                            blit_surface(bg, &rSrc, surface, &mut r);
+                            bg.draw_src_to(&rSrc, surface, &r);
                         } else if iBackgroundSprite >= 16 {
                             rSrc = SDL_Rect { x: ts + iBackgroundStyleOffset, y: (b - 14) << shift, w: ts, h: ts };
-                            blit_surface(bg, &rSrc, surface, &mut r);
+                            bg.draw_src_to(&rSrc, surface, &r);
                         } else {
                             rSrc = SDL_Rect { x: iBackgroundStyleOffset, y: b << shift, w: ts, h: ts };
-                            blit_surface(bg, &rSrc, surface, &mut r);
+                            bg.draw_src_to(&rSrc, surface, &r);
                         }
                     }
                 }
             }
 
             if iLayer != 1 {
-                let special = rm.spr_worldforegroundspecial[sheet].get_surface();
+                let special = &rm.spr_worldforegroundspecial[sheet];
                 if tile.iCompleted >= 0 {
                     let rSrc = SDL_Rect { x: (tile.iCompleted as i32 + 10) << shift, y: 5 << shift, w: ts, h: ts };
-                    blit_surface(special, &rSrc, surface, &mut r);
+                    special.draw_src_to(&rSrc, surface, &r);
                 } else if iForegroundSprite >= 0 && iForegroundSprite < WORLD_FOREGROUND_STAGE_OFFSET {
-                    let paths = rm.spr_worldpaths[sheet].get_surface();
+                    let paths = &rm.spr_worldpaths[sheet];
                     let iPathStyle = iForegroundSprite / WORLD_PATH_SPRITE_SET_SIZE;
                     let iPathOffsetX = ((iPathStyle as i32 % 4) * (5 << shift)) as i16 as i32;
                     let iPathOffsetY = ((iPathStyle as i32 >> 2) * (10 << shift)) as i16 as i32;
@@ -1378,49 +1374,49 @@ impl WorldMap {
                     if iForegroundSprite == 1 || iForegroundSprite == 2 {
                         //Non-animated straight paths
                         let rSrc = SDL_Rect { x: iPathOffsetX, y: ((f - 1) << shift) + iPathOffsetY, w: ts, h: ts };
-                        blit_surface(paths, &rSrc, surface, &mut r);
+                        paths.draw_src_to(&rSrc, surface, &r);
                     } else if iForegroundSprite >= 3 && iForegroundSprite <= 10 {
                         //Animated paths with "coins" in them
                         let rSrc = SDL_Rect { x: iPathOffsetX + iAnimationFrame, y: ((f - 1) << shift) + iPathOffsetY, w: ts, h: ts };
-                        blit_surface(paths, &rSrc, surface, &mut r);
+                        paths.draw_src_to(&rSrc, surface, &r);
                     } else if iForegroundSprite >= 11 && iForegroundSprite <= 18 {
                         //Non-animated straight paths over water
                         let iSpriteX = ((((f - 11) / 2) + 1) << shift) as i16 as i32;
                         let iSpriteY = (((f - 11) % 2) << shift) as i16 as i32;
 
                         let rSrc = SDL_Rect { x: iPathOffsetX + iSpriteX, y: iSpriteY + iPathOffsetY, w: ts, h: ts };
-                        blit_surface(paths, &rSrc, surface, &mut r);
+                        paths.draw_src_to(&rSrc, surface, &r);
                     }
                 } else if iForegroundSprite >= WORLD_FOREGROUND_STAGE_OFFSET && iForegroundSprite <= WORLD_FOREGROUND_STAGE_OFFSET + 399 {
                     let iTileColor = (iForegroundSprite - WORLD_FOREGROUND_STAGE_OFFSET) / 100;
                     let mut rSrc = SDL_Rect { x: (10 << shift) + iAnimationFrame, y: (iTileColor as i32) << shift, w: ts, h: ts };
-                    blit_surface(special, &rSrc, surface, &mut r);
+                    special.draw_src_to(&rSrc, surface, &r);
 
                     let iTileNumber = (iForegroundSprite - WORLD_FOREGROUND_STAGE_OFFSET) % 100;
                     rSrc.x = ((iTileNumber % 10) as i32) << shift;
                     rSrc.y = ((iTileNumber / 10) as i32) << shift;
-                    blit_surface(special, &rSrc, surface, &mut r);
+                    special.draw_src_to(&rSrc, surface, &r);
                 } else if iForegroundSprite >= WORLD_BRIDGE_SPRITE_OFFSET && iForegroundSprite <= WORLD_BRIDGE_SPRITE_OFFSET + 3 {
                     let rSrc = SDL_Rect { x: ((iForegroundSprite - WORLD_BRIDGE_SPRITE_OFFSET + 10) as i32) << shift, y: 7 << shift, w: ts, h: ts };
-                    blit_surface(special, &rSrc, surface, &mut r);
+                    special.draw_src_to(&rSrc, surface, &r);
                 } else if iForegroundSprite >= WORLD_START_SPRITE_OFFSET && iForegroundSprite <= WORLD_START_SPRITE_OFFSET + 1 {
                     let rSrc = SDL_Rect { x: ((iForegroundSprite - WORLD_START_SPRITE_OFFSET + 10) as i32) << shift, y: 4 << shift, w: ts, h: ts };
-                    blit_surface(special, &rSrc, surface, &mut r);
+                    special.draw_src_to(&rSrc, surface, &r);
                 } else if iForegroundSprite >= WORLD_FOREGROUND_SPRITE_OFFSET && iForegroundSprite <= WORLD_FOREGROUND_SPRITE_OFFSET + 179 {
                     let iSprite = (iForegroundSprite - WORLD_FOREGROUND_SPRITE_OFFSET) as i32;
                     let rSrc = SDL_Rect { x: (iSprite % 12) << shift, y: (iSprite / 12) << shift, w: ts, h: ts };
-                    blit_surface(rm.spr_worldforeground[sheet].get_surface(), &rSrc, surface, &mut r);
+                    rm.spr_worldforeground[sheet].draw_src_to(&rSrc, surface, &r);
                 } else if iForegroundSprite >= WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET && iForegroundSprite <= WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET + 29 {
                     let iSprite = (iForegroundSprite - WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET) as i32;
                     let rSrc = SDL_Rect { x: (if iSprite >= 15 { 16 << shift } else { 12 << shift }) + iAnimationFrame, y: (iSprite % 15) << shift, w: ts, h: ts };
-                    blit_surface(rm.spr_worldforeground[sheet].get_surface(), &rSrc, surface, &mut r);
+                    rm.spr_worldforeground[sheet].draw_src_to(&rSrc, surface, &r);
                 }
 
                 //Draw doors
                 let iType = tile.iType;
                 if iType >= 2 && iType <= 5 {
                     let rSrc = SDL_Rect { x: (iType as i32 + 8) << shift, y: 6 << shift, w: ts, h: ts };
-                    blit_surface(special, &rSrc, surface, &mut r);
+                    special.draw_src_to(&rSrc, surface, &r);
                 }
             }
         }

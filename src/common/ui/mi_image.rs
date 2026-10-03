@@ -201,7 +201,7 @@ impl UI_ControlTrait for MI_Image {
                 w: self.iw as i32 + (pv << 1),
                 h: self.ih as i32 + (pv << 1),
             };
-            self.spr.draw_stretch(&dst, &src);
+            self.spr.draw_stretch(&src, unsafe { blitdest }, &dst);
         } else {
             self.spr.draw_src(self.m_pos.x as i32 + iXOffset as i32, self.m_pos.y as i32 + iYOffset as i32, &src);
         }

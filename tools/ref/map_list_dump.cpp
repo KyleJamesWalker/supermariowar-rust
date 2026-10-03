@@ -56,8 +56,7 @@ int main(int argc, char** argv) {
     filterslist = new FiltersList();
     game_values.init();
     rm = new CResourceManager();
-    g_tilesetmanager = new CTilesetManager();
-    g_tilesetmanager->init(convertPath("gfx/packs/Classic"));
+    g_tilesetmanager = new CTilesetManager(convertPath("gfx/packs/Classic"));
     g_map = new (calloc(1, sizeof(CMap))) CMap();
     maplist = new MapList(false);
     maplist->ReadFilters();

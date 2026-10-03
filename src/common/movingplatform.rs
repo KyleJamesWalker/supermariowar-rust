@@ -1,5 +1,6 @@
 //! Port of src/common/movingplatform.cpp
 
+use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::game::App;
 use crate::common::gfx::gfx_drawpreview;
 use crate::common::global::*;
@@ -61,7 +62,7 @@ pub struct MovingPlatform {
     pub iSteps: i16,
     pub iOnStep: i16,
 
-    pub sSurface: [*mut SDL_Surface; 2],
+    pub sprites: [gfxSprite; 2],
 
     pub rSrcRect: SDL_Rect,
     pub rDstRect: SDL_Rect,
@@ -126,7 +127,7 @@ impl MovingPlatform {
             fOldVelY: 0.0,
             iSteps: 0,
             iOnStep: 0,
-            sSurface: [null_mut(); 2],
+            sprites: [gfxSprite::new(), gfxSprite::new()],
             rSrcRect: SDL_Rect { x: 0, y: 0, w: 0, h: 0 },
             rDstRect: SDL_Rect { x: 0, y: 0, w: 0, h: 0 },
             fForwardDirection: false,
@@ -146,18 +147,10 @@ impl MovingPlatform {
 
         unsafe {
             for iSurface in 0..2 {
-                let s = SDL_CreateRGBSurface(
-                    (*screen).flags,
-                    w as i32 * iTileSize as i32,
-                    h as i32 * iTileSize as i32,
-                    (*(*screen).format).BitsPerPixel as i32,
-                    0,
-                    0,
-                    0,
-                    0,
-                );
-                this.sSurface[iSurface] = s;
+                this.sprites[iSurface] = gfxSprite::blank(w as u32 * iTileSize as u32, h as u32 * iTileSize as u32);
+                this.sprites[iSurface].set_wrap(640);
 
+                let s = this.sprites[iSurface].get_surface();
                 if SDL_SetColorKey(s, SDL_bool::SDL_TRUE as i32, SDL_MapRGB((*s).format, 255, 0, 255)) < 0 {
                     print!("\n ERROR: Couldn't set ColorKey for moving platform: {}\n", sdl_error());
                 }
@@ -175,20 +168,18 @@ impl MovingPlatform {
                         }
 
                         if tile.iID >= 0 {
-                            g_tilesetmanager.draw(this.sSurface[iSurface], tile.iID, iTileSizeIndex, tile.iCol, tile.iRow, iCol, iRow);
+                            g_tilesetmanager.draw(this.sprites[iSurface].get_surface(), tile.iID, iTileSizeIndex, tile.iCol, tile.iRow, iCol, iRow);
                         } else if tile.iID as i32 == TILESETANIMATED {
-                            SDL_UpperBlit(
-                                rm.spr_tileanimation[iTileSizeIndex as usize].get_surface(),
-                                g_tilesetmanager.rect(iTileSizeIndex, tile.iCol * 4, tile.iRow),
-                                this.sSurface[iSurface],
-                                g_tilesetmanager.rect(iTileSizeIndex, iCol, iRow),
+                            rm.spr_tileanimation[iTileSizeIndex as usize].draw_src_to(
+                                &*g_tilesetmanager.rect(iTileSizeIndex, tile.iCol * 4, tile.iRow),
+                                this.sprites[iSurface].get_surface(),
+                                &*g_tilesetmanager.rect(iTileSizeIndex, iCol, iRow),
                             );
                         } else if tile.iID as i32 == TILESETUNKNOWN {
-                            SDL_UpperBlit(
-                                rm.spr_unknowntile[iTileSizeIndex as usize].get_surface(),
-                                g_tilesetmanager.rect(iTileSizeIndex, 0, 0),
-                                this.sSurface[iSurface],
-                                g_tilesetmanager.rect(iTileSizeIndex, iCol, iRow),
+                            rm.spr_unknowntile[iTileSizeIndex as usize].draw_src_to(
+                                &*g_tilesetmanager.rect(iTileSizeIndex, 0, 0),
+                                this.sprites[iSurface].get_surface(),
+                                &*g_tilesetmanager.rect(iTileSizeIndex, iCol, iRow),
                             );
                         }
                     }
@@ -223,6 +214,16 @@ impl MovingPlatform {
         self.iTileType[col * self.iTileHeight as usize + row]
     }
 
+    //Draw a custom sprite on a tile of the platform, instead of a tileset tile
+    pub fn paint_sprite_at(&mut self, spr: &gfxSprite, col: usize, row: usize) {
+        let iTileSize: i16 = self.iWidth / self.iTileWidth;
+        let dstPos = SDL_Rect { x: col as i32 * iTileSize as i32, y: row as i32 * iTileSize as i32, w: 0, h: 0 };
+
+        for layer in &self.sprites {
+            spr.draw_to(layer.get_surface(), &dstPos);
+        }
+    }
+
     fn flags_at(&self, col: i16, row: i16) -> i32 {
         tile_to_flags(self.tile_type_at(col as usize, row as usize)) as i32
     }
@@ -255,46 +256,21 @@ impl MovingPlatform {
             self.rDstRect.w = self.iWidth as i32;
             self.rDstRect.h = self.iHeight as i32;
 
-            if SDL_UpperBlit(self.sSurface[(1 - g_iCurrentDrawIndex) as usize], &self.rSrcRect, blitdest, &mut self.rDstRect) < 0 {
-                eprint!("SDL_BlitSurface error: {}\n", sdl_error());
-                return;
-            }
-
-            let mut fBlitSide = false;
-            if (self.ix as i32 - self.iHalfWidth as i32) < 0 {
-                self.rDstRect.x = self.ix as i32 - self.iHalfWidth as i32 + App::screenWidth + x_shake as i32;
-                fBlitSide = true;
-            } else if self.ix as i32 + self.iHalfWidth as i32 >= App::screenWidth {
-                self.rDstRect.x = self.ix as i32 - self.iHalfWidth as i32 - App::screenWidth + x_shake as i32;
-                fBlitSide = true;
-            }
-
-            if fBlitSide {
-                self.rDstRect.y = self.iy as i32 - self.iHalfHeight as i32 + y_shake as i32;
-                self.rDstRect.w = self.iWidth as i32;
-                self.rDstRect.h = self.iHeight as i32;
-
-                if SDL_UpperBlit(self.sSurface[(1 - g_iCurrentDrawIndex) as usize], &self.rSrcRect, blitdest, &mut self.rDstRect) < 0 {
-                    eprint!("SDL_BlitSurface error: {}\n", sdl_error());
-                }
-            }
+            self.sprites[(1 - g_iCurrentDrawIndex) as usize].draw_src_to(&self.rSrcRect, blitdest, &self.rDstRect);
         }
     }
 
     /// `draw(short iOffsetX, short iOffsetY)`: path drawing for the map preview.
     pub fn draw_offset(&mut self, iOffsetX: i16, iOffsetY: i16) {
         gfx_drawpreview(
-            self.sSurface[0],
+            &self.sprites[0],
             (self.ix as i32 - self.iHalfWidth as i32 + iOffsetX as i32) as i16,
             (self.iy as i32 - self.iHalfHeight as i32 + iOffsetY as i32) as i16,
             0,
             0,
             self.iWidth,
             self.iHeight,
-            iOffsetX,
-            iOffsetY,
-            (App::screenWidth / 2) as i16,
-            (App::screenHeight / 2) as i16,
+            &SDL_Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: App::screenWidth / 2, h: App::screenHeight / 2 },
             true,
             Option::None,
         );
@@ -1466,11 +1442,3 @@ impl MovingPlatform {
     }
 }
 
-impl Drop for MovingPlatform {
-    fn drop(&mut self) {
-        unsafe {
-            SDL_FreeSurface(self.sSurface[0]);
-            SDL_FreeSurface(self.sSurface[1]);
-        }
-    }
-}

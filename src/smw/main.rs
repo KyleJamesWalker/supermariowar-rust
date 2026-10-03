@@ -16,7 +16,7 @@ use crate::common::map_list::MapList;
 use crate::common::tileset_manager::CTilesetManager;
 use crate::common::resource_manager::CResourceManager;
 use crate::smw::player::CPlayer;
-use crate::common::gfx::{gfx_close, gfx_init, gfx_flipscreen, gfx_loadpalette, gfx_settitle, gfx_show_error};
+use crate::common::gfx::{gfx_close, gfx_init, gfx_flipscreen, gfx_loadpalette, gfx_settitle, gfx_show_catched_error};
 use crate::common::global_constants::{HALF_PI, MAX_PLAYERS, NUM_POWERUPS, PI, THREE_HALF_PI};
 use crate::common::path::convert_path_pack;
 use crate::common::score::CScore;
@@ -94,8 +94,6 @@ pub fn create_globals() {
         rm = Ptr::new_box(CResourceManager::new());
 
         g_map = Ptr::from_box(CMap::new());
-        g_tilesetmanager = Ptr::new_box(CTilesetManager::new());
-
         filterslist = Ptr::new_box(FiltersList::new());
         maplist = Ptr::new_box(MapList::new(false));
 
@@ -217,23 +215,6 @@ pub fn init_spawnlocations() {
 //  PROGRAM ENTRY POINT
 //*************************************
 
-fn show_catched_error(error: &str) {
-    let mut message = String::from(
-        "It seems the game has unexpectedly crashed. If you could tell us\n\
-         what happened exactly, we might be able to fix this bug. Consider\n\
-         reporting it on the link below, thanks!\n\n\
-         https://github.com/mmatyas/supermariowar/issues\n\n\
-         Sincerely,\nThe Developers",
-    );
-    if !error.is_empty() {
-        message += "\n\n\nThe error message:\n";
-        message += error;
-    }
-
-    eprintln!("\n{}", message);
-    gfx_show_error(&message);
-}
-
 pub fn main() {
     crate::globals::init_globals();
 
@@ -261,7 +242,7 @@ pub fn main() {
             .cloned()
             .or_else(|| payload.downcast_ref::<&str>().map(|s| s.to_string()))
             .unwrap_or_default();
-        show_catched_error(&what);
+        gfx_show_catched_error(&what);
         std::process::exit(1);
     }
 }
@@ -318,8 +299,10 @@ pub fn main_game() {
 
         //Load the gfx color palette
         let pack = gamegraphicspacklist.current_path().to_string_lossy().into_owned();
-        let pngPalette = gfx_loadpalette(Path::new(&convert_path_pack("gfx/packs/palette.png", &pack)));
-        if !pngPalette {
+        let png = std::panic::catch_unwind(|| gfx_loadpalette(Path::new(&convert_path_pack("gfx/packs/palette.png", &pack))));
+        if let Err(payload) = png {
+            let Some(err) = payload.downcast_ref::<String>() else { std::panic::resume_unwind(payload) };
+            println!("\nwarning: {} -> falling back to BMP", err);
             gfx_loadpalette(Path::new(&convert_path_pack("gfx/packs/palette.bmp", &pack)));
         }
 

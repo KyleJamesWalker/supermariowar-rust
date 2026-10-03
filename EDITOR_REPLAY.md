@@ -17,11 +17,11 @@ patch -p1 < <this repo>/tools/cpp-harness.patch
 patch -p1 < <this repo>/tools/editor-harness.patch
 mkdir -p build-editors && cd build-editors
 cmake .. -DNO_NETWORK=ON -DBUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release \
-         -DDISABLE_DEFAULT_CFLAGS=ON -DCMAKE_CXX_FLAGS="-O2 -ffp-contract=off"
+         -DCMAKE_CXX_FLAGS="-O2 -ffp-contract=off"
 make -j smw-worldedit smw-leveledit
 ```
 
-`editor-harness.patch` holds one `diff -uN supermariowar/src/<f> smw-ref-editors/src/<f>` per file it touches (`common/CMakeLists.txt`, `common/EditorHarness.{h,cpp}`, `common/map.h`, `leveleditor/leveleditor.cpp`, `worldeditor/worldeditor.cpp`); `~/work/smw-ref` never gets them, so the game reference stays clean upstream plus `cpp-harness.patch`. Regenerate it from `~/work` by rerunning that diff for each file, and check it with `patch -p1 --dry-run` on a clean copy that already has `cpp-harness.patch` applied.
+`editor-harness.patch` covers `common/CMakeLists.txt`, `common/EditorHarness.{h,cpp}`, `common/map.h`, `leveleditor/leveleditor.cpp` and `worldeditor/worldeditor.cpp`; `~/work/smw-ref` never gets them, so the game reference stays clean upstream plus `cpp-harness.patch`. Both patches are `git diff master harness-latest -- <files>` in the reference repo. Check them by applying both with `patch -p1` to a clean `git archive master src` and diffing against `harness-latest`.
 
 ## Running
 
@@ -118,7 +118,7 @@ The fields are the editor globals of the same names (`edit_mode`, `selected_laye
 
 | Hash | Values, in order |
 |---|---|
-| `map` | for x in 0..20, y in 0..15: the 4 layers of `mapdata` (`iID`, `iCol`, `iRow`), `mapdatatop`, `objectdata` (`iType`, 26 settings, `fHidden`), `warpdata` (`direction`, `connection`, `id`), the 6 `nospawn` flags. Then the `mapitems` count and each item (`itype`, `ix`, `iy`); the `maphazards` count and each hazard (`itype`, `ix`, `iy`, then per parameter `iparam`, `dparam`); `eyecandy[3]`; `musicCategoryID`; `iNumRaceGoals` and 8 race goal `x`, `y`; `iNumFlagBases` and 4 flag base `x`, `y`; `iSwitches[4]`; each byte of `szBackgroundFile`; `platforms.size()` |
+| `map` | for x in 0..20, y in 0..15: the 4 layers of `mapdata` (`iID`, `iCol`, `iRow`), `mapdatatop`, `objectdata` (`iType`, the stored settings, `fHidden`: all 26 settings for types 1 and 15, setting 0 for types 11-14, none otherwise, because the C++ leaves the others uninitialized), `warpdata` (`direction`, `connection`, `id`), the 6 `nospawn` flags. Then the `mapitems` count and each item (`itype`, `ix`, `iy`); the `maphazards` count and each hazard (`itype`, `ix`, `iy`, then per parameter `iparam`, `dparam`); `eyecandy[3]`; `musicCategoryID`; `iNumRaceGoals` and 8 race goal `x`, `y`; `iNumFlagBases` and 4 flag base `x`, `y`; `iSwitches[4]`; each byte of `szBackgroundFile`; `platforms.size()` |
 | `plat` | for each of the first `g_iNumPlatforms` editor platforms: 300 tiles (`iID`, `iCol`, `iRow`), 300 types, `iVelocity`, `iStartX`, `iStartY`, `iEndX`, `iEndY`, `iPathType`, `fAngle`, `fRadiusX`, `fRadiusY`, `iDrawLayer` |
 | `anim` | the 256 `animatedtiletypes` |
 

@@ -5,12 +5,11 @@ pub mod gfx_font;
 pub mod gfx_palette;
 pub mod gfx_sdl;
 pub mod gfx_sprite;
-pub mod s_font;
 
 use crate::common::gfx::color::{colors, RGB};
 use crate::common::gfx::gfx_palette::{gfxPalette, PlayerPalette};
 use crate::common::gfx::gfx_sdl::GraphicsSDL;
-use crate::common::gfx::gfx_sprite::{gfxSprite, ClipEdge};
+use crate::common::gfx::gfx_sprite::{gfxSprite, ClipEdge, ImageLoader};
 use crate::common::global_constants::PGFX_LAST;
 use crate::common::util::sdl_helpers::SdlSurfacePtr;
 use crate::globals::*;
@@ -40,7 +39,7 @@ fn sdl_error() -> String {
     unsafe { CStr::from_ptr(SDL_GetError()).to_string_lossy().into_owned() }
 }
 
-unsafe fn get_raw_pixel(surf: *mut SDL_Surface, x: i32, y: i32) -> u32 {
+pub unsafe fn get_raw_pixel(surf: *mut SDL_Surface, x: i32, y: i32) -> u32 {
     assert!(!surf.is_null());
     assert!(0 <= x && x < (*surf).w);
     assert!(0 <= y && y < (*surf).h);
@@ -104,29 +103,19 @@ fn must_lock(surf: *mut SDL_Surface) -> bool {
 }
 
 /// Makes team-colored skin surface frame from a loaded sprite strip.
-fn create_skin_surface(source: &SdlSurfacePtr, sourceFrame: usize, team: usize, allStates: bool, mirrored: bool) -> SdlSurfacePtr {
+fn create_skin_surface(source: &gfxSprite, sourceFrame: usize, team: usize, allStates: bool, mirrored: bool) -> gfxSprite {
     unsafe {
         //Take the loaded skin and colorize it for each state (normal, 3 frames of invincibility, shielded, tagged, ztarred, got shine, frozen)
         let outFrameCount: usize = if allStates { gfx_palette::COUNT as usize } else { 1 };
 
-        let sf = (*screen).format;
-        let out = SdlSurfacePtr::new(SDL_CreateRGBSurface(
-            0x0,
-            32 * outFrameCount as i32,
-            32,
-            (*sf).BitsPerPixel as i32,
-            (*sf).Rmask,
-            (*sf).Gmask,
-            (*sf).Bmask,
-            0x0, /* no alpha */
-        ));
+        let out = gfxSprite::blank(32 * outFrameCount as u32, 32);
 
-        if must_lock(out.get()) {
-            SDL_LockSurface(out.get());
+        if must_lock(out.get_surface()) {
+            SDL_LockSurface(out.get_surface());
         }
 
-        if must_lock(source.get()) {
-            SDL_LockSurface(source.get());
+        if must_lock(source.get_surface()) {
+            SDL_LockSurface(source.get_surface());
         }
 
         let startX = (sourceFrame * 32) as i32;
@@ -135,29 +124,29 @@ fn create_skin_surface(source: &SdlSurfacePtr, sourceFrame: usize, team: usize, 
             for srcX in 0..32 {
                 let dstX = if mirrored { 31 - srcX } else { srcX };
 
-                let pixelColor = get_rgb(source.get(), startX + srcX, y);
+                let pixelColor = get_rgb(source.get_surface(), startX + srcX, y);
 
                 if let Some(sheet) = gfx_palette.color_sheets().get(&pixelColor) {
                     for outFrame in 0..outFrameCount {
                         let paletteColor = sheet.replacement_for(team, outFrame as PlayerPalette);
-                        set_rgb(out.get(), outFrame as i32 * 32 + dstX, y, &paletteColor);
+                        set_rgb(out.get_surface(), outFrame as i32 * 32 + dstX, y, &paletteColor);
                     }
                 } else {
                     for outFrame in 0..outFrameCount {
-                        set_rgb(out.get(), outFrame as i32 * 32 + dstX, y, &pixelColor);
+                        set_rgb(out.get_surface(), outFrame as i32 * 32 + dstX, y, &pixelColor);
                     }
                 }
             }
         }
 
-        SDL_UnlockSurface(source.get());
-        SDL_UnlockSurface(out.get());
+        SDL_UnlockSurface(source.get_surface());
+        SDL_UnlockSurface(out.get_surface());
 
-        let color_key = SDL_MapRGB(out.format, colors::MAGENTA.r, colors::MAGENTA.g, colors::MAGENTA.b);
-        if SDL_SetColorKey(out.get(), 1, color_key) < 0 {
+        let color_key = SDL_MapRGB((*out.get_surface()).format, colors::MAGENTA.r, colors::MAGENTA.g, colors::MAGENTA.b);
+        if SDL_SetColorKey(out.get_surface(), 1, color_key) < 0 {
             panic!("Couldn't set color key for new skin surface: {}", sdl_error());
         }
-        if SDL_SetSurfaceRLE(out.get(), 1) < 0 {
+        if SDL_SetSurfaceRLE(out.get_surface(), 1) < 0 {
             panic!("Couldn't set RLE acceleration for new skin surface: {}", sdl_error());
         }
 
@@ -165,8 +154,8 @@ fn create_skin_surface(source: &SdlSurfacePtr, sourceFrame: usize, team: usize, 
     }
 }
 
-fn valid_skin_surface(skin: &SdlSurfacePtr) -> bool {
-    skin.w == 192 && skin.h == 32
+fn valid_skin_surface(skin: &gfxSprite) -> bool {
+    skin.get_width() == 192 && skin.get_height() == 32
 }
 
 pub fn get_rgb(surf: *mut SDL_Surface, x: i32, y: i32) -> RGB {
@@ -195,8 +184,20 @@ pub fn gfx_settitle(title: &str) {
     unsafe { gfx.set_title(title) }
 }
 
-pub fn gfx_show_error(message: &str) {
-    unsafe { gfx.show_error_box(message) }
+pub fn gfx_show_catched_error(error: &str) {
+    let mut message = String::from(
+        "It seems the game has unexpectedly crashed. If you could tell us\n\
+         what happened exactly, we might be able to fix this bug. Consider\n\
+         reporting it on the link below, thanks!\n\n\
+         https://github.com/mmatyas/supermariowar/issues\n\n\
+         Sincerely,\nThe Developers",
+    );
+    if !error.is_empty() {
+        message += "\n\n\nThe error message:\n";
+        message += error;
+    }
+    eprintln!("\n{}", message);
+    unsafe { gfx.show_error_box(&message) }
 }
 
 pub fn gfx_take_screenshot() {
@@ -218,12 +219,8 @@ pub fn gfx_save_screen_bmp(path: &str) -> bool {
     }
 }
 
-fn load_skin(path: &Path) -> Result<SdlSurfacePtr, String> {
-    let cpath = CString::new(path.to_string_lossy().as_bytes()).unwrap();
-    let skin = SdlSurfacePtr::new(unsafe { IMG_Load(cpath.as_ptr()) });
-    if skin.is_null() {
-        return Err(format!("Couldn't load {}: {}", path.display(), sdl_error()));
-    }
+fn load_skin(path: &Path) -> Result<gfxSprite, String> {
+    let skin = ImageLoader::new(path).without_color_key().without_optimization().try_create()?;
 
     if !valid_skin_surface(&skin) {
         return Err(format!("Invalid skin file: {} has incorrect dimensions", path.display()));
@@ -240,13 +237,13 @@ pub fn gfx_loadmenuskin(path: &Path, colorScheme: i16, fLoadBothDirections: bool
 
     for i in 0..2usize {
         let skinSurface = create_skin_surface(&skin, i, colorScheme as usize, true, false);
-        strip[i * 2] = gfxSprite::from_surface(skinSurface, Some(640));
+        strip[i * 2] = skinSurface;
     }
 
     if fLoadBothDirections {
         for i in 0..2usize {
             let skinSurface = create_skin_surface(&skin, i, colorScheme as usize, true, true);
-            strip[i * 2 + 1] = gfxSprite::from_surface(skinSurface, Some(640));
+            strip[i * 2 + 1] = skinSurface;
         }
     }
 
@@ -262,51 +259,54 @@ pub fn gfx_loadfullskin(path: &Path, colorScheme: i16) -> Result<SpriteStrip, St
     for k in 0..4usize {
         for j in 0..2usize {
             let skinSurface = create_skin_surface(&skin, k, colorScheme as usize, true, j != 0);
-            strip[(k * 2) + j] = gfxSprite::from_surface(skinSurface, Some(640));
+            strip[(k * 2) + j] = skinSurface;
         }
     }
 
     //Dead Flying Sprite
     let skinSurface = create_skin_surface(&skin, 4, colorScheme as usize, true, false);
-    strip[8] = gfxSprite::from_surface(skinSurface, Some(640));
+    strip[8] = skinSurface;
 
     //Dead Stomped Sprite
     let skinSurface = create_skin_surface(&skin, 5, colorScheme as usize, true, false);
-    strip[9] = gfxSprite::from_surface(skinSurface, Some(640));
+    strip[9] = skinSurface;
 
     Ok(strip)
 }
 
-pub fn gfx_cliprect(srcRect: &mut SDL_Rect, dstRect: &mut SDL_Rect, x: i16, y: i16, w: i16, h: i16) {
-    let (x, y, w, h) = (x as i32, y as i32, w as i32, h as i32);
-    if dstRect.x >= x + w || dstRect.x + dstRect.w < x || dstRect.y >= y + h || dstRect.y + dstRect.h < y {
+pub fn gfx_cliprect(srcRect: &mut SDL_Rect, dstRect: &mut SDL_Rect, clipArea: &SDL_Rect) {
+    if dstRect.x >= clipArea.x + clipArea.w
+        || dstRect.x + dstRect.w < clipArea.x
+        || dstRect.y >= clipArea.y + clipArea.h
+        || dstRect.y + dstRect.h < clipArea.y
+    {
         srcRect.w = 0;
         srcRect.h = 0;
         return;
     }
 
-    if dstRect.x < x {
-        let iDiffX = (x - dstRect.x) as i16;
-        srcRect.x += iDiffX as i32;
-        srcRect.w -= iDiffX as i32;
-        dstRect.x = x;
+    if dstRect.x < clipArea.x {
+        let iDiffX = clipArea.x - dstRect.x;
+        srcRect.x += iDiffX;
+        srcRect.w -= iDiffX;
+        dstRect.x = clipArea.x;
     }
 
-    if dstRect.x + dstRect.w >= x + w {
-        let iDiffX = (dstRect.x + dstRect.w - x - w) as i16;
-        srcRect.w -= iDiffX as i32;
+    if dstRect.x + dstRect.w >= clipArea.x + clipArea.w {
+        let iDiffX = dstRect.x + dstRect.w - clipArea.x - clipArea.w;
+        srcRect.w -= iDiffX;
     }
 
-    if dstRect.y < y {
-        let iDiffY = (y - dstRect.y) as i16;
-        srcRect.y += iDiffY as i32;
-        srcRect.h -= iDiffY as i32;
-        dstRect.y = y;
+    if dstRect.y < clipArea.y {
+        let iDiffY = clipArea.y - dstRect.y;
+        srcRect.y += iDiffY;
+        srcRect.h -= iDiffY;
+        dstRect.y = clipArea.y;
     }
 
-    if dstRect.y + dstRect.h >= y + h {
-        let iDiffY = (dstRect.y + dstRect.h - y - h) as i16;
-        srcRect.h -= iDiffY as i32;
+    if dstRect.y + dstRect.h >= clipArea.y + clipArea.h {
+        let iDiffY = dstRect.y + dstRect.h - clipArea.y - clipArea.h;
+        srcRect.h -= iDiffY;
     }
 }
 
@@ -368,17 +368,14 @@ pub fn gfx_adjusthiddenrects(src: &mut SDL_Rect, dst: &mut SDL_Rect, edge: ClipE
 }
 
 pub fn gfx_drawpreview(
-    surface: *mut SDL_Surface,
+    sprite: &gfxSprite,
     dstX: i16,
     dstY: i16,
     srcX: i16,
     srcY: i16,
     iw: i16,
     ih: i16,
-    clipX: i16,
-    clipY: i16,
-    clipW: i16,
-    clipH: i16,
+    clipRect: &SDL_Rect,
     wrap: bool,
     clip: Option<(ClipEdge, i32)>,
 ) {
@@ -387,7 +384,7 @@ pub fn gfx_drawpreview(
         let mut rSrcRect = SDL_Rect { x: srcX as i32, y: srcY as i32, w: iw as i32, h: ih as i32 };
         let mut rDstRect = SDL_Rect { x: dstX as i32, y: dstY as i32, w: iw as i32, h: ih as i32 };
 
-        gfx_cliprect(&mut rSrcRect, &mut rDstRect, clipX, clipY, clipW, clipH);
+        gfx_cliprect(&mut rSrcRect, &mut rDstRect, clipRect);
 
         if let Some((edge, threshold)) = clip {
             if gfx_adjusthiddenrects(&mut rSrcRect, &mut rDstRect, edge, threshold) {
@@ -396,18 +393,15 @@ pub fn gfx_drawpreview(
         }
 
         // Blit onto the screen surface
-        if SDL_UpperBlit(surface, &rSrcRect, blitdest, &mut rDstRect) < 0 {
-            eprintln!("SDL_BlitSurface error: {}", sdl_error());
-            return;
-        }
+        sprite.draw_src_to(&rSrcRect, blitdest, &rDstRect);
 
         if wrap {
             //Deal with wrapping over sides of screen
             let mut fBlitSide = false;
-            if dstX < clipX {
+            if (dstX as i32) < clipRect.x {
                 rDstRect.x = dstX as i32 + 320;
                 fBlitSide = true;
-            } else if dstX as i32 + iw as i32 >= clipX as i32 + clipW as i32 {
+            } else if dstX as i32 + iw as i32 >= clipRect.x + clipRect.w {
                 rDstRect.x = dstX as i32 - 320;
                 fBlitSide = true;
             }
@@ -423,7 +417,7 @@ pub fn gfx_drawpreview(
                 rDstRect.w = iw as i32;
                 rDstRect.h = ih as i32;
 
-                gfx_cliprect(&mut rSrcRect, &mut rDstRect, clipX, clipY, clipW, clipH);
+                gfx_cliprect(&mut rSrcRect, &mut rDstRect, clipRect);
 
                 if let Some((edge, threshold)) = clip {
                     if gfx_adjusthiddenrects(&mut rSrcRect, &mut rDstRect, edge, threshold) {
@@ -431,10 +425,7 @@ pub fn gfx_drawpreview(
                     }
                 }
 
-                if SDL_UpperBlit(surface, &rSrcRect, blitdest, &mut rDstRect) < 0 {
-                    eprintln!("SDL_BlitSurface error: {}", sdl_error());
-                    return;
-                }
+                sprite.draw_src_to(&rSrcRect, blitdest, &rDstRect);
             }
         }
     }

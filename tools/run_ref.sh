@@ -4,7 +4,7 @@
 # Usage: run_ref.sh <replay.txt> [out_dir]
 #
 # Run parameters come from `#@ key=value` lines in the replay (seed, frames,
-# map, shots); SMW_SEED/SMW_FRAMES/SMW_MAP/SMW_SHOT_FRAMES in the environment
+# map, shots, options); SMW_SEED/SMW_FRAMES/SMW_MAP/SMW_SHOT_FRAMES in the environment
 # override them. Writes <out_dir>/dump.txt and <out_dir>/frame_<n>.bmp.
 # SMW_BIN and SMW_DATA_DIR select another binary and data tree (run_rust.sh uses them).
 # See REPLAY.md.
@@ -35,6 +35,7 @@ seed="${SMW_SEED:-$(directive seed)}"
 frames="${SMW_FRAMES:-$(directive frames)}"
 map="${SMW_MAP:-$(directive map)}"
 shots="${SMW_SHOT_FRAMES:-$(directive shots)}"
+options="$(directive options)"
 
 mkdir -p "$out"
 out="$(cd "$out" && pwd)"
@@ -53,6 +54,10 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 home="$sandbox/home"
 mkdir -p "$home/Library/Preferences"
+if [[ -n "$options" ]]; then
+    mkdir -p "$home/Library/Preferences/.smw"
+    cp "$(dirname "$replay")/$options" "$home/Library/Preferences/.smw/options.bin"
+fi
 cp -c -R "$data" "$sandbox/data" 2>/dev/null || cp -R "$data" "$sandbox/data"
 rm -f "$sandbox/data/maps/cache/mapsummary.txt"
 data="$sandbox/data"

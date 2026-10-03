@@ -2,6 +2,7 @@
 # Regenerate editor golden output from the C++ reference build:
 # editor_replays/<editor>/<x>.txt -> editor_golden/<editor>/<x>/ (dump.txt.gz, frame_<n>.png, files/, home/).
 # Usage: make_editor_golden.sh [editor_replays/<editor>/<x>.txt ...]   (default: all); JOBS=n runs n at once.
+# GOLDEN_ROOT=<dir> writes <dir>/editor_golden/ instead.
 set -euo pipefail
 
 tools="$(cd "$(dirname "$0")" && pwd)"
@@ -15,7 +16,7 @@ one() {
     local editor name out
     editor="$(basename "$(dirname "$script")")"
     name="$(basename "$script" .txt)"
-    out="$tools/editor_golden/$editor/$name"
+    out="${GOLDEN_ROOT:-$tools}/editor_golden/$editor/$name"
     rm -rf "$out"
     "$tools/run_editor.sh" "$editor" "$script" "$out" > /dev/null
     for bmp in "$out"/frame_*.bmp; do

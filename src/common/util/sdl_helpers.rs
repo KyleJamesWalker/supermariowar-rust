@@ -15,7 +15,7 @@ macro_rules! sdl_unique_ptr {
             pub fn new(ptr: *mut $ty) -> Self {
                 $name(ptr)
             }
-            pub fn null() -> Self {
+            pub const fn null() -> Self {
                 $name(null_mut())
             }
             pub fn get(&self) -> *mut $ty {

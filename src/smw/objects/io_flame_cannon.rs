@@ -55,17 +55,14 @@ impl IO_FlameCannon {
             let rect = &g_rFlameRects[self.iDirection as usize][self.iFrame as usize];
             unsafe {
                 gfx_drawpreview(
-                    rm.spr_hazard_flame[1].get_surface(),
+                    &rm.spr_hazard_flame[1],
                     (((self.ix as i32) >> 1) + iOffsetX as i32) as i16,
                     (((self.iy as i32) >> 1) + iOffsetY as i32) as i16,
                     (rect.x >> 1) as i16,
                     (rect.y >> 1) as i16,
                     (rect.w >> 1) as i16,
                     (rect.h >> 1) as i16,
-                    iOffsetX,
-                    iOffsetY,
-                    320,
-                    240,
+                    &sdl2::sys::SDL_Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: 320, h: 240 },
                     true,
                     None,
                 );

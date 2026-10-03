@@ -86,7 +86,7 @@
 #Stage Type 0,Map,Mode,Goal,Points,Bonus List(Max 10),Name,End World, then mode settings (see sample tour file for details)
 #Stage Type 1,Bonus House Name,Sequential/Random Order,Display Text,Powerup List(Max 5)
 2
-1,Tour Stop 2,0,p0,p1
+1,Tour Stop 2,0,hi||||,p0,p1
 0,The Arctic,0,10,1,0,Tour Stop 3,0,0,0
 
 #Warps

@@ -16,7 +16,7 @@ pub struct PlayerCape {
     pub iCapeFrameX: u16,
     pub iCapeFrameY: u16,
     pub fCapeUp: bool,
-    pub iCapeYOffset: u16,
+    pub iCapeYOffset: i16,
     pub _alias: Aliased,
 }
 
@@ -63,7 +63,7 @@ impl PlayerCape {
                 if player.spin.is_spin_in_progress() {
                     self.iCapeFrameX = player.spin.to_cape_frame_x() as u16;
                     self.iCapeFrameY = 32;
-                    self.iCapeYOffset = -8i32 as u16;
+                    self.iCapeYOffset = -8;
                 } else if (!player.inair && player.velx != 0.0f32) || (player.inair && player.vely < 1.0f32) {
                     self.iCapeFrameX += 32;
                     if self.iCapeFrameX > 96 {
@@ -91,7 +91,7 @@ impl PlayerCape {
 
                     self.iCapeFrameY = 64;
                     self.fCapeUp = true;
-                    self.iCapeYOffset = -18i32 as u16;
+                    self.iCapeYOffset = -18;
                 }
 
                 self.iCapeTimer = 0;
@@ -106,7 +106,6 @@ impl PlayerCape {
                 fPlayerFacingRight = player.is_facing_right();
             }
 
-            // iCapeYOffset is unsigned short, so -8/-18 promote to 65528/65518 here, as in C++.
             let x = player.left_x() as i32 - PWOFFSET + (if fPlayerFacingRight { -18 } else { 18 });
             let y = player.top_y() as i32 - PHOFFSET + 4 + self.iCapeYOffset as i32;
             let src = SDL_Rect {

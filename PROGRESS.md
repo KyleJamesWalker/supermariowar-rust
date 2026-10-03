@@ -9,7 +9,7 @@ Scope order: core game + menus + sound, then netplay, level editor, world editor
 | C++ | Rust | Status | Parity |
 |---|---|---|---|
 | (filled in as modules land) | | | |
-| common/gfx.cpp, gfx/gfxSprite, gfxFont, SFont, gfxPalette, gfxSDL, Color.h | common/gfx.rs, common/gfx/* | done | `tools/gfx_smoke/compare.sh`: BMP byte-identical to C++ |
+| common/gfx.cpp, gfx/gfxSprite, gfxFont, gfxPalette, gfxSDL, Color.h | common/gfx.rs, common/gfx/* | done (upstream `5693918f`: SFont is gone) | `tools/gfx_smoke/compare.sh`: BMP byte-identical to C++ |
 | common/util/SdlHelpers.cpp | common/util/sdl_helpers.rs | done | n/a |
 | common/sfx.cpp | common/sfx.rs | done | `S` records (virtual mixer) match C++ on every replay |
 | common/input.cpp | common/input.rs | done | replays (keyboard path) |
@@ -46,7 +46,10 @@ Scope order: core game + menus + sound, then netplay, level editor, world editor
 | worldeditor/worldeditor.cpp | worldeditor/worldeditor.rs, bin/worldeditor.rs | done | `tools/editor_parity.sh`: 5 scripted sessions (paint, stages/vehicles/warps/items, navigate/resize, stage menus incl. delete) match C++ dump, screenshots and saved world files byte for byte |
 | leveleditor/leveleditor.cpp | leveleditor/leveleditor.rs, bin/leveleditor.rs | done | `tools/editor_parity.sh`: 6 scripted sessions (tiles, blocks/items/warps/no-spawn/eyecandy, platforms, hazards/move/copy/mode items/Save As/Find, tile and animated tile types/backgrounds/clear, smoke) match C++ dump, screenshots and saved .map/.tls files byte for byte |
 | (harness) common/EditorHarness.cpp | common/editor_harness.rs | done | shared by both editors; see EDITOR_REPLAY.md |
+| common/GameModeSettingsSerialization.cpp | common/game_mode_settings_serialization.rs | done | tour-stop settings in every replay that loads a tour or world |
+| smw/network/NetConfigManager.cpp (servers.toml) | smw/network/net_config_manager.rs | done | `tools/ref/net_config_interop.sh`: 300 fuzzed files written byte-identically to toml11 |
 
 ## Known C++ issues
 
+- Upstream `5c979393` gave hazard and platform drawing an explicit destination, but the hazards and platform shadows drawn by position in map thumbnails still go to `blitdest`, so thumbnails lack them. The port reproduces this.
 - `RandomNumberGenerator::getBoolean(scaleMax, positiveThreshold)` (`get_boolean_threshold`) asserts `positiveThreshold < scaleMax && positiveThreshold >= 0` (`random_number_generator.rs:43`, a `debug_assert!` port of the C++ `assert`). Replay `opt_gameplay` trips it at frame 1209 in a release build with debug assertions. The C++ has the same assert, compiled out in the Release reference, so a debug C++ build would fail it too; the caller passing the bad range is not yet traced.

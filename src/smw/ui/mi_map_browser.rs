@@ -1,6 +1,7 @@
 //! Port of src/smw/ui/MI_MapBrowser.cpp
 
 use crate::common::game::App;
+use crate::common::gfx::gfx_sprite::{gfxSprite, ImageLoader};
 use crate::common::input::CPlayerInput;
 use crate::common::map::read_type_preview;
 use crate::common::path::{convert_path, file_exists, get_name_from_file_name};
@@ -8,9 +9,7 @@ use crate::common::ui::menu_code::*;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 use crate::smw::gs_gameplay::lookup_team_id;
-use sdl2::sys::image::IMG_Load;
-use sdl2::sys::{SDL_Delay, SDL_FreeSurface, SDL_Rect, SDL_Surface, SDL_UpperBlit};
-use std::ffi::CString;
+use sdl2::sys::{SDL_Delay, SDL_Rect};
 
 fn small_delay() {
     unsafe { SDL_Delay(10) };
@@ -24,7 +23,7 @@ pub struct MI_MapBrowser {
     iSelectedRow: i16,
     iSelectedIndex: i16,
 
-    mapSurfaces: [*mut SDL_Surface; 9],
+    mapSurfaces: [gfxSprite; 9],
     mapNames: [String; 9],
     /// Also stands in for `mapListNodes[i]`, which is `&(*mapListItr[i]).second`.
     mapListItr: [usize; 9],
@@ -48,7 +47,7 @@ impl MI_MapBrowser {
             iSelectedCol: 0,
             iSelectedRow: 0,
             iSelectedIndex: 0,
-            mapSurfaces: [std::ptr::null_mut(); 9],
+            mapSurfaces: Default::default(),
             mapNames: Default::default(),
             mapListItr: [0; 9],
             iFilterTagAnimationTimer: 0,
@@ -112,12 +111,7 @@ impl MI_MapBrowser {
                 }
 
                 let m = iMap as usize;
-                if !self.mapSurfaces[m].is_null() {
-                    SDL_FreeSurface(self.mapSurfaces[m]);
-                }
-
-                let cpath = CString::new(sConvertedPath).unwrap();
-                self.mapSurfaces[m] = IMG_Load(cpath.as_ptr());
+                self.mapSurfaces[m] = ImageLoader::new(&sConvertedPath).without_color_key().create();
 
                 self.mapNames[m] = maplist.key_at(itr).to_string();
                 self.mapListItr[m] = itr;
@@ -134,17 +128,6 @@ impl MI_MapBrowser {
 impl Default for MI_MapBrowser {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-impl Drop for MI_MapBrowser {
-    fn drop(&mut self) {
-        for iSurface in 0..9 {
-            if !self.mapSurfaces[iSurface].is_null() {
-                unsafe { SDL_FreeSurface(self.mapSurfaces[iSurface]) };
-                self.mapSurfaces[iSurface] = std::ptr::null_mut();
-            }
-        }
     }
 }
 
@@ -185,7 +168,7 @@ impl UI_ControlTrait for MI_MapBrowser {
                         rDst.x = iCol as i32 * 200 + 40;
 
                         let i = (iRow * 3 + iCol) as usize;
-                        SDL_UpperBlit(self.mapSurfaces[i], &rSrc, blitdest, &mut rDst);
+                        self.mapSurfaces[i].draw_src_to(&rSrc, blitdest, &rDst);
 
                         if self.iType == 0 && self.node_filter(i) {
                             rm.menu_map_filter.draw_src(rDst.x, rDst.y, &filterSrc);
@@ -206,7 +189,7 @@ impl UI_ControlTrait for MI_MapBrowser {
             rm.menu_dialog.draw_src(rDst.x + 160, rDst.y + 132, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
 
             let sel = (self.iSelectedRow * 3 + self.iSelectedCol) as usize;
-            SDL_UpperBlit(self.mapSurfaces[sel], &rSrc, blitdest, &mut rDst);
+            self.mapSurfaces[sel].draw_src_to(&rSrc, blitdest, &rDst);
 
             if self.iType == 0 && self.node_filter(sel) {
                 rm.menu_map_filter.draw_src(rDst.x, rDst.y, &filterSrc);

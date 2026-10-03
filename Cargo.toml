@@ -14,7 +14,7 @@ no_network = []
 sdl2 = { version = "0.37", features = ["image", "mixer"] }
 enet-sys = "1.0.5"
 libz-sys = "1"
-yaml-rust2 = "0.10"
+toml = "0.8"
 
 [profile.dev]
 opt-level = 1

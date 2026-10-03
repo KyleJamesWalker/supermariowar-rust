@@ -14,7 +14,18 @@ enum Handle {
 }
 
 pub struct BinaryFile {
+    m_path: String,
     fp: Option<Handle>,
+}
+
+extern "C" {
+    fn strerror(errnum: i32) -> *const std::ffi::c_char;
+}
+
+/// The C `std::strerror` text for an IO error that `std::ferror` would flag (not end of file).
+fn system_message(err: &std::io::Error) -> Option<String> {
+    let code = err.raw_os_error()?;
+    Some(unsafe { std::ffi::CStr::from_ptr(strerror(code)).to_string_lossy().into_owned() })
 }
 
 impl BinaryFile {
@@ -26,7 +37,7 @@ impl BinaryFile {
         } else {
             File::create(path).ok().map(|f| Handle::W(BufWriter::new(f)))
         };
-        BinaryFile { fp }
+        BinaryFile { m_path: path.to_string(), fp }
     }
 
     pub fn is_open(&self) -> bool {
@@ -45,23 +56,50 @@ impl BinaryFile {
         }
     }
 
+    pub fn pos(&mut self) -> i64 {
+        match &mut self.fp {
+            Some(Handle::R(r)) => r.stream_position().map(|p| p as i64).unwrap_or(-1),
+            Some(Handle::W(w)) => w.stream_position().map(|p| p as i64).unwrap_or(-1),
+            None => 0,
+        }
+    }
+
     fn fread_or_exception(&mut self, buf: &mut [u8]) {
-        let ok = match &mut self.fp {
-            Some(Handle::R(r)) => r.read_exact(buf).is_ok(),
-            _ => false,
+        let pos = self.pos();
+        let result = match &mut self.fp {
+            Some(Handle::R(r)) => r.read_exact(buf),
+            _ => Err(std::io::Error::from_raw_os_error(9)),
         };
-        if !ok {
-            throw_runtime_error("File read error");
+        if let Err(err) = result {
+            let mut msg = format!(
+                "File read error in {}\n\
+                 Tried to read {} bytes at position {}, but failed\n\
+                 The file might be damaged, or it's not in the expected format",
+                self.m_path,
+                buf.len(),
+                pos
+            );
+            if let Some(system) = system_message(&err) {
+                msg += "\nSystem message: ";
+                msg += &system;
+            }
+            throw_runtime_error(&msg);
         }
     }
 
     fn fwrite_or_exception(&mut self, buf: &[u8]) {
-        let ok = match &mut self.fp {
-            Some(Handle::W(w)) => w.write_all(buf).is_ok(),
-            _ => false,
+        let pos = self.pos();
+        let result = match &mut self.fp {
+            Some(Handle::W(w)) => w.write_all(buf),
+            _ => Err(std::io::Error::from_raw_os_error(9)),
         };
-        if !ok {
-            throw_runtime_error("File write error");
+        if let Err(err) = result {
+            let mut msg = format!("File write error in {}\nTried to write {} bytes at position {}, but failed", self.m_path, buf.len(), pos);
+            if let Some(system) = system_message(&err) {
+                msg += "\nSystem message: ";
+                msg += &system;
+            }
+            throw_runtime_error(&msg);
         }
     }
 
@@ -89,33 +127,22 @@ impl BinaryFile {
         self.fwrite_or_exception(&value.to_le_bytes());
     }
 
-    pub fn write_string(&mut self, string: &str) {
-        let bytes = string.as_bytes();
-        let mut len = bytes.len() as i32 + 1;
-        if len > 255 {
-            len = 255;
-        }
-
-        self.write_u8(len as u8);
-        self.write_cstr_bytes(bytes, len as usize);
-    }
-
+    /// Writes an i32 that tells the byte length of the string data *including*
+    /// a terminating null byte, then the text data itself, plus a null byte
     pub fn write_string_long(&mut self, string: &str) {
-        let bytes = string.as_bytes();
-        let mut len = bytes.len() as i32 + 1;
-        if len > 255 {
-            len = 255;
+        let mut bytes = string.as_bytes().to_vec();
+        if bytes.len() > 255 {
+            let msg = format!(
+                "File write error in {}\nTried to write a text that would take {} bytes, which is too long",
+                self.m_path,
+                bytes.len()
+            );
+            throw_runtime_error(&msg);
         }
 
-        self.write_i32(len);
-        self.write_cstr_bytes(bytes, len as usize);
-    }
-
-    fn write_cstr_bytes(&mut self, bytes: &[u8], len: usize) {
-        let mut buf = bytes.to_vec();
-        buf.push(0);
-        buf.truncate(len);
-        self.fwrite_or_exception(&buf);
+        self.write_i32(bytes.len() as i32 + 1);
+        bytes.push(0);
+        self.fwrite_or_exception(&bytes);
     }
 
     pub fn write_raw(&mut self, source: &[u8]) {
@@ -170,33 +197,26 @@ impl BinaryFile {
         f32::from_le_bytes(b)
     }
 
-    /// Reads into a C `char[size]` buffer and returns its contents up to the first NUL.
-    pub fn read_string(&mut self, size: usize) -> String {
-        let len = self.read_u8() as usize;
-        if len == 0 {
+    /// Uses 32 bits to store the length of the string, then the text data,
+    /// including a terminating null byte. Reads at most `maxlen` bytes and always drops the last one.
+    pub fn read_string_long(&mut self, maxlen: usize) -> String {
+        let stored_len = self.read_i32();
+        if stored_len <= 0 {
             return String::new();
         }
-        self.read_cstr_body(len, size)
-    }
 
-    pub fn read_string_long(&mut self, size: usize) -> String {
-        let len = self.read_i32();
-        if len <= 0 {
+        let data_len = (stored_len as usize).min(maxlen);
+        if data_len == 0 {
             return String::new();
         }
-        self.read_cstr_body(len as usize, size)
-    }
 
-    fn read_cstr_body(&mut self, len: usize, size: usize) -> String {
-        let mut string = vec![0u8; len];
-        self.fread_or_exception(&mut string);
-        string[len - 1] = 0;
+        let mut text = vec![0u8; data_len];
+        self.fread_or_exception(&mut text);
 
-        let mut end = string.iter().position(|&c| c == 0).unwrap_or(len);
-        if end > size - 1 {
-            end = size - 1;
-        }
-        cstr_bytes_to_string(&string[..end])
+        // NOTE: The stored text always includes a terminating null byte
+        text.pop();
+
+        cstr_bytes_to_string(&text)
     }
 
     pub fn read_raw(&mut self, target: &mut [u8]) {
@@ -225,18 +245,29 @@ mod tests {
             f.write_i32(-5);
             f.write_i16(300);
             f.write_float(1.5);
-            f.write_string("hello");
             f.write_string_long("world!");
+            f.write_string_long(&"x".repeat(255));
+            f.write_string_long("a\0b");
+            f.write_string_long("truncated");
             f.write_bool(true);
         }
         let mut f = BinaryFile::new(p, "rb");
         assert_eq!(f.read_i32(), -5);
         assert_eq!(f.read_i16(), 300);
         assert_eq!(f.read_float(), 1.5);
-        assert_eq!(f.read_string(4), "hel");
         assert_eq!(f.read_string_long(128), "world!");
+        assert_eq!(f.read_string_long(512), "x".repeat(255));
+        assert_eq!(f.read_string_long(128), "a\0b");
+        // Reads only maxlen bytes (dropping the last), leaving the rest of the text unread.
+        assert_eq!(f.read_string_long(4), "tru");
+        let mut rest = [0u8; 6];
+        f.read_raw(&mut rest);
+        assert_eq!(&rest, b"cated\0");
         assert!(f.read_bool());
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| f.read_i32()));
+        assert!(r.is_err());
+        let mut w = BinaryFile::new(p, "wb");
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| w.write_string_long(&"y".repeat(256))));
         assert!(r.is_err());
         let _ = std::fs::remove_file(&path);
     }

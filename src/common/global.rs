@@ -43,7 +43,7 @@ pub static g_szMusicCategoryNames: [&str; crate::common::global_constants::MAXMU
     ["Land", "Underground", "Underwater", "Castle", "Platforms", "Ghost", "Bonus", "Battle", "Desert", "Clouds", "Snow"];
 
 pub fn load_current_map_background() {
-    use crate::common::gfx::gfx_sprite::SpriteBuilder;
+    use crate::common::gfx::gfx_sprite::ImageLoader;
     use crate::common::path::{concat, convert_path_pack, file_exists};
     unsafe {
         let pack = gamegraphicspacklist.current_path().to_string_lossy().into_owned();
@@ -54,6 +54,6 @@ pub fn load_current_map_background() {
             path = convert_path_pack("gfx/packs/backgrounds/Land_Classic.png", &pack);
         }
 
-        rm.spr_background = SpriteBuilder::new(path).without_color_key().create();
+        rm.spr_background = ImageLoader::new(path).without_color_key().create();
     }
 }

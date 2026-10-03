@@ -13,7 +13,8 @@ use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 use crate::smw::gs_gameplay::lookup_team_id;
 use crate::smw::world::{g_worldmap, WorldMapTile, WORLD_BRIDGE_SPRITE_OFFSET};
-use sdl2::sys::{SDL_CreateRGBSurface, SDL_FreeSurface, SDL_Rect, SDL_Surface, SDL_UpperBlit};
+use crate::common::gfx::gfx_sprite::gfxSprite;
+use sdl2::sys::{SDL_Rect, SDL_Surface};
 
 pub struct MI_World {
     pub ui_control: UI_Control,
@@ -32,7 +33,7 @@ pub struct MI_World {
     iItemCol: [i16; 4],
     iItemPage: [i16; 4],
 
-    sMapSurface: [*mut SDL_Surface; 2],
+    map_sprites: [gfxSprite; 2],
     rectSrcSurface: SDL_Rect,
     rectDstSurface: SDL_Rect,
 
@@ -86,22 +87,6 @@ pub struct MI_World {
 }
 crate::impl_base!(MI_World => ui_control: UI_Control);
 
-impl Drop for MI_World {
-    fn drop(&mut self) {
-        unsafe {
-            if !self.sMapSurface[0].is_null() {
-                SDL_FreeSurface(self.sMapSurface[0]);
-                self.sMapSurface[0] = std::ptr::null_mut();
-            }
-
-            if !self.sMapSurface[1].is_null() {
-                SDL_FreeSurface(self.sMapSurface[1]);
-                self.sMapSurface[1] = std::ptr::null_mut();
-            }
-        }
-    }
-}
-
 /// `game_values.teamids[iTeam][iMember]` read as the flat C++ array, where a member index of 3 runs into the next row.
 unsafe fn teamids_flat(iTeam: i16, iMember: i16) -> i16 {
     let idx = iTeam as usize * 3 + iMember as usize;
@@ -120,13 +105,6 @@ impl Default for MI_World {
 
 impl MI_World {
     pub fn new() -> Self {
-        let sMapSurface = unsafe {
-            [
-                SDL_CreateRGBSurface((*screen).flags, 768, 608, (*(*screen).format).BitsPerPixel as i32, 0, 0, 0, 0),
-                SDL_CreateRGBSurface((*screen).flags, 768, 608, (*(*screen).format).BitsPerPixel as i32, 0, 0, 0, 0),
-            ]
-        };
-
         MI_World {
             ui_control: UI_Control::new(0, 0),
             iState: 0,
@@ -140,7 +118,7 @@ impl MI_World {
             iPopupFlag: [false; 4],
             iItemCol: [0; 4],
             iItemPage: [0; 4],
-            sMapSurface,
+            map_sprites: [gfxSprite::blank(768, 608), gfxSprite::blank(768, 608)],
             rectSrcSurface: SDL_Rect { x: 0, y: 0, w: 768, h: 608 },
             rectDstSurface: SDL_Rect { x: 0, y: 0, w: App::screenWidth, h: App::screenHeight },
             iCurrentSurfaceIndex: 0,
@@ -221,8 +199,8 @@ impl MI_World {
             self.set_map_offset();
             self.reposition_map_image();
 
-            g_worldmap.draw_map_to_surface(-1, true, self.sMapSurface[0], self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
-            g_worldmap.draw_map_to_surface(-1, true, self.sMapSurface[1], self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
+            g_worldmap.draw_map_to_surface(-1, true, self.map_sprites[0].get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
+            g_worldmap.draw_map_to_surface(-1, true, self.map_sprites[1].get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
 
             self.dTeleportStarRadius = 300.0f32;
             self.dTeleportStarAngle = 0.0f32;
@@ -362,7 +340,7 @@ impl MI_World {
                 g_worldmap.draw_map_to_surface(
                     iCycleIndex,
                     self.iDrawFullRefresh > 0,
-                    self.sMapSurface[(1 - self.iCurrentSurfaceIndex) as usize],
+                    self.map_sprites[(1 - self.iCurrentSurfaceIndex) as usize].get_surface(),
                     self.iNextMapDrawOffsetCol,
                     self.iNextMapDrawOffsetRow,
                     self.iAnimationFrame,
@@ -466,11 +444,11 @@ impl MI_World {
         }
     }
 
-    /// The paired `g_worldmap.UpdateTile(sMapSurface[0..2], ...)` calls.
+    /// The paired `g_worldmap.UpdateTile(map_sprites[0..2], ...)` calls.
     fn update_tile_both(&mut self, col: i16, row: i16) {
         unsafe {
-            g_worldmap.update_tile(self.sMapSurface[0], col, row, self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
-            g_worldmap.update_tile(self.sMapSurface[1], col, row, self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
+            g_worldmap.update_tile(self.map_sprites[0].get_surface(), col, row, self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
+            g_worldmap.update_tile(self.map_sprites[1].get_surface(), col, row, self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
         }
     }
 
@@ -848,8 +826,8 @@ impl UI_ControlTrait for MI_World {
 
                     self.iDrawFullRefresh = 2; //Draw one full refresh to next surface
 
-                    g_worldmap.draw_map_to_surface(-1, true, self.sMapSurface[0], self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
-                    //g_worldmap.DrawMapToSurface(-1, true, sMapSurface[1], iMapDrawOffsetCol, iMapDrawOffsetRow, iAnimationFrame);
+                    g_worldmap.draw_map_to_surface(-1, true, self.map_sprites[0].get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
+                    //g_worldmap.DrawMapToSurface(-1, true, map_sprites[1].getSurface(), iMapDrawOffsetCol, iMapDrawOffsetRow, iAnimationFrame);
 
                     self.iState = 5;
                     self.iScreenfade = 255;
@@ -885,7 +863,7 @@ impl UI_ControlTrait for MI_World {
             self.rectSrcSurface = SDL_Rect { x: self.iSrcOffsetX as i32, y: self.iSrcOffsetY as i32, w: self.iDrawWidth as i32, h: self.iDrawHeight as i32 };
             self.rectDstSurface = SDL_Rect { x: self.iDstOffsetX as i32, y: self.iDstOffsetY as i32, w: self.iDrawWidth as i32, h: self.iDrawHeight as i32 };
 
-            SDL_UpperBlit(self.sMapSurface[self.iCurrentSurfaceIndex as usize], &self.rectSrcSurface, blitdest, &mut self.rectDstSurface);
+            self.map_sprites[self.iCurrentSurfaceIndex as usize].draw_src_to(&self.rectSrcSurface, blitdest, &self.rectDstSurface);
 
             //Draw the world, vehicles and player
             g_worldmap.draw(self.iMapOffsetX, self.iMapOffsetY, self.iState == -1 && !self.fUsingCloud, self.iSleepTurns > 0);

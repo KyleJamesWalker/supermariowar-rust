@@ -12,8 +12,9 @@ use crate::common::game::ensure_settings_dir;
 use crate::common::game_mode::{game_mode_owned, GAMEMODE_LAST, GAMEMODE_NUM_OPTIONS};
 use crate::common::game_values::{controlkeys, TITLESTRING};
 use crate::common::gfx::color::colors;
-use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::gfx::{gfx_changefullscreen, gfx_flipscreen, gfx_init, gfx_settitle};
+use crate::common::gfx::gfx_font::gfxFont;
+use crate::common::gfx::gfx_sprite::{gfxSprite, ImageLoader};
+use crate::common::gfx::{gfx_changefullscreen, gfx_show_catched_error, gfx_flipscreen, gfx_init, gfx_settitle};
 use crate::common::global_constants::*;
 use crate::common::input::{DEVICE_KEYBOARD, NUM_KEYS};
 use crate::common::map::{read_type_preview, CMap};
@@ -204,7 +205,7 @@ pub static mut miTitleText: Ptr<MI_Text> = Ptr::null();
 
 pub static mut mModeOptionsMenu: Ptr<UI_ModeOptionsMenu> = Ptr::null();
 
-pub static mut sMapThumbnail: *mut SDL_Surface = null_mut();
+pub static mut sMapThumbnail: gfxSprite = gfxSprite::new();
 pub static mut iOldStageId: i16 = -1;
 
 //Sets up default mode options
@@ -321,14 +322,6 @@ fn dump_editor_state(out: &mut dyn Write) {
     }
 }
 
-fn load_sprite(path: &str, color_key: crate::common::gfx::color::RGB) -> gfxSprite {
-    gfxSprite::from_file(Path::new(&convert_path(path)), Some(color_key), None, None)
-}
-
-fn load_sprite_alpha(path: &str, color_key: crate::common::gfx::color::RGB, alpha: u8) -> gfxSprite {
-    gfxSprite::from_file(Path::new(&convert_path(path)), Some(color_key), Some(alpha), None)
-}
-
 //main main main
 pub fn main() {
     crate::globals::init_globals();
@@ -351,21 +344,24 @@ pub fn main() {
         if !cmd.data_root.is_empty() {
             RootDataDirectory = cmd.data_root.clone();
         }
+    }
 
+    // C++ catches `const char*`, `std::string`, `std::exception` and `...` around inner_main().
+    let result = std::panic::catch_unwind(inner_main);
+    if let Err(payload) = result {
+        let what = payload
+            .downcast_ref::<String>()
+            .cloned()
+            .or_else(|| payload.downcast_ref::<&str>().map(|s| s.to_string()))
+            .unwrap_or_default();
+        gfx_show_catched_error(&what);
+        std::process::exit(1);
+    }
+}
+
+pub fn inner_main() {
+    unsafe {
         ensure_settings_dir();
-
-        rm = Ptr::new_box(CResourceManager::new());
-
-        g_map = Ptr::from_box(CMap::new());
-        g_tilesetmanager = Ptr::new_box(CTilesetManager::new());
-        filterslist = Ptr::new_box(FiltersList::new());
-        maplist = Ptr::new_box(MapList::new(true));
-        menugraphicspacklist = Ptr::new_box(GraphicsList::new());
-        gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
-        worldlist = Ptr::new_box(WorldList::new());
-
-        game_values.sound = false;
-        game_values.music = false;
 
         /* This must occur before any data files are loaded */
         initialize_paths();
@@ -394,7 +390,19 @@ pub fn main() {
         blitdest = screen;
         editor_harness::init();
         editor_harness::set_dumper(dump_editor_state);
-        g_tilesetmanager.init(&convert_path("gfx/Classic/tilesets"));
+
+        rm = Ptr::new_box(CResourceManager::new());
+
+        g_map = Ptr::from_box(CMap::new());
+        g_tilesetmanager = Ptr::new_box(CTilesetManager::new(&convert_path("gfx/Classic/tilesets")));
+        filterslist = Ptr::new_box(FiltersList::new());
+        maplist = Ptr::new_box(MapList::new(true));
+        menugraphicspacklist = Ptr::new_box(GraphicsList::new());
+        gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
+        worldlist = Ptr::new_box(WorldList::new());
+
+        game_values.sound = false;
+        game_values.music = false;
 
         let title = format!("{} {}", TITLESTRING, MAPTITLESTRING);
         gfx_settitle(&title);
@@ -404,98 +412,98 @@ pub fn main() {
         println!("\n---------------- loading graphics ----------------");
 
         spr_warps.init([
-            load_sprite("gfx/leveleditor/leveleditor_warp.png", colors::MAGENTA),
-            load_sprite("gfx/leveleditor/leveleditor_warp_preview.png", colors::MAGENTA),
-            load_sprite("gfx/leveleditor/leveleditor_warp_thumbnail.png", colors::MAGENTA),
+            ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_warp.png")).create(),
+            ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_warp_preview.png")).create(),
+            ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_warp_thumbnail.png")).create(),
         ]);
 
-        spr_path.init(load_sprite("gfx/leveleditor/leveleditor_world_path.png", colors::MAGENTA));
+        spr_path.init(ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_world_path.png")).create());
 
-        rm.spr_selectedtile = load_sprite_alpha("gfx/leveleditor/leveleditor_selectedtile.png", colors::BLACK, 128);
+        rm.spr_selectedtile = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_selectedtile.png")).with_color_key(colors::BLACK).with_alpha(128).create();
 
-        spr_dialog.init(load_sprite_alpha("gfx/leveleditor/leveleditor_dialog.png", colors::MAGENTA, 255));
-        menu_shade.init(load_sprite_alpha("gfx/leveleditor/leveleditor_shade.png", colors::MAGENTA, 128));
-        spr_largedialog.init(load_sprite_alpha("gfx/leveleditor/leveleditor_platform.png", colors::MAGENTA, 255));
+        spr_dialog.init(ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_dialog.png")).with_alpha(255).create());
+        menu_shade.init(ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_shade.png")).with_alpha(128).create());
+        spr_largedialog.init(ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_platform.png")).with_alpha(255).create());
 
-        rm.menu_font_small.init(&convert_path("gfx/packs/Classic/fonts/font_small.png"));
-        rm.menu_font_large.init(&convert_path("gfx/packs/Classic/fonts/font_large.png"));
+        rm.menu_font_small = gfxFont::from_path(&convert_path("gfx/packs/Classic/fonts/font_small.png"));
+        rm.menu_font_large = gfxFont::from_path(&convert_path("gfx/packs/Classic/fonts/font_large.png"));
 
         println!("\n---------------- load world ----------------");
 
-        rm.spr_worldbackground[0] = load_sprite("gfx/packs/Classic/world/world_background.png", colors::MAGENTA);
-        rm.spr_worldbackground[1] = load_sprite("gfx/packs/Classic/world/preview/world_background.png", colors::MAGENTA);
-        rm.spr_worldbackground[2] = load_sprite("gfx/packs/Classic/world/thumbnail/world_background.png", colors::MAGENTA);
+        rm.spr_worldbackground[0] = ImageLoader::new(convert_path("gfx/packs/Classic/world/world_background.png")).create();
+        rm.spr_worldbackground[1] = ImageLoader::new(convert_path("gfx/packs/Classic/world/preview/world_background.png")).create();
+        rm.spr_worldbackground[2] = ImageLoader::new(convert_path("gfx/packs/Classic/world/thumbnail/world_background.png")).create();
 
-        rm.spr_worldforeground[0] = load_sprite("gfx/packs/Classic/world/world_foreground.png", colors::MAGENTA);
-        rm.spr_worldforeground[1] = load_sprite("gfx/packs/Classic/world/preview/world_foreground.png", colors::MAGENTA);
-        rm.spr_worldforeground[2] = load_sprite("gfx/packs/Classic/world/thumbnail/world_foreground.png", colors::MAGENTA);
+        rm.spr_worldforeground[0] = ImageLoader::new(convert_path("gfx/packs/Classic/world/world_foreground.png")).create();
+        rm.spr_worldforeground[1] = ImageLoader::new(convert_path("gfx/packs/Classic/world/preview/world_foreground.png")).create();
+        rm.spr_worldforeground[2] = ImageLoader::new(convert_path("gfx/packs/Classic/world/thumbnail/world_foreground.png")).create();
 
-        rm.spr_worldforegroundspecial[0] = load_sprite("gfx/packs/Classic/world/world_foreground_special.png", colors::MAGENTA);
-        rm.spr_worldforegroundspecial[1] = load_sprite("gfx/packs/Classic/world/preview/world_foreground_special.png", colors::MAGENTA);
-        rm.spr_worldforegroundspecial[2] = load_sprite("gfx/packs/Classic/world/thumbnail/world_foreground_special.png", colors::MAGENTA);
+        rm.spr_worldforegroundspecial[0] = ImageLoader::new(convert_path("gfx/packs/Classic/world/world_foreground_special.png")).create();
+        rm.spr_worldforegroundspecial[1] = ImageLoader::new(convert_path("gfx/packs/Classic/world/preview/world_foreground_special.png")).create();
+        rm.spr_worldforegroundspecial[2] = ImageLoader::new(convert_path("gfx/packs/Classic/world/thumbnail/world_foreground_special.png")).create();
 
-        rm.spr_worldpaths[0] = load_sprite("gfx/packs/Classic/world/world_paths.png", colors::MAGENTA);
-        rm.spr_worldpaths[1] = load_sprite("gfx/packs/Classic/world/preview/world_paths.png", colors::MAGENTA);
-        rm.spr_worldpaths[2] = load_sprite("gfx/packs/Classic/world/thumbnail/world_paths.png", colors::MAGENTA);
+        rm.spr_worldpaths[0] = ImageLoader::new(convert_path("gfx/packs/Classic/world/world_paths.png")).create();
+        rm.spr_worldpaths[1] = ImageLoader::new(convert_path("gfx/packs/Classic/world/preview/world_paths.png")).create();
+        rm.spr_worldpaths[2] = ImageLoader::new(convert_path("gfx/packs/Classic/world/thumbnail/world_paths.png")).create();
 
-        rm.spr_worldvehicle[0] = load_sprite("gfx/packs/Classic/world/world_vehicles.png", colors::MAGENTA);
-        rm.spr_worldvehicle[1] = load_sprite("gfx/packs/Classic/world/preview/world_vehicles.png", colors::MAGENTA);
-        rm.spr_worldvehicle[2] = load_sprite("gfx/packs/Classic/world/thumbnail/world_vehicles.png", colors::MAGENTA);
+        rm.spr_worldvehicle[0] = ImageLoader::new(convert_path("gfx/packs/Classic/world/world_vehicles.png")).create();
+        rm.spr_worldvehicle[1] = ImageLoader::new(convert_path("gfx/packs/Classic/world/preview/world_vehicles.png")).create();
+        rm.spr_worldvehicle[2] = ImageLoader::new(convert_path("gfx/packs/Classic/world/thumbnail/world_vehicles.png")).create();
 
-        rm.spr_worlditems = load_sprite("gfx/packs/Classic/world/world_powerups.png", colors::MAGENTA);
-        rm.spr_worlditempopup = load_sprite("gfx/packs/Classic/world/world_item_popup.png", colors::MAGENTA);
+        rm.spr_worlditems = ImageLoader::new(convert_path("gfx/packs/Classic/world/world_powerups.png")).create();
+        rm.spr_worlditempopup = ImageLoader::new(convert_path("gfx/packs/Classic/world/world_item_popup.png")).create();
 
-        rm.spr_storedpowerupsmall = load_sprite("gfx/packs/Classic/powerups/small.png", colors::MAGENTA);
-        rm.spr_worlditemssmall = load_sprite("gfx/packs/Classic/world/world_powerupssmall.png", colors::MAGENTA);
-        rm.spr_worlditemsplace = load_sprite("gfx/packs/Classic/world/world_bonusplace.png", colors::MAGENTA);
+        rm.spr_storedpowerupsmall = ImageLoader::new(convert_path("gfx/packs/Classic/powerups/small.png")).create();
+        rm.spr_worlditemssmall = ImageLoader::new(convert_path("gfx/packs/Classic/world/world_powerupssmall.png")).create();
+        rm.spr_worlditemsplace = ImageLoader::new(convert_path("gfx/packs/Classic/world/world_bonusplace.png")).create();
 
-        rm.menu_dialog = load_sprite("gfx/packs/Classic/menu/menu_dialog.png", colors::MAGENTA);
+        rm.menu_dialog = ImageLoader::new(convert_path("gfx/packs/Classic/menu/menu_dialog.png")).create();
 
         //Mode Options Menu Gfx
-        rm.menu_egg = load_sprite("gfx/packs/Classic/modeobjects/menu_egg.png", colors::MAGENTA);
-        rm.menu_stomp = load_sprite("gfx/packs/Classic/modeobjects/menu_stomp.png", colors::MAGENTA);
-        rm.menu_survival = load_sprite("gfx/packs/Classic/modeobjects/menu_survival.png", colors::MAGENTA);
-        rm.spr_phanto = load_sprite("gfx/packs/Classic/modeobjects/phanto.png", colors::MAGENTA);
-        rm.menu_plain_field = load_sprite("gfx/leveleditor/menu_plain_field.png", colors::MAGENTA);
-        rm.menu_slider_bar = load_sprite("gfx/packs/Classic/menu/menu_slider_bar.png", colors::MAGENTA);
-        rm.spr_selectfield = load_sprite("gfx/leveleditor/menu_selectfield.png", colors::MAGENTA);
-        rm.menu_verticalarrows = load_sprite("gfx/packs/Classic/menu/menu_vertical_arrows.png", colors::MAGENTA);
-        rm.spr_storedpoweruplarge = load_sprite("gfx/packs/Classic/powerups/large.png", colors::MAGENTA);
+        rm.menu_egg = ImageLoader::new(convert_path("gfx/packs/Classic/modeobjects/menu_egg.png")).create();
+        rm.menu_stomp = ImageLoader::new(convert_path("gfx/packs/Classic/modeobjects/menu_stomp.png")).create();
+        rm.menu_survival = ImageLoader::new(convert_path("gfx/packs/Classic/modeobjects/menu_survival.png")).create();
+        rm.spr_phanto = ImageLoader::new(convert_path("gfx/packs/Classic/modeobjects/phanto.png")).create();
+        rm.menu_plain_field = ImageLoader::new(convert_path("gfx/leveleditor/menu_plain_field.png")).create();
+        rm.menu_slider_bar = ImageLoader::new(convert_path("gfx/packs/Classic/menu/menu_slider_bar.png")).create();
+        rm.spr_selectfield = ImageLoader::new(convert_path("gfx/leveleditor/menu_selectfield.png")).create();
+        rm.menu_verticalarrows = ImageLoader::new(convert_path("gfx/packs/Classic/menu/menu_vertical_arrows.png")).create();
+        rm.spr_storedpoweruplarge = ImageLoader::new(convert_path("gfx/packs/Classic/powerups/large.png")).create();
 
-        rm.menu_mode_small = load_sprite("gfx/packs/Classic/menu/menu_mode_small.png", colors::MAGENTA);
-        rm.menu_mode_large = load_sprite("gfx/packs/Classic/menu/menu_mode_large.png", colors::MAGENTA);
+        rm.menu_mode_small = ImageLoader::new(convert_path("gfx/packs/Classic/menu/menu_mode_small.png")).create();
+        rm.menu_mode_large = ImageLoader::new(convert_path("gfx/packs/Classic/menu/menu_mode_large.png")).create();
 
-        spr_vehicleicons.init(load_sprite("gfx/leveleditor/vehicle_icons.png", colors::MAGENTA));
+        spr_vehicleicons.init(ImageLoader::new(convert_path("gfx/leveleditor/vehicle_icons.png")).create());
 
-        rm.spr_thumbnail_warps[0] = load_sprite("gfx/packs/Classic/menu/menu_warp_preview.png", colors::MAGENTA);
-        rm.spr_thumbnail_warps[1] = load_sprite("gfx/packs/Classic/menu/menu_warp_thumbnail.png", colors::MAGENTA);
+        rm.spr_thumbnail_warps[0] = ImageLoader::new(convert_path("gfx/packs/Classic/menu/menu_warp_preview.png")).create();
+        rm.spr_thumbnail_warps[1] = ImageLoader::new(convert_path("gfx/packs/Classic/menu/menu_warp_thumbnail.png")).create();
 
-        rm.spr_thumbnail_mapitems[0] = load_sprite("gfx/packs/Classic/menu/menu_mapitems_preview.png", colors::MAGENTA);
-        rm.spr_thumbnail_mapitems[1] = load_sprite("gfx/packs/Classic/menu/menu_mapitems_thumbnail.png", colors::MAGENTA);
+        rm.spr_thumbnail_mapitems[0] = ImageLoader::new(convert_path("gfx/packs/Classic/menu/menu_mapitems_preview.png")).create();
+        rm.spr_thumbnail_mapitems[1] = ImageLoader::new(convert_path("gfx/packs/Classic/menu/menu_mapitems_thumbnail.png")).create();
 
-        rm.spr_tileanimation[1] = load_sprite("gfx/packs/Classic/tilesets/tile_animation_preview.png", colors::MAGENTA);
-        rm.spr_tileanimation[2] = load_sprite("gfx/packs/Classic/tilesets/tile_animation_thumbnail.png", colors::MAGENTA);
+        rm.spr_tileanimation[1] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/tile_animation_preview.png")).create();
+        rm.spr_tileanimation[2] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/tile_animation_thumbnail.png")).create();
 
-        rm.spr_blocks[1] = load_sprite("gfx/packs/Classic/tilesets/blocks_preview.png", colors::MAGENTA);
-        rm.spr_blocks[2] = load_sprite("gfx/packs/Classic/tilesets/blocks_thumbnail.png", colors::MAGENTA);
+        rm.spr_blocks[1] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/blocks_preview.png")).create();
+        rm.spr_blocks[2] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/blocks_thumbnail.png")).create();
 
-        rm.spr_unknowntile[1] = load_sprite("gfx/packs/Classic/tilesets/unknown_tile_preview.png", colors::MAGENTA);
-        rm.spr_unknowntile[2] = load_sprite("gfx/packs/Classic/tilesets/unknown_tile_thumbnail.png", colors::MAGENTA);
+        rm.spr_unknowntile[1] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/unknown_tile_preview.png")).create();
+        rm.spr_unknowntile[2] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/unknown_tile_thumbnail.png")).create();
 
-        rm.spr_hazard_fireball[1] = load_sprite("gfx/packs/Classic/hazards/fireball_preview.png", colors::MAGENTA);
-        rm.spr_hazard_fireball[2] = load_sprite("gfx/packs/Classic/hazards/fireball_thumbnail.png", colors::MAGENTA);
+        rm.spr_hazard_fireball[1] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/fireball_preview.png")).create();
+        rm.spr_hazard_fireball[2] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/fireball_thumbnail.png")).create();
 
-        rm.spr_hazard_rotodisc[1] = load_sprite("gfx/packs/Classic/hazards/rotodisc_preview.png", colors::MAGENTA);
-        rm.spr_hazard_rotodisc[2] = load_sprite("gfx/packs/Classic/hazards/rotodisc_thumbnail.png", colors::MAGENTA);
+        rm.spr_hazard_rotodisc[1] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/rotodisc_preview.png")).create();
+        rm.spr_hazard_rotodisc[2] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/rotodisc_thumbnail.png")).create();
 
-        rm.spr_hazard_bulletbill[1] = load_sprite("gfx/packs/Classic/hazards/bulletbill_preview.png", colors::MAGENTA);
-        rm.spr_hazard_bulletbill[2] = load_sprite("gfx/packs/Classic/hazards/bulletbill_thumbnail.png", colors::MAGENTA);
+        rm.spr_hazard_bulletbill[1] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/bulletbill_preview.png")).create();
+        rm.spr_hazard_bulletbill[2] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/bulletbill_thumbnail.png")).create();
 
-        rm.spr_hazard_flame[1] = load_sprite("gfx/packs/Classic/hazards/flame_preview.png", colors::MAGENTA);
-        rm.spr_hazard_flame[2] = load_sprite("gfx/packs/Classic/hazards/flame_thumbnail.png", colors::MAGENTA);
+        rm.spr_hazard_flame[1] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/flame_preview.png")).create();
+        rm.spr_hazard_flame[2] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/flame_thumbnail.png")).create();
 
-        rm.spr_hazard_pirhanaplant[1] = load_sprite("gfx/packs/Classic/hazards/pirhanaplant_preview.png", colors::MAGENTA);
-        rm.spr_hazard_pirhanaplant[2] = load_sprite("gfx/packs/Classic/hazards/pirhanaplant_thumbnail.png", colors::MAGENTA);
+        rm.spr_hazard_pirhanaplant[1] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/pirhanaplant_preview.png")).create();
+        rm.spr_hazard_pirhanaplant[2] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/pirhanaplant_thumbnail.png")).create();
 
         rm.load_menu_graphics();
 
@@ -1268,9 +1276,8 @@ pub fn editor_edit() -> i32 {
                             }
 
                             if key_sym() == SDLK_r as i32 {
-                                if g_musiccategorydisplaytimer > 0 && g_worldmap.iMusicCategory == crate::common::file_list::WorldMusicCategory::Sleep {
-                                    // FIXME
-                                    g_worldmap.iMusicCategory = crate::common::file_list::WorldMusicCategory::Grass;
+                                if g_musiccategorydisplaytimer > 0 {
+                                    g_worldmap.iMusicCategory.post_increment();
                                 }
 
                                 g_musiccategorydisplaytimer = 90;
@@ -3059,15 +3066,9 @@ pub fn DisplayStageDetails(fForce: bool, iStageId: i16, mut iMouseX: i16, mut iM
         //If we're pointing to a new stage or no stage at all
         if iStageId != iOldStageId || fForce {
             if ts.iStageType == 1 {
-                if !sMapThumbnail.is_null() {
-                    SDL_FreeSurface(sMapThumbnail);
-                    sMapThumbnail = null_mut();
-                }
+                sMapThumbnail = gfxSprite::new();
             } else if !ts.pszMapFile.is_empty() {
-                if !sMapThumbnail.is_null() {
-                    SDL_FreeSurface(sMapThumbnail);
-                    sMapThumbnail = null_mut();
-                }
+                sMapThumbnail = gfxSprite::new();
 
                 if maplist.findexact(&ts.pszMapFile, false) {
                     let file = maplist.current_filename().to_string();
@@ -3075,8 +3076,7 @@ pub fn DisplayStageDetails(fForce: bool, iStageId: i16, mut iMouseX: i16, mut iM
                     sMapThumbnail = g_map.create_thumbnail_surface(true);
                 } else {
                     //otherwise show a unknown map icon
-                    let path = CString::new(convert_path("gfx/leveleditor/leveleditor_mapnotfound.png")).unwrap();
-                    sMapThumbnail = IMG_Load(path.as_ptr());
+                    sMapThumbnail = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_mapnotfound.png")).without_color_key().create();
                 }
             }
         }
@@ -3144,11 +3144,10 @@ pub fn DisplayStageDetails(fForce: bool, iStageId: i16, mut iMouseX: i16, mut iM
                 spr_icon.draw_src(x + iBonus * 20 + 18, y + 196, &r(src, 0, 16, 16));
             }
 
-            if !sMapThumbnail.is_null() {
+            if !sMapThumbnail.get_surface().is_null() {
                 let rSrc = r(0, 0, 160, 120);
-                let mut rDst = r(x + 16, y + 52, 160, 120);
-
-                SDL_UpperBlit(sMapThumbnail, &rSrc, blitdest, &mut rDst);
+                let rDst = r(x + 16, y + 52, 160, 120);
+                sMapThumbnail.draw_src_to(&rSrc, blitdest, &rDst);
             }
         } else {
             let szPrint = format!("Sort: {}", if ts.iBonusType == 0 { "Fixed" } else { "Random" });
@@ -3841,7 +3840,7 @@ pub fn editor_stage() -> i32 {
                             if iIndex == iEditStage {
                                 game_values.tourstops[iIndex as usize].delete();
 
-                                game_values.tourstops.erase(iIndex as usize);
+                                game_values.tourstops.remove(iIndex as usize);
                                 g_worldmap.iNumStages -= 1;
 
                                 break;

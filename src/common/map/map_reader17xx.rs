@@ -27,7 +27,7 @@ impl MapReader {
     }
 
     pub(super) fn read_tiles_1700(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) {
-        let iClassicTilesetID: i16 = unsafe { g_tilesetmanager.index_from_name("Classic") as i16 };
+        let iClassicTilesetID: i16 = unsafe { g_tilesetmanager.classic_tileset_index() as i16 };
 
         for j in 0..MAPHEIGHT as usize {
             for i in 0..MAPWIDTH as usize {
