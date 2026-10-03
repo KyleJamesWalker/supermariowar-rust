@@ -26,6 +26,7 @@ use crate::smw::fps_limiter::FPSLimiter;
 use crate::smw::game_state::{GameState, GameStateManager};
 use crate::smw::gs_splash_screen::SplashScreenState;
 use crate::smw::harness;
+use crate::smw::net::{net_close, net_init};
 use sdl2::sys::{SDL_InitSubSystem, SDL_Joystick, SDL_JoystickEventState, SDL_JoystickOpen, SDL_NumJoysticks, SDL_ShowCursor, SDL_Surface, SDL_DISABLE, SDL_ENABLE, SDL_INIT_JOYSTICK};
 use std::path::Path;
 use std::ptr::null_mut;
@@ -281,7 +282,7 @@ pub fn main_game() {
         blitdest = screen;
 
         sfx_init(); //init the sound system
-        // TODO(net): net_init(); //init the networking
+        net_init(); //init the networking
 
         init_joysticks();
 
@@ -338,7 +339,7 @@ pub fn main_game() {
 
         sfx_close();
         gfx_close();
-        // TODO(net): net_close();
+        net_close();
 
         //Delete player skins
         for k in 0..MAX_PLAYERS as usize {

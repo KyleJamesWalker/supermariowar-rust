@@ -11,6 +11,7 @@ use crate::globals::*;
 use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::main::{players, score, score_cnt};
+use crate::smw::net::netplay;
 use crate::smw::objects::powerup::pu_treasure_chest_bonus::PU_TreasureChestBonus;
 use crate::smw::player::{CPlayer, PlayerState};
 
@@ -388,7 +389,15 @@ pub fn cgamemode_init<T: CGameModeTrait + ?Sized>(this: &mut T) {
 }
 
 pub fn cgamemode_think<T: CGameModeTrait + ?Sized>(this: &mut T) {
-    // TODO(net): if (netplay.active) { for k in players: if (netplay.player_disconnected[k]) players[k]->spawnText("Disconnected!"); }
+    unsafe {
+        if netplay.active {
+            for k in 0..players.len() {
+                if netplay.player_disconnected[k] {
+                    players[k].spawn_text("Disconnected!");
+                }
+            }
+        }
+    }
 
     if this.gm().gameover {
         this.gm_mut().displayplayertext();
