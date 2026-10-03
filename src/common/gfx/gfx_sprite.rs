@@ -227,12 +227,12 @@ impl gfxSprite {
     }
 
     /// Draw a part of the sprite scaled to a destination area.
-    pub fn draw_stretch(&self, dstRect: &SDL_Rect, srcRect: &SDL_Rect) {
+    pub fn draw_stretch(&self, srcRect: &SDL_Rect, dst: *mut SDL_Surface, dstRect: &SDL_Rect) {
         debug_assert!(!self.m_picture.is_null());
 
         let mut dstRect_w = *dstRect;
         unsafe {
-            if SDL_UpperBlitScaled(self.m_picture.get(), srcRect, blitdest, &mut dstRect_w) < 0 {
+            if SDL_UpperBlitScaled(self.m_picture.get(), srcRect, dst, &mut dstRect_w) < 0 {
                 eprintln!("SDL_BlitScaled error: {}", sdl_error());
             }
         }

@@ -1530,12 +1530,9 @@ pub fn drawmap(fScreenshot: bool, iBlockSize: i16, fWithPlatforms: bool) {
         let bs = iBlockSize as i32;
         if bs != TILESIZE {
             let srcrect = rect(0, 0, 640, 480);
-            let mut dstrect = rect(0, 0, bs * 20, bs * 15);
+            let dstrect = rect(0, 0, bs * 20, bs * 15);
 
-            if SDL_UpperBlitScaled(rm.spr_background.get_surface(), &srcrect, blitdest, &mut dstrect) < 0 {
-                eprintln!("SDL_SCALEBLIT error: {}", sdl_error());
-                return;
-            }
+            rm.spr_background.draw_stretch(&srcrect, blitdest, &dstrect);
         } else {
             rm.spr_background.draw(0, 0);
         }
@@ -1695,7 +1692,7 @@ pub fn drawmap(fScreenshot: bool, iBlockSize: i16, fWithPlatforms: bool) {
 
                     if warp.connection != -1 {
                         let rSrcWarp = rect(warp.connection as i32 * bs, warp.direction as i32 * bs, bs, bs);
-                        let mut rDstWarp = rect(i * bs, j * bs, bs, bs);
+                        let rDstWarp = rect(i * bs, j * bs, bs, bs);
 
                         let idx = if bs == TILESIZE {
                             0
@@ -1704,7 +1701,7 @@ pub fn drawmap(fScreenshot: bool, iBlockSize: i16, fWithPlatforms: bool) {
                         } else {
                             2
                         };
-                        SDL_UpperBlit(rm.spr_warps[idx].get_surface(), &rSrcWarp, screen, &mut rDstWarp);
+                        rm.spr_warps[idx].draw_src_to(&rSrcWarp, screen, &rDstWarp);
                     }
                 }
             }
@@ -1758,7 +1755,7 @@ pub fn editor_warp() -> i32 {
         r.w = 640;
         r.h = 480;
 
-        SDL_UpperBlit(rm.spr_warps[0].get_surface(), null(), screen, &mut r);
+        rm.spr_warps[0].draw_to(screen, &r);
         rm.menu_font_small.draw_right_justified(640, 0, maplist.current_filename());
 
         draw_message();
@@ -3681,12 +3678,11 @@ pub fn editor_blocks() -> i32 {
         drawmap(false, TILESIZE as i16, false);
         rm.menu_shade.draw(0, 0);
 
-        let blocks = rm.spr_blocks[0].get_surface();
-        SDL_UpperBlit(blocks, &rect(0, 0, 224, 32), screen, &mut rect(0, 0, 224, 32));
-        SDL_UpperBlit(blocks, &rect(224, 0, 128, 64), screen, &mut rect(0, 32, 128, 64));
-        SDL_UpperBlit(blocks, &rect(352, 0, 128, 64), screen, &mut rect(128, 32, 128, 64));
-        SDL_UpperBlit(blocks, &rect(0, 32, 160, 32), screen, &mut rect(224, 0, 160, 32));
-        SDL_UpperBlit(blocks, &rect(0, 64, 320, 32), screen, &mut rect(0, 96, 320, 32));
+        rm.spr_blocks[0].draw_src_to(&rect(0, 0, 224, 32), screen, &rect(0, 0, 224, 32));
+        rm.spr_blocks[0].draw_src_to(&rect(224, 0, 128, 64), screen, &rect(0, 32, 128, 64));
+        rm.spr_blocks[0].draw_src_to(&rect(352, 0, 128, 64), screen, &rect(128, 32, 128, 64));
+        rm.spr_blocks[0].draw_src_to(&rect(0, 32, 160, 32), screen, &rect(224, 0, 160, 32));
+        rm.spr_blocks[0].draw_src_to(&rect(0, 64, 320, 32), screen, &rect(0, 96, 320, 32));
 
         rm.menu_font_small.draw_right_justified(640, 0, maplist.current_filename());
 

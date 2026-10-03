@@ -268,7 +268,7 @@ pub fn draw_map_hazard(hazard: &MapHazard, iSize: i16, fDrawCenter: bool) {
         };
 
         if fDrawCenter && hazard.itype <= 1 {
-            blit(rm.spr_platformpath.get_surface(), &rPathSrc, blitdest, &mut rPathDst);
+            rm.spr_platformpath.draw_src_to(&rPathSrc, blitdest, &rPathDst);
         }
 
         if hazard.itype == 0 {
@@ -338,7 +338,7 @@ pub fn draw_map_hazard(hazard: &MapHazard, iSize: i16, fDrawCenter: bool) {
             let iBulletPathSpacing: i16 = (hazard.dparam[0] * dBulletBillFrequency[s]) as i16;
             while iBulletPathX >= 0 && (iBulletPathX as i32) < get_screen_width(iSize as i32) {
                 rDotDst = SDL_Rect { x: iBulletPathX as i32, y: rPathDst.y + ((ts - dot) >> 1), w: dot, h: dot };
-                blit(rm.spr_platformpath.get_surface(), &rDotSrc, blitdest, &mut rDotDst);
+                rm.spr_platformpath.draw_src_to(&rDotSrc, blitdest, &rDotDst);
 
                 iBulletPathX = (iBulletPathX as i32
                     + if (hazard.iparam[0] as f32) < 0.0 { -(iBulletPathSpacing as i32) } else { iBulletPathSpacing as i32 })
@@ -516,7 +516,7 @@ pub fn draw_platform(
 
             for _iSpot in 0..(iNumSpots as i32 + 1) {
                 rPathDst = SDL_Rect { x: dX as i16 as i32, y: dY as i16 as i32, w: dot, h: dot };
-                blit(rm.spr_platformpath.get_surface(), &rPathSrc, blitdest, &mut rPathDst);
+                rm.spr_platformpath.draw_src_to(&rPathSrc, blitdest, &rPathDst);
 
                 dX += dIncrementX;
                 dY += dIncrementY;
@@ -534,7 +534,7 @@ pub fn draw_platform(
 
             for _iSpot in 0..50 {
                 rPathDst = SDL_Rect { x: dX as i16 as i32, y: dY as i16 as i32, w: dot, h: dot };
-                blit(rm.spr_platformpath.get_surface(), &rPathSrc, blitdest, &mut rPathDst);
+                rm.spr_platformpath.draw_src_to(&rPathSrc, blitdest, &rPathDst);
 
                 let mut iWrapX: i16 = dX as i16;
                 let mut iWrapY: i16 = dY as i16;
@@ -557,7 +557,7 @@ pub fn draw_platform(
 
                 if fNeedWrap {
                     rPathDst = SDL_Rect { x: iWrapX as i32, y: iWrapY as i32, w: dot, h: dot };
-                    blit(rm.spr_platformpath.get_surface(), &rPathSrc, blitdest, &mut rPathDst);
+                    rm.spr_platformpath.draw_src_to(&rPathSrc, blitdest, &rPathDst);
                 }
 
                 dX += dIncrementX;
@@ -577,14 +577,14 @@ pub fn draw_platform(
                 let iY: i16 = ((fRadiusY * fAngle.sin()) as i16 as i32 - (dot >> 1) + iStartY as i32) as i16;
 
                 rPathDst = SDL_Rect { x: iX as i32, y: iY as i32, w: dot, h: dot };
-                blit(rm.spr_platformpath.get_surface(), &rPathSrc, blitdest, &mut rPathDst);
+                rm.spr_platformpath.draw_src_to(&rPathSrc, blitdest, &rPathDst);
 
                 if iX as i32 + dot >= get_screen_width(iSize as i32) {
                     rPathDst = SDL_Rect { x: iX as i32 - get_screen_width(iSize as i32), y: iY as i32, w: dot, h: dot };
-                    blit(rm.spr_platformpath.get_surface(), &rPathSrc, blitdest, &mut rPathDst);
+                    rm.spr_platformpath.draw_src_to(&rPathSrc, blitdest, &rPathDst);
                 } else if iX < 0 {
                     rPathDst = SDL_Rect { x: iX as i32 + get_screen_width(iSize as i32), y: iY as i32, w: dot, h: dot };
-                    blit(rm.spr_platformpath.get_surface(), &rPathSrc, blitdest, &mut rPathDst);
+                    rm.spr_platformpath.draw_src_to(&rPathSrc, blitdest, &rPathDst);
                 }
 
                 fAngle += TWO_PI / 32.0;
@@ -2034,7 +2034,7 @@ impl CMap {
                         let rSrc = SDL_Rect { x: wWarp.connection as i32 * ts, y: wWarp.direction * ts, w: ts, h: ts };
                         let mut rDst = SDL_Rect { x: i as i32 * ts, y: j as i32 * ts, w: ts, h: ts };
 
-                        blit(rm.spr_thumbnail_warps[iScreenshotSize].get_surface(), &rSrc, targetSurface, &mut rDst);
+                        rm.spr_thumbnail_warps[iScreenshotSize].draw_src_to(&rSrc, targetSurface, &rDst);
                     }
                 }
             }
@@ -2055,7 +2055,7 @@ impl CMap {
                 let rSrc = SDL_Rect { x: item.itype as i32 * iTileSize, y: 0, w: iTileSize, h: iTileSize };
                 let mut rDst = SDL_Rect { x: item.ix as i32 * iTileSize, y: item.iy as i32 * iTileSize, w: iTileSize, h: iTileSize };
 
-                blit(rm.spr_thumbnail_mapitems[iScreenshotSize].get_surface(), &rSrc, targetSurface, &mut rDst);
+                rm.spr_thumbnail_mapitems[iScreenshotSize].draw_src_to(&rSrc, targetSurface, &rDst);
             }
         }
     }
@@ -2090,12 +2090,7 @@ impl CMap {
             dstrect.h = App::screenHeight / 2;
         }
 
-        unsafe {
-            if SDL_UpperBlitScaled(background.get_surface(), &srcrect, targetSurface, &mut dstrect) < 0 {
-                eprint!("SDL_SoftStretch error: {}\n", sdl_error());
-                return;
-            }
-        }
+        background.draw_stretch(&srcrect, targetSurface, &dstrect);
 
         small_delay();
         self.pre_draw_preview_background(targetSurface, fThumbnail);
@@ -2215,9 +2210,9 @@ impl CMap {
                     }
 
                     if fThumbnail {
-                        blit(rm.spr_blocks[2].get_surface(), &rectSrc, targetSurface, &mut rectDst);
+                        rm.spr_blocks[2].draw_src_to(&rectSrc, targetSurface, &rectDst);
                     } else {
-                        blit(rm.spr_blocks[1].get_surface(), &rectSrc, targetSurface, &mut rectDst);
+                        rm.spr_blocks[1].draw_src_to(&rectSrc, targetSurface, &rectDst);
                     }
                 }
 
@@ -2230,7 +2225,7 @@ impl CMap {
         let mut r = SDL_Rect { x: 0, y: 0, w: App::screenWidth, h: App::screenHeight };
 
         unsafe {
-            blit(background.get_surface(), null(), mapspr.get_surface(), &mut r);
+            background.draw_to(mapspr.get_surface(), &r);
         }
 
         self.draw(mapspr.get_surface(), 0);
@@ -2280,9 +2275,6 @@ impl CMap {
             }
 
             if self.iAnimatedTileCount > 0 {
-                let backgroundSurface = rm.spr_background.get_surface();
-                let animatedTileSrcSurface = rm.spr_tileanimation[0].get_surface();
-
                 self.animatedFrontmapSurface = rm.spr_frontmap[g_iCurrentDrawIndex as usize].get_surface();
                 self.animatedBackmapSurface = rm.spr_backmap[g_iCurrentDrawIndex as usize].get_surface();
                 self.animatedTilesSurface =
@@ -2305,7 +2297,7 @@ impl CMap {
                         for sTileAnimationFrame in 0..4usize {
                             tile.rAnimationSrc[0][sTileAnimationFrame] = rDst;
 
-                            blit(backgroundSurface, rSrc, ats, &mut rDst);
+                            rm.spr_background.draw_src_to(&*rSrc, ats, &rDst);
 
                             for iLayer in 0..self.iAnimatedBackgroundLayers as usize {
                                 let tilesetTile = tile.layers[iLayer];
@@ -2317,7 +2309,7 @@ impl CMap {
                                         &mut rDst,
                                     );
                                 } else if tilesetTile.iID as i32 == TILESETANIMATED {
-                                    blit(animatedTileSrcSurface, &tile.rSrc[iLayer][sTileAnimationFrame], ats, &mut rDst);
+                                    rm.spr_tileanimation[0].draw_src_to(&tile.rSrc[iLayer][sTileAnimationFrame], ats, &rDst);
                                 } else if tilesetTile.iID as i32 == TILESETUNKNOWN {
                                     blit(rm.spr_unknowntile[0].get_surface(), g_tilesetmanager.rect(0, 0, 0), ats, &mut rDst);
                                 }
@@ -2357,7 +2349,7 @@ impl CMap {
                                         &mut rDst,
                                     );
                                 } else if tilesetTile.iID as i32 == TILESETANIMATED {
-                                    blit(animatedTileSrcSurface, &tile.rSrc[iLayer][sTileAnimationFrame], ats, &mut rDst);
+                                    rm.spr_tileanimation[0].draw_src_to(&tile.rSrc[iLayer][sTileAnimationFrame], ats, &rDst);
                                 } else if tilesetTile.iID as i32 == TILESETUNKNOWN {
                                     blit(rm.spr_unknowntile[0].get_surface(), g_tilesetmanager.rect(0, 0, 0), ats, &mut rDst);
                                 }
@@ -2388,7 +2380,7 @@ impl CMap {
 
                             let tilesetTile = tile.layers[0];
                             if tilesetTile.iID as i32 == TILESETANIMATED {
-                                blit(animatedTileSrcSurface, &tile.rSrc[0][sTileAnimationFrame], ats, &mut rDst);
+                                rm.spr_tileanimation[0].draw_src_to(&tile.rSrc[0][sTileAnimationFrame], ats, &rDst);
                             } else {
                                 println!();
                                 println!(" ERROR: A nonanimated platform tile was added to the animated tile list");
