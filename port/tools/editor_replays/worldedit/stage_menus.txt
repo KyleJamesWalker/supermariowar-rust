@@ -1,0 +1,137 @@
+# Stage editor menus on a new small world: boss minigame settings, bonus house with text and
+# bonuses, stage deletion through the confirm dialog (renumbers stages on the map), then save.
+#@ frames=287
+#@ shots=10,25,40,55,70,85,100,115,130,145,160,175,190,205,220,235,250,265,280
+#@ files=data/worlds/zzhouse.txt,data/worlds/ZZworldeditor.txt
+
+# New 12x10 world "zzhouse" (smaller than the screen: centered with a black border)
+5 down N
+6 up N
+8 down Z
+9 up Z
+11 down Z
+12 up Z
+14 down H
+15 up H
+17 down O
+18 up O
+20 down U
+21 up U
+23 down S
+24 up S
+26 down E
+27 up E
+29 down Return
+30 up Return
+32 down 1
+33 up 1
+35 down 2
+36 up 2
+38 down Return
+39 up Return
+41 down 1
+42 up 1
+44 down 0
+45 up 0
+47 down Return
+48 up Return
+
+# Stage 1: Frag, open its mode settings menu and back
+55 down E
+56 up E
+58 down N
+59 up N
+64 down Down
+65 up Down
+67 down Return
+68 up Return
+70 down Right
+71 up Right
+73 down Right
+74 up Right
+76 down Return
+77 up Return
+79 mousedown left 500 116
+80 mouseup left 500 116
+85 down Escape
+86 up Escape
+
+# Leave stage 1, create stage 2 as a bonus house with a text line and three bonuses
+91 down Escape
+92 up Escape
+94 down N
+95 up N
+100 down Down
+101 up Down
+103 down Return
+104 up Return
+106 down Left
+107 up Left
+109 down Left
+110 up Left
+112 down Left
+113 up Left
+115 down Left
+116 up Left
+118 down Return
+119 up Return
+121 down Down
+122 up Down
+124 down Down
+125 up Down
+127 down Return
+128 up Return
+130 down H
+131 up H
+133 down I
+134 up I
+136 down Return
+137 up Return
+139 mousedown left 500 356
+140 mouseup left 500 356
+145 mousedown left 24 24
+146 mouseup left 24 24
+148 mousedown left 72 24
+149 mouseup left 72 24
+151 mousedown left 500 200
+152 mouseup left 500 200
+154 mousedown left 40 370
+155 mouseup left 40 370
+157 down Escape
+158 up Escape
+163 down Escape
+164 up Escape
+
+# Stage 3: plain stage, then delete stage 1 through the confirm dialog
+169 down N
+170 up N
+175 down Escape
+176 up Escape
+181 mousedown right 16 16
+182 mouseup right 16 16
+187 mousedown left 500 456
+188 mouseup left 500 456
+193 mousedown left 275 266
+194 mouseup left 275 266
+
+# Back to the map: place both remaining stages, start tile, save
+202 down E
+203 up E
+208 mousedown left 80 64
+209 mouseup left 80 64
+211 mousedown left 112 64
+212 mouseup left 112 64
+214 down E
+215 up E
+220 mousedown left 48 16
+221 mouseup left 48 16
+226 mousedown left 80 112
+227 mouseup left 80 112
+232 down T
+233 up T
+238 mousedown left 16 16
+239 mouseup left 16 16
+241 mousedown left 144 112
+242 mouseup left 144 112
+244 down S
+245 up S

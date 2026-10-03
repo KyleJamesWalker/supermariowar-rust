@@ -1,0 +1,6 @@
+# Open the first world, save it unchanged, quit.
+#@ frames=40
+#@ shots=5,20
+#@ files=data/worlds/ZZworldeditor.txt
+10 down S
+11 up S

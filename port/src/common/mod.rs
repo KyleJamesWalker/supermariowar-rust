@@ -1,4 +1,5 @@
 pub mod cmd_args;
+pub mod editor_harness;
 pub mod eyecandy;
 pub mod eyecandy_styles;
 pub mod file_io;

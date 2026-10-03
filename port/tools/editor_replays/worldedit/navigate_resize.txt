@@ -1,0 +1,69 @@
+# Page through worlds, scroll with held arrow keys, run a failing Find, resize the current world
+# through the dialogs (drops warps and out-of-range vehicles), paint on it, then save.
+#@ frames=260
+#@ shots=8,13,18,45,70,95,125,160,200,240
+#@ files=data/worlds/Contest_Bonus World.txt,data/worlds/ZZworldeditor.txt
+
+5 down PageDown
+6 up PageDown
+10 down PageDown
+11 up PageDown
+15 down PageDown
+16 up PageDown
+19 down PageUp
+20 up PageUp
+
+# Scroll down (held, auto-repeat), then right once
+22 down Down
+60 up Down
+63 down Right
+64 up Right
+66 down Left
+67 up Left
+
+# Find dialog: type "smb", Enter (no lowercase match), then the next search key reruns it
+72 down F
+73 up F
+75 down S
+76 up S
+77 down M
+78 up M
+79 down B
+80 up B
+81 down Backspace
+82 up Backspace
+83 down B
+84 up B
+86 down Return
+87 up Return
+90 down F
+91 up F
+
+# Resize to 18x13
+100 down K
+101 up K
+104 down 1
+105 up 1
+107 down 8
+108 up 8
+110 down Return
+111 up Return
+113 down 1
+114 up 1
+116 down 3
+117 up 3
+119 down Return
+120 up Return
+
+# Paint land with auto paint near the new edge, then save
+130 down 2
+131 up 2
+133 mousedown left 48 16
+134 mouseup left 48 16
+136 mousemove 560 400
+137 mousedown left 560 400
+138 mousemove 560 368
+139 mousemove 528 368
+140 mouseup left 528 368
+150 down S
+151 up S
