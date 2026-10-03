@@ -55,7 +55,7 @@ Each variable is a no-op when unset or empty. The Rust binary must honour the sa
 
 The frame counter `N` starts at 0 and counts iterations of the main loop in `gameloop()`:
 
-1. Push every replay event whose frame is `N` with `SDL_PushEvent`, in file order.
+1. Seeded runs: `sfx_virtual_advance()` (see Sound). Then push every replay event whose frame is `N` with `SDL_PushEvent`, in file order.
 2. `currentState->update()`.
 3. Write the dump block for `N`.
 4. If `N` is in `SMW_SHOT_FRAMES`, `SDL_SaveBMP(screen)`: the 640x480 ARGB8888 surface as drawn by this frame, before `gfx_flipscreen()`.
@@ -98,6 +98,7 @@ M <menu> focus=<i> modifying=<0|1>
 G mode=<m> gameover=<0|1> winner=<w>
 P id=<id> team=<t> ix=<ix> iy=<iy> fx=<f> fy=<f> velx=<f> vely=<f> state=<s> score=<n> powerup=<p> inair=<0|1>
 O noncol=<n> obj0=<n> obj1=<n> obj2=<n> ec0=<n> ec1=<n> ec2=<n>
+S <sound event>
 R calls=<n> last=<u32>
 ```
 
@@ -108,6 +109,7 @@ R calls=<n> last=<u32>
 | `G` | state `gameplay` | `mode` = `(int)game_values.gamemode->gamemode` (`GameModeType`: classic 0, frag 1, ... ; bonus 999, minigames 1000-1002). `gameover`, `winner` = `gamemode->gameover`, `gamemode->winningteam`. |
 | `P` | state `gameplay` | one line per entry of the global `players` vector, in vector order. `id` = `globalID`, `team` = `teamID`, `ix`/`iy` shorts, `fx`/`fy`/`velx`/`vely` floats, `state` = `(int)PlayerState` (Waiting 0, Spawning 1, Dead 2, Ready 3, EnteringWarpUp 4 ... LeavingWarpRight 11), `score` = `score->score` (0 if null), `powerup` short, `inair` bool. |
 | `O` | state `gameplay` | element counts of `noncolcontainer`, `objectcontainer[0..2]`, `eyecandy[0..2]` at the end of the frame (dead objects not yet cleaned count). |
+| `S` | seeded runs | one line per sound command or virtual-mixer event since the previous block, in the order they happened (see Sound). Events before frame 0 land in frame 0. |
 | `R` | always | `calls` = number of `Well512RandomNumberGenerator::getNext()` calls since the reseed. `last` = the value the most recent call returned (0 before the first call). |
 
 Floats are printed with C `printf("%.4f", (double)value)`. Rust `format!("{:.4}", value as f64)` produces the same text, including `-0.0000` for negative zero and round-half-to-even on exact ties.
@@ -144,6 +146,31 @@ O noncol=6 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
 R calls=44 last=516273304
 ```
 
+## Sound
+
+Under `SMW_SEED`, `sfx` runs a virtual mixer instead of SDL_mixer playback, so channel allocation, `sfxSound::isPlaying()`, `sfxMusic::isPlaying()` and the music-finished hook depend only on the frame counter. Nothing reaches the audio device.
+
+- Clock: `sfx_ticks()`, the virtual `1000 + N * 16` ms.
+- Channels: 16. `Mix_PlayChannel(-1, ...)` takes the lowest free channel, or returns -1 when all are busy or the chunk is NULL. A channel ends at `start + alen * 1000 / bytes_per_second * (loops + 1)` ms (integer division; `bytes_per_second` = frequency x channels x sample bytes from `Mix_QuerySpec`); `loops = -1` never ends. `Mix_HaltChannel` frees the channel and calls `sfxSound::onChannelFinished` at once, as SDL_mixer does. Freeing a chunk frees its channels without the callback.
+- Music: one track. `play` starts it unpaused; `once=1` ends `Mix_MusicDuration * 1000` ms later (truncated), `once=0` or an unknown duration never ends. `stop` and freeing the playing `Mix_Music` halt it without the hook. `togglePause` freezes and resumes the remaining time.
+- `harness::frameStart()` calls `sfx_virtual_advance()` before pushing events: every channel whose end time has passed finishes in channel order (`onChannelFinished`), then finished music calls `musicfinished()` on the main thread.
+
+`S` lines (`<name>` is the file path after the data directory, e.g. `sfx/packs/Classic/jump.wav`; empty for a sound that never loaded):
+
+| Line | Source |
+|---|---|
+| `S play <name> ch=<c>` | `sfxSound::play()` past the 40 ms throttle; `c` is the virtual channel or -1 |
+| `S skip <name>` | `sfxSound::play()` refused by the throttle |
+| `S loop <name> loops=<n> ch=<c>` | `sfxSound::playLoop()` |
+| `S stop <name>` | `sfxSound::stop()` |
+| `S haltall` | `sfx_stopallsounds()` |
+| `S done ch=<c>` | channel `c` reached its end time |
+| `S music <name> once=<0\|1> resume=<0\|1>` | `sfxMusic::play()` |
+| `S musicstop <name>` | `sfxMusic::stop()` |
+| `S musicpause <name> paused=<0\|1>` | `sfxMusic::togglePause()`; `paused` is the new state |
+| `S musicdone` | the playing track ended; `musicfinished()` runs next |
+| `S soundvolume <v>` / `S musicvolume <v>` | `sfx_setsoundvolume()` / `sfx_setmusicvolume()` |
+
 ## SMW_MAP
 
 Applied at the end of `MenuState::init()`, which runs when the splash screen is dismissed (after `MapList::ReadFilters()` has reset the current map to the first one). The name is matched with `MapList::findexact(name, false)`, a case-insensitive match on the map key (file name without the `creator_` prefix and `.map`, e.g. `Block Piles` for `4matsy_Block Piles.map`). If that fails, `MapList::find(name)` matches a substring of the path. Then `miMapField->LoadCurrentMap()` refreshes the game settings preview. An unknown name exits with status 2. Without `SMW_MAP` the first map in sorted order (`0smw`) is current.
@@ -155,12 +182,12 @@ Applied at the end of `MenuState::init()`, which runs when the splash screen is 
 | Well512 seeded from `srand(time(0))` + `rand()` in its constructor | `RandomNumberGenerator.cpp` | `SMW_SEED` reseeds via `Well512::initialize(seed)` (state[0] = seed, then LCG `state[i] = (state[i-1] * 1103515245 + 12345) & 0x7fffffff`, index 0) at the start of `main_game()`, before `create_globals()`. |
 | `srand(time(NULL))` | `main.cpp` | Replaced by `srand(seed)` when seeded. Nothing in the game calls libc `rand()` afterwards (`SystemRandomNumberGenerator` is unused). |
 | `sfxSound::play()` refuses a retrigger within 40 ms of `SDL_GetTicks()`, and its return value drives announcer selection in `PlayerAwardEffects` | `sfx.cpp` | Seeded runs use a virtual clock: `1000 + N * 16` ms (`WAITTIME`), where `N` is the frame counter. |
-| `Mix_PlayChannel` fails when all 16 channels are busy, which depends on the audio thread | `sfx.cpp` | Seeded runs treat the failure as success (the throttle timestamp still updates). The Rust port should model `play()` as succeeding unless throttled. |
+| `Mix_PlayChannel` fails when all 16 channels are busy, which depends on the audio thread | `sfx.cpp` | Seeded runs use the virtual mixer (see Sound), and still treat a failed `play()` as success (the throttle timestamp updates). |
+| Channel-finished and music-finished callbacks on the audio thread drive `isPlaying()`, which gameplay reads (skid, flying, invincibility and clock sounds, music restarts) | `sfx.cpp`, `GSGameplay.cpp` | Seeded runs use the virtual mixer; the callbacks run on the main thread from `frameStart()`. |
 | Frame limiter reads `SDL_GetTicks()` | `FPSLimiter.cpp` | Wall clock only controls sleeping and the F1 FPS overlay. `SMW_NOLIMIT` skips the sleeps. |
 | `options.bin` / `controls.sdl2.bin` in `$HOME/Library/Preferences/.smw/` | `GameValues.cpp` | `run_ref.sh` points `HOME` at an empty temp directory, so defaults from `CGameValues::init` apply. The game writes `options.bin` there on exit. |
 | Map summary cache `data/maps/cache/mapsummary.txt` written on exit | `MapList.cpp` | Holds only precomputed auto-filter flags. `run_ref.sh` deletes it before each run. |
 | OS events (window, joystick hot-plug, real keyboard) | `SDL_PollEvent` | Not filtered. The dummy video driver generates no input and no joysticks are attached. |
-| Music-finished callback on the audio thread | `GSGameplay.cpp musicfinished()` | Only restarts music. No RNG or game state, so it is left alone. |
 | Screenshot file names (`Insert` key) and netplay timestamps | `gfxSDL.cpp`, `net.cpp` | Unreachable: no script presses `Insert`, and the build uses `NO_NETWORK`. |
 | FMA contraction on arm64 | compiler | `-ffp-contract=off`. |
 
@@ -174,7 +201,7 @@ Map list order is deterministic: maps live in a `std::multimap` keyed by name.
 - `main.cpp`: `harness::init()` at the top of `main_game()`, `harness::frameStart()`/`frameEnd()` around `update()`, seeded `srand`.
 - `FPSLimiter.cpp`: early return under `SMW_NOLIMIT`.
 - `RandomNumberGenerator`: `callCount()`, `lastValue()`, `resetCallCount()`.
-- `sfx`: `sfx_ticks` clock hook and `sfx_ignore_channel_failure`.
+- `sfx`: `sfx_ticks` clock hook, `sfx_ignore_channel_failure`, the virtual mixer (`sfx_virtual_mixer`, `sfx_virtual_advance()`), `sfx_events` for `S` lines, and the data-relative file name on `sfxSound`/`sfxMusic`.
 - `uimenu`: `UI_Menu::currentFocusIndex()`. `GSMenu`: menu name/focus accessors and `SMW_MAP`. `player.h`: `friend struct HarnessAccess`.
 
 ## Golden outputs

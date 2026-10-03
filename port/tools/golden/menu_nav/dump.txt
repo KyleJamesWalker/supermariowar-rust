@@ -1,6 +1,7 @@
 F 0 splash
 R calls=0 last=0
 F 1 splash
+S play sfx/packs/Classic/coin.wav ch=0
 R calls=0 last=0
 F 2 splash
 R calls=0 last=0
@@ -20,6 +21,7 @@ F 9 splash
 R calls=0 last=0
 F 10 menu
 M main focus=0 modifying=0
+S music music/game/Standard/Menu/menu.ogg once=0 resume=0
 R calls=0 last=0
 F 11 menu
 M main focus=0 modifying=0
@@ -185,6 +187,7 @@ M main focus=4 modifying=0
 R calls=0 last=0
 F 65 menu
 M main focus=4 modifying=0
+S done ch=0
 R calls=0 last=0
 F 66 menu
 M main focus=4 modifying=0

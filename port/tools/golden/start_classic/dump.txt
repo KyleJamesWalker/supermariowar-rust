@@ -1,6 +1,7 @@
 F 0 splash
 R calls=0 last=0
 F 1 splash
+S play sfx/packs/Classic/coin.wav ch=0
 R calls=0 last=0
 F 2 splash
 R calls=0 last=0
@@ -20,6 +21,7 @@ F 9 splash
 R calls=0 last=0
 F 10 menu
 M main focus=0 modifying=0
+S music music/game/Standard/Menu/menu.ogg once=0 resume=0
 R calls=0 last=0
 F 11 menu
 M main focus=0 modifying=0
@@ -185,6 +187,7 @@ M team_select focus=0 modifying=1
 R calls=13 last=2809667089
 F 65 menu
 M team_select focus=0 modifying=1
+S done ch=0
 R calls=13 last=2809667089
 F 66 menu
 M team_select focus=0 modifying=1
@@ -470,6 +473,8 @@ M game_settings focus=0 modifying=0
 R calls=13 last=2809667089
 F 160 menu
 M game_settings focus=0 modifying=0
+S musicstop music/game/Standard/Menu/menu.ogg
+S play sfx/announcer/Mario/enter-stage.wav ch=0
 R calls=13 last=2809667089
 F 161 menu
 M game_settings focus=0 modifying=0
@@ -563,6 +568,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=197 iy=43 fx=197.0000 fy=43.0000 velx=0.0000 vely=-4.5000 state=0 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=530 iy=194 fx=530.0000 fy=194.0000 velx=0.0000 vely=-4.5000 state=0 score=10 powerup=-1 inair=1
 O noncol=6 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S music music/game/Standard/SMB_Forest.ogg once=0 resume=0
 R calls=38 last=151308991
 F 191 gameplay
 G mode=0 gameover=0 winner=-1
@@ -755,6 +761,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=197 iy=43 fx=197.0000 fy=43.0000 velx=0.0000 vely=-4.5000 state=0 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=530 iy=194 fx=530.0000 fy=194.0000 velx=0.0000 vely=-4.5000 state=0 score=10 powerup=-1 inair=1
 O noncol=6 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=5
+S done ch=0
 R calls=38 last=151308991
 F 223 gameplay
 G mode=0 gameover=0 winner=-1
@@ -809,6 +816,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=197 iy=43 fx=197.0000 fy=43.0000 velx=0.0000 vely=-4.5000 state=0 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=530 iy=194 fx=530.0000 fy=194.0000 velx=0.0000 vely=-4.5000 state=0 score=10 powerup=-1 inair=1
 O noncol=6 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=5
+S play sfx/packs/Classic/starwarning.wav ch=0
 R calls=38 last=151308991
 F 232 gameplay
 G mode=0 gameover=0 winner=-1
@@ -911,6 +919,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=197 iy=43 fx=197.0000 fy=43.0000 velx=0.0000 vely=-4.5000 state=0 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=530 iy=194 fx=530.0000 fy=194.0000 velx=0.0000 vely=-4.5000 state=0 score=10 powerup=-1 inair=1
 O noncol=6 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=5
+S done ch=0
 R calls=38 last=151308991
 F 249 gameplay
 G mode=0 gameover=0 winner=-1
@@ -1007,6 +1016,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=197 iy=43 fx=197.0000 fy=43.0000 velx=0.0000 vely=-4.5000 state=0 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=530 iy=194 fx=530.0000 fy=194.0000 velx=0.0000 vely=-4.5000 state=0 score=10 powerup=-1 inair=1
 O noncol=6 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=5
+S play sfx/packs/Classic/starwarning.wav ch=0
 R calls=38 last=151308991
 F 265 gameplay
 G mode=0 gameover=0 winner=-1
@@ -1109,6 +1119,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=197 iy=43 fx=197.0000 fy=43.0000 velx=0.0000 vely=-4.5000 state=0 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=530 iy=194 fx=530.0000 fy=194.0000 velx=0.0000 vely=-4.5000 state=0 score=10 powerup=-1 inair=1
 O noncol=6 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=5
+S done ch=0
 R calls=38 last=151308991
 F 282 gameplay
 G mode=0 gameover=0 winner=-1
@@ -1205,6 +1216,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=197 iy=43 fx=197.0000 fy=43.0000 velx=0.0000 vely=-4.5000 state=0 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=530 iy=194 fx=530.0000 fy=194.0000 velx=0.0000 vely=-4.5000 state=0 score=10 powerup=-1 inair=1
 O noncol=6 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=5
+S play sfx/packs/Classic/starwarning.wav ch=0
 R calls=38 last=151308991
 F 298 gameplay
 G mode=0 gameover=0 winner=-1
@@ -1307,6 +1319,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=197 iy=43 fx=197.0000 fy=43.0000 velx=0.0000 vely=-4.5000 state=0 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=530 iy=194 fx=530.0000 fy=194.0000 velx=0.0000 vely=-4.5000 state=0 score=10 powerup=-1 inair=1
 O noncol=6 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=5
+S done ch=0
 R calls=38 last=151308991
 F 315 gameplay
 G mode=0 gameover=0 winner=-1
@@ -1403,6 +1416,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=610 iy=113 fx=610.0000 fy=113.0000 velx=0.0000 vely=-4.5000 state=1 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=283 iy=52 fx=283.0000 fy=52.0000 velx=0.0000 vely=-4.5000 state=1 score=10 powerup=-1 inair=1
 O noncol=6 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=5
+S play sfx/announcer/Mario/lets_go.wav ch=0
 R calls=44 last=516273304
 F 331 gameplay
 G mode=0 gameover=0 winner=-1
@@ -1781,6 +1795,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=560 iy=86 fx=560.5000 fy=86.4000 velx=-5.5000 vely=1.1000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=283 iy=25 fx=283.0000 fy=25.4000 velx=0.0000 vely=1.1000 state=3 score=10 powerup=-1 inair=1
 O noncol=6 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=12
+S done ch=0
 R calls=44 last=516273304
 F 394 gameplay
 G mode=0 gameover=0 winner=-1
@@ -1883,6 +1898,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=467 iy=124 fx=467.0000 fy=124.6000 velx=-5.5000 vely=-9.8000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=283 iy=38 fx=283.0000 fy=38.8000 velx=0.0000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 O noncol=6 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S play sfx/packs/Classic/jump.wav ch=0
 R calls=44 last=516273304
 F 411 gameplay
 G mode=0 gameover=0 winner=-1
@@ -2123,6 +2139,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=247 iy=102 fx=247.2000 fy=102.8000 velx=-5.3000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=283 iy=38 fx=283.0000 fy=38.8000 velx=0.0000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 O noncol=6 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S done ch=0
 R calls=44 last=516273304
 F 451 gameplay
 G mode=0 gameover=0 winner=-1
@@ -2243,6 +2260,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=183 iy=93 fx=183.0600 fy=93.8000 velx=-1.4400 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=283 iy=38 fx=283.0000 fy=38.8000 velx=0.0000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 O noncol=6 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S play sfx/packs/Classic/jump.wav ch=0
 R calls=44 last=516273304
 F 471 gameplay
 G mode=0 gameover=0 winner=-1
@@ -2435,6 +2453,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=265 iy=4 fx=265.4000 fy=4.0000 velx=4.0000 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=283 iy=38 fx=283.0000 fy=38.8000 velx=0.0000 vely=-4.5000 state=0 score=9 powerup=-1 inair=1
 O noncol=6 obj0=0 obj1=0 obj2=0 ec0=0 ec1=1 ec2=4
+S play sfx/packs/Classic/mip.wav ch=1
 R calls=44 last=516273304
 F 503 gameplay
 G mode=0 gameover=0 winner=-1
@@ -2483,6 +2502,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=296 iy=-52 fx=296.1401 fy=-52.8000 velx=3.6400 vely=-4.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=283 iy=38 fx=283.0000 fy=38.8000 velx=0.0000 vely=-4.5000 state=0 score=9 powerup=-1 inair=1
 O noncol=6 obj0=0 obj1=0 obj2=0 ec0=0 ec1=1 ec2=4
+S done ch=0
 R calls=44 last=516273304
 F 511 gameplay
 G mode=0 gameover=0 winner=-1
@@ -2573,6 +2593,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=343 iy=-79 fx=343.5401 fy=-79.8000 velx=2.7400 vely=1.4000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=283 iy=38 fx=283.0000 fy=38.8000 velx=0.0000 vely=-4.5000 state=0 score=9 powerup=-1 inair=1
 O noncol=6 obj0=0 obj1=0 obj2=0 ec0=0 ec1=1 ec2=4
+S done ch=1
 R calls=44 last=516273304
 F 526 gameplay
 G mode=0 gameover=0 winner=-1
@@ -2915,6 +2936,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=405 iy=253 fx=405.7801 fy=253.8000 velx=1.5000 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=246 iy=326 fx=246.0000 fy=326.0000 velx=0.0000 vely=-4.5000 state=1 score=9 powerup=-1 inair=1
 O noncol=6 obj0=0 obj1=0 obj2=0 ec0=0 ec1=1 ec2=36
+S play sfx/packs/Classic/jump.wav ch=0
 R calls=47 last=372637317
 F 583 gameplay
 G mode=0 gameover=0 winner=-1
@@ -3107,6 +3129,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=528 iy=176 fx=528.7802 fy=177.0000 velx=4.0000 vely=4.2000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=246 iy=320 fx=246.0000 fy=320.2000 velx=0.0000 vely=2.0500 state=3 score=9 powerup=-1 inair=1
 O noncol=6 obj0=0 obj1=0 obj2=0 ec0=0 ec1=1 ec2=36
+S play sfx/packs/Classic/breakblock.wav ch=1
 R calls=47 last=372637317
 F 615 gameplay
 G mode=0 gameover=0 winner=-1
@@ -3155,6 +3178,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=553 iy=221 fx=553.8000 fy=221.8000 velx=0.0000 vely=7.4000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=246 iy=347 fx=246.0000 fy=347.8000 velx=0.0000 vely=5.2500 state=3 score=9 powerup=-1 inair=1
 O noncol=5 obj0=0 obj1=0 obj2=0 ec0=0 ec1=1 ec2=20
+S done ch=0
 R calls=47 last=372637317
 F 623 gameplay
 G mode=0 gameover=0 winner=-1
@@ -3323,6 +3347,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=631 iy=317 fx=631.8000 fy=317.8000 velx=4.0000 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=246 iy=422 fx=246.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=9 powerup=-1 inair=0
 O noncol=5 obj0=0 obj1=0 obj2=0 ec0=0 ec1=1 ec2=8
+S play sfx/packs/Classic/jump.wav ch=0
 R calls=47 last=372637317
 F 651 gameplay
 G mode=0 gameover=0 winner=-1
@@ -3359,6 +3384,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=15 iy=296 fx=15.8000 fy=296.0000 velx=4.0000 vely=4.5000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=246 iy=422 fx=246.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=9 powerup=-1 inair=0
 O noncol=5 obj0=0 obj1=0 obj2=0 ec0=0 ec1=1 ec2=8
+S done ch=1
 R calls=47 last=372637317
 F 657 gameplay
 G mode=0 gameover=0 winner=-1
@@ -3533,6 +3559,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=131 iy=381 fx=131.8000 fy=381.8000 velx=4.0000 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=246 iy=422 fx=246.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=9 powerup=-1 inair=0
 O noncol=5 obj0=0 obj1=0 obj2=0 ec0=0 ec1=1 ec2=4
+S play sfx/packs/Classic/jump.wav ch=1
 R calls=48 last=3735707529
 F 686 gameplay
 G mode=0 gameover=0 winner=-1
@@ -3563,6 +3590,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=151 iy=342 fx=151.8000 fy=342.8000 velx=4.0000 vely=-6.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=246 iy=422 fx=246.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=9 powerup=-1 inair=0
 O noncol=5 obj0=0 obj1=0 obj2=0 ec0=0 ec1=1 ec2=4
+S done ch=0
 R calls=48 last=3735707529
 F 691 gameplay
 G mode=0 gameover=0 winner=-1
@@ -3773,6 +3801,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=174 iy=349 fx=174.8000 fy=349.8000 velx=2.0000 vely=7.4000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=246 iy=422 fx=246.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=9 powerup=-1 inair=0
 O noncol=5 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S done ch=1
 R calls=48 last=3735707529
 F 726 gameplay
 G mode=0 gameover=0 winner=-1
@@ -3815,6 +3844,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=199 iy=381 fx=199.8000 fy=381.8000 velx=4.0000 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=246 iy=422 fx=246.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=9 powerup=-1 inair=0
 O noncol=5 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S play sfx/packs/Classic/jump.wav ch=0
 R calls=48 last=3735707529
 F 733 gameplay
 G mode=0 gameover=0 winner=-1
@@ -3881,6 +3911,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=243 iy=320 fx=243.8000 fy=320.2000 velx=4.0000 vely=1.5000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=246 iy=422 fx=246.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=9 powerup=-1 inair=0
 O noncol=5 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=8
+S play sfx/packs/Classic/breakblock.wav ch=1
 R calls=48 last=3735707529
 F 744 gameplay
 G mode=0 gameover=0 winner=-1
@@ -4007,6 +4038,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=327 iy=413 fx=327.8000 fy=413.8000 velx=4.0000 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=246 iy=422 fx=246.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=9 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=8
+S play sfx/packs/Classic/jump.wav ch=2
 R calls=49 last=690719395
 F 765 gameplay
 G mode=0 gameover=0 winner=-1
@@ -4055,6 +4087,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=359 iy=356 fx=359.8000 fy=356.2000 velx=4.0000 vely=-5.4000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=246 iy=422 fx=246.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=9 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=8
+S done ch=0
 R calls=49 last=690719395
 F 773 gameplay
 G mode=0 gameover=0 winner=-1
@@ -4133,6 +4166,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=410 iy=322 fx=410.5400 fy=322.4000 velx=3.6400 vely=0.2000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=246 iy=422 fx=246.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=9 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=8
+S done ch=1
 R calls=49 last=690719395
 F 786 gameplay
 G mode=0 gameover=0 winner=-1
@@ -4247,6 +4281,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=468 iy=394 fx=468.3000 fy=394.6000 velx=2.5000 vely=7.8000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=246 iy=422 fx=246.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=9 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=6
+S done ch=2
 R calls=49 last=690719395
 F 805 gameplay
 G mode=0 gameover=0 winner=-1
@@ -4283,6 +4318,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=481 iy=422 fx=481.3200 fy=422.8000 velx=1.5600 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=246 iy=422 fx=246.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=9 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S play sfx/packs/Classic/skid.wav ch=0
 R calls=49 last=690719395
 F 811 gameplay
 G mode=0 gameover=0 winner=-1
@@ -4307,12 +4343,14 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=482 iy=422 fx=482.5600 fy=422.8000 velx=-0.4400 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=246 iy=422 fx=246.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=9 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=1 ec2=4
+S stop sfx/packs/Classic/skid.wav
 R calls=49 last=690719395
 F 815 gameplay
 G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=481 iy=413 fx=481.6200 fy=413.8000 velx=-0.9400 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=246 iy=422 fx=246.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=9 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=1 ec2=4
+S play sfx/packs/Classic/jump.wav ch=0
 R calls=49 last=690719395
 F 816 gameplay
 G mode=0 gameover=0 winner=-1
@@ -4553,6 +4591,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=329 iy=358 fx=329.4800 fy=358.8000 velx=-4.0000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=246 iy=422 fx=246.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=9 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S done ch=0
 R calls=49 last=690719395
 F 856 gameplay
 G mode=0 gameover=0 winner=-1
@@ -4685,6 +4724,8 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=243 iy=392 fx=243.6400 fy=392.5000 velx=-3.5200 vely=-4.1000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=246 iy=422 fx=246.0000 fy=422.8000 velx=0.0000 vely=-4.5000 state=0 score=8 powerup=-1 inair=1
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=1 ec2=4
+S play  ch=-1
+S play sfx/packs/Classic/mip.wav ch=0
 R calls=49 last=690719395
 F 878 gameplay
 G mode=0 gameover=0 winner=-1
@@ -4823,6 +4864,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=208 iy=390 fx=208.2800 fy=390.8000 velx=2.7000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=246 iy=422 fx=246.0000 fy=422.8000 velx=0.0000 vely=-4.5000 state=0 score=8 powerup=-1 inair=1
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=1 ec2=4
+S done ch=0
 R calls=49 last=690719395
 F 901 gameplay
 G mode=0 gameover=0 winner=-1
@@ -5123,6 +5165,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=289 iy=422 fx=289.7000 fy=422.8000 velx=2.5000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=231 iy=66 fx=231.0000 fy=66.0000 velx=0.0000 vely=-4.5000 state=1 score=8 powerup=-1 inair=1
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=1 ec2=28
+S play sfx/packs/Classic/skid.wav ch=0
 R calls=52 last=877841500
 F 951 gameplay
 G mode=0 gameover=0 winner=-1
@@ -5153,6 +5196,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=294 iy=422 fx=294.7000 fy=422.8000 velx=-0.0000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=231 iy=66 fx=231.0000 fy=66.0000 velx=0.0000 vely=-4.5000 state=1 score=8 powerup=-1 inair=1
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=2 ec2=36
+S stop sfx/packs/Classic/skid.wav
 R calls=52 last=877841500
 F 956 gameplay
 G mode=0 gameover=0 winner=-1
@@ -5483,6 +5527,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=304 iy=413 fx=304.7000 fy=413.8000 velx=4.0000 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=231 iy=38 fx=231.0000 fy=38.8000 velx=0.0000 vely=0.4000 state=3 score=8 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=1 ec2=4
+S play sfx/packs/Classic/jump.wav ch=0
 R calls=52 last=877841500
 F 1011 gameplay
 G mode=0 gameover=0 winner=-1
@@ -5723,6 +5768,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=464 iy=381 fx=464.7000 fy=381.8000 velx=4.0000 vely=7.4000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=231 iy=38 fx=231.0000 fy=38.8000 velx=0.0000 vely=0.4000 state=3 score=8 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=1 ec2=4
+S done ch=0
 R calls=52 last=877841500
 F 1051 gameplay
 G mode=0 gameover=0 winner=-1
@@ -5765,6 +5811,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=492 iy=413 fx=492.7000 fy=413.8000 velx=4.0000 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=231 iy=38 fx=231.0000 fy=38.8000 velx=0.0000 vely=0.4000 state=3 score=8 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=1 ec2=4
+S play sfx/packs/Classic/jump.wav ch=0
 R calls=52 last=877841500
 F 1058 gameplay
 G mode=0 gameover=0 winner=-1
@@ -6005,6 +6052,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=634 iy=326 fx=634.7401 fy=326.8000 velx=1.5200 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=231 iy=38 fx=231.0000 fy=38.8000 velx=0.0000 vely=0.4000 state=3 score=8 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S done ch=0
 R calls=52 last=877841500
 F 1098 gameplay
 G mode=0 gameover=0 winner=-1
@@ -6023,6 +6071,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=637 iy=326 fx=637.8000 fy=326.8000 velx=0.6200 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=231 iy=38 fx=231.0000 fy=38.8000 velx=0.0000 vely=0.4000 state=3 score=8 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S play sfx/packs/Classic/skid.wav ch=0
 R calls=52 last=877841500
 F 1101 gameplay
 G mode=0 gameover=0 winner=-1
@@ -6035,6 +6084,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=637 iy=326 fx=637.5400 fy=326.8000 velx=-0.3800 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=231 iy=38 fx=231.0000 fy=38.8000 velx=0.0000 vely=0.4000 state=3 score=8 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S stop sfx/packs/Classic/skid.wav
 R calls=52 last=877841500
 F 1103 gameplay
 G mode=0 gameover=0 winner=-1
@@ -6203,6 +6253,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=507 iy=316 fx=507.2400 fy=316.6000 velx=-5.5000 vely=-9.8000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=231 iy=38 fx=231.0000 fy=38.8000 velx=0.0000 vely=0.4000 state=3 score=8 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S play sfx/packs/Classic/jump.wav ch=0
 R calls=52 last=877841500
 F 1131 gameplay
 G mode=0 gameover=0 winner=-1
@@ -6443,6 +6494,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=287 iy=236 fx=287.2400 fy=236.6000 velx=-5.5000 vely=6.2000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=231 iy=38 fx=231.0000 fy=38.8000 velx=0.0000 vely=0.4000 state=3 score=8 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S done ch=0
 R calls=53 last=3681164079
 F 1171 gameplay
 G mode=0 gameover=0 winner=-1
@@ -6863,6 +6915,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=568 iy=413 fx=568.7000 fy=413.8000 velx=-2.5600 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=231 iy=38 fx=231.0000 fy=38.8000 velx=0.0000 vely=0.4000 state=3 score=8 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S play sfx/packs/Classic/jump.wav ch=0
 R calls=53 last=3681164079
 F 1241 gameplay
 G mode=0 gameover=0 winner=-1
@@ -7103,6 +7156,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=24 iy=337 fx=24.9599 fy=338.0000 velx=3.6400 vely=3.2000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=231 iy=38 fx=231.0000 fy=38.8000 velx=0.0000 vely=0.4000 state=3 score=8 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S done ch=0
 R calls=54 last=1980383211
 F 1281 gameplay
 G mode=0 gameover=0 winner=-1
@@ -7523,6 +7577,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=82 iy=381 fx=82.2599 fy=381.8000 velx=0.5000 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=231 iy=38 fx=231.0000 fy=38.8000 velx=0.0000 vely=0.4000 state=3 score=8 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S play sfx/packs/Classic/jump.wav ch=0
 R calls=54 last=1980383211
 F 1351 gameplay
 G mode=0 gameover=0 winner=-1
@@ -7763,6 +7818,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=174 iy=349 fx=174.8000 fy=349.8000 velx=2.0000 vely=7.4000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=231 iy=38 fx=231.0000 fy=38.8000 velx=0.0000 vely=0.4000 state=3 score=8 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S done ch=0
 R calls=54 last=1980383211
 F 1391 gameplay
 G mode=0 gameover=0 winner=-1
@@ -7805,6 +7861,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=199 iy=381 fx=199.8000 fy=381.8000 velx=4.0000 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=231 iy=38 fx=231.0000 fy=38.8000 velx=0.0000 vely=0.4000 state=3 score=8 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S play sfx/packs/Classic/jump.wav ch=0
 R calls=55 last=455187030
 F 1398 gameplay
 G mode=0 gameover=0 winner=-1
@@ -8045,6 +8102,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=307 iy=405 fx=307.8000 fy=405.8000 velx=4.0000 vely=9.0000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=231 iy=38 fx=231.0000 fy=38.8000 velx=0.0000 vely=0.4000 state=3 score=8 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S done ch=0
 R calls=56 last=379426211
 F 1438 gameplay
 G mode=0 gameover=0 winner=-1
@@ -8153,6 +8211,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=379 iy=413 fx=379.8000 fy=413.8000 velx=4.0000 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=231 iy=38 fx=231.0000 fy=38.8000 velx=0.0000 vely=0.4000 state=3 score=8 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S play sfx/packs/Classic/jump.wav ch=0
 R calls=56 last=379426211
 F 1456 gameplay
 G mode=0 gameover=0 winner=-1
@@ -8339,6 +8398,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=503 iy=326 fx=503.8000 fy=326.8000 velx=4.0000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=231 iy=38 fx=231.0000 fy=38.8000 velx=0.0000 vely=-4.5000 state=0 score=7 powerup=-1 inair=1
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=5
+S play sfx/packs/Classic/death.wav ch=1
 R calls=56 last=379426211
 F 1487 gameplay
 G mode=0 gameover=0 winner=-1
@@ -8363,6 +8423,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=519 iy=317 fx=519.8000 fy=317.8000 velx=4.0000 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=231 iy=38 fx=231.0000 fy=38.8000 velx=0.0000 vely=-4.5000 state=0 score=7 powerup=-1 inair=1
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=5
+S play sfx/packs/Classic/jump.wav ch=2
 R calls=56 last=379426211
 F 1491 gameplay
 G mode=0 gameover=0 winner=-1
@@ -8393,6 +8454,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=539 iy=278 fx=539.8000 fy=278.8000 velx=4.0000 vely=-6.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=231 iy=38 fx=231.0000 fy=38.8000 velx=0.0000 vely=-4.5000 state=0 score=7 powerup=-1 inair=1
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=5
+S done ch=0
 R calls=56 last=379426211
 F 1496 gameplay
 G mode=0 gameover=0 winner=-1
@@ -8423,6 +8485,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=553 iy=249 fx=553.8000 fy=249.8000 velx=0.0000 vely=-4.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=231 iy=38 fx=231.0000 fy=38.8000 velx=0.0000 vely=-4.5000 state=0 score=7 powerup=-1 inair=1
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=5
+S done ch=1
 R calls=56 last=379426211
 F 1501 gameplay
 G mode=0 gameover=0 winner=-1
@@ -8603,6 +8666,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=558 iy=285 fx=558.8000 fy=285.8000 velx=2.0000 vely=7.4000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=231 iy=38 fx=231.0000 fy=38.8000 velx=0.0000 vely=-4.5000 state=0 score=7 powerup=-1 inair=1
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=5
+S done ch=2
 R calls=56 last=379426211
 F 1531 gameplay
 G mode=0 gameover=0 winner=-1
@@ -8645,6 +8709,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=583 iy=317 fx=583.8000 fy=317.8000 velx=4.0000 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=231 iy=38 fx=231.0000 fy=38.8000 velx=0.0000 vely=-4.5000 state=0 score=7 powerup=-1 inair=1
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=5
+S play sfx/packs/Classic/jump.wav ch=0
 R calls=56 last=379426211
 F 1538 gameplay
 G mode=0 gameover=0 winner=-1
@@ -8885,6 +8950,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=617 iy=326 fx=617.8000 fy=326.8000 velx=0.0000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=263 iy=340 fx=263.0000 fy=340.0000 velx=0.0000 vely=-4.5000 state=1 score=7 powerup=-1 inair=1
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=36
+S done ch=0
 R calls=59 last=1202610578
 F 1578 gameplay
 G mode=0 gameover=0 winner=-1
@@ -8933,6 +8999,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=607 iy=317 fx=607.3000 fy=317.8000 velx=-3.0000 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=263 iy=340 fx=263.0000 fy=340.0000 velx=0.0000 vely=-4.5000 state=1 score=7 powerup=-1 inair=1
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=36
+S play sfx/packs/Classic/jump.wav ch=0
 R calls=59 last=1202610578
 F 1586 gameplay
 G mode=0 gameover=0 winner=-1
@@ -9173,6 +9240,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=447 iy=353 fx=447.8000 fy=353.2000 velx=-4.0000 vely=4.8000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=263 iy=365 fx=263.0000 fy=365.2000 velx=0.0000 vely=6.7000 state=3 score=7 powerup=-1 inair=1
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S done ch=0
 R calls=60 last=862513058
 F 1626 gameplay
 G mode=0 gameover=0 winner=-1
@@ -9503,6 +9571,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=419 iy=422 fx=419.3000 fy=422.8000 velx=2.5000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=263 iy=422 fx=263.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=7 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S play sfx/packs/Classic/skid.wav ch=0
 R calls=61 last=3895647668
 F 1681 gameplay
 G mode=0 gameover=0 winner=-1
@@ -9533,6 +9602,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=424 iy=422 fx=424.3000 fy=422.8000 velx=-0.0000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=263 iy=422 fx=263.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=7 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=1 ec2=4
+S stop sfx/packs/Classic/skid.wav
 R calls=61 last=3895647668
 F 1686 gameplay
 G mode=0 gameover=0 winner=-1
@@ -9623,6 +9693,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=382 iy=422 fx=382.8000 fy=422.8000 velx=-2.5000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=263 iy=422 fx=263.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=7 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S play sfx/packs/Classic/skid.wav ch=0
 R calls=61 last=3895647668
 F 1701 gameplay
 G mode=0 gameover=0 winner=-1
@@ -9653,6 +9724,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=377 iy=422 fx=377.8000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=263 iy=422 fx=263.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=7 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=1 ec2=4
+S stop sfx/packs/Classic/skid.wav
 R calls=61 last=3895647668
 F 1706 gameplay
 G mode=0 gameover=0 winner=-1
@@ -9743,6 +9815,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=419 iy=422 fx=419.3000 fy=422.8000 velx=2.5000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=263 iy=422 fx=263.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=7 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S play sfx/packs/Classic/skid.wav ch=0
 R calls=61 last=3895647668
 F 1721 gameplay
 G mode=0 gameover=0 winner=-1
@@ -9773,6 +9846,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=424 iy=422 fx=424.3000 fy=422.8000 velx=-0.0000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=263 iy=422 fx=263.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=7 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=1 ec2=4
+S stop sfx/packs/Classic/skid.wav
 R calls=61 last=3895647668
 F 1726 gameplay
 G mode=0 gameover=0 winner=-1
@@ -10103,6 +10177,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=434 iy=413 fx=434.3000 fy=413.8000 velx=4.0000 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=263 iy=422 fx=263.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=7 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S play sfx/packs/Classic/jump.wav ch=0
 R calls=61 last=3895647668
 F 1781 gameplay
 G mode=0 gameover=0 winner=-1
@@ -10343,6 +10418,8 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=594 iy=317 fx=594.3000 fy=317.8000 velx=4.0000 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=263 iy=422 fx=263.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=7 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S done ch=0
+S play sfx/packs/Classic/jump.wav ch=0
 R calls=61 last=3895647668
 F 1821 gameplay
 G mode=0 gameover=0 winner=-1
@@ -10583,6 +10660,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=51 iy=368 fx=51.8400 fy=368.8000 velx=3.3400 vely=6.0000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=263 iy=422 fx=263.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=7 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S done ch=0
 R calls=61 last=3895647668
 F 1861 gameplay
 G mode=0 gameover=0 winner=-1
@@ -10643,6 +10721,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=78 iy=390 fx=78.7000 fy=390.8000 velx=1.6000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=263 iy=422 fx=263.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=7 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S play sfx/packs/Classic/skid.wav ch=0
 R calls=61 last=3895647668
 F 1871 gameplay
 G mode=0 gameover=0 winner=-1
@@ -10667,6 +10746,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=80 iy=390 fx=80.1000 fy=390.8000 velx=-0.4000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=263 iy=422 fx=263.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=7 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=1 ec2=4
+S stop sfx/packs/Classic/skid.wav
 R calls=61 last=3895647668
 F 1875 gameplay
 G mode=0 gameover=0 winner=-1
@@ -10823,6 +10903,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=600 iy=412 fx=600.6000 fy=412.6000 velx=-5.5000 vely=-9.8000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=263 iy=422 fx=263.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=7 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S play sfx/packs/Classic/jump.wav ch=0
 R calls=61 last=3895647668
 F 1901 gameplay
 G mode=0 gameover=0 winner=-1
@@ -11063,6 +11144,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=380 iy=332 fx=380.6000 fy=332.6000 velx=-5.5000 vely=6.2000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=263 iy=422 fx=263.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=7 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S done ch=0
 R calls=61 last=3895647668
 F 1941 gameplay
 G mode=0 gameover=0 winner=-1
@@ -11123,6 +11205,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=325 iy=348 fx=325.6000 fy=348.6000 velx=-5.5000 vely=-9.8000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=263 iy=422 fx=263.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=7 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S play sfx/packs/Classic/jump.wav ch=0
 R calls=61 last=3895647668
 F 1951 gameplay
 G mode=0 gameover=0 winner=-1
@@ -11147,6 +11230,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=303 iy=320 fx=303.6000 fy=320.2000 velx=-5.5000 vely=4.3000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=263 iy=422 fx=263.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=7 powerup=-1 inair=0
 O noncol=4 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=8
+S play sfx/packs/Classic/breakblock.wav ch=1
 R calls=61 last=3895647668
 F 1955 gameplay
 G mode=0 gameover=0 winner=-1
@@ -11363,6 +11447,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=224 iy=422 fx=224.2000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=263 iy=422 fx=263.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=7 powerup=-1 inair=0
 O noncol=3 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=8
+S done ch=0
 R calls=61 last=3895647668
 F 1991 gameplay
 G mode=0 gameover=0 winner=-1
@@ -11399,6 +11484,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=224 iy=422 fx=224.2000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=263 iy=422 fx=263.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=7 powerup=-1 inair=0
 O noncol=3 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=8
+S done ch=1
 R calls=61 last=3895647668
 F 1997 gameplay
 G mode=0 gameover=0 winner=-1
@@ -11483,6 +11569,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=224 iy=413 fx=224.2000 fy=413.8000 velx=0.0000 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=263 iy=422 fx=263.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=7 powerup=-1 inair=0
 O noncol=3 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=6
+S play sfx/packs/Classic/jump.wav ch=0
 R calls=61 last=3895647668
 F 2011 gameplay
 G mode=0 gameover=0 winner=-1
@@ -11723,6 +11810,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=352 iy=358 fx=352.1000 fy=358.8000 velx=3.2200 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=263 iy=422 fx=263.0000 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=7 powerup=-1 inair=0
 O noncol=3 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S done ch=0
 R calls=61 last=3895647668
 F 2051 gameplay
 G mode=0 gameover=0 winner=-1
@@ -11999,6 +12087,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=376 iy=422 fx=376.4200 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=263 iy=422 fx=263.0000 fy=422.8000 velx=0.0000 vely=-4.5000 state=0 score=6 powerup=-1 inair=1
 O noncol=3 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=5
+S play sfx/packs/Classic/death.wav ch=0
 R calls=62 last=2537086122
 F 2097 gameplay
 G mode=0 gameover=0 winner=-1
@@ -12083,6 +12172,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=376 iy=422 fx=376.4200 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=263 iy=422 fx=263.0000 fy=422.8000 velx=0.0000 vely=-4.5000 state=0 score=6 powerup=-1 inair=1
 O noncol=3 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=5
+S done ch=0
 R calls=62 last=2537086122
 F 2111 gameplay
 G mode=0 gameover=0 winner=-1
@@ -12143,6 +12233,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=376 iy=413 fx=376.9200 fy=413.8000 velx=0.5000 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=263 iy=422 fx=263.0000 fy=422.8000 velx=0.0000 vely=-4.5000 state=0 score=6 powerup=-1 inair=1
 O noncol=3 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=5
+S play sfx/packs/Classic/jump.wav ch=0
 R calls=62 last=2537086122
 F 2121 gameplay
 G mode=0 gameover=0 winner=-1
@@ -12383,6 +12474,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=526 iy=381 fx=526.4200 fy=381.8000 velx=4.0000 vely=7.4000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=136 iy=48 fx=136.0000 fy=48.0000 velx=0.0000 vely=-4.5000 state=1 score=6 powerup=-1 inair=1
 O noncol=3 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=8
+S done ch=0
 R calls=66 last=390648507
 F 2161 gameplay
 G mode=0 gameover=0 winner=-1
@@ -12425,6 +12517,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=554 iy=413 fx=554.4200 fy=413.8000 velx=4.0000 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=136 iy=48 fx=136.0000 fy=48.0000 velx=0.0000 vely=-4.5000 state=1 score=6 powerup=-1 inair=1
 O noncol=3 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=24
+S play sfx/packs/Classic/jump.wav ch=0
 R calls=66 last=390648507
 F 2168 gameplay
 G mode=0 gameover=0 winner=-1
@@ -12635,6 +12728,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=54 iy=381 fx=54.4200 fy=381.8000 velx=4.0000 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=136 iy=48 fx=136.0000 fy=48.0000 velx=0.0000 vely=-4.5000 state=1 score=6 powerup=-1 inair=1
 O noncol=3 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=36
+S play sfx/packs/Classic/jump.wav ch=1
 R calls=66 last=390648507
 F 2203 gameplay
 G mode=0 gameover=0 winner=-1
@@ -12665,6 +12759,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=74 iy=342 fx=74.4200 fy=342.8000 velx=4.0000 vely=-6.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=136 iy=48 fx=136.0000 fy=48.0000 velx=0.0000 vely=-4.5000 state=1 score=6 powerup=-1 inair=1
 O noncol=3 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=36
+S done ch=0
 R calls=66 last=390648507
 F 2208 gameplay
 G mode=0 gameover=0 winner=-1
@@ -12875,6 +12970,8 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=214 iy=381 fx=214.4200 fy=381.8000 velx=4.0000 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=136 iy=128 fx=136.0000 fy=128.5000 velx=0.0000 vely=9.5000 state=3 score=6 powerup=-1 inair=1
 O noncol=3 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S done ch=1
+S play sfx/packs/Classic/jump.wav ch=0
 R calls=66 last=390648507
 F 2243 gameplay
 G mode=0 gameover=0 winner=-1
@@ -13007,6 +13104,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=302 iy=349 fx=302.4200 fy=349.8000 velx=4.0000 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=136 iy=390 fx=136.0000 fy=390.8000 velx=0.0000 vely=0.4000 state=3 score=6 powerup=-1 inair=0
 O noncol=3 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S play sfx/packs/Classic/jump.wav ch=1
 R calls=66 last=390648507
 F 2265 gameplay
 G mode=0 gameover=0 winner=-1
@@ -13115,6 +13213,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=374 iy=256 fx=374.4200 fy=256.2000 velx=4.0000 vely=-1.4000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=136 iy=390 fx=136.0000 fy=390.8000 velx=0.0000 vely=0.4000 state=3 score=6 powerup=-1 inair=0
 O noncol=3 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S done ch=0
 R calls=66 last=390648507
 F 2283 gameplay
 G mode=0 gameover=0 winner=-1
@@ -13193,6 +13292,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=426 iy=253 fx=426.4200 fy=253.8000 velx=4.0000 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=136 iy=390 fx=136.0000 fy=390.8000 velx=0.0000 vely=0.4000 state=3 score=6 powerup=-1 inair=0
 O noncol=3 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S play sfx/packs/Classic/jump.wav ch=0
 R calls=66 last=390648507
 F 2296 gameplay
 G mode=0 gameover=0 winner=-1
@@ -13247,6 +13347,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=462 iy=190 fx=462.4200 fy=190.8000 velx=4.0000 vely=-5.0000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=136 iy=390 fx=136.0000 fy=390.8000 velx=0.0000 vely=0.4000 state=3 score=6 powerup=-1 inair=0
 O noncol=3 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S done ch=1
 R calls=66 last=390648507
 F 2305 gameplay
 G mode=0 gameover=0 winner=-1
@@ -13433,6 +13534,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=577 iy=198 fx=577.4202 fy=198.8000 velx=2.6200 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=136 iy=390 fx=136.0000 fy=390.8000 velx=0.0000 vely=0.4000 state=3 score=6 powerup=-1 inair=0
 O noncol=3 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S done ch=0
 R calls=66 last=390648507
 F 2336 gameplay
 G mode=0 gameover=0 winner=-1
@@ -13553,6 +13655,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=582 iy=189 fx=582.7802 fy=189.8000 velx=-3.0000 vely=-8.6000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=136 iy=390 fx=136.0000 fy=390.8000 velx=0.0000 vely=0.4000 state=3 score=6 powerup=-1 inair=0
 O noncol=3 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S play sfx/packs/Classic/jump.wav ch=0
 R calls=66 last=390648507
 F 2356 gameplay
 G mode=0 gameover=0 winner=-1
@@ -13667,6 +13770,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=507 iy=96 fx=507.2802 fy=96.2000 velx=-4.0000 vely=0.7000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=136 iy=390 fx=136.0000 fy=390.8000 velx=0.0000 vely=0.4000 state=3 score=6 powerup=-1 inair=0
 O noncol=3 obj0=0 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S play sfx/packs/Classic/bump.wav ch=1
 R calls=66 last=390648507
 F 2375 gameplay
 G mode=0 gameover=0 winner=-1
@@ -13709,6 +13813,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=479 iy=109 fx=479.2802 fy=109.5000 velx=-4.0000 vely=3.5000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=136 iy=390 fx=136.0000 fy=390.8000 velx=0.0000 vely=0.4000 state=3 score=6 powerup=-1 inair=0
 O noncol=3 obj0=1 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S play sfx/packs/Classic/sprout.wav ch=2
 R calls=67 last=1437738935
 F 2382 gameplay
 G mode=0 gameover=0 winner=-1
@@ -13751,6 +13856,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=451 iy=134 fx=451.2802 fy=134.8000 velx=-4.0000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=136 iy=390 fx=136.0000 fy=390.8000 velx=0.0000 vely=0.4000 state=3 score=6 powerup=-1 inair=0
 O noncol=3 obj0=1 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S done ch=1
 R calls=67 last=1437738935
 F 2389 gameplay
 G mode=0 gameover=0 winner=-1
@@ -13793,6 +13899,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=423 iy=134 fx=423.2802 fy=134.8000 velx=-4.0000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=136 iy=390 fx=136.0000 fy=390.8000 velx=0.0000 vely=0.4000 state=3 score=6 powerup=-1 inair=0
 O noncol=3 obj0=1 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S done ch=0
 R calls=67 last=1437738935
 F 2396 gameplay
 G mode=0 gameover=0 winner=-1
@@ -13919,6 +14026,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=340 iy=176 fx=340.9601 fy=176.8000 velx=-3.5800 vely=6.0000 state=3 score=10 powerup=-1 inair=1
 P id=1 team=1 ix=136 iy=390 fx=136.0000 fy=390.8000 velx=0.0000 vely=0.4000 state=3 score=6 powerup=-1 inair=0
 O noncol=3 obj0=1 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S done ch=2
 R calls=67 last=1437738935
 F 2417 gameplay
 G mode=0 gameover=0 winner=-1
@@ -14123,6 +14231,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=336 iy=422 fx=336.4803 fy=422.8000 velx=2.5000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=136 iy=390 fx=136.0000 fy=390.8000 velx=0.0000 vely=0.4000 state=3 score=6 powerup=-1 inair=0
 O noncol=3 obj0=1 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S play sfx/packs/Classic/skid.wav ch=0
 R calls=67 last=1437738935
 F 2451 gameplay
 G mode=0 gameover=0 winner=-1
@@ -14153,6 +14262,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=341 iy=422 fx=341.4803 fy=422.8000 velx=-0.0000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=136 iy=390 fx=136.0000 fy=390.8000 velx=0.0000 vely=0.4000 state=3 score=6 powerup=-1 inair=0
 O noncol=3 obj0=1 obj1=0 obj2=0 ec0=0 ec1=1 ec2=4
+S stop sfx/packs/Classic/skid.wav
 R calls=67 last=1437738935
 F 2456 gameplay
 G mode=0 gameover=0 winner=-1
@@ -14243,6 +14353,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=299 iy=422 fx=299.9803 fy=422.8000 velx=-2.5000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=136 iy=390 fx=136.0000 fy=390.8000 velx=0.0000 vely=0.4000 state=3 score=6 powerup=-1 inair=0
 O noncol=3 obj0=1 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S play sfx/packs/Classic/skid.wav ch=0
 R calls=67 last=1437738935
 F 2471 gameplay
 G mode=0 gameover=0 winner=-1
@@ -14273,6 +14384,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=294 iy=422 fx=294.9803 fy=422.8000 velx=0.0000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=136 iy=390 fx=136.0000 fy=390.8000 velx=0.0000 vely=0.4000 state=3 score=6 powerup=-1 inair=0
 O noncol=3 obj0=1 obj1=0 obj2=0 ec0=0 ec1=1 ec2=4
+S stop sfx/packs/Classic/skid.wav
 R calls=67 last=1437738935
 F 2476 gameplay
 G mode=0 gameover=0 winner=-1
@@ -14363,6 +14475,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=336 iy=422 fx=336.4803 fy=422.8000 velx=2.5000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=136 iy=390 fx=136.0000 fy=390.8000 velx=0.0000 vely=0.4000 state=3 score=6 powerup=-1 inair=0
 O noncol=3 obj0=1 obj1=0 obj2=0 ec0=0 ec1=0 ec2=4
+S play sfx/packs/Classic/skid.wav ch=0
 R calls=67 last=1437738935
 F 2491 gameplay
 G mode=0 gameover=0 winner=-1
@@ -14393,6 +14506,7 @@ G mode=0 gameover=0 winner=-1
 P id=0 team=0 ix=341 iy=422 fx=341.4803 fy=422.8000 velx=-0.0000 vely=0.4000 state=3 score=10 powerup=-1 inair=0
 P id=1 team=1 ix=136 iy=390 fx=136.0000 fy=390.8000 velx=0.0000 vely=0.4000 state=3 score=6 powerup=-1 inair=0
 O noncol=3 obj0=1 obj1=0 obj2=0 ec0=0 ec1=1 ec2=4
+S stop sfx/packs/Classic/skid.wav
 R calls=67 last=1437738935
 F 2496 gameplay
 G mode=0 gameover=0 winner=-1
