@@ -26,11 +26,11 @@ use crate::common::tile_types::{next_tile_type, prev_tile_type, TileType};
 use crate::common::tileset_manager::{CTileset, CTilesetManager};
 use crate::globals::*;
 use crate::smw::fps_limiter::FPSLimiter;
-use sdl2::sys::image::{IMG_Load, IMG_SavePNG};
+use sdl2::sys::image::IMG_SavePNG;
 use sdl2::sys::SDL_KeyCode::*;
 use sdl2::sys::{
-    SDL_ConvertSurfaceFormat, SDL_CreateRGBSurface, SDL_Event, SDL_EventType, SDL_FillRect, SDL_FreeSurface, SDL_GetError, SDL_GetScancodeFromKey, SDL_KeyCode,
-    SDL_Keycode, SDL_MapRGB, SDL_PixelFormatEnum, SDL_PollEvent, SDL_Rect, SDL_SetColorKey, SDL_Surface, SDL_UpperBlit, SDL_UpperBlitScaled, SDL_bool, SDL_Keymod,
+    SDL_Event, SDL_EventType, SDL_FillRect, SDL_GetError, SDL_GetScancodeFromKey, SDL_KeyCode,
+    SDL_Keycode, SDL_MapRGB, SDL_PollEvent, SDL_Rect, SDL_SetColorKey, SDL_Surface, SDL_UpperBlit, SDL_bool, SDL_Keymod,
     SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT,
 };
 use std::ffi::{CStr, CString};
@@ -203,7 +203,7 @@ pub struct MapPlatform {
     pub iDrawLayer: i16,
 
     pub rIcon: [SDL_Rect; 2],
-    pub preview: *mut SDL_Surface,
+    pub preview: gfxSprite,
     pub _alias: Aliased,
 }
 
@@ -223,18 +223,18 @@ impl MapPlatform {
             fRadiusY: 0.0,
             iDrawLayer: 0,
             rIcon: [SDL_Rect { x: 0, y: 0, w: 0, h: 0 }; 2],
-            preview: null_mut(),
+            preview: gfxSprite::new(),
         }
     }
 
     pub fn update_preview(&mut self) {
         unsafe {
-            if self.preview.is_null() {
-                self.preview = SDL_CreateRGBSurface((*screen).flags, 160, 120, (*(*screen).format).BitsPerPixel as i32, 0, 0, 0, 0);
-                SDL_SetColorKey(self.preview, SDL_bool::SDL_TRUE as i32, SDL_MapRGB((*self.preview).format, 255, 0, 255));
+            if self.preview.get_surface().is_null() {
+                self.preview = gfxSprite::blank(160, 120);
+                SDL_SetColorKey(self.preview.get_surface(), SDL_bool::SDL_TRUE as i32, SDL_MapRGB((*self.preview.get_surface()).format, 255, 0, 255));
             }
 
-            SDL_FillRect(self.preview, null(), SDL_MapRGB((*self.preview).format, 255, 0, 255));
+            SDL_FillRect(self.preview.get_surface(), null(), SDL_MapRGB((*self.preview.get_surface()).format, 255, 0, 255));
 
             for iPlatformX in 0..MAPWIDTH as i16 {
                 for iPlatformY in 0..MAPHEIGHT as i16 {
@@ -243,25 +243,17 @@ impl MapPlatform {
                     let mut bltrect = SDL_Rect { x: (iPlatformX as i32) << 3, y: (iPlatformY as i32) << 3, w: THUMBTILESIZE, h: THUMBTILESIZE };
                     if tile.iID >= 0 {
                         let src = g_tilesetmanager.rect(2, tile.iCol, tile.iRow);
-                        SDL_UpperBlit(g_tilesetmanager.tileset(tile.iID as usize).surface(2), src, self.preview, &mut bltrect);
+                        SDL_UpperBlit(g_tilesetmanager.tileset(tile.iID as usize).surface(2), src, self.preview.get_surface(), &mut bltrect);
                     } else if tile.iID as i32 == TILESETANIMATED {
                         let src = g_tilesetmanager.rect(2, (tile.iCol as i32 * 4) as i16, tile.iRow);
-                        SDL_UpperBlit(rm.spr_tileanimation[2].get_surface(), src, self.preview, &mut bltrect);
+                        rm.spr_tileanimation[2].draw_src_to(&*src, self.preview.get_surface(), &bltrect);
                     } else if tile.iID as i32 == TILESETUNKNOWN {
                         //Draw unknown tile
                         let src = g_tilesetmanager.rect(2, 0, 0);
-                        SDL_UpperBlit(rm.spr_unknowntile[2].get_surface(), src, self.preview, &mut bltrect);
+                        rm.spr_unknowntile[2].draw_src_to(&*src, self.preview.get_surface(), &bltrect);
                     }
                 }
             }
-        }
-    }
-}
-
-impl Drop for MapPlatform {
-    fn drop(&mut self) {
-        if !self.preview.is_null() {
-            unsafe { SDL_FreeSurface(self.preview) };
         }
     }
 }
@@ -282,9 +274,9 @@ pub fn check_key(keystate: *const u8, key: SDL_KeyCode) -> bool {
     unsafe { *keystate.add(SDL_GetScancodeFromKey(key as SDL_Keycode) as usize) != 0 }
 }
 
-pub static mut s_platform: *mut SDL_Surface = null_mut();
-pub static mut s_platformpathbuttons: *mut SDL_Surface = null_mut();
-pub static mut s_maphazardbuttons: *mut SDL_Surface = null_mut();
+pub static mut s_platform: Global<gfxSprite> = Global::uninit();
+pub static mut s_platformpathbuttons: Global<gfxSprite> = Global::uninit();
+pub static mut s_maphazardbuttons: Global<gfxSprite> = Global::uninit();
 
 pub static mut viewblocks: bool = true;
 pub static mut view_only_layer: bool = false;
@@ -314,11 +306,6 @@ pub fn clear_tileset_tile(tile: &mut TilesetTile) {
 }
 
 pub static mut g_fFullScreen: bool = false;
-
-fn load_surface(path: &str) -> *mut SDL_Surface {
-    let c = CString::new(path).unwrap();
-    unsafe { IMG_Load(c.as_ptr()) }
-}
 
 fn sdl_error() -> String {
     unsafe { CStr::from_ptr(SDL_GetError()).to_string_lossy().into_owned() }
@@ -416,9 +403,9 @@ pub fn inner_main() {
 
         rm.spr_eyecandy = SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_eyecandy.png")).create();
 
-        s_platform = load_surface(&convert_path("gfx/leveleditor/leveleditor_platform.png"));
-        s_platformpathbuttons = load_surface(&convert_path("gfx/leveleditor/leveleditor_pathtype_buttons.png"));
-        s_maphazardbuttons = load_surface(&convert_path("gfx/leveleditor/leveleditor_maphazard_buttons.png"));
+        s_platform.init(SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_platform.png")).create());
+        s_platformpathbuttons.init(SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_pathtype_buttons.png")).create());
+        s_maphazardbuttons.init(SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_maphazard_buttons.png")).create());
 
         rm.spr_warps[0] = SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_warp.png")).create();
         rm.spr_warps[1] = SpriteBuilder::new(convert_path("gfx/leveleditor/leveleditor_warp_preview.png")).create();
@@ -486,17 +473,7 @@ pub fn inner_main() {
             rm.spr_hazard_flame[i].set_wrap((640 >> i) as i16);
             rm.spr_hazard_pirhanaplant[i].set_wrap((640 >> i) as i16);
         }
-        if SDL_SetColorKey(s_platform, SDL_bool::SDL_TRUE as i32, SDL_MapRGB((*s_platform).format, 255, 0, 255)) < 0 {
-            println!("\n ERROR: Couldn't set ColorKey + RLE: {}", sdl_error());
-        }
 
-        if SDL_SetColorKey(s_platformpathbuttons, SDL_bool::SDL_TRUE as i32, SDL_MapRGB((*s_platformpathbuttons).format, 255, 0, 255)) < 0 {
-            println!("\n ERROR: Couldn't set ColorKey + RLE: {}", sdl_error());
-        }
-
-        if SDL_SetColorKey(s_maphazardbuttons, SDL_bool::SDL_TRUE as i32, SDL_MapRGB((*s_maphazardbuttons).format, 255, 0, 255)) < 0 {
-            println!("\n ERROR: Couldn't set ColorKey + RLE: {}", sdl_error());
-        }
 
         rm.menu_font_small = gfxFont::from_path(&convert_path("gfx/packs/Classic/fonts/font_small.png"));
         rm.menu_font_large = gfxFont::from_path(&convert_path("gfx/packs/Classic/fonts/font_large.png"));
@@ -2144,8 +2121,8 @@ pub fn editor_platforms_draw_background_section(src_area: &SDL_Rect, dst_area: &
             let w = (dst_area.w - offset_x).min(src_area.w);
 
             let src = rect(src_area.x, src_area.y, w, h);
-            let mut dst = rect(dst_area.x + offset_x, dst_area.y + offset_y, w, h);
-            unsafe { SDL_UpperBlit(s_platform, &src, screen, &mut dst) };
+            let dst = rect(dst_area.x + offset_x, dst_area.y + offset_y, w, h);
+            unsafe { s_platform.draw_src_to(&src, screen, &dst) };
 
             offset_x += w;
         }
@@ -2627,12 +2604,12 @@ pub fn editor_platforms() -> i32 {
             for iPlatform in 0..g_iNumPlatforms as usize {
                 let p = &mut g_Platforms[iPlatform];
                 let src = p.rIcon[0];
-                SDL_UpperBlit(s_platform, &src, screen, &mut p.rIcon[1]);
+                s_platform.draw_src_to(&src, screen, &p.rIcon[1]);
             }
 
             if (g_iNumPlatforms as i32) < MAX_PLATFORMS && PLATFORM_EDIT_STATE_SELECT == iPlatformEditState {
                 let src = rNewButton[0];
-                SDL_UpperBlit(s_platform, &src, screen, &mut rNewButton[1]);
+                s_platform.draw_src_to(&src, screen, &rNewButton[1]);
             }
 
             if PLATFORM_EDIT_STATE_MOVE == iPlatformEditState {
@@ -2652,9 +2629,9 @@ pub fn editor_platforms() -> i32 {
             //Draw path options
             for iType in 0..3usize {
                 let s0 = rTypeButton[iType][0];
-                SDL_UpperBlit(s_platformpathbuttons, &s0, screen, &mut rTypeButton[iType][1]);
+                s_platformpathbuttons.draw_src_to(&s0, screen, &rTypeButton[iType][1]);
                 let s2 = rTypeButton[iType][2];
-                SDL_UpperBlit(s_platformpathbuttons, &s2, screen, &mut rTypeButton[iType][3]);
+                s_platformpathbuttons.draw_src_to(&s2, screen, &rTypeButton[iType][3]);
 
                 rm.menu_font_large.draw(rTypeButton[iType][1].x + 36, rTypeButton[iType][1].y + 6, szPathNames[iType]);
             }
@@ -2671,11 +2648,11 @@ pub fn editor_platforms() -> i32 {
 
                 let rVel = [rect(0, 400, 244, 17), rect(198, 10, 244, 17)];
                 let mut d = rVel[1];
-                SDL_UpperBlit(s_platform, &rVel[0], screen, &mut d);
+                s_platform.draw_src_to(&rVel[0], screen, &d);
 
                 let rMarker = [rect(244, 400, 8, 18), rect(iVelMarkerX as i32, 10, 8, 18)];
                 let mut d = rMarker[1];
-                SDL_UpperBlit(s_platform, &rMarker[0], screen, &mut d);
+                s_platform.draw_src_to(&rMarker[0], screen, &d);
 
                 rm.menu_font_small.draw_right_justified(198, 10, "Counter");
                 rm.menu_font_small.draw(442, 10, "Clockwise");
@@ -2684,11 +2661,11 @@ pub fn editor_platforms() -> i32 {
 
                 let rVel = [rect(12, 384, 172, 13), rect(234, 10, 172, 13)];
                 let mut d = rVel[1];
-                SDL_UpperBlit(s_platform, &rVel[0], screen, &mut d);
+                s_platform.draw_src_to(&rVel[0], screen, &d);
 
                 let rMarker = [rect(184, 384, 8, 16), rect(iVelMarkerX as i32, 8, 8, 16)];
                 let mut d = rMarker[1];
-                SDL_UpperBlit(s_platform, &rMarker[0], screen, &mut d);
+                s_platform.draw_src_to(&rMarker[0], screen, &d);
 
                 rm.menu_font_small.draw_right_justified(234, 10, "Slow");
                 rm.menu_font_small.draw(406, 10, "Fast");
@@ -2753,8 +2730,8 @@ fn path_type_from(v: u8) -> PlatformPathType {
 pub fn display_platform_preview(iPlatformId: i16, iMouseX: i16, iMouseY: i16) {
     unsafe {
         let srcRect = rect(0, 0, 160, 120);
-        let mut dstRect = rect(iMouseX as i32, iMouseY as i32, 160, 120);
-        SDL_UpperBlit(g_Platforms[iPlatformId as usize].preview, &srcRect, screen, &mut dstRect);
+        let dstRect = rect(iMouseX as i32, iMouseY as i32, 160, 120);
+        g_Platforms[iPlatformId as usize].preview.draw_src_to(&srcRect, screen, &dstRect);
     }
 }
 
@@ -3237,18 +3214,18 @@ pub fn editor_maphazards() -> i32 {
 
         if MAPHAZARD_EDIT_STATE_SELECT == iEditState {
             let s = rBackground[0];
-            SDL_UpperBlit(s_platform, &s, screen, &mut rBackground[1]);
+            s_platform.draw_src_to(&s, screen, &rBackground[1]);
 
             rm.menu_font_small.draw(0, 480 - rm.menu_font_small.get_height(), "Map Hazard Mode: [esc] Exit");
 
             for iMapHazard in 0..g_map.maphazards.len() {
                 let s = rIconRects[iMapHazard][0];
-                SDL_UpperBlit(s_platform, &s, screen, &mut rIconRects[iMapHazard][1]);
+                s_platform.draw_src_to(&s, screen, &rIconRects[iMapHazard][1]);
             }
 
             if (g_map.maphazards.len() as i32) < MAXMAPHAZARDS {
                 let s = rNewButton[0];
-                SDL_UpperBlit(s_platform, &s, screen, &mut rNewButton[1]);
+                s_platform.draw_src_to(&s, screen, &rNewButton[1]);
             }
 
             rm.menu_font_small.draw_centered(320, rBackground[1].y - 18, "Hazards");
@@ -3256,9 +3233,9 @@ pub fn editor_maphazards() -> i32 {
             //Draw map hazard options
             for iType in 0..8usize {
                 let s0 = rTypeButton[iType][0];
-                SDL_UpperBlit(s_maphazardbuttons, &s0, screen, &mut rTypeButton[iType][1]);
+                s_maphazardbuttons.draw_src_to(&s0, screen, &rTypeButton[iType][1]);
                 let s2 = rTypeButton[iType][2];
-                SDL_UpperBlit(s_maphazardbuttons, &s2, screen, &mut rTypeButton[iType][3]);
+                s_maphazardbuttons.draw_src_to(&s2, screen, &rTypeButton[iType][3]);
 
                 rm.menu_font_large.draw(rTypeButton[iType][1].x + 36, rTypeButton[iType][1].y + 6, szHazardNames[iType]);
             }
@@ -3330,11 +3307,11 @@ pub fn draw_map_hazard_controls(hazard: &MapHazard) {
 
             let rVel = [rect(0, 400, 244, 17), rect(198, 420, 244, 17)];
             let mut d = rVel[1];
-            SDL_UpperBlit(s_platform, &rVel[0], screen, &mut d);
+            s_platform.draw_src_to(&rVel[0], screen, &d);
 
             let rMarker = [rect(244, 400, 8, 18), rect(iVelMarkerX as i32, 418, 8, 18)];
             let mut d = rMarker[1];
-            SDL_UpperBlit(s_platform, &rMarker[0], screen, &mut d);
+            s_platform.draw_src_to(&rMarker[0], screen, &d);
 
             if hazard.itype == 2 {
                 rm.menu_font_small.draw_right_justified(190, 420, "Left");
@@ -3351,11 +3328,11 @@ pub fn draw_map_hazard_controls(hazard: &MapHazard) {
 
             let rVel = [rect(0, 384, 184, 13), rect(198, 390, 184, 13)];
             let mut d = rVel[1];
-            SDL_UpperBlit(s_platform, &rVel[0], screen, &mut d);
+            s_platform.draw_src_to(&rVel[0], screen, &d);
 
             let rMarker = [rect(244, 400, 8, 18), rect(iFreqMarkerX as i32, 388, 8, 18)];
             let mut d = rMarker[1];
-            SDL_UpperBlit(s_platform, &rMarker[0], screen, &mut d);
+            s_platform.draw_src_to(&rMarker[0], screen, &d);
 
             rm.menu_font_small.draw_right_justified(190, 390, "More Frequent");
             rm.menu_font_small.draw(388, 390, "Less Frequent");
@@ -3942,7 +3919,7 @@ pub fn editor_tiletype() -> i32 {
 }
 
 pub static mut iPage: i16 = 0;
-pub static mut sBackgrounds: [*mut SDL_Surface; 16] = [null_mut(); 16];
+pub static mut sBackgrounds: Global<[gfxSprite; 16]> = Global::uninit();
 pub static mut rSrc: SDL_Rect = SDL_Rect { x: 0, y: 0, w: 160, h: 120 };
 pub static mut rDst: [SDL_Rect; 16] = [SDL_Rect { x: 0, y: 0, w: 0, h: 0 }; 16];
 
@@ -3961,9 +3938,7 @@ pub fn init_editor_backgrounds() {
             }
         }
 
-        for iSurface in 0..16usize {
-            sBackgrounds[iSurface] = SDL_CreateRGBSurface((*screen).flags, 160, 120, 16, 0, 0, 0, 0);
-        }
+        sBackgrounds.init(std::array::from_fn(|_| gfxSprite::blank(160, 120)));
 
         load_background_page(iPage);
 
@@ -3973,7 +3948,7 @@ pub fn init_editor_backgrounds() {
 
 unsafe fn free_background_surfaces() {
     for iSurface in 0..16usize {
-        SDL_FreeSurface(sBackgrounds[iSurface]);
+        sBackgrounds[iSurface] = gfxSprite::new();
     }
 }
 
@@ -4054,7 +4029,7 @@ pub fn editor_backgrounds() -> i32 {
             }
 
             let s = rSrc;
-            SDL_UpperBlit(sBackgrounds[iBackground as usize], &s, screen, &mut rDst[iBackground as usize]);
+            sBackgrounds[iBackground as usize].draw_src_to(&s, screen, &rDst[iBackground as usize]);
         }
 
         rm.menu_font_small.draw(0, 480 - rm.menu_font_small.get_height() * 2, "[Page Up] next page, [Page Down] previous page");
@@ -4247,50 +4222,28 @@ pub fn editor_animation() -> i32 {
 pub fn load_background_page(iPage_: i16) {
     unsafe {
         let srcRectBackground = rect(0, 0, 640, 480);
-        let mut dstRectBackground = rect(0, 0, 160, 120);
+        let dstRectBackground = rect(0, 0, 160, 120);
 
         for iIndex in 0..16i32 {
             if iPage_ as i32 * 16 + iIndex >= backgroundlist.count() as i32 {
                 break;
             }
 
-            let szFileName = backgroundlist.at((iPage_ as i32 * 16 + iIndex) as usize).to_string_lossy().into_owned();
-
-            if szFileName.is_empty() {
+            let path = backgroundlist.at((iPage_ as i32 * 16 + iIndex) as usize);
+            if path.as_os_str().is_empty() {
                 return;
             }
 
-            let temp = load_surface(&szFileName);
+            let temp = SpriteBuilder::new(path).without_color_key().create();
 
-            if temp.is_null() {
-                println!("ERROR: Couldn't load thumbnail background: {}", sdl_error());
-                return;
-            }
+            SDL_FillRect(sBackgrounds[iIndex as usize].get_surface(), null(), 0x0);
 
-            let sBackground = SDL_ConvertSurfaceFormat(temp, SDL_PixelFormatEnum::SDL_PIXELFORMAT_ARGB8888 as u32, 0);
-            SDL_FreeSurface(temp);
-
-            if sBackground.is_null() {
-                println!("ERROR: Couldn't convert thumbnail background to display pixel format: {}", sdl_error());
-                return;
-            }
-
-            SDL_FillRect(sBackgrounds[iIndex as usize], null(), 0x0);
-
-            if (*sBackground).w != 640 || (*sBackground).h != 480 {
-                println!("WARNING: Background {} is {}x{} but must be 640x480. Skipping.", szFileName, (*sBackground).w, (*sBackground).h);
-
-                SDL_FreeSurface(sBackground);
+            if temp.get_width() != 640 || temp.get_height() != 480 {
+                println!("WARNING: Background {} is {}x{} but must be 640x480. Skipping.", path.display(), temp.get_width(), temp.get_height());
                 continue;
             }
 
-            if SDL_UpperBlitScaled(sBackground, &srcRectBackground, sBackgrounds[iIndex as usize], &mut dstRectBackground) < 0 {
-                eprintln!("SDL_SCALEBLIT error: {}", sdl_error());
-                SDL_FreeSurface(sBackground);
-                return;
-            }
-
-            SDL_FreeSurface(sBackground);
+            temp.draw_stretch(&srcRectBackground, sBackgrounds[iIndex as usize].get_surface(), &dstRectBackground);
         }
     }
 }
@@ -5036,9 +4989,9 @@ pub fn takescreenshot() {
             rm.spr_platformpath.set_wrap((640 >> iScreenshotSize) as i16);
 
             //Create new screenshot surface
-            let screenshot = SDL_CreateRGBSurface((*old_screen).flags, iTileSize as i32 * 20, iTileSize as i32 * 15, (*(*old_screen).format).BitsPerPixel as i32, 0, 0, 0, 0);
-            blitdest = screenshot;
-            screen = screenshot;
+            let screenshot = gfxSprite::blank(iTileSize as u32 * 20, iTileSize as u32 * 15);
+            blitdest = screenshot.get_surface();
+            screen = screenshot.get_surface();
 
             //Draw map to screenshot
             drawmap(true, iTileSize, false);
@@ -5081,9 +5034,7 @@ pub fn takescreenshot() {
 
             szSaveFile.push_str(".png");
             let c = CString::new(convert_path(&szSaveFile)).unwrap();
-            IMG_SavePNG(screenshot, c.as_ptr());
-
-            SDL_FreeSurface(screenshot);
+            IMG_SavePNG(screenshot.get_surface(), c.as_ptr());
 
             println!("Screenshot taken: {}", szSaveFile);
 
