@@ -40,6 +40,15 @@ impl TourStopVec {
     pub fn clear(&mut self) {
         self.len = 0;
     }
+    /// `erase(begin() + i)`: shifts the live elements down; the slot past the new end keeps its old pointer.
+    pub fn erase(&mut self, i: usize) {
+        assert!(i < self.len);
+        for k in i..self.len - 1 {
+            self.storage[k] = self.storage[k + 1];
+        }
+        self.len -= 1;
+    }
+
     pub fn push(&mut self, ts: Ptr<crate::common::world_tour_stop::TourStop>) {
         if self.len < self.storage.len() {
             self.storage[self.len] = ts;
