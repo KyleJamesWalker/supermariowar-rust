@@ -6,7 +6,7 @@ use crate::common::util::sdl_helpers::SdlSurfacePtr;
 use crate::globals::*;
 use sdl2::sys::image::IMG_Load;
 use sdl2::sys::{
-    SDL_BlendMode, SDL_ConvertSurface, SDL_GetError, SDL_MapRGB, SDL_Rect, SDL_SetColorKey,
+    SDL_BlendMode, SDL_ConvertSurface, SDL_CreateRGBSurfaceWithFormat, SDL_GetError, SDL_MapRGB, SDL_Rect, SDL_SetColorKey,
     SDL_SetSurfaceAlphaMod, SDL_SetSurfaceBlendMode, SDL_SetSurfaceRLE, SDL_Surface, SDL_UpperBlit,
     SDL_UpperBlitScaled,
 };
@@ -112,6 +112,47 @@ impl gfxSprite {
     /// `gfxSprite(SdlSurfacePtr image, wrap = 640)`
     pub fn from_surface(image: SdlSurfacePtr, wrap: Option<i32>) -> Self {
         gfxSprite { _alias: Aliased::new(), m_picture: image, m_wrap_x: wrap }
+    }
+
+    /// `gfxSprite::blank(w, h)`: a screen-format surface with blending off.
+    pub fn blank(w: u32, h: u32) -> Self {
+        unsafe {
+            let sf = (*screen).format;
+            let surf = SdlSurfacePtr::new(SDL_CreateRGBSurfaceWithFormat(0x0, w as i32, h as i32, (*sf).BitsPerPixel as i32, (*sf).format));
+            if surf.is_null() {
+                throw(format!("Couldn't create blank surface: {}", sdl_error()));
+            }
+
+            if SDL_SetSurfaceBlendMode(surf.get(), SDL_BlendMode::SDL_BLENDMODE_NONE) < 0 {
+                throw(format!("Couldn't set blend mode for blank surface: {}", sdl_error()));
+            }
+
+            Self::from_surface(surf, Some(640))
+        }
+    }
+
+    /// `draw(SDL_Surface* dst, const SDL_Rect& dstRect)`: the whole sprite onto `dst`, no camera shake.
+    pub fn draw_to(&self, dst: *mut SDL_Surface, dstRect: &SDL_Rect) {
+        self.blit(null(), dst, dstRect.x, dstRect.y);
+    }
+
+    fn blit(&self, srcRect: *const SDL_Rect, dst: *mut SDL_Surface, dstPosX: i32, dstPosY: i32) {
+        assert!(!self.m_picture.is_null());
+
+        unsafe {
+            let mut dstRect = SDL_Rect { x: dstPosX, y: dstPosY, w: 0, h: 0 };
+            blit_surface(self.m_picture.get(), srcRect, dst, &mut dstRect);
+
+            if let Some(wrap_x) = self.m_wrap_x {
+                if dstRect.x + self.get_width() >= wrap_x {
+                    dstRect = SDL_Rect { x: dstPosX - wrap_x, y: dstPosY, w: 0, h: 0 }; // SDL2 modifies the dst rect
+                    blit_surface(self.m_picture.get(), srcRect, dst, &mut dstRect);
+                } else if dstRect.x < 0 {
+                    dstRect = SDL_Rect { x: dstPosX + wrap_x, y: dstPosY, w: 0, h: 0 }; // SDL2 modifies the dst rect
+                    blit_surface(self.m_picture.get(), srcRect, dst, &mut dstRect);
+                }
+            }
+        }
     }
 
     /// Draw the whole sprite at the given coordinate.

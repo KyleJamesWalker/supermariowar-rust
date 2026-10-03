@@ -14,7 +14,7 @@ use crate::smw::objects::moving::mo_pirhana_plant::MO_PirhanaPlant;
 use crate::smw::objects::overmap::over_map_object::io_over_map_object_draw_offset;
 use crate::smw::objects::overmap::wo_orbit_hazard::OMO_OrbitHazard;
 use crate::smw::objects::overmap::wo_straight_path_hazard::OMO_StraightPathHazard;
-use sdl2::sys::{SDL_CreateRGBSurface, SDL_Delay, SDL_Rect, SDL_Surface, SDL_UpperBlit};
+use sdl2::sys::{SDL_Delay, SDL_Rect};
 
 fn small_delay() {
     unsafe { SDL_Delay(10) };
@@ -32,9 +32,9 @@ pub struct MI_MapPreview {
 
     pub spr: Ptr<gfxSprite>,
 
-    pub surfaceMapBackground: *mut SDL_Surface,
-    pub surfaceMapBlockLayer: *mut SDL_Surface,
-    pub surfaceMapForeground: *mut SDL_Surface,
+    pub surfaceMapBackground: gfxSprite,
+    pub surfaceMapBlockLayer: gfxSprite,
+    pub surfaceMapForeground: gfxSprite,
     pub rectDst: SDL_Rect,
 
     pub iWidth: i16,
@@ -47,13 +47,9 @@ crate::impl_base!(MI_MapPreview => ui_control: UI_Control);
 
 impl MI_MapPreview {
     pub fn new(nspr: Ptr<gfxSprite>, x: i16, y: i16, width: i16, indent: i16) -> Self {
-        let (surfaceMapBackground, surfaceMapBlockLayer, surfaceMapForeground) = unsafe {
-            (
-                SDL_CreateRGBSurface(0, App::screenWidth / 2, App::screenHeight / 2, 16, 0, 0, 0, 0),
-                SDL_CreateRGBSurface(0, App::screenWidth / 2, App::screenHeight / 2, 16, 0, 0, 0, 0),
-                SDL_CreateRGBSurface(0, App::screenWidth / 2, App::screenHeight / 2, 16, 0, 0, 0, 0),
-            )
-        };
+        let surfaceMapBackground = gfxSprite::blank((App::screenWidth / 2) as u32, (App::screenHeight / 2) as u32);
+        let surfaceMapBlockLayer = gfxSprite::blank((App::screenWidth / 2) as u32, (App::screenHeight / 2) as u32);
+        let surfaceMapForeground = gfxSprite::blank((App::screenWidth / 2) as u32, (App::screenHeight / 2) as u32);
 
         let mut this = MI_MapPreview {
             ui_control: UI_Control::new(x, y),
@@ -109,11 +105,11 @@ impl MI_MapPreview {
 
             self.rectDst.x = bx + 16;
 
-            SDL_UpperBlit(self.surfaceMapBackground, std::ptr::null(), blitdest, &mut self.rectDst);
+            self.surfaceMapBackground.draw_to(blitdest, &self.rectDst);
 
             g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 0);
 
-            SDL_UpperBlit(self.surfaceMapBlockLayer, std::ptr::null(), blitdest, &mut self.rectDst);
+            self.surfaceMapBlockLayer.draw_to(blitdest, &self.rectDst);
 
             g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 1);
 
@@ -138,7 +134,7 @@ impl MI_MapPreview {
             g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 2);
 
             if game_values.toplayer {
-                SDL_UpperBlit(self.surfaceMapForeground, std::ptr::null(), blitdest, &mut self.rectDst);
+                self.surfaceMapForeground.draw_to(blitdest, &self.rectDst);
             }
 
             g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 3);
@@ -163,19 +159,19 @@ impl MI_MapPreview {
             load_current_map_background();
             small_delay();
 
-            g_map.pre_draw_preview_background_spr(&rm.spr_background, self.surfaceMapBackground, false);
+            g_map.pre_draw_preview_background_spr(&rm.spr_background, self.surfaceMapBackground.get_surface(), false);
             small_delay();
 
-            g_map.pre_draw_preview_blocks(self.surfaceMapBlockLayer, false);
+            g_map.pre_draw_preview_blocks(self.surfaceMapBlockLayer.get_surface(), false);
             small_delay();
 
-            g_map.pre_draw_preview_map_items(self.surfaceMapBackground, false);
+            g_map.pre_draw_preview_map_items(self.surfaceMapBackground.get_surface(), false);
             small_delay();
 
-            g_map.pre_draw_preview_foreground(self.surfaceMapForeground, false);
+            g_map.pre_draw_preview_foreground(self.surfaceMapForeground.get_surface(), false);
             small_delay();
 
-            g_map.pre_draw_preview_warps(if game_values.toplayer { self.surfaceMapForeground } else { self.surfaceMapBackground }, false);
+            g_map.pre_draw_preview_warps(if game_values.toplayer { self.surfaceMapForeground.get_surface() } else { self.surfaceMapBackground.get_surface() }, false);
             small_delay();
 
             load_map_hazards(true);
