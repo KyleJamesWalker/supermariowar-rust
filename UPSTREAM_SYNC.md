@@ -33,7 +33,7 @@ How work flows:
 | Tileset manager series | `f56607a1`, `a2541fcc`, `00cffef9`, `c130b990`, `b6f985ec`, `fa3e6a22`, `981b56c3`, `4c6d805a`, `559a4401`, `cfcbbcb2` + `f56f8ed1`, `c27115b5`, `eaaea5e3` + `19dcc293` | foundation | done: `41016dc`. The 504-map dump now matches the new C++ on every map |
 | `servers.toml` and interop scripts | `efe2e390` | foundation | done: `6e8672e` |
 | Binary strings, file errors | `28e9e673` + `4b965424`, `277ee170` | foundation | done: `ee4dcb2` |
-| Tour-stop settings fallback | `8faf76bc` | foundation | done: `b249b58`. Coverage replay pending (coordinator) |
+| Tour-stop settings fallback | `8faf76bc` | foundation | done: `b249b58`, gated green. Coverage pending: `flow_tour`, `flow_world` and `flow_tournament` with a non-default `options.bin` match before and after the port, so no played stop omits the changed settings. Waiting on foundation for a stop that does |
 | Error paths | `fc938877`, `b9bb1a85`, `d2ed0cd1` | foundation | `fc938877` level editor part done (`b765c64`). Rest todo |
 | Level editor: screenshot crash, editor-side gfx parts (with gfx) | `d3ad2cbb` | player | done: `21bdeac`. Screenshot PNG bytes still wait on `0124c1eb` |
 | Skin reload cache | `d70e4dc3` | player | done: `f7f6229` |
@@ -44,7 +44,7 @@ How work flows:
 | `gfx_smoke` C++ twin on the new API | | coordinator | done: `941ede6`. The twin and the Rust example write byte-identical BMPs |
 | Level editor nondeterminism root cause | | coordinator | done: `CMap::clearMap` leaves `MapBlock::iSettings` uninitialized and `g_map` is now allocated after `gfx_init`, so the harness hashed stale heap bytes. Both dumpers now hash only stored settings (`8a8d41d`, C++ `869d3c55`). 42/42 parallel runs agree |
 | Small structural leftovers | `53e65af9`, `b80e755e`, `6e36bd76`, `df5a85a6` | coordinator | optional |
-| 290-map sweep goldens, fresh-worktree verification, final summary | | coordinator | last |
+| 290-map sweep goldens, fresh-worktree verification, final summary | | coordinator | sweep goldens generated from the new C++ (`~/work/smw-upstream-goldens/golden_sweep`). At `b249b58` all 290 maps match. Final verification and summary last |
 
 Gate baseline: `ee4dcb2`. 20/20 tests pass, 43/43 game replays match, 12/12 editor dumps match (108/110 shots, 35/35 files). The two remaining shot differences are the world editor stage thumbnail (`5c979393`, gfx).
 
