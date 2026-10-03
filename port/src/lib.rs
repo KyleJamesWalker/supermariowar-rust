@@ -16,4 +16,5 @@
 pub mod globals;
 
 pub mod common;
+pub mod common_netplay;
 pub mod smw;

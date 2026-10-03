@@ -10,6 +10,7 @@ pub mod net;
 pub mod object_container;
 pub mod objectgame;
 pub mod objecthazard;
+pub mod platform;
 pub mod player;
 pub mod world;
 pub mod gamemodes;

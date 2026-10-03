@@ -223,6 +223,7 @@ pub use crate::smw::main::{blitdest, screen, x_shake, y_shake};
 pub fn init_globals() {
     crate::common::global::init_globals();
     crate::smw::world::init_globals();
+    crate::smw::net::init_globals();
 }
 
 #[cfg(test)]
