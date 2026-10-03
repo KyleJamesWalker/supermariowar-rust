@@ -5090,10 +5090,10 @@ pub fn takescreenshot() {
             SDL_FreeSurface(screenshot);
 
             println!("Screenshot taken: {}", szSaveFile);
-        }
 
-        screen = old_screen;
-        blitdest = screen;
+            screen = old_screen;
+            blitdest = screen;
+        }
     }
 }
 
