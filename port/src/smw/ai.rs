@@ -204,11 +204,8 @@ fn static_cast_gamemode<T: Any>() -> Ptr<T> {
     p
 }
 
-// After a wrap-around pushback (PlayerCollisions::handle_p2p_pushback) a player's ix can be about -632
-// when Think() runs, so the C++ indexes mapdatatop/blockdata/warpdata with x around -19 and reads
-// earlier CMap members. These helpers reproduce those reads from the clang arm64 CMap layout
-// (offsets measured with offsetof): mapdata 38, mapdatatop 7238, objectdata 7538 (MapBlock is 56
-// bytes), blockdata 24344, nospawn 26744, warpdata 36368. Padding bytes read as 0.
+// After a wrap pushback ix can be ~-632, so the C++ indexes g_map with x ~-19 and reads earlier CMap
+// members. These offsets are the clang arm64 CMap layout (offsetof); padding reads as 0.
 const CMAP_OFF_MAPDATA: i32 = 38;
 const CMAP_OFF_MAPDATATOP: i32 = 7238;
 const CMAP_OFF_OBJECTDATA: i32 = 7538;
@@ -267,8 +264,8 @@ unsafe fn ai_block_nonnull(x: i16, y: i16) -> bool {
     (0..8).any(|i| cmap_byte(off + i) != 0)
 }
 
-/// `g_map->checkforwarp(x1, x2, y, 2)`. Out of bounds, warpdata[x][y] lands in `nospawn`, whose bool
-/// bytes can never form direction 2, so the C++ returns false before touching warplocked/warpexits.
+/// `g_map->checkforwarp(x1, x2, y, 2)`. Out of bounds, warpdata lands in `nospawn`, whose bool bytes
+/// never form direction 2, so the C++ returns false.
 unsafe fn ai_checkforwarp_up(x1: i16, x2: i16, y: i16) -> bool {
     if in_map(x1 as i32, y as i32) && in_map(x2 as i32, y as i32) {
         return g_map.checkforwarp(x1, x2, y, 2);
