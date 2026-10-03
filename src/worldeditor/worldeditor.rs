@@ -14,7 +14,7 @@ use crate::common::game_values::{controlkeys, TITLESTRING};
 use crate::common::gfx::color::colors;
 use crate::common::gfx::gfx_font::gfxFont;
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::gfx::{gfx_changefullscreen, gfx_flipscreen, gfx_init, gfx_settitle};
+use crate::common::gfx::{gfx_changefullscreen, gfx_show_catched_error, gfx_flipscreen, gfx_init, gfx_settitle};
 use crate::common::global_constants::*;
 use crate::common::input::{DEVICE_KEYBOARD, NUM_KEYS};
 use crate::common::map::{read_type_preview, CMap};
@@ -352,20 +352,24 @@ pub fn main() {
         if !cmd.data_root.is_empty() {
             RootDataDirectory = cmd.data_root.clone();
         }
+    }
 
+    // C++ catches `const char*`, `std::string`, `std::exception` and `...` around inner_main().
+    let result = std::panic::catch_unwind(inner_main);
+    if let Err(payload) = result {
+        let what = payload
+            .downcast_ref::<String>()
+            .cloned()
+            .or_else(|| payload.downcast_ref::<&str>().map(|s| s.to_string()))
+            .unwrap_or_default();
+        gfx_show_catched_error(&what);
+        std::process::exit(1);
+    }
+}
+
+pub fn inner_main() {
+    unsafe {
         ensure_settings_dir();
-
-        rm = Ptr::new_box(CResourceManager::new());
-
-        g_map = Ptr::from_box(CMap::new());
-        filterslist = Ptr::new_box(FiltersList::new());
-        maplist = Ptr::new_box(MapList::new(true));
-        menugraphicspacklist = Ptr::new_box(GraphicsList::new());
-        gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
-        worldlist = Ptr::new_box(WorldList::new());
-
-        game_values.sound = false;
-        game_values.music = false;
 
         /* This must occur before any data files are loaded */
         initialize_paths();
@@ -394,7 +398,19 @@ pub fn main() {
         blitdest = screen;
         editor_harness::init();
         editor_harness::set_dumper(dump_editor_state);
+
+        rm = Ptr::new_box(CResourceManager::new());
+
+        g_map = Ptr::from_box(CMap::new());
         g_tilesetmanager = Ptr::new_box(CTilesetManager::new(&convert_path("gfx/Classic/tilesets")));
+        filterslist = Ptr::new_box(FiltersList::new());
+        maplist = Ptr::new_box(MapList::new(true));
+        menugraphicspacklist = Ptr::new_box(GraphicsList::new());
+        gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
+        worldlist = Ptr::new_box(WorldList::new());
+
+        game_values.sound = false;
+        game_values.music = false;
 
         let title = format!("{} {}", TITLESTRING, MAPTITLESTRING);
         gfx_settitle(&title);
