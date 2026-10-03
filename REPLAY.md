@@ -70,7 +70,7 @@ One event per line: `<frame> <down|up> <SDL key name>`. The key name is everythi
 
 Pushed events are `SDL_KEYDOWN`/`SDL_KEYUP` with `keysym.sym` = the key, `keysym.scancode = SDL_GetScancodeFromKey(sym)`, `mod = KMOD_NONE`, `repeat = 0`, `windowID = 0`, `timestamp = 0`. The game reads only `sym` and `mod`.
 
-Lines of the form `#@ key=value` are run parameters for `run_ref.sh` (and the Rust runner): `seed`, `frames`, `map`, `shots`. They are comments to the game itself.
+Lines of the form `#@ key=value` are run parameters for `run_ref.sh` (and the Rust runner): `seed`, `frames`, `map`, `shots`, and `options`, an `options.bin` (path relative to the replay) copied into the sandbox HOME before the run. They are comments to the game itself.
 
 A key press is a `down` and a later `up`. `fPressed` fires only on the down edge, so pressing the same key twice needs an `up` in between.
 
