@@ -197,5 +197,336 @@ impl CPlayerInput {
         self.iPressedKey = 0;
     }
 
-    // TODO(input): update() lands once game_values (inputConfiguration, playercontrol) is ported.
+    //Called during game loop to read input events and see if
+    //configured keys were pressed.  If they were, then turn on
+    //key flags to be used by game logic
+    //iGameState == 0 for in game and 1 for menu
+    pub fn update(&mut self, event: SDL_Event, iGameState: i16) {
+        unsafe {
+            let event_type = event.type_;
+            let is = |t: SDL_EventType| event_type == t as u32;
+
+            let mut fFound = false;
+            for iPlayer in -1..MAX_PLAYERS as i16 {
+                let inputControl: *const CInputControl;
+                let outputControl: *mut COutputControl;
+                let mut iDeviceID: i16 = DEVICE_KEYBOARD;
+
+                //Allow keyboard input from player 1 at all times (even when he is configured to use joystick)
+                if iPlayer == -1 {
+                    if iGameState == 1 && self.inputControls[0].iDevice != DEVICE_KEYBOARD {
+                        inputControl = &game_values.inputConfiguration[0][0].inputGameControls[1];
+                        outputControl = &mut self.outputControls[0];
+                        iDeviceID = game_values.inputConfiguration[0][0].iDevice;
+                    } else {
+                        continue;
+                    }
+                } else {
+                    if self.inputControls[iPlayer as usize].is_null() {
+                        continue;
+                    }
+
+                    inputControl = &self.inputControls[iPlayer as usize].inputGameControls[iGameState as usize];
+                    outputControl = &mut self.outputControls[iPlayer as usize];
+                    iDeviceID = self.inputControls[iPlayer as usize].iDevice;
+                }
+
+                let inputControl = &*inputControl;
+                let outputControl = &mut *outputControl;
+
+                // game_values.playercontrol[-1] is read for the keyboard fallback player in C++ only
+                // when iGameState == 0, which the iPlayer == -1 branch excludes.
+                let ignore_cpu = |iKey: usize| -> bool {
+                    iGameState == 0 && game_values.playercontrol[iPlayer as usize] != 1 && iKey < 6
+                };
+
+                if iDeviceID == DEVICE_KEYBOARD {
+                    if is(SDL_EventType::SDL_KEYDOWN) {
+                        let mut iKey = 0;
+                        while iKey < NUM_KEYS && !fFound {
+                            if inputControl.keys[iKey] == event.key.keysym.sym {
+                                fFound = true;
+
+                                //Ignore input for cpu controlled players
+                                if ignore_cpu(iKey) {
+                                    iKey += 1;
+                                    continue;
+                                }
+
+                                if !outputControl.keys[iKey].fDown {
+                                    outputControl.keys[iKey].fPressed = true;
+                                }
+
+                                outputControl.keys[iKey].fDown = true;
+                            }
+                            iKey += 1;
+                        }
+
+                        self.iPressedKey = event.key.keysym.sym;
+                    } else if is(SDL_EventType::SDL_KEYUP) {
+                        let mut iKey = 0;
+                        while iKey < NUM_KEYS && !fFound {
+                            if inputControl.keys[iKey] == event.key.keysym.sym {
+                                fFound = true;
+
+                                //Ignore input for cpu controlled players
+                                if ignore_cpu(iKey) {
+                                    iKey += 1;
+                                    continue;
+                                }
+
+                                outputControl.keys[iKey].fDown = false;
+                            }
+                            iKey += 1;
+                        }
+                    } else if is(SDL_EventType::SDL_MOUSEMOTION) {
+                        let mut iKey = 0;
+                        while iKey < NUM_KEYS && !fFound {
+                            let k = inputControl.keys[iKey];
+                            if k >= MOUSE_UP {
+                                if (k == MOUSE_UP && event.motion.yrel < -MOUSE_Y_DEAD_ZONE)
+                                    || (k == MOUSE_DOWN && event.motion.yrel > MOUSE_Y_DEAD_ZONE)
+                                    || (k == MOUSE_LEFT && event.motion.xrel < -MOUSE_X_DEAD_ZONE)
+                                    || (k == MOUSE_RIGHT && event.motion.xrel > MOUSE_X_DEAD_ZONE)
+                                    || (k >= MOUSE_BUTTON_START && (event.motion.state & sdl_button(k - MOUSE_BUTTON_START)) != 0)
+                                {
+                                    fFound = true;
+
+                                    //Ignore input for cpu controlled players
+                                    if ignore_cpu(iKey) {
+                                        iKey += 1;
+                                        continue;
+                                    }
+
+                                    if !outputControl.keys[iKey].fDown {
+                                        outputControl.keys[iKey].fPressed = true;
+                                    }
+
+                                    outputControl.keys[iKey].fDown = true;
+                                } else {
+                                    //Ignore input for cpu controlled players
+                                    if ignore_cpu(iKey) {
+                                        iKey += 1;
+                                        continue;
+                                    }
+
+                                    //Mouse scroll wheel up/down events happen on same frame so ignore up event (and clear it in the ClearPressedKeys() method)
+                                    if k == MOUSE_BUTTON_START + 4 || k == MOUSE_BUTTON_START + 5 {
+                                        iKey += 1;
+                                        continue;
+                                    }
+
+                                    outputControl.keys[iKey].fDown = false;
+                                }
+                            }
+                            iKey += 1;
+                        }
+                    } else if is(SDL_EventType::SDL_MOUSEBUTTONDOWN) {
+                        let mut iKey = 0;
+                        while iKey < NUM_KEYS && !fFound {
+                            if inputControl.keys[iKey] == event.button.button as i32 + MOUSE_BUTTON_START {
+                                fFound = true;
+
+                                //Ignore input for cpu controlled players
+                                if ignore_cpu(iKey) {
+                                    iKey += 1;
+                                    continue;
+                                }
+
+                                if !outputControl.keys[iKey].fDown {
+                                    outputControl.keys[iKey].fPressed = true;
+                                }
+
+                                outputControl.keys[iKey].fDown = true;
+                            }
+                            iKey += 1;
+                        }
+                    } else if is(SDL_EventType::SDL_MOUSEBUTTONUP) {
+                        let mut iKey = 0;
+                        while iKey < NUM_KEYS && !fFound {
+                            if inputControl.keys[iKey] == event.button.button as i32 + MOUSE_BUTTON_START {
+                                fFound = true;
+
+                                //Mouse scroll wheel up/down events happen on same frame so ignore up event (and clear it in the ClearPressedKeys() method)
+                                if inputControl.keys[iKey] == MOUSE_BUTTON_START + 4
+                                    || inputControl.keys[iKey] == MOUSE_BUTTON_START + 5
+                                {
+                                    iKey += 1;
+                                    continue;
+                                }
+
+                                //Ignore input for cpu controlled players
+                                if ignore_cpu(iKey) {
+                                    iKey += 1;
+                                    continue;
+                                }
+
+                                outputControl.keys[iKey].fDown = false;
+                            }
+                            iKey += 1;
+                        }
+                    }
+                } else {
+                    if is(SDL_EventType::SDL_JOYHATMOTION) {
+                        if iDeviceID as i32 != event.jhat.which {
+                            continue;
+                        }
+
+                        for iKey in 0..NUM_KEYS {
+                            let k = inputControl.keys[iKey];
+                            if k >= JOY_HAT_UP && k <= JOY_HAT_RIGHT {
+                                let value = event.jhat.value as u32;
+                                if (k == JOY_HAT_UP && (value & SDL_HAT_UP) != 0)
+                                    || (k == JOY_HAT_DOWN && (value & SDL_HAT_DOWN) != 0)
+                                    || (k == JOY_HAT_LEFT && (value & SDL_HAT_LEFT) != 0)
+                                    || (k == JOY_HAT_RIGHT && (value & SDL_HAT_RIGHT) != 0)
+                                {
+                                    fFound = true;
+
+                                    //Ignore input for cpu controlled players
+                                    if ignore_cpu(iKey) {
+                                        continue;
+                                    }
+
+                                    if !outputControl.keys[iKey].fDown {
+                                        outputControl.keys[iKey].fPressed = true;
+                                    }
+
+                                    outputControl.keys[iKey].fDown = true;
+                                } else {
+                                    //Ignore input for cpu controlled players
+                                    if ignore_cpu(iKey) {
+                                        continue;
+                                    }
+
+                                    outputControl.keys[iKey].fDown = false;
+                                }
+                            }
+                        }
+                    } else if is(SDL_EventType::SDL_JOYBUTTONDOWN) {
+                        if iDeviceID as i32 != event.jbutton.which {
+                            continue;
+                        }
+
+                        let mut iKey = 0;
+                        while iKey < NUM_KEYS && !fFound {
+                            if inputControl.keys[iKey] == event.jbutton.button as i32 + JOY_BUTTON_START {
+                                fFound = true;
+
+                                //Ignore input for cpu controlled players
+                                if ignore_cpu(iKey) {
+                                    iKey += 1;
+                                    continue;
+                                }
+
+                                if !outputControl.keys[iKey].fDown {
+                                    outputControl.keys[iKey].fPressed = true;
+                                }
+
+                                outputControl.keys[iKey].fDown = true;
+                            }
+                            iKey += 1;
+                        }
+                    } else if is(SDL_EventType::SDL_JOYBUTTONUP) {
+                        if iDeviceID as i32 != event.jbutton.which {
+                            continue;
+                        }
+
+                        let mut iKey = 0;
+                        while iKey < NUM_KEYS && !fFound {
+                            if inputControl.keys[iKey] == event.jbutton.button as i32 + JOY_BUTTON_START {
+                                fFound = true;
+
+                                //Ignore input for cpu controlled players
+                                if ignore_cpu(iKey) {
+                                    iKey += 1;
+                                    continue;
+                                }
+
+                                outputControl.keys[iKey].fDown = false;
+                            }
+                            iKey += 1;
+                        }
+                    } else if is(SDL_EventType::SDL_JOYAXISMOTION) {
+                        if iDeviceID as i32 != event.jaxis.which {
+                            continue;
+                        }
+
+                        let axis = event.jaxis.axis;
+                        let value = event.jaxis.value as i32;
+                        for iKey in 0..NUM_KEYS {
+                            let k = inputControl.keys[iKey];
+                            let mut fUseJoystickInput = false;
+                            let mut fJoystickDown = false;
+
+                            if axis == 0 && k == JOY_STICK_1_LEFT {
+                                fUseJoystickInput = true;
+                                if value < -JOYSTICK_DEAD_ZONE {
+                                    fJoystickDown = true;
+                                }
+                            } else if axis == 0 && k == JOY_STICK_1_RIGHT {
+                                fUseJoystickInput = true;
+                                if value > JOYSTICK_DEAD_ZONE {
+                                    fJoystickDown = true;
+                                }
+                            } else if axis == 1 && k == JOY_STICK_1_UP {
+                                fUseJoystickInput = true;
+                                if value < -JOYSTICK_DEAD_ZONE {
+                                    fJoystickDown = true;
+                                }
+                            } else if axis == 1 && k == JOY_STICK_1_DOWN {
+                                fUseJoystickInput = true;
+                                if value > JOYSTICK_DEAD_ZONE {
+                                    fJoystickDown = true;
+                                }
+                            } else if axis == 2 && k == JOY_STICK_2_LEFT {
+                                fUseJoystickInput = true;
+                                if value < -JOYSTICK_DEAD_ZONE {
+                                    fJoystickDown = true;
+                                }
+                            } else if axis == 2 && k == JOY_STICK_2_RIGHT {
+                                fUseJoystickInput = true;
+                                if value > JOYSTICK_DEAD_ZONE {
+                                    fJoystickDown = true;
+                                }
+                            } else if axis == 3 && k == JOY_STICK_2_UP {
+                                fUseJoystickInput = true;
+                                if value < -JOYSTICK_DEAD_ZONE {
+                                    fJoystickDown = true;
+                                }
+                            } else if axis == 3 && k == JOY_STICK_2_DOWN {
+                                fUseJoystickInput = true;
+                                if value > JOYSTICK_DEAD_ZONE {
+                                    fJoystickDown = true;
+                                }
+                            }
+
+                            if fUseJoystickInput {
+                                //Ignore input for cpu controlled players
+                                if ignore_cpu(iKey) {
+                                    continue;
+                                }
+
+                                if fJoystickDown {
+                                    fFound = true;
+
+                                    if !outputControl.keys[iKey].fDown {
+                                        outputControl.keys[iKey].fPressed = true;
+                                    }
+
+                                    outputControl.keys[iKey].fDown = true;
+                                } else {
+                                    outputControl.keys[iKey].fDown = false;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                //This line might be causing input from some players not to be read
+                //if (fFound)
+                //break;
+            }
+        }
+    }
 }
