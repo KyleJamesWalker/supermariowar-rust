@@ -47,7 +47,26 @@ pub struct RandomNumberGenerator;
 
 static mut grng: Option<Well512RandomNumberGenerator> = None;
 
+// Replay-harness counters (port/tools/cpp-harness.patch), reported in the dump's `R` line.
+static mut g_callCount: u64 = 0;
+static mut g_lastValue: u32 = 0;
+
 impl RandomNumberGenerator {
+    pub fn call_count() -> u64 {
+        unsafe { g_callCount }
+    }
+
+    pub fn last_value() -> u32 {
+        unsafe { g_lastValue }
+    }
+
+    pub fn reset_call_count() {
+        unsafe {
+            g_callCount = 0;
+            g_lastValue = 0;
+        }
+    }
+
     pub fn generator() -> &'static mut Well512RandomNumberGenerator {
         unsafe {
             if grng.is_none() {
@@ -82,6 +101,7 @@ impl Well512RandomNumberGenerator {
     }
 
     fn get_next(&mut self) -> u32 {
+        unsafe { g_callCount += 1 };
         let state = &mut self.state;
         let index = self.index as usize;
         let mut a = state[index];
@@ -96,6 +116,7 @@ impl Well512RandomNumberGenerator {
         self.index = index as u32;
         a = state[index];
         state[index] = a ^ b ^ d ^ (a << 2) ^ (b << 18) ^ (c << 28);
+        unsafe { g_lastValue = state[index] };
         state[index]
     }
 

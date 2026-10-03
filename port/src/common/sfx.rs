@@ -8,6 +8,13 @@ use std::path::Path;
 use std::ptr::null_mut;
 
 pub static mut fResumeMusic: bool = true;
+// Clock for the sfxSound::play() retrigger throttle; the replay harness swaps it (cpp-harness.patch).
+pub static mut sfx_ticks: extern "C" fn() -> u32 = sdl_get_ticks;
+pub static mut sfx_ignore_channel_failure: bool = false;
+
+extern "C" fn sdl_get_ticks() -> u32 {
+    unsafe { SDL_GetTicks() }
+}
 
 /// The C++ links `extern void musicfinished()` from GSGameplay.cpp (an empty one in the editors).
 /// The port resolves that link at runtime: gs_gameplay assigns its `musicfinished` here.
@@ -119,14 +126,17 @@ impl sfxSound {
 
     pub fn play(&mut self) -> bool {
         unsafe {
-            let current_time: u32 = SDL_GetTicks();
+            let current_time: u32 = sfx_ticks();
             if (current_time as usize).wrapping_sub(self.m_last_start_time) < 40 {
                 return false;
             }
 
             let channel = Mix_PlayChannelTimed(-1, self.m_sfx.0, 0, -1);
             if channel < 0 {
-                return false;
+                if sfx_ignore_channel_failure {
+                    self.m_last_start_time = current_time as usize;
+                }
+                return sfx_ignore_channel_failure;
             }
 
             self.m_last_start_time = current_time as usize;

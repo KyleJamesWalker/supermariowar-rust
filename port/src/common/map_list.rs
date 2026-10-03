@@ -421,6 +421,10 @@ impl MapList {
         self.maps.node(itr)
     }
 
+    pub fn node_at_mut(&mut self, itr: usize) -> &mut MapListNode {
+        self.maps.node_mut(itr)
+    }
+
     /// `(*itr).first` for an iterator from `GetCurrent` / `GetIteratorAt`.
     pub fn key_at(&self, itr: usize) -> &str {
         self.maps.key(itr)
