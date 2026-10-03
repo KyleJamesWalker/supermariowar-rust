@@ -16,6 +16,9 @@ pub static mut sfx_ignore_channel_failure: bool = false;
 // and log every sound command to sfx_events (REPLAY.md, "Sound").
 pub static mut sfx_virtual_mixer: bool = false;
 pub static mut sfx_events: Vec<String> = Vec::new();
+// Recorded sessions and --replay watching: the virtual mixer still owns all game-visible state, and
+// SDL_mixer plays the same commands as output only (results ignored, no callbacks).
+pub static mut sfx_audible: bool = false;
 
 extern "C" fn sdl_get_ticks() -> u32 {
     unsafe { SDL_GetTicks() }
@@ -99,6 +102,9 @@ unsafe fn mix_play_channel(chunk: *mut Mix_Chunk, loops: i32) -> i32 {
         ch.chunk = chunk;
         ch.forever = loops < 0;
         ch.end = sfx_ticks().wrapping_add(chunk_duration_ms(chunk).wrapping_mul((loops + 1) as u32));
+        if sfx_audible {
+            Mix_PlayChannelTimed(i as i32, chunk, loops, -1);
+        }
         return i as i32;
     }
     -1
@@ -110,6 +116,9 @@ unsafe fn mix_halt_channel(channel: i32) {
         return;
     }
 
+    if sfx_audible {
+        Mix_HaltChannel(channel);
+    }
     for i in 0..sfxSound::k_channels {
         if (channel < 0 || channel == i as i32) && !v_channels[i].chunk.is_null() {
             v_channels[i].chunk = null_mut();
@@ -184,13 +193,39 @@ impl Drop for MixMusicPtr {
     }
 }
 
+extern "C" {
+    // SDL_mixer 2.0.2+, missing from sdl2-sys 0.37.
+    fn Mix_OpenAudioDevice(frequency: i32, format: u16, channels: i32, chunksize: i32, device: *const std::ffi::c_char, allowed_changes: i32) -> i32;
+}
+
+/// Audible sessions must report the same mixer spec as the headless dummy driver, since the virtual
+/// mixer derives sound lengths from it: open the real device with no format changes allowed, and if
+/// that fails, fall back to the silent dummy driver rather than to a different spec.
+unsafe fn open_audible_audio() {
+    if Mix_OpenAudioDevice(44100, AUDIO_S16 as u16, 2, 2048, std::ptr::null(), 0) == 0 {
+        return;
+    }
+    eprintln!("[sfx] no usable audio device ({}); continuing silently", mix_error());
+    sdl2::sys::SDL_QuitSubSystem(sdl2::sys::SDL_INIT_AUDIO);
+    std::env::set_var("SDL_AUDIODRIVER", "dummy");
+    sdl2::sys::SDL_InitSubSystem(sdl2::sys::SDL_INIT_AUDIO);
+    Mix_OpenAudio(44100, AUDIO_S16 as u16, 2, 2048);
+}
+
 pub fn sfx_init() -> bool {
     unsafe {
-        Mix_OpenAudio(44100, AUDIO_S16 as u16, 2, 2048);
+        if sfx_audible {
+            open_audible_audio();
+        } else {
+            Mix_OpenAudio(44100, AUDIO_S16 as u16, 2, 2048);
+        }
         Mix_AllocateChannels(sfxSound::k_channels as i32);
 
-        Mix_ChannelFinished(Some(sfxSound::on_channel_finished_c));
-        Mix_HookMusicFinished(Some(musicfinished_trampoline));
+        // With the virtual mixer the game's channel and music state never come from SDL_mixer's threads.
+        if !sfx_virtual_mixer {
+            Mix_ChannelFinished(Some(sfxSound::on_channel_finished_c));
+            Mix_HookMusicFinished(Some(musicfinished_trampoline));
+        }
 
         let link_version = &*Mix_Linked_Version();
         println!("[sfx] SDL_Mixer {}.{}.{} initialized.", link_version.major, link_version.minor, link_version.patch);
@@ -369,6 +404,9 @@ impl sfxMusic {
                 v_music.forever = !fPlayonce || duration <= 0.0;
                 v_music.paused = false;
                 v_music.end = sfx_ticks().wrapping_add((duration * 1000.0) as u32);
+                if sfx_audible {
+                    Mix_PlayMusic(self.m_music.0, if fPlayonce { 0 } else { -1 });
+                }
             } else {
                 Mix_PlayMusic(self.m_music.0, if fPlayonce { 0 } else { -1 });
             }
@@ -381,6 +419,9 @@ impl sfxMusic {
         unsafe {
             if sfx_virtual_mixer {
                 v_music.music = null_mut();
+                if sfx_audible {
+                    Mix_HaltMusic();
+                }
             } else {
                 Mix_HaltMusic();
             }
@@ -391,6 +432,13 @@ impl sfxMusic {
         log_event(format!("S musicpause {} paused={}", self.m_name, if self.m_paused { 0 } else { 1 }));
         unsafe {
             if sfx_virtual_mixer {
+                if sfx_audible {
+                    if self.m_paused {
+                        Mix_ResumeMusic();
+                    } else {
+                        Mix_PauseMusic();
+                    }
+                }
                 if !v_music.music.is_null() {
                     if self.m_paused && v_music.paused {
                         v_music.end = sfx_ticks().wrapping_add(v_music.remaining);

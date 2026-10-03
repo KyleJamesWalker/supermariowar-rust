@@ -48,7 +48,7 @@ impl FPSLimiter {
             }
 
             //Sleep for time just under what we need
-            let framelimiter = game_values.framelimiter as i32;
+            let framelimiter = if harness::speed() == 1.0 { game_values.framelimiter as i32 } else { (game_values.framelimiter as f32 / harness::speed()) as i32 };
             let mut delay: i16 = (framelimiter as u32).wrapping_sub(SDL_GetTicks()).wrapping_add(self.framestart).wrapping_sub(2) as i16;
 
             if delay > 0 {

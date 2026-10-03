@@ -13,8 +13,9 @@ use crate::smw::gs_gameplay::GameplayState;
 use crate::smw::gs_menu::MenuState;
 use crate::smw::gs_splash_screen::SplashScreenState;
 use sdl2::sys::{
-    SDL_Event, SDL_EventType, SDL_GetError, SDL_GetKeyFromName, SDL_GetScancodeFromKey, SDL_InitSubSystem, SDL_JoystickAttachVirtual, SDL_JoystickType,
-    SDL_KeyCode, SDL_Keymod, SDL_PushEvent, SDL_WaitEvent, SDL_INIT_JOYSTICK, SDL_PRESSED, SDL_RELEASED,
+    SDL_Event, SDL_EventType, SDL_GetError, SDL_GetKeyFromName, SDL_GetKeyName, SDL_GetScancodeFromKey, SDL_InitSubSystem, SDL_JoystickAttachVirtual,
+    SDL_JoystickInstanceID, SDL_JoystickType, SDL_KeyCode, SDL_Keymod, SDL_PumpEvents, SDL_PushEvent, SDL_SetEventFilter, SDL_WaitEvent, SDL_INIT_JOYSTICK,
+    SDL_PRESSED, SDL_RELEASED,
 };
 use std::ffi::CStr;
 use std::collections::BTreeSet;
@@ -62,6 +63,9 @@ struct Harness {
     replay: bool,
     nextEvent: usize,
     frame: u32,
+    audible: bool,
+    speed: f32,
+    rec: Option<Recorder>,
 }
 
 static mut h: Harness = Harness {
@@ -78,6 +82,9 @@ static mut h: Harness = Harness {
     replay: false,
     nextEvent: 0,
     frame: 0,
+    audible: false,
+    speed: 1.0,
+    rec: None,
 };
 
 fn env(name: &str) -> Option<String> {
@@ -121,9 +128,10 @@ extern "C" fn virtual_ticks() -> u32 {
     unsafe { 1000u32.wrapping_add(h.frame.wrapping_mul(WAITTIME as u32)) }
 }
 
-fn load_replay(path: &str) {
+fn load_events(path: &str) -> Vec<ReplayEvent> {
     let text = std::fs::read_to_string(path).unwrap_or_else(|_| fail(format!("cannot open replay {}", path)));
-    let events = unsafe { &mut h.events };
+    let mut events: Vec<ReplayEvent> = Vec::new();
+    let events = &mut events;
     for (i, raw) in text.split('\n').enumerate() {
         let lineno = i + 1;
         let line = raw.strip_suffix('\r').unwrap_or(raw);
@@ -193,6 +201,7 @@ fn load_replay(path: &str) {
         }
         events.push(ev);
     }
+    std::mem::take(events)
 }
 
 fn attach_joysticks() {
@@ -291,7 +300,10 @@ fn dump_frame(out: &mut impl Write) -> std::io::Result<()> {
 
 pub fn init() {
     unsafe {
-        if let Some(seed) = env("SMW_SEED") {
+        // A normal launch records the session (seeded, so it can be replayed); replays never record.
+        let record = env("SMW_REPLAY").is_none() && env("SMW_NO_RECORD").is_none();
+        let seed_text = env("SMW_SEED").or_else(|| if record { Some(random_seed().to_string()) } else { None });
+        if let Some(seed) = seed_text {
             h.seeded = true;
             h.seed = strtoul0(&seed);
             RandomNumberGenerator::generator().reseed(h.seed);
@@ -313,8 +325,17 @@ pub fn init() {
         }
 
         if let Some(replay) = env("SMW_REPLAY") {
-            load_replay(&replay);
+            h.events = load_events(&replay);
             h.replay = true;
+        }
+
+        h.audible = record || env("SMW_AUDIBLE").is_some();
+        sfx::sfx_audible = h.audible && h.seeded;
+        if let Some(speed) = env("SMW_REPLAY_SPEED").and_then(|v| v.parse::<f32>().ok()).filter(|v| *v > 0.0) {
+            h.speed = speed;
+        }
+        if record {
+            start_recording(h.seed);
         }
 
         if h.joysticks > 0 {
@@ -365,6 +386,7 @@ pub fn forced_map() -> Option<&'static str> {
 
 pub fn frame_start() {
     sfx::sfx_virtual_advance();
+    record_frame_start(unsafe { h.frame });
 
     unsafe {
         while h.nextEvent < h.events.len() && h.events[h.nextEvent].frame <= h.frame {
@@ -381,6 +403,10 @@ pub fn frame_start() {
 /// Blocking waits take the next replay event immediately instead of waiting for input.
 pub fn wait_event(event: &mut SDL_Event) {
     unsafe {
+        if h.rec.is_some() {
+            record_wait_event(event);
+            return;
+        }
         if !h.replay {
             SDL_WaitEvent(event);
             return;
@@ -414,5 +440,432 @@ pub fn frame_end() {
             crate::common::global::game_values.appstate = AppState::Quit;
             h.dump = None;
         }
+    }
+}
+
+//------------------------------------------------------------------------------------------------
+// Session recording (not in the C++). A normal launch, i.e. one without SMW_REPLAY, runs seeded and
+// records every input the game sees to <settings dir>/replays/<timestamp>.txt in the replay format,
+// so the session can be watched again or replayed on the C++ reference. See REPLAY.md, "Recordings".
+//------------------------------------------------------------------------------------------------
+
+const KEEP_RECORDINGS: usize = 10;
+
+struct Recorder {
+    out: BufWriter<File>,
+    path: String,
+    /// Raw OS input events held back by the event filter until the next frame start (or blocking wait).
+    pending: Vec<SDL_Event>,
+    quit: bool,
+    /// The frame a window close arrived in; the recording ends before it.
+    quitFrame: Option<u32>,
+    injecting: bool,
+    /// SMW_LIVE_SCRIPT: replay-format lines pushed into SDL's queue as if the OS delivered them.
+    script: Vec<ReplayEvent>,
+    nextScript: usize,
+}
+
+fn rec() -> Option<&'static mut Recorder> {
+    unsafe { h.rec.as_mut() }
+}
+
+const BASE64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+pub fn base64_encode(data: &[u8]) -> String {
+    let mut out = String::with_capacity((data.len() + 2) / 3 * 4);
+    for chunk in data.chunks(3) {
+        let b = [chunk[0], *chunk.get(1).unwrap_or(&0), *chunk.get(2).unwrap_or(&0)];
+        let n = (b[0] as u32) << 16 | (b[1] as u32) << 8 | b[2] as u32;
+        for i in 0..4 {
+            if i <= chunk.len() {
+                out.push(BASE64[(n >> (18 - 6 * i) & 63) as usize] as char);
+            } else {
+                out.push('=');
+            }
+        }
+    }
+    out
+}
+
+pub fn base64_decode(text: &str) -> Option<Vec<u8>> {
+    let mut out = Vec::with_capacity(text.len() / 4 * 3);
+    let mut acc: u32 = 0;
+    let mut bits = 0;
+    for c in text.bytes() {
+        if c == b'=' {
+            break;
+        }
+        let v = BASE64.iter().position(|&x| x == c)? as u32;
+        acc = acc << 6 | v;
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            out.push((acc >> bits) as u8);
+        }
+    }
+    Some(out)
+}
+
+/// UTC `YYYY-MM-DD_HHMMSS` for the recording file name (sorts chronologically).
+fn utc_timestamp() -> String {
+    let secs = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0);
+    let (days, rem) = (secs.div_euclid(86400), secs.rem_euclid(86400));
+    // Howard Hinnant's civil_from_days.
+    let z = days + 719468;
+    let era = z.div_euclid(146097);
+    let doe = z - era * 146097;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = yoe + era * 400 + if m <= 2 { 1 } else { 0 };
+    format!("{:04}-{:02}-{:02}_{:02}{:02}{:02}", y, m, d, rem / 3600, rem / 60 % 60, rem % 60)
+}
+
+fn random_seed() -> u32 {
+    let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0);
+    let mixed = (nanos as u64) ^ ((std::process::id() as u64) << 32) ^ (nanos >> 64) as u64;
+    (mixed ^ (mixed >> 29)).wrapping_mul(0x9E3779B97F4A7C15).wrapping_shr(32) as u32
+}
+
+fn prune_recordings(dir: &str) {
+    let Ok(entries) = std::fs::read_dir(dir) else { return };
+    let mut names: Vec<String> = entries
+        .filter_map(|e| e.ok())
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .filter(|n| n.ends_with(".txt"))
+        .collect();
+    names.sort();
+    while names.len() > KEEP_RECORDINGS {
+        let _ = std::fs::remove_file(format!("{}{}", dir, names.remove(0)));
+    }
+}
+
+/// Opens the recording and writes its header. Called from `init` before the settings files are read.
+fn start_recording(seed: u32) {
+    let dir = crate::common::path::get_home_directory() + "replays/";
+    if std::fs::create_dir_all(&dir).is_err() {
+        eprintln!("[harness] cannot create {}; not recording", dir);
+        return;
+    }
+    let stamp = utc_timestamp();
+    let mut path = format!("{}{}.txt", dir, stamp);
+    let mut n = 1;
+    while std::path::Path::new(&path).exists() {
+        n += 1;
+        path = format!("{}{}_{}.txt", dir, stamp, n);
+    }
+    let Ok(file) = File::create(&path) else {
+        eprintln!("[harness] cannot create {}; not recording", path);
+        return;
+    };
+    let mut out = BufWriter::new(file);
+    let home = crate::common::path::get_home_directory();
+    let _ = writeln!(out, "# Super Mario War session recorded {} UTC (Rust port).", stamp.replace('_', " "));
+    let _ = writeln!(out, "#@ seed={}", seed);
+    for (key, file) in [("options_b64", "options.bin"), ("controls_b64", "controls.sdl2.bin")] {
+        if let Ok(bytes) = std::fs::read(home.clone() + file) {
+            let _ = writeln!(out, "#@ {}={}", key, base64_encode(&bytes));
+        }
+    }
+    let _ = out.flush();
+    println!("[harness] recording to {}", path);
+
+    let script = env("SMW_LIVE_SCRIPT").map(|p| load_events(&p)).unwrap_or_default();
+    unsafe {
+        h.rec = Some(Recorder { out, path, pending: Vec::new(), quit: false, quitFrame: None, injecting: false, script, nextScript: 0 });
+        SDL_SetEventFilter(Some(record_filter), std::ptr::null_mut());
+    }
+    prune_recordings(&dir);
+}
+
+fn is_input_event(t: u32) -> bool {
+    use SDL_EventType::*;
+    [
+        SDL_KEYDOWN, SDL_KEYUP, SDL_TEXTEDITING, SDL_TEXTINPUT, SDL_KEYMAPCHANGED, SDL_MOUSEMOTION, SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP,
+        SDL_MOUSEWHEEL, SDL_JOYAXISMOTION, SDL_JOYBALLMOTION, SDL_JOYHATMOTION, SDL_JOYBUTTONDOWN, SDL_JOYBUTTONUP, SDL_JOYDEVICEADDED,
+        SDL_JOYDEVICEREMOVED, SDL_CONTROLLERAXISMOTION, SDL_CONTROLLERBUTTONDOWN, SDL_CONTROLLERBUTTONUP, SDL_CONTROLLERDEVICEADDED,
+        SDL_CONTROLLERDEVICEREMOVED, SDL_CONTROLLERDEVICEREMAPPED, SDL_FINGERDOWN, SDL_FINGERUP, SDL_FINGERMOTION, SDL_QUIT,
+    ]
+    .iter()
+    .any(|&e| e as u32 == t)
+}
+
+/// While recording, every input event SDL queues is held back here; the frame start (or a blocking
+/// wait) turns the held events into replay lines and pushes those, so the game only ever sees input
+/// in the exact form a replay of the recording will produce.
+unsafe extern "C" fn record_filter(_userdata: *mut std::ffi::c_void, event: *mut SDL_Event) -> i32 {
+    let Some(r) = rec() else { return 1 };
+    if r.injecting || !is_input_event((*event).type_) {
+        return 1;
+    }
+    r.pending.push(*event);
+    0
+}
+
+/// The replay line for a raw SDL event, or None for input the replay format cannot express.
+fn to_replay_event(raw: &SDL_Event, frame: u32) -> Option<ReplayEvent> {
+    unsafe {
+        let t = raw.type_;
+        let mut ev = ReplayEvent { frame, kind: EventKind::Key, down: false, keyName: String::new(), device: 0, index: 0, value: 0 };
+        if t == SDL_EventType::SDL_KEYDOWN as u32 || t == SDL_EventType::SDL_KEYUP as u32 {
+            let sym = raw.key.keysym.sym;
+            let name = CStr::from_ptr(SDL_GetKeyName(sym)).to_string_lossy().into_owned();
+            if name.is_empty() || SDL_GetKeyFromName(CString::new(name.as_bytes()).ok()?.as_ptr()) != sym {
+                return None;
+            }
+            ev.down = t == SDL_EventType::SDL_KEYDOWN as u32;
+            ev.keyName = name;
+            return Some(ev);
+        }
+        let which = if t == SDL_EventType::SDL_JOYAXISMOTION as u32 {
+            raw.jaxis.which
+        } else if t == SDL_EventType::SDL_JOYBUTTONDOWN as u32 || t == SDL_EventType::SDL_JOYBUTTONUP as u32 {
+            raw.jbutton.which
+        } else if t == SDL_EventType::SDL_JOYHATMOTION as u32 {
+            raw.jhat.which
+        } else {
+            return None;
+        };
+        ev.device = device_index(which)?;
+        if t == SDL_EventType::SDL_JOYAXISMOTION as u32 {
+            ev.kind = EventKind::JoyAxis;
+            ev.index = raw.jaxis.axis as i32;
+            ev.value = raw.jaxis.value as i32;
+        } else if t == SDL_EventType::SDL_JOYHATMOTION as u32 {
+            ev.kind = EventKind::JoyHat;
+            ev.index = raw.jhat.hat as i32;
+            ev.value = raw.jhat.value as i32;
+        } else {
+            ev.kind = EventKind::JoyButton;
+            ev.index = raw.jbutton.button as i32;
+            ev.value = (t == SDL_EventType::SDL_JOYBUTTONDOWN as u32) as i32;
+        }
+        let limit = match ev.kind {
+            EventKind::JoyAxis => VIRTUAL_AXES,
+            EventKind::JoyButton => VIRTUAL_BUTTONS,
+            _ => VIRTUAL_HATS,
+        };
+        if ev.device > 7 || ev.index >= limit {
+            return None;
+        }
+        Some(ev)
+    }
+}
+
+/// The game addresses a joystick by its open index; SDL events carry the instance id.
+fn device_index(which: i32) -> Option<i32> {
+    unsafe {
+        let js = crate::common::global::joysticks;
+        for i in 0..crate::common::global::joystickcount.max(0) as usize {
+            let j = *js.add(i);
+            if !j.is_null() && SDL_JoystickInstanceID(j) == which {
+                return Some(i as i32);
+            }
+        }
+        None
+    }
+}
+
+fn line_for(ev: &ReplayEvent) -> String {
+    match ev.kind {
+        EventKind::Key => format!("{} {} {}", ev.frame, if ev.down { "down" } else { "up" }, ev.keyName),
+        EventKind::JoyAxis => format!("{} jaxis {} {} {}", ev.frame, ev.device, ev.index, ev.value),
+        EventKind::JoyButton => format!("{} jbutton {} {} {}", ev.frame, ev.device, ev.index, ev.value),
+        EventKind::JoyHat => format!("{} jhat {} {} {}", ev.frame, ev.device, ev.index, ev.value),
+    }
+}
+
+fn inject(r: &mut Recorder, event: &mut SDL_Event) {
+    r.injecting = true;
+    unsafe { SDL_PushEvent(event) };
+    r.injecting = false;
+}
+
+/// SMW_LIVE_SCRIPT events due this frame enter SDL's queue like OS input, with the modifier and
+/// repeat flags a real keyboard sets, so they take the same capture path as real input.
+fn push_live_script(r: &mut Recorder, frame: u32) {
+    while r.nextScript < r.script.len() && r.script[r.nextScript].frame <= frame {
+        if r.script[r.nextScript].frame == frame {
+            let mut event: SDL_Event = unsafe { std::mem::zeroed() };
+            fill_event(&r.script[r.nextScript], &mut event);
+            unsafe {
+                if event.type_ == SDL_EventType::SDL_KEYDOWN as u32 {
+                    event.key.keysym.mod_ = SDL_Keymod::KMOD_NUM as u16;
+                    event.key.repeat = (r.nextScript % 3 == 2) as u8;
+                } else if event.type_ == SDL_EventType::SDL_JOYAXISMOTION as u32 {
+                    event.jaxis.which = sdl_instance(event.jaxis.which);
+                } else if event.type_ == SDL_EventType::SDL_JOYBUTTONDOWN as u32 || event.type_ == SDL_EventType::SDL_JOYBUTTONUP as u32 {
+                    event.jbutton.which = sdl_instance(event.jbutton.which);
+                } else if event.type_ == SDL_EventType::SDL_JOYHATMOTION as u32 {
+                    event.jhat.which = sdl_instance(event.jhat.which);
+                }
+                SDL_PushEvent(&mut event);
+            }
+        }
+        r.nextScript += 1;
+    }
+}
+
+fn sdl_instance(device: i32) -> i32 {
+    unsafe {
+        let js = crate::common::global::joysticks;
+        if device >= 0 && device < crate::common::global::joystickcount as i32 {
+            let j = *js.add(device as usize);
+            if !j.is_null() {
+                return SDL_JoystickInstanceID(j);
+            }
+        }
+        -1
+    }
+}
+
+/// Frame start while recording: every joystick open at frame 0 gets a centred-hat line so a replay
+/// attaches the same number of joysticks; then held input becomes replay lines pushed in order.
+fn record_frame_start(frame: u32) {
+    let Some(r) = rec() else { return };
+    if frame == 0 {
+        for d in 0..unsafe { crate::common::global::joystickcount }.min(8) as i32 {
+            let ev = ReplayEvent { frame: 0, kind: EventKind::JoyHat, down: false, keyName: String::new(), device: d, index: 0, value: 0 };
+            let _ = writeln!(r.out, "{}", line_for(&ev));
+            let mut event: SDL_Event = unsafe { std::mem::zeroed() };
+            fill_event(&ev, &mut event);
+            inject(r, &mut event);
+        }
+    }
+    push_live_script(r, frame);
+    unsafe { SDL_PumpEvents() };
+    let held = std::mem::take(&mut r.pending);
+    for raw in held.iter() {
+        if unsafe { raw.type_ } == SDL_EventType::SDL_QUIT as u32 {
+            r.quit = true;
+            continue;
+        }
+        if let Some(ev) = to_replay_event(raw, frame) {
+            let _ = writeln!(r.out, "{}", line_for(&ev));
+            let mut event: SDL_Event = unsafe { std::mem::zeroed() };
+            fill_event(&ev, &mut event);
+            inject(r, &mut event);
+        }
+    }
+    if r.quit {
+        // The recording ends before this frame; frames= excludes it.
+        r.quitFrame.get_or_insert(frame);
+        unsafe { crate::common::global::game_values.appstate = AppState::Quit };
+    }
+}
+
+/// A blocking wait while recording returns the next held input event, written with the next frame
+/// number so the replay's frame start leaves it for the replay's own blocking wait.
+fn record_wait_event(event: &mut SDL_Event) {
+    loop {
+        let Some(r) = rec() else { return };
+        push_live_script(r, unsafe { h.frame } + 1);
+        unsafe { SDL_PumpEvents() };
+        while !r.pending.is_empty() {
+            let raw = r.pending.remove(0);
+            if unsafe { raw.type_ } == SDL_EventType::SDL_QUIT as u32 {
+                r.quit = true;
+                r.pending.insert(0, raw);
+                break;
+            }
+            if let Some(ev) = to_replay_event(&raw, unsafe { h.frame } + 1) {
+                let _ = writeln!(r.out, "{}", line_for(&ev));
+                fill_event(&ev, event);
+                return;
+            }
+        }
+        if r.quit {
+            // Hand the game an event its wait loop ignores until the frame start ends the session.
+            unsafe { *event = std::mem::zeroed() };
+            return;
+        }
+        unsafe { sdl2::sys::SDL_Delay(5) };
+    }
+}
+
+static mut watch_home: Option<std::path::PathBuf> = None;
+
+/// Writes `#@ frames=` and closes the recording, or removes a watch session's throwaway HOME.
+/// Safe to call more than once.
+pub fn finish() {
+    unsafe {
+        if let Some(home) = watch_home.take() {
+            let _ = std::fs::remove_dir_all(home);
+        }
+        if let Some(mut r) = h.rec.take() {
+            SDL_SetEventFilter(None, std::ptr::null_mut());
+            let frames = r.quitFrame.unwrap_or(h.frame);
+            let _ = writeln!(r.out, "#@ frames={}", frames);
+            let _ = r.out.flush();
+            println!("[harness] recorded {} frames to {}", frames, r.path);
+        }
+    }
+}
+
+/// Real SDL_mixer output on top of the virtual mixer (recorded sessions and --replay watching).
+pub fn audible() -> bool {
+    unsafe { h.audible }
+}
+
+/// Playback speed multiplier for watching a recording (SMW_REPLAY_SPEED); 1 otherwise.
+pub fn speed() -> f32 {
+    unsafe { h.speed }
+}
+
+/// `--replay <file>`: watch a recording in a normal window at normal speed with sound. The settings
+/// embedded in the recording go into a throwaway HOME so the user's own settings stay untouched.
+pub fn prepare_watch(file: &str, speed: Option<f32>) {
+    let path = std::fs::canonicalize(file).unwrap_or_else(|_| fail(format!("cannot open replay {}", file)));
+    let text = std::fs::read_to_string(&path).unwrap_or_else(|_| fail(format!("cannot read replay {}", path.display())));
+    let directive = |key: &str| {
+        text.lines().filter_map(|l| l.strip_prefix("#@ ")).filter_map(|l| l.strip_prefix(key)).filter_map(|l| l.strip_prefix('=')).last().map(|v| v.to_string())
+    };
+    let home = std::env::temp_dir().join(format!("smw-watch-{}", std::process::id()));
+    let settings = home.join("Library/Preferences/.smw");
+    std::fs::create_dir_all(&settings).unwrap_or_else(|e| fail(format!("cannot create {}: {}", settings.display(), e)));
+    for (key, file) in [("options_b64", "options.bin"), ("controls_b64", "controls.sdl2.bin")] {
+        if let Some(bytes) = directive(key).and_then(|v| base64_decode(&v)) {
+            let _ = std::fs::write(settings.join(file), bytes);
+        }
+    }
+    std::env::set_var("HOME", &home);
+    unsafe { watch_home = Some(home) };
+    std::env::set_var("SMW_REPLAY", &path);
+    std::env::set_var("SMW_SEED", directive("seed").unwrap_or_else(|| "1".to_string()));
+    if let Some(frames) = directive("frames") {
+        std::env::set_var("SMW_FRAMES", frames);
+    }
+    if let Some(map) = directive("map") {
+        std::env::set_var("SMW_MAP", map);
+    }
+    std::env::set_var("SMW_AUDIBLE", "1");
+    if let Some(s) = speed {
+        std::env::set_var("SMW_REPLAY_SPEED", s.to_string());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn base64_round_trips_like_coreutils() {
+        assert_eq!(base64_encode(b""), "");
+        assert_eq!(base64_encode(b"f"), "Zg==");
+        assert_eq!(base64_encode(b"fo"), "Zm8=");
+        assert_eq!(base64_encode(b"foo"), "Zm9v");
+        let bytes: Vec<u8> = (0..=255u8).collect();
+        assert_eq!(base64_decode(&base64_encode(&bytes)).unwrap(), bytes);
+        assert!(base64_decode("not base64!").is_none());
+    }
+
+    #[test]
+    fn timestamps_sort_chronologically() {
+        let t = utc_timestamp();
+        assert_eq!(t.len(), "2026-10-03_223716".len());
+        assert_eq!(&t[4..5], "-");
+        assert_eq!(&t[10..11], "_");
     }
 }

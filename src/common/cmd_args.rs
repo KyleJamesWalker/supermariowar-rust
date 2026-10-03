@@ -6,6 +6,9 @@ pub struct Args {
     pub show_help: bool,
     pub debug: bool,
     pub data_root: String,
+    /// Not in the C++: `--replay <file>` watches a session recording (see REPLAY.md, "Recordings").
+    pub replay: String,
+    pub replay_speed: Option<f32>,
 }
 
 pub fn show_windows_console() {}
@@ -21,6 +24,8 @@ pub fn print_help(title: &str, version: &str) {
     println!("  -h, --help              Prints this help");
     println!("      --datadir <DIR>     Sets the data directory to DIR (default: ./data)");
     println!("      --debug             Shows the debug console on Windows");
+    println!("      --replay <FILE>     Watches a session recording");
+    println!("      --replay-speed <N>  Playback speed multiplier for --replay");
 }
 
 pub fn parse_args(argv: &[String]) -> Args {
@@ -36,6 +41,26 @@ pub fn parse_args(argv: &[String]) -> Args {
         }
         if arg == "--debug" {
             result.debug = true;
+            i += 1;
+            continue;
+        }
+        if arg == "--replay" || arg == "--replay-speed" {
+            i += 1;
+            if i >= argc {
+                eprintln!("Error: `{}` requires a parameter, see `--help`", arg);
+                return result;
+            }
+            if arg == "--replay" {
+                result.replay = argv[i].clone();
+            } else {
+                match argv[i].parse::<f32>() {
+                    Ok(v) if v > 0.0 => result.replay_speed = Some(v),
+                    _ => {
+                        eprintln!("Error: `--replay-speed` needs a positive number");
+                        return result;
+                    }
+                }
+            }
             i += 1;
             continue;
         }

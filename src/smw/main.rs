@@ -233,6 +233,9 @@ pub fn main() {
     if !cmd.data_root.is_empty() {
         unsafe { RootDataDirectory = cmd.data_root.clone() };
     }
+    if !cmd.replay.is_empty() {
+        harness::prepare_watch(&cmd.replay, cmd.replay_speed);
+    }
 
     // C++ catches `const char*`, `std::string`, `std::exception` and `...` around main_game().
     let result = std::panic::catch_unwind(main_game);
@@ -242,6 +245,7 @@ pub fn main() {
             .cloned()
             .or_else(|| payload.downcast_ref::<&str>().map(|s| s.to_string()))
             .unwrap_or_default();
+        harness::finish();
         gfx_show_catched_error(&what);
         std::process::exit(1);
     }
@@ -315,6 +319,7 @@ pub fn main_game() {
         //**********************************************************
 
         println!("\n---------------- shutdown ----------------");
+        harness::finish();
 
         for i in 0..GAMEMODE_LAST as usize {
             gamemodes[i].delete();
