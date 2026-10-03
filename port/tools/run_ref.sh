@@ -40,15 +40,17 @@ mkdir -p "$out"
 out="$(cd "$out" && pwd)"
 rm -f "$out/dump.txt" "$out"/frame_*.bmp
 
-# Fresh HOME so no options.bin / controls file from a real install leaks in.
-home="$(mktemp -d)"
-trap 'rm -rf "$home"' EXIT
+# Per-run sandbox: a fresh HOME (no options.bin / controls file) and a private clone of the data tree,
+# since the game writes data/maps/cache/mapsummary.txt and replays run concurrently.
+sandbox="$(mktemp -d)"
+trap 'rm -rf "$sandbox"' EXIT
+home="$sandbox/home"
 mkdir -p "$home/Library/Preferences"
+cp -c -R "$data" "$sandbox/data" 2>/dev/null || cp -R "$data" "$sandbox/data"
+rm -f "$sandbox/data/maps/cache/mapsummary.txt"
+data="$sandbox/data"
 
-# The game writes this cache on exit; start every run from the pristine data tree.
-rm -f "$data/maps/cache/mapsummary.txt"
-
-cd "$data/.."
+cd "$sandbox"
 status=0
 env HOME="$home" \
     SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \

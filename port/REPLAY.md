@@ -32,7 +32,7 @@ tools/diffreplay.py tools/golden/start_classic/dump.txt out/dump.txt
 tools/diffreplay.py --shots tools/golden/start_classic out/
 ```
 
-`run_ref.sh` takes `SMW_BIN` and `SMW_DATA_DIR` to run another binary and data tree (this is how `run_rust.sh` runs the port against the repository's `data/`), and exits with the game's status. It sets `SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy`, a fresh temporary `HOME`, deletes `data/maps/cache/mapsummary.txt`, and runs with `--datadir ~/work/smw-ref/data`. The dummy video driver works: the game draws into a 640x480 software surface and the renderer falls back to `software`. A 2,500-frame replay runs in about 3 s.
+`run_ref.sh` takes `SMW_BIN` and `SMW_DATA_DIR` to run another binary and data tree (this is how `run_rust.sh` runs the port against the repository's `data/`), and exits with the game's status. It sets `SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy`, and runs each replay in its own sandbox: a fresh temporary `HOME` and an APFS clone (`cp -c -R`) of the data tree with `maps/cache/mapsummary.txt` removed, passed as `--datadir`. Concurrent runs therefore never share a file the game writes. The dummy video driver works: the game draws into a 640x480 software surface and the renderer falls back to `software`. A 2,500-frame replay runs in about 3 s.
 
 `diffreplay.py` options: `--context N` prints N identical frames before the divergence, `--ignore R` drops a record type, `--float-tol 0.001` relaxes `%.4f` fields while porting, and `--shots --max-diff N` compares screenshots by differing-pixel count. It needs only the Python standard library (Pillow is used if installed). Exit status: 0 identical, 1 diverged, 2 error.
 
@@ -158,7 +158,7 @@ Applied at the end of `MenuState::init()`, which runs when the splash screen is 
 | `Mix_PlayChannel` fails when all 16 channels are busy, which depends on the audio thread | `sfx.cpp` | Seeded runs treat the failure as success (the throttle timestamp still updates). The Rust port should model `play()` as succeeding unless throttled. |
 | Frame limiter reads `SDL_GetTicks()` | `FPSLimiter.cpp` | Wall clock only controls sleeping and the F1 FPS overlay. `SMW_NOLIMIT` skips the sleeps. |
 | `options.bin` / `controls.sdl2.bin` in `$HOME/Library/Preferences/.smw/` | `GameValues.cpp` | `run_ref.sh` points `HOME` at an empty temp directory, so defaults from `CGameValues::init` apply. The game writes `options.bin` there on exit. |
-| Map summary cache `data/maps/cache/mapsummary.txt` written on exit | `MapList.cpp` | Holds only precomputed auto-filter flags. `run_ref.sh` deletes it before each run. |
+| Map summary cache `data/maps/cache/mapsummary.txt` written on exit | `MapList.cpp` | Holds only precomputed auto-filter flags. Each run gets its own data clone without it. |
 | OS events (window, joystick hot-plug, real keyboard) | `SDL_PollEvent` | Not filtered. The dummy video driver generates no input and no joysticks are attached. |
 | Music-finished callback on the audio thread | `GSGameplay.cpp musicfinished()` | Only restarts music. No RNG or game state, so it is left alone. |
 | Screenshot file names (`Insert` key) and netplay timestamps | `gfxSDL.cpp`, `net.cpp` | Unreachable: no script presses `Insert`, and the build uses `NO_NETWORK`. |
