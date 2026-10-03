@@ -263,17 +263,14 @@ impl MovingPlatform {
     /// `draw(short iOffsetX, short iOffsetY)`: path drawing for the map preview.
     pub fn draw_offset(&mut self, iOffsetX: i16, iOffsetY: i16) {
         gfx_drawpreview(
-            self.sprites[0].get_surface(),
+            &self.sprites[0],
             (self.ix as i32 - self.iHalfWidth as i32 + iOffsetX as i32) as i16,
             (self.iy as i32 - self.iHalfHeight as i32 + iOffsetY as i32) as i16,
             0,
             0,
             self.iWidth,
             self.iHeight,
-            iOffsetX,
-            iOffsetY,
-            (App::screenWidth / 2) as i16,
-            (App::screenHeight / 2) as i16,
+            &SDL_Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: App::screenWidth / 2, h: App::screenHeight / 2 },
             true,
             Option::None,
         );

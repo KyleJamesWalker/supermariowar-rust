@@ -53,7 +53,7 @@ fn main() {
     menuskin[3].draw_part(414, 400, 96, 0, 32, 32);
     skin[0].draw_clip(450, 400, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 }, ClipEdge::Left, 460);
     skin[0].draw_stretch(&SDL_Rect { x: 0, y: 0, w: 32, h: 32 }, unsafe { blitdest }, &SDL_Rect { x: 500, y: 380, w: 64, h: 64 });
-    gfx_drawpreview(skin[2].get_surface(), 620, 300, 0, 0, 32, 32, 0, 0, 640, 480, true, None);
+    gfx_drawpreview(&skin[2], 620, 300, 0, 0, 32, 32, &SDL_Rect { x: 0, y: 0, w: 640, h: 480 }, true, None);
 
     font_large.draw(10, 150, "Super Mario War: 0123456789");
     font_small.draw_centered(320, 180, "centered small text ~!@#$%^&*()");

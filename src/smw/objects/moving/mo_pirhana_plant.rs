@@ -115,19 +115,20 @@ impl MO_PirhanaPlant {
         if self.state > 0 {
             unsafe {
                 let rect = &g_rPirhanaRects[self.iType as usize][self.iDirection as usize][self.iFrame as usize];
-                let surface = rm.spr_hazard_pirhanaplant[1].get_surface();
+                let surface = &rm.spr_hazard_pirhanaplant[1];
+                let clipRect = SDL_Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: 320, h: 240 };
                 let dstX = ((self.ix as i32 >> 1) + iOffsetX as i32) as i16;
                 let dstY = ((self.iy as i32 >> 1) + iOffsetY as i32) as i16;
                 let (ih, iw) = (self.ih as i32, self.iw as i32);
                 let (ch, cw) = (self.collisionHeight as i32, self.collisionWidth as i32);
                 if self.iDirection == 0 {
-                    gfx_drawpreview(surface, dstX, dstY, (rect.x >> 1) as i16, (rect.y >> 1) as i16, 16, (ch >> 1) as i16, iOffsetX, iOffsetY, 320, 240, true, None);
+                    gfx_drawpreview(surface, dstX, dstY, (rect.x >> 1) as i16, (rect.y >> 1) as i16, 16, (ch >> 1) as i16, &clipRect, true, None);
                 } else if self.iDirection == 1 {
-                    gfx_drawpreview(surface, dstX, dstY, (rect.x >> 1) as i16, ((rect.y + ih - ch) >> 1) as i16, 16, (ch >> 1) as i16, iOffsetX, iOffsetY, 320, 240, true, None);
+                    gfx_drawpreview(surface, dstX, dstY, (rect.x >> 1) as i16, ((rect.y + ih - ch) >> 1) as i16, 16, (ch >> 1) as i16, &clipRect, true, None);
                 } else if self.iDirection == 2 {
-                    gfx_drawpreview(surface, dstX, dstY, (rect.x >> 1) as i16, (rect.y >> 1) as i16, (cw >> 1) as i16, 16, iOffsetX, iOffsetY, 320, 240, true, None);
+                    gfx_drawpreview(surface, dstX, dstY, (rect.x >> 1) as i16, (rect.y >> 1) as i16, (cw >> 1) as i16, 16, &clipRect, true, None);
                 } else {
-                    gfx_drawpreview(surface, dstX, dstY, ((rect.x + iw - cw) >> 1) as i16, (rect.y >> 1) as i16, (cw >> 1) as i16, 16, iOffsetX, iOffsetY, 320, 240, true, None);
+                    gfx_drawpreview(surface, dstX, dstY, ((rect.x + iw - cw) >> 1) as i16, (rect.y >> 1) as i16, (cw >> 1) as i16, 16, &clipRect, true, None);
                 }
             }
         }

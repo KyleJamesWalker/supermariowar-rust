@@ -274,36 +274,39 @@ pub fn gfx_loadfullskin(path: &Path, colorScheme: i16) -> Result<SpriteStrip, St
     Ok(strip)
 }
 
-pub fn gfx_cliprect(srcRect: &mut SDL_Rect, dstRect: &mut SDL_Rect, x: i16, y: i16, w: i16, h: i16) {
-    let (x, y, w, h) = (x as i32, y as i32, w as i32, h as i32);
-    if dstRect.x >= x + w || dstRect.x + dstRect.w < x || dstRect.y >= y + h || dstRect.y + dstRect.h < y {
+pub fn gfx_cliprect(srcRect: &mut SDL_Rect, dstRect: &mut SDL_Rect, clipArea: &SDL_Rect) {
+    if dstRect.x >= clipArea.x + clipArea.w
+        || dstRect.x + dstRect.w < clipArea.x
+        || dstRect.y >= clipArea.y + clipArea.h
+        || dstRect.y + dstRect.h < clipArea.y
+    {
         srcRect.w = 0;
         srcRect.h = 0;
         return;
     }
 
-    if dstRect.x < x {
-        let iDiffX = (x - dstRect.x) as i16;
-        srcRect.x += iDiffX as i32;
-        srcRect.w -= iDiffX as i32;
-        dstRect.x = x;
+    if dstRect.x < clipArea.x {
+        let iDiffX = clipArea.x - dstRect.x;
+        srcRect.x += iDiffX;
+        srcRect.w -= iDiffX;
+        dstRect.x = clipArea.x;
     }
 
-    if dstRect.x + dstRect.w >= x + w {
-        let iDiffX = (dstRect.x + dstRect.w - x - w) as i16;
-        srcRect.w -= iDiffX as i32;
+    if dstRect.x + dstRect.w >= clipArea.x + clipArea.w {
+        let iDiffX = dstRect.x + dstRect.w - clipArea.x - clipArea.w;
+        srcRect.w -= iDiffX;
     }
 
-    if dstRect.y < y {
-        let iDiffY = (y - dstRect.y) as i16;
-        srcRect.y += iDiffY as i32;
-        srcRect.h -= iDiffY as i32;
-        dstRect.y = y;
+    if dstRect.y < clipArea.y {
+        let iDiffY = clipArea.y - dstRect.y;
+        srcRect.y += iDiffY;
+        srcRect.h -= iDiffY;
+        dstRect.y = clipArea.y;
     }
 
-    if dstRect.y + dstRect.h >= y + h {
-        let iDiffY = (dstRect.y + dstRect.h - y - h) as i16;
-        srcRect.h -= iDiffY as i32;
+    if dstRect.y + dstRect.h >= clipArea.y + clipArea.h {
+        let iDiffY = dstRect.y + dstRect.h - clipArea.y - clipArea.h;
+        srcRect.h -= iDiffY;
     }
 }
 
@@ -365,17 +368,14 @@ pub fn gfx_adjusthiddenrects(src: &mut SDL_Rect, dst: &mut SDL_Rect, edge: ClipE
 }
 
 pub fn gfx_drawpreview(
-    surface: *mut SDL_Surface,
+    sprite: &gfxSprite,
     dstX: i16,
     dstY: i16,
     srcX: i16,
     srcY: i16,
     iw: i16,
     ih: i16,
-    clipX: i16,
-    clipY: i16,
-    clipW: i16,
-    clipH: i16,
+    clipRect: &SDL_Rect,
     wrap: bool,
     clip: Option<(ClipEdge, i32)>,
 ) {
@@ -384,7 +384,7 @@ pub fn gfx_drawpreview(
         let mut rSrcRect = SDL_Rect { x: srcX as i32, y: srcY as i32, w: iw as i32, h: ih as i32 };
         let mut rDstRect = SDL_Rect { x: dstX as i32, y: dstY as i32, w: iw as i32, h: ih as i32 };
 
-        gfx_cliprect(&mut rSrcRect, &mut rDstRect, clipX, clipY, clipW, clipH);
+        gfx_cliprect(&mut rSrcRect, &mut rDstRect, clipRect);
 
         if let Some((edge, threshold)) = clip {
             if gfx_adjusthiddenrects(&mut rSrcRect, &mut rDstRect, edge, threshold) {
@@ -393,18 +393,15 @@ pub fn gfx_drawpreview(
         }
 
         // Blit onto the screen surface
-        if SDL_UpperBlit(surface, &rSrcRect, blitdest, &mut rDstRect) < 0 {
-            eprintln!("SDL_BlitSurface error: {}", sdl_error());
-            return;
-        }
+        sprite.draw_src_to(&rSrcRect, blitdest, &rDstRect);
 
         if wrap {
             //Deal with wrapping over sides of screen
             let mut fBlitSide = false;
-            if dstX < clipX {
+            if (dstX as i32) < clipRect.x {
                 rDstRect.x = dstX as i32 + 320;
                 fBlitSide = true;
-            } else if dstX as i32 + iw as i32 >= clipX as i32 + clipW as i32 {
+            } else if dstX as i32 + iw as i32 >= clipRect.x + clipRect.w {
                 rDstRect.x = dstX as i32 - 320;
                 fBlitSide = true;
             }
@@ -420,7 +417,7 @@ pub fn gfx_drawpreview(
                 rDstRect.w = iw as i32;
                 rDstRect.h = ih as i32;
 
-                gfx_cliprect(&mut rSrcRect, &mut rDstRect, clipX, clipY, clipW, clipH);
+                gfx_cliprect(&mut rSrcRect, &mut rDstRect, clipRect);
 
                 if let Some((edge, threshold)) = clip {
                     if gfx_adjusthiddenrects(&mut rSrcRect, &mut rDstRect, edge, threshold) {
@@ -428,10 +425,7 @@ pub fn gfx_drawpreview(
                     }
                 }
 
-                if SDL_UpperBlit(surface, &rSrcRect, blitdest, &mut rDstRect) < 0 {
-                    eprintln!("SDL_BlitSurface error: {}", sdl_error());
-                    return;
-                }
+                sprite.draw_src_to(&rSrcRect, blitdest, &rDstRect);
             }
         }
     }
