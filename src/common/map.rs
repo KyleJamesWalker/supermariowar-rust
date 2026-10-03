@@ -2247,8 +2247,17 @@ impl CMap {
     pub fn predrawforeground(&mut self, foregroundspr: &gfxSprite) {
         unsafe {
             let s = foregroundspr.get_surface();
+            if (*s).flags & SDL_RLEACCEL != 0 {
+                SDL_LockSurface(s);
+            }
+
             SDL_FillRect(s, null(), SDL_MapRGB((*s).format, 255, 0, 255));
             SDL_SetColorKey(s, SDL_bool::SDL_TRUE as i32, SDL_MapRGB((*s).format, 255, 0, 255));
+
+            if (*s).flags & SDL_RLEACCEL != 0 {
+                SDL_UnlockSurface(s);
+            }
+
             self.draw(s, 2);
             self.draw(s, 3);
         }
