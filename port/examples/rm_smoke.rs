@@ -1,7 +1,8 @@
 //! Loads every sprite, font, skin and sound CResourceManager knows about from data/, headless.
-#![allow(static_mut_refs)]
 //!
 //! SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy cargo run --example rm_smoke -- [data dir]
+
+#![allow(static_mut_refs)]
 
 use smw::common::file_list::{GraphicsList, SkinList, SoundsList};
 use smw::common::gfx::{gfx_init, gfx_loadpalette};
