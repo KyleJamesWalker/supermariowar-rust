@@ -27,11 +27,17 @@ Scope order: core game + menus + sound, then netplay, level editor, world editor
 | common/WorldTourStop.cpp | common/world_tour_stop.rs | done | strtok unit test |
 | common/GameValues.cpp | common/game_values.rs | done except full options.bin IO (handed to gfx) | not yet |
 | common/ObjectBase.cpp, IO_Block.h, GameMode.h, Game.cpp | common/object_base.rs, io_block.rs, game_mode.rs, game.rs | done (headers + base structs/traits) | n/a |
-| smw/objects/blocks/IO_Block.cpp | smw/objects/blocks/io_block.rs | partial: all but BounceMovingObject, KillPlayersAndObjectsInsideBlock | |
 | smw/player.cpp | smw/player.rs | done except netplay branches | start_classic reaches gameplay; P lines not comparable yet (RNG diverges in the menu at frame 30) |
 | smw/player_components/* | smw/player_components/*.rs | done | as above |
 | smw/ai.cpp | smw/ai.rs | done | frenzy_cpu: not comparable yet (same menu RNG divergence) |
-| objects/moving/MovingObject.cpp, objectgame.cpp | | placeholders (foundation) awaiting their porters | |
 | smw/GSGameplay.cpp | smw/gs_gameplay.rs | done except netplay (TODO(net)) and LoadMapHazards call (waits on objecthazard) | start_classic: not yet run |
 | smw/gamemodes/* (GameMode, GameModeTimer, all 22 modes, bonus house, 3 minigames) | smw/gamemodes/*.rs | done except netplay disconnect text | via start_classic / frenzy_cpu, not yet run |
 | smw/main.cpp create_gamemodes, mode globals | smw/main.rs | done | |
+| smw/objects/blocks/* (IO_Block + 11 blocks) | smw/objects/blocks/*.rs | done | not yet (gameplay not reached in replays) |
+| smw/objects/moving/* (MovingObject, CarriedObject, 19 MO_*) | smw/objects/moving/*.rs | done | not yet |
+| smw/objects/carriable/* (11 CO_*) | smw/objects/carriable/*.rs | done | not yet |
+| smw/objects/powerup/* (MO_Powerup + 25 PU_*) | smw/objects/powerup/*.rs | done | not yet |
+| smw/objects/walkingenemy/* | smw/objects/walkingenemy/*.rs | done | not yet |
+| smw/objects/overmap/* (IO_OverMapObject + 10 OMO_*) | smw/objects/overmap/*.rs | done | not yet |
+| smw/objects/IO_BulletBillCannon, IO_FlameCannon, MysteryMushroomTempPlayer, SwitchColor.h, ThrowBlockType.h | smw/objects/*.rs | done | not yet |
+| smw/ObjectContainer.cpp, objectgame.cpp, objecthazard.cpp | smw/object_container.rs, objectgame.rs, objecthazard.rs | done | not yet |
