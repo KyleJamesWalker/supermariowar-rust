@@ -1,0 +1,13 @@
+[package]
+name = "smw"
+version = "0.1.0"
+edition = "2021"
+description = "Super Mario War - faithful Rust port"
+
+[workspace]
+
+[dependencies]
+sdl2 = { version = "0.37", features = ["image", "mixer"] }
+
+[profile.dev]
+opt-level = 1
