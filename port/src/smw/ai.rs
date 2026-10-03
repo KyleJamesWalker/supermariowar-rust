@@ -204,15 +204,21 @@ fn static_cast_gamemode<T: Any>() -> Ptr<T> {
     p
 }
 
-// After a wrap pushback ix can be ~-632, so the C++ indexes g_map with x ~-19 and reads earlier CMap
-// members. These offsets are the clang arm64 CMap layout (offsetof); padding reads as 0.
+// After a wrap pushback ix can be ~-632 or ~650, so the C++ indexes g_map with x ~-19 or 20 and reads
+// neighbouring CMap members. These offsets are the clang arm64 CMap layout (offsetof); padding reads as 0.
 const CMAP_OFF_MAPDATA: i32 = 38;
 const CMAP_OFF_MAPDATATOP: i32 = 7238;
 const CMAP_OFF_OBJECTDATA: i32 = 7538;
 const CMAP_OFF_BLOCKDATA: i32 = 24344;
 const CMAP_OFF_NOSPAWN: i32 = 26744;
 const CMAP_OFF_WARPDATA: i32 = 36368;
+const CMAP_OFF_NUMWARPEXITS: i32 = 38768;
+const CMAP_OFF_WARPEXITS: i32 = 38772;
+const CMAP_OFF_WARPLOCKTIMER: i32 = 39540;
+const CMAP_OFF_WARPLOCKED: i32 = 39560;
+const CMAP_OFF_MAXCONNECTION: i32 = 39570;
 const CMAP_SIZEOF_MAPBLOCK: i32 = 56;
+const CMAP_SIZEOF_WARPEXIT: i32 = 24;
 
 fn in_map(x: i32, y: i32) -> bool {
     (0..MAPWIDTH).contains(&x) && (0..MAPHEIGHT).contains(&y)
@@ -244,10 +250,54 @@ unsafe fn cmap_byte(off: i32) -> u8 {
             _ => 0,
         };
     }
+    if (CMAP_OFF_NOSPAWN..CMAP_OFF_NOSPAWN + NUMSPAWNAREATYPES * cells).contains(&off) {
+        let rel = off - CMAP_OFF_NOSPAWN;
+        return g_map.nospawn[(rel / cells) as usize][((rel % cells) / MAPHEIGHT) as usize][(rel % MAPHEIGHT) as usize] as u8;
+    }
+    if (CMAP_OFF_WARPDATA..CMAP_OFF_NUMWARPEXITS).contains(&off) {
+        let rel = off - CMAP_OFF_WARPDATA;
+        let e = rel / 8;
+        let w = &g_map.warpdata[(e / MAPHEIGHT) as usize][(e % MAPHEIGHT) as usize];
+        let r = (rel % 8) as usize;
+        return match r {
+            0..=3 => (w.direction as i32).to_le_bytes()[r],
+            4..=5 => w.connection.to_le_bytes()[r - 4],
+            _ => w.id.to_le_bytes()[r - 6],
+        };
+    }
+    if (CMAP_OFF_NUMWARPEXITS..CMAP_OFF_WARPEXITS).contains(&off) {
+        let r = (off - CMAP_OFF_NUMWARPEXITS) as usize;
+        return if r < 2 { g_map.numwarpexits.to_le_bytes()[r] } else { 0 };
+    }
+    if (CMAP_OFF_WARPEXITS..CMAP_OFF_WARPLOCKTIMER).contains(&off) {
+        let rel = off - CMAP_OFF_WARPEXITS;
+        let x = &g_map.warpexits[(rel / CMAP_SIZEOF_WARPEXIT) as usize];
+        let r = (rel % CMAP_SIZEOF_WARPEXIT) as usize;
+        if r < 4 {
+            return (x.direction as i32).to_le_bytes()[r];
+        }
+        let v = [x.connection, x.id, x.x, x.y, x.lockx, x.locky, x.warpx, x.warpy, x.numblocks, x.locktimer][(r - 4) / 2];
+        return v.to_le_bytes()[r % 2];
+    }
+    if (CMAP_OFF_WARPLOCKTIMER..CMAP_OFF_WARPLOCKED).contains(&off) {
+        let rel = (off - CMAP_OFF_WARPLOCKTIMER) as usize;
+        return g_map.warplocktimer[rel / 2].to_le_bytes()[rel % 2];
+    }
+    if (CMAP_OFF_WARPLOCKED..CMAP_OFF_MAXCONNECTION).contains(&off) {
+        return g_map.warplocked[(off - CMAP_OFF_WARPLOCKED) as usize] as u8;
+    }
     panic!("ai: C++ out-of-bounds CMap read at offset {} is not modelled", off);
 }
 
-/// `g_map->map(x, y)`, including the C++ out-of-bounds read for x < 0.
+unsafe fn cmap_i16(off: i32) -> i16 {
+    i16::from_le_bytes([cmap_byte(off), cmap_byte(off + 1)])
+}
+
+unsafe fn cmap_i32(off: i32) -> i32 {
+    i32::from_le_bytes([cmap_byte(off), cmap_byte(off + 1), cmap_byte(off + 2), cmap_byte(off + 3)])
+}
+
+/// `g_map->map(x, y)`, including the C++ out-of-bounds reads.
 unsafe fn ai_map(x: i32, y: i32) -> i32 {
     if in_map(x, y) {
         return g_map.map(x, y);
@@ -255,7 +305,7 @@ unsafe fn ai_map(x: i32, y: i32) -> i32 {
     tile_to_flags(TileType(cmap_byte(CMAP_OFF_MAPDATATOP + x * MAPHEIGHT + y))) as i32
 }
 
-/// `g_map->block(x, y) != NULL`, including the C++ out-of-bounds read for x < 0.
+/// `g_map->block(x, y) != NULL`, including the C++ out-of-bounds reads.
 unsafe fn ai_block_nonnull(x: i16, y: i16) -> bool {
     if in_map(x as i32, y as i32) {
         return !g_map.block(x, y).is_null();
@@ -264,15 +314,36 @@ unsafe fn ai_block_nonnull(x: i16, y: i16) -> bool {
     (0..8).any(|i| cmap_byte(off + i) != 0)
 }
 
-/// `g_map->checkforwarp(x1, x2, y, 2)`. Out of bounds, warpdata lands in `nospawn`, whose bool bytes
-/// never form direction 2, so the C++ returns false.
+/// `&warpdata[x][y]` as (direction, connection, id), including the C++ out-of-bounds reads.
+unsafe fn ai_warp(x: i16, y: i16) -> (i32, i16, i16) {
+    if in_map(x as i32, y as i32) {
+        let w = &g_map.warpdata[x as usize][y as usize];
+        return (w.direction as i32, w.connection, w.id);
+    }
+    let off = CMAP_OFF_WARPDATA + (x as i32 * MAPHEIGHT + y as i32) * 8;
+    (cmap_i32(off), cmap_i16(off + 4), cmap_i16(off + 6))
+}
+
+/// `g_map->checkforwarp(x1, x2, y, 2)`, including the C++ out-of-bounds reads.
 unsafe fn ai_checkforwarp_up(x1: i16, x2: i16, y: i16) -> bool {
     if in_map(x1 as i32, y as i32) && in_map(x2 as i32, y as i32) {
         return g_map.checkforwarp(x1, x2, y, 2);
     }
-    let lowest = CMAP_OFF_WARPDATA + ((x1.min(x2) as i32) * MAPHEIGHT + y as i32) * 8;
-    assert!(lowest >= CMAP_OFF_NOSPAWN, "ai: C++ out-of-bounds warpdata read at offset {} is not modelled", lowest);
-    false
+    let w1 = ai_warp(x1, y);
+    let w2 = ai_warp(x2, y);
+    if !(w1.0 == w2.0 && w1.2 == w2.2 && w1.0 == 2) {
+        return false;
+    }
+    let locked = if (0..10).contains(&w1.1) { g_map.warplocked[w1.1 as usize] as u8 } else { cmap_byte(CMAP_OFF_WARPLOCKED + w1.1 as i32) };
+    if locked != 0 {
+        return false;
+    }
+    let locktimer = if (0..32).contains(&w1.2) {
+        g_map.warpexits[w1.2 as usize].locktimer
+    } else {
+        cmap_i16(CMAP_OFF_WARPEXITS + w1.2 as i32 * CMAP_SIZEOF_WARPEXIT + 22)
+    };
+    locktimer <= 0
 }
 
 /// `carriedItem` seen as a `CObject*`.
