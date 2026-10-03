@@ -1,82 +1,23 @@
-# Super Mario War (Rust/Bevy)
+# Super Mario War, in Rust
 
-A Rust rewrite of [Super Mario War](https://github.com/mmatyas/supermariowar) using the [Bevy](https://bevyengine.org/) game engine.
+A faithful Rust + rust-sdl2 port of [Super Mario War](https://github.com/mmatyas/supermariowar) (upstream commit [`a7f7e25`](https://github.com/mmatyas/supermariowar/commit/a7f7e257786554b43f4654a3057758175f455711)). It covers the game, menus, sound, netplay, the lobby server, and the level and world editors. Given the same scripted input, the Rust build produces the same per-frame game state, sound events and screenshots as the C++ original. `MORNING_REPORT.md` has the verification results.
 
-Super Mario War is a fan-made multiplayer Super Mario Bros. style deathmatch game in which players try to beat one another in a variety of gameplay modes.
+## Build and run
 
-- [About](#about)
-- [Building](#building)
-  - [Requirements](#requirements)
-  - [Build & Run](#build--run)
-  - [Release Build](#release-build)
-- [Game Data](#game-data)
-- [Project Structure](#project-structure)
-- [Original Project](#original-project)
-
-## About
-
-Super Mario War is a Super Mario multiplayer game. The goal is to stomp as many other Mario's as possible to win the game. There is a range of different gameplay modes in the game, like Stomp, Survival, and more. Up to four players can play simultaneously.
-
-The game uses artwork and sounds from Nintendo games. We hope that this noncommercial fangame qualifies as fair use work. We just wanted to create this game to show how much we adore Nintendo's characters and games.
-
-## Building
-
-### Requirements
-
-- [Rust](https://www.rust-lang.org/tools/install) (2021 edition or later)
-- Cargo (included with Rust)
-
-Bevy's dependencies vary by platform:
-
-- **macOS**: Xcode command line tools (`xcode-select --install`)
-- **Linux**: `sudo apt install g++ pkg-config libx11-dev libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev` (Debian/Ubuntu) or equivalent for your distro
-- **Windows**: VS2019+ Build Tools or MSVC toolchain
-
-### Build & Run
+Requires Rust and the SDL2, SDL2_image and SDL2_mixer libraries (on macOS: `brew install sdl2 sdl2_image sdl2_mixer`). Game data is the upstream [supermariowar-data](https://github.com/mmatyas/supermariowar-data) submodule.
 
 ```sh
-cargo run
+git submodule update --init                             # or clone with --recursive
+cargo run --release --bin smw -- --datadir data          # the game
+cargo run --release --bin leveleditor -- --datadir data
+cargo run --release --bin worldeditor -- --datadir data
+cargo run --release --bin smw_server                     # netplay lobby server
 ```
 
-### Release Build
+## Verifying against the C++ original
 
-For optimized performance:
+The C++ original, plus the replay and state-dump hooks used to compare it with this port, lives in [supermariowar-cpp-reference](https://github.com/KyleJamesWalker/supermariowar-cpp-reference) (branch `harness`; the hooks are also kept here as `tools/cpp-harness.patch` and `tools/editor-harness.patch`). `REPLAY.md` specifies the harness, and `tools/parity.sh`, `tools/parity_sweep.sh` and `tools/editor_parity.sh` run the comparisons. `ARCHITECTURE.md` documents the porting conventions, and `PROGRESS.md` maps each C++ file to its Rust module.
 
-```sh
-cargo run --release
-```
+## Credits
 
-## Game Data
-
-The game assets are in the `data/` directory and include:
-
-- `gfx/` - Graphics and sprites
-- `maps/` - Level maps
-- `music/` - Background music
-- `sfx/` - Sound effects
-- `filters/` - Graphics filters
-- `tours/` - Tour definitions
-- `worlds/` - World definitions
-
-## Project Structure
-
-```
-src/
-├── main.rs          # App entry point and Bevy plugin setup
-├── lib.rs           # Library root
-├── ai/              # CPU player AI
-├── audio/           # Music and sound effects
-├── core/            # Constants, game state, and shared types
-├── game_modes/      # Game mode implementations (Stomp, Survival, etc.)
-├── graphics/        # Sprite loading and rendering
-├── map/             # Map loading and tile systems
-├── menu/            # Main menu and UI
-├── net/             # Networking
-├── objects/         # Game objects (items, powerups, blocks)
-├── physics/         # Movement and collision systems
-└── player/          # Player components and systems
-```
-
-## Original Project
-
-This is a Rust/Bevy port based on the original C++ Super Mario War project by [mmatyas](https://github.com/mmatyas/supermariowar).
+Game design, code and assets are from the Super Mario War project and its contributors; see `data/` and the upstream repository. This repository contains only the Rust translation and its test tooling.
