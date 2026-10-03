@@ -82,11 +82,17 @@ impl MapMultimap {
 }
 
 fn add_maps_from(dirpath: &str, container: &mut MapMultimap) {
+    add_maps_from_with(dirpath, |key, node| {
+        container.emplace(key, node);
+    });
+}
+
+fn add_maps_from_with(dirpath: &str, mut emplace: impl FnMut(String, MapListNode)) {
     let mut dir = FilesIterator::new(dirpath.to_string(), vec![".map".to_string()]);
     while let Some(path) = dir.next() {
         let node = MapListNode::new(path.to_string_lossy().into_owned());
         let fname = path.file_name().map(|f| f.to_string_lossy().into_owned()).unwrap_or_default();
-        container.emplace(strip_creator_and_ext(&fname), node);
+        emplace(strip_creator_and_ext(&fname), node);
     }
 }
 
@@ -173,7 +179,7 @@ impl MapList {
         let mut worldmapdirs = SimpleDirectoryList::new(convert_path("worlds/"));
         for _iDir in 0..worldmapdirs.count() {
             let szName = worldmapdirs.current_path().to_string_lossy().into_owned() + "/";
-            add_maps_from(&szName, &mut self.maps);
+            add_maps_from_with(&szName, |key, node| self.emplace_map(key, node));
             worldmapdirs.next();
         }
     }
@@ -181,7 +187,25 @@ impl MapList {
     pub fn add(&mut self, name: &str) {
         let fullName = convert_path("maps/") + name;
         let node = MapListNode::new(fullName);
-        self.maps.emplace(strip_creator_and_ext(name), node);
+        self.emplace_map(strip_creator_and_ext(name), node);
+    }
+
+    /// `maps.emplace` after construction: C++ multimap iterators stay on their element (and `end()`
+    /// stays `end()`), so every stored position is moved past the insertion point.
+    fn emplace_map(&mut self, key: String, node: MapListNode) {
+        let pos = self.maps.emplace(key, node);
+        let reseat = |it: &mut usize| {
+            if *it >= pos {
+                *it += 1;
+            }
+        };
+        reseat(&mut self.current);
+        reseat(&mut self.savedcurrent);
+        if let OuterIter::Maps(it) = &mut self.outercurrent {
+            reseat(it);
+        }
+        self.mlnFilteredMaps.iter_mut().for_each(reseat);
+        self.mlnMaps.iter_mut().for_each(reseat);
     }
 
     pub fn find(&mut self, name: &str) -> bool {
