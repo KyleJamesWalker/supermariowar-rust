@@ -39,6 +39,9 @@ pub static mut rm: Ptr<crate::common::resource_manager::CResourceManager> = Ptr:
 pub static mut g_map: Ptr<crate::common::map::CMap> = Ptr::null();
 pub static mut g_tilesetmanager: Ptr<crate::common::tileset_manager::CTilesetManager> = Ptr::null();
 
+pub static g_szMusicCategoryNames: [&str; crate::common::global_constants::MAXMUSICCATEGORY as usize] =
+    ["Land", "Underground", "Underwater", "Castle", "Platforms", "Ghost", "Bonus", "Battle", "Desert", "Clouds", "Snow"];
+
 pub fn load_current_map_background() {
     use crate::common::gfx::gfx_sprite::SpriteBuilder;
     use crate::common::path::{concat, convert_path_pack, file_exists};
