@@ -1,7 +1,6 @@
 //! Port of src/common/movingplatform.cpp
 
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::util::sdl_helpers::SdlSurfacePtr;
 use crate::common::game::App;
 use crate::common::gfx::gfx_drawpreview;
 use crate::common::global::*;
@@ -148,25 +147,15 @@ impl MovingPlatform {
 
         unsafe {
             for iSurface in 0..2 {
-                let surf = SdlSurfacePtr::new(SDL_CreateRGBSurface(
-                    0x0,
-                    w as i32 * iTileSize as i32,
-                    h as i32 * iTileSize as i32,
-                    (*(*screen).format).BitsPerPixel as i32,
-                    0,
-                    0,
-                    0,
-                    0,
-                ));
+                this.sprites[iSurface] = gfxSprite::blank(w as u32 * iTileSize as u32, h as u32 * iTileSize as u32);
+                this.sprites[iSurface].set_wrap(640);
 
-                if SDL_SetColorKey(surf.get(), SDL_bool::SDL_TRUE as i32, SDL_MapRGB(surf.format, 255, 0, 255)) < 0 {
+                let s = this.sprites[iSurface].get_surface();
+                if SDL_SetColorKey(s, SDL_bool::SDL_TRUE as i32, SDL_MapRGB((*s).format, 255, 0, 255)) < 0 {
                     print!("\n ERROR: Couldn't set ColorKey for moving platform: {}\n", sdl_error());
                 }
 
-                SDL_FillRect(surf.get(), null(), SDL_MapRGB(surf.format, 255, 0, 255));
-
-                this.sprites[iSurface] = gfxSprite::from_surface(surf, Some(640));
-                this.sprites[iSurface].set_wrap(640);
+                SDL_FillRect(s, null(), SDL_MapRGB((*s).format, 255, 0, 255));
             }
 
             for iSurface in 0..2 {

@@ -2689,6 +2689,7 @@ pub fn editor_platforms() -> i32 {
                 iPlatformHeight,
                 false,
                 true,
+                blitdest,
             );
 
             if platform.iPathType == PlatformPathType::Straight {
@@ -3242,13 +3243,13 @@ pub fn editor_maphazards() -> i32 {
             rm.menu_font_small.draw(0, 480 - rm.menu_font_small.get_height(), "Choose Hazard Type");
         } else if MAPHAZARD_EDIT_STATE_LOCATION == iEditState {
             let hazard = g_map.maphazards[iEditMapHazard as usize];
-            draw_map_hazard(&hazard, 0, true);
+            draw_map_hazard(&hazard, 0, true, blitdest);
             draw_map_hazard_controls(&hazard);
 
             rm.menu_font_small.draw(0, 480 - rm.menu_font_small.get_height(), "Location: [esc] Exit, [p] Properties, [LMB] Set Location");
         } else if MAPHAZARD_EDIT_STATE_PROPERTIES == iEditState {
             let hazard = g_map.maphazards[iEditMapHazard as usize];
-            draw_map_hazard(&hazard, 0, true);
+            draw_map_hazard(&hazard, 0, true, blitdest);
             draw_map_hazard_controls(&hazard);
 
             if hazard.itype == 0 || hazard.itype == 1 {
@@ -5013,12 +5014,13 @@ pub fn takescreenshot() {
                     g_map.platforms[iPlatform].iTileHeight,
                     true,
                     true,
+                    blitdest,
                 );
             }
 
             //Draw map hazards
             for hazard in g_map.maphazards.clone().iter() {
-                draw_map_hazard(hazard, iScreenshotSize, false);
+                draw_map_hazard(hazard, iScreenshotSize, false, blitdest);
             }
 
             //Save the screenshot with the same name as the map file

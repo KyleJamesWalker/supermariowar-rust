@@ -100,8 +100,8 @@ pub struct gfxSprite {
 }
 
 impl gfxSprite {
-    pub fn new() -> Self {
-        Self::default()
+    pub const fn new() -> Self {
+        gfxSprite { _alias: Aliased::new(), m_picture: SdlSurfacePtr::null(), m_wrap_x: None }
     }
 
     /// `gfxSprite(filename, color_key, alpha, wrap)`

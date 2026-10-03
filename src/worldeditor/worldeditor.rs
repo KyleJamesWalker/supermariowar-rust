@@ -205,7 +205,7 @@ pub static mut miTitleText: Ptr<MI_Text> = Ptr::null();
 
 pub static mut mModeOptionsMenu: Ptr<UI_ModeOptionsMenu> = Ptr::null();
 
-pub static mut sMapThumbnail: *mut SDL_Surface = null_mut();
+pub static mut sMapThumbnail: gfxSprite = gfxSprite::new();
 pub static mut iOldStageId: i16 = -1;
 
 //Sets up default mode options
@@ -3074,15 +3074,9 @@ pub fn DisplayStageDetails(fForce: bool, iStageId: i16, mut iMouseX: i16, mut iM
         //If we're pointing to a new stage or no stage at all
         if iStageId != iOldStageId || fForce {
             if ts.iStageType == 1 {
-                if !sMapThumbnail.is_null() {
-                    SDL_FreeSurface(sMapThumbnail);
-                    sMapThumbnail = null_mut();
-                }
+                sMapThumbnail = gfxSprite::new();
             } else if !ts.pszMapFile.is_empty() {
-                if !sMapThumbnail.is_null() {
-                    SDL_FreeSurface(sMapThumbnail);
-                    sMapThumbnail = null_mut();
-                }
+                sMapThumbnail = gfxSprite::new();
 
                 if maplist.findexact(&ts.pszMapFile, false) {
                     let file = maplist.current_filename().to_string();
@@ -3090,8 +3084,7 @@ pub fn DisplayStageDetails(fForce: bool, iStageId: i16, mut iMouseX: i16, mut iM
                     sMapThumbnail = g_map.create_thumbnail_surface(true);
                 } else {
                     //otherwise show a unknown map icon
-                    let path = CString::new(convert_path("gfx/leveleditor/leveleditor_mapnotfound.png")).unwrap();
-                    sMapThumbnail = IMG_Load(path.as_ptr());
+                    sMapThumbnail = gfxSprite::from_file(Path::new(&convert_path("gfx/leveleditor/leveleditor_mapnotfound.png")), Some(colors::MAGENTA), None, None);
                 }
             }
         }
@@ -3159,11 +3152,10 @@ pub fn DisplayStageDetails(fForce: bool, iStageId: i16, mut iMouseX: i16, mut iM
                 spr_icon.draw_src(x + iBonus * 20 + 18, y + 196, &r(src, 0, 16, 16));
             }
 
-            if !sMapThumbnail.is_null() {
+            if !sMapThumbnail.get_surface().is_null() {
                 let rSrc = r(0, 0, 160, 120);
-                let mut rDst = r(x + 16, y + 52, 160, 120);
-
-                SDL_UpperBlit(sMapThumbnail, &rSrc, blitdest, &mut rDst);
+                let rDst = r(x + 16, y + 52, 160, 120);
+                sMapThumbnail.draw_src_to(&rSrc, blitdest, &rDst);
             }
         } else {
             let szPrint = format!("Sort: {}", if ts.iBonusType == 0 { "Fixed" } else { "Random" });
