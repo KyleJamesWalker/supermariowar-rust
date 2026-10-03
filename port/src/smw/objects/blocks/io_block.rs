@@ -1,16 +1,21 @@
 //! Port of src/smw/objects/blocks/IO_Block.cpp
-// PLACEHOLDER(foundation): BounceMovingObject and KillPlayersAndObjectsInsideBlock are left to the objects porter.
 
-use crate::common::game_values::game_values;
+use crate::common::game::App;
+use crate::common::game_values::{game_values, if_sound_on_play};
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global::g_map;
 use crate::common::global_constants::*;
 use crate::common::io_block::{IO_Block, IO_BlockTrait};
 use crate::common::math::vec2::Vec2s;
-use crate::common::object_base::{cap_falling_velocity, object_block, CObject};
-use crate::globals::Ptr;
+use crate::common::moving_object_types::*;
+use crate::common::object_base::{cap_falling_velocity, object_block, CObject, CObjectTrait};
+use crate::common::player_kill_styles::KillStyle;
+use crate::globals::{rm, Ptr};
+use crate::smw::gs_gameplay::objectcontainer;
+use crate::smw::main::players;
+use crate::smw::objects::carriable::co_shell::CO_Shell;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
-use crate::smw::player::CPlayer;
+use crate::smw::player::{get_player_from_global_id, CPlayer};
 
 pub fn io_block_new(nspr: Ptr<gfxSprite>, pos: Vec2s) -> IO_Block {
     let cobject = CObject::new(nspr, pos);
@@ -202,10 +207,112 @@ pub fn io_block_hitleft_object<T: IO_BlockTrait + ?Sized>(this: &mut T, mut obje
     true
 }
 
-pub fn io_block_bounce_moving_object<T: IO_BlockTrait + ?Sized>(_this: &mut T, _object: Ptr<dyn IO_MovingObjectTrait>) {
-    todo!("port IO_Block::BounceMovingObject")
+pub fn io_block_bounce_moving_object<T: IO_BlockTrait + ?Sized>(this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) {
+    unsafe {
+        let r#type = object.get_moving_object_type();
+        if r#type == movingobject_goomba || r#type == movingobject_koopa || r#type == movingobject_buzzybeetle || r#type == movingobject_spiny {
+            if_sound_on_play(&mut rm.sfx_kicksound);
+
+            let enemy = object.as_walking_enemy().unwrap();
+            let style = enemy.we().get_kill_style();
+
+            enemy.die_and_drop_shell(true, true);
+
+            let iBumpPlayerID = this.block().iBumpPlayerID;
+            if !game_values.gamemode.gameover && iBumpPlayerID >= 0 {
+                let mut player = get_player_from_global_id(iBumpPlayerID);
+
+                if !player.is_null() {
+                    player.add_killer_award(Ptr::null(), style);
+                    player.score.adjust_score(1);
+                }
+            }
+        } else if r#type == movingobject_shell {
+            let shell = object.as_any().downcast_mut::<CO_Shell>().unwrap();
+            shell.flip();
+        } else if r#type == movingobject_throwblock {
+            object.die();
+        } else if r#type == movingobject_throwbox {
+            object.die();
+        } else {
+            object.vely = -VELNOTEBLOCKREPEL;
+        }
+    }
 }
 
-pub fn io_block_kill_players_and_objects_inside_block<T: IO_BlockTrait + ?Sized>(_this: &mut T, _playerID: i16) {
-    todo!("port IO_Block::KillPlayersAndObjectsInsideBlock")
+pub fn io_block_kill_players_and_objects_inside_block<T: IO_BlockTrait + ?Sized>(this: &mut T, playerID: i16) {
+    unsafe {
+        let iposx = this.block().iposx;
+        let iposy = this.block().iposy;
+
+        //Loop through players
+        for i in 0..players.len() {
+            let mut player = players[i];
+            if !player.isready() {
+                continue;
+            }
+
+            let mut iSwapSides: i16 = 0;
+            if player.fOldX >= (iposx as i32 + TILESIZE) as f32 {
+                iSwapSides = -App::screenWidth as i16;
+            }
+
+            if player.fOldX + PW as f32 + iSwapSides as f32 >= iposx as f32
+                && player.fOldX + (iSwapSides as f32) < (iposx as i32 + TILESIZE) as f32
+                && player.fOldY + PH as f32 >= iposy as f32
+                && player.fOldY < (iposy as i32 + TILESIZE) as f32
+            {
+                player.iSuicideCreditPlayerID = playerID;
+                player.iSuicideCreditTimer = 1;
+                player.kill_player_map_hazard(true, KillStyle::Environment, true, -1);
+            }
+        }
+
+        //Loop through objects
+        for iLayer in 0..3usize {
+            let count = objectcontainer[iLayer].list().len();
+            for i in 0..count {
+                let mut obj: Ptr<dyn CObjectTrait> = objectcontainer[iLayer].list()[i];
+                let movingobject: &mut dyn IO_MovingObjectTrait = match obj.as_io_moving_object() {
+                    Some(m) => m,
+                    None => continue,
+                };
+                if !movingobject.mo().collides_with_map() {
+                    continue;
+                }
+
+                let fOldX = movingobject.mo().fOldX;
+                let fOldY = movingobject.mo().fOldY;
+
+                let mut iSwapSides: i16 = 0;
+                if fOldX >= (iposx as i32 + TILESIZE) as f32 {
+                    iSwapSides = -App::screenWidth as i16;
+                }
+
+                if fOldX + PW as f32 + iSwapSides as f32 >= iposx as f32
+                    && fOldX + (iSwapSides as f32) < (iposx as i32 + TILESIZE) as f32
+                    && fOldY + PH as f32 >= iposy as f32
+                    && fOldY < (iposy as i32 + TILESIZE) as f32
+                {
+                    movingobject.kill_object_map_hazard(playerID);
+                }
+            }
+        }
+    }
+}
+
+/// Implements `block`, `block_mut`, `as_block_ptr` for a type that derefs to `IO_Block`.
+#[macro_export]
+macro_rules! impl_io_block_plumbing {
+    () => {
+        fn block(&self) -> &$crate::common::io_block::IO_Block {
+            self
+        }
+        fn block_mut(&mut self) -> &mut $crate::common::io_block::IO_Block {
+            self
+        }
+        fn as_block_ptr(&mut self) -> $crate::globals::Ptr<dyn $crate::common::io_block::IO_BlockTrait> {
+            $crate::globals::Ptr::from_mut(self as &mut dyn $crate::common::io_block::IO_BlockTrait)
+        }
+    };
 }
