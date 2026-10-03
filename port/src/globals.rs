@@ -222,6 +222,7 @@ pub use crate::smw::main::{blitdest, screen, x_shake, y_shake};
 /// Runs the constructors of C++ globals that have static storage, in C++ definition order.
 pub fn init_globals() {
     crate::common::global::init_globals();
+    crate::smw::world::init_globals();
 }
 
 #[cfg(test)]

@@ -3,6 +3,7 @@
 use crate::common::global_constants::PREVIEWTILESIZE;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
+use crate::smw::world::{g_worldmap, WorldMap};
 use sdl2::sys::{SDL_CreateRGBSurface, SDL_FreeSurface, SDL_Rect, SDL_Surface, SDL_UpperBlit};
 
 const PTS: i16 = PREVIEWTILESIZE as i16;
@@ -94,8 +95,7 @@ impl MI_WorldPreviewDisplay {
         self.iAnimationTimer = 0;
         self.iAnimationFrame = 0;
 
-        // TODO(world): read g_worldmap.iWidth / g_worldmap.iHeight once WorldMap is ported.
-        let (iWidth, iHeight): (i16, i16) = (0, 0);
+        let (iWidth, iHeight): (i16, i16) = unsafe { (g_worldmap.iWidth, g_worldmap.iHeight) };
 
         if iWidth > 20 {
             self.rectSrcSurface.w = 320;
@@ -132,8 +132,11 @@ impl MI_WorldPreviewDisplay {
     }
 
     pub fn set_world(&mut self) {
-        // TODO(world): g_worldmap = WorldMap(worldlist->at(game_values.worldindex).string(), PREVIEWTILESIZE); g_worldmap.GetWorldSize(&w, &h);
-        let (w, h): (i16, i16) = (0, 0);
+        let (mut w, mut h): (i16, i16) = (0, 0);
+        unsafe {
+            g_worldmap.init(WorldMap::new_path(&worldlist.at(game_values.worldindex as usize).to_string_lossy(), PREVIEWTILESIZE as i16));
+            g_worldmap.get_world_size(&mut w, &mut h);
+        }
 
         self.iScrollCols = if w > 20 { w - 20 } else { 0 };
         self.iScrollRows = if h > 15 { h - 15 } else { 0 };
@@ -144,13 +147,14 @@ impl MI_WorldPreviewDisplay {
     }
 
     fn update_map_surface(&mut self, fFullRefresh: bool) {
-        let _ = fFullRefresh;
-        // TODO(world): g_worldmap.DrawMapToSurface(-1, fFullRefresh, sMapSurface, iMapDrawOffsetCol, iMapDrawOffsetRow, iAnimationFrame);
+        unsafe {
+            g_worldmap.draw_map_to_surface(-1, fFullRefresh, self.sMapSurface, self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
+        }
 
         unsafe {
             let olddest = blitdest;
             blitdest = self.sMapSurface;
-            // TODO(world): g_worldmap.Draw(iMapGlobalOffsetX, iMapGlobalOffsetY, false, false);
+            g_worldmap.draw(self.iMapGlobalOffsetX, self.iMapGlobalOffsetY, false, false);
             blitdest = olddest;
         }
     }
