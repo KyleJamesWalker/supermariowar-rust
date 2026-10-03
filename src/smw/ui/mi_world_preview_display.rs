@@ -4,15 +4,15 @@ use crate::common::global_constants::PREVIEWTILESIZE;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 use crate::smw::world::{g_worldmap, WorldMap};
-use sdl2::sys::{SDL_CreateRGBSurface, SDL_FreeSurface, SDL_Rect, SDL_Surface, SDL_UpperBlit};
+use crate::common::gfx::gfx_sprite::gfxSprite;
+use sdl2::sys::{SDL_Rect, SDL_Surface};
 
 const PTS: i16 = PREVIEWTILESIZE as i16;
 
 pub struct MI_WorldPreviewDisplay {
     pub ui_control: UI_Control,
 
-    sMapSurface: *mut SDL_Surface,
-    rectDst: SDL_Rect,
+    map_sprite: gfxSprite,
 
     iCols: i16,
     iRows: i16,
@@ -40,24 +40,13 @@ pub struct MI_WorldPreviewDisplay {
 }
 crate::impl_base!(MI_WorldPreviewDisplay => ui_control: UI_Control);
 
-impl Drop for MI_WorldPreviewDisplay {
-    fn drop(&mut self) {
-        if !self.sMapSurface.is_null() {
-            unsafe { SDL_FreeSurface(self.sMapSurface) };
-            self.sMapSurface = std::ptr::null_mut();
-        }
-    }
-}
-
 const ZERO_RECT: SDL_Rect = SDL_Rect { x: 0, y: 0, w: 0, h: 0 };
 
 impl MI_WorldPreviewDisplay {
     pub fn new(x: i16, y: i16, cols: i16, rows: i16) -> Self {
-        let sMapSurface = unsafe { SDL_CreateRGBSurface((*screen).flags, 384, 304, (*(*screen).format).BitsPerPixel as i32, 0, 0, 0, 0) };
         let mut this = MI_WorldPreviewDisplay {
             ui_control: UI_Control::new(x, y),
-            sMapSurface,
-            rectDst: ZERO_RECT,
+            map_sprite: gfxSprite::blank(384, 304),
             iCols: cols,
             iRows: rows,
             iMapOffsetX: 0,
@@ -148,12 +137,12 @@ impl MI_WorldPreviewDisplay {
 
     fn update_map_surface(&mut self, fFullRefresh: bool) {
         unsafe {
-            g_worldmap.draw_map_to_surface(-1, fFullRefresh, self.sMapSurface, self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
+            g_worldmap.draw_map_to_surface(-1, fFullRefresh, self.map_sprite.get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
         }
 
         unsafe {
             let olddest = blitdest;
-            blitdest = self.sMapSurface;
+            blitdest = self.map_sprite.get_surface();
             g_worldmap.draw(self.iMapGlobalOffsetX, self.iMapGlobalOffsetY, false, false);
             blitdest = olddest;
         }
@@ -302,8 +291,6 @@ impl UI_ControlTrait for MI_WorldPreviewDisplay {
         self.rectSrcSurface.x = self.iMapOffsetX as i32;
         self.rectSrcSurface.y = self.iMapOffsetY as i32;
 
-        unsafe {
-            SDL_UpperBlit(self.sMapSurface, &self.rectSrcSurface, blitdest, &mut self.rectDstSurface);
-        }
+        self.map_sprite.draw_src_to(&self.rectSrcSurface, unsafe { blitdest }, &self.rectDstSurface);
     }
 }
