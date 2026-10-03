@@ -638,12 +638,8 @@ impl CResourceManager {
 
         unsafe { g_tilesetmanager.init(&graphicspack) };
 
-        let mut loadok = true;
-        loadok &= self.game_font_small.init(&convert_path_pack("gfx/packs/fonts/font_small.png", &graphicspack));
-        loadok &= self.game_font_large.init(&convert_path_pack("gfx/packs/fonts/font_large.png", &graphicspack));
-        if !loadok {
-            panic!("ERROR: error loading the fonts!");
-        }
+        self.game_font_small = gfxFont::from_path(&convert_path_pack("gfx/packs/fonts/font_small.png", &graphicspack));
+        self.game_font_large = gfxFont::from_path(&convert_path_pack("gfx/packs/fonts/font_large.png", &graphicspack));
 
         self.load_all_sprites();
     }
@@ -652,12 +648,8 @@ impl CResourceManager {
         let graphicspack = unsafe { menugraphicspacklist.current_path().to_string_lossy().into_owned() };
         let builder = |relpath: &str| SpriteBuilder::new(convert_path_pack(relpath, &graphicspack));
 
-        let mut loadok = true;
-        loadok &= self.menu_font_small.init(&convert_path_pack("gfx/packs/menu/menu_font_small.png", &graphicspack));
-        loadok &= self.menu_font_large.init(&convert_path_pack("gfx/packs/menu/menu_font_large.png", &graphicspack));
-        if !loadok {
-            panic!("ERROR: error loading the fonts!");
-        }
+        self.menu_font_small = gfxFont::from_path(&convert_path_pack("gfx/packs/menu/menu_font_small.png", &graphicspack));
+        self.menu_font_large = gfxFont::from_path(&convert_path_pack("gfx/packs/menu/menu_font_large.png", &graphicspack));
 
         //load basic stuff
         self.menu_backdrop = builder("gfx/packs/menu/menu_background.png").without_color_key().create();

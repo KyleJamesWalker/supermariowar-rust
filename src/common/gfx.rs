@@ -5,7 +5,6 @@ pub mod gfx_font;
 pub mod gfx_palette;
 pub mod gfx_sdl;
 pub mod gfx_sprite;
-pub mod s_font;
 
 use crate::common::gfx::color::{colors, RGB};
 use crate::common::gfx::gfx_palette::{gfxPalette, PlayerPalette};
@@ -40,7 +39,7 @@ fn sdl_error() -> String {
     unsafe { CStr::from_ptr(SDL_GetError()).to_string_lossy().into_owned() }
 }
 
-unsafe fn get_raw_pixel(surf: *mut SDL_Surface, x: i32, y: i32) -> u32 {
+pub unsafe fn get_raw_pixel(surf: *mut SDL_Surface, x: i32, y: i32) -> u32 {
     assert!(!surf.is_null());
     assert!(0 <= x && x < (*surf).w);
     assert!(0 <= y && y < (*surf).h);

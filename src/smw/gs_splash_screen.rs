@@ -128,7 +128,7 @@ impl GameState for SplashScreenState {
                 rm.menu_version.setalpha(self.alpha as u8);
                 rm.menu_version.draw(628 - rm.menu_version.get_width(), 10); //smw logo
 
-                rm.menu_font_large.setalpha(self.alpha as u8);
+                rm.menu_font_large.set_alpha(self.alpha as u8);
 
                 self.menu_credits.setalpha(self.alpha as u8);
                 self.menu_credits.draw(227, 200);

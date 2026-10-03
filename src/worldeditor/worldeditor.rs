@@ -12,6 +12,7 @@ use crate::common::game::ensure_settings_dir;
 use crate::common::game_mode::{game_mode_owned, GAMEMODE_LAST, GAMEMODE_NUM_OPTIONS};
 use crate::common::game_values::{controlkeys, TITLESTRING};
 use crate::common::gfx::color::colors;
+use crate::common::gfx::gfx_font::gfxFont;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::gfx::{gfx_changefullscreen, gfx_flipscreen, gfx_init, gfx_settitle};
 use crate::common::global_constants::*;
@@ -417,8 +418,8 @@ pub fn main() {
         menu_shade.init(load_sprite_alpha("gfx/leveleditor/leveleditor_shade.png", colors::MAGENTA, 128));
         spr_largedialog.init(load_sprite_alpha("gfx/leveleditor/leveleditor_platform.png", colors::MAGENTA, 255));
 
-        rm.menu_font_small.init(&convert_path("gfx/packs/Classic/fonts/font_small.png"));
-        rm.menu_font_large.init(&convert_path("gfx/packs/Classic/fonts/font_large.png"));
+        rm.menu_font_small = gfxFont::from_path(&convert_path("gfx/packs/Classic/fonts/font_small.png"));
+        rm.menu_font_large = gfxFont::from_path(&convert_path("gfx/packs/Classic/fonts/font_large.png"));
 
         println!("\n---------------- load world ----------------");
 

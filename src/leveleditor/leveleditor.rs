@@ -7,6 +7,7 @@ use crate::common::file_list::BackgroundList;
 use crate::common::game::ensure_settings_dir;
 use crate::common::game_values::{default_powerup_setting, TITLESTRING};
 use crate::common::gfx::color::colors;
+use crate::common::gfx::gfx_font::gfxFont;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::gfx::{gfx_changefullscreen, gfx_flipscreen, gfx_init, gfx_settitle};
 use crate::common::global::g_szMusicCategoryNames;
@@ -497,8 +498,8 @@ pub fn main() {
             println!("\n ERROR: Couldn't set ColorKey + RLE: {}", sdl_error());
         }
 
-        rm.menu_font_small.init(&convert_path("gfx/packs/Classic/fonts/font_small.png"));
-        rm.menu_font_large.init(&convert_path("gfx/packs/Classic/fonts/font_large.png"));
+        rm.menu_font_small = gfxFont::from_path(&convert_path("gfx/packs/Classic/fonts/font_small.png"));
+        rm.menu_font_large = gfxFont::from_path(&convert_path("gfx/packs/Classic/fonts/font_large.png"));
 
         println!("\n---------------- load map ----------------");
 
