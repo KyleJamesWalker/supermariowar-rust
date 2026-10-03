@@ -46,7 +46,7 @@ How work flows:
 | Small structural leftovers | `53e65af9`, `b80e755e`, `6e36bd76`, `df5a85a6` | coordinator | optional |
 | 290-map sweep goldens, fresh-worktree verification, final summary | | coordinator | last |
 
-Gate baseline: `8a8d41d` (`df0f56a` gated the same). 20/20 tests pass, 43/43 game replays match, 12/12 editor dumps match (105/110 shots, 25/35 files).
+Gate baseline: `8a8d41d` (`df0f56a` gated the same). 20/20 tests pass, 43/43 game replays match, 12/12 editor dumps match (105/110 shots, 26/35 files).
 
 ## Branches and outputs
 
