@@ -35,6 +35,8 @@ The crate root sets `#![allow(non_snake_case, non_camel_case_types, non_upper_ca
 - **Overflow.** `overflow-checks = false` in every profile, so arithmetic wraps like the compiled C++. Use explicit `wrapping_*` where C++ relies on unsigned wraparound (RNG, hashes), as documentation.
 - **Evaluation order.** C++ argument evaluation order is unspecified; the reference build is clang, which evaluates left to right. When arguments have side effects (e.g. two `RANDOM_INT` calls), hoist them into locals in left-to-right order.
 - **Randomness.** All game randomness goes through `RANDOM_INT` / `RANDOM_BOOL` (`common::random_number_generator`). Never use another RNG.
+- **Exceptions.** `throw` is a panic carrying the C++ payload (`std::panic::panic_any(String)`, see `file_io::throw_runtime_error`); `try { } catch` is `std::panic::catch_unwind(AssertUnwindSafe(|| ...))` at the same site. Signatures do not change to `Result`.
+- **Strings.** `std::string` and `char[N]` fields become `String`; where C++ truncates into a fixed buffer, truncate the same way at the write site.
 - Array indexing panics where C++ would read out of bounds; that is intended (it surfaces bugs) unless the C++ out-of-bounds read is load-bearing, in which case reproduce the value it reads and comment why.
 
 ## Global state
