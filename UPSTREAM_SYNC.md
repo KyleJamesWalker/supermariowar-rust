@@ -1,16 +1,16 @@
 # Upstream sync: a7f7e25 to 5693918f
 
-**Bottom line:** bringing the port up to upstream `5693918f` (72 commits past `a7f7e25`) is about 40 engineer-hours. 8 of those hours are done on this branch. Six ported upstream changes and one latent port fix already make all 43 game replays match the new C++ on every frame, sound record and screenshot, and make all 12 editor dumps match. The rest of the work is editor pixels and saved files, `servers.toml`, error paths that no replay reaches, and optional structural alignment with the upstream gfx and tileset refactors.
+**Bottom line:** bringing the port up to upstream `5693918f` (72 commits past `a7f7e25`) is about 45 engineer-hours. 8 of those hours are done on this branch. Seven ported upstream changes and one latent port fix already make all 43 game replays match the new C++ on every frame, sound record and screenshot, and make all 12 editor dumps match. The rest of the work is editor pixels and saved files, `servers.toml`, error paths that no replay reaches, and optional structural alignment with the upstream gfx and tileset refactors.
 
 | Category | Done | Remaining |
 |---|---|---|
 | Reference merge, build and goldens (one conflict, CMake flag change) | 2 h | 0 |
 | Behaviour ports with parity evidence (7 changes, below) | 6 h | 0 |
-| Behaviour changes not yet ported: editor surfaces and files, donut block, map foreground, tile types, error paths (class b, todo) | 0 | 15 h |
-| Infrastructure: `servers.yml` to `servers.toml` (class c) | 0 | 4 h |
-| Structural alignment with refactors, no behaviour change (class a*) | 0 | 10 h |
+| Behaviour changes not yet ported: editor surfaces and files, tileset loading, donut block, map foreground, tour-stop settings fallback, error paths (class b, todo) | 0 | 20 h |
+| Infrastructure: `servers.yml` to `servers.toml`, binary string edge cases (class c) | 0 | 4 h |
+| Structural alignment with refactors, no behaviour change (class a*) | 0 | 8 h |
 | Coverage and harness: new replays for unreached fixes, map dump rerun, editor nondeterminism, `gfx_smoke` twin, docs and committed goldens | 0 | 5 h |
-| **Total** | **8 h** | **34 h** |
+| **Total** | **8 h** | **37 h** |
 
 Estimates assume the tooling on this branch. Agent wall-clock time for the done column was about 1 h 45 min.
 
@@ -53,7 +53,7 @@ The same 43 frames diverge in reverse (0 calls against 13), and nothing else doe
 | `cdcd9c02` map dirs resolved twice (reproduced C++ bug) | `bdceedb` | `add_maps_from` takes a resolved path | All 43 dumps go from diverged to identical |
 | `37c4eaec` font rewrite (large refactor) | `ed16f54` | `gfx_font.rs` rewritten: glyph areas between markers, colour key at (0,1), screen-format RLE surface, whole-glyph chop. `s_font.rs` removed | Shot mismatches drop from 51 to 3 |
 | `5bb5459b` disappearing capes | `7f6262e` | `iCapeYOffset` signed | `cpu_health` frame 2014 matches (the cape was missing) |
-| `4c336b4c` map preview sprites | `2e0850a` | Preview layers are `gfxSprite::blank` (screen format, not 16 bpp). `rectDst` is no longer clipped in place | `start_classic` frame 150 and `joy_game` frame 470 match (72,659 px each before) |
+| `4c336b4c` + `c2e87df8` map preview sprites | `2e0850a` | Preview layers are `gfxSprite::blank` (screen format, not 16 bpp). `rectDst` is no longer clipped in place | `start_classic` frame 150 and `joy_game` frame 470 match (72,659 px each before) |
 | `d546c05b` tour stops cleared after world load (reproduced C++ bug) | `8ba9fe1` | `reset_tour_stops()` runs before parsing | World editor dumps show `stages=12`, as in C++. Game replays unchanged |
 | (latent port bug) | `d052cf2` | `MapList` positions follow their element on insert, as `std::multimap` iterators do | The level editor opens `NMcCoy_1-3`, as in C++. Exposed only once `cdcd9c02` made `addWorldMaps` insert maps |
 | `dacabe1c` wrapped blits | `9cc30de` | `gfxSprite::draw` uses the upstream `blit` | Dense shots: `flow_world` frame 2050 differs by 122 px without it and matches with it |
@@ -65,10 +65,10 @@ Supporting commits: `358777e` adds `GOLDEN_ROOT` to the four golden and parity s
 | Session | Difference | Cause |
 |---|---|---|
 | All 5 world editor sessions | Saved world files drop the bonus text (`Toad's House,1,p6,...` instead of `Toad's House,1,\|\|Pick an item...\|\|,p6,...`) | `1eaed535`, not ported |
-| `stages_vehicles` frames 130, 145 | Stage thumbnail draws platforms tinted, colours differ | Editor thumbnail surfaces, `5c979393` / `0124c1eb` |
-| `types_backgrounds` frame 70 | Background picker colours differ on the whole screen | 16 bpp editor surfaces replaced, `0124c1eb` / `545fd077` |
-| `platforms_save` 96, `types_backgrounds` 45 | Tile palette markers differ (about 1,480 px) | Tileset series, likely `19dcc293`. Not root-caused |
-| `screenshot_find` | 9 saved PNGs differ in bytes, pixels identical | Screenshot surface format, `d3ad2cbb` / `0124c1eb` |
+| `stages_vehicles` frames 130, 145 | Stage thumbnail draws platforms tinted, colours differ | Thumbnail surfaces 16 bpp to 32 bpp, `5c979393` |
+| `types_backgrounds` frame 70 | Background picker colours differ on the whole screen | Picker thumbnails 16 bpp to 32 bpp, `0124c1eb` |
+| `platforms_save` 96, `types_backgrounds` 45 | Tile palette markers differ (about 1,480 px) | Likely `a4a6140d`: the tile-type overlay lost its magenta colour key. Not confirmed |
+| `screenshot_find` | 9 saved PNGs differ in bytes, pixels identical | Screenshots saved with an alpha channel, `0124c1eb` |
 
 ## Commit triage
 
@@ -77,31 +77,31 @@ Classes: **a** no Rust impact. **a\*** refactor with no observable change on any
 | Commit | Subject | Class | Rust module | Status | Note |
 |---|---|---|---|---|---|
 | `f56607a1` | Tileset manager no longer a directory iterator | b | `common/tileset_manager.rs`, `common/map/map_reader1{5,6,7}xx.rs` | todo | Finds `Classic` after sorting: fixes the kept "index taken before sorting" bug. Affects only pre-1.8 map conversion. Rerun the map dump |
-| `a2541fcc` | Do not assume the classic tileset exists | b | `common/tileset_manager.rs`, map readers | todo | Null-safe when `Classic` is missing. Error path only |
+| `a2541fcc` | Do not assume the classic tileset exists | a | `common/tileset_manager.rs`, map readers | | Pointer return. Matches only once `f56607a1` is ported |
 | `00cffef9` | Tileset rects computed at compile time | a* | `common/tileset_manager.rs` | | |
 | `c130b990` | Lazy load tileset textures | a* | `common/tileset_manager.rs`, `common/file_io.rs` | | |
-| `3ad06ca7` | Direct blitting utilities on gfxSprite | a* | `common/gfx/gfx_sprite.rs` | partly ported | `blank`, `draw_to`, `blit` |
+| `3ad06ca7` | Direct blitting utilities on gfxSprite | b | `common/gfx/gfx_sprite.rs` | partly ported | `blank`, `draw_to`, `blit` in their `dacabe1c` form. Wrap test uses post-clip x plus shake |
 | `b6f985ec` | Tile draw call simplifications | a* | `common/tileset_manager.rs`, `common/map.rs`, `common/movingplatform.rs` | | |
-| `e0bcaf30` | Fewer direct SDL blits | a* | `common/eyecandy.rs`, `common/map.rs`, `smw/world.rs` | | |
+| `e0bcaf30` | Fewer direct SDL blits | b | `common/eyecandy.rs`, `common/map.rs`, `smw/world.rs`, `leveleditor/` | todo | Editor path dots wrap after `takescreenshot()` leaves wrap set |
 | `fa3e6a22` | More tileset refactoring | a* | `common/map.rs`, `common/movingplatform.rs` | | |
 | `981b56c3` | Store tilesets directly | a* | `common/tileset_manager.rs` | | |
 | `4c6d805a` | Minor refactoring | a* | `common/tileset_manager.rs` | | |
 | `53e65af9` | Removed path helpers | a* | `common/path.rs` | | |
-| `5c865fe5` | gfxSprite in movingplatform | a* | `common/movingplatform.rs` | | |
-| `4c336b4c` | gfxSprites in the map preview | b | `common/ui/mi_map_preview.rs` | **ported** | 16 bpp surfaces to screen format |
-| `c2e87df8` | Fewer surface allocations in menu elements | a* | `smw/ui/mi_world_preview_display.rs` | | World preview was already screen format |
+| `5c865fe5` | gfxSprite in movingplatform | b | `common/movingplatform.rs` | todo | Platform side-wrap goes through the sprite wrap. Port with `dacabe1c` semantics |
+| `4c336b4c` | gfxSprites in the map preview | a* | `common/ui/mi_map_preview.rs` | **ported** | With `c2e87df8`. Preview rect no longer clipped in place. Rust commit `2e0850a` cites only this hash |
+| `c2e87df8` | Fewer surface allocations in menu elements | b | `common/ui/mi_map_preview.rs`, `smw/ui/mi_world*.rs` | partly ported | Adds `blank()`: map preview 16 bpp to 32 bpp (ported). World map surfaces gain alpha and wrap (todo, no visible change in replays) |
 | `5c979393` | Fewer surface allocations in map code | b | `common/map.rs`, editors | todo | Editor thumbnails |
-| `a4a6140d` | Image loading moved out of gfxSprite | a* | `common/gfx/gfx_sprite.rs` | | `SpriteBuilder` becomes `ImageLoader` |
+| `a4a6140d` | Image loading moved out of gfxSprite | b | `common/gfx/gfx_sprite.rs`, editors | todo | `SpriteBuilder` becomes `ImageLoader`. The level editor tile-type overlay loses its magenta colour key: likely the tile palette marker diffs |
 | `559a4401` | Tileset rects const | a* | `common/tileset_manager.rs` | | |
-| `0124c1eb` | Manual surface creation removed in editors | b | `leveleditor/`, `worldeditor/` | todo | Editor surface formats |
-| `e3bab591` | Skin processing surfaces | a* | `common/gfx.rs` | | |
-| `b9bb1a85` | Removed manual `IMG_Load` calls | a* | `common/gfx/gfx_palette.rs`, `smw/ui/mi_map_browser.rs` | | Map browser not in replays. Unverified |
+| `0124c1eb` | Manual surface creation removed in editors | b | `leveleditor/`, `worldeditor/` | todo | Background picker 16 bpp to 32 bpp, screenshots saved with alpha, platform tooltip wraps |
+| `e3bab591` | Skin processing surfaces | b | `common/gfx.rs` | todo | `blank()` blend mode none (ported). Skin surfaces become `blank()` with alpha, RGB unchanged |
+| `b9bb1a85` | Removed manual `IMG_Load` calls | a | `common/gfx/gfx_palette.rs`, `smw/ui/mi_map_browser.rs` | | Same pixels for valid files. A broken file now throws |
 | `6b6bdb7a` | More gfx refactoring | a* | `common/gfx.rs`, hazards | | |
-| `545fd077` | Last manual blits in the world editor | b | `leveleditor/leveleditor.rs` | todo | Background picker colours |
+| `545fd077` | Last manual blits in the world editor | a | `leveleditor/leveleditor.rs` | | Same pixels: the sheets have no transparency chunk |
 | `05e1d52b` | Limit cloned submodules | a | | | CMake |
 | `02664496` | Log typo | a | | | |
 | `37c4eaec` | Font handling rewrite | b | `common/gfx/gfx_font.rs` | **ported** | |
-| `cfcbbcb2` | Tileset loading more lazy | a* | `common/tileset_manager.rs` | | |
+| `cfcbbcb2` | Tileset loading more lazy | b | `common/tileset_manager.rs` | todo | `.tls` read on first use. Port with `f56f8ed1`, which fixes a `.tls` truncation it introduces |
 | `b5fbfffc` | SDL exception message format | a | | | Message text |
 | `3f18878f` | Removed CMake platform files | a | | | `-DDISABLE_DEFAULT_CFLAGS` gone |
 | `34a03d48` | Dropped Mixer X | c | | none | The port never used Mixer X |
@@ -127,33 +127,35 @@ Classes: **a** no Rust impact. **a\*** refactor with no observable change on any
 | `a7bc5276` | World music enum looping | b | `worldeditor/worldeditor.rs`, `common/file_list.rs` | todo | Cycles through all categories |
 | `d546c05b` | Tour stops cleared after world load | b | `smw/world.rs` | **ported** | |
 | `1eaed535` | Toad House text when saving worlds | b | `common/world_tour_stop.rs` | todo | Saved world files |
-| `d70e4dc3` | Skip reloading present skins | a* | `common/resource_manager.rs` | | Cache only |
+| `d70e4dc3` | Skip reloading present skins | b | `common/resource_manager.rs` | todo | Low risk: skips `gfx_loadmenuskin` when path and colour are unchanged |
 | `df5a85a6` | Readability refactor | a* | `smw/ui/mi_tournament_scoreboard.rs` | | |
-| `01e5fa7e` | World editor stage map field stuck | b | `common/map_list.rs` | todo | `fInCurrentFilterSet` defaults to true |
+| `01e5fa7e` | World editor stage map field stuck | b | `common/map_list.rs` | todo | `fInCurrentFilterSet` defaults to true, so `next(true)` no longer loops on one map |
 | `3b9ca6dd` | Bug report template | a | | | |
 | `dacabe1c` | Clipped destination on wrapped blits | b | `common/gfx/gfx_sprite.rs` | **ported** | |
-| `11bb5fba` | Donut block's own falling graphic | b | `common/movingplatform.rs`, `smw/objects/blocks/donut_block.rs` | todo | No replay reaches a falling donut on a shot frame |
+| `11bb5fba` | Donut block's own falling graphic | b | `common/movingplatform.rs`, `smw/objects/blocks/donut_block.rs` | todo | `donutblock.png` instead of Classic tile (29,15). No replay shows a falling donut on a shot frame |
 | `efe2e390` | yaml-cpp replaced with toml11 | c | `smw/network/net_config_manager.rs` | todo | See below |
 | `116a5324` | README toml11 | a | | | |
 | `ceb5ddb9` | README SDL3 | a | | | |
 | `277ee170` | Detailed file errors | b | `common/file_io.rs` | todo | Message text on IO errors |
-| `8faf76bc` | Mode settings serialization moved | a* | `common/world_tour_stop.rs` | | New file `GameModeSettingsSerialization.cpp` |
+| `8faf76bc` | Mode settings serialization moved | b | `common/world_tour_stop.rs` | todo | Hidden change: missing tour-stop settings fall back to `gamemodesettings`, not `gamemodemenusettings`. Differs with a non-default options.bin |
 | `65a81608` | Serialization tests | a | | | |
 | `70706d2b` | ci: MSVC package | a | | | |
 | `1dbcbaf3` | ci: MSVC static runtime | a | | | |
-| `28e9e673` | Binary text reads return a string | a* | `common/file_io.rs` | | |
-| `4b965424` | Text serialization null bytes | a* | `common/file_io.rs` | | Byte format equals `a7f7e25`. Strings over 254 chars now throw |
+| `28e9e673` | Binary text reads return a string | c | `common/file_io.rs` | todo | Port with `4b965424` |
+| `4b965424` | Text serialization null bytes | c | `common/file_io.rs` | todo | Same bytes up to 254 chars. 255 chars now get a NUL, longer strings throw, embedded NULs are kept |
 | `2934b282` | String serialization tests | a | | | |
 | `051723d0` | File writing tests | a | | | |
 | `6713b94a` | README screenshots | a | | | |
 | `9663cc66` | README history | a | | | |
-| `5693918f` | Map foreground not cleared before load | b | `common/map.rs` | todo | Pixels after a map change |
+| `5693918f` | Map foreground not cleared before load | b | `common/map.rs` | todo | Lock the RLE foreground surface around the fill. Without it the previous map foreground shows through |
 
-Totals: 22 **a**, 24 **a\*** (one partly ported), 24 **b** (6 ported, 18 todo), 2 **c** (1 todo).
+Totals: 25 **a**, 14 **a\***, 30 **b** (5 ported, 2 partly ported, 23 todo), 4 **c** (3 todo). Three triage agents read every diff. Their notes are folded into this table.
 
 ### `servers.yml` to `servers.toml`
 
-Upstream now reads and writes `$HOME/.smw/servers.toml` and ignores an existing `servers.yml` (no migration). The keys are unchanged: `player_name` (string) and `servers` (array of strings). The validation and fallback rules are also unchanged. The port reads and writes `servers.yml` with `yaml-rust2` and emulates yaml-cpp quoting, so that `tools/ref/persist_interop.sh` gets byte-identical files. To keep that test byte-identical, the Rust side needs a writer that matches `toml::format` from toml11 v4.4.0. Check its key order: `toml::table` is an `unordered_map`, so the order follows libc++ hashing. `src/server` already has a libc++-order helper for this.
+Upstream now reads and writes `$HOME/.smw/servers.toml` and ignores an existing `servers.yml` (no migration). The keys are unchanged: `player_name` (string) and `servers` (array of strings). A non-string `player_name` is now an error. A non-string server entry is skipped with a warning, where YAML stopped the loop.
+
+The port reads and writes `servers.yml` with `yaml-rust2` and emulates yaml-cpp quoting so `tools/ref/persist_interop.sh` gets byte-identical files. A toml11 v4.4.0 build on macOS writes `servers` first, then `player_name`, then a blank line. The key order comes from libc++ hashing. An array stays inline until its running length passes 60 characters, then goes multiline with a 4-space indent and a trailing comma. The Rust writer must match this, and `persist_interop.sh`, `persist_fuzz.py`, `net_driver.sh` and `net_game_interop.sh` must move to the new file name.
 
 ## Problems hit
 
@@ -180,7 +182,7 @@ Upstream now reads and writes `$HOME/.smw/servers.toml` and ignores an existing 
 
 ## Follow-up
 
-- Port the 18 **b** todo rows. Start with `1eaed535` and the editor surface commits, which close the remaining editor differences.
+- Port the 23 **b** todo rows. Start with `1eaed535` and the editor surface commits, which close the remaining editor differences.
 - Add replays or editor sessions for fixes that no current script reaches: a falling donut block, world music cycling, a save of a world with bonus houses, and a pre-1.8 map in the level editor.
 - `TourStopVec` (`common/game_values.rs`) emulates reads past `clear()`. After `d546c05b` the game no longer needs it, but the world editor's `erase` still does. Check before removing it.
 - The other C++ bugs the port keeps on purpose (AI out-of-bounds map reads, the boss-minigame Frenzy cast, the `getBoolean` assert) are in files these 72 commits do not touch.
