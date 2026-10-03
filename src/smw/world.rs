@@ -631,6 +631,8 @@ impl WorldMap {
             lines.pop();
         }
 
+        reset_tour_stops();
+
         let mut iReadType: i16 = 0;
         let mut version = Version::default();
         let mut iMapTileReadRow: i16 = 0;
@@ -982,7 +984,6 @@ impl WorldMap {
             throw_runtime_error("Invalid world file");
         }
 
-        reset_tour_stops(); // FIXME
         this
     }
 
