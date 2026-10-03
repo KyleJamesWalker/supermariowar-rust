@@ -2,20 +2,26 @@
 
 The level and world editors are checked the same way as the game (`REPLAY.md`). Scripted keyboard and mouse sessions edit and save maps or worlds. The C++ reference and the Rust port must then produce byte-identical per-frame dumps, screenshots and saved files.
 
-- Harness: `src/common/EditorHarness.{h,cpp}` in `tools/cpp-harness.patch`, ported as `src/common/editor_harness.rs`. Both editors share it.
+- Harness: `src/common/EditorHarness.{h,cpp}` in `tools/editor-harness.patch`, ported as `src/common/editor_harness.rs`. Both editors share it.
 - Scripts: `tools/editor_replays/<editor>/*.txt`, where `<editor>` is `worldedit` or `leveledit`.
 - Golden output: `tools/editor_golden/<editor>/<script>/` contains `dump.txt.gz`, `frame_<n>.png`, `files/` and `home/`.
 
 ## Building the reference editors
 
-Build them in a separate directory of the patched reference tree, so `build/smw` is not disturbed:
+The editors build from their own tree, `~/work/smw-ref-editors`, never from `~/work/smw-ref` (the game reference all game goldens come from). That tree is upstream plus `tools/cpp-harness.patch` plus `tools/editor-harness.patch`:
 
 ```sh
-cd ~/work/smw-ref && mkdir -p build-editors && cd build-editors
+rsync -a --exclude .git ~/work/supermariowar/ ~/work/smw-ref-editors/
+cd ~/work/smw-ref-editors
+patch -p1 < <this repo>/port/tools/cpp-harness.patch
+patch -p1 < <this repo>/port/tools/editor-harness.patch
+mkdir -p build-editors && cd build-editors
 cmake .. -DNO_NETWORK=ON -DBUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release \
          -DDISABLE_DEFAULT_CFLAGS=ON -DCMAKE_CXX_FLAGS="-O2 -ffp-contract=off"
 make -j smw-worldedit smw-leveledit
 ```
+
+`editor-harness.patch` holds one `diff -uN supermariowar/src/<f> smw-ref-editors/src/<f>` per file it touches (`common/CMakeLists.txt`, `common/EditorHarness.{h,cpp}`, `common/map.h`, `leveleditor/leveleditor.cpp`, `worldeditor/worldeditor.cpp`); `~/work/smw-ref` never gets them, so the game reference stays clean upstream plus `cpp-harness.patch`. Regenerate it from `~/work` by rerunning that diff for each file, and check it with `patch -p1 --dry-run` on a clean copy that already has `cpp-harness.patch` applied.
 
 ## Running
 
@@ -31,7 +37,7 @@ tools/make_editor_golden.sh [script ...]     # regenerate tools/editor_golden/
 - It uses a fresh `HOME`, so no `worldeditor.bin` or `leveleditor.bin` from a previous run is read.
 - It sets the same `SDL_VIDEODRIVER=dummy` / `SDL_AUDIODRIVER=dummy` / `SMW_*` environment as `run_ref.sh`.
 
-Without `SMW_BIN` it runs `~/work/smw-ref/build-editors/smw-<editor>`. `editor_parity.sh` points it at `target/release/<editor>or` (`worldeditor`, `leveleditor`) and the repository's `data/`.
+Without `SMW_BIN` it runs `~/work/smw-ref-editors/build-editors/smw-<editor>` (`SMW_EDITOR_REF_DIR` overrides the tree). `editor_parity.sh` points it at `target/release/<editor>or` (`worldeditor`, `leveleditor`) and the repository's `data/`.
 
 Script directives, given as `#@ key=value` lines:
 
@@ -55,6 +61,8 @@ Every editor loop ends its iteration with `SDL_Delay(delay)`. The reference buil
 
 `editorharness::init()` pushes the frame-0 events. Loops that return early (a key that switches editor mode) do not end a frame. The next loop's `SDL_Delay` ends it instead.
 
+The level editor's loops end with `FPSLimiter::beforeFlip()` instead, so the patch puts `editorharness::frameDelay(0)` before each of its five `beforeFlip` calls: the main loop, the block property page, and the nested tile, animation and tile type pickers of the platform editor. Its text dialogs (New, Save As, Find) loop on `SDL_Delay` without flipping and get the `#define`. The editor links `smw/FPSLimiter.cpp`, which calls `harness::noLimit()`, so `leveleditor.cpp` defines that to return `editorharness::noLimit()`.
+
 ## Script format
 
 This is the `REPLAY.md` format plus mouse lines:
@@ -71,7 +79,10 @@ The harness builds each event as follows:
 - **Mouse button events:** `clicks = 1`.
 - **Motion events:** `state` is the scripted buttons held, and `xrel`/`yrel` are measured from the last scripted position.
 
-`SDL_PushEvent` does not update `SDL_GetKeyboardState`. Editor code that checks held modifiers that way (Shift+S save-as, Ctrl+Delete, Shift in dialogs) therefore sees them released, on both sides.
+`SDL_PushEvent` does not update `SDL_GetKeyboardState` or `SDL_GetMouseState`, so the harness keeps its own copies: a scancode array set and cleared by scripted key events at push time, and the scripted button mask. `editorharness::keyboardState()` / `mouseState()` (`editor_harness::keyboard_state()` / `mouse_state()`) return them while the harness is active and fall back to SDL otherwise.
+
+- The level editor `#define`s `SDL_GetKeyboardState` and `SDL_GetMouseState` to these, so held Shift, Ctrl and the Z/X/C path modifiers work in scripts.
+- The world editor still reads SDL directly, so it sees held modifiers released.
 
 ## Dump format
 
@@ -92,6 +103,26 @@ The world editor writes one editor line:
 | `w`, `h` | `iWorldWidth`, `iWorldHeight` |
 | `stages` | `game_values.tourstops.size()` |
 | `vehicles`, `warps` | sizes of the editor's vehicle and warp lists |
+
+The level editor writes five editor lines:
+
+```
+E state=<s> edit_mode=<m> layer=<l> mouse=<x>,<y> ignore=<0|1> only=<0|1> blocks=<0|1>
+T tileset=<t> start=<x>,<y> end=<x>,<y> size=<cols>,<rows> drag=<0|1> view=<x>,<y>,<ax> block=<b>,<on> tiletype=<t> settype=<t> item=<i> warp=<dir>,<conn> nospawn=<n>
+X move=<m> start=<x>,<y> offset=<x>,<y> drag=<sx>,<sy>,<ox>,<oy> replace=<0|1> nodrag=<0|1> copied=<layer>
+P count=<n> edit=<i> state=<s> preview=<i> switch=<s>,<i> hazards=<n> hzstate=<s> hzedit=<i> modeitem=<m>,<drag> msg=<t> music=<t>
+H map=<hex> plat=<hex> anim=<hex>
+```
+
+The fields are the editor globals of the same names (`edit_mode`, `selected_layer`, `set_tile_*`, `move_*`, `g_iNumPlatforms`, `iPlatformEditState`, `iEditState`, `modeitemmode`, `g_messagedisplaytimer`, `g_musiccategorydisplaytimer`...). `H` holds three 32-bit FNV-1a hashes (offset `0x811c9dc5`, prime `0x01000193`), each over a sequence of 32-bit little-endian ints, with floats taken by their bit pattern:
+
+| Hash | Values, in order |
+|---|---|
+| `map` | for x in 0..20, y in 0..15: the 4 layers of `mapdata` (`iID`, `iCol`, `iRow`), `mapdatatop`, `objectdata` (`iType`, 26 settings, `fHidden`), `warpdata` (`direction`, `connection`, `id`), the 6 `nospawn` flags. Then the `mapitems` count and each item (`itype`, `ix`, `iy`); the `maphazards` count and each hazard (`itype`, `ix`, `iy`, then per parameter `iparam`, `dparam`); `eyecandy[3]`; `musicCategoryID`; `iNumRaceGoals` and 8 race goal `x`, `y`; `iNumFlagBases` and 4 flag base `x`, `y`; `iSwitches[4]`; each byte of `szBackgroundFile`; `platforms.size()` |
+| `plat` | for each of the first `g_iNumPlatforms` editor platforms: 300 tiles (`iID`, `iCol`, `iRow`), 300 types, `iVelocity`, `iStartX`, `iStartY`, `iEndX`, `iEndY`, `iPathType`, `fAngle`, `fRadiusX`, `fRadiusY`, `iDrawLayer` |
+| `anim` | the 256 `animatedtiletypes` |
+
+The C++ dump needs the private `CMap` members, so `editor-harness.patch` adds `friend void dumpLevelEditorState(void*)` to `map.h`; a friend declaration does not change the game binary.
 
 ## Known C++ behaviour the scripts avoid
 

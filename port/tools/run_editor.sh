@@ -23,7 +23,7 @@ editor="$1"
 script="$(cd "$(dirname "$2")" && pwd)/$(basename "$2")"
 name="$(basename "$script" .txt)"
 out="${3:-${TMPDIR:-/tmp}/smw-editor-out/$editor/$name}"
-ref="${SMW_REF_DIR:-$HOME/work/smw-ref}"
+ref="${SMW_EDITOR_REF_DIR:-$HOME/work/smw-ref-editors}"
 bin="${SMW_BIN:-$ref/build-editors/smw-$editor}"
 data="${SMW_DATA_DIR:-$ref/data}"
 
