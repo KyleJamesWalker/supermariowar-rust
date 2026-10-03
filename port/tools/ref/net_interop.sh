@@ -14,6 +14,11 @@ RUST_SERVER=${SMW_RUST_SERVER:-}
 if [ -z "$RUST_SERVER" ]; then (cd $PORT && cargo build -q --bin smw_server) || exit 2; RUST_SERVER=$PORT/target/debug/smw_server; fi
 WORK=$(mktemp -d)
 fail=0
+# wait_for <file> <pattern>: poll every 0.1 s, give up after 15 s.
+wait_for() {
+  for _ in $(seq 150); do grep -q "$2" "$1" 2>/dev/null && return 0; sleep 0.1; done
+  return 1
+}
 run_pair() {
   local sname=$1 sbin=$2 hname=$3 hbin=$4 jname=$5 jbin=$6
   local dir=$WORK/$sname-$hname-$jname
@@ -22,7 +27,8 @@ run_pair() {
   (cd $dir && exec $sbin serverconfig > server.log 2>&1) & local spid=$!
   sleep 0.5
   HOME=$dir/hh SDL_VIDEODRIVER=dummy $hbin host "$DATA" > $dir/host.log 2>&1 & local hpid=$!
-  sleep 0.7
+  # serverlog.txt is flushed per line on both servers; the C++ client's stdout is not.
+  if wait_for $dir/serverlog.txt "New room by"; then sleep 0.3; else echo "  host never created a room"; fail=1; fi
   HOME=$dir/hj SDL_VIDEODRIVER=dummy $jbin join "$DATA" > $dir/join.log 2>&1; local jst=$?
   wait $hpid; local hst=$?
   kill $spid 2>/dev/null; wait $spid 2>/dev/null
