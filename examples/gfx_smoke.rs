@@ -34,10 +34,8 @@ fn main() {
         .with_color_key(smw::common::gfx::color::RGB { r: 0, g: 255, b: 0 })
         .create();
 
-    let mut font_large = gfxFont::new();
-    assert!(font_large.init(&format!("{}/menu/menu_font_large.png", pack)));
-    let mut font_small = gfxFont::new();
-    assert!(font_small.init(&format!("{}/fonts/font_small.png", pack)));
+    let mut font_large = gfxFont::from_path(&format!("{}/menu/menu_font_large.png", pack));
+    let font_small = gfxFont::from_path(&format!("{}/fonts/font_small.png", pack));
 
     let skin = gfx_loadfullskin(Path::new(&format!("{}/gfx/skins/0smw.png", data)), 1).unwrap();
     let menuskin = gfx_loadmenuskin(Path::new(&format!("{}/gfx/skins/0smw.png", data)), 2, true).unwrap();
@@ -63,7 +61,7 @@ fn main() {
     font_small.draw_chop_right(10, 250, 120, "chopped right text that is long");
     font_small.draw_chop_left(630, 250, 120, "chopped left text that is long");
     font_small.draw_chop_centered(320, 270, 100, "chop centered text that is long");
-    font_large.setalpha(128);
+    font_large.set_alpha(128);
     font_large.draw(10, 300, "translucent");
     unsafe {
         x_shake = 3;
