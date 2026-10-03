@@ -6,6 +6,7 @@
 # Run parameters come from `#@ key=value` lines in the replay (seed, frames,
 # map, shots); SMW_SEED/SMW_FRAMES/SMW_MAP/SMW_SHOT_FRAMES in the environment
 # override them. Writes <out_dir>/dump.txt and <out_dir>/frame_<n>.bmp.
+# SMW_BIN and SMW_DATA_DIR select another binary and data tree (run_rust.sh uses them).
 # See port/REPLAY.md.
 set -euo pipefail
 
@@ -16,9 +17,10 @@ fi
 
 replay="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 name="$(basename "$replay" .txt)"
-out="${2:-${TMPDIR:-/tmp}/smw-ref-out/$name}"
+out="${2:-${TMPDIR:-/tmp}/smw-$(basename "$0" .sh)-out/$name}"
 ref="${SMW_REF_DIR:-$HOME/work/smw-ref}"
-bin="$ref/build/smw"
+bin="${SMW_BIN:-$ref/build/smw}"
+data="${SMW_DATA_DIR:-$ref/data}"
 
 if [[ ! -x "$bin" ]]; then
     echo "missing $bin; build it first (see port/REPLAY.md)" >&2
@@ -44,9 +46,10 @@ trap 'rm -rf "$home"' EXIT
 mkdir -p "$home/Library/Preferences"
 
 # The game writes this cache on exit; start every run from the pristine data tree.
-rm -f "$ref/data/maps/cache/mapsummary.txt"
+rm -f "$data/maps/cache/mapsummary.txt"
 
-cd "$ref"
+cd "$data/.."
+status=0
 env HOME="$home" \
     SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
     SMW_SEED="${seed:-1}" \
@@ -57,6 +60,7 @@ env HOME="$home" \
     SMW_DUMP="$out/dump.txt" \
     SMW_SHOT_FRAMES="$shots" \
     SMW_SHOT_DIR="$out" \
-    "$bin" --datadir "$ref/data" > "$out/stdout.log" 2>&1
+    "$bin" --datadir "$data" > "$out/stdout.log" 2>&1 || status=$?
 
 echo "$out"
+exit "$status"

@@ -25,12 +25,14 @@ Homebrew dependencies: `sdl2-compat`, `sdl2_image`, `sdl2_mixer`, `yaml-cpp`, `z
 
 ```sh
 tools/run_ref.sh tools/replays/start_classic.txt [out_dir]    # dump.txt + frame_<n>.bmp
+tools/run_rust.sh tools/replays/start_classic.txt [out_dir]   # same, for the Rust port (builds --release first)
+tools/parity.sh [replay.txt ...]                               # Rust vs golden for every replay, with a summary
 tools/make_golden.sh [replay.txt ...]                          # regenerate tools/golden/
 tools/diffreplay.py tools/golden/start_classic/dump.txt out/dump.txt
 tools/diffreplay.py --shots tools/golden/start_classic out/
 ```
 
-`run_ref.sh` sets `SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy`, a fresh temporary `HOME`, deletes `data/maps/cache/mapsummary.txt`, and runs with `--datadir ~/work/smw-ref/data`. The dummy video driver works: the game draws into a 640x480 software surface and the renderer falls back to `software`. A 2,500-frame replay runs in about 3 s.
+`run_ref.sh` takes `SMW_BIN` and `SMW_DATA_DIR` to run another binary and data tree (this is how `run_rust.sh` runs the port against the repository's `data/`), and exits with the game's status. It sets `SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy`, a fresh temporary `HOME`, deletes `data/maps/cache/mapsummary.txt`, and runs with `--datadir ~/work/smw-ref/data`. The dummy video driver works: the game draws into a 640x480 software surface and the renderer falls back to `software`. A 2,500-frame replay runs in about 3 s.
 
 `diffreplay.py` options: `--context N` prints N identical frames before the divergence, `--ignore R` drops a record type, `--float-tol 0.001` relaxes `%.4f` fields while porting, and `--shots --max-diff N` compares screenshots by differing-pixel count. It needs only the Python standard library (Pillow is used if installed). Exit status: 0 identical, 1 diverged, 2 error.
 
@@ -182,5 +184,6 @@ Map list order is deterministic: maps live in a `std::multimap` keyed by name.
 | `menu_nav` | 816 | 1 | Splash, main menu walk, Options and Powerup Settings, Controls, Match Selection, Team Select, back out |
 | `start_classic` | 2530 | 1 | Default 2-player Classic on `0smw`; player 1 runs, jumps, uses turbo and powerup keys; several stomps |
 | `map_blockpiles` | 2530 | 7 | `SMW_MAP=Block Piles`, both players moving |
+| `frenzy_cpu` | 2780 | 42 | Players 3 and 4 set to CPU in the main menu, Frenzy picked in the game settings Mode field, `Block Piles`. About 1,200 RNG calls from AI, card spawns and powerups. |
 
 The scripts were produced by a small generator; edit the `.txt` directly and rerun `tools/make_golden.sh` to refresh the golden files.
