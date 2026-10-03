@@ -12,7 +12,11 @@ use crate::smw::game_state::GameStateManager;
 use crate::smw::gs_gameplay::GameplayState;
 use crate::smw::gs_menu::MenuState;
 use crate::smw::gs_splash_screen::SplashScreenState;
-use sdl2::sys::{SDL_Event, SDL_EventType, SDL_GetKeyFromName, SDL_GetScancodeFromKey, SDL_KeyCode, SDL_Keymod, SDL_PushEvent, SDL_PRESSED, SDL_RELEASED};
+use sdl2::sys::{
+    SDL_Event, SDL_EventType, SDL_GetError, SDL_GetKeyFromName, SDL_GetScancodeFromKey, SDL_InitSubSystem, SDL_JoystickAttachVirtual, SDL_JoystickType,
+    SDL_KeyCode, SDL_Keymod, SDL_PushEvent, SDL_WaitEvent, SDL_INIT_JOYSTICK, SDL_PRESSED, SDL_RELEASED,
+};
+use std::ffi::CStr;
 use std::collections::BTreeSet;
 use std::ffi::CString;
 use std::fs::File;
@@ -22,11 +26,27 @@ extern "C" {
     fn srand(seed: u32);
 }
 
-struct KeyEvent {
+#[derive(PartialEq, Eq, Clone, Copy)]
+enum EventKind {
+    Key,
+    JoyAxis,
+    JoyButton,
+    JoyHat,
+}
+
+struct ReplayEvent {
     frame: u32,
+    kind: EventKind,
     down: bool,
     keyName: String,
+    device: i32,
+    index: i32,
+    value: i32,
 }
+
+const VIRTUAL_AXES: i32 = 6;
+const VIRTUAL_BUTTONS: i32 = 16;
+const VIRTUAL_HATS: i32 = 1;
 
 struct Harness {
     seeded: bool,
@@ -37,7 +57,9 @@ struct Harness {
     dump: Option<BufWriter<File>>,
     shotFrames: BTreeSet<u32>,
     shotDir: String,
-    events: Vec<KeyEvent>,
+    events: Vec<ReplayEvent>,
+    joysticks: i32,
+    replay: bool,
     nextEvent: usize,
     frame: u32,
 }
@@ -52,6 +74,8 @@ static mut h: Harness = Harness {
     shotFrames: BTreeSet::new(),
     shotDir: String::new(),
     events: Vec::new(),
+    joysticks: 0,
+    replay: false,
     nextEvent: 0,
     frame: 0,
 };
@@ -121,20 +145,94 @@ fn load_replay(path: &str) {
             Ok(f) if !dir.is_empty() => f,
             _ => fail(format!("{}:{}: malformed line", path, lineno)),
         };
-        let keyName = rest.trim_start_matches([' ', '\t']).to_string();
-        if (dir != "down" && dir != "up") || keyName.is_empty() {
-            fail(format!("{}:{}: expected '<frame> <down|up> <key>'", path, lineno));
+        let mut ev = ReplayEvent { frame, kind: EventKind::Key, down: false, keyName: String::new(), device: 0, index: 0, value: 0 };
+        if dir == "jaxis" || dir == "jbutton" || dir == "jhat" {
+            ev.kind = match dir {
+                "jaxis" => EventKind::JoyAxis,
+                "jbutton" => EventKind::JoyButton,
+                _ => EventKind::JoyHat,
+            };
+            let indexLimit = match ev.kind {
+                EventKind::JoyAxis => VIRTUAL_AXES,
+                EventKind::JoyButton => VIRTUAL_BUTTONS,
+                _ => VIRTUAL_HATS,
+            };
+            let nums: Vec<Option<i32>> = rest.split_whitespace().map(|t| t.parse::<i32>().ok()).collect();
+            let valid = match nums.as_slice() {
+                [Some(d), Some(i), Some(v)] => {
+                    ev.device = *d;
+                    ev.index = *i;
+                    ev.value = *v;
+                    (0..=7).contains(d)
+                        && (0..indexLimit).contains(i)
+                        && match ev.kind {
+                            EventKind::JoyAxis => (-32768..=32767).contains(v),
+                            EventKind::JoyButton => *v == 0 || *v == 1,
+                            _ => (0..=15).contains(v),
+                        }
+                }
+                _ => false,
+            };
+            if !valid {
+                fail(format!("{}:{}: expected '<frame> {} <dev> <index> <value>'", path, lineno, dir));
+            }
+            unsafe {
+                h.joysticks = h.joysticks.max(ev.device + 1);
+            }
+        } else {
+            ev.keyName = rest.trim_start_matches([' ', '\t']).to_string();
+            if (dir != "down" && dir != "up") || ev.keyName.is_empty() {
+                fail(format!("{}:{}: expected '<frame> <down|up> <key>'", path, lineno));
+            }
+            ev.down = dir == "down";
         }
         if let Some(last) = events.last() {
             if frame < last.frame {
                 fail(format!("{}:{}: frames must be non-decreasing", path, lineno));
             }
         }
-        events.push(KeyEvent { frame, down: dir == "down", keyName });
+        events.push(ev);
     }
 }
 
-fn push_key(ev: &KeyEvent) {
+fn attach_joysticks() {
+    unsafe {
+        SDL_InitSubSystem(SDL_INIT_JOYSTICK);
+        for i in 0..h.joysticks {
+            if SDL_JoystickAttachVirtual(SDL_JoystickType::SDL_JOYSTICK_TYPE_GAMECONTROLLER, VIRTUAL_AXES, VIRTUAL_BUTTONS, VIRTUAL_HATS) != i {
+                fail(format!("cannot attach virtual joystick {}: {}", i, CStr::from_ptr(SDL_GetError()).to_string_lossy()));
+            }
+        }
+    }
+}
+
+fn fill_joystick(ev: &ReplayEvent, event: &mut SDL_Event) {
+    unsafe {
+        *event = std::mem::zeroed();
+        match ev.kind {
+            EventKind::JoyAxis => {
+                event.jaxis.type_ = SDL_EventType::SDL_JOYAXISMOTION as u32;
+                event.jaxis.which = ev.device;
+                event.jaxis.axis = ev.index as u8;
+                event.jaxis.value = ev.value as i16;
+            }
+            EventKind::JoyButton => {
+                event.jbutton.type_ = if ev.value != 0 { SDL_EventType::SDL_JOYBUTTONDOWN as u32 } else { SDL_EventType::SDL_JOYBUTTONUP as u32 };
+                event.jbutton.which = ev.device;
+                event.jbutton.button = ev.index as u8;
+                event.jbutton.state = if ev.value != 0 { SDL_PRESSED as u8 } else { SDL_RELEASED as u8 };
+            }
+            _ => {
+                event.jhat.type_ = SDL_EventType::SDL_JOYHATMOTION as u32;
+                event.jhat.which = ev.device;
+                event.jhat.hat = ev.index as u8;
+                event.jhat.value = ev.value as u8;
+            }
+        }
+    }
+}
+
+fn fill_key(ev: &ReplayEvent, event: &mut SDL_Event) {
     unsafe {
         let cname = CString::new(ev.keyName.as_bytes()).unwrap();
         let key = SDL_GetKeyFromName(cname.as_ptr());
@@ -142,13 +240,20 @@ fn push_key(ev: &KeyEvent) {
             fail(format!("unknown SDL key name '{}'", ev.keyName));
         }
 
-        let mut event: SDL_Event = std::mem::zeroed();
+        *event = std::mem::zeroed();
         event.key.type_ = if ev.down { SDL_EventType::SDL_KEYDOWN as u32 } else { SDL_EventType::SDL_KEYUP as u32 };
         event.key.state = if ev.down { SDL_PRESSED as u8 } else { SDL_RELEASED as u8 };
         event.key.keysym.sym = key;
         event.key.keysym.scancode = SDL_GetScancodeFromKey(key);
         event.key.keysym.mod_ = SDL_Keymod::KMOD_NONE as u16;
-        SDL_PushEvent(&mut event);
+    }
+}
+
+fn fill_event(ev: &ReplayEvent, event: &mut SDL_Event) {
+    if ev.kind == EventKind::Key {
+        fill_key(ev, event);
+    } else {
+        fill_joystick(ev, event);
     }
 }
 
@@ -204,6 +309,11 @@ pub fn init() {
 
         if let Some(replay) = env("SMW_REPLAY") {
             load_replay(&replay);
+            h.replay = true;
+        }
+
+        if h.joysticks > 0 {
+            attach_joysticks();
         }
 
         if let Some(dump) = env("SMW_DUMP") {
@@ -252,10 +362,27 @@ pub fn frame_start() {
     unsafe {
         while h.nextEvent < h.events.len() && h.events[h.nextEvent].frame <= h.frame {
             if h.events[h.nextEvent].frame == h.frame {
-                push_key(&h.events[h.nextEvent]);
+                let mut event: SDL_Event = std::mem::zeroed();
+                fill_event(&h.events[h.nextEvent], &mut event);
+                SDL_PushEvent(&mut event);
             }
             h.nextEvent += 1;
         }
+    }
+}
+
+/// Blocking waits take the next replay event immediately instead of waiting for input.
+pub fn wait_event(event: &mut SDL_Event) {
+    unsafe {
+        if !h.replay {
+            SDL_WaitEvent(event);
+            return;
+        }
+        if h.nextEvent >= h.events.len() {
+            fail(format!("blocking wait at frame {} but the replay has no events left", h.frame));
+        }
+        fill_event(&h.events[h.nextEvent], event);
+        h.nextEvent += 1;
     }
 }
 

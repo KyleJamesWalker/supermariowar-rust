@@ -10,7 +10,8 @@ use crate::common::ui::mi_text::{MI_HeaderText, MI_Text};
 use crate::common::uicontrol::{ctl_ptr, TextAlign, UI_Control, UI_ControlTrait};
 use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
-use sdl2::sys::{SDL_Event, SDL_EventType, SDL_GetKeyName, SDL_JoystickNameForIndex, SDL_Keycode, SDL_Rect, SDL_KeyCode, SDL_WaitEvent, SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP, SDL_PRESSED};
+use crate::smw::harness;
+use sdl2::sys::{SDL_Event, SDL_EventType, SDL_GetKeyName, SDL_JoystickNameForIndex, SDL_Keycode, SDL_Rect, SDL_KeyCode, SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP, SDL_PRESSED};
 use std::ffi::CStr;
 
 const GameInputNames: [&str; NUM_KEYS] = ["Left", "Right", "Jump", "Down", "Turbo", "Use Item", "Pause", "Exit"];
@@ -130,7 +131,7 @@ impl UI_ControlTrait for MI_InputControlField {
             let mut done = false;
 
             while !done {
-                SDL_WaitEvent(&mut event);
+                harness::wait_event(&mut event);
 
                 game_values.playerInput.update(event, 1);
 

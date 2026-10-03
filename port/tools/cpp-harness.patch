@@ -58,7 +58,7 @@ diff --color -ruN supermariowar/src/common/RandomNumberGenerator.h smw-ref/src/c
      ~RandomNumberGenerator();
 diff --color -ruN supermariowar/src/common/sfx.cpp smw-ref/src/common/sfx.cpp
 --- supermariowar/src/common/sfx.cpp	2026-03-20 16:50:46
-+++ smw-ref/src/common/sfx.cpp	2026-10-02 22:17:34
++++ smw-ref/src/common/sfx.cpp	2026-10-03 01:39:18
 @@ -10,6 +10,8 @@
  
  
@@ -90,7 +90,7 @@ diff --color -ruN supermariowar/src/common/sfx.cpp smw-ref/src/common/sfx.cpp
      m_channels.set(channel);
 diff --color -ruN supermariowar/src/common/sfx.h smw-ref/src/common/sfx.h
 --- supermariowar/src/common/sfx.h	2026-03-20 16:50:46
-+++ smw-ref/src/common/sfx.h	2026-10-02 22:17:45
++++ smw-ref/src/common/sfx.h	2026-10-03 01:39:18
 @@ -19,6 +19,9 @@
  
  
@@ -255,8 +255,8 @@ diff --color -ruN supermariowar/src/smw/GSMenu.h smw-ref/src/smw/GSMenu.h
  		void LoadScript(const char * szScriptFile);
 diff --color -ruN supermariowar/src/smw/Harness.cpp smw-ref/src/smw/Harness.cpp
 --- supermariowar/src/smw/Harness.cpp	1969-12-31 16:00:00
-+++ smw-ref/src/smw/Harness.cpp	2026-10-02 22:22:25
-@@ -0,0 +1,263 @@
++++ smw-ref/src/smw/Harness.cpp	2026-10-03 03:02:25
+@@ -0,0 +1,349 @@
 +#include "Harness.h"
 +
 +#include "eyecandy.h"
@@ -274,6 +274,7 @@ diff --color -ruN supermariowar/src/smw/Harness.cpp smw-ref/src/smw/Harness.cpp
 +
 +#include "SDL.h"
 +
++#include <algorithm>
 +#include <cstdio>
 +#include <cstdlib>
 +#include <cstring>
@@ -303,11 +304,19 @@ diff --color -ruN supermariowar/src/smw/Harness.cpp smw-ref/src/smw/Harness.cpp
 +namespace harness {
 +namespace {
 +
-+struct KeyEvent {
++enum class EventKind { Key, JoyAxis, JoyButton, JoyHat };
++
++struct ReplayEvent {
 +    unsigned frame;
++    EventKind kind;
 +    bool down;
 +    std::string keyName;
++    int device, index, value;
 +};
++
++constexpr int VIRTUAL_AXES = 6;
++constexpr int VIRTUAL_BUTTONS = 16;
++constexpr int VIRTUAL_HATS = 1;
 +
 +bool g_seeded = false;
 +unsigned g_seed = 0;
@@ -317,7 +326,9 @@ diff --color -ruN supermariowar/src/smw/Harness.cpp smw-ref/src/smw/Harness.cpp
 +FILE* g_dump = nullptr;
 +std::set<unsigned> g_shotFrames;
 +std::string g_shotDir = ".";
-+std::vector<KeyEvent> g_events;
++std::vector<ReplayEvent> g_events;
++int g_joysticks = 0;
++bool g_replay = false;
 +size_t g_nextEvent = 0;
 +unsigned g_frame = 0;
 +
@@ -351,19 +362,35 @@ diff --color -ruN supermariowar/src/smw/Harness.cpp smw-ref/src/smw/Harness.cpp
 +            continue;
 +
 +        std::istringstream ls(line);
-+        KeyEvent ev;
++        ReplayEvent ev {};
 +        std::string dir;
 +        if (!(ls >> ev.frame >> dir)) {
 +            fprintf(stderr, "[harness] %s:%d: malformed line\n", path, lineno);
 +            exit(2);
 +        }
-+        std::getline(ls, ev.keyName);
-+        ev.keyName.erase(0, ev.keyName.find_first_not_of(" \t"));
-+        if ((dir != "down" && dir != "up") || ev.keyName.empty()) {
-+            fprintf(stderr, "[harness] %s:%d: expected '<frame> <down|up> <key>'\n", path, lineno);
-+            exit(2);
++        if (dir == "jaxis" || dir == "jbutton" || dir == "jhat") {
++            ev.kind = dir == "jaxis" ? EventKind::JoyAxis : dir == "jbutton" ? EventKind::JoyButton : EventKind::JoyHat;
++            std::string trailing;
++            int indexLimit = dir == "jaxis" ? VIRTUAL_AXES : dir == "jbutton" ? VIRTUAL_BUTTONS : VIRTUAL_HATS;
++            if (!(ls >> ev.device >> ev.index >> ev.value) || (ls >> trailing) || ev.device < 0 || ev.device > 7
++                    || ev.index < 0 || ev.index >= indexLimit
++                    || (dir == "jaxis" && (ev.value < -32768 || ev.value > 32767))
++                    || (dir == "jbutton" && ev.value != 0 && ev.value != 1)
++                    || (dir == "jhat" && (ev.value < 0 || ev.value > 15))) {
++                fprintf(stderr, "[harness] %s:%d: expected '<frame> %s <dev> <index> <value>'\n", path, lineno, dir.c_str());
++                exit(2);
++            }
++            g_joysticks = std::max(g_joysticks, ev.device + 1);
++        } else {
++            ev.kind = EventKind::Key;
++            std::getline(ls, ev.keyName);
++            ev.keyName.erase(0, ev.keyName.find_first_not_of(" \t"));
++            if ((dir != "down" && dir != "up") || ev.keyName.empty()) {
++                fprintf(stderr, "[harness] %s:%d: expected '<frame> <down|up> <key>'\n", path, lineno);
++                exit(2);
++            }
++            ev.down = dir == "down";
 +        }
-+        ev.down = dir == "down";
 +        if (!g_events.empty() && ev.frame < g_events.back().frame) {
 +            fprintf(stderr, "[harness] %s:%d: frames must be non-decreasing\n", path, lineno);
 +            exit(2);
@@ -372,7 +399,39 @@ diff --color -ruN supermariowar/src/smw/Harness.cpp smw-ref/src/smw/Harness.cpp
 +    }
 +}
 +
-+void pushKey(const KeyEvent& ev)
++void attachJoysticks()
++{
++    SDL_InitSubSystem(SDL_INIT_JOYSTICK);
++    for (int i = 0; i < g_joysticks; i++) {
++        if (SDL_JoystickAttachVirtual(SDL_JOYSTICK_TYPE_GAMECONTROLLER, VIRTUAL_AXES, VIRTUAL_BUTTONS, VIRTUAL_HATS) != i) {
++            fprintf(stderr, "[harness] cannot attach virtual joystick %d: %s\n", i, SDL_GetError());
++            exit(2);
++        }
++    }
++}
++
++void fillJoystick(const ReplayEvent& ev, SDL_Event& event)
++{
++    memset(&event, 0, sizeof(event));
++    if (ev.kind == EventKind::JoyAxis) {
++        event.type = SDL_JOYAXISMOTION;
++        event.jaxis.which = ev.device;
++        event.jaxis.axis = (Uint8)ev.index;
++        event.jaxis.value = (Sint16)ev.value;
++    } else if (ev.kind == EventKind::JoyButton) {
++        event.type = ev.value ? SDL_JOYBUTTONDOWN : SDL_JOYBUTTONUP;
++        event.jbutton.which = ev.device;
++        event.jbutton.button = (Uint8)ev.index;
++        event.jbutton.state = ev.value ? SDL_PRESSED : SDL_RELEASED;
++    } else {
++        event.type = SDL_JOYHATMOTION;
++        event.jhat.which = ev.device;
++        event.jhat.hat = (Uint8)ev.index;
++        event.jhat.value = (Uint8)ev.value;
++    }
++}
++
++void fillKey(const ReplayEvent& ev, SDL_Event& event)
 +{
 +    SDL_Keycode key = SDL_GetKeyFromName(ev.keyName.c_str());
 +    if (key == SDLK_UNKNOWN) {
@@ -380,14 +439,20 @@ diff --color -ruN supermariowar/src/smw/Harness.cpp smw-ref/src/smw/Harness.cpp
 +        exit(2);
 +    }
 +
-+    SDL_Event event;
 +    memset(&event, 0, sizeof(event));
 +    event.type = ev.down ? SDL_KEYDOWN : SDL_KEYUP;
 +    event.key.state = ev.down ? SDL_PRESSED : SDL_RELEASED;
 +    event.key.keysym.sym = key;
 +    event.key.keysym.scancode = SDL_GetScancodeFromKey(key);
 +    event.key.keysym.mod = KMOD_NONE;
-+    SDL_PushEvent(&event);
++}
++
++void fillEvent(const ReplayEvent& ev, SDL_Event& event)
++{
++    if (ev.kind == EventKind::Key)
++        fillKey(ev, event);
++    else
++        fillJoystick(ev, event);
 +}
 +
 +const char* stateName()
@@ -450,8 +515,13 @@ diff --color -ruN supermariowar/src/smw/Harness.cpp smw-ref/src/smw/Harness.cpp
 +    if (const char* frames = env("SMW_FRAMES"))
 +        g_maxFrames = strtol(frames, nullptr, 10);
 +
-+    if (const char* replay = env("SMW_REPLAY"))
++    if (const char* replay = env("SMW_REPLAY")) {
 +        loadReplay(replay);
++        g_replay = true;
++    }
++
++    if (g_joysticks > 0)
++        attachJoysticks();
 +
 +    if (const char* dump = env("SMW_DUMP")) {
 +        g_dump = fopen(dump, "a");
@@ -490,10 +560,26 @@ diff --color -ruN supermariowar/src/smw/Harness.cpp smw-ref/src/smw/Harness.cpp
 +void frameStart()
 +{
 +    while (g_nextEvent < g_events.size() && g_events[g_nextEvent].frame <= g_frame) {
-+        if (g_events[g_nextEvent].frame == g_frame)
-+            pushKey(g_events[g_nextEvent]);
++        if (g_events[g_nextEvent].frame == g_frame) {
++            SDL_Event event;
++            fillEvent(g_events[g_nextEvent], event);
++            SDL_PushEvent(&event);
++        }
 +        g_nextEvent++;
 +    }
++}
++
++void waitEvent(SDL_Event* event)
++{
++    if (!g_replay) {
++        SDL_WaitEvent(event);
++        return;
++    }
++    if (g_nextEvent >= g_events.size()) {
++        fprintf(stderr, "[harness] blocking wait at frame %u but the replay has no events left\n", g_frame);
++        exit(2);
++    }
++    fillEvent(g_events[g_nextEvent++], *event);
 +}
 +
 +void frameEnd()
@@ -522,12 +608,14 @@ diff --color -ruN supermariowar/src/smw/Harness.cpp smw-ref/src/smw/Harness.cpp
 +} // namespace harness
 diff --color -ruN supermariowar/src/smw/Harness.h smw-ref/src/smw/Harness.h
 --- supermariowar/src/smw/Harness.h	1969-12-31 16:00:00
-+++ smw-ref/src/smw/Harness.h	2026-10-02 22:17:34
-@@ -0,0 +1,16 @@
++++ smw-ref/src/smw/Harness.h	2026-10-03 02:58:23
+@@ -0,0 +1,20 @@
 +#pragma once
 +
 +// Deterministic replay/dump harness. Every entry point is a no-op unless the
 +// corresponding SMW_* environment variable is set; see port/REPLAY.md.
++union SDL_Event;
++
 +namespace harness {
 +
 +void init();
@@ -537,6 +625,8 @@ diff --color -ruN supermariowar/src/smw/Harness.h smw-ref/src/smw/Harness.h
 +const char* forcedMap();
 +
 +void frameStart();
++// Blocking waits take the next replay event immediately instead of waiting for input.
++void waitEvent(SDL_Event* event);
 +void frameEnd();
 +
 +} // namespace harness
@@ -590,3 +680,21 @@ diff --color -ruN supermariowar/src/smw/player.h smw-ref/src/smw/player.h
  		friend bool RemoveTeam(short teamid);
  		friend short CountAliveTeams(short * lastteam);
  			friend void shakeScreen();
+diff --color -ruN supermariowar/src/smw/ui/MI_InputControlContainer.cpp smw-ref/src/smw/ui/MI_InputControlContainer.cpp
+--- supermariowar/src/smw/ui/MI_InputControlContainer.cpp	2026-03-20 16:50:46
++++ smw-ref/src/smw/ui/MI_InputControlContainer.cpp	2026-10-03 03:02:35
+@@ -1,4 +1,5 @@
+ #include "MI_InputControlContainer.h"
++#include "Harness.h"
+ 
+ #include "GameValues.h"
+ #include "gfx/gfxSprite.h"
+@@ -85,7 +86,7 @@
+ 
+     while (!done) {
+         #ifndef __EMSCRIPTEN__
+-        SDL_WaitEvent(&event);
++        harness::waitEvent(&event);
+         #endif
+ 
+         /*
