@@ -21,7 +21,7 @@ client() {
   [ "$kind" = rust ] && bin=$RUST data=$RUST_DATA
   local home=$dir/home-$role
   mkdir -p "$home/Library/Preferences/.smw"
-  printf 'player_name: %s\nservers:\n  - 127.0.0.1\n' "$name" > "$home/Library/Preferences/.smw/servers.yml"
+  printf 'player_name = "%s"\nservers = ["127.0.0.1"]\n' "$name" > "$home/Library/Preferences/.smw/servers.toml"
   (cd "$data/.." && exec env HOME="$home" SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy SMW_SEED=1 SMW_FRAMES=1100 \
     SMW_REPLAY="$HERE/net_game/$role.txt" SMW_DUMP="$dir/$role.dump" \
     "$bin" --datadir "$data" > "$dir/$role.log" 2>&1)

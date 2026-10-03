@@ -1,26 +1,28 @@
 #!/bin/bash
 # Persistent-file compatibility between the C++ reference and the Rust port.
-# Each case seeds HOME (options.bin, controls.sdl2.bin, servers.yml), maps/cache/mapsummary.txt and filters/*.txt,
+# Each case seeds HOME (options.bin, controls.sdl2.bin, servers.toml), maps/cache/mapsummary.txt and filters/*.txt,
 # runs both builds through persist/filter_edit.txt (edits a user filter, then StartGame writes the config and filters;
-# shutdown writes servers.yml), then requires byte-identical rewritten files and identical frame dumps.
+# shutdown writes servers.toml), then requires byte-identical rewritten files and identical frame dumps.
 # Case "empty" starts from no files and the repository filters; seeds start from fuzzed files.
 # Usage: persist_interop.sh [empty] [seed ...]   (default: empty 1 2 3 4 5)
-# Env: SMW_CPP_BIN (default ~/work/smw-ref-net/build/smw, networking on like the default Rust build), SMW_RUST_BIN,
-# SMW_PERSIST_FRAMES (default 730).
+# Env: SMW_CPP_BIN (default: the NO_NETWORK reference ~/work/supermariowar-cpp-reference/build-latest/smw), SMW_RUST_BIN
+# (default: a `--features no_network` build to match; with a networking C++ build, pass a default Rust build),
+# SMW_PERSIST_FRAMES (default 730). servers.toml contents are covered by net_config_interop.sh.
 HERE=$(cd "$(dirname "$0")" && pwd)
 TOOLS=$(dirname "$HERE")
 PORT=$(dirname "$TOOLS")
-CPP=${SMW_CPP_BIN:-$HOME/work/smw-ref-net/build/smw}
-RUST=${SMW_RUST_BIN:-$PORT/target/release/smw}
+CPP=${SMW_CPP_BIN:-$HOME/work/supermariowar-cpp-reference/build-latest/smw}
+RUST=${SMW_RUST_BIN:-$PORT/target/no_network/release/smw}
 FRAMES=${SMW_PERSIST_FRAMES:-730}
 REPLAY=$HERE/persist/filter_edit.txt
-[ -n "$SMW_RUST_BIN" ] || cargo build --release --quiet --manifest-path "$PORT/Cargo.toml" || exit 2
+[ -n "$SMW_RUST_BIN" ] || CARGO_TARGET_DIR="$PORT/target/no_network" cargo build --release --quiet --bin smw --features no_network \
+  --manifest-path "$PORT/Cargo.toml" || exit 2
 WORK=$(mktemp -d)
 rsync -a --exclude maps/cache/mapsummary.txt "$PORT/data/" "$WORK/data/"
 cp -R "$WORK/data/filters" "$WORK/filters-orig"
 cases=("$@")
 [ ${#cases[@]} -gt 0 ] || cases=(empty 1 2 3 4 5)
-FILES=(options.bin controls.sdl2.bin servers.yml mapsummary.txt)
+FILES=(options.bin controls.sdl2.bin servers.toml mapsummary.txt)
 for f in "$WORK/filters-orig"/*; do FILES+=("filters/$(basename "$f")"); done
 
 # run <bin> <input_dir> <out_dir>
@@ -28,7 +30,7 @@ run() {
   local bin=$1 in=$2 out=$3
   local home=$out/home
   mkdir -p "$home/Library/Preferences/.smw"
-  for f in options.bin controls.sdl2.bin servers.yml; do
+  for f in options.bin controls.sdl2.bin servers.toml; do
     [ -f "$in/$f" ] && cp "$in/$f" "$home/Library/Preferences/.smw/"
   done
   rm -f "$WORK/data/maps/cache/mapsummary.txt"
@@ -39,7 +41,7 @@ run() {
     SMW_FRAMES="$FRAMES" SMW_REPLAY="$REPLAY" SMW_DUMP="$out/dump.txt" \
     "$bin" --datadir "$WORK/data" > "$out/stdout.log" 2>&1)
   local status=$?
-  for f in options.bin controls.sdl2.bin servers.yml; do
+  for f in options.bin controls.sdl2.bin servers.toml; do
     [ -f "$home/Library/Preferences/.smw/$f" ] && cp "$home/Library/Preferences/.smw/$f" "$out/"
   done
   [ -f "$WORK/data/maps/cache/mapsummary.txt" ] && cp "$WORK/data/maps/cache/mapsummary.txt" "$out/"

@@ -3,7 +3,7 @@
 
 Usage: persist_fuzz.py <seed> <defaults_dir> <out_dir>
 defaults_dir holds options.bin, controls.sdl2.bin, mapsummary.txt and filters/*.txt as the game wrote them;
-out_dir gets fuzzed copies plus servers.yml. Values stay in the ranges the menus can produce.
+out_dir gets fuzzed copies plus servers.toml. Values stay in the ranges the menus can produce.
 """
 import os
 import random
@@ -94,11 +94,36 @@ def fuzz_filter(rng, maps):
     return f'#Version\n2.0.0.1\n\n#Icon\n{rng.randrange(120)}\n\n#Maps\n' + ''.join(m + '\n' for m in picked)
 
 
-def servers_yml(rng):
-    name = ''.join(rng.choice('abcdefghijklmnopqrstuvwxyz') for _ in range(rng.randrange(3, 12)))
-    hosts = ['127.0.0.1', 'smw.example.org', 'short', '192.168.0.10', 'localhost']
+def toml_string(s):
+    out = ''
+    for c in s:
+        if c in '"\\':
+            out += '\\' + c
+        elif c == '\t':
+            out += '\\t'
+        elif ord(c) < 0x20 or ord(c) == 0x7F:
+            out += '\\u%04X' % ord(c)
+        else:
+            out += c
+    return '"' + out + '"'
+
+
+def servers_toml(rng):
+    """A servers.toml with escapes, UTF-8, invalid entries and arrays on both sides of toml11's inline limit."""
+    alphabet = 'abcdefghijklmnopqrstuvwxyz' + 'AZ09 _-"\\\t' + '\u00e9\u00df'
+    name = ''.join(rng.choice(alphabet) for _ in range(rng.randrange(2, 14)))
+    hosts = ['127.0.0.1', 'smw.example.org', 'short', '192.168.0.10', 'localhost', 'a-much-longer-server-name.example.com',
+             'game "quoted" host', 'tab\there.example', '\u00fcml\u00e4ut.example']
     rng.shuffle(hosts)
-    lines = [f'player_name: {name}', 'servers:'] + [f'  - {h}' for h in hosts[:rng.randrange(1, 6)]]
+    entries = [toml_string(h) for h in hosts[:rng.randrange(0, len(hosts) + 1)]]
+    if entries and rng.random() < 0.3:
+        entries.insert(rng.randrange(len(entries)), str(rng.randrange(100000000, 999999999)))
+    lines = []
+    if rng.random() < 0.9:
+        lines.append('player_name = ' + (toml_string(name) if rng.random() < 0.9 else str(rng.randrange(1000))))
+    if rng.random() < 0.9:
+        lines.append('servers = [' + ', '.join(entries) + ']' if rng.random() < 0.9 else 'servers = "not an array"')
+    rng.shuffle(lines)
     return '\n'.join(lines) + '\n'
 
 
@@ -117,8 +142,8 @@ def main():
         f.write(controls)
     with open(f'{dst}/mapsummary.txt', 'w') as f:
         f.write(summary)
-    with open(f'{dst}/servers.yml', 'w') as f:
-        f.write(servers_yml(rng))
+    with open(f'{dst}/servers.toml', 'w') as f:
+        f.write(servers_toml(rng))
     maps = [line.split(',')[0] for line in summary.splitlines()]
     os.makedirs(f'{dst}/filters', exist_ok=True)
     for name in sorted(os.listdir(f'{src}/filters')):
