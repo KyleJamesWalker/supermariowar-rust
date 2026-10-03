@@ -14,6 +14,40 @@
 
 Estimates assume the tooling on this branch. Agent wall-clock time for the done column was about 1 h 45 min.
 
+## Live plan
+
+The sync is approved to finish on `upstream-sync`. This section is the source of truth for who owns what. The coordinator updates it as items land.
+
+How work flows:
+
+1. Owners edit only their own files in this worktree and commit only their own paths. If `.git/index.lock` exists, wait and retry.
+2. After each commit, the owner sends the coordinator the SHA. The coordinator runs `tools/sync_gate.sh <sha>`: `cargo test`, 43 game replays and 12 editor sessions against `~/work/smw-upstream-goldens`, diffed against the last accepted baseline. A regression gets a follow-up commit, never an amend.
+3. Only the coordinator builds the C++ reference or writes goldens. To add a replay or editor session, send the coordinator the script. The coordinator generates goldens serially and generates editor goldens twice.
+4. No pushes, no background runs left behind, and each agent cleans its own scratch.
+
+| Item | Upstream | Owner | Status |
+|---|---|---|---|
+| Menu and world surfaces, thumbnails, skins | `c2e87df8` (world part), `5c979393`, `e3bab591` | gfx | todo |
+| `ImageLoader`, editor surfaces, wrapping draws | `a4a6140d`, `0124c1eb`, `e0bcaf30`, `5c865fe5`, `3ad06ca7` (check what `dacabe1c` already covers), `6b6bdb7a` | gfx | todo |
+| Map foreground clear, donut graphic | `5693918f`, `11bb5fba` | gfx | todo |
+| Tileset manager series | `f56607a1`, `a2541fcc`, `00cffef9`, `c130b990`, `b6f985ec`, `fa3e6a22`, `981b56c3`, `4c6d805a`, `559a4401`, `cfcbbcb2` + `f56f8ed1`, `c27115b5`, `eaaea5e3` + `19dcc293` | foundation | todo |
+| `servers.toml` and interop scripts | `efe2e390` | foundation | todo |
+| Binary strings, file errors | `28e9e673` + `4b965424`, `277ee170` | foundation | todo |
+| Tour-stop settings fallback | `8faf76bc` | foundation | todo |
+| Error paths | `fc938877`, `b9bb1a85`, `d2ed0cd1` | foundation | todo |
+| Level editor: screenshot crash, editor-side gfx parts (with gfx) | `d3ad2cbb` | player | todo |
+| Skin reload cache | `d70e4dc3` | player | todo |
+| World editor: bonus text, stage map field, music cycling | `1eaed535`, `01e5fa7e`, `a7bc5276` | objects | todo |
+| `TourStopVec` follow-up after `d546c05b` | | objects | todo |
+| Coverage replays: falling donut, map foreground, non-default `options.bin` for `8faf76bc` | | coordinator | todo |
+| 504-map dump against the new C++ | | coordinator | todo |
+| `gfx_smoke` C++ twin on the new API | | coordinator | todo |
+| Level editor nondeterminism root cause | | coordinator | todo |
+| Small structural leftovers | `53e65af9`, `b80e755e`, `6e36bd76`, `df5a85a6` | coordinator | optional |
+| 290-map sweep goldens, fresh-worktree verification, final summary | | coordinator | last |
+
+Gate baseline: `c4a9f64`. 20/20 tests pass, 43/43 game replays match, 12/12 editor dumps match (105/110 shots, 19/35 files).
+
 ## Branches and outputs
 
 | What | Where |
