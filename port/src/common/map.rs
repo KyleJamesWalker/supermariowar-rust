@@ -594,6 +594,15 @@ pub fn draw_platform(
 }
 
 const MW: usize = MAPWIDTH as usize;
+
+// clang arm64 offsets of CMap members in the C++ reference (tools/ref/cmap_layout.cpp).
+pub const CPP_OFF_MAPDATA: i32 = 38;
+pub const CPP_OFF_MAPDATATOP: i32 = 7238;
+pub const CPP_OFF_OBJECTDATA: i32 = 7538;
+pub const CPP_OFF_BLOCKDATA: i32 = 24344;
+pub const CPP_OFF_NOSPAWN: i32 = 26744;
+pub const CPP_OFF_WARPDATA: i32 = 36368;
+pub const CPP_SIZEOF_MAPBLOCK: i32 = 56;
 const MH: usize = MAPHEIGHT as usize;
 const ML: usize = MAPLAYERS as usize;
 const NSPAWN: usize = NUMSPAWNAREATYPES as usize;
@@ -716,11 +725,81 @@ impl CMap {
 
     /// Returns the tile flags of the front-most visible tile.
     pub fn map(&self, x: i32, y: i32) -> i32 {
-        tile_to_flags(self.mapdatatop[x as usize][y as usize]) as i32
+        let flat = x * MAPHEIGHT + y;
+        if (0..MAPWIDTH * MAPHEIGHT).contains(&flat) {
+            return tile_to_flags(self.mapdatatop[(flat / MAPHEIGHT) as usize][(flat % MAPHEIGHT) as usize]) as i32;
+        }
+        match self.cpp_byte(CPP_OFF_MAPDATATOP + flat) {
+            Some(b) => tile_to_flags(TileType(b)) as i32,
+            Option::None => panic!("CMap::map({}, {}): the C++ reads block pointer bytes as a tile", x, y),
+        }
     }
 
     pub fn block(&self, x: i16, y: i16) -> Ptr<dyn IO_BlockTrait> {
-        self.blockdata[x as usize][y as usize]
+        let flat = x as i32 * MAPHEIGHT + y as i32;
+        if (0..MAPWIDTH * MAPHEIGHT).contains(&flat) {
+            return self.blockdata[(flat / MAPHEIGHT) as usize][(flat % MAPHEIGHT) as usize];
+        }
+        let off = CPP_OFF_BLOCKDATA + flat * 8;
+        if (0..8).all(|i| self.cpp_byte(off + i) == Some(0)) {
+            return Ptr::null();
+        }
+        panic!("CMap::block({}, {}): C++ would deref garbage at CMap offset {}", x, y, off);
+    }
+
+    /// The C++ `blockdata[x][y] == NULL` test, which compares the pointer without dereferencing it.
+    pub fn block_is_null(&self, x: i16, y: i16) -> bool {
+        let flat = x as i32 * MAPHEIGHT + y as i32;
+        if (0..MAPWIDTH * MAPHEIGHT).contains(&flat) {
+            return self.blockdata[(flat / MAPHEIGHT) as usize][(flat % MAPHEIGHT) as usize].is_null();
+        }
+        let off = CPP_OFF_BLOCKDATA + flat * 8;
+        (0..8).all(|i| self.cpp_byte(off + i) == Some(0))
+    }
+
+    /// One byte of the C++ CMap object at `off`, so out-of-range C++ indexing (which stays inside the
+    /// object) reads what it would. None is a byte of a non-null block pointer. Covers mapdata through
+    /// nospawn; anything else panics.
+    pub fn cpp_byte(&self, off: i32) -> Option<u8> {
+        let cells = MAPWIDTH * MAPHEIGHT;
+        let cell = |e: i32| ((e / MAPHEIGHT) as usize, (e % MAPHEIGHT) as usize);
+        if (CPP_OFF_MAPDATA..CPP_OFF_MAPDATATOP).contains(&off) {
+            let rel = off - CPP_OFF_MAPDATA;
+            let e = rel / 6;
+            let (x, y) = cell(e / MAPLAYERS);
+            let t = &self.mapdata[x][y][(e % MAPLAYERS) as usize];
+            let v = [t.iID, t.iCol, t.iRow][((rel % 6) / 2) as usize];
+            return Some(v.to_le_bytes()[(rel % 2) as usize]);
+        }
+        if (CPP_OFF_MAPDATATOP..CPP_OFF_MAPDATATOP + cells).contains(&off) {
+            let (x, y) = cell(off - CPP_OFF_MAPDATATOP);
+            return Some(self.mapdatatop[x][y].0);
+        }
+        if (CPP_OFF_OBJECTDATA..CPP_OFF_OBJECTDATA + cells * CPP_SIZEOF_MAPBLOCK).contains(&off) {
+            let rel = off - CPP_OFF_OBJECTDATA;
+            let (x, y) = cell(rel / CPP_SIZEOF_MAPBLOCK);
+            let b = &self.objectdata[x][y];
+            let r = rel % CPP_SIZEOF_MAPBLOCK;
+            return Some(match r {
+                0..=1 => b.iType.to_le_bytes()[r as usize],
+                2..=53 => b.iSettings[((r - 2) / 2) as usize].to_le_bytes()[(r % 2) as usize],
+                54 => b.fHidden as u8,
+                _ => 0,
+            });
+        }
+        if (CPP_OFF_OBJECTDATA + cells * CPP_SIZEOF_MAPBLOCK..CPP_OFF_BLOCKDATA).contains(&off) {
+            return Some(0);
+        }
+        if (CPP_OFF_BLOCKDATA..CPP_OFF_NOSPAWN).contains(&off) {
+            let (x, y) = cell((off - CPP_OFF_BLOCKDATA) / 8);
+            return if self.blockdata[x][y].is_null() { Some(0) } else { Option::None };
+        }
+        if (CPP_OFF_NOSPAWN..CPP_OFF_NOSPAWN + NUMSPAWNAREATYPES * cells).contains(&off) {
+            let rel = off - CPP_OFF_NOSPAWN;
+            let (x, y) = cell(rel % cells);
+            return Some(self.nospawn[(rel / cells) as usize][x][y] as u8);
+        }
+        panic!("C++ out-of-bounds CMap read at offset {} is not modelled", off);
     }
 
     pub fn warp(&mut self, x: i16, y: i16) -> &mut Warp {
