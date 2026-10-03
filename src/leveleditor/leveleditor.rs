@@ -5231,7 +5231,13 @@ pub fn dump_editor_state(out: &mut dyn Write) {
                 hm.add(g_map.mapdatatop[x][y].0 as i32);
                 let b = &g_map.objectdata[x][y];
                 hm.add(b.iType as i32);
-                for s in b.iSettings.iter() {
+                // Only the settings the map format stores: the rest keep stale heap bytes in the C++.
+                let stored = match b.iType {
+                    1 | 15 => b.iSettings.len(),
+                    11..=14 => 1,
+                    _ => 0,
+                };
+                for s in &b.iSettings[..stored] {
                     hm.add(*s as i32);
                 }
                 hm.add(b.fHidden as i32);
