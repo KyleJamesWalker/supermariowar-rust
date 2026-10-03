@@ -647,14 +647,14 @@ pub fn write_tour_stop_line(ts: &TourStop, fIsWorld: bool) -> String {
         fields.push(ts.szName.clone());
         fields.push(ts.iBonusType.to_string());
 
-        let mut field = String::new();
+        let mut bonus_text_field = String::new();
         let mut delim = DELIM_EMPTY;
         for iText in 0..ts.iBonusTextLines.max(0) as usize {
-            field += delim;
-            field += &ts.szBonusText[iText];
+            bonus_text_field += delim;
+            bonus_text_field += &ts.szBonusText[iText];
             delim = DELIM_PIPE;
         }
-        let _ = field;
+        fields.push(bonus_text_field);
 
         if ts.iNumBonuses == 0 {
             fields.push("p0".to_string());
