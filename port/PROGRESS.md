@@ -30,7 +30,7 @@ Scope order: core game + menus + sound, then netplay, level editor, world editor
 | smw/player.cpp | smw/player.rs | done except netplay branches | start_classic reaches gameplay; P lines not comparable yet (RNG diverges in the menu at frame 30) |
 | smw/player_components/* | smw/player_components/*.rs | done | as above |
 | smw/ai.cpp | smw/ai.rs | done | frenzy_cpu: not comparable yet (same menu RNG divergence) |
-| smw/GSGameplay.cpp | smw/gs_gameplay.rs | done except netplay (TODO(net)) and LoadMapHazards call (waits on objecthazard) | start_classic: not yet run |
+| smw/GSGameplay.cpp | smw/gs_gameplay.rs | done except netplay (TODO(net)) | start_classic: not yet run |
 | smw/gamemodes/* (GameMode, GameModeTimer, all 22 modes, bonus house, 3 minigames) | smw/gamemodes/*.rs | done except netplay disconnect text | via start_classic / frenzy_cpu, not yet run |
 | smw/main.cpp create_gamemodes, mode globals | smw/main.rs | done | |
 | smw/objects/blocks/* (IO_Block + 11 blocks) | smw/objects/blocks/*.rs | done | not yet (gameplay not reached in replays) |
