@@ -11,10 +11,10 @@ Scope order: core game + menus + sound, then netplay, level editor, world editor
 | (filled in as modules land) | | | |
 | common/gfx.cpp, gfx/gfxSprite, gfxFont, SFont, gfxPalette, gfxSDL, Color.h | common/gfx.rs, common/gfx/* | done | `tools/gfx_smoke/compare.sh`: BMP byte-identical to C++ |
 | common/util/SdlHelpers.cpp | common/util/sdl_helpers.rs | done | n/a |
-| common/sfx.cpp | common/sfx.rs | done | not tested (no audio in harness) |
-| common/input.cpp | common/input.rs | partial: types + key clearing; `update()` waits on game_values | |
-| common/ResourceManager.cpp | common/resource_manager.rs | written, waits on game_values / tileset_manager / game.rs | |
-| common/eyecandy.cpp | common/eyecandy.rs | written, waits on map / io_block / gs_gameplay `eyecandy` | |
+| common/sfx.cpp | common/sfx.rs | done | `S` records (virtual mixer) match C++ on every replay |
+| common/input.cpp | common/input.rs | done | replays (keyboard path) |
+| common/ResourceManager.cpp | common/resource_manager.rs | done | `examples/rm_smoke.rs` loads every asset; replay screenshots match |
+| common/eyecandy.cpp | common/eyecandy.rs | done | `O ec*` counts match on replays |
 | common/GlobalConstants.h, Version.h, MatchTypes.h, GameplayStyles.h, PlayerKill*.h, MovingObjectTypes.h, EyecandyStyles.h, Score.h | common/global_constants.rs etc. | done | n/a |
 | common/RandomNumberGenerator.cpp | common/random_number_generator.rs | done | unit test vs C++ outputs (`tools/ref/rng_ref.cpp`) |
 | common/FileIO.cpp, linfunc.cpp, path.cpp, util/DirIterator.cpp, util/Grid.h, util/ContainerHelpers.h, math/Vec2.h | same names | done | unit tests |
