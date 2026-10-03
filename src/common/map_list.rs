@@ -81,8 +81,8 @@ impl MapMultimap {
     }
 }
 
-fn add_maps_from(relDir: &str, container: &mut MapMultimap) {
-    let mut dir = FilesIterator::new(convert_path(relDir), vec![".map".to_string()]);
+fn add_maps_from(dirpath: &str, container: &mut MapMultimap) {
+    let mut dir = FilesIterator::new(dirpath.to_string(), vec![".map".to_string()]);
     while let Some(path) = dir.next() {
         let node = MapListNode::new(path.to_string_lossy().into_owned());
         let fname = path.file_name().map(|f| f.to_string_lossy().into_owned()).unwrap_or_default();
@@ -116,10 +116,10 @@ pub struct MapList {
 impl MapList {
     pub fn new(fWorldEditor: bool) -> Self {
         let mut maps = MapMultimap::default();
-        add_maps_from("maps/", &mut maps);
+        add_maps_from(&convert_path("maps/"), &mut maps);
 
         if fWorldEditor {
-            add_maps_from("maps/tour/", &mut maps);
+            add_maps_from(&convert_path("maps/tour/"), &mut maps);
 
             let mut worldeditormapdirs = SimpleDirectoryList::new(convert_path("worlds/"));
             for _iDir in 0..worldeditormapdirs.count() {
@@ -128,7 +128,7 @@ impl MapList {
                 worldeditormapdirs.next();
             }
 
-            add_maps_from("maps/special/", &mut maps);
+            add_maps_from(&convert_path("maps/special/"), &mut maps);
         }
 
         if maps.is_empty() {
@@ -145,7 +145,7 @@ impl MapList {
         let n = maps.len();
         let mut worldmaps = MapMultimap::default();
 
-        add_maps_from("maps/tour/", &mut worldmaps);
+        add_maps_from(&convert_path("maps/tour/"), &mut worldmaps);
 
         let mut worldmapdirs = SimpleDirectoryList::new(convert_path("worlds/"));
         for _iDir in 0..worldmapdirs.count() {
@@ -154,7 +154,7 @@ impl MapList {
             worldmapdirs.next();
         }
 
-        add_maps_from("maps/special/", &mut worldmaps);
+        add_maps_from(&convert_path("maps/special/"), &mut worldmaps);
 
         MapList {
             maps,
