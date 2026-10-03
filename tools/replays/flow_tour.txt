@@ -1,0 +1,51 @@
+# 4 CPU players: first Tour, first stop.
+#@ seed=202
+#@ map=0smw
+#@ frames=5000
+#@ shots=486,2500,4999
+10 down Return
+12 up Return
+30 down Down
+32 up Down
+44 down Return
+46 up Return
+58 down Down
+60 up Down
+72 down Right
+74 up Right
+86 down Down
+88 up Down
+100 down Right
+102 up Right
+114 down Up
+116 up Up
+128 down Right
+130 up Right
+142 down Up
+144 up Up
+156 down Return
+158 up Return
+170 down Up
+172 up Up
+184 down Return
+186 up Return
+214 down Up
+216 up Up
+228 down Return
+230 up Return
+242 down Right
+244 up Right
+250 down Right
+252 up Right
+258 down Return
+260 up Return
+278 down Down
+280 up Down
+292 down Down
+294 up Down
+306 down Return
+308 up Return
+346 down Return
+348 up Return
+386 down Return
+388 up Return

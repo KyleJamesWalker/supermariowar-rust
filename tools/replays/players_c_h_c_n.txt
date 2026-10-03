@@ -1,0 +1,37 @@
+# Players: CPU, human, CPU, none; Classic; player 2 idle.
+#@ seed=305
+#@ map=3blockforts
+#@ frames=3000
+#@ shots=416,2999
+10 down Return
+12 up Return
+30 down Down
+32 up Down
+44 down Return
+46 up Return
+58 down Down
+60 up Down
+72 down Right
+74 up Right
+86 down Right
+88 up Right
+100 down Up
+102 up Up
+114 down Right
+116 up Right
+128 down Return
+130 up Return
+142 down Up
+144 up Up
+156 down Return
+158 up Return
+186 down Return
+188 up Return
+216 down E
+218 up E
+246 down Return
+248 up Return
+276 down Return
+278 up Return
+316 down Return
+318 up Return

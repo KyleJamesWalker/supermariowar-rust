@@ -1,0 +1,18 @@
+# Start on the first map, open the help screen, the tile picker and the block picker, then quit.
+#@ frames=119
+#@ shots=1,8,15,22,30
+#@ files=data/maps/ZZleveleditor.map
+
+5 down F1
+6 up F1
+10 down Escape
+11 up Escape
+12 down T
+13 up T
+18 down Escape
+19 up Escape
+20 down I
+21 up I
+26 down Escape
+27 up Escape
+30 mousemove 100 100

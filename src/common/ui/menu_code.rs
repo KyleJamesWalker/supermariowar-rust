@@ -1,0 +1,131 @@
+//! Port of src/common/ui/MenuCode.h
+
+pub type MenuCodeEnum = i32;
+
+pub const MENU_CODE_NEIGHBOR_UP: MenuCodeEnum = 0;
+pub const MENU_CODE_NEIGHBOR_DOWN: MenuCodeEnum = 1;
+pub const MENU_CODE_NEIGHBOR_LEFT: MenuCodeEnum = 2;
+pub const MENU_CODE_NEIGHBOR_RIGHT: MenuCodeEnum = 3;
+pub const MENU_CODE_NONE: MenuCodeEnum = 4;
+pub const MENU_CODE_CLICKED: MenuCodeEnum = 5;
+pub const MENU_CODE_UNSELECT_ITEM: MenuCodeEnum = 6;
+pub const MENU_CODE_INPUT_TYPE_CHANGED: MenuCodeEnum = 7;
+pub const MENU_CODE_INPUT_DEVICE_CHANGED: MenuCodeEnum = 8;
+pub const MENU_CODE_CANCEL_INPUT: MenuCodeEnum = 9;
+pub const MENU_CODE_START_GAME: MenuCodeEnum = 10;
+pub const MENU_CODE_MODIFY_ACCEPTED: MenuCodeEnum = 11;
+pub const MENU_CODE_BONUS_DONE: MenuCodeEnum = 12;
+pub const MENU_CODE_EXIT_APPLICATION: MenuCodeEnum = 13;
+pub const MENU_CODE_TO_OPTIONS_MENU: MenuCodeEnum = 14;
+pub const MENU_CODE_TO_CONTROLS_MENU: MenuCodeEnum = 15;
+pub const MENU_CODE_BACK_TO_CONTROLS_MENU: MenuCodeEnum = 16;
+pub const MENU_CODE_TO_PLAYER_1_CONTROLS: MenuCodeEnum = 17;
+pub const MENU_CODE_TO_PLAYER_2_CONTROLS: MenuCodeEnum = 18;
+pub const MENU_CODE_TO_PLAYER_3_CONTROLS: MenuCodeEnum = 19;
+pub const MENU_CODE_TO_PLAYER_4_CONTROLS: MenuCodeEnum = 20;
+pub const MENU_CODE_TO_MAIN_MENU: MenuCodeEnum = 21;
+pub const MENU_CODE_TOGGLE_FULLSCREEN: MenuCodeEnum = 22;
+pub const MENU_CODE_TO_SCREEN_SETTINGS: MenuCodeEnum = 23;
+pub const MENU_CODE_TO_SCREEN_RESIZE: MenuCodeEnum = 24;
+pub const MENU_CODE_MODE_CHANGED: MenuCodeEnum = 25;
+pub const MENU_CODE_TO_GAME_SETUP_MENU: MenuCodeEnum = 26;
+pub const MENU_CODE_TO_TEAM_SELECT_MENU: MenuCodeEnum = 27;
+pub const MENU_CODE_BACK_TEAM_SELECT_MENU: MenuCodeEnum = 28;
+pub const MENU_CODE_SOUND_VOLUME_CHANGED: MenuCodeEnum = 29;
+pub const MENU_CODE_MUSIC_VOLUME_CHANGED: MenuCodeEnum = 30;
+pub const MENU_CODE_TO_MODE_SETTINGS_MENU: MenuCodeEnum = 31;
+pub const MENU_CODE_BACK_TO_GAME_SETUP_MENU: MenuCodeEnum = 32;
+pub const MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS: MenuCodeEnum = 33;
+pub const MENU_CODE_EXIT_TOURNAMENT_YES: MenuCodeEnum = 34;
+pub const MENU_CODE_EXIT_TOURNAMENT_NO: MenuCodeEnum = 35;
+pub const MENU_CODE_TO_POWERUP_SELECTION_MENU: MenuCodeEnum = 36;
+pub const MENU_CODE_BACK_TO_OPTIONS_MENU: MenuCodeEnum = 37;
+pub const MENU_CODE_RESTORE_DEFAULT_POWERUP_WEIGHTS: MenuCodeEnum = 38;
+pub const MENU_CODE_CLEAR_POWERUP_WEIGHTS: MenuCodeEnum = 39;
+pub const MENU_CODE_TO_GRAPHICS_OPTIONS_MENU: MenuCodeEnum = 40;
+pub const MENU_CODE_TO_EYECANDY_OPTIONS_MENU: MenuCodeEnum = 41;
+pub const MENU_CODE_TO_SOUND_OPTIONS_MENU: MenuCodeEnum = 42;
+pub const MENU_CODE_TO_GAMEPLAY_OPTIONS_MENU: MenuCodeEnum = 43;
+pub const MENU_CODE_TO_TEAM_OPTIONS_MENU: MenuCodeEnum = 44;
+pub const MENU_CODE_BACK_TO_GRAPHIC_OPTIONS_MENU: MenuCodeEnum = 45;
+pub const MENU_CODE_MENU_GRAPHICS_PACK_CHANGED: MenuCodeEnum = 46;
+pub const MENU_CODE_WORLD_GRAPHICS_PACK_CHANGED: MenuCodeEnum = 47;
+pub const MENU_CODE_GAME_GRAPHICS_PACK_CHANGED: MenuCodeEnum = 48;
+pub const MENU_CODE_SOUND_PACK_CHANGED: MenuCodeEnum = 49;
+pub const MENU_CODE_TO_PROJECTILES_OPTIONS_MENU: MenuCodeEnum = 50;
+pub const MENU_CODE_TO_PROJECTILES_LIMITS_MENU: MenuCodeEnum = 51;
+pub const MENU_CODE_TO_POWERUP_SETTINGS_MENU: MenuCodeEnum = 52;
+pub const MENU_CODE_POWERUP_RESET_YES: MenuCodeEnum = 53;
+pub const MENU_CODE_POWERUP_CLEAR_YES: MenuCodeEnum = 54;
+pub const MENU_CODE_POWERUP_RESET_NO: MenuCodeEnum = 55;
+pub const MENU_CODE_TOUR_STOP_CONTINUE: MenuCodeEnum = 56;
+pub const MENU_CODE_EXIT_TOUR_YES: MenuCodeEnum = 57;
+pub const MENU_CODE_EXIT_TOUR_NO: MenuCodeEnum = 58;
+pub const MENU_CODE_RESET_STORED_POWERUPS: MenuCodeEnum = 59;
+pub const MENU_CODE_MAP_CHANGED: MenuCodeEnum = 60;
+pub const MENU_CODE_MAP_FILTER_EXIT: MenuCodeEnum = 61;
+pub const MENU_CODE_TO_MAP_FILTERS: MenuCodeEnum = 62;
+pub const MENU_CODE_TO_MAP_FILTER_EDIT: MenuCodeEnum = 63;
+pub const MENU_CODE_MAP_BROWSER_EXIT: MenuCodeEnum = 64;
+pub const MENU_CODE_TO_MAP_BROWSER_THUMBNAILS: MenuCodeEnum = 65;
+pub const MENU_CODE_SAVE_ALL_MAP_THUMBNAILS: MenuCodeEnum = 66;
+pub const MENU_CODE_BACK_TO_SCREEN_SETTINGS_MENU: MenuCodeEnum = 67;
+pub const MENU_CODE_SCREEN_FILTER_CHANGED: MenuCodeEnum = 68;
+pub const MENU_CODE_SCREEN_SETTINGS_CHANGED: MenuCodeEnum = 69;
+pub const MENU_CODE_GENERATE_THUMBS_RESET_YES: MenuCodeEnum = 70;
+pub const MENU_CODE_GENERATE_THUMBS_RESET_NO: MenuCodeEnum = 71;
+pub const MENU_CODE_MATCH_SELECTION_START: MenuCodeEnum = 72;
+pub const MENU_CODE_MATCH_SELECTION_MATCH_CHANGED: MenuCodeEnum = 73;
+pub const MENU_CODE_TO_MATCH_SELECTION_MENU: MenuCodeEnum = 74;
+pub const MENU_CODE_BACK_TO_MATCH_SELECTION_MENU: MenuCodeEnum = 75;
+pub const MENU_CODE_EXIT_WORLD_YES: MenuCodeEnum = 76;
+pub const MENU_CODE_EXIT_WORLD_NO: MenuCodeEnum = 77;
+pub const MENU_CODE_WORLD_STAGE_START: MenuCodeEnum = 78;
+pub const MENU_CODE_WORLD_STAGE_NO_START: MenuCodeEnum = 79;
+pub const MENU_CODE_TOUR_STOP_CONTINUE_FORCED: MenuCodeEnum = 80;
+pub const MENU_CODE_WORLD_MUSIC_CHANGED: MenuCodeEnum = 81;
+pub const MENU_CODE_WORLD_MAP_CHANGED: MenuCodeEnum = 82;
+pub const MENU_CODE_POWERUP_OVERRIDE_CHANGED: MenuCodeEnum = 83;
+pub const MENU_CODE_HEALTH_MODE_START_LIFE_CHANGED: MenuCodeEnum = 84;
+pub const MENU_CODE_HEALTH_MODE_MAX_LIFE_CHANGED: MenuCodeEnum = 85;
+pub const MENU_CODE_POWERUP_PRESET_CHANGED: MenuCodeEnum = 86;
+pub const MENU_CODE_POWERUP_SETTING_CHANGED: MenuCodeEnum = 87;
+pub const MENU_CODE_QUICK_GAME_START: MenuCodeEnum = 88;
+pub const MENU_CODE_TO_BONUS_PICKER_MENU: MenuCodeEnum = 89;
+pub const MENU_CODE_DELETE_STAGE_BUTTON: MenuCodeEnum = 90;
+pub const MENU_CODE_DELETE_STAGE_YES: MenuCodeEnum = 91;
+pub const MENU_CODE_DELETE_STAGE_NO: MenuCodeEnum = 92;
+pub const MENU_CODE_VEHICLE_MIN_MOVES_CHANGED: MenuCodeEnum = 93;
+pub const MENU_CODE_VEHICLE_MAX_MOVES_CHANGED: MenuCodeEnum = 94;
+pub const MENU_CODE_CREATE_VEHICLE: MenuCodeEnum = 95;
+pub const MENU_CODE_TO_NET_SERVERS_MENU: MenuCodeEnum = 96;
+pub const MENU_CODE_TO_NET_SERVERLIST: MenuCodeEnum = 97;
+pub const MENU_CODE_NET_SERVERLIST_EXIT: MenuCodeEnum = 98;
+pub const MENU_CODE_NET_CONNECT_IN_PROGRESS: MenuCodeEnum = 99;
+pub const MENU_CODE_NET_CONNECT_ABORT: MenuCodeEnum = 100;
+pub const MENU_CODE_TO_NET_ADDREMOVE_SERVER_MENU: MenuCodeEnum = 101;
+pub const MENU_CODE_NET_ADDREMOVE_SERVER_ON_ADD_BTN: MenuCodeEnum = 102;
+pub const MENU_CODE_NET_ADDREMOVE_SERVER_ON_EDIT_BTN: MenuCodeEnum = 103;
+pub const MENU_CODE_NET_ADDREMOVE_SERVER_ON_DELETE_BTN: MenuCodeEnum = 104;
+pub const MENU_CODE_NET_ADDREMOVE_SERVER_ON_SELECT: MenuCodeEnum = 105;
+pub const MENU_CODE_NET_ADDREMOVE_SERVER_ON_DIALOG_OK_BTN: MenuCodeEnum = 106;
+pub const MENU_CODE_TO_NET_LOBBY_MENU: MenuCodeEnum = 107;
+pub const MENU_CODE_NET_JOIN_ROOM_IN_PROGRESS: MenuCodeEnum = 108;
+pub const MENU_CODE_NET_JOIN_ROOM_ABORT: MenuCodeEnum = 109;
+pub const MENU_CODE_TO_NET_ROOM_MENU: MenuCodeEnum = 110;
+pub const MENU_CODE_TO_NET_NEW_ROOM_LEVEL_SELECT_MENU: MenuCodeEnum = 111;
+pub const MENU_CODE_TO_NET_NEW_ROOM_SETTINGS_MENU: MenuCodeEnum = 112;
+pub const MENU_CODE_TO_NET_NEW_ROOM_CREATE_IN_PROGRESS: MenuCodeEnum = 113;
+pub const MENU_CODE_TO_NET_NEW_ROOM_CREATE_ABORT: MenuCodeEnum = 114;
+pub const MENU_CODE_NET_CHAT_SEND: MenuCodeEnum = 115;
+pub const MENU_CODE_TO_NET_ROOM_START_IN_PROGRESS: MenuCodeEnum = 116;
+pub const MENU_CODE_NET_ROOM_GO: MenuCodeEnum = 117;
+
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum MenuNavDirection {
+    Up,
+    Down,
+    Left,
+    Right,
+}

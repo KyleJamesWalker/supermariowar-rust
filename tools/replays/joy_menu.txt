@@ -1,0 +1,69 @@
+# Gamepad on virtual joystick 0: switch player 1 to it in Controls, bind Jump to button 6 and Down
+# to hat down (blocking binding waits take the next replay event), then navigate with stick and buttons.
+#@ seed=1
+#@ frames=520
+#@ shots=160,245,292,370,519
+10 down Return
+12 up Return
+25 down Down
+27 up Down
+40 down Down
+42 up Down
+55 down Down
+57 up Down
+70 down Right
+72 up Right
+85 down Return
+87 up Return
+100 down Return
+102 up Return
+115 down Return
+117 up Return
+130 down Right
+132 up Right
+145 down Return
+147 up Return
+160 jaxis 0 1 32767
+162 jaxis 0 1 0
+175 jaxis 0 1 32767
+177 jaxis 0 1 0
+190 jaxis 0 1 32767
+192 jaxis 0 1 0
+205 jaxis 0 1 32767
+207 jaxis 0 1 0
+220 jbutton 0 0 1
+222 jbutton 0 0 0
+235 jbutton 0 6 1
+237 jbutton 0 6 0
+250 jaxis 0 1 32767
+252 jaxis 0 1 0
+265 jbutton 0 0 1
+267 jbutton 0 0 0
+280 jhat 0 0 4
+282 jhat 0 0 0
+295 jbutton 0 1 1
+297 jbutton 0 1 0
+310 jbutton 0 1 1
+312 jbutton 0 1 0
+325 jaxis 0 0 -32767
+327 jaxis 0 0 0
+340 jbutton 0 0 1
+342 jbutton 0 0 0
+355 jaxis 0 1 32767
+357 jaxis 0 1 0
+370 jaxis 0 1 32767
+372 jaxis 0 1 0
+385 jbutton 0 1 1
+387 jbutton 0 1 0
+400 jaxis 0 1 -32767
+402 jaxis 0 1 0
+415 jaxis 0 1 -32767
+417 jaxis 0 1 0
+430 jaxis 0 1 -32767
+432 jaxis 0 1 0
+445 jbutton 0 0 1
+447 jbutton 0 0 0
+460 jaxis 0 1 32767
+462 jaxis 0 1 0
+475 jbutton 0 1 1
+477 jbutton 0 1 0

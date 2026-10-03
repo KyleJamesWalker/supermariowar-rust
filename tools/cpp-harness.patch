@@ -1,0 +1,976 @@
+diff --color -ruN supermariowar/src/common/RandomNumberGenerator.cpp smw-ref/src/common/RandomNumberGenerator.cpp
+--- supermariowar/src/common/RandomNumberGenerator.cpp	2026-03-20 16:50:46
++++ smw-ref/src/common/RandomNumberGenerator.cpp	2026-10-03 05:03:16
+@@ -53,6 +53,24 @@
+     delete rng;
+ }
+ 
++namespace {
++unsigned long long g_callCount = 0;
++unsigned g_lastValue = 0;
++}
++
++unsigned long long RandomNumberGenerator::callCount() {
++    return g_callCount;
++}
++
++unsigned RandomNumberGenerator::lastValue() {
++    return g_lastValue;
++}
++
++void RandomNumberGenerator::resetCallCount() {
++    g_callCount = 0;
++    g_lastValue = 0;
++}
++
+ RandomNumberGeneratorType& RandomNumberGenerator::generator() {
+     static RandomNumberGenerator grng;
+     return *(grng.rng);
+@@ -79,6 +97,7 @@
+ // this constitutes a good enough seed
+ unsigned Well512RandomNumberGenerator::getNext()
+ {
++    g_callCount++;
+     unsigned a, b, c, d;
+     a = state[index];
+     c = state[(index+13)&15];
+@@ -90,6 +109,7 @@
+     index = (index + 15)&15;
+     a = state[index];
+     state[index] = a^b^d^(a<<2)^(b<<18)^(c<<28);
++    g_lastValue = state[index];
+     return state[index];
+ }
+ 
+diff --color -ruN supermariowar/src/common/RandomNumberGenerator.h smw-ref/src/common/RandomNumberGenerator.h
+--- supermariowar/src/common/RandomNumberGenerator.h	2026-03-20 16:50:46
++++ smw-ref/src/common/RandomNumberGenerator.h	2026-10-03 05:03:16
+@@ -29,6 +29,10 @@
+ public:
+     static RandomNumberGeneratorType& generator();
+ 
++    static unsigned long long callCount();
++    static unsigned lastValue();
++    static void resetCallCount();
++
+ private:
+     RandomNumberGenerator();
+     ~RandomNumberGenerator();
+diff --color -ruN supermariowar/src/common/sfx.cpp smw-ref/src/common/sfx.cpp
+--- supermariowar/src/common/sfx.cpp	2026-03-20 16:50:46
++++ smw-ref/src/common/sfx.cpp	2026-10-03 05:03:16
+@@ -10,13 +10,130 @@
+ 
+ 
+ bool fResumeMusic = true;
++Uint32 (SDLCALL *sfx_ticks)(void) = &SDL_GetTicks;
++bool sfx_ignore_channel_failure = false;
++bool sfx_virtual_mixer = false;
++std::vector<std::string> sfx_events;
+ extern void SDLCALL musicfinished();
+ 
+ 
+-void MixDeleter::operator()(Mix_Chunk* ptr) const noexcept { Mix_FreeChunk(ptr); }
+-void MixDeleter::operator()(Mix_Music* ptr) const noexcept { Mix_FreeMusic(ptr); }
++namespace {
++struct VirtualChannel {
++    Mix_Chunk* chunk = nullptr;
++    bool forever = false;
++    Uint32 end = 0;
++};
++std::array<VirtualChannel, sfxSound::k_channels> v_channels;
+ 
++struct VirtualMusic {
++    Mix_Music* music = nullptr;
++    bool forever = false;
++    bool paused = false;
++    Uint32 end = 0;
++    Uint32 remaining = 0;
++} v_music;
+ 
++void logEvent(std::string line)
++{
++    if (sfx_virtual_mixer)
++        sfx_events.push_back(std::move(line));
++}
++
++// The data-relative part of a path ("sfx/packs/Classic/jump.wav"), identical for any data root.
++std::string dataRelative(const std::string& path)
++{
++    size_t pos = path.rfind("data/");
++    while (pos != std::string::npos && pos > 0 && path[pos - 1] != '/')
++        pos = pos == 0 ? std::string::npos : path.rfind("data/", pos - 1);
++    return pos == std::string::npos ? path : path.substr(pos + 5);
++}
++
++Uint32 chunkDurationMs(const Mix_Chunk* chunk)
++{
++    int frequency = 0, channels = 0;
++    Uint16 format = 0;
++    Mix_QuerySpec(&frequency, &format, &channels);
++    const Uint64 bytesPerSecond = (Uint64)frequency * channels * (SDL_AUDIO_BITSIZE(format) / 8);
++    return bytesPerSecond ? (Uint32)((Uint64)chunk->alen * 1000 / bytesPerSecond) : 0;
++}
++
++int mixPlayChannel(Mix_Chunk* chunk, int loops)
++{
++    if (!sfx_virtual_mixer)
++        return Mix_PlayChannel(-1, chunk, loops);
++
++    if (!chunk)  // Mix_PlayChannel rejects NULL chunks
++        return -1;
++
++    for (int i = 0; i < sfxSound::k_channels; i++) {
++        VirtualChannel& ch = v_channels[i];
++        if (ch.chunk)
++            continue;
++        ch.chunk = chunk;
++        ch.forever = loops < 0;
++        ch.end = sfx_ticks() + chunkDurationMs(chunk) * (Uint32)(loops + 1);
++        return i;
++    }
++    return -1;
++}
++
++void mixHaltChannel(int channel)
++{
++    if (!sfx_virtual_mixer) {
++        Mix_HaltChannel(channel);
++        return;
++    }
++
++    for (int i = 0; i < sfxSound::k_channels; i++) {
++        if ((channel < 0 || channel == i) && v_channels[i].chunk) {
++            v_channels[i].chunk = nullptr;
++            sfxSound::onChannelFinished(i);
++        }
++    }
++}
++} // namespace
++
++
++void sfx_virtual_advance()
++{
++    if (!sfx_virtual_mixer)
++        return;
++
++    const Uint32 now = sfx_ticks();
++    for (int i = 0; i < sfxSound::k_channels; i++) {
++        VirtualChannel& ch = v_channels[i];
++        if (ch.chunk && !ch.forever && (Sint32)(now - ch.end) >= 0) {
++            ch.chunk = nullptr;
++            logEvent(std::format("S done ch={}", i));
++            sfxSound::onChannelFinished(i);
++        }
++    }
++
++    if (v_music.music && !v_music.forever && !v_music.paused && (Sint32)(now - v_music.end) >= 0) {
++        v_music.music = nullptr;
++        logEvent("S musicdone");
++        musicfinished();
++    }
++}
++
++
++void MixDeleter::operator()(Mix_Chunk* ptr) const noexcept
++{
++    for (VirtualChannel& ch : v_channels) {
++        if (ch.chunk == ptr)
++            ch.chunk = nullptr;
++    }
++    Mix_FreeChunk(ptr);
++}
++
++void MixDeleter::operator()(Mix_Music* ptr) const noexcept
++{
++    if (v_music.music == ptr)
++        v_music.music = nullptr;
++    Mix_FreeMusic(ptr);
++}
++
++
+ bool sfx_init()
+ {
+     Mix_OpenAudio(44100, AUDIO_S16, 2, 2048);
+@@ -46,16 +163,19 @@
+ 
+ void sfx_stopallsounds()
+ {
+-    Mix_HaltChannel(-1);
++    logEvent("S haltall");
++    mixHaltChannel(-1);
+ }
+ 
+ void sfx_setmusicvolume(int volume)
+ {
++    logEvent(std::format("S musicvolume {}", volume));
+     Mix_VolumeMusic(volume);
+ }
+ 
+ void sfx_setsoundvolume(int volume)
+ {
++    logEvent(std::format("S soundvolume {}", volume));
+     Mix_Volume(-1, volume);
+ }
+ 
+@@ -78,19 +198,26 @@
+     m_sfx = MixChunkPtr(Mix_LoadWAV(path_str.c_str()));
+     if (!m_sfx)
+         throw std::format("Failed to load {}: {}", path_str, Mix_GetError());
++    m_name = dataRelative(path_str);
+ 
+     std::cout << " done" << std::endl;
+ }
+ 
+ bool sfxSound::play()
+ {
+-    const Uint32 current_time = SDL_GetTicks();
+-    if (current_time - m_last_start_time < 40)
++    const Uint32 current_time = sfx_ticks();
++    if (current_time - m_last_start_time < 40) {
++        logEvent(std::format("S skip {}", m_name));
+         return false;
++    }
+ 
+-    const int channel = Mix_PlayChannel(-1, m_sfx.get(), 0);
+-    if (channel < 0)
+-        return false;
++    const int channel = mixPlayChannel(m_sfx.get(), 0);
++    logEvent(std::format("S play {} ch={}", m_name, channel));
++    if (channel < 0) {
++        if (sfx_ignore_channel_failure)
++            m_last_start_time = current_time;
++        return sfx_ignore_channel_failure;
++    }
+ 
+     m_last_start_time = current_time;
+     m_channels.set(channel);
+@@ -100,7 +227,8 @@
+ 
+ void sfxSound::playLoop(int loops)
+ {
+-    const int channel = Mix_PlayChannel(-1, m_sfx.get(), loops);
++    const int channel = mixPlayChannel(m_sfx.get(), loops);
++    logEvent(std::format("S loop {} loops={} ch={}", m_name, loops, channel));
+     if (channel < 0)
+         return;
+ 
+@@ -109,9 +237,10 @@
+ 
+ void sfxSound::stop()
+ {
++    logEvent(std::format("S stop {}", m_name));
+     for (size_t i = 0; i < m_channels.size(); i++) {
+         if (m_channels.test(i)) {
+-            Mix_HaltChannel(i);
++            mixHaltChannel(i);
+         }
+     }
+ }
+@@ -134,24 +263,49 @@
+     m_music = MixMusicPtr(Mix_LoadMUS(path_str.c_str()));
+     if (!m_music)
+         throw std::format("Failed to load {}: {}", path_str, Mix_GetError());
++    m_name = dataRelative(path_str);
+ 
+     std::cout << " done" << std::endl;
+ }
+ 
+ void sfxMusic::play(bool fPlayonce, bool fResume)
+ {
+-    Mix_PlayMusic(m_music.get(), fPlayonce ? 0 : -1);
++    logEvent(std::format("S music {} once={} resume={}", m_name, fPlayonce ? 1 : 0, fResume ? 1 : 0));
++    if (sfx_virtual_mixer) {
++        const double duration = Mix_MusicDuration(m_music.get());
++        v_music.music = m_music.get();
++        v_music.forever = !fPlayonce || duration <= 0.0;
++        v_music.paused = false;
++        v_music.end = sfx_ticks() + (Uint32)(duration * 1000.0);
++    } else {
++        Mix_PlayMusic(m_music.get(), fPlayonce ? 0 : -1);
++    }
+     fResumeMusic = fResume;
+ }
+ 
+ void sfxMusic::stop()
+ {
+-    Mix_HaltMusic();
++    logEvent(std::format("S musicstop {}", m_name));
++    if (sfx_virtual_mixer)
++        v_music.music = nullptr;
++    else
++        Mix_HaltMusic();
+ }
+ 
+ void sfxMusic::togglePause()
+ {
+-    if (m_paused) {
++    logEvent(std::format("S musicpause {} paused={}", m_name, m_paused ? 0 : 1));
++    if (sfx_virtual_mixer) {
++        if (v_music.music) {
++            if (m_paused && v_music.paused) {
++                v_music.end = sfx_ticks() + v_music.remaining;
++                v_music.paused = false;
++            } else if (!m_paused && !v_music.paused) {
++                v_music.remaining = v_music.end - sfx_ticks();
++                v_music.paused = true;
++            }
++        }
++    } else if (m_paused) {
+         Mix_ResumeMusic();
+     } else {
+         Mix_PauseMusic();
+@@ -161,5 +315,7 @@
+ 
+ bool sfxMusic::isPlaying() const
+ {
++    if (sfx_virtual_mixer)
++        return v_music.music != nullptr;
+     return Mix_PlayingMusic();
+ }
+diff --color -ruN supermariowar/src/common/sfx.h smw-ref/src/common/sfx.h
+--- supermariowar/src/common/sfx.h	2026-03-20 16:50:46
++++ smw-ref/src/common/sfx.h	2026-10-03 05:03:16
+@@ -9,6 +9,8 @@
+ #include <array>
+ #include <bitset>
+ #include <filesystem>
++#include <string>
++#include <vector>
+ 
+ struct MixDeleter {
+     void operator()(Mix_Chunk* ptr) const noexcept;
+@@ -19,6 +21,14 @@
+ 
+ 
+ bool sfx_init();
++// Clock used for the sfxSound::play() retrigger throttle; the replay harness swaps it.
++extern Uint32 (SDLCALL *sfx_ticks)(void);
++extern bool sfx_ignore_channel_failure;
++// Seeded replays replace SDL_mixer playback state with a virtual mixer driven by sfx_ticks,
++// and log every sound command to sfx_events (port/REPLAY.md, "Sound").
++extern bool sfx_virtual_mixer;
++extern std::vector<std::string> sfx_events;
++void sfx_virtual_advance();
+ void sfx_close();
+ void sfx_stopallsounds();
+ void sfx_setmusicvolume(int volume);
+@@ -43,6 +53,7 @@
+ 
+ private:
+     MixChunkPtr m_sfx;
++    std::string m_name;
+     std::bitset<k_channels> m_channels;
+     size_t m_last_start_time = 0;
+ 
+@@ -64,5 +75,6 @@
+ 
+ private:
+     MixMusicPtr m_music;
++    std::string m_name;
+     bool m_paused = false;
+ };
+diff --color -ruN supermariowar/src/common/uimenu.cpp smw-ref/src/common/uimenu.cpp
+--- supermariowar/src/common/uimenu.cpp	2026-03-20 16:50:46
++++ smw-ref/src/common/uimenu.cpp	2026-10-03 05:03:16
+@@ -247,3 +247,12 @@
+         control->Refresh();
+     }
+ }
++
++int UI_Menu::currentFocusIndex() const
++{
++    for (size_t i = 0; i < controls.size(); i++) {
++        if (controls[i].get() == m_currentFocus)
++            return (int)i;
++    }
++    return -1;
++}
+diff --color -ruN supermariowar/src/common/uimenu.h smw-ref/src/common/uimenu.h
+--- supermariowar/src/common/uimenu.h	2026-03-20 16:50:46
++++ smw-ref/src/common/uimenu.h	2026-10-03 05:03:16
+@@ -24,6 +24,8 @@
+     UI_Control* initialFocus() const { return m_initialFocus; }
+     /// The currently focused element of the menu.
+     UI_Control* currentFocus() const { return m_currentFocus; }
++    /// Index of the focused element in insertion order, or -1.
++    int currentFocusIndex() const;
+ 
+     void SetCancelCode(MenuCodeEnum code) {
+         cancelCode = code;
+diff --color -ruN supermariowar/src/smw/CMakeLists.txt smw-ref/src/smw/CMakeLists.txt
+--- supermariowar/src/smw/CMakeLists.txt	2026-03-20 16:50:46
++++ smw-ref/src/smw/CMakeLists.txt	2026-10-03 05:03:16
+@@ -11,6 +11,8 @@
+ 	GSMenu.h
+ 	GSSplashScreen.cpp
+ 	GSSplashScreen.h
++	Harness.cpp
++	Harness.h
+ 	net.cpp
+ 	net.h
+ 	network/FileCompressor.cpp
+diff --color -ruN supermariowar/src/smw/FPSLimiter.cpp smw-ref/src/smw/FPSLimiter.cpp
+--- supermariowar/src/smw/FPSLimiter.cpp	2026-03-20 16:50:46
++++ smw-ref/src/smw/FPSLimiter.cpp	2026-10-03 05:03:16
+@@ -1,6 +1,7 @@
+ #include "FPSLimiter.h"
+ 
+ #include "GameValues.h"
++#include "Harness.h"
+ #include "ResourceManager.h"
+ 
+ #include "SDL.h"
+@@ -54,6 +55,9 @@
+ void FPSLimiter::afterFlip()
+ {
+     flipfps = 1000.0f / (float)ticks;
++
++    if (harness::noLimit())
++        return;
+ 
+     //Sleep for time just under what we need
+     short delay = (short)(game_values.framelimiter - SDL_GetTicks() + framestart - 2);
+diff --color -ruN supermariowar/src/smw/GSMenu.cpp smw-ref/src/smw/GSMenu.cpp
+--- supermariowar/src/smw/GSMenu.cpp	2026-03-20 16:50:46
++++ smw-ref/src/smw/GSMenu.cpp	2026-10-03 05:03:16
+@@ -1,4 +1,5 @@
+ #include "GSMenu.h"
++#include "Harness.h"
+ 
+ #include "FileList.h"
+ #include "Game.h"
+@@ -159,9 +160,67 @@
+     mNetRoomMenu = std::make_unique<UI_NetRoomMenu>();
+ 
+     mCurrentMenu = mMainMenu.get();
++
++    if (const char* forcedMap = harness::forcedMap()) {
++        if (!maplist->findexact(forcedMap, false) && !maplist->find(forcedMap)) {
++            fprintf(stderr, "[harness] SMW_MAP '%s' not found\n", forcedMap);
++            exit(2);
++        }
++        mGameSettingsMenu->miMapField->LoadCurrentMap();
++    }
++
+     szCurrentMapName = mGameSettingsMenu->miMapField->GetMapName();
+ 
+     return true;
++}
++
++const char* MenuState::harnessMenuName() const
++{
++    const std::pair<const UI_Menu*, const char*> names[] = {
++        {mMainMenu.get(), "main"},
++        {mOptionsMenu.get(), "options"},
++        {mGameplayOptionsMenu.get(), "gameplay_options"},
++        {mTeamOptionsMenu.get(), "team_options"},
++        {mPowerupDropRatesMenu.get(), "powerup_drop_rates"},
++        {mPowerupSettingsMenu.get(), "powerup_settings"},
++        {mProjectileLimitsMenu.get(), "projectile_limits"},
++        {mProjectileOptionsMenu.get(), "projectile_options"},
++        {mGraphicsOptionsMenu.get(), "graphics_options"},
++        {mEyeCandyOptionsMenu.get(), "eyecandy_options"},
++        {mSoundOptionsMenu.get(), "sound_options"},
++        {mPlayerControlsSelectMenu.get(), "player_controls_select"},
++        {mPlayerControlsMenu.get(), "player_controls"},
++        {mModeOptionsMenu.get(), "mode_options"},
++        {mMatchSelectionMenu.get(), "match_selection"},
++        {mGameSettingsMenu.get(), "game_settings"},
++        {mMapFilterEditMenu.get(), "map_filter_edit"},
++        {mTourStopMenu.get(), "tour_stop"},
++        {mWorldMenu.get(), "world"},
++        {mTeamSelectMenu.get(), "team_select"},
++        {mTournamentScoreboardMenu.get(), "tournament_scoreboard"},
++        {mBonusWheelMenu.get(), "bonus_wheel"},
++        {mNetServersMenu.get(), "net_servers"},
++        {mNetEditServersMenu.get(), "net_edit_servers"},
++        {mNetLobbyMenu.get(), "net_lobby"},
++        {mNetNewRoomMenu.get(), "net_new_room"},
++        {mNetNewRoomSettingsMenu.get(), "net_new_room_settings"},
++        {mNetRoomMenu.get(), "net_room"},
++    };
++    for (const auto& [menu, name] : names) {
++        if (menu == mCurrentMenu)
++            return name;
++    }
++    return "unknown";
++}
++
++int MenuState::harnessFocusIndex() const
++{
++    return mCurrentMenu ? mCurrentMenu->currentFocusIndex() : -1;
++}
++
++bool MenuState::harnessModifying() const
++{
++    return mCurrentMenu && mCurrentMenu->IsModifying();
+ }
+ 
+ //---------------------------------------------------------------
+diff --color -ruN supermariowar/src/smw/GSMenu.h smw-ref/src/smw/GSMenu.h
+--- supermariowar/src/smw/GSMenu.h	2026-03-20 16:50:46
++++ smw-ref/src/smw/GSMenu.h	2026-10-03 05:03:16
+@@ -75,6 +75,10 @@
+ 
+         static MenuState& instance();
+ 
++        const char* harnessMenuName() const;
++        int harnessFocusIndex() const;
++        bool harnessModifying() const;
++
+ #ifdef _DEBUG
+ 
+ 		void LoadScript(const char * szScriptFile);
+diff --color -ruN supermariowar/src/smw/Harness.cpp smw-ref/src/smw/Harness.cpp
+--- supermariowar/src/smw/Harness.cpp	1969-12-31 16:00:00
++++ smw-ref/src/smw/Harness.cpp	2026-10-03 05:03:16
+@@ -0,0 +1,356 @@
++#include "Harness.h"
++
++#include "eyecandy.h"
++#include "GameMode.h"
++#include "GameValues.h"
++#include "GSGameplay.h"
++#include "GSMenu.h"
++#include "GSSplashScreen.h"
++#include "MapList.h"
++#include "ObjectContainer.h"
++#include "player.h"
++#include "RandomNumberGenerator.h"
++#include "Score.h"
++#include "sfx.h"
++
++#include "SDL.h"
++
++#include <algorithm>
++#include <cstdio>
++#include <cstdlib>
++#include <cstring>
++#include <fstream>
++#include <set>
++#include <sstream>
++#include <string>
++#include <vector>
++
++extern CGameValues game_values;
++extern std::vector<CPlayer*> players;
++extern CObjectContainer noncolcontainer;
++extern CObjectContainer objectcontainer[3];
++extern CEyecandyContainer eyecandy[3];
++extern SDL_Surface* screen;
++
++
++struct HarnessAccess {
++    static void dumpPlayer(FILE* out, const CPlayer& p) {
++        fprintf(out, "P id=%d team=%d ix=%d iy=%d fx=%.4f fy=%.4f velx=%.4f vely=%.4f state=%d score=%d powerup=%d inair=%d\n",
++            p.globalID, p.teamID, p.ix, p.iy,
++            (double)p.fx, (double)p.fy, (double)p.velx, (double)p.vely,
++            (int)p.state, p.score ? p.score->score : 0, p.powerup, p.inair ? 1 : 0);
++    }
++};
++
++namespace harness {
++namespace {
++
++enum class EventKind { Key, JoyAxis, JoyButton, JoyHat };
++
++struct ReplayEvent {
++    unsigned frame;
++    EventKind kind;
++    bool down;
++    std::string keyName;
++    int device, index, value;
++};
++
++constexpr int VIRTUAL_AXES = 6;
++constexpr int VIRTUAL_BUTTONS = 16;
++constexpr int VIRTUAL_HATS = 1;
++
++bool g_seeded = false;
++unsigned g_seed = 0;
++bool g_noLimit = false;
++std::string g_map;
++long g_maxFrames = -1;
++FILE* g_dump = nullptr;
++std::set<unsigned> g_shotFrames;
++std::string g_shotDir = ".";
++std::vector<ReplayEvent> g_events;
++int g_joysticks = 0;
++bool g_replay = false;
++size_t g_nextEvent = 0;
++unsigned g_frame = 0;
++
++const char* env(const char* name)
++{
++    const char* value = getenv(name);
++    return (value && *value) ? value : nullptr;
++}
++
++Uint32 SDLCALL virtualTicks()
++{
++    return 1000 + g_frame * WAITTIME;
++}
++
++void loadReplay(const char* path)
++{
++    std::ifstream in(path);
++    if (!in) {
++        fprintf(stderr, "[harness] cannot open replay %s\n", path);
++        exit(2);
++    }
++
++    std::string line;
++    int lineno = 0;
++    while (std::getline(in, line)) {
++        lineno++;
++        if (!line.empty() && line.back() == '\r')
++            line.pop_back();
++        size_t first = line.find_first_not_of(" \t");
++        if (first == std::string::npos || line[first] == '#')
++            continue;
++
++        std::istringstream ls(line);
++        ReplayEvent ev {};
++        std::string dir;
++        if (!(ls >> ev.frame >> dir)) {
++            fprintf(stderr, "[harness] %s:%d: malformed line\n", path, lineno);
++            exit(2);
++        }
++        if (dir == "jaxis" || dir == "jbutton" || dir == "jhat") {
++            ev.kind = dir == "jaxis" ? EventKind::JoyAxis : dir == "jbutton" ? EventKind::JoyButton : EventKind::JoyHat;
++            std::string trailing;
++            int indexLimit = dir == "jaxis" ? VIRTUAL_AXES : dir == "jbutton" ? VIRTUAL_BUTTONS : VIRTUAL_HATS;
++            if (!(ls >> ev.device >> ev.index >> ev.value) || (ls >> trailing) || ev.device < 0 || ev.device > 7
++                    || ev.index < 0 || ev.index >= indexLimit
++                    || (dir == "jaxis" && (ev.value < -32768 || ev.value > 32767))
++                    || (dir == "jbutton" && ev.value != 0 && ev.value != 1)
++                    || (dir == "jhat" && (ev.value < 0 || ev.value > 15))) {
++                fprintf(stderr, "[harness] %s:%d: expected '<frame> %s <dev> <index> <value>'\n", path, lineno, dir.c_str());
++                exit(2);
++            }
++            g_joysticks = std::max(g_joysticks, ev.device + 1);
++        } else {
++            ev.kind = EventKind::Key;
++            std::getline(ls, ev.keyName);
++            ev.keyName.erase(0, ev.keyName.find_first_not_of(" \t"));
++            if ((dir != "down" && dir != "up") || ev.keyName.empty()) {
++                fprintf(stderr, "[harness] %s:%d: expected '<frame> <down|up> <key>'\n", path, lineno);
++                exit(2);
++            }
++            ev.down = dir == "down";
++        }
++        if (!g_events.empty() && ev.frame < g_events.back().frame) {
++            fprintf(stderr, "[harness] %s:%d: frames must be non-decreasing\n", path, lineno);
++            exit(2);
++        }
++        g_events.push_back(ev);
++    }
++}
++
++void attachJoysticks()
++{
++    SDL_InitSubSystem(SDL_INIT_JOYSTICK);
++    for (int i = 0; i < g_joysticks; i++) {
++        if (SDL_JoystickAttachVirtual(SDL_JOYSTICK_TYPE_GAMECONTROLLER, VIRTUAL_AXES, VIRTUAL_BUTTONS, VIRTUAL_HATS) != i) {
++            fprintf(stderr, "[harness] cannot attach virtual joystick %d: %s\n", i, SDL_GetError());
++            exit(2);
++        }
++    }
++}
++
++void fillJoystick(const ReplayEvent& ev, SDL_Event& event)
++{
++    memset(&event, 0, sizeof(event));
++    if (ev.kind == EventKind::JoyAxis) {
++        event.type = SDL_JOYAXISMOTION;
++        event.jaxis.which = ev.device;
++        event.jaxis.axis = (Uint8)ev.index;
++        event.jaxis.value = (Sint16)ev.value;
++    } else if (ev.kind == EventKind::JoyButton) {
++        event.type = ev.value ? SDL_JOYBUTTONDOWN : SDL_JOYBUTTONUP;
++        event.jbutton.which = ev.device;
++        event.jbutton.button = (Uint8)ev.index;
++        event.jbutton.state = ev.value ? SDL_PRESSED : SDL_RELEASED;
++    } else {
++        event.type = SDL_JOYHATMOTION;
++        event.jhat.which = ev.device;
++        event.jhat.hat = (Uint8)ev.index;
++        event.jhat.value = (Uint8)ev.value;
++    }
++}
++
++void fillKey(const ReplayEvent& ev, SDL_Event& event)
++{
++    SDL_Keycode key = SDL_GetKeyFromName(ev.keyName.c_str());
++    if (key == SDLK_UNKNOWN) {
++        fprintf(stderr, "[harness] unknown SDL key name '%s'\n", ev.keyName.c_str());
++        exit(2);
++    }
++
++    memset(&event, 0, sizeof(event));
++    event.type = ev.down ? SDL_KEYDOWN : SDL_KEYUP;
++    event.key.state = ev.down ? SDL_PRESSED : SDL_RELEASED;
++    event.key.keysym.sym = key;
++    event.key.keysym.scancode = SDL_GetScancodeFromKey(key);
++    event.key.keysym.mod = KMOD_NONE;
++}
++
++void fillEvent(const ReplayEvent& ev, SDL_Event& event)
++{
++    if (ev.kind == EventKind::Key)
++        fillKey(ev, event);
++    else
++        fillJoystick(ev, event);
++}
++
++const char* stateName()
++{
++    GameState* current = GameStateManager::instance().currentState;
++    if (current == &SplashScreenState::instance())
++        return "splash";
++    if (current == &MenuState::instance())
++        return "menu";
++    if (current == &GameplayState::instance())
++        return "gameplay";
++    return "other";
++}
++
++void dumpFrame()
++{
++    fprintf(g_dump, "F %u %s\n", g_frame, stateName());
++
++    GameState* current = GameStateManager::instance().currentState;
++    if (current == &MenuState::instance()) {
++        const MenuState& menu = MenuState::instance();
++        fprintf(g_dump, "M %s focus=%d modifying=%d\n",
++            menu.harnessMenuName(), menu.harnessFocusIndex(), menu.harnessModifying() ? 1 : 0);
++    } else if (current == &GameplayState::instance()) {
++        CGameMode* mode = game_values.gamemode;
++        fprintf(g_dump, "G mode=%d gameover=%d winner=%d\n",
++            (int)mode->gamemode, mode->gameover ? 1 : 0, mode->winningteam);
++        for (const CPlayer* player : players)
++            HarnessAccess::dumpPlayer(g_dump, *player);
++        fprintf(g_dump, "O noncol=%zu obj0=%zu obj1=%zu obj2=%zu ec0=%zu ec1=%zu ec2=%zu\n",
++            noncolcontainer.list().size(),
++            objectcontainer[0].list().size(), objectcontainer[1].list().size(), objectcontainer[2].list().size(),
++            eyecandy[0].eyecandies.size(), eyecandy[1].eyecandies.size(), eyecandy[2].eyecandies.size());
++    }
++
++    for (const std::string& line : sfx_events)
++        fprintf(g_dump, "%s\n", line.c_str());
++
++    fprintf(g_dump, "R calls=%llu last=%u\n",
++        (unsigned long long)RandomNumberGenerator::callCount(), RandomNumberGenerator::lastValue());
++}
++
++} // namespace
++
++
++void init()
++{
++    if (const char* seed = env("SMW_SEED")) {
++        g_seeded = true;
++        g_seed = (unsigned)strtoul(seed, nullptr, 0);
++        RandomNumberGenerator::generator().reseed(g_seed);
++        srand(g_seed);
++        RandomNumberGenerator::resetCallCount();
++        sfx_ticks = &virtualTicks;
++        sfx_ignore_channel_failure = true;
++        sfx_virtual_mixer = true;
++    }
++
++    g_noLimit = env("SMW_NOLIMIT") != nullptr;
++
++    if (const char* map = env("SMW_MAP"))
++        g_map = map;
++
++    if (const char* frames = env("SMW_FRAMES"))
++        g_maxFrames = strtol(frames, nullptr, 10);
++
++    if (const char* replay = env("SMW_REPLAY")) {
++        loadReplay(replay);
++        g_replay = true;
++    }
++
++    if (g_joysticks > 0)
++        attachJoysticks();
++
++    if (const char* dump = env("SMW_DUMP")) {
++        g_dump = fopen(dump, "a");
++        if (!g_dump) {
++            fprintf(stderr, "[harness] cannot open dump %s\n", dump);
++            exit(2);
++        }
++    }
++
++    if (const char* shots = env("SMW_SHOT_FRAMES")) {
++        std::stringstream ss(shots);
++        std::string item;
++        while (std::getline(ss, item, ','))
++            if (!item.empty())
++                g_shotFrames.insert((unsigned)strtoul(item.c_str(), nullptr, 10));
++    }
++    if (const char* dir = env("SMW_SHOT_DIR"))
++        g_shotDir = dir;
++}
++
++unsigned libcSeed(unsigned fallback)
++{
++    return g_seeded ? g_seed : fallback;
++}
++
++bool noLimit()
++{
++    return g_noLimit;
++}
++
++const char* forcedMap()
++{
++    return g_map.empty() ? nullptr : g_map.c_str();
++}
++
++void frameStart()
++{
++    sfx_virtual_advance();
++
++    while (g_nextEvent < g_events.size() && g_events[g_nextEvent].frame <= g_frame) {
++        if (g_events[g_nextEvent].frame == g_frame) {
++            SDL_Event event;
++            fillEvent(g_events[g_nextEvent], event);
++            SDL_PushEvent(&event);
++        }
++        g_nextEvent++;
++    }
++}
++
++void waitEvent(SDL_Event* event)
++{
++    if (!g_replay) {
++        SDL_WaitEvent(event);
++        return;
++    }
++    if (g_nextEvent >= g_events.size()) {
++        fprintf(stderr, "[harness] blocking wait at frame %u but the replay has no events left\n", g_frame);
++        exit(2);
++    }
++    fillEvent(g_events[g_nextEvent++], *event);
++}
++
++void frameEnd()
++{
++    if (g_dump) {
++        dumpFrame();
++        fflush(g_dump);
++    }
++    sfx_events.clear();
++
++    if (g_shotFrames.count(g_frame)) {
++        std::string path = g_shotDir + "/frame_" + std::to_string(g_frame) + ".bmp";
++        if (SDL_SaveBMP(screen, path.c_str()) != 0)
++            fprintf(stderr, "[harness] cannot save %s: %s\n", path.c_str(), SDL_GetError());
++    }
++
++    g_frame++;
++    if (g_maxFrames >= 0 && (long)g_frame >= g_maxFrames) {
++        game_values.appstate = AppState::Quit;
++        if (g_dump) {
++            fclose(g_dump);
++            g_dump = nullptr;
++        }
++    }
++}
++
++} // namespace harness
+diff --color -ruN supermariowar/src/smw/Harness.h smw-ref/src/smw/Harness.h
+--- supermariowar/src/smw/Harness.h	1969-12-31 16:00:00
++++ smw-ref/src/smw/Harness.h	2026-10-03 05:03:16
+@@ -0,0 +1,20 @@
++#pragma once
++
++// Deterministic replay/dump harness. Every entry point is a no-op unless the
++// corresponding SMW_* environment variable is set; see port/REPLAY.md.
++union SDL_Event;
++
++namespace harness {
++
++void init();
++unsigned libcSeed(unsigned fallback);
++
++bool noLimit();
++const char* forcedMap();
++
++void frameStart();
++// Blocking waits take the next replay event immediately instead of waiting for input.
++void waitEvent(SDL_Event* event);
++void frameEnd();
++
++} // namespace harness
+diff --color -ruN supermariowar/src/smw/main.cpp smw-ref/src/smw/main.cpp
+--- supermariowar/src/smw/main.cpp	2026-03-20 16:50:46
++++ smw-ref/src/smw/main.cpp	2026-10-03 05:03:16
+@@ -55,6 +55,7 @@
+ 
+ #include "FPSLimiter.h"
+ #include "GSSplashScreen.h"
++#include "Harness.h"
+ 
+ #include <ctime>
+ #include <cmath>
+@@ -152,7 +153,9 @@
+     {
+         FPSLimiter::instance().frameStart();
+ 
++        harness::frameStart();
+         GameStateManager::instance().currentState->update();
++        harness::frameEnd();
+ 
+         FPSLimiter::instance().beforeFlip();
+         gfx_flipscreen();
+@@ -354,6 +357,8 @@
+     printf("-------------------------------------------------------------------------------\n");
+     printf("\n---------------- startup ----------------\n");
+ 
++    harness::init();
++
+     ensureSettingsDir();
+     create_globals();
+ 
+@@ -414,7 +419,7 @@
+         gfx_loadpalette(convertPath("gfx/packs/palette.bmp", gamegraphicspacklist->currentPath()));
+     }
+ 
+-    srand((unsigned int)time(NULL));
++    srand(harness::libcSeed((unsigned int)time(NULL)));
+ /*
+     bool fLoadOK = LoadAndSplashScreenState();
+ 
+diff --color -ruN supermariowar/src/smw/player.h smw-ref/src/smw/player.h
+--- supermariowar/src/smw/player.h	2026-03-20 16:50:46
++++ smw-ref/src/smw/player.h	2026-10-03 05:03:16
+@@ -410,6 +410,7 @@
+ 
+ 		friend void RemovePlayersButHighestScoring();
+ 		friend void RemovePlayersButTeam(short teamID);
++		friend struct HarnessAccess;
+ 		friend bool RemoveTeam(short teamid);
+ 		friend short CountAliveTeams(short * lastteam);
+ 			friend void shakeScreen();
+diff --color -ruN supermariowar/src/smw/ui/MI_InputControlContainer.cpp smw-ref/src/smw/ui/MI_InputControlContainer.cpp
+--- supermariowar/src/smw/ui/MI_InputControlContainer.cpp	2026-03-20 16:50:46
++++ smw-ref/src/smw/ui/MI_InputControlContainer.cpp	2026-10-03 05:03:16
+@@ -1,4 +1,5 @@
+ #include "MI_InputControlContainer.h"
++#include "Harness.h"
+ 
+ #include "GameValues.h"
+ #include "gfx/gfxSprite.h"
+@@ -85,7 +86,7 @@
+ 
+     while (!done) {
+         #ifndef __EMSCRIPTEN__
+-        SDL_WaitEvent(&event);
++        harness::waitEvent(&event);
+         #endif
+ 
+         /*

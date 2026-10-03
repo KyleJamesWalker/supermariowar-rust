@@ -1,0 +1,39 @@
+//! Port of src/common/MovingObjectTypes.h
+
+pub type MovingObjectType = i32;
+
+pub const movingobject_none: MovingObjectType = 0;
+pub const movingobject_powerup: MovingObjectType = 1;
+pub const movingobject_fireball: MovingObjectType = 2;
+pub const movingobject_goomba: MovingObjectType = 3;
+pub const movingobject_bulletbill: MovingObjectType = 4;
+pub const movingobject_hammer: MovingObjectType = 5;
+pub const movingobject_poisonpowerup: MovingObjectType = 6;
+pub const movingobject_shell: MovingObjectType = 7;
+pub const movingobject_throwblock: MovingObjectType = 8;
+pub const movingobject_egg: MovingObjectType = 9;
+pub const movingobject_star: MovingObjectType = 10;
+pub const movingobject_flag: MovingObjectType = 11;
+pub const movingobject_cheepcheep: MovingObjectType = 12;
+pub const movingobject_koopa: MovingObjectType = 13;
+pub const movingobject_boomerang: MovingObjectType = 14;
+pub const movingobject_carried: MovingObjectType = 15;
+pub const movingobject_iceblast: MovingObjectType = 16;
+pub const movingobject_bomb: MovingObjectType = 17;
+pub const movingobject_podobo: MovingObjectType = 18;
+pub const movingobject_treasurechest: MovingObjectType = 19;
+pub const movingobject_attackzone: MovingObjectType = 20;
+pub const movingobject_pirhanaplant: MovingObjectType = 21;
+pub const movingobject_explosion: MovingObjectType = 22;
+pub const movingobject_buzzybeetle: MovingObjectType = 23;
+pub const movingobject_spiny: MovingObjectType = 24;
+pub const movingobject_phantokey: MovingObjectType = 25;
+pub const movingobject_flagbase: MovingObjectType = 26;
+pub const movingobject_yoshi: MovingObjectType = 27;
+pub const movingobject_coin: MovingObjectType = 28;
+pub const movingobject_collectioncard: MovingObjectType = 29;
+pub const movingobject_sledgebrother: MovingObjectType = 30;
+pub const movingobject_sledgehammer: MovingObjectType = 31;
+pub const movingobject_superfireball: MovingObjectType = 32;
+pub const movingobject_throwbox: MovingObjectType = 33;
+pub const MOVINGOBJECT_LAST: MovingObjectType = 34;

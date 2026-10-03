@@ -1,0 +1,12 @@
+pub mod bounce_block;
+pub mod breakable_block;
+pub mod donut_block;
+pub mod flip_block;
+pub mod io_block;
+pub mod note_block;
+pub mod on_off_switch_block;
+pub mod powerup_block;
+pub mod switch_block;
+pub mod throw_block;
+pub mod view_block;
+pub mod weapon_breakable_block;

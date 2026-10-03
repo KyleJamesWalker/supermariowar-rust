@@ -1,0 +1,201 @@
+# Create a new world, then a stage in the stage editor (name, mode, goal through the menu), place it, hover it for the
+# stage preview, add a vehicle through the vehicle menu, warps, initial items, a boundary and a door,
+# then save.
+#@ frames=420
+#@ shots=10,25,40,55,84,100,130,145,168,190,220,245,275,310,340,370
+#@ files=data/worlds/zzstages.txt,data/worlds/ZZworldeditor.txt
+
+# New 22x16 world "zzstages" (stage numbering only works on a world without stages: the loader clears tourstops)
+5 down N
+6 up N
+8 down Z
+9 up Z
+11 down Z
+12 up Z
+14 down S
+15 up S
+17 down T
+18 up T
+20 down A
+21 up A
+23 down G
+24 up G
+26 down E
+27 up E
+29 down S
+30 up S
+32 down Return
+33 up Return
+35 down 2
+36 up 2
+38 down 2
+39 up 2
+41 down Return
+42 up Return
+44 down 1
+45 up 1
+47 down 6
+48 up 6
+50 down Return
+51 up Return
+
+# Stage editor, new stage
+75 down E
+76 up E
+80 down N
+81 up N
+
+# Name field: select, type "ab", unselect
+86 down Return
+87 up Return
+89 down A
+90 up A
+91 down B
+92 up B
+94 down Return
+95 up Return
+
+# Mode field: select, next mode (Frag), unselect
+97 down Down
+98 up Down
+100 down Return
+101 up Return
+103 down Right
+104 up Right
+106 down Return
+107 up Return
+
+# Goal field: select, two steps up, unselect
+109 down Down
+110 up Down
+112 down Return
+113 up Return
+115 down Right
+116 up Right
+117 down Right
+118 up Right
+120 down Return
+121 up Return
+
+# Leave the stage menu (saves the stage), then back to the map with E
+124 down Escape
+125 up Escape
+128 mousemove 16 16
+132 down E
+133 up E
+
+# Place the stage on two tiles, hover one for the preview
+136 mousedown left 336 112
+137 mouseup left 336 112
+139 mousedown left 368 112
+140 mouseup left 368 112
+142 mousemove 340 116
+143 mousemove 341 116
+
+# Vehicle menu: click OK, then drop a vehicle and copy it with C
+150 down V
+151 up V
+155 mousedown left 500 370
+156 mouseup left 500 370
+160 mousedown left 400 48
+161 mouseup left 400 48
+163 mousemove 404 50
+166 down C
+167 up C
+171 down Escape
+172 up Escape
+174 mousedown left 500 370
+175 mouseup left 500 370
+178 mousedown left 432 48
+179 mouseup left 432 48
+181 mousedown right 400 48
+182 mouseup right 400 48
+
+# Warps: id 2, both ends
+185 down W
+186 up W
+188 mousedown left 80 16
+189 mouseup left 80 16
+191 mousedown left 48 48
+192 mouseup left 48 48
+194 mousedown left 80 112
+195 mouseup left 80 112
+
+# Initial items: pick three, remove one
+200 down I
+201 up I
+204 mousedown left 24 24
+205 mouseup left 24 24
+207 mousedown left 72 72
+208 mouseup left 72 72
+210 mousedown right 120 120
+211 mouseup right 120 120
+213 mousedown left 130 250
+214 mouseup left 130 250
+217 down I
+218 up I
+
+# Boundary 3 on two tiles
+222 down B
+223 up B
+225 mousedown left 80 16
+226 mouseup left 80 16
+228 mousedown left 400 80
+229 mouseup left 400 80
+231 mousedown left 432 80
+232 mouseup left 432 80
+
+# Door (type 3) on a tile
+236 down T
+237 up T
+239 mousedown left 112 16
+240 mouseup left 112 16
+242 mousedown left 464 144
+243 mouseup left 464 144
+
+# Bridge foreground
+248 down 6
+249 up 6
+251 mousedown left 48 16
+252 mouseup left 48 16
+254 mousedown left 496 208
+255 mouseup left 496 208
+
+# Structure foreground (animated column)
+260 down 5
+261 up 5
+263 mousedown left 400 48
+264 mouseup left 400 48
+266 mousedown left 528 80
+267 mouseup left 528 80
+
+# Stage editor: edit the first stage with the right mouse button, open bonuses, add two, back out
+280 down E
+281 up E
+284 mousedown right 16 16
+285 mouseup right 16 16
+288 mousemove 470 230
+289 mousedown left 470 230
+290 mouseup left 470 230
+294 mousemove 24 24
+295 down 1
+296 up 1
+298 mousemove 72 24
+299 down 2
+300 up 2
+303 mousedown left 40 370
+304 mouseup left 40 370
+307 down Escape
+308 up Escape
+311 down Escape
+312 up Escape
+315 down Escape
+316 up Escape
+
+# Help screen, then save
+325 down H
+326 up H
+335 down Space
+336 up Space
+350 down S
+351 up S

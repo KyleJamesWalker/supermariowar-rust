@@ -1,0 +1,105 @@
+# Gamepad on virtual joystick 0: player 1 switches to it and rebinds Jump/Down as in joy_menu, walks
+# the menus to a 2-player Classic game with stick and buttons, then plays with stick, buttons and hat.
+#@ seed=1
+#@ frames=1500
+#@ shots=470,700,1000,1499
+10 down Return
+12 up Return
+25 down Down
+27 up Down
+40 down Down
+42 up Down
+55 down Down
+57 up Down
+70 down Right
+72 up Right
+85 down Return
+87 up Return
+100 down Return
+102 up Return
+115 down Return
+117 up Return
+130 down Right
+132 up Right
+145 down Return
+147 up Return
+160 jaxis 0 1 32767
+162 jaxis 0 1 0
+175 jaxis 0 1 32767
+177 jaxis 0 1 0
+190 jaxis 0 1 32767
+192 jaxis 0 1 0
+205 jaxis 0 1 32767
+207 jaxis 0 1 0
+220 jbutton 0 0 1
+222 jbutton 0 0 0
+235 jbutton 0 6 1
+237 jbutton 0 6 0
+250 jaxis 0 1 32767
+252 jaxis 0 1 0
+265 jbutton 0 0 1
+267 jbutton 0 0 0
+280 jhat 0 0 4
+282 jhat 0 0 0
+295 jbutton 0 1 1
+297 jbutton 0 1 0
+310 jbutton 0 1 1
+312 jbutton 0 1 0
+325 jaxis 0 0 -32767
+327 jaxis 0 0 0
+340 jaxis 0 1 -32767
+342 jaxis 0 1 0
+355 jaxis 0 1 -32767
+357 jaxis 0 1 0
+370 jaxis 0 1 -32767
+372 jaxis 0 1 0
+385 jbutton 0 0 1
+387 jbutton 0 0 0
+400 jbutton 0 0 1
+402 jbutton 0 0 0
+415 down E
+417 up E
+430 jbutton 0 0 1
+432 jbutton 0 0 0
+445 jbutton 0 0 1
+447 jbutton 0 0 0
+460 jbutton 0 0 1
+462 jbutton 0 0 0
+535 jaxis 0 0 32767
+550 jbutton 0 6 1
+552 jbutton 0 6 0
+585 jaxis 0 0 0
+585 jaxis 0 0 32767
+600 jbutton 0 6 1
+615 jaxis 0 0 -32767
+620 jbutton 0 6 0
+625 jaxis 0 0 0
+630 jbutton 0 1 1
+645 jhat 0 0 4
+660 jbutton 0 1 0
+660 jbutton 0 6 1
+662 jbutton 0 6 0
+665 jhat 0 0 0
+675 jaxis 0 0 0
+675 jaxis 0 0 -25000
+690 jbutton 0 6 1
+692 jbutton 0 6 0
+705 jbutton 0 2 1
+707 jbutton 0 2 0
+750 jaxis 0 0 32767
+755 jaxis 0 0 0
+765 jbutton 0 6 1
+790 jbutton 0 6 0
+800 jhat 0 0 4
+815 jhat 0 0 0
+815 jaxis 0 0 20000
+830 jbutton 0 6 1
+832 jbutton 0 6 0
+840 jaxis 0 0 0
+845 jbutton 0 6 1
+847 jbutton 0 6 0
+875 jaxis 0 0 0
+900 jaxis 0 0 -32767
+915 jbutton 0 6 1
+945 jbutton 0 6 0
+1000 jaxis 0 0 0

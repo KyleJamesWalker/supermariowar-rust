@@ -1,0 +1,37 @@
+# Map sweep: 4 CPU players, Classic, on 'pikawil_Hyrule Castle.map'.
+#@ seed=1246
+#@ map=pikawil_Hyrule Castle.map
+#@ frames=1214
+#@ shots=1213
+10 down Return
+12 up Return
+30 down Down
+32 up Down
+44 down Return
+46 up Return
+58 down Down
+60 up Down
+72 down Right
+74 up Right
+86 down Down
+88 up Down
+100 down Right
+102 up Right
+114 down Up
+116 up Up
+128 down Right
+130 up Right
+142 down Up
+144 up Up
+156 down Return
+158 up Return
+170 down Up
+172 up Up
+184 down Return
+186 up Return
+204 down Return
+206 up Return
+234 down Return
+236 up Return
+274 down Return
+276 up Return

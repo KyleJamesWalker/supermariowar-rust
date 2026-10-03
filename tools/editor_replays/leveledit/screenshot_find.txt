@@ -1,0 +1,55 @@
+# Map screenshots (Insert) at full, preview and thumbnail size on the start map and a map found by
+# name; a Find with no match; tile type clear-all with Delete; browse with PageDown.
+#@ frames=200
+#@ shots=12,40,70,100
+#@ files=data/maps/ZZleveleditor.map,data/maps/screenshots/NMcCoy_1-3.png,data/maps/screenshots/NMcCoy_1-3_preview.png,data/maps/screenshots/NMcCoy_1-3_thumb.png,data/maps/screenshots/2skyfight.png,data/maps/screenshots/2skyfight_preview.png,data/maps/screenshots/2skyfight_thumb.png,data/maps/screenshots/Xijar_1986.png,data/maps/screenshots/Xijar_1986_preview.png,data/maps/screenshots/Xijar_1986_thumb.png
+
+4 down Insert
+5 up Insert
+8 down PageDown
+9 up PageDown
+12 down PageDown
+13 up PageDown
+16 down Insert
+17 up Insert
+
+# Find "qqq" (no match), then Find "1986"
+20 down F
+21 up F
+24 down Q
+25 up Q
+26 down Q
+27 up Q
+28 down Q
+29 up Q
+30 down Return
+31 up Return
+34 down Left Shift
+35 down F
+36 up F
+37 up Left Shift
+40 down 1
+41 up 1
+42 down 9
+43 up 9
+44 down 8
+45 up 8
+46 down 6
+47 up 6
+60 down Return
+61 up Return
+64 down Insert
+65 up Insert
+
+# The next F reruns the remembered search; tile type mode, clear all types with Delete
+68 down F
+69 up F
+72 down L
+73 up L
+75 mousemove 10 10
+76 mousedown left 10 10
+77 mouseup left 10 10
+80 down Delete
+81 up Delete
+84 down Escape
+85 up Escape
