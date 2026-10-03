@@ -27,26 +27,26 @@ How work flows:
 
 | Item | Upstream | Owner | Status |
 |---|---|---|---|
-| Menu and world surfaces, thumbnails, skins | `c2e87df8` (world part), `5c979393`, `e3bab591` | gfx | todo |
-| `ImageLoader`, editor surfaces, wrapping draws | `a4a6140d`, `0124c1eb`, `e0bcaf30`, `5c865fe5`, `3ad06ca7` (check what `dacabe1c` already covers), `6b6bdb7a` | gfx | `a4a6140d` (`fc564f2`), `3ad06ca7` (`165a44f`), `e0bcaf30` (`1d10612`), `0124c1eb` + `545fd077` (`f2f8763`) done. Level editor shots and screenshot files now all match. `5c865fe5`, `6b6bdb7a` todo |
-| Map foreground clear, donut graphic | `5693918f`, `11bb5fba` | gfx | done: `9d74d6d`, `df0f56a`. Donut verified with a recoloured `donutblock.png` (Classic's is pixel-identical to tile 29,15): Rust before the port matches 194/200 dense shots, after it 200/200. Foreground: no difference on 1,100 dense `flow_tour`/`flow_tournament` frames before or after, so the old missing lock is harmless under sdl2-compat |
+| Menu and world surfaces, thumbnails, skins | `c2e87df8` (world part), `5c979393`, `e3bab591` | gfx | `c2e87df8` (`c1df8f2`), `5c979393` (`3b512ff`) done: the world editor stage thumbnail now matches, so every editor shot matches. `e3bab591` skins todo |
+| `ImageLoader`, editor surfaces, wrapping draws | `a4a6140d`, `0124c1eb`, `e0bcaf30`, `5c865fe5`, `3ad06ca7` (check what `dacabe1c` already covers), `6b6bdb7a` | gfx | `a4a6140d` level editor half (`fc564f2`, player), `3ad06ca7` (`165a44f`), `e0bcaf30` (`1d10612`), `0124c1eb` + `545fd077` (`f2f8763`, player), `5c865fe5` (`c351624`) done. Remaining: the `SpriteBuilder` to `ImageLoader` rename and `6b6bdb7a`, both structural |
+| Map foreground clear, donut graphic | `5693918f`, `11bb5fba` | gfx | done: `9d74d6d` (gfx), `df0f56a` (objects). Donut verified with a recoloured `donutblock.png` (Classic's is pixel-identical to tile 29,15): Rust before the port matches 194/200 dense shots, after it 200/200. Foreground: no difference on 1,100 dense `flow_tour`/`flow_tournament` frames before or after, so the old missing lock is harmless under sdl2-compat |
 | Tileset manager series | `f56607a1`, `a2541fcc`, `00cffef9`, `c130b990`, `b6f985ec`, `fa3e6a22`, `981b56c3`, `4c6d805a`, `559a4401`, `cfcbbcb2` + `f56f8ed1`, `c27115b5`, `eaaea5e3` + `19dcc293` | foundation | done: `41016dc`. The 504-map dump now matches the new C++ on every map |
-| `servers.toml` and interop scripts | `efe2e390` | foundation | done: `6e8672e` |
+| `servers.toml` and interop scripts | `efe2e390` | foundation | done: `6e8672e`, `dd74644` (`net_driver` on toml11, `net_interop.sh` 8/8). Networking-on C++ build for `net_game_interop.sh`: `build-latest-net`, run pending (foundation) |
 | Binary strings, file errors | `28e9e673` + `4b965424`, `277ee170` | foundation | done: `ee4dcb2` |
-| Tour-stop settings fallback | `8faf76bc` | foundation | done: `b249b58`, gated green. Coverage pending: `flow_tour`, `flow_world` and `flow_tournament` with a non-default `options.bin` match before and after the port, so no played stop omits the changed settings. Waiting on foundation for a stop that does |
-| Error paths | `fc938877`, `b9bb1a85`, `d2ed0cd1` | foundation | `fc938877` level editor part done (`b765c64`). Rest todo |
+| Tour-stop settings fallback | `8faf76bc` | foundation | done: `b249b58`. The fallback only differs when a same-mode stop with explicit settings is played and then a later-parsed stop omits them, which no short flow on shipped data reaches. `cov_tour_options` (`956e820`) covers a tour played with a non-default `options.bin` instead |
+| Error paths | `fc938877`, `b9bb1a85`, `d2ed0cd1` | foundation | done: `fc938877` (`b765c64` player, `52be321` objects), `b9bb1a85` + `d2ed0cd1` (`c27c340`) |
 | Level editor: screenshot crash, editor-side gfx parts (with gfx) | `d3ad2cbb` | player | done: `21bdeac`. Screenshot PNG bytes still wait on `0124c1eb` |
 | Skin reload cache | `d70e4dc3` | player | done: `f7f6229` |
 | World editor: bonus text, stage map field, music cycling | `1eaed535`, `01e5fa7e`, `a7bc5276` | objects | done: `91c9975`, `46d8a3a`, `30eba25`. Saved world files now match in 4 of 5 sessions |
 | `TourStopVec` follow-up after `d546c05b` | | objects | done: `cd28809` (now a plain `Vec`) |
-| Coverage replays: falling donut, map foreground, non-default `options.bin` for `8faf76bc` | | coordinator | donut and foreground checked (see gfx row). `8faf76bc` waits on foundation |
-| 504-map dump against the new C++ | | coordinator | done: `map_dump` updated (`69f1ceb`). Before `41016dc`, 3 maps differed on 1.7 platform tiles (the pre-sort classic index). At `ee4dcb2`, all 504 maps match in all 3 read types |
+| Coverage replays: falling donut, map foreground, non-default `options.bin` for `8faf76bc` | | coordinator | done: donut and foreground checked (see gfx row). `cov_tour_options` and the world editor `sync_coverage` session (objects) added with goldens (`956e820`) |
+| 504-map dump against the new C++ | | coordinator | done (assigned to foundation; both ran it): `69f1ceb` updates `map_dump`. All 504 maps and the MapList dump match since `41016dc` |
 | `gfx_smoke` C++ twin on the new API | | coordinator | done: `941ede6`. The twin and the Rust example write byte-identical BMPs |
-| Level editor nondeterminism root cause | | coordinator | done: `CMap::clearMap` leaves `MapBlock::iSettings` uninitialized and `g_map` is now allocated after `gfx_init`, so the harness hashed stale heap bytes. Both dumpers now hash only stored settings (`8a8d41d`, C++ `869d3c55`). 42/42 parallel runs agree |
+| Level editor nondeterminism root cause | | coordinator | done (assigned to player; the coordinator fixed it first): `CMap::clearMap` leaves `MapBlock::iSettings` uninitialized and `g_map` is now allocated after `gfx_init`, so the harness hashed stale heap bytes. player independently found the same cause. Both dumpers hash only stored settings (`8a8d41d`, C++ `869d3c55`). 42/42 parallel runs agree |
 | Small structural leftovers | `53e65af9`, `b80e755e`, `6e36bd76`, `df5a85a6` | coordinator | optional |
 | 290-map sweep goldens, fresh-worktree verification, final summary | | coordinator | sweep goldens generated from the new C++ (`~/work/smw-upstream-goldens/golden_sweep`). At `b249b58` all 290 maps match. Final verification and summary last |
 
-Gate baseline: `ee4dcb2`. 20/20 tests pass, 43/43 game replays match, 12/12 editor dumps match (108/110 shots, 35/35 files). The two remaining shot differences are the world editor stage thumbnail (`5c979393`, gfx).
+Gate baseline: `956e820`. 20/20 tests pass. 44/44 game replays match on every frame and shot. 13/13 editor sessions match on every dump, shot and saved file. The 290-map sweep and the 504-map dump match
 
 ## Branches and outputs
 
