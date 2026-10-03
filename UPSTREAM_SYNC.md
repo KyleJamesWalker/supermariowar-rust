@@ -29,24 +29,24 @@ How work flows:
 |---|---|---|---|
 | Menu and world surfaces, thumbnails, skins | `c2e87df8` (world part), `5c979393`, `e3bab591` | gfx | todo |
 | `ImageLoader`, editor surfaces, wrapping draws | `a4a6140d`, `0124c1eb`, `e0bcaf30`, `5c865fe5`, `3ad06ca7` (check what `dacabe1c` already covers), `6b6bdb7a` | gfx | todo |
-| Map foreground clear, donut graphic | `5693918f`, `11bb5fba` | gfx | todo |
+| Map foreground clear, donut graphic | `5693918f`, `11bb5fba` | gfx | done: `9d74d6d`, `df0f56a`. Donut verified with a recoloured `donutblock.png` (Classic's is pixel-identical to tile 29,15): Rust before the port matches 194/200 dense shots, after it 200/200. Foreground: no difference on 1,100 dense `flow_tour`/`flow_tournament` frames before or after, so the old missing lock is harmless under sdl2-compat |
 | Tileset manager series | `f56607a1`, `a2541fcc`, `00cffef9`, `c130b990`, `b6f985ec`, `fa3e6a22`, `981b56c3`, `4c6d805a`, `559a4401`, `cfcbbcb2` + `f56f8ed1`, `c27115b5`, `eaaea5e3` + `19dcc293` | foundation | todo |
 | `servers.toml` and interop scripts | `efe2e390` | foundation | todo |
 | Binary strings, file errors | `28e9e673` + `4b965424`, `277ee170` | foundation | todo |
 | Tour-stop settings fallback | `8faf76bc` | foundation | todo |
 | Error paths | `fc938877`, `b9bb1a85`, `d2ed0cd1` | foundation | todo |
-| Level editor: screenshot crash, editor-side gfx parts (with gfx) | `d3ad2cbb` | player | todo |
+| Level editor: screenshot crash, editor-side gfx parts (with gfx) | `d3ad2cbb` | player | done: `21bdeac`. Screenshot PNG bytes still wait on `0124c1eb` |
 | Skin reload cache | `d70e4dc3` | player | todo |
-| World editor: bonus text, stage map field, music cycling | `1eaed535`, `01e5fa7e`, `a7bc5276` | objects | todo |
+| World editor: bonus text, stage map field, music cycling | `1eaed535`, `01e5fa7e`, `a7bc5276` | objects | done: `91c9975`, `46d8a3a`, `30eba25`. Saved world files now match in 4 of 5 sessions |
 | `TourStopVec` follow-up after `d546c05b` | | objects | todo |
-| Coverage replays: falling donut, map foreground, non-default `options.bin` for `8faf76bc` | | coordinator | todo |
-| 504-map dump against the new C++ | | coordinator | todo |
+| Coverage replays: falling donut, map foreground, non-default `options.bin` for `8faf76bc` | | coordinator | donut and foreground checked (see gfx row). `8faf76bc` waits on foundation |
+| 504-map dump against the new C++ | | coordinator | run: `map_dump` updated (`69f1ceb`). 501/504 maps match. The 3 that differ (`crazy castle`, `crystal caverns`, `smb3 5-9`, summary and preview reads) resolve 1.7 platform tiles to tileset 6 instead of Classic: `f56607a1`, foundation |
 | `gfx_smoke` C++ twin on the new API | | coordinator | todo |
-| Level editor nondeterminism root cause | | coordinator | todo |
+| Level editor nondeterminism root cause | | coordinator | done: `CMap::clearMap` leaves `MapBlock::iSettings` uninitialized and `g_map` is now allocated after `gfx_init`, so the harness hashed stale heap bytes. Both dumpers now hash only stored settings (`8a8d41d`, C++ `869d3c55`). 42/42 parallel runs agree |
 | Small structural leftovers | `53e65af9`, `b80e755e`, `6e36bd76`, `df5a85a6` | coordinator | optional |
 | 290-map sweep goldens, fresh-worktree verification, final summary | | coordinator | last |
 
-Gate baseline: `c4a9f64`. 20/20 tests pass, 43/43 game replays match, 12/12 editor dumps match (105/110 shots, 19/35 files).
+Gate baseline: `8a8d41d` (`df0f56a` gated the same). 20/20 tests pass, 43/43 game replays match, 12/12 editor dumps match (105/110 shots, 25/35 files).
 
 ## Branches and outputs
 
