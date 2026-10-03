@@ -47,6 +47,15 @@ use crate::smw::menu::team_select_menu::UI_TeamSelectMenu;
 use crate::smw::menu::tour_stop_menu::UI_TourStopMenu;
 use crate::smw::menu::tournament_scoreboard_menu::UI_TournamentScoreboardMenu;
 use crate::smw::menu::world_menu::UI_WorldMenu;
+use crate::smw::menu::network::net_edit_servers_menu::UI_NetEditServersMenu;
+use crate::smw::menu::network::net_lobby_menu::UI_NetLobbyMenu;
+use crate::smw::menu::network::net_new_room_menu::UI_NetNewRoomMenu;
+use crate::smw::menu::network::net_new_room_settings_menu::UI_NetNewRoomSettingsMenu;
+use crate::smw::menu::network::net_room_menu::UI_NetRoomMenu;
+use crate::smw::menu::network::net_servers_menu::UI_NetServersMenu;
+use crate::common::path::get_home_directory;
+use crate::common_netplay::protocol_definitions::*;
+use crate::smw::net::{net_end_session, net_start_session, netplay};
 use sdl2::sys::{SDL_Event, SDL_EventType, SDL_FillRect, SDL_KeyCode, SDL_Keymod, SDL_MapRGB, SDL_PollEvent, SDL_Rect};
 use std::ops::DerefMut;
 use std::path::Path;
@@ -108,7 +117,14 @@ pub struct MenuState {
     mTournamentScoreboardMenu: Ptr<UI_TournamentScoreboardMenu>,
     mBonusWheelMenu: Ptr<UI_BonusWheelMenu>,
 
-    // TODO(net): mNetServersMenu, mNetEditServersMenu, mNetLobbyMenu, mNetNewRoomMenu, mNetNewRoomSettingsMenu, mNetRoomMenu
+    // Multiplayer menus
+    mNetServersMenu: Ptr<UI_NetServersMenu>,
+    mNetEditServersMenu: Ptr<UI_NetEditServersMenu>,
+    mNetLobbyMenu: Ptr<UI_NetLobbyMenu>,
+    mNetNewRoomMenu: Ptr<UI_NetNewRoomMenu>,
+    mNetNewRoomSettingsMenu: Ptr<UI_NetNewRoomSettingsMenu>,
+    mNetRoomMenu: Ptr<UI_NetRoomMenu>,
+
     iDisplayError: DisplayError,
     iDisplayErrorTimer: i16,
     fNeedMenuMusicReset: bool,
@@ -152,6 +168,12 @@ impl MenuState {
             mTeamSelectMenu: Ptr::null(),
             mTournamentScoreboardMenu: Ptr::null(),
             mBonusWheelMenu: Ptr::null(),
+            mNetServersMenu: Ptr::null(),
+            mNetEditServersMenu: Ptr::null(),
+            mNetLobbyMenu: Ptr::null(),
+            mNetNewRoomMenu: Ptr::null(),
+            mNetNewRoomSettingsMenu: Ptr::null(),
+            mNetRoomMenu: Ptr::null(),
             iDisplayError: DISPLAY_ERROR_NONE,
             iDisplayErrorTimer: 0,
             fNeedMenuMusicReset: false,
@@ -168,7 +190,7 @@ impl MenuState {
     }
 
     pub fn harness_menu_name(&self) -> &'static str {
-        let names: [(Ptr<UI_Menu>, &'static str); 22] = [
+        let names: [(Ptr<UI_Menu>, &'static str); 28] = [
             (menu(self.mMainMenu), "main"),
             (menu(self.mOptionsMenu), "options"),
             (menu(self.mGameplayOptionsMenu), "gameplay_options"),
@@ -191,7 +213,12 @@ impl MenuState {
             (menu(self.mTeamSelectMenu), "team_select"),
             (menu(self.mTournamentScoreboardMenu), "tournament_scoreboard"),
             (menu(self.mBonusWheelMenu), "bonus_wheel"),
-            // TODO(net): net_servers, net_edit_servers, net_lobby, net_new_room, net_new_room_settings, net_room
+            (menu(self.mNetServersMenu), "net_servers"),
+            (menu(self.mNetEditServersMenu), "net_edit_servers"),
+            (menu(self.mNetLobbyMenu), "net_lobby"),
+            (menu(self.mNetNewRoomMenu), "net_new_room"),
+            (menu(self.mNetNewRoomSettingsMenu), "net_new_room_settings"),
+            (menu(self.mNetRoomMenu), "net_room"),
         ];
         for (m, name) in names.iter() {
             if *m == self.mCurrentMenu {
@@ -288,8 +315,27 @@ impl MenuState {
             println!("Loading player skins...");
             for k in 0..4usize {
                 if game_values.playercontrol[k] > 0 {
-                    // TODO(net): if (netplay.active) { local skin for netplay.remotePlayerNumber, else net_skin<k>.bmp }
-                    if game_values.randomskin[k] {
+                    if netplay.active {
+                        if k == netplay.remotePlayerNumber as usize {
+                            // local player uses local skin
+                            println!("  player {} -> local", k);
+                            let skin = rm.load_full_skin(game_values.skinids[k], game_values.colorids[k]);
+                            rm.spr_player[k] = skin;
+                        } else {
+                            let path = format!("{}net_skin{}.bmp", get_home_directory(), k);
+                            println!("  player {} -> {}", k, path);
+
+                            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| rm.load_full_skin_path(Path::new(&path), k as i16)));
+                            match result {
+                                Ok(skin) => rm.spr_player[k] = skin,
+                                Err(_) => {
+                                    println!("[warning] Could not load netplay skin of player {}, using default", k);
+                                    let skin = rm.load_full_skin(game_values.skinids[k], game_values.colorids[k]);
+                                    rm.spr_player[k] = skin;
+                                }
+                            }
+                        }
+                    } else if game_values.randomskin[k] {
                         game_values.skinids[k] = RANDOM_INT(skinlist.count() as i32) as i16;
                         let skin = rm.load_full_skin(game_values.skinids[k], game_values.colorids[k]);
                         rm.spr_player[k] = skin;
@@ -808,8 +854,12 @@ impl MenuState {
                     sShortMapName = strip_path_and_extension(&szMapName);
 
                     println!("  State: GS_START_GAME, Match type: MatchType::QuickGame");
+                } else if netplay.active {
+                    // NOTE: for the host, netplay.mapfilepath will be ./data/something
+                    // while for the other players, it's ~/.smw/net_last.map
+                    g_map.load_map(&netplay.mapfilepath, read_type_full);
+                    sShortMapName = strip_path_and_extension(&netplay.mapfilepath);
                 } else {
-                    // TODO(net): else if (netplay.active) { g_map->loadMap(netplay.mapfilepath, read_type_full); sShortMapName = stripPathAndExtension(netplay.mapfilepath); }
                     let filename = maplist.current_filename().to_string();
                     g_map.load_map(&filename, read_type_full);
                     sShortMapName = maplist.current_shortmapname().to_string();
@@ -846,9 +896,17 @@ impl MenuState {
     }
 
     /// Handles one `MenuCodeEnum` from `mCurrentMenu->SendInput`. Returns true where C++ `return`s from `update`.
-    fn handle_menu_code(&mut self, code: MenuCodeEnum, fGenerateMapThumbs: &mut bool) -> bool {
+    fn handle_menu_code(&mut self, mut code: MenuCodeEnum, fGenerateMapThumbs: &mut bool) -> bool {
         unsafe {
-            // TODO(net): if (netplay.active) override code with MENU_CODE_NET_ROOM_GO on NET_P2G_SYNC_OK / NET_G2E_GAME_START
+            // Shortcut to game start
+            if netplay.active {
+                let lastSendType = netplay.client.lastSentMessage.packageType;
+                let lastRecvType = netplay.client.lastReceivedMessage.packageType;
+
+                if lastSendType == NET_P2G_SYNC_OK && lastRecvType == NET_G2E_GAME_START {
+                    code = MENU_CODE_NET_ROOM_GO;
+                }
+            }
 
             if MENU_CODE_EXIT_APPLICATION == code {
                 self.exit();
@@ -856,7 +914,7 @@ impl MenuState {
             } else if MENU_CODE_TO_MAIN_MENU == code {
                 self.iDisplayError = DISPLAY_ERROR_NONE;
                 self.iDisplayErrorTimer = 0;
-                // TODO(net): net_endSession();
+                net_end_session();
 
                 self.mCurrentMenu = menu(self.mMainMenu);
             } else if MENU_CODE_BACK_TO_MATCH_SELECTION_MENU == code {
@@ -896,7 +954,9 @@ impl MenuState {
             } else if MENU_CODE_BACK_TO_OPTIONS_MENU == code {
                 self.mCurrentMenu = menu(self.mOptionsMenu);
             } else if MENU_CODE_TO_NET_SERVERS_MENU == code {
-                // TODO(net): mCurrentMenu = mNetServersMenu.get(); mCurrentMenu->ResetMenu(); net_startSession();
+                self.mCurrentMenu = menu(self.mNetServersMenu);
+                self.mCurrentMenu.reset_menu();
+                net_start_session();
             } else if MENU_CODE_BACK_TO_GRAPHIC_OPTIONS_MENU == code {
                 self.mCurrentMenu = menu(self.mGraphicsOptionsMenu);
             } else if MENU_CODE_TO_CONTROLS_MENU == code {
@@ -970,12 +1030,15 @@ impl MenuState {
                     self.mWorldMenu.miWorld.display_team_control_announcement();
                 }
             } else if MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS == code {
-                // TODO(net): if (netplay.active) mCurrentMenu = mNetNewRoomSettingsMenu.get(); else
-                self.mCurrentMenu = menu(self.mGameSettingsMenu);
+                if netplay.active {
+                    self.mCurrentMenu = menu(self.mNetNewRoomSettingsMenu);
+                } else {
+                    self.mCurrentMenu = menu(self.mGameSettingsMenu);
+                }
             } else if MENU_CODE_MODE_CHANGED == code {
                 game_values.gamemode = gamemodes[self.mGameSettingsMenu.get_current_game_mode_id() as usize];
                 self.mGameSettingsMenu.refresh_game_mode_buttons();
-                // TODO(net): mNetNewRoomSettingsMenu->RefreshGameModeButtons();
+                self.mNetNewRoomSettingsMenu.refresh_game_mode_buttons();
             } else if MENU_CODE_BACK_TEAM_SELECT_MENU == code {
                 if game_values.matchtype == MatchType::World {
                     self.mWorldMenu.open_exit_dialog();
@@ -1083,12 +1146,16 @@ impl MenuState {
                 self.mCurrentMenu = menu(self.mProjectileLimitsMenu);
                 self.mCurrentMenu.reset_menu();
             } else if MENU_CODE_TO_MODE_SETTINGS_MENU == code {
-                // TODO(net): if (netplay.active) { mCurrentMenu = mModeOptionsMenu->GetOptionsMenu(mNetNewRoomSettingsMenu->getSelectedGameModeID()); mCurrentMenu->ResetMenu(); } else
-                for iGameMode in 0..GAMEMODE_LAST as i16 {
-                    if self.mGameSettingsMenu.miGoalField[iGameMode as usize].is_visible() {
-                        self.mCurrentMenu = self.mModeOptionsMenu.get_options_menu(iGameMode);
-                        self.mCurrentMenu.reset_menu();
-                        break;
+                if netplay.active {
+                    self.mCurrentMenu = self.mModeOptionsMenu.get_options_menu(self.mNetNewRoomSettingsMenu.get_selected_game_mode_id());
+                    self.mCurrentMenu.reset_menu();
+                } else {
+                    for iGameMode in 0..GAMEMODE_LAST as i16 {
+                        if self.mGameSettingsMenu.miGoalField[iGameMode as usize].is_visible() {
+                            self.mCurrentMenu = self.mModeOptionsMenu.get_options_menu(iGameMode);
+                            self.mCurrentMenu.reset_menu();
+                            break;
+                        }
                     }
                 }
             } else if MENU_CODE_MENU_GRAPHICS_PACK_CHANGED == code {
@@ -1156,8 +1223,12 @@ impl MenuState {
                     game_values.storedpowerups[iPlayer] = -1;
                 }
             } else if MENU_CODE_MAP_CHANGED == code {
-                // TODO(net): if (mCurrentMenu == mNetNewRoomSettingsMenu.get()) { netplay.mapfilepath = ...; mNetRoomMenu->SetPreviewMapPath(...); } else
-                if game_values.matchtype != MatchType::Tour {
+                if self.mCurrentMenu == menu(self.mNetNewRoomSettingsMenu) {
+                    debug_assert!(netplay.active);
+                    netplay.mapfilepath = self.mNetNewRoomSettingsMenu.get_current_map_path();
+                    println!("[net] Selected map: {}", netplay.mapfilepath);
+                    self.mNetRoomMenu.set_preview_map_path(&netplay.mapfilepath);
+                } else if game_values.matchtype != MatchType::Tour {
                     self.szCurrentMapName = Ptr::from_mut(&mut self.mGameSettingsMenu.miMapField.szMapName);
                 }
             } else if MENU_CODE_MAP_FILTER_EXIT == code {
@@ -1210,7 +1281,139 @@ impl MenuState {
                 self.mModeOptionsMenu.health_mode_max_life_changed();
             }
 
-            // TODO(net): if (netplay.active) { response-driven code overrides and every MENU_CODE_*NET* branch; refresh on netplay.currentMenuChanged }
+            if netplay.active {
+                let lastSent = netplay.client.lastSentMessage;
+                let lastRecv = netplay.client.lastReceivedMessage;
+
+                // Override menu code if response has arrived
+                if netplay.operationInProgress {
+                    let previousCode = code;
+
+                    // if sent connect request,
+                    // received connect_ok
+                    // then sent skin change
+                    if lastSent.packageType == NET_NOTICE_SKIN_CHANGE && lastRecv.packageType == NET_RESPONSE_CONNECT_OK && lastSent.timestamp >= lastRecv.timestamp {
+                        code = MENU_CODE_TO_NET_LOBBY_MENU;
+                    } else if lastSent.packageType == NET_REQUEST_JOIN_ROOM && lastRecv.packageType == NET_RESPONSE_JOIN_OK && lastSent.timestamp < lastRecv.timestamp {
+                        // ensure that the incoming message arrived after the request
+                        code = MENU_CODE_TO_NET_ROOM_MENU;
+                    } else if lastSent.packageType == NET_NOTICE_GAMEMODESETTINGS && lastRecv.packageType == NET_RESPONSE_CREATE_OK {
+                        code = MENU_CODE_TO_NET_ROOM_MENU;
+                    }
+
+                    // If we have finished the waiting
+                    if code != previousCode {
+                        netplay.operationInProgress = false;
+                    }
+                }
+
+                if MENU_CODE_TO_NET_SERVERLIST == code {
+                    self.mNetServersMenu.open_server_list();
+                } else if MENU_CODE_TO_NET_ADDREMOVE_SERVER_MENU == code {
+                    self.mCurrentMenu = menu(self.mNetEditServersMenu);
+                    self.mCurrentMenu.reset_menu();
+                    self.mNetEditServersMenu.restore();
+                } else if MENU_CODE_NET_ADDREMOVE_SERVER_ON_ADD_BTN == code {
+                    self.mNetEditServersMenu.on_press_add();
+                } else if MENU_CODE_NET_ADDREMOVE_SERVER_ON_EDIT_BTN == code {
+                    self.mNetEditServersMenu.on_press_edit();
+                } else if MENU_CODE_NET_ADDREMOVE_SERVER_ON_DELETE_BTN == code {
+                    self.mNetEditServersMenu.on_press_delete();
+                } else if MENU_CODE_NET_ADDREMOVE_SERVER_ON_SELECT == code {
+                    self.mNetEditServersMenu.on_entry_select();
+                    self.mNetServersMenu.refresh_scroll();
+                } else if MENU_CODE_NET_ADDREMOVE_SERVER_ON_DIALOG_OK_BTN == code {
+                    self.mNetEditServersMenu.on_dialog_ok();
+                    self.mNetServersMenu.refresh_scroll();
+                } else if MENU_CODE_NET_SERVERLIST_EXIT == code || MENU_CODE_NET_CONNECT_ABORT == code {
+                    if MENU_CODE_NET_SERVERLIST_EXIT == code {
+                        netplay.currentMenuChanged = true;
+                    } else {
+                        net_start_session(); // release & restart socket
+                        netplay.operationInProgress = false;
+                    }
+
+                    self.mNetServersMenu.restore();
+                    self.iDisplayError = DISPLAY_ERROR_NONE;
+                } else if MENU_CODE_NET_CONNECT_IN_PROGRESS == code {
+                    self.mNetServersMenu.connect_in_progress();
+                } else if MENU_CODE_TO_NET_LOBBY_MENU == code {
+                    // If we are leaving a room
+                    if netplay.currentRoom.roomID != 0 {
+                        netplay.client.send_leave_room_message();
+                        netplay.currentRoom.roomID = 0;
+                        netplay.joinSuccessful = false;
+                        netplay.gameRunning = false;
+                    }
+                    netplay.client.request_room_list();
+
+                    // Restore layouts
+                    self.mNetServersMenu.restore();
+                    self.mNetLobbyMenu.restore();
+                    self.mNetNewRoomMenu.restore();
+
+                    self.mCurrentMenu = menu(self.mNetLobbyMenu);
+                    self.mCurrentMenu.reset_menu();
+                } else if MENU_CODE_TO_NET_NEW_ROOM_LEVEL_SELECT_MENU == code {
+                    self.mCurrentMenu = menu(self.mNetNewRoomSettingsMenu);
+                    self.mCurrentMenu.reset_menu();
+                } else if MENU_CODE_TO_NET_NEW_ROOM_SETTINGS_MENU == code {
+                    self.mCurrentMenu = menu(self.mNetNewRoomMenu);
+                    self.mCurrentMenu.reset_menu();
+                } else if MENU_CODE_NET_CHAT_SEND == code {
+                    if !netplay.mychatmessage.is_empty() {
+                        let message = netplay.mychatmessage.clone();
+                        netplay.client.send_chat_message(&message);
+                    } else {
+                        code = MENU_CODE_TO_NET_ROOM_MENU;
+                    }
+                } else if MENU_CODE_TO_NET_ROOM_MENU == code {
+                    self.mCurrentMenu = menu(self.mNetRoomMenu);
+                    self.mCurrentMenu.reset_menu();
+                    netplay.currentMenuChanged = true;
+                    netplay.operationInProgress = false;
+
+                    self.mNetRoomMenu.restore(); // Restore Room layout
+                    self.mNetLobbyMenu.restore(); // Restore Lobby layout
+                    self.mNetNewRoomMenu.restore(); // remove 'in progress' dialog
+                } else if MENU_CODE_NET_JOIN_ROOM_IN_PROGRESS == code {
+                    self.mNetLobbyMenu.join_in_progress();
+                } else if MENU_CODE_NET_JOIN_ROOM_ABORT == code {
+                    self.mNetLobbyMenu.abort_join();
+                    self.iDisplayError = DISPLAY_ERROR_NONE;
+                } else if MENU_CODE_TO_NET_NEW_ROOM_CREATE_IN_PROGRESS == code {
+                    self.mNetNewRoomMenu.create_in_progress();
+                } else if MENU_CODE_TO_NET_NEW_ROOM_CREATE_ABORT == code {
+                    self.mNetNewRoomMenu.abort_create();
+                    self.iDisplayError = DISPLAY_ERROR_NONE;
+                } else if MENU_CODE_TO_NET_ROOM_START_IN_PROGRESS == code {
+                    self.mNetRoomMenu.start_in_progress();
+                } else if MENU_CODE_NET_ROOM_GO == code {
+                    netplay.operationInProgress = false;
+                    game_values.matchtype = MatchType::NetGame;
+
+                    self.mTeamSelectMenu.reset_team_select();
+                    self.mTeamSelectMenu.reset_menu();
+                    score_cnt = self.mTeamSelectMenu.get_team_count();
+
+                    game_values.tournamentcontrolteam = -1;
+                    game_values.tournamentwinner = -1;
+
+                    self.iDisplayError = DISPLAY_ERROR_NONE;
+                    self.iDisplayErrorTimer = 0;
+
+                    //game_values.noexit = true;
+                    self.start_game();
+                }
+
+                // on room change
+                if netplay.currentMenuChanged {
+                    self.mNetServersMenu.refresh();
+                    self.mNetRoomMenu.refresh();
+
+                    netplay.currentMenuChanged = false;
+                }
+            }
 
             /*if (code != MENU_CODE_NONE)
                 printf("Code: %d\n", code);*/
@@ -1252,7 +1455,12 @@ impl GameState for MenuState {
             assign(&mut self.mBonusWheelMenu, UI_BonusWheelMenu::new());
 
             // Multiplayer menu
-            // TODO(net): mNetServersMenu, mNetEditServersMenu, mNetLobbyMenu, mNetNewRoomMenu, mNetNewRoomSettingsMenu(mGameSettingsMenu.get()), mNetRoomMenu
+            assign(&mut self.mNetServersMenu, UI_NetServersMenu::new());
+            assign(&mut self.mNetEditServersMenu, UI_NetEditServersMenu::new());
+            assign(&mut self.mNetLobbyMenu, UI_NetLobbyMenu::new());
+            assign(&mut self.mNetNewRoomMenu, UI_NetNewRoomMenu::new());
+            assign(&mut self.mNetNewRoomSettingsMenu, UI_NetNewRoomSettingsMenu::new(&self.mGameSettingsMenu));
+            assign(&mut self.mNetRoomMenu, UI_NetRoomMenu::new());
 
             self.mCurrentMenu = menu(self.mMainMenu);
 
@@ -1302,7 +1510,10 @@ impl GameState for MenuState {
                 self.mCurrentMenu = menu(self.mMainMenu);
                 self.mCurrentMenu.reset_menu();
             } else if matchtype == MatchType::NetGame {
-                // TODO(net): mCurrentMenu = mNetLobbyMenu.get(); mCurrentMenu->ResetMenu(); netplay.joinSuccessful = false; netplay.gameRunning = false;
+                self.mCurrentMenu = menu(self.mNetLobbyMenu);
+                self.mCurrentMenu.reset_menu();
+                netplay.joinSuccessful = false;
+                netplay.gameRunning = false;
             }
 
             if game_values.matchtype == MatchType::World {
@@ -1385,13 +1596,23 @@ impl GameState for MenuState {
             }
 
             // On return from a game, refresh room list
-            // TODO(net): if (netplay.active) { leave netplay.currentRoom if set; netplay.client.requestRoomList(); }
+            if netplay.active {
+                if netplay.currentRoom.roomID != 0 {
+                    netplay.client.send_leave_room_message();
+                    netplay.currentRoom.roomID = 0;
+                    netplay.joinSuccessful = false;
+                    netplay.gameRunning = false;
+                }
+                netplay.client.request_room_list();
+            }
         }
     }
 
     fn update(&mut self) {
         unsafe {
-            // TODO(net): if (netplay.active) netplay.client.update();
+            if netplay.active {
+                netplay.client.update();
+            }
 
             //Reset the keys that were down the last frame
             game_values.playerInput.clear_pressed_keys(1);
