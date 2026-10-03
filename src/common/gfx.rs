@@ -9,7 +9,7 @@ pub mod gfx_sprite;
 use crate::common::gfx::color::{colors, RGB};
 use crate::common::gfx::gfx_palette::{gfxPalette, PlayerPalette};
 use crate::common::gfx::gfx_sdl::GraphicsSDL;
-use crate::common::gfx::gfx_sprite::{gfxSprite, ClipEdge};
+use crate::common::gfx::gfx_sprite::{gfxSprite, ClipEdge, SpriteBuilder};
 use crate::common::global_constants::PGFX_LAST;
 use crate::common::util::sdl_helpers::SdlSurfacePtr;
 use crate::globals::*;
@@ -103,29 +103,19 @@ fn must_lock(surf: *mut SDL_Surface) -> bool {
 }
 
 /// Makes team-colored skin surface frame from a loaded sprite strip.
-fn create_skin_surface(source: &SdlSurfacePtr, sourceFrame: usize, team: usize, allStates: bool, mirrored: bool) -> SdlSurfacePtr {
+fn create_skin_surface(source: &gfxSprite, sourceFrame: usize, team: usize, allStates: bool, mirrored: bool) -> gfxSprite {
     unsafe {
         //Take the loaded skin and colorize it for each state (normal, 3 frames of invincibility, shielded, tagged, ztarred, got shine, frozen)
         let outFrameCount: usize = if allStates { gfx_palette::COUNT as usize } else { 1 };
 
-        let sf = (*screen).format;
-        let out = SdlSurfacePtr::new(SDL_CreateRGBSurface(
-            0x0,
-            32 * outFrameCount as i32,
-            32,
-            (*sf).BitsPerPixel as i32,
-            (*sf).Rmask,
-            (*sf).Gmask,
-            (*sf).Bmask,
-            0x0, /* no alpha */
-        ));
+        let out = gfxSprite::blank(32 * outFrameCount as u32, 32);
 
-        if must_lock(out.get()) {
-            SDL_LockSurface(out.get());
+        if must_lock(out.get_surface()) {
+            SDL_LockSurface(out.get_surface());
         }
 
-        if must_lock(source.get()) {
-            SDL_LockSurface(source.get());
+        if must_lock(source.get_surface()) {
+            SDL_LockSurface(source.get_surface());
         }
 
         let startX = (sourceFrame * 32) as i32;
@@ -134,29 +124,29 @@ fn create_skin_surface(source: &SdlSurfacePtr, sourceFrame: usize, team: usize, 
             for srcX in 0..32 {
                 let dstX = if mirrored { 31 - srcX } else { srcX };
 
-                let pixelColor = get_rgb(source.get(), startX + srcX, y);
+                let pixelColor = get_rgb(source.get_surface(), startX + srcX, y);
 
                 if let Some(sheet) = gfx_palette.color_sheets().get(&pixelColor) {
                     for outFrame in 0..outFrameCount {
                         let paletteColor = sheet.replacement_for(team, outFrame as PlayerPalette);
-                        set_rgb(out.get(), outFrame as i32 * 32 + dstX, y, &paletteColor);
+                        set_rgb(out.get_surface(), outFrame as i32 * 32 + dstX, y, &paletteColor);
                     }
                 } else {
                     for outFrame in 0..outFrameCount {
-                        set_rgb(out.get(), outFrame as i32 * 32 + dstX, y, &pixelColor);
+                        set_rgb(out.get_surface(), outFrame as i32 * 32 + dstX, y, &pixelColor);
                     }
                 }
             }
         }
 
-        SDL_UnlockSurface(source.get());
-        SDL_UnlockSurface(out.get());
+        SDL_UnlockSurface(source.get_surface());
+        SDL_UnlockSurface(out.get_surface());
 
-        let color_key = SDL_MapRGB(out.format, colors::MAGENTA.r, colors::MAGENTA.g, colors::MAGENTA.b);
-        if SDL_SetColorKey(out.get(), 1, color_key) < 0 {
+        let color_key = SDL_MapRGB((*out.get_surface()).format, colors::MAGENTA.r, colors::MAGENTA.g, colors::MAGENTA.b);
+        if SDL_SetColorKey(out.get_surface(), 1, color_key) < 0 {
             panic!("Couldn't set color key for new skin surface: {}", sdl_error());
         }
-        if SDL_SetSurfaceRLE(out.get(), 1) < 0 {
+        if SDL_SetSurfaceRLE(out.get_surface(), 1) < 0 {
             panic!("Couldn't set RLE acceleration for new skin surface: {}", sdl_error());
         }
 
@@ -164,8 +154,8 @@ fn create_skin_surface(source: &SdlSurfacePtr, sourceFrame: usize, team: usize, 
     }
 }
 
-fn valid_skin_surface(skin: &SdlSurfacePtr) -> bool {
-    skin.w == 192 && skin.h == 32
+fn valid_skin_surface(skin: &gfxSprite) -> bool {
+    skin.get_width() == 192 && skin.get_height() == 32
 }
 
 pub fn get_rgb(surf: *mut SDL_Surface, x: i32, y: i32) -> RGB {
@@ -229,12 +219,8 @@ pub fn gfx_save_screen_bmp(path: &str) -> bool {
     }
 }
 
-fn load_skin(path: &Path) -> Result<SdlSurfacePtr, String> {
-    let cpath = CString::new(path.to_string_lossy().as_bytes()).unwrap();
-    let skin = SdlSurfacePtr::new(unsafe { IMG_Load(cpath.as_ptr()) });
-    if skin.is_null() {
-        return Err(format!("Couldn't load {}: {}", path.display(), sdl_error()));
-    }
+fn load_skin(path: &Path) -> Result<gfxSprite, String> {
+    let skin = SpriteBuilder::new(path).without_color_key().without_optimization().try_create()?;
 
     if !valid_skin_surface(&skin) {
         return Err(format!("Invalid skin file: {} has incorrect dimensions", path.display()));
@@ -251,13 +237,13 @@ pub fn gfx_loadmenuskin(path: &Path, colorScheme: i16, fLoadBothDirections: bool
 
     for i in 0..2usize {
         let skinSurface = create_skin_surface(&skin, i, colorScheme as usize, true, false);
-        strip[i * 2] = gfxSprite::from_surface(skinSurface, Some(640));
+        strip[i * 2] = skinSurface;
     }
 
     if fLoadBothDirections {
         for i in 0..2usize {
             let skinSurface = create_skin_surface(&skin, i, colorScheme as usize, true, true);
-            strip[i * 2 + 1] = gfxSprite::from_surface(skinSurface, Some(640));
+            strip[i * 2 + 1] = skinSurface;
         }
     }
 
@@ -273,17 +259,17 @@ pub fn gfx_loadfullskin(path: &Path, colorScheme: i16) -> Result<SpriteStrip, St
     for k in 0..4usize {
         for j in 0..2usize {
             let skinSurface = create_skin_surface(&skin, k, colorScheme as usize, true, j != 0);
-            strip[(k * 2) + j] = gfxSprite::from_surface(skinSurface, Some(640));
+            strip[(k * 2) + j] = skinSurface;
         }
     }
 
     //Dead Flying Sprite
     let skinSurface = create_skin_surface(&skin, 4, colorScheme as usize, true, false);
-    strip[8] = gfxSprite::from_surface(skinSurface, Some(640));
+    strip[8] = skinSurface;
 
     //Dead Stomped Sprite
     let skinSurface = create_skin_surface(&skin, 5, colorScheme as usize, true, false);
-    strip[9] = gfxSprite::from_surface(skinSurface, Some(640));
+    strip[9] = skinSurface;
 
     Ok(strip)
 }

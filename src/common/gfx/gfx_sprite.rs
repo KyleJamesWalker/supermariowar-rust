@@ -33,7 +33,7 @@ fn throw(msg: String) -> ! {
     panic!("{}", msg)
 }
 
-fn load_image(path: &Path, optimize: bool, color_key: Option<RGB>, alpha: Option<u8>) -> SdlSurfacePtr {
+fn try_load_image(path: &Path, optimize: bool, color_key: Option<RGB>, alpha: Option<u8>) -> Result<SdlSurfacePtr, String> {
     let path_str = path.to_string_lossy().into_owned();
 
     let mut out = String::from("loading sprite");
@@ -53,38 +53,43 @@ fn load_image(path: &Path, optimize: bool, color_key: Option<RGB>, alpha: Option
         let cpath = CString::new(path_str.as_bytes()).unwrap();
         let raw = SdlSurfacePtr::new(IMG_Load(cpath.as_ptr()));
         if raw.is_null() {
-            throw(format!("Couldn't load {}: {}", path_str, sdl_error()));
+            return Err(format!("Couldn't load {}: {}", path_str, sdl_error()));
         }
 
         if let Some(color_key) = color_key {
             let key = SDL_MapRGB(raw.format, color_key.r, color_key.g, color_key.b);
             if SDL_SetColorKey(raw.get(), 1, key) < 0 {
-                throw(format!("Couldn't set color key for {}: {}", path_str, sdl_error()));
+                return Err(format!("Couldn't set color key for {}: {}", path_str, sdl_error()));
             }
         }
 
         let img = SdlSurfacePtr::new(SDL_ConvertSurface(raw.get(), (*screen).format, 0));
         if img.is_null() {
-            throw(format!("Couldn't convert {} to the display's pixel format: {}", path_str, sdl_error()));
+            return Err(format!("Couldn't convert {} to the display's pixel format: {}", path_str, sdl_error()));
         }
 
         if optimize && SDL_SetSurfaceRLE(img.get(), 1) < 0 {
-            throw(format!("Couldn't set RLE acceleration for {}: {}", path_str, sdl_error()));
+            return Err(format!("Couldn't set RLE acceleration for {}: {}", path_str, sdl_error()));
         }
 
         if let Some(alpha) = alpha {
             if SDL_SetSurfaceBlendMode(img.get(), SDL_BlendMode::SDL_BLENDMODE_BLEND) < 0 {
-                throw(format!("Couldn't set blend mode for {}: {}", path_str, sdl_error()));
+                return Err(format!("Couldn't set blend mode for {}: {}", path_str, sdl_error()));
             }
             if SDL_SetSurfaceAlphaMod(img.get(), alpha) < 0 {
-                throw(format!("Couldn't set alpha modulation for {}: {}", path_str, sdl_error()));
+                return Err(format!("Couldn't set alpha modulation for {}: {}", path_str, sdl_error()));
             }
         }
 
         println!(" done");
-        img
+        Ok(img)
     }
 }
+
+fn load_image(path: &Path, optimize: bool, color_key: Option<RGB>, alpha: Option<u8>) -> SdlSurfacePtr {
+    try_load_image(path, optimize, color_key, alpha).unwrap_or_else(|what| throw(what))
+}
+
 
 unsafe fn blit_surface(src: *mut SDL_Surface, srcArea: *const SDL_Rect, dst: *mut SDL_Surface, dstArea: *mut SDL_Rect) {
     if SDL_UpperBlit(src, srcArea, dst, dstArea) < 0 {
@@ -313,5 +318,10 @@ impl SpriteBuilder {
 
     pub fn create(&self) -> gfxSprite {
         gfxSprite::from_surface(load_image(&self.m_path, self.m_optimize, self.m_color_key, self.m_alpha), self.m_wrap_x)
+    }
+
+    /// `create()` for callers that catch the `std::string` the C++ throws on a load failure.
+    pub fn try_create(&self) -> Result<gfxSprite, String> {
+        Ok(gfxSprite::from_surface(try_load_image(&self.m_path, self.m_optimize, self.m_color_key, self.m_alpha)?, self.m_wrap_x))
     }
 }
