@@ -136,7 +136,7 @@ impl gfxSprite {
 
     /// Draw part of the sprite at the given coordinate.
     pub fn draw_src(&self, x: i32, y: i32, srcRect: &SDL_Rect) {
-        assert!(!self.m_picture.is_null());
+        debug_assert!(!self.m_picture.is_null());
 
         unsafe {
             let mut dstRect = SDL_Rect { x: x + x_shake as i32, y: y + y_shake as i32, w: srcRect.w, h: srcRect.h };
@@ -161,7 +161,7 @@ impl gfxSprite {
 
     /// Draw part of the sprite at the given coordinate, clipped along a given direction.
     pub fn draw_clip(&self, x: i32, y: i32, srcRect: &SDL_Rect, clipEdge: ClipEdge, clipTreshold: i32) {
-        assert!(!self.m_picture.is_null());
+        debug_assert!(!self.m_picture.is_null());
 
         unsafe {
             let dstRect = SDL_Rect { x: x + x_shake as i32, y: y + y_shake as i32, w: srcRect.w, h: srcRect.h };
@@ -202,7 +202,7 @@ impl gfxSprite {
 
     /// Draw a part of the sprite scaled to a destination area.
     pub fn draw_stretch(&self, dstRect: &SDL_Rect, srcRect: &SDL_Rect) {
-        assert!(!self.m_picture.is_null());
+        debug_assert!(!self.m_picture.is_null());
 
         let mut dstRect_w = *dstRect;
         unsafe {
@@ -213,7 +213,7 @@ impl gfxSprite {
     }
 
     pub fn setalpha(&mut self, alpha: u8) {
-        assert!(!self.m_picture.is_null());
+        debug_assert!(!self.m_picture.is_null());
 
         unsafe {
             if SDL_SetSurfaceBlendMode(self.m_picture.get(), SDL_BlendMode::SDL_BLENDMODE_BLEND) < 0 {
