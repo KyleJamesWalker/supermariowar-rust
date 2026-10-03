@@ -43,7 +43,14 @@ rm -f "$out/dump.txt" "$out"/frame_*.bmp
 # Per-run sandbox: a fresh HOME (no options.bin / controls file) and a private clone of the data tree,
 # since the game writes data/maps/cache/mapsummary.txt and replays run concurrently.
 sandbox="$(mktemp -d)"
-trap 'rm -rf "$sandbox"' EXIT
+game=""
+cleanup() {
+    [[ -n "$game" ]] && kill "$game" 2>/dev/null
+    rm -rf "$sandbox"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 home="$sandbox/home"
 mkdir -p "$home/Library/Preferences"
 cp -c -R "$data" "$sandbox/data" 2>/dev/null || cp -R "$data" "$sandbox/data"
@@ -52,7 +59,8 @@ data="$sandbox/data"
 
 cd "$sandbox"
 status=0
-env HOME="$home" \
+# Background + wait so a killed script also stops the game; ulimit caps each file the game writes at 1 GB.
+(ulimit -f 1048576; exec env HOME="$home" \
     SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
     SMW_SEED="${seed:-1}" \
     SMW_NOLIMIT="${SMW_NOLIMIT-1}" \
@@ -62,7 +70,10 @@ env HOME="$home" \
     SMW_DUMP="$out/dump.txt" \
     SMW_SHOT_FRAMES="$shots" \
     SMW_SHOT_DIR="$out" \
-    "$bin" --datadir "$data" > "$out/stdout.log" 2>&1 || status=$?
+    "$bin" --datadir "$data") > "$out/stdout.log" 2>&1 &
+game=$!
+wait "$game" || status=$?
+game=""
 
 echo "$out"
 exit "$status"

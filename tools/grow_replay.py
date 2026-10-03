@@ -19,10 +19,10 @@ TOOLS = Path(__file__).resolve().parent
 
 
 def run(replay, frames):
-    out = tempfile.mkdtemp(prefix="grow-")
-    env = dict(os.environ, SMW_FRAMES=str(frames), SMW_SHOT_FRAMES="")
-    subprocess.run([str(TOOLS / "run_ref.sh"), str(replay), out], env=env, stdout=subprocess.DEVNULL, check=False)
-    return (Path(out) / "dump.txt").read_text().splitlines()
+    with tempfile.TemporaryDirectory(prefix="grow-") as out:
+        env = dict(os.environ, SMW_FRAMES=str(frames), SMW_SHOT_FRAMES="")
+        subprocess.run([str(TOOLS / "run_ref.sh"), str(replay), out], env=env, stdout=subprocess.DEVNULL, check=False)
+        return (Path(out) / "dump.txt").read_text().splitlines()
 
 
 def blocks(lines):
