@@ -7,6 +7,7 @@ pub mod file_list;
 pub mod game;
 pub mod game_mode;
 pub mod game_mode_settings;
+pub mod game_mode_settings_serialization;
 pub mod game_values;
 pub mod gameplay_styles;
 pub mod global;
