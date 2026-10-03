@@ -4,7 +4,8 @@
   soak.py [--cases N] [--start S] [--jobs J] [--frames F] [--out DIR] [--rust-bin BIN] [--ref-dir DIR]
 
 Case <seed> builds a replay from python random seed <seed>: random option edits, 2-4 CPUs plus 0-2
-fuzzed human players, a random game mode and map. Both builds run it in run_ref.sh sandboxes (in
+fuzzed human players, a random game mode and map. With --flow-share P, a share P of the cases instead
+start a CPU-only tournament, tour, world or minigame through the Match Selection menu. Both builds run it in run_ref.sh sandboxes (in
 parallel) and the dumps are diffed. Matching cases are deleted; for each divergence or crash the
 output dir keeps <seed>/replay.txt, diff.txt (first divergence with context) and both stdout logs.
 The same --start/--cases always produce the same replays, so a case reruns with --start S --cases 1.
@@ -48,8 +49,39 @@ TO = {0: {"human": [], "cpu": ["Down"], "none": ["Down", "Down"]},
 FUZZ_KEYS = [["Left", "Right", "Up", "Down", "Right Ctrl", "Right Shift"], ["A", "D", "W", "S", "E", "Q"]]
 
 
-def make_replay(seed, frames):
+TOURS = len(list((DATA / "tours").glob("*.txt")))
+WORLDS = len(list((DATA / "worlds").glob("*.txt")))
+
+
+def make_flow_replay(rng, seed, frames):
+    """Match Selection flows (see gen_replays.flow): CPU players only, since Team Select would wait on humans."""
+    s = g.Script()
+    g.boot_to_main(s)
+    cpus = rng.randint(2, 4)
+    slots = ["none"] * 4
+    for i in rng.sample(range(4), cpus):
+        slots[i] = "cpu"
+    g.set_players(s, [TO[i][slots[i]] for i in range(4)], order=(2, 3, 0, 1))
+    s.tap("Return", gap=30)   # Start -> Match Selection
+    kind, rights, sub, returns = rng.choice([
+        ("tournament", 1, 0, 3),
+        ("tour", 2, rng.randrange(TOURS), 3),
+        ("world", 3, rng.randrange(WORLDS), 3),
+        ("minigame", 4, rng.randrange(5), 2),
+    ])
+    g.match_type(s, rights, sub)
+    for _ in range(returns):
+        s.tap("Return", gap=40)
+    mapname = rng.choice(MAPS)
+    header = (f"# soak case {seed}: players {','.join(slots)}, {kind} (match type {rights}, sub {sub}), map '{mapname}'.\n"
+              f"#@ seed={rng.randrange(1, 2**31)}\n#@ map={mapname}\n#@ frames={frames}\n")
+    return s, header
+
+
+def make_replay(seed, frames, flow_share=0.0):
     rng = random.Random(seed)
+    if flow_share > 0 and rng.random() < flow_share:
+        return make_flow_replay(rng, seed, frames)
     s = g.Script()
     g.boot_to_main(s)
 
@@ -109,7 +141,7 @@ def run(bin_path, data_dir, replay, out):
 def case(seed, args):
     d = args.out / str(seed)
     d.mkdir(parents=True, exist_ok=True)
-    s, header = make_replay(seed, args.frames)
+    s, header = make_replay(seed, args.frames, args.flow_share)
     s.write("replay", header, d)
     replay = d / "replay.txt"
 
@@ -143,6 +175,7 @@ def main():
     ap.add_argument("--start", type=int, default=1)
     ap.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) // 2), help="cases at once (2 processes each)")
     ap.add_argument("--frames", type=int, default=5000)
+    ap.add_argument("--flow-share", type=float, default=0.0, help="share of cases that run a tournament/tour/world/minigame flow")
     ap.add_argument("--out", type=Path, default=Path(os.environ.get("TMPDIR", "/tmp")) / "smw-soak")
     ap.add_argument("--rust-bin", type=Path, default=PORT / "target/release/smw")
     ap.add_argument("--ref-dir", type=Path, default=Path.home() / "work/smw-ref-soak")
