@@ -152,7 +152,7 @@ impl gfxSprite {
     }
 
     fn blit(&self, srcRect: *const SDL_Rect, dst: *mut SDL_Surface, dstPosX: i32, dstPosY: i32) {
-        assert!(!self.m_picture.is_null());
+        debug_assert!(!self.m_picture.is_null());
 
         unsafe {
             let mut dstRect = SDL_Rect { x: dstPosX, y: dstPosY, w: 0, h: 0 };

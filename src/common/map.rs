@@ -1813,7 +1813,7 @@ impl CMap {
                     blit(
                         self.animatedTilesSurface,
                         &tile.rAnimationSrc[0][frame],
-                        tile.pPlatform.sSurface[g_iCurrentDrawIndex as usize],
+                        tile.pPlatform.sprites[g_iCurrentDrawIndex as usize].get_surface(),
                         rDst,
                     );
                 }
