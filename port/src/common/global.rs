@@ -8,4 +8,5 @@ pub fn init_globals() {
     unsafe {
         RootDataDirectory = crate::common::path::get_root_directory() + "data";
     }
+    crate::common::gfx::init_globals();
 }
