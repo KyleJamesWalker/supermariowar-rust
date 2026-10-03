@@ -2,7 +2,7 @@
 
 The C++ game is rebuilt as a deterministic, headless, scriptable reference that writes one text block of game state per frame. The Rust port must read the same replay scripts and emit byte-identical dumps; `tools/diffreplay.py` reports the first frame where they diverge.
 
-- Reference build: `~/work/smw-ref` (a copy of `~/work/supermariowar` with `tools/cpp-harness.patch` applied). The original checkout is never modified.
+- Reference build: `~/work/smw-ref` (a copy of `~/work/supermariowar` at upstream `5693918f` with `tools/cpp-harness.patch` applied). The original checkout is never modified. The reference repo's `harness-latest` branch holds the same tree.
 - Scripts: `tools/replays/*.txt`. Golden output: `tools/golden/<script>/dump.txt` plus `frame_<n>.png` screenshots.
 
 ## Building the reference
@@ -12,13 +12,12 @@ rsync -a --exclude .git ~/work/supermariowar/ ~/work/smw-ref/
 cd ~/work/smw-ref && patch -p1 < <this repo>/tools/cpp-harness.patch
 mkdir build && cd build
 cmake .. -DNO_NETWORK=ON -DBUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release \
-         -DDISABLE_DEFAULT_CFLAGS=ON -DCMAKE_CXX_FLAGS="-O2 -ffp-contract=off"
+         -DCMAKE_CXX_FLAGS="-O2 -ffp-contract=off"
 make -j smw
 ```
 
 Homebrew dependencies: `sdl2-compat`, `sdl2_image`, `sdl2_mixer`, `zlib`; CMake fetches toml11 (tested with sdl2-compat 2.32.72, Apple clang 21).
 
-- `-DDISABLE_DEFAULT_CFLAGS=ON` is required on Apple Silicon: `cmake/PlatformArm.cmake` matches `arm64` and adds 32-bit ARM flags (`-marm -mfpu=vfp`) that clang rejects.
 - `-ffp-contract=off` stops clang fusing `a*b+c` into FMA instructions on arm64. Rust never fuses, so without this flag float positions drift by an ulp.
 
 ## Running

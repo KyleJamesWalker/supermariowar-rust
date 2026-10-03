@@ -17,11 +17,11 @@ patch -p1 < <this repo>/tools/cpp-harness.patch
 patch -p1 < <this repo>/tools/editor-harness.patch
 mkdir -p build-editors && cd build-editors
 cmake .. -DNO_NETWORK=ON -DBUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release \
-         -DDISABLE_DEFAULT_CFLAGS=ON -DCMAKE_CXX_FLAGS="-O2 -ffp-contract=off"
+         -DCMAKE_CXX_FLAGS="-O2 -ffp-contract=off"
 make -j smw-worldedit smw-leveledit
 ```
 
-`editor-harness.patch` holds one `diff -uN supermariowar/src/<f> smw-ref-editors/src/<f>` per file it touches (`common/CMakeLists.txt`, `common/EditorHarness.{h,cpp}`, `common/map.h`, `leveleditor/leveleditor.cpp`, `worldeditor/worldeditor.cpp`); `~/work/smw-ref` never gets them, so the game reference stays clean upstream plus `cpp-harness.patch`. Regenerate it from `~/work` by rerunning that diff for each file, and check it with `patch -p1 --dry-run` on a clean copy that already has `cpp-harness.patch` applied.
+`editor-harness.patch` covers `common/CMakeLists.txt`, `common/EditorHarness.{h,cpp}`, `common/map.h`, `leveleditor/leveleditor.cpp` and `worldeditor/worldeditor.cpp`; `~/work/smw-ref` never gets them, so the game reference stays clean upstream plus `cpp-harness.patch`. Both patches are `git diff master harness-latest -- <files>` in the reference repo. Check them by applying both with `patch -p1` to a clean `git archive master src` and diffing against `harness-latest`.
 
 ## Running
 
