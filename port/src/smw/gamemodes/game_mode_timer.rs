@@ -20,6 +20,7 @@ pub struct GameTimerDisplay {
     pub iScoreOffsetX: i16,
 
     pub iFramesPerSecond: i16,
+    pub _alias: Aliased,
 }
 
 impl GameTimerDisplay {

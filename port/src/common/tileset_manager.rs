@@ -51,6 +51,7 @@ pub struct CTileset {
     m_width: i16,
     m_height: i16,
     m_tiletypes: Vec<TileType>,
+    pub _alias: Aliased,
 }
 
 impl CTileset {
@@ -66,7 +67,7 @@ impl CTileset {
         let m_tilesetPath = format!("{}/tileset.tls", dir);
         let m_tiletypes = read_tile_type_file(&m_tilesetPath, m_width as i32 * m_height as i32);
 
-        CTileset { m_name: get_filename_from_path(dir), m_tilesetPath, m_sprites, m_width, m_height, m_tiletypes }
+        CTileset { _alias: Aliased::new(), m_name: get_filename_from_path(dir), m_tilesetPath, m_sprites, m_width, m_height, m_tiletypes }
     }
 
     pub fn surface(&self, index: usize) -> *mut SDL_Surface {

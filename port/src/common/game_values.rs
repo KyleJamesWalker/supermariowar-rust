@@ -339,6 +339,7 @@ pub struct CGameConfig {
     pub storedpowerupdelay: i16,
     pub swapstyle: i16,
     pub respawn: i16,
+    pub _alias: Aliased,
 }
 
 // these are actually the program options
@@ -431,7 +432,7 @@ crate::impl_base!(CGameValues => cgame_config: CGameConfig);
 impl CGameConfig {
     /// Zero-initialized like the C++ global, which has static storage.
     pub fn new() -> Self {
-        CGameConfig {
+        CGameConfig { _alias: Aliased::new(),
             soundvolume: 0,
             musicvolume: 0,
             fullscreen: false,

@@ -9,9 +9,10 @@ pub struct FPSLimiter {
     ticks: u32,
     realfps: f32,
     flipfps: f32,
+    pub _alias: Aliased,
 }
 
-static mut instance: FPSLimiter = FPSLimiter { framestart: 0, ticks: 0, realfps: 0.0, flipfps: 0.0 };
+static mut instance: FPSLimiter = FPSLimiter { _alias: Aliased::new(), framestart: 0, ticks: 0, realfps: 0.0, flipfps: 0.0 };
 
 impl FPSLimiter {
     pub fn instance() -> &'static mut FPSLimiter {

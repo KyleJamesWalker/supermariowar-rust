@@ -28,6 +28,7 @@ pub struct MysteryMushroomTempPlayer {
 
     pub iOldPowerupX: i16,
     pub iOldPowerupY: i16,
+    pub _alias: Aliased,
 }
 
 impl Default for MysteryMushroomTempPlayer {
@@ -38,7 +39,7 @@ impl Default for MysteryMushroomTempPlayer {
 
 impl MysteryMushroomTempPlayer {
     pub fn new() -> Self {
-        MysteryMushroomTempPlayer {
+        MysteryMushroomTempPlayer { _alias: Aliased::new(),
             fUsed: false,
             fx: 0.0,
             fy: 0.0,

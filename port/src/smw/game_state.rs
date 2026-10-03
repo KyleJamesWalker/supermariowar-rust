@@ -15,9 +15,10 @@ pub trait GameState {
 
 pub struct GameStateManager {
     pub currentState: Ptr<dyn GameState>,
+    pub _alias: Aliased,
 }
 
-static mut gsm: GameStateManager = GameStateManager { currentState: Ptr::null() };
+static mut gsm: GameStateManager = GameStateManager { _alias: Aliased::new(), currentState: Ptr::null() };
 
 impl GameStateManager {
     pub fn change_state_to(&mut self, newState: Ptr<dyn GameState>) {

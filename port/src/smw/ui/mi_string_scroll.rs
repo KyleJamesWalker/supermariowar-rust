@@ -10,11 +10,12 @@ use sdl2::sys::SDL_Rect;
 
 pub struct StringScrollElement {
     str: String,
+    pub _alias: Aliased,
 }
 
 impl StringScrollElement {
     pub fn new(text: &str) -> Self {
-        StringScrollElement { str: text.to_string() }
+        StringScrollElement { _alias: Aliased::new(), str: text.to_string() }
     }
 
     pub fn draw(&self, x: i32, y: i32, max_w: u32) {

@@ -13,6 +13,7 @@ use std::io::Write;
 #[derive(Default)]
 pub struct gfxFont {
     m_font: Option<Box<SFont_Font>>,
+    pub _alias: Aliased,
 }
 
 impl Drop for gfxFont {
@@ -29,7 +30,7 @@ fn sdl_error() -> String {
 
 impl gfxFont {
     pub fn new() -> Self {
-        gfxFont { m_font: None }
+        gfxFont { _alias: Aliased::new(), m_font: None }
     }
 
     pub fn init(&mut self, filename: &str) -> bool {

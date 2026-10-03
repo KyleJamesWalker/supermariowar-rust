@@ -24,13 +24,14 @@ pub struct SplashScreenState {
     state: i32,
     timer: i32,
     firstFrame: bool,
+    pub _alias: Aliased,
 }
 
 static mut ss: Option<SplashScreenState> = None;
 
 impl SplashScreenState {
     fn new() -> Self {
-        SplashScreenState {
+        SplashScreenState { _alias: Aliased::new(),
             loop_event: unsafe { std::mem::zeroed() },
             menu_credits: Ptr::null(),
             alpha: 255,

@@ -102,6 +102,7 @@ pub struct GameplayState {
     spinspeed: f32,
     spindirection: i16,
     spintimer: i16,
+    pub _alias: Aliased,
 }
 
 static mut gps: Option<GameplayState> = None;
@@ -111,7 +112,7 @@ impl GameplayState {
     pub const g_iPowerupToIcon: [i16; 8] = [80, 176, 272, 304, 336, 368, 384, 400];
 
     fn new() -> Self {
-        let mut s = GameplayState {
+        let mut s = GameplayState { _alias: Aliased::new(),
             iCountDownState: 0,
             iCountDownTimer: 0,
             iWindTimer: 0,

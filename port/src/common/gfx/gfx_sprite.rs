@@ -96,6 +96,7 @@ unsafe fn blit_surface(src: *mut SDL_Surface, srcArea: *const SDL_Rect, dst: *mu
 pub struct gfxSprite {
     m_picture: SdlSurfacePtr,
     m_wrap_x: Option<i32>,
+    pub _alias: Aliased,
 }
 
 impl gfxSprite {
@@ -110,7 +111,7 @@ impl gfxSprite {
 
     /// `gfxSprite(SdlSurfacePtr image, wrap = 640)`
     pub fn from_surface(image: SdlSurfacePtr, wrap: Option<i32>) -> Self {
-        gfxSprite { m_picture: image, m_wrap_x: wrap }
+        gfxSprite { _alias: Aliased::new(), m_picture: image, m_wrap_x: wrap }
     }
 
     /// Draw the whole sprite at the given coordinate.

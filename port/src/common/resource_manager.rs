@@ -288,6 +288,7 @@ pub struct CResourceManager {
     pub sfx_gameover: sfxSound,
     pub sfx_pickup: sfxSound,
     pub backgroundmusic: [sfxMusic; 6],
+    pub _alias: Aliased,
 }
 
 impl CResourceManager {

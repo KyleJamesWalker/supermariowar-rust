@@ -20,3 +20,6 @@ pub mod common_netplay;
 pub mod smw;
 pub mod leveleditor;
 pub mod worldeditor;
+
+#[cfg(test)]
+mod alias_audit;

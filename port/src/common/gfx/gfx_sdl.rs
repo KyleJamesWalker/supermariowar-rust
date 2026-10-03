@@ -124,11 +124,12 @@ pub struct GraphicsSDL {
     sdl_renderer: *mut SDL_Renderer,
     sdl_screen_surface: *mut SDL_Surface,
     sdl_screen_texture: *mut SDL_Texture,
+    pub _alias: Aliased,
 }
 
 impl Default for GraphicsSDL {
     fn default() -> Self {
-        GraphicsSDL {
+        GraphicsSDL { _alias: Aliased::new(),
             sdl_window: null_mut(),
             sdl_renderer: null_mut(),
             sdl_screen_surface: null_mut(),

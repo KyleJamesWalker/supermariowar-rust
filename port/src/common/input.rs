@@ -126,6 +126,7 @@ pub struct CPlayerInput {
     pub outputControls: [COutputControl; 4],
 
     pub iPressedKey: SDL_Keycode,
+    pub _alias: Aliased,
 }
 
 impl Default for CPlayerInput {
@@ -141,7 +142,7 @@ fn sdl_button(x: i32) -> u32 {
 
 impl CPlayerInput {
     pub fn new() -> Self {
-        let mut this = CPlayerInput {
+        let mut this = CPlayerInput { _alias: Aliased::new(),
             inputControls: [Ptr::null(); 4],
             outputControls: [COutputControl::default(); 4],
             iPressedKey: 0,

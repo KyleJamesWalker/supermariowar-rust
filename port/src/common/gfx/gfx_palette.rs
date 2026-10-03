@@ -1,5 +1,6 @@
 //! Port of src/common/gfx/gfxPalette.cpp
 
+use crate::globals::Aliased;
 use crate::common::gfx::color::RGB;
 use crate::common::gfx::get_rgb;
 use crate::common::global_constants::MAX_PLAYERS;
@@ -42,6 +43,7 @@ impl ColorSheet {
 #[derive(Default)]
 pub struct gfxPalette {
     m_colorsheets: HashMap<RGB, ColorSheet>,
+    pub _alias: Aliased,
 }
 
 impl gfxPalette {
