@@ -299,8 +299,10 @@ pub fn main_game() {
 
         //Load the gfx color palette
         let pack = gamegraphicspacklist.current_path().to_string_lossy().into_owned();
-        let pngPalette = gfx_loadpalette(Path::new(&convert_path_pack("gfx/packs/palette.png", &pack)));
-        if !pngPalette {
+        let png = std::panic::catch_unwind(|| gfx_loadpalette(Path::new(&convert_path_pack("gfx/packs/palette.png", &pack))));
+        if let Err(payload) = png {
+            let Some(err) = payload.downcast_ref::<String>() else { std::panic::resume_unwind(payload) };
+            println!("\nwarning: {} -> falling back to BMP", err);
             gfx_loadpalette(Path::new(&convert_path_pack("gfx/packs/palette.bmp", &pack)));
         }
 

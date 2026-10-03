@@ -1169,8 +1169,10 @@ impl MenuState {
                 rm.load_world_graphics();
             } else if MENU_CODE_GAME_GRAPHICS_PACK_CHANGED == code {
                 let packdir = gamegraphicspacklist.current_path().to_string_lossy().into_owned();
-                let pngPalette = gfx_loadpalette(Path::new(&convert_path_pack("gfx/packs/palette.png", &packdir)));
-                if !pngPalette {
+                let png = std::panic::catch_unwind(|| gfx_loadpalette(Path::new(&convert_path_pack("gfx/packs/palette.png", &packdir))));
+                if let Err(payload) = png {
+                    let Some(err) = payload.downcast_ref::<String>() else { std::panic::resume_unwind(payload) };
+                    println!("\nwarning: {} -> falling back to BMP", err);
                     gfx_loadpalette(Path::new(&convert_path_pack("gfx/packs/palette.bmp", &packdir)));
                 }
                 rm.load_game_graphics();

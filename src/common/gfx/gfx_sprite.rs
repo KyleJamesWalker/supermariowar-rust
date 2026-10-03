@@ -33,7 +33,7 @@ fn throw(msg: String) -> ! {
     panic!("{}", msg)
 }
 
-fn load_image(path: &Path, color_key: Option<RGB>, alpha: Option<u8>) -> SdlSurfacePtr {
+fn load_image(path: &Path, optimize: bool, color_key: Option<RGB>, alpha: Option<u8>) -> SdlSurfacePtr {
     let path_str = path.to_string_lossy().into_owned();
 
     let mut out = String::from("loading sprite");
@@ -68,7 +68,7 @@ fn load_image(path: &Path, color_key: Option<RGB>, alpha: Option<u8>) -> SdlSurf
             throw(format!("Couldn't convert {} to the display's pixel format: {}", path_str, sdl_error()));
         }
 
-        if SDL_SetSurfaceRLE(img.get(), 1) < 0 {
+        if optimize && SDL_SetSurfaceRLE(img.get(), 1) < 0 {
             throw(format!("Couldn't set RLE acceleration for {}: {}", path_str, sdl_error()));
         }
 
@@ -106,7 +106,7 @@ impl gfxSprite {
 
     /// `gfxSprite(filename, color_key, alpha, wrap)`
     pub fn from_file(filename: &Path, color_key: Option<RGB>, alpha: Option<u8>, wrap: Option<i32>) -> Self {
-        Self::from_surface(load_image(filename, color_key, alpha), wrap)
+        Self::from_surface(load_image(filename, true, color_key, alpha), wrap)
     }
 
     /// `gfxSprite(SdlSurfacePtr image, wrap = 640)`
@@ -274,6 +274,7 @@ impl gfxSprite {
 
 pub struct SpriteBuilder {
     m_path: PathBuf,
+    m_optimize: bool,
     m_color_key: Option<RGB>,
     m_alpha: Option<u8>,
     m_wrap_x: Option<i32>,
@@ -281,7 +282,7 @@ pub struct SpriteBuilder {
 
 impl SpriteBuilder {
     pub fn new(path: impl Into<PathBuf>) -> Self {
-        SpriteBuilder { m_path: path.into(), m_color_key: Some(colors::MAGENTA), m_alpha: None, m_wrap_x: None }
+        SpriteBuilder { m_path: path.into(), m_optimize: true, m_color_key: Some(colors::MAGENTA), m_alpha: None, m_wrap_x: None }
     }
 
     pub fn with_color_key(mut self, key: RGB) -> Self {
@@ -305,7 +306,12 @@ impl SpriteBuilder {
         self
     }
 
+    pub fn without_optimization(mut self) -> Self {
+        self.m_optimize = false;
+        self
+    }
+
     pub fn create(&self) -> gfxSprite {
-        gfxSprite::from_file(&self.m_path, self.m_color_key, self.m_alpha, self.m_wrap_x)
+        gfxSprite::from_surface(load_image(&self.m_path, self.m_optimize, self.m_color_key, self.m_alpha), self.m_wrap_x)
     }
 }

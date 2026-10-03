@@ -4,10 +4,9 @@ use crate::globals::Aliased;
 use crate::common::gfx::color::RGB;
 use crate::common::gfx::get_rgb;
 use crate::common::global_constants::MAX_PLAYERS;
-use sdl2::sys::{SDL_FreeSurface, SDL_GetError, SDL_LockSurface, SDL_UnlockSurface, SDL_RLEACCEL};
-use sdl2::sys::image::IMG_Load;
+use crate::common::gfx::gfx_sprite::SpriteBuilder;
+use sdl2::sys::{SDL_LockSurface, SDL_UnlockSurface, SDL_RLEACCEL};
 use std::collections::HashMap;
-use std::ffi::{CStr, CString};
 use std::path::Path;
 
 pub type PlayerPalette = i32;
@@ -62,19 +61,15 @@ impl gfxPalette {
     pub fn load(&mut self, path: &Path) -> bool {
         self.m_colorsheets.clear();
 
-        unsafe {
-            let cpath = CString::new(path.to_string_lossy().as_bytes()).unwrap();
-            let surf = IMG_Load(cpath.as_ptr());
-            if surf.is_null() {
-                println!("Couldn't load color palette: {}", CStr::from_ptr(SDL_GetError()).to_string_lossy());
-                return false;
-            }
+        let sprite = SpriteBuilder::new(path).without_color_key().without_optimization().create();
 
+        unsafe {
+            let surf = sprite.get_surface();
             if (*surf).flags & SDL_RLEACCEL != 0 {
                 SDL_LockSurface(surf);
             }
 
-            for x in 0..(*surf).w {
+            for x in 0..sprite.get_width() {
                 let key = get_rgb(surf, x, 0);
 
                 let mut sheet = ColorSheet::default();
@@ -92,8 +87,6 @@ impl gfxPalette {
             if (*surf).flags & SDL_RLEACCEL != 0 {
                 SDL_UnlockSurface(surf);
             }
-
-            SDL_FreeSurface(surf);
         }
         true
     }
