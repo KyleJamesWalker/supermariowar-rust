@@ -194,8 +194,20 @@ pub fn gfx_settitle(title: &str) {
     unsafe { gfx.set_title(title) }
 }
 
-pub fn gfx_show_error(message: &str) {
-    unsafe { gfx.show_error_box(message) }
+pub fn gfx_show_catched_error(error: &str) {
+    let mut message = String::from(
+        "It seems the game has unexpectedly crashed. If you could tell us\n\
+         what happened exactly, we might be able to fix this bug. Consider\n\
+         reporting it on the link below, thanks!\n\n\
+         https://github.com/mmatyas/supermariowar/issues\n\n\
+         Sincerely,\nThe Developers",
+    );
+    if !error.is_empty() {
+        message += "\n\n\nThe error message:\n";
+        message += error;
+    }
+    eprintln!("\n{}", message);
+    unsafe { gfx.show_error_box(&message) }
 }
 
 pub fn gfx_take_screenshot() {

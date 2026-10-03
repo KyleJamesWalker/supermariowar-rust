@@ -9,7 +9,7 @@ use crate::common::game_values::{default_powerup_setting, TITLESTRING};
 use crate::common::gfx::color::colors;
 use crate::common::gfx::gfx_font::gfxFont;
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::gfx::{gfx_changefullscreen, gfx_flipscreen, gfx_init, gfx_settitle};
+use crate::common::gfx::{gfx_changefullscreen, gfx_flipscreen, gfx_init, gfx_settitle, gfx_show_catched_error};
 use crate::common::global::g_szMusicCategoryNames;
 use crate::common::global_constants::*;
 use crate::common::map::{
@@ -362,19 +362,26 @@ pub fn main() {
         cmd::show_windows_console();
     }
 
+    if !cmd.data_root.is_empty() {
+        unsafe { RootDataDirectory = cmd.data_root.clone() };
+    }
+
+    // C++ catches `const char*`, `std::string`, `std::exception` and `...` around inner_main().
+    let result = std::panic::catch_unwind(inner_main);
+    if let Err(payload) = result {
+        let what = payload
+            .downcast_ref::<String>()
+            .cloned()
+            .or_else(|| payload.downcast_ref::<&str>().map(|s| s.to_string()))
+            .unwrap_or_default();
+        gfx_show_catched_error(&what);
+        std::process::exit(1);
+    }
+}
+
+pub fn inner_main() {
     unsafe {
-        if !cmd.data_root.is_empty() {
-            RootDataDirectory = cmd.data_root.clone();
-        }
-
         ensure_settings_dir();
-
-        rm = Ptr::new_box(CResourceManager::new());
-        g_map = Ptr::from_box(CMap::new());
-        g_tilesetmanager = Ptr::new_box(CTilesetManager::new());
-        filterslist = Ptr::new_box(crate::common::file_list::FiltersList::new());
-        maplist = Ptr::new_box(MapList::new(false));
-        backgroundlist = Ptr::new_box(BackgroundList::new());
 
         /* This must occur before any data files are loaded */
         initialize_paths();
@@ -397,7 +404,14 @@ pub fn main() {
 
         gfx_init(640, 480, g_fFullScreen);
         blitdest = screen;
+
+        rm = Ptr::new_box(CResourceManager::new());
+        g_tilesetmanager = Ptr::new_box(CTilesetManager::new());
         g_tilesetmanager.init(&convert_path("gfx/Classic/tilesets"));
+        g_map = Ptr::from_box(CMap::new());
+        filterslist = Ptr::new_box(crate::common::file_list::FiltersList::new());
+        maplist = Ptr::new_box(MapList::new(false));
+        backgroundlist = Ptr::new_box(BackgroundList::new());
 
         //Add all of the maps that are world only so we can edit them
         maplist.add_world_maps();

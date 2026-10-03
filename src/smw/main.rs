@@ -16,7 +16,7 @@ use crate::common::map_list::MapList;
 use crate::common::tileset_manager::CTilesetManager;
 use crate::common::resource_manager::CResourceManager;
 use crate::smw::player::CPlayer;
-use crate::common::gfx::{gfx_close, gfx_init, gfx_flipscreen, gfx_loadpalette, gfx_settitle, gfx_show_error};
+use crate::common::gfx::{gfx_close, gfx_init, gfx_flipscreen, gfx_loadpalette, gfx_settitle, gfx_show_catched_error};
 use crate::common::global_constants::{HALF_PI, MAX_PLAYERS, NUM_POWERUPS, PI, THREE_HALF_PI};
 use crate::common::path::convert_path_pack;
 use crate::common::score::CScore;
@@ -217,23 +217,6 @@ pub fn init_spawnlocations() {
 //  PROGRAM ENTRY POINT
 //*************************************
 
-fn show_catched_error(error: &str) {
-    let mut message = String::from(
-        "It seems the game has unexpectedly crashed. If you could tell us\n\
-         what happened exactly, we might be able to fix this bug. Consider\n\
-         reporting it on the link below, thanks!\n\n\
-         https://github.com/mmatyas/supermariowar/issues\n\n\
-         Sincerely,\nThe Developers",
-    );
-    if !error.is_empty() {
-        message += "\n\n\nThe error message:\n";
-        message += error;
-    }
-
-    eprintln!("\n{}", message);
-    gfx_show_error(&message);
-}
-
 pub fn main() {
     crate::globals::init_globals();
 
@@ -261,7 +244,7 @@ pub fn main() {
             .cloned()
             .or_else(|| payload.downcast_ref::<&str>().map(|s| s.to_string()))
             .unwrap_or_default();
-        show_catched_error(&what);
+        gfx_show_catched_error(&what);
         std::process::exit(1);
     }
 }
