@@ -16,7 +16,7 @@ cmake .. -DNO_NETWORK=ON -DBUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release \
 make -j smw
 ```
 
-Homebrew dependencies: `sdl2-compat`, `sdl2_image`, `sdl2_mixer`, `yaml-cpp`, `zlib` (tested with sdl2-compat 2.32.72, Apple clang 21).
+Homebrew dependencies: `sdl2-compat`, `sdl2_image`, `sdl2_mixer`, `zlib`; CMake fetches toml11 (tested with sdl2-compat 2.32.72, Apple clang 21).
 
 - `-DDISABLE_DEFAULT_CFLAGS=ON` is required on Apple Silicon: `cmake/PlatformArm.cmake` matches `arm64` and adds 32-bit ARM flags (`-marm -mfpu=vfp`) that clang rejects.
 - `-ffp-contract=off` stops clang fusing `a*b+c` into FMA instructions on arm64. Rust never fuses, so without this flag float positions drift by an ulp.

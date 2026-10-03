@@ -1,11 +1,12 @@
 #!/bin/bash
 # Builds net_driver from the original C++ netplay sources (ENet from Homebrew). Unused game symbols resolve lazily.
 set -e
-SRC=${SMW_SRC:-$HOME/work/supermariowar/src}
+SRC=${SMW_SRC:-$HOME/work/smw-cpp-harness-latest/src}
+TOML=${SMW_TOML11:-$HOME/work/supermariowar-cpp-reference/build-latest/_deps/toml11-src/include}
 OUT=${1:-/tmp/net_driver}
 C=$SRC/common
 M=$SRC/smw
-clang++ -std=c++20 -O1 -w -Wno-c++11-narrowing -I$C -I$SRC/common_netplay -I$M -I/opt/homebrew/include $(sdl2-config --cflags) \
+clang++ -std=c++20 -O1 -w -Wno-c++11-narrowing -I$C -I$SRC/common_netplay -I$M -I$TOML -I/opt/homebrew/include $(sdl2-config --cflags) \
   $(dirname $0)/net_driver.cpp $(dirname $0)/net_driver_modes.cpp \
   $M/net.cpp $M/platform/network/enet/NetworkLayerENet.cpp $SRC/common_netplay/platform_enet/NetPeerENet.cpp \
   $M/network/FileCompressor.cpp $M/network/NetConfigManager.cpp $M/gamemodes/*.cpp \
@@ -13,4 +14,4 @@ clang++ -std=c++20 -O1 -w -Wno-c++11-narrowing -I$C -I$SRC/common_netplay -I$M -
   $C/FileIO.cpp $C/FileList.cpp $C/path.cpp $C/linfunc.cpp $C/util/DirIterator.cpp $C/RandomNumberGenerator.cpp $C/Game.cpp \
   $C/GameModeSettings.cpp $C/GameValues.cpp $C/input.cpp $C/global.cpp $C/gfx.cpp $C/gfx/*.cpp $C/ResourceManager.cpp $C/sfx.cpp \
   $C/util/SdlHelpers.cpp $C/TilesetManager.cpp \
-  $(sdl2-config --libs) -L/opt/homebrew/lib -lSDL2_image -lSDL2_mixer -lenet -lyaml-cpp -lz -Wl,-undefined,dynamic_lookup -o $OUT
+  $(sdl2-config --libs) -L/opt/homebrew/lib -lSDL2_image -lSDL2_mixer -lenet -lz -Wl,-undefined,dynamic_lookup -o $OUT
