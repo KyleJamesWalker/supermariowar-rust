@@ -157,42 +157,12 @@ impl gfxSprite {
 
     /// Draw the whole sprite at the given coordinate.
     pub fn draw(&self, x: i32, y: i32) {
-        assert!(!self.m_picture.is_null());
-
-        unsafe {
-            let mut dstRect = SDL_Rect { x: x + x_shake as i32, y: y + y_shake as i32, w: self.get_width(), h: self.get_height() };
-            blit_surface(self.m_picture.get(), null(), blitdest, &mut dstRect);
-
-            if let Some(wrap_x) = self.m_wrap_x {
-                if x + self.get_width() >= wrap_x {
-                    dstRect.x -= wrap_x;
-                    blit_surface(self.m_picture.get(), null(), blitdest, &mut dstRect);
-                } else if x < 0 {
-                    dstRect.x += wrap_x;
-                    blit_surface(self.m_picture.get(), null(), blitdest, &mut dstRect);
-                }
-            }
-        }
+        unsafe { self.blit(null(), blitdest, x + x_shake as i32, y + y_shake as i32) };
     }
 
     /// Draw part of the sprite at the given coordinate.
     pub fn draw_src(&self, x: i32, y: i32, srcRect: &SDL_Rect) {
-        debug_assert!(!self.m_picture.is_null());
-
-        unsafe {
-            let mut dstRect = SDL_Rect { x: x + x_shake as i32, y: y + y_shake as i32, w: srcRect.w, h: srcRect.h };
-            blit_surface(self.m_picture.get(), srcRect, blitdest, &mut dstRect);
-
-            if let Some(wrap_x) = self.m_wrap_x {
-                if x + self.get_width() >= wrap_x {
-                    dstRect.x -= wrap_x;
-                    blit_surface(self.m_picture.get(), srcRect, blitdest, &mut dstRect);
-                } else if x < 0 {
-                    dstRect.x += wrap_x;
-                    blit_surface(self.m_picture.get(), srcRect, blitdest, &mut dstRect);
-                }
-            }
-        }
+        unsafe { self.blit(srcRect, blitdest, x + x_shake as i32, y + y_shake as i32) };
     }
 
     /// `draw(x, y, srcx, srcy, w, h)` convenience used all over the C++ via `SDL_Rect{...}` temporaries.
