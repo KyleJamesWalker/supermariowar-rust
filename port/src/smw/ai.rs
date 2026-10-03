@@ -204,6 +204,80 @@ fn static_cast_gamemode<T: Any>() -> Ptr<T> {
     p
 }
 
+// After a wrap-around pushback (PlayerCollisions::handle_p2p_pushback) a player's ix can be about -632
+// when Think() runs, so the C++ indexes mapdatatop/blockdata/warpdata with x around -19 and reads
+// earlier CMap members. These helpers reproduce those reads from the clang arm64 CMap layout
+// (offsets measured with offsetof): mapdata 38, mapdatatop 7238, objectdata 7538 (MapBlock is 56
+// bytes), blockdata 24344, nospawn 26744, warpdata 36368. Padding bytes read as 0.
+const CMAP_OFF_MAPDATA: i32 = 38;
+const CMAP_OFF_MAPDATATOP: i32 = 7238;
+const CMAP_OFF_OBJECTDATA: i32 = 7538;
+const CMAP_OFF_BLOCKDATA: i32 = 24344;
+const CMAP_OFF_NOSPAWN: i32 = 26744;
+const CMAP_OFF_WARPDATA: i32 = 36368;
+const CMAP_SIZEOF_MAPBLOCK: i32 = 56;
+
+fn in_map(x: i32, y: i32) -> bool {
+    (0..MAPWIDTH).contains(&x) && (0..MAPHEIGHT).contains(&y)
+}
+
+/// One byte of the C++ CMap object at `off`, for the members between mapdata and blockdata.
+unsafe fn cmap_byte(off: i32) -> u8 {
+    let cells = MAPWIDTH * MAPHEIGHT;
+    if (CMAP_OFF_MAPDATA..CMAP_OFF_MAPDATA + cells * MAPLAYERS * 6).contains(&off) {
+        let rel = off - CMAP_OFF_MAPDATA;
+        let e = rel / 6;
+        let t = &g_map.mapdata[(e / (MAPHEIGHT * MAPLAYERS)) as usize][((e / MAPLAYERS) % MAPHEIGHT) as usize][(e % MAPLAYERS) as usize];
+        let v = [t.iID, t.iCol, t.iRow][((rel % 6) / 2) as usize];
+        return v.to_le_bytes()[(rel % 2) as usize];
+    }
+    if (CMAP_OFF_MAPDATATOP..CMAP_OFF_MAPDATATOP + cells).contains(&off) {
+        let e = off - CMAP_OFF_MAPDATATOP;
+        return g_map.mapdatatop[(e / MAPHEIGHT) as usize][(e % MAPHEIGHT) as usize].0;
+    }
+    if (CMAP_OFF_OBJECTDATA..CMAP_OFF_OBJECTDATA + cells * CMAP_SIZEOF_MAPBLOCK).contains(&off) {
+        let rel = off - CMAP_OFF_OBJECTDATA;
+        let e = rel / CMAP_SIZEOF_MAPBLOCK;
+        let b = &g_map.objectdata[(e / MAPHEIGHT) as usize][(e % MAPHEIGHT) as usize];
+        let r = rel % CMAP_SIZEOF_MAPBLOCK;
+        return match r {
+            0..=1 => b.iType.to_le_bytes()[r as usize],
+            2..=53 => b.iSettings[((r - 2) / 2) as usize].to_le_bytes()[(r % 2) as usize],
+            54 => b.fHidden as u8,
+            _ => 0,
+        };
+    }
+    panic!("ai: C++ out-of-bounds CMap read at offset {} is not modelled", off);
+}
+
+/// `g_map->map(x, y)`, including the C++ out-of-bounds read for x < 0.
+unsafe fn ai_map(x: i32, y: i32) -> i32 {
+    if in_map(x, y) {
+        return g_map.map(x, y);
+    }
+    tile_to_flags(TileType(cmap_byte(CMAP_OFF_MAPDATATOP + x * MAPHEIGHT + y))) as i32
+}
+
+/// `g_map->block(x, y) != NULL`, including the C++ out-of-bounds read for x < 0.
+unsafe fn ai_block_nonnull(x: i16, y: i16) -> bool {
+    if in_map(x as i32, y as i32) {
+        return !g_map.block(x, y).is_null();
+    }
+    let off = CMAP_OFF_BLOCKDATA + (x as i32 * MAPHEIGHT + y as i32) * 8;
+    (0..8).any(|i| cmap_byte(off + i) != 0)
+}
+
+/// `g_map->checkforwarp(x1, x2, y, 2)`. Out of bounds, warpdata[x][y] lands in `nospawn`, whose bool
+/// bytes can never form direction 2, so the C++ returns false before touching warplocked/warpexits.
+unsafe fn ai_checkforwarp_up(x1: i16, x2: i16, y: i16) -> bool {
+    if in_map(x1 as i32, y as i32) && in_map(x2 as i32, y as i32) {
+        return g_map.checkforwarp(x1, x2, y, 2);
+    }
+    let lowest = CMAP_OFF_WARPDATA + ((x1.min(x2) as i32) * MAPHEIGHT + y as i32) * 8;
+    assert!(lowest >= CMAP_OFF_NOSPAWN, "ai: C++ out-of-bounds warpdata read at offset {} is not modelled", lowest);
+    false
+}
+
 /// `carriedItem` seen as a `CObject*`.
 fn carried_as_object(carriedItem: Ptr<dyn MO_CarriedObjectTrait>) -> Ptr<dyn CObjectTrait> {
     if carriedItem.is_null() {
@@ -1279,8 +1353,8 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
         //short depth = -1;
         // `break 'ExitDeathCheck` is the C++ `goto ExitDeathCheck`.
         'ExitDeathCheck: while (iDeathY as i32) < MAPHEIGHT {
-            let ttLeftTile: i32 = g_map.map(iDeathX1 as i32, iDeathY as i32);
-            let ttRightTile: i32 = g_map.map(iDeathX2 as i32, iDeathY as i32);
+            let ttLeftTile: i32 = ai_map(iDeathX1 as i32, iDeathY as i32);
+            let ttRightTile: i32 = ai_map(iDeathX2 as i32, iDeathY as i32);
 
             let fDeathTileUnderPlayer1 = ((ttLeftTile & tile_flag_death_on_top) != 0 && (ttRightTile & tile_flag_death_on_top) != 0)
                 || ((ttLeftTile & tile_flag_death_on_top) != 0 && (ttRightTile & tile_flag_solid) == 0)
@@ -1294,10 +1368,10 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
                 break 'ExitDeathCheck;
             } else if (ttLeftTile & tile_flag_solid) != 0
                 || (ttLeftTile & tile_flag_solid_on_top) != 0
-                || !g_map.block(iDeathX1, iDeathY).is_null()
+                || ai_block_nonnull(iDeathX1, iDeathY)
                 || (ttRightTile & tile_flag_solid) != 0
                 || (ttRightTile & tile_flag_solid_on_top) != 0
-                || !g_map.block(iDeathX2, iDeathY).is_null()
+                || ai_block_nonnull(iDeathX2, iDeathY)
             {
                 this.iFallDanger = 0;
                 break 'ExitDeathCheck;
@@ -1362,12 +1436,12 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
 
         let mut heightlimit: i16 = 3;
         while iDeathY >= 0 && heightlimit > 0 {
-            let ttLeftTile: i32 = g_map.map(iDeathX1 as i32, iDeathY as i32);
-            let ttRightTile: i32 = g_map.map(iDeathX2 as i32, iDeathY as i32);
+            let ttLeftTile: i32 = ai_map(iDeathX1 as i32, iDeathY as i32);
+            let ttRightTile: i32 = ai_map(iDeathX2 as i32, iDeathY as i32);
 
             if heightlimit == 2
                 && ((ttLeftTile & tile_flag_solid) != 0 || (ttRightTile & tile_flag_solid) != 0)
-                && !g_map.checkforwarp(iDeathX1, iDeathX2, iDeathY, 2)
+                && !ai_checkforwarp_up(iDeathX1, iDeathX2, iDeathY)
             {
                 //Avoid jumping wildly in 1 tile high gaps
                 playerKeys.game_jump_mut().fDown = false;
@@ -1375,8 +1449,8 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
 
             if ((ttLeftTile & tile_flag_solid) != 0 && (ttLeftTile & tile_flag_death_on_bottom) == 0)
                 || ((ttRightTile & tile_flag_solid) != 0 && (ttRightTile & tile_flag_death_on_bottom) == 0)
-                || !g_map.block(iDeathX1, iDeathY).is_null()
-                || !g_map.block(iDeathX2, iDeathY).is_null()
+                || ai_block_nonnull(iDeathX1, iDeathY)
+                || ai_block_nonnull(iDeathX2, iDeathY)
             {
                 break;
             } else if (ttLeftTile & tile_flag_death_on_bottom) != 0 || (ttRightTile & tile_flag_death_on_bottom) != 0 {
