@@ -1,5 +1,6 @@
 //! Port of src/common/movingplatform.cpp
 
+use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::game::App;
 use crate::common::gfx::gfx_drawpreview;
 use crate::common::global::*;
@@ -221,6 +222,16 @@ impl MovingPlatform {
 
     pub fn tile_type_at(&self, col: usize, row: usize) -> TileType {
         self.iTileType[col * self.iTileHeight as usize + row]
+    }
+
+    //Draw a custom sprite on a tile of the platform, instead of a tileset tile
+    pub fn paint_sprite_at(&mut self, spr: &gfxSprite, col: usize, row: usize) {
+        let iTileSize: i16 = self.iWidth / self.iTileWidth;
+        let dstPos = SDL_Rect { x: col as i32 * iTileSize as i32, y: row as i32 * iTileSize as i32, w: 0, h: 0 };
+
+        for layer in self.sSurface {
+            spr.draw_to(layer, &dstPos);
+        }
     }
 
     fn flags_at(&self, col: i16, row: i16) -> i32 {

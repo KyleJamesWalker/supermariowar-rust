@@ -1,7 +1,8 @@
 //! Port of src/smw/objects/blocks/DonutBlock.cpp
 
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::global::{g_map, g_tilesetmanager};
+use crate::common::global::g_map;
+use crate::common::global_constants::TILESETNONE;
 use crate::common::io_block::{IO_Block, IO_BlockTrait};
 use crate::common::map::TilesetTile;
 use crate::common::math::vec2::{Vec2f, Vec2s};
@@ -29,16 +30,17 @@ impl B_DonutBlock {
     }
 
     pub fn trigger_behavior_player(&mut self, iPlayerId: i16) {
-        //eyecandy[2].emplace<EC_FallingObject>(&rm->spr_donutblock, ix, iy, 0.0f, 0, 0, 0, 0);
-
+        //The falling block uses this block's own graphic instead of a tileset tile
         unsafe {
-            let tile = TilesetTile { iID: g_tilesetmanager.classic_tileset_index() as i16, iCol: 29, iRow: 15 };
+            let tile = TilesetTile { iID: TILESETNONE as i16, iCol: 0, iRow: 0 };
 
             let r#type = TileType::Solid;
 
             let path = Box::new(FallingPath::new(Vec2f::new(self.ix as f32 + 16.0f32, self.iy as f32 + 15.8f32)));
             let mut platform = MovingPlatform::new(vec![tile], vec![r#type], 1, 1, 2, path, false);
             platform.set_player_id(iPlayerId);
+            let spr = self.spr;
+            platform.paint_sprite_at(&*spr, 0, 0);
 
             g_map.add_temporary_platform(platform);
 
