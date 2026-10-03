@@ -2,9 +2,10 @@
 """Derive non-default persistent files from game-written defaults (see persist_interop.sh).
 
 Usage: persist_fuzz.py <seed> <defaults_dir> <out_dir>
-defaults_dir holds options.bin, controls.sdl2.bin and mapsummary.txt as the game wrote them; out_dir gets
-fuzzed copies plus servers.yml. Values stay in the ranges the menus can produce.
+defaults_dir holds options.bin, controls.sdl2.bin, mapsummary.txt and filters/*.txt as the game wrote them;
+out_dir gets fuzzed copies plus servers.yml. Values stay in the ranges the menus can produce.
 """
+import os
 import random
 import struct
 import sys
@@ -88,6 +89,11 @@ def fuzz_summary(rng, text):
     return '\n'.join(out) + '\n'
 
 
+def fuzz_filter(rng, maps):
+    picked = sorted(rng.sample(maps, rng.randrange(0, 30))) + ['No such map']
+    return f'#Version\n2.0.0.1\n\n#Icon\n{rng.randrange(120)}\n\n#Maps\n' + ''.join(m + '\n' for m in picked)
+
+
 def servers_yml(rng):
     name = ''.join(rng.choice('abcdefghijklmnopqrstuvwxyz') for _ in range(rng.randrange(3, 12)))
     hosts = ['127.0.0.1', 'smw.example.org', 'short', '192.168.0.10', 'localhost']
@@ -113,6 +119,11 @@ def main():
         f.write(summary)
     with open(f'{dst}/servers.yml', 'w') as f:
         f.write(servers_yml(rng))
+    maps = [line.split(',')[0] for line in summary.splitlines()]
+    os.makedirs(f'{dst}/filters', exist_ok=True)
+    for name in sorted(os.listdir(f'{src}/filters')):
+        with open(f'{dst}/filters/{name}', 'w') as f:
+            f.write(fuzz_filter(rng, maps))
 
 
 if __name__ == '__main__':
