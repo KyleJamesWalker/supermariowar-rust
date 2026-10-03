@@ -544,19 +544,19 @@ impl CPlayer {
         self.fy = self.iy as f32;
     }
 
-    fn this(&mut self) -> Ptr<CPlayer> {
+    pub fn this(&mut self) -> Ptr<CPlayer> {
         Ptr::from_mut(self)
     }
 
-    fn keys(&self) -> &mut COutputControl {
+    pub fn keys(&self) -> &mut COutputControl {
         self.playerKeys.get()
     }
 
-    fn clip_edge(&self) -> ClipEdge {
+    pub fn clip_edge(&self) -> ClipEdge {
         unsafe { std::mem::transmute::<i32, ClipEdge>((self.state as i16 % 4) as i32) }
     }
 
-    fn update_frozen_status(&mut self, keymask: i32) {
+    pub fn update_frozen_status(&mut self, keymask: i32) {
         if self.frozen {
             // `~(sprite_state & 0x1)` is never zero, so the left key always thaws.
             if b(keymask & 4) || (b(self.sprite_state as i32 & 0x1) && b(keymask & 8)) {
@@ -583,7 +583,7 @@ impl CPlayer {
         }
     }
 
-    fn accelerate(&mut self, direction: f32) {
+    pub fn accelerate(&mut self, direction: f32) {
         // direction is
         //  1 on moving right
         // -1 on moving left
@@ -664,15 +664,15 @@ impl CPlayer {
         }
     }
 
-    fn accelerate_right(&mut self) {
+    pub fn accelerate_right(&mut self) {
         self.accelerate(1.0);
     }
 
-    fn accelerate_left(&mut self) {
+    pub fn accelerate_left(&mut self) {
         self.accelerate(-1.0);
     }
 
-    fn decrease_velocity(&mut self) {
+    pub fn decrease_velocity(&mut self) {
         //Stop ground velocity when wearing the sticky shoe
         if !self.inair && self.kuriboshoe.get_type() == STICKY {
             self.velx = 0.0;
@@ -744,7 +744,7 @@ impl CPlayer {
         self.diedas = r#type;
     }
 
-    fn update_waiting_for_respawn(&mut self) {
+    pub fn update_waiting_for_respawn(&mut self) {
         debug_assert!(self.state == PlayerState::Waiting);
 
         unsafe {
@@ -791,7 +791,7 @@ impl CPlayer {
         }
     }
 
-    fn update_respawning(&mut self) {
+    pub fn update_respawning(&mut self) {
         debug_assert!(self.isspawning());
 
         unsafe {
@@ -836,7 +836,7 @@ impl CPlayer {
         }
     }
 
-    fn trigger_powerup(&mut self) {
+    pub fn trigger_powerup(&mut self) {
         let this = self.this();
         unsafe {
             match self.powerupused.unwrap() {
@@ -976,7 +976,7 @@ impl CPlayer {
         self.powerupused = None;
     }
 
-    fn update_use_powerup(&mut self) {
+    pub fn update_use_powerup(&mut self) {
         debug_assert!(self.powerupused.is_some());
 
         unsafe {
@@ -1017,7 +1017,7 @@ impl CPlayer {
         }
     }
 
-    fn try_falling_through_platform(&mut self, movement_direction: i16) {
+    pub fn try_falling_through_platform(&mut self, movement_direction: i16) {
         unsafe {
             //only if on the ground and the jump key was released somewhen after it was pressed the last time
             let mut fFellThrough = false;
@@ -1073,7 +1073,7 @@ impl CPlayer {
         }
     }
 
-    fn try_super_jumping(&mut self, movement_direction: i16) {
+    pub fn try_super_jumping(&mut self, movement_direction: i16) {
         debug_assert!(self.superjumptype > 0);
 
         unsafe {
@@ -1097,7 +1097,7 @@ impl CPlayer {
         self.lockjump = true;
     }
 
-    fn try_cape_double_jump(&mut self, movement_direction: i16) {
+    pub fn try_cape_double_jump(&mut self, movement_direction: i16) {
         debug_assert!(self.powerup == 3);
         if self.kuriboshoe.is_on() {
             return;
@@ -1122,7 +1122,7 @@ impl CPlayer {
         }
     }
 
-    fn try_start_flying(&mut self) {
+    pub fn try_start_flying(&mut self) {
         debug_assert!(self.powerup == 8);
         if self.kuriboshoe.is_on() || self.flying || self.extrajumps != 0 {
             return;
@@ -1137,7 +1137,7 @@ impl CPlayer {
         self.extrajumps += 1;
     }
 
-    fn try_shaking_tail(&mut self) {
+    pub fn try_shaking_tail(&mut self) {
         if self.kuriboshoe.is_on() || self.spin.is_spin_in_progress() {
             return;
         }
@@ -1157,7 +1157,7 @@ impl CPlayer {
         }
     }
 
-    fn try_releasing_powerup(&mut self) {
+    pub fn try_releasing_powerup(&mut self) {
         unsafe {
             if self.tanookisuit.is_statue() || game_values.gamemode.gamemode == game_mode_bonus {
                 return;
@@ -1183,7 +1183,7 @@ impl CPlayer {
         }
     }
 
-    fn use_special_powerup(&mut self) {
+    pub fn use_special_powerup(&mut self) {
         self.fAcceptingItem = self.carriedItem.is_null();
 
         unsafe {
@@ -1228,7 +1228,7 @@ impl CPlayer {
         }
     }
 
-    fn release_carried_item(&mut self) {
+    pub fn release_carried_item(&mut self) {
         self.lockfire = false;
         self.fAcceptingItem = false;
 
@@ -1252,7 +1252,7 @@ impl CPlayer {
         }
     }
 
-    fn update_flying_status(&mut self) {
+    pub fn update_flying_status(&mut self) {
         if self.flying {
             //If they player was frozen while flying, cause them to stop flying
             //or if they have been flying for a while, stop them flying
@@ -1685,7 +1685,7 @@ impl CPlayer {
         self.action = PlayerAction::None;
     }
 
-    fn update_sprite(&mut self) {
+    pub fn update_sprite(&mut self) {
         unsafe {
             let iReverseSprite: i32 = if game_values.reversewalk { 1 } else { 0 };
 
@@ -1868,7 +1868,7 @@ impl CPlayer {
         }
     }
 
-    fn cpu_think(&mut self) {
+    pub fn cpu_think(&mut self) {
         let keys = self.playerKeys;
         self.pPlayerAI.as_mut().unwrap().think(keys);
     }
@@ -1978,7 +1978,7 @@ impl CPlayer {
         self.clear_powerup_states();
     }
 
-    fn setup_new_player(&mut self) {
+    pub fn setup_new_player(&mut self) {
         unsafe {
             self.pScoreboardSprite = self.sprites;
             self.action = PlayerAction::None;
@@ -2060,7 +2060,7 @@ impl CPlayer {
         self.powerupused = None;
     }
 
-    fn find_spawn_point(&mut self) -> bool {
+    pub fn find_spawn_point(&mut self) -> bool {
         unsafe {
             let fRet = g_map.findspawnpoint(self.teamID + 1, &mut self.ix, &mut self.iy, PW as i16, PH as i16, false);
 
@@ -2257,7 +2257,7 @@ impl CPlayer {
         }
     }
 
-    fn draw_spotlight(&mut self) {
+    pub fn draw_spotlight(&mut self) {
         unsafe {
             if game_values.spotlights && self.state != PlayerState::Dead {
                 if self.sSpotlight.is_null() {
@@ -2271,7 +2271,7 @@ impl CPlayer {
         }
     }
 
-    fn draw_powerup_ring(&mut self) {
+    pub fn draw_powerup_ring(&mut self) {
         if let Some(used) = self.powerupused {
             let numeyecandy: i16 = 8;
             let addangle: f32 = TWO_PI / numeyecandy as f32;
@@ -2295,7 +2295,7 @@ impl CPlayer {
         }
     }
 
-    fn draw_winner_crown(&mut self) {
+    pub fn draw_winner_crown(&mut self) {
         unsafe {
             if game_values.showwinningcrown && g_iWinningPlayer == self.teamID {
                 let x = self.ix as i32 + HALFPW - if self.is_facing_right() { 4 } else { 10 };
@@ -2491,7 +2491,7 @@ impl CPlayer {
         }
     }
 
-    fn mapcolldet_handle_platform_velocity(&mut self, fPlatformVelX: &mut f32, fPlatformVelY: &mut f32) {
+    pub fn mapcolldet_handle_platform_velocity(&mut self, fPlatformVelX: &mut f32, fPlatformVelY: &mut f32) {
         if !self.platform.is_null() {
             *fPlatformVelX = self.platform.fVelX;
             self.set_xf(self.fx + *fPlatformVelX);
@@ -2507,7 +2507,7 @@ impl CPlayer {
         }
     }
 
-    fn mapcolldet_handle_out_of_screen(&mut self) -> bool {
+    pub fn mapcolldet_handle_out_of_screen(&mut self) -> bool {
         if self.fPrecalculatedY + (PH as f32) < 0.0 {
             // on top outside of the screen
             self.set_yf(self.fPrecalculatedY);
@@ -2541,7 +2541,7 @@ impl CPlayer {
         false
     }
 
-    fn mapcolldet_move_horizontally(&mut self, direction: i16) {
+    pub fn mapcolldet_move_horizontally(&mut self, direction: i16) {
         debug_assert!(direction == 1 || direction == 3);
         let counter_direction: i16 = if direction == 1 { 3 } else { 1 };
         let this = self.this();
@@ -2674,7 +2674,7 @@ impl CPlayer {
         }
     }
 
-    fn mapcolldet_move_upward(&mut self, txl: i16, txc: i16, txr: i16, alignedBlockX: i16, unAlignedBlockX: i16, unAlignedBlockFX: f32) {
+    pub fn mapcolldet_move_upward(&mut self, txl: i16, txc: i16, txr: i16, alignedBlockX: i16, unAlignedBlockX: i16, unAlignedBlockFX: f32) {
         let this = self.this();
 
         unsafe {
@@ -2796,7 +2796,7 @@ impl CPlayer {
         }
     }
 
-    fn mapcolldet_move_downward(&mut self, txl: i16, _txc: i16, txr: i16, alignedBlockX: i16, unAlignedBlockX: i16, _unAlignedBlockFX: f32) {
+    pub fn mapcolldet_move_downward(&mut self, txl: i16, _txc: i16, txr: i16, alignedBlockX: i16, unAlignedBlockX: i16, _unAlignedBlockFX: f32) {
         let this = self.this();
 
         unsafe {
@@ -2978,7 +2978,7 @@ impl CPlayer {
         }
     }
 
-    fn collision_detection_map(&mut self) {
+    pub fn collision_detection_map(&mut self) {
         let this = self.this();
 
         self.set_xf(self.fx + self.velx);
