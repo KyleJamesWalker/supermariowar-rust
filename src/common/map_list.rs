@@ -33,7 +33,7 @@ impl MapListNode {
             filename: fullName,
             iIndex: 0,
             iFilteredIndex: 0,
-            fInCurrentFilterSet: false,
+            fInCurrentFilterSet: true,
             fReadFromCache: false,
             fValid: true,
         }
