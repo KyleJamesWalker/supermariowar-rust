@@ -103,7 +103,30 @@
 #Stages
 #Stage Type 0,Map,Mode,Goal,Points,Bonus List(Max 10),Name,End World, then mode settings (see sample tour file for details)
 #Stage Type 1,Bonus House Name,Sequential/Random Order,Display Text,Powerup List(Max 5)
-0
+23
+0,On Drugs,0,10,1,0,On Drugs,0,0
+0,Secret Civilization,11,30,1,p17,Secret Civilization,0,1,777,1,1,1
+0,Childs Play,10,10,1,0,Childs Play,0,15,1,5
+0,Bonus I Think,13,3,1,0,Bonus I Think,0,8,3,1
+0,Smworld bonus,4,250,1,0,Super Mario World Bonus,0,1,25
+0,Bonus circus,5,100,1,0,Bonus Circus,0,15,10,0,5,10,3,5,0,0,0
+0,Bonus Cave,6,10,1,0,Bonus Cave,0,1,0,0,0,1,0,0,0,10
+0,Bonus Paradise,14,200,1,0,Bonus Paradise,0
+0,Bonus Puzzle,15,10,1,0,Bonus Puzzle,0,8,0,0,5,0,0,0,0,0,0,10,0,0,0,0,0,0,10,0,0,0,0
+0,Bonusful,7,5,1,0,Bonusful,0,0,0,1,0,1,0
+0,Grassy Bonus,5,15,1,0,Grassy Bonus,0,150,10,2,0,1,1,1,5,1,1
+0,Rotting like a Bonus Room,3,15,1,0,Rotting Away,0,0,1,0,20
+0,Bawnus,1,25,3,0,Bawnus,1,0,0
+1,Toad's House,1,||Pick an item to help you on your way!||,p1,p5,p8
+1,Toad's House,1,||Pick an item to help you on your way!||,p2,p11,p9
+1,Toad's House,1,||Pick an item to help you on your way!||,p3,p19,p16
+1,Toad's House,1,||Pick an item to help you on your way!||,p18,w1,w12
+1,Toad's Gold House,1,||Too Much Good Stuff (tm)||,p4,p6,p14,p16,w14
+1,Toad's Gold House,1,||Too Much Good Stuff (tm)||,p4,p6,p14,p16,w14
+1,Red Palace Switch,0,||Here is an item that you need!||,w5
+1,Yellow Palace Switch,0,||Here is an item that you need!||,w6
+1,Green Palace Switch,0,||Here is an item that you need!||,w7
+1,Blue Palace Switch,0,||Here is an item that you need!||,w8
 
 #Warps
 #location 1 x, y, location 2 x, y
