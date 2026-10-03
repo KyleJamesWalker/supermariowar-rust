@@ -6,7 +6,7 @@ use crate::common::game_mode::*;
 use crate::common::game_values::{if_sound_on_play, AppState};
 use crate::common::gameplay_styles::TournamentControlStyle;
 use crate::common::gfx::{gfx_changefullscreen, gfx_loadpalette, gfx_take_screenshot};
-use crate::common::global_constants::{MAX_PLAYERS, PANNOUNCER_SOUND_LAST};
+use crate::common::global_constants::{MAX_PLAYERS, PANNOUNCER_SOUND_LAST, TILESIZE};
 use crate::common::map::{read_type_full, read_type_preview};
 use crate::common::map_list::fgets_lines;
 use crate::common::match_types::{Boss, MatchType, Minigame};
@@ -18,6 +18,8 @@ use crate::common::uimenu::UI_Menu;
 use crate::common::version::Version;
 use crate::common::world_tour_stop::{parse_tour_stop_line, reset_tour_stops, Strtok, TourStop};
 use crate::globals::*;
+use crate::common::eyecandy::EC_Announcement;
+use crate::smw::world::{g_worldmap, WorldMap};
 use crate::smw::main::{bonushousemode, bossgamemode, boxesgamemode, pipegamemode};
 use crate::smw::game_state::{GameState, GameStateManager};
 use crate::smw::gs_gameplay::{lookup_team_id, GameplayState};
@@ -400,9 +402,15 @@ impl MenuState {
                 format!("Team {} Is In Control", iControlTeam + 1)
             };
 
-            let _iIcon: i16 = if iControlTeam < 0 { 4 } else { game_values.colorids[game_values.teamids[iControlTeam as usize][0] as usize] };
-            let _szMessage = szMessage;
-            // TODO(eyecandy): mCurrentMenu->AddEyeCandy<EC_Announcement>(&rm->menu_font_large, &rm->spr_announcementicons, szMessage, iIcon, 120, 100);
+            let iIcon: i16 = if iControlTeam < 0 { 4 } else { game_values.colorids[game_values.teamids[iControlTeam as usize][0] as usize] };
+            self.mCurrentMenu.eyeCandy.emplace(EC_Announcement::new(
+                Ptr::from_mut(&mut rm.menu_font_large),
+                Ptr::from_mut(&mut rm.spr_announcementicons),
+                szMessage,
+                iIcon,
+                120,
+                100,
+            ));
         }
     }
 
@@ -519,11 +527,11 @@ impl MenuState {
                     let this = Ptr::from_mut(self);
                     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                         let mut this = this;
-                        // TODO(world): g_worldmap = WorldMap(worldlist->at(game_values.worldindex).string(), TILESIZE);
+                        g_worldmap.init(WorldMap::new_path(&worldlist.at(game_values.worldindex as usize).to_string_lossy(), TILESIZE as i16));
 
                         this.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(score_cnt, 0, Ptr::from_mut(&mut rm.spr_tour_markers));
 
-                        // TODO(world): g_worldmap.SetInitialPowerups();
+                        g_worldmap.set_initial_powerups();
 
                         //If a player had a stored powerup from another game, add it to their inventory
                         for iPlayer in 0..4i16 {
@@ -742,12 +750,12 @@ impl MenuState {
                 // TODO: set from network
                 self.mModeOptionsMenu.set_random_game_mode_settings(game_values.gamemode.gamemode as i16);
             } else {
-                // TODO(gs_gameplay): SetGameModeSettingsFromMenu();
+                crate::smw::gs_gameplay::set_game_mode_settings_from_menu();
             }
 
             if game_values.matchtype == MatchType::World && game_values.tourstops[game_values.tourstopcurrent].iStageType == 1 {
                 g_map.load_map(&convert_path("maps/special/two52_special_bonushouse.map"), read_type_full);
-                // TODO(global): LoadCurrentMapBackground();
+                crate::common::global::load_current_map_background();
 
                 if game_values.music {
                     rm.backgroundmusic[0] = sfxMusic::from_file(worldmusiclist.current_music(WorldMusicCategory::Bonus, "")).unwrap_or_else(|e| std::panic::panic_any(e));
@@ -807,7 +815,7 @@ impl MenuState {
                     sShortMapName = maplist.current_shortmapname().to_string();
                 }
 
-                // TODO(global): LoadCurrentMapBackground();
+                crate::common::global::load_current_map_background();
 
                 //Allows all players to start the game
                 game_values.singleplayermode = -1;
@@ -831,7 +839,7 @@ impl MenuState {
             g_map.predrawforeground(&rm.spr_frontmap[1]);
 
             g_map.setup_animated_tiles();
-            // TODO(gs_gameplay): LoadMapObjects(false);
+            crate::smw::gs_gameplay::load_map_objects(false);
 
             GameStateManager::instance().change_state_to(Ptr::from_mut(GameplayState::instance() as &mut dyn GameState));
         }
@@ -1322,7 +1330,7 @@ impl GameState for MenuState {
                     mCurrentMenu = mBonusWheelMenu;
                 }*/
 
-                // TODO(gs_gameplay): UpdateScoreBoard();
+                crate::smw::gs_gameplay::update_score_board();
 
                 //If we're suposed to skip the scoreboard, then reset back to the world map
                 if game_values.worldskipscoreboard {
@@ -1537,7 +1545,8 @@ impl GameState for MenuState {
                     self.mCurrentMenu.reset_menu();
 
                     rm.backgroundmusic[2].stop();
-                    // TODO(world): rm->backgroundmusic[5] = sfxMusic(worldmusiclist->currentMusic(g_worldmap.GetMusicCategory(), g_worldmap.GetWorldName()));
+                    let worldMusic = worldmusiclist.current_music(g_worldmap.get_music_category(), g_worldmap.get_world_name()).clone();
+                    rm.backgroundmusic[5] = sfxMusic::from_file(&worldMusic).unwrap_or_else(|e| std::panic::panic_any(e));
                     rm.backgroundmusic[5].play(false, false);
                     self.fNeedMenuMusicReset = true;
 

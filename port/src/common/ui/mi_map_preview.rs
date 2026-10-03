@@ -5,6 +5,15 @@ use crate::common::map::read_type_preview;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
+use crate::common::global::load_current_map_background;
+use crate::smw::gs_gameplay::{noncolcontainer, objectcontainer};
+use crate::smw::objecthazard::load_map_hazards;
+use crate::smw::objects::io_flame_cannon::IO_FlameCannon;
+use crate::smw::objects::moving::mo_bullet_bill::MO_BulletBill;
+use crate::smw::objects::moving::mo_pirhana_plant::MO_PirhanaPlant;
+use crate::smw::objects::overmap::over_map_object::io_over_map_object_draw_offset;
+use crate::smw::objects::overmap::wo_orbit_hazard::OMO_OrbitHazard;
+use crate::smw::objects::overmap::wo_straight_path_hazard::OMO_StraightPathHazard;
 use sdl2::sys::{SDL_CreateRGBSurface, SDL_Delay, SDL_Rect, SDL_Surface, SDL_UpperBlit};
 
 fn small_delay() {
@@ -72,12 +81,14 @@ impl MI_MapPreview {
 
     pub fn update_impl(&mut self) {
         //Update hazards
-        // TODO(gameplay): noncolcontainer.update();
+        unsafe {
+            noncolcontainer.update();
 
-        // TODO(gameplay): objectcontainer[1].update();
-        // TODO(gameplay): objectcontainer[1].cleanDeadObjects();
+            objectcontainer[1].update();
+            objectcontainer[1].clean_dead_objects();
 
-        unsafe { g_map.update_platforms() };
+            g_map.update_platforms();
+        }
     }
 
     pub fn draw_impl(&mut self) {
@@ -107,7 +118,22 @@ impl MI_MapPreview {
             g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 1);
 
             //Draw map hazards
-            // TODO(objects): draw OMO_OrbitHazard/OMO_StraightPathHazard/IO_FlameCannon/MO_BulletBill/MO_PirhanaPlant in objectcontainer[1] at rectDst
+            let (ox, oy) = (self.rectDst.x as i16, self.rectDst.y as i16);
+            for i in 0..objectcontainer[1].list().len() {
+                let mut obj = objectcontainer[1].list()[i];
+                let any = obj.as_any();
+                if let Some(hazard) = any.downcast_mut::<OMO_OrbitHazard>() {
+                    io_over_map_object_draw_offset(hazard, ox, oy);
+                } else if let Some(hazard) = any.downcast_mut::<OMO_StraightPathHazard>() {
+                    io_over_map_object_draw_offset(hazard, ox, oy);
+                } else if let Some(hazard) = any.downcast_mut::<IO_FlameCannon>() {
+                    hazard.draw_offset(ox, oy);
+                } else if let Some(hazard) = any.downcast_mut::<MO_BulletBill>() {
+                    hazard.draw_offset(ox, oy);
+                } else if let Some(hazard) = any.downcast_mut::<MO_PirhanaPlant>() {
+                    hazard.draw_offset(ox, oy);
+                }
+            }
 
             g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 2);
 
@@ -134,7 +160,7 @@ impl MI_MapPreview {
             g_map.load_map(szMapPath, read_type_preview);
             small_delay(); //Sleeps to help the music from skipping
 
-            // TODO(global): LoadCurrentMapBackground();
+            load_current_map_background();
             small_delay();
 
             g_map.pre_draw_preview_background_spr(&rm.spr_background, self.surfaceMapBackground, false);
@@ -152,7 +178,7 @@ impl MI_MapPreview {
             g_map.pre_draw_preview_warps(if game_values.toplayer { self.surfaceMapForeground } else { self.surfaceMapBackground }, false);
             small_delay();
 
-            // TODO(objecthazard): LoadMapHazards(true);
+            load_map_hazards(true);
         }
     }
 
