@@ -11,7 +11,7 @@ use smw::common_netplay::network_interface::{NetPeer, NetworkEventHandler};
 use smw::common_netplay::protocol_definitions::*;
 use smw::common_netplay::protocol_packages::{ClientConnection, JoinRoom, MessageHeader, NewRoom, NewRoomCreated, RoomChatMsg, RoomInfo, ServerInfo};
 use smw::globals::Ptr;
-use std::collections::HashMap;
+use super::unordered_map::UnorderedMap;
 
 static mut netLayer: Option<NetworkLayerENet> = None;
 
@@ -25,11 +25,11 @@ pub struct SMWServer {
 
     currentPlayerCount: u32,
     maxPlayerCount: u32,
-    players: HashMap<u64, Box<Player>>,
+    players: UnorderedMap<u64, Player>,
 
     roomCreateID: u32, // temporary
     currentRoomCount: u32,
-    rooms: HashMap<u32, Room>,
+    rooms: UnorderedMap<u32, Room>,
 }
 
 impl SMWServer {
@@ -39,10 +39,10 @@ impl SMWServer {
             serverInfo: ServerInfo::with("SMW Server", 0, 20 /* maxPlayerCount */),
             currentPlayerCount: 0,
             maxPlayerCount: 20,
-            players: HashMap::new(),
+            players: UnorderedMap::new(),
             roomCreateID: 1,
             currentRoomCount: 0,
-            rooms: HashMap::new(),
+            rooms: UnorderedMap::new(),
         }
     }
 
@@ -160,7 +160,7 @@ impl SMWServer {
     }
 
     fn player(&mut self, playerID: u64) -> Option<Ptr<Player>> {
-        self.players.get_mut(&playerID).map(|p| Ptr::from_mut(&mut **p))
+        self.players.get_mut(&playerID).map(Ptr::from_mut)
     }
 
     fn player_connects_server(&mut self, playerID: u64, data: &[u8]) {
@@ -443,7 +443,7 @@ impl NetworkEventHandler for SMWServer {
             std::mem::forget(new_client);
         } else {
             let address = new_client.address_as_string();
-            self.players.entry(new_client.get_player_id()).or_insert_with(|| Box::new(Player::new())).set_client(new_client);
+            self.players.index_or_insert_with(new_client.get_player_id(), Player::new).set_client(new_client);
             log(&format!("[info] New connection from {}", address));
         }
     }
@@ -453,7 +453,7 @@ impl NetworkEventHandler for SMWServer {
         let playerID = client.get_player_id();
         if self.players.contains_key(&playerID) {
             self.player_leaves_room(playerID);
-            let player = &self.players[&playerID];
+            let player = self.players.get(&playerID).unwrap();
             log(&format!("[info] {}@{} disconnected.", String::from_utf8_lossy(&player.name), player.network_client.as_ref().unwrap().address_as_string()));
             self.players.remove(&playerID);
         } else {

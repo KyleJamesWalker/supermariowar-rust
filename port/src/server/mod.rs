@@ -10,4 +10,5 @@ pub mod network_layer_enet;
 pub mod player;
 pub mod room;
 pub mod server;
+pub mod unordered_map;
 pub mod util;
