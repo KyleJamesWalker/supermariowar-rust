@@ -1,0 +1,41 @@
+# Players: human, none, CPU, CPU; Classic; player 1 idle.
+#@ seed=304
+#@ map=2skyfight
+#@ frames=3000
+#@ shots=428,2999
+10 down Return
+12 up Return
+30 down Down
+32 up Down
+44 down Return
+46 up Return
+58 down Right
+60 up Right
+72 down Right
+74 up Right
+86 down Up
+88 up Up
+100 down Right
+102 up Right
+114 down Up
+116 up Up
+128 down Right
+130 up Right
+142 down Right
+144 up Right
+156 down Up
+158 up Up
+170 down Return
+172 up Return
+184 down Up
+186 up Up
+198 down Return
+200 up Return
+228 down Return
+230 up Return
+258 down Return
+260 up Return
+288 down Return
+290 up Return
+328 down Return
+330 up Return

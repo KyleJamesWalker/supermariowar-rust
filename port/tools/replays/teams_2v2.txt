@@ -1,0 +1,39 @@
+# Team play: players 3 and 4 as CPUs; player 2 moves onto player 1's team in Team Select; Classic.
+#@ seed=306
+#@ map=4highabove
+#@ frames=3000
+#@ shots=446,2999
+10 down Return
+12 up Return
+30 down Down
+32 up Down
+44 down Return
+46 up Return
+58 down Right
+60 up Right
+72 down Right
+74 up Right
+86 down Up
+88 up Up
+100 down Right
+102 up Right
+114 down Up
+116 up Up
+128 down Return
+130 up Return
+142 down Up
+144 up Up
+156 down Return
+158 up Return
+186 down Return
+188 up Return
+216 down A
+218 up A
+246 down E
+248 up E
+276 down Return
+278 up Return
+306 down Return
+308 up Return
+346 down Return
+348 up Return

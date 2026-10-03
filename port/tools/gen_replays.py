@@ -173,6 +173,98 @@ REPLAYS["mini_pipe"] = lambda: flow("mini_pipe", "Pipe Coin minigame", 4, 0, 2, 
 REPLAYS["mini_hammerboss"] = lambda: flow("mini_hammerboss", "Hammer Boss minigame", 4, 1, 2, 205, 3000)
 REPLAYS["mini_boxes"] = lambda: flow("mini_boxes", "Boxes minigame", 4, 4, 2, 206, 3000)
 
+def edit_options(s, edits):
+    """From the main menu (focus Start): open Options, then for each (submenu, fields) open that submenu
+    and edit its fields top to bottom, then back out to Start. A field entry is an int (modify, Right n
+    times, accept), "t" (auto-advance field: one Return), 0 (skip), or a list of raw keys."""
+    s.tap("Down")
+    s.tap("Down")
+    s.tap("Down")            # Start -> Players -> Multiplayer -> Options
+    s.tap("Return", gap=20)
+    cur = 0
+    for submenu, fields in edits:
+        key = "Down" if submenu > cur else "Up"
+        for _ in range(abs(submenu - cur)):
+            s.tap(key)
+        cur = submenu
+        s.tap("Return", gap=20)
+        for f in fields:
+            if isinstance(f, list):
+                for k in f:
+                    s.tap(k)
+                continue
+            if f == "t":
+                s.tap("Return")
+            elif f:
+                s.tap("Return")
+                for _ in range(f):
+                    s.tap("Right", gap=8)
+                s.tap("Return")
+            s.tap("Down")
+        s.tap("Escape", gap=20)  # submenu -> Options, focus stays on its button
+    s.tap("Escape", gap=20)      # Options -> main menu (focus Options)
+    s.tap("Up")
+    s.tap("Up")
+    s.tap("Up")                  # back to Start
+
+
+def set_players(s, deltas, order=(0, 1, 2, 3)):
+    """Players field: per slot, a list of 'Up'/'Down' presses (Down: none->human->CPU->none).
+    Slots are visited in `order`; the game refuses to drop below two players, so add players first."""
+    s.tap("Down")
+    s.tap("Return")
+    cur = 0
+    for slot in order:
+        for _ in range((slot - cur) % 4):
+            s.tap("Right")
+        cur = slot
+        for k in deltas[slot]:
+            s.tap(k)
+    s.tap("Return")
+    s.tap("Up")
+
+
+def options_game(name, desc, seed, mapname, frames, edits, players, mode=0, team_keys=("Return",), order=(0, 1, 2, 3)):
+    s = Script()
+    boot_to_main(s)
+    if edits:
+        edit_options(s, edits)
+    set_players(s, players, order)
+    s.tap("Return", gap=30)   # Start -> Match Selection
+    s.tap("Return", gap=30)   # Start -> Team Select
+    for key in team_keys:
+        s.tap(key, gap=30)
+    s.tap("Return", gap=30)   # -> Game Settings
+    s.wait(10)
+    game_settings_mode(s, mode)
+    s.tap("Return", gap=40)   # Start
+    shots = [s.f + 60, frames - 1]
+    s.write(name, f"# {desc}\n#@ seed={seed}\n#@ map={mapname}\n#@ frames={frames}\n#@ shots={','.join(map(str, shots))}\n")
+
+
+CPU4 = [["Down"], ["Down"], ["Up"], ["Up"]]
+
+REPLAYS["opt_gameplay"] = lambda: options_game(
+    "opt_gameplay", "Gameplay options changed (respawn, shields, bounds, suicide, warp lock, CPU difficulty, point speed, secrets), 4 CPUs, Classic.",
+    301, "Manic Mountain", 3600, [(0, [3, 1, 2, 1, 2, 1, 1, 2, 1, 1])], CPU4, team_keys=())
+REPLAYS["opt_items"] = lambda: options_game(
+    "opt_items", "Item odds preset, item settings, projectile options and limits changed, 4 CPUs, Frenzy.",
+    302, "Block Piles", 3600,
+    [(2, [["Down", "Return", "Right", "Right", "Right", "Return"]]), (3, [2, 1, 1, 1, 1, "t"]),
+     (4, [1, 1, 1, 2, 1, 1, 1, 1, "t", 1, 1, 1]), (5, [2, 1, 1, 1, 1, 1, 1, 1, 1])], CPU4, mode=15, team_keys=())
+REPLAYS["opt_eyecandy"] = lambda: options_game(
+    "opt_eyecandy", "Eye candy, team and top-layer options changed, 4 CPUs, Star mode.",
+    303, "Cloud Props", 3600, [(7, [1, 2, 1, "t", "t", "t", "t", "t"]), (1, [1, "t", 1]), (6, ["t"])], CPU4, mode=10, team_keys=())
+REPLAYS["players_h_n_c_c"] = lambda: options_game(
+    "players_h_n_c_c", "Players: human, none, CPU, CPU; Classic; player 1 idle.",
+    304, "2skyfight", 3000, [], [[], ["Up"], ["Up"], ["Up"]], order=(2, 3, 1))
+REPLAYS["players_c_h_c_n"] = lambda: options_game(
+    "players_c_h_c_n", "Players: CPU, human, CPU, none; Classic; player 2 idle.",
+    305, "3blockforts", 3000, [], [["Down"], [], ["Up"], []], team_keys=("E", "Return"))
+REPLAYS["teams_2v2"] = lambda: options_game(
+    "teams_2v2", "Team play: players 3 and 4 as CPUs; player 2 moves onto player 1's team in Team Select; Classic.",
+    306, "4highabove", 3000, [], [[], [], ["Up"], ["Up"]], team_keys=("A", "E", "Return"))
+
 REPLAYS["fuzz_a"] = lambda: fuzz("fuzz_a", 7001, "0smw")
 REPLAYS["fuzz_b"] = lambda: fuzz("fuzz_b", 7002, "Block Piles")
 REPLAYS["fuzz_c"] = lambda: fuzz("fuzz_c", 7003, "Manic Mountain")
