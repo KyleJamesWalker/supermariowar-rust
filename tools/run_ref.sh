@@ -4,7 +4,7 @@
 # Usage: run_ref.sh <replay.txt> [out_dir]
 #
 # Run parameters come from `#@ key=value` lines in the replay (seed, frames,
-# map, shots, options); SMW_SEED/SMW_FRAMES/SMW_MAP/SMW_SHOT_FRAMES in the environment
+# map, shots, options, options_b64, controls_b64); SMW_SEED/SMW_FRAMES/SMW_MAP/SMW_SHOT_FRAMES in the environment
 # override them. Writes <out_dir>/dump.txt and <out_dir>/frame_<n>.bmp.
 # SMW_BIN and SMW_DATA_DIR select another binary and data tree (run_rust.sh uses them).
 # See REPLAY.md.
@@ -36,6 +36,8 @@ frames="${SMW_FRAMES:-$(directive frames)}"
 map="${SMW_MAP:-$(directive map)}"
 shots="${SMW_SHOT_FRAMES:-$(directive shots)}"
 options="$(directive options)"
+options_b64="$(directive options_b64)"
+controls_b64="$(directive controls_b64)"
 
 mkdir -p "$out"
 out="$(cd "$out" && pwd)"
@@ -57,6 +59,12 @@ mkdir -p "$home/Library/Preferences"
 if [[ -n "$options" ]]; then
     mkdir -p "$home/Library/Preferences/.smw"
     cp "$(dirname "$replay")/$options" "$home/Library/Preferences/.smw/options.bin"
+fi
+# Session recordings embed the settings files they started with.
+if [[ -n "$options_b64" || -n "$controls_b64" ]]; then
+    mkdir -p "$home/Library/Preferences/.smw"
+    [[ -z "$options_b64" ]] || printf '%s' "$options_b64" | base64 -d > "$home/Library/Preferences/.smw/options.bin"
+    [[ -z "$controls_b64" ]] || printf '%s' "$controls_b64" | base64 -d > "$home/Library/Preferences/.smw/controls.sdl2.bin"
 fi
 cp -c -R "$data" "$sandbox/data" 2>/dev/null || cp -R "$data" "$sandbox/data"
 rm -f "$sandbox/data/maps/cache/mapsummary.txt"
