@@ -27,9 +27,9 @@ Scope order: core game + menus + sound, then netplay, level editor, world editor
 | common/WorldTourStop.cpp | common/world_tour_stop.rs | done | strtok unit test |
 | common/GameValues.cpp | common/game_values.rs | done except full options.bin IO (handed to gfx) | not yet |
 | common/ObjectBase.cpp, IO_Block.h, GameMode.h, Game.cpp | common/object_base.rs, io_block.rs, game_mode.rs, game.rs | done (headers + base structs/traits) | n/a |
-| smw/player.cpp | smw/player.rs | done except netplay branches | start_classic reaches gameplay; P lines not comparable yet (RNG diverges in the menu at frame 30) |
-| smw/player_components/* | smw/player_components/*.rs | done | as above |
-| smw/ai.cpp | smw/ai.rs | done | frenzy_cpu: not comparable yet (same menu RNG divergence) |
+| smw/player.cpp | smw/player.rs | done except netplay branches | start_classic, map_blockpiles, frenzy_cpu: all frames identical, all shots match |
+| smw/player_components/* | smw/player_components/*.rs | done | via the replays above |
+| smw/ai.cpp | smw/ai.rs | done | frenzy_cpu: all 2780 frames identical, including RNG call counts |
 | smw/GSGameplay.cpp | smw/gs_gameplay.rs | done except netplay (TODO(net)) | start_classic: not yet run |
 | smw/gamemodes/* (GameMode, GameModeTimer, all 22 modes, bonus house, 3 minigames) | smw/gamemodes/*.rs | done except netplay disconnect text | via start_classic / frenzy_cpu, not yet run |
 | smw/main.cpp create_gamemodes, mode globals | smw/main.rs | done | |
