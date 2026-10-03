@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Run the Rust port on every replay and diff it against the C++ golden output.
-# Usage: parity.sh [replay.txt ...]   (default: every replays/*.txt)
+# Usage: parity.sh [replay.txt ...]   (default: every replays/*.txt); JOBS=n runs n at once.
+# Goldens: replays/<x>.txt -> golden/<x>/, replays_sweep/<x>.txt -> golden_sweep/<x>/.
 # Output per replay: first divergence (diffreplay.py), screenshot check, then a summary.
 # Exit status 1 if any replay diverges.
 set -uo pipefail
@@ -15,16 +16,27 @@ fi
 
 cargo build --release --quiet --manifest-path "$port/Cargo.toml" || exit 2
 
+run_one() {
+    local replay="$1" name
+    name="$(basename "$replay" .txt)"
+    SMW_NO_BUILD=1 "$tools/run_rust.sh" "$replay" "$out_root/$name" > /dev/null
+    echo $? > "$out_root/$name.status"
+}
+export -f run_one
+export tools out_root
+mkdir -p "$out_root"
+printf '%s\0' "${replays[@]}" | xargs -0 -n 1 -P "${JOBS:-1}" bash -c 'run_one "$0"'
+
 summary=()
 failed=0
 for replay in "${replays[@]}"; do
     name="$(basename "$replay" .txt)"
-    golden="$tools/golden/$name"
+    dir="$(cd "$(dirname "$replay")" && pwd)"
+    golden="$(dirname "$dir")/$(basename "$dir" | sed 's/^replays/golden/')/$name"
     out="$out_root/$name"
     echo "=== $name"
 
-    SMW_NO_BUILD=1 "$tools/run_rust.sh" "$replay" "$out" > /dev/null
-    status=$?
+    status="$(cat "$out_root/$name.status" 2>/dev/null || echo 2)"
     if [[ $status -ne 0 ]]; then
         echo "rust exited with status $status; last output:"
         tail -n 5 "$out/stdout.log" | sed 's/^/    /'

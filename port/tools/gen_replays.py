@@ -13,6 +13,8 @@ import sys
 from pathlib import Path
 
 OUT = Path(__file__).resolve().parent / "replays"
+SWEEP_OUT = Path(__file__).resolve().parent / "replays_sweep"
+DATA = Path(__file__).resolve().parents[2] / "data"
 
 GAME_MODES = [
     "classic", "frag", "timelimit", "jail", "coins", "stomp", "eggs", "ctf", "chicken", "tag", "star",
@@ -38,9 +40,9 @@ class Script:
         self.events.append((f, "down", key))
         self.events.append((f + n, "up", key))
 
-    def write(self, name, header):
+    def write(self, name, header, out=None):
         ev = sorted(self.events, key=lambda e: (e[0], 0 if e[1] == "up" else 1))
-        with open(OUT / f"{name}.txt", "w") as fh:
+        with open((out or OUT) / f"{name}.txt", "w") as fh:
             fh.write(header)
             for f, d, k in ev:
                 fh.write(f"{f} {d} {k}\n")
@@ -176,7 +178,39 @@ REPLAYS["fuzz_b"] = lambda: fuzz("fuzz_b", 7002, "Block Piles")
 REPLAYS["fuzz_c"] = lambda: fuzz("fuzz_c", 7003, "Manic Mountain")
 
 
+CPP_CRASH_FRAME = {"Tanuki_Moby Dick.map": 812}
+
+
+def sweep():
+    """4 CPU Classic games on every map in data/maps, about 900 gameplay frames each."""
+    import re
+    SWEEP_OUT.mkdir(exist_ok=True)
+    for old in SWEEP_OUT.glob("*.txt"):
+        old.unlink()
+    maps = sorted(p.name for p in (DATA / "maps").glob("*.map"))
+    for i, mapfile in enumerate(maps):
+        s = Script()
+        boot_to_main(s)
+        players_all_cpu(s)
+        s.tap("Return", gap=20)   # Start -> Match Selection
+        s.tap("Return", gap=30)   # Start -> Team Select
+        s.tap("Return", gap=30)   # confirm teams -> Game Settings
+        s.wait(10)
+        s.tap("Return", gap=40)   # Start
+        frames = s.f + 900
+        # The C++ reference segfaults here (CO_Spring::update -> collision_detection_map) at frame 813.
+        if mapfile in CPP_CRASH_FRAME:
+            frames = CPP_CRASH_FRAME[mapfile]
+        name = re.sub(r"[^a-z0-9]+", "_", mapfile[:-4].lower()).strip("_")
+        s.write(name, f"# Map sweep: 4 CPU players, Classic, on '{mapfile}'.\n"
+                      f"#@ seed={1000 + i}\n#@ map={mapfile}\n#@ frames={frames}\n#@ shots={frames - 1}\n", SWEEP_OUT)
+    print(f"sweep: {len(maps)} maps")
+
+
 def main():
+    if sys.argv[1:] == ["sweep"]:
+        sweep()
+        return
     names = sys.argv[1:] or list(REPLAYS)
     for n in names:
         REPLAYS[n]()
