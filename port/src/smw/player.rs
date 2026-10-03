@@ -1173,7 +1173,7 @@ impl CPlayer {
                 return;
             }
 
-            self.powerupused = Some(std::mem::transmute::<u8, PowerupType>(game_values.gamepowerups[self.globalID as usize] as u8));
+            self.powerupused = Some(PowerupType::from_u8(game_values.gamepowerups[self.globalID as usize] as u8));
             game_values.gamepowerups[self.globalID as usize] = -1;
 
             self.powerupradius = 100.0;
