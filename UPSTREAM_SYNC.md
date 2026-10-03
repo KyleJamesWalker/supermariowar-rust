@@ -43,8 +43,8 @@ How work flows:
 | 504-map dump against the new C++ | | coordinator | done (assigned to foundation; both ran it): `69f1ceb` updates `map_dump`. All 504 maps and the MapList dump match since `41016dc` |
 | `gfx_smoke` C++ twin on the new API | | coordinator | done: `941ede6`. The twin and the Rust example write byte-identical BMPs |
 | Level editor nondeterminism root cause | | coordinator | done (assigned to player; the coordinator fixed it first): `CMap::clearMap` leaves `MapBlock::iSettings` uninitialized and `g_map` is now allocated after `gfx_init`, so the harness hashed stale heap bytes. player independently found the same cause. Both dumpers hash only stored settings (`8a8d41d`, C++ `869d3c55`). 42/42 parallel runs agree |
-| Small structural leftovers | `53e65af9`, `b80e755e`, `6e36bd76`, `df5a85a6` | coordinator | optional |
-| 290-map sweep goldens, fresh-worktree verification, final summary | | coordinator | sweep goldens generated from the new C++ (`~/work/smw-upstream-goldens/golden_sweep`). At `b249b58` all 290 maps match. Final verification and summary last |
+| Small structural leftovers | `53e65af9`, `b80e755e`, `6e36bd76`, `df5a85a6` | coordinator | closed without code: `df5a85a6`, `b80e755e` and `6e36bd76` remove C++ constructs the port never had. `53e65af9` would only replace `get_filename_from_path` with `Path::file_name` in `leveleditor.rs`, with no behaviour change, so it is left |
+| 290-map sweep goldens, fresh-worktree verification, final summary | | coordinator | sweep: 290/290 at `b249b58`. Done since: harness patches regenerated (`8f458d4`, verified to rebuild `harness-latest` exactly), build docs and module map (`be622a4`), C++ `build-reference.sh`/`REFERENCE.md` (`2e1e5f64`), networking-on C++ build (`build-latest-net`). Fresh-worktree verification and final summary last |
 
 Gate baseline: `956e820`. 20/20 tests pass. 44/44 game replays match on every frame and shot. 13/13 editor sessions match on every dump, shot and saved file. The 290-map sweep and the 504-map dump match
 
