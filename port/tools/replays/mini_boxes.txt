@@ -1,0 +1,65 @@
+# 4 CPU players: Boxes minigame.
+#@ seed=206
+#@ map=0smw
+#@ frames=3000
+#@ shots=522,1500,2999
+10 down Return
+12 up Return
+30 down Down
+32 up Down
+44 down Return
+46 up Return
+58 down Down
+60 up Down
+72 down Right
+74 up Right
+86 down Down
+88 up Down
+100 down Right
+102 up Right
+114 down Up
+116 up Up
+128 down Right
+130 up Right
+142 down Up
+144 up Up
+156 down Return
+158 up Return
+170 down Up
+172 up Up
+184 down Return
+186 up Return
+214 down Up
+216 up Up
+228 down Return
+230 up Return
+242 down Right
+244 up Right
+250 down Right
+252 up Right
+258 down Right
+260 up Right
+266 down Right
+268 up Right
+274 down Return
+276 up Return
+294 down Down
+296 up Down
+308 down Return
+310 up Return
+322 down Right
+324 up Right
+330 down Right
+332 up Right
+338 down Right
+340 up Right
+346 down Right
+348 up Right
+354 down Return
+356 up Return
+368 down Down
+370 up Down
+382 down Return
+384 up Return
+422 down Return
+424 up Return

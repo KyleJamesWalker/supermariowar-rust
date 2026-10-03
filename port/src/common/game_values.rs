@@ -19,6 +19,50 @@ use sdl2::sys::SDL_Keycode;
 
 pub const TITLESTRING: &str = "Super Mario War";
 
+/// `std::vector<TourStop*>` whose `clear()` keeps the old pointers readable: WorldMap's loader clears
+/// the list it just filled, and the C++ world code then indexes the stale (leaked) entries.
+#[derive(Default)]
+pub struct TourStopVec {
+    len: usize,
+    storage: Vec<Ptr<crate::common::world_tour_stop::TourStop>>,
+}
+
+impl TourStopVec {
+    pub fn new() -> Self {
+        TourStopVec { len: 0, storage: Vec::new() }
+    }
+    pub fn len(&self) -> usize {
+        self.len
+    }
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+    pub fn clear(&mut self) {
+        self.len = 0;
+    }
+    pub fn push(&mut self, ts: Ptr<crate::common::world_tour_stop::TourStop>) {
+        if self.len < self.storage.len() {
+            self.storage[self.len] = ts;
+        } else {
+            self.storage.push(ts);
+        }
+        self.len += 1;
+    }
+}
+
+impl std::ops::Index<usize> for TourStopVec {
+    type Output = Ptr<crate::common::world_tour_stop::TourStop>;
+    fn index(&self, i: usize) -> &Self::Output {
+        &self.storage[i]
+    }
+}
+
+impl std::ops::IndexMut<usize> for TourStopVec {
+    fn index_mut(&mut self, i: usize) -> &mut Self::Output {
+        &mut self.storage[i]
+    }
+}
+
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum AppState {
@@ -319,7 +363,7 @@ pub struct CGameValues {
 
     pub tourindex: i16,
     pub tourstopcurrent: usize,
-    pub tourstops: Vec<Ptr<crate::common::world_tour_stop::TourStop>>,
+    pub tourstops: TourStopVec,
     pub worldindex: i16,
 
     pub storedpowerups: [i16; 4],
@@ -472,7 +516,7 @@ impl CGameValues {
             selectedminigame: Minigame::default(),
             tourindex: 0,
             tourstopcurrent: 0,
-            tourstops: Vec::new(),
+            tourstops: TourStopVec::new(),
             worldindex: 0,
             storedpowerups: [0; 4],
             gamepowerups: [0; 4],

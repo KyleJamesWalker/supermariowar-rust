@@ -20,5 +20,6 @@ for replay in "${replays[@]}"; do
         rm "$bmp"
     done
     rm -f "$out/stdout.log"
-    echo "$name: $(grep -c '^F ' "$out/dump.txt") frames"
+    gzip -9 -n "$out/dump.txt"
+    echo "$name: $(gzip -dc "$out/dump.txt.gz" | grep -c '^F ') frames"
 done

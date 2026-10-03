@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Compare two replay dumps (and optionally screenshot sets). See port/REPLAY.md.
 
-  diffreplay.py expected/dump.txt actual/dump.txt [--context 2] [--ignore R]
+  diffreplay.py expected/dump.txt[.gz] actual/dump.txt [--context 2] [--ignore R]
   diffreplay.py --shots expected_dir actual_dir [--max-diff 0]
 
 Exit status: 0 identical, 1 divergence, 2 usage or I/O error.
@@ -9,6 +9,7 @@ Exit status: 0 identical, 1 divergence, 2 usage or I/O error.
 
 import argparse
 import difflib
+import gzip
 import re
 import struct
 import sys
@@ -19,7 +20,10 @@ from pathlib import Path
 def parse_frames(path):
     """Split a dump into [(frame_no, [lines])], one entry per `F` block."""
     frames = []
-    for raw in Path(path).read_text().splitlines():
+    data = Path(path).read_bytes()
+    if data[:2] == b"\x1f\x8b":
+        data = gzip.decompress(data)
+    for raw in data.decode().splitlines():
         if raw.startswith("F "):
             frames.append((int(raw.split()[1]), [raw]))
         elif frames:

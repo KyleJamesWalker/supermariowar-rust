@@ -1,0 +1,2769 @@
+# Fuzzed input for 2 human players (python random seed 7001) on '0smw'.
+#@ seed=7001
+#@ map=0smw
+#@ frames=5000
+#@ shots=2500,4999
+10 down Return
+12 up Return
+30 down Return
+32 up Return
+50 down Return
+52 up Return
+70 down E
+72 up E
+100 down Return
+102 up Return
+130 down Return
+132 up Return
+160 down Return
+162 up Return
+200 down Left
+200 down E
+202 down W
+210 down Up
+212 down S
+213 up Up
+214 up S
+215 up Left
+215 up E
+220 down Up
+222 up Up
+222 down E
+223 down Right
+223 down D
+225 down Right Shift
+227 up E
+228 up Right Shift
+230 down S
+231 up D
+231 down Up
+232 up Up
+232 up W
+233 down Right Ctrl
+235 up Right Ctrl
+235 down Right Shift
+236 down Left
+236 down W
+239 up W
+240 down Right Ctrl
+241 down Down
+242 up Right Ctrl
+242 up Down
+243 up Right Shift
+243 down Right Ctrl
+244 down W
+246 up W
+251 up Right Ctrl
+257 down Q
+262 down Up
+263 up Up
+263 down W
+264 down A
+266 up W
+267 up A
+268 down Down
+271 up Down
+274 down Right Shift
+276 down D
+278 down Up
+279 up Right Shift
+279 up D
+280 down W
+283 up Right
+285 up W
+286 up Up
+286 down Down
+287 up Q
+288 up Down
+290 up S
+290 down Right Ctrl
+292 down W
+293 down D
+295 up D
+296 up Left
+297 down A
+300 up W
+303 down Q
+305 up A
+305 up Q
+306 down Right Shift
+309 down S
+311 up Right Shift
+312 down Right
+314 up Right
+315 down Left
+315 down E
+316 up E
+317 down Q
+318 down Up
+320 up Q
+323 down D
+324 down Right Shift
+325 down Right
+327 down A
+328 up D
+328 up A
+330 up Left
+330 down W
+333 up W
+341 down D
+343 down W
+344 down Q
+345 up W
+346 up D
+349 up Q
+350 up Right Ctrl
+352 down Right Ctrl
+354 up Right Ctrl
+355 up Right
+360 down A
+362 down Right Ctrl
+364 up Right Ctrl
+364 down Left
+366 down D
+369 up S
+369 up D
+371 down W
+372 up W
+374 down D
+375 down S
+376 down Right Ctrl
+378 up Up
+379 down Up
+384 up Right Shift
+385 down W
+389 up D
+390 up A
+391 up Right Ctrl
+392 down E
+393 up W
+393 up E
+393 down Right Shift
+395 down E
+396 down W
+397 up E
+397 up W
+400 down W
+405 up W
+406 down Right Ctrl
+407 down D
+408 up Right Shift
+408 down Q
+409 up Q
+412 up D
+412 down Down
+413 down Q
+415 down W
+416 up W
+417 up Down
+418 down E
+422 down Down
+423 up E
+424 up Left
+424 down D
+433 down Right Shift
+433 down W
+435 up S
+435 up W
+436 down W
+438 up Right Shift
+439 up Up
+439 up D
+439 down Right
+439 down S
+441 up W
+443 up Q
+443 down Left
+443 down D
+444 up D
+445 up Left
+445 down W
+448 up W
+452 up Down
+454 up Right
+455 down Down
+460 up Down
+461 down W
+464 down E
+465 down Right Shift
+466 up Right Ctrl
+468 down Right Ctrl
+470 up Right Ctrl
+470 down Q
+471 down Right
+472 up Q
+473 up Right Shift
+474 down Left
+475 down A
+476 up W
+478 down Q
+479 up Right
+480 up Q
+480 down Right Ctrl
+482 up Right Ctrl
+484 down Right Shift
+488 down D
+492 down Q
+493 up D
+494 up E
+497 down Down
+498 down D
+499 up Down
+499 up S
+500 up D
+500 down W
+501 down Up
+504 up Left
+505 up A
+506 up Up
+507 up Q
+509 down Q
+511 up Q
+511 down Right
+512 down Left
+512 down S
+514 up Right Shift
+514 up Left
+514 up S
+514 down Up
+514 down D
+516 up Up
+518 down S
+519 up Right
+520 down Right Shift
+521 up S
+522 up D
+523 down Up
+524 up Up
+527 down Up
+528 down D
+530 up W
+530 up D
+530 down A
+531 down Down
+532 up A
+533 down W
+535 up Up
+535 down A
+536 up Down
+538 up A
+541 down Right
+543 down Q
+544 down Down
+546 up Q
+547 up Down
+548 up W
+549 up Right
+550 up Right Shift
+553 down D
+554 down Down
+557 down W
+558 up D
+558 down E
+559 up Down
+560 down D
+564 down Right Ctrl
+565 up W
+565 down Down
+567 down Left
+567 down A
+568 up Left
+570 up Down
+570 down Right
+573 up E
+576 down W
+578 up W
+579 up Right Ctrl
+580 down Up
+582 up A
+585 up Right
+586 down Right
+586 down S
+587 up S
+587 down W
+588 up Right
+590 up W
+590 down Right Shift
+595 up Right Shift
+597 down Q
+599 up Q
+607 down W
+609 up W
+610 down Right Shift
+615 up Right Shift
+617 down A
+618 down Down
+619 up Down
+620 up D
+620 down Right Ctrl
+622 up Right Ctrl
+623 down S
+624 down Down
+627 down Right Ctrl
+630 down Q
+631 down Left
+633 up Left
+634 down W
+635 up Right Ctrl
+640 up Up
+642 down Right Ctrl
+647 up A
+652 down Up
+653 up S
+657 down D
+660 up Q
+660 down S
+661 down Q
+662 down Left
+663 up Left
+664 up W
+666 up Q
+667 up Up
+672 up D
+673 down E
+675 down A
+678 up A
+678 down Right
+679 down Right Shift
+680 up Right
+681 up E
+681 down D
+682 down W
+684 up Down
+687 up Right Shift
+689 up D
+690 up S
+692 down Down
+692 down D
+697 up Down
+697 down Q
+698 down Up
+699 down Right
+702 up Right Ctrl
+702 up Q
+702 down Left
+703 up Left
+707 up D
+708 down Q
+712 up W
+713 up Up
+714 down Left
+714 down D
+715 down Up
+716 up Left
+719 down Right Shift
+720 down E
+722 down A
+727 down W
+729 up Right
+729 down Down
+735 down Right
+737 up Down
+738 up Q
+740 up Right
+743 down S
+744 down Left
+745 up Up
+752 down Q
+754 up Q
+754 down Down
+755 up Down
+768 down Up
+770 up Up
+771 down Q
+772 up Q
+773 up S
+774 up D
+778 down Up
+779 up Right Shift
+779 down S
+780 up E
+782 up A
+784 down Down
+786 down Q
+787 up W
+788 up Q
+788 down D
+789 up Down
+791 down Right
+792 down W
+793 up Up
+793 up D
+794 up Right
+794 up S
+794 down Right Ctrl
+797 up Right Ctrl
+802 down S
+804 up Left
+809 down D
+810 up S
+810 down Up
+812 up Up
+812 up D
+814 down Down
+815 down D
+820 down Right
+821 down E
+822 up W
+823 up Right
+823 down W
+824 up W
+826 down Right Ctrl
+829 up Down
+832 down Right
+834 up Right Ctrl
+834 up Right
+839 down Q
+841 up Q
+842 down Right Shift
+843 down Up
+843 down S
+844 down W
+846 up W
+847 down Right Ctrl
+847 down W
+849 down Right
+850 up Right Shift
+850 up W
+851 up Right
+851 up E
+851 up S
+857 down W
+858 down A
+859 down S
+861 up S
+861 down Down
+863 up A
+865 down E
+866 up Down
+867 up E
+873 up Up
+875 up D
+877 up Right Ctrl
+878 down Right
+879 down S
+881 down Q
+882 down Left
+883 up Right
+885 down Right Ctrl
+887 up W
+893 down W
+897 up Left
+898 down Up
+898 down E
+900 up Right Ctrl
+901 up Up
+901 up W
+902 down W
+904 up W
+907 down D
+908 down Left
+909 up S
+911 up Q
+912 down Right
+912 down W
+913 down Right Shift
+914 down Right Ctrl
+915 up Right Shift
+915 up Right Ctrl
+915 down Up
+916 up Left
+917 up Right
+917 down Right Shift
+918 up Right Shift
+918 down Left
+919 down Right Ctrl
+920 up Left
+921 down Down
+922 down A
+923 down Right
+924 down Right Shift
+926 up Down
+926 down Left
+932 up Right Shift
+937 up D
+939 down Right Shift
+939 down D
+940 down Q
+942 up D
+942 up Q
+944 up Right Shift
+946 down D
+951 up D
+952 up A
+955 down Right Shift
+956 up Left
+956 down D
+958 up E
+960 down E
+967 down Down
+970 up Down
+972 up W
+972 down Q
+975 up Up
+975 up E
+976 down Left
+977 down W
+979 up Right Ctrl
+979 up W
+982 down Up
+983 up Right
+987 up Q
+991 down S
+999 up S
+1000 down Right
+1002 up Right
+1002 down W
+1005 down A
+1006 down Right Ctrl
+1011 down S
+1014 up Right Ctrl
+1015 up Right Shift
+1016 up D
+1016 down Down
+1018 down Right Ctrl
+1021 up Right Ctrl
+1021 down D
+1023 up D
+1024 up Down
+1027 down E
+1028 down Right
+1030 up Right
+1030 down Right Ctrl
+1032 up W
+1036 up Left
+1041 up S
+1042 up Up
+1044 down Down
+1047 down W
+1048 up W
+1048 down S
+1049 down D
+1050 up S
+1054 down Left
+1055 down W
+1057 up E
+1059 up Down
+1059 up Left
+1060 up Right Ctrl
+1060 down Right Shift
+1061 down E
+1062 down Right Ctrl
+1065 up A
+1073 down Down
+1075 down Q
+1079 up D
+1080 up Q
+1080 down S
+1081 up Down
+1081 down A
+1083 up S
+1083 down Up
+1084 up Up
+1085 up W
+1091 up E
+1093 down Right
+1094 up Right
+1095 down Right
+1105 down Up
+1108 up Up
+1108 down Down
+1108 down E
+1110 up E
+1112 down Left
+1117 up Left
+1118 down Q
+1119 down W
+1120 up Right Shift
+1122 up Right Ctrl
+1122 up W
+1122 down Up
+1123 up Down
+1124 up Up
+1125 up Right
+1126 up Q
+1126 down Right
+1127 down Up
+1132 up Up
+1133 down Right Ctrl
+1135 down Q
+1138 up Q
+1141 up Right Ctrl
+1141 up A
+1141 down S
+1143 down Left
+1144 up S
+1146 up Left
+1147 down Up
+1150 up Up
+1151 down E
+1156 up Right
+1157 down Right Ctrl
+1160 up Right Ctrl
+1161 down D
+1164 down S
+1166 up E
+1167 down Right Shift
+1168 up Right Shift
+1170 down Up
+1172 up Up
+1176 down Right Shift
+1177 up Right Shift
+1181 down Right
+1185 down Up
+1186 down Right Shift
+1186 down E
+1187 down Down
+1188 up Right Shift
+1189 up Down
+1191 up D
+1191 up E
+1192 down W
+1194 up S
+1195 up W
+1195 down E
+1197 down Down
+1198 up Down
+1198 up E
+1198 down D
+1200 up D
+1201 down E
+1207 down Left
+1209 up E
+1210 up Left
+1211 down S
+1212 up S
+1215 up Up
+1215 down S
+1216 up S
+1218 down E
+1219 up E
+1221 down E
+1224 down A
+1227 down S
+1231 down W
+1232 down Right Shift
+1232 down Q
+1233 down Left
+1235 up Right Shift
+1241 up Right
+1241 down Right Ctrl
+1245 down Up
+1247 up Q
+1248 down D
+1250 up Up
+1251 up D
+1251 down Down
+1252 down Right
+1254 up A
+1255 down Q
+1257 up S
+1260 up Right
+1261 up W
+1263 up Q
+1264 down Right
+1265 down S
+1266 up Down
+1268 down Down
+1270 up S
+1273 down D
+1274 up D
+1279 up Right
+1279 down S
+1281 up E
+1284 up S
+1289 down D
+1293 up Left
+1299 down E
+1301 up Right Ctrl
+1303 down W
+1305 down Right
+1308 up W
+1310 up Right
+1311 down Right Ctrl
+1314 down Left
+1319 up Left
+1319 up D
+1320 down Right Shift
+1325 down Q
+1326 up Right Ctrl
+1327 down D
+1328 up Down
+1328 up Q
+1328 down Left
+1329 up E
+1333 down A
+1335 up Right Shift
+1335 down W
+1336 down Down
+1337 up W
+1339 down E
+1340 up E
+1342 down Up
+1342 down W
+1345 up Up
+1345 down Right Ctrl
+1346 down Right
+1348 up Right
+1348 up A
+1348 down Up
+1351 up Down
+1353 up Up
+1357 up W
+1357 down Right Shift
+1357 down A
+1358 up Left
+1358 up Right Shift
+1363 down Right
+1367 down W
+1371 up Right
+1375 up Right Ctrl
+1375 up W
+1376 down Right Ctrl
+1379 down Up
+1380 down E
+1383 up E
+1384 down Right
+1387 up Up
+1387 up D
+1387 up A
+1387 down E
+1389 up E
+1392 down E
+1394 up E
+1394 down Right Shift
+1394 down W
+1395 down Down
+1396 up Right Shift
+1397 down Q
+1398 up Down
+1398 down Up
+1398 down S
+1399 up Right
+1400 up S
+1401 down Right
+1402 up Q
+1403 down Right Shift
+1404 up Right Shift
+1408 down Q
+1412 down E
+1413 down Down
+1413 down D
+1415 up D
+1416 up Right
+1421 up Down
+1423 up Q
+1423 down Down
+1424 up W
+1425 down W
+1427 up W
+1428 up Up
+1431 down Q
+1434 up Q
+1436 up Right Ctrl
+1436 down Left
+1437 up Left
+1443 down D
+1453 down Q
+1456 up Q
+1456 down A
+1461 up A
+1466 down Right
+1468 down Right Shift
+1469 up Right
+1470 down W
+1471 up W
+1472 up E
+1473 down W
+1479 down Up
+1479 down Q
+1481 up W
+1483 up Down
+1483 down Left
+1486 down S
+1489 down Right Ctrl
+1497 up Right Ctrl
+1503 up D
+1509 up Q
+1511 down Down
+1512 down A
+1513 up A
+1513 down W
+1514 up Down
+1515 up W
+1517 down Q
+1521 down Right
+1527 down W
+1528 up Right Shift
+1531 down A
+1532 down Right Shift
+1533 up Right Shift
+1534 down Right Ctrl
+1535 up Right Ctrl
+1538 down E
+1539 up Up
+1540 down Right Ctrl
+1543 up Left
+1546 up S
+1546 down Up
+1547 up Q
+1553 up E
+1554 up Up
+1556 down Left
+1556 down E
+1557 up W
+1559 down Right Shift
+1560 down D
+1561 up D
+1564 up Left
+1564 down D
+1568 down W
+1574 up Right Shift
+1574 down Down
+1574 down S
+1581 up Right
+1582 up Down
+1582 down Left
+1583 up W
+1586 up E
+1587 up Left
+1591 up A
+1600 up Right Ctrl
+1600 down Right
+1600 down W
+1601 up Right
+1602 down Right Ctrl
+1604 up S
+1606 down Q
+1607 up Right Ctrl
+1608 up W
+1612 down Down
+1612 down W
+1615 up Down
+1616 down Left
+1620 up W
+1621 up Left
+1622 down W
+1624 up D
+1624 down Up
+1625 down Right
+1629 up Up
+1633 down A
+1635 down Up
+1639 down S
+1643 up Up
+1645 down Up
+1647 up S
+1651 down Right Shift
+1653 up Right Shift
+1655 up Right
+1655 down Right Shift
+1658 up Right Shift
+1663 up A
+1665 down Right Shift
+1666 up Q
+1667 up Right Shift
+1669 down S
+1670 up S
+1670 down Right Shift
+1674 down S
+1675 up Up
+1676 down Up
+1677 down D
+1682 up W
+1682 up D
+1683 down D
+1684 up Up
+1685 up Right Shift
+1685 down Down
+1686 up Down
+1693 down W
+1695 down Right Shift
+1699 down Right Ctrl
+1699 down Q
+1700 down Up
+1702 up Up
+1704 up Q
+1706 down Left
+1707 up Right Ctrl
+1708 up W
+1710 down Right Ctrl
+1712 up Right Ctrl
+1714 up Left
+1717 down Q
+1718 down A
+1720 up A
+1720 down Right
+1723 up Right
+1723 down Right Ctrl
+1728 up Right Ctrl
+1729 down Right Ctrl
+1732 up Q
+1732 down A
+1734 up Right Ctrl
+1734 up S
+1734 up A
+1738 down A
+1739 down Left
+1739 down Q
+1743 up D
+1745 down Right Ctrl
+1745 down D
+1746 up A
+1747 up Q
+1748 up Right Ctrl
+1753 up D
+1753 down Down
+1755 up Right Shift
+1755 down W
+1761 up Down
+1761 down E
+1763 up W
+1764 up E
+1765 down E
+1769 down D
+1770 down Down
+1772 down Right
+1775 up Right
+1777 down Right
+1778 down Up
+1779 up Right
+1779 up Up
+1779 down W
+1784 up D
+1785 up Down
+1785 down D
+1786 up D
+1794 down Up
+1795 up Up
+1797 down Q
+1799 up Left
+1803 down S
+1804 down Down
+1805 up Q
+1806 up Down
+1809 up W
+1811 up S
+1814 down Up
+1815 down Q
+1817 down Left
+1817 down A
+1818 up Q
+1818 down Down
+1820 up Left
+1821 down W
+1825 up E
+1829 up Up
+1832 up A
+1835 down Left
+1835 down A
+1837 down S
+1839 up S
+1840 down E
+1845 up E
+1845 down Right Shift
+1846 down E
+1848 up Right Shift
+1850 down Right Ctrl
+1853 up Right Ctrl
+1854 down S
+1855 up S
+1857 down Q
+1862 up Q
+1865 up Left
+1868 down Right
+1869 up Right
+1872 down Right Shift
+1872 down D
+1873 up D
+1875 down S
+1876 up E
+1876 down Right
+1877 up Right Shift
+1877 up S
+1878 up Down
+1879 up Right
+1879 down E
+1881 up W
+1882 down Left
+1884 up Left
+1884 down Up
+1885 down Q
+1886 up Q
+1887 down Left
+1894 up E
+1895 up A
+1895 down Q
+1897 down Down
+1897 down A
+1900 down Right
+1900 down S
+1902 up Down
+1902 up Right
+1903 up Q
+1906 down Right Shift
+1907 up Right Shift
+1908 up S
+1909 down Right Ctrl
+1914 up Up
+1914 down Right Shift
+1914 down W
+1915 down S
+1917 up Left
+1922 up Right Shift
+1922 up W
+1924 down Left
+1924 down Q
+1936 down Down
+1939 up Right Ctrl
+1939 up Q
+1941 up Down
+1946 down Down
+1954 up Down
+1956 down Up
+1957 up A
+1961 down D
+1963 down E
+1966 down Down
+1967 up Down
+1975 up S
+1976 down Right Ctrl
+1978 up E
+1979 down Right
+1979 down E
+1980 down Right Shift
+1984 up Left
+1984 up Right
+1986 down Q
+1987 up E
+1987 up Q
+1991 up Right Ctrl
+1991 up D
+1996 down A
+2001 up A
+2002 down S
+2006 down E
+2008 down Q
+2010 up Right Shift
+2010 down A
+2013 up A
+2015 down Right Ctrl
+2015 down D
+2016 up Up
+2017 up S
+2020 up D
+2021 down Left
+2023 up Right Ctrl
+2023 up Q
+2024 up Left
+2025 down D
+2028 down Right Ctrl
+2033 up D
+2034 down Up
+2036 up E
+2038 down A
+2040 down S
+2041 down E
+2042 up Up
+2043 up Right Ctrl
+2046 up E
+2046 down Right
+2047 down W
+2049 up W
+2050 down Right Ctrl
+2052 up Right Ctrl
+2053 down D
+2057 down E
+2061 up Right
+2064 down Right Ctrl
+2065 up Right Ctrl
+2067 down Right
+2069 up Right
+2071 down Right Ctrl
+2074 down Down
+2078 down W
+2079 up Right Ctrl
+2087 up E
+2088 down Right Shift
+2089 up Down
+2089 up Right Shift
+2094 down Down
+2095 up Down
+2095 down Q
+2098 up A
+2100 up S
+2104 down Right Shift
+2107 up Right Shift
+2108 up W
+2109 down W
+2110 up Q
+2111 down Right Ctrl
+2111 down S
+2113 up D
+2114 up W
+2114 down Down
+2117 down W
+2118 up W
+2123 down A
+2124 down Up
+2126 up Right Ctrl
+2126 up Up
+2126 down Left
+2127 down Right Shift
+2128 up A
+2129 up Down
+2129 down W
+2130 up Right Shift
+2130 down Right Ctrl
+2131 up W
+2135 down Q
+2136 up Q
+2139 down W
+2143 down Up
+2145 up Right Ctrl
+2149 down A
+2152 down D
+2153 down Right Ctrl
+2153 down Q
+2154 up A
+2155 down Right
+2156 up Left
+2156 up Right
+2156 up Q
+2158 up Up
+2159 down Left
+2160 up D
+2160 down Right Shift
+2161 down A
+2162 up Left
+2162 up A
+2165 down A
+2168 up Right Shift
+2169 up W
+2170 down Left
+2171 up S
+2171 down Right Shift
+2173 up Right Shift
+2175 down D
+2177 up D
+2178 up Left
+2178 down E
+2179 down W
+2180 down Right
+2184 down Right Shift
+2186 up E
+2189 down Q
+2194 up W
+2195 up A
+2199 down Up
+2199 down D
+2200 up Up
+2204 up D
+2207 down Up
+2209 down Left
+2210 up Right
+2210 down W
+2211 down Right
+2213 up Right Ctrl
+2214 down Down
+2215 up Up
+2215 up W
+2217 up Down
+2218 down Right Ctrl
+2219 up Right
+2222 down Down
+2223 up Right Ctrl
+2223 up Down
+2224 down E
+2225 down Up
+2227 up E
+2227 down Right
+2227 down S
+2229 up S
+2230 down Right Ctrl
+2230 down W
+2231 down E
+2232 up Right
+2232 up Right Ctrl
+2233 up W
+2244 up Right Shift
+2246 up E
+2246 down Right Shift
+2249 up Q
+2249 down A
+2253 down S
+2255 up Up
+2257 up A
+2259 down Right Ctrl
+2259 down E
+2260 up Right Ctrl
+2260 down Right
+2261 down Right Ctrl
+2262 up E
+2262 down Q
+2263 up Q
+2265 down Down
+2265 down A
+2269 up Left
+2269 up Right Ctrl
+2276 up Right Shift
+2277 down Q
+2280 up A
+2281 down Left
+2282 up Left
+2283 down E
+2286 up E
+2288 down E
+2291 down Left
+2292 up Q
+2294 down D
+2295 up Down
+2296 down Right Shift
+2299 up Left
+2300 down A
+2302 up D
+2303 up E
+2309 down Right Ctrl
+2311 up Right Ctrl
+2313 up S
+2313 down E
+2315 down Left
+2316 up Left
+2318 up E
+2320 up Right
+2321 down Left
+2321 down S
+2324 up S
+2325 down W
+2326 up Right Shift
+2326 up W
+2329 up Left
+2331 down Up
+2333 up Up
+2337 down Down
+2340 up Down
+2343 down D
+2344 up D
+2345 down W
+2347 down Right Ctrl
+2348 down Q
+2351 up Q
+2352 down Q
+2353 up W
+2355 up Right Ctrl
+2356 down D
+2357 down Right Ctrl
+2360 up Right Ctrl
+2360 up A
+2360 down Right Shift
+2361 down Down
+2362 up Down
+2367 up Q
+2368 down S
+2369 up S
+2373 down Right
+2374 up Right
+2375 up Right Shift
+2376 down Right Shift
+2378 up Right Shift
+2378 down Up
+2378 down E
+2380 down Right Ctrl
+2381 up Up
+2381 up Right Ctrl
+2382 down Up
+2382 down Q
+2383 down Right Shift
+2384 up Up
+2384 up Q
+2385 down Q
+2389 down Left
+2389 down S
+2391 up Right Shift
+2392 up S
+2395 down Down
+2395 down S
+2397 down A
+2398 up A
+2400 up Q
+2404 up Left
+2405 down W
+2407 down Right Shift
+2408 up Right Shift
+2409 down Right Shift
+2412 down Up
+2414 up Up
+2416 up D
+2420 up W
+2422 down Up
+2424 up Right Shift
+2425 up S
+2428 down Q
+2429 up Q
+2432 down S
+2435 down D
+2437 up S
+2438 up E
+2438 down Right Shift
+2440 down E
+2445 up E
+2445 down W
+2446 down Right Ctrl
+2448 down Left
+2450 up D
+2450 up W
+2455 up Down
+2455 down D
+2458 down Right
+2458 down S
+2460 up D
+2463 up Left
+2464 down A
+2469 down Down
+2469 down E
+2471 down D
+2473 up S
+2482 up Up
+2484 up E
+2485 down Left
+2488 up Right
+2488 down E
+2491 down Right
+2492 up Right
+2493 up Left
+2494 up A
+2497 down W
+2498 up Right Shift
+2498 up W
+2499 up Down
+2501 down Down
+2501 down W
+2503 up W
+2504 up Down
+2506 up Right Ctrl
+2512 down A
+2513 up A
+2513 down Down
+2516 down Left
+2518 up Down
+2519 down Right Ctrl
+2519 down A
+2523 down W
+2525 down Right Shift
+2527 up Right Ctrl
+2527 up A
+2531 up Left
+2531 up D
+2538 up W
+2539 down Right
+2540 up Right
+2545 down W
+2546 down A
+2548 up E
+2549 up A
+2551 down Up
+2551 down Q
+2555 up Right Shift
+2557 down D
+2558 up D
+2559 up Up
+2560 down A
+2561 down Right Shift
+2566 down D
+2571 down Left
+2572 up Left
+2575 down Down
+2576 up Down
+2580 down Right Ctrl
+2581 up Right Ctrl
+2581 up Q
+2581 up D
+2582 down Right Ctrl
+2582 down E
+2585 up E
+2585 down Q
+2590 up Q
+2593 down Up
+2595 down E
+2600 up E
+2603 down Left
+2603 down Q
+2605 up W
+2605 up Q
+2606 down S
+2608 up S
+2608 down D
+2611 up Left
+2611 up D
+2612 up Right Ctrl
+2614 down Left
+2618 down W
+2620 up A
+2620 down Down
+2621 up Right Shift
+2623 up Down
+2624 down Down
+2624 down Q
+2629 up Left
+2629 down Right
+2630 down Right Ctrl
+2634 up Right
+2635 up Right Ctrl
+2639 up Q
+2640 down D
+2641 down Left
+2645 down Right Ctrl
+2648 up Right Ctrl
+2651 down Right
+2651 down Q
+2653 up Up
+2653 up Right
+2658 down S
+2660 up S
+2662 down S
+2665 down Right Shift
+2667 up Right Shift
+2668 down A
+2670 up D
+2671 up Left
+2673 up A
+2675 down Right Ctrl
+2676 up Right Ctrl
+2677 down A
+2678 up W
+2678 up A
+2684 up Down
+2684 down W
+2685 down Right
+2687 down Down
+2687 down A
+2688 down Left
+2689 up W
+2692 up S
+2693 down S
+2697 down Up
+2698 up S
+2699 down D
+2702 down Right Shift
+2702 down E
+2703 up Left
+2704 up E
+2707 down E
+2711 up Q
+2715 up E
+2717 up A
+2717 down Left
+2717 down Q
+2719 up Left
+2719 down W
+2722 up W
+2722 down S
+2724 up S
+2725 down W
+2727 up Up
+2727 up W
+2727 down A
+2728 down Left
+2730 up Left
+2730 up A
+2733 down W
+2734 up W
+2741 down Up
+2743 down A
+2745 up Right
+2745 up A
+2747 up Down
+2751 down E
+2752 down W
+2759 up D
+2759 down A
+2761 down D
+2762 up Right Shift
+2763 down Right
+2764 up A
+2766 down S
+2767 up S
+2768 down S
+2769 down A
+2770 down Right Shift
+2771 up Up
+2771 down Right Ctrl
+2774 up Right Ctrl
+2774 up A
+2777 up Q
+2787 down Right Ctrl
+2789 down Down
+2794 up Down
+2795 down Down
+2797 down Q
+2798 up S
+2800 up Right Shift
+2802 up Right Ctrl
+2802 up Q
+2806 down Right Ctrl
+2811 up E
+2812 up W
+2814 down S
+2816 down Right Shift
+2817 down W
+2819 up W
+2821 up Right Ctrl
+2821 up D
+2822 up S
+2823 up Right
+2823 down A
+2824 up A
+2825 down Q
+2827 up Q
+2831 down E
+2832 down S
+2835 up S
+2835 down Up
+2837 up Up
+2842 down Q
+2844 up Q
+2844 down A
+2845 up A
+2846 up Right Shift
+2846 up E
+2847 down E
+2851 down Right
+2852 up Right
+2853 down W
+2855 up Down
+2856 down Q
+2857 up Q
+2857 down Up
+2858 up W
+2859 up Up
+2862 down W
+2865 up W
+2865 down Q
+2866 up Q
+2866 down W
+2868 down S
+2869 down Left
+2871 down Q
+2873 up S
+2873 up Q
+2875 down Right Shift
+2878 up Right Shift
+2878 down A
+2879 down Right Ctrl
+2884 down D
+2885 up D
+2889 down Right
+2892 down S
+2893 down Up
+2894 up Right
+2894 down D
+2895 up Up
+2896 down Right Shift
+2897 up Right Shift
+2899 up Left
+2899 up D
+2900 down Right Shift
+2903 up Right Shift
+2903 down D
+2904 down Down
+2907 up E
+2908 up D
+2908 down Right
+2909 down D
+2911 down Up
+2912 up Down
+2914 up D
+2918 down E
+2919 down Left
+2920 down Q
+2921 up Q
+2922 up S
+2926 up W
+2926 up E
+2929 down Down
+2930 down W
+2931 up Down
+2933 up W
+2933 down S
+2934 up Left
+2935 down Q
+2936 up Q
+2936 down Right Shift
+2937 up Right Shift
+2938 up Right
+2938 up A
+2939 up Right Ctrl
+2939 down Q
+2941 up S
+2943 down W
+2945 up W
+2945 down E
+2946 down Down
+2948 down Right Shift
+2948 down W
+2949 down S
+2951 up Right Shift
+2951 down A
+2952 up A
+2954 up S
+2958 down Right
+2960 up E
+2964 down E
+2967 down S
+2969 up Q
+2971 up Up
+2972 up E
+2973 up Right
+2975 down A
+2976 down Right
+2982 up S
+2982 down Left
+2985 up Left
+2986 down Up
+2988 down Left
+2989 down D
+2990 up A
+2996 down S
+3001 up S
+3002 down E
+3004 down Right Ctrl
+3005 up Right Ctrl
+3006 up Down
+3006 up Right
+3006 down Q
+3007 up Q
+3008 up W
+3008 down Right
+3008 down S
+3009 up Right
+3010 up E
+3011 down Q
+3012 up Q
+3013 down Right
+3014 down Q
+3016 up Up
+3018 up Left
+3020 down E
+3023 up S
+3023 down Right Ctrl
+3023 down W
+3024 up W
+3025 up E
+3028 up Right
+3029 down Left
+3031 up Right Ctrl
+3033 down S
+3034 down Right Shift
+3037 down E
+3038 up E
+3041 up S
+3042 down Right
+3043 up Right
+3049 up D
+3050 down Up
+3053 up Up
+3054 down Down
+3055 down S
+3056 up Down
+3056 down E
+3060 down Right
+3060 down D
+3063 up D
+3064 down Down
+3064 down A
+3067 up Down
+3070 up S
+3070 down Down
+3071 down Right Ctrl
+3074 up Q
+3076 up Right Ctrl
+3077 down S
+3078 up Down
+3079 up S
+3081 down Q
+3084 up Q
+3084 down W
+3086 up E
+3088 down E
+3089 up Left
+3090 up Right
+3090 down D
+3094 up Right Shift
+3094 up A
+3096 up E
+3097 down Right Shift
+3097 down S
+3098 up S
+3099 up W
+3103 down Left
+3105 up Left
+3105 up D
+3107 down Right
+3107 down E
+3110 down S
+3111 down Left
+3112 up Right Shift
+3113 down A
+3115 up A
+3116 up Left
+3119 down W
+3121 up W
+3123 down Down
+3125 down Right Shift
+3137 up Right
+3137 up E
+3138 down Q
+3139 down Right Ctrl
+3140 up Right Shift
+3142 down Up
+3142 down A
+3148 down Left
+3150 up Up
+3152 down D
+3153 up Down
+3153 up Q
+3158 down Down
+3159 down E
+3160 up D
+3161 up E
+3165 down Q
+3168 down E
+3169 down Up
+3170 up Up
+3170 up S
+3172 up A
+3176 down W
+3178 up Left
+3184 up W
+3186 down Left
+3190 down Right Shift
+3194 down Up
+3195 down D
+3197 up Up
+3198 up E
+3198 down Up
+3199 up Right Ctrl
+3199 up Up
+3201 up Left
+3202 down Up
+3203 down A
+3206 up A
+3213 down Right
+3215 up Right
+3215 down A
+3218 up Down
+3220 up Right Shift
+3220 up A
+3222 down S
+3223 down Down
+3224 up S
+3225 up Q
+3229 down Right
+3231 up Down
+3231 up Right
+3232 down E
+3234 down Q
+3235 up E
+3235 down W
+3237 up Q
+3239 down Right Ctrl
+3239 down S
+3249 down Right
+3251 up Right
+3251 down Down
+3254 up Down
+3255 up D
+3255 down Left
+3256 up Left
+3262 up Up
+3262 down A
+3265 down Left
+3266 down Right Shift
+3267 up Left
+3268 down E
+3269 up E
+3270 up A
+3271 up Right Shift
+3274 down A
+3278 down Q
+3279 up A
+3279 up Q
+3280 down Down
+3281 down Q
+3285 up Down
+3286 up Q
+3288 down Left
+3290 down Down
+3295 up W
+3296 down D
+3298 up Down
+3299 up Right Ctrl
+3299 up S
+3300 down Down
+3300 down W
+3301 up Down
+3304 up D
+3305 up W
+3305 down S
+3306 down A
+3309 up A
+3310 up S
+3310 down Up
+3310 down E
+3316 down Down
+3320 down Right
+3321 down W
+3323 down S
+3324 up Down
+3326 up S
+3335 down D
+3340 up Up
+3343 down Right Shift
+3344 down Up
+3347 up Up
+3348 up Left
+3348 down Down
+3349 up Down
+3351 up Right Shift
+3351 up W
+3354 down Right Shift
+3354 down S
+3357 up Right Shift
+3358 down Down
+3363 up Down
+3364 down W
+3365 up D
+3368 down Right Shift
+3370 up E
+3370 down D
+3371 up Right Shift
+3372 up D
+3372 down Down
+3374 down Right Ctrl
+3375 up Down
+3376 up Right Ctrl
+3376 down Q
+3380 up Right
+3380 down Left
+3382 up Left
+3382 down E
+3384 up S
+3385 up E
+3386 down Down
+3389 up Down
+3392 down A
+3394 up W
+3394 down E
+3396 down Up
+3397 down Right Shift
+3399 up Up
+3399 down Down
+3402 up Right Shift
+3404 down Up
+3405 down Right Ctrl
+3407 up Down
+3407 up A
+3408 down Left
+3410 up Right Ctrl
+3413 up Left
+3413 down W
+3418 down Down
+3420 down A
+3422 down Right Shift
+3424 up E
+3426 down Right
+3430 down D
+3431 up Right
+3432 down Right Ctrl
+3434 up Up
+3436 up Q
+3436 down Left
+3437 up Right Shift
+3439 down Right
+3444 up Left
+3445 down S
+3447 up Right
+3448 up Down
+3449 down Right
+3451 down E
+3453 down Right Shift
+3457 down Down
+3458 up Right Shift
+3463 down Left
+3464 up Right
+3466 up E
+3468 up Left
+3473 up W
+3473 down Up
+3474 down W
+3476 up Up
+3477 down Right Shift
+3479 up Right Shift
+3479 up W
+3480 up A
+3480 down Left
+3482 up Left
+3484 down E
+3490 up D
+3492 up Right Ctrl
+3493 down Right Ctrl
+3494 down Q
+3495 up Right Ctrl
+3497 up Q
+3499 up E
+3505 up S
+3505 down Right Ctrl
+3506 up Right Ctrl
+3507 down S
+3508 down W
+3515 up S
+3515 down Right Shift
+3516 down Right Ctrl
+3517 up Down
+3518 down Q
+3519 up Right Ctrl
+3520 down Up
+3521 down A
+3523 up Q
+3524 up A
+3525 up Up
+3526 down Down
+3529 down A
+3530 down Right Ctrl
+3531 down Q
+3533 down D
+3535 up Right Ctrl
+3538 up W
+3538 down Left
+3550 down Right Ctrl
+3553 up Left
+3553 down Up
+3554 up Up
+3555 down E
+3556 up Down
+3558 up E
+3559 up A
+3563 down Down
+3564 down Left
+3565 down S
+3566 up Left
+3575 up Right Shift
+3576 down E
+3577 down Right
+3578 up E
+3580 up Right Ctrl
+3580 up S
+3580 down Left
+3581 down S
+3583 down Right Ctrl
+3584 down Up
+3585 up Up
+3588 up Right Ctrl
+3591 up Q
+3592 up Right
+3593 up D
+3595 down Right
+3596 down Right Shift
+3597 up Right
+3598 down D
+3604 up Right Shift
+3604 down A
+3606 down Right
+3607 up Right
+3607 down Right Ctrl
+3611 up S
+3614 down Right Shift
+3614 down S
+3615 up Right Ctrl
+3616 up Right Shift
+3623 up Down
+3624 down Right Ctrl
+3624 down E
+3625 up E
+3625 down Down
+3626 up Down
+3628 up D
+3628 down Down
+3630 down E
+3632 up Right Ctrl
+3634 up A
+3636 down Up
+3638 down A
+3640 up Left
+3644 up Up
+3644 down Right Ctrl
+3645 up Right Ctrl
+3648 down Left
+3648 down Q
+3650 down D
+3651 up D
+3653 up Left
+3660 up E
+3660 down W
+3665 down Right
+3674 up S
+3675 up W
+3678 up Q
+3678 down Right Shift
+3681 down Left
+3684 up Left
+3685 down Up
+3687 down Q
+3688 up Down
+3688 down Right Ctrl
+3690 up Right Ctrl
+3690 down Down
+3692 up Down
+3695 up Q
+3696 down Down
+3697 up Down
+3697 down Q
+3698 up A
+3699 down Down
+3699 down S
+3700 up Up
+3700 down D
+3701 up Down
+3701 down Left
+3703 down Down
+3707 up S
+3708 up Right Shift
+3711 up Down
+3713 down Up
+3715 up Up
+3716 up Left
+3716 down Up
+3718 down Right Shift
+3724 down W
+3725 up Right
+3725 up W
+3726 up Right Shift
+3726 down S
+3727 down E
+3730 up D
+3730 down Left
+3731 up Up
+3731 up Left
+3731 down Down
+3732 up Down
+3732 up E
+3732 down A
+3734 down Down
+3735 up A
+3736 up Down
+3740 down Down
+3740 down E
+3742 down Right
+3746 down Left
+3748 up Down
+3753 down A
+3754 up A
+3756 up S
+3756 down Up
+3757 up Q
+3761 up Left
+3763 down Q
+3764 up Q
+3764 down Left
+3767 down Q
+3768 down Right Ctrl
+3769 up Right Ctrl
+3770 up E
+3771 up Up
+3772 up Right
+3773 down S
+3775 down E
+3777 up E
+3779 down Right
+3779 down W
+3785 down Down
+3788 up S
+3789 down A
+3794 up Right
+3795 down D
+3797 up Q
+3800 up D
+3805 down Q
+3808 down S
+3809 down Up
+3810 up Q
+3811 down Right Shift
+3812 down Right Ctrl
+3814 up Up
+3815 up Down
+3816 up Right Shift
+3819 up A
+3820 up Right Ctrl
+3822 down Right Shift
+3823 down Right Ctrl
+3824 up Left
+3824 up Right Shift
+3828 up Right Ctrl
+3829 down Right Shift
+3832 down Up
+3835 down Left
+3836 up Left
+3839 up W
+3839 down Down
+3842 down Right Ctrl
+3843 down W
+3845 up Right Ctrl
+3848 down Left
+3853 down Q
+3855 down Right Ctrl
+3859 up Right Shift
+3859 down A
+3864 up A
+3865 down Right Shift
+3868 up S
+3868 up Q
+3869 up Down
+3870 up Right Ctrl
+3873 down S
+3878 up Left
+3879 down A
+3880 up Right Shift
+3880 down Right Ctrl
+3880 down D
+3881 up Right Ctrl
+3881 up S
+3882 up A
+3882 up D
+3884 down S
+3886 down Right Shift
+3887 up Right Shift
+3887 up S
+3888 down A
+3890 down Left
+3890 down D
+3891 up A
+3892 up Up
+3893 up Left
+3898 down Left
+3900 down Q
+3902 down Right Shift
+3902 down E
+3903 up W
+3903 up Q
+3904 down Down
+3904 down W
+3906 up Left
+3906 up Down
+3907 up Right Shift
+3908 down Right Ctrl
+3910 up Right Ctrl
+3912 down Down
+3912 down A
+3915 up Down
+3918 down Down
+3922 down Left
+3924 down Q
+3927 up A
+3928 down Right
+3933 up Right
+3934 up W
+3938 down Right
+3939 up Right
+3939 up Q
+3939 down S
+3943 down W
+3946 down Up
+3947 down Right Shift
+3948 up Down
+3948 down A
+3949 up A
+3950 up D
+3952 up Left
+3952 down Q
+3954 up S
+3955 up Q
+3956 down Q
+3959 down S
+3962 up Right Shift
+3962 up E
+3969 down Right
+3969 down E
+3971 up E
+3972 up Right
+3972 down Right Shift
+3976 up Up
+3982 down Up
+3986 down Down
+3987 up Right Shift
+3989 up S
+3992 down Right Shift
+3994 up Down
+3995 down Right Ctrl
+3997 up Up
+3997 up Right Ctrl
+4003 up W
+4010 down Left
+4012 down W
+4016 up Q
+4016 down Right
+4018 up Right
+4020 up W
+4022 up Right Shift
+4022 down Q
+4025 down E
+4026 up E
+4027 down D
+4030 up D
+4030 down Right Ctrl
+4031 down Right
+4035 down D
+4036 up Right
+4040 up Left
+4041 down Up
+4042 down A
+4045 up Right Ctrl
+4046 up Up
+4047 up A
+4047 down Up
+4050 up Up
+4050 up D
+4052 up Q
+4052 down D
+4053 down E
+4054 up E
+4057 up D
+4057 down Right Shift
+4061 down Right Ctrl
+4062 up Right Shift
+4062 up Right Ctrl
+4063 down S
+4064 down Up
+4065 down Right Shift
+4066 up S
+4067 up Right Shift
+4069 down Right Shift
+4069 down A
+4070 up A
+4072 up Up
+4072 down D
+4074 down A
+4075 up A
+4076 down S
+4077 up Right Shift
+4078 up S
+4081 down Up
+4082 up Up
+4082 down W
+4085 up W
+4091 down Right Shift
+4092 down Q
+4094 up Right Shift
+4101 down Right Ctrl
+4102 up D
+4102 down A
+4104 down W
+4105 down Left
+4106 up Right Ctrl
+4107 up Left
+4107 up W
+4111 down Down
+4113 down Left
+4114 up Left
+4114 down S
+4116 down Right Ctrl
+4119 up S
+4123 down D
+4124 up D
+4130 down E
+4131 up Right Ctrl
+4132 up A
+4141 up Down
+4144 down Left
+4144 down D
+4146 up D
+4146 down A
+4149 down Right Shift
+4150 up Right Shift
+4150 down S
+4152 up Q
+4152 up S
+4154 up A
+4159 up Left
+4159 down Right Ctrl
+4160 up E
+4161 up Right Ctrl
+4163 down Q
+4168 up Q
+4169 down W
+4170 down Right
+4172 down Up
+4174 up Up
+4176 down Right Shift
+4178 up Right Shift
+4182 down Down
+4183 up Down
+4183 down Up
+4185 up Right
+4187 down Right
+4193 down Right Ctrl
+4195 down S
+4196 up S
+4199 down A
+4200 down E
+4201 down S
+4202 up S
+4204 down Q
+4207 up A
+4209 down Left
+4212 up Q
+4212 down S
+4213 up Up
+4213 up S
+4214 up Left
+4214 down A
+4215 up E
+4216 up A
+4217 up Right
+4219 down Up
+4223 up Right Ctrl
+4224 down A
+4225 down Right Shift
+4225 down E
+4226 down Right Ctrl
+4228 up Right Ctrl
+4228 down S
+4229 up W
+4229 down Left
+4234 up Up
+4236 up S
+4238 down S
+4239 up A
+4239 up S
+4244 down D
+4245 down Right
+4248 down S
+4249 up D
+4250 up S
+4255 up E
+4257 down E
+4259 up E
+4267 down W
+4270 down E
+4275 up W
+4275 down Right Ctrl
+4279 down W
+4280 up Right Ctrl
+4282 down Down
+4285 up Right Shift
+4285 down Up
+4287 up W
+4289 up Left
+4290 up Down
+4290 up Up
+4291 down Right Ctrl
+4295 down D
+4299 up Right Ctrl
+4299 down A
+4300 up E
+4301 up A
+4305 up Right
+4307 down Left
+4309 down A
+4314 up A
+4315 down S
+4317 down Down
+4318 down Right Shift
+4322 up Left
+4322 down Right
+4323 up S
+4325 up Down
+4325 down S
+4326 up Right Shift
+4327 up S
+4328 down Down
+4329 up Down
+4338 down Right Ctrl
+4339 down S
+4340 up S
+4345 down Q
+4346 down Right Shift
+4347 up Q
+4348 down S
+4349 up Right Shift
+4352 down Up
+4353 up Right Ctrl
+4355 up D
+4367 up Up
+4367 down Q
+4368 down A
+4371 down E
+4372 down Up
+4373 up E
+4374 down Down
+4374 down E
+4375 down D
+4377 down Right Ctrl
+4378 up S
+4379 up E
+4380 up Right Ctrl
+4382 up Right
+4383 up A
+4383 down Right Shift
+4386 up Right Shift
+4387 down W
+4389 up W
+4391 down Right Ctrl
+4394 down Right
+4399 up Right Ctrl
+4399 down Right Shift
+4402 up Up
+4404 up Right Shift
+4405 down W
+4406 down Right Ctrl
+4408 up Right Ctrl
+4409 up Right
+4415 down Right Shift
+4422 down S
+4427 up Q
+4429 down Q
+4431 down Up
+4433 down A
+4434 up Down
+4434 up Q
+4435 up D
+4437 up S
+4441 down Right
+4441 down S
+4444 up Right
+4446 up Up
+4447 down Q
+4449 down Up
+4450 up Up
+4452 down Left
+4454 down Up
+4456 up S
+4457 down D
+4461 down Right
+4463 up Right
+4463 up A
+4465 up W
+4469 up Up
+4473 down A
+4474 down E
+4475 up Right Shift
+4475 down Down
+4477 up E
+4478 up Down
+4479 down Down
+4480 down W
+4481 up Down
+4481 down Up
+4482 down E
+4485 up W
+4485 down Right Ctrl
+4487 up Right Ctrl
+4487 up E
+4487 down Right
+4488 up Right
+4488 down E
+4499 down Right
+4503 up E
+4506 down S
+4507 up Right
+4507 up Q
+4509 down Right Shift
+4511 up S
+4512 up Left
+4513 down Right
+4516 up Right
+4517 up D
+4519 down E
+4520 down Right
+4524 down W
+4525 up Right
+4525 down D
+4526 down Left
+4529 up Left
+4531 down Right
+4532 down Left
+4533 up A
+4536 up Right
+4536 down A
+4537 up Left
+4537 up A
+4541 up Up
+4546 down A
+4548 up A
+4549 up E
+4552 down Q
+4553 down Left
+4554 up W
+4555 up D
+4555 up Q
+4559 down Right
+4562 up Right
+4562 down A
+4567 down Q
+4568 up Q
+4569 up Right Shift
+4569 down D
+4577 up A
+4577 up D
+4579 down Down
+4579 down W
+4582 up W
+4583 up Left
+4584 down Right Shift
+4587 up Down
+4589 down S
+4592 up S
+4593 down D
+4594 up D
+4594 down A
+4595 down Left
+4596 down Up
+4596 down D
+4599 up Right Shift
+4599 down E
+4600 up Left
+4602 up E
+4603 down E
+4604 up Up
+4604 up E
+4606 down Right
+4607 down Left
+4609 down S
+4611 up D
+4613 down Up
+4619 down D
+4621 up Up
+4624 up A
+4624 up S
+4625 down W
+4626 down Up
+4627 up D
+4627 down S
+4631 down E
+4633 down Right Shift
+4634 up Up
+4636 up Right
+4641 down Right
+4643 up Right
+4645 down Up
+4646 up E
+4646 down A
+4649 up A
+4652 down E
+4654 down D
+4655 up W
+4655 down Right
+4656 up Right
+4656 down A
+4657 up S
+4657 up A
+4663 up Right Shift
+4665 down Down
+4666 down A
+4667 up Left
+4667 up A
+4669 up D
+4669 down Right
+4670 up Down
+4670 down D
+4672 up Right
+4673 down A
+4676 up A
+4679 down Right Ctrl
+4679 down Q
+4681 down Right
+4685 down Right Shift
+4686 down Down
+4691 up Down
+4694 up Right Ctrl
+4695 down Left
+4696 up Right
+4696 up Left
+4696 down S
+4697 down Right Ctrl
+4700 up Right Ctrl
+4701 down Left
+4702 down A
+4705 up Up
+4705 down W
+4706 up Left
+4711 up S
+4711 down Up
+4712 up E
+4713 up Up
+4713 up W
+4715 up Right Shift
+4721 down Down
+4723 down Right Ctrl
+4724 up Down
+4724 down W
+4725 up W
+4730 up D
+4730 down Left
+4730 down E
+4732 up E
+4732 down Down
+4734 up Down
+4734 down E
+4738 up Right Ctrl
+4739 up Q
+4740 down S
+4741 up S
+4741 down Right Ctrl
+4742 up Right Ctrl
+4750 down S
+4751 down Right Ctrl
+4752 down Down
+4753 up Right Ctrl
+4755 up S
+4756 down W
+4757 down Q
+4762 up A
+4762 down Right Ctrl
+4763 down Up
+4763 down A
+4764 up Up
+4764 up E
+4765 up Right Ctrl
+4766 up A
+4767 up Down
+4770 down S
+4772 up Q
+4773 down Down
+4778 up Down
+4778 up S
+4779 down Up
+4781 down S
+4783 down Right
+4784 up S
+4785 up Right
+4786 up W
+4787 down Right Shift
+4787 down A
+4789 up Right Shift
+4789 down W
+4790 up Left
+4790 up A
+4791 down Right Shift
+4792 up W
+4792 down Q
+4793 up Right Shift
+4794 up Up
+4795 down Left
+4795 down S
+4797 down Right
+4799 up Right
+4800 up Q
+4800 up S
+4801 down Right Ctrl
+4802 down Right
+4802 down Q
+4803 up Right Ctrl
+4803 up Right
+4804 up Q
+4808 down A
+4809 down Up
+4812 down S
+4817 up Up
+4818 down E
+4820 up E
+4820 down Right
+4827 up S
+4830 down Right Shift
+4831 down S
+4832 down W
+4834 up S
+4836 down S
+4839 down D
+4840 down Up
+4841 down Down
+4842 up Down
+4843 up Up
+4843 down Right Ctrl
+4845 up Right Ctrl
+4847 down Down
+4854 up D
+4855 up Left
+4855 up Down
+4856 down D
+4857 up D
+4860 up Right Shift
+4861 down Up
+4862 up W
+4862 down D
+4863 up D
+4865 down Down
+4868 up A
+4868 down W
+4876 down A
+4880 up Right
+4880 up Down
+4883 down Down
+4887 down Left
+4887 down Q
+4888 down Right
+4891 up Up
+4891 up A
+4892 down Up
+4893 up Right
+4896 up S
+4897 up Up
+4898 up W
+4898 down E
+4901 up E
+4902 up Left
+4902 down Right Ctrl
+4905 down A
+4908 down Right Shift
+4910 up A
+4910 down Up
+4913 up Down
+4917 up Right Ctrl
+4917 up Q
+4920 down S
+4923 down Left
+4924 down Right Ctrl
+4926 up Right Ctrl
+4926 down W
+4927 up W
+4928 down W
+4935 up S
+4935 down Right
+4939 down E
+4940 up Up
+4943 up W
+4943 down Q
+4944 down A
+4946 down Down
+4947 up E
+4948 up Q
+4949 up Down
+4949 up A
+4954 down E
+4955 up E
+4955 down A
+4956 down Up
+4957 down D
+4960 down Q
+4962 down W
+4963 up A
+4963 up Q
+4965 up D
+4965 down Down
+4965 down E
+4967 up W
+4967 up E
+4968 up Right Shift
+4968 up Down
+4971 up Up
+4971 down Right Ctrl
+4975 down S
+4977 down Right Shift
+4980 down D
+4983 up Left
+4986 down A
+4987 up A
+4995 up Right
+5010 up D
+5031 up Right Ctrl
+5035 up S
+5037 up Right Shift

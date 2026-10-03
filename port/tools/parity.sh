@@ -30,7 +30,9 @@ for replay in "${replays[@]}"; do
         tail -n 5 "$out/stdout.log" | sed 's/^/    /'
     fi
 
-    dump_result="$("$tools/diffreplay.py" --context 1 "$golden/dump.txt" "$out/dump.txt" 2>&1)"
+    golden_dump="$golden/dump.txt"
+    [[ -f "$golden_dump" ]] || golden_dump="$golden/dump.txt.gz"
+    dump_result="$("$tools/diffreplay.py" --context 1 "$golden_dump" "$out/dump.txt" 2>&1)"
     dump_status=$?
     echo "$dump_result" | head -n 40
 
@@ -39,7 +41,7 @@ for replay in "${replays[@]}"; do
     shot_total="$(grep -c '^frame ' <<< "$shot_result")"
     grep -v ': OK ' <<< "$shot_result" | sed 's/^/shot /'
 
-    frames="$(grep -c '^F ' "$golden/dump.txt")"
+    frames="$(gzip -dcf "$golden_dump" | grep -c '^F ')"
     if [[ $dump_status -eq 0 ]]; then
         verdict="MATCH all $frames frames"
     else
