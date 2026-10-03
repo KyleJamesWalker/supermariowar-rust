@@ -2808,8 +2808,7 @@ pub(crate) mod tests {
             }
             CGameValues::init(&mut game_values);
             rm = Ptr::new_box(CResourceManager::new());
-            g_tilesetmanager = Ptr::new_box(CTilesetManager::new());
-            g_tilesetmanager.init(&convert_path("gfx/packs/Classic"));
+            g_tilesetmanager = Ptr::new_box(CTilesetManager::new(&convert_path("gfx/packs/Classic")));
             g_map = Ptr::from_box(CMap::new());
         });
     }
@@ -3069,9 +3068,6 @@ pub(crate) mod tests {
         assert_eq!(actual.lines().count(), expected.lines().count());
     }
 
-    /// Platform tile types read past the end of the wrong "classic" tileset (`CTilesetManager::classic_tileset`).
-    const READS_GARBAGE: [&str; 2] = ["maps/SMW Fan_shipwreck.map", "worlds/Smb3/Big JM_Grassland 6.map"];
-
     /// Compares against the original C++ (`tools/ref/map_dump.sh` builds it). Skipped when the
     /// binary is absent; set `SMW_MAP_DUMP` to its path.
     #[test]
@@ -3094,7 +3090,7 @@ pub(crate) mod tests {
                     g_map = Ptr::from_box(CMap::new());
                     g_map.load_map(&f, rt);
                     let actual = dump(&mut g_map, rt);
-                    if actual != expected && !READS_GARBAGE.iter().any(|m| f.ends_with(m)) {
+                    if actual != expected {
                         let line = actual.lines().zip(expected.lines()).position(|(a, b)| a != b);
                         let show = line.map(|l| format!("\n  rust: {}\n  c++:  {}", actual.lines().nth(l).unwrap_or(""), expected.lines().nth(l).unwrap_or("")));
                         mismatches.push(format!("{} rt={} first diff line {:?}{}", f, rt, line, show.unwrap_or_default()));

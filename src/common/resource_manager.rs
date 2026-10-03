@@ -657,7 +657,7 @@ impl CResourceManager {
     pub fn load_game_graphics(&mut self) {
         let graphicspack = unsafe { gamegraphicspacklist.current_path().to_string_lossy().into_owned() };
 
-        unsafe { g_tilesetmanager.init(&graphicspack) };
+        unsafe { g_tilesetmanager = Ptr::new_box(crate::common::tileset_manager::CTilesetManager::new(&graphicspack)) };
 
         self.game_font_small = gfxFont::from_path(&convert_path_pack("gfx/packs/fonts/font_small.png", &graphicspack));
         self.game_font_large = gfxFont::from_path(&convert_path_pack("gfx/packs/fonts/font_large.png", &graphicspack));

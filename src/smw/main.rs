@@ -94,8 +94,6 @@ pub fn create_globals() {
         rm = Ptr::new_box(CResourceManager::new());
 
         g_map = Ptr::from_box(CMap::new());
-        g_tilesetmanager = Ptr::new_box(CTilesetManager::new());
-
         filterslist = Ptr::new_box(FiltersList::new());
         maplist = Ptr::new_box(MapList::new(false));
 

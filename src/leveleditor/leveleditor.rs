@@ -381,8 +381,7 @@ pub fn inner_main() {
         blitdest = screen;
 
         rm = Ptr::new_box(CResourceManager::new());
-        g_tilesetmanager = Ptr::new_box(CTilesetManager::new());
-        g_tilesetmanager.init(&convert_path("gfx/Classic/tilesets"));
+        g_tilesetmanager = Ptr::new_box(CTilesetManager::new(&convert_path("gfx/Classic/tilesets")));
         g_map = Ptr::from_box(CMap::new());
         filterslist = Ptr::new_box(crate::common::file_list::FiltersList::new());
         maplist = Ptr::new_box(MapList::new(false));

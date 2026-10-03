@@ -25,7 +25,6 @@ fn main() {
         sfx_init();
 
         rm = Ptr::new_box(CResourceManager::new());
-        g_tilesetmanager = Ptr::new_box(CTilesetManager::new());
         skinlist = Ptr::new_box(SkinList::new());
         soundpacklist = Ptr::new_box(SoundsList::new());
         menugraphicspacklist = Ptr::new_box(GraphicsList::new());

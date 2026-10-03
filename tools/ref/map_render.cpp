@@ -66,7 +66,6 @@ int main(int argc, char** argv) {
     blitdest = screen;
     rm = new CResourceManager();
     g_map = new (calloc(1, sizeof(CMap))) CMap();
-    g_tilesetmanager = new CTilesetManager();
     filterslist = new FiltersList();
     skinlist = new SkinList();
     menugraphicspacklist = new GraphicsList();

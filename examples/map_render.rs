@@ -44,7 +44,6 @@ fn main() {
         blitdest = screen;
         rm = Ptr::new_box(CResourceManager::new());
         g_map = Ptr::from_box(CMap::new());
-        g_tilesetmanager = Ptr::new_box(CTilesetManager::new());
         filterslist = Ptr::new_box(FiltersList::new());
         skinlist = Ptr::new_box(SkinList::new());
         menugraphicspacklist = Ptr::new_box(GraphicsList::new());

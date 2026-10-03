@@ -358,7 +358,6 @@ pub fn main() {
         rm = Ptr::new_box(CResourceManager::new());
 
         g_map = Ptr::from_box(CMap::new());
-        g_tilesetmanager = Ptr::new_box(CTilesetManager::new());
         filterslist = Ptr::new_box(FiltersList::new());
         maplist = Ptr::new_box(MapList::new(true));
         menugraphicspacklist = Ptr::new_box(GraphicsList::new());
@@ -395,7 +394,7 @@ pub fn main() {
         blitdest = screen;
         editor_harness::init();
         editor_harness::set_dumper(dump_editor_state);
-        g_tilesetmanager.init(&convert_path("gfx/Classic/tilesets"));
+        g_tilesetmanager = Ptr::new_box(CTilesetManager::new(&convert_path("gfx/Classic/tilesets")));
 
         let title = format!("{} {}", TITLESTRING, MAPTITLESTRING);
         gfx_settitle(&title);

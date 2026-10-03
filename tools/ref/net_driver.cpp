@@ -83,7 +83,6 @@ int main(int argc, char** argv) {
     gfx_init(640, 480, false);
     blitdest = screen;
     rm = new CResourceManager();
-    g_tilesetmanager = new CTilesetManager();
     filterslist = new FiltersList();
     skinlist = new SkinList();
     menugraphicspacklist = new GraphicsList();
