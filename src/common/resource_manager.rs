@@ -9,7 +9,13 @@ use crate::common::global_constants::*;
 use crate::common::path::{convert_path_pack, file_exists};
 use crate::common::sfx::{sfxMusic, sfxSound, sfx_can_play_audio};
 use crate::globals::*;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct LoadedSpriteInfo {
+    pub path: PathBuf,
+    pub colorScheme: i16,
+}
 
 #[derive(Default)]
 pub struct CResourceManager {
@@ -17,6 +23,8 @@ pub struct CResourceManager {
     pub spr_shyguy: [SpriteStrip; 4],
     pub spr_chocobo: [SpriteStrip; 4],
     pub spr_bobomb: [SpriteStrip; 4],
+
+    pub loaded_player_sprites: [LoadedSpriteInfo; 4],
     pub spr_clouds: gfxSprite,
     pub spr_ghosts: gfxSprite,
     pub spr_fish: gfxSprite,
@@ -301,10 +309,23 @@ impl CResourceManager {
         self.load_menu_skin_path(playerID, &path, colorID, fLoadBothDirections)
     }
 
-    pub fn load_menu_skin_path(&mut self, playerID: i16, filename: &Path, colorID: i16, fLoadBothDirections: bool) -> bool {
-        match gfx_loadmenuskin(filename, colorID, fLoadBothDirections) {
+    pub fn load_menu_skin_path(&mut self, playerID: i16, path: &Path, colorID: i16, fLoadBothDirections: bool) -> bool {
+        let p = playerID as usize;
+        let new_info = LoadedSpriteInfo { path: path.to_path_buf(), colorScheme: colorID };
+        // GSMenu's LoadFullSkin replaces spr_player without updating this cache, as in C++.
+        if self.loaded_player_sprites[p] == new_info {
+            let both_dirs_present = !self.spr_player[p][PGFX_STANDING_L as usize].get_surface().is_null()
+                && !self.spr_player[p][PGFX_RUNNING_L as usize].get_surface().is_null();
+            let already_loaded = !fLoadBothDirections || both_dirs_present;
+            if already_loaded {
+                return true;
+            }
+        }
+
+        match gfx_loadmenuskin(path, colorID, fLoadBothDirections) {
             Ok(strip) => {
-                self.spr_player[playerID as usize] = strip;
+                self.spr_player[p] = strip;
+                self.loaded_player_sprites[p] = new_info;
                 true
             }
             Err(what) => {
