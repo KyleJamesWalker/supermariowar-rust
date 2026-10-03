@@ -3,7 +3,7 @@
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 port="$here/../.."
-data="$(cd "$port/../data" && pwd)"
+data="$(cd "$port/data" && pwd)"
 tmp="${TMPDIR:-/tmp}/gfx_smoke"
 mkdir -p "$tmp"
 export SDL_VIDEODRIVER=dummy
