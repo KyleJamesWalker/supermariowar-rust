@@ -1269,9 +1269,8 @@ pub fn editor_edit() -> i32 {
                             }
 
                             if key_sym() == SDLK_r as i32 {
-                                if g_musiccategorydisplaytimer > 0 && g_worldmap.iMusicCategory == crate::common::file_list::WorldMusicCategory::Sleep {
-                                    // FIXME
-                                    g_worldmap.iMusicCategory = crate::common::file_list::WorldMusicCategory::Grass;
+                                if g_musiccategorydisplaytimer > 0 {
+                                    g_worldmap.iMusicCategory.post_increment();
                                 }
 
                                 g_musiccategorydisplaytimer = 90;

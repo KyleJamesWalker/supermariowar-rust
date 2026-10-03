@@ -713,6 +713,22 @@ pub enum WorldMusicCategory {
     COUNT,
 }
 
+impl WorldMusicCategory {
+    /// `++category`: wraps past the last category back to `Grass`.
+    pub fn pre_increment(&mut self) -> WorldMusicCategory {
+        let value = (*self as u8 + 1) % WorldMusicCategory::COUNT as u8;
+        *self = unsafe { std::mem::transmute::<u8, WorldMusicCategory>(value) };
+        *self
+    }
+
+    /// `category++`
+    pub fn post_increment(&mut self) -> WorldMusicCategory {
+        let temp = *self;
+        self.pre_increment();
+        temp
+    }
+}
+
 pub fn world_music_category_to_string(category: WorldMusicCategory) -> &'static str {
     match category {
         WorldMusicCategory::Grass => "Grass",
