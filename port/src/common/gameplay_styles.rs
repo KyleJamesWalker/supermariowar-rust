@@ -88,3 +88,13 @@ pub enum BoomerangStyle {
     Zelda,
     Random,
 }
+
+crate::enum_from_u8!(TeamCollisionStyle, 3);
+crate::enum_from_u8!(TournamentControlStyle, 8);
+crate::enum_from_u8!(DeathStyle, 2);
+crate::enum_from_u8!(ScoringStyle, 2);
+crate::enum_from_u8!(JailStyle, 3);
+crate::enum_from_u8!(ShieldStyle, 4);
+crate::enum_from_u8!(StarStyle, 4);
+crate::enum_from_u8!(WarpLockStyle, 5);
+crate::enum_from_u8!(BoomerangStyle, 4);

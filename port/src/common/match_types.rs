@@ -32,3 +32,7 @@ pub enum Boss {
     Bomb,
     Fire,
 }
+
+crate::enum_from_u8!(MatchType, 7);
+crate::enum_from_u8!(Minigame, 5);
+crate::enum_from_u8!(Boss, 3);

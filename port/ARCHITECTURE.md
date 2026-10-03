@@ -47,6 +47,7 @@ The game is single-threaded. C++ globals are `pub static mut` items with the C++
 |---|---|
 | Scalar, POD array, const-initializable value (`short x_shake = 0;`, `short g_iSwirlSpawnLocations[4][2][25];`) | `pub static mut x_shake: i16 = 0;` |
 | Class instance constructed at startup (`CGameValues game_values;`, `CObjectContainer objectcontainer[3];`) | `pub static mut game_values: Global<CGameValues> = Global::uninit();` initialized by `game_values.init(CGameValues::new())` in `globals::init_globals()` in C++ definition order. `Global<T>` derefs to `T`, so call sites read `game_values.gamemode` exactly like C++. |
+| (trap) `Global<T>` has its own `init(v)`, `is_initialized()`, `as_ptr()`; call a same-named method of `T` as `CGameValues::init(&mut game_values)`. | |
 | Pointer global (`CMap* g_map;`, `CResourceManager* rm;`) | `pub static mut g_map: Ptr<CMap> = Ptr::null();` assigned with `g_map = Ptr::new_box(CMap::new())`; `Ptr<T>` derefs to `T`, so `g_map.map(x, y)` mirrors `g_map->map(x, y)`. |
 | Function-local `static` | `static mut` inside the function, same name |
 

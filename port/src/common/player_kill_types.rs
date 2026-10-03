@@ -9,3 +9,5 @@ pub enum PlayerKillType {
     Removed,
     NonKill,
 }
+
+crate::enum_from_u8!(PlayerKillType, 4);

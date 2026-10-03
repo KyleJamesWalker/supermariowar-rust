@@ -252,3 +252,20 @@ mod tests {
         assert_eq!(std::mem::size_of::<Aliased>(), 0);
     }
 }
+
+/// `static_cast<Enum>(uint8_t)` for a `#[repr(u8)]` enum with `$count` variants numbered from 0.
+/// Out-of-range values (only from corrupt files) become the default variant.
+#[macro_export]
+macro_rules! enum_from_u8 {
+    ($t:ty, $count:expr) => {
+        impl $t {
+            pub fn from_u8(v: u8) -> Self {
+                if (v as usize) < $count {
+                    unsafe { ::std::mem::transmute::<u8, $t>(v) }
+                } else {
+                    <$t>::default()
+                }
+            }
+        }
+    };
+}
