@@ -1,0 +1,62 @@
+# World editor coverage for the upstream sync: music category cycling, stage editing on a loaded
+# world, scrolling the stage map field, stage deletion with existing stages, and saving.
+#@ frames=271
+#@ shots=10,22,34,46,58,70,82,94,106,118,130,142,154,166,178,190,202,214,226,238,250,262
+#@ files=data/worlds/Contest_Arctic World.txt,data/worlds/ZZworldeditor.txt
+
+# Music category: the first R shows the popup, each further R advances the category (upstream a7bc5276)
+5 down R
+6 up R
+9 down R
+10 up R
+13 down R
+14 up R
+17 down R
+18 up R
+21 down R
+22 up R
+
+# Stage editor on a world that already has stages (upstream d546c05b): edit stage 2 with the right button
+120 down E
+121 up E
+126 mousedown right 48 16
+127 mouseup right 48 16
+
+# Map field: select it, scroll forward three maps and back one (upstream 01e5fa7e), unselect
+134 down Down
+135 up Down
+137 down Down
+138 up Down
+140 down Down
+141 up Down
+143 down Down
+144 up Down
+146 down Return
+147 up Return
+149 down Right
+150 up Right
+154 down Right
+155 up Right
+159 down Right
+160 up Right
+164 down Left
+165 up Left
+169 down Return
+170 up Return
+
+# Leave the stage, hover stage 4 for the preview, then delete stage 1 through the dialog
+177 down Escape
+178 up Escape
+183 mousemove 144 16
+195 mousedown right 16 16
+196 mouseup right 16 16
+203 mousedown left 500 456
+204 mouseup left 500 456
+209 mousedown left 275 266
+210 mouseup left 275 266
+220 down E
+221 up E
+
+# Save (bonus house text is written, upstream 1eaed535)
+228 down S
+229 up S

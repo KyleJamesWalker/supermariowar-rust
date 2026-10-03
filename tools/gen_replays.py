@@ -154,7 +154,7 @@ MAPS = ["0smw", "Block Piles", "2skyfight", "3blockforts", "4highabove", "Cloud 
 for i, mode in enumerate(GAME_MODES):
     REPLAYS[f"cpu_{mode}"] = (lambda i=i, mode=mode: cpu_mode(f"cpu_{mode}", i, MAPS[i % len(MAPS)], 100 + i))
 
-def flow(name, desc, rights, sub_rights, returns, seed, frames, mapname="0smw", gap=40):
+def flow(name, desc, rights, sub_rights, returns, seed, frames, mapname="0smw", gap=40, options=None):
     s = Script()
     boot_to_main(s)
     players_all_cpu(s)
@@ -163,12 +163,16 @@ def flow(name, desc, rights, sub_rights, returns, seed, frames, mapname="0smw", 
     for _ in range(returns):
         s.tap("Return", gap=gap)
     shots = [s.f + 60, frames // 2, frames - 1]
-    s.write(name, f"# 4 CPU players: {desc}.\n#@ seed={seed}\n#@ map={mapname}\n#@ frames={frames}\n#@ shots={','.join(map(str, shots))}\n")
+    opts = f"#@ options={options}\n" if options else ""
+    s.write(name, f"# 4 CPU players: {desc}.\n#@ seed={seed}\n#@ map={mapname}\n#@ frames={frames}\n#@ shots={','.join(map(str, shots))}\n{opts}")
 
 
 REPLAYS["flow_tournament"] = lambda: flow("flow_tournament", "Tournament (2 wins) through the menus", 1, 0, 3, 201, 6000, "2skyfight")
 REPLAYS["flow_tour"] = lambda: flow("flow_tour", "first Tour, first stop", 2, 0, 3, 202, 5000)
 REPLAYS["flow_world"] = lambda: flow("flow_world", "first World, CPU-driven first stage", 3, 0, 3, 203, 6000)
+REPLAYS["cov_tour_options"] = lambda: flow(
+    "cov_tour_options", "Mario tour first stop (Frenzy, no settings on the line) with non-default Frenzy, CTF and Survival options from options.bin",
+    2, 6, 3, 207, 3000, options="fixtures/options_modes.bin")
 REPLAYS["mini_pipe"] = lambda: flow("mini_pipe", "Pipe Coin minigame", 4, 0, 2, 204, 3000)
 REPLAYS["mini_hammerboss"] = lambda: flow("mini_hammerboss", "Hammer Boss minigame", 4, 1, 2, 205, 3000)
 REPLAYS["mini_boxes"] = lambda: flow("mini_boxes", "Boxes minigame", 4, 4, 2, 206, 3000)
