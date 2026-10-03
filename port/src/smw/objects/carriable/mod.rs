@@ -1,0 +1,11 @@
+pub mod co_bomb;
+pub mod co_egg;
+pub mod co_flag;
+pub mod co_kuribo_shoe;
+pub mod co_phanto_key;
+pub mod co_shell;
+pub mod co_spike;
+pub mod co_spring;
+pub mod co_star;
+pub mod co_throw_block;
+pub mod co_throw_box;

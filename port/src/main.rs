@@ -1,1 +1,3 @@
-fn main() {}
+fn main() {
+    smw::smw::main::main();
+}

@@ -11,3 +11,10 @@ sdl2 = { version = "0.37", features = ["image", "mixer"] }
 
 [profile.dev]
 opt-level = 1
+overflow-checks = false
+
+[profile.release]
+overflow-checks = false
+
+[profile.test]
+overflow-checks = false

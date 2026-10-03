@@ -1,0 +1,11 @@
+pub mod over_map_object;
+pub mod wo_area;
+pub mod wo_bowser_fire;
+pub mod wo_king_of_the_hill_zone;
+pub mod wo_orbit_hazard;
+pub mod wo_phanto;
+pub mod wo_pipe_bonus;
+pub mod wo_pipe_coin;
+pub mod wo_race_goal;
+pub mod wo_straight_path_hazard;
+pub mod wo_thwomp;
