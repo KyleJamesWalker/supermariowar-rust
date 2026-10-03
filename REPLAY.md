@@ -50,6 +50,8 @@ Each variable is a no-op when unset or empty. The Rust binary must honour the sa
 | `SMW_SHOT_DIR=<dir>` | Where screenshots go (default `.`), named `frame_<n>.bmp`. |
 | `SMW_MAP=<name>` | Select the start map when the menu is created (see below). |
 
+Rust only (see Recordings): `SMW_NO_RECORD=1` turns off session recording, `SMW_LIVE_SCRIPT=<file>` feeds a replay-format script into the live input path of a recorded session, `SMW_AUDIBLE=1` plays real sound alongside the virtual mixer, and `SMW_REPLAY_SPEED=<n>` scales the frame-limiter sleep.
+
 ## Frame loop
 
 The frame counter `N` starts at 0 and counts iterations of the main loop in `gameloop()`:
@@ -69,7 +71,7 @@ One event per line: `<frame> <down|up> <SDL key name>`. The key name is everythi
 
 Pushed events are `SDL_KEYDOWN`/`SDL_KEYUP` with `keysym.sym` = the key, `keysym.scancode = SDL_GetScancodeFromKey(sym)`, `mod = KMOD_NONE`, `repeat = 0`, `windowID = 0`, `timestamp = 0`. The game reads only `sym` and `mod`.
 
-Lines of the form `#@ key=value` are run parameters for `run_ref.sh` (and the Rust runner): `seed`, `frames`, `map`, `shots`, and `options`, an `options.bin` (path relative to the replay) copied into the sandbox HOME before the run. They are comments to the game itself.
+Lines of the form `#@ key=value` are run parameters for `run_ref.sh` (and the Rust runner): `seed`, `frames`, `map`, `shots`, and `options`, an `options.bin` (path relative to the replay) copied into the sandbox HOME before the run. Session recordings also carry `options_b64` and `controls_b64`, the base64 bytes of the `options.bin` and `controls.sdl2.bin` the session started with, which `run_ref.sh` writes into the sandbox HOME. They are comments to the game itself.
 
 A key press is a `down` and a later `up`. `fPressed` fires only on the down edge, so pressing the same key twice needs an `up` in between.
 
@@ -102,6 +104,22 @@ Default keyboard bindings from `CGameValues::init` (`controlkeys` in `GameValues
 | cancel / scroll fast | `Escape` | `Left Shift` | - | - |
 
 Menu path to a default 2-player Classic game, used by `start_classic.txt`: `Return` (splash), `Return` (main: Start), `Return` (match selection: Continue), `E` (player 2 ready on team select), `Return`, `Return` (to game settings), `Return` (Start). With presses on frames 10, 30, 50, 70, 100, 130, 160, gameplay begins on frame 190.
+
+## Recordings
+
+The Rust game records every normal launch (no `SMW_REPLAY`, no `SMW_NO_RECORD`) to `~/Library/Preferences/.smw/replays/<UTC timestamp>.txt`, the settings directory that holds `options.bin`, and keeps the newest 10. A recording is an ordinary replay script, so `run_ref.sh` runs it on either build. The editors and replays never record.
+
+- Header: `#@ seed=` (a random seed, applied exactly as `SMW_SEED`, so the live session is a seeded run), then `#@ options_b64=` and `#@ controls_b64=` when those files existed at startup. `#@ frames=` is appended at exit (normal quit, the window closing, or a caught crash); a killed process leaves it out.
+- Input capture: an SDL event filter holds back every OS input event. At each frame start the held keyboard and joystick events become replay lines (`down`/`up` with `SDL_GetKeyName`, `jaxis`/`jbutton`/`jhat` with the joystick's open index) and are pushed back exactly as a replay pushes them, so the game sees `mod = KMOD_NONE` and `repeat = 0` both live and in replay. Input the format cannot express is dropped while recording: mouse, touch, game-controller and text events, key-repeat flags, and modifiers (so Alt+Enter and Alt+F4 do nothing in a recorded session).
+- Frame 0 gets one `0 jhat <dev> 0 0` line per joystick open at startup, so a replay attaches the same number of joysticks.
+- A blocking wait (control binding) returns the next held input event and writes it with the next frame number, which is how a replay's `waitEvent` consumes it.
+- Window close: `#@ frames=` is the frame the close arrived in, so the replay ends where the live session stopped processing input.
+- Sound: the virtual mixer drives every game-visible sound state, as in replays, and SDL_mixer also plays the same commands as output only (results ignored, no finished callbacks). The device is opened at 44100 Hz, S16, stereo with no format changes allowed, so sound lengths match the headless dummy driver; with no usable device the game falls back to the dummy driver.
+- `SMW_LIVE_SCRIPT=<file>` pushes a replay script's events into SDL's queue at their frames, with the `KMOD_NUM` modifier and some repeat flags a real keyboard sends, so they take the live capture path. A scripted live session's `SMW_DUMP` equals its recording's dump under `run_rust.sh`.
+
+Watching: `smw --replay <file> [--replay-speed <n>]` plays a recording in a normal window at normal speed (or `n` times faster) with sound. It writes the embedded settings into a throwaway HOME, removed at exit, so the user's settings are untouched, and quits after `#@ frames=`. In the app bundle: `open "dist/Super Mario War.app" --args --replay /absolute/path/to/recording.txt`.
+
+Bug check: `tools/replay_compare.sh <file> [out_dir]` runs a recording headless on the C++ reference (`SMW_CPP_BIN`, default `~/work/supermariowar-cpp-reference/build-latest/smw`) and on the Rust build, prints the first divergent frame with `diffreplay.py` context, and saves C++ and Rust screenshots of the frames around it.
 
 ## Dump format
 
