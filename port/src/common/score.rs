@@ -1,5 +1,6 @@
 //! Port of src/common/Score.h
 
+use crate::globals::Aliased;
 /// `CScore::AdjustScore` is defined in smw/player.cpp, so its port lives in `smw::player`.
 #[derive(Clone, Debug, Default)]
 pub struct CScore {
@@ -17,6 +18,7 @@ pub struct CScore {
     pub iDigitRight: i16,
     pub iDigitMiddle: i16,
     pub iDigitLeft: i16,
+    pub _alias: Aliased,
 }
 
 impl CScore {

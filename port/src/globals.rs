@@ -32,6 +32,18 @@ impl std::fmt::Debug for Aliased {
     }
 }
 
+impl PartialEq for Aliased {
+    fn eq(&self, _: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for Aliased {}
+
+impl std::hash::Hash for Aliased {
+    fn hash<H: std::hash::Hasher>(&self, _: &mut H) {}
+}
+
 /// A C++ global object constructed at startup. Derefs to `T`.
 pub struct Global<T> {
     value: MaybeUninit<T>,

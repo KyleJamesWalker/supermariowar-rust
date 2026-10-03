@@ -7,7 +7,7 @@ use crate::common::global_constants::*;
 use crate::common::math::vec2::Vec2f;
 use crate::common::movingplatform::MovingPlatform;
 use crate::common::object_base::cap_falling_velocity;
-use crate::globals::Ptr;
+use crate::globals::{Ptr, Aliased};
 use crate::smw::main::players;
 use std::any::Any;
 
@@ -444,11 +444,12 @@ impl MovingPlatformPathTrait for EllipsePath {
 
 pub struct FallingPath {
     pub base: MovingPlatformPath,
+    _alias: Aliased,
 }
 
 impl FallingPath {
     pub fn new(startPos: Vec2f) -> Self {
-        FallingPath { base: MovingPlatformPath::new(0.0, startPos, Vec2f::zero(), false) }
+        FallingPath { _alias: Aliased::new(), base: MovingPlatformPath::new(0.0, startPos, Vec2f::zero(), false) }
     }
 }
 

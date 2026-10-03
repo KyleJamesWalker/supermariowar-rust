@@ -1,5 +1,6 @@
 //! Port of src/common/FileList.cpp
 
+use crate::globals::Aliased;
 use crate::common::file_io::cstr_bytes_to_string;
 use crate::common::linfunc::tokenize;
 use crate::common::path::{convert_path, strip_creator_and_ext, strip_path_and_extension};
@@ -112,11 +113,12 @@ pub fn update_music_with_overrides(musiclist: &mut MusicList, worldmusiclist: &m
 pub struct SimpleFileList {
     pub m_filelist: Vec<PathBuf>,
     pub m_index: usize,
+    _alias: Aliased,
 }
 
 impl Default for SimpleFileList {
     fn default() -> Self {
-        SimpleFileList { m_filelist: Vec::new(), m_index: usize::MAX }
+        SimpleFileList { _alias: Aliased::new(), m_filelist: Vec::new(), m_index: usize::MAX }
     }
 }
 
@@ -304,6 +306,7 @@ pub struct SkinListNode {
 #[derive(Clone, Debug)]
 pub struct SkinList {
     m_skins: Vec<SkinListNode>,
+    _alias: Aliased,
 }
 
 impl SkinList {
@@ -314,7 +317,7 @@ impl SkinList {
             m_skins.push(SkinListNode { name: strip_creator_and_ext(&filename_string(&path)), path });
         }
         container_helpers::sort(&mut m_skins, |lhs: &SkinListNode, rhs: &SkinListNode| lhs.name < rhs.name);
-        SkinList { m_skins }
+        SkinList { _alias: Aliased::new(), m_skins }
     }
 
     pub fn count(&self) -> usize {
@@ -629,6 +632,7 @@ pub struct MusicList {
     m_currentMusic: PathBuf,
     m_entries: Vec<MusicPack>,
     m_currentIndex: usize,
+    _alias: Aliased,
 }
 
 impl MusicList {
@@ -645,7 +649,7 @@ impl MusicList {
             std::panic::panic_any("Could not load any map music!");
         }
 
-        MusicList { m_currentMusic: PathBuf::new(), m_entries, m_currentIndex: 0 }
+        MusicList { _alias: Aliased::new(), m_currentMusic: PathBuf::new(), m_entries, m_currentIndex: 0 }
     }
 
     pub fn music(&self, musicID: usize) -> &PathBuf {
@@ -845,6 +849,7 @@ impl WorldMusicPack {
 pub struct WorldMusicList {
     m_entries: Vec<WorldMusicPack>,
     m_currentIndex: usize,
+    _alias: Aliased,
 }
 
 impl WorldMusicList {
@@ -859,7 +864,7 @@ impl WorldMusicList {
         if m_entries.is_empty() {
             std::panic::panic_any("Could not load any world music!");
         }
-        WorldMusicList { m_entries, m_currentIndex: 0 }
+        WorldMusicList { _alias: Aliased::new(), m_entries, m_currentIndex: 0 }
     }
 
     pub fn current_index(&self) -> usize {

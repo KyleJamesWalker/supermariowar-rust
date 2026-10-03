@@ -3,6 +3,7 @@
 use crate::common_netplay::network_interface::NetworkEventHandler;
 use crate::common_netplay::platform_enet::net_peer_enet::NetPeerENet;
 use crate::common_netplay::protocol_definitions::NET_GAMEHOST_PORT;
+use crate::globals::Aliased;
 use crate::smw::network::network_layer::NetworkLayer;
 use enet_sys::*;
 use std::ffi::CString;
@@ -14,6 +15,8 @@ pub struct NetworkLayerENet {
 
     local_gamehost: *mut ENetHost,
     last_gamehost_event: ENetEvent,
+
+    _alias: Aliased,
 }
 
 impl Default for NetworkLayerENet {
@@ -25,6 +28,7 @@ impl Default for NetworkLayerENet {
 impl NetworkLayerENet {
     pub fn new() -> Self {
         NetworkLayerENet {
+            _alias: Aliased::new(),
             local_client: null_mut(),
             last_client_event: unsafe { std::mem::zeroed() },
             local_gamehost: null_mut(),

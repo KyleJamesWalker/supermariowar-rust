@@ -1,5 +1,6 @@
 //! Port of src/common_netplay/platform_enet/NetPeerENet.cpp
 
+use crate::globals::Aliased;
 use crate::common_netplay::network_interface::NetPeer;
 use enet_sys::*;
 use std::any::Any;
@@ -11,6 +12,7 @@ const RELIABLE_CHANNEL: u8 = 1;
 pub struct NetPeerENet {
     foreign_peer: *mut ENetPeer,
     player_id: u64,
+    _alias: Aliased,
 }
 
 impl NetPeerENet {
@@ -19,7 +21,7 @@ impl NetPeerENet {
             let mut player_id: u64 = (*peer).address.host as u64;
             player_id <<= std::mem::size_of_val(&(*peer).address.port) * 8;
             player_id += (*peer).address.port as u64;
-            NetPeerENet { foreign_peer: peer, player_id }
+            NetPeerENet { _alias: Aliased::new(), foreign_peer: peer, player_id }
         }
     }
 

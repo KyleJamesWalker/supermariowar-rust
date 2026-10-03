@@ -8,7 +8,7 @@ use crate::common::global_constants::*;
 use crate::common::match_types::Boss;
 use crate::common::random_number_generator::RANDOM_INT;
 use crate::common::version::Version;
-use crate::globals::Ptr;
+use crate::globals::{Ptr, Aliased};
 use crate::smw::main::gamemodes;
 
 const DELIM_EMPTY: &str = "";
@@ -43,6 +43,7 @@ pub struct TourStop {
 
     pub iBonusTextLines: i16,
     pub szBonusText: [String; 5],
+    pub _alias: Aliased,
 }
 
 /// C `strtok` over a NUL-terminated byte buffer; positions are indices into `buf`.

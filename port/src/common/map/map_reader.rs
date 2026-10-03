@@ -3,6 +3,7 @@
 //! The C++ reader class hierarchy (MapReader1500 ... MapReader1802) is one struct tagged with the
 //! concrete class; each `read_*` method dispatches to the override that class would use.
 
+use crate::globals::Aliased;
 use crate::common::file_io::BinaryFile;
 use crate::common::map::{CMap, ReadType};
 use crate::common::version::Version;
@@ -33,12 +34,14 @@ pub struct MapReader {
     pub translationid: Option<Vec<i16>>,
     pub tilesetwidths: Option<Vec<i16>>,
     pub tilesetheights: Option<Vec<i16>>,
+    _alias: Aliased,
 }
 
 impl MapReader {
     fn new(kind: MapReaderKind) -> Self {
         use MapReaderKind::*;
         let mut r = MapReader {
+            _alias: Aliased::new(),
             kind,
             parse_nospawn: false,
             fix_spawnareas: false,

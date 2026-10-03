@@ -1,5 +1,7 @@
 //! Port of src/common/RandomNumberGenerator.cpp
 
+use crate::globals::Aliased;
+
 extern "C" {
     fn srand(seed: u32);
     fn rand() -> i32;
@@ -91,11 +93,12 @@ impl RandomNumberGeneratorType for SystemRandomNumberGenerator {
 pub struct Well512RandomNumberGenerator {
     state: [u32; 16],
     index: u32,
+    _alias: Aliased,
 }
 
 impl Well512RandomNumberGenerator {
     pub fn new() -> Self {
-        let mut r = Well512RandomNumberGenerator { state: [0; 16], index: 0 };
+        let mut r = Well512RandomNumberGenerator { _alias: Aliased::new(), state: [0; 16], index: 0 };
         r.initialize();
         r
     }
