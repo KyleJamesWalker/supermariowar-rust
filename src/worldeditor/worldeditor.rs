@@ -3841,7 +3841,7 @@ pub fn editor_stage() -> i32 {
                             if iIndex == iEditStage {
                                 game_values.tourstops[iIndex as usize].delete();
 
-                                game_values.tourstops.erase(iIndex as usize);
+                                game_values.tourstops.remove(iIndex as usize);
                                 g_worldmap.iNumStages -= 1;
 
                                 break;
