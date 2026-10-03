@@ -1,6 +1,8 @@
 //! Port of src/smw/ui/MI_ChatMessageBox.cpp
 
+use crate::common::global::rm;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
+use sdl2::sys::SDL_Rect;
 
 #[derive(Clone, Debug, Default)]
 pub struct CMB_ChatMessage {
@@ -36,6 +38,14 @@ impl UI_ControlTrait for MI_ChatMessageBox {
     crate::impl_ctl!();
 
     fn draw(&mut self) {
-        // TODO(mi_chat_message_box): port MI_ChatMessageBox::Draw (menu_dialog frame + messages).
+        unsafe {
+            let (x, y) = (self.m_pos.x as i32, self.m_pos.y as i32);
+            let w = self.iWidth as i32;
+            let n = self.iNumLines as i32;
+            rm.menu_dialog.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: w - 16, h: n * 32 + 32 });
+            rm.menu_dialog.draw_src(x + w - 16, y, &SDL_Rect { x: 496, y: 0, w: 16, h: n * 32 + 32 });
+            rm.menu_dialog.draw_src(x, y + n * 32 + 32, &SDL_Rect { x: 0, y: 464, w: w - 16, h: 16 });
+            rm.menu_dialog.draw_src(x + w - 16, y + n * 32 + 32, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+        }
     }
 }

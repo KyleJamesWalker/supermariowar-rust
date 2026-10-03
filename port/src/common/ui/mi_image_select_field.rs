@@ -37,6 +37,16 @@ impl MI_ImageSelectField {
             iImageHeight: imageHeight,
         }
     }
+
+    /// Implicit copy constructor.
+    pub fn copy_from(other: &MI_ImageSelectField) -> Self {
+        MI_ImageSelectField {
+            mi_select_field: MI_SelectField::copy_from(&other.mi_select_field),
+            spr_image: other.spr_image,
+            iImageWidth: other.iImageWidth,
+            iImageHeight: other.iImageHeight,
+        }
+    }
 }
 
 impl UI_ControlTrait for MI_ImageSelectField {
