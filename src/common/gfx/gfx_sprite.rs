@@ -131,9 +131,24 @@ impl gfxSprite {
         }
     }
 
+    /// `draw(SDL_Surface* dst, Vec2i dstPos)`: the whole sprite onto `dst`, no camera shake.
+    pub fn draw_to_pos(&self, dst: *mut SDL_Surface, dstX: i32, dstY: i32) {
+        self.blit(null(), dst, dstX, dstY);
+    }
+
     /// `draw(SDL_Surface* dst, const SDL_Rect& dstRect)`: the whole sprite onto `dst`, no camera shake.
     pub fn draw_to(&self, dst: *mut SDL_Surface, dstRect: &SDL_Rect) {
         self.blit(null(), dst, dstRect.x, dstRect.y);
+    }
+
+    /// `draw(const SDL_Rect& srcRect, SDL_Surface* dst, Vec2i dstPos)`: part of the sprite onto `dst`.
+    pub fn draw_src_to_pos(&self, srcRect: &SDL_Rect, dst: *mut SDL_Surface, dstX: i32, dstY: i32) {
+        self.blit(srcRect, dst, dstX, dstY);
+    }
+
+    /// `draw(const SDL_Rect& srcRect, SDL_Surface* dst, const SDL_Rect& dstRect)`: part of the sprite onto `dst`.
+    pub fn draw_src_to(&self, srcRect: &SDL_Rect, dst: *mut SDL_Surface, dstRect: &SDL_Rect) {
+        self.blit(srcRect, dst, dstRect.x, dstRect.y);
     }
 
     fn blit(&self, srcRect: *const SDL_Rect, dst: *mut SDL_Surface, dstPosX: i32, dstPosY: i32) {
