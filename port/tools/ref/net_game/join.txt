@@ -1,0 +1,32 @@
+#@ seed=1
+#@ frames=1100
+10 down Return
+12 up Return
+30 down Down
+32 up Down
+40 down Down
+42 up Down
+50 down Return
+52 up Return
+70 down Down
+72 up Down
+80 down Return
+82 up Return
+300 down Down
+302 up Down
+310 down Down
+312 up Down
+320 down Return
+322 up Return
+340 down Left
+342 up Left
+350 down Return
+352 up Return
+620 down Left
+680 up Left
+700 down Up
+704 up Up
+760 down Right
+860 up Right
+880 down Up
+884 up Up
