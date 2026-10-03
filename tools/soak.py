@@ -178,7 +178,7 @@ def main():
     ap.add_argument("--flow-share", type=float, default=0.0, help="share of cases that run a tournament/tour/world/minigame flow")
     ap.add_argument("--out", type=Path, default=Path(os.environ.get("TMPDIR", "/tmp")) / "smw-soak")
     ap.add_argument("--rust-bin", type=Path, default=PORT / "target/release/smw")
-    ap.add_argument("--ref-dir", type=Path, default=Path.home() / "work/smw-ref-soak")
+    ap.add_argument("--ref-dir", type=Path, default=Path.home() / "work/supermariowar-cpp-reference")
     args = ap.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
 

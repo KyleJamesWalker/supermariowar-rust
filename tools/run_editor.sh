@@ -23,8 +23,8 @@ editor="$1"
 script="$(cd "$(dirname "$2")" && pwd)/$(basename "$2")"
 name="$(basename "$script" .txt)"
 out="${3:-${TMPDIR:-/tmp}/smw-editor-out/$editor/$name}"
-ref="${SMW_EDITOR_REF_DIR:-$HOME/work/smw-ref-editors}"
-bin="${SMW_BIN:-$ref/build-editors/smw-$editor}"
+ref="${SMW_EDITOR_REF_DIR:-$HOME/work/supermariowar-cpp-reference}"
+bin="${SMW_BIN:-$ref/build/smw-$editor}"
 data="${SMW_DATA_DIR:-$ref/data}"
 
 if [[ ! -x "$bin" ]]; then

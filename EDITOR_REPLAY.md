@@ -8,20 +8,9 @@ The level and world editors are checked the same way as the game (`REPLAY.md`). 
 
 ## Building the reference editors
 
-The editors build from their own tree, `~/work/smw-ref-editors`, never from `~/work/smw-ref` (the game reference all game goldens come from). That tree is upstream plus `tools/cpp-harness.patch` plus `tools/editor-harness.patch`:
+The editors build from the same reference checkout as the game (`REPLAY.md`): `~/work/supermariowar-cpp-reference` on branch `harness-latest`, whose `build-reference.sh` builds `smw-leveledit` and `smw-worldedit` alongside `smw`. The editor hooks add only a `friend` declaration to `common/map.h` outside the editor sources, so the game binary from the same tree still reproduces the game goldens.
 
-```sh
-rsync -a --exclude .git ~/work/supermariowar/ ~/work/smw-ref-editors/
-cd ~/work/smw-ref-editors
-patch -p1 < <this repo>/tools/cpp-harness.patch
-patch -p1 < <this repo>/tools/editor-harness.patch
-mkdir -p build-editors && cd build-editors
-cmake .. -DNO_NETWORK=ON -DBUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release \
-         -DCMAKE_CXX_FLAGS="-O2 -ffp-contract=off"
-make -j smw-worldedit smw-leveledit
-```
-
-`editor-harness.patch` covers `common/CMakeLists.txt`, `common/EditorHarness.{h,cpp}`, `common/map.h`, `leveleditor/leveleditor.cpp` and `worldeditor/worldeditor.cpp`; `~/work/smw-ref` never gets them, so the game reference stays clean upstream plus `cpp-harness.patch`. Both patches are `git diff master harness-latest -- <files>` in the reference repo. Check them by applying both with `patch -p1` to a clean `git archive master src` and diffing against `harness-latest`.
+`editor-harness.patch` covers `common/CMakeLists.txt`, `common/EditorHarness.{h,cpp}`, `common/map.h`, `leveleditor/leveleditor.cpp` and `worldeditor/worldeditor.cpp`. Both patches are `git diff master harness-latest -- <files>` in the reference repo. Check them by applying both with `patch -p1` to a clean `git archive master src` and diffing against `harness-latest`.
 
 ## Running
 
@@ -37,7 +26,7 @@ tools/make_editor_golden.sh [script ...]     # regenerate tools/editor_golden/
 - It uses a fresh `HOME`, so no `worldeditor.bin` or `leveleditor.bin` from a previous run is read.
 - It sets the same `SDL_VIDEODRIVER=dummy` / `SDL_AUDIODRIVER=dummy` / `SMW_*` environment as `run_ref.sh`.
 
-Without `SMW_BIN` it runs `~/work/smw-ref-editors/build-editors/smw-<editor>` (`SMW_EDITOR_REF_DIR` overrides the tree). `editor_parity.sh` points it at `target/release/<editor>or` (`worldeditor`, `leveleditor`) and the repository's `data/`.
+Without `SMW_BIN` it runs `~/work/supermariowar-cpp-reference/build/smw-<editor>` (`SMW_EDITOR_REF_DIR` overrides the tree). `editor_parity.sh` points it at `target/release/<editor>or` (`worldeditor`, `leveleditor`) and the repository's `data/`.
 
 Script directives, given as `#@ key=value` lines:
 

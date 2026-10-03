@@ -3,7 +3,7 @@
 # report the first divergent frame with context, and save screenshots around it.
 #
 # Usage: replay_compare.sh <recording.txt> [out_dir]
-# Env: SMW_CPP_BIN (default ~/work/supermariowar-cpp-reference/build-latest/smw),
+# Env: SMW_CPP_BIN (default ~/work/supermariowar-cpp-reference/build/smw),
 #      SMW_CPP_DATA (default ~/work/supermariowar-cpp-reference/data), SMW_NO_BUILD=1 to skip cargo.
 # Exit status: 0 identical, 1 diverged, 2 error. See REPLAY.md, "Recordings".
 set -uo pipefail
@@ -16,7 +16,7 @@ fi
 tools="$(cd "$(dirname "$0")" && pwd)"
 replay="$1"
 out="${2:-${TMPDIR:-/tmp}/smw-replay-compare/$(basename "$replay" .txt)}"
-cpp_bin="${SMW_CPP_BIN:-$HOME/work/supermariowar-cpp-reference/build-latest/smw}"
+cpp_bin="${SMW_CPP_BIN:-$HOME/work/supermariowar-cpp-reference/build/smw}"
 cpp_data="${SMW_CPP_DATA:-$HOME/work/supermariowar-cpp-reference/data}"
 rm -rf "$out"
 mkdir -p "$out"

@@ -5,13 +5,13 @@
 # shutdown writes servers.toml), then requires byte-identical rewritten files and identical frame dumps.
 # Case "empty" starts from no files and the repository filters; seeds start from fuzzed files.
 # Usage: persist_interop.sh [empty] [seed ...]   (default: empty 1 2 3 4 5)
-# Env: SMW_CPP_BIN (default: the NO_NETWORK reference ~/work/supermariowar-cpp-reference/build-latest/smw), SMW_RUST_BIN
+# Env: SMW_CPP_BIN (default: the NO_NETWORK reference ~/work/supermariowar-cpp-reference/build/smw), SMW_RUST_BIN
 # (default: a `--features no_network` build to match; with a networking C++ build, pass a default Rust build),
 # SMW_PERSIST_FRAMES (default 730). servers.toml contents are covered by net_config_interop.sh.
 HERE=$(cd "$(dirname "$0")" && pwd)
 TOOLS=$(dirname "$HERE")
 PORT=$(dirname "$TOOLS")
-CPP=${SMW_CPP_BIN:-$HOME/work/supermariowar-cpp-reference/build-latest/smw}
+CPP=${SMW_CPP_BIN:-$HOME/work/supermariowar-cpp-reference/build/smw}
 RUST=${SMW_RUST_BIN:-$PORT/target/no_network/release/smw}
 FRAMES=${SMW_PERSIST_FRAMES:-730}
 REPLAY=$HERE/persist/filter_edit.txt

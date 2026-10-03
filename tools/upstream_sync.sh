@@ -47,7 +47,7 @@ cmake --build "$build" --target smw smw-leveledit smw-worldedit -j"$(sysctl -n h
 edref="$sync_dir/edref"
 rm -rf "$edref"
 mkdir -p "$edref"
-ln -s "$build" "$edref/build-editors"
+ln -s "$build" "$edref/build"
 cp -c -R "$cpp/data" "$edref/data" 2>/dev/null || cp -R "$cpp/data" "$edref/data"
 
 export SMW_BIN="$build/smw" SMW_DATA_DIR="$cpp/data"

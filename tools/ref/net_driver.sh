@@ -1,8 +1,8 @@
 #!/bin/bash
 # Builds net_driver from the original C++ netplay sources (ENet from Homebrew). Unused game symbols resolve lazily.
 set -e
-SRC=${SMW_SRC:-$HOME/work/smw-cpp-harness-latest/src}
-TOML=${SMW_TOML11:-$HOME/work/supermariowar-cpp-reference/build-latest/_deps/toml11-src/include}
+SRC=${SMW_SRC:-$HOME/work/supermariowar-cpp-reference/src}
+TOML=${SMW_TOML11:-$HOME/work/supermariowar-cpp-reference/build/_deps/toml11-src/include}
 OUT=${1:-/tmp/net_driver}
 C=$SRC/common
 M=$SRC/smw

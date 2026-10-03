@@ -5,9 +5,9 @@
 # Env: SMW_SERVER, SMW_CPP_NET (net-enabled harness smw), SMW_CPP_DATA, SMW_RUST_BIN, SMW_RUST_DATA.
 HERE=$(cd "$(dirname "$0")" && pwd)
 PORT=$(cd "$HERE/../.." && pwd)
-SERVER=${SMW_SERVER:-$HOME/work/smw-ref-net/build/smw-server}
-CPP=${SMW_CPP_NET:-$HOME/work/smw-ref-net/build/smw}
-CPP_DATA=${SMW_CPP_DATA:-$HOME/work/smw-ref-net/data}
+SERVER=${SMW_SERVER:-$HOME/work/supermariowar-cpp-reference/build-net/smw-server}
+CPP=${SMW_CPP_NET:-$HOME/work/supermariowar-cpp-reference/build-net/smw}
+CPP_DATA=${SMW_CPP_DATA:-$HOME/work/supermariowar-cpp-reference/data}
 RUST=${SMW_RUST_BIN:-$PORT/target/release/smw}
 RUST_DATA=${SMW_RUST_DATA:-$PORT/data}
 [ -n "$SMW_RUST_BIN" ] || cargo build --release --quiet --manifest-path "$PORT/Cargo.toml" || exit 2

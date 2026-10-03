@@ -2,19 +2,17 @@
 
 The C++ game is rebuilt as a deterministic, headless, scriptable reference that writes one text block of game state per frame. The Rust port must read the same replay scripts and emit byte-identical dumps; `tools/diffreplay.py` reports the first frame where they diverge.
 
-- Reference build: `~/work/smw-ref` (a copy of `~/work/supermariowar` at upstream `5693918f` with `tools/cpp-harness.patch` applied). The original checkout is never modified. The reference repo's `harness-latest` branch holds the same tree.
+- Reference build: [supermariowar-cpp-reference](https://github.com/KyleJamesWalker/supermariowar-cpp-reference), branch `harness-latest` (upstream `5693918f` plus the game and editor harness), checked out at `~/work/supermariowar-cpp-reference` and built into `build/`. `tools/cpp-harness.patch` and `tools/editor-harness.patch` are the same hooks as diffs against upstream.
 - Scripts: `tools/replays/*.txt`. Golden output: `tools/golden/<script>/dump.txt` plus `frame_<n>.png` screenshots.
 
 ## Building the reference
 
 ```sh
-rsync -a --exclude .git ~/work/supermariowar/ ~/work/smw-ref/
-cd ~/work/smw-ref && patch -p1 < <this repo>/tools/cpp-harness.patch
-mkdir build && cd build
-cmake .. -DNO_NETWORK=ON -DBUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release \
-         -DCMAKE_CXX_FLAGS="-O2 -ffp-contract=off"
-make -j smw
+git clone --branch harness-latest git@github.com:KyleJamesWalker/supermariowar-cpp-reference.git ~/work/supermariowar-cpp-reference
+~/work/supermariowar-cpp-reference/build-reference.sh   # NO_NETWORK build of smw, smw-leveledit and smw-worldedit into build/
 ```
+
+`tools/run_ref.sh`, `tools/run_editor.sh`, `tools/replay_compare.sh` and `tools/soak.py` default to that checkout (`SMW_REF_DIR`, `SMW_EDITOR_REF_DIR`, `SMW_CPP_BIN` or `--ref-dir` override it). The networking checks in `tools/ref/` expect a networking-on build of the same tree in `build-net/`.
 
 Homebrew dependencies: `sdl2-compat`, `sdl2_image`, `sdl2_mixer`, `zlib`; CMake fetches toml11 (tested with sdl2-compat 2.32.72, Apple clang 21).
 
@@ -119,7 +117,7 @@ The Rust game records every normal launch (no `SMW_REPLAY`, no `SMW_NO_RECORD`) 
 
 Watching: `smw --replay <file> [--replay-speed <n>]` plays a recording in a normal window at normal speed (or `n` times faster) with sound. It writes the embedded settings into a throwaway HOME, removed at exit, so the user's settings are untouched, and quits after `#@ frames=`. In the app bundle: `open "dist/Super Mario War.app" --args --replay /absolute/path/to/recording.txt`.
 
-Bug check: `tools/replay_compare.sh <file> [out_dir]` runs a recording headless on the C++ reference (`SMW_CPP_BIN`, default `~/work/supermariowar-cpp-reference/build-latest/smw`) and on the Rust build, prints the first divergent frame with `diffreplay.py` context, and saves C++ and Rust screenshots of the frames around it.
+Bug check: `tools/replay_compare.sh <file> [out_dir]` runs a recording headless on the C++ reference (`SMW_CPP_BIN`, default `~/work/supermariowar-cpp-reference/build/smw`) and on the Rust build, prints the first divergent frame with `diffreplay.py` context, and saves C++ and Rust screenshots of the frames around it.
 
 ## Dump format
 

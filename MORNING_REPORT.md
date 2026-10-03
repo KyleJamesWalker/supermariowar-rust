@@ -43,7 +43,7 @@ cargo run --release --bin smw_server              # lobby server
 tools/verify_head.sh                              # build + test + 43-replay parity on a clean checkout
 ```
 
-The parity tools need the C++ reference at `~/work/smw-ref/build/smw`. Rebuild it from `~/work/supermariowar` plus `tools/cpp-harness.patch` using the cmake flags in `REPLAY.md`: `-DNO_NETWORK=ON -DDISABLE_DEFAULT_CFLAGS=ON -DCMAKE_CXX_FLAGS="-O2 -ffp-contract=off"`. The editors use `~/work/smw-ref-editors` (plus `tools/editor-harness.patch`).
+The parity tools need the C++ reference; see `REPLAY.md` for building it (now [supermariowar-cpp-reference](https://github.com/KyleJamesWalker/supermariowar-cpp-reference), branch `harness-latest`). As first written: Rebuild it from `~/work/supermariowar` plus `tools/cpp-harness.patch` using the cmake flags in `REPLAY.md`: `-DNO_NETWORK=ON -DDISABLE_DEFAULT_CFLAGS=ON -DCMAKE_CXX_FLAGS="-O2 -ffp-contract=off"`. The editors use `~/work/smw-ref-editors` (plus `tools/editor-harness.patch`).
 
 ## Known gaps
 

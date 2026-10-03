@@ -1,5 +1,5 @@
 // Prints the CMap member offsets that smw/ai.rs uses to reproduce out-of-bounds g_map reads.
-// Build from ~/work/smw-ref/src: clang++ -std=c++17 -Wno-invalid-offsetof -I common -I smw -I . -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 cmap_layout.cpp
+// Build from ~/work/supermariowar-cpp-reference/src: clang++ -std=c++17 -Wno-invalid-offsetof -I common -I smw -I . -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 cmap_layout.cpp
 #define private public
 #define protected public
 #include "map.h"

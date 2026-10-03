@@ -6,7 +6,7 @@
 HERE=$(cd $(dirname $0) && pwd)
 PORT=$HERE/../..
 DATA=${SMW_DATA_DIR:-$PORT/data}
-SERVER=${SMW_SERVER:-$HOME/work/smw-ref-net/build/smw-server}
+SERVER=${SMW_SERVER:-$HOME/work/supermariowar-cpp-reference/build-net/smw-server}
 CPP=${SMW_NET_DRIVER:-/tmp/net_driver}
 RUST=${SMW_RUST_NET:-}
 if [ -z "$RUST" ]; then (cd $PORT && cargo build -q --example net_interop) || exit 2; RUST=$PORT/target/debug/examples/net_interop; fi

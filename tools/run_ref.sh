@@ -18,7 +18,7 @@ fi
 replay="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 name="$(basename "$replay" .txt)"
 out="${2:-${TMPDIR:-/tmp}/smw-$(basename "$0" .sh)-out/$name}"
-ref="${SMW_REF_DIR:-$HOME/work/smw-ref}"
+ref="${SMW_REF_DIR:-$HOME/work/supermariowar-cpp-reference}"
 bin="${SMW_BIN:-$ref/build/smw}"
 data="${SMW_DATA_DIR:-$ref/data}"
 

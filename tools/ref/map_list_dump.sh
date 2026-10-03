@@ -1,7 +1,7 @@
 #!/bin/bash
 # Builds map_list_dump against the original C++ sources. Unused game symbols resolve lazily (-undefined dynamic_lookup).
 set -e
-SRC=${SMW_SRC:-$HOME/work/supermariowar/src}
+SRC=${SMW_SRC:-$HOME/work/supermariowar-cpp-reference/src}
 OUT=${1:-/tmp/map_list_dump}
 C=$SRC/common
 clang++ -std=c++20 -O2 -DNDEBUG -ffp-contract=off -w -I$C -I$SRC/smw $(sdl2-config --cflags) \
