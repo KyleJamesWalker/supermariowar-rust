@@ -2707,6 +2707,12 @@ pub(crate) mod tests {
     use std::sync::Once;
 
     static INIT: Once = Once::new();
+    static GLOBALS: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    /// Tests that touch C++ globals hold this so they don't run concurrently.
+    pub(crate) fn lock_globals() -> std::sync::MutexGuard<'static, ()> {
+        GLOBALS.lock().unwrap_or_else(|e| e.into_inner())
+    }
 
     /// Brings up the globals `CMap::load_map` touches, against the repository's data/ directory.
     pub(crate) fn init_map_globals() {
@@ -2868,6 +2874,7 @@ pub(crate) mod tests {
 
     #[test]
     fn loads_every_map_without_panicking() {
+        let _g = lock_globals();
         init_map_globals();
         let maps = all_map_files();
         assert!(maps.len() > 400, "found {} maps", maps.len());
@@ -2881,6 +2888,107 @@ pub(crate) mod tests {
         }
     }
 
+    /// Same text as port/tools/ref/map_list_dump.cpp prints after `---`.
+    fn map_list_dump() -> String {
+        use crate::common::global::maplist;
+        use crate::common::map_list::MapList;
+        use crate::common::random_number_generator::{RandomNumberGenerator, RandomNumberGeneratorType};
+        unsafe {
+            let root = RootDataDirectory.clone();
+            let rel = |p: &str| if p.len() > root.len() { p[root.len()..].to_string() } else { p.to_string() };
+            maplist = Ptr::new_box(MapList::new(false));
+            maplist.read_filters();
+
+            let mut o = String::new();
+            let cur = |o: &mut String, what: &str| {
+                let _ = writeln!(o, "{} cur={} file={}", what, maplist.current_shortmapname(), rel(maplist.current_filename()));
+            };
+            let _ = writeln!(o, "count={} filtered={}", maplist.count(), maplist.filtered_count());
+            for i in 0..maplist.maps.len() {
+                let n = maplist.maps.node(i);
+                let _ = write!(o, "map {} {} idx={} f=", maplist.maps.key(i), rel(&n.filename), n.iIndex);
+                for b in &n.pfFilters {
+                    let _ = write!(o, "{}", *b as i32);
+                }
+                o += "\n";
+            }
+            for i in 0..maplist.worldmaps.len() {
+                let _ = writeln!(o, "world {} {}", maplist.worldmaps.key(i), rel(&maplist.worldmaps.node(i).filename));
+            }
+            for (i, v) in game_values.piFilterIcons.iter().enumerate() {
+                let _ = writeln!(o, "icon {} {}", i, v);
+            }
+
+            RandomNumberGenerator::generator().reseed(42);
+            for _ in 0..3 {
+                maplist.next(false);
+                cur(&mut o, "next");
+            }
+            maplist.prev(false);
+            cur(&mut o, "prev");
+            for _ in 0..5 {
+                maplist.random(false);
+                cur(&mut o, "random");
+            }
+            let _ = writeln!(o, "findexact {}", maplist.findexact("death valley", false) as i32);
+            cur(&mut o, "after findexact");
+            let _ = writeln!(o, "findexact {}", maplist.findexact("no such map", false) as i32);
+            cur(&mut o, "after miss");
+            let _ = writeln!(o, "findworld {}", maplist.findexact("special_bonushouse", true) as i32);
+            cur(&mut o, "after findworld");
+            let _ = writeln!(o, "find {}", maplist.find("matsy") as i32);
+            cur(&mut o, "after find");
+            let _ = writeln!(o, "startswith {}", maplist.startswith_char(b'm') as i32);
+            cur(&mut o, "after startswith m");
+            let _ = writeln!(o, "startswithstr {}", maplist.startswith("bo") as i32);
+            cur(&mut o, "after startswith bo");
+            let nfilters = NUM_AUTO_FILTERS as usize + filterslist.count();
+            for f in 0..NUM_AUTO_FILTERS as usize {
+                let mut filters = vec![false; nfilters];
+                filters[f] = true;
+                maplist.apply_filters(&filters);
+                let _ = write!(o, "filter {} filtered={} on={}", f, maplist.filtered_count(), game_values.fFiltersOn as i32);
+                cur(&mut o, "");
+                for _ in 0..4 {
+                    maplist.next(true);
+                    cur(&mut o, " next");
+                }
+                maplist.prev(true);
+                cur(&mut o, " prev");
+                maplist.random(true);
+                cur(&mut o, " random");
+                let it = maplist.get_iterator_at(1, true);
+                let _ = writeln!(o, " at1 {}", if it == maplist.end() { "end".to_string() } else { maplist.key_at(it).to_string() });
+            }
+            maplist.apply_filters(&vec![false; nfilters]);
+            for _ in 0..5 {
+                let _ = writeln!(o, "randomFilename {}", rel(&maplist.random_filename()));
+            }
+            o
+        }
+    }
+
+    /// Compares MapList against the original C++ (`port/tools/ref/map_list_dump.sh`); set `SMW_MAP_LIST_DUMP`.
+    #[test]
+    fn matches_cpp_map_list_dump() {
+        let _g = lock_globals();
+        let Ok(bin) = std::env::var("SMW_MAP_LIST_DUMP") else {
+            eprintln!("SMW_MAP_LIST_DUMP not set; skipping C++ comparison");
+            return;
+        };
+        init_map_globals();
+        let data = unsafe { RootDataDirectory.clone() };
+        let out = std::process::Command::new(&bin).env("SDL_VIDEODRIVER", "dummy").arg(&data).output().unwrap();
+        let text = String::from_utf8_lossy(&out.stdout);
+        let expected = text.split("\n---\n").nth(1).unwrap_or("").to_string();
+        assert!(expected.lines().count() > 300, "C++ dump produced no output");
+        let actual = map_list_dump();
+        if let Some(l) = actual.lines().zip(expected.lines()).position(|(a, b)| a != b) {
+            panic!("line {}:\n  rust: {}\n  c++:  {}", l, actual.lines().nth(l).unwrap(), expected.lines().nth(l).unwrap());
+        }
+        assert_eq!(actual.lines().count(), expected.lines().count());
+    }
+
     /// Platform tile types read past the end of the wrong "classic" tileset (`CTilesetManager::classic_tileset`).
     const READS_GARBAGE: [&str; 2] = ["maps/SMW Fan_shipwreck.map", "worlds/Smb3/Big JM_Grassland 6.map"];
 
@@ -2888,6 +2996,7 @@ pub(crate) mod tests {
     /// binary is absent; set `SMW_MAP_DUMP` to its path.
     #[test]
     fn matches_cpp_map_dump() {
+        let _g = lock_globals();
         let Ok(bin) = std::env::var("SMW_MAP_DUMP") else {
             eprintln!("SMW_MAP_DUMP not set; skipping C++ comparison");
             return;

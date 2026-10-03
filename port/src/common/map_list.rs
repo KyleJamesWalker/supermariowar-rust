@@ -98,8 +98,8 @@ pub enum OuterIter {
 }
 
 pub struct MapList {
-    maps: MapMultimap,
-    worldmaps: MapMultimap,
+    pub maps: MapMultimap,
+    pub worldmaps: MapMultimap,
 
     current: usize,
     savedcurrent: usize,
