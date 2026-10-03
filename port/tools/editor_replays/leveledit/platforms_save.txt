@@ -1,0 +1,201 @@
+# New map "zzplat": three moving platforms (straight, ellipse, continuous) built with the nested tile,
+# animation and tile type pickers, path editing with held modifier keys, reorder, test run, delete; save.
+#@ frames=375
+#@ shots=30,50,75,96,120,150,175,200,230,262,290
+#@ files=data/maps/zzplat.map,data/maps/ZZleveleditor.map
+
+2 down N
+3 up N
+6 down Z
+7 up Z
+8 down Z
+9 up Z
+10 down P
+11 up P
+12 down L
+13 up L
+14 down A
+15 up A
+16 down T
+17 up T
+20 down Return
+21 up Return
+
+# Platform mode, new platform, choose "Line Segment" by clicking its button
+24 down P
+25 up P
+27 down N
+28 up N
+30 mousemove 300 195
+31 mousedown left 300 195
+32 mouseup left 300 195
+
+# Nested tile picker: pick column 2, paint a three tile platform, speed up, next draw layer
+35 down T
+36 up T
+39 mousemove 70 10
+40 mousedown left 70 10
+41 mouseup left 70 10
+44 mousemove 290 230
+45 mousedown left 290 230
+46 mousemove 320 230
+47 mousemove 355 230
+48 mouseup left 355 230
+50 down =
+51 up =
+52 down =
+53 up =
+54 down Y
+55 up Y
+
+# Path: start with the left button, end with the right, then a snapped start with shift held
+58 down P
+59 up P
+62 mousemove 100 100
+63 mousedown left 100 100
+64 mouseup left 100 100
+65 mousemove 300 120
+66 mousedown right 300 120
+67 mouseup right 300 120
+68 down Left Shift
+69 mousemove 133 117
+70 mousedown left 133 117
+71 mousemove 141 130
+72 mouseup left 141 130
+73 up Left Shift
+76 down Escape
+77 up Escape
+79 down Escape
+80 up Escape
+
+# Hover the first platform icon for its preview
+83 mousemove 170 170
+86 mousemove 400 400
+
+# Second platform: ellipse via key 3, animated tiles, radius with held C / X / Z, angle with the right button
+89 down N
+90 up N
+92 down 3
+93 up 3
+95 down A
+96 up A
+99 mousemove 10 40
+100 mousedown left 10 40
+101 mouseup left 10 40
+104 mousemove 320 260
+105 mousedown left 320 260
+106 mouseup left 320 260
+108 down -
+109 up -
+110 down -
+111 up -
+112 down P
+113 up P
+116 down C
+117 mousemove 420 240
+118 mousedown left 420 240
+119 mouseup left 420 240
+120 up C
+121 down X
+122 mousemove 470 245
+123 mousedown left 470 245
+124 mouseup left 470 245
+125 up X
+126 down Left Shift
+127 down Z
+128 mousemove 330 330
+129 mousedown left 330 330
+130 mouseup left 330 330
+131 up Z
+132 up Left Shift
+133 mousemove 320 200
+134 mousedown right 320 200
+135 mouseup right 320 200
+136 down T
+137 up T
+139 down 2
+140 up 2
+142 down Escape
+143 up Escape
+145 down Escape
+146 up Escape
+
+# Third platform: continuous via key 2, tiles, then tile types from the nested type picker
+149 down N
+150 up N
+152 down 2
+153 up 2
+155 down T
+156 up T
+159 mousemove 40 40
+160 mousedown left 40 40
+161 mouseup left 40 40
+164 mousemove 100 400
+165 mousedown left 100 400
+166 mousemove 160 400
+167 mouseup left 160 400
+169 down L
+170 up L
+173 mousemove 40 10
+174 mousedown left 40 10
+175 mouseup left 40 10
+177 mousemove 100 400
+178 mousedown left 100 400
+179 mousemove 130 400
+180 mouseup left 130 400
+181 mousedown right 130 400
+182 mouseup right 130 400
+184 down P
+185 up P
+188 down Left Shift
+189 mousemove 300 300
+190 mousedown right 300 300
+191 mouseup right 300 300
+192 up Left Shift
+194 down Escape
+195 up Escape
+197 down Escape
+198 up Escape
+
+# Swap platforms 1 and 3 with the move mode, then by clicking icons
+204 down M
+205 up M
+207 down 1
+208 up 1
+210 down 3
+211 up 3
+213 down M
+214 up M
+216 mousemove 170 170
+217 mousedown left 170 170
+218 mouseup left 170 170
+220 mousemove 255 170
+221 mousedown left 255 170
+222 mouseup left 255 170
+
+# Test the paths for a while, then exit the test
+225 down C
+226 up C
+262 down Escape
+263 up Escape
+
+# Select platform 2 by clicking its icon and delete it; save from platform mode, leave
+266 mousemove 212 170
+267 mousedown left 212 170
+268 mouseup left 212 170
+271 down Delete
+272 up Delete
+275 down S
+276 up S
+300 down Escape
+301 up Escape
+
+# Quit (the nested type picker left tile type mode on, so Escape twice)
+305 down Escape
+306 up Escape
+308 down Escape
+309 up Escape
+311 down Left
+312 up Left
+314 down Return
+315 up Return

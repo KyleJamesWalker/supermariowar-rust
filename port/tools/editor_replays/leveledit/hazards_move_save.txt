@@ -1,0 +1,237 @@
+# New map "zzhaz": map hazards (rotodisc, bullet bill, flame thrower; edit, delete), move and copy a
+# selection, race goals and flag bases, save, Save As "zzcopy", browse maps, Find back; then quit.
+#@ frames=388
+#@ shots=60,90,120,150,175,205,235,265,290,320
+#@ files=data/maps/zzhaz.map,data/maps/zzcopy.map,data/maps/ZZleveleditor.map
+
+2 down N
+3 up N
+6 down Z
+7 up Z
+8 down Z
+9 up Z
+10 down H
+11 up H
+12 down A
+13 up A
+14 down Z
+15 up Z
+18 down Return
+19 up Return
+
+# Hazard mode: new rotodisc, place it, then properties: velocity, count, radius and snapped angle
+22 down H
+23 up H
+25 down N
+26 up N
+28 mousemove 300 140
+29 mousedown left 300 140
+30 mouseup left 300 140
+32 mousemove 200 200
+33 mousedown left 200 200
+34 mousemove 210 215
+35 mouseup left 210 215
+37 down P
+38 up P
+39 down =
+40 up =
+41 down =
+42 up =
+43 down 4
+44 up 4
+46 mousemove 290 170
+47 mousedown left 290 170
+48 mouseup left 290 170
+49 down Right Shift
+50 mousemove 330 250
+51 mousedown left 330 250
+52 mouseup left 330 250
+53 up Right Shift
+55 down Escape
+56 up Escape
+
+# Bullet bill by the New button: direction, frequency, velocity
+59 mousemove 320 380
+60 mousedown left 320 380
+61 mouseup left 320 380
+63 mousemove 300 180
+64 mousedown left 300 180
+65 mouseup left 300 180
+67 mousemove 400 300
+68 mousedown left 400 300
+69 mouseup left 400 300
+71 down P
+72 up P
+73 down D
+74 up D
+75 down ]
+76 up ]
+77 down ]
+78 up ]
+79 down -
+80 up -
+81 down [
+82 up [
+84 down Escape
+85 up Escape
+
+# Flame thrower, then select hazard 1 by key, go to its location page and delete it
+88 down N
+89 up N
+91 mousemove 300 220
+92 mousedown left 300 220
+93 mouseup left 300 220
+95 mousemove 100 100
+96 mousedown left 100 100
+97 mouseup left 100 100
+99 down P
+100 up P
+101 down D
+102 up D
+103 down D
+104 up D
+106 down Escape
+107 up Escape
+109 down 1
+110 up 1
+112 down L
+113 up L
+115 down Delete
+116 up Delete
+118 down Escape
+119 up Escape
+
+# Paint a row of tiles and a block to move around
+122 down T
+123 up T
+125 mousemove 40 10
+126 mousedown left 40 10
+127 mouseup left 40 10
+129 mousemove 10 370
+130 mousedown left 10 370
+131 mousemove 50 370
+132 mousemove 90 370
+133 mousemove 120 370
+134 mouseup left 120 370
+136 down I
+137 up I
+139 mousemove 40 10
+140 mousedown left 40 10
+141 mouseup left 40 10
+143 mousemove 40 335
+144 mousedown left 40 335
+145 mouseup left 40 335
+
+# Move mode: drag-select, then drag the selection to a new place
+148 down M
+149 up M
+151 mousemove 5 335
+152 mousedown left 5 335
+153 mousemove 60 350
+154 mousemove 125 365
+155 mouseup left 125 365
+157 mousemove 40 340
+158 mousedown left 40 340
+159 mousemove 120 260
+160 mousemove 200 180
+161 mouseup left 200 180
+
+# Copy the selection and stamp it elsewhere, merge mode, ctrl freehand select and delete
+164 down C
+165 up C
+167 mousemove 400 250
+168 mousemove 420 300
+169 mousedown left 420 300
+170 mouseup left 420 300
+172 down M
+173 up M
+175 down Left Ctrl
+176 mousedown left 600 40
+177 mouseup left 600 40
+178 mousemove 610 80
+179 mousedown left 610 80
+180 mouseup left 610 80
+181 up Left Ctrl
+183 down Left Shift
+184 mousedown left 420 300
+185 mouseup left 420 300
+186 up Left Shift
+188 mousedown right 20 20
+189 mouseup right 20 20
+191 down Delete
+192 up Delete
+
+# Race goals and flag bases: set them manually and drag a few
+195 down J
+196 up J
+198 down R
+199 up R
+201 mousemove 30 30
+202 mousedown left 30 30
+203 mousemove 120 200
+204 mousemove 210 300
+205 mouseup left 210 300
+207 down 2
+208 up 2
+210 down R
+211 up R
+213 mousemove 110 30
+214 mousedown left 110 30
+215 down Left Shift
+216 mousemove 300 290
+217 mouseup left 300 290
+218 up Left Shift
+220 down Escape
+221 up Escape
+
+# Save, then Save As "zzcopy"
+224 down S
+225 up S
+262 down Left Shift
+263 down S
+264 up S
+265 up Left Shift
+268 down Z
+269 up Z
+270 down Z
+271 up Z
+272 down C
+273 up C
+274 down O
+275 up O
+276 down P
+277 up P
+278 down Y
+279 up Y
+282 down Return
+283 up Return
+
+# Browse to the next and previous maps, then Find "zzh"
+286 down PageDown
+287 up PageDown
+290 down PageUp
+291 up PageUp
+294 down PageUp
+295 up PageUp
+298 down Left Shift
+299 down F
+300 up F
+301 up Left Shift
+304 down Z
+305 up Z
+306 down Z
+307 up Z
+308 down H
+309 up H
+312 down Return
+313 up Return
+
+# Quit (Escape leaves move mode first)
+318 down Escape
+319 up Escape
+321 down Escape
+322 up Escape
+324 down Left
+325 up Left
+327 down Return
+328 up Return

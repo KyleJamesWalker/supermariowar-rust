@@ -1,0 +1,107 @@
+# New map "zztyp": edit tileset and animated tile types in the pickers (saved on quit), background
+# thumbnail pages, hidden flag of a donut block, clear the whole map, repaint, save, then quit.
+#@ frames=229
+#@ shots=20,45,70,95,120,150
+#@ files=data/maps/zztyp.map,data/maps/ZZleveleditor.map,data/gfx/packs/Classic/tilesets/tile_animation_tileset.tls,data/gfx/packs/Classic/tilesets/Classic/tileset.tls
+
+2 down N
+3 up N
+6 down Z
+7 up Z
+8 down Z
+9 up Z
+10 down T
+11 up T
+12 down Y
+13 up Y
+14 down P
+15 up P
+18 down Return
+19 up Return
+
+# Tile picker: right click cycles a tile type forward, middle back, right drag paints the last type
+22 down T
+23 up T
+25 mousemove 10 10
+26 mousedown right 10 10
+27 mouseup right 10 10
+28 mousedown right 10 10
+29 mouseup right 10 10
+30 mousedown middle 40 10
+31 mouseup middle 40 10
+32 mousedown right 70 10
+33 mousemove 100 10
+34 mousemove 130 40
+35 mouseup right 130 40
+37 mousedown left 70 10
+38 mouseup left 70 10
+
+# Animation picker: the same on animated tiles
+41 down A
+42 up A
+44 mousemove 70 40
+45 mousedown right 70 40
+46 mouseup right 70 40
+47 mousedown middle 100 40
+48 mouseup middle 100 40
+49 mousedown right 70 70
+50 mousemove 100 70
+51 mousemove 130 70
+52 mouseup right 130 70
+54 down Escape
+55 up Escape
+
+# Background thumbnails: next page, previous page, pick one with the right button (music unchanged)
+58 down B
+59 up B
+62 mousemove 200 150
+64 down PageDown
+65 up PageDown
+68 down Up
+69 up Up
+72 mousedown right 200 150
+73 mouseup right 200 150
+76 down B
+77 up B
+80 mousemove 500 400
+82 mousedown left 500 400
+83 mouseup left 500 400
+
+# Donut block (column 4) with its hidden flag toggled in the property page
+86 down I
+87 up I
+89 mousemove 140 10
+90 mousedown left 140 10
+91 mouseup left 140 10
+93 mousemove 300 300
+94 mousedown left 300 300
+95 mouseup left 300 300
+97 down K
+98 up K
+100 mousemove 300 230
+101 mousedown left 300 230
+102 mouseup left 300 230
+104 down K
+105 up K
+
+# Clear everything, repaint one tile, save, quit
+108 down Left Ctrl
+109 down Delete
+110 up Delete
+111 up Left Ctrl
+113 down T
+114 up T
+116 mousemove 10 10
+117 mousedown left 10 10
+118 mouseup left 10 10
+120 mousemove 320 450
+121 mousedown left 320 450
+122 mouseup left 320 450
+125 down S
+126 up S
+160 down Escape
+161 up Escape
+164 down Left
+165 up Left
+168 down Return
+169 up Return

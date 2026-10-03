@@ -1,0 +1,122 @@
+# New map "zztiles"; pick single and multi-tile brushes from two tilesets, paint by click and drag on
+# two layers, erase, paint animated tiles and tile types, save, then quit (which also saves ZZleveleditor).
+#@ frames=301
+#@ shots=4,20,30,52,70,95,120,150,175,200,230
+#@ files=data/maps/zztiles.map,data/maps/ZZleveleditor.map,data/gfx/packs/Classic/tilesets/tile_animation_tileset.tls
+
+# New map dialog: type the name, Enter
+2 down N
+3 up N
+8 down Z
+9 up Z
+10 down Z
+11 up Z
+12 down T
+13 up T
+14 down I
+15 up I
+16 down L
+17 up L
+18 down E
+19 up E
+20 down S
+21 up S
+22 down Backspace
+23 up Backspace
+24 down S
+25 up S
+28 down Return
+29 up Return
+
+# Tile picker: one tile at column 1, row 0
+32 down T
+33 up T
+36 mousemove 40 10
+37 mousedown left 40 10
+38 mouseup left 40 10
+
+# Click to paint, then drag-paint a row
+42 mousemove 70 330
+43 mousedown left 70 330
+44 mouseup left 70 330
+46 mousemove 100 330
+47 mousedown left 100 330
+48 mousemove 140 330
+49 mousemove 180 330
+50 mousemove 220 340
+51 mouseup left 220 340
+
+# Tile picker on the second tileset: drag a 3x2 brush
+53 down T
+54 up T
+56 down 2
+57 up 2
+58 mousedown left 10 70
+59 mousemove 40 90
+60 mousemove 75 110
+61 mouseup left 75 110
+64 mousemove 260 200
+65 mousedown left 260 200
+66 mouseup left 260 200
+
+# Next layer, paint, view only this layer, then erase one tile with the right button
+70 down Y
+71 up Y
+72 mousemove 300 40
+73 mousedown left 300 40
+74 mouseup left 300 40
+76 down U
+77 up U
+80 down U
+81 up U
+84 mousemove 100 330
+85 mousedown right 100 330
+86 mouseup right 100 330
+
+# Scroll the tile picker with held arrows (auto-repeat), page tilesets, then cancel with a key
+90 down T
+91 up T
+94 down Right
+133 up Right
+134 down PageDown
+135 up PageDown
+136 down Down
+137 up Down
+138 down Escape
+139 up Escape
+
+# Animated tiles: pick column 0, row 1, paint two
+142 down A
+143 up A
+146 mousemove 10 40
+147 mousedown left 10 40
+148 mouseup left 10 40
+150 mousemove 450 70
+151 mousedown left 450 70
+152 mousemove 490 70
+153 mouseup left 490 70
+
+# Tile types: pick "ice" (column 3), paint, clear one with the right button, then back to tile mode
+156 down L
+157 up L
+160 mousemove 100 10
+161 mousedown left 100 10
+162 mouseup left 100 10
+164 mousemove 330 420
+165 mousedown left 330 420
+166 mousemove 370 420
+167 mouseup left 370 420
+169 mousedown right 330 420
+170 mouseup right 330 420
+172 down Escape
+173 up Escape
+
+# Save, wait for the message, then quit through the confirmation dialog
+180 down S
+181 up S
+230 down Escape
+231 up Escape
+235 down Left
+236 up Left
+240 down Return
+241 up Return

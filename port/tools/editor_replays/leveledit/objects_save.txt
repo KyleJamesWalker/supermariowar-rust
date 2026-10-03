@@ -1,0 +1,193 @@
+# New map "zzOb-2" (shifted letter in the name): blocks (powerup with edited properties, on/off switch, switch, weapon breakable),
+# map items, warps, no-spawn zones, eyecandy, background and music category; save, then quit.
+#@ frames=329
+#@ shots=40,62,80,100,125,150,180,205,232,260
+#@ files=data/maps/zzOb-2.map,data/maps/ZZleveleditor.map
+
+2 down N
+3 up N
+6 down Z
+7 up Z
+8 down Z
+9 up Z
+10 down Left Shift
+11 down O
+12 up O
+13 up Left Shift
+14 down B
+15 up B
+16 down -
+17 up -
+18 down 2
+19 up 2
+22 down Return
+23 up Return
+
+# Block picker: powerup block (column 1), place two by click and drag
+26 down I
+27 up I
+30 mousemove 40 10
+31 mousedown left 40 10
+32 mouseup left 40 10
+34 mousemove 100 300
+35 mousedown left 100 300
+36 mousemove 140 300
+37 mouseup left 140 300
+
+# Block properties of the first powerup block: change settings by click, key, shift+key, hidden, use game
+40 mousemove 110 310
+41 down K
+42 up K
+45 mousemove 50 75
+46 mousedown left 50 75
+47 mouseup left 50 75
+48 mousedown left 50 75
+49 mouseup left 50 75
+50 mousemove 160 80
+51 down 7
+52 up 7
+53 mousemove 360 140
+54 down Left Shift
+55 down 3
+56 up 3
+57 up Left Shift
+58 mousemove 160 80
+59 mousedown right 160 80
+60 mouseup right 160 80
+61 down `
+62 up `
+63 mousemove 300 380
+64 mousedown left 300 380
+65 mouseup left 300 380
+66 mousemove 430 380
+67 mousedown left 430 380
+68 mouseup left 430 380
+69 mousedown left 430 380
+70 mouseup left 430 380
+72 down Escape
+73 up Escape
+
+# On/off switch block (row 1, column 1) and a weapon breakable block (row 3, column 2)
+76 down I
+77 up I
+79 mousemove 40 40
+80 mousedown left 40 40
+81 mouseup left 40 40
+83 mousemove 200 300
+84 mousedown left 200 300
+85 mouseup left 200 300
+86 down I
+87 up I
+89 mousemove 70 100
+90 mousedown left 70 100
+91 mouseup left 70 100
+93 mousemove 240 300
+94 mousedown left 240 300
+95 mouseup left 240 300
+96 mousedown right 140 300
+97 mouseup right 140 300
+
+# Map items: item 2 on two free tiles
+100 down O
+101 up O
+103 mousemove 70 10
+104 mousedown left 70 10
+105 mouseup left 70 10
+107 mousemove 330 200
+108 mousedown left 330 200
+109 mouseup left 330 200
+110 mousedown left 370 200
+111 mouseup left 370 200
+112 mousedown right 370 200
+113 mouseup right 370 200
+
+# Warps: direction 1, connection 2, a pair, then remove a stray one
+116 down W
+117 up W
+119 mousemove 70 40
+120 mousedown left 70 40
+121 mouseup left 70 40
+123 mousemove 20 200
+124 mousedown left 20 200
+125 mouseup left 20 200
+126 mousemove 600 200
+127 mousedown left 600 200
+128 mousemove 600 240
+129 mouseup left 600 240
+130 mousedown right 600 240
+131 mouseup right 600 240
+
+# No player spawn: global zone, team 2 zone, all/none/invert
+134 down X
+135 up X
+137 mousemove 20 20
+138 mousedown left 20 20
+139 mousemove 90 20
+140 mouseup left 90 20
+142 down 2
+143 up 2
+145 mousedown left 300 100
+146 mouseup left 300 100
+147 down I
+148 up I
+150 down N
+151 up N
+152 down A
+153 up A
+154 mousedown right 300 100
+155 mouseup right 300 100
+157 down Escape
+158 up Escape
+
+# No item spawn zone
+160 down Z
+161 up Z
+163 mousedown left 500 100
+164 mousemove 540 100
+165 mouseup left 540 100
+166 mousedown right 500 100
+167 mouseup right 500 100
+169 down Escape
+170 up Escape
+
+# Eyecandy: toggle clouds on the back layer and snow on the top layer
+172 down E
+173 up E
+176 mousemove 200 40
+177 mousedown left 200 40
+178 mouseup left 200 40
+179 mousemove 430 230
+180 mousedown left 430 230
+181 mouseup left 430 230
+183 down E
+184 up E
+
+# Background: next one (music follows), then next with shift held (music stays); music category menu
+186 down G
+187 up G
+189 down Left Shift
+190 down G
+191 up G
+192 up Left Shift
+194 down R
+195 up R
+197 down R
+198 up R
+200 down R
+201 up R
+203 down Escape
+204 up Escape
+
+# Hide blocks, save, unhide, quit
+206 down V
+207 up V
+210 down S
+211 up S
+226 down V
+227 up V
+260 down Escape
+261 up Escape
+264 down Left
+265 up Left
+268 down Return
+269 up Return
