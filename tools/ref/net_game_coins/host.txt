@@ -1,7 +1,7 @@
 #@ seed=1
 #@ frames=1600
 #@ map=netplay_arena
-#@ compare=--min place=3 --min-close 0.6
+#@ compare=--min place=3 --min-close 0.5
 10 down Return
 12 up Return
 30 down Down

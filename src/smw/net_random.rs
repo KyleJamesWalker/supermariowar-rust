@@ -223,7 +223,7 @@ pub fn awaiting_host() -> bool {
     unsafe { netplay.active && !netplay.theHostIsMe && netplay.host_decides_random && g_inGame }
 }
 
-/// Object IDs 0 and 1 << 16 are untracked objects and setup objects.
+/// Contexts 0 and 1 number untracked objects and setup objects.
 fn context_of(sent: u16) -> u16 {
     2 + sent % 0xFFFE
 }
