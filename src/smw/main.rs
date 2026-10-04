@@ -18,7 +18,7 @@ use crate::common::resource_manager::CResourceManager;
 use crate::smw::player::CPlayer;
 use crate::common::gfx::{gfx_close, gfx_init, gfx_flipscreen, gfx_loadpalette, gfx_settitle, gfx_show_catched_error};
 use crate::common::global_constants::{HALF_PI, MAX_PLAYERS, NUM_POWERUPS, PI, THREE_HALF_PI};
-use crate::common::path::convert_path_pack;
+use crate::common::path::{convert_path_pack, get_home_directory};
 use crate::common::score::CScore;
 use crate::common::sfx::{sfx_close, sfx_init};
 use crate::globals::*;
@@ -223,12 +223,31 @@ pub fn init_joysticks() {
 /// Not in upstream: every launch gives the players the connected joysticks first, then the right
 /// keyboard set (player 1's keyboard bindings), then the left one (player 2's), and makes them human.
 /// A joystick's bindings belong to it (`inputConfiguration[pad][1]`), so they follow it between players.
+/// The first launch with pads keeps the players' saved settings in `PAD_PLAYERS_FILE`; the next launch
+/// without pads puts them back, so only launches after a pad session differ from upstream.
 fn assign_inputs() {
     unsafe {
+        let marker = get_home_directory() + PAD_PLAYERS_FILE;
         let pads = joystickcount.clamp(0, MAX_PLAYERS as i16) as usize;
         if pads == 0 {
+            if let Ok(text) = std::fs::read_to_string(&marker) {
+                let saved: Vec<i16> = text.split_whitespace().filter_map(|v| v.parse().ok()).collect();
+                if saved.len() == MAX_PLAYERS as usize {
+                    for p in 0..MAX_PLAYERS as usize {
+                        game_values.playerInput.inputControls[p] = Ptr::from_mut(&mut game_values.inputConfiguration[p][0]);
+                        game_values.playercontrol[p] = saved[p];
+                    }
+                    game_values.write_config();
+                }
+                let _ = std::fs::remove_file(&marker);
+            }
             return;
         }
+        if !std::path::Path::new(&marker).exists() {
+            let saved: Vec<String> = game_values.playercontrol.iter().map(|c| c.to_string()).collect();
+            let _ = std::fs::write(&marker, saved.join(" ") + "\n");
+        }
+
         for p in 0..MAX_PLAYERS as usize {
             let control = if p < pads {
                 game_values.inputConfiguration[p][1].iDevice = p as i16;
@@ -244,6 +263,9 @@ fn assign_inputs() {
         }
     }
 }
+
+/// The players' settings (`playercontrol`, one number each) from before pads were assigned.
+const PAD_PLAYERS_FILE: &str = "pad_players.txt";
 
 fn new_mode<T: CGameModeTrait + 'static>(mode: T) -> Ptr<dyn CGameModeTrait> {
     Ptr::from_raw(Ptr::new_box(mode).as_ptr() as *mut dyn CGameModeTrait)
