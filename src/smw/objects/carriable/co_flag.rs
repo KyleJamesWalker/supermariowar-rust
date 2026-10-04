@@ -74,6 +74,10 @@ impl CO_Flag {
     }
 
     pub fn place_flag(&mut self) {
+        if crate::smw::net_random::place_event(self.iNetworkID, 0) {
+            return;
+        }
+
         if self.centerflag {
             MO_CarriedObjectTrait::drop(self);
             self.fInBase = false;

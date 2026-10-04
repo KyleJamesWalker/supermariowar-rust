@@ -26,7 +26,9 @@ impl PlayerWarpStatus {
         self.warpcounter = self.warpcounter.wrapping_add(1);
         if self.warpcounter > iGoal {
             self.warpcounter = iGoal;
-            self.choose_warp_exit(player);
+            if !crate::smw::net_random::event(crate::smw::net_random::Ev::WarpExit, &[player.globalID as i32]) {
+                self.choose_warp_exit(player);
+            }
         }
     }
 
@@ -148,7 +150,7 @@ impl PlayerWarpStatus {
         }
     }
 
-    fn choose_warp_exit(&mut self, player: &mut CPlayer) {
+    pub fn choose_warp_exit(&mut self, player: &mut CPlayer) {
         unsafe {
             let mut exit: Ptr<WarpExit> = g_map.get_random_warp_exit(self.warpconnection as i32, self.warpid as i32);
             debug_assert!(!exit.is_null());

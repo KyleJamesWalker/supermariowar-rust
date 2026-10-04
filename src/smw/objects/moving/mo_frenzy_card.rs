@@ -57,6 +57,10 @@ impl MO_FrenzyCard {
     }
 
     pub fn place_card(&mut self) {
+        if crate::smw::net_random::place_event(self.iNetworkID, 0) {
+            return;
+        }
+
         unsafe {
             self.timer = 0;
 

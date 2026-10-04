@@ -47,6 +47,10 @@ impl MO_Yoshi {
     }
 
     pub fn place_yoshi(&mut self) {
+        if crate::smw::net_random::place_event(self.iNetworkID, 0) {
+            return;
+        }
+
         unsafe {
             self.timer = 0;
 

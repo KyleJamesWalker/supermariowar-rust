@@ -12,6 +12,7 @@ use crate::smw::gamemodes::frag::{cgm_frag_check_winner, cgm_frag_playerextraguy
 use crate::smw::gamemodes::game_mode::*;
 use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::main::players;
+use crate::smw::net_random::{self, Ev};
 use crate::smw::objectgame::PowerupType;
 use crate::smw::objects::moving::mo_frenzy_card::MO_FrenzyCard;
 use crate::smw::player::CPlayer;
@@ -79,6 +80,35 @@ pub fn cgm_frenzy_init(this: &mut CGM_Frenzy) {
     this.set_frenzy_owner(Ptr::null());
 }
 
+fn spawn_card(this: &mut CGM_Frenzy) {
+    unsafe {
+        if this.iItemWeightCount == 0 {
+            //If all weights are zero, then choose the random powerup
+            this.iSelectedPowerup = (NUMFRENZYCARDS - 1) as i16;
+        } else {
+            //Randomly choose a powerup from the weighted list
+            let iRandPowerup: i32 = RANDOM_INT(this.iItemWeightCount as i32) + 1;
+            this.iSelectedPowerup = 0;
+            let mut iWeightCount: i32 = game_values.gamemodesettings.frenzy.powerupweight[this.iSelectedPowerup as usize] as i32;
+
+            while iWeightCount < iRandPowerup {
+                this.iSelectedPowerup += 1;
+                iWeightCount += game_values.gamemodesettings.frenzy.powerupweight[this.iSelectedPowerup as usize] as i32;
+            }
+        }
+
+        objectcontainer[1].add(Ptr::new_box(MO_FrenzyCard::new(Ptr::from_mut(&mut rm.spr_frenzycards), this.iSelectedPowerup)));
+    }
+}
+
+pub fn net_spawn_card() {
+    unsafe {
+        if let Some(this) = game_values.gamemode.as_any().downcast_mut::<CGM_Frenzy>() {
+            spawn_card(this);
+        }
+    }
+}
+
 pub fn cgm_frenzy_think(this: &mut CGM_Frenzy) {
     unsafe {
         if this.gameover {
@@ -103,23 +133,8 @@ pub fn cgm_frenzy_think(this: &mut CGM_Frenzy) {
                     iPowerupQuantity = (players.len() as i32 + iPowerupQuantity as i32 - 7) as i16;
                 }
 
-                if objectcontainer[1].count_types(object_frenzycard) < iPowerupQuantity as isize as usize {
-                    if this.iItemWeightCount == 0 {
-                        //If all weights are zero, then choose the random powerup
-                        this.iSelectedPowerup = (NUMFRENZYCARDS - 1) as i16;
-                    } else {
-                        //Randomly choose a powerup from the weighted list
-                        let iRandPowerup: i32 = RANDOM_INT(this.iItemWeightCount as i32) + 1;
-                        this.iSelectedPowerup = 0;
-                        let mut iWeightCount: i32 = game_values.gamemodesettings.frenzy.powerupweight[this.iSelectedPowerup as usize] as i32;
-
-                        while iWeightCount < iRandPowerup {
-                            this.iSelectedPowerup += 1;
-                            iWeightCount += game_values.gamemodesettings.frenzy.powerupweight[this.iSelectedPowerup as usize] as i32;
-                        }
-                    }
-
-                    objectcontainer[1].add(Ptr::new_box(MO_FrenzyCard::new(Ptr::from_mut(&mut rm.spr_frenzycards), this.iSelectedPowerup)));
+                if objectcontainer[1].count_types(object_frenzycard) < iPowerupQuantity as isize as usize && !net_random::event(Ev::FrenzyCard, &[]) {
+                    spawn_card(this);
                 }
             }
         }

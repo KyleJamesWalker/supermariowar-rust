@@ -53,6 +53,15 @@ static mut grng: Option<Well512RandomNumberGenerator> = None;
 static mut g_callCount: u64 = 0;
 static mut g_lastValue: u32 = 0;
 
+/// Not in the C++: netplay records the game host's draws and replays them on joiners (smw/net_random.rs).
+enum Tape {
+    Off,
+    Record(Vec<u32>),
+    Play(Vec<u32>, usize),
+}
+
+static mut g_tape: Tape = Tape::Off;
+
 impl RandomNumberGenerator {
     pub fn call_count() -> u64 {
         unsafe { g_callCount }
@@ -66,6 +75,27 @@ impl RandomNumberGenerator {
         unsafe {
             g_callCount = 0;
             g_lastValue = 0;
+        }
+    }
+
+    pub fn tape_active() -> bool {
+        unsafe { !matches!(g_tape, Tape::Off) }
+    }
+
+    pub fn start_recording() {
+        unsafe { g_tape = Tape::Record(Vec::new()) }
+    }
+
+    pub fn start_playback(values: Vec<u32>) {
+        unsafe { g_tape = Tape::Play(values, 0) }
+    }
+
+    /// Ends recording or playback; returns the recorded draws, or the draws playback left unused.
+    pub fn stop_tape() -> Vec<u32> {
+        match unsafe { std::mem::replace(&mut g_tape, Tape::Off) } {
+            Tape::Off => Vec::new(),
+            Tape::Record(values) => values,
+            Tape::Play(values, next) => values[next.min(values.len())..].to_vec(),
         }
     }
 
@@ -104,6 +134,24 @@ impl Well512RandomNumberGenerator {
     }
 
     fn get_next(&mut self) -> u32 {
+        unsafe {
+            if let Tape::Play(values, next) = &mut g_tape {
+                if let Some(&v) = values.get(*next) {
+                    *next += 1;
+                    return v;
+                }
+            }
+        }
+        let value = self.draw();
+        unsafe {
+            if let Tape::Record(values) = &mut g_tape {
+                values.push(value);
+            }
+        }
+        value
+    }
+
+    fn draw(&mut self) -> u32 {
         unsafe { g_callCount += 1 };
         let state = &mut self.state;
         let index = self.index as usize;

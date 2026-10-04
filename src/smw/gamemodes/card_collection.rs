@@ -11,6 +11,7 @@ use crate::impl_base;
 use crate::smw::gamemodes::game_mode::{self as gm, remove_players_but_team, setup_score_board, show_score_board};
 use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::main::{players, score, score_cnt};
+use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::moving::mo_collection_card::MO_CollectionCard;
 use crate::smw::player::CPlayer;
 use std::any::Any;
@@ -36,7 +37,14 @@ impl CGM_Collection {
     pub fn release_card(&mut self, mut player: Ptr<CPlayer>) {
         if player.score().subscore[0] > 0 {
             let pos = Vec2s::new((player.center_x() as i32 - 16) as i16, (player.center_y() as i32 - 16) as i16);
+            if !net_random::event(Ev::ReleaseCard, &[player.globalID as i32, pos.x as i32, pos.y as i32]) {
+                self.drop_card(player, pos);
+            }
+        }
+    }
 
+    fn drop_card(&mut self, mut player: Ptr<CPlayer>, pos: Vec2s) {
+        {
             let speed: f32 = 7.0f32 + RANDOM_INT(9) as f32 / 2.0f32;
             let angle: f32 = -(RANDOM_INT(314) as f32) / 100.0f32;
             let vel = Vec2f::new(speed * angle.cos(), speed * angle.sin());
@@ -52,6 +60,34 @@ impl CGM_Collection {
 
             unsafe {
                 objectcontainer[1].add(Ptr::new_box(MO_CollectionCard::new(Ptr::from_mut(&mut rm.spr_collectcards), 1, iValue, 30, vel, pos)));
+            }
+        }
+    }
+}
+
+fn spawn_card() {
+    unsafe {
+        let iRandom: i16 = RANDOM_INT(5) as i16;
+        let mut iRandomCard: i16 = 0;
+        if iRandom == 4 {
+            iRandomCard = 2;
+        } else if iRandom >= 2 {
+            iRandomCard = 1;
+        }
+
+        objectcontainer[1].add(Ptr::new_box(MO_CollectionCard::new(Ptr::from_mut(&mut rm.spr_collectcards), 0, iRandomCard, 0, Vec2f::zero(), Vec2s::zero())));
+    }
+}
+
+pub fn net_spawn_card() {
+    spawn_card();
+}
+
+pub fn net_release_card(mut player: Ptr<CPlayer>, x: i16, y: i16) {
+    unsafe {
+        if let Some(this) = game_values.gamemode.as_any().downcast_mut::<CGM_Collection>() {
+            if !player.is_null() && player.score().subscore[0] > 0 {
+                this.drop_card(player, Vec2s::new(x, y));
             }
         }
     }
@@ -93,16 +129,8 @@ impl CGameModeTrait for CGM_Collection {
                     iPowerupQuantity = players.len().wrapping_add(iPowerupQuantity as usize).wrapping_sub(7) as i16;
                 }
 
-                if objectcontainer[1].count_moving_types(movingobject_collectioncard) < iPowerupQuantity as usize {
-                    let iRandom: i16 = RANDOM_INT(5) as i16;
-                    let mut iRandomCard: i16 = 0;
-                    if iRandom == 4 {
-                        iRandomCard = 2;
-                    } else if iRandom >= 2 {
-                        iRandomCard = 1;
-                    }
-
-                    objectcontainer[1].add(Ptr::new_box(MO_CollectionCard::new(Ptr::from_mut(&mut rm.spr_collectcards), 0, iRandomCard, 0, Vec2f::zero(), Vec2s::zero())));
+                if objectcontainer[1].count_moving_types(movingobject_collectioncard) < iPowerupQuantity as usize && !net_random::event(Ev::CollectionCard, &[]) {
+                    spawn_card();
                 }
             }
 

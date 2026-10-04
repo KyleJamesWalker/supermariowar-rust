@@ -9,7 +9,7 @@
 //   CHROME     Chrome binary (default: the macOS Google Chrome app)
 //   RELAY_BIN  smw_relay binary (default: relay/target/release/smw_relay)
 //   WEB_DIR    web build (default: dist/web)
-//   NET_GAMES  scenarios (default: net_game net_game_blocks)
+//   NET_GAMES  scenarios (default: every tools/ref/net_game*)
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -25,7 +25,7 @@ const chrome = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/M
 const out = resolve(process.argv[2] ?? join(tmpdir(), 'smw-web-netplay'));
 mkdirSync(out, { recursive: true });
 
-const games = (process.env.NET_GAMES ?? 'net_game net_game_blocks').split(/\s+/).filter(Boolean);
+const games = (process.env.NET_GAMES ?? 'net_game net_game_blocks net_game_frenzy net_game_stomp net_game_coins').split(/\s+/).filter(Boolean);
 
 // The native scripts assume both clients start together. Pages load at different speeds, so the
 // host's start press and both players' gameplay inputs move SHIFT frames later.
@@ -45,7 +45,7 @@ const scenario = (game) => {
             })
             .join('\n');
     const map = param('map');
-    const mapFile = map && { name: `${map}.map`, base64: readFileSync(join(dir, `${map}.map`)).toString('base64') };
+    const mapFile = map && { name: `${map}.map`, base64: readFileSync(join(repo, 'tools', 'ref', 'net_maps', `${map}.map`)).toString('base64') };
     return {
         frames,
         compareArgs: (param('compare') ?? '').split(/\s+/).filter(Boolean),

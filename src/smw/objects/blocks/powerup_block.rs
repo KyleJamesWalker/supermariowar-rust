@@ -15,7 +15,7 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::{rm, Ptr};
 use crate::impl_base;
-use crate::smw::net;
+use crate::smw::net_random::{self, Ev};
 use crate::smw::objectgame::createpowerup;
 use crate::smw::objects::blocks::io_block::*;
 use crate::smw::objects::carriable::co_throw_box::CO_ThrowBox;
@@ -187,29 +187,9 @@ pub fn b_powerup_block_update<T: B_PowerupBlockTrait + ?Sized>(this: &mut T) {
                 };
 
                 let (col, row) = (this.pb().col, this.pb().row);
-                if net::joiner_awaits_block_powerups() {
-                    net::await_block_powerup(col, row, pos);
-                } else {
-                    let gm = game_values.gamemode.gamemode;
-                    let gs = &game_values.gamemodesettings;
-                    let iType = if gm == game_mode_health && RANDOM_INT(100) < gs.health.percentextralife as i32 {
-                        HEALTH_POWERUP as i16
-                    } else if (gm == game_mode_timelimit && RANDOM_INT(100) < gs.time.percentextratime as i32)
-                        || (gm == game_mode_star && RANDOM_INT(100) < gs.star.percentextratime as i32)
-                    {
-                        TIME_POWERUP as i16
-                    } else if (gm == game_mode_coins && RANDOM_INT(100) < gs.coins.percentextracoin as i32)
-                        || (gm == game_mode_greed && RANDOM_INT(100) < gs.greed.percentextracoin as i32)
-                    {
-                        COIN_POWERUP as i16
-                    } else if gm == game_mode_jail && RANDOM_INT(100) < gs.jail.percentkey as i32 {
-                        JAIL_KEY_POWERUP as i16
-                    } else {
-                        this.select_powerup()
-                    };
-
-                    net::announce_block_powerup(col, row, side, iType);
-                    createpowerup(iType, pos, side, true);
+                let args = [col as i32, row as i32, side as i32, pos.x as i32, pos.y as i32];
+                if !net_random::event(Ev::Block, &args) {
+                    b_powerup_block_release(this, pos, side);
                 }
 
                 if_sound_on_play(&mut rm.sfx_sprout);
@@ -233,6 +213,74 @@ pub fn b_powerup_block_update<T: B_PowerupBlockTrait + ?Sized>(this: &mut T) {
         b.drawFrame += b.iw;
         if b.drawFrame >= b.animationWidth {
             b.drawFrame = 0;
+        }
+    }
+}
+
+fn b_powerup_block_release<T: B_PowerupBlockTrait + ?Sized>(this: &mut T, pos: Vec2s, side: bool) {
+    unsafe {
+        let gm = game_values.gamemode.gamemode;
+        let gs = &game_values.gamemodesettings;
+        let iType = if gm == game_mode_health && RANDOM_INT(100) < gs.health.percentextralife as i32 {
+            HEALTH_POWERUP as i16
+        } else if (gm == game_mode_timelimit && RANDOM_INT(100) < gs.time.percentextratime as i32)
+            || (gm == game_mode_star && RANDOM_INT(100) < gs.star.percentextratime as i32)
+        {
+            TIME_POWERUP as i16
+        } else if (gm == game_mode_coins && RANDOM_INT(100) < gs.coins.percentextracoin as i32)
+            || (gm == game_mode_greed && RANDOM_INT(100) < gs.greed.percentextracoin as i32)
+        {
+            COIN_POWERUP as i16
+        } else if gm == game_mode_jail && RANDOM_INT(100) < gs.jail.percentkey as i32 {
+            JAIL_KEY_POWERUP as i16
+        } else {
+            this.select_powerup()
+        };
+
+        createpowerup(iType, pos, side, true);
+    }
+}
+
+/// `net_random::Ev::Block`: the block at `col`, `row` releases its powerup at the game host's spot and side.
+pub fn net_release(col: i16, row: i16, pos: Vec2s, side: bool) {
+    unsafe {
+        if col < 0 || row < 0 || col as i32 >= MAPWIDTH || row as i32 >= MAPHEIGHT {
+            return;
+        }
+        let mut block = g_map.blockdata[col as usize][row as usize];
+        if block.is_null() {
+            return;
+        }
+        let any = block.as_any();
+        if let Some(b) = any.downcast_mut::<B_PowerupBlock>() {
+            b_powerup_block_release(b, pos, side);
+        } else if let Some(b) = any.downcast_mut::<crate::smw::objects::blocks::view_block::B_ViewBlock>() {
+            b_powerup_block_release(b, pos, side);
+        }
+    }
+}
+
+/// Whether a joiner can release the game host's powerup now: not while its own copy of the block still bounces.
+/// A block it never saw hit turns used.
+pub fn net_block_ready(col: i16, row: i16) -> bool {
+    unsafe {
+        if col < 0 || row < 0 || col as i32 >= MAPWIDTH || row as i32 >= MAPHEIGHT {
+            return true;
+        }
+        let mut block = g_map.blockdata[col as usize][row as usize];
+        if block.is_null() {
+            return true;
+        }
+        let b = block.block_mut();
+        match b.state {
+            1 | 2 => false,
+            0 => {
+                b.state = 3;
+                b.hidden = false;
+                g_map.update_tile_gap(col, row);
+                true
+            }
+            _ => true,
         }
     }
 }

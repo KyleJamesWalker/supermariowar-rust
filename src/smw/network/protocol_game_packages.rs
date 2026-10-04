@@ -307,29 +307,54 @@ impl P2PCollision {
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
-pub struct HostDecidesBlocks {
+pub struct HostDecidesRandom {
     pub header: MessageHeader,
 }
 
-impl HostDecidesBlocks {
+impl HostDecidesRandom {
     pub fn new() -> Self {
-        HostDecidesBlocks { header: MessageHeader::new(NET_G2P_HOST_DECIDES_BLOCKS) }
+        HostDecidesRandom { header: MessageHeader::new(NET_G2P_HOST_DECIDES_RANDOM) }
     }
 }
 
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct BlockPowerup {
-    pub header: MessageHeader,
-    pub col: u8,
-    pub row: u8,
-    pub side: u8,
-    pub powerup: i16,
+/// Variable length: header, kind u8, context u16, arg count u8, draw count u16, then the i32 args and the u32
+/// draws, all little-endian.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RandomEvent {
+    pub kind: u8,
+    pub context: u16,
+    pub args: Vec<i32>,
+    pub draws: Vec<u32>,
 }
 
-impl BlockPowerup {
-    pub fn new(col: u8, row: u8, side: bool, powerup: i16) -> Self {
-        BlockPowerup { header: MessageHeader::new(NET_G2P_BLOCK_POWERUP), col, row, side: side as u8, powerup }
+impl RandomEvent {
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut out = MessageHeader::new(NET_G2P_RANDOM_EVENT).as_bytes().to_vec();
+        out.push(self.kind);
+        out.extend(self.context.to_le_bytes());
+        out.push(self.args.len() as u8);
+        out.extend((self.draws.len() as u16).to_le_bytes());
+        for a in &self.args {
+            out.extend(a.to_le_bytes());
+        }
+        for d in &self.draws {
+            out.extend(d.to_le_bytes());
+        }
+        out
+    }
+
+    pub fn from_bytes(data: &[u8]) -> Option<Self> {
+        let body = data.get(3..)?;
+        let head = body.get(..6)?;
+        let (kind, context, nargs, ndraws) = (head[0], u16::from_le_bytes([head[1], head[2]]), head[3] as usize, u16::from_le_bytes([head[4], head[5]]) as usize);
+        let words = body.get(6..6 + 4 * (nargs + ndraws))?;
+        let word = |i: usize| [words[4 * i], words[4 * i + 1], words[4 * i + 2], words[4 * i + 3]];
+        Some(RandomEvent {
+            kind,
+            context,
+            args: (0..nargs).map(|i| i32::from_le_bytes(word(i))).collect(),
+            draws: (nargs..nargs + ndraws).map(|i| u32::from_le_bytes(word(i))).collect(),
+        })
     }
 }
 
@@ -345,8 +370,7 @@ crate::net_package!(
     TriggerPowerup,
     MapCollision,
     P2PCollision,
-    HostDecidesBlocks,
-    BlockPowerup
+    HostDecidesRandom
 );
 
 #[cfg(test)]
@@ -415,21 +439,14 @@ mod tests {
     }
 
     #[test]
-    fn block_packages() {
-        assert_eq!(size_of::<HostDecidesBlocks>(), 3);
-        assert_eq!(
-            (
-                size_of::<BlockPowerup>(),
-                offset_of!(BlockPowerup, col),
-                offset_of!(BlockPowerup, row),
-                offset_of!(BlockPowerup, side),
-                offset_of!(BlockPowerup, powerup)
-            ),
-            (8, 3, 4, 5, 6)
-        );
-        let pkg = BlockPowerup::new(19, 14, true, -3);
-        let back = BlockPowerup::from_bytes(pkg.as_bytes());
-        assert_eq!((back.header.packageType, back.col, back.row, back.side, back.powerup), (NET_G2P_BLOCK_POWERUP, 19, 14, 1, -3));
+    fn random_event_round_trip() {
+        assert_eq!(size_of::<HostDecidesRandom>(), 3);
+        let ev = RandomEvent { kind: 7, context: 513, args: vec![-1, 65538], draws: vec![0, u32::MAX, 12345] };
+        let bytes = ev.to_bytes();
+        assert_eq!(bytes.len(), 3 + 6 + 4 * 5);
+        assert_eq!(bytes[2], NET_G2P_RANDOM_EVENT);
+        assert_eq!(RandomEvent::from_bytes(&bytes), Some(ev));
+        assert_eq!(RandomEvent::from_bytes(&bytes[..bytes.len() - 1]), None);
     }
 
     #[test]

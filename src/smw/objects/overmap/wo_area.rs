@@ -56,6 +56,10 @@ impl OMO_Area {
     }
 
     pub fn place_area(&mut self) {
+        if crate::smw::net_random::place_event(self.iNetworkID, 0) {
+            return;
+        }
+
         unsafe {
             let mut x: i16 = 0;
             let mut y: i16 = 0;

@@ -162,7 +162,13 @@ impl MO_PirhanaPlant {
         }
     }
 
-    fn set_new_timer(&mut self) {
+    pub fn set_new_timer(&mut self) {
+        if crate::smw::net_random::object_event(crate::smw::net_random::Ev::HazardTimer, &[self.iNetworkID]) {
+            if crate::smw::net_random::awaiting_host() {
+                self.iTimer = i16::MAX;
+            }
+            return;
+        }
         self.iTimer = (self.iFreq as i32 + RANDOM_INT(self.iFreq as i32)) as i16;
 
         // Face the green fireball plant in a random direction

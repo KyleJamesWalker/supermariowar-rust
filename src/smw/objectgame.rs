@@ -226,6 +226,7 @@ pub fn removeifprojectile(mut object: Ptr<dyn IO_MovingObjectTrait>, playsound: 
 pub fn createpowerup(iType: i16, pos: Vec2s, side: bool, spawn: bool) -> Ptr<dyn IO_MovingObjectTrait> {
     unsafe {
         crate::smw::harness::note_powerup_spawn(iType, pos.x, pos.y);
+        crate::smw::net_random::note_powerup(iType);
         let specialPos = pos + Vec2s::new(1, -1);
 
         let mut spawned = Spawned::None;
@@ -312,10 +313,16 @@ fn check_secret_poof(object: Ptr<dyn IO_MovingObjectTrait>) {
 
 pub fn check_secret(id: i16) {
     unsafe {
-        if !game_values.secretsenabled {
+        if !game_values.secretsenabled || crate::smw::net_random::event(crate::smw::net_random::Ev::Secret, &[id as i32]) {
             return;
         }
 
+        net_check_secret(id);
+    }
+}
+
+pub fn net_check_secret(id: i16) {
+    unsafe {
         let rx = RANDOM_INT(App::screenWidth) as i16;
         let ry = RANDOM_INT(App::screenHeight) as i16;
         let randomPos = Vec2s::new(rx, ry);

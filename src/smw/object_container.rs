@@ -58,6 +58,7 @@ impl CObjectContainer {
             ptr.delete(); // otherwise memory leak!
             return false;
         }
+        crate::smw::net_random::note_added(ptr);
         self.m_list.push(ptr);
         true
     }

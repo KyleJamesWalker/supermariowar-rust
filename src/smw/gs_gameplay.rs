@@ -35,6 +35,7 @@ use crate::smw::gs_menu::MenuState;
 use crate::smw::main::{currentgamemode, players, score, score_cnt};
 use crate::common_netplay::protocol_definitions::NET_GAMESTATE_FRAMES_TO_SEND;
 use crate::smw::net::{netplay, Net_IndexedPlayerData};
+use crate::smw::net_random::{self, Ev};
 use crate::smw::object_container::CObjectContainer;
 use crate::smw::objects::blocks::bounce_block::B_BounceBlock;
 use crate::smw::objects::blocks::breakable_block::B_BreakableBlock;
@@ -788,6 +789,32 @@ pub fn animate_during_countdown() {
     }
 }
 
+pub fn net_pow_kills(ids: &[i32]) {
+    unsafe {
+        let pKillPlayers: Vec<Ptr<CPlayer>> = ids.iter().filter_map(|&id| players.iter().copied().find(|p| p.globalID as i32 == id)).collect();
+        let iNumKillPlayers = pKillPlayers.len() as i16;
+        if iNumKillPlayers == 0 {
+            return;
+        }
+        let mut iRandPlayer = RANDOM_INT(iNumKillPlayers as i32) as i16;
+        for _iPlayer in 0..iNumKillPlayers {
+            player_killed_player(
+                game_values.flags.screenshakeplayerid,
+                pKillPlayers[iRandPlayer as usize],
+                PlayerDeathStyle::Jump,
+                KillStyle::Pow,
+                false,
+                false,
+            );
+
+            iRandPlayer += 1;
+            if iRandPlayer >= iNumKillPlayers {
+                iRandPlayer = 0;
+            }
+        }
+    }
+}
+
 pub fn shake_screen() {
     unsafe {
         if game_values.flags.screenshaketimer <= 0 {
@@ -848,21 +875,9 @@ pub fn shake_screen() {
 
         //Randomize the order in which the players are killed
         if iNumKillPlayers > 0 {
-            let mut iRandPlayer = RANDOM_INT(iNumKillPlayers as i32) as i16;
-            for _iPlayer in 0..iNumKillPlayers {
-                player_killed_player(
-                    game_values.flags.screenshakeplayerid,
-                    pKillPlayers[iRandPlayer as usize],
-                    PlayerDeathStyle::Jump,
-                    KillStyle::Pow,
-                    false,
-                    false,
-                );
-
-                iRandPlayer += 1;
-                if iRandPlayer >= iNumKillPlayers {
-                    iRandPlayer = 0;
-                }
+            let ids: Vec<i32> = pKillPlayers[..iNumKillPlayers as usize].iter().map(|p| p.globalID as i32).collect();
+            if !net_random::event(Ev::Pow, &ids) {
+                net_pow_kills(&ids);
             }
         }
 
@@ -2024,6 +2039,7 @@ pub fn load_map_objects(fPreview: bool) {
 }
 
 pub fn clean_up() {
+    net_random::end_game();
     unsafe {
         //delete object list
         for player in players.iter() {
@@ -2163,23 +2179,29 @@ pub fn update_bullet_bill_powerup() {
                 game_values.bulletbilltimer[p] -= 1;
 
                 game_values.bulletbillspawntimer[p] -= 1;
-                if game_values.bulletbillspawntimer[p] <= 0 {
-                    game_values.bulletbillspawntimer[p] = (RANDOM_INT(20) + 25) as i16;
-                    let speed: f32 = ((RANDOM_INT(21) + 20) as f32) / 10.0f32;
-                    let posy = RANDOM_INT(448) as i16;
-                    let vel = if RANDOM_INT(2) != 0 { speed } else { -speed };
-                    objectcontainer[2].add(Ptr::new_box(MO_BulletBill::new(
-                        spr(&mut rm.spr_bulletbill),
-                        spr(&mut rm.spr_bulletbilldead),
-                        Vec2s::new(0, posy),
-                        vel,
-                        iPlayer,
-                        false,
-                    )));
-                    if_sound_on_play(&mut rm.sfx_bulletbillsound);
+                if game_values.bulletbillspawntimer[p] <= 0 && !net_random::event(Ev::BulletBills, &[p as i32]) {
+                    net_bullet_bill(p);
                 }
             }
         }
+    }
+}
+
+pub fn net_bullet_bill(p: usize) {
+    unsafe {
+        game_values.bulletbillspawntimer[p] = (RANDOM_INT(20) + 25) as i16;
+        let speed: f32 = ((RANDOM_INT(21) + 20) as f32) / 10.0f32;
+        let posy = RANDOM_INT(448) as i16;
+        let vel = if RANDOM_INT(2) != 0 { speed } else { -speed };
+        objectcontainer[2].add(Ptr::new_box(MO_BulletBill::new(
+            spr(&mut rm.spr_bulletbill),
+            spr(&mut rm.spr_bulletbilldead),
+            Vec2s::new(0, posy),
+            vel,
+            p as i16,
+            false,
+        )));
+        if_sound_on_play(&mut rm.sfx_bulletbillsound);
     }
 }
 
@@ -2646,6 +2668,7 @@ impl GameState for GameplayState {
 
     fn update(&mut self) {
         unsafe {
+            net_random::gameplay_frame();
             self.read_network();
 
             if !netplay.active {
@@ -2756,6 +2779,14 @@ pub fn coldec_obj2obj(o1: Ptr<dyn CObjectTrait>, o2: Ptr<dyn CObjectTrait>) -> b
 }
 
 pub fn swap_players(iUsingPlayerID: i16) -> bool {
+    let ready = unsafe { players.iter().filter(|p| p.isready()).count() };
+    if ready > 1 && net_random::event(Ev::MysterySwap, &[iUsingPlayerID as i32]) {
+        return true;
+    }
+    net_mystery_swap(iUsingPlayerID)
+}
+
+pub fn net_mystery_swap(iUsingPlayerID: i16) -> bool {
     unsafe {
         //Count available players to switch with
         let mut iNumAvailablePlayers: i16 = 0;
