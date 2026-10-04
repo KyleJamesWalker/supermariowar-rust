@@ -131,6 +131,7 @@ impl UI_ControlTrait for MI_InputControlField {
             let mut done = false;
 
             while !done {
+                #[cfg(not(target_os = "emscripten"))]
                 harness::wait_event(&mut event);
 
                 game_values.playerInput.update(event, 1);

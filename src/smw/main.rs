@@ -69,23 +69,36 @@ pub static mut currentgamemode: i16 = 0;
 //  MAIN LOOP
 //*************************************
 
+#[cfg(target_os = "emscripten")]
+extern "C" {
+    fn emscripten_set_main_loop(func: unsafe extern "C-unwind" fn(), fps: i32, simulate_infinite_loop: i32);
+}
+
 pub fn gameloop() {
     unsafe {
         SplashScreenState::instance().init();
         GameStateManager::instance().currentState = Ptr::from_mut(SplashScreenState::instance() as &mut dyn GameState);
 
+        #[cfg(target_os = "emscripten")]
+        emscripten_set_main_loop(gameloop_frame, 0, 1);
+
+        #[cfg(not(target_os = "emscripten"))]
         while game_values.appstate != crate::common::game_values::AppState::Quit {
-            FPSLimiter::instance().frame_start();
-
-            harness::frame_start();
-            GameStateManager::instance().currentState.get().update();
-            harness::frame_end();
-
-            FPSLimiter::instance().before_flip();
-            gfx_flipscreen();
-            FPSLimiter::instance().after_flip();
+            gameloop_frame();
         }
     }
+}
+
+unsafe extern "C-unwind" fn gameloop_frame() {
+    FPSLimiter::instance().frame_start();
+
+    harness::frame_start();
+    GameStateManager::instance().currentState.get().update();
+    harness::frame_end();
+
+    FPSLimiter::instance().before_flip();
+    gfx_flipscreen();
+    FPSLimiter::instance().after_flip();
 }
 
 pub fn create_globals() {

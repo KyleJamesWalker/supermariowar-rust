@@ -2,7 +2,7 @@
 
 use crate::globals::Aliased;
 use sdl2::sys::mixer::*;
-use sdl2::sys::{SDL_GetError, SDL_GetTicks, SDL_RWFromFile, AUDIO_S16};
+use sdl2::sys::{SDL_GetError, SDL_GetTicks, SDL_RWFromFile, SDL_version, AUDIO_S16};
 use std::ffi::{CStr, CString};
 use std::io::Write;
 use std::path::Path;
@@ -227,8 +227,17 @@ pub fn sfx_init() -> bool {
             Mix_HookMusicFinished(Some(musicfinished_trampoline));
         }
 
-        let link_version = &*Mix_Linked_Version();
-        println!("[sfx] SDL_Mixer {}.{}.{} initialized.", link_version.major, link_version.minor, link_version.patch);
+        #[cfg(not(target_os = "emscripten"))]
+        {
+            let link_version = &*Mix_Linked_Version();
+            println!("[sfx] SDL_Mixer {}.{}.{} initialized.", link_version.major, link_version.minor, link_version.patch);
+        }
+        #[cfg(target_os = "emscripten")]
+        {
+            // SDL_MIXER_VERSION of the emsdk 5.0.2 sdl2_mixer port (SDL_mixer-release-2.8.0).
+            let ver_compiled = SDL_version { major: 2, minor: 8, patch: 0 };
+            println!("[sfx] SDL_Mixer {}.{}.{} initialized.", ver_compiled.major, ver_compiled.minor, ver_compiled.patch);
+        }
     }
 
     true
@@ -253,6 +262,12 @@ pub fn sfx_setsoundvolume(volume: i32) {
     unsafe { Mix_Volume(-1, volume) };
 }
 
+#[cfg(target_os = "emscripten")]  // emscripten has sound capabilities
+pub fn sfx_can_play_audio() -> bool {
+    true
+}
+
+#[cfg(not(target_os = "emscripten"))]
 pub fn sfx_can_play_audio() -> bool {
     let mut frequency = 0;
     let mut channels = 0;

@@ -71,17 +71,34 @@ impl UI_MainMenu {
 
             this.miPlayerSelect = Ptr::new_box(MI_PlayerSelect::new(Ptr::from_mut(&mut rm.menu_player_select), 120, 250, "Players", 400, 140));
 
-            this.miMultiplayerButton = Ptr::new_box(MI_Button::new(selectfield, 120, 322, "Multiplayer", 400, TextAlign::LEFT));
-            this.miMultiplayerButton.set_code(MENU_CODE_TO_NET_SERVERS_MENU);
+            // disable Multiplayer button for web builds
+            #[cfg(target_os = "emscripten")]
+            {
+                this.miMultiplayerButton = Ptr::new_box(MI_Button::new(selectfield, 120, 322, "Multiplayer - Under Construction", 400, TextAlign::LEFT));
+                this.miOptionsButton = Ptr::new_box(MI_Button::new(selectfield, 120, 362, "Options", 400, TextAlign::LEFT));
+                this.miControlsButton = Ptr::new_box(MI_Button::new(selectfield, 120, 402, "Controls", 400, TextAlign::LEFT));
+            }
+            #[cfg(not(target_os = "emscripten"))]
+            {
+                this.miMultiplayerButton = Ptr::new_box(MI_Button::new(selectfield, 120, 322, "Multiplayer", 400, TextAlign::LEFT));
+                this.miMultiplayerButton.set_code(MENU_CODE_TO_NET_SERVERS_MENU);
 
-            this.miOptionsButton = Ptr::new_box(MI_Button::new(selectfield, 120, 362, "Options", 200, TextAlign::LEFT));
-            this.miControlsButton = Ptr::new_box(MI_Button::new(selectfield, 320, 362, "Controls", 200, TextAlign::LEFT));
+                this.miOptionsButton = Ptr::new_box(MI_Button::new(selectfield, 120, 362, "Options", 200, TextAlign::LEFT));
+                this.miControlsButton = Ptr::new_box(MI_Button::new(selectfield, 320, 362, "Controls", 200, TextAlign::LEFT));
+            }
 
             this.miOptionsButton.set_code(MENU_CODE_TO_OPTIONS_MENU);
             this.miControlsButton.set_code(MENU_CODE_TO_CONTROLS_MENU);
 
-            this.miExitButton = Ptr::new_box(MI_Button::new(selectfield, 120, 402, "Exit", (640.0f32 * 0.625f32) as i16, TextAlign::LEFT));
-            this.miExitButton.set_code(MENU_CODE_EXIT_APPLICATION);
+            #[cfg(target_os = "emscripten")]
+            {
+                this.miExitButton = Ptr::null();
+            }
+            #[cfg(not(target_os = "emscripten"))]
+            {
+                this.miExitButton = Ptr::new_box(MI_Button::new(selectfield, 120, 402, "Exit", (640.0f32 * 0.625f32) as i16, TextAlign::LEFT));
+                this.miExitButton.set_code(MENU_CODE_EXIT_APPLICATION);
+            }
         }
 
         let start = ctl_ptr(this.miMainStartButton);
@@ -90,18 +107,31 @@ impl UI_MainMenu {
         let multi = ctl_ptr(this.miMultiplayerButton);
         let options = ctl_ptr(this.miOptionsButton);
         let controls = ctl_ptr(this.miControlsButton);
-        let exit = ctl_ptr(this.miExitButton);
         let null = Ptr::null();
 
-        this.add_control(start, exit, players, null, quick);
-        this.add_control(quick, exit, players, start, null);
-        this.add_control(players, start, multi, null, null);
-        this.add_control(multi, players, options, null, null);
-        this.add_control(options, multi, exit, controls, controls);
-        this.add_control(controls, multi, exit, options, options);
-        this.add_control(exit, options, start, null, null);
+        #[cfg(not(target_os = "emscripten"))]
+        {
+            let exit = ctl_ptr(this.miExitButton);
+            this.add_control(start, exit, players, null, quick);
+            this.add_control(quick, exit, players, start, null);
+            this.add_control(players, start, multi, null, null);
+            this.add_control(multi, players, options, null, null);
+            this.add_control(options, multi, exit, controls, controls);
+            this.add_control(controls, multi, exit, options, options);
+            this.add_control(exit, options, start, null, null);
+        }
+        #[cfg(target_os = "emscripten")]
+        {
+            this.add_control(start, controls, players, null, quick);
+            this.add_control(quick, controls, players, start, null);
+            this.add_non_control(multi);
+            this.add_control(players, start, options, null, null);
+            this.add_control(options, players, controls, null, null);
+            this.add_control(controls, options, start, null, null);
+        }
 
         this.set_initial_focus(start);
+        #[cfg(not(target_os = "emscripten"))]
         this.set_cancel_code(MENU_CODE_EXIT_APPLICATION);
 
         let (title, version) = (ctl_ptr(this.miSMWTitle), ctl_ptr(this.miSMWVersion));

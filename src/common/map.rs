@@ -217,9 +217,12 @@ pub static iFireballHazardSize: [i16; 3] = [18, 9, 5];
 pub static iStandardOffset: [i16; 3] = [0, 32, 48];
 pub static dBulletBillFrequency: [f32; 3] = [10.0, 5.0, 2.5];
 
+#[cfg(not(target_os = "emscripten"))]
 fn small_delay() {
     unsafe { SDL_Delay(10) };
 }
+#[cfg(target_os = "emscripten")]
+fn small_delay() {}
 
 fn sdl_error() -> String {
     unsafe { CStr::from_ptr(SDL_GetError()).to_string_lossy().into_owned() }

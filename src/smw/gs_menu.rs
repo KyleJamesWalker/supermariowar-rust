@@ -461,6 +461,9 @@ impl MenuState {
     }
 
     fn exit(&mut self) {
+        #[cfg(target_os = "emscripten")]
+        return;
+
         unsafe {
             game_values.appstate = AppState::Quit;
             game_values.write_config();

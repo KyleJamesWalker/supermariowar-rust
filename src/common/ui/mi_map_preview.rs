@@ -16,9 +16,12 @@ use crate::smw::objects::overmap::wo_orbit_hazard::OMO_OrbitHazard;
 use crate::smw::objects::overmap::wo_straight_path_hazard::OMO_StraightPathHazard;
 use sdl2::sys::{SDL_Delay, SDL_Rect};
 
+#[cfg(not(target_os = "emscripten"))]
 fn small_delay() {
     unsafe { SDL_Delay(10) };
 }
+#[cfg(target_os = "emscripten")]
+fn small_delay() {}
 
 /// `strncpy(dst, src, 255); dst[255] = 0;`
 pub(crate) fn copy_map_name(src: &str) -> String {
