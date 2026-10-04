@@ -225,6 +225,7 @@ pub fn removeifprojectile(mut object: Ptr<dyn IO_MovingObjectTrait>, playsound: 
 
 pub fn createpowerup(iType: i16, pos: Vec2s, side: bool, spawn: bool) -> Ptr<dyn IO_MovingObjectTrait> {
     unsafe {
+        crate::smw::harness::note_powerup_spawn(iType, pos.x, pos.y);
         let specialPos = pos + Vec2s::new(1, -1);
 
         let mut spawned = Spawned::None;

@@ -305,7 +305,49 @@ impl P2PCollision {
     }
 }
 
-crate::net_package!(SyncOK, StartGame, LeaveGame, ClientInput, RemoteInput, GameState, RequestPowerup, StartPowerup, TriggerPowerup, MapCollision, P2PCollision);
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct HostDecidesBlocks {
+    pub header: MessageHeader,
+}
+
+impl HostDecidesBlocks {
+    pub fn new() -> Self {
+        HostDecidesBlocks { header: MessageHeader::new(NET_G2P_HOST_DECIDES_BLOCKS) }
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct BlockPowerup {
+    pub header: MessageHeader,
+    pub col: u8,
+    pub row: u8,
+    pub side: u8,
+    pub powerup: i16,
+}
+
+impl BlockPowerup {
+    pub fn new(col: u8, row: u8, side: bool, powerup: i16) -> Self {
+        BlockPowerup { header: MessageHeader::new(NET_G2P_BLOCK_POWERUP), col, row, side: side as u8, powerup }
+    }
+}
+
+crate::net_package!(
+    SyncOK,
+    StartGame,
+    LeaveGame,
+    ClientInput,
+    RemoteInput,
+    GameState,
+    RequestPowerup,
+    StartPowerup,
+    TriggerPowerup,
+    MapCollision,
+    P2PCollision,
+    HostDecidesBlocks,
+    BlockPowerup
+);
 
 #[cfg(test)]
 mod tests {
@@ -370,6 +412,24 @@ mod tests {
             ),
             (48, 3, 8, 16, 24, 32, 40)
         );
+    }
+
+    #[test]
+    fn block_packages() {
+        assert_eq!(size_of::<HostDecidesBlocks>(), 3);
+        assert_eq!(
+            (
+                size_of::<BlockPowerup>(),
+                offset_of!(BlockPowerup, col),
+                offset_of!(BlockPowerup, row),
+                offset_of!(BlockPowerup, side),
+                offset_of!(BlockPowerup, powerup)
+            ),
+            (8, 3, 4, 5, 6)
+        );
+        let pkg = BlockPowerup::new(19, 14, true, -3);
+        let back = BlockPowerup::from_bytes(pkg.as_bytes());
+        assert_eq!((back.header.packageType, back.col, back.row, back.side, back.powerup), (NET_G2P_BLOCK_POWERUP, 19, 14, 1, -3));
     }
 
     #[test]

@@ -2,9 +2,10 @@
 
 use crate::common::game_mode::{GameModeType, *};
 use crate::common::game_mode_settings::GAMEMODESETTINGS_RAW_SIZE;
-use crate::common::global::{game_values, rm, skinlist};
-use crate::common::global_constants::WAITTIME;
+use crate::common::global::{g_map, game_values, rm, skinlist};
+use crate::common::global_constants::{MAPHEIGHT, MAPWIDTH, WAITTIME};
 use crate::common::input::{COutputControl, CPlayerInput};
+use crate::common::math::vec2::Vec2s;
 use crate::common::path::get_home_directory;
 use crate::common::random_number_generator::{RandomNumberGenerator, RandomNumberGeneratorType, RANDOM_INT};
 use crate::common_netplay::network_interface::{NetPeer, NetworkEventHandler};
@@ -16,7 +17,7 @@ use crate::smw::network::file_compressor::FileCompressor;
 use crate::smw::network::net_config_manager::NetConfigManager;
 use crate::smw::network::network_layer::NetworkLayer;
 use crate::smw::network::protocol_game_packages as gpkgs;
-use crate::smw::objectgame::PowerupType;
+use crate::smw::objectgame::{createpowerup, PowerupType};
 use crate::smw::ui::network_list_scroll::MI_NetworkListScroll;
 use sdl2::sys::SDL_GetTicks;
 use std::collections::VecDeque;
@@ -726,6 +727,9 @@ impl NetClient {
             netplay.last_confirmed_input = 0xFF;
             netplay.current_input_counter = 0;
             netplay.local_playerdata_store_time = [SystemTime::now(); 256];
+            netplay.host_decides_blocks = false;
+            netplay.pending_block_powerups.clear();
+            netplay.blocks_awaiting_powerup.clear();
 
             if netplay.theHostIsMe {
                 self.set_as_last_sent_message(NET_P2G_SYNC_OK);
@@ -883,6 +887,43 @@ impl NetClient {
             player1.collides_with_player(player2);
 
             println!("P{} collided with P{}!", pkg.player_id[0], pkg.player_id[1]);
+        }
+    }
+
+    fn handle_block_powerup(&mut self, data: &[u8]) {
+        let pkg = gpkgs::BlockPowerup::from_bytes(data);
+        let (col, row) = (pkg.col as i16, pkg.row as i16);
+        let side = pkg.side != 0;
+
+        unsafe {
+            if let Some(i) = netplay.blocks_awaiting_powerup.iter().position(|b| b.0 == col && b.1 == row) {
+                let (_, _, pos) = netplay.blocks_awaiting_powerup.remove(i);
+                createpowerup(pkg.powerup, pos, side, true);
+                return;
+            }
+
+            if col as usize >= MAPWIDTH as usize || row as usize >= MAPHEIGHT as usize {
+                return;
+            }
+            let mut block = g_map.blockdata[col as usize][row as usize];
+            if block.is_null() {
+                return;
+            }
+
+            let b = block.block_mut();
+            if b.state == 1 || b.state == 2 {
+                netplay.pending_block_powerups.push(pkg);
+                return;
+            }
+
+            // This client never saw the block get hit.
+            if b.state == 0 {
+                b.state = 3;
+                b.hidden = false;
+                g_map.update_tile_gap(col, row);
+            }
+            let pos = Vec2s::new(b.ix, b.iposy);
+            createpowerup(pkg.powerup, pos, side, true);
         }
     }
 
@@ -1088,6 +1129,10 @@ impl NetworkEventHandler for NetClient {
 
                 NET_G2P_TRIGGER_P2PCOLL => self.handle_p2p_collision(data),
 
+                NET_G2P_HOST_DECIDES_BLOCKS => netplay.host_decides_blocks = true,
+
+                NET_G2P_BLOCK_POWERUP => self.handle_block_powerup(data),
+
                 _ => {
                     print!("Unknown: ");
                     for b in data {
@@ -1103,6 +1148,31 @@ impl NetworkEventHandler for NetClient {
         if packageType == NET_RESPONSE_CREATE_OK {
             println!("last: {}, {}", self.lastSentMessage.packageType, self.lastReceivedMessage.packageType);
         }
+    }
+}
+
+/// Not in the C++: joiners release what the host's powerup blocks released instead of rolling their own RNG.
+pub fn joiner_awaits_block_powerups() -> bool {
+    unsafe { netplay.active && !netplay.theHostIsMe && netplay.host_decides_blocks }
+}
+
+pub fn announce_block_powerup(col: i16, row: i16, side: bool, powerup: i16) {
+    unsafe {
+        if netplay.active && netplay.theHostIsMe {
+            let pkg = gpkgs::BlockPowerup::new(col as u8, row as u8, side, powerup);
+            netplay.client.local_gamehost.send_message_to_my_peers(pkg.as_bytes());
+        }
+    }
+}
+
+pub fn await_block_powerup(col: i16, row: i16, pos: Vec2s) {
+    unsafe {
+        let Some(i) = netplay.pending_block_powerups.iter().position(|p| p.col as i16 == col && p.row as i16 == row) else {
+            netplay.blocks_awaiting_powerup.push((col, row, pos));
+            return;
+        };
+        let pkg = netplay.pending_block_powerups.remove(i);
+        createpowerup(pkg.powerup, pos, pkg.side != 0, true);
     }
 }
 
@@ -1238,6 +1308,7 @@ impl NetGameHost {
         RandomNumberGenerator::generator().reseed(unsafe { libc_time() } as u32);
         let pkg = pkgs::StartSync::new(RANDOM_INT(32767) as u32);
         self.send_message_to_my_peers(pkg.as_bytes());
+        self.send_message_to_my_peers(gpkgs::HostDecidesBlocks::new().as_bytes());
 
         unsafe {
             netplay.client.handle_start_sync_message(pkg.as_bytes());
@@ -1630,6 +1701,10 @@ pub struct Networking {
     pub local_playerdata_buffer: VecDeque<Net_IndexedPlayerData>,
     pub local_playerdata_store_time: [nettimepoint; 256],
 
+    pub host_decides_blocks: bool,
+    pub pending_block_powerups: Vec<gpkgs::BlockPowerup>,
+    pub blocks_awaiting_powerup: Vec<(i16, i16, Vec2s)>,
+
     pub _alias: Aliased,
 }
 
@@ -1672,6 +1747,9 @@ impl Networking {
             local_input_buffer: VecDeque::new(),
             local_playerdata_buffer: VecDeque::new(),
             local_playerdata_store_time: [SystemTime::UNIX_EPOCH; 256],
+            host_decides_blocks: false,
+            pending_block_powerups: Vec::new(),
+            blocks_awaiting_powerup: Vec::new(),
             _alias: Aliased::new(),
         }
     }

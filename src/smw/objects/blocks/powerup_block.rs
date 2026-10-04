@@ -15,6 +15,7 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::{rm, Ptr};
 use crate::impl_base;
+use crate::smw::net;
 use crate::smw::objectgame::createpowerup;
 use crate::smw::objects::blocks::io_block::*;
 use crate::smw::objects::carriable::co_throw_box::CO_ThrowBox;
@@ -185,22 +186,29 @@ pub fn b_powerup_block_update<T: B_PowerupBlockTrait + ?Sized>(this: &mut T) {
                     (Vec2s::new(b.ix, b.iy), b.side)
                 };
 
-                let gm = game_values.gamemode.gamemode;
-                let gs = &game_values.gamemodesettings;
-                if gm == game_mode_health && RANDOM_INT(100) < gs.health.percentextralife as i32 {
-                    createpowerup(HEALTH_POWERUP as i16, pos, side, true);
-                } else if (gm == game_mode_timelimit && RANDOM_INT(100) < gs.time.percentextratime as i32)
-                    || (gm == game_mode_star && RANDOM_INT(100) < gs.star.percentextratime as i32)
-                {
-                    createpowerup(TIME_POWERUP as i16, pos, side, true);
-                } else if (gm == game_mode_coins && RANDOM_INT(100) < gs.coins.percentextracoin as i32)
-                    || (gm == game_mode_greed && RANDOM_INT(100) < gs.greed.percentextracoin as i32)
-                {
-                    createpowerup(COIN_POWERUP as i16, pos, side, true);
-                } else if gm == game_mode_jail && RANDOM_INT(100) < gs.jail.percentkey as i32 {
-                    createpowerup(JAIL_KEY_POWERUP as i16, pos, side, true);
+                let (col, row) = (this.pb().col, this.pb().row);
+                if net::joiner_awaits_block_powerups() {
+                    net::await_block_powerup(col, row, pos);
                 } else {
-                    let iType = this.select_powerup();
+                    let gm = game_values.gamemode.gamemode;
+                    let gs = &game_values.gamemodesettings;
+                    let iType = if gm == game_mode_health && RANDOM_INT(100) < gs.health.percentextralife as i32 {
+                        HEALTH_POWERUP as i16
+                    } else if (gm == game_mode_timelimit && RANDOM_INT(100) < gs.time.percentextratime as i32)
+                        || (gm == game_mode_star && RANDOM_INT(100) < gs.star.percentextratime as i32)
+                    {
+                        TIME_POWERUP as i16
+                    } else if (gm == game_mode_coins && RANDOM_INT(100) < gs.coins.percentextracoin as i32)
+                        || (gm == game_mode_greed && RANDOM_INT(100) < gs.greed.percentextracoin as i32)
+                    {
+                        COIN_POWERUP as i16
+                    } else if gm == game_mode_jail && RANDOM_INT(100) < gs.jail.percentkey as i32 {
+                        JAIL_KEY_POWERUP as i16
+                    } else {
+                        this.select_powerup()
+                    };
+
+                    net::announce_block_powerup(col, row, side, iType);
                     createpowerup(iType, pos, side, true);
                 }
 
