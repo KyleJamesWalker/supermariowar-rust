@@ -54,7 +54,7 @@ const cleanup = () => {
 };
 process.on('exit', cleanup);
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => process.exit(1));
-const deadlineMs = 240000;
+const deadlineMs = 360000;
 setTimeout(() => {
     console.error(`not finished after ${deadlineMs / 1000} s; giving up`);
     process.exit(1);
@@ -191,7 +191,7 @@ try {
     await waitFor(`(() => { try { return /^#@ mark frame=\\d+ state=menu match=1 /m.test(Module.FS.readFile(REPLAY_DIR + '/' + Module.FS.readdir(REPLAY_DIR).filter((n) => n.endsWith('.txt')).sort().pop(), { encoding: 'utf8' })); } catch { return false; } })()`,
         'the game to end through the exit dialog', 20000);
     const session = await recording();
-    check(/^#@ checkpoint match=1 frame=\d+ b64=/m.test(session), 'the browser recording has a checkpoint for match 1');
+    check(/^#@ checkpoint match=1 frame=\d+ z64=/m.test(session), 'the browser recording has a checkpoint for match 1');
     await evaluate(`new Promise((ok) => Module.FS.syncfs(false, ok))`);
 
     await send('Page.reload');
@@ -239,6 +239,20 @@ try {
     const start = Number(clip.match(/^#@ checkpoint match=1 frame=(\d+)/m)[1]);
     check(nativeDump !== null && webDump === nativeDump && webDump.startsWith(`F ${start} gameplay\n`),
         `the watched clip's dump equals the native build's (${webDump.split('\nF ').length} frames from ${start})`);
+
+    // A clip of an older recording (`b64=` checkpoints) still plays through Load replay.
+    const oldClip = join(out, 'old_clip.txt');
+    const cut = spawnSync('python3', [join(repo, 'tools', 'replay_clip.py'), join(repo, 'tools', 'checkpoint_fixtures', 'web_gamepad_ztar_b64.txt'), '--match', '1', '-o', oldClip], { encoding: 'utf8' });
+    check(cut.status === 0 && /^#@ checkpoint match=1 frame=\d+ b64=/m.test(readFileSync(oldClip, 'utf8')), 'replay_clip.py cuts a b64 clip');
+    await send('Page.reload');
+    await waitFor(startScreen, 'the start screen for Load replay', 120000);
+    const { result: input } = await send('Runtime.evaluate', { expression: `document.getElementById('loadReplay')` });
+    await send('DOM.setFileInputFiles', { files: [oldClip], objectId: input.objectId });
+    await waitFor('window.smwQuit === true', 'the loaded b64 clip to play to its end', 90000);
+    const oldWeb = await evaluate(`Module.FS.readFile('/dump.txt', { encoding: 'utf8' })`);
+    const oldNative = spawnSync(join(repo, 'tools', 'run_rust.sh'), [oldClip, join(out, 'old_native')], { encoding: 'utf8' });
+    const oldNativeDump = oldNative.status === 0 ? readFileSync(join(out, 'old_native', 'dump.txt'), 'utf8') : null;
+    check(oldNativeDump !== null && oldWeb === oldNativeDump, `Load replay plays a b64 clip like the native build (${oldWeb.split('\nF ').length} frames)`);
 } catch (e) {
     console.error(e.message);
     console.error(`last console lines:\n${consoleLines.slice(-15).join('\n')}`);
