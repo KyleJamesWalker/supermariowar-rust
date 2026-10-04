@@ -116,6 +116,7 @@
   .match-name { flex: 1; min-width: 0; text-align: left; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .match-name small { color: var(--muted); font-weight: 400; }
   .hint { color: var(--muted); font-size: 13px; text-align: center; }
+  .hint a { color: var(--gold); }
   kbd {
     background: var(--panel);
     border: 1px solid #2f3459;
@@ -128,7 +129,7 @@
   }
   footer { margin-top: auto; color: var(--muted); font-size: 12px; text-align: center; }
   footer a { color: var(--muted); }
-  footer a[hidden] { display: none; }
+  footer [hidden] { display: none; }
   #output {
     width: min(100%, 960px);
     height: 160px;
@@ -167,11 +168,12 @@
         <input type="file" id="loadReplay" accept=".txt,text/plain" hidden>
       </div>
       <div class="hint" id="pads">Using gamepads? Press a button on each one now (up to 4).</div>
+      <div class="hint"><a href="manual.html" target="_blank" rel="noopener">How to play</a></div>
     </div>
     <div class="overlay" id="end" hidden>
       <div id="endText">Replay finished</div>
       <div class="row">
-        <button class="btn btn-big" id="playAgain" type="button">Play</button>
+        <button class="btn btn-big" id="playAgain" type="button">Menu</button>
         <button class="btn btn-big btn-quiet" id="watchAgain" type="button">Watch again</button>
       </div>
     </div>
@@ -184,6 +186,12 @@
       </svg>
       Fullscreen
     </button>
+    <button class="btn btn-quiet" id="menu" type="button" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+        <path d="M4 6h16M4 12h16M4 18h16"/>
+      </svg>
+      Menu
+    </button>
     <span class="hint">
       <kbd>&larr;</kbd><kbd>&rarr;</kbd> move &middot; <kbd>&uarr;</kbd> jump &middot; <kbd>Right Ctrl</kbd> run / grab &middot;
       <kbd>Right Shift</kbd> use item &middot; <kbd>Enter</kbd> start &middot; <kbd>Esc</kbd> back
@@ -195,8 +203,8 @@
   <footer>
     A Rust port of <a href="https://github.com/mmatyas/supermariowar">Super Mario War</a> &middot;
     <a href="https://github.com/KyleJamesWalker/supermariowar-rust">source</a> &middot;
-    <a href="https://github.com/KyleJamesWalker/supermariowar-rust/blob/main/docs/GAME_MANUAL.md">how to play</a> &middot;
-    <a href="#" id="downloadReplay" hidden>download replay</a> &middot;
+    <a href="manual.html" target="_blank" rel="noopener">how to play</a> &middot;
+    <span id="downloadReplay" hidden><a href="#">download replay</a> &middot;</span>
     <a href="#" id="toggleLog">show log</a>
   </footer>
 
@@ -216,6 +224,12 @@
     window.addEventListener('keydown', function (e) {
       if (e.key === 'Backspace' && !e.target.closest('input, textarea, [contenteditable]')) e.preventDefault();
     }, true);
+    // SDL takes every key on window and swallows Tab; keep Tab, and Enter or Space on a focused page button, for the page.
+    ['keydown', 'keypress', 'keyup'].forEach(function (type) {
+      window.addEventListener(type, function (e) {
+        if (e.key === 'Tab' || ((e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('button, a, label'))) e.stopPropagation();
+      }, true);
+    });
     var stageElement = document.getElementById('stage');
     document.getElementById('fullscreen').addEventListener('click', function () {
       if (document.fullscreenElement) document.exitFullscreen();
@@ -244,17 +258,19 @@
     var watching = null;
     var started = false;
     var syncing = false;
-    var saveFiles = function () {
-      if (syncing || !started) return;
+    var saveFiles = function (done) {
+      if (!started) return done && done();
+      if (syncing) return done && setTimeout(function () { saveFiles(done); }, 100);
       syncing = true;
       Module.FS.syncfs(false, function (err) {
         syncing = false;
         if (err) console.warn('saving settings and replays failed', err);
+        if (done) done();
       });
     };
-    setInterval(saveFiles, 5000);
+    setInterval(function () { saveFiles(); }, 5000);
     document.addEventListener('visibilitychange', function () { if (document.hidden) saveFiles(); });
-    window.addEventListener('pagehide', saveFiles);
+    window.addEventListener('pagehide', function () { saveFiles(); });
 
     var lastRecording = function () {
       try {
@@ -404,6 +420,8 @@
       startElement.hidden = true;
       started = true;
       downloadElement.hidden = false;
+      menuElement.hidden = false;
+      document.documentElement.classList.add('playing');
       canvasElement.focus();
       Module.callMain(args);
     };
@@ -429,7 +447,23 @@
 
     // The browser main loop never returns, so a fresh page is the simplest way back to a clean game.
     var endElement = document.getElementById('end');
-    document.getElementById('playAgain').addEventListener('click', function () { location.reload(); });
+    var menuElement = document.getElementById('menu');
+    var leaving = false;
+    var backToMenu = function () {
+      if (leaving) return;
+      var live = started && !watching && endElement.hidden;
+      if (live && !confirm('Leave this game for the menu? The recording so far is kept.')) {
+        canvasElement.focus();
+        return;
+      }
+      leaving = true;
+      menuElement.disabled = true;
+      menuElement.lastChild.textContent = ' Saving\u2026 ';
+      // The game flushes its recording once a second (src/smw/harness.rs); let it before saving.
+      setTimeout(function () { saveFiles(function () { location.reload(); }); }, live ? 1200 : 0);
+    };
+    menuElement.addEventListener('click', backToMenu);
+    document.getElementById('playAgain').addEventListener('click', backToMenu);
     document.getElementById('watchAgain').addEventListener('click', function () {
       var path = currentReplay();
       try {
