@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build the web version (wasm32-unknown-emscripten, NO_NETWORK) and assemble dist/web/:
-# index.html, smw.js, smw.wasm, smw.data (the preloaded data/ tree) and the page's touch controls.
+# index.html, smw.js, smw.wasm, smw.data (the preloaded data/ tree) and the page's touch controls, manifest and icons.
 # Usage: tools/package_web.sh            (needs emsdk 5.0.2 in $EMSDK or ~/work/emsdk)
 set -euo pipefail
 
@@ -36,6 +36,6 @@ echo 'int main(void) { return 0; }' > "$stub/smw.c"
 emcc "$stub/smw.c" -o "$stub/smw.html" -sUSE_SDL=2 -sALLOW_MEMORY_GROWTH=1 --shell-file "$repo/web/shell.html"
 cp "$stub/smw.html" "$out/index.html"
 cp "$repo/resources/smw.png" "$out/favicon.png"
-cp "$repo"/web/{touch.js,touch.css} "$out/"
+cp "$repo"/web/{touch.js,touch.css,manifest.webmanifest,icon-180.png,icon-192.png,icon-512.png} "$out/"
 
 du -sh "$out"/*
