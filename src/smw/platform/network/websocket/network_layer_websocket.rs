@@ -227,7 +227,10 @@ impl Relay {
 
 fn listen(side: Side, handler: &mut dyn NetworkEventHandler) {
     unsafe {
-        relay.pump();
+        // NetClient polls its game host first: a player's INCOMING must wait for the lobby's CLIENTS_INFO before it.
+        if side == Side::Client {
+            relay.pump();
+        }
         while let Some(event) = relay.events(side).pop_front() {
             match event {
                 Event::Connect(peer) => handler.on_connect(Box::new(peer)),
