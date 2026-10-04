@@ -47,6 +47,9 @@ Each variable is a no-op when unset or empty. The Rust binary must honour the sa
 | `SMW_DUMP=<file>` | Append one state block per frame (format below). |
 | `SMW_SHOT_FRAMES=1,60,300` | Save the screen surface after those frames. |
 | `SMW_SHOT_DIR=<dir>` | Where screenshots go (default `.`), named `frame_<n>.bmp`. |
+| `SMW_SHOT_EVERY=<n>` | Also save every nth frame, counting from the start of `SMW_SHOT_RANGE` (default 0). |
+| `SMW_SHOT_RANGE=<a>-<b>` | Limit `SMW_SHOT_EVERY` to frames `a..=b` (`a-` runs to the end); alone, it saves every frame in the range. `SMW_SHOT_FRAMES` still applies outside it. |
+| `SMW_SHOT_STREAM=<file>` | Append the frames `SMW_SHOT_EVERY`/`SMW_SHOT_RANGE` select to this file (or pipe) as raw 640x480 ARGB8888 rows, 1,228,800 bytes each, instead of writing BMPs. `SMW_SHOT_FRAMES` still writes BMPs. |
 | `SMW_MAP=<name>` | Select the start map when the menu is created (see below). |
 
 Rust only (see Recordings): `SMW_NO_RECORD=1` turns off session recording, `SMW_LIVE_SCRIPT=<file>` feeds a replay-format script into the live input path of a recorded session, `SMW_AUDIBLE=1` plays real sound alongside the virtual mixer, `SMW_REPLAY_SPEED=<n>` scales the frame-limiter sleep, and `SMW_RLE=0`/`1` turns SDL surface RLE off or on (default: off natively, on in the web build).
@@ -58,7 +61,7 @@ The frame counter `N` starts at 0 and counts iterations of the main loop in `gam
 1. Seeded runs: `sfx_virtual_advance()` (see Sound). Then push every replay event whose frame is `N` with `SDL_PushEvent`, in file order.
 2. `currentState->update()`.
 3. Write the dump block for `N`.
-4. If `N` is in `SMW_SHOT_FRAMES`, `SDL_SaveBMP(screen)`: the 640x480 ARGB8888 surface as drawn by this frame, before `gfx_flipscreen()`.
+4. If `N` is in `SMW_SHOT_FRAMES` (or selected by `SMW_SHOT_EVERY`/`SMW_SHOT_RANGE`), `SDL_SaveBMP(screen)`: the 640x480 ARGB8888 surface as drawn by this frame, before `gfx_flipscreen()`. With `SMW_SHOT_STREAM`, the periodic frames go to the stream instead.
 5. `N += 1`; if `N >= SMW_FRAMES`, quit.
 6. FPS limiter, `gfx_flipscreen()`.
 

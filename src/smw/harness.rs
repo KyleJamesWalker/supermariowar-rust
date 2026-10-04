@@ -58,6 +58,10 @@ struct Harness {
     dump: Option<BufWriter<File>>,
     shotFrames: BTreeSet<u32>,
     shotDir: String,
+    shotEvery: u32,
+    shotFrom: u32,
+    shotTo: u32,
+    shotStream: Option<BufWriter<File>>,
     events: Vec<ReplayEvent>,
     joysticks: i32,
     replay: bool,
@@ -77,6 +81,10 @@ static mut h: Harness = Harness {
     dump: None,
     shotFrames: BTreeSet::new(),
     shotDir: String::new(),
+    shotEvery: 0,
+    shotFrom: 0,
+    shotTo: u32::MAX,
+    shotStream: None,
     events: Vec::new(),
     joysticks: 0,
     replay: false,
@@ -383,6 +391,25 @@ pub fn init() {
             }
         }
         h.shotDir = env("SMW_SHOT_DIR").unwrap_or_else(|| ".".to_string());
+        if let Some(range) = env("SMW_SHOT_RANGE") {
+            let (from, to) = range.split_once('-').unwrap_or((&range, ""));
+            h.shotFrom = strtol10(from) as u32;
+            if !to.is_empty() {
+                h.shotTo = strtol10(to) as u32;
+            }
+            h.shotEvery = 1;
+        }
+        if let Some(every) = env("SMW_SHOT_EVERY") {
+            h.shotEvery = strtol10(&every).max(1) as u32;
+        }
+        if let Some(stream) = env("SMW_SHOT_STREAM") {
+            let file = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&stream)
+                .unwrap_or_else(|_| fail(format!("cannot open shot stream {}", stream)));
+            h.shotStream = Some(BufWriter::with_capacity(640 * 480 * 4, file));
+        }
     }
 }
 
@@ -467,7 +494,16 @@ pub fn frame_end() {
         sfx::sfx_events.clear();
         spawn_events.clear();
 
-        if h.shotFrames.contains(&h.frame) {
+        let f = h.frame;
+        let periodic = h.shotEvery > 0 && f >= h.shotFrom && f <= h.shotTo && (f - h.shotFrom) % h.shotEvery == 0;
+        if periodic {
+            if let Some(out) = h.shotStream.as_mut() {
+                if crate::common::gfx::gfx_write_screen_raw(out).and_then(|_| out.flush()).is_err() {
+                    fail(format!("cannot write shot stream at frame {}", f));
+                }
+            }
+        }
+        if h.shotFrames.contains(&f) || (periodic && h.shotStream.is_none()) {
             let path = format!("{}/frame_{}.bmp", h.shotDir, h.frame);
             if !crate::common::gfx::gfx_save_screen_bmp(&path) {
                 eprintln!("[harness] cannot save {}", path);
