@@ -92,7 +92,7 @@ pub fn net_hazard_state(mut obj: Ptr<dyn CObjectTrait>) -> String {
     if let Some(o) = any.downcast_mut::<io_flame_cannon::IO_FlameCannon>() {
         format!("t{}", o.iTimer)
     } else if let Some(o) = any.downcast_mut::<moving::mo_pirhana_plant::MO_PirhanaPlant>() {
-        format!("t{}f{}", o.iTimer, o.iFrame)
+        format!("t{}", o.iTimer)
     } else if let Some(o) = any.downcast_mut::<io_bullet_bill_cannon::IO_BulletBillCannon>() {
         format!("t{}", o.m_timer)
     } else {
