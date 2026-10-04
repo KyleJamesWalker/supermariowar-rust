@@ -18,7 +18,7 @@ use crate::common::resource_manager::CResourceManager;
 use crate::smw::player::CPlayer;
 use crate::common::gfx::{gfx_close, gfx_init, gfx_flipscreen, gfx_loadpalette, gfx_settitle, gfx_show_catched_error};
 use crate::common::global_constants::{HALF_PI, MAX_PLAYERS, NUM_POWERUPS, PI, THREE_HALF_PI};
-use crate::common::path::convert_path_pack;
+use crate::common::path::{convert_path_pack, get_home_directory};
 use crate::common::score::CScore;
 use crate::common::sfx::{sfx_close, sfx_init};
 use crate::globals::*;
@@ -75,6 +75,7 @@ extern "C" {
     fn emscripten_get_now() -> f64;
     fn emscripten_cancel_main_loop();
     fn emscripten_run_script(script: *const std::ffi::c_char);
+    fn emscripten_run_script_int(script: *const std::ffi::c_char) -> i32;
 }
 
 pub fn gameloop() {
@@ -200,6 +201,14 @@ pub fn create_globals() {
 
 pub fn init_joysticks() {
     unsafe {
+        // Not in upstream: a browser replay opens no pads, so a connected one cannot act in it.
+        if let Some(count) = harness::replay_joysticks() {
+            joystickcount = count;
+            joysticks = Box::leak(vec![null_mut::<SDL_Joystick>(); count.max(0) as usize].into_boxed_slice()).as_mut_ptr();
+            SDL_JoystickEventState(SDL_ENABLE as i32);
+            return;
+        }
+
         SDL_InitSubSystem(SDL_INIT_JOYSTICK);
         joystickcount = SDL_NumJoysticks() as i16;
         joysticks = Box::leak(vec![null_mut::<SDL_Joystick>(); joystickcount.max(0) as usize].into_boxed_slice()).as_mut_ptr();
@@ -214,28 +223,76 @@ pub fn init_joysticks() {
 
 /// Not in upstream: every launch gives the players the connected joysticks first, then the right
 /// keyboard set (player 1's keyboard bindings), then the left one (player 2's), and makes them human.
-/// A joystick's bindings belong to it (`inputConfiguration[pad][1]`), so they follow it between players.
+/// The page's touch controls press the right set's default keys, so while they are on, the right set
+/// goes to player 1 ahead of the joysticks. A joystick's bindings belong to it
+/// (`inputConfiguration[pad][1]`), so they follow it between players.
+/// The first launch with pads keeps the players' saved settings in `PAD_PLAYERS_FILE`; the next launch
+/// without pads puts them back, so only launches after a pad session differ from upstream.
 fn assign_inputs() {
     unsafe {
+        let marker = get_home_directory() + PAD_PLAYERS_FILE;
         let pads = joystickcount.clamp(0, MAX_PLAYERS as i16) as usize;
         if pads == 0 {
+            if let Ok(text) = std::fs::read_to_string(&marker) {
+                let saved: Vec<i16> = text.split_whitespace().filter_map(|v| v.parse().ok()).collect();
+                if saved.len() == MAX_PLAYERS as usize {
+                    for p in 0..MAX_PLAYERS as usize {
+                        game_values.playerInput.inputControls[p] = Ptr::from_mut(&mut game_values.inputConfiguration[p][0]);
+                        game_values.playercontrol[p] = saved[p];
+                    }
+                    game_values.write_config();
+                }
+                let _ = std::fs::remove_file(&marker);
+            }
             return;
         }
+        if !std::path::Path::new(&marker).exists() {
+            let saved: Vec<String> = game_values.playercontrol.iter().map(|c| c.to_string()).collect();
+            let _ = std::fs::write(&marker, saved.join(" ") + "\n");
+        }
+
+        // (joystick, index): a pad, or a keyboard set (0 right, 1 left).
+        let touch = touch_controls_on();
+        let mut order: Vec<(bool, usize)> = Vec::new();
+        if touch {
+            order.push((false, 0));
+        }
+        order.extend((0..pads).map(|k| (true, k)));
+        if !touch {
+            order.push((false, 0));
+        }
+        order.push((false, 1));
+
         for p in 0..MAX_PLAYERS as usize {
-            let control = if p < pads {
-                game_values.inputConfiguration[p][1].iDevice = p as i16;
-                &mut game_values.inputConfiguration[p][1]
-            } else if p - pads < 2 {
-                &mut game_values.inputConfiguration[p - pads][0]
-            } else {
-                game_values.playerInput.inputControls[p] = Ptr::from_mut(&mut game_values.inputConfiguration[p][0]);
-                continue;
+            let control = match order.get(p) {
+                Some(&(true, k)) => {
+                    game_values.inputConfiguration[k][1].iDevice = k as i16;
+                    &mut game_values.inputConfiguration[k][1]
+                }
+                Some(&(false, q)) => &mut game_values.inputConfiguration[q][0],
+                None => {
+                    game_values.playerInput.inputControls[p] = Ptr::from_mut(&mut game_values.inputConfiguration[p][0]);
+                    continue;
+                }
             };
             game_values.playerInput.inputControls[p] = Ptr::from_mut(control);
             game_values.playercontrol[p] = 1;
         }
     }
 }
+
+/// Whether the page shows its touch controls (web/touch.js), which is decided before Play.
+fn touch_controls_on() -> bool {
+    #[cfg(target_os = "emscripten")]
+    unsafe {
+        return emscripten_run_script_int(c"document.documentElement.classList.contains('touch') ? 1 : 0".as_ptr()) != 0;
+    }
+    #[cfg(not(target_os = "emscripten"))]
+    false
+}
+
+/// The players' settings (`playercontrol`, one number each) from before pads were assigned.
+const PAD_PLAYERS_FILE: &str = "pad_players.txt";
 
 fn new_mode<T: CGameModeTrait + 'static>(mode: T) -> Ptr<dyn CGameModeTrait> {
     Ptr::from_raw(Ptr::new_box(mode).as_ptr() as *mut dyn CGameModeTrait)

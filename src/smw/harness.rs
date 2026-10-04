@@ -14,7 +14,7 @@ use crate::smw::gs_menu::MenuState;
 use crate::smw::gs_splash_screen::SplashScreenState;
 use sdl2::sys::{
     SDL_Event, SDL_EventType, SDL_GetError, SDL_GetKeyFromName, SDL_GetKeyName, SDL_GetScancodeFromKey, SDL_InitSubSystem, SDL_JoystickAttachVirtual,
-    SDL_JoystickInstanceID, SDL_JoystickType, SDL_KeyCode, SDL_Keymod, SDL_PumpEvents, SDL_PushEvent, SDL_SetEventFilter, SDL_WaitEvent, SDL_INIT_JOYSTICK,
+    SDL_JoystickInstanceID, SDL_JoystickType, SDL_KeyCode, SDL_Keymod, SDL_PumpEvents, SDL_PushEvent, SDL_SetEventFilter, SDL_SetHint, SDL_WaitEvent, SDL_INIT_JOYSTICK,
     SDL_PRESSED, SDL_RELEASED,
 };
 use std::ffi::CStr;
@@ -204,6 +204,7 @@ fn load_events(path: &str) -> Vec<ReplayEvent> {
     std::mem::take(events)
 }
 
+#[cfg(not(target_os = "emscripten"))]
 fn attach_joysticks() {
     unsafe {
         SDL_InitSubSystem(SDL_INIT_JOYSTICK);
@@ -349,6 +350,16 @@ pub fn init() {
             start_recording(h.seed);
         }
 
+        // Not in upstream: a connected pad must not join a replay's joysticks.
+        #[cfg(not(target_os = "emscripten"))]
+        if h.replay {
+            for hint in [c"SDL_JOYSTICK_HIDAPI", c"SDL_JOYSTICK_MFI", c"SDL_JOYSTICK_IOKIT"] {
+                SDL_SetHint(hint.as_ptr(), c"0".as_ptr());
+            }
+        }
+
+        // The browser's SDL has no virtual joysticks; there init_joysticks takes the count from replay_joysticks.
+        #[cfg(not(target_os = "emscripten"))]
         if h.joysticks > 0 {
             attach_joysticks();
         }
@@ -379,6 +390,18 @@ pub fn libc_seed(fallback: u32) -> u32 {
             fallback
         }
     }
+}
+
+/// Not in upstream: in a browser replay, the number of joysticks the replay uses. They exist only as
+/// the device index its events carry (`which`), which is what the game compares with its bindings.
+pub fn replay_joysticks() -> Option<i16> {
+    #[cfg(target_os = "emscripten")]
+    unsafe {
+        if h.replay {
+            return Some(h.joysticks as i16);
+        }
+    }
+    None
 }
 
 pub fn no_limit() -> bool {
