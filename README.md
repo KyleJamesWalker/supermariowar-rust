@@ -23,12 +23,15 @@ git clone https://github.com/emscripten-core/emsdk.git ~/work/emsdk
 ~/work/emsdk/emsdk install 5.0.2 && ~/work/emsdk/emsdk activate 5.0.2
 rustup target add wasm32-unknown-emscripten
 
-tools/package_web.sh                          # builds and writes dist/web/{index.html,smw.js,smw.wasm,smw.data}
+tools/package_web.sh                          # builds and writes dist/web/ (index.html, smw.js, smw.wasm, smw.data, ...)
 python3 -m http.server -d dist/web 8000       # then open http://localhost:8000
 node tools/web_replay.mjs tools/replays/start_classic.txt out/   # run a replay in headless Chrome
+node tools/web_touch_test.mjs out/                                # check the touch controls on an emulated phone
 ```
 
 `tools/web_replay.mjs` runs a replay in the browser build the way `run_ref.sh` runs a native binary, and writes the same `dump.txt` and screenshots for `diffreplay.py`. In the browser, settings and session recordings are kept in the site's IndexedDB storage. The start screen can watch or download the last game or load a replay file, and the page footer downloads the current recording. A recording made in the browser replays on the native builds and with `tools/replay_compare.sh`.
+
+On touch screens (`pointer: coarse`) the page shows on-screen controls for player 1: a D-pad, Jump, Run and Item, Start and Back. They press player 1's default keys, so the game sees ordinary keyboard input. The page footer forces them on or off. Player 2 defaults to a human player, so to play alone set it to CPU or None in the main menu's Players row. On iPhone, Share > Add to Home Screen runs the game fullscreen; Android can use the controls' fullscreen button or install the page.
 
 ## Session recordings
 
