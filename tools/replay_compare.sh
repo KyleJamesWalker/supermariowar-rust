@@ -18,6 +18,13 @@ replay="$1"
 out="${2:-${TMPDIR:-/tmp}/smw-replay-compare/$(basename "$replay" .txt)}"
 cpp_bin="${SMW_CPP_BIN:-$HOME/work/supermariowar-cpp-reference/build/smw}"
 cpp_data="${SMW_CPP_DATA:-$HOME/work/supermariowar-cpp-reference/data}"
+beyond="$(awk '!/^#/ && (($2 == "jaxis" && $4 > 5) || ($2 == "jbutton" && $4 > 15)) { print; exit }' "$replay")"
+if [[ -n "$beyond" ]]; then
+    echo "the C++ harness only replays axes 0-5 and buttons 0-15, and this recording has: $beyond" >&2
+    echo "(the Rust build replays it: tools/run_rust.sh $replay)" >&2
+    exit 2
+fi
+
 rm -rf "$out"
 mkdir -p "$out"
 
