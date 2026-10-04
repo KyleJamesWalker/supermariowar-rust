@@ -101,18 +101,18 @@ cargo run --release --bin smw_server              # lobby server
 tools/verify_head.sh                              # build + test + 43-replay parity on a clean checkout
 ```
 
-The parity tools need the C++ reference; see `REPLAY.md` for building it (now [supermariowar-cpp-reference](https://github.com/KyleJamesWalker/supermariowar-cpp-reference), branch `harness-latest`). As first written: Rebuild it from `~/work/supermariowar` plus `tools/cpp-harness.patch` using the cmake flags in `REPLAY.md`: `-DNO_NETWORK=ON -DDISABLE_DEFAULT_CFLAGS=ON -DCMAKE_CXX_FLAGS="-O2 -ffp-contract=off"`. The editors use `~/work/smw-ref-editors` (plus `tools/editor-harness.patch`).
+The parity tools need the C++ reference; see `REPLAY.md` for building it (now [supermariowar-cpp-reference](https://github.com/KyleJamesWalker/supermariowar-cpp-reference), branch `harness-latest`). The same branch builds the editors; `tools/cpp-harness.patch` and `tools/editor-harness.patch` hold the hooks as patches.
 
 ## Known gaps
 
 - **Bonus house is untested.** It's only reachable inside World maps, and in 12,000 frames of `Contest_Bonus World` the CPUs never entered one. That replay (`tools/repros/flow_world_bonus.txt`) has no golden yet. It did find one real bug, now fixed in `d63bf67`: the tournament scoreboard draws unloaded skin frames, and the Release C++ silently skips them. With the fix it matches the C++ for all 12,000 frames.
 - **Real-time 60 fps on two heavy scenes.** Rust runs at the same CPU cost as C++ (0.95–1.02× on 5 replays). `flow_world` and the heaviest map exceed the 16.7 ms budget on *both* builds, because Homebrew's sdl2-compat (over SDL3) re-encodes RLE sprite sheets on every blit. The upstream issue is drafted (not filed) in `docs/sdl2-compat-rle.md`. A pixel-safe bypass is possible but not done. Windowed 60 fps wasn't confirmed because the machine was saturated all night.
-- **Soak repro replays not yet goldens.** One replay per fixed crash class is committed in `tools/repros/`, along with `flow_world_bonus.txt`. Run them with `run_ref.sh` and `run_rust.sh` and diff the outputs. They should be trimmed and given goldens; they sit outside `tools/replays/` so `parity.sh` doesn't count them as failures. The `flow_world_bonus` generator entry in `tools/gen_replays.py` is left uncommitted for the same reason. The private soak reference `~/work/smw-ref-soak` predates the sound records; rebuild it before the next soak.
+- **Soak repro replays not yet goldens.** One replay per fixed crash class is committed in `tools/repros/`, along with `flow_world_bonus.txt`. Run them with `run_ref.sh` and `run_rust.sh` and diff the outputs. They should be trimmed and given goldens; they sit outside `tools/replays/` so `parity.sh` doesn't count them as failures. The `flow_world_bonus` generator entry in `tools/gen_replays.py` is left uncommitted for the same reason. Soak runs need a reference build with the sound records, built from `harness-latest`.
 - **Duplicate C++ memory-layout model.** Rust deliberately reproduces C++ out-of-bounds `CMap` reads (the C++ reads neighbouring fields silently). `common/map.rs` (`cpp_byte`) and `smw/ai.rs` (`cmap_byte`, which adds the warp tables) each carry a copy. Merging them is cleanup with no behaviour change.
 - **Cosmetic stderr.** Where the C++ throws and catches (e.g. options.bin unwritable), Rust prints Rust's default "thread 'main' panicked" line before catching. Behaviour and exit code match.
 - **Not ported on purpose:** `src/screenshot` is dead upstream (not in CMake, doesn't compile).
 - **C++ bugs kept for parity**, all documented in code and PROGRESS.md: the Classic-tileset index taken before sorting, stale tour stops read after `clear()`, AI out-of-bounds map reads, the boss-minigame Frenzy-card cast, and the `getBoolean` assert that a debug C++ build would trip in `opt_gameplay`.
 
-## Reference trees
+## Reference builds
 
-Outside the repo: `~/work/smw-ref` (game), `~/work/smw-ref-editors`, `~/work/smw-ref-net` (networking on), `~/work/smw-ref-soak`.
+Everything builds from [supermariowar-cpp-reference](https://github.com/KyleJamesWalker/supermariowar-cpp-reference), branch `harness-latest`: `build/` (game and editors, networking off) and `build-net/` (networking on). `REPLAY.md` has the commands.

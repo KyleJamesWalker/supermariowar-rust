@@ -1,6 +1,6 @@
 # Porting conventions
 
-Rules every agent follows when translating `~/work/supermariowar/src` (C++, read only) into this crate. The goal is frame-for-frame identical behavior under differential replay (`REPLAY.md`), so **translate, do not reinterpret**: same names, same order of operations, same numeric types, same quirks and bugs.
+Rules every agent follows when translating the C++ sources of [Super Mario War](https://github.com/mmatyas/supermariowar) (`src/`, read only; the pinned commit is in `README.md`) into this crate. The goal is frame-for-frame identical behavior under differential replay (`REPLAY.md`), so **translate, do not reinterpret**: same names, same order of operations, same numeric types, same quirks and bugs.
 
 ## Layout
 
