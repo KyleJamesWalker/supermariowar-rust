@@ -23,13 +23,12 @@ use std::collections::VecDeque;
 use std::path::Path;
 use std::time::SystemTime;
 
-#[cfg(all(target_os = "emscripten", not(feature = "no_network")))]
-compile_error!("the web build is NO_NETWORK only: build it with --features no_network");
-
 #[cfg(feature = "no_network")]
 pub type NetworkHandler = crate::smw::platform::network::null::network_layer_null::NetworkLayerNULL;
-#[cfg(not(feature = "no_network"))]
+#[cfg(all(not(feature = "no_network"), not(target_os = "emscripten")))]
 pub type NetworkHandler = crate::smw::platform::network::enet::network_layer_enet::NetworkLayerENet;
+#[cfg(all(not(feature = "no_network"), target_os = "emscripten"))]
+pub type NetworkHandler = crate::smw::platform::network::websocket::network_layer_websocket::NetworkLayerWebSocket;
 
 pub type nettimepoint = SystemTime;
 
@@ -209,6 +208,13 @@ pub fn net_save_server_list() {
 pub fn net_load_server_list() {
     let mut config = NetConfigManager;
     config.load();
+
+    #[cfg(all(not(feature = "no_network"), target_os = "emscripten"))]
+    unsafe {
+        let url = crate::smw::platform::network::websocket::network_layer_websocket::relay_url();
+        netplay.savedServers.retain(|s| s.hostname != url);
+        netplay.savedServers.insert(0, ServerAddress { hostname: url });
+    }
 }
 
 /****************************

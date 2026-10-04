@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Build the web version (wasm32-unknown-emscripten, NO_NETWORK) and assemble dist/web/:
+# Build the web version (wasm32-unknown-emscripten) and assemble dist/web/:
 # index.html, smw.js, smw.wasm, smw.data (the preloaded data/ tree) and the page's touch controls, manifest and icons.
 # Usage: tools/package_web.sh            (needs emsdk 5.0.2 in $EMSDK or ~/work/emsdk)
+# SMW_RELAY_URL=wss://... sets the netplay relay the page uses when it has no ?relay= parameter.
 set -euo pipefail
 
 repo="$(cd "$(dirname "$0")/.." && pwd)"
@@ -15,7 +16,7 @@ out="$repo/dist/web"
 # remapped, and the data package name the file packager derives from the output path is reset.
 cargo_home="${CARGO_HOME:-$HOME/.cargo}"
 RUSTFLAGS="--remap-path-prefix=$cargo_home=cargo --remap-path-prefix=$repo=." \
-    cargo build --release --target wasm32-unknown-emscripten --features no_network --bin smw \
+    cargo build --release --target wasm32-unknown-emscripten --bin smw \
     --manifest-path "$repo/Cargo.toml" --target-dir "$target_dir"
 
 build="$target_dir/wasm32-unknown-emscripten/release"
