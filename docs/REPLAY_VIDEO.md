@@ -11,6 +11,10 @@ tools/replay_video.py tools/replays/start_classic.txt --before origin/main --aft
 # Watch one build
 tools/replay_video.py ~/Library/Preferences/.smw/replays/<file>.txt --after target/release/smw
 
+# One match of a session: a clip renders from the match's first frame
+tools/replay_clip.py ~/Library/Preferences/.smw/replays/<file>.txt --match 1 -o clip.txt
+tools/replay_video.py clip.txt --after target/release/smw
+
 # Same binary, different settings per side: the sdl2-compat RLE foreground bug
 tools/replay_video.py tools/replays/cpu_greed.txt --frames 400-1000 --diff \
     --before target/release/smw --before-env SMW_RLE=1 --label-before "RLE on" \
