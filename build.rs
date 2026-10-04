@@ -13,7 +13,10 @@ fn main() {
 
 /// The settings of upstream's cmake/PlatformEmscripten.cmake, applied to the game binary.
 fn emscripten_link_args() {
-    let data = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("data");
+    let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let data = repo.join("data");
+    let fullscreen = repo.join("web/fullscreen.js");
+    println!("cargo:rerun-if-changed={}", fullscreen.display());
     for arg in [
         "-sUSE_SDL=2",
         "-sUSE_SDL_IMAGE=2",
@@ -24,8 +27,12 @@ fn emscripten_link_args() {
         // Not in upstream: the port builds large globals (CResourceManager, CGameValues) on the stack
         // before boxing them, which overflows emscripten's 64 KiB default. 8 MiB matches the native main thread.
         "-sSTACK_SIZE=8MB",
-        // Not in upstream: lets tools/web_replay.mjs set SMW_* variables and read the harness output.
-        "-sEXPORTED_RUNTIME_METHODS=ENV,FS",
+        // ENV and FS are not in upstream: they let tools/web_replay.mjs set SMW_* variables and read
+        // the harness output. requestFullscreen is what the shell page's Fullscreen button calls.
+        "-sEXPORTED_RUNTIME_METHODS=ENV,FS,requestFullscreen",
+        // Not in upstream: fixes the shell page's Fullscreen button for SDL2 (see the file).
+        "--pre-js",
+        &fullscreen.display().to_string(),
         "--preload-file",
         &format!("{}@data", data.display()),
     ] {
