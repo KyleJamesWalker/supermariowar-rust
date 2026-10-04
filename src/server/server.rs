@@ -3,7 +3,6 @@
 use super::clock::time_now;
 use super::log::{log, log_close, log_init, log_silently};
 use super::network_layer::NetworkLayer;
-use super::network_layer_enet::NetworkLayerENet;
 use super::player::Player;
 use super::room::Room;
 use super::util::cstr_field;
@@ -13,10 +12,15 @@ use smw::common_netplay::protocol_packages::{ClientConnection, JoinRoom, Message
 use smw::globals::Ptr;
 use super::unordered_map::UnorderedMap;
 
-static mut netLayer: Option<NetworkLayerENet> = None;
+static mut netLayer: Option<Box<dyn NetworkLayer>> = None;
 
-fn net_layer() -> &'static mut NetworkLayerENet {
-    unsafe { netLayer.get_or_insert_with(NetworkLayerENet::new) }
+/// The C++ links one `NetworkLayer` in; each binary installs its own before `SMWServer::init`.
+pub fn set_net_layer(layer: Box<dyn NetworkLayer>) {
+    unsafe { netLayer = Some(layer) };
+}
+
+fn net_layer() -> &'static mut dyn NetworkLayer {
+    unsafe { netLayer.as_deref_mut().expect("set_net_layer before SMWServer::init") }
 }
 
 pub struct SMWServer {
