@@ -2702,6 +2702,7 @@ impl GameState for GameplayState {
                     }
                 }
                 update_playerswap();
+                crate::smw::net_outcomes::sample();
                 network_broadcast_game_state();
 
                 if game_values.screenfade == 255 {

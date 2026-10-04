@@ -1,7 +1,7 @@
 #@ seed=1
 #@ frames=1600
 #@ map=netplay_arena
-#@ compare=--min place=3 --min-close 0.5
+#@ compare=--min place=1 --min gameover=1 --min-close 0.5
 10 down Return
 12 up Return
 30 down Down
@@ -52,14 +52,12 @@
 187 up Left
 188 down Left
 189 up Left
-190 down Left
-191 up Left
-192 down Return
-193 up Return
+190 down Return
+191 up Return
+192 down Up
+193 up Up
 194 down Up
 195 up Up
-196 down Up
-197 up Up
 250 down Return
 252 up Return
 270 down Return

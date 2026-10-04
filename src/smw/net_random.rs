@@ -144,6 +144,7 @@ pub fn begin_setup() {
         g_pending.clear();
         g_waits.clear();
     }
+    crate::smw::net_outcomes::begin_game();
 }
 
 /// Called at the start of every gameplay frame.
