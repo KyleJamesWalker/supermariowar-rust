@@ -1,0 +1,15 @@
+[package]
+name = "smw_relay"
+version = "0.1.0"
+edition = "2021"
+description = "Super Mario War netplay lobby and WebSocket relay for the browser build"
+publish = false
+
+# Not part of the game's workspace: the relay builds without SDL2 or ENet.
+[workspace]
+
+[dependencies]
+tungstenite = { version = "0.30", default-features = false, features = ["handshake"] }
+
+[profile.release]
+overflow-checks = false
