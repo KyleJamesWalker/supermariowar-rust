@@ -72,6 +72,7 @@ pub static mut currentgamemode: i16 = 0;
 #[cfg(target_os = "emscripten")]
 extern "C" {
     fn emscripten_set_main_loop(func: unsafe extern "C-unwind" fn(), fps: i32, simulate_infinite_loop: i32);
+    fn emscripten_get_now() -> f64;
 }
 
 pub fn gameloop() {
@@ -80,12 +81,52 @@ pub fn gameloop() {
         GameStateManager::instance().currentState = Ptr::from_mut(SplashScreenState::instance() as &mut dyn GameState);
 
         #[cfg(target_os = "emscripten")]
-        emscripten_set_main_loop(gameloop_frame, 0, 1);
+        emscripten_set_main_loop(gameloop_frame_web, 0, 1);
 
         #[cfg(not(target_os = "emscripten"))]
         while game_values.appstate != crate::common::game_values::AppState::Quit {
             gameloop_frame();
         }
+    }
+}
+
+/// Not in upstream, whose web build runs one game frame per requestAnimationFrame, i.e. at the
+/// display refresh rate. The game advances in fixed steps of `framelimiter` ms of wall time instead,
+/// as the native frame limiter paces it, and presents once per animation frame. Under SMW_NOLIMIT
+/// (replays) every callback runs exactly one frame, so the dumps stay deterministic.
+#[cfg(target_os = "emscripten")]
+unsafe extern "C-unwind" fn gameloop_frame_web() {
+    const MAX_CATCH_UP_FRAMES: u32 = 5;
+    static mut last_time: f64 = -1.0;
+    static mut accumulated: f64 = 0.0;
+
+    let frame_ms = game_values.framelimiter as f64;
+    if harness::no_limit() || frame_ms <= 0.0 {
+        gameloop_frame();
+        return;
+    }
+
+    let now = emscripten_get_now();
+    if last_time >= 0.0 {
+        accumulated += now - last_time;
+    }
+    last_time = now;
+
+    let mut frames = 0;
+    while accumulated >= frame_ms && frames < MAX_CATCH_UP_FRAMES {
+        harness::frame_start();
+        GameStateManager::instance().currentState.get().update();
+        harness::frame_end();
+
+        accumulated -= frame_ms;
+        frames += 1;
+    }
+    if frames == MAX_CATCH_UP_FRAMES {
+        accumulated = accumulated.min(frame_ms);
+    }
+
+    if frames > 0 {
+        gfx_flipscreen();
     }
 }
 
