@@ -28,8 +28,9 @@ fn emscripten_link_args() {
         // before boxing them, which overflows emscripten's 64 KiB default. 8 MiB matches the native main thread.
         "-sSTACK_SIZE=8MB",
         // Not in upstream: ENV and FS let tools/web_replay.mjs set SMW_* variables and read the harness
-        // output; callMain is how web/shell.html starts the game from its Play button.
-        "-sEXPORTED_RUNTIME_METHODS=ENV,FS,callMain",
+        // output; web/shell.html starts the game with callMain and keeps settings and recordings in IDBFS.
+        "-sEXPORTED_RUNTIME_METHODS=ENV,FS,callMain,addRunDependency,removeRunDependency",
+        "-lidbfs.js",
         // Not in upstream: keeps the canvas size when SDL itself enters or leaves fullscreen (see the file).
         "--pre-js",
         &fullscreen.display().to_string(),

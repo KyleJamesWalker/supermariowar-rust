@@ -28,7 +28,7 @@ python3 -m http.server -d dist/web 8000       # then open http://localhost:8000
 node tools/web_replay.mjs tools/replays/start_classic.txt out/   # run a replay in headless Chrome
 ```
 
-`tools/web_replay.mjs` runs a replay in the browser build the way `run_ref.sh` runs a native binary, and writes the same `dump.txt` and screenshots for `diffreplay.py`. In the browser, settings and session recordings live in memory and are lost when the page closes.
+`tools/web_replay.mjs` runs a replay in the browser build the way `run_ref.sh` runs a native binary, and writes the same `dump.txt` and screenshots for `diffreplay.py`. In the browser, settings and session recordings are kept in the site's IndexedDB storage. The start screen can watch or download the last game or load a replay file, and the page footer downloads the current recording. A recording made in the browser replays on the native builds and with `tools/replay_compare.sh`.
 
 ## Session recordings
 
