@@ -4,7 +4,7 @@ or a menu whose M line has not changed for --stall frames), press Return there a
 
   grow_replay.py <replay.txt> [--frames N] [--stall 90] [--rounds 40]
 
-Rewrites the replay in place (keeps its #@ header, updates frames=). Needs the C++ reference built (see REPLAY.md).
+Rewrites the replay in place (keeps its #@ header, updates frames=). Needs the C++ reference built (see docs/REPLAY.md).
 """
 
 import argparse

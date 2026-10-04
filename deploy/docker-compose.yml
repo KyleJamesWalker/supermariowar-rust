@@ -1,4 +1,4 @@
-# smw_relay behind Caddy, which terminates TLS and proxies the WebSocket (see Caddyfile and RELAY.md).
+# smw_relay behind Caddy, which terminates TLS and proxies the WebSocket (see Caddyfile and docs/RELAY.md).
 # Both join the external `caddy` network: docker network create caddy
 # If Caddy already runs on that network, drop the caddy service and add the site block to its Caddyfile.
 services:

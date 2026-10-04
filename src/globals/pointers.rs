@@ -1,4 +1,4 @@
-//! `Aliased`, `Global<T>` and `Ptr<T>`, the global-state infrastructure (see ARCHITECTURE.md).
+//! `Aliased`, `Global<T>` and `Ptr<T>`, the global-state infrastructure (see docs/ARCHITECTURE.md).
 
 use std::cell::UnsafeCell;
 use std::marker::PhantomPinned;

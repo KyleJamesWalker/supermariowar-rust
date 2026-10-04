@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the coverage replays in tools/replays/ (see REPLAY.md).
+"""Generate the coverage replays in tools/replays/ (see docs/REPLAY.md).
 
   gen_replays.py [name ...]     (default: every replay defined here)
 

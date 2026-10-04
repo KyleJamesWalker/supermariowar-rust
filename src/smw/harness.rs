@@ -1,7 +1,7 @@
 //! Port of src/smw/Harness.cpp from tools/cpp-harness.patch (not in upstream C++).
 //!
 //! Deterministic replay/dump harness. Every entry point is a no-op unless the corresponding
-//! SMW_* environment variable is set; REPLAY.md is the byte-level spec.
+//! SMW_* environment variable is set; docs/REPLAY.md is the byte-level spec.
 
 use crate::common::game_values::AppState;
 use crate::common::global_constants::WAITTIME;
@@ -481,7 +481,7 @@ pub fn frame_end() {
 //------------------------------------------------------------------------------------------------
 // Session recording (not in the C++). A normal launch, i.e. one without SMW_REPLAY, runs seeded and
 // records every input the game sees to <settings dir>/replays/<timestamp>.txt in the replay format,
-// so the session can be watched again or replayed on the C++ reference. See REPLAY.md, "Recordings".
+// so the session can be watched again or replayed on the C++ reference. See docs/REPLAY.md, "Recordings".
 //------------------------------------------------------------------------------------------------
 
 const KEEP_RECORDINGS: usize = 10;

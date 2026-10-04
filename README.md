@@ -1,6 +1,6 @@
 # Super Mario War, in Rust
 
-A faithful Rust + rust-sdl2 port of [Super Mario War](https://github.com/mmatyas/supermariowar) (upstream commit [`5693918f`](https://github.com/mmatyas/supermariowar/commit/5693918f5e3ec8ef50ff4f86cfe07c8d2c5a247b)). It covers the game, menus, sound, netplay, the lobby server, and the level and world editors. Given the same scripted input, the Rust build produces the same per-frame game state, sound events and screenshots as the C++ original. `MORNING_REPORT.md` has the verification results.
+A faithful Rust + rust-sdl2 port of [Super Mario War](https://github.com/mmatyas/supermariowar) (upstream commit [`5693918f`](https://github.com/mmatyas/supermariowar/commit/5693918f5e3ec8ef50ff4f86cfe07c8d2c5a247b)). It covers the game, menus, sound, netplay, the lobby server, and the level and world editors. Given the same scripted input, the Rust build produces the same per-frame game state, sound events and screenshots as the C++ original. `docs/MORNING_REPORT.md` has the verification results.
 
 ## Build and run
 
@@ -35,7 +35,7 @@ On touch screens (`pointer: coarse`) the page shows on-screen controls for playe
 
 ## Browser multiplayer
 
-Upstream's web build has no netplay. Here the browser build plays online through `smw_relay`, which runs the lobby server and relays game traffic between players over WebSocket. The page connects to `wss://smw-relay.vps.pocketsquirrel.com`, or to the relay a `?relay=ws://...` parameter names. Browser and native players cannot meet yet. `RELAY.md` covers the protocol, settings and deployment.
+Upstream's web build has no netplay. Here the browser build plays online through `smw_relay`, which runs the lobby server and relays game traffic between players over WebSocket. The page connects to `wss://smw-relay.vps.pocketsquirrel.com`, or to the relay a `?relay=ws://...` parameter names. Browser and native players cannot meet yet. `docs/RELAY.md` covers the protocol, settings and deployment.
 
 ```sh
 cargo run --release --manifest-path relay/Cargo.toml -- --port 8080   # then open http://localhost:8000/?relay=ws://localhost:8080
@@ -52,11 +52,11 @@ open "dist/Super Mario War.app" --args --replay /absolute/path/<file>.txt       
 tools/replay_compare.sh ~/Library/Preferences/.smw/replays/<file>.txt   # replay on the C++ original and the port, report the first difference
 ```
 
-`--replay-speed <n>` watches faster. `REPLAY.md` ("Recordings") has the details.
+`--replay-speed <n>` watches faster. `docs/REPLAY.md` ("Recordings") has the details.
 
 ## Verifying against the C++ original
 
-The C++ original, plus the replay and state-dump hooks used to compare it with this port, lives in [supermariowar-cpp-reference](https://github.com/KyleJamesWalker/supermariowar-cpp-reference) (branch `harness-latest`; the hooks are also kept here as `tools/cpp-harness.patch` and `tools/editor-harness.patch`). `REPLAY.md` specifies the harness, and `tools/parity.sh`, `tools/parity_sweep.sh` and `tools/editor_parity.sh` run the comparisons. `ARCHITECTURE.md` documents the porting conventions, and `PROGRESS.md` maps each C++ file to its Rust module.
+The C++ original, plus the replay and state-dump hooks used to compare it with this port, lives in [supermariowar-cpp-reference](https://github.com/KyleJamesWalker/supermariowar-cpp-reference) (branch `harness-latest`; the hooks are also kept here as `tools/cpp-harness.patch` and `tools/editor-harness.patch`). `docs/REPLAY.md` specifies the harness, and `tools/parity.sh`, `tools/parity_sweep.sh` and `tools/editor_parity.sh` run the comparisons. `docs/ARCHITECTURE.md` documents the porting conventions, and `docs/PROGRESS.md` maps each C++ file to its Rust module.
 
 ## Credits
 

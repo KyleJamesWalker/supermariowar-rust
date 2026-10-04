@@ -1,7 +1,7 @@
 //! Port of src/common/EditorHarness.cpp from tools/cpp-harness.patch (not in upstream C++).
 //!
 //! Deterministic replay/dump harness for the level and world editors. Every entry point is a
-//! no-op unless the corresponding SMW_* environment variable is set; EDITOR_REPLAY.md is
+//! no-op unless the corresponding SMW_* environment variable is set; docs/EDITOR_REPLAY.md is
 //! the byte-level spec.
 
 use crate::common::random_number_generator::{RandomNumberGenerator, RandomNumberGeneratorType};

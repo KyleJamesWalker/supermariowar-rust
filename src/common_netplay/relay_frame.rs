@@ -1,4 +1,4 @@
-//! Not in the C++: the messages between the browser build and `smw_relay`, specified in RELAY.md.
+//! Not in the C++: the messages between the browser build and `smw_relay`, specified in docs/RELAY.md.
 
 pub const CONNECT: u8 = 1;
 pub const ACCEPTED: u8 = 2;

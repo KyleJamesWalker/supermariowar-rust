@@ -5,7 +5,7 @@
 # Usage: replay_compare.sh <recording.txt> [out_dir]
 # Env: SMW_CPP_BIN (default ~/work/supermariowar-cpp-reference/build/smw),
 #      SMW_CPP_DATA (default ~/work/supermariowar-cpp-reference/data), SMW_NO_BUILD=1 to skip cargo.
-# Exit status: 0 identical, 1 diverged, 2 error. See REPLAY.md, "Recordings".
+# Exit status: 0 identical, 1 diverged, 2 error. See docs/REPLAY.md, "Recordings".
 set -uo pipefail
 
 if [[ $# -lt 1 ]]; then

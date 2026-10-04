@@ -1,5 +1,5 @@
 //! `smw_relay`: the netplay lobby server plus a connection switch, both over WebSocket, so the browser
-//! build can play online. See RELAY.md.
+//! build can play online. See docs/RELAY.md.
 
 #![allow(non_snake_case, non_camel_case_types, non_upper_case_globals, static_mut_refs, dead_code)]
 

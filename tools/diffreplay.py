@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare two replay dumps (and optionally screenshot sets). See REPLAY.md.
+"""Compare two replay dumps (and optionally screenshot sets). See docs/REPLAY.md.
 
   diffreplay.py expected/dump.txt[.gz] actual/dump.txt [--context 2] [--ignore R]
   diffreplay.py --shots expected_dir actual_dir [--max-diff 0]

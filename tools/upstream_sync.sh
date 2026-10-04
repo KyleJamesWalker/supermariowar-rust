@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Measure how far the port is from a newer upstream C++: merge upstream into the harness branch,
 # build a reference from it, generate goldens into a scratch directory and run both parity suites.
-# Nothing is pushed and the committed goldens are not touched. See UPSTREAM_SYNC.md.
+# Nothing is pushed and the committed goldens are not touched. See docs/UPSTREAM_SYNC.md.
 #
 # Usage: upstream_sync.sh [upstream-ref]   (default: upstream/master)
 #   REF_REPO     C++ reference clone with `harness` and remote `upstream` (~/work/supermariowar-cpp-reference)

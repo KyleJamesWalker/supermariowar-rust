@@ -1,4 +1,4 @@
-//! Global-state infrastructure (see ARCHITECTURE.md) and re-exports of every C++ global.
+//! Global-state infrastructure (see docs/ARCHITECTURE.md) and re-exports of every C++ global.
 
 mod pointers;
 pub use pointers::{Aliased, Global, Ptr};

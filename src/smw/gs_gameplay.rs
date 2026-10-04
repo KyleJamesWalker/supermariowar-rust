@@ -153,7 +153,7 @@ impl GameplayState {
         }
     }
 
-    /// Replay-harness `G`/`P`/`O` records (REPLAY.md).
+    /// Replay-harness `G`/`P`/`O` records (docs/REPLAY.md).
     pub fn harness_dump(&mut self, out: &mut impl Write) -> std::io::Result<()> {
         unsafe {
             let gm = game_values.gamemode;

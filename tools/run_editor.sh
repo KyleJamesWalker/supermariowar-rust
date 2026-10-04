@@ -11,7 +11,7 @@
 # `#@ files=a,b` to <out_dir>/files/<path>
 # (plus home/<name> for every name in `#@ homefiles=`).
 # SMW_BIN and SMW_DATA_DIR select another binary and data tree (Rust runs use them).
-# See EDITOR_REPLAY.md.
+# See docs/EDITOR_REPLAY.md.
 set -euo pipefail
 
 if [[ $# -lt 2 ]]; then
@@ -28,7 +28,7 @@ bin="${SMW_BIN:-$ref/build/smw-$editor}"
 data="${SMW_DATA_DIR:-$ref/data}"
 
 if [[ ! -x "$bin" ]]; then
-    echo "missing $bin; build it first (see EDITOR_REPLAY.md)" >&2
+    echo "missing $bin; build it first (see docs/EDITOR_REPLAY.md)" >&2
     exit 2
 fi
 

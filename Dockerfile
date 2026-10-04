@@ -1,4 +1,4 @@
-# smw_relay, the netplay lobby and WebSocket relay for the browser build (RELAY.md).
+# smw_relay, the netplay lobby and WebSocket relay for the browser build (docs/RELAY.md).
 FROM rust:1.94-slim-bookworm AS build
 WORKDIR /src
 COPY relay/Cargo.toml relay/Cargo.lock relay/

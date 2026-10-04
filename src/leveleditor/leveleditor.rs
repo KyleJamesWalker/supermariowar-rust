@@ -5102,7 +5102,7 @@ impl Fnv {
     }
 }
 
-/// Replay-harness `E`/`T`/`X`/`P`/`H` records (EDITOR_REPLAY.md).
+/// Replay-harness `E`/`T`/`X`/`P`/`H` records (docs/EDITOR_REPLAY.md).
 pub fn dump_editor_state(out: &mut dyn Write) {
     unsafe {
         let _ = writeln!(

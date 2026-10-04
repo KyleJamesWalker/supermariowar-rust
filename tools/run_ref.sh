@@ -7,7 +7,7 @@
 # map, shots, options, options_b64, controls_b64); SMW_SEED/SMW_FRAMES/SMW_MAP/SMW_SHOT_FRAMES in the environment
 # override them. Writes <out_dir>/dump.txt and <out_dir>/frame_<n>.bmp.
 # SMW_BIN and SMW_DATA_DIR select another binary and data tree (run_rust.sh uses them).
-# See REPLAY.md.
+# See docs/REPLAY.md.
 set -euo pipefail
 
 if [[ $# -lt 1 ]]; then
@@ -23,7 +23,7 @@ bin="${SMW_BIN:-$ref/build/smw}"
 data="${SMW_DATA_DIR:-$ref/data}"
 
 if [[ ! -x "$bin" ]]; then
-    echo "missing $bin; build it first (see REPLAY.md)" >&2
+    echo "missing $bin; build it first (see docs/REPLAY.md)" >&2
     exit 2
 fi
 

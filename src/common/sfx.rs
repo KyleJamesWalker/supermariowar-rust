@@ -13,7 +13,7 @@ pub static mut fResumeMusic: bool = true;
 pub static mut sfx_ticks: extern "C" fn() -> u32 = sdl_get_ticks;
 pub static mut sfx_ignore_channel_failure: bool = false;
 // Seeded replays replace SDL_mixer playback state with a virtual mixer driven by sfx_ticks,
-// and log every sound command to sfx_events (REPLAY.md, "Sound").
+// and log every sound command to sfx_events (docs/REPLAY.md, "Sound").
 pub static mut sfx_virtual_mixer: bool = false;
 pub static mut sfx_events: Vec<String> = Vec::new();
 // Recorded sessions and --replay watching: the virtual mixer still owns all game-visible state, and

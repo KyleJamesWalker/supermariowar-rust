@@ -150,7 +150,7 @@ const recording = () => evaluate(`(() => {
     const names = Module.FS.readdir(REPLAY_DIR).filter((n) => n.endsWith('.txt')).sort();
     return names.length ? Module.FS.readFile(REPLAY_DIR + '/' + names[names.length - 1], { encoding: 'utf8' }) : '';
 })()`);
-// The harness dump (REPLAY.md) of the newest frame: state, menu focus and player records.
+// The harness dump (docs/REPLAY.md) of the newest frame: state, menu focus and player records.
 const frameState = async () => {
     const dump = await evaluate(`(() => { try { return Module.FS.readFile('/dump.txt', { encoding: 'utf8' }).slice(-4000); } catch { return ''; } })()`);
     const block = dump.slice(dump.lastIndexOf('\nF ') + 1).split('\n');
