@@ -105,6 +105,16 @@
   .btn-quiet { background: var(--panel); box-shadow: 0 4px 0 #05060b, 0 8px 16px rgba(0, 0, 0, 0.4); }
   .btn[hidden] { display: none; }
   .row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .btn-small { font-size: 12px; padding: 9px 12px; gap: 6px; box-shadow: 0 3px 0 var(--accent-dark), 0 6px 12px rgba(0, 0, 0, 0.4); }
+  .btn-small.btn-quiet { box-shadow: 0 3px 0 #05060b, 0 6px 12px rgba(0, 0, 0, 0.4); }
+  .btn-small svg { width: 14px; height: 14px; }
+  .matches { width: min(100%, 520px); display: flex; flex-direction: column; gap: 6px; }
+  .matches[hidden] { display: none; }
+  .matches-title { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; text-align: left; }
+  .matches ol { list-style: none; margin: 0; padding: 0 2px 4px 0; max-height: 10.5em; overflow-y: auto; touch-action: pan-y; display: flex; flex-direction: column; gap: 8px; }
+  .match { display: flex; align-items: center; gap: 8px; background: var(--panel); border-radius: 8px; padding: 6px 6px 6px 12px; }
+  .match-name { flex: 1; min-width: 0; text-align: left; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .match-name small { color: var(--muted); font-weight: 400; }
   .hint { color: var(--muted); font-size: 13px; text-align: center; }
   kbd {
     background: var(--panel);
@@ -146,6 +156,10 @@
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>
         Play
       </button>
+      <div class="matches" id="matches" hidden>
+        <div class="matches-title">Last session</div>
+        <ol id="matchList"></ol>
+      </div>
       <div class="row">
         <button class="btn btn-quiet" id="watchLast" type="button" hidden>Watch last game</button>
         <button class="btn btn-quiet" id="downloadLast" type="button" hidden>Download last replay</button>
@@ -250,21 +264,140 @@
       }
     };
     var currentReplay = function () { return watching || lastRecording(); };
-    var downloadFile = function (path) {
-      if (!path) return;
+    var downloadText = function (name, text) {
       var a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([Module.FS.readFile(path)], { type: 'text/plain' }));
-      a.download = path.split('/').pop();
+      a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+      a.download = name;
       document.body.appendChild(a);
       a.click();
       a.remove();
       setTimeout(function () { URL.revokeObjectURL(a.href); }, 10000);
+    };
+    var downloadFile = function (path) {
+      if (path) downloadText(path.split('/').pop(), Module.FS.readFile(path));
     };
     var downloadElement = document.getElementById('downloadReplay');
     downloadElement.addEventListener('click', function (e) {
       e.preventDefault();
       downloadFile(currentReplay());
     });
+
+    // A recording marks each match with `#@ mark` lines and a `#@ checkpoint` (docs/REPLAY.md, "Markers,
+    // checkpoints and clips"); a clip is the header, one match's markers and checkpoint and its input,
+    // which the game plays from the checkpoint (tools/replay_clip.py writes the same file).
+    var directiveFields = function (line) {
+      var out = {};
+      line.replace(/(\w+)=("[^"]*"|\S*)/g, function (_, k, v) { out[k] = v.charAt(0) === '"' ? v.slice(1, -1) : v; });
+      return out;
+    };
+    var parseSession = function (text) {
+      var session = { header: [], events: [], matches: [], frames: null };
+      var byNumber = {};
+      var current = null;
+      text.split('\n').forEach(function (line) {
+        if (/^#@ (mark|checkpoint) /.test(line)) {
+          var f = directiveFields(line);
+          var n = parseInt(f.match, 10);
+          if (/^#@ checkpoint /.test(line)) {
+            var m = byNumber[n];
+            if (m && !f.unsupported) m.checkpoint = line;
+            else if (m) m.unsupported = f.unsupported;
+            return;
+          }
+          if (f.state === 'gameplay' && f.type) {
+            current = byNumber[n] = { number: n, start: parseInt(f.frame, 10), end: null, info: f, marks: [] };
+            session.matches.push(current);
+          }
+          if (current) {
+            current.marks.push(line);
+            if (f.state !== 'gameplay' && f.state !== 'scoreboard') {
+              current.end = parseInt(f.frame, 10);
+              current = null;
+            }
+          }
+        } else if (/^#@ frames=/.test(line)) {
+          session.frames = parseInt(line.split('=')[1], 10);
+        } else if (line.charAt(0) === '#') {
+          if (!session.events.length) session.header.push(line);
+        } else if (line.trim()) {
+          session.events.push(line);
+        }
+      });
+      return session;
+    };
+    var matchEnd = function (session, m) {
+      if (m.end !== null) return m.end;
+      if (session.frames !== null) return session.frames;
+      var last = session.events.length ? parseInt(session.events[session.events.length - 1], 10) : 0;
+      return last + 188;
+    };
+    var clipText = function (session, m, name) {
+      var end = matchEnd(session, m);
+      var devices = 0;
+      session.events.forEach(function (e) {
+        var p = e.split(/\s+/);
+        if (/^j(axis|button|hat)$/.test(p[1])) devices = Math.max(devices, parseInt(p[2], 10) + 1);
+      });
+      var out = ['# Super Mario War clip: match ' + m.number + ' of ' + name + '.'];
+      session.header.forEach(function (l) { if (/^#@ /.test(l) && !/^#@ frames=/.test(l)) out.push(l); });
+      out.push('#@ segment=' + m.number);
+      out = out.concat(m.marks, [m.checkpoint]);
+      for (var d = 0; d < devices; d++) out.push('0 jhat ' + d + ' 0 0');
+      session.events.forEach(function (e) {
+        var f = parseInt(e, 10);
+        if (f > m.start && f < end) out.push(e);
+      });
+      out.push('#@ frames=' + end);
+      return out.join('\n') + '\n';
+    };
+    var titleCase = function (text) {
+      return text.replace(/_/g, ' ').replace(/(^|\s)\S/g, function (c) { return c.toUpperCase(); });
+    };
+    var describeMatch = function (session, m) {
+      var i = m.info;
+      var mode = i.style ? (i.style === 'multi' ? 'Multi Star' : titleCase(i.style)) : titleCase(i.mode || '?');
+      var parts = [mode, i.map || '?', (i.players || '?') + ' players'];
+      parts.push(m.end === null ? 'unfinished' : Math.round((m.end - m.start) * 16 / 1000) + ' s');
+      return { title: 'Match ' + m.number + ' \u2014 ' + parts.join(', '), type: i.type && i.type !== 'single' ? titleCase(i.type) : '' };
+    };
+    var smallButton = function (label, quiet, icon, onClick) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn btn-small' + (quiet ? ' btn-quiet' : '');
+      b.innerHTML = icon + label;
+      b.addEventListener('click', onClick);
+      return b;
+    };
+    var PLAY_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>';
+    var SAVE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>';
+    // The last session's matches, each with Watch and a clip download; false for a recording without markers.
+    var showMatches = function (path) {
+      var list = document.getElementById('matchList');
+      list.textContent = '';
+      var session = parseSession(Module.FS.readFile(path, { encoding: 'utf8' }));
+      if (!session.matches.length) return false;
+      var name = path.split('/').pop();
+      session.matches.forEach(function (m) {
+        var d = describeMatch(session, m);
+        var row = document.createElement('li');
+        row.className = 'match';
+        var label = document.createElement('span');
+        label.className = 'match-name';
+        label.textContent = d.title + (d.type ? ' ' : '');
+        if (d.type) label.appendChild(Object.assign(document.createElement('small'), { textContent: d.type }));
+        label.title = label.textContent;
+        row.appendChild(label);
+        if (m.checkpoint) {
+          var clipName = name.replace(/\.txt$/, '') + '_match' + m.number + '.txt';
+          row.appendChild(smallButton('Watch', false, PLAY_ICON, function () { watchText(clipName, clipText(session, m, name)); }));
+          row.appendChild(smallButton('Clip', true, SAVE_ICON, function () { downloadText(clipName, clipText(session, m, name)); }));
+        } else {
+          row.appendChild(Object.assign(document.createElement('small'), { className: 'hint', textContent: m.unsupported === 'bonus_house' ? 'bonus house: no clip' : 'no clip' }));
+        }
+        list.appendChild(row);
+      });
+      return true;
+    };
 
     var startGame = function (args) {
       startElement.hidden = true;
@@ -310,9 +443,17 @@
         sessionStorage.removeItem(WATCH_AGAIN_KEY);
       } catch (e) {}
       if (pending) return watchText(pending.name, pending.text);
-      var hasRecording = !!lastRecording();
-      document.getElementById('watchLast').hidden = !hasRecording;
-      document.getElementById('downloadLast').hidden = !hasRecording;
+      var last = lastRecording();
+      var hasMatches = false;
+      try {
+        hasMatches = !!last && showMatches(last);
+      } catch (e) {
+        console.warn('reading the last session failed', e);
+      }
+      document.getElementById('matches').hidden = !hasMatches;
+      document.getElementById('watchLast').hidden = !last || hasMatches;
+      document.getElementById('downloadLast').hidden = !last;
+      document.getElementById('downloadLast').textContent = hasMatches ? 'Download session' : 'Download last replay';
       countPads();
       startElement.hidden = false;
       document.getElementById('play').focus();
