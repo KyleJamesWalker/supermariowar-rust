@@ -1,7 +1,7 @@
 //! Port of src/common/gfx/gfxSprite.cpp
 
 use crate::common::gfx::color::{colors, RGB};
-use crate::common::gfx::gfx_adjusthiddenrects;
+use crate::common::gfx::{gfx_adjusthiddenrects, rle_enabled};
 use crate::common::util::sdl_helpers::SdlSurfacePtr;
 use crate::globals::*;
 use sdl2::sys::image::IMG_Load;
@@ -68,7 +68,7 @@ fn try_load_image(path: &Path, optimize: bool, color_key: Option<RGB>, alpha: Op
             return Err(format!("Couldn't convert {} to the display's pixel format: {}", path_str, sdl_error()));
         }
 
-        if optimize && SDL_SetSurfaceRLE(img.get(), 1) < 0 {
+        if optimize && rle_enabled() && SDL_SetSurfaceRLE(img.get(), 1) < 0 {
             return Err(format!("Couldn't set RLE acceleration for {}: {}", path_str, sdl_error()));
         }
 
