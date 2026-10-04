@@ -280,6 +280,17 @@ fn state_name() -> &'static str {
     "other"
 }
 
+static mut spawn_events: Vec<String> = Vec::new();
+
+/// Net games only (not in the C++ harness): one `C` line per `createpowerup`, compared across clients.
+pub fn note_powerup_spawn(iType: i16, x: i16, y: i16) {
+    unsafe {
+        if crate::smw::net::netplay.active && h.dump.is_some() {
+            spawn_events.push(format!("C type={} x={} y={}", iType, x, y));
+        }
+    }
+}
+
 fn dump_frame(out: &mut impl Write) -> std::io::Result<()> {
     let state = state_name();
     writeln!(out, "F {} {}", unsafe { h.frame }, state)?;
@@ -291,7 +302,7 @@ fn dump_frame(out: &mut impl Write) -> std::io::Result<()> {
         GameplayState::instance().harness_dump(out)?;
     }
 
-    for line in unsafe { sfx::sfx_events.iter() } {
+    for line in unsafe { sfx::sfx_events.iter().chain(spawn_events.iter()) } {
         writeln!(out, "{}", line)?;
     }
 
@@ -427,6 +438,7 @@ pub fn frame_end() {
             h.dump = Some(out);
         }
         sfx::sfx_events.clear();
+        spawn_events.clear();
 
         if h.shotFrames.contains(&h.frame) {
             let path = format!("{}/frame_{}.bmp", h.shotDir, h.frame);
