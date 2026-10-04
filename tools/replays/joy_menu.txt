@@ -1,5 +1,5 @@
-# Gamepad on virtual joystick 0: switch player 1 to it in Controls, bind Jump to button 6 and Down
-# to hat down (blocking binding waits take the next replay event), then navigate with stick and buttons.
+# Gamepad on virtual joystick 0, which player 1 gets at launch: in Controls bind Jump to button 6 and
+# Down to hat down (blocking binding waits take the next replay event), then navigate with stick, hat and buttons.
 #@ seed=1
 #@ frames=520
 #@ shots=160,245,292,370,519
@@ -19,8 +19,6 @@
 102 up Return
 115 down Return
 117 up Return
-130 down Right
-132 up Right
 145 down Return
 147 up Return
 160 jaxis 0 1 32767
@@ -67,3 +65,5 @@
 462 jaxis 0 1 0
 475 jbutton 0 1 1
 477 jbutton 0 1 0
+490 jhat 0 0 4
+492 jhat 0 0 0

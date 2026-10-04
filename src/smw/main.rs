@@ -196,6 +196,31 @@ pub fn init_joysticks() {
     }
 }
 
+/// Not in upstream: every launch gives the players the connected joysticks first, then the right
+/// keyboard set (player 1's keyboard bindings), then the left one (player 2's), and makes them human.
+/// A joystick's bindings belong to it (`inputConfiguration[pad][1]`), so they follow it between players.
+fn assign_inputs() {
+    unsafe {
+        let pads = joystickcount.clamp(0, MAX_PLAYERS as i16) as usize;
+        if pads == 0 {
+            return;
+        }
+        for p in 0..MAX_PLAYERS as usize {
+            let control = if p < pads {
+                game_values.inputConfiguration[p][1].iDevice = p as i16;
+                &mut game_values.inputConfiguration[p][1]
+            } else if p - pads < 2 {
+                &mut game_values.inputConfiguration[p - pads][0]
+            } else {
+                game_values.playerInput.inputControls[p] = Ptr::from_mut(&mut game_values.inputConfiguration[p][0]);
+                continue;
+            };
+            game_values.playerInput.inputControls[p] = Ptr::from_mut(control);
+            game_values.playercontrol[p] = 1;
+        }
+    }
+}
+
 fn new_mode<T: CGameModeTrait + 'static>(mode: T) -> Ptr<dyn CGameModeTrait> {
     Ptr::from_raw(Ptr::new_box(mode).as_ptr() as *mut dyn CGameModeTrait)
 }
@@ -342,6 +367,7 @@ pub fn main_game() {
         create_gamemodes();
 
         game_values.read_binary_config();
+        assign_inputs();
 
         //Assign the powerup weights to the selected preset
         for iPowerup in 0..NUM_POWERUPS as usize {

@@ -165,9 +165,11 @@ impl UI_Menu {
                     }
                 }
                 // Only let player 1 on the keyboard control the menu unless there is another controlling team
+                // Not in upstream: the first keyboard player may too, when joysticks took the players before it.
                 else if iPlayer != 0
                     && !game_values.playerInput.inputControls[iPlayer as usize].is_null()
                     && game_values.playerInput.inputControls[iPlayer as usize].iDevice == DEVICE_KEYBOARD
+                    && (0..iPlayer as usize).any(|p| game_values.playerInput.inputControls[p].is_null() || game_values.playerInput.inputControls[p].iDevice == DEVICE_KEYBOARD)
                 {
                     continue;
                 }

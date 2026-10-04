@@ -56,7 +56,11 @@ Scope order: core game + menus + sound, then netplay, level editor, world editor
 
 ## Deliberate deviations from the C++
 
+Replays without joysticks still match the C++ goldens. `joy_menu` and `joy_game` exercise these deviations and are checked against Rust goldens (`tools/golden_rust/`, `make_golden.sh` with `RUST_GOLDEN=1`); `parity.sh` marks them "(Rust golden)".
+
 - Stick and D-pad are one control: on a joystick, a binding to a stick 1 direction also fires from the same hat direction and vice versa, in game and in menus (`CPlayerInput::update`). Upstream reads only the bound one, and its defaults bind the stick, so a D-pad-only pad did nothing.
+- Players get inputs at every launch (`assign_inputs`, `main.rs`): connected joysticks first, then the right keyboard set (player 1's keyboard bindings), then the left one (player 2's); those players become human. 1 pad: P1 pad, P2 right, P3 left; 2 pads: P1-2 pads, P3 right, P4 left; 3: P4 right; 4: all pads. With no joystick the saved assignment stands, as upstream. A joystick's bindings belong to it (`inputConfiguration[pad][1]`), so they follow it to whichever player has it; switching a player to the keyboard in Controls takes the first keyboard set no other player has.
+- Menus: the first keyboard player may drive menus even when it is not player 1 (upstream: only player 1), and player 1's keyboard fallback in menus is off while another player has those keys.
 - Web: binding a control in the Controls menu does not block. Upstream's `MI_InputControlField::SendInput` skips `SDL_WaitEvent` under `__EMSCRIPTEN__` but keeps looping, which hangs the page (an upstream bug). The field reads each frame's polled events instead and binds the first that fits.
 - Web: a standard-mapping gamepad's D-pad (browser buttons 12-15) also sends hat 0, as desktop SDL reports it. See `REPLAY.md`, Recordings.
 - The Rust harness records and replays axes and buttons 0-63; a browser recording that uses axis 6+ or button 16+ does not replay on the C++ harness.

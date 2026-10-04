@@ -491,7 +491,16 @@ impl MI_InputControlContainer {
     pub fn update_device_keys(&mut self, lDevice: i16) {
         unsafe {
             let p = self.iPlayerID as usize;
-            game_values.playerInput.inputControls[p] = Ptr::from_mut(&mut game_values.inputConfiguration[p][if lDevice == DEVICE_KEYBOARD { 0 } else { 1 }]);
+            // Not in upstream: a joystick keeps its own bindings, and a keyboard player takes the first
+            // keyboard set no other player has (player p's own unless joysticks moved them, see assign_inputs).
+            let control = if lDevice == DEVICE_KEYBOARD {
+                let taken = |q: usize| (0..4).any(|o| o != p && game_values.playerInput.inputControls[o].as_ptr() == &mut game_values.inputConfiguration[q][0] as *mut CInputPlayerControl);
+                let q = (0..4).find(|&q| !taken(q)).unwrap_or(p);
+                &mut game_values.inputConfiguration[q][0]
+            } else {
+                &mut game_values.inputConfiguration[lDevice as usize][1]
+            };
+            game_values.playerInput.inputControls[p] = Ptr::from_mut(control);
             game_values.playerInput.inputControls[p].iDevice = lDevice;
 
             for iKey in 0..NUM_KEYS {

@@ -89,7 +89,7 @@ Without a replay it is a plain `SDL_WaitEvent`. Pressing select on a control fie
 
 The browser cannot block, so the Rust web build does not wait: each frame the field reads the input events the menu polled that frame and binds the first that fits, staying in "(Press Button)" until one does. Upstream's web build skips the wait but still loops, which hangs the page.
 
-Joystick defaults (`GameValues.cpp`, device index != keyboard): game Left/Right = axis 0, Jump = button 0, Down = axis 1 +, Turbo/Item/Pause/Exit = buttons 1-4; menu Up/Down = axis 1, Left/Right = axis 0, select = button 0, cancel = button 1, random = button 2. `JOYSTICK_DEAD_ZONE` is 16384. Cancel on the main menu exits the game. The Rust port deviates here (see `PROGRESS.md`, Deliberate deviations): a stick 1 binding also fires from the hat and vice versa.
+Joystick defaults (`GameValues.cpp`, device index != keyboard): game Left/Right = axis 0, Jump = button 0, Down = axis 1 +, Turbo/Item/Pause/Exit = buttons 1-4; menu Up/Down = axis 1, Left/Right = axis 0, select = button 0, cancel = button 1, random = button 2. `JOYSTICK_DEAD_ZONE` is 16384. Cancel on the main menu exits the game. The Rust port deviates here (see `PROGRESS.md`, Deliberate deviations): a stick 1 binding also fires from the hat and vice versa, and at launch connected joysticks go to the first players, so a replay with joystick lines starts with player 1 on joystick 0, player 2 on the arrow-key set and player 3 on the WASD set, all human.
 
 Default keyboard bindings from `CGameValues::init` (`controlkeys` in `GameValues.cpp`); players 1 and 2 are human, 3 and 4 are off:
 

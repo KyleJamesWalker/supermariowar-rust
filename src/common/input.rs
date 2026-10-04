@@ -256,8 +256,10 @@ impl CPlayerInput {
                 let mut iDeviceID: i16 = DEVICE_KEYBOARD;
 
                 //Allow keyboard input from player 1 at all times (even when he is configured to use joystick)
+                // Not in upstream: unless another player now has those keys (see assign_inputs).
                 if iPlayer == -1 {
-                    if iGameState == 1 && self.inputControls[0].iDevice != DEVICE_KEYBOARD {
+                    let keyboard = &mut game_values.inputConfiguration[0][0] as *mut CInputPlayerControl;
+                    if iGameState == 1 && self.inputControls[0].iDevice != DEVICE_KEYBOARD && !self.inputControls.iter().any(|c| c.as_ptr() == keyboard) {
                         inputControl = &game_values.inputConfiguration[0][0].inputGameControls[1];
                         outputControl = &mut self.outputControls[0];
                         iDeviceID = game_values.inputConfiguration[0][0].iDevice;
