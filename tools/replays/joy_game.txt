@@ -1,8 +1,9 @@
-# Gamepad on virtual joystick 0: player 1 switches to it and rebinds Jump/Down as in joy_menu, walks
-# the menus to a 2-player Classic game with stick and buttons, then plays with stick, buttons and hat.
+# Gamepad on virtual joystick 0, which player 1 gets at launch: rebinds Jump/Down as in joy_menu, walks
+# the menus to a 3-player Classic game (players 2 and 3 on the keyboard sets) with stick and buttons,
+# then plays with stick, buttons and hat, and walks with the hat on the default stick bindings.
 #@ seed=1
 #@ frames=1500
-#@ shots=470,700,1000,1499
+#@ shots=470,700,1000,1100,1499
 10 down Return
 12 up Return
 25 down Down
@@ -19,8 +20,6 @@
 102 up Return
 115 down Return
 117 up Return
-130 down Right
-132 up Right
 145 down Return
 147 up Return
 160 jaxis 0 1 32767
@@ -59,6 +58,8 @@
 402 jbutton 0 0 0
 415 down E
 417 up E
+418 down Return
+420 up Return
 430 jbutton 0 0 1
 432 jbutton 0 0 0
 445 jbutton 0 0 1
@@ -103,3 +104,7 @@
 915 jbutton 0 6 1
 945 jbutton 0 6 0
 1000 jaxis 0 0 0
+1010 jhat 0 0 8
+1100 jhat 0 0 0
+1110 jhat 0 0 2
+1200 jhat 0 0 0

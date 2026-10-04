@@ -3,6 +3,7 @@
 # Usage: parity.sh [replay.txt ...]   (default: every replays/*.txt); JOBS=n runs n at once.
 # Goldens: replays/<x>.txt -> golden/<x>/, replays_sweep/<x>.txt -> golden_sweep/<x>/.
 # GOLDEN_ROOT=<dir> reads <dir>/golden/<x>/ instead.
+# A replay with a Rust golden (golden_rust/<x>/, see make_golden.sh) is checked against it and marked so.
 # Output per replay: first divergence (diffreplay.py), screenshot check, then a summary.
 # Exit status 1 if any replay diverges.
 set -uo pipefail
@@ -34,6 +35,11 @@ for replay in "${replays[@]}"; do
     name="$(basename "$replay" .txt)"
     dir="$(cd "$(dirname "$replay")" && pwd)"
     golden="${GOLDEN_ROOT:-$(dirname "$dir")}/$(basename "$dir" | sed 's/^replays/golden/')/$name"
+    kind=""
+    if [[ -d "$tools/golden_rust/$name" ]]; then
+        golden="$tools/golden_rust/$name"
+        kind=" (Rust golden)"
+    fi
     out="$out_root/$name"
     echo "=== $name"
 
@@ -56,10 +62,10 @@ for replay in "${replays[@]}"; do
 
     frames="$(gzip -dcf "$golden_dump" | grep -c '^F ')"
     if [[ $dump_status -eq 0 ]]; then
-        verdict="MATCH all $frames frames"
+        verdict="MATCH all $frames frames$kind"
     else
         first="$(sed -n 's/^DIVERGED at frame \([0-9-]*\).*/\1/p; s/^DIVERGED: .* after \([0-9]*\) frames.*/\1/p' <<< "$dump_result" | head -n 1)"
-        verdict="DIVERGE at frame ${first:-?} of $frames"
+        verdict="DIVERGE at frame ${first:-?} of $frames$kind"
         failed=1
     fi
     [[ "$shot_ok" -eq "$shot_total" ]] || failed=1

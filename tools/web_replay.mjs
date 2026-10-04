@@ -73,6 +73,8 @@ const initScript = `(() => {
         },
     });
     window.alert = (msg) => console.error('[alert] ' + msg);
+    // Physical pads would join the game's joysticks and change who controls each player.
+    navigator.getGamepads = () => [];
 })();`;
 
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.wasm': 'application/wasm', '.data': 'application/octet-stream' };
