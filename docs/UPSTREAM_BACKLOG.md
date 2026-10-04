@@ -64,8 +64,16 @@ Deliberate behaviour changes; each needs the maintainer's agreement first. Detai
 | P3 | The first keyboard player can drive menus, not only player 1 | proposed | |
 | P4 | Browser netplay through a WebSocket relay (`smw_relay`, `RELAY.md`) | proposed | |
 
+## Upstream changes to follow
+
+Upstream work the port will need to sync, tracked so it isn't missed.
+
+| ID | Change | Notes | Status |
+|---|---|---|---|
+| S1 | The `sdl3` branch ports the game to SDL 3.4.8, SDL3_image 3.4.4 and SDL3_mixer 3.2.2 (5 commits on `master`, ~50 files; `dad8a861` onwards). The maintainer plans to make it the default ([#479](https://github.com/mmatyas/supermariowar/pull/479#issuecomment-5927470541), 2026-10-01) | Fixes X1 for Super Mario War: an RLE blit costs 2.1–2.4 µs on native SDL3 against 63–69 µs through sdl2-compat (0.3 µs without RLE). Port work: move the C++ harness onto the branch (the sound hooks need the most rework, since SDL3_mixer's track API replaces Mix channels), swap the port's `sdl2::sys` calls (116 files) for SDL3's, port the branch's own changes as an upstream sync, follow the mixer rewrite in the deterministic sound path, and build SDL3_image/SDL3_mixer for the web build. Wait until it lands on `master` | on hold |
+
 ## Outside Super Mario War
 
 | ID | Issue | Where | Status |
 |---|---|---|---|
-| X1 | Homebrew sdl2-compat re-encodes RLE sprite sheets on every blit, so heavy scenes miss 60 fps | draft in `sdl2-compat-rle.md`, for libsdl-org/sdl2-compat | drafted, not filed |
+| X1 | Homebrew sdl2-compat re-encodes RLE sprite sheets on every blit, so heavy scenes miss 60 fps | draft in `sdl2-compat-rle.md`, for libsdl-org/sdl2-compat. Moot for this game once S1 lands, still worth filing for other SDL2 games | drafted, not filed |
