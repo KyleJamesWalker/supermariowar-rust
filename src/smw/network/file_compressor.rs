@@ -1,9 +1,25 @@
 //! Port of src/smw/network/FileCompressor.cpp
 
+#[cfg(not(target_os = "emscripten"))]
 use libz_sys::{compress, compressBound, uLong, uncompress, Z_OK};
+#[cfg(target_os = "emscripten")]
+use emscripten_zlib::{compress, compressBound, uLong, uncompress, Z_OK};
 use std::io::{Read, Seek, SeekFrom, Write};
 
 const COMPRESSION_SIZE_LIMIT: u64 = 20000;
+
+/// Emscripten's zlib port (`-sUSE_ZLIB=1`), as upstream links: libz-sys builds zlib for wasm32 with
+/// `Z_SOLO`, where `compress` and `uncompress` have no allocator and always fail.
+#[cfg(target_os = "emscripten")]
+mod emscripten_zlib {
+    pub type uLong = std::os::raw::c_ulong;
+    pub const Z_OK: i32 = 0;
+    extern "C" {
+        pub fn compress(dest: *mut u8, dest_len: *mut uLong, source: *const u8, source_len: uLong) -> i32;
+        pub fn compressBound(source_len: uLong) -> uLong;
+        pub fn uncompress(dest: *mut u8, dest_len: *mut uLong, source: *const u8, source_len: uLong) -> i32;
+    }
+}
 
 /// `CompressedData`: an owned buffer; empty means invalid.
 pub struct CompressedData {

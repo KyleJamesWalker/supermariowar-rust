@@ -1,6 +1,7 @@
 //! Port of src/server/mainServer.cpp
 
-use super::server::SMWServer;
+use super::network_layer_enet::NetworkLayerENet;
+use super::server::{set_net_layer, SMWServer};
 
 static mut running: bool = true;
 
@@ -28,6 +29,7 @@ pub fn main() -> i32 {
     let argv: Vec<String> = std::env::args().collect();
     let config_path = if argv.len() > 1 { argv[1].clone() } else { "serverconfig".to_string() };
 
+    set_net_layer(Box::new(NetworkLayerENet::new()));
     let mut server = SMWServer::new();
     if !server.init(&config_path) {
         cleanup();

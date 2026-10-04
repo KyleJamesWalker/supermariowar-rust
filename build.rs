@@ -16,7 +16,10 @@ fn emscripten_link_args() {
     let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     let data = repo.join("data");
     let fullscreen = repo.join("web/fullscreen.js");
+    let relay_socket = repo.join("web/relay_socket.js");
     println!("cargo:rerun-if-changed={}", fullscreen.display());
+    println!("cargo:rerun-if-changed={}", relay_socket.display());
+    println!("cargo:rerun-if-env-changed=SMW_RELAY_URL");
     for arg in [
         "-sUSE_SDL=2",
         "-sUSE_SDL_IMAGE=2",
@@ -28,11 +31,15 @@ fn emscripten_link_args() {
         // before boxing them, which overflows emscripten's 64 KiB default. 8 MiB matches the native main thread.
         "-sSTACK_SIZE=8MB",
         // Not in upstream: ENV and FS let tools/web_replay.mjs set SMW_* variables and read the harness
-        // output; callMain is how web/shell.html starts the game from its Play button.
-        "-sEXPORTED_RUNTIME_METHODS=ENV,FS,callMain",
+        // output; web/shell.html starts the game with callMain and keeps settings and recordings in IDBFS.
+        "-sEXPORTED_RUNTIME_METHODS=ENV,FS,callMain,addRunDependency,removeRunDependency",
+        "-lidbfs.js",
         // Not in upstream: keeps the canvas size when SDL itself enters or leaves fullscreen (see the file).
         "--pre-js",
         &fullscreen.display().to_string(),
+        // Not in upstream: the WebSocket to smw_relay for netplay (src/smw/platform/network/websocket).
+        "--js-library",
+        &relay_socket.display().to_string(),
         "--preload-file",
         &format!("{}@data", data.display()),
     ] {

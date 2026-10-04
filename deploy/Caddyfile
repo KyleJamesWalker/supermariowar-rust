@@ -1,0 +1,3 @@
+smw-relay.vps.pocketsquirrel.com {
+	reverse_proxy smw-relay:8080
+}

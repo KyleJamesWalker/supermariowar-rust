@@ -778,6 +778,11 @@ fn record_frame_start(frame: u32) {
         #[cfg(target_os = "emscripten")]
         web_dpad::init();
     }
+    // A browser tab can close at any moment without finish(); keep the file current for IDBFS syncs.
+    #[cfg(target_os = "emscripten")]
+    if frame % 60 == 0 {
+        let _ = r.out.flush();
+    }
     push_live_script(r, frame);
     unsafe { SDL_PumpEvents() };
     let held = std::mem::take(&mut r.pending);
@@ -832,6 +837,9 @@ fn record_wait_event(event: &mut SDL_Event) {
 
 static mut watch_home: Option<std::path::PathBuf> = None;
 
+/// About three seconds at the default 16 ms frame time.
+const UNFINISHED_TAIL_FRAMES: u32 = 188;
+
 /// Writes `#@ frames=` and closes the recording, or removes a watch session's throwaway HOME.
 /// Safe to call more than once.
 pub fn finish() {
@@ -879,9 +887,13 @@ pub fn prepare_watch(file: &str, speed: Option<f32>) {
     unsafe { watch_home = Some(home) };
     std::env::set_var("SMW_REPLAY", &path);
     std::env::set_var("SMW_SEED", directive("seed").unwrap_or_else(|| "1".to_string()));
-    if let Some(frames) = directive("frames") {
-        std::env::set_var("SMW_FRAMES", frames);
-    }
+    // A session that ended without finish() (killed, or a browser tab closed) has no frames= line:
+    // play it to its last input and a few seconds beyond.
+    let frames = directive("frames").unwrap_or_else(|| {
+        let last = text.lines().filter(|l| !l.trim_start().starts_with('#')).filter_map(|l| l.split_whitespace().next()?.parse::<u32>().ok()).max();
+        (last.unwrap_or(0) + UNFINISHED_TAIL_FRAMES).to_string()
+    });
+    std::env::set_var("SMW_FRAMES", frames);
     if let Some(map) = directive("map") {
         std::env::set_var("SMW_MAP", map);
     }

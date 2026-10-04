@@ -71,10 +71,11 @@ impl UI_MainMenu {
 
             this.miPlayerSelect = Ptr::new_box(MI_PlayerSelect::new(Ptr::from_mut(&mut rm.menu_player_select), 120, 250, "Players", 400, 140));
 
-            // disable Multiplayer button for web builds
+            // Upstream disables Multiplayer on the web; here it plays through smw_relay.
             #[cfg(target_os = "emscripten")]
             {
-                this.miMultiplayerButton = Ptr::new_box(MI_Button::new(selectfield, 120, 322, "Multiplayer - Under Construction", 400, TextAlign::LEFT));
+                this.miMultiplayerButton = Ptr::new_box(MI_Button::new(selectfield, 120, 322, "Multiplayer", 400, TextAlign::LEFT));
+                this.miMultiplayerButton.set_code(MENU_CODE_TO_NET_SERVERS_MENU);
                 this.miOptionsButton = Ptr::new_box(MI_Button::new(selectfield, 120, 362, "Options", 400, TextAlign::LEFT));
                 this.miControlsButton = Ptr::new_box(MI_Button::new(selectfield, 120, 402, "Controls", 400, TextAlign::LEFT));
             }
@@ -124,9 +125,9 @@ impl UI_MainMenu {
         {
             this.add_control(start, controls, players, null, quick);
             this.add_control(quick, controls, players, start, null);
-            this.add_non_control(multi);
-            this.add_control(players, start, options, null, null);
-            this.add_control(options, players, controls, null, null);
+            this.add_control(players, start, multi, null, null);
+            this.add_control(multi, players, options, null, null);
+            this.add_control(options, multi, controls, null, null);
             this.add_control(controls, options, start, null, null);
         }
 

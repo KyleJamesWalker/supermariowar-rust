@@ -1,0 +1,31 @@
+# smw_relay behind Caddy, which terminates TLS and proxies the WebSocket (see Caddyfile and RELAY.md).
+# Both join the external `caddy` network: docker network create caddy
+# If Caddy already runs on that network, drop the caddy service and add the site block to its Caddyfile.
+services:
+  smw-relay:
+    image: ghcr.io/kylejameswalker/supermariowar-rust-relay:latest
+    restart: unless-stopped
+    environment:
+      SMW_RELAY_ALLOWED_ORIGINS: https://www.kylejameswalker.com
+    networks: [caddy]
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [caddy]
+
+networks:
+  caddy:
+    external: true
+
+volumes:
+  caddy_data:
+  caddy_config:

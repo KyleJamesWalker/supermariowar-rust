@@ -2,9 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Super Mario War</title>
 <link rel="icon" type="image/png" href="favicon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0e0f1a">
+<link rel="stylesheet" href="touch.css">
+<script src="touch.js" defer></script>
 <style>
   :root {
     --bg: #0e0f1a;
@@ -94,6 +102,9 @@
   .btn svg { width: 18px; height: 18px; }
   .btn-big { font-size: 20px; padding: 16px 34px; }
   .btn-big svg { width: 22px; height: 22px; }
+  .btn-quiet { background: var(--panel); box-shadow: 0 4px 0 #05060b, 0 8px 16px rgba(0, 0, 0, 0.4); }
+  .btn[hidden] { display: none; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
   .hint { color: var(--muted); font-size: 13px; text-align: center; }
   kbd {
     background: var(--panel);
@@ -107,6 +118,7 @@
   }
   footer { margin-top: auto; color: var(--muted); font-size: 12px; text-align: center; }
   footer a { color: var(--muted); }
+  footer a[hidden] { display: none; }
   #output {
     width: min(100%, 960px);
     height: 160px;
@@ -134,7 +146,20 @@
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>
         Play
       </button>
+      <div class="row">
+        <button class="btn btn-quiet" id="watchLast" type="button" hidden>Watch last game</button>
+        <button class="btn btn-quiet" id="downloadLast" type="button" hidden>Download last replay</button>
+        <label class="btn btn-quiet" for="loadReplay" tabindex="0">Load replay&hellip;</label>
+        <input type="file" id="loadReplay" accept=".txt,text/plain" hidden>
+      </div>
       <div class="hint" id="pads">Using gamepads? Press a button on each one now (up to 4).</div>
+    </div>
+    <div class="overlay" id="end" hidden>
+      <div id="endText">Replay finished</div>
+      <div class="row">
+        <button class="btn btn-big" id="playAgain" type="button">Play</button>
+        <button class="btn btn-big btn-quiet" id="watchAgain" type="button">Watch again</button>
+      </div>
     </div>
   </div>
 
@@ -156,6 +181,7 @@
   <footer>
     A Rust port of <a href="https://github.com/mmatyas/supermariowar">Super Mario War</a> &middot;
     <a href="https://github.com/KyleJamesWalker/supermariowar-rust">source</a> &middot;
+    <a href="#" id="downloadReplay" hidden>download replay</a> &middot;
     <a href="#" id="toggleLog">show log</a>
   </footer>
 
@@ -172,6 +198,9 @@
       outputElement.hidden = !outputElement.hidden;
       this.textContent = outputElement.hidden ? 'show log' : 'hide log';
     });
+    window.addEventListener('keydown', function (e) {
+      if (e.key === 'Backspace' && !e.target.closest('input, textarea, [contenteditable]')) e.preventDefault();
+    }, true);
     var stageElement = document.getElementById('stage');
     document.getElementById('fullscreen').addEventListener('click', function () {
       if (document.fullscreenElement) document.exitFullscreen();
@@ -192,11 +221,102 @@
     };
     window.addEventListener('gamepadconnected', countPads);
     window.addEventListener('gamepaddisconnected', countPads);
-    document.getElementById('play').addEventListener('click', function () {
-      startElement.hidden = true;
-      canvasElement.focus();
-      Module.callMain([]);
+
+    // Settings and recordings live in IndexedDB; the game writes them to SAVE_DIR like any other file.
+    var SAVE_DIR = '/home/web_user/Library/Preferences/.smw';
+    var REPLAY_DIR = SAVE_DIR + '/replays';
+    var WATCH_AGAIN_KEY = 'smw-watch-again';
+    var watching = null;
+    var started = false;
+    var syncing = false;
+    var saveFiles = function () {
+      if (syncing || !started) return;
+      syncing = true;
+      Module.FS.syncfs(false, function (err) {
+        syncing = false;
+        if (err) console.warn('saving settings and replays failed', err);
+      });
+    };
+    setInterval(saveFiles, 5000);
+    document.addEventListener('visibilitychange', function () { if (document.hidden) saveFiles(); });
+    window.addEventListener('pagehide', saveFiles);
+
+    var lastRecording = function () {
+      try {
+        var names = Module.FS.readdir(REPLAY_DIR).filter(function (n) { return /\.txt$/.test(n); }).sort();
+        return names.length ? REPLAY_DIR + '/' + names[names.length - 1] : null;
+      } catch (e) {
+        return null;
+      }
+    };
+    var currentReplay = function () { return watching || lastRecording(); };
+    var downloadFile = function (path) {
+      if (!path) return;
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([Module.FS.readFile(path)], { type: 'text/plain' }));
+      a.download = path.split('/').pop();
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 10000);
+    };
+    var downloadElement = document.getElementById('downloadReplay');
+    downloadElement.addEventListener('click', function (e) {
+      e.preventDefault();
+      downloadFile(currentReplay());
     });
+
+    var startGame = function (args) {
+      startElement.hidden = true;
+      started = true;
+      downloadElement.hidden = false;
+      canvasElement.focus();
+      Module.callMain(args);
+    };
+    var watch = function (path) {
+      watching = path;
+      startGame(['--replay', path]);
+    };
+    var watchText = function (name, text) {
+      var path = '/tmp/' + (name.replace(/[^\w.-]/g, '_') || 'replay.txt');
+      Module.FS.writeFile(path, text);
+      watch(path);
+    };
+    document.getElementById('play').addEventListener('click', function () { startGame([]); });
+    document.getElementById('watchLast').addEventListener('click', function () { watch(lastRecording()); });
+    document.getElementById('downloadLast').addEventListener('click', function () { downloadFile(lastRecording()); });
+    document.querySelector('label[for=loadReplay]').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); document.getElementById('loadReplay').click(); }
+    });
+    document.getElementById('loadReplay').addEventListener('change', function () {
+      var file = this.files[0];
+      if (file) file.text().then(function (text) { watchText(file.name, text); });
+    });
+
+    // The browser main loop never returns, so a fresh page is the simplest way back to a clean game.
+    var endElement = document.getElementById('end');
+    document.getElementById('playAgain').addEventListener('click', function () { location.reload(); });
+    document.getElementById('watchAgain').addEventListener('click', function () {
+      var path = currentReplay();
+      try {
+        sessionStorage.setItem(WATCH_AGAIN_KEY, JSON.stringify({ name: path.split('/').pop(), text: Module.FS.readFile(path, { encoding: 'utf8' }) }));
+      } catch (e) {}
+      location.reload();
+    });
+    var showStart = function () {
+      var pending = null;
+      try {
+        pending = JSON.parse(sessionStorage.getItem(WATCH_AGAIN_KEY));
+        sessionStorage.removeItem(WATCH_AGAIN_KEY);
+      } catch (e) {}
+      if (pending) return watchText(pending.name, pending.text);
+      var hasRecording = !!lastRecording();
+      document.getElementById('watchLast').hidden = !hasRecording;
+      document.getElementById('downloadLast').hidden = !hasRecording;
+      countPads();
+      startElement.hidden = false;
+      document.getElementById('play').focus();
+    };
 
     var setStatus = function (text) {
       var m = text && text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
@@ -220,12 +340,27 @@
       canvas: canvasElement,
       setStatus: setStatus,
       noInitialRun: true,
+      preRun: [function () {
+        var FS = Module.FS;
+        FS.mkdirTree(SAVE_DIR);
+        FS.mount(FS.filesystems.IDBFS, {}, SAVE_DIR);
+        Module.addRunDependency('idbfs');
+        FS.syncfs(true, function (err) {
+          if (err) console.warn('loading settings and replays failed', err);
+          Module.removeRunDependency('idbfs');
+        });
+      }],
       onRuntimeInitialized: function () {
         if (!Module.noInitialRun) return;
         loadingElement.hidden = true;
-        countPads();
-        startElement.hidden = false;
-        document.getElementById('play').focus();
+        showStart();
+      },
+      onGameQuit: function () {
+        saveFiles();
+        document.getElementById('endText').textContent = watching ? 'Replay finished' : 'Game over';
+        document.getElementById('watchAgain').hidden = !currentReplay();
+        endElement.hidden = false;
+        document.getElementById('playAgain').focus();
       },
       totalDependencies: 0,
       monitorRunDependencies: function (left) {
