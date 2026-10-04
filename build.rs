@@ -24,6 +24,8 @@ fn emscripten_link_args() {
         // Not in upstream: the port builds large globals (CResourceManager, CGameValues) on the stack
         // before boxing them, which overflows emscripten's 64 KiB default. 8 MiB matches the native main thread.
         "-sSTACK_SIZE=8MB",
+        // Not in upstream: lets tools/web_replay.mjs set SMW_* variables and read the harness output.
+        "-sEXPORTED_RUNTIME_METHODS=ENV,FS",
         "--preload-file",
         &format!("{}@data", data.display()),
     ] {
