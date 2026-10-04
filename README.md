@@ -32,7 +32,7 @@ node tools/web_replay.mjs tools/replays/start_classic.txt out/   # run a replay 
 
 ## Browser multiplayer
 
-Upstream's web build has no netplay. Here the browser build plays online through `smw_relay`, which runs the lobby server and relays game traffic between players over WebSocket. The page connects to `wss://smw-relay.kylejameswalker.com`, or to the relay a `?relay=ws://...` parameter names. Browser and native players cannot meet yet. `RELAY.md` covers the protocol, settings and deployment.
+Upstream's web build has no netplay. Here the browser build plays online through `smw_relay`, which runs the lobby server and relays game traffic between players over WebSocket. The page connects to `wss://smw-relay.vps.pocketsquirrel.com`, or to the relay a `?relay=ws://...` parameter names. Browser and native players cannot meet yet. `RELAY.md` covers the protocol, settings and deployment.
 
 ```sh
 cargo run --release --manifest-path relay/Cargo.toml -- --port 8080   # then open http://localhost:8000/?relay=ws://localhost:8080

@@ -53,17 +53,17 @@ The relay serves plain `ws://` and `GET /healthz`. Put a TLS proxy in front of i
 
 The relay refuses a WebSocket whose `Origin` is not in the list. It also caps each browser at 8 virtual connections and each message at 64 KiB. It drops a client that is silent for 60 seconds or whose outgoing queue fills up. When a browser leaves, the relay closes its virtual connections and the lobby removes it from its room.
 
-The browser build connects to `wss://smw-relay.kylejameswalker.com` unless the page has a `?relay=` parameter. Set `SMW_RELAY_URL` when you run `tools/package_web.sh` to change that default. The relay URL is the first entry in the saved server list. A saved entry without a scheme means `wss://<entry>`.
+The browser build connects to `wss://smw-relay.vps.pocketsquirrel.com` unless the page has a `?relay=` parameter. Set `SMW_RELAY_URL` when you run `tools/package_web.sh` to change that default. The relay URL is the first entry in the saved server list. A saved entry without a scheme means `wss://<entry>`.
 
 ## Deploy
 
 The `Relay` workflow publishes `ghcr.io/kylejameswalker/supermariowar-rust-relay` for `linux/amd64` and `linux/arm64`. `deploy/` holds a compose file and a Caddyfile that put it behind Caddy.
 
-1. Point a DNS `A` (or `AAAA`) record for `smw-relay.kylejameswalker.com` at the server.
+1. Point a DNS `A` (or `AAAA`) record for `smw-relay.vps.pocketsquirrel.com` at the server.
 2. On the server, create the shared network: `docker network create caddy`.
 3. Copy `deploy/docker-compose.yml` and `deploy/Caddyfile` to one directory. If Caddy already runs on the `caddy` network, add the Caddyfile's site block to its config and remove the `caddy` service.
 4. Run `docker compose up -d`. Caddy gets the certificate and proxies the WebSocket to `smw-relay:8080`.
-5. Check `curl https://smw-relay.kylejameswalker.com/healthz` returns `ok`.
+5. Check `curl https://smw-relay.vps.pocketsquirrel.com/healthz` returns `ok`.
 
 ## Limits
 

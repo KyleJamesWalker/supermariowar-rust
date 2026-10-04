@@ -26,7 +26,7 @@ const WS_CLOSED: i32 = 2;
 
 pub const DEFAULT_RELAY_URL: &str = match option_env!("SMW_RELAY_URL") {
     Some(url) => url,
-    None => "wss://smw-relay.kylejameswalker.com",
+    None => "wss://smw-relay.vps.pocketsquirrel.com",
 };
 
 /// The page's `?relay=` URL, else the build's default.
