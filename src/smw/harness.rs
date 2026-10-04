@@ -22,6 +22,7 @@ use std::collections::BTreeSet;
 use std::ffi::CString;
 use std::fs::File;
 use std::io::{BufWriter, Write};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 extern "C" {
     fn srand(seed: u32);
@@ -534,7 +535,6 @@ struct Recorder {
     quit: bool,
     /// The frame a window close arrived in; the recording ends before it.
     quitFrame: Option<u32>,
-    injecting: bool,
     /// SMW_LIVE_SCRIPT: replay-format lines pushed into SDL's queue as if the OS delivered them.
     script: Vec<ReplayEvent>,
     nextScript: usize,
@@ -649,7 +649,7 @@ fn start_recording(seed: u32) {
 
     let script = env("SMW_LIVE_SCRIPT").map(|p| load_events(&p)).unwrap_or_default();
     unsafe {
-        h.rec = Some(Recorder { out, path, pending: Vec::new(), quit: false, quitFrame: None, injecting: false, script, nextScript: 0 });
+        h.rec = Some(Recorder { out, path, pending: Vec::new(), quit: false, quitFrame: None, script, nextScript: 0 });
         SDL_SetEventFilter(Some(record_filter), std::ptr::null_mut());
     }
     prune_recordings(&dir);
@@ -672,7 +672,7 @@ fn is_input_event(t: u32) -> bool {
 /// in the exact form a replay of the recording will produce.
 unsafe extern "C" fn record_filter(_userdata: *mut std::ffi::c_void, event: *mut SDL_Event) -> i32 {
     let Some(r) = rec() else { return 1 };
-    if r.injecting || !is_input_event((*event).type_) {
+    if INJECTING.load(Ordering::Relaxed) || !is_input_event((*event).type_) {
         return 1;
     }
     r.pending.push(*event);
@@ -752,10 +752,14 @@ fn line_for(ev: &ReplayEvent) -> String {
     }
 }
 
-fn inject(r: &mut Recorder, event: &mut SDL_Event) {
-    r.injecting = true;
+/// Set while the recorder pushes an event, so its filter lets that event through. Not a Recorder field:
+/// the compiler may drop a store through `&mut Recorder` that only the filter callback reads.
+static INJECTING: AtomicBool = AtomicBool::new(false);
+
+fn inject(event: &mut SDL_Event) {
+    INJECTING.store(true, Ordering::Relaxed);
     unsafe { SDL_PushEvent(event) };
-    r.injecting = false;
+    INJECTING.store(false, Ordering::Relaxed);
 }
 
 /// SMW_LIVE_SCRIPT events due this frame enter SDL's queue like OS input, with the modifier and
@@ -800,7 +804,7 @@ fn record_event(r: &mut Recorder, ev: &ReplayEvent) {
     let _ = writeln!(r.out, "{}", line_for(ev));
     let mut event: SDL_Event = unsafe { std::mem::zeroed() };
     fill_event(ev, &mut event);
-    inject(r, &mut event);
+    inject(&mut event);
 }
 
 /// Not in upstream. Browsers report a standard-mapping pad's D-pad as buttons 12-15 (up, down, left,
