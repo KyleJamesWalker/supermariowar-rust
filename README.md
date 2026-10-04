@@ -54,7 +54,7 @@ open "dist/Super Mario War.app" --args --replay /absolute/path/<file>.txt       
 tools/replay_compare.sh ~/Library/Preferences/.smw/replays/<file>.txt   # replay on the C++ original and the port, report the first difference
 ```
 
-`--replay-speed <n>` watches faster. `docs/REPLAY.md` ("Recordings") has the details.
+`--replay-speed <n>` watches faster. `docs/REPLAY.md` ("Recordings") has the details. `tools/replay_video.py` renders a replay to an MP4, or two builds side by side (`docs/REPLAY_VIDEO.md`).
 
 ## Verifying against the C++ original
 
