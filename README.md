@@ -16,7 +16,7 @@ cargo run --release --bin smw_server                     # netplay lobby server
 
 ## Web build
 
-The port also builds for the browser as WebAssembly (`wasm32-unknown-emscripten`), mirroring upstream's Emscripten build: SDL2, SDL2_image (PNG and BMP), SDL2_mixer (WAV and OGG) and zlib come from Emscripten's ports, `data/` is preloaded into the page, and networking is off (`--features no_network`). It needs emsdk 5.0.2, the version upstream's CI uses, and the Rust target:
+The port also builds for the browser as WebAssembly (`wasm32-unknown-emscripten`), mirroring upstream's Emscripten build: SDL2, SDL2_image (PNG and BMP), SDL2_mixer (WAV and OGG) and zlib come from Emscripten's ports, and `data/` is preloaded into the page. It needs emsdk 5.0.2, the version upstream's CI uses, and the Rust target:
 
 ```sh
 git clone https://github.com/emscripten-core/emsdk.git ~/work/emsdk
@@ -29,6 +29,15 @@ node tools/web_replay.mjs tools/replays/start_classic.txt out/   # run a replay 
 ```
 
 `tools/web_replay.mjs` runs a replay in the browser build the way `run_ref.sh` runs a native binary, and writes the same `dump.txt` and screenshots for `diffreplay.py`. In the browser, settings and session recordings are kept in the site's IndexedDB storage. The start screen can watch or download the last game or load a replay file, and the page footer downloads the current recording. A recording made in the browser replays on the native builds and with `tools/replay_compare.sh`.
+
+## Browser multiplayer
+
+Upstream's web build has no netplay. Here the browser build plays online through `smw_relay`, which runs the lobby server and relays game traffic between players over WebSocket. The page connects to `wss://smw-relay.kylejameswalker.com`, or to the relay a `?relay=ws://...` parameter names. Browser and native players cannot meet yet. `RELAY.md` covers the protocol, settings and deployment.
+
+```sh
+cargo run --release --manifest-path relay/Cargo.toml -- --port 8080   # then open http://localhost:8000/?relay=ws://localhost:8080
+node tools/web_netplay_test.mjs out/   # two headless browsers play a scripted net game
+```
 
 ## Session recordings
 
