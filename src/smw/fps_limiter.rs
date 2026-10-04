@@ -19,10 +19,20 @@ impl FPSLimiter {
         unsafe { &mut instance }
     }
 
+    // the browser limits the frame rate
+    #[cfg(target_os = "emscripten")]
+    pub fn frame_start(&mut self) {}
+    #[cfg(target_os = "emscripten")]
+    pub fn before_flip(&mut self) {}
+    #[cfg(target_os = "emscripten")]
+    pub fn after_flip(&mut self) {}
+
+    #[cfg(not(target_os = "emscripten"))]
     pub fn frame_start(&mut self) {
         self.framestart = unsafe { SDL_GetTicks() };
     }
 
+    #[cfg(not(target_os = "emscripten"))]
     pub fn before_flip(&mut self) {
         unsafe {
             self.ticks = SDL_GetTicks().wrapping_sub(self.framestart);
@@ -39,6 +49,7 @@ impl FPSLimiter {
         }
     }
 
+    #[cfg(not(target_os = "emscripten"))]
     pub fn after_flip(&mut self) {
         unsafe {
             self.flipfps = 1000.0f32 / self.ticks as f32;

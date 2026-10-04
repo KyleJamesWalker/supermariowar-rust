@@ -129,9 +129,17 @@ impl UI_ControlTrait for MI_InputControlField {
         unsafe {
             let mut event: SDL_Event = std::mem::zeroed();
             let mut done = false;
+            #[cfg(target_os = "emscripten")]
+            let mut events = std::mem::take(&mut crate::smw::gs_menu::frame_events).into_iter();
 
             while !done {
+                #[cfg(not(target_os = "emscripten"))]
                 harness::wait_event(&mut event);
+                #[cfg(target_os = "emscripten")]
+                match events.next() {
+                    Some(next) => event = next,
+                    None => return MENU_CODE_NONE,
+                }
 
                 game_values.playerInput.update(event, 1);
 

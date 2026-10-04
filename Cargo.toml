@@ -12,9 +12,12 @@ no_network = []
 
 [dependencies]
 sdl2 = { version = "0.37", features = ["image", "mixer"] }
-enet-sys = "1.0.5"
 libz-sys = "1"
 toml = "0.8"
+
+# The web build is NO_NETWORK only, as upstream's.
+[target.'cfg(not(target_os = "emscripten"))'.dependencies]
+enet-sys = "1.0.5"
 
 [profile.dev]
 opt-level = 1

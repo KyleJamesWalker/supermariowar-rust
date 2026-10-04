@@ -23,6 +23,9 @@ use std::collections::VecDeque;
 use std::path::Path;
 use std::time::SystemTime;
 
+#[cfg(all(target_os = "emscripten", not(feature = "no_network")))]
+compile_error!("the web build is NO_NETWORK only: build it with --features no_network");
+
 #[cfg(feature = "no_network")]
 pub type NetworkHandler = crate::smw::platform::network::null::network_layer_null::NetworkLayerNULL;
 #[cfg(not(feature = "no_network"))]

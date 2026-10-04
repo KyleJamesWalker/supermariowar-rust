@@ -11,9 +11,12 @@ use crate::globals::*;
 use crate::smw::gs_gameplay::lookup_team_id;
 use sdl2::sys::{SDL_Delay, SDL_Rect};
 
+#[cfg(not(target_os = "emscripten"))]
 fn small_delay() {
     unsafe { SDL_Delay(10) };
 }
+#[cfg(target_os = "emscripten")]
+fn small_delay() {}
 
 pub struct MI_MapBrowser {
     pub ui_control: UI_Control,

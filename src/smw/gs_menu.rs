@@ -142,6 +142,10 @@ pub struct MenuState {
 
 static mut ms: Option<MenuState> = None;
 
+/// The browser cannot block for input, so a control field being rebound reads this frame's events here.
+#[cfg(target_os = "emscripten")]
+pub static mut frame_events: Vec<SDL_Event> = Vec::new();
+
 impl MenuState {
     fn new() -> Self {
         MenuState {
@@ -461,6 +465,9 @@ impl MenuState {
     }
 
     fn exit(&mut self) {
+        #[cfg(target_os = "emscripten")]
+        return;
+
         unsafe {
             game_values.appstate = AppState::Quit;
             game_values.write_config();
@@ -1620,8 +1627,12 @@ impl GameState for MenuState {
             game_values.playerInput.clear_pressed_keys(1);
 
             //handle messages
+            #[cfg(target_os = "emscripten")]
+            frame_events.clear();
             let mut event: SDL_Event = std::mem::zeroed();
             while SDL_PollEvent(&mut event) != 0 {
+                #[cfg(target_os = "emscripten")]
+                frame_events.push(event);
                 let event_type = event.type_;
                 if event_type == SDL_EventType::SDL_QUIT as u32 {
                     self.exit();

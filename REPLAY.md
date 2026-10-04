@@ -75,9 +75,9 @@ A key press is a `down` and a later `up`. `fPressed` fires only on the down edge
 
 ### Joystick events
 
-`<frame> jaxis <dev> <axis> <value>`, `<frame> jbutton <dev> <button> <0|1>` and `<frame> jhat <dev> <hat> <value>` push `SDL_JOYAXISMOTION`, `SDL_JOYBUTTONDOWN`/`SDL_JOYBUTTONUP` (`state` `SDL_PRESSED`/`SDL_RELEASED`) and `SDL_JOYHATMOTION`, with `which = <dev>`, interleaved with key events in file order. Ranges: `dev` 0-7, axis 0-5 with value -32768..32767, button 0-15, hat 0 with value 0-15 (`SDL_HAT_UP` 1, `RIGHT` 2, `DOWN` 4, `LEFT` 8). The game binds a device by index and compares it with `which`, so `<dev>` is both.
+`<frame> jaxis <dev> <axis> <value>`, `<frame> jbutton <dev> <button> <0|1>` and `<frame> jhat <dev> <hat> <value>` push `SDL_JOYAXISMOTION`, `SDL_JOYBUTTONDOWN`/`SDL_JOYBUTTONUP` (`state` `SDL_PRESSED`/`SDL_RELEASED`) and `SDL_JOYHATMOTION`, with `which = <dev>`, interleaved with key events in file order. Ranges: `dev` 0-7, axis 0-5 with value -32768..32767, button 0-15, hat 0 with value 0-15 (`SDL_HAT_UP` 1, `RIGHT` 2, `DOWN` 4, `LEFT` 8). The game binds a device by index and compares it with `which`, so `<dev>` is both. The Rust harness accepts axes and buttons 0-63, so a browser recording can keep every pad input; one that uses axis 6+ or button 16+ does not replay on the C++ harness, and `replay_compare.sh` says so and exits 2.
 
-When the replay has joystick lines, `harness::init` attaches `max(dev) + 1` virtual joysticks (`SDL_JoystickAttachVirtual`, game-controller type, 6 axes, 16 buttons, 1 hat, named "Virtual Controller") before `init_joysticks`, so `SDL_NumJoysticks`, the Controls device list and the `controls.sdl2.bin` device clamp see them. Replays without joystick lines attach none.
+When the replay has joystick lines, `harness::init` attaches `max(dev) + 1` virtual joysticks (`SDL_JoystickAttachVirtual`, game-controller type, 6 axes, 16 buttons, 1 hat (Rust: 64 axes, 64 buttons, 1 hat), named "Virtual Controller") before `init_joysticks`, so `SDL_NumJoysticks`, the Controls device list and the `controls.sdl2.bin` device clamp see them. Replays without joystick lines attach none.
 
 Binding a control in the Controls menu blocks in `MI_InputControlField::SendInput` until input arrives. With a replay loaded, that wait calls `harness::waitEvent` instead of `SDL_WaitEvent`:
 
@@ -86,6 +86,8 @@ Binding a control in the Controls menu blocks in `MI_InputControlField::SendInpu
 3. If the replay has no events left, the harness prints `blocking wait at frame N but the replay has no events left` and exits with status 2.
 
 Without a replay it is a plain `SDL_WaitEvent`. Pressing select on a control field at frame N therefore binds the first event after that press's `up`, e.g. `jbutton 0 6 1`.
+
+The browser cannot block, so the Rust web build does not wait: each frame the field reads the input events the menu polled that frame and binds the first that fits, staying in "(Press Button)" until one does. Upstream's web build skips the wait but still loops, which hangs the page.
 
 Joystick defaults (`GameValues.cpp`, device index != keyboard): game Left/Right = axis 0, Jump = button 0, Down = axis 1 +, Turbo/Item/Pause/Exit = buttons 1-4; menu Up/Down = axis 1, Left/Right = axis 0, select = button 0, cancel = button 1, random = button 2. `JOYSTICK_DEAD_ZONE` is 16384. Cancel on the main menu exits the game.
 
@@ -107,15 +109,16 @@ Menu path to a default 2-player Classic game, used by `start_classic.txt`: `Retu
 
 The Rust game records every normal launch (no `SMW_REPLAY`, no `SMW_NO_RECORD`) to `~/Library/Preferences/.smw/replays/<UTC timestamp>.txt`, the settings directory that holds `options.bin`, and keeps the newest 10. A recording is an ordinary replay script, so `run_ref.sh` runs it on either build. The editors and replays never record.
 
-- Header: `#@ seed=` (a random seed, applied exactly as `SMW_SEED`, so the live session is a seeded run), then `#@ options_b64=` and `#@ controls_b64=` when those files existed at startup. `#@ frames=` is appended at exit (normal quit, the window closing, or a caught crash); a killed process leaves it out.
+- Header: `#@ seed=` (a random seed, applied exactly as `SMW_SEED`, so the live session is a seeded run), then `#@ options_b64=` and `#@ controls_b64=` when those files existed at startup. `#@ frames=` is appended at exit (normal quit, the window closing, or a caught crash); a killed process or a closed browser tab leaves it out. The browser build flushes the recording every 60 frames.
 - Input capture: an SDL event filter holds back every OS input event. At each frame start the held keyboard and joystick events become replay lines (`down`/`up` with `SDL_GetKeyName`, `jaxis`/`jbutton`/`jhat` with the joystick's open index) and are pushed back exactly as a replay pushes them, so the game sees `mod = KMOD_NONE` and `repeat = 0` both live and in replay. Input the format cannot express is dropped while recording: mouse, touch, game-controller and text events, key-repeat flags, and modifiers (so Alt+Enter and Alt+F4 do nothing in a recorded session).
 - Frame 0 gets one `0 jhat <dev> 0 0` line per joystick open at startup, so a replay attaches the same number of joysticks.
+- In the browser, a standard-mapping gamepad reports its D-pad as buttons 12-15 (up, down, left, right) and has no hat, where desktop SDL reports hat 0. Each of those button lines is preceded by the `jhat <dev> 0 <value>` line the four buttons imply, so binding a control with the D-pad takes the hat ("Pad Up" and so on) as it does natively. While the real left stick is inside `JOYSTICK_DEAD_ZONE`, the D-pad also writes `jaxis <dev> 0|1 <-32767|0|32767>` lines after the button line, so the default stick bindings work with a D-pad-only pad.
 - A blocking wait (control binding) returns the next held input event and writes it with the next frame number, which is how a replay's `waitEvent` consumes it.
 - Window close: `#@ frames=` is the frame the close arrived in, so the replay ends where the live session stopped processing input.
 - Sound: the virtual mixer drives every game-visible sound state, as in replays, and SDL_mixer also plays the same commands as output only (results ignored, no finished callbacks). The device is opened at 44100 Hz, S16, stereo with no format changes allowed, so sound lengths match the headless dummy driver; with no usable device the game falls back to the dummy driver.
 - `SMW_LIVE_SCRIPT=<file>` pushes a replay script's events into SDL's queue at their frames, with the `KMOD_NUM` modifier and some repeat flags a real keyboard sends, so they take the live capture path. A scripted live session's `SMW_DUMP` equals its recording's dump under `run_rust.sh`.
 
-Watching: `smw --replay <file> [--replay-speed <n>]` plays a recording in a normal window at normal speed (or `n` times faster) with sound. It writes the embedded settings into a throwaway HOME, removed at exit, so the user's settings are untouched, and quits after `#@ frames=`. In the app bundle: `open "dist/Super Mario War.app" --args --replay /absolute/path/to/recording.txt`.
+Watching: `smw --replay <file> [--replay-speed <n>]` plays a recording in a normal window at normal speed (or `n` times faster) with sound. It writes the embedded settings into a throwaway HOME, removed at exit, so the user's settings are untouched, and quits after `#@ frames=`, or, when that line is missing, 188 frames (about 3 s) after the last input. In the app bundle: `open "dist/Super Mario War.app" --args --replay /absolute/path/to/recording.txt`.
 
 Bug check: `tools/replay_compare.sh <file> [out_dir]` runs a recording headless on the C++ reference (`SMW_CPP_BIN`, default `~/work/supermariowar-cpp-reference/build/smw`) and on the Rust build, prints the first divergent frame with `diffreplay.py` context, and saves C++ and Rust screenshots of the frames around it.
 
