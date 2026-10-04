@@ -2786,6 +2786,12 @@ pub(crate) mod tests {
             }
             CGameValues::init(&mut game_values);
             rm = Ptr::new_box(CResourceManager::new());
+            // Moving platforms draw these while loading a map.
+            let pack = convert_path("gfx/packs/Classic");
+            for (i, size) in ["", "_preview", "_thumbnail"].iter().enumerate() {
+                rm.spr_tileanimation[i] = ImageLoader::new(convert_path_pack(&format!("gfx/packs/tilesets/tile_animation{}.png", size), &pack)).create();
+                rm.spr_unknowntile[i] = ImageLoader::new(convert_path_pack(&format!("gfx/packs/tilesets/unknown_tile{}.png", size), &pack)).create();
+            }
             g_tilesetmanager = Ptr::new_box(CTilesetManager::new(&convert_path("gfx/packs/Classic")));
             g_map = Ptr::from_box(CMap::new());
         });
