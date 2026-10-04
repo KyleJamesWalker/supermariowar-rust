@@ -14,6 +14,8 @@ cargo run --release --bin worldeditor -- --datadir data
 cargo run --release --bin smw_server                     # netplay lobby server
 ```
 
+On Homebrew's sdl2-compat, RLE sprite surfaces cost most of the frame time (`docs/sdl2-compat-rle.md`). `--features no_rle` builds with RLE off; `SMW_RLE=0` or `SMW_RLE=1` overrides either build at launch.
+
 ## Web build
 
 The port also builds for the browser as WebAssembly (`wasm32-unknown-emscripten`), mirroring upstream's Emscripten build: SDL2, SDL2_image (PNG and BMP), SDL2_mixer (WAV and OGG) and zlib come from Emscripten's ports, and `data/` is preloaded into the page. It needs emsdk 5.0.2, the version upstream's CI uses, and the Rust target:

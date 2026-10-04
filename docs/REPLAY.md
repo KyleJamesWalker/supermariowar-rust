@@ -49,7 +49,7 @@ Each variable is a no-op when unset or empty. The Rust binary must honour the sa
 | `SMW_SHOT_DIR=<dir>` | Where screenshots go (default `.`), named `frame_<n>.bmp`. |
 | `SMW_MAP=<name>` | Select the start map when the menu is created (see below). |
 
-Rust only (see Recordings): `SMW_NO_RECORD=1` turns off session recording, `SMW_LIVE_SCRIPT=<file>` feeds a replay-format script into the live input path of a recorded session, `SMW_AUDIBLE=1` plays real sound alongside the virtual mixer, and `SMW_REPLAY_SPEED=<n>` scales the frame-limiter sleep.
+Rust only (see Recordings): `SMW_NO_RECORD=1` turns off session recording, `SMW_LIVE_SCRIPT=<file>` feeds a replay-format script into the live input path of a recorded session, `SMW_AUDIBLE=1` plays real sound alongside the virtual mixer, `SMW_REPLAY_SPEED=<n>` scales the frame-limiter sleep, and `SMW_RLE=0`/`1` turns SDL surface RLE off or on (default: on, off with `--features no_rle`).
 
 ## Frame loop
 
