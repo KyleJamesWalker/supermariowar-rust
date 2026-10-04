@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Measure how far the port is from a newer upstream C++: merge upstream into the harness branch,
+# Measure how far the port is from a newer upstream C++: merge upstream into the reference's harness,
 # build a reference from it, generate goldens into a scratch directory and run both parity suites.
 # Nothing is pushed and the committed goldens are not touched. See docs/UPSTREAM_SYNC.md.
 #
 # Usage: upstream_sync.sh [upstream-ref]   (default: upstream/master)
-#   REF_REPO     C++ reference clone with `harness` and remote `upstream` (~/work/supermariowar-cpp-reference)
+#   REF_REPO     C++ reference clone with remote `upstream` (~/work/supermariowar-cpp-reference)
+#   REF_BRANCH   harness branch the sync starts from (default harness-latest)
 #   SYNC_DIR     scratch root (~/work/smw-upstream-sync-<short sha>): worktree, build, goldens, logs
 #   JOBS         parallel game replays (default 8); editor goldens always run one at a time
 # Stops after the merge if it conflicts: resolve in $SYNC_DIR/cpp, commit, then rerun.
@@ -14,6 +15,7 @@ tools="$(cd "$(dirname "$0")" && pwd)"
 port="$(dirname "$tools")"
 ref_repo="${REF_REPO:-$HOME/work/supermariowar-cpp-reference}"
 upstream_ref="${1:-upstream/master}"
+ref_branch="${REF_BRANCH:-harness-latest}"
 
 git -C "$ref_repo" fetch upstream
 target="$(git -C "$ref_repo" rev-parse --short "$upstream_ref")"
@@ -23,7 +25,7 @@ build="$sync_dir/build"
 mkdir -p "$sync_dir"
 
 if [[ ! -d "$cpp" ]]; then
-    git -C "$ref_repo" worktree add -b "harness-$target" "$cpp" harness
+    git -C "$ref_repo" worktree add -b "harness-$target" "$cpp" "$ref_branch"
 fi
 if ! git -C "$cpp" merge-base --is-ancestor "$upstream_ref" HEAD; then
     if ! git -C "$cpp" merge --no-edit "$upstream_ref"; then
@@ -33,12 +35,12 @@ if ! git -C "$cpp" merge-base --is-ancestor "$upstream_ref" HEAD; then
 fi
 git -C "$cpp" submodule update --init
 
-base="$(git -C "$cpp" merge-base harness "$upstream_ref")"
+base="$(git -C "$cpp" merge-base "$ref_branch" "$upstream_ref")"
 git -C "$cpp" log --reverse --format='%h %s' "$base..$upstream_ref" > "$sync_dir/commits.txt"
 git -C "$cpp" diff --stat "$base" "$upstream_ref" -- data > "$sync_dir/data-submodule.txt"
 echo "$(wc -l < "$sync_dir/commits.txt") upstream commits since $(git -C "$cpp" rev-parse --short "$base"): $sync_dir/commits.txt"
 
-cmake -S "$cpp" -B "$build" -DNO_NETWORK=ON -DBUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release \
+cmake -S "$cpp" -B "$build" -DNO_NETWORK=ON -DBUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release -DSMW_NO_RLE=ON \
     -DCMAKE_CXX_FLAGS="-O2 -ffp-contract=off" > "$sync_dir/cmake.log"
 cmake --build "$build" --target smw smw-leveledit smw-worldedit -j"$(sysctl -n hw.ncpu)" > "$sync_dir/build.log"
 

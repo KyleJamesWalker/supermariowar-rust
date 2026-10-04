@@ -221,12 +221,20 @@ The port reads and writes `servers.yml` with `yaml-rust2` and emulates yaml-cpp 
 - **Screenshots are sampled.** With 2 to 6 shots per replay, the suite did not see `dacabe1c`. The dense run did.
 - **The `gfx_smoke` C++ twin does not build** against the new sources (`SpriteBuilder`, `drawStretch`, `gfx_drawpreview` changed). Only the Rust side is updated.
 
+## Reference branches
+
+In [supermariowar-cpp-reference](https://github.com/KyleJamesWalker/supermariowar-cpp-reference):
+
+- `harness-latest` (default): upstream plus the replay, screenshot and editor hooks. The reference build and every golden come from it. Changes to the hooks land here through PRs.
+- `master`: upstream, unmodified. The harness patches are `git diff master harness-latest`, and fixes meant for upstream (`UPSTREAM_BACKLOG.md`) branch from here so their PRs carry no harness code.
+- Tag `port-base-a7f7e25`: the upstream commit the port was first translated from, plus the two original hook commits.
+
 ## Recommended process
 
 `tools/upstream_sync.sh [upstream-ref]` runs steps 1 to 4 and prints both parity summaries. It never pushes.
 
-1. Merge the upstream ref into a new `harness-<sha>` worktree of the reference repo. Resolve conflicts by keeping the harness hooks, then rerun.
-2. Build `smw`, `smw-leveledit` and `smw-worldedit` with `-DNO_NETWORK=ON -DCMAKE_CXX_FLAGS="-O2 -ffp-contract=off"`.
+1. Merge the upstream ref into a new `harness-<sha>` worktree branched from `harness-latest`. Resolve conflicts by keeping the harness hooks, then rerun.
+2. Build `smw`, `smw-leveledit` and `smw-worldedit` with `-DNO_NETWORK=ON -DSMW_NO_RLE=ON -DCMAKE_CXX_FLAGS="-O2 -ffp-contract=off"`.
 3. Check determinism: run `start_classic` twice. Make the editor goldens serially, twice, and require identical output.
 4. Generate goldens into a scratch `GOLDEN_ROOT` and run `parity.sh` and `editor_parity.sh` against them.
 5. For each divergence, match the first differing record to a commit in `commits.txt`. A shift in RNG count points at data loading or randomness. A shift in pixels points at gfx.
@@ -236,4 +244,4 @@ The port reads and writes `servers.yml` with `yaml-rust2` and emulates yaml-cpp 
 
 ## Next sync
 
-Run `tools/upstream_sync.sh` against the new upstream ref. Gate each port with `tools/sync_gate.sh`, and finish with `tools/verify_head.sh` (set `SMW_MAP_DUMP` for the map comparison). Generate editor goldens serially, twice. When the suites match, replace the committed goldens and regenerate the harness patches with `git diff master harness-<sha>`.
+Run `tools/upstream_sync.sh` against the new upstream ref. Gate each port with `tools/sync_gate.sh`, and finish with `tools/verify_head.sh` (set `SMW_MAP_DUMP` for the map comparison). Generate editor goldens serially, twice. When the suites match, replace the committed goldens and regenerate the harness patches with `git diff master harness-<sha>`. Land the C++ side as a PR from `harness-<sha>` into `harness-latest`, after updating `master` to the synced upstream commit.
