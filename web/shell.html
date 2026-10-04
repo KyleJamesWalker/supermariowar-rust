@@ -198,6 +198,9 @@
       outputElement.hidden = !outputElement.hidden;
       this.textContent = outputElement.hidden ? 'show log' : 'hide log';
     });
+    window.addEventListener('keydown', function (e) {
+      if (e.key === 'Backspace' && !e.target.closest('input, textarea, [contenteditable]')) e.preventDefault();
+    }, true);
     var stageElement = document.getElementById('stage');
     document.getElementById('fullscreen').addEventListener('click', function () {
       if (document.fullscreenElement) document.exitFullscreen();
