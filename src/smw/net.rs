@@ -721,6 +721,7 @@ impl NetClient {
 
         println!("reseed: {}", pkg.commonRandomSeed as i32);
         RandomNumberGenerator::generator().reseed(pkg.commonRandomSeed);
+        crate::smw::net_random::begin_setup();
 
         unsafe {
             netplay.player_disconnected = [false; 4];

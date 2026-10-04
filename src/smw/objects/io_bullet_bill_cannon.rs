@@ -43,25 +43,31 @@ impl CObjectTrait for IO_BulletBillCannon {
 
     fn update(&mut self) {
         self.m_timer -= 1;
-        if self.m_timer <= 0 {
-            self.set_new_timer();
-
-            let pos = Vec2s::new((self.ix as i32 + if self.m_vel < 0.0f32 { 32 } else { -32 }) as i16, self.iy);
-            unsafe {
-                objectcontainer[1].add(Ptr::new_box(MO_BulletBill::new(
-                    Ptr::from_mut(&mut rm.spr_hazard_bulletbill[if self.m_preview { 1 } else { 0 }]),
-                    Ptr::from_mut(&mut rm.spr_hazard_bulletbilldead),
-                    pos,
-                    self.m_vel,
-                    0,
-                    true,
-                )));
-                if_sound_on_play(&mut rm.sfx_bulletbillsound);
-            }
+        if self.m_timer <= 0 && !crate::smw::net_random::object_event(crate::smw::net_random::Ev::HazardTimer, &[self.iNetworkID]) {
+            self.fire();
         }
     }
 
     fn collide_player(&mut self, _player: Ptr<CPlayer>) -> bool {
         false
+    }
+}
+
+impl IO_BulletBillCannon {
+    pub fn fire(&mut self) {
+        self.set_new_timer();
+
+        let pos = Vec2s::new((self.ix as i32 + if self.m_vel < 0.0f32 { 32 } else { -32 }) as i16, self.iy);
+        unsafe {
+            objectcontainer[1].add(Ptr::new_box(MO_BulletBill::new(
+                Ptr::from_mut(&mut rm.spr_hazard_bulletbill[if self.m_preview { 1 } else { 0 }]),
+                Ptr::from_mut(&mut rm.spr_hazard_bulletbilldead),
+                pos,
+                self.m_vel,
+                0,
+                true,
+            )));
+            if_sound_on_play(&mut rm.sfx_bulletbillsound);
+        }
     }
 }

@@ -40,6 +40,10 @@ impl PU_SecretPowerup {
     }
 
     pub fn place(&mut self) {
+        if crate::smw::net_random::place_event(self.iNetworkID, 0) {
+            return;
+        }
+
         let mut ix = self.ix;
         let mut iy = self.iy;
         let collisionWidth = self.collisionWidth;

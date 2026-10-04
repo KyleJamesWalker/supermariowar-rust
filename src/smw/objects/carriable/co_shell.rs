@@ -14,7 +14,7 @@ use crate::common::player_kill_styles::KillStyle;
 use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::{eyecandy, spotlightManager};
+use crate::smw::gs_gameplay::{eyecandy, objectcontainer, spotlightManager};
 use crate::smw::objectgame::removeifprojectile;
 use crate::smw::objects::moving::mo_carried_object::{MO_CarriedObject, MO_CarriedObjectTrait};
 use crate::smw::objects::moving::moving_object::{io_moving_object_collision_detection_checksides, io_moving_object_update, IO_MovingObjectTrait};
@@ -589,6 +589,37 @@ impl CObjectTrait for CO_Shell {
     }
 }
 
+impl CO_Shell {
+    fn maybe_die(&mut self) {
+        if RANDOM_INT(5) == 0 {
+            self.die();
+        }
+    }
+}
+
+/// `net_random::Ev::ShellDeath`: the shell the game host rolled for, else the one the same player holds.
+pub fn net_shell_death(obj: Ptr<dyn CObjectTrait>, holder: i32) {
+    let mut shell = obj;
+    if shell.is_null() {
+        unsafe {
+            for &o in objectcontainer[1].list() {
+                let mut o = o;
+                if let Some(s) = o.as_any().downcast_mut::<CO_Shell>() {
+                    if s.state == 3 && !s.owner.is_null() && s.owner.globalID as i32 == holder {
+                        shell = o;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    if !shell.is_null() {
+        if let Some(s) = shell.as_any().downcast_mut::<CO_Shell>() {
+            s.maybe_die();
+        }
+    }
+}
+
 impl IO_MovingObjectTrait for CO_Shell {
     crate::impl_io_moving_object_plumbing!();
     fn as_carried_object(&mut self) -> Option<&mut dyn MO_CarriedObjectTrait> {
@@ -598,8 +629,11 @@ impl IO_MovingObjectTrait for CO_Shell {
     fn check_and_die(&mut self) {
         if (self.fDieOnMovingPlayerCollision && self.state == 1) || ((self.fDieOnHoldingPlayerCollision || self.fFlipped) && self.state == 3) {
             self.die();
-        } else if !self.fDieOnHoldingPlayerCollision && self.state == 3 && RANDOM_INT(5) == 0 {
-            self.die();
+        } else if !self.fDieOnHoldingPlayerCollision && self.state == 3 {
+            let holder = if self.owner.is_null() { -1 } else { self.owner.globalID as i32 };
+            if !crate::smw::net_random::event(crate::smw::net_random::Ev::ShellDeath, &[self.iNetworkID, holder]) {
+                self.maybe_die();
+            }
         }
     }
 

@@ -87,6 +87,10 @@ impl CO_Egg {
     }
 
     pub fn place_egg(&mut self) {
+        if crate::smw::net_random::place_event(self.iNetworkID, 0) {
+            return;
+        }
+
         self.relocatetimer = 0;
         unsafe {
             if game_values.gamemodesettings.egg.explode > 0 {

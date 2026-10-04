@@ -77,6 +77,10 @@ impl MO_CollectionCard {
     }
 
     pub fn place_card(&mut self) {
+        if crate::smw::net_random::place_event(self.iNetworkID, 0) {
+            return;
+        }
+
         self.timer = 0;
 
         let mut x: i16 = 0;

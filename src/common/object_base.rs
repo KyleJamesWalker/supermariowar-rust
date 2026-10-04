@@ -76,6 +76,28 @@ pub struct CObject {
     pub _alias: Aliased,
 }
 
+/// Not in the C++ (whose `iNetworkID` is unused): while nonzero, new objects get `context << 16 | n`, so a net
+/// game's clients give the same objects the same IDs (smw/net_random.rs).
+pub static mut g_networkIDContext: u32 = 0;
+static mut g_networkIDCount: u32 = 0;
+
+pub fn set_network_id_context(context: u32) {
+    unsafe {
+        g_networkIDContext = context;
+        g_networkIDCount = 0;
+    }
+}
+
+fn next_network_id() -> i32 {
+    unsafe {
+        if g_networkIDContext == 0 {
+            return 0;
+        }
+        g_networkIDCount += 1;
+        (g_networkIDContext << 16 | (g_networkIDCount & 0xFFFF)) as i32
+    }
+}
+
 impl CObject {
     pub fn new(nspr1: Ptr<gfxSprite>, pos: Vec2s) -> Self {
         let mut o = CObject {
@@ -95,7 +117,7 @@ impl CObject {
             spr: nspr1,
             state: 0,
             dead: false,
-            iNetworkID: 0,
+            iNetworkID: next_network_id(),
             _alias: Aliased::new(),
         };
 

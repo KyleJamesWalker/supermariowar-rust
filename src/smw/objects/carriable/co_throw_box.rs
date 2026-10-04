@@ -114,13 +114,21 @@ impl CO_ThrowBox {
 
         // Check to see if we should spawn an item here
         if self.iItem as i32 != NO_POWERUP {
-            createpowerup(self.iItem, Vec2s::new(self.ix, self.iy), self.velx < 0.0, false);
+            let args = [self.iNetworkID, self.iItem as i32, self.ix as i32, self.iy as i32, (self.velx < 0.0) as i32];
+            if !crate::smw::net_random::event(crate::smw::net_random::Ev::ThrowBoxItem, &args) {
+                createpowerup(self.iItem, Vec2s::new(self.ix, self.iy), self.velx < 0.0, false);
+            }
         }
     }
 
     pub fn has_kill_velocity(&self) -> bool {
         self.velx < -0.01 || self.velx > 0.01 || self.vely < -0.01 || self.vely > 2.0
     }
+}
+
+/// `net_random::Ev::ThrowBoxItem`: the box may already be gone, so the item and spot come with the event.
+pub fn net_release_item(args: &[i32]) {
+    createpowerup(args[1] as i16, Vec2s::new(args[2] as i16, args[3] as i16), args[4] != 0, false);
 }
 
 impl CObjectTrait for CO_ThrowBox {

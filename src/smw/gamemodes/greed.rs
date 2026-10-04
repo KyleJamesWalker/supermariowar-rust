@@ -12,6 +12,7 @@ use crate::smw::gamemodes::classic::CGM_Classic;
 use crate::smw::gamemodes::game_mode::*;
 use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::main::{score, score_cnt};
+use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::moving::mo_coin::MO_Coin;
 use crate::smw::player::CPlayer;
 
@@ -54,6 +55,24 @@ pub struct CGM_Greed {
 impl_base!(CGM_Greed => cgm_classic: CGM_Classic);
 
 //Greed - steal other players coins - if you have 0 coins, you're removed from the game!
+fn drop_coins(player: Ptr<CPlayer>, iDamage: i16, pos: Vec2s) {
+    unsafe {
+        for _k in 0..iDamage {
+            let speed: f32 = 7.0f32 + (RANDOM_INT(9) as f32) / 2.0f32;
+            let angle: f32 = -(RANDOM_INT(314) as f32) / 100.0f32;
+            let vel: Vec2f = Vec2f::new(speed * angle.cos(), speed * angle.sin());
+
+            objectcontainer[1].add(Ptr::new_box(MO_Coin::new(Ptr::from_mut(&mut rm.spr_coin), vel, pos, player.get_color_id(), player.get_team_id(), 1, 30, false)));
+        }
+    }
+}
+
+pub fn net_drop_coins(player: Ptr<CPlayer>, iDamage: i16, x: i16, y: i16) {
+    if !player.is_null() {
+        drop_coins(player, iDamage, Vec2s::new(x, y));
+    }
+}
+
 impl CGM_Greed {
     pub fn new() -> Self {
         let mut this = CGM_Greed { cgm_classic: CGM_Classic::new() };
@@ -82,12 +101,8 @@ impl CGM_Greed {
 
             let pos: Vec2s = Vec2s::new((player.center_x() as i32 - 16) as i16, (player.center_y() as i32 - 16) as i16);
 
-            for _k in 0..iDamage {
-                let speed: f32 = 7.0f32 + (RANDOM_INT(9) as f32) / 2.0f32;
-                let angle: f32 = -(RANDOM_INT(314) as f32) / 100.0f32;
-                let vel: Vec2f = Vec2f::new(speed * angle.cos(), speed * angle.sin());
-
-                objectcontainer[1].add(Ptr::new_box(MO_Coin::new(Ptr::from_mut(&mut rm.spr_coin), vel, pos, player.get_color_id(), player.get_team_id(), 1, 30, false)));
+            if !net_random::event(Ev::GreedCoins, &[player.globalID as i32, iDamage as i32, pos.x as i32, pos.y as i32]) {
+                drop_coins(player, iDamage, pos);
             }
 
             //Play warning sound if game is almost over

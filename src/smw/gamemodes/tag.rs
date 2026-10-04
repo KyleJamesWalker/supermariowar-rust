@@ -11,6 +11,7 @@ use crate::impl_base;
 use crate::smw::gamemodes::game_mode::*;
 use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::main::{score, score_cnt};
+use crate::smw::net_random::{self, Ev};
 use crate::smw::player::CPlayer;
 
 pub struct CGM_Tag {
@@ -50,6 +51,11 @@ unsafe fn tag_warning_needed(goal: i16) -> bool {
 //the "it" player is chosen at random.  Someone is
 //always "it".
 impl CGM_Tag {
+    fn reassign(&mut self) {
+        let fGetHighest = !self.fReverseScoring;
+        self.m_tagged = self.get_highest_score_player(fGetHighest);
+    }
+
     pub fn new() -> Self {
         let mut this = CGM_Tag { cgame_mode: CGameMode::new(), m_tagged: Ptr::null() };
         this.goal = 200;
@@ -92,9 +98,11 @@ impl CGameModeTrait for CGM_Tag {
         if self.gameover {
             self.displayplayertext();
         } else {
+            if self.m_tagged.is_null() && !net_random::event(Ev::TagReassign, &[]) {
+                self.reassign();
+            }
             if self.m_tagged.is_null() {
-                let fGetHighest = !self.fReverseScoring;
-                self.m_tagged = self.get_highest_score_player(fGetHighest);
+                return;
             }
 
             static mut counter: i16 = 0;
@@ -223,5 +231,24 @@ impl CGameModeTrait for CGM_Tag {
                 player.score().adjust_score((10 * iType as i32) as i16);
             }
         }
+    }
+}
+
+fn tag_mode() -> Option<&'static mut CGM_Tag> {
+    unsafe { game_values.gamemode.as_any().downcast_mut::<CGM_Tag>() }
+}
+
+pub fn net_reassign() {
+    if let Some(this) = tag_mode() {
+        if this.m_tagged.is_null() {
+            this.reassign();
+        }
+    }
+}
+
+pub fn net_state() -> String {
+    match tag_mode() {
+        Some(this) if !this.m_tagged.is_null() => format!("tagged{}", this.m_tagged.globalID),
+        _ => "tagged-".to_string(),
     }
 }

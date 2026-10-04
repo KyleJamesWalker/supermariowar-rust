@@ -11,6 +11,7 @@ use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::classic::{cgm_classic_init, cgm_classic_playerextraguy, cgm_classic_playerkilledplayer, cgm_classic_playerkilledself, CGM_Classic};
 use crate::smw::gs_gameplay::objectcontainer;
+use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::moving::mo_podobo::MO_Podobo;
 use crate::smw::objects::overmap::wo_bowser_fire::OMO_BowserFire;
 use crate::smw::objects::overmap::wo_thwomp::OMO_Thwomp;
@@ -36,6 +37,64 @@ impl CGM_Survival {
         this.gamemode = game_mode_survival;
         this.szModeName = "Survival".to_string();
         this
+    }
+}
+
+impl CGM_Survival {
+    fn spawn_enemy(&mut self) {
+        unsafe {
+            self.ratetimer += 1;
+            if self.ratetimer == 10 {
+                self.ratetimer = 0;
+
+                self.rate -= 1;
+                if self.rate < game_values.gamemodesettings.survival.density {
+                    self.rate = game_values.gamemodesettings.survival.density;
+                }
+            }
+
+            //Randomly choose an enemy from the weighted list
+            let iRandEnemy: i32 = RANDOM_INT(self.iEnemyWeightCount as i32) + 1;
+            self.iSelectedEnemy = 0;
+            let mut iWeightCount: i32 = game_values.gamemodesettings.survival.enemyweight[self.iSelectedEnemy as usize] as i32;
+
+            while iWeightCount < iRandEnemy {
+                self.iSelectedEnemy += 1;
+                iWeightCount += game_values.gamemodesettings.survival.enemyweight[self.iSelectedEnemy as usize] as i32;
+            }
+
+            if 0 == self.iSelectedEnemy {
+                let x = RANDOM_INT((App::screenWidth as f32 * 0.92f32) as i32) as i16;
+                let nspeed = game_values.gamemodesettings.survival.speed as f32 / 2.0f32 + (RANDOM_INT(20) as f32) / 10.0f32;
+                objectcontainer[2].add(Ptr::new_box(OMO_Thwomp::new(Ptr::from_mut(&mut rm.spr_thwomp), x, nspeed)));
+                self.timer = (RANDOM_INT(21) - 10 + self.rate as i32) as i16;
+            } else if 1 == self.iSelectedEnemy {
+                let x = RANDOM_INT((App::screenWidth as f32 * 0.95f32) as i32) as i16;
+                let nspeed = -((RANDOM_INT(9) as f32) / 2.0f32) - 8.0f32;
+                objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(Ptr::from_mut(&mut rm.spr_podobo), Vec2s::new(x, App::screenHeight as i16), nspeed, -1, -1, -1, false)));
+                self.timer = (RANDOM_INT(21) - 10 + self.rate as i32 - 20) as i16;
+            } else {
+                let dSpeed: f32 = ((RANDOM_INT(21) + 20) as f32) / 10.0f32;
+                let dVel: f32 = if RANDOM_BOOL() { dSpeed } else { -dSpeed };
+
+                let mut x: i16 = -54;
+                if dVel < 0.0 {
+                    x = 694;
+                }
+
+                let y = RANDOM_INT((App::screenHeight as f32 * 0.93f32) as i32) as i16;
+                objectcontainer[2].add(Ptr::new_box(OMO_BowserFire::new(Ptr::from_mut(&mut rm.spr_bowserfire), Vec2s::new(x, y), Vec2f::new(dVel, 0.0f32), -1, -1, -1)));
+                self.timer = (RANDOM_INT(21) - 10 + self.rate as i32) as i16;
+            }
+        }
+    }
+}
+
+pub fn net_spawn_enemy() {
+    unsafe {
+        if let Some(this) = game_values.gamemode.as_any().downcast_mut::<CGM_Survival>() {
+            this.spawn_enemy();
+        }
     }
 }
 
@@ -69,50 +128,8 @@ impl CGameModeTrait for CGM_Survival {
 
         unsafe {
             self.timer -= 1;
-            if self.timer <= 0 {
-                self.ratetimer += 1;
-                if self.ratetimer == 10 {
-                    self.ratetimer = 0;
-
-                    self.rate -= 1;
-                    if self.rate < game_values.gamemodesettings.survival.density {
-                        self.rate = game_values.gamemodesettings.survival.density;
-                    }
-                }
-
-                //Randomly choose an enemy from the weighted list
-                let iRandEnemy: i32 = RANDOM_INT(self.iEnemyWeightCount as i32) + 1;
-                self.iSelectedEnemy = 0;
-                let mut iWeightCount: i32 = game_values.gamemodesettings.survival.enemyweight[self.iSelectedEnemy as usize] as i32;
-
-                while iWeightCount < iRandEnemy {
-                    self.iSelectedEnemy += 1;
-                    iWeightCount += game_values.gamemodesettings.survival.enemyweight[self.iSelectedEnemy as usize] as i32;
-                }
-
-                if 0 == self.iSelectedEnemy {
-                    let x = RANDOM_INT((App::screenWidth as f32 * 0.92f32) as i32) as i16;
-                    let nspeed = game_values.gamemodesettings.survival.speed as f32 / 2.0f32 + (RANDOM_INT(20) as f32) / 10.0f32;
-                    objectcontainer[2].add(Ptr::new_box(OMO_Thwomp::new(Ptr::from_mut(&mut rm.spr_thwomp), x, nspeed)));
-                    self.timer = (RANDOM_INT(21) - 10 + self.rate as i32) as i16;
-                } else if 1 == self.iSelectedEnemy {
-                    let x = RANDOM_INT((App::screenWidth as f32 * 0.95f32) as i32) as i16;
-                    let nspeed = -((RANDOM_INT(9) as f32) / 2.0f32) - 8.0f32;
-                    objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(Ptr::from_mut(&mut rm.spr_podobo), Vec2s::new(x, App::screenHeight as i16), nspeed, -1, -1, -1, false)));
-                    self.timer = (RANDOM_INT(21) - 10 + self.rate as i32 - 20) as i16;
-                } else {
-                    let dSpeed: f32 = ((RANDOM_INT(21) + 20) as f32) / 10.0f32;
-                    let dVel: f32 = if RANDOM_BOOL() { dSpeed } else { -dSpeed };
-
-                    let mut x: i16 = -54;
-                    if dVel < 0.0 {
-                        x = 694;
-                    }
-
-                    let y = RANDOM_INT((App::screenHeight as f32 * 0.93f32) as i32) as i16;
-                    objectcontainer[2].add(Ptr::new_box(OMO_BowserFire::new(Ptr::from_mut(&mut rm.spr_bowserfire), Vec2s::new(x, y), Vec2f::new(dVel, 0.0f32), -1, -1, -1)));
-                    self.timer = (RANDOM_INT(21) - 10 + self.rate as i32) as i16;
-                }
+            if self.timer <= 0 && !net_random::event(Ev::SurvivalEnemy, &[]) {
+                self.spawn_enemy();
             }
         }
     }

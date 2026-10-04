@@ -52,6 +52,10 @@ impl CO_PhantoKey {
     }
 
     pub fn place_key(&mut self) {
+        if crate::smw::net_random::place_event(self.iNetworkID, 0) {
+            return;
+        }
+
         self.relocatetimer = 0;
 
         let mut x: i16 = 0;

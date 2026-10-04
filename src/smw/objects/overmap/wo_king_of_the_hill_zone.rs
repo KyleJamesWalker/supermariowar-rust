@@ -81,6 +81,10 @@ impl OMO_KingOfTheHillZone {
     }
 
     pub fn place_area(&mut self) {
+        if crate::smw::net_random::place_event(self.iNetworkID, 0) {
+            return;
+        }
+
         self.relocatetimer = 0;
         self.colorID = -1;
         self.iPlayerID = -1;

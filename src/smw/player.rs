@@ -5,7 +5,7 @@ use crate::common::eyecandy_styles::{AwardStyle, SpawnStyle};
 use crate::common::game::App;
 use crate::common::game_mode::{game_mode_bonus, game_mode_shyguytag, game_mode_star};
 use crate::common::game_values::if_sound_on_play;
-use crate::common::gameplay_styles::StarStyle;
+use crate::common::gameplay_styles::{BoomerangStyle, StarStyle};
 use crate::common::gfx::gfx_palette::{self, PlayerPalette};
 use crate::common::gfx::gfx_sprite::{gfxSprite, ClipEdge};
 use crate::common::gfx::SpriteStrip;
@@ -30,6 +30,7 @@ use crate::smw::gamemodes::tag::CGM_Tag;
 use crate::smw::gs_gameplay::{eyecandy, g_iWinningPlayer, noncolcontainer, objectcontainer, spotlightManager, swap_players};
 use crate::smw::main::{g_iSwirlSpawnLocations, players};
 use crate::smw::net::netplay;
+use crate::smw::net_random::{self, Ev};
 use crate::smw::objectgame::{check_secret, PowerupType};
 use crate::smw::objects::carriable::co_bomb::CO_Bomb;
 use crate::smw::objects::carriable::co_kuribo_shoe::CO_KuriboShoe;
@@ -776,35 +777,121 @@ impl CPlayer {
             if *self.respawncounter.get() <= 0 {
                 *self.respawncounter.get() = 0;
 
-                if self.find_spawn_point() {
-                    //Make sure spawn point isn't inside a tile
-                    let this = self.this();
-                    self.collisions.checksides(this.get());
-
-                    self.state = PlayerState::Spawning;
-
-                    if game_values.spawnstyle == SpawnStyle::Instant {
-                        eyecandy[2].emplace(EC_SingleAnimation::new(
-                            Ptr::from_mut(&mut rm.spr_fireballexplosion),
-                            (self.ix as i32 + HALFPW - 16) as i16,
-                            (self.iy as i32 + HALFPH - 16) as i16,
-                            3,
-                            8,
-                        ));
-                    } else if game_values.spawnstyle == SpawnStyle::Door {
-                        eyecandy[0].emplace(EC_Door::new(
-                            Ptr::from_mut(&mut rm.spr_spawndoor),
-                            Ptr::from_mut(&mut self.sprites.get()[self.sprite_state as usize]),
-                            (self.ix as i32 + HALFPW - 16) as i16,
-                            (self.iy as i32 + HALFPH - 16) as i16,
-                            1,
-                            self.iSrcOffsetX,
-                            self.colorID,
-                        ));
-                    }
+                if !net_random::event(Ev::Respawn, &[self.globalID as i32]) {
+                    self.net_respawn();
                 }
             }
         }
+    }
+
+    pub fn net_respawn(&mut self) {
+        unsafe {
+            if self.find_spawn_point() {
+                //Make sure spawn point isn't inside a tile
+                let this = self.this();
+                self.collisions.checksides(this.get());
+
+                self.state = PlayerState::Spawning;
+
+                if game_values.spawnstyle == SpawnStyle::Instant {
+                    eyecandy[2].emplace(EC_SingleAnimation::new(
+                        Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                        (self.ix as i32 + HALFPW - 16) as i16,
+                        (self.iy as i32 + HALFPH - 16) as i16,
+                        3,
+                        8,
+                    ));
+                } else if game_values.spawnstyle == SpawnStyle::Door {
+                    eyecandy[0].emplace(EC_Door::new(
+                        Ptr::from_mut(&mut rm.spr_spawndoor),
+                        Ptr::from_mut(&mut self.sprites.get()[self.sprite_state as usize]),
+                        (self.ix as i32 + HALFPW - 16) as i16,
+                        (self.iy as i32 + HALFPH - 16) as i16,
+                        1,
+                        self.iSrcOffsetX,
+                        self.colorID,
+                    ));
+                }
+            }
+        }
+    }
+
+    pub fn net_podobo_rain(&mut self) {
+        unsafe {
+            let numPodobos = (RANDOM_INT(6) + 10) as i16;
+            for _iPodobo in 0..numPodobos {
+                let x = RANDOM_INT((App::screenWidth as f32 * 0.95f32) as i32) as i16;
+                let vy = -((RANDOM_INT(9) as f32) / 2.0f32) - 9.0f32;
+                objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(
+                    Ptr::from_mut(&mut rm.spr_podobo),
+                    Vec2s::new(x, App::screenHeight as i16),
+                    vy,
+                    self.globalID,
+                    self.teamID,
+                    self.colorID,
+                    false,
+                )));
+            }
+            if_sound_on_play(&mut rm.sfx_thunder);
+        }
+    }
+
+    pub fn net_throw_boomerang(&mut self, ix: i32, iy: i32, facingRight: bool) {
+        unsafe {
+            objectcontainer[2].add(Ptr::new_box(MO_Boomerang::new(
+                Ptr::from_mut(&mut rm.spr_boomerang),
+                Vec2s::new(ix as i16, (iy + HALFPH - 16) as i16),
+                4,
+                facingRight,
+                5,
+                self.globalID,
+                self.teamID,
+                self.colorID,
+            )));
+            self.projectiles += 1;
+
+            if game_values.boomeranglimit > 0 {
+                self.decrease_projectile_limit();
+            }
+        }
+    }
+
+    pub fn net_throw_bomb(&mut self, ix: i32, iy: i32, facingRight: bool) {
+        let this = self.this();
+        unsafe {
+            let ttl = (RANDOM_INT(120) + 120) as i16;
+            let mut bomb = Ptr::new_box(CO_Bomb::new(
+                Ptr::from_mut(&mut rm.spr_bomb),
+                Vec2s::new((ix + HALFPW - 14) as i16, (iy - 8) as i16),
+                Vec2f::new(if facingRight { 3.0 } else { -3.0 }, -3.0),
+                4,
+                self.globalID,
+                self.teamID,
+                self.colorID,
+                ttl,
+            ));
+
+            if self.accept_item(bomb.get().as_carried_ptr()) {
+                bomb.owner = this;
+                bomb.get().move_to_owner();
+            }
+
+            objectcontainer[1].add(bomb);
+            self.projectiles += 1;
+
+            self.hammertimer = 90;
+
+            if_sound_on_play(&mut rm.sfx_fireball);
+
+            if game_values.bombslimit > 0 {
+                self.decrease_projectile_limit();
+            }
+        }
+    }
+
+    pub fn net_choose_warp_exit(&mut self) {
+        let this = self.this();
+        self.warpstatus.choose_warp_exit(this.get());
     }
 
     pub fn update_respawning(&mut self) {
@@ -955,21 +1042,9 @@ impl CPlayer {
                     self.set_powerup(5);
                 }
                 PowerupType::Podobo => {
-                    let numPodobos = (RANDOM_INT(6) + 10) as i16;
-                    for _iPodobo in 0..numPodobos {
-                        let x = RANDOM_INT((App::screenWidth as f32 * 0.95f32) as i32) as i16;
-                        let vy = -((RANDOM_INT(9) as f32) / 2.0f32) - 9.0f32;
-                        objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(
-                            Ptr::from_mut(&mut rm.spr_podobo),
-                            Vec2s::new(x, App::screenHeight as i16),
-                            vy,
-                            self.globalID,
-                            self.teamID,
-                            self.colorID,
-                            false,
-                        )));
+                    if !net_random::event(Ev::PodoboRain, &[self.globalID as i32]) {
+                        self.net_podobo_rain();
                     }
-                    if_sound_on_play(&mut rm.sfx_thunder);
                 }
                 PowerupType::Bomb => {
                     self.powerup = -1;
@@ -1635,20 +1710,9 @@ impl CPlayer {
                     self.decrease_projectile_limit();
                 }
             } else if PlayerAction::Boomerang == self.action {
-                objectcontainer[2].add(Ptr::new_box(MO_Boomerang::new(
-                    Ptr::from_mut(&mut rm.spr_boomerang),
-                    Vec2s::new(ix as i16, (iy + HALFPH - 16) as i16),
-                    4,
-                    self.is_facing_right(),
-                    5,
-                    self.globalID,
-                    self.teamID,
-                    self.colorID,
-                )));
-                self.projectiles += 1;
-
-                if game_values.boomeranglimit > 0 {
-                    self.decrease_projectile_limit();
+                let args = [self.globalID as i32, ix, iy, self.is_facing_right() as i32];
+                if game_values.boomerangstyle != BoomerangStyle::Random || !net_random::event(Ev::Boomerang, &args) {
+                    self.net_throw_boomerang(ix, iy, self.is_facing_right());
                 }
             } else if PlayerAction::Iceblast == self.action {
                 if self.is_facing_right() {
@@ -1679,33 +1743,8 @@ impl CPlayer {
                     self.decrease_projectile_limit();
                 }
             } else if PlayerAction::Bomb == self.action {
-                let facingRight = self.is_facing_right();
-                let ttl = (RANDOM_INT(120) + 120) as i16;
-                let mut bomb = Ptr::new_box(CO_Bomb::new(
-                    Ptr::from_mut(&mut rm.spr_bomb),
-                    Vec2s::new((ix + HALFPW - 14) as i16, (iy - 8) as i16),
-                    Vec2f::new(if facingRight { 3.0 } else { -3.0 }, -3.0),
-                    4,
-                    self.globalID,
-                    self.teamID,
-                    self.colorID,
-                    ttl,
-                ));
-
-                if self.accept_item(bomb.get().as_carried_ptr()) {
-                    bomb.owner = this;
-                    bomb.get().move_to_owner();
-                }
-
-                objectcontainer[1].add(bomb);
-                self.projectiles += 1;
-
-                self.hammertimer = 90;
-
-                if_sound_on_play(&mut rm.sfx_fireball);
-
-                if game_values.bombslimit > 0 {
-                    self.decrease_projectile_limit();
+                if !net_random::event(Ev::Bomb, &[self.globalID as i32, ix, iy, self.is_facing_right() as i32]) {
+                    self.net_throw_bomb(ix, iy, self.is_facing_right());
                 }
             } else if PlayerAction::SpinCape == self.action {
                 self.cape.spin(this.get());

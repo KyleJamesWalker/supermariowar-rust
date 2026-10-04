@@ -12,6 +12,7 @@ use crate::common::random_number_generator::{RANDOM_BOOL, RANDOM_INT};
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::chase::CGM_Chase;
+use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::overmap::over_map_object::{io_over_map_object_draw, IO_OverMapObject, IO_OverMapObjectTrait};
 use crate::smw::player::CPlayer;
 
@@ -31,7 +32,26 @@ pub struct OMO_Phanto {
 }
 impl_base!(OMO_Phanto => io_over_map_object: IO_OverMapObject);
 
+pub fn net_return(mut obj: Ptr<dyn crate::common::object_base::CObjectTrait>) {
+    if !obj.is_null() {
+        if let Some(o) = obj.as_any().downcast_mut::<OMO_Phanto>() {
+            o.return_offscreen();
+        }
+    }
+}
+
 impl OMO_Phanto {
+    pub fn change_speed(&mut self) {
+        self.iSpeedTimer = 0;
+        self.dReactionSpeed = (0.05f32 + RANDOM_INT(20) as f32 / 100.0f32) * self.dSpeedRatio;
+    }
+
+    pub fn return_offscreen(&mut self) {
+        self.set_xi(RANDOM_INT(App::screenWidth) as i16);
+        let yi = if RANDOM_BOOL() { -(self.ih as i32) - CRUNCHMAX } else { App::screenHeight };
+        self.set_yi(yi as i16);
+    }
+
     pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s, dVelX: f32, dVelY: f32, r#type: i16) -> Self {
         let mut this = OMO_Phanto {
             io_over_map_object: IO_OverMapObject::new(nspr, pos, 1, 0, 30, 32, 1, 0, ((r#type as i32) << 5) as i16, 0, 32, 32),
@@ -83,9 +103,8 @@ impl CObjectTrait for OMO_Phanto {
         }
 
         self.iSpeedTimer += 1;
-        if self.iSpeedTimer > 62 {
-            self.iSpeedTimer = 0;
-            self.dReactionSpeed = (0.05f32 + RANDOM_INT(20) as f32 / 100.0f32) * self.dSpeedRatio;
+        if self.iSpeedTimer > 62 && !net_random::object_event(Ev::Wander, &net_random::wander_args(self.iNetworkID, self.fx, self.fy, 0.0)) {
+            self.change_speed();
         }
 
         unsafe {
@@ -151,9 +170,9 @@ impl CObjectTrait for OMO_Phanto {
                         self.velx = 0.0f32;
 
                         // Randomly position phanto off screen
-                        self.set_xi(RANDOM_INT(App::screenWidth) as i16);
-                        let yi = if RANDOM_BOOL() { -(self.ih as i32) - CRUNCHMAX } else { App::screenHeight };
-                        self.set_yi(yi as i16);
+                        if !net_random::object_event(Ev::PhantoReturn, &[self.iNetworkID]) {
+                            self.return_offscreen();
+                        }
                     }
                 }
             }
