@@ -1,0 +1,7 @@
+# Build: harness-latest (b610d997, contains upstream 5693918f) without the fixes; Apple clang 21, arm64 macOS.
+# CMake build type empty, which upstream's CMakeLists maps to -O3 -DNDEBUG; extra flags -g -fno-omit-frame-pointer -fsanitize=address,undefined.
+# Line numbers are from the harness tree (upstream lines differ by the harness hooks).
+# Replay: star_multi_4cpu.txt (here), 4 CPUs, Star mode, Star Type 'Multi Star'; UBSan reports and continues (one report per source location)
+
+src/smw/gamemodes/Star.cpp:106:18: runtime error: index 3 out of bounds for type 'CPlayer *[3]'
+src/smw/gamemodes/Star.cpp:185:25: runtime error: index 3 out of bounds for type 'CPlayer *[3]'

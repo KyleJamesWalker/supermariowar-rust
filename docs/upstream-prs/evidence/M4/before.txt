@@ -1,0 +1,21 @@
+# Build: harness-latest (b610d997, contains upstream 5693918f) without the fixes; Apple clang 21, arm64 macOS.
+# CMake build type empty, which upstream's CMakeLists maps to -O3 -DNDEBUG; extra flags -g -fno-omit-frame-pointer -fsanitize=address,undefined.
+# Line numbers are from the harness tree (upstream lines differ by the harness hooks).
+# Session: tools/editor_replays/worldedit/stage_menus.txt (bonus house stage saved); aborted at frame 162 of 287
+
+src/worldeditor/worldeditor.cpp:3662:56: runtime error: index 24 out of bounds for type 'int[22]'
+    #0 0x00010071f47c in SaveStage(short) worldeditor.cpp:3662
+    #1 0x00010070290c in editor_stage() worldeditor.cpp:4031
+    #2 0x0001006e4cdc in inner_main() worldeditor.cpp:1019
+
+==99611==ERROR: AddressSanitizer: global-buffer-overflow on address 0x000100bf1280 at pc 0x00010071f5e8 bp 0x00016f7f19c0 sp 0x00016f7f19b8
+READ of size 4 at 0x000100bf1280 thread T0
+    #0 0x00010071f5e4 in SaveStage(short) worldeditor.cpp:3662
+    #1 0x00010070290c in editor_stage() worldeditor.cpp:4031
+    #2 0x0001006e4cdc in inner_main() worldeditor.cpp:1019
+    #3 0x0001006da984 in main worldeditor.cpp:458
+    #4 0x00018e33c4e0 in start+0x1b4c (dyld:arm64e+0x204e0)
+
+0x000100bf1280 is located 8 bytes after global variable 'g_iNumGameModeSettings' defined in 'src/worldeditor/worldeditor.cpp' (0x000100bf1220) of size 88
+SUMMARY: AddressSanitizer: global-buffer-overflow worldeditor.cpp:3662 in SaveStage(short)
+SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior src/worldeditor/worldeditor.cpp:3662:56 

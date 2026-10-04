@@ -1,0 +1,14 @@
+# Build: harness-latest (b610d997, contains upstream 5693918f) without the fixes; Apple clang 21, arm64 macOS.
+# CMake build type empty, which upstream's CMakeLists maps to -O3 -DNDEBUG; extra flags -g -fno-omit-frame-pointer -fsanitize=address,undefined.
+# Line numbers are from the harness tree (upstream lines differ by the harness hooks).
+# Session: delete_stage_vehicles.txt (here): delete stage 1 of 'Big JM_Mixed River', whose 5 vehicles all belong to it; aborted at frame 79 of 140
+
+==53900==ERROR: AddressSanitizer: container-overflow on address 0x606000053cd8 at pc 0x000104cc7508 bp 0x00016b2319f0 sp 0x00016b2319e8
+READ of size 8 at 0x606000053cd8 thread T0
+    #0 0x000104cc7504 in editor_stage() worldeditor.cpp:4162
+    #1 0x000104ca4cdc in inner_main() worldeditor.cpp:1019
+    #2 0x000104c9a984 in main worldeditor.cpp:458
+    #3 0x00018e33c4e0 in start+0x1b4c (dyld:arm64e+0x204e0)
+
+0x... is located 24 bytes inside of 64-byte region (vehiclelist's buffer: inside its capacity, past its size)
+SUMMARY: AddressSanitizer: container-overflow worldeditor.cpp:4162 in editor_stage()

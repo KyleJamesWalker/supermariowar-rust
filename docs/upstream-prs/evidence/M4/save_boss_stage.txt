@@ -1,0 +1,102 @@
+# New world "zzboss" with one Boss minigame stage (stage editor mode field set to mode 26), then save.
+#@ frames=200
+#@ shots=120,199
+#@ files=data/worlds/zzboss.txt
+
+# New 12x10 world "zzboss"
+5 down N
+6 up N
+8 down Z
+9 up Z
+11 down Z
+12 up Z
+14 down B
+15 up B
+17 down O
+18 up O
+20 down S
+21 up S
+23 down S
+24 up S
+29 down Return
+30 up Return
+32 down 1
+33 up 1
+35 down 2
+36 up 2
+38 down Return
+39 up Return
+41 down 1
+42 up 1
+44 down 0
+45 up 0
+47 down Return
+48 up Return
+
+# Stage 1: set the mode field to the Boss minigame
+55 down E
+56 up E
+58 down N
+59 up N
+64 down Down
+65 up Down
+67 down Return
+68 up Return
+70 down Right
+71 up Right
+73 down Right
+74 up Right
+76 down Right
+77 up Right
+79 down Right
+80 up Right
+82 down Right
+83 up Right
+85 down Right
+86 up Right
+88 down Right
+89 up Right
+91 down Right
+92 up Right
+94 down Right
+95 up Right
+97 down Right
+98 up Right
+100 down Right
+101 up Right
+103 down Right
+104 up Right
+106 down Right
+107 up Right
+109 down Right
+110 up Right
+112 down Right
+113 up Right
+115 down Right
+116 up Right
+118 down Right
+119 up Right
+121 down Right
+122 up Right
+124 down Right
+125 up Right
+127 down Right
+128 up Right
+130 down Right
+131 up Right
+133 down Right
+134 up Right
+136 down Right
+137 up Right
+139 down Right
+140 up Right
+142 down Return
+143 up Return
+
+# Leave the stage editor (saves the stage), leave stage mode, save the world
+152 down Escape
+153 up Escape
+162 down E
+163 up E
+172 down S
+173 up S

@@ -1,0 +1,25 @@
+# Before fix: harness-latest (b610d997, contains upstream 5693918f), Apple clang 21, arm64 macOS
+# flags: -g -fno-omit-frame-pointer -fsanitize=address,undefined (on top of upstream's non-Debug -O3 -DNDEBUG; Apple clang's "undefined" group omits vptr)
+# replay: tools/repros/boss_frenzy_card.txt; aborted at frame 756 of 8000
+
+==22325==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x61700000b270 at pc 0x000100503740 bp 0x00016fc53b90 sp 0x00016fc53b88
+WRITE of size 8 at 0x61700000b270 thread T0
+    #0 0x00010050373c in CGM_Frenzy::setFrenzyOwner(CPlayer*) Frenzy.cpp:38
+    #1 0x0001005bc7e8 in MO_FrenzyCard::collide(CPlayer*) MO_FrenzyCard.cpp:44
+    #2 0x0001002104b0 in handleP2ObjCollisions() GSGameplay.cpp:830
+    #3 0x000100236144 in GameplayState::update_world() GSGameplay.cpp:2471
+    #4 0x000100236e84 in GameplayState::update() GSGameplay.cpp:2539
+    #5 0x0001001aa890 in gameloop() main.cpp:157
+    #6 0x0001001adce4 in main_game() main.cpp:424
+    #7 0x0001001ad274 in main main.cpp:314
+    #8 0x00018e33c4e0 in start+0x1b4c (dyld:arm64e+0x204e0)
+
+0x61700000b270 is located 0 bytes after 752-byte region [0x61700000af80,0x61700000b270)
+allocated by thread T0 here:
+    #0 0x000101a9c150 in _Znwm+0x74 (libclang_rt.asan_osx_dynamic.dylib:arm64e+0x50150)
+    #1 0x0001001ac1c8 in create_gamemodes() main.cpp:258
+    #2 0x0001001ada40 in main_game() main.cpp:383
+    #3 0x0001001ad274 in main main.cpp:314
+    #4 0x00018e33c4e0 in start+0x1b4c (dyld:arm64e+0x204e0)
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow Frenzy.cpp:38 in CGM_Frenzy::setFrenzyOwner(CPlayer*)

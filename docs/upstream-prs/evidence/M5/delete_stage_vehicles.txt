@@ -1,0 +1,38 @@
+# Delete stage 1 of 'Big JM_Mixed River', whose five vehicles all belong to stage 1, then save.
+#@ frames=140
+#@ shots=60,100,139
+#@ files=data/worlds/Big JM_Mixed River.txt,data/worlds/ZZworldeditor.txt
+
+# Page to 'Big JM_Mixed River' (the ninth world in the editor's list)
+5 down PageDown
+6 up PageDown
+10 down PageDown
+11 up PageDown
+15 down PageDown
+16 up PageDown
+20 down PageDown
+21 up PageDown
+25 down PageDown
+26 up PageDown
+30 down PageDown
+31 up PageDown
+35 down PageDown
+36 up PageDown
+40 down PageDown
+41 up PageDown
+
+# Stage mode, open stage 1, delete it through the confirm dialog, leave stage mode
+50 down E
+51 up E
+60 mousedown right 16 16
+61 mouseup right 16 16
+70 mousedown left 500 456
+71 mouseup left 500 456
+80 mousedown left 275 266
+81 mouseup left 275 266
+90 down E
+91 up E
+
+# Save
+100 down S
+101 up S

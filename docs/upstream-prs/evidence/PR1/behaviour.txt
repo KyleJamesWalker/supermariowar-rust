@@ -1,0 +1,25 @@
+# Intentional behaviour changes, Release harness build (build-reference.sh flags) without vs with the fixes.
+# None of the committed goldens (42 game replays, 13 editor sessions) change; see parity.txt.
+
+## M1 boss_frenzy_card (tools/repros): dumps identical for all 8000 frames.
+## M2 star_multi_4cpu (M2/): dumps identical for all 4800 frames (the out-of-bounds slot never matched a player).
+
+## M2 star_multi_3cpu (M2/): 3 CPUs, Multi Star (2 stars)
+CO_Star::placeStar calls over the 3600-frame replay:  before 5516   after 2
+dump diverges from the first gameplay frame (792): RNG calls in that frame 53 before, 41 after;
+the before build reassigns both stars to the top ranked players and re-places them on every frame.
+
+## M5 delete_stage_vehicles (M5/): delete stage 1 of 'Big JM_Mixed River' (5 vehicles, all on stage 1)
+editor dump at frame 80:  before vehicles=2   after vehicles=0
+saved world file, #Vehicles section:
+  before: 2
+          5,0,17,4,5,8,1,0,0
+          4,0,4,11,5,8,1,0,0
+  after:  0
+(the two survivors are the 2nd and 4th vehicles, skipped by the loop; they now point at the stage that took index 0)
+
+## M4 save_boss_stage (M4/): new world with one Boss minigame stage, saved
+stage line in the saved world file (settings follow the end-stage field):
+  before: 0,The Arctic,1001,50,1,0,Tour Stop 1,0,0,2,5,0,0,0,0   (7 settings: whatever followed the array in this build)
+  after:  0,The Arctic,1001,50,1,0,Tour Stop 1,0,0,2,5           (3 settings: boss type, difficulty, hit points)
+stage_menus saves a bonus house (mode 24), whose settings are never written, so its output does not change.

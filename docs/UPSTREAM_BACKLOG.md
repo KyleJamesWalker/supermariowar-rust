@@ -18,13 +18,13 @@ The port reproduces these so replays match the C++ byte for byte.
 
 | ID | Bug | Port location | Status | Upstream |
 |---|---|---|---|---|
-| M1 | In the boss minigame, picking up a Frenzy card `static_cast`s the game mode to `CGM_Frenzy` and writes past the end of the non-Frenzy mode object | `src/smw/objects/moving/mo_frenzy_card.rs:90` | found | |
-| M2 | Star mode with four players reads `starPlayer[3]` out of bounds; the bytes after the array form a non-null pointer | `src/smw/gamemodes/star.rs:59` | found | |
+| M1 | In the boss minigame, picking up a Frenzy card `static_cast`s the game mode to `CGM_Frenzy` and writes past the end of the non-Frenzy mode object | `src/smw/objects/moving/mo_frenzy_card.rs:90` | PR open | [#480](https://github.com/mmatyas/supermariowar/pull/480) |
+| M2 | Star mode with four players reads `starPlayer[3]` out of bounds; the bytes after the array form a non-null pointer. With two or three players the same loop reassigns every star each frame, so steals never stick | applied here ahead of upstream (`PROGRESS.md`, Deliberate deviations) | PR open | [#480](https://github.com/mmatyas/supermariowar/pull/480) (`0f45d19e`) |
 | M3 | `CMap` block lookups and AI map reads past the map edge read neighbouring fields | `src/common/map.rs:751` (`cpp_byte`), `src/smw/ai.rs` (`cmap_byte`) | found | |
-| M4 | World editor: saving a tour stop in the bonus house or a minigame mode (24-27) indexes `g_iNumGameModeSettings` out of bounds | `src/worldeditor/worldeditor.rs:3303` | found | |
-| M5 | World editor: deleting a stage keeps iterating `vehiclelist` with iterators invalidated by `RemoveVehicleFromTile`, skipping elements and visiting stale slots | `src/worldeditor/worldeditor.rs:3478` | found | |
+| M4 | World editor: saving a tour stop in the bonus house or a minigame mode (24-27) indexes `g_iNumGameModeSettings` out of bounds | `src/worldeditor/worldeditor.rs:3303` | PR open | [#480](https://github.com/mmatyas/supermariowar/pull/480) |
+| M5 | World editor: deleting a stage keeps iterating `vehiclelist` with iterators invalidated by `RemoveVehicleFromTile`, skipping elements and visiting stale slots | `src/worldeditor/worldeditor.rs:3478` | PR open | [#480](https://github.com/mmatyas/supermariowar/pull/480) |
 | M6 | Reads of uninitialized values: race goal position (`placeRaceGoal`), an AI constructor field, map loader entries for IDs missing from the tile table, level editor `MapBlock::iSettings` (makes the editor's saved output vary between runs), and a game package's default constructor | `src/smw/objects/overmap/wo_race_goal.rs:52`, `src/smw/ai.rs:404`, `src/common/map/map_reader18xx.rs:43`, `src/leveleditor/leveleditor.rs:5182`, `src/smw/network/protocol_game_packages.rs:242` | found | |
-| M7 | The tournament scoreboard draws skin frames that were never loaded; Release builds skip them silently | fixed in `d63bf67` | found | |
+| M7 | The tournament scoreboard draws skin frames that were never loaded; Release builds skip them silently | fixed in `d63bf67` | fixed upstream in `d70e4dc3` | |
 
 ## Logic
 
@@ -34,6 +34,7 @@ The port reproduces these so replays match the C++ byte for byte.
 | L2 | `getBoolean(scaleMax, positiveThreshold)` gets an out-of-range threshold; replay `opt_gameplay` trips the assert at frame 1209 in a debug build. The caller is not traced yet | `src/common/random_number_generator.rs:43` | found | |
 | L3 | Map thumbnails miss hazards and platform shadows drawn by position, which still go to `blitdest` after `5c979393` | see `PROGRESS.md`, Known C++ issues | found | |
 | L4 | `sdl3` branch (`1971b11c`): the map foreground layer is drawn wrong on native SDL3. `spr_frontmap` is an opaque PNG converted to the ARGB8888 screen format, which SDL3 gives `SDL_BLENDMODE_BLEND`, and it is RLE-encoded. The first map shows the foreground's magenta colour key, because the RLE encoder ignores the key on blended surfaces (X2); later maps show the previous map's foreground, because the branch's `predrawforeground` fills the surface without the lock that `5693918f` added on `master`, so the stale RLE data is drawn. With that lock merged, every map shows magenta. Fix: drop `SDL_SetSurfaceRLE` (P5), or set `SDL_BLENDMODE_NONE` on opaque converted images. Modelled with a standalone SDL 3.4.18 program (`sdl2-compat-convert-blend.md`); not run in the branch build, which needs SDL3_mixer | not in the port (SDL2) | found | file as an issue on the `sdl3` branch |
+| L5 | `GetScoreRankedPlayerList` bubble-sorts the global `players` vector instead of `outPlayers` (since `e63375d7`), so multi star mode hands out stars in player order and the player order changes mid-game | applied here ahead of upstream (`PROGRESS.md`, Deliberate deviations) | PR open | [#480](https://github.com/mmatyas/supermariowar/pull/480) (`04766e2c`) |
 
 ## Web build
 

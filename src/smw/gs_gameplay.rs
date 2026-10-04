@@ -154,7 +154,7 @@ impl GameplayState {
         }
     }
 
-    /// Replay-harness `G`/`P`/`O` records (docs/REPLAY.md).
+    /// Replay-harness `G`/`P`/`T`/`O` records (docs/REPLAY.md).
     pub fn harness_dump(&mut self, out: &mut impl Write) -> std::io::Result<()> {
         unsafe {
             let gm = game_values.gamemode;
@@ -179,6 +179,9 @@ impl GameplayState {
                     p.powerup,
                     p.inair as i32
                 )?;
+            }
+            if let Some(line) = crate::smw::gamemodes::star::harness_record() {
+                writeln!(out, "{}", line)?;
             }
 
             writeln!(

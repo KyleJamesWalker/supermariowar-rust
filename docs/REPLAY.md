@@ -2,7 +2,7 @@
 
 The C++ game is rebuilt as a deterministic, headless, scriptable reference that writes one text block of game state per frame. The Rust port must read the same replay scripts and emit byte-identical dumps; `tools/diffreplay.py` reports the first frame where they diverge.
 
-- Reference build: [supermariowar-cpp-reference](https://github.com/KyleJamesWalker/supermariowar-cpp-reference), branch `harness-latest` (upstream `5693918f` plus the game and editor harness), checked out at `~/work/supermariowar-cpp-reference` and built into `build/`. `tools/cpp-harness.patch` and `tools/editor-harness.patch` are the same hooks as diffs against upstream.
+- Reference build: [supermariowar-cpp-reference](https://github.com/KyleJamesWalker/supermariowar-cpp-reference), branch `harness-latest` (upstream `5693918f` plus the game and editor harness and two Star mode fixes taken ahead of upstream, see `PROGRESS.md`), checked out at `~/work/supermariowar-cpp-reference` and built into `build/`. `tools/cpp-harness.patch` and `tools/editor-harness.patch` are the same hooks as diffs against upstream.
 - Scripts: `tools/replays/*.txt`. Golden output: `tools/golden/<script>/dump.txt` plus `frame_<n>.png` screenshots. A replay that tests a deliberate deviation from the C++ (`PROGRESS.md`) has a Rust golden in `tools/golden_rust/<script>/` instead (`RUST_GOLDEN=1 make_golden.sh`), which `parity.sh` uses and marks "(Rust golden)".
 
 ## Building the reference
@@ -135,6 +135,7 @@ F <frame> <state>
 M <menu> focus=<i> modifying=<0|1>
 G mode=<m> gameover=<0|1> winner=<w>
 P id=<id> team=<t> ix=<ix> iy=<iy> fx=<f> fy=<f> velx=<f> vely=<f> state=<s> score=<n> powerup=<p> inair=<0|1>
+T type=<t> holders=<id>,<id>,<id>
 O noncol=<n> obj0=<n> obj1=<n> obj2=<n> ec0=<n> ec1=<n> ec2=<n>
 S <sound event>
 C <kind> <fields>
@@ -147,6 +148,7 @@ R calls=<n> last=<u32>
 | `M` | state `menu` | `<menu>` is `MenuState::mCurrentMenu`, named in the table below. `focus` is the index of `UI_Menu::m_currentFocus` in `controls` (insertion order of `AddControl`/`AddNonControl`), or -1. `modifying` is `UI_Menu::fModifyingItem`. |
 | `G` | state `gameplay` | `mode` = `(int)game_values.gamemode->gamemode` (`GameModeType`: classic 0, frag 1, ... ; bonus 999, minigames 1000-1002). `gameover`, `winner` = `gamemode->gameover`, `gamemode->winningteam`. |
 | `P` | state `gameplay` | one line per entry of the global `players` vector, in vector order. `id` = `globalID`, `team` = `teamID`, `ix`/`iy` shorts, `fx`/`fy`/`velx`/`vely` floats, `state` = `(int)PlayerState` (Waiting 0, Spawning 1, Dead 2, Ready 3, EnteringWarpUp 4 ... LeavingWarpRight 11), `score` = `score->score` (0 if null), `powerup` short, `inair` bool. |
+| `T` | state `gameplay`, Star mode | `type` = `(int)CGM_Star::iCurrentModeType` (`StarStyle`: Ztar 0, Shine 1, Multi 2). `holders` = the `globalID` of `starPlayer[0..2]`, -1 for an empty slot. Ztar and Shine use slot 0; Multi uses one slot per star (players - 1). |
 | `O` | state `gameplay` | element counts of `noncolcontainer`, `objectcontainer[0..2]`, `eyecandy[0..2]` at the end of the frame (dead objects not yet cleaned count). |
 | `S` | seeded runs | one line per sound command or virtual-mixer event since the previous block, in the order they happened (see Sound). Events before frame 0 land in frame 0. |
 | `C` | net games, Rust only | one line per random outcome, death or score change since the previous block. `powerup type=<t> x=<x> y=<y>`: a `createpowerup` call, with the position passed in (a powerup block's top-left corner). `<event> args=<a,...> out=<...>`: one `net_random::Ev` (`src/smw/net_random.rs`), its arguments, the objects it added (`<objectType>/<movingObjectType>@<x>,<y>`, `powerup<t>`) and its result (a position, a timer, a player's spot and state). `death p=<id> style=<s> removed=<0|1>`: a `CPlayer::die` call, or (`removed=1`) a player a team removal took out. `scores <team scores>` and `gameover winner=<team>`: the team scores and the end of the game, written at the end of a frame when they changed. `net_game_compare.py --spawns` compares them across clients. Never written outside a net game, so single-player dumps match the C++ goldens. |
@@ -243,6 +245,7 @@ Map list order is deterministic: maps live in a `std::multimap` keyed by name.
 - `RandomNumberGenerator`: `callCount()`, `lastValue()`, `resetCallCount()`.
 - `sfx`: `sfx_ticks` clock hook, `sfx_ignore_channel_failure`, the virtual mixer (`sfx_virtual_mixer`, `sfx_virtual_advance()`), `sfx_events` for `S` lines, and the data-relative file name on `sfxSound`/`sfxMusic`.
 - `CMakeLists.txt`, `gfx.cpp`, `gfxFont.cpp`, `gfxSprite.cpp`: the `SMW_NO_RLE` option.
+- `Star.cpp`, `GameMode.cpp`: the multi star fixes from upstream PR branch `fix/memory-safety` (`PROGRESS.md`, Deliberate deviations).
 - `uimenu`: `UI_Menu::currentFocusIndex()`. `GSMenu`: menu name/focus accessors and `SMW_MAP`. `player.h`: `friend struct HarnessAccess`.
 
 ## Golden outputs
@@ -258,6 +261,7 @@ Hand-written scripts:
 | `start_classic` | 2530 | 1 | Default 2-player Classic on `0smw`; player 1 runs, jumps, uses turbo and powerup keys; several stomps |
 | `map_blockpiles` | 2530 | 7 | `SMW_MAP=Block Piles`, both players moving |
 | `frenzy_cpu` | 2780 | 42 | Players 3 and 4 set to CPU in the main menu, Frenzy picked in the game settings Mode field, `Block Piles` |
+| `star_multi_2p`, `_3p`, `_4p` | 3600, 3600, 4800 | 501-503 | 2, 3 and 4 CPUs, Star mode with Star Type Multi Star, `Wacky Woods`. Regression replays for the multi star fixes (`PROGRESS.md`): 2p and 3p include steals whose holder holds for hundreds of frames in the `T` line |
 
 Generated by `tools/gen_replays.py` (rerun it, then `make_golden.sh`, after editing):
 

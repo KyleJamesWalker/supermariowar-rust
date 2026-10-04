@@ -1,0 +1,31 @@
+# Sanitizer sweep, harness-latest (b610d997) before and after the four fixes (branch fix/memory-safety).
+# -fsanitize=address,undefined on upstream's non-Debug -O3 -DNDEBUG; UBSan recovers, ASan aborts (rc=134).
+# Every game replay (tools/replays, tools/repros), every world editor session (tools/editor_replays/worldedit),
+# plus M2/star_multi_*.txt and M5/delete_stage_vehicles.txt. Only runs with a report are listed.
+
+## Before
+game boss_frenzy_card rc=134 last=756    1 ==99068==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x61700000b270 at pc 0x0001030fb740 bp 0x00016d05bad0 sp 0x00016d05bac8;
+game collection_card_block_y_minus_1 rc=0 last=4999    1 src/common/map.h:208:28: runtime error: index -1 out of bounds for type 'TileType[15]';   1 src/common/map.h:212:11: runtime error: index -1 out of bounds for type 'IO_Block *[15]';
+game cpu_health rc=0 last=3599    1 src/common/map.h:208:28: runtime error: index -19 out of bounds for type 'TileType[20][15]';   1 src/common/map.h:212:11: runtime error: index -19 out of bounds for type 'IO_Block *[20][15]';
+game mini_pipe rc=0 last=2999    2 src/smw/gamemodes/MiniPipe.h:22:16: runtime error: load of value 190, which is not a valid value for type 'bool';
+game opt_gameplay rc=0 last=3599    1 src/common/map.h:208:28: runtime error: index -19 out of bounds for type 'TileType[20][15]';   1 src/common/map.h:212:11: runtime error: index -19 out of bounds for type 'IO_Block *[20][15]';
+game players_h_n_c_c rc=0 last=2999    1 src/common/map.h:208:28: runtime error: index -19 out of bounds for type 'TileType[20][15]';   1 src/common/map.h:212:11: runtime error: index -19 out of bounds for type 'IO_Block *[20][15]';
+worldedit stage_menus rc=134 last=162    1 ==99611==ERROR: AddressSanitizer: global-buffer-overflow on address 0x000100bf1280 at pc 0x00010071f5e8 bp 0x00016f7f19c0 sp 0x00016f7f19b8;   1 src/worldeditor/worldeditor.cpp:3662:56: runtime error: index 24 out of bounds for type 'int[22]';
+worldedit stages_vehicles rc=0 last=419    1 src/common/input.cpp:130:106: runtime error: shift exponent 1073741578 is too large for 32-bit type 'int';
+worldedit sync_coverage rc=0 last=270    1 src/common/input.cpp:130:106: runtime error: shift exponent 1073741578 is too large for 32-bit type 'int';
+game star_multi_4cpu (M2/before.txt) rc=0 last=4799  Star.cpp:106 and Star.cpp:185 index 3 out of bounds for type 'CPlayer *[3]'
+worldedit delete_stage_vehicles (M5/before.txt) rc=134 last=79  container-overflow worldeditor.cpp:4162
+
+## After (59 runs incl. M4/save_boss_stage.txt, all rc=0, all reach their last frame)
+game collection_card_block_y_minus_1 rc=0 last=4999    1 src/common/map.h:208:28: runtime error: index -1 out of bounds for type 'TileType[15]';   1 src/common/map.h:212:11: runtime error: index -1 out of bounds for type 'IO_Block *[15]';
+game cpu_health rc=0 last=3599    1 src/common/map.h:208:28: runtime error: index -19 out of bounds for type 'TileType[20][15]';   1 src/common/map.h:212:11: runtime error: index -19 out of bounds for type 'IO_Block *[20][15]';
+game mini_pipe rc=0 last=2999    2 src/smw/gamemodes/MiniPipe.h:22:16: runtime error: load of value 190, which is not a valid value for type 'bool';
+game opt_gameplay rc=0 last=3599    1 src/common/map.h:208:28: runtime error: index -19 out of bounds for type 'TileType[20][15]';   1 src/common/map.h:212:11: runtime error: index -19 out of bounds for type 'IO_Block *[20][15]';
+game players_h_n_c_c rc=0 last=2999    1 src/common/map.h:208:28: runtime error: index -19 out of bounds for type 'TileType[20][15]';   1 src/common/map.h:212:11: runtime error: index -19 out of bounds for type 'IO_Block *[20][15]';
+worldedit stages_vehicles rc=0 last=419    1 src/common/input.cpp:130:106: runtime error: shift exponent 1073741578 is too large for 32-bit type 'int';
+worldedit sync_coverage rc=0 last=270    1 src/common/input.cpp:130:106: runtime error: shift exponent 1073741578 is too large for 32-bit type 'int';
+
+## Not in this PR: map.h index -1/-19 (map edge reads), MiniPipe.h uninitialized bool, input.cpp shift exponent
+
+## -fsanitize=vptr build (smw only; the editors do not link the game mode typeinfo), boss_frenzy_card after the fixes
+game boss_frenzy_card rc=0 last=7999, no reports

@@ -1,0 +1,7 @@
+# M7 (tournament/world scoreboard draws unloaded skin frames 4, 8, 9): not present on upstream 5693918f
+# Replay: tools/repros/flow_world_bonus.txt (12000 frames), Release harness build (build-reference.sh flags)
+harness-latest (contains 5693918f) as is:          0 "SDL_BlitSurface error" lines
+harness-latest with d70e4dc3 reverted (src/common): 92 "SDL_BlitSurface error" lines   (the count the port saw at a7f7e25)
+# d70e4dc3 "Do not load player skins again when the necessary frames are present" keeps the full skins
+# loaded for the game when the world map asks for the menu skin again, so the scoreboard frames exist.
+# Sanitizer sweep (ASan+UBSan, all 47 game replays incl. flow_tour, flow_tournament, flow_world_bonus): no blit errors.

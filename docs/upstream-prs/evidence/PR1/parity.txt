@@ -1,0 +1,61 @@
+# Behaviour parity: harness-latest + the four fixes, built with build-reference.sh flags (Release, -O2 -ffp-contract=off, NO_NETWORK, SMW_NO_RLE)
+# against the committed goldens, which come from the same build without the fixes.
+# Game replays: run exit | dump diff (diffreplay.py) | last screenshot (every screenshot set: diffreplay.py --shots exit 0)
+
+cov_tour_options run=0 | OK: 3000 frames identical | frame 2999: OK 0 differing pixels of 307200
+cpu_chase run=0 | OK: 3600 frames identical | frame 3599: OK 0 differing pixels of 307200
+cpu_chicken run=0 | OK: 3600 frames identical | frame 3599: OK 0 differing pixels of 307200
+cpu_classic run=0 | OK: 3600 frames identical | frame 3599: OK 0 differing pixels of 307200
+cpu_coins run=0 | OK: 3600 frames identical | frame 3599: OK 0 differing pixels of 307200
+cpu_collection run=0 | OK: 3600 frames identical | frame 3599: OK 0 differing pixels of 307200
+cpu_ctf run=0 | OK: 3600 frames identical | frame 3599: OK 0 differing pixels of 307200
+cpu_domination run=0 | OK: 3600 frames identical | frame 3599: OK 0 differing pixels of 307200
+cpu_eggs run=0 | OK: 3600 frames identical | frame 3599: OK 0 differing pixels of 307200
+cpu_frag run=0 | OK: 3600 frames identical | frame 3599: OK 0 differing pixels of 307200
+cpu_frenzy run=0 | OK: 3600 frames identical | frame 3599: OK 0 differing pixels of 307200
+cpu_greed run=0 | OK: 3600 frames identical | frame 3599: OK 0 differing pixels of 307200
+cpu_health run=0 | OK: 3600 frames identical | frame 3599: OK 0 differing pixels of 307200
+cpu_jail run=0 | OK: 3600 frames identical | frame 3599: OK 0 differing pixels of 307200
+cpu_kingofthehill run=0 | OK: 3600 frames identical | frame 3599: OK 0 differing pixels of 307200
+cpu_owned run=0 | OK: 3600 frames identical | frame 3599: OK 0 differing pixels of 307200
+cpu_race run=0 | OK: 3600 frames identical | frame 3599: OK 0 differing pixels of 307200
+cpu_shyguytag run=0 | OK: 3600 frames identical | frame 3599: OK 0 differing pixels of 307200
+cpu_star run=0 | OK: 3600 frames identical | frame 3599: OK 0 differing pixels of 307200
+cpu_stomp run=0 | OK: 3600 frames identical | frame 3599: OK 0 differing pixels of 307200
+cpu_survival run=0 | OK: 3600 frames identical | frame 3599: OK 0 differing pixels of 307200
+cpu_tag run=0 | OK: 3600 frames identical | frame 3599: OK 0 differing pixels of 307200
+cpu_timelimit run=0 | OK: 3600 frames identical | frame 3599: OK 0 differing pixels of 307200
+flow_tour run=0 | OK: 5000 frames identical | frame 4999: OK 0 differing pixels of 307200
+flow_tournament run=0 | OK: 6000 frames identical | frame 5999: OK 0 differing pixels of 307200
+flow_world run=0 | OK: 6000 frames identical | frame 5999: OK 0 differing pixels of 307200
+frenzy_cpu run=0 | OK: 2780 frames identical | frame 2250: OK 0 differing pixels of 307200
+fuzz_a run=0 | OK: 5000 frames identical | frame 4999: OK 0 differing pixels of 307200
+fuzz_b run=0 | OK: 5000 frames identical | frame 4999: OK 0 differing pixels of 307200
+fuzz_c run=0 | OK: 5000 frames identical | frame 4999: OK 0 differing pixels of 307200
+map_blockpiles run=0 | OK: 2530 frames identical | frame 1300: OK 0 differing pixels of 307200
+menu_nav run=0 | OK: 816 frames identical | frame 815: OK 0 differing pixels of 307200
+mini_boxes run=0 | OK: 3000 frames identical | frame 2999: OK 0 differing pixels of 307200
+mini_hammerboss run=0 | OK: 3000 frames identical | frame 2999: OK 0 differing pixels of 307200
+mini_pipe run=0 | OK: 3000 frames identical | frame 2999: OK 0 differing pixels of 307200
+opt_eyecandy run=0 | OK: 3600 frames identical | frame 3599: OK 0 differing pixels of 307200
+opt_gameplay run=0 | OK: 3600 frames identical | frame 3599: OK 0 differing pixels of 307200
+opt_items run=0 | OK: 3600 frames identical | frame 3599: OK 0 differing pixels of 307200
+players_c_h_c_n run=0 | OK: 3000 frames identical | frame 2999: OK 0 differing pixels of 307200
+players_h_n_c_c run=0 | OK: 3000 frames identical | frame 2999: OK 0 differing pixels of 307200
+start_classic run=0 | OK: 2530 frames identical | frame 1500: OK 0 differing pixels of 307200
+teams_2v2 run=0 | OK: 3000 frames identical | frame 2999: OK 0 differing pixels of 307200
+
+# Editor sessions: run exit | dump diff | screenshots | saved files byte-identical
+leveledit/hazards_move_save rc=0 | OK: 329 frames identical | shots 10/10 | files 3/3
+leveledit/objects_save rc=0 | OK: 270 frames identical | shots 10/10 | files 2/2
+leveledit/platforms_save rc=0 | OK: 316 frames identical | shots 11/11 | files 2/2
+leveledit/screenshot_find rc=0 | OK: 200 frames identical | shots 4/4 | files 10/10
+leveledit/smoke rc=0 | OK: 119 frames identical | shots 5/5 | files 1/1
+leveledit/tiles_save rc=0 | OK: 242 frames identical | shots 11/11 | files 3/3
+leveledit/types_backgrounds rc=0 | OK: 170 frames identical | shots 6/6 | files 4/4
+worldedit/navigate_resize rc=0 | OK: 260 frames identical | shots 10/10 | files 2/2
+worldedit/paint_save rc=0 | OK: 140 frames identical | shots 6/6 | files 3/3
+worldedit/smoke rc=0 | OK: 40 frames identical | shots 2/2 | files 1/1
+worldedit/stage_menus rc=0 | OK: 287 frames identical | shots 19/19 | files 2/2
+worldedit/stages_vehicles rc=0 | OK: 420 frames identical | shots 16/16 | files 2/2
+worldedit/sync_coverage rc=0 | OK: 271 frames identical | shots 22/22 | files 2/2
