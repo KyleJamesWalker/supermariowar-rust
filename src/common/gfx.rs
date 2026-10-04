@@ -229,6 +229,30 @@ pub fn gfx_save_screen_bmp(path: &str) -> bool {
     }
 }
 
+/// Appends the screen's 640x480 pixels to `out` as raw ARGB8888 (BGRA bytes on little-endian).
+pub fn gfx_write_screen_raw(out: &mut impl std::io::Write) -> std::io::Result<()> {
+    unsafe {
+        let argb = SDL_PixelFormatEnum::SDL_PIXELFORMAT_ARGB8888 as u32;
+        let surface = if (*(*screen).format).format == argb {
+            screen
+        } else {
+            SDL_ConvertSurfaceFormat(screen, argb, 0)
+        };
+        if surface.is_null() {
+            return Err(std::io::Error::other("cannot convert the screen surface"));
+        }
+        SDL_LockSurface(surface);
+        let (w, rows, pitch) = ((*surface).w as usize * 4, (*surface).h as usize, (*surface).pitch as usize);
+        let pixels = std::slice::from_raw_parts((*surface).pixels as *const u8, pitch * rows);
+        let result = (0..rows).try_for_each(|y| out.write_all(&pixels[y * pitch..y * pitch + w]));
+        SDL_UnlockSurface(surface);
+        if surface != screen {
+            SDL_FreeSurface(surface);
+        }
+        result
+    }
+}
+
 fn load_skin(path: &Path) -> Result<gfxSprite, String> {
     let skin = ImageLoader::new(path).without_color_key().without_optimization().try_create()?;
 
