@@ -73,4 +73,6 @@ Super Mario War (C++ reference and its Rust port, both on sdl2-compat), headless
 | world map menu (`flow_world`, 6000 frames) | 18.9 ms | 1.2 ms |
 | heavy battle map (`gg_death_valley`, 1214 frames) | 11.6 ms | 0.9 ms |
 
-Disabling RLE is not an acceptable workaround for us. SDL3's RLE alpha blit rounds differently from the non-RLE blend, which changes the rendered pixels.
+On an idle machine (2026-10-04) the costs are 2.5 ms and 0.25 ms for `flow_world`, 9.5 ms and 0.6 ms for `gg_death_valley`.
+
+RLE also changes the picture. In 10 of our 44 replays, maps with a foreground layer show its magenta colour key as opaque pixels with RLE on. With RLE off, and in the Emscripten build (real SDL2) with RLE on, those pixels are transparent. The other screenshots are identical with and without RLE. The port can build without RLE (`no_rle` feature, `SMW_RLE=0`).
