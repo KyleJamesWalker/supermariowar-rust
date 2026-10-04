@@ -51,7 +51,8 @@ Both change the protocol, so open an issue first.
 | ID | Bug | Port fix | Status | Upstream |
 |---|---|---|---|---|
 | N1 | Powerup blocks release different items on different clients: each rolls from its own RNG copy, and a joiner that misses a host's block hit falls one draw behind. Reproduced between two C++ clients with `tools/ref/net_game_blocks` (2 of 5 runs) | the host decides block contents (`7a0a43d`); `PROGRESS.md`, Netplay deviations | found | |
-| N2 | Other random outcomes can differ between clients the same way: frenzy cards, coin placement, stomp/survival enemies, random shell deaths, respawn points | in progress on `netplay-random-sync` | found | |
+| N2 | Every other random outcome can differ between clients the same way: frenzy and collection cards, stomp/survival enemies, coin and objective relocations, hazard timers, respawn points and warp exits, shell breaks, and more (survey in `PROGRESS.md`) | the host decides every random outcome (`5fee1c4`, `src/smw/net_random.rs`); replaces N1's packages | found | |
+| N3 | Game packets index `players` by player number; once a client's game ends and the vector shrinks, later packets index past it (undefined behaviour; the port panicked) | look players up by global ID (`3a883b4`) | found | |
 
 ## Proposals
 
