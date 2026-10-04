@@ -1,0 +1,20 @@
+# Before fix: harness-latest (b610d997, contains upstream 5693918f), Apple clang 21, arm64 macOS
+# flags: -g -fno-omit-frame-pointer -fsanitize=address,undefined,vptr -fno-sanitize-recover=undefined,vptr (on top of upstream's non-Debug -O3 -DNDEBUG)
+# replay: tools/repros/boss_frenzy_card.txt (boss minigame, fire boss, Link901_DoomsDay.map, 3 CPUs); aborted at frame 756 of 8000
+
+src/smw/objects/moving/MO_FrenzyCard.cpp:44:9: runtime error: downcast of address 0x61700000af80 which does not point to an object of type 'CGM_Frenzy'
+0x61700000af80: note: object is of type 'CGM_Boss_MiniGame'
+ 00 00 00 00  90 47 40 01 01 00 00 00  ff ff 00 be e9 03 00 00  00 be 05 00 be be be be  42 6f 73 73
+              ^~~~~~~~~~~~~~~~~~~~~~~
+              vptr for 'CGM_Boss_MiniGame'
+    #0 0x000100e27d6c in MO_FrenzyCard::collide(CPlayer*) MO_FrenzyCard.cpp:44
+    #1 0x000100a1be18 in handleP2ObjCollisions() GSGameplay.cpp:830
+    #2 0x000100a39cf4 in GameplayState::update_world() GSGameplay.cpp:2471
+    #3 0x000100a3aa24 in GameplayState::update() GSGameplay.cpp:2539
+    #4 0x0001009c2a78 in gameloop() main.cpp:157
+    #5 0x0001009c5ea4 in main_game() main.cpp:424
+    #6 0x0001009c4e2c in main main.cpp:314
+    #7 0x00018e33c4e0 in start+0x1b4c (dyld:arm64e+0x204e0)
+
+SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior src/smw/objects/moving/MO_FrenzyCard.cpp:44:9 
+  GS_GAME

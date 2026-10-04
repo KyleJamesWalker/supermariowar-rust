@@ -1,0 +1,14 @@
+# After fix: same tree and replay as before-*.txt, with the MO_FrenzyCard.cpp change applied.
+
+## -fsanitize=address,undefined,vptr -fno-sanitize-recover=undefined,vptr
+exit status 0; 0 sanitizer reports in stdout; dump reaches frame 7999 (all 8000 frames)
+
+## -fsanitize=address,undefined
+exit status 0; 0 sanitizer reports in stdout; dump reaches frame 7999 (all 8000 frames)
+
+## Both sanitizer builds produce identical dumps (diffreplay.py: "OK: 8000 frames identical").
+## Frames 0-756 are identical to the aborted pre-fix run.
+
+## lldb on the -fsanitize=address,undefined build, same replay:
+breakpoint MO_FrenzyCard::collide   hit 9 times
+breakpoint CGM_Frenzy::setFrenzyOwner hit 0 times

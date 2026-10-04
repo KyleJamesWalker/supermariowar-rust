@@ -1,0 +1,14 @@
+# Plain upstream build of fix/memory-safety (0f45d19e): README's 'cmake ..' + build, default options, Apple clang 21, arm64 macOS.
+# Full build: exit 0. The three changed files rebuilt at upstream/master and at the branch; warnings per file (line numbers stripped):
+
+## upstream/master
+   1 src/smw/gamemodes/Star.cpp: warning: comparison of integers of different signs: 'short' and 'size_type' (aka '
+  14 src/worldeditor/worldeditor.cpp: warning: 'sprintf' is deprecated: This function is provided for compatibility
+   1 src/worldeditor/worldeditor.cpp: warning: comparison of integers of different signs: 'short' and 'size_t' (aka
+
+## fix/memory-safety
+   1 src/smw/gamemodes/Star.cpp: warning: comparison of integers of different signs: 'short' and 'size_type' (aka '
+  14 src/worldeditor/worldeditor.cpp: warning: 'sprintf' is deprecated: This function is provided for compatibility
+   1 src/worldeditor/worldeditor.cpp: warning: comparison of integers of different signs: 'short' and 'size_t' (aka
+
+# Identical: no new warnings. (Star.cpp's sign-compare is isplayerstar(), Star.cpp:290, unchanged.)

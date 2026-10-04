@@ -1,0 +1,106 @@
+# Sort fix (04766e2c) evidence. 'before' = harness-latest + the four PR1 fixes (0f45d19e), 'after' = + 04766e2c.
+# Release builds with build-reference.sh flags. Replays: evidence/M2/replays/star_multi_{2p,3p,4p}.txt (Multi Star, CPUs).
+
+## Trace: a stderr line at the end of GetScoreRankedPlayerList (scratch only): returned id:score list, then the global players order.
+## Star mode passes fGetHighest = fReverseScoring = false, so the returned list should be ascending by score.
+
+### 2p before: rank calls=2 returned-unsorted=0 global-orders-seen=['1,0,']
+RANK out=0:5,1:5, global=1,0,
+RANK out=1:4,0:5, global=1,0,
+
+### 2p after: rank calls=2 returned-unsorted=0 global-orders-seen=['0,1,']
+RANK out=1:5,0:5, global=0,1,
+RANK out=0:4,1:5, global=0,1,
+
+### 3p before: rank calls=2 returned-unsorted=1 global-orders-seen=['1,2,0,', '2,0,1,']
+RANK out=0:5,1:5,2:5, global=2,0,1,
+RANK out=2:5,0:5,1:4, global=1,2,0,
+
+### 3p after: rank calls=2 returned-unsorted=0 global-orders-seen=['0,1,2,']
+RANK out=2:5,0:5,1:5, global=0,1,2,
+RANK out=2:4,0:5,1:5, global=0,1,2,
+
+### 4p before: rank calls=2 returned-unsorted=1 global-orders-seen=['1,0,2,3,', '3,0,2,1,']
+RANK out=0:5,1:5,2:5,3:5, global=3,0,2,1,
+RANK out=3:5,0:5,2:5,1:4, global=1,0,2,3,
+
+### 4p after: rank calls=3 returned-unsorted=0 global-orders-seen=['0,1,2,3,']
+RANK out=3:5,0:5,2:5,1:5, global=0,1,2,3,
+RANK out=0:4,2:5,1:5,3:5, global=0,1,2,3,
+RANK out=0:4,1:4,2:5,3:5, global=0,1,2,3,
+
+## The trace does not change the game: traced 'before' dumps equal the untraced 'before' dumps for all three replays.
+
+## Dumps (P lines are written in global players order)
+2p: before P-order changes=0, after P-order changes=0; before vs after: DIVERGED at frame 638 (block 638; actual frame 638)
+3p: before P-order changes=1, after P-order changes=0; before vs after: DIVERGED at frame 652 (block 652; actual frame 652)
+4p: before P-order changes=1, after P-order changes=0; before vs after: DIVERGED at frame 666 (block 666; actual frame 666)
+(2p: the reorder happens before the first dumped gameplay frame, so the P order never changes inside the dump.)
+
+## Golden parity with all five fixes: 42 game replays (dumps identical, all screenshot sets exit 0), 13 editor sessions:
+cov_tour_options run=0 | OK: 3000 frames identical | shots exit=0
+cpu_chase run=0 | OK: 3600 frames identical | shots exit=0
+cpu_chicken run=0 | OK: 3600 frames identical | shots exit=0
+cpu_classic run=0 | OK: 3600 frames identical | shots exit=0
+cpu_coins run=0 | OK: 3600 frames identical | shots exit=0
+cpu_collection run=0 | OK: 3600 frames identical | shots exit=0
+cpu_ctf run=0 | OK: 3600 frames identical | shots exit=0
+cpu_domination run=0 | OK: 3600 frames identical | shots exit=0
+cpu_eggs run=0 | OK: 3600 frames identical | shots exit=0
+cpu_frag run=0 | OK: 3600 frames identical | shots exit=0
+cpu_frenzy run=0 | OK: 3600 frames identical | shots exit=0
+cpu_greed run=0 | OK: 3600 frames identical | shots exit=0
+cpu_health run=0 | OK: 3600 frames identical | shots exit=0
+cpu_jail run=0 | OK: 3600 frames identical | shots exit=0
+cpu_kingofthehill run=0 | OK: 3600 frames identical | shots exit=0
+cpu_owned run=0 | OK: 3600 frames identical | shots exit=0
+cpu_race run=0 | OK: 3600 frames identical | shots exit=0
+cpu_shyguytag run=0 | OK: 3600 frames identical | shots exit=0
+cpu_star run=0 | OK: 3600 frames identical | shots exit=0
+cpu_stomp run=0 | OK: 3600 frames identical | shots exit=0
+cpu_survival run=0 | OK: 3600 frames identical | shots exit=0
+cpu_tag run=0 | OK: 3600 frames identical | shots exit=0
+cpu_timelimit run=0 | OK: 3600 frames identical | shots exit=0
+flow_tour run=0 | OK: 5000 frames identical | shots exit=0
+flow_tournament run=0 | OK: 6000 frames identical | shots exit=0
+flow_world run=0 | OK: 6000 frames identical | shots exit=0
+frenzy_cpu run=0 | OK: 2780 frames identical | shots exit=0
+fuzz_a run=0 | OK: 5000 frames identical | shots exit=0
+fuzz_b run=0 | OK: 5000 frames identical | shots exit=0
+fuzz_c run=0 | OK: 5000 frames identical | shots exit=0
+map_blockpiles run=0 | OK: 2530 frames identical | shots exit=0
+menu_nav run=0 | OK: 816 frames identical | shots exit=0
+mini_boxes run=0 | OK: 3000 frames identical | shots exit=0
+mini_hammerboss run=0 | OK: 3000 frames identical | shots exit=0
+mini_pipe run=0 | OK: 3000 frames identical | shots exit=0
+opt_eyecandy run=0 | OK: 3600 frames identical | shots exit=0
+opt_gameplay run=0 | OK: 3600 frames identical | shots exit=0
+opt_items run=0 | OK: 3600 frames identical | shots exit=0
+players_c_h_c_n run=0 | OK: 3000 frames identical | shots exit=0
+players_h_n_c_c run=0 | OK: 3000 frames identical | shots exit=0
+start_classic run=0 | OK: 2530 frames identical | shots exit=0
+teams_2v2 run=0 | OK: 3000 frames identical | shots exit=0
+worldedit/navigate_resize rc=0 | OK: 260 frames identical | shots 10/10 | files 2/2
+worldedit/paint_save rc=0 | OK: 140 frames identical | shots 6/6 | files 3/3
+worldedit/smoke rc=0 | OK: 40 frames identical | shots 2/2 | files 1/1
+worldedit/stage_menus rc=0 | OK: 287 frames identical | shots 19/19 | files 2/2
+worldedit/stages_vehicles rc=0 | OK: 420 frames identical | shots 16/16 | files 2/2
+worldedit/sync_coverage rc=0 | OK: 271 frames identical | shots 22/22 | files 2/2
+leveledit/hazards_move_save rc=0 | OK: 329 frames identical | shots 10/10 | files 3/3
+leveledit/objects_save rc=0 | OK: 270 frames identical | shots 10/10 | files 2/2
+leveledit/platforms_save rc=0 | OK: 316 frames identical | shots 11/11 | files 2/2
+leveledit/screenshot_find rc=0 | OK: 200 frames identical | shots 4/4 | files 10/10
+leveledit/smoke rc=0 | OK: 119 frames identical | shots 5/5 | files 1/1
+leveledit/tiles_save rc=0 | OK: 242 frames identical | shots 11/11 | files 3/3
+leveledit/types_backgrounds rc=0 | OK: 170 frames identical | shots 6/6 | files 4/4
+
+## Sanitizer (-fsanitize=address,undefined, all five fixes): no reports
+cpu_star rc=0 last=3599
+opt_eyecandy rc=0 last=3599
+star_multi_2p rc=0 last=3599
+star_multi_3p rc=0 last=3599
+star_multi_4p rc=0 last=4799
+
+## Plain upstream CMake build (README defaults) of 04766e2c: exit 0; GameMode.cpp rebuilt at 0f45d19e and at 04766e2c: 0 warnings both.
+
+## CI on 04766e2c: run 37227044509, Linux/macOS/Windows MSVC/MinGW/Web success, Android skipped (workflow has if: false)

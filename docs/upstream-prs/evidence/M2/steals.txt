@@ -1,0 +1,26 @@
+# M2: star steals in Multi star mode, Release harness build (build-reference.sh flags) with a stderr trace added to
+# CGM_Star::think (holder of each star, every frame) and CGM_Star::swapplayer (a steal). Not part of the PR.
+# before = upstream master code, after = commit 0f45d19e. Replays: replays/star_multi_{2p,3p,4p}.txt (CPUs only, Wacky Woods).
+# hold = frames a stolen star stays with the stealer before think() hands it to someone else.
+
+## 2p: dump before vs after: DIVERGED at frame 778 (block 778; actual frame 778)
+before: frames=2822 steals=35 holder_changes=822 hold_after_steal=[1, 2, 1, 3, 2, 1, 6, 3, 10, 9, 7, 6]...
+before:   hold frames: min=1 median=3 max=16; frames where a star changed holder=822
+after: frames=2822 steals=11 holder_changes=12 hold_after_steal=[344, 60, 115, 493, 151, 275, 60, 106, 60, 347, 380]
+after:   hold frames: min=60 median=151 max=493; frames where a star changed holder=12
+
+## 3p: dump before vs after: DIVERGED at frame 792 (block 792; actual frame 792)
+before: frames=2808 steals=36 holder_changes=1563 hold_after_steal=[3, 2, 1, 1, 1, 2, 1, 1, 1, 1, 3, 2]...
+before:   hold frames: min=1 median=1.5 max=6; frames where a star changed holder=1563
+after: frames=2808 steals=1 holder_changes=2 hold_after_steal=[392]
+after:   hold frames: min=392 median=392 max=392; frames where a star changed holder=2
+
+## 4p: dump before vs after: OK: 4800 frames identical
+before: frames=3994 steals=17 holder_changes=18 hold_after_steal=[245, 795, 238, 834, 222, 1022, 599, 104, 208, 978, 616, 702]...
+before:   hold frames: min=60 median=599 max=1813; frames where a star changed holder=18
+after: frames=3994 steals=17 holder_changes=18 hold_after_steal=[245, 795, 238, 834, 222, 1022, 599, 104, 208, 978, 616, 702]...
+after:   hold frames: min=60 median=599 max=1813; frames where a star changed holder=18
+
+# Before, with 2-3 players think() reassigns every star to the top ranked players on every frame,
+# so a steal lasts 1-16 frames (median 3 / 1.5). After, steals last 60-493 frames. 4 players: identical.
+# The replay dump has no star holder field; the dumps differ through positions and RNG calls (placeStar/ranking).
