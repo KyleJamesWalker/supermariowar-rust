@@ -45,7 +45,7 @@ const scenario = (game) => {
             })
             .join('\n');
     const map = param('map');
-    const mapFile = map && { name: `${map}.map`, base64: readFileSync(join(dir, `${map}.map`)).toString('base64') };
+    const mapFile = map && { name: `${map}.map`, base64: readFileSync(join(repo, 'tools', 'ref', 'net_maps', `${map}.map`)).toString('base64') };
     return {
         frames,
         compareArgs: (param('compare') ?? '').split(/\s+/).filter(Boolean),

@@ -4,8 +4,8 @@
 # Usage: net_game_interop.sh [cpp-cpp|rust-rust|cpp-rust|rust-cpp ...]   (host-joiner; default: all four)
 # Env: SMW_SERVER, SMW_CPP_NET (net-enabled harness smw), SMW_CPP_DATA, SMW_RUST_BIN, SMW_RUST_DATA,
 #      NET_GAMES (scenario directories beside this script; default: net_game net_game_blocks).
-# A scenario's host.txt may name a map shipped beside it (`#@ map=<name>`; each client gets an APFS clone of its
-# data tree with the map added) and extra net_game_compare.py arguments (`#@ compare=...`). Only rust-rust pairings
+# A scenario's host.txt may name a map from net_maps/ (`#@ map=<name>`; each client gets an APFS clone of its data
+# tree with the map added) and extra net_game_compare.py arguments (`#@ compare=...`). Only rust-rust pairings
 # compare spawned powerups: the C++ harness does not record them.
 HERE=$(cd "$(dirname "$0")" && pwd)
 PORT=$(cd "$HERE/../.." && pwd)
@@ -30,7 +30,7 @@ datadir() {
   if [ -n "$map" ]; then
     cp -c -R "$data" "$dir/data-$role"
     data=$dir/data-$role
-    cp "$HERE/$game/$map.map" "$data/maps/"
+    cp "$HERE/net_maps/$map.map" "$data/maps/"
   fi
   echo "$data"
 }
