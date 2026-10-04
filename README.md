@@ -14,7 +14,7 @@ cargo run --release --bin worldeditor -- --datadir data
 cargo run --release --bin smw_server                     # netplay lobby server
 ```
 
-On Homebrew's sdl2-compat, RLE sprite surfaces cost most of the frame time (`docs/sdl2-compat-rle.md`). `--features no_rle` builds with RLE off; `SMW_RLE=0` or `SMW_RLE=1` overrides either build at launch.
+Native builds draw without SDL surface RLE, which on Homebrew's sdl2-compat costs most of the frame time and shows the map foreground's colour key (`docs/sdl2-compat-rle.md`); the web build keeps it. `SMW_RLE=1` or `SMW_RLE=0` overrides at launch.
 
 ## Web build
 

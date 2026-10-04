@@ -16,7 +16,7 @@ git clone --branch harness-latest git@github.com:KyleJamesWalker/supermariowar-c
 
 Homebrew dependencies: `sdl2-compat`, `sdl2_image`, `sdl2_mixer`, `zlib`; CMake fetches toml11 (tested with sdl2-compat 2.32.72, Apple clang 21).
 
-- `-DSMW_NO_RLE=ON` builds without `SDL_SetSurfaceRLE` (default `OFF`), the C++ side of the port's `SMW_RLE=0`. The committed goldens are from the default build.
+- `-DSMW_NO_RLE=ON` (passed by `build-reference.sh`; branch `harness-rle` until merged) builds without `SDL_SetSurfaceRLE`, like the port's native default. The goldens come from this build.
 - `-ffp-contract=off` stops clang fusing `a*b+c` into FMA instructions on arm64. Rust never fuses, so without this flag float positions drift by an ulp.
 
 ## Running
@@ -49,7 +49,7 @@ Each variable is a no-op when unset or empty. The Rust binary must honour the sa
 | `SMW_SHOT_DIR=<dir>` | Where screenshots go (default `.`), named `frame_<n>.bmp`. |
 | `SMW_MAP=<name>` | Select the start map when the menu is created (see below). |
 
-Rust only (see Recordings): `SMW_NO_RECORD=1` turns off session recording, `SMW_LIVE_SCRIPT=<file>` feeds a replay-format script into the live input path of a recorded session, `SMW_AUDIBLE=1` plays real sound alongside the virtual mixer, `SMW_REPLAY_SPEED=<n>` scales the frame-limiter sleep, and `SMW_RLE=0`/`1` turns SDL surface RLE off or on (default: on, off with `--features no_rle`).
+Rust only (see Recordings): `SMW_NO_RECORD=1` turns off session recording, `SMW_LIVE_SCRIPT=<file>` feeds a replay-format script into the live input path of a recorded session, `SMW_AUDIBLE=1` plays real sound alongside the virtual mixer, `SMW_REPLAY_SPEED=<n>` scales the frame-limiter sleep, and `SMW_RLE=0`/`1` turns SDL surface RLE off or on (default: off natively, on in the web build).
 
 ## Frame loop
 
