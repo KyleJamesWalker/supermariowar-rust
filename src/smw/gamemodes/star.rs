@@ -57,16 +57,6 @@ impl CGM_Star {
         self.iCurrentModeType
     }
 
-    // With four players the C++ reads starPlayer[3] out of bounds; those bytes
-    // (iCurrentModeType == Multi, fDisplayTimer) form a non-null pointer matching no player.
-    fn star_player_missing(&self, i: usize) -> bool {
-        i < 3 && self.starPlayer[i].is_null()
-    }
-
-    fn star_player_is(&self, i: usize, player: Ptr<CPlayer>) -> bool {
-        i < 3 && self.starPlayer[i] == player
-    }
-
     fn setup_mode(&mut self) {
         unsafe {
             //Clean up old stars
@@ -267,7 +257,7 @@ pub fn cgm_star_init(this: &mut CGM_Star) {
 fn star_needs_reassign(this: &CGM_Star) -> bool {
     unsafe {
         if this.iCurrentModeType == StarStyle::Multi {
-            (0..players.len()).any(|i| this.star_player_missing(i))
+            (0..players.len().saturating_sub(1)).any(|i| this.starPlayer[i].is_null())
         } else {
             this.starPlayer[0].is_null()
         }
@@ -278,9 +268,9 @@ fn reassign(this: &mut CGM_Star) {
     unsafe {
         if this.iCurrentModeType == StarStyle::Multi {
             let mut iStar1: usize = 0;
-            while iStar1 + 1 <= players.len() {
+            while iStar1 + 1 < players.len() {
                 //If we're missing a star player, then reassign them all
-                if this.star_player_missing(iStar1) {
+                if this.starPlayer[iStar1].is_null() {
                     this.rebalance_multi_stars();
                     break;
                 }
@@ -353,8 +343,8 @@ fn time_out(this: &mut CGM_Star) {
             for iPlayer in 0..players.len() {
                 let mut fFound = false;
                 let mut iStar: usize = 0;
-                while iStar + 1 <= players.len() {
-                    if this.star_player_is(iStar, players[iPlayer]) {
+                while iStar + 1 < players.len() {
+                    if this.starPlayer[iStar] == players[iPlayer] {
                         fFound = true;
                         break;
                     }
