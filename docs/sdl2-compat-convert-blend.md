@@ -49,8 +49,24 @@ SDL 2.32.10:          blend mode 0, dst pixel ff0000ff (expect ff0000ff)
 
 Without `SDL_SetSurfaceRLE`, or after `SDL_SetSurfaceBlendMode(fg, SDL_BLENDMODE_NONE)`, sdl2-compat also prints `ff0000ff`. SDL 2.32.10 prints `ffff00ff` too if the surface is set to `SDL_BLENDMODE_BLEND` first, so the RLE behaviour is the same in both; the difference is the blend mode `SDL_ConvertSurface` returns.
 
-Native SDL3 behaves like sdl2-compat: `SDL_ConvertSurface(rgb24, SDL_PIXELFORMAT_ARGB8888)` returns a blended surface, and the same lock, fill, colour key and blit draws magenta. A direct SDL3 port that keeps RLE needs `SDL_BLENDMODE_NONE` on opaque converted images.
+Native SDL3 behaves like sdl2-compat. The same steps in SDL3's API print `blend mode 1` and a magenta pixel, and a transparent one after `SDL_SetSurfaceBlendMode(fg, SDL_BLENDMODE_NONE)`:
+
+```c
+SDL_Surface *dst = SDL_CreateSurface(64, 64, SDL_PIXELFORMAT_ARGB8888);
+SDL_Surface *raw = SDL_CreateSurface(64, 64, SDL_PIXELFORMAT_RGB24);
+SDL_Surface *fg = SDL_ConvertSurface(raw, SDL_PIXELFORMAT_ARGB8888);
+SDL_SetSurfaceRLE(fg, true);
+Uint32 magenta = SDL_MapSurfaceRGB(fg, 255, 0, 255);
+SDL_LockSurface(fg);
+SDL_FillSurfaceRect(fg, NULL, magenta);
+SDL_SetSurfaceColorKey(fg, true, magenta);
+SDL_UnlockSurface(fg);
+SDL_FillSurfaceRect(dst, NULL, SDL_MapSurfaceRGB(dst, 0, 0, 255));
+SDL_BlitSurface(fg, NULL, dst, NULL);   /* dst is magenta on SDL 3.4.18 */
+```
+
+SDL3 may consider this intended, but sdl2-compat should return what SDL2 does. A direct SDL3 port that keeps RLE needs `SDL_BLENDMODE_NONE` on opaque converted images.
 
 ## Impact
 
-10 of the port's 44 replays have magenta in their screenshots, in both the C++ build and the Rust port. Setting `SDL_BLENDMODE_NONE` on the foreground surface, or building without RLE (`no_rle`, `SMW_RLE=0`), removes it. The result then matches the Emscripten build pixel for pixel.
+10 of the port's 44 replays and 121 of its 290 map replays have magenta in their screenshots, in both the C++ build and the Rust port. Setting `SDL_BLENDMODE_NONE` on the foreground surface, or drawing without RLE, removes it. The result then matches the Emscripten build pixel for pixel.

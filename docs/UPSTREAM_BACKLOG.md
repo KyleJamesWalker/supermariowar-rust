@@ -64,6 +64,7 @@ Deliberate behaviour changes; each needs the maintainer's agreement first. Detai
 | P2 | Connected gamepads go to the first players at launch, keyboards fill the rest, and the next launch without pads restores the keyboard setup | proposed | |
 | P3 | The first keyboard player can drive menus, not only player 1 | proposed | |
 | P4 | Browser netplay through a WebSocket relay (`smw_relay`, `RELAY.md`) | proposed | |
+| P5 | Make `SDL_SetSurfaceRLE` optional (the `SMW_NO_RLE` CMake option on `harness-rle`) or drop it. Through sdl2-compat RLE costs 8–16x CPU per frame (X1), on native SDL3 an RLE blit still costs 2.1–2.4 µs against 0.3 µs without, the web build runs no faster with it, and without it X2 cannot happen. The port draws without RLE on native | proposed | |
 
 ## Upstream changes to follow
 
@@ -71,10 +72,11 @@ Upstream work the port will need to sync, tracked so it isn't missed.
 
 | ID | Change | Notes | Status |
 |---|---|---|---|
-| S1 | The `sdl3` branch ports the game to SDL 3.4.8, SDL3_image 3.4.4 and SDL3_mixer 3.2.2 (5 commits on `master`, ~50 files; `dad8a861` onwards). The maintainer plans to make it the default ([#479](https://github.com/mmatyas/supermariowar/pull/479#issuecomment-5927470541), 2026-10-01) | Fixes X1 for Super Mario War: an RLE blit costs 2.1–2.4 µs on native SDL3 against 63–69 µs through sdl2-compat (0.3 µs without RLE). Port work: move the C++ harness onto the branch (the sound hooks need the most rework, since SDL3_mixer's track API replaces Mix channels), swap the port's `sdl2::sys` calls (116 files) for SDL3's, port the branch's own changes as an upstream sync, follow the mixer rewrite in the deterministic sound path, and build SDL3_image/SDL3_mixer for the web build. Wait until it lands on `master` | on hold |
+| S1 | The `sdl3` branch ports the game to SDL 3.4.8, SDL3_image 3.4.4 and SDL3_mixer 3.2.2 (5 commits on `master`, ~50 files; `dad8a861` onwards). The maintainer plans to make it the default ([#479](https://github.com/mmatyas/supermariowar/pull/479#issuecomment-5927470541), 2026-10-01) | Fixes X1 for Super Mario War, but not X2: an RLE blit costs 2.1–2.4 µs on native SDL3 against 63–69 µs through sdl2-compat (0.3 µs without RLE). Port work: move the C++ harness onto the branch (the sound hooks need the most rework, since SDL3_mixer's track API replaces Mix channels), swap the port's `sdl2::sys` calls (116 files) for SDL3's, port the branch's own changes as an upstream sync, follow the mixer rewrite in the deterministic sound path, and build SDL3_image/SDL3_mixer for the web build. Wait until it lands on `master` | on hold |
 
 ## Outside Super Mario War
 
 | ID | Issue | Where | Status |
 |---|---|---|---|
-| X1 | Homebrew sdl2-compat re-encodes RLE sprite sheets on every blit, so heavy scenes miss 60 fps | draft in `sdl2-compat-rle.md`, for libsdl-org/sdl2-compat. Moot for this game once S1 lands, still worth filing for other SDL2 games | drafted, not filed |
+| X1 | Homebrew sdl2-compat re-encodes RLE sprite sheets on every blit, so heavy scenes miss 60 fps | draft in `sdl2-compat-rle.md`, for libsdl-org/sdl2-compat. Moot for this game once S1 lands, still worth filing for other SDL2 games. CPU per frame on an idle machine (2026-10-04), RLE on → off: `flow_world` 2.5 → 0.25 ms, `gg_death_valley` 9.5 → 0.6 ms, `cpu_greed` 10.9 → 0.7 ms, `cpu_classic` 2.1 → 0.25 ms; the draft's older figures were taken under heavy load | drafted, not filed |
+| X2 | `SDL_ConvertSurface` of an opaque surface to the ARGB8888 screen format returns `SDL_BLENDMODE_BLEND` (SDL2: `NONE`). With RLE, the RLE encoder then uses per-pixel alpha and ignores the colour key, so map foreground layers show their magenta key (10 of 44 replays, 121 of 290 sweep maps) | draft with repro in `sdl2-compat-convert-blend.md`, for libsdl-org/sdl2-compat. Native SDL3 behaves the same, so an SDL3 build (S1) needs RLE off (P5) or `SDL_BLENDMODE_NONE` on opaque images | drafted, not filed |
