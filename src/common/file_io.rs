@@ -1,7 +1,7 @@
 //! Port of src/common/FileIO.cpp
 
 use std::fs::{File, OpenOptions};
-use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
+use std::io::{BufReader, BufWriter, Cursor, Read, Seek, SeekFrom, Write};
 
 /// C++ `throw std::runtime_error(...)`; caught by `catch_unwind` at the C++ `catch` sites.
 pub fn throw_runtime_error(what: &str) -> ! {
@@ -11,6 +11,7 @@ pub fn throw_runtime_error(what: &str) -> ! {
 enum Handle {
     R(BufReader<File>),
     W(BufWriter<File>),
+    M(Cursor<Vec<u8>>),
 }
 
 pub struct BinaryFile {
@@ -40,6 +41,18 @@ impl BinaryFile {
         BinaryFile { m_path: path.to_string(), fp }
     }
 
+    /// Not in the C++: reads from or writes to memory (replay checkpoints, smw/checkpoint.rs).
+    pub fn memory(name: &str, bytes: Vec<u8>) -> Self {
+        BinaryFile { m_path: name.to_string(), fp: Some(Handle::M(Cursor::new(bytes))) }
+    }
+
+    pub fn into_bytes(self) -> Vec<u8> {
+        match self.fp {
+            Some(Handle::M(m)) => m.into_inner(),
+            _ => Vec::new(),
+        }
+    }
+
     pub fn is_open(&self) -> bool {
         self.fp.is_some()
     }
@@ -52,6 +65,7 @@ impl BinaryFile {
             Some(Handle::W(w)) => {
                 let _ = w.seek(SeekFrom::Start(0));
             }
+            Some(Handle::M(m)) => m.set_position(0),
             None => {}
         }
     }
@@ -60,6 +74,7 @@ impl BinaryFile {
         match &mut self.fp {
             Some(Handle::R(r)) => r.stream_position().map(|p| p as i64).unwrap_or(-1),
             Some(Handle::W(w)) => w.stream_position().map(|p| p as i64).unwrap_or(-1),
+            Some(Handle::M(m)) => m.position() as i64,
             None => 0,
         }
     }
@@ -68,6 +83,7 @@ impl BinaryFile {
         let pos = self.pos();
         let result = match &mut self.fp {
             Some(Handle::R(r)) => r.read_exact(buf),
+            Some(Handle::M(m)) => m.read_exact(buf),
             _ => Err(std::io::Error::from_raw_os_error(9)),
         };
         if let Err(err) = result {
@@ -91,6 +107,7 @@ impl BinaryFile {
         let pos = self.pos();
         let result = match &mut self.fp {
             Some(Handle::W(w)) => w.write_all(buf),
+            Some(Handle::M(m)) => m.write_all(buf),
             _ => Err(std::io::Error::from_raw_os_error(9)),
         };
         if let Err(err) = result {

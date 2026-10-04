@@ -702,13 +702,32 @@ fn catch_runtime_error<R>(f: impl FnOnce() -> R) -> Option<R> {
 
 impl CGameConfig {
     pub fn read_binary_config(&mut self) {
-        let ok = catch_runtime_error(|| unsafe {
+        let ok = catch_runtime_error(|| {
             let options_path = get_home_directory() + "options.bin";
             let mut options = BinaryFile::new(&options_path, "rb");
             if !options.is_open() {
                 throw_runtime_error(&format!("Could not open {}", options_path));
             }
 
+            self.read_options(&mut options)
+        });
+        if ok != Some(true) {
+            return;
+        }
+
+        catch_runtime_error(|| {
+            let controls_path = get_home_directory() + "controls.sdl2.bin";
+            let mut controls = BinaryFile::new(&controls_path, "rb");
+            if !controls.is_open() {
+                throw_runtime_error(&format!("Could not open {}", controls_path));
+            }
+
+            self.read_controls(&mut controls);
+        });
+    }
+
+    fn read_options(&mut self, options: &mut BinaryFile) -> bool {
+        unsafe {
             let version = Version {
                 major: options.read_i32() as u8,
                 minor: options.read_i32() as u8,
@@ -829,18 +848,11 @@ impl CGameConfig {
             sfx_setmusicvolume(self.musicvolume as i32);
             sfx_setsoundvolume(self.soundvolume as i32);
             true
-        });
-        if ok != Some(true) {
-            return;
         }
+    }
 
-        catch_runtime_error(|| unsafe {
-            let controls_path = get_home_directory() + "controls.sdl2.bin";
-            let mut controls = BinaryFile::new(&controls_path, "rb");
-            if !controls.is_open() {
-                throw_runtime_error(&format!("Could not open {}", controls_path));
-            }
-
+    fn read_controls(&mut self, controls: &mut BinaryFile) {
+        unsafe {
             let mut raw = [0u8; CINPUTPLAYERCONTROL_RAW_SIZE * 8];
             controls.read_raw(&mut raw);
             for p in 0..4 {
@@ -860,17 +872,11 @@ impl CGameConfig {
                 self.playerInput.inputControls[iPlayer] =
                     Ptr::from_mut(&mut self.inputConfiguration[iPlayer][if iDevice == DEVICE_KEYBOARD { 0 } else { 1 }]);
             }
-        });
+        }
     }
 
-    pub fn write_config(&self) {
-        let ok = catch_runtime_error(|| unsafe {
-            let options_path = get_home_directory() + "options.bin";
-            let mut options = BinaryFile::new(&options_path, "wb");
-            if !options.is_open() {
-                throw_runtime_error(&format!("Could not open {}", options_path));
-            }
-
+    fn write_options(&self, options: &mut BinaryFile) {
+        unsafe {
             options.write_i32(GAME_VERSION.major as i32);
             options.write_i32(GAME_VERSION.minor as i32);
             options.write_i32(GAME_VERSION.patch as i32);
@@ -971,6 +977,49 @@ impl CGameConfig {
             options.write_u8(menugraphicspacklist.current_index() as u8);
             options.write_u8(worldgraphicspacklist.current_index() as u8);
             options.write_u8(gamegraphicspacklist.current_index() as u8);
+        }
+    }
+
+    fn write_controls(&self, controls: &mut BinaryFile) {
+        let mut raw = [0u8; CINPUTPLAYERCONTROL_RAW_SIZE * 8];
+        for p in 0..4 {
+            for d in 0..2 {
+                let o = (p * 2 + d) * CINPUTPLAYERCONTROL_RAW_SIZE;
+                input_control_to_raw(&self.inputConfiguration[p][d], &mut raw[o..o + CINPUTPLAYERCONTROL_RAW_SIZE]);
+            }
+        }
+        controls.write_raw(&raw);
+
+        for iPlayer in 0..4 {
+            controls.write_i16(self.playerInput.inputControls[iPlayer].iDevice);
+        }
+    }
+
+    /// Not in the C++: the bytes `write_config` would write to options.bin and controls.sdl2.bin.
+    pub fn config_bytes(&self) -> (Vec<u8>, Vec<u8>) {
+        let mut options = BinaryFile::memory("options.bin", Vec::new());
+        self.write_options(&mut options);
+        let mut controls = BinaryFile::memory("controls.sdl2.bin", Vec::new());
+        self.write_controls(&mut controls);
+        (options.into_bytes(), controls.into_bytes())
+    }
+
+    /// Not in the C++: `read_binary_config` from the bytes `config_bytes` returned.
+    pub fn read_config_bytes(&mut self, options: Vec<u8>, controls: Vec<u8>) {
+        if catch_runtime_error(|| self.read_options(&mut BinaryFile::memory("options.bin", options))) == Some(true) {
+            catch_runtime_error(|| self.read_controls(&mut BinaryFile::memory("controls.sdl2.bin", controls)));
+        }
+    }
+
+    pub fn write_config(&self) {
+        let ok = catch_runtime_error(|| {
+            let options_path = get_home_directory() + "options.bin";
+            let mut options = BinaryFile::new(&options_path, "wb");
+            if !options.is_open() {
+                throw_runtime_error(&format!("Could not open {}", options_path));
+            }
+
+            self.write_options(&mut options);
         });
         if ok.is_none() {
             return;
@@ -983,18 +1032,7 @@ impl CGameConfig {
                 throw_runtime_error(&format!("Could not open {}", controls_path));
             }
 
-            let mut raw = [0u8; CINPUTPLAYERCONTROL_RAW_SIZE * 8];
-            for p in 0..4 {
-                for d in 0..2 {
-                    let o = (p * 2 + d) * CINPUTPLAYERCONTROL_RAW_SIZE;
-                    input_control_to_raw(&self.inputConfiguration[p][d], &mut raw[o..o + CINPUTPLAYERCONTROL_RAW_SIZE]);
-                }
-            }
-            controls.write_raw(&raw);
-
-            for iPlayer in 0..4 {
-                controls.write_i16(self.playerInput.inputControls[iPlayer].iDevice);
-            }
+            self.write_controls(&mut controls);
         });
         if ok.is_none() {
             return;
