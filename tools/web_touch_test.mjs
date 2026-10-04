@@ -7,6 +7,7 @@
 // Usage: node tools/web_touch_test.mjs [out_dir]
 //   CHROME   Chrome binary (default: the macOS Google Chrome app)
 //   WEB_DIR  the web build to serve (default: dist/web, see tools/package_web.sh)
+//   SMW_MAP  the match's map (default: 2skyfight, open floor right of player 1's spawn with SMW_SEED=1)
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -86,6 +87,7 @@ const send = (method, params = {}) =>
         pending.set(id, { ok, fail });
         ws.send(JSON.stringify({ id, method, params, sessionId }));
     });
+const MAP = process.env.SMW_MAP || '2skyfight';
 const sleep = (ms) => new Promise((ok) => setTimeout(ok, ms));
 const evaluate = async (expression) => {
     const r = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
@@ -157,6 +159,29 @@ const frameState = async () => {
     const p1 = Object.fromEntries((block.find((l) => l.startsWith('P id=0 ')) ?? '').split(' ').slice(1).map((kv) => kv.split('=')));
     return { frame: Number(frame), state, menu, p1: { x: Number(p1.fx), y: Number(p1.fy), velx: Number(p1.velx), vely: Number(p1.vely) } };
 };
+// Player 1's record in every gameplay frame after `since`.
+const p1Since = async (since) => {
+    const dump = await evaluate(`(() => { try { return Module.FS.readFile('/dump.txt', { encoding: 'utf8' }).slice(-300000); } catch { return ''; } })()`);
+    const frames = [];
+    let frame = -1;
+    for (const line of dump.split('\n')) {
+        if (line.startsWith('F ')) frame = Number(line.split(' ')[1]);
+        else if (frame > since && line.startsWith('P id=0 ')) {
+            const p = Object.fromEntries(line.split(' ').slice(1).map((kv) => kv.split('=')));
+            frames.push({ frame, x: Number(p.fx), y: Number(p.fy), velx: Number(p.velx), vely: Number(p.vely), inair: p.inair === '1' });
+        }
+    }
+    return frames;
+};
+const waitP1 = async (since, pred, what, ms = 3000) => {
+    const until = Date.now() + ms;
+    for (;;) {
+        const hit = (await p1Since(since)).find(pred);
+        if (hit) return hit;
+        if (Date.now() > until) throw new Error(`timed out waiting for ${what}`);
+        await sleep(50);
+    }
+};
 
 const { targetId } = await send('Target.createTarget', { url: 'about:blank' });
 ({ sessionId } = await send('Target.attachToTarget', { targetId, flatten: true }));
@@ -173,7 +198,8 @@ await send('Page.addScriptToEvaluateOnNewDocument', {
             set(m) {
                 if (m === module) return;
                 module = m;
-                m.preRun = [...(m.preRun ?? []), () => { m.ENV.SMW_DUMP = '/dump.txt'; }];
+                // A fixed seed and map pin the spawn points; input still comes live from the page.
+                m.preRun = [...(m.preRun ?? []), () => Object.assign(m.ENV, { SMW_DUMP: '/dump.txt', SMW_SEED: '1', SMW_MAP: ${JSON.stringify(MAP)} })];
             },
         });`,
 });
@@ -182,7 +208,7 @@ try {
     // Phone, landscape.
     await phone(true);
     await send('Page.navigate', { url });
-    await waitFor(`!document.getElementById('start').hidden`, 'the start screen', 120000);
+    await waitFor(`document.getElementById('start')?.hidden === false`, 'the start screen', 120000);
     check(await evaluate(`matchMedia('(pointer: coarse)').matches`), 'emulated phone reports pointer: coarse');
     check(await evaluate(`document.documentElement.classList.contains('touch') && !document.getElementById('touch').hidden`), 'touch controls shown');
     check(await evaluate(`getComputedStyle(document.querySelector('.toolbar')).display === 'none'`), 'key hints hidden');
@@ -243,21 +269,21 @@ try {
     const run = await center('[data-key=run]');
     const jump = await center('.tc-btn[data-key=up]');
     const item = await center('[data-key=item]');
-    const before = await frameState();
+    // Each step waits on the dump for the frame that proves it, so slow frames do not cause flakes.
+    const idle = await waitP1(0, (p) => !p.inair && p.vely >= 0, 'player 1 standing');
+    console.log(`     P1 spawned at ${idle.x},${idle.y} (frame ${idle.frame})`);
     await down(1, arm.right);
-    await sleep(300);
-    const walking = await frameState();
+    const walk = await waitP1(idle.frame, (p) => p.velx >= 4, 'player 1 walking right');
     await down(2, run);
-    await sleep(400);
-    const running = await frameState();
+    const runStart = (await frameState()).frame;
+    const fast = await waitP1(runStart, (p) => p.velx > walk.velx, 'player 1 running', 2000).catch(() => null);
+    check(!!fast, `P1 walks right (velx ${walk.velx}) and runs faster with Run held (velx ${fast?.velx})`);
     await screenshot('running');
+    const grounded = await waitP1(runStart, (p) => !p.inair, 'player 1 on the ground');
     await down(3, jump);
-    await sleep(150);
-    const jumping = await frameState();
+    const leap = await waitP1(grounded.frame, (p) => p.vely < 0, 'player 1 jumping', 2000).catch(() => null);
+    check(!!leap && leap.velx > walk.velx, `P1 jumps while still running right (vely ${leap?.vely}, velx ${leap?.velx})`);
     await screenshot('jumping');
-    console.log(`     P1 idle ${JSON.stringify(before.p1)}\n     walking ${JSON.stringify(walking.p1)}\n     running ${JSON.stringify(running.p1)}\n     jumping ${JSON.stringify(jumping.p1)}`);
-    check(walking.p1.velx > 0 && running.p1.velx > walking.p1.velx, 'P1 walks right, and runs faster with Run held');
-    check(jumping.p1.vely < 0 && jumping.p1.velx > 0, 'P1 jumps while still moving right');
     await move(1, { x: dpad.x + r * 0.6, y: dpad.y - r * 0.6 });
     await sleep(150);
     const held = await evaluate(`[...document.querySelectorAll('#touch .on')].map((el) => el.dataset.key || el.dataset.dir).sort().join(',')`);
@@ -273,7 +299,9 @@ try {
         .every((k) => keys.includes(k)), 'right, Right Ctrl and Right Shift (location 2) and Up dispatched');
     check(['ArrowRight', 'ControlRight', 'ArrowUp', 'ShiftRight'].every((c) => keys.filter((k) => k.startsWith(`keyup ${c} `)).length >= 1),
         'every key released');
-    await sleep(1200);
+    // The recording is flushed every 60 frames; wait for the Item release, the last key above.
+    const until = Date.now() + 5000;
+    while (!/ up Right Shift$/m.test(await recording()) && Date.now() < until) await sleep(200);
     const rec = await recording();
     const lines = rec.split('\n');
     const at = (name) => lines.findIndex((l) => / down /.test(l) && l.endsWith(` down ${name}`));
@@ -316,14 +344,14 @@ try {
     // Desktop: no controls, key hints back; the footer link forces them on and the choice is remembered.
     await desktop();
     await send('Page.reload');
-    await waitFor(`!document.getElementById('start').hidden`, 'the start screen (desktop)', 120000);
+    await waitFor(`document.getElementById('start')?.hidden === false`, 'the start screen (desktop)', 120000);
     check(await evaluate(`!matchMedia('(pointer: coarse)').matches && !document.documentElement.classList.contains('touch')
         && getComputedStyle(document.getElementById('touch')).display === 'none'
         && getComputedStyle(document.querySelector('.toolbar')).display !== 'none'`), 'desktop: controls hidden, key hints shown');
     await screenshot('desktop');
     await evaluate(`[...document.querySelectorAll('footer a')].find((a) => a.textContent === 'show touch controls').click()`);
     await send('Page.reload');
-    await waitFor(`!document.getElementById('start').hidden`, 'the start screen (forced on)', 120000);
+    await waitFor(`document.getElementById('start')?.hidden === false`, 'the start screen (forced on)', 120000);
     check(await evaluate(`document.documentElement.classList.contains('touch') && localStorage.getItem('smw-touch-controls') === 'on'`),
         'desktop: forcing controls on survives a reload');
     await screenshot('desktop-forced-on');
