@@ -1,3 +1,26 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 36d259ef..527b0715 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -21,6 +21,7 @@ option(USE_PNG_SAVE "Use PNG for screenshots and thumbnails" ON)
+ option(NO_NETWORK "Disable all network communication" OFF)
+ option(SDL2_FORCE_GLES "(SDL2) Use OpenGL ES rendering if possible" OFF)
+ option(BUILD_TESTS "Build the unit tests" ON)
++option(SMW_NO_RLE "Do not RLE-encode sprite and font surfaces" OFF)
+ 
+ set(SMW_INSTALL_PORTABLE_DEFAULT OFF)
+ if(WIN32)
+@@ -82,6 +83,10 @@ else()
+ 	endif()
+ endif()
+ 
++if (SMW_NO_RLE)
++	add_definitions(-DSMW_NO_RLE)
++endif()
++
+ if (EMSCRIPTEN)
+ 	if (CMAKE_BUILD_TYPE STREQUAL Debug)
+ 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g4")
 diff --git a/src/common/RandomNumberGenerator.cpp b/src/common/RandomNumberGenerator.cpp
 index 892625ae..e6a2bd82 100644
 --- a/src/common/RandomNumberGenerator.cpp
@@ -58,6 +81,55 @@ index 5d45282e..493e46b9 100644
  private:
      RandomNumberGenerator();
      ~RandomNumberGenerator();
+diff --git a/src/common/gfx.cpp b/src/common/gfx.cpp
+index 30683d77..cba743fb 100644
+--- a/src/common/gfx.cpp
++++ b/src/common/gfx.cpp
+@@ -129,9 +129,11 @@ gfxSprite createSkinSurface(
+     if (SDL_SetColorKey(out.getSurface(), SDL_TRUE, color_key) < 0) {
+         throw std::format("Couldn't set color key for new skin surface: {}", SDL_GetError());
+     }
++#ifndef SMW_NO_RLE
+     if (SDL_SetSurfaceRLE(out.getSurface(), 1) < 0) {
+         throw std::format("Couldn't set RLE acceleration for new skin surface: {}", SDL_GetError());
+     }
++#endif
+ 
+     return out;
+ }
+diff --git a/src/common/gfx/gfxFont.cpp b/src/common/gfx/gfxFont.cpp
+index 0fa2c172..7749a73c 100644
+--- a/src/common/gfx/gfxFont.cpp
++++ b/src/common/gfx/gfxFont.cpp
+@@ -77,8 +77,10 @@ gfxFont::gfxFont(const std::filesystem::path& path)
+     if (!surf_opti)
+         throw std::format("Couldn't convert {} to the display's pixel format: {}", path_str, SDL_GetError());
+ 
++#ifndef SMW_NO_RLE
+     if (SDL_SetSurfaceRLE(surf_opti.get(), 1) < 0)
+         throw std::format("Couldn't set RLE acceleration for {}: {}", path_str, SDL_GetError());
++#endif
+ 
+     m_sprite = gfxSprite(std::move(surf_opti), std::nullopt);
+     std::cout << "done" << std::endl;
+diff --git a/src/common/gfx/gfxSprite.cpp b/src/common/gfx/gfxSprite.cpp
+index 4533b07c..b425faee 100644
+--- a/src/common/gfx/gfxSprite.cpp
++++ b/src/common/gfx/gfxSprite.cpp
+@@ -54,11 +54,13 @@ SdlSurfacePtr loadImage(
+         throw std::format("Couldn't convert {} to the display's pixel format: {}", path_str, SDL_GetError());
+     }
+ 
++#ifndef SMW_NO_RLE
+     if (optimize) {
+         if (SDL_SetSurfaceRLE(img.get(), 1) < 0) {
+             throw std::format("Couldn't set RLE acceleration for {}: {}", path_str, SDL_GetError());
+         }
+     }
++#endif
+ 
+     if (alpha) {
+         if (SDL_SetSurfaceBlendMode(img.get(), SDL_BLENDMODE_BLEND) < 0) {
 diff --git a/src/common/sfx.cpp b/src/common/sfx.cpp
 index ef232b67..fe53636c 100644
 --- a/src/common/sfx.cpp

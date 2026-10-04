@@ -16,6 +16,7 @@ git clone --branch harness-latest git@github.com:KyleJamesWalker/supermariowar-c
 
 Homebrew dependencies: `sdl2-compat`, `sdl2_image`, `sdl2_mixer`, `zlib`; CMake fetches toml11 (tested with sdl2-compat 2.32.72, Apple clang 21).
 
+- `-DSMW_NO_RLE=ON` builds without `SDL_SetSurfaceRLE` (default `OFF`), the C++ side of the port's `SMW_RLE=0`. The committed goldens are from the default build.
 - `-ffp-contract=off` stops clang fusing `a*b+c` into FMA instructions on arm64. Rust never fuses, so without this flag float positions drift by an ulp.
 
 ## Running
@@ -238,6 +239,7 @@ Map list order is deterministic: maps live in a `std::multimap` keyed by name.
 - `FPSLimiter.cpp`: early return under `SMW_NOLIMIT`.
 - `RandomNumberGenerator`: `callCount()`, `lastValue()`, `resetCallCount()`.
 - `sfx`: `sfx_ticks` clock hook, `sfx_ignore_channel_failure`, the virtual mixer (`sfx_virtual_mixer`, `sfx_virtual_advance()`), `sfx_events` for `S` lines, and the data-relative file name on `sfxSound`/`sfxMusic`.
+- `CMakeLists.txt`, `gfx.cpp`, `gfxFont.cpp`, `gfxSprite.cpp`: the `SMW_NO_RLE` option.
 - `uimenu`: `UI_Menu::currentFocusIndex()`. `GSMenu`: menu name/focus accessors and `SMW_MAP`. `player.h`: `friend struct HarnessAccess`.
 
 ## Golden outputs
