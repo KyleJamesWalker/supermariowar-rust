@@ -1,5 +1,5 @@
-// On-screen controls for touch screens. They press player 1's default keys by dispatching
-// keyboard events on window, where SDL's Emscripten port listens.
+// On-screen controls for touch screens. They press player 1's default keys, which the game keeps on player 1
+// while they are on, by dispatching keyboard events on window, where SDL's Emscripten port listens.
 (function () {
   'use strict';
 
