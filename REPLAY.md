@@ -3,7 +3,7 @@
 The C++ game is rebuilt as a deterministic, headless, scriptable reference that writes one text block of game state per frame. The Rust port must read the same replay scripts and emit byte-identical dumps; `tools/diffreplay.py` reports the first frame where they diverge.
 
 - Reference build: [supermariowar-cpp-reference](https://github.com/KyleJamesWalker/supermariowar-cpp-reference), branch `harness-latest` (upstream `5693918f` plus the game and editor harness), checked out at `~/work/supermariowar-cpp-reference` and built into `build/`. `tools/cpp-harness.patch` and `tools/editor-harness.patch` are the same hooks as diffs against upstream.
-- Scripts: `tools/replays/*.txt`. Golden output: `tools/golden/<script>/dump.txt` plus `frame_<n>.png` screenshots.
+- Scripts: `tools/replays/*.txt`. Golden output: `tools/golden/<script>/dump.txt` plus `frame_<n>.png` screenshots. A replay that tests a deliberate deviation from the C++ (`PROGRESS.md`) has a Rust golden in `tools/golden_rust/<script>/` instead (`RUST_GOLDEN=1 make_golden.sh`), which `parity.sh` uses and marks "(Rust golden)".
 
 ## Building the reference
 
