@@ -1,4 +1,62 @@
-# Morning report: Rust port of Super Mario War
+# Morning report: web, multiplayer and controls (2026-10-04)
+
+**Bottom line:** the browser build now plays online through your relay, works on phones with touch controls, and assigns gamepads automatically. Netplay powerup blocks now match between players. Everything is merged to `main` (last merge `b631c97`) and pushed, the site and relay image are deployed, and `dist/Super Mario War.app` is rebuilt. Your relay at `smw-relay.vps.pocketsquirrel.com` passed a live two-browser game.
+
+## What landed
+
+| Merge | Change |
+|---|---|
+| `7c2d131` | On-screen touch controls for phones and tablets, plus a web app manifest so Add to Home Screen runs fullscreen |
+| `3d2ac31` | Browser multiplayer: `smw_relay` (lobby server plus WebSocket relay), the browser network layer, Docker image, deploy examples. See `RELAY.md` |
+| `75b3cec` | Backspace no longer navigates the page back while typing a name |
+| `7a0a43d` | Net games: the host decides what powerup blocks release (an upstream C++ bug, fixed as a deliberate deviation) |
+| `533ca89` | Gamepads: stick and D-pad drive the same controls on every build; pads go to the first players at each launch |
+| `9343588` | Watching gamepad recordings in the browser; a launch without pads undoes the last pad assignment; touch keeps player 1 when pads are connected |
+| `b631c97` | The touch-controls test pins its seed and map, so it no longer fails at random |
+
+Every deliberate difference from the C++ is listed in `PROGRESS.md`.
+
+## Verification
+
+| Check | Result |
+|---|---|
+| `cargo test`, relay tests | pass (relay: 12 tests) |
+| `tools/parity.sh`, `tools/editor_parity.sh` | 44/44 game replays, 13/13 editor sessions. `joy_game` and `joy_menu` are compared against Rust goldens because pad assignment deliberately differs from the C++ |
+| Browser replay of `start_classic` | 2530 frames identical to the C++ golden |
+| Native net games (`net_game_interop.sh`, 4 pairings × 2 scenarios) | 8/8 synced; Rust–Rust powerup spawns match |
+| Two-browser game through a local relay (`web_netplay_test.mjs`) | synced, powerups match |
+| Two-browser game against the live site and your relay | synced (606/628 and 610/627 frames within 2 px) |
+| Relay image | 49 MB distroless; healthy; refuses foreign origins (403); CI built amd64 and arm64 |
+| Touch test on an emulated phone (`web_touch_test.mjs`) | 10/10 consecutive passes |
+
+## Try it
+
+- **Two players online:** open https://www.kylejameswalker.com/supermariowar-rust/ in two browsers, choose Multiplayer, the relay server, then create a room in one and join from the other. If the room isn't listed yet, refresh the room list.
+- **Gamepad (Q36 in XInput mode):** reload, press a pad button until the page shows "1 gamepad ready", click Play. P1 is the pad (A jump, B turbo, X item, Y pause); arrows/Return drive P2 and WASD/E drive P3. Set extra players to None in the main menu's Players row to play alone.
+- **Phone:** open the site in landscape; the controls appear on touch screens. On iPhone, use Share → Add to Home Screen for fullscreen.
+
+## Needs a real-device check
+
+- iPhone: Add to Home Screen opens fullscreen; controls clear the notch and home indicator; long-press, magnifier and double-tap zoom stay blocked; keys release when switching apps.
+- Holding the D-pad plus two buttons at once on real hardware.
+- Android: the fullscreen button and the landscape lock.
+- Backspace in the name field on the browser where you saw the bug (Chrome no longer goes back on Backspace, so the test couldn't reproduce it).
+- Native `--replay` with a real pad plugged in (pads were unplugged when this was tested).
+
+## Known gaps
+
+- **Native and browser players can't share a game.** The relay serves browsers only.
+- **Mixed C++/Rust net games keep the upstream powerup desync.** The C++ client ignores the new block packages.
+- **Other random outcomes can still differ between net players:** frenzy cards, coin placement in the coin modes, stomp/survival enemies, random shell deaths. The same host-decides approach would fix each.
+- **Touch on a solo phone:** player 2 defaults to human, so set it to CPU or None in the Players row before starting.
+- **Touch controls send player 1's default keys.** If player 1's keyboard keys are rebound, touch won't follow.
+- **SDL's browser backend drops the first stick movement on each axis** after Play. The D-pad is unaffected.
+- **WebSocket runs over TCP**, so a lost packet can briefly stall a net game. WebRTC would fix it if it matters in practice.
+
+---
+
+# Earlier report: the initial port
+
 
 **Bottom line:** the whole C++ project is ported to plain Rust + rust-sdl2: the game, menus, sound, netplay, lobby server, level editor and world editor. Run on the same scripted input, the Rust build produces the same per-frame state, sound events and screenshots as the original C++, byte for byte, on every replay we have (333 game replays and 12 editor sessions). Rust also interoperates with the C++ over the network and reads and writes the same save files.
 
