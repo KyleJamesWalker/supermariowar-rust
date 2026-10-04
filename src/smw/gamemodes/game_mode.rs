@@ -12,6 +12,7 @@ use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::main::{players, score, score_cnt};
 use crate::smw::net::netplay;
+use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::powerup::pu_treasure_chest_bonus::PU_TreasureChestBonus;
 use crate::smw::player::{CPlayer, PlayerState};
 
@@ -33,6 +34,12 @@ macro_rules! impl_cgamemode_plumbing {
 }
 
 pub fn remove_players_but_team(teamid: i16) {
+    if !net_random::event(Ev::RemoveButTeam, &[teamid as i32]) {
+        remove_players_but_team_now(teamid);
+    }
+}
+
+pub fn remove_players_but_team_now(teamid: i16) {
     unsafe {
         for i in 0..players.len() {
             let mut player = players[i];
@@ -44,6 +51,12 @@ pub fn remove_players_but_team(teamid: i16) {
 }
 
 pub fn remove_players_but_highest_scoring() {
+    if !net_random::event(Ev::RemoveButHighest, &[]) {
+        remove_players_but_highest_scoring_now();
+    }
+}
+
+pub fn remove_players_but_highest_scoring_now() {
     unsafe {
         let mut iMaxScore: i16 = -1;
 
@@ -65,6 +78,12 @@ pub fn remove_players_but_highest_scoring() {
 }
 
 pub fn setup_score_board(fOrderMatters: bool) {
+    if !net_random::event(Ev::ScoreBoard, &[fOrderMatters as i32]) {
+        setup_score_board_now(fOrderMatters);
+    }
+}
+
+pub fn setup_score_board_now(fOrderMatters: bool) {
     unsafe {
         let mut doneWithScore: [bool; 4] = [false, false, false, false];
 
@@ -135,6 +154,12 @@ pub fn setup_score_board(fOrderMatters: bool) {
 }
 
 pub fn show_score_board() {
+    if !net_random::event(Ev::ShowScoreBoard, &[]) {
+        show_score_board_now();
+    }
+}
+
+pub fn show_score_board_now() {
     unsafe {
         game_values.flags.showscoreboard = true;
 
@@ -164,6 +189,13 @@ pub fn show_score_board() {
 
 //Returns true if all but one team is dead
 pub fn remove_team(teamid: i16) -> bool {
+    match crate::smw::net_outcomes::remove_team_event(teamid) {
+        Some(result) => result,
+        None => remove_team_now(teamid),
+    }
+}
+
+pub fn remove_team_now(teamid: i16) -> bool {
     unsafe {
         //If we have already removed this team then return
         if score[teamid as usize].order > -1 {

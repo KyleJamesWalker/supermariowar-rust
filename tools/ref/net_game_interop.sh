@@ -18,7 +18,7 @@ RUST_DATA=${SMW_RUST_DATA:-$PORT/data}
 WORK=$(mktemp -d)
 pairs=("$@")
 [ ${#pairs[@]} -gt 0 ] || pairs=(cpp-cpp rust-rust cpp-rust rust-cpp)
-games=(${NET_GAMES:-net_game net_game_blocks net_game_frenzy net_game_stomp net_game_coins})
+games=(${NET_GAMES:-net_game net_game_blocks net_game_frenzy net_game_stomp net_game_coins net_game_classic})
 
 param() { sed -n "s/^#@ $1=//p" "$HERE/$2/host.txt"; }
 

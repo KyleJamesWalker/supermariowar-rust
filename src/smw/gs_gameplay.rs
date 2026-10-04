@@ -688,6 +688,7 @@ impl GameplayState {
                     fCheckForGameOver = true;
 
                     let globalID = players[i].globalID as usize;
+                    crate::smw::net_outcomes::note_death(globalID as i16, PlayerDeathStyle::Jump as i32, true);
                     if self.respawnCount[globalID] <= 0 {
                         players[i].die(PlayerDeathStyle::Jump, true, false);
                     }
@@ -2702,6 +2703,7 @@ impl GameState for GameplayState {
                     }
                 }
                 update_playerswap();
+                crate::smw::net_outcomes::sample();
                 network_broadcast_game_state();
 
                 if game_values.screenfade == 255 {

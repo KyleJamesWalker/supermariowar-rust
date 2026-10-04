@@ -1,7 +1,7 @@
 #@ seed=1
 #@ frames=1600
 #@ map=netplay_arena
-#@ compare=--min stompenemy=2 --min-close 0.5
+#@ compare=--min stompenemy=1 --min gameover=1 --min-close 0.5
 10 down Return
 12 up Return
 30 down Down
@@ -44,18 +44,8 @@
 179 up Right
 180 down Return
 181 up Return
-182 down Down
-183 up Down
-184 down Return
-185 up Return
-186 down Left
-187 up Left
-188 down Return
-189 up Return
-190 down Up
-191 up Up
-192 down Up
-193 up Up
+182 down Up
+183 up Up
 250 down Return
 252 up Return
 270 down Return

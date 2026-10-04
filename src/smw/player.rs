@@ -261,7 +261,7 @@ fn b(v: i32) -> bool {
 impl CScore {
     pub fn adjust_score(&mut self, iValue: i16) {
         unsafe {
-            if game_values.gamemode.gameover {
+            if game_values.gamemode.gameover || crate::smw::net_outcomes::score_locked() {
                 return;
             }
         }
@@ -298,7 +298,15 @@ pub fn should_update_sprite() -> bool {
     unsafe { !game_values.flags.pausegame && !game_values.flags.exitinggame && !game_values.flags.swapplayers }
 }
 
-pub fn player_killed_player(iKiller: i16, mut killed: Ptr<CPlayer>, deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
+pub fn player_killed_player(iKiller: i16, killed: Ptr<CPlayer>, deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
+    let args = [0, iKiller as i32, killed.globalID as i32, deathstyle as i32, style as i32, fForce as i32, fKillCarriedItem as i32, -1];
+    if let Some(result) = crate::smw::net_outcomes::kill(&args) {
+        return result;
+    }
+    player_killed_player_now(iKiller, killed, deathstyle, style, fForce, fKillCarriedItem)
+}
+
+pub fn player_killed_player_now(iKiller: i16, mut killed: Ptr<CPlayer>, deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
     unsafe {
         let mut killer = get_player_from_global_id(iKiller);
 
@@ -1956,6 +1964,9 @@ impl CPlayer {
     }
 
     pub fn die(&mut self, deathStyle: PlayerDeathStyle, fTeamRemoved: bool, fKillCarriedItem: bool) {
+        if !fTeamRemoved {
+            crate::smw::net_outcomes::note_death(self.globalID, deathStyle as i32, false);
+        }
         unsafe {
             let ix = self.ix as i32;
             let iy = self.iy as i32;
@@ -2197,7 +2208,15 @@ impl CPlayer {
         self.awardeffects.add_kills_in_row_in_air_award(this.get());
     }
 
-    pub fn killed_player(&mut self, mut killed: Ptr<CPlayer>, mut deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
+    pub fn killed_player(&mut self, killed: Ptr<CPlayer>, deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
+        let args = [1, self.globalID as i32, killed.globalID as i32, deathstyle as i32, style as i32, fForce as i32, fKillCarriedItem as i32, -1];
+        if let Some(result) = crate::smw::net_outcomes::kill(&args) {
+            return result;
+        }
+        self.killed_player_now(killed, deathstyle, style, fForce, fKillCarriedItem)
+    }
+
+    pub fn killed_player_now(&mut self, mut killed: Ptr<CPlayer>, mut deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
         let mut killer = self.this();
 
         unsafe {
@@ -3216,6 +3235,14 @@ impl CPlayer {
 
     //iPlayerIdCredit is passed in if this platform was triggered by another player and crushed this player (e.g. donut block)
     pub fn kill_player_map_hazard(&mut self, fForce: bool, style: KillStyle, fKillCarriedItem: bool, iPlayerIdCredit: i16) -> PlayerKillType {
+        let args = [2, self.globalID as i32, -1, 0, style as i32, fForce as i32, fKillCarriedItem as i32, iPlayerIdCredit as i32];
+        if let Some(result) = crate::smw::net_outcomes::kill(&args) {
+            return result;
+        }
+        self.kill_player_map_hazard_now(fForce, style, fKillCarriedItem, iPlayerIdCredit)
+    }
+
+    pub fn kill_player_map_hazard_now(&mut self, fForce: bool, style: KillStyle, fKillCarriedItem: bool, iPlayerIdCredit: i16) -> PlayerKillType {
         let this = self.this();
         if iPlayerIdCredit >= 0 || self.iSuicideCreditPlayerID >= 0 {
             player_killed_player(

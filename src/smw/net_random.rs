@@ -53,9 +53,16 @@ pub enum Ev {
     Boomerang,
     PhantoReturn,
     Block,
+    Kill,
+    RemoveTeam,
+    RemoveButTeam,
+    RemoveButHighest,
+    ScoreBoard,
+    ShowScoreBoard,
+    Scores,
 }
 
-const EVENTS: [Ev; 25] = [
+const EVENTS: [Ev; 32] = [
     Ev::FrenzyCard,
     Ev::StompEnemy,
     Ev::SurvivalEnemy,
@@ -81,6 +88,13 @@ const EVENTS: [Ev; 25] = [
     Ev::Boomerang,
     Ev::PhantoReturn,
     Ev::Block,
+    Ev::Kill,
+    Ev::RemoveTeam,
+    Ev::RemoveButTeam,
+    Ev::RemoveButHighest,
+    Ev::ScoreBoard,
+    Ev::ShowScoreBoard,
+    Ev::Scores,
 ];
 
 impl Ev {
@@ -115,6 +129,13 @@ impl Ev {
             Ev::Boomerang => "boomerang",
             Ev::PhantoReturn => "phantoreturn",
             Ev::Block => "block",
+            Ev::Kill => "kill",
+            Ev::RemoveTeam => "removeteam",
+            Ev::RemoveButTeam => "removebutteam",
+            Ev::RemoveButHighest => "removebuthighest",
+            Ev::ScoreBoard => "scoreboard",
+            Ev::ShowScoreBoard => "showscoreboard",
+            Ev::Scores => "scoresync",
         }
     }
 }
@@ -144,12 +165,14 @@ pub fn begin_setup() {
         g_pending.clear();
         g_waits.clear();
     }
+    crate::smw::net_outcomes::begin_game();
 }
 
 /// Called at the start of every gameplay frame.
 pub fn gameplay_frame() {
     unsafe {
         g_frame += 1;
+        crate::smw::net_outcomes::frame_start();
         g_pending.retain(|(p, at)| p.kind != Ev::WarpExit as u8 || g_frame - at < PENDING_FRAMES);
         if g_inSetup {
             g_inSetup = false;
@@ -192,14 +215,20 @@ pub fn event(ev: Ev, args: &[i32]) -> bool {
             let context = context_of(g_sent);
             set_network_id_context(context as u32);
             RandomNumberGenerator::start_recording();
-            run_logged(ev, args);
+            let line = run_logged(ev, args);
             let draws = RandomNumberGenerator::stop_tape();
             set_network_id_context(0);
+            if ev == Ev::Kill && !crate::smw::net_outcomes::kill_had_effect() {
+                return true;
+            }
+            harness::note_net(line);
             let mut args = args.to_vec();
             if ev == Ev::Place {
                 // Placements also test the spots against other objects, which a joiner may have elsewhere.
                 let o = find_object(args[0]);
                 args.extend([o.ix as i32, o.iy as i32]);
+            } else if ev == Ev::Kill {
+                args.push(crate::smw::net_outcomes::kill_result() as i32);
             }
             let pkg = RandomEvent { kind: ev as u8, context, args, draws };
             netplay.client.local_gamehost.send_message_to_my_peers(&pkg.to_bytes());
@@ -212,10 +241,24 @@ pub fn event(ev: Ev, args: &[i32]) -> bool {
                 return false;
             }
         } else {
-            run_logged(ev, args);
+            harness::note_net(run_logged(ev, args));
         }
         true
     }
+}
+
+pub fn in_game() -> bool {
+    unsafe { g_inGame }
+}
+
+/// Inside an event the host runs or a joiner replays.
+pub fn in_event() -> bool {
+    unsafe { g_added.is_some() || RandomNumberGenerator::tape_active() }
+}
+
+/// A joiner whose game host decides random outcomes, deaths and scores.
+pub fn host_decides() -> bool {
+    unsafe { netplay.active && !netplay.theHostIsMe && netplay.host_decides_random }
 }
 
 /// While true, a joiner leaves its hazard timers waiting for the game host's.
@@ -280,7 +323,7 @@ fn replay(pkg: &RandomEvent) {
     }
     set_network_id_context(pkg.context as u32);
     RandomNumberGenerator::start_playback(pkg.draws.clone());
-    run_logged(ev, &pkg.args);
+    harness::note_net(run_logged(ev, &pkg.args));
     let left = RandomNumberGenerator::stop_tape();
     set_network_id_context(0);
     if !left.is_empty() {
@@ -326,15 +369,20 @@ pub fn object_event(ev: Ev, args: &[i32]) -> bool {
     args[0] != 0 && event(ev, args)
 }
 
-pub(crate) fn run_logged(ev: Ev, args: &[i32]) {
+/// Runs the event and returns its `C` record.
+fn run_logged(ev: Ev, args: &[i32]) -> String {
     unsafe {
         g_added = Some(Vec::new());
         run(ev, args);
         let mut out = g_added.take().unwrap_or_default();
         out.extend(outcome(ev, args));
         let args: Vec<String> = args.iter().map(|a| a.to_string()).collect();
-        let shown = if ev == Ev::Place { &args[..2] } else { &args[..] };
-        harness::note_net(format!("{} args={} out={}", ev.name(), shown.join(","), out.join(";")));
+        let shown = match ev {
+            Ev::Place => &args[..2.min(args.len())],
+            Ev::Kill => &args[..8.min(args.len())],
+            _ => &args[..],
+        };
+        format!("{} args={} out={}", ev.name(), shown.join(","), out.join(";"))
     }
 }
 
@@ -454,6 +502,13 @@ fn run(ev: Ev, args: &[i32]) {
             }
         }
         Ev::PhantoReturn => obj::overmap::wo_phanto::net_return(find_object(args[0])),
+        Ev::Kill => crate::smw::net_outcomes::net_kill(args),
+        Ev::RemoveTeam => crate::smw::net_outcomes::net_remove_team(args[0] as i16),
+        Ev::RemoveButTeam => crate::smw::gamemodes::game_mode::remove_players_but_team_now(args[0] as i16),
+        Ev::RemoveButHighest => crate::smw::gamemodes::game_mode::remove_players_but_highest_scoring_now(),
+        Ev::ScoreBoard => crate::smw::gamemodes::game_mode::setup_score_board_now(args[0] != 0),
+        Ev::ShowScoreBoard => crate::smw::gamemodes::game_mode::show_score_board_now(),
+        Ev::Scores => crate::smw::net_outcomes::net_apply_scores(args),
         Ev::Block => obj::blocks::powerup_block::net_release(args[0] as i16, args[1] as i16, Vec2s::new(args[3] as i16, args[4] as i16), args[2] != 0),
     }
 }
@@ -483,6 +538,7 @@ fn outcome(ev: Ev, args: &[i32]) -> Vec<String> {
             vec![if o.is_null() { "gone".to_string() } else { format!("dead{}", o.dead as i32) }]
         }
         Ev::StarTimeout | Ev::StarReassign => vec![gm_state_star()],
+        Ev::Kill => vec![crate::smw::net_outcomes::kill_outcome(args)],
         Ev::TagReassign => vec![gm_state_tag()],
         _ => vec![],
     }

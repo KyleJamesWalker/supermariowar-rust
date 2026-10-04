@@ -3,12 +3,14 @@
 
 The host simulates every player; the joiner predicts its own player and interpolates the others
 from the host's game state packets, so the two trajectories agree up to a frame offset and a little
-interpolation lag. Each player's (fx, fy) track is aligned at the offset with the most exact matches.
+interpolation lag. Each player's (fx, fy) track is aligned at the offset with the most exact matches, up to each
+client's game over: after it, a client that ended the match removes players.
 
 --spawns also compares the random outcomes both clients recorded (`C` records, Rust only, see docs/REPLAY.md): for each
 kind, the joiner's records must be the host's, in any order. The joiner may still be missing the host's records from
 the last SPAWN_TAIL gameplay frames. --min KIND=N fails when the host recorded fewer than N of KIND (--min-spawns N
-is --min powerup=N). --min-close overrides MIN_CLOSE for scenarios whose tracks drift for a few frames per block bump,
+is --min powerup=N). With --spawns, a game over must also come within GAMEOVER_SLACK gameplay frames on both
+clients. --min-close overrides MIN_CLOSE for scenarios whose tracks drift for a few frames per block bump,
 as they do between two C++ clients.
 """
 import argparse
@@ -20,10 +22,11 @@ SLACK = 4
 TOLERANCE = 2.0
 MIN_CLOSE = 0.95
 SPAWN_TAIL = 120
+GAMEOVER_SLACK = 10
 
 
 def parse(path):
-    menus, frames, spawns = [], [], []
+    menus, frames, spawns, gameover = [], [], [], None
     for line in open(path):
         f = line.split()
         if not f:
@@ -37,9 +40,11 @@ def parse(path):
         elif f[0] == 'P' and frames:
             kv = dict(x.split('=', 1) for x in f[1:])
             frames[-1][int(kv['id'])] = (float(kv['fx']), float(kv['fy']), int(kv['state']))
+        elif f[0] == 'G' and gameover is None and 'gameover=1' in f:
+            gameover = len(frames) - 1
         elif f[0] == 'C' and frames:
             spawns.append((len(frames) - 1, f[1], ' '.join(f[2:])))
-    return menus, frames, spawns
+    return menus, frames, spawns, gameover
 
 
 def compare_spawns(host, hspawns, jspawns, minimums):
@@ -101,8 +106,8 @@ def main():
     ap.add_argument('--min', action='append', default=[], metavar='KIND=N')
     ap.add_argument('--min-close', type=float, default=MIN_CLOSE)
     args = ap.parse_args()
-    hmenus, host, hspawns = parse(args.host)
-    jmenus, join, jspawns = parse(args.join)
+    hmenus, host, hspawns, hend = parse(args.host)
+    jmenus, join, jspawns, jend = parse(args.join)
     print('  host menus: ' + ' > '.join(hmenus))
     print('  join menus: ' + ' > '.join(jmenus))
     print(f'  gameplay frames: host {len(host)}, join {len(join)}')
@@ -110,8 +115,10 @@ def main():
     pids = sorted(set().union(*host) if host else set())
     if len(pids) < 2:
         ok = False
+    if hend is not None or jend is not None:
+        print(f'  game over at gameplay frame: host {hend}, join {jend}; tracks compared until then')
     for pid in pids:
-        r = align(host, join, pid)
+        r = align(host[:hend], join[:jend], pid)
         if r is None:
             print(f'  player {pid}: no overlap')
             ok = False
@@ -126,6 +133,11 @@ def main():
         minimums['powerup'] = args.min_spawns
     if args.spawns and not compare_spawns(host, hspawns, jspawns, minimums):
         ok = False
+    if args.spawns and (hend is not None or jend is not None):
+        late = hend is not None and jend is None and hend >= len(host) - SPAWN_TAIL
+        same = hend is not None and jend is not None and abs(hend - jend) <= GAMEOVER_SLACK
+        print('  game over: ' + ('same frame' if same else 'joiner not there yet' if late else 'DIFFERENT FRAMES'))
+        ok &= same or late
     print('  ' + ('SYNCED' if ok else 'NOT SYNCED'))
     return 0 if ok else 1
 
