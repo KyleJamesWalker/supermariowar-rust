@@ -73,6 +73,8 @@ pub static mut currentgamemode: i16 = 0;
 extern "C" {
     fn emscripten_set_main_loop(func: unsafe extern "C-unwind" fn(), fps: i32, simulate_infinite_loop: i32);
     fn emscripten_get_now() -> f64;
+    fn emscripten_cancel_main_loop();
+    fn emscripten_run_script(script: *const std::ffi::c_char);
 }
 
 pub fn gameloop() {
@@ -103,6 +105,7 @@ unsafe extern "C-unwind" fn gameloop_frame_web() {
     let frame_ms = game_values.framelimiter as f64;
     if harness::no_limit() || frame_ms <= 0.0 {
         gameloop_frame();
+        web_quit_if_done();
         return;
     }
 
@@ -113,7 +116,7 @@ unsafe extern "C-unwind" fn gameloop_frame_web() {
     last_time = now;
 
     let mut frames = 0;
-    while accumulated >= frame_ms && frames < MAX_CATCH_UP_FRAMES {
+    while accumulated >= frame_ms && frames < MAX_CATCH_UP_FRAMES && game_values.appstate != crate::common::game_values::AppState::Quit {
         harness::frame_start();
         GameStateManager::instance().currentState.get().update();
         harness::frame_end();
@@ -128,6 +131,19 @@ unsafe extern "C-unwind" fn gameloop_frame_web() {
     if frames > 0 {
         gfx_flipscreen();
     }
+    web_quit_if_done();
+}
+
+/// The browser main loop never returns, so when the game quits (the end of a watched replay) stop
+/// the loop, close the harness, and let the page offer what to do next (web/shell.html).
+#[cfg(target_os = "emscripten")]
+unsafe fn web_quit_if_done() {
+    if game_values.appstate != crate::common::game_values::AppState::Quit {
+        return;
+    }
+    emscripten_cancel_main_loop();
+    harness::finish();
+    emscripten_run_script(c"Module.onGameQuit && Module.onGameQuit()".as_ptr());
 }
 
 unsafe extern "C-unwind" fn gameloop_frame() {
