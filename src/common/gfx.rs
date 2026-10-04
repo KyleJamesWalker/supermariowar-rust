@@ -35,6 +35,16 @@ pub fn init_globals() {
     }
 }
 
+/// Not in upstream: whether surfaces get `SDL_SetSurfaceRLE`. On unless built with `no_rle`; `SMW_RLE=0`/`1` overrides.
+pub fn rle_enabled() -> bool {
+    static RLE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *RLE.get_or_init(|| match std::env::var("SMW_RLE").as_deref() {
+        Ok("0") => false,
+        Ok("1") => true,
+        _ => !cfg!(feature = "no_rle"),
+    })
+}
+
 fn sdl_error() -> String {
     unsafe { CStr::from_ptr(SDL_GetError()).to_string_lossy().into_owned() }
 }
@@ -146,7 +156,7 @@ fn create_skin_surface(source: &gfxSprite, sourceFrame: usize, team: usize, allS
         if SDL_SetColorKey(out.get_surface(), 1, color_key) < 0 {
             panic!("Couldn't set color key for new skin surface: {}", sdl_error());
         }
-        if SDL_SetSurfaceRLE(out.get_surface(), 1) < 0 {
+        if rle_enabled() && SDL_SetSurfaceRLE(out.get_surface(), 1) < 0 {
             panic!("Couldn't set RLE acceleration for new skin surface: {}", sdl_error());
         }
 

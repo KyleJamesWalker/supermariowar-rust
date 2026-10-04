@@ -3,7 +3,7 @@
 //! `std::string_view` text is taken as bytes; `char` is signed on the reference platforms, so
 //! bytes >= 0x80 are below `ASCII_FIRST_PRINTABLE` and advance like a space.
 
-use crate::common::gfx::get_raw_pixel;
+use crate::common::gfx::{get_raw_pixel, rle_enabled};
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::util::sdl_helpers::SdlSurfacePtr;
 use crate::globals::*;
@@ -120,7 +120,7 @@ impl gfxFont {
                 throw(format!("Couldn't convert {} to the display's pixel format: {}", path_str, sdl_error()));
             }
 
-            if SDL_SetSurfaceRLE(surf_opti.get(), 1) < 0 {
+            if rle_enabled() && SDL_SetSurfaceRLE(surf_opti.get(), 1) < 0 {
                 throw(format!("Couldn't set RLE acceleration for {}: {}", path_str, sdl_error()));
             }
 
