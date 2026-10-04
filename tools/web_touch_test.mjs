@@ -182,7 +182,7 @@ try {
     // Phone, landscape.
     await phone(true);
     await send('Page.navigate', { url });
-    await waitFor(`!document.getElementById('start').hidden`, 'the start screen', 120000);
+    await waitFor(`document.getElementById('start')?.hidden === false`, 'the start screen', 120000);
     check(await evaluate(`matchMedia('(pointer: coarse)').matches`), 'emulated phone reports pointer: coarse');
     check(await evaluate(`document.documentElement.classList.contains('touch') && !document.getElementById('touch').hidden`), 'touch controls shown');
     check(await evaluate(`getComputedStyle(document.querySelector('.toolbar')).display === 'none'`), 'key hints hidden');
@@ -316,14 +316,14 @@ try {
     // Desktop: no controls, key hints back; the footer link forces them on and the choice is remembered.
     await desktop();
     await send('Page.reload');
-    await waitFor(`!document.getElementById('start').hidden`, 'the start screen (desktop)', 120000);
+    await waitFor(`document.getElementById('start')?.hidden === false`, 'the start screen (desktop)', 120000);
     check(await evaluate(`!matchMedia('(pointer: coarse)').matches && !document.documentElement.classList.contains('touch')
         && getComputedStyle(document.getElementById('touch')).display === 'none'
         && getComputedStyle(document.querySelector('.toolbar')).display !== 'none'`), 'desktop: controls hidden, key hints shown');
     await screenshot('desktop');
     await evaluate(`[...document.querySelectorAll('footer a')].find((a) => a.textContent === 'show touch controls').click()`);
     await send('Page.reload');
-    await waitFor(`!document.getElementById('start').hidden`, 'the start screen (forced on)', 120000);
+    await waitFor(`document.getElementById('start')?.hidden === false`, 'the start screen (forced on)', 120000);
     check(await evaluate(`document.documentElement.classList.contains('touch') && localStorage.getItem('smw-touch-controls') === 'on'`),
         'desktop: forcing controls on survives a reload');
     await screenshot('desktop-forced-on');
