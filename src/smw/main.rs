@@ -200,6 +200,14 @@ pub fn create_globals() {
 
 pub fn init_joysticks() {
     unsafe {
+        // Not in upstream: a browser replay opens no pads, so a connected one cannot act in it.
+        if let Some(count) = harness::replay_joysticks() {
+            joystickcount = count;
+            joysticks = Box::leak(vec![null_mut::<SDL_Joystick>(); count.max(0) as usize].into_boxed_slice()).as_mut_ptr();
+            SDL_JoystickEventState(SDL_ENABLE as i32);
+            return;
+        }
+
         SDL_InitSubSystem(SDL_INIT_JOYSTICK);
         joystickcount = SDL_NumJoysticks() as i16;
         joysticks = Box::leak(vec![null_mut::<SDL_Joystick>(); joystickcount.max(0) as usize].into_boxed_slice()).as_mut_ptr();

@@ -333,7 +333,13 @@ impl MI_InputControlContainer {
 
             for iJoystick in 0..joystickcount {
                 let p = SDL_JoystickNameForIndex(iJoystick as i32);
-                let name = if p.is_null() { String::new() } else { CStr::from_ptr(p).to_string_lossy().into_owned() };
+                let name = if harness::replay_joysticks().is_some() {
+                    "Virtual Controller".to_string()
+                } else if p.is_null() {
+                    String::new()
+                } else {
+                    CStr::from_ptr(p).to_string_lossy().into_owned()
+                };
                 miDeviceSelectField.add_random(name, iJoystick, false);
             }
 
