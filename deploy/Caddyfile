@@ -1,0 +1,3 @@
+smw-relay.kylejameswalker.com {
+	reverse_proxy smw-relay:8080
+}
