@@ -11,13 +11,22 @@ source "$emsdk/emsdk_env.sh" > /dev/null 2>&1
 target_dir="${CARGO_TARGET_DIR:-$repo/target}"
 out="$repo/dist/web"
 
-cargo build --release --target wasm32-unknown-emscripten --features no_network --bin smw \
+# The page is published, so keep build-machine paths out of it: dependency panic locations are
+# remapped, and the data package name the file packager derives from the output path is reset.
+cargo_home="${CARGO_HOME:-$HOME/.cargo}"
+RUSTFLAGS="--remap-path-prefix=$cargo_home=cargo --remap-path-prefix=$repo=." \
+    cargo build --release --target wasm32-unknown-emscripten --features no_network --bin smw \
     --manifest-path "$repo/Cargo.toml" --target-dir "$target_dir"
 
 build="$target_dir/wasm32-unknown-emscripten/release"
 rm -rf "$out"
 mkdir -p "$out"
-cp "$build/smw.js" "$build/smw.wasm" "$build/deps/smw.data" "$out/"
+cp "$build/smw.wasm" "$build/deps/smw.data" "$out/"
+sed "s|\"[^\"]*/deps/smw\.data\"|\"smw.data\"|g" "$build/smw.js" > "$out/smw.js"
+if grep -qE "$HOME|$repo|$target_dir" "$out/smw.js" "$out/smw.wasm"; then
+    echo "error: a build path leaked into dist/web" >&2
+    exit 1
+fi
 
 # Upstream links smw.html (CMAKE_EXECUTABLE_SUFFIX .html), i.e. emcc's default shell page.
 # Let emcc render that shell for a stub with the same settings and keep only the page.
