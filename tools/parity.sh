@@ -5,6 +5,7 @@
 # GOLDEN_ROOT=<dir> reads <dir>/golden/<x>/ instead.
 # A replay with a Rust golden (golden_rust/<x>/, see make_golden.sh) is checked against it and marked so.
 # Output per replay: first divergence (diffreplay.py), screenshot check, then a summary.
+# SMW_NO_BUILD=1 skips cargo; SMW_BIN and SMW_DATA_DIR pass through to run_rust.sh.
 # Exit status 1 if any replay diverges.
 set -uo pipefail
 
@@ -16,7 +17,9 @@ if [[ ${#replays[@]} -eq 0 ]]; then
     replays=("$tools"/replays/*.txt)
 fi
 
-cargo build --release --quiet --manifest-path "$port/Cargo.toml" || exit 2
+if [[ -z "${SMW_NO_BUILD:-}" ]]; then
+    cargo build --release --quiet --manifest-path "$port/Cargo.toml" || exit 2
+fi
 
 run_one() {
     local replay="$1" name
