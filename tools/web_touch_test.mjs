@@ -1,0 +1,340 @@
+#!/usr/bin/env node
+// Drive the web build's touch controls in headless Chrome: an emulated phone in landscape taps Play,
+// walks the menus with the on-screen Start and D-pad, starts a match, then holds right + run + jump
+// with simultaneous touches; then checks portrait and desktop layouts and the on/off toggle.
+// Exits non-zero on the first failed check. Screenshots go to out_dir.
+//
+// Usage: node tools/web_touch_test.mjs [out_dir]
+//   CHROME   Chrome binary (default: the macOS Google Chrome app)
+//   WEB_DIR  the web build to serve (default: dist/web, see tools/package_web.sh)
+import { spawn } from 'node:child_process';
+import { createServer } from 'node:http';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, extname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const web = resolve(process.env.WEB_DIR ?? join(repo, 'dist', 'web'));
+const chrome = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const out = resolve(process.argv[2] ?? join(tmpdir(), 'smw-web-touch-out'));
+mkdirSync(out, { recursive: true });
+
+const types = {
+    '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.wasm': 'application/wasm',
+    '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.data': 'application/octet-stream',
+};
+const server = createServer((req, res) => {
+    const path = decodeURIComponent(req.url.split('?')[0]);
+    const file = join(web, path === '/' ? 'index.html' : path);
+    try {
+        const body = readFileSync(file);
+        res.writeHead(200, { 'Content-Type': types[extname(file)] ?? 'application/octet-stream' });
+        res.end(body);
+    } catch {
+        res.writeHead(404);
+        res.end();
+    }
+});
+await new Promise((ok) => server.listen(0, '127.0.0.1', ok));
+const url = `http://127.0.0.1:${server.address().port}/`;
+
+const profile = mkdtempSync(join(tmpdir(), 'smw-web-chrome-'));
+const browser = spawn(chrome, [
+    '--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--disable-extensions',
+    '--autoplay-policy=no-user-gesture-required', '--mute-audio', '--window-size=900,900', 'about:blank',
+], { stdio: ['ignore', 'ignore', 'pipe'] });
+const cleanup = () => {
+    browser.kill('SIGKILL');
+    server.close();
+    rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+};
+process.on('exit', cleanup);
+for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => process.exit(1));
+const deadlineMs = 240000;
+setTimeout(() => {
+    console.error(`not finished after ${deadlineMs / 1000} s; giving up`);
+    process.exit(1);
+}, deadlineMs).unref();
+
+const wsUrl = await new Promise((ok, fail) => {
+    let buf = '';
+    browser.stderr.on('data', (d) => {
+        buf += d;
+        const m = buf.match(/DevTools listening on (ws:\/\/\S+)/);
+        if (m) ok(m[1]);
+    });
+    browser.on('exit', () => fail(new Error('chrome exited')));
+});
+
+const ws = new WebSocket(wsUrl);
+await new Promise((ok) => ws.addEventListener('open', ok));
+let nextId = 1;
+const pending = new Map();
+ws.addEventListener('message', (ev) => {
+    const msg = JSON.parse(ev.data);
+    if (msg.id && pending.has(msg.id)) {
+        const { ok, fail } = pending.get(msg.id);
+        pending.delete(msg.id);
+        msg.error ? fail(new Error(`${msg.error.message}`)) : ok(msg.result);
+    }
+});
+let sessionId;
+const send = (method, params = {}) =>
+    new Promise((ok, fail) => {
+        const id = nextId++;
+        pending.set(id, { ok, fail });
+        ws.send(JSON.stringify({ id, method, params, sessionId }));
+    });
+const sleep = (ms) => new Promise((ok) => setTimeout(ok, ms));
+const evaluate = async (expression) => {
+    const r = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
+    if (r.exceptionDetails) throw new Error(`${expression}: ${r.exceptionDetails.exception?.description ?? r.exceptionDetails.text}`);
+    return r.result.value;
+};
+const waitFor = async (expression, what, ms = 60000) => {
+    const until = Date.now() + ms;
+    while (!(await evaluate(expression))) {
+        if (Date.now() > until) throw new Error(`timed out waiting for ${what}`);
+        await sleep(200);
+    }
+};
+let failures = 0;
+const check = (ok, what) => {
+    console.log(`${ok ? 'ok  ' : 'FAIL'} ${what}`);
+    if (!ok) failures++;
+};
+let shot = 0;
+const screenshot = async (name) => {
+    const { data } = await send('Page.captureScreenshot', { format: 'png' });
+    const file = join(out, `${String(++shot).padStart(2, '0')}-${name}.png`);
+    writeFileSync(file, Buffer.from(data, 'base64'));
+    console.log(`     ${file}`);
+};
+
+const phone = async (landscape) => {
+    await send('Emulation.setDeviceMetricsOverride', {
+        width: landscape ? 844 : 390, height: landscape ? 390 : 844, deviceScaleFactor: 3, mobile: true,
+        screenOrientation: landscape ? { type: 'landscapePrimary', angle: 90 } : { type: 'portraitPrimary', angle: 0 },
+    });
+    await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+};
+const desktop = async () => {
+    await send('Emulation.setTouchEmulationEnabled', { enabled: false });
+    await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false });
+};
+
+// Multi-touch: every event lists all fingers still down, as a real touch screen reports them.
+const fingers = new Map();
+const touch = async (type, id, point) => {
+    if (type === 'touchEnd') fingers.delete(id);
+    else fingers.set(id, { x: point.x, y: point.y, id });
+    await send('Input.dispatchTouchEvent', { type, touchPoints: [...fingers.values()] });
+};
+const down = (id, p) => touch('touchStart', id, p);
+const move = (id, p) => touch('touchMove', id, p);
+const up = (id) => touch('touchEnd', id);
+const tap = async (p, holdMs = 120) => {
+    await down(9, p);
+    await sleep(holdMs);
+    await up(9);
+};
+const center = (selector, fx = 0.5, fy = 0.5) => evaluate(`(() => {
+    const r = document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();
+    return { x: r.left + r.width * ${fx}, y: r.top + r.height * ${fy} };
+})()`);
+const keyLog = () => evaluate('window.__keys.splice(0)');
+const recording = () => evaluate(`(() => {
+    const names = Module.FS.readdir(REPLAY_DIR).filter((n) => n.endsWith('.txt')).sort();
+    return names.length ? Module.FS.readFile(REPLAY_DIR + '/' + names[names.length - 1], { encoding: 'utf8' }) : '';
+})()`);
+// The harness dump (REPLAY.md) of the newest frame: state, menu focus and player records.
+const frameState = async () => {
+    const dump = await evaluate(`(() => { try { return Module.FS.readFile('/dump.txt', { encoding: 'utf8' }).slice(-4000); } catch { return ''; } })()`);
+    const block = dump.slice(dump.lastIndexOf('\nF ') + 1).split('\n');
+    const [, frame, state] = (block[0] ?? '').split(' ');
+    const menu = block.find((l) => l.startsWith('M ')) ?? '';
+    const p1 = Object.fromEntries((block.find((l) => l.startsWith('P id=0 ')) ?? '').split(' ').slice(1).map((kv) => kv.split('=')));
+    return { frame: Number(frame), state, menu, p1: { x: Number(p1.fx), y: Number(p1.fy), velx: Number(p1.velx), vely: Number(p1.vely) } };
+};
+
+const { targetId } = await send('Target.createTarget', { url: 'about:blank' });
+({ sessionId } = await send('Target.attachToTarget', { targetId, flatten: true }));
+await send('Runtime.enable');
+await send('Page.enable');
+await send('Page.addScriptToEvaluateOnNewDocument', {
+    source: `window.__keys = [];
+        for (const t of ['keydown', 'keyup']) addEventListener(t, (e) => __keys.push([t, e.code, e.keyCode, e.location].join(' ')), true);
+        window.alert = (msg) => console.error('[alert] ' + msg);
+        let module;
+        Object.defineProperty(window, 'Module', {
+            configurable: true,
+            get() { return module; },
+            set(m) {
+                if (m === module) return;
+                module = m;
+                m.preRun = [...(m.preRun ?? []), () => { m.ENV.SMW_DUMP = '/dump.txt'; }];
+            },
+        });`,
+});
+
+try {
+    // Phone, landscape.
+    await phone(true);
+    await send('Page.navigate', { url });
+    await waitFor(`!document.getElementById('start').hidden`, 'the start screen', 120000);
+    check(await evaluate(`matchMedia('(pointer: coarse)').matches`), 'emulated phone reports pointer: coarse');
+    check(await evaluate(`document.documentElement.classList.contains('touch') && !document.getElementById('touch').hidden`), 'touch controls shown');
+    check(await evaluate(`getComputedStyle(document.querySelector('.toolbar')).display === 'none'`), 'key hints hidden');
+    check(await evaluate(`(() => {
+        const s = document.getElementById('stage').getBoundingClientRect();
+        return s.top >= 0 && s.bottom <= innerHeight + 0.5 && Math.abs(s.width / s.height - 4 / 3) < 0.01;
+    })()`), 'game fits the landscape viewport at 4:3');
+    check(await evaluate(`[...document.querySelectorAll('#touch [data-key]')].every((el) => {
+        const r = el.getBoundingClientRect();
+        return r.width >= 56 && r.height >= 56;
+    })`), 'every control is at least 56 px');
+    await screenshot('landscape-start');
+
+    await tap(await center('#play'));
+    await waitFor('started', 'Play to start the game', 10000);
+    check(true, 'tapping Play started the game');
+    await sleep(2500);
+    await screenshot('splash');
+
+    // Splash, then the main menu: D-pad down and up again must move the cursor and come back.
+    const start = await center('[data-key=start]');
+    const dpad = await center('.tc-dpad');
+    const r = await evaluate(`document.querySelector('.tc-dpad').getBoundingClientRect().width / 2`);
+    const arm = { up: { x: dpad.x, y: dpad.y - r * 0.7 }, down: { x: dpad.x, y: dpad.y + r * 0.7 }, right: { x: dpad.x + r * 0.7, y: dpad.y } };
+    await tap(start);
+    await sleep(1000);
+    await screenshot('menu');
+    const menuFocus = (await frameState()).menu;
+    await tap(arm.down);
+    await sleep(500);
+    await screenshot('menu-down');
+    const downFocus = (await frameState()).menu;
+    await tap(arm.up);
+    await sleep(500);
+    check(downFocus !== menuFocus && (await frameState()).menu === menuFocus,
+        `D-pad down/up moves the menu focus and back (${menuFocus} -> ${downFocus})`);
+    let keys = await keyLog();
+    check(keys.includes('keydown Enter 13 0') && keys.includes('keyup Enter 13 0'), 'Start sends Enter (code, keyCode)');
+    check(keys.includes('keydown ArrowDown 40 0') && keys.includes('keydown ArrowUp 38 0'), 'D-pad sends arrow keys');
+
+    // Main menu -> match type -> match settings -> game, as tools/replays/start_classic.txt does with Return.
+    // Player 2 readies up from the keyboard (E), as in start_classic.txt; everything else is touch.
+    for (let i = 0; i < 9 && (await frameState()).state !== 'gameplay'; i++) {
+        if (i === 3) {
+            for (const type of ['keyDown', 'keyUp']) {
+                await send('Input.dispatchKeyEvent', { type, key: 'e', code: 'KeyE', windowsVirtualKeyCode: 69 });
+            }
+        }
+        await tap(start);
+        await sleep(900);
+    }
+    check((await frameState()).state === 'gameplay', 'Start taps reach a match');
+    await sleep(2500);
+    await screenshot('match');
+    await keyLog();
+
+    // Hold right, then run, then jump: three fingers down at once; slide the D-pad thumb to up-right.
+    const run = await center('[data-key=run]');
+    const jump = await center('.tc-btn[data-key=up]');
+    const item = await center('[data-key=item]');
+    const before = await frameState();
+    await down(1, arm.right);
+    await sleep(300);
+    const walking = await frameState();
+    await down(2, run);
+    await sleep(400);
+    const running = await frameState();
+    await screenshot('running');
+    await down(3, jump);
+    await sleep(150);
+    const jumping = await frameState();
+    await screenshot('jumping');
+    console.log(`     P1 idle ${JSON.stringify(before.p1)}\n     walking ${JSON.stringify(walking.p1)}\n     running ${JSON.stringify(running.p1)}\n     jumping ${JSON.stringify(jumping.p1)}`);
+    check(walking.p1.velx > 0 && running.p1.velx > walking.p1.velx, 'P1 walks right, and runs faster with Run held');
+    check(jumping.p1.vely < 0 && jumping.p1.velx > 0, 'P1 jumps while still moving right');
+    await move(1, { x: dpad.x + r * 0.6, y: dpad.y - r * 0.6 });
+    await sleep(150);
+    const held = await evaluate(`[...document.querySelectorAll('#touch .on')].map((el) => el.dataset.key || el.dataset.dir).sort().join(',')`);
+    check(held === 'right,run,up,up', `right + run + jump held together, D-pad slid to up-right (lit: ${held})`);
+    await up(3);
+    await up(2);
+    await up(1);
+    await sleep(300);
+    await tap(item);
+    await sleep(300);
+    keys = await keyLog();
+    check(['keydown ArrowRight 39 0', 'keydown ControlRight 17 2', 'keydown ArrowUp 38 0', 'keydown ShiftRight 16 2']
+        .every((k) => keys.includes(k)), 'right, Right Ctrl and Right Shift (location 2) and Up dispatched');
+    check(['ArrowRight', 'ControlRight', 'ArrowUp', 'ShiftRight'].every((c) => keys.filter((k) => k.startsWith(`keyup ${c} `)).length >= 1),
+        'every key released');
+    await sleep(1200);
+    const rec = await recording();
+    const lines = rec.split('\n');
+    const at = (name) => lines.findIndex((l) => / down /.test(l) && l.endsWith(` down ${name}`));
+    check(['Right', 'Right Ctrl', 'Up', 'Right Shift'].every((n) => at(n) >= 0),
+        'the game saw Right, Right Ctrl, Up and Right Shift (session recording)');
+    const frameOf = (name, dir) => Number((lines.findLast((l) => l.endsWith(` ${dir} ${name}`)) ?? 'NaN').split(' ')[0]);
+    check(frameOf('Up', 'down') > frameOf('Right Ctrl', 'down') && frameOf('Up', 'down') < frameOf('Right Ctrl', 'up'),
+        'jump pressed while run was held');
+    writeFileSync(join(out, 'recording.txt'), rec);
+
+    // Stuck keys: a finger still down when the window loses focus or the touch is cancelled is released.
+    await down(1, arm.right);
+    await sleep(100);
+    await evaluate(`dispatchEvent(new Event('blur'))`);
+    keys = await keyLog();
+    check(keys.at(-1) === 'keyup ArrowRight 39 0', 'blur releases held keys');
+    await up(1);
+    await down(1, run);
+    await sleep(100);
+    await send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
+    fingers.clear();
+    keys = await keyLog();
+    check(keys.at(-1) === 'keyup ControlRight 17 2', 'touchcancel releases held keys');
+
+    await tap(await center('[data-key=back]'));
+    await sleep(500);
+    await screenshot('back');
+    check((await keyLog()).includes('keydown Escape 27 0'), 'Back sends Escape');
+
+    // Portrait: the game on top, the controls below it.
+    await phone(false);
+    await sleep(500);
+    check(await evaluate(`(() => {
+        const s = document.getElementById('stage').getBoundingClientRect();
+        const below = [...document.querySelectorAll('#touch .tc-zone, #touch .tc-util:not([hidden])')].every((el) => el.getBoundingClientRect().top >= s.bottom);
+        return s.top >= 0 && s.width <= innerWidth + 0.5 && below;
+    })()`), 'portrait: controls sit below the game');
+    await screenshot('portrait');
+
+    // Desktop: no controls, key hints back; the footer link forces them on and the choice is remembered.
+    await desktop();
+    await send('Page.reload');
+    await waitFor(`!document.getElementById('start').hidden`, 'the start screen (desktop)', 120000);
+    check(await evaluate(`!matchMedia('(pointer: coarse)').matches && !document.documentElement.classList.contains('touch')
+        && getComputedStyle(document.getElementById('touch')).display === 'none'
+        && getComputedStyle(document.querySelector('.toolbar')).display !== 'none'`), 'desktop: controls hidden, key hints shown');
+    await screenshot('desktop');
+    await evaluate(`[...document.querySelectorAll('footer a')].find((a) => a.textContent === 'show touch controls').click()`);
+    await send('Page.reload');
+    await waitFor(`!document.getElementById('start').hidden`, 'the start screen (forced on)', 120000);
+    check(await evaluate(`document.documentElement.classList.contains('touch') && localStorage.getItem('smw-touch-controls') === 'on'`),
+        'desktop: forcing controls on survives a reload');
+    await screenshot('desktop-forced-on');
+    await evaluate(`document.querySelector('[data-action=hide]').click()`);
+    check(await evaluate(`!document.documentElement.classList.contains('touch') && localStorage.getItem('smw-touch-controls') === 'off'`),
+        'the hide button turns them off');
+} catch (e) {
+    console.error(e.message);
+    failures++;
+    await screenshot('error').catch(() => {});
+}
+
+console.log(failures ? `${failures} check(s) failed` : 'all checks passed');
+process.exit(failures ? 1 : 0);

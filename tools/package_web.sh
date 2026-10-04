@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build the web version (wasm32-unknown-emscripten) and assemble dist/web/:
-# index.html, smw.js, smw.wasm and smw.data (the preloaded data/ tree).
+# index.html, smw.js, smw.wasm, smw.data (the preloaded data/ tree) and the page's touch controls, manifest and icons.
 # Usage: tools/package_web.sh            (needs emsdk 5.0.2 in $EMSDK or ~/work/emsdk)
 # SMW_RELAY_URL=wss://... sets the netplay relay the page uses when it has no ?relay= parameter.
 set -euo pipefail
@@ -37,5 +37,6 @@ echo 'int main(void) { return 0; }' > "$stub/smw.c"
 emcc "$stub/smw.c" -o "$stub/smw.html" -sUSE_SDL=2 -sALLOW_MEMORY_GROWTH=1 --shell-file "$repo/web/shell.html"
 cp "$stub/smw.html" "$out/index.html"
 cp "$repo/resources/smw.png" "$out/favicon.png"
+cp "$repo"/web/{touch.js,touch.css,manifest.webmanifest,icon-180.png,icon-192.png,icon-512.png} "$out/"
 
 du -sh "$out"/*
