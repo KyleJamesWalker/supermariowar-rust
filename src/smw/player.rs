@@ -1964,7 +1964,9 @@ impl CPlayer {
     }
 
     pub fn die(&mut self, deathStyle: PlayerDeathStyle, fTeamRemoved: bool, fKillCarriedItem: bool) {
-        crate::smw::net_outcomes::note_death(self.globalID, deathStyle as i32, fTeamRemoved);
+        if !fTeamRemoved {
+            crate::smw::net_outcomes::note_death(self.globalID, deathStyle as i32, false);
+        }
         unsafe {
             let ix = self.ix as i32;
             let iy = self.iy as i32;

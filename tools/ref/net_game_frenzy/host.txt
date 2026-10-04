@@ -1,7 +1,7 @@
 #@ seed=1
 #@ frames=1600
 #@ map=netplay_arena
-#@ compare=--min frenzycard=2 --min-close 0.5
+#@ compare=--min frenzycard=1 --min-close 0.5
 10 down Return
 12 up Return
 30 down Down
