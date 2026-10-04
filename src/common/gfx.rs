@@ -35,13 +35,13 @@ pub fn init_globals() {
     }
 }
 
-/// Not in upstream: whether surfaces get `SDL_SetSurfaceRLE`. On unless built with `no_rle`; `SMW_RLE=0`/`1` overrides.
+/// Not in upstream: `SDL_SetSurfaceRLE` only on the web by default (docs/sdl2-compat-rle.md); `SMW_RLE=0`/`1` overrides.
 pub fn rle_enabled() -> bool {
     static RLE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *RLE.get_or_init(|| match std::env::var("SMW_RLE").as_deref() {
         Ok("0") => false,
         Ok("1") => true,
-        _ => !cfg!(feature = "no_rle"),
+        _ => cfg!(target_os = "emscripten"),
     })
 }
 

@@ -9,8 +9,6 @@ description = "Super Mario War - faithful Rust port"
 [features]
 # Mirrors the C++ NO_NETWORK build (NetworkLayerNULL).
 no_network = []
-# Not in upstream: RLE off by default (SMW_RLE=1 turns it back on); see docs/sdl2-compat-rle.md.
-no_rle = []
 
 [dependencies]
 sdl2 = { version = "0.37", features = ["image", "mixer"] }
