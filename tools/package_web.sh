@@ -28,12 +28,13 @@ if grep -qE "$HOME|$repo|$target_dir" "$out/smw.js" "$out/smw.wasm"; then
     exit 1
 fi
 
-# Upstream links smw.html (CMAKE_EXECUTABLE_SUFFIX .html), i.e. emcc's default shell page.
-# Let emcc render that shell for a stub with the same settings and keep only the page.
+# Upstream ships emcc's default shell page; web/shell.html is our own (no Emscripten branding, log hidden).
+# Let emcc render it for a stub with the same settings and keep only the page.
 stub="$(mktemp -d)"
 trap 'rm -rf "$stub"' EXIT
 echo 'int main(void) { return 0; }' > "$stub/smw.c"
-emcc "$stub/smw.c" -o "$stub/smw.html" -sUSE_SDL=2 -sALLOW_MEMORY_GROWTH=1
+emcc "$stub/smw.c" -o "$stub/smw.html" -sUSE_SDL=2 -sALLOW_MEMORY_GROWTH=1 --shell-file "$repo/web/shell.html"
 cp "$stub/smw.html" "$out/index.html"
+cp "$repo/resources/smw.png" "$out/favicon.png"
 
 du -sh "$out"/*

@@ -63,6 +63,8 @@ const initScript = `(() => {
             // smw.js assigns Module again (to itself); hook it only once.
             if (m === module) return;
             module = m;
+            // The page waits for a Play click before main(); replays start straight away.
+            m.noInitialRun = false;
             m.preRun = [...(m.preRun ?? []), () => {
                 Object.assign(m.ENV, env);
                 m.FS.writeFile('/replay.txt', replay);

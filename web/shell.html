@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Super Mario War</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<style>
+  :root {
+    --bg: #0e0f1a;
+    --panel: #171a2b;
+    --text: #e8e9f3;
+    --muted: #8a8fb0;
+    --accent: #e4002b;
+    --accent-dark: #8c0019;
+    --gold: #ffcc33;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background: radial-gradient(ellipse at top, #22264a 0%, var(--bg) 60%) fixed;
+    color: var(--text);
+    font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+    gap: 14px;
+    min-height: 100vh;
+  }
+  h1 {
+    margin: 4px 0 0;
+    font-size: clamp(20px, 3.2vw, 30px);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gold);
+    text-shadow: 3px 3px 0 var(--accent-dark);
+  }
+  .stage {
+    position: relative;
+    width: min(100%, calc((100vh - 190px) * 4 / 3), 1280px);
+    aspect-ratio: 4 / 3;
+    background: #000;
+    border-radius: 6px;
+    box-shadow: 0 0 0 3px #000, 0 0 0 6px var(--panel), 0 18px 40px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+  }
+  canvas.game {
+    /* !important: SDL/Emscripten set inline pixel sizes on the canvas. */
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain;
+    display: block;
+    image-rendering: pixelated;
+    outline: none;
+  }
+  .stage:fullscreen { width: 100vw; height: 100vh; aspect-ratio: auto; border-radius: 0; box-shadow: none; }
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    background: rgba(0, 0, 0, 0.85);
+    font-weight: 600;
+    text-align: center;
+    padding: 16px;
+  }
+  .overlay[hidden] { display: none; }
+  .bar { width: 50%; height: 10px; background: #2a2e4a; border-radius: 5px; overflow: hidden; }
+  .bar > div { height: 100%; width: 0; background: var(--gold); transition: width 0.15s; }
+  .toolbar { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; justify-content: center; max-width: 960px; }
+  .btn {
+    font: 700 14px/1 system-ui, -apple-system, "Segoe UI", sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #fff;
+    background: linear-gradient(var(--accent), #b80022);
+    border: 0;
+    border-radius: 8px;
+    padding: 12px 20px;
+    cursor: pointer;
+    box-shadow: 0 4px 0 var(--accent-dark), 0 8px 16px rgba(0, 0, 0, 0.4);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: transform 0.06s, box-shadow 0.06s, filter 0.15s;
+  }
+  .btn:hover { filter: brightness(1.12); }
+  .btn:active { transform: translateY(4px); box-shadow: 0 0 0 var(--accent-dark), 0 4px 8px rgba(0, 0, 0, 0.4); }
+  .btn:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+  .btn svg { width: 18px; height: 18px; }
+  .btn-big { font-size: 20px; padding: 16px 34px; }
+  .btn-big svg { width: 22px; height: 22px; }
+  .hint { color: var(--muted); font-size: 13px; text-align: center; }
+  kbd {
+    background: var(--panel);
+    border: 1px solid #2f3459;
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font: 12px ui-monospace, Menlo, monospace;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  footer { margin-top: auto; color: var(--muted); font-size: 12px; text-align: center; }
+  footer a { color: var(--muted); }
+  #output {
+    width: min(100%, 960px);
+    height: 160px;
+    background: #05060b;
+    color: #9fe3a8;
+    border: 1px solid #2a2e4a;
+    border-radius: 6px;
+    font: 12px ui-monospace, Menlo, monospace;
+    padding: 8px;
+  }
+  #output[hidden] { display: none; }
+</style>
+</head>
+<body>
+  <h1>Super Mario War</h1>
+
+  <div class="stage" id="stage">
+    <canvas class="game" id="canvas" tabindex="-1" oncontextmenu="event.preventDefault()"></canvas>
+    <div class="overlay" id="loading">
+      <div id="status">Downloading&hellip;</div>
+      <div class="bar"><div id="progress"></div></div>
+    </div>
+    <div class="overlay" id="start" hidden>
+      <button class="btn btn-big" id="play" type="button">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>
+        Play
+      </button>
+      <div class="hint" id="pads">Using gamepads? Press a button on each one now (up to 4).</div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <button class="btn" id="fullscreen" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>
+      </svg>
+      Fullscreen
+    </button>
+    <span class="hint">
+      <kbd>&larr;</kbd><kbd>&rarr;</kbd> move &middot; <kbd>&uarr;</kbd> jump &middot; <kbd>Right Ctrl</kbd> run / grab &middot;
+      <kbd>Right Shift</kbd> use item &middot; <kbd>Enter</kbd> start &middot; <kbd>Esc</kbd> back
+    </span>
+  </div>
+
+  <textarea id="output" rows="8" hidden readonly></textarea>
+
+  <footer>
+    A Rust port of <a href="https://github.com/mmatyas/supermariowar">Super Mario War</a> &middot;
+    <a href="https://github.com/KyleJamesWalker/supermariowar-rust">source</a> &middot;
+    <a href="#" id="toggleLog">show log</a>
+  </footer>
+
+  <script>
+    var canvasElement = document.getElementById('canvas');
+    var outputElement = document.getElementById('output');
+    var loadingElement = document.getElementById('loading');
+    var statusElement = document.getElementById('status');
+    var progressElement = document.getElementById('progress');
+    outputElement.value = '';
+
+    document.getElementById('toggleLog').addEventListener('click', function (e) {
+      e.preventDefault();
+      outputElement.hidden = !outputElement.hidden;
+      this.textContent = outputElement.hidden ? 'show log' : 'hide log';
+    });
+    var stageElement = document.getElementById('stage');
+    document.getElementById('fullscreen').addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else stageElement.requestFullscreen({ navigationUI: 'hide' });
+      canvasElement.focus();
+    });
+    canvasElement.addEventListener('click', function () { canvasElement.focus(); });
+
+    // Browsers only expose a gamepad after one of its buttons is pressed, and the game (like upstream) lists
+    // joysticks once at startup, so start it from a click after the pads are awake. The click also unlocks audio.
+    var startElement = document.getElementById('start');
+    var padsElement = document.getElementById('pads');
+    var countPads = function () {
+      var pads = navigator.getGamepads ? Array.prototype.filter.call(navigator.getGamepads(), Boolean) : [];
+      padsElement.textContent = pads.length
+        ? pads.length + ' gamepad' + (pads.length > 1 ? 's' : '') + ' ready. Press a button on any others, then Play.'
+        : 'Using gamepads? Press a button on each one now (up to 4).';
+    };
+    window.addEventListener('gamepadconnected', countPads);
+    window.addEventListener('gamepaddisconnected', countPads);
+    document.getElementById('play').addEventListener('click', function () {
+      startElement.hidden = true;
+      canvasElement.focus();
+      Module.callMain([]);
+    });
+
+    var setStatus = function (text) {
+      var m = text && text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+      if (m) {
+        statusElement.textContent = m[1].trim();
+        progressElement.style.width = (100 * parseInt(m[2]) / parseInt(m[4])) + '%';
+      } else if (text) {
+        statusElement.textContent = text;
+      } else {
+        loadingElement.hidden = true;
+      }
+    };
+
+    var Module = {
+      print: function () {
+        var text = Array.prototype.join.call(arguments, ' ');
+        console.log(text);
+        outputElement.value += text + '\n';
+        outputElement.scrollTop = outputElement.scrollHeight;
+      },
+      canvas: canvasElement,
+      setStatus: setStatus,
+      noInitialRun: true,
+      onRuntimeInitialized: function () {
+        if (!Module.noInitialRun) return;
+        loadingElement.hidden = true;
+        countPads();
+        startElement.hidden = false;
+        document.getElementById('play').focus();
+      },
+      totalDependencies: 0,
+      monitorRunDependencies: function (left) {
+        this.totalDependencies = Math.max(this.totalDependencies, left);
+        setStatus(left ? 'Loading… (' + (this.totalDependencies - left) + '/' + this.totalDependencies + ')' : '');
+      }
+    };
+    window.onerror = function () {
+      loadingElement.hidden = false;
+      statusElement.textContent = 'Something went wrong — the log below has details.';
+      outputElement.hidden = false;
+    };
+  </script>
+  {{{ SCRIPT }}}
+</body>
+</html>
