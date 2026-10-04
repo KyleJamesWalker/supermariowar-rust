@@ -73,8 +73,10 @@ data="$sandbox/data"
 cd "$sandbox"
 status=0
 # Background + wait so a killed script also stops the game; ulimit caps each file the game writes at 1 GB.
+# The SDL_JOYSTICK_* hints hide physical pads, which would otherwise join the replay's virtual joysticks.
 (ulimit -f 1048576; exec env HOME="$home" \
     SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
+    SDL_JOYSTICK_HIDAPI=0 SDL_JOYSTICK_MFI=0 SDL_JOYSTICK_IOKIT=0 \
     SMW_SEED="${seed:-1}" \
     SMW_NOLIMIT="${SMW_NOLIMIT-1}" \
     SMW_FRAMES="${frames:-600}" \
