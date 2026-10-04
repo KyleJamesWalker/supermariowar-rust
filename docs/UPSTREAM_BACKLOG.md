@@ -1,0 +1,71 @@
+# Upstream backlog
+
+Bugs found in the C++ [Super Mario War](https://github.com/mmatyas/supermariowar) while porting it, and port changes worth offering upstream, tracked until each lands or is dropped. Everything was found against upstream `5693918f`; confirm each item on current upstream `master` before opening a PR.
+
+## How an item goes upstream
+
+1. Confirm the bug on current upstream `master`, and record the commit in the item.
+2. Fix it on a branch of [supermariowar-cpp-reference](https://github.com/KyleJamesWalker/supermariowar-cpp-reference), with the replay or script that shows it.
+3. Open a small upstream PR, one bug per PR, linking the evidence. Bigger behaviour changes start as an issue.
+4. Once it merges, pull it in through the upstream sync (`UPSTREAM_SYNC.md`): drop the port code that reproduces the bug, regenerate the affected goldens, and check parity.
+5. Update the item's status and links here.
+
+Status: `found` (seen at `5693918f`), `confirmed` (still on `master`), `PR open`, `merged`, `synced` (the port no longer reproduces it), `dropped`.
+
+## Memory safety
+
+The port reproduces these so replays match the C++ byte for byte.
+
+| ID | Bug | Port location | Status | Upstream |
+|---|---|---|---|---|
+| M1 | In the boss minigame, picking up a Frenzy card `static_cast`s the game mode to `CGM_Frenzy` and writes past the end of the non-Frenzy mode object | `src/smw/objects/moving/mo_frenzy_card.rs:90` | found | |
+| M2 | Star mode with four players reads `starPlayer[3]` out of bounds; the bytes after the array form a non-null pointer | `src/smw/gamemodes/star.rs:59` | found | |
+| M3 | `CMap` block lookups and AI map reads past the map edge read neighbouring fields | `src/common/map.rs:751` (`cpp_byte`), `src/smw/ai.rs` (`cmap_byte`) | found | |
+| M4 | World editor: saving a tour stop in the bonus house or a minigame mode (24-27) indexes `g_iNumGameModeSettings` out of bounds | `src/worldeditor/worldeditor.rs:3303` | found | |
+| M5 | World editor: deleting a stage keeps iterating `vehiclelist` with iterators invalidated by `RemoveVehicleFromTile`, skipping elements and visiting stale slots | `src/worldeditor/worldeditor.rs:3478` | found | |
+| M6 | Reads of uninitialized values: race goal position (`placeRaceGoal`), an AI constructor field, map loader entries for IDs missing from the tile table, level editor `MapBlock::iSettings` (makes the editor's saved output vary between runs), and a game package's default constructor | `src/smw/objects/overmap/wo_race_goal.rs:52`, `src/smw/ai.rs:404`, `src/common/map/map_reader18xx.rs:43`, `src/leveleditor/leveleditor.rs:5182`, `src/smw/network/protocol_game_packages.rs:242` | found | |
+| M7 | The tournament scoreboard draws skin frames that were never loaded; Release builds skip them silently | fixed in `d63bf67` | found | |
+
+## Logic
+
+| ID | Bug | Port location | Status | Upstream |
+|---|---|---|---|---|
+| L1 | `NewRoom` cuts the room name at the player-name length (`NET_MAX_PLAYER_NAME_LENGTH - 1`) | `src/common_netplay/protocol_packages.rs:194` | found | |
+| L2 | `getBoolean(scaleMax, positiveThreshold)` gets an out-of-range threshold; replay `opt_gameplay` trips the assert at frame 1209 in a debug build. The caller is not traced yet | `src/common/random_number_generator.rs:43` | found | |
+| L3 | Map thumbnails miss hazards and platform shadows drawn by position, which still go to `blitdest` after `5c979393` | see `PROGRESS.md`, Known C++ issues | found | |
+
+## Web build
+
+Upstream ships an Emscripten build, so these apply to it directly.
+
+| ID | Bug | Port fix | Status | Upstream |
+|---|---|---|---|---|
+| W1 | Binding a control in the Controls menu hangs the page: `MI_InputControlField::SendInput` skips `SDL_WaitEvent` under `__EMSCRIPTEN__` but keeps looping | binds from each frame's polled events (`faa0cf4`) | found | |
+| W2 | A standard-mapping gamepad's D-pad arrives as buttons 12-15, so nothing is bound to it | the D-pad also sends hat 0 (`a9ee8b3`) | found | |
+| W3 | Backspace can navigate the page back while typing a name | the page cancels the browser default (`75b3cec`) | found | |
+
+## Netplay
+
+Both change the protocol, so open an issue first.
+
+| ID | Bug | Port fix | Status | Upstream |
+|---|---|---|---|---|
+| N1 | Powerup blocks release different items on different clients: each rolls from its own RNG copy, and a joiner that misses a host's block hit falls one draw behind. Reproduced between two C++ clients with `tools/ref/net_game_blocks` (2 of 5 runs) | the host decides block contents (`7a0a43d`); `PROGRESS.md`, Netplay deviations | found | |
+| N2 | Other random outcomes can differ between clients the same way: frenzy cards, coin placement, stomp/survival enemies, random shell deaths, respawn points | in progress on `netplay-random-sync` | found | |
+
+## Proposals
+
+Deliberate behaviour changes; each needs the maintainer's agreement first. Details in `PROGRESS.md`, Deliberate deviations.
+
+| ID | Change | Status | Upstream |
+|---|---|---|---|
+| P1 | A joystick's stick and D-pad drive the same bindings. Upstream's defaults bind the stick, so a D-pad-only pad does nothing | proposed | |
+| P2 | Connected gamepads go to the first players at launch, keyboards fill the rest, and the next launch without pads restores the keyboard setup | proposed | |
+| P3 | The first keyboard player can drive menus, not only player 1 | proposed | |
+| P4 | Browser netplay through a WebSocket relay (`smw_relay`, `RELAY.md`) | proposed | |
+
+## Outside Super Mario War
+
+| ID | Issue | Where | Status |
+|---|---|---|---|
+| X1 | Homebrew sdl2-compat re-encodes RLE sprite sheets on every blit, so heavy scenes miss 60 fps | draft in `sdl2-compat-rle.md`, for libsdl-org/sdl2-compat | drafted, not filed |

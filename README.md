@@ -56,7 +56,7 @@ tools/replay_compare.sh ~/Library/Preferences/.smw/replays/<file>.txt   # replay
 
 ## Verifying against the C++ original
 
-The C++ original, plus the replay and state-dump hooks used to compare it with this port, lives in [supermariowar-cpp-reference](https://github.com/KyleJamesWalker/supermariowar-cpp-reference) (branch `harness-latest`; the hooks are also kept here as `tools/cpp-harness.patch` and `tools/editor-harness.patch`). `docs/REPLAY.md` specifies the harness, and `tools/parity.sh`, `tools/parity_sweep.sh` and `tools/editor_parity.sh` run the comparisons. `docs/ARCHITECTURE.md` documents the porting conventions, and `docs/PROGRESS.md` maps each C++ file to its Rust module.
+The C++ original, plus the replay and state-dump hooks used to compare it with this port, lives in [supermariowar-cpp-reference](https://github.com/KyleJamesWalker/supermariowar-cpp-reference) (branch `harness-latest`; the hooks are also kept here as `tools/cpp-harness.patch` and `tools/editor-harness.patch`). `docs/REPLAY.md` specifies the harness, and `tools/parity.sh`, `tools/parity_sweep.sh` and `tools/editor_parity.sh` run the comparisons. `docs/ARCHITECTURE.md` documents the porting conventions, and `docs/PROGRESS.md` maps each C++ file to its Rust module. `docs/UPSTREAM_BACKLOG.md` tracks C++ bugs and port changes to offer upstream.
 
 ## Credits
 
