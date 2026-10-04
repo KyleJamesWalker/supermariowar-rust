@@ -93,7 +93,7 @@ const url = `http://127.0.0.1:${server.address().port}/${page}`;
 const profile = mkdtempSync(join(tmpdir(), 'smw-web-chrome-'));
 const browser = spawn(chrome, [
     '--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--disable-extensions',
-    '--autoplay-policy=no-user-gesture-required', '--window-size=800,700', 'about:blank',
+    '--autoplay-policy=no-user-gesture-required', '--mute-audio', '--window-size=800,700', 'about:blank',
 ], { stdio: ['ignore', 'ignore', 'pipe'] });
 const cleanup = () => {
     browser.kill();
@@ -101,6 +101,13 @@ const cleanup = () => {
     rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 };
 process.on('exit', cleanup);
+for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => process.exit(1));
+// A hang anywhere (Chrome, the page, a CDP call) must not leave the browser running.
+const deadlineMs = Math.max(120000, frames * 100) + 60000;
+setTimeout(() => {
+    console.error(`no result after ${deadlineMs / 1000} s; giving up`);
+    process.exit(1);
+}, deadlineMs);
 
 const wsUrl = await new Promise((ok, fail) => {
     let buf = '';
