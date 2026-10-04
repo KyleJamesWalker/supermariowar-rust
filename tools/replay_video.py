@@ -11,6 +11,7 @@ so nothing but the dumps touches the disk. Exit status: 0 done, 1 a game or ffmp
 
 import argparse
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -103,6 +104,16 @@ def directive(replay, key):
             if k.strip() == key:
                 value = v.strip()
     return value
+
+
+def segment_start(replay):
+    """The first frame a segment replay or clip plays (docs/REPLAY.md, "Markers, checkpoints and clips"), else 0."""
+    match = os.environ.get("SMW_SEGMENT") or directive(replay, "segment")
+    if match:
+        for line in Path(replay).read_text().splitlines():
+            if line.startswith("#@ checkpoint ") and f" match={match} " in line + " ":
+                return int(re.search(r" frame=(\d+)", line).group(1))
+    return 0
 
 
 def find_data(binary):
@@ -363,7 +374,7 @@ def main():
 
     every = max(1, int(args.speed)) if args.speed >= 2 else 1
     total = int(os.environ.get("SMW_FRAMES") or directive(replay, "frames") or 600)
-    first, last = 0, total - 1
+    first, last = segment_start(replay), total - 1
     if args.frames:
         a, _, b = args.frames.partition("-")
         if not a.isdigit() or not b.isdigit() or int(b) < int(a):
