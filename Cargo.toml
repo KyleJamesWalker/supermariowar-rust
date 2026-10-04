@@ -14,7 +14,7 @@ no_network = []
 sdl2 = { version = "0.37", features = ["image", "mixer"] }
 toml = "0.8"
 
-# The web build is NO_NETWORK only, as upstream's.
+# Native only: the web build links Emscripten's zlib and plays online through smw_relay (relay/).
 [target.'cfg(not(target_os = "emscripten"))'.dependencies]
 enet-sys = "1.0.5"
 libz-sys = "1"
