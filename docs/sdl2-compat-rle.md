@@ -75,4 +75,4 @@ Super Mario War (C++ reference and its Rust port, both on sdl2-compat), headless
 
 On an idle machine (2026-10-04) the costs are 2.5 ms and 0.25 ms for `flow_world`, 9.5 ms and 0.6 ms for `gg_death_valley`.
 
-RLE also changes the picture. In 10 of our 44 replays, maps with a foreground layer show its magenta colour key as opaque pixels with RLE on. With RLE off, and in the Emscripten build (real SDL2) with RLE on, those pixels are transparent. The other screenshots are identical with and without RLE. The port can build without RLE (`no_rle` feature, `SMW_RLE=0`).
+RLE also changes the picture. In 10 of our 44 replays, maps with a foreground layer show its magenta colour key as opaque pixels with RLE on (`sdl2-compat-convert-blend.md`). With RLE off, and in the Emscripten build (real SDL2) with RLE on, those pixels are transparent. The other screenshots are identical with and without RLE. The port can build without RLE (`no_rle` feature, `SMW_RLE=0`).
