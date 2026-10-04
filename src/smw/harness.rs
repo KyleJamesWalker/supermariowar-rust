@@ -729,12 +729,10 @@ fn record_event(r: &mut Recorder, ev: &ReplayEvent) {
 }
 
 /// Not in upstream. Browsers report a standard-mapping pad's D-pad as buttons 12-15 (up, down, left,
-/// right): each such line is preceded by the hat 0 line desktop SDL would send, and followed by left-stick
-/// lines while the real stick is centred, so the D-pad binds as "Pad" directions and drives the defaults.
+/// right) and desktop SDL as hat 0, so each of those button lines is preceded by the hat line it implies.
 #[cfg(target_os = "emscripten")]
 mod web_dpad {
     use super::{EventKind, ReplayEvent};
-    use crate::common::input::JOYSTICK_DEAD_ZONE;
     use sdl2::sys::{SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP};
 
     extern "C" {
@@ -744,7 +742,6 @@ mod web_dpad {
     /// Bit d set: open joystick d is a standard-mapping pad. SDL opens the connected pads in page order.
     static mut standard: i32 = 0;
     static mut hats: [i32; 8] = [0; 8];
-    static mut stick: [[i32; 2]; 8] = [[0; 2]; 8];
 
     pub fn init() {
         unsafe {
@@ -754,51 +751,18 @@ mod web_dpad {
         }
     }
 
-    fn line(ev: &ReplayEvent, kind: EventKind, index: i32, value: i32) -> ReplayEvent {
-        ReplayEvent { frame: ev.frame, kind, down: false, keyName: String::new(), device: ev.device, index, value }
-    }
-
-    fn dpad_axis(hat: i32, axis: i32) -> i32 {
-        let (neg, pos) = if axis == 0 { (SDL_HAT_LEFT, SDL_HAT_RIGHT) } else { (SDL_HAT_UP, SDL_HAT_DOWN) };
-        (hat & pos as i32 != 0) as i32 * 32767 - (hat & neg as i32 != 0) as i32 * 32767
-    }
-
-    /// The lines to record for `ev`, in order, including `ev` itself.
-    pub fn expand(ev: ReplayEvent) -> Vec<ReplayEvent> {
-        if unsafe { standard } & (1 << ev.device) == 0 {
-            return vec![ev];
+    pub fn hat_for(ev: &ReplayEvent) -> Option<ReplayEvent> {
+        if ev.kind != EventKind::JoyButton || !(12..=15).contains(&ev.index) || unsafe { standard } & (1 << ev.device) == 0 {
+            return None;
         }
-        let d = ev.device as usize;
-        let (hat, real) = unsafe { (&mut hats[d], &mut stick[d]) };
-        let centred = |v: i32| v.abs() <= JOYSTICK_DEAD_ZONE;
-        if ev.kind == EventKind::JoyAxis && ev.index < 2 {
-            let axis = ev.index;
-            real[axis as usize] = ev.value;
-            let held = dpad_axis(*hat, axis);
-            if centred(ev.value) && held != 0 {
-                let synth = line(&ev, EventKind::JoyAxis, axis, held);
-                return vec![ev, synth];
-            }
-            return vec![ev];
-        }
-        if ev.kind != EventKind::JoyButton || !(12..=15).contains(&ev.index) {
-            return vec![ev];
-        }
-        let before = [dpad_axis(*hat, 0), dpad_axis(*hat, 1)];
         let bit = [SDL_HAT_UP, SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT][(ev.index - 12) as usize] as i32;
+        let hat = unsafe { &mut hats[ev.device as usize] };
         if ev.value != 0 {
             *hat |= bit;
         } else {
             *hat &= !bit;
         }
-        let mut out = vec![line(&ev, EventKind::JoyHat, 0, *hat), line(&ev, ev.kind, ev.index, ev.value)];
-        for axis in 0..2 {
-            let value = dpad_axis(*hat, axis);
-            if value != before[axis as usize] && centred(real[axis as usize]) {
-                out.push(line(&ev, EventKind::JoyAxis, axis, value));
-            }
-        }
-        out
+        Some(ReplayEvent { frame: ev.frame, kind: EventKind::JoyHat, down: false, keyName: String::new(), device: ev.device, index: 0, value: *hat })
     }
 }
 
@@ -824,10 +788,9 @@ fn record_frame_start(frame: u32) {
         }
         if let Some(ev) = to_replay_event(raw, frame) {
             #[cfg(target_os = "emscripten")]
-            for line in web_dpad::expand(ev) {
-                record_event(r, &line);
+            if let Some(hat) = web_dpad::hat_for(&ev) {
+                record_event(r, &hat);
             }
-            #[cfg(not(target_os = "emscripten"))]
             record_event(r, &ev);
         }
     }

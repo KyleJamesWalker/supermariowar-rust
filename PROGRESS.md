@@ -54,8 +54,9 @@ Scope order: core game + menus + sound, then netplay, level editor, world editor
 - Upstream `5c979393` gave hazard and platform drawing an explicit destination, but the hazards and platform shadows drawn by position in map thumbnails still go to `blitdest`, so thumbnails lack them. The port reproduces this.
 - `RandomNumberGenerator::getBoolean(scaleMax, positiveThreshold)` (`get_boolean_threshold`) asserts `positiveThreshold < scaleMax && positiveThreshold >= 0` (`random_number_generator.rs:43`, a `debug_assert!` port of the C++ `assert`). Replay `opt_gameplay` trips it at frame 1209 in a release build with debug assertions. The C++ has the same assert, compiled out in the Release reference, so a debug C++ build would fail it too; the caller passing the bad range is not yet traced.
 
-## Web-only deviations
+## Deliberate deviations from the C++
 
-- Binding a control in the Controls menu does not block: upstream's `MI_InputControlField::SendInput` skips `SDL_WaitEvent` under `__EMSCRIPTEN__` but keeps looping, which hangs the page (an upstream bug). The field reads each frame's polled events instead and binds the first that fits.
-- Standard-mapping gamepads: the D-pad (browser buttons 12-15) also sends hat 0, as desktop SDL does, and left-stick axis 0/1 while the real stick is centred, so a D-pad-only pad drives the default joystick bindings. See `REPLAY.md`, Recordings.
+- Stick and D-pad are one control: on a joystick, a binding to a stick 1 direction also fires from the same hat direction and vice versa, in game and in menus (`CPlayerInput::update`). Upstream reads only the bound one, and its defaults bind the stick, so a D-pad-only pad did nothing.
+- Web: binding a control in the Controls menu does not block. Upstream's `MI_InputControlField::SendInput` skips `SDL_WaitEvent` under `__EMSCRIPTEN__` but keeps looping, which hangs the page (an upstream bug). The field reads each frame's polled events instead and binds the first that fits.
+- Web: a standard-mapping gamepad's D-pad (browser buttons 12-15) also sends hat 0, as desktop SDL reports it. See `REPLAY.md`, Recordings.
 - The Rust harness records and replays axes and buttons 0-63; a browser recording that uses axis 6+ or button 16+ does not replay on the C++ harness.

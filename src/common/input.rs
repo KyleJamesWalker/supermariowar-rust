@@ -126,7 +126,19 @@ pub struct CPlayerInput {
     pub outputControls: [COutputControl; 4],
 
     pub iPressedKey: SDL_Keycode,
+    /// Not in upstream: per joystick (`which`), the stick 1 and hat directions held (up, down, left, right).
+    joyDirections: Vec<(i32, [bool; 4], [bool; 4])>,
     pub _alias: Aliased,
+}
+
+/// Not in upstream: the direction (up, down, left, right) of a stick 1 or hat binding. A joystick's
+/// stick 1 and hat drive the same direction bindings, so either one moves a player or a menu.
+fn joy_direction(key: SDL_Keycode) -> Option<usize> {
+    match key {
+        JOY_STICK_1_UP..=JOY_STICK_1_RIGHT => Some(key as usize),
+        JOY_HAT_UP..=JOY_HAT_RIGHT => Some((key - JOY_HAT_UP) as usize),
+        _ => None,
+    }
 }
 
 impl Default for CPlayerInput {
@@ -146,6 +158,7 @@ impl CPlayerInput {
             inputControls: [Ptr::null(); 4],
             outputControls: [COutputControl::default(); 4],
             iPressedKey: 0,
+            joyDirections: Vec::new(),
         };
         for iPlayer in 0..MAX_PLAYERS as usize {
             for iKey in 0..NUM_KEYS {
@@ -206,6 +219,35 @@ impl CPlayerInput {
         unsafe {
             let event_type = event.type_;
             let is = |t: SDL_EventType| event_type == t as u32;
+
+            let mut joyDirection: Option<([bool; 4], &[usize])> = None;
+            if is(SDL_EventType::SDL_JOYHATMOTION) || (is(SDL_EventType::SDL_JOYAXISMOTION) && event.jaxis.axis < 2) {
+                let which = if is(SDL_EventType::SDL_JOYHATMOTION) { event.jhat.which } else { event.jaxis.which };
+                let i = match self.joyDirections.iter().position(|d| d.0 == which) {
+                    Some(i) => i,
+                    None => {
+                        self.joyDirections.push((which, [false; 4], [false; 4]));
+                        self.joyDirections.len() - 1
+                    }
+                };
+                let (_, stick, hat) = &mut self.joyDirections[i];
+                let changed: &[usize] = if is(SDL_EventType::SDL_JOYHATMOTION) {
+                    let value = event.jhat.value as u32;
+                    *hat = [value & SDL_HAT_UP != 0, value & SDL_HAT_DOWN != 0, value & SDL_HAT_LEFT != 0, value & SDL_HAT_RIGHT != 0];
+                    &[0, 1, 2, 3]
+                } else {
+                    let value = event.jaxis.value as i32;
+                    let (neg, pos) = if event.jaxis.axis == 0 { (2, 3) } else { (0, 1) };
+                    stick[neg] = value < -JOYSTICK_DEAD_ZONE;
+                    stick[pos] = value > JOYSTICK_DEAD_ZONE;
+                    if event.jaxis.axis == 0 {
+                        &[2, 3]
+                    } else {
+                        &[0, 1]
+                    }
+                };
+                joyDirection = Some(([0, 1, 2, 3].map(|d| stick[d] || hat[d]), changed));
+            }
 
             let mut fFound = false;
             for iPlayer in -1..MAX_PLAYERS as i16 {
@@ -368,40 +410,33 @@ impl CPlayerInput {
                         }
                     }
                 } else {
-                    if is(SDL_EventType::SDL_JOYHATMOTION) {
-                        if iDeviceID as i32 != event.jhat.which {
+                    if let Some((held, changed)) = joyDirection {
+                        let which = if is(SDL_EventType::SDL_JOYHATMOTION) { event.jhat.which } else { event.jaxis.which };
+                        if iDeviceID as i32 != which {
                             continue;
                         }
 
                         for iKey in 0..NUM_KEYS {
-                            let k = inputControl.keys[iKey];
-                            if k >= JOY_HAT_UP && k <= JOY_HAT_RIGHT {
-                                let value = event.jhat.value as u32;
-                                if (k == JOY_HAT_UP && (value & SDL_HAT_UP) != 0)
-                                    || (k == JOY_HAT_DOWN && (value & SDL_HAT_DOWN) != 0)
-                                    || (k == JOY_HAT_LEFT && (value & SDL_HAT_LEFT) != 0)
-                                    || (k == JOY_HAT_RIGHT && (value & SDL_HAT_RIGHT) != 0)
-                                {
-                                    fFound = true;
+                            let Some(direction) = joy_direction(inputControl.keys[iKey]) else { continue };
+                            if !changed.contains(&direction) {
+                                continue;
+                            }
 
-                                    //Ignore input for cpu controlled players
-                                    if ignore_cpu(iKey) {
-                                        continue;
-                                    }
+                            //Ignore input for cpu controlled players
+                            if ignore_cpu(iKey) {
+                                continue;
+                            }
 
-                                    if !outputControl.keys[iKey].fDown {
-                                        outputControl.keys[iKey].fPressed = true;
-                                    }
+                            if held[direction] {
+                                fFound = true;
 
-                                    outputControl.keys[iKey].fDown = true;
-                                } else {
-                                    //Ignore input for cpu controlled players
-                                    if ignore_cpu(iKey) {
-                                        continue;
-                                    }
-
-                                    outputControl.keys[iKey].fDown = false;
+                                if !outputControl.keys[iKey].fDown {
+                                    outputControl.keys[iKey].fPressed = true;
                                 }
+
+                                outputControl.keys[iKey].fDown = true;
+                            } else {
+                                outputControl.keys[iKey].fDown = false;
                             }
                         }
                     } else if is(SDL_EventType::SDL_JOYBUTTONDOWN) {
@@ -460,27 +495,7 @@ impl CPlayerInput {
                             let mut fUseJoystickInput = false;
                             let mut fJoystickDown = false;
 
-                            if axis == 0 && k == JOY_STICK_1_LEFT {
-                                fUseJoystickInput = true;
-                                if value < -JOYSTICK_DEAD_ZONE {
-                                    fJoystickDown = true;
-                                }
-                            } else if axis == 0 && k == JOY_STICK_1_RIGHT {
-                                fUseJoystickInput = true;
-                                if value > JOYSTICK_DEAD_ZONE {
-                                    fJoystickDown = true;
-                                }
-                            } else if axis == 1 && k == JOY_STICK_1_UP {
-                                fUseJoystickInput = true;
-                                if value < -JOYSTICK_DEAD_ZONE {
-                                    fJoystickDown = true;
-                                }
-                            } else if axis == 1 && k == JOY_STICK_1_DOWN {
-                                fUseJoystickInput = true;
-                                if value > JOYSTICK_DEAD_ZONE {
-                                    fJoystickDown = true;
-                                }
-                            } else if axis == 2 && k == JOY_STICK_2_LEFT {
+                            if axis == 2 && k == JOY_STICK_2_LEFT {
                                 fUseJoystickInput = true;
                                 if value < -JOYSTICK_DEAD_ZONE {
                                     fJoystickDown = true;
