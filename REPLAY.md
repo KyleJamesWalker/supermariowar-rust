@@ -75,9 +75,9 @@ A key press is a `down` and a later `up`. `fPressed` fires only on the down edge
 
 ### Joystick events
 
-`<frame> jaxis <dev> <axis> <value>`, `<frame> jbutton <dev> <button> <0|1>` and `<frame> jhat <dev> <hat> <value>` push `SDL_JOYAXISMOTION`, `SDL_JOYBUTTONDOWN`/`SDL_JOYBUTTONUP` (`state` `SDL_PRESSED`/`SDL_RELEASED`) and `SDL_JOYHATMOTION`, with `which = <dev>`, interleaved with key events in file order. Ranges: `dev` 0-7, axis 0-5 with value -32768..32767, button 0-15, hat 0 with value 0-15 (`SDL_HAT_UP` 1, `RIGHT` 2, `DOWN` 4, `LEFT` 8). The game binds a device by index and compares it with `which`, so `<dev>` is both.
+`<frame> jaxis <dev> <axis> <value>`, `<frame> jbutton <dev> <button> <0|1>` and `<frame> jhat <dev> <hat> <value>` push `SDL_JOYAXISMOTION`, `SDL_JOYBUTTONDOWN`/`SDL_JOYBUTTONUP` (`state` `SDL_PRESSED`/`SDL_RELEASED`) and `SDL_JOYHATMOTION`, with `which = <dev>`, interleaved with key events in file order. Ranges: `dev` 0-7, axis 0-5 with value -32768..32767, button 0-15, hat 0 with value 0-15 (`SDL_HAT_UP` 1, `RIGHT` 2, `DOWN` 4, `LEFT` 8). The game binds a device by index and compares it with `which`, so `<dev>` is both. The Rust harness accepts axes and buttons 0-63, so a browser recording can keep every pad input; one that uses axis 6+ or button 16+ does not replay on the C++ harness, and `replay_compare.sh` says so and exits 2.
 
-When the replay has joystick lines, `harness::init` attaches `max(dev) + 1` virtual joysticks (`SDL_JoystickAttachVirtual`, game-controller type, 6 axes, 16 buttons, 1 hat, named "Virtual Controller") before `init_joysticks`, so `SDL_NumJoysticks`, the Controls device list and the `controls.sdl2.bin` device clamp see them. Replays without joystick lines attach none.
+When the replay has joystick lines, `harness::init` attaches `max(dev) + 1` virtual joysticks (`SDL_JoystickAttachVirtual`, game-controller type, 6 axes, 16 buttons, 1 hat (Rust: 64 axes, 64 buttons, 1 hat), named "Virtual Controller") before `init_joysticks`, so `SDL_NumJoysticks`, the Controls device list and the `controls.sdl2.bin` device clamp see them. Replays without joystick lines attach none.
 
 Binding a control in the Controls menu blocks in `MI_InputControlField::SendInput` until input arrives. With a replay loaded, that wait calls `harness::waitEvent` instead of `SDL_WaitEvent`:
 

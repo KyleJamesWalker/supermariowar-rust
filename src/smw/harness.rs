@@ -45,8 +45,8 @@ struct ReplayEvent {
     value: i32,
 }
 
-const VIRTUAL_AXES: i32 = 6;
-const VIRTUAL_BUTTONS: i32 = 16;
+const VIRTUAL_AXES: i32 = 64;
+const VIRTUAL_BUTTONS: i32 = 64;
 const VIRTUAL_HATS: i32 = 1;
 
 struct Harness {

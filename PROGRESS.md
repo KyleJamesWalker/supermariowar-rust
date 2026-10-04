@@ -57,3 +57,4 @@ Scope order: core game + menus + sound, then netplay, level editor, world editor
 ## Web-only deviations
 
 - Binding a control in the Controls menu does not block: upstream's `MI_InputControlField::SendInput` skips `SDL_WaitEvent` under `__EMSCRIPTEN__` but keeps looping, which hangs the page (an upstream bug). The field reads each frame's polled events instead and binds the first that fits.
+- The Rust harness records and replays axes and buttons 0-63; a browser recording that uses axis 6+ or button 16+ does not replay on the C++ harness.
