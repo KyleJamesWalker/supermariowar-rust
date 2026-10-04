@@ -1,0 +1,134 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  pull_request:
+    paths:
+      - device/muos/**
+      - tools/parity.sh
+      - tools/run_rust.sh
+      - .github/workflows/release.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  muxapp:
+    runs-on: ubuntu-22.04-arm
+    outputs:
+      name: ${{ steps.name.outputs.name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev cmake libclang-dev patchelf zip
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Build SDL2_image and SDL2_mixer
+        run: device/muos/build-sdl-libs.sh
+
+      - name: Build smw
+        env:
+          LIBZ_SYS_STATIC: '1'
+        run: cargo build --release --locked --bin smw
+
+      - id: name
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then v="$GITHUB_REF_NAME"; else v="${GITHUB_SHA::7}"; fi
+          echo "name=SuperMarioWar-$v.muxapp" >> "$GITHUB_OUTPUT"
+
+      - name: Package
+        env:
+          MUXAPP_OUT: dist/${{ steps.name.outputs.name }}
+        run: device/muos/build-muxapp.sh target/release/smw | tee package.log
+
+      - name: Summary
+        run: |
+          {
+            echo '```'
+            sed -n '/^bundled libraries:/,$p' package.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.name.outputs.name }}
+          path: dist/${{ steps.name.outputs.name }}
+          compression-level: 0
+          if-no-files-found: error
+
+  verify:
+    needs: muxapp
+    runs-on: ubuntu-22.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install libSDL2
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-2.0-0
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.muxapp.outputs.name }}
+
+      - name: Extract
+        run: unzip -q '${{ needs.muxapp.outputs.name }}' -d "$RUNNER_TEMP"
+
+      - name: Check bundled libraries
+        run: |
+          app="$RUNNER_TEMP/SuperMarioWar"
+          readelf -d "$app/smw" | grep -E 'RUNPATH|RPATH'
+          for f in "$app/smw" "$app"/lib/*; do
+            echo "== $(basename "$f")"
+            env -u LD_LIBRARY_PATH ldd "$f" | tee ldd.txt
+            if grep -q 'not found' ldd.txt; then exit 1; fi
+          done
+          env -u LD_LIBRARY_PATH ldd "$app/smw" | grep -E 'libSDL2_(image|mixer)' | grep -vq "$app/lib/" && exit 1
+          env -u LD_LIBRARY_PATH "$app/smw" --help
+
+      - name: Replay parity
+        env:
+          SMW_NO_BUILD: '1'
+          JOBS: '4'
+        run: |
+          app="$RUNNER_TEMP/SuperMarioWar"
+          status=0
+          SMW_BIN="$app/smw" SMW_DATA_DIR="$app/data" tools/parity.sh > parity.log || status=$?
+          cat parity.log
+          {
+            echo '```'
+            sed -n '/^=== summary/,$p' parity.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+
+  release:
+    needs: [muxapp, verify]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.muxapp.outputs.name }}
+
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ASSET: ${{ needs.muxapp.outputs.name }}
+        run: |
+          sha256sum "$ASSET" > SHA256SUMS
+          cat SHA256SUMS
+          gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes --title "$GITHUB_REF_NAME"
+          gh release upload "$GITHUB_REF_NAME" "$ASSET" SHA256SUMS --clobber
