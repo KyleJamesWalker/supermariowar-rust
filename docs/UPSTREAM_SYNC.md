@@ -240,7 +240,7 @@ In [supermariowar-cpp-reference](https://github.com/KyleJamesWalker/supermariowa
 5. For each divergence, match the first differing record to a commit in `commits.txt`. A shift in RNG count points at data loading or randomness. A shift in pixels points at gfx.
 6. Port one upstream commit per Rust commit, with the upstream hash in the subject. Rerun the full suite after each port.
 7. Run dense screenshots (`SMW_SHOT_FRAMES` every 25 frames) on five replays, and rerun the 504-map dump against the new C++. Those cover pixel-only and map-loading changes that the sampled suite misses.
-8. When the suites match, regenerate the committed goldens, update the commit pin in `README.md`, the build flags in `REPLAY.md`, and the C++ bug list in `PROGRESS.md`.
+8. When the suites match, regenerate the committed goldens, update the commit pin in `README.md`, the build flags in `REPLAY.md`, the C++ bug list in `PROGRESS.md`, and `GAME_MANUAL.md` (with `docs/gfx/docs/`) if upstream's `docs/readme-v1.8.md` changed.
 
 ## Next sync
 
