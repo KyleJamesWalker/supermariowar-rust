@@ -606,13 +606,14 @@ index fa998ba5..730e5691 100644
  		void LoadScript(const char * szScriptFile);
 diff --git a/src/smw/Harness.cpp b/src/smw/Harness.cpp
 new file mode 100644
-index 00000000..a0d2ccd2
+index 00000000..a9eefe9a
 --- /dev/null
 +++ b/src/smw/Harness.cpp
-@@ -0,0 +1,401 @@
+@@ -0,0 +1,411 @@
 +#include "Harness.h"
 +
 +#include "eyecandy.h"
++#include "gamemodes/Star.h"
 +#include "GameMode.h"
 +#include "GameValues.h"
 +#include "GSGameplay.h"
@@ -840,6 +841,15 @@ index 00000000..a0d2ccd2
 +            (int)mode->gamemode, mode->gameover ? 1 : 0, mode->winningteam);
 +        for (const CPlayer* player : players)
 +            HarnessAccess::dumpPlayer(g_dump, *player);
++        if (mode->gamemode == game_mode_star) {
++            CGM_Star* star = static_cast<CGM_Star*>(mode);
++            fprintf(g_dump, "T type=%d holders=", (int)star->getcurrentmodetype());
++            for (short iStar = 0; iStar < 3; iStar++) {
++                const CPlayer* holder = star->getstarplayer(iStar);
++                fprintf(g_dump, iStar ? ",%d" : "%d", holder ? holder->getGlobalID() : -1);
++            }
++            fprintf(g_dump, "\n");
++        }
 +        fprintf(g_dump, "O noncol=%zu obj0=%zu obj1=%zu obj2=%zu ec0=%zu ec1=%zu ec2=%zu\n",
 +            noncolcontainer.list().size(),
 +            objectcontainer[0].list().size(), objectcontainer[1].list().size(), objectcontainer[2].list().size(),
@@ -1037,6 +1047,51 @@ index 00000000..ee66dd9f
 +void frameEnd();
 +
 +} // namespace harness
+diff --git a/src/smw/gamemodes/GameMode.cpp b/src/smw/gamemodes/GameMode.cpp
+index 8f1933a6..9f1f7390 100644
+--- a/src/smw/gamemodes/GameMode.cpp
++++ b/src/smw/gamemodes/GameMode.cpp
+@@ -322,12 +322,12 @@ short CGameMode::GetScoreRankedPlayerList(CPlayer * outPlayers[4], bool fGetHigh
+         fNeedSwap = false;
+         short iRandom = 0;
+         for (short iIndex = 0; iIndex < iNumPlayersInList - 1; iIndex++) {
+-            if ((fGetHighest && players[iIndex]->Score().score < players[iIndex + 1]->Score().score) ||
+-                    (!fGetHighest && players[iIndex]->Score().score > players[iIndex + 1]->Score().score) ||
+-                    (players[iIndex]->Score().score == players[iIndex + 1]->Score().score && RANDOM_BOOL() && iRandom++ < 5)) {
+-                CPlayer * pTemp = players[iIndex];
+-                players[iIndex] = players[iIndex + 1];
+-                players[iIndex + 1] = pTemp;
++            if ((fGetHighest && outPlayers[iIndex]->Score().score < outPlayers[iIndex + 1]->Score().score) ||
++                    (!fGetHighest && outPlayers[iIndex]->Score().score > outPlayers[iIndex + 1]->Score().score) ||
++                    (outPlayers[iIndex]->Score().score == outPlayers[iIndex + 1]->Score().score && RANDOM_BOOL() && iRandom++ < 5)) {
++                CPlayer * pTemp = outPlayers[iIndex];
++                outPlayers[iIndex] = outPlayers[iIndex + 1];
++                outPlayers[iIndex + 1] = pTemp;
+ 
+                 fNeedSwap = true;
+             }
+diff --git a/src/smw/gamemodes/Star.cpp b/src/smw/gamemodes/Star.cpp
+index b17868fb..274d788d 100644
+--- a/src/smw/gamemodes/Star.cpp
++++ b/src/smw/gamemodes/Star.cpp
+@@ -101,7 +101,7 @@ void CGM_Star::think()
+ 
+     //Make sure there is a star player(s)
+     if (iCurrentModeType == StarStyle::Multi) {
+-        for (size_t iStar1 = 0; iStar1 + 1 <= players.size(); iStar1++) {
++        for (size_t iStar1 = 0; iStar1 + 1 < players.size(); iStar1++) {
+             //If we're missing a star player, then reassign them all
+             if (!starPlayer[iStar1]) {
+                 CPlayer * players[4];
+@@ -181,7 +181,7 @@ void CGM_Star::think()
+         } else if (iCurrentModeType == StarStyle::Multi) {
+             for (size_t iPlayer = 0; iPlayer < players.size(); iPlayer++) {
+                 bool fFound = false;
+-                for (size_t iStar = 0; iStar + 1 <= players.size(); iStar++) {
++                for (size_t iStar = 0; iStar + 1 < players.size(); iStar++) {
+                     if (starPlayer[iStar] == players[iPlayer]) {
+                         fFound = true;
+                         break;
 diff --git a/src/smw/main.cpp b/src/smw/main.cpp
 index bc7783b7..da457d8c 100644
 --- a/src/smw/main.cpp

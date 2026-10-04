@@ -444,6 +444,14 @@ pub fn net_state() -> String {
     }
 }
 
+/// Replay-harness `T` record (docs/REPLAY.md).
+pub fn harness_record() -> Option<String> {
+    star_mode().map(|this| {
+        let ids: Vec<String> = this.starPlayer.iter().map(|p| if p.is_null() { "-1".to_string() } else { p.globalID.to_string() }).collect();
+        format!("T type={} holders={}", this.iCurrentModeType as i32, ids.join(","))
+    })
+}
+
 pub fn cgm_star_think(this: &mut CGM_Star) {
     if this.gameover {
         this.displayplayertext();
