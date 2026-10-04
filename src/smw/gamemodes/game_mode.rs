@@ -338,7 +338,6 @@ impl CGameMode {
     }
 
     //Returns number of players in list
-    // Faithful to C++: the bubble sort reorders the global `players`, not `outPlayers`.
     pub fn get_score_ranked_player_list(&mut self, outPlayers: &mut [Ptr<CPlayer>; 4], fGetHighest: bool) -> i16 {
         unsafe {
             let mut iNumPlayersInList: i16 = 0;
@@ -361,15 +360,15 @@ impl CGameMode {
                 let mut iRandom: i16 = 0;
                 let mut iIndex: i16 = 0;
                 while (iIndex as i32) < iNumPlayersInList as i32 - 1 {
-                    let a = players[iIndex as usize].score().score;
-                    let b = players[iIndex as usize + 1].score().score;
+                    let a = outPlayers[iIndex as usize].score().score;
+                    let b = outPlayers[iIndex as usize + 1].score().score;
                     let swap = (fGetHighest && a < b) || (!fGetHighest && a > b) || (a == b && RANDOM_BOOL() && {
                         let r = iRandom < 5;
                         iRandom += 1;
                         r
                     });
                     if swap {
-                        players.swap(iIndex as usize, iIndex as usize + 1);
+                        outPlayers.swap(iIndex as usize, iIndex as usize + 1);
 
                         fNeedSwap = true;
                     }
