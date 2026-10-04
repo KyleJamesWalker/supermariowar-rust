@@ -116,6 +116,7 @@
   .match-name { flex: 1; min-width: 0; text-align: left; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .match-name small { color: var(--muted); font-weight: 400; }
   .hint { color: var(--muted); font-size: 13px; text-align: center; }
+  .hint a { color: var(--gold); }
   kbd {
     background: var(--panel);
     border: 1px solid #2f3459;
@@ -167,6 +168,7 @@
         <input type="file" id="loadReplay" accept=".txt,text/plain" hidden>
       </div>
       <div class="hint" id="pads">Using gamepads? Press a button on each one now (up to 4).</div>
+      <div class="hint"><a href="manual.html" target="_blank" rel="noopener">How to play</a></div>
     </div>
     <div class="overlay" id="end" hidden>
       <div id="endText">Replay finished</div>
@@ -195,7 +197,7 @@
   <footer>
     A Rust port of <a href="https://github.com/mmatyas/supermariowar">Super Mario War</a> &middot;
     <a href="https://github.com/KyleJamesWalker/supermariowar-rust">source</a> &middot;
-    <a href="https://github.com/KyleJamesWalker/supermariowar-rust/blob/main/docs/GAME_MANUAL.md">how to play</a> &middot;
+    <a href="manual.html" target="_blank" rel="noopener">how to play</a> &middot;
     <a href="#" id="downloadReplay" hidden>download replay</a> &middot;
     <a href="#" id="toggleLog">show log</a>
   </footer>

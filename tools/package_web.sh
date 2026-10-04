@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Build the web version (wasm32-unknown-emscripten) and assemble dist/web/:
-# index.html, smw.js, smw.wasm, smw.data (the preloaded data/ tree) and the page's touch controls, manifest and icons.
+# index.html, smw.js, smw.wasm, smw.data (the preloaded data/ tree), the page's touch controls, manifest and icons,
+# and manual.html with its images (docs/GAME_MANUAL.md rendered by tools/render_manual.py).
 # Usage: tools/package_web.sh            (needs emsdk 5.0.2 in $EMSDK or ~/work/emsdk)
 # SMW_RELAY_URL=wss://... sets the netplay relay the page uses when it has no ?relay= parameter.
 set -euo pipefail
@@ -38,5 +39,6 @@ emcc "$stub/smw.c" -o "$stub/smw.html" -sUSE_SDL=2 -sALLOW_MEMORY_GROWTH=1 --she
 cp "$stub/smw.html" "$out/index.html"
 cp "$repo/resources/smw.png" "$out/favicon.png"
 cp "$repo"/web/{touch.js,touch.css,manifest.webmanifest,icon-180.png,icon-192.png,icon-512.png} "$out/"
+python3 "$repo/tools/render_manual.py" "$repo/docs/GAME_MANUAL.md" "$repo/web/manual.html" "$out"
 
 du -sh "$out"/*
