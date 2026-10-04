@@ -2668,7 +2668,7 @@ impl GameState for GameplayState {
 
     fn update(&mut self) {
         unsafe {
-            net_random::end_setup();
+            net_random::gameplay_frame();
             self.read_network();
 
             if !netplay.active {

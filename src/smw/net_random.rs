@@ -7,9 +7,15 @@
 //! Otherwise `event` runs the site through `run` and writes its outcome to the harness dump as a `C`
 //! record (REPLAY.md), so the clients' dumps can be compared.
 //!
+//! The game host runs every event while the RNG records its draws, and sends the event, its arguments and
+//! the draws to the joiners (`NET_G2P_RANDOM_EVENT`). A joiner whose host announced this
+//! (`NET_G2P_HOST_DECIDES_RANDOM`) never runs an event itself: it replays the host's with the host's draws,
+//! a few frames later. Events about a block or a player wait until the joiner's own copy gets there.
+//!
 //! Objects made during setup and inside events get the same `iNetworkID` on every client, so events
 //! can name them.
 
+use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::{set_network_id_context, CObjectTrait};
 use crate::common::random_number_generator::RandomNumberGenerator;
 use crate::globals::Ptr;
@@ -17,6 +23,7 @@ use crate::smw::gs_gameplay::{noncolcontainer, objectcontainer};
 use crate::smw::harness;
 use crate::smw::main::players;
 use crate::smw::net::netplay;
+use crate::smw::network::protocol_game_packages::RandomEvent;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u8)]
@@ -45,9 +52,10 @@ pub enum Ev {
     Bomb,
     Boomerang,
     PhantoReturn,
+    Block,
 }
 
-const EVENTS: [Ev; 24] = [
+const EVENTS: [Ev; 25] = [
     Ev::FrenzyCard,
     Ev::StompEnemy,
     Ev::SurvivalEnemy,
@@ -72,6 +80,7 @@ const EVENTS: [Ev; 24] = [
     Ev::Bomb,
     Ev::Boomerang,
     Ev::PhantoReturn,
+    Ev::Block,
 ];
 
 impl Ev {
@@ -105,6 +114,7 @@ impl Ev {
             Ev::Bomb => "bomb",
             Ev::Boomerang => "boomerang",
             Ev::PhantoReturn => "phantoreturn",
+            Ev::Block => "block",
         }
     }
 }
@@ -113,22 +123,50 @@ impl Ev {
 static mut g_added: Option<Vec<String>> = None;
 static mut g_inSetup: bool = false;
 static mut g_inGame: bool = false;
+static mut g_sent: u16 = 0;
+static mut g_frame: u32 = 0;
+/// The game host's events this joiner cannot replay yet, with the frame they arrived.
+static mut g_pending: Vec<(RandomEvent, u32)> = Vec::new();
+/// How many frames a joiner's player has waited for the game host's respawn or warp exit.
+static mut g_waits: Vec<(Ev, i32, u32)> = Vec::new();
+
+/// A joiner's player whose death or warp the game host never saw gives up waiting after this.
+const FALLBACK_FRAMES: u32 = 90;
+const PENDING_FRAMES: u32 = 180;
 
 /// From the net game's sync until its first gameplay frame the clients draw in step and number objects alike.
 pub fn begin_setup() {
     unsafe {
         g_inSetup = true;
         g_inGame = false;
-        set_network_id_context(1);
+        g_sent = 0;
+        g_frame = 0;
+        g_pending.clear();
+        g_waits.clear();
     }
 }
 
-pub fn end_setup() {
+/// Called at the start of every gameplay frame.
+pub fn gameplay_frame() {
     unsafe {
+        g_frame += 1;
+        g_pending.retain(|(p, at)| p.kind != Ev::WarpExit as u8 || g_frame - at < PENDING_FRAMES);
         if g_inSetup {
             g_inSetup = false;
             g_inGame = true;
             set_network_id_context(0);
+            // Menus may make objects during setup on one client only; the game's own objects are made alike.
+            let mut n = 0;
+            for container in [&noncolcontainer, &objectcontainer[0], &objectcontainer[1], &objectcontainer[2]] {
+                for &obj in container.list() {
+                    let mut o = obj;
+                    n += 1;
+                    o.iNetworkID = (1 << 16 | n) as i32;
+                }
+            }
+            for (pkg, _) in std::mem::take(&mut g_pending) {
+                deliver(pkg);
+            }
         }
     }
 }
@@ -142,20 +180,145 @@ pub fn end_game() {
     }
 }
 
-/// True when the caller must not run the site's own code: this function already ran it.
+/// True when the caller must not run the site's own code: this function ran it, or the game host decides it.
 pub fn event(ev: Ev, args: &[i32]) -> bool {
     unsafe {
         if !netplay.active || !g_inGame || g_added.is_some() || RandomNumberGenerator::tape_active() {
             return false;
         }
+
+        if netplay.theHostIsMe {
+            g_sent = g_sent.wrapping_add(1);
+            let context = context_of(g_sent);
+            set_network_id_context(context as u32);
+            RandomNumberGenerator::start_recording();
+            run_logged(ev, args);
+            let draws = RandomNumberGenerator::stop_tape();
+            set_network_id_context(0);
+            let mut args = args.to_vec();
+            if ev == Ev::Place {
+                // Placements also test the spots against other objects, which a joiner may have elsewhere.
+                let o = find_object(args[0]);
+                args.extend([o.ix as i32, o.iy as i32]);
+            }
+            let pkg = RandomEvent { kind: ev as u8, context, args, draws };
+            netplay.client.local_gamehost.send_message_to_my_peers(&pkg.to_bytes());
+        } else if netplay.host_decides_random {
+            if let Some(i) = g_pending.iter().position(|(p, _)| p.kind == ev as u8 && same_target(ev, &p.args, args)) {
+                let (pkg, _) = g_pending.remove(i);
+                replay(&pkg);
+            } else if matches!(ev, Ev::Respawn | Ev::WarpExit) && waited(ev, args[0]) > FALLBACK_FRAMES {
+                stop_waiting(ev, args[0]);
+                return false;
+            }
+        } else {
+            run_logged(ev, args);
+        }
+        true
     }
-    run_logged(ev, args);
-    true
+}
+
+/// While true, a joiner leaves its hazard timers waiting for the game host's.
+pub fn awaiting_host() -> bool {
+    unsafe { netplay.active && !netplay.theHostIsMe && netplay.host_decides_random && g_inGame }
+}
+
+/// Object IDs 0 and 1 << 16 are untracked objects and setup objects.
+fn context_of(sent: u16) -> u16 {
+    2 + sent % 0xFFFE
+}
+
+/// `NET_G2P_RANDOM_EVENT` from the game host.
+pub fn receive(data: &[u8]) {
+    let Some(pkg) = RandomEvent::from_bytes(data) else {
+        return;
+    };
+    unsafe {
+        if netplay.theHostIsMe || Ev::from_u8(pkg.kind).is_none() {
+            return;
+        }
+        if !g_inGame {
+            g_pending.push((pkg, g_frame));
+            return;
+        }
+    }
+    deliver(pkg);
+}
+
+fn deliver(pkg: RandomEvent) {
+    let ev = Ev::from_u8(pkg.kind).unwrap();
+    if ready(ev, &pkg.args) {
+        replay(&pkg);
+    } else {
+        unsafe { g_pending.push((pkg, g_frame)) };
+    }
+}
+
+fn waited(ev: Ev, key: i32) -> u32 {
+    unsafe {
+        match g_waits.iter_mut().find(|w| w.0 == ev && w.1 == key) {
+            Some(w) => {
+                w.2 += 1;
+                w.2
+            }
+            None => {
+                g_waits.push((ev, key, 1));
+                1
+            }
+        }
+    }
+}
+
+fn stop_waiting(ev: Ev, key: i32) {
+    unsafe { g_waits.retain(|w| w.0 != ev || w.1 != key) };
+}
+
+fn replay(pkg: &RandomEvent) {
+    let ev = Ev::from_u8(pkg.kind).unwrap();
+    if let Some(&key) = pkg.args.first() {
+        stop_waiting(ev, key);
+    }
+    set_network_id_context(pkg.context as u32);
+    RandomNumberGenerator::start_playback(pkg.draws.clone());
+    run_logged(ev, &pkg.args);
+    let left = RandomNumberGenerator::stop_tape();
+    set_network_id_context(0);
+    if !left.is_empty() {
+        println!("[net] {:?} left {} of the game host's draws unused", ev, left.len());
+    }
+}
+
+/// Events that must wait for the joiner's own copy of their block or warping player. A respawn applies at once:
+/// the game host waits for the respawn counter, so a joiner that saw the death is already waiting.
+fn ready(ev: Ev, args: &[i32]) -> bool {
+    match ev {
+        Ev::Block => crate::smw::objects::blocks::powerup_block::net_block_ready(args[0] as i16, args[1] as i16),
+        Ev::WarpExit => {
+            let p = player(args);
+            p.is_null() || p.is_entering_warp()
+        }
+        _ => true,
+    }
+}
+
+fn same_target(ev: Ev, a: &[i32], b: &[i32]) -> bool {
+    match ev {
+        Ev::Block => a.get(..2) == b.get(..2),
+        _ => a.first() == b.first(),
+    }
 }
 
 /// A placement that is not part of creating the object.
 pub fn place_event(id: i32, extra: i32) -> bool {
-    id != 0 && !find_object(id).is_null() && event(Ev::Place, &[id, extra])
+    let mut obj = find_object(id);
+    if id == 0 || obj.is_null() || !event(Ev::Place, &[id, extra]) {
+        return false;
+    }
+    // Out of reach until the game host's placement arrives, so it cannot be collected again meanwhile.
+    if awaiting_host() {
+        obj.set_yi(-2000);
+    }
+    true
 }
 
 /// An event about one object; objects that only one client numbered roll for themselves.
@@ -170,7 +333,8 @@ pub(crate) fn run_logged(ev: Ev, args: &[i32]) {
         let mut out = g_added.take().unwrap_or_default();
         out.extend(outcome(ev, args));
         let args: Vec<String> = args.iter().map(|a| a.to_string()).collect();
-        harness::note_net(format!("{} args={} out={}", ev.name(), args.join(","), out.join(";")));
+        let shown = if ev == Ev::Place { &args[..2] } else { &args[..] };
+        harness::note_net(format!("{} args={} out={}", ev.name(), shown.join(","), out.join(";")));
     }
 }
 
@@ -213,10 +377,6 @@ pub fn wander_args(id: i32, fx: f32, fy: f32, angle: f32) -> [i32; 4] {
     [id, f32_arg(fx), f32_arg(fy), f32_arg(angle)]
 }
 
-pub fn awaiting_host() -> bool {
-    false
-}
-
 pub fn f32_arg(v: f32) -> i32 {
     v.to_bits() as i32
 }
@@ -242,7 +402,14 @@ fn run(ev: Ev, args: &[i32]) {
         Ev::CollectionCard => gm::card_collection::net_spawn_card(),
         Ev::ReleaseCard => gm::card_collection::net_release_card(player(args), args[1] as i16, args[2] as i16),
         Ev::GreedCoins => gm::greed::net_drop_coins(player(args), args[1] as i16, args[2] as i16, args[3] as i16),
-        Ev::Place => obj::net_place(find_object(args[0]), args[1]),
+        Ev::Place => {
+            let mut o = find_object(args[0]);
+            obj::net_place(o, args[1]);
+            if let (false, Some(&x), Some(&y)) = (o.is_null(), args.get(2), args.get(3)) {
+                o.set_xi(x as i16);
+                o.set_yi(y as i16);
+            }
+        }
         Ev::Wander => obj::net_wander(find_object(args[0]), args),
         Ev::HazardTimer => obj::net_hazard_timer(find_object(args[0])),
         Ev::Respawn => {
@@ -287,6 +454,7 @@ fn run(ev: Ev, args: &[i32]) {
             }
         }
         Ev::PhantoReturn => obj::overmap::wo_phanto::net_return(find_object(args[0])),
+        Ev::Block => obj::blocks::powerup_block::net_release(args[0] as i16, args[1] as i16, Vec2s::new(args[3] as i16, args[4] as i16), args[2] != 0),
     }
 }
 

@@ -77,7 +77,7 @@ pub struct CObject {
 }
 
 /// Not in the C++ (whose `iNetworkID` is unused): while nonzero, new objects get `context << 16 | n`, so a net
-/// game's clients give the same objects the same IDs (smw/net_random.rs).
+/// game's clients give the objects an event makes the same IDs (smw/net_random.rs).
 pub static mut g_networkIDContext: u32 = 0;
 static mut g_networkIDCount: u32 = 0;
 

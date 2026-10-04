@@ -889,6 +889,10 @@ impl CPlayer {
         }
     }
 
+    pub fn is_entering_warp(&self) -> bool {
+        matches!(self.state, PlayerState::EnteringWarpUp | PlayerState::EnteringWarpRight | PlayerState::EnteringWarpDown | PlayerState::EnteringWarpLeft)
+    }
+
     pub fn net_choose_warp_exit(&mut self) {
         let this = self.this();
         self.warpstatus.choose_warp_exit(this.get());
