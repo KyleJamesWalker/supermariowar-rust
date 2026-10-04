@@ -2,6 +2,8 @@
 """Generate the coverage replays in tools/replays/ (see docs/REPLAY.md).
 
   gen_replays.py [name ...]     (default: every replay defined here)
+  gen_replays.py sweep          (tools/replays_sweep/: one game on every map)
+  gen_replays.py segments       (tools/segment_replays/: multi-match sessions for segment_check.py)
 
 Each replay drives the real menus from boot. Frame numbers were checked
 against the C++ reference dumps (M lines), so edit with care and regenerate
@@ -14,6 +16,7 @@ from pathlib import Path
 
 OUT = Path(__file__).resolve().parent / "replays"
 SWEEP_OUT = Path(__file__).resolve().parent / "replays_sweep"
+SEGMENT_OUT = Path(__file__).resolve().parent / "segment_replays"
 DATA = Path(__file__).resolve().parents[2] / "data"
 
 GAME_MODES = [
@@ -274,6 +277,93 @@ REPLAYS["fuzz_b"] = lambda: fuzz("fuzz_b", 7002, "Block Piles")
 REPLAYS["fuzz_c"] = lambda: fuzz("fuzz_c", 7003, "Manic Mountain")
 
 
+SESSION_FRAMES = 30000
+
+
+def keep_going(s, frames):
+    """Tap Return every 150 frames: it ends each game's scoreboard and confirms the menus between games."""
+    for f in range(s.f + 200, frames - 10, 150):
+        s.events += [(f, "down", "Return"), (f + 2, "up", "Return")]
+
+
+def session_flow(name, desc, rights, sub_rights, returns, seed, mapname="0smw", options=None):
+    s = Script()
+    boot_to_main(s)
+    players_all_cpu(s)
+    s.tap("Return", gap=30)   # Start -> Match Selection
+    match_type(s, rights, sub_rights)
+    for _ in range(returns):
+        s.tap("Return", gap=40)
+    keep_going(s, SESSION_FRAMES)
+    opts = f"#@ options={options}\n" if options else ""
+    s.write(name, f"# 4 CPU players: {desc}, played on by tapping Return.\n#@ seed={seed}\n#@ map={mapname}\n"
+                  f"#@ frames={SESSION_FRAMES}\n{opts}", SEGMENT_OUT)
+
+
+def play(s, rng, n, players):
+    """Random holds of each human player's game keys for n frames."""
+    end = s.f + n
+    for keys in players:
+        busy = {k: 0 for k in keys}
+        f = s.f
+        while f < end - 10:
+            k = rng.choice(keys)
+            if busy[k] <= f:
+                d = min(rng.choice([1, 2, 3, 5, 8, 15, 30, 60]), end - 5 - f)
+                if d > 0:
+                    s.hold(f, k, d)
+                    busy[k] = f + d + 1
+            f += rng.choice([1, 2, 3, 4, 6, 10])
+    s.f = end
+
+
+def exit_game(s):
+    s.tap("Escape", gap=20)   # exit dialog
+    s.tap("Left", gap=10)     # Yes
+    s.tap("Return", gap=60)
+
+
+def session_mixed():
+    """Two human players: Classic, Star and Frenzy games, each left through the exit dialog; player 1
+    holds Right across the first game's start."""
+    p1 = ["Left", "Right", "Up", "Down", "Right Ctrl", "Right Shift"]
+    p2 = ["A", "D", "W", "S", "E", "Q"]
+    s = Script()
+    rng = random.Random(7)
+    boot_to_main(s)
+    s.tap("Return", gap=20)   # Start -> Match Selection
+    s.tap("Return", gap=30)   # -> Team Select
+    s.tap("E", gap=30)        # player 2 ready
+    s.tap("Return", gap=30)   # player 1 ready
+    s.tap("Return", gap=30)   # -> Game Settings
+    s.tap("Return", gap=10)   # Start
+    s.hold(s.f, "Right", 120)
+    s.wait(40)
+    play(s, rng, 700, [p1, p2])
+    exit_game(s)
+    for mode in (10, 5):      # Star, then Frenzy
+        s.wait(30)
+        game_settings_mode(s, mode)
+        s.tap("Return", gap=40)
+        play(s, rng, 900, [p1, p2])
+        exit_game(s)
+    s.write("mixed_humans", f"# Two human players: Classic, Star and Frenzy, each left through the exit dialog.\n"
+                            f"#@ seed=11\n#@ frames={s.f + 100}\n", SEGMENT_OUT)
+
+
+SEGMENTS = {
+    "tournament_long": lambda: session_flow("tournament_long", "Tournament", 1, 0, 3, 201, "2skyfight"),
+    "tour_long": lambda: session_flow("tour_long", "first Tour", 2, 0, 3, 202),
+    "tour_options_long": lambda: session_flow("tour_options_long", "Mario tour with options.bin mode settings", 2, 6, 3, 207,
+                                              options="../replays/fixtures/options_modes.bin"),
+    "world_long": lambda: session_flow("world_long", "first World", 3, 0, 3, 203),
+    "mini_pipe_long": lambda: session_flow("mini_pipe_long", "Pipe Coin minigame", 4, 0, 2, 204),
+    "mini_hammerboss_long": lambda: session_flow("mini_hammerboss_long", "Hammer Boss minigame", 4, 1, 2, 205),
+    "mini_boxes_long": lambda: session_flow("mini_boxes_long", "Boxes minigame", 4, 4, 2, 206),
+    "mixed_humans": session_mixed,
+}
+
+
 CPP_CRASH_FRAME = {"Tanuki_Moby Dick.map": 812}
 
 
@@ -306,6 +396,12 @@ def sweep():
 def main():
     if sys.argv[1:] == ["sweep"]:
         sweep()
+        return
+    if sys.argv[1:] == ["segments"]:
+        SEGMENT_OUT.mkdir(exist_ok=True)
+        for n, make in SEGMENTS.items():
+            make()
+            print(n)
         return
     names = sys.argv[1:] or list(REPLAYS)
     for n in names:

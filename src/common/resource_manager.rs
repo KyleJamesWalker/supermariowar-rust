@@ -304,6 +304,64 @@ impl CResourceManager {
         Self::default()
     }
 
+    /// Not in the C++: every sound, in a fixed order, for replay checkpoints (smw/checkpoint.rs).
+    pub fn sounds(&mut self) -> Vec<*mut sfxSound> {
+        let mut sounds: Vec<*mut sfxSound> = self.sfx_announcer.iter_mut().map(|s| s as *mut sfxSound).collect();
+        sounds.extend([
+            &mut self.sfx_mip as *mut sfxSound,
+            &mut self.sfx_deathsound as *mut sfxSound,
+            &mut self.sfx_jump as *mut sfxSound,
+            &mut self.sfx_skid as *mut sfxSound,
+            &mut self.sfx_capejump as *mut sfxSound,
+            &mut self.sfx_invinciblemusic as *mut sfxSound,
+            &mut self.sfx_extraguysound as *mut sfxSound,
+            &mut self.sfx_sprout as *mut sfxSound,
+            &mut self.sfx_collectpowerup as *mut sfxSound,
+            &mut self.sfx_collectfeather as *mut sfxSound,
+            &mut self.sfx_storepowerup as *mut sfxSound,
+            &mut self.sfx_tailspin as *mut sfxSound,
+            &mut self.sfx_breakblock as *mut sfxSound,
+            &mut self.sfx_bump as *mut sfxSound,
+            &mut self.sfx_coin as *mut sfxSound,
+            &mut self.sfx_fireball as *mut sfxSound,
+            &mut self.sfx_springjump as *mut sfxSound,
+            &mut self.sfx_timewarning as *mut sfxSound,
+            &mut self.sfx_hit as *mut sfxSound,
+            &mut self.sfx_chicken as *mut sfxSound,
+            &mut self.sfx_transform as *mut sfxSound,
+            &mut self.sfx_yoshi as *mut sfxSound,
+            &mut self.sfx_pause as *mut sfxSound,
+            &mut self.sfx_bobombsound as *mut sfxSound,
+            &mut self.sfx_areatag as *mut sfxSound,
+            &mut self.sfx_cannon as *mut sfxSound,
+            &mut self.sfx_burnup as *mut sfxSound,
+            &mut self.sfx_pipe as *mut sfxSound,
+            &mut self.sfx_thunder as *mut sfxSound,
+            &mut self.sfx_slowdownmusic as *mut sfxSound,
+            &mut self.sfx_flyingsound as *mut sfxSound,
+            &mut self.sfx_storedpowerupsound as *mut sfxSound,
+            &mut self.sfx_kicksound as *mut sfxSound,
+            &mut self.sfx_racesound as *mut sfxSound,
+            &mut self.sfx_bulletbillsound as *mut sfxSound,
+            &mut self.sfx_boomerang as *mut sfxSound,
+            &mut self.sfx_spit as *mut sfxSound,
+            &mut self.sfx_starwarning as *mut sfxSound,
+            &mut self.sfx_powerdown as *mut sfxSound,
+            &mut self.sfx_switchpress as *mut sfxSound,
+            &mut self.sfx_superspring as *mut sfxSound,
+            &mut self.sfx_stun as *mut sfxSound,
+            &mut self.sfx_inventory as *mut sfxSound,
+            &mut self.sfx_worldmove as *mut sfxSound,
+            &mut self.sfx_treasurechest as *mut sfxSound,
+            &mut self.sfx_flamecannon as *mut sfxSound,
+            &mut self.sfx_wand as *mut sfxSound,
+            &mut self.sfx_enterstage as *mut sfxSound,
+            &mut self.sfx_gameover as *mut sfxSound,
+            &mut self.sfx_pickup as *mut sfxSound,
+        ]);
+        sounds
+    }
+
     pub fn load_menu_skin(&mut self, playerID: i16, skinID: i16, colorID: i16, fLoadBothDirections: bool) -> bool {
         let path = unsafe { skinlist.at(skinID as usize).path.clone() };
         self.load_menu_skin_path(playerID, &path, colorID, fLoadBothDirections)

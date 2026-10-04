@@ -52,7 +52,7 @@ Each variable is a no-op when unset or empty. The Rust binary must honour the sa
 | `SMW_SHOT_STREAM=<file>` | Append the frames `SMW_SHOT_EVERY`/`SMW_SHOT_RANGE` select to this file (or pipe) as raw 640x480 ARGB8888 rows, 1,228,800 bytes each, instead of writing BMPs. `SMW_SHOT_FRAMES` still writes BMPs. |
 | `SMW_MAP=<name>` | Select the start map when the menu is created (see below). |
 
-Rust only (see Recordings): `SMW_NO_RECORD=1` turns off session recording, `SMW_LIVE_SCRIPT=<file>` feeds a replay-format script into the live input path of a recorded session, `SMW_AUDIBLE=1` plays real sound alongside the virtual mixer, `SMW_REPLAY_SPEED=<n>` scales the frame-limiter sleep, and `SMW_RLE=0`/`1` turns SDL surface RLE off or on (default: off natively, on in the web build).
+Rust only (see Recordings and "Markers, checkpoints and clips"): `SMW_SEGMENT=<k>` replays only match k from its checkpoint, `SMW_RECORD_TO=<file>` writes a replay's events, markers and checkpoints to a new recording, `SMW_NO_RECORD=1` turns off session recording, `SMW_LIVE_SCRIPT=<file>` feeds a replay-format script into the live input path of a recorded session, `SMW_AUDIBLE=1` plays real sound alongside the virtual mixer, `SMW_REPLAY_SPEED=<n>` scales the frame-limiter sleep, and `SMW_RLE=0`/`1` turns SDL surface RLE off or on (default: off natively, on in the web build).
 
 ## Frame loop
 
@@ -122,9 +122,44 @@ The Rust game records every normal launch (no `SMW_REPLAY`, no `SMW_NO_RECORD`) 
 - Sound: the virtual mixer drives every game-visible sound state, as in replays, and SDL_mixer also plays the same commands as output only (results ignored, no finished callbacks). The device is opened at 44100 Hz, S16, stereo with no format changes allowed, so sound lengths match the headless dummy driver; with no usable device the game falls back to the dummy driver.
 - `SMW_LIVE_SCRIPT=<file>` pushes a replay script's events into SDL's queue at their frames, with the `KMOD_NUM` modifier and some repeat flags a real keyboard sends, so they take the live capture path. A scripted live session's `SMW_DUMP` equals its recording's dump under `run_rust.sh`.
 
-Watching: `smw --replay <file> [--replay-speed <n>]` plays a recording in a normal window at normal speed (or `n` times faster) with sound. It writes the embedded settings into a throwaway HOME, removed at exit, so the user's settings are untouched, and quits after `#@ frames=`, or, when that line is missing, 188 frames (about 3 s) after the last input. In the app bundle: `open "dist/Super Mario War.app" --args --replay /absolute/path/to/recording.txt`.
+Watching: `smw --replay <file> [--replay-speed <n>] [--segment <k>]` plays a recording (or only its match k, see "Markers, checkpoints and clips") in a normal window at normal speed (or `n` times faster) with sound. It writes the embedded settings into a throwaway HOME, removed at exit, so the user's settings are untouched, and quits after `#@ frames=`, or, when that line is missing, 188 frames (about 3 s) after the last input. In the app bundle: `open "dist/Super Mario War.app" --args --replay /absolute/path/to/recording.txt`.
 
 Bug check: `tools/replay_compare.sh <file> [out_dir]` runs a recording headless on the C++ reference (`SMW_CPP_BIN`, default `~/work/supermariowar-cpp-reference/build/smw`) and on the Rust build, prints the first divergent frame with `diffreplay.py` context, and saves C++ and Rust screenshots of the frames around it.
+
+## Markers, checkpoints and clips
+
+Rust only. A recording marks every change of game state, and saves a checkpoint where each match starts, so one match can be replayed, watched or shared without the frames before it. `SMW_RECORD_TO=<file>` makes a replay write the same recording: its own events, markers and checkpoints, under a header taken from the sandbox HOME (`seed`, `options_b64`, `controls_b64`, `map`).
+
+Markers are `#@ mark frame=<n> state=<state> ...` lines, written after frame n's events when the state differs from the previous frame's. States: `splash`, `menu`, `worldmap` (the World menu), `gameplay`, `scoreboard` (gameplay after the game is over) and `other`. Fields are `key=value`; a value with a space is double-quoted.
+
+| Marker | Fields |
+|---|---|
+| a match starts (`gameplay` after anything else) | `match=<k>` (1, 2, ... in the session), `type` (`single`, `tournament`, `tour`, `minigame`, `world`, `quick`, `online`), `mode` (the mode's name in lower case with `_` for spaces), `style` (Star only: `ztar`, `shine`, `multi`, `random`), `goal`, `map`, `file` (the map file relative to the data directory), Tournament `game` and `wins_needed`, Tour or World `tour`/`world` and `stop=<i>/<n>`, `players`, and per playing slot `p<i>=<control>,team<t>,<skin>`, where control is `keys<s>` (keyboard set s), `pad<d>` (joystick d) or `cpu-<difficulty>` |
+| `scoreboard`, and the marker that leaves the match | `match=<k>`, `scores` (the team scores), and once the game is over `winner=team<t>` or `winner=tie` |
+
+```
+#@ mark frame=2286 state=gameplay match=1 type=single mode=star style=ztar goal=5 map=2skyfight file=maps/2skyfight.map players=4 p1=pad0,team1,BubBob p2=cpu-moderate,team2,BlackMage p3=cpu-moderate,team3,0smw p4=cpu-moderate,team4,0smw
+#@ checkpoint match=1 frame=2286 b64=U01XQwH...
+#@ mark frame=3931 state=menu match=1 scores=5,5,5,5
+```
+
+A checkpoint follows its match's start marker: `#@ checkpoint match=<k> frame=<n> b64=<data>`, the base64 of a versioned binary (`SMWC`, version 1; `src/smw/checkpoint.rs`). It is saved in `MenuState::enter_gameplay` once the map and its music are loaded, and holds everything the match reads from earlier frames:
+
+- the settings, as the options.bin and controls.sdl2.bin bytes they would be written as now; which input configuration each player reads; the stick and hat directions held;
+- `game_values` outside those files: match type, teams, tournament, tour and world state, stored and world powerups, the mode settings in effect, colors, timers and flags the menus set;
+- the game mode object, the boss type and the minigame goals; the tour or world stops; the score boards; the carry-over fields of the gameplay state;
+- the map file, the map list and music list positions, every music track and sound (its file, the channels it plays on and its retrigger time), the virtual mixer;
+- the RNG state, index, call count and last value, and the sound commands frame n has logged so far.
+
+Matches without one get `#@ checkpoint match=<k> frame=<n> unsupported=<reason>`: `online` (net games depend on the peers) and `bonus_house` (a World's bonus house, which no replay covers yet).
+
+Segment replays: `SMW_SEGMENT=<k>`, `smw --replay <file> --segment <k>`, or a `#@ segment=<k>` line in the file, play match k only. The frame counter starts at the checkpoint's frame n, the events of frames up to n are skipped (the menu read them before the checkpoint), and the replay ends before the first marker after n whose state is neither `gameplay` nor `scoreboard` (a lower `SMW_FRAMES` still applies). Frame n loads the game data as the splash screen does, initializes the menus, restores the checkpoint and runs the rest of `enter_gameplay`. Its dump is byte-identical to the full replay's frames n up to the end, frame numbers and `R` counters included; only the screen of frame n differs (the full replay still shows the faded-out menu). A segment replay never records.
+
+Clips: `tools/replay_clip.py <recording> --match <k> -o clip.txt` writes the recording's header, `#@ segment=<k>`, match k's markers and checkpoint, a `0 jhat <d> 0 0` line per joystick the recording used (so the same joysticks attach), match k's input lines and `#@ frames=<end>`. It plays with `smw --replay`, `run_rust.sh`, `web_replay.mjs`, `replay_video.py` and the web page, and dumps the same frames as the full recording. `--list` prints the session's matches. The web page's start screen lists the last session's matches from its markers, each with Watch and a clip download (`web/shell.html` cuts clips the same way). A clip only plays on this port: the C++ harness skips every `#` line, so it would start a clip from frame 0.
+
+`tools/segment_check.py [--web] <file> ...` checks the exactness: it replays each file whole (recording checkpoints with `SMW_RECORD_TO` when it has none), then for every checkpoint compares the full dump from the match's first frame to the frame before it left gameplay with `SMW_SEGMENT=k` on the recording, with the clip, and with `--web` the clip in the browser build. `tools/segment_replays/` holds multi-match sessions for it (`gen_replays.py segments`) and a browser recording of a gamepad Ztar game.
+
+Compatibility: the C++ harness and `run_ref.sh` ignore `#@ mark` and `#@ checkpoint` lines, so a recording with markers replays on the reference as before, and recordings without markers replay as before but offer no segments. Replays never record unless `SMW_RECORD_TO` is set, so the parity goldens are unaffected. A checkpoint names sounds, tracks and maps by their data-relative files, so it needs the same data tree, and a build refuses a checkpoint of another format version.
 
 ## Dump format
 

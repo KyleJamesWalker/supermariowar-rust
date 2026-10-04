@@ -154,6 +154,22 @@ impl GameplayState {
         }
     }
 
+    /// Not in the C++: the fields a replay checkpoint (smw/checkpoint.rs) saves and restores.
+    pub fn checkpoint(&mut self, s: &mut crate::smw::checkpoint::Snap) {
+        s.io(&mut self.iCountDownState);
+        s.io(&mut self.iCountDownTimer);
+        s.io(&mut self.iWindTimer);
+        s.io(&mut self.dNextWind);
+        s.io(&mut self.iScoreTextOffset);
+        s.io(&mut self.respawnCount);
+        s.io(&mut self.respawnanimationtimer);
+        s.io(&mut self.respawnanimationframe);
+        s.io(&mut self.spinangle);
+        s.io(&mut self.spinspeed);
+        s.io(&mut self.spindirection);
+        s.io(&mut self.spintimer);
+    }
+
     /// Replay-harness `G`/`P`/`T`/`O` records (docs/REPLAY.md).
     pub fn harness_dump(&mut self, out: &mut impl Write) -> std::io::Result<()> {
         unsafe {

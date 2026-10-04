@@ -8,7 +8,7 @@
 //   WEB_DIR / WEB_PAGE  another web build and its page (default: dist/web, index.html). It must be
 //            linked with -sEXPORTED_RUNTIME_METHODS=ENV,FS.
 //   SMW_SEED / SMW_FRAMES / SMW_MAP / SMW_SHOT_FRAMES override the replay's directives.
-//   SMW_RLE is passed through to the game.
+//   SMW_RLE and SMW_SEGMENT are passed through to the game.
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -45,11 +45,19 @@ const env = {
     SMW_SHOT_FRAMES: process.env.SMW_SHOT_FRAMES ?? directive('shots'),
     SMW_SHOT_DIR: '/shots',
     SMW_RLE: process.env.SMW_RLE ?? '',
+    SMW_SEGMENT: process.env.SMW_SEGMENT ?? '',
 };
-if (directive('options') || directive('options_b64') || directive('controls_b64')) {
-    console.error('replays with options.bin directives are not supported in the browser yet');
+if (directive('options')) {
+    console.error('replays with an options= file are not supported in the browser yet');
     process.exit(2);
 }
+// Session recordings and clips embed their settings files; the game reads them from $HOME, kept apart
+// from the page's IndexedDB-backed settings directory.
+const settings = {};
+for (const [key, file] of [['options_b64', 'options.bin'], ['controls_b64', 'controls.sdl2.bin']]) {
+    if (directive(key)) settings[file] = directive(key);
+}
+if (Object.keys(settings).length) env.HOME = '/replay-home';
 const frames = Number(env.SMW_FRAMES);
 
 // Runs before smw.js: the shell page assigns `var Module = {...}`, so trap the assignment and add a
@@ -57,6 +65,7 @@ const frames = Number(env.SMW_FRAMES);
 const initScript = `(() => {
     const env = ${JSON.stringify(env)};
     const replay = ${JSON.stringify(replay)};
+    const settings = ${JSON.stringify(settings)};
     let module;
     Object.defineProperty(window, 'Module', {
         configurable: true,
@@ -67,10 +76,18 @@ const initScript = `(() => {
             module = m;
             // The page waits for a Play click before main(); replays start straight away.
             m.noInitialRun = false;
+            // The game quits after SMW_FRAMES, or at the end of a segment.
+            const quit = m.onGameQuit;
+            m.onGameQuit = () => { window.smwQuit = true; quit && quit(); };
+            m.onAbort = () => { window.smwAbort = true; };
             m.preRun = [...(m.preRun ?? []), () => {
                 Object.assign(m.ENV, env);
                 m.FS.writeFile('/replay.txt', replay);
                 m.FS.mkdir('/shots');
+                for (const [file, b64] of Object.entries(settings)) {
+                    m.FS.mkdirTree('/replay-home/Library/Preferences/.smw');
+                    m.FS.writeFile('/replay-home/Library/Preferences/.smw/' + file, Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)));
+                }
             }];
         },
     });
@@ -163,10 +180,16 @@ while (!done) {
     await new Promise((ok) => setTimeout(ok, 1000));
     done = await evaluate(`(() => {
         try {
+            if (window.smwQuit) return true;
+            if (window.smwAbort) return 'abort';
             const n = (Module.FS.readFile('/dump.txt', { encoding: 'utf8' }).match(/^F /gm) || []).length;
             return n >= ${frames};
         } catch { return false; }
     })()`);
+    if (done === 'abort') {
+        console.error(`the game aborted; last console lines:\n${consoleLines.slice(-20).join('\n')}`);
+        process.exit(1);
+    }
     if (Date.now() - started > Math.max(120000, frames * 100)) {
         console.error(`timed out; last console lines:\n${consoleLines.slice(-20).join('\n')}`);
         process.exit(1);

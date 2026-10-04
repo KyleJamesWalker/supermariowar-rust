@@ -22,6 +22,7 @@ use std::collections::BTreeSet;
 use std::ffi::CString;
 use std::fs::File;
 use std::io::{BufWriter, Write};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 extern "C" {
     fn srand(seed: u32);
@@ -70,6 +71,13 @@ struct Harness {
     audible: bool,
     speed: f32,
     rec: Option<Recorder>,
+    segment: Option<Segment>,
+}
+
+/// A segment replay (SMW_SEGMENT, `--segment`, or a clip's `#@ segment=`): one match of the replay,
+/// started from its checkpoint (smw/checkpoint.rs).
+struct Segment {
+    checkpoint: Vec<u8>,
 }
 
 static mut h: Harness = Harness {
@@ -93,6 +101,7 @@ static mut h: Harness = Harness {
     audible: false,
     speed: 1.0,
     rec: None,
+    segment: None,
 };
 
 fn env(name: &str) -> Option<String> {
@@ -351,6 +360,7 @@ pub fn init() {
         if let Some(replay) = env("SMW_REPLAY") {
             h.events = load_events(&replay);
             h.replay = true;
+            load_segment(&replay);
         }
 
         h.audible = record || env("SMW_AUDIBLE").is_some();
@@ -359,7 +369,9 @@ pub fn init() {
             h.speed = speed;
         }
         if record {
-            start_recording(h.seed);
+            start_recording(h.seed, None);
+        } else if let Some(path) = env("SMW_RECORD_TO").filter(|_| h.replay && h.segment.is_none()) {
+            start_recording(h.seed, Some(path));
         }
 
         // Not in upstream: a connected pad must not join a replay's joysticks.
@@ -459,6 +471,7 @@ pub fn frame_start() {
                 let mut event: SDL_Event = std::mem::zeroed();
                 fill_event(&h.events[h.nextEvent], &mut event);
                 SDL_PushEvent(&mut event);
+                copy_replay_event(&h.events[h.nextEvent]);
             }
             h.nextEvent += 1;
         }
@@ -468,7 +481,7 @@ pub fn frame_start() {
 /// Blocking waits take the next replay event immediately instead of waiting for input.
 pub fn wait_event(event: &mut SDL_Event) {
     unsafe {
-        if h.rec.is_some() {
+        if h.rec.as_ref().is_some_and(|r| r.live) {
             record_wait_event(event);
             return;
         }
@@ -480,6 +493,7 @@ pub fn wait_event(event: &mut SDL_Event) {
             fail(format!("blocking wait at frame {} but the replay has no events left", h.frame));
         }
         fill_event(&h.events[h.nextEvent], event);
+        copy_replay_event(&h.events[h.nextEvent]);
         h.nextEvent += 1;
     }
 }
@@ -493,6 +507,7 @@ pub fn frame_end() {
         }
         sfx::sfx_events.clear();
         spawn_events.clear();
+        record_markers(h.frame);
 
         let f = h.frame;
         let periodic = h.shotEvery > 0 && f >= h.shotFrom && f <= h.shotTo && (f - h.shotFrom) % h.shotEvery == 0;
@@ -534,10 +549,15 @@ struct Recorder {
     quit: bool,
     /// The frame a window close arrived in; the recording ends before it.
     quitFrame: Option<u32>,
-    injecting: bool,
     /// SMW_LIVE_SCRIPT: replay-format lines pushed into SDL's queue as if the OS delivered them.
     script: Vec<ReplayEvent>,
     nextScript: usize,
+    /// False for SMW_RECORD_TO, which records a replay's own events instead of OS input.
+    live: bool,
+    /// Markers: the last state written, the number of the current match and its checkpoint, if any.
+    state: String,
+    matches: u32,
+    checkpoint: Option<String>,
 }
 
 fn rec() -> Option<&'static mut Recorder> {
@@ -618,19 +638,26 @@ fn prune_recordings(dir: &str) {
 }
 
 /// Opens the recording and writes its header. Called from `init` before the settings files are read.
-fn start_recording(seed: u32) {
+/// `to` is SMW_RECORD_TO: a replay's own events, markers and checkpoints go to that file instead.
+fn start_recording(seed: u32, to: Option<String>) {
     let dir = crate::common::path::get_home_directory() + "replays/";
-    if std::fs::create_dir_all(&dir).is_err() {
-        eprintln!("[harness] cannot create {}; not recording", dir);
-        return;
-    }
     let stamp = utc_timestamp();
-    let mut path = format!("{}{}.txt", dir, stamp);
-    let mut n = 1;
-    while std::path::Path::new(&path).exists() {
-        n += 1;
-        path = format!("{}{}_{}.txt", dir, stamp, n);
-    }
+    let live = to.is_none();
+    let path = if let Some(path) = to {
+        path
+    } else {
+        if std::fs::create_dir_all(&dir).is_err() {
+            eprintln!("[harness] cannot create {}; not recording", dir);
+            return;
+        }
+        let mut path = format!("{}{}.txt", dir, stamp);
+        let mut n = 1;
+        while std::path::Path::new(&path).exists() {
+            n += 1;
+            path = format!("{}{}_{}.txt", dir, stamp, n);
+        }
+        path
+    };
     let Ok(file) = File::create(&path) else {
         eprintln!("[harness] cannot create {}; not recording", path);
         return;
@@ -644,15 +671,34 @@ fn start_recording(seed: u32) {
             let _ = writeln!(out, "#@ {}={}", key, base64_encode(&bytes));
         }
     }
+    if let Some(map) = forced_map() {
+        let _ = writeln!(out, "#@ map={}", map);
+    }
     let _ = out.flush();
     println!("[harness] recording to {}", path);
 
-    let script = env("SMW_LIVE_SCRIPT").map(|p| load_events(&p)).unwrap_or_default();
+    let script = if live { env("SMW_LIVE_SCRIPT").map(|p| load_events(&p)).unwrap_or_default() } else { Vec::new() };
     unsafe {
-        h.rec = Some(Recorder { out, path, pending: Vec::new(), quit: false, quitFrame: None, injecting: false, script, nextScript: 0 });
-        SDL_SetEventFilter(Some(record_filter), std::ptr::null_mut());
+        h.rec = Some(Recorder {
+            out,
+            path,
+            pending: Vec::new(),
+            quit: false,
+            quitFrame: None,
+            script,
+            nextScript: 0,
+            live,
+            state: String::new(),
+            matches: 0,
+            checkpoint: None,
+        });
+        if live {
+            SDL_SetEventFilter(Some(record_filter), std::ptr::null_mut());
+        }
     }
-    prune_recordings(&dir);
+    if live {
+        prune_recordings(&dir);
+    }
 }
 
 fn is_input_event(t: u32) -> bool {
@@ -672,7 +718,7 @@ fn is_input_event(t: u32) -> bool {
 /// in the exact form a replay of the recording will produce.
 unsafe extern "C" fn record_filter(_userdata: *mut std::ffi::c_void, event: *mut SDL_Event) -> i32 {
     let Some(r) = rec() else { return 1 };
-    if r.injecting || !is_input_event((*event).type_) {
+    if INJECTING.load(Ordering::Relaxed) || !is_input_event((*event).type_) {
         return 1;
     }
     r.pending.push(*event);
@@ -752,10 +798,14 @@ fn line_for(ev: &ReplayEvent) -> String {
     }
 }
 
-fn inject(r: &mut Recorder, event: &mut SDL_Event) {
-    r.injecting = true;
+/// Set while the recorder pushes an event, so its filter lets that event through. Not a Recorder field:
+/// the compiler may drop a store through `&mut Recorder` that only the filter callback reads.
+static INJECTING: AtomicBool = AtomicBool::new(false);
+
+fn inject(event: &mut SDL_Event) {
+    INJECTING.store(true, Ordering::Relaxed);
     unsafe { SDL_PushEvent(event) };
-    r.injecting = false;
+    INJECTING.store(false, Ordering::Relaxed);
 }
 
 /// SMW_LIVE_SCRIPT events due this frame enter SDL's queue like OS input, with the modifier and
@@ -800,7 +850,7 @@ fn record_event(r: &mut Recorder, ev: &ReplayEvent) {
     let _ = writeln!(r.out, "{}", line_for(ev));
     let mut event: SDL_Event = unsafe { std::mem::zeroed() };
     fill_event(ev, &mut event);
-    inject(r, &mut event);
+    inject(&mut event);
 }
 
 /// Not in upstream. Browsers report a standard-mapping pad's D-pad as buttons 12-15 (up, down, left,
@@ -844,7 +894,7 @@ mod web_dpad {
 /// Frame start while recording: every joystick open at frame 0 gets a centred-hat line so a replay
 /// attaches the same number of joysticks; then held input becomes replay lines pushed in order.
 fn record_frame_start(frame: u32) {
-    let Some(r) = rec() else { return };
+    let Some(r) = rec().filter(|r| r.live) else { return };
     if frame == 0 {
         for d in 0..unsafe { crate::common::global::joystickcount }.min(8) as i32 {
             let ev = ReplayEvent { frame: 0, kind: EventKind::JoyHat, down: false, keyName: String::new(), device: d, index: 0, value: 0 };
@@ -923,7 +973,9 @@ pub fn finish() {
             let _ = std::fs::remove_dir_all(home);
         }
         if let Some(mut r) = h.rec.take() {
-            SDL_SetEventFilter(None, std::ptr::null_mut());
+            if r.live {
+                SDL_SetEventFilter(None, std::ptr::null_mut());
+            }
             let frames = r.quitFrame.unwrap_or(h.frame);
             let _ = writeln!(r.out, "#@ frames={}", frames);
             let _ = r.out.flush();
@@ -944,7 +996,7 @@ pub fn speed() -> f32 {
 
 /// `--replay <file>`: watch a recording in a normal window at normal speed with sound. The settings
 /// embedded in the recording go into a throwaway HOME so the user's own settings stay untouched.
-pub fn prepare_watch(file: &str, speed: Option<f32>) {
+pub fn prepare_watch(file: &str, speed: Option<f32>, segment: Option<u32>) {
     let path = std::fs::canonicalize(file).unwrap_or_else(|_| fail(format!("cannot open replay {}", file)));
     let text = std::fs::read_to_string(&path).unwrap_or_else(|_| fail(format!("cannot read replay {}", path.display())));
     let directive = |key: &str| {
@@ -976,6 +1028,144 @@ pub fn prepare_watch(file: &str, speed: Option<f32>) {
     if let Some(s) = speed {
         std::env::set_var("SMW_REPLAY_SPEED", s.to_string());
     }
+    if let Some(k) = segment {
+        std::env::set_var("SMW_SEGMENT", k.to_string());
+    }
+}
+
+//------------------------------------------------------------------------------------------------
+// Markers, checkpoints and segment replays (not in the C++). A recording marks each change of game
+// state with a `#@ mark` line and saves a `#@ checkpoint` at the start of each match, from which a
+// segment replay starts that match directly. See docs/REPLAY.md, "Markers, checkpoints and clips".
+//------------------------------------------------------------------------------------------------
+
+/// A replay's event, written to its SMW_RECORD_TO recording as it is pushed.
+fn copy_replay_event(ev: &ReplayEvent) {
+    if let Some(r) = rec().filter(|r| !r.live) {
+        let _ = writeln!(r.out, "{}", line_for(ev));
+    }
+}
+
+pub fn note_match_map(path: &str) {
+    crate::smw::checkpoint::note_match_map(path);
+}
+
+/// Called where a match starts (`MenuState::enter_gameplay`): the next marker opens a new match.
+pub fn match_checkpoint() {
+    let Some(r) = rec() else { return };
+    r.matches += 1;
+    r.checkpoint = Some(match crate::smw::checkpoint::unsupported_reason() {
+        Some(reason) => format!("#@ checkpoint match={} frame={} unsupported={}", r.matches, unsafe { h.frame }, reason),
+        None => format!("#@ checkpoint match={} frame={} b64={}", r.matches, unsafe { h.frame }, base64_encode(&crate::smw::checkpoint::capture())),
+    });
+}
+
+/// The game state markers name: `splash`, `menu`, `worldmap`, `gameplay`, `scoreboard` (gameplay after
+/// the game is over) or `other`.
+fn marker_state() -> &'static str {
+    match state_name() {
+        "menu" if MenuState::instance().harness_menu_name() == "world" => "worldmap",
+        "gameplay" if unsafe { crate::common::global::game_values.gamemode.gameover } => "scoreboard",
+        name => name,
+    }
+}
+
+/// Frame end while recording: a `#@ mark` line when the state changed this frame, and when a match
+/// started, its checkpoint.
+fn record_markers(frame: u32) {
+    let Some(r) = rec() else { return };
+    let state = marker_state();
+    if state == r.state {
+        return;
+    }
+    let was_match = r.state == "gameplay" || r.state == "scoreboard";
+    r.state = state.to_string();
+    let mut line = format!("#@ mark frame={} state={}", frame, state);
+    if state == "gameplay" && !was_match {
+        line += &format!(" match={} {}", r.matches, crate::smw::checkpoint::start_fields());
+        let checkpoint = r.checkpoint.take();
+        let _ = writeln!(r.out, "{}", line);
+        if let Some(checkpoint) = checkpoint {
+            let _ = writeln!(r.out, "{}", checkpoint);
+        }
+        let _ = r.out.flush();
+        return;
+    }
+    if state == "scoreboard" || was_match {
+        line += &format!(" match={} {}", r.matches, crate::smw::checkpoint::result_fields());
+    }
+    let _ = writeln!(r.out, "{}", line);
+}
+
+/// `#@ key=value` fields of a directive line, in order (values may be double-quoted).
+fn directive_fields(line: &str) -> Vec<(String, String)> {
+    let mut fields = Vec::new();
+    let mut rest = line.trim();
+    let first = rest.split(' ').next().unwrap_or("");
+    if !first.contains('=') {
+        fields.push((first.to_string(), String::new()));
+        rest = rest[first.len()..].trim_start();
+    }
+    while !rest.is_empty() {
+        let Some(eq) = rest.find('=') else { break };
+        let key = rest[..eq].trim().to_string();
+        rest = &rest[eq + 1..];
+        let value = if let Some(quoted) = rest.strip_prefix('"') {
+            let end = quoted.find('"').unwrap_or(quoted.len());
+            let v = quoted[..end].to_string();
+            rest = quoted.get(end + 1..).unwrap_or("");
+            v
+        } else {
+            let end = rest.find(' ').unwrap_or(rest.len());
+            let v = rest[..end].to_string();
+            rest = &rest[end..];
+            v
+        };
+        fields.push((key, value));
+        rest = rest.trim_start();
+    }
+    fields
+}
+
+/// Segment mode: SMW_SEGMENT=<k>, or `#@ segment=<k>` in the replay (a clip). Finds checkpoint k,
+/// starts the frame counter at its frame and ends the replay where the match left gameplay.
+fn load_segment(path: &str) {
+    let text = std::fs::read_to_string(path).unwrap_or_default();
+    let directives: Vec<Vec<(String, String)>> = text.lines().filter_map(|l| l.strip_prefix("#@ ")).map(directive_fields).collect();
+    let field = |d: &[(String, String)], key: &str| d.iter().find(|(k, _)| k == key).map(|(_, v)| v.clone());
+    let wanted = env("SMW_SEGMENT").or_else(|| directives.iter().filter(|d| d.len() == 1).find_map(|d| field(d, "segment")));
+    let Some(wanted) = wanted else { return };
+    let checkpoint = directives.iter().find(|d| d.first().is_some_and(|(k, v)| k == "checkpoint" && v.is_empty()) && field(d, "match").as_deref() == Some(wanted.as_str()));
+    let Some(checkpoint) = checkpoint else {
+        fail(format!("{} has no checkpoint for match {}", path, wanted));
+    };
+    let start: u32 = field(checkpoint, "frame").and_then(|v| v.parse().ok()).unwrap_or_else(|| fail("checkpoint without frame=".to_string()));
+    if let Some(reason) = field(checkpoint, "unsupported") {
+        fail(format!("match {} has no checkpoint: {} matches are not supported", wanted, reason));
+    }
+    let bytes = field(checkpoint, "b64").and_then(|v| base64_decode(&v)).unwrap_or_else(|| fail("checkpoint without b64=".to_string()));
+    let end = directives
+        .iter()
+        .filter(|d| d.first().is_some_and(|(k, v)| k == "mark" && v.is_empty()))
+        .filter_map(|d| Some((field(d, "frame")?.parse::<u32>().ok()?, field(d, "state")?)))
+        .find(|(f, state)| *f > start && state != "gameplay" && state != "scoreboard")
+        .map(|(f, _)| f);
+    unsafe {
+        h.frame = start;
+        if let Some(end) = end {
+            h.maxFrames = if h.maxFrames >= 0 { h.maxFrames.min(end as i64) } else { end as i64 };
+        }
+        // The menu consumed this frame's input before the checkpoint.
+        while h.nextEvent < h.events.len() && h.events[h.nextEvent].frame <= start {
+            h.nextEvent += 1;
+        }
+        h.segment = Some(Segment { checkpoint: bytes });
+    }
+}
+
+/// The state a segment replay starts in, if this is one.
+pub fn segment_state() -> Option<crate::smw::checkpoint::SegmentState> {
+    unsafe { h.segment.as_mut().map(|s| crate::smw::checkpoint::SegmentState { checkpoint: std::mem::take(&mut s.checkpoint), _alias: Aliased::new() }) }
 }
 
 #[cfg(test)]
@@ -991,6 +1181,14 @@ mod tests {
         let bytes: Vec<u8> = (0..=255u8).collect();
         assert_eq!(base64_decode(&base64_encode(&bytes)).unwrap(), bytes);
         assert!(base64_decode("not base64!").is_none());
+    }
+
+    #[test]
+    fn directive_fields_split_words_and_quotes() {
+        let f = directive_fields("mark frame=12 state=gameplay map=\"Wacky Woods\" p1=pad0,team1,Mario");
+        let pairs: Vec<(&str, &str)> = f.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+        assert_eq!(pairs, [("mark", ""), ("frame", "12"), ("state", "gameplay"), ("map", "Wacky Woods"), ("p1", "pad0,team1,Mario")]);
+        assert_eq!(directive_fields("segment=2"), [("segment".to_string(), "2".to_string())]);
     }
 
     #[test]

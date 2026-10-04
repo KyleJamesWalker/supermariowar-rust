@@ -82,6 +82,9 @@ pub fn gameloop() {
     unsafe {
         SplashScreenState::instance().init();
         GameStateManager::instance().currentState = Ptr::from_mut(SplashScreenState::instance() as &mut dyn GameState);
+        if let Some(segment) = harness::segment_state() {
+            GameStateManager::instance().currentState = Ptr::from_box(Box::new(segment) as Box<dyn GameState>);
+        }
 
         #[cfg(target_os = "emscripten")]
         emscripten_set_main_loop(gameloop_frame_web, 0, 1);
@@ -386,7 +389,7 @@ pub fn main() {
         unsafe { RootDataDirectory = cmd.data_root.clone() };
     }
     if !cmd.replay.is_empty() {
-        harness::prepare_watch(&cmd.replay, cmd.replay_speed);
+        harness::prepare_watch(&cmd.replay, cmd.replay_speed, cmd.segment);
     }
 
     // C++ catches `const char*`, `std::string`, `std::exception` and `...` around main_game().

@@ -151,27 +151,34 @@ impl GameState for SplashScreenState {
             }
 
             if self.state == 7 {
-                // load initial coin sound
-                rm.backgroundmusic[2] = sfxMusic::from_file(musiclist.music(1)).unwrap_or_else(|e| std::panic::panic_any(e));
-
-                rm.load_all_graphics();
-                rm.load_game_sounds();
-
-                if !game_values.soundcapable {
-                    game_values.sound = false;
-                    game_values.music = false;
-                    game_values.soundvolume = 0;
-                    game_values.musicvolume = 0;
-                }
-
-                //Read the map filter lists
-                maplist.read_filters();
-                maplist.apply_filters(&game_values.pfFilters.clone());
+                load_game_data();
 
                 if_sound_on_play(&mut rm.sfx_coin);
 
                 self.state += 1;
             }
         }
+    }
+}
+
+/// The splash screen's second-frame load; a segment replay (smw/checkpoint.rs) runs it before restoring a match.
+pub fn load_game_data() {
+    unsafe {
+        // load initial coin sound
+        rm.backgroundmusic[2] = sfxMusic::from_file(musiclist.music(1)).unwrap_or_else(|e| std::panic::panic_any(e));
+
+        rm.load_all_graphics();
+        rm.load_game_sounds();
+
+        if !game_values.soundcapable {
+            game_values.sound = false;
+            game_values.music = false;
+            game_values.soundvolume = 0;
+            game_values.musicvolume = 0;
+        }
+
+        //Read the map filter lists
+        maplist.read_filters();
+        maplist.apply_filters(&game_values.pfFilters.clone());
     }
 }
