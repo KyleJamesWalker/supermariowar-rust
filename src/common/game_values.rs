@@ -34,6 +34,8 @@ pub enum AppState {
     Quit,
 }
 
+crate::enum_from_u8!(AppState, 7);
+
 //tournament scores
 #[derive(Clone, Copy, Default, Debug)]
 pub struct TournamentScores {

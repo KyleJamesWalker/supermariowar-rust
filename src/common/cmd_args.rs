@@ -9,6 +9,8 @@ pub struct Args {
     /// Not in the C++: `--replay <file>` watches a session recording (see docs/REPLAY.md, "Recordings").
     pub replay: String,
     pub replay_speed: Option<f32>,
+    /// `--segment <k>` with `--replay`: watch only match k, started from its checkpoint.
+    pub segment: Option<u32>,
 }
 
 pub fn show_windows_console() {}
@@ -26,6 +28,7 @@ pub fn print_help(title: &str, version: &str) {
     println!("      --debug             Shows the debug console on Windows");
     println!("      --replay <FILE>     Watches a session recording");
     println!("      --replay-speed <N>  Playback speed multiplier for --replay");
+    println!("      --segment <K>       With --replay: watch only match K of the recording");
 }
 
 pub fn parse_args(argv: &[String]) -> Args {
@@ -44,7 +47,7 @@ pub fn parse_args(argv: &[String]) -> Args {
             i += 1;
             continue;
         }
-        if arg == "--replay" || arg == "--replay-speed" {
+        if arg == "--replay" || arg == "--replay-speed" || arg == "--segment" {
             i += 1;
             if i >= argc {
                 eprintln!("Error: `{}` requires a parameter, see `--help`", arg);
@@ -52,6 +55,14 @@ pub fn parse_args(argv: &[String]) -> Args {
             }
             if arg == "--replay" {
                 result.replay = argv[i].clone();
+            } else if arg == "--segment" {
+                match argv[i].parse::<u32>() {
+                    Ok(v) if v > 0 => result.segment = Some(v),
+                    _ => {
+                        eprintln!("Error: `--segment` needs a match number (1, 2, ...)");
+                        return result;
+                    }
+                }
             } else {
                 match argv[i].parse::<f32>() {
                     Ok(v) if v > 0.0 => result.replay_speed = Some(v),

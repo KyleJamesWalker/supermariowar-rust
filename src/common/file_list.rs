@@ -659,6 +659,11 @@ impl MusicList {
         &self.m_currentMusic
     }
 
+    /// Not in the C++: the current song and its index in the current pack, for replay checkpoints (smw/checkpoint.rs).
+    pub fn song_state_mut(&mut self) -> (&mut PathBuf, &mut usize) {
+        (&mut self.m_currentMusic, &mut self.m_entries[self.m_currentIndex].m_currentMusic)
+    }
+
     pub fn set_random_music(&mut self, category: MusicCategory, mapName: &str, background: &str) {
         self.m_currentMusic = self.m_entries[self.m_currentIndex].random_music(category, mapName, background);
     }

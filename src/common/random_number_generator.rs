@@ -71,6 +71,14 @@ impl RandomNumberGenerator {
         unsafe { g_lastValue }
     }
 
+    /// Not in the C++: a replay checkpoint (smw/checkpoint.rs) restores the counters.
+    pub fn set_counters(calls: u64, last: u32) {
+        unsafe {
+            g_callCount = calls;
+            g_lastValue = last;
+        }
+    }
+
     pub fn reset_call_count() {
         unsafe {
             g_callCount = 0;
@@ -131,6 +139,11 @@ impl Well512RandomNumberGenerator {
         let mut r = Well512RandomNumberGenerator { _alias: Aliased::new(), state: [0; 16], index: 0 };
         r.initialize();
         r
+    }
+
+    /// Not in the C++: the generator state a replay checkpoint (smw/checkpoint.rs) saves and restores.
+    pub fn state_mut(&mut self) -> (&mut [u32; 16], &mut u32) {
+        (&mut self.state, &mut self.index)
     }
 
     fn get_next(&mut self) -> u32 {

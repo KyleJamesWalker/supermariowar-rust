@@ -21,3 +21,4 @@ pub mod network;
 pub mod objects;
 pub mod player_components;
 pub mod ui;
+pub mod checkpoint;

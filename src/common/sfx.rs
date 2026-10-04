@@ -60,7 +60,7 @@ fn log_event(line: String) {
 }
 
 /// The data-relative part of a path ("sfx/packs/Classic/jump.wav"), identical for any data root.
-fn data_relative(path: &str) -> String {
+pub fn data_relative(path: &str) -> String {
     let mut end = path.len();
     while let Some(pos) = path[..end].rfind("data/") {
         if pos == 0 || path.as_bytes()[pos - 1] == b'/' {
@@ -478,6 +478,91 @@ impl sfxMusic {
                 return !v_music.music.is_null();
             }
             Mix_PlayingMusic() != 0
+        }
+    }
+}
+
+/// Not in the C++: the virtual mixer state a replay checkpoint saves and restores (smw/checkpoint.rs).
+/// Chunks and tracks are identified by their owner, so the state survives a reload in another process.
+pub mod checkpoint {
+    use super::*;
+
+    pub struct Channel {
+        pub sound: *mut sfxSound,
+        pub owner: *mut sfxSound,
+        pub forever: bool,
+        pub end: u32,
+    }
+
+    pub struct Music {
+        pub track: *mut sfxMusic,
+        pub forever: bool,
+        pub paused: bool,
+        pub end: u32,
+        pub remaining: u32,
+    }
+
+    /// `sounds` and `tracks` are every loaded sound and track; a channel or track owned by none reads as null.
+    pub fn save(sounds: &[*mut sfxSound], tracks: &[*mut sfxMusic]) -> (Vec<Channel>, Music, bool) {
+        unsafe {
+            let channels = (0..sfxSound::k_channels)
+                .map(|i| Channel {
+                    sound: sounds.iter().copied().find(|&s| !v_channels[i].chunk.is_null() && (*s).m_sfx.0 == v_channels[i].chunk).unwrap_or(null_mut()),
+                    owner: s_channels[i],
+                    forever: v_channels[i].forever,
+                    end: v_channels[i].end,
+                })
+                .collect();
+            let music = Music {
+                track: tracks.iter().copied().find(|&t| !v_music.music.is_null() && (*t).m_music.0 == v_music.music).unwrap_or(null_mut()),
+                forever: v_music.forever,
+                paused: v_music.paused,
+                end: v_music.end,
+                remaining: v_music.remaining,
+            };
+            (channels, music, fResumeMusic)
+        }
+    }
+
+    pub fn restore(channels: &[Channel], music: &Music, resume: bool) {
+        unsafe {
+            for (i, ch) in channels.iter().enumerate().take(sfxSound::k_channels) {
+                v_channels[i] = VirtualChannel { chunk: if ch.sound.is_null() { null_mut() } else { (*ch.sound).m_sfx.0 }, forever: ch.forever, end: ch.end };
+                s_channels[i] = ch.owner;
+            }
+            v_music = VirtualMusic {
+                music: if music.track.is_null() { null_mut() } else { (*music.track).m_music.0 },
+                forever: music.forever,
+                paused: music.paused,
+                end: music.end,
+                remaining: music.remaining,
+            };
+            fResumeMusic = resume;
+        }
+    }
+
+    impl sfxSound {
+        pub fn name(&self) -> &str {
+            &self.m_name
+        }
+        pub fn state(&self) -> (u16, u64) {
+            (self.m_channels, self.m_last_start_time as u64)
+        }
+        pub fn set_state(&mut self, channels: u16, last_start: u64) {
+            self.m_channels = channels;
+            self.m_last_start_time = last_start as usize;
+        }
+    }
+
+    impl sfxMusic {
+        pub fn name(&self) -> &str {
+            &self.m_name
+        }
+        pub fn paused(&self) -> bool {
+            self.m_paused
+        }
+        pub fn set_paused(&mut self, paused: bool) {
+            self.m_paused = paused;
         }
     }
 }

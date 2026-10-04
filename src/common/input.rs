@@ -198,6 +198,11 @@ impl CPlayerInput {
         self.iPressedKey = 0;
     }
 
+    /// Not in the C++: the held stick and hat directions, for replay checkpoints (smw/checkpoint.rs).
+    pub fn joy_directions_mut(&mut self) -> &mut Vec<(i32, [bool; 4], [bool; 4])> {
+        &mut self.joyDirections
+    }
+
     //Clear all button pushed and down states
     //Call this when switching from menu to game
     pub fn reset_keys(&mut self) {

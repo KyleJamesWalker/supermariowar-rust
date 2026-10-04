@@ -807,7 +807,7 @@ impl MenuState {
             }
 
             if game_values.matchtype == MatchType::World && game_values.tourstops[game_values.tourstopcurrent].iStageType == 1 {
-                g_map.load_map(&convert_path("maps/special/two52_special_bonushouse.map"), read_type_full);
+                load_match_map(&convert_path("maps/special/two52_special_bonushouse.map"));
                 crate::common::global::load_current_map_background();
 
                 if game_values.music {
@@ -827,7 +827,7 @@ impl MenuState {
 
                         if fMiniGameMapFound {
                             let filename = maplist.current_filename().to_string();
-                            g_map.load_map(&filename, read_type_full);
+                            load_match_map(&filename);
                             sShortMapName = maplist.current_shortmapname().to_string();
                         }
                     }
@@ -835,7 +835,7 @@ impl MenuState {
 
                 if game_values.gamemode.gamemode == game_mode_pipe_minigame {
                     if !fMiniGameMapFound {
-                        g_map.load_map(&convert_path("maps/special/two52_special_pipe_minigame.map"), read_type_full);
+                        load_match_map(&convert_path("maps/special/two52_special_pipe_minigame.map"));
                         sShortMapName = "minigamepipe".to_string();
                     }
                 } else if game_values.gamemode.gamemode == game_mode_boss_minigame {
@@ -843,32 +843,32 @@ impl MenuState {
                         let bossType: Boss = game_values.gamemodesettings.boss.bosstype;
                         bossgamemode.set_boss_type(bossType);
                         match bossType {
-                            Boss::Hammer => g_map.load_map(&convert_path("maps/special/two52_special_hammerboss_minigame.map"), read_type_full),
-                            Boss::Bomb => g_map.load_map(&convert_path("maps/special/two52_special_bombboss_minigame.map"), read_type_full),
-                            Boss::Fire => g_map.load_map(&convert_path("maps/special/two52_special_fireboss_minigame.map"), read_type_full),
+                            Boss::Hammer => load_match_map(&convert_path("maps/special/two52_special_hammerboss_minigame.map")),
+                            Boss::Bomb => load_match_map(&convert_path("maps/special/two52_special_bombboss_minigame.map")),
+                            Boss::Fire => load_match_map(&convert_path("maps/special/two52_special_fireboss_minigame.map")),
                         }
                         sShortMapName = "minigameboss".to_string();
                     }
                 } else if game_values.gamemode.gamemode == game_mode_boxes_minigame {
                     if !fMiniGameMapFound {
-                        g_map.load_map(&convert_path("maps/special/two52_special_boxes_minigame.map"), read_type_full);
+                        load_match_map(&convert_path("maps/special/two52_special_boxes_minigame.map"));
                         sShortMapName = "minigameboxes".to_string();
                     }
                 } else if game_values.matchtype == MatchType::QuickGame {
                     //Load a random map for the quick game
                     let szMapName = maplist.random_filename();
-                    g_map.load_map(&szMapName, read_type_full);
+                    load_match_map(&szMapName);
                     sShortMapName = strip_path_and_extension(&szMapName);
 
                     println!("  State: GS_START_GAME, Match type: MatchType::QuickGame");
                 } else if netplay.active {
                     // NOTE: for the host, netplay.mapfilepath will be ./data/something
                     // while for the other players, it's ~/.smw/net_last.map
-                    g_map.load_map(&netplay.mapfilepath, read_type_full);
+                    load_match_map(&netplay.mapfilepath);
                     sShortMapName = strip_path_and_extension(&netplay.mapfilepath);
                 } else {
                     let filename = maplist.current_filename().to_string();
-                    g_map.load_map(&filename, read_type_full);
+                    load_match_map(&filename);
                     sShortMapName = maplist.current_shortmapname().to_string();
                 }
 
@@ -886,22 +886,39 @@ impl MenuState {
                 }
             }
 
-            game_values.appstate = AppState::Game;
-            println!("  GS_GAME");
-
-            g_map.predrawbackground(&rm.spr_background, &rm.spr_backmap[0]);
-            g_map.predrawforeground(&rm.spr_frontmap[0]);
-
-            g_map.predrawbackground(&rm.spr_background, &rm.spr_backmap[1]);
-            g_map.predrawforeground(&rm.spr_frontmap[1]);
-
-            g_map.setup_animated_tiles();
-            crate::smw::gs_gameplay::load_map_objects(false);
-
-            GameStateManager::instance().change_state_to(Ptr::from_mut(GameplayState::instance() as &mut dyn GameState));
+            harness::match_checkpoint();
+            enter_gameplay_tail();
         }
     }
+}
 
+/// Loads the map a match is played on; replay checkpoints (smw/checkpoint.rs) note its file.
+fn load_match_map(path: &str) {
+    unsafe { g_map.load_map(path, read_type_full) };
+    harness::note_match_map(path);
+}
+
+/// The rest of `MenuState::enter_gameplay`, after the map and its music are loaded. A segment replay
+/// (smw/checkpoint.rs) restores the state up to that point and starts the match here.
+pub fn enter_gameplay_tail() {
+    unsafe {
+        game_values.appstate = AppState::Game;
+        println!("  GS_GAME");
+
+        g_map.predrawbackground(&rm.spr_background, &rm.spr_backmap[0]);
+        g_map.predrawforeground(&rm.spr_frontmap[0]);
+
+        g_map.predrawbackground(&rm.spr_background, &rm.spr_backmap[1]);
+        g_map.predrawforeground(&rm.spr_frontmap[1]);
+
+        g_map.setup_animated_tiles();
+        crate::smw::gs_gameplay::load_map_objects(false);
+
+        GameStateManager::instance().change_state_to(Ptr::from_mut(GameplayState::instance() as &mut dyn GameState));
+    }
+}
+
+impl MenuState {
     /// Handles one `MenuCodeEnum` from `mCurrentMenu->SendInput`. Returns true where C++ `return`s from `update`.
     fn handle_menu_code(&mut self, mut code: MenuCodeEnum, fGenerateMapThumbs: &mut bool) -> bool {
         unsafe {
