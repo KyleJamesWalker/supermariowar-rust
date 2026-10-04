@@ -67,6 +67,8 @@ SDL_BlitSurface(fg, NULL, dst, NULL);   /* dst is magenta on SDL 3.4.18 */
 
 SDL3 may consider this intended, but sdl2-compat should return what SDL2 does. A direct SDL3 port that keeps RLE needs `SDL_BLENDMODE_NONE` on opaque converted images.
 
+Without the lock, SDL 3.4.18 draws magenta if `fg` was never blitted. If it was blitted before the fill, it draws the old contents, because the fill does not invalidate the RLE data. Super Mario War's `sdl3` branch does exactly this in `CMap::predrawforeground`.
+
 ## Impact
 
 10 of the port's 44 replays and 121 of its 290 map replays have magenta in their screenshots, in both the C++ build and the Rust port. Setting `SDL_BLENDMODE_NONE` on the foreground surface, or drawing without RLE, removes it. The result then matches the Emscripten build pixel for pixel.
