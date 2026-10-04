@@ -153,6 +153,12 @@ impl GameModeSettingsUnion {
     }
 }
 
+/// Not in the C++, which indexes `players` by ID: a client that already removed players at the end of its game
+/// would read past the vector.
+fn net_player(id: u8) -> Ptr<crate::smw::player::CPlayer> {
+    unsafe { players.iter().copied().find(|p| p.globalID as u8 == id).unwrap_or(Ptr::null()) }
+}
+
 fn ticks() -> u32 {
     unsafe { SDL_GetTicks() }
 }
@@ -801,7 +807,7 @@ impl NetClient {
         }
 
         unsafe {
-            let mut player = players[pkg.player_id as usize];
+            let mut player = net_player(pkg.player_id);
             if player.is_null() {
                 return;
             }
@@ -832,7 +838,7 @@ impl NetClient {
         }
 
         unsafe {
-            let mut player = players[pkg.player_id as usize];
+            let mut player = net_player(pkg.player_id);
             if player.is_null() {
                 return;
             }
@@ -871,8 +877,8 @@ impl NetClient {
         }
 
         unsafe {
-            let mut player1 = players[pkg.player_id[0] as usize];
-            let mut player2 = players[pkg.player_id[1] as usize];
+            let mut player1 = net_player(pkg.player_id[0]);
+            let mut player2 = net_player(pkg.player_id[1]);
             if player1.is_null() || player2.is_null() {
                 return;
             }
@@ -1476,7 +1482,7 @@ impl NetGameHost {
         }
 
         unsafe {
-            if players[playerID as usize].is_null() {
+            if net_player(playerID).is_null() {
                 return;
             }
 
