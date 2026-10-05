@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build the Rust port and run it against a replay exactly like run_ref.sh runs the C++.
-# Usage: run_rust.sh <replay.txt> [out_dir]   (SMW_BIN and SMW_DATA_DIR select another binary and data tree)
+# Usage: run_rust.sh <replay.txt|.smwrp> [out_dir]   (SMW_BIN and SMW_DATA_DIR select another binary and data tree)
 set -euo pipefail
 
 tools="$(cd "$(dirname "$0")" && pwd)"

@@ -113,6 +113,8 @@ Menu path to a default 2-player Classic game, used by `start_classic.txt`: `Retu
 
 The Rust game records every normal launch (no `SMW_REPLAY`, no `SMW_NO_RECORD`) to `~/Library/Preferences/.smw/replays/<UTC timestamp>.txt`, the settings directory that holds `options.bin`, and keeps the newest 10. A recording is an ordinary replay script, so `run_ref.sh` runs it on either build. The editors and replays never record.
 
+A `.smwrp` ("Super Mario War replay") is a recording gzipped, nothing more; `gunzip -c f.smwrp` or `zcat < f.smwrp` reads it, and `.txt.gz` is the same bytes. The web page downloads `.smwrp`, and `smw --replay`, `SMW_REPLAY`, the web page's Load replay and the tools (`run_ref.sh`, `run_rust.sh`, `replay_compare.sh`, `replay_clip.py`, `segment_check.py`, `replay_video.py`, `web_replay.mjs`) read plain or gzipped files, told apart by the gzip magic bytes. `run_ref.sh` gunzips into its sandbox, so the C++ harness only sees text.
+
 - Header: `#@ seed=` (a random seed, applied exactly as `SMW_SEED`, so the live session is a seeded run), then `#@ options_b64=` and `#@ controls_b64=` when those files existed at startup. `#@ frames=` is appended at exit (normal quit, the window closing, or a caught crash); a killed process or a closed browser tab leaves it out. The browser build flushes the recording every 60 frames.
 - Input capture: an SDL event filter holds back every OS input event. At each frame start the held keyboard and joystick events become replay lines (`down`/`up` with `SDL_GetKeyName`, `jaxis`/`jbutton`/`jhat` with the joystick's open index) and are pushed back exactly as a replay pushes them, so the game sees `mod = KMOD_NONE` and `repeat = 0` both live and in replay. Input the format cannot express is dropped while recording: mouse, touch, game-controller and text events, key-repeat flags, and modifiers (so Alt+Enter and Alt+F4 do nothing in a recorded session).
 - Frame 0 gets one `0 jhat <dev> 0 0` line per joystick open at startup, so a replay attaches the same number of joysticks.
@@ -139,11 +141,11 @@ Markers are `#@ mark frame=<n> state=<state> ...` lines, written after frame n's
 
 ```
 #@ mark frame=2286 state=gameplay match=1 type=single mode=star style=ztar goal=5 map=2skyfight file=maps/2skyfight.map players=4 p1=pad0,team1,BubBob p2=cpu-moderate,team2,BlackMage p3=cpu-moderate,team3,0smw p4=cpu-moderate,team4,0smw
-#@ checkpoint match=1 frame=2286 b64=U01XQwH...
+#@ checkpoint match=1 frame=2286 z64=eNrtWFtv...
 #@ mark frame=3931 state=menu match=1 scores=5,5,5,5
 ```
 
-A checkpoint follows its match's start marker: `#@ checkpoint match=<k> frame=<n> b64=<data>`, the base64 of a versioned binary (`SMWC`, version 1; `src/smw/checkpoint.rs`). It is saved in `MenuState::enter_gameplay` once the map and its music are loaded, and holds everything the match reads from earlier frames:
+A checkpoint follows its match's start marker: `#@ checkpoint match=<k> frame=<n> z64=<data>`, the base64 of the zlib stream of a versioned binary (`SMWC`, version 1; `src/smw/checkpoint.rs`). Older recordings hold the binary uncompressed as `b64=<data>`, which every reader still accepts; any other field is an error. It is saved in `MenuState::enter_gameplay` once the map and its music are loaded, and holds everything the match reads from earlier frames:
 
 - the settings, as the options.bin and controls.sdl2.bin bytes they would be written as now; which input configuration each player reads; the stick and hat directions held;
 - `game_values` outside those files: match type, teams, tournament, tour and world state, stored and world powerups, the mode settings in effect, colors, timers and flags the menus set;
@@ -157,7 +159,7 @@ Segment replays: `SMW_SEGMENT=<k>`, `smw --replay <file> --segment <k>`, or a `#
 
 Clips: `tools/replay_clip.py <recording> --match <k> -o clip.txt` writes the recording's header, `#@ segment=<k>`, match k's markers and checkpoint, a `0 jhat <d> 0 0` line per joystick the recording used (so the same joysticks attach), match k's input lines and `#@ frames=<end>`. It plays with `smw --replay`, `run_rust.sh`, `web_replay.mjs`, `replay_video.py` and the web page, and dumps the same frames as the full recording. `--list` prints the session's matches. The web page's start screen lists the last session's matches from its markers, each with Watch and a clip download (`web/shell.html` cuts clips the same way). A clip only plays on this port: the C++ harness skips every `#` line, so it would start a clip from frame 0.
 
-`tools/segment_check.py [--web] <file> ...` checks the exactness: it replays each file whole (recording checkpoints with `SMW_RECORD_TO` when it has none), then for every checkpoint compares the full dump from the match's first frame to the frame before it left gameplay with `SMW_SEGMENT=k` on the recording, with the clip, and with `--web` the clip in the browser build. `tools/segment_replays/` holds multi-match sessions for it (`gen_replays.py segments`) and a browser recording of a gamepad Ztar game.
+`tools/segment_check.py [--web] <file> ...` checks the exactness: it replays each file whole (recording checkpoints with `SMW_RECORD_TO` when it has none), then for every checkpoint compares the full dump from the match's first frame to the frame before it left gameplay with `SMW_SEGMENT=k` on the recording, with the clip, and with `--web` the clip in the browser build. `tools/segment_replays/` holds multi-match sessions for it (`gen_replays.py segments`) and a browser recording of a gamepad Ztar game. `tools/checkpoint_fixtures/` holds a recording of that game with its checkpoint in each format.
 
 Compatibility: the C++ harness and `run_ref.sh` ignore `#@ mark` and `#@ checkpoint` lines, so a recording with markers replays on the reference as before, and recordings without markers replay as before but offer no segments. Replays never record unless `SMW_RECORD_TO` is set, so the parity goldens are unaffected. A checkpoint names sounds, tracks and maps by their data-relative files, so it needs the same data tree, and a build refuses a checkpoint of another format version.
 

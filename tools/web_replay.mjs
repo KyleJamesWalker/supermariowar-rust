@@ -3,7 +3,7 @@
 // Chrome, like run_ref.sh runs a native binary: same #@ directives and SMW_* variables, and the
 // same outputs (<out_dir>/dump.txt, frame_<n>.bmp), so diffreplay.py can compare them.
 //
-// Usage: node tools/web_replay.mjs <replay.txt> [out_dir]
+// Usage: node tools/web_replay.mjs <replay.txt|.smwrp> [out_dir]
 //   CHROME   Chrome binary (default: the macOS Google Chrome app)
 //   WEB_DIR / WEB_PAGE  another web build and its page (default: dist/web, index.html). It must be
 //            linked with -sEXPORTED_RUNTIME_METHODS=ENV,FS.
@@ -15,6 +15,7 @@ import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { gunzipSync } from 'node:zlib';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const web = resolve(process.env.WEB_DIR ?? join(repo, 'dist', 'web'));
@@ -23,11 +24,12 @@ const chrome = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/M
 
 const [replayArg, outArg] = process.argv.slice(2);
 if (!replayArg) {
-    console.error('usage: web_replay.mjs <replay.txt> [out_dir]');
+    console.error('usage: web_replay.mjs <replay.txt|.smwrp> [out_dir]');
     process.exit(2);
 }
-const replay = readFileSync(replayArg, 'utf8');
-const out = resolve(outArg ?? join(tmpdir(), 'smw-web-replay-out', basename(replayArg, '.txt')));
+const replayBytes = readFileSync(replayArg);
+const replay = (replayBytes[0] === 0x1f && replayBytes[1] === 0x8b ? gunzipSync(replayBytes) : replayBytes).toString('utf8');
+const out = resolve(outArg ?? join(tmpdir(), 'smw-web-replay-out', basename(replayArg).replace(/(\.smwrp|\.gz)$/, '').replace(/\.txt$/, '')));
 mkdirSync(out, { recursive: true });
 
 const directive = (key) => {

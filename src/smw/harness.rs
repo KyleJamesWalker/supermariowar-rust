@@ -12,6 +12,7 @@ use crate::smw::game_state::GameStateManager;
 use crate::smw::gs_gameplay::GameplayState;
 use crate::smw::gs_menu::MenuState;
 use crate::smw::gs_splash_screen::SplashScreenState;
+use crate::smw::network::file_compressor::{deflate, inflate, read_maybe_gzip};
 use sdl2::sys::{
     SDL_Event, SDL_EventType, SDL_GetError, SDL_GetKeyFromName, SDL_GetKeyName, SDL_GetScancodeFromKey, SDL_InitSubSystem, SDL_JoystickAttachVirtual,
     SDL_JoystickInstanceID, SDL_JoystickType, SDL_KeyCode, SDL_Keymod, SDL_PumpEvents, SDL_PushEvent, SDL_SetEventFilter, SDL_SetHint, SDL_WaitEvent, SDL_INIT_JOYSTICK,
@@ -145,8 +146,13 @@ extern "C" fn virtual_ticks() -> u32 {
     unsafe { 1000u32.wrapping_add(h.frame.wrapping_mul(WAITTIME as u32)) }
 }
 
+/// A recording's text: plain, or gzipped (.smwrp, .txt.gz).
+pub fn read_recording(path: impl AsRef<std::path::Path>) -> Option<String> {
+    String::from_utf8(read_maybe_gzip(path).ok()?).ok()
+}
+
 fn load_events(path: &str) -> Vec<ReplayEvent> {
-    let text = std::fs::read_to_string(path).unwrap_or_else(|_| fail(format!("cannot open replay {}", path)));
+    let text = read_recording(path).unwrap_or_else(|| fail(format!("cannot open replay {}", path)));
     let mut events: Vec<ReplayEvent> = Vec::new();
     let events = &mut events;
     for (i, raw) in text.split('\n').enumerate() {
@@ -998,7 +1004,7 @@ pub fn speed() -> f32 {
 /// embedded in the recording go into a throwaway HOME so the user's own settings stay untouched.
 pub fn prepare_watch(file: &str, speed: Option<f32>, segment: Option<u32>) {
     let path = std::fs::canonicalize(file).unwrap_or_else(|_| fail(format!("cannot open replay {}", file)));
-    let text = std::fs::read_to_string(&path).unwrap_or_else(|_| fail(format!("cannot read replay {}", path.display())));
+    let text = read_recording(&path).unwrap_or_else(|| fail(format!("cannot read replay {}", path.display())));
     let directive = |key: &str| {
         text.lines().filter_map(|l| l.strip_prefix("#@ ")).filter_map(|l| l.strip_prefix(key)).filter_map(|l| l.strip_prefix('=')).last().map(|v| v.to_string())
     };
@@ -1056,7 +1062,7 @@ pub fn match_checkpoint() {
     r.matches += 1;
     r.checkpoint = Some(match crate::smw::checkpoint::unsupported_reason() {
         Some(reason) => format!("#@ checkpoint match={} frame={} unsupported={}", r.matches, unsafe { h.frame }, reason),
-        None => format!("#@ checkpoint match={} frame={} b64={}", r.matches, unsafe { h.frame }, base64_encode(&crate::smw::checkpoint::capture())),
+        None => format!("#@ checkpoint match={} frame={} z64={}", r.matches, unsafe { h.frame }, base64_encode(&deflate(&crate::smw::checkpoint::capture()))),
     });
 }
 
@@ -1130,7 +1136,7 @@ fn directive_fields(line: &str) -> Vec<(String, String)> {
 /// Segment mode: SMW_SEGMENT=<k>, or `#@ segment=<k>` in the replay (a clip). Finds checkpoint k,
 /// starts the frame counter at its frame and ends the replay where the match left gameplay.
 fn load_segment(path: &str) {
-    let text = std::fs::read_to_string(path).unwrap_or_default();
+    let text = read_recording(path).unwrap_or_default();
     let directives: Vec<Vec<(String, String)>> = text.lines().filter_map(|l| l.strip_prefix("#@ ")).map(directive_fields).collect();
     let field = |d: &[(String, String)], key: &str| d.iter().find(|(k, _)| k == key).map(|(_, v)| v.clone());
     let wanted = env("SMW_SEGMENT").or_else(|| directives.iter().filter(|d| d.len() == 1).find_map(|d| field(d, "segment")));
@@ -1143,7 +1149,7 @@ fn load_segment(path: &str) {
     if let Some(reason) = field(checkpoint, "unsupported") {
         fail(format!("match {} has no checkpoint: {} matches are not supported", wanted, reason));
     }
-    let bytes = field(checkpoint, "b64").and_then(|v| base64_decode(&v)).unwrap_or_else(|| fail("checkpoint without b64=".to_string()));
+    let bytes = checkpoint_bytes(checkpoint).unwrap_or_else(|e| fail(format!("match {}: {}", wanted, e)));
     let end = directives
         .iter()
         .filter(|d| d.first().is_some_and(|(k, v)| k == "mark" && v.is_empty()))
@@ -1161,6 +1167,23 @@ fn load_segment(path: &str) {
         }
         h.segment = Some(Segment { checkpoint: bytes });
     }
+}
+
+/// A checkpoint line's binary: `z64=` (zlib, then base64) or, in older recordings, `b64=` (base64).
+fn checkpoint_bytes(d: &[(String, String)]) -> Result<Vec<u8>, String> {
+    let mut bytes = None;
+    for (key, value) in d.iter().skip(1) {
+        bytes = match key.as_str() {
+            "match" | "frame" => continue,
+            "b64" => base64_decode(value),
+            "z64" => base64_decode(value).and_then(|z| inflate(&z)),
+            _ => return Err(format!("checkpoint has an unknown field {}= (this build reads b64= and z64=)", key)),
+        };
+        if bytes.is_none() {
+            return Err(format!("checkpoint {}= is damaged", key));
+        }
+    }
+    bytes.ok_or_else(|| "checkpoint without z64= or b64=".to_string())
 }
 
 /// The state a segment replay starts in, if this is one.
@@ -1189,6 +1212,23 @@ mod tests {
         let pairs: Vec<(&str, &str)> = f.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
         assert_eq!(pairs, [("mark", ""), ("frame", "12"), ("state", "gameplay"), ("map", "Wacky Woods"), ("p1", "pad0,team1,Mario")]);
         assert_eq!(directive_fields("segment=2"), [("segment".to_string(), "2".to_string())]);
+    }
+
+    #[test]
+    fn checkpoints_read_old_and_new_encodings() {
+        let read = |name: &str| -> Vec<Vec<u8>> {
+            let text = std::fs::read_to_string(format!("{}/tools/checkpoint_fixtures/{}", env!("CARGO_MANIFEST_DIR"), name)).unwrap();
+            text.lines().filter_map(|l| l.strip_prefix("#@ checkpoint ")).map(|l| checkpoint_bytes(&directive_fields(&format!("checkpoint {}", l))).unwrap()).collect()
+        };
+        let old = read("web_gamepad_ztar_b64.txt");
+        assert_eq!(old.len(), 1);
+        assert_eq!(&old[0][..5], b"SMWC\x01");
+        assert_eq!(read("web_gamepad_ztar_z64.txt"), old);
+
+        let err = |line: &str| checkpoint_bytes(&directive_fields(line)).unwrap_err();
+        assert!(err("checkpoint match=1 frame=9 x64=AAAA").contains("unknown field x64="));
+        assert!(err("checkpoint match=1 frame=9 z64=bm90IHpsaWI=").contains("z64= is damaged"));
+        assert!(err("checkpoint match=1 frame=9").contains("without z64= or b64="));
     }
 
     #[test]

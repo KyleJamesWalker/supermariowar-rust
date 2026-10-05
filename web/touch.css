@@ -175,6 +175,7 @@ html.touch #touch {
 .tc-util { width: 48px; height: 44px; cursor: pointer; }
 .tc-util svg { width: 20px; height: 20px; }
 .tc-util[hidden] { display: none; }
+html:not(.playing) .tc-util[data-action=menu] { display: none; }
 @media (orientation: portrait) {
   .tc-col { flex-direction: row; }
 }

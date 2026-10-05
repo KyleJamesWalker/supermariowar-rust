@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Render a replay to an H.264 MP4, alone or side by side for two builds. See docs/REPLAY_VIDEO.md.
 
-  replay_video.py <replay.txt> --after <bin|git-rev> [--before <bin|git-rev>] [-o out.mp4]
+  replay_video.py <replay.txt|.smwrp> --after <bin|git-rev> [--before <bin|git-rev>] [-o out.mp4]
                   [--frames a-b] [--speed x] [--diff] [--scale n]
                   [--before-env K=V ...] [--after-env K=V ...] [--label-before TXT] [--label-after TXT]
 
@@ -22,6 +22,8 @@ from pathlib import Path
 
 TOOLS = Path(__file__).resolve().parent
 PORT = TOOLS.parent
+sys.path.insert(0, str(TOOLS))
+from replay_clip import read_recording, recording_stem  # noqa: E402
 W, H = 640, 480
 FRAME = W * H * 4
 FPS = Fraction(125, 2)
@@ -98,7 +100,7 @@ def fail(msg, status=2):
 
 def directive(replay, key):
     value = None
-    for line in Path(replay).read_text().splitlines():
+    for line in read_recording(replay).splitlines():
         if line.startswith("#@") and "=" in line:
             k, v = line[2:].strip().split("=", 1)
             if k.strip() == key:
@@ -110,7 +112,7 @@ def segment_start(replay):
     """The first frame a segment replay or clip plays (docs/REPLAY.md, "Markers, checkpoints and clips"), else 0."""
     match = os.environ.get("SMW_SEGMENT") or directive(replay, "segment")
     if match:
-        for line in Path(replay).read_text().splitlines():
+        for line in read_recording(replay).splitlines():
             if line.startswith("#@ checkpoint ") and f" match={match} " in line + " ":
                 return int(re.search(r" frame=(\d+)", line).group(1))
     return 0
@@ -383,7 +385,7 @@ def main():
         if first > last:
             fail(f"--frames starts after the replay's last frame {last}")
 
-    out = Path(args.output or f"{replay.stem}.mp4").resolve()
+    out = Path(args.output or f"{recording_stem(replay)}.mp4").resolve()
     cache = Path(args.cache_dir).expanduser()
     tmp = Path(tempfile.mkdtemp(prefix="smw-video-"))
     builds = Builds(cache, tmp)

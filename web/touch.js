@@ -55,6 +55,9 @@
       '<button class="tc-util" type="button" data-action="fullscreen" title="Fullscreen">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">' +
         '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>' +
+      '<button class="tc-util" type="button" data-action="menu" title="Menu">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">' +
+        '<path d="M4 6h16M4 12h16M4 18h16"/></svg></button>' +
     '</div>' +
     '<div class="tc-col tc-col-right">' +
       '<div class="tc-zone tc-key" data-key="start">Start</div>' +
@@ -185,6 +188,11 @@
         if (screen.orientation && screen.orientation.lock) return screen.orientation.lock('landscape');
       }).catch(function () {});
     }
+  });
+
+  controls.querySelector('[data-action=menu]').addEventListener('click', function () {
+    var menu = document.getElementById('menu');
+    if (menu) menu.click();
   });
 
   var readPref = function () {

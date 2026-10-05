@@ -2,23 +2,26 @@
 # Replay one recording (or any replay script) headless on the C++ reference and on the Rust build,
 # report the first divergent frame with context, and save screenshots around it.
 #
-# Usage: replay_compare.sh <recording.txt> [out_dir]
+# Usage: replay_compare.sh <recording.txt|.smwrp> [out_dir]
 # Env: SMW_CPP_BIN (default ~/work/supermariowar-cpp-reference/build/smw),
 #      SMW_CPP_DATA (default ~/work/supermariowar-cpp-reference/data), SMW_NO_BUILD=1 to skip cargo.
 # Exit status: 0 identical, 1 diverged, 2 error. See docs/REPLAY.md, "Recordings".
 set -uo pipefail
 
 if [[ $# -lt 1 ]]; then
-    echo "usage: $0 <recording.txt> [out_dir]" >&2
+    echo "usage: $0 <recording.txt|.smwrp> [out_dir]" >&2
     exit 2
 fi
 
 tools="$(cd "$(dirname "$0")" && pwd)"
 replay="$1"
-out="${2:-${TMPDIR:-/tmp}/smw-replay-compare/$(basename "$replay" .txt)}"
+name="$(basename "$replay")"
+name="${name%.smwrp}"
+name="${name%.gz}"
+out="${2:-${TMPDIR:-/tmp}/smw-replay-compare/${name%.txt}}"
 cpp_bin="${SMW_CPP_BIN:-$HOME/work/supermariowar-cpp-reference/build/smw}"
 cpp_data="${SMW_CPP_DATA:-$HOME/work/supermariowar-cpp-reference/data}"
-beyond="$(awk '!/^#/ && (($2 == "jaxis" && $4 > 5) || ($2 == "jbutton" && $4 > 15)) { print; exit }' "$replay")"
+beyond="$(awk '!/^#/ && (($2 == "jaxis" && $4 > 5) || ($2 == "jbutton" && $4 > 15)) { print; exit }' <(gzip -dcf "$replay"))"
 if [[ -n "$beyond" ]]; then
     echo "the C++ harness only replays axes 0-5 and buttons 0-15, and this recording has: $beyond" >&2
     echo "(the Rust build replays it: tools/run_rust.sh $replay)" >&2
