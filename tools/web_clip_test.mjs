@@ -49,9 +49,11 @@ const profile = mkdtempSync(join(tmpdir(), 'smw-web-chrome-'));
 const browser = spawn(chrome, [
     '--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--disable-extensions',
     '--autoplay-policy=no-user-gesture-required', '--mute-audio', '--window-size=900,900', 'about:blank',
-], { stdio: ['ignore', 'ignore', 'pipe'] });
+], { stdio: ['ignore', 'ignore', 'pipe'], detached: true });
 const cleanup = () => {
-    browser.kill('SIGKILL');
+    try {
+        process.kill(-browser.pid, 'SIGKILL');
+    } catch {}
     server.close();
     rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 };
