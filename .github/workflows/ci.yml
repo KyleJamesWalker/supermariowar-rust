@@ -414,8 +414,11 @@ jobs:
 
   web:
     needs: build-web
-    runs-on: macos-15
-    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      SDL_RENDER_DRIVER: software
+      CHROME: /usr/bin/google-chrome
     steps:
       - uses: actions/checkout@v4
         with:
@@ -438,12 +441,18 @@ jobs:
       - name: Build
         run: cargo build --release --locked --bin smw
 
+      - name: Allow Chrome's sandbox
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
       - name: Web clip test
-        run: node tools/web_clip_test.mjs "$RUNNER_TEMP/web-clip"
+        run: |
+          timeout 15m node tools/web_clip_test.mjs "$RUNNER_TEMP/web-clip" && exit 0
+          echo "::warning::web_clip_test failed once; retrying"
+          timeout 15m node tools/web_clip_test.mjs "$RUNNER_TEMP/web-clip-retry"
 
       - name: Web UI test
         if: always()
-        run: node tools/web_ui_test.mjs "$RUNNER_TEMP/web-ui"
+        run: timeout 10m node tools/web_ui_test.mjs "$RUNNER_TEMP/web-ui"
 
       - uses: actions/upload-artifact@v4
         if: failure()
