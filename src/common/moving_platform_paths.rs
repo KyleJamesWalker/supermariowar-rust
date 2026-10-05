@@ -4,6 +4,7 @@ use crate::common::eyecandy_styles::SpawnStyle;
 use crate::common::game::App;
 use crate::common::game_values::game_values;
 use crate::common::global_constants::*;
+use crate::common::math::trig::{atan2f, cosf, sinf};
 use crate::common::math::vec2::Vec2f;
 use crate::common::movingplatform::MovingPlatform;
 use crate::common::object_base::cap_falling_velocity;
@@ -22,7 +23,7 @@ pub enum PlatformPathType {
 }
 
 fn calc_velocity(speed: f32, angle: f32) -> Vec2f {
-    let mut vel = Vec2f::new(speed * angle.cos(), speed * angle.sin());
+    let mut vel = Vec2f::new(speed * cosf(angle), speed * sinf(angle));
 
     if vel.x.abs() < 0.01 {
         vel.x = 0.0;
@@ -169,7 +170,7 @@ fn straight_angle_and_length(base: &MovingPlatformPath) -> (f32, f32) {
         angle = if width > 0.0 { 0.0 } else { PI };
         length = width.abs();
     } else {
-        angle = height.atan2(width);
+        angle = atan2f(height, width);
         length = (height * height + width * width).sqrt();
     }
     (angle, length)
@@ -393,8 +394,8 @@ impl EllipsePath {
 
     pub fn set_position(&mut self, r#type: i16) {
         let t = r#type as usize;
-        self.base.m_currentPos[t].x = self.m_radius.x * self.m_angle[t].cos() + self.base.m_startPos.x;
-        self.base.m_currentPos[t].y = self.m_radius.y * self.m_angle[t].sin() + self.base.m_startPos.y;
+        self.base.m_currentPos[t].x = self.m_radius.x * cosf(self.m_angle[t]) + self.base.m_startPos.x;
+        self.base.m_currentPos[t].y = self.m_radius.y * sinf(self.m_angle[t]) + self.base.m_startPos.y;
     }
 }
 

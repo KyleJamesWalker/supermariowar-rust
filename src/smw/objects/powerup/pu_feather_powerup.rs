@@ -3,6 +3,7 @@
 use crate::common::game::App;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::*;
+use crate::common::math::trig::{cosf, sinf};
 use crate::common::math::vec2::Vec2s;
 use crate::common::moving_object_types::movingobject_powerup;
 use crate::common::object_base::CObjectTrait;
@@ -111,9 +112,9 @@ pub fn pu_feather_powerup_update<T: PU_FeatherPowerupTrait + ?Sized>(this: &mut 
 
         o.dFloatCenterY += 1.0f32;
 
-        let x = 64.0f32 * o.dFloatAngle.cos() + o.dFloatCenterX;
+        let x = 64.0f32 * cosf(o.dFloatAngle) + o.dFloatCenterX;
         o.set_xf(x);
-        let y = 64.0f32 * o.dFloatAngle.sin() + o.dFloatCenterY;
+        let y = 64.0f32 * sinf(o.dFloatAngle) + o.dFloatCenterY;
         o.set_yf(y);
 
         if o.fy >= App::screenHeight as f32 {

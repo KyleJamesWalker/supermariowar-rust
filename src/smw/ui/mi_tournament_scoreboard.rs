@@ -5,6 +5,7 @@ use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::{MAX_WORLD_BONUSES_AWARDED, PGFX_STANDING_R, PI, TWO_PI, VELJUMP};
 use crate::common::match_types::MatchType;
+use crate::common::math::trig::{cosf, sinf};
 use crate::common::random_number_generator::RANDOM_INT;
 use crate::common::ui::mi_image::MI_Image;
 use crate::common::ui::mi_score_text::MI_ScoreText;
@@ -534,8 +535,8 @@ impl UI_ControlTrait for MI_TournamentScoreboard {
 
                             for iBlock in 0..28i16 {
                                 let dVel: f32 = 7.0f32 + ((iBlock % 2) as f32 * 5.0f32);
-                                let dVelX = dVel * dAngle.cos();
-                                let dVelY = dVel * dAngle.sin();
+                                let dVelX = dVel * cosf(dAngle);
+                                let dVelY = dVel * sinf(dAngle);
 
                                 let iRandomColor = RANDOM_INT(self.iTeamCounts[w] as i32) as i16;
                                 let _ = (iRandX, iRandY, dVelX, dVelY, game_values.colorids[self.iTeamIDs[w][iRandomColor as usize] as usize] << 4);

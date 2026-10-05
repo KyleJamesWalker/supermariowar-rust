@@ -18,6 +18,7 @@ use crate::common::resource_manager::CResourceManager;
 use crate::smw::player::CPlayer;
 use crate::common::gfx::{gfx_close, gfx_init, gfx_flipscreen, gfx_loadpalette, gfx_settitle, gfx_show_catched_error};
 use crate::common::global_constants::{HALF_PI, MAX_PLAYERS, NUM_POWERUPS, PI, THREE_HALF_PI};
+use crate::common::math::trig::{cosf, sinf};
 use crate::common::path::{convert_path_pack, get_home_directory};
 use crate::common::score::CScore;
 use crate::common::sfx::{sfx_close, sfx_init};
@@ -368,20 +369,20 @@ pub fn init_spawnlocations() {
         let mut spawnangle: f32 = 0.0;
 
         for i in 0..25usize {
-            g_iSwirlSpawnLocations[0][0][i] = (spawnradius * spawnangle.cos()) as i16;
-            g_iSwirlSpawnLocations[0][1][i] = (spawnradius * spawnangle.sin()) as i16;
+            g_iSwirlSpawnLocations[0][0][i] = (spawnradius * cosf(spawnangle)) as i16;
+            g_iSwirlSpawnLocations[0][1][i] = (spawnradius * sinf(spawnangle)) as i16;
 
             let mut angle = spawnangle + HALF_PI;
-            g_iSwirlSpawnLocations[1][0][i] = (spawnradius * angle.cos()) as i16;
-            g_iSwirlSpawnLocations[1][1][i] = (spawnradius * angle.sin()) as i16;
+            g_iSwirlSpawnLocations[1][0][i] = (spawnradius * cosf(angle)) as i16;
+            g_iSwirlSpawnLocations[1][1][i] = (spawnradius * sinf(angle)) as i16;
 
             angle = spawnangle + PI;
-            g_iSwirlSpawnLocations[2][0][i] = (spawnradius * angle.cos()) as i16;
-            g_iSwirlSpawnLocations[2][1][i] = (spawnradius * angle.sin()) as i16;
+            g_iSwirlSpawnLocations[2][0][i] = (spawnradius * cosf(angle)) as i16;
+            g_iSwirlSpawnLocations[2][1][i] = (spawnradius * sinf(angle)) as i16;
 
             angle = spawnangle + THREE_HALF_PI;
-            g_iSwirlSpawnLocations[3][0][i] = (spawnradius * angle.cos()) as i16;
-            g_iSwirlSpawnLocations[3][1][i] = (spawnradius * angle.sin()) as i16;
+            g_iSwirlSpawnLocations[3][0][i] = (spawnradius * cosf(angle)) as i16;
+            g_iSwirlSpawnLocations[3][1][i] = (spawnradius * sinf(angle)) as i16;
 
             spawnradius -= 4.0;
             spawnangle += 0.1;

@@ -3,6 +3,7 @@
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game::App;
 use crate::common::gfx::gfx_sprite::gfxSprite;
+use crate::common::math::trig::{cosf, sinf};
 use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::{object_pathhazard, CObjectTrait};
 use crate::common::player_kill_styles::KillStyle;
@@ -65,8 +66,8 @@ impl OMO_StraightPathHazard {
         this.dVel = vel;
         this.dAngle = angle;
 
-        this.velx = vel * angle.cos();
-        this.vely = vel * angle.sin();
+        this.velx = vel * cosf(angle);
+        this.vely = vel * sinf(angle);
         this
     }
 }

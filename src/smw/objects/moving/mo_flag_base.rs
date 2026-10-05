@@ -3,6 +3,7 @@
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::gfxSprite;
+use crate::common::math::trig::{atan2f, cosf, sinf};
 use crate::common::math::vec2::Vec2s;
 use crate::common::moving_object_types::*;
 use crate::common::object_base::{object_moving, CObjectTrait};
@@ -64,8 +65,8 @@ impl MO_FlagBase {
         o.anglechange = RANDOM_INT(100) as f32 * 0.0002f32;
         o.anglechangetimer = (RANDOM_INT(50) + 100) as i16;
 
-        o.velx = o.angle.sin();
-        o.vely = o.angle.cos();
+        o.velx = sinf(o.angle);
+        o.vely = cosf(o.angle);
 
         o.homeflag = Ptr::null();
 
@@ -182,8 +183,8 @@ impl CObjectTrait for MO_FlagBase {
 
                 self.angle += self.anglechange;
 
-                self.velx = self.speed * self.angle.sin();
-                self.vely = self.speed * self.angle.cos();
+                self.velx = self.speed * sinf(self.angle);
+                self.vely = self.speed * cosf(self.angle);
 
                 let (fx, velx) = (self.fx, self.velx);
                 self.set_xf(fx + velx);
@@ -195,13 +196,13 @@ impl CObjectTrait for MO_FlagBase {
                     self.ix = 0;
                     self.fx = self.ix as f32;
 
-                    self.angle = self.velx.atan2(self.vely);
+                    self.angle = atan2f(self.velx, self.vely);
                 } else if self.ix as i32 + self.collisionWidth as i32 >= App::screenWidth {
                     self.velx = -self.velx;
                     self.ix = (App::screenWidth - 1 - self.collisionWidth as i32) as i16;
                     self.fx = self.ix as f32;
 
-                    self.angle = self.velx.atan2(self.vely);
+                    self.angle = atan2f(self.velx, self.vely);
                 }
 
                 if self.iy < 0 {
@@ -209,13 +210,13 @@ impl CObjectTrait for MO_FlagBase {
                     self.iy = 0;
                     self.fy = self.iy as f32;
 
-                    self.angle = self.velx.atan2(self.vely);
+                    self.angle = atan2f(self.velx, self.vely);
                 } else if self.iy as i32 + self.collisionHeight as i32 >= App::screenHeight {
                     self.vely = -self.vely;
                     self.iy = (App::screenHeight - 1 - self.collisionHeight as i32) as i16;
                     self.fy = self.iy as f32;
 
-                    self.angle = self.velx.atan2(self.vely);
+                    self.angle = atan2f(self.velx, self.vely);
                 }
             }
 

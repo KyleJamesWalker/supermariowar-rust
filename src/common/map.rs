@@ -14,6 +14,7 @@ use crate::common::global::*;
 use crate::common::global_constants::*;
 use crate::common::io_block::IO_BlockTrait;
 use crate::common::map::map_reader::get_loader_by_version;
+use crate::common::math::trig::{cosf, sinf};
 use crate::common::moving_platform_paths::{EllipsePath, MovingPlatformPathTrait, PlatformPathType, StraightPath, StraightPathContinuous};
 use crate::common::movingplatform::MovingPlatform;
 use crate::common::path::{concat, convert_path, convert_path_pack, file_exists};
@@ -279,8 +280,8 @@ pub fn draw_map_hazard(hazard: &MapHazard, iSize: i16, fDrawCenter: bool, dst: *
             let dRadius: f32 = ((hazard.iparam[0] as i32 - 1) * 24) as f32 / (1i32 << iSize) as f32 + (dot >> 1) as f32;
             let mut dAngle: f32 = hazard.dparam[1];
             for _iDot in 0..iNumDots {
-                rDotDst.x = (dRadius * dAngle.cos()) as i16 as i32 + rPathDst.x + (ts >> 1) - (dot >> 1);
-                rDotDst.y = (dRadius * dAngle.sin()) as i16 as i32 + rPathDst.y + (ts >> 1) - (dot >> 1);
+                rDotDst.x = (dRadius * cosf(dAngle)) as i16 as i32 + rPathDst.x + (ts >> 1) - (dot >> 1);
+                rDotDst.y = (dRadius * sinf(dAngle)) as i16 as i32 + rPathDst.y + (ts >> 1) - (dot >> 1);
                 rDotDst.w = dot;
                 rDotDst.h = dot;
 
@@ -291,11 +292,11 @@ pub fn draw_map_hazard(hazard: &MapHazard, iSize: i16, fDrawCenter: bool, dst: *
             let fb = iFireballHazardSize[s] as i32;
             for iFireball in 0..hazard.iparam[0] {
                 let x: i16 = (((hazard.ix as i32) << (iSizeShift - 1))
-                    + ((iFireball as i32 * (24 >> iSize)) as f32 * hazard.dparam[1].cos()) as i16 as i32
+                    + ((iFireball as i32 * (24 >> iSize)) as f32 * cosf(hazard.dparam[1])) as i16 as i32
                     + (ts >> 1)
                     - (fb >> 1)) as i16;
                 let y: i16 = (((hazard.iy as i32) << (iSizeShift - 1))
-                    + ((iFireball as i32 * (24 >> iSize)) as f32 * hazard.dparam[1].sin()) as i16 as i32
+                    + ((iFireball as i32 * (24 >> iSize)) as f32 * sinf(hazard.dparam[1])) as i16 as i32
                     + (ts >> 1)
                     - (fb >> 1)) as i16;
 
@@ -306,8 +307,8 @@ pub fn draw_map_hazard(hazard: &MapHazard, iSize: i16, fDrawCenter: bool, dst: *
             let mut dRadius: f32 = (hazard.dparam[2] + (ts >> 1) as f32 - (dot >> 1) as f32) / (1i32 << iSize) as f32;
             let mut dAngle: f32 = hazard.dparam[1];
             for _iDot in 0..iNumDots {
-                rDotDst.x = (dRadius * dAngle.cos()) as i16 as i32 + rPathDst.x + (ts >> 1) - (dot >> 1);
-                rDotDst.y = (dRadius * dAngle.sin()) as i16 as i32 + rPathDst.y + (ts >> 1) - (dot >> 1);
+                rDotDst.x = (dRadius * cosf(dAngle)) as i16 as i32 + rPathDst.x + (ts >> 1) - (dot >> 1);
+                rDotDst.y = (dRadius * sinf(dAngle)) as i16 as i32 + rPathDst.y + (ts >> 1) - (dot >> 1);
                 rDotDst.w = dot;
                 rDotDst.h = dot;
 
@@ -319,8 +320,8 @@ pub fn draw_map_hazard(hazard: &MapHazard, iSize: i16, fDrawCenter: bool, dst: *
             dAngle = hazard.dparam[1];
             dRadius = hazard.dparam[2] / (1i32 << iSize) as f32;
             for _iRotodisc in 0..hazard.iparam[0] {
-                let x: i16 = (rPathDst.x + (dRadius * dAngle.cos()) as i16 as i32) as i16;
-                let y: i16 = (rPathDst.y + (dRadius * dAngle.sin()) as i16 as i32) as i16;
+                let x: i16 = (rPathDst.x + (dRadius * cosf(dAngle)) as i16 as i32) as i16;
+                let y: i16 = (rPathDst.y + (dRadius * sinf(dAngle)) as i16 as i32) as i16;
 
                 rm.spr_hazard_rotodisc[s].draw_src(x as i32, y as i32, &SDL_Rect { x: 0, y: 0, w: ts, h: ts });
 
@@ -450,9 +451,9 @@ pub fn draw_platform(
                     let iDstY: i32;
 
                     if pathtype == PlatformPathType::Ellipse {
-                        iDstX = iStartX as i32 + ((iPlatformX as i32) << iSizeShift) + (fRadiusX * angle.cos()) as i16 as i32
+                        iDstX = iStartX as i32 + ((iPlatformX as i32) << iSizeShift) + (fRadiusX * cosf(angle)) as i16 as i32
                             - (pw << (iSizeShift - 1));
-                        iDstY = iStartY as i32 + ((iPlatformY as i32) << iSizeShift) + (fRadiusY * angle.sin()) as i16 as i32
+                        iDstY = iStartY as i32 + ((iPlatformY as i32) << iSizeShift) + (fRadiusY * sinf(angle)) as i16 as i32
                             - (ph << (iSizeShift - 1));
                     } else {
                         iDstX = iStartX as i32 + ((iPlatformX as i32) << iSizeShift) - (pw << (iSizeShift - 1));
@@ -530,8 +531,8 @@ pub fn draw_platform(
                 draw_tile_marks(&rm.spr_platformstarttile, iStartX as i32 - (pw << (iSizeShift - 1)), iStartY as i32 - (ph << (iSizeShift - 1)));
             }
 
-            let dIncrementX: f32 = iTileSize as f32 * angle.cos();
-            let dIncrementY: f32 = iTileSize as f32 * angle.sin();
+            let dIncrementX: f32 = iTileSize as f32 * cosf(angle);
+            let dIncrementY: f32 = iTileSize as f32 * sinf(angle);
 
             let mut dX: f32 = iStartX as f32 - (dot >> 1) as f32;
             let mut dY: f32 = iStartY as f32 - (dot >> 1) as f32;
@@ -569,16 +570,16 @@ pub fn draw_platform(
             }
         } else if pathtype == PlatformPathType::Ellipse {
             if fDrawShadow {
-                let iEllipseStartX: i16 = ((fRadiusX * angle.cos()) as i16 as i32 - (pw << (iSizeShift - 1)) + iStartX as i32) as i16;
-                let iEllipseStartY: i16 = ((fRadiusY * angle.sin()) as i16 as i32 - (ph << (iSizeShift - 1)) + iStartY as i32) as i16;
+                let iEllipseStartX: i16 = ((fRadiusX * cosf(angle)) as i16 as i32 - (pw << (iSizeShift - 1)) + iStartX as i32) as i16;
+                let iEllipseStartY: i16 = ((fRadiusY * sinf(angle)) as i16 as i32 - (ph << (iSizeShift - 1)) + iStartY as i32) as i16;
 
                 draw_tile_marks(&rm.spr_platformstarttile, iEllipseStartX as i32, iEllipseStartY as i32);
             }
 
             let mut fAngle: f32 = angle;
             for _iSpot in 0..32 {
-                let iX: i16 = ((fRadiusX * fAngle.cos()) as i16 as i32 - (dot >> 1) + iStartX as i32) as i16;
-                let iY: i16 = ((fRadiusY * fAngle.sin()) as i16 as i32 - (dot >> 1) + iStartY as i32) as i16;
+                let iX: i16 = ((fRadiusX * cosf(fAngle)) as i16 as i32 - (dot >> 1) + iStartX as i32) as i16;
+                let iY: i16 = ((fRadiusY * sinf(fAngle)) as i16 as i32 - (dot >> 1) + iStartY as i32) as i16;
 
                 rPathDst = SDL_Rect { x: iX as i32, y: iY as i32, w: dot, h: dot };
                 rm.spr_platformpath.draw_src_to(&rPathSrc, dst, &rPathDst);

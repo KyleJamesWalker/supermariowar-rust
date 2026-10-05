@@ -2,6 +2,7 @@
 
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::TWO_PI;
+use crate::common::math::trig::{cosf, sinf};
 use crate::common::math::vec2::{Vec2f, Vec2s};
 use crate::common::object_base::{object_orbithazard, CObjectTrait};
 use crate::common::player_kill_styles::KillStyle;
@@ -75,9 +76,9 @@ impl OMO_OrbitHazard {
     }
 
     fn calculate_position(&mut self) {
-        let x = self.dCenter.x + self.dRadius * self.dAngle.cos() - self.iw as f32 / 2.0f32;
+        let x = self.dCenter.x + self.dRadius * cosf(self.dAngle) - self.iw as f32 / 2.0f32;
         self.set_xf(x);
-        let y = self.dCenter.y + self.dRadius * self.dAngle.sin() - self.ih as f32 / 2.0f32;
+        let y = self.dCenter.y + self.dRadius * sinf(self.dAngle) - self.ih as f32 / 2.0f32;
         self.set_yf(y);
     }
 }
