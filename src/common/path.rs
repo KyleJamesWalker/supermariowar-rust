@@ -5,6 +5,7 @@ use std::path::Path;
 
 pub static mut SMW_Root_Data_Dir: String = String::new();
 
+#[cfg(not(windows))]
 pub fn get_home_directory() -> String {
     let mut result = String::from("/Library/Preferences/.smw/");
     if let Ok(folder) = std::env::var("HOME") {
@@ -13,7 +14,18 @@ pub fn get_home_directory() -> String {
     result
 }
 
+/// `SHGetFolderPathA(CSIDL_PROFILE)` is the profile directory that `USERPROFILE` names.
+#[cfg(windows)]
+pub fn get_home_directory() -> String {
+    let mut result = String::from(".smw/");
+    if let Ok(folder) = std::env::var("USERPROFILE") {
+        result = folder + "/" + &result;
+    }
+    result
+}
+
 pub fn get_root_directory() -> String {
+    #[cfg(not(windows))]
     if let Ok(p) = sdl2::filesystem::base_path() {
         return p;
     }

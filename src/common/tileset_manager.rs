@@ -216,8 +216,11 @@ impl CTileset {
         }
         drop(tsf);
 
-        use std::os::unix::fs::PermissionsExt;
-        let _ = std::fs::set_permissions(&tileset_path, std::fs::Permissions::from_mode(0o774));
+        #[cfg(target_os = "macos")]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = std::fs::set_permissions(&tileset_path, std::fs::Permissions::from_mode(0o774));
+        }
     }
 
     pub fn name(&self) -> &str {

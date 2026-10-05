@@ -243,7 +243,9 @@ impl GraphicsSDL {
 
 fn strftime_local(format: &str) -> String {
     extern "C" {
+        #[cfg_attr(windows, link_name = "_time64")]
         fn time(t: *mut i64) -> i64;
+        #[cfg_attr(windows, link_name = "_localtime64")]
         fn localtime(t: *const i64) -> *mut libc_tm;
         fn strftime(s: *mut u8, max: usize, format: *const u8, tm: *const libc_tm) -> usize;
     }

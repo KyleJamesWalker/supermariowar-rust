@@ -2,6 +2,7 @@
 
 use crate::common::path::get_home_directory;
 use std::ffi::CString;
+#[cfg(unix)]
 use std::os::unix::fs::DirBuilderExt;
 
 pub struct App;
@@ -17,7 +18,10 @@ pub fn ensure_settings_dir() {
 
     match std::fs::metadata(&smwHome) {
         Err(_) => {
-            if std::fs::DirBuilder::new().mode(0o775).create(&smwHome).is_err() {
+            let mut builder = std::fs::DirBuilder::new();
+            #[cfg(unix)]
+            builder.mode(0o775);
+            if builder.create(&smwHome).is_err() {
                 perror("[error] Could not create settings directory");
             }
         }
