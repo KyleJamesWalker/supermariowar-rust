@@ -81,14 +81,14 @@ jobs:
       - name: Install libSDL2
         run: |
           sudo apt-get update
-          sudo apt-get install -y libsdl2-2.0-0 exfatprogs
+          sudo apt-get install -y libsdl2-2.0-0 dosfstools
 
-      - name: Mount an exFAT card
+      - name: Mount a FAT32 card
         run: |
           truncate -s 2G "$RUNNER_TEMP/card.img"
-          mkfs.exfat "$RUNNER_TEMP/card.img"
+          mkfs.vfat -F 32 "$RUNNER_TEMP/card.img"
           sudo mkdir -p "$CARD"
-          sudo mount -o loop,uid="$(id -u)",gid="$(id -g)" "$RUNNER_TEMP/card.img" "$CARD"
+          sudo mount -o loop,utf8,uid="$(id -u)",gid="$(id -g)" "$RUNNER_TEMP/card.img" "$CARD"
           mkdir "$CARD/tmp"
 
       - uses: actions/download-artifact@v4
