@@ -21,5 +21,8 @@ pub mod smw;
 pub mod leveleditor;
 pub mod worldeditor;
 
+#[cfg(target_os = "android")]
+mod android;
+
 #[cfg(test)]
 mod alias_audit;

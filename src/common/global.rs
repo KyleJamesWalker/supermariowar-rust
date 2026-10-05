@@ -10,7 +10,9 @@ pub static mut joystickcount: i16 = 0;
 
 pub fn init_globals() {
     unsafe {
-        RootDataDirectory = crate::common::path::get_root_directory() + "data";
+        // Upstream's global.cpp reads data from the settings directory on Android.
+        let root = if cfg!(target_os = "android") { crate::common::path::get_home_directory() } else { crate::common::path::get_root_directory() };
+        RootDataDirectory = root + "data";
         game_values.init(CGameValues::new());
     }
     crate::common::gfx::init_globals();

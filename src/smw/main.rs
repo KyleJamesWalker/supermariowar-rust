@@ -394,9 +394,12 @@ pub fn init_spawnlocations() {
 //*************************************
 
 pub fn main() {
+    run(std::env::args().collect());
+}
+
+pub fn run(argv: Vec<String>) {
     crate::globals::init_globals();
 
-    let argv: Vec<String> = std::env::args().collect();
     let cmd = cmd::parse_args(&argv);
     if !cmd.success {
         std::process::exit(1);
