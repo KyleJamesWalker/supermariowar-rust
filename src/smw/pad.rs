@@ -9,6 +9,7 @@ use sdl2::sys::{
     SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP, SDL_INIT_GAMECONTROLLER,
 };
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU32, AtomicU64, AtomicUsize, Ordering};
 use std::ffi::{CStr, CString};
 
 /// Joystick button per controller button, in `SDL_GameControllerButton` order up to the right shoulder; -1 is handled apart.
@@ -75,6 +76,9 @@ static mut logged: [u32; 3] = [0; 3];
 pub fn init(translate: bool) {
     unsafe {
         debug_input = std::env::var_os("SMW_DEBUG_INPUT").is_some();
+        if debug_input {
+            start_watchdog();
+        }
         SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER);
         let count = SDL_NumJoysticks();
         print!("[pad] SDL_NumJoysticks = {}", count);
@@ -318,9 +322,47 @@ unsafe fn translate_axis(p: &mut Pad, event: &mut SDL_Event) -> bool {
 
 /// `SMW_DEBUG_INPUT=1`: a heartbeat every 120 frames.
 pub fn debug_frame(frame: u32) {
+    FRAME.store(frame, Ordering::Relaxed);
     if unsafe { debug_input } && frame % 120 == 0 {
         println!("[loop] frame {}", frame);
     }
+}
+
+static FRAME: AtomicU32 = AtomicU32::new(0);
+static PHASE: AtomicUsize = AtomicUsize::new(0);
+static BEATS: AtomicU64 = AtomicU64::new(0);
+const PHASES: [&str; 8] = ["startup", "fps limiter", "sound", "recorder", "replay events", "update", "frame end", "flip"];
+
+/// Marks the main loop's progress for the `SMW_DEBUG_INPUT` watchdog; `phase` indexes `PHASES`.
+pub fn phase(phase: usize) {
+    PHASE.store(phase, Ordering::Relaxed);
+    BEATS.fetch_add(1, Ordering::Relaxed);
+}
+
+/// `SMW_DEBUG_INPUT=1`: reports a main loop that has not moved for 3 s.
+fn start_watchdog() {
+    std::thread::spawn(|| {
+        let mut last = u64::MAX;
+        let mut still = 0;
+        loop {
+            std::thread::sleep(std::time::Duration::from_millis(500));
+            let beats = BEATS.load(Ordering::Relaxed);
+            if beats != last {
+                last = beats;
+                still = 0;
+                continue;
+            }
+            still += 1;
+            if still == 6 || (still > 6 && still % 20 == 0) {
+                println!(
+                    "[watchdog] main loop stalled for {} s at frame {}, phase {}",
+                    still / 2,
+                    FRAME.load(Ordering::Relaxed),
+                    PHASES.get(PHASE.load(Ordering::Relaxed)).unwrap_or(&"?")
+                );
+            }
+        }
+    });
 }
 
 /// `SMW_DEBUG_INPUT=1`: the first 2000 input events at each stage: 0 as SDL queues them, 1 after translation, 2 as the game reads them.

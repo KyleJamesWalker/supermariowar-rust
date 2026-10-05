@@ -474,8 +474,14 @@ pub fn forced_map() -> Option<&'static str> {
 pub fn frame_start() {
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::debug_frame(unsafe { h.frame });
+    #[cfg(not(target_os = "emscripten"))]
+    crate::smw::pad::phase(2);
     sfx::sfx_virtual_advance();
+    #[cfg(not(target_os = "emscripten"))]
+    crate::smw::pad::phase(3);
     record_frame_start(unsafe { h.frame });
+    #[cfg(not(target_os = "emscripten"))]
+    crate::smw::pad::phase(4);
 
     unsafe {
         while h.nextEvent < h.events.len() && h.events[h.nextEvent].frame <= h.frame {
@@ -919,8 +925,7 @@ fn record_frame_start(frame: u32) {
         #[cfg(target_os = "emscripten")]
         web_dpad::init();
     }
-    // A browser tab can close at any moment without finish(); keep the file current for IDBFS syncs.
-    #[cfg(target_os = "emscripten")]
+    // A browser tab can close at any moment without finish(), and muOS kills apps; keep the file current.
     if frame % 60 == 0 {
         let _ = r.out.flush();
     }

@@ -52,10 +52,10 @@ To quit, press **Menu**, choose **Exit** on the main menu, or press B there. Set
 | Variable | Effect |
 |---|---|
 | `SMW_PAD_TRANSLATE=1` | Reads every pad SDL has a controller mapping for (muOS provides one for the built-in controls) through that mapping, in the button layout above. Mapped pads get players first; Menu quits. |
-| `SMW_DEBUG_INPUT=1` | Logs a heartbeat every 120 frames and the first 2,000 input events as SDL queues them, after translation and as the game reads them. On while the controls are being brought up. |
+| `SMW_DEBUG_INPUT=1` | Logs a heartbeat every 120 frames, the first 2,000 input events as SDL queues them, after translation and as the game reads them, and a watchdog line naming the main loop's phase when it stalls for 3 s. On while the controls are being brought up. |
 | `SMW_NO_KEYBOARD=1` | Leaves the keyboard out of the launch-time player assignment and turns the players without a pad that were human into bots. |
 
-Other builds set none of them, so desktop pads keep their raw button numbering there. The launcher also sets `SDL_AUDIODRIVER=pipewire,alsa` unless it is already set, since muOS's ALSA default device is a PipeWire plugin.
+Other builds set none of them, so desktop pads keep their raw button numbering there. The launcher also sets `SDL_AUDIODRIVER` from its `AUDIO_DRIVER` line, `pipewire,alsa` by default, since muOS's ALSA default device is a PipeWire plugin. Edit that line to `dummy` to run without sound.
 
 It also sets `SDL_JOYSTICK_DEVICE` (unless already set) to the `/dev/input/eventN` node of `muOS-Keys`, or of every device the kernel gives a joystick (`jsN`) handler, so SDL opens the pad even where its udev enumeration finds none.
 

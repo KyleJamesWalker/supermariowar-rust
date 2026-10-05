@@ -151,14 +151,25 @@ unsafe fn web_quit_if_done() {
 }
 
 unsafe extern "C-unwind" fn gameloop_frame() {
+    #[cfg(not(target_os = "emscripten"))]
+    use crate::smw::pad::phase;
+    #[cfg(target_os = "emscripten")]
+    fn phase(_: usize) {}
+
+    phase(1);
     FPSLimiter::instance().frame_start();
 
     harness::frame_start();
+    phase(5);
     GameStateManager::instance().currentState.get().update();
+    phase(6);
     harness::frame_end();
 
+    phase(1);
     FPSLimiter::instance().before_flip();
+    phase(7);
     gfx_flipscreen();
+    phase(1);
     FPSLimiter::instance().after_flip();
 }
 
