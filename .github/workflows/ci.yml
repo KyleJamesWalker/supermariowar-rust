@@ -55,7 +55,7 @@ jobs:
         run: |
           status=0
           for m in Cargo.toml relay/Cargo.toml; do
-            cargo clippy --locked --all-targets --manifest-path "$m" --message-format=short 2> clippy.log || status=1
+            cargo clippy --locked --all-targets --manifest-path "$m" --message-format=short --color never 2> clippy.log || status=1
             grep -E ': (warning|error)' clippy.log | grep -v '^warning: `' > diags.txt || true
             echo "clippy $m: $(grep -c ': error' diags.txt || true) errors, $(grep -c ': warning' diags.txt || true) warnings" | tee -a "$GITHUB_STEP_SUMMARY"
             grep ': error' clippy.log || true
@@ -73,7 +73,6 @@ jobs:
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
           manifest-path: ${{ matrix.manifest }}
-          command-arguments: --config=deny.toml
 
   test:
     name: test (${{ matrix.os }}, ${{ matrix.profile }})
@@ -140,7 +139,7 @@ jobs:
             ${{ env.SMW_REF_DIR }}/build/smw
             ${{ env.SMW_REF_DIR }}/build/smw-leveledit
             ${{ env.SMW_REF_DIR }}/build/smw-worldedit
-          key: cpp-ref-${{ runner.os }}-${{ runner.arch }}-${{ steps.ref.outputs.sha }}-v1
+          key: cpp-ref-${{ runner.os }}-${{ runner.arch }}-${{ steps.ref.outputs.sha }}-v2
 
       - name: Build the C++ reference
         if: steps.ref-cache.outputs.cache-hit != 'true'
@@ -150,6 +149,11 @@ jobs:
           if [[ $RUNNER_OS == Linux ]]; then
             sed -i '0,/^#ifdef __APPLE__$/s//#if defined(__APPLE__) || defined(__linux__)/' "$SMW_REF_DIR/src/common/path.cpp"
             git -C "$SMW_REF_DIR" diff --stat
+            sudo apt-get install -y clang libc++-dev libc++abi-dev
+            mkdir -p "$RUNNER_TEMP/cxx"
+            printf '#!/bin/sh\nexec clang++ -stdlib=libc++ "$@"\n' > "$RUNNER_TEMP/cxx/clang++-libc++"
+            chmod +x "$RUNNER_TEMP/cxx/clang++-libc++"
+            export CC=clang CXX="$RUNNER_TEMP/cxx/clang++-libc++"
           fi
           "$SMW_REF_DIR/build-reference.sh"
 
@@ -161,7 +165,7 @@ jobs:
       - name: Data on the FAT32 card
         if: runner.os == 'Linux'
         run: |
-          tar --sort=name -cf - data | tar -xf - -C "$CARD"
+          python3 tools/apfs_order.py data "$CARD/data"
           sudo mount --bind "$CARD/data" data
           echo "TMPDIR=$CARD/tmp" >> "$GITHUB_ENV"
           echo "SDL_RENDER_DRIVER=software" >> "$GITHUB_ENV"
@@ -190,10 +194,10 @@ jobs:
           if [[ $RUNNER_OS == macOS ]]; then exit $status; fi
           ! grep -q DIVERGE game-summary.txt
 
-      - name: Linux C++ goldens
-        if: always() && runner.os == 'Linux' && steps.game.outcome != 'skipped'
+      - name: C++ goldens
+        if: always() && steps.game.outcome != 'skipped'
         env:
-          GOLDEN_ROOT: ${{ runner.temp }}/linux-goldens
+          GOLDEN_ROOT: ${{ runner.temp }}/cpp-goldens
           SMW_DATA_DIR: ${{ github.workspace }}/data
         run: |
           one() {
@@ -212,24 +216,24 @@ jobs:
           printf '%s\0' tools/replays/*.txt tools/editor_replays/*/*.txt | xargs -0 -n 1 -P "$JOBS" bash -c 'one "$0"'
           du -sh "$GOLDEN_ROOT"/*
 
-      - name: Game parity vs Linux C++
-        if: always() && runner.os == 'Linux' && steps.game.outcome != 'skipped'
+      - name: Game parity vs the C++ built here
+        if: always() && steps.game.outcome != 'skipped'
         env:
           SMW_NO_BUILD: '1'
-          GOLDEN_ROOT: ${{ runner.temp }}/linux-goldens
-          PARITY_OUT: ${{ runner.temp }}/parity/game-linux
+          GOLDEN_ROOT: ${{ runner.temp }}/cpp-goldens
+          PARITY_OUT: ${{ runner.temp }}/parity/game-cpp
         run: |
           status=0
-          tools/parity.sh > game-linux.log || status=$?
-          sed -n '/^=== summary/,$p' game-linux.log > summary.txt
+          tools/parity.sh > game-cpp.log || status=$?
+          sed -n '/^=== summary/,$p' game-cpp.log > summary.txt
           {
-            echo "### Game parity vs the C++ built here"
+            echo "### Game parity vs the C++ built here (${{ matrix.os }})"
             echo "$(grep -c 'MATCH all' summary.txt) of $(($(wc -l < summary.txt) - 1)) dumps match"
             echo '```'
             grep -v -E 'MATCH all .* shots ([0-9]+)/\1$' summary.txt
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          cat game-linux.log
+          cat game-cpp.log
           exit $status
 
       - name: Editor parity
@@ -251,21 +255,21 @@ jobs:
           if [[ $RUNNER_OS == macOS ]]; then exit $status; fi
           ! tail -n +2 summary.txt | grep -v -E 'dump MATCH, shots [0-9]+/[0-9]+, files ([0-9]+)/\1$'
 
-      - name: Editor parity vs Linux C++
-        if: always() && runner.os == 'Linux' && steps.game.outcome != 'skipped'
+      - name: Editor parity vs the C++ built here
+        if: always() && steps.game.outcome != 'skipped'
         env:
-          GOLDEN_ROOT: ${{ runner.temp }}/linux-goldens
-          PARITY_OUT: ${{ runner.temp }}/parity/editor-linux
+          GOLDEN_ROOT: ${{ runner.temp }}/cpp-goldens
+          PARITY_OUT: ${{ runner.temp }}/parity/editor-cpp
         run: |
           status=0
-          tools/editor_parity.sh > editor-linux.log || status=$?
+          tools/editor_parity.sh > editor-cpp.log || status=$?
           {
-            echo "### Editor parity vs the C++ built here"
+            echo "### Editor parity vs the C++ built here (${{ matrix.os }})"
             echo '```'
-            sed -n '/^=== summary/,$p' editor-linux.log | grep -v -E 'dump MATCH, shots ([0-9]+)/\1, files ([0-9]+)/\2$'
+            sed -n '/^=== summary/,$p' editor-cpp.log | grep -v -E 'dump MATCH, shots ([0-9]+)/\1, files ([0-9]+)/\2$'
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          cat editor-linux.log
+          cat editor-cpp.log
           exit $status
 
       - name: Segment check
@@ -319,7 +323,7 @@ jobs:
       - name: Data on the FAT32 card
         if: runner.os == 'Linux'
         run: |
-          tar --sort=name -cf - data | tar -xf - -C "$CARD"
+          python3 tools/apfs_order.py data "$CARD/data"
           sudo mount --bind "$CARD/data" data
           echo "TMPDIR=$CARD/tmp" >> "$GITHUB_ENV"
           echo "SDL_RENDER_DRIVER=software" >> "$GITHUB_ENV"
@@ -346,6 +350,48 @@ jobs:
           [[ -s summary.txt ]] || exit 1
           if [[ $RUNNER_OS == macOS ]]; then exit $status; fi
           ! grep -q DIVERGE summary.txt
+
+  parity-windows:
+    runs-on: windows-latest
+    continue-on-error: true
+    timeout-minutes: 90
+    env:
+      JOBS: '4'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: ./.github/actions/setup-native
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo build --release --locked --bin smw
+
+      - name: python3 for the tools
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          printf '#!/bin/sh\nexec python "$@"\n' > "$RUNNER_TEMP/bin/python3"
+          chmod +x "$RUNNER_TEMP/bin/python3"
+          cygpath -w "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - name: Game parity (report only)
+        env:
+          SMW_NO_BUILD: '1'
+          PARITY_OUT: ${{ runner.temp }}/parity/game
+        run: |
+          status=0
+          tools/parity.sh > game.log || status=$?
+          sed -n '/^=== summary/,$p' game.log > summary.txt
+          {
+            echo "### Game parity vs the committed goldens (windows, report only)"
+            echo "$(grep -c 'MATCH all' summary.txt) of $(($(wc -l < summary.txt) - 1)) dumps match"
+            echo '```'
+            grep -v -E 'MATCH all .* shots ([0-9]+)/\1$' summary.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat game.log
+          exit $status
 
   build-linux:
     uses: ./.github/workflows/build_linux.yml
