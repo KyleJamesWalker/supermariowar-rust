@@ -93,7 +93,7 @@ The C++ original, plus the replay and state-dump hooks used to compare it with t
 
 - clippy (fails on errors) and cargo-deny (licenses, advisories, sources)
 - `cargo test`, debug and release, on Linux, macOS and Windows
-- replay parity: `tools/parity.sh`, `tools/parity_sweep.sh`, `tools/editor_parity.sh` and `tools/segment_check.py` against the committed goldens. macOS, where the goldens were made, gates on dumps and screenshots. Linux replays on a FAT32 image so data directories list in a fixed order, gates on dumps and saved files, and also gates against goldens from the C++ reference built on the same runner.
+- replay parity: `tools/parity.sh`, `tools/parity_sweep.sh`, `tools/editor_parity.sh` and `tools/segment_check.py` against the committed goldens. macOS, where the goldens were made, gates on dumps and screenshots. It also checks the port against goldens from the C++ reference built on the same runner. Linux copies `data/` onto a FAT32 image in APFS order (`tools/apfs_order.py`), so directories list as they do on macOS, and gates on the same suites except the editor screenshots. Windows gates on the game suite.
 - the web build's clip and page tests in headless Chrome
 - the Linux, macOS, Windows, web and muOS packages (`build_*.yml`, the same reusable workflows `release.yml` calls)
 
