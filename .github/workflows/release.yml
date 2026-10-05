@@ -14,6 +14,10 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   muxapp:
     runs-on: ubuntu-22.04-arm
@@ -40,8 +44,10 @@ jobs:
         run: cargo build --release --locked --bin smw
 
       - id: name
+        env:
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then v="$GITHUB_REF_NAME"; else v="${GITHUB_SHA::7}"; fi
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then v="$GITHUB_REF_NAME"; else v="${SHA::7}"; fi
           echo "name=SuperMarioWar-$v.muxapp" >> "$GITHUB_OUTPUT"
 
       - name: Package
@@ -98,6 +104,7 @@ jobs:
         env:
           SMW_NO_BUILD: '1'
           JOBS: '4'
+          SDL_RENDER_DRIVER: software
         run: |
           app="$RUNNER_TEMP/SuperMarioWar"
           status=0
