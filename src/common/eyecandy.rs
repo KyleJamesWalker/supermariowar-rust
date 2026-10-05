@@ -7,6 +7,7 @@ use crate::common::game::App;
 use crate::common::gfx::gfx_font::gfxFont;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::*;
+use crate::common::math::trig::{cos, sin};
 use crate::common::object_base::cap_falling_velocity;
 use crate::common::random_number_generator::{RANDOM_BOOL, RANDOM_INT};
 use crate::common::tile_types::TileType;
@@ -1115,8 +1116,8 @@ impl EC_SwirlingAward {
 
         self.timer += 1;
         if self.timer > self.ttl {
-            let awardx = (self.x as i32 + (self.radius * self.angle.cos()) as i16 as i32 + (self.w as i32 >> 1) - 16) as i16;
-            let awardy = (self.y as i32 + (self.radius * self.angle.sin()) as i16 as i32 + (self.h as i32 >> 1) - 16) as i16;
+            let awardx = (self.x as i32 + (self.radius * cos(self.angle)) as i16 as i32 + (self.w as i32 >> 1) - 16) as i16;
+            let awardy = (self.y as i32 + (self.radius * sin(self.angle)) as i16 as i32 + (self.h as i32 >> 1) - 16) as i16;
             unsafe { emplace_fireball_explosion(awardx, awardy) };
 
             self.dead = true;
@@ -1136,8 +1137,8 @@ impl EC_SwirlingAward {
     }
 
     pub fn draw(&self) {
-        let awardx = (self.x as i32 + (self.radius * self.angle.cos()) as i16 as i32) as i16;
-        let awardy = (self.y as i32 + (self.radius * self.angle.sin()) as i16 as i32) as i16;
+        let awardx = (self.x as i32 + (self.radius * cos(self.angle)) as i16 as i32) as i16;
+        let awardy = (self.y as i32 + (self.radius * sin(self.angle)) as i16 as i32) as i16;
 
         spr(self.spr).draw_part(awardx as i32, awardy as i32, self.iAnimationFrame as i32, self.iSrcY as i32, self.w as i32, self.h as i32);
     }
@@ -1401,8 +1402,8 @@ impl EC_SoulsAward {
             let startangle = -HALF_PI;
 
             let angle = (RANDOM_INT(21) - 10) as f32 * addangle + startangle;
-            let velx = self.speed * angle.cos();
-            let vely = self.speed * angle.sin();
+            let velx = self.speed * cos(angle);
+            let vely = self.speed * sin(angle);
 
             unsafe {
                 let spr = Ptr::from_mut(&mut rm.spr_awardsouls);

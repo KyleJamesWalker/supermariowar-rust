@@ -12,6 +12,7 @@ use crate::common::gfx::SpriteStrip;
 use crate::common::global_constants::*;
 use crate::common::input::{COutputControl, DEVICE_KEYBOARD};
 use crate::common::map::CMap;
+use crate::common::math::trig::{cos, sin};
 use crate::common::math::vec2::{Vec2f, Vec2s};
 use crate::common::moving_object_types::*;
 use crate::common::movingplatform::MovingPlatform;
@@ -2379,8 +2380,8 @@ impl CPlayer {
             let mut displayangle: f32 = self.powerupangle;
 
             for _k in 0..numeyecandy {
-                let powerupX = (self.ix as i32 + HALFPW - 8 + (self.powerupradius * displayangle.cos()) as i16 as i32) as i16;
-                let powerupY = (self.iy as i32 + HALFPH - 8 + (self.powerupradius * displayangle.sin()) as i16 as i32) as i16;
+                let powerupX = (self.ix as i32 + HALFPW - 8 + (self.powerupradius * cos(displayangle)) as i16 as i32) as i16;
+                let powerupY = (self.iy as i32 + HALFPH - 8 + (self.powerupradius * sin(displayangle)) as i16 as i32) as i16;
 
                 displayangle += addangle;
 

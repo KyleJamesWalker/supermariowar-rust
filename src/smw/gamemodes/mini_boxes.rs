@@ -2,6 +2,7 @@
 
 use crate::common::game_mode::{game_mode_boxes_minigame, CGameMode, CGameModeTrait};
 use crate::common::game_values::if_sound_on_play;
+use crate::common::math::trig::{cos, sin};
 use crate::common::math::vec2::{Vec2f, Vec2s};
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
@@ -48,7 +49,7 @@ impl CGM_Boxes_MiniGame {
 
             let speed: f32 = 7.0f32 + RANDOM_INT(9) as f32 / 2.0f32;
             let angle: f32 = -(RANDOM_INT(314) as f32) / 100.0f32;
-            let vel = Vec2f::new(speed * angle.cos(), speed * angle.sin());
+            let vel = Vec2f::new(speed * cos(angle), speed * sin(angle));
 
             unsafe {
                 if_sound_on_play(&mut rm.sfx_coin);

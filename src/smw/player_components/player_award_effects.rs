@@ -5,6 +5,7 @@ use crate::common::eyecandy_styles::AwardStyle;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::ClipEdge;
 use crate::common::global_constants::*;
+use crate::common::math::trig::{cos, sin};
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
 use crate::smw::gs_gameplay::eyecandy;
@@ -58,8 +59,8 @@ impl PlayerAwardEffects {
 
             for k in 0..numawards {
                 let angle: f32 = k as f32 * addangle + self.awardangle;
-                let awardx: i16 = (xoffset as i32 + (30.0f32 * angle.cos()) as i16 as i32) as i16;
-                let awardy: i16 = (yoffset as i32 + (30.0f32 * angle.sin()) as i16 as i32) as i16;
+                let awardx: i16 = (xoffset as i32 + (30.0f32 * cos(angle)) as i16 as i32) as i16;
+                let awardy: i16 = (yoffset as i32 + (30.0f32 * sin(angle)) as i16 as i32) as i16;
 
                 let src = SDL_Rect { x: self.awards[k as usize] as i32 * 16, y: 0, w: 16, h: 16 };
                 if player.iswarping() {
@@ -85,8 +86,8 @@ impl PlayerAwardEffects {
 
             for k in 0..numawards {
                 let angle: f32 = k as f32 * addangle + self.awardangle;
-                let cosangle: f32 = angle.cos();
-                let sinangle: f32 = angle.sin();
+                let cosangle: f32 = cos(angle);
+                let sinangle: f32 = sin(angle);
 
                 let awardx: i16 = (player.center_x() as i32 - 8 + (30.0f32 * cosangle) as i16 as i32) as i16;
                 let awardy: i16 = (player.center_y() as i32 - 8 + (30.0f32 * sinangle) as i16 as i32) as i16;
@@ -173,8 +174,8 @@ impl PlayerAwardEffects {
 
             for k in 0..numawards {
                 let angle: f32 = k as f32 * addangle + startangle;
-                let awardvelx: f32 = 9.0f32 * angle.cos();
-                let awardvely: f32 = 9.0f32 * angle.sin();
+                let awardvelx: f32 = 9.0f32 * cos(angle);
+                let awardvely: f32 = 9.0f32 * sin(angle);
 
                 if numawards as i32 == MAXAWARDS {
                     eyecandy[2].emplace(EC_RocketAward::new(
@@ -351,8 +352,8 @@ impl PlayerAwardEffects {
             let mut angle: f32 = 0.0f32;
             for k in 0..15i16 {
                 let vel: f32 = 7.0f32 + ((k % 2) as f32 * 5.0f32);
-                let awardvelx: f32 = vel * angle.cos();
-                let awardvely: f32 = vel * angle.sin();
+                let awardvelx: f32 = vel * cos(angle);
+                let awardvely: f32 = vel * sin(angle);
 
                 eyecandy[2].emplace(EC_FallingObject::new(
                     Ptr::from_mut(&mut rm.spr_bonus),

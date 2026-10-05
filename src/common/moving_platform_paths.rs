@@ -4,6 +4,7 @@ use crate::common::eyecandy_styles::SpawnStyle;
 use crate::common::game::App;
 use crate::common::game_values::game_values;
 use crate::common::global_constants::*;
+use crate::common::math::trig::{atan2f, cos, cosf, sin, sincosf, sinf};
 use crate::common::math::vec2::Vec2f;
 use crate::common::movingplatform::MovingPlatform;
 use crate::common::object_base::cap_falling_velocity;
@@ -22,7 +23,7 @@ pub enum PlatformPathType {
 }
 
 fn calc_velocity(speed: f32, angle: f32) -> Vec2f {
-    let mut vel = Vec2f::new(speed * angle.cos(), speed * angle.sin());
+    let mut vel = Vec2f::new(speed * cos(angle), speed * sin(angle));
 
     if vel.x.abs() < 0.01 {
         vel.x = 0.0;
@@ -108,17 +109,17 @@ impl std::ops::DerefMut for dyn MovingPlatformPathTrait {
     }
 }
 
+fn spawn_moves() -> usize {
+    match unsafe { game_values.spawnstyle } {
+        SpawnStyle::Door => 36,
+        SpawnStyle::Swirl => 50,
+        _ => 0,
+    }
+}
+
 pub fn moving_platform_path_reset<T: MovingPlatformPathTrait + ?Sized>(this: &mut T) {
-    unsafe {
-        if game_values.spawnstyle == SpawnStyle::Door {
-            for _ in 0..36 {
-                this.r#move(1);
-            }
-        } else if game_values.spawnstyle == SpawnStyle::Swirl {
-            for _ in 0..50 {
-                this.r#move(1);
-            }
-        }
+    for _ in 0..spawn_moves() {
+        this.r#move(1);
     }
 }
 
@@ -169,7 +170,7 @@ fn straight_angle_and_length(base: &MovingPlatformPath) -> (f32, f32) {
         angle = if width > 0.0 { 0.0 } else { PI };
         length = width.abs();
     } else {
-        angle = height.atan2(width);
+        angle = atan2f(height, width);
         length = (height * height + width * width).sqrt();
     }
     (angle, length)
@@ -376,7 +377,7 @@ impl EllipsePath {
 
         for t in 0..2 {
             p.m_angle[t] = p.m_startAngle;
-            p.set_position(t as i16);
+            p.set_position(t as i16, sincosf(p.m_startAngle));
         }
         p
     }
@@ -391,21 +392,14 @@ impl EllipsePath {
         self.m_startAngle
     }
 
-    pub fn set_position(&mut self, r#type: i16) {
+    pub fn set_position(&mut self, r#type: i16, (sin, cos): (f32, f32)) {
         let t = r#type as usize;
-        self.base.m_currentPos[t].x = self.m_radius.x * self.m_angle[t].cos() + self.base.m_startPos.x;
-        self.base.m_currentPos[t].y = self.m_radius.y * self.m_angle[t].sin() + self.base.m_startPos.y;
-    }
-}
-
-impl MovingPlatformPathTrait for EllipsePath {
-    path_plumbing!();
-
-    fn path_type_id(&self) -> PlatformPathType {
-        PlatformPathType::Ellipse
+        self.base.m_currentPos[t].x = self.m_radius.x * cos + self.base.m_startPos.x;
+        self.base.m_currentPos[t].y = self.m_radius.y * sin + self.base.m_startPos.y;
     }
 
-    fn r#move(&mut self, r#type: i16) -> bool {
+    /// The native build paired the sin and cos only where `move` was inlined into `reset`.
+    fn step(&mut self, r#type: i16, paired: bool) {
         let t = r#type as usize;
         let oldPos = self.base.m_currentPos[t];
 
@@ -421,20 +415,34 @@ impl MovingPlatformPathTrait for EllipsePath {
             }
         }
 
-        self.set_position(r#type);
+        let a = self.m_angle[t];
+        self.set_position(r#type, if paired { sincosf(a) } else { (sinf(a), cosf(a)) });
 
         self.base.m_velocity[t] = self.base.m_currentPos[t] - oldPos;
+    }
+}
 
+impl MovingPlatformPathTrait for EllipsePath {
+    path_plumbing!();
+
+    fn path_type_id(&self) -> PlatformPathType {
+        PlatformPathType::Ellipse
+    }
+
+    fn r#move(&mut self, r#type: i16) -> bool {
+        self.step(r#type, false);
         false
     }
 
     fn reset(&mut self) {
         for t in 0..2 {
             self.m_angle[t] = self.m_startAngle;
-            self.set_position(t as i16);
+            self.set_position(t as i16, sincosf(self.m_startAngle));
         }
 
-        moving_platform_path_reset(self);
+        for _ in 0..spawn_moves() {
+            self.step(1, true);
+        }
     }
 }
 

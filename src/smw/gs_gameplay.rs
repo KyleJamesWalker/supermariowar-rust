@@ -19,6 +19,7 @@ use crate::common::input::COutputControl;
 use crate::common::io_block::IO_BlockTrait;
 use crate::common::map::{g_iCurrentDrawIndex, MapBlock};
 use crate::common::match_types::MatchType;
+use crate::common::math::trig::{cos, sin};
 use crate::common::math::vec2::{Vec2f, Vec2s};
 use crate::common::moving_object_types::*;
 use crate::common::object_base::CObjectTrait;
@@ -1016,12 +1017,12 @@ impl GameplayState {
                 self.spinangle += TWO_PI;
             }
 
-            let mut shakey: f32 = self.spinspeed * App::screenWidth as f32 * self.spinangle.sin();
+            let mut shakey: f32 = self.spinspeed * App::screenWidth as f32 * sin(self.spinangle);
             if shakey < 0.0f32 {
                 shakey -= 1.0f32;
             }
 
-            x_shake = (self.spinspeed * App::screenWidth as f32 * self.spinangle.cos()) as i16;
+            x_shake = (self.spinspeed * App::screenWidth as f32 * cos(self.spinangle)) as i16;
             y_shake = shakey as i16;
         }
     }

@@ -1,6 +1,7 @@
 //! Port of src/smw/gamemodes/CardCollection.cpp
 
 use crate::common::game_mode::{game_mode_collection, CGameMode, CGameModeTrait};
+use crate::common::math::trig::{cos, sin};
 use crate::common::math::vec2::{Vec2f, Vec2s};
 use crate::common::moving_object_types::movingobject_collectioncard;
 use crate::common::player_kill_styles::KillStyle;
@@ -47,7 +48,7 @@ impl CGM_Collection {
         {
             let speed: f32 = 7.0f32 + RANDOM_INT(9) as f32 / 2.0f32;
             let angle: f32 = -(RANDOM_INT(314) as f32) / 100.0f32;
-            let vel = Vec2f::new(speed * angle.cos(), speed * angle.sin());
+            let vel = Vec2f::new(speed * cos(angle), speed * sin(angle));
 
             player.score().subscore[0] -= 1;
 
