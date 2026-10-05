@@ -10,7 +10,7 @@ Each [release](https://github.com/KyleJamesWalker/supermariowar-rust/releases) c
 
 | Package | Runs on | Notes |
 |---|---|---|
-| `SuperMarioWar-<version>-linux-x86_64.tar.gz`, `-linux-aarch64.tar.gz` | Linux with glibc 2.35 or newer (Ubuntu 22.04, Debian 12) | Needs the system SDL2 libraries: `sudo apt install libsdl2-2.0-0 libsdl2-image-2.0-0 libsdl2-mixer-2.0-0`. Run `SuperMarioWar/smw`. |
+| `SuperMarioWar-<version>-linux-x86_64.tar.gz`, `-linux-aarch64.tar.gz` | Linux with glibc 2.34 and SDL2_mixer 2.6 or newer (built on Ubuntu 24.04) | Links the system SDL2 libraries: `sudo apt install libsdl2-2.0-0 libsdl2-image-2.0-0 libsdl2-mixer-2.0-0`. Run `SuperMarioWar/smw`. |
 | `SuperMarioWar-<version>-macos-universal.zip` | macOS 14 or newer (Apple silicon), 15 or newer (Intel) | Ad-hoc signed, not notarized: after unzipping, run `xattr -dr com.apple.quarantine "Super Mario War.app"` once. |
 | `SuperMarioWar-<version>-windows-x86_64.zip` | Windows 10 or newer, x64 | SDL2 DLLs included. Settings go to `%USERPROFILE%\.smw\`. |
 | `SuperMarioWar-<version>-web.zip` | Any static web server | The site published at GitHub Pages. |
