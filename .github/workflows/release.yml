@@ -111,6 +111,7 @@ jobs:
           env -u LD_LIBRARY_PATH "$app/smw" --help
 
       - name: Replay parity
+        id: parity
         env:
           SMW_NO_BUILD: '1'
           JOBS: '4'
@@ -119,18 +120,19 @@ jobs:
           TMPDIR: /mnt/sdcard/tmp
         run: |
           app="$CARD/SuperMarioWar"
-          status=0
-          SMW_BIN="$app/smw" SMW_DATA_DIR="$app/data" tools/parity.sh > parity.log || status=$?
+          SMW_BIN="$app/smw" SMW_DATA_DIR="$app/data" tools/parity.sh > parity.log || true
           cat parity.log
+          sed -n '/^=== summary/,$p' parity.log > summary.txt
           {
             echo '```'
-            sed -n '/^=== summary/,$p' parity.log
+            cat summary.txt
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          exit "$status"
+          if grep -q '^shot ' parity.log; then echo "shots_differ=true" >> "$GITHUB_OUTPUT"; fi
+          [[ -s summary.txt ]] && ! grep -q DIVERGE summary.txt
 
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: failure() || steps.parity.outputs.shots_differ
         with:
           name: parity-${{ needs.muxapp.outputs.name }}
           path: ${{ runner.temp }}/parity
