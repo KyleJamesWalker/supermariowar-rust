@@ -2,7 +2,7 @@
 
 use crate::common::global::{joystickcount, joysticks};
 use sdl2::sys::{
-    SDL_Event, SDL_EventFilter, SDL_EventType, SDL_GameControllerAddMapping, SDL_GameControllerMappingForDeviceIndex, SDL_GameControllerOpen, SDL_GetEventFilter,
+    SDL_Event, SDL_EventFilter, SDL_EventType, SDL_GetError, SDL_NumJoysticks, SDL_GameControllerAddMapping, SDL_GameControllerMappingForDeviceIndex, SDL_GameControllerOpen, SDL_GetEventFilter,
     SDL_InitSubSystem, SDL_IsGameController, SDL_JoystickGetGUID, SDL_JoystickGetGUIDString, SDL_JoystickInstanceID, SDL_JoystickNameForIndex, SDL_JoystickNumAxes,
     SDL_JoystickNumButtons, SDL_JoystickNumHats, SDL_SetEventFilter, SDL_bool, SDL_free, SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP, SDL_INIT_GAMECONTROLLER,
 };
@@ -27,11 +27,17 @@ const TRIGGER_THRESHOLD: i16 = 16384;
 const GUIDE: u8 = 5;
 const DPAD_UP: u8 = 11;
 
-/// Applied by joystick name to whatever GUID the device reports.
-const BUILTIN_MAPPINGS: [(&str, &str); 1] = [(
-    "muOS-Keys",
-    "a:b2,b:b3,x:b4,y:b5,leftshoulder:b6,rightshoulder:b7,lefttrigger:b8,righttrigger:b9,guide:b12,start:b11,back:b10,dpup:h0.1,dpleft:h0.8,dpright:h0.2,dpdown:h0.4,leftx:a0,lefty:a1,",
-)];
+/// (name, GUID prefix, mapping), applied to the first entry matching a joystick that has no mapping. Older muOS
+/// images expose the H700 controls directly (bus 0x19) with different raw numbering from the `muinput` virtual pad.
+const BUILTIN_MAPPINGS: [(&str, &str, &str); 3] = [
+    ("muOS-Keys", "19000000", H700_RAW),
+    ("Deeplay-keys", "", H700_RAW),
+    ("muOS-Keys", "", MUINPUT),
+];
+const MUINPUT: &str =
+    "a:b2,b:b3,x:b4,y:b5,leftshoulder:b6,rightshoulder:b7,lefttrigger:b8,righttrigger:b9,guide:b12,start:b11,back:b10,dpup:h0.1,dpleft:h0.8,dpright:h0.2,dpdown:h0.4,leftx:a0,lefty:a1,";
+const H700_RAW: &str =
+    "a:b3,b:b4,x:b6,y:b5,leftshoulder:b7,rightshoulder:b8,lefttrigger:b12,righttrigger:b13,guide:b11,start:b10,back:b9,dpup:h0.1,dpleft:h0.8,dpright:h0.2,dpdown:h0.4,leftx:a0,lefty:a1,";
 
 struct Pad {
     instance: i32,
@@ -46,6 +52,20 @@ static mut pads: Vec<Pad> = Vec::new();
 pub fn init(translate: bool) {
     unsafe {
         SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER);
+        let count = SDL_NumJoysticks();
+        print!("[pad] SDL_NumJoysticks = {}", count);
+        if count < 0 {
+            print!(" ({})", c_string(SDL_GetError()));
+        }
+        println!();
+        for var in ["SDL_JOYSTICK_DEVICE", "SDL_JOYSTICK_DISABLE_UDEV", "SDL_LINUX_JOYSTICK_CLASSIC", "SDL_JOYSTICK_HIDAPI", "SDL_GAMECONTROLLERCONFIG_FILE"] {
+            if let Some(value) = std::env::var_os(var) {
+                println!("[pad] {}={}", var, value.to_string_lossy());
+            }
+        }
+        if let Some(config) = std::env::var_os("SDL_GAMECONTROLLERCONFIG") {
+            println!("[pad] SDL_GAMECONTROLLERCONFIG has {} mapping(s)", config.to_string_lossy().lines().filter(|l| l.contains(',')).count());
+        }
         for i in 0..joystickcount.max(0) as i32 {
             let js = *joysticks.add(i as usize);
             if js.is_null() {
@@ -56,7 +76,7 @@ pub fn init(translate: bool) {
             SDL_JoystickGetGUIDString(SDL_JoystickGetGUID(js), guid.as_mut_ptr(), guid.len() as i32);
             let guid = CStr::from_ptr(guid.as_ptr()).to_string_lossy().into_owned();
             if translate && SDL_IsGameController(i) == SDL_bool::SDL_FALSE {
-                if let Some((_, mapping)) = BUILTIN_MAPPINGS.iter().find(|(n, _)| *n == name) {
+                if let Some((_, _, mapping)) = BUILTIN_MAPPINGS.iter().find(|(n, prefix, _)| *n == name && guid.starts_with(prefix)) {
                     if let Ok(line) = CString::new(format!("{},{},{}platform:Linux,", guid, name, mapping)) {
                         SDL_GameControllerAddMapping(line.as_ptr());
                     }

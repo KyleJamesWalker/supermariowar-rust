@@ -20,7 +20,26 @@ mkdir -p "$HOME"
 cd "$APP_DIR" || exit 1
 chmod +x ./smw 2>/dev/null
 
-./smw --datadir "$APP_DIR/data" >"$APP_DIR/log.txt" 2>&1
+# The event nodes the kernel also gives a jsN handler; only muOS's virtual pad when it exists.
+if [ -z "$SDL_JOYSTICK_DEVICE" ]; then
+	PADS="$(awk '/^N: / { name = $0 } /^H: / && (/js[0-9]/ || name ~ /"muOS-Keys"/) && match($0, /event[0-9]+/) { node = "/dev/input/" substr($0, RSTART, RLENGTH); if (name ~ /"muOS-Keys"/) first = first (first ? ":" : "") node; else rest = rest (rest ? ":" : "") node } END { print first ? first : rest }' /proc/bus/input/devices)"
+	[ -n "$PADS" ] && export SDL_JOYSTICK_DEVICE="$PADS"
+fi
+
+{
+	echo "=== muOS $(cat /opt/muos/config/system/version /opt/muos/config/version.txt 2>/dev/null | head -n 1)"
+	echo "=== /proc/bus/input/devices"
+	cat /proc/bus/input/devices
+	echo "=== /dev/input"
+	ls -l /dev/input /dev/input/by-id 2>&1
+	echo "=== environment"
+	env | grep -E '^(SDL_|HOME=|LD_)' | grep -v '^SDL_GAMECONTROLLERCONFIG='
+	echo "=== udev"
+	pgrep -a udevd || echo "udevd not running"
+	echo "=== game"
+} >"$APP_DIR/log.txt" 2>&1
+
+./smw --datadir "$APP_DIR/data" >>"$APP_DIR/log.txt" 2>&1
 
 SCREEN_TYPE="internal"
 [ "$(GET_VAR config boot/device_mode)" = "1" ] && SCREEN_TYPE="external"

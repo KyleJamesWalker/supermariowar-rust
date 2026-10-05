@@ -56,6 +56,8 @@ To quit, press **Menu**, choose **Exit** on the main menu, or press B there. Set
 
 Other builds set neither, so desktop pads keep their raw button numbering there.
 
+It also sets `SDL_JOYSTICK_DEVICE` (unless already set) to the `/dev/input/eventN` node of `muOS-Keys`, or of every device the kernel gives a joystick (`jsN`) handler, so SDL opens the pad even where its udev enumeration finds none.
+
 ## Files on the device
 
 Everything the game writes stays in its folder, `<card>/MUOS/application/SuperMarioWar/`:
@@ -73,7 +75,7 @@ A recording copied to a computer plays with `smw --replay <file>`.
 - **The app does not start or returns straight to the menu.** Read `log.txt`. `error while loading shared libraries` names a library the device lacks; `GLIBC_2.xx not found` means the firmware's glibc is older than 2.34.
 - **No icon in the Applications list.** Apps on the second card (`/mnt/sdcard`) need muOS 2508.3 or newer to show their glyph.
 - **No sound.** The log's `[sfx]` lines show whether SDL_mixer opened the audio device; the game keeps running without one.
-- **Buttons do nothing or the wrong thing.** The `[pad]` lines at the top of `log.txt` list each joystick SDL sees and whether it has a controller mapping ("translated"). Rebind under **Controls**; the bindings are saved in `home/`. Bindings saved by a build before controller support point at raw button numbers: delete `home/Library/Preferences/.smw/controls.sdl2.bin` to get the defaults above.
+- **Buttons do nothing or the wrong thing.** `log.txt` starts with the launcher's view of the input devices (`/proc/bus/input/devices`, `/dev/input`, the `SDL_` variables, whether udevd runs, the muOS version). The game's `[pad]` lines that follow give the joystick count SDL reports and list each joystick and whether it has a controller mapping ("translated"). Rebind under **Controls**; the bindings are saved in `home/`. Bindings saved by a build before controller support point at raw button numbers: delete `home/Library/Preferences/.smw/controls.sdl2.bin` to get the defaults above.
 
 ## Building
 
