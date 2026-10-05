@@ -62,8 +62,11 @@ jobs:
           SMW_NO_BUILD: '1'
         run: |
           app="$RUNNER_TEMP/SuperMarioWar"
-          SMW_BIN="$app/smw.exe" SMW_DATA_DIR="$app/data" tools/run_rust.sh tools/replays/start_classic.txt "$RUNNER_TEMP/smoke"
+          SMW_BIN="$app/smw.exe" SMW_DATA_DIR="$app/data" tools/run_rust.sh tools/replays/start_classic.txt "$RUNNER_TEMP/smoke" || status=$?
+          ls -l "$RUNNER_TEMP/smoke"
+          tail -n 20 "$RUNNER_TEMP/smoke/stdout.log"
           grep -c '^F ' "$RUNNER_TEMP/smoke/dump.txt"
+          exit "${status:-0}"
 
       - uses: actions/upload-artifact@v4
         with:

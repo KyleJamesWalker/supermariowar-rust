@@ -73,7 +73,7 @@ jobs:
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
           manifest-path: ${{ matrix.manifest }}
-          command-arguments: --config deny.toml
+          command-arguments: --config=deny.toml
 
   test:
     name: test (${{ matrix.os }}, ${{ matrix.profile }})
@@ -164,6 +164,7 @@ jobs:
           tar --sort=name -cf - data | tar -xf - -C "$CARD"
           sudo mount --bind "$CARD/data" data
           echo "TMPDIR=$CARD/tmp" >> "$GITHUB_ENV"
+          echo "SDL_RENDER_DRIVER=software" >> "$GITHUB_ENV"
 
       - name: Build
         run: cargo build --release --locked --bins
@@ -321,6 +322,7 @@ jobs:
           tar --sort=name -cf - data | tar -xf - -C "$CARD"
           sudo mount --bind "$CARD/data" data
           echo "TMPDIR=$CARD/tmp" >> "$GITHUB_ENV"
+          echo "SDL_RENDER_DRIVER=software" >> "$GITHUB_ENV"
 
       - name: Build
         run: cargo build --release --locked --bin smw
@@ -360,6 +362,8 @@ jobs:
     needs: build-web
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    env:
+      SDL_RENDER_DRIVER: software
     steps:
       - uses: actions/checkout@v4
         with:

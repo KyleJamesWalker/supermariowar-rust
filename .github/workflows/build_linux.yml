@@ -24,9 +24,9 @@ jobs:
       matrix:
         include:
           - arch: x86_64
-            runner: ubuntu-22.04
+            runner: ubuntu-24.04
           - arch: aarch64
-            runner: ubuntu-22.04-arm
+            runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
@@ -52,6 +52,7 @@ jobs:
       - name: Smoke test
         env:
           SMW_NO_BUILD: '1'
+          SDL_RENDER_DRIVER: software
         run: |
           tar -xzf 'dist/${{ steps.name.outputs.file }}' -C "$RUNNER_TEMP"
           app="$RUNNER_TEMP/SuperMarioWar"
