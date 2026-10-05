@@ -1,9 +1,9 @@
 //! Port of src/smw/network/FileCompressor.cpp
 
 #[cfg(not(target_os = "emscripten"))]
-use libz_sys::{compress, compressBound, uLong, uncompress, Z_OK};
+use libz_sys::{compress, compress2, compressBound, uLong, uncompress, Z_BUF_ERROR, Z_OK};
 #[cfg(target_os = "emscripten")]
-use emscripten_zlib::{compress, compressBound, uLong, uncompress, Z_OK};
+use emscripten_zlib::{compress, compress2, compressBound, uLong, uncompress, Z_BUF_ERROR, Z_OK};
 use std::io::{Read, Seek, SeekFrom, Write};
 
 const COMPRESSION_SIZE_LIMIT: u64 = 20000;
@@ -14,8 +14,10 @@ const COMPRESSION_SIZE_LIMIT: u64 = 20000;
 mod emscripten_zlib {
     pub type uLong = std::os::raw::c_ulong;
     pub const Z_OK: i32 = 0;
+    pub const Z_BUF_ERROR: i32 = -5;
     extern "C" {
         pub fn compress(dest: *mut u8, dest_len: *mut uLong, source: *const u8, source_len: uLong) -> i32;
+        pub fn compress2(dest: *mut u8, dest_len: *mut uLong, source: *const u8, source_len: uLong, level: i32) -> i32;
         pub fn compressBound(source_len: uLong) -> uLong;
         pub fn uncompress(dest: *mut u8, dest_len: *mut uLong, source: *const u8, source_len: uLong) -> i32;
     }
@@ -153,6 +155,35 @@ impl FileCompressor {
     }
 }
 
+/// Not in the C++: a zlib stream at the best compression, for replay checkpoints (smw/harness.rs).
+pub fn deflate(data: &[u8]) -> Vec<u8> {
+    unsafe {
+        let mut len = compressBound(data.len() as uLong);
+        let mut out = vec![0u8; len as usize];
+        let rc = compress2(out.as_mut_ptr(), &mut len, data.as_ptr(), data.len() as uLong, 9);
+        assert_eq!(rc, Z_OK, "zlib compress2 failed");
+        out.truncate(len as usize);
+        out
+    }
+}
+
+/// Not in the C++: the data of a zlib stream, or None when it is damaged.
+pub fn inflate(data: &[u8]) -> Option<Vec<u8>> {
+    let mut cap = data.len().max(256) * 8;
+    loop {
+        let mut out = vec![0u8; cap];
+        let mut len = cap as uLong;
+        match unsafe { uncompress(out.as_mut_ptr(), &mut len, data.as_ptr(), data.len() as uLong) } {
+            Z_OK => {
+                out.truncate(len as usize);
+                return Some(out);
+            }
+            Z_BUF_ERROR if cap < 1 << 26 => cap *= 2,
+            _ => return None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -166,5 +197,16 @@ mod tests {
         assert!(FileCompressor::decompress(&c.data[3..], out.to_str().unwrap()));
         assert_eq!(std::fs::read(map).unwrap(), std::fs::read(&out).unwrap());
         let _ = std::fs::remove_file(out);
+    }
+
+    #[test]
+    fn deflate_round_trips() {
+        let data: Vec<u8> = (0..100_000u32).map(|i| (i % 251) as u8 ^ (i / 997) as u8).collect();
+        let z = deflate(&data);
+        assert!(z.len() < data.len() / 4);
+        assert_eq!(inflate(&z).unwrap(), data);
+        assert_eq!(inflate(&deflate(b"")).unwrap(), b"");
+        assert!(inflate(&z[..z.len() / 2]).is_none());
+        assert!(inflate(b"not zlib").is_none());
     }
 }

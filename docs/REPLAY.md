@@ -139,11 +139,11 @@ Markers are `#@ mark frame=<n> state=<state> ...` lines, written after frame n's
 
 ```
 #@ mark frame=2286 state=gameplay match=1 type=single mode=star style=ztar goal=5 map=2skyfight file=maps/2skyfight.map players=4 p1=pad0,team1,BubBob p2=cpu-moderate,team2,BlackMage p3=cpu-moderate,team3,0smw p4=cpu-moderate,team4,0smw
-#@ checkpoint match=1 frame=2286 b64=U01XQwH...
+#@ checkpoint match=1 frame=2286 z64=eNrtWFtv...
 #@ mark frame=3931 state=menu match=1 scores=5,5,5,5
 ```
 
-A checkpoint follows its match's start marker: `#@ checkpoint match=<k> frame=<n> b64=<data>`, the base64 of a versioned binary (`SMWC`, version 1; `src/smw/checkpoint.rs`). It is saved in `MenuState::enter_gameplay` once the map and its music are loaded, and holds everything the match reads from earlier frames:
+A checkpoint follows its match's start marker: `#@ checkpoint match=<k> frame=<n> z64=<data>`, the base64 of the zlib stream of a versioned binary (`SMWC`, version 1; `src/smw/checkpoint.rs`). Older recordings hold the binary uncompressed as `b64=<data>`, which every reader still accepts; any other field is an error. It is saved in `MenuState::enter_gameplay` once the map and its music are loaded, and holds everything the match reads from earlier frames:
 
 - the settings, as the options.bin and controls.sdl2.bin bytes they would be written as now; which input configuration each player reads; the stick and hat directions held;
 - `game_values` outside those files: match type, teams, tournament, tour and world state, stored and world powerups, the mode settings in effect, colors, timers and flags the menus set;
@@ -157,7 +157,7 @@ Segment replays: `SMW_SEGMENT=<k>`, `smw --replay <file> --segment <k>`, or a `#
 
 Clips: `tools/replay_clip.py <recording> --match <k> -o clip.txt` writes the recording's header, `#@ segment=<k>`, match k's markers and checkpoint, a `0 jhat <d> 0 0` line per joystick the recording used (so the same joysticks attach), match k's input lines and `#@ frames=<end>`. It plays with `smw --replay`, `run_rust.sh`, `web_replay.mjs`, `replay_video.py` and the web page, and dumps the same frames as the full recording. `--list` prints the session's matches. The web page's start screen lists the last session's matches from its markers, each with Watch and a clip download (`web/shell.html` cuts clips the same way). A clip only plays on this port: the C++ harness skips every `#` line, so it would start a clip from frame 0.
 
-`tools/segment_check.py [--web] <file> ...` checks the exactness: it replays each file whole (recording checkpoints with `SMW_RECORD_TO` when it has none), then for every checkpoint compares the full dump from the match's first frame to the frame before it left gameplay with `SMW_SEGMENT=k` on the recording, with the clip, and with `--web` the clip in the browser build. `tools/segment_replays/` holds multi-match sessions for it (`gen_replays.py segments`) and a browser recording of a gamepad Ztar game.
+`tools/segment_check.py [--web] <file> ...` checks the exactness: it replays each file whole (recording checkpoints with `SMW_RECORD_TO` when it has none), then for every checkpoint compares the full dump from the match's first frame to the frame before it left gameplay with `SMW_SEGMENT=k` on the recording, with the clip, and with `--web` the clip in the browser build. `tools/segment_replays/` holds multi-match sessions for it (`gen_replays.py segments`) and a browser recording of a gamepad Ztar game. `tools/checkpoint_fixtures/` holds a recording of that game with its checkpoint in each format.
 
 Compatibility: the C++ harness and `run_ref.sh` ignore `#@ mark` and `#@ checkpoint` lines, so a recording with markers replays on the reference as before, and recordings without markers replay as before but offer no segments. Replays never record unless `SMW_RECORD_TO` is set, so the parity goldens are unaffected. A checkpoint names sounds, tracks and maps by their data-relative files, so it needs the same data tree, and a build refuses a checkpoint of another format version.
 
