@@ -22,7 +22,7 @@ Upstream's Android port ([mmatyas/supermariowar-android](https://github.com/mmat
 
 ## Data and settings
 
-The game lists directories and reads files under `data/` with plain filesystem calls, which cannot see inside an APK. Upstream reads `data/` from `$EXTERNAL_STORAGE/supermariowar/`, which the user copies there by hand. Here `data/` ships as APK assets and `MainActivity` copies it to the app's external files directory, `/sdcard/Android/data/net.smwstuff.supermariowar/files/data/`, on the first launch after each install or update (about a second). Files added to that folder stay.
+The game lists directories and reads files under `data/` with plain filesystem calls, which cannot see inside an APK. Upstream reads `data/` from `$EXTERNAL_STORAGE/supermariowar/`, which the user copies there by hand. Here `data/` ships as APK assets and `MainActivity` copies it to the app's external files directory, `/sdcard/Android/data/com.kylejameswalker.supermariowar/files/data/`, on the first launch after each install or update (about a second). Files added to that folder stay.
 
 Settings (`options.bin`, `controls.sdl2.bin`) and recordings (`replays/`) live in the same files directory, upstream's settings directory on Android, falling back to internal storage when there is no external storage. Uninstalling deletes them. Game output (stdout and stderr) goes to logcat under the `smw` tag: `adb logcat -s smw SDL`.
 
@@ -52,5 +52,5 @@ The APK lands in `dist/SuperMarioWar-<Cargo version>.apk`, with `versionName` th
 `android/smoke.sh <apk> [replay.txt ...]` installs the APK on the connected device or emulator and, for each replay, clears the app's data, starts it with the replay harness variables as intent extras, waits for it to quit, and diffs the dump and screenshots against `tools/golden/` like `tools/parity.sh`. `MainActivity` turns extras named `SMW_*` into environment variables and an `args` string array into the command line, in debuggable builds only:
 
 ```sh
-adb shell am start -n net.smwstuff.supermariowar/.MainActivity --es SMW_REPLAY /data/data/net.smwstuff.supermariowar/files/r.txt --es SMW_NOLIMIT 1
+adb shell am start -n com.kylejameswalker.supermariowar/.MainActivity --es SMW_REPLAY /data/data/com.kylejameswalker.supermariowar/files/r.txt --es SMW_NOLIMIT 1
 ```

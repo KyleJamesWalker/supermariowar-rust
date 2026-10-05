@@ -9,7 +9,7 @@ tools="$repo/tools"
 apk=$1
 shift
 replays=("${@:-$tools/replays/cpu_classic.txt}")
-pkg=net.smwstuff.supermariowar
+pkg=com.kylejameswalker.supermariowar
 dir=/data/data/$pkg/files/smoke
 out="${SMOKE_OUT:-${TMPDIR:-/tmp}/smw-android-smoke}"
 timeout_s="${SMOKE_TIMEOUT:-600}"

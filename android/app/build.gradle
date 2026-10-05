@@ -1,11 +1,11 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace 'net.smwstuff.supermariowar'
+    namespace 'com.kylejameswalker.supermariowar'
     compileSdkVersion 34
     ndkVersion '27.2.12479018'
     defaultConfig {
-        applicationId 'net.smwstuff.supermariowar'
+        applicationId 'com.kylejameswalker.supermariowar'
         minSdkVersion 21
         targetSdkVersion 34
         versionCode project.property('smwVersionCode') as int

@@ -1,4 +1,4 @@
-package net.smwstuff.supermariowar;
+package com.kylejameswalker.supermariowar;
 
 import android.content.pm.ApplicationInfo;
 import android.content.res.AssetManager;
