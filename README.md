@@ -18,6 +18,10 @@ cargo run --release --bin smw_server                     # netplay lobby server
 
 Native builds draw without SDL surface RLE, which on Homebrew's sdl2-compat costs most of the frame time and shows the map foreground's colour key (`docs/sdl2-compat-rle.md`); the web build keeps it. `SMW_RLE=1` or `SMW_RLE=0` overrides at launch.
 
+## Anbernic (muOS)
+
+Each `v*` release carries `SuperMarioWar-<version>.muxapp`, a one-file install for Anbernic handhelds running muOS: copy it to the SD card's `ARCHIVE/` folder and install it with Applications > Archive Manager. [`device/muos/README.md`](device/muos/README.md) covers installing, controls, where settings, recordings and logs go, troubleshooting and building the package.
+
 ## Web build
 
 The port also builds for the browser as WebAssembly (`wasm32-unknown-emscripten`), mirroring upstream's Emscripten build: SDL2, SDL2_image (PNG and BMP), SDL2_mixer (WAV and OGG) and zlib come from Emscripten's ports, and `data/` is preloaded into the page. It needs emsdk 5.0.2, the version upstream's CI uses, and the Rust target:
