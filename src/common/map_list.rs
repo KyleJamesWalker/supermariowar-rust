@@ -487,8 +487,11 @@ impl MapList {
                     let _ = fp.write_all(out.as_bytes());
                     drop(fp);
 
-                    use std::os::unix::fs::PermissionsExt;
-                    let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o774));
+                    #[cfg(target_os = "macos")]
+                    {
+                        use std::os::unix::fs::PermissionsExt;
+                        let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o774));
+                    }
                 }
             }
         }
@@ -608,8 +611,11 @@ impl MapList {
         let _ = fp.write_all(out.as_bytes());
         drop(fp);
 
-        use std::os::unix::fs::PermissionsExt;
-        let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o774));
+        #[cfg(target_os = "macos")]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o774));
+        }
     }
 
     pub fn apply_filters(&mut self, pfFilters: &[bool]) {

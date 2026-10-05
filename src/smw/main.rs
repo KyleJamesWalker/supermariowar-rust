@@ -34,6 +34,7 @@ use std::ptr::null_mut;
 
 extern "C" {
     fn srand(seed: u32);
+    #[cfg_attr(windows, link_name = "_time64")]
     fn time(t: *mut i64) -> i64;
 }
 

@@ -5,10 +5,14 @@ use crate::globals::Aliased;
 extern "C" {
     fn srand(seed: u32);
     fn rand() -> i32;
+    #[cfg_attr(windows, link_name = "_time64")]
     fn time(t: *mut i64) -> i64;
 }
 
+#[cfg(not(windows))]
 const RAND_MAX: i32 = 0x7fffffff;
+#[cfg(windows)]
+const RAND_MAX: i32 = 0x7fff;
 
 #[inline]
 pub fn RANDOM_INT(rMaxInt: i32) -> i32 {

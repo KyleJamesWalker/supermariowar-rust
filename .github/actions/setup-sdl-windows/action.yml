@@ -1,0 +1,35 @@
+name: Set up SDL2 for MSVC
+description: Downloads the SDL2, SDL2_image and SDL2_mixer Visual C++ development releases, verifies them, and puts their import libraries on the linker path and their DLLs on PATH.
+
+outputs:
+  dir:
+    description: Directory holding the x64 import libraries and DLLs
+    value: ${{ steps.sdl.outputs.dir }}
+
+runs:
+  using: composite
+  steps:
+    - id: sdl
+      shell: bash
+      run: |
+        dir="$RUNNER_TEMP/sdl"
+        mkdir -p "$dir/lib" "$dir/licenses"
+        cd "$RUNNER_TEMP"
+        while read -r sha url; do
+          curl -fsSLO "$url"
+          zip="$(basename "$url")"
+          echo "$sha  $zip" | sha256sum -c -
+          unzip -q "$zip"
+          pkg="$(unzip -Z1 "$zip" | sed -n '1s|/.*||p')"
+          cp "$pkg"/lib/x64/*.lib "$pkg"/lib/x64/*.dll "$dir/lib/"
+          cp "$pkg/LICENSE.txt" "$dir/licenses/LICENSE.${pkg%-*}.txt"
+        done <<'EOF'
+        af347939395a58b365846aaea27391e69f9ec9d4dd650d6ac40802159b418a6e https://github.com/libsdl-org/SDL/releases/download/release-2.32.10/SDL2-devel-2.32.10-VC.zip
+        076cebe070c5762bff0c854d2307078e53348d0225e04748feeb7c944453a86e https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.8/SDL2_image-devel-2.8.8-VC.zip
+        12dc2bb724afaf19bcc23fdd7e6fcdcf40274edf13b8c6ec3723089a72537832 https://github.com/libsdl-org/SDL_mixer/releases/download/release-2.8.1/SDL2_mixer-devel-2.8.1-VC.zip
+        EOF
+        ls -l "$dir/lib"
+        lib="$(cygpath -m "$dir/lib")"
+        echo "RUSTFLAGS=-L native=$lib" >> "$GITHUB_ENV"
+        cygpath -w "$dir/lib" >> "$GITHUB_PATH"
+        echo "dir=$dir" >> "$GITHUB_OUTPUT"

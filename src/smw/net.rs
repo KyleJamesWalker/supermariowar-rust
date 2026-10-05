@@ -1555,7 +1555,8 @@ impl NetworkEventHandler for NetGameHost {
 }
 
 extern "C" {
-    #[link_name = "time"]
+    #[cfg_attr(not(windows), link_name = "time")]
+    #[cfg_attr(windows, link_name = "_time64")]
     fn libc_time_raw(t: *mut i64) -> i64;
 }
 

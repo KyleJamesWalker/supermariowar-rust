@@ -1,0 +1,77 @@
+name: Build - Linux
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Version in the file names (default the short commit)
+        type: string
+        default: ''
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  linux:
+    name: ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: ./.github/actions/setup-native
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - id: name
+        env:
+          VERSION: ${{ inputs.version }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: echo "file=SuperMarioWar-${VERSION:-${SHA::7}}-linux-${{ matrix.arch }}.tar.gz" >> "$GITHUB_OUTPUT"
+
+      - name: Package
+        env:
+          PACKAGE_OUT: dist/${{ steps.name.outputs.file }}
+        run: tools/package_linux.sh | tee package.log
+
+      - name: Smoke test
+        env:
+          SMW_NO_BUILD: '1'
+          SDL_RENDER_DRIVER: software
+        run: |
+          tar -xzf 'dist/${{ steps.name.outputs.file }}' -C "$RUNNER_TEMP"
+          app="$RUNNER_TEMP/SuperMarioWar"
+          "$app/smw" --help > /dev/null
+          SMW_BIN="$app/smw" SMW_DATA_DIR="$app/data" tools/run_rust.sh tools/replays/start_classic.txt "$RUNNER_TEMP/smoke"
+          grep -c '^F ' "$RUNNER_TEMP/smoke/dump.txt"
+
+      - name: Summary
+        run: |
+          {
+            echo '### Linux ${{ matrix.arch }}'
+            echo '```'
+            sed -n '/^shared libraries:/,$p' package.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smw-linux-${{ matrix.arch }}
+          path: dist/${{ steps.name.outputs.file }}
+          compression-level: 0
+          if-no-files-found: error

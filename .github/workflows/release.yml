@@ -3,160 +3,112 @@ name: Release
 on:
   push:
     tags: ['v*']
-  pull_request:
-    paths:
-      - device/muos/**
-      - tools/parity.sh
-      - tools/run_rust.sh
-      - .github/workflows/release.yml
   workflow_dispatch:
 
 permissions:
   contents: read
 
-defaults:
-  run:
-    shell: bash
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  muxapp:
-    runs-on: ubuntu-22.04-arm
+  version:
+    runs-on: ubuntu-latest
     outputs:
-      name: ${{ steps.name.outputs.name }}
+      version: ${{ steps.version.outputs.version }}
+      publish: ${{ steps.version.outputs.publish }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Install build dependencies
+      - id: version
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libsdl2-dev cmake libclang-dev patchelf zip
+          if [[ $GITHUB_EVENT_NAME == push && $GITHUB_REF == refs/tags/v* ]]; then
+            echo "version=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          fi
 
-      - uses: dtolnay/rust-toolchain@stable
+  linux:
+    needs: version
+    uses: ./.github/workflows/build_linux.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+  macos:
+    needs: version
+    uses: ./.github/workflows/build_macos.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+  windows:
+    needs: version
+    uses: ./.github/workflows/build_windows.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+  web:
+    needs: version
+    uses: ./.github/workflows/build_web.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+  muxapp:
+    needs: version
+    uses: ./.github/workflows/build_muxapp.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+  android:
+    needs: version
+    uses: ./.github/workflows/build_android.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
 
-      - name: Build SDL2_image and SDL2_mixer
-        run: device/muos/build-sdl-libs.sh
-
-      - name: Build smw
-        env:
-          LIBZ_SYS_STATIC: '1'
-        run: cargo build --release --locked --bin smw
-
-      - id: name
-        env:
-          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then v="$GITHUB_REF_NAME"; else v="${SHA::7}"; fi
-          echo "name=SuperMarioWar-$v.muxapp" >> "$GITHUB_OUTPUT"
-
-      - name: Package
-        env:
-          MUXAPP_OUT: dist/${{ steps.name.outputs.name }}
-        run: device/muos/build-muxapp.sh target/release/smw | tee package.log
-
-      - name: Summary
-        run: |
-          {
-            echo '```'
-            sed -n '/^bundled libraries:/,$p' package.log
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ steps.name.outputs.name }}
-          path: dist/${{ steps.name.outputs.name }}
-          compression-level: 0
-          if-no-files-found: error
-
-  verify:
-    needs: muxapp
-    runs-on: ubuntu-22.04-arm
-    env:
-      CARD: /mnt/sdcard
+  assemble:
+    needs: [version, linux, macos, windows, web, muxapp, android]
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Install libSDL2
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libsdl2-2.0-0 dosfstools
-
-      - name: Mount a FAT32 card
-        run: |
-          truncate -s 2G "$RUNNER_TEMP/card.img"
-          mkfs.vfat -F 32 "$RUNNER_TEMP/card.img"
-          sudo mkdir -p "$CARD"
-          sudo mount -o loop,utf8,uid="$(id -u)",gid="$(id -g)" "$RUNNER_TEMP/card.img" "$CARD"
-          mkdir "$CARD/tmp"
-
       - uses: actions/download-artifact@v4
         with:
-          name: ${{ needs.muxapp.outputs.name }}
+          pattern: smw-*
+          merge-multiple: true
+          path: dist
 
-      - name: Extract
-        run: unzip -q '${{ needs.muxapp.outputs.name }}' -d "$CARD"
-
-      - name: Check bundled libraries
+      - name: Checksums
+        working-directory: dist
         run: |
-          app="$CARD/SuperMarioWar"
-          readelf -d "$app/smw" | grep -E 'RUNPATH|RPATH'
-          for f in "$app/smw" "$app"/lib/*; do
-            echo "== $(basename "$f")"
-            env -u LD_LIBRARY_PATH ldd "$f" | tee ldd.txt
-            if grep -q 'not found' ldd.txt; then exit 1; fi
-          done
-          env -u LD_LIBRARY_PATH ldd "$app/smw" | grep -E 'libSDL2_(image|mixer)' | grep -vq "$app/lib/" && exit 1
-          env -u LD_LIBRARY_PATH "$app/smw" --help
-
-      - name: Replay parity
-        id: parity
-        env:
-          SMW_NO_BUILD: '1'
-          JOBS: '4'
-          SDL_RENDER_DRIVER: software
-          PARITY_OUT: ${{ runner.temp }}/parity
-          TMPDIR: /mnt/sdcard/tmp
-        run: |
-          app="$CARD/SuperMarioWar"
-          SMW_BIN="$app/smw" SMW_DATA_DIR="$app/data" tools/parity.sh > parity.log || true
-          cat parity.log
-          sed -n '/^=== summary/,$p' parity.log > summary.txt
+          sha256sum -- * > SHA256SUMS
           {
-            echo '```'
-            cat summary.txt
-            echo '```'
+            echo '### Release assets (${{ needs.version.outputs.version }}, publish: ${{ needs.version.outputs.publish }})'
+            echo '| File | Size | SHA-256 |'
+            echo '| --- | ---: | --- |'
+            while read -r sum file; do
+              echo "| $file | $(du -h "$file" | cut -f 1) | \`$sum\` |"
+            done < SHA256SUMS
           } >> "$GITHUB_STEP_SUMMARY"
-          if grep -q '^shot ' parity.log; then echo "shots_differ=true" >> "$GITHUB_OUTPUT"; fi
-          [[ -s summary.txt ]] && ! grep -q DIVERGE summary.txt
+          cat SHA256SUMS
 
       - uses: actions/upload-artifact@v4
-        if: failure() || steps.parity.outputs.shots_differ
         with:
-          name: parity-${{ needs.muxapp.outputs.name }}
-          path: ${{ runner.temp }}/parity
+          name: release-assets
+          path: dist
+          compression-level: 0
           retention-days: 7
 
-  release:
-    needs: [muxapp, verify]
-    if: startsWith(github.ref, 'refs/tags/v')
+  publish:
+    needs: [version, assemble]
+    if: needs.version.outputs.publish == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: ${{ needs.muxapp.outputs.name }}
+          name: release-assets
+          path: dist
 
-      - name: Upload to the release
+      - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          ASSET: ${{ needs.muxapp.outputs.name }}
+          TAG: ${{ needs.version.outputs.version }}
         run: |
-          sha256sum "$ASSET" > SHA256SUMS
-          cat SHA256SUMS
-          gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1 \
-            || gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes --title "$GITHUB_REF_NAME"
-          gh release upload "$GITHUB_REF_NAME" "$ASSET" SHA256SUMS --clobber
+          gh release view "$TAG" > /dev/null 2>&1 \
+            || gh release create "$TAG" --verify-tag --generate-notes --title "$TAG"
+          gh release upload "$TAG" dist/* --clobber

@@ -22,8 +22,12 @@ struct tm {
 }
 
 extern "C" {
+    #[cfg_attr(windows, link_name = "_time64")]
     fn time(t: *mut i64) -> i64;
+    #[cfg(not(windows))]
     fn localtime_r(t: *const i64, result: *mut tm) -> *mut tm;
+    #[cfg(windows)]
+    fn _localtime64_s(result: *mut tm, t: *const i64) -> c_int;
     fn strftime(s: *mut c_char, max: usize, format: *const c_char, tm: *const tm) -> usize;
 }
 
@@ -50,7 +54,10 @@ fn write_log(show_output: bool, parsed_message: &str) {
     unsafe {
         let rawtime = time(std::ptr::null_mut());
         let mut sTime: tm = std::mem::zeroed();
+        #[cfg(not(windows))]
         localtime_r(&rawtime, &mut sTime);
+        #[cfg(windows)]
+        _localtime64_s(&mut sTime, &rawtime);
 
         let mut timeBuffer = [0u8; 80];
         let n = strftime(timeBuffer.as_mut_ptr() as *mut c_char, timeBuffer.len(), c"%Y-%b-%d %X".as_ptr(), &sTime);

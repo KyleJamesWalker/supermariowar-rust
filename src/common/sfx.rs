@@ -59,8 +59,10 @@ fn log_event(line: String) {
     }
 }
 
-/// The data-relative part of a path ("sfx/packs/Classic/jump.wav"), identical for any data root.
+/// The data-relative part of a path ("sfx/packs/Classic/jump.wav"), identical for any data root and separator.
 pub fn data_relative(path: &str) -> String {
+    #[cfg(windows)]
+    let path = &path.replace('\\', "/");
     let mut end = path.len();
     while let Some(pos) = path[..end].rfind("data/") {
         if pos == 0 || path.as_bytes()[pos - 1] == b'/' {

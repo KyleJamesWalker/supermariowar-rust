@@ -1024,14 +1024,17 @@ pub fn prepare_watch(file: &str, speed: Option<f32>, segment: Option<u32>) {
         text.lines().filter_map(|l| l.strip_prefix("#@ ")).filter_map(|l| l.strip_prefix(key)).filter_map(|l| l.strip_prefix('=')).last().map(|v| v.to_string())
     };
     let home = std::env::temp_dir().join(format!("smw-watch-{}", std::process::id()));
+    #[cfg(not(windows))]
     let settings = home.join("Library/Preferences/.smw");
+    #[cfg(windows)]
+    let settings = home.join(".smw");
     std::fs::create_dir_all(&settings).unwrap_or_else(|e| fail(format!("cannot create {}: {}", settings.display(), e)));
     for (key, file) in [("options_b64", "options.bin"), ("controls_b64", "controls.sdl2.bin")] {
         if let Some(bytes) = directive(key).and_then(|v| base64_decode(&v)) {
             let _ = std::fs::write(settings.join(file), bytes);
         }
     }
-    std::env::set_var("HOME", &home);
+    std::env::set_var(if cfg!(windows) { "USERPROFILE" } else { "HOME" }, &home);
     unsafe { watch_home = Some(home) };
     std::env::set_var("SMW_REPLAY", &path);
     std::env::set_var("SMW_SEED", directive("seed").unwrap_or_else(|| "1".to_string()));

@@ -3,6 +3,7 @@ name = "smw"
 version = "0.1.0"
 edition = "2021"
 description = "Super Mario War - faithful Rust port"
+publish = false
 
 [workspace]
 
