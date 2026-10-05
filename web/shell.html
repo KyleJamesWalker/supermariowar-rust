@@ -117,6 +117,9 @@
   .match-name small { color: var(--muted); font-weight: 400; }
   .hint { color: var(--muted); font-size: 13px; text-align: center; }
   .hint a { color: var(--gold); }
+  .hint label { cursor: pointer; white-space: nowrap; }
+  .hint input { accent-color: var(--gold); vertical-align: -2px; margin: 0 4px 0 0; }
+  .hint [hidden] { display: none; }
   kbd {
     background: var(--panel);
     border: 1px solid #2f3459;
@@ -165,10 +168,13 @@
         <button class="btn btn-quiet" id="watchLast" type="button" hidden>Watch last game</button>
         <button class="btn btn-quiet" id="downloadLast" type="button" hidden>Download last replay</button>
         <label class="btn btn-quiet" for="loadReplay" tabindex="0">Load replay&hellip;</label>
-        <input type="file" id="loadReplay" accept=".txt,text/plain" hidden>
+        <input type="file" id="loadReplay" accept=".smwrp,.gz,.txt,text/plain,application/gzip" hidden>
       </div>
       <div class="hint" id="pads">Using gamepads? Press a button on each one now (up to 4).</div>
-      <div class="hint"><a href="manual.html" target="_blank" rel="noopener">How to play</a></div>
+      <div class="hint">
+        <a href="manual.html" target="_blank" rel="noopener">How to play</a>
+        <span id="saveTextOption" hidden>&middot; <label><input type="checkbox" id="saveText">save downloads as .txt</label></span>
+      </div>
     </div>
     <div class="overlay" id="end" hidden>
       <div id="endText">Replay finished</div>
@@ -204,7 +210,7 @@
     A Rust port of <a href="https://github.com/mmatyas/supermariowar">Super Mario War</a> &middot;
     <a href="https://github.com/KyleJamesWalker/supermariowar-rust">source</a> &middot;
     <a href="manual.html" target="_blank" rel="noopener">how to play</a> &middot;
-    <span id="downloadReplay" hidden><a href="#">download replay</a> &middot;</span>
+    <span id="downloadReplay" hidden><a href="#">download replay</a> <a href="#" data-plain title="as plain text">(.txt)</a> &middot;</span>
     <a href="#" id="toggleLog">show log</a>
   </footer>
 
@@ -281,22 +287,45 @@
       }
     };
     var currentReplay = function () { return watching || lastRecording(); };
-    var downloadText = function (name, text) {
+    var saveBlob = function (name, blob) {
       var a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+      a.href = URL.createObjectURL(blob);
       a.download = name;
       document.body.appendChild(a);
       a.click();
       a.remove();
       setTimeout(function () { URL.revokeObjectURL(a.href); }, 10000);
     };
-    var downloadFile = function (path) {
-      if (path) downloadText(path.split('/').pop(), Module.FS.readFile(path));
+    // A .smwrp is the recording's text gzipped (docs/REPLAY.md); plain .txt on request.
+    var SAVE_TEXT_KEY = 'smw-save-text';
+    var saveTextElement = document.getElementById('saveText');
+    try { saveTextElement.checked = localStorage.getItem(SAVE_TEXT_KEY) === '1'; } catch (e) {}
+    saveTextElement.addEventListener('change', function () {
+      try { localStorage.setItem(SAVE_TEXT_KEY, this.checked ? '1' : '0'); } catch (e) {}
+    });
+    var downloadText = function (name, text, plain) {
+      var base = name.replace(/\.txt$/, '');
+      if (plain || !window.CompressionStream) return saveBlob(base + '.txt', new Blob([text], { type: 'text/plain' }));
+      new Response(new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'))).blob().then(function (gz) {
+        saveBlob(base + '.smwrp', new Blob([gz], { type: 'application/octet-stream' }));
+      });
+    };
+    var downloadFile = function (path, plain) {
+      if (path) downloadText(path.split('/').pop(), Module.FS.readFile(path), plain);
+    };
+    var readReplayFile = function (file) {
+      return file.arrayBuffer().then(function (buffer) {
+        var bytes = new Uint8Array(buffer);
+        if (bytes[0] !== 0x1f || bytes[1] !== 0x8b) return new TextDecoder().decode(bytes);
+        return new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+      });
     };
     var downloadElement = document.getElementById('downloadReplay');
     downloadElement.addEventListener('click', function (e) {
+      var link = e.target.closest('a');
+      if (!link) return;
       e.preventDefault();
-      downloadFile(currentReplay());
+      downloadFile(currentReplay(), link.hasAttribute('data-plain'));
     });
 
     // A recording marks each match with `#@ mark` lines and a `#@ checkpoint` (docs/REPLAY.md, "Markers,
@@ -407,7 +436,7 @@
         if (m.checkpoint) {
           var clipName = name.replace(/\.txt$/, '') + '_match' + m.number + '.txt';
           row.appendChild(smallButton('Watch', false, PLAY_ICON, function () { watchText(clipName, clipText(session, m, name)); }));
-          row.appendChild(smallButton('Clip', true, SAVE_ICON, function () { downloadText(clipName, clipText(session, m, name)); }));
+          row.appendChild(smallButton('Clip', true, SAVE_ICON, function () { downloadText(clipName, clipText(session, m, name), saveTextElement.checked); }));
         } else {
           row.appendChild(Object.assign(document.createElement('small'), { className: 'hint', textContent: m.unsupported === 'bonus_house' ? 'bonus house: no clip' : 'no clip' }));
         }
@@ -436,13 +465,18 @@
     };
     document.getElementById('play').addEventListener('click', function () { startGame([]); });
     document.getElementById('watchLast').addEventListener('click', function () { watch(lastRecording()); });
-    document.getElementById('downloadLast').addEventListener('click', function () { downloadFile(lastRecording()); });
+    document.getElementById('downloadLast').addEventListener('click', function () { downloadFile(lastRecording(), saveTextElement.checked); });
     document.querySelector('label[for=loadReplay]').addEventListener('keydown', function (e) {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); document.getElementById('loadReplay').click(); }
     });
     document.getElementById('loadReplay').addEventListener('change', function () {
       var file = this.files[0];
-      if (file) file.text().then(function (text) { watchText(file.name, text); });
+      if (!file) return;
+      readReplayFile(file).then(function (text) {
+        watchText(file.name.replace(/(\.smwrp|\.gz)$/, '').replace(/\.txt$/, '') + '.txt', text);
+      }, function (e) {
+        alert('Cannot read ' + file.name + ': ' + e.message);
+      });
     });
 
     // The browser main loop never returns, so a fresh page is the simplest way back to a clean game.
@@ -488,6 +522,7 @@
       document.getElementById('matches').hidden = !hasMatches;
       document.getElementById('watchLast').hidden = !last || hasMatches;
       document.getElementById('downloadLast').hidden = !last;
+      document.getElementById('saveTextOption').hidden = !last;
       document.getElementById('downloadLast').textContent = hasMatches ? 'Download session' : 'Download last replay';
       countPads();
       startElement.hidden = false;
