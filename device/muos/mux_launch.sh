@@ -15,7 +15,9 @@ fi
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 export HOME="$APP_DIR/home"
 export LD_LIBRARY_PATH="$APP_DIR/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-export SMW_NO_KEYBOARD=1 SMW_PAD_TRANSLATE=1
+export SMW_NO_KEYBOARD=1 SMW_PAD_TRANSLATE=1 SMW_DEBUG_INPUT=1
+# muOS routes ALSA through PipeWire; SDL takes the first driver in the list that opens.
+[ -z "$SDL_AUDIODRIVER" ] && export SDL_AUDIODRIVER=pipewire,alsa
 mkdir -p "$HOME"
 cd "$APP_DIR" || exit 1
 chmod +x ./smw 2>/dev/null

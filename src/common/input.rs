@@ -221,6 +221,8 @@ impl CPlayerInput {
     //key flags to be used by game logic
     //iGameState == 0 for in game and 1 for menu
     pub fn update(&mut self, event: SDL_Event, iGameState: i16) {
+        #[cfg(not(target_os = "emscripten"))]
+        crate::smw::pad::log_event(2, &event);
         unsafe {
             let event_type = event.type_;
             let is = |t: SDL_EventType| event_type == t as u32;

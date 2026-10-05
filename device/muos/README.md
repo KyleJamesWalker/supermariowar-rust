@@ -47,14 +47,15 @@ To quit, press **Menu**, choose **Exit** on the main menu, or press B there. Set
 
 ## Launcher settings
 
-`mux_launch.sh` sets two variables that change the game's behaviour on muOS only:
+`mux_launch.sh` sets variables that change the game's behaviour on muOS only:
 
 | Variable | Effect |
 |---|---|
 | `SMW_PAD_TRANSLATE=1` | Reads every pad SDL has a controller mapping for (muOS provides one for the built-in controls) through that mapping, in the button layout above. Mapped pads get players first; Menu quits. |
+| `SMW_DEBUG_INPUT=1` | Logs a heartbeat every 120 frames and the first 2,000 input events as SDL queues them, after translation and as the game reads them. On while the controls are being brought up. |
 | `SMW_NO_KEYBOARD=1` | Leaves the keyboard out of the launch-time player assignment and turns the players without a pad that were human into bots. |
 
-Other builds set neither, so desktop pads keep their raw button numbering there.
+Other builds set none of them, so desktop pads keep their raw button numbering there. The launcher also sets `SDL_AUDIODRIVER=pipewire,alsa` unless it is already set, since muOS's ALSA default device is a PipeWire plugin.
 
 It also sets `SDL_JOYSTICK_DEVICE` (unless already set) to the `/dev/input/eventN` node of `muOS-Keys`, or of every device the kernel gives a joystick (`jsN`) handler, so SDL opens the pad even where its udev enumeration finds none.
 

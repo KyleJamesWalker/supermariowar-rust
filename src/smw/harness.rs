@@ -472,6 +472,8 @@ pub fn forced_map() -> Option<&'static str> {
 }
 
 pub fn frame_start() {
+    #[cfg(not(target_os = "emscripten"))]
+    crate::smw::pad::debug_frame(unsafe { h.frame });
     sfx::sfx_virtual_advance();
     record_frame_start(unsafe { h.frame });
 
