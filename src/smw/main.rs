@@ -151,14 +151,25 @@ unsafe fn web_quit_if_done() {
 }
 
 unsafe extern "C-unwind" fn gameloop_frame() {
+    #[cfg(not(target_os = "emscripten"))]
+    use crate::smw::pad::phase;
+    #[cfg(target_os = "emscripten")]
+    fn phase(_: usize) {}
+
+    phase(1);
     FPSLimiter::instance().frame_start();
 
     harness::frame_start();
+    phase(5);
     GameStateManager::instance().currentState.get().update();
+    phase(6);
     harness::frame_end();
 
+    phase(1);
     FPSLimiter::instance().before_flip();
+    phase(7);
     gfx_flipscreen();
+    phase(1);
     FPSLimiter::instance().after_flip();
 }
 
@@ -221,6 +232,8 @@ pub fn init_joysticks() {
         }
 
         SDL_JoystickEventState(SDL_ENABLE as i32);
+        #[cfg(not(target_os = "emscripten"))]
+        crate::smw::pad::init(!harness::replaying() && std::env::var_os("SMW_PAD_TRANSLATE").is_some());
     }
 }
 
@@ -234,8 +247,12 @@ pub fn init_joysticks() {
 fn assign_inputs() {
     unsafe {
         let marker = get_home_directory() + PAD_PLAYERS_FILE;
-        let pads = joystickcount.clamp(0, MAX_PLAYERS as i16) as usize;
-        if pads == 0 {
+        #[cfg(not(target_os = "emscripten"))]
+        let mut pads = crate::smw::pad::player_pads();
+        #[cfg(target_os = "emscripten")]
+        let mut pads: Vec<usize> = (0..joystickcount.max(0) as usize).collect();
+        pads.retain(|&k| k < MAX_PLAYERS as usize);
+        if pads.is_empty() {
             if let Ok(text) = std::fs::read_to_string(&marker) {
                 let saved: Vec<i16> = text.split_whitespace().filter_map(|v| v.parse().ok()).collect();
                 if saved.len() == MAX_PLAYERS as usize {
@@ -260,11 +277,14 @@ fn assign_inputs() {
         if touch {
             order.push((false, 0));
         }
-        order.extend((0..pads).map(|k| (true, k)));
-        if !touch {
+        order.extend(pads.iter().map(|&k| (true, k)));
+        let keyboard = std::env::var_os("SMW_NO_KEYBOARD").is_none();
+        if !touch && keyboard {
             order.push((false, 0));
         }
-        order.push((false, 1));
+        if keyboard {
+            order.push((false, 1));
+        }
 
         for p in 0..MAX_PLAYERS as usize {
             let control = match order.get(p) {
@@ -275,6 +295,9 @@ fn assign_inputs() {
                 Some(&(false, q)) => &mut game_values.inputConfiguration[q][0],
                 None => {
                     game_values.playerInput.inputControls[p] = Ptr::from_mut(&mut game_values.inputConfiguration[p][0]);
+                    if !keyboard && game_values.playercontrol[p] == 1 {
+                        game_values.playercontrol[p] = 2;
+                    }
                     continue;
                 }
             };

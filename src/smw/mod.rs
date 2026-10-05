@@ -9,6 +9,8 @@ pub mod main;
 pub mod net;
 pub mod net_outcomes;
 pub mod net_random;
+#[cfg(not(target_os = "emscripten"))]
+pub mod pad;
 pub mod object_container;
 pub mod objectgame;
 pub mod objecthazard;

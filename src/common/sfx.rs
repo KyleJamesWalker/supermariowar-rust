@@ -231,6 +231,11 @@ pub fn sfx_init() -> bool {
         {
             let link_version = &*Mix_Linked_Version();
             println!("[sfx] SDL_Mixer {}.{}.{} initialized.", link_version.major, link_version.minor, link_version.patch);
+            let (mut frequency, mut format, mut channels) = (0, 0u16, 0);
+            let opened = Mix_QuerySpec(&mut frequency, &mut format, &mut channels);
+            let driver = sdl2::sys::SDL_GetCurrentAudioDriver();
+            let driver = if driver.is_null() { String::from("none") } else { CStr::from_ptr(driver).to_string_lossy().into_owned() };
+            println!("[sfx] audio driver {}, {} Hz, format {:#06x}, {} channels (opened {})", driver, frequency, format, channels, opened);
         }
         #[cfg(target_os = "emscripten")]
         {
