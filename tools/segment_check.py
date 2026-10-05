@@ -128,6 +128,9 @@ def main():
     try:
         rows = []
         for f in args.files:
+            if Path(f).is_dir():
+                print(f'{f}: a directory, skipped', file=sys.stderr)
+                continue
             try:
                 rows += check(f, work, args.jobs, args.web)
             except RuntimeError as err:
