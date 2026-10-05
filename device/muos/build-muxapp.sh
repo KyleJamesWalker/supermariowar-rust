@@ -55,5 +55,6 @@ glibc="$(find "$app/smw" "$app/lib" -type f -exec objdump -T {} + | grep -o 'GLI
 echo "requires $glibc or newer"
 
 rm -f "$out"
-(cd "$stage" && zip -r -q "$out" SuperMarioWar)
+# The game lists some data directories unsorted, and FAT keeps entries in the order they were extracted.
+(cd "$stage" && find SuperMarioWar | LC_ALL=C sort | zip -q -X "$out" -@)
 echo "wrote $out ($(du -h "$out" | cut -f 1))"
