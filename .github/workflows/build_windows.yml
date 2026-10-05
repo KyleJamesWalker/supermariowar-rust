@@ -60,6 +60,7 @@ jobs:
       - name: Smoke test
         env:
           SMW_NO_BUILD: '1'
+          SDL_RENDER_DRIVER: software
         run: |
           app="$RUNNER_TEMP/SuperMarioWar"
           SMW_BIN="$app/smw.exe" SMW_DATA_DIR="$app/data" tools/run_rust.sh tools/replays/start_classic.txt "$RUNNER_TEMP/smoke" || status=$?

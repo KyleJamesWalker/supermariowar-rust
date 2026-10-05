@@ -191,8 +191,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           cat game.log
           [[ -s game-summary.txt ]] || exit 1
-          if [[ $RUNNER_OS == macOS ]]; then exit $status; fi
-          ! grep -q DIVERGE game-summary.txt
+          exit $status
 
       - name: C++ goldens
         if: always() && steps.game.outcome != 'skipped'
@@ -234,6 +233,10 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           cat game-cpp.log
+          if [[ $RUNNER_OS == Linux && $status -ne 0 ]]; then
+            echo "::notice::The C++ reference built on Linux diverges from its macOS goldens; this comparison is report-only on Linux."
+            exit 0
+          fi
           exit $status
 
       - name: Editor parity
@@ -348,8 +351,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           grep -v -E 'MATCH all .* shots ([0-9]+)/\1$' sweep.log | grep -v -E '^(=== |OK: )' || true
           [[ -s summary.txt ]] || exit 1
-          if [[ $RUNNER_OS == macOS ]]; then exit $status; fi
-          ! grep -q DIVERGE summary.txt
+          exit $status
 
   parity-windows:
     runs-on: windows-latest
@@ -357,6 +359,7 @@ jobs:
     timeout-minutes: 90
     env:
       JOBS: '4'
+      SDL_RENDER_DRIVER: software
     steps:
       - uses: actions/checkout@v4
         with:
