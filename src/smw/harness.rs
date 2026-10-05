@@ -453,6 +453,10 @@ pub fn replay_joysticks() -> Option<i16> {
     None
 }
 
+pub fn replaying() -> bool {
+    unsafe { h.replay }
+}
+
 pub fn no_limit() -> bool {
     unsafe { h.noLimit }
 }
@@ -726,6 +730,10 @@ unsafe extern "C" fn record_filter(_userdata: *mut std::ffi::c_void, event: *mut
     let Some(r) = rec() else { return 1 };
     if INJECTING.load(Ordering::Relaxed) || !is_input_event((*event).type_) {
         return 1;
+    }
+    #[cfg(not(target_os = "emscripten"))]
+    if !crate::smw::pad::translate(&mut *event) {
+        return 0;
     }
     r.pending.push(*event);
     0
