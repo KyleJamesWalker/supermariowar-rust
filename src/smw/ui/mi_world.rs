@@ -14,6 +14,7 @@ use crate::globals::*;
 use crate::smw::gs_gameplay::lookup_team_id;
 use crate::smw::world::{g_worldmap, WorldMapTile, WORLD_BRIDGE_SPRITE_OFFSET};
 use crate::common::gfx::gfx_sprite::gfxSprite;
+use crate::common::math::trig::{cosf, sinf};
 use sdl2::sys::{SDL_Rect, SDL_Surface};
 
 pub struct MI_World {
@@ -885,8 +886,8 @@ impl UI_ControlTrait for MI_World {
             if self.iState == -2 || self.iState >= 4 {
                 for iStar in 0..10i16 {
                     let dAngle: f32 = self.dTeleportStarAngle + (TWO_PI / 10.0f32) * iStar as f32;
-                    let iStarX = (self.dTeleportStarRadius * dAngle.cos()) as i16;
-                    let iStarY = (self.dTeleportStarRadius * dAngle.sin()) as i16;
+                    let iStarX = (self.dTeleportStarRadius * cosf(dAngle)) as i16;
+                    let iStarY = (self.dTeleportStarRadius * sinf(dAngle)) as i16;
 
                     rm.spr_teleportstar.draw_src(iStarX as i32 + px, iStarY as i32 + py, &SDL_Rect { x: self.iTeleportStarAnimationFrame as i32, y: 0, w: 32, h: 32 });
                 }

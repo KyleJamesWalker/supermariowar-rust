@@ -5,6 +5,7 @@ use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::GRAVITATION;
+use crate::common::math::trig::{cosf, sinf};
 use crate::common::math::vec2::{Vec2f, Vec2s};
 use crate::common::moving_object_types::*;
 use crate::common::object_base::CObjectTrait;
@@ -81,8 +82,8 @@ impl MO_SledgeHammer {
                 for _iHammer in 0..3 {
                     let dAngle: f32 = RANDOM_INT(628) as f32 / 100.0f32;
                     let dVel: f32 = RANDOM_INT(5) as f32 / 2.0f32 + 3.0f32;
-                    let dVelX: f32 = dVel * dAngle.cos();
-                    let dVelY: f32 = dVel * dAngle.sin();
+                    let dVelX: f32 = dVel * cosf(dAngle);
+                    let dVelY: f32 = dVel * sinf(dAngle);
                     objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(
                         Ptr::from_mut(&mut rm.spr_hammer),
                         Vec2s::new(iCenterX, iCenterY),

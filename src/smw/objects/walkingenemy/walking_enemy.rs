@@ -6,6 +6,7 @@ use crate::common::game_mode::game_mode_stomp;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::*;
+use crate::common::math::trig::{cosf, sinf};
 use crate::common::math::vec2::Vec2s;
 use crate::common::moving_object_types::*;
 use crate::common::player_kill_styles::KillStyle;
@@ -145,8 +146,8 @@ pub fn mo_walking_enemy_draw<T: MO_WalkingEnemyTrait + ?Sized>(this: &mut T) {
         let mut displayangle: f32 = o.spawnangle;
 
         for _k in 0..numeyecandy {
-            let spawnX: i16 = (o.ix as i32 + (o.collisionWidth as i32 >> 1) - 8 + (o.spawnradius * displayangle.cos()) as i16 as i32) as i16;
-            let spawnY: i16 = (o.iy as i32 + (o.collisionHeight as i32 >> 1) - 8 + (o.spawnradius * displayangle.sin()) as i16 as i32) as i16;
+            let spawnX: i16 = (o.ix as i32 + (o.collisionWidth as i32 >> 1) - 8 + (o.spawnradius * cosf(displayangle)) as i16 as i32) as i16;
+            let spawnY: i16 = (o.iy as i32 + (o.collisionHeight as i32 >> 1) - 8 + (o.spawnradius * sinf(displayangle)) as i16 as i32) as i16;
 
             displayangle += addangle;
 

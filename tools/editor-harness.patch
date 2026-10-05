@@ -1,5 +1,5 @@
 diff --git a/src/common/CMakeLists.txt b/src/common/CMakeLists.txt
-index dbf465a6..4690a9b5 100644
+index dbf465a6..66c445a6 100644
 --- a/src/common/CMakeLists.txt
 +++ b/src/common/CMakeLists.txt
 @@ -1,6 +1,8 @@
@@ -11,6 +11,25 @@ index dbf465a6..4690a9b5 100644
      eyecandy.cpp
      eyecandy.h
      EyecandyStyles.h
+@@ -70,6 +72,10 @@ add_library(CommonFiles STATIC
+     Version.h
+     WorldTourStop.cpp
+     WorldTourStop.h
++    core-math/atan2f.c
++    core-math/core_math.h
++    core-math/cosf.c
++    core-math/sinf.c
+     util/ContainerHelpers.h
+     util/Grid.h
+     util/DirIterator.cpp
+@@ -79,6 +85,7 @@ add_library(CommonFiles STATIC
+ )
+ 
+ add_subdirectory(ui)
++set_source_files_properties(core-math/atan2f.c core-math/cosf.c core-math/sinf.c PROPERTIES COMPILE_OPTIONS "-ffp-contract=off")
+ target_compile_features(CommonFiles PUBLIC cxx_std_20)
+ 
+ if (SDL2_FORCE_GLES)
 diff --git a/src/common/EditorHarness.cpp b/src/common/EditorHarness.cpp
 new file mode 100644
 index 00000000..3e1141d1

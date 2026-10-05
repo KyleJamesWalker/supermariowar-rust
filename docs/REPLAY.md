@@ -270,6 +270,7 @@ Applied at the end of `MenuState::init()`, which runs when the splash screen is 
 | OS events (window, joystick hot-plug, real keyboard) | `SDL_PollEvent` | Not filtered. The dummy video driver generates no input and no joysticks are attached. |
 | Screenshot file names (`Insert` key) and netplay timestamps | `gfxSDL.cpp`, `net.cpp` | Unreachable: no script presses `Insert`, and the build uses `NO_NETWORK`. |
 | FMA contraction on arm64 | compiler | `-ffp-contract=off`. |
+| `sinf`, `cosf` and `atan2f` round differently per libm (macOS, glibc, Emscripten's musl; clang may also merge a sin and cos into `__sincosf_stret`) | libm | Both builds use CORE-MATH's correctly rounded functions: `src/common/core-math/` in the reference, `src/common/math/trig.rs` in the port. |
 | A thrown flag's `owner_throw` still points at a player `CleanDeadPlayers` deleted, and a flag base reads it | `CO_Flag`, `MO_FlagBase` | The Rust port clears it when the player is removed (see `PROGRESS.md`, Deliberate deviations). |
 
 Map list order is deterministic: maps live in a `std::multimap` keyed by name.
@@ -285,6 +286,7 @@ Map list order is deterministic: maps live in a `std::multimap` keyed by name.
 - `sfx`: `sfx_ticks` clock hook, `sfx_ignore_channel_failure`, the virtual mixer (`sfx_virtual_mixer`, `sfx_virtual_advance()`), `sfx_events` for `S` lines, and the data-relative file name on `sfxSound`/`sfxMusic`.
 - `CMakeLists.txt`, `gfx.cpp`, `gfxFont.cpp`, `gfxSprite.cpp`: the `SMW_NO_RLE` option.
 - `Star.cpp`, `GameMode.cpp`: the multi star fixes from upstream PR branch `fix/memory-safety` (`PROGRESS.md`, Deliberate deviations).
+- `common/core-math/`, `CMakeLists.txt` and every game `sin`/`cos`/`atan2` call: CORE-MATH's `cr_sinf`, `cr_cosf` and `cr_atan2f` (see Nondeterminism sources).
 - `uimenu`: `UI_Menu::currentFocusIndex()`. `GSMenu`: menu name/focus accessors and `SMW_MAP`. `player.h`: `friend struct HarnessAccess`.
 
 ## Golden outputs

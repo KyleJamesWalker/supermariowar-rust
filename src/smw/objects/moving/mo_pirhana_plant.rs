@@ -6,6 +6,7 @@ use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_drawpreview;
 use crate::common::global_constants::*;
 use crate::common::map::g_rPirhanaRects;
+use crate::common::math::trig::atan2f;
 use crate::common::math::vec2::Vec2s;
 use crate::common::moving_object_types::*;
 use crate::common::object_base::CObjectTrait;
@@ -306,7 +307,7 @@ impl CObjectTrait for MO_PirhanaPlant {
                     }
                 }
 
-                let dAngle: f32 = (iDiffX as f64).atan2(iDiffY as f64) as f32;
+                let dAngle: f32 = atan2f(iDiffX as f32, iDiffY as f32);
 
                 if dAngle >= 0.0f32 && dAngle < HALF_PI {
                     self.iFrame = 0;

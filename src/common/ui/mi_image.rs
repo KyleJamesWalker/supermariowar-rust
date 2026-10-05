@@ -1,6 +1,7 @@
 //! Port of src/common/ui/MI_Image.cpp
 
 use crate::common::gfx::gfx_sprite::gfxSprite;
+use crate::common::math::trig::{cosf, sinf};
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 use sdl2::sys::SDL_Rect;
@@ -188,8 +189,8 @@ impl UI_ControlTrait for MI_Image {
         let mut iYOffset: i16 = 0;
 
         if self.fSwirl {
-            iXOffset = (self.dSwirlRadius * self.dSwirlAngle.cos()) as i16;
-            iYOffset = (self.dSwirlRadius * self.dSwirlAngle.sin()) as i16;
+            iXOffset = (self.dSwirlRadius * cosf(self.dSwirlAngle)) as i16;
+            iYOffset = (self.dSwirlRadius * sinf(self.dSwirlAngle)) as i16;
         }
 
         let src = SDL_Rect { x: self.iXFrame as i32, y: self.iYFrame as i32, w: self.iw as i32, h: self.ih as i32 };

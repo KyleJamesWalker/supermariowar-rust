@@ -3,6 +3,7 @@
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::global_constants::{NUM_POWERUPS, PGFX_JUMPING_R, TWO_PI};
+use crate::common::math::trig::{cosf, sinf};
 use crate::common::random_number_generator::RANDOM_INT;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
@@ -62,8 +63,8 @@ impl MI_BonusWheel {
             let miBonusImages: [Box<MI_Image>; NB] = std::array::from_fn(|iImage| {
                 dSelectionSector[iImage] = iImage as f32 * TWO_PI / NUMBONUSITEMSONWHEEL as f32;
 
-                let iPowerupX = (x as i32 + 160 + (110.0f32 * dSelectionSector[iImage].cos()) as i16 as i32) as i16;
-                let iPowerupY = (y as i32 + 208 + (110.0f32 * dSelectionSector[iImage].sin()) as i16 as i32) as i16;
+                let iPowerupX = (x as i32 + 160 + (110.0f32 * cosf(dSelectionSector[iImage])) as i16 as i32) as i16;
+                let iPowerupY = (y as i32 + 208 + (110.0f32 * sinf(dSelectionSector[iImage])) as i16 as i32) as i16;
 
                 Box::new(MI_Image::new(Ptr::from_mut(&mut rm.spr_storedpoweruplarge), iPowerupX, iPowerupY, 0, 0, 32, 32, 1, 1, 0))
             });
@@ -258,8 +259,8 @@ impl UI_ControlTrait for MI_BonusWheel {
                     self.iDisplayPowerupTimer = 20;
 
                     let sector = self.dSelectionSector[self.iDisplayPowerupIndex as usize];
-                    let iPoofX = (self.m_pos.x as i32 + 152 + (110.0f32 * sector.cos()) as i16 as i32) as i16;
-                    let iPoofY = (self.m_pos.y as i32 + 200 + (110.0f32 * sector.sin()) as i16 as i32) as i16;
+                    let iPoofX = (self.m_pos.x as i32 + 152 + (110.0f32 * cosf(sector)) as i16 as i32) as i16;
+                    let iPoofY = (self.m_pos.y as i32 + 200 + (110.0f32 * sinf(sector)) as i16 as i32) as i16;
 
                     let _ = (iPoofX, iPoofY);
                     // TODO(eyecandy): m_parentMenu->AddEyeCandy<EC_SingleAnimation>(&rm->spr_poof, iPoofX, iPoofY, 4, 5);
@@ -380,8 +381,8 @@ impl UI_ControlTrait for MI_BonusWheel {
 
             rm.spr_tournament_powerup_splash.draw(x, y);
 
-            let iSelectorX = (x + 144 + (110.0f32 * self.dSelectionAngle.cos()) as i16 as i32) as i16;
-            let iSelectorY = (y + 190 + (110.0f32 * self.dSelectionAngle.sin()) as i16 as i32) as i16;
+            let iSelectorX = (x + 144 + (110.0f32 * cosf(self.dSelectionAngle)) as i16 as i32) as i16;
+            let iSelectorY = (y + 190 + (110.0f32 * sinf(self.dSelectionAngle)) as i16 as i32) as i16;
 
             if self.iState > 0 {
                 rm.spr_powerupselector.draw_src(iSelectorX as i32, iSelectorY as i32, &SDL_Rect { x: self.iSelectorAnimation as i32 * 64, y: 0, w: 64, h: 64 });
