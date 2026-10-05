@@ -25,6 +25,7 @@ The port reproduces these so replays match the C++ byte for byte.
 | M5 | World editor: deleting a stage keeps iterating `vehiclelist` with iterators invalidated by `RemoveVehicleFromTile`, skipping elements and visiting stale slots | `src/worldeditor/worldeditor.rs:3478` | PR open | [#480](https://github.com/mmatyas/supermariowar/pull/480) |
 | M6 | Reads of uninitialized values: race goal position (`placeRaceGoal`), an AI constructor field, map loader entries for IDs missing from the tile table, level editor `MapBlock::iSettings` (makes the editor's saved output vary between runs), and a game package's default constructor | `src/smw/objects/overmap/wo_race_goal.rs:52`, `src/smw/ai.rs:404`, `src/common/map/map_reader18xx.rs:43`, `src/leveleditor/leveleditor.rs:5182`, `src/smw/network/protocol_game_packages.rs:242` | found | |
 | M7 | The tournament scoreboard draws skin frames that were never loaded; Release builds skip them silently | fixed in `d63bf67` | fixed upstream in `d70e4dc3` | |
+| M8 | A thrown flag keeps `owner_throw` pointing at a player `CleanDeadPlayers` frees at match end; `MO_FlagBase::collide_object` then reads the freed player's `teamID`, so whether the flag scores depends on the allocator | fixed here in `c2ffc79` (`clean_dead_players` clears it) | found | |
 
 ## Logic
 
