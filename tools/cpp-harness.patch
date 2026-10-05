@@ -1,7 +1,16 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 36d259ef..527b0715 100644
+index 36d259ef..01e9fd13 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
+@@ -10,7 +10,7 @@ project(smw
+ 	VERSION 2.0.0
+ 	DESCRIPTION "A fan-made multiplayer Super Mario Bros. style deathmatch game"
+ 	HOMEPAGE_URL "https://github.com/mmatyas/supermariowar"
+-	LANGUAGES CXX
++	LANGUAGES C CXX
+ )
+ 
+ #
 @@ -21,6 +21,7 @@ option(USE_PNG_SAVE "Use PNG for screenshots and thumbnails" ON)
  option(NO_NETWORK "Disable all network communication" OFF)
  option(SDL2_FORCE_GLES "(SDL2) Use OpenGL ES rendering if possible" OFF)
@@ -21,6 +30,58 @@ index 36d259ef..527b0715 100644
  if (EMSCRIPTEN)
  	if (CMAKE_BUILD_TYPE STREQUAL Debug)
  		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g4")
+diff --git a/src/common/MovingPlatformPaths.cpp b/src/common/MovingPlatformPaths.cpp
+index fadd75ce..33957c76 100644
+--- a/src/common/MovingPlatformPaths.cpp
++++ b/src/common/MovingPlatformPaths.cpp
+@@ -5,6 +5,7 @@
+ #include "movingplatform.h"
+ #include "ObjectBase.h"
+ #include "player.h"
++#include "core-math/core_math.h"
+ 
+ #include <cmath>
+ 
+@@ -15,8 +16,8 @@ namespace {
+ Vec2f calcVelocity(float speed, float angle)
+ {
+     Vec2f vel {
+-        speed * cos(angle),
+-        speed * sin(angle),
++        speed * cr_cosf(angle),
++        speed * cr_sinf(angle),
+     };
+ 
+     // Fix rounding errors
+@@ -78,7 +79,7 @@ StraightPath::StraightPath(float speed, Vec2f startPos, Vec2f endPos, bool previ
+         m_angle = (width > 0) ? 0.f : PI;
+         length = ::fabs(width);
+     } else {
+-        m_angle = atan2(height, width);
++        m_angle = cr_atan2f(height, width);
+         length = ::sqrt(height * height + width * width);
+     }
+ 
+@@ -147,7 +148,7 @@ StraightPathContinuous::StraightPathContinuous(float speed, Vec2f startPos, floa
+         m_angle = (width > 0) ? 0.f : PI;
+         length = ::fabs(width);
+     } else {
+-        m_angle = atan2(height, width);
++        m_angle = cr_atan2f(height, width);
+         length = ::sqrt(height * height + width * width);
+     }
+ 
+@@ -250,8 +251,8 @@ bool EllipsePath::Move(short type)
+ 
+ void EllipsePath::SetPosition(short type)
+ {
+-    m_currentPos[type].x = m_radius.x * cos(m_angle[type]) + m_startPos.x;
+-    m_currentPos[type].y = m_radius.y * sin(m_angle[type]) + m_startPos.y;
++    m_currentPos[type].x = m_radius.x * cr_cosf(m_angle[type]) + m_startPos.x;
++    m_currentPos[type].y = m_radius.y * cr_sinf(m_angle[type]) + m_startPos.y;
+ }
+ 
+ void EllipsePath::Reset()
 diff --git a/src/common/RandomNumberGenerator.cpp b/src/common/RandomNumberGenerator.cpp
 index 892625ae..e6a2bd82 100644
 --- a/src/common/RandomNumberGenerator.cpp
@@ -81,6 +142,760 @@ index 5d45282e..493e46b9 100644
  private:
      RandomNumberGenerator();
      ~RandomNumberGenerator();
+diff --git a/src/common/core-math/README.md b/src/common/core-math/README.md
+new file mode 100644
+index 00000000..00d9fe8c
+--- /dev/null
++++ b/src/common/core-math/README.md
+@@ -0,0 +1,3 @@
++Unmodified `src/binary32/sin/sinf.c`, `cos/cosf.c` and `atan2/atan2f.c` from
++[CORE-MATH](https://core-math.gitlabpages.inria.fr/) commit `284b3b0e198042c38f5c30316f696786b10816b0`,
++MIT-licensed (notice in each file). Built with `-ffp-contract=off` like the rest of the reference.
+diff --git a/src/common/core-math/atan2f.c b/src/common/core-math/atan2f.c
+new file mode 100644
+index 00000000..592908e6
+--- /dev/null
++++ b/src/common/core-math/atan2f.c
+@@ -0,0 +1,231 @@
++/* Correctly-rounded arctangent function of two binary32 values.
++
++Copyright (c) 2022-2025 Alexei Sibidanov and Paul Zimmermann.
++
++This file is part of the CORE-MATH project
++(https://core-math.gitlabpages.inria.fr/).
++
++Permission is hereby granted, free of charge, to any person obtaining a copy
++of this software and associated documentation files (the "Software"), to deal
++in the Software without restriction, including without limitation the rights
++to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++copies of the Software, and to permit persons to whom the Software is
++furnished to do so, subject to the following conditions:
++
++The above copyright notice and this permission notice shall be included in all
++copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++SOFTWARE.
++
++*/
++
++#include <stdint.h>
++#ifdef CORE_MATH_SUPPORT_ERRNO
++#include <errno.h>
++#endif
++
++// Warning: clang also defines __GNUC__
++#if defined(__GNUC__) && !defined(__clang__)
++#pragma GCC diagnostic ignored "-Wunknown-pragmas"
++#endif
++
++#pragma STDC FENV_ACCESS ON
++
++typedef union {float f; uint32_t u;} b32u32_u;
++typedef union {double f; uint64_t u;} b64u64_u;
++
++static inline double muldd(double xh, double xl, double ch, double cl, double *l){
++  double ahlh = ch*xl, alhh = cl*xh, ahhh = ch*xh, ahhl = __builtin_fma(ch, xh, -ahhh);
++  ahhl += alhh + ahlh;
++  ch = ahhh + ahhl;
++  *l = (ahhh - ch) + ahhl;
++  return ch;
++}
++
++static double polydd(double xh, double xl, int n, const double c[][2], double *l){
++  int i = n-1;
++  double ch = c[i][0], cl = c[i][1];
++  while(--i>=0){
++    ch = muldd(xh,xl,ch,cl,&cl);
++    double th = ch + c[i][0], tl = (c[i][0] - th) + ch;
++    ch = th;
++    cl += tl + c[i][1];
++  }
++  *l = cl;
++  return ch;
++}
++
++/* for y/x tiny, use Taylor approximation z - z^3/3 where z=y/x */
++static float
++cr_atan2f_tiny (float y, float x)
++{
++  double dy = y, dx = x;
++  double z = dy / dx;
++  double e = __builtin_fma (-z, x, y);
++  /* z * x + e = y thus y/x = z + e/x */
++  static const double c = -0x1.5555555555555p-2; /* -1/3 rounded to nearest */
++  double zz = z * z;
++  double cz = c * z;
++  e = e / dx + cz * zz;
++  b64u64_u t = {.f = z};
++  if ((t.u & 0xfffffffull) == 0) /* boundary case */
++  {
++    /* If z and e are of same sign (resp. of different signs), we increase
++       (resp. decrease) the significant of t by 1 to avoid a double-rounding
++       issue when rounding t.f to binary32. */
++    if (z * e > 0)
++      t.u += 1;
++    else
++      t.u -= 1;
++  }
++  float res = t.f;
++#ifdef CORE_MATH_SUPPORT_ERRNO
++  if (__builtin_fabsf (res) < 0x1p-126f)
++    errno = ERANGE; // underflow
++#endif
++  return res;
++}
++
++float cr_atan2f(float y, float x){
++  static const double cn[] =
++    {0x1p+0, 0x1.40e0698f94c35p+1, 0x1.248c5da347f0dp+1, 0x1.d873386572976p-1, 0x1.46fa40b20f1dp-3,
++     0x1.33f5e041eed0fp-7, 0x1.546bbf28667c5p-14};
++  static const double cd[] =
++    {0x1p+0, 0x1.6b8b143a3f6dap+1, 0x1.8421201d18ed5p+1, 0x1.8221d086914ebp+0, 0x1.670657e3a07bap-2,
++     0x1.0f4951fd1e72dp-5, 0x1.b3874b8798286p-11};
++  static const double m[] = {0, 1};
++#define pi 0x1.921fb54442d18p+1
++#define pi2 0x1.921fb54442d18p+0
++#define pi2l 0x1.1a62633145c07p-54
++  static const double off[] = {0.0f, pi2, pi, pi2, -0.0f, -pi2, -pi, -pi2};
++  static const double offl[] = {0.0f, pi2l, 2*pi2l, pi2l, -0.0f, -pi2l, -2*pi2l, -pi2l};
++  static const double sgn[] = {1,-1};
++  b32u32_u tx = {.f = x}, ty = {.f = y};
++  uint32_t ux = tx.u, uy = ty.u, ax = ux&(~0u>>1), ay = uy&(~0u>>1);
++  if(__builtin_expect(ay >= (0xff<<23)||ax >= (0xff<<23), 0)){ // x or y is nan or inf
++    /* we use x+y below so that the invalid exception is set
++       for (x,y) = (qnan,snan) or (snan,qnan) */
++    if(ay > (0xff<<23)) return x + y; // case y nan
++    if(ax > (0xff<<23)) return x + y; // case x nan
++    uint32_t yinf = ay==(0xff<<23), xinf = ax==(0xff<<23);
++    if(yinf&xinf){
++      if(ux>>31)
++	return 0x1.2d97c7f3321d2p+1*sgn[uy>>31]; // +/-3pi/4
++      else
++	return 0x1.921fb54442d18p-1*sgn[uy>>31]; // +/-pi/4
++    }
++    if(xinf){
++      if(ux>>31)
++	return pi*sgn[uy>>31];
++      else
++	return 0.0*sgn[uy>>31];
++    }
++    if(yinf){
++      return pi2*sgn[uy>>31];
++    }
++  }
++  if(__builtin_expect(ay==0, 0)){
++    if(__builtin_expect(!ax,0)){
++      uint32_t i = (uy>>31)*4 + (ux>>31)*2;
++      if(ux>>31)
++	return off[i] + offl[i];
++      else
++	return off[i];
++    }
++    if(!(ux>>31)) return 0.0*sgn[uy>>31];
++  }
++  uint32_t gt = ay>ax, i = (uy>>31)*4 + (ux>>31)*2 + gt;
++
++  double zx = x, zy = y;
++  double z = (m[gt]*zx + m[1-gt]*zy)/(m[gt]*zy + m[1-gt]*zx);
++  // z = x/y if |y| > |x|, and z = y/x otherwise
++  double r;
++  int d = (int)ax-(int)ay;
++  if (__builtin_expect(d<(27<<23)&&d>(-(27<<23)),1)){
++    double z2 = z*z, z4 = z2*z2, z8 = z4*z4;
++    /* z2 cannot underflow, since for |y|=0x1p-149 and |x|=0x1.fffffep+127
++       we get |z| > 2^-277 thus z2 > 2^-554, but z4 and z8 might underflow,
++       which might give spurious underflow exceptions. */
++    double cn0 = cn[0] + z2*cn[1];
++    double cn2 = cn[2] + z2*cn[3];
++    double cn4 = cn[4] + z2*cn[5];
++    double cn6 = cn[6];
++    cn0 += z4*cn2;
++    cn4 += z4*cn6;
++    cn0 += z8*cn4;
++    double cd0 = cd[0] + z2*cd[1];
++    double cd2 = cd[2] + z2*cd[3];
++    double cd4 = cd[4] + z2*cd[5];
++    double cd6 = cd[6];
++    cd0 += z4*cd2;
++    cd4 += z4*cd6;
++    cd0 += z8*cd4;
++    r = cn0/cd0;
++  } else {
++    r = 1;
++  }
++  z *= sgn[gt];
++  r = z*r + off[i];
++  b64u64_u res = {.f = r};
++  if(__builtin_expect(((res.u + 8)&0xfffffff) <= 16, 0)){
++    /* check tiny y/x */
++    if (ay < ax && ((ax - ay) >> 23 >= 25))
++      return cr_atan2f_tiny (y, x);
++    double zh,zl;
++    if(!gt){
++      zh = zy/zx;
++      zl = __builtin_fma(zh,-zx,zy)/zx;
++    } else {
++      zh = zx/zy;
++      zl = __builtin_fma(zh,-zy,zx)/zy;
++    }
++    double z2l, z2h = muldd(zh,zl,zh,zl,&z2l);
++    static const double c[32][2] =
++      {{0x1p+0, -0x1.8c1dac5492248p-87}, {-0x1.5555555555555p-2, -0x1.55553bf3a2abep-56},
++       {0x1.999999999999ap-3, -0x1.99deed1ec9071p-57}, {-0x1.2492492492492p-3, -0x1.fd99c8d18269ap-58},
++       {0x1.c71c71c71c717p-4, -0x1.651eee4c4d9dp-61}, {-0x1.745d1745d1649p-4, -0x1.632683d6c44a6p-58},
++       {0x1.3b13b13b11c63p-4, 0x1.bf69c1f8af41dp-58}, {-0x1.11111110e6338p-4, 0x1.3c3e431e8bb68p-61},
++       {0x1.e1e1e1dc45c4ap-5, -0x1.be2db05c77bbfp-59}, {-0x1.af286b8164b4fp-5, 0x1.a4673491f0942p-61},
++       {0x1.86185e9ad4846p-5, 0x1.e12e32d79fceep-59}, {-0x1.642c6d5161faep-5, 0x1.3ce76c1ca03fp-59},
++       {0x1.47ad6f277e5bfp-5, -0x1.abd8d85bdb714p-60}, {-0x1.2f64a2ee8896dp-5, 0x1.ef87d4b615323p-61},
++       {0x1.1a6a2b31741b5p-5, 0x1.a5d9d973547eep-62}, {-0x1.07fbdad65e0a6p-5, -0x1.65ac07f5d35f4p-61},
++       {0x1.ee9932a9a5f8bp-6, 0x1.f8b9623f6f55ap-61}, {-0x1.ce8b5b9584dc6p-6, 0x1.fe5af96e8ea2dp-61},
++       {0x1.ac9cb288087b7p-6, -0x1.450cdfceaf5cap-60}, {-0x1.84b025351f3e6p-6, 0x1.579561b0d73dap-61},
++       {0x1.52f5b8ecdd52bp-6, 0x1.036bd2c6fba47p-60}, {-0x1.163a8c44909dcp-6, 0x1.18f735ffb9f16p-60},
++       {0x1.a400dce3eea6fp-7, -0x1.c90569c0c1b5cp-61}, {-0x1.1caa78ae6db3ap-7, -0x1.4c60f8161ea09p-61},
++       {0x1.52672453c0731p-8, 0x1.834efb598c338p-62}, {-0x1.5850c5be137cfp-9, -0x1.445fc150ca7f5p-63},
++       {0x1.23eb98d22e1cap-10, -0x1.388fbaf1d783p-64}, {-0x1.8f4e974a40741p-12, 0x1.271198a97da34p-66},
++       {0x1.a5cf2e9cf76e5p-14, -0x1.887eb4a63b665p-68}, {-0x1.420c270719e32p-16, 0x1.efd595b27888bp-71},
++       {0x1.3ba2d69b51677p-19, -0x1.4fb06829cdfc7p-73}, {-0x1.29b7e6f676385p-23, -0x1.a783b6de718fbp-77}};
++    double pl, ph = polydd(z2h, z2l, 32, c, &pl);
++    zh *= sgn[gt];
++    zl *= sgn[gt];
++    ph = muldd(zh,zl,ph,pl,&pl);
++    double sh = ph + off[i], sl = ((off[i] - sh) + ph) + pl + offl[i];
++    float rf = sh;
++    double th = rf, dh = sh - th, tm = dh + sl;
++    b64u64_u tth = {.f = th};
++    if(th + th*0x1p-60 == th - th*0x1p-60){
++      tth.u &= (uint64_t) 0x7ff<<52;
++      tth.u -= (uint64_t) 24<<52;
++      if(__builtin_fabs(tm)>tth.f)
++	tm *= 1.25;
++      else
++	tm *= 0.75;
++    }
++    r = th + tm;
++  }
++  float rf = r;
++#ifdef CORE_MATH_SUPPORT_ERRNO
++  // if rf underflows, set errno=ERANGE
++  if (__builtin_expect (__builtin_fabsf (rf) < 0x1p-126f, 0))
++    errno = ERANGE; // underflow
++#endif
++  return rf;
++}
+diff --git a/src/common/core-math/core_math.h b/src/common/core-math/core_math.h
+new file mode 100644
+index 00000000..55e2a024
+--- /dev/null
++++ b/src/common/core-math/core_math.h
+@@ -0,0 +1,13 @@
++#pragma once
++
++// Correctly rounded binary32 functions from CORE-MATH (MIT, see the .c files), so every platform and the
++// Rust port compute the same game state.
++#ifdef __cplusplus
++extern "C" {
++#endif
++float cr_sinf(float x);
++float cr_cosf(float x);
++float cr_atan2f(float y, float x);
++#ifdef __cplusplus
++}
++#endif
+diff --git a/src/common/core-math/cosf.c b/src/common/core-math/cosf.c
+new file mode 100644
+index 00000000..40a7db5f
+--- /dev/null
++++ b/src/common/core-math/cosf.c
+@@ -0,0 +1,208 @@
++/* Correctly-rounded cosine of binary32 value.
++
++Copyright (c) 2022-2023 Alexei Sibidanov.
++
++This file is part of the CORE-MATH project
++(https://core-math.gitlabpages.inria.fr/).
++
++Permission is hereby granted, free of charge, to any person obtaining a copy
++of this software and associated documentation files (the "Software"), to deal
++in the Software without restriction, including without limitation the rights
++to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++copies of the Software, and to permit persons to whom the Software is
++furnished to do so, subject to the following conditions:
++
++The above copyright notice and this permission notice shall be included in all
++copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++SOFTWARE.
++*/
++
++#include <stdint.h>
++#ifdef CORE_MATH_SUPPORT_ERRNO
++#include <errno.h>
++#endif
++
++// Warning: clang also defines __GNUC__
++#if defined(__GNUC__) && !defined(__clang__)
++#pragma GCC diagnostic ignored "-Wunknown-pragmas"
++#endif
++
++#pragma STDC FENV_ACCESS ON
++
++/* __builtin_roundeven was introduced in gcc 10:
++   https://gcc.gnu.org/gcc-10/changes.html,
++   and in clang 17 */
++#if ((defined(__GNUC__) && __GNUC__ >= 10) || (defined(__clang__) && __clang_major__ >= 17)) && !defined(_MSC_VER) && (defined(__aarch64__) || defined(__x86_64__) || defined(__i386__))
++# define roundeven_finite(x) __builtin_roundeven (x)
++#else
++/* round x to nearest integer, breaking ties to even */
++static double
++roundeven_finite (double x)
++{
++  double ix;
++# if (defined(__GNUC__) || defined(__clang__)) && (defined(__AVX__) || defined(__SSE4_1__) || (__ARM_ARCH >= 8))
++#  if defined __AVX__
++   __asm__("vroundsd $0x8,%1,%1,%0":"=x"(ix):"x"(x));
++#  elif __ARM_ARCH >= 8
++   __asm__ ("frintn %d0, %d1":"=w"(ix):"w"(x));
++#  else /* __SSE4_1__ */
++   __asm__("roundsd $0x8,%1,%0":"=x"(ix):"x"(x));
++#  endif
++# else
++  ix = __builtin_round (x); /* nearest, away from 0 */
++  if (__builtin_fabs (ix - x) == 0.5)
++  {
++    /* if ix is odd, we should return ix-1 if x>0, and ix+1 if x<0 */
++    union { double f; uint64_t n; } u, v;
++    u.f = ix;
++    v.f = ix - __builtin_copysign (1.0, x);
++    /* Warning: v.n is 0 when x=0.5; while u.n cannot be zero since ix
++       is rounded away from zero. */
++    if (v.n == 0 || __builtin_ctzll (v.n) > __builtin_ctzll (u.n))
++      ix = v.f;
++  }
++# endif
++  return ix;
++}
++#endif
++
++typedef union {float f; uint32_t u;} b32u32_u;
++typedef union {double f; uint64_t u;} b64u64_u;
++#if (defined(__clang__) && __clang_major__ >= 14) || (defined(__GNUC__) && __GNUC__ >= 14 && __BITINT_MAXWIDTH__ && __BITINT_MAXWIDTH__ >= 128)
++typedef unsigned _BitInt(128) u128;
++#else
++typedef unsigned __int128 u128;
++#endif
++typedef uint64_t u64;
++
++static double __attribute__((noinline)) rbig(uint32_t u, int *q){
++  static const u64 ipi[] = {0xfe5163abdebbc562, 0xdb6295993c439041, 0xfc2757d1f534ddc0, 0xa2f9836e4e441529};
++  int e = (u>>23)&0xff, i;
++  u64 m = (u&(~0u>>9))|1<<23;
++  u128 p0 = (u128)m*ipi[0];
++  u128 p1 = (u128)m*ipi[1]; p1 += p0>>64;
++  u128 p2 = (u128)m*ipi[2]; p2 += p1>>64;
++  u128 p3 = (u128)m*ipi[3]; p3 += p2>>64;
++  u64 p3h = p3>>64, p3l = p3, p2l = p2, p1l = p1;
++  int64_t a;
++  int k = e-124, s = k-23;
++  /* in cr_cosf(), rbig() is called in the case 127+28 <= e < 0xff
++     thus 155 <= e <= 254, which yields 28 <= k <= 127 and 5 <= s <= 104 */
++  if (s<64) {
++    i = p3h<<s|p3l>>(64-s);
++    a = p3l<<s|p2l>>(64-s);
++  } else if(s==64) {
++    i = p3l;
++    a = p2l;
++  } else { /* s > 64 */
++    i = p3l<<(s-64)|p2l>>(128-s);
++    a = p2l<<(s-64)|p1l>>(128-s);
++  }
++  int sgn = u; sgn >>= 31;
++  int64_t sm = a>>63;
++  i -= sm;
++  double z = (a^sgn)*0x1p-64;
++  i = (i^sgn) - sgn;
++  *q = i;
++  return z;
++}
++
++static inline double rltl(float z, int *q){
++  double x = z;
++  double idl = -0x1.b1bbead603d8bp-29*x, idh = 0x1.45f306ep+2*x, id = roundeven_finite(idh);
++  b64u64_u Q = {.f = 0x1.8p52 + id}; *q = Q.u;
++  return (idh - id) + idl;
++}
++
++static inline double rltl0(double x, int *q){
++  double idh = 0x1.45f306dc9c883p+2*x, id = roundeven_finite(idh);
++  b64u64_u Q = {.f = 0x1.8p52 + id}; *q = Q.u;
++  return idh - id;
++}
++
++static float __attribute__((noinline)) as_cosf_database(float x, double r){
++  static const struct {union{float arg; uint32_t uarg;}; float rh, rl;} st[] = {
++    {{0x1.2d97c8p+2}, 0x1.99bc5cp-27, -0x1p-52},
++    {{0x1.4555p+51}, 0x1.115d7ep-1, -0x1p-26},
++    {{0x1.48a858p+54}, 0x1.f48148p-2, 0x1p-27},
++    {{0x1.3170fp+63}, 0x1.fe2976p-1, 0x1p-26},
++    {{0x1.2b9622p+67}, 0x1.f0285ep-1, -0x1p-26},
++  };
++  b32u32_u t = {.f = x};
++  uint32_t ax = t.u&(~0u>>1);
++  for(unsigned i=0; i<sizeof(st)/sizeof(st[0]); i++)
++    if(__builtin_expect(st[i].uarg == ax, 0)) return st[i].rh + st[i].rl;
++  return r;
++}
++
++static const double b[] =
++  {0x1.3bd3cc9be45dcp-6, -0x1.03c1f081b0833p-14, 0x1.55d3c6fc9ac1fp-24, -0x1.e1d3ff281b40dp-35};
++static const double a[] =
++  {0x1.921fb54442d17p-3, -0x1.4abbce6256a39p-10, 0x1.466bc5a518c16p-19, -0x1.32bdc61074ff6p-29};
++static const double tb[] =
++  {0x1p+0, 0x1.f6297cff75cbp-1, 0x1.d906bcf328d46p-1, 0x1.a9b66290ea1a3p-1,
++   0x1.6a09e667f3bcdp-1, 0x1.1c73b39ae68c8p-1, 0x1.87de2a6aea963p-2, 0x1.8f8b83c69a60bp-3,
++   0x0p+0, -0x1.8f8b83c69a60bp-3, -0x1.87de2a6aea963p-2, -0x1.1c73b39ae68c8p-1,
++   -0x1.6a09e667f3bcdp-1, -0x1.a9b66290ea1a3p-1, -0x1.d906bcf328d46p-1, -0x1.f6297cff75cbp-1,
++   -0x1p+0, -0x1.f6297cff75cbp-1, -0x1.d906bcf328d46p-1, -0x1.a9b66290ea1a3p-1,
++   -0x1.6a09e667f3bcdp-1, -0x1.1c73b39ae68c8p-1, -0x1.87de2a6aea963p-2, -0x1.8f8b83c69a60bp-3,
++   0x0p+0, 0x1.8f8b83c69a60bp-3, 0x1.87de2a6aea963p-2, 0x1.1c73b39ae68c8p-1,
++   0x1.6a09e667f3bcdp-1, 0x1.a9b66290ea1a3p-1, 0x1.d906bcf328d46p-1, 0x1.f6297cff75cbp-1};
++
++static float __attribute__((noinline)) as_cosf_big(float x){
++  b32u32_u t = {.f = x};
++  uint32_t ax = t.u<<1;
++  if(__builtin_expect(ax>=0xffu<<24, 0)){ // nan or +-inf
++    if(ax<<8) return x + x; // nan
++#ifdef CORE_MATH_SUPPORT_ERRNO
++    errno = EDOM;
++#endif
++    return 0.0f/0.0f; // to raise FE_INVALID
++  }
++  int ia;
++  double z = rbig(t.u, &ia);
++  double z2 = z*z, z4 = z2*z2;
++  double aa = (a[0] + z2*a[1]) + z4*(a[2] + z2*a[3]);
++  double bb = (b[0] + z2*b[1]) + z4*(b[2] + z2*b[3]);
++  double s0 = tb[(ia+8u)&31], c0 = tb[ia&31];
++  double r = c0 + z*(aa*s0 - bb*(z*c0));
++  b64u64_u tr = {.f = r}; u64 tail = (tr.u + 6)&(~(u64)0>>36);
++  if(__builtin_expect(tail<=12, 0)) return as_cosf_database(x, r);
++  return r;
++}
++
++float cr_cosf(float x){
++  b32u32_u t = {.f = x};
++  uint32_t ax = t.u<<1;
++  int ia;
++  double z0 = x, z;
++  if (__builtin_expect(ax>0x99000000u || ax<0x74000000u, 0)){
++    // |x| > 0x1p+26 or |x| < 0x1p-11
++    if (ax<0x74000000u) // |x| < 0x1p-11
++      /* For |x| < 2^-11, cos(x) rounds to the same value as 1-x^2/2
++         for all rounding modes. However, __builtin_fmaf (x/2, -x, 1.0f)
++         would raise a spurious underflow for x/2, which the following
++         formula avoids. */
++      return 0.5f * __builtin_fmaf (x, -x, 2.0f);
++    return as_cosf_big(x); // |x| > 0x1p+26
++  }
++  if(__builtin_expect(ax<0x82a41896u, 1)){
++    if(__builtin_expect(ax==0x812d97c8u, 0)) return as_cosf_database(x, 0.0);
++    z = rltl0(z0, &ia);
++  } else {
++    z = rltl(z0, &ia);
++  }
++  double z2 = z*z, z4 = z2*z2;
++  double aa = (a[0] + z2*a[1]) + z4*(a[2] + z2*a[3]);
++  double bb = (b[0] + z2*b[1]) + z4*(b[2] + z2*b[3]);
++  double c0 = tb[ia&31], s0 = tb[(ia+8)&31];
++  double r = c0 + aa*(z*s0) - bb*(z2*c0);
++  return r;
++}
+diff --git a/src/common/core-math/sinf.c b/src/common/core-math/sinf.c
+new file mode 100644
+index 00000000..1f8f1445
+--- /dev/null
++++ b/src/common/core-math/sinf.c
+@@ -0,0 +1,224 @@
++/* Correctly-rounded sine of binary32 value.
++
++Copyright (c) 2022-2025 Alexei Sibidanov.
++
++This file is part of the CORE-MATH project
++(https://core-math.gitlabpages.inria.fr/).
++
++Permission is hereby granted, free of charge, to any person obtaining a copy
++of this software and associated documentation files (the "Software"), to deal
++in the Software without restriction, including without limitation the rights
++to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++copies of the Software, and to permit persons to whom the Software is
++furnished to do so, subject to the following conditions:
++
++The above copyright notice and this permission notice shall be included in all
++copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++SOFTWARE.
++*/
++
++#include <stdint.h>
++#ifdef CORE_MATH_SUPPORT_ERRNO
++#include <errno.h>
++#endif
++
++// Warning: clang also defines __GNUC__
++#if defined(__GNUC__) && !defined(__clang__)
++#pragma GCC diagnostic ignored "-Wunknown-pragmas"
++#endif
++
++#pragma STDC FENV_ACCESS ON
++
++/* __builtin_roundeven was introduced in gcc 10:
++   https://gcc.gnu.org/gcc-10/changes.html,
++   and in clang 17 */
++#if ((defined(__GNUC__) && __GNUC__ >= 10) || (defined(__clang__) && __clang_major__ >= 17)) && !defined(_MSC_VER) && (defined(__aarch64__) || defined(__x86_64__) || defined(__i386__))
++# define roundeven_finite(x) __builtin_roundeven (x)
++#else
++/* round x to nearest integer, breaking ties to even */
++static double
++roundeven_finite (double x)
++{
++  double ix;
++# if (defined(__GNUC__) || defined(__clang__)) && (defined(__AVX__) || defined(__SSE4_1__) || (__ARM_ARCH >= 8))
++#  if defined __AVX__
++   __asm__("vroundsd $0x8,%1,%1,%0":"=x"(ix):"x"(x));
++#  elif __ARM_ARCH >= 8
++   __asm__ ("frintn %d0, %d1":"=w"(ix):"w"(x));
++#  else /* __SSE4_1__ */
++   __asm__("roundsd $0x8,%1,%0":"=x"(ix):"x"(x));
++#  endif
++# else
++  ix = __builtin_round (x); /* nearest, away from 0 */
++  if (__builtin_fabs (ix - x) == 0.5)
++  {
++    /* if ix is odd, we should return ix-1 if x>0, and ix+1 if x<0 */
++    union { double f; uint64_t n; } u, v;
++    u.f = ix;
++    v.f = ix - __builtin_copysign (1.0, x);
++    /* Warning: v.n is 0 when x=0.5; while u.n cannot be zero since ix
++       is rounded away from zero. */
++    if (v.n == 0 || __builtin_ctzll (v.n) > __builtin_ctzll (u.n))
++      ix = v.f;
++  }
++# endif
++  return ix;
++}
++#endif
++
++typedef union {float f; uint32_t u;} b32u32_u;
++typedef union {double f; uint64_t u;} b64u64_u;
++#if (defined(__clang__) && __clang_major__ >= 14) || (defined(__GNUC__) && __GNUC__ >= 14 && __BITINT_MAXWIDTH__ && __BITINT_MAXWIDTH__ >= 128)
++typedef unsigned _BitInt(128) u128;
++#else
++typedef unsigned __int128 u128;
++#endif
++typedef uint64_t u64;
++
++static double __attribute__((noinline)) rbig(uint32_t u, int *q){
++  static const u64 ipi[] = {0xfe5163abdebbc562, 0xdb6295993c439041, 0xfc2757d1f534ddc0, 0xa2f9836e4e441529};
++  int e = (u>>23)&0xff, i;
++  u64 m = (u&(~0u>>9))|1<<23;
++  u128 p0 = (u128)m*ipi[0];
++  u128 p1 = (u128)m*ipi[1]; p1 += p0>>64;
++  u128 p2 = (u128)m*ipi[2]; p2 += p1>>64;
++  u128 p3 = (u128)m*ipi[3]; p3 += p2>>64;
++  u64 p3h = p3>>64, p3l = p3, p2l = p2, p1l = p1;
++  int64_t a;
++  int k = e-124, s = k-23;
++  /* in cr_sinf(), rbig() is called in the case 127+28 <= e < 0xff
++     thus 155 <= e <= 254, which yields 28 <= k <= 127 and 5 <= s <= 104 */
++  if (s<64) {
++    i = p3h<<s|p3l>>(64-s);
++    a = p3l<<s|p2l>>(64-s);
++  } else if(s==64) {
++    i = p3l;
++    a = p2l;
++  } else { /* s > 64 */
++    i = p3l<<(s-64)|p2l>>(128-s);
++    a = p2l<<(s-64)|p1l>>(128-s);
++  }
++  int sgn = u; sgn >>= 31;
++  int64_t sm = a>>63;
++  i -= sm;
++  double z = (a^sgn)*0x1p-64;
++  i = (i^sgn) - sgn;
++  *q = i;
++  return z;
++}
++
++static inline double rltl(float z, int *q){
++  double x = z;
++  double idl = -0x1.b1bbead603d8bp-29*x, idh = 0x1.45f306ep+2*x, id = roundeven_finite(idh);
++  b64u64_u Q = {.f = 0x1.8p52 + id}; *q = Q.u;
++  return (idh - id) + idl;
++}
++
++static inline double rltl0(double x, int *q){
++  double idh = 0x1.45f306dc9c883p+2*x, id = roundeven_finite(idh);
++  b64u64_u Q = {.f = 0x1.8p52 + id}; *q = Q.u;
++  return idh - id;
++}
++
++static inline float add_sign(float x, float rh, float rl){
++  float sgn = __builtin_copysignf(1.0f, x);
++  return sgn*rh + sgn*rl;
++}
++
++static float __attribute__((noinline)) as_sinf_database(float x, double r){
++  static const struct {union{float arg; uint32_t uarg;}; float rh, rl;} st[] = {
++    {{0x1.33333p+13}, -0x1.63f4bap-2, -0x1p-27},
++    {{0x1.75b8a2p-1}, 0x1.55688ap-1, -0x1p-26},
++    {{0x1.4f0654p+0}, 0x1.ee836cp-1, -0x1p-26},
++    {{0x1.2d97c8p+3}, -0x1.99bc5ap-26, -0x1p-51},
++  };
++  b32u32_u t = {.f = x};
++  uint32_t ax = t.u&(~0u>>1);
++  for(unsigned i=0;i<sizeof(st)/sizeof(st[0]);i++)
++    if(__builtin_expect(st[i].uarg == ax, 0)) return add_sign(x, st[i].rh, st[i].rl);
++  return r;
++}
++
++static const double b[] =
++  {0x1.3bd3cc9be45dcp-6, -0x1.03c1f081b0833p-14, 0x1.55d3c6fc9ac1fp-24, -0x1.e1d3ff281b40dp-35};
++static const double a[] =
++  {0x1.921fb54442d17p-3, -0x1.4abbce6256a39p-10, 0x1.466bc5a518c16p-19, -0x1.32bdc61074ff6p-29};
++static const double tb[] =
++  {0x0p+0, 0x1.8f8b83c69a60bp-3, 0x1.87de2a6aea963p-2, 0x1.1c73b39ae68c8p-1,
++   0x1.6a09e667f3bcdp-1, 0x1.a9b66290ea1a3p-1, 0x1.d906bcf328d46p-1, 0x1.f6297cff75cbp-1,
++   0x1p+0, 0x1.f6297cff75cbp-1, 0x1.d906bcf328d46p-1, 0x1.a9b66290ea1a3p-1,
++   0x1.6a09e667f3bcdp-1, 0x1.1c73b39ae68c8p-1, 0x1.87de2a6aea963p-2, 0x1.8f8b83c69a60bp-3,
++   0x0p+0, -0x1.8f8b83c69a60bp-3, -0x1.87de2a6aea963p-2, -0x1.1c73b39ae68c8p-1,
++   -0x1.6a09e667f3bcdp-1, -0x1.a9b66290ea1a3p-1, -0x1.d906bcf328d46p-1, -0x1.f6297cff75cbp-1,
++   -0x1p+0, -0x1.f6297cff75cbp-1, -0x1.d906bcf328d46p-1, -0x1.a9b66290ea1a3p-1,
++   -0x1.6a09e667f3bcdp-1, -0x1.1c73b39ae68c8p-1, -0x1.87de2a6aea963p-2, -0x1.8f8b83c69a60bp-3};
++
++static float __attribute__((noinline)) as_sinf_big(float x){
++  b32u32_u t = {.f = x};
++  uint32_t ax = t.u<<1;
++  if(__builtin_expect(ax>=0xffu<<24, 0)){ // nan or +-inf
++    if(ax<<8) return x + x; // nan
++#ifdef CORE_MATH_SUPPORT_ERRNO
++    errno = EDOM;
++#endif
++    return 0.0f/0.0f; // to raise FE_INVALID
++  }
++  int ia;
++  double z = rbig(t.u, &ia);
++  double z2 = z*z, z4 = z2*z2;
++  double aa = (a[0] + z2*a[1]) + z4*(a[2] + z2*a[3]);
++  double bb = (b[0] + z2*b[1]) + z4*(b[2] + z2*b[3]);
++  double s0 = tb[ia&31], c0 = tb[(ia+8u)&31];
++  double r = s0 + z*(aa*c0 - bb*(z*s0));
++  return r;
++}
++
++float cr_sinf(float x){
++  b32u32_u t = {.f = x};
++  uint32_t ax = t.u<<1;
++  int ia;
++  double z0 = x, z;
++  if (__builtin_expect(ax>0x99000000u || ax<0x73000000u, 0)){
++    // |x| > 0x1p+26 or |x| < 0x1p-12
++    if (__builtin_expect(ax<0x73000000u, 1)){ // |x| < 0x1p-12
++      if (__builtin_expect(ax<0x66000000u, 0)){ // |x| < 0x1p-25
++	if (__builtin_expect(ax==0u, 0))
++	  return x;
++        float res = __builtin_fmaf(-x, __builtin_fabsf(x), x);
++#ifdef CORE_MATH_SUPPORT_ERRNO
++        /* The Taylor expansion of sin(x) at x=0 is x - x^3/6 + o(x^3).
++           For |x| > 2^-126 we have no underflow, whatever the rounding mode.
++           For |x| < 2^-126, since |sin(x)| < |x|, we always have underflow.
++           For |x| = 2^-126, we have underflow for rounding towards zero,
++           i.e., when sin(x) rounds to nextbelow(2^-126).
++           In summary, we have underflow whenever |x|<2^-126 or |res|<2^-126. */
++        if (__builtin_fabsf (x) < 0x1p-126f || __builtin_fabsf (res) < 0x1p-126f)
++          errno = ERANGE; // underflow
++#endif
++        return res;
++      }
++      return (-0x1.555556p-3f*x)*(x*x) + x;
++    }
++    return as_sinf_big(x);
++  }
++  if(__builtin_expect(ax<0x822d97c8u, 1)){
++    if (__builtin_expect(ax==0x7e75b8a2u||ax==0x7f4f0654u, 0)) return as_sinf_database(x,0.0);
++    z = rltl0(z0, &ia);
++  } else {
++    if (__builtin_expect(ax==0x8c333330u, 0)) return as_sinf_database(x,0.0);
++    z = rltl(z0, &ia);
++  }
++  double z2 = z*z, z4 = z2*z2;
++  double aa = (a[0] + z2*a[1]) + z4*(a[2] + z2*a[3]);
++  double bb = (b[0] + z2*b[1]) + z4*(b[2] + z2*b[3]);
++  double s0 = tb[ia&31], c0 = tb[(ia+8)&31];
++  double r = s0 + aa*(z*c0) - bb*(z2*s0);
++  return r;
++}
+diff --git a/src/common/eyecandy.cpp b/src/common/eyecandy.cpp
+index 52c1266f..11effec6 100644
+--- a/src/common/eyecandy.cpp
++++ b/src/common/eyecandy.cpp
+@@ -6,6 +6,7 @@
+ #include "map.h"
+ #include "RandomNumberGenerator.h"
+ #include "ResourceManager.h"
++#include "core-math/core_math.h"
+ 
+ #include <algorithm>
+ #include <cmath>
+@@ -718,8 +719,8 @@ void EC_SwirlingAward::update()
+     radius += 3.0f;
+ 
+     if (++timer > ttl) {
+-        short awardx = x + (short)(radius * cos(angle)) + (w >> 1) - 16;
+-        short awardy = y + (short)(radius * sin(angle)) + (h >> 1) - 16;
++        short awardx = x + (short)(radius * cr_cosf(angle)) + (w >> 1) - 16;
++        short awardy = y + (short)(radius * cr_sinf(angle)) + (h >> 1) - 16;
+         eyecandy[2].emplace<EC_SingleAnimation>(&rm->spr_fireballexplosion, awardx, awardy, 3, 8);
+ 
+         dead = true;
+@@ -737,8 +738,8 @@ void EC_SwirlingAward::update()
+ 
+ void EC_SwirlingAward::draw() const
+ {
+-    short awardx = x + (short)(radius * cos(angle));
+-    short awardy = y + (short)(radius * sin(angle));
++    short awardx = x + (short)(radius * cr_cosf(angle));
++    short awardy = y + (short)(radius * cr_sinf(angle));
+ 
+     spr->draw(awardx, awardy, {iAnimationFrame, iSrcY, w, h});
+ }
+@@ -893,8 +894,8 @@ void EC_SoulsAward::update()
+         float startangle = -HALF_PI;
+ 
+         float angle = (float)(RANDOM_INT(21) - 10) * addangle + startangle;
+-        float velx = speed * cos(angle);
+-        float vely = speed * sin(angle);
++        float velx = speed * cr_cosf(angle);
++        float vely = speed * cr_sinf(angle);
+ 
+         eyecandy[2].emplace<EC_RocketAward>(&rm->spr_awardsouls, x - 8, y - 8, velx, vely, ttl, id[count], 0, 16, 16);
+ 
 diff --git a/src/common/gfx.cpp b/src/common/gfx.cpp
 index 30683d77..cba743fb 100644
 --- a/src/common/gfx.cpp
@@ -130,6 +945,106 @@ index 4533b07c..b425faee 100644
  
      if (alpha) {
          if (SDL_SetSurfaceBlendMode(img.get(), SDL_BLENDMODE_BLEND) < 0) {
+diff --git a/src/common/map.cpp b/src/common/map.cpp
+index e2d6b705..699830e4 100644
+--- a/src/common/map.cpp
++++ b/src/common/map.cpp
+@@ -15,6 +15,7 @@
+ #include "map/MapReader.h"
+ 
+ #include "SDL_image.h"
++#include "core-math/core_math.h"
+ 
+ #include <cmath>
+ #include <iostream>
+@@ -129,8 +130,8 @@ void DrawMapHazard(const MapHazard& hazard, short iSize, bool fDrawCenter, SDL_S
+         float dRadius = (float)((hazard.iparam[0] - 1) * 24) / (float)(1 << iSize) + (iPlatformPathDotSize[iSize] >> 1);
+         float dAngle = hazard.dparam[1];
+         for (short iDot = 0; iDot < iNumDots; iDot++) {
+-            rDotDst.x = (short)(dRadius * cos(dAngle)) + rPathDst.x + (iTileSize >> 1) - (iPlatformPathDotSize[iSize] >> 1);
+-            rDotDst.y = (short)(dRadius * sin(dAngle)) + rPathDst.y + (iTileSize >> 1) - (iPlatformPathDotSize[iSize] >> 1);
++            rDotDst.x = (short)(dRadius * cr_cosf(dAngle)) + rPathDst.x + (iTileSize >> 1) - (iPlatformPathDotSize[iSize] >> 1);
++            rDotDst.y = (short)(dRadius * cr_sinf(dAngle)) + rPathDst.y + (iTileSize >> 1) - (iPlatformPathDotSize[iSize] >> 1);
+             rDotDst.h = rDotDst.w = iPlatformPathDotSize[iSize];
+ 
+             rm->spr_platformpath.draw(rDotDst.x, rDotDst.y, {rDotSrc.x, rDotSrc.y, rDotDst.w, rDotDst.h});
+@@ -139,8 +140,8 @@ void DrawMapHazard(const MapHazard& hazard, short iSize, bool fDrawCenter, SDL_S
+ 
+         //Draw the fireball string
+         for (short iFireball = 0; iFireball < hazard.iparam[0]; iFireball++) {
+-            short x = (hazard.ix << (iSizeShift - 1)) + (short)((float)(iFireball * (24 >> iSize)) * cos(hazard.dparam[1])) + (iTileSize >> 1) - (iFireballHazardSize[iSize] >> 1);
+-            short y = (hazard.iy << (iSizeShift - 1)) + (short)((float)(iFireball * (24 >> iSize)) * sin(hazard.dparam[1])) + (iTileSize >> 1) - (iFireballHazardSize[iSize] >> 1);
++            short x = (hazard.ix << (iSizeShift - 1)) + (short)((float)(iFireball * (24 >> iSize)) * cr_cosf(hazard.dparam[1])) + (iTileSize >> 1) - (iFireballHazardSize[iSize] >> 1);
++            short y = (hazard.iy << (iSizeShift - 1)) + (short)((float)(iFireball * (24 >> iSize)) * cr_sinf(hazard.dparam[1])) + (iTileSize >> 1) - (iFireballHazardSize[iSize] >> 1);
+ 
+             rm->spr_hazard_fireball[iSize].draw(x, y, {0, 0, iFireballHazardSize[iSize], iFireballHazardSize[iSize]});
+         }
+@@ -149,8 +150,8 @@ void DrawMapHazard(const MapHazard& hazard, short iSize, bool fDrawCenter, SDL_S
+         float dRadius = (hazard.dparam[2] + (iTileSize >> 1) - (iPlatformPathDotSize[iSize] >> 1)) / (float)(1 << iSize);
+         float dAngle = hazard.dparam[1];
+         for (short iDot = 0; iDot < iNumDots; iDot++) {
+-            rDotDst.x = (short)(dRadius * cos(dAngle)) + rPathDst.x + (iTileSize >> 1) - (iPlatformPathDotSize[iSize] >> 1);
+-            rDotDst.y = (short)(dRadius * sin(dAngle)) + rPathDst.y + (iTileSize >> 1) - (iPlatformPathDotSize[iSize] >> 1);
++            rDotDst.x = (short)(dRadius * cr_cosf(dAngle)) + rPathDst.x + (iTileSize >> 1) - (iPlatformPathDotSize[iSize] >> 1);
++            rDotDst.y = (short)(dRadius * cr_sinf(dAngle)) + rPathDst.y + (iTileSize >> 1) - (iPlatformPathDotSize[iSize] >> 1);
+             rDotDst.h = rDotDst.w = iPlatformPathDotSize[iSize];
+ 
+             rm->spr_platformpath.draw(rDotDst.x, rDotDst.y, {rDotSrc.x, rDotSrc.y, rDotDst.w, rDotDst.h});
+@@ -162,8 +163,8 @@ void DrawMapHazard(const MapHazard& hazard, short iSize, bool fDrawCenter, SDL_S
+         dAngle = hazard.dparam[1];
+         dRadius = hazard.dparam[2] / (float)(1 << iSize);
+         for (short iRotodisc = 0; iRotodisc < hazard.iparam[0]; iRotodisc++) {
+-            short x = rPathDst.x + (short)(dRadius * cos(dAngle));
+-            short y = rPathDst.y + (short)(dRadius * sin(dAngle));
++            short x = rPathDst.x + (short)(dRadius * cr_cosf(dAngle));
++            short y = rPathDst.y + (short)(dRadius * cr_sinf(dAngle));
+ 
+             rm->spr_hazard_rotodisc[iSize].draw(x, y, {0, 0, iTileSize, iTileSize});
+ 
+@@ -247,8 +248,8 @@ void DrawPlatform(
+                 int iDstY = 0;
+ 
+                 if (pathtype == PlatformPathType::Ellipse) {
+-                    iDstX = iStartX + (iPlatformX << iSizeShift) + (short)(fRadiusX * cos(angle)) - (iPlatformWidth << (iSizeShift - 1));
+-                    iDstY = iStartY + (iPlatformY << iSizeShift) + (short)(fRadiusY * sin(angle)) - (iPlatformHeight << (iSizeShift - 1));
++                    iDstX = iStartX + (iPlatformX << iSizeShift) + (short)(fRadiusX * cr_cosf(angle)) - (iPlatformWidth << (iSizeShift - 1));
++                    iDstY = iStartY + (iPlatformY << iSizeShift) + (short)(fRadiusY * cr_sinf(angle)) - (iPlatformHeight << (iSizeShift - 1));
+                 } else {
+                     iDstX = iStartX + (iPlatformX << iSizeShift) - (iPlatformWidth << (iSizeShift - 1));
+                     iDstY = iStartY + (iPlatformY << iSizeShift) - (iPlatformHeight << (iSizeShift - 1));
+@@ -346,8 +347,8 @@ void DrawPlatform(
+             }
+         }
+ 
+-        float dIncrementX = (float)iTileSize * cos(angle);
+-        float dIncrementY = (float)iTileSize * sin(angle);
++        float dIncrementX = (float)iTileSize * cr_cosf(angle);
++        float dIncrementY = (float)iTileSize * cr_sinf(angle);
+ 
+         float dX = (float)(iStartX) - (float)(iPlatformPathDotSize[iSize] >> 1);
+         float dY = (float)(iStartY) - (float)(iPlatformPathDotSize[iSize] >> 1);
+@@ -386,8 +387,8 @@ void DrawPlatform(
+     } else if (pathtype == PlatformPathType::Ellipse) {
+         //Calculate the starting position
+         if (fDrawShadow) {
+-            short iEllipseStartX = (short)(fRadiusX * cos(angle)) - (iPlatformWidth << (iSizeShift - 1)) + iStartX;
+-            short iEllipseStartY = (short)(fRadiusY * sin(angle)) - (iPlatformHeight << (iSizeShift - 1)) + iStartY;
++            short iEllipseStartX = (short)(fRadiusX * cr_cosf(angle)) - (iPlatformWidth << (iSizeShift - 1)) + iStartX;
++            short iEllipseStartY = (short)(fRadiusY * cr_sinf(angle)) - (iPlatformHeight << (iSizeShift - 1)) + iStartY;
+ 
+             for (short iCol = 0; iCol < iPlatformWidth; iCol++) {
+                 for (short iRow = 0; iRow < iPlatformHeight; iRow++) {
+@@ -399,8 +400,8 @@ void DrawPlatform(
+ 
+         float fAngle = angle;
+         for (short iSpot = 0; iSpot < 32; iSpot++) {
+-            short iX = (short)(fRadiusX * cos(fAngle)) - (iPlatformPathDotSize[iSize] >> 1) + iStartX;
+-            short iY = (short)(fRadiusY * sin(fAngle)) - (iPlatformPathDotSize[iSize] >> 1) + iStartY;
++            short iX = (short)(fRadiusX * cr_cosf(fAngle)) - (iPlatformPathDotSize[iSize] >> 1) + iStartX;
++            short iY = (short)(fRadiusY * cr_sinf(fAngle)) - (iPlatformPathDotSize[iSize] >> 1) + iStartY;
+ 
+             rPathDst = {iX, iY, iPlatformPathDotSize[iSize], iPlatformPathDotSize[iSize]};
+             rm->spr_platformpath.draw(rPathSrc, dst, rPathDst);
 diff --git a/src/common/sfx.cpp b/src/common/sfx.cpp
 index ef232b67..fe53636c 100644
 --- a/src/common/sfx.cpp
@@ -444,6 +1359,29 @@ index ffa6d6a9..0a2b4a98 100644
 +    std::string m_name;
      bool m_paused = false;
  };
+diff --git a/src/common/ui/MI_Image.cpp b/src/common/ui/MI_Image.cpp
+index a4fe5983..bb5747aa 100644
+--- a/src/common/ui/MI_Image.cpp
++++ b/src/common/ui/MI_Image.cpp
+@@ -1,6 +1,7 @@
+ #include "MI_Image.h"
+ 
+ #include "gfx.h"
++#include "core-math/core_math.h"
+ 
+ #include <cmath>
+ 
+@@ -88,8 +89,8 @@ void MI_Image::Draw()
+     short iYOffset = 0;
+ 
+     if (fSwirl) {
+-        iXOffset = (short)(dSwirlRadius * cos(dSwirlAngle));
+-        iYOffset = (short)(dSwirlRadius * sin(dSwirlAngle));
++        iXOffset = (short)(dSwirlRadius * cr_cosf(dSwirlAngle));
++        iYOffset = (short)(dSwirlRadius * cr_sinf(dSwirlAngle));
+     }
+ 
+     const SDL_Rect srcRect {iXFrame, iYFrame, iw, ih};
 diff --git a/src/common/uimenu.cpp b/src/common/uimenu.cpp
 index 6bd231c3..ee2715f3 100644
 --- a/src/common/uimenu.cpp
@@ -508,6 +1446,32 @@ index 9b065afa..edc52d86 100644
 +
      //Sleep for time just under what we need
      short delay = (short)(game_values.framelimiter - SDL_GetTicks() + framestart - 2);
+ 
+diff --git a/src/smw/GSGameplay.cpp b/src/smw/GSGameplay.cpp
+index 5413c8b2..8c41433c 100644
+--- a/src/smw/GSGameplay.cpp
++++ b/src/smw/GSGameplay.cpp
+@@ -59,6 +59,7 @@
+ #include "objects/powerup/PU_StarPowerup.h"
+ #include "objects/powerup/PU_Tanooki.h"
+ #include "objects/walkingenemy/WalkingEnemy.h"
++#include "core-math/core_math.h"
+ 
+ #include <algorithm>
+ #include <cmath>
+@@ -779,11 +780,11 @@ void GameplayState::spinScreen()
+         spinangle += TWO_PI;
+     }
+ 
+-    float shakey = spinspeed * App::screenWidth * sin(spinangle);
++    float shakey = spinspeed * App::screenWidth * cr_sinf(spinangle);
+     if (shakey < 0.0f)
+         shakey -= 1.0f;
+ 
+-    x_shake = (short)(spinspeed * App::screenWidth * cos(spinangle));
++    x_shake = (short)(spinspeed * App::screenWidth * cr_cosf(spinangle));
+     y_shake = (short)(shakey);
+ }
  
 diff --git a/src/smw/GSMenu.cpp b/src/smw/GSMenu.cpp
 index 0e3d6ef8..8249eb11 100644
@@ -1047,6 +2011,27 @@ index 00000000..ee66dd9f
 +void frameEnd();
 +
 +} // namespace harness
+diff --git a/src/smw/gamemodes/CardCollection.cpp b/src/smw/gamemodes/CardCollection.cpp
+index ff09efb6..e81ade24 100644
+--- a/src/smw/gamemodes/CardCollection.cpp
++++ b/src/smw/gamemodes/CardCollection.cpp
+@@ -7,6 +7,7 @@
+ #include "ResourceManager.h"
+ #include "Score.h"
+ #include "objects/moving/MO_CollectionCard.h"
++#include "core-math/core_math.h"
+ 
+ #include <cmath>
+ 
+@@ -118,7 +119,7 @@ void CGM_Collection::ReleaseCard(CPlayer &player)
+ 
+         float speed = 7.0f + (float)RANDOM_INT(9) / 2.0f;
+         float angle = -(float)RANDOM_INT(314) / 100.0f;
+-        Vec2f vel(speed * cos(angle), speed * sin(angle));
++        Vec2f vel(speed * cr_cosf(angle), speed * cr_sinf(angle));
+ 
+         player.Score().subscore[0]--;
+ 
 diff --git a/src/smw/gamemodes/GameMode.cpp b/src/smw/gamemodes/GameMode.cpp
 index 8f1933a6..9f1f7390 100644
 --- a/src/smw/gamemodes/GameMode.cpp
@@ -1070,6 +2055,48 @@ index 8f1933a6..9f1f7390 100644
  
                  fNeedSwap = true;
              }
+diff --git a/src/smw/gamemodes/Greed.cpp b/src/smw/gamemodes/Greed.cpp
+index 93c41bd6..8ce5182a 100644
+--- a/src/smw/gamemodes/Greed.cpp
++++ b/src/smw/gamemodes/Greed.cpp
+@@ -7,6 +7,7 @@
+ #include "ResourceManager.h"
+ #include "Score.h"
+ #include "objects/moving/MO_Coin.h"
++#include "core-math/core_math.h"
+ 
+ #include <cmath>
+ 
+@@ -117,7 +118,7 @@ PlayerKillType CGM_Greed::ReleaseCoins(CPlayer &player, KillStyle style)
+     for (short k = 0; k < iDamage; k++) {
+         float speed = 7.0f + ((float)RANDOM_INT(9)) / 2.0f;
+         float angle = -((float)RANDOM_INT(314)) / 100.0f;
+-        Vec2f vel(speed * cos(angle), speed * sin(angle));
++        Vec2f vel(speed * cr_cosf(angle), speed * cr_sinf(angle));
+ 
+         objectcontainer[1].add(new MO_Coin(&rm->spr_coin, vel, pos, player.getColorID(), player.getTeamID(), 1, 30, false));
+     }
+diff --git a/src/smw/gamemodes/MiniBoxes.cpp b/src/smw/gamemodes/MiniBoxes.cpp
+index ee9f1e13..74c34514 100644
+--- a/src/smw/gamemodes/MiniBoxes.cpp
++++ b/src/smw/gamemodes/MiniBoxes.cpp
+@@ -6,6 +6,7 @@
+ #include "RandomNumberGenerator.h"
+ #include "ResourceManager.h"
+ #include "objects/moving/MO_Coin.h"
++#include "core-math/core_math.h"
+ 
+ #include <cmath>
+ 
+@@ -161,7 +162,7 @@ void CGM_Boxes_MiniGame::ReleaseCoin(CPlayer &player)
+ 
+         float speed = 7.0f + (float)RANDOM_INT(9) / 2.0f;
+         float angle = -(float)RANDOM_INT(314) / 100.0f;
+-        Vec2f vel(speed * cos(angle), speed * sin(angle));
++        Vec2f vel(speed * cr_cosf(angle), speed * cr_sinf(angle));
+ 
+         ifSoundOnPlay(rm->sfx_coin);
+ 
 diff --git a/src/smw/gamemodes/Star.cpp b/src/smw/gamemodes/Star.cpp
 index b17868fb..274d788d 100644
 --- a/src/smw/gamemodes/Star.cpp
@@ -1093,18 +2120,19 @@ index b17868fb..274d788d 100644
                          fFound = true;
                          break;
 diff --git a/src/smw/main.cpp b/src/smw/main.cpp
-index bc7783b7..da457d8c 100644
+index bc7783b7..8cb917ce 100644
 --- a/src/smw/main.cpp
 +++ b/src/smw/main.cpp
-@@ -55,6 +55,7 @@
+@@ -55,6 +55,8 @@
  
  #include "FPSLimiter.h"
  #include "GSSplashScreen.h"
 +#include "Harness.h"
++#include "core-math/core_math.h"
  
  #include <ctime>
  #include <cmath>
-@@ -152,7 +153,9 @@ void gameloop_frame()
+@@ -152,7 +154,9 @@ void gameloop_frame()
      {
          FPSLimiter::instance().frameStart();
  
@@ -1114,7 +2142,36 @@ index bc7783b7..da457d8c 100644
  
          FPSLimiter::instance().beforeFlip();
          gfx_flipscreen();
-@@ -337,6 +340,8 @@ void main_game()
+@@ -263,20 +267,20 @@ void init_spawnlocations()
+     float spawnangle = 0.0f;
+ 
+     for (short i = 0; i < 25; i++) {
+-        g_iSwirlSpawnLocations[0][0][i] = (short)(spawnradius * cos(spawnangle));
+-        g_iSwirlSpawnLocations[0][1][i] = (short)(spawnradius * sin(spawnangle));
++        g_iSwirlSpawnLocations[0][0][i] = (short)(spawnradius * cr_cosf(spawnangle));
++        g_iSwirlSpawnLocations[0][1][i] = (short)(spawnradius * cr_sinf(spawnangle));
+ 
+         float angle = spawnangle + HALF_PI;
+-        g_iSwirlSpawnLocations[1][0][i] = (short)(spawnradius * cos(angle));
+-        g_iSwirlSpawnLocations[1][1][i] = (short)(spawnradius * sin(angle));
++        g_iSwirlSpawnLocations[1][0][i] = (short)(spawnradius * cr_cosf(angle));
++        g_iSwirlSpawnLocations[1][1][i] = (short)(spawnradius * cr_sinf(angle));
+ 
+         angle = spawnangle + PI;
+-        g_iSwirlSpawnLocations[2][0][i] = (short)(spawnradius * cos(angle));
+-        g_iSwirlSpawnLocations[2][1][i] = (short)(spawnradius * sin(angle));
++        g_iSwirlSpawnLocations[2][0][i] = (short)(spawnradius * cr_cosf(angle));
++        g_iSwirlSpawnLocations[2][1][i] = (short)(spawnradius * cr_sinf(angle));
+ 
+         angle = spawnangle + THREE_HALF_PI;
+-        g_iSwirlSpawnLocations[3][0][i] = (short)(spawnradius * cos(angle));
+-        g_iSwirlSpawnLocations[3][1][i] = (short)(spawnradius * sin(angle));
++        g_iSwirlSpawnLocations[3][0][i] = (short)(spawnradius * cr_cosf(angle));
++        g_iSwirlSpawnLocations[3][1][i] = (short)(spawnradius * cr_sinf(angle));
+ 
+         spawnradius -= 4.0f;
+         spawnangle += 0.1f;
+@@ -337,6 +341,8 @@ void main_game()
      printf("-------------------------------------------------------------------------------\n");
      printf("\n---------------- startup ----------------\n");
  
@@ -1123,7 +2180,7 @@ index bc7783b7..da457d8c 100644
      ensureSettingsDir();
      create_globals();
  
-@@ -399,7 +404,7 @@ void main_game()
+@@ -399,7 +405,7 @@ void main_game()
          gfx_loadpalette(convertPath("gfx/packs/palette.bmp", gamegraphicspacklist->currentPath()));
      }
  
@@ -1131,6 +2188,295 @@ index bc7783b7..da457d8c 100644
 +    srand(harness::libcSeed((unsigned int)time(NULL)));
  /*
      bool fLoadOK = LoadAndSplashScreenState();
+ 
+diff --git a/src/smw/objects/moving/MO_FlagBase.cpp b/src/smw/objects/moving/MO_FlagBase.cpp
+index cbd26e16..fd8517e0 100644
+--- a/src/smw/objects/moving/MO_FlagBase.cpp
++++ b/src/smw/objects/moving/MO_FlagBase.cpp
+@@ -8,6 +8,7 @@
+ #include "RandomNumberGenerator.h"
+ #include "ResourceManager.h"
+ #include "objects/carriable/CO_Flag.h"
++#include "core-math/core_math.h"
+ 
+ #include <cmath>
+ 
+@@ -37,8 +38,8 @@ MO_FlagBase::MO_FlagBase(gfxSprite* nspr, short iTeamID, short iColorID)
+     anglechange = (float)(RANDOM_INT(100) * 0.0002f);
+     anglechangetimer = (short)(RANDOM_INT(50) + 100);
+ 
+-    velx = sin(angle);
+-    vely = cos(angle);
++    velx = cr_sinf(angle);
++    vely = cr_cosf(angle);
+ 
+     homeflag = NULL;
+ 
+@@ -78,8 +79,8 @@ void MO_FlagBase::update()
+ 
+         angle += anglechange;
+ 
+-        velx = speed * sin(angle);
+-        vely = speed * cos(angle);
++        velx = speed * cr_sinf(angle);
++        vely = speed * cr_cosf(angle);
+ 
+         setXf(fx + velx);
+         setYf(fy + vely);
+@@ -89,13 +90,13 @@ void MO_FlagBase::update()
+             ix = 0;
+             fx = (float)ix;
+ 
+-            angle = atan2(velx, vely);
++            angle = cr_atan2f(velx, vely);
+         } else if (ix + collisionWidth >= App::screenWidth) {
+             velx = -velx;
+             ix = App::screenWidth - 1 - collisionWidth;
+             fx = (float)ix;
+ 
+-            angle = atan2(velx, vely);
++            angle = cr_atan2f(velx, vely);
+         }
+ 
+         if (iy < 0) {
+@@ -103,13 +104,13 @@ void MO_FlagBase::update()
+             iy = 0;
+             fy = (float)iy;
+ 
+-            angle = atan2(velx, vely);
++            angle = cr_atan2f(velx, vely);
+         } else if (iy + collisionHeight >= App::screenHeight) {
+             vely = -vely;
+             iy = App::screenHeight - 1 - collisionHeight;
+             fy = (float)iy;
+ 
+-            angle = atan2(velx, vely);
++            angle = cr_atan2f(velx, vely);
+         }
+     }
+ 
+diff --git a/src/smw/objects/moving/MO_PirhanaPlant.cpp b/src/smw/objects/moving/MO_PirhanaPlant.cpp
+index 644d4a95..b9d38838 100644
+--- a/src/smw/objects/moving/MO_PirhanaPlant.cpp
++++ b/src/smw/objects/moving/MO_PirhanaPlant.cpp
+@@ -8,6 +8,7 @@
+ #include "ResourceManager.h"
+ #include "objects/carriable/CO_ThrowBox.h"
+ #include "objects/overmap/WO_StraightPathHazard.h"
++#include "core-math/core_math.h"
+ 
+ #include <cmath>
+ 
+@@ -166,7 +167,7 @@ void MO_PirhanaPlant::update()
+                 }
+             }
+ 
+-            float dAngle = (float)atan2((double)iDiffX, (double)iDiffY);
++            float dAngle = cr_atan2f((float)iDiffX, (float)iDiffY);
+ 
+             if (dAngle >= 0.0f && dAngle < HALF_PI)
+                 iFrame = 0;
+diff --git a/src/smw/objects/moving/MO_SledgeHammer.cpp b/src/smw/objects/moving/MO_SledgeHammer.cpp
+index 5acb6d21..2c76751b 100644
+--- a/src/smw/objects/moving/MO_SledgeHammer.cpp
++++ b/src/smw/objects/moving/MO_SledgeHammer.cpp
+@@ -8,6 +8,7 @@
+ #include "ResourceManager.h"
+ #include "objects/moving/MO_Explosion.h"
+ #include "objects/moving/MO_Hammer.h"
++#include "core-math/core_math.h"
+ 
+ #include <cmath>
+ 
+@@ -99,8 +100,8 @@ void MO_SledgeHammer::explode()
+         for (short iHammer = 0; iHammer < 3; iHammer++) {
+             float dAngle = (float)(RANDOM_INT(628)) / 100.0f;
+             float dVel = (float)(RANDOM_INT(5)) / 2.0f + 3.0f;
+-            float dVelX = dVel * cos(dAngle);
+-            float dVelY = dVel * sin(dAngle);
++            float dVelX = dVel * cr_cosf(dAngle);
++            float dVelY = dVel * cr_sinf(dAngle);
+             objectcontainer[2].add(new MO_Hammer(&rm->spr_hammer, {iCenterX, iCenterY}, 6, {dVelX, dVelY}, 5, playerID, teamID, iColorID, true));
+         }
+ 
+diff --git a/src/smw/objects/overmap/WO_OrbitHazard.cpp b/src/smw/objects/overmap/WO_OrbitHazard.cpp
+index f868401a..bc6324ae 100644
+--- a/src/smw/objects/overmap/WO_OrbitHazard.cpp
++++ b/src/smw/objects/overmap/WO_OrbitHazard.cpp
+@@ -2,6 +2,7 @@
+ 
+ #include "player.h"
+ #include "ResourceManager.h"
++#include "core-math/core_math.h"
+ 
+ #include <cmath>
+ 
+@@ -49,6 +50,6 @@ bool OMO_OrbitHazard::collide(CPlayer* player)
+ 
+ void OMO_OrbitHazard::CalculatePosition()
+ {
+-    setXf(dCenter.x + dRadius * cos(dAngle) - (float)iw / 2.0f);
+-    setYf(dCenter.y + dRadius * sin(dAngle) - (float)ih / 2.0f);
++    setXf(dCenter.x + dRadius * cr_cosf(dAngle) - (float)iw / 2.0f);
++    setYf(dCenter.y + dRadius * cr_sinf(dAngle) - (float)ih / 2.0f);
+ }
+diff --git a/src/smw/objects/overmap/WO_RaceGoal.cpp b/src/smw/objects/overmap/WO_RaceGoal.cpp
+index 764e3e6c..50318f64 100644
+--- a/src/smw/objects/overmap/WO_RaceGoal.cpp
++++ b/src/smw/objects/overmap/WO_RaceGoal.cpp
+@@ -7,6 +7,7 @@
+ #include "RandomNumberGenerator.h"
+ #include "ResourceManager.h"
+ #include "gamemodes/Race.h"
++#include "core-math/core_math.h"
+ 
+ #include <cmath>
+ 
+@@ -44,8 +45,8 @@ OMO_RaceGoal::OMO_RaceGoal(gfxSprite* nspr, short id)
+     anglechange = (float)(RANDOM_INT(100) * 0.0002f);
+     anglechangetimer = (short)(RANDOM_INT(50) + 100);
+ 
+-    velx = sin(angle);
+-    vely = cos(angle);
++    velx = cr_sinf(angle);
++    vely = cr_cosf(angle);
+ 
+     placeRaceGoal();
+ 
+@@ -99,8 +100,8 @@ void OMO_RaceGoal::update()
+ 
+     angle += anglechange;
+ 
+-    velx = speed * sin(angle);
+-    vely = speed * cos(angle);
++    velx = speed * cr_sinf(angle);
++    vely = speed * cr_cosf(angle);
+ 
+     IO_OverMapObject::update();
+ 
+@@ -112,13 +113,13 @@ void OMO_RaceGoal::update()
+         ix = 0;
+         fx = (float)ix;
+ 
+-        angle = atan2(velx, vely);
++        angle = cr_atan2f(velx, vely);
+     } else if (ix + collisionWidth >= App::screenWidth) {
+         velx = -velx;
+         ix = App::screenWidth - 1 - collisionWidth;
+         fx = (float)ix;
+ 
+-        angle = atan2(velx, vely);
++        angle = cr_atan2f(velx, vely);
+     }
+ 
+     if (iy < 0) {
+@@ -126,13 +127,13 @@ void OMO_RaceGoal::update()
+         iy = 0;
+         fy = (float)iy;
+ 
+-        angle = atan2(velx, vely);
++        angle = cr_atan2f(velx, vely);
+     } else if (iy + collisionHeight >= App::screenHeight) {
+         vely = -vely;
+         iy = App::screenHeight - 1 - collisionHeight;
+         fy = (float)iy;
+ 
+-        angle = atan2(velx, vely);
++        angle = cr_atan2f(velx, vely);
+     }
+ }
+ 
+diff --git a/src/smw/objects/overmap/WO_StraightPathHazard.cpp b/src/smw/objects/overmap/WO_StraightPathHazard.cpp
+index 1ffa3c85..3960a955 100644
+--- a/src/smw/objects/overmap/WO_StraightPathHazard.cpp
++++ b/src/smw/objects/overmap/WO_StraightPathHazard.cpp
+@@ -4,6 +4,7 @@
+ #include "Game.h"
+ #include "player.h"
+ #include "ResourceManager.h"
++#include "core-math/core_math.h"
+ 
+ #include <cmath>
+ 
+@@ -21,8 +22,8 @@ OMO_StraightPathHazard::OMO_StraightPathHazard(gfxSprite* nspr, Vec2s pos, float
+     dVel = vel;
+     dAngle = angle;
+ 
+-    velx = vel * cos(angle);
+-    vely = vel * sin(angle);
++    velx = vel * cr_cosf(angle);
++    vely = vel * cr_sinf(angle);
+ }
+ 
+ void OMO_StraightPathHazard::update()
+diff --git a/src/smw/objects/powerup/PU_FeatherPowerup.cpp b/src/smw/objects/powerup/PU_FeatherPowerup.cpp
+index d465bd7a..a635d146 100644
+--- a/src/smw/objects/powerup/PU_FeatherPowerup.cpp
++++ b/src/smw/objects/powerup/PU_FeatherPowerup.cpp
+@@ -5,6 +5,7 @@
+ #include "GameValues.h"
+ #include "player.h"
+ #include "ResourceManager.h"
++#include "core-math/core_math.h"
+ 
+ #include <cmath>
+ 
+@@ -76,8 +77,8 @@ void PU_FeatherPowerup::update()
+ 
+         dFloatCenterY += 1.0f;
+ 
+-        setXf(64.0f * cos(dFloatAngle) + dFloatCenterX);
+-        setYf(64.0f * sin(dFloatAngle) + dFloatCenterY);
++        setXf(64.0f * cr_cosf(dFloatAngle) + dFloatCenterX);
++        setYf(64.0f * cr_sinf(dFloatAngle) + dFloatCenterY);
+ 
+         if (fy >= App::screenHeight)
+             dead = true;
+diff --git a/src/smw/objects/walkingenemy/WalkingEnemy.cpp b/src/smw/objects/walkingenemy/WalkingEnemy.cpp
+index 15881577..9c776427 100644
+--- a/src/smw/objects/walkingenemy/WalkingEnemy.cpp
++++ b/src/smw/objects/walkingenemy/WalkingEnemy.cpp
+@@ -12,6 +12,7 @@
+ #include "ResourceManager.h"
+ #include "objects/carriable/CO_Shell.h"
+ #include "objects/carriable/CO_ThrowBox.h"
++#include "core-math/core_math.h"
+ 
+ #include <cmath>
+ 
+@@ -69,8 +70,8 @@ void MO_WalkingEnemy::draw()
+         float displayangle = spawnangle;
+ 
+         for (short k = 0; k < numeyecandy; k++) {
+-            short spawnX = ix + (collisionWidth >> 1) - 8 + (short)(spawnradius * cos(displayangle));
+-            short spawnY = iy + (collisionHeight >> 1) - 8 + (short)(spawnradius * sin(displayangle));
++            short spawnX = ix + (collisionWidth >> 1) - 8 + (short)(spawnradius * cr_cosf(displayangle));
++            short spawnY = iy + (collisionHeight >> 1) - 8 + (short)(spawnradius * cr_sinf(displayangle));
+ 
+             displayangle += addangle;
+ 
+diff --git a/src/smw/player.cpp b/src/smw/player.cpp
+index d80f1609..e045ced7 100644
+--- a/src/smw/player.cpp
++++ b/src/smw/player.cpp
+@@ -23,6 +23,7 @@
+ #include "objects/moving/MO_Hammer.h"
+ #include "objects/moving/MO_IceBlast.h"
+ #include "objects/moving/MO_Podobo.h"
++#include "core-math/core_math.h"
+ 
+ #include <cassert>
+ #include <cmath>
+@@ -1984,8 +1985,8 @@ void CPlayer::draw_powerupRing()
+         float displayangle = powerupangle;
+ 
+         for (short k = 0; k < numeyecandy; k++) {
+-            short powerupX = ix + HALFPW - 8 + (short)(powerupradius * cos(displayangle));
+-            short powerupY = iy + HALFPH - 8 + (short)(powerupradius * sin(displayangle));
++            short powerupX = ix + HALFPW - 8 + (short)(powerupradius * cr_cosf(displayangle));
++            short powerupY = iy + HALFPH - 8 + (short)(powerupradius * cr_sinf(displayangle));
+ 
+             displayangle += addangle;
  
 diff --git a/src/smw/player.h b/src/smw/player.h
 index a351aa4d..e59c9cc6 100644
@@ -1144,6 +2490,107 @@ index a351aa4d..e59c9cc6 100644
  		friend bool RemoveTeam(short teamid);
  		friend short CountAliveTeams(short * lastteam);
  			friend void shakeScreen();
+diff --git a/src/smw/player_components/PlayerAwardEffects.cpp b/src/smw/player_components/PlayerAwardEffects.cpp
+index 34f9dcfc..67d1d875 100644
+--- a/src/smw/player_components/PlayerAwardEffects.cpp
++++ b/src/smw/player_components/PlayerAwardEffects.cpp
+@@ -5,6 +5,7 @@
+ #include "objectgame.h"
+ #include "player.h"
+ #include "ResourceManager.h"
++#include "core-math/core_math.h"
+ 
+ #include <cmath>
+ 
+@@ -51,8 +52,8 @@ void PlayerAwardEffects::drawRingAward(CPlayer& player)
+ 
+     for (short k = 0; k < numawards; k++) {
+         float angle = (float)k * addangle + awardangle;
+-        short awardx = xoffset + (short)(30.0f * cos(angle));
+-        short awardy = yoffset + (short)(30.0f * sin(angle));
++        short awardx = xoffset + (short)(30.0f * cr_cosf(angle));
++        short awardy = yoffset + (short)(30.0f * cr_sinf(angle));
+ 
+         if (player.iswarping())
+             rm->spr_award.draw(awardx, awardy, {awards[k] * 16, 0, 16, 16}, static_cast<ClipEdge>((short)player.state % 4), player.GetWarpPlane());
+@@ -73,8 +74,8 @@ void PlayerAwardEffects::addExploding(CPlayer& player)
+ 
+     for (short k = 0; k < numawards; k++) {
+         float angle = (float)k * addangle + awardangle;
+-        float cosangle = cos(angle);
+-        float sinangle = sin(angle);
++        float cosangle = cr_cosf(angle);
++        float sinangle = cr_sinf(angle);
+ 
+         short awardx = player.centerX() - 8 + (short)(30.0f * cosangle);
+         short awardy = player.centerY() - 8 + (short)(30.0f * sinangle);
+@@ -120,8 +121,8 @@ void PlayerAwardEffects::addRocket(CPlayer& player)
+ 
+     for (short k = 0; k < numawards; k++) {
+         float angle = (float)k * addangle + startangle;
+-        float awardvelx = 9.0f * cos(angle);
+-        float awardvely = 9.0f * sin(angle);
++        float awardvelx = 9.0f * cr_cosf(angle);
++        float awardvely = 9.0f * cr_sinf(angle);
+ 
+         if (numawards == MAXAWARDS)
+             eyecandy[2].emplace<EC_RocketAward>(&rm->spr_awardkillsinrow, player.centerX() - 8, player.centerY() - 8, awardvelx, awardvely, 80, 10, player.getColorID(), 16, 16, 4, 4);
+@@ -250,8 +251,8 @@ void PlayerAwardEffects::addKillsInRowInAirAward(CPlayer& player)
+     float angle = 0.0f;
+     for (short k = 0; k < 15; k++) {
+         float vel = 7.0f + ((k % 2) * 5.0f);
+-        float awardvelx = vel * cos(angle);
+-        float awardvely = vel * sin(angle);
++        float awardvelx = vel * cr_cosf(angle);
++        float awardvely = vel * cr_sinf(angle);
+ 
+         eyecandy[2].emplace<EC_FallingObject>(&rm->spr_bonus,
+             player.centerX() - 8,
+diff --git a/src/smw/ui/MI_BonusWheel.cpp b/src/smw/ui/MI_BonusWheel.cpp
+index f0bce5e3..3efd26af 100644
+--- a/src/smw/ui/MI_BonusWheel.cpp
++++ b/src/smw/ui/MI_BonusWheel.cpp
+@@ -9,6 +9,7 @@
+ #include "ui/MI_Button.h"
+ #include "ui/MI_Image.h"
+ #include "uimenu.h"
++#include "core-math/core_math.h"
+ 
+ #include <cmath>
+ 
+@@ -22,8 +23,8 @@ MI_BonusWheel::MI_BonusWheel(short x, short y)
+     for (short iImage = 0; iImage < NUMBONUSITEMSONWHEEL; iImage++) {
+         dSelectionSector[iImage] = (float)iImage * TWO_PI / (float)(NUMBONUSITEMSONWHEEL);
+ 
+-        short iPowerupX = x + 160 + (short)(110.0f * cos(dSelectionSector[iImage]));
+-        short iPowerupY = y + 208 + (short)(110.0f * sin(dSelectionSector[iImage]));
++        short iPowerupX = x + 160 + (short)(110.0f * cr_cosf(dSelectionSector[iImage]));
++        short iPowerupY = y + 208 + (short)(110.0f * cr_sinf(dSelectionSector[iImage]));
+ 
+         miBonusImages[iImage] = new MI_Image(&rm->spr_storedpoweruplarge, iPowerupX, iPowerupY, 0, 0, 32, 32, 1, 1, 0);
+     }
+@@ -89,8 +90,8 @@ void MI_BonusWheel::Update()
+         if (--iDisplayPowerupTimer <= 0) {
+             iDisplayPowerupTimer = 20;
+ 
+-            short iPoofX = m_pos.x + 152 + (short)(110.0f * cos(dSelectionSector[iDisplayPowerupIndex]));
+-            short iPoofY = m_pos.y + 200 + (short)(110.0f * sin(dSelectionSector[iDisplayPowerupIndex]));
++            short iPoofX = m_pos.x + 152 + (short)(110.0f * cr_cosf(dSelectionSector[iDisplayPowerupIndex]));
++            short iPoofY = m_pos.y + 200 + (short)(110.0f * cr_sinf(dSelectionSector[iDisplayPowerupIndex]));
+ 
+             m_parentMenu->AddEyeCandy<EC_SingleAnimation>(&rm->spr_poof, iPoofX, iPoofY, 4, 5);
+ 
+@@ -192,8 +193,8 @@ void MI_BonusWheel::Draw()
+ 
+     rm->spr_tournament_powerup_splash.draw(m_pos.x, m_pos.y);
+ 
+-    short iSelectorX = m_pos.x + 144 + (short)(110.0f * cos(dSelectionAngle));
+-    short iSelectorY = m_pos.y + 190 + (short)(110.0f * sin(dSelectionAngle));
++    short iSelectorX = m_pos.x + 144 + (short)(110.0f * cr_cosf(dSelectionAngle));
++    short iSelectorY = m_pos.y + 190 + (short)(110.0f * cr_sinf(dSelectionAngle));
+ 
+     if (iState > 0)
+         rm->spr_powerupselector.draw(iSelectorX, iSelectorY, {iSelectorAnimation * 64, 0, 64, 64});
 diff --git a/src/smw/ui/MI_InputControlContainer.cpp b/src/smw/ui/MI_InputControlContainer.cpp
 index debf6753..4dcfba68 100644
 --- a/src/smw/ui/MI_InputControlContainer.cpp
@@ -1163,3 +2610,49 @@ index debf6753..4dcfba68 100644
          #endif
  
          /*
+diff --git a/src/smw/ui/MI_TournamentScoreboard.cpp b/src/smw/ui/MI_TournamentScoreboard.cpp
+index 073e23de..105f646e 100644
+--- a/src/smw/ui/MI_TournamentScoreboard.cpp
++++ b/src/smw/ui/MI_TournamentScoreboard.cpp
+@@ -10,6 +10,7 @@
+ #include "WorldTourStop.h"
+ #include "ui/MI_Image.h"
+ #include "ui/MI_ScoreText.h"
++#include "core-math/core_math.h"
+ 
+ #include <cmath>
+ 
+@@ -163,8 +164,8 @@ void MI_TournamentScoreboard::Update()
+ 
+                     for (short iBlock = 0; iBlock < 28; iBlock++) {
+                         float dVel = 7.0f + ((iBlock % 2) * 5.0f);
+-                        float dVelX = dVel * cos(dAngle);
+-                        float dVelY = dVel * sin(dAngle);
++                        float dVelX = dVel * cr_cosf(dAngle);
++                        float dVelY = dVel * cr_sinf(dAngle);
+ 
+                         short iRandomColor = (short)RANDOM_INT(iTeamCounts[iTournamentWinner]);
+                         m_parentMenu->AddEyeCandy<EC_FallingObject>(&rm->spr_bonus, iRandX, iRandY, dVelX, dVelY, 4, 2, 0, game_values.colorids[iTeamIDs[iTournamentWinner][iRandomColor]] << 4, 16, 16);
+diff --git a/src/smw/ui/MI_World.cpp b/src/smw/ui/MI_World.cpp
+index d4cef41c..6e8c6039 100644
+--- a/src/smw/ui/MI_World.cpp
++++ b/src/smw/ui/MI_World.cpp
+@@ -9,6 +9,7 @@
+ #include "uimenu.h"
+ #include "world.h"
+ #include "WorldTourStop.h"
++#include "core-math/core_math.h"
+ 
+ #include <cmath>
+ 
+@@ -428,8 +429,8 @@ void MI_World::Draw()
+     if (iState == -2 || iState >= 4) {
+         for (short iStar = 0; iStar < 10; iStar++) {
+             float dAngle = dTeleportStarAngle + (TWO_PI / 10.0f) * (float)iStar;
+-            short iStarX = (short)(dTeleportStarRadius * cos(dAngle));
+-            short iStarY = (short)(dTeleportStarRadius * sin(dAngle));
++            short iStarX = (short)(dTeleportStarRadius * cr_cosf(dAngle));
++            short iStarY = (short)(dTeleportStarRadius * cr_sinf(dAngle));
+ 
+             rm->spr_teleportstar.draw(iStarX + iPlayerDrawPos.x + iMapOffsetX, iStarY + iPlayerDrawPos.y + iMapOffsetY, {iTeleportStarAnimationFrame, 0, 32, 32});
+         }
