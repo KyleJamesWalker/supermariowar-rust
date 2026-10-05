@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run the C++ reference build headlessly against a replay script.
 #
-# Usage: run_ref.sh <replay.txt> [out_dir]
+# Usage: run_ref.sh <replay.txt|.smwrp> [out_dir]
 #
 # Run parameters come from `#@ key=value` lines in the replay (seed, frames,
 # map, shots, options, options_b64, controls_b64); SMW_SEED/SMW_FRAMES/SMW_MAP/SMW_SHOT_FRAMES in the environment
@@ -11,12 +11,16 @@
 set -euo pipefail
 
 if [[ $# -lt 1 ]]; then
-    echo "usage: $0 <replay.txt> [out_dir]" >&2
+    echo "usage: $0 <replay.txt|.smwrp> [out_dir]" >&2
     exit 2
 fi
 
 replay="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
-name="$(basename "$replay" .txt)"
+replay_dir="$(dirname "$replay")"
+name="$(basename "$replay")"
+name="${name%.smwrp}"
+name="${name%.gz}"
+name="${name%.txt}"
 out="${2:-${TMPDIR:-/tmp}/smw-$(basename "$0" .sh)-out/$name}"
 ref="${SMW_REF_DIR:-$HOME/work/supermariowar-cpp-reference}"
 bin="${SMW_BIN:-$ref/build/smw}"
@@ -25,6 +29,24 @@ data="${SMW_DATA_DIR:-$ref/data}"
 if [[ ! -x "$bin" ]]; then
     echo "missing $bin; build it first (see docs/REPLAY.md)" >&2
     exit 2
+fi
+
+# Per-run sandbox: a fresh HOME (no options.bin / controls file) and a private clone of the data tree,
+# since the game writes data/maps/cache/mapsummary.txt and replays run concurrently.
+sandbox="$(mktemp -d)"
+game=""
+cleanup() {
+    [[ -n "$game" ]] && kill "$game" 2>/dev/null
+    rm -rf "${sandbox:?}"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+# The C++ harness reads plain text.
+if [[ "$(head -c 2 "$replay" | od -An -tx1 | tr -d ' \n')" == 1f8b ]]; then
+    gzip -dc "$replay" > "$sandbox/replay.txt"
+    replay="$sandbox/replay.txt"
 fi
 
 directive() {
@@ -43,22 +65,11 @@ mkdir -p "$out"
 out="$(cd "$out" && pwd)"
 rm -f "$out/dump.txt" "$out"/frame_*.bmp
 
-# Per-run sandbox: a fresh HOME (no options.bin / controls file) and a private clone of the data tree,
-# since the game writes data/maps/cache/mapsummary.txt and replays run concurrently.
-sandbox="$(mktemp -d)"
-game=""
-cleanup() {
-    [[ -n "$game" ]] && kill "$game" 2>/dev/null
-    rm -rf "$sandbox"
-}
-trap cleanup EXIT
-trap 'exit 130' INT
-trap 'exit 143' TERM
 home="$sandbox/home"
 mkdir -p "$home/Library/Preferences"
 if [[ -n "$options" ]]; then
     mkdir -p "$home/Library/Preferences/.smw"
-    cp "$(dirname "$replay")/$options" "$home/Library/Preferences/.smw/options.bin"
+    cp "$replay_dir/$options" "$home/Library/Preferences/.smw/options.bin"
 fi
 # Session recordings embed the settings files they started with.
 if [[ -n "$options_b64" || -n "$controls_b64" ]]; then

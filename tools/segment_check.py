@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check that every match of a recording replays exactly from its checkpoint.
 
-Usage: tools/segment_check.py [--web] [--jobs N] [--keep DIR] <recording-or-replay.txt> ...
+Usage: tools/segment_check.py [--web] [--jobs N] [--keep DIR] <recording-or-replay.txt|.smwrp> ...
 
 For each file it runs the whole replay headless (tools/run_rust.sh) and, if the file has no
 checkpoints yet (a hand-written replay or an older recording), records them on the way with
@@ -24,7 +24,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from replay_clip import Recording  # noqa: E402
+from replay_clip import Recording, read_recording, recording_stem  # noqa: E402
 
 TOOLS = Path(__file__).resolve().parent
 REPO = TOOLS.parent
@@ -67,12 +67,12 @@ def compare(full, start, end, dump):
 
 
 def check(path, work, jobs, web):
-    name = Path(path).stem
-    src = Path(path).read_text()
+    name = recording_stem(path)
+    src = read_recording(path)
     rec_path = work / f'{name}.rec.txt'
     env = {}
     if '#@ checkpoint ' in src:
-        shutil.copy(path, rec_path)
+        rec_path.write_text(src)
     else:
         env['SMW_RECORD_TO'] = str(rec_path)
     probe = Recording(path)
@@ -128,10 +128,13 @@ def main():
     try:
         rows = []
         for f in args.files:
+            if Path(f).is_dir():
+                print(f'{f}: a directory, skipped', file=sys.stderr)
+                continue
             try:
                 rows += check(f, work, args.jobs, args.web)
             except RuntimeError as err:
-                rows.append((Path(f).stem, '-', str(err), '-', 'ERROR', 'ERROR') + (('ERROR',) if args.web else ()))
+                rows.append((recording_stem(f), '-', str(err), '-', 'ERROR', 'ERROR') + (('ERROR',) if args.web else ()))
     finally:
         if not args.keep:
             shutil.rmtree(work, ignore_errors=True)

@@ -2,8 +2,8 @@
 """Cut one match out of a session recording as a standalone clip, or list the session's matches.
 
 Usage:
-  tools/replay_clip.py <recording.txt> --list
-  tools/replay_clip.py <recording.txt> --match <k> [-o clip.txt]
+  tools/replay_clip.py <recording.txt|.smwrp> --list
+  tools/replay_clip.py <recording.txt|.smwrp> --match <k> [-o clip.txt|clip.smwrp]
 
 The recording needs `#@ mark` and `#@ checkpoint` lines (docs/REPLAY.md, "Markers, checkpoints and
 clips"). A clip holds the recording's header, match k's markers and checkpoint, its input lines and
@@ -11,6 +11,7 @@ clips"). A clip holds the recording's header, match k's markers and checkpoint, 
 that match, with the same frame numbers and dump as in the full recording.
 """
 import argparse
+import gzip
 import re
 import string
 import sys
@@ -18,6 +19,27 @@ from pathlib import Path
 
 FIELD = re.compile(r'(\w+)=("[^"]*"|\S*)')
 UNFINISHED_TAIL_FRAMES = 188
+GZIP_MAGIC = b'\x1f\x8b'
+
+
+def read_recording(path):
+    """A recording's text, plain or gzipped (.smwrp, .txt.gz)."""
+    data = Path(path).read_bytes()
+    return (gzip.decompress(data) if data[:2] == GZIP_MAGIC else data).decode()
+
+
+def write_recording(path, text):
+    """Writes text, gzipped when the name ends in .smwrp or .gz."""
+    data = text.encode()
+    Path(path).write_bytes(gzip.compress(data, mtime=0) if Path(path).suffix in ('.smwrp', '.gz') else data)
+
+
+def recording_stem(path):
+    """The file name without .smwrp, .txt.gz or .txt."""
+    name = Path(path).name
+    for ext in ('.smwrp', '.gz', '.txt'):
+        name = name.removesuffix(ext)
+    return name
 
 
 def fields(text):
@@ -54,7 +76,7 @@ class Match:
 class Recording:
     def __init__(self, path):
         self.path = Path(path)
-        self.lines = self.path.read_text().splitlines()
+        self.lines = read_recording(self.path).splitlines()
         self.header = []
         self.events = []
         self.matches = {}
@@ -133,7 +155,7 @@ def main():
     ap.add_argument('recording')
     ap.add_argument('--list', action='store_true', help="print the session's matches")
     ap.add_argument('--match', type=int, help='the match to cut (1, 2, ...)')
-    ap.add_argument('-o', '--output', help='clip file (default: <recording>_match<k>.txt)')
+    ap.add_argument('-o', '--output', help='clip file, gzipped if it ends in .smwrp (default: <recording>_match<k>.txt)')
     args = ap.parse_args()
     rec = Recording(args.recording)
     if args.list or args.match is None:
@@ -145,8 +167,8 @@ def main():
             else:
                 print(f'Match {m.number} - no clip ({m.reason or "no checkpoint"})')
         return 0
-    out = Path(args.output or rec.path.with_name(f'{rec.path.stem}_match{args.match}.txt'))
-    out.write_text(rec.clip(args.match))
+    out = Path(args.output or rec.path.with_name(f'{recording_stem(rec.path)}_match{args.match}.txt'))
+    write_recording(out, rec.clip(args.match))
     print(out)
     return 0
 

@@ -12,7 +12,7 @@ use crate::smw::game_state::GameStateManager;
 use crate::smw::gs_gameplay::GameplayState;
 use crate::smw::gs_menu::MenuState;
 use crate::smw::gs_splash_screen::SplashScreenState;
-use crate::smw::network::file_compressor::{deflate, inflate};
+use crate::smw::network::file_compressor::{deflate, inflate, read_maybe_gzip};
 use sdl2::sys::{
     SDL_Event, SDL_EventType, SDL_GetError, SDL_GetKeyFromName, SDL_GetKeyName, SDL_GetScancodeFromKey, SDL_InitSubSystem, SDL_JoystickAttachVirtual,
     SDL_JoystickInstanceID, SDL_JoystickType, SDL_KeyCode, SDL_Keymod, SDL_PumpEvents, SDL_PushEvent, SDL_SetEventFilter, SDL_SetHint, SDL_WaitEvent, SDL_INIT_JOYSTICK,
@@ -146,8 +146,13 @@ extern "C" fn virtual_ticks() -> u32 {
     unsafe { 1000u32.wrapping_add(h.frame.wrapping_mul(WAITTIME as u32)) }
 }
 
+/// A recording's text: plain, or gzipped (.smwrp, .txt.gz).
+pub fn read_recording(path: impl AsRef<std::path::Path>) -> Option<String> {
+    String::from_utf8(read_maybe_gzip(path).ok()?).ok()
+}
+
 fn load_events(path: &str) -> Vec<ReplayEvent> {
-    let text = std::fs::read_to_string(path).unwrap_or_else(|_| fail(format!("cannot open replay {}", path)));
+    let text = read_recording(path).unwrap_or_else(|| fail(format!("cannot open replay {}", path)));
     let mut events: Vec<ReplayEvent> = Vec::new();
     let events = &mut events;
     for (i, raw) in text.split('\n').enumerate() {
@@ -999,7 +1004,7 @@ pub fn speed() -> f32 {
 /// embedded in the recording go into a throwaway HOME so the user's own settings stay untouched.
 pub fn prepare_watch(file: &str, speed: Option<f32>, segment: Option<u32>) {
     let path = std::fs::canonicalize(file).unwrap_or_else(|_| fail(format!("cannot open replay {}", file)));
-    let text = std::fs::read_to_string(&path).unwrap_or_else(|_| fail(format!("cannot read replay {}", path.display())));
+    let text = read_recording(&path).unwrap_or_else(|| fail(format!("cannot read replay {}", path.display())));
     let directive = |key: &str| {
         text.lines().filter_map(|l| l.strip_prefix("#@ ")).filter_map(|l| l.strip_prefix(key)).filter_map(|l| l.strip_prefix('=')).last().map(|v| v.to_string())
     };
@@ -1131,7 +1136,7 @@ fn directive_fields(line: &str) -> Vec<(String, String)> {
 /// Segment mode: SMW_SEGMENT=<k>, or `#@ segment=<k>` in the replay (a clip). Finds checkpoint k,
 /// starts the frame counter at its frame and ends the replay where the match left gameplay.
 fn load_segment(path: &str) {
-    let text = std::fs::read_to_string(path).unwrap_or_default();
+    let text = read_recording(path).unwrap_or_default();
     let directives: Vec<Vec<(String, String)>> = text.lines().filter_map(|l| l.strip_prefix("#@ ")).map(directive_fields).collect();
     let field = |d: &[(String, String)], key: &str| d.iter().find(|(k, _)| k == key).map(|(_, v)| v.clone());
     let wanted = env("SMW_SEGMENT").or_else(|| directives.iter().filter(|d| d.len() == 1).find_map(|d| field(d, "segment")));

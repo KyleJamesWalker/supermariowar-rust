@@ -130,7 +130,7 @@ fn parse_button(name: &str, path: &str, lineno: usize) -> u8 {
 }
 
 fn load_replay(path: &str) {
-    let text = std::fs::read_to_string(path).unwrap_or_else(|_| {
+    let text = crate::smw::harness::read_recording(path).unwrap_or_else(|| {
         eprintln!("[editorharness] cannot open replay {}", path);
         std::process::exit(2);
     });
