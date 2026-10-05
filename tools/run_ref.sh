@@ -66,16 +66,19 @@ out="$(cd "$out" && pwd)"
 rm -f "$out/dump.txt" "$out"/frame_*.bmp
 
 home="$sandbox/home"
-mkdir -p "$home/Library/Preferences"
+settings="$home/Library/Preferences/.smw"
+# Windows builds keep their settings in %USERPROFILE%/.smw/.
+[[ "$OSTYPE" == msys || "$OSTYPE" == cygwin ]] && settings="$home/.smw"
+mkdir -p "$(dirname "$settings")"
 if [[ -n "$options" ]]; then
-    mkdir -p "$home/Library/Preferences/.smw"
-    cp "$replay_dir/$options" "$home/Library/Preferences/.smw/options.bin"
+    mkdir -p "$settings"
+    cp "$replay_dir/$options" "$settings/options.bin"
 fi
 # Session recordings embed the settings files they started with.
 if [[ -n "$options_b64" || -n "$controls_b64" ]]; then
-    mkdir -p "$home/Library/Preferences/.smw"
-    [[ -z "$options_b64" ]] || printf '%s' "$options_b64" | base64 -d > "$home/Library/Preferences/.smw/options.bin"
-    [[ -z "$controls_b64" ]] || printf '%s' "$controls_b64" | base64 -d > "$home/Library/Preferences/.smw/controls.sdl2.bin"
+    mkdir -p "$settings"
+    [[ -z "$options_b64" ]] || printf '%s' "$options_b64" | base64 -d > "$settings/options.bin"
+    [[ -z "$controls_b64" ]] || printf '%s' "$controls_b64" | base64 -d > "$settings/controls.sdl2.bin"
 fi
 cp -c -R "$data" "$sandbox/data" 2>/dev/null || cp -R "$data" "$sandbox/data"
 rm -f "$sandbox/data/maps/cache/mapsummary.txt"
@@ -83,9 +86,10 @@ data="$sandbox/data"
 
 cd "$sandbox"
 status=0
-# Background + wait so a killed script also stops the game; ulimit caps each file the game writes at 1 GB.
+# Background + wait so a killed script also stops the game; ulimit caps each file the game writes at 1 GB
+# where the shell can set it (not Git Bash).
 # The SDL_JOYSTICK_* hints hide physical pads, which would otherwise join the replay's virtual joysticks.
-(ulimit -f 1048576; exec env HOME="$home" \
+(ulimit -f 1048576 2> /dev/null || true; exec env HOME="$home" USERPROFILE="$home" \
     SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
     SDL_JOYSTICK_HIDAPI=0 SDL_JOYSTICK_MFI=0 SDL_JOYSTICK_IOKIT=0 \
     SMW_SEED="${seed:-1}" \
