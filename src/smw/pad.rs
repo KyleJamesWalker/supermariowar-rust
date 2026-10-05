@@ -1,4 +1,4 @@
-//! Not in upstream: game controllers' events rewritten as joystick events in `LAYOUT` (docs/PROGRESS.md, Deliberate deviations).
+//! Not in upstream: with `SMW_PAD_TRANSLATE=1`, game controllers' events rewritten as joystick events in `LAYOUT` (docs/PROGRESS.md, Deliberate deviations).
 
 use crate::common::global::{joystickcount, joysticks};
 use sdl2::sys::{
@@ -42,7 +42,7 @@ struct Pad {
 
 static mut pads: Vec<Pad> = Vec::new();
 
-/// Logs every open joystick and opens the game controllers among them; `translate` is false in replays.
+/// Logs every open joystick; with `translate`, opens the game controllers among them.
 pub fn init(translate: bool) {
     unsafe {
         SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER);
@@ -93,7 +93,7 @@ pub fn init(translate: bool) {
     }
 }
 
-/// The joysticks players get at launch: the controllers if there are any, otherwise every joystick.
+/// The joysticks players get at launch: the translated controllers if there are any, otherwise every joystick.
 pub fn player_pads() -> Vec<usize> {
     unsafe {
         let count = joystickcount.max(0) as usize;

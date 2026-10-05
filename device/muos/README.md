@@ -45,6 +45,17 @@ With one controller, the other players that were human become **Bot** at launch,
 
 To quit, press **Menu**, choose **Exit** on the main menu, or press B there. Settings are saved on the way out.
 
+## Launcher settings
+
+`mux_launch.sh` sets two variables that change the game's behaviour on muOS only:
+
+| Variable | Effect |
+|---|---|
+| `SMW_PAD_TRANSLATE=1` | Reads every pad SDL has a controller mapping for (muOS provides one for the built-in controls) through that mapping, in the button layout above. Mapped pads get players first; Menu quits. |
+| `SMW_NO_KEYBOARD=1` | Leaves the keyboard out of the launch-time player assignment and turns the players without a pad that were human into bots. |
+
+Other builds set neither, so desktop pads keep their raw button numbering there.
+
 ## Files on the device
 
 Everything the game writes stays in its folder, `<card>/MUOS/application/SuperMarioWar/`:

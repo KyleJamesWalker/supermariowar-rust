@@ -222,7 +222,7 @@ pub fn init_joysticks() {
 
         SDL_JoystickEventState(SDL_ENABLE as i32);
         #[cfg(not(target_os = "emscripten"))]
-        crate::smw::pad::init(!harness::replaying());
+        crate::smw::pad::init(!harness::replaying() && std::env::var_os("SMW_PAD_TRANSLATE").is_some());
     }
 }
 
