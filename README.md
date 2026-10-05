@@ -58,7 +58,7 @@ tools/replay_clip.py <file>.txt --list                  # the session's matches
 tools/replay_clip.py <file>.txt --match 2 -o clip.txt   # match 2 alone, as a clip that plays like any replay
 ```
 
-Each match in a recording is marked and checkpointed, so `--replay <file> --segment <k>` watches match k alone, and a clip shares a single match without the menus before it. `--replay-speed <n>` watches faster. `docs/REPLAY.md` ("Recordings") has the details. `tools/replay_video.py` renders a replay to an MP4, or two builds side by side (`docs/REPLAY_VIDEO.md`).
+Each match in a recording is marked and checkpointed, so `--replay <file> --segment <k>` watches match k alone, and a clip shares a single match without the menus before it. `--replay-speed <n>` watches faster. The web page downloads recordings and clips as `.smwrp`, the text gzipped (`gunzip -c f.smwrp` reads it), or as `.txt`; every tool and `--replay` reads either. `docs/REPLAY.md` ("Recordings") has the details. `tools/replay_video.py` renders a replay to an MP4, or two builds side by side (`docs/REPLAY_VIDEO.md`).
 
 ## Verifying against the C++ original
 
