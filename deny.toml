@@ -17,6 +17,7 @@ allow = [
     "Zlib",
 ]
 private = { ignore = true }
+unused-allowed-license = "allow"
 
 [bans]
 multiple-versions = "allow"
