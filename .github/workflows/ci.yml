@@ -33,7 +33,7 @@ jobs:
   lint:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-native
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -69,7 +69,7 @@ jobs:
       matrix:
         manifest: [Cargo.toml, relay/Cargo.toml]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
           manifest-path: ${{ matrix.manifest }}
@@ -83,7 +83,7 @@ jobs:
         profile: [debug, release]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
       - uses: ./.github/actions/setup-native
@@ -97,7 +97,7 @@ jobs:
   relay:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
@@ -122,7 +122,7 @@ jobs:
       JOBS: '4'
       CARD: /mnt/sdcard
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
       - uses: ./.github/actions/setup-native
@@ -133,7 +133,7 @@ jobs:
         run: echo "sha=$(git ls-remote "$CPP_REF_REPO" "refs/heads/$CPP_REF_BRANCH" | cut -f 1)" >> "$GITHUB_OUTPUT"
 
       - id: ref-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ${{ env.SMW_REF_DIR }}/build/smw
@@ -290,7 +290,7 @@ jobs:
             tail -n 1 segment.log
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: parity-${{ matrix.os }}
@@ -315,7 +315,7 @@ jobs:
       JOBS: '4'
       CARD: /mnt/sdcard
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
       - uses: ./.github/actions/setup-native
@@ -364,7 +364,7 @@ jobs:
       JOBS: '4'
       SDL_RENDER_DRIVER: software
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
       - uses: ./.github/actions/setup-native
@@ -420,14 +420,14 @@ jobs:
       SDL_RENDER_DRIVER: software
       CHROME: /usr/bin/google-chrome
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
       - uses: ./.github/actions/setup-native
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: smw-web
           path: ${{ runner.temp }}
@@ -454,7 +454,7 @@ jobs:
         if: always()
         run: timeout 10m node tools/web_ui_test.mjs "$RUNNER_TEMP/web-ui"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: web-test

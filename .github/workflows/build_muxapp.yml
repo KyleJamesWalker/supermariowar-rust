@@ -22,7 +22,7 @@ jobs:
     outputs:
       file: ${{ steps.name.outputs.file }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -62,7 +62,7 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: smw-muos-aarch64
           path: dist/${{ steps.name.outputs.file }}
@@ -75,7 +75,7 @@ jobs:
     env:
       CARD: /mnt/sdcard
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install libSDL2
         run: |
@@ -86,7 +86,7 @@ jobs:
         with:
           path: ${{ env.CARD }}
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: smw-muos-aarch64
 
@@ -127,7 +127,7 @@ jobs:
           if grep -q '^shot ' parity.log; then echo "shots_differ=true" >> "$GITHUB_OUTPUT"; fi
           [[ -s summary.txt ]] && ! grep -q DIVERGE summary.txt
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure() || steps.parity.outputs.shots_differ
         with:
           name: parity-muos-aarch64

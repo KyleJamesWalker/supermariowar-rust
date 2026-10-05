@@ -21,7 +21,7 @@ jobs:
     name: MSVC x86_64
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -69,7 +69,7 @@ jobs:
           grep -c '^F ' "$RUNNER_TEMP/smoke/dump.txt"
           exit "${status:-0}"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: smw-windows-x86_64
           path: dist/${{ steps.name.outputs.file }}
