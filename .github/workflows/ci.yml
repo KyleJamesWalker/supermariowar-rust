@@ -403,6 +403,8 @@ jobs:
     uses: ./.github/workflows/build_muxapp.yml
   build-web:
     uses: ./.github/workflows/build_web.yml
+  build-android:
+    uses: ./.github/workflows/build_android.yml
 
   web:
     needs: build-web

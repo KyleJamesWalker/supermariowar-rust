@@ -54,9 +54,14 @@ jobs:
     uses: ./.github/workflows/build_muxapp.yml
     with:
       version: ${{ needs.version.outputs.version }}
+  android:
+    needs: version
+    uses: ./.github/workflows/build_android.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
 
   assemble:
-    needs: [version, linux, macos, windows, web, muxapp]
+    needs: [version, linux, macos, windows, web, muxapp, android]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
