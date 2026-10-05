@@ -269,6 +269,8 @@ Applied at the end of `MenuState::init()`, which runs when the splash screen is 
 | OS events (window, joystick hot-plug, real keyboard) | `SDL_PollEvent` | Not filtered. The dummy video driver generates no input and no joysticks are attached. |
 | Screenshot file names (`Insert` key) and netplay timestamps | `gfxSDL.cpp`, `net.cpp` | Unreachable: no script presses `Insert`, and the build uses `NO_NETWORK`. |
 | FMA contraction on arm64 | compiler | `-ffp-contract=off`. |
+| `sinf`, `cosf`, `atan2f` and `__sincosf_stret` (what LLVM calls for a sin and cos of one angle) round differently per libm; the web build links musl | libm | The Rust port computes them with `src/common/math/trig.rs`, the macOS arm64 libm's algorithms, on every target. Each call site keeps the function the native release build called. |
+| A thrown flag's `owner_throw` still points at a player `CleanDeadPlayers` deleted, and a flag base reads it | `CO_Flag`, `MO_FlagBase` | The Rust port clears it when the player is removed (see `PROGRESS.md`, Deliberate deviations). |
 
 Map list order is deterministic: maps live in a `std::multimap` keyed by name.
 
