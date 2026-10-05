@@ -1,0 +1,140 @@
+name: Build - Android
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Version in the file names (default the short commit)
+        type: string
+        default: ''
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - android/**
+      - src/android.rs
+      - build.rs
+      - .github/workflows/build_android.yml
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  NDK_VERSION: 27.2.12479018
+  CARGO_NDK_VERSION: 4.1.2
+  ABIS: arm64-v8a armeabi-v7a x86_64
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    outputs:
+      file: ${{ steps.name.outputs.file }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ndk;${{ env.NDK_VERSION }} platforms;android-34 build-tools;34.0.0
+
+      - name: Point at the NDK
+        run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: android
+
+      - name: Install cargo-ndk
+        run: cargo ndk --version 2> /dev/null | grep -q "$CARGO_NDK_VERSION" || cargo install --locked cargo-ndk --version "$CARGO_NDK_VERSION"
+
+      - uses: actions/cache@v4
+        with:
+          path: target/android/sdl
+          key: android-sdl-${{ env.NDK_VERSION }}-${{ env.ABIS }}-${{ hashFiles('android/build-sdl-libs.sh') }}
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: android-gradle-${{ hashFiles('android/**/*.gradle', 'android/build-sdl-libs.sh') }}
+
+      - name: Build
+        run: android/build.sh $ABIS
+
+      - id: name
+        env:
+          VERSION: ${{ inputs.version }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: echo "file=SuperMarioWar-${VERSION:-${SHA::7}}.apk" >> "$GITHUB_OUTPUT"
+
+      - name: Rename
+        run: mv dist/SuperMarioWar-*.apk "dist/${{ steps.name.outputs.file }}"
+
+      - name: Summary
+        env:
+          APK: dist/${{ steps.name.outputs.file }}
+        run: |
+          {
+            echo '### Android'
+            echo '```'
+            echo "$(basename "$APK"): $(du -h "$APK" | cut -f1)"
+            unzip -l "$APK" 'lib/*'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smw-android-apk
+          path: dist/${{ steps.name.outputs.file }}
+          compression-level: 0
+          if-no-files-found: error
+
+  smoke:
+    needs: apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: smw-android-apk
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Replays on the x86_64 emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          SMOKE_OUT: ${{ runner.temp }}/smoke
+        with:
+          api-level: 30
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader_indirect
+          disable-animations: true
+          script: android/smoke.sh ${{ needs.apk.outputs.file }} tools/replays/cpu_classic.txt tools/replays/menu_nav.txt tools/replays/joy_game.txt tools/replays/flow_world.txt
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: smw-android-smoke
+          path: ${{ runner.temp }}/smoke
+          retention-days: 7
