@@ -10,7 +10,7 @@ It targets the 64-bit H700 handhelds such as the RG35XX Plus, H, SP and 2024, wh
 2. On the device, open **Applications > Archive Manager** and select it. muOS extracts it to `<card>/MUOS/application/SuperMarioWar/`.
 3. Launch **Super Mario War** from **Applications**.
 
-To update, install the newer `.muxapp` the same way; it replaces the files it ships and leaves `home/` and `log.txt` alone. To uninstall, delete `MUOS/application/SuperMarioWar/`.
+To update, install the newer `.muxapp` the same way; it replaces the files it ships and leaves `home/` and `log.txt` alone. If the menus then show the Retro graphics instead of Classic, move `home/` aside, delete the folder, reinstall and put `home/` back: the game takes its default graphics pack from directory order, which an install over an older one keeps. To uninstall, delete `MUOS/application/SuperMarioWar/`.
 
 ## What is in the package
 
@@ -27,7 +27,7 @@ SuperMarioWar/
 
 ## Controls
 
-The built-in controls are player 1's gamepad. The game reads them through muOS's controller mapping, so A and B follow the muOS layout setting (retro or modern):
+The built-in controls are player 1's gamepad. The game reads them through muOS's controller mapping, so muOS's controller layout setting decides which physical button is A: with the retro layout A is the button labelled A, with the modern layout A and B (and X and Y) swap places. The table names the mapped buttons:
 
 | Button | In a match | In menus |
 |---|---|---|
@@ -43,19 +43,22 @@ Y, the shoulder buttons and the triggers are free to bind under **Controls** in 
 
 With one controller, the other players that were human become **Bot** at launch, so a match starts against the computer. Set them to **None** in the main menu's **Players** row for fewer opponents. Each extra controller (a USB or Bluetooth pad) joins as the next human player.
 
-To quit, press **Menu**, choose **Exit** on the main menu, or press B there. Settings are saved on the way out.
+To quit, press **Menu** or choose **Exit** on the main menu. B on the main menu also quits, as Back does there in the original game, so press A to start. Settings are saved on the way out.
 
 ## Launcher settings
 
-`mux_launch.sh` sets variables that change the game's behaviour on muOS only:
+`mux_launch.sh` sets these variables, which change the game's behaviour on muOS only:
 
 | Variable | Effect |
 |---|---|
 | `SMW_PAD_TRANSLATE=1` | Reads every pad SDL has a controller mapping for (muOS provides one for the built-in controls) through that mapping, in the button layout above. Mapped pads get players first; Menu quits. |
-| `SMW_DEBUG_INPUT=1` | Logs a heartbeat every 120 frames, the first 2,000 input events as SDL queues them, after translation and as the game reads them, and a watchdog line naming the main loop's phase when it stalls for 3 s. On while the controls are being brought up. |
 | `SMW_NO_KEYBOARD=1` | Leaves the keyboard out of the launch-time player assignment and turns the players without a pad that were human into bots. |
 
-Other builds set none of them, so desktop pads keep their raw button numbering there. The launcher also sets `SDL_AUDIODRIVER` from its `AUDIO_DRIVER` line, `pipewire,alsa` by default, since muOS's ALSA default device is a PipeWire plugin. Edit that line to `dummy` to run without sound.
+Other builds set neither, so desktop pads keep their raw button numbering there.
+
+`SMW_DEBUG_INPUT=1` is off; uncomment its line in `mux_launch.sh` to log a heartbeat every 120 frames, the first 2,000 input events (as SDL queues them, after translation and as the game reads them), and a watchdog line naming the main loop's phase when it stalls for 3 s.
+
+The `AUDIO_DRIVER` line sets `SDL_AUDIODRIVER`, a comma-separated list SDL tries in order. It defaults to `alsa`, the driver muOS's SDL 2.28.5 opens on the RG35XX (it has no PipeWire backend; ALSA's default device forwards to PipeWire). `dummy` runs without sound.
 
 It also sets `SDL_JOYSTICK_DEVICE` (unless already set) to the `/dev/input/eventN` node of `muOS-Keys`, or of every device the kernel gives a joystick (`jsN`) handler, so SDL opens the pad even where its udev enumeration finds none.
 
@@ -76,7 +79,7 @@ A recording copied to a computer plays with `smw --replay <file>`.
 - **The app does not start or returns straight to the menu.** Read `log.txt`. `error while loading shared libraries` names a library the device lacks; `GLIBC_2.xx not found` means the firmware's glibc is older than 2.34.
 - **No icon in the Applications list.** Apps on the second card (`/mnt/sdcard`) need muOS 2508.3 or newer to show their glyph.
 - **No sound.** The log's `[sfx]` lines show whether SDL_mixer opened the audio device; the game keeps running without one.
-- **Buttons do nothing or the wrong thing.** `log.txt` starts with the launcher's view of the input devices (`/proc/bus/input/devices`, `/dev/input`, the `SDL_` variables, whether udevd runs, the muOS version). The game's `[pad]` lines that follow give the joystick count SDL reports and list each joystick and whether it has a controller mapping ("translated"). Rebind under **Controls**; the bindings are saved in `home/`. Bindings saved by a build before controller support point at raw button numbers: delete `home/Library/Preferences/.smw/controls.sdl2.bin` to get the defaults above.
+- **Buttons do nothing or the wrong thing.** Turn on `SMW_DEBUG_INPUT` (see Launcher settings). `log.txt` starts with the launcher's view of the input devices (`/proc/bus/input/devices`, `/dev/input`, the `SDL_` variables, whether udevd runs, the muOS version). The game's `[pad]` lines that follow give the joystick count SDL reports and list each joystick and whether it has a controller mapping ("translated"). Rebind under **Controls**; the bindings are saved in `home/`. Bindings saved by a build before controller support point at raw button numbers: delete `home/Library/Preferences/.smw/controls.sdl2.bin` to get the defaults above.
 
 ## Building
 

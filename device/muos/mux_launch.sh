@@ -15,9 +15,10 @@ fi
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 export HOME="$APP_DIR/home"
 export LD_LIBRARY_PATH="$APP_DIR/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-export SMW_NO_KEYBOARD=1 SMW_PAD_TRANSLATE=1 SMW_DEBUG_INPUT=1
-# SDL takes the first audio driver in the list that opens; "dummy" runs silent, to rule sound out.
-AUDIO_DRIVER="pipewire,alsa"
+export SMW_NO_KEYBOARD=1 SMW_PAD_TRANSLATE=1
+# export SMW_DEBUG_INPUT=1
+# A comma-separated list SDL tries in order; "dummy" runs silent.
+AUDIO_DRIVER="alsa"
 export SDL_AUDIODRIVER="$AUDIO_DRIVER"
 mkdir -p "$HOME"
 cd "$APP_DIR" || exit 1
