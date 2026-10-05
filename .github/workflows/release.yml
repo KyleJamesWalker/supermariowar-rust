@@ -73,24 +73,34 @@ jobs:
   verify:
     needs: muxapp
     runs-on: ubuntu-22.04-arm
+    env:
+      CARD: /mnt/sdcard
     steps:
       - uses: actions/checkout@v4
 
       - name: Install libSDL2
         run: |
           sudo apt-get update
-          sudo apt-get install -y libsdl2-2.0-0
+          sudo apt-get install -y libsdl2-2.0-0 exfatprogs
+
+      - name: Mount an exFAT card
+        run: |
+          truncate -s 2G "$RUNNER_TEMP/card.img"
+          mkfs.exfat "$RUNNER_TEMP/card.img"
+          sudo mkdir -p "$CARD"
+          sudo mount -o loop,uid="$(id -u)",gid="$(id -g)" "$RUNNER_TEMP/card.img" "$CARD"
+          mkdir "$CARD/tmp"
 
       - uses: actions/download-artifact@v4
         with:
           name: ${{ needs.muxapp.outputs.name }}
 
       - name: Extract
-        run: unzip -q '${{ needs.muxapp.outputs.name }}' -d "$RUNNER_TEMP"
+        run: unzip -q '${{ needs.muxapp.outputs.name }}' -d "$CARD"
 
       - name: Check bundled libraries
         run: |
-          app="$RUNNER_TEMP/SuperMarioWar"
+          app="$CARD/SuperMarioWar"
           readelf -d "$app/smw" | grep -E 'RUNPATH|RPATH'
           for f in "$app/smw" "$app"/lib/*; do
             echo "== $(basename "$f")"
@@ -106,8 +116,9 @@ jobs:
           JOBS: '4'
           SDL_RENDER_DRIVER: software
           PARITY_OUT: ${{ runner.temp }}/parity
+          TMPDIR: /mnt/sdcard/tmp
         run: |
-          app="$RUNNER_TEMP/SuperMarioWar"
+          app="$CARD/SuperMarioWar"
           status=0
           SMW_BIN="$app/smw" SMW_DATA_DIR="$app/data" tools/parity.sh > parity.log || status=$?
           cat parity.log
