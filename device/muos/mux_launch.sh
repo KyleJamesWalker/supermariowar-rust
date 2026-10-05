@@ -3,14 +3,19 @@
 # ICON: smw
 
 . /opt/muos/script/var/func.sh
-echo app >/tmp/act_go
 
-SETUP_SDL_ENVIRONMENT
+if command -v SETUP_APP >/dev/null 2>&1; then
+	SETUP_APP smw ""
+else
+	echo app >/tmp/act_go
+	SETUP_SDL_ENVIRONMENT
+fi
 
 # Derived from $0, not GET_VAR: the app may be installed on either card.
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 export HOME="$APP_DIR/home"
 export LD_LIBRARY_PATH="$APP_DIR/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export SMW_NO_KEYBOARD=1
 mkdir -p "$HOME"
 cd "$APP_DIR" || exit 1
 chmod +x ./smw 2>/dev/null

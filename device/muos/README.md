@@ -2,6 +2,8 @@
 
 `SuperMarioWar-<version>.muxapp` installs the game on Anbernic handhelds running [muOS](https://muos.dev) through Archive Manager. The release workflow (`.github/workflows/release.yml`) builds it for aarch64 and attaches it to each `v*` release.
 
+It targets the 64-bit H700 handhelds such as the RG35XX Plus, H, SP and 2024, whose 640x480 screen matches the game's resolution. The original 2023 RG35XX is 32-bit ARM and is not supported.
+
 ## Install
 
 1. Download `SuperMarioWar-<version>.muxapp` from the GitHub release and copy it to `ARCHIVE/` on either SD card (`/mnt/mmc/ARCHIVE` or `/mnt/sdcard/ARCHIVE`).
@@ -25,22 +27,23 @@ SuperMarioWar/
 
 ## Controls
 
-The built-in controls are a joystick to the game, and the first joystick is player 1. The game's joystick defaults are by button number, so they may not match the labels on the device:
+The built-in controls are player 1's gamepad. The game reads them through muOS's controller mapping, so A and B follow the muOS layout setting (retro or modern):
 
-| | Game | Menus |
+| Button | In a match | In menus |
 |---|---|---|
-| Move | D-pad or left stick | D-pad or left stick |
-| Button 0 | Jump | Select |
-| Button 1 | Turbo | Back (on the main menu: exit the game) |
-| Button 2 | Use item | Random |
-| Button 3 | Pause | |
-| Button 4 | Exit (pause menu, then quit the match) | |
+| D-pad or left stick | Move, Down to duck | Move the cursor |
+| A | Jump | Choose |
+| B | Run and pick up | Back (on the main menu: quit) |
+| X | Use the stored item | Random choice |
+| Start | Pause | Scroll fast |
+| Select | Exit the match (asks first) | |
+| Menu | Quit the game | Quit the game |
 
-Rebind them under **Controls** in the main menu if they land on the wrong buttons. `docs/GAME_MANUAL.md` covers the menus and modes.
+Y, the shoulder buttons and the triggers are free to bind under **Controls** in the main menu. `docs/GAME_MANUAL.md` covers the menus and modes.
 
-At every launch, players after the connected joysticks are set to the two keyboard sets as human players. A handheld has no keyboard, so before starting a match set players 2 and 3 to **Bot** or **None** in the main menu's **Players** row, or the team selection screen waits for them.
+With one controller, the other players that were human become **Bot** at launch, so a match starts against the computer. Set them to **None** in the main menu's **Players** row for fewer opponents. Each extra controller (a USB or Bluetooth pad) joins as the next human player.
 
-To quit, choose **Exit** on the main menu or press Back there.
+To quit, press **Menu**, choose **Exit** on the main menu, or press B there. Settings are saved on the way out.
 
 ## Files on the device
 
@@ -59,8 +62,7 @@ A recording copied to a computer plays with `smw --replay <file>`.
 - **The app does not start or returns straight to the menu.** Read `log.txt`. `error while loading shared libraries` names a library the device lacks; `GLIBC_2.xx not found` means the firmware's glibc is older than 2.34.
 - **No icon in the Applications list.** Apps on the second card (`/mnt/sdcard`) need muOS 2508.3 or newer to show their glyph.
 - **No sound.** The log's `[sfx]` lines show whether SDL_mixer opened the audio device; the game keeps running without one.
-- **Buttons do the wrong thing.** Rebind them under **Controls**; the bindings are saved in `home/`.
-- **Stuck on the team selection screen.** Set the players without a controller to Bot or None (see Controls).
+- **Buttons do nothing or the wrong thing.** The `[pad]` lines at the top of `log.txt` list each joystick SDL sees and whether it has a controller mapping ("translated"). Rebind under **Controls**; the bindings are saved in `home/`. Bindings saved by a build before controller support point at raw button numbers: delete `home/Library/Preferences/.smw/controls.sdl2.bin` to get the defaults above.
 
 ## Building
 
