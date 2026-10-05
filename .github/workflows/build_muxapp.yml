@@ -1,0 +1,135 @@
+name: Build - muOS
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Version in the file names (default the short commit)
+        type: string
+        default: ''
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  muxapp:
+    runs-on: ubuntu-22.04-arm
+    outputs:
+      file: ${{ steps.name.outputs.file }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev cmake libclang-dev patchelf zip
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build SDL2_image and SDL2_mixer
+        run: device/muos/build-sdl-libs.sh
+
+      - name: Build smw
+        env:
+          LIBZ_SYS_STATIC: '1'
+        run: cargo build --release --locked --bin smw
+
+      - id: name
+        env:
+          VERSION: ${{ inputs.version }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: echo "file=SuperMarioWar-${VERSION:-${SHA::7}}.muxapp" >> "$GITHUB_OUTPUT"
+
+      - name: Package
+        env:
+          MUXAPP_OUT: dist/${{ steps.name.outputs.file }}
+        run: device/muos/build-muxapp.sh target/release/smw | tee package.log
+
+      - name: Summary
+        run: |
+          {
+            echo '### muOS'
+            echo '```'
+            sed -n '/^bundled libraries:/,$p' package.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smw-muos-aarch64
+          path: dist/${{ steps.name.outputs.file }}
+          compression-level: 0
+          if-no-files-found: error
+
+  verify:
+    needs: muxapp
+    runs-on: ubuntu-22.04-arm
+    env:
+      CARD: /mnt/sdcard
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install libSDL2
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-2.0-0 dosfstools
+
+      - uses: ./.github/actions/fat32-card
+        with:
+          path: ${{ env.CARD }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: smw-muos-aarch64
+
+      - name: Extract
+        run: unzip -q '${{ needs.muxapp.outputs.file }}' -d "$CARD"
+
+      - name: Check bundled libraries
+        run: |
+          app="$CARD/SuperMarioWar"
+          readelf -d "$app/smw" | grep -E 'RUNPATH|RPATH'
+          for f in "$app/smw" "$app"/lib/*; do
+            echo "== $(basename "$f")"
+            env -u LD_LIBRARY_PATH ldd "$f" | tee ldd.txt
+            if grep -q 'not found' ldd.txt; then exit 1; fi
+          done
+          env -u LD_LIBRARY_PATH ldd "$app/smw" | grep -E 'libSDL2_(image|mixer)' | grep -vq "$app/lib/" && exit 1
+          env -u LD_LIBRARY_PATH "$app/smw" --help
+
+      - name: Replay parity
+        id: parity
+        env:
+          SMW_NO_BUILD: '1'
+          JOBS: '4'
+          SDL_RENDER_DRIVER: software
+          PARITY_OUT: ${{ runner.temp }}/parity
+          TMPDIR: /mnt/sdcard/tmp
+        run: |
+          app="$CARD/SuperMarioWar"
+          SMW_BIN="$app/smw" SMW_DATA_DIR="$app/data" tools/parity.sh > parity.log || true
+          cat parity.log
+          sed -n '/^=== summary/,$p' parity.log > summary.txt
+          {
+            echo '### muOS replay parity'
+            echo '```'
+            cat summary.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if grep -q '^shot ' parity.log; then echo "shots_differ=true" >> "$GITHUB_OUTPUT"; fi
+          [[ -s summary.txt ]] && ! grep -q DIVERGE summary.txt
+
+      - uses: actions/upload-artifact@v4
+        if: failure() || steps.parity.outputs.shots_differ
+        with:
+          name: parity-muos-aarch64
+          path: ${{ runner.temp }}/parity
+          retention-days: 7

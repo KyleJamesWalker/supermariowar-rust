@@ -1,0 +1,27 @@
+name: Set up native build dependencies
+description: Installs SDL2, SDL2_image, SDL2_mixer, CMake and libclang for building the game on the runner's OS.
+
+outputs:
+  sdl-dir:
+    description: On Windows, the directory holding the SDL import libraries and DLLs
+    value: ${{ steps.windows.outputs.dir }}
+
+runs:
+  using: composite
+  steps:
+    - if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev cmake libclang-dev
+
+    - if: runner.os == 'macOS'
+      shell: bash
+      env:
+        HOMEBREW_NO_AUTO_UPDATE: '1'
+        HOMEBREW_NO_INSTALL_CLEANUP: '1'
+      run: brew install sdl2 sdl2_image sdl2_mixer
+
+    - if: runner.os == 'Windows'
+      id: windows
+      uses: ./.github/actions/setup-sdl-windows

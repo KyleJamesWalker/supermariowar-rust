@@ -1,0 +1,404 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths: &paths
+      - '**'
+      - '!**.md'
+      - '!docs/**'
+      - docs/GAME_MANUAL.md
+      - docs/gfx/**
+  pull_request:
+    paths: *paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CARGO_TERM_COLOR: always
+  CPP_REF_REPO: https://github.com/KyleJamesWalker/supermariowar-cpp-reference
+  CPP_REF_BRANCH: harness-latest
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-native
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            relay
+
+      - name: rustfmt (report only)
+        run: |
+          for m in Cargo.toml relay/Cargo.toml; do
+            n="$(cargo fmt --check --manifest-path "$m" 2>/dev/null | grep -c '^Diff in' || true)"
+            echo "rustfmt $m: $n hunks differ" | tee -a "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: clippy
+        run: |
+          status=0
+          for m in Cargo.toml relay/Cargo.toml; do
+            cargo clippy --locked --all-targets --manifest-path "$m" --message-format=short 2> clippy.log || status=1
+            grep -E ': (warning|error)' clippy.log | grep -v '^warning: `' > diags.txt || true
+            echo "clippy $m: $(grep -c ': error' diags.txt || true) errors, $(grep -c ': warning' diags.txt || true) warnings" | tee -a "$GITHUB_STEP_SUMMARY"
+            grep ': error' clippy.log || true
+          done
+          exit $status
+
+  deny:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        manifest: [Cargo.toml, relay/Cargo.toml]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          manifest-path: ${{ matrix.manifest }}
+          command-arguments: --config deny.toml
+
+  test:
+    name: test (${{ matrix.os }}, ${{ matrix.profile }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15, windows-latest]
+        profile: [debug, release]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: ./.github/actions/setup-native
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.profile }}
+      - name: cargo test
+        run: cargo test --locked ${{ matrix.profile == 'release' && '--release' || '' }}
+
+  relay:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: relay
+      - run: cargo test --release --locked --manifest-path relay/Cargo.toml
+
+  parity:
+    name: parity (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: linux
+            runner: ubuntu-24.04
+          - os: macos
+            runner: macos-15
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    env:
+      SMW_REF_DIR: ${{ github.workspace }}/../cpp-reference
+      SMW_EDITOR_REF_DIR: ${{ github.workspace }}/../cpp-reference
+      JOBS: '4'
+      CARD: /mnt/sdcard
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: ./.github/actions/setup-native
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - id: ref
+        run: echo "sha=$(git ls-remote "$CPP_REF_REPO" "refs/heads/$CPP_REF_BRANCH" | cut -f 1)" >> "$GITHUB_OUTPUT"
+
+      - id: ref-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.SMW_REF_DIR }}/build/smw
+            ${{ env.SMW_REF_DIR }}/build/smw-leveledit
+            ${{ env.SMW_REF_DIR }}/build/smw-worldedit
+          key: cpp-ref-${{ runner.os }}-${{ runner.arch }}-${{ steps.ref.outputs.sha }}-v1
+
+      - name: Build the C++ reference
+        if: steps.ref-cache.outputs.cache-hit != 'true'
+        run: |
+          git clone --branch "$CPP_REF_BRANCH" "$CPP_REF_REPO" "$SMW_REF_DIR"
+          test "$(git -C "$SMW_REF_DIR" rev-parse HEAD)" = '${{ steps.ref.outputs.sha }}'
+          if [[ $RUNNER_OS == Linux ]]; then
+            sed -i '0,/^#ifdef __APPLE__$/s//#if defined(__APPLE__) || defined(__linux__)/' "$SMW_REF_DIR/src/common/path.cpp"
+            git -C "$SMW_REF_DIR" diff --stat
+          fi
+          "$SMW_REF_DIR/build-reference.sh"
+
+      - if: runner.os == 'Linux'
+        uses: ./.github/actions/fat32-card
+        with:
+          path: ${{ env.CARD }}
+
+      - name: Data on the FAT32 card
+        if: runner.os == 'Linux'
+        run: |
+          tar --sort=name -cf - data | tar -xf - -C "$CARD"
+          sudo mount --bind "$CARD/data" data
+          echo "TMPDIR=$CARD/tmp" >> "$GITHUB_ENV"
+
+      - name: Build
+        run: cargo build --release --locked --bins
+
+      - name: Game parity
+        id: game
+        env:
+          SMW_NO_BUILD: '1'
+          PARITY_OUT: ${{ runner.temp }}/parity/game
+        run: |
+          status=0
+          tools/parity.sh > game.log || status=$?
+          sed -n '/^=== summary/,$p' game.log > game-summary.txt
+          {
+            echo "### Game parity vs the committed goldens (${{ matrix.os }})"
+            echo "$(grep -c 'MATCH all' game-summary.txt) of $(($(wc -l < game-summary.txt) - 1)) dumps match"
+            echo '```'
+            grep -v -E 'MATCH all .* shots ([0-9]+)/\1$' game-summary.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat game.log
+          [[ -s game-summary.txt ]] || exit 1
+          if [[ $RUNNER_OS == macOS ]]; then exit $status; fi
+          ! grep -q DIVERGE game-summary.txt
+
+      - name: Linux C++ goldens
+        if: always() && runner.os == 'Linux' && steps.game.outcome != 'skipped'
+        env:
+          GOLDEN_ROOT: ${{ runner.temp }}/linux-goldens
+          SMW_DATA_DIR: ${{ github.workspace }}/data
+        run: |
+          one() {
+            local script=$1 out
+            if [[ $script == */editor_replays/* ]]; then
+              out="$GOLDEN_ROOT/editor_golden/$(basename "$(dirname "$script")")/$(basename "$script" .txt)"
+              tools/run_editor.sh "$(basename "$(dirname "$script")")" "$script" "$out" > /dev/null || true
+            else
+              out="$GOLDEN_ROOT/golden/$(basename "$script" .txt)"
+              tools/run_ref.sh "$script" "$out" > /dev/null || true
+            fi
+            rm -f "$out/stdout.log"
+            if [[ -f $out/dump.txt ]]; then gzip -n "$out/dump.txt"; fi
+          }
+          export -f one
+          printf '%s\0' tools/replays/*.txt tools/editor_replays/*/*.txt | xargs -0 -n 1 -P "$JOBS" bash -c 'one "$0"'
+          du -sh "$GOLDEN_ROOT"/*
+
+      - name: Game parity vs Linux C++
+        if: always() && runner.os == 'Linux' && steps.game.outcome != 'skipped'
+        env:
+          SMW_NO_BUILD: '1'
+          GOLDEN_ROOT: ${{ runner.temp }}/linux-goldens
+          PARITY_OUT: ${{ runner.temp }}/parity/game-linux
+        run: |
+          status=0
+          tools/parity.sh > game-linux.log || status=$?
+          sed -n '/^=== summary/,$p' game-linux.log > summary.txt
+          {
+            echo "### Game parity vs the C++ built here"
+            echo "$(grep -c 'MATCH all' summary.txt) of $(($(wc -l < summary.txt) - 1)) dumps match"
+            echo '```'
+            grep -v -E 'MATCH all .* shots ([0-9]+)/\1$' summary.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat game-linux.log
+          exit $status
+
+      - name: Editor parity
+        if: always() && steps.game.outcome != 'skipped'
+        env:
+          PARITY_OUT: ${{ runner.temp }}/parity/editor
+        run: |
+          status=0
+          tools/editor_parity.sh > editor.log || status=$?
+          sed -n '/^=== summary/,$p' editor.log > summary.txt
+          {
+            echo "### Editor parity vs the committed goldens (${{ matrix.os }})"
+            echo '```'
+            grep -v -E 'dump MATCH, shots ([0-9]+)/\1, files ([0-9]+)/\2$' summary.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat editor.log
+          [[ -s summary.txt ]] || exit 1
+          if [[ $RUNNER_OS == macOS ]]; then exit $status; fi
+          ! tail -n +2 summary.txt | grep -v -E 'dump MATCH, shots [0-9]+/[0-9]+, files ([0-9]+)/\1$'
+
+      - name: Editor parity vs Linux C++
+        if: always() && runner.os == 'Linux' && steps.game.outcome != 'skipped'
+        env:
+          GOLDEN_ROOT: ${{ runner.temp }}/linux-goldens
+          PARITY_OUT: ${{ runner.temp }}/parity/editor-linux
+        run: |
+          status=0
+          tools/editor_parity.sh > editor-linux.log || status=$?
+          {
+            echo "### Editor parity vs the C++ built here"
+            echo '```'
+            sed -n '/^=== summary/,$p' editor-linux.log | grep -v -E 'dump MATCH, shots ([0-9]+)/\1, files ([0-9]+)/\2$'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat editor-linux.log
+          exit $status
+
+      - name: Segment check
+        if: always() && steps.game.outcome != 'skipped'
+        env:
+          SMW_NO_BUILD: '1'
+        run: |
+          python3 tools/segment_check.py --jobs "$JOBS" tools/segment_replays/*.txt | tee segment.log
+          {
+            echo "### Segment check (${{ matrix.os }})"
+            tail -n 1 segment.log
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: parity-${{ matrix.os }}
+          path: |
+            ${{ runner.temp }}/parity
+            *.log
+          retention-days: 7
+
+  sweep:
+    name: sweep (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: linux
+            runner: ubuntu-24.04
+          - os: macos
+            runner: macos-15
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    env:
+      JOBS: '4'
+      CARD: /mnt/sdcard
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: ./.github/actions/setup-native
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - if: runner.os == 'Linux'
+        uses: ./.github/actions/fat32-card
+        with:
+          path: ${{ env.CARD }}
+
+      - name: Data on the FAT32 card
+        if: runner.os == 'Linux'
+        run: |
+          tar --sort=name -cf - data | tar -xf - -C "$CARD"
+          sudo mount --bind "$CARD/data" data
+          echo "TMPDIR=$CARD/tmp" >> "$GITHUB_ENV"
+
+      - name: Build
+        run: cargo build --release --locked --bin smw
+
+      - name: Sweep parity
+        env:
+          SMW_NO_BUILD: '1'
+          PARITY_OUT: ${{ runner.temp }}/parity/sweep
+        run: |
+          status=0
+          tools/parity_sweep.sh > sweep.log || status=$?
+          sed -n '/^=== summary/,$p' sweep.log > summary.txt
+          {
+            echo "### Map sweep vs the committed goldens (${{ matrix.os }})"
+            echo "$(grep -c 'MATCH all' summary.txt) of $(($(wc -l < summary.txt) - 1)) dumps match"
+            echo '```'
+            grep -v -E 'MATCH all .* shots ([0-9]+)/\1$' summary.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          grep -v -E 'MATCH all .* shots ([0-9]+)/\1$' sweep.log | grep -v -E '^(=== |OK: )' || true
+          [[ -s summary.txt ]] || exit 1
+          if [[ $RUNNER_OS == macOS ]]; then exit $status; fi
+          ! grep -q DIVERGE summary.txt
+
+  build-linux:
+    uses: ./.github/workflows/build_linux.yml
+  build-macos:
+    uses: ./.github/workflows/build_macos.yml
+  build-windows:
+    uses: ./.github/workflows/build_windows.yml
+  build-muxapp:
+    uses: ./.github/workflows/build_muxapp.yml
+  build-web:
+    uses: ./.github/workflows/build_web.yml
+
+  web:
+    needs: build-web
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: ./.github/actions/setup-native
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: smw-web
+          path: ${{ runner.temp }}
+
+      - name: Extract
+        run: |
+          unzip -q "$RUNNER_TEMP"/SuperMarioWar-*-web.zip -d "$RUNNER_TEMP"
+          mkdir -p dist
+          mv "$RUNNER_TEMP/SuperMarioWar-web" dist/web
+
+      - name: Build
+        run: cargo build --release --locked --bin smw
+
+      - name: Allow Chrome's sandbox
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      - name: Web clip test
+        env:
+          CHROME: /usr/bin/google-chrome
+        run: timeout 15m node tools/web_clip_test.mjs "$RUNNER_TEMP/web-clip"
+
+      - name: Web UI test
+        if: always()
+        env:
+          CHROME: /usr/bin/google-chrome
+        run: timeout 10m node tools/web_ui_test.mjs "$RUNNER_TEMP/web-ui"
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: web-test
+          path: ${{ runner.temp }}/web-*
+          retention-days: 7

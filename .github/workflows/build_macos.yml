@@ -1,0 +1,126 @@
+name: Build - macOS
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Version in the file names (default the short commit)
+        type: string
+        default: ''
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  app:
+    name: ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-14
+          - arch: x86_64
+            runner: macos-15-intel
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: ./.github/actions/setup-native
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Package
+        run: tools/package_macos.sh
+
+      - name: Smoke test
+        env:
+          SMW_NO_BUILD: '1'
+        run: |
+          app="$PWD/dist/Super Mario War.app"
+          SMW_BIN="$app/Contents/MacOS/smw" SMW_DATA_DIR="$app/Contents/Resources/data" \
+            tools/run_rust.sh tools/replays/start_classic.txt "$RUNNER_TEMP/smoke"
+          grep -c '^F ' "$RUNNER_TEMP/smoke/dump.txt"
+          otool -l "$app/Contents/MacOS/smw" | grep -m 1 minos
+
+      - name: Archive
+        run: tar -C dist -czf "$RUNNER_TEMP/app.tar.gz" 'Super Mario War.app'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-app-${{ matrix.arch }}
+          path: ${{ runner.temp }}/app.tar.gz
+          compression-level: 0
+          retention-days: 3
+          if-no-files-found: error
+
+  universal:
+    needs: app
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: macos-app-*
+
+      - id: name
+        env:
+          VERSION: ${{ inputs.version }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: echo "file=SuperMarioWar-${VERSION:-${SHA::7}}-macos-universal.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Merge
+        run: |
+          for arch in arm64 x86_64; do
+            mkdir -p "$RUNNER_TEMP/$arch"
+            tar -xzf "macos-app-$arch/app.tar.gz" -C "$RUNNER_TEMP/$arch"
+          done
+          mkdir -p dist
+          tools/macos_universal.sh "$RUNNER_TEMP/arm64/Super Mario War.app" "$RUNNER_TEMP/x86_64/Super Mario War.app" \
+            "dist/Super Mario War.app" | tee merge.log
+          codesign --verify --deep --strict "dist/Super Mario War.app"
+
+      - name: Smoke test
+        env:
+          SMW_NO_BUILD: '1'
+        run: |
+          app="$PWD/dist/Super Mario War.app"
+          for arch in arm64 x86_64; do
+            if ! arch "-$arch" /usr/bin/true 2> /dev/null; then
+              echo "$arch: cannot run here, skipped"
+              continue
+            fi
+            printf '#!/bin/sh\nexec arch -%s "%s" "$@"\n' "$arch" "$app/Contents/MacOS/smw" > "$RUNNER_TEMP/smw-$arch"
+            chmod +x "$RUNNER_TEMP/smw-$arch"
+            SMW_BIN="$RUNNER_TEMP/smw-$arch" SMW_DATA_DIR="$app/Contents/Resources/data" \
+              tools/run_rust.sh tools/replays/start_classic.txt "$RUNNER_TEMP/smoke-$arch"
+            echo "$arch: $(grep -c '^F ' "$RUNNER_TEMP/smoke-$arch/dump.txt") frames"
+          done
+
+      - name: Zip
+        run: ditto -c -k --keepParent "dist/Super Mario War.app" 'dist/${{ steps.name.outputs.file }}'
+
+      - name: Summary
+        run: |
+          {
+            echo '### macOS universal'
+            echo '```'
+            cat merge.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smw-macos-universal
+          path: dist/${{ steps.name.outputs.file }}
+          compression-level: 0
+          if-no-files-found: error

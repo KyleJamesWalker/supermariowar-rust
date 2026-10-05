@@ -1,0 +1,25 @@
+name: Mount a FAT32 card
+description: Mounts an empty FAT32 image, whose directories list entries in the order they were created, with a tmp/ for TMPDIR.
+
+inputs:
+  path:
+    description: Mount point
+    default: /mnt/sdcard
+  size:
+    description: Image size for truncate
+    default: 2G
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        CARD: ${{ inputs.path }}
+        SIZE: ${{ inputs.size }}
+      run: |
+        command -v mkfs.vfat > /dev/null || { sudo apt-get update; sudo apt-get install -y dosfstools; }
+        truncate -s "$SIZE" "$RUNNER_TEMP/card.img"
+        mkfs.vfat -F 32 "$RUNNER_TEMP/card.img"
+        sudo mkdir -p "$CARD"
+        sudo mount -o loop,utf8,uid="$(id -u)",gid="$(id -g)" "$RUNNER_TEMP/card.img" "$CARD"
+        mkdir "$CARD/tmp"
