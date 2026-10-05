@@ -4,6 +4,21 @@ A faithful Rust + rust-sdl2 port of [Super Mario War](https://github.com/mmatyas
 
 `docs/GAME_MANUAL.md` is the player's manual: menus, controls, all 21 game modes, blocks and items.
 
+## Downloads
+
+Each [release](https://github.com/KyleJamesWalker/supermariowar-rust/releases) carries ready-to-run packages and a `SHA256SUMS` file:
+
+| Package | Runs on | Notes |
+|---|---|---|
+| `SuperMarioWar-<version>-linux-x86_64.tar.gz`, `-linux-aarch64.tar.gz` | Linux with glibc 2.35 or newer (Ubuntu 22.04, Debian 12) | Needs the system SDL2 libraries: `sudo apt install libsdl2-2.0-0 libsdl2-image-2.0-0 libsdl2-mixer-2.0-0`. Run `SuperMarioWar/smw`. |
+| `SuperMarioWar-<version>-macos-universal.zip` | macOS 14 or newer (Apple silicon), 15 or newer (Intel) | Ad-hoc signed, not notarized: after unzipping, run `xattr -dr com.apple.quarantine "Super Mario War.app"` once. |
+| `SuperMarioWar-<version>-windows-x86_64.zip` | Windows 10 or newer, x64 | SDL2 DLLs included. Settings go to `%USERPROFILE%\.smw\`. |
+| `SuperMarioWar-<version>-web.zip` | Any static web server | The site published at GitHub Pages. |
+| `SuperMarioWar-<version>.muxapp` | Anbernic handhelds on muOS | See [Anbernic (muOS)](#anbernic-muos). |
+| `SuperMarioWar-<version>.apk` | Android 5.0 or newer, with a gamepad or keyboard | Debug-signed. See [Android](#android). |
+
+Every CI run also uploads these packages as workflow artifacts (`smw-linux-x86_64`, `smw-macos-universal`, `smw-windows-x86_64`, ...). `docs/RELEASING.md` describes how a release is cut.
+
 ## Build and run
 
 Requires Rust and the SDL2, SDL2_image and SDL2_mixer libraries (on macOS: `brew install sdl2 sdl2_image sdl2_mixer`). Game data is the upstream [supermariowar-data](https://github.com/mmatyas/supermariowar-data) submodule.
@@ -72,6 +87,18 @@ Each match in a recording is marked and checkpointed, so `--replay <file> --segm
 
 The C++ original, plus the replay and state-dump hooks used to compare it with this port, lives in [supermariowar-cpp-reference](https://github.com/KyleJamesWalker/supermariowar-cpp-reference) (branch `harness-latest`; the hooks are also kept here as `tools/cpp-harness.patch` and `tools/editor-harness.patch`). `docs/REPLAY.md` specifies the harness, and `tools/parity.sh`, `tools/parity_sweep.sh` and `tools/editor_parity.sh` run the comparisons. `docs/ARCHITECTURE.md` documents the porting conventions, and `docs/PROGRESS.md` maps each C++ file to its Rust module. `docs/UPSTREAM_BACKLOG.md` tracks C++ bugs and port changes to offer upstream.
 
+## CI
+
+`.github/workflows/ci.yml` runs on every pull request and every push to `main`:
+
+- clippy (fails on errors) and cargo-deny (licenses, advisories, sources)
+- `cargo test`, debug and release, on Linux, macOS and Windows
+- replay parity: `tools/parity.sh`, `tools/parity_sweep.sh`, `tools/editor_parity.sh` and `tools/segment_check.py` against the committed goldens. macOS, where the goldens were made, gates on dumps and screenshots. Linux replays on a FAT32 image so data directories list in a fixed order, gates on dumps and saved files, and also gates against goldens from the C++ reference built on the same runner.
+- the web build's clip and page tests in headless Chrome
+- the Linux, macOS, Windows, web and muOS packages (`build_*.yml`, the same reusable workflows `release.yml` calls)
+
+`web.yml` deploys the web build to GitHub Pages and `relay.yml` pushes the relay image to GHCR, both from `main`.
+
 ## Credits
 
-Game design, code and assets are from the Super Mario War project and its contributors; see `data/` and the upstream repository. This repository contains only the Rust translation and its test tooling.
+Game design, code and assets are from the Super Mario War project and its contributors; see `CREDITS`, `data/` and the upstream repository. This repository contains only the Rust translation and its test tooling.
