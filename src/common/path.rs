@@ -5,6 +5,12 @@ use std::path::Path;
 
 pub static mut SMW_Root_Data_Dir: String = String::new();
 
+#[cfg(target_os = "android")]
+pub fn get_home_directory() -> String {
+    crate::android::storage_path() + "/"
+}
+
+#[cfg(not(target_os = "android"))]
 pub fn get_home_directory() -> String {
     let mut result = String::from("/Library/Preferences/.smw/");
     if let Ok(folder) = std::env::var("HOME") {

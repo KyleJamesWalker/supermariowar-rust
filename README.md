@@ -22,6 +22,10 @@ Native builds draw without SDL surface RLE, which on Homebrew's sdl2-compat cost
 
 Each `v*` release carries `SuperMarioWar-<version>.muxapp`, a one-file install for Anbernic handhelds running muOS: copy it to the SD card's `ARCHIVE/` folder and install it with Applications > Archive Manager. [`device/muos/README.md`](device/muos/README.md) covers installing, controls, where settings, recordings and logs go, troubleshooting and building the package.
 
+## Android
+
+`.github/workflows/build_android.yml` builds a debug-signed APK for arm64-v8a, armeabi-v7a and x86_64 following upstream's SDL-template Android port, and plays replays on an x86_64 emulator against the goldens. It needs a gamepad or keyboard; there are no on-screen controls yet. [`android/README.md`](android/README.md) covers installing, data and settings paths, controls and building.
+
 ## Web build
 
 The port also builds for the browser as WebAssembly (`wasm32-unknown-emscripten`), mirroring upstream's Emscripten build: SDL2, SDL2_image (PNG and BMP), SDL2_mixer (WAV and OGG) and zlib come from Emscripten's ports, and `data/` is preloaded into the page. It needs emsdk 5.0.2, the version upstream's CI uses, and the Rust target:

@@ -1,0 +1,20 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace 'com.kylejameswalker.supermariowar'
+    compileSdkVersion 34
+    ndkVersion '27.2.12479018'
+    defaultConfig {
+        applicationId 'com.kylejameswalker.supermariowar'
+        minSdkVersion 21
+        targetSdkVersion 34
+        versionCode project.property('smwVersionCode') as int
+        versionName project.property('smwVersionName')
+    }
+    sourceSets.main {
+        jniLibs.srcDir 'libs'
+    }
+    lint {
+        abortOnError false
+    }
+}
