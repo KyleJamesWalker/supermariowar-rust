@@ -49,6 +49,7 @@ use crate::smw::objects::blocks::switch_block::B_SwitchBlock;
 use crate::smw::objects::blocks::throw_block::B_ThrowBlock;
 use crate::smw::objects::blocks::view_block::B_ViewBlock;
 use crate::smw::objects::blocks::weapon_breakable_block::{B_WeaponBreakableBlock, WeaponDamageType};
+use crate::smw::objects::carriable::co_flag::CO_Flag;
 use crate::smw::objects::carriable::co_kuribo_shoe::CO_KuriboShoe;
 use crate::smw::objects::carriable::co_shell::CO_Shell;
 use crate::smw::objects::carriable::co_spike::CO_Spike;
@@ -721,6 +722,16 @@ impl GameplayState {
 
                     if !gmChicken.is_null() && gmChicken.get().chicken() == players[i] {
                         gmChicken.get().clear_chicken();
+                    }
+
+                    // C++ leaves this dangling and reads freed memory when the flag reaches a base.
+                    for &obj in objectcontainer[1].list() {
+                        let mut obj = obj;
+                        if let Some(flag) = obj.as_any().downcast_mut::<CO_Flag>() {
+                            if flag.owner_throw == players[i] {
+                                flag.owner_throw = Ptr::null();
+                            }
+                        }
                     }
 
                     players[i].delete();
