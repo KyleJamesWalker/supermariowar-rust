@@ -9,6 +9,7 @@ on:
       - Cargo.lock
       - crates/smw-globals/**
       - crates/smw-netplay/**
+      - crates/*/Cargo.toml
       - src/common/file_io.rs
       - src/common_netplay/**
       - src/globals/**
@@ -25,6 +26,7 @@ on:
       - Cargo.lock
       - crates/smw-globals/**
       - crates/smw-netplay/**
+      - crates/*/Cargo.toml
       - src/common/file_io.rs
       - src/common_netplay/**
       - src/globals/**

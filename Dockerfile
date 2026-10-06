@@ -4,6 +4,7 @@ WORKDIR /src
 COPY Cargo.toml Cargo.lock ./
 COPY crates/smw-globals crates/smw-globals
 COPY crates/smw-netplay crates/smw-netplay
+COPY crates/smw-platform crates/smw-platform
 COPY relay/Cargo.toml relay/
 COPY relay/src relay/src
 COPY src/common/file_io.rs src/common/file_io.rs

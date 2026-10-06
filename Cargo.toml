@@ -6,7 +6,7 @@ description = "Super Mario War - faithful Rust port"
 publish.workspace = true
 
 [workspace]
-members = ["crates/smw-globals", "crates/smw-netplay", "relay"]
+members = ["crates/smw-globals", "crates/smw-netplay", "crates/smw-platform", "relay"]
 
 [workspace.package]
 edition = "2021"

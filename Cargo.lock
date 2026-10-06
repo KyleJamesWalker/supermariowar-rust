@@ -511,6 +511,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "smw-platform"
+version = "0.1.0"
+
+[[package]]
 name = "smw_relay"
 version = "0.1.0"
 dependencies = [

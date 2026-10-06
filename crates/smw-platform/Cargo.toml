@@ -1,0 +1,6 @@
+[package]
+name = "smw-platform"
+version = "0.1.0"
+edition.workspace = true
+description = "Super Mario War - the platform traits (video, audio output, clock, storage) and the normalized input events"
+publish.workspace = true
