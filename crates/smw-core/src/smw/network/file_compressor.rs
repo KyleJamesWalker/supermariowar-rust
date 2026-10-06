@@ -266,7 +266,7 @@ mod tests {
 
     #[test]
     fn roundtrip_a_map() {
-        let map = concat!(env!("CARGO_MANIFEST_DIR"), "/data/maps/0smw.map");
+        let map = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/maps/0smw.map");
         let c = FileCompressor::compress(map, 3);
         assert!(c.is_valid());
         let out = std::env::temp_dir().join(format!("smw_fc_{}.map", std::process::id()));

@@ -401,7 +401,7 @@ mod tests {
 
     #[test]
     fn matches_libcxx_iteration_order() {
-        let expected = include_str!("../../tools/ref/unordered_map_order.txt");
+        let expected = include_str!("../../../../tools/ref/unordered_map_order.txt");
         let mut rng = Lcg(12345);
         let mut out = String::new();
         run::<u32>(&mut rng, &mut out, "u32rand", 200, 900, false);

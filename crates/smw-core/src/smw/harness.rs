@@ -1309,7 +1309,7 @@ mod tests {
     #[test]
     fn checkpoints_read_old_and_new_encodings() {
         let read = |name: &str| -> Vec<Vec<u8>> {
-            let text = std::fs::read_to_string(format!("{}/tools/checkpoint_fixtures/{}", env!("CARGO_MANIFEST_DIR"), name)).unwrap();
+            let text = std::fs::read_to_string(format!("{}/../../tools/checkpoint_fixtures/{}", env!("CARGO_MANIFEST_DIR"), name)).unwrap();
             text.lines().filter_map(|l| l.strip_prefix("#@ checkpoint ")).map(|l| checkpoint_bytes(&directive_fields(&format!("checkpoint {}", l))).unwrap()).collect()
         };
         let old = read("web_gamepad_ztar_b64.txt");

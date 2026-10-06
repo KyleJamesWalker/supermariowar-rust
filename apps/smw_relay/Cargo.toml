@@ -6,5 +6,5 @@ description = "Super Mario War netplay lobby and WebSocket relay for the browser
 publish.workspace = true
 
 [dependencies]
-smw-netplay = { path = "../crates/smw-netplay" }
+smw-netplay = { path = "../../crates/smw-netplay" }
 tungstenite = { version = "0.30", default-features = false, features = ["handshake"] }

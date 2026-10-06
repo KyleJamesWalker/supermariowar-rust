@@ -2779,7 +2779,7 @@ pub(crate) mod tests {
     /// Brings up the globals `CMap::load_map` touches, against the repository's data/ directory.
     pub(crate) fn init_map_globals() {
         INIT.call_once(|| unsafe {
-            RootDataDirectory = concat!(env!("CARGO_MANIFEST_DIR"), "/data").to_string();
+            RootDataDirectory = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data").to_string();
             std::env::set_var("SDL_VIDEODRIVER", "dummy");
             SDL_Init(0);
             screen = SDL_CreateRGBSurface(0, 640, 480, 32, 0, 0, 0, 0);
@@ -2922,7 +2922,7 @@ pub(crate) mod tests {
     }
 
     fn all_map_files() -> Vec<String> {
-        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/data");
+        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data");
         let mut out = Vec::new();
         let mut stack = vec![std::path::PathBuf::from(root)];
         while let Some(d) = stack.pop() {
@@ -3066,7 +3066,7 @@ pub(crate) mod tests {
             return;
         };
         init_map_globals();
-        let data = concat!(env!("CARGO_MANIFEST_DIR"), "/data");
+        let data = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data");
         let mut mismatches = Vec::new();
         unsafe {
             for f in all_map_files() {

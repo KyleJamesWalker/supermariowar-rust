@@ -1,6 +1,6 @@
 #!/bin/bash
 # Netplay interop: the C++ lobby server (smw-server) and the Rust one (bin smw_server), each with every
-# host/joiner pairing of the C++ client (net_driver, see net_driver.sh) and the Rust client (examples/net_interop.rs).
+# host/joiner pairing of the C++ client (net_driver, see net_driver.sh) and the Rust client (crates/smw-core/examples/net_interop.rs).
 # Env: SMW_SERVER (smw-server binary), SMW_RUST_SERVER (smw_server binary), SMW_NET_DRIVER (net_driver),
 # SMW_RUST_NET (net_interop binary).
 HERE=$(cd $(dirname $0) && pwd)

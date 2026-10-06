@@ -493,7 +493,7 @@
       leaving = true;
       menuElement.disabled = true;
       menuElement.lastChild.textContent = ' Saving\u2026 ';
-      // The game flushes its recording once a second (src/smw/harness.rs); let it before saving.
+      // The game flushes its recording once a second (crates/smw-core/src/smw/harness.rs); let it before saving.
       setTimeout(function () { saveFiles(function () { location.reload(); }); }, live ? 1200 : 0);
     };
     menuElement.addEventListener('click', backToMenu);

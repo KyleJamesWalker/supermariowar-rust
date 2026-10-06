@@ -12,7 +12,7 @@ use std::path::Path;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let data = args.get(1).cloned().unwrap_or_else(|| concat!(env!("CARGO_MANIFEST_DIR"), "/data").to_string());
+    let data = args.get(1).cloned().unwrap_or_else(|| concat!(env!("CARGO_MANIFEST_DIR"), "/../../data").to_string());
     let out = args.get(2).cloned().unwrap_or_else(|| "gfx_smoke_rust.bmp".to_string());
 
     smw::globals::init_globals();

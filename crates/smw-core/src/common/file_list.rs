@@ -930,7 +930,7 @@ mod tests {
 
     fn set_data_root() {
         unsafe {
-            RootDataDirectory = concat!(env!("CARGO_MANIFEST_DIR"), "/data").to_string();
+            RootDataDirectory = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data").to_string();
         }
     }
 

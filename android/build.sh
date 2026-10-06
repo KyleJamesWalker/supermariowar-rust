@@ -35,7 +35,7 @@ for abi in "${abis[@]}"; do
     triple_env="$(tr a-z- A-Z_ <<< "$triple")"
     export "CARGO_TARGET_${triple_env}_RUSTFLAGS=-C link-arg=-Wl,-z,max-page-size=16384"
     SMW_SDL_LIB_DIR="$sdl/lib" cargo ndk -t "$abi" -P "$api" \
-        --manifest-path "$repo/Cargo.toml" rustc --lib --crate-type cdylib --release --locked
+        --manifest-path "$repo/crates/smw-core/Cargo.toml" rustc --lib --crate-type cdylib --release --locked
     mkdir -p "$project/app/libs/$abi"
     cp "$repo/target/$triple/release/libsmw.so" "$project/app/libs/$abi/libmain.so"
     cp "$sdl"/lib/libSDL2{,_image,_mixer}.so "$project/app/libs/$abi/"

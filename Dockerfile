@@ -2,17 +2,10 @@
 FROM rust:1.94-slim-bookworm AS build
 WORKDIR /src
 COPY Cargo.toml Cargo.lock ./
-COPY crates/smw-globals crates/smw-globals
-COPY crates/smw-netplay crates/smw-netplay
-COPY relay/Cargo.toml relay/
-COPY relay/src relay/src
-COPY src/common/file_io.rs src/common/file_io.rs
-COPY src/common_netplay src/common_netplay
-COPY src/globals src/globals
-COPY src/server src/server
-# Cargo needs a target for every workspace member; the game itself is not built here.
-RUN touch src/main.rs \
-    && cargo build --release --locked --package smw_relay \
+# Cargo needs every workspace member; only the relay and its crates are built here.
+COPY crates crates
+COPY apps apps
+RUN cargo build --release --locked --package smw_relay \
     && mkdir -p /out/srv \
     && cp target/release/smw_relay /out/ \
     && ln -s /dev/null /out/srv/serverlog.txt

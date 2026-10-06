@@ -1,32 +1,32 @@
-[package]
-name = "smw"
-version = "0.1.0"
-edition.workspace = true
-description = "Super Mario War - faithful Rust port"
-publish.workspace = true
-
 [workspace]
-members = ["crates/smw-globals", "crates/smw-netplay", "relay"]
+resolver = "2"
+members = [
+    "crates/smw-core",
+    "crates/smw-globals",
+    "crates/smw-netplay",
+    "crates/smw-platform",
+    "apps/smw",
+    "apps/leveleditor",
+    "apps/worldeditor",
+    "apps/smw_server",
+    "apps/smw_relay",
+]
+# Commands without -p build the game, the editors and smw_server, as before; the relay builds on its own.
+default-members = [
+    "crates/smw-core",
+    "crates/smw-globals",
+    "crates/smw-netplay",
+    "crates/smw-platform",
+    "apps/smw",
+    "apps/leveleditor",
+    "apps/worldeditor",
+    "apps/smw_server",
+]
 
 [workspace.package]
+version = "0.1.0"
 edition = "2021"
 publish = false
-
-[features]
-# Mirrors the C++ NO_NETWORK build (NetworkLayerNULL).
-no_network = []
-
-[dependencies]
-smw-globals = { path = "crates/smw-globals" }
-smw-netplay = { path = "crates/smw-netplay" }
-sdl2 = { version = "0.38", features = ["image", "mixer"] }
-toml = "1.1"
-
-# Native only: the web build links Emscripten's zlib and plays online through smw_relay (relay/).
-[target.'cfg(not(target_os = "emscripten"))'.dependencies]
-enet-sys = "1.0.5"
-smw-netplay = { path = "crates/smw-netplay", features = ["enet"] }
-libz-sys = "1"
 
 [profile.dev]
 opt-level = 1

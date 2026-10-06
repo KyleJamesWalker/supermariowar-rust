@@ -2,7 +2,7 @@
 
 `smw_relay` lets the browser build play online. It runs the netplay lobby server and switches each player's game traffic to the game host, all over WebSocket. Browsers cannot send UDP or accept connections, so ENet's direct player-to-host links do not work in a page.
 
-The relay is not in the C++ project. It reuses the lobby code in `src/server` unchanged, behind a WebSocket `NetworkLayer`, through the `smw-netplay` crate built without its `enet` feature. It is its own Cargo package in `relay/`, a member of the root workspace, so it builds without SDL2 or ENet.
+The relay is not in the C++ project. It reuses the lobby code in `crates/smw-netplay/src/server` unchanged, behind a WebSocket `NetworkLayer`, through the `smw-netplay` crate built without its `enet` feature. It is its own Cargo package in `apps/smw_relay/`, a member of the root workspace, so it builds without SDL2 or ENet.
 
 ## Overview
 
@@ -17,7 +17,7 @@ The game host's NAT punch is a no-op. Reliable and unreliable sends both go over
 
 ## Message format
 
-Every WebSocket binary message is `[kind u8][conn u16 big-endian][payload]`. Ids below `0x8000` name connections the browser opened. Ids from `0x8000` up name connections the relay opened to the browser's game host. `src/common_netplay/relay_frame.rs` defines the constants.
+Every WebSocket binary message is `[kind u8][conn u16 big-endian][payload]`. Ids below `0x8000` name connections the browser opened. Ids from `0x8000` up name connections the relay opened to the browser's game host. `crates/smw-netplay/src/common_netplay/relay_frame.rs` defines the constants.
 
 | Kind | Name | Direction | `conn` | Payload |
 |---|---|---|---|---|
@@ -36,7 +36,7 @@ An address is 6 bytes: the IPv4 octets in dotted order, then the port as u16 big
 ## Setup and usage
 
 ```sh
-cargo run --release --manifest-path relay/Cargo.toml -- --port 8080
+cargo run --release -p smw_relay -- --port 8080
 tools/package_web.sh && python3 -m http.server -d dist/web 8000
 # open http://localhost:8000/?relay=ws://localhost:8080 in two windows
 node tools/web_netplay_test.mjs out/   # two headless browsers play a scripted game

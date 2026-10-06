@@ -2,7 +2,7 @@
 
 The level and world editors are checked the same way as the game (`REPLAY.md`). Scripted keyboard and mouse sessions edit and save maps or worlds. The C++ reference and the Rust port must then produce byte-identical per-frame dumps, screenshots and saved files.
 
-- Harness: `src/common/EditorHarness.{h,cpp}` in `tools/editor-harness.patch`, ported as `src/common/editor_harness.rs`. Both editors share it.
+- Harness: `src/common/EditorHarness.{h,cpp}` in `tools/editor-harness.patch`, ported as `crates/smw-core/src/common/editor_harness.rs`. Both editors share it.
 - Scripts: `tools/editor_replays/<editor>/*.txt`, where `<editor>` is `worldedit` or `leveledit`.
 - Golden output: `tools/editor_golden/<editor>/<script>/` contains `dump.txt.gz`, `frame_<n>.png`, `files/` and `home/`.
 

@@ -1,4 +1,4 @@
-// The browser build's one WebSocket to smw_relay (src/smw/platform/network/websocket). Linked with
+// The browser build's one WebSocket to smw_relay (crates/smw-core/src/smw/platform/network/websocket). Linked with
 // --js-library; the game polls it every frame, so nothing here calls back into wasm.
 addToLibrary({
     $SMWRelay: { socket: null, inbox: [], failed: false },

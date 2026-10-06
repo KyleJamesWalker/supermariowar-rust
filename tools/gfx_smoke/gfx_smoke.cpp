@@ -1,4 +1,4 @@
-// C++ twin of examples/gfx_smoke.rs, linked against the original gfx sources.
+// C++ twin of crates/smw-core/examples/gfx_smoke.rs, linked against the original gfx sources.
 #include "gfx.h"
 #include "gfx/gfxFont.h"
 #include "gfx/gfxSprite.h"

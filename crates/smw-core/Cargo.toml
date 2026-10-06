@@ -1,0 +1,25 @@
+[package]
+name = "smw-core"
+version.workspace = true
+edition.workspace = true
+description = "Super Mario War - faithful Rust port"
+publish.workspace = true
+
+[lib]
+name = "smw"
+
+[features]
+# Mirrors the C++ NO_NETWORK build (NetworkLayerNULL).
+no_network = []
+
+[dependencies]
+smw-globals = { path = "../smw-globals" }
+smw-netplay = { path = "../smw-netplay" }
+sdl2 = { version = "0.38", features = ["image", "mixer"] }
+toml = "1.1"
+
+# Native only: the web build links Emscripten's zlib and plays online through smw_relay (apps/smw_relay).
+[target.'cfg(not(target_os = "emscripten"))'.dependencies]
+enet-sys = "1.0.5"
+smw-netplay = { path = "../smw-netplay", features = ["enet"] }
+libz-sys = "1"
