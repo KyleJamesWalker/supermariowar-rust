@@ -2,7 +2,7 @@
 
 use crate::globals::*;
 use crate::smw::harness;
-use sdl2::sys::{SDL_Delay, SDL_GetTicks};
+
 
 pub struct FPSLimiter {
     framestart: u32,
@@ -29,13 +29,13 @@ impl FPSLimiter {
 
     #[cfg(not(target_os = "emscripten"))]
     pub fn frame_start(&mut self) {
-        self.framestart = unsafe { SDL_GetTicks() };
+        self.framestart = crate::services::ticks();
     }
 
     #[cfg(not(target_os = "emscripten"))]
     pub fn before_flip(&mut self) {
         unsafe {
-            self.ticks = SDL_GetTicks().wrapping_sub(self.framestart);
+            self.ticks = crate::services::ticks().wrapping_sub(self.framestart);
             if self.ticks == 0 {
                 self.ticks = 1;
             }
@@ -60,22 +60,22 @@ impl FPSLimiter {
 
             //Sleep for time just under what we need
             let framelimiter = if harness::speed() == 1.0 { game_values.framelimiter as i32 } else { (game_values.framelimiter as f32 / harness::speed()) as i32 };
-            let mut delay: i16 = (framelimiter as u32).wrapping_sub(SDL_GetTicks()).wrapping_add(self.framestart).wrapping_sub(2) as i16;
+            let mut delay: i16 = (framelimiter as u32).wrapping_sub(crate::services::ticks()).wrapping_add(self.framestart).wrapping_sub(2) as i16;
 
             if delay > 0 {
                 if delay as i32 > framelimiter {
                     delay = framelimiter as i16;
                 }
 
-                SDL_Delay(delay as u32);
+                crate::services::delay(delay as u32);
             }
 
             //Fine tune wait here
-            while SDL_GetTicks().wrapping_sub(self.framestart) < (framelimiter as u16) as u32 {
-                SDL_Delay(0); //keep framerate constant at 1000/game_values.framelimiter fps
+            while crate::services::ticks().wrapping_sub(self.framestart) < (framelimiter as u16) as u32 {
+                crate::services::delay(0); //keep framerate constant at 1000/game_values.framelimiter fps
             }
 
-            self.ticks = SDL_GetTicks().wrapping_sub(self.framestart);
+            self.ticks = crate::services::ticks().wrapping_sub(self.framestart);
             if self.ticks == 0 {
                 self.ticks = framelimiter as u32;
             }

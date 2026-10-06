@@ -56,11 +56,10 @@ pub trait Storage {
     fn persist(&mut self) {}
 }
 
+/// What the game reaches through its context. Phase 2 adds one service per PR, in the order clock, storage,
+/// audio output, video; the traits above are the end state.
 pub struct Services {
-    pub video: Box<dyn Video>,
-    pub audio: Box<dyn AudioOut>,
     pub clock: Box<dyn Clock>,
-    pub storage: Box<dyn Storage>,
 }
 
 /// The open index of a pad: a replay's `<dev>`, SDL's `which`, and the device a binding names.
@@ -156,14 +155,18 @@ mod tests {
     #[test]
     fn services_hold_trait_objects() {
         let log = Rc::new(RefCell::new(Vec::new()));
-        let mut services = Services { video: Box::new(Null), audio: Box::new(Log(log.clone())), clock: Box::new(Null), storage: Box::new(Null) };
-        let pixels = vec![0u32; SCREEN_W * SCREEN_H];
-        services.video.present(Frame { pixels: &pixels });
-        services.audio.load_sound(SoundId(3), &[0; 4]);
-        services.audio.play(0, SoundId(3), -1);
-        services.storage.persist();
+        let services = Services { clock: Box::new(Null) };
         assert_eq!(services.clock.now_ms(), 1000);
-        assert_eq!(services.storage.data_dir(), PathBuf::from("data"));
+
+        let mut video: Box<dyn Video> = Box::new(Null);
+        let mut audio: Box<dyn AudioOut> = Box::new(Log(log.clone()));
+        let mut storage: Box<dyn Storage> = Box::new(Null);
+        let pixels = vec![0u32; SCREEN_W * SCREEN_H];
+        video.present(Frame { pixels: &pixels });
+        audio.load_sound(SoundId(3), &[0; 4]);
+        audio.play(0, SoundId(3), -1);
+        storage.persist();
+        assert_eq!(storage.data_dir(), PathBuf::from("data"));
         assert_eq!(*log.borrow(), ["load 3 4", "play 3 ch=0 loops=-1"]);
     }
 }

@@ -1051,7 +1051,7 @@ fn record_wait_event(event: &mut SDL_Event) {
             unsafe { *event = std::mem::zeroed() };
             return;
         }
-        unsafe { sdl2::sys::SDL_Delay(5) };
+        crate::services::delay(5);
     }
 }
 

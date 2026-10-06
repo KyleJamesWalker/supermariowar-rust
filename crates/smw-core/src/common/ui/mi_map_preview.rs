@@ -14,11 +14,11 @@ use crate::smw::objects::moving::mo_pirhana_plant::MO_PirhanaPlant;
 use crate::smw::objects::overmap::over_map_object::io_over_map_object_draw_offset;
 use crate::smw::objects::overmap::wo_orbit_hazard::OMO_OrbitHazard;
 use crate::smw::objects::overmap::wo_straight_path_hazard::OMO_StraightPathHazard;
-use sdl2::sys::{SDL_Delay, SDL_Rect};
+use sdl2::sys::SDL_Rect;
 
 #[cfg(not(target_os = "emscripten"))]
 fn small_delay() {
-    unsafe { SDL_Delay(10) };
+    crate::services::delay(10);
 }
 #[cfg(target_os = "emscripten")]
 fn small_delay() {}

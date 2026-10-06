@@ -2,7 +2,7 @@
 
 use crate::globals::Aliased;
 use sdl2::sys::mixer::*;
-use sdl2::sys::{SDL_GetError, SDL_GetTicks, SDL_RWFromFile, SDL_version, AUDIO_S16};
+use sdl2::sys::{SDL_GetError, SDL_RWFromFile, SDL_version, AUDIO_S16};
 use std::ffi::{CStr, CString};
 use std::io::Write;
 use std::path::Path;
@@ -21,7 +21,7 @@ pub static mut sfx_events: Vec<String> = Vec::new();
 pub static mut sfx_audible: bool = false;
 
 extern "C" fn sdl_get_ticks() -> u32 {
-    unsafe { SDL_GetTicks() }
+    crate::services::ticks()
 }
 
 /// The C++ links `extern void musicfinished()` from GSGameplay.cpp (an empty one in the editors).

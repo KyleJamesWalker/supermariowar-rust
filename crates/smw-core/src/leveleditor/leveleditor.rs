@@ -4374,7 +4374,7 @@ pub fn dialog(title: &str, instructions: &str, input: &mut String, inputsize: i3
         draw_dialog(title, instructions, None);
 
         loop {
-            let framestart = sdl2::sys::SDL_GetTicks() as i32;
+            let framestart = crate::services::ticks() as i32;
 
             //handle messages
             while SDL_PollEvent(&mut event) != 0 {
@@ -4440,7 +4440,7 @@ pub fn dialog(title: &str, instructions: &str, input: &mut String, inputsize: i3
                 }
             }
 
-            let mut delay = WAITTIME - (sdl2::sys::SDL_GetTicks() as i32 - framestart);
+            let mut delay = WAITTIME - (crate::services::ticks() as i32 - framestart);
             if delay < 0 {
                 delay = 0;
             } else if delay > WAITTIME {

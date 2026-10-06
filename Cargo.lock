@@ -509,6 +509,8 @@ dependencies = [
  "sdl2",
  "smw-globals",
  "smw-netplay",
+ "smw-platform",
+ "smw-sdl2",
  "toml",
 ]
 
@@ -527,6 +529,14 @@ dependencies = [
 [[package]]
 name = "smw-platform"
 version = "0.1.0"
+
+[[package]]
+name = "smw-sdl2"
+version = "0.1.0"
+dependencies = [
+ "sdl2",
+ "smw-platform",
+]
 
 [[package]]
 name = "smw_relay"
