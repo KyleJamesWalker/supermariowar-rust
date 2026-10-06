@@ -3,6 +3,7 @@
 
   diffreplay.py expected/dump.txt[.gz] actual/dump.txt [--context 2] [--ignore R]
   diffreplay.py --shots expected_dir actual_dir [--max-diff 0]
+  diffreplay.py --image expected.png actual.png
 
 Exit status: 0 identical, 1 divergence, 2 usage or I/O error.
 """
@@ -188,6 +189,14 @@ def diff_shots(args):
     return status
 
 
+def diff_image(args):
+    exp, act = load_image(args.expected), load_image(args.actual)
+    if exp == act:
+        return 0
+    print(f"{args.actual}: pixels differ from {args.expected}")
+    return 1
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("expected")
@@ -198,9 +207,12 @@ def main():
     ap.add_argument("--float-tol", type=float, default=0.0,
                     help="treat %%.4f fields within this tolerance as equal")
     ap.add_argument("--shots", action="store_true", help="compare frame_<n>.{bmp,png} in two directories")
+    ap.add_argument("--image", action="store_true", help="compare the pixels of two image files")
     ap.add_argument("--max-diff", type=int, default=0, help="allowed differing pixels per screenshot")
     args = ap.parse_args()
     try:
+        if args.image:
+            return diff_image(args)
         return diff_shots(args) if args.shots else diff_dumps(args)
     except (OSError, ValueError) as err:
         print(f"error: {err}", file=sys.stderr)

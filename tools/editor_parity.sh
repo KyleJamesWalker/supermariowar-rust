@@ -16,6 +16,11 @@ fi
 
 cargo build --release --quiet --manifest-path "$port/Cargo.toml" || exit 2
 
+# PNG encoders differ between SDL_image builds; the pixels must not.
+same_file() {
+    cmp -s "$1" "$2" || { [[ $1 == *.png && -f $2 ]] && "$tools/diffreplay.py" --image "$1" "$2" > /dev/null 2>&1; }
+}
+
 summary=()
 failed=0
 for script in "${scripts[@]}"; do
@@ -25,7 +30,7 @@ for script in "${scripts[@]}"; do
     out="$out_root/$editor/$name"
     echo "=== $editor/$name"
 
-    SMW_BIN="$port/target/release/${editor%it}itor" SMW_DATA_DIR="$port/data" \
+    SMW_BIN="$port/target/release/${editor%it}itor" SMW_DATA_DIR="${SMW_DATA_DIR:-$port/data}" \
         "$tools/run_editor.sh" "$editor" "$script" "$out" > /dev/null
     status=$?
     if [[ $status -ne 0 ]]; then
@@ -46,7 +51,7 @@ for script in "${scripts[@]}"; do
     while IFS= read -r -d '' f; do
         rel="${f#"$golden"/}"
         file_total=$((file_total + 1))
-        if ! cmp -s "$f" "$out/$rel"; then
+        if ! same_file "$f" "$out/$rel"; then
             echo "file $rel differs"
             file_bad=$((file_bad + 1))
         fi
