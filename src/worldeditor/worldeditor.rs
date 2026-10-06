@@ -324,6 +324,7 @@ fn dump_editor_state(out: &mut dyn Write) {
 
 //main main main
 pub fn main() {
+    cmd::attach_parent_console();
     crate::globals::init_globals();
 
     let argv: Vec<String> = std::env::args().collect();

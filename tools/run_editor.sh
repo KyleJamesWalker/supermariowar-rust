@@ -49,14 +49,22 @@ rm -rf "$out/dump.txt" "$out"/frame_*.bmp "$out/files" "$out/home"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 home="$work/home"
-mkdir -p "$home/Library/Preferences"
+settings="$home/Library/Preferences/.smw"
+# Windows builds keep their settings in %USERPROFILE%/.smw/.
+[[ "$OSTYPE" == msys || "$OSTYPE" == cygwin ]] && settings="$home/.smw"
+mkdir -p "$(dirname "$settings")"
 # APFS clone: instant, and writes stay private to this run.
-cp -Rc "$data" "$work/data" 2>/dev/null || cp -R "$data" "$work/data"
+# Git Bash's cp -R does not keep listing order; on a FAT TMPDIR this gives the goldens' order.
+if [[ "$OSTYPE" == msys || "$OSTYPE" == cygwin ]]; then
+    python3 "$(dirname "$0")/apfs_order.py" "$data" "$work/data"
+else
+    cp -Rc "$data" "$work/data" 2>/dev/null || cp -R "$data" "$work/data"
+fi
 rm -f "$work/data/maps/cache/mapsummary.txt"
 
 cd "$work"
 status=0
-env HOME="$home" \
+env HOME="$home" USERPROFILE="$home" \
     SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
     SMW_SEED="${seed:-1}" \
     SMW_NOLIMIT="${SMW_NOLIMIT-1}" \
@@ -81,9 +89,9 @@ done
 IFS=',' read -r -a home_list <<< "$homefiles"
 for f in ${home_list[@]+"${home_list[@]}"}; do
     [[ -z "$f" ]] && continue
-    if [[ -f "$home/Library/Preferences/.smw/$f" ]]; then
+    if [[ -f "$settings/$f" ]]; then
         mkdir -p "$out/home"
-        cp "$home/Library/Preferences/.smw/$f" "$out/home/$f"
+        cp "$settings/$f" "$out/home/$f"
     else
         echo "missing home file $f" >> "$out/stdout.log"
     fi

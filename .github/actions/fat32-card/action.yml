@@ -3,7 +3,7 @@ description: Mounts an empty FAT32 image, whose directories list entries in the 
 
 inputs:
   path:
-    description: Mount point
+    description: Mount point (a drive letter such as S on Windows)
     default: /mnt/sdcard
   size:
     description: Image size for truncate
@@ -12,7 +12,8 @@ inputs:
 runs:
   using: composite
   steps:
-    - shell: bash
+    - if: runner.os == 'Linux'
+      shell: bash
       env:
         CARD: ${{ inputs.path }}
         SIZE: ${{ inputs.size }}
@@ -23,3 +24,23 @@ runs:
         sudo mkdir -p "$CARD"
         sudo mount -o loop,utf8,uid="$(id -u)",gid="$(id -g)" "$RUNNER_TEMP/card.img" "$CARD"
         mkdir "$CARD/tmp"
+
+    - if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        CARD: ${{ inputs.path }}
+        SIZE: ${{ inputs.size }}
+      run: |
+        $mb = [int64]($env:SIZE.TrimEnd('G')) * 1024
+        $vhd = Join-Path $env:RUNNER_TEMP 'card.vhd'
+        @"
+        create vdisk file="$vhd" maximum=$mb type=expandable
+        select vdisk file="$vhd"
+        attach vdisk
+        create partition primary
+        format fs=fat32 quick label=CARD
+        assign letter=$env:CARD
+        "@ | Set-Content -Encoding ascii (Join-Path $env:RUNNER_TEMP 'card.txt')
+        diskpart /s (Join-Path $env:RUNNER_TEMP 'card.txt')
+        if ($LASTEXITCODE) { exit $LASTEXITCODE }
+        New-Item -ItemType Directory "$($env:CARD):\tmp" | Out-Null

@@ -80,7 +80,12 @@ if [[ -n "$options_b64" || -n "$controls_b64" ]]; then
     [[ -z "$options_b64" ]] || printf '%s' "$options_b64" | base64 -d > "$settings/options.bin"
     [[ -z "$controls_b64" ]] || printf '%s' "$controls_b64" | base64 -d > "$settings/controls.sdl2.bin"
 fi
-cp -c -R "$data" "$sandbox/data" 2>/dev/null || cp -R "$data" "$sandbox/data"
+# Git Bash's cp -R does not keep listing order; on a FAT TMPDIR this gives the goldens' order.
+if [[ "$OSTYPE" == msys || "$OSTYPE" == cygwin ]]; then
+    python3 "$(dirname "$0")/apfs_order.py" "$data" "$sandbox/data"
+else
+    cp -c -R "$data" "$sandbox/data" 2>/dev/null || cp -R "$data" "$sandbox/data"
+fi
 rm -f "$sandbox/data/maps/cache/mapsummary.txt"
 data="$sandbox/data"
 

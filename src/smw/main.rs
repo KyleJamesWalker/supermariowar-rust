@@ -452,6 +452,7 @@ pub fn init_spawnlocations() {
 //*************************************
 
 pub fn main() {
+    cmd::attach_parent_console();
     run(std::env::args().collect());
 }
 

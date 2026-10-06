@@ -13,7 +13,75 @@ pub struct Args {
     pub segment: Option<u32>,
 }
 
-pub fn show_windows_console() {}
+/// `--debug`: a console of its own when the game was not started from one.
+pub fn show_windows_console() {
+    #[cfg(windows)]
+    win_console::attach(true);
+}
+
+/// The GUI-subsystem executables have no console: write to the parent's when started from one,
+/// leaving inherited (redirected) handles alone.
+pub fn attach_parent_console() {
+    #[cfg(windows)]
+    win_console::attach(false);
+}
+
+#[cfg(windows)]
+mod win_console {
+    use std::ffi::c_void;
+
+    type Handle = *mut c_void;
+    const ATTACH_PARENT_PROCESS: u32 = u32::MAX;
+    const STD_INPUT_HANDLE: u32 = -10i32 as u32;
+    const STD_OUTPUT_HANDLE: u32 = -11i32 as u32;
+    const STD_ERROR_HANDLE: u32 = -12i32 as u32;
+    const GENERIC_READ: u32 = 0x8000_0000;
+    const GENERIC_WRITE: u32 = 0x4000_0000;
+    const FILE_SHARE_READ: u32 = 1;
+    const FILE_SHARE_WRITE: u32 = 2;
+    const OPEN_EXISTING: u32 = 3;
+    const INVALID_HANDLE_VALUE: Handle = -1isize as Handle;
+
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn AttachConsole(process_id: u32) -> i32;
+        fn AllocConsole() -> i32;
+        fn GetConsoleWindow() -> Handle;
+        fn GetStdHandle(std_handle: u32) -> Handle;
+        fn SetStdHandle(std_handle: u32, handle: Handle) -> i32;
+        fn CreateFileW(name: *const u16, access: u32, share: u32, security: *mut c_void, disposition: u32, flags: u32, template: Handle) -> Handle;
+    }
+
+    fn missing(id: u32) -> bool {
+        let h = unsafe { GetStdHandle(id) };
+        h.is_null() || h == INVALID_HANDLE_VALUE
+    }
+
+    fn open(name: &str) -> Handle {
+        let wide: Vec<u16> = name.encode_utf16().chain(Some(0)).collect();
+        unsafe { CreateFileW(wide.as_ptr(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, std::ptr::null_mut(), OPEN_EXISTING, 0, std::ptr::null_mut()) }
+    }
+
+    pub fn attach(alloc: bool) {
+        let ids = [STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, STD_ERROR_HANDLE];
+        if !alloc && !ids.iter().any(|&id| missing(id)) {
+            return;
+        }
+        unsafe {
+            if GetConsoleWindow().is_null() && AttachConsole(ATTACH_PARENT_PROCESS) == 0 && !(alloc && AllocConsole() != 0) {
+                return;
+            }
+        }
+        for id in ids {
+            if missing(id) {
+                let h = open(if id == STD_INPUT_HANDLE { "CONIN$" } else { "CONOUT$" });
+                if h != INVALID_HANDLE_VALUE {
+                    unsafe { SetStdHandle(id, h) };
+                }
+            }
+        }
+    }
+}
 
 pub fn print_help(title: &str, version: &str) {
     print!("{} {}\n\n", title, version);
