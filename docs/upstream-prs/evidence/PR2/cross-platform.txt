@@ -1,4 +1,5 @@
-# Cross-platform check on upstream c7056790 (+ replay hooks = harness-latest d7c59e1f), 45 scripted game replays.
+# Local cross-platform check on harness-latest (d7c59e1f: upstream 5693918f + replay hooks + PR 480's multi star and ranking fixes), 45 scripted game replays.
+# The CI run on c7056790 itself is in ci-c7056790.txt.
 # Linux: Ubuntu 24.04 arm64 container, clang 18 with libc++, -O2 -ffp-contract=off, data copied onto FAT32 in APFS order
 # (tools/apfs_order.py), as in the M9 investigation. macOS: arm64, Apple clang 21, same flags. Goldens were recorded on macOS without the fixes.
 

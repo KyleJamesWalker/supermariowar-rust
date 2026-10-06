@@ -1,0 +1,23 @@
+# CI run on upstream c7056790 + replay hooks (cpp-reference branch investigate/pr2-c7056790, run 37413292776):
+# https://github.com/KyleJamesWalker/supermariowar-cpp-reference/actions/runs/37413292776
+# clang + libc++ on Linux (ubuntu-24.04 x86_64, ubuntu-24.04-arm), Apple clang on macos-15 arm64; -O2 -ffp-contract=off; Linux data on FAT32 in APFS order.
+# 45 game replays with C++ goldens (recorded on macOS arm64 without the fixes). joy_game, joy_menu and pad_hotplug have no C++ golden and are left out.
+# pr2 = all seven fix/uninitialized-reads commits (fa91633d); pr2-no-netid = the same without the ObjectBase.h initializer.
+
+macos-arm64: 45 of 45 match the goldens; differ: 
+linux-arm64: 25 of 45 match the goldens; differ: cov_tour_options cpu_chase cpu_coins cpu_collection cpu_ctf cpu_domination cpu_eggs cpu_frenzy cpu_greed cpu_race cpu_stomp cpu_survival cpu_tag flow_tour frenzy_cpu mini_boxes mini_pipe opt_items star_multi_3p star_multi_4p 
+linux-x86_64: 23 of 45 match the goldens; differ: cov_tour_options cpu_chase cpu_coins cpu_collection cpu_ctf cpu_domination cpu_eggs cpu_frenzy cpu_greed cpu_jail cpu_race cpu_stomp cpu_survival cpu_tag flow_tour frenzy_cpu mini_boxes mini_pipe opt_items players_c_h_c_n star_multi_3p star_multi_4p 
+macos-arm64-pr2: 44 of 45 match the goldens; differ: cpu_race 
+linux-arm64-pr2: 44 of 45 match the goldens; differ: cpu_race 
+linux-x86_64-pr2: 44 of 45 match the goldens; differ: cpu_race 
+linux-arm64-pr2-no-netid: 28 of 45 match the goldens; differ: cov_tour_options cpu_chase cpu_coins cpu_collection cpu_ctf cpu_domination cpu_eggs cpu_frenzy cpu_race cpu_tag flow_tour frenzy_cpu mini_boxes mini_pipe opt_items star_multi_3p star_multi_4p 
+linux-x86_64-pr2-no-netid: 28 of 45 match the goldens; differ: cov_tour_options cpu_chase cpu_coins cpu_collection cpu_ctf cpu_domination cpu_eggs cpu_frenzy cpu_race cpu_tag flow_tour frenzy_cpu mini_boxes mini_pipe opt_items star_multi_3p star_multi_4p 
+
+## cpu_race differs from the golden on every platform with pr2 (fix 4 changes race goal placement). Its dumps across platforms:
+linux-arm64-pr2 cpu_race vs macos-arm64-pr2 cpu_race: OK: 3600 frames identical
+linux-x86_64-pr2 cpu_race vs macos-arm64-pr2 cpu_race: OK: 3600 frames identical
+linux-arm64-pr2-no-netid cpu_race vs macos-arm64-pr2 cpu_race: DIVERGED at frame 1175 (block 1175; actual frame 1175)
+linux-x86_64-pr2-no-netid cpu_race vs macos-arm64-pr2 cpu_race: DIVERGED at frame 1175 (block 1175; actual frame 1175)
+
+## Result: with all fixes, Linux x86_64 and arm64 play all 45 games identically to macOS (44 equal to the goldens, cpu_race equal to macOS-with-fixes).
+## Without the iNetworkID initializer, 17 of 45 still differ from macOS on both Linux architectures.
