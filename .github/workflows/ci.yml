@@ -439,10 +439,7 @@ jobs:
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
       - name: Web clip test
-        run: |
-          timeout 15m node tools/web_clip_test.mjs "$RUNNER_TEMP/web-clip" && exit 0
-          echo "::warning::web_clip_test failed once; retrying"
-          timeout 15m node tools/web_clip_test.mjs "$RUNNER_TEMP/web-clip-retry"
+        run: timeout 15m node tools/web_clip_test.mjs "$RUNNER_TEMP/web-clip"
 
       - name: Web UI test
         if: always()
