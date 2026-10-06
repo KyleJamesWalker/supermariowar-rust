@@ -5,36 +5,12 @@ use std::path::Path;
 
 pub static mut SMW_Root_Data_Dir: String = String::new();
 
-#[cfg(target_os = "android")]
 pub fn get_home_directory() -> String {
-    crate::android::storage_path() + "/"
-}
-
-#[cfg(not(any(windows, target_os = "android")))]
-pub fn get_home_directory() -> String {
-    let mut result = String::from("/Library/Preferences/.smw/");
-    if let Ok(folder) = std::env::var("HOME") {
-        result = folder + &result;
-    }
-    result
-}
-
-/// `SHGetFolderPathA(CSIDL_PROFILE)` is the profile directory that `USERPROFILE` names.
-#[cfg(windows)]
-pub fn get_home_directory() -> String {
-    let mut result = String::from(".smw/");
-    if let Ok(folder) = std::env::var("USERPROFILE") {
-        result = folder + "/" + &result;
-    }
-    result
+    crate::services::services().storage.settings_dir().to_string_lossy().into_owned()
 }
 
 pub fn get_root_directory() -> String {
-    #[cfg(not(windows))]
-    if let Ok(p) = sdl2::filesystem::base_path() {
-        return p;
-    }
-    "./".to_string()
+    crate::services::services().storage.root_dir().to_string_lossy().into_owned()
 }
 
 pub fn file_exists(path: &str) -> bool {
