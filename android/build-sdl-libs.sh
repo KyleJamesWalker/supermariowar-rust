@@ -22,7 +22,7 @@ trap 'rm -rf "${work:?}"' EXIT
 
 fetch() {
     local repo=$1 name=$2 version=$3 sha256=$4
-    [[ -d "$src/$name-$version" ]] && return
+    [[ -f "$src/$name-$version/CMakeLists.txt" ]] && return
     curl -fsSL -o "$work/$name.tar.gz" \
         "https://github.com/libsdl-org/$repo/releases/download/release-$version/$name-$version.tar.gz"
     echo "$sha256  $work/$name.tar.gz" | shasum -a 256 -c -
