@@ -317,6 +317,7 @@ fn rect(x: i32, y: i32, w: i32, h: i32) -> SDL_Rect {
 
 //main main main
 pub fn main() {
+    cmd::attach_parent_console();
     crate::globals::init_globals();
     unsafe {
         copiedtiles.init([[EditorMapTile::zeroed(); MH]; MW]);
