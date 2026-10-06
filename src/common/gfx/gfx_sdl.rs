@@ -46,7 +46,7 @@ unsafe fn quit_sdl() {
 
 unsafe fn create_window(fullscreen: bool) -> *mut SDL_Window {
     let mut window_flags = SDL_WindowFlags::SDL_WINDOW_RESIZABLE as u32;
-    if fullscreen {
+    if fullscreen || cfg!(target_os = "android") {
         window_flags |= SDL_WindowFlags::SDL_WINDOW_FULLSCREEN_DESKTOP as u32;
     }
 
@@ -211,6 +211,10 @@ impl GraphicsSDL {
     }
 
     pub fn change_full_screen(&self, fullscreen: bool) {
+        // Android stays immersive; leaving fullscreen there would bring back the system bars.
+        if cfg!(target_os = "android") {
+            return;
+        }
         unsafe {
             let mut flags = SDL_GetWindowFlags(self.sdl_window);
             if fullscreen {

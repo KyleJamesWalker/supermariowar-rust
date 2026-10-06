@@ -134,6 +134,7 @@ html.stick #touch .tc-dpad { pointer-events: none; }
   top: -50px;
   width: 100px;
   height: 100px;
+  box-sizing: border-box;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.08);
   border: 2px solid rgba(255, 255, 255, 0.35);
@@ -142,10 +143,11 @@ html.stick #touch .tc-dpad { pointer-events: none; }
 .tc-stick-base[hidden] { display: none; }
 .tc-stick-knob {
   position: absolute;
-  left: 24px;
-  top: 24px;
+  left: 22px;
+  top: 22px;
   width: 52px;
   height: 52px;
+  box-sizing: border-box;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.4);
   border: 2px solid rgba(255, 255, 255, 0.5);

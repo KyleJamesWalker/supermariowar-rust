@@ -76,6 +76,24 @@ fn redirect_output() {
     }
 }
 
+/// MainActivity reports up to two display cutouts' bounding boxes whenever the window's insets change.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub extern "C" fn Java_com_kylejameswalker_supermariowar_MainActivity_nativeSetCutouts(
+    _env: *mut std::ffi::c_void,
+    _class: *mut std::ffi::c_void,
+    l1: c_int,
+    t1: c_int,
+    r1: c_int,
+    b1: c_int,
+    l2: c_int,
+    t2: c_int,
+    r2: c_int,
+    b2: c_int,
+) {
+    crate::smw::touch::set_cutouts(&[[l1, t1, r1, b1], [l2, t2, r2, b2]]);
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn SDL_main(argc: c_int, argv: *const *const c_char) -> c_int {
     redirect_output();

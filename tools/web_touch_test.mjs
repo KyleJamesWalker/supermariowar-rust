@@ -339,7 +339,7 @@ try {
         && document.querySelector('[data-action=mode]').textContent === 'Stick'`), 'the mode button switches to the floating stick');
     await keyLog();
     const zone = await evaluate(`(() => { const r = document.querySelector('.tc-stick').getBoundingClientRect(); return { left: r.left, top: r.top, width: r.width, height: r.height }; })()`);
-    const p0 = { x: zone.left + zone.width * 0.6, y: zone.top + zone.height * 0.6 };
+    const p0 = { x: zone.left + 55, y: zone.top + zone.height * 0.6 };
     const baseCenter = () => evaluate(`(() => {
         const el = document.querySelector('.tc-stick-base');
         if (el.hidden) return null;
@@ -354,14 +354,23 @@ try {
     await move(4, { x: p0.x + 30, y: p0.y - 30 });
     keys = await keyLog();
     check(keys.includes('keydown ArrowRight 39 0') && keys.includes('keydown ArrowUp 38 0'), 'dragging up-right presses right and up');
-    await move(4, { x: p0.x + 120, y: p0.y });
+    await move(4, { x: p0.x + 90, y: p0.y });
     const b1 = await baseCenter();
-    check(!!b1 && Math.abs(b1.x - (p0.x + 80)) < 1 && Math.abs(b1.y - p0.y) < 1, `the base follows the thumb past its radius (${JSON.stringify(b1)})`);
-    await screenshot('stick');
+    check(!!b1 && Math.abs(b1.x - (p0.x + 50)) < 1 && Math.abs(b1.y - p0.y) < 1, `the base follows the thumb past its radius (${JSON.stringify(b1)})`);
     await keyLog();
-    await move(4, { x: p0.x + 60, y: p0.y });
+    await move(4, { x: p0.x + 20, y: p0.y });
     keys = await keyLog();
     check(keys.includes('keyup ArrowRight 39 0') && keys.includes('keydown ArrowLeft 37 0'), 'pulling back past the base turns left at once');
+    await move(4, { x: zone.left + zone.width + 300, y: p0.y });
+    await screenshot('stick');
+    check(await evaluate(`(() => {
+        const z = document.querySelector('.tc-stick').getBoundingClientRect();
+        return [...document.querySelectorAll('.tc-stick-base, .tc-stick-knob')].every((el) => el.getBoundingClientRect().right <= z.right + 0.5);
+    })()`), 'dragged onto the game, the stick stays in its zone');
+    await keyLog();
+    await move(4, { x: zone.left, y: p0.y });
+    keys = await keyLog();
+    check(keys.includes('keyup ArrowRight 39 0') && keys.includes('keydown ArrowLeft 37 0'), 'pulling back from over the game turns left at once');
     await up(4);
     keys = await keyLog();
     check(keys.at(-1) === 'keyup ArrowLeft 37 0' && (await baseCenter()) === null, 'releasing the thumb releases the key and hides the stick');

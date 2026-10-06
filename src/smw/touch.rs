@@ -93,6 +93,8 @@ struct Layout {
     h: f32,
     dp: f32,
     view: Rect,
+    /// Where the floating stick's base may sit: the left bar, clear of the display cutout.
+    stick_area: Rect,
     dpad: Circle,
     jump: Circle,
     run: Circle,
@@ -111,29 +113,47 @@ fn fit(want: f32, room: f32) -> f32 {
     }
 }
 
-fn layout(w: f32, h: f32, dp: f32) -> Layout {
+/// `cutouts` are the display cutouts' bounding boxes; a control that would sit on one moves sideways off it.
+fn layout(w: f32, h: f32, dp: f32, cutouts: &[Rect]) -> Layout {
     let scale = (w / 640.0).min(h / 480.0);
     let view = Rect { x: (w - 640.0 * scale) / 2.0, y: (h - 480.0 * scale) / 2.0, w: 640.0 * scale, h: 480.0 * scale };
     let edge = 12.0 * dp;
     let room = view.x - 2.0 * edge;
+    let (x0, y0, x1, y1) = (edge, edge, w - edge, h - edge);
     let d = fit((160.0 * dp).min(0.42 * w.min(h)), room);
     let btn = fit((0.17 * w.min(h)).clamp(56.0 * dp, 68.0 * dp), (room - 10.0 * dp) / 2.0);
     let block = 2.0 * btn + 10.0 * dp;
     let (kw, kh) = (fit(68.0 * dp, room), 56.0 * dp);
-    let left = w - edge - block + btn / 2.0;
-    Layout {
+    let left = x1 - block + btn / 2.0;
+    let mut l = Layout {
         w,
         h,
         dp,
         view,
-        dpad: Circle { x: edge + d / 2.0, y: h - edge - d / 2.0, r: d / 2.0 },
-        jump: Circle { x: w - edge - btn / 2.0, y: h - edge - btn, r: btn / 2.0 },
-        run: Circle { x: left, y: h - edge - btn / 2.0, r: btn / 2.0 },
-        item: Circle { x: left, y: h - edge - block + btn / 2.0, r: btn / 2.0 },
-        back: Rect { x: edge, y: edge, w: kw, h: kh },
-        toggle: Rect { x: edge, y: edge + kh + 8.0 * dp, w: kw, h: 44.0 * dp },
-        start: Rect { x: w - edge - kw, y: edge, w: kw, h: kh },
+        stick_area: Rect { x: 0.0, y: 0.0, w: view.x, h },
+        dpad: Circle { x: x0 + d / 2.0, y: y1 - d / 2.0, r: d / 2.0 },
+        jump: Circle { x: x1 - btn / 2.0, y: y1 - btn, r: btn / 2.0 },
+        run: Circle { x: left, y: y1 - btn / 2.0, r: btn / 2.0 },
+        item: Circle { x: left, y: y1 - block + btn / 2.0, r: btn / 2.0 },
+        back: Rect { x: x0, y: y0, w: kw, h: kh },
+        toggle: Rect { x: x0, y: y0 + kh + 8.0 * dp, w: kw, h: 44.0 * dp },
+        start: Rect { x: x1 - kw, y: y0, w: kw, h: kh },
+    };
+    for c in cutouts {
+        let side = |x: f32, half: f32| if x < w / 2.0 { c.x + c.w + edge + half } else { c.x - edge - half };
+        for circle in [&mut l.dpad, &mut l.jump, &mut l.run, &mut l.item] {
+            let (nx, ny) = (circle.x.clamp(c.x, c.x + c.w), circle.y.clamp(c.y, c.y + c.h));
+            if (circle.x - nx).hypot(circle.y - ny) < circle.r + edge {
+                circle.x = side(circle.x, circle.r);
+            }
+        }
+        for r in [&mut l.back, &mut l.toggle, &mut l.start] {
+            if c.x - edge < r.x + r.w && r.x < c.x + c.w + edge && c.y - edge < r.y + r.h && r.y < c.y + c.h + edge {
+                r.x = side(r.x + r.w / 2.0, r.w / 2.0) - r.w / 2.0;
+            }
+        }
     }
+    l
 }
 
 /// 8-way, with diagonals overlapping the straight directions as in web/touch.js.
@@ -161,6 +181,25 @@ fn direction_keys(dx: f32, dy: f32, dead: f32) -> u8 {
 impl Layout {
     fn stick_radius(&self) -> f32 {
         40.0 * self.dp
+    }
+
+    fn stick_base_radius(&self) -> f32 {
+        self.stick_radius() + 10.0 * self.dp
+    }
+
+    /// `p` moved so a circle of radius `r` around it stays inside the stick area (centred if it cannot fit).
+    fn in_stick_area(&self, p: (f32, f32), r: f32) -> (f32, f32) {
+        let a = self.stick_area;
+        let clamp = |v: f32, lo: f32, hi: f32| if lo <= hi { v.clamp(lo, hi) } else { (lo + hi) / 2.0 };
+        (clamp(p.0, a.x + r, a.x + a.w - r), clamp(p.1, a.y + r, a.y + a.h - r))
+    }
+
+    /// Where the knob is drawn: the thumb, kept on the base and inside the stick area.
+    fn knob(&self, finger: &Finger) -> (f32, f32) {
+        let (dx, dy) = (finger.pos.0 - finger.origin.0, finger.pos.1 - finger.origin.1);
+        let dist = dx.hypot(dy);
+        let scale = if dist > self.stick_radius() { self.stick_radius() / dist } else { 1.0 };
+        self.in_stick_area((finger.origin.0 + dx * scale, finger.origin.1 + dy * scale), 26.0 * self.dp)
     }
 
     fn buttons(&self) -> [(Key, Circle); 3] {
@@ -209,6 +248,7 @@ impl Layout {
                 if dist > radius {
                     finger.origin = (x - dx / dist * radius, y - dy / dist * radius);
                 }
+                finger.origin = self.in_stick_area(finger.origin, self.stick_base_radius());
                 direction_keys(x - finger.origin.0, y - finger.origin.1, 12.0 * self.dp)
             }
             Zone::Keys => self.button_keys(x, y),
@@ -287,6 +327,7 @@ struct Touch {
     controls: Controls,
     visible: bool,
     alpha: f32,
+    cutouts: Vec<Rect>,
     textures: Vec<*mut SDL_Texture>,
 }
 
@@ -295,6 +336,13 @@ static mut session_on: bool = false;
 static mut first: bool = false;
 static mut pushing: bool = false;
 static mut debug: bool = false;
+static CUTOUTS: std::sync::Mutex<Vec<Rect>> = std::sync::Mutex::new(Vec::new());
+
+/// The display cutouts' bounding boxes in window pixels (left, top, right, bottom each), from MainActivity.
+pub fn set_cutouts(boxes: &[[i32; 4]]) {
+    let rects = boxes.iter().filter(|b| b[2] > b[0] && b[3] > b[1]).map(|b| Rect { x: b[0] as f32, y: b[1] as f32, w: (b[2] - b[0]) as f32, h: (b[3] - b[1]) as f32 });
+    *CUTOUTS.lock().unwrap_or_else(|e| e.into_inner()) = rects.collect();
+}
 const MODE_FILE: &str = "touch_controls.txt";
 
 fn load_mode() -> Mode {
@@ -320,7 +368,7 @@ pub fn init() {
         first = session_on && !pads;
         if live {
             crate::smw::harness::record_touch();
-            touch = Some(Touch { controls: Controls::new(load_mode(), Layout::default()), visible: !pads, alpha: if pads { 0.0 } else { 1.0 }, textures: Vec::new() });
+            touch = Some(Touch { controls: Controls::new(load_mode(), Layout::default()), visible: !pads, alpha: if pads { 0.0 } else { 1.0 }, cutouts: Vec::new(), textures: Vec::new() });
             println!("[touch] on, {}", if pads { "hidden while a pad is connected" } else { "player 1" });
         }
     }
@@ -404,11 +452,13 @@ pub fn draw(renderer: *mut SDL_Renderer) {
         if w <= 0 || h <= 0 {
             return;
         }
-        if t.controls.layout.w != w as f32 || t.controls.layout.h != h as f32 {
+        let cutouts = CUTOUTS.lock().unwrap_or_else(|e| e.into_inner()).clone();
+        if t.controls.layout.w != w as f32 || t.controls.layout.h != h as f32 || t.cutouts != cutouts {
+            t.cutouts = cutouts.clone();
             let mut dpi = 0.0;
             let dp = if SDL_GetDisplayDPI(0, &mut dpi, std::ptr::null_mut(), std::ptr::null_mut()) == 0 && dpi > 0.0 { dpi / 160.0 } else { h as f32 / 400.0 };
             t.controls.release_all();
-            t.controls.layout = layout(w as f32, h as f32, dp);
+            t.controls.layout = layout(w as f32, h as f32, dp, &cutouts);
             for tex in t.textures.drain(..) {
                 SDL_DestroyTexture(tex);
             }
@@ -472,12 +522,13 @@ unsafe fn draw_controls(renderer: *mut SDL_Renderer, t: &Touch) {
             put(DPAD_CENTER, x0 + cell, y0 + cell, arm, arm, 1.0);
         }
         Mode::Stick => {
-            let base = |x: f32, y: f32, alpha: f32| circle(STICK_BASE, Circle { x, y, r: l.stick_radius() + 10.0 * l.dp }, alpha);
+            let base = |x: f32, y: f32, alpha: f32| circle(STICK_BASE, Circle { x, y, r: l.stick_base_radius() }, alpha);
             let mut any = false;
             for f in c.fingers.iter().filter(|f| f.zone == Zone::Stick) {
                 any = true;
                 base(f.origin.0, f.origin.1, 1.0);
-                circle(STICK_KNOB, Circle { x: f.pos.0, y: f.pos.1, r: 26.0 * l.dp }, 1.0);
+                let (kx, ky) = l.knob(f);
+                circle(STICK_KNOB, Circle { x: kx, y: ky, r: 26.0 * l.dp }, 1.0);
             }
             if !any {
                 base(l.dpad.x, l.dpad.y, 0.5);
@@ -681,7 +732,7 @@ unsafe fn build_textures(renderer: *mut SDL_Renderer, l: &Layout) -> Vec<*mut SD
         canvases.push(c);
     }
 
-    let r = l.stick_radius() + 10.0 * dp;
+    let r = l.stick_base_radius();
     let mut stick = Canvas::new(2.0 * r, 2.0 * r);
     stick.circle([1.0, 1.0, 1.0, 0.08], border, 0.35);
     canvases.push(stick);
@@ -708,7 +759,7 @@ mod tests {
 
     /// Pixel 9 Pro XL, landscape.
     fn pixel() -> Layout {
-        layout(2244.0, 1008.0, 3.0)
+        layout(2244.0, 1008.0, 3.0, &[])
     }
 
     #[test]
@@ -765,7 +816,7 @@ mod tests {
     fn floating_stick_spawns_under_the_thumb_and_follows_it() {
         let l = pixel();
         let mut c = Controls::new(Mode::Stick, l);
-        let (x, y) = (200.0, 600.0);
+        let (x, y) = (155.0, 600.0);
         c.down(7, x, y);
         assert!(c.queue.is_empty());
         c.moved(7, x + 6.0 * l.dp, y);
@@ -773,14 +824,41 @@ mod tests {
         c.moved(7, x + 20.0 * l.dp, y);
         assert_eq!(c.queue, [(R, true)]);
         c.queue.clear();
-        c.moved(7, x + 100.0 * l.dp, y);
+        c.moved(7, x + 80.0 * l.dp, y);
         let origin = c.fingers[0].origin;
-        assert!((origin.0 - (x + 60.0 * l.dp)).abs() < 0.01);
-        c.moved(7, x + 40.0 * l.dp, y);
+        assert!((origin.0 - (x + 40.0 * l.dp)).abs() < 0.01);
+        c.moved(7, x + 20.0 * l.dp, y);
         assert_eq!(c.queue, [(R, false), (L, true)]);
         c.queue.clear();
         c.up(7, 0.0, 0.0);
         assert_eq!(c.queue, [(L, false)]);
+    }
+
+    #[test]
+    fn the_stick_stays_in_the_left_bar() {
+        let l = pixel();
+        let mut c = Controls::new(Mode::Stick, l);
+        c.down(1, l.view.x - 10.0, 700.0);
+        c.moved(1, l.view.x + 400.0, 700.0);
+        let f = c.fingers[0];
+        assert!(f.origin.0 + l.stick_base_radius() <= l.view.x + 0.01, "{:?}", f.origin);
+        assert!(l.knob(&f).0 + 26.0 * l.dp <= l.view.x + 0.01);
+        assert_eq!(c.held[Key::Right as usize], 1);
+        c.moved(1, 0.0, l.h);
+        let f = c.fingers[0];
+        assert!(f.origin.0 >= l.stick_base_radius() && f.origin.1 <= l.h - l.stick_base_radius());
+    }
+
+    #[test]
+    fn controls_keep_clear_of_the_cutout() {
+        let free = pixel();
+        // A punch hole in the middle of the left edge, as on a phone held in landscape, touches nothing.
+        let middle = layout(2244.0, 1008.0, 3.0, &[Rect { x: 0.0, y: 440.0, w: 130.0, h: 130.0 }]);
+        assert_eq!(middle, Layout { ..free });
+        // One in the bottom left corner moves the D-pad off it, and only the D-pad.
+        let corner = layout(2244.0, 1008.0, 3.0, &[Rect { x: 0.0, y: 872.0, w: 136.0, h: 136.0 }]);
+        assert!(corner.dpad.x - corner.dpad.r >= 136.0);
+        assert_eq!((corner.back, corner.jump), (free.back, free.jump));
     }
 
     #[test]
@@ -810,7 +888,7 @@ mod tests {
 
     #[test]
     fn narrow_screens_overlap_rather_than_vanish() {
-        let l = layout(1024.0, 768.0, 2.0);
+        let l = layout(1024.0, 768.0, 2.0, &[]);
         assert!(l.dpad.r * 2.0 >= 100.0);
         assert!(l.jump.r * 2.0 >= 56.0 * 2.0);
     }

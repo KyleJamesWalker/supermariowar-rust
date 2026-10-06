@@ -7,6 +7,8 @@
   var STICK_KEY = 'smw-touch-stick';
   var STICK_RADIUS = 40;
   var STICK_DEAD = 12;
+  var STICK_BASE = 50;
+  var STICK_KNOB = 26;
   var KEYS = {
     left: { key: 'ArrowLeft', code: 'ArrowLeft', keyCode: 37 },
     up: { key: 'ArrowUp', code: 'ArrowUp', keyCode: 38 },
@@ -72,6 +74,7 @@
         '<path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
     '</div>';
   var dpad = controls.querySelector('.tc-dpad');
+  var stickZone = controls.querySelector('.tc-stick');
   var stickBase = controls.querySelector('.tc-stick-base');
   var stickKnob = controls.querySelector('.tc-stick-knob');
   var keyElements = controls.querySelectorAll('[data-key]');
@@ -88,8 +91,12 @@
     Object.keys(pointers).forEach(function (id) { if (pointers[id].zone === 'stick') stick = pointers[id]; });
     stickBase.hidden = !stick;
     if (stick) {
+      var dx = stick.x - stick.origin.x;
+      var dy = stick.y - stick.origin.y;
+      var scale = Math.min(1, STICK_RADIUS / (Math.hypot(dx, dy) || 1));
+      var knob = inStickZone({ x: stick.origin.x + dx * scale, y: stick.origin.y + dy * scale }, STICK_KNOB);
       stickBase.style.transform = 'translate(' + stick.origin.x + 'px, ' + stick.origin.y + 'px)';
-      stickKnob.style.transform = 'translate(' + (stick.x - stick.origin.x) + 'px, ' + (stick.y - stick.origin.y) + 'px)';
+      stickKnob.style.transform = 'translate(' + (knob.x - stick.origin.x) + 'px, ' + (knob.y - stick.origin.y) + 'px)';
     }
   };
   var pointerHolds = function (name, zone) {
@@ -145,6 +152,13 @@
     return keys;
   };
 
+  // Keeps a circle of radius r around p inside the stick zone, so the stick never covers the game.
+  var inStickZone = function (p, r) {
+    var z = stickZone.getBoundingClientRect();
+    var clamp = function (v, lo, hi) { return lo <= hi ? Math.min(Math.max(v, lo), hi) : (lo + hi) / 2; };
+    return { x: clamp(p.x, z.left + r, z.right - r), y: clamp(p.y, z.top + r, z.bottom - r) };
+  };
+
   // The floating stick's base appears under the thumb and follows it past STICK_RADIUS.
   var stickKeys = function (p, x, y) {
     var dx = x - p.origin.x;
@@ -153,6 +167,7 @@
     if (dist > STICK_RADIUS) {
       p.origin = { x: x - dx / dist * STICK_RADIUS, y: y - dy / dist * STICK_RADIUS };
     }
+    p.origin = inStickZone(p.origin, STICK_BASE);
     p.x = x;
     p.y = y;
     return directionKeys(x - p.origin.x, y - p.origin.y, STICK_DEAD);
