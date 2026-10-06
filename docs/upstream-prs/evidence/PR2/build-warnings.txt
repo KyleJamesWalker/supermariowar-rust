@@ -1,0 +1,4 @@
+# Plain upstream CMake build (README: cmake .. && make, default options), Apple clang 21, arm64 macOS, full build of both trees.
+# upstream/master (c7056790): 121 warnings; fix/uninitialized-reads (a8bae9af): 121 warnings.
+# The per-file warning lists (line numbers stripped) are identical: no new warnings.
+# 89d2e96b (sixth commit, ObjectBase.h): incremental rebuild of the 144 affected files, same warnings per file as upstream/master.

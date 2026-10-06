@@ -1,0 +1,17 @@
+# Backlog items checked on upstream c7056790 and left out of PR2
+
+## M6: MapCollision default constructor (src/smw/network/ProtocolGamePackages.h)
+The default constructor leaves player_id and the four floats unset, but nothing reads them unset:
+- NetGameHost: every sendMapCollisionEvent() call in player.cpp follows prepareMapCollisionEvent(), which calls fill().
+- NetClient::handleMapCollision memcpy()s the received bytes over the whole package first.
+- No padding goes out: sizeof(MapCollision) == 20, player_id at offset 3, player_x at 4 (MessageHeader is 3 bytes).
+A default member initializer would be harmless hardening, but there is no bug to show.
+
+## M6: level editor MapBlock::iSettings
+CMap::clearMap() leaves iSettings of cleared blocks as they were, but the editor and the map writer only read
+the settings the format stores (all of them for block types 1 and 15, setting 0 for 11-14), and placing such a
+block sets them first. valgrind reports nothing in all 7 level editor sessions, including the saves (valgrind.txt).
+The run-to-run variation came from our own harness, which hashed all 26 settings of every block; it now hashes
+only the stored ones.
+
+## M7 was dropped from PR1 earlier (fixed upstream in d70e4dc3).
