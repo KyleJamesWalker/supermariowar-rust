@@ -1,11 +1,16 @@
 [package]
 name = "smw"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
 description = "Super Mario War - faithful Rust port"
-publish = false
+publish.workspace = true
 
 [workspace]
+members = ["relay"]
+
+[workspace.package]
+edition = "2021"
+publish = false
 
 [features]
 # Mirrors the C++ NO_NETWORK build (NetworkLayerNULL).
@@ -23,6 +28,11 @@ libz-sys = "1"
 [profile.dev]
 opt-level = 1
 overflow-checks = false
+
+# The relay keeps Cargo's default dev profile.
+[profile.dev.package.smw_relay]
+overflow-checks = true
+opt-level = 0
 
 [profile.release]
 overflow-checks = false

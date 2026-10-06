@@ -7,7 +7,7 @@
 //
 // Usage: node tools/web_netplay_test.mjs [out_dir]
 //   CHROME     Chrome binary (default: the macOS Google Chrome app)
-//   RELAY_BIN  smw_relay binary (default: relay/target/release/smw_relay)
+//   RELAY_BIN  smw_relay binary (default: target/release/smw_relay)
 //   WEB_DIR    web build (default: dist/web)
 //   NET_GAMES  scenarios (default: every tools/ref/net_game*)
 import { spawn, spawnSync } from 'node:child_process';
@@ -20,7 +20,7 @@ import { fileURLToPath } from 'node:url';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const web = resolve(process.env.WEB_DIR ?? join(repo, 'dist', 'web'));
-const relayBin = resolve(process.env.RELAY_BIN ?? join(repo, 'relay', 'target', 'release', 'smw_relay'));
+const relayBin = resolve(process.env.RELAY_BIN ?? join(repo, 'target', 'release', 'smw_relay'));
 const chrome = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const out = resolve(process.argv[2] ?? join(tmpdir(), 'smw-web-netplay'));
 mkdirSync(out, { recursive: true });
