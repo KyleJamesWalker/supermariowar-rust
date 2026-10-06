@@ -23,12 +23,12 @@ jobs:
   emscripten:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
 
       - id: emsdk-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ runner.temp }}/emsdk
           key: emsdk-${{ runner.os }}-${{ env.EMSDK_VERSION }}
@@ -64,7 +64,7 @@ jobs:
           (cd "$RUNNER_TEMP" && zip -q -r -X "$GITHUB_WORKSPACE/dist/${{ steps.name.outputs.file }}" SuperMarioWar-web)
           ls -l dist
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: smw-web
           path: dist/${{ steps.name.outputs.file }}

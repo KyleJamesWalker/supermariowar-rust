@@ -29,7 +29,7 @@ jobs:
             runner: macos-15-intel
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -57,7 +57,7 @@ jobs:
       - name: Archive
         run: tar -C dist -czf "$RUNNER_TEMP/app.tar.gz" 'Super Mario War.app'
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: macos-app-${{ matrix.arch }}
           path: ${{ runner.temp }}/app.tar.gz
@@ -69,9 +69,9 @@ jobs:
     needs: app
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: macos-app-*
 
@@ -121,7 +121,7 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: smw-macos-universal
           path: dist/${{ steps.name.outputs.file }}
