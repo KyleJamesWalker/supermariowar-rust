@@ -14,7 +14,7 @@ use smw::globals::*;
 use std::path::Path;
 
 fn main() {
-    let data = std::env::args().nth(1).unwrap_or_else(|| concat!(env!("CARGO_MANIFEST_DIR"), "/data").to_string());
+    let data = std::env::args().nth(1).unwrap_or_else(|| concat!(env!("CARGO_MANIFEST_DIR"), "/../../data").to_string());
 
     smw::globals::init_globals();
     unsafe {

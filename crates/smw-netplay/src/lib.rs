@@ -1,4 +1,4 @@
-//! The netplay protocol (src/common_netplay) and the lobby server (src/server).
+//! The netplay protocol (`common_netplay`, C++ src/common_netplay) and the lobby server (`server`, C++ src/server).
 
 #![allow(
     non_snake_case,
@@ -18,13 +18,19 @@ extern crate self as smw;
 
 pub use smw_globals as globals;
 
-#[path = "../../../src/common"]
 pub mod common {
-    pub mod file_io;
+    /// The part of smw-core's `common::file_io` that the protocol uses.
+    pub mod file_io {
+        /// C strings in data files are Latin-1/ASCII bytes; map each byte to one char so lengths stay in bytes for ASCII.
+        pub fn cstr_bytes_to_string(bytes: &[u8]) -> String {
+            match std::str::from_utf8(bytes) {
+                Ok(s) => s.to_string(),
+                Err(_) => bytes.iter().map(|&b| b as char).collect(),
+            }
+        }
+    }
 }
 
-#[path = "../../../src/common_netplay/mod.rs"]
 pub mod common_netplay;
 
-#[path = "../../../src/server/mod.rs"]
 pub mod server;

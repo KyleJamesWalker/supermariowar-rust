@@ -1,0 +1,9 @@
+[package]
+name = "leveleditor"
+version.workspace = true
+edition.workspace = true
+description = "Super Mario War - the level editor"
+publish.workspace = true
+
+[dependencies]
+smw-core = { path = "../../crates/smw-core" }

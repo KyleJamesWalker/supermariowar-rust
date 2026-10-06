@@ -4,16 +4,13 @@ on:
   push:
     branches: [main]
     paths:
-      - relay/**
+      - apps/smw_relay/**
       - Cargo.toml
       - Cargo.lock
       - crates/smw-globals/**
       - crates/smw-netplay/**
       - crates/*/Cargo.toml
-      - src/common/file_io.rs
-      - src/common_netplay/**
-      - src/globals/**
-      - src/server/**
+      - apps/*/Cargo.toml
       - tools/ref/unordered_map_order.txt
       - Dockerfile
       - .dockerignore
@@ -21,16 +18,13 @@ on:
       - .github/workflows/build_relay.yml
   pull_request:
     paths:
-      - relay/**
+      - apps/smw_relay/**
       - Cargo.toml
       - Cargo.lock
       - crates/smw-globals/**
       - crates/smw-netplay/**
       - crates/*/Cargo.toml
-      - src/common/file_io.rs
-      - src/common_netplay/**
-      - src/globals/**
-      - src/server/**
+      - apps/*/Cargo.toml
       - tools/ref/unordered_map_order.txt
       - Dockerfile
       - .dockerignore

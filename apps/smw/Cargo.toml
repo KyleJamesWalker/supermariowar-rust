@@ -1,0 +1,12 @@
+[package]
+name = "smw"
+version.workspace = true
+edition.workspace = true
+description = "Super Mario War - the game"
+publish.workspace = true
+
+[features]
+no_network = ["smw-core/no_network"]
+
+[dependencies]
+smw-core = { path = "../../crates/smw-core" }

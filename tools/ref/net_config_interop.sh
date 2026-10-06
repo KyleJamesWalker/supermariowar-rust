@@ -1,5 +1,5 @@
 #!/bin/bash
-# servers.toml compatibility: the C++ NetConfigManager (net_config_ref.sh) and the Rust one (examples/net_config.rs)
+# servers.toml compatibility: the C++ NetConfigManager (net_config_ref.sh) and the Rust one (crates/smw-core/examples/net_config.rs)
 # each load the same fuzzed servers.toml and save it back; the saved files and the warnings must be identical.
 # Usage: net_config_interop.sh [cases]   (default 200)
 HERE=$(cd "$(dirname "$0")" && pwd)

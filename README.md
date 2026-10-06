@@ -40,10 +40,12 @@ The repository is a Cargo workspace with one `Cargo.lock` at the root, and every
 
 | Crate | Path | Contents |
 |---|---|---|
-| `smw` | `src/` | the game, the level and world editors and `smw_server` |
+| `smw-core` (library `smw`) | `crates/smw-core/` | the game, the editors and the replay harness, mirroring the C++ tree |
 | `smw-globals` | `crates/smw-globals/` | the porting infrastructure: `Ptr`, `Global`, `Aliased` and the C++ inheritance macros |
 | `smw-netplay` | `crates/smw-netplay/` | the netplay protocol and lobby server, shared by the game, `smw_server` and `smw_relay` |
-| `smw_relay` | `relay/` | the WebSocket lobby and relay for [browser multiplayer](#browser-multiplayer) |
+| `smw-platform` | `crates/smw-platform/` | the platform traits and normalized input events (`docs/ARCHITECTURE_V2.md`) |
+| `smw`, `leveleditor`, `worldeditor`, `smw_server` | `apps/<name>/` | one package per binary |
+| `smw_relay` | `apps/smw_relay/` | the WebSocket lobby and relay for [browser multiplayer](#browser-multiplayer) |
 
 Native builds draw without SDL surface RLE, which on Homebrew's sdl2-compat costs most of the frame time and shows the map foreground's colour key (`docs/sdl2-compat-rle.md`); the web build keeps it. `SMW_RLE=1` or `SMW_RLE=0` overrides at launch.
 

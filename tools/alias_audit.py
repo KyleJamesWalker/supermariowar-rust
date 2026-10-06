@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Regenerate src/alias_audit.rs: a test that every struct reachable through Ptr<T>, Global<T> or a `static mut`
+"""Regenerate crates/smw-core/src/alias_audit.rs: a test that every struct reachable through Ptr<T>, Global<T> or a `static mut`
 carries the Aliased marker (directly or through a field), so LLVM gets no noalias/readonly for &self/&mut self.
 
 Every concrete type behind a Ptr<dyn Trait> counts too, via its `impl Trait for Type`, as does every non-Copy
 struct with a &self/&mut self method containing `unsafe` (it can reach itself again through a global).
 
 Usage: alias_audit.py [--check]
-Writes src/alias_audit.rs (with --check: exits 1 if it is out of date instead). Then `cargo test alias_audit`
+Writes crates/smw-core/src/alias_audit.rs (with --check: exits 1 if it is out of date instead). Then `cargo test alias_audit`
 fails listing every target type that is still Unpin. Types in ALLOW are plain values that are never reached
 through another path while borrowed; each needs a reason.
 """
@@ -15,13 +15,15 @@ import re
 import sys
 
 PORT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SRC = os.path.join(PORT, 'src')
+SRC = os.path.join(PORT, 'crates', 'smw-core', 'src')
+NETPLAY = os.path.join(PORT, 'crates', 'smw-netplay', 'src')
 OUT = os.path.join(SRC, 'alias_audit.rs')
 _LIB = open(os.path.join(SRC, 'lib.rs')).read()
-# Modules smw-netplay compiles from src/ and the game re-exports count as the game's own.
+# The modules the game re-exports from smw-netplay count as the game's own.
 LIB_MODULES = re.findall(r'(?m)^pub mod (\w+);', _LIB) + [
-    m for m in re.findall(r'(?m)^pub use smw_netplay::\{([^}]*)\};', _LIB)[0].replace(' ', '').split(',') if os.path.isdir(os.path.join(SRC, m))
+    m for m in re.findall(r'(?m)^pub use smw_netplay::\{([^}]*)\};', _LIB)[0].replace(' ', '').split(',')
 ]
+ROOTS = [(SRC, SRC)] + [(os.path.join(NETPLAY, m), NETPLAY) for m in LIB_MODULES if os.path.isdir(os.path.join(NETPLAY, m))]
 
 ALLOW = {
     'MixChunkPtr': 'owning handle; the raw pointer is set once at construction and never written through another path',
@@ -78,8 +80,8 @@ def add_type_expr(expr, targets, dyns):
         targets.add(name + (args.replace(' ', '') if args and PRIMITIVE_ARGS.match(args) else ''))
 
 
-def module_path(path):
-    rel = os.path.relpath(path, SRC)[:-3].split(os.sep)
+def module_path(path, base):
+    rel = os.path.relpath(path, base)[:-3].split(os.sep)
     if rel[-1] in ('mod', 'lib'):
         rel = rel[:-1]
     return 'crate::' + '::'.join(rel) if rel else 'crate'
@@ -92,30 +94,31 @@ def strip_tests(text):
 
 def scan():
     structs, targets, dyns, impls, generic, copy, reentrant = {}, set(), set(), [], set(), set(), set()
-    for root, dirs, files in os.walk(SRC):
-        dirs[:] = sorted(d for d in dirs if root != SRC or d in LIB_MODULES)
-        for name in sorted(files):
-            if not name.endswith('.rs') or os.path.join(root, name) == OUT:
-                continue
-            if root == SRC and name[:-3] not in LIB_MODULES:
-                continue
-            path = os.path.join(root, name)
-            text = strip_tests(open(path).read())
-            for m in STRUCT_RE.finditer(text):
-                if m.group(1) and not m.group(1).startswith('pub(super'):
-                    structs.setdefault(m.group(2), []).append(module_path(path))
-                    if m.group(3):
-                        generic.add(m.group(2))
-            for m in WRAPPER_RE.finditer(text):
-                add_type_expr(wrapped(text, m.end()), targets, dyns)
-            for m in STATIC_RE.finditer(text):
-                add_type_expr(m.group(1), targets, dyns)
-            impls += IMPL_RE.findall(text)
-            copy |= {m.group(2) for m in DERIVE_COPY_RE.finditer(text) if 'Copy' in m.group(1)}
-            for m in IMPL_BLOCK_RE.finditer(text):
-                body = block(text, m.end())
-                if SELF_METHOD_RE.search(body) and 'unsafe' in body:
-                    reentrant.add(m.group(1))
+    for top, base in ROOTS:
+      for root, dirs, files in os.walk(top):
+          dirs[:] = sorted(d for d in dirs if root != SRC or d in LIB_MODULES)
+          for name in sorted(files):
+              if not name.endswith('.rs') or os.path.join(root, name) == OUT:
+                  continue
+              if root == SRC and name[:-3] not in LIB_MODULES:
+                  continue
+              path = os.path.join(root, name)
+              text = strip_tests(open(path).read())
+              for m in STRUCT_RE.finditer(text):
+                  if m.group(1) and not m.group(1).startswith('pub(super'):
+                      structs.setdefault(m.group(2), []).append(module_path(path, base))
+                      if m.group(3):
+                          generic.add(m.group(2))
+              for m in WRAPPER_RE.finditer(text):
+                  add_type_expr(wrapped(text, m.end()), targets, dyns)
+              for m in STATIC_RE.finditer(text):
+                  add_type_expr(m.group(1), targets, dyns)
+              impls += IMPL_RE.findall(text)
+              copy |= {m.group(2) for m in DERIVE_COPY_RE.finditer(text) if 'Copy' in m.group(1)}
+              for m in IMPL_BLOCK_RE.finditer(text):
+                  body = block(text, m.end())
+                  if SELF_METHOD_RE.search(body) and 'unsafe' in body:
+                      reentrant.add(m.group(1))
     targets |= {ty for trait, ty in impls if trait in dyns}
     targets |= reentrant - copy
     return structs, {t for t in targets if '<' in t or t not in generic}
@@ -171,7 +174,7 @@ def main():
     if '--check' in sys.argv:
         current = open(OUT).read() if os.path.exists(OUT) else ''
         if current != text:
-            print('src/alias_audit.rs is out of date; run tools/alias_audit.py')
+            print('crates/smw-core/src/alias_audit.rs is out of date; run tools/alias_audit.py')
             return 1
         return 0
     open(OUT, 'w').write(text)

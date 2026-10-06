@@ -1,6 +1,5 @@
 //! `Ptr`, `Global` and `Aliased`, and the macros that model C++ inheritance (see docs/ARCHITECTURE.md).
 
-#[path = "../../../src/globals/pointers.rs"]
 mod pointers;
 pub use pointers::{Aliased, Global, Ptr};
 

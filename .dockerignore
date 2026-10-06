@@ -1,12 +1,5 @@
 *
 !Cargo.toml
 !Cargo.lock
-!crates/smw-globals
-!crates/smw-netplay
-!crates/smw-platform
-!relay/Cargo.toml
-!relay/src
-!src/common/file_io.rs
-!src/common_netplay
-!src/globals
-!src/server
+!crates
+!apps

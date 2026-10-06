@@ -264,6 +264,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20870f649af7073d53e38067b2a84312175d56ea15217e1b15bc83506ec50afb"
 
 [[package]]
+name = "leveleditor"
+version = "0.1.0"
+dependencies = [
+ "smw-core",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.190"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -490,6 +497,13 @@ checksum = "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
 name = "smw"
 version = "0.1.0"
 dependencies = [
+ "smw-core",
+]
+
+[[package]]
+name = "smw-core"
+version = "0.1.0"
+dependencies = [
  "enet-sys",
  "libz-sys",
  "sdl2",
@@ -520,6 +534,13 @@ version = "0.1.0"
 dependencies = [
  "smw-netplay",
  "tungstenite",
+]
+
+[[package]]
+name = "smw_server"
+version = "0.1.0"
+dependencies = [
+ "smw-netplay",
 ]
 
 [[package]]
@@ -654,3 +675,10 @@ name = "winnow"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "23b97319f7b8343df12cc98938e5c3eb436064524c8d2b4e30a1d3a36eecdf81"
+
+[[package]]
+name = "worldeditor"
+version = "0.1.0"
+dependencies = [
+ "smw-core",
+]

@@ -17,7 +17,7 @@ Upstream's Android port ([mmatyas/supermariowar-android](https://github.com/mmat
 | Piece | Here |
 |---|---|
 | Java and Gradle | SDL 2.32.10's `android-project` template, with `app/`, `build.gradle` (AGP 8.5.2) and the Gradle 8.7 wrapper properties from this directory on top (`build.sh`) |
-| Game | the `smw` library as `libmain.so`, exporting `SDL_main` (`src/android.rs`), built with cargo-ndk |
+| Game | the `smw` library as `libmain.so`, exporting `SDL_main` (`crates/smw-core/src/android.rs`), built with cargo-ndk |
 | SDL2, SDL2_image, SDL2_mixer | built from checksummed release tarballs with CMake and the NDK (`build-sdl-libs.sh`), PNG and OGG through stb as on muOS |
 | ENet, zlib | ENet built by `enet-sys`; the system `libz.so` |
 | Icon | `resources/smw.png` (32x32), scaled by whole numbers with nearest neighbour to every mipmap density, plus an adaptive icon on the sky blue of its frame (`make_icons.py`, run by `build.sh`) |
@@ -36,7 +36,7 @@ The manifest also turns off SDL's accelerometer joystick, which would otherwise 
 
 ## Touch controls
 
-Upstream's Android port has no on-screen controls. Here the manifest sets `SMW_TOUCH=1`, and the game draws controls in the black bars beside the 4:3 picture (`src/smw/touch.rs`), laid out like the web build's (`web/touch.js`): a D-pad bottom left, Jump, Run and Item bottom right, Back and Start at the top. They press player 1's default keys, so a recording holds ordinary key input and replays exactly. Every finger is tracked on its own, so a direction, Run and Jump can be held together, and a thumb between two buttons presses both. Keys are released when the finger lifts, the touch is cancelled or the app loses focus.
+Upstream's Android port has no on-screen controls. Here the manifest sets `SMW_TOUCH=1`, and the game draws controls in the black bars beside the 4:3 picture (`crates/smw-core/src/smw/touch.rs`), laid out like the web build's (`web/touch.js`): a D-pad bottom left, Jump, Run and Item bottom right, Back and Start at the top. They press player 1's default keys, so a recording holds ordinary key input and replays exactly. Every finger is tracked on its own, so a direction, Run and Jump can be held together, and a thumb between two buttons presses both. Keys are released when the finger lifts, the touch is cancelled or the app loses focus.
 
 - **D-pad or stick.** The button under Back switches between the D-pad (the default) and a floating stick: touching anywhere left of the picture puts the stick under the thumb, dragging presses up to two directions past a small dead zone, and the stick follows a thumb that goes past its edge but never leaves the left bar. The choice is kept in `touch_controls.txt` in the settings directory.
 - **Players.** With no pad at launch the touch controls are player 1 and pads connected later take the next players. With a pad at launch the pad is player 1 and the touch controls player 2. The keyboard sets get no other player, and the remaining players are bots, as with `SMW_NO_KEYBOARD`. A recording made with touch controls says so (`#@ touch=1`), so its replay assigns players the same way.

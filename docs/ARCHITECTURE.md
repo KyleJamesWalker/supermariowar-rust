@@ -4,11 +4,12 @@ Rules every agent follows when translating the C++ sources of [Super Mario War](
 
 ## Layout
 
-- `src/common/...` and `src/smw/...` mirror the C++ tree one-to-one. One Rust module per C++ `.cpp`/`.h` pair, named by snake-casing the C++ basename: `map.cpp` → `common/map.rs`, `MapReader15xx.cpp` → `common/map/map_reader15xx.rs`, `GSGameplay.cpp` → `smw/gs_gameplay.rs`, `MO_Fireball.cpp` → `smw/objects/moving/mo_fireball.rs`. Exception: `Coins.h` + `Coin.cpp` → `smw/gamemodes/coin.rs`.
+- The repository is a Cargo workspace: `crates/smw-core` (the game library, crate name `smw`), `crates/smw-globals` (`Ptr`, `Global`, `Aliased`, `impl_base!`), `crates/smw-netplay` (`common_netplay/` and `server/`, shared with `smw_server` and the relay), `crates/smw-platform` (the platform traits, `ARCHITECTURE_V2.md`), and one package per binary in `apps/`.
+- `crates/smw-core/src/common/...` and `crates/smw-core/src/smw/...` mirror the C++ tree one-to-one. One Rust module per C++ `.cpp`/`.h` pair, named by snake-casing the C++ basename: `map.cpp` → `common/map.rs`, `MapReader15xx.cpp` → `common/map/map_reader15xx.rs`, `GSGameplay.cpp` → `smw/gs_gameplay.rs`, `MO_Fireball.cpp` → `smw/objects/moving/mo_fireball.rs`. Exception: `Coins.h` + `Coin.cpp` → `smw/gamemodes/coin.rs`.
 - When a file and a directory share a name (`common/map.cpp` + `common/map/`, `common/gfx.cpp` + `common/gfx/`), the file module declares the directory's children (`common/map.rs` holds `pub mod map_reader;` ...). There is no `mod.rs` for those directories.
 - Every module already exists as a stub (generated); fill it in, do not create parallel files. Every module starts with `//! Port of src/<path>` naming the `.cpp` (or the `.h` if header-only).
-- `src/lib.rs` is the crate root (so tests and tools can link it); `src/main.rs` only calls `smw::smw::main::main()`.
-- `src/globals.rs` holds the global-state infrastructure (`Global<T>`, `Ptr<T>`, `Aliased`) and re-exports every C++ global, so code writes `use crate::globals::*;`.
+- `crates/smw-core/src/lib.rs` is the crate root (so tests and tools can link it); `apps/smw/src/main.rs` only calls `smw::smw::main::main()`.
+- `crates/smw-core/src/globals.rs` re-exports the global-state infrastructure (`Global<T>`, `Ptr<T>`, `Aliased`, from smw-globals) and every C++ global, so code writes `use crate::globals::*;`.
 - Not ported now: `smw/platform/` (ENet), `leveleditor/`, `worldeditor/`, `server/`, `common_netplay/`.
 
 ## Names

@@ -138,7 +138,7 @@ All of these are resolved. `1eaed535` fixed the saved world files. `5c979393` fi
 
 ## Commit triage
 
-Classes: **a** no Rust impact. **a\*** refactor with no observable change on any exercised path (replays match without porting it), ported only to keep the one-module-per-file map. **b** behaviour change to mirror. **c** infrastructure the port replaced. Rust modules are under `src/`.
+Classes: **a** no Rust impact. **a\*** refactor with no observable change on any exercised path (replays match without porting it), ported only to keep the one-module-per-file map. **b** behaviour change to mirror. **c** infrastructure the port replaced. Rust modules are under `crates/smw-core/src/` (`common_netplay/` and `server/` under `crates/smw-netplay/src/`).
 
 | Commit | Subject | Class | Rust module | Status | Note |
 |---|---|---|---|---|---|

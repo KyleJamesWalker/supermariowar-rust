@@ -1,0 +1,12 @@
+[package]
+name = "smw_server"
+version.workspace = true
+edition.workspace = true
+description = "Super Mario War - the lobby server"
+publish.workspace = true
+
+[dependencies]
+smw-netplay = { path = "../../crates/smw-netplay" }
+
+[target.'cfg(not(target_os = "emscripten"))'.dependencies]
+smw-netplay = { path = "../../crates/smw-netplay", features = ["enet"] }
