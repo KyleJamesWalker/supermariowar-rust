@@ -14,7 +14,7 @@ Upstream's Android port ([mmatyas/supermariowar-android](https://github.com/mmat
 
 | Piece | Here |
 |---|---|
-| Java and Gradle | SDL 2.32.10's `android-project` template, with `app/` from this directory on top (`build.sh`) |
+| Java and Gradle | SDL 2.32.10's `android-project` template, with `app/`, `build.gradle` (AGP 8.5.2) and the Gradle 8.7 wrapper properties from this directory on top (`build.sh`) |
 | Game | the `smw` library as `libmain.so`, exporting `SDL_main` (`src/android.rs`), built with cargo-ndk |
 | SDL2, SDL2_image, SDL2_mixer | built from checksummed release tarballs with CMake and the NDK (`build-sdl-libs.sh`), PNG and OGG through stb as on muOS |
 | ENet, zlib | ENet built by `enet-sys`; the system `libz.so` |
@@ -38,14 +38,14 @@ Upstream's Android port has no on-screen controls, and this build adds none. A f
 
 ## Build
 
-Needs the Android SDK (`ANDROID_HOME`) with NDK 27.2.12479018 (`ANDROID_NDK_HOME`), JDK 17, CMake, rsync, `cargo install cargo-ndk`, and the Rust targets:
+Needs the Android SDK (`ANDROID_HOME`) with NDK 27.2.12479018 (`ANDROID_NDK_HOME`) and build-tools 35 or newer, JDK 17, CMake, rsync, `cargo install cargo-ndk`, and the Rust targets:
 
 ```sh
 rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
 android/build.sh arm64-v8a armeabi-v7a x86_64   # default arm64-v8a only
 ```
 
-The APK lands in `dist/SuperMarioWar-<Cargo version>.apk`, with `versionName` the Cargo version and `versionCode` `major*10000 + minor*100 + patch`. The SDL builds are kept in `target/android/sdl/<abi>/`; delete that to rebuild them.
+The APK lands in `dist/SuperMarioWar-<Cargo version>.apk`, with `versionName` the Cargo version and `versionCode` `major*10000 + minor*100 + patch`. The SDL builds are kept in `target/android/sdl/<abi>/`; delete that to rebuild them. `check_page_size.sh` then fails the build unless every 64-bit library is aligned for 16 KB pages and stored uncompressed and 16 KB-aligned in the APK, which Android 15 and later check.
 
 ## Replay and pad checks
 
