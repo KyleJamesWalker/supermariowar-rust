@@ -1,0 +1,42 @@
+# cpu_race, frame 464 (match start): RNG calls on macOS arm64 (left) and Linux arm64 (right), same binary source.
+# Calls 1-25 agree; from the second random race goal on, Linux rejects positions that macOS accepts, because placeRaceGoal() reads an uninitialised quantity.
+1 max=4 val=3                1 max=4 val=3
+2 max=203 val=46             2 max=203 val=46
+3 max=360 val=298            3 max=360 val=298
+4 max=37 val=27              4 max=37 val=27
+5 max=203 val=19             5 max=203 val=19
+6 max=232 val=128            6 max=232 val=128
+7 max=69 val=35              7 max=69 val=35
+8 max=203 val=8              8 max=203 val=8
+9 max=232 val=143            9 max=232 val=143
+10 max=69 val=54             10 max=69 val=54
+11 max=203 val=29            11 max=203 val=29
+12 max=360 val=300           12 max=360 val=300
+13 max=37 val=20             13 max=37 val=20
+14 max=1000 val=589          14 max=1000 val=589
+15 max=100 val=97            15 max=100 val=97
+16 max=50 val=7              16 max=50 val=7
+17 max=604 val=274           17 max=604 val=274
+18 max=444 val=151           18 max=444 val=151
+19 max=1000 val=304          19 max=1000 val=304
+20 max=100 val=14            20 max=100 val=14
+21 max=50 val=9              21 max=50 val=9
+22 max=604 val=274           22 max=604 val=274
+23 max=444 val=21            23 max=444 val=21
+24 max=604 val=48            24 max=604 val=48
+25 max=444 val=392           25 max=444 val=392
+26 max=1000 val=392          26 max=604 val=236
+27 max=100 val=81            27 max=444 val=363
+28 max=50 val=47             28 max=604 val=568
+29 max=604 val=340           29 max=444 val=250
+30 max=444 val=442           30 max=604 val=601
+31 max=1000 val=107          31 max=444 val=47
+32 max=100 val=81            32 max=604 val=495
+33 max=50 val=34             33 max=444 val=306
+34 max=604 val=545           34 max=604 val=545
+35 max=444 val=373           35 max=444 val=373
+36 max=604 val=596           36 max=604 val=596
+37 max=444 val=323           37 max=444 val=323
+38 max=41 val=18             38 max=604 val=266
+39 max=41 val=16             39 max=444 val=176
+... Linux continues to      221 calls (97 x-position rolls); macOS stops at       39.

@@ -1,0 +1,48 @@
+# Leave-one-out over investigate/patches/init-members.patch (cpp-reference branch investigate/x86-divergence),
+# Linux arm64 in Docker, 45 game replays vs the macOS goldens. Every run, the full patch included, also
+# diverges in cov_tour_options and flow_tour, because the Docker data mount does not list directories in
+# APFS order (CI uses a FAT32 image for that); those two are left out below. The full patch matches 43/45 here
+# and 45/45 in CI.
+
+### without ObjectBase.h
+DIFF cpu_chase DIVERGED at frame 913
+DIFF cpu_coins DIVERGED at frame 1200
+DIFF cpu_collection DIVERGED at frame 2070
+DIFF cpu_ctf DIVERGED at frame 1199
+DIFF cpu_domination DIVERGED at frame 1221
+DIFF cpu_eggs DIVERGED at frame 1380
+DIFF cpu_frenzy DIVERGED at frame 1670
+DIFF cpu_race DIVERGED at frame 1276
+DIFF cpu_tag DIVERGED at frame 1523
+DIFF frenzy_cpu DIVERGED at frame 1672
+DIFF mini_boxes DIVERGED at frame 1262
+DIFF mini_pipe DIVERGED at frame 2810
+DIFF opt_items DIVERGED at frame 3577
+DIFF star_multi_3p DIVERGED at frame 2006
+DIFF star_multi_4p DIVERGED at frame 4107
+match 28/45
+### without ai.h
+DIFF cpu_coins DIVERGED at frame 584
+DIFF cpu_domination DIVERGED at frame 648
+DIFF cpu_greed DIVERGED at frame 689
+DIFF cpu_stomp DIVERGED at frame 596
+DIFF cpu_survival DIVERGED at frame 680
+DIFF mini_pipe DIVERGED at frame 584
+DIFF teams_2v2 DIVERGED at frame 578
+match 36/45
+### without WO_RaceGoal.h
+DIFF cpu_race DIVERGED at frame 464
+match 42/45
+### without MiniPipe.h
+match 43/45
+### without PlayerAwardEffects.h
+match 43/45
+### without MovingObject.h
+match 43/45
+### without map.cpp
+match 43/45
+
+[exited with code 0]
+
+### only ObjectBase.h, ai.h and WO_RaceGoal.h (iNetworkID, iFallDanger, quantity)
+match 43/45
