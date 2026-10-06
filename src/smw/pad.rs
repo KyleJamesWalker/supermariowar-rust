@@ -3,8 +3,8 @@
 use crate::common::global::{joystickcount, joysticks};
 use sdl2::sys::{
     SDL_Event, SDL_EventFilter, SDL_EventType, SDL_GameController, SDL_GameControllerAddMapping, SDL_GameControllerAxis, SDL_GameControllerBindType, SDL_GameControllerButton,
-    SDL_GameControllerButtonBind, SDL_GameControllerGetBindForAxis, SDL_GameControllerGetBindForButton, SDL_GameControllerMappingForDeviceIndex, SDL_GameControllerOpen,
-    SDL_GetError, SDL_GetEventFilter, SDL_InitSubSystem, SDL_IsGameController, SDL_JoystickGetGUID, SDL_JoystickGetGUIDString, SDL_JoystickInstanceID,
+    SDL_GameControllerButtonBind, SDL_GameControllerClose, SDL_GameControllerGetBindForAxis, SDL_GameControllerGetBindForButton, SDL_GameControllerMappingForDeviceIndex, SDL_GameControllerOpen,
+    SDL_GetError, SDL_GetEventFilter, SDL_InitSubSystem, SDL_IsGameController, SDL_Joystick, SDL_JoystickGetGUID, SDL_JoystickGetGUIDString, SDL_JoystickInstanceID,
     SDL_JoystickNameForIndex, SDL_JoystickNumAxes, SDL_JoystickNumButtons, SDL_JoystickNumHats, SDL_NumJoysticks, SDL_SetEventFilter, SDL_bool, SDL_free, SDL_HAT_DOWN,
     SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP, SDL_INIT_GAMECONTROLLER,
 };
@@ -57,24 +57,38 @@ enum AxisTarget {
     Trigger(usize),
 }
 
+/// The raw input behind a controller button or axis, from `SDL_GameControllerGetBindForButton`/`Axis`.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Bind {
+    None,
+    Button(u8),
+    Axis(u8),
+    Hat(u8, u8),
+}
+
 #[derive(Default)]
 struct Pad {
+    index: usize,
     instance: i32,
     controller: bool,
     buttons: HashMap<u8, Target>,
     hats: Vec<(u8, u8, u8)>,
     axes: HashMap<u8, AxisTarget>,
+    /// (axis, D-pad bit, negative half): a D-pad bound to an axis that is not also a stick.
+    dpad_axes: Vec<(u8, u8, bool)>,
     dpad: u8,
     triggers: [bool; 2],
 }
 
 static mut pads: Vec<Pad> = Vec::new();
+static mut translate_on: bool = false;
 static mut debug_input: bool = false;
 static mut logged: [u32; 3] = [0; 3];
 
 /// Logs every open joystick; with `translate`, reads the game controllers among them through their mapping.
 pub fn init(translate: bool) {
     unsafe {
+        translate_on = translate;
         debug_input = std::env::var_os("SMW_DEBUG_INPUT").is_some();
         if debug_input {
             start_watchdog();
@@ -94,50 +108,11 @@ pub fn init(translate: bool) {
         if let Some(config) = std::env::var_os("SDL_GAMECONTROLLERCONFIG") {
             println!("[pad] SDL_GAMECONTROLLERCONFIG has {} mapping(s)", config.to_string_lossy().lines().filter(|l| l.contains(',')).count());
         }
-        for i in 0..joystickcount.max(0) as i32 {
-            let js = *joysticks.add(i as usize);
-            if js.is_null() {
-                continue;
+        for i in 0..joystickcount.max(0) as usize {
+            let js = *joysticks.add(i);
+            if !js.is_null() {
+                pads.push(open_pad(i as i32, js, i));
             }
-            let name = c_string(SDL_JoystickNameForIndex(i));
-            let mut guid = [0 as std::ffi::c_char; 33];
-            SDL_JoystickGetGUIDString(SDL_JoystickGetGUID(js), guid.as_mut_ptr(), guid.len() as i32);
-            let guid = CStr::from_ptr(guid.as_ptr()).to_string_lossy().into_owned();
-            if translate && SDL_IsGameController(i) == SDL_bool::SDL_FALSE {
-                if let Some((_, _, mapping)) = BUILTIN_MAPPINGS.iter().find(|(n, prefix, _)| *n == name && guid.starts_with(prefix)) {
-                    if let Ok(line) = CString::new(format!("{},{},{}platform:Linux,", guid, name, mapping)) {
-                        SDL_GameControllerAddMapping(line.as_ptr());
-                    }
-                }
-            }
-            let mapping = SDL_GameControllerMappingForDeviceIndex(i);
-            let mapping_text = if mapping.is_null() { String::from("none") } else { c_string(mapping) };
-            if !mapping.is_null() {
-                SDL_free(mapping as *mut _);
-            }
-            let mut pad = Pad { instance: SDL_JoystickInstanceID(js), ..Default::default() };
-            if translate && SDL_IsGameController(i) == SDL_bool::SDL_TRUE {
-                let gc = SDL_GameControllerOpen(i);
-                if !gc.is_null() {
-                    read_binds(gc, &mut pad);
-                    pad.controller = true;
-                }
-            }
-            println!(
-                "[pad] joystick {}: \"{}\" guid {} buttons {} hats {} axes {}; mapping {}{}",
-                i,
-                name,
-                guid,
-                SDL_JoystickNumButtons(js),
-                SDL_JoystickNumHats(js),
-                SDL_JoystickNumAxes(js),
-                mapping_text,
-                if pad.controller { " (translated)" } else { "" }
-            );
-            if pad.controller && debug_input {
-                println!("[pad]   buttons {:?} hats {:?} axes {:?}", pad.buttons, pad.hats, pad.axes);
-            }
-            pads.push(pad);
         }
 
         // The recorder's filter calls translate itself.
@@ -149,11 +124,91 @@ pub fn init(translate: bool) {
     }
 }
 
+/// Reads and logs the joystick at `device` (an SDL device index), open as `js`, which the game knows as `index`.
+unsafe fn open_pad(device: i32, js: *mut SDL_Joystick, index: usize) -> Pad {
+    let name = c_string(SDL_JoystickNameForIndex(device));
+    let mut guid = [0 as std::ffi::c_char; 33];
+    SDL_JoystickGetGUIDString(SDL_JoystickGetGUID(js), guid.as_mut_ptr(), guid.len() as i32);
+    let guid = CStr::from_ptr(guid.as_ptr()).to_string_lossy().into_owned();
+    if translate_on && SDL_IsGameController(device) == SDL_bool::SDL_FALSE {
+        if let Some((_, _, mapping)) = BUILTIN_MAPPINGS.iter().find(|(n, prefix, _)| *n == name && guid.starts_with(prefix)) {
+            if let Ok(line) = CString::new(format!("{},{},{}platform:Linux,", guid, name, mapping)) {
+                SDL_GameControllerAddMapping(line.as_ptr());
+            }
+        }
+    }
+    let mapping = SDL_GameControllerMappingForDeviceIndex(device);
+    let mapping_text = if mapping.is_null() { String::from("none") } else { c_string(mapping) };
+    if !mapping.is_null() {
+        SDL_free(mapping as *mut _);
+    }
+    let mut pad = Pad { index, instance: SDL_JoystickInstanceID(js), ..Default::default() };
+    if translate_on && SDL_IsGameController(device) == SDL_bool::SDL_TRUE {
+        // Closed again at once: SDL's controller watcher would read the hat events translate makes as this
+        // controller's own, and dereferences a null hat array for a joystick without hats (Android pads).
+        let gc = SDL_GameControllerOpen(device);
+        if !gc.is_null() {
+            read_binds(gc, &mut pad);
+            SDL_GameControllerClose(gc);
+            pad.controller = true;
+        }
+    }
+    println!(
+        "[pad] joystick {}: \"{}\" guid {} buttons {} hats {} axes {}; mapping {}{}",
+        index,
+        name,
+        guid,
+        SDL_JoystickNumButtons(js),
+        SDL_JoystickNumHats(js),
+        SDL_JoystickNumAxes(js),
+        mapping_text,
+        if pad.controller { " (translated)" } else { "" }
+    );
+    if pad.controller && debug_input {
+        println!("[pad]   buttons {:?} hats {:?} axes {:?} dpad axes {:?}", pad.buttons, pad.hats, pad.axes, pad.dpad_axes);
+    }
+    pad
+}
+
 /// The raw input behind each controller button and axis. SDL2 derives controller events from raw joystick events in
 /// an event watcher, which never sees the raw events a filter drops, so the binds are applied here instead.
 unsafe fn read_binds(gc: *mut SDL_GameController, pad: &mut Pad) {
+    let mut buttons = [Bind::None; DPAD_UP + 4];
+    for (b, bind) in buttons.iter_mut().enumerate() {
+        *bind = to_bind(SDL_GameControllerGetBindForButton(gc, std::mem::transmute::<i32, SDL_GameControllerButton>(b as i32)));
+    }
+    let mut axes = [Bind::None; 6];
+    for (a, bind) in axes.iter_mut().enumerate() {
+        *bind = to_bind(SDL_GameControllerGetBindForAxis(gc, std::mem::transmute::<i32, SDL_GameControllerAxis>(a as i32)));
+    }
+    apply_binds(pad, &buttons, &axes);
+}
+
+unsafe fn to_bind(bind: SDL_GameControllerButtonBind) -> Bind {
     use SDL_GameControllerBindType::*;
-    for b in 0..DPAD_UP + 4 {
+    match bind.bindType {
+        SDL_CONTROLLER_BINDTYPE_BUTTON => Bind::Button(bind.value.button as u8),
+        SDL_CONTROLLER_BINDTYPE_AXIS => Bind::Axis(bind.value.axis as u8),
+        SDL_CONTROLLER_BINDTYPE_HAT => Bind::Hat(bind.value.hat.hat as u8, bind.value.hat.hat_mask as u8),
+        _ => Bind::None,
+    }
+}
+
+/// `buttons` in `SDL_GameControllerButton` order up to the D-pad, `axes` in `SDL_GameControllerAxis` order.
+fn apply_binds(pad: &mut Pad, buttons: &[Bind; DPAD_UP + 4], axes: &[Bind; 6]) {
+    for (a, &bind) in axes.iter().enumerate() {
+        let target = if a < 4 { AxisTarget::Axis(a as u8) } else { AxisTarget::Trigger(a - 4) };
+        match (bind, target) {
+            (Bind::Axis(n), _) => {
+                pad.axes.insert(n, target);
+            }
+            (Bind::Button(n), AxisTarget::Trigger(side)) => {
+                pad.buttons.insert(n, Target::Button(TRIGGER_BUTTONS[side]));
+            }
+            _ => {}
+        }
+    }
+    for (b, &bind) in buttons.iter().enumerate() {
         let target = if b == GUIDE {
             Target::Quit
         } else if b >= DPAD_UP {
@@ -161,44 +216,28 @@ unsafe fn read_binds(gc: *mut SDL_GameController, pad: &mut Pad) {
         } else {
             Target::Button(LAYOUT[b] as u8)
         };
-        let bind: SDL_GameControllerButtonBind = SDL_GameControllerGetBindForButton(gc, std::mem::transmute::<i32, SDL_GameControllerButton>(b as i32));
-        match bind.bindType {
-            SDL_CONTROLLER_BINDTYPE_BUTTON => {
-                pad.buttons.insert(bind.value.button as u8, target);
+        match (bind, target) {
+            (Bind::Button(n), _) => {
+                pad.buttons.insert(n, target);
             }
-            SDL_CONTROLLER_BINDTYPE_HAT => {
-                if let Target::Dpad(bit) = target {
-                    pad.hats.push((bind.value.hat.hat as u8, bind.value.hat.hat_mask as u8, bit));
-                }
-            }
-            _ => {}
-        }
-    }
-    for a in 0..6usize {
-        let target = if a < 4 { AxisTarget::Axis(a as u8) } else { AxisTarget::Trigger(a - 4) };
-        let bind: SDL_GameControllerButtonBind = SDL_GameControllerGetBindForAxis(gc, std::mem::transmute::<i32, SDL_GameControllerAxis>(a as i32));
-        match (bind.bindType, target) {
-            (SDL_CONTROLLER_BINDTYPE_AXIS, _) => {
-                pad.axes.insert(bind.value.axis as u8, target);
-            }
-            (SDL_CONTROLLER_BINDTYPE_BUTTON, AxisTarget::Trigger(side)) => {
-                pad.buttons.insert(bind.value.button as u8, Target::Button(TRIGGER_BUTTONS[side]));
+            (Bind::Hat(hat, mask), Target::Dpad(bit)) => pad.hats.push((hat, mask, bit)),
+            // SDL2 reports no half for an axis bind; mappings put up and left on the negative one.
+            (Bind::Axis(n), Target::Dpad(bit)) if !pad.axes.contains_key(&n) => {
+                pad.dpad_axes.push((n, bit, bit == SDL_HAT_UP as u8 || bit == SDL_HAT_LEFT as u8));
             }
             _ => {}
         }
     }
 }
 
-/// The joysticks players get at launch: the translated controllers if there are any, otherwise every joystick.
+/// The joysticks players get: the translated controllers if there are any, otherwise every open joystick.
 pub fn player_pads() -> Vec<usize> {
     unsafe {
-        let count = joystickcount.max(0) as usize;
-        let controllers: Vec<usize> = (0..count).filter(|&i| pads.get(i).is_some_and(|p| p.controller)).collect();
-        if controllers.is_empty() {
-            (0..count).collect()
-        } else {
-            controllers
+        let mut open: Vec<usize> = (0..joystickcount.max(0) as usize).filter(|&i| !(*joysticks.add(i)).is_null()).collect();
+        if pads.iter().any(|p| p.controller) {
+            open.retain(|&i| pads.iter().any(|p| p.index == i && p.controller));
         }
+        open
     }
 }
 
@@ -316,7 +355,18 @@ unsafe fn translate_axis(p: &mut Pad, event: &mut SDL_Event) -> bool {
             event.jbutton.state = pressed as u8;
             true
         }
-        None => false,
+        None => {
+            let mut dpad = p.dpad;
+            let mut bound = false;
+            for &(axis, bit, negative) in &p.dpad_axes {
+                if axis == a.axis {
+                    bound = true;
+                    let on = if negative { a.value <= -TRIGGER_THRESHOLD } else { a.value >= TRIGGER_THRESHOLD };
+                    dpad = if on { dpad | bit } else { dpad & !bit };
+                }
+            }
+            bound && set_dpad(p, event, a.timestamp, a.which, dpad)
+        }
     }
 }
 
@@ -402,5 +452,183 @@ unsafe fn c_string(p: *const std::ffi::c_char) -> String {
         String::new()
     } else {
         CStr::from_ptr(p).to_string_lossy().into_owned()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sdl2::sys::SDL_EventType::*;
+
+    const NAMES: [&str; 15] = [
+        "a", "b", "x", "y", "back", "guide", "start", "leftstick", "rightstick", "leftshoulder", "rightshoulder", "dpup", "dpdown", "dpleft", "dpright",
+    ];
+    const AXES: [&str; 6] = ["leftx", "lefty", "rightx", "righty", "lefttrigger", "righttrigger"];
+
+    fn pad(mapping: &str) -> Pad {
+        let mut buttons = [Bind::None; 15];
+        let mut axes = [Bind::None; 6];
+        for (key, value) in mapping.split(',').filter_map(|f| f.split_once(':')) {
+            let value = value.trim_start_matches(['+', '-']);
+            let bind = if let Some(n) = value.strip_prefix('b') {
+                Bind::Button(n.parse().unwrap())
+            } else if let Some(n) = value.strip_prefix('a') {
+                Bind::Axis(n.parse().unwrap())
+            } else if let Some((h, m)) = value.strip_prefix('h').and_then(|v| v.split_once('.')) {
+                Bind::Hat(h.parse().unwrap(), m.parse().unwrap())
+            } else {
+                continue;
+            };
+            if let Some(i) = NAMES.iter().position(|n| *n == key) {
+                buttons[i] = bind;
+            } else if let Some(i) = AXES.iter().position(|n| *n == key) {
+                axes[i] = bind;
+            }
+        }
+        let mut p = Pad { controller: true, ..Default::default() };
+        apply_binds(&mut p, &buttons, &axes);
+        p
+    }
+
+    /// The event the game gets for a raw one, None when dropped.
+    fn run(p: &mut Pad, mut event: SDL_Event) -> Option<SDL_Event> {
+        let t = unsafe { event.type_ };
+        let keep = unsafe {
+            if t == SDL_JOYBUTTONDOWN as u32 || t == SDL_JOYBUTTONUP as u32 {
+                translate_button(p, &mut event)
+            } else if t == SDL_JOYHATMOTION as u32 {
+                translate_hat(p, &mut event)
+            } else {
+                translate_axis(p, &mut event)
+            }
+        };
+        keep.then_some(event)
+    }
+
+    fn button(b: u8, down: bool) -> SDL_Event {
+        let mut e: SDL_Event = unsafe { std::mem::zeroed() };
+        e.jbutton.type_ = if down { SDL_JOYBUTTONDOWN } else { SDL_JOYBUTTONUP } as u32;
+        e.jbutton.button = b;
+        e.jbutton.state = down as u8;
+        e
+    }
+
+    fn hat(h: u8, value: u8) -> SDL_Event {
+        let mut e: SDL_Event = unsafe { std::mem::zeroed() };
+        e.jhat.type_ = SDL_JOYHATMOTION as u32;
+        e.jhat.hat = h;
+        e.jhat.value = value;
+        e
+    }
+
+    fn axis(a: u8, value: i16) -> SDL_Event {
+        let mut e: SDL_Event = unsafe { std::mem::zeroed() };
+        e.jaxis.type_ = SDL_JOYAXISMOTION as u32;
+        e.jaxis.axis = a;
+        e.jaxis.value = value;
+        e
+    }
+
+    fn as_button(e: Option<SDL_Event>) -> Option<(u8, bool)> {
+        e.filter(|e| unsafe { e.type_ == SDL_JOYBUTTONDOWN as u32 || e.type_ == SDL_JOYBUTTONUP as u32 })
+            .map(|e| unsafe { (e.jbutton.button, e.type_ == SDL_JOYBUTTONDOWN as u32) })
+    }
+
+    fn as_hat(e: Option<SDL_Event>) -> Option<(u8, u8)> {
+        e.filter(|e| unsafe { e.type_ == SDL_JOYHATMOTION as u32 }).map(|e| unsafe { (e.jhat.hat, e.jhat.value) })
+    }
+
+    const UP: u8 = SDL_HAT_UP as u8;
+    const DOWN: u8 = SDL_HAT_DOWN as u8;
+    const LEFT: u8 = SDL_HAT_LEFT as u8;
+    const RIGHT: u8 = SDL_HAT_RIGHT as u8;
+
+    /// SDL's generated Android mapping: the D-pad on buttons 11-14 (Android turns a hat into those), no hat.
+    const ANDROID: &str = "a:b0,b:b1,x:b2,y:b3,back:b4,guide:b5,start:b6,leftstick:b7,rightstick:b8,leftshoulder:b9,rightshoulder:b10,\
+        dpup:b11,dpdown:b12,dpleft:b13,dpright:b14,leftx:a0,lefty:a1,rightx:a2,righty:a3,lefttrigger:a4,righttrigger:a5";
+
+    #[test]
+    fn android_dpad_buttons_become_hat_0() {
+        let mut p = pad(ANDROID);
+        assert_eq!(as_hat(run(&mut p, button(11, true))), Some((0, UP)));
+        assert_eq!(as_hat(run(&mut p, button(14, true))), Some((0, UP | RIGHT)));
+        assert_eq!(as_hat(run(&mut p, button(11, false))), Some((0, RIGHT)));
+        assert_eq!(as_hat(run(&mut p, button(14, false))), Some((0, 0)));
+        assert_eq!(as_hat(run(&mut p, button(12, true))), Some((0, DOWN)));
+        assert_eq!(as_hat(run(&mut p, button(13, true))), Some((0, DOWN | LEFT)));
+    }
+
+    #[test]
+    fn android_face_buttons_and_triggers_take_the_layout() {
+        let mut p = pad(ANDROID);
+        assert_eq!(as_button(run(&mut p, button(0, true))), Some((0, true)));
+        assert_eq!(as_button(run(&mut p, button(1, true))), Some((1, true)));
+        assert_eq!(as_button(run(&mut p, button(2, true))), Some((2, true)));
+        assert_eq!(as_button(run(&mut p, button(3, true))), Some((5, true)));
+        assert_eq!(as_button(run(&mut p, button(4, true))), Some((4, true)));
+        assert_eq!(as_button(run(&mut p, button(6, true))), Some((3, true)));
+        assert_eq!(as_button(run(&mut p, button(9, true))), Some((6, true)));
+        assert_eq!(as_button(run(&mut p, button(10, true))), Some((7, true)));
+        assert_eq!(as_button(run(&mut p, axis(4, 32767))), Some((8, true)));
+        assert!(run(&mut p, axis(4, 30000)).is_none());
+        assert_eq!(as_button(run(&mut p, axis(4, -32767))), Some((8, false)));
+        assert_eq!(as_button(run(&mut p, axis(5, 32767))), Some((9, true)));
+        let quit = run(&mut p, button(5, true)).unwrap();
+        assert_eq!(unsafe { quit.type_ }, SDL_QUIT as u32);
+        assert!(run(&mut p, button(5, false)).is_none());
+    }
+
+    #[test]
+    fn unmapped_inputs_are_dropped() {
+        let mut p = pad("a:b0,b:b1,start:b6,dpup:b11,dpdown:b12,dpleft:b13,dpright:b14");
+        assert!(run(&mut p, button(20, true)).is_none());
+        assert!(run(&mut p, button(255, true)).is_none());
+        assert!(run(&mut p, hat(0, UP)).is_none());
+        assert!(run(&mut p, hat(3, UP)).is_none());
+        assert!(run(&mut p, axis(0, 32767)).is_none());
+        assert!(run(&mut p, axis(255, -32768)).is_none());
+    }
+
+    #[test]
+    fn hat_dpad_is_hat_0() {
+        let mut p = pad("a:b0,b:b1,dpup:h1.1,dpright:h1.2,dpdown:h1.4,dpleft:h1.8,leftx:a0,lefty:a1");
+        assert_eq!(as_hat(run(&mut p, hat(1, UP | LEFT))), Some((0, UP | LEFT)));
+        assert!(run(&mut p, hat(1, UP | LEFT)).is_none());
+        assert_eq!(as_hat(run(&mut p, hat(1, 0))), Some((0, 0)));
+        assert!(run(&mut p, hat(0, UP)).is_none());
+    }
+
+    #[test]
+    fn axis_dpad_is_hat_0() {
+        let mut p = pad("a:b0,b:b1,leftx:a0,lefty:a1,dpup:-a7,dpdown:+a7,dpleft:-a6,dpright:+a6");
+        assert_eq!(as_hat(run(&mut p, axis(7, -32768))), Some((0, UP)));
+        assert_eq!(as_hat(run(&mut p, axis(6, 32767))), Some((0, UP | RIGHT)));
+        assert!(run(&mut p, axis(6, 32000)).is_none());
+        assert_eq!(as_hat(run(&mut p, axis(7, 0))), Some((0, RIGHT)));
+        assert_eq!(as_hat(run(&mut p, axis(6, -32768))), Some((0, LEFT)));
+        assert_eq!(unsafe { run(&mut p, axis(0, 1234)).unwrap().jaxis.axis }, 0);
+    }
+
+    #[test]
+    fn a_stick_axis_is_not_also_a_dpad() {
+        let mut p = pad("a:b0,leftx:a0,lefty:a1,dpup:-a1,dpdown:+a1");
+        assert!(p.dpad_axes.is_empty());
+        let e = run(&mut p, axis(1, -32768)).unwrap();
+        assert_eq!(unsafe { (e.type_, e.jaxis.axis) }, (SDL_JOYAXISMOTION as u32, 1));
+    }
+
+    #[test]
+    fn triggers_on_buttons() {
+        let mut p = pad("a:b0,lefttrigger:b15,righttrigger:b16");
+        assert_eq!(as_button(run(&mut p, button(15, true))), Some((8, true)));
+        assert_eq!(as_button(run(&mut p, button(16, false))), Some((9, false)));
+    }
+
+    #[test]
+    fn empty_mapping_drops_everything() {
+        let mut p = pad("");
+        assert!(run(&mut p, button(0, true)).is_none());
+        assert!(run(&mut p, hat(0, UP)).is_none());
+        assert!(run(&mut p, axis(0, 100)).is_none());
     }
 }
