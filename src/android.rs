@@ -1,8 +1,9 @@
 //! Not in upstream: the entry point SDLActivity calls in libmain.so, and the Android storage and log plumbing.
 
 use std::ffi::{c_char, c_int, CStr};
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Write};
 use std::os::fd::FromRawFd;
+use std::sync::Mutex;
 
 extern "C" {
     fn SDL_AndroidGetExternalStoragePath() -> *const c_char;
@@ -29,8 +30,36 @@ pub fn storage_path() -> String {
     }
 }
 
-/// stdout and stderr go nowhere on Android, so forward their lines to logcat under the "smw" tag.
-fn redirect_output_to_logcat() {
+static LOG_FILE: Mutex<Option<std::fs::File>> = Mutex::new(None);
+
+/// A line to logcat under the "smw" tag and to `log.txt` in the storage directory.
+fn log_line(line: &[u8]) {
+    if let Ok(text) = std::ffi::CString::new(line) {
+        unsafe { __android_log_write(ANDROID_LOG_INFO, c"smw".as_ptr(), text.as_ptr()) };
+    }
+    if let Some(file) = LOG_FILE.lock().unwrap_or_else(|e| e.into_inner()).as_mut() {
+        let _ = file.write_all(line);
+        let _ = file.write_all(b"\n");
+    }
+}
+
+/// stdout and stderr go nowhere on Android, so forward their lines to `log_line`, which a file manager can
+/// reach as Android/data/<package>/files/log.txt. A panic is logged before the process aborts.
+fn redirect_output() {
+    if let Ok(file) = std::fs::File::create(format!("{}/log.txt", storage_path())) {
+        *LOG_FILE.lock().unwrap_or_else(|e| e.into_inner()) = Some(file);
+    }
+    std::panic::set_hook(Box::new(|info| {
+        let thread = std::thread::current();
+        let location = info.location().map(|l| l.to_string()).unwrap_or_default();
+        let message = info
+            .payload()
+            .downcast_ref::<&str>()
+            .map(|s| s.to_string())
+            .or_else(|| info.payload().downcast_ref::<String>().cloned())
+            .unwrap_or_default();
+        log_line(format!("thread '{}' panicked at {}:\n{}", thread.name().unwrap_or("<unnamed>"), location, message).as_bytes());
+    }));
     unsafe {
         let mut fds = [0 as c_int; 2];
         if pipe(fds.as_mut_ptr()) != 0 {
@@ -41,8 +70,7 @@ fn redirect_output_to_logcat() {
         let reader = BufReader::new(std::fs::File::from_raw_fd(fds[0]));
         std::thread::spawn(move || {
             for line in reader.split(b'\n').map_while(Result::ok) {
-                let Ok(text) = std::ffi::CString::new(line) else { continue };
-                __android_log_write(ANDROID_LOG_INFO, c"smw".as_ptr(), text.as_ptr());
+                log_line(&line);
             }
         });
     }
@@ -50,7 +78,7 @@ fn redirect_output_to_logcat() {
 
 #[no_mangle]
 pub unsafe extern "C" fn SDL_main(argc: c_int, argv: *const *const c_char) -> c_int {
-    redirect_output_to_logcat();
+    redirect_output();
     let args = (0..argc.max(0) as usize).map(|i| CStr::from_ptr(*argv.add(i)).to_string_lossy().into_owned()).collect();
     crate::smw::main::run(args);
     0
