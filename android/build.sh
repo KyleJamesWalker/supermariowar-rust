@@ -26,14 +26,16 @@ for abi in "${abis[@]}"; do
     if [[ ! -f "$sdl/lib/libSDL2_mixer.so" ]]; then
         "$repo/android/build-sdl-libs.sh" "$abi" "$sdl" "$api"
     fi
-    SMW_SDL_LIB_DIR="$sdl/lib" cargo ndk -t "$abi" -P "$api" \
-        --manifest-path "$repo/Cargo.toml" rustc --lib --crate-type cdylib --release --locked
     case "$abi" in
         arm64-v8a) triple=aarch64-linux-android ;;
         armeabi-v7a) triple=armv7-linux-androideabi ;;
         x86_64) triple=x86_64-linux-android ;;
         *) echo "unsupported ABI $abi" >&2; exit 1 ;;
     esac
+    triple_env="$(tr a-z- A-Z_ <<< "$triple")"
+    export "CARGO_TARGET_${triple_env}_RUSTFLAGS=-C link-arg=-Wl,-z,max-page-size=16384"
+    SMW_SDL_LIB_DIR="$sdl/lib" cargo ndk -t "$abi" -P "$api" \
+        --manifest-path "$repo/Cargo.toml" rustc --lib --crate-type cdylib --release --locked
     mkdir -p "$project/app/libs/$abi"
     cp "$repo/target/$triple/release/libsmw.so" "$project/app/libs/$abi/libmain.so"
     cp "$sdl"/lib/libSDL2{,_image,_mixer}.so "$project/app/libs/$abi/"
@@ -44,6 +46,8 @@ cp -R "$template"/{build.gradle,gradle,gradle.properties,gradlew,settings.gradle
 mkdir -p "$project/app/src/main"
 cp -R "$template/app/src/main/java" "$template/app/src/main/res" "$project/app/src/main/"
 rm -rf "$project"/app/src/main/res/mipmap-*
+cp "$repo/android/build.gradle" "$project/"
+cp "$repo/android/gradle/wrapper/gradle-wrapper.properties" "$project/gradle/wrapper/"
 cp -R "$repo/android/app/." "$project/app/"
 mkdir -p "$project/app/src/main/res/mipmap-mdpi"
 cp "$repo/resources/smw.png" "$project/app/src/main/res/mipmap-mdpi/ic_launcher.png"
@@ -54,4 +58,5 @@ rsync -a --exclude .git "$repo/data/" "$project/app/src/main/assets/data/"
 (cd "$project" && ./gradlew --no-daemon assembleDebug -PsmwVersionCode="$version_code" -PsmwVersionName="$version")
 mkdir -p "$repo/dist"
 cp "$project/app/build/outputs/apk/debug/app-debug.apk" "$repo/dist/SuperMarioWar-$version.apk"
+"$repo/android/check_page_size.sh" "$repo/dist/SuperMarioWar-$version.apk"
 echo "dist/SuperMarioWar-$version.apk"

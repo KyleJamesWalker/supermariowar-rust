@@ -22,7 +22,7 @@ trap 'rm -rf "${work:?}"' EXIT
 
 fetch() {
     local repo=$1 name=$2 version=$3 sha256=$4
-    [[ -d "$src/$name-$version" ]] && return
+    [[ -f "$src/$name-$version/CMakeLists.txt" ]] && return
     curl -fsSL -o "$work/$name.tar.gz" \
         "https://github.com/libsdl-org/$repo/releases/download/release-$version/$name-$version.tar.gz"
     echo "$sha256  $work/$name.tar.gz" | shasum -a 256 -c -
@@ -34,7 +34,7 @@ build() {
     shift
     cmake -S "$dir" -B "$work/$(basename "$dir")" \
         -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
-        -DANDROID_ABI="$abi" -DANDROID_PLATFORM="android-$api" \
+        -DANDROID_ABI="$abi" -DANDROID_PLATFORM="android-$api" -DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON \
         -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$prefix" \
         -DCMAKE_FIND_ROOT_PATH="$prefix" -DCMAKE_PREFIX_PATH="$prefix" "$@"
     cmake --build "$work/$(basename "$dir")" --parallel

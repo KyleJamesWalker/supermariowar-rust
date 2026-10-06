@@ -4,6 +4,11 @@
   'use strict';
 
   var PREF_KEY = 'smw-touch-controls';
+  var STICK_KEY = 'smw-touch-stick';
+  var STICK_RADIUS = 40;
+  var STICK_DEAD = 12;
+  var STICK_BASE = 50;
+  var STICK_KNOB = 26;
   var KEYS = {
     left: { key: 'ArrowLeft', code: 'ArrowLeft', keyCode: 37 },
     up: { key: 'ArrowUp', code: 'ArrowUp', keyCode: 38 },
@@ -41,6 +46,8 @@
   controls.id = 'touch';
   controls.setAttribute('aria-hidden', 'true');
   controls.innerHTML =
+    '<div class="tc-zone tc-stick"></div>' +
+    '<div class="tc-stick-base" hidden><div class="tc-stick-knob"></div></div>' +
     '<div class="tc-zone tc-dpad">' +
       '<div class="tc-arm" data-dir="up"></div><div class="tc-arm" data-dir="down"></div>' +
       '<div class="tc-arm" data-dir="left"></div><div class="tc-arm" data-dir="right"></div>' +
@@ -55,6 +62,7 @@
       '<button class="tc-util" type="button" data-action="fullscreen" title="Fullscreen">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">' +
         '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>' +
+      '<button class="tc-util tc-mode" type="button" data-action="mode" title="Switch between D-pad and floating stick"></button>' +
       '<button class="tc-util" type="button" data-action="menu" title="Menu">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">' +
         '<path d="M4 6h16M4 12h16M4 18h16"/></svg></button>' +
@@ -66,6 +74,9 @@
         '<path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
     '</div>';
   var dpad = controls.querySelector('.tc-dpad');
+  var stickZone = controls.querySelector('.tc-stick');
+  var stickBase = controls.querySelector('.tc-stick-base');
+  var stickKnob = controls.querySelector('.tc-stick-knob');
   var keyElements = controls.querySelectorAll('[data-key]');
   var arms = controls.querySelectorAll('.tc-arm');
 
@@ -76,6 +87,17 @@
     Array.prototype.forEach.call(arms, function (el) {
       el.classList.toggle('on', pointerHolds(el.dataset.dir, 'dpad'));
     });
+    var stick = null;
+    Object.keys(pointers).forEach(function (id) { if (pointers[id].zone === 'stick') stick = pointers[id]; });
+    stickBase.hidden = !stick;
+    if (stick) {
+      var dx = stick.x - stick.origin.x;
+      var dy = stick.y - stick.origin.y;
+      var scale = Math.min(1, STICK_RADIUS / (Math.hypot(dx, dy) || 1));
+      var knob = inStickZone({ x: stick.origin.x + dx * scale, y: stick.origin.y + dy * scale }, STICK_KNOB);
+      stickBase.style.transform = 'translate(' + stick.origin.x + 'px, ' + stick.origin.y + 'px)';
+      stickKnob.style.transform = 'translate(' + (knob.x - stick.origin.x) + 'px, ' + (knob.y - stick.origin.y) + 'px)';
+    }
   };
   var pointerHolds = function (name, zone) {
     return Object.keys(pointers).some(function (id) {
@@ -104,9 +126,10 @@
 
   var dpadKeys = function (x, y) {
     var r = dpad.getBoundingClientRect();
-    var dx = x - (r.left + r.width / 2);
-    var dy = y - (r.top + r.height / 2);
-    if (Math.hypot(dx, dy) < r.width * 0.12) return [];
+    return directionKeys(x - (r.left + r.width / 2), y - (r.top + r.height / 2), r.width * 0.12);
+  };
+  var directionKeys = function (dx, dy, dead) {
+    if (Math.hypot(dx, dy) < dead) return [];
     var angle = Math.atan2(dy, dx) * 180 / Math.PI;
     var keys = [];
     if (Math.abs(angle) < 67.5) keys.push('right');
@@ -129,10 +152,33 @@
     return keys;
   };
 
+  // Keeps a circle of radius r around p inside the stick zone, so the stick never covers the game.
+  var inStickZone = function (p, r) {
+    var z = stickZone.getBoundingClientRect();
+    var clamp = function (v, lo, hi) { return lo <= hi ? Math.min(Math.max(v, lo), hi) : (lo + hi) / 2; };
+    return { x: clamp(p.x, z.left + r, z.right - r), y: clamp(p.y, z.top + r, z.bottom - r) };
+  };
+
+  // The floating stick's base appears under the thumb and follows it past STICK_RADIUS.
+  var stickKeys = function (p, x, y) {
+    var dx = x - p.origin.x;
+    var dy = y - p.origin.y;
+    var dist = Math.hypot(dx, dy);
+    if (dist > STICK_RADIUS) {
+      p.origin = { x: x - dx / dist * STICK_RADIUS, y: y - dy / dist * STICK_RADIUS };
+    }
+    p.origin = inStickZone(p.origin, STICK_BASE);
+    p.x = x;
+    p.y = y;
+    return directionKeys(x - p.origin.x, y - p.origin.y, STICK_DEAD);
+  };
+
   var track = function (e) {
     var p = pointers[e.pointerId];
     if (!p) return;
-    setKeys(p, p.zone === 'dpad' ? dpadKeys(e.clientX, e.clientY) : buttonKeys(e.clientX, e.clientY));
+    var keys = p.zone === 'dpad' ? dpadKeys(e.clientX, e.clientY)
+      : p.zone === 'stick' ? stickKeys(p, e.clientX, e.clientY) : buttonKeys(e.clientX, e.clientY);
+    setKeys(p, keys);
     render();
   };
   var release = function (id) {
@@ -147,11 +193,13 @@
   };
 
   controls.addEventListener('pointerdown', function (e) {
-    var zone = e.target.closest('.tc-dpad') ? 'dpad' : e.target.closest('.tc-buttons, .tc-key') ? 'keys' : null;
+    var zone = e.target.closest('.tc-buttons, .tc-key') ? 'keys'
+      : stickMode() ? (e.target.closest('.tc-stick, .tc-dpad') ? 'stick' : null)
+      : e.target.closest('.tc-dpad') ? 'dpad' : null;
     if (!zone) return;
     e.preventDefault();
     try { controls.setPointerCapture(e.pointerId); } catch (err) {}
-    pointers[e.pointerId] = { zone: zone, type: e.pointerType, keys: [] };
+    pointers[e.pointerId] = { zone: zone, type: e.pointerType, keys: [], origin: { x: e.clientX, y: e.clientY } };
     track(e);
   });
   controls.addEventListener('pointermove', track);
@@ -204,6 +252,26 @@
   var coarse = window.matchMedia('(pointer: coarse)');
   var toggleLink = document.createElement('a');
   toggleLink.href = '#';
+  var modeLink = document.createElement('a');
+  modeLink.href = '#';
+  var modeButton = controls.querySelector('[data-action=mode]');
+  var stickMode = function () {
+    try { return localStorage.getItem(STICK_KEY) === 'stick'; } catch (e) { return false; }
+  };
+  var applyMode = function () {
+    var stick = stickMode();
+    releaseAll();
+    root.classList.toggle('stick', stick);
+    modeButton.textContent = stick ? 'Stick' : 'D-pad';
+    modeLink.textContent = stick ? 'use the touch D-pad' : 'use a floating touch stick';
+  };
+  var toggleMode = function (e) {
+    e.preventDefault();
+    try { localStorage.setItem(STICK_KEY, stickMode() ? 'dpad' : 'stick'); } catch (err) {}
+    applyMode();
+  };
+  modeButton.addEventListener('click', toggleMode);
+  modeLink.addEventListener('click', toggleMode);
   var enabled = function () {
     var pref = readPref();
     return pref === 'on' || (pref !== 'off' && coarse.matches);
@@ -214,6 +282,7 @@
     root.classList.toggle('touch', on);
     controls.hidden = !on;
     toggleLink.textContent = on ? 'hide touch controls' : 'show touch controls';
+    modeLink.hidden = !on;
   };
   var toggle = function (e) {
     e.preventDefault();
@@ -231,7 +300,7 @@
   var mount = function () {
     document.body.appendChild(controls);
     var footer = document.querySelector('footer');
-    if (footer) footer.append(' · ', toggleLink);
+    if (footer) footer.append(' · ', toggleLink, ' ', modeLink);
     var start = document.getElementById('start');
     if (start && !requestFullscreen && !navigator.standalone && !window.matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches) {
       var tip = document.createElement('div');
@@ -239,6 +308,7 @@
       tip.textContent = 'For fullscreen, use Share → Add to Home Screen.';
       start.appendChild(tip);
     }
+    applyMode();
     apply();
   };
   if (document.body) mount();

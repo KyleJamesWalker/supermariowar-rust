@@ -123,6 +123,7 @@ unsafe extern "C-unwind" fn gameloop_frame_web() {
 
     let mut frames = 0;
     while accumulated >= frame_ms && frames < MAX_CATCH_UP_FRAMES && game_values.appstate != crate::common::game_values::AppState::Quit {
+        assign_hotplugged();
         harness::frame_start();
         GameStateManager::instance().currentState.get().update();
         harness::frame_end();
@@ -161,6 +162,9 @@ unsafe extern "C-unwind" fn gameloop_frame() {
     phase(1);
     FPSLimiter::instance().frame_start();
 
+    assign_hotplugged();
+    #[cfg(not(target_os = "emscripten"))]
+    crate::smw::touch::flush();
     harness::frame_start();
     phase(5);
     GameStateManager::instance().currentState.get().update();
@@ -236,6 +240,8 @@ pub fn init_joysticks() {
         SDL_JoystickEventState(SDL_ENABLE as i32);
         #[cfg(not(target_os = "emscripten"))]
         crate::smw::pad::init(!harness::replaying() && std::env::var_os("SMW_PAD_TRANSLATE").is_some());
+        #[cfg(not(target_os = "emscripten"))]
+        crate::smw::touch::init();
     }
 }
 
@@ -246,15 +252,18 @@ pub fn init_joysticks() {
 /// (`inputConfiguration[pad][1]`), so they follow it between players.
 /// The first launch with pads keeps the players' saved settings in `PAD_PLAYERS_FILE`; the next launch
 /// without pads puts them back, so only launches after a pad session differ from upstream.
+/// With Android's touch controls (`touch::session`) the touch keys take player 1 or the slot after the pads,
+/// the keyboard sets get no other player, and the rest are bots, also when no pad is connected.
 fn assign_inputs() {
     unsafe {
         let marker = get_home_directory() + PAD_PLAYERS_FILE;
         #[cfg(not(target_os = "emscripten"))]
         let mut pads = crate::smw::pad::player_pads();
         #[cfg(target_os = "emscripten")]
-        let mut pads: Vec<usize> = (0..joystickcount.max(0) as usize).collect();
+        let mut pads: Vec<usize> = (0..joystickcount.max(0) as usize).filter(|k| !web_removed.contains(k)).collect();
         pads.retain(|&k| k < MAX_PLAYERS as usize);
-        if pads.is_empty() {
+        let touch_session = touch_session();
+        if pads.is_empty() && !touch_session {
             if let Ok(text) = std::fs::read_to_string(&marker) {
                 let saved: Vec<i16> = text.split_whitespace().filter_map(|v| v.parse().ok()).collect();
                 if saved.len() == MAX_PLAYERS as usize {
@@ -268,7 +277,7 @@ fn assign_inputs() {
             }
             return;
         }
-        if !std::path::Path::new(&marker).exists() {
+        if !touch_session && !std::path::Path::new(&marker).exists() {
             let saved: Vec<String> = game_values.playercontrol.iter().map(|c| c.to_string()).collect();
             let _ = std::fs::write(&marker, saved.join(" ") + "\n");
         }
@@ -280,8 +289,8 @@ fn assign_inputs() {
             order.push((false, 0));
         }
         order.extend(pads.iter().map(|&k| (true, k)));
-        let keyboard = std::env::var_os("SMW_NO_KEYBOARD").is_none();
-        if !touch && keyboard {
+        let keyboard = std::env::var_os("SMW_NO_KEYBOARD").is_none() && !touch_session;
+        if !touch && (keyboard || touch_session) {
             order.push((false, 0));
         }
         if keyboard {
@@ -309,14 +318,61 @@ fn assign_inputs() {
     }
 }
 
-/// Whether the page shows its touch controls (web/touch.js), which is decided before Play.
+/// Not in upstream: a pad connected after launch (`pad::hotplug`, or a replay's `jadd` line) gets a player as at
+/// launch, once no match is on.
+fn assign_hotplugged() {
+    static mut pending: bool = false;
+    unsafe {
+        for (index, added) in harness::replay_device_changes() {
+            #[cfg(not(target_os = "emscripten"))]
+            crate::smw::pad::replay_device(index, added);
+            #[cfg(target_os = "emscripten")]
+            web_replay_device(index, added);
+            pending |= added;
+        }
+        #[cfg(not(target_os = "emscripten"))]
+        if crate::smw::pad::hotplug() {
+            pending = true;
+        }
+        let playing = GameStateManager::instance().currentState.addr() == crate::smw::gs_gameplay::GameplayState::instance() as *mut _ as usize;
+        if pending && !playing {
+            pending = false;
+            assign_inputs();
+        }
+    }
+}
+
+/// A browser replay's joysticks exist only as the device index its events carry.
+#[cfg(target_os = "emscripten")]
+static mut web_removed: Vec<usize> = Vec::new();
+
+#[cfg(target_os = "emscripten")]
+unsafe fn web_replay_device(index: usize, added: bool) {
+    web_removed.retain(|&i| i != index);
+    if !added {
+        web_removed.push(index);
+    } else if index >= joystickcount.max(0) as usize {
+        joystickcount = index as i16 + 1;
+        joysticks = Box::leak(vec![null_mut::<SDL_Joystick>(); index + 1].into_boxed_slice()).as_mut_ptr();
+    }
+}
+
+fn touch_session() -> bool {
+    #[cfg(not(target_os = "emscripten"))]
+    return crate::smw::touch::session();
+    #[cfg(target_os = "emscripten")]
+    false
+}
+
+/// Whether the touch keys go to player 1 ahead of the pads: the page shows its touch controls (web/touch.js), decided
+/// before Play, or Android's are on with no pad at launch (`touch::touch_first`).
 fn touch_controls_on() -> bool {
     #[cfg(target_os = "emscripten")]
     unsafe {
         return emscripten_run_script_int(c"document.documentElement.classList.contains('touch') ? 1 : 0".as_ptr()) != 0;
     }
     #[cfg(not(target_os = "emscripten"))]
-    false
+    crate::smw::touch::touch_first()
 }
 
 /// The players' settings (`playercontrol`, one number each) from before pads were assigned.

@@ -15,7 +15,7 @@ Each [release](https://github.com/KyleJamesWalker/supermariowar-rust/releases) c
 | `SuperMarioWar-<version>-windows-x86_64.zip` | Windows 10 or newer, x64 | SDL2 DLLs included. Settings go to `%USERPROFILE%\.smw\`. |
 | `SuperMarioWar-<version>-web.zip` | Any static web server | The site published at GitHub Pages. |
 | `SuperMarioWar-<version>.muxapp` | Anbernic handhelds on muOS | See [Anbernic (muOS)](#anbernic-muos). |
-| `SuperMarioWar-<version>.apk` | Android 5.0 or newer, with a gamepad or keyboard | Debug-signed. See [Android](#android). |
+| `SuperMarioWar-<version>.apk` | Android 5.0 or newer: on-screen touch controls, a gamepad or a keyboard | Debug-signed. See [Android](#android). |
 
 Every CI run also uploads these packages as workflow artifacts (`smw-linux-x86_64`, `smw-macos-universal`, `smw-windows-x86_64`, ...). `docs/RELEASING.md` describes how a release is cut.
 
@@ -39,7 +39,7 @@ Each `v*` release carries `SuperMarioWar-<version>.muxapp`, a one-file install f
 
 ## Android
 
-`.github/workflows/build_android.yml` builds a debug-signed APK for arm64-v8a, armeabi-v7a and x86_64 following upstream's SDL-template Android port, and plays replays on an x86_64 emulator against the goldens. It needs a gamepad or keyboard; there are no on-screen controls yet. [`android/README.md`](android/README.md) covers installing, data and settings paths, controls and building.
+`.github/workflows/build_android.yml` builds a debug-signed APK for arm64-v8a, armeabi-v7a and x86_64 following upstream's SDL-template Android port, and plays replays on an x86_64 emulator against the goldens. It has on-screen touch controls beside the picture, and reads gamepads and keyboards. [`android/README.md`](android/README.md) covers installing, data and settings paths, controls and building.
 
 ## Web build
 
@@ -58,7 +58,7 @@ node tools/web_touch_test.mjs out/                                # check the to
 
 `tools/web_replay.mjs` runs a replay in the browser build the way `run_ref.sh` runs a native binary, and writes the same `dump.txt` and screenshots for `diffreplay.py`. In the browser, settings and session recordings are kept in the site's IndexedDB storage. The start screen lists the last session's matches, each to watch or download as a clip, downloads the whole session, or loads a replay file, and the page footer downloads the current recording. A recording made in the browser replays on the native builds and with `tools/replay_compare.sh`.
 
-On touch screens (`pointer: coarse`) the page shows on-screen controls for player 1: a D-pad, Jump, Run and Item, Start and Back. They press player 1's default keys, so the game sees ordinary keyboard input. The page footer forces them on or off. Player 2 defaults to a human player, so to play alone set it to CPU or None in the main menu's Players row. On iPhone, Share > Add to Home Screen runs the game fullscreen; Android can use the controls' fullscreen button or install the page.
+On touch screens (`pointer: coarse`) the page shows on-screen controls for player 1: a D-pad, Jump, Run and Item, Start and Back. They press player 1's default keys, so the game sees ordinary keyboard input. The page footer forces them on or off. The Stick button (or the footer link) swaps the D-pad for a floating stick that appears under the thumb anywhere left of the picture; the choice is remembered. Player 2 defaults to a human player, so to play alone set it to CPU or None in the main menu's Players row. On iPhone, Share > Add to Home Screen runs the game fullscreen; Android can use the controls' fullscreen button or install the page.
 
 ## Browser multiplayer
 

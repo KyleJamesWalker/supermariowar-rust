@@ -2,8 +2,13 @@ package com.kylejameswalker.supermariowar;
 
 import android.content.pm.ApplicationInfo;
 import android.content.res.AssetManager;
+import android.graphics.Rect;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.DisplayCutout;
+import android.view.View;
+import android.view.WindowInsets;
 
 import org.libsdl.app.SDLActivity;
 
@@ -15,6 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 public class MainActivity extends SDLActivity {
     private static final String TAG = "smw";
@@ -27,6 +33,57 @@ public class MainActivity extends SDLActivity {
             "SDL2_mixer",
             "main"
         };
+    }
+
+    private static native void nativeSetCutouts(int l1, int t1, int r1, int b1, int l2, int t2, int r2, int b2);
+
+    private DisplayCutout cutout;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        if (Build.VERSION.SDK_INT < 28 || mSurface == null) {
+            return;
+        }
+        // The game draws its touch controls beside the picture, where a display cutout may be.
+        getWindow().getDecorView().setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
+            @Override
+            public WindowInsets onApplyWindowInsets(View view, WindowInsets insets) {
+                cutout = insets.getDisplayCutout();
+                reportCutouts();
+                return view.onApplyWindowInsets(insets);
+            }
+        });
+        mSurface.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+            @Override
+            public void onLayoutChange(View v, int l, int t, int r, int b, int ol, int ot, int or, int ob) {
+                reportCutouts();
+            }
+        });
+    }
+
+    /** Up to two cutouts' bounding boxes, relative to the surface the game draws on. */
+    private void reportCutouts() {
+        int[] at = new int[2];
+        int[] origin = new int[2];
+        mSurface.getLocationOnScreen(at);
+        getWindow().getDecorView().getLocationOnScreen(origin);
+        int[] box = new int[8];
+        if (cutout != null) {
+            List<Rect> rects = cutout.getBoundingRects();
+            for (int i = 0; i < Math.min(2, rects.size()); i++) {
+                Rect r = rects.get(i);
+                box[4 * i] = r.left - (at[0] - origin[0]);
+                box[4 * i + 1] = r.top - (at[1] - origin[1]);
+                box[4 * i + 2] = r.right - (at[0] - origin[0]);
+                box[4 * i + 3] = r.bottom - (at[1] - origin[1]);
+            }
+        }
+        try {
+            nativeSetCutouts(box[0], box[1], box[2], box[3], box[4], box[5], box[6], box[7]);
+        } catch (UnsatisfiedLinkError e) {
+            Log.e(TAG, "libmain is not loaded", e);
+        }
     }
 
     @Override

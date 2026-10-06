@@ -11,7 +11,7 @@ use crate::common::uicontrol::{ctl_ptr, TextAlign, UI_Control, UI_ControlTrait};
 use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::harness;
-use sdl2::sys::{SDL_Event, SDL_EventType, SDL_GetKeyName, SDL_JoystickNameForIndex, SDL_Keycode, SDL_Rect, SDL_KeyCode, SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP, SDL_PRESSED};
+use sdl2::sys::{SDL_Event, SDL_EventType, SDL_GetKeyName, SDL_JoystickName, SDL_JoystickNameForIndex, SDL_Keycode, SDL_Rect, SDL_KeyCode, SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP, SDL_PRESSED};
 use std::ffi::CStr;
 
 const GameInputNames: [&str; NUM_KEYS] = ["Left", "Right", "Jump", "Down", "Turbo", "Use Item", "Pause", "Exit"];
@@ -304,8 +304,25 @@ pub struct MI_InputControlContainer {
     pub miMenuInputControlFields: [Ptr<MI_InputControlField>; NUM_KEYS],
 
     pub miBackButton: Ptr<MI_Button>,
+    /// `pad::generation()` when the device list was filled.
+    devices: u32,
 }
 crate::impl_base!(MI_InputControlContainer => ui_control: UI_Control);
+
+unsafe fn add_joysticks(field: &mut MI_SelectField<i16>) {
+    for iJoystick in 0..joystickcount {
+        let js = if joysticks.is_null() { std::ptr::null_mut() } else { *joysticks.add(iJoystick as usize) };
+        let p = if js.is_null() { SDL_JoystickNameForIndex(iJoystick as i32) } else { SDL_JoystickName(js) };
+        let name = if harness::replay_joysticks().is_some() {
+            "Virtual Controller".to_string()
+        } else if p.is_null() {
+            String::new()
+        } else {
+            CStr::from_ptr(p).to_string_lossy().into_owned()
+        };
+        field.add_random(name, iJoystick, false);
+    }
+}
 
 fn key_ptr(iPlayerID: i16, iType: usize, iKey: usize) -> *mut SDL_Keycode {
     unsafe { &mut game_values.playerInput.inputControls[iPlayerID as usize].inputGameControls[iType].keys[iKey] as *mut SDL_Keycode }
@@ -331,17 +348,7 @@ impl MI_InputControlContainer {
             miDeviceSelectField.set_item_changed_code(MENU_CODE_INPUT_DEVICE_CHANGED);
             miDeviceSelectField.add("Keyboard", -1);
 
-            for iJoystick in 0..joystickcount {
-                let p = SDL_JoystickNameForIndex(iJoystick as i32);
-                let name = if harness::replay_joysticks().is_some() {
-                    "Virtual Controller".to_string()
-                } else if p.is_null() {
-                    String::new()
-                } else {
-                    CStr::from_ptr(p).to_string_lossy().into_owned()
-                };
-                miDeviceSelectField.add_random(name, iJoystick, false);
-            }
+            add_joysticks(&mut miDeviceSelectField);
 
             //If the device is not found, default to the keyboard
             if !miDeviceSelectField.set_current_value(iDevice) {
@@ -390,6 +397,7 @@ impl MI_InputControlContainer {
                 miGameInputControlFields,
                 miMenuInputControlFields,
                 miBackButton,
+                devices: 0,
             };
 
             let g = |i: usize| ctl_ptr(miGameInputControlFields[i]);
@@ -449,6 +457,15 @@ impl MI_InputControlContainer {
 
     pub fn set_player(&mut self, playerID: i16) {
         unsafe {
+            // Not in upstream: list the pads connected since (pad::hotplug).
+            #[cfg(not(target_os = "emscripten"))]
+            if self.devices != crate::smw::pad::generation() {
+                self.devices = crate::smw::pad::generation();
+                self.miDeviceSelectField.clear();
+                self.miDeviceSelectField.add("Keyboard", -1);
+                add_joysticks(&mut self.miDeviceSelectField);
+            }
+
             //Hide input options that other players are using
             self.miDeviceSelectField.hide_all_items(false);
 

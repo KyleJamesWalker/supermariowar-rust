@@ -1,0 +1,17 @@
+// SDL's android-project top-level file with AGP 8.5, the first that aligns uncompressed native libraries to 16 KB.
+buildscript {
+    repositories {
+        mavenCentral()
+        google()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.5.2'
+    }
+}
+
+allprojects {
+    repositories {
+        mavenCentral()
+        google()
+    }
+}
