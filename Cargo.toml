@@ -6,7 +6,7 @@ description = "Super Mario War - faithful Rust port"
 publish.workspace = true
 
 [workspace]
-members = ["crates/smw-globals", "relay"]
+members = ["crates/smw-globals", "crates/smw-netplay", "relay"]
 
 [workspace.package]
 edition = "2021"
@@ -18,12 +18,14 @@ no_network = []
 
 [dependencies]
 smw-globals = { path = "crates/smw-globals" }
+smw-netplay = { path = "crates/smw-netplay" }
 sdl2 = { version = "0.38", features = ["image", "mixer"] }
 toml = "1.1"
 
 # Native only: the web build links Emscripten's zlib and plays online through smw_relay (relay/).
 [target.'cfg(not(target_os = "emscripten"))'.dependencies]
 enet-sys = "1.0.5"
+smw-netplay = { path = "crates/smw-netplay", features = ["enet"] }
 libz-sys = "1"
 
 [profile.dev]

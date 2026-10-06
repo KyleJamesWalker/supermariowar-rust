@@ -494,6 +494,7 @@ dependencies = [
  "libz-sys",
  "sdl2",
  "smw-globals",
+ "smw-netplay",
  "toml",
 ]
 
@@ -502,9 +503,18 @@ name = "smw-globals"
 version = "0.1.0"
 
 [[package]]
+name = "smw-netplay"
+version = "0.1.0"
+dependencies = [
+ "enet-sys",
+ "smw-globals",
+]
+
+[[package]]
 name = "smw_relay"
 version = "0.1.0"
 dependencies = [
+ "smw-netplay",
  "tungstenite",
 ]
 

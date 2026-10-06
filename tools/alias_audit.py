@@ -17,7 +17,11 @@ import sys
 PORT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(PORT, 'src')
 OUT = os.path.join(SRC, 'alias_audit.rs')
-LIB_MODULES = re.findall(r'(?m)^pub mod (\w+);', open(os.path.join(SRC, 'lib.rs')).read())
+_LIB = open(os.path.join(SRC, 'lib.rs')).read()
+# Modules smw-netplay compiles from src/ and the game re-exports count as the game's own.
+LIB_MODULES = re.findall(r'(?m)^pub mod (\w+);', _LIB) + [
+    m for m in re.findall(r'(?m)^pub use smw_netplay::\{([^}]*)\};', _LIB)[0].replace(' ', '').split(',') if os.path.isdir(os.path.join(SRC, m))
+]
 
 ALLOW = {
     'MixChunkPtr': 'owning handle; the raw pointer is set once at construction and never written through another path',

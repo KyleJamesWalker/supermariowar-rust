@@ -2,6 +2,7 @@
 !Cargo.toml
 !Cargo.lock
 !crates/smw-globals
+!crates/smw-netplay
 !relay/Cargo.toml
 !relay/src
 !src/common/file_io.rs

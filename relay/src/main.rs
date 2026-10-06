@@ -3,36 +3,9 @@
 
 #![allow(non_snake_case, non_camel_case_types, non_upper_case_globals, static_mut_refs, dead_code)]
 
-extern crate self as smw;
+extern crate smw_netplay as smw;
 
-#[path = "../../src/globals/pointers.rs"]
-pub mod globals;
-
-#[path = "../../src/common"]
-pub mod common {
-    pub mod file_io;
-}
-
-#[path = "../../src/common_netplay"]
-pub mod common_netplay {
-    pub mod network_interface;
-    pub mod protocol_definitions;
-    pub mod protocol_packages;
-    pub mod relay_frame;
-}
-
-#[path = "../../src/server"]
-mod server {
-    pub mod blob;
-    pub mod clock;
-    pub mod log;
-    pub mod network_layer;
-    pub mod player;
-    pub mod room;
-    pub mod server;
-    pub mod unordered_map;
-    pub mod util;
-}
+use smw::server;
 
 mod config;
 mod lobby;

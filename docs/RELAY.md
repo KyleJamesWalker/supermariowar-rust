@@ -2,7 +2,7 @@
 
 `smw_relay` lets the browser build play online. It runs the netplay lobby server and switches each player's game traffic to the game host, all over WebSocket. Browsers cannot send UDP or accept connections, so ENet's direct player-to-host links do not work in a page.
 
-The relay is not in the C++ project. It reuses the lobby code in `src/server` unchanged, behind a WebSocket `NetworkLayer`. It is its own Cargo package in `relay/`, a member of the root workspace, so it builds without SDL2 or ENet.
+The relay is not in the C++ project. It reuses the lobby code in `src/server` unchanged, behind a WebSocket `NetworkLayer`, through the `smw-netplay` crate built without its `enet` feature. It is its own Cargo package in `relay/`, a member of the root workspace, so it builds without SDL2 or ENet.
 
 ## Overview
 
