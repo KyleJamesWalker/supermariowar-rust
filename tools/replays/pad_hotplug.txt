@@ -1,0 +1,36 @@
+# Recorded on the Android emulator: Return goes to team select, a pad is plugged in there (jadd 0), and the players
+# are reassigned with the pad first. Without the jadd line the replay diverges at frame 3548.
+#@ seed=2210563465
+#@ frames=3875
+#@ shots=2199,2520,3548,3874
+302 down Return
+302 up Return
+378 down Return
+378 up Return
+502 down Return
+502 up Return
+625 down Return
+625 up Return
+748 down Return
+748 up Return
+872 down Return
+872 up Return
+2200 jadd 0
+2512 jbutton 0 0 1
+2520 jbutton 0 0 0
+2581 down Return
+2581 up Return
+2674 down Return
+2674 up Return
+3548 jbutton 0 0 1
+3549 jbutton 0 0 0
+3794 jhat 0 0 2
+3802 down Left
+3802 up Left
+3832 down Left
+3832 up Left
+3845 jhat 0 0 0
+3845 jbutton 0 0 1
+3861 down Left
+3861 up Left
+3863 jbutton 0 0 0
