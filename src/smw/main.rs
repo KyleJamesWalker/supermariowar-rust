@@ -123,6 +123,7 @@ unsafe extern "C-unwind" fn gameloop_frame_web() {
 
     let mut frames = 0;
     while accumulated >= frame_ms && frames < MAX_CATCH_UP_FRAMES && game_values.appstate != crate::common::game_values::AppState::Quit {
+        assign_hotplugged();
         harness::frame_start();
         GameStateManager::instance().currentState.get().update();
         harness::frame_end();
@@ -161,7 +162,6 @@ unsafe extern "C-unwind" fn gameloop_frame() {
     phase(1);
     FPSLimiter::instance().frame_start();
 
-    #[cfg(not(target_os = "emscripten"))]
     assign_hotplugged();
     harness::frame_start();
     phase(5);
@@ -254,7 +254,7 @@ fn assign_inputs() {
         #[cfg(not(target_os = "emscripten"))]
         let mut pads = crate::smw::pad::player_pads();
         #[cfg(target_os = "emscripten")]
-        let mut pads: Vec<usize> = (0..joystickcount.max(0) as usize).collect();
+        let mut pads: Vec<usize> = (0..joystickcount.max(0) as usize).filter(|k| !web_removed.contains(k)).collect();
         pads.retain(|&k| k < MAX_PLAYERS as usize);
         if pads.is_empty() {
             if let Ok(text) = std::fs::read_to_string(&marker) {
@@ -311,11 +311,19 @@ fn assign_inputs() {
     }
 }
 
-/// Not in upstream: a pad connected after launch (`pad::hotplug`) gets a player as at launch, once no match is on.
-#[cfg(not(target_os = "emscripten"))]
+/// Not in upstream: a pad connected after launch (`pad::hotplug`, or a replay's `jadd` line) gets a player as at
+/// launch, once no match is on.
 fn assign_hotplugged() {
     static mut pending: bool = false;
     unsafe {
+        for (index, added) in harness::replay_device_changes() {
+            #[cfg(not(target_os = "emscripten"))]
+            crate::smw::pad::replay_device(index, added);
+            #[cfg(target_os = "emscripten")]
+            web_replay_device(index, added);
+            pending |= added;
+        }
+        #[cfg(not(target_os = "emscripten"))]
         if crate::smw::pad::hotplug() {
             pending = true;
         }
@@ -324,6 +332,21 @@ fn assign_hotplugged() {
             pending = false;
             assign_inputs();
         }
+    }
+}
+
+/// A browser replay's joysticks exist only as the device index its events carry.
+#[cfg(target_os = "emscripten")]
+static mut web_removed: Vec<usize> = Vec::new();
+
+#[cfg(target_os = "emscripten")]
+unsafe fn web_replay_device(index: usize, added: bool) {
+    web_removed.retain(|&i| i != index);
+    if !added {
+        web_removed.push(index);
+    } else if index >= joystickcount.max(0) as usize {
+        joystickcount = index as i16 + 1;
+        joysticks = Box::leak(vec![null_mut::<SDL_Joystick>(); index + 1].into_boxed_slice()).as_mut_ptr();
     }
 }
 

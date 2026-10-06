@@ -66,6 +66,9 @@ struct Harness {
     shotStream: Option<BufWriter<File>>,
     events: Vec<ReplayEvent>,
     joysticks: i32,
+    /// `jadd`/`jremove` lines: (frame, device, added).
+    devices: Vec<(u32, i32, bool)>,
+    nextDevice: usize,
     replay: bool,
     nextEvent: usize,
     frame: u32,
@@ -96,6 +99,8 @@ static mut h: Harness = Harness {
     shotStream: None,
     events: Vec::new(),
     joysticks: 0,
+    devices: Vec::new(),
+    nextDevice: 0,
     replay: false,
     nextEvent: 0,
     frame: 0,
@@ -155,6 +160,9 @@ fn load_events(path: &str) -> Vec<ReplayEvent> {
     let text = read_recording(path).unwrap_or_else(|| fail(format!("cannot open replay {}", path)));
     let mut events: Vec<ReplayEvent> = Vec::new();
     let events = &mut events;
+    let mut last_frame = 0;
+    // Per device: whether its first line is a `jadd`, which leaves it out of the joysticks attached at launch.
+    let mut added_later: [Option<bool>; 8] = [None; 8];
     for (i, raw) in text.split('\n').enumerate() {
         let lineno = i + 1;
         let line = raw.strip_suffix('\r').unwrap_or(raw);
@@ -176,7 +184,23 @@ fn load_events(path: &str) -> Vec<ReplayEvent> {
             Ok(f) if !dir.is_empty() => f,
             _ => fail(format!("{}:{}: malformed line", path, lineno)),
         };
+        if frame < last_frame {
+            fail(format!("{}:{}: frames must be non-decreasing", path, lineno));
+        }
+        last_frame = frame;
         let mut ev = ReplayEvent { frame, kind: EventKind::Key, down: false, keyName: String::new(), device: 0, index: 0, value: 0 };
+        if dir == "jadd" || dir == "jremove" {
+            let device = match rest.split_whitespace().collect::<Vec<_>>().as_slice() {
+                [d] => d.parse::<i32>().ok().filter(|d| (0..=7).contains(d)),
+                _ => None,
+            };
+            let Some(device) = device else { fail(format!("{}:{}: expected '<frame> {} <dev>'", path, lineno, dir)) };
+            added_later[device as usize].get_or_insert(dir == "jadd");
+            unsafe {
+                h.devices.push((frame, device, dir == "jadd"));
+            }
+            continue;
+        }
         if dir == "jaxis" || dir == "jbutton" || dir == "jhat" {
             ev.kind = match dir {
                 "jaxis" => EventKind::JoyAxis,
@@ -207,9 +231,7 @@ fn load_events(path: &str) -> Vec<ReplayEvent> {
             if !valid {
                 fail(format!("{}:{}: expected '<frame> {} <dev> <index> <value>'", path, lineno, dir));
             }
-            unsafe {
-                h.joysticks = h.joysticks.max(ev.device + 1);
-            }
+            added_later[ev.device as usize].get_or_insert(false);
         } else {
             ev.keyName = rest.trim_start_matches([' ', '\t']).to_string();
             if (dir != "down" && dir != "up") || ev.keyName.is_empty() {
@@ -217,12 +239,10 @@ fn load_events(path: &str) -> Vec<ReplayEvent> {
             }
             ev.down = dir == "down";
         }
-        if let Some(last) = events.last() {
-            if frame < last.frame {
-                fail(format!("{}:{}: frames must be non-decreasing", path, lineno));
-            }
-        }
         events.push(ev);
+    }
+    unsafe {
+        h.joysticks = (0..8).filter(|&d| added_later[d as usize] == Some(false)).map(|d| d + 1).max().unwrap_or(0);
     }
     std::mem::take(events)
 }
@@ -232,10 +252,39 @@ fn attach_joysticks() {
     unsafe {
         SDL_InitSubSystem(SDL_INIT_JOYSTICK);
         for i in 0..h.joysticks {
-            if SDL_JoystickAttachVirtual(SDL_JoystickType::SDL_JOYSTICK_TYPE_GAMECONTROLLER, VIRTUAL_AXES, VIRTUAL_BUTTONS, VIRTUAL_HATS) != i {
+            if attach_virtual() != i {
                 fail(format!("cannot attach virtual joystick {}: {}", i, CStr::from_ptr(SDL_GetError()).to_string_lossy()));
             }
         }
+    }
+}
+
+/// Attaches a replay's virtual joystick; its SDL device index, or -1.
+#[cfg(not(target_os = "emscripten"))]
+pub fn attach_virtual() -> i32 {
+    unsafe { SDL_JoystickAttachVirtual(SDL_JoystickType::SDL_JOYSTICK_TYPE_GAMECONTROLLER, VIRTUAL_AXES, VIRTUAL_BUTTONS, VIRTUAL_HATS) }
+}
+
+/// Not in the C++. A replay's `jadd`/`jremove` lines for this frame: (device, connected).
+pub fn replay_device_changes() -> Vec<(usize, bool)> {
+    let mut changes = Vec::new();
+    unsafe {
+        while h.nextDevice < h.devices.len() && h.devices[h.nextDevice].0 <= h.frame {
+            let (frame, device, added) = h.devices[h.nextDevice];
+            if frame == h.frame {
+                changes.push((device as usize, added));
+            }
+            h.nextDevice += 1;
+        }
+    }
+    changes
+}
+
+/// Not in the C++. While recording, a `jadd`/`jremove` line for a pad connected or disconnected before this frame.
+pub fn record_device(index: usize, added: bool) {
+    let Some(r) = rec().filter(|r| r.live) else { return };
+    if index < 8 {
+        let _ = writeln!(r.out, "{} {} {}", unsafe { h.frame }, if added { "jadd" } else { "jremove" }, index);
     }
 }
 
@@ -367,6 +416,11 @@ pub fn init() {
             h.events = load_events(&replay);
             h.replay = true;
             load_segment(&replay);
+            // A segment starts mid-session with every joystick the replay uses.
+            if h.segment.is_some() {
+                h.joysticks = h.joysticks.max(h.devices.iter().map(|&(_, d, _)| d + 1).max().unwrap_or(0));
+                h.devices.clear();
+            }
         }
 
         h.audible = record || env("SMW_AUDIBLE").is_some();

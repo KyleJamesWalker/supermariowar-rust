@@ -185,34 +185,27 @@ pub fn hotplug() -> bool {
         for index in 0..joystickcount.max(0) as usize {
             let js = *joysticks.add(index);
             if !js.is_null() && SDL_JoystickGetAttached(js) == SDL_bool::SDL_FALSE {
-                println!("[pad] joystick {} removed", index);
-                SDL_JoystickClose(js);
-                *joysticks.add(index) = std::ptr::null_mut();
-                pads.retain(|p| p.index != index);
-                GENERATION.fetch_add(1, Ordering::Relaxed);
+                close(index);
+                crate::smw::harness::record_device(index, false);
             }
         }
         let mut added = false;
         for device in 0..SDL_NumJoysticks().max(0) {
             let instance = SDL_JoystickGetDeviceInstanceID(device);
-            let open = (0..joystickcount.max(0) as usize).any(|i| {
+            let already = (0..joystickcount.max(0) as usize).any(|i| {
                 let js = *joysticks.add(i);
                 !js.is_null() && SDL_JoystickInstanceID(js) == instance
             });
-            if open {
+            if already {
                 continue;
             }
             let Some(index) = free_index() else {
                 continue;
             };
-            let js = SDL_JoystickOpen(device);
-            if js.is_null() {
-                continue;
+            if open(device, index) {
+                crate::smw::harness::record_device(index, true);
+                added = true;
             }
-            *joysticks.add(index) = js;
-            pads.push(open_pad(device, js, index));
-            GENERATION.fetch_add(1, Ordering::Relaxed);
-            added = true;
         }
         added
     }
@@ -221,6 +214,47 @@ pub fn hotplug() -> bool {
 /// Changes whenever `hotplug` opens or closes a joystick.
 pub fn generation() -> u32 {
     GENERATION.load(Ordering::Relaxed)
+}
+
+/// A replay's `jadd` (`added`) or `jremove` line: attaches a virtual joystick as `index`, or closes it.
+pub fn replay_device(index: usize, added: bool) {
+    unsafe {
+        let open_now = index < joystickcount.max(0) as usize && !(*joysticks.add(index)).is_null();
+        if !added {
+            if open_now {
+                close(index);
+            }
+            return;
+        }
+        if open_now || index >= MAX_JOYSTICKS {
+            return;
+        }
+        let device = crate::smw::harness::attach_virtual();
+        if device >= 0 {
+            grow(index + 1);
+            open(device, index);
+        }
+    }
+}
+
+/// Opens SDL device `device` as joystick `index`, which must be an empty slot.
+unsafe fn open(device: i32, index: usize) -> bool {
+    let js = SDL_JoystickOpen(device);
+    if js.is_null() {
+        return false;
+    }
+    *joysticks.add(index) = js;
+    pads.push(open_pad(device, js, index));
+    GENERATION.fetch_add(1, Ordering::Relaxed);
+    true
+}
+
+unsafe fn close(index: usize) {
+    println!("[pad] joystick {} removed", index);
+    SDL_JoystickClose(*joysticks.add(index));
+    *joysticks.add(index) = std::ptr::null_mut();
+    pads.retain(|p| p.index != index);
+    GENERATION.fetch_add(1, Ordering::Relaxed);
 }
 
 /// The first empty slot in `joysticks`, growing it by one when every slot is taken.
@@ -232,13 +266,22 @@ unsafe fn free_index() -> Option<usize> {
     if count >= MAX_JOYSTICKS {
         return None;
     }
-    let mut grown = vec![std::ptr::null_mut::<SDL_Joystick>(); count + 1];
-    for (i, slot) in grown.iter_mut().enumerate().take(count) {
+    grow(count + 1);
+    Some(count)
+}
+
+/// Makes `joysticks` at least `count` long; the new slots are empty.
+unsafe fn grow(count: usize) {
+    let old = joystickcount.max(0) as usize;
+    if count <= old {
+        return;
+    }
+    let mut grown = vec![std::ptr::null_mut::<SDL_Joystick>(); count];
+    for (i, slot) in grown.iter_mut().enumerate().take(old) {
         *slot = *joysticks.add(i);
     }
     joysticks = Box::leak(grown.into_boxed_slice()).as_mut_ptr();
-    joystickcount = (count + 1) as i16;
-    Some(count)
+    joystickcount = count as i16;
 }
 
 /// The raw input behind each controller button and axis. SDL2 derives controller events from raw joystick events in
