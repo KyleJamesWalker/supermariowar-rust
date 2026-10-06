@@ -1,118 +1,62 @@
-# Morning report: web, multiplayer and controls (2026-10-04)
+# Morning report: platforms, workspace and upstream (2026-10-06)
 
-**Bottom line:** the browser build now plays online through your relay, works on phones with touch controls, and assigns gamepads automatically. Netplay powerup blocks now match between players. Everything is merged to `main` (last merge `b631c97`) and pushed, the site and relay image are deployed, and `dist/Super Mario War.app` is rebuilt. Your relay at `smw-relay.vps.pocketsquirrel.com` passed a live two-browser game.
+**Bottom line:** 24 PRs merged since yesterday evening; every one that runs CI was green, and docs-only PRs run none. Phase 0 and phase 1 of `ARCHITECTURE_V2.md` are on `main`, and phase 2 has started: the game library now lives in `crates/smw-core`, and the clock and storage go through a services context. The port and the C++ reference are synced to upstream `c7056790`, and no golden changed. Windows, macOS and Android each got their packaging fix. Upstream PR 2 is ready on the fork for you to review; nothing went upstream.
+
+## Decisions for you
+
+1. **Upstream PR 2** (`fix/uninitialized-reads` on the fork, head `fa91633d`, six fixes plus a comment fix). Draft and evidence: `docs/upstream-prs/PR2-uninitialized-reads.md`. Open it upstream when you're happy with it. With the fixes, Linux x86_64, Linux arm64 and macOS play all 45 games identically (CI run 37413292776 on `c7056790`).
+2. **Unique AI object IDs.** Fix 6 starts every object's network ID at 0, as macOS already behaves, so once a CPU player ignores one object it ignores all of them. Unique IDs would fix that but change CPU play; the draft offers it as a follow-up.
+3. **Upstream issue for the Linux/macOS divergence**: the draft is `docs/upstream-prs/ISSUE-linux-macos-divergence.md`, not filed. Upstream PR 2 fixes the cause, so the issue may be unnecessary.
+4. **macOS minimum version.** Releases now declare macOS 14 (Apple silicon) and 15 (Intel), set by the Homebrew libraries they bundle. Building SDL from source would bring it down to macOS 11, for about 3-5 CI minutes per architecture, but it swaps the graphics and audio libraries and needs its own parity run. #21 has the write-up.
 
 ## What landed
 
-| Merge | Change |
+| PR | Change |
 |---|---|
-| `7c2d131` | On-screen touch controls for phones and tablets, plus a web app manifest so Add to Home Screen runs fullscreen |
-| `3d2ac31` | Browser multiplayer: `smw_relay` (lobby server plus WebSocket relay), the browser network layer, Docker image, deploy examples. See `RELAY.md` |
-| `75b3cec` | Backspace no longer navigates the page back while typing a name |
-| `7a0a43d` | Net games: the host decides what powerup blocks release (an upstream C++ bug, fixed as a deliberate deviation) |
-| `533ca89` | Gamepads: stick and D-pad drive the same controls on every build; pads go to the first players at each launch |
-| `9343588` | Watching gamepad recordings in the browser; a launch without pads undoes the last pad assignment; touch keeps player 1 when pads are connected |
-| `b631c97` | The touch-controls test pins its seed and map, so it no longer fails at random |
+| #17, #18, #19 | Dependabot: `toml` 1.1, `sdl2` 0.38, 12 GitHub Actions bumps |
+| #20 | Android: no gamepad crash at launch, pad hot-plug, on-screen touch controls (D-pad or floating stick), `log.txt` |
+| #21 | macOS: `Info.plist` declares the real minimum per architecture |
+| #22 | Windows: the game and editors open no console window; Windows CI adds editor parity (13/13) and the map sweep (290/290) |
+| #23 | Phase 0: Cargo workspace, relay folded in, one `Cargo.lock` |
+| #24, #25 | `ARCHITECTURE_V2.md` (you approved) and decision 5, hot-plug replay lines |
+| #26 | CI and relay runs on PRs and `main` cancel superseded runs; tag runs never cancel |
+| #27 | Android: every CI and release APK is signed with one project debug key from repository secrets; pixel-perfect launcher icons |
+| #28 | Why the C++ reference plays differently on Linux and macOS: three uninitialized members (M9 in `UPSTREAM_BACKLOG.md`) |
+| #29, #30, #31, #39 | Phase 1: `smw-globals`, `smw-netplay` and `smw-platform` crates, then `src/` moved to `crates/smw-core` and each binary to `apps/` |
+| #33 | Web: the data submodule's `.git` pointer stays out of `smw.data` |
+| #34, #36 | Upstream PR 2 draft and evidence, measured in CI on `c7056790` |
+| #35 | Web: the clip test paces itself by game frames; the CI retry is gone |
+| #37 | Port synced to upstream `c7056790` (upstream PR 480: M1, M4, M5 ported; harness patches regenerated) |
+| #38 | README brought up to date with `main` |
+| #40, #41 | Phase 2: clock and storage behind `smw_core::services`, new `smw-sdl2` crate |
 
-Every deliberate difference from the C++ is listed in `PROGRESS.md`.
+The C++ reference merged its own sync PR 6 into `harness-latest` (`d657f2dc`), and `~/work/supermariowar-cpp-reference/build` is rebuilt from it.
 
 ## Verification
 
+Every merged code PR passed full CI: tests, parity on macOS, Linux and Windows, the 290-map sweep, editor parity, the web build and the packages. Main at `c2710b3`, the first commit with the new layout, passed CI, web and relay.
+
 | Check | Result |
 |---|---|
-| `cargo test`, relay tests | pass (relay: 12 tests) |
-| `tools/parity.sh`, `tools/editor_parity.sh` | 44/44 game replays, 13/13 editor sessions. `joy_game` and `joy_menu` are compared against Rust goldens because pad assignment deliberately differs from the C++ |
-| Browser replay of `start_classic` | 2530 frames identical to the C++ golden |
-| Native net games (`net_game_interop.sh`, 4 pairings × 2 scenarios) | 8/8 synced; Rust–Rust powerup spawns match |
-| Two-browser game through a local relay (`web_netplay_test.mjs`) | synced, powerups match |
-| Two-browser game against the live site and your relay | synced (606/628 and 610/627 frames within 2 px) |
-| Relay image | 49 MB distroless; healthy; refuses foreign origins (403); CI built amd64 and arm64 |
-| Touch test on an emulated phone (`web_touch_test.mjs`) | 10/10 consecutive passes |
+| Golden regeneration from the synced C++ reference | 45 game, 290 sweep and 13 editor goldens byte-identical |
+| Phase 1 and 2 PRs, local gates | parity 48/48, sweep 290/290, editor 13/13, `segment_check` 27/27, `R calls=` unchanged |
+| Web clip test | 10/10 local runs, first CI run green without the retry |
+| Android APK from #27 | the keystore secret was decoded; no throwaway-key warning |
 
-## Try it
+## Known issues and follow-ups
 
-- **Two players online:** open https://www.kylejameswalker.com/supermariowar-rust/ in two browsers, choose Multiplayer, the relay server, then create a room in one and join from the other. If the room isn't listed yet, refresh the room list.
-- **Gamepad (Q36 in XInput mode):** reload, press a pad button until the page shows "1 gamepad ready", click Play. P1 is the pad (A jump, B turbo, X item, Y pause); arrows/Return drive P2 and WASD/E drive P3. Set extra players to None in the main menu's Players row to play alone.
-- **Phone:** open the site in landscape; the controls appear on touch screens. On iPhone, use Share → Add to Home Screen for fullscreen.
+- **Install the new APK once by hand.** Earlier APKs used throwaway keys, so the first install of a fixed-key APK on your Pixel needs an uninstall first. Later updates install over it.
+- **C++ reference on Windows** fails to build: CORE-MATH's `__int128` isn't supported by MSVC. This predates tonight; the replay harness only runs on macOS and Linux.
+- **Windows editor screenshots** are report-only, as on Linux. One shot in `leveledit/platforms_save` differs by 104 pixels; dumps and saved files must still match.
+- **No editor session exercises M4 or M5.** A new session that saves a minigame stage and deletes a stage with a vehicle would cover them.
+- **Upstream PR links in `UPSTREAM_BACKLOG.md`**: six markdown links to upstream PR 480 predate tonight. Links in files don't post on the upstream timeline, but plain text would match the rest of the docs.
+- **Web netplay frenzy test** still fails about 1 run in 5 locally. It isn't in CI.
+- **`investigate/pr2-c7056790`** stays on the C++ reference repo so CI run 37413292776 stays linked. Delete it when PR 2 is done.
 
-## Needs a real-device check
+## Next in the architecture
 
-- iPhone: Add to Home Screen opens fullscreen; controls clear the notch and home indicator; long-press, magnifier and double-tap zoom stay blocked; keys release when switching apps.
-- Holding the D-pad plus two buttons at once on real hardware.
-- Android: the fullscreen button and the landscape lock.
-- Backspace in the name field on the browser where you saw the bug (Chrome no longer goes back on Backspace, so the test couldn't reproduce it).
-- Native `--replay` with a real pad plugged in (pads were unplugged when this was tested).
+Phase 2 has three steps left, in this order:
 
-## Known gaps
-
-- **Native and browser players can't share a game.** The relay serves browsers only.
-- **Mixed C++/Rust net games keep the upstream powerup desync.** The C++ client ignores the new block packages.
-- **Other random outcomes can still differ between net players:** frenzy cards, coin placement in the coin modes, stomp/survival enemies, random shell deaths. The same host-decides approach would fix each.
-- **Touch on a solo phone:** player 2 defaults to human, so set it to CPU or None in the Players row before starting.
-- **Touch controls send player 1's default keys.** If player 1's keyboard keys are rebound, touch won't follow.
-- **SDL's browser backend drops the first stick movement on each axis** after Play. The D-pad is unaffected.
-- **WebSocket runs over TCP**, so a lost packet can briefly stall a net game. WebRTC would fix it if it matters in practice.
-
----
-
-# Earlier report: the initial port
-
-
-**Bottom line:** the whole C++ project is ported to plain Rust + rust-sdl2: the game, menus, sound, netplay, lobby server, level editor and world editor. Run on the same scripted input, the Rust build produces the same per-frame state, sound events and screenshots as the original C++, byte for byte, on every replay we have (333 game replays and 12 editor sessions). Rust also interoperates with the C++ over the network and reads and writes the same save files.
-
-Branch `rust-port`. The crate is at the repo root (it was developed in `port/`; the old Bevy attempt has been removed). About 87k lines of Rust in 325 files, nothing pushed.
-
-## Final verification (fresh checkout of HEAD)
-
-Run at 06:07–06:22 on a clean `git worktree` of `59065bc`:
-
-| Step | Result |
-|---|---|
-| `cargo build --release` (default and `--features no_network`) | ok |
-| `cargo test --release` | 20/20 pass, including the RNG, map-load, MapList, libc++-order and alias-audit tests |
-| `tools/parity.sh` (43 replays) | 43/43 identical: every frame, every `S` sound record, every screenshot |
-| `tools/editor_parity.sh` (12 sessions) | 12/12 identical: dumps, screenshots and saved files |
-
-One commit landed afterwards: `d63bf67`, the bonus-world sprite fix below. It only changes a path that used to panic, so no passing replay can change, and the affected replay was verified separately (12,000 frames identical).
-
-Earlier full runs, same goldens:
-
-| Suite | What it covers | Result |
-|---|---|---|
-| `tools/parity.sh` | 43 replays: all 22 modes with 4 CPUs, Tour/Tournament/World flows, 3 minigames, 3 fuzzed-input games, gamepad menus and play, option/player/team setups, menu navigation | 43/43 identical on every frame, sound record and screenshot |
-| `tools/parity_sweep.sh` | 4 CPUs on every one of the 290 maps | 290/290 identical |
-| `tools/editor_parity.sh` | 7 level editor + 5 world editor scripted sessions | 12/12 identical: dump, screenshots and every saved `.map`/`.tls`/world file |
-| `tools/soak.py` | Random games (mode, map, options, CPUs, fuzzed humans), C++ vs Rust, no goldens | 723 games of 5,000–8,000 frames: no state divergence. 25 Rust crashes where the C++ silently reads out of bounds, in 3 classes (CMap edge reads, AI edge reads, boss-minigame Frenzy cast). All fixed (06407b7, ec5f3a6, a39d9aa), and every failing case now matches the saved C++ dump |
-| `tools/ref/net_interop.sh`, `net_game_interop.sh` | C++/Rust clients × C++/Rust lobby server, then a real game through the menus | 8/8 pairings pass; game sync within 2 px on ≥95% of frames, same as C++↔C++ |
-| `tools/ref/persist_interop.sh` | options.bin, controls, servers.yml, map cache, filters written by one build and read by the other | identical, including 5 fuzzed seeds |
-| Map tests (`cargo test`) | All 504 maps loaded, 30 maps rendered, MapList, RNG, libc++ hash order vs C++ | identical |
-
-## How it was verified
-
-The C++ game is built from a pristine copy plus `tools/cpp-harness.patch`, which adds a fixed seed, scripted input (keyboard and gamepad), a per-frame state dump, screenshots, and a frame-clocked sound mixer so audio state is deterministic. Rust has the same hooks. `REPLAY.md` is the spec, and `ARCHITECTURE.md` describes the porting conventions. Each replay runs in its own sandbox (data clone plus fresh HOME), so runs can't interfere.
-
-## How to run
-
-```sh
-cargo run --release --bin smw -- --datadir data   # the game
-cargo run --release --bin leveleditor -- --datadir data
-cargo run --release --bin worldeditor -- --datadir data
-cargo run --release --bin smw_server              # lobby server
-tools/verify_head.sh                              # build + test + 43-replay parity on a clean checkout
-```
-
-The parity tools need the C++ reference; see `REPLAY.md` for building it (now [supermariowar-cpp-reference](https://github.com/KyleJamesWalker/supermariowar-cpp-reference), branch `harness-latest`). The same branch builds the editors; `tools/cpp-harness.patch` and `tools/editor-harness.patch` hold the hooks as patches.
-
-## Known gaps
-
-- **Bonus house is untested.** It's only reachable inside World maps, and in 12,000 frames of `Contest_Bonus World` the CPUs never entered one. That replay (`tools/repros/flow_world_bonus.txt`) has no golden yet. It did find one real bug, now fixed in `d63bf67`: the tournament scoreboard draws unloaded skin frames, and the Release C++ silently skips them. With the fix it matches the C++ for all 12,000 frames.
-- **Real-time 60 fps on two heavy scenes.** Rust runs at the same CPU cost as C++ (0.95–1.02× on 5 replays). `flow_world` and the heaviest map exceed the 16.7 ms budget on *both* builds, because Homebrew's sdl2-compat (over SDL3) re-encodes RLE sprite sheets on every blit. The upstream issue is drafted (not filed) in `docs/sdl2-compat-rle.md`. A pixel-safe bypass is possible but not done. Windowed 60 fps wasn't confirmed because the machine was saturated all night.
-- **Soak repro replays not yet goldens.** One replay per fixed crash class is committed in `tools/repros/`, along with `flow_world_bonus.txt`. Run them with `run_ref.sh` and `run_rust.sh` and diff the outputs. They should be trimmed and given goldens; they sit outside `tools/replays/` so `parity.sh` doesn't count them as failures. The `flow_world_bonus` generator entry in `tools/gen_replays.py` is left uncommitted for the same reason. Soak runs need a reference build with the sound records, built from `harness-latest`.
-- **Duplicate C++ memory-layout model.** Rust deliberately reproduces C++ out-of-bounds `CMap` reads (the C++ reads neighbouring fields silently). `common/map.rs` (`cpp_byte`) and `smw/ai.rs` (`cmap_byte`, which adds the warp tables) each carry a copy. Merging them is cleanup with no behaviour change.
-- **Cosmetic stderr.** Where the C++ throws and catches (e.g. options.bin unwritable), Rust prints Rust's default "thread 'main' panicked" line before catching. Behaviour and exit code match.
-- **Not ported on purpose:** `src/screenshot` is dead upstream (not in CMake, doesn't compile).
-- **C++ bugs kept for parity**, all documented in code and PROGRESS.md: the Classic-tileset index taken before sorting, stale tour stops read after `clear()`, AI out-of-bounds map reads, the boss-minigame Frenzy-card cast, and the `getBoolean` assert that a debug C++ build would trip in `opt_gameplay`.
-
-## Reference builds
-
-Everything builds from [supermariowar-cpp-reference](https://github.com/KyleJamesWalker/supermariowar-cpp-reference), branch `harness-latest`: `build/` (game and editors, networking off) and `build-net/` (networking on). `REPLAY.md` has the commands.
+1. **Audio output**, the largest and riskiest. The virtual mixer must decide sound state in every run, not only seeded ones, and SDL_mixer becomes output-only. Blocker: channel end times still come from SDL_mixer's decoded lengths, so they need a checked-in duration table and a test comparing it with SDL2_mixer for every file in `data/`. Gate it on the dumps' sound records and a scripted live session, because unrecorded play can shift `isPlaying()` timing.
+2. **Presentation**: window and texture calls move into `smw-sdl2`. Low risk, because screenshots are taken before the flip. The Android touch overlay waits for phase 3.
+3. **Event pump**: the remaining `SDL_PollEvent` sites, about 55 of them in the editors, move behind the backend together with phase 3's input events. The replay and editor goldens catch any change in event order.
