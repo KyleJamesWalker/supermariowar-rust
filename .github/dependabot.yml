@@ -1,9 +1,7 @@
 version: 2
 updates:
   - package-ecosystem: cargo
-    directories:
-      - /
-      - /relay
+    directory: /
     schedule:
       interval: weekly
     groups:
