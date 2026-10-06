@@ -42,7 +42,7 @@ jobs:
 
       - name: rustfmt (report only)
         run: |
-          for m in Cargo.toml relay/Cargo.toml; do
+          for m in Cargo.toml relay/Cargo.toml crates/*/Cargo.toml; do
             n="$(cargo fmt --check --manifest-path "$m" 2>/dev/null | grep -c '^Diff in' || true)"
             echo "rustfmt $m: $n hunks differ" | tee -a "$GITHUB_STEP_SUMMARY"
           done
@@ -50,7 +50,7 @@ jobs:
       - name: clippy
         run: |
           status=0
-          for m in Cargo.toml relay/Cargo.toml; do
+          for m in Cargo.toml relay/Cargo.toml crates/*/Cargo.toml; do
             cargo clippy --locked --all-targets --manifest-path "$m" --message-format=short --color never 2> clippy.log || status=1
             grep -E ': (warning|error)' clippy.log | grep -v '^warning: `' > diags.txt || true
             echo "clippy $m: $(grep -c ': error' diags.txt || true) errors, $(grep -c ': warning' diags.txt || true) warnings" | tee -a "$GITHUB_STEP_SUMMARY"

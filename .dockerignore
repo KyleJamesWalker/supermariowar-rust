@@ -1,6 +1,7 @@
 *
 !Cargo.toml
 !Cargo.lock
+!crates/smw-globals
 !relay/Cargo.toml
 !relay/src
 !src/common/file_io.rs

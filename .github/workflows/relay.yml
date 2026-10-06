@@ -7,6 +7,7 @@ on:
       - relay/**
       - Cargo.toml
       - Cargo.lock
+      - crates/smw-globals/**
       - src/common/file_io.rs
       - src/common_netplay/**
       - src/globals/**
@@ -21,6 +22,7 @@ on:
       - relay/**
       - Cargo.toml
       - Cargo.lock
+      - crates/smw-globals/**
       - src/common/file_io.rs
       - src/common_netplay/**
       - src/globals/**

@@ -493,8 +493,13 @@ dependencies = [
  "enet-sys",
  "libz-sys",
  "sdl2",
+ "smw-globals",
  "toml",
 ]
+
+[[package]]
+name = "smw-globals"
+version = "0.1.0"
 
 [[package]]
 name = "smw_relay"

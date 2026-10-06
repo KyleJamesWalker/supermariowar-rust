@@ -2,6 +2,7 @@
 FROM rust:1.94-slim-bookworm AS build
 WORKDIR /src
 COPY Cargo.toml Cargo.lock ./
+COPY crates/smw-globals crates/smw-globals
 COPY relay/Cargo.toml relay/
 COPY relay/src relay/src
 COPY src/common/file_io.rs src/common/file_io.rs

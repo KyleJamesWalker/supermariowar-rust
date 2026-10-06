@@ -1,0 +1,6 @@
+[package]
+name = "smw-globals"
+version = "0.1.0"
+edition.workspace = true
+description = "Super Mario War - the porting infrastructure: Ptr, Global, Aliased and the C++ inheritance macros"
+publish.workspace = true

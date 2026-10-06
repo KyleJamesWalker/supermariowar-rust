@@ -6,7 +6,7 @@ description = "Super Mario War - faithful Rust port"
 publish.workspace = true
 
 [workspace]
-members = ["relay"]
+members = ["crates/smw-globals", "relay"]
 
 [workspace.package]
 edition = "2021"
@@ -17,6 +17,7 @@ publish = false
 no_network = []
 
 [dependencies]
+smw-globals = { path = "crates/smw-globals" }
 sdl2 = { version = "0.38", features = ["image", "mixer"] }
 toml = "1.1"
 
