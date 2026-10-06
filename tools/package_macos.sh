@@ -65,6 +65,12 @@ for lib in "$frameworks"/*.dylib; do
     install_name_tool -add_rpath "@loader_path" "$lib" 2>/dev/null || true
 done
 
+# The newest minos of the binary and the bundled libs; Homebrew builds its bottles for the runner's macOS.
+minos="$(for f in "$app/Contents/MacOS/smw" "$frameworks"/*.dylib; do
+    otool -l "$f" | sed -n -e '/LC_BUILD_VERSION/,/minos/s/^ *minos //p' -e '/LC_VERSION_MIN_MACOSX/,/version/s/^ *version //p'
+done | sort -u -V | tail -n 1)"
+[[ -n "$minos" ]] || { echo "no minimum macOS version found" >&2; exit 1; }
+
 iconset="$(mktemp -d)/smw.iconset"
 mkdir -p "$iconset"
 for size in 16 32 128 256 512; do
@@ -87,7 +93,7 @@ cat > "$app/Contents/Info.plist" <<EOF
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>$version</string>
     <key>CFBundleVersion</key><string>$version</string>
-    <key>LSMinimumSystemVersion</key><string>12.0</string>
+    <key>LSMinimumSystemVersion</key><string>$minos</string>
     <key>NSHighResolutionCapable</key><true/>
 </dict>
 </plist>
@@ -100,4 +106,4 @@ if [[ -n "$leftover" ]]; then
     echo "$leftover" >&2
     exit 1
 fi
-echo "built $app"
+echo "built $app (macOS $minos or later)"
