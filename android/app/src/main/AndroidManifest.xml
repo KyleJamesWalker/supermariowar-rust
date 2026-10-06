@@ -19,6 +19,8 @@
 
         <!-- A phone's accelerometer would otherwise be joystick 0 and take player 1. -->
         <meta-data android:name="SDL_ENV.SDL_ACCELEROMETER_AS_JOYSTICK" android:value="0" />
+        <!-- Keyboards and remotes with a D-pad but no stick or hat would otherwise be joysticks and take player 1. -->
+        <meta-data android:name="SDL_ENV.SDL_TV_REMOTE_AS_JOYSTICK" android:value="0" />
         <meta-data android:name="SDL_ENV.SDL_IOS_ORIENTATIONS" android:value="LandscapeLeft LandscapeRight" />
         <meta-data android:name="SDL_ENV.SMW_PAD_TRANSLATE" android:value="1" />
 
