@@ -232,7 +232,7 @@ Where each input source goes:
 Replay format compatibility:
 
 - The version 1 line kinds (`down`/`up` key names, `jaxis`, `jbutton`, `jhat`, the `#@` directives, markers and checkpoints) stay byte-for-byte. Existing recordings, clips, `tools/replays` and `tools/checkpoint_fixtures` replay unchanged, and recordings made after the change still replay on the C++ harness.
-- The recorder writes only v1 lines for events that v1 can express. Touch keeps recording as keys, as it does now. Events that v1 cannot express (`PadAdded`/`PadRemoved` after frame 0, `Text`) are dropped in v1 recordings, as they are today. Recording them needs new line kinds (`jadd <dev> <guid> <name>`, `jremove <dev>`) behind a `#@ format=2` header. The C++ harness rejects unknown lines, so a v2 recording does not replay there. That trade-off is the same as for axis 6+ today (decision 5).
+- The recorder writes v1 lines for every event v1 can express. Touch records as keys. Pad hot-plug after frame 0 records as `jadd`/`jremove` lines (Rust only, decision 5), which the C++ harness cannot replay. `Text` events are still dropped.
 - The frame-0 `0 jhat <dev> 0 0` convention keeps declaring the pad count for v1 files.
 
 ### Audio: SDL2_mixer, SDL3_mixer and the virtual mixer
@@ -296,7 +296,7 @@ Decisions (maintainer, 2026-10-05):
 2. **The core owns all pixels.** Accepted. Per-backend goldens are not an option.
 3. **Default backend per platform.** SDL3 on desktop. SDL2 on muOS, web and Android until their SDL3 ports are proven.
 4. **Controller translation (`SMW_PAD_TRANSLATE`) becomes the default** on every platform at phase 7, because it changes desktop behavior. It stays opt-in until then.
-5. **Replay format version 2 lines (`jadd`, `jremove`, text).** Deferred. Nothing needs them yet, v1 already drops those events, and a v2 file cannot replay on the C++ harness. Revisit when phase 3 hot-plug produces a recording worth keeping.
+5. **Hot-plug replay lines are adopted.** `<frame> jadd <dev>` and `<frame> jremove <dev>` (`REPLAY.md`) landed with the Android gamepad work (PR #20) and stay. They are written only when a pad connects or disconnects mid-session with `SMW_PAD_TRANSLATE=1`, so other recordings still replay on the C++ harness; `replay_compare.sh` refuses the ones that have them. No `#@ format=2` header is used. Text-input lines remain deferred.
 6. **Web touch controls move into the core** after phase 4, once the core already draws the Android overlay. One layout and one hit test, and the web replay tests can then exercise touch.
 7. **Netplay stays host-authoritative** through phase 7. Lockstep or rollback is decided once `Game` is a value (phase 5) and cross-platform determinism is CI-enforced (phase 6). Browser and native clients still cannot play together (the relay speaks WebSocket and native clients speak ENet); that is a separate transport question.
 8. **`libz-sys` is replaced by `miniz_oxide`.** It can land at any time. The only compressed bytes written are checkpoint lines in recordings, and every reader, including the C++ harness, only inflates. This also removes the Emscripten zlib special case in `file_compressor.rs`.
