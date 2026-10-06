@@ -23,6 +23,9 @@
         <meta-data android:name="SDL_ENV.SDL_TV_REMOTE_AS_JOYSTICK" android:value="0" />
         <meta-data android:name="SDL_ENV.SDL_IOS_ORIENTATIONS" android:value="LandscapeLeft LandscapeRight" />
         <meta-data android:name="SDL_ENV.SMW_PAD_TRANSLATE" android:value="1" />
+        <meta-data android:name="SDL_ENV.SMW_TOUCH" android:value="1" />
+        <!-- Touches drive the on-screen controls only; as mouse clicks they would also hit the menus. -->
+        <meta-data android:name="SDL_ENV.SDL_TOUCH_MOUSE_EVENTS" android:value="0" />
 
         <activity android:name="MainActivity"
             android:label="@string/app_name"

@@ -364,6 +364,9 @@ pub fn translate(event: &mut SDL_Event) -> bool {
     use SDL_EventType::*;
     unsafe {
         log_event(0, event);
+        if !crate::smw::touch::filter(event) {
+            return false;
+        }
         let t = event.type_;
         let keep = if t == SDL_CONTROLLERBUTTONDOWN as u32 || t == SDL_CONTROLLERBUTTONUP as u32 || t == SDL_CONTROLLERAXISMOTION as u32 {
             !pads.iter().any(|p| p.controller)

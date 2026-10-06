@@ -69,6 +69,8 @@ struct Harness {
     /// `jadd`/`jremove` lines: (frame, device, added).
     devices: Vec<(u32, i32, bool)>,
     nextDevice: usize,
+    /// `#@ touch=1`: the session had Android's touch controls.
+    touch: bool,
     replay: bool,
     nextEvent: usize,
     frame: u32,
@@ -101,6 +103,7 @@ static mut h: Harness = Harness {
     joysticks: 0,
     devices: Vec::new(),
     nextDevice: 0,
+    touch: false,
     replay: false,
     nextEvent: 0,
     frame: 0,
@@ -167,6 +170,9 @@ fn load_events(path: &str) -> Vec<ReplayEvent> {
         let lineno = i + 1;
         let line = raw.strip_suffix('\r').unwrap_or(raw);
         let trimmed = line.trim_start_matches([' ', '\t']);
+        if let Some(value) = trimmed.strip_prefix("#@ touch=") {
+            unsafe { h.touch = value.trim() == "1" };
+        }
         if trimmed.is_empty() || trimmed.starts_with('#') {
             continue;
         }
@@ -505,6 +511,18 @@ pub fn replay_joysticks() -> Option<i16> {
         }
     }
     None
+}
+
+/// Marks the recording as made with Android's touch controls on, before its first frame.
+pub fn record_touch() {
+    if let Some(r) = rec().filter(|r| r.live) {
+        let _ = writeln!(r.out, "#@ touch=1");
+    }
+}
+
+/// Whether the replay was recorded with Android's touch controls on (`touch::touch_first`).
+pub fn replay_touch() -> bool {
+    unsafe { h.replay && h.touch }
 }
 
 pub fn replaying() -> bool {
@@ -1010,6 +1028,8 @@ fn record_frame_start(frame: u32) {
 /// number so the replay's frame start leaves it for the replay's own blocking wait.
 fn record_wait_event(event: &mut SDL_Event) {
     loop {
+        #[cfg(not(target_os = "emscripten"))]
+        crate::smw::touch::flush();
         let Some(r) = rec() else { return };
         push_live_script(r, unsafe { h.frame } + 1);
         unsafe { SDL_PumpEvents() };

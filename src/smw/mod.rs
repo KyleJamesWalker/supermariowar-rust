@@ -11,6 +11,8 @@ pub mod net_outcomes;
 pub mod net_random;
 #[cfg(not(target_os = "emscripten"))]
 pub mod pad;
+#[cfg(not(target_os = "emscripten"))]
+pub mod touch;
 pub mod object_container;
 pub mod objectgame;
 pub mod objecthazard;

@@ -85,6 +85,8 @@ When the replay has joystick lines, `harness::init` attaches `max(dev) + 1` virt
 
 `<frame> jadd <dev>` and `<frame> jremove <dev>` (Rust only, not in the C++) connect and disconnect joystick `<dev>` before frame `<frame>` runs: a pad hot-plugged in a session with `SMW_PAD_TRANSLATE=1` (`PROGRESS.md`, Deliberate deviations). A device whose first line is `jadd` is left out of the joysticks attached at launch; `jadd` attaches a virtual joystick as index `<dev>` (in the browser, it raises `joystickcount`), `jremove` closes it, and once no match is on the players are reassigned as at launch, as in the session. A segment replay attaches every joystick the replay uses at launch and ignores these lines, since a match never reassigns players. `replay_compare.sh` refuses recordings with them (exit 2).
 
+`#@ touch=1` (Rust only) marks a session recorded with Android's touch controls, which change how `assign_inputs` gives out players (`android/README.md`, Touch controls); a replay of it assigns them the same way. The touch controls themselves record as ordinary key lines.
+
 Binding a control in the Controls menu blocks in `MI_InputControlField::SendInput` until input arrives. With a replay loaded, that wait calls `harness::waitEvent` instead of `SDL_WaitEvent`:
 
 1. It returns the next unconsumed replay event in file order, whatever its frame number, built exactly as `frameStart` would push it. The frame counter does not advance, as in the real game.

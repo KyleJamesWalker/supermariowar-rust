@@ -204,6 +204,8 @@ impl GraphicsSDL {
             );
             SDL_RenderClear(self.sdl_renderer);
             SDL_RenderCopy(self.sdl_renderer, self.sdl_screen_texture, null(), null());
+            #[cfg(not(target_os = "emscripten"))]
+            crate::smw::touch::draw(self.sdl_renderer);
             SDL_RenderPresent(self.sdl_renderer);
         }
     }

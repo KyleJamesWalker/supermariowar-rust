@@ -2,7 +2,7 @@
 
 `SuperMarioWar-<version>.apk` is a debug-signed APK for Android 5.0 (API 21) and newer on arm64-v8a, armeabi-v7a and x86_64. `.github/workflows/build_android.yml` builds it, plays replays on an x86_64 emulator, and uploads it as the `smw-android-apk` artifact.
 
-This version needs a gamepad or a keyboard. It has no on-screen controls; see [Touch controls](#touch-controls).
+It plays with on-screen touch controls, a gamepad or a keyboard; see [Controls](#controls) and [Touch controls](#touch-controls).
 
 ## Install
 
@@ -34,7 +34,12 @@ The manifest also turns off SDL's accelerometer joystick, which would otherwise 
 
 ## Touch controls
 
-Upstream's Android port has no on-screen controls, and this build adds none. A follow-up could reuse the web build's touch overlay design (`web/touch.js`, which presses player 1's keyboard keys) as a native layer drawn by the game or as an Android view over `SDLSurface` that injects key events.
+Upstream's Android port has no on-screen controls. Here the manifest sets `SMW_TOUCH=1`, and the game draws controls in the black bars beside the 4:3 picture (`src/smw/touch.rs`), laid out like the web build's (`web/touch.js`): a D-pad bottom left, Jump, Run and Item bottom right, Back and Start at the top. They press player 1's default keys, so a recording holds ordinary key input and replays exactly. Every finger is tracked on its own, so a direction, Run and Jump can be held together, and a thumb between two buttons presses both. Keys are released when the finger lifts, the touch is cancelled or the app loses focus.
+
+- **D-pad or stick.** The button under Back switches between the D-pad (the default) and a floating stick: touching anywhere left of the picture puts the stick under the thumb, dragging presses up to two directions past a small dead zone, and the stick follows a thumb that goes past its edge. The choice is kept in `touch_controls.txt` in the settings directory.
+- **Players.** With no pad at launch the touch controls are player 1 and pads connected later take the next players. With a pad at launch the pad is player 1 and the touch controls player 2. The keyboard sets get no other player, and the remaining players are bots, as with `SMW_NO_KEYBOARD`. A recording made with touch controls says so (`#@ touch=1`), so its replay assigns players the same way.
+- **Hiding.** The controls fade out at the first pad or keyboard input, return at the next touch, and start hidden when a pad is connected at launch.
+- Touches do not reach the game as mouse clicks (`SDL_TOUCH_MOUSE_EVENTS=0`).
 
 ## Build
 
