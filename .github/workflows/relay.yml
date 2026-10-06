@@ -36,6 +36,10 @@ permissions:
   contents: read
   packages: write
 
+concurrency:
+  group: relay-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   relay:
     uses: ./.github/workflows/build_relay.yml
