@@ -4,12 +4,13 @@ use crate::common::global::{joystickcount, joysticks};
 use sdl2::sys::{
     SDL_Event, SDL_EventFilter, SDL_EventType, SDL_GameController, SDL_GameControllerAddMapping, SDL_GameControllerAxis, SDL_GameControllerBindType, SDL_GameControllerButton,
     SDL_GameControllerButtonBind, SDL_GameControllerClose, SDL_GameControllerGetBindForAxis, SDL_GameControllerGetBindForButton, SDL_GameControllerMappingForDeviceIndex, SDL_GameControllerOpen,
-    SDL_GetError, SDL_GetEventFilter, SDL_InitSubSystem, SDL_IsGameController, SDL_Joystick, SDL_JoystickGetGUID, SDL_JoystickGetGUIDString, SDL_JoystickInstanceID,
+    SDL_GetError, SDL_GetEventFilter, SDL_InitSubSystem, SDL_IsGameController, SDL_Joystick, SDL_JoystickClose, SDL_JoystickGetAttached,
+    SDL_JoystickGetDeviceInstanceID, SDL_JoystickGetGUID, SDL_JoystickOpen, SDL_JoystickGetGUIDString, SDL_JoystickInstanceID,
     SDL_JoystickNameForIndex, SDL_JoystickNumAxes, SDL_JoystickNumButtons, SDL_JoystickNumHats, SDL_NumJoysticks, SDL_SetEventFilter, SDL_bool, SDL_free, SDL_HAT_DOWN,
     SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP, SDL_INIT_GAMECONTROLLER,
 };
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU32, AtomicU64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, AtomicUsize, Ordering};
 use std::ffi::{CStr, CString};
 
 /// Joystick button per controller button, in `SDL_GameControllerButton` order up to the right shoulder; -1 is handled apart.
@@ -84,6 +85,10 @@ static mut pads: Vec<Pad> = Vec::new();
 static mut translate_on: bool = false;
 static mut debug_input: bool = false;
 static mut logged: [u32; 3] = [0; 3];
+static HOTPLUG: AtomicBool = AtomicBool::new(false);
+static GENERATION: AtomicU32 = AtomicU32::new(0);
+/// The replay format's device limit.
+const MAX_JOYSTICKS: usize = 8;
 
 /// Logs every open joystick; with `translate`, reads the game controllers among them through their mapping.
 pub fn init(translate: bool) {
@@ -118,7 +123,7 @@ pub fn init(translate: bool) {
         // The recorder's filter calls translate itself.
         let mut current: SDL_EventFilter = None;
         let mut userdata = std::ptr::null_mut();
-        if (debug_input || pads.iter().any(|p| p.controller)) && SDL_GetEventFilter(&mut current, &mut userdata) == SDL_bool::SDL_FALSE {
+        if (debug_input || translate || pads.iter().any(|p| p.controller)) && SDL_GetEventFilter(&mut current, &mut userdata) == SDL_bool::SDL_FALSE {
             SDL_SetEventFilter(Some(filter), std::ptr::null_mut());
         }
     }
@@ -168,6 +173,72 @@ unsafe fn open_pad(device: i32, js: *mut SDL_Joystick, index: usize) -> Pad {
         println!("[pad]   buttons {:?} hats {:?} axes {:?} dpad axes {:?}", pad.buttons, pad.hats, pad.axes, pad.dpad_axes);
     }
     pad
+}
+
+/// With `SMW_PAD_TRANSLATE`, opens joysticks connected since the last call and closes removed ones. A new one
+/// takes the first free index, so a pad that reconnects gets its index back. True when one was opened.
+pub fn hotplug() -> bool {
+    unsafe {
+        if !translate_on || !HOTPLUG.swap(false, Ordering::Relaxed) {
+            return false;
+        }
+        for index in 0..joystickcount.max(0) as usize {
+            let js = *joysticks.add(index);
+            if !js.is_null() && SDL_JoystickGetAttached(js) == SDL_bool::SDL_FALSE {
+                println!("[pad] joystick {} removed", index);
+                SDL_JoystickClose(js);
+                *joysticks.add(index) = std::ptr::null_mut();
+                pads.retain(|p| p.index != index);
+                GENERATION.fetch_add(1, Ordering::Relaxed);
+            }
+        }
+        let mut added = false;
+        for device in 0..SDL_NumJoysticks().max(0) {
+            let instance = SDL_JoystickGetDeviceInstanceID(device);
+            let open = (0..joystickcount.max(0) as usize).any(|i| {
+                let js = *joysticks.add(i);
+                !js.is_null() && SDL_JoystickInstanceID(js) == instance
+            });
+            if open {
+                continue;
+            }
+            let Some(index) = free_index() else {
+                continue;
+            };
+            let js = SDL_JoystickOpen(device);
+            if js.is_null() {
+                continue;
+            }
+            *joysticks.add(index) = js;
+            pads.push(open_pad(device, js, index));
+            GENERATION.fetch_add(1, Ordering::Relaxed);
+            added = true;
+        }
+        added
+    }
+}
+
+/// Changes whenever `hotplug` opens or closes a joystick.
+pub fn generation() -> u32 {
+    GENERATION.load(Ordering::Relaxed)
+}
+
+/// The first empty slot in `joysticks`, growing it by one when every slot is taken.
+unsafe fn free_index() -> Option<usize> {
+    let count = joystickcount.max(0) as usize;
+    if let Some(i) = (0..count).find(|&i| (*joysticks.add(i)).is_null()) {
+        return Some(i);
+    }
+    if count >= MAX_JOYSTICKS {
+        return None;
+    }
+    let mut grown = vec![std::ptr::null_mut::<SDL_Joystick>(); count + 1];
+    for (i, slot) in grown.iter_mut().enumerate().take(count) {
+        *slot = *joysticks.add(i);
+    }
+    joysticks = Box::leak(grown.into_boxed_slice()).as_mut_ptr();
+    joystickcount = (count + 1) as i16;
+    Some(count)
 }
 
 /// The raw input behind each controller button and axis. SDL2 derives controller events from raw joystick events in
@@ -271,6 +342,9 @@ pub fn translate(event: &mut SDL_Event) -> bool {
         } else if t == SDL_JOYBALLMOTION as u32 {
             pad(event.jball.which).is_none()
         } else {
+            if t == SDL_JOYDEVICEADDED as u32 || t == SDL_JOYDEVICEREMOVED as u32 {
+                HOTPLUG.store(true, Ordering::Relaxed);
+            }
             true
         };
         if keep {

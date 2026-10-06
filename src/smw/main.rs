@@ -161,6 +161,8 @@ unsafe extern "C-unwind" fn gameloop_frame() {
     phase(1);
     FPSLimiter::instance().frame_start();
 
+    #[cfg(not(target_os = "emscripten"))]
+    assign_hotplugged();
     harness::frame_start();
     phase(5);
     GameStateManager::instance().currentState.get().update();
@@ -305,6 +307,22 @@ fn assign_inputs() {
             };
             game_values.playerInput.inputControls[p] = Ptr::from_mut(control);
             game_values.playercontrol[p] = 1;
+        }
+    }
+}
+
+/// Not in upstream: a pad connected after launch (`pad::hotplug`) gets a player as at launch, once no match is on.
+#[cfg(not(target_os = "emscripten"))]
+fn assign_hotplugged() {
+    static mut pending: bool = false;
+    unsafe {
+        if crate::smw::pad::hotplug() {
+            pending = true;
+        }
+        let playing = GameStateManager::instance().currentState.addr() == crate::smw::gs_gameplay::GameplayState::instance() as *mut _ as usize;
+        if pending && !playing {
+            pending = false;
+            assign_inputs();
         }
     }
 }
