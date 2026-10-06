@@ -363,7 +363,10 @@ jobs:
     env:
       JOBS: '4'
       SDL_RENDER_DRIVER: software
+      CARD: S
     steps:
+      # The goldens' text files are compared byte for byte.
+      - run: git config --global core.autocrlf false
       - uses: actions/checkout@v7
         with:
           submodules: recursive
@@ -380,6 +383,16 @@ jobs:
           printf '#!/bin/sh\nexec python "$@"\n' > "$RUNNER_TEMP/bin/python3"
           chmod +x "$RUNNER_TEMP/bin/python3"
           cygpath -w "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - uses: ./.github/actions/fat32-card
+        with:
+          path: ${{ env.CARD }}
+
+      - name: Data on the FAT32 card
+        run: |
+          python tools/apfs_order.py data "$CARD:/data"
+          echo "SMW_DATA_DIR=$CARD:/data" >> "$GITHUB_ENV"
+          echo "TMPDIR=$CARD:/tmp" >> "$GITHUB_ENV"
 
       - name: Game parity
         id: game
