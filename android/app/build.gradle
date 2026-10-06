@@ -11,6 +11,17 @@ android {
         versionCode project.property('smwVersionCode') as int
         versionName project.property('smwVersionName')
     }
+    signingConfigs {
+        debug {
+            def keystore = System.getenv('SMW_DEBUG_KEYSTORE')
+            if (keystore) {
+                storeFile file(keystore)
+                storePassword System.getenv('SMW_DEBUG_KEYSTORE_PASSWORD')
+                keyAlias 'smw-debug'
+                keyPassword System.getenv('SMW_DEBUG_KEYSTORE_PASSWORD')
+            }
+        }
+    }
     sourceSets.main {
         jniLibs.srcDir 'libs'
     }

@@ -57,6 +57,7 @@ jobs:
   android:
     needs: version
     uses: ./.github/workflows/build_android.yml
+    secrets: inherit
     with:
       version: ${{ needs.version.outputs.version }}
 
