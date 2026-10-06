@@ -1,4 +1,4 @@
-# Golden parity, macOS arm64, Release with build-reference.sh flags. before = harness-latest (d7c59e1f), after = + the six PR2 commits.
+# Golden parity, macOS arm64, Release with build-reference.sh flags. before = harness-latest (d7c59e1f: upstream 5693918f + replay hooks + PR 480's multi star and ranking fixes), after = + the six PR2 commits.
 # Game: run exit | dump vs tools/golden | screenshot sets (diffreplay --shots exit). Editor: dump, screenshots, saved files.
 
 ## before
@@ -126,4 +126,4 @@ worldedit/sync_coverage rc=0 | OK: 271 frames identical | shots 22/22 | files 2/
 ## The Rust port models the uninitialized quantity as 0 (src/smw/objects/overmap/wo_race_goal.rs), which matched the C++ golden.
 
 ## Map sweep: all 290 replays in tools/replays_sweep vs tools/golden_sweep: 290/290 dumps identical with the first five commits, and again 290/290 with all six.
-## CI: run 37405562110 on a8bae9af and run 37411503740 on 89d2e96b, all success (Android skipped, as upstream).
+## CI: runs 37405562110 (a8bae9af), 37411503740 (89d2e96b) and 37413239556 (fa91633d, final), all success (Android skipped, as upstream).

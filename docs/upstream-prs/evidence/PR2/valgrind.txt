@@ -1,4 +1,5 @@
-# PR2 valgrind evidence. Linux arm64 container (Ubuntu 24.04, clang 18, SDL 2.30), harness-latest (d7c59e1f, upstream c7056790 + replay hooks),
+# PR2 valgrind evidence. Linux arm64 container (Ubuntu 24.04, clang 18, SDL 2.30), harness-latest (d7c59e1f: upstream 5693918f + replay hooks + CORE-MATH trig + PR 480's multi star and ranking fixes;
+# its other three PR 480 fixes touch only the boss minigame and the world editor),
 # Release -O3 -g, run with valgrind --track-origins=yes under SDL dummy video/audio and the software renderer.
 # before = harness-latest, after = + the commits of fix/uninitialized-reads (cpu_race: all six; the other runs: the first five, which cover their reports). Each block: count, error, top frames, origin.
 
