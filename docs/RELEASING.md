@@ -11,7 +11,7 @@ Pushing a `v*` tag publishes a GitHub Release: `.github/workflows/release.yml` b
 | `SuperMarioWar-<tag>-windows-x86_64.zip` | `build_windows.yml` | the four `.exe` files, SDL2 DLLs and licenses, `data/` |
 | `SuperMarioWar-<tag>-web.zip` | `build_web.yml` | the `tools/package_web.sh` bundle for any static web server |
 | `SuperMarioWar-<tag>.muxapp` | `build_muxapp.yml` | the muOS package (`device/muos/README.md`) |
-| `SuperMarioWar-<tag>.apk` | `build_android.yml` | the debug-signed Android APK (`android/README.md`) |
+| `SuperMarioWar-<tag>.apk` | `build_android.yml` | the Android APK, signed with the project's debug key from the repository secrets (`android/README.md`, Install) |
 | `SHA256SUMS` | `release.yml` | checksums of the files above |
 
 ## Cutting a release

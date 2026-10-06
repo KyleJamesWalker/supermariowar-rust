@@ -49,8 +49,7 @@ rm -rf "$project"/app/src/main/res/mipmap-*
 cp "$repo/android/build.gradle" "$project/"
 cp "$repo/android/gradle/wrapper/gradle-wrapper.properties" "$project/gradle/wrapper/"
 cp -R "$repo/android/app/." "$project/app/"
-mkdir -p "$project/app/src/main/res/mipmap-mdpi"
-cp "$repo/resources/smw.png" "$project/app/src/main/res/mipmap-mdpi/ic_launcher.png"
+python3 "$repo/android/make_icons.py" "$repo/resources/smw.png" "$project/app/src/main/res"
 
 mkdir -p "$project/app/src/main/assets"
 rsync -a --exclude .git "$repo/data/" "$project/app/src/main/assets/data/"

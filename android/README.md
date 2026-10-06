@@ -6,7 +6,9 @@ It plays with on-screen touch controls, a gamepad or a keyboard; see [Controls](
 
 ## Install
 
-Allow installs from unknown sources, then open the APK on the device, or run `adb install SuperMarioWar-<version>.apk`. The APK is signed with a throwaway debug key, so installing a build from another machine over an existing one fails with a signature mismatch: uninstall first, which deletes settings and recordings.
+Allow installs from unknown sources, then open the APK on the device, or run `adb install SuperMarioWar-<version>.apk`.
+
+CI artifacts and releases are signed with the project's debug key, which the workflow decodes from the repository secrets `ANDROID_DEBUG_KEYSTORE_B64` and `ANDROID_DEBUG_KEYSTORE_PASSWORD` (key alias `smw-debug`), so each one installs over the last and keeps settings and recordings. A local build uses that key when `SMW_DEBUG_KEYSTORE` (the keystore file) and `SMW_DEBUG_KEYSTORE_PASSWORD` are set, and the standard `~/.android/debug.keystore` otherwise. Without the secrets (a fork's pull request, say) CI signs with a throwaway key and warns. An APK signed with a different key does not install over an existing one: uninstall first, which deletes settings and recordings. The workflow summary prints each APK's signing certificate (SHA-256). A release key for a store listing is not set up yet.
 
 ## Layout
 
@@ -18,7 +20,7 @@ Upstream's Android port ([mmatyas/supermariowar-android](https://github.com/mmat
 | Game | the `smw` library as `libmain.so`, exporting `SDL_main` (`src/android.rs`), built with cargo-ndk |
 | SDL2, SDL2_image, SDL2_mixer | built from checksummed release tarballs with CMake and the NDK (`build-sdl-libs.sh`), PNG and OGG through stb as on muOS |
 | ENet, zlib | ENet built by `enet-sys`; the system `libz.so` |
-| Icon | `resources/smw.png` (32x32) |
+| Icon | `resources/smw.png` (32x32), scaled by whole numbers with nearest neighbour to every mipmap density, plus an adaptive icon on the sky blue of its frame (`make_icons.py`, run by `build.sh`) |
 
 ## Data and settings
 
@@ -44,7 +46,7 @@ Upstream's Android port has no on-screen controls. Here the manifest sets `SMW_T
 
 ## Build
 
-Needs the Android SDK (`ANDROID_HOME`) with NDK 27.2.12479018 (`ANDROID_NDK_HOME`) and build-tools 35 or newer, JDK 17, CMake, rsync, `cargo install cargo-ndk`, and the Rust targets:
+Needs the Android SDK (`ANDROID_HOME`) with NDK 27.2.12479018 (`ANDROID_NDK_HOME`) and build-tools 35 or newer, Python 3, JDK 17, CMake, rsync, `cargo install cargo-ndk`, and the Rust targets:
 
 ```sh
 rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android

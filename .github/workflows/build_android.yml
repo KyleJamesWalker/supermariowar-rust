@@ -7,6 +7,11 @@ on:
         description: Version in the file names (default the short commit)
         type: string
         default: ''
+    secrets:
+      ANDROID_DEBUG_KEYSTORE_B64:
+        required: false
+      ANDROID_DEBUG_KEYSTORE_PASSWORD:
+        required: false
   workflow_dispatch:
 
 permissions:
@@ -66,7 +71,20 @@ jobs:
             ~/.gradle/wrapper
           key: android-gradle-${{ hashFiles('android/**/*.gradle', 'android/gradle/**', 'android/build-sdl-libs.sh') }}
 
+      - name: Debug signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_B64 }}
+        run: |
+          if [[ -z "$KEYSTORE_B64" ]]; then
+            echo "::warning::ANDROID_DEBUG_KEYSTORE_B64 is not set, so this APK is signed with a throwaway key and will not install over other builds."
+            exit 0
+          fi
+          base64 -d <<< "$KEYSTORE_B64" > "$RUNNER_TEMP/smw-debug.keystore"
+          echo "SMW_DEBUG_KEYSTORE=$RUNNER_TEMP/smw-debug.keystore" >> "$GITHUB_ENV"
+
       - name: Build
+        env:
+          SMW_DEBUG_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_DEBUG_KEYSTORE_PASSWORD }}
         run: android/build.sh $ABIS
 
       - id: name
@@ -86,6 +104,7 @@ jobs:
             echo '### Android'
             echo '```'
             echo "$(basename "$APK"): $(du -h "$APK" | cut -f1)"
+            "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$APK" | grep 'SHA-256'
             unzip -l "$APK" 'lib/*'
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
