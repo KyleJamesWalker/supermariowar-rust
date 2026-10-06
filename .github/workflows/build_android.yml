@@ -38,7 +38,7 @@ jobs:
 
       - uses: android-actions/setup-android@v3
         with:
-          packages: ndk;${{ env.NDK_VERSION }} platforms;android-34 build-tools;34.0.0
+          packages: ndk;${{ env.NDK_VERSION }} platforms;android-34 build-tools;34.0.0 build-tools;35.0.0
 
       - name: Point at the NDK
         run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
@@ -64,7 +64,7 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: android-gradle-${{ hashFiles('android/**/*.gradle', 'android/build-sdl-libs.sh') }}
+          key: android-gradle-${{ hashFiles('android/**/*.gradle', 'android/gradle/**', 'android/build-sdl-libs.sh') }}
 
       - name: Build
         run: android/build.sh $ABIS
