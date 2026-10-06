@@ -13,10 +13,14 @@
     clippy::all
 )]
 
+#[macro_use]
+extern crate smw_globals;
+pub use smw_globals::{enum_from_u8, impl_base};
+
 pub mod globals;
 
 pub mod common;
-pub mod common_netplay;
+pub use smw_netplay::{common_netplay, net_package};
 pub mod smw;
 pub mod leveleditor;
 pub mod worldeditor;
