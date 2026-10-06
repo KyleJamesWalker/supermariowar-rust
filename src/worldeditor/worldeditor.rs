@@ -10,6 +10,7 @@ use crate::common::file_io::BinaryFile;
 use crate::common::file_list::{FiltersList, GraphicsList, WorldList};
 use crate::common::game::ensure_settings_dir;
 use crate::common::game_mode::{game_mode_owned, GAMEMODE_LAST, GAMEMODE_NUM_OPTIONS};
+use crate::common::game_mode_settings_serialization::serialize_gms;
 use crate::common::game_values::{controlkeys, TITLESTRING};
 use crate::common::gfx::color::colors;
 use crate::common::gfx::gfx_font::gfxFont;
@@ -3299,17 +3300,16 @@ pub fn SaveStage(iEditStage: i16) {
     unsafe {
         let mut ts = game_values.tourstops[iEditStage as usize];
 
-        //Set the number of game mode settings to the maximum so we write them all out
-        ts.fUseSettings = true;
-        // Bonus house and minigame modes (24-27) read past the C++ array into unrelated globals.
-        ts.iNumUsedSettings = g_iNumGameModeSettings.get(ts.iMode as usize).copied().unwrap_or(0);
-
-        //Copy the working values back into the structure that will be saved
-        ts.gmsSettings = game_values.gamemodemenusettings.clone();
-
         if ts.iMode >= 25 && ts.iMode <= 27 {
             ts.iMode += 975;
         }
+
+        //Set the number of game mode settings to the maximum so we write them all out
+        ts.fUseSettings = true;
+        ts.iNumUsedSettings = serialize_gms(ts.iMode, &game_values.gamemodemenusettings).len() as i16;
+
+        //Copy the working values back into the structure that will be saved
+        ts.gmsSettings = game_values.gamemodemenusettings.clone();
     }
 }
 
