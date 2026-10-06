@@ -38,7 +38,7 @@ permissions:
 
 concurrency:
   group: relay-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
   relay:
