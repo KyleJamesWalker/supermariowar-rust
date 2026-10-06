@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - relay/**
+      - Cargo.toml
+      - Cargo.lock
       - src/common/file_io.rs
       - src/common_netplay/**
       - src/globals/**
@@ -17,6 +19,8 @@ on:
   pull_request:
     paths:
       - relay/**
+      - Cargo.toml
+      - Cargo.lock
       - src/common/file_io.rs
       - src/common_netplay/**
       - src/globals/**

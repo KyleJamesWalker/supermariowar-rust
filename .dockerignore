@@ -1,6 +1,7 @@
 *
+!Cargo.toml
+!Cargo.lock
 !relay/Cargo.toml
-!relay/Cargo.lock
 !relay/src
 !src/common/file_io.rs
 !src/common_netplay

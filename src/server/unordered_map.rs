@@ -401,8 +401,7 @@ mod tests {
 
     #[test]
     fn matches_libcxx_iteration_order() {
-        let here = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(file!());
-        let expected = std::fs::read_to_string(here.parent().unwrap().join("../../tools/ref/unordered_map_order.txt")).unwrap();
+        let expected = include_str!("../../tools/ref/unordered_map_order.txt");
         let mut rng = Lcg(12345);
         let mut out = String::new();
         run::<u32>(&mut rng, &mut out, "u32rand", 200, 900, false);

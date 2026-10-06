@@ -1,15 +1,18 @@
 # smw_relay, the netplay lobby and WebSocket relay for the browser build (docs/RELAY.md).
 FROM rust:1.94-slim-bookworm AS build
 WORKDIR /src
-COPY relay/Cargo.toml relay/Cargo.lock relay/
+COPY Cargo.toml Cargo.lock ./
+COPY relay/Cargo.toml relay/
 COPY relay/src relay/src
 COPY src/common/file_io.rs src/common/file_io.rs
 COPY src/common_netplay src/common_netplay
 COPY src/globals src/globals
 COPY src/server src/server
-RUN cargo build --release --locked --manifest-path relay/Cargo.toml \
+# Cargo needs a target for every workspace member; the game itself is not built here.
+RUN touch src/main.rs \
+    && cargo build --release --locked --package smw_relay \
     && mkdir -p /out/srv \
-    && cp relay/target/release/smw_relay /out/ \
+    && cp target/release/smw_relay /out/ \
     && ln -s /dev/null /out/srv/serverlog.txt
 
 FROM gcr.io/distroless/cc-debian12:nonroot
