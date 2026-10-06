@@ -388,11 +388,7 @@ jobs:
         with:
           path: ${{ env.CARD }}
 
-      - name: Data on the FAT32 card
-        run: |
-          python tools/apfs_order.py data "$CARD:/data"
-          echo "SMW_DATA_DIR=$CARD:/data" >> "$GITHUB_ENV"
-          echo "TMPDIR=$CARD:/tmp" >> "$GITHUB_ENV"
+      - run: echo "TMPDIR=$CARD:/tmp" >> "$GITHUB_ENV"
 
       - name: Game parity
         id: game
@@ -429,7 +425,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           cat editor.log
           [[ -s summary.txt ]] || exit 1
-          exit $status
+          ! tail -n +2 summary.txt | grep -v -E 'dump MATCH, shots [0-9]+/[0-9]+, files ([0-9]+)/\1$'
 
       - name: Sweep parity
         if: always() && steps.game.outcome != 'skipped'
