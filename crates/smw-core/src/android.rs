@@ -6,29 +6,12 @@ use std::os::fd::FromRawFd;
 use std::sync::Mutex;
 
 extern "C" {
-    fn SDL_AndroidGetExternalStoragePath() -> *const c_char;
-    fn SDL_AndroidGetInternalStoragePath() -> *const c_char;
     fn __android_log_write(prio: c_int, tag: *const c_char, text: *const c_char) -> c_int;
     fn pipe(fds: *mut c_int) -> c_int;
     fn dup2(old: c_int, new: c_int) -> c_int;
 }
 
 const ANDROID_LOG_INFO: c_int = 4;
-
-/// The app's external files directory, as upstream's `$EXTERNAL_STORAGE/supermariowar`; internal storage when it
-/// is unavailable. MainActivity extracts the APK's data/ there.
-pub fn storage_path() -> String {
-    unsafe {
-        let mut path = SDL_AndroidGetExternalStoragePath();
-        if path.is_null() {
-            path = SDL_AndroidGetInternalStoragePath();
-        }
-        if path.is_null() {
-            return ".".to_string();
-        }
-        CStr::from_ptr(path).to_string_lossy().into_owned()
-    }
-}
 
 static LOG_FILE: Mutex<Option<std::fs::File>> = Mutex::new(None);
 
@@ -46,7 +29,7 @@ fn log_line(line: &[u8]) {
 /// stdout and stderr go nowhere on Android, so forward their lines to `log_line`, which a file manager can
 /// reach as Android/data/<package>/files/log.txt. A panic is logged before the process aborts.
 fn redirect_output() {
-    if let Ok(file) = std::fs::File::create(format!("{}/log.txt", storage_path())) {
+    if let Ok(file) = std::fs::File::create(format!("{}/log.txt", smw_sdl2::android_storage_path())) {
         *LOG_FILE.lock().unwrap_or_else(|e| e.into_inner()) = Some(file);
     }
     std::panic::set_hook(Box::new(|info| {

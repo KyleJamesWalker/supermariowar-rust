@@ -18,7 +18,6 @@ use crate::smw::network::network_layer::NetworkLayer;
 use crate::smw::network::protocol_game_packages as gpkgs;
 use crate::smw::objectgame::PowerupType;
 use crate::smw::ui::network_list_scroll::MI_NetworkListScroll;
-use sdl2::sys::SDL_GetTicks;
 use std::collections::VecDeque;
 use std::path::Path;
 use std::time::SystemTime;
@@ -159,7 +158,7 @@ fn net_player(id: u8) -> Ptr<crate::smw::player::CPlayer> {
 }
 
 fn ticks() -> u32 {
-    unsafe { SDL_GetTicks() }
+    crate::services::ticks()
 }
 
 pub fn net_init() -> bool {

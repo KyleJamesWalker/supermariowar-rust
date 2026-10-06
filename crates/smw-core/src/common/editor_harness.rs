@@ -7,7 +7,7 @@
 use crate::common::random_number_generator::{RandomNumberGenerator, RandomNumberGeneratorType};
 use crate::globals::*;
 use sdl2::sys::{
-    SDL_Delay, SDL_Event, SDL_EventType, SDL_GetError, SDL_GetKeyFromName, SDL_GetScancodeFromKey, SDL_KeyCode, SDL_Keymod, SDL_PushEvent, SDL_RWFromFile, SDL_SaveBMP_RW,
+    SDL_Event, SDL_EventType, SDL_GetError, SDL_GetKeyFromName, SDL_GetScancodeFromKey, SDL_KeyCode, SDL_Keymod, SDL_PushEvent, SDL_RWFromFile, SDL_SaveBMP_RW,
     SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT, SDL_PRESSED, SDL_RELEASED,
 };
 use std::collections::BTreeSet;
@@ -393,7 +393,7 @@ pub fn frame_delay(delay: u32) {
         }
 
         if !h.noLimit {
-            SDL_Delay(delay);
+            crate::services::delay(delay);
         }
     }
 }

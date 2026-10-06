@@ -1,16 +1,6 @@
 fn main() {
-    if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("emscripten") {
-        return;
-    }
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("android") {
         android_link_args();
-        return;
-    }
-
-    for dir in ["/opt/homebrew/lib", "/usr/local/lib"] {
-        if std::path::Path::new(dir).exists() {
-            println!("cargo:rustc-link-search=native={dir}");
-        }
     }
 }
 

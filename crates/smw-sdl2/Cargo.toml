@@ -1,0 +1,10 @@
+[package]
+name = "smw-sdl2"
+version = "0.1.0"
+edition.workspace = true
+description = "Super Mario War - the SDL2 backend: smw-platform's traits over SDL2"
+publish.workspace = true
+
+[dependencies]
+smw-platform = { path = "../smw-platform" }
+sdl2 = "0.38"

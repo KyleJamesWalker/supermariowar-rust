@@ -50,15 +50,15 @@ pub trait Clock {
 pub trait Storage {
     /// `~/Library/Preferences/.smw` on macOS, as the C++ game.
     fn settings_dir(&self) -> PathBuf;
-    /// `GetRootDirectory()` + `data`, or `--datadir`.
-    fn data_dir(&self) -> PathBuf;
+    /// `GetRootDirectory()`: the executable's directory, where the game looks for `data/` unless `--datadir` says otherwise.
+    fn root_dir(&self) -> PathBuf;
     /// Flushes written settings where that needs a step (IDBFS on the web).
     fn persist(&mut self) {}
 }
 
+/// What the game reaches through its context. Phase 2 adds one service per PR, in the order clock, storage,
+/// audio output, video; the traits above are the end state.
 pub struct Services {
-    pub video: Box<dyn Video>,
-    pub audio: Box<dyn AudioOut>,
     pub clock: Box<dyn Clock>,
     pub storage: Box<dyn Storage>,
 }
@@ -148,22 +148,25 @@ mod tests {
         fn settings_dir(&self) -> PathBuf {
             PathBuf::from("settings")
         }
-        fn data_dir(&self) -> PathBuf {
-            PathBuf::from("data")
+        fn root_dir(&self) -> PathBuf {
+            PathBuf::from("root")
         }
     }
 
     #[test]
     fn services_hold_trait_objects() {
         let log = Rc::new(RefCell::new(Vec::new()));
-        let mut services = Services { video: Box::new(Null), audio: Box::new(Log(log.clone())), clock: Box::new(Null), storage: Box::new(Null) };
-        let pixels = vec![0u32; SCREEN_W * SCREEN_H];
-        services.video.present(Frame { pixels: &pixels });
-        services.audio.load_sound(SoundId(3), &[0; 4]);
-        services.audio.play(0, SoundId(3), -1);
-        services.storage.persist();
+        let mut services = Services { clock: Box::new(Null), storage: Box::new(Null) };
         assert_eq!(services.clock.now_ms(), 1000);
-        assert_eq!(services.storage.data_dir(), PathBuf::from("data"));
+        services.storage.persist();
+        assert_eq!(services.storage.root_dir(), PathBuf::from("root"));
+
+        let mut video: Box<dyn Video> = Box::new(Null);
+        let mut audio: Box<dyn AudioOut> = Box::new(Log(log.clone()));
+        let pixels = vec![0u32; SCREEN_W * SCREEN_H];
+        video.present(Frame { pixels: &pixels });
+        audio.load_sound(SoundId(3), &[0; 4]);
+        audio.play(0, SoundId(3), -1);
         assert_eq!(*log.borrow(), ["load 3 4", "play 3 ch=0 loops=-1"]);
     }
 }

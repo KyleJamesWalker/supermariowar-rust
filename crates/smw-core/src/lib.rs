@@ -21,6 +21,7 @@ pub mod globals;
 
 pub mod common;
 pub use smw_netplay::{common_netplay, net_package};
+pub mod services;
 pub mod smw;
 pub mod leveleditor;
 pub mod worldeditor;

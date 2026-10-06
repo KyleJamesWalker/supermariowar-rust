@@ -220,7 +220,7 @@ pub static dBulletBillFrequency: [f32; 3] = [10.0, 5.0, 2.5];
 
 #[cfg(not(target_os = "emscripten"))]
 fn small_delay() {
-    unsafe { SDL_Delay(10) };
+    crate::services::delay(10);
 }
 #[cfg(target_os = "emscripten")]
 fn small_delay() {}

@@ -41,7 +41,7 @@ use crate::smw::world::*;
 use sdl2::sys::image::{IMG_Load, IMG_SavePNG};
 use sdl2::sys::SDL_KeyCode::*;
 use sdl2::sys::{
-    SDL_CreateRGBSurface, SDL_Event, SDL_EventType, SDL_FillRect, SDL_FreeSurface, SDL_GetKeyboardState, SDL_GetScancodeFromKey, SDL_GetTicks, SDL_Keycode, SDL_Keymod,
+    SDL_CreateRGBSurface, SDL_Event, SDL_EventType, SDL_FillRect, SDL_FreeSurface, SDL_GetKeyboardState, SDL_GetScancodeFromKey, SDL_Keycode, SDL_Keymod,
     SDL_MapRGB, SDL_PollEvent, SDL_Rect, SDL_Surface, SDL_UpperBlit, SDL_BUTTON_LEFT, SDL_BUTTON_RIGHT,
 };
 use std::ffi::CString;
@@ -282,16 +282,14 @@ const SDL_BUTTON_RMASK: u32 = 1 << (SDL_BUTTON_RIGHT - 1);
 
 /// The end-of-frame wait every editor loop does; the reference harness `#define`s `SDL_Delay` to this.
 fn frame_wait(framestart: i32) {
-    unsafe {
-        let mut delay: i32 = WAITTIME - (SDL_GetTicks() as i32 - framestart);
-        if delay < 0 {
-            delay = 0;
-        } else if delay > WAITTIME {
-            delay = WAITTIME;
-        }
-
-        editor_harness::frame_delay(delay as u32);
+    let mut delay: i32 = WAITTIME - (crate::services::ticks() as i32 - framestart);
+    if delay < 0 {
+        delay = 0;
+    } else if delay > WAITTIME {
+        delay = WAITTIME;
     }
+
+    editor_harness::frame_delay(delay as u32);
 }
 
 fn tile(iCol: i16, iRow: i16) -> &'static mut WorldMapTile {
@@ -1143,7 +1141,7 @@ pub fn editor_edit() -> i32 {
         let mut iStageDisplay: i16 = -1;
 
         while !done {
-            let framestart = SDL_GetTicks() as i32;
+            let framestart = crate::services::ticks() as i32;
 
             if fExiting {
                 //handle messages
@@ -2218,7 +2216,7 @@ pub fn editor_warp() -> i32 {
         let mut done = false;
 
         while !done {
-            let framestart = SDL_GetTicks() as i32;
+            let framestart = crate::services::ticks() as i32;
 
             //handle messages
             while SDL_PollEvent(&mut event) != 0 {
@@ -2311,7 +2309,7 @@ pub fn editor_start_items() -> i32 {
         }
 
         while !done {
-            let framestart = SDL_GetTicks() as i32;
+            let framestart = crate::services::ticks() as i32;
 
             //handle messages
             while SDL_PollEvent(&mut event) != 0 {
@@ -2404,7 +2402,7 @@ pub fn editor_boundary() -> i32 {
         let mut done = false;
 
         while !done {
-            let framestart = SDL_GetTicks() as i32;
+            let framestart = crate::services::ticks() as i32;
 
             //handle messages
             while SDL_PollEvent(&mut event) != 0 {
@@ -2466,7 +2464,7 @@ pub fn editor_type() -> i32 {
         let mut done = false;
 
         while !done {
-            let framestart = SDL_GetTicks() as i32;
+            let framestart = crate::services::ticks() as i32;
 
             //handle messages
             while SDL_PollEvent(&mut event) != 0 {
@@ -2528,7 +2526,7 @@ pub fn editor_water() -> i32 {
         let mut done = false;
 
         while !done {
-            let framestart = SDL_GetTicks() as i32;
+            let framestart = crate::services::ticks() as i32;
 
             //handle messages
             while SDL_PollEvent(&mut event) != 0 {
@@ -2585,7 +2583,7 @@ pub fn editor_background() -> i32 {
         let mut iPage: i16 = 0;
 
         while !done {
-            let framestart = SDL_GetTicks() as i32;
+            let framestart = crate::services::ticks() as i32;
 
             //handle messages
             while SDL_PollEvent(&mut event) != 0 {
@@ -2667,7 +2665,7 @@ pub fn editor_stageforeground() -> i32 {
         let mut iForegroundScreen: i16 = 0;
 
         while !done {
-            let framestart = SDL_GetTicks() as i32;
+            let framestart = crate::services::ticks() as i32;
 
             //handle messages
             while SDL_PollEvent(&mut event) != 0 {
@@ -2733,7 +2731,7 @@ pub fn editor_bridges() -> i32 {
         let mut done = false;
 
         while !done {
-            let framestart = SDL_GetTicks() as i32;
+            let framestart = crate::services::ticks() as i32;
 
             //handle messages
             while SDL_PollEvent(&mut event) != 0 {
@@ -2787,7 +2785,7 @@ pub fn editor_structureforeground() -> i32 {
         let mut done = false;
 
         while !done {
-            let framestart = SDL_GetTicks() as i32;
+            let framestart = crate::services::ticks() as i32;
 
             //handle messages
             while SDL_PollEvent(&mut event) != 0 {
@@ -2848,7 +2846,7 @@ pub fn editor_pathsprite() -> i32 {
         let mut done = false;
 
         while !done {
-            let framestart = SDL_GetTicks() as i32;
+            let framestart = crate::services::ticks() as i32;
 
             //handle messages
             while SDL_PollEvent(&mut event) != 0 {
@@ -2927,7 +2925,7 @@ pub fn editor_vehicles() -> i32 {
         miVehicleStageField.set_current_value(g_wvVehicleStamp.iActionId);
 
         while !done {
-            let framestart = SDL_GetTicks() as i32;
+            let framestart = crate::services::ticks() as i32;
 
             game_values.playerInput.clear_pressed_keys(1);
 
@@ -3015,7 +3013,7 @@ pub fn editor_path() -> i32 {
         let mut done = false;
 
         while !done {
-            let framestart = SDL_GetTicks() as i32;
+            let framestart = crate::services::ticks() as i32;
 
             //handle messages
             while SDL_PollEvent(&mut event) != 0 {
@@ -3521,7 +3519,7 @@ pub fn editor_stage() -> i32 {
         }
 
         while !done {
-            let framestart = SDL_GetTicks() as i32;
+            let framestart = crate::services::ticks() as i32;
 
             //Reset the keys that were down the last frame
             game_values.playerInput.clear_pressed_keys(1);
@@ -4035,7 +4033,7 @@ pub fn display_help() -> i32 {
         gfx_flipscreen();
 
         loop {
-            let framestart = SDL_GetTicks() as i32;
+            let framestart = crate::services::ticks() as i32;
 
             //handle messages
             while SDL_PollEvent(&mut event) != 0 {
@@ -4093,7 +4091,7 @@ pub fn dialog(title: &str, instructions: &str, input: &mut String, inputsize: i3
         draw_dialog(title, instructions, None);
 
         loop {
-            let framestart = SDL_GetTicks() as i32;
+            let framestart = crate::services::ticks() as i32;
 
             //handle messages
             while SDL_PollEvent(&mut event) != 0 {
