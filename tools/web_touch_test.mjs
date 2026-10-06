@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Drive the web build's touch controls in headless Chrome: an emulated phone in landscape taps Play,
 // walks the menus with the on-screen Start and D-pad, starts a match, then holds right + run + jump
-// with simultaneous touches; then checks portrait and desktop layouts and the on/off toggle.
+// with simultaneous touches, switches to the floating stick and drags it; then checks portrait and desktop layouts and
+// the on/off toggle.
 // Exits non-zero on the first failed check. Screenshots go to out_dir.
 //
 // Usage: node tools/web_touch_test.mjs [out_dir]
@@ -330,6 +331,40 @@ try {
     await sleep(500);
     await screenshot('back');
     check((await keyLog()).includes('keydown Escape 27 0'), 'Back sends Escape');
+
+    // Floating stick: the mode button switches to it and remembers the choice; the stick spawns under the
+    // thumb, presses 8-way directions past a small dead zone, and its base follows the thumb past its radius.
+    await evaluate(`document.querySelector('[data-action=mode]').click()`);
+    check(await evaluate(`document.documentElement.classList.contains('stick') && localStorage.getItem('smw-touch-stick') === 'stick'
+        && document.querySelector('[data-action=mode]').textContent === 'Stick'`), 'the mode button switches to the floating stick');
+    await keyLog();
+    const zone = await evaluate(`(() => { const r = document.querySelector('.tc-stick').getBoundingClientRect(); return { left: r.left, top: r.top, width: r.width, height: r.height }; })()`);
+    const p0 = { x: zone.left + zone.width * 0.6, y: zone.top + zone.height * 0.6 };
+    const baseCenter = () => evaluate(`(() => {
+        const el = document.querySelector('.tc-stick-base');
+        if (el.hidden) return null;
+        const r = el.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    })()`);
+    await down(4, p0);
+    const b0 = await baseCenter();
+    check(!!b0 && Math.hypot(b0.x - p0.x, b0.y - p0.y) < 1, `the stick appears under the thumb (${JSON.stringify(b0)})`);
+    await move(4, { x: p0.x + 6, y: p0.y });
+    check((await keyLog()).length === 0, 'no key inside the dead zone');
+    await move(4, { x: p0.x + 30, y: p0.y - 30 });
+    keys = await keyLog();
+    check(keys.includes('keydown ArrowRight 39 0') && keys.includes('keydown ArrowUp 38 0'), 'dragging up-right presses right and up');
+    await move(4, { x: p0.x + 120, y: p0.y });
+    const b1 = await baseCenter();
+    check(!!b1 && Math.abs(b1.x - (p0.x + 80)) < 1 && Math.abs(b1.y - p0.y) < 1, `the base follows the thumb past its radius (${JSON.stringify(b1)})`);
+    await screenshot('stick');
+    await keyLog();
+    await move(4, { x: p0.x + 60, y: p0.y });
+    keys = await keyLog();
+    check(keys.includes('keyup ArrowRight 39 0') && keys.includes('keydown ArrowLeft 37 0'), 'pulling back past the base turns left at once');
+    await up(4);
+    keys = await keyLog();
+    check(keys.at(-1) === 'keyup ArrowLeft 37 0' && (await baseCenter()) === null, 'releasing the thumb releases the key and hides the stick');
 
     // Portrait: the game on top, the controls below it.
     await phone(false);

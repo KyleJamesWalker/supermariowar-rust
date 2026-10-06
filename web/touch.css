@@ -118,6 +118,39 @@ html.touch #touch {
 }
 .tc-arm.on { background: rgba(255, 204, 51, 0.65); }
 
+.tc-stick {
+  left: 0;
+  bottom: 0;
+  top: 0;
+  width: calc(var(--sl) + (100vw - var(--sl) - var(--sr) - var(--stage-w)) / 2);
+}
+html:not(.stick) .tc-stick,
+html.stick .tc-dpad .tc-arm,
+html.stick .tc-dpad::before { display: none; }
+html.stick #touch .tc-dpad { pointer-events: none; }
+.tc-stick-base {
+  position: absolute;
+  left: -50px;
+  top: -50px;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+}
+.tc-stick-base[hidden] { display: none; }
+.tc-stick-knob {
+  position: absolute;
+  left: 24px;
+  top: 24px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
 .tc-buttons {
   right: calc(var(--sr) + var(--edge));
   bottom: calc(var(--sb) + var(--edge));
@@ -176,6 +209,8 @@ html.touch #touch {
 .tc-util svg { width: 20px; height: 20px; }
 .tc-util[hidden] { display: none; }
 html:not(.playing) .tc-util[data-action=menu] { display: none; }
+.tc-mode { font: 700 11px/1 system-ui, -apple-system, "Segoe UI", sans-serif; }
 @media (orientation: portrait) {
   .tc-col { flex-direction: row; }
+  .tc-stick { top: var(--keys-top); width: 50vw; }
 }
