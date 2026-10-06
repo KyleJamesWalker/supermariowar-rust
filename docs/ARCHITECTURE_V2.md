@@ -1,6 +1,6 @@
 # Architecture v2: platform-free core, SDL2 and SDL3 backends
 
-Status: draft for review. Owner: the port's maintainer. Phase 0 (the Cargo workspace) is PR #23.
+Status: accepted; the decisions are under Risks and decisions. Owner: the port's maintainer. Phase 0 (the Cargo workspace) is PR #23.
 
 ## Summary
 
@@ -185,7 +185,7 @@ The accessor returns `Ptr<Game>`, not `&'static mut Game`. Step 3 passes `&mut G
 
 **Step 3: pass `&mut Game` down.** The frame loop passes `&mut Game` into `GameStateManager`, then each state's `update`/`draw`, then subsystems. A PR converts one call tree, and leaf code that still calls `game()` keeps working through the `Ptr`. When no caller remains, the static is deleted and `&mut Game` becomes the only path. `Game` is then an ordinary value, so one process can run several games: parallel in-process replay tests, and later rollback.
 
-Step 3 meets the object graph: methods that take `&mut self` on an object inside `Game` while touching other parts of `Game`. The `Ptr`/`Aliased` convention (`docs/ARCHITECTURE.md`, Pointers and ownership) stays valid through all three steps. Replacing `Ptr` graphs with arenas and typed handles is a separate later design (open question 9).
+Step 3 meets the object graph: methods that take `&mut self` on an object inside `Game` while touching other parts of `Game`. The `Ptr`/`Aliased` convention (`docs/ARCHITECTURE.md`, Pointers and ownership) stays valid through all three steps. Replacing `Ptr` graphs with arenas and typed handles is a separate later design (decision 9).
 
 ### Normalized input
 
@@ -225,14 +225,14 @@ Where each input source goes:
 | Controller translation (`pad.rs`, `SMW_PAD_TRANSLATE`) | An SDL event filter rewrites `SDL_Event`s | In the backend: a game controller with a mapping emits `PadButton`/`PadHat`/`PadAxis` in `LAYOUT` order. SDL3 uses its gamepad API for the same layout. |
 | Hot-plug | Not handled. Pads are assigned at launch. | `PadAdded`/`PadRemoved`. The core assigns `PadSlot`s, and a slot stays stable for the session. |
 | Android touch (`touch.rs`) | Pushes P1 key events and draws with `SDL_Render*` | `smw_core::input::touch` owns the layout, hit tests and hysteresis, and emits `Key` events for player 1's default keys (unchanged behavior). The backend forwards `Touch` and draws the core's overlay description. |
-| Web touch (`web/touch.js`) | Page-side, dispatches DOM key events | Unchanged at first. It can move to the core module later (open question 6). |
+| Web touch (`web/touch.js`) | Page-side, dispatches DOM key events | Unchanged at first. It moves to the core module after phase 4 (decision 6). |
 | Replay | `harness.rs` calls `SDL_PushEvent` and attaches SDL virtual joysticks | `ReplaySource: InputQueue` yields the frame's events in file order. Pads exist because the replay declares them, so no SDL virtual joysticks. `wait()` keeps `harness::waitEvent` semantics (next unconsumed event, which its own frame then skips). |
 | Recording | An SDL event filter holds OS events and re-pushes them at frame start | `Recorder` wraps the live `InputQueue` and writes each event it hands to the core. Live and replay input then reach the core through the same path. |
 
 Replay format compatibility:
 
 - The version 1 line kinds (`down`/`up` key names, `jaxis`, `jbutton`, `jhat`, the `#@` directives, markers and checkpoints) stay byte-for-byte. Existing recordings, clips, `tools/replays` and `tools/checkpoint_fixtures` replay unchanged, and recordings made after the change still replay on the C++ harness.
-- The recorder writes only v1 lines for events that v1 can express. Touch keeps recording as keys, as it does now. Events that v1 cannot express (`PadAdded`/`PadRemoved` after frame 0, `Text`) are dropped in v1 recordings, as they are today. Recording them needs new line kinds (`jadd <dev> <guid> <name>`, `jremove <dev>`) behind a `#@ format=2` header. The C++ harness rejects unknown lines, so a v2 recording does not replay there. That trade-off is the same as for axis 6+ today (open question 5).
+- The recorder writes only v1 lines for events that v1 can express. Touch keeps recording as keys, as it does now. Events that v1 cannot express (`PadAdded`/`PadRemoved` after frame 0, `Text`) are dropped in v1 recordings, as they are today. Recording them needs new line kinds (`jadd <dev> <guid> <name>`, `jremove <dev>`) behind a `#@ format=2` header. The C++ harness rejects unknown lines, so a v2 recording does not replay there. That trade-off is the same as for axis 6+ today (decision 5).
 - The frame-0 `0 jhat <dev> 0 0` convention keeps declaring the pad count for v1 files.
 
 ### Audio: SDL2_mixer, SDL3_mixer and the virtual mixer
@@ -277,7 +277,7 @@ Upstream's `sdl3` branch (6 commits on top of upstream master, tip `d1b58c9`, pu
 - **Keep SDL's blitter in each backend.** Each backend would need its own goldens, because SDL2, sdl2-compat and SDL3 differ on RLE and blend modes. The pure-Rust blitter removes that variable.
 - **Get SDL3 through sdl2-compat only.** This already happens on Homebrew. It gives none of SDL3's APIs (gamepad, pen, properties) and keeps the compat-layer bugs.
 
-## Risks and open questions
+## Risks and decisions
 
 Risks:
 
@@ -290,18 +290,18 @@ Risks:
 | Cross-platform float differences (armv7 Android, wasm, x86_64) | Trig already comes from CORE-MATH, and Rust never contracts to FMA. Phase 6 adds the hash comparison across platforms, including an aarch64 run under qemu-user for muOS and Android. |
 | Agents keep adding `sdl2::sys` calls during the migration | A CI check counts files that use `sdl2::sys` outside the backends and fails if the count rises. |
 
-Open questions for the maintainer:
+Decisions (maintainer, 2026-10-05):
 
-1. When is the parity milestone (phase 7)? This document proposes: after phase 6 is green on every backend, and after the last upstream sync that the port intends to take as a C++-verified port.
-2. Is the core owning all pixels (pure-Rust blitter) acceptable? The alternative is per-backend goldens.
-3. Which backend is the default per platform once SDL3 works? This document proposes SDL3 on desktop, SDL2 on muOS, and SDL2 on web and Android until their SDL3 ports are proven.
-4. Should controller translation (`SMW_PAD_TRANSLATE`) become the default on every platform once input is normalized? That is a deviation on desktop, so it would wait for phase 7.
-5. Should the replay format get version 2 lines (`jadd`, `jremove`, text) that the C++ harness cannot replay?
-6. Should web touch controls move into the core and draw on the canvas, as on Android?
-7. Should netplay stay host-authoritative state sync, or move to input lockstep or rollback once `Game` is a value and determinism across platforms is CI-enforced? Browser and native clients cannot play together today (the relay speaks WebSocket and native clients speak ENet).
-8. Should `libz-sys` be replaced by a pure-Rust deflate (`miniz_oxide`)? Compressed bytes would differ, but every reader only inflates, and that includes the C++ peers.
-9. Should the `Ptr` object graph (objects, players, map items) move to arenas with typed handles after step 3? That needs its own design.
-10. Do the editors get the SDL3 backend, or stay on SDL2 until a later phase?
+1. **Parity milestone (phase 7).** After phase 6 is green on every backend, and after the last upstream sync that the port intends to take as a C++-verified port. No date is set.
+2. **The core owns all pixels.** Accepted. Per-backend goldens are not an option.
+3. **Default backend per platform.** SDL3 on desktop. SDL2 on muOS, web and Android until their SDL3 ports are proven.
+4. **Controller translation (`SMW_PAD_TRANSLATE`) becomes the default** on every platform at phase 7, because it changes desktop behavior. It stays opt-in until then.
+5. **Replay format version 2 lines (`jadd`, `jremove`, text).** Deferred. Nothing needs them yet, v1 already drops those events, and a v2 file cannot replay on the C++ harness. Revisit when phase 3 hot-plug produces a recording worth keeping.
+6. **Web touch controls move into the core** after phase 4, once the core already draws the Android overlay. One layout and one hit test, and the web replay tests can then exercise touch.
+7. **Netplay stays host-authoritative** through phase 7. Lockstep or rollback is decided once `Game` is a value (phase 5) and cross-platform determinism is CI-enforced (phase 6). Browser and native clients still cannot play together (the relay speaks WebSocket and native clients speak ENet); that is a separate transport question.
+8. **`libz-sys` is replaced by `miniz_oxide`.** It can land at any time. The only compressed bytes written are checkpoint lines in recordings, and every reader, including the C++ harness, only inflates. This also removes the Emscripten zlib special case in `file_compressor.rs`.
+9. **The `Ptr` object graph moves to arenas with typed handles** after step 3, under its own design document. Nothing in this document depends on it.
+10. **The editors stay on SDL2 through phase 6** and follow the game to SDL3 in one PR afterwards. Their 13 sessions already gate the shared blitter in phase 4.
 
 ## Rollout
 
