@@ -54,7 +54,12 @@ settings="$home/Library/Preferences/.smw"
 [[ "$OSTYPE" == msys || "$OSTYPE" == cygwin ]] && settings="$home/.smw"
 mkdir -p "$(dirname "$settings")"
 # APFS clone: instant, and writes stay private to this run.
-cp -Rc "$data" "$work/data" 2>/dev/null || cp -R "$data" "$work/data"
+# Git Bash's cp -R does not keep listing order; on a FAT TMPDIR this gives the goldens' order.
+if [[ "$OSTYPE" == msys || "$OSTYPE" == cygwin ]]; then
+    python3 "$(dirname "$0")/apfs_order.py" "$data" "$work/data"
+else
+    cp -Rc "$data" "$work/data" 2>/dev/null || cp -R "$data" "$work/data"
+fi
 rm -f "$work/data/maps/cache/mapsummary.txt"
 
 cd "$work"

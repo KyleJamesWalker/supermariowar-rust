@@ -30,7 +30,7 @@ for script in "${scripts[@]}"; do
     out="$out_root/$editor/$name"
     echo "=== $editor/$name"
 
-    SMW_BIN="$port/target/release/${editor%it}itor" SMW_DATA_DIR="${SMW_DATA_DIR:-$port/data}" \
+    SMW_BIN="$port/target/release/${editor%it}itor" SMW_DATA_DIR="$port/data" \
         "$tools/run_editor.sh" "$editor" "$script" "$out" > /dev/null
     status=$?
     if [[ $status -ne 0 ]]; then
