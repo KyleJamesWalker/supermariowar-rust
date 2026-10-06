@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Merges an arm64 and an x86_64 "Super Mario War.app" (tools/package_macos.sh on each) into a universal app:
 # every Mach-O file both have is joined with lipo, the rest is copied as is, and the result is ad-hoc signed again.
+# Info.plist gets each slice's minimum macOS in LSMinimumSystemVersionByArchitecture and the lower as LSMinimumSystemVersion.
 # Usage: tools/macos_universal.sh <arm64.app> <x86_64.app> <out.app>
 set -euo pipefail
 
@@ -24,7 +25,17 @@ while IFS= read -r -d '' f; do
     fi
 done < <(find "$intel" -type f -print0)
 
+plist="$out/Contents/Info.plist"
+pb=/usr/libexec/PlistBuddy
+arm_min="$("$pb" -c 'Print :LSMinimumSystemVersion' "$arm/Contents/Info.plist")"
+intel_min="$("$pb" -c 'Print :LSMinimumSystemVersion' "$intel/Contents/Info.plist")"
+"$pb" -c "Set :LSMinimumSystemVersion $(printf '%s\n' "$arm_min" "$intel_min" | sort -V | head -n 1)" \
+    -c 'Add :LSMinimumSystemVersionByArchitecture dict' \
+    -c "Add :LSMinimumSystemVersionByArchitecture:arm64 string $arm_min" \
+    -c "Add :LSMinimumSystemVersionByArchitecture:x86_64 string $intel_min" "$plist"
+
 codesign --force --deep --sign - "$out"
 for f in "$out/Contents/MacOS/smw" "$out/Contents/Frameworks"/*.dylib; do
     printf '%-28s %s\n' "$(basename "$f")" "$(lipo -archs "$f")"
 done
+echo "minimum macOS: arm64 $arm_min, x86_64 $intel_min"

@@ -49,10 +49,7 @@ jobs:
           SMW_BIN="$app/Contents/MacOS/smw" SMW_DATA_DIR="$app/Contents/Resources/data" \
             tools/run_rust.sh tools/replays/start_classic.txt "$RUNNER_TEMP/smoke"
           grep -c '^F ' "$RUNNER_TEMP/smoke/dump.txt"
-          for f in "$app/Contents/MacOS/smw" "$app/Contents/Frameworks"/*.dylib; do
-            otool -l "$f" > load-commands.txt
-            sed -n -e '/LC_BUILD_VERSION/,/minos/s/^ *minos //p' -e '/LC_VERSION_MIN_MACOSX/,/version/s/^ *version //p' load-commands.txt
-          done | sort -u -V | tail -n 1 | sed 's/^/requires macOS /' | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "requires macOS $(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$app/Contents/Info.plist")" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Archive
         run: tar -C dist -czf "$RUNNER_TEMP/app.tar.gz" 'Super Mario War.app'
