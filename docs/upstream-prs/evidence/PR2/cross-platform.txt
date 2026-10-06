@@ -1,0 +1,102 @@
+# Cross-platform check on upstream c7056790 (+ replay hooks = harness-latest d7c59e1f), 45 scripted game replays.
+# Linux: Ubuntu 24.04 arm64 container, clang 18 with libc++, -O2 -ffp-contract=off, data copied onto FAT32 in APFS order
+# (tools/apfs_order.py), as in the M9 investigation. macOS: arm64, Apple clang 21, same flags. Goldens were recorded on macOS without the fixes.
+
+## Linux, without the fixes, vs the macOS goldens: 23 of 45 match
+cov_tour_options   DIVERGED at frame 688 (block 688; actual frame 688)
+cpu_chase          DIVERGED at frame 913 (block 913; actual frame 913)
+cpu_chicken        MATCH
+cpu_classic        MATCH
+cpu_coins          DIVERGED at frame 584 (block 584; actual frame 584)
+cpu_collection     DIVERGED at frame 2070 (block 2070; actual frame 2070)
+cpu_ctf            DIVERGED at frame 1203 (block 1203; actual frame 1203)
+cpu_domination     DIVERGED at frame 648 (block 648; actual frame 648)
+cpu_eggs           DIVERGED at frame 1380 (block 1380; actual frame 1380)
+cpu_frag           MATCH
+cpu_frenzy         DIVERGED at frame 672 (block 672; actual frame 672)
+cpu_greed          DIVERGED at frame 689 (block 689; actual frame 689)
+cpu_health         MATCH
+cpu_jail           DIVERGED at frame 576 (block 576; actual frame 576)
+cpu_kingofthehill  MATCH
+cpu_owned          MATCH
+cpu_race           DIVERGED at frame 464 (block 464; actual frame 464)
+cpu_shyguytag      MATCH
+cpu_star           MATCH
+cpu_stomp          DIVERGED at frame 596 (block 596; actual frame 596)
+cpu_survival       DIVERGED at frame 680 (block 680; actual frame 680)
+cpu_tag            DIVERGED at frame 1523 (block 1523; actual frame 1523)
+cpu_timelimit      MATCH
+flow_tour          DIVERGED at frame 608 (block 608; actual frame 608)
+flow_tournament    MATCH
+flow_world         MATCH
+frenzy_cpu         DIVERGED at frame 2121 (block 2121; actual frame 2121)
+fuzz_a             MATCH
+fuzz_b             MATCH
+fuzz_c             MATCH
+map_blockpiles     MATCH
+menu_nav           MATCH
+mini_boxes         DIVERGED at frame 1262 (block 1262; actual frame 1262)
+mini_hammerboss    MATCH
+mini_pipe          DIVERGED at frame 584 (block 584; actual frame 584)
+opt_eyecandy       MATCH
+opt_gameplay       MATCH
+opt_items          DIVERGED at frame 3577 (block 3577; actual frame 3577)
+players_c_h_c_n    DIVERGED at frame 518 (block 518; actual frame 518)
+players_h_n_c_c    MATCH
+star_multi_2p      MATCH
+star_multi_3p      DIVERGED at frame 2006 (block 2006; actual frame 2006)
+star_multi_4p      DIVERGED at frame 4107 (block 4107; actual frame 4107)
+start_classic      MATCH
+teams_2v2          MATCH
+
+## Linux, with all six PR2 commits, vs the macOS goldens: 44 of 45 match
+cov_tour_options   MATCH
+cpu_chase          MATCH
+cpu_chicken        MATCH
+cpu_classic        MATCH
+cpu_coins          MATCH
+cpu_collection     MATCH
+cpu_ctf            MATCH
+cpu_domination     MATCH
+cpu_eggs           MATCH
+cpu_frag           MATCH
+cpu_frenzy         MATCH
+cpu_greed          MATCH
+cpu_health         MATCH
+cpu_jail           MATCH
+cpu_kingofthehill  MATCH
+cpu_owned          MATCH
+cpu_race           DIVERGED at frame 464 (block 464; actual frame 464)
+cpu_shyguytag      MATCH
+cpu_star           MATCH
+cpu_stomp          MATCH
+cpu_survival       MATCH
+cpu_tag            MATCH
+cpu_timelimit      MATCH
+flow_tour          MATCH
+flow_tournament    MATCH
+flow_world         MATCH
+frenzy_cpu         MATCH
+fuzz_a             MATCH
+fuzz_b             MATCH
+fuzz_c             MATCH
+map_blockpiles     MATCH
+menu_nav           MATCH
+mini_boxes         MATCH
+mini_hammerboss    MATCH
+mini_pipe          MATCH
+opt_eyecandy       MATCH
+opt_gameplay       MATCH
+opt_items          MATCH
+players_c_h_c_n    MATCH
+players_h_n_c_c    MATCH
+star_multi_2p      MATCH
+star_multi_3p      MATCH
+star_multi_4p      MATCH
+start_classic      MATCH
+teams_2v2          MATCH
+## cpu_race differs because fix 4 changes race goal placement on every platform (macOS too, see parity.txt).
+
+## Linux with the fixes vs macOS with the fixes, dump for dump: 45 of 45 identical.
+
+## x86_64 and the per-member ablation (which member accounts for which games) are in evidence/M9 and cpp-reference run 37408856280, on 5693918f.

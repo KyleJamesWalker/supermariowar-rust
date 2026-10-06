@@ -1,0 +1,129 @@
+# Golden parity, macOS arm64, Release with build-reference.sh flags. before = harness-latest (d7c59e1f), after = + the six PR2 commits.
+# Game: run exit | dump vs tools/golden | screenshot sets (diffreplay --shots exit). Editor: dump, screenshots, saved files.
+
+## before
+cov_tour_options run=0 | OK: 3000 frames identical | shots exit=0
+cpu_chase run=0 | OK: 3600 frames identical | shots exit=0
+cpu_chicken run=0 | OK: 3600 frames identical | shots exit=0
+cpu_classic run=0 | OK: 3600 frames identical | shots exit=0
+cpu_coins run=0 | OK: 3600 frames identical | shots exit=0
+cpu_collection run=0 | OK: 3600 frames identical | shots exit=0
+cpu_ctf run=0 | OK: 3600 frames identical | shots exit=0
+cpu_domination run=0 | OK: 3600 frames identical | shots exit=0
+cpu_eggs run=0 | OK: 3600 frames identical | shots exit=0
+cpu_frag run=0 | OK: 3600 frames identical | shots exit=0
+cpu_frenzy run=0 | OK: 3600 frames identical | shots exit=0
+cpu_greed run=0 | OK: 3600 frames identical | shots exit=0
+cpu_health run=0 | OK: 3600 frames identical | shots exit=0
+cpu_jail run=0 | OK: 3600 frames identical | shots exit=0
+cpu_kingofthehill run=0 | OK: 3600 frames identical | shots exit=0
+cpu_owned run=0 | OK: 3600 frames identical | shots exit=0
+cpu_race run=0 | OK: 3600 frames identical | shots exit=0
+cpu_shyguytag run=0 | OK: 3600 frames identical | shots exit=0
+cpu_star run=0 | OK: 3600 frames identical | shots exit=0
+cpu_stomp run=0 | OK: 3600 frames identical | shots exit=0
+cpu_survival run=0 | OK: 3600 frames identical | shots exit=0
+cpu_tag run=0 | OK: 3600 frames identical | shots exit=0
+cpu_timelimit run=0 | OK: 3600 frames identical | shots exit=0
+flow_tour run=0 | OK: 5000 frames identical | shots exit=0
+flow_tournament run=0 | OK: 6000 frames identical | shots exit=0
+flow_world run=0 | OK: 6000 frames identical | shots exit=0
+frenzy_cpu run=0 | OK: 2780 frames identical | shots exit=0
+fuzz_a run=0 | OK: 5000 frames identical | shots exit=0
+fuzz_b run=0 | OK: 5000 frames identical | shots exit=0
+fuzz_c run=0 | OK: 5000 frames identical | shots exit=0
+map_blockpiles run=0 | OK: 2530 frames identical | shots exit=0
+menu_nav run=0 | OK: 816 frames identical | shots exit=0
+mini_boxes run=0 | OK: 3000 frames identical | shots exit=0
+mini_hammerboss run=0 | OK: 3000 frames identical | shots exit=0
+mini_pipe run=0 | OK: 3000 frames identical | shots exit=0
+opt_eyecandy run=0 | OK: 3600 frames identical | shots exit=0
+opt_gameplay run=0 | OK: 3600 frames identical | shots exit=0
+opt_items run=0 | OK: 3600 frames identical | shots exit=0
+players_c_h_c_n run=0 | OK: 3000 frames identical | shots exit=0
+players_h_n_c_c run=0 | OK: 3000 frames identical | shots exit=0
+star_multi_2p run=0 | OK: 3600 frames identical | shots exit=0
+star_multi_3p run=0 | OK: 3600 frames identical | shots exit=0
+star_multi_4p run=0 | OK: 4800 frames identical | shots exit=0
+start_classic run=0 | OK: 2530 frames identical | shots exit=0
+teams_2v2 run=0 | OK: 3000 frames identical | shots exit=0
+worldedit/navigate_resize rc=0 | OK: 260 frames identical | shots 10/10 | files 2/2
+worldedit/paint_save rc=0 | OK: 140 frames identical | shots 6/6 | files 3/3
+worldedit/smoke rc=0 | OK: 40 frames identical | shots 2/2 | files 1/1
+worldedit/stage_menus rc=0 | OK: 287 frames identical | shots 19/19 | files 2/2
+worldedit/stages_vehicles rc=0 | OK: 420 frames identical | shots 16/16 | files 2/2
+worldedit/sync_coverage rc=0 | OK: 271 frames identical | shots 22/22 | files 2/2
+leveledit/hazards_move_save rc=0 | OK: 329 frames identical | shots 10/10 | files 3/3
+leveledit/objects_save rc=0 | OK: 270 frames identical | shots 10/10 | files 2/2
+leveledit/platforms_save rc=0 | OK: 316 frames identical | shots 11/11 | files 2/2
+leveledit/screenshot_find rc=0 | OK: 200 frames identical | shots 4/4 | files 10/10
+leveledit/smoke rc=0 | OK: 119 frames identical | shots 5/5 | files 1/1
+leveledit/tiles_save rc=0 | OK: 242 frames identical | shots 11/11 | files 3/3
+leveledit/types_backgrounds rc=0 | OK: 170 frames identical | shots 6/6 | files 4/4
+
+## after
+cov_tour_options run=0 | OK: 3000 frames identical | shots exit=0
+cpu_chase run=0 | OK: 3600 frames identical | shots exit=0
+cpu_chicken run=0 | OK: 3600 frames identical | shots exit=0
+cpu_classic run=0 | OK: 3600 frames identical | shots exit=0
+cpu_coins run=0 | OK: 3600 frames identical | shots exit=0
+cpu_collection run=0 | OK: 3600 frames identical | shots exit=0
+cpu_ctf run=0 | OK: 3600 frames identical | shots exit=0
+cpu_domination run=0 | OK: 3600 frames identical | shots exit=0
+cpu_eggs run=0 | OK: 3600 frames identical | shots exit=0
+cpu_frag run=0 | OK: 3600 frames identical | shots exit=0
+cpu_frenzy run=0 | OK: 3600 frames identical | shots exit=0
+cpu_greed run=0 | OK: 3600 frames identical | shots exit=0
+cpu_health run=0 | OK: 3600 frames identical | shots exit=0
+cpu_jail run=0 | OK: 3600 frames identical | shots exit=0
+cpu_kingofthehill run=0 | OK: 3600 frames identical | shots exit=0
+cpu_owned run=0 | OK: 3600 frames identical | shots exit=0
+cpu_race run=0 | DIVERGED at frame 464 (block 464; actual frame 464) | shots exit=1
+cpu_shyguytag run=0 | OK: 3600 frames identical | shots exit=0
+cpu_star run=0 | OK: 3600 frames identical | shots exit=0
+cpu_stomp run=0 | OK: 3600 frames identical | shots exit=0
+cpu_survival run=0 | OK: 3600 frames identical | shots exit=0
+cpu_tag run=0 | OK: 3600 frames identical | shots exit=0
+cpu_timelimit run=0 | OK: 3600 frames identical | shots exit=0
+flow_tour run=0 | OK: 5000 frames identical | shots exit=0
+flow_tournament run=0 | OK: 6000 frames identical | shots exit=0
+flow_world run=0 | OK: 6000 frames identical | shots exit=0
+frenzy_cpu run=0 | OK: 2780 frames identical | shots exit=0
+fuzz_a run=0 | OK: 5000 frames identical | shots exit=0
+fuzz_b run=0 | OK: 5000 frames identical | shots exit=0
+fuzz_c run=0 | OK: 5000 frames identical | shots exit=0
+map_blockpiles run=0 | OK: 2530 frames identical | shots exit=0
+menu_nav run=0 | OK: 816 frames identical | shots exit=0
+mini_boxes run=0 | OK: 3000 frames identical | shots exit=0
+mini_hammerboss run=0 | OK: 3000 frames identical | shots exit=0
+mini_pipe run=0 | OK: 3000 frames identical | shots exit=0
+opt_eyecandy run=0 | OK: 3600 frames identical | shots exit=0
+opt_gameplay run=0 | OK: 3600 frames identical | shots exit=0
+opt_items run=0 | OK: 3600 frames identical | shots exit=0
+players_c_h_c_n run=0 | OK: 3000 frames identical | shots exit=0
+players_h_n_c_c run=0 | OK: 3000 frames identical | shots exit=0
+star_multi_2p run=0 | OK: 3600 frames identical | shots exit=0
+star_multi_3p run=0 | OK: 3600 frames identical | shots exit=0
+star_multi_4p run=0 | OK: 4800 frames identical | shots exit=0
+start_classic run=0 | OK: 2530 frames identical | shots exit=0
+teams_2v2 run=0 | OK: 3000 frames identical | shots exit=0
+leveledit/hazards_move_save rc=0 | OK: 329 frames identical | shots 10/10 | files 3/3
+leveledit/objects_save rc=0 | OK: 270 frames identical | shots 10/10 | files 2/2
+leveledit/platforms_save rc=0 | OK: 316 frames identical | shots 11/11 | files 2/2
+leveledit/screenshot_find rc=0 | OK: 200 frames identical | shots 4/4 | files 10/10
+leveledit/smoke rc=0 | OK: 119 frames identical | shots 5/5 | files 1/1
+leveledit/tiles_save rc=0 | OK: 242 frames identical | shots 11/11 | files 3/3
+leveledit/types_backgrounds rc=0 | OK: 170 frames identical | shots 6/6 | files 4/4
+worldedit/navigate_resize rc=0 | OK: 260 frames identical | shots 10/10 | files 2/2
+worldedit/paint_save rc=0 | OK: 140 frames identical | shots 6/6 | files 3/3
+worldedit/smoke rc=0 | OK: 40 frames identical | shots 2/2 | files 1/1
+worldedit/stage_menus rc=0 | OK: 287 frames identical | shots 19/19 | files 2/2
+worldedit/stages_vehicles rc=0 | OK: 420 frames identical | shots 16/16 | files 2/2
+worldedit/sync_coverage rc=0 | OK: 271 frames identical | shots 22/22 | files 2/2
+
+## The only change: cpu_race diverges at frame 464 (game start), when the race goals are placed:
+## RNG calls in that frame differ, because the minimum distance between random goals now uses the real goal count.
+## The Rust port models the uninitialized quantity as 0 (src/smw/objects/overmap/wo_race_goal.rs), which matched the C++ golden.
+
+## Map sweep: all 290 replays in tools/replays_sweep vs tools/golden_sweep: 290/290 dumps identical with the first five commits, and again 290/290 with all six.
+## CI: run 37405562110 on a8bae9af and run 37411503740 on 89d2e96b, all success (Android skipped, as upstream).

@@ -1,0 +1,20 @@
+# NewRoom(name, password) with a 26-character name (NET_MAX_ROOM_NAME_LENGTH is 32), compiled against src/common_netplay/ProtocolPackages.h
+
+```cpp
+#include "ProtocolPackages.h"
+#include <cstdio>
+#include <cstring>
+int main() {
+    const char* name = "Saturday Night Mario Party";  // 26 characters, under NET_MAX_ROOM_NAME_LENGTH (32)
+    NetPkgs::NewRoom pkg(name, "pw");
+    printf("in:  \"%s\" (%zu)\nout: \"%s\" (%zu)\n", name, strlen(name), pkg.name, strlen(pkg.name));
+}
+```
+
+## before (upstream/master c7056790)
+in:  "Saturday Night Mario Party" (26)
+out: "Saturday Night " (15)
+
+## after (fix/uninitialized-reads)
+in:  "Saturday Night Mario Party" (26)
+out: "Saturday Night Mario Party" (26)

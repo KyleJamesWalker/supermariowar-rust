@@ -1,0 +1,153 @@
+# PR2 valgrind evidence. Linux arm64 container (Ubuntu 24.04, clang 18, SDL 2.30), harness-latest (d7c59e1f, upstream c7056790 + replay hooks),
+# Release -O3 -g, run with valgrind --track-origins=yes under SDL dummy video/audio and the software renderer.
+# before = harness-latest, after = + the commits of fix/uninitialized-reads (cpu_race: all six; the other runs: the first five, which cover their reports). Each block: count, error, top frames, origin.
+
+## cpu_race (4 CPUs, Race on 'Block Piles', first 900 frames)
+### before
+[2x] Conditional jump or move depends on uninitialised value(s)
+    at MI_SelectField<short>::setCurrentValue(short) (src/common/ui/MI_SelectField.cpp:227)
+    by UI_GameSettingsMenu::UI_GameSettingsMenu() (src/smw/menu/GameSettingsMenu.cpp:68)
+    by make_unique<UI_GameSettingsMenu> (unique_ptr.h:1070)
+    Uninitialised value was created by a heap allocation
+    at operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-arm64-linux.so)
+    by allocate (new_allocator.h:151)
+
+[2x] Conditional jump or move depends on uninitialised value(s)
+    at OMO_RaceGoal::placeRaceGoal() (src/smw/objects/overmap/WO_RaceGoal.cpp:155)
+    by OMO_RaceGoal::OMO_RaceGoal(gfxSprite*, short) (src/smw/objects/overmap/WO_RaceGoal.cpp:51)
+    by CGM_Race::init() (src/smw/gamemodes/Race.cpp:63)
+    Uninitialised value was created by a heap allocation
+    at operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-arm64-linux.so)
+    by CGM_Race::init() (src/smw/gamemodes/Race.cpp:63)
+
+[1x] Conditional jump or move depends on uninitialised value(s)
+    at CPlayerAI::Think(COutputControl*) (src/smw/ai.cpp:165)
+    by cpu_think (src/smw/player.cpp:1620)
+    by CPlayer::move() (src/smw/player.cpp:1164)
+    Uninitialised value was created by a heap allocation
+    at operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-arm64-linux.so)
+    by CGM_Race::init() (src/smw/gamemodes/Race.cpp:63)
+
+[1x] Conditional jump or move depends on uninitialised value(s)
+    at CPlayerAI::Think(COutputControl*) (src/smw/ai.cpp:242)
+    by cpu_think (src/smw/player.cpp:1620)
+    by CPlayer::move() (src/smw/player.cpp:1164)
+    Uninitialised value was created by a heap allocation
+    at operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-arm64-linux.so)
+    by GameplayState::createPlayers() (src/smw/GSGameplay.cpp:300)
+
+### after (all six commits)
+[2x] Conditional jump or move depends on uninitialised value(s)
+    at MI_SelectField<short>::setCurrentValue(short) (src/common/ui/MI_SelectField.cpp:227)
+    by UI_GameSettingsMenu::UI_GameSettingsMenu() (src/smw/menu/GameSettingsMenu.cpp:68)
+    by make_unique<UI_GameSettingsMenu> (unique_ptr.h:1070)
+    Uninitialised value was created by a heap allocation
+    at operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-arm64-linux.so)
+    by allocate (new_allocator.h:151)
+
+## stage_menus world editor session (File > New world, then save)
+### before
+[1x] Use of uninitialised value of size 8
+    at _itoa_word (_itoa.c:183)
+    by __printf_buffer (vfprintf-process-arg.c:155)
+    by __vfprintf_internal (vfprintf-internal.c:1544)
+    Uninitialised value was created by a stack allocation
+    at new_world() (src/worldeditor/worldeditor.cpp:4680)
+
+
+[1x] Conditional jump or move depends on uninitialised value(s)
+    at _itoa_word (_itoa.c:183)
+    by __printf_buffer (vfprintf-process-arg.c:155)
+    by __vfprintf_internal (vfprintf-internal.c:1544)
+    Uninitialised value was created by a stack allocation
+    at new_world() (src/worldeditor/worldeditor.cpp:4680)
+
+
+[1x] Conditional jump or move depends on uninitialised value(s)
+    at __printf_buffer (vfprintf-process-arg.c:186)
+    by __vfprintf_internal (vfprintf-internal.c:1544)
+    by fprintf (fprintf.c:32)
+    Uninitialised value was created by a stack allocation
+    at new_world() (src/worldeditor/worldeditor.cpp:4680)
+
+
+[1x] Conditional jump or move depends on uninitialised value(s)
+    at WorldMap::Save(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) const (src/smw/world.cpp:888)
+    by savecurrentworld() (src/worldeditor/worldeditor.cpp:4650)
+    by new_world() (src/worldeditor/worldeditor.cpp:4717)
+    Uninitialised value was created by a stack allocation
+    at new_world() (src/worldeditor/worldeditor.cpp:4680)
+
+
+[1x] Conditional jump or move depends on uninitialised value(s)
+    at WorldMap::Save(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) const (src/smw/world.cpp:902)
+    by savecurrentworld() (src/worldeditor/worldeditor.cpp:4650)
+    by new_world() (src/worldeditor/worldeditor.cpp:4717)
+    Uninitialised value was created by a stack allocation
+    at new_world() (src/worldeditor/worldeditor.cpp:4680)
+
+
+### after: ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+
+## Crafted map: GG_Boo rondell.map with three layer-0 tiles changed to tileset ID 2, which is missing from its table (IDs 0 and 4)
+### before
+[2x] Conditional jump or move depends on uninitialised value(s)
+[2x] Conditional jump or move depends on uninitialised value(s)
+    at MapReader1800::read_tiles(CMap&, BinaryFile&) (src/common/map/MapReader18xx.cpp:111)
+    by MapReader1800::load(CMap&, BinaryFile&, ReadType) (src/common/map/MapReader18xx.cpp:374)
+    by MapReader1800::read_tileset(BinaryFile&) (src/common/map/MapReader18xx.cpp:74)
+[2x] Conditional jump or move depends on uninitialised value(s)
+    at MapReader1800::read_tiles(CMap&, BinaryFile&) (src/common/map/MapReader18xx.cpp:114)
+    by MapReader1800::load(CMap&, BinaryFile&, ReadType) (src/common/map/MapReader18xx.cpp:374)
+    by MapReader1800::read_tileset(BinaryFile&) (src/common/map/MapReader18xx.cpp:75)
+[1x] Conditional jump or move depends on uninitialised value(s)
+    at CMap::drawPreview(gfxSprite&, int, bool) (src/common/map.cpp:1819)
+    by MapReader1800::read_tileset(BinaryFile&) (src/common/map/MapReader18xx.cpp:73)
+[1x] Conditional jump or move depends on uninitialised value(s)
+    at CMap::drawPreview(gfxSprite&, int, bool) (src/common/map.cpp:1823)
+    by MapReader1800::read_tileset(BinaryFile&) (src/common/map/MapReader18xx.cpp:73)
+[1x] Conditional jump or move depends on uninitialised value(s)
+    by CMap::drawPreview(gfxSprite&, int, bool) (src/common/map.cpp:1824)
+    by MapReader1800::read_tileset(BinaryFile&) (src/common/map/MapReader18xx.cpp:73)
+[1x] Use of uninitialised value of size 8
+    by MapReader1800::read_tileset(BinaryFile&) (src/common/map/MapReader18xx.cpp:73)
+### after: ERROR SUMMARY: 21 errors from 2 contexts (suppressed: 0 from 0) (all MI_SelectField, see below)
+
+## All 290 map-sweep replays (first 400 frames, harness-latest): the only report is MI_SelectField.cpp:227 (not in this PR).
+## No shipped map reaches the missing-tileset-ID read: 68 of 287 v1.8 maps have gaps in their tileset ID table, but no tile uses a gap.
+
+## All 13 editor sessions (7 level editor, 6 world editor)
+### before
+screenshot_find.txt rc=0 0 errors from 0
+objects_save.txt rc=0 0 errors from 0
+hazards_move_save.txt rc=0 0 errors from 0
+platforms_save.txt rc=0 0 errors from 0
+smoke.txt rc=0 0 errors from 0
+tiles_save.txt rc=0 0 errors from 0
+types_backgrounds.txt rc=0 0 errors from 0
+navigate_resize.txt rc=0 0 errors from 0
+paint_save.txt rc=0 0 errors from 0
+smoke.txt rc=0 0 errors from 0
+stage_menus.txt rc=0 5 errors from 5
+stages_vehicles.txt rc=0 5 errors from 5
+sync_coverage.txt rc=0 0 errors from 0
+### after
+screenshot_find.txt rc=0 0 errors from 0
+objects_save.txt rc=0 0 errors from 0
+hazards_move_save.txt rc=0 0 errors from 0
+platforms_save.txt rc=0 0 errors from 0
+smoke.txt rc=0 0 errors from 0
+tiles_save.txt rc=0 0 errors from 0
+types_backgrounds.txt rc=0 0 errors from 0
+paint_save.txt rc=0 0 errors from 0
+navigate_resize.txt rc=0 0 errors from 0
+smoke.txt rc=0 0 errors from 0
+stage_menus.txt rc=0 0 errors from 0
+stages_vehicles.txt rc=0 0 errors from 0
+sync_coverage.txt rc=0 0 errors from 0
+
+## Found, not in this PR
+- MI_SelectField.cpp:227 from GameSettingsMenu.cpp:68 in every game start: a select field item compared before being set.
+- From the M9 investigation, flagged by valgrind but changing none of the 45 replays: CGM_Pipe_MiniGame::fSlowdown (MiniPipe.h:34),
+  PlayerAwardEffects::awardangle (PlayerAwardEffects.h:23, drawing only), IO_MovingObject::iPlayerID (MovingObject.h:41, read by
+  removeifprojectile for sledge brother hammers), and the CMap padding read by the AI's out-of-bounds map reads (backlog M3).
