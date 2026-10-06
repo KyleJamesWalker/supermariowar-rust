@@ -1,6 +1,6 @@
 # Super Mario War, in Rust
 
-A faithful Rust + rust-sdl2 port of [Super Mario War](https://github.com/mmatyas/supermariowar) (upstream commit [`5693918f`](https://github.com/mmatyas/supermariowar/commit/5693918f5e3ec8ef50ff4f86cfe07c8d2c5a247b)). It covers the game, menus, sound, netplay, the lobby server, and the level and world editors. Given the same scripted input, the Rust build produces the same per-frame game state, sound events and screenshots as the C++ original. `docs/MORNING_REPORT.md` has the verification results.
+A faithful Rust + rust-sdl2 port of [Super Mario War](https://github.com/mmatyas/supermariowar) (upstream commit [`c7056790`](https://github.com/mmatyas/supermariowar/commit/c7056790ccb485b7309137251167b75fed1482e4)). It covers the game, menus, sound, netplay, the lobby server, and the level and world editors. Given the same scripted input, the Rust build produces the same per-frame game state, sound events and screenshots as the C++ original. `docs/MORNING_REPORT.md` has the verification results.
 
 `docs/GAME_MANUAL.md` is the player's manual: menus, controls, all 21 game modes, blocks and items.
 
@@ -11,13 +11,17 @@ Each [release](https://github.com/KyleJamesWalker/supermariowar-rust/releases) c
 | Package | Runs on | Notes |
 |---|---|---|
 | `SuperMarioWar-<version>-linux-x86_64.tar.gz`, `-linux-aarch64.tar.gz` | Linux with glibc 2.34 and SDL2_mixer 2.6 or newer (built on Ubuntu 24.04) | Links the system SDL2 libraries: `sudo apt install libsdl2-2.0-0 libsdl2-image-2.0-0 libsdl2-mixer-2.0-0`. Run `SuperMarioWar/smw`. |
-| `SuperMarioWar-<version>-macos-universal.zip` | macOS 14 or newer (Apple silicon), 15 or newer (Intel) | Ad-hoc signed, not notarized: after unzipping, run `xattr -dr com.apple.quarantine "Super Mario War.app"` once. |
-| `SuperMarioWar-<version>-windows-x86_64.zip` | Windows 10 or newer, x64 | SDL2 DLLs included. Settings go to `%USERPROFILE%\.smw\`. |
+| `SuperMarioWar-<version>-macos-universal.zip` | macOS 14 or newer (Apple silicon), 15 or newer (Intel) | The bundled Homebrew libraries set these minimums. `Info.plist` declares each one per architecture. Ad-hoc signed, not notarized: after unzipping, run `xattr -dr com.apple.quarantine "Super Mario War.app"` once. |
+| `SuperMarioWar-<version>-windows-x86_64.zip` | Windows 10 or newer, x64 | SDL2 DLLs included. The game and editors open no console window. Started from a terminal, they print to it. `--debug` opens a console. Settings go to `%USERPROFILE%\.smw\`. |
 | `SuperMarioWar-<version>-web.zip` | Any static web server | The site published at GitHub Pages. |
 | `SuperMarioWar-<version>.muxapp` | Anbernic handhelds on muOS | See [Anbernic (muOS)](#anbernic-muos). |
-| `SuperMarioWar-<version>.apk` | Android 5.0 or newer: on-screen touch controls, a gamepad or a keyboard | Debug-signed. See [Android](#android). |
+| `SuperMarioWar-<version>.apk` | Android 5.0 or newer: on-screen touch controls, a gamepad or a keyboard | Signed with the project's debug key, so a new APK installs over the last one. See [Android](#android). |
 
-Every CI run also uploads these packages as workflow artifacts (`smw-linux-x86_64`, `smw-macos-universal`, `smw-windows-x86_64`, ...). `docs/RELEASING.md` describes how a release is cut.
+Every CI run also uploads these packages as workflow artifacts (`smw-linux-x86_64`, `smw-macos-universal`, `smw-windows-x86_64`, ...).
+
+### Releases
+
+Pushing a `v*` tag runs `.github/workflows/release.yml`. It builds every package with the same `build_*.yml` workflows that CI uses, checks them, and publishes a GitHub Release with `SHA256SUMS` and generated notes. The web page and the relay image do not follow tags: they deploy from `main`. `docs/RELEASING.md` has the steps, including a dry run that builds the packages without a release.
 
 ## Build and run
 
@@ -29,7 +33,17 @@ cargo run --release --bin smw -- --datadir data          # the game
 cargo run --release --bin leveleditor -- --datadir data
 cargo run --release --bin worldeditor -- --datadir data
 cargo run --release --bin smw_server                     # netplay lobby server
+cargo test --workspace                                   # unit tests of every crate
 ```
+
+The repository is a Cargo workspace with one `Cargo.lock` at the root, and every binary builds to `target/`:
+
+| Crate | Path | Contents |
+|---|---|---|
+| `smw` | `src/` | the game, the level and world editors and `smw_server` |
+| `smw-globals` | `crates/smw-globals/` | the porting infrastructure: `Ptr`, `Global`, `Aliased` and the C++ inheritance macros |
+| `smw-netplay` | `crates/smw-netplay/` | the netplay protocol and lobby server, shared by the game, `smw_server` and `smw_relay` |
+| `smw_relay` | `relay/` | the WebSocket lobby and relay for [browser multiplayer](#browser-multiplayer) |
 
 Native builds draw without SDL surface RLE, which on Homebrew's sdl2-compat costs most of the frame time and shows the map foreground's colour key (`docs/sdl2-compat-rle.md`); the web build keeps it. `SMW_RLE=1` or `SMW_RLE=0` overrides at launch.
 
@@ -39,7 +53,9 @@ Each `v*` release carries `SuperMarioWar-<version>.muxapp`, a one-file install f
 
 ## Android
 
-`.github/workflows/build_android.yml` builds a debug-signed APK for arm64-v8a, armeabi-v7a and x86_64 following upstream's SDL-template Android port, and plays replays on an x86_64 emulator against the goldens. It has on-screen touch controls beside the picture, and reads gamepads and keyboards. [`android/README.md`](android/README.md) covers installing, data and settings paths, controls and building.
+`.github/workflows/build_android.yml` builds an APK for arm64-v8a, armeabi-v7a and x86_64 following upstream's SDL-template Android port. CI then plays replays on an x86_64 emulator against the goldens and plugs in a virtual gamepad. CI and releases sign every APK with one project debug key from the repository secrets, so an update keeps settings and recordings.
+
+The game draws touch controls in the bars beside the picture, with a D-pad or a floating stick. They hide at the first gamepad or keyboard input. Gamepads with an SDL mapping use the muOS layout and join as the next player, also when connected after launch. Recordings replay that hot-plug exactly. [`android/README.md`](android/README.md) covers installing, signing, data and settings paths, controls and building.
 
 ## Web build
 
@@ -65,7 +81,7 @@ On touch screens (`pointer: coarse`) the page shows on-screen controls for playe
 Upstream's web build has no netplay. Here the browser build plays online through `smw_relay`, which runs the lobby server and relays game traffic between players over WebSocket. The page connects to `wss://smw-relay.vps.pocketsquirrel.com`, or to the relay a `?relay=ws://...` parameter names. Browser and native players cannot meet yet. `docs/RELAY.md` covers the protocol, settings and deployment.
 
 ```sh
-cargo run --release --manifest-path relay/Cargo.toml -- --port 8080   # then open http://localhost:8000/?relay=ws://localhost:8080
+cargo run --release -p smw_relay -- --port 8080   # then open http://localhost:8000/?relay=ws://localhost:8080
 node tools/web_netplay_test.mjs out/   # two headless browsers play a scripted net game
 ```
 
@@ -92,10 +108,10 @@ The C++ original, plus the replay and state-dump hooks used to compare it with t
 `.github/workflows/ci.yml` runs on every pull request and every push to `main`:
 
 - clippy (fails on errors) and cargo-deny (licenses, advisories, sources)
-- `cargo test`, debug and release, on Linux, macOS and Windows
-- replay parity: `tools/parity.sh`, `tools/parity_sweep.sh`, `tools/editor_parity.sh` and `tools/segment_check.py` against the committed goldens. macOS, where the goldens were made, gates on dumps and screenshots. It also checks the port against goldens from the C++ reference built on the same runner. Linux copies `data/` onto a FAT32 image in APFS order (`tools/apfs_order.py`), so directories list as they do on macOS, and gates on the same suites except the editor screenshots. Windows gates on the game suite.
+- `cargo test` for the workspace, debug and release, on Linux, macOS and Windows
+- replay parity: `tools/parity.sh`, `tools/parity_sweep.sh`, `tools/editor_parity.sh` and `tools/segment_check.py` against the committed goldens. macOS, where the goldens were made, gates on dumps and screenshots. It also checks the port against goldens from the C++ reference built on the same runner. Linux copies `data/` onto a FAT32 image in APFS order (`tools/apfs_order.py`), so directories list as they do on macOS, and gates on the same suites except the editor screenshots. Windows keeps its replay runs on a FAT32 image and gates on the game suite, the map sweep, and editor dumps and saved files. It reports editor screenshot differences without failing.
 - the web build's clip and page tests in headless Chrome
-- the Linux, macOS, Windows, web and muOS packages (`build_*.yml`, the same reusable workflows `release.yml` calls)
+- the Linux, macOS, Windows, web, muOS and Android packages (`build_*.yml`, the same reusable workflows `release.yml` calls)
 
 `web.yml` deploys the web build to GitHub Pages and `relay.yml` pushes the relay image to GHCR, both from `main`.
 

@@ -80,6 +80,7 @@ await new Promise((ok) => ws.addEventListener('open', ok));
 let nextId = 1;
 const pending = new Map();
 const consoleLines = [];
+const listeners = new Set();
 ws.addEventListener('message', (ev) => {
     const msg = JSON.parse(ev.data);
     if (msg.id && pending.has(msg.id)) {
@@ -89,7 +90,21 @@ ws.addEventListener('message', (ev) => {
     } else if (msg.method === 'Runtime.consoleAPICalled') {
         consoleLines.push(msg.params.args.map((a) => a.value ?? a.description ?? '').join(' '));
     }
+    if (msg.method) for (const listener of listeners) listener(msg);
 });
+// Resolves with the params of the first `method` event that `match` accepts. Subscribe before the action that fires it.
+const nextEvent = (method, match = () => true, ms = 60000) => {
+    let listener;
+    let timer;
+    return new Promise((ok, fail) => {
+        timer = setTimeout(() => fail(new Error(`no ${method} within ${ms / 1000} s`)), ms);
+        listener = (msg) => msg.method === method && match(msg.params) && ok(msg.params);
+        listeners.add(listener);
+    }).finally(() => {
+        clearTimeout(timer);
+        listeners.delete(listener);
+    });
+};
 let sessionId;
 const send = (method, params = {}, session = sessionId) =>
     new Promise((ok, fail) => {
@@ -103,12 +118,24 @@ const evaluate = async (expression) => {
     if (r.exceptionDetails) throw new Error(`${expression}: ${r.exceptionDetails.exception?.description ?? r.exceptionDetails.text}`);
     return r.result.value;
 };
-const waitFor = async (expression, what, ms = 60000) => {
+// A page that navigates mid-poll fails that one evaluation; the next one runs in the new page.
+const navigated = /Inspected target navigated or closed|Execution context was destroyed|Cannot find context/;
+const waitFor = async (expression, what, ms = 60000, every = 200) => {
     const until = Date.now() + ms;
-    while (!(await evaluate(expression))) {
+    for (;;) {
+        try {
+            if (await evaluate(expression)) return;
+        } catch (e) {
+            if (!navigated.test(e.message)) throw e;
+        }
         if (Date.now() > until) throw new Error(`timed out waiting for ${what}`);
-        await sleep(200);
+        await sleep(every);
     }
+};
+const reload = async () => {
+    const loaded = nextEvent('Page.loadEventFired');
+    await send('Page.reload');
+    await loaded;
 };
 let failures = 0;
 const check = (ok, what) => {
@@ -135,18 +162,21 @@ const tap = async (p) => {
 const download = async (expression) => {
     const dir = join(downloads, String(++downloadCount));
     mkdirSync(dir);
-    await send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: dir }, undefined);
+    await send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: dir, eventsEnabled: true }, undefined);
+    const begun = nextEvent('Browser.downloadWillBegin', () => true, 10000);
     await evaluate(expression);
-    const until = Date.now() + 10000;
-    let name;
-    while (!(name = readdirSync(dir).find((f) => !f.endsWith('.crdownload'))) && Date.now() < until) await sleep(200);
-    if (!name) throw new Error(`no download from ${expression}`);
-    await sleep(300);
-    return { name, bytes: readFileSync(join(dir, name)) };
+    const { guid, suggestedFilename } = await begun.catch(() => {
+        throw new Error(`no download from ${expression}`);
+    });
+    const { state } = await nextEvent('Browser.downloadProgress', (p) => p.guid === guid && p.state !== 'inProgress', 10000);
+    if (state !== 'completed') throw new Error(`the download of ${suggestedFilename} was ${state}`);
+    const names = readdirSync(dir);
+    if (names.length !== 1) throw new Error(`expected one download in ${dir}, found ${names.join(', ')}`);
+    return { name: names[0], bytes: readFileSync(join(dir, names[0])) };
 };
 const isGzip = (b) => b[0] === 0x1f && b[1] === 0x8b;
 const loadReplay = async (file, what) => {
-    await send('Page.reload');
+    await reload();
     await waitFor(startScreen, `the start screen for Load replay (${what})`, 120000);
     const { result: input } = await send('Runtime.evaluate', { expression: `document.getElementById('loadReplay')` });
     await send('DOM.setFileInputFiles', { files: [file], objectId: input.objectId });
@@ -159,19 +189,35 @@ const recording = () => evaluate(`(() => {
 })()`);
 const startScreen = `document.getElementById('start')?.hidden === false`;
 const KEYS = { Enter: 13, Escape: 27, ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, e: 69 };
-const key = async (name, holdMs = 80) => {
-    const code = name.length === 1 ? `Key${name.toUpperCase()}` : name;
-    for (const type of ['keyDown', 'keyUp']) {
-        await send('Input.dispatchKeyEvent', { type, key: name, code, windowsVirtualKeyCode: KEYS[name] });
-        if (type === 'keyDown') await sleep(holdMs);
-    }
-    await sleep(250);
-};
-// The state and menu of the newest dump block (docs/REPLAY.md, "Dump format").
+const keyEvent = (type, name) => send('Input.dispatchKeyEvent', {
+    type, key: name, code: name.length === 1 ? `Key${name.toUpperCase()}` : name, windowsVirtualKeyCode: KEYS[name],
+});
+// The frame, state, menu and player 1's x of the newest complete dump block (docs/REPLAY.md, "Dump format").
 const frameState = async () => {
     const dump = await evaluate(`(() => { try { return Module.FS.readFile('/dump.txt', { encoding: 'utf8' }).slice(-4000); } catch { return ''; } })()`);
-    const block = dump.slice(dump.lastIndexOf('\nF ') + 1).split('\n');
-    return { state: (block[0] ?? '').split(' ')[2], menu: (block.find((l) => l.startsWith('M ')) ?? '').split(' ')[1] };
+    const blocks = dump.split('\nF ');
+    const block = (blocks.length > 2 ? blocks[blocks.length - 2] : '').split('\n');
+    const [frame, state] = (block[0] ?? '').split(' ');
+    const field = (prefix, name) => (block.find((l) => l.startsWith(prefix)) ?? '').match(new RegExp(` ${name}=(\\S+)`))?.[1];
+    return {
+        frame: frame === undefined || frame === '' ? -1 : Number(frame), state,
+        menu: (block.find((l) => l.startsWith('M ')) ?? '').split(' ')[1], x: field('P id=0 ', 'fx'),
+    };
+};
+// Game frames, not wall time, pace the key presses: a slow runner then sees the same input as a fast one.
+const frames = async (n) => {
+    const until = (await frameState()).frame + n;
+    const deadline = Date.now() + 30000;
+    while ((await frameState()).frame < until) {
+        if (Date.now() > deadline) throw new Error(`the game did not advance ${n} frames`);
+        await sleep(20);
+    }
+};
+const key = async (name, holdFrames = 10) => {
+    await keyEvent('keyDown', name);
+    await frames(holdFrames);
+    await keyEvent('keyUp', name);
+    await frames(30);
 };
 
 const { targetId } = await send('Target.createTarget', { url: 'about:blank' });
@@ -197,20 +243,31 @@ await send('Page.addScriptToEvaluateOnNewDocument', {
 
 try {
     await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false });
+    const loaded = nextEvent('Page.loadEventFired');
     await send('Page.navigate', { url });
+    await loaded;
     await waitFor(startScreen, 'the start screen', 120000);
     check(await evaluate(`document.getElementById('matches').hidden && document.getElementById('watchLast').hidden`), 'no recording yet: no match list');
 
     await evaluate(`document.getElementById('play').click()`);
     await evaluate(`document.getElementById('canvas').focus()`);
-    await sleep(1500);
+    await waitFor(`(() => { try { return Module.FS.stat('/dump.txt').size > 0; } catch { return false; } })()`, 'the game to start', 60000);
+    await frames(150);
     // tools/replays/start_classic.txt's menu path: Enter through the menus, E readies player 2.
     for (let i = 0; i < 12 && (await frameState()).state !== 'gameplay'; i++) {
         await key((await frameState()).menu === 'team_select' && i < 6 ? 'e' : 'Enter');
     }
     check((await frameState()).state === 'gameplay', 'the keyboard started a Classic game');
-    await sleep(1500);
-    await key('ArrowRight', 600);
+    // The exit dialog ignores Escape during the countdown; player 1 moving shows it is over.
+    const x0 = (await frameState()).x;
+    await keyEvent('keyDown', 'ArrowRight');
+    await frames(60);
+    for (const until = Date.now() + 30000; (await frameState()).x === x0;) {
+        if (Date.now() > until) throw new Error('player 1 did not move right');
+        await frames(1);
+    }
+    await keyEvent('keyUp', 'ArrowRight');
+    await frames(30);
     await key('ArrowUp');
     await key('Escape');
     await key('ArrowLeft');
@@ -224,9 +281,10 @@ try {
     check(/\.smwrp$/.test(footerGz.name) && isGzip(footerGz.bytes) && /\.txt$/.test(footerTxt.name) && !isGzip(footerTxt.bytes)
         && gunzipSync(footerGz.bytes).equals(footerTxt.bytes) && footerTxt.bytes.toString().startsWith('#'),
         `the footer downloads the recording as .smwrp and (.txt) as text (${footerGz.name} ${footerGz.bytes.length} B, ${footerTxt.name} ${footerTxt.bytes.length} B)`);
+    check(await evaluate(`document.getElementById('end').hidden`) && (await frameState()).state === 'menu', 'the game is still running, in its menu');
     await evaluate(`new Promise((ok) => Module.FS.syncfs(false, ok))`);
 
-    await send('Page.reload');
+    await reload();
     await waitFor(startScreen, 'the start screen after the session', 120000);
     const rows = await evaluate(`[...document.querySelectorAll('#matchList .match-name')].map((e) => e.textContent)`);
     check(rows.length === 1 && /^Match 1 — Classic, 0smw, 2 players, \d+ s$/.test(rows[0]), `the start screen lists the match (${rows.join(' | ')})`);
@@ -258,7 +316,7 @@ try {
         width: 844, height: 390, deviceScaleFactor: 3, mobile: true, screenOrientation: { type: 'landscapePrimary', angle: 90 },
     });
     await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
-    await send('Page.reload');
+    await reload();
     await waitFor(startScreen, 'the start screen on a phone', 120000);
     check(await evaluate(`document.documentElement.classList.contains('touch')`), 'phone: touch controls on');
     check(await evaluate(`(() => {
@@ -299,7 +357,7 @@ try {
         check(dump === nativeDump, `Load replay plays the ${what} like the native build (${dump.split('\nF ').length} frames)`);
     }
     // The game itself gunzips too (Emscripten's zlib), as smw --replay does natively.
-    await send('Page.reload');
+    await reload();
     await waitFor(startScreen, 'the start screen for a gzipped --replay', 120000);
     await evaluate(`(() => {
         Module.FS.writeFile('/tmp/raw.smwrp', Uint8Array.from(atob(${JSON.stringify(clipGz.bytes.toString('base64'))}), (c) => c.charCodeAt(0)));

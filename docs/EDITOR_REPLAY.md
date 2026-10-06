@@ -116,4 +116,3 @@ The C++ dump needs the private `CMap` members, so `editor-harness.patch` adds `f
 ## Known C++ behaviour the scripts avoid
 
 - **Stage editing on a world that already has stages.** World loading leaves `game_values.tourstops` empty while `iNumStages` keeps the loaded count. A new stage then overwrites stale entries, and the vehicle menu reads past the vector and crashes. The stage scripts create a new world first.
-- **Minigame stages (modes 25–27).** `SaveStage` reads `g_iNumGameModeSettings` past its 22 entries, into whatever globals the linker placed after it. In the patched reference those are the harness's own globals. Saving such a stage writes that many settings, or crashes. The Rust port reads 0 there. Bonus houses (24) read past the array too, but never write settings.

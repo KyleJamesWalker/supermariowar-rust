@@ -2032,29 +2032,6 @@ index ff09efb6..e81ade24 100644
  
          player.Score().subscore[0]--;
  
-diff --git a/src/smw/gamemodes/GameMode.cpp b/src/smw/gamemodes/GameMode.cpp
-index 8f1933a6..9f1f7390 100644
---- a/src/smw/gamemodes/GameMode.cpp
-+++ b/src/smw/gamemodes/GameMode.cpp
-@@ -322,12 +322,12 @@ short CGameMode::GetScoreRankedPlayerList(CPlayer * outPlayers[4], bool fGetHigh
-         fNeedSwap = false;
-         short iRandom = 0;
-         for (short iIndex = 0; iIndex < iNumPlayersInList - 1; iIndex++) {
--            if ((fGetHighest && players[iIndex]->Score().score < players[iIndex + 1]->Score().score) ||
--                    (!fGetHighest && players[iIndex]->Score().score > players[iIndex + 1]->Score().score) ||
--                    (players[iIndex]->Score().score == players[iIndex + 1]->Score().score && RANDOM_BOOL() && iRandom++ < 5)) {
--                CPlayer * pTemp = players[iIndex];
--                players[iIndex] = players[iIndex + 1];
--                players[iIndex + 1] = pTemp;
-+            if ((fGetHighest && outPlayers[iIndex]->Score().score < outPlayers[iIndex + 1]->Score().score) ||
-+                    (!fGetHighest && outPlayers[iIndex]->Score().score > outPlayers[iIndex + 1]->Score().score) ||
-+                    (outPlayers[iIndex]->Score().score == outPlayers[iIndex + 1]->Score().score && RANDOM_BOOL() && iRandom++ < 5)) {
-+                CPlayer * pTemp = outPlayers[iIndex];
-+                outPlayers[iIndex] = outPlayers[iIndex + 1];
-+                outPlayers[iIndex + 1] = pTemp;
- 
-                 fNeedSwap = true;
-             }
 diff --git a/src/smw/gamemodes/Greed.cpp b/src/smw/gamemodes/Greed.cpp
 index 93c41bd6..8ce5182a 100644
 --- a/src/smw/gamemodes/Greed.cpp
@@ -2097,28 +2074,6 @@ index ee9f1e13..74c34514 100644
  
          ifSoundOnPlay(rm->sfx_coin);
  
-diff --git a/src/smw/gamemodes/Star.cpp b/src/smw/gamemodes/Star.cpp
-index b17868fb..274d788d 100644
---- a/src/smw/gamemodes/Star.cpp
-+++ b/src/smw/gamemodes/Star.cpp
-@@ -101,7 +101,7 @@ void CGM_Star::think()
- 
-     //Make sure there is a star player(s)
-     if (iCurrentModeType == StarStyle::Multi) {
--        for (size_t iStar1 = 0; iStar1 + 1 <= players.size(); iStar1++) {
-+        for (size_t iStar1 = 0; iStar1 + 1 < players.size(); iStar1++) {
-             //If we're missing a star player, then reassign them all
-             if (!starPlayer[iStar1]) {
-                 CPlayer * players[4];
-@@ -181,7 +181,7 @@ void CGM_Star::think()
-         } else if (iCurrentModeType == StarStyle::Multi) {
-             for (size_t iPlayer = 0; iPlayer < players.size(); iPlayer++) {
-                 bool fFound = false;
--                for (size_t iStar = 0; iStar + 1 <= players.size(); iStar++) {
-+                for (size_t iStar = 0; iStar + 1 < players.size(); iStar++) {
-                     if (starPlayer[iStar] == players[iPlayer]) {
-                         fFound = true;
-                         break;
 diff --git a/src/smw/main.cpp b/src/smw/main.cpp
 index bc7783b7..8cb917ce 100644
 --- a/src/smw/main.cpp

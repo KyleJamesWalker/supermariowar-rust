@@ -60,7 +60,13 @@ const children = [];
 const profiles = [];
 let httpServer;
 const cleanup = () => {
-    for (const child of children) child.kill('SIGKILL');
+    for (const child of children) {
+        try {
+            process.kill(-child.pid, 'SIGKILL');
+        } catch {
+            child.kill('SIGKILL');
+        }
+    }
     httpServer?.close();
     for (const p of profiles) rmSync(p, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 };
@@ -156,9 +162,13 @@ const openPage = async (page) => {
     const browser = spawn(chrome, [
         '--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--disable-extensions',
         '--autoplay-policy=no-user-gesture-required', '--mute-audio', '--window-size=800,700', 'about:blank',
-    ], { stdio: ['ignore', 'ignore', 'pipe'] });
+    ], { stdio: ['ignore', 'ignore', 'pipe'], detached: true });
     children.push(browser);
-    const close = () => browser.kill('SIGKILL');
+    const close = () => {
+        try {
+            process.kill(-browser.pid, 'SIGKILL');
+        } catch {}
+    };
     const wsUrl = await new Promise((ok, fail) => {
         let buf = '';
         browser.stderr.on('data', (d) => {
