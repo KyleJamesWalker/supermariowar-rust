@@ -57,6 +57,8 @@ fn emscripten_link_args() {
         &relay_socket.display().to_string(),
         "--preload-file",
         &format!("{}@data", data.display()),
+        "--exclude-file",
+        "*.git",
     ] {
         println!("cargo:rustc-link-arg-bin=smw={arg}");
     }
