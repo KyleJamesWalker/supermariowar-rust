@@ -20,9 +20,9 @@ The port mirrors the C++ tree one module per file (`docs/ARCHITECTURE.md`). It k
 |---|---|
 | Rust source in `src/` | 92,750 lines |
 | Files that use `sdl2::sys` directly | 116 (90 in `smw/`, 24 in `common/`, 1 per editor) |
-| `static mut` declarations | 150 in 36 files (23 `Global<T>`, 46 `Ptr<T>`) |
+| `static mut` declarations | 281 in 36 files (167 in the two editors; 23 `Global<T>`, 54 `Ptr<T>`) |
 | `unsafe {` blocks | 1,324 |
-| Game replays with goldens (`tools/replays`) | 48 (45 C++ goldens, 2 Rust goldens) |
+| Game replays with goldens (`tools/replays`) | 47 (45 C++ goldens, 2 Rust goldens) |
 | Map sweep replays (`tools/replays_sweep`) | 290 |
 | Editor sessions (`tools/editor_replays`) | 13 |
 | Segment replays (`tools/segment_replays`) | 9 |
@@ -74,7 +74,7 @@ Rules:
 
 ### Trait boundaries
 
-The core gets services from the context and never calls a platform API itself. Input is pushed in by the frame driver, not pulled by the core. Sketch signatures:
+The core gets services from the context and never calls a platform API itself. Input is pushed in by the frame driver, not pulled by the core. The frame driver owns `Services` and lends them to each frame: `FrameOutput` borrows the core's framebuffer, and the driver then presents it through the video service, which it could not do if `Game` owned the services. Sketch signatures:
 
 ```rust
 // smw-platform
@@ -93,14 +93,18 @@ pub trait Video {
     fn draw_overlay(&mut self, overlay: &touch::Overlay) {}
 }
 
-pub type SoundId = u32;
-pub type TrackId = u32;
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub struct SoundId(pub u32);
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub struct TrackId(pub u32);
 
 /// Output only. Nothing here returns game-visible state, and backends never call back into the game.
+/// `isPlaying()`, `Mix_PlayingMusic()` and the finish callbacks all come from the core's virtual mixer.
 pub trait AudioOut {
     fn load_sound(&mut self, id: SoundId, bytes: &[u8]);
     fn load_track(&mut self, id: TrackId, bytes: &[u8]);
-    fn free(&mut self, id: u32);
+    fn free_sound(&mut self, id: SoundId);
+    fn free_track(&mut self, id: TrackId);
     fn play(&mut self, channel: u8, id: SoundId, loops: i32);   // channel chosen by the core
     fn halt(&mut self, channel: Option<u8>);                      // None: every channel
     fn play_track(&mut self, id: TrackId, once: bool);
@@ -110,7 +114,7 @@ pub trait AudioOut {
 }
 
 pub trait Clock {
-    /// Wall-clock milliseconds. Only the frame driver and the FPS overlay read it.
+    /// Wall-clock milliseconds. Only the frame driver, the FPS overlay and netplay message timestamps read it.
     fn now_ms(&self) -> u64;
     fn sleep_ms(&self, ms: u32);
 }
@@ -137,9 +141,9 @@ pub struct FrameOutput<'a> {
 }
 
 impl Game {
-    pub fn new(services: Services, args: &CmdArgs) -> Game;
+    pub fn new(services: &mut Services, args: &CmdArgs) -> Game;
     /// One iteration of the C++ gameloop body: sound advance, input, state update, dump, screenshot.
-    pub fn frame(&mut self, input: &mut dyn InputQueue) -> FrameOutput<'_>;
+    pub fn frame(&mut self, services: &mut Services, input: &mut dyn InputQueue) -> FrameOutput<'_>;
 }
 
 /// Events for this frame, plus the blocking wait that MI_InputControlField::SendInput needs.
@@ -151,9 +155,9 @@ pub trait InputQueue {
 
 Three design decisions follow from the parity constraints.
 
-1. **Pixels are the core's.** `smw-core` owns `Surface` (a `Vec<u32>` or palette-indexed buffer with a color key, alpha mod and blend mode) and a blitter that reproduces the SDL blit paths the game uses: `SDL_UpperBlit` with clipping, color key, per-surface alpha, `SDL_FillRect`, `SDL_ConvertSurface` and palette mapping. Images decode with the `png` crate and a small BMP reader. With this design, both backends present the same bytes, the web build stops depending on RLE behavior, and the sdl2-compat differences stop mattering. The screenshots of the 48 game replays, the 290 sweep replays and the 13 editor sessions verify every blit path.
+1. **Pixels are the core's.** `smw-core` owns `Surface` (a `Vec<u32>` or palette-indexed buffer with a color key, alpha mod and blend mode) and a blitter that reproduces the SDL blit paths the game uses: `SDL_UpperBlit` with clipping, color key, per-surface alpha, `SDL_FillRect`, `SDL_ConvertSurface` and palette mapping. Images decode with the `png` crate and a small BMP reader. With this design, both backends present the same bytes, the web build stops depending on RLE behavior, and the sdl2-compat differences stop mattering. The screenshots of the 47 game replays, the 290 sweep replays and the 13 editor sessions verify every blit path.
 2. **Sound state is the core's.** The virtual mixer (`sfx.rs`, today active only in seeded runs) becomes the only source of `isPlaying()`, channel numbers and finish events in every run. Backends play what it says on the channel it picks. Durations come from a table that the core builds from file headers, or from a checked-in table that a tool generates with SDL2_mixer. They no longer come from the backend's decoded length. A test on the SDL2 backend compares the table with `Mix_Chunk::alen` and `Mix_MusicDuration` for every file in `data/`.
-3. **Time is the frame counter.** Game logic reads only the virtual clock (`1000 + N * 16` ms, already used by seeded runs). The wall clock reaches only the frame driver (`fps_limiter.rs`) and the F1 overlay.
+3. **Time is the frame counter.** Game logic reads only the virtual clock (`1000 + N * 16` ms, already used by seeded runs). The wall clock reaches only the frame driver (`fps_limiter.rs`), the F1 overlay and the netplay message timestamps in `net.rs`, which nothing reads back.
 
 ### Threading the context through the code
 
@@ -165,7 +169,6 @@ The migration has three steps. Each step is a series of PRs, and each PR keeps e
 
 ```rust
 pub struct Game {
-    pub services: Services,
     pub game_values: CGameValues,
     pub g_map: Box<CMap>,
     pub rm: Box<CResourceManager>,
@@ -175,12 +178,12 @@ pub struct Game {
 
 static mut GAME: Ptr<Game> = Ptr::null();
 #[inline(always)]
-pub fn game() -> &'static mut Game { unsafe { &mut *GAME.as_ptr() } }
+pub fn game() -> Ptr<Game> { unsafe { GAME } }
 ```
 
-Call sites change mechanically, for example from `game_values.gamemode` to `game().game_values.gamemode`. `Game::new` constructs fields in the order `globals::init_globals` uses today. Constructors that draw from the RNG or read files must run in the same order, because a different order changes the `R calls=` record. Function-local `static mut`s, for example in `sfx.rs`, `pad.rs`, `harness.rs` and `main.rs`, move into the subsystem that owns them. Checkpoint save and restore can then cover whole subsystems instead of listing globals by hand.
+The accessor returns `Ptr<Game>`, not `&'static mut Game`. Step 3 passes `&mut Game` down call trees while leaf code still reaches the same object through the accessor, and two live `&mut` to one object is undefined behavior. `Ptr` keeps that aliasing in the raw-pointer world the port already lives in. Call sites change mechanically, for example from `game_values.gamemode` to `game().game_values.gamemode`. `Game::new` constructs fields in the order `globals::init_globals` uses today. Constructors that draw from the RNG or read files must run in the same order, because a different order changes the `R calls=` record. Function-local `static mut`s, for example in `sfx.rs`, `pad.rs`, `harness.rs` and `main.rs`, move into the subsystem that owns them. Checkpoint save and restore can then cover whole subsystems instead of listing globals by hand.
 
-**Step 3: pass `&mut Game` down.** The frame loop passes `&mut Game` into `GameStateManager`, then each state's `update`/`draw`, then subsystems. A PR converts one call tree, and leaf code that still calls `game()` keeps working. When no caller remains, the static is deleted. `Game` is then an ordinary value, so one process can run several games: parallel in-process replay tests, and later rollback.
+**Step 3: pass `&mut Game` down.** The frame loop passes `&mut Game` into `GameStateManager`, then each state's `update`/`draw`, then subsystems. A PR converts one call tree, and leaf code that still calls `game()` keeps working through the `Ptr`. When no caller remains, the static is deleted and `&mut Game` becomes the only path. `Game` is then an ordinary value, so one process can run several games: parallel in-process replay tests, and later rollback.
 
 Step 3 meets the object graph: methods that take `&mut self` on an object inside `Game` while touching other parts of `Game`. The `Ptr`/`Aliased` convention (`docs/ARCHITECTURE.md`, Pointers and ownership) stays valid through all three steps. Replacing `Ptr` graphs with arenas and typed handles is a separate later design (open question 9).
 
@@ -211,7 +214,7 @@ pub enum InputEvent {
 
 There are two layers:
 
-- **Device events (`InputEvent`).** Backends produce them, and replays and the recorder read and write them. Key values are SDL2 keycodes, because `controls.sdl2.bin`, `options.bin` and every replay use them. `smw-sdl3` translates SDL3 keycodes into those values. Letters and ASCII keys have the same values in SDL3, and scancode-derived keys keep the same `1 << 30` mask. The SDL2 key-name table moves into `smw-core`, so the headless backend and SDL3 parse replays without SDL.
+- **Device events (`InputEvent`).** Backends produce them, and replays and the recorder read and write them. Key values are SDL2 keycodes, because `controls.sdl2.bin`, `options.bin` and every replay use them. `smw-sdl3` translates SDL3 keycodes into those values. Letters and ASCII keys have the same values in SDL3, and scancode-derived keys keep the same `1 << 30` mask. SDL3 key events apply modifiers to the keycode by default, so Shift+A would arrive as a different value than SDL2 sends; `smw-sdl3` sets `SDL_HINT_KEYCODE_OPTIONS` to `unmodified` so shifted bindings keep their SDL2 values. The SDL2 key-name table moves into `smw-core`, so the headless backend and SDL3 parse replays without SDL.
 - **Player-slot actions.** The ported `CPlayerInput::update` stays the only translator from device events to the per-player game and menu key states (`outputControls`) that game code reads. Bindings, the stick and hat merge, `assign_inputs` and the keyboard-set rules stay where they are, now fed `InputEvent` instead of `SDL_Event`.
 
 Where each input source goes:
@@ -310,10 +313,10 @@ Each phase is a series of PRs. No PR changes behavior, and each one passes every
 |---|---|---|---|---|---|
 | 0 | Cargo workspace: root package plus `relay` as a member, one `Cargo.lock` (PR #23) | 1 | ~250 | relay tests, `docker build`, web bundle | none found |
 | 1 | Create `smw-globals`, `smw-netplay` (`relay` stops using `#[path]` includes), `smw-platform` (traits only). Move `src/` to `crates/smw-core` and the binaries to apps in one rename-only PR. | 4-5 | ~1,500 plus renames | relay image, `smw_server` interop scripts (`tools/ref/net_*`) | Branch conflicts: schedule a merge freeze |
-| 2 | Context step 1: time, storage, audio output, presentation and the event pump behind `Services`, implemented in `smw-sdl2` | 6-8 | 300-1,500 each | Sound `S` records identical, web tests | The virtual mixer becomes always-on: its live behavior has to match what recordings already assume |
+| 2 | Context step 1: time, storage, audio output, presentation and the event pump behind `Services`, implemented in `smw-sdl2` | 6-8 | 300-1,500 each | Sound `S` records identical, web tests | The virtual mixer becomes always-on: its live behavior has to match what recordings already assume. When its table and SDL_mixer's decoded length disagree, the core may play on a channel SDL_mixer still considers busy, which cuts that sound audibly but changes no game state |
 | 3 | Normalized input: `InputEvent`, `InputQueue`, `ReplaySource`, `Recorder`, `pad.rs` into the backend, touch layout into the core, no SDL virtual joysticks | 5-6 | 500-1,500 each | Recordings round trip (`SMW_LIVE_SCRIPT` dump equals replay dump), every file in `tools/segment_replays` and `checkpoint_fixtures` parses unchanged, Android touch smoke test | Event order inside a frame |
 | 4 | Pure-Rust surfaces, blitter and image decoding. `smw-core` drops the `sdl2` dependency. The editors follow. | 6-8 | 500-2,000 each | Every screenshot, including the sweep and the editors; `gfx_smoke`; `map_render_parity.sh` | Blit edge cases |
-| 5 | Context steps 2 and 3: the `Game` struct, then passing `&mut Game`. It can start after phase 2 and run alongside phases 3-4. | 15-25 | 200-3,000 each | `R calls=` unchanged from frame 0 | Initialization order, aliasing |
+| 5 | Context steps 2 and 3: the `Game` struct, then passing `&mut Game`. The game-state subsystems (`game_values`, `map`, `rm`, `objects`, `players`, `scores`, `rng`, `menus`, `net`) can start after phase 2 and run alongside phases 3-4. The `sfx`, `harness`, `pad` and gfx subsystems wait for phases 3 and 4, which rewrite those files. | 15-25 | 200-3,000 each | `R calls=` unchanged from frame 0 | Initialization order, aliasing |
 | 6 | `smw-sdl3` on desktop. CI runs every replay on every backend and compares the hashes. Then Android SDL3, then web SDL3 when its ports exist. | 4-6 | ~3,000 total | Cross-backend equality (below) | SDL3_mixer bindings |
 | 7 | Parity milestone: Rust goldens primary | 1-2 | data plus CI | Maintainer sign-off | None technical |
 
