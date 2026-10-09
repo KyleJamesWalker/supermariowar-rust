@@ -28,6 +28,7 @@ pub mod random_number_generator;
 pub mod resource_manager;
 pub mod score;
 pub mod sfx;
+pub mod sfx_durations;
 pub mod tile_types;
 pub mod tileset_manager;
 pub mod uicontrol;

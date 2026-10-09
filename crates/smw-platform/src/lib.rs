@@ -12,6 +12,8 @@ pub struct Frame<'a> {
 }
 
 pub trait Video {
+    /// Creates the window. A backend that cannot panics with its error message, as the C++ throws.
+    fn open(&mut self, fullscreen: bool);
     fn present(&mut self, frame: Frame<'_>);
     fn set_fullscreen(&mut self, on: bool);
     fn set_title(&mut self, title: &str);
@@ -61,6 +63,7 @@ pub trait Storage {
 pub struct Services {
     pub clock: Box<dyn Clock>,
     pub storage: Box<dyn Storage>,
+    pub video: Box<dyn Video>,
 }
 
 /// The open index of a pad: a replay's `<dev>`, SDL's `which`, and the device a binding names.
@@ -110,6 +113,7 @@ mod tests {
     struct Null;
 
     impl Video for Null {
+        fn open(&mut self, _: bool) {}
         fn present(&mut self, frame: Frame<'_>) {
             assert_eq!(frame.pixels.len(), SCREEN_W * SCREEN_H);
         }
@@ -156,15 +160,15 @@ mod tests {
     #[test]
     fn services_hold_trait_objects() {
         let log = Rc::new(RefCell::new(Vec::new()));
-        let mut services = Services { clock: Box::new(Null), storage: Box::new(Null) };
+        let mut services = Services { clock: Box::new(Null), storage: Box::new(Null), video: Box::new(Null) };
         assert_eq!(services.clock.now_ms(), 1000);
         services.storage.persist();
         assert_eq!(services.storage.root_dir(), PathBuf::from("root"));
 
-        let mut video: Box<dyn Video> = Box::new(Null);
         let mut audio: Box<dyn AudioOut> = Box::new(Log(log.clone()));
         let pixels = vec![0u32; SCREEN_W * SCREEN_H];
-        video.present(Frame { pixels: &pixels });
+        services.video.open(false);
+        services.video.present(Frame { pixels: &pixels });
         audio.load_sound(SoundId(3), &[0; 4]);
         audio.play(0, SoundId(3), -1);
         assert_eq!(*log.borrow(), ["load 3 4", "play 3 ch=0 loops=-1"]);
