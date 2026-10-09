@@ -232,10 +232,10 @@ R calls=44 last=516273304
 
 ## Sound
 
-Under `SMW_SEED`, `sfx` runs a virtual mixer instead of SDL_mixer playback, so channel allocation, `sfxSound::isPlaying()`, `sfxMusic::isPlaying()` and the music-finished hook depend only on the frame counter. Nothing reaches the audio device.
+Under `SMW_SEED`, `sfx` runs a virtual mixer instead of SDL_mixer playback, so channel allocation, `sfxSound::isPlaying()`, `sfxMusic::isPlaying()` and the music-finished hook depend only on the frame counter. Nothing reaches the audio device. The Rust game runs the virtual mixer in every run, live ones included: the audio service (`smw_sdl2::Sdl2Audio`) plays the same commands as output only, on the channel the virtual mixer chose, and a headless replay sends it nothing.
 
-- Clock: `sfx_ticks()`, the virtual `1000 + N * 16` ms.
-- Channels: 16. `Mix_PlayChannel(-1, ...)` takes the lowest free channel, or returns -1 when all are busy or the chunk is NULL. A channel ends at `start + alen * 1000 / bytes_per_second * (loops + 1)` ms (integer division; `bytes_per_second` = frequency x channels x sample bytes from `Mix_QuerySpec`); `loops = -1` never ends. `Mix_HaltChannel` frees the channel and calls `sfxSound::onChannelFinished` at once, as SDL_mixer does. Freeing a chunk frees its channels without the callback.
+- Clock: `sfx_ticks()`, the virtual `1000 + N * 16` ms (`SDL_GetTicks()` in an unseeded run).
+- Channels: 16. `Mix_PlayChannel(-1, ...)` takes the lowest free channel, or returns -1 when all are busy or the chunk is NULL. A channel ends at `start + alen * 1000 / bytes_per_second * (loops + 1)` ms (integer division; `bytes_per_second` = frequency x channels x sample bytes from `Mix_QuerySpec`); `loops = -1` never ends. The port reads that length, and each track's `Mix_MusicDuration`, from `crates/smw-core/src/common/sfx_durations.txt` (SDL2_mixer at 44100 Hz, S16, stereo; a unit test keeps it equal to SDL2_mixer). It asks the audio service only for files the table does not list. `Mix_HaltChannel` frees the channel and calls `sfxSound::onChannelFinished` at once, as SDL_mixer does. Freeing a chunk frees its channels without the callback.
 - Music: one track. `play` starts it unpaused; `once=1` ends `Mix_MusicDuration * 1000` ms later (truncated), `once=0` or an unknown duration never ends. `stop` and freeing the playing `Mix_Music` halt it without the hook. `togglePause` freezes and resumes the remaining time.
 - `harness::frameStart()` calls `sfx_virtual_advance()` before pushing events: every channel whose end time has passed finishes in channel order (`onChannelFinished`), then finished music calls `musicfinished()` on the main thread.
 

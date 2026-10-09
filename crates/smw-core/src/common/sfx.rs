@@ -1,9 +1,9 @@
 //! Port of src/common/sfx.cpp
 
+use crate::common::sfx_durations;
 use crate::globals::Aliased;
-use sdl2::sys::mixer::*;
-use sdl2::sys::{SDL_GetError, SDL_RWFromFile, SDL_version, AUDIO_S16};
-use std::ffi::{CStr, CString};
+use crate::services::services;
+use smw_platform::{SoundId, TrackId};
 use std::io::Write;
 use std::path::Path;
 use std::ptr::null_mut;
@@ -12,12 +12,12 @@ pub static mut fResumeMusic: bool = true;
 // Clock for the sfxSound::play() retrigger throttle; the replay harness swaps it (cpp-harness.patch).
 pub static mut sfx_ticks: extern "C" fn() -> u32 = sdl_get_ticks;
 pub static mut sfx_ignore_channel_failure: bool = false;
-// Seeded replays replace SDL_mixer playback state with a virtual mixer driven by sfx_ticks,
-// and log every sound command to sfx_events (docs/REPLAY.md, "Sound").
-pub static mut sfx_virtual_mixer: bool = false;
+// Not in upstream: a virtual mixer driven by sfx_ticks owns all game-visible sound state in every run, and the
+// audio service plays the same commands as output only (docs/REPLAY.md, "Sound"). Seeded runs log every
+// command to sfx_events.
+pub static mut sfx_log_events: bool = false;
 pub static mut sfx_events: Vec<String> = Vec::new();
-// Recorded sessions and --replay watching: the virtual mixer still owns all game-visible state, and
-// SDL_mixer plays the same commands as output only (results ignored, no callbacks).
+// Whether the audio service plays anything; headless replays only run the virtual mixer.
 pub static mut sfx_audible: bool = false;
 
 extern "C" fn sdl_get_ticks() -> u32 {
@@ -28,19 +28,15 @@ extern "C" fn sdl_get_ticks() -> u32 {
 /// The port resolves that link at runtime: gs_gameplay assigns its `musicfinished` here.
 pub static mut musicfinished: fn() = || {};
 
-unsafe extern "C" fn musicfinished_trampoline() {
-    musicfinished();
-}
-
 #[derive(Clone, Copy)]
 struct VirtualChannel {
-    chunk: *mut Mix_Chunk,
+    chunk: Option<SoundId>,
     forever: bool,
     end: u32,
 }
 
 struct VirtualMusic {
-    music: *mut Mix_Music,
+    music: Option<TrackId>,
     forever: bool,
     paused: bool,
     end: u32,
@@ -48,12 +44,20 @@ struct VirtualMusic {
 }
 
 static mut v_channels: [VirtualChannel; sfxSound::k_channels] =
-    [VirtualChannel { chunk: null_mut(), forever: false, end: 0 }; sfxSound::k_channels];
-static mut v_music: VirtualMusic = VirtualMusic { music: null_mut(), forever: false, paused: false, end: 0, remaining: 0 };
+    [VirtualChannel { chunk: None, forever: false, end: 0 }; sfxSound::k_channels];
+static mut v_music: VirtualMusic = VirtualMusic { music: None, forever: false, paused: false, end: 0, remaining: 0 };
+static mut next_id: u32 = 0;
+
+fn new_id() -> u32 {
+    unsafe {
+        next_id += 1;
+        next_id
+    }
+}
 
 fn log_event(line: String) {
     unsafe {
-        if sfx_virtual_mixer {
+        if sfx_log_events {
             sfx_events.push(line);
         }
     }
@@ -73,39 +77,22 @@ pub fn data_relative(path: &str) -> String {
     path.to_string()
 }
 
-unsafe fn chunk_duration_ms(chunk: *const Mix_Chunk) -> u32 {
-    let mut frequency = 0;
-    let mut channels = 0;
-    let mut format: u16 = 0;
-    Mix_QuerySpec(&mut frequency, &mut format, &mut channels);
-    let bytesPerSecond = frequency as u64 * channels as u64 * ((format & 0xFF) as u64 / 8);
-    if bytesPerSecond != 0 {
-        ((*chunk).alen as u64 * 1000 / bytesPerSecond) as u32
-    } else {
-        0
-    }
-}
-
-unsafe fn mix_play_channel(chunk: *mut Mix_Chunk, loops: i32) -> i32 {
-    if !sfx_virtual_mixer {
-        return Mix_PlayChannelTimed(-1, chunk, loops, -1);
-    }
-
-    if chunk.is_null() {
+unsafe fn mix_play_channel(chunk: Option<SoundId>, duration_ms: u32, loops: i32) -> i32 {
+    let Some(id) = chunk else {
         // Mix_PlayChannel rejects NULL chunks
         return -1;
-    }
+    };
 
     for i in 0..sfxSound::k_channels {
         let ch = &mut v_channels[i];
-        if !ch.chunk.is_null() {
+        if ch.chunk.is_some() {
             continue;
         }
-        ch.chunk = chunk;
+        ch.chunk = Some(id);
         ch.forever = loops < 0;
-        ch.end = sfx_ticks().wrapping_add(chunk_duration_ms(chunk).wrapping_mul((loops + 1) as u32));
+        ch.end = sfx_ticks().wrapping_add(duration_ms.wrapping_mul((loops + 1) as u32));
         if sfx_audible {
-            Mix_PlayChannelTimed(i as i32, chunk, loops, -1);
+            services().audio.play(i as u8, id, loops);
         }
         return i as i32;
     }
@@ -113,17 +100,12 @@ unsafe fn mix_play_channel(chunk: *mut Mix_Chunk, loops: i32) -> i32 {
 }
 
 unsafe fn mix_halt_channel(channel: i32) {
-    if !sfx_virtual_mixer {
-        Mix_HaltChannel(channel);
-        return;
-    }
-
     if sfx_audible {
-        Mix_HaltChannel(channel);
+        services().audio.halt(if channel < 0 { None } else { Some(channel as u8) });
     }
     for i in 0..sfxSound::k_channels {
-        if (channel < 0 || channel == i as i32) && !v_channels[i].chunk.is_null() {
-            v_channels[i].chunk = null_mut();
+        if (channel < 0 || channel == i as i32) && v_channels[i].chunk.is_some() {
+            v_channels[i].chunk = None;
             sfxSound::on_channel_finished(i as i32);
         }
     }
@@ -131,127 +113,64 @@ unsafe fn mix_halt_channel(channel: i32) {
 
 pub fn sfx_virtual_advance() {
     unsafe {
-        if !sfx_virtual_mixer {
-            return;
-        }
-
         let now = sfx_ticks();
         for i in 0..sfxSound::k_channels {
             let ch = &mut v_channels[i];
-            if !ch.chunk.is_null() && !ch.forever && now.wrapping_sub(ch.end) as i32 >= 0 {
-                ch.chunk = null_mut();
+            if ch.chunk.is_some() && !ch.forever && now.wrapping_sub(ch.end) as i32 >= 0 {
+                ch.chunk = None;
                 log_event(format!("S done ch={}", i));
                 sfxSound::on_channel_finished(i as i32);
             }
         }
 
-        if !v_music.music.is_null() && !v_music.forever && !v_music.paused && now.wrapping_sub(v_music.end) as i32 >= 0 {
-            v_music.music = null_mut();
+        if v_music.music.is_some() && !v_music.forever && !v_music.paused && now.wrapping_sub(v_music.end) as i32 >= 0 {
+            v_music.music = None;
             log_event("S musicdone".to_string());
             musicfinished();
         }
     }
 }
 
-extern "C" {
-    // SDL_mixer 2.6+, missing from sdl2-sys 0.37.
-    fn Mix_MusicDuration(music: *mut Mix_Music) -> f64;
-}
-
-fn mix_error() -> String {
-    unsafe { CStr::from_ptr(SDL_GetError()).to_string_lossy().into_owned() }
-}
-
-/// `std::unique_ptr<Mix_Chunk, MixDeleter>`
-pub struct MixChunkPtr(*mut Mix_Chunk);
-/// `std::unique_ptr<Mix_Music, MixDeleter>`
-pub struct MixMusicPtr(*mut Mix_Music);
+/// `std::unique_ptr<Mix_Chunk, MixDeleter>`: the audio service's copy of a sound.
+pub struct MixChunkPtr(Option<SoundId>);
+/// `std::unique_ptr<Mix_Music, MixDeleter>`: the audio service's copy of a track.
+pub struct MixMusicPtr(Option<TrackId>);
 
 impl Drop for MixChunkPtr {
     fn drop(&mut self) {
-        if !self.0.is_null() {
+        if let Some(id) = self.0 {
             unsafe {
                 for ch in v_channels.iter_mut() {
-                    if ch.chunk == self.0 {
-                        ch.chunk = null_mut();
+                    if ch.chunk == Some(id) {
+                        ch.chunk = None;
                     }
                 }
-                Mix_FreeChunk(self.0)
-            };
+            }
+            services().audio.free_sound(id);
         }
     }
 }
 
 impl Drop for MixMusicPtr {
     fn drop(&mut self) {
-        if !self.0.is_null() {
+        if let Some(id) = self.0 {
             unsafe {
-                if v_music.music == self.0 {
-                    v_music.music = null_mut();
+                if v_music.music == Some(id) {
+                    v_music.music = None;
                 }
-                Mix_FreeMusic(self.0)
-            };
+            }
+            services().audio.free_track(id);
         }
     }
-}
-
-extern "C" {
-    // SDL_mixer 2.0.2+, missing from sdl2-sys 0.37.
-    fn Mix_OpenAudioDevice(frequency: i32, format: u16, channels: i32, chunksize: i32, device: *const std::ffi::c_char, allowed_changes: i32) -> i32;
-}
-
-/// Audible sessions must report the same mixer spec as the headless dummy driver, since the virtual
-/// mixer derives sound lengths from it: open the real device with no format changes allowed, and if
-/// that fails, fall back to the silent dummy driver rather than to a different spec.
-unsafe fn open_audible_audio() {
-    if Mix_OpenAudioDevice(44100, AUDIO_S16 as u16, 2, 2048, std::ptr::null(), 0) == 0 {
-        return;
-    }
-    eprintln!("[sfx] no usable audio device ({}); continuing silently", mix_error());
-    sdl2::sys::SDL_QuitSubSystem(sdl2::sys::SDL_INIT_AUDIO);
-    std::env::set_var("SDL_AUDIODRIVER", "dummy");
-    sdl2::sys::SDL_InitSubSystem(sdl2::sys::SDL_INIT_AUDIO);
-    Mix_OpenAudio(44100, AUDIO_S16 as u16, 2, 2048);
 }
 
 pub fn sfx_init() -> bool {
-    unsafe {
-        if sfx_audible {
-            open_audible_audio();
-        } else {
-            Mix_OpenAudio(44100, AUDIO_S16 as u16, 2, 2048);
-        }
-        Mix_AllocateChannels(sfxSound::k_channels as i32);
-
-        // With the virtual mixer the game's channel and music state never come from SDL_mixer's threads.
-        if !sfx_virtual_mixer {
-            Mix_ChannelFinished(Some(sfxSound::on_channel_finished_c));
-            Mix_HookMusicFinished(Some(musicfinished_trampoline));
-        }
-
-        #[cfg(not(target_os = "emscripten"))]
-        {
-            let link_version = &*Mix_Linked_Version();
-            println!("[sfx] SDL_Mixer {}.{}.{} initialized.", link_version.major, link_version.minor, link_version.patch);
-            let (mut frequency, mut format, mut channels) = (0, 0u16, 0);
-            let opened = Mix_QuerySpec(&mut frequency, &mut format, &mut channels);
-            let driver = sdl2::sys::SDL_GetCurrentAudioDriver();
-            let driver = if driver.is_null() { String::from("none") } else { CStr::from_ptr(driver).to_string_lossy().into_owned() };
-            println!("[sfx] audio driver {}, {} Hz, format {:#06x}, {} channels (opened {})", driver, frequency, format, channels, opened);
-        }
-        #[cfg(target_os = "emscripten")]
-        {
-            // SDL_MIXER_VERSION of the emsdk 5.0.2 sdl2_mixer port (SDL_mixer-release-2.8.0).
-            let ver_compiled = SDL_version { major: 2, minor: 8, patch: 0 };
-            println!("[sfx] SDL_Mixer {}.{}.{} initialized.", ver_compiled.major, ver_compiled.minor, ver_compiled.patch);
-        }
-    }
-
+    unsafe { services().audio.open(sfx_audible) };
     true
 }
 
 pub fn sfx_close() {
-    unsafe { Mix_CloseAudio() };
+    services().audio.close();
 }
 
 pub fn sfx_stopallsounds() {
@@ -261,12 +180,12 @@ pub fn sfx_stopallsounds() {
 
 pub fn sfx_setmusicvolume(volume: i32) {
     log_event(format!("S musicvolume {}", volume));
-    unsafe { Mix_VolumeMusic(volume) };
+    services().audio.set_music_volume(volume);
 }
 
 pub fn sfx_setsoundvolume(volume: i32) {
     log_event(format!("S soundvolume {}", volume));
-    unsafe { Mix_Volume(-1, volume) };
+    services().audio.set_sound_volume(volume);
 }
 
 #[cfg(target_os = "emscripten")]  // emscripten has sound capabilities
@@ -276,14 +195,12 @@ pub fn sfx_can_play_audio() -> bool {
 
 #[cfg(not(target_os = "emscripten"))]
 pub fn sfx_can_play_audio() -> bool {
-    let mut frequency = 0;
-    let mut channels = 0;
-    let mut format: u16 = 0;
-    unsafe { Mix_QuerySpec(&mut frequency, &mut format, &mut channels) != 0 /* error */ }
+    services().audio.is_open()
 }
 
 pub struct sfxSound {
     m_sfx: MixChunkPtr,
+    m_duration_ms: u32,
     m_name: String,
     m_channels: u16,
     m_last_start_time: usize,
@@ -294,7 +211,7 @@ static mut s_channels: [*mut sfxSound; sfxSound::k_channels] = [null_mut(); sfxS
 
 impl Default for sfxSound {
     fn default() -> Self {
-        sfxSound { _alias: Aliased::new(), m_sfx: MixChunkPtr(null_mut()), m_name: String::new(), m_channels: 0, m_last_start_time: 0 }
+        sfxSound { _alias: Aliased::new(), m_sfx: MixChunkPtr(None), m_duration_ms: 0, m_name: String::new(), m_channels: 0, m_last_start_time: 0 }
     }
 }
 
@@ -311,14 +228,20 @@ impl sfxSound {
         print!("loading {} ...", path_str);
         let _ = std::io::stdout().flush();
 
-        let cpath = CString::new(path_str.as_bytes()).unwrap();
-        let chunk = unsafe { Mix_LoadWAV_RW(SDL_RWFromFile(cpath.as_ptr(), b"rb\0".as_ptr() as *const _), 1) };
-        if chunk.is_null() {
-            return Err(format!("Failed to load {}: {}", path_str, mix_error()));
-        }
+        let bytes = std::fs::read(path).map_err(|e| format!("Failed to load {}: {}", path_str, e))?;
+        let id = SoundId(new_id());
+        let decoded_ms = services().audio.load_sound(id, &bytes).map_err(|e| format!("Failed to load {}: {}", path_str, e))?;
+        let name = data_relative(&path_str);
 
         println!(" done");
-        Ok(sfxSound { _alias: Aliased::new(), m_sfx: MixChunkPtr(chunk), m_name: data_relative(&path_str), m_channels: 0, m_last_start_time: 0 })
+        Ok(sfxSound {
+            _alias: Aliased::new(),
+            m_sfx: MixChunkPtr(Some(id)),
+            m_duration_ms: sfx_durations::sound_ms(&name).unwrap_or(decoded_ms),
+            m_name: name,
+            m_channels: 0,
+            m_last_start_time: 0,
+        })
     }
 
     pub fn play(&mut self) -> bool {
@@ -329,7 +252,7 @@ impl sfxSound {
                 return false;
             }
 
-            let channel = mix_play_channel(self.m_sfx.0, 0);
+            let channel = mix_play_channel(self.m_sfx.0, self.m_duration_ms, 0);
             log_event(format!("S play {} ch={}", self.m_name, channel));
             if channel < 0 {
                 if sfx_ignore_channel_failure {
@@ -346,7 +269,7 @@ impl sfxSound {
     }
 
     pub fn play_loop(&mut self, loops: i32) {
-        let channel = unsafe { mix_play_channel(self.m_sfx.0, loops) };
+        let channel = unsafe { mix_play_channel(self.m_sfx.0, self.m_duration_ms, loops) };
         log_event(format!("S loop {} loops={} ch={}", self.m_name, loops, channel));
         if channel < 0 {
             return;
@@ -377,14 +300,12 @@ impl sfxSound {
             s_channels[channel as usize] = null_mut();
         }
     }
-
-    unsafe extern "C" fn on_channel_finished_c(channel: i32) {
-        Self::on_channel_finished(channel);
-    }
 }
 
 pub struct sfxMusic {
     m_music: MixMusicPtr,
+    /// `Mix_MusicDuration`: seconds, negative when unknown.
+    m_duration: f64,
     m_name: String,
     m_paused: bool,
     pub _alias: Aliased,
@@ -392,7 +313,7 @@ pub struct sfxMusic {
 
 impl Default for sfxMusic {
     fn default() -> Self {
-        sfxMusic { _alias: Aliased::new(), m_music: MixMusicPtr(null_mut()), m_name: String::new(), m_paused: false }
+        sfxMusic { _alias: Aliased::new(), m_music: MixMusicPtr(None), m_duration: -1.0, m_name: String::new(), m_paused: false }
     }
 }
 
@@ -407,30 +328,33 @@ impl sfxMusic {
         print!("loading {} ...", path_str);
         let _ = std::io::stdout().flush();
 
-        let cpath = CString::new(path_str.as_bytes()).unwrap();
-        let music = unsafe { Mix_LoadMUS(cpath.as_ptr()) };
-        if music.is_null() {
-            return Err(format!("Failed to load {}: {}", path_str, mix_error()));
-        }
+        let bytes = std::fs::read(path).map_err(|e| format!("Failed to load {}: {}", path_str, e))?;
+        let id = TrackId(new_id());
+        let decoded = services().audio.load_track(id, &bytes).map_err(|e| format!("Failed to load {}: {}", path_str, e))?;
+        let name = data_relative(&path_str);
 
         println!(" done");
-        Ok(sfxMusic { _alias: Aliased::new(), m_music: MixMusicPtr(music), m_name: data_relative(&path_str), m_paused: false })
+        Ok(sfxMusic {
+            _alias: Aliased::new(),
+            m_music: MixMusicPtr(Some(id)),
+            m_duration: sfx_durations::track_seconds(&name).unwrap_or(decoded),
+            m_name: name,
+            m_paused: false,
+        })
     }
 
     pub fn play(&mut self, fPlayonce: bool, fResume: bool) {
         log_event(format!("S music {} once={} resume={}", self.m_name, fPlayonce as i32, fResume as i32));
         unsafe {
-            if sfx_virtual_mixer {
-                let duration = Mix_MusicDuration(self.m_music.0);
-                v_music.music = self.m_music.0;
-                v_music.forever = !fPlayonce || duration <= 0.0;
-                v_music.paused = false;
-                v_music.end = sfx_ticks().wrapping_add((duration * 1000.0) as u32);
-                if sfx_audible {
-                    Mix_PlayMusic(self.m_music.0, if fPlayonce { 0 } else { -1 });
+            let duration = self.m_duration;
+            v_music.music = self.m_music.0;
+            v_music.forever = !fPlayonce || duration <= 0.0;
+            v_music.paused = false;
+            v_music.end = sfx_ticks().wrapping_add((duration * 1000.0) as u32);
+            if sfx_audible {
+                if let Some(id) = self.m_music.0 {
+                    services().audio.play_track(id, fPlayonce);
                 }
-            } else {
-                Mix_PlayMusic(self.m_music.0, if fPlayonce { 0 } else { -1 });
             }
             fResumeMusic = fResume;
         }
@@ -439,13 +363,9 @@ impl sfxMusic {
     pub fn stop(&mut self) {
         log_event(format!("S musicstop {}", self.m_name));
         unsafe {
-            if sfx_virtual_mixer {
-                v_music.music = null_mut();
-                if sfx_audible {
-                    Mix_HaltMusic();
-                }
-            } else {
-                Mix_HaltMusic();
+            v_music.music = None;
+            if sfx_audible {
+                services().audio.stop_track();
             }
         }
     }
@@ -453,39 +373,24 @@ impl sfxMusic {
     pub fn toggle_pause(&mut self) {
         log_event(format!("S musicpause {} paused={}", self.m_name, if self.m_paused { 0 } else { 1 }));
         unsafe {
-            if sfx_virtual_mixer {
-                if sfx_audible {
-                    if self.m_paused {
-                        Mix_ResumeMusic();
-                    } else {
-                        Mix_PauseMusic();
-                    }
+            if sfx_audible {
+                services().audio.pause_track(!self.m_paused);
+            }
+            if v_music.music.is_some() {
+                if self.m_paused && v_music.paused {
+                    v_music.end = sfx_ticks().wrapping_add(v_music.remaining);
+                    v_music.paused = false;
+                } else if !self.m_paused && !v_music.paused {
+                    v_music.remaining = v_music.end.wrapping_sub(sfx_ticks());
+                    v_music.paused = true;
                 }
-                if !v_music.music.is_null() {
-                    if self.m_paused && v_music.paused {
-                        v_music.end = sfx_ticks().wrapping_add(v_music.remaining);
-                        v_music.paused = false;
-                    } else if !self.m_paused && !v_music.paused {
-                        v_music.remaining = v_music.end.wrapping_sub(sfx_ticks());
-                        v_music.paused = true;
-                    }
-                }
-            } else if self.m_paused {
-                Mix_ResumeMusic();
-            } else {
-                Mix_PauseMusic();
             }
         }
         self.m_paused = !self.m_paused;
     }
 
     pub fn is_playing(&self) -> bool {
-        unsafe {
-            if sfx_virtual_mixer {
-                return !v_music.music.is_null();
-            }
-            Mix_PlayingMusic() != 0
-        }
+        unsafe { v_music.music.is_some() }
     }
 }
 
@@ -514,14 +419,14 @@ pub mod checkpoint {
         unsafe {
             let channels = (0..sfxSound::k_channels)
                 .map(|i| Channel {
-                    sound: sounds.iter().copied().find(|&s| !v_channels[i].chunk.is_null() && (*s).m_sfx.0 == v_channels[i].chunk).unwrap_or(null_mut()),
+                    sound: sounds.iter().copied().find(|&s| v_channels[i].chunk.is_some() && (*s).m_sfx.0 == v_channels[i].chunk).unwrap_or(null_mut()),
                     owner: s_channels[i],
                     forever: v_channels[i].forever,
                     end: v_channels[i].end,
                 })
                 .collect();
             let music = Music {
-                track: tracks.iter().copied().find(|&t| !v_music.music.is_null() && (*t).m_music.0 == v_music.music).unwrap_or(null_mut()),
+                track: tracks.iter().copied().find(|&t| v_music.music.is_some() && (*t).m_music.0 == v_music.music).unwrap_or(null_mut()),
                 forever: v_music.forever,
                 paused: v_music.paused,
                 end: v_music.end,
@@ -534,11 +439,11 @@ pub mod checkpoint {
     pub fn restore(channels: &[Channel], music: &Music, resume: bool) {
         unsafe {
             for (i, ch) in channels.iter().enumerate().take(sfxSound::k_channels) {
-                v_channels[i] = VirtualChannel { chunk: if ch.sound.is_null() { null_mut() } else { (*ch.sound).m_sfx.0 }, forever: ch.forever, end: ch.end };
+                v_channels[i] = VirtualChannel { chunk: if ch.sound.is_null() { None } else { (*ch.sound).m_sfx.0 }, forever: ch.forever, end: ch.end };
                 s_channels[i] = ch.owner;
             }
             v_music = VirtualMusic {
-                music: if music.track.is_null() { null_mut() } else { (*music.track).m_music.0 },
+                music: if music.track.is_null() { None } else { (*music.track).m_music.0 },
                 forever: music.forever,
                 paused: music.paused,
                 end: music.end,

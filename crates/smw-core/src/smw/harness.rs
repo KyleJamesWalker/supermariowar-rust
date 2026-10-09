@@ -361,6 +361,30 @@ fn state_name() -> &'static str {
 
 static mut spawn_events: Vec<String> = Vec::new();
 
+/// The keyboard as the replayed key events left it; pushed events do not update SDL's own state.
+static mut replay_keys: [u8; sdl2::sys::SDL_Scancode::SDL_NUM_SCANCODES as usize] = [0; sdl2::sys::SDL_Scancode::SDL_NUM_SCANCODES as usize];
+
+fn note_replay_key(event: &SDL_Event) {
+    unsafe {
+        let t = event.type_;
+        if t == SDL_EventType::SDL_KEYDOWN as u32 || t == SDL_EventType::SDL_KEYUP as u32 {
+            replay_keys[event.key.keysym.scancode as usize] = (t == SDL_EventType::SDL_KEYDOWN as u32) as u8;
+        }
+    }
+}
+
+/// `SDL_GetKeyboardState(NULL)` for the game; while replaying, the replayed keys, so Shift held while typing
+/// in a text field replays as it was recorded.
+pub fn keyboard_state() -> *const u8 {
+    unsafe {
+        if h.replay {
+            (&raw const replay_keys).cast()
+        } else {
+            sdl2::sys::SDL_GetKeyboardState(std::ptr::null_mut())
+        }
+    }
+}
+
 /// Net games only (not in the C++ harness): a `C` line, compared across clients.
 pub fn note_net(line: String) {
     unsafe {
@@ -405,7 +429,7 @@ pub fn init() {
             RandomNumberGenerator::reset_call_count();
             sfx::sfx_ticks = virtual_ticks;
             sfx::sfx_ignore_channel_failure = true;
-            sfx::sfx_virtual_mixer = true;
+            sfx::sfx_log_events = true;
         }
 
         h.noLimit = env("SMW_NOLIMIT").is_some();
@@ -430,7 +454,8 @@ pub fn init() {
         }
 
         h.audible = record || env("SMW_AUDIBLE").is_some();
-        sfx::sfx_audible = h.audible && h.seeded;
+        // Unseeded runs (SMW_NO_RECORD) are live play, so they are audible too.
+        sfx::sfx_audible = h.audible || !h.seeded;
         if let Some(speed) = env("SMW_REPLAY_SPEED").and_then(|v| v.parse::<f32>().ok()).filter(|v| *v > 0.0) {
             h.speed = speed;
         }
@@ -560,6 +585,7 @@ pub fn frame_start() {
             if h.events[h.nextEvent].frame == h.frame {
                 let mut event: SDL_Event = std::mem::zeroed();
                 fill_event(&h.events[h.nextEvent], &mut event);
+                note_replay_key(&event);
                 SDL_PushEvent(&mut event);
                 copy_replay_event(&h.events[h.nextEvent]);
             }
@@ -583,6 +609,7 @@ pub fn wait_event(event: &mut SDL_Event) {
             fail(format!("blocking wait at frame {} but the replay has no events left", h.frame));
         }
         fill_event(&h.events[h.nextEvent], event);
+        note_replay_key(event);
         copy_replay_event(&h.events[h.nextEvent]);
         h.nextEvent += 1;
     }

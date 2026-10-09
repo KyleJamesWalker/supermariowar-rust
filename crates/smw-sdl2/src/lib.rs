@@ -3,7 +3,9 @@
 use smw_platform::{Clock, Services, Storage};
 use std::path::PathBuf;
 
+mod audio;
 mod video;
+pub use audio::Sdl2Audio;
 pub use video::{set_overlay, Sdl2Video};
 
 pub struct Sdl2Clock;
@@ -81,5 +83,5 @@ pub fn android_storage_path() -> String {
 }
 
 pub fn services() -> Services {
-    Services { clock: Box::new(Sdl2Clock), storage: Box::new(Sdl2Storage), video: Box::new(Sdl2Video::new()) }
+    Services { clock: Box::new(Sdl2Clock), storage: Box::new(Sdl2Storage), video: Box::new(Sdl2Video::new()), audio: Box::new(Sdl2Audio::new()) }
 }
