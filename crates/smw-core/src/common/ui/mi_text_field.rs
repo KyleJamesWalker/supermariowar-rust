@@ -7,7 +7,7 @@ use crate::common::ui::mi_image::MI_Image;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 use sdl2::sys::SDL_KeyCode::*;
-use sdl2::sys::{SDL_GetKeyboardState, SDL_Keycode, SDL_Rect, SDL_Scancode};
+use sdl2::sys::{SDL_Keycode, SDL_Rect, SDL_Scancode};
 
 const NUMBER_KEY_MAP: [i16; 10] = [41, 33, 64, 35, 36, 37, 94, 38, 42, 40];
 
@@ -145,7 +145,7 @@ impl UI_ControlTrait for MI_TextField {
     }
 
     fn send_input(&mut self, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
-        let keystate = unsafe { SDL_GetKeyboardState(std::ptr::null_mut()) };
+        let keystate = crate::smw::harness::keyboard_state();
 
         for iPlayer in 0..4usize {
             // NOTE: copied from UI_Menu::SendInput

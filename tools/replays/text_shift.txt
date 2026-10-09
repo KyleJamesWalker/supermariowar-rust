@@ -1,0 +1,53 @@
+# Open Multiplayer, erase the name and type "Kyle_7!" with Left Shift held for the capital and the symbols,
+# as the web page's touch text entry sends it. Replays must apply the replayed Shift (Rust golden).
+#@ seed=1
+#@ frames=340
+#@ shots=330
+2 down Return
+15 up Return
+78 down Down
+86 up Down
+109 down Down
+116 up Down
+139 down Return
+148 up Return
+170 down Up
+178 up Up
+200 down Return
+208 up Return
+234 down Backspace
+238 up Backspace
+241 down Backspace
+243 up Backspace
+246 down Backspace
+249 up Backspace
+251 down Backspace
+253 up Backspace
+256 down Backspace
+259 up Backspace
+261 down Backspace
+264 up Backspace
+266 down Left Shift
+266 down K
+269 up K
+269 up Left Shift
+272 down Y
+274 up Y
+277 down L
+279 up L
+282 down E
+285 up E
+287 down Left Shift
+287 down -
+289 up -
+289 up Left Shift
+292 down 7
+294 up 7
+297 down Left Shift
+297 down 1
+300 up 1
+300 up Left Shift
+305 down Return
+308 up Return
+312 down Down
+320 up Down
