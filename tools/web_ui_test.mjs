@@ -3,7 +3,8 @@
 // contents link has its heading, every image loads, nothing scrolls sideways at 390 px. The game page:
 // a keyboard session reaches a match, Tab and Enter press Menu, and after the confirm the start screen
 // lists that match; a watched clip ends on Menu / Watch again, and Menu mid-watch returns without a
-// confirm; on an emulated phone the touch Menu button does the same. Exits non-zero on a failed check.
+// confirm; the main menu's Exit ends the session on the Game over overlay, and Escape does nothing; on an emulated
+// phone the touch Menu button does the same. Exits non-zero on a failed check.
 // Screenshots go to out_dir.
 //
 // Usage: node tools/web_ui_test.mjs [out_dir]
@@ -146,7 +147,8 @@ const key = async (name, holdMs = 80) => {
 const frameState = async () => {
     const dump = await evaluate(`(() => { try { return Module.FS.readFile('/dump.txt', { encoding: 'utf8' }).slice(-4000); } catch { return ''; } })()`);
     const block = dump.slice(dump.lastIndexOf('\nF ') + 1).split('\n');
-    return { state: (block[0] ?? '').split(' ')[2], menu: (block.find((l) => l.startsWith('M ')) ?? '').split(' ')[1] };
+    const m = block.find((l) => l.startsWith('M ')) ?? '';
+    return { state: (block[0] ?? '').split(' ')[2], menu: m.split(' ')[1], focus: Number((m.match(/focus=(-?\d+)/) ?? [])[1]) };
 };
 const recordings = () => evaluate(`Module.FS.readdir(REPLAY_DIR).filter((n) => n.endsWith('.txt')).sort()`);
 const startScreen = `document.getElementById('start')?.hidden === false`;
@@ -350,6 +352,30 @@ try {
     await sleep(1000);
     check(await visible('#touch [data-action=menu]'), 'phone, portrait: the touch Menu button shows');
     await screenshot('phone-portrait-playing');
+
+    // The main menu has the native layout: Escape does nothing, Up from Start reaches Exit, and Exit ends the session.
+    await desktop();
+    await send('Emulation.setTouchEmulationEnabled', { enabled: false });
+    await send('Page.reload');
+    await waitFor(startScreen, 'the start screen', 120000);
+    const sessions = await recordings();
+    await evaluate(`document.getElementById('play').click()`);
+    await sleep(1500);
+    for (let i = 0; i < 6 && (await frameState()).menu !== 'main'; i++) await key('Enter');
+    check((await frameState()).menu === 'main' && (await frameState()).focus === 0, 'game: the main menu opens on Start');
+    await key('Escape');
+    check(await evaluate('!window.smwQuit') && (await frameState()).menu === 'main', 'game: Escape on the main menu does nothing');
+    await key('ArrowUp');
+    check((await frameState()).focus === 6, `game: Up from Start reaches Exit (focus ${(await frameState()).focus})`);
+    await screenshot('game-main-menu-exit');
+    await key('Enter');
+    await waitFor('window.smwQuit === true', 'Exit to end the session', 10000);
+    await waitFor(`!document.getElementById('end').hidden`, 'the end screen', 5000);
+    check(await evaluate(`document.getElementById('endText').textContent === 'Game over'`), 'game: Exit shows the Game over overlay');
+    const exited = (await recordings()).at(-1);
+    const closed = await evaluate(`/^#@ frames=\\d+$/m.test(Module.FS.readFile(REPLAY_DIR + '/' + ${JSON.stringify(exited)}, { encoding: 'utf8' }))`);
+    check(!sessions.includes(exited) && closed, `game: the exited session was recorded and closed (${exited}, frames line ${closed})`);
+    await screenshot('game-exited');
 } catch (e) {
     console.error(e.message);
     console.error(`last console lines:\n${consoleLines.slice(-15).join('\n')}`);
