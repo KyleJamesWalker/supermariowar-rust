@@ -146,6 +146,8 @@ static mut g_inSetup: bool = false;
 static mut g_inGame: bool = false;
 static mut g_sent: u16 = 0;
 static mut g_frame: u32 = 0;
+/// While a joiner replays a card spawn: where the game host's card landed.
+static mut g_spawnAt: Option<(i16, i16)> = None;
 /// The game host's events this joiner cannot replay yet, with the frame they arrived.
 static mut g_pending: Vec<(RandomEvent, u32)> = Vec::new();
 /// How many frames a joiner's player has waited for the game host's respawn or warp exit.
@@ -229,6 +231,12 @@ pub fn event(ev: Ev, args: &[i32]) -> bool {
                 args.extend([o.ix as i32, o.iy as i32]);
             } else if ev == Ev::Kill {
                 args.push(crate::smw::net_outcomes::kill_result() as i32);
+            } else if matches!(ev, Ev::FrenzyCard | Ev::CollectionCard) {
+                // A new card keeps away from the other cards, which a joiner may have elsewhere or not at all.
+                let card = find_object((context as i32) << 16 | 1);
+                if !card.is_null() {
+                    args.extend([card.ix as i32, card.iy as i32]);
+                }
             }
             let pkg = RandomEvent { kind: ev as u8, context, args, draws };
             netplay.client.local_gamehost.send_message_to_my_peers(&pkg.to_bytes());
@@ -245,6 +253,11 @@ pub fn event(ev: Ev, args: &[i32]) -> bool {
         }
         true
     }
+}
+
+/// The game host's position for the card a replayed spawn makes, which the card takes after its own search.
+pub fn spawn_position() -> Option<(i16, i16)> {
+    unsafe { g_spawnAt }
 }
 
 pub fn in_game() -> bool {
@@ -380,6 +393,7 @@ fn run_logged(ev: Ev, args: &[i32]) -> String {
         let shown = match ev {
             Ev::Place => &args[..2.min(args.len())],
             Ev::Kill => &args[..8.min(args.len())],
+            Ev::FrenzyCard | Ev::CollectionCard => &args[..0],
             _ => &args[..],
         };
         format!("{} args={} out={}", ev.name(), shown.join(","), out.join(";"))
@@ -444,10 +458,17 @@ fn run(ev: Ev, args: &[i32]) {
     use crate::smw::gamemodes as gm;
     use crate::smw::objects as obj;
     match ev {
-        Ev::FrenzyCard => gm::frenzy::net_spawn_card(),
+        Ev::FrenzyCard | Ev::CollectionCard => unsafe {
+            g_spawnAt = args.get(..2).map(|a| (a[0] as i16, a[1] as i16));
+            if ev == Ev::FrenzyCard {
+                gm::frenzy::net_spawn_card();
+            } else {
+                gm::card_collection::net_spawn_card();
+            }
+            g_spawnAt = None;
+        },
         Ev::StompEnemy => gm::stomp::net_spawn_enemy(),
         Ev::SurvivalEnemy => gm::survival::net_spawn_enemy(),
-        Ev::CollectionCard => gm::card_collection::net_spawn_card(),
         Ev::ReleaseCard => gm::card_collection::net_release_card(player(args), args[1] as i16, args[2] as i16),
         Ev::GreedCoins => gm::greed::net_drop_coins(player(args), args[1] as i16, args[2] as i16, args[3] as i16),
         Ev::Place => {
