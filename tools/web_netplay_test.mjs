@@ -72,11 +72,15 @@ const cleanup = () => {
 };
 process.on('exit', cleanup);
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => process.exit(1));
-const DEADLINE_MS = 240000 * games.length;
+const SCENARIO_MS = 200000;
+const DEADLINE_MS = (SCENARIO_MS + 40000) * games.length;
 setTimeout(() => {
     console.error(`no result after ${DEADLINE_MS / 1000} s; giving up`);
     process.exit(1);
 }, DEADLINE_MS).unref();
+
+const within = (promise, ms) =>
+    Promise.race([promise, new Promise((_, fail) => setTimeout(() => fail(new Error(`no answer in ${ms / 1000} s`)), ms))]);
 
 const freePort = () =>
     new Promise((ok) => {
@@ -113,6 +117,7 @@ const relay = spawn(relayBin, ['--port', String(relayPort)], {
     stdio: ['ignore', 'pipe', 'pipe'],
 });
 children.push(relay);
+relay.on('error', (e) => (relayLog += `${e.message}\n`));
 relay.stdout.on('data', (d) => (relayLog += d));
 relay.stderr.on('data', (d) => (relayLog += d));
 for (let i = 0; i < 50 && !relayLog.includes('Ready!'); i++) await new Promise((ok) => setTimeout(ok, 100));
@@ -231,23 +236,36 @@ const play = async (game) => {
     for (const r of roles) pages.push(await openPage({ ...r, frames }));
 
     let shot = false;
+    let timedOut = false;
+    const started = Date.now();
     for (;;) {
         await new Promise((ok) => setTimeout(ok, 1000));
-        const states = await Promise.all(pages.map(progress));
+        const states = await Promise.all(pages.map((p) => within(progress(p), 10000).catch(() => ({ frames: -1, gameplay: 0 }))));
         if (!shot && states.every((s) => s.gameplay >= 300)) {
             await Promise.all(pages.map((p) => p.screenshot(join(dir, `${p.role}.png`))));
             shot = true;
         }
         if (states.every((s) => s.frames >= frames)) break;
+        if (Date.now() - started > SCENARIO_MS) {
+            console.error(`${game}: no result after ${SCENARIO_MS / 1000} s: ` + pages.map((p, i) => `${p.role} ${states[i].frames}/${frames} frames`).join(', '));
+            timedOut = true;
+            break;
+        }
     }
 
-    let ok = true;
+    console.log(`== ${game}`);
+    let ok = !timedOut;
     for (const page of pages) {
-        writeFileSync(join(dir, `${page.role}.dump`), await page.evaluate(`Module.FS.readFile('/dump.txt', { encoding: 'utf8' })`));
+        try {
+            writeFileSync(join(dir, `${page.role}.dump`), await within(page.evaluate(`Module.FS.readFile('/dump.txt', { encoding: 'utf8' })`), 10000));
+        } catch (e) {
+            console.error(`${page.role}: could not read the dump: ${e.message}`);
+            ok = false;
+        }
         writeFileSync(join(dir, `${page.role}.log`), page.consoleLines.join('\n') + '\n');
         page.close();
     }
-    console.log(`== ${game}`);
+    writeFileSync(join(dir, 'relay.log'), relayLog.slice(logStart));
     if (!shot) {
         console.error('a page never reached 300 gameplay frames');
         ok = false;
@@ -262,7 +280,12 @@ const play = async (game) => {
         { encoding: 'utf8' },
     );
     process.stdout.write(compare.stdout + compare.stderr);
-    return ok && compare.status === 0;
+    ok &&= compare.status === 0;
+    if (!ok) {
+        for (const page of pages) console.error(`  last ${page.role} console lines:\n    ` + page.consoleLines.slice(-8).join('\n    '));
+    }
+    console.log(`${game}: ${ok ? 'PASS' : 'FAIL'} (${dir})`);
+    return ok;
 };
 
 let ok = true;
