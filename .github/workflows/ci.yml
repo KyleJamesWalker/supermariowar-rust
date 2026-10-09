@@ -467,7 +467,7 @@ jobs:
   web:
     needs: build-web
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 60
     env:
       SDL_RENDER_DRIVER: software
       CHROME: /usr/bin/google-chrome
@@ -491,7 +491,7 @@ jobs:
           mv "$RUNNER_TEMP/SuperMarioWar-web" dist/web
 
       - name: Build
-        run: cargo build --release --locked --bin smw
+        run: cargo build --release --locked --bin smw --bin smw_relay
 
       - name: Allow Chrome's sandbox
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
@@ -502,6 +502,13 @@ jobs:
       - name: Web UI test
         if: always()
         run: timeout 10m node tools/web_ui_test.mjs "$RUNNER_TEMP/web-ui"
+
+      # net_game_frenzy stays out until its card placement fix lands.
+      - name: Web netplay test
+        if: always()
+        env:
+          NET_GAMES: net_game net_game_blocks net_game_stomp net_game_coins net_game_classic
+        run: timeout 25m node tools/web_netplay_test.mjs "$RUNNER_TEMP/web-netplay"
 
       - uses: actions/upload-artifact@v7
         if: failure()
