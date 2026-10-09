@@ -39,10 +39,11 @@ use crate::globals::*;
 use crate::smw::menu::mode_options_menu::UI_ModeOptionsMenu;
 use crate::smw::world::*;
 use sdl2::sys::image::{IMG_Load, IMG_SavePNG};
+use crate::common::util::sdl_helpers::poll_event;
 use sdl2::sys::SDL_KeyCode::*;
 use sdl2::sys::{
     SDL_CreateRGBSurface, SDL_Event, SDL_EventType, SDL_FillRect, SDL_FreeSurface, SDL_GetKeyboardState, SDL_GetScancodeFromKey, SDL_Keycode, SDL_Keymod,
-    SDL_MapRGB, SDL_PollEvent, SDL_Rect, SDL_Surface, SDL_UpperBlit, SDL_BUTTON_LEFT, SDL_BUTTON_RIGHT,
+    SDL_MapRGB, SDL_Rect, SDL_Surface, SDL_UpperBlit, SDL_BUTTON_LEFT, SDL_BUTTON_RIGHT,
 };
 use std::ffi::CString;
 use std::io::Write;
@@ -1145,7 +1146,7 @@ pub fn editor_edit() -> i32 {
 
             if fExiting {
                 //handle messages
-                while SDL_PollEvent(&mut event) != 0 {
+                while poll_event(&mut event) != 0 {
                     if event_type() == T_KEYDOWN {
                         let key = key_sym();
 
@@ -1164,7 +1165,7 @@ pub fn editor_edit() -> i32 {
                 }
             } else {
                 //handle messages
-                while SDL_PollEvent(&mut event) != 0 {
+                while poll_event(&mut event) != 0 {
                     match event_type() {
                         T_QUIT => {
                             done = true;
@@ -2219,7 +2220,7 @@ pub fn editor_warp() -> i32 {
             let framestart = crate::services::ticks() as i32;
 
             //handle messages
-            while SDL_PollEvent(&mut event) != 0 {
+            while poll_event(&mut event) != 0 {
                 match event_type() {
                     T_QUIT => {
                         done = true;
@@ -2312,7 +2313,7 @@ pub fn editor_start_items() -> i32 {
             let framestart = crate::services::ticks() as i32;
 
             //handle messages
-            while SDL_PollEvent(&mut event) != 0 {
+            while poll_event(&mut event) != 0 {
                 match event_type() {
                     T_QUIT => {
                         done = true;
@@ -2405,7 +2406,7 @@ pub fn editor_boundary() -> i32 {
             let framestart = crate::services::ticks() as i32;
 
             //handle messages
-            while SDL_PollEvent(&mut event) != 0 {
+            while poll_event(&mut event) != 0 {
                 match event_type() {
                     T_QUIT => {
                         done = true;
@@ -2467,7 +2468,7 @@ pub fn editor_type() -> i32 {
             let framestart = crate::services::ticks() as i32;
 
             //handle messages
-            while SDL_PollEvent(&mut event) != 0 {
+            while poll_event(&mut event) != 0 {
                 match event_type() {
                     T_QUIT => {
                         done = true;
@@ -2529,7 +2530,7 @@ pub fn editor_water() -> i32 {
             let framestart = crate::services::ticks() as i32;
 
             //handle messages
-            while SDL_PollEvent(&mut event) != 0 {
+            while poll_event(&mut event) != 0 {
                 match event_type() {
                     T_QUIT => {
                         done = true;
@@ -2586,7 +2587,7 @@ pub fn editor_background() -> i32 {
             let framestart = crate::services::ticks() as i32;
 
             //handle messages
-            while SDL_PollEvent(&mut event) != 0 {
+            while poll_event(&mut event) != 0 {
                 match event_type() {
                     T_QUIT => {
                         done = true;
@@ -2668,7 +2669,7 @@ pub fn editor_stageforeground() -> i32 {
             let framestart = crate::services::ticks() as i32;
 
             //handle messages
-            while SDL_PollEvent(&mut event) != 0 {
+            while poll_event(&mut event) != 0 {
                 match event_type() {
                     T_QUIT => {
                         done = true;
@@ -2734,7 +2735,7 @@ pub fn editor_bridges() -> i32 {
             let framestart = crate::services::ticks() as i32;
 
             //handle messages
-            while SDL_PollEvent(&mut event) != 0 {
+            while poll_event(&mut event) != 0 {
                 match event_type() {
                     T_QUIT => {
                         done = true;
@@ -2788,7 +2789,7 @@ pub fn editor_structureforeground() -> i32 {
             let framestart = crate::services::ticks() as i32;
 
             //handle messages
-            while SDL_PollEvent(&mut event) != 0 {
+            while poll_event(&mut event) != 0 {
                 match event_type() {
                     T_QUIT => {
                         done = true;
@@ -2849,7 +2850,7 @@ pub fn editor_pathsprite() -> i32 {
             let framestart = crate::services::ticks() as i32;
 
             //handle messages
-            while SDL_PollEvent(&mut event) != 0 {
+            while poll_event(&mut event) != 0 {
                 match event_type() {
                     T_QUIT => {
                         done = true;
@@ -2932,7 +2933,7 @@ pub fn editor_vehicles() -> i32 {
             let mut code: MenuCodeEnum = MENU_CODE_NONE;
 
             //handle messages
-            while SDL_PollEvent(&mut event) != 0 {
+            while poll_event(&mut event) != 0 {
                 match event_type() {
                     T_QUIT => {
                         edit_mode = 5;
@@ -3016,7 +3017,7 @@ pub fn editor_path() -> i32 {
             let framestart = crate::services::ticks() as i32;
 
             //handle messages
-            while SDL_PollEvent(&mut event) != 0 {
+            while poll_event(&mut event) != 0 {
                 match event_type() {
                     T_QUIT => {
                         done = true;
@@ -3527,7 +3528,7 @@ pub fn editor_stage() -> i32 {
             let mut code: MenuCodeEnum = MENU_CODE_NONE;
 
             //handle messages
-            while SDL_PollEvent(&mut event) != 0 {
+            while poll_event(&mut event) != 0 {
                 match event_type() {
                     T_QUIT => {
                         done = true;
@@ -4036,7 +4037,7 @@ pub fn display_help() -> i32 {
             let framestart = crate::services::ticks() as i32;
 
             //handle messages
-            while SDL_PollEvent(&mut event) != 0 {
+            while poll_event(&mut event) != 0 {
                 match event_type() {
                     T_QUIT => return 0,
                     T_KEYDOWN => return 0,
@@ -4094,7 +4095,7 @@ pub fn dialog(title: &str, instructions: &str, input: &mut String, inputsize: i3
             let framestart = crate::services::ticks() as i32;
 
             //handle messages
-            while SDL_PollEvent(&mut event) != 0 {
+            while poll_event(&mut event) != 0 {
                 match event_type() {
                     T_QUIT => return false,
 

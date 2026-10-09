@@ -57,3 +57,14 @@ sdl_unique_ptr!(SdlWindowPtr, SDL_Window, SDL_DestroyWindow);
 sdl_unique_ptr!(SdlRendererPtr, SDL_Renderer, SDL_DestroyRenderer);
 sdl_unique_ptr!(SdlTexturePtr, SDL_Texture, SDL_DestroyTexture);
 sdl_unique_ptr!(SdlSurfacePtr, SDL_Surface, SDL_FreeSurface);
+
+/// `SDL_PollEvent` that leaves `*event` as is on an empty queue, as sdl2-compat does. SDL2 writes its poll
+/// sentinel there, and the editors read `event` after their poll loops.
+pub unsafe fn poll_event(event: *mut sdl2::sys::SDL_Event) -> i32 {
+    let mut polled: sdl2::sys::SDL_Event = std::mem::zeroed();
+    let result = sdl2::sys::SDL_PollEvent(&mut polled);
+    if result != 0 {
+        *event = polled;
+    }
+    result
+}

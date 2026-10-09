@@ -249,8 +249,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           cat editor.log
           [[ -s summary.txt ]] || exit 1
-          if [[ $RUNNER_OS == macOS ]]; then exit $status; fi
-          ! tail -n +2 summary.txt | grep -v -E 'dump MATCH, shots [0-9]+/[0-9]+, files ([0-9]+)/\1$'
+          exit $status
 
       - name: Editor parity vs the C++ built here
         if: always() && steps.game.outcome != 'skipped'
@@ -443,7 +442,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           cat editor.log
           [[ -s summary.txt ]] || exit 1
-          ! tail -n +2 summary.txt | grep -v -E 'dump MATCH, shots [0-9]+/[0-9]+, files ([0-9]+)/\1$'
+          exit $status
 
       - name: Sweep parity
         if: always() && steps.game.outcome != 'skipped'
