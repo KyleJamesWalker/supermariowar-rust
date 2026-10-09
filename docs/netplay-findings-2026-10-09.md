@@ -1,6 +1,6 @@
 # Netplay findings, 2026-10-09
 
-The `net_game_coins` and `net_game_classic` scenarios fail now and then because each client rolls its own random game mode settings when a net game starts. Native `net_game` between a C++ and a Rust client fails because the two load a match at different speeds and upstream has no start barrier. Neither failure is a protocol bug. Both fixes below change game code and wait for review.
+The `net_game_coins` and `net_game_classic` scenarios failed now and then because each client rolled its own random game mode settings when a net game started. #59 fixes this with option A below. Native `net_game` between a C++ and a Rust client fails because the two load a match at different speeds and upstream has no start barrier. Native C++ netplay is no longer supported, so this second finding only matters between Rust clients. A start barrier is the open follow-up.
 
 ## 1. Each client rolls its own game mode settings
 
@@ -29,15 +29,11 @@ These come from temporary logs that were not committed.
 - **Classic kill mismatches:** classic returns `NonKill` only when `classic.style` is Shield, and only one client returned it.
 
 ### Fix options
-- **A (recommended).** In a game the host decides (both clients Rust, `NET_G2P_HOST_DECIDES_RANDOM`):
-  - The host rolls the random settings once, when it sends the sync.
-  - It sends them to the joiners before `NET_G2E_GAME_START`.
-  - Each Rust client applies the host's settings in `enter_gameplay` instead of rolling.
-  - A C++ peer on either side keeps the upstream behaviour.
-- **B.** In Rust-to-Rust net games, stop randomizing and play with the host's room settings. This resolves the upstream TODO and is simpler, but net games then play with the menu settings rather than random ones, which changes behaviour.
-- **C.** Keep rolling locally and make both clients draw the same number of times. This breaks again whenever menu code draws one more random number, so it is not recommended.
+- **A (chosen, #59).** The host rolls the random settings once, at the sync, and sends them to the joiners before `NET_G2P_SYNC`. When the match starts, every client applies the host's settings and reseeds the shared generator with the sync's seed. The user approved this without a fallback for C++ peers.
+- **B.** Stop randomizing in net games and play with the host's room settings. Simpler, but net games then play with the menu settings rather than random ones, which changes behaviour.
+- **C.** Keep rolling locally and make both clients draw the same number of times. This breaks again whenever menu code draws one more random number.
 
-Until one of these lands, `net_game_coins` and `net_game_classic` stay out of the CI netplay list.
+With #59, `net_game_coins` and `net_game_classic` passed 22 of 22 consecutive browser runs and join the CI netplay list.
 
 ## 2. A C++ host and a Rust joiner start the match about 0.7 s apart
 
@@ -67,6 +63,7 @@ The C++ client takes about 0.7 s longer to load, so whichever client is Rust sta
 The harness records what happened, and the protocol is compatible.
 
 ### Fix options
-- **A (recommended, tool only).** `net_game_compare.py` compares each remote player's track from the first game state its client received. It reports how many frames it skipped, so it measures sync rather than load-time differences.
-- **B (game code, Rust-to-Rust only).** Add a start barrier: each client reports when it has loaded, and the host starts gameplay for everyone together. This removes the skew between Rust clients, but a C++ peer keeps the upstream behaviour.
-- **C (game code).** Until the first game state arrives, a joiner keeps remote players at their spawn positions instead of the origin. This is cosmetic, since the players are still spawning during that window.
+Native C++ netplay is no longer supported, so mixed pairings no longer gate anything. The same skew can still happen between two Rust clients on machines that load at different speeds.
+- **Recommended follow-up (game code, for the user to decide): a start barrier for Rust-to-Rust games.** Each client reports when it has loaded the match, and the host starts gameplay for everyone together. This removes the skew and the origin frames.
+- **Tool only.** `net_game_compare.py` compares each remote player's track from the first game state its client received, and reports the frames it skipped. This measures sync rather than load time, but it changes nothing in the game.
+- **Cosmetic.** Until the first game state arrives, a joiner keeps remote players at their spawn positions instead of the origin.
