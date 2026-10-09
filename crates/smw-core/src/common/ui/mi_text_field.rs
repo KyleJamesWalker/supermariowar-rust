@@ -124,7 +124,48 @@ impl MI_TextField {
         } else {
             self.miModifyCursor.set_position(px + self.iIndent + 10 + self.iAllowedWidth, py + 4);
         }
+        if self.fModifying {
+            self.notify_page();
+        }
     }
+
+    /// Not in upstream. Tells the web page (web/textinput.js) where the field being edited is and what it
+    /// holds, so a touch screen can open its on-screen keyboard; the typing still arrives as key events.
+    #[cfg(target_os = "emscripten")]
+    fn notify_page(&self) {
+        extern "C" {
+            fn emscripten_run_script(script: *const std::ffi::c_char);
+        }
+        let js_string = |bytes: &[u8]| {
+            let mut out = String::from("\"");
+            for &b in bytes {
+                if b.is_ascii_alphanumeric() || b == b' ' {
+                    out.push(b as char);
+                } else {
+                    out += &format!("\\u{:04x}", b);
+                }
+            }
+            out + "\""
+        };
+        let value = if self.szOutValue.is_null() { Vec::new() } else { unsafe { (*self.szOutValue).as_bytes().to_vec() } };
+        let script = format!(
+            "Module.onTextField && Module.onTextField({{active: {}, x: {}, y: {}, width: {}, indent: {}, value: {}, cursor: {}, max: {}, disallowed: {}}})",
+            self.fModifying,
+            self.m_pos.x,
+            self.m_pos.y,
+            self.iWidth,
+            self.iIndent,
+            js_string(&value),
+            self.iCursorIndex,
+            self.iMaxChars - 1,
+            js_string(self.szDisallowedChars.as_bytes()),
+        );
+        let script = std::ffi::CString::new(script).expect("no NUL in the script");
+        unsafe { emscripten_run_script(script.as_ptr()) };
+    }
+
+    #[cfg(not(target_os = "emscripten"))]
+    fn notify_page(&self) {}
 }
 
 impl UI_ControlTrait for MI_TextField {
@@ -141,6 +182,7 @@ impl UI_ControlTrait for MI_TextField {
 
         self.miModifyCursor.set_visible(modify);
         self.fModifying = modify;
+        self.notify_page();
         MENU_CODE_MODIFY_ACCEPTED
     }
 
@@ -163,6 +205,7 @@ impl UI_ControlTrait for MI_TextField {
                 self.miModifyCursor.set_visible(false);
 
                 self.fModifying = false;
+                self.notify_page();
 
                 return MENU_CODE_UNSELECT_ITEM;
             }
