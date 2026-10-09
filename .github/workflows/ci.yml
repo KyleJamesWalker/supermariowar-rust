@@ -66,9 +66,11 @@ jobs:
         manifest: [Cargo.toml, apps/smw_relay/Cargo.toml]
     steps:
       - uses: actions/checkout@v7
-      - uses: EmbarkStudios/cargo-deny-action@v2
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@v2
         with:
-          manifest-path: ${{ matrix.manifest }}
+          tool: cargo-deny@0.20.2
+      - run: cargo deny --log-level warn --manifest-path "${{ matrix.manifest }}" --all-features check
 
   test:
     name: test (${{ matrix.os }}, ${{ matrix.profile }})
