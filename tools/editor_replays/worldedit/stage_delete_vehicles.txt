@@ -1,0 +1,141 @@
+# World editor stage fixes from upstream PR 480 (M4, M5): on a new world, stage 1 (Classic), stage 2 as the boss
+# minigame (saved as mode 1001 with its three settings), stage 3 as a bonus house, stage 4 as the pipe minigame
+# (saved as 1000). Two vehicles bound to stage 1 and one bound to stage 2, then stage 1 is deleted through the
+# confirm dialog: its vehicles are deleted and the other one moves to the new stage 1. Then save.
+#@ frames=280
+#@ shots=52,90,111,140,168,186,199,214,224,236,244,250,262,272
+#@ files=data/worlds/zzveh.txt,data/worlds/ZZworldeditor.txt
+
+# New 22x16 world "zzveh" (stages need a world without stages: the loader clears tourstops)
+5 down N
+6 up N
+8 down Z
+9 up Z
+11 down Z
+12 up Z
+14 down V
+15 up V
+17 down E
+18 up E
+20 down H
+21 up H
+23 down Return
+24 up Return
+26 down 2
+27 up 2
+29 down 2
+30 up 2
+32 down Return
+33 up Return
+35 down 1
+36 up 1
+38 down 6
+39 up 6
+41 down Return
+42 up Return
+
+# Stage editor: stage 1 stays Classic, the stage that is deleted later
+75 down E
+76 up E
+80 down N
+81 up N
+86 down Escape
+87 up Escape
+
+# Stage 2: Boss minigame (mode 26, saved as 1001 with its three settings)
+92 down N
+93 up N
+98 down Down
+99 up Down
+101 down Return
+102 up Return
+104 down Left
+105 up Left
+107 down Left
+108 up Left
+110 down Return
+111 up Return
+113 down Escape
+114 up Escape
+
+# Stage 3: bonus house (mode 24); the menu keeps its focus on Mode
+119 down N
+120 up N
+125 down Return
+126 up Return
+128 down Left
+129 up Left
+131 down Left
+132 up Left
+134 down Left
+135 up Left
+137 down Left
+138 up Left
+140 down Return
+141 up Return
+143 down Escape
+144 up Escape
+
+# Stage 4: pipe minigame (mode 25, saved as 1000)
+149 down N
+150 up N
+155 down Return
+156 up Return
+158 down Left
+159 up Left
+161 down Left
+162 up Left
+164 down Left
+165 up Left
+167 down Return
+168 up Return
+170 down Escape
+171 up Escape
+
+# Back to the map
+176 down E
+177 up E
+
+# Vehicle menu: two vehicles bound to stage 1
+184 down V
+185 up V
+189 mousedown left 500 370
+190 mouseup left 500 370
+194 mousedown left 400 48
+195 mouseup left 400 48
+197 mousedown left 464 48
+198 mouseup left 464 48
+
+# One vehicle bound to stage 2
+200 down V
+201 up V
+205 down Down
+206 up Down
+208 down Return
+209 up Return
+211 down Right
+212 up Right
+214 down Return
+215 up Return
+217 mousedown left 500 370
+218 mouseup left 500 370
+222 mousedown left 400 112
+223 mouseup left 400 112
+225 down Escape
+226 up Escape
+
+# Stage editor: open stage 1 and delete it through the confirm dialog
+230 down E
+231 up E
+236 mousedown right 16 16
+237 mouseup right 16 16
+242 mousedown left 500 456
+243 mouseup left 500 456
+248 mousedown left 275 266
+249 mouseup left 275 266
+
+# Back to the map and save
+256 down E
+257 up E
+264 down S
+265 up S
