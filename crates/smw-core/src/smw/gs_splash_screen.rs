@@ -96,23 +96,26 @@ impl GameState for SplashScreenState {
                 game_values.playerInput.update(self.loop_event, 1);
             }
 
-            for iPlayer in 0..4usize {
-                let out = &game_values.playerInput.outputControls[iPlayer];
-                if out.menu_select().fPressed || out.menu_cancel().fPressed || out.menu_random().fPressed {
-                    blitdest = rm.menu_backdrop.get_surface();
-                    rm.menu_shade.setalpha(App::menuTransparency as u8);
-                    rm.menu_shade.draw(0, 0);
-                    blitdest = screen;
+            // Not in upstream: a press before load_game_data() would open the menus without their graphics.
+            if self.state == 8 {
+                for iPlayer in 0..4usize {
+                    let out = &game_values.playerInput.outputControls[iPlayer];
+                    if out.menu_select().fPressed || out.menu_cancel().fPressed || out.menu_random().fPressed {
+                        blitdest = rm.menu_backdrop.get_surface();
+                        rm.menu_shade.setalpha(App::menuTransparency as u8);
+                        rm.menu_shade.draw(0, 0);
+                        blitdest = screen;
 
-                    eyecandy[2].clean();
+                        eyecandy[2].clean();
 
-                    game_values.playerInput.reset_keys();
-                    game_values.appstate = AppState::Menu;
+                        game_values.playerInput.reset_keys();
+                        game_values.appstate = AppState::Menu;
 
-                    MenuState::instance().init();
-                    GameplayState::instance().init();
-                    GameStateManager::instance().change_state_to(Ptr::from_mut(MenuState::instance() as &mut dyn GameState));
-                    return;
+                        MenuState::instance().init();
+                        GameplayState::instance().init();
+                        GameStateManager::instance().change_state_to(Ptr::from_mut(MenuState::instance() as &mut dyn GameState));
+                        return;
+                    }
                 }
             }
 

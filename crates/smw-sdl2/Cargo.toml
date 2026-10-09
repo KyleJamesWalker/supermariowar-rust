@@ -7,4 +7,4 @@ publish.workspace = true
 
 [dependencies]
 smw-platform = { path = "../smw-platform" }
-sdl2 = "0.38"
+sdl2 = { version = "0.38", features = ["mixer"] }
