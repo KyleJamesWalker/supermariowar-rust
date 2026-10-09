@@ -38,7 +38,7 @@ echo 'int main(void) { return 0; }' > "$stub/smw.c"
 emcc "$stub/smw.c" -o "$stub/smw.html" -sUSE_SDL=2 -sALLOW_MEMORY_GROWTH=1 --shell-file "$repo/web/shell.html"
 cp "$stub/smw.html" "$out/index.html"
 cp "$repo/resources/smw.png" "$out/favicon.png"
-cp "$repo"/web/{touch.js,touch.css,manifest.webmanifest,icon-180.png,icon-192.png,icon-512.png} "$out/"
+cp "$repo"/web/{touch.js,textinput.js,touch.css,manifest.webmanifest,icon-180.png,icon-192.png,icon-512.png} "$out/"
 python3 "$repo/tools/render_manual.py" "$repo/docs/GAME_MANUAL.md" "$repo/web/manual.html" "$out"
 
 du -sh "$out"/*
