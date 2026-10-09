@@ -1,26 +1,29 @@
 //! Port of src/smw/network/FileCompressor.cpp
 
-#[cfg(not(target_os = "emscripten"))]
-use libz_sys::{compress, compress2, compressBound, uLong, uncompress, Z_BUF_ERROR, Z_OK};
-#[cfg(target_os = "emscripten")]
-use emscripten_zlib::{compress, compress2, compressBound, uLong, uncompress, Z_BUF_ERROR, Z_OK};
+use flate2::read::{MultiGzDecoder, ZlibDecoder};
+use flate2::write::ZlibEncoder;
+use flate2::Compression;
 use std::io::{Read, Seek, SeekFrom, Write};
 
 const COMPRESSION_SIZE_LIMIT: u64 = 20000;
 
-/// Emscripten's zlib port (`-sUSE_ZLIB=1`), as upstream links: libz-sys builds zlib for wasm32 with
-/// `Z_SOLO`, where `compress` and `uncompress` have no allocator and always fail.
-#[cfg(target_os = "emscripten")]
-mod emscripten_zlib {
-    pub type uLong = std::os::raw::c_ulong;
-    pub const Z_OK: i32 = 0;
-    pub const Z_BUF_ERROR: i32 = -5;
-    extern "C" {
-        pub fn compress(dest: *mut u8, dest_len: *mut uLong, source: *const u8, source_len: uLong) -> i32;
-        pub fn compress2(dest: *mut u8, dest_len: *mut uLong, source: *const u8, source_len: uLong, level: i32) -> i32;
-        pub fn compressBound(source_len: uLong) -> uLong;
-        pub fn uncompress(dest: *mut u8, dest_len: *mut uLong, source: *const u8, source_len: uLong) -> i32;
-    }
+/// zlib's `compressBound`.
+fn compress_bound(source_len: u64) -> u64 {
+    source_len + (source_len >> 12) + (source_len >> 14) + (source_len >> 25) + 13
+}
+
+/// zlib's `compress2`: a zlib stream of `data`.
+fn zlib_compress(data: &[u8], level: u32) -> Vec<u8> {
+    let mut e = ZlibEncoder::new(Vec::new(), Compression::new(level));
+    e.write_all(data).expect("writing to a Vec");
+    e.finish().expect("writing to a Vec")
+}
+
+/// The data of the zlib stream at the start of `data`, or None when it is damaged or longer than `limit`.
+fn zlib_decompress(data: &[u8], limit: u64) -> Option<Vec<u8>> {
+    let mut out = Vec::new();
+    let read = ZlibDecoder::new(data).take(limit + 1).read_to_end(&mut out);
+    (read.is_ok() && out.len() as u64 <= limit).then_some(out)
 }
 
 /// `CompressedData`: an owned buffer; empty means invalid.
@@ -68,34 +71,23 @@ impl FileCompressor {
             }
             drop(input_file);
 
-            unsafe {
-                let mut compressed_size_ulong: uLong = compressBound(input_size as uLong);
-                if compressed_size_ulong as u64 > COMPRESSION_SIZE_LIMIT {
-                    println!("[error] File is too big: {}", input_path);
-                    return None;
-                }
-
-                let mut compressed_buffer = vec![0u8; output_header_offset + 4 + compressed_size_ulong as usize];
-
-                let return_value = compress(
-                    compressed_buffer.as_mut_ptr().add(output_header_offset + 4),
-                    &mut compressed_size_ulong,
-                    input_buffer.as_ptr(),
-                    input_size as uLong,
-                );
-                if return_value != Z_OK {
-                    println!("[error] Out of memory, could not compress {}", input_path);
-                    return None;
-                }
-
-                let stored_full_size = input_size as u16;
-                let stored_compressed_size = compressed_size_ulong as u16;
-                compressed_buffer[output_header_offset..output_header_offset + 2].copy_from_slice(&stored_full_size.to_ne_bytes());
-                compressed_buffer[output_header_offset + 2..output_header_offset + 4].copy_from_slice(&stored_compressed_size.to_ne_bytes());
-
-                compressed_buffer.truncate(compressed_size_ulong as usize + output_header_offset + 4);
-                Some(compressed_buffer)
+            if compress_bound(input_size) > COMPRESSION_SIZE_LIMIT {
+                println!("[error] File is too big: {}", input_path);
+                return None;
             }
+
+            let compressed = zlib_compress(&input_buffer, 6);
+            if compressed.len() as u64 > compress_bound(input_size) {
+                println!("[error] Out of memory, could not compress {}", input_path);
+                return None;
+            }
+            let mut compressed_buffer = vec![0u8; output_header_offset + 4];
+            let stored_full_size = input_size as u16;
+            let stored_compressed_size = compressed.len() as u16;
+            compressed_buffer[output_header_offset..output_header_offset + 2].copy_from_slice(&stored_full_size.to_ne_bytes());
+            compressed_buffer[output_header_offset + 2..output_header_offset + 4].copy_from_slice(&stored_compressed_size.to_ne_bytes());
+            compressed_buffer.extend_from_slice(&compressed);
+            Some(compressed_buffer)
         })();
 
         match result {
@@ -130,18 +122,12 @@ impl FileCompressor {
                 return false;
             }
 
-            let mut output_size_ulong: uLong = stored_full_size as uLong;
-            let mut output_buffer = vec![0u8; stored_full_size as usize];
-
-            let return_value = unsafe {
-                uncompress(output_buffer.as_mut_ptr(), &mut output_size_ulong, input_buffer.as_ptr().add(4), stored_compressed_size as uLong)
-            };
-            if return_value != Z_OK {
+            let Some(output_buffer) = zlib_decompress(&input_buffer[4..4 + stored_compressed_size as usize], stored_full_size as u64) else {
                 println!("[error] Out of memory, could not decompress");
                 return false;
-            }
+            };
 
-            if output_file.write_all(&output_buffer[..output_size_ulong as usize]).is_err() || stored_full_size as uLong != output_size_ulong {
+            if output_file.write_all(&output_buffer).is_err() || stored_full_size as usize != output_buffer.len() {
                 println!("[error] File writing error ({})", output_path);
                 return false;
             }
@@ -157,98 +143,19 @@ impl FileCompressor {
 
 /// Not in the C++: a zlib stream at the best compression, for replay checkpoints (smw/harness.rs).
 pub fn deflate(data: &[u8]) -> Vec<u8> {
-    unsafe {
-        let mut len = compressBound(data.len() as uLong);
-        let mut out = vec![0u8; len as usize];
-        let rc = compress2(out.as_mut_ptr(), &mut len, data.as_ptr(), data.len() as uLong, 9);
-        assert_eq!(rc, Z_OK, "zlib compress2 failed");
-        out.truncate(len as usize);
-        out
-    }
+    zlib_compress(data, 9)
 }
 
 /// Not in the C++: the data of a zlib stream, or None when it is damaged.
 pub fn inflate(data: &[u8]) -> Option<Vec<u8>> {
-    let mut cap = data.len().max(256) * 8;
-    loop {
-        let mut out = vec![0u8; cap];
-        let mut len = cap as uLong;
-        match unsafe { uncompress(out.as_mut_ptr(), &mut len, data.as_ptr(), data.len() as uLong) } {
-            Z_OK => {
-                out.truncate(len as usize);
-                return Some(out);
-            }
-            Z_BUF_ERROR if cap < 1 << 26 => cap *= 2,
-            _ => return None,
-        }
-    }
+    zlib_decompress(data, 1 << 27)
 }
 
-/// zlib's stream API, declared here because Emscripten's zlib has no Rust binding.
-mod zstream {
-    use std::os::raw::{c_char, c_int, c_uint, c_ulong, c_void};
-
-    pub const Z_OK: c_int = 0;
-    pub const Z_STREAM_END: c_int = 1;
-    pub const Z_NO_FLUSH: c_int = 0;
-
-    #[repr(C)]
-    pub struct ZStream {
-        pub next_in: *const u8,
-        pub avail_in: c_uint,
-        pub total_in: c_ulong,
-        pub next_out: *mut u8,
-        pub avail_out: c_uint,
-        pub total_out: c_ulong,
-        pub msg: *const c_char,
-        pub state: *mut c_void,
-        pub zalloc: *mut c_void,
-        pub zfree: *mut c_void,
-        pub opaque: *mut c_void,
-        pub data_type: c_int,
-        pub adler: c_ulong,
-        pub reserved: c_ulong,
-    }
-
-    extern "C" {
-        pub fn zlibVersion() -> *const c_char;
-        pub fn inflateInit2_(strm: *mut ZStream, window_bits: c_int, version: *const c_char, stream_size: c_int) -> c_int;
-        #[link_name = "inflate"]
-        pub fn inflate_stream(strm: *mut ZStream, flush: c_int) -> c_int;
-        pub fn inflateReset(strm: *mut ZStream) -> c_int;
-        pub fn inflateEnd(strm: *mut ZStream) -> c_int;
-    }
-}
-
-/// Not in the C++: the data of a gzip file (a .smwrp recording), or None when it is damaged.
+/// Not in the C++: the data of a gzip file (a .smwrp recording, one or more members), or None when it is damaged.
 pub fn gunzip(data: &[u8]) -> Option<Vec<u8>> {
-    use std::os::raw::{c_int, c_uint};
-    use zstream::*;
     let mut out = Vec::with_capacity(data.len() * 8);
-    let mut buf = vec![0u8; 1 << 16];
-    unsafe {
-        let mut s: ZStream = std::mem::zeroed();
-        if inflateInit2_(&mut s, 15 + 16, zlibVersion(), std::mem::size_of::<ZStream>() as c_int) != Z_OK {
-            return None;
-        }
-        s.next_in = data.as_ptr();
-        s.avail_in = data.len() as c_uint;
-        let rc = loop {
-            s.next_out = buf.as_mut_ptr();
-            s.avail_out = buf.len() as c_uint;
-            let rc = inflate_stream(&mut s, Z_NO_FLUSH);
-            out.extend_from_slice(&buf[..buf.len() - s.avail_out as usize]);
-            match rc {
-                Z_STREAM_END if s.avail_in > 0 => {
-                    inflateReset(&mut s);
-                }
-                Z_OK => {}
-                _ => break rc,
-            }
-        };
-        inflateEnd(&mut s);
-        (rc == Z_STREAM_END).then_some(out)
-    }
+    MultiGzDecoder::new(data).read_to_end(&mut out).ok()?;
+    Some(out)
 }
 
 /// Not in the C++: a file's bytes, gunzipped when they start with the gzip magic.

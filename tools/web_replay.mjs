@@ -49,13 +49,12 @@ const env = {
     SMW_RLE: process.env.SMW_RLE ?? '',
     SMW_SEGMENT: process.env.SMW_SEGMENT ?? '',
 };
-if (directive('options')) {
-    console.error('replays with an options= file are not supported in the browser yet');
-    process.exit(2);
-}
-// Session recordings and clips embed their settings files; the game reads them from $HOME, kept apart
-// from the page's IndexedDB-backed settings directory.
+// The settings files the game reads from $HOME, kept apart from the page's IndexedDB-backed settings directory:
+// an options= file next to the replay (as run_ref.sh copies it), then the ones recordings and clips embed.
 const settings = {};
+if (directive('options')) {
+    settings['options.bin'] = readFileSync(join(dirname(resolve(replayArg)), directive('options'))).toString('base64');
+}
 for (const [key, file] of [['options_b64', 'options.bin'], ['controls_b64', 'controls.sdl2.bin']]) {
     if (directive(key)) settings[file] = directive(key);
 }

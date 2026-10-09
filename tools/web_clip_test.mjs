@@ -356,7 +356,7 @@ try {
         const dump = await loadReplay(file, what);
         check(dump === nativeDump, `Load replay plays the ${what} like the native build (${dump.split('\nF ').length} frames)`);
     }
-    // The game itself gunzips too (Emscripten's zlib), as smw --replay does natively.
+    // The game itself gunzips too, as smw --replay does natively.
     await reload();
     await waitFor(startScreen, 'the start screen for a gzipped --replay', 120000);
     await evaluate(`(() => {

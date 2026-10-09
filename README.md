@@ -61,7 +61,7 @@ The game draws touch controls in the bars beside the picture, with a D-pad or a 
 
 ## Web build
 
-The port also builds for the browser as WebAssembly (`wasm32-unknown-emscripten`), mirroring upstream's Emscripten build: SDL2, SDL2_image (PNG and BMP), SDL2_mixer (WAV and OGG) and zlib come from Emscripten's ports, and `data/` is preloaded into the page. It needs emsdk 5.0.2, the version upstream's CI uses, and the Rust target:
+The port also builds for the browser as WebAssembly (`wasm32-unknown-emscripten`), mirroring upstream's Emscripten build: SDL2, SDL2_image (PNG and BMP) and SDL2_mixer (WAV and OGG) come from Emscripten's ports, and `data/` is preloaded into the page. It needs emsdk 5.0.2, the version upstream's CI uses, and the Rust target:
 
 ```sh
 git clone https://github.com/emscripten-core/emsdk.git ~/work/emsdk
@@ -111,7 +111,7 @@ The C++ original, plus the replay and state-dump hooks used to compare it with t
 
 - clippy (fails on errors) and cargo-deny (licenses, advisories, sources)
 - `cargo test` for the workspace, debug and release, on Linux, macOS and Windows
-- replay parity: `tools/parity.sh`, `tools/parity_sweep.sh`, `tools/editor_parity.sh` and `tools/segment_check.py` against the committed goldens. macOS, where the goldens were made, gates on dumps and screenshots. It also checks the port against goldens from the C++ reference built on the same runner. Linux copies `data/` onto a FAT32 image in APFS order (`tools/apfs_order.py`), so directories list as they do on macOS, and gates on the same suites except the editor screenshots. Windows keeps its replay runs on a FAT32 image and gates on the game suite, the map sweep, and editor dumps and saved files. It reports editor screenshot differences without failing.
+- replay parity: `tools/parity.sh`, `tools/parity_sweep.sh`, `tools/editor_parity.sh` and `tools/segment_check.py` against the committed goldens. macOS, where the goldens were made, gates on dumps and screenshots. It also checks the port against goldens from the C++ reference built on the same runner. Linux copies `data/` onto a FAT32 image in APFS order (`tools/apfs_order.py`), so directories list as they do on macOS, and gates on the same suites. Windows keeps its replay runs on a FAT32 image and gates on the game suite, the map sweep, and the editor sessions, screenshots included.
 - the web build's clip and page tests in headless Chrome
 - the Linux, macOS, Windows, web, muOS and Android packages (`build_*.yml`, the same reusable workflows `release.yml` calls)
 

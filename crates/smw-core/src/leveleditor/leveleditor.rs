@@ -27,10 +27,11 @@ use crate::common::tileset_manager::{CTileset, CTilesetManager};
 use crate::globals::*;
 use crate::smw::fps_limiter::FPSLimiter;
 use sdl2::sys::image::IMG_SavePNG;
+use crate::common::util::sdl_helpers::poll_event;
 use sdl2::sys::SDL_KeyCode::*;
 use sdl2::sys::{
     SDL_Event, SDL_EventType, SDL_FillRect, SDL_GetError, SDL_GetScancodeFromKey, SDL_KeyCode,
-    SDL_Keycode, SDL_MapRGB, SDL_PollEvent, SDL_Rect, SDL_SetColorKey, SDL_Surface, SDL_UpperBlit, SDL_bool, SDL_Keymod,
+    SDL_Keycode, SDL_MapRGB, SDL_Rect, SDL_SetColorKey, SDL_Surface, SDL_UpperBlit, SDL_bool, SDL_Keymod,
     SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT,
 };
 use std::ffi::{CStr, CString};
@@ -678,7 +679,7 @@ pub fn editor_edit() -> i32 {
     unsafe {
         if fExiting {
             //handle messages
-            while SDL_PollEvent(&mut event) != 0 {
+            while poll_event(&mut event) != 0 {
                 if event.type_ == SDL_KEYDOWN_EV {
                     let key = event.key.keysym.sym;
 
@@ -697,7 +698,7 @@ pub fn editor_edit() -> i32 {
             }
         } else {
             //handle messages
-            while SDL_PollEvent(&mut event) != 0 {
+            while poll_event(&mut event) != 0 {
                 let keystate = get_keyboard_state();
 
                 match event.type_ {
@@ -1695,7 +1696,7 @@ pub static mut r: SDL_Rect = SDL_Rect { x: 0, y: 0, w: 0, h: 0 };
 pub fn editor_warp() -> i32 {
     unsafe {
         //handle messages
-        while SDL_PollEvent(&mut event) != 0 {
+        while poll_event(&mut event) != 0 {
             match event.type_ {
                 SDL_QUIT_EV => return EDITOR_QUIT,
 
@@ -1747,7 +1748,7 @@ const szLayerNames: [&str; 3] = ["Back Layer", "Mid Layer", "Top Layer"];
 pub fn editor_eyecandy() -> i32 {
     unsafe {
         //handle messages
-        while SDL_PollEvent(&mut event) != 0 {
+        while poll_event(&mut event) != 0 {
             let ty = event.type_;
             let mut fall = false;
 
@@ -1865,7 +1866,7 @@ pub fn editor_properties(iBlockCol: i16, iBlockRow: i16) -> i32 {
         loop {
             FPSLimiter::instance().frame_start();
             //handle messages
-            while SDL_PollEvent(&mut event) != 0 {
+            while poll_event(&mut event) != 0 {
                 let ty = event.type_;
                 let mut fall = false;
 
@@ -2188,7 +2189,7 @@ pub fn editor_platforms() -> i32 {
 
     unsafe {
         //handle messages
-        while SDL_PollEvent(&mut event) != 0 {
+        while poll_event(&mut event) != 0 {
             let ty = event.type_;
             let mut fall = false;
 
@@ -2964,7 +2965,7 @@ pub fn editor_maphazards() -> i32 {
 
     unsafe {
         //handle messages
-        while SDL_PollEvent(&mut event) != 0 {
+        while poll_event(&mut event) != 0 {
             let ty = event.type_;
             let mut fall = false;
 
@@ -3406,7 +3407,7 @@ pub fn editor_tiles() -> i32 {
 
     unsafe {
         //handle messages
-        while SDL_PollEvent(&mut event) != 0 {
+        while poll_event(&mut event) != 0 {
             match event.type_ {
                 SDL_QUIT_EV => return EDITOR_QUIT,
 
@@ -3606,7 +3607,7 @@ pub fn editor_tiles() -> i32 {
 pub fn editor_blocks() -> i32 {
     unsafe {
         //handle messages
-        while SDL_PollEvent(&mut event) != 0 {
+        while poll_event(&mut event) != 0 {
             match event.type_ {
                 SDL_QUIT_EV => return EDITOR_QUIT,
 
@@ -3672,7 +3673,7 @@ pub fn editor_blocks() -> i32 {
 pub fn editor_mapitems() -> i32 {
     unsafe {
         //handle messages
-        while SDL_PollEvent(&mut event) != 0 {
+        while poll_event(&mut event) != 0 {
             match event.type_ {
                 SDL_QUIT_EV => return EDITOR_QUIT,
 
@@ -3742,7 +3743,7 @@ pub fn editor_modeitems() -> i32 {
 
     unsafe {
         //handle messages
-        while SDL_PollEvent(&mut event) != 0 {
+        while poll_event(&mut event) != 0 {
             let ty = event.type_;
             let mut fall = false;
 
@@ -3879,7 +3880,7 @@ pub fn editor_modeitems() -> i32 {
 pub fn editor_tiletype() -> i32 {
     unsafe {
         //handle messages
-        while SDL_PollEvent(&mut event) != 0 {
+        while poll_event(&mut event) != 0 {
             match event.type_ {
                 SDL_QUIT_EV => return EDITOR_QUIT,
 
@@ -3958,7 +3959,7 @@ pub fn editor_backgrounds() -> i32 {
 
     unsafe {
         //handle messages
-        while SDL_PollEvent(&mut event) != 0 {
+        while poll_event(&mut event) != 0 {
             match event.type_ {
                 SDL_QUIT_EV => {
                     free_background_surfaces();
@@ -4068,7 +4069,7 @@ pub fn editor_animation() -> i32 {
 
     unsafe {
         //handle messages
-        while SDL_PollEvent(&mut event) != 0 {
+        while poll_event(&mut event) != 0 {
             let iCol = (event.button.x / TILESIZE + view_animated_tileset_x) as i16;
             let iRow = (event.button.y / TILESIZE) as i16;
 
@@ -4323,7 +4324,7 @@ pub fn display_help() -> i32 {
         rm.menu_font_small.draw(offsetx, offsety, "[alt] + [enter] - Full Screen/Window");
 
         //handle messages
-        while SDL_PollEvent(&mut event) != 0 {
+        while poll_event(&mut event) != 0 {
             match event.type_ {
                 SDL_QUIT_EV => return 0,
                 SDL_KEYDOWN_EV => return 0,
@@ -4377,7 +4378,7 @@ pub fn dialog(title: &str, instructions: &str, input: &mut String, inputsize: i3
             let framestart = crate::services::ticks() as i32;
 
             //handle messages
-            while SDL_PollEvent(&mut event) != 0 {
+            while poll_event(&mut event) != 0 {
                 match event.type_ {
                     SDL_QUIT_EV => return false,
 
