@@ -18,7 +18,6 @@ fn emscripten_link_args() {
         "-sUSE_SDL_IMAGE=2",
         r#"-sSDL2_IMAGE_FORMATS=["png","bmp"]"#,
         "-sUSE_SDL_MIXER=2",
-        "-sUSE_ZLIB=1",
         "-sALLOW_MEMORY_GROWTH=1",
         // Not in upstream: the port builds large globals (CResourceManager, CGameValues) on the stack
         // before boxing them, which overflows emscripten's 64 KiB default. 8 MiB matches the native main thread.
