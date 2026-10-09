@@ -284,6 +284,18 @@ jobs:
             tail -n 1 segment.log
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Determinism manifest
+        if: always() && steps.game.outcome != 'skipped'
+        run: python3 tools/determinism.py manifest parity-${{ matrix.os }} game "$RUNNER_TEMP/parity/game" editor "$RUNNER_TEMP/parity/editor" > "$RUNNER_TEMP/determinism-parity-${{ matrix.os }}.txt"
+
+      - uses: actions/upload-artifact@v7
+        if: always() && steps.game.outcome != 'skipped'
+        with:
+          name: determinism-parity-${{ matrix.os }}
+          path: ${{ runner.temp }}/determinism-parity-${{ matrix.os }}.txt
+          if-no-files-found: ignore
+          retention-days: 7
+
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
@@ -350,6 +362,18 @@ jobs:
           grep -v -E 'MATCH all .* shots ([0-9]+)/\1$' sweep.log | grep -v -E '^(=== |OK: )' || true
           [[ -s summary.txt ]] || exit 1
           exit $status
+
+      - name: Determinism manifest
+        if: always()
+        run: python3 tools/determinism.py manifest sweep-${{ matrix.os }} sweep "$RUNNER_TEMP/parity/sweep" > "$RUNNER_TEMP/determinism-sweep-${{ matrix.os }}.txt"
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: determinism-sweep-${{ matrix.os }}
+          path: ${{ runner.temp }}/determinism-sweep-${{ matrix.os }}.txt
+          if-no-files-found: ignore
+          retention-days: 7
 
   parity-windows:
     runs-on: windows-latest
@@ -441,6 +465,18 @@ jobs:
           [[ -s summary.txt ]] || exit 1
           exit $status
 
+      - name: Determinism manifest
+        if: always()
+        run: python3 tools/determinism.py manifest parity-windows game "$RUNNER_TEMP/parity/game" editor "$RUNNER_TEMP/parity/editor" sweep "$RUNNER_TEMP/parity/sweep" > "$RUNNER_TEMP/determinism-parity-windows.txt"
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: determinism-parity-windows
+          path: ${{ runner.temp }}/determinism-parity-windows.txt
+          if-no-files-found: ignore
+          retention-days: 7
+
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
@@ -510,9 +546,55 @@ jobs:
           NET_GAMES: net_game net_game_blocks net_game_stomp
         run: timeout 25m node tools/web_netplay_test.mjs "$RUNNER_TEMP/web-netplay"
 
+      - name: Web replays
+        if: always()
+        continue-on-error: true
+        run: |
+          printf '%s\0' tools/replays/*.txt | timeout 20m xargs -0 -n 1 -P 4 bash -c \
+            'timeout 5m node tools/web_replay.mjs "$0" "$RUNNER_TEMP/web-replays/$(basename "$0" .txt)" > /dev/null 2>&1 || echo "::warning::web_replay $0 failed"'
+
+      - name: Determinism manifest
+        if: always()
+        run: python3 tools/determinism.py manifest web game "$RUNNER_TEMP/web-replays" > "$RUNNER_TEMP/determinism-web.txt"
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: determinism-web
+          path: ${{ runner.temp }}/determinism-web.txt
+          if-no-files-found: ignore
+          retention-days: 7
+
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: web-test
           path: ${{ runner.temp }}/web-*
           retention-days: 7
+
+  determinism:
+    name: determinism (report-only)
+    needs: [parity, sweep, parity-windows, web]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: determinism-*
+          path: ${{ runner.temp }}/determinism
+          merge-multiple: true
+      - name: Compare the manifests
+        continue-on-error: true
+        run: |
+          shopt -s nullglob
+          python3 tools/determinism.py compare "$RUNNER_TEMP/determinism-summary.md" "$RUNNER_TEMP"/determinism/determinism-*.txt
+          cat "$RUNNER_TEMP/determinism-summary.md" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: determinism-summary
+          path: |
+            ${{ runner.temp }}/determinism-summary.md
+            ${{ runner.temp }}/determinism/
+          if-no-files-found: ignore
+          retention-days: 30

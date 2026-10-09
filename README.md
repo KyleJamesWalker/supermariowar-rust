@@ -61,7 +61,7 @@ The game draws touch controls in the bars beside the picture, with a D-pad or a 
 
 ## Web build
 
-The port also builds for the browser as WebAssembly (`wasm32-unknown-emscripten`), mirroring upstream's Emscripten build: SDL2, SDL2_image (PNG and BMP), SDL2_mixer (WAV and OGG) and zlib come from Emscripten's ports, and `data/` is preloaded into the page. It needs emsdk 5.0.2, the version upstream's CI uses, and the Rust target:
+The port also builds for the browser as WebAssembly (`wasm32-unknown-emscripten`), mirroring upstream's Emscripten build: SDL2, SDL2_image (PNG and BMP) and SDL2_mixer (WAV and OGG) come from Emscripten's ports, and `data/` is preloaded into the page. It needs emsdk 5.0.2, the version upstream's CI uses, and the Rust target:
 
 ```sh
 git clone https://github.com/emscripten-core/emsdk.git ~/work/emsdk
