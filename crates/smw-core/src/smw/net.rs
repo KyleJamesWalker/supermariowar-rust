@@ -279,6 +279,24 @@ impl HandlerAccess for Global<NetworkHandler> {
     }
 }
 
+/// Not in the C++: every client draws in step from the start of the match, whatever its menus drew since the sync.
+pub fn reseed_for_match() {
+    RandomNumberGenerator::generator().reseed(unsafe { netplay.common_random_seed });
+}
+
+/// `NET_NOTICE_GAMEMODESETTINGS` with the current game mode's settings.
+fn game_mode_settings_package() -> Vec<u8> {
+    let mut blob = vec![0u8; std::mem::size_of::<MessageHeader>() + GMS_UNION_SIZE];
+
+    let header = MessageHeader::new(NET_NOTICE_GAMEMODESETTINGS);
+    blob[..3].copy_from_slice(header.as_bytes());
+
+    let mut modesettings = GameModeSettingsUnion::new();
+    modesettings.read_global(unsafe { currentgamemode } as GameModeType);
+    blob[3..].copy_from_slice(&modesettings.bytes);
+    blob
+}
+
 /// `host_bytes[0].host_bytes[1]...` of an address stored in network byte order.
 fn host_to_string(host: u32) -> String {
     let b = host.to_ne_bytes();
@@ -591,15 +609,7 @@ impl NetClient {
     }
 
     pub fn send_game_mode_settings_change_message(&mut self) {
-        let mut blob = vec![0u8; std::mem::size_of::<MessageHeader>() + GMS_UNION_SIZE];
-
-        let header = MessageHeader::new(NET_NOTICE_GAMEMODESETTINGS);
-        blob[..3].copy_from_slice(header.as_bytes());
-
-        let mut modesettings = GameModeSettingsUnion::new();
-        modesettings.read_global(unsafe { currentgamemode } as GameModeType);
-        blob[3..].copy_from_slice(&modesettings.bytes);
-
+        let blob = game_mode_settings_package();
         self.send_message_to_lobby_server(&blob);
     }
 
@@ -725,6 +735,7 @@ impl NetClient {
 
         println!("reseed: {}", pkg.commonRandomSeed as i32);
         RandomNumberGenerator::generator().reseed(pkg.commonRandomSeed);
+        unsafe { netplay.common_random_seed = pkg.commonRandomSeed };
         crate::smw::net_random::begin_setup();
 
         unsafe {
@@ -1247,7 +1258,10 @@ impl NetGameHost {
         println!("[net] Prepare launching the game...");
 
         RandomNumberGenerator::generator().reseed(unsafe { libc_time() } as u32);
+        crate::smw::gs_menu::roll_net_game_mode_settings();
+        let settings = game_mode_settings_package();
         let pkg = pkgs::StartSync::new(RANDOM_INT(32767) as u32);
+        self.send_message_to_my_peers(&settings);
         self.send_message_to_my_peers(pkg.as_bytes());
         self.send_message_to_my_peers(gpkgs::HostDecidesRandom::new().as_bytes());
 
@@ -1644,6 +1658,8 @@ pub struct Networking {
     pub local_playerdata_store_time: [nettimepoint; 256],
 
     pub host_decides_random: bool,
+    /// The sync's seed; every client reseeds with it again when the match starts.
+    pub common_random_seed: u32,
 
     pub _alias: Aliased,
 }
@@ -1688,6 +1704,7 @@ impl Networking {
             local_playerdata_buffer: VecDeque::new(),
             local_playerdata_store_time: [SystemTime::UNIX_EPOCH; 256],
             host_decides_random: false,
+            common_random_seed: 0,
             _alias: Aliased::new(),
         }
     }
