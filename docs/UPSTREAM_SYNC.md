@@ -7,7 +7,7 @@
 Upstream PR 480 landed our five fixes as `895f4ea6` (M1), `bd2155f0` (M5), `66208bbc` (M4), `a272c93f` (M2) and `c7056790` (L5). The port already carried M2 and L5. This sync ports the other three and drops the code that reproduced those bugs (`UPSTREAM_BACKLOG.md`).
 
 - **C++:** merging upstream into `harness-latest` has no conflicts, because the cherry-picked M2 and L5 commits match upstream's. `GameMode.cpp` and `Star.cpp` leave `cpp-harness.patch`.
-- **Goldens:** none changed. All 45 game, 290 sweep and 13 editor goldens, regenerated serially from the merged reference, are byte-identical, and the editor goldens match across two runs. No editor session saves a stage in modes 25-27 (M4). The sessions that delete a stage have no vehicles, so the old and new loops visit the same elements (M5). M1 never changed the port's behaviour.
+- **Goldens:** none changed. All 45 game, 290 sweep and 13 editor goldens, regenerated serially from the merged reference, are byte-identical, and the editor goldens match across two runs. No editor session saves a stage in modes 25-27 (M4). The sessions that delete a stage have no vehicles, so the old and new loops visit the same elements (M5). M1 never changed the port's behaviour. The editor session `worldedit/stage_delete_vehicles`, added after the sync, covers M4 and M5: it saves boss minigame, bonus house and pipe minigame stages, and deletes a stage with two vehicles bound to it.
 - **Gates:** `cargo test` (debug and release), `parity.sh` 48/48, `parity_sweep.sh` 290/290, `editor_parity.sh` 13/13, `segment_check.py` 27/27, web build.
 
 ## a7f7e25 to 5693918f
