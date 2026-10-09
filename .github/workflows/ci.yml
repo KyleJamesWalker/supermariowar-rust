@@ -527,7 +527,9 @@ jobs:
           mv "$RUNNER_TEMP/SuperMarioWar-web" dist/web
 
       - name: Build
-        run: cargo build --release --locked --bin smw --bin smw_relay
+        run: |
+          cargo build --release --locked --bin smw
+          cargo build --release --locked --package smw_relay
 
       - name: Allow Chrome's sandbox
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
