@@ -182,6 +182,10 @@ const menu = async () => {
     const m = line.match(/^M (\S+) focus=(-?\d+) modifying=(\d)/);
     return m ? { name: m[1], focus: Number(m[2]), modifying: m[3] === '1' } : { name: '', focus: -1, modifying: false };
 };
+// The splash screen loads the game data on frame 1, and a key pressed before frame 2 skips that load (docs/REPLAY.md,
+// Frame loop), leaving the menus without their graphics.
+const splashLoaded = () => waitFor(`(() => { try { return /^F 2 /m.test(Module.FS.readFile('/dump.txt', { encoding: 'utf8' })); } catch { return false; } })()`,
+    'the splash screen to load the game data', 30000);
 const waitMenu = async (pred, what, ms = 10000) => {
     const until = Date.now() + ms;
     for (;;) {
@@ -254,6 +258,7 @@ try {
     })()`);
     await tap(await center('#play'));
     await waitFor('started', 'Play to start the game', 10000);
+    await splashLoaded();
     start = await center('[data-key=start]');
     const dpad = await center('.tc-dpad');
     const r = await evaluate(`document.querySelector('.tc-dpad').getBoundingClientRect().width / 2`);
@@ -352,6 +357,7 @@ try {
     check(await evaluate(`!document.documentElement.classList.contains('touch')`), 'desktop: no touch controls');
     await evaluate(`document.getElementById('play').click()`);
     await waitFor('started', 'Play (desktop)', 10000);
+    await splashLoaded();
     const key = async (k, code, vk, mods = 0) => {
         for (const type of ['keyDown', 'keyUp']) await send('Input.dispatchKeyEvent', { type, key: k, code, windowsVirtualKeyCode: vk, modifiers: mods });
         await sleep(150);
