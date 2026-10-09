@@ -117,6 +117,7 @@ const relay = spawn(relayBin, ['--port', String(relayPort)], {
     stdio: ['ignore', 'pipe', 'pipe'],
 });
 children.push(relay);
+relay.on('error', (e) => (relayLog += `${e.message}\n`));
 relay.stdout.on('data', (d) => (relayLog += d));
 relay.stderr.on('data', (d) => (relayLog += d));
 for (let i = 0; i < 50 && !relayLog.includes('Ready!'); i++) await new Promise((ok) => setTimeout(ok, 100));
