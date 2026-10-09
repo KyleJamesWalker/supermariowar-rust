@@ -19,7 +19,7 @@ Upstream's Android port ([mmatyas/supermariowar-android](https://github.com/mmat
 | Java and Gradle | SDL 2.32.10's `android-project` template, with `app/`, `build.gradle` (AGP 8.5.2) and the Gradle 8.7 wrapper properties from this directory on top (`build.sh`) |
 | Game | the `smw` library as `libmain.so`, exporting `SDL_main` (`crates/smw-core/src/android.rs`), built with cargo-ndk |
 | SDL2, SDL2_image, SDL2_mixer | built from checksummed release tarballs with CMake and the NDK (`build-sdl-libs.sh`), PNG and OGG through stb as on muOS |
-| ENet, zlib | ENet built by `enet-sys`; the system `libz.so` |
+| ENet | built by `enet-sys`. Compression uses flate2's Rust backend, so the game links no zlib |
 | Icon | `resources/smw.png` (32x32), scaled by whole numbers with nearest neighbour to every mipmap density, plus an adaptive icon on the sky blue of its frame (`make_icons.py`, run by `build.sh`) |
 
 ## Data and settings
