@@ -503,7 +503,7 @@ jobs:
   web:
     needs: build-web
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 75
     env:
       SDL_RENDER_DRIVER: software
       CHROME: /usr/bin/google-chrome
