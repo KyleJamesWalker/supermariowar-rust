@@ -540,6 +540,10 @@ jobs:
         if: always()
         run: timeout 10m node tools/web_ui_test.mjs "$RUNNER_TEMP/web-ui"
 
+      - name: Web text entry test
+        if: always()
+        run: timeout 6m node tools/web_text_entry_test.mjs "$RUNNER_TEMP/web-text-entry"
+
       # net_game_frenzy, net_game_coins and net_game_classic do not pass reliably yet.
       - name: Web netplay test
         if: always()
