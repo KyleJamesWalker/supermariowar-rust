@@ -405,7 +405,7 @@ pub fn init() {
             RandomNumberGenerator::reset_call_count();
             sfx::sfx_ticks = virtual_ticks;
             sfx::sfx_ignore_channel_failure = true;
-            sfx::sfx_virtual_mixer = true;
+            sfx::sfx_log_events = true;
         }
 
         h.noLimit = env("SMW_NOLIMIT").is_some();
@@ -430,7 +430,8 @@ pub fn init() {
         }
 
         h.audible = record || env("SMW_AUDIBLE").is_some();
-        sfx::sfx_audible = h.audible && h.seeded;
+        // Unseeded runs (SMW_NO_RECORD) are live play, so they are audible too.
+        sfx::sfx_audible = h.audible || !h.seeded;
         if let Some(speed) = env("SMW_REPLAY_SPEED").and_then(|v| v.parse::<f32>().ok()).filter(|v| *v > 0.0) {
             h.speed = speed;
         }

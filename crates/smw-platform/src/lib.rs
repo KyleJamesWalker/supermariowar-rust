@@ -26,11 +26,19 @@ pub struct SoundId(pub u32);
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct TrackId(pub u32);
 
-/// Output only: nothing here returns game-visible state, and a backend never calls back into the game.
-/// `isPlaying()`, the channel numbers and the finish callbacks all come from the core's virtual mixer.
+/// Output only: the core's virtual mixer chooses channels and decides `isPlaying()`, finished channels and
+/// finished music in every run; a backend never calls back into the game. The two load methods return a length,
+/// which the core uses only for files its duration table (`sfx_durations.txt`) does not list.
 pub trait AudioOut {
-    fn load_sound(&mut self, id: SoundId, bytes: &[u8]);
-    fn load_track(&mut self, id: TrackId, bytes: &[u8]);
+    /// Opens the device. With `exact`, it must take 44100 Hz, S16, stereo unchanged, or fall back to a silent
+    /// device of that spec, so lengths match the headless runs.
+    fn open(&mut self, exact: bool);
+    fn close(&mut self);
+    fn is_open(&self) -> bool;
+    /// Decodes a sound. Returns its length in milliseconds at the opened spec, or the decoder's error.
+    fn load_sound(&mut self, id: SoundId, bytes: &[u8]) -> Result<u32, String>;
+    /// Decodes a track. Returns its length in seconds (negative when unknown), or the decoder's error.
+    fn load_track(&mut self, id: TrackId, bytes: &[u8]) -> Result<f64, String>;
     fn free_sound(&mut self, id: SoundId);
     fn free_track(&mut self, id: TrackId);
     /// Plays on the channel the core's virtual mixer chose.
@@ -40,7 +48,9 @@ pub trait AudioOut {
     fn play_track(&mut self, id: TrackId, once: bool);
     fn stop_track(&mut self);
     fn pause_track(&mut self, paused: bool);
-    fn set_volumes(&mut self, sound: u8, music: u8);
+    /// 0 to 128, as SDL_mixer.
+    fn set_sound_volume(&mut self, volume: i32);
+    fn set_music_volume(&mut self, volume: i32);
 }
 
 pub trait Clock {
@@ -58,12 +68,12 @@ pub trait Storage {
     fn persist(&mut self) {}
 }
 
-/// What the game reaches through its context. Phase 2 adds one service per PR, in the order clock, storage,
-/// audio output, video; the traits above are the end state.
+/// What the game reaches through its context.
 pub struct Services {
     pub clock: Box<dyn Clock>,
     pub storage: Box<dyn Storage>,
     pub video: Box<dyn Video>,
+    pub audio: Box<dyn AudioOut>,
 }
 
 /// The open index of a pad: a replay's `<dev>`, SDL's `which`, and the device a binding names.
@@ -125,10 +135,18 @@ mod tests {
     struct Log(Rc<RefCell<Vec<String>>>);
 
     impl AudioOut for Log {
-        fn load_sound(&mut self, id: SoundId, bytes: &[u8]) {
-            self.0.borrow_mut().push(format!("load {} {}", id.0, bytes.len()));
+        fn open(&mut self, _: bool) {}
+        fn close(&mut self) {}
+        fn is_open(&self) -> bool {
+            true
         }
-        fn load_track(&mut self, _: TrackId, _: &[u8]) {}
+        fn load_sound(&mut self, id: SoundId, bytes: &[u8]) -> Result<u32, String> {
+            self.0.borrow_mut().push(format!("load {} {}", id.0, bytes.len()));
+            Ok(250)
+        }
+        fn load_track(&mut self, _: TrackId, _: &[u8]) -> Result<f64, String> {
+            Ok(-1.0)
+        }
         fn free_sound(&mut self, _: SoundId) {}
         fn free_track(&mut self, _: TrackId) {}
         fn play(&mut self, channel: u8, id: SoundId, loops: i32) {
@@ -138,7 +156,8 @@ mod tests {
         fn play_track(&mut self, _: TrackId, _: bool) {}
         fn stop_track(&mut self) {}
         fn pause_track(&mut self, _: bool) {}
-        fn set_volumes(&mut self, _: u8, _: u8) {}
+        fn set_sound_volume(&mut self, _: i32) {}
+        fn set_music_volume(&mut self, _: i32) {}
     }
 
     impl Clock for Null {
@@ -160,17 +179,16 @@ mod tests {
     #[test]
     fn services_hold_trait_objects() {
         let log = Rc::new(RefCell::new(Vec::new()));
-        let mut services = Services { clock: Box::new(Null), storage: Box::new(Null), video: Box::new(Null) };
+        let mut services = Services { clock: Box::new(Null), storage: Box::new(Null), video: Box::new(Null), audio: Box::new(Log(log.clone())) };
         assert_eq!(services.clock.now_ms(), 1000);
         services.storage.persist();
         assert_eq!(services.storage.root_dir(), PathBuf::from("root"));
 
-        let mut audio: Box<dyn AudioOut> = Box::new(Log(log.clone()));
         let pixels = vec![0u32; SCREEN_W * SCREEN_H];
         services.video.open(false);
         services.video.present(Frame { pixels: &pixels });
-        audio.load_sound(SoundId(3), &[0; 4]);
-        audio.play(0, SoundId(3), -1);
+        assert_eq!(services.audio.load_sound(SoundId(3), &[0; 4]), Ok(250));
+        services.audio.play(0, SoundId(3), -1);
         assert_eq!(*log.borrow(), ["load 3 4", "play 3 ch=0 loops=-1"]);
     }
 }
