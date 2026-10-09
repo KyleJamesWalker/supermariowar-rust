@@ -10,6 +10,7 @@
 //   CHROME     Chrome binary (default: the macOS Google Chrome app)
 //   RELAY_BIN  smw_relay binary (default: target/release/smw_relay)
 //   WEB_DIR    web build (default: dist/web)
+//   CPU_THROTTLE  slow the page's CPU by this factor (Chrome's emulation), as on a slow CI runner
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -246,6 +247,7 @@ try {
         width: 844, height: 390, deviceScaleFactor: 3, mobile: true, screenOrientation: { type: 'landscapePrimary', angle: 90 },
     });
     await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+    if (process.env.CPU_THROTTLE) await send('Emulation.setCPUThrottlingRate', { rate: Number(process.env.CPU_THROTTLE) });
     await send('Page.navigate', { url: page });
     await waitFor(`document.getElementById('start')?.hidden === false`, 'the start screen', 120000);
     await evaluate(`(() => {
