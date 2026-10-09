@@ -540,11 +540,11 @@ jobs:
         if: always()
         run: timeout 10m node tools/web_ui_test.mjs "$RUNNER_TEMP/web-ui"
 
-      # net_game_frenzy, net_game_coins and net_game_classic do not pass reliably yet.
+      # net_game_frenzy does not pass reliably yet.
       - name: Web netplay test
         if: always()
         env:
-          NET_GAMES: net_game net_game_blocks net_game_stomp
+          NET_GAMES: net_game net_game_blocks net_game_stomp net_game_coins net_game_classic
         run: timeout 25m node tools/web_netplay_test.mjs "$RUNNER_TEMP/web-netplay"
 
       - name: Web replays

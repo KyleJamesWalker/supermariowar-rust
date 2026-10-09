@@ -800,8 +800,8 @@ impl MenuState {
             if game_values.matchtype == MatchType::QuickGame {
                 self.mModeOptionsMenu.set_random_game_mode_settings(game_values.gamemode.gamemode as i16);
             } else if game_values.matchtype == MatchType::NetGame {
-                // TODO: set from network
-                self.mModeOptionsMenu.set_random_game_mode_settings(game_values.gamemode.gamemode as i16);
+                // Not in the C++ (whose TODO rolls them here on every client): the host rolled them at the sync.
+                crate::smw::net::reseed_for_match();
             } else {
                 crate::smw::gs_gameplay::set_game_mode_settings_from_menu();
             }
@@ -888,6 +888,17 @@ impl MenuState {
 
             harness::match_checkpoint();
             enter_gameplay_tail();
+        }
+    }
+}
+
+/// The game host rolls a net game's random mode settings once, for every client (`NetGameHost::send_sync_messages`).
+pub fn roll_net_game_mode_settings() {
+    unsafe {
+        if let Some(state) = ms.as_mut() {
+            if !state.mModeOptionsMenu.is_null() {
+                state.mModeOptionsMenu.set_random_game_mode_settings(currentgamemode);
+            }
         }
     }
 }
