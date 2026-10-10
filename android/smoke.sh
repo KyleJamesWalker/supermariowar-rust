@@ -55,6 +55,10 @@ for replay in "${replays[@]}"; do
         grep -E ' (smw|SDL|AndroidRuntime|DEBUG) ' "$out/$name/logcat.txt" | grep -v 'I smw *: loading' | tail -n 40
         failed=1
     fi
+    if grep -q 'Could not open client connection port' "$out/$name/logcat.txt"; then
+        echo "the network client port did not open"
+        failed=1
+    fi
 
     golden="$tools/golden/$name"
     [[ -d "$tools/golden_rust/$name" ]] && golden="$tools/golden_rust/$name"
