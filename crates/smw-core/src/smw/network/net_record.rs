@@ -20,7 +20,7 @@ pub enum Kind {
     Disconnect,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Default)]
 pub struct PeerInfo {
     pub host: u32,
     pub port: u16,
@@ -73,7 +73,7 @@ impl NetEvent {
     }
 }
 
-fn info(peer: &dyn NetPeer) -> PeerInfo {
+pub fn info(peer: &dyn NetPeer) -> PeerInfo {
     PeerInfo { host: peer.address_host(), port: peer.address_port(), player_id: peer.get_player_id(), key: peer.peer_key() }
 }
 
@@ -173,11 +173,11 @@ struct Replay {
 
 static mut replay: Option<Replay> = None;
 
-/// Loads a replay's net lines from `from` on. A recording without `#@ netv` lines predates net recording,
+/// Loads a replay's net lines from `from` on. A recording without `#@ netrec=1` predates net recording,
 /// so its replay keeps using the network.
 pub fn load(text: &str, from: u32) {
     let lines = || text.lines().map(|l| l.strip_suffix('\r').unwrap_or(l));
-    if !lines().any(|l| l.starts_with("#@ netv ")) {
+    if !lines().any(|l| l == "#@ netrec=1") {
         return;
     }
     let events = lines().filter_map(NetEvent::parse).filter(|e| e.frame >= from).collect();

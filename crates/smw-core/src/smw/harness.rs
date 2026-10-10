@@ -785,6 +785,7 @@ fn start_recording(seed: u32, to: Option<String>) {
     let home = crate::common::path::get_home_directory();
     let _ = writeln!(out, "# Super Mario War session recorded {} UTC (Rust port).", stamp.replace('_', " "));
     let _ = writeln!(out, "#@ seed={}", seed);
+    let _ = writeln!(out, "#@ netrec=1");
     for (key, file) in SETTINGS_FILES {
         if let Ok(bytes) = std::fs::read(home.clone() + file) {
             let _ = writeln!(out, "#@ {}={}", key, base64_encode(&bytes));

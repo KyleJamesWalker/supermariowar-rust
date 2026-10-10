@@ -14,7 +14,8 @@ use crate::globals::{Aliased, Global, Ptr};
 use crate::smw::main::{currentgamemode, gamemodes, players};
 use crate::smw::network::file_compressor::FileCompressor;
 use crate::smw::network::net_config_manager::NetConfigManager;
-use crate::smw::network::net_record::{self, Side};
+use crate::smw::checkpoint::{local_path, portable_path, Field, Snap};
+use crate::smw::network::net_record::{self, PeerInfo, ReplayPeer, Side};
 use crate::smw::network::network_layer::NetworkLayer;
 use crate::smw::network::protocol_game_packages as gpkgs;
 use crate::smw::objectgame::PowerupType;
@@ -213,8 +214,12 @@ pub fn net_load_server_list() {
     config.load();
 
     #[cfg(all(not(feature = "no_network"), target_os = "emscripten"))]
-    unsafe {
-        if let Some(url) = net_record::value_opt("relay", crate::smw::platform::network::websocket::network_layer_websocket::relay_url) {
+    let relay_url = crate::smw::platform::network::websocket::network_layer_websocket::relay_url;
+    #[cfg(not(all(not(feature = "no_network"), target_os = "emscripten")))]
+    let relay_url = || None;
+    // Recorded on every build, so a native replay of a browser recording lists the same servers.
+    if let Some(url) = net_record::value_opt("relay", relay_url) {
+        unsafe {
             netplay.savedServers.retain(|s| s.hostname != url);
             netplay.savedServers.insert(0, ServerAddress { hostname: url });
         }
@@ -1788,4 +1793,185 @@ impl Networking {
             _alias: Aliased::new(),
         }
     }
+}
+
+/****************************
+    Checkpoints
+****************************/
+
+impl Field for PeerInfo {
+    fn io(&mut self, s: &mut Snap) {
+        s.io(&mut self.host);
+        s.io(&mut self.port);
+        s.io(&mut self.player_id);
+        s.io(&mut self.key);
+    }
+}
+
+impl Field for LastMessage {
+    fn io(&mut self, s: &mut Snap) {
+        s.io(&mut self.packageType);
+        s.io(&mut self.timestamp);
+    }
+}
+
+impl Field for COutputControl {
+    fn io(&mut self, s: &mut Snap) {
+        for key in self.keys.iter_mut() {
+            s.io(&mut key.fDown);
+            s.io(&mut key.fPressed);
+        }
+    }
+}
+
+impl Field for Net_PlayerData {
+    fn io(&mut self, s: &mut Snap) {
+        s.io(&mut self.x);
+        s.io(&mut self.y);
+        s.io(&mut self.xvel);
+        s.io(&mut self.yvel);
+    }
+}
+
+impl Field for Net_IndexedPlayerData {
+    fn io(&mut self, s: &mut Snap) {
+        s.io(&mut self.input_id);
+        s.io(&mut self.data);
+    }
+}
+
+impl Field for Net_AllPlayerData {
+    fn io(&mut self, s: &mut Snap) {
+        s.io(&mut self.player);
+        s.io(&mut self.player_input);
+    }
+}
+
+impl Field for RawPlayerAddress {
+    fn io(&mut self, s: &mut Snap) {
+        s.io(&mut self.host);
+        s.io(&mut self.port);
+        s.io(&mut self.sync_ok);
+        s.io(&mut self.loaded);
+    }
+}
+
+impl Field for Room {
+    fn io(&mut self, s: &mut Snap) {
+        s.io(&mut self.roomID);
+        s.io(&mut self.name);
+        s.io(&mut self.playerNames);
+        s.io(&mut self.hostPlayerNumber);
+        s.io(&mut self.gamemodeID);
+        s.io(&mut self.gamemodeGoal);
+    }
+}
+
+/// A peer as its address; a segment replay's peers are `ReplayPeer`s like the replayed events'.
+fn peer_io(s: &mut Snap, peer: &mut Ptr<dyn NetPeer>) {
+    let mut info = (!peer.is_null()).then(|| net_record::info(&**peer));
+    s.io(&mut info);
+    if s.loading() {
+        *peer = match info {
+            Some(info) => Ptr::from_box(Box::new(ReplayPeer(info)) as Box<dyn NetPeer>),
+            None => Ptr::null(),
+        };
+    }
+}
+
+/// The skin a net game's remote player plays with, as `MenuState::start_game` loaded it.
+pub fn net_skin_path(player: usize) -> Option<String> {
+    unsafe {
+        if !netplay.active || player == netplay.remotePlayerNumber as usize {
+            return None;
+        }
+    }
+    let path = format!("{}net_skin{}.bmp", get_home_directory(), player);
+    Path::new(&path).exists().then_some(path)
+}
+
+/// An online match's checkpoint (smw/checkpoint.rs): the net session, its peers and the files the host sent.
+pub fn checkpoint(s: &mut Snap) {
+    unsafe {
+        let home = get_home_directory();
+        let mut files: Vec<(String, Vec<u8>)> = Vec::new();
+        if !s.loading() {
+            let mut names = Vec::new();
+            if netplay.mapfilepath == home.clone() + "net_last.map" {
+                names.push("net_last.map".to_string());
+            }
+            for k in 0..4 {
+                if game_values.playercontrol[k] > 0 && k != netplay.remotePlayerNumber as usize {
+                    names.push(format!("net_skin{}.bmp", k));
+                }
+            }
+            files = names.into_iter().filter_map(|n| Some((n.clone(), std::fs::read(home.clone() + &n).ok()?))).collect();
+        }
+        s.io(&mut files);
+        if s.loading() {
+            for (name, bytes) in &files {
+                if name == "net_last.map" || (name.starts_with("net_skin") && name.ends_with(".bmp") && !name.contains('/')) {
+                    let _ = std::fs::write(home.clone() + name, bytes);
+                }
+            }
+        }
+
+        let n = &mut *netplay;
+        s.io(&mut n.active);
+        s.io(&mut n.connectSuccessful);
+        s.io(&mut n.joinSuccessful);
+        s.io(&mut n.gameRunning);
+        s.io(&mut n.currentMenuChanged);
+        s.io(&mut n.operationInProgress);
+        s.io(&mut n.myPlayerName);
+        s.io(&mut n.currentRoom);
+        let mut map = portable_path(&n.mapfilepath);
+        s.io(&mut map);
+        n.mapfilepath = local_path(&map);
+        s.io(&mut n.theHostIsMe);
+        s.io(&mut n.remotePlayerNumber);
+        s.io(&mut n.hostPlayerNumber);
+        s.io(&mut n.netPlayerInput.outputControls);
+        s.io(&mut n.waitingForPowerupTrigger);
+        s.io(&mut n.allowMapCollisionEvent);
+        s.io(&mut n.gamestate_changed);
+        s.io(&mut n.frames_since_last_gamestate);
+        s.io(&mut n.previous_playerdata);
+        s.io(&mut n.latest_playerdata);
+        s.io(&mut n.last_confirmed_input);
+        s.io(&mut n.current_input_counter);
+        s.io(&mut n.remote_input_buffer);
+        s.io(&mut n.player_disconnected);
+        s.io(&mut n.local_input_buffer);
+        s.io(&mut n.local_playerdata_buffer);
+        s.io(&mut n.local_playerdata_store_time);
+        s.io(&mut n.local_playerdata_store_count);
+        s.io(&mut n.common_random_seed);
+        s.io(&mut n.start_waiting);
+        s.io(&mut n.start_waited_since);
+        s.io(&mut n.gamestate_received);
+        s.io(&mut *(&raw mut backup_playercontrol));
+
+        let c = &mut n.client;
+        s.io(&mut c.lastSentMessage);
+        s.io(&mut c.lastReceivedMessage);
+        peer_io(s, &mut c.foreign_lobbyserver);
+        peer_io(s, &mut c.foreign_gamehost);
+
+        let g = &mut c.local_gamehost;
+        s.io(&mut g.lastSentMessage);
+        s.io(&mut g.lastReceivedMessage);
+        s.io(&mut g.active);
+        s.io(&mut g.current_server_tick);
+        for peer in g.clients.iter_mut() {
+            peer_io(s, peer);
+        }
+        peer_io(s, &mut g.foreign_lobbyserver);
+        s.io(&mut g.expected_clients);
+        s.io(&mut g.expected_client_count);
+        s.io(&mut g.next_free_client_slot);
+        s.io(&mut g.last_processed_input_id);
+    }
+    crate::smw::net_random::checkpoint(s);
+    crate::smw::net_outcomes::checkpoint(s);
 }

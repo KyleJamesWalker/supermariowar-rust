@@ -567,3 +567,25 @@ fn gm_state_star() -> String {
 fn gm_state_tag() -> String {
     crate::smw::gamemodes::tag::net_state()
 }
+
+/// A net match's checkpoint (smw/checkpoint.rs): the event state from the sync on.
+pub fn checkpoint(s: &mut crate::smw::checkpoint::Snap) {
+    unsafe {
+        s.io(&mut *(&raw mut g_inSetup));
+        s.io(&mut *(&raw mut g_inGame));
+        s.io(&mut *(&raw mut g_sent));
+        s.io(&mut *(&raw mut g_frame));
+        s.io(&mut *(&raw mut g_spawnAt));
+        let mut pending: Vec<(Vec<u8>, u32)> = g_pending.iter().map(|(p, at)| (p.to_bytes(), *at)).collect();
+        s.io(&mut pending);
+        let mut waits: Vec<(u8, i32, u32)> = g_waits.iter().map(|&(ev, key, n)| (ev as u8, key, n)).collect();
+        s.io(&mut waits);
+        if s.loading() {
+            g_pending = pending.iter().filter_map(|(bytes, at)| Some((RandomEvent::from_bytes(bytes)?, *at))).collect();
+            g_waits = waits.iter().filter_map(|&(ev, key, n)| Some((Ev::from_u8(ev)?, key, n))).collect();
+        }
+        let (context, count) = crate::common::object_base::network_id_state();
+        s.io(context);
+        s.io(count);
+    }
+}

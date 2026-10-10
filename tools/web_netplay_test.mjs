@@ -3,7 +3,10 @@
 // and play each tools/ref/<scenario>'s scripted net game through the real menus (connect, create room,
 // join, start, play). Writes both harness dumps, page screenshots and logs to <out_dir>/<scenario>, then
 // compares the players' tracks and spawned powerups with net_game_compare.py, as net_game_interop.sh
-// does natively (including the scenario's `#@ map=` and `#@ compare=` parameters).
+// does natively (including the scenario's `#@ map=` and `#@ compare=` parameters). Each client also records
+// the match (SMW_RECORD_TO); each recording then replays offline, with no relay, and its dump must equal
+// the client's own, and so must the dump of its first match's clip (tools/replay_clip.py, as the web page's
+// Watch and Clip buttons play it) from the match's first frame on.
 //
 // Usage: node tools/web_netplay_test.mjs [out_dir]
 //   CHROME     Chrome binary (default: the macOS Google Chrome app)
@@ -129,9 +132,9 @@ const health = await fetch(`http://127.0.0.1:${relayPort}/healthz`);
 console.log(`relay on port ${relayPort}, /healthz ${health.status}`);
 
 // Runs before smw.js (see web_replay.mjs): harness variables, the replay, and the player's name.
-const initScript = ({ name, replay, frames, mapFile, map }) => `(() => {
+const initScript = ({ name, replay, frames, mapFile, map, env: extra }) => `(() => {
     const env = ${JSON.stringify({
-        SMW_SEED: '1', SMW_FRAMES: String(frames), SMW_REPLAY: '/replay.txt', SMW_DUMP: '/dump.txt', ...(map && { SMW_MAP: map }),
+        SMW_SEED: '1', SMW_FRAMES: String(frames), SMW_REPLAY: '/replay.txt', SMW_DUMP: '/dump.txt', ...(map && { SMW_MAP: map }), ...extra,
     })};
     const replay = ${JSON.stringify(replay)};
     const mapFile = ${JSON.stringify(mapFile ?? null)};
@@ -209,7 +212,8 @@ const openPage = async (page) => {
     await send('Runtime.enable', {}, sessionId);
     await send('Page.enable', {}, sessionId);
     await send('Page.addScriptToEvaluateOnNewDocument', { source: initScript(page) }, sessionId);
-    await send('Page.navigate', { url: `${origin}/index.html?relay=${encodeURIComponent(`ws://127.0.0.1:${relayPort}`)}` }, sessionId);
+    const relayUrl = page.offline ? '' : `ws://127.0.0.1:${relayPort}`;
+    await send('Page.navigate', { url: `${origin}/index.html?relay=${encodeURIComponent(relayUrl)}` }, sessionId);
     const evaluate = async (expression) =>
         (await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }, sessionId)).result.value;
     const screenshot = async (file) => {
@@ -233,7 +237,7 @@ const play = async (game) => {
     mkdirSync(dir, { recursive: true });
     const logStart = relayLog.length;
     const pages = [];
-    for (const r of roles) pages.push(await openPage({ ...r, frames }));
+    for (const r of roles) pages.push(await openPage({ ...r, frames, env: { SMW_RECORD_TO: '/rec.txt' } }));
 
     let shot = false;
     let timedOut = false;
@@ -255,11 +259,14 @@ const play = async (game) => {
 
     console.log(`== ${game}`);
     let ok = !timedOut;
+    const recordings = {};
     for (const page of pages) {
         try {
             writeFileSync(join(dir, `${page.role}.dump`), await within(page.evaluate(`Module.FS.readFile('/dump.txt', { encoding: 'utf8' })`), 10000));
+            recordings[page.role] = await within(page.evaluate(`Module.FS.readFile('/rec.txt', { encoding: 'utf8' })`), 10000);
+            writeFileSync(join(dir, `${page.role}.rec.txt`), recordings[page.role]);
         } catch (e) {
-            console.error(`${page.role}: could not read the dump: ${e.message}`);
+            console.error(`${page.role}: could not read the dump or the recording: ${e.message}`);
             ok = false;
         }
         writeFileSync(join(dir, `${page.role}.log`), page.consoleLines.join('\n') + '\n');
@@ -284,7 +291,76 @@ const play = async (game) => {
     if (!ok) {
         for (const page of pages) console.error(`  last ${page.role} console lines:\n    ` + page.consoleLines.slice(-8).join('\n    '));
     }
+    if (ok) ok = await replayOffline(game, dir, frames, roles, recordings);
     console.log(`${game}: ${ok ? 'PASS' : 'FAIL'} (${dir})`);
+    return ok;
+};
+
+const clipOf = (dir, role) => {
+    const cut = spawnSync('python3', [join(repo, 'tools', 'replay_clip.py'), join(dir, `${role}.rec.txt`), '--match', '1', '-o', join(dir, `${role}.clip.txt`)], { encoding: 'utf8' });
+    if (cut.status !== 0) throw new Error(`replay_clip.py: ${cut.stderr.trim()}`);
+    const text = readFileSync(join(dir, `${role}.clip.txt`), 'utf8');
+    const start = Number(text.match(/^#@ checkpoint match=1 frame=(\d+) /m)[1]);
+    const end = Number(text.match(/^#@ frames=(\d+)$/m)[1]);
+    return { text, start, end };
+};
+
+// The dump's lines from frame `start` up to, not including, frame `end`.
+const frameRange = (dump, start, end) => {
+    const lines = dump.split('\n');
+    const at = (f) => lines.findIndex((l) => l.startsWith(`F ${f} `));
+    const to = at(end);
+    return lines.slice(at(start), to < 0 ? lines.length : to);
+};
+
+// Each client's recording, replayed with no relay, and its first match's clip: their dumps must equal the live
+// client's, frame for frame.
+const replayOffline = async (game, dir, frames, roles, recordings) => {
+    const pages = [];
+    const runs = [];
+    for (const r of roles) {
+        runs.push({ role: r.role, what: 'offline replay', count: frames, range: (dump) => dump.split('\n') });
+        pages.push(await openPage({ ...r, role: `${r.role}.replay`, replay: recordings[r.role], frames, offline: true, env: { SMW_NOLIMIT: '1' } }));
+        let clip;
+        try {
+            clip = clipOf(dir, r.role);
+        } catch (e) {
+            console.error(`  ${r.role}: ${e.message}`);
+            return false;
+        }
+        runs.push({ role: r.role, what: `match 1 clip (frames ${clip.start}-${clip.end - 1})`, count: clip.end - clip.start, range: (dump) => frameRange(dump, clip.start, clip.end) });
+        pages.push(await openPage({ ...r, role: `${r.role}.clip`, replay: clip.text, frames, offline: true, env: { SMW_NOLIMIT: '1' } }));
+    }
+    const started = Date.now();
+    for (;;) {
+        await new Promise((ok) => setTimeout(ok, 1000));
+        const states = await Promise.all(pages.map((p) => within(progress(p), 10000).catch(() => ({ frames: -1 }))));
+        if (states.every((s, i) => s.frames >= runs[i].count)) break;
+        if (Date.now() - started > SCENARIO_MS) {
+            console.error(`${game}: offline replays stopped at ` + pages.map((p, i) => `${p.role} ${states[i].frames}/${runs[i].count}`).join(', '));
+            break;
+        }
+    }
+    let ok = true;
+    for (const [i, page] of pages.entries()) {
+        const run = runs[i];
+        const live = readFileSync(join(dir, `${run.role}.dump`), 'utf8');
+        let replayed = '';
+        try {
+            replayed = await within(page.evaluate(`Module.FS.readFile('/dump.txt', { encoding: 'utf8' })`), 10000);
+        } catch (e) {
+            console.error(`${page.role}: could not read the dump: ${e.message}`);
+        }
+        writeFileSync(join(dir, `${page.role}.dump`), replayed);
+        writeFileSync(join(dir, `${page.role}.log`), page.consoleLines.join('\n') + '\n');
+        page.close();
+        const a = run.range(live).filter((line) => line !== '');
+        const b = replayed.split('\n').filter((line) => line !== '');
+        const at = a.findIndex((line, k) => line !== b[k]);
+        const differences = a.filter((line, k) => line !== b[k]).length + Math.max(0, b.length - a.length);
+        console.log(`  ${run.role} ${run.what}: ${differences} dump differences` + (at >= 0 ? ` (first at line ${at + 1}: ${JSON.stringify(a[at])} vs ${JSON.stringify(b[at])})` : ''));
+        if (differences) ok = false;
+    }
     return ok;
 };
 

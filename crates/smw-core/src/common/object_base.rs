@@ -88,6 +88,11 @@ pub fn set_network_id_context(context: u32) {
     }
 }
 
+/// The ID context and the count of objects made in it, for checkpoints.
+pub fn network_id_state() -> (&'static mut u32, &'static mut u32) {
+    unsafe { (&mut *(&raw mut g_networkIDContext), &mut *(&raw mut g_networkIDCount)) }
+}
+
 fn next_network_id() -> i32 {
     unsafe {
         if g_networkIDContext == 0 {

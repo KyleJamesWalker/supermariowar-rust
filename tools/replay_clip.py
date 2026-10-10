@@ -18,6 +18,7 @@ import sys
 from pathlib import Path
 
 FIELD = re.compile(r'(\w+)=("[^"]*"|\S*)')
+NET_LINE = re.compile(r'^#@ netv? frame=(\d+) ')
 UNFINISHED_TAIL_FRAMES = 188
 GZIP_MAGIC = b'\x1f\x8b'
 
@@ -79,6 +80,7 @@ class Recording:
         self.lines = read_recording(self.path).splitlines()
         self.header = []
         self.events = []
+        self.net = []
         self.matches = {}
         self.frames = None
         current = None
@@ -104,6 +106,8 @@ class Recording:
                         current = None
                     elif state == 'scoreboard':
                         current.result = f
+            elif NET_LINE.match(line):
+                self.net.append(line)
             elif line.startswith('#@ frames='):
                 self.frames = int(line.split('=', 1)[1])
             elif line.startswith('#'):
@@ -146,6 +150,7 @@ class Recording:
         # Frame 0 hat lines only make a replay attach the recording's joysticks; frame 0 is never played.
         out += [f'0 jhat {d} 0 0' for d in range(devices)]
         out += [e for e in self.events if match.start < self.event_frame(e) < end]
+        out += [n for n in self.net if match.start < int(NET_LINE.match(n)[1]) < end]
         out.append(f'#@ frames={end}')
         return '\n'.join(out) + '\n'
 
