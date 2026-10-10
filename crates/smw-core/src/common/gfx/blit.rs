@@ -9,12 +9,16 @@ pub fn rust_blit() -> bool {
     *RUST.get_or_init(|| std::env::var("SMW_BLIT").as_deref() == Ok("rust"))
 }
 
-unsafe fn is_argb8888(surf: *mut SDL_Surface) -> bool {
-    !surf.is_null()
-        && !(*surf).pixels.is_null()
-        && (*surf).flags & SDL_RLEACCEL == 0
-        && (*(*surf).format).format == SDL_PixelFormatEnum::SDL_PIXELFORMAT_ARGB8888 as u32
-        && (*surf).pitch % 4 == 0
+/// `Some(true)` for ARGB8888 and `Some(false)` for XRGB8888 surfaces the software blitter can draw on.
+unsafe fn layout(surf: *mut SDL_Surface) -> Option<bool> {
+    if surf.is_null() || (*surf).pixels.is_null() || (*surf).flags & SDL_RLEACCEL != 0 || (*surf).pitch % 4 != 0 {
+        return Option::None;
+    }
+    match (*(*surf).format).format {
+        f if f == SDL_PixelFormatEnum::SDL_PIXELFORMAT_ARGB8888 as u32 => Some(true),
+        f if f == SDL_PixelFormatEnum::SDL_PIXELFORMAT_RGB888 as u32 => Some(false),
+        _ => Option::None,
+    }
 }
 
 unsafe fn clip_of(surf: *mut SDL_Surface) -> Rect {
@@ -22,7 +26,18 @@ unsafe fn clip_of(surf: *mut SDL_Surface) -> Rect {
     Rect::new(c.x, c.y, c.w, c.h)
 }
 
-unsafe fn pixels_mut<'a>(surf: *mut SDL_Surface) -> PixelsMut<'a> {
+unsafe fn pixels<'a>(surf: *mut SDL_Surface, alpha: bool) -> Pixels<'a> {
+    let pitch = (*surf).pitch as usize / 4;
+    Pixels {
+        w: (*surf).w,
+        h: (*surf).h,
+        pitch,
+        pixels: std::slice::from_raw_parts((*surf).pixels as *const u32, pitch * (*surf).h as usize),
+        alpha,
+    }
+}
+
+unsafe fn pixels_mut<'a>(surf: *mut SDL_Surface, alpha: bool) -> PixelsMut<'a> {
     let pitch = (*surf).pitch as usize / 4;
     PixelsMut {
         w: (*surf).w,
@@ -30,6 +45,7 @@ unsafe fn pixels_mut<'a>(surf: *mut SDL_Surface) -> PixelsMut<'a> {
         pitch,
         pixels: std::slice::from_raw_parts_mut((*surf).pixels as *mut u32, pitch * (*surf).h as usize),
         clip: clip_of(surf),
+        alpha,
     }
 }
 
@@ -56,22 +72,18 @@ unsafe fn blit_state(src: *mut SDL_Surface) -> Option<BlitState> {
 
 /// `SDL_UpperBlit`.
 pub unsafe fn upper_blit(src: *mut SDL_Surface, src_rect: *const SDL_Rect, dst: *mut SDL_Surface, dst_rect: *mut SDL_Rect) -> i32 {
-    if !rust_blit() || src == dst || !is_argb8888(src) || !is_argb8888(dst) {
+    if !rust_blit() || src == dst {
         return SDL_UpperBlit(src, src_rect, dst, dst_rect);
     }
-    let Some(state) = blit_state(src) else {
+    let (Some(src_alpha), Some(dst_alpha)) = (layout(src), layout(dst)) else {
         return SDL_UpperBlit(src, src_rect, dst, dst_rect);
     };
-    let spitch = (*src).pitch as usize / 4;
-    let view = Pixels {
-        w: (*src).w,
-        h: (*src).h,
-        pitch: spitch,
-        pixels: std::slice::from_raw_parts((*src).pixels as *const u32, spitch * (*src).h as usize),
+    let Some(state) = blit_state(src).filter(|s| soft_surface::blit_supported(s, src_alpha, dst_alpha)) else {
+        return SDL_UpperBlit(src, src_rect, dst, dst_rect);
     };
     let sr = src_rect.as_ref().map(|r| Rect::new(r.x, r.y, r.w, r.h));
     let mut dr = dst_rect.as_ref().map(|r| Rect::new(r.x, r.y, r.w, r.h));
-    soft_surface::blit(&view, &state, sr.as_ref(), &mut pixels_mut(dst), dr.as_mut());
+    soft_surface::blit(&pixels(src, src_alpha), &state, sr.as_ref(), &mut pixels_mut(dst, dst_alpha), dr.as_mut());
     if let (Some(out), Some(r)) = (dst_rect.as_mut(), dr) {
         *out = SDL_Rect { x: r.x, y: r.y, w: r.w, h: r.h };
     }
@@ -80,11 +92,11 @@ pub unsafe fn upper_blit(src: *mut SDL_Surface, src_rect: *const SDL_Rect, dst: 
 
 /// `SDL_FillRect`.
 pub unsafe fn fill_rect(dst: *mut SDL_Surface, rect: *const SDL_Rect, color: u32) -> i32 {
-    if !rust_blit() || !is_argb8888(dst) {
+    let Some(alpha) = (if rust_blit() { layout(dst) } else { Option::None }) else {
         return SDL_FillRect(dst, rect, color);
-    }
+    };
     let r = rect.as_ref().map(|r| Rect::new(r.x, r.y, r.w, r.h));
-    soft_surface::fill_rect(&mut pixels_mut(dst), r.as_ref(), color);
+    soft_surface::fill_rect(&mut pixels_mut(dst, alpha), r.as_ref(), color);
     0
 }
 
@@ -116,18 +128,11 @@ pub unsafe fn to_sdl_surface(s: &soft_surface::Surface) -> *mut SDL_Surface {
 
 /// `SDL_UpperBlitScaled`.
 pub unsafe fn upper_blit_scaled(src: *mut SDL_Surface, src_rect: *const SDL_Rect, dst: *mut SDL_Surface, dst_rect: *mut SDL_Rect) -> i32 {
-    if rust_blit() && src != dst && is_argb8888(src) && is_argb8888(dst) {
+    if let (true, true, Some(true), Some(true)) = (rust_blit(), src != dst, layout(src), layout(dst)) {
         if let Some(state) = blit_state(src) {
-            let spitch = (*src).pitch as usize / 4;
-            let view = Pixels {
-                w: (*src).w,
-                h: (*src).h,
-                pitch: spitch,
-                pixels: std::slice::from_raw_parts((*src).pixels as *const u32, spitch * (*src).h as usize),
-            };
             let sr = src_rect.as_ref().map(|r| Rect::new(r.x, r.y, r.w, r.h));
             let mut dr = dst_rect.as_ref().map(|r| Rect::new(r.x, r.y, r.w, r.h));
-            if soft_surface::blit_scaled(&view, &state, sr.as_ref(), &mut pixels_mut(dst), dr.as_mut()) {
+            if soft_surface::blit_scaled(&pixels(src, true), &state, sr.as_ref(), &mut pixels_mut(dst, true), dr.as_mut()) {
                 if let (Some(out), Some(r)) = (dst_rect.as_mut(), dr) {
                     *out = SDL_Rect { x: r.x, y: r.y, w: r.w, h: r.h };
                 }
