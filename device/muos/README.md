@@ -39,6 +39,8 @@ The built-in controls are player 1's gamepad. The game reads them through muOS's
 | Select | Exit the match (asks first) | |
 | Menu | Quit the game | Quit the game |
 
+Text fields, such as your name and a room name under **Multiplayer**, open an on-screen keyboard: the D-pad moves, A presses a key (Shift, Space, Del and Done are on the bottom row), and B erases a character, or leaves an empty field.
+
 Y, the shoulder buttons and the triggers are free to bind under **Controls** in the main menu. `docs/GAME_MANUAL.md` covers the menus and modes.
 
 With one controller, the other players that were human become **Bot** at launch, so a match starts against the computer. Set them to **None** in the main menu's **Players** row for fewer opponents. Each extra controller (a USB or Bluetooth pad) joins as the next human player.

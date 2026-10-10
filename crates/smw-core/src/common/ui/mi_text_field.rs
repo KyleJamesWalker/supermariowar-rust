@@ -11,6 +11,50 @@ use sdl2::sys::{SDL_Keycode, SDL_Rect, SDL_Scancode};
 
 const NUMBER_KEY_MAP: [i16; 10] = [41, 33, 64, 35, 36, 37, 94, 38, 42, 40];
 
+/// Not in upstream: the on-screen keyboard's character rows, unshifted and shifted, and its bottom row
+/// (first column, columns spanned, label).
+const OSK_KEYS: [&[u8; 10]; 4] = [b"1234567890", b"qwertyuiop", b"asdfghjkl-", b"zxcvbnm,./"];
+const OSK_SHIFTED: [&[u8; 10]; 4] = [b"!@#$%^&*()", b"QWERTYUIOP", b"ASDFGHJKL_", b"ZXCVBNM<>?"];
+const OSK_BOTTOM: [(i16, i16, &str); 4] = [(0, 3, "Shift"), (3, 3, "Space"), (6, 2, "Del"), (8, 2, "Done")];
+const OSK_ROWS: i16 = 5;
+const OSK_COLS: i16 = 10;
+const OSK_CELL: i32 = 56;
+const OSK_ROW_H: i32 = 36;
+const OSK_X: i32 = 24;
+const OSK_W: i32 = 592;
+const OSK_H: i32 = 16 + OSK_ROWS as i32 * OSK_ROW_H + 12;
+
+/// Whether the menu press that opened the field came from a keyboard key; set by `UI_Menu`.
+static mut OPENED_BY_KEY: bool = false;
+
+/// Not in upstream. `UI_Menu` reports what opened a field: a pad button or a mouse click opens the on-screen keyboard.
+pub fn note_opener(keyboard: bool) {
+    unsafe { OPENED_BY_KEY = keyboard };
+}
+
+fn touch_session() -> bool {
+    #[cfg(not(target_os = "emscripten"))]
+    return crate::smw::touch::session();
+    #[cfg(target_os = "emscripten")]
+    false
+}
+
+fn is_text_key(key: SDL_Keycode) -> bool {
+    let k = |c: sdl2::sys::SDL_KeyCode| c as SDL_Keycode;
+    (key >= k(SDLK_a) && key <= k(SDLK_z))
+        || key == k(SDLK_SPACE)
+        || (key >= k(SDLK_0) && key <= k(SDLK_9))
+        || key == k(SDLK_EQUALS)
+        || key == k(SDLK_MINUS)
+        || key == k(SDLK_BACKQUOTE)
+        || (key >= k(SDLK_LEFTBRACKET) && key <= k(SDLK_RIGHTBRACKET))
+        || key == k(SDLK_SEMICOLON)
+        || key == k(SDLK_QUOTE)
+        || key == k(SDLK_COMMA)
+        || key == k(SDLK_PERIOD)
+        || key == k(SDLK_SLASH)
+}
+
 pub struct MI_TextField {
     pub ui_control: UI_Control,
 
@@ -36,6 +80,12 @@ pub struct MI_TextField {
     pub iAllowedWidth: i16,
 
     pub szDisallowedChars: String,
+
+    /// Not in upstream: the on-screen keyboard is open, its cursor, and its one-shot Shift.
+    pub fOsk: bool,
+    pub iOskRow: i16,
+    pub iOskCol: i16,
+    pub fOskShift: bool,
 }
 crate::impl_base!(MI_TextField => ui_control: UI_Control);
 
@@ -64,6 +114,10 @@ impl MI_TextField {
             iStringWidth: 0,
             iAllowedWidth: width - indent - 24,
             szDisallowedChars: String::new(),
+            fOsk: false,
+            iOskRow: 0,
+            iOskCol: 0,
+            fOskShift: false,
         }
     }
 
@@ -129,6 +183,141 @@ impl MI_TextField {
         }
     }
 
+    fn insert_char(&mut self, c: u8) -> MenuCodeEnum {
+        if self.iNumChars >= self.iMaxChars - 1 || self.szDisallowedChars.as_bytes().contains(&c) {
+            return MENU_CODE_NONE;
+        }
+        unsafe { (*self.szOutValue).as_mut_vec().insert(self.iCursorIndex as usize, c) };
+        self.iCursorIndex += 1;
+        self.iNumChars += 1;
+
+        self.update_cursor();
+        self.mcItemChangedCode
+    }
+
+    fn backspace(&mut self) -> MenuCodeEnum {
+        if self.iCursorIndex > 0 {
+            self.iCursorIndex -= 1;
+            self.iNumChars -= 1;
+            unsafe { (*self.szOutValue).as_mut_vec().remove(self.iCursorIndex as usize) };
+
+            self.update_cursor();
+            return self.mcItemChangedCode;
+        }
+        MENU_CODE_NONE
+    }
+
+    fn finish(&mut self) -> MenuCodeEnum {
+        self.miModifyCursor.set_visible(false);
+        self.fModifying = false;
+        self.fOsk = false;
+        self.notify_page();
+        MENU_CODE_UNSELECT_ITEM
+    }
+
+    /// Not in upstream. The on-screen keyboard: the menu directions move its cursor, select presses the key,
+    /// cancel erases (or leaves an empty field). A typed character means a keyboard is here, so it closes.
+    fn osk_input(&mut self, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+        let key = playerInput.iPressedKey;
+        if is_text_key(key) || key == SDLK_BACKSPACE as SDL_Keycode || key == SDLK_DELETE as SDL_Keycode {
+            self.fOsk = false;
+            return self.send_input(playerInput);
+        }
+
+        for iPlayer in 0..4usize {
+            unsafe {
+                if iPlayer != 0
+                    && !game_values.playerInput.inputControls[iPlayer].is_null()
+                    && game_values.playerInput.inputControls[iPlayer].iDevice == DEVICE_KEYBOARD
+                {
+                    continue;
+                }
+            }
+            let out = &playerInput.outputControls[iPlayer];
+            if out.menu_up().fPressed {
+                self.iOskRow = (self.iOskRow + OSK_ROWS - 1) % OSK_ROWS;
+                return MENU_CODE_NONE;
+            }
+            if out.menu_down().fPressed {
+                self.iOskRow = (self.iOskRow + 1) % OSK_ROWS;
+                return MENU_CODE_NONE;
+            }
+            if out.menu_left().fPressed || out.menu_right().fPressed {
+                let step = if out.menu_left().fPressed { -1 } else { 1 };
+                if self.iOskRow == OSK_ROWS - 1 {
+                    let n = OSK_BOTTOM.len() as i16;
+                    self.iOskCol = OSK_BOTTOM[((self.osk_bottom_key() as i16 + step + n) % n) as usize].0;
+                } else {
+                    self.iOskCol = (self.iOskCol + step + OSK_COLS) % OSK_COLS;
+                }
+                return MENU_CODE_NONE;
+            }
+            if out.menu_select().fPressed {
+                return self.osk_press();
+            }
+            if out.menu_cancel().fPressed {
+                return if self.iNumChars > 0 { self.backspace() } else { self.finish() };
+            }
+        }
+        MENU_CODE_NONE
+    }
+
+    fn osk_bottom_key(&self) -> usize {
+        OSK_BOTTOM.iter().rposition(|&(start, _, _)| self.iOskCol >= start).unwrap_or(0)
+    }
+
+    fn osk_press(&mut self) -> MenuCodeEnum {
+        if self.iOskRow < OSK_ROWS - 1 {
+            let rows = if self.fOskShift { OSK_SHIFTED } else { OSK_KEYS };
+            self.fOskShift = false;
+            return self.insert_char(rows[self.iOskRow as usize][self.iOskCol as usize]);
+        }
+        match self.osk_bottom_key() {
+            0 => {
+                self.fOskShift = !self.fOskShift;
+                MENU_CODE_NONE
+            }
+            1 => self.insert_char(b' '),
+            2 => self.backspace(),
+            _ => self.finish(),
+        }
+    }
+
+    /// Drawn over the menu, away from the field: below it for a field in the top half, else above.
+    fn draw_osk(&mut self) {
+        let top = if (self.m_pos.y as i32) < 240 { 480 - OSK_H - 8 } else { 8 };
+        // The dialog image is 512 wide, so the panel is its left and right halves.
+        let half = OSK_W / 2;
+        unsafe {
+            rm.menu_dialog.draw_src(OSK_X, top, &SDL_Rect { x: 0, y: 0, w: half, h: OSK_H - 16 });
+            rm.menu_dialog.draw_src(OSK_X + half, top, &SDL_Rect { x: 512 - half, y: 0, w: half, h: OSK_H - 16 });
+            rm.menu_dialog.draw_src(OSK_X, top + OSK_H - 16, &SDL_Rect { x: 0, y: 464, w: half, h: 16 });
+            rm.menu_dialog.draw_src(OSK_X + half, top + OSK_H - 16, &SDL_Rect { x: 512 - half, y: 464, w: half, h: 16 });
+        }
+        let key = |spr: &Ptr<gfxSprite>, col: i16, row: i16, span: i16, selected: bool, label: &str| {
+            let x = OSK_X + 16 + col as i32 * OSK_CELL;
+            let y = top + 12 + row as i32 * OSK_ROW_H;
+            let w = span as i32 * OSK_CELL - 4;
+            let srcY = if selected { 32 } else { 0 };
+            spr.draw_src(x, y, &SDL_Rect { x: 0, y: srcY, w: w - 8, h: 32 });
+            spr.draw_src(x + w - 8, y, &SDL_Rect { x: 504, y: srcY, w: 8, h: 32 });
+            unsafe { rm.menu_font_large.draw_centered(x + w / 2, y + 5, label) };
+        };
+        let rows = if self.fOskShift { OSK_SHIFTED } else { OSK_KEYS };
+        for row in 0..OSK_ROWS - 1 {
+            for col in 0..OSK_COLS {
+                let c = rows[row as usize][col as usize];
+                let label = if self.szDisallowedChars.as_bytes().contains(&c) { String::new() } else { (c as char).to_string() };
+                key(&self.spr, col, row, 1, row == self.iOskRow && col == self.iOskCol, &label);
+            }
+        }
+        let selected = if self.iOskRow == OSK_ROWS - 1 { Some(self.osk_bottom_key()) } else { None };
+        for (i, &(start, span, label)) in OSK_BOTTOM.iter().enumerate() {
+            let label = if i == 0 && self.fOskShift { "SHIFT" } else { label };
+            key(&self.spr, start, OSK_ROWS - 1, span, selected == Some(i), label);
+        }
+    }
+
     /// Not in upstream. Tells the web page (web/textinput.js) where the field being edited is and what it
     /// holds, so a touch screen can open its on-screen keyboard; the typing still arrives as key events.
     #[cfg(target_os = "emscripten")]
@@ -182,11 +371,19 @@ impl UI_ControlTrait for MI_TextField {
 
         self.miModifyCursor.set_visible(modify);
         self.fModifying = modify;
+        self.fOsk = modify && (touch_session() || unsafe { !OPENED_BY_KEY });
+        self.iOskRow = 0;
+        self.iOskCol = 0;
+        self.fOskShift = false;
         self.notify_page();
         MENU_CODE_MODIFY_ACCEPTED
     }
 
     fn send_input(&mut self, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+        if self.fOsk && !self.szOutValue.is_null() {
+            return self.osk_input(playerInput);
+        }
+
         let keystate = crate::smw::harness::keyboard_state();
 
         for iPlayer in 0..4usize {
@@ -205,6 +402,7 @@ impl UI_ControlTrait for MI_TextField {
                 self.miModifyCursor.set_visible(false);
 
                 self.fModifying = false;
+                self.fOsk = false;
                 self.notify_page();
 
                 return MENU_CODE_UNSELECT_ITEM;
@@ -220,19 +418,7 @@ impl UI_ControlTrait for MI_TextField {
         // TODO: check string conversion
         //Watch for characters typed in including delete and backspace
         let mut key: SDL_Keycode = playerInput.iPressedKey;
-        if (key >= k(SDLK_a) && key <= k(SDLK_z))
-            || key == k(SDLK_SPACE)
-            || (key >= k(SDLK_0) && key <= k(SDLK_9))
-            || key == k(SDLK_EQUALS)
-            || key == k(SDLK_MINUS)
-            || key == k(SDLK_BACKQUOTE)
-            || (key >= k(SDLK_LEFTBRACKET) && key <= k(SDLK_RIGHTBRACKET))
-            || key == k(SDLK_SEMICOLON)
-            || key == k(SDLK_QUOTE)
-            || key == k(SDLK_COMMA)
-            || key == k(SDLK_PERIOD)
-            || key == k(SDLK_SLASH)
-        {
+        if is_text_key(key) {
             if self.iNumChars < self.iMaxChars - 1 {
                 //Take care of holding shift to shift the pressed key to another character
                 let shift = unsafe {
@@ -264,31 +450,10 @@ impl UI_ControlTrait for MI_TextField {
                     }
                 }
 
-                //Check to see if this is an allowed character for this field
-                let mut fAllowed = true;
-                if self.szDisallowedChars.as_bytes().contains(&(key as u8)) {
-                    fAllowed = false;
-                }
-
-                //If it is an allowed character, then add it to the field
-                if fAllowed {
-                    unsafe { (*self.szOutValue).as_mut_vec().insert(self.iCursorIndex as usize, key as u8) };
-                    self.iCursorIndex += 1;
-                    self.iNumChars += 1;
-
-                    self.update_cursor();
-                    return self.mcItemChangedCode;
-                }
+                return self.insert_char(key as u8);
             }
         } else if key == k(SDLK_BACKSPACE) {
-            if self.iCursorIndex > 0 {
-                self.iCursorIndex -= 1;
-                self.iNumChars -= 1;
-                unsafe { (*self.szOutValue).as_mut_vec().remove(self.iCursorIndex as usize) };
-
-                self.update_cursor();
-                return self.mcItemChangedCode;
-            }
+            return self.backspace();
         } else if key == k(SDLK_DELETE) {
             if self.iCursorIndex < self.iNumChars {
                 unsafe { (*self.szOutValue).as_mut_vec().remove(self.iCursorIndex as usize) };
@@ -344,6 +509,12 @@ impl UI_ControlTrait for MI_TextField {
         }
 
         self.miModifyCursor.draw();
+    }
+
+    fn draw_overlay(&mut self) {
+        if self.fModifying && self.fOsk {
+            self.draw_osk();
+        }
     }
 
     fn mouse_click(&mut self, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {

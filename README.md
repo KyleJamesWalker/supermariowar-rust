@@ -57,7 +57,7 @@ Each `v*` release carries `SuperMarioWar-<version>.muxapp`, a one-file install f
 
 `.github/workflows/build_android.yml` builds an APK for arm64-v8a, armeabi-v7a and x86_64 following upstream's SDL-template Android port. CI then plays replays on an x86_64 emulator against the goldens and plugs in a virtual gamepad. CI and releases sign every APK with one project debug key from the repository secrets, so an update keeps settings and recordings.
 
-The game draws touch controls in the bars beside the picture, with a D-pad or a floating stick. They hide at the first gamepad or keyboard input. Gamepads with an SDL mapping use the muOS layout and join as the next player, also when connected after launch. Recordings replay that hot-plug exactly. [`android/README.md`](android/README.md) covers installing, signing, data and settings paths, controls and building.
+The game draws touch controls in the bars beside the picture, with a D-pad or a floating stick. They hide at the first gamepad or keyboard input. Gamepads with an SDL mapping use the muOS layout and join as the next player, also when connected after launch. Recordings replay that hot-plug exactly. Text fields such as the player and room names open an on-screen keyboard (D-pad to move, A to press a key, B to erase), as they do on muOS and anywhere a field is opened with a gamepad. [`android/README.md`](android/README.md) covers installing, signing, data and settings paths, controls and building.
 
 ## Web build
 
