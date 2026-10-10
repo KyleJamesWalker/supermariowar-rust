@@ -6,7 +6,8 @@
 // does natively (including the scenario's `#@ map=` and `#@ compare=` parameters). Each client also records
 // the match (SMW_RECORD_TO); each recording then replays offline, with no relay, and its dump must equal
 // the client's own, and so must the dump of its first match's clip (tools/replay_clip.py, as the web page's
-// Watch and Clip buttons play it) from the match's first frame on.
+// Watch and Clip buttons play it) from the match's first frame on, and so must the native build's replay of
+// the recording (tools/run_rust.sh; NATIVE=0 skips it).
 //
 // Usage: node tools/web_netplay_test.mjs [out_dir]
 //   CHROME     Chrome binary (default: the macOS Google Chrome app)
@@ -76,7 +77,7 @@ const cleanup = () => {
 process.on('exit', cleanup);
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => process.exit(1));
 const SCENARIO_MS = 200000;
-const DEADLINE_MS = (SCENARIO_MS + 40000) * games.length;
+const DEADLINE_MS = (2 * SCENARIO_MS + 40000) * games.length;
 setTimeout(() => {
     console.error(`no result after ${DEADLINE_MS / 1000} s; giving up`);
     process.exit(1);
@@ -361,7 +362,41 @@ const replayOffline = async (game, dir, frames, roles, recordings) => {
         console.log(`  ${run.role} ${run.what}: ${differences} dump differences` + (at >= 0 ? ` (first at line ${at + 1}: ${JSON.stringify(a[at])} vs ${JSON.stringify(b[at])})` : ''));
         if (differences) ok = false;
     }
+    if (process.env.NATIVE !== '0') {
+        for (const r of roles) {
+            const outDir = join(dir, `${r.role}.native`);
+            const run = spawnSync(join(repo, 'tools', 'run_rust.sh'), [join(dir, `${r.role}.rec.txt`), outDir], {
+                encoding: 'utf8',
+                env: { ...process.env, SMW_NO_BUILD: '1', SMW_DATA_DIR: nativeData() },
+                timeout: SCENARIO_MS,
+            });
+            let replayed = '';
+            try {
+                replayed = readFileSync(join(outDir, 'dump.txt'), 'utf8');
+            } catch {
+                console.error(`  ${r.role}: the native replay wrote no dump (exit ${run.status}): ${(run.stderr ?? '').slice(-400)}`);
+            }
+            const a = readFileSync(join(dir, `${r.role}.dump`), 'utf8').split('\n');
+            const b = replayed.split('\n');
+            const at = a.findIndex((line, k) => line !== b[k]);
+            const differences = a.filter((line, k) => line !== b[k]).length + Math.max(0, b.length - a.length);
+            console.log(`  ${r.role} native replay: ${differences} dump differences` + (at >= 0 ? ` (first at line ${at + 1}: ${JSON.stringify(a[at])} vs ${JSON.stringify(b[at])})` : ''));
+            if (differences) ok = false;
+        }
+    }
     return ok;
+};
+
+// The data tree with tools/ref/net_maps added, for the native replays.
+let nativeDataDir;
+const nativeData = () => {
+    if (!nativeDataDir) {
+        nativeDataDir = join(out, 'data');
+        rmSync(nativeDataDir, { recursive: true, force: true });
+        spawnSync('cp', ['-R', join(repo, 'data'), nativeDataDir]);
+        spawnSync('sh', ['-c', 'cp "$0"/*.map "$1"/maps/', join(repo, 'tools', 'ref', 'net_maps'), nativeDataDir]);
+    }
+    return nativeDataDir;
 };
 
 let ok = true;

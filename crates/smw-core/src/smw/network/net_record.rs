@@ -31,13 +31,15 @@ pub struct PeerInfo {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct NetEvent {
     pub frame: u32,
+    /// Which of the side's polls in that frame got it: a frame may poll a listener more than once.
+    pub poll: u32,
     pub side: Side,
     pub peer: PeerInfo,
     pub kind: Kind,
 }
 
 impl NetEvent {
-    /// `#@ net frame=<n> side=<c|h> peer=<host>:<port>:<player id>:<peer key> <connect|disconnect|recv=<base64>>`
+    /// `#@ net frame=<n> side=<c|h> poll=<k> peer=<host>:<port>:<player id>:<peer key> <connect|disconnect|recv=<base64>>`
     pub fn line(&self) -> String {
         let side = if self.side == Side::Client { 'c' } else { 'h' };
         let kind = match &self.kind {
@@ -45,7 +47,8 @@ impl NetEvent {
             Kind::Disconnect => "disconnect".to_string(),
             Kind::Receive(data) => format!("recv={}", base64_encode(data)),
         };
-        format!("#@ net frame={} side={} peer={}:{}:{}:{} {}", self.frame, side, self.peer.host, self.peer.port, self.peer.player_id, self.peer.key, kind)
+        let p = &self.peer;
+        format!("#@ net frame={} side={} poll={} peer={}:{}:{}:{} {}", self.frame, side, self.poll, p.host, p.port, p.player_id, p.key, kind)
     }
 
     pub fn parse(line: &str) -> Option<NetEvent> {
@@ -57,6 +60,7 @@ impl NetEvent {
             "h" => Side::Host,
             _ => return None,
         };
+        let poll = fields.next()?.strip_prefix("poll=")?.parse().ok()?;
         let mut peer = fields.next()?.strip_prefix("peer=")?.split(':');
         let peer = PeerInfo {
             host: peer.next()?.parse().ok()?,
@@ -69,7 +73,7 @@ impl NetEvent {
             "disconnect" => Kind::Disconnect,
             k => Kind::Receive(base64_decode(k.strip_prefix("recv=")?)?),
         };
-        fields.next().is_none().then_some(NetEvent { frame, side, peer, kind })
+        fields.next().is_none().then_some(NetEvent { frame, poll, side, peer, kind })
     }
 }
 
@@ -82,22 +86,23 @@ pub struct Recording<'a> {
     pub inner: &'a mut dyn NetworkEventHandler,
     pub side: Side,
     pub frame: u32,
+    pub poll: u32,
     pub log: &'a mut Vec<NetEvent>,
 }
 
 impl NetworkEventHandler for Recording<'_> {
     fn on_connect(&mut self, peer: Box<dyn NetPeer>) {
-        self.log.push(NetEvent { frame: self.frame, side: self.side, peer: info(&*peer), kind: Kind::Connect });
+        self.log.push(NetEvent { frame: self.frame, poll: self.poll, side: self.side, peer: info(&*peer), kind: Kind::Connect });
         self.inner.on_connect(peer);
     }
 
     fn on_receive(&mut self, peer: &mut dyn NetPeer, data: &[u8]) {
-        self.log.push(NetEvent { frame: self.frame, side: self.side, peer: info(peer), kind: Kind::Receive(data.to_vec()) });
+        self.log.push(NetEvent { frame: self.frame, poll: self.poll, side: self.side, peer: info(peer), kind: Kind::Receive(data.to_vec()) });
         self.inner.on_receive(peer, data);
     }
 
     fn on_disconnect(&mut self, client: &mut dyn NetPeer) {
-        self.log.push(NetEvent { frame: self.frame, side: self.side, peer: info(client), kind: Kind::Disconnect });
+        self.log.push(NetEvent { frame: self.frame, poll: self.poll, side: self.side, peer: info(client), kind: Kind::Disconnect });
         self.inner.on_disconnect(client);
     }
 }
@@ -140,9 +145,9 @@ impl NetPeer for ReplayPeer {
     }
 }
 
-/// Plays a recording's events to the listener of `side` at `frame`, in recorded order.
-pub fn deliver(events: &[NetEvent], next: &mut usize, side: Side, frame: u32, handler: &mut dyn NetworkEventHandler) {
-    while let Some(ev) = events.get(*next).filter(|e| e.frame == frame && e.side == side) {
+/// Plays a recording's events to the listener of `side` at its `poll` in `frame`, in recorded order.
+pub fn deliver(events: &[NetEvent], next: &mut usize, side: Side, frame: u32, poll: u32, handler: &mut dyn NetworkEventHandler) {
+    while let Some(ev) = events.get(*next).filter(|e| e.frame == frame && e.side == side && e.poll == poll) {
         *next += 1;
         let mut peer = ReplayPeer(ev.peer.clone());
         match &ev.kind {
@@ -173,6 +178,21 @@ struct Replay {
 
 static mut replay: Option<Replay> = None;
 
+/// The frame of the last poll, and how often each side was polled in it.
+static mut polls: (u32, [u32; 2]) = (u32::MAX, [0; 2]);
+
+fn next_poll(side: Side, frame: u32) -> u32 {
+    unsafe {
+        let p = &mut *(&raw mut polls);
+        if p.0 != frame {
+            *p = (frame, [0; 2]);
+        }
+        let n = &mut p.1[side as usize];
+        *n += 1;
+        *n - 1
+    }
+}
+
 /// Loads a replay's net lines from `from` on. A recording without `#@ netrec=1` predates net recording,
 /// so its replay keeps using the network.
 pub fn load(text: &str, from: u32) {
@@ -198,18 +218,19 @@ pub fn replaying() -> bool {
 /// A listener's poll: in a replay, the events recorded for this frame and side; otherwise `live`'s, recorded.
 pub fn listen(side: Side, handler: &mut dyn NetworkEventHandler, live: impl FnOnce(&mut dyn NetworkEventHandler)) {
     let frame = harness::frame();
+    let poll = next_poll(side, frame);
     let mut log = Vec::new();
     if let Some(r) = unsafe { (*(&raw mut replay)).as_mut() } {
         // Taken out while delivering: a handler may read a recorded value.
         let events = std::mem::take(&mut r.events);
         let mut next = r.next;
-        deliver(&events, &mut next, side, frame, &mut Recording { inner: handler, side, frame, log: &mut log });
+        deliver(&events, &mut next, side, frame, poll, &mut Recording { inner: handler, side, frame, poll, log: &mut log });
         if let Some(r) = unsafe { (*(&raw mut replay)).as_mut() } {
             r.events = events;
             r.next = next;
         }
     } else {
-        live(&mut Recording { inner: handler, side, frame, log: &mut log });
+        live(&mut Recording { inner: handler, side, frame, poll, log: &mut log });
     }
     for ev in &log {
         harness::record_line(&ev.line());
@@ -254,10 +275,10 @@ mod tests {
     fn lines_round_trip() {
         let peer = PeerInfo { host: 0x0100000a, port: 12522, player_id: 7, key: 3 };
         for kind in [Kind::Connect, Kind::Disconnect, Kind::Receive(vec![0, 93, 255, 1, 2])] {
-            let ev = NetEvent { frame: 1234, side: Side::Host, peer: peer.clone(), kind };
+            let ev = NetEvent { frame: 1234, poll: 1, side: Side::Host, peer: peer.clone(), kind };
             assert_eq!(NetEvent::parse(&ev.line()), Some(ev));
         }
-        assert_eq!(NetEvent::parse("#@ net frame=1 side=x peer=1:2:3:4 connect"), None);
+        assert_eq!(NetEvent::parse("#@ net frame=1 side=x poll=0 peer=1:2:3:4 connect"), None);
     }
 
     struct Log(Vec<String>);
@@ -275,22 +296,24 @@ mod tests {
     }
 
     #[test]
-    fn deliver_replays_one_side_and_frame_in_order() {
+    fn deliver_replays_one_poll_in_order() {
         let peer = PeerInfo { host: 0x0100000a, port: 12522, player_id: 2, key: 1 };
-        let ev = |frame, side, kind| NetEvent { frame, side, peer: peer.clone(), kind };
+        let ev = |frame, poll, side, kind| NetEvent { frame, poll, side, peer: peer.clone(), kind };
         let events = [
-            ev(5, Side::Client, Kind::Connect),
-            ev(5, Side::Client, Kind::Receive(vec![1])),
-            ev(6, Side::Client, Kind::Receive(vec![2])),
-            ev(6, Side::Host, Kind::Disconnect),
+            ev(5, 0, Side::Client, Kind::Connect),
+            ev(5, 0, Side::Client, Kind::Receive(vec![1])),
+            ev(5, 1, Side::Client, Kind::Receive(vec![3])),
+            ev(6, 0, Side::Client, Kind::Receive(vec![2])),
+            ev(6, 0, Side::Host, Kind::Disconnect),
         ];
         let mut log = Log(Vec::new());
         let mut next = 0;
-        deliver(&events, &mut next, Side::Client, 5, &mut log);
+        deliver(&events, &mut next, Side::Client, 5, 0, &mut log);
         assert_eq!(log.0, ["connect 10.0.0.1:12522", "recv 2 [1]"]);
-        deliver(&events, &mut next, Side::Client, 6, &mut log);
-        deliver(&events, &mut next, Side::Host, 6, &mut log);
-        assert_eq!(next, 4);
-        assert_eq!(log.0[2..], ["recv 2 [2]".to_string(), "disconnect".to_string()]);
+        deliver(&events, &mut next, Side::Client, 5, 1, &mut log);
+        deliver(&events, &mut next, Side::Client, 6, 0, &mut log);
+        deliver(&events, &mut next, Side::Host, 6, 0, &mut log);
+        assert_eq!(next, 5);
+        assert_eq!(log.0[2..], ["recv 2 [3]".to_string(), "recv 2 [2]".to_string(), "disconnect".to_string()]);
     }
 }
