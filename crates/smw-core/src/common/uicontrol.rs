@@ -130,6 +130,9 @@ pub trait UI_ControlTrait {
     /// Draws every frame
     fn draw(&mut self) {}
 
+    /// Not in upstream: drawn after the whole menu while this control is being modified.
+    fn draw_overlay(&mut self) {}
+
     /// Sends player input to control on every frame
     fn send_input(&mut self, _playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         MENU_CODE_NONE

@@ -134,6 +134,10 @@ impl UI_Menu {
         }
 
         self.eyeCandy.draw();
+
+        if self.fModifyingItem && !self.m_currentFocus.is_null() {
+            self.m_currentFocus.draw_overlay();
+        }
     }
 
     pub fn send_input(&mut self, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
@@ -194,6 +198,7 @@ impl UI_Menu {
                     let mut ret = MENU_CODE_NONE;
 
                     if !self.m_currentFocus.is_null() {
+                        crate::common::ui::mi_text_field::note_opener(playerInput.iPressedKey != 0);
                         ret = self.m_currentFocus.modify(true);
 
                         if MENU_CODE_MODIFY_ACCEPTED == ret {
@@ -282,6 +287,7 @@ impl UI_Menu {
         }
 
         if !pFound.is_null() {
+            crate::common::ui::mi_text_field::note_opener(false);
             // If we clicked the same control we have selected
             if pFound != self.m_currentFocus {
                 if self.fModifyingItem {
