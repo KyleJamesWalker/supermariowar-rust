@@ -1302,7 +1302,7 @@ impl NetGameHost {
         println!("[net] Prepare launching the game...");
 
         RandomNumberGenerator::generator().reseed(net_record::value_u32("time", || unsafe { libc_time() } as u32));
-        crate::smw::gs_menu::roll_net_game_mode_settings();
+        crate::smw::gs_gameplay::set_game_mode_settings_from_menu();
         let settings = game_mode_settings_package();
         let pkg = pkgs::StartSync::new(RANDOM_INT(32767) as u32);
         for c in 0..3 {
