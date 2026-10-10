@@ -58,8 +58,9 @@ addToLibrary({
     },
 
     smw_relay_url_param__deps: ['$stringToUTF8'],
+    // -1 for an empty `?relay=`: no default server.
     smw_relay_url_param: (buf, cap) => {
         const url = new URLSearchParams(location.search).get('relay');
-        return url ? stringToUTF8(url, buf, cap) : 0;
+        return url ? stringToUTF8(url, buf, cap) : url === '' ? -1 : 0;
     },
 });
