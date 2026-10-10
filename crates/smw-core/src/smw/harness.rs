@@ -118,7 +118,7 @@ fn env(name: &str) -> Option<String> {
     std::env::var(name).ok().filter(|v| !v.is_empty())
 }
 
-fn fail(msg: String) -> ! {
+pub fn fail(msg: String) -> ! {
     eprintln!("[harness] {}", msg);
     std::process::exit(2);
 }
@@ -547,10 +547,6 @@ pub fn record_line(line: &str) {
     if let Some(r) = rec() {
         let _ = writeln!(r.out, "{}", line);
     }
-}
-
-pub fn fail_replay(msg: String) -> ! {
-    fail(msg)
 }
 
 pub fn no_limit() -> bool {

@@ -242,7 +242,7 @@ pub fn value(key: &str, live: impl FnOnce() -> String) -> String {
     let v = if let Some(r) = unsafe { (*(&raw mut replay)).as_mut() } {
         match r.values.get_mut(key).and_then(|q| q.pop_front()) {
             Some(v) => v,
-            None => harness::fail_replay(format!("the replay has no recorded {} for frame {}", key, harness::frame())),
+            None => harness::fail(format!("the replay has no recorded {} for frame {}", key, harness::frame())),
         }
     } else {
         live()
