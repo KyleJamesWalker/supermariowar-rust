@@ -8,9 +8,8 @@
 //! record (docs/REPLAY.md), so the clients' dumps can be compared.
 //!
 //! The game host runs every event while the RNG records its draws, and sends the event, its arguments and
-//! the draws to the joiners (`NET_G2P_RANDOM_EVENT`). A joiner whose host announced this
-//! (`NET_G2P_HOST_DECIDES_RANDOM`) never runs an event itself: it replays the host's with the host's draws,
-//! a few frames later. Events about a block or a player wait until the joiner's own copy gets there.
+//! the draws to the joiners (`NET_G2P_RANDOM_EVENT`). A joiner never runs an event itself: it replays the
+//! host's with the host's draws, a few frames later. Events about a block or a player wait until the joiner's own copy gets there.
 //!
 //! Objects made during setup and inside events get the same `iNetworkID` on every client, so events
 //! can name them.
@@ -240,16 +239,12 @@ pub fn event(ev: Ev, args: &[i32]) -> bool {
             }
             let pkg = RandomEvent { kind: ev as u8, context, args, draws };
             netplay.client.local_gamehost.send_message_to_my_peers(&pkg.to_bytes());
-        } else if netplay.host_decides_random {
-            if let Some(i) = g_pending.iter().position(|(p, _)| p.kind == ev as u8 && same_target(ev, &p.args, args)) {
-                let (pkg, _) = g_pending.remove(i);
-                replay(&pkg);
-            } else if matches!(ev, Ev::Respawn | Ev::WarpExit) && waited(ev, args[0]) > FALLBACK_FRAMES {
-                stop_waiting(ev, args[0]);
-                return false;
-            }
-        } else {
-            harness::note_net(run_logged(ev, args));
+        } else if let Some(i) = g_pending.iter().position(|(p, _)| p.kind == ev as u8 && same_target(ev, &p.args, args)) {
+            let (pkg, _) = g_pending.remove(i);
+            replay(&pkg);
+        } else if matches!(ev, Ev::Respawn | Ev::WarpExit) && waited(ev, args[0]) > FALLBACK_FRAMES {
+            stop_waiting(ev, args[0]);
+            return false;
         }
         true
     }
@@ -271,12 +266,12 @@ pub fn in_event() -> bool {
 
 /// A joiner whose game host decides random outcomes, deaths and scores.
 pub fn host_decides() -> bool {
-    unsafe { netplay.active && !netplay.theHostIsMe && netplay.host_decides_random }
+    unsafe { netplay.active && !netplay.theHostIsMe }
 }
 
 /// While true, a joiner leaves its hazard timers waiting for the game host's.
 pub fn awaiting_host() -> bool {
-    unsafe { netplay.active && !netplay.theHostIsMe && netplay.host_decides_random && g_inGame }
+    unsafe { netplay.active && !netplay.theHostIsMe && g_inGame }
 }
 
 /// Contexts 0 and 1 number untracked objects and setup objects.

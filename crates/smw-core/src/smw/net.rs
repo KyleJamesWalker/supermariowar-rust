@@ -783,7 +783,6 @@ impl NetClient {
             netplay.last_confirmed_input = 0xFF;
             netplay.current_input_counter = 0;
             netplay.local_playerdata_store_time = [SystemTime::now(); 256];
-            netplay.host_decides_random = false;
 
             if netplay.theHostIsMe {
                 self.set_as_last_sent_message(NET_P2G_SYNC_OK);
@@ -1153,7 +1152,6 @@ impl NetworkEventHandler for NetClient {
 
                 NET_G2P_TRIGGER_P2PCOLL => self.handle_p2p_collision(data),
 
-                NET_G2P_HOST_DECIDES_RANDOM => netplay.host_decides_random = true,
 
                 NET_G2P_GO => netplay.start_waiting = false,
 
@@ -1317,7 +1315,6 @@ impl NetGameHost {
         }
         self.send_message_to_my_peers(&settings);
         self.send_message_to_my_peers(pkg.as_bytes());
-        self.send_message_to_my_peers(gpkgs::HostDecidesRandom::new().as_bytes());
 
         unsafe {
             netplay.client.handle_start_sync_message(pkg.as_bytes());
@@ -1734,7 +1731,6 @@ pub struct Networking {
     pub local_playerdata_buffer: VecDeque<Net_IndexedPlayerData>,
     pub local_playerdata_store_time: [nettimepoint; 256],
 
-    pub host_decides_random: bool,
     /// The sync's seed; every client reseeds with it again when the match starts.
     pub common_random_seed: u32,
     /// Until every client has loaded the match, nobody plays gameplay frame 1 (`waiting_to_start`).
@@ -1785,7 +1781,6 @@ impl Networking {
             local_input_buffer: VecDeque::new(),
             local_playerdata_buffer: VecDeque::new(),
             local_playerdata_store_time: [SystemTime::UNIX_EPOCH; 256],
-            host_decides_random: false,
             common_random_seed: 0,
             start_waiting: false,
             start_waited_since: 0,
