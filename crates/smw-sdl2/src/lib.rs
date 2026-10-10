@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 mod audio;
 pub mod events;
+pub mod input;
 mod video;
 pub use audio::Sdl2Audio;
 pub use video::{set_overlay, Sdl2Video};

@@ -3,6 +3,7 @@
 //! The C++ unions that alias `keys[NUM_KEYS]` with named members (`menu_up`, `game_jump`, ...)
 //! become a plain `keys` array plus same-named accessor methods (`game_jump()` / `game_jump_mut()`).
 
+use smw_platform::{InputEvent, MouseEvent};
 use crate::common::global_constants::MAX_PLAYERS;
 use crate::globals::*;
 use sdl2::sys::{SDL_Event, SDL_EventType, SDL_Keycode, SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP};
@@ -223,13 +224,24 @@ impl CPlayerInput {
     pub fn update(&mut self, event: SDL_Event, iGameState: i16) {
         #[cfg(not(target_os = "emscripten"))]
         crate::smw::pad::log_event(2, &event);
+        self.update_input(&smw_sdl2::input::from_sdl(&event).event, iGameState);
+    }
+
+    /// Not in upstream: `Update` on the backend's normalized event (docs/ARCHITECTURE_V2.md, Normalized input).
+    pub fn update_input(&mut self, event: &InputEvent, iGameState: i16) {
+        use InputEvent as E;
+        use MouseEvent as M;
+        let key_sym = if let E::Key { key, .. } = *event { key.0 } else { 0 };
+        let (motion_xrel, motion_yrel, motion_state) = if let E::Mouse { event: M::Motion { xrel, yrel, buttons, .. }, .. } = *event { (xrel, yrel, buttons) } else { (0, 0, 0) };
+        let mouse_button = if let E::Mouse { event: M::Button { button, .. }, .. } = *event { button } else { 0 };
+        let (jhat_which, jhat_value) = if let E::PadHat { pad, value, .. } = *event { (pad.0, value) } else { (0, 0) };
+        let (jaxis_which, jaxis_axis, jaxis_value) = if let E::PadAxis { pad, axis, value } = *event { (pad.0, axis, value) } else { (0, 0, 0) };
+        let (jbutton_which, jbutton_button) = if let E::PadButton { pad, button, .. } = *event { (pad.0, button) } else { (0, 0) };
         unsafe {
-            let event_type = event.type_;
-            let is = |t: SDL_EventType| event_type == t as u32;
 
             let mut joyDirection: Option<([bool; 4], &[usize])> = None;
-            if is(SDL_EventType::SDL_JOYHATMOTION) || (is(SDL_EventType::SDL_JOYAXISMOTION) && event.jaxis.axis < 2) {
-                let which = if is(SDL_EventType::SDL_JOYHATMOTION) { event.jhat.which } else { event.jaxis.which };
+            if matches!(event, E::PadHat { .. }) || (matches!(event, E::PadAxis { .. }) && jaxis_axis < 2) {
+                let which = if matches!(event, E::PadHat { .. }) { jhat_which } else { jaxis_which };
                 let i = match self.joyDirections.iter().position(|d| d.0 == which) {
                     Some(i) => i,
                     None => {
@@ -238,16 +250,16 @@ impl CPlayerInput {
                     }
                 };
                 let (_, stick, hat) = &mut self.joyDirections[i];
-                let changed: &[usize] = if is(SDL_EventType::SDL_JOYHATMOTION) {
-                    let value = event.jhat.value as u32;
+                let changed: &[usize] = if matches!(event, E::PadHat { .. }) {
+                    let value = jhat_value as u32;
                     *hat = [value & SDL_HAT_UP != 0, value & SDL_HAT_DOWN != 0, value & SDL_HAT_LEFT != 0, value & SDL_HAT_RIGHT != 0];
                     &[0, 1, 2, 3]
                 } else {
-                    let value = event.jaxis.value as i32;
-                    let (neg, pos) = if event.jaxis.axis == 0 { (2, 3) } else { (0, 1) };
+                    let value = jaxis_value as i32;
+                    let (neg, pos) = if jaxis_axis == 0 { (2, 3) } else { (0, 1) };
                     stick[neg] = value < -JOYSTICK_DEAD_ZONE;
                     stick[pos] = value > JOYSTICK_DEAD_ZONE;
-                    if event.jaxis.axis == 0 {
+                    if jaxis_axis == 0 {
                         &[2, 3]
                     } else {
                         &[0, 1]
@@ -293,10 +305,10 @@ impl CPlayerInput {
                 };
 
                 if iDeviceID == DEVICE_KEYBOARD {
-                    if is(SDL_EventType::SDL_KEYDOWN) {
+                    if matches!(event, E::Key { down: true, .. }) {
                         let mut iKey = 0;
                         while iKey < NUM_KEYS && !fFound {
-                            if inputControl.keys[iKey] == event.key.keysym.sym {
+                            if inputControl.keys[iKey] == key_sym {
                                 fFound = true;
 
                                 //Ignore input for cpu controlled players
@@ -314,11 +326,11 @@ impl CPlayerInput {
                             iKey += 1;
                         }
 
-                        self.iPressedKey = event.key.keysym.sym;
-                    } else if is(SDL_EventType::SDL_KEYUP) {
+                        self.iPressedKey = key_sym;
+                    } else if matches!(event, E::Key { down: false, .. }) {
                         let mut iKey = 0;
                         while iKey < NUM_KEYS && !fFound {
-                            if inputControl.keys[iKey] == event.key.keysym.sym {
+                            if inputControl.keys[iKey] == key_sym {
                                 fFound = true;
 
                                 //Ignore input for cpu controlled players
@@ -331,16 +343,16 @@ impl CPlayerInput {
                             }
                             iKey += 1;
                         }
-                    } else if is(SDL_EventType::SDL_MOUSEMOTION) {
+                    } else if matches!(event, E::Mouse { event: M::Motion { .. }, .. }) {
                         let mut iKey = 0;
                         while iKey < NUM_KEYS && !fFound {
                             let k = inputControl.keys[iKey];
                             if k >= MOUSE_UP {
-                                if (k == MOUSE_UP && event.motion.yrel < -MOUSE_Y_DEAD_ZONE)
-                                    || (k == MOUSE_DOWN && event.motion.yrel > MOUSE_Y_DEAD_ZONE)
-                                    || (k == MOUSE_LEFT && event.motion.xrel < -MOUSE_X_DEAD_ZONE)
-                                    || (k == MOUSE_RIGHT && event.motion.xrel > MOUSE_X_DEAD_ZONE)
-                                    || (k >= MOUSE_BUTTON_START && (event.motion.state & sdl_button(k - MOUSE_BUTTON_START)) != 0)
+                                if (k == MOUSE_UP && motion_yrel < -MOUSE_Y_DEAD_ZONE)
+                                    || (k == MOUSE_DOWN && motion_yrel > MOUSE_Y_DEAD_ZONE)
+                                    || (k == MOUSE_LEFT && motion_xrel < -MOUSE_X_DEAD_ZONE)
+                                    || (k == MOUSE_RIGHT && motion_xrel > MOUSE_X_DEAD_ZONE)
+                                    || (k >= MOUSE_BUTTON_START && (motion_state & sdl_button(k - MOUSE_BUTTON_START)) != 0)
                                 {
                                     fFound = true;
 
@@ -373,10 +385,10 @@ impl CPlayerInput {
                             }
                             iKey += 1;
                         }
-                    } else if is(SDL_EventType::SDL_MOUSEBUTTONDOWN) {
+                    } else if matches!(event, E::Mouse { event: M::Button { down: true, .. }, .. }) {
                         let mut iKey = 0;
                         while iKey < NUM_KEYS && !fFound {
-                            if inputControl.keys[iKey] == event.button.button as i32 + MOUSE_BUTTON_START {
+                            if inputControl.keys[iKey] == mouse_button as i32 + MOUSE_BUTTON_START {
                                 fFound = true;
 
                                 //Ignore input for cpu controlled players
@@ -393,10 +405,10 @@ impl CPlayerInput {
                             }
                             iKey += 1;
                         }
-                    } else if is(SDL_EventType::SDL_MOUSEBUTTONUP) {
+                    } else if matches!(event, E::Mouse { event: M::Button { down: false, .. }, .. }) {
                         let mut iKey = 0;
                         while iKey < NUM_KEYS && !fFound {
-                            if inputControl.keys[iKey] == event.button.button as i32 + MOUSE_BUTTON_START {
+                            if inputControl.keys[iKey] == mouse_button as i32 + MOUSE_BUTTON_START {
                                 fFound = true;
 
                                 //Mouse scroll wheel up/down events happen on same frame so ignore up event (and clear it in the ClearPressedKeys() method)
@@ -420,7 +432,7 @@ impl CPlayerInput {
                     }
                 } else {
                     if let Some((held, changed)) = joyDirection {
-                        let which = if is(SDL_EventType::SDL_JOYHATMOTION) { event.jhat.which } else { event.jaxis.which };
+                        let which = if matches!(event, E::PadHat { .. }) { jhat_which } else { jaxis_which };
                         if iDeviceID as i32 != which {
                             continue;
                         }
@@ -448,14 +460,14 @@ impl CPlayerInput {
                                 outputControl.keys[iKey].fDown = false;
                             }
                         }
-                    } else if is(SDL_EventType::SDL_JOYBUTTONDOWN) {
-                        if iDeviceID as i32 != event.jbutton.which {
+                    } else if matches!(event, E::PadButton { down: true, .. }) {
+                        if iDeviceID as i32 != jbutton_which {
                             continue;
                         }
 
                         let mut iKey = 0;
                         while iKey < NUM_KEYS && !fFound {
-                            if inputControl.keys[iKey] == event.jbutton.button as i32 + JOY_BUTTON_START {
+                            if inputControl.keys[iKey] == jbutton_button as i32 + JOY_BUTTON_START {
                                 fFound = true;
 
                                 //Ignore input for cpu controlled players
@@ -472,14 +484,14 @@ impl CPlayerInput {
                             }
                             iKey += 1;
                         }
-                    } else if is(SDL_EventType::SDL_JOYBUTTONUP) {
-                        if iDeviceID as i32 != event.jbutton.which {
+                    } else if matches!(event, E::PadButton { down: false, .. }) {
+                        if iDeviceID as i32 != jbutton_which {
                             continue;
                         }
 
                         let mut iKey = 0;
                         while iKey < NUM_KEYS && !fFound {
-                            if inputControl.keys[iKey] == event.jbutton.button as i32 + JOY_BUTTON_START {
+                            if inputControl.keys[iKey] == jbutton_button as i32 + JOY_BUTTON_START {
                                 fFound = true;
 
                                 //Ignore input for cpu controlled players
@@ -492,13 +504,13 @@ impl CPlayerInput {
                             }
                             iKey += 1;
                         }
-                    } else if is(SDL_EventType::SDL_JOYAXISMOTION) {
-                        if iDeviceID as i32 != event.jaxis.which {
+                    } else if matches!(event, E::PadAxis { .. }) {
+                        if iDeviceID as i32 != jaxis_which {
                             continue;
                         }
 
-                        let axis = event.jaxis.axis;
-                        let value = event.jaxis.value as i32;
+                        let axis = jaxis_axis;
+                        let value = jaxis_value as i32;
                         for iKey in 0..NUM_KEYS {
                             let k = inputControl.keys[iKey];
                             let mut fUseJoystickInput = false;
