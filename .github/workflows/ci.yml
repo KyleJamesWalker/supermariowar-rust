@@ -92,6 +92,10 @@ jobs:
       - name: cargo test
         run: cargo test --locked --workspace --exclude smw_relay ${{ matrix.profile == 'release' && '--release' || '' }}
 
+      - name: Lobby connect stress
+        if: matrix.os == 'ubuntu-24.04' && matrix.profile == 'release'
+        run: tools/ref/net_connect_stress.sh 20
+
   relay:
     runs-on: ubuntu-24.04
     steps:

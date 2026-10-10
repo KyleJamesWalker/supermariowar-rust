@@ -1040,8 +1040,11 @@ impl NetworkEventHandler for NetClient {
                 NET_RESPONSE_SERVER_MOTD => println!("Not implemented: NET_RESPONSE_SERVER_MOTD"),
 
                 NET_RESPONSE_CONNECT_OK => {
+                    // Not in the C++: the Servers menu moves on only if the skin goes out no earlier than this receive.
+                    self.set_as_last_received_message(packageType);
                     netplay.connectSuccessful = true;
                     self.send_skin_change();
+                    return;
                 }
 
                 NET_RESPONSE_CONNECT_DENIED => {

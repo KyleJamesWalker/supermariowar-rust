@@ -1,7 +1,8 @@
 //! Scripted netplay session for interop tests against the C++ lobby server and C++ clients
 //! (twin of tools/ref/net_driver.cpp). Prints `EV ...` lines describing protocol progress.
 //!
-//! SDL_VIDEODRIVER=dummy cargo run --example net_interop -- <host|join> <datadir> [server] [name]
+//! SDL_VIDEODRIVER=dummy cargo run --example net_interop -- <host|join|connect> <datadir> [server] [name]
+//! `connect` only connects, on a clock that advances on every read, and checks the Servers menu would move on.
 
 use smw::common::file_list::{FiltersList, GraphicsList, SkinList};
 use smw::common::game::ensure_settings_dir;
@@ -12,10 +13,25 @@ use smw::common::resource_manager::CResourceManager;
 use smw::common::tileset_manager::CTilesetManager;
 use smw::globals::*;
 use smw::smw::main::create_gamemodes;
+use smw::common_netplay::protocol_definitions::{NET_NOTICE_SKIN_CHANGE, NET_RESPONSE_CONNECT_OK};
 use smw::smw::net::*;
+use std::cell::Cell;
 use std::time::{Duration, Instant};
 
 const FRAMES: u32 = 30;
+
+struct TickingClock(Cell<u64>);
+
+impl smw_platform::Clock for TickingClock {
+    fn now_ms(&self) -> u64 {
+        self.0.set(self.0.get() + 1);
+        self.0.get()
+    }
+
+    fn sleep_ms(&self, ms: u32) {
+        std::thread::sleep(Duration::from_millis(ms as u64));
+    }
+}
 
 /// Deterministic per-frame key pattern so each side can check what the other sent.
 fn pattern(seed: u32, frame: u32) -> COutputControl {
@@ -39,6 +55,9 @@ fn main() {
     let server = args.get(3).cloned().unwrap_or_else(|| "127.0.0.1".to_string());
     let name = args.get(4).cloned().unwrap_or_else(|| if role == "host" { "RustHost".into() } else { "RustJoin".into() });
     let is_host = role == "host";
+    if role == "connect" {
+        smw::services::services().clock = Box::new(TickingClock(Cell::new(0)));
+    }
 
     smw::globals::init_globals();
     unsafe {
@@ -85,6 +104,13 @@ fn main() {
             netplay.client.update();
 
             match stage {
+                0 if netplay.connectSuccessful && role == "connect" => {
+                    let (sent, recv) = (netplay.client.lastSentMessage, netplay.client.lastReceivedMessage);
+                    let advances = sent.packageType == NET_NOTICE_SKIN_CHANGE && recv.packageType == NET_RESPONSE_CONNECT_OK && sent.timestamp >= recv.timestamp;
+                    println!("EV servers menu advances {} (sent {}@{}, received {}@{})", advances, sent.packageType, sent.timestamp, recv.packageType, recv.timestamp);
+                    net_close();
+                    std::process::exit(if advances { 0 } else { 1 });
+                }
                 0 if netplay.connectSuccessful => {
                     println!("EV connected");
                     if is_host {
