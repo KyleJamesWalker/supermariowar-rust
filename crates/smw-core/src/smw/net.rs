@@ -14,13 +14,13 @@ use crate::globals::{Aliased, Global, Ptr};
 use crate::smw::main::{currentgamemode, gamemodes, players};
 use crate::smw::network::file_compressor::FileCompressor;
 use crate::smw::network::net_config_manager::NetConfigManager;
+use crate::smw::network::net_record::{self, Side};
 use crate::smw::network::network_layer::NetworkLayer;
 use crate::smw::network::protocol_game_packages as gpkgs;
 use crate::smw::objectgame::PowerupType;
 use crate::smw::ui::network_list_scroll::MI_NetworkListScroll;
 use std::collections::VecDeque;
 use std::path::Path;
-use std::time::SystemTime;
 
 #[cfg(feature = "no_network")]
 pub type NetworkHandler = crate::smw::platform::network::null::network_layer_null::NetworkLayerNULL;
@@ -28,8 +28,6 @@ pub type NetworkHandler = crate::smw::platform::network::null::network_layer_nul
 pub type NetworkHandler = crate::smw::platform::network::enet::network_layer_enet::NetworkLayerENet;
 #[cfg(all(not(feature = "no_network"), target_os = "emscripten"))]
 pub type NetworkHandler = crate::smw::platform::network::websocket::network_layer_websocket::NetworkLayerWebSocket;
-
-pub type nettimepoint = SystemTime;
 
 pub static mut networkHandler: Global<NetworkHandler> = Global::uninit();
 pub static mut netplay: Global<Networking> = Global::uninit();
@@ -158,7 +156,7 @@ fn net_player(id: u8) -> Ptr<crate::smw::player::CPlayer> {
 }
 
 fn ticks() -> u32 {
-    crate::services::ticks()
+    crate::smw::harness::net_ticks()
 }
 
 pub fn net_init() -> bool {
@@ -216,7 +214,7 @@ pub fn net_load_server_list() {
 
     #[cfg(all(not(feature = "no_network"), target_os = "emscripten"))]
     unsafe {
-        if let Some(url) = crate::smw::platform::network::websocket::network_layer_websocket::relay_url() {
+        if let Some(url) = net_record::value_opt("relay", crate::smw::platform::network::websocket::network_layer_websocket::relay_url) {
             netplay.savedServers.retain(|s| s.hostname != url);
             netplay.savedServers.insert(0, ServerAddress { hostname: url });
         }
@@ -378,18 +376,12 @@ impl NetClient {
     }
 
     pub fn start(&mut self) -> bool {
-        unsafe {
-            if !networkHandler.deref_handler().client_restart() {
-                return false;
-            }
-        }
-
-        true
+        net_record::value_bool("client_restart", || unsafe { networkHandler.deref_handler().client_restart() })
     }
 
     pub fn update(&mut self) {
         self.local_gamehost.update();
-        unsafe { networkHandler.deref_handler().client_listen(self) };
+        net_record::listen(Side::Client, self, |handler| unsafe { networkHandler.deref_handler().client_listen(handler) });
     }
 
     pub fn stop(&mut self) {
@@ -408,7 +400,9 @@ impl NetClient {
             self.foreign_gamehost = Ptr::null();
         }
 
-        unsafe { networkHandler.deref_handler().client_shutdown() };
+        if !net_record::replaying() {
+            unsafe { networkHandler.deref_handler().client_shutdown() };
+        }
     }
 
     pub fn cleanup(&mut self) {
@@ -782,7 +776,8 @@ impl NetClient {
             netplay.player_disconnected = [false; 4];
             netplay.last_confirmed_input = 0xFF;
             netplay.current_input_counter = 0;
-            netplay.local_playerdata_store_time = [SystemTime::now(); 256];
+            netplay.local_playerdata_store_count = netplay.local_playerdata_store_count.wrapping_add(1);
+            netplay.local_playerdata_store_time = [netplay.local_playerdata_store_count; 256];
 
             if netplay.theHostIsMe {
                 self.set_as_last_sent_message(NET_P2G_SYNC_OK);
@@ -860,7 +855,7 @@ impl NetClient {
 
             let mut missed_frames: u32 = pkg.delay;
             if !netplay.theHostIsMe {
-                missed_frames = missed_frames.wrapping_add(self.foreign_gamehost.average_rtt() / 2);
+                missed_frames = missed_frames.wrapping_add(net_record::value_u32("rtt", || self.foreign_gamehost.average_rtt()) / 2);
             }
             missed_frames /= WAITTIME as u32;
 
@@ -979,14 +974,14 @@ impl NetClient {
     fn connect_lobby(&mut self, hostname: &str, port: u16) -> bool {
         unsafe {
             netplay.connectSuccessful = false;
-            networkHandler.deref_handler().connect_to_lobby_server(hostname, port)
+            net_record::value_bool("connect_lobby", || networkHandler.deref_handler().connect_to_lobby_server(hostname, port))
         }
     }
 
     fn connect_game_host(&mut self, hostname: &str, port: u16) -> bool {
         unsafe {
             netplay.connectSuccessful = false;
-            networkHandler.deref_handler().connect_to_foreign_game_host(hostname, port)
+            net_record::value_bool("connect_game_host", || networkHandler.deref_handler().connect_to_foreign_game_host(hostname, port))
         }
     }
 
@@ -1254,10 +1249,8 @@ impl NetGameHost {
 
         self.foreign_lobbyserver = lobbyserver;
 
-        unsafe {
-            if !networkHandler.deref_handler().gamehost_restart() {
-                return false;
-            }
+        if !net_record::value_bool("gamehost_restart", || unsafe { networkHandler.deref_handler().gamehost_restart() }) {
+            return false;
         }
 
         self.active = true;
@@ -1267,7 +1260,7 @@ impl NetGameHost {
 
     pub fn update(&mut self) {
         if self.active {
-            unsafe { networkHandler.deref_handler().gamehost_listen(self) };
+            net_record::listen(Side::Host, self, |handler| unsafe { networkHandler.deref_handler().gamehost_listen(handler) });
         }
     }
 
@@ -1288,7 +1281,9 @@ impl NetGameHost {
             self.last_processed_input_id[p] = 0xFF;
         }
 
-        unsafe { networkHandler.deref_handler().gamehost_shutdown() };
+        if !net_record::replaying() {
+            unsafe { networkHandler.deref_handler().gamehost_shutdown() };
+        }
         self.active = false;
         println!("[net] GameHost stopped.");
     }
@@ -1306,7 +1301,7 @@ impl NetGameHost {
     fn send_sync_messages(&mut self) {
         println!("[net] Prepare launching the game...");
 
-        RandomNumberGenerator::generator().reseed(unsafe { libc_time() } as u32);
+        RandomNumberGenerator::generator().reseed(net_record::value_u32("time", || unsafe { libc_time() } as u32));
         crate::smw::gs_menu::roll_net_game_mode_settings();
         let settings = game_mode_settings_package();
         let pkg = pkgs::StartSync::new(RANDOM_INT(32767) as u32);
@@ -1351,7 +1346,9 @@ impl NetGameHost {
 
         for c in 0..self.expected_client_count as usize {
             let (h, p) = (self.expected_clients[c].host, self.expected_clients[c].port);
-            unsafe { networkHandler.deref_handler().nat_punch(h, p) };
+            if !net_record::replaying() {
+                unsafe { networkHandler.deref_handler().nat_punch(h, p) };
+            }
         }
     }
 
@@ -1508,7 +1505,7 @@ impl NetGameHost {
 
             game_values.gamepowerups[playerID as usize] = -1;
 
-            let pkg = gpkgs::StartPowerup::new(playerID, powerupused as u8, player.average_rtt() / 2);
+            let pkg = gpkgs::StartPowerup::new(playerID, powerupused as u8, net_record::value_u32("rtt", || player.average_rtt()) / 2);
             for c in 0..self.expected_client_count as usize {
                 if !self.clients[c].is_null() {
                     self.clients[c].send_reliable(pkg.as_bytes());
@@ -1729,7 +1726,9 @@ pub struct Networking {
 
     pub local_input_buffer: VecDeque<COutputControl>,
     pub local_playerdata_buffer: VecDeque<Net_IndexedPlayerData>,
-    pub local_playerdata_store_time: [nettimepoint; 256],
+    /// When each input's player data was stored, as a count of stores.
+    pub local_playerdata_store_time: [u32; 256],
+    pub local_playerdata_store_count: u32,
 
     /// The sync's seed; every client reseeds with it again when the match starts.
     pub common_random_seed: u32,
@@ -1780,7 +1779,8 @@ impl Networking {
             player_disconnected: [false; 4],
             local_input_buffer: VecDeque::new(),
             local_playerdata_buffer: VecDeque::new(),
-            local_playerdata_store_time: [SystemTime::UNIX_EPOCH; 256],
+            local_playerdata_store_time: [0; 256],
+            local_playerdata_store_count: 0,
             common_random_seed: 0,
             start_waiting: false,
             start_waited_since: 0,

@@ -1,9 +1,10 @@
 //! Not in upstream: recording and replaying a net match at the transport boundary. A client's recording keeps every
 //! network event its listeners saw as `#@ net` lines; a replay hands them to the same handlers at the same frame.
 
-use crate::smw::harness::{base64_decode, base64_encode};
+use crate::smw::harness::{self, base64_decode, base64_encode};
 use smw_netplay::common_netplay::network_interface::{NetPeer, NetworkEventHandler};
 use std::any::Any;
+use std::collections::{BTreeMap, VecDeque};
 
 /// Which of the client's two listeners an event reached: its client (lobby or foreign game host) or its own game host.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -24,6 +25,7 @@ pub struct PeerInfo {
     pub host: u32,
     pub port: u16,
     pub player_id: u64,
+    pub key: u64,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -35,7 +37,7 @@ pub struct NetEvent {
 }
 
 impl NetEvent {
-    /// `#@ net frame=<n> side=<c|h> peer=<host>:<port>:<player id> <connect|disconnect|recv=<base64>>`
+    /// `#@ net frame=<n> side=<c|h> peer=<host>:<port>:<player id>:<peer key> <connect|disconnect|recv=<base64>>`
     pub fn line(&self) -> String {
         let side = if self.side == Side::Client { 'c' } else { 'h' };
         let kind = match &self.kind {
@@ -43,7 +45,7 @@ impl NetEvent {
             Kind::Disconnect => "disconnect".to_string(),
             Kind::Receive(data) => format!("recv={}", base64_encode(data)),
         };
-        format!("#@ net frame={} side={} peer={}:{}:{} {}", self.frame, side, self.peer.host, self.peer.port, self.peer.player_id, kind)
+        format!("#@ net frame={} side={} peer={}:{}:{}:{} {}", self.frame, side, self.peer.host, self.peer.port, self.peer.player_id, self.peer.key, kind)
     }
 
     pub fn parse(line: &str) -> Option<NetEvent> {
@@ -56,7 +58,12 @@ impl NetEvent {
             _ => return None,
         };
         let mut peer = fields.next()?.strip_prefix("peer=")?.split(':');
-        let peer = PeerInfo { host: peer.next()?.parse().ok()?, port: peer.next()?.parse().ok()?, player_id: peer.next()?.parse().ok()? };
+        let peer = PeerInfo {
+            host: peer.next()?.parse().ok()?,
+            port: peer.next()?.parse().ok()?,
+            player_id: peer.next()?.parse().ok()?,
+            key: peer.next()?.parse().ok()?,
+        };
         let kind = match fields.next()? {
             "connect" => Kind::Connect,
             "disconnect" => Kind::Disconnect,
@@ -67,7 +74,7 @@ impl NetEvent {
 }
 
 fn info(peer: &dyn NetPeer) -> PeerInfo {
-    PeerInfo { host: peer.address_host(), port: peer.address_port(), player_id: peer.get_player_id() }
+    PeerInfo { host: peer.address_host(), port: peer.address_port(), player_id: peer.get_player_id(), key: peer.peer_key() }
 }
 
 /// A listener's handler while recording: each event is logged, then passed on unchanged.
@@ -122,6 +129,9 @@ impl NetPeer for ReplayPeer {
     fn get_player_id(&self) -> u64 {
         self.0.player_id
     }
+    fn peer_key(&self) -> u64 {
+        self.0.key
+    }
     fn same_peer(&self, other: &dyn NetPeer) -> bool {
         other.as_any().downcast_ref::<ReplayPeer>().is_some_and(|o| o.0 == self.0)
     }
@@ -143,18 +153,111 @@ pub fn deliver(events: &[NetEvent], next: &mut usize, side: Side, frame: u32, ha
     }
 }
 
+/// A recorded value the game read from outside it: `#@ netv frame=<n> <key>=<value>`.
+fn value_line(frame: u32, key: &str, value: &str) -> String {
+    format!("#@ netv frame={} {}={}", frame, key, value)
+}
+
+fn parse_value(line: &str) -> Option<(u32, String, String)> {
+    let rest = line.strip_prefix("#@ netv frame=")?;
+    let (frame, rest) = rest.split_once(' ')?;
+    let (key, value) = rest.split_once('=')?;
+    Some((frame.parse().ok()?, key.to_string(), value.to_string()))
+}
+
+struct Replay {
+    events: Vec<NetEvent>,
+    next: usize,
+    values: BTreeMap<String, VecDeque<String>>,
+}
+
+static mut replay: Option<Replay> = None;
+
+/// Loads a replay's net lines from `from` on. A recording without `#@ netv` lines predates net recording,
+/// so its replay keeps using the network.
+pub fn load(text: &str, from: u32) {
+    let lines = || text.lines().map(|l| l.strip_suffix('\r').unwrap_or(l));
+    if !lines().any(|l| l.starts_with("#@ netv ")) {
+        return;
+    }
+    let events = lines().filter_map(NetEvent::parse).filter(|e| e.frame >= from).collect();
+    let mut values: BTreeMap<String, VecDeque<String>> = BTreeMap::new();
+    for (frame, key, value) in lines().filter_map(parse_value) {
+        if frame >= from {
+            values.entry(key).or_default().push_back(value);
+        }
+    }
+    unsafe { replay = Some(Replay { events, next: 0, values }) };
+}
+
+/// Whether the network comes from the replay: no connections, and every listener gets the recorded events.
+pub fn replaying() -> bool {
+    unsafe { (*(&raw const replay)).is_some() }
+}
+
+/// A listener's poll: in a replay, the events recorded for this frame and side; otherwise `live`'s, recorded.
+pub fn listen(side: Side, handler: &mut dyn NetworkEventHandler, live: impl FnOnce(&mut dyn NetworkEventHandler)) {
+    let frame = harness::frame();
+    let mut log = Vec::new();
+    if let Some(r) = unsafe { (*(&raw mut replay)).as_mut() } {
+        // Taken out while delivering: a handler may read a recorded value.
+        let events = std::mem::take(&mut r.events);
+        let mut next = r.next;
+        deliver(&events, &mut next, side, frame, &mut Recording { inner: handler, side, frame, log: &mut log });
+        if let Some(r) = unsafe { (*(&raw mut replay)).as_mut() } {
+            r.events = events;
+            r.next = next;
+        }
+    } else {
+        live(&mut Recording { inner: handler, side, frame, log: &mut log });
+    }
+    for ev in &log {
+        harness::record_line(&ev.line());
+    }
+}
+
+/// A value the game reads from the network layer or the clock: `live`'s, recorded, or in a replay the recorded one.
+pub fn value(key: &str, live: impl FnOnce() -> String) -> String {
+    let v = if let Some(r) = unsafe { (*(&raw mut replay)).as_mut() } {
+        match r.values.get_mut(key).and_then(|q| q.pop_front()) {
+            Some(v) => v,
+            None => harness::fail_replay(format!("the replay has no recorded {} for frame {}", key, harness::frame())),
+        }
+    } else {
+        live()
+    };
+    harness::record_line(&value_line(harness::frame(), key, &v));
+    v
+}
+
+/// `value` for one the game may lack (`-`); a replay without it reads none.
+pub fn value_opt(key: &str, live: impl FnOnce() -> Option<String>) -> Option<String> {
+    if replaying() && unsafe { (*(&raw const replay)).as_ref() }.is_some_and(|r| r.values.get(key).is_none_or(|q| q.is_empty())) {
+        return None;
+    }
+    Some(value(key, || live().unwrap_or_else(|| "-".to_string()))).filter(|v| v != "-")
+}
+
+pub fn value_u32(key: &str, live: impl FnOnce() -> u32) -> u32 {
+    value(key, || live().to_string()).parse().unwrap_or(0)
+}
+
+pub fn value_bool(key: &str, live: impl FnOnce() -> bool) -> bool {
+    value(key, || (live() as u8).to_string()) == "1"
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn lines_round_trip() {
-        let peer = PeerInfo { host: 0x0100000a, port: 12522, player_id: 7 };
+        let peer = PeerInfo { host: 0x0100000a, port: 12522, player_id: 7, key: 3 };
         for kind in [Kind::Connect, Kind::Disconnect, Kind::Receive(vec![0, 93, 255, 1, 2])] {
             let ev = NetEvent { frame: 1234, side: Side::Host, peer: peer.clone(), kind };
             assert_eq!(NetEvent::parse(&ev.line()), Some(ev));
         }
-        assert_eq!(NetEvent::parse("#@ net frame=1 side=x peer=1:2:3 connect"), None);
+        assert_eq!(NetEvent::parse("#@ net frame=1 side=x peer=1:2:3:4 connect"), None);
     }
 
     struct Log(Vec<String>);
@@ -173,7 +276,7 @@ mod tests {
 
     #[test]
     fn deliver_replays_one_side_and_frame_in_order() {
-        let peer = PeerInfo { host: 0x0100000a, port: 12522, player_id: 2 };
+        let peer = PeerInfo { host: 0x0100000a, port: 12522, player_id: 2, key: 1 };
         let ev = |frame, side, kind| NetEvent { frame, side, peer: peer.clone(), kind };
         let events = [
             ev(5, Side::Client, Kind::Connect),

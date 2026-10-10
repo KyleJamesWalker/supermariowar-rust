@@ -17,6 +17,11 @@ pub trait NetPeer: Any {
 
     fn get_player_id(&self) -> u64;
 
+    /// Tells this peer apart from the layer's other peers, as `same_peer` does.
+    fn peer_key(&self) -> u64 {
+        self.get_player_id()
+    }
+
     fn same_peer(&self, other: &dyn NetPeer) -> bool;
     fn as_any(&self) -> &dyn Any;
 }
