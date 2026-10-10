@@ -128,21 +128,22 @@ impl UI_ControlTrait for MI_InputControlField {
 
     fn send_input(&mut self, _playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         unsafe {
-            let mut event: SDL_Event = std::mem::zeroed();
             let mut done = false;
             #[cfg(target_os = "emscripten")]
             let mut events = std::mem::take(&mut crate::smw::gs_menu::frame_events).into_iter();
 
             while !done {
                 #[cfg(not(target_os = "emscripten"))]
-                harness::wait_event(&mut event);
+                let input = {
+                    let mut event: SDL_Event = std::mem::zeroed();
+                    harness::wait_event(&mut event);
+                    smw_sdl2::input::from_sdl(&event)
+                };
                 #[cfg(target_os = "emscripten")]
-                match events.next() {
-                    Some(next) => event = next,
-                    None => return MENU_CODE_NONE,
-                }
+                let Some(input) = events.next() else {
+                    return MENU_CODE_NONE;
+                };
 
-                let input = smw_sdl2::input::from_sdl(&event);
                 game_values.playerInput.update_input(&input, 1);
 
                 use InputEvent as E;

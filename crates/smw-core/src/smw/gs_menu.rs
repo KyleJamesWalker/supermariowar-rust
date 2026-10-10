@@ -1,5 +1,6 @@
 //! Port of src/smw/GSMenu.cpp (reference build: original + tools/cpp-harness.patch).
 
+use smw_platform::{Input, InputEvent};
 use crate::common::file_list::{MusicCategory, WorldMusicCategory};
 use crate::common::game::App;
 use crate::common::game_mode::*;
@@ -56,7 +57,7 @@ use crate::smw::menu::network::net_servers_menu::UI_NetServersMenu;
 use crate::common::path::get_home_directory;
 use crate::common_netplay::protocol_definitions::*;
 use crate::smw::net::{net_end_session, net_start_session, netplay};
-use sdl2::sys::{SDL_Event, SDL_EventType, SDL_FillRect, SDL_KeyCode, SDL_Keymod, SDL_MapRGB, SDL_PollEvent, SDL_Rect};
+use sdl2::sys::{SDL_Event, SDL_EventType, SDL_FillRect, SDL_KeyCode, SDL_Keymod, SDL_MapRGB, SDL_Rect};
 use std::ops::DerefMut;
 use std::path::Path;
 
@@ -144,7 +145,7 @@ static mut ms: Option<MenuState> = None;
 
 /// The browser cannot block for input, so a control field being rebound reads this frame's events here.
 #[cfg(target_os = "emscripten")]
-pub static mut frame_events: Vec<SDL_Event> = Vec::new();
+pub static mut frame_events: Vec<Input> = Vec::new();
 
 impl MenuState {
     fn new() -> Self {
@@ -1663,28 +1664,26 @@ impl GameState for MenuState {
             //handle messages
             #[cfg(target_os = "emscripten")]
             frame_events.clear();
-            let mut event: SDL_Event = std::mem::zeroed();
-            while SDL_PollEvent(&mut event) != 0 {
+            while let Some(input) = smw_sdl2::events::poll_input() {
                 #[cfg(target_os = "emscripten")]
-                frame_events.push(event);
-                let event_type = event.type_;
-                if event_type == SDL_EventType::SDL_QUIT as u32 {
+                frame_events.push(input.clone());
+                if input.event == InputEvent::Quit {
                     self.exit();
                     return;
-                } else if event_type == SDL_EventType::SDL_KEYDOWN as u32 {
-                    let keysym = event.key.keysym;
-                    if keysym.sym == SDL_KeyCode::SDLK_F1 as i32 {
+                } else if let InputEvent::Key { key, mods, down: true, .. } = input.event {
+                    let sym = key.0;
+                    if sym == SDL_KeyCode::SDLK_F1 as i32 {
                         game_values.showfps = !game_values.showfps;
                     }
 
-                    if (keysym.mod_ as u32) & (SDL_Keymod::KMOD_LALT as u32 | SDL_Keymod::KMOD_RALT as u32) != 0 {
+                    if (mods as u32) & (SDL_Keymod::KMOD_LALT as u32 | SDL_Keymod::KMOD_RALT as u32) != 0 {
                         //ALT + F4 = close window
-                        if keysym.sym == SDL_KeyCode::SDLK_F4 as i32 {
+                        if sym == SDL_KeyCode::SDLK_F4 as i32 {
                             self.exit();
                             return;
                         }
                         //ALT + Enter = fullscreen/windowed toggle
-                        else if keysym.sym == SDL_KeyCode::SDLK_RETURN as i32 {
+                        else if sym == SDL_KeyCode::SDLK_RETURN as i32 {
                             game_values.fullscreen = !game_values.fullscreen;
                             gfx_changefullscreen(game_values.fullscreen);
                             blitdest = screen;
@@ -1693,12 +1692,12 @@ impl GameState for MenuState {
                         }
                     }
 
-                    if keysym.sym == SDL_KeyCode::SDLK_INSERT as i32 {
+                    if sym == SDL_KeyCode::SDLK_INSERT as i32 {
                         gfx_take_screenshot();
                     }
                 }
 
-                game_values.playerInput.update(event, 1);
+                game_values.playerInput.update_input(&input, 1);
             }
 
             //If AI is controlling the tournament menu, select the options
