@@ -15,7 +15,7 @@ use crate::smw::gs_splash_screen::SplashScreenState;
 use crate::smw::network::file_compressor::{deflate, inflate, read_maybe_gzip};
 use sdl2::sys::{
     SDL_Event, SDL_EventType, SDL_GetError, SDL_GetKeyFromName, SDL_GetKeyName, SDL_GetScancodeFromKey, SDL_InitSubSystem, SDL_JoystickAttachVirtual,
-    SDL_JoystickInstanceID, SDL_JoystickType, SDL_KeyCode, SDL_Keymod, SDL_PumpEvents, SDL_PushEvent, SDL_SetEventFilter, SDL_SetHint, SDL_WaitEvent, SDL_INIT_JOYSTICK,
+    SDL_JoystickInstanceID, SDL_JoystickType, SDL_KeyCode, SDL_Keymod, SDL_SetHint, SDL_INIT_JOYSTICK,
     SDL_PRESSED, SDL_RELEASED,
 };
 use std::ffi::CStr;
@@ -586,7 +586,7 @@ pub fn frame_start() {
                 let mut event: SDL_Event = std::mem::zeroed();
                 fill_event(&h.events[h.nextEvent], &mut event);
                 note_replay_key(&event);
-                SDL_PushEvent(&mut event);
+                smw_sdl2::events::push(&mut event);
                 copy_replay_event(&h.events[h.nextEvent]);
             }
             h.nextEvent += 1;
@@ -602,7 +602,7 @@ pub fn wait_event(event: &mut SDL_Event) {
             return;
         }
         if !h.replay {
-            SDL_WaitEvent(event);
+            smw_sdl2::events::wait(event);
             return;
         }
         if h.nextEvent >= h.events.len() {
@@ -810,7 +810,7 @@ fn start_recording(seed: u32, to: Option<String>) {
             checkpoint: None,
         });
         if live {
-            SDL_SetEventFilter(Some(record_filter), std::ptr::null_mut());
+            smw_sdl2::events::set_filter(Some(record_filter), std::ptr::null_mut());
         }
     }
     if live {
@@ -925,7 +925,7 @@ static INJECTING: AtomicBool = AtomicBool::new(false);
 
 fn inject(event: &mut SDL_Event) {
     INJECTING.store(true, Ordering::Relaxed);
-    unsafe { SDL_PushEvent(event) };
+    unsafe { smw_sdl2::events::push(event) };
     INJECTING.store(false, Ordering::Relaxed);
 }
 
@@ -947,7 +947,7 @@ fn push_live_script(r: &mut Recorder, frame: u32) {
                 } else if event.type_ == SDL_EventType::SDL_JOYHATMOTION as u32 {
                     event.jhat.which = sdl_instance(event.jhat.which);
                 }
-                SDL_PushEvent(&mut event);
+                smw_sdl2::events::push(&mut event);
             }
         }
         r.nextScript += 1;
@@ -1029,7 +1029,7 @@ fn record_frame_start(frame: u32) {
         let _ = r.out.flush();
     }
     push_live_script(r, frame);
-    unsafe { SDL_PumpEvents() };
+    smw_sdl2::events::pump();
     let held = std::mem::take(&mut r.pending);
     for raw in held.iter() {
         if unsafe { raw.type_ } == SDL_EventType::SDL_QUIT as u32 {
@@ -1059,7 +1059,7 @@ fn record_wait_event(event: &mut SDL_Event) {
         crate::smw::touch::flush();
         let Some(r) = rec() else { return };
         push_live_script(r, unsafe { h.frame } + 1);
-        unsafe { SDL_PumpEvents() };
+        smw_sdl2::events::pump();
         while !r.pending.is_empty() {
             let raw = r.pending.remove(0);
             if unsafe { raw.type_ } == SDL_EventType::SDL_QUIT as u32 {
@@ -1096,7 +1096,7 @@ pub fn finish() {
         }
         if let Some(mut r) = h.rec.take() {
             if r.live {
-                SDL_SetEventFilter(None, std::ptr::null_mut());
+                smw_sdl2::events::set_filter(None, std::ptr::null_mut());
             }
             let frames = r.quitFrame.unwrap_or(h.frame);
             let _ = writeln!(r.out, "#@ frames={}", frames);
