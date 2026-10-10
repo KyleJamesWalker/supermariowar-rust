@@ -21,6 +21,8 @@ use std::path::Path;
 
 const MAGIC: &[u8; 4] = b"SMWC";
 const VERSION: u8 = 1;
+/// An online match's checkpoint: the net state (smw/net.rs) comes first, then version 1's fields.
+const ONLINE_VERSION: u8 = 2;
 
 /// One routine both saves and loads each value, so the two directions cannot drift apart.
 pub struct Snap {
@@ -45,6 +47,10 @@ impl Snap {
 
     pub fn io<T: Field + ?Sized>(&mut self, v: &mut T) {
         v.io(self);
+    }
+
+    pub fn loading(&self) -> bool {
+        self.load
     }
 
     fn take(&mut self, n: usize) -> &[u8] {
@@ -144,6 +150,34 @@ impl<T: Field + Default> Field for Vec<T> {
     }
 }
 
+impl<T: Field + Default> Field for Option<T> {
+    fn io(&mut self, s: &mut Snap) {
+        let mut some = self.is_some();
+        some.io(s);
+        if s.load {
+            *self = some.then(T::default);
+        }
+        if let Some(v) = self {
+            v.io(s);
+        }
+    }
+}
+
+impl<T: Field + Default> Field for std::collections::VecDeque<T> {
+    fn io(&mut self, s: &mut Snap) {
+        let mut v: Vec<T> = std::mem::take(self).into();
+        v.io(s);
+        *self = v.into();
+    }
+}
+
+impl<A: Field, B: Field> Field for (A, B) {
+    fn io(&mut self, s: &mut Snap) {
+        self.0.io(s);
+        self.1.io(s);
+    }
+}
+
 impl<A: Field, B: Field, C: Field> Field for (A, B, C) {
     fn io(&mut self, s: &mut Snap) {
         self.0.io(s);
@@ -158,6 +192,24 @@ impl<A: Field, B: Field, C: Field, D: Field> Field for (A, B, C, D) {
         self.1.io(s);
         self.2.io(s);
         self.3.io(s);
+    }
+}
+
+/// Starts a checkpoint's path in the settings directory, which differs between machines.
+const HOME_PREFIX: &str = "~settings/";
+
+/// A path for a checkpoint: one in the settings directory relative to it.
+pub fn portable_path(path: &str) -> String {
+    match path.strip_prefix(crate::common::path::get_home_directory().as_str()) {
+        Some(rest) => format!("{}{}", HOME_PREFIX, rest),
+        None => path.to_string(),
+    }
+}
+
+pub fn local_path(path: &str) -> String {
+    match path.strip_prefix(HOME_PREFIX) {
+        Some(rest) => crate::common::path::get_home_directory() + rest,
+        None => path.to_string(),
     }
 }
 
@@ -176,13 +228,9 @@ fn data_path(name: &str) -> String {
     }
 }
 
-/// Matches a checkpoint cannot start: online games (the peers' state) and a World's bonus house,
-/// which no replay covers yet.
+/// Matches a checkpoint cannot start: a World's bonus house, which no replay covers yet.
 pub fn unsupported_reason() -> Option<&'static str> {
     unsafe {
-        if crate::smw::net::netplay.active || game_values.matchtype == MatchType::NetGame {
-            return Some("online");
-        }
         let stop = game_values.tourstops.get(game_values.tourstopcurrent);
         if game_values.matchtype == MatchType::World && stop.is_some_and(|s| s.iStageType == 1) {
             return Some("bonus_house");
@@ -193,10 +241,11 @@ pub fn unsupported_reason() -> Option<&'static str> {
 
 /// The checkpoint at the current point of `MenuState::enter_gameplay`.
 pub fn capture() -> Vec<u8> {
+    let online = unsafe { crate::smw::net::netplay.active };
     let mut s = Snap::saver();
     s.put(MAGIC);
-    s.put(&[VERSION]);
-    walk(&mut s);
+    s.put(&[if online { ONLINE_VERSION } else { VERSION }]);
+    walk(&mut s, online);
     s.buf
 }
 
@@ -205,12 +254,13 @@ pub fn restore(bytes: Vec<u8>) -> Result<(), String> {
     if bytes.len() < 5 || &bytes[..4] != MAGIC {
         return Err("not a checkpoint".to_string());
     }
-    if bytes[4] != VERSION {
-        return Err(format!("checkpoint version {} (this build reads {})", bytes[4], VERSION));
+    if bytes[4] != VERSION && bytes[4] != ONLINE_VERSION {
+        return Err(format!("checkpoint version {} (this build reads {} and {})", bytes[4], VERSION, ONLINE_VERSION));
     }
+    let online = bytes[4] == ONLINE_VERSION;
     let mut s = Snap::loader(bytes);
     s.pos = 5;
-    walk(&mut s);
+    walk(&mut s, online);
     if s.damaged || s.pos != s.buf.len() {
         return Err("checkpoint is damaged".to_string());
     }
@@ -219,9 +269,12 @@ pub fn restore(bytes: Vec<u8>) -> Result<(), String> {
 }
 
 /// Saves or restores every part of the checkpoint, in the order a restore must apply them.
-fn walk(s: &mut Snap) {
+fn walk(s: &mut Snap, online: bool) {
     unsafe {
         let gv = &mut *game_values;
+        if online {
+            crate::smw::net::checkpoint(s);
+        }
 
         // Settings, as options.bin and controls.sdl2.bin would hold them now.
         let (mut options, mut controls) = if s.load { (Vec::new(), Vec::new()) } else { gv.config_bytes() };
@@ -354,11 +407,12 @@ fn walk(s: &mut Snap) {
         s.io(&mut score_cnt);
         GameplayState::instance().checkpoint(s);
 
-        // The map and the music the menu chose.
-        let mut map = match_map.clone();
+        // The map and the music the menu chose. A net game's joiner plays the host's map from its settings directory.
+        let mut map = portable_path(&match_map);
         let mut map_index = maplist.get_current();
         s.io(&mut map);
         s.io(&mut map_index);
+        map = local_path(&map);
         if s.load {
             maplist.set_current(map_index);
             g_map.load_map(&data_path(&map), crate::common::map::read_type_full);
@@ -373,7 +427,10 @@ fn walk(s: &mut Snap) {
             *song = data_path(&song_name).into();
             for k in 0..4 {
                 if gv.playercontrol[k] > 0 {
-                    rm.spr_player[k] = rm.load_full_skin(gv.skinids[k], gv.colorids[k]);
+                    rm.spr_player[k] = match crate::smw::net::net_skin_path(k) {
+                        Some(path) => rm.load_full_skin_path(Path::new(&path), k as i16),
+                        None => rm.load_full_skin(gv.skinids[k], gv.colorids[k]),
+                    };
                 }
             }
         }
@@ -486,7 +543,7 @@ pub fn start_fields() -> String {
         let short = Path::new(&map).file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
         let short = short.split_once('_').map(|(_, rest)| rest.to_string()).unwrap_or(short);
         f.push(kv("map", &short));
-        f.push(kv("file", &map));
+        f.push(kv("file", &portable_path(&map)));
         match gv.matchtype {
             MatchType::Tournament => {
                 let played: i16 = gv.tournament_scores.iter().map(|t| t.wins).sum();

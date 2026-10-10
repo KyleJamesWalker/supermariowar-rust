@@ -118,7 +118,7 @@ fn env(name: &str) -> Option<String> {
     std::env::var(name).ok().filter(|v| !v.is_empty())
 }
 
-fn fail(msg: String) -> ! {
+pub fn fail(msg: String) -> ! {
     eprintln!("[harness] {}", msg);
     std::process::exit(2);
 }
@@ -424,6 +424,8 @@ pub fn init() {
                 h.joysticks = h.joysticks.max(h.devices.iter().map(|&(_, d, _)| d + 1).max().unwrap_or(0));
                 h.devices.clear();
             }
+            let from = if h.segment.is_some() { h.frame + 1 } else { 0 };
+            crate::smw::network::net_record::load(&read_recording(&replay).unwrap_or_default(), from);
         }
 
         h.audible = record || env("SMW_AUDIBLE").is_some();
@@ -525,6 +527,26 @@ pub fn replay_touch() -> bool {
 
 pub fn replaying() -> bool {
     unsafe { h.replay }
+}
+
+pub fn frame() -> u32 {
+    unsafe { h.frame }
+}
+
+/// The clock net code decides by: frame-based in seeded runs, so a replay reads the recorded session's times.
+pub fn net_ticks() -> u32 {
+    if unsafe { h.seeded } {
+        virtual_ticks()
+    } else {
+        crate::services::ticks()
+    }
+}
+
+/// A `#@` line for the recording, if one is being made.
+pub fn record_line(line: &str) {
+    if let Some(r) = rec() {
+        let _ = writeln!(r.out, "{}", line);
+    }
 }
 
 pub fn no_limit() -> bool {
@@ -630,6 +652,9 @@ pub fn frame_end() {
 //------------------------------------------------------------------------------------------------
 
 const KEEP_RECORDINGS: usize = 10;
+
+/// The settings files a recording embeds, as `#@ <key>=<base64>`.
+const SETTINGS_FILES: [(&str, &str); 3] = [("options_b64", "options.bin"), ("controls_b64", "controls.sdl2.bin"), ("servers_b64", "servers.toml")];
 
 struct Recorder {
     out: BufWriter<File>,
@@ -756,7 +781,8 @@ fn start_recording(seed: u32, to: Option<String>) {
     let home = crate::common::path::get_home_directory();
     let _ = writeln!(out, "# Super Mario War session recorded {} UTC (Rust port).", stamp.replace('_', " "));
     let _ = writeln!(out, "#@ seed={}", seed);
-    for (key, file) in [("options_b64", "options.bin"), ("controls_b64", "controls.sdl2.bin")] {
+    let _ = writeln!(out, "#@ netrec=1");
+    for (key, file) in SETTINGS_FILES {
         if let Ok(bytes) = std::fs::read(home.clone() + file) {
             let _ = writeln!(out, "#@ {}={}", key, base64_encode(&bytes));
         }
@@ -1086,7 +1112,7 @@ pub fn prepare_watch(file: &str, speed: Option<f32>, segment: Option<u32>) {
     #[cfg(windows)]
     let settings = home.join(".smw");
     std::fs::create_dir_all(&settings).unwrap_or_else(|e| fail(format!("cannot create {}: {}", settings.display(), e)));
-    for (key, file) in [("options_b64", "options.bin"), ("controls_b64", "controls.sdl2.bin")] {
+    for (key, file) in SETTINGS_FILES {
         if let Some(bytes) = directive(key).and_then(|v| base64_decode(&v)) {
             let _ = std::fs::write(settings.join(file), bytes);
         }

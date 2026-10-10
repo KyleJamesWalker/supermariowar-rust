@@ -11,16 +11,17 @@ use crate::common_netplay::network_interface::{NetPeer, NetworkEventHandler};
 use crate::common_netplay::protocol_definitions::*;
 use crate::common_netplay::protocol_packages::{self as pkgs, cstr_field, MessageHeader};
 use crate::globals::{Aliased, Global, Ptr};
+use crate::smw::checkpoint::{local_path, portable_path, Field, Snap};
 use crate::smw::main::{currentgamemode, gamemodes, players};
 use crate::smw::network::file_compressor::FileCompressor;
 use crate::smw::network::net_config_manager::NetConfigManager;
+use crate::smw::network::net_record::{self, PeerInfo, ReplayPeer, Side};
 use crate::smw::network::network_layer::NetworkLayer;
 use crate::smw::network::protocol_game_packages as gpkgs;
 use crate::smw::objectgame::PowerupType;
 use crate::smw::ui::network_list_scroll::MI_NetworkListScroll;
 use std::collections::VecDeque;
 use std::path::Path;
-use std::time::SystemTime;
 
 #[cfg(feature = "no_network")]
 pub type NetworkHandler = crate::smw::platform::network::null::network_layer_null::NetworkLayerNULL;
@@ -28,8 +29,6 @@ pub type NetworkHandler = crate::smw::platform::network::null::network_layer_nul
 pub type NetworkHandler = crate::smw::platform::network::enet::network_layer_enet::NetworkLayerENet;
 #[cfg(all(not(feature = "no_network"), target_os = "emscripten"))]
 pub type NetworkHandler = crate::smw::platform::network::websocket::network_layer_websocket::NetworkLayerWebSocket;
-
-pub type nettimepoint = SystemTime;
 
 pub static mut networkHandler: Global<NetworkHandler> = Global::uninit();
 pub static mut netplay: Global<Networking> = Global::uninit();
@@ -158,7 +157,7 @@ fn net_player(id: u8) -> Ptr<crate::smw::player::CPlayer> {
 }
 
 fn ticks() -> u32 {
-    crate::services::ticks()
+    crate::smw::harness::net_ticks()
 }
 
 pub fn net_init() -> bool {
@@ -215,8 +214,12 @@ pub fn net_load_server_list() {
     config.load();
 
     #[cfg(all(not(feature = "no_network"), target_os = "emscripten"))]
-    unsafe {
-        if let Some(url) = crate::smw::platform::network::websocket::network_layer_websocket::relay_url() {
+    let relay_url = crate::smw::platform::network::websocket::network_layer_websocket::relay_url;
+    #[cfg(not(all(not(feature = "no_network"), target_os = "emscripten")))]
+    let relay_url = || None;
+    // Recorded on every build, so a native replay of a browser recording lists the same servers.
+    if let Some(url) = net_record::value_opt("relay", relay_url) {
+        unsafe {
             netplay.savedServers.retain(|s| s.hostname != url);
             netplay.savedServers.insert(0, ServerAddress { hostname: url });
         }
@@ -378,18 +381,12 @@ impl NetClient {
     }
 
     pub fn start(&mut self) -> bool {
-        unsafe {
-            if !networkHandler.deref_handler().client_restart() {
-                return false;
-            }
-        }
-
-        true
+        net_record::value_bool("client_restart", || unsafe { networkHandler.deref_handler().client_restart() })
     }
 
     pub fn update(&mut self) {
         self.local_gamehost.update();
-        unsafe { networkHandler.deref_handler().client_listen(self) };
+        net_record::listen(Side::Client, self, |handler| unsafe { networkHandler.deref_handler().client_listen(handler) });
     }
 
     pub fn stop(&mut self) {
@@ -408,7 +405,9 @@ impl NetClient {
             self.foreign_gamehost = Ptr::null();
         }
 
-        unsafe { networkHandler.deref_handler().client_shutdown() };
+        if !net_record::replaying() {
+            unsafe { networkHandler.deref_handler().client_shutdown() };
+        }
     }
 
     pub fn cleanup(&mut self) {
@@ -782,7 +781,8 @@ impl NetClient {
             netplay.player_disconnected = [false; 4];
             netplay.last_confirmed_input = 0xFF;
             netplay.current_input_counter = 0;
-            netplay.local_playerdata_store_time = [SystemTime::now(); 256];
+            netplay.local_playerdata_store_count = netplay.local_playerdata_store_count.wrapping_add(1);
+            netplay.local_playerdata_store_time = [netplay.local_playerdata_store_count; 256];
 
             if netplay.theHostIsMe {
                 self.set_as_last_sent_message(NET_P2G_SYNC_OK);
@@ -860,7 +860,7 @@ impl NetClient {
 
             let mut missed_frames: u32 = pkg.delay;
             if !netplay.theHostIsMe {
-                missed_frames = missed_frames.wrapping_add(self.foreign_gamehost.average_rtt() / 2);
+                missed_frames = missed_frames.wrapping_add(net_record::value_u32("rtt", || self.foreign_gamehost.average_rtt()) / 2);
             }
             missed_frames /= WAITTIME as u32;
 
@@ -979,14 +979,14 @@ impl NetClient {
     fn connect_lobby(&mut self, hostname: &str, port: u16) -> bool {
         unsafe {
             netplay.connectSuccessful = false;
-            networkHandler.deref_handler().connect_to_lobby_server(hostname, port)
+            net_record::value_bool("connect_lobby", || networkHandler.deref_handler().connect_to_lobby_server(hostname, port))
         }
     }
 
     fn connect_game_host(&mut self, hostname: &str, port: u16) -> bool {
         unsafe {
             netplay.connectSuccessful = false;
-            networkHandler.deref_handler().connect_to_foreign_game_host(hostname, port)
+            net_record::value_bool("connect_game_host", || networkHandler.deref_handler().connect_to_foreign_game_host(hostname, port))
         }
     }
 
@@ -1254,10 +1254,8 @@ impl NetGameHost {
 
         self.foreign_lobbyserver = lobbyserver;
 
-        unsafe {
-            if !networkHandler.deref_handler().gamehost_restart() {
-                return false;
-            }
+        if !net_record::value_bool("gamehost_restart", || unsafe { networkHandler.deref_handler().gamehost_restart() }) {
+            return false;
         }
 
         self.active = true;
@@ -1267,7 +1265,7 @@ impl NetGameHost {
 
     pub fn update(&mut self) {
         if self.active {
-            unsafe { networkHandler.deref_handler().gamehost_listen(self) };
+            net_record::listen(Side::Host, self, |handler| unsafe { networkHandler.deref_handler().gamehost_listen(handler) });
         }
     }
 
@@ -1288,7 +1286,9 @@ impl NetGameHost {
             self.last_processed_input_id[p] = 0xFF;
         }
 
-        unsafe { networkHandler.deref_handler().gamehost_shutdown() };
+        if !net_record::replaying() {
+            unsafe { networkHandler.deref_handler().gamehost_shutdown() };
+        }
         self.active = false;
         println!("[net] GameHost stopped.");
     }
@@ -1306,7 +1306,7 @@ impl NetGameHost {
     fn send_sync_messages(&mut self) {
         println!("[net] Prepare launching the game...");
 
-        RandomNumberGenerator::generator().reseed(unsafe { libc_time() } as u32);
+        RandomNumberGenerator::generator().reseed(net_record::value_u32("time", || unsafe { libc_time() } as u32));
         crate::smw::gs_gameplay::set_game_mode_settings_from_menu();
         let settings = game_mode_settings_package();
         let pkg = pkgs::StartSync::new(RANDOM_INT(32767) as u32);
@@ -1351,7 +1351,9 @@ impl NetGameHost {
 
         for c in 0..self.expected_client_count as usize {
             let (h, p) = (self.expected_clients[c].host, self.expected_clients[c].port);
-            unsafe { networkHandler.deref_handler().nat_punch(h, p) };
+            if !net_record::replaying() {
+                unsafe { networkHandler.deref_handler().nat_punch(h, p) };
+            }
         }
     }
 
@@ -1508,7 +1510,7 @@ impl NetGameHost {
 
             game_values.gamepowerups[playerID as usize] = -1;
 
-            let pkg = gpkgs::StartPowerup::new(playerID, powerupused as u8, player.average_rtt() / 2);
+            let pkg = gpkgs::StartPowerup::new(playerID, powerupused as u8, net_record::value_u32("rtt", || player.average_rtt()) / 2);
             for c in 0..self.expected_client_count as usize {
                 if !self.clients[c].is_null() {
                     self.clients[c].send_reliable(pkg.as_bytes());
@@ -1729,7 +1731,9 @@ pub struct Networking {
 
     pub local_input_buffer: VecDeque<COutputControl>,
     pub local_playerdata_buffer: VecDeque<Net_IndexedPlayerData>,
-    pub local_playerdata_store_time: [nettimepoint; 256],
+    /// When each input's player data was stored, as a count of stores.
+    pub local_playerdata_store_time: [u32; 256],
+    pub local_playerdata_store_count: u32,
 
     /// The sync's seed; every client reseeds with it again when the match starts.
     pub common_random_seed: u32,
@@ -1780,7 +1784,8 @@ impl Networking {
             player_disconnected: [false; 4],
             local_input_buffer: VecDeque::new(),
             local_playerdata_buffer: VecDeque::new(),
-            local_playerdata_store_time: [SystemTime::UNIX_EPOCH; 256],
+            local_playerdata_store_time: [0; 256],
+            local_playerdata_store_count: 0,
             common_random_seed: 0,
             start_waiting: false,
             start_waited_since: 0,
@@ -1788,4 +1793,185 @@ impl Networking {
             _alias: Aliased::new(),
         }
     }
+}
+
+/****************************
+    Checkpoints
+****************************/
+
+impl Field for PeerInfo {
+    fn io(&mut self, s: &mut Snap) {
+        s.io(&mut self.host);
+        s.io(&mut self.port);
+        s.io(&mut self.player_id);
+        s.io(&mut self.key);
+    }
+}
+
+impl Field for LastMessage {
+    fn io(&mut self, s: &mut Snap) {
+        s.io(&mut self.packageType);
+        s.io(&mut self.timestamp);
+    }
+}
+
+impl Field for COutputControl {
+    fn io(&mut self, s: &mut Snap) {
+        for key in self.keys.iter_mut() {
+            s.io(&mut key.fDown);
+            s.io(&mut key.fPressed);
+        }
+    }
+}
+
+impl Field for Net_PlayerData {
+    fn io(&mut self, s: &mut Snap) {
+        s.io(&mut self.x);
+        s.io(&mut self.y);
+        s.io(&mut self.xvel);
+        s.io(&mut self.yvel);
+    }
+}
+
+impl Field for Net_IndexedPlayerData {
+    fn io(&mut self, s: &mut Snap) {
+        s.io(&mut self.input_id);
+        s.io(&mut self.data);
+    }
+}
+
+impl Field for Net_AllPlayerData {
+    fn io(&mut self, s: &mut Snap) {
+        s.io(&mut self.player);
+        s.io(&mut self.player_input);
+    }
+}
+
+impl Field for RawPlayerAddress {
+    fn io(&mut self, s: &mut Snap) {
+        s.io(&mut self.host);
+        s.io(&mut self.port);
+        s.io(&mut self.sync_ok);
+        s.io(&mut self.loaded);
+    }
+}
+
+impl Field for Room {
+    fn io(&mut self, s: &mut Snap) {
+        s.io(&mut self.roomID);
+        s.io(&mut self.name);
+        s.io(&mut self.playerNames);
+        s.io(&mut self.hostPlayerNumber);
+        s.io(&mut self.gamemodeID);
+        s.io(&mut self.gamemodeGoal);
+    }
+}
+
+/// A peer as its address; a segment replay's peers are `ReplayPeer`s like the replayed events'.
+fn peer_io(s: &mut Snap, peer: &mut Ptr<dyn NetPeer>) {
+    let mut info = (!peer.is_null()).then(|| net_record::info(&**peer));
+    s.io(&mut info);
+    if s.loading() {
+        *peer = match info {
+            Some(info) => Ptr::from_box(Box::new(ReplayPeer(info)) as Box<dyn NetPeer>),
+            None => Ptr::null(),
+        };
+    }
+}
+
+/// The skin a net game's remote player plays with, as `MenuState::start_game` loaded it.
+pub fn net_skin_path(player: usize) -> Option<String> {
+    unsafe {
+        if !netplay.active || player == netplay.remotePlayerNumber as usize {
+            return None;
+        }
+    }
+    let path = format!("{}net_skin{}.bmp", get_home_directory(), player);
+    Path::new(&path).exists().then_some(path)
+}
+
+/// An online match's checkpoint (smw/checkpoint.rs): the net session, its peers and the files the host sent.
+pub fn checkpoint(s: &mut Snap) {
+    unsafe {
+        let home = get_home_directory();
+        let mut files: Vec<(String, Vec<u8>)> = Vec::new();
+        if !s.loading() {
+            let mut names = Vec::new();
+            if netplay.mapfilepath == home.clone() + "net_last.map" {
+                names.push("net_last.map".to_string());
+            }
+            for k in 0..4 {
+                if game_values.playercontrol[k] > 0 && k != netplay.remotePlayerNumber as usize {
+                    names.push(format!("net_skin{}.bmp", k));
+                }
+            }
+            files = names.into_iter().filter_map(|n| Some((n.clone(), std::fs::read(home.clone() + &n).ok()?))).collect();
+        }
+        s.io(&mut files);
+        if s.loading() {
+            for (name, bytes) in &files {
+                if name == "net_last.map" || (name.starts_with("net_skin") && name.ends_with(".bmp") && !name.contains('/')) {
+                    let _ = std::fs::write(home.clone() + name, bytes);
+                }
+            }
+        }
+
+        let n = &mut *netplay;
+        s.io(&mut n.active);
+        s.io(&mut n.connectSuccessful);
+        s.io(&mut n.joinSuccessful);
+        s.io(&mut n.gameRunning);
+        s.io(&mut n.currentMenuChanged);
+        s.io(&mut n.operationInProgress);
+        s.io(&mut n.myPlayerName);
+        s.io(&mut n.currentRoom);
+        let mut map = portable_path(&n.mapfilepath);
+        s.io(&mut map);
+        n.mapfilepath = local_path(&map);
+        s.io(&mut n.theHostIsMe);
+        s.io(&mut n.remotePlayerNumber);
+        s.io(&mut n.hostPlayerNumber);
+        s.io(&mut n.netPlayerInput.outputControls);
+        s.io(&mut n.waitingForPowerupTrigger);
+        s.io(&mut n.allowMapCollisionEvent);
+        s.io(&mut n.gamestate_changed);
+        s.io(&mut n.frames_since_last_gamestate);
+        s.io(&mut n.previous_playerdata);
+        s.io(&mut n.latest_playerdata);
+        s.io(&mut n.last_confirmed_input);
+        s.io(&mut n.current_input_counter);
+        s.io(&mut n.remote_input_buffer);
+        s.io(&mut n.player_disconnected);
+        s.io(&mut n.local_input_buffer);
+        s.io(&mut n.local_playerdata_buffer);
+        s.io(&mut n.local_playerdata_store_time);
+        s.io(&mut n.local_playerdata_store_count);
+        s.io(&mut n.common_random_seed);
+        s.io(&mut n.start_waiting);
+        s.io(&mut n.start_waited_since);
+        s.io(&mut n.gamestate_received);
+        s.io(&mut *(&raw mut backup_playercontrol));
+
+        let c = &mut n.client;
+        s.io(&mut c.lastSentMessage);
+        s.io(&mut c.lastReceivedMessage);
+        peer_io(s, &mut c.foreign_lobbyserver);
+        peer_io(s, &mut c.foreign_gamehost);
+
+        let g = &mut c.local_gamehost;
+        s.io(&mut g.lastSentMessage);
+        s.io(&mut g.lastReceivedMessage);
+        s.io(&mut g.active);
+        s.io(&mut g.current_server_tick);
+        for peer in g.clients.iter_mut() {
+            peer_io(s, peer);
+        }
+        peer_io(s, &mut g.foreign_lobbyserver);
+        s.io(&mut g.expected_clients);
+        s.io(&mut g.expected_client_count);
+        s.io(&mut g.next_free_client_slot);
+        s.io(&mut g.last_processed_input_id);
+    }
+    crate::smw::net_random::checkpoint(s);
+    crate::smw::net_outcomes::checkpoint(s);
 }

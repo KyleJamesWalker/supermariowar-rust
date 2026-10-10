@@ -2437,7 +2437,8 @@ impl GameplayState {
                         pdata.data.xvel = player.velx;
                         pdata.data.yvel = player.vely;
                         netplay.local_playerdata_buffer.push_back(pdata);
-                        netplay.local_playerdata_store_time[netplay.current_input_counter as usize] = std::time::SystemTime::now();
+                        netplay.local_playerdata_store_count = netplay.local_playerdata_store_count.wrapping_add(1);
+                        netplay.local_playerdata_store_time[netplay.current_input_counter as usize] = netplay.local_playerdata_store_count;
                         netplay.current_input_counter = netplay.current_input_counter.wrapping_add(1);
 
                         if netplay.gamestate_changed {

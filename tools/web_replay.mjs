@@ -55,7 +55,7 @@ const settings = {};
 if (directive('options')) {
     settings['options.bin'] = readFileSync(join(dirname(resolve(replayArg)), directive('options'))).toString('base64');
 }
-for (const [key, file] of [['options_b64', 'options.bin'], ['controls_b64', 'controls.sdl2.bin']]) {
+for (const [key, file] of [['options_b64', 'options.bin'], ['controls_b64', 'controls.sdl2.bin'], ['servers_b64', 'servers.toml']]) {
     if (directive(key)) settings[file] = directive(key);
 }
 if (Object.keys(settings).length) env.HOME = '/replay-home';
