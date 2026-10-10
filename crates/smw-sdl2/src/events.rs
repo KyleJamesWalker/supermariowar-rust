@@ -20,6 +20,14 @@ pub unsafe fn poll_keep_last(event: *mut SDL_Event) -> i32 {
     result
 }
 
+/// `SDL_PollEvent`, normalized.
+pub fn poll_input() -> Option<smw_platform::Input> {
+    unsafe {
+        let mut event: SDL_Event = std::mem::zeroed();
+        (sdl2::sys::SDL_PollEvent(&mut event) != 0).then(|| crate::input::from_sdl(&event))
+    }
+}
+
 /// `SDL_WaitEvent`.
 pub unsafe fn wait(event: *mut SDL_Event) -> i32 {
     sdl2::sys::SDL_WaitEvent(event)
