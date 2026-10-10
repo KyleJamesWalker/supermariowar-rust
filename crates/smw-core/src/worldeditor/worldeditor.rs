@@ -1540,7 +1540,7 @@ pub fn editor_edit() -> i32 {
                                 let ix: i16 = ((iCol as i32 - draw_offset_col) * TILESIZE + draw_offset_x) as i16;
                                 let iy: i16 = ((iRow as i32 - draw_offset_row) * TILESIZE + draw_offset_y) as i16;
                                 let mut rr = r(ix as i32, iy as i32, 32, 32);
-                                SDL_FillRect(blitdest, &mut rr, color);
+                                crate::common::gfx::blit::fill_rect(blitdest, &mut rr, color);
 
                                 rm.spr_worldforegroundspecial[0].draw_src(ix as i32, iy as i32, &r(((iBoundary % 10) as i32) << 5, ((iBoundary / 10) as i32) << 5, 32, 32));
                             }
@@ -1561,7 +1561,7 @@ pub fn editor_edit() -> i32 {
                                 let ix: i16 = ((iCol as i32 - draw_offset_col) * TILESIZE + draw_offset_x) as i16;
                                 let iy: i16 = ((iRow as i32 - draw_offset_row) * TILESIZE + draw_offset_y) as i16;
                                 let mut rr = r(ix as i32, iy as i32, 32, 32);
-                                SDL_FillRect(blitdest, &mut rr, color);
+                                crate::common::gfx::blit::fill_rect(blitdest, &mut rr, color);
 
                                 rm.spr_worldforegroundspecial[0].draw_src(ix as i32, iy as i32, &r(((iType % 10) as i32) << 5, ((iType / 10) as i32) << 5, 32, 32));
                             }
@@ -1583,7 +1583,7 @@ pub fn editor_edit() -> i32 {
                         let iy: i16 = ((vehicle.currentTile.y as i32 - draw_offset_row) * TILESIZE + draw_offset_y) as i16;
 
                         let mut rr = r(ix as i32, iy as i32, 32, 32);
-                        SDL_FillRect(blitdest, &mut rr, color);
+                        crate::common::gfx::blit::fill_rect(blitdest, &mut rr, color);
 
                         rm.spr_worldvehicle[0].draw_src(ix as i32, iy as i32, &r((vehicle.iDrawDirection as i32) << 5, (vehicle.iDrawSprite as i32) << 5, 32, 32));
 
@@ -2205,10 +2205,10 @@ pub fn updateworldsurface() {
 pub fn drawmap(_fScreenshot: bool, _iBlockSize: i16) {
     unsafe {
         if fNeedBlackBackground {
-            SDL_FillRect(screen, null(), 0x0);
+            crate::common::gfx::blit::fill_rect(screen, null(), 0x0);
         }
 
-        SDL_UpperBlit(sMapSurface, &rectSrcSurface, blitdest, &mut rectDstSurface);
+        crate::common::gfx::blit::upper_blit(sMapSurface, &rectSrcSurface, blitdest, &mut rectDstSurface);
     }
 }
 
@@ -2444,7 +2444,7 @@ pub fn editor_boundary() -> i32 {
 
             let color = SDL_MapRGB((*blitdest).format, 255, 0, 255);
             let mut rr = r(0, 0, 320, 320);
-            SDL_FillRect(blitdest, &mut rr, color);
+            crate::common::gfx::blit::fill_rect(blitdest, &mut rr, color);
 
             rm.spr_worldforegroundspecial[0].draw_src(0, 0, &r(0, 0, 320, 320));
 
@@ -2562,7 +2562,7 @@ pub fn editor_water() -> i32 {
                 }
             }
 
-            SDL_FillRect(screen, null(), 0x0);
+            crate::common::gfx::blit::fill_rect(screen, null(), 0x0);
 
             for iWater in 0..3i32 {
                 rm.spr_worldbackground[0].draw_src(iWater << 5, 0, &r(512 + (iWater << 7), 0, 32, 32));
@@ -2646,7 +2646,7 @@ pub fn editor_background() -> i32 {
                 }
             }
 
-            SDL_FillRect(screen, null(), 0x0);
+            crate::common::gfx::blit::fill_rect(screen, null(), 0x0);
 
             rm.spr_worldbackground[0].draw_src(0, 0, &r(iPage as i32 * 640, 32, 640, 480));
 
@@ -2707,7 +2707,7 @@ pub fn editor_stageforeground() -> i32 {
                 }
             }
 
-            SDL_FillRect(screen, null(), 0x0);
+            crate::common::gfx::blit::fill_rect(screen, null(), 0x0);
 
             for iRow in 0..10i32 {
                 for iCol in 0..10i32 {
@@ -2767,7 +2767,7 @@ pub fn editor_bridges() -> i32 {
                 }
             }
 
-            SDL_FillRect(screen, null(), 0x0);
+            crate::common::gfx::blit::fill_rect(screen, null(), 0x0);
 
             rm.spr_worldforegroundspecial[0].draw_src(0, 0, &r(320, 224, 128, 32));
 
@@ -2827,7 +2827,7 @@ pub fn editor_structureforeground() -> i32 {
                 }
             }
 
-            SDL_FillRect(screen, null(), 0x0);
+            crate::common::gfx::blit::fill_rect(screen, null(), 0x0);
 
             rm.spr_worldforeground[0].draw_src(0, 0, &r(0, 0, 416, 480));
             rm.spr_worldforeground[0].draw_src(416, 0, &r(512, 0, 32, 480));
@@ -2882,7 +2882,7 @@ pub fn editor_pathsprite() -> i32 {
                 }
             }
 
-            SDL_FillRect(screen, null(), 0x0);
+            crate::common::gfx::blit::fill_rect(screen, null(), 0x0);
 
             for iPath in 0..8i32 {
                 rm.spr_worldpaths[0].draw_src(iPath << 5, 0, &r((iPath % 4) * 160, (iPath / 4) * 320, 32, 192));
@@ -3047,7 +3047,7 @@ pub fn editor_path() -> i32 {
                 }
             }
 
-            SDL_FillRect(screen, null(), 0x0);
+            crate::common::gfx::blit::fill_rect(screen, null(), 0x0);
             spr_path.draw_src(0, 0, &r(0, 0, 480, 32));
 
             DrawMessage();
@@ -3848,7 +3848,7 @@ pub fn editor_stage() -> i32 {
                     let iy: i16 = ((iStage / 20) << 5) as i16;
 
                     let mut rr = r(ix as i32, iy as i32, 32, 32);
-                    SDL_FillRect(blitdest, &mut rr, color);
+                    crate::common::gfx::blit::fill_rect(blitdest, &mut rr, color);
 
                     rm.spr_worldforegroundspecial[0].draw_src(ix as i32, iy as i32, &r((iStage % 10) << 5, (iStage / 10) << 5, 32, 32));
                 }
@@ -3874,7 +3874,7 @@ pub fn editor_stage() -> i32 {
                     let iy: i16 = 20;
 
                     let mut rr = r(ix as i32, iy as i32, 32, 32);
-                    SDL_FillRect(blitdest, &mut rr, color);
+                    crate::common::gfx::blit::fill_rect(blitdest, &mut rr, color);
 
                     rm.spr_worldforegroundspecial[0].draw_src(ix as i32, iy as i32, &r(((iEditStage % 10) as i32) << 5, ((iEditStage / 10) as i32) << 5, 32, 32));
                 }

@@ -155,7 +155,7 @@ impl MovingPlatform {
                     print!("\n ERROR: Couldn't set ColorKey for moving platform: {}\n", sdl_error());
                 }
 
-                SDL_FillRect(s, null(), SDL_MapRGB((*s).format, 255, 0, 255));
+                crate::common::gfx::blit::fill_rect(s, null(), SDL_MapRGB((*s).format, 255, 0, 255));
             }
 
             for iSurface in 0..2 {
