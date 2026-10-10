@@ -113,3 +113,27 @@ pub unsafe fn to_sdl_surface(s: &soft_surface::Surface) -> *mut SDL_Surface {
     SDL_SetSurfaceBlendMode(surf, mode);
     surf
 }
+
+/// `SDL_UpperBlitScaled`.
+pub unsafe fn upper_blit_scaled(src: *mut SDL_Surface, src_rect: *const SDL_Rect, dst: *mut SDL_Surface, dst_rect: *mut SDL_Rect) -> i32 {
+    if rust_blit() && src != dst && is_argb8888(src) && is_argb8888(dst) {
+        if let Some(state) = blit_state(src) {
+            let spitch = (*src).pitch as usize / 4;
+            let view = Pixels {
+                w: (*src).w,
+                h: (*src).h,
+                pitch: spitch,
+                pixels: std::slice::from_raw_parts((*src).pixels as *const u32, spitch * (*src).h as usize),
+            };
+            let sr = src_rect.as_ref().map(|r| Rect::new(r.x, r.y, r.w, r.h));
+            let mut dr = dst_rect.as_ref().map(|r| Rect::new(r.x, r.y, r.w, r.h));
+            if soft_surface::blit_scaled(&view, &state, sr.as_ref(), &mut pixels_mut(dst), dr.as_mut()) {
+                if let (Some(out), Some(r)) = (dst_rect.as_mut(), dr) {
+                    *out = SDL_Rect { x: r.x, y: r.y, w: r.w, h: r.h };
+                }
+                return 0;
+            }
+        }
+    }
+    SDL_UpperBlitScaled(src, src_rect, dst, dst_rect)
+}
