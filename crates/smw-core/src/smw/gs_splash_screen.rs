@@ -1,5 +1,6 @@
 //! Port of src/smw/GSSplashScreen.cpp
 
+use smw_platform::InputEvent;
 use crate::common::game::App;
 use crate::common::game_values::{if_sound_on_play, AppState};
 use crate::common::gfx::gfx_changefullscreen;
@@ -18,7 +19,6 @@ use sdl2::sys::{SDL_Event, SDL_EventType, SDL_FillRect, SDL_KeyCode, SDL_Keymod}
 //that's a bunch of ugly code, maybe i'll throw it out again
 
 pub struct SplashScreenState {
-    loop_event: SDL_Event,
     menu_credits: Ptr<gfxSprite>,
     alpha: i32,
     state: i32,
@@ -32,7 +32,6 @@ static mut ss: Option<SplashScreenState> = None;
 impl SplashScreenState {
     fn new() -> Self {
         SplashScreenState { _alias: Aliased::new(),
-            loop_event: unsafe { std::mem::zeroed() },
             menu_credits: Ptr::null(),
             alpha: 255,
             state: 7,
@@ -69,31 +68,29 @@ impl GameState for SplashScreenState {
 
             // TODO: move this out of this method maybe
 
-            while smw_sdl2::events::poll(&mut self.loop_event) != 0 {
-                let event_type = self.loop_event.type_;
-                if event_type == SDL_EventType::SDL_QUIT as u32 {
+            while let Some(input) = smw_sdl2::events::poll_input() {
+                if input.event == InputEvent::Quit {
                     game_values.appstate = AppState::Quit;
                     return;
-                } else if event_type == SDL_EventType::SDL_KEYDOWN as u32 {
-                    let key = self.loop_event.key.keysym;
-                    let alt = (key.mod_ as u32) & (SDL_Keymod::KMOD_LALT as u32 | SDL_Keymod::KMOD_RALT as u32) != 0;
-                    if key.sym == SDL_KeyCode::SDLK_RETURN as i32 {
+                } else if let InputEvent::Key { key, mods, down: true, .. } = input.event {
+                    let alt = (mods as u32) & (SDL_Keymod::KMOD_LALT as u32 | SDL_Keymod::KMOD_RALT as u32) != 0;
+                    if key.0 == SDL_KeyCode::SDLK_RETURN as i32 {
                         if alt {
                             game_values.fullscreen = !game_values.fullscreen;
                             gfx_changefullscreen(game_values.fullscreen);
                             blitdest = screen;
                         }
-                    } else if key.sym == SDL_KeyCode::SDLK_F4 as i32 {
+                    } else if key.0 == SDL_KeyCode::SDLK_F4 as i32 {
                         if alt {
                             game_values.appstate = AppState::Quit;
                             return;
                         }
-                    } else if key.sym == SDL_KeyCode::SDLK_INSERT as i32 {
+                    } else if key.0 == SDL_KeyCode::SDLK_INSERT as i32 {
                         crate::common::gfx::gfx_take_screenshot();
                     }
                 }
 
-                game_values.playerInput.update(self.loop_event, 1);
+                game_values.playerInput.update_input(&input, 1);
             }
 
             // Not in upstream: a press before load_game_data() would open the menus without their graphics.

@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_InputControlContainer.cpp
 
+use smw_platform::{InputEvent, MouseEvent};
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::input::*;
 use crate::common::ui::menu_code::*;
@@ -141,32 +142,39 @@ impl UI_ControlTrait for MI_InputControlField {
                     None => return MENU_CODE_NONE,
                 }
 
-                game_values.playerInput.update(event, 1);
+                let input = smw_sdl2::input::from_sdl(&event);
+                game_values.playerInput.update_input(&input, 1);
 
-                let event_type = event.type_;
-                let is = |t: SDL_EventType| event_type == t as u32;
+                use InputEvent as E;
+                let ev = &input.event;
+                let key_sym = if let E::Key { key, .. } = *ev { key.0 } else { 0 };
+                let (motion_xrel, motion_yrel) = if let E::Mouse { event: MouseEvent::Motion { xrel, yrel, .. }, .. } = *ev { (xrel, yrel) } else { (0, 0) };
+                let mouse_button = if let E::Mouse { event: MouseEvent::Button { button, .. }, .. } = *ev { button } else { 0 };
+                let jhat_value = if let E::PadHat { value, .. } = *ev { value } else { 0 };
+                let (jaxis_axis, jaxis_value) = if let E::PadAxis { axis, value, .. } = *ev { (axis, value) } else { (0, 0) };
+                let jbutton_button = if let E::PadButton { button, .. } = *ev { button } else { 0 };
 
                 if self.iDevice == DEVICE_KEYBOARD {
-                    if is(SDL_EventType::SDL_KEYDOWN) {
-                        let key: SDL_Keycode = event.key.keysym.sym;
+                    if matches!(ev, E::Key { down: true, .. }) {
+                        let key: SDL_Keycode = key_sym;
 
                         self.set_key_device(self.iKey, key, self.iDevice);
                         done = true;
-                    } else if is(SDL_EventType::SDL_MOUSEMOTION) {
-                        let xmag = event.motion.xrel.abs() as i16;
-                        let ymag = event.motion.yrel.abs() as i16;
+                    } else if matches!(ev, E::Mouse { event: MouseEvent::Motion { .. }, .. }) {
+                        let xmag = motion_xrel.abs() as i16;
+                        let ymag = motion_yrel.abs() as i16;
 
                         if (xmag as i32) < MOUSE_X_DEAD_ZONE && (ymag as i32) < MOUSE_Y_DEAD_ZONE {
                             continue;
                         }
 
                         let key: SDL_Keycode = if xmag > ymag {
-                            if event.motion.xrel < 0 {
+                            if motion_xrel < 0 {
                                 MOUSE_LEFT
                             } else {
                                 MOUSE_RIGHT
                             }
-                        } else if event.motion.yrel < 0 {
+                        } else if motion_yrel < 0 {
                             MOUSE_UP
                         } else {
                             MOUSE_DOWN
@@ -176,18 +184,18 @@ impl UI_ControlTrait for MI_InputControlField {
                             self.set_key_device(self.iKey, key, self.iDevice);
                             done = true;
                         }
-                    } else if is(SDL_EventType::SDL_MOUSEBUTTONDOWN) {
-                        let key: SDL_Keycode = event.button.button as i32 + MOUSE_BUTTON_START;
+                    } else if matches!(ev, E::Mouse { event: MouseEvent::Button { down: true, .. }, .. }) {
+                        let key: SDL_Keycode = mouse_button as i32 + MOUSE_BUTTON_START;
                         self.set_key_device(self.iKey, key, self.iDevice);
                         done = true;
                     }
-                } else if is(SDL_EventType::SDL_KEYDOWN) {
-                    if event.key.keysym.sym == SDL_KeyCode::SDLK_ESCAPE as i32 {
+                } else if matches!(ev, E::Key { down: true, .. }) {
+                    if key_sym == SDL_KeyCode::SDLK_ESCAPE as i32 {
                         done = true;
                     }
-                } else if is(SDL_EventType::SDL_JOYHATMOTION) {
+                } else if matches!(ev, E::PadHat { .. }) {
                     let mut key: SDL_Keycode = KEY_NONE;
-                    let value = event.jhat.value as u32;
+                    let value = jhat_value as u32;
 
                     if value & SDL_HAT_UP as u32 != 0 {
                         key = JOY_HAT_UP;
@@ -203,29 +211,29 @@ impl UI_ControlTrait for MI_InputControlField {
                         self.set_key_device(self.iKey, key, self.iDevice);
                         done = true;
                     }
-                } else if is(SDL_EventType::SDL_JOYAXISMOTION) {
+                } else if matches!(ev, E::PadAxis { .. }) {
                     let mut key: SDL_Keycode = KEY_NONE;
-                    let value = event.jaxis.value as i32;
+                    let value = jaxis_value as i32;
 
-                    if event.jaxis.axis == 0 {
+                    if jaxis_axis == 0 {
                         if value < -JOYSTICK_DEAD_ZONE {
                             key = JOY_STICK_1_LEFT;
                         } else if value > JOYSTICK_DEAD_ZONE {
                             key = JOY_STICK_1_RIGHT;
                         }
-                    } else if event.jaxis.axis == 1 {
+                    } else if jaxis_axis == 1 {
                         if value < -JOYSTICK_DEAD_ZONE {
                             key = JOY_STICK_1_UP;
                         } else if value > JOYSTICK_DEAD_ZONE {
                             key = JOY_STICK_1_DOWN;
                         }
-                    } else if event.jaxis.axis == 2 {
+                    } else if jaxis_axis == 2 {
                         if value < -JOYSTICK_DEAD_ZONE {
                             key = JOY_STICK_2_LEFT;
                         } else if value > JOYSTICK_DEAD_ZONE {
                             key = JOY_STICK_2_RIGHT;
                         }
-                    } else if event.jaxis.axis == 3 {
+                    } else if jaxis_axis == 3 {
                         if value < -JOYSTICK_DEAD_ZONE {
                             key = JOY_STICK_2_UP;
                         } else if value > JOYSTICK_DEAD_ZONE {
@@ -237,8 +245,8 @@ impl UI_ControlTrait for MI_InputControlField {
                         self.set_key_device(self.iKey, key, self.iDevice);
                         done = true;
                     }
-                } else if is(SDL_EventType::SDL_JOYBUTTONDOWN) && event.jbutton.state as u32 == SDL_PRESSED as u32 {
-                    let key: SDL_Keycode = event.jbutton.button as i32 + JOY_BUTTON_START;
+                } else if matches!(ev, E::PadButton { down: true, .. }) {
+                    let key: SDL_Keycode = jbutton_button as i32 + JOY_BUTTON_START;
                     self.set_key_device(self.iKey, key, self.iDevice);
                     done = true;
                 }
