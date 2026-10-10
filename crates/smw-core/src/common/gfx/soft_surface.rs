@@ -28,6 +28,13 @@ impl Rect {
         }
         Some(Rect { x, y, w, h })
     }
+
+    /// SDL3's `SDL_GetRectIntersection` result, written even when it is empty.
+    pub fn intersect_raw(&self, other: &Rect) -> Rect {
+        let x = self.x.max(other.x);
+        let y = self.y.max(other.y);
+        Rect { x, y, w: (self.x + self.w).min(other.x + other.w) - x, h: (self.y + self.h).min(other.y + other.h) - y }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -305,6 +312,123 @@ fn lower_blit(src: &Pixels, state: &BlitState, sr: &Rect, dst: &mut PixelsMut, d
     }
 }
 
+/// sdl2-compat's `SDL_UpperBlitScaled` for a blending source without a color key or alpha modulation, the state of
+/// every stretched sprite. Other states return `false` without drawing.
+pub fn blit_scaled(src: &Pixels, state: &BlitState, src_rect: Option<&Rect>, dst: &mut PixelsMut, dst_rect: Option<&mut Rect>) -> bool {
+    if state.blend != BlendMode::Blend || state.color_key.is_some() || state.alpha_mod != 255 {
+        return false;
+    }
+    let (src_w, src_h) = src_rect.map_or((src.w, src.h), |r| (r.w, r.h));
+    let (dst_w, dst_h) = dst_rect.as_ref().map_or((dst.w, dst.h), |r| (r.w, r.h));
+    if dst_w == src_w && dst_h == src_h {
+        blit(src, state, src_rect, dst, dst_rect);
+        return true;
+    }
+
+    let scaling_w = dst_w as f64 / src_w as f64;
+    let scaling_h = dst_h as f64 / src_h as f64;
+    let (mut dst_x0, mut dst_y0) = dst_rect.as_ref().map_or((0.0, 0.0), |r| (r.x as f64, r.y as f64));
+    let (mut dst_x1, mut dst_y1) = (dst_x0 + dst_w as f64, dst_y0 + dst_h as f64);
+    let (mut src_x0, mut src_y0) = src_rect.map_or((0.0, 0.0), |r| (r.x as f64, r.y as f64));
+    let (mut src_x1, mut src_y1) = (src_x0 + src_w as f64, src_y0 + src_h as f64);
+
+    // Fused, as clang compiles sdl2-compat on arm64.
+    if src_rect.is_some() {
+        if src_x0 < 0.0 {
+            dst_x0 = (-src_x0).mul_add(scaling_w, dst_x0);
+            src_x0 = 0.0;
+        }
+        if src_x1 > src.w as f64 {
+            dst_x1 = (-(src_x1 - src.w as f64)).mul_add(scaling_w, dst_x1);
+            src_x1 = src.w as f64;
+        }
+        if src_y0 < 0.0 {
+            dst_y0 = (-src_y0).mul_add(scaling_h, dst_y0);
+            src_y0 = 0.0;
+        }
+        if src_y1 > src.h as f64 {
+            dst_y1 = (-(src_y1 - src.h as f64)).mul_add(scaling_h, dst_y1);
+            src_y1 = src.h as f64;
+        }
+    }
+
+    let clip = dst.clip;
+    dst_x0 -= clip.x as f64;
+    dst_x1 -= clip.x as f64;
+    dst_y0 -= clip.y as f64;
+    dst_y1 -= clip.y as f64;
+    if dst_x0 < 0.0 {
+        src_x0 -= dst_x0 / scaling_w;
+        dst_x0 = 0.0;
+    }
+    if dst_x1 > clip.w as f64 {
+        src_x1 -= (dst_x1 - clip.w as f64) / scaling_w;
+        dst_x1 = clip.w as f64;
+    }
+    if dst_y0 < 0.0 {
+        src_y0 -= dst_y0 / scaling_h;
+        dst_y0 = 0.0;
+    }
+    if dst_y1 > clip.h as f64 {
+        src_y1 -= (dst_y1 - clip.h as f64) / scaling_h;
+        dst_y1 = clip.h as f64;
+    }
+    dst_x0 += clip.x as f64;
+    dst_x1 += clip.x as f64;
+    dst_y0 += clip.y as f64;
+    dst_y1 += clip.y as f64;
+
+    let round = |v: f64| v.round() as i32;
+    let mut final_src = Rect::new(round(src_x0), round(src_y0), round(src_x1 - src_x0), round(src_y1 - src_y0));
+    let mut final_dst = Rect::new(round(dst_x0), round(dst_y0), round(dst_x1 - dst_x0), round(dst_y1 - dst_y0));
+    final_src = Rect::new(0, 0, src.w, src.h).intersect_raw(&final_src);
+    final_dst = clip.intersect_raw(&final_dst);
+
+    if let Some(out) = dst_rect {
+        *out = final_dst;
+    }
+    if final_dst.w <= 0 || final_dst.h <= 0 || final_src.w <= 0 || final_src.h <= 0 {
+        return true;
+    }
+
+    // SDL_Blit_ARGB8888_ARGB8888_Blend_Scale.
+    let incy = ((final_src.h as u64) << 16) / final_dst.h as u64;
+    let incx = ((final_src.w as u64) << 16) / final_dst.w as u64;
+    let mut posy = incy / 2;
+    for row in 0..final_dst.h {
+        let srcy = (posy >> 16) as usize;
+        let s0 = (final_src.y as usize + srcy) * src.pitch + final_src.x as usize;
+        let d0 = (final_dst.y + row) as usize * dst.pitch + final_dst.x as usize;
+        let mut posx = incx / 2;
+        for col in 0..final_dst.w as usize {
+            let sp = src.pixels[s0 + (posx >> 16) as usize];
+            let d = &mut dst.pixels[d0 + col];
+            *d = blend_auto(sp, *d);
+            posx += incx;
+        }
+        posy += incy;
+    }
+    true
+}
+
+/// The blend of SDL3's generated blitters (`MULT_DIV_255`), without modulation.
+#[inline]
+fn blend_auto(src: u32, dst: u32) -> u32 {
+    let [mut sr, mut sg, mut sb, sa] = channels(src);
+    let [dr, dg, db, da] = channels(dst);
+    if sa < 255 {
+        sr = mult_div_255(sr, sa);
+        sg = mult_div_255(sg, sa);
+        sb = mult_div_255(sb, sa);
+    }
+    pack(
+        mult_div_255(255 - sa, dr) + sr,
+        mult_div_255(255 - sa, dg) + sg,
+        mult_div_255(255 - sa, db) + sb,
+        mult_div_255(255 - sa, da) + sa,
+    )
+}
+
 /// SDL3's `SDL_ConvertSurface` of an 8-bit indexed image to ARGB8888. The color key becomes alpha 0 in the
 /// key index's pixels, and the result blends without a color key.
 pub fn convert_indexed(w: i32, h: i32, pitch: usize, indices: &[u8], palette: &[[u8; 4]], key_index: Option<u8>) -> Surface {
@@ -505,6 +629,50 @@ mod tests {
         check_blits(BlendMode::Blend, true, Option::None, 4);
         for (i, m) in [0u8, 64, 128, 200].into_iter().enumerate() {
             check_blits(BlendMode::Blend, true, Some(m), 20 + i as u32);
+        }
+    }
+
+    #[test]
+    fn scaled_blend_matches_sdl() {
+        if !linked_sdl_is_sdl2_compat() {
+            eprintln!("scaled blits follow sdl2-compat; skipping on real SDL2");
+            return;
+        }
+        let mut rng = Rng::new(7);
+        for case in 0..1500 {
+            let (sw, sh) = (rng.range(1, 40), rng.range(1, 40));
+            let (dw, dh) = (rng.range(1, 40), rng.range(1, 40));
+            let src = random_surface(&mut rng, sw, sh);
+            let mut dst = random_surface(&mut rng, dw, dh);
+            if rng.next() % 3 == 0 {
+                dst.set_clip_rect(Some(&Rect::new(rng.range(-4, dw), rng.range(-4, dh), rng.range(0, 40), rng.range(0, 40))));
+            }
+            let src_rect = (rng.next() % 4 != 0)
+                .then(|| Rect::new(rng.range(-8, sw), rng.range(-8, sh), rng.range(1, 50), rng.range(1, 50)));
+            let dst_rect = (rng.next() % 4 != 0)
+                .then(|| Rect::new(rng.range(-30, dw + 4), rng.range(-30, dh + 4), rng.range(1, 60), rng.range(1, 60)));
+            unsafe {
+                let ssrc = to_sdl(&src);
+                let sdst = to_sdl(&dst);
+                let ssr = src_rect.map(|r| sdl_rect(&r));
+                let mut sdr = dst_rect.map(|r| sdl_rect(&r));
+                SDL_UpperBlitScaled(
+                    ssrc,
+                    ssr.as_ref().map_or(std::ptr::null(), |r| r as *const SDL_Rect),
+                    sdst,
+                    sdr.as_mut().map_or(std::ptr::null_mut(), |r| r as *mut SDL_Rect),
+                );
+                let mut rdr = dst_rect;
+                assert!(blit_scaled(&src.view(), &src.state(), src_rect.as_ref(), &mut dst.view_mut(), rdr.as_mut()));
+                if let Some(d) = first_difference(&dst.pixels, &sdl_pixels(sdst), dst.w) {
+                    panic!("scaled case {case} src {src_rect:?} dst {dst_rect:?}: {d}");
+                }
+                if let (Some(r), Some(s)) = (rdr, sdr) {
+                    assert_eq!((r.x, r.y, r.w, r.h), (s.x, s.y, s.w, s.h), "scaled dst rect, case {case} src {src_rect:?} dst {dst_rect:?} sizes {sw}x{sh} -> {dw}x{dh} clip {:?}", dst.clip);
+                }
+                SDL_FreeSurface(ssrc);
+                SDL_FreeSurface(sdst);
+            }
         }
     }
 
