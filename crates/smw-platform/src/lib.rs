@@ -11,10 +11,41 @@ pub struct Frame<'a> {
     pub pixels: &'a [u32],
 }
 
+/// A straight-alpha image for the overlay: R, G, B, A bytes per pixel, row by row.
+pub struct OverlayImage {
+    pub w: u32,
+    pub h: u32,
+    pub rgba: Vec<u8>,
+}
+
+/// One image drawn in window pixels, with its alpha and color modulation.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct OverlayQuad {
+    pub image: u16,
+    pub x: i32,
+    pub y: i32,
+    pub w: i32,
+    pub h: i32,
+    pub alpha: u8,
+    pub color: [u8; 3],
+}
+
+/// What the core draws over the game's picture, outside its 640x480 viewport: the Android touch controls. The images
+/// change only with `generation`, so a backend uploads them once per generation.
+pub struct Overlay {
+    pub generation: u64,
+    pub images: std::sync::Arc<[OverlayImage]>,
+    pub quads: Vec<OverlayQuad>,
+}
+
 pub trait Video {
     /// Creates the window. A backend that cannot panics with its error message, as the C++ throws.
     fn open(&mut self, fullscreen: bool);
-    fn present(&mut self, frame: Frame<'_>);
+    fn present(&mut self, frame: Frame<'_>, overlay: Option<&Overlay>);
+    /// The window's size in pixels, which the overlay is laid out in.
+    fn output_size(&self) -> (i32, i32);
+    /// The display's diagonal DPI, if the platform reports one.
+    fn display_dpi(&self) -> Option<f32>;
     fn set_fullscreen(&mut self, on: bool);
     fn set_title(&mut self, title: &str);
     fn show_error(&mut self, message: &str);
@@ -148,8 +179,14 @@ mod tests {
 
     impl Video for Null {
         fn open(&mut self, _: bool) {}
-        fn present(&mut self, frame: Frame<'_>) {
+        fn present(&mut self, frame: Frame<'_>, _: Option<&Overlay>) {
             assert_eq!(frame.pixels.len(), SCREEN_W * SCREEN_H);
+        }
+        fn output_size(&self) -> (i32, i32) {
+            (SCREEN_W as i32, SCREEN_H as i32)
+        }
+        fn display_dpi(&self) -> Option<f32> {
+            None
         }
         fn set_fullscreen(&mut self, _: bool) {}
         fn set_title(&mut self, _: &str) {}
@@ -210,7 +247,7 @@ mod tests {
 
         let pixels = vec![0u32; SCREEN_W * SCREEN_H];
         services.video.open(false);
-        services.video.present(Frame { pixels: &pixels });
+        services.video.present(Frame { pixels: &pixels }, None);
         assert_eq!(services.audio.load_sound(SoundId(3), &[0; 4]), Ok(250));
         services.audio.play(0, SoundId(3), -1);
         assert_eq!(*log.borrow(), ["load 3 4", "play 3 ch=0 loops=-1"]);

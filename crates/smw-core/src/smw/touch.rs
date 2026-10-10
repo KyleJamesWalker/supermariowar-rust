@@ -1,12 +1,10 @@
 //! Not in upstream: on-screen touch controls for Android (`SMW_TOUCH=1`), drawn beside the 4:3 picture. Like
 //! web/touch.js they press player 1's default keys, so recordings hold ordinary key input.
 
+use smw_platform::{Overlay, OverlayImage, OverlayQuad};
+use std::sync::Arc;
 use crate::common::path::get_home_directory;
-use sdl2::sys::{
-    SDL_BlendMode, SDL_CreateTexture, SDL_DestroyTexture, SDL_Event, SDL_EventType, SDL_GetDisplayDPI, SDL_GetKeyboardFocus, SDL_GetRendererOutputSize,
-    SDL_GetScancodeFromKey, SDL_KeyCode, SDL_PixelFormatEnum, SDL_Rect, SDL_RenderCopy, SDL_RenderSetLogicalSize, SDL_Renderer,
-    SDL_SetTextureAlphaMod, SDL_SetTextureBlendMode, SDL_SetTextureColorMod, SDL_Texture, SDL_TextureAccess, SDL_UpdateTexture, SDL_PRESSED, SDL_RELEASED,
-};
+use sdl2::sys::{SDL_Event, SDL_EventType, SDL_GetKeyboardFocus, SDL_GetScancodeFromKey, SDL_KeyCode, SDL_PRESSED, SDL_RELEASED};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Key {
@@ -328,7 +326,8 @@ struct Touch {
     visible: bool,
     alpha: f32,
     cutouts: Vec<Rect>,
-    textures: Vec<*mut SDL_Texture>,
+    images: Option<Arc<[OverlayImage]>>,
+    generation: u64,
 }
 
 static mut touch: Option<Touch> = None;
@@ -368,7 +367,7 @@ pub fn init() {
         first = session_on && !pads;
         if live {
             crate::smw::harness::record_touch();
-            touch = Some(Touch { controls: Controls::new(load_mode(), Layout::default()), visible: !pads, alpha: if pads { 0.0 } else { 1.0 }, cutouts: Vec::new(), textures: Vec::new() });
+            touch = Some(Touch { controls: Controls::new(load_mode(), Layout::default()), visible: !pads, alpha: if pads { 0.0 } else { 1.0 }, cutouts: Vec::new(), images: None, generation: 0 });
             println!("[touch] on, {}", if pads { "hidden while a pad is connected" } else { "player 1" });
         }
     }
@@ -443,34 +442,32 @@ pub fn flush() {
     }
 }
 
-/// Draws over the presented frame, outside the game's 640x480 logical viewport.
-pub fn draw(renderer: *mut SDL_Renderer) {
+/// What to draw over the presented frame, outside the game's 640x480 logical viewport.
+pub fn overlay() -> Option<Overlay> {
     unsafe {
-        let Some(t) = touch.as_mut() else { return };
-        let (mut w, mut h) = (0, 0);
-        SDL_GetRendererOutputSize(renderer, &mut w, &mut h);
+        let t = touch.as_mut()?;
+        let video = &crate::services::services().video;
+        let (w, h) = video.output_size();
         if w <= 0 || h <= 0 {
-            return;
+            return None;
         }
         let cutouts = CUTOUTS.lock().unwrap_or_else(|e| e.into_inner()).clone();
         if t.controls.layout.w != w as f32 || t.controls.layout.h != h as f32 || t.cutouts != cutouts {
             t.cutouts = cutouts.clone();
-            let mut dpi = 0.0;
-            let dp = if SDL_GetDisplayDPI(0, &mut dpi, std::ptr::null_mut(), std::ptr::null_mut()) == 0 && dpi > 0.0 { dpi / 160.0 } else { h as f32 / 400.0 };
+            let dp = match video.display_dpi() {
+                Some(dpi) => dpi / 160.0,
+                None => h as f32 / 400.0,
+            };
             t.controls.release_all();
             t.controls.layout = layout(w as f32, h as f32, dp, &cutouts);
-            for tex in t.textures.drain(..) {
-                SDL_DestroyTexture(tex);
-            }
-            t.textures = build_textures(renderer, &t.controls.layout);
+            t.images = Some(build_images(&t.controls.layout).into());
+            t.generation += 1;
         }
         t.alpha = if t.visible { (t.alpha + 0.2).min(1.0) } else { (t.alpha - 0.08).max(0.0) };
-        if t.alpha <= 0.0 || t.textures.len() != TEXTURES {
-            return;
+        if t.alpha <= 0.0 {
+            return None;
         }
-        SDL_RenderSetLogicalSize(renderer, 0, 0);
-        draw_controls(renderer, t);
-        SDL_RenderSetLogicalSize(renderer, 640, 480);
+        Some(Overlay { generation: t.generation, images: t.images.clone()?, quads: quads(t) })
     }
 }
 
@@ -490,14 +487,21 @@ const STICK_BASE: usize = 15;
 const STICK_KNOB: usize = 16;
 const TEXTURES: usize = 17;
 
-unsafe fn draw_controls(renderer: *mut SDL_Renderer, t: &Touch) {
+fn quads(t: &Touch) -> Vec<OverlayQuad> {
     let c = &t.controls;
     let l = c.layout;
+    let out = std::cell::RefCell::new(Vec::new());
+    let tint = std::cell::Cell::new([255u8; 3]);
     let put = |index: usize, x: f32, y: f32, w: f32, h: f32, alpha: f32| {
-        let tex = t.textures[index];
-        SDL_SetTextureAlphaMod(tex, (alpha * t.alpha * 255.0) as u8);
-        let dst = SDL_Rect { x: x.round() as i32, y: y.round() as i32, w: w.round() as i32, h: h.round() as i32 };
-        SDL_RenderCopy(renderer, tex, std::ptr::null(), &dst);
+        out.borrow_mut().push(OverlayQuad {
+            image: index as u16,
+            x: x.round() as i32,
+            y: y.round() as i32,
+            w: w.round() as i32,
+            h: h.round() as i32,
+            alpha: (alpha * t.alpha * 255.0) as u8,
+            color: tint.replace([255; 3]),
+        });
     };
     let circle = |index: usize, c: Circle, alpha: f32| put(index, c.x - c.r, c.y - c.r, 2.0 * c.r, 2.0 * c.r, alpha);
     let rect = |index: usize, r: Rect, alpha: f32| put(index, r.x, r.y, r.w, r.h, alpha);
@@ -511,11 +515,8 @@ unsafe fn draw_controls(renderer: *mut SDL_Renderer, t: &Touch) {
             let arm = 0.68 * d.r;
             let (x0, y0) = (d.x - d.r, d.y - d.r);
             for (i, (key, (cx, cy))) in [(Key::Up, (1.0, 0.0)), (Key::Down, (1.0, 2.0)), (Key::Left, (0.0, 1.0)), (Key::Right, (2.0, 1.0))].into_iter().enumerate() {
-                let tex = t.textures[ARM + i];
                 if lit & key.bit() != 0 {
-                    SDL_SetTextureColorMod(tex, 255, 204, 51);
-                } else {
-                    SDL_SetTextureColorMod(tex, 255, 255, 255);
+                    tint.set([255, 204, 51]);
                 }
                 put(ARM + i, x0 + cx * cell, y0 + cy * cell, arm, arm, 1.0);
             }
@@ -550,6 +551,7 @@ unsafe fn draw_controls(renderer: *mut SDL_Renderer, t: &Touch) {
         }
     }
     rect(if c.mode == Mode::Dpad { TOGGLE_DPAD } else { TOGGLE_STICK }, l.toggle, 1.0);
+    out.into_inner()
 }
 
 type Rgba = [f32; 4];
@@ -646,22 +648,9 @@ impl Canvas {
         }
     }
 
-    unsafe fn texture(&self, renderer: *mut SDL_Renderer) -> *mut SDL_Texture {
-        let tex = SDL_CreateTexture(
-            renderer,
-            SDL_PixelFormatEnum::SDL_PIXELFORMAT_ABGR8888 as u32,
-            SDL_TextureAccess::SDL_TEXTUREACCESS_STATIC as i32,
-            self.w as i32,
-            self.h as i32,
-        );
-        if tex.is_null() {
-            return tex;
-        }
-        // R, G, B, A bytes: ABGR8888 on a little-endian target.
-        let bytes: Vec<u8> = self.px.iter().flat_map(|p| p.map(|v| (v * 255.0).round() as u8)).collect();
-        SDL_UpdateTexture(tex, std::ptr::null(), bytes.as_ptr() as *const _, (self.w * 4) as i32);
-        SDL_SetTextureBlendMode(tex, SDL_BlendMode::SDL_BLENDMODE_BLEND);
-        tex
+    fn image(&self) -> OverlayImage {
+        let rgba = self.px.iter().flat_map(|p| p.map(|v| (v * 255.0).round() as u8)).collect();
+        OverlayImage { w: self.w as u32, h: self.h as u32, rgba }
     }
 }
 
@@ -687,7 +676,7 @@ fn glyph(ch: u8) -> Option<[u8; 7]> {
     })
 }
 
-unsafe fn build_textures(renderer: *mut SDL_Renderer, l: &Layout) -> Vec<*mut SDL_Texture> {
+fn build_images(l: &Layout) -> Vec<OverlayImage> {
     let dp = l.dp;
     let border = 2.0 * dp;
     let mut canvases = Vec::with_capacity(TEXTURES);
@@ -741,7 +730,7 @@ unsafe fn build_textures(renderer: *mut SDL_Renderer, l: &Layout) -> Vec<*mut SD
     knob.circle([1.0, 1.0, 1.0, 0.4], border, 0.5);
     canvases.push(knob);
 
-    canvases.iter().map(|c| c.texture(renderer)).collect()
+    canvases.iter().map(Canvas::image).collect()
 }
 
 #[cfg(test)]
@@ -773,6 +762,21 @@ mod tests {
         assert_eq!(direction_keys(-10.0, 10.0, 5.0), bits(&[D, L]));
         assert_eq!(direction_keys(10.0, -3.0, 5.0), bits(&[R]));
         assert_eq!(direction_keys(10.0, -5.0, 5.0), bits(&[U, R]));
+    }
+
+    #[test]
+    fn the_overlay_draws_each_control_once_and_tints_the_held_arm() {
+        let l = pixel();
+        let mut t = Touch { controls: Controls::new(Mode::Dpad, l), visible: true, alpha: 1.0, cutouts: Vec::new(), images: None, generation: 0 };
+        let images = build_images(&l);
+        assert_eq!(images.len(), TEXTURES);
+        assert!(images.iter().all(|i| i.rgba.len() == (i.w * i.h * 4) as usize));
+        let idle = quads(&t);
+        assert_eq!(idle.iter().map(|q| q.image as usize).collect::<Vec<_>>(), [DPAD_BASE, ARM, ARM + 1, ARM + 2, ARM + 3, DPAD_CENTER, JUMP, RUN, ITEM, BACK, START, TOGGLE_DPAD]);
+        assert!(idle.iter().all(|q| q.alpha == 255 && q.color == [255; 3]));
+        t.controls.down(1, l.dpad.x + l.dpad.r * 0.8, l.dpad.y);
+        let held = quads(&t);
+        assert_eq!(held.iter().map(|q| q.color).collect::<Vec<_>>()[1..5], [[255; 3], [255; 3], [255; 3], [255, 204, 51]]);
     }
 
     #[test]

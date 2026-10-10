@@ -87,8 +87,6 @@ impl GraphicsSDL {
             init_sdl();
 
             services().video.open(fullscreen);
-            #[cfg(not(target_os = "emscripten"))]
-            smw_sdl2::set_overlay(crate::smw::touch::draw);
             self.sdl_screen_surface = create_screen_surface();
 
             println!(
@@ -117,7 +115,11 @@ impl GraphicsSDL {
             debug_assert_eq!(s.pitch, GFX_SCREEN_W * 4);
             std::slice::from_raw_parts(s.pixels as *const u32, (GFX_SCREEN_W * GFX_SCREEN_H) as usize)
         };
-        services().video.present(Frame { pixels });
+        #[cfg(not(target_os = "emscripten"))]
+        let overlay = crate::smw::touch::overlay();
+        #[cfg(target_os = "emscripten")]
+        let overlay: Option<smw_platform::Overlay> = Option::None;
+        services().video.present(Frame { pixels }, overlay.as_ref());
     }
 
     pub fn change_full_screen(&self, fullscreen: bool) {

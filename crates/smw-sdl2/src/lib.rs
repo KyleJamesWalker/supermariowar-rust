@@ -8,7 +8,7 @@ pub mod events;
 pub mod input;
 mod video;
 pub use audio::Sdl2Audio;
-pub use video::{set_overlay, Sdl2Video};
+pub use video::Sdl2Video;
 
 pub struct Sdl2Clock;
 

@@ -1,18 +1,11 @@
 //! The game window: a 640x480 streaming texture scaled into a resizable window (from the C++ gfxSDL.cpp).
 
 use sdl2::sys::*;
-use smw_platform::{Frame, Video, SCREEN_H, SCREEN_W};
+use smw_platform::{Frame, Overlay, Video, SCREEN_H, SCREEN_W};
 use std::ffi::{CStr, CString};
 use std::ptr::{null, null_mut};
 
 const SDL_WINDOWPOS_CENTERED: i32 = SDL_WINDOWPOS_CENTERED_MASK as i32;
-
-/// Draws on the renderer after the frame and before it is shown: the Android touch controls until phase 3.
-static mut OVERLAY: Option<unsafe fn(*mut SDL_Renderer)> = Option::None;
-
-pub fn set_overlay(draw: unsafe fn(*mut SDL_Renderer)) {
-    unsafe { OVERLAY = Some(draw) };
-}
 
 fn sdl_error() -> String {
     unsafe { CStr::from_ptr(SDL_GetError()).to_string_lossy().into_owned() }
@@ -90,11 +83,13 @@ pub struct Sdl2Video {
     window: *mut SDL_Window,
     renderer: *mut SDL_Renderer,
     texture: *mut SDL_Texture,
+    overlay_generation: Option<u64>,
+    overlay_textures: Vec<*mut SDL_Texture>,
 }
 
 impl Sdl2Video {
     pub fn new() -> Self {
-        Sdl2Video { window: null_mut(), renderer: null_mut(), texture: null_mut() }
+        Sdl2Video { window: null_mut(), renderer: null_mut(), texture: null_mut(), overlay_generation: Option::None, overlay_textures: Vec::new() }
     }
 }
 
@@ -107,10 +102,52 @@ impl Default for Sdl2Video {
 impl Drop for Sdl2Video {
     fn drop(&mut self) {
         unsafe {
+            for tex in self.overlay_textures.drain(..) {
+                SDL_DestroyTexture(tex);
+            }
             SDL_DestroyTexture(self.texture);
             SDL_DestroyRenderer(self.renderer);
             SDL_DestroyWindow(self.window);
         }
+    }
+}
+
+impl Sdl2Video {
+    /// Draws in window pixels, outside the 640x480 logical viewport.
+    unsafe fn draw_overlay(&mut self, overlay: &Overlay) {
+        if self.overlay_generation != Some(overlay.generation) {
+            for tex in self.overlay_textures.drain(..) {
+                SDL_DestroyTexture(tex);
+            }
+            for image in overlay.images.iter() {
+                let tex = SDL_CreateTexture(
+                    self.renderer,
+                    SDL_PixelFormatEnum::SDL_PIXELFORMAT_ABGR8888 as u32,
+                    SDL_TextureAccess::SDL_TEXTUREACCESS_STATIC as i32,
+                    image.w as i32,
+                    image.h as i32,
+                );
+                if !tex.is_null() {
+                    // R, G, B, A bytes: ABGR8888 on a little-endian target.
+                    SDL_UpdateTexture(tex, null(), image.rgba.as_ptr() as *const _, (image.w * 4) as i32);
+                    SDL_SetTextureBlendMode(tex, SDL_BlendMode::SDL_BLENDMODE_BLEND);
+                }
+                self.overlay_textures.push(tex);
+            }
+            self.overlay_generation = Some(overlay.generation);
+        }
+        if self.overlay_textures.iter().any(|t| t.is_null()) {
+            return;
+        }
+        SDL_RenderSetLogicalSize(self.renderer, 0, 0);
+        for q in &overlay.quads {
+            let tex = self.overlay_textures[q.image as usize];
+            SDL_SetTextureColorMod(tex, q.color[0], q.color[1], q.color[2]);
+            SDL_SetTextureAlphaMod(tex, q.alpha);
+            let dst = SDL_Rect { x: q.x, y: q.y, w: q.w, h: q.h };
+            SDL_RenderCopy(self.renderer, tex, null(), &dst);
+        }
+        SDL_RenderSetLogicalSize(self.renderer, SCREEN_W as i32, SCREEN_H as i32);
     }
 }
 
@@ -123,16 +160,27 @@ impl Video for Sdl2Video {
         }
     }
 
-    fn present(&mut self, frame: Frame<'_>) {
+    fn present(&mut self, frame: Frame<'_>, overlay: Option<&Overlay>) {
         unsafe {
             SDL_UpdateTexture(self.texture, null(), frame.pixels.as_ptr() as *const _, (SCREEN_W * 4) as i32);
             SDL_RenderClear(self.renderer);
             SDL_RenderCopy(self.renderer, self.texture, null(), null());
-            if let Some(draw) = OVERLAY {
-                draw(self.renderer);
+            if let Some(overlay) = overlay {
+                self.draw_overlay(overlay);
             }
             SDL_RenderPresent(self.renderer);
         }
+    }
+
+    fn output_size(&self) -> (i32, i32) {
+        let (mut w, mut h) = (0, 0);
+        unsafe { SDL_GetRendererOutputSize(self.renderer, &mut w, &mut h) };
+        (w, h)
+    }
+
+    fn display_dpi(&self) -> Option<f32> {
+        let mut dpi = 0.0;
+        (unsafe { SDL_GetDisplayDPI(0, &mut dpi, null_mut(), null_mut()) } == 0 && dpi > 0.0).then_some(dpi)
     }
 
     fn set_fullscreen(&mut self, on: bool) {
