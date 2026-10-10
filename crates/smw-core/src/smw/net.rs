@@ -216,9 +216,10 @@ pub fn net_load_server_list() {
 
     #[cfg(all(not(feature = "no_network"), target_os = "emscripten"))]
     unsafe {
-        let url = crate::smw::platform::network::websocket::network_layer_websocket::relay_url();
-        netplay.savedServers.retain(|s| s.hostname != url);
-        netplay.savedServers.insert(0, ServerAddress { hostname: url });
+        if let Some(url) = crate::smw::platform::network::websocket::network_layer_websocket::relay_url() {
+            netplay.savedServers.retain(|s| s.hostname != url);
+            netplay.savedServers.insert(0, ServerAddress { hostname: url });
+        }
     }
 }
 
