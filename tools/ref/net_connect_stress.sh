@@ -28,7 +28,10 @@ for i in $(seq "$N"); do
   status=$?
   line=$(grep -h '^EV servers menu' "$WORK/client$i.log")
   echo "connect $i: ${line:-no result (exit $status)}"
-  [ $status -eq 0 ] || fail=1
+  if [ $status -ne 0 ]; then
+    fail=1
+    tail -n 5 "$WORK/client$i.log" | sed 's/^/    /'
+  fi
 done
 echo "$([ $fail -eq 0 ] && echo PASS || echo FAIL): $N connects"
 exit $fail
