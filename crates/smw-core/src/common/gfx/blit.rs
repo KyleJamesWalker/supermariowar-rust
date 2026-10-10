@@ -87,3 +87,29 @@ pub unsafe fn fill_rect(dst: *mut SDL_Surface, rect: *const SDL_Rect, color: u32
     soft_surface::fill_rect(&mut pixels_mut(dst), r.as_ref(), color);
     0
 }
+
+/// The decoded PNG at `path` when `SMW_BLIT=rust` and the software decoder handles it.
+pub fn decode_for_load(path: &std::path::Path) -> Option<crate::common::gfx::soft_image::Decoded> {
+    if !rust_blit() {
+        return Option::None;
+    }
+    crate::common::gfx::soft_image::decode_png(&std::fs::read(path).ok()?)
+}
+
+/// An SDL ARGB8888 surface holding a software surface's pixels and blend mode.
+pub unsafe fn to_sdl_surface(s: &soft_surface::Surface) -> *mut SDL_Surface {
+    let surf = SDL_CreateRGBSurfaceWithFormat(0, s.w, s.h, 32, SDL_PixelFormatEnum::SDL_PIXELFORMAT_ARGB8888 as u32);
+    if surf.is_null() {
+        return surf;
+    }
+    for y in 0..s.h as usize {
+        let row = ((*surf).pixels as *mut u8).add(y * (*surf).pitch as usize) as *mut u32;
+        std::ptr::copy_nonoverlapping(s.pixels[y * s.w as usize..].as_ptr(), row, s.w as usize);
+    }
+    let mode = match s.blend {
+        BlendMode::None => SDL_BlendMode::SDL_BLENDMODE_NONE,
+        BlendMode::Blend => SDL_BlendMode::SDL_BLENDMODE_BLEND,
+    };
+    SDL_SetSurfaceBlendMode(surf, mode);
+    surf
+}

@@ -3,7 +3,7 @@
 //! `std::string_view` text is taken as bytes; `char` is signed on the reference platforms, so
 //! bytes >= 0x80 are below `ASCII_FIRST_PRINTABLE` and advance like a space.
 
-use crate::common::gfx::{get_raw_pixel, rle_enabled};
+use crate::common::gfx::{blit, get_raw_pixel, rle_enabled, soft_image};
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::util::sdl_helpers::SdlSurfacePtr;
 use crate::globals::*;
@@ -51,6 +51,9 @@ impl gfxFont {
 
         print!("loading font {} ...", path_str);
         let _ = std::io::stdout().flush();
+        if let Some(image) = blit::decode_for_load(Path::new(path)) {
+            return Self::from_decoded(&path_str, &image);
+        }
         let cpath = CString::new(path_str.as_str()).unwrap();
         let surf = SdlSurfacePtr::new(unsafe { IMG_Load(cpath.as_ptr()) });
         if surf.is_null() {
@@ -73,42 +76,12 @@ impl gfxFont {
                 SDL_UnlockSurface(s);
             }
 
-            let mut m_glyph_areas: Vec<GlyphArea> = Vec::with_capacity(127);
-
             let raw_magenta = SDL_MapRGB((*s).format, 255, 0, 255);
-            let width = first_row.len() as i32;
-            let mut x: i32 = 0;
-
-            // Find first marker
-            while x < width && first_row[x as usize] != raw_magenta {
-                x += 1;
-            }
-
-            while x < width {
-                // Find marker end
-                while x < width && first_row[x as usize] == raw_magenta {
-                    x += 1;
-                }
-
-                if width <= x {
-                    break;
-                }
-
-                let start = x;
-
-                // Grow until next marker
-                while x < width && first_row[x as usize] != raw_magenta {
-                    x += 1;
-                }
-
-                m_glyph_areas.push(GlyphArea { x: start, w: x - start });
-            }
+            let m_glyph_areas = glyph_areas(&first_row, raw_magenta);
 
             if m_glyph_areas.is_empty() {
                 throw(format!("Didn't find any characters on font image {}", path_str));
             }
-
-            m_glyph_areas.shrink_to_fit();
 
             let color_key = get_raw_pixel(s, 0, 1);
             if SDL_SetColorKey(s, 1, color_key) < 0 {
@@ -128,6 +101,30 @@ impl gfxFont {
             println!("done");
             gfxFont { m_sprite, m_glyph_areas, _alias: Aliased::new() }
         }
+    }
+
+    /// `from_path` on an image the software decoder read.
+    fn from_decoded(path_str: &str, image: &soft_image::Decoded) -> Self {
+        let (width, _) = image.size();
+        let raw_magenta = image.map_rgb(255, 0, 255);
+        let first_row: Vec<u32> = (0..width).map(|x| image.raw_pixel(x, 0)).collect();
+        let m_glyph_areas = glyph_areas(&first_row, raw_magenta);
+        if m_glyph_areas.is_empty() {
+            throw(format!("Didn't find any characters on font image {}", path_str));
+        }
+        let surface = soft_image::convert_to_screen(image, Some(image.raw_pixel(0, 1)));
+        let surf_opti = SdlSurfacePtr::new(unsafe { blit::to_sdl_surface(&surface) });
+        if surf_opti.is_null() {
+            throw(format!("Couldn't convert {} to the display's pixel format: {}", path_str, sdl_error()));
+        }
+        unsafe {
+            if rle_enabled() && SDL_SetSurfaceRLE(surf_opti.get(), 1) < 0 {
+                throw(format!("Couldn't set RLE acceleration for {}: {}", path_str, sdl_error()));
+            }
+        }
+        let m_sprite = gfxSprite::from_surface(surf_opti, None);
+        println!("done");
+        gfxFont { m_sprite, m_glyph_areas, _alias: Aliased::new() }
     }
 
     pub fn draw(&self, x: i32, y: i32, text: &str) {
@@ -219,4 +216,39 @@ impl gfxFont {
         }
         width
     }
+}
+
+/// The glyph columns between the magenta markers in a font image's first row.
+fn glyph_areas(first_row: &[u32], raw_magenta: u32) -> Vec<GlyphArea> {
+    let mut m_glyph_areas: Vec<GlyphArea> = Vec::with_capacity(127);
+    let width = first_row.len() as i32;
+    let mut x: i32 = 0;
+
+    // Find first marker
+    while x < width && first_row[x as usize] != raw_magenta {
+        x += 1;
+    }
+
+    while x < width {
+        // Find marker end
+        while x < width && first_row[x as usize] == raw_magenta {
+            x += 1;
+        }
+
+        if width <= x {
+            break;
+        }
+
+        let start = x;
+
+        // Grow until next marker
+        while x < width && first_row[x as usize] != raw_magenta {
+            x += 1;
+        }
+
+        m_glyph_areas.push(GlyphArea { x: start, w: x - start });
+    }
+
+    m_glyph_areas.shrink_to_fit();
+    m_glyph_areas
 }
