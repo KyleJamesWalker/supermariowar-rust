@@ -1,31 +1,27 @@
 #!/bin/bash
-# Full-client netplay interop: two real game clients (C++ net-enabled harness build and/or the Rust port)
-# meet on the C++ lobby server through the real menus, play a scripted net game, and compare their dumps.
-# Usage: net_game_interop.sh [cpp-cpp|rust-rust|cpp-rust|rust-cpp ...]   (host-joiner; default: all four)
-# Env: SMW_SERVER, SMW_CPP_NET (net-enabled harness smw), SMW_CPP_DATA, SMW_RUST_BIN, SMW_RUST_DATA,
+# Full-client netplay: two Rust game clients meet on the Rust lobby server through the real menus, play each
+# scripted net game, and compare their dumps (net_game_compare.py, including spawned outcomes).
+# Usage: net_game_interop.sh
+# Env: SMW_RUST_BIN (smw), SMW_RUST_SERVER (smw_server), SMW_RUST_DATA,
 #      NET_GAMES (scenario directories beside this script; default: every net_game*).
 # A scenario's host.txt may name a map from net_maps/ (`#@ map=<name>`; each client gets an APFS clone of its data
-# tree with the map added) and extra net_game_compare.py arguments (`#@ compare=...`). Only rust-rust pairings
-# compare spawned powerups: the C++ harness does not record them.
+# tree with the map added) and extra net_game_compare.py arguments (`#@ compare=...`).
 HERE=$(cd "$(dirname "$0")" && pwd)
 PORT=$(cd "$HERE/../.." && pwd)
-SERVER=${SMW_SERVER:-$HOME/work/supermariowar-cpp-reference/build-net/smw-server}
-CPP=${SMW_CPP_NET:-$HOME/work/supermariowar-cpp-reference/build-net/smw}
-CPP_DATA=${SMW_CPP_DATA:-$HOME/work/supermariowar-cpp-reference/data}
 RUST=${SMW_RUST_BIN:-$PORT/target/release/smw}
+SERVER=${SMW_RUST_SERVER:-$PORT/target/release/smw_server}
 RUST_DATA=${SMW_RUST_DATA:-$PORT/data}
-[ -n "$SMW_RUST_BIN" ] || cargo build --release --quiet --manifest-path "$PORT/Cargo.toml" || exit 2
+if [ -z "$SMW_RUST_BIN" ] || [ -z "$SMW_RUST_SERVER" ]; then
+  cargo build --release --quiet --locked --manifest-path "$PORT/Cargo.toml" --bin smw --bin smw_server || exit 2
+fi
 WORK=$(mktemp -d)
-pairs=("$@")
-[ ${#pairs[@]} -gt 0 ] || pairs=(cpp-cpp rust-rust cpp-rust rust-cpp)
 games=(${NET_GAMES:-net_game net_game_blocks net_game_frenzy net_game_stomp net_game_coins net_game_classic})
 
 param() { sed -n "s/^#@ $1=//p" "$HERE/$2/host.txt"; }
 
 datadir() {
-  local kind=$1 role=$2 dir=$3 game=$4
-  local data=$CPP_DATA map
-  [ "$kind" = rust ] && data=$RUST_DATA
+  local role=$1 dir=$2 game=$3
+  local data=$RUST_DATA map
   map=$(param map "$game")
   if [ -n "$map" ]; then
     cp -c -R "$data" "$dir/data-$role"
@@ -36,41 +32,35 @@ datadir() {
 }
 
 client() {
-  local kind=$1 role=$2 dir=$3 name=$4 game=$5 data=$6
-  local bin=$CPP mapenv=()
-  [ "$kind" = rust ] && bin=$RUST
+  local role=$1 dir=$2 name=$3 game=$4 data=$5
+  local mapenv=()
   [ "$role" = host ] && [ -n "$(param map "$game")" ] && mapenv=(SMW_MAP="$(param map "$game")")
   local home=$dir/home-$role
   mkdir -p "$home/Library/Preferences/.smw"
   printf 'player_name = "%s"\nservers = ["127.0.0.1"]\n' "$name" > "$home/Library/Preferences/.smw/servers.toml"
   (cd "$data/.." && exec env HOME="$home" SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy SMW_SEED=1 SMW_FRAMES="$(param frames "$game")" "${mapenv[@]}" \
     SMW_REPLAY="$HERE/$game/$role.txt" SMW_DUMP="$dir/$role.dump" \
-    "$bin" --datadir "$data" > "$dir/$role.log" 2>&1)
+    "$RUST" --datadir "$data" > "$dir/$role.log" 2>&1)
 }
 
 fail=0
 for game in "${games[@]}"; do
-  for pair in "${pairs[@]}"; do
-    h=${pair%-*} j=${pair#*-}
-    dir=$WORK/$game/$pair
-    mkdir -p "$dir"
-    printf 'port 12521\nname Server\nmaxplayers 10\n' > "$dir/serverconfig"
-    (cd "$dir" && exec "$SERVER" serverconfig > server.log 2>&1) & spid=$!
-    sleep 0.5
-    hdata=$(datadir "$h" host "$dir" "$game")
-    jdata=$(datadir "$j" join "$dir" "$game")
-    client "$h" host "$dir" Host "$game" "$hdata" & hpid=$!
-    client "$j" join "$dir" Join "$game" "$jdata" & jpid=$!
-    wait $hpid; hst=$?
-    wait $jpid; jst=$?
-    kill $spid 2>/dev/null; wait $spid 2>/dev/null
-    rm -rf "${dir:?}/data-host" "${dir:?}/data-join"
-    echo "== $game host=$h join=$j: host exit $hst, join exit $jst"
-    args=($(param compare "$game"))
-    [ "$pair" = rust-rust ] && args+=(--spawns)
-    python3 "$HERE/net_game_compare.py" "${args[@]}" "$dir/host.dump" "$dir/join.dump" || fail=1
-    [ $hst -eq 0 ] && [ $jst -eq 0 ] || fail=1
-  done
+  dir=$WORK/$game
+  mkdir -p "$dir"
+  printf 'port 12521\nname Server\nmaxplayers 10\n' > "$dir/serverconfig"
+  (cd "$dir" && exec "$SERVER" serverconfig > server.log 2>&1) & spid=$!
+  sleep 0.5
+  hdata=$(datadir host "$dir" "$game")
+  jdata=$(datadir join "$dir" "$game")
+  client host "$dir" Host "$game" "$hdata" & hpid=$!
+  client join "$dir" Join "$game" "$jdata" & jpid=$!
+  wait $hpid; hst=$?
+  wait $jpid; jst=$?
+  kill $spid 2>/dev/null; wait $spid 2>/dev/null
+  rm -rf "${dir:?}/data-host" "${dir:?}/data-join"
+  echo "== $game: host exit $hst, join exit $jst"
+  python3 "$HERE/net_game_compare.py" --spawns $(param compare "$game") "$dir/host.dump" "$dir/join.dump" || fail=1
+  [ $hst -eq 0 ] && [ $jst -eq 0 ] || fail=1
 done
 echo "logs in $WORK"
 exit $fail

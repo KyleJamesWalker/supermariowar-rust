@@ -55,6 +55,5 @@ pub const NET_G2P_START_POWERUP: u8 = 75;
 pub const NET_G2P_TRIGGER_POWERUP: u8 = 76;
 pub const NET_G2P_TRIGGER_MAPCOLL: u8 = 77;
 pub const NET_G2P_TRIGGER_P2PCOLL: u8 = 78;
-// Not in the C++ protocol: the game host decides random outcomes (docs/PROGRESS.md, Netplay deviations).
-pub const NET_G2P_HOST_DECIDES_RANDOM: u8 = 92;
+// Not in the C++ protocol: the game host decides random outcomes (docs/PROGRESS.md, Netplay deviations). 92 is unused.
 pub const NET_G2P_RANDOM_EVENT: u8 = 93;

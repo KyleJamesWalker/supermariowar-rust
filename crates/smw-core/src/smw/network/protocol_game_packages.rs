@@ -305,18 +305,6 @@ impl P2PCollision {
     }
 }
 
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct HostDecidesRandom {
-    pub header: MessageHeader,
-}
-
-impl HostDecidesRandom {
-    pub fn new() -> Self {
-        HostDecidesRandom { header: MessageHeader::new(NET_G2P_HOST_DECIDES_RANDOM) }
-    }
-}
-
 /// Variable length: header, kind u8, context u16, arg count u8, draw count u16, then the i32 args and the u32
 /// draws, all little-endian.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -369,8 +357,7 @@ crate::net_package!(
     StartPowerup,
     TriggerPowerup,
     MapCollision,
-    P2PCollision,
-    HostDecidesRandom
+    P2PCollision
 );
 
 #[cfg(test)]
@@ -440,7 +427,6 @@ mod tests {
 
     #[test]
     fn random_event_round_trip() {
-        assert_eq!(size_of::<HostDecidesRandom>(), 3);
         let ev = RandomEvent { kind: 7, context: 513, args: vec![-1, 65538], draws: vec![0, u32::MAX, 12345] };
         let bytes = ev.to_bytes();
         assert_eq!(bytes.len(), 3 + 6 + 4 * 5);
