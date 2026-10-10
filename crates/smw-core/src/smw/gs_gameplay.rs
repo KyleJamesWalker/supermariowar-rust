@@ -2485,7 +2485,7 @@ impl GameplayState {
                         }
                     }
                     // for remote players, interpolate
-                    else {
+                    else if netplay.gamestate_received {
                         player.fx = percent_old * netplay.previous_playerdata.player[p].x + percent_new * netplay.latest_playerdata.player[p].x;
                         player.fy = percent_old * netplay.previous_playerdata.player[p].y + percent_new * netplay.latest_playerdata.player[p].y;
                         player.velx = percent_old * netplay.previous_playerdata.player[p].xvel + percent_new * netplay.latest_playerdata.player[p].xvel;
@@ -2700,6 +2700,9 @@ impl GameState for GameplayState {
 
     fn update(&mut self) {
         unsafe {
+            if crate::smw::net::waiting_to_start() {
+                return;
+            }
             net_random::gameplay_frame();
             self.read_network();
 

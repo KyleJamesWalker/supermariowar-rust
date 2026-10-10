@@ -1,6 +1,6 @@
 # Netplay findings, 2026-10-09
 
-The `net_game_coins` and `net_game_classic` scenarios failed now and then because each client rolled its own random game mode settings when a net game started. #59 fixes this with option A below. Native `net_game` between a C++ and a Rust client fails because the two load a match at different speeds and upstream has no start barrier. Native C++ netplay is no longer supported, so this second finding only matters between Rust clients. A start barrier is the open follow-up. A joiner could also hang in the Servers menu after connecting, because of a timestamp race in the lobby connect handshake inherited from upstream. That race is fixed.
+The `net_game_coins` and `net_game_classic` scenarios failed now and then because each client rolled its own random game mode settings when a net game started. #59 fixes this with option A below. Native `net_game` between a C++ and a Rust client fails because the two load a match at different speeds and upstream has no start barrier. Native C++ netplay is no longer supported, so this second finding only matters between Rust clients, and a start barrier now fixes it. A joiner could also hang in the Servers menu after connecting, because of a timestamp race in the lobby connect handshake inherited from upstream. That race is fixed.
 
 ## 1. Each client rolls its own game mode settings
 
@@ -64,7 +64,7 @@ The harness records what happened, and the protocol is compatible.
 
 ### Fix options
 Native C++ netplay is no longer supported, so mixed pairings no longer gate anything. The same skew can still happen between two Rust clients on machines that load at different speeds.
-- **Recommended follow-up (game code, for the user to decide): a start barrier for Rust-to-Rust games.** Each client reports when it has loaded the match, and the host starts gameplay for everyone together. This removes the skew and the origin frames.
+- **Done: a start barrier for Rust-to-Rust games.** Each joiner reports when it has loaded the match, and the host starts gameplay for everyone together, with a timeout for a dead peer. Until the host's first game state arrives, a joiner also leaves remote players where setup put them. In all six native scenarios the joiner now draws the host's player at the origin for 0 frames.
 - **Tool only.** `net_game_compare.py` compares each remote player's track from the first game state its client received, and reports the frames it skipped. This measures sync rather than load time, but it changes nothing in the game.
 - **Cosmetic.** Until the first game state arrives, a joiner keeps remote players at their spawn positions instead of the origin.
 
