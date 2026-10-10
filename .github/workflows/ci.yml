@@ -546,11 +546,10 @@ jobs:
         if: always()
         run: timeout 6m node tools/web_text_entry_test.mjs "$RUNNER_TEMP/web-text-entry"
 
-      # net_game_frenzy does not pass reliably yet.
       - name: Web netplay test
         if: always()
         env:
-          NET_GAMES: net_game net_game_blocks net_game_stomp net_game_coins net_game_classic
+          NET_GAMES: net_game net_game_blocks net_game_stomp net_game_coins net_game_classic net_game_frenzy
         run: timeout 25m node tools/web_netplay_test.mjs "$RUNNER_TEMP/web-netplay"
 
       - name: Web replays

@@ -74,6 +74,9 @@ impl MO_FrenzyCard {
                 iAttempts -= 1;
                 a > 0
             } {}
+            if let Some((hx, hy)) = crate::smw::net_random::spawn_position() {
+                (x, y) = (hx, hy);
+            }
 
             self.set_xi(x);
             self.set_yi(y);
