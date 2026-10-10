@@ -64,7 +64,7 @@ use crate::smw::objects::mystery_mushroom_temp_player::MysteryMushroomTempPlayer
 use crate::smw::objects::switch_color::SwitchColor;
 use crate::smw::objects::throw_block_type::ThrowBlockType;
 use crate::smw::player::{get_player_from_global_id, player_killed_player, CPlayer, PlayerDeathStyle, PlayerState};
-use sdl2::sys::{SDL_Event, SDL_EventType, SDL_FillRect, SDL_KeyCode, SDL_Keymod, SDL_PollEvent, SDL_Rect};
+use sdl2::sys::{SDL_Event, SDL_EventType, SDL_FillRect, SDL_KeyCode, SDL_Keymod, SDL_Rect};
 use std::io::Write;
 
 pub const COUNTDOWN_START_INDEX: i16 = 4;
@@ -1439,18 +1439,18 @@ impl GameplayState {
             //Draw black "behind" the game if we are shaking/moving the screen
             if y_shake > 0 {
                 let rect = SDL_Rect { x: 0, y: 0, w: App::screenWidth, h: y_shake as i32 };
-                SDL_FillRect(screen, &rect, 0x0); //fill empty area with black
+                crate::common::gfx::blit::fill_rect(screen, &rect, 0x0); //fill empty area with black
             } else if y_shake < 0 {
                 let rect = SDL_Rect { x: 0, y: App::screenHeight + y_shake as i32, w: App::screenWidth, h: App::screenHeight };
-                SDL_FillRect(screen, &rect, 0x0); //fill empty area with black
+                crate::common::gfx::blit::fill_rect(screen, &rect, 0x0); //fill empty area with black
             }
 
             if x_shake > 0 {
                 let rect = SDL_Rect { x: 0, y: 0, w: x_shake as i32, h: App::screenHeight };
-                SDL_FillRect(screen, &rect, 0x0); //fill empty area with black
+                crate::common::gfx::blit::fill_rect(screen, &rect, 0x0); //fill empty area with black
             } else if x_shake < 0 {
                 let rect = SDL_Rect { x: App::screenWidth + x_shake as i32, y: 0, w: App::screenWidth, h: App::screenHeight };
-                SDL_FillRect(screen, &rect, 0x0); //fill empty area with black
+                crate::common::gfx::blit::fill_rect(screen, &rect, 0x0); //fill empty area with black
             }
         }
     }
@@ -2352,7 +2352,7 @@ impl GameplayState {
             game_values.playerInput.clear_pressed_keys(if game_values.flags.exitinggame { 1 } else { 0 });
 
             let mut event: SDL_Event = std::mem::zeroed();
-            while SDL_PollEvent(&mut event) != 0 {
+            while smw_sdl2::events::poll(&mut event) != 0 {
                 let event_type = event.type_;
                 if event_type == SDL_EventType::SDL_QUIT as u32 {
                     clean_up();

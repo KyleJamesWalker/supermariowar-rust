@@ -20,6 +20,7 @@ smw-sdl2 = { path = "../smw-sdl2" }
 sdl2 = { version = "0.38", features = ["image", "mixer"] }
 toml = "1.1"
 flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+png = "0.18.1"
 
 # Native only: the web build plays online through smw_relay (apps/smw_relay).
 [target.'cfg(not(target_os = "emscripten"))'.dependencies]

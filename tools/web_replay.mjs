@@ -110,7 +110,8 @@ const server = createServer((req, res) => {
     }
 });
 await new Promise((ok) => server.listen(0, '127.0.0.1', ok));
-const url = `http://127.0.0.1:${server.address().port}/${page}`;
+// An empty relay parameter leaves out the web build's default server, so menus show "(none)" as natively.
+const url = `http://127.0.0.1:${server.address().port}/${page}?relay=`;
 
 const profile = mkdtempSync(join(tmpdir(), 'smw-web-chrome-'));
 const browser = spawn(chrome, [

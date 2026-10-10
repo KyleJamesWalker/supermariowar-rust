@@ -4,7 +4,7 @@
 use crate::common::path::get_home_directory;
 use sdl2::sys::{
     SDL_BlendMode, SDL_CreateTexture, SDL_DestroyTexture, SDL_Event, SDL_EventType, SDL_GetDisplayDPI, SDL_GetKeyboardFocus, SDL_GetRendererOutputSize,
-    SDL_GetScancodeFromKey, SDL_KeyCode, SDL_PixelFormatEnum, SDL_PushEvent, SDL_Rect, SDL_RenderCopy, SDL_RenderSetLogicalSize, SDL_Renderer,
+    SDL_GetScancodeFromKey, SDL_KeyCode, SDL_PixelFormatEnum, SDL_Rect, SDL_RenderCopy, SDL_RenderSetLogicalSize, SDL_Renderer,
     SDL_SetTextureAlphaMod, SDL_SetTextureBlendMode, SDL_SetTextureColorMod, SDL_Texture, SDL_TextureAccess, SDL_UpdateTexture, SDL_PRESSED, SDL_RELEASED,
 };
 
@@ -437,7 +437,7 @@ pub fn flush() {
             event.key.state = if down { SDL_PRESSED } else { SDL_RELEASED } as u8;
             event.key.keysym.sym = key.sym();
             event.key.keysym.scancode = SDL_GetScancodeFromKey(key.sym());
-            SDL_PushEvent(&mut event);
+            smw_sdl2::events::push(&mut event);
         }
         pushing = false;
     }

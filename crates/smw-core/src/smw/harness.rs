@@ -15,9 +15,10 @@ use crate::smw::gs_splash_screen::SplashScreenState;
 use crate::smw::network::file_compressor::{deflate, inflate, read_maybe_gzip};
 use sdl2::sys::{
     SDL_Event, SDL_EventType, SDL_GetError, SDL_GetKeyFromName, SDL_GetKeyName, SDL_GetScancodeFromKey, SDL_InitSubSystem, SDL_JoystickAttachVirtual,
-    SDL_JoystickInstanceID, SDL_JoystickType, SDL_KeyCode, SDL_Keymod, SDL_PumpEvents, SDL_PushEvent, SDL_SetEventFilter, SDL_SetHint, SDL_WaitEvent, SDL_INIT_JOYSTICK,
+    SDL_JoystickInstanceID, SDL_JoystickType, SDL_KeyCode, SDL_Keymod, SDL_SetHint, SDL_INIT_JOYSTICK,
     SDL_PRESSED, SDL_RELEASED,
 };
+use smw_platform::{Input, InputEvent, Keycode, PadSlot};
 use std::ffi::CStr;
 use std::collections::BTreeSet;
 use std::ffi::CString;
@@ -294,55 +295,27 @@ pub fn record_device(index: usize, added: bool) {
     }
 }
 
-fn fill_joystick(ev: &ReplayEvent, event: &mut SDL_Event) {
-    unsafe {
-        *event = std::mem::zeroed();
-        match ev.kind {
-            EventKind::JoyAxis => {
-                event.jaxis.type_ = SDL_EventType::SDL_JOYAXISMOTION as u32;
-                event.jaxis.which = ev.device;
-                event.jaxis.axis = ev.index as u8;
-                event.jaxis.value = ev.value as i16;
+/// The normalized event a replay line pushes, before the backend gives it a timestamp.
+fn input_for(ev: &ReplayEvent) -> InputEvent {
+    let pad = PadSlot(ev.device);
+    match ev.kind {
+        EventKind::Key => unsafe {
+            let cname = CString::new(ev.keyName.as_bytes()).unwrap();
+            let key = SDL_GetKeyFromName(cname.as_ptr());
+            if key == SDL_KeyCode::SDLK_UNKNOWN as i32 {
+                fail(format!("unknown SDL key name '{}'", ev.keyName));
             }
-            EventKind::JoyButton => {
-                event.jbutton.type_ = if ev.value != 0 { SDL_EventType::SDL_JOYBUTTONDOWN as u32 } else { SDL_EventType::SDL_JOYBUTTONUP as u32 };
-                event.jbutton.which = ev.device;
-                event.jbutton.button = ev.index as u8;
-                event.jbutton.state = if ev.value != 0 { SDL_PRESSED as u8 } else { SDL_RELEASED as u8 };
-            }
-            _ => {
-                event.jhat.type_ = SDL_EventType::SDL_JOYHATMOTION as u32;
-                event.jhat.which = ev.device;
-                event.jhat.hat = ev.index as u8;
-                event.jhat.value = ev.value as u8;
-            }
-        }
-    }
-}
-
-fn fill_key(ev: &ReplayEvent, event: &mut SDL_Event) {
-    unsafe {
-        let cname = CString::new(ev.keyName.as_bytes()).unwrap();
-        let key = SDL_GetKeyFromName(cname.as_ptr());
-        if key == SDL_KeyCode::SDLK_UNKNOWN as i32 {
-            fail(format!("unknown SDL key name '{}'", ev.keyName));
-        }
-
-        *event = std::mem::zeroed();
-        event.key.type_ = if ev.down { SDL_EventType::SDL_KEYDOWN as u32 } else { SDL_EventType::SDL_KEYUP as u32 };
-        event.key.state = if ev.down { SDL_PRESSED as u8 } else { SDL_RELEASED as u8 };
-        event.key.keysym.sym = key;
-        event.key.keysym.scancode = SDL_GetScancodeFromKey(key);
-        event.key.keysym.mod_ = SDL_Keymod::KMOD_NONE as u16;
+            let scancode = SDL_GetScancodeFromKey(key) as i32;
+            InputEvent::Key { key: Keycode(key), scancode, mods: SDL_Keymod::KMOD_NONE as u16, down: ev.down, repeat: false, window: 0 }
+        },
+        EventKind::JoyAxis => InputEvent::PadAxis { pad, axis: ev.index as u8, value: ev.value as i16 },
+        EventKind::JoyButton => InputEvent::PadButton { pad, button: ev.index as u8, down: ev.value != 0 },
+        EventKind::JoyHat => InputEvent::PadHat { pad, hat: ev.index as u8, value: ev.value as u8 },
     }
 }
 
 fn fill_event(ev: &ReplayEvent, event: &mut SDL_Event) {
-    if ev.kind == EventKind::Key {
-        fill_key(ev, event);
-    } else {
-        fill_joystick(ev, event);
-    }
+    *event = smw_sdl2::input::to_sdl(&Input { timestamp: 0, event: input_for(ev) });
 }
 
 fn state_name() -> &'static str {
@@ -586,7 +559,7 @@ pub fn frame_start() {
                 let mut event: SDL_Event = std::mem::zeroed();
                 fill_event(&h.events[h.nextEvent], &mut event);
                 note_replay_key(&event);
-                SDL_PushEvent(&mut event);
+                smw_sdl2::events::push(&mut event);
                 copy_replay_event(&h.events[h.nextEvent]);
             }
             h.nextEvent += 1;
@@ -602,7 +575,7 @@ pub fn wait_event(event: &mut SDL_Event) {
             return;
         }
         if !h.replay {
-            SDL_WaitEvent(event);
+            smw_sdl2::events::wait(event);
             return;
         }
         if h.nextEvent >= h.events.len() {
@@ -810,7 +783,7 @@ fn start_recording(seed: u32, to: Option<String>) {
             checkpoint: None,
         });
         if live {
-            SDL_SetEventFilter(Some(record_filter), std::ptr::null_mut());
+            smw_sdl2::events::set_filter(Some(record_filter), std::ptr::null_mut());
         }
     }
     if live {
@@ -848,52 +821,35 @@ unsafe extern "C" fn record_filter(_userdata: *mut std::ffi::c_void, event: *mut
 
 /// The replay line for a raw SDL event, or None for input the replay format cannot express.
 fn to_replay_event(raw: &SDL_Event, frame: u32) -> Option<ReplayEvent> {
-    unsafe {
-        let t = raw.type_;
-        let mut ev = ReplayEvent { frame, kind: EventKind::Key, down: false, keyName: String::new(), device: 0, index: 0, value: 0 };
-        if t == SDL_EventType::SDL_KEYDOWN as u32 || t == SDL_EventType::SDL_KEYUP as u32 {
-            let sym = raw.key.keysym.sym;
-            let name = CStr::from_ptr(SDL_GetKeyName(sym)).to_string_lossy().into_owned();
-            if name.is_empty() || SDL_GetKeyFromName(CString::new(name.as_bytes()).ok()?.as_ptr()) != sym {
+    let mut ev = ReplayEvent { frame, kind: EventKind::Key, down: false, keyName: String::new(), device: 0, index: 0, value: 0 };
+    let (which, kind, index, value) = match smw_sdl2::input::from_sdl(raw).event {
+        InputEvent::Key { key, down, .. } => unsafe {
+            let name = CStr::from_ptr(SDL_GetKeyName(key.0)).to_string_lossy().into_owned();
+            if name.is_empty() || SDL_GetKeyFromName(CString::new(name.as_bytes()).ok()?.as_ptr()) != key.0 {
                 return None;
             }
-            ev.down = t == SDL_EventType::SDL_KEYDOWN as u32;
+            ev.down = down;
             ev.keyName = name;
             return Some(ev);
-        }
-        let which = if t == SDL_EventType::SDL_JOYAXISMOTION as u32 {
-            raw.jaxis.which
-        } else if t == SDL_EventType::SDL_JOYBUTTONDOWN as u32 || t == SDL_EventType::SDL_JOYBUTTONUP as u32 {
-            raw.jbutton.which
-        } else if t == SDL_EventType::SDL_JOYHATMOTION as u32 {
-            raw.jhat.which
-        } else {
-            return None;
-        };
-        ev.device = device_index(which)?;
-        if t == SDL_EventType::SDL_JOYAXISMOTION as u32 {
-            ev.kind = EventKind::JoyAxis;
-            ev.index = raw.jaxis.axis as i32;
-            ev.value = raw.jaxis.value as i32;
-        } else if t == SDL_EventType::SDL_JOYHATMOTION as u32 {
-            ev.kind = EventKind::JoyHat;
-            ev.index = raw.jhat.hat as i32;
-            ev.value = raw.jhat.value as i32;
-        } else {
-            ev.kind = EventKind::JoyButton;
-            ev.index = raw.jbutton.button as i32;
-            ev.value = (t == SDL_EventType::SDL_JOYBUTTONDOWN as u32) as i32;
-        }
-        let limit = match ev.kind {
-            EventKind::JoyAxis => VIRTUAL_AXES,
-            EventKind::JoyButton => VIRTUAL_BUTTONS,
-            _ => VIRTUAL_HATS,
-        };
-        if ev.device > 7 || ev.index >= limit {
-            return None;
-        }
-        Some(ev)
+        },
+        InputEvent::PadAxis { pad, axis, value } => (pad.0, EventKind::JoyAxis, axis as i32, value as i32),
+        InputEvent::PadHat { pad, hat, value } => (pad.0, EventKind::JoyHat, hat as i32, value as i32),
+        InputEvent::PadButton { pad, button, down } => (pad.0, EventKind::JoyButton, button as i32, down as i32),
+        _ => return None,
+    };
+    ev.device = device_index(which)?;
+    ev.kind = kind;
+    ev.index = index;
+    ev.value = value;
+    let limit = match ev.kind {
+        EventKind::JoyAxis => VIRTUAL_AXES,
+        EventKind::JoyButton => VIRTUAL_BUTTONS,
+        _ => VIRTUAL_HATS,
+    };
+    if ev.device > 7 || ev.index >= limit {
+        return None;
     }
+    Some(ev)
 }
 
 /// The game addresses a joystick by its open index; SDL events carry the instance id.
@@ -925,7 +881,7 @@ static INJECTING: AtomicBool = AtomicBool::new(false);
 
 fn inject(event: &mut SDL_Event) {
     INJECTING.store(true, Ordering::Relaxed);
-    unsafe { SDL_PushEvent(event) };
+    unsafe { smw_sdl2::events::push(event) };
     INJECTING.store(false, Ordering::Relaxed);
 }
 
@@ -947,7 +903,7 @@ fn push_live_script(r: &mut Recorder, frame: u32) {
                 } else if event.type_ == SDL_EventType::SDL_JOYHATMOTION as u32 {
                     event.jhat.which = sdl_instance(event.jhat.which);
                 }
-                SDL_PushEvent(&mut event);
+                smw_sdl2::events::push(&mut event);
             }
         }
         r.nextScript += 1;
@@ -1029,7 +985,7 @@ fn record_frame_start(frame: u32) {
         let _ = r.out.flush();
     }
     push_live_script(r, frame);
-    unsafe { SDL_PumpEvents() };
+    smw_sdl2::events::pump();
     let held = std::mem::take(&mut r.pending);
     for raw in held.iter() {
         if unsafe { raw.type_ } == SDL_EventType::SDL_QUIT as u32 {
@@ -1059,7 +1015,7 @@ fn record_wait_event(event: &mut SDL_Event) {
         crate::smw::touch::flush();
         let Some(r) = rec() else { return };
         push_live_script(r, unsafe { h.frame } + 1);
-        unsafe { SDL_PumpEvents() };
+        smw_sdl2::events::pump();
         while !r.pending.is_empty() {
             let raw = r.pending.remove(0);
             if unsafe { raw.type_ } == SDL_EventType::SDL_QUIT as u32 {
@@ -1096,7 +1052,7 @@ pub fn finish() {
         }
         if let Some(mut r) = h.rec.take() {
             if r.live {
-                SDL_SetEventFilter(None, std::ptr::null_mut());
+                smw_sdl2::events::set_filter(None, std::ptr::null_mut());
             }
             let frames = r.quitFrame.unwrap_or(h.frame);
             let _ = writeln!(r.out, "#@ frames={}", frames);

@@ -1,10 +1,13 @@
 //! Port of src/common/gfx.cpp
 
+pub mod blit;
 pub mod color;
 pub mod gfx_font;
 pub mod gfx_palette;
 pub mod gfx_sdl;
 pub mod gfx_sprite;
+pub mod soft_image;
+pub mod soft_surface;
 
 use crate::common::gfx::color::{colors, RGB};
 use crate::common::gfx::gfx_palette::{gfxPalette, PlayerPalette};

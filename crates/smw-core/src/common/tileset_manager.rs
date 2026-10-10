@@ -74,7 +74,7 @@ fn load_image_or_downscale(path: &Path, largeRes: &gfxSprite) -> gfxSprite {
                     (*format).BitsPerPixel as i32,
                     (*format).format,
                 ));
-                if SDL_UpperBlit(large, null_mut(), surf.get(), null_mut()) < 0 {
+                if crate::common::gfx::blit::upper_blit(large, null_mut(), surf.get(), null_mut()) < 0 {
                     eprintln!("SDL_BlitSurface error: {}", CStr::from_ptr(SDL_GetError()).to_string_lossy());
                 }
 
@@ -192,7 +192,7 @@ impl CTileset {
 
     pub fn draw(&self, dstSurface: *mut SDL_Surface, tileSize: i16, srcRect: *mut SDL_Rect, dstRect: *mut SDL_Rect) {
         unsafe {
-            SDL_UpperBlit(self.surface(tileSize as usize), srcRect, dstSurface, dstRect);
+            crate::common::gfx::blit::upper_blit(self.surface(tileSize as usize), srcRect, dstSurface, dstRect);
         }
     }
 

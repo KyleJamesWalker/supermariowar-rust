@@ -1,6 +1,6 @@
 # Netplay findings, 2026-10-09
 
-The `net_game_coins` and `net_game_classic` scenarios failed now and then because each client rolled its own random game mode settings when a net game started. #59 fixes this with option A below. Native `net_game` between a C++ and a Rust client fails because the two load a match at different speeds and upstream has no start barrier. Native C++ netplay is no longer supported, so this second finding only matters between Rust clients. A start barrier is the open follow-up. A joiner can also hang in the Servers menu after connecting, because of a timestamp race in the lobby connect handshake that is inherited from upstream. Its fix is open too.
+The `net_game_coins` and `net_game_classic` scenarios failed now and then because each client rolled its own random game mode settings when a net game started. #59 fixes this with option A below. Native `net_game` between a C++ and a Rust client fails because the two load a match at different speeds and upstream has no start barrier. Native C++ netplay is no longer supported, so this second finding only matters between Rust clients. A start barrier is the open follow-up. A joiner could also hang in the Servers menu after connecting, because of a timestamp race in the lobby connect handshake inherited from upstream. That race is fixed.
 
 ## 1. Each client rolls its own game mode settings
 
@@ -88,4 +88,4 @@ Both timestamps are `SDL_GetTicks()` milliseconds. If the tick advances between 
 - **A (recommended).** Record the received `NET_RESPONSE_CONNECT_OK` before sending the skin, so the send is never older than the receive. This is a one-line reorder for this one message type. It keeps the menu's ordering check, which guards against stale replies.
 - **B.** Relax the check to `lastSent.timestamp + 1 >= lastRecv.timestamp`, or drop the timestamp comparison for this transition. This is simpler, but it weakens a check that other transitions rely on, so it is not recommended.
 
-Both options change game code and wait for the user's review.
+Option A is done: the client now records the reply before it sends the skin. `tools/ref/net_connect_stress.sh` checks it by connecting 20 times on a clock that advances on every read, so the two timestamps always differ. The check fails on the old order and runs in CI.

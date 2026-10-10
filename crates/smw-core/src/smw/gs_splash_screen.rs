@@ -10,7 +10,7 @@ use crate::globals::*;
 use crate::smw::game_state::{GameState, GameStateManager};
 use crate::smw::gs_gameplay::{eyecandy, GameplayState};
 use crate::smw::gs_menu::MenuState;
-use sdl2::sys::{SDL_Event, SDL_EventType, SDL_FillRect, SDL_KeyCode, SDL_Keymod, SDL_PollEvent};
+use sdl2::sys::{SDL_Event, SDL_EventType, SDL_FillRect, SDL_KeyCode, SDL_Keymod};
 
 //-----------------------------------------------------------------------------
 // THE LOAD UP SEQUENCE + SPLASH SCREEN
@@ -69,7 +69,7 @@ impl GameState for SplashScreenState {
 
             // TODO: move this out of this method maybe
 
-            while SDL_PollEvent(&mut self.loop_event) != 0 {
+            while smw_sdl2::events::poll(&mut self.loop_event) != 0 {
                 let event_type = self.loop_event.type_;
                 if event_type == SDL_EventType::SDL_QUIT as u32 {
                     game_values.appstate = AppState::Quit;
@@ -119,7 +119,7 @@ impl GameState for SplashScreenState {
                 }
             }
 
-            SDL_FillRect(screen, std::ptr::null(), 0x0);
+            crate::common::gfx::blit::fill_rect(screen, std::ptr::null(), 0x0);
 
             if self.state == 6 || self.state == 7 || self.state == 8 {
                 rm.menu_backdrop.setalpha(self.alpha as u8);

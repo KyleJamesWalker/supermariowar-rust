@@ -7,7 +7,7 @@
 use crate::common::random_number_generator::{RandomNumberGenerator, RandomNumberGeneratorType};
 use crate::globals::*;
 use sdl2::sys::{
-    SDL_Event, SDL_EventType, SDL_GetError, SDL_GetKeyFromName, SDL_GetScancodeFromKey, SDL_KeyCode, SDL_Keymod, SDL_PushEvent, SDL_RWFromFile, SDL_SaveBMP_RW,
+    SDL_Event, SDL_EventType, SDL_GetError, SDL_GetKeyFromName, SDL_GetScancodeFromKey, SDL_KeyCode, SDL_Keymod, SDL_RWFromFile, SDL_SaveBMP_RW,
     SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT, SDL_PRESSED, SDL_RELEASED,
 };
 use std::collections::BTreeSet;
@@ -276,7 +276,7 @@ fn push_event(ev: &ScriptEvent) {
             }
         }
 
-        SDL_PushEvent(&mut event);
+        smw_sdl2::events::push(&mut event);
     }
 }
 
@@ -296,7 +296,7 @@ fn push_quit() {
     unsafe {
         let mut event: SDL_Event = std::mem::zeroed();
         event.type_ = SDL_EventType::SDL_QUIT as u32;
-        SDL_PushEvent(&mut event);
+        smw_sdl2::events::push(&mut event);
     }
 }
 

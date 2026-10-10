@@ -4,9 +4,9 @@ use crate::common::global::{joystickcount, joysticks};
 use sdl2::sys::{
     SDL_Event, SDL_EventFilter, SDL_EventType, SDL_GameController, SDL_GameControllerAddMapping, SDL_GameControllerAxis, SDL_GameControllerBindType, SDL_GameControllerButton,
     SDL_GameControllerButtonBind, SDL_GameControllerClose, SDL_GameControllerGetBindForAxis, SDL_GameControllerGetBindForButton, SDL_GameControllerMappingForDeviceIndex, SDL_GameControllerOpen,
-    SDL_GetError, SDL_GetEventFilter, SDL_InitSubSystem, SDL_IsGameController, SDL_Joystick, SDL_JoystickClose, SDL_JoystickGetAttached,
+    SDL_GetError, SDL_InitSubSystem, SDL_IsGameController, SDL_Joystick, SDL_JoystickClose, SDL_JoystickGetAttached,
     SDL_JoystickGetDeviceInstanceID, SDL_JoystickGetGUID, SDL_JoystickOpen, SDL_JoystickGetGUIDString, SDL_JoystickInstanceID,
-    SDL_JoystickNameForIndex, SDL_JoystickNumAxes, SDL_JoystickNumButtons, SDL_JoystickNumHats, SDL_NumJoysticks, SDL_SetEventFilter, SDL_bool, SDL_free, SDL_HAT_DOWN,
+    SDL_JoystickNameForIndex, SDL_JoystickNumAxes, SDL_JoystickNumButtons, SDL_JoystickNumHats, SDL_NumJoysticks, SDL_bool, SDL_free, SDL_HAT_DOWN,
     SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP, SDL_INIT_GAMECONTROLLER,
 };
 use std::collections::HashMap;
@@ -123,8 +123,8 @@ pub fn init(translate: bool) {
         // The recorder's filter calls translate itself.
         let mut current: SDL_EventFilter = None;
         let mut userdata = std::ptr::null_mut();
-        if (debug_input || translate || pads.iter().any(|p| p.controller)) && SDL_GetEventFilter(&mut current, &mut userdata) == SDL_bool::SDL_FALSE {
-            SDL_SetEventFilter(Some(filter), std::ptr::null_mut());
+        if (debug_input || translate || pads.iter().any(|p| p.controller)) && smw_sdl2::events::get_filter(&mut current, &mut userdata) == SDL_bool::SDL_FALSE {
+            smw_sdl2::events::set_filter(Some(filter), std::ptr::null_mut());
         }
     }
 }

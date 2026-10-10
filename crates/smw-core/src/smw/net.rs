@@ -216,9 +216,10 @@ pub fn net_load_server_list() {
 
     #[cfg(all(not(feature = "no_network"), target_os = "emscripten"))]
     unsafe {
-        let url = crate::smw::platform::network::websocket::network_layer_websocket::relay_url();
-        netplay.savedServers.retain(|s| s.hostname != url);
-        netplay.savedServers.insert(0, ServerAddress { hostname: url });
+        if let Some(url) = crate::smw::platform::network::websocket::network_layer_websocket::relay_url() {
+            netplay.savedServers.retain(|s| s.hostname != url);
+            netplay.savedServers.insert(0, ServerAddress { hostname: url });
+        }
     }
 }
 
@@ -1039,8 +1040,11 @@ impl NetworkEventHandler for NetClient {
                 NET_RESPONSE_SERVER_MOTD => println!("Not implemented: NET_RESPONSE_SERVER_MOTD"),
 
                 NET_RESPONSE_CONNECT_OK => {
+                    // Not in the C++: the Servers menu moves on only if the skin goes out no earlier than this receive.
+                    self.set_as_last_received_message(packageType);
                     netplay.connectSuccessful = true;
                     self.send_skin_change();
+                    return;
                 }
 
                 NET_RESPONSE_CONNECT_DENIED => {
