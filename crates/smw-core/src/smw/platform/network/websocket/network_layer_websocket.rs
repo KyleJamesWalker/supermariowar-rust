@@ -29,14 +29,14 @@ pub const DEFAULT_RELAY_URL: &str = match option_env!("SMW_RELAY_URL") {
     None => "wss://smw-relay.vps.pocketsquirrel.com",
 };
 
-/// The page's `?relay=` URL, else the build's default.
-pub fn relay_url() -> String {
+/// The page's `?relay=` URL, else the build's default; none for an empty `?relay=` (web_replay.mjs).
+pub fn relay_url() -> Option<String> {
     let mut buf = [0u8; 512];
     let len = unsafe { smw_relay_url_param(buf.as_mut_ptr(), buf.len()) };
-    if len > 0 {
-        String::from_utf8_lossy(&buf[..len as usize]).into_owned()
-    } else {
-        DEFAULT_RELAY_URL.to_string()
+    match len {
+        0 => Some(DEFAULT_RELAY_URL.to_string()),
+        n if n > 0 => Some(String::from_utf8_lossy(&buf[..n as usize]).into_owned()),
+        _ => None,
     }
 }
 

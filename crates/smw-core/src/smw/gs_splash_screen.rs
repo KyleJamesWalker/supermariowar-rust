@@ -116,7 +116,7 @@ impl GameState for SplashScreenState {
                 }
             }
 
-            SDL_FillRect(screen, std::ptr::null(), 0x0);
+            crate::common::gfx::blit::fill_rect(screen, std::ptr::null(), 0x0);
 
             if self.state == 6 || self.state == 7 || self.state == 8 {
                 rm.menu_backdrop.setalpha(self.alpha as u8);

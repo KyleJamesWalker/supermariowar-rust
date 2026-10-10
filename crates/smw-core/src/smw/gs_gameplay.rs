@@ -1440,18 +1440,18 @@ impl GameplayState {
             //Draw black "behind" the game if we are shaking/moving the screen
             if y_shake > 0 {
                 let rect = SDL_Rect { x: 0, y: 0, w: App::screenWidth, h: y_shake as i32 };
-                SDL_FillRect(screen, &rect, 0x0); //fill empty area with black
+                crate::common::gfx::blit::fill_rect(screen, &rect, 0x0); //fill empty area with black
             } else if y_shake < 0 {
                 let rect = SDL_Rect { x: 0, y: App::screenHeight + y_shake as i32, w: App::screenWidth, h: App::screenHeight };
-                SDL_FillRect(screen, &rect, 0x0); //fill empty area with black
+                crate::common::gfx::blit::fill_rect(screen, &rect, 0x0); //fill empty area with black
             }
 
             if x_shake > 0 {
                 let rect = SDL_Rect { x: 0, y: 0, w: x_shake as i32, h: App::screenHeight };
-                SDL_FillRect(screen, &rect, 0x0); //fill empty area with black
+                crate::common::gfx::blit::fill_rect(screen, &rect, 0x0); //fill empty area with black
             } else if x_shake < 0 {
                 let rect = SDL_Rect { x: App::screenWidth + x_shake as i32, y: 0, w: App::screenWidth, h: App::screenHeight };
-                SDL_FillRect(screen, &rect, 0x0); //fill empty area with black
+                crate::common::gfx::blit::fill_rect(screen, &rect, 0x0); //fill empty area with black
             }
         }
     }

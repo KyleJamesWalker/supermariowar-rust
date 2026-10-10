@@ -103,7 +103,7 @@ pub fn mo_attack_zone_collide_player<T: MO_AttackZoneTrait + ?Sized>(this: &mut 
         if (!dead)
         {
                 SDL_Rect r = {ix, iy, collisionWidth, collisionHeight};
-                SDL_FillRect(blitdest, &r, 0xf000);
+                crate::common::gfx::blit::fill_rect(blitdest, &r, 0xf000);
         }
 }*/
 

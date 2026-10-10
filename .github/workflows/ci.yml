@@ -289,6 +289,24 @@ jobs:
             tail -n 1 segment.log
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Parity with the software blitter (report-only)
+        if: always() && steps.game.outcome != 'skipped'
+        env:
+          SMW_BLIT: rust
+          SMW_NO_BUILD: '1'
+        run: |
+          PARITY_OUT="$RUNNER_TEMP/parity/blit-game" tools/parity.sh > blit-game.log || true
+          PARITY_OUT="$RUNNER_TEMP/parity/blit-editor" tools/editor_parity.sh > blit-editor.log || true
+          {
+            echo "### Parity with SMW_BLIT=rust (${{ matrix.os }}, report-only)"
+            sed -n '/^=== summary/,$p' blit-game.log > blit-game-summary.txt
+            echo "game: $(grep -c 'MATCH all' blit-game-summary.txt) of $(($(wc -l < blit-game-summary.txt) - 1)) dumps match"
+            echo '```'
+            grep -v -E 'MATCH all .* shots ([0-9]+)/\1$' blit-game-summary.txt
+            sed -n '/^=== summary/,$p' blit-editor.log | grep -v -E 'dump MATCH, shots ([0-9]+)/\1, files ([0-9]+)/\2$'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Determinism manifest
         if: always() && steps.game.outcome != 'skipped'
         run: python3 tools/determinism.py manifest parity-${{ matrix.os }} game "$RUNNER_TEMP/parity/game" editor "$RUNNER_TEMP/parity/editor" > "$RUNNER_TEMP/determinism-parity-${{ matrix.os }}.txt"
@@ -469,6 +487,24 @@ jobs:
           grep -v -E 'MATCH all .* shots ([0-9]+)/\1$' sweep.log | grep -v -E '^(=== |OK: )' || true
           [[ -s summary.txt ]] || exit 1
           exit $status
+
+      - name: Parity with the software blitter (report-only)
+        if: always() && steps.game.outcome != 'skipped'
+        env:
+          SMW_BLIT: rust
+          SMW_NO_BUILD: '1'
+        run: |
+          PARITY_OUT="$RUNNER_TEMP/parity/blit-game" tools/parity.sh > blit-game.log || true
+          PARITY_OUT="$RUNNER_TEMP/parity/blit-editor" tools/editor_parity.sh > blit-editor.log || true
+          {
+            echo "### Parity with SMW_BLIT=rust (windows, report-only)"
+            sed -n '/^=== summary/,$p' blit-game.log > blit-game-summary.txt
+            echo "game: $(grep -c 'MATCH all' blit-game-summary.txt) of $(($(wc -l < blit-game-summary.txt) - 1)) dumps match"
+            echo '```'
+            grep -v -E 'MATCH all .* shots ([0-9]+)/\1$' blit-game-summary.txt
+            sed -n '/^=== summary/,$p' blit-editor.log | grep -v -E 'dump MATCH, shots ([0-9]+)/\1, files ([0-9]+)/\2$'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Determinism manifest
         if: always()
