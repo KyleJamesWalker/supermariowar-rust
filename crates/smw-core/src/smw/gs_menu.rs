@@ -468,6 +468,12 @@ impl MenuState {
         #[cfg(target_os = "emscripten")]
         return;
 
+        self.quit();
+    }
+
+    /// Not in upstream: `exit` without its web early return. The main menu's Exit button uses it, so the web build
+    /// ends the session and the page shows its game-over overlay (web_quit_if_done in main.rs).
+    fn quit(&mut self) {
         unsafe {
             game_values.appstate = AppState::Quit;
             game_values.write_config();
@@ -944,7 +950,7 @@ impl MenuState {
             }
 
             if MENU_CODE_EXIT_APPLICATION == code {
-                self.exit();
+                self.quit();
                 return true;
             } else if MENU_CODE_TO_MAIN_MENU == code {
                 self.iDisplayError = DISPLAY_ERROR_NONE;
