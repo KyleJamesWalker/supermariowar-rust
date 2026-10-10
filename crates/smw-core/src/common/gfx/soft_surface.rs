@@ -130,6 +130,31 @@ fn blend_slow(src: u32, dst: u32, alpha_mod: Option<u32>) -> u32 {
     )
 }
 
+/// A source surface's pixels: `pitch` is in pixels.
+pub struct Pixels<'a> {
+    pub w: i32,
+    pub h: i32,
+    pub pitch: usize,
+    pub pixels: &'a [u32],
+}
+
+/// A destination surface's pixels and clip rectangle: `pitch` is in pixels.
+pub struct PixelsMut<'a> {
+    pub w: i32,
+    pub h: i32,
+    pub pitch: usize,
+    pub pixels: &'a mut [u32],
+    pub clip: Rect,
+}
+
+/// The source surface state that picks the blit path.
+#[derive(Clone, Copy, Debug)]
+pub struct BlitState {
+    pub color_key: Option<u32>,
+    pub alpha_mod: u8,
+    pub blend: BlendMode,
+}
+
 impl Surface {
     /// `SDL_CreateRGBSurfaceWithFormat(.., ARGB8888)`: zeroed pixels, blending on, no color key.
     pub fn new(w: i32, h: i32) -> Self {
@@ -147,6 +172,18 @@ impl Surface {
 
     pub fn pixel(&self, x: i32, y: i32) -> u32 {
         self.pixels[(y * self.w + x) as usize]
+    }
+
+    pub fn view(&self) -> Pixels<'_> {
+        Pixels { w: self.w, h: self.h, pitch: self.w as usize, pixels: &self.pixels }
+    }
+
+    pub fn view_mut(&mut self) -> PixelsMut<'_> {
+        PixelsMut { w: self.w, h: self.h, pitch: self.w as usize, pixels: &mut self.pixels, clip: self.clip }
+    }
+
+    pub fn state(&self) -> BlitState {
+        BlitState { color_key: self.color_key, alpha_mod: self.alpha_mod, blend: self.blend }
     }
 
     /// `SDL_SetClipRect`: `None` clips to the whole surface. Returns whether the result is non-empty.
@@ -170,24 +207,34 @@ impl Surface {
 
     /// `SDL_FillRect`: `None` fills the clip rectangle; a rectangle is intersected with it.
     pub fn fill_rect(&mut self, rect: Option<&Rect>, color: u32) {
-        let area = match rect {
-            None => Some(self.clip),
-            Some(r) => r.intersect(&self.clip),
-        };
-        let Some(area) = area else { return };
-        if area.w <= 0 || area.h <= 0 {
-            return;
-        }
-        for y in area.y..area.y + area.h {
-            let row = (y * self.w + area.x) as usize;
-            self.pixels[row..row + area.w as usize].fill(color);
-        }
+        fill_rect(&mut self.view_mut(), rect, color);
+    }
+}
+
+/// `SDL_FillRect` on a pixel view.
+pub fn fill_rect(dst: &mut PixelsMut, rect: Option<&Rect>, color: u32) {
+    let area = match rect {
+        None => Some(dst.clip),
+        Some(r) => r.intersect(&dst.clip),
+    };
+    let Some(area) = area else { return };
+    if area.w <= 0 || area.h <= 0 {
+        return;
+    }
+    for y in area.y..area.y + area.h {
+        let row = y as usize * dst.pitch + area.x as usize;
+        dst.pixels[row..row + area.w as usize].fill(color);
     }
 }
 
 /// sdl2-compat's `SDL_UpperBlit`: clips `src_rect` to `src` and the destination to `dst`'s clip rectangle, then
 /// blits. On a blit, `dst_rect` becomes the clipped destination; otherwise only its size is zeroed.
 pub fn upper_blit(src: &Surface, src_rect: Option<&Rect>, dst: &mut Surface, dst_rect: Option<&mut Rect>) {
+    blit(&src.view(), &src.state(), src_rect, &mut dst.view_mut(), dst_rect);
+}
+
+/// `upper_blit` on pixel views.
+pub fn blit(src: &Pixels, state: &BlitState, src_rect: Option<&Rect>, dst: &mut PixelsMut, dst_rect: Option<&mut Rect>) {
     let mut r_src = Rect::new(0, 0, src.w, src.h);
     let mut r_dst = match &dst_rect {
         Some(d) => Rect::new(d.x, d.y, 0, 0),
@@ -218,7 +265,7 @@ pub fn upper_blit(src: &Surface, src_rect: Option<&Rect>, dst: &mut Surface, dst
             if let Some(out) = out {
                 *out = r_dst;
             }
-            lower_blit(src, &r_src, dst, r_dst.x, r_dst.y);
+            lower_blit(src, state, &r_src, dst, r_dst.x, r_dst.y);
         }
         (None, Some(out)) => {
             out.w = 0;
@@ -228,16 +275,16 @@ pub fn upper_blit(src: &Surface, src_rect: Option<&Rect>, dst: &mut Surface, dst
     }
 }
 
-/// `SDL_LowerBlit` on rectangles already clipped by `upper_blit`.
-fn lower_blit(src: &Surface, sr: &Rect, dst: &mut Surface, dx: i32, dy: i32) {
-    let blend = src.blend == BlendMode::Blend;
-    let modulate = src.alpha_mod != 255;
-    let alpha_mod = src.alpha_mod as u32;
-    let key = src.color_key.map(|k| k & RGB_MASK);
+/// `SDL_LowerBlit` on rectangles already clipped by `blit`.
+fn lower_blit(src: &Pixels, state: &BlitState, sr: &Rect, dst: &mut PixelsMut, dx: i32, dy: i32) {
+    let blend = state.blend == BlendMode::Blend;
+    let modulate = state.alpha_mod != 255;
+    let alpha_mod = state.alpha_mod as u32;
+    let key = state.color_key.map(|k| k & RGB_MASK);
 
     for row in 0..sr.h {
-        let s0 = ((sr.y + row) * src.w + sr.x) as usize;
-        let d0 = ((dy + row) * dst.w + dx) as usize;
+        let s0 = (sr.y + row) as usize * src.pitch + sr.x as usize;
+        let d0 = (dy + row) as usize * dst.pitch + dx as usize;
         let srow = &src.pixels[s0..s0 + sr.w as usize];
         let drow = &mut dst.pixels[d0..d0 + sr.w as usize];
         for (s, d) in srow.iter().zip(drow.iter_mut()) {
