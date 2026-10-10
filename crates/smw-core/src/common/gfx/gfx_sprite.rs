@@ -7,8 +7,7 @@ use crate::globals::*;
 use sdl2::sys::image::IMG_Load;
 use sdl2::sys::{
     SDL_BlendMode, SDL_ConvertSurface, SDL_CreateRGBSurfaceWithFormat, SDL_GetError, SDL_MapRGB, SDL_Rect, SDL_SetColorKey,
-    SDL_SetSurfaceAlphaMod, SDL_SetSurfaceBlendMode, SDL_SetSurfaceRLE, SDL_Surface, SDL_UpperBlit,
-    SDL_UpperBlitScaled,
+    SDL_SetSurfaceAlphaMod, SDL_SetSurfaceBlendMode, SDL_SetSurfaceRLE, SDL_Surface,
 };
 use std::ffi::{CStr, CString};
 use std::io::Write;
@@ -237,7 +236,7 @@ impl gfxSprite {
 
         let mut dstRect_w = *dstRect;
         unsafe {
-            if SDL_UpperBlitScaled(self.m_picture.get(), srcRect, dst, &mut dstRect_w) < 0 {
+            if blit::upper_blit_scaled(self.m_picture.get(), srcRect, dst, &mut dstRect_w) < 0 {
                 eprintln!("SDL_BlitScaled error: {}", sdl_error());
             }
         }
