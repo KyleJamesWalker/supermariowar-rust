@@ -23,7 +23,7 @@ sleep 0.5
 fail=0
 for i in $(seq "$N"); do
   mkdir -p "$WORK/home$i"
-  HOME=$WORK/home$i SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
+  HOME=$WORK/home$i SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy SDL_RENDER_DRIVER=software \
     perl -e 'alarm 20; exec @ARGV' "$RUST" connect "$DATA" > "$WORK/client$i.log" 2>&1
   status=$?
   line=$(grep -h '^EV servers menu' "$WORK/client$i.log")
