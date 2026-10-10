@@ -29,7 +29,8 @@ These come from temporary logs that were not committed.
 - **Classic kill mismatches:** classic returns `NonKill` only when `classic.style` is Shield, and only one client returned it.
 
 ### Fix options
-- **A (chosen, #59).** The host rolls the random settings once, at the sync, and sends them to the joiners before `NET_G2P_SYNC`. When the match starts, every client applies the host's settings and reseeds the shared generator with the sync's seed. The user approved this without a fallback for C++ peers.
+- **B (chosen after #59).** Net games now play the host's own menu settings, so a random Shield death style can no longer make stomps stop killing. That was the cause of a stomp bug the user saw online.
+- **A (#59, replaced by B).** The host rolls the random settings once, at the sync, and sends them to the joiners before `NET_G2P_SYNC`. When the match starts, every client applies the host's settings and reseeds the shared generator with the sync's seed. The user approved this without a fallback for C++ peers.
 - **B.** Stop randomizing in net games and play with the host's room settings. Simpler, but net games then play with the menu settings rather than random ones, which changes behaviour.
 - **C.** Keep rolling locally and make both clients draw the same number of times. This breaks again whenever menu code draws one more random number.
 
