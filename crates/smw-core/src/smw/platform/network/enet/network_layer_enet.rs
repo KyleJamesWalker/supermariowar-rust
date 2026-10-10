@@ -37,6 +37,10 @@ impl NetworkLayerENet {
     }
 
     fn open_connection(&mut self, hostname: &str, port: u16) -> bool {
+        if self.local_client.is_null() {
+            println!("[net] Could not initiate connection: no client connection port.");
+            return false;
+        }
         unsafe {
             let mut target_address: ENetAddress = std::mem::zeroed();
             let c = CString::new(hostname).unwrap_or_default();
@@ -53,7 +57,11 @@ impl NetworkLayerENet {
         true
     }
 
+    /// Not in upstream: a host that failed to open (no socket permission on Android) is null, and ENet dereferences it.
     fn listen(host: *mut ENetHost, last_host_event: &mut ENetEvent, listener: &mut dyn NetworkEventHandler) {
+        if host.is_null() {
+            return;
+        }
         unsafe {
             while enet_host_service(host, last_host_event, 0) > 0 {
                 match last_host_event.type_ {
@@ -130,6 +138,9 @@ impl NetworkLayer for NetworkLayerENet {
     }
 
     fn nat_punch(&mut self, host: u32, port: u16) -> bool {
+        if self.local_gamehost.is_null() {
+            return false;
+        }
         unsafe {
             let target_address = ENetAddress { host, port };
 
