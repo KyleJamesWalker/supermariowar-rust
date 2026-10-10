@@ -1,7 +1,7 @@
 //! Port of src/common/gfx/gfxSprite.cpp
 
 use crate::common::gfx::color::{colors, RGB};
-use crate::common::gfx::{gfx_adjusthiddenrects, rle_enabled};
+use crate::common::gfx::{blit, gfx_adjusthiddenrects, rle_enabled, soft_image};
 use crate::common::util::sdl_helpers::SdlSurfacePtr;
 use crate::globals::*;
 use sdl2::sys::image::IMG_Load;
@@ -50,20 +50,25 @@ fn try_load_image(path: &Path, optimize: bool, color_key: Option<RGB>, alpha: Op
     let _ = std::io::stdout().flush();
 
     unsafe {
-        let cpath = CString::new(path_str.as_bytes()).unwrap();
-        let raw = SdlSurfacePtr::new(IMG_Load(cpath.as_ptr()));
-        if raw.is_null() {
-            return Err(format!("Couldn't load {}: {}", path_str, sdl_error()));
-        }
-
-        if let Some(color_key) = color_key {
-            let key = SDL_MapRGB(raw.format, color_key.r, color_key.g, color_key.b);
-            if SDL_SetColorKey(raw.get(), 1, key) < 0 {
-                return Err(format!("Couldn't set color key for {}: {}", path_str, sdl_error()));
+        let img = if let Some(image) = blit::decode_for_load(path) {
+            let key = color_key.map(|c| image.map_rgb(c.r, c.g, c.b));
+            SdlSurfacePtr::new(blit::to_sdl_surface(&soft_image::convert_to_screen(&image, key)))
+        } else {
+            let cpath = CString::new(path_str.as_bytes()).unwrap();
+            let raw = SdlSurfacePtr::new(IMG_Load(cpath.as_ptr()));
+            if raw.is_null() {
+                return Err(format!("Couldn't load {}: {}", path_str, sdl_error()));
             }
-        }
 
-        let img = SdlSurfacePtr::new(SDL_ConvertSurface(raw.get(), (*screen).format, 0));
+            if let Some(color_key) = color_key {
+                let key = SDL_MapRGB(raw.format, color_key.r, color_key.g, color_key.b);
+                if SDL_SetColorKey(raw.get(), 1, key) < 0 {
+                    return Err(format!("Couldn't set color key for {}: {}", path_str, sdl_error()));
+                }
+            }
+
+            SdlSurfacePtr::new(SDL_ConvertSurface(raw.get(), (*screen).format, 0))
+        };
         if img.is_null() {
             return Err(format!("Couldn't convert {} to the display's pixel format: {}", path_str, sdl_error()));
         }
