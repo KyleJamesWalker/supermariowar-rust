@@ -149,7 +149,7 @@ jobs:
           emulator-options: -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader_indirect
           disable-animations: true
           script: |
-            android/smoke.sh ${{ needs.apk.outputs.file }} tools/replays/cpu_classic.txt tools/replays/menu_nav.txt tools/replays/joy_game.txt tools/replays/flow_world.txt tools/replays/pad_hotplug.txt
+            android/smoke.sh ${{ needs.apk.outputs.file }} tools/replays/cpu_classic.txt tools/replays/menu_nav.txt tools/replays/joy_game.txt tools/replays/flow_world.txt tools/replays/pad_hotplug.txt tools/replays/text_shift.txt tools/replays/osk_pad.txt
             android/pad_smoke.sh ${{ runner.temp }}/vpad
 
       - uses: actions/upload-artifact@v7

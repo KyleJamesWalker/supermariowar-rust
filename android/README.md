@@ -63,4 +63,4 @@ The APK lands in `dist/SuperMarioWar-<Cargo version>.apk`, with `versionName` th
 adb shell am start -n com.kylejameswalker.supermariowar/.MainActivity --es SMW_REPLAY /data/data/com.kylejameswalker.supermariowar/files/r.txt --es SMW_NOLIMIT 1
 ```
 
-`android/pad_smoke.sh <vpad>` plugs a virtual Bluetooth Xbox pad into a rootable emulator through `/dev/uinput` (`vpad.c`, built for the emulator's ABI with the NDK's clang), launches the installed APK with it connected, presses the D-pad, unplugs and replugs it, and checks the `[pad]` and `[input]` lines in logcat and `log.txt`. CI runs both after building the APK.
+`android/pad_smoke.sh <vpad>` plugs a virtual Bluetooth Xbox pad into a rootable emulator through `/dev/uinput` (`vpad.c`, built for the emulator's ABI with the NDK's clang), launches the installed APK with it connected, presses the D-pad, unplugs and replugs it, and checks the `[pad]` and `[input]` lines in logcat and `log.txt`. CI runs both after building the APK. Its replays include `text_shift` and `osk_pad`, which open Multiplayer and with it the ENet client socket; the manifest's `INTERNET` permission is what lets that socket open.
