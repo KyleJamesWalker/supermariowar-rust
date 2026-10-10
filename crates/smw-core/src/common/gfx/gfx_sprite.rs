@@ -92,7 +92,7 @@ fn load_image(path: &Path, optimize: bool, color_key: Option<RGB>, alpha: Option
 
 
 unsafe fn blit_surface(src: *mut SDL_Surface, srcArea: *const SDL_Rect, dst: *mut SDL_Surface, dstArea: *mut SDL_Rect) {
-    if SDL_UpperBlit(src, srcArea, dst, dstArea) < 0 {
+    if crate::common::gfx::blit::upper_blit(src, srcArea, dst, dstArea) < 0 {
         eprintln!("SDL_BlitSurface error: {}", sdl_error());
     }
 }

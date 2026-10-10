@@ -10,7 +10,7 @@ use smw::common::map::{g_iCurrentDrawIndex, read_type_full, CMap};
 use smw::common::resource_manager::CResourceManager;
 use smw::common::tileset_manager::CTilesetManager;
 use smw::globals::*;
-use sdl2::sys::{SDL_FillRect, SDL_FreeSurface, SDL_RWFromFile, SDL_SaveBMP_RW, SDL_Surface};
+use sdl2::sys::{SDL_FreeSurface, SDL_RWFromFile, SDL_SaveBMP_RW, SDL_Surface};
 use std::ffi::CString;
 
 fn save_bmp(s: *mut SDL_Surface, path: &str) {
@@ -68,7 +68,7 @@ fn main() {
             g_map.predrawforeground(&rmp.spr_frontmap[1]);
             g_map.setup_animated_tiles();
 
-            SDL_FillRect(screen, std::ptr::null(), 0);
+            smw::common::gfx::blit::fill_rect(screen, std::ptr::null(), 0);
             draw_map();
             save_bmp(screen, &format!("{}/{}_f0.bmp", outdir, n));
 
@@ -77,7 +77,7 @@ fn main() {
                 g_map.update();
             }
             g_map.lockconnection(0);
-            SDL_FillRect(screen, std::ptr::null(), 0);
+            smw::common::gfx::blit::fill_rect(screen, std::ptr::null(), 0);
             draw_map();
             save_bmp(screen, &format!("{}/{}_f40.bmp", outdir, n));
 

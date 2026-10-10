@@ -1813,7 +1813,7 @@ impl SpotlightManager {
     pub fn draw_spotlights(&mut self) {
         unsafe {
             // Clear the overlay surface again with black
-            SDL_FillRect(rm.spr_overlay.get_surface(), null(), 0x0);
+            crate::common::gfx::blit::fill_rect(rm.spr_overlay.get_surface(), null(), 0x0);
         }
 
         let mut i = 0;

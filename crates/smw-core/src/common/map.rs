@@ -249,7 +249,7 @@ fn get_screen_height(iSize: i32) -> i32 {
 
 #[inline]
 unsafe fn blit(src: *mut SDL_Surface, srcrect: *const SDL_Rect, dst: *mut SDL_Surface, dstrect: *mut SDL_Rect) -> i32 {
-    SDL_UpperBlit(src, srcrect, dst, dstrect)
+    crate::common::gfx::blit::upper_blit(src, srcrect, dst, dstrect)
 }
 
 pub fn draw_map_hazard(hazard: &MapHazard, iSize: i16, fDrawCenter: bool, dst: *mut SDL_Surface) {
@@ -2085,7 +2085,7 @@ impl CMap {
     pub fn pre_draw_preview_blocks(&mut self, targetSurface: *mut SDL_Surface, fThumbnail: bool) {
         if !fThumbnail {
             unsafe {
-                SDL_FillRect(targetSurface, null(), SDL_MapRGB((*targetSurface).format, 255, 0, 255));
+                crate::common::gfx::blit::fill_rect(targetSurface, null(), SDL_MapRGB((*targetSurface).format, 255, 0, 255));
                 SDL_SetColorKey(targetSurface, SDL_bool::SDL_TRUE as i32, SDL_MapRGB((*targetSurface).format, 255, 0, 255));
             }
             small_delay();
@@ -2097,7 +2097,7 @@ impl CMap {
     pub fn pre_draw_preview_foreground(&mut self, targetSurface: *mut SDL_Surface, fThumbnail: bool) {
         if !fThumbnail {
             unsafe {
-                SDL_FillRect(targetSurface, null(), SDL_MapRGB((*targetSurface).format, 255, 0, 255));
+                crate::common::gfx::blit::fill_rect(targetSurface, null(), SDL_MapRGB((*targetSurface).format, 255, 0, 255));
                 SDL_SetColorKey(targetSurface, SDL_bool::SDL_TRUE as i32, SDL_MapRGB((*targetSurface).format, 255, 0, 255));
             }
             small_delay();
@@ -2232,7 +2232,7 @@ impl CMap {
                 SDL_LockSurface(s);
             }
 
-            SDL_FillRect(s, null(), SDL_MapRGB((*s).format, 255, 0, 255));
+            crate::common::gfx::blit::fill_rect(s, null(), SDL_MapRGB((*s).format, 255, 0, 255));
             SDL_SetColorKey(s, SDL_bool::SDL_TRUE as i32, SDL_MapRGB((*s).format, 255, 0, 255));
 
             if (*s).flags & SDL_RLEACCEL != 0 {
@@ -2319,7 +2319,7 @@ impl CMap {
                         for sTileAnimationFrame in 0..4usize {
                             tile.rAnimationSrc[1][sTileAnimationFrame] = rDst;
 
-                            SDL_FillRect(ats, &rDst, iTransparentColor);
+                            crate::common::gfx::blit::fill_rect(ats, &rDst, iTransparentColor);
 
                             for iLayer in 2..4usize {
                                 let tilesetTile = tile.layers[iLayer];
@@ -2358,7 +2358,7 @@ impl CMap {
                         for sTileAnimationFrame in 0..4usize {
                             tile.rAnimationSrc[0][sTileAnimationFrame] = rDst;
 
-                            SDL_FillRect(ats, &rDst, iTransparentColor);
+                            crate::common::gfx::blit::fill_rect(ats, &rDst, iTransparentColor);
 
                             let tilesetTile = tile.layers[0];
                             if tilesetTile.iID as i32 == TILESETANIMATED {

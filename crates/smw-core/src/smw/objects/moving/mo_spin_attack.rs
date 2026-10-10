@@ -65,7 +65,7 @@ impl CObjectTrait for MO_SpinAttack {
             if (iTimer <= 11 && !dead)
             {
                     SDL_Rect r = {ix, iy, collisionWidth, collisionHeight};
-                    SDL_FillRect(blitdest, &r, 0xff00);
+                    crate::common::gfx::blit::fill_rect(blitdest, &r, 0xff00);
             }
     }
     */

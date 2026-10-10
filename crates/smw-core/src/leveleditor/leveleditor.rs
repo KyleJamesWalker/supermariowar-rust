@@ -235,7 +235,7 @@ impl MapPlatform {
                 SDL_SetColorKey(self.preview.get_surface(), SDL_bool::SDL_TRUE as i32, SDL_MapRGB((*self.preview.get_surface()).format, 255, 0, 255));
             }
 
-            SDL_FillRect(self.preview.get_surface(), null(), SDL_MapRGB((*self.preview.get_surface()).format, 255, 0, 255));
+            crate::common::gfx::blit::fill_rect(self.preview.get_surface(), null(), SDL_MapRGB((*self.preview.get_surface()).format, 255, 0, 255));
 
             for iPlatformX in 0..MAPWIDTH as i16 {
                 for iPlatformY in 0..MAPHEIGHT as i16 {
@@ -244,7 +244,7 @@ impl MapPlatform {
                     let mut bltrect = SDL_Rect { x: (iPlatformX as i32) << 3, y: (iPlatformY as i32) << 3, w: THUMBTILESIZE, h: THUMBTILESIZE };
                     if tile.iID >= 0 {
                         let src = g_tilesetmanager.rect(2, tile.iCol, tile.iRow);
-                        SDL_UpperBlit(g_tilesetmanager.tileset(tile.iID as usize).surface(2), src, self.preview.get_surface(), &mut bltrect);
+                        crate::common::gfx::blit::upper_blit(g_tilesetmanager.tileset(tile.iID as usize).surface(2), src, self.preview.get_surface(), &mut bltrect);
                     } else if tile.iID as i32 == TILESETANIMATED {
                         let src = g_tilesetmanager.rect(2, (tile.iCol as i32 * 4) as i16, tile.iRow);
                         rm.spr_tileanimation[2].draw_src_to(&*src, self.preview.get_surface(), &bltrect);
@@ -1186,7 +1186,7 @@ pub fn editor_edit() -> i32 {
         if maplist.is_valid() {
             drawmap(false, TILESIZE as i16, false);
         } else {
-            SDL_FillRect(screen, null(), 0x0);
+            crate::common::gfx::blit::fill_rect(screen, null(), 0x0);
             rm.menu_font_large.draw_centered(320, 200, "Map has been deleted.");
         }
 
@@ -1492,11 +1492,11 @@ pub fn drawlayer(layer: i32, fUseCopied: bool, iBlockSize: i16) {
 
                     let src = g_tilesetmanager.rect(iTilesetIndex, iSrcCol, iSrcRow);
                     let dst = g_tilesetmanager.rect(iTilesetIndex, i, j);
-                    SDL_UpperBlit(rm.spr_tileanimation[iTilesetIndex as usize].get_surface(), src, screen, dst);
+                    crate::common::gfx::blit::upper_blit(rm.spr_tileanimation[iTilesetIndex as usize].get_surface(), src, screen, dst);
                 } else if tile.iID as i32 == TILESETUNKNOWN {
                     let src = g_tilesetmanager.rect(iTilesetIndex, 0, 0);
                     let dst = g_tilesetmanager.rect(iTilesetIndex, i, j);
-                    SDL_UpperBlit(rm.spr_unknowntile[iTilesetIndex as usize].get_surface(), src, screen, dst);
+                    crate::common::gfx::blit::upper_blit(rm.spr_unknowntile[iTilesetIndex as usize].get_surface(), src, screen, dst);
                 }
             }
         }
@@ -1586,7 +1586,7 @@ pub fn drawmap(fScreenshot: bool, iBlockSize: i16, fWithPlatforms: bool) {
                         }
 
                         let dst = g_tilesetmanager.rect(iTilesizeIndex, i as i16, j as i16);
-                        SDL_UpperBlit(rm.spr_blocks[iTilesizeIndex as usize].get_surface(), &rSrcBlock, screen, dst);
+                        crate::common::gfx::blit::upper_blit(rm.spr_blocks[iTilesizeIndex as usize].get_surface(), &rSrcBlock, screen, dst);
                     }
                 }
             }
@@ -2900,11 +2900,11 @@ pub fn draw_platform_unfinished(iPlatform: i16, fDrawTileTypes: bool) {
 
                     let src = g_tilesetmanager.rect(0, iSrcCol, iSrcRow);
                     let dst = g_tilesetmanager.rect(0, iCol, iRow);
-                    SDL_UpperBlit(rm.spr_tileanimation[0].get_surface(), src, screen, dst);
+                    crate::common::gfx::blit::upper_blit(rm.spr_tileanimation[0].get_surface(), src, screen, dst);
                 } else if tile.iID as i32 == TILESETUNKNOWN {
                     let src = g_tilesetmanager.rect(0, 0, 0);
                     let dst = g_tilesetmanager.rect(0, iCol, iRow);
-                    SDL_UpperBlit(rm.spr_unknowntile[0].get_surface(), src, screen, dst);
+                    crate::common::gfx::blit::upper_blit(rm.spr_unknowntile[0].get_surface(), src, screen, dst);
                 }
 
                 if fDrawTileTypes {
@@ -3564,7 +3564,7 @@ pub fn editor_tiles() -> i32 {
             }
         }
 
-        SDL_FillRect(screen, null(), 0xFF888888);
+        crate::common::gfx::blit::fill_rect(screen, null(), 0xFF888888);
 
         let rectSrc = rect(
             view_tileset_x << 5,
@@ -3575,7 +3575,7 @@ pub fn editor_tiles() -> i32 {
 
         r = rect(0, 0, 640, 480);
 
-        SDL_UpperBlit(g_tilesetmanager.tileset(set_tile_tileset as usize).surface(0), &rectSrc, screen, &mut r);
+        crate::common::gfx::blit::upper_blit(g_tilesetmanager.tileset(set_tile_tileset as usize).surface(0), &rectSrc, screen, &mut r);
         rm.menu_font_small.draw(0, 480 - rm.menu_font_small.get_height(), tileset.name());
 
         let mut i = view_tileset_x;
@@ -4023,7 +4023,7 @@ pub fn editor_backgrounds() -> i32 {
         }
 
         let rc = rect(0, 0, 640, 480);
-        SDL_FillRect(screen, &rc, 0x0);
+        crate::common::gfx::blit::fill_rect(screen, &rc, 0x0);
 
         for iBackground in 0..16i32 {
             if iPage as i32 * 16 + iBackground >= backgroundlist.count() as i32 {
@@ -4186,7 +4186,7 @@ pub fn editor_animation() -> i32 {
             }
         }
 
-        SDL_FillRect(screen, null(), 0xFF888888);
+        crate::common::gfx::blit::fill_rect(screen, null(), 0xFF888888);
 
         for iCol in view_animated_tileset_x as i16..(view_animated_tileset_x + 20) as i16 {
             for iRow in 0..8i16 {
@@ -4238,7 +4238,7 @@ pub fn load_background_page(iPage_: i16) {
 
             let temp = ImageLoader::new(path).without_color_key().create();
 
-            SDL_FillRect(sBackgrounds[iIndex as usize].get_surface(), null(), 0x0);
+            crate::common::gfx::blit::fill_rect(sBackgrounds[iIndex as usize].get_surface(), null(), 0x0);
 
             if temp.get_width() != 640 || temp.get_height() != 480 {
                 println!("WARNING: Background {} is {}x{} but must be 640x480. Skipping.", path.display(), temp.get_width(), temp.get_height());
