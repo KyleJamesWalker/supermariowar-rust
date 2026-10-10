@@ -4,7 +4,7 @@
 // through the page's text input (web/textinput.js) the way an on-screen keyboard does, create the room, and
 // check that the relay has a room of that name hosted by that player. Also checks that the touch D-pad still
 // drives the menus after typing, that the session recording holds the typed keys, and that a desktop page
-// never shows the input.
+// never shows the input. Last, a gamepad-only replay types both names with the game's on-screen keyboard.
 //
 // Usage: node tools/web_text_entry_test.mjs [out_dir]
 //   CHROME     Chrome binary (default: the macOS Google Chrome app)
@@ -28,6 +28,93 @@ mkdirSync(out, { recursive: true });
 
 const PLAYER = 'Kyle_7!';
 const ROOM = 'Phone Room';
+const PAD_ROOM = 'Pad Room';
+
+// A pad-only replay for the in-game on-screen keyboard (MI_TextField): its key grid and moves, as in the game.
+const OSK_KEYS = ['1234567890', 'qwertyuiop', 'asdfghjkl-', 'zxcvbnm,./'];
+const OSK_SHIFTED = ['!@#$%^&*()', 'QWERTYUIOP', 'ASDFGHJKL_', 'ZXCVBNM<>?'];
+const OSK_BOTTOM = [0, 3, 6, 8];
+const bottomKey = (col) => OSK_BOTTOM.findLastIndex((start) => col >= start);
+const oskMove = ([r, c], d) => {
+    if (d === 'up') return [(r + 4) % 5, c];
+    if (d === 'down') return [(r + 1) % 5, c];
+    const step = d === 'left' ? -1 : 1;
+    if (r === 4) return [r, OSK_BOTTOM[(bottomKey(c) + step + 4) % 4]];
+    return [r, (c + step + 10) % 10];
+};
+const oskPath = (from, goal) => {
+    const queue = [[from, []]];
+    const seen = new Set([String(from)]);
+    while (queue.length) {
+        const [p, moves] = queue.shift();
+        if (goal(p)) return [p, moves];
+        for (const d of ['up', 'down', 'left', 'right']) {
+            const n = oskMove(p, d);
+            if (!seen.has(String(n))) {
+                seen.add(String(n));
+                queue.push([n, [...moves, d]]);
+            }
+        }
+    }
+};
+const padScript = () => {
+    const HAT = { up: 1, right: 2, down: 4, left: 8 };
+    const lines = ['0 jhat 0 0 0'];
+    let f = 10;
+    const hat = (d) => { lines.push(`${f} jhat 0 0 ${HAT[d]}`, `${f + 2} jhat 0 0 0`); f += 6; };
+    const button = (b) => { lines.push(`${f} jbutton 0 ${b} 1`, `${f + 2} jbutton 0 ${b} 0`); f += 6; };
+    let pos;
+    const go = (goal) => {
+        let moves;
+        [pos, moves] = oskPath(pos, goal);
+        moves.forEach(hat);
+        button(0);
+    };
+    const type = (text) => {
+        pos = [0, 0];
+        for (const ch of text) {
+            if (ch === ' ') {
+                go(([r, c]) => r === 4 && bottomKey(c) === 1);
+                continue;
+            }
+            let rows = OSK_KEYS;
+            if (!OSK_KEYS.some((row) => row.includes(ch))) {
+                rows = OSK_SHIFTED;
+                go(([r, c]) => r === 4 && bottomKey(c) === 0);
+            }
+            const r = rows.findIndex((row) => row.includes(ch));
+            go(([pr, pc]) => pr === r && pc === rows[r].indexOf(ch));
+        }
+        go(([r, c]) => r === 4 && bottomKey(c) === 3);
+    };
+    button(0);
+    f += 20;
+    hat('down');
+    hat('down');
+    button(0);
+    f += 20;
+    hat('up');
+    button(0);
+    f += 10;
+    for (let i = 0; i < 'Player'.length; i++) button(1);
+    type(PLAYER);
+    hat('down');
+    hat('down');
+    button(0);
+    f += 120;
+    button(0);
+    f += 20;
+    button(0);
+    f += 20;
+    button(0);
+    f += 10;
+    type(PAD_ROOM);
+    hat('down');
+    hat('down');
+    button(0);
+    f += 120;
+    return { frames: f, text: `#@ seed=1\n#@ frames=${f}\n${lines.join('\n')}\n` };
+};
 
 const children = [];
 const profile = mkdtempSync(join(tmpdir(), 'smw-text-chrome-'));
@@ -380,6 +467,38 @@ try {
     await key('Enter', 'Enter', 13);
     await waitMenu((m) => !m.modifying, 'Enter to close the field (desktop)');
     await screenshot('desktop');
+    // A gamepad only: the game's own on-screen keyboard types the player and room names, from a replay.
+    const pad = padScript();
+    const logStart = relayLog.length;
+    await send('Page.addScriptToEvaluateOnNewDocument', {
+        source: `(() => {
+            const replay = ${JSON.stringify(pad.text)};
+            const set = Object.getOwnPropertyDescriptor(window, 'Module').set;
+            Object.defineProperty(window, 'Module', {
+                configurable: true,
+                get() { return window.__module; },
+                set(m) {
+                    if (m === window.__module) return;
+                    window.__module = m;
+                    m.noInitialRun = false;
+                    m.preRun = [...(m.preRun ?? []), () => {
+                        Object.assign(m.ENV, { SMW_REPLAY: '/pad.txt', SMW_FRAMES: '${pad.frames}' });
+                        m.FS.writeFile('/pad.txt', replay);
+                    }];
+                    set(m);
+                },
+            });
+        })();`,
+    });
+    await send('Page.navigate', { url: page });
+    const padUntil = Date.now() + 120000;
+    while (!relayLog.slice(logStart).includes('New room by') && Date.now() < padUntil) await sleep(500);
+    await sleep(500);
+    await screenshot('pad-room');
+    const padRoom = relayLog.slice(logStart).split('\n').find((l) => l.includes('New room by')) ?? '';
+    console.log(`     relay: ${padRoom.trim()}`);
+    check(padRoom.includes(`[${PLAYER}@`) && padRoom.includes(`name: ${PAD_ROOM};`),
+        'pad only: the on-screen keyboard typed the player and room names the relay lists');
 } catch (e) {
     console.error(e.message);
     failures++;
