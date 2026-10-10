@@ -3,7 +3,7 @@
 //! The C++ unions that alias `keys[NUM_KEYS]` with named members (`menu_up`, `game_jump`, ...)
 //! become a plain `keys` array plus same-named accessor methods (`game_jump()` / `game_jump_mut()`).
 
-use smw_platform::{InputEvent, MouseEvent};
+use smw_platform::{Input, InputEvent, MouseEvent};
 use crate::common::global_constants::MAX_PLAYERS;
 use crate::globals::*;
 use sdl2::sys::{SDL_Event, SDL_EventType, SDL_Keycode, SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP};
@@ -222,13 +222,14 @@ impl CPlayerInput {
     //key flags to be used by game logic
     //iGameState == 0 for in game and 1 for menu
     pub fn update(&mut self, event: SDL_Event, iGameState: i16) {
-        #[cfg(not(target_os = "emscripten"))]
-        crate::smw::pad::log_event(2, &event);
-        self.update_input(&smw_sdl2::input::from_sdl(&event).event, iGameState);
+        self.update_input(&smw_sdl2::input::from_sdl(&event), iGameState);
     }
 
     /// Not in upstream: `Update` on the backend's normalized event (docs/ARCHITECTURE_V2.md, Normalized input).
-    pub fn update_input(&mut self, event: &InputEvent, iGameState: i16) {
+    pub fn update_input(&mut self, input: &Input, iGameState: i16) {
+        #[cfg(not(target_os = "emscripten"))]
+        crate::smw::pad::log_event(2, &smw_sdl2::input::to_sdl(input));
+        let event = &input.event;
         use InputEvent as E;
         use MouseEvent as M;
         let key_sym = if let E::Key { key, .. } = *event { key.0 } else { 0 };

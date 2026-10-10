@@ -2,6 +2,7 @@
 //!
 //! `_DEBUG`-only code (autotest, debug hotkeys, autokill) is not ported: the reference build is Release.
 
+use smw_platform::InputEvent;
 use crate::common::eyecandy::{
     CEyecandyContainer, EC_Announcement, EC_Bubble, EC_Cloud, EC_Ghost, EC_Leaf, EC_Rain, EC_SingleAnimation, EC_Snow, SpotlightManager,
 };
@@ -2351,21 +2352,19 @@ impl GameplayState {
         unsafe {
             game_values.playerInput.clear_pressed_keys(if game_values.flags.exitinggame { 1 } else { 0 });
 
-            let mut event: SDL_Event = std::mem::zeroed();
-            while smw_sdl2::events::poll(&mut event) != 0 {
-                let event_type = event.type_;
-                if event_type == SDL_EventType::SDL_QUIT as u32 {
+            while let Some(input) = smw_sdl2::events::poll_input() {
+                if input.event == InputEvent::Quit {
                     clean_up();
                     game_values.appstate = AppState::Quit;
                     return;
-                } else if event_type == SDL_EventType::SDL_KEYDOWN as u32 {
-                    let keysym = event.key.keysym;
-                    if (keysym.mod_ as u32) & (SDL_Keymod::KMOD_LALT as u32 | SDL_Keymod::KMOD_RALT as u32) != 0 {
-                        if keysym.sym == SDL_KeyCode::SDLK_F4 as i32 {
+                } else if let InputEvent::Key { key, mods, down: true, .. } = input.event {
+                    let sym = key.0;
+                    if (mods as u32) & (SDL_Keymod::KMOD_LALT as u32 | SDL_Keymod::KMOD_RALT as u32) != 0 {
+                        if sym == SDL_KeyCode::SDLK_F4 as i32 {
                             clean_up();
                             game_values.appstate = AppState::Quit;
                             return;
-                        } else if keysym.sym == SDL_KeyCode::SDLK_RETURN as i32 {
+                        } else if sym == SDL_KeyCode::SDLK_RETURN as i32 {
                             game_values.fullscreen = !game_values.fullscreen;
                             gfx_changefullscreen(game_values.fullscreen);
                             blitdest = screen;
@@ -2374,20 +2373,20 @@ impl GameplayState {
                             continue;
                         }
                     }
-                    if keysym.sym == SDL_KeyCode::SDLK_F1 as i32 {
+                    if sym == SDL_KeyCode::SDLK_F1 as i32 {
                         game_values.showfps = !game_values.showfps;
-                    } else if keysym.sym == SDL_KeyCode::SDLK_ESCAPE as i32 {
+                    } else if sym == SDL_KeyCode::SDLK_ESCAPE as i32 {
                         game_values.playerInput.outputControls[0].game_cancel_mut().fPressed = true;
-                    } else if keysym.sym == SDL_KeyCode::SDLK_TAB as i32 {
+                    } else if sym == SDL_KeyCode::SDLK_TAB as i32 {
                         play_next_music_track();
-                    } else if keysym.sym == SDL_KeyCode::SDLK_INSERT as i32 {
+                    } else if sym == SDL_KeyCode::SDLK_INSERT as i32 {
                         gfx_take_screenshot();
                     }
                 }
 
                 //Feed the player control structures with input data
                 //Use menu controls when exit game dialog is up
-                game_values.playerInput.update(event, if game_values.flags.exitinggame { 1 } else { 0 });
+                game_values.playerInput.update_input(&input, if game_values.flags.exitinggame { 1 } else { 0 });
             }
         }
     }
