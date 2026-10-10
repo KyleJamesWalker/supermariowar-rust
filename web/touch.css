@@ -216,3 +216,19 @@ html:not(.playing) .tc-util[data-action=menu] { display: none; }
   .tc-col { flex-direction: row; }
   .tc-stick { top: var(--keys-top); width: 50vw; }
 }
+
+#textEntry {
+  position: fixed;
+  z-index: 20;
+  margin: 0;
+  padding: 0 8px;
+  border: 2px solid var(--gold, #ffcc33);
+  border-radius: 6px;
+  background: #fff;
+  color: #000;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-user-select: text;
+  user-select: text;
+  touch-action: manipulation;
+}
+#textEntry[hidden] { display: none; }
