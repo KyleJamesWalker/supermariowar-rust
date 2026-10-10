@@ -90,13 +90,34 @@ fn find_color(palette: &[[u8; 4]], r: u8, g: u8, b: u8, a: u8) -> u8 {
     best
 }
 
-/// `IMG_Load`, then `SDL_SetColorKey(SDL_MapRGB(key))` when a key is given, then `SDL_ConvertSurface` to ARGB8888.
-/// Key pixels become alpha 0, and the result blends without a color key.
-pub fn convert_to_screen(image: &Decoded, key: Option<(u8, u8, u8)>) -> Surface {
+impl Decoded {
+    /// `SDL_MapRGB` in the decoded layout: a palette index, or the packed RGB24 or RGBA32 value.
+    pub fn map_rgb(&self, r: u8, g: u8, b: u8) -> u32 {
+        match self {
+            Decoded::Indexed { palette, .. } => find_color(palette, r, g, b, 255) as u32,
+            Decoded::Rgb { .. } => r as u32 | (g as u32) << 8 | (b as u32) << 16,
+            Decoded::Rgba { .. } => r as u32 | (g as u32) << 8 | (b as u32) << 16 | 0xFF00_0000,
+        }
+    }
+
+    /// The raw pixel value `get_raw_pixel` reads from the `IMG_Load` surface.
+    pub fn raw_pixel(&self, x: i32, y: i32) -> u32 {
+        let (w, _) = self.size();
+        let i = (y * w + x) as usize;
+        match self {
+            Decoded::Indexed { indices, .. } => indices[i] as u32,
+            Decoded::Rgb { bytes, .. } => u32::from_le_bytes([bytes[i * 3], bytes[i * 3 + 1], bytes[i * 3 + 2], 0]),
+            Decoded::Rgba { bytes, .. } => u32::from_le_bytes([bytes[i * 4], bytes[i * 4 + 1], bytes[i * 4 + 2], bytes[i * 4 + 3]]),
+        }
+    }
+}
+
+/// `IMG_Load`, then `SDL_SetColorKey(key)` with a raw key (`Decoded::map_rgb`, `Decoded::raw_pixel`) when given,
+/// then `SDL_ConvertSurface` to ARGB8888. Key pixels become alpha 0, and the result blends without a color key.
+pub fn convert_to_screen(image: &Decoded, key: Option<u32>) -> Surface {
     let mut out = match image {
         Decoded::Indexed { w, h, palette, indices } => {
-            let key_index = key.map(|(r, g, b)| find_color(palette, r, g, b, 255));
-            return convert_indexed(*w, *h, *w as usize, indices, palette, key_index);
+            return convert_indexed(*w, *h, *w as usize, indices, palette, key.map(|k| k as u8));
         }
         Decoded::Rgb { w, h, bytes } => {
             let mut s = Surface::new(*w, *h);
@@ -113,7 +134,8 @@ pub fn convert_to_screen(image: &Decoded, key: Option<(u8, u8, u8)>) -> Surface 
             s
         }
     };
-    if let Some((r, g, b)) = key {
+    if let Some(k) = key {
+        let [r, g, b, _] = k.to_le_bytes();
         let rgb = (r as u32) << 16 | (g as u32) << 8 | b as u32;
         for p in &mut out.pixels {
             if *p & 0x00FF_FFFF == rgb {
@@ -183,7 +205,7 @@ mod tests {
                     }
                     let fmt = SDL_AllocFormat(SDL_PixelFormatEnum::SDL_PIXELFORMAT_ARGB8888 as u32);
                     let conv = SDL_ConvertSurface(raw, fmt, 0);
-                    let ours = convert_to_screen(&image, key);
+                    let ours = convert_to_screen(&image, key.map(|(r, g, b)| image.map_rgb(r, g, b)));
                     assert_eq!((ours.w, ours.h), ((*conv).w, (*conv).h), "{}", path.display());
                     let theirs = sdl_pixels(conv);
                     if let Some(i) = ours.pixels.iter().zip(&theirs).position(|(a, b)| a != b) {
@@ -196,6 +218,13 @@ mod tests {
                     }
                     let mut k = 0;
                     assert_eq!(SDL_GetColorKey(conv, &mut k), -1, "{} keeps no color key", path.display());
+                    if let Some((r, g, b)) = key {
+                        assert_eq!(image.map_rgb(r, g, b), SDL_MapRGB((*raw).format, r, g, b), "{} map_rgb", path.display());
+                    }
+                    let (w, h) = image.size();
+                    for (x, y) in [(0, 0), (w - 1, 0), (0, h - 1), (w / 2, h / 2)] {
+                        assert_eq!(image.raw_pixel(x, y), crate::common::gfx::get_raw_pixel(raw, x, y), "{} raw pixel", path.display());
+                    }
                     SDL_FreeFormat(fmt);
                     SDL_FreeSurface(conv);
                     SDL_FreeSurface(raw);
