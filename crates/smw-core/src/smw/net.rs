@@ -280,6 +280,40 @@ impl HandlerAccess for Global<NetworkHandler> {
     }
 }
 
+/// How long the host waits for its joiners to load, and a joiner for the host's go, before playing anyway.
+const START_TIMEOUT_MS: u32 = 5000;
+
+/// Not in the C++: called before every gameplay frame. While true, the frame only polls the network, so no client
+/// plays gameplay frame 1 before every client has loaded the match (`NET_P2G_LOADED`, then the host's `NET_G2P_GO`).
+pub fn waiting_to_start() -> bool {
+    unsafe {
+        if !netplay.active || !netplay.start_waiting {
+            return false;
+        }
+        let now = ticks();
+        if netplay.start_waited_since == 0 {
+            netplay.start_waited_since = now.max(1);
+            if !netplay.theHostIsMe {
+                let peer = netplay.client.foreign_gamehost;
+                netplay.client.send_to(peer, MessageHeader::new(NET_P2G_LOADED).as_bytes(), false);
+            }
+        }
+        netplay.client.update();
+        if netplay.theHostIsMe && netplay.start_waiting {
+            netplay.client.local_gamehost.start_if_everyone_loaded();
+        }
+        let limit = if netplay.theHostIsMe { START_TIMEOUT_MS } else { 2 * START_TIMEOUT_MS };
+        if netplay.start_waiting && now.wrapping_sub(netplay.start_waited_since) > limit {
+            println!("[net] Not every client loaded the match in time; starting anyway.");
+            if netplay.theHostIsMe {
+                netplay.client.local_gamehost.send_go_message();
+            }
+            netplay.start_waiting = false;
+        }
+        netplay.start_waiting
+    }
+}
+
 /// Not in the C++: every client draws in step from the start of the match, whatever its menus drew since the sync.
 pub fn reseed_for_match() {
     RandomNumberGenerator::generator().reseed(unsafe { netplay.common_random_seed });
@@ -736,7 +770,12 @@ impl NetClient {
 
         println!("reseed: {}", pkg.commonRandomSeed as i32);
         RandomNumberGenerator::generator().reseed(pkg.commonRandomSeed);
-        unsafe { netplay.common_random_seed = pkg.commonRandomSeed };
+        unsafe {
+            netplay.common_random_seed = pkg.commonRandomSeed;
+            netplay.start_waiting = true;
+            netplay.start_waited_since = 0;
+            netplay.gamestate_received = false;
+        }
         crate::smw::net_random::begin_setup();
 
         unsafe {
@@ -924,7 +963,11 @@ impl NetClient {
                 pkg.get_player_vel(p, &mut d.xvel, &mut d.yvel);
             }
 
+            if !netplay.gamestate_received {
+                netplay.previous_playerdata = netplay.latest_playerdata.clone();
+            }
             netplay.gamestate_changed = true;
+            netplay.gamestate_received = true;
             netplay.frames_since_last_gamestate = 0;
             netplay.last_confirmed_input = pkg.last_confirmed_local_input_id as u16;
         }
@@ -1112,6 +1155,8 @@ impl NetworkEventHandler for NetClient {
 
                 NET_G2P_HOST_DECIDES_RANDOM => netplay.host_decides_random = true,
 
+                NET_G2P_GO => netplay.start_waiting = false,
+
                 NET_G2P_RANDOM_EVENT => crate::smw::net_random::receive(data),
 
                 _ => {
@@ -1141,6 +1186,7 @@ struct RawPlayerAddress {
     host: u32,
     port: u16,
     sync_ok: bool,
+    loaded: bool,
 }
 
 impl RawPlayerAddress {
@@ -1148,6 +1194,7 @@ impl RawPlayerAddress {
         self.host = 0;
         self.port = 0;
         self.sync_ok = false;
+        self.loaded = false;
     }
 
     fn same(&self, other: &RawPlayerAddress) -> bool {
@@ -1265,6 +1312,9 @@ impl NetGameHost {
         crate::smw::gs_menu::roll_net_game_mode_settings();
         let settings = game_mode_settings_package();
         let pkg = pkgs::StartSync::new(RANDOM_INT(32767) as u32);
+        for c in 0..3 {
+            self.expected_clients[c].loaded = false;
+        }
         self.send_message_to_my_peers(&settings);
         self.send_message_to_my_peers(pkg.as_bytes());
         self.send_message_to_my_peers(gpkgs::HostDecidesRandom::new().as_bytes());
@@ -1306,6 +1356,22 @@ impl NetGameHost {
             let (h, p) = (self.expected_clients[c].host, self.expected_clients[c].port);
             unsafe { networkHandler.deref_handler().nat_punch(h, p) };
         }
+    }
+
+    /// The host plays gameplay frame 1 once every joiner that is still connected has loaded the match.
+    fn start_if_everyone_loaded(&mut self) {
+        unsafe {
+            let everyone = (0..self.expected_client_count as usize)
+                .all(|c| self.expected_clients[c].loaded || self.clients[c].is_null() || netplay.player_disconnected[c + 1]);
+            if everyone {
+                self.send_go_message();
+            }
+        }
+    }
+
+    fn send_go_message(&mut self) {
+        self.send_message_to_my_peers(MessageHeader::new(NET_G2P_GO).as_bytes());
+        unsafe { netplay.start_waiting = false };
     }
 
     fn send_start_game_message(&mut self) {
@@ -1506,7 +1572,7 @@ impl NetworkEventHandler for NetGameHost {
             return;
         }
 
-        let incoming = RawPlayerAddress { host: new_player.address_host(), port: new_player.address_port(), sync_ok: false };
+        let incoming = RawPlayerAddress { host: new_player.address_host(), port: new_player.address_port(), sync_ok: false, loaded: false };
 
         let mut valid_address = false;
         let mut c = 0;
@@ -1558,6 +1624,13 @@ impl NetworkEventHandler for NetGameHost {
 
         match packageType {
             NET_P2G_SYNC_OK => self.handle_sync_ok_message(player, data),
+            NET_P2G_LOADED => {
+                for c in 0..self.expected_client_count as usize {
+                    if !self.clients[c].is_null() && player.same_peer(&*self.clients[c]) {
+                        self.expected_clients[c].loaded = true;
+                    }
+                }
+            }
             NET_P2G_LOCAL_KEYS => self.handle_remote_input(player, data),
             NET_P2G_REQ_POWERUP => self.handle_powerup_request(player, data),
             _ => {
@@ -1664,6 +1737,11 @@ pub struct Networking {
     pub host_decides_random: bool,
     /// The sync's seed; every client reseeds with it again when the match starts.
     pub common_random_seed: u32,
+    /// Until every client has loaded the match, nobody plays gameplay frame 1 (`waiting_to_start`).
+    pub start_waiting: bool,
+    pub start_waited_since: u32,
+    /// A joiner leaves remote players where setup put them until the host's first game state arrives.
+    pub gamestate_received: bool,
 
     pub _alias: Aliased,
 }
@@ -1709,6 +1787,9 @@ impl Networking {
             local_playerdata_store_time: [SystemTime::UNIX_EPOCH; 256],
             host_decides_random: false,
             common_random_seed: 0,
+            start_waiting: false,
+            start_waited_since: 0,
+            gamestate_received: false,
             _alias: Aliased::new(),
         }
     }
