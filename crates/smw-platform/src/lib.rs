@@ -76,9 +76,10 @@ pub struct Services {
     pub audio: Box<dyn AudioOut>,
 }
 
-/// The open index of a pad: a replay's `<dev>`, SDL's `which`, and the device a binding names.
+/// A pad as SDL's events name it (`which`): the device index for added events, the instance ID otherwise. The game
+/// compares it with the device index a binding names, as the C++ does, and replays push `<dev>` here.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-pub struct PadSlot(pub u8);
+pub struct PadSlot(pub i32);
 
 /// An SDL2 keycode value, as `controls.sdl2.bin`, `options.bin` and replays store keys.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -91,27 +92,50 @@ pub enum TouchPhase {
     Up,
 }
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum MouseEvent {
-    Motion { x: i32, y: i32, buttons: u32 },
-    Button { button: u8, down: bool, x: i32, y: i32 },
+    /// `buttons` is SDL's button mask.
+    Motion { x: i32, y: i32, xrel: i32, yrel: i32, buttons: u32 },
+    Button { button: u8, down: bool, clicks: u8, x: i32, y: i32 },
     Wheel { x: i32, y: i32 },
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum DeviceChange {
+    Added,
+    Removed,
+    Remapped,
+}
+
+/// One input event, as the backend delivers it. `timestamp` is the backend's milliseconds; the game never reads it,
+/// but the replay harness keeps it so a pushed event reads back unchanged.
+#[derive(Clone, PartialEq, Debug)]
+pub struct Input {
+    pub timestamp: u32,
+    pub event: InputEvent,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum InputEvent {
-    Key { key: Keycode, down: bool },
+    /// `scancode` and `mods` are SDL2's values; `window` is the window ID.
+    Key { key: Keycode, scancode: i32, mods: u16, down: bool, repeat: bool, window: u32 },
     PadAxis { pad: PadSlot, axis: u8, value: i16 },
     PadButton { pad: PadSlot, button: u8, down: bool },
     PadHat { pad: PadSlot, hat: u8, value: u8 },
-    PadAdded { pad: PadSlot, name: String, guid: [u8; 16] },
-    PadRemoved { pad: PadSlot },
+    /// A joystick plugged in, unplugged or (gamepads only) remapped.
+    Pad { pad: PadSlot, change: DeviceChange },
+    /// The SDL game controller API's view of a pad, which pad.rs translates; buttons and axes in SDL's numbering.
+    GamepadAxis { pad: PadSlot, axis: u8, value: i16 },
+    GamepadButton { pad: PadSlot, button: u8, down: bool },
+    Gamepad { pad: PadSlot, change: DeviceChange },
     /// Normalized to the window, 0.0 to 1.0.
-    Touch { finger: u64, phase: TouchPhase, x: f32, y: f32 },
+    Touch { touch: i64, finger: i64, phase: TouchPhase, x: f32, y: f32, dx: f32, dy: f32, pressure: f32 },
     Text(String),
-    /// The editors only.
-    Mouse(MouseEvent),
+    /// The window the event belongs to, then the event.
+    Mouse { window: u32, which: u32, event: MouseEvent },
     Quit,
+    /// Any other backend event, by the backend's type number. Nothing reads its contents.
+    Other(u32),
 }
 
 #[cfg(test)]
