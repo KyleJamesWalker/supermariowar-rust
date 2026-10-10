@@ -69,7 +69,10 @@ for game in "${games[@]}"; do
     data=$hdata name=Host; [ $role = join ] && data=$jdata name=Join
     rm -rf "${dir:?}/home-$role"
     client $role "$dir" $name "$game" "$data" SMW_NOLIMIT=1 SMW_REPLAY="$dir/${game}_$role.rec.txt" SMW_DUMP="$dir/$role.replay.dump" > "$dir/$role.replay.log" 2>&1
-    if cmp -s "$dir/$role.dump" "$dir/$role.replay.dump"; then
+    if [ ! -s "$dir/$role.dump" ]; then
+      echo "  $role: no dump to replay"
+      fail=1
+    elif cmp -s "$dir/$role.dump" "$dir/$role.replay.dump"; then
       echo "  $role offline replay: 0 dump differences"
     else
       echo "  $role offline replay: $(diff "$dir/$role.dump" "$dir/$role.replay.dump" | grep -c '^<') dump differences"
