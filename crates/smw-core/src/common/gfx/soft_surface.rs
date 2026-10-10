@@ -143,6 +143,8 @@ pub struct Pixels<'a> {
     pub h: i32,
     pub pitch: usize,
     pub pixels: &'a [u32],
+    /// ARGB8888; `false` is XRGB8888, whose top byte SDL ignores on read.
+    pub alpha: bool,
 }
 
 /// A destination surface's pixels and clip rectangle: `pitch` is in pixels.
@@ -152,6 +154,8 @@ pub struct PixelsMut<'a> {
     pub pitch: usize,
     pub pixels: &'a mut [u32],
     pub clip: Rect,
+    /// ARGB8888; `false` is XRGB8888.
+    pub alpha: bool,
 }
 
 /// The source surface state that picks the blit path.
@@ -182,11 +186,11 @@ impl Surface {
     }
 
     pub fn view(&self) -> Pixels<'_> {
-        Pixels { w: self.w, h: self.h, pitch: self.w as usize, pixels: &self.pixels }
+        Pixels { w: self.w, h: self.h, pitch: self.w as usize, pixels: &self.pixels, alpha: true }
     }
 
     pub fn view_mut(&mut self) -> PixelsMut<'_> {
-        PixelsMut { w: self.w, h: self.h, pitch: self.w as usize, pixels: &mut self.pixels, clip: self.clip }
+        PixelsMut { w: self.w, h: self.h, pitch: self.w as usize, pixels: &mut self.pixels, clip: self.clip, alpha: true }
     }
 
     pub fn state(&self) -> BlitState {
@@ -238,6 +242,16 @@ pub fn fill_rect(dst: &mut PixelsMut, rect: Option<&Rect>, color: u32) {
 /// blits. On a blit, `dst_rect` becomes the clipped destination; otherwise only its size is zeroed.
 pub fn upper_blit(src: &Surface, src_rect: Option<&Rect>, dst: &mut Surface, dst_rect: Option<&mut Rect>) {
     blit(&src.view(), &src.state(), src_rect, &mut dst.view_mut(), dst_rect);
+}
+
+/// Whether `blit` reproduces SDL for this source state and pair of layouts (`true` is ARGB8888, `false` XRGB8888).
+pub fn blit_supported(state: &BlitState, src_alpha: bool, dst_alpha: bool) -> bool {
+    match (src_alpha, dst_alpha) {
+        (true, true) => true,
+        (true, false) => state.blend == BlendMode::Blend && state.color_key.is_none() && state.alpha_mod == 255,
+        (false, true) => state.blend == BlendMode::None && state.color_key.is_none() && state.alpha_mod == 255,
+        (false, false) => false,
+    }
 }
 
 /// `upper_blit` on pixel views.
@@ -295,19 +309,20 @@ fn lower_blit(src: &Pixels, state: &BlitState, sr: &Rect, dst: &mut PixelsMut, d
         let srow = &src.pixels[s0..s0 + sr.w as usize];
         let drow = &mut dst.pixels[d0..d0 + sr.w as usize];
         for (s, d) in srow.iter().zip(drow.iter_mut()) {
-            let s = *s;
+            let s = if src.alpha { *s } else { *s | 0xFF00_0000 };
             if let Some(k) = key {
                 if s & RGB_MASK == k {
                     continue;
                 }
             }
-            *d = match (blend, key.is_some(), modulate) {
+            let out = match (blend, key.is_some(), modulate) {
                 (false, _, false) => s,
                 (false, _, true) => (s & RGB_MASK) | (mult_div_255(s >> 24, alpha_mod) << 24),
                 (true, false, false) => blend_pixel_alpha(s, *d),
                 (true, false, true) => blend_modulate(s, *d, alpha_mod),
                 (true, true, m) => blend_slow(s, *d, m.then_some(alpha_mod)),
             };
+            *d = if dst.alpha { out } else { out | 0xFF00_0000 };
         }
     }
 }
@@ -672,6 +687,82 @@ mod tests {
                 }
                 SDL_FreeSurface(ssrc);
                 SDL_FreeSurface(sdst);
+            }
+        }
+    }
+
+    /// ARGB8888 and XRGB8888 pairs in the states `blit_supported` accepts, against SDL.
+    #[test]
+    fn xrgb_layouts_match_sdl() {
+        let mut rng = Rng::new(8);
+        rng.1 = linked_sdl_is_sdl2_compat();
+        let states = [
+            BlitState { color_key: Option::None, alpha_mod: 255, blend: BlendMode::Blend },
+            BlitState { color_key: Option::None, alpha_mod: 255, blend: BlendMode::None },
+        ];
+        for (src_alpha, dst_alpha) in [(true, false), (false, true)] {
+            for state in states.iter().filter(|s| blit_supported(s, src_alpha, dst_alpha)) {
+                for case in 0..300 {
+                    let (sw, sh) = (rng.range(1, 24), rng.range(1, 24));
+                    let (dw, dh) = (rng.range(1, 24), rng.range(1, 24));
+                    let src = random_surface(&mut rng, sw, sh);
+                    let mut dst = random_surface(&mut rng, dw, dh);
+                    let src_rect = (rng.next() % 4 != 0)
+                        .then(|| Rect::new(rng.range(-8, sw + 2), rng.range(-8, sh + 2), rng.range(-2, 30), rng.range(-2, 30)));
+                    let dst_rect = (rng.next() % 4 != 0)
+                        .then(|| Rect::new(rng.range(-30, dw + 4), rng.range(-30, dh + 4), rng.range(-2, 30), rng.range(-2, 30)));
+                    unsafe {
+                        let make = |s: &Surface, alpha: bool| {
+                            let f = if alpha {
+                                SDL_PixelFormatEnum::SDL_PIXELFORMAT_ARGB8888
+                            } else {
+                                SDL_PixelFormatEnum::SDL_PIXELFORMAT_RGB888
+                            };
+                            let surf = SDL_CreateRGBSurfaceWithFormat(0, s.w, s.h, 32, f as u32);
+                            for y in 0..s.h {
+                                let row = ((*surf).pixels as *mut u8).add((y * (*surf).pitch) as usize) as *mut u32;
+                                for x in 0..s.w {
+                                    *row.add(x as usize) = s.pixel(x, y);
+                                }
+                            }
+                            surf
+                        };
+                        let ssrc = make(&src, src_alpha);
+                        let sdst = make(&dst, dst_alpha);
+                        let mode = match state.blend {
+                            BlendMode::None => SDL_BlendMode::SDL_BLENDMODE_NONE,
+                            BlendMode::Blend => SDL_BlendMode::SDL_BLENDMODE_BLEND,
+                        };
+                        SDL_SetSurfaceBlendMode(ssrc, mode);
+                        let ssr = src_rect.map(|r| sdl_rect(&r));
+                        let mut sdr = dst_rect.map(|r| sdl_rect(&r));
+                        SDL_UpperBlit(
+                            ssrc,
+                            ssr.as_ref().map_or(std::ptr::null(), |r| r as *const SDL_Rect),
+                            sdst,
+                            sdr.as_mut().map_or(std::ptr::null_mut(), |r| r as *mut SDL_Rect),
+                        );
+                        let sv = Pixels { w: src.w, h: src.h, pitch: src.w as usize, pixels: &src.pixels, alpha: src_alpha };
+                        let mut dv = PixelsMut {
+                            w: dst.w,
+                            h: dst.h,
+                            pitch: dst.w as usize,
+                            pixels: &mut dst.pixels,
+                            clip: Rect::new(0, 0, dw, dh),
+                            alpha: dst_alpha,
+                        };
+                        let mut rdr = dst_rect;
+                        blit(&sv, state, src_rect.as_ref(), &mut dv, rdr.as_mut());
+                        let mask = if dst_alpha { u32::MAX } else { RGB_MASK };
+                        let ours: Vec<u32> = dst.pixels.iter().map(|p| p & mask).collect();
+                        let theirs: Vec<u32> = sdl_pixels(sdst).iter().map(|p| p & mask).collect();
+                        if let Some(d) = first_difference(&ours, &theirs, dw) {
+                            panic!("{src_alpha}->{dst_alpha} {state:?} case {case}: {d}");
+                        }
+                        SDL_FreeSurface(ssrc);
+                        SDL_FreeSurface(sdst);
+                    }
+                }
             }
         }
     }
