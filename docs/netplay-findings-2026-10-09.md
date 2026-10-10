@@ -1,6 +1,6 @@
 # Netplay findings, 2026-10-09
 
-The `net_game_coins` and `net_game_classic` scenarios failed now and then because each client rolled its own random game mode settings when a net game started. #59 fixes this with option A below. Native `net_game` between a C++ and a Rust client fails because the two load a match at different speeds and upstream has no start barrier. Native C++ netplay is no longer supported, so this second finding only matters between Rust clients. A start barrier is the open follow-up.
+The `net_game_coins` and `net_game_classic` scenarios failed now and then because each client rolled its own random game mode settings when a net game started. #59 fixes this with option A below. Native `net_game` between a C++ and a Rust client fails because the two load a match at different speeds and upstream has no start barrier. Native C++ netplay is no longer supported, so this second finding only matters between Rust clients. A start barrier is the open follow-up. A joiner can also hang in the Servers menu after connecting, because of a timestamp race in the lobby connect handshake that is inherited from upstream. Its fix is open too.
 
 ## 1. Each client rolls its own game mode settings
 
@@ -67,3 +67,25 @@ Native C++ netplay is no longer supported, so mixed pairings no longer gate anyt
 - **Recommended follow-up (game code, for the user to decide): a start barrier for Rust-to-Rust games.** Each client reports when it has loaded the match, and the host starts gameplay for everyone together. This removes the skew and the origin frames.
 - **Tool only.** `net_game_compare.py` compares each remote player's track from the first game state its client received, and reports the frames it skipped. This measures sync rather than load time, but it changes nothing in the game.
 - **Cosmetic.** Until the first game state arrives, a joiner keeps remote players at their spawn positions instead of the origin.
+
+## 3. A joiner can wait forever in the Servers menu after connecting
+
+### Symptom
+In 1 of 24 `net_game_stomp` browser runs, the joiner connected to the lobby but stayed on the Servers menu ("Connecting...") for the rest of the run. The lobby logged the connection and the skin, and the host went on to create the room.
+
+### Cause
+Inherited from upstream. The menu leaves the Servers screen only when the last message sent is the skin and the last message received is `NET_RESPONSE_CONNECT_OK`, with `lastSent.timestamp >= lastRecv.timestamp` (`crates/smw-core/src/smw/gs_menu.rs`).
+
+`NetClient::on_receive` handles `NET_RESPONSE_CONNECT_OK` in this order (`crates/smw-core/src/smw/net.rs`):
+1. It sends the skin, which sets `lastSent.timestamp`.
+2. After the message is handled, it sets `lastRecv.timestamp`.
+
+Upstream `net.cpp` uses the same order: `sendSkinChange()` inside the `NET_RESPONSE_CONNECT_OK` case, then `setAsLastReceivedMessage` after the switch.
+
+Both timestamps are `SDL_GetTicks()` milliseconds. If the tick advances between the two steps, the receive is newer than the send, and the condition never holds again. Compressing the skin file between the two steps makes this more likely.
+
+### Fix options
+- **A (recommended).** Record the received `NET_RESPONSE_CONNECT_OK` before sending the skin, so the send is never older than the receive. This is a one-line reorder for this one message type. It keeps the menu's ordering check, which guards against stale replies.
+- **B.** Relax the check to `lastSent.timestamp + 1 >= lastRecv.timestamp`, or drop the timestamp comparison for this transition. This is simpler, but it weakens a check that other transitions rely on, so it is not recommended.
+
+Both options change game code and wait for the user's review.
