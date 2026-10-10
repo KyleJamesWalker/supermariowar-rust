@@ -11,7 +11,7 @@ kind, the joiner's records must be the host's, in any order. The joiner may stil
 the last SPAWN_TAIL gameplay frames. --min KIND=N fails when the host recorded fewer than N of KIND (--min-spawns N
 is --min powerup=N). With --spawns, a game over must also come within GAMEOVER_SLACK gameplay frames on both
 clients. --min-close overrides MIN_CLOSE for scenarios whose tracks drift for a few frames per block bump,
-as they do between two C++ clients.
+as they do between two C++ clients. --forbid TEXT fails when any `C` record of either client contains TEXT.
 """
 import argparse
 import sys
@@ -105,6 +105,7 @@ def main():
     ap.add_argument('--min-spawns', type=int, default=0)
     ap.add_argument('--min', action='append', default=[], metavar='KIND=N')
     ap.add_argument('--min-close', type=float, default=MIN_CLOSE)
+    ap.add_argument('--forbid', action='append', default=[], metavar='TEXT')
     args = ap.parse_args()
     hmenus, host, hspawns, hend = parse(args.host)
     jmenus, join, jspawns, jend = parse(args.join)
@@ -138,6 +139,12 @@ def main():
         same = hend is not None and jend is not None and abs(hend - jend) <= GAMEOVER_SLACK
         print('  game over: ' + ('same frame' if same else 'joiner not there yet' if late else 'DIFFERENT FRAMES'))
         ok &= same or late
+    for text in args.forbid:
+        hits = [(who, s) for who, spawns in (('host', hspawns), ('join', jspawns)) for s in spawns if text in f'{s[1]} {s[2]}']
+        print(f'  forbid {text!r}: ' + ('none' if not hits else f'{len(hits)} FOUND'))
+        for who, s in hits[:4]:
+            print(f'    {who} frame {s[0]}: {s[1]} {s[2]}')
+        ok &= not hits
     print('  ' + ('SYNCED' if ok else 'NOT SYNCED'))
     return 0 if ok else 1
 
