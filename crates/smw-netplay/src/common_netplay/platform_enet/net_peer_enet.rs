@@ -93,6 +93,10 @@ impl NetPeer for NetPeerENet {
         self.player_id
     }
 
+    fn peer_key(&self) -> u64 {
+        self.foreign_peer as u64
+    }
+
     fn same_peer(&self, other: &dyn NetPeer) -> bool {
         match other.as_any().downcast_ref::<NetPeerENet>() {
             Some(o) => self.foreign_peer == o.foreign_peer,

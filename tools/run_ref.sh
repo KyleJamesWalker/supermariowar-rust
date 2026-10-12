@@ -60,6 +60,7 @@ shots="${SMW_SHOT_FRAMES:-$(directive shots)}"
 options="$(directive options)"
 options_b64="$(directive options_b64)"
 controls_b64="$(directive controls_b64)"
+servers_b64="$(directive servers_b64)"
 
 mkdir -p "$out"
 out="$(cd "$out" && pwd)"
@@ -75,10 +76,11 @@ if [[ -n "$options" ]]; then
     cp "$replay_dir/$options" "$settings/options.bin"
 fi
 # Session recordings embed the settings files they started with.
-if [[ -n "$options_b64" || -n "$controls_b64" ]]; then
+if [[ -n "$options_b64" || -n "$controls_b64" || -n "$servers_b64" ]]; then
     mkdir -p "$settings"
     [[ -z "$options_b64" ]] || printf '%s' "$options_b64" | base64 -d > "$settings/options.bin"
     [[ -z "$controls_b64" ]] || printf '%s' "$controls_b64" | base64 -d > "$settings/controls.sdl2.bin"
+    [[ -z "$servers_b64" ]] || printf '%s' "$servers_b64" | base64 -d > "$settings/servers.toml"
 fi
 # Git Bash's cp -R does not keep listing order; on a FAT TMPDIR this gives the goldens' order.
 if [[ "$OSTYPE" == msys || "$OSTYPE" == cygwin ]]; then

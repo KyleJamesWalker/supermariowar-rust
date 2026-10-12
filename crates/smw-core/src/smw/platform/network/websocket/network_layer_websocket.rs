@@ -297,6 +297,10 @@ impl NetPeer for NetPeerWebSocket {
         ((self.address_host() as u64) << 16) + self.port as u64
     }
 
+    fn peer_key(&self) -> u64 {
+        self.conn as u64
+    }
+
     fn same_peer(&self, other: &dyn NetPeer) -> bool {
         match other.as_any().downcast_ref::<NetPeerWebSocket>() {
             Some(o) => self.conn == o.conn,

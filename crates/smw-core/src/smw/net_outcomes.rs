@@ -226,3 +226,14 @@ fn kill_style(v: i32) -> KillStyle {
         KillStyle::default()
     }
 }
+
+/// A net match's checkpoint (smw/checkpoint.rs).
+pub fn checkpoint(s: &mut crate::smw::checkpoint::Snap) {
+    unsafe {
+        s.io(&mut *(&raw mut g_lastScores));
+        s.io(&mut *(&raw mut g_lastGameOver));
+        s.io(&mut *(&raw mut g_lastSent));
+        s.io(&mut *(&raw mut g_hostGameOver));
+        s.io(&mut *(&raw mut g_hostWinner));
+    }
+}

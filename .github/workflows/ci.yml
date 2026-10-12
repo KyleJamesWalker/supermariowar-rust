@@ -96,6 +96,12 @@ jobs:
         if: matrix.os == 'ubuntu-24.04' && matrix.profile == 'release'
         run: tools/ref/net_connect_stress.sh 20
 
+      - name: Net games, recorded and replayed offline
+        if: matrix.os == 'ubuntu-24.04' && matrix.profile == 'release'
+        env:
+          SDL_RENDER_DRIVER: software
+        run: timeout 20m tools/ref/net_game_interop.sh
+
   relay:
     runs-on: ubuntu-24.04
     steps:
@@ -544,7 +550,7 @@ jobs:
   web:
     needs: build-web
     runs-on: ubuntu-24.04
-    timeout-minutes: 75
+    timeout-minutes: 95
     env:
       SDL_RENDER_DRIVER: software
       CHROME: /usr/bin/google-chrome
@@ -590,7 +596,7 @@ jobs:
         if: always()
         env:
           NET_GAMES: net_game net_game_blocks net_game_stomp net_game_coins net_game_classic net_game_frenzy
-        run: timeout 25m node tools/web_netplay_test.mjs "$RUNNER_TEMP/web-netplay"
+        run: timeout 40m node tools/web_netplay_test.mjs "$RUNNER_TEMP/web-netplay"
 
       - name: Web replays
         if: always()

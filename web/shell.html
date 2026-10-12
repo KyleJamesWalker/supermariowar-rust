@@ -338,7 +338,7 @@
       return out;
     };
     var parseSession = function (text) {
-      var session = { header: [], events: [], matches: [], frames: null };
+      var session = { header: [], events: [], net: [], matches: [], frames: null };
       var byNumber = {};
       var current = null;
       text.split('\n').forEach(function (line) {
@@ -362,6 +362,8 @@
               current = null;
             }
           }
+        } else if (/^#@ netv? frame=\d+ /.test(line)) {
+          session.net.push(line);
         } else if (/^#@ frames=/.test(line)) {
           session.frames = parseInt(line.split('=')[1], 10);
         } else if (line.charAt(0) === '#') {
@@ -393,6 +395,10 @@
       session.events.forEach(function (e) {
         var f = parseInt(e, 10);
         if (f > m.start && f < end) out.push(e);
+      });
+      session.net.forEach(function (n) {
+        var f = parseInt(n.split(' ')[2].slice(6), 10);
+        if (f > m.start && f < end) out.push(n);
       });
       out.push('#@ frames=' + end);
       return out.join('\n') + '\n';
@@ -439,7 +445,7 @@
           row.appendChild(smallButton('Watch', false, PLAY_ICON, function () { watchText(clipName, clipText(session, m, name)); }));
           row.appendChild(smallButton('Clip', true, SAVE_ICON, function () { downloadText(clipName, clipText(session, m, name), saveTextElement.checked); }));
         } else {
-          row.appendChild(Object.assign(document.createElement('small'), { className: 'hint', textContent: m.unsupported === 'bonus_house' ? 'bonus house: no clip' : 'no clip' }));
+          row.appendChild(Object.assign(document.createElement('small'), { className: 'hint', textContent: { bonus_house: 'bonus house: no clip', online: 'online: no clip' }[m.unsupported] || 'no clip' }));
         }
         list.appendChild(row);
       });
