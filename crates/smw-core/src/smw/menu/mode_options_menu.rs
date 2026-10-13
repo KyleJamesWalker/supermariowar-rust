@@ -1588,6 +1588,26 @@ impl UI_ModeOptionsMenu {
         }
     }
 
+    /// Not in the C++: a net match's mode options as the menu names them, for the preview before it starts.
+    pub fn describe_game_mode_settings(&self, iMode: i16) -> Vec<String> {
+        unsafe {
+            let g = &game_values.gamemodesettings;
+            let lines = match iMode as GameModeType {
+                game_mode_classic => vec![self.miClassicModeStyleField.describe(g.classic.style), self.miClassicModeScoringField.describe(g.classic.scoring)],
+                game_mode_frag => vec![self.miFragModeStyleField.describe(g.frag.style), self.miFragModeScoringField.describe(g.frag.scoring)],
+                game_mode_timelimit => vec![self.miTimeLimitModeStyleField.describe(g.time.style), self.miTimeLimitModeScoringField.describe(g.time.scoring)],
+                game_mode_jail => vec![self.miJailModeStyleField.describe(g.jail.style), self.miJailModeTimeFreeField.describe(g.jail.timetofree), self.miJailModeTagFreeField.describe(g.jail.tagfree)],
+                game_mode_coins => vec![self.miCoinModePenaltyField.describe(g.coins.penalty), self.miCoinModeQuantityField.describe(g.coins.quantity)],
+                game_mode_stomp => vec![self.miStompModeRateField.describe(g.stomp.rate)],
+                game_mode_domination => vec![self.miDominationModeQuantityField.describe(g.domination.quantity)],
+                game_mode_race => vec![self.miRaceModeQuantityField.describe(g.race.quantity), self.miRaceModePenaltyField.describe(g.race.penalty)],
+                game_mode_collection => vec![self.miCollectionModeQuantityField.describe(g.collection.quantity)],
+                _ => vec![],
+            };
+            lines.into_iter().flatten().collect()
+        }
+    }
+
     pub fn set_random_game_mode_settings(&mut self, iMode: i16) {
         unsafe {
             let iMode = iMode as GameModeType;

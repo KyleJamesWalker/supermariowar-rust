@@ -285,6 +285,34 @@ impl HandlerAccess for Global<NetworkHandler> {
 
 /// How long the host waits for its joiners to load, and a joiner for the host's go, before playing anyway.
 const START_TIMEOUT_MS: u32 = 5000;
+/// How long every client shows the match settings before gameplay frame 1, at least.
+const PREVIEW_MS: u32 = 2500;
+
+/// Not in the C++: the match settings every client shows while it waits to start (`waiting_to_start`).
+pub fn draw_match_preview() {
+    unsafe {
+        rm.menu_backdrop.draw(0, 0);
+        rm.menu_dialog.draw_src(144, 100, &sdl2::sys::SDL_Rect { x: 0, y: 0, w: 336, h: 264 });
+        rm.menu_dialog.draw_src(480, 100, &sdl2::sys::SDL_Rect { x: 496, y: 0, w: 16, h: 264 });
+        rm.menu_dialog.draw_src(144, 364, &sdl2::sys::SDL_Rect { x: 0, y: 464, w: 336, h: 16 });
+        rm.menu_dialog.draw_src(480, 364, &sdl2::sys::SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+
+        let gm = game_values.gamemode;
+        let mut lines = vec![gm.szModeName.clone()];
+        if !gm.szGoalName.is_empty() {
+            lines.push(if gm.goal < 0 { format!("{}: Unlimited", gm.szGoalName) } else { format!("{}: {}", gm.szGoalName, gm.goal) });
+        }
+        lines.extend(crate::smw::gs_menu::describe_net_game_mode_settings());
+        if !netplay.match_map_name.is_empty() {
+            lines.push(format!("Map: {}", netplay.match_map_name));
+        }
+        rm.menu_font_large.draw_centered(320, 116, "Match Settings");
+        for (i, line) in lines.iter().enumerate() {
+            rm.menu_font_large.draw_chop_centered(320, 160 + 30 * i as i32, 320, line);
+        }
+        rm.menu_font_small.draw_centered(320, 340, if netplay.match_randomized { "Randomized by the host" } else { "Chosen by the host" });
+    }
+}
 
 /// Not in the C++: called before every gameplay frame. While true, the frame only polls the network, so no client
 /// plays gameplay frame 1 before every client has loaded the match (`NET_P2G_LOADED`, then the host's `NET_G2P_GO`).
@@ -1155,6 +1183,11 @@ impl NetworkEventHandler for NetClient {
 
                 NET_G2P_GO => netplay.start_waiting = false,
 
+                NET_G2P_MATCH_MAP if data.len() > 3 => {
+                    netplay.match_randomized = data[3] != 0;
+                    netplay.match_map_name = String::from_utf8_lossy(&data[4..]).into_owned();
+                }
+
                 NET_G2P_RANDOM_EVENT => crate::smw::net_random::receive(data),
 
                 _ => {
@@ -1306,14 +1339,28 @@ impl NetGameHost {
     fn send_sync_messages(&mut self) {
         println!("[net] Prepare launching the game...");
 
-        RandomNumberGenerator::generator().reseed(net_record::value_u32("time", || unsafe { libc_time() } as u32));
-        crate::smw::gs_gameplay::set_game_mode_settings_from_menu();
+        RandomNumberGenerator::generator().reseed(net_record::value_u32("time", || crate::smw::harness::net_seed().unwrap_or(unsafe { libc_time() } as u32)));
+        if unsafe { netplay.randomize_settings } {
+            crate::smw::gs_menu::roll_net_game_mode_settings();
+        } else {
+            crate::smw::gs_gameplay::set_game_mode_settings_from_menu();
+        }
         let settings = game_mode_settings_package();
+        let map_name = unsafe {
+            let path = netplay.mapfilepath.clone();
+            netplay.match_map_name = Path::new(&path).file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+            netplay.match_map_name.clone()
+        };
+        unsafe { netplay.match_randomized = netplay.randomize_settings };
+        let mut map_pkg = MessageHeader::new(NET_G2P_MATCH_MAP).as_bytes().to_vec();
+        map_pkg.push(unsafe { netplay.randomize_settings } as u8);
+        map_pkg.extend_from_slice(map_name.as_bytes());
         let pkg = pkgs::StartSync::new(RANDOM_INT(32767) as u32);
         for c in 0..3 {
             self.expected_clients[c].loaded = false;
         }
         self.send_message_to_my_peers(&settings);
+        self.send_message_to_my_peers(&map_pkg);
         self.send_message_to_my_peers(pkg.as_bytes());
 
         unsafe {
@@ -1362,7 +1409,7 @@ impl NetGameHost {
         unsafe {
             let everyone = (0..self.expected_client_count as usize)
                 .all(|c| self.expected_clients[c].loaded || self.clients[c].is_null() || netplay.player_disconnected[c + 1]);
-            if everyone {
+            if everyone && ticks().wrapping_sub(netplay.start_waited_since) >= PREVIEW_MS {
                 self.send_go_message();
             }
         }
@@ -1742,6 +1789,11 @@ pub struct Networking {
     pub start_waited_since: u32,
     /// A joiner leaves remote players where setup put them until the host's first game state arrives.
     pub gamestate_received: bool,
+    /// The host's "Randomize" room setting: roll the mode settings at the sync instead of playing the menu's.
+    pub randomize_settings: bool,
+    /// The match's map name, and whether its settings were randomized, for the preview while every client loads.
+    pub match_map_name: String,
+    pub match_randomized: bool,
 
     pub _alias: Aliased,
 }
@@ -1790,6 +1842,9 @@ impl Networking {
             start_waiting: false,
             start_waited_since: 0,
             gamestate_received: false,
+            randomize_settings: false,
+            match_map_name: String::new(),
+            match_randomized: false,
             _alias: Aliased::new(),
         }
     }

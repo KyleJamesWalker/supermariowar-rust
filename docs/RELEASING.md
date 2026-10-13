@@ -19,12 +19,10 @@ Pushing a `v*` tag publishes a GitHub Release: `.github/workflows/release.yml` b
 1. Check that CI is green on the `main` commit you will tag.
 2. Optional: run a dry run from Actions > Release > Run workflow, or `gh workflow run release.yml --ref main`. It builds everything and uploads the packages as the `release-assets` artifact without creating a release. The run summary lists each file's size and checksum.
 3. Set `version` in `Cargo.toml` to the new version (it becomes the macOS app's `CFBundleShortVersionString`), run `cargo check` to update `Cargo.lock`, and merge that change to `main`.
-4. Tag the merge commit and push the tag:
+4. Create the release on that `main` commit. GitHub creates the tag, which starts the Release run, and the run uploads the packages to this release:
 
    ```sh
-   git switch main && git pull
-   git tag -a v0.2.0 -m "v0.2.0"
-   git push origin v0.2.0
+   gh release create v0.2.0 --target main --generate-notes
    ```
 
 5. Watch the Release run. When it finishes, the release is at `https://github.com/KyleJamesWalker/supermariowar-rust/releases/tag/v0.2.0`. Edit the generated notes if needed.
