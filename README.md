@@ -79,6 +79,8 @@ node tools/web_text_entry_test.mjs out/                           # type a name 
 
 On touch screens (`pointer: coarse`) the page shows on-screen controls for player 1: a D-pad, Jump, Run and Item, Start and Back. They press player 1's default keys, so the game sees ordinary keyboard input. The page footer forces them on or off. The Stick button (or the footer link) swaps the D-pad for a floating stick that appears under the thumb anywhere left of the picture; the choice is remembered. Player 2 defaults to a human player, so to play alone set it to CPU or None in the main menu's Players row. On iPhone, Share > Add to Home Screen runs the game fullscreen; Android can use the controls' fullscreen button or install the page. When a text field such as the player or room name is being edited, a text box appears over it: tap it to type with the on-screen keyboard. Done or closing the keyboard confirms; Back leaves the field as it does with a keyboard.
 
+Gamepads use the browser Gamepad API. On macOS, Firefox misnumbers Xbox Bluetooth pads (A comes through as button 1), so use Chrome or rebind in Options > Controls.
+
 ## Browser multiplayer
 
 Upstream's web build has no netplay. Here the browser build plays online through `smw_relay`, which runs the lobby server and relays game traffic between players over WebSocket. The page connects to `wss://smw-relay.vps.pocketsquirrel.com`, or to the relay a `?relay=ws://...` parameter names. Browser and native players cannot meet yet. `docs/RELAY.md` covers the protocol, settings and deployment.
