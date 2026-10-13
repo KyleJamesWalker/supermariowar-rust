@@ -7,7 +7,8 @@
 # Env: SMW_RUST_BIN (smw), SMW_RUST_SERVER (smw_server), SMW_RUST_DATA,
 #      NET_GAMES (scenario directories beside this script; default: every net_game*).
 # A scenario's host.txt may name a map from net_maps/ (`#@ map=<name>`; each client gets an APFS clone of its data
-# tree with the map added) and extra net_game_compare.py arguments (`#@ compare=...`).
+# tree with the map added), a host sync seed (`#@ net_seed=<n>`, so the game spawns alike every run) and extra
+# net_game_compare.py arguments (`#@ compare=...`).
 HERE=$(cd "$(dirname "$0")" && pwd)
 PORT=$(cd "$HERE/../.." && pwd)
 RUST=${SMW_RUST_BIN:-$PORT/target/release/smw}
@@ -17,7 +18,7 @@ if [ -z "$SMW_RUST_BIN" ] || [ -z "$SMW_RUST_SERVER" ]; then
   cargo build --release --quiet --locked --manifest-path "$PORT/Cargo.toml" --bin smw --bin smw_server || exit 2
 fi
 WORK=$(mktemp -d)
-games=(${NET_GAMES:-net_game net_game_blocks net_game_frenzy net_game_stomp net_game_coins net_game_classic})
+games=(${NET_GAMES:-net_game net_game_blocks net_game_frenzy net_game_stomp net_game_coins net_game_classic net_game_stompkill})
 
 param() { sed -n "s/^#@ $1=//p" "$HERE/$2/host.txt"; }
 
@@ -40,6 +41,7 @@ client() {
   shift 5
   local mapenv=()
   [ "$role" = host ] && [ -n "$(param map "$game")" ] && mapenv=(SMW_MAP="$(param map "$game")")
+  [ "$role" = host ] && [ -n "$(param net_seed "$game")" ] && mapenv+=(SMW_NET_SEED="$(param net_seed "$game")")
   local home=$dir/home-$role
   mkdir -p "$home/Library/Preferences/.smw"
   printf 'player_name = "%s"\nservers = ["127.0.0.1"]\n' "$name" > "$home/Library/Preferences/.smw/servers.toml"

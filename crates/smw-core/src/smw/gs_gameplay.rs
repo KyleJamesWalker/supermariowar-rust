@@ -2701,6 +2701,7 @@ impl GameState for GameplayState {
     fn update(&mut self) {
         unsafe {
             if crate::smw::net::waiting_to_start() {
+                crate::smw::net::draw_match_preview();
                 return;
             }
             net_random::gameplay_frame();

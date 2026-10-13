@@ -73,6 +73,12 @@ fn modify_images(spr: Ptr<gfxSprite>, x: i16, y: i16, width: i16, indent: i16) -
 }
 
 impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
+    /// Not in the C++: the label and the item name for `value`, without selecting it.
+    pub fn describe(&self, value: T) -> Option<String> {
+        let item = self.m_items.iter().find(|i| i.value == value)?;
+        Some(format!("{}: {}", self.m_name, item.name))
+    }
+
     pub fn new(nspr: Ptr<gfxSprite>, x: i16, y: i16, name: impl Into<String>, width: i16, indent: i16) -> Self {
         let (left, right) = modify_images(nspr, x, y, width, indent);
         MI_SelectField {

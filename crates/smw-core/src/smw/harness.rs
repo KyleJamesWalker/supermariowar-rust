@@ -549,6 +549,11 @@ pub fn record_line(line: &str) {
     }
 }
 
+/// SMW_NET_SEED: the seed a net game's host syncs with instead of the clock, so a scripted net game spawns alike every run.
+pub fn net_seed() -> Option<u32> {
+    env("SMW_NET_SEED").and_then(|s| s.parse().ok())
+}
+
 pub fn no_limit() -> bool {
     unsafe { h.noLimit }
 }

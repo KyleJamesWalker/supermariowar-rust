@@ -29,7 +29,7 @@ const chrome = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/M
 const out = resolve(process.argv[2] ?? join(tmpdir(), 'smw-web-netplay'));
 mkdirSync(out, { recursive: true });
 
-const games = (process.env.NET_GAMES ?? 'net_game net_game_blocks net_game_frenzy net_game_stomp net_game_coins net_game_classic').split(/\s+/).filter(Boolean);
+const games = (process.env.NET_GAMES ?? 'net_game net_game_blocks net_game_frenzy net_game_stomp net_game_coins net_game_classic net_game_stompkill').split(/\s+/).filter(Boolean);
 
 // The native scripts assume both clients start together. Pages load at different speeds, so the
 // host's start press and both players' gameplay inputs move SHIFT frames later.
@@ -49,12 +49,13 @@ const scenario = (game) => {
             })
             .join('\n');
     const map = param('map');
+    const netSeed = param('net_seed');
     const mapFile = map && { name: `${map}.map`, base64: readFileSync(join(repo, 'tools', 'ref', 'net_maps', `${map}.map`)).toString('base64') };
     return {
         frames,
         compareArgs: (param('compare') ?? '').split(/\s+/).filter(Boolean),
         roles: [
-            { role: 'host', name: 'Host', replay: shifted('host', 420), mapFile, map },
+            { role: 'host', name: 'Host', replay: shifted('host', 420), mapFile, map, netSeed },
             { role: 'join', name: 'Join', replay: shifted('join', 620), mapFile },
         ],
     };
@@ -238,7 +239,7 @@ const play = async (game) => {
     mkdirSync(dir, { recursive: true });
     const logStart = relayLog.length;
     const pages = [];
-    for (const r of roles) pages.push(await openPage({ ...r, frames, env: { SMW_RECORD_TO: '/rec.txt' } }));
+    for (const r of roles) pages.push(await openPage({ ...r, frames, env: { SMW_RECORD_TO: '/rec.txt', ...(r.netSeed && { SMW_NET_SEED: r.netSeed }) } }));
 
     let shot = false;
     let timedOut = false;

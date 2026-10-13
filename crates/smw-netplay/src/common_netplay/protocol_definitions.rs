@@ -60,3 +60,5 @@ pub const NET_G2P_RANDOM_EVENT: u8 = 93;
 // Not in the C++ protocol: the start barrier (docs/PROGRESS.md, Netplay deviations).
 pub const NET_P2G_LOADED: u8 = 94;
 pub const NET_G2P_GO: u8 = 95;
+// Not in the C++ protocol: the match's map name, for the preview before it starts.
+pub const NET_G2P_MATCH_MAP: u8 = 96;

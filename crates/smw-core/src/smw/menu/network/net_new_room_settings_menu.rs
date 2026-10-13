@@ -24,6 +24,8 @@ pub struct UI_NetNewRoomSettingsMenu {
     miModeField: Ptr<MI_ImageSelectField>,
     miGoalField: [Ptr<MI_SelectField<i16>>; GM_LAST],
     miModeSettingsButton: Ptr<MI_Button>,
+    /// Not in the C++: roll the mode settings when the match starts, as upstream always did.
+    miRandomizeField: Ptr<MI_SelectField<bool>>,
     miMapField: Ptr<MI_MapField>,
     miContinueButton: Ptr<MI_Button>,
 
@@ -52,6 +54,12 @@ impl UI_NetNewRoomSettingsMenu {
 
             this.miModeSettingsButton = Ptr::new_box(MI_Button::new_left(selectfield, 430, 125, "Settings", 140));
             this.miModeSettingsButton.set_code(MENU_CODE_TO_MODE_SETTINGS_MENU);
+
+            this.miRandomizeField = Ptr::new_box(MI_SelectField::<bool>::new(selectfield, 440, 205, "Random", 130, 80));
+            this.miRandomizeField.add("Off", false);
+            this.miRandomizeField.add("On", true);
+            this.miRandomizeField.set_output_ptr(&mut netplay.randomize_settings as *mut _);
+            this.miRandomizeField.set_current_value(netplay.randomize_settings);
         }
 
         let cont = ctl_ptr(this.miContinueButton);
@@ -59,6 +67,7 @@ impl UI_NetNewRoomSettingsMenu {
         let goals: Vec<_> = this.miGoalField.iter().map(|g| ctl_ptr(*g)).collect();
         let settings = ctl_ptr(this.miModeSettingsButton);
         let map = ctl_ptr(this.miMapField);
+        let randomize = ctl_ptr(this.miRandomizeField);
         let null = Ptr::null();
 
         this.add_control(cont, map, mode, null, null);
@@ -68,7 +77,8 @@ impl UI_NetNewRoomSettingsMenu {
             this.add_control(goals[iGoalField], goals[iGoalField - 1], goals[iGoalField + 1], goals[iGoalField - 1], settings);
         }
         this.add_control(goals[GM_LAST - 1], goals[GM_LAST - 2], map, goals[GM_LAST - 2], null);
-        this.add_control(settings, mode, map, goals[GM_LAST - 1], null);
+        this.add_control(settings, mode, randomize, goals[GM_LAST - 1], randomize);
+        this.add_control(randomize, settings, map, settings, null);
         this.add_control(map, goals[GM_LAST - 1], cont, null, null);
 
         unsafe {

@@ -807,7 +807,7 @@ impl MenuState {
             if game_values.matchtype == MatchType::QuickGame {
                 self.mModeOptionsMenu.set_random_game_mode_settings(game_values.gamemode.gamemode as i16);
             } else if game_values.matchtype == MatchType::NetGame {
-                // Not in the C++ (whose TODO rolls random ones here on every client): the host sent its own at the sync.
+                // Not in the C++ (whose TODO rolls random ones here on every client): the host sent the match's at the sync.
                 crate::smw::net::reseed_for_match();
             } else {
                 crate::smw::gs_gameplay::set_game_mode_settings_from_menu();
@@ -895,6 +895,27 @@ impl MenuState {
 
             harness::match_checkpoint();
             enter_gameplay_tail();
+        }
+    }
+}
+
+/// The game host rolls a net game's random mode settings, when it plays with "Randomize" on (`NetGameHost::send_sync_messages`).
+pub fn roll_net_game_mode_settings() {
+    unsafe {
+        if let Some(state) = ms.as_mut() {
+            if !state.mModeOptionsMenu.is_null() {
+                state.mModeOptionsMenu.set_random_game_mode_settings(currentgamemode);
+            }
+        }
+    }
+}
+
+/// The current mode's options as the mode options menu names them.
+pub fn describe_net_game_mode_settings() -> Vec<String> {
+    unsafe {
+        match ms.as_ref() {
+            Some(state) if !state.mModeOptionsMenu.is_null() => state.mModeOptionsMenu.describe_game_mode_settings(currentgamemode),
+            _ => Vec::new(),
         }
     }
 }
