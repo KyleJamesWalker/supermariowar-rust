@@ -326,8 +326,13 @@ unsafe fn add_joysticks(field: &mut MI_SelectField<i16>) {
             "Virtual Controller".to_string()
         } else if p.is_null() {
             String::new()
-        } else {
+        } else if harness::replaying() {
             CStr::from_ptr(p).to_string_lossy().into_owned()
+        } else {
+            let name = CStr::from_ptr(p).to_string_lossy().into_owned();
+            let label = crate::smw::pad_type::controller_type(iJoystick as i32, &name).label();
+            // The field is about 30 characters wide; browser ids are longer, so those show the family alone.
+            if label.len() + name.len() < 30 { format!("{}: {}", label, name) } else { label.to_string() }
         };
         field.add_random(name, iJoystick, false);
     }

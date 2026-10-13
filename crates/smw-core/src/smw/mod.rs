@@ -9,6 +9,7 @@ pub mod main;
 pub mod net;
 pub mod net_outcomes;
 pub mod net_random;
+pub mod pad_type;
 #[cfg(not(target_os = "emscripten"))]
 pub mod pad;
 #[cfg(not(target_os = "emscripten"))]
