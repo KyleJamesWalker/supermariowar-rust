@@ -1538,6 +1538,7 @@ impl GameState for MenuState {
 
     fn on_enter_state(&mut self) {
         unsafe {
+            sdl2::sys::SDL_ShowCursor(sdl2::sys::SDL_ENABLE as i32);
             self.iUnlockMinigameOptionIndex = 0;
 
             self.iTournamentAIStep = 0;
