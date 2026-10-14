@@ -37,10 +37,10 @@ impl PlayerInvincibility {
             //(we don't want two invincible music sounds playing at the same time)
             game().rm.sfx_invinciblemusic.stop();
 
-            if !game_values.gamemode.gameover {
-                game_values.flags.playinvinciblesound = true;
+            if !game().game_values.gamemode.gameover {
+                game().game_values.flags.playinvinciblesound = true;
 
-                if game_values.music && game_values.sound {
+                if game().game_values.music && game().game_values.sound {
                     game().rm.backgroundmusic[0].stop();
                 }
             }

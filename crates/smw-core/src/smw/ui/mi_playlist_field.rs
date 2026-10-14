@@ -28,7 +28,7 @@ unsafe fn restart_menu_music() {
     game().rm.backgroundmusic[2].stop();
     game().rm.backgroundmusic[2] = sfxMusic::from_file(game().musiclist.music(1)).unwrap_or_else(|e| std::panic::panic_any(e));
 
-    if game_values.music {
+    if game().game_values.music {
         game().rm.backgroundmusic[2].play(false, false);
     }
 }

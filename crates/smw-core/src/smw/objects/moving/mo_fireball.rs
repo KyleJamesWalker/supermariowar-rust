@@ -71,7 +71,7 @@ impl MO_Fireball {
 
         o.state = 1;
 
-        o.ttl = unsafe { game_values.fireballttl };
+        o.ttl = unsafe { game().game_values.fireballttl };
 
         o.sSpotlight = Ptr::null();
         o
@@ -91,7 +91,7 @@ impl CObjectTrait for MO_Fireball {
             self.ttl -= 1;
             if self.ttl <= 0 {
                 removeifprojectile(self.as_mo_ptr(), true, true);
-            } else if game_values.spotlights {
+            } else if game().game_values.spotlights {
                 if self.sSpotlight.is_null() {
                     self.sSpotlight = spotlightManager.add_spotlight(
                         (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16,
@@ -111,7 +111,7 @@ impl CObjectTrait for MO_Fireball {
 
     fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
         unsafe {
-            if self.iPlayerID != player.get_global_id() && (game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.get_team_id()) {
+            if self.iPlayerID != player.get_global_id() && (game().game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.get_team_id()) {
                 if !player.is_shielded() {
                     removeifprojectile(self.as_mo_ptr(), false, false);
 

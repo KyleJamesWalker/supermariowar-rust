@@ -214,9 +214,9 @@ impl PlayerAwardEffects {
 
     pub fn add_death_award(&mut self, player: &mut CPlayer) {
         unsafe {
-            if game_values.awardstyle == AwardStyle::Halo {
+            if game().game_values.awardstyle == AwardStyle::Halo {
                 self.add_exploding(player);
-            } else if game_values.awardstyle == AwardStyle::Souls && player.killsinrow as i32 >= MINAWARDSNEEDED {
+            } else if game().game_values.awardstyle == AwardStyle::Souls && player.killsinrow as i32 >= MINAWARDSNEEDED {
                 eyecandy[2].emplace(EC_SoulsAward::new(
                     Ptr::from_mut(&mut game().rm.spr_awardsouls),
                     Ptr::from_mut(&mut game().rm.spr_awardsoulspawn),
@@ -278,17 +278,17 @@ impl PlayerAwardEffects {
                 }
 
                 if killer.killsinrow >= 5 {
-                    game_values.unlocksecret2part1 = true;
+                    game().game_values.unlocksecret2part1 = true;
                     check_secret(1);
                 }
             }
 
             //Add eyecandy
-            if game_values.awardstyle != AwardStyle::None {
+            if game().game_values.awardstyle != AwardStyle::None {
                 let slot = ((killer.killsinrow as i32 - 1) % MAXAWARDS) as usize;
-                if game_values.awardstyle == AwardStyle::Halo {
+                if game().game_values.awardstyle == AwardStyle::Halo {
                     killer.awardeffects.awards[slot] = style as i16;
-                } else if game_values.awardstyle == AwardStyle::Souls {
+                } else if game().game_values.awardstyle == AwardStyle::Souls {
                     if !killed.is_null() {
                         killer.awardeffects.awards[slot] = killed.get_color_id();
                     } else if style == KillStyle::Goomba {
@@ -302,9 +302,9 @@ impl PlayerAwardEffects {
                     } else {
                         killer.awardeffects.awards[slot] = 8; //soul id for ?
                     }
-                } else if game_values.awardstyle == AwardStyle::Swirl {
+                } else if game().game_values.awardstyle == AwardStyle::Swirl {
                     Ptr::from_mut(&mut killer.awardeffects).get().add_swirling(killer);
-                } else if game_values.awardstyle == AwardStyle::Fireworks {
+                } else if game().game_values.awardstyle == AwardStyle::Fireworks {
                     Ptr::from_mut(&mut killer.awardeffects).get().add_rocket(killer);
                 }
 
@@ -314,7 +314,7 @@ impl PlayerAwardEffects {
 
                 //if we have enough kills in a row -> spawn an award
 
-                if game_values.awardstyle == AwardStyle::Text {
+                if game().game_values.awardstyle == AwardStyle::Text {
                     if killer.killsinrow >= 2 {
                         let text = format!("{} - {}", killer.killsinrow, awardtexts[awardIndex as usize].name);
 
@@ -372,7 +372,7 @@ impl PlayerAwardEffects {
             }
 
             //Track to unlock secret
-            game_values.unlocksecret1part1[player.get_global_id() as usize] = true;
+            game().game_values.unlocksecret1part1[player.get_global_id() as usize] = true;
             check_secret(0);
         }
     }

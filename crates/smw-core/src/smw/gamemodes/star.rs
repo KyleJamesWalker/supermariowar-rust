@@ -213,10 +213,10 @@ impl CGameModeTrait for CGM_Star {
 
 fn star_time() -> i16 {
     unsafe {
-        if game_values.gamemodesettings.star.time < 1 {
+        if game().game_values.gamemodesettings.star.time < 1 {
             30
         } else {
-            game_values.gamemodesettings.star.time
+            game().game_values.gamemodesettings.star.time
         }
     }
 }
@@ -229,7 +229,7 @@ pub fn cgm_star_init(this: &mut CGM_Star) {
     this.gameClock.init(star_time(), true);
 
     unsafe {
-        this.iCurrentModeType = game_values.gamemodesettings.star.shine;
+        this.iCurrentModeType = game().game_values.gamemodesettings.star.shine;
         if this.iCurrentModeType == StarStyle::Random {
             this.iCurrentModeType = StarStyle::from_u8(RANDOM_INT(3) as u8);
         }
@@ -277,7 +277,7 @@ fn reassign(this: &mut CGM_Star) {
                 iStar1 += 1;
             }
         } else if this.starPlayer[0].is_null() {
-            let fGetHighest = !this.fReverseScoring && game_values.gamemodesettings.star.shine == StarStyle::Ztar;
+            let fGetHighest = !this.fReverseScoring && game().game_values.gamemodesettings.star.shine == StarStyle::Ztar;
             this.starPlayer[0] = this.get_highest_score_player(fGetHighest);
             this.starItem[0].place_star();
         }
@@ -370,14 +370,14 @@ fn time_out(this: &mut CGM_Star) {
                     if p.score().score <= 0 {
                         this.fDisplayTimer = !remove_team(p.get_team_id());
 
-                        if game_values.gamemodesettings.star.shine != StarStyle::Random {
+                        if game().game_values.gamemodesettings.star.shine != StarStyle::Random {
                             this.setup_mode();
                             fNeedRebalance = false;
                         }
                     }
                 }
 
-                if game_values.gamemodesettings.star.shine != StarStyle::Random && fNeedRebalance {
+                if game().game_values.gamemodesettings.star.shine != StarStyle::Random && fNeedRebalance {
                     this.rebalance_multi_stars();
                 }
 
@@ -407,7 +407,7 @@ fn time_out(this: &mut CGM_Star) {
         }
 
         //If random game, then choose a new game type
-        if game_values.gamemodesettings.star.shine == StarStyle::Random && this.fDisplayTimer {
+        if game().game_values.gamemodesettings.star.shine == StarStyle::Random && this.fDisplayTimer {
             this.iCurrentModeType = StarStyle::from_u8(RANDOM_INT(3) as u8);
             this.setup_mode();
         }
@@ -415,7 +415,7 @@ fn time_out(this: &mut CGM_Star) {
 }
 
 fn star_mode() -> Option<&'static mut CGM_Star> {
-    unsafe { game_values.gamemode.as_any().downcast_mut::<CGM_Star>() }
+    unsafe { game().game_values.gamemode.get().as_any().downcast_mut::<CGM_Star>() }
 }
 
 pub fn net_reassign() {

@@ -93,7 +93,7 @@ impl PlayerTail {
                     if self.iTailFrame < 66 {
                         self.iTailState = TAIL_NOT_IN_USE;
 
-                        if player.powerup == 7 && game_values.leaflimit > 0 {
+                        if player.powerup == 7 && game().game_values.leaflimit > 0 {
                             player.decrease_projectile_limit();
                         }
                     }
@@ -108,7 +108,7 @@ impl PlayerTail {
                         self.iTailState = TAIL_NOT_IN_USE;
                         self.iTailFrame = 66;
 
-                        if player.powerup == 7 && game_values.leaflimit > 0 {
+                        if player.powerup == 7 && game().game_values.leaflimit > 0 {
                             player.decrease_projectile_limit();
                         }
                     }
@@ -140,10 +140,10 @@ impl PlayerTail {
                     }
                 }
 
-                let mut fPlayerFacingRight = !game_values.reversewalk;
+                let mut fPlayerFacingRight = !game().game_values.reversewalk;
                 if self.iTailState == TAIL_SPIN_AND_SHAKE {
                     if player.spin.is_reverse_walking() {
-                        fPlayerFacingRight = game_values.reversewalk;
+                        fPlayerFacingRight = game().game_values.reversewalk;
                     }
                 } else {
                     fPlayerFacingRight = player.is_facing_right();

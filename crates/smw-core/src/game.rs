@@ -5,9 +5,11 @@ use crate::common::map::CMap;
 use crate::common::map_list::MapList;
 use crate::common::resource_manager::CResourceManager;
 use crate::common::tileset_manager::CTilesetManager;
-use crate::globals::Ptr;
+use crate::common::game_values::CGameValues;
+use crate::globals::{Global, Ptr};
 
 pub struct Game {
+    pub game_values: Global<CGameValues>,
     /// Must be created before `maplist`, whose constructor reads it.
     pub filterslist: Ptr<FiltersList>,
     pub maplist: Ptr<MapList>,
@@ -29,6 +31,7 @@ pub struct Game {
 impl Game {
     pub const fn new() -> Self {
         Game {
+            game_values: Global::uninit(),
             filterslist: Ptr::null(),
             maplist: Ptr::null(),
             skinlist: Ptr::null(),

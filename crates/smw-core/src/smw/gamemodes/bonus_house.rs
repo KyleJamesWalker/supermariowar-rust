@@ -51,13 +51,13 @@ impl CGameModeTrait for CGM_Bonus {
 
         unsafe {
             //Unlock the chests
-            game_values.flags.noexit = true;
+            game().game_values.flags.noexit = true;
 
             //Will cause the flow to skip the scoreboard screen and go straight back to the world map
-            game_values.worldskipscoreboard = true;
+            game().game_values.worldskipscoreboard = true;
 
             //Add number of treasure chests to the bonus house
-            self.tsTourStop = game_values.tourstops[game_values.tourstopcurrent];
+            self.tsTourStop = game().game_values.tourstops[game().game_values.tourstopcurrent];
             let iNumBonuses: i16 = self.tsTourStop.iNumBonuses;
 
             let mut fChestUsed: [bool; MAX_BONUS_CHESTS as usize] = [false; MAX_BONUS_CHESTS as usize];

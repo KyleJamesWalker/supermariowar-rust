@@ -8,7 +8,7 @@
 //! The harness dump records every death, every change of the team scores and the end of the game as `C`
 //! records (docs/REPLAY.md), so net_game_compare.py can tell whether the clients agree on them.
 
-use crate::common::game_values::game_values;
+use crate::game::game;
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
 use crate::smw::harness;
@@ -52,8 +52,8 @@ pub fn score_locked() -> bool {
 /// A joiner keeps the game host's game over and winner, whatever its own mode logic concluded.
 pub fn frame_start() {
     unsafe {
-        if net_random::host_decides() && !game_values.gamemode.is_null() {
-            let mut gm = game_values.gamemode;
+        if net_random::host_decides() && !game().game_values.gamemode.is_null() {
+            let mut gm = game().game_values.gamemode;
             gm.gameover = g_hostGameOver;
             gm.winningteam = g_hostWinner;
         }
@@ -63,7 +63,7 @@ pub fn frame_start() {
 /// End of a gameplay frame: the host sends changed scores; every client but a deciding host's joiner records them.
 pub fn sample() {
     unsafe {
-        if !netplay.active || game_values.gamemode.is_null() {
+        if !netplay.active || game().game_values.gamemode.is_null() {
             return;
         }
         if netplay.theHostIsMe && net_random::in_game() {
@@ -81,7 +81,7 @@ pub fn sample() {
 
 fn snapshot() -> Vec<i32> {
     unsafe {
-        let gm = game_values.gamemode;
+        let gm = game().game_values.gamemode;
         let mut v = vec![gm.gameover as i32, gm.winningteam as i32];
         for t in 0..score_cnt as usize {
             v.push(score[t].score as i32);
@@ -99,7 +99,7 @@ fn record() {
             harness::note_net(format!("scores {}", text.join(",")));
             g_lastScores = scores;
         }
-        let gm = game_values.gamemode;
+        let gm = game().game_values.gamemode;
         if gm.gameover && !g_lastGameOver {
             harness::note_net(format!("gameover winner={}", gm.winningteam));
         }
@@ -123,7 +123,7 @@ pub fn net_apply_scores(args: &[i32]) {
             }
         }
         g_applying = false;
-        let mut gm = game_values.gamemode;
+        let mut gm = game().game_values.gamemode;
         gm.gameover = g_hostGameOver;
         gm.winningteam = g_hostWinner;
         record();
@@ -198,7 +198,7 @@ pub fn remove_team_event(teamid: i16) -> Option<bool> {
             Some(g_removeResult)
         } else {
             let removed = score[teamid as usize].order > -1;
-            Some(game_values.flags.teamdeadcounter as i32 + if removed { 0 } else { 1 } == score_cnt as i32 - 1)
+            Some(game().game_values.flags.teamdeadcounter as i32 + if removed { 0 } else { 1 } == score_cnt as i32 - 1)
         }
     }
 }

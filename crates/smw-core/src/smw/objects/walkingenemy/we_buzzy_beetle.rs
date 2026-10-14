@@ -100,7 +100,7 @@ impl MO_WalkingEnemyTrait for MO_BuzzyBeetle {
 
             player.add_killer_award(Ptr::null(), KillStyle::BuzzyBeetle);
 
-            if game_values.gamemode.gamemode == game_mode_stomp && !game_values.gamemode.gameover {
+            if game().game_values.gamemode.gamemode == game_mode_stomp && !game().game_values.gamemode.gameover {
                 player.score().adjust_score(1);
             }
 

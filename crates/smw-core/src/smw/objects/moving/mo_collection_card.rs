@@ -189,7 +189,7 @@ impl CObjectTrait for MO_CollectionCard {
 
             self.uncollectabletime -= 1;
             unsafe {
-                if (self.uncollectabletime as i32) < -(game_values.gamemodesettings.collection.cardlife as i32) {
+                if (self.uncollectabletime as i32) < -(game().game_values.gamemodesettings.collection.cardlife as i32) {
                     eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
                     self.dead = true;
                 }

@@ -99,7 +99,7 @@ impl CObjectTrait for PU_SecretPowerup {
     fn collide_player(&mut self, _player: Ptr<CPlayer>) -> bool {
         unsafe {
             if self.itemtype == 0 {
-                game_values.windaffectsplayers = true;
+                game().game_values.windaffectsplayers = true;
 
                 for _i in 0..15i16 {
                     let x = RANDOM_INT(App::screenWidth) as f32;
@@ -108,11 +108,11 @@ impl CObjectTrait for PU_SecretPowerup {
                     eyecandy[2].emplace(EC_Snow::new(Ptr::from_mut(&mut game().rm.spr_snow), x, y, t));
                 }
             } else if self.itemtype == 1 {
-                game_values.spinscreen = true;
+                game().game_values.spinscreen = true;
             } else if self.itemtype == 2 {
-                game_values.reversewalk = true;
+                game().game_values.reversewalk = true;
             } else if self.itemtype == 3 {
-                game_values.spotlights = true;
+                game().game_values.spotlights = true;
             }
 
             if_sound_on_play(&mut game().rm.sfx_pickup);

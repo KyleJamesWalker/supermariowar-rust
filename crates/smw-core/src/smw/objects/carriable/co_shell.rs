@@ -181,7 +181,7 @@ impl CO_Shell {
             player.platform = Ptr::null();
         } else if self.state == 3 {
             // Holding
-            if player != self.owner && (unsafe { game_values.teamcollision } == TeamCollisionStyle::On || player.teamID != self.owner.teamID) {
+            if player != self.owner && (unsafe { game().game_values.teamcollision } == TeamCollisionStyle::On || player.teamID != self.owner.teamID) {
                 if !self.owner.is_null() {
                     self.owner.carriedItem = Ptr::null();
                 }
@@ -233,7 +233,7 @@ impl CO_Shell {
             }
         } else if self.state == 3 {
             // Holding
-            if player != self.owner && (unsafe { game_values.teamcollision } == TeamCollisionStyle::On || player.teamID != self.owner.teamID) {
+            if player != self.owner && (unsafe { game().game_values.teamcollision } == TeamCollisionStyle::On || player.teamID != self.owner.teamID) {
                 self.iPlayerID = self.owner.globalID;
                 self.iTeamID = self.owner.teamID;
                 return self.kill_player(player);
@@ -275,7 +275,7 @@ impl CO_Shell {
 
     pub fn add_moving_kill(&mut self, killer: Ptr<CPlayer>) {
         let mut killer = killer;
-        if self.state == 1 && unsafe { game_values.awardstyle } != AwardStyle::None {
+        if self.state == 1 && unsafe { game().game_values.awardstyle } != AwardStyle::None {
             // If the shell is moving, the keep track of how many people we kill in a row with it
             self.iKillCounter += 1;
             if self.iKillCounter > 1 {
@@ -484,9 +484,9 @@ impl CObjectTrait for CO_Shell {
                     ));
                 }
             } else if self.state == 1 {
-                if game_values.shellttl > 0 && {
+                if game().game_values.shellttl > 0 && {
                     self.iDeathTime += 1;
-                    self.iDeathTime >= game_values.shellttl
+                    self.iDeathTime >= game().game_values.shellttl
                 } {
                     eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
                     self.dead = true;
@@ -535,7 +535,7 @@ impl CObjectTrait for CO_Shell {
         }
 
         unsafe {
-            if game_values.spotlights {
+            if game().game_values.spotlights {
                 if self.state == 1 {
                     let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
                     let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;

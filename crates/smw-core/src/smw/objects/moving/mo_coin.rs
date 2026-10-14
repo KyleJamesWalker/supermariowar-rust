@@ -106,18 +106,18 @@ impl CObjectTrait for MO_Coin {
 
     fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
         unsafe {
-            if self.iUncollectableTime > 0 || (self.iType == 1 && (!game_values.gamemodesettings.greed.owncoins && self.iTeam == player.get_team_id())) {
+            if self.iUncollectableTime > 0 || (self.iType == 1 && (!game().game_values.gamemodesettings.greed.owncoins && self.iTeam == player.get_team_id())) {
                 return false;
             }
 
-            if !game_values.gamemode.gameover {
+            if !game().game_values.gamemode.gameover {
                 if self.iType == 2 {
                     player.score().subscore[0] += 1;
                 } else {
                     player.score().adjust_score(1);
                 }
 
-                game_values.gamemode.check_winner(player);
+                game().game_values.gamemode.check_winner(player);
             }
 
             eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_coinsparkle), self.ix, self.iy, 7, 4));
@@ -160,7 +160,7 @@ impl CObjectTrait for MO_Coin {
             self.iUncollectableTime -= 1;
 
             unsafe {
-                if self.iType == 1 && (self.iUncollectableTime as i32) < -(game_values.gamemodesettings.greed.coinlife as i32) {
+                if self.iType == 1 && (self.iUncollectableTime as i32) < -(game().game_values.gamemodesettings.greed.coinlife as i32) {
                     eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
                     self.dead = true;
                 }

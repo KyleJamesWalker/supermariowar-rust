@@ -58,7 +58,7 @@ impl CGM_Boss_MiniGame {
             setup_score_board(false);
             show_score_board();
 
-            if game_values.music {
+            if game().game_values.music {
                 game().rm.sfx_invinciblemusic.stop();
                 game().rm.sfx_timewarning.stop();
                 game().rm.sfx_slowdownmusic.stop();
@@ -121,7 +121,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
             if !self.gameover && players.len() == 0 {
                 self.gameover = true;
 
-                if game_values.music {
+                if game().game_values.music {
                     game().rm.sfx_invinciblemusic.stop();
                     game().rm.sfx_timewarning.stop();
                     game().rm.sfx_slowdownmusic.stop();
@@ -145,7 +145,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
                 } else if self.iBossType == Boss::Fire {
                     //Only create podobos if the difficulty is moderate or greater
                     self.enemytimer -= 1;
-                    if self.enemytimer <= 0 && game_values.gamemodesettings.boss.difficulty >= 2 {
+                    if self.enemytimer <= 0 && game().game_values.gamemodesettings.boss.difficulty >= 2 {
                         let x = RANDOM_INT((App::screenWidth as f32 * 0.95f32) as i32) as i16;
                         let pos = Vec2s::new(x, App::screenHeight as i16);
                         let nspeed: f32 = -((RANDOM_INT(9) as f32) / 2.0f32) - 9.0f32;

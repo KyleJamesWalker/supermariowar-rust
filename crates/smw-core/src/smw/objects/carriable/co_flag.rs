@@ -125,7 +125,7 @@ impl CObjectTrait for CO_Flag {
     fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
         let mut player = player;
         if self.owner.is_null() && player.isready() && (!self.fInBase || self.teamID != player.teamID) {
-            if unsafe { game_values.gamemodesettings.flag.touchreturn } && self.teamID == player.teamID {
+            if unsafe { game().game_values.gamemodesettings.flag.touchreturn } && self.teamID == player.teamID {
                 self.place_flag();
                 unsafe { if_sound_on_play(&mut game().rm.sfx_areatag) };
             } else if player.accept_item(self.as_carried_ptr()) {
@@ -142,7 +142,7 @@ impl CObjectTrait for CO_Flag {
     }
 
     fn update(&mut self) {
-        let autoreturn = unsafe { game_values.gamemodesettings.flag.autoreturn };
+        let autoreturn = unsafe { game().game_values.gamemodesettings.flag.autoreturn };
         if !self.owner.is_null() {
             self.move_to_owner();
             self.timer = 0;

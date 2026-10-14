@@ -1,7 +1,7 @@
 //! Port of src/smw/objects/blocks/NoteBlock.cpp
 
 use crate::game::game;
-use crate::common::game_values::{game_values, if_sound_on_play};
+use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::*;
 use crate::common::io_block::{IO_Block, IO_BlockTrait};
@@ -162,7 +162,7 @@ impl IO_BlockTrait for B_NoteBlock {
             unsafe {
                 if_sound_on_play(&mut game().rm.sfx_bump);
 
-                game_values.unlocksecret3part2[player.globalID as usize] += 2;
+                game().game_values.unlocksecret3part2[player.globalID as usize] += 2;
                 check_secret(2);
             }
         }

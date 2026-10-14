@@ -152,7 +152,7 @@ impl CObjectTrait for PU_TreasureChestBonus {
 
                 eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
 
-                game_values.flags.noexit = false;
+                game().game_values.flags.noexit = false;
             }
         }
 

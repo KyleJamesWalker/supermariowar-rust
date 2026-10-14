@@ -227,8 +227,8 @@ impl MI_TextField {
         for iPlayer in 0..4usize {
             unsafe {
                 if iPlayer != 0
-                    && !game_values.playerInput.inputControls[iPlayer].is_null()
-                    && game_values.playerInput.inputControls[iPlayer].iDevice == DEVICE_KEYBOARD
+                    && !game().game_values.playerInput.inputControls[iPlayer].is_null()
+                    && game().game_values.playerInput.inputControls[iPlayer].iDevice == DEVICE_KEYBOARD
                 {
                     continue;
                 }
@@ -391,8 +391,8 @@ impl UI_ControlTrait for MI_TextField {
             // Only let player 1 on the keyboard control the menu
             unsafe {
                 if iPlayer != 0
-                    && !game_values.playerInput.inputControls[iPlayer].is_null()
-                    && game_values.playerInput.inputControls[iPlayer].iDevice == DEVICE_KEYBOARD
+                    && !game().game_values.playerInput.inputControls[iPlayer].is_null()
+                    && game().game_values.playerInput.inputControls[iPlayer].iDevice == DEVICE_KEYBOARD
                 {
                     continue;
                 }

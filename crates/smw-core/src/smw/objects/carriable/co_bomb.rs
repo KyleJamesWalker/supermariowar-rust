@@ -115,7 +115,7 @@ impl CObjectTrait for CO_Bomb {
         self.animate();
 
         unsafe {
-            if game_values.spotlights {
+            if game().game_values.spotlights {
                 let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
                 let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
                 if self.sSpotlight.is_null() {

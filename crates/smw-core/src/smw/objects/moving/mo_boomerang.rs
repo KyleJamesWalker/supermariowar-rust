@@ -96,10 +96,10 @@ impl MO_Boomerang {
         o.iStateTimer = 0;
 
         unsafe {
-            if game_values.boomerangstyle == BoomerangStyle::Random {
+            if game().game_values.boomerangstyle == BoomerangStyle::Random {
                 o.iStyle = BoomerangStyle::from_u8(RANDOM_INT(3) as u8);
             } else {
-                o.iStyle = game_values.boomerangstyle;
+                o.iStyle = game().game_values.boomerangstyle;
             }
         }
 
@@ -115,7 +115,7 @@ impl MO_Boomerang {
             removeifprojectile(self.as_mo_ptr(), false, true);
             game().rm.sfx_boomerang.stop();
 
-            if game_values.boomeranglimit == 0 {
+            if game().game_values.boomeranglimit == 0 {
                 return;
             }
 
@@ -272,7 +272,7 @@ impl CObjectTrait for MO_Boomerang {
                     self.set_xf(fx);
                 }
 
-                if self.iStateTimer > game_values.boomeranglife {
+                if self.iStateTimer > game().game_values.boomeranglife {
                     self.forcedead();
                     return;
                 }
@@ -366,7 +366,7 @@ impl CObjectTrait for MO_Boomerang {
                 }
             }
 
-            if game_values.spotlights {
+            if game().game_values.spotlights {
                 if self.sSpotlight.is_null() {
                     self.sSpotlight = spotlightManager.add_spotlight(
                         (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16,
@@ -386,7 +386,7 @@ impl CObjectTrait for MO_Boomerang {
 
     fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
         unsafe {
-            if self.iPlayerID != player.globalID && (game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID) {
+            if self.iPlayerID != player.globalID && (game().game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID) {
                 if !player.is_shielded() {
                     removeifprojectile(self.as_mo_ptr(), false, false);
 

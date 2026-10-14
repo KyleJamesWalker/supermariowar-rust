@@ -132,7 +132,7 @@ impl UI_ControlTrait for MI_MapFilterScroll {
         unsafe {
             for iPlayer in 0..4i16 {
                 //Only allow the controlling team to control the menu (if there is one)
-                if self.iControllingTeam != -1 && (self.iControllingTeam != lookup_team_id(iPlayer) || game_values.playercontrol[iPlayer as usize] != 1) {
+                if self.iControllingTeam != -1 && (self.iControllingTeam != lookup_team_id(iPlayer) || game().game_values.playercontrol[iPlayer as usize] != 1) {
                     continue;
                 }
 
@@ -165,10 +165,10 @@ impl UI_ControlTrait for MI_MapFilterScroll {
                     //If the left column is selected, then turn that filter on/off
                     if self.iSelectedColumn == 0 {
                         self.items[idx].fSelected = !self.items[idx].fSelected;
-                        game_values.pfFilters[idx] = !game_values.pfFilters[idx];
+                        game().game_values.pfFilters[idx] = !game().game_values.pfFilters[idx];
                     } else {
                         //otherwise if the right is selected, go into the details of that filter
-                        game_values.selectedmapfilter = self.iIndex as i16;
+                        game().game_values.selectedmapfilter = self.iIndex as i16;
                         return MENU_CODE_TO_MAP_FILTER_EDIT;
                     }
 

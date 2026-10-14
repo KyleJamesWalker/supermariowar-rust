@@ -64,25 +64,25 @@ impl GameState for SplashScreenState {
 
     fn update(&mut self) {
         unsafe {
-            game_values.playerInput.clear_pressed_keys(1);
+            game().game_values.playerInput.clear_pressed_keys(1);
 
             // TODO: move this out of this method maybe
 
             while let Some(input) = smw_sdl2::events::poll_input() {
                 if input.event == InputEvent::Quit {
-                    game_values.appstate = AppState::Quit;
+                    game().game_values.appstate = AppState::Quit;
                     return;
                 } else if let InputEvent::Key { key, mods, down: true, .. } = input.event {
                     let alt = (mods as u32) & (SDL_Keymod::KMOD_LALT as u32 | SDL_Keymod::KMOD_RALT as u32) != 0;
                     if key.0 == SDL_KeyCode::SDLK_RETURN as i32 {
                         if alt {
-                            game_values.fullscreen = !game_values.fullscreen;
-                            gfx_changefullscreen(game_values.fullscreen);
+                            game().game_values.fullscreen = !game().game_values.fullscreen;
+                            gfx_changefullscreen(game().game_values.fullscreen);
                             blitdest = screen;
                         }
                     } else if key.0 == SDL_KeyCode::SDLK_F4 as i32 {
                         if alt {
-                            game_values.appstate = AppState::Quit;
+                            game().game_values.appstate = AppState::Quit;
                             return;
                         }
                     } else if key.0 == SDL_KeyCode::SDLK_INSERT as i32 {
@@ -90,13 +90,13 @@ impl GameState for SplashScreenState {
                     }
                 }
 
-                game_values.playerInput.update_input(&input, 1);
+                game().game_values.playerInput.update_input(&input, 1);
             }
 
             // Not in upstream: a press before load_game_data() would open the menus without their graphics.
             if self.state == 8 {
                 for iPlayer in 0..4usize {
-                    let out = &game_values.playerInput.outputControls[iPlayer];
+                    let out = &game().game_values.playerInput.outputControls[iPlayer];
                     if out.menu_select().fPressed || out.menu_cancel().fPressed || out.menu_random().fPressed {
                         blitdest = game().rm.menu_backdrop.get_surface();
                         game().rm.menu_shade.setalpha(App::menuTransparency as u8);
@@ -105,8 +105,8 @@ impl GameState for SplashScreenState {
 
                         eyecandy[2].clean();
 
-                        game_values.playerInput.reset_keys();
-                        game_values.appstate = AppState::Menu;
+                        game().game_values.playerInput.reset_keys();
+                        game().game_values.appstate = AppState::Menu;
 
                         MenuState::instance().init();
                         GameplayState::instance().init();
@@ -170,15 +170,15 @@ pub fn load_game_data() {
         game().rm.load_all_graphics();
         game().rm.load_game_sounds();
 
-        if !game_values.soundcapable {
-            game_values.sound = false;
-            game_values.music = false;
-            game_values.soundvolume = 0;
-            game_values.musicvolume = 0;
+        if !game().game_values.soundcapable {
+            game().game_values.sound = false;
+            game().game_values.music = false;
+            game().game_values.soundvolume = 0;
+            game().game_values.musicvolume = 0;
         }
 
         //Read the map filter lists
         game().maplist.read_filters();
-        game().maplist.apply_filters(&game_values.pfFilters.clone());
+        game().maplist.apply_filters(&game().game_values.pfFilters.clone());
     }
 }

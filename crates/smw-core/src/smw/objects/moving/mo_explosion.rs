@@ -59,7 +59,7 @@ impl CObjectTrait for MO_Explosion {
     fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
         unsafe {
             if player.globalID != self.iPlayerID
-                && (game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID)
+                && (game().game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID)
                 && !player.is_invincible()
                 && !player.is_shielded()
                 && !player.shyguy

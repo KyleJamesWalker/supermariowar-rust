@@ -1,8 +1,8 @@
 //! Port of src/common/MovingPlatformPaths.cpp
 
+use crate::game::game;
 use crate::common::eyecandy_styles::SpawnStyle;
 use crate::common::game::App;
-use crate::common::game_values::game_values;
 use crate::common::global_constants::*;
 use crate::common::math::trig::{atan2f, cosf, sinf};
 use crate::common::math::vec2::Vec2f;
@@ -111,11 +111,11 @@ impl std::ops::DerefMut for dyn MovingPlatformPathTrait {
 
 pub fn moving_platform_path_reset<T: MovingPlatformPathTrait + ?Sized>(this: &mut T) {
     unsafe {
-        if game_values.spawnstyle == SpawnStyle::Door {
+        if game().game_values.spawnstyle == SpawnStyle::Door {
             for _ in 0..36 {
                 this.r#move(1);
             }
-        } else if game_values.spawnstyle == SpawnStyle::Swirl {
+        } else if game().game_values.spawnstyle == SpawnStyle::Swirl {
             for _ in 0..50 {
                 this.r#move(1);
             }

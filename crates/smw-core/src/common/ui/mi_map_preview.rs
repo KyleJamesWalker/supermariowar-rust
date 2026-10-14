@@ -136,7 +136,7 @@ impl MI_MapPreview {
 
             game().g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 2);
 
-            if game_values.toplayer {
+            if game().game_values.toplayer {
                 self.surfaceMapForeground.draw_to(blitdest, &self.rectDst);
             }
 
@@ -174,7 +174,7 @@ impl MI_MapPreview {
             game().g_map.pre_draw_preview_foreground(self.surfaceMapForeground.get_surface(), false);
             small_delay();
 
-            game().g_map.pre_draw_preview_warps(if game_values.toplayer { self.surfaceMapForeground.get_surface() } else { self.surfaceMapBackground.get_surface() }, false);
+            game().g_map.pre_draw_preview_warps(if game().game_values.toplayer { self.surfaceMapForeground.get_surface() } else { self.surfaceMapBackground.get_surface() }, false);
             small_delay();
 
             load_map_hazards(true);

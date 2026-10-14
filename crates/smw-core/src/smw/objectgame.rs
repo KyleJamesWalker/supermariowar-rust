@@ -148,7 +148,7 @@ fn spawn_special_powerup(r#type: i16, spawnPos: Vec2s) -> Spawned {
 
                 let colorIdx = color as usize;
 
-                let value = if game_values.gamemode.gamemode == game_mode_greed { iGreedValue[colorIdx] } else { iCoinValue[colorIdx] };
+                let value = if game().game_values.gamemode.gamemode == game_mode_greed { iGreedValue[colorIdx] } else { iCoinValue[colorIdx] };
                 new_powerup(PU_CoinPowerup::new(Ptr::from_mut(&mut game().rm.spr_coin), spawnPos, color, value))
             }
             MINIGAME_COIN => Spawned::Coin(Ptr::new_box(MO_Coin::new(
@@ -195,7 +195,7 @@ pub fn removeifprojectile(mut object: Ptr<dyn IO_MovingObjectTrait>, playsound: 
             let iPlayerID = object.iPlayerID;
             let mut fDie = true;
 
-            if r#type == movingobject_hammer && !game_values.hammerpower {
+            if r#type == movingobject_hammer && !game().game_values.hammerpower {
                 fDie = false;
             }
 
@@ -313,7 +313,7 @@ fn check_secret_poof(object: Ptr<dyn IO_MovingObjectTrait>) {
 
 pub fn check_secret(id: i16) {
     unsafe {
-        if !game_values.secretsenabled || crate::smw::net_random::event(crate::smw::net_random::Ev::Secret, &[id as i32]) {
+        if !game().game_values.secretsenabled || crate::smw::net_random::event(crate::smw::net_random::Ev::Secret, &[id as i32]) {
             return;
         }
 
@@ -327,42 +327,42 @@ pub fn net_check_secret(id: i16) {
         let ry = RANDOM_INT(App::screenHeight) as i16;
         let randomPos = Vec2s::new(rx, ry);
 
-        if id == 0 && !game_values.unlocksecretunlocked[0] {
+        if id == 0 && !game().game_values.unlocksecretunlocked[0] {
             let mut iCountTeams: i16 = 0;
             for iPlayer in 0..MAX_PLAYERS as usize {
-                if game_values.unlocksecret1part1[iPlayer] {
+                if game().game_values.unlocksecret1part1[iPlayer] {
                     iCountTeams += 1;
                 }
             }
 
-            if iCountTeams >= 2 && game_values.unlocksecret1part2 >= 8 {
-                game_values.unlocksecretunlocked[0] = true;
+            if iCountTeams >= 2 && game().game_values.unlocksecret1part2 >= 8 {
+                game().game_values.unlocksecretunlocked[0] = true;
                 if_sound_on_play(&mut game().rm.sfx_transform);
 
                 let object = createpowerup(SECRET1_POWERUP as i16, randomPos, true, false);
                 check_secret_poof(object);
             }
-        } else if id == 1 && !game_values.unlocksecretunlocked[1] {
-            if game_values.unlocksecret2part1 && game_values.unlocksecret2part2 >= 3 {
-                game_values.unlocksecretunlocked[1] = true;
+        } else if id == 1 && !game().game_values.unlocksecretunlocked[1] {
+            if game().game_values.unlocksecret2part1 && game().game_values.unlocksecret2part2 >= 3 {
+                game().game_values.unlocksecretunlocked[1] = true;
                 if_sound_on_play(&mut game().rm.sfx_transform);
 
                 let object = createpowerup(SECRET2_POWERUP as i16, randomPos, true, false);
                 check_secret_poof(object);
             }
-        } else if id == 2 && !game_values.unlocksecretunlocked[2] {
+        } else if id == 2 && !game().game_values.unlocksecretunlocked[2] {
             for iPlayer in 0..MAX_PLAYERS as usize {
                 //number of songs on thriller + number of released albums (figure it out :))
-                if game_values.unlocksecret3part1[iPlayer] >= 9 && game_values.unlocksecret3part2[iPlayer] >= 13 {
-                    game_values.unlocksecretunlocked[2] = true;
+                if game().game_values.unlocksecret3part1[iPlayer] >= 9 && game().game_values.unlocksecret3part2[iPlayer] >= 13 {
+                    game().game_values.unlocksecretunlocked[2] = true;
                     if_sound_on_play(&mut game().rm.sfx_transform);
 
                     let object = createpowerup(SECRET3_POWERUP as i16, randomPos, true, false);
                     check_secret_poof(object);
                 }
             }
-        } else if id == 3 && !game_values.unlocksecretunlocked[3] {
-            game_values.unlocksecretunlocked[3] = true;
+        } else if id == 3 && !game().game_values.unlocksecretunlocked[3] {
+            game().game_values.unlocksecretunlocked[3] = true;
             if_sound_on_play(&mut game().rm.sfx_transform);
 
             let object = createpowerup(SECRET4_POWERUP as i16, randomPos, true, false);

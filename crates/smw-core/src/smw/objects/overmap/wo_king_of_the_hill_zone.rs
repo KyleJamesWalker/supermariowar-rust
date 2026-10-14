@@ -55,11 +55,11 @@ impl OMO_KingOfTheHillZone {
             multipliertimer: 0,
         };
         unsafe {
-            this.size = game_values.gamemodesettings.kingofthehill.areasize;
+            this.size = game().game_values.gamemodesettings.kingofthehill.areasize;
 
             if this.size < 2 {
                 this.size = 2;
-                game_values.gamemodesettings.kingofthehill.areasize = this.size;
+                game().game_values.gamemodesettings.kingofthehill.areasize = this.size;
             }
         }
 
@@ -268,22 +268,22 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
         }
 
         unsafe {
-            if self.iPlayerID != -1 && !game_values.gamemode.gameover {
+            if self.iPlayerID != -1 && !game().game_values.gamemode.gameover {
                 // Speed of point accumulation is proportional to how many players are in zone
                 self.scoretimer = (self.scoretimer as i32 + (((iMax as i32) << 1) - self.totalTouchingPlayers as i32)) as i16;
 
-                if self.scoretimer >= game_values.pointspeed {
+                if self.scoretimer >= game().game_values.pointspeed {
                     self.scoretimer = 0;
                     players[self.iPlayerID as usize].score().adjust_score(self.multiplier);
-                    game_values.gamemode.check_winner(players[self.iPlayerID as usize]);
+                    game().game_values.gamemode.check_winner(players[self.iPlayerID as usize]);
 
-                    if game_values.gamemodesettings.kingofthehill.maxmultiplier > 1 && {
+                    if game().game_values.gamemodesettings.kingofthehill.maxmultiplier > 1 && {
                         self.multipliertimer += 1;
                         self.multipliertimer >= 5
                     } {
                         self.multipliertimer = 0;
 
-                        if self.multiplier < game_values.gamemodesettings.kingofthehill.maxmultiplier {
+                        if self.multiplier < game().game_values.gamemodesettings.kingofthehill.maxmultiplier {
                             self.multiplier += 1;
                         }
                     }
@@ -293,9 +293,9 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
                 self.multipliertimer = 0;
             }
 
-            if game_values.gamemodesettings.kingofthehill.relocationfrequency > 0 {
+            if game().game_values.gamemodesettings.kingofthehill.relocationfrequency > 0 {
                 self.relocatetimer += 1;
-                if self.relocatetimer >= game_values.gamemodesettings.kingofthehill.relocationfrequency {
+                if self.relocatetimer >= game().game_values.gamemodesettings.kingofthehill.relocationfrequency {
                     self.relocatetimer = 0;
                     self.place_area();
                 }

@@ -26,21 +26,21 @@ impl PlayerShield {
         self.abort();
 
         unsafe {
-            if game_values.gamemode.getgamemode() == game_mode_survival {
-                if game_values.gamemodesettings.survival.shield {
-                    self.timer = game_values.shieldtime;
-                    self.r#type = game_values.shieldstyle as PlayerShieldType;
+            if game().game_values.gamemode.getgamemode() == game_mode_survival {
+                if game().game_values.gamemodesettings.survival.shield {
+                    self.timer = game().game_values.shieldtime;
+                    self.r#type = game().game_values.shieldstyle as PlayerShieldType;
                 }
-            } else if game_values.shieldstyle != ShieldStyle::NoShield {
-                self.timer = game_values.shieldtime;
-                self.r#type = game_values.shieldstyle as PlayerShieldType;
+            } else if game().game_values.shieldstyle != ShieldStyle::NoShield {
+                self.timer = game().game_values.shieldtime;
+                self.r#type = game().game_values.shieldstyle as PlayerShieldType;
             }
         }
     }
 
     pub fn turn_on(&mut self) {
         unsafe {
-            self.r#type = if game_values.shieldstyle != ShieldStyle::NoShield { game_values.shieldstyle as PlayerShieldType } else { SOFT };
+            self.r#type = if game().game_values.shieldstyle != ShieldStyle::NoShield { game().game_values.shieldstyle as PlayerShieldType } else { SOFT };
         }
         self.timer = 60;
     }

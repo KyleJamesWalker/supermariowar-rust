@@ -161,7 +161,7 @@ impl UI_ControlTrait for MI_StringScroll {
         unsafe {
             for iPlayer in 0..4i16 {
                 //Only allow the controlling team to control the menu (if there is one)
-                if self.iControllingTeam != -1 && (self.iControllingTeam != lookup_team_id(iPlayer) || game_values.playercontrol[iPlayer as usize] != 1) {
+                if self.iControllingTeam != -1 && (self.iControllingTeam != lookup_team_id(iPlayer) || game().game_values.playercontrol[iPlayer as usize] != 1) {
                     continue;
                 }
 

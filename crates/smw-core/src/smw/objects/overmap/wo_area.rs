@@ -119,18 +119,18 @@ impl CObjectTrait for OMO_Area {
                 self.set_owner(p);
             }
 
-            if self.iPlayerID != -1 && !game_values.gamemode.gameover {
+            if self.iPlayerID != -1 && !game().game_values.gamemode.gameover {
                 self.scoretimer += 1;
-                if self.scoretimer as i32 >= ((game_values.pointspeed as i32) << 1) {
+                if self.scoretimer as i32 >= ((game().game_values.pointspeed as i32) << 1) {
                     self.scoretimer = 0;
                     players[self.iPlayerID as usize].score().adjust_score(1);
-                    game_values.gamemode.check_winner(players[self.iPlayerID as usize]);
+                    game().game_values.gamemode.check_winner(players[self.iPlayerID as usize]);
                 }
             }
 
-            if game_values.gamemodesettings.domination.relocationfrequency > 0 {
+            if game().game_values.gamemodesettings.domination.relocationfrequency > 0 {
                 self.relocatetimer += 1;
-                if self.relocatetimer >= game_values.gamemodesettings.domination.relocationfrequency {
+                if self.relocatetimer >= game().game_values.gamemodesettings.domination.relocationfrequency {
                     self.relocatetimer = 0;
                     self.place_area();
                 }

@@ -47,7 +47,7 @@ impl PlayerSpinStatus {
                 if self.state == 6 || self.state == 12 {
                     self.state = 0;
 
-                    if player.powerup == 3 && unsafe { game_values.featherlimit } > 0 {
+                    if player.powerup == 3 && unsafe { game().game_values.featherlimit } > 0 {
                         player.decrease_projectile_limit();
                     }
                 }
@@ -56,7 +56,7 @@ impl PlayerSpinStatus {
     }
 
     pub fn spin(&mut self, player: &mut CPlayer) {
-        let reversewalk = unsafe { game_values.reversewalk };
+        let reversewalk = unsafe { game().game_values.reversewalk };
         self.state = if player.is_facing_right() {
             if reversewalk { 7 } else { 1 }
         } else if reversewalk {
@@ -81,7 +81,7 @@ impl PlayerSpinStatus {
 
     pub fn to_sprite_id(&mut self) -> u8 {
         let s = spinStateToSprite[self.state as usize];
-        if unsafe { game_values.reversewalk } {
+        if unsafe { game().game_values.reversewalk } {
             if s & 0x1 != 0 { (s as i32 - 1) as u8 } else { (s as i32 + 1) as u8 }
         } else {
             s

@@ -1859,11 +1859,11 @@ impl CMap {
                                         };
                                     }
 
-                                    if iLayer < 2 || !game_values.toplayer {
+                                    if iLayer < 2 || !game().game_values.toplayer {
                                         animatedtile.fBackgroundAnimated = true;
                                     }
 
-                                    if iLayer >= 2 && game_values.toplayer {
+                                    if iLayer >= 2 && game().game_values.toplayer {
                                         animatedtile.fForegroundAnimated = true;
                                     }
                                 }
@@ -2054,7 +2054,7 @@ impl CMap {
         self.draw_preview(targetSurface, 1, fThumbnail);
         small_delay();
 
-        if unsafe { !game_values.toplayer } {
+        if unsafe { !game().game_values.toplayer } {
             self.draw_preview(targetSurface, 2, fThumbnail);
             small_delay();
 
@@ -2104,7 +2104,7 @@ impl CMap {
             small_delay();
         }
 
-        if unsafe { !game_values.toplayer } {
+        if unsafe { !game().game_values.toplayer } {
             return;
         }
 
@@ -2218,7 +2218,7 @@ impl CMap {
         self.draw(mapspr.get_surface(), 0);
         self.draw(mapspr.get_surface(), 1);
 
-        if unsafe { !game_values.toplayer } {
+        if unsafe { !game().game_values.toplayer } {
             self.draw(mapspr.get_surface(), 2);
             self.draw(mapspr.get_surface(), 3);
         }
@@ -2248,7 +2248,7 @@ impl CMap {
     pub fn setup_animated_tiles(&mut self) {
         unsafe {
             self.iAnimatedBackgroundLayers = 2;
-            if !game_values.toplayer {
+            if !game().game_values.toplayer {
                 self.iAnimatedBackgroundLayers = 4;
             }
 
@@ -2572,7 +2572,7 @@ impl CMap {
                 let c = iConnection as usize;
                 if self.warplocked[c] {
                     self.warplocktimer[c] += 1;
-                    if self.warplocktimer[c] > game_values.warplocktime {
+                    if self.warplocktimer[c] > game().game_values.warplocktime {
                         self.warplocked[c] = false;
                         self.warplocktimer[c] = 0;
                     }
@@ -2786,10 +2786,10 @@ pub(crate) mod tests {
             screen = SDL_CreateRGBSurface(0, 640, 480, 32, 0, 0, 0, 0);
             blitdest = screen;
             game().filterslist = Ptr::new_box(FiltersList::new());
-            if !game_values.is_initialized() {
-                game_values.init(CGameValues::new());
+            if !game().game_values.is_initialized() {
+                game().game_values.init(CGameValues::new());
             }
-            CGameValues::init(&mut game_values);
+            CGameValues::init(&mut game().game_values);
             game().rm = Ptr::new_box(CResourceManager::new());
             // Moving platforms draw these while loading a map.
             let pack = convert_path("gfx/packs/Classic");
@@ -2983,7 +2983,7 @@ pub(crate) mod tests {
             for i in 0..maplist.worldmaps.len() {
                 let _ = writeln!(o, "world {} {}", maplist.worldmaps.key(i), rel(&maplist.worldmaps.node(i).filename));
             }
-            for (i, v) in game_values.piFilterIcons.iter().enumerate() {
+            for (i, v) in game().game_values.piFilterIcons.iter().enumerate() {
                 let _ = writeln!(o, "icon {} {}", i, v);
             }
 
@@ -3015,7 +3015,7 @@ pub(crate) mod tests {
                 let mut filters = vec![false; nfilters];
                 filters[f] = true;
                 maplist.apply_filters(&filters);
-                let _ = write!(o, "filter {} filtered={} on={}", f, maplist.filtered_count(), game_values.fFiltersOn as i32);
+                let _ = write!(o, "filter {} filtered={} on={}", f, maplist.filtered_count(), game().game_values.fFiltersOn as i32);
                 cur(&mut o, "");
                 for _ in 0..4 {
                     maplist.next(true);

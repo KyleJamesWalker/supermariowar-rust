@@ -184,7 +184,7 @@ fn static_cast<T: Any>(obj: Ptr<dyn CObjectTrait>) -> Ptr<T> {
 /// `dynamic_cast<T*>(game_values.gamemode)`
 fn dynamic_cast_gamemode<T: Any>() -> Ptr<T> {
     unsafe {
-        let gm = game_values.gamemode;
+        let gm = game().game_values.gamemode;
         if gm.is_null() {
             return Ptr::null();
         }
@@ -768,7 +768,7 @@ impl CPlayerAI {
                         nearest!(self.distance_to_object_center(obj, threat, threatdistance, threatwrap));
                     }
                     object_race_goal => {
-                        if game_values.gamemode.gamemode != game_mode_race {
+                        if game().game_values.gamemode.gamemode != game_mode_race {
                             continue;
                         }
 
@@ -796,7 +796,7 @@ impl CPlayerAI {
                 }
 
                 //Find players in jail on own team to tag
-                if game_values.gamemode.gamemode == game_mode_jail {
+                if game().game_values.gamemode.gamemode == game_mode_jail {
                     if players[iPlayer].jail.is_active() && players[iPlayer].teamID == iTeamID {
                         nearest!(self.distance_to_player(players[iPlayer], teammate, teammatedistance, teammatewrap));
                     }
@@ -899,7 +899,7 @@ impl CPlayerAI {
 pub fn cplayer_ai_init(this: &mut CPlayerAI) {
     unsafe {
         //Scan yoshi's egg mode objects to make sure that we ignore eggs without matching yoshis
-        if game_values.gamemode.gamemode == game_mode_eggs {
+        if game().game_values.gamemode.gamemode == game_mode_eggs {
             let mut fYoshi: [bool; 4] = [false, false, false, false];
 
             //Scan Yoshis to see which ones are present
@@ -945,7 +945,7 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
         playerKeys.game_right_mut().fDown = false;
 
         //A percentage of the time the cpu will do nothing based on the difficulty level
-        if RandomNumberGenerator::generator().get_boolean_threshold(100, iDecisionPercentage[game_values.cpudifficulty as usize] as i32)
+        if RandomNumberGenerator::generator().get_boolean_threshold(100, iDecisionPercentage[game().game_values.cpudifficulty as usize] as i32)
             && pPlayer.isready()
         {
             return;
@@ -968,7 +968,7 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
          ***************************************************/
         this.get_nearest_objects();
 
-        let iTenSeconds: i16 = (15 * iDecisionPercentage[game_values.cpudifficulty as usize] as i32 / 10) as i16;
+        let iTenSeconds: i16 = (15 * iDecisionPercentage[game().game_values.cpudifficulty as usize] as i32 / 10) as i16;
 
         //If there is a goal, then make sure we aren't paying attention to it for too long
         if !this.nearestObjects.goal.is_null() {
@@ -1008,7 +1008,7 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
             this.attentionObjects.remove(td);
         }
 
-        let iStoredPowerup: i16 = game_values.gamepowerups[pPlayer.globalID as usize];
+        let iStoredPowerup: i16 = game().game_values.gamepowerups[pPlayer.globalID as usize];
         let mut carriedItem = pPlayer.carriedItem;
         let carriedObj = carried_as_object(carriedItem);
         let ix: i16 = pPlayer.ix;
@@ -1098,7 +1098,7 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
                 let piy = player.iy as i32;
 
                 //Move player relative to opponent when we are playing star mode and we are holding a star
-                if game_values.gamemode.gamemode == game_mode_star {
+                if game().game_values.gamemode.gamemode == game_mode_star {
                     if !carriedItem.is_null() && carriedItem.get_moving_object_type() == movingobject_star {
                         if static_cast::<CO_Star>(carriedObj).get_type() == 1 {
                             *moveAway = true;
@@ -1339,7 +1339,7 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
 
         //"Star Mode" specific stuff
         //Drop the star if we're not it
-        if game_values.gamemode.gamemode == game_mode_star {
+        if game().game_values.gamemode.gamemode == game_mode_star {
             let mut starmode = static_cast_gamemode::<CGM_Star>();
 
             if !carriedItem.is_null()
@@ -1358,7 +1358,7 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
             let no = &this.nearestObjects;
 
             //"Phanto Mode" specific stuff
-            if game_values.gamemode.gamemode == game_mode_chase {
+            if game().game_values.gamemode.gamemode == game_mode_chase {
                 //Ignore the key if a phanto is really close
                 if !no.threat.is_null()
                     && no.threat.get().get_object_type() == object_phanto
@@ -1371,12 +1371,12 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
                     let carriedID = carriedItem.network_id();
                     if let Some(ao) = this.attentionObjects.get_mut(&carriedID) {
                         ao.iType = 1;
-                        ao.iTimer = iDecisionPercentage[game_values.cpudifficulty as usize] / 3;
+                        ao.iTimer = iDecisionPercentage[game().game_values.cpudifficulty as usize] / 3;
                     } else {
                         let ao = Box::new(AttentionObject {
                             iID: carriedID,
                             iType: 1,
-                            iTimer: iDecisionPercentage[game_values.cpudifficulty as usize] / 3,
+                            iTimer: iDecisionPercentage[game().game_values.cpudifficulty as usize] / 3,
                         });
                         this.attentionObjects.insert(ao.iID, ao);
                     }
@@ -1568,7 +1568,7 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
                             if iPlayer == pPlayer.localID as usize || players[iPlayer].teamID == iTeamID {
                                 continue;
                             }
-                            if game_values.gamepowerups[players[iPlayer].globalID as usize] > 0 {
+                            if game().game_values.gamepowerups[players[iPlayer].globalID as usize] > 0 {
                                 return true;
                             }
                         }

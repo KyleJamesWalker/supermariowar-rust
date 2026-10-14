@@ -214,14 +214,14 @@ impl UI_ModeOptionsMenu {
             this.miClassicModeStyleField = Ptr::new_box(MI_SelectField::<DeathStyle>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 200, "On Kill", 400, 180));
             this.miClassicModeStyleField.add("Respawn", DeathStyle::Respawn);
             this.miClassicModeStyleField.add("Shield", DeathStyle::Shield);
-            this.miClassicModeStyleField.set_output_ptr(&mut game_values.gamemodemenusettings.classic.style as *mut _);
-            this.miClassicModeStyleField.set_current_value(game_values.gamemodemenusettings.classic.style);
+            this.miClassicModeStyleField.set_output_ptr(&mut game().game_values.gamemodemenusettings.classic.style as *mut _);
+            this.miClassicModeStyleField.set_current_value(game().game_values.gamemodemenusettings.classic.style);
 
             this.miClassicModeScoringField = Ptr::new_box(MI_SelectField::<ScoringStyle>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 240, "Scoring", 400, 180));
             this.miClassicModeScoringField.add("All Kills", ScoringStyle::AllKills);
             this.miClassicModeScoringField.add_random("Push Kills Only", ScoringStyle::PushOnly, false);
-            this.miClassicModeScoringField.set_output_ptr(&mut game_values.gamemodemenusettings.classic.scoring as *mut _);
-            this.miClassicModeScoringField.set_current_value(game_values.gamemodemenusettings.classic.scoring);
+            this.miClassicModeScoringField.set_output_ptr(&mut game().game_values.gamemodemenusettings.classic.scoring as *mut _);
+            this.miClassicModeScoringField.set_current_value(game().game_values.gamemodemenusettings.classic.scoring);
 
             this.miClassicModeBackButton = Ptr::new_box(MI_Button::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miClassicModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
@@ -249,14 +249,14 @@ impl UI_ModeOptionsMenu {
             this.miFragModeStyleField = Ptr::new_box(MI_SelectField::<DeathStyle>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 200, "On Kill", 400, 180));
             this.miFragModeStyleField.add("Respawn", DeathStyle::Respawn);
             this.miFragModeStyleField.add("Shield", DeathStyle::Shield);
-            this.miFragModeStyleField.set_output_ptr(&mut game_values.gamemodemenusettings.frag.style as *mut _);
-            this.miFragModeStyleField.set_current_value(game_values.gamemodemenusettings.frag.style);
+            this.miFragModeStyleField.set_output_ptr(&mut game().game_values.gamemodemenusettings.frag.style as *mut _);
+            this.miFragModeStyleField.set_current_value(game().game_values.gamemodemenusettings.frag.style);
 
             this.miFragModeScoringField = Ptr::new_box(MI_SelectField::<ScoringStyle>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 240, "Scoring", 400, 180));
             this.miFragModeScoringField.add("All Kills", ScoringStyle::AllKills);
             this.miFragModeScoringField.add_random("Push Kills Only", ScoringStyle::PushOnly, false);
-            this.miFragModeScoringField.set_output_ptr(&mut game_values.gamemodemenusettings.frag.scoring as *mut _);
-            this.miFragModeScoringField.set_current_value(game_values.gamemodemenusettings.frag.scoring);
+            this.miFragModeScoringField.set_output_ptr(&mut game().game_values.gamemodemenusettings.frag.scoring as *mut _);
+            this.miFragModeScoringField.set_current_value(game().game_values.gamemodemenusettings.frag.scoring);
 
             this.miFragModeBackButton = Ptr::new_box(MI_Button::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miFragModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
@@ -284,14 +284,14 @@ impl UI_ModeOptionsMenu {
             this.miTimeLimitModeStyleField = Ptr::new_box(MI_SelectField::<DeathStyle>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 180, "On Kill", 400, 150));
             this.miTimeLimitModeStyleField.add("Respawn", DeathStyle::Respawn);
             this.miTimeLimitModeStyleField.add("Shield", DeathStyle::Shield);
-            this.miTimeLimitModeStyleField.set_output_ptr(&mut game_values.gamemodemenusettings.time.style as *mut _);
-            this.miTimeLimitModeStyleField.set_current_value(game_values.gamemodemenusettings.time.style);
+            this.miTimeLimitModeStyleField.set_output_ptr(&mut game().game_values.gamemodemenusettings.time.style as *mut _);
+            this.miTimeLimitModeStyleField.set_current_value(game().game_values.gamemodemenusettings.time.style);
 
             this.miTimeLimitModeScoringField = Ptr::new_box(MI_SelectField::<ScoringStyle>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 220, "Scoring", 400, 150));
             this.miTimeLimitModeScoringField.add("All Kills", ScoringStyle::AllKills);
             this.miTimeLimitModeScoringField.add_random("Push Kills Only", ScoringStyle::PushOnly, false);
-            this.miTimeLimitModeScoringField.set_output_ptr(&mut game_values.gamemodemenusettings.time.scoring as *mut _);
-            this.miTimeLimitModeScoringField.set_current_value(game_values.gamemodemenusettings.time.scoring);
+            this.miTimeLimitModeScoringField.set_output_ptr(&mut game().game_values.gamemodemenusettings.time.scoring as *mut _);
+            this.miTimeLimitModeScoringField.set_current_value(game().game_values.gamemodemenusettings.time.scoring);
 
             this.miTimeLimitModePercentExtraTime = Ptr::new_box(MI_SliderField::new(Ptr::from_mut(&mut game().rm.spr_selectfield), Ptr::from_mut(&mut game().rm.menu_slider_bar), 120, 260, "Extra Time", 400, 150, 384));
             this.miTimeLimitModePercentExtraTime.add_random("0", 0, false);
@@ -315,8 +315,8 @@ impl UI_ModeOptionsMenu {
             this.miTimeLimitModePercentExtraTime.add_random("90", 90, false);
             this.miTimeLimitModePercentExtraTime.add_random("95", 95, false);
             this.miTimeLimitModePercentExtraTime.add_random("100", 100, false);
-            this.miTimeLimitModePercentExtraTime.set_output_ptr(&mut game_values.gamemodemenusettings.time.percentextratime as *mut _);
-            this.miTimeLimitModePercentExtraTime.set_current_value(game_values.gamemodemenusettings.time.percentextratime);
+            this.miTimeLimitModePercentExtraTime.set_output_ptr(&mut game().game_values.gamemodemenusettings.time.percentextratime as *mut _);
+            this.miTimeLimitModePercentExtraTime.set_current_value(game().game_values.gamemodemenusettings.time.percentextratime);
             this.miTimeLimitModePercentExtraTime.allow_wrap(false);
 
             this.miTimeLimitModeBackButton = Ptr::new_box(MI_Button::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
@@ -347,8 +347,8 @@ impl UI_ModeOptionsMenu {
             this.miJailModeStyleField.add("Classic", JailStyle::Classic);
             this.miJailModeStyleField.add("Owned", JailStyle::Owned);
             this.miJailModeStyleField.add("Free For All", JailStyle::FreeForAll);
-            this.miJailModeStyleField.set_output_ptr(&mut game_values.gamemodemenusettings.jail.style as *mut _);
-            this.miJailModeStyleField.set_current_value(game_values.gamemodemenusettings.jail.style);
+            this.miJailModeStyleField.set_output_ptr(&mut game().game_values.gamemodemenusettings.jail.style as *mut _);
+            this.miJailModeStyleField.set_current_value(game().game_values.gamemodemenusettings.jail.style);
 
             this.miJailModeTimeFreeField = Ptr::new_box(MI_SelectField::<i16>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 200, "Free Timer", 400, 150));
             this.miJailModeTimeFreeField.add("None", 1);
@@ -364,14 +364,14 @@ impl UI_ModeOptionsMenu {
             this.miJailModeTimeFreeField.add_random("50 Seconds", 3100, false);
             this.miJailModeTimeFreeField.add_random("55 Seconds", 3410, false);
             this.miJailModeTimeFreeField.add_random("60 Seconds", 3720, false);
-            this.miJailModeTimeFreeField.set_output_ptr(&mut game_values.gamemodemenusettings.jail.timetofree as *mut _);
-            this.miJailModeTimeFreeField.set_current_value(game_values.gamemodemenusettings.jail.timetofree);
+            this.miJailModeTimeFreeField.set_output_ptr(&mut game().game_values.gamemodemenusettings.jail.timetofree as *mut _);
+            this.miJailModeTimeFreeField.set_current_value(game().game_values.gamemodemenusettings.jail.timetofree);
 
             this.miJailModeTagFreeField = Ptr::new_box(MI_SelectField::<bool>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 240, "Tag Free", 400, 150));
             this.miJailModeTagFreeField.add("Off", false);
             this.miJailModeTagFreeField.add("On", true);
-            this.miJailModeTagFreeField.set_output_ptr(&mut game_values.gamemodemenusettings.jail.tagfree as *mut _);
-            this.miJailModeTagFreeField.set_current_value(game_values.gamemodemenusettings.jail.tagfree);
+            this.miJailModeTagFreeField.set_output_ptr(&mut game().game_values.gamemodemenusettings.jail.tagfree as *mut _);
+            this.miJailModeTagFreeField.set_current_value(game().game_values.gamemodemenusettings.jail.tagfree);
             this.miJailModeTagFreeField.set_auto_advance(true);
 
             this.miJailModeJailKeyField = Ptr::new_box(MI_SliderField::new(Ptr::from_mut(&mut game().rm.spr_selectfield), Ptr::from_mut(&mut game().rm.menu_slider_bar), 120, 280, "Jail Key", 400, 150, 384));
@@ -396,8 +396,8 @@ impl UI_ModeOptionsMenu {
             this.miJailModeJailKeyField.add_random("90", 90, false);
             this.miJailModeJailKeyField.add_random("95", 95, false);
             this.miJailModeJailKeyField.add_random("100", 100, false);
-            this.miJailModeJailKeyField.set_output_ptr(&mut game_values.gamemodemenusettings.jail.percentkey as *mut _);
-            this.miJailModeJailKeyField.set_current_value(game_values.gamemodemenusettings.jail.percentkey);
+            this.miJailModeJailKeyField.set_output_ptr(&mut game().game_values.gamemodemenusettings.jail.percentkey as *mut _);
+            this.miJailModeJailKeyField.set_current_value(game().game_values.gamemodemenusettings.jail.percentkey);
             this.miJailModeJailKeyField.allow_wrap(false);
 
             this.miJailModeBackButton = Ptr::new_box(MI_Button::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
@@ -428,8 +428,8 @@ impl UI_ModeOptionsMenu {
             this.miCoinModePenaltyField = Ptr::new_box(MI_SelectField::<bool>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 180, "Penalty", 400, 150));
             this.miCoinModePenaltyField.add("Off", false);
             this.miCoinModePenaltyField.add("On", true);
-            this.miCoinModePenaltyField.set_output_ptr(&mut game_values.gamemodemenusettings.coins.penalty as *mut _);
-            this.miCoinModePenaltyField.set_current_value(game_values.gamemodemenusettings.coins.penalty);
+            this.miCoinModePenaltyField.set_output_ptr(&mut game().game_values.gamemodemenusettings.coins.penalty as *mut _);
+            this.miCoinModePenaltyField.set_current_value(game().game_values.gamemodemenusettings.coins.penalty);
             this.miCoinModePenaltyField.set_auto_advance(true);
 
             this.miCoinModeQuantityField = Ptr::new_box(MI_SelectField::<i16>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 220, "Quantity", 400, 150));
@@ -443,8 +443,8 @@ impl UI_ModeOptionsMenu {
             this.miCoinModeQuantityField.add("8", 8);
             this.miCoinModeQuantityField.add("9", 9);
             this.miCoinModeQuantityField.add("10", 10);
-            this.miCoinModeQuantityField.set_output_ptr(&mut game_values.gamemodemenusettings.coins.quantity as *mut _);
-            this.miCoinModeQuantityField.set_current_value(game_values.gamemodemenusettings.coins.quantity);
+            this.miCoinModeQuantityField.set_output_ptr(&mut game().game_values.gamemodemenusettings.coins.quantity as *mut _);
+            this.miCoinModeQuantityField.set_current_value(game().game_values.gamemodemenusettings.coins.quantity);
 
             this.miCoinModePercentExtraCoin = Ptr::new_box(MI_SliderField::new(Ptr::from_mut(&mut game().rm.spr_selectfield), Ptr::from_mut(&mut game().rm.menu_slider_bar), 120, 260, "Extra Coins", 400, 150, 384));
             this.miCoinModePercentExtraCoin.add_random("0", 0, false);
@@ -468,8 +468,8 @@ impl UI_ModeOptionsMenu {
             this.miCoinModePercentExtraCoin.add_random("90", 90, false);
             this.miCoinModePercentExtraCoin.add_random("95", 95, false);
             this.miCoinModePercentExtraCoin.add_random("100", 100, false);
-            this.miCoinModePercentExtraCoin.set_output_ptr(&mut game_values.gamemodemenusettings.coins.percentextracoin as *mut _);
-            this.miCoinModePercentExtraCoin.set_current_value(game_values.gamemodemenusettings.coins.percentextracoin);
+            this.miCoinModePercentExtraCoin.set_output_ptr(&mut game().game_values.gamemodemenusettings.coins.percentextracoin as *mut _);
+            this.miCoinModePercentExtraCoin.set_current_value(game().game_values.gamemodemenusettings.coins.percentextracoin);
             this.miCoinModePercentExtraCoin.allow_wrap(false);
 
             this.miCoinModeBackButton = Ptr::new_box(MI_Button::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
@@ -504,8 +504,8 @@ impl UI_ModeOptionsMenu {
             this.miStompModeRateField.add_random("Very Fast", 30, false);
             this.miStompModeRateField.add_random("Extremely Fast", 15, false);
             this.miStompModeRateField.add_random("Insanely Fast", 5, false);
-            this.miStompModeRateField.set_output_ptr(&mut game_values.gamemodemenusettings.stomp.rate as *mut _);
-            this.miStompModeRateField.set_current_value(game_values.gamemodemenusettings.stomp.rate);
+            this.miStompModeRateField.set_output_ptr(&mut game().game_values.gamemodemenusettings.stomp.rate as *mut _);
+            this.miStompModeRateField.set_current_value(game().game_values.gamemodemenusettings.stomp.rate);
 
             for iEnemy in 0..NUMSTOMPENEMIES as i16 {
                 this.miStompModeEnemySlider[iEnemy as usize] = Ptr::new_box(MI_PowerupSlider::new(Ptr::from_mut(&mut game().rm.spr_selectfield), Ptr::from_mut(&mut game().rm.menu_slider_bar), Ptr::from_mut(&mut game().rm.menu_stomp), 120, 80 + 40 * iEnemy, 400, iEnemy));
@@ -521,8 +521,8 @@ impl UI_ModeOptionsMenu {
                 this.miStompModeEnemySlider[iEnemy as usize].add("", 9);
                 this.miStompModeEnemySlider[iEnemy as usize].add("", 10);
                 this.miStompModeEnemySlider[iEnemy as usize].allow_wrap(false);
-                this.miStompModeEnemySlider[iEnemy as usize].set_output_ptr(&mut game_values.gamemodemenusettings.stomp.enemyweight[iEnemy as usize] as *mut _);
-                this.miStompModeEnemySlider[iEnemy as usize].set_current_value(game_values.gamemodemenusettings.stomp.enemyweight[iEnemy as usize]);
+                this.miStompModeEnemySlider[iEnemy as usize].set_output_ptr(&mut game().game_values.gamemodemenusettings.stomp.enemyweight[iEnemy as usize] as *mut _);
+                this.miStompModeEnemySlider[iEnemy as usize].set_current_value(game().game_values.gamemodemenusettings.stomp.enemyweight[iEnemy as usize]);
             }
 
             this.miStompModeBackButton = Ptr::new_box(MI_Button::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
@@ -566,8 +566,8 @@ impl UI_ModeOptionsMenu {
                 this.miEggModeEggQuantityField[iEggField as usize].add_random("2", 2, !(iEggField >= 2));
                 this.miEggModeEggQuantityField[iEggField as usize].add_random("3", 3, !(iEggField >= 1));
                 this.miEggModeEggQuantityField[iEggField as usize].add("4", 4);
-                this.miEggModeEggQuantityField[iEggField as usize].set_output_ptr(&mut game_values.gamemodemenusettings.egg.eggs[iEggField as usize] as *mut _);
-                this.miEggModeEggQuantityField[iEggField as usize].set_current_value(game_values.gamemodemenusettings.egg.eggs[iEggField as usize]);
+                this.miEggModeEggQuantityField[iEggField as usize].set_output_ptr(&mut game().game_values.gamemodemenusettings.egg.eggs[iEggField as usize] as *mut _);
+                this.miEggModeEggQuantityField[iEggField as usize].set_current_value(game().game_values.gamemodemenusettings.egg.eggs[iEggField as usize]);
                 this.miEggModeEggQuantityField[iEggField as usize].allow_wrap(false);
             }
 
@@ -578,8 +578,8 @@ impl UI_ModeOptionsMenu {
                 this.miEggModeYoshiQuantityField[iYoshiField as usize].add_random("2", 2, !(iYoshiField >= 1));
                 this.miEggModeYoshiQuantityField[iYoshiField as usize].add("3", 3);
                 this.miEggModeYoshiQuantityField[iYoshiField as usize].add("4", 4);
-                this.miEggModeYoshiQuantityField[iYoshiField as usize].set_output_ptr(&mut game_values.gamemodemenusettings.egg.yoshis[iYoshiField as usize] as *mut _);
-                this.miEggModeYoshiQuantityField[iYoshiField as usize].set_current_value(game_values.gamemodemenusettings.egg.yoshis[iYoshiField as usize]);
+                this.miEggModeYoshiQuantityField[iYoshiField as usize].set_output_ptr(&mut game().game_values.gamemodemenusettings.egg.yoshis[iYoshiField as usize] as *mut _);
+                this.miEggModeYoshiQuantityField[iYoshiField as usize].set_current_value(game().game_values.gamemodemenusettings.egg.yoshis[iYoshiField as usize]);
                 this.miEggModeYoshiQuantityField[iYoshiField as usize].allow_wrap(false);
             }
 
@@ -591,8 +591,8 @@ impl UI_ModeOptionsMenu {
             this.miEggModeExplosionTimeField.add("10 Seconds", 10);
             this.miEggModeExplosionTimeField.add("15 Seconds", 15);
             this.miEggModeExplosionTimeField.add("20 Seconds", 20);
-            this.miEggModeExplosionTimeField.set_output_ptr(&mut game_values.gamemodemenusettings.egg.explode as *mut _);
-            this.miEggModeExplosionTimeField.set_current_value(game_values.gamemodemenusettings.egg.explode);
+            this.miEggModeExplosionTimeField.set_output_ptr(&mut game().game_values.gamemodemenusettings.egg.explode as *mut _);
+            this.miEggModeExplosionTimeField.set_current_value(game().game_values.gamemodemenusettings.egg.explode);
 
             this.miEggModeBackButton = Ptr::new_box(MI_Button::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miEggModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
@@ -637,22 +637,22 @@ impl UI_ModeOptionsMenu {
             this.miFlagModeSpeedField.add_random("6", 6, false);
             this.miFlagModeSpeedField.add_random("7", 7, false);
             this.miFlagModeSpeedField.add_random("8", 8, false);
-            this.miFlagModeSpeedField.set_output_ptr(&mut game_values.gamemodemenusettings.flag.speed as *mut _);
-            this.miFlagModeSpeedField.set_current_value(game_values.gamemodemenusettings.flag.speed);
+            this.miFlagModeSpeedField.set_output_ptr(&mut game().game_values.gamemodemenusettings.flag.speed as *mut _);
+            this.miFlagModeSpeedField.set_current_value(game().game_values.gamemodemenusettings.flag.speed);
             this.miFlagModeSpeedField.allow_wrap(false);
 
             this.miFlagModeTouchReturnField = Ptr::new_box(MI_SelectField::<bool>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 160, "Touch Return", 400, 180));
             this.miFlagModeTouchReturnField.add("Off", false);
             this.miFlagModeTouchReturnField.add("On", true);
-            this.miFlagModeTouchReturnField.set_output_ptr(&mut game_values.gamemodemenusettings.flag.touchreturn as *mut _);
-            this.miFlagModeTouchReturnField.set_current_value(game_values.gamemodemenusettings.flag.touchreturn);
+            this.miFlagModeTouchReturnField.set_output_ptr(&mut game().game_values.gamemodemenusettings.flag.touchreturn as *mut _);
+            this.miFlagModeTouchReturnField.set_current_value(game().game_values.gamemodemenusettings.flag.touchreturn);
             this.miFlagModeTouchReturnField.set_auto_advance(true);
 
             this.miFlagModePointMoveField = Ptr::new_box(MI_SelectField::<bool>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 200, "Point Move", 400, 180));
             this.miFlagModePointMoveField.add("Off", false);
             this.miFlagModePointMoveField.add("On", true);
-            this.miFlagModePointMoveField.set_output_ptr(&mut game_values.gamemodemenusettings.flag.pointmove as *mut _);
-            this.miFlagModePointMoveField.set_current_value(game_values.gamemodemenusettings.flag.pointmove);
+            this.miFlagModePointMoveField.set_output_ptr(&mut game().game_values.gamemodemenusettings.flag.pointmove as *mut _);
+            this.miFlagModePointMoveField.set_current_value(game().game_values.gamemodemenusettings.flag.pointmove);
             this.miFlagModePointMoveField.set_auto_advance(true);
 
             this.miFlagModeAutoReturnField = Ptr::new_box(MI_SelectField::<i16>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 240, "Auto Return", 400, 180));
@@ -669,21 +669,21 @@ impl UI_ModeOptionsMenu {
             this.miFlagModeAutoReturnField.add_random("50 Seconds", 3100, false);
             this.miFlagModeAutoReturnField.add_random("55 Seconds", 3410, false);
             this.miFlagModeAutoReturnField.add_random("60 Seconds", 3720, false);
-            this.miFlagModeAutoReturnField.set_output_ptr(&mut game_values.gamemodemenusettings.flag.autoreturn as *mut _);
-            this.miFlagModeAutoReturnField.set_current_value(game_values.gamemodemenusettings.flag.autoreturn);
+            this.miFlagModeAutoReturnField.set_output_ptr(&mut game().game_values.gamemodemenusettings.flag.autoreturn as *mut _);
+            this.miFlagModeAutoReturnField.set_current_value(game().game_values.gamemodemenusettings.flag.autoreturn);
 
             this.miFlagModeHomeScoreField = Ptr::new_box(MI_SelectField::<bool>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 280, "Need Home", 400, 180));
             this.miFlagModeHomeScoreField.add("Off", false);
             this.miFlagModeHomeScoreField.add("On", true);
-            this.miFlagModeHomeScoreField.set_output_ptr(&mut game_values.gamemodemenusettings.flag.homescore as *mut _);
-            this.miFlagModeHomeScoreField.set_current_value(game_values.gamemodemenusettings.flag.homescore);
+            this.miFlagModeHomeScoreField.set_output_ptr(&mut game().game_values.gamemodemenusettings.flag.homescore as *mut _);
+            this.miFlagModeHomeScoreField.set_current_value(game().game_values.gamemodemenusettings.flag.homescore);
             this.miFlagModeHomeScoreField.set_auto_advance(true);
 
             this.miFlagModeCenterFlagField = Ptr::new_box(MI_SelectField::<bool>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 320, "Center Flag", 400, 180));
             this.miFlagModeCenterFlagField.add("Off", false);
             this.miFlagModeCenterFlagField.add("On", true);
-            this.miFlagModeCenterFlagField.set_output_ptr(&mut game_values.gamemodemenusettings.flag.centerflag as *mut _);
-            this.miFlagModeCenterFlagField.set_current_value(game_values.gamemodemenusettings.flag.centerflag);
+            this.miFlagModeCenterFlagField.set_output_ptr(&mut game().game_values.gamemodemenusettings.flag.centerflag as *mut _);
+            this.miFlagModeCenterFlagField.set_current_value(game().game_values.gamemodemenusettings.flag.centerflag);
             this.miFlagModeCenterFlagField.set_auto_advance(true);
 
             this.miFlagModeBackButton = Ptr::new_box(MI_Button::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
@@ -717,15 +717,15 @@ impl UI_ModeOptionsMenu {
             this.miChickenModeShowTargetField = Ptr::new_box(MI_SelectField::<bool>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 200, "Show Target", 400, 180));
             this.miChickenModeShowTargetField.add("Off", false);
             this.miChickenModeShowTargetField.add("On", true);
-            this.miChickenModeShowTargetField.set_output_ptr(&mut game_values.gamemodemenusettings.chicken.usetarget as *mut _);
-            this.miChickenModeShowTargetField.set_current_value(game_values.gamemodemenusettings.chicken.usetarget);
+            this.miChickenModeShowTargetField.set_output_ptr(&mut game().game_values.gamemodemenusettings.chicken.usetarget as *mut _);
+            this.miChickenModeShowTargetField.set_current_value(game().game_values.gamemodemenusettings.chicken.usetarget);
             this.miChickenModeShowTargetField.set_auto_advance(true);
 
             this.miChickenModeGlideField = Ptr::new_box(MI_SelectField::<bool>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 240, "Chicken Glide", 400, 180));
             this.miChickenModeGlideField.add("Off", false);
             this.miChickenModeGlideField.add("On", true);
-            this.miChickenModeGlideField.set_output_ptr(&mut game_values.gamemodemenusettings.chicken.glide as *mut _);
-            this.miChickenModeGlideField.set_current_value(game_values.gamemodemenusettings.chicken.glide);
+            this.miChickenModeGlideField.set_output_ptr(&mut game().game_values.gamemodemenusettings.chicken.glide as *mut _);
+            this.miChickenModeGlideField.set_current_value(game().game_values.gamemodemenusettings.chicken.glide);
             this.miChickenModeGlideField.set_auto_advance(true);
 
             this.miChickenModeBackButton = Ptr::new_box(MI_Button::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
@@ -755,8 +755,8 @@ impl UI_ModeOptionsMenu {
             this.miTagModeTagOnTouchField = Ptr::new_box(MI_SelectField::<bool>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 220, "Touch Tag", 400, 180));
             this.miTagModeTagOnTouchField.add("Off", false);
             this.miTagModeTagOnTouchField.add("On", true);
-            this.miTagModeTagOnTouchField.set_output_ptr(&mut game_values.gamemodemenusettings.tag.tagontouch as *mut _);
-            this.miTagModeTagOnTouchField.set_current_value(game_values.gamemodemenusettings.tag.tagontouch);
+            this.miTagModeTagOnTouchField.set_output_ptr(&mut game().game_values.gamemodemenusettings.tag.tagontouch as *mut _);
+            this.miTagModeTagOnTouchField.set_current_value(game().game_values.gamemodemenusettings.tag.tagontouch);
             this.miTagModeTagOnTouchField.set_auto_advance(true);
 
             this.miTagModeBackButton = Ptr::new_box(MI_Button::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
@@ -795,16 +795,16 @@ impl UI_ModeOptionsMenu {
             this.miStarModeTimeField.add_random("50 Seconds", 50, false);
             this.miStarModeTimeField.add_random("55 Seconds", 55, false);
             this.miStarModeTimeField.add_random("60 Seconds", 60, false);
-            this.miStarModeTimeField.set_output_ptr(&mut game_values.gamemodemenusettings.star.time as *mut _);
-            this.miStarModeTimeField.set_current_value(game_values.gamemodemenusettings.star.time);
+            this.miStarModeTimeField.set_output_ptr(&mut game().game_values.gamemodemenusettings.star.time as *mut _);
+            this.miStarModeTimeField.set_current_value(game().game_values.gamemodemenusettings.star.time);
 
             this.miStarModeShineField = Ptr::new_box(MI_SelectField::<StarStyle>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 220, "Star Type", 400, 150));
             this.miStarModeShineField.add("Ztar", StarStyle::Ztar);
             this.miStarModeShineField.add("Shine", StarStyle::Shine);
             this.miStarModeShineField.add("Multi Star", StarStyle::Multi);
             this.miStarModeShineField.add("Random", StarStyle::Random);
-            this.miStarModeShineField.set_output_ptr(&mut game_values.gamemodemenusettings.star.shine as *mut _);
-            this.miStarModeShineField.set_current_value(game_values.gamemodemenusettings.star.shine);
+            this.miStarModeShineField.set_output_ptr(&mut game().game_values.gamemodemenusettings.star.shine as *mut _);
+            this.miStarModeShineField.set_current_value(game().game_values.gamemodemenusettings.star.shine);
 
             this.miStarModePercentExtraTime = Ptr::new_box(MI_SliderField::new(Ptr::from_mut(&mut game().rm.spr_selectfield), Ptr::from_mut(&mut game().rm.menu_slider_bar), 120, 260, "Extra Time", 400, 150, 384));
             this.miStarModePercentExtraTime.add_random("0", 0, false);
@@ -828,8 +828,8 @@ impl UI_ModeOptionsMenu {
             this.miStarModePercentExtraTime.add_random("90", 90, false);
             this.miStarModePercentExtraTime.add_random("95", 95, false);
             this.miStarModePercentExtraTime.add_random("100", 100, false);
-            this.miStarModePercentExtraTime.set_output_ptr(&mut game_values.gamemodemenusettings.star.percentextratime as *mut _);
-            this.miStarModePercentExtraTime.set_current_value(game_values.gamemodemenusettings.star.percentextratime);
+            this.miStarModePercentExtraTime.set_output_ptr(&mut game().game_values.gamemodemenusettings.star.percentextratime as *mut _);
+            this.miStarModePercentExtraTime.set_current_value(game().game_values.gamemodemenusettings.star.percentextratime);
             this.miStarModePercentExtraTime.allow_wrap(false);
 
             this.miStarModeBackButton = Ptr::new_box(MI_Button::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
@@ -881,8 +881,8 @@ impl UI_ModeOptionsMenu {
             this.miDominationModeQuantityField.add("2x Players", 22);
             this.miDominationModeQuantityField.add_random("2x Players + 1", 23, false);
             this.miDominationModeQuantityField.add_random("2x Players + 2", 24, false);
-            this.miDominationModeQuantityField.set_output_ptr(&mut game_values.gamemodemenusettings.domination.quantity as *mut _);
-            this.miDominationModeQuantityField.set_current_value(game_values.gamemodemenusettings.domination.quantity);
+            this.miDominationModeQuantityField.set_output_ptr(&mut game().game_values.gamemodemenusettings.domination.quantity as *mut _);
+            this.miDominationModeQuantityField.set_current_value(game().game_values.gamemodemenusettings.domination.quantity);
 
             this.miDominationModeRelocateFrequencyField = Ptr::new_box(MI_SelectField::<i16>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 160, "Relocate", 400, 180));
             this.miDominationModeRelocateFrequencyField.add("Never", 0);
@@ -897,30 +897,30 @@ impl UI_ModeOptionsMenu {
             this.miDominationModeRelocateFrequencyField.add("2 Minutes", 7440);
             this.miDominationModeRelocateFrequencyField.add("2.5 Minutes", 9300);
             this.miDominationModeRelocateFrequencyField.add("3 Minutes", 11160);
-            this.miDominationModeRelocateFrequencyField.set_output_ptr(&mut game_values.gamemodemenusettings.domination.relocationfrequency as *mut _);
-            this.miDominationModeRelocateFrequencyField.set_current_value(game_values.gamemodemenusettings.domination.relocationfrequency);
+            this.miDominationModeRelocateFrequencyField.set_output_ptr(&mut game().game_values.gamemodemenusettings.domination.relocationfrequency as *mut _);
+            this.miDominationModeRelocateFrequencyField.set_current_value(game().game_values.gamemodemenusettings.domination.relocationfrequency);
 
             this.miDominationModeDeathText = Ptr::new_box(MI_Text::new("On Death", 120, 210, 0, true, TextAlign::LEFT));
 
             this.miDominationModeLoseOnDeathField = Ptr::new_box(MI_SelectField::<bool>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 240, "Lose Bases", 400, 180));
             this.miDominationModeLoseOnDeathField.add("Off", false);
             this.miDominationModeLoseOnDeathField.add("On", true);
-            this.miDominationModeLoseOnDeathField.set_output_ptr(&mut game_values.gamemodemenusettings.domination.loseondeath as *mut _);
-            this.miDominationModeLoseOnDeathField.set_current_value(game_values.gamemodemenusettings.domination.loseondeath);
+            this.miDominationModeLoseOnDeathField.set_output_ptr(&mut game().game_values.gamemodemenusettings.domination.loseondeath as *mut _);
+            this.miDominationModeLoseOnDeathField.set_current_value(game().game_values.gamemodemenusettings.domination.loseondeath);
             this.miDominationModeLoseOnDeathField.set_auto_advance(true);
 
             this.miDominationModeRelocateOnDeathField = Ptr::new_box(MI_SelectField::<bool>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 280, "Move Bases", 400, 180));
             this.miDominationModeRelocateOnDeathField.add("Off", false);
             this.miDominationModeRelocateOnDeathField.add("On", true);
-            this.miDominationModeRelocateOnDeathField.set_output_ptr(&mut game_values.gamemodemenusettings.domination.relocateondeath as *mut _);
-            this.miDominationModeRelocateOnDeathField.set_current_value(game_values.gamemodemenusettings.domination.relocateondeath);
+            this.miDominationModeRelocateOnDeathField.set_output_ptr(&mut game().game_values.gamemodemenusettings.domination.relocateondeath as *mut _);
+            this.miDominationModeRelocateOnDeathField.set_current_value(game().game_values.gamemodemenusettings.domination.relocateondeath);
             this.miDominationModeRelocateOnDeathField.set_auto_advance(true);
 
             this.miDominationModeStealOnDeathField = Ptr::new_box(MI_SelectField::<bool>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 320, "Steal Bases", 400, 180));
             this.miDominationModeStealOnDeathField.add("Off", false);
             this.miDominationModeStealOnDeathField.add("On", true);
-            this.miDominationModeStealOnDeathField.set_output_ptr(&mut game_values.gamemodemenusettings.domination.stealondeath as *mut _);
-            this.miDominationModeStealOnDeathField.set_current_value(game_values.gamemodemenusettings.domination.stealondeath);
+            this.miDominationModeStealOnDeathField.set_output_ptr(&mut game().game_values.gamemodemenusettings.domination.stealondeath as *mut _);
+            this.miDominationModeStealOnDeathField.set_current_value(game().game_values.gamemodemenusettings.domination.stealondeath);
             this.miDominationModeStealOnDeathField.set_auto_advance(true);
 
 
@@ -959,8 +959,8 @@ impl UI_ModeOptionsMenu {
             this.miKingOfTheHillModeSizeField.add("5 x 5", 5);
             this.miKingOfTheHillModeSizeField.add("6 x 6", 6);
             this.miKingOfTheHillModeSizeField.add("7 x 7", 7);
-            this.miKingOfTheHillModeSizeField.set_output_ptr(&mut game_values.gamemodemenusettings.kingofthehill.areasize as *mut _);
-            this.miKingOfTheHillModeSizeField.set_current_value(game_values.gamemodemenusettings.kingofthehill.areasize);
+            this.miKingOfTheHillModeSizeField.set_output_ptr(&mut game().game_values.gamemodemenusettings.kingofthehill.areasize as *mut _);
+            this.miKingOfTheHillModeSizeField.set_current_value(game().game_values.gamemodemenusettings.kingofthehill.areasize);
 
             this.miKingOfTheHillModeRelocateFrequencyField = Ptr::new_box(MI_SelectField::<i16>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 220, "Relocate", 400, 180));
             this.miKingOfTheHillModeRelocateFrequencyField.add("Never", 0);
@@ -975,8 +975,8 @@ impl UI_ModeOptionsMenu {
             this.miKingOfTheHillModeRelocateFrequencyField.add("2 Minutes", 7440);
             this.miKingOfTheHillModeRelocateFrequencyField.add("2.5 Minutes", 9300);
             this.miKingOfTheHillModeRelocateFrequencyField.add("3 Minutes", 11160);
-            this.miKingOfTheHillModeRelocateFrequencyField.set_output_ptr(&mut game_values.gamemodemenusettings.kingofthehill.relocationfrequency as *mut _);
-            this.miKingOfTheHillModeRelocateFrequencyField.set_current_value(game_values.gamemodemenusettings.kingofthehill.relocationfrequency);
+            this.miKingOfTheHillModeRelocateFrequencyField.set_output_ptr(&mut game().game_values.gamemodemenusettings.kingofthehill.relocationfrequency as *mut _);
+            this.miKingOfTheHillModeRelocateFrequencyField.set_current_value(game().game_values.gamemodemenusettings.kingofthehill.relocationfrequency);
 
             this.miKingOfTheHillModeMultiplierField = Ptr::new_box(MI_SelectField::<i16>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 260, "Max Multiplier", 400, 180));
             this.miKingOfTheHillModeMultiplierField.add("None", 1);
@@ -984,8 +984,8 @@ impl UI_ModeOptionsMenu {
             this.miKingOfTheHillModeMultiplierField.add("3", 3);
             this.miKingOfTheHillModeMultiplierField.add("4", 4);
             this.miKingOfTheHillModeMultiplierField.add("5", 5);
-            this.miKingOfTheHillModeMultiplierField.set_output_ptr(&mut game_values.gamemodemenusettings.kingofthehill.maxmultiplier as *mut _);
-            this.miKingOfTheHillModeMultiplierField.set_current_value(game_values.gamemodemenusettings.kingofthehill.maxmultiplier);
+            this.miKingOfTheHillModeMultiplierField.set_output_ptr(&mut game().game_values.gamemodemenusettings.kingofthehill.maxmultiplier as *mut _);
+            this.miKingOfTheHillModeMultiplierField.set_current_value(game().game_values.gamemodemenusettings.kingofthehill.maxmultiplier);
 
             this.miKingOfTheHillModeBackButton = Ptr::new_box(MI_Button::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miKingOfTheHillModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
@@ -1020,8 +1020,8 @@ impl UI_ModeOptionsMenu {
             this.miRaceModeQuantityField.add("6", 6);
             this.miRaceModeQuantityField.add("7", 7);
             this.miRaceModeQuantityField.add("8", MAXRACEGOALS as i16);
-            this.miRaceModeQuantityField.set_output_ptr(&mut game_values.gamemodemenusettings.race.quantity as *mut _);
-            this.miRaceModeQuantityField.set_current_value(game_values.gamemodemenusettings.race.quantity);
+            this.miRaceModeQuantityField.set_output_ptr(&mut game().game_values.gamemodemenusettings.race.quantity as *mut _);
+            this.miRaceModeQuantityField.set_current_value(game().game_values.gamemodemenusettings.race.quantity);
 
             this.miRaceModeSpeedField = Ptr::new_box(MI_SelectField::<i16>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 220, "Speed", 400, 180));
             this.miRaceModeSpeedField.add("Stationary", 0);
@@ -1032,15 +1032,15 @@ impl UI_ModeOptionsMenu {
             this.miRaceModeSpeedField.add_random("Very Fast", 8, false);
             this.miRaceModeSpeedField.add_random("Extremely Fast", 15, false);
             this.miRaceModeSpeedField.add_random("Insanely Fast", 30, false);
-            this.miRaceModeSpeedField.set_output_ptr(&mut game_values.gamemodemenusettings.race.speed as *mut _);
-            this.miRaceModeSpeedField.set_current_value(game_values.gamemodemenusettings.race.speed);
+            this.miRaceModeSpeedField.set_output_ptr(&mut game().game_values.gamemodemenusettings.race.speed as *mut _);
+            this.miRaceModeSpeedField.set_current_value(game().game_values.gamemodemenusettings.race.speed);
 
             this.miRaceModePenaltyField = Ptr::new_box(MI_SelectField::<i16>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 260, "Penalty", 400, 180));
             this.miRaceModePenaltyField.add("None", 0);
             this.miRaceModePenaltyField.add("One Goal", 1);
             this.miRaceModePenaltyField.add("All Goals", 2);
-            this.miRaceModePenaltyField.set_output_ptr(&mut game_values.gamemodemenusettings.race.penalty as *mut _);
-            this.miRaceModePenaltyField.set_current_value(game_values.gamemodemenusettings.race.penalty);
+            this.miRaceModePenaltyField.set_output_ptr(&mut game().game_values.gamemodemenusettings.race.penalty as *mut _);
+            this.miRaceModePenaltyField.set_current_value(game().game_values.gamemodemenusettings.race.penalty);
 
             this.miRaceModeBackButton = Ptr::new_box(MI_Button::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miRaceModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
@@ -1102,8 +1102,8 @@ impl UI_ModeOptionsMenu {
                 this.miSurvivalModeEnemySlider[iEnemy as usize].add("", 9);
                 this.miSurvivalModeEnemySlider[iEnemy as usize].add("", 10);
                 this.miSurvivalModeEnemySlider[iEnemy as usize].allow_wrap(false);
-                this.miSurvivalModeEnemySlider[iEnemy as usize].set_output_ptr(&mut game_values.gamemodemenusettings.survival.enemyweight[iEnemy as usize] as *mut _);
-                this.miSurvivalModeEnemySlider[iEnemy as usize].set_current_value(game_values.gamemodemenusettings.survival.enemyweight[iEnemy as usize]);
+                this.miSurvivalModeEnemySlider[iEnemy as usize].set_output_ptr(&mut game().game_values.gamemodemenusettings.survival.enemyweight[iEnemy as usize] as *mut _);
+                this.miSurvivalModeEnemySlider[iEnemy as usize].set_current_value(game().game_values.gamemodemenusettings.survival.enemyweight[iEnemy as usize]);
             }
 
             this.miSurvivalModeDensityField = Ptr::new_box(MI_SelectField::<i16>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 240, "Density", 400, 180));
@@ -1114,8 +1114,8 @@ impl UI_ModeOptionsMenu {
             this.miSurvivalModeDensityField.add_random("Very High", 10, false);
             this.miSurvivalModeDensityField.add("Extremely High", 6);
             this.miSurvivalModeDensityField.add_random("Insanely High", 2, false);
-            this.miSurvivalModeDensityField.set_output_ptr(&mut game_values.gamemodemenusettings.survival.density as *mut _);
-            this.miSurvivalModeDensityField.set_current_value(game_values.gamemodemenusettings.survival.density);
+            this.miSurvivalModeDensityField.set_output_ptr(&mut game().game_values.gamemodemenusettings.survival.density as *mut _);
+            this.miSurvivalModeDensityField.set_current_value(game().game_values.gamemodemenusettings.survival.density);
 
             this.miSurvivalModeSpeedField = Ptr::new_box(MI_SelectField::<i16>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 280, "Speed", 400, 180));
             this.miSurvivalModeSpeedField.add_random("Very Slow", 2, false);
@@ -1125,14 +1125,14 @@ impl UI_ModeOptionsMenu {
             this.miSurvivalModeSpeedField.add_random("Very Fast", 8, false);
             this.miSurvivalModeSpeedField.add_random("Extremely Fast", 15, false);
             this.miSurvivalModeSpeedField.add_random("Insanely Fast", 30, false);
-            this.miSurvivalModeSpeedField.set_output_ptr(&mut game_values.gamemodemenusettings.survival.speed as *mut _);
-            this.miSurvivalModeSpeedField.set_current_value(game_values.gamemodemenusettings.survival.speed);
+            this.miSurvivalModeSpeedField.set_output_ptr(&mut game().game_values.gamemodemenusettings.survival.speed as *mut _);
+            this.miSurvivalModeSpeedField.set_current_value(game().game_values.gamemodemenusettings.survival.speed);
 
             this.miSurvivalModeShieldField = Ptr::new_box(MI_SelectField::<bool>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 320, "Shield", 400, 180));
             this.miSurvivalModeShieldField.add("Off", false);
             this.miSurvivalModeShieldField.add("On", true);
-            this.miSurvivalModeShieldField.set_output_ptr(&mut game_values.gamemodemenusettings.survival.shield as *mut _);
-            this.miSurvivalModeShieldField.set_current_value(game_values.gamemodemenusettings.survival.shield);
+            this.miSurvivalModeShieldField.set_output_ptr(&mut game().game_values.gamemodemenusettings.survival.shield as *mut _);
+            this.miSurvivalModeShieldField.set_current_value(game().game_values.gamemodemenusettings.survival.shield);
             this.miSurvivalModeShieldField.set_auto_advance(true);
 
             this.miSurvivalModeBackButton = Ptr::new_box(MI_Button::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
@@ -1178,14 +1178,14 @@ impl UI_ModeOptionsMenu {
             this.miGreedModeCoinLife.add("20 Seconds", 1240);
             this.miGreedModeCoinLife.add("25 Seconds", 1550);
             this.miGreedModeCoinLife.add("30 Seconds", 1860);
-            this.miGreedModeCoinLife.set_output_ptr(&mut game_values.gamemodemenusettings.greed.coinlife as *mut _);
-            this.miGreedModeCoinLife.set_current_value(game_values.gamemodemenusettings.greed.coinlife);
+            this.miGreedModeCoinLife.set_output_ptr(&mut game().game_values.gamemodemenusettings.greed.coinlife as *mut _);
+            this.miGreedModeCoinLife.set_current_value(game().game_values.gamemodemenusettings.greed.coinlife);
 
             this.miGreedModeOwnCoins = Ptr::new_box(MI_SelectField::<bool>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 200, "Own Coins", 400, 150));
             this.miGreedModeOwnCoins.add("Yes", true);
             this.miGreedModeOwnCoins.add("No", false);
-            this.miGreedModeOwnCoins.set_output_ptr(&mut game_values.gamemodemenusettings.greed.owncoins as *mut _);
-            this.miGreedModeOwnCoins.set_current_value(game_values.gamemodemenusettings.greed.owncoins);
+            this.miGreedModeOwnCoins.set_output_ptr(&mut game().game_values.gamemodemenusettings.greed.owncoins as *mut _);
+            this.miGreedModeOwnCoins.set_current_value(game().game_values.gamemodemenusettings.greed.owncoins);
             this.miGreedModeOwnCoins.set_auto_advance(true);
 
             this.miGreedModeMultiplier = Ptr::new_box(MI_SelectField::<i16>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 240, "Multipler", 400, 150));
@@ -1195,8 +1195,8 @@ impl UI_ModeOptionsMenu {
             this.miGreedModeMultiplier.add("2", 4);
             this.miGreedModeMultiplier.add_random("2.5", 5, false);
             this.miGreedModeMultiplier.add_random("3", 6, false);
-            this.miGreedModeMultiplier.set_output_ptr(&mut game_values.gamemodemenusettings.greed.multiplier as *mut _);
-            this.miGreedModeMultiplier.set_current_value(game_values.gamemodemenusettings.greed.multiplier);
+            this.miGreedModeMultiplier.set_output_ptr(&mut game().game_values.gamemodemenusettings.greed.multiplier as *mut _);
+            this.miGreedModeMultiplier.set_current_value(game().game_values.gamemodemenusettings.greed.multiplier);
 
             this.miGreedModePercentExtraCoin = Ptr::new_box(MI_SliderField::new(Ptr::from_mut(&mut game().rm.spr_selectfield), Ptr::from_mut(&mut game().rm.menu_slider_bar), 120, 280, "Extra Coins", 400, 150, 384));
             this.miGreedModePercentExtraCoin.add_random("0", 0, false);
@@ -1220,8 +1220,8 @@ impl UI_ModeOptionsMenu {
             this.miGreedModePercentExtraCoin.add_random("90", 90, false);
             this.miGreedModePercentExtraCoin.add_random("95", 95, false);
             this.miGreedModePercentExtraCoin.add_random("100", 100, false);
-            this.miGreedModePercentExtraCoin.set_output_ptr(&mut game_values.gamemodemenusettings.greed.percentextracoin as *mut _);
-            this.miGreedModePercentExtraCoin.set_current_value(game_values.gamemodemenusettings.greed.percentextracoin);
+            this.miGreedModePercentExtraCoin.set_output_ptr(&mut game().game_values.gamemodemenusettings.greed.percentextracoin as *mut _);
+            this.miGreedModePercentExtraCoin.set_current_value(game().game_values.gamemodemenusettings.greed.percentextracoin);
             this.miGreedModePercentExtraCoin.allow_wrap(false);
 
             this.miGreedModeBackButton = Ptr::new_box(MI_Button::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
@@ -1259,8 +1259,8 @@ impl UI_ModeOptionsMenu {
             this.miHealthModeStartLife.add_random("8", 8, false);
             this.miHealthModeStartLife.add_random("9", 9, false);
             this.miHealthModeStartLife.add_random("10", 10, false);
-            this.miHealthModeStartLife.set_output_ptr(&mut game_values.gamemodemenusettings.health.startlife as *mut _);
-            this.miHealthModeStartLife.set_current_value(game_values.gamemodemenusettings.health.startlife);
+            this.miHealthModeStartLife.set_output_ptr(&mut game().game_values.gamemodemenusettings.health.startlife as *mut _);
+            this.miHealthModeStartLife.set_current_value(game().game_values.gamemodemenusettings.health.startlife);
             this.miHealthModeStartLife.allow_wrap(false);
             this.miHealthModeStartLife.set_item_changed_code(MENU_CODE_HEALTH_MODE_START_LIFE_CHANGED);
 
@@ -1274,8 +1274,8 @@ impl UI_ModeOptionsMenu {
             this.miHealthModeMaxLife.add("8", 8);
             this.miHealthModeMaxLife.add("9", 9);
             this.miHealthModeMaxLife.add("10", 10);
-            this.miHealthModeMaxLife.set_output_ptr(&mut game_values.gamemodemenusettings.health.maxlife as *mut _);
-            this.miHealthModeMaxLife.set_current_value(game_values.gamemodemenusettings.health.maxlife);
+            this.miHealthModeMaxLife.set_output_ptr(&mut game().game_values.gamemodemenusettings.health.maxlife as *mut _);
+            this.miHealthModeMaxLife.set_current_value(game().game_values.gamemodemenusettings.health.maxlife);
             this.miHealthModeMaxLife.allow_wrap(false);
             this.miHealthModeMaxLife.set_item_changed_code(MENU_CODE_HEALTH_MODE_MAX_LIFE_CHANGED);
 
@@ -1301,8 +1301,8 @@ impl UI_ModeOptionsMenu {
             this.miHealthModePercentExtraLife.add_random("90", 90, false);
             this.miHealthModePercentExtraLife.add_random("95", 95, false);
             this.miHealthModePercentExtraLife.add_random("100", 100, false);
-            this.miHealthModePercentExtraLife.set_output_ptr(&mut game_values.gamemodemenusettings.health.percentextralife as *mut _);
-            this.miHealthModePercentExtraLife.set_current_value(game_values.gamemodemenusettings.health.percentextralife);
+            this.miHealthModePercentExtraLife.set_output_ptr(&mut game().game_values.gamemodemenusettings.health.percentextralife as *mut _);
+            this.miHealthModePercentExtraLife.set_current_value(game().game_values.gamemodemenusettings.health.percentextralife);
             this.miHealthModePercentExtraLife.allow_wrap(false);
 
             this.miHealthModeBackButton = Ptr::new_box(MI_Button::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
@@ -1340,8 +1340,8 @@ impl UI_ModeOptionsMenu {
             this.miCollectionModeQuantityField.add_random("# Players + 1", 8, false);
             this.miCollectionModeQuantityField.add_random("# Players + 2", 9, false);
             this.miCollectionModeQuantityField.add_random("# Players + 3", 10, false);
-            this.miCollectionModeQuantityField.set_output_ptr(&mut game_values.gamemodemenusettings.collection.quantity as *mut _);
-            this.miCollectionModeQuantityField.set_current_value(game_values.gamemodemenusettings.collection.quantity);
+            this.miCollectionModeQuantityField.set_output_ptr(&mut game().game_values.gamemodemenusettings.collection.quantity as *mut _);
+            this.miCollectionModeQuantityField.set_current_value(game().game_values.gamemodemenusettings.collection.quantity);
 
             this.miCollectionModeRateField = Ptr::new_box(MI_SelectField::<i16>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 200, "Rate", 400, 180));
             this.miCollectionModeRateField.add("Instant", 0);
@@ -1354,8 +1354,8 @@ impl UI_ModeOptionsMenu {
             this.miCollectionModeRateField.add_random("20 Seconds", 1240, false);
             this.miCollectionModeRateField.add_random("25 Seconds", 1550, false);
             this.miCollectionModeRateField.add_random("30 Seconds", 1860, false);
-            this.miCollectionModeRateField.set_output_ptr(&mut game_values.gamemodemenusettings.collection.rate as *mut _);
-            this.miCollectionModeRateField.set_current_value(game_values.gamemodemenusettings.collection.rate);
+            this.miCollectionModeRateField.set_output_ptr(&mut game().game_values.gamemodemenusettings.collection.rate as *mut _);
+            this.miCollectionModeRateField.set_current_value(game().game_values.gamemodemenusettings.collection.rate);
 
             this.miCollectionModeBankTimeField = Ptr::new_box(MI_SelectField::<i16>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 240, "Bank Time", 400, 180));
             this.miCollectionModeBankTimeField.add_random("Instant", 0, false);
@@ -1369,8 +1369,8 @@ impl UI_ModeOptionsMenu {
             this.miCollectionModeBankTimeField.add_random("8 Seconds", 496, false);
             this.miCollectionModeBankTimeField.add_random("9 Seconds", 558, false);
             this.miCollectionModeBankTimeField.add_random("10 Seconds", 620, false);
-            this.miCollectionModeBankTimeField.set_output_ptr(&mut game_values.gamemodemenusettings.collection.banktime as *mut _);
-            this.miCollectionModeBankTimeField.set_current_value(game_values.gamemodemenusettings.collection.banktime);
+            this.miCollectionModeBankTimeField.set_output_ptr(&mut game().game_values.gamemodemenusettings.collection.banktime as *mut _);
+            this.miCollectionModeBankTimeField.set_current_value(game().game_values.gamemodemenusettings.collection.banktime);
 
             this.miCollectionModeCardLifeField = Ptr::new_box(MI_SelectField::<i16>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 280, "Card Life", 400, 180));
             this.miCollectionModeCardLifeField.add_random("1 Second", 62, false);
@@ -1389,8 +1389,8 @@ impl UI_ModeOptionsMenu {
             this.miCollectionModeCardLifeField.add("20 Seconds", 1240);
             this.miCollectionModeCardLifeField.add("25 Seconds", 1550);
             this.miCollectionModeCardLifeField.add("30 Seconds", 1860);
-            this.miCollectionModeCardLifeField.set_output_ptr(&mut game_values.gamemodemenusettings.collection.cardlife as *mut _);
-            this.miCollectionModeCardLifeField.set_current_value(game_values.gamemodemenusettings.collection.cardlife);
+            this.miCollectionModeCardLifeField.set_output_ptr(&mut game().game_values.gamemodemenusettings.collection.cardlife as *mut _);
+            this.miCollectionModeCardLifeField.set_current_value(game().game_values.gamemodemenusettings.collection.cardlife);
 
             this.miCollectionModeBackButton = Ptr::new_box(MI_Button::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miCollectionModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
@@ -1424,8 +1424,8 @@ impl UI_ModeOptionsMenu {
             this.miChaseModeSpeedField.add("Very Fast", 7);
             this.miChaseModeSpeedField.add_random("Extremely Fast", 8, false);
             this.miChaseModeSpeedField.add_random("Insanely Fast", 10, false);
-            this.miChaseModeSpeedField.set_output_ptr(&mut game_values.gamemodemenusettings.chase.phantospeed as *mut _);
-            this.miChaseModeSpeedField.set_current_value(game_values.gamemodemenusettings.chase.phantospeed);
+            this.miChaseModeSpeedField.set_output_ptr(&mut game().game_values.gamemodemenusettings.chase.phantospeed as *mut _);
+            this.miChaseModeSpeedField.set_current_value(game().game_values.gamemodemenusettings.chase.phantospeed);
 
             for iPhanto in 0..3 {
                 this.miChaseModeQuantitySlider[iPhanto as usize] = Ptr::new_box(MI_PowerupSlider::new(Ptr::from_mut(&mut game().rm.spr_selectfield), Ptr::from_mut(&mut game().rm.menu_slider_bar), Ptr::from_mut(&mut game().rm.spr_phanto), 120, 200 + 40 * iPhanto, 400, iPhanto));
@@ -1436,8 +1436,8 @@ impl UI_ModeOptionsMenu {
                 this.miChaseModeQuantitySlider[iPhanto as usize].add_random("", 4, false);
                 this.miChaseModeQuantitySlider[iPhanto as usize].add_random("", 5, false);
                 this.miChaseModeQuantitySlider[iPhanto as usize].allow_wrap(false);
-                this.miChaseModeQuantitySlider[iPhanto as usize].set_output_ptr(&mut game_values.gamemodemenusettings.chase.phantoquantity[iPhanto as usize] as *mut _);
-                this.miChaseModeQuantitySlider[iPhanto as usize].set_current_value(game_values.gamemodemenusettings.chase.phantoquantity[iPhanto as usize]);
+                this.miChaseModeQuantitySlider[iPhanto as usize].set_output_ptr(&mut game().game_values.gamemodemenusettings.chase.phantoquantity[iPhanto as usize] as *mut _);
+                this.miChaseModeQuantitySlider[iPhanto as usize].set_current_value(game().game_values.gamemodemenusettings.chase.phantoquantity[iPhanto as usize]);
             }
 
             this.miChaseModeBackButton = Ptr::new_box(MI_Button::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
@@ -1470,16 +1470,16 @@ impl UI_ModeOptionsMenu {
             this.miShyGuyTagModeTagOnSuicideField = Ptr::new_box(MI_SelectField::<bool>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 180, "Suicide Tag", 400, 180));
             this.miShyGuyTagModeTagOnSuicideField.add("Off", false);
             this.miShyGuyTagModeTagOnSuicideField.add("On", true);
-            this.miShyGuyTagModeTagOnSuicideField.set_output_ptr(&mut game_values.gamemodemenusettings.shyguytag.tagonsuicide as *mut _);
-            this.miShyGuyTagModeTagOnSuicideField.set_current_value(game_values.gamemodemenusettings.shyguytag.tagonsuicide);
+            this.miShyGuyTagModeTagOnSuicideField.set_output_ptr(&mut game().game_values.gamemodemenusettings.shyguytag.tagonsuicide as *mut _);
+            this.miShyGuyTagModeTagOnSuicideField.set_current_value(game().game_values.gamemodemenusettings.shyguytag.tagonsuicide);
             this.miShyGuyTagModeTagOnSuicideField.set_auto_advance(true);
 
             this.miShyGuyTagModeTagOnStompField = Ptr::new_box(MI_SelectField::<i16>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 220, "Tag Transfer", 400, 180));
             this.miShyGuyTagModeTagOnStompField.add("Touch Only", 0);
             this.miShyGuyTagModeTagOnStompField.add("Kills Only", 1);
             this.miShyGuyTagModeTagOnStompField.add("Touch and Kills", 2);
-            this.miShyGuyTagModeTagOnStompField.set_output_ptr(&mut game_values.gamemodemenusettings.shyguytag.tagtransfer as *mut _);
-            this.miShyGuyTagModeTagOnStompField.set_current_value(game_values.gamemodemenusettings.shyguytag.tagtransfer);
+            this.miShyGuyTagModeTagOnStompField.set_output_ptr(&mut game().game_values.gamemodemenusettings.shyguytag.tagtransfer as *mut _);
+            this.miShyGuyTagModeTagOnStompField.set_current_value(game().game_values.gamemodemenusettings.shyguytag.tagtransfer);
 
             this.miShyGuyTagModeFreeTimeField = Ptr::new_box(MI_SelectField::<i16>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 260, "Free Time", 400, 180));
             this.miShyGuyTagModeFreeTimeField.add("Instant", 0);
@@ -1493,8 +1493,8 @@ impl UI_ModeOptionsMenu {
             this.miShyGuyTagModeFreeTimeField.add("8 Seconds", 8);
             this.miShyGuyTagModeFreeTimeField.add("9 Seconds", 9);
             this.miShyGuyTagModeFreeTimeField.add("10 Seconds", 10);
-            this.miShyGuyTagModeFreeTimeField.set_output_ptr(&mut game_values.gamemodemenusettings.shyguytag.freetime as *mut _);
-            this.miShyGuyTagModeFreeTimeField.set_current_value(game_values.gamemodemenusettings.shyguytag.freetime);
+            this.miShyGuyTagModeFreeTimeField.set_output_ptr(&mut game().game_values.gamemodemenusettings.shyguytag.freetime as *mut _);
+            this.miShyGuyTagModeFreeTimeField.set_current_value(game().game_values.gamemodemenusettings.shyguytag.freetime);
 
             this.miShyGuyTagModeBackButton = Ptr::new_box(MI_Button::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miShyGuyTagModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
@@ -1524,8 +1524,8 @@ impl UI_ModeOptionsMenu {
             this.miBossModeTypeField.add("Hammer", Boss::Hammer);
             this.miBossModeTypeField.add("Bomb", Boss::Bomb);
             this.miBossModeTypeField.add("Fire", Boss::Fire);
-            this.miBossModeTypeField.set_output_ptr(&mut game_values.gamemodemenusettings.boss.bosstype as *mut _);
-            this.miBossModeTypeField.set_current_value(game_values.gamemodemenusettings.boss.bosstype);
+            this.miBossModeTypeField.set_output_ptr(&mut game().game_values.gamemodemenusettings.boss.bosstype as *mut _);
+            this.miBossModeTypeField.set_current_value(game().game_values.gamemodemenusettings.boss.bosstype);
 
             this.miBossModeDifficultyField = Ptr::new_box(MI_SelectField::<i16>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 220, "Difficulty", 400, 180));
             this.miBossModeDifficultyField.add_random("Very Easy", 0, false);
@@ -1533,8 +1533,8 @@ impl UI_ModeOptionsMenu {
             this.miBossModeDifficultyField.add("Moderate", 2);
             this.miBossModeDifficultyField.add("Hard", 3);
             this.miBossModeDifficultyField.add_random("Very Hard", 4, false);
-            this.miBossModeDifficultyField.set_output_ptr(&mut game_values.gamemodemenusettings.boss.difficulty as *mut _);
-            this.miBossModeDifficultyField.set_current_value(game_values.gamemodemenusettings.boss.difficulty);
+            this.miBossModeDifficultyField.set_output_ptr(&mut game().game_values.gamemodemenusettings.boss.difficulty as *mut _);
+            this.miBossModeDifficultyField.set_current_value(game().game_values.gamemodemenusettings.boss.difficulty);
 
             this.miBossModeHitPointsField = Ptr::new_box(MI_SelectField::<i16>::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 120, 260, "Health", 400, 180));
             this.miBossModeHitPointsField.add_random("1", 1, false);
@@ -1557,8 +1557,8 @@ impl UI_ModeOptionsMenu {
             this.miBossModeHitPointsField.add_random("18", 18, false);
             this.miBossModeHitPointsField.add_random("19", 19, false);
             this.miBossModeHitPointsField.add_random("20", 20, false);
-            this.miBossModeHitPointsField.set_output_ptr(&mut game_values.gamemodemenusettings.boss.hitpoints as *mut _);
-            this.miBossModeHitPointsField.set_current_value(game_values.gamemodemenusettings.boss.hitpoints);
+            this.miBossModeHitPointsField.set_output_ptr(&mut game().game_values.gamemodemenusettings.boss.hitpoints as *mut _);
+            this.miBossModeHitPointsField.set_current_value(game().game_values.gamemodemenusettings.boss.hitpoints);
 
             this.miBossModeBackButton = Ptr::new_box(MI_Button::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miBossModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
@@ -1591,7 +1591,7 @@ impl UI_ModeOptionsMenu {
     /// Not in the C++: a net match's mode options as the menu names them, for the preview before it starts.
     pub fn describe_game_mode_settings(&self, iMode: i16) -> Vec<String> {
         unsafe {
-            let g = &game_values.gamemodesettings;
+            let g = &game().game_values.gamemodesettings;
             let lines = match iMode as GameModeType {
                 game_mode_classic => vec![self.miClassicModeStyleField.describe(g.classic.style), self.miClassicModeScoringField.describe(g.classic.scoring)],
                 game_mode_frag => vec![self.miFragModeStyleField.describe(g.frag.style), self.miFragModeScoringField.describe(g.frag.scoring)],
@@ -1613,130 +1613,130 @@ impl UI_ModeOptionsMenu {
             let iMode = iMode as GameModeType;
             if iMode == game_mode_classic {
                 // classic
-                game_values.gamemodesettings.classic.style = self.miClassicModeStyleField.random_value();
-                game_values.gamemodesettings.classic.scoring = self.miClassicModeScoringField.random_value();
+                game().game_values.gamemodesettings.classic.style = self.miClassicModeStyleField.random_value();
+                game().game_values.gamemodesettings.classic.scoring = self.miClassicModeScoringField.random_value();
             } else if iMode == game_mode_frag {
                 // frag
-                game_values.gamemodesettings.frag.style = self.miFragModeStyleField.random_value();
-                game_values.gamemodesettings.frag.scoring = self.miFragModeScoringField.random_value();
+                game().game_values.gamemodesettings.frag.style = self.miFragModeStyleField.random_value();
+                game().game_values.gamemodesettings.frag.scoring = self.miFragModeScoringField.random_value();
             } else if iMode == game_mode_timelimit {
                 // time
-                game_values.gamemodesettings.time.style = self.miTimeLimitModeStyleField.random_value();
-                game_values.gamemodesettings.time.scoring = self.miTimeLimitModeScoringField.random_value();
-                game_values.gamemodesettings.time.percentextratime = self.miTimeLimitModePercentExtraTime.current_value();
+                game().game_values.gamemodesettings.time.style = self.miTimeLimitModeStyleField.random_value();
+                game().game_values.gamemodesettings.time.scoring = self.miTimeLimitModeScoringField.random_value();
+                game().game_values.gamemodesettings.time.percentextratime = self.miTimeLimitModePercentExtraTime.current_value();
             } else if iMode == game_mode_jail {
                 // jail
-                game_values.gamemodesettings.jail.style = self.miJailModeStyleField.random_value();
-                game_values.gamemodesettings.jail.timetofree = self.miJailModeTimeFreeField.random_value();
-                game_values.gamemodesettings.jail.tagfree = self.miJailModeTagFreeField.random_value();
-                game_values.gamemodesettings.jail.percentkey = self.miJailModeJailKeyField.current_value();
+                game().game_values.gamemodesettings.jail.style = self.miJailModeStyleField.random_value();
+                game().game_values.gamemodesettings.jail.timetofree = self.miJailModeTimeFreeField.random_value();
+                game().game_values.gamemodesettings.jail.tagfree = self.miJailModeTagFreeField.random_value();
+                game().game_values.gamemodesettings.jail.percentkey = self.miJailModeJailKeyField.current_value();
             } else if iMode == game_mode_coins {
                 // coins
-                game_values.gamemodesettings.coins.penalty = self.miCoinModePenaltyField.random_value();
-                game_values.gamemodesettings.coins.quantity = self.miCoinModeQuantityField.random_value();
-                game_values.gamemodesettings.coins.percentextracoin = self.miCoinModePercentExtraCoin.current_value();
+                game().game_values.gamemodesettings.coins.penalty = self.miCoinModePenaltyField.random_value();
+                game().game_values.gamemodesettings.coins.quantity = self.miCoinModeQuantityField.random_value();
+                game().game_values.gamemodesettings.coins.percentextracoin = self.miCoinModePercentExtraCoin.current_value();
             } else if iMode == game_mode_stomp {
                 // stomp
-                game_values.gamemodesettings.stomp.rate = self.miStompModeRateField.random_value();
+                game().game_values.gamemodesettings.stomp.rate = self.miStompModeRateField.random_value();
 
                 for iEnemy in 0..NUMSTOMPENEMIES as usize {
-                    game_values.gamemodesettings.stomp.enemyweight[iEnemy] = self.miStompModeEnemySlider[iEnemy].current_value();
+                    game().game_values.gamemodesettings.stomp.enemyweight[iEnemy] = self.miStompModeEnemySlider[iEnemy].current_value();
                 }
             } else if iMode == game_mode_eggs {
                 // egg
                 for iEgg in 0..4 {
-                    game_values.gamemodesettings.egg.eggs[iEgg] = self.miEggModeEggQuantityField[iEgg].current_value();
+                    game().game_values.gamemodesettings.egg.eggs[iEgg] = self.miEggModeEggQuantityField[iEgg].current_value();
                 }
 
                 for iYoshi in 0..4 {
-                    game_values.gamemodesettings.egg.yoshis[iYoshi] = self.miEggModeYoshiQuantityField[iYoshi].current_value();
+                    game().game_values.gamemodesettings.egg.yoshis[iYoshi] = self.miEggModeYoshiQuantityField[iYoshi].current_value();
                 }
 
-                game_values.gamemodesettings.egg.explode = self.miEggModeExplosionTimeField.random_value();
+                game().game_values.gamemodesettings.egg.explode = self.miEggModeExplosionTimeField.random_value();
             } else if iMode == game_mode_ctf {
                 // capture the flag
-                game_values.gamemodesettings.flag.speed = self.miFlagModeSpeedField.current_value();
-                game_values.gamemodesettings.flag.touchreturn = self.miFlagModeTouchReturnField.random_value();
-                game_values.gamemodesettings.flag.pointmove = self.miFlagModePointMoveField.random_value();
-                game_values.gamemodesettings.flag.autoreturn = self.miFlagModeAutoReturnField.random_value();
-                game_values.gamemodesettings.flag.homescore = self.miFlagModeHomeScoreField.random_value();
-                game_values.gamemodesettings.flag.centerflag = self.miFlagModeCenterFlagField.random_value();
+                game().game_values.gamemodesettings.flag.speed = self.miFlagModeSpeedField.current_value();
+                game().game_values.gamemodesettings.flag.touchreturn = self.miFlagModeTouchReturnField.random_value();
+                game().game_values.gamemodesettings.flag.pointmove = self.miFlagModePointMoveField.random_value();
+                game().game_values.gamemodesettings.flag.autoreturn = self.miFlagModeAutoReturnField.random_value();
+                game().game_values.gamemodesettings.flag.homescore = self.miFlagModeHomeScoreField.random_value();
+                game().game_values.gamemodesettings.flag.centerflag = self.miFlagModeCenterFlagField.random_value();
             } else if iMode == game_mode_chicken {
                 // chicken
-                game_values.gamemodesettings.chicken.usetarget = self.miChickenModeShowTargetField.random_value();
-                game_values.gamemodesettings.chicken.glide = self.miChickenModeGlideField.random_value();
+                game().game_values.gamemodesettings.chicken.usetarget = self.miChickenModeShowTargetField.random_value();
+                game().game_values.gamemodesettings.chicken.glide = self.miChickenModeGlideField.random_value();
             } else if iMode == game_mode_tag {
                 // tag
-                game_values.gamemodesettings.tag.tagontouch = self.miTagModeTagOnTouchField.random_value();
+                game().game_values.gamemodesettings.tag.tagontouch = self.miTagModeTagOnTouchField.random_value();
             } else if iMode == game_mode_star {
                 // star
-                game_values.gamemodesettings.star.time = self.miStarModeTimeField.random_value();
-                game_values.gamemodesettings.star.shine = self.miStarModeShineField.random_value();
-                game_values.gamemodesettings.star.percentextratime = self.miStarModePercentExtraTime.current_value();
+                game().game_values.gamemodesettings.star.time = self.miStarModeTimeField.random_value();
+                game().game_values.gamemodesettings.star.shine = self.miStarModeShineField.random_value();
+                game().game_values.gamemodesettings.star.percentextratime = self.miStarModePercentExtraTime.current_value();
             } else if iMode == game_mode_domination {
                 // domination
-                game_values.gamemodesettings.domination.quantity = self.miDominationModeQuantityField.random_value();
-                game_values.gamemodesettings.domination.loseondeath = self.miDominationModeLoseOnDeathField.random_value();
-                game_values.gamemodesettings.domination.relocateondeath = self.miDominationModeRelocateOnDeathField.random_value();
-                game_values.gamemodesettings.domination.stealondeath = self.miDominationModeStealOnDeathField.random_value();
-                game_values.gamemodesettings.domination.relocationfrequency = self.miDominationModeRelocateFrequencyField.random_value();
+                game().game_values.gamemodesettings.domination.quantity = self.miDominationModeQuantityField.random_value();
+                game().game_values.gamemodesettings.domination.loseondeath = self.miDominationModeLoseOnDeathField.random_value();
+                game().game_values.gamemodesettings.domination.relocateondeath = self.miDominationModeRelocateOnDeathField.random_value();
+                game().game_values.gamemodesettings.domination.stealondeath = self.miDominationModeStealOnDeathField.random_value();
+                game().game_values.gamemodesettings.domination.relocationfrequency = self.miDominationModeRelocateFrequencyField.random_value();
             } else if iMode == game_mode_koth {
                 // king of the hill
-                game_values.gamemodesettings.kingofthehill.areasize = self.miKingOfTheHillModeSizeField.random_value();
-                game_values.gamemodesettings.kingofthehill.relocationfrequency = self.miKingOfTheHillModeRelocateFrequencyField.random_value();
-                game_values.gamemodesettings.kingofthehill.maxmultiplier = self.miKingOfTheHillModeMultiplierField.random_value();
+                game().game_values.gamemodesettings.kingofthehill.areasize = self.miKingOfTheHillModeSizeField.random_value();
+                game().game_values.gamemodesettings.kingofthehill.relocationfrequency = self.miKingOfTheHillModeRelocateFrequencyField.random_value();
+                game().game_values.gamemodesettings.kingofthehill.maxmultiplier = self.miKingOfTheHillModeMultiplierField.random_value();
             } else if iMode == game_mode_race {
                 // race
-                game_values.gamemodesettings.race.quantity = self.miRaceModeQuantityField.random_value();
-                game_values.gamemodesettings.race.speed = self.miRaceModeSpeedField.random_value();
-                game_values.gamemodesettings.race.penalty = self.miRaceModePenaltyField.random_value();
+                game().game_values.gamemodesettings.race.quantity = self.miRaceModeQuantityField.random_value();
+                game().game_values.gamemodesettings.race.speed = self.miRaceModeSpeedField.random_value();
+                game().game_values.gamemodesettings.race.penalty = self.miRaceModePenaltyField.random_value();
             } else if iMode == game_mode_frenzy {
                 // frenzy
                 self.miFrenzyModeOptions.set_random_game_mode_settings();
             } else if iMode == game_mode_survival {
                 // survival
-                game_values.gamemodesettings.survival.density = self.miSurvivalModeDensityField.random_value();
-                game_values.gamemodesettings.survival.speed = self.miSurvivalModeSpeedField.random_value();
-                game_values.gamemodesettings.survival.shield = self.miSurvivalModeShieldField.random_value();
+                game().game_values.gamemodesettings.survival.density = self.miSurvivalModeDensityField.random_value();
+                game().game_values.gamemodesettings.survival.speed = self.miSurvivalModeSpeedField.random_value();
+                game().game_values.gamemodesettings.survival.shield = self.miSurvivalModeShieldField.random_value();
 
                 for iEnemy in 0..NUMSURVIVALENEMIES as usize {
-                    game_values.gamemodesettings.survival.enemyweight[iEnemy] = self.miSurvivalModeEnemySlider[iEnemy].current_value();
+                    game().game_values.gamemodesettings.survival.enemyweight[iEnemy] = self.miSurvivalModeEnemySlider[iEnemy].current_value();
                 }
             } else if iMode == game_mode_greed {
                 // greed
-                game_values.gamemodesettings.greed.coinlife = self.miGreedModeCoinLife.random_value();
-                game_values.gamemodesettings.greed.owncoins = self.miGreedModeOwnCoins.random_value();
-                game_values.gamemodesettings.greed.multiplier = self.miGreedModeMultiplier.random_value();
-                game_values.gamemodesettings.greed.percentextracoin = self.miGreedModePercentExtraCoin.current_value();
+                game().game_values.gamemodesettings.greed.coinlife = self.miGreedModeCoinLife.random_value();
+                game().game_values.gamemodesettings.greed.owncoins = self.miGreedModeOwnCoins.random_value();
+                game().game_values.gamemodesettings.greed.multiplier = self.miGreedModeMultiplier.random_value();
+                game().game_values.gamemodesettings.greed.percentextracoin = self.miGreedModePercentExtraCoin.current_value();
             } else if iMode == game_mode_health {
                 // health
-                game_values.gamemodesettings.health.startlife = self.miHealthModeStartLife.random_value();
-                game_values.gamemodesettings.health.maxlife = self.miHealthModeMaxLife.random_value();
-                game_values.gamemodesettings.health.percentextralife = self.miHealthModePercentExtraLife.current_value();
+                game().game_values.gamemodesettings.health.startlife = self.miHealthModeStartLife.random_value();
+                game().game_values.gamemodesettings.health.maxlife = self.miHealthModeMaxLife.random_value();
+                game().game_values.gamemodesettings.health.percentextralife = self.miHealthModePercentExtraLife.current_value();
             } else if iMode == game_mode_collection {
                 // card collection
-                game_values.gamemodesettings.collection.quantity = self.miCollectionModeQuantityField.random_value();
-                game_values.gamemodesettings.collection.rate = self.miCollectionModeRateField.random_value();
-                game_values.gamemodesettings.collection.banktime = self.miCollectionModeBankTimeField.random_value();
-                game_values.gamemodesettings.collection.cardlife = self.miCollectionModeCardLifeField.random_value();
+                game().game_values.gamemodesettings.collection.quantity = self.miCollectionModeQuantityField.random_value();
+                game().game_values.gamemodesettings.collection.rate = self.miCollectionModeRateField.random_value();
+                game().game_values.gamemodesettings.collection.banktime = self.miCollectionModeBankTimeField.random_value();
+                game().game_values.gamemodesettings.collection.cardlife = self.miCollectionModeCardLifeField.random_value();
             } else if iMode == game_mode_chase {
                 // chase (phanto)
-                game_values.gamemodesettings.chase.phantospeed = self.miChaseModeSpeedField.random_value();
+                game().game_values.gamemodesettings.chase.phantospeed = self.miChaseModeSpeedField.random_value();
 
                 for iPhanto in 0..3 {
-                    game_values.gamemodesettings.chase.phantoquantity[iPhanto] = self.miChaseModeQuantitySlider[iPhanto].current_value();
+                    game().game_values.gamemodesettings.chase.phantoquantity[iPhanto] = self.miChaseModeQuantitySlider[iPhanto].current_value();
                 }
             } else if iMode == game_mode_shyguytag {
                 // shyguy tag
-                game_values.gamemodesettings.shyguytag.tagonsuicide = self.miShyGuyTagModeTagOnSuicideField.random_value();
-                game_values.gamemodesettings.shyguytag.tagtransfer = self.miShyGuyTagModeTagOnStompField.random_value();
+                game().game_values.gamemodesettings.shyguytag.tagonsuicide = self.miShyGuyTagModeTagOnSuicideField.random_value();
+                game().game_values.gamemodesettings.shyguytag.tagtransfer = self.miShyGuyTagModeTagOnStompField.random_value();
                 // freetime reads the tag transfer field, as in C++.
-                game_values.gamemodesettings.shyguytag.freetime = self.miShyGuyTagModeTagOnStompField.random_value();
+                game().game_values.gamemodesettings.shyguytag.freetime = self.miShyGuyTagModeTagOnStompField.random_value();
             } else if iMode == game_mode_boss_minigame {
                 // boss
-                game_values.gamemodesettings.boss.bosstype = self.miBossModeTypeField.random_value();
-                game_values.gamemodesettings.boss.difficulty = self.miBossModeDifficultyField.random_value();
-                game_values.gamemodesettings.boss.hitpoints = self.miBossModeHitPointsField.random_value();
+                game().game_values.gamemodesettings.boss.bosstype = self.miBossModeTypeField.random_value();
+                game().game_values.gamemodesettings.boss.difficulty = self.miBossModeDifficultyField.random_value();
+                game().game_values.gamemodesettings.boss.hitpoints = self.miBossModeHitPointsField.random_value();
             }
         }
     }

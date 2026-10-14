@@ -78,11 +78,11 @@ pub fn cgm_jail_playerkilledplayer(this: &mut CGM_Jail, mut inflictor: Ptr<CPlay
                 other.jail().lock_in_by(&mut *inflictor2);
 
                 //Apply rules for "Classic" jail
-                if game_values.gamemodesettings.jail.style == JailStyle::Classic {
+                if game().game_values.gamemodesettings.jail.style == JailStyle::Classic {
                     let mut jailedteams: [i16; 4] = [0; 4];
 
                     for i in 0..score_cnt {
-                        jailedteams[i as usize] = game_values.teamcounts[i as usize];
+                        jailedteams[i as usize] = game().game_values.teamcounts[i as usize];
                     }
 
                     //Figure out which teams have been jailed
@@ -134,7 +134,7 @@ pub fn cgm_jail_playerkilledplayer(this: &mut CGM_Jail, mut inflictor: Ptr<CPlay
                     }
                 }
                 //Apply rules for "Owned" jail
-                else if game_values.gamemodesettings.jail.style == JailStyle::Owned {
+                else if game().game_values.gamemodesettings.jail.style == JailStyle::Owned {
                     let mut jailedteams: [i16; 4] = [-1, -1, -1, -1];
 
                     //Figure out which teams have been jailed

@@ -90,41 +90,41 @@ impl UI_ControlTrait for MI_PlayerSelect {
                 let sel = self.iSelectedPlayer as usize;
 
                 if out.menu_up().fPressed {
-                    game_values.playercontrol[sel] -= 1;
-                    if game_values.playercontrol[sel] < 0 {
-                        game_values.playercontrol[sel] = 2;
+                    game().game_values.playercontrol[sel] -= 1;
+                    if game().game_values.playercontrol[sel] < 0 {
+                        game().game_values.playercontrol[sel] = 2;
                     }
 
-                    if game_values.playercontrol[sel] == 0 {
+                    if game().game_values.playercontrol[sel] == 0 {
                         let mut iCountPlayers = 0;
                         for iPlayer in 0..4usize {
-                            if game_values.playercontrol[iPlayer] > 0 {
+                            if game().game_values.playercontrol[iPlayer] > 0 {
                                 iCountPlayers += 1;
                             }
                         }
 
                         if iCountPlayers < 2 {
-                            game_values.playercontrol[sel] = 2;
+                            game().game_values.playercontrol[sel] = 2;
                         }
                     }
                 }
 
                 if out.menu_down().fPressed {
-                    game_values.playercontrol[sel] += 1;
-                    if game_values.playercontrol[sel] > 2 {
-                        game_values.playercontrol[sel] = 0;
+                    game().game_values.playercontrol[sel] += 1;
+                    if game().game_values.playercontrol[sel] > 2 {
+                        game().game_values.playercontrol[sel] = 0;
                     }
 
-                    if game_values.playercontrol[sel] == 0 {
+                    if game().game_values.playercontrol[sel] == 0 {
                         let mut iCountPlayers = 0;
                         for iPlayer in 0..4usize {
-                            if game_values.playercontrol[iPlayer] > 0 {
+                            if game().game_values.playercontrol[iPlayer] > 0 {
                                 iCountPlayers += 1;
                             }
                         }
 
                         if iCountPlayers < 2 {
-                            game_values.playercontrol[sel] = 1;
+                            game().game_values.playercontrol[sel] = 1;
                         }
                     }
                 }
@@ -167,7 +167,7 @@ impl UI_ControlTrait for MI_PlayerSelect {
                 self.spr.draw_src(
                     x + self.iPlayerPosition[iPlayer] as i32,
                     y + 16,
-                    &SDL_Rect { x: game_values.playercontrol[iPlayer] as i32 * 34 + 32, y: 206, w: 34, h: 32 },
+                    &SDL_Rect { x: game().game_values.playercontrol[iPlayer] as i32 * 34 + 32, y: 206, w: 34, h: 32 },
                 );
             }
         }

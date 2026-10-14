@@ -134,9 +134,9 @@ impl CGameModeTrait for CGM_Pipe_MiniGame {
                         iRandTeam = self.iBonusTeam;
                     }
 
-                    let iRandPlayer: i16 = game_values.teamids[iRandTeam as usize][RANDOM_INT(game_values.teamcounts[iRandTeam as usize] as i32) as usize];
+                    let iRandPlayer: i16 = game().game_values.teamids[iRandTeam as usize][RANDOM_INT(game().game_values.teamcounts[iRandTeam as usize] as i32) as usize];
 
-                    objectcontainer[1].add(Ptr::new_box(OMO_PipeCoin::new(Ptr::from_mut(&mut game().rm.spr_coin), vel, pos, iRandTeam, game_values.colorids[iRandPlayer as usize], 15)));
+                    objectcontainer[1].add(Ptr::new_box(OMO_PipeCoin::new(Ptr::from_mut(&mut game().rm.spr_coin), vel, pos, iRandTeam, game().game_values.colorids[iRandPlayer as usize], 15)));
                 } else if self.iBonusType == 3 {
                     self.iNextItemTimer = (RANDOM_INT(5) + 10) as i16;
                     objectcontainer[1].add(Ptr::new_box(OMO_PipeCoin::new(Ptr::from_mut(&mut game().rm.spr_coin), vel, pos, -1, 0, 15)));

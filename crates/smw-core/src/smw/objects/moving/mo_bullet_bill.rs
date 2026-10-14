@@ -92,7 +92,7 @@ impl MO_BulletBill {
             }
 
             o.iPlayerID = playerID;
-            o.iColorID = unsafe { game_values.colorids[o.iPlayerID as usize] };
+            o.iColorID = unsafe { game().game_values.colorids[o.iPlayerID as usize] };
             o.iTeamID = lookup_team_id(o.iPlayerID);
         }
 
@@ -145,7 +145,7 @@ impl MO_BulletBill {
                 return false;
             }
 
-            if game_values.teamcollision != TeamCollisionStyle::On && self.iTeamID == player.teamID {
+            if game().game_values.teamcollision != TeamCollisionStyle::On && self.iTeamID == player.teamID {
                 return false;
             }
 

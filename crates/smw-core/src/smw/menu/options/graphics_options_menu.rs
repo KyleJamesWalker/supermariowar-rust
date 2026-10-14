@@ -43,7 +43,7 @@ impl UI_GraphicsOptionsMenu {
 
             this.miTopLayerField = select_field(spr_selectfield, 70, 120, "Draw Top Layer", 500, 220,
                 &[("Background", false), ("Foreground", true)],
-                &mut game_values.toplayer);
+                &mut game().game_values.toplayer);
             this.miTopLayerField.set_auto_advance(true);
 
             this.miFrameLimiterField = select_field(spr_selectfield, 70, 160, "Frame Limit", 500, 220,
@@ -75,11 +75,11 @@ impl UI_GraphicsOptionsMenu {
                     ("500 FPS", 2),
                     ("No Limit", 0),
                 ],
-                &mut game_values.framelimiter);
+                &mut game().game_values.framelimiter);
 
             this.miFullscreenField = select_field(spr_selectfield, 70, 200, "Screen Size", 500, 220,
                 &[("Windowed", false), ("Fullscreen", true)],
-                &mut game_values.fullscreen);
+                &mut game().game_values.fullscreen);
             this.miFullscreenField.set_auto_advance(true);
             this.miFullscreenField.set_item_changed_code(MENU_CODE_TOGGLE_FULLSCREEN);
 

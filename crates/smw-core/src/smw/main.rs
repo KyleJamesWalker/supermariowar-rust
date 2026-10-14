@@ -92,7 +92,7 @@ pub fn gameloop() {
         emscripten_set_main_loop(gameloop_frame_web, 0, 1);
 
         #[cfg(not(target_os = "emscripten"))]
-        while game_values.appstate != crate::common::game_values::AppState::Quit {
+        while game().game_values.appstate != crate::common::game_values::AppState::Quit {
             gameloop_frame();
         }
     }
@@ -108,7 +108,7 @@ unsafe extern "C-unwind" fn gameloop_frame_web() {
     static mut last_time: f64 = -1.0;
     static mut accumulated: f64 = 0.0;
 
-    let frame_ms = game_values.framelimiter as f64;
+    let frame_ms = game().game_values.framelimiter as f64;
     if harness::no_limit() || frame_ms <= 0.0 {
         gameloop_frame();
         web_quit_if_done();
@@ -122,7 +122,7 @@ unsafe extern "C-unwind" fn gameloop_frame_web() {
     last_time = now;
 
     let mut frames = 0;
-    while accumulated >= frame_ms && frames < MAX_CATCH_UP_FRAMES && game_values.appstate != crate::common::game_values::AppState::Quit {
+    while accumulated >= frame_ms && frames < MAX_CATCH_UP_FRAMES && game().game_values.appstate != crate::common::game_values::AppState::Quit {
         assign_hotplugged();
         harness::frame_start();
         GameStateManager::instance().currentState.get().update();
@@ -145,7 +145,7 @@ unsafe extern "C-unwind" fn gameloop_frame_web() {
 /// the loop, close the harness, and let the page offer what to do next (web/shell.html).
 #[cfg(target_os = "emscripten")]
 unsafe fn web_quit_if_done() {
-    if game_values.appstate != crate::common::game_values::AppState::Quit {
+    if game().game_values.appstate != crate::common::game_values::AppState::Quit {
         return;
     }
     emscripten_cancel_main_loop();
@@ -268,17 +268,17 @@ fn assign_inputs() {
                 let saved: Vec<i16> = text.split_whitespace().filter_map(|v| v.parse().ok()).collect();
                 if saved.len() == MAX_PLAYERS as usize {
                     for p in 0..MAX_PLAYERS as usize {
-                        game_values.playerInput.inputControls[p] = Ptr::from_mut(&mut game_values.inputConfiguration[p][0]);
-                        game_values.playercontrol[p] = saved[p];
+                        game().game_values.playerInput.inputControls[p] = Ptr::from_mut(&mut game().game_values.inputConfiguration[p][0]);
+                        game().game_values.playercontrol[p] = saved[p];
                     }
-                    game_values.write_config();
+                    game().game_values.write_config();
                 }
                 let _ = std::fs::remove_file(&marker);
             }
             return;
         }
         if !touch_session && !std::path::Path::new(&marker).exists() {
-            let saved: Vec<String> = game_values.playercontrol.iter().map(|c| c.to_string()).collect();
+            let saved: Vec<String> = game().game_values.playercontrol.iter().map(|c| c.to_string()).collect();
             let _ = std::fs::write(&marker, saved.join(" ") + "\n");
         }
 
@@ -300,20 +300,20 @@ fn assign_inputs() {
         for p in 0..MAX_PLAYERS as usize {
             let control = match order.get(p) {
                 Some(&(true, k)) => {
-                    game_values.inputConfiguration[k][1].iDevice = k as i16;
-                    &mut game_values.inputConfiguration[k][1]
+                    game().game_values.inputConfiguration[k][1].iDevice = k as i16;
+                    &mut game().game_values.inputConfiguration[k][1]
                 }
-                Some(&(false, q)) => &mut game_values.inputConfiguration[q][0],
+                Some(&(false, q)) => &mut game().game_values.inputConfiguration[q][0],
                 None => {
-                    game_values.playerInput.inputControls[p] = Ptr::from_mut(&mut game_values.inputConfiguration[p][0]);
-                    if !keyboard && game_values.playercontrol[p] == 1 {
-                        game_values.playercontrol[p] = 2;
+                    game().game_values.playerInput.inputControls[p] = Ptr::from_mut(&mut game().game_values.inputConfiguration[p][0]);
+                    if !keyboard && game().game_values.playercontrol[p] == 1 {
+                        game().game_values.playercontrol[p] = 2;
                     }
                     continue;
                 }
             };
-            game_values.playerInput.inputControls[p] = Ptr::from_mut(control);
-            game_values.playercontrol[p] = 1;
+            game().game_values.playerInput.inputControls[p] = Ptr::from_mut(control);
+            game().game_values.playercontrol[p] = 1;
         }
     }
 }
@@ -409,7 +409,7 @@ pub fn create_gamemodes() {
         gamemodes[21] = new_mode(CGM_ShyGuyTag::new());
 
         currentgamemode = 0;
-        game_values.gamemode = gamemodes[currentgamemode as usize];
+        game().game_values.gamemode = gamemodes[currentgamemode as usize];
 
         //Special modes
         bonushousemode = Ptr::new_box(CGM_Bonus::new());
@@ -523,19 +523,19 @@ pub fn main_game() {
             score[iScore] = Ptr::new_box(CScore::new(iScore as i16));
         }
 
-        CGameValues::init(&mut game_values);
+        CGameValues::init(&mut game().game_values);
 
         create_gamemodes();
 
-        game_values.read_binary_config();
+        game().game_values.read_binary_config();
         assign_inputs();
 
         //Assign the powerup weights to the selected preset
         for iPowerup in 0..NUM_POWERUPS as usize {
-            game_values.powerupweights[iPowerup] = game_values.allPowerupPresets[game_values.poweruppreset as usize][iPowerup];
+            game().game_values.powerupweights[iPowerup] = game().game_values.allPowerupPresets[game().game_values.poweruppreset as usize][iPowerup];
         }
 
-        if game_values.fullscreen {
+        if game().game_values.fullscreen {
             crate::common::gfx::gfx_changefullscreen(true);
             blitdest = screen;
         }

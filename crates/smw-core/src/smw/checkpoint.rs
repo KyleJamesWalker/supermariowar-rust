@@ -231,8 +231,9 @@ fn data_path(name: &str) -> String {
 /// Matches a checkpoint cannot start: a World's bonus house, which no replay covers yet.
 pub fn unsupported_reason() -> Option<&'static str> {
     unsafe {
-        let stop = game_values.tourstops.get(game_values.tourstopcurrent);
-        if game_values.matchtype == MatchType::World && stop.is_some_and(|s| s.iStageType == 1) {
+        let g = game();
+        let stop = g.game_values.tourstops.get(g.game_values.tourstopcurrent);
+        if g.game_values.matchtype == MatchType::World && stop.is_some_and(|s| s.iStageType == 1) {
             return Some("bonus_house");
         }
     }
@@ -271,7 +272,7 @@ pub fn restore(bytes: Vec<u8>) -> Result<(), String> {
 /// Saves or restores every part of the checkpoint, in the order a restore must apply them.
 fn walk(s: &mut Snap, online: bool) {
     unsafe {
-        let gv = &mut *game_values;
+        let gv = &mut *game().game_values;
         if online {
             crate::smw::net::checkpoint(s);
         }
@@ -518,7 +519,7 @@ fn slug(text: &str) -> String {
 /// The fields of a match's start marker: what was played, where, by whom.
 pub fn start_fields() -> String {
     unsafe {
-        let gv = &mut *game_values;
+        let gv = &mut *game().game_values;
         let mut f: Vec<String> = Vec::new();
         f.push(kv("type", match gv.matchtype {
             MatchType::SingleGame => "single",
@@ -588,7 +589,7 @@ pub fn start_fields() -> String {
 /// The result fields of a match's later markers.
 pub fn result_fields() -> String {
     unsafe {
-        let gm = game_values.gamemode;
+        let gm = game().game_values.gamemode;
         let scores: Vec<String> = (0..crate::smw::main::score_cnt.max(0) as usize).map(|k| crate::smw::main::score[k].score.to_string()).collect();
         let mut f = vec![kv("scores", &scores.join(","))];
         if gm.gameover {
@@ -609,8 +610,8 @@ impl GameState for SegmentState {
         unsafe {
             crate::smw::gs_splash_screen::load_game_data();
             eyecandy[2].clean();
-            game_values.playerInput.reset_keys();
-            game_values.appstate = AppState::Menu;
+            game().game_values.playerInput.reset_keys();
+            game().game_values.appstate = AppState::Menu;
             MenuState::instance().init();
             GameplayState::instance().init();
         }

@@ -1,7 +1,7 @@
 //! Port of src/smw/ui/NetworkListScroll.cpp
 
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::global::{game_values};
+
 use crate::common::input::CPlayerInput;
 use crate::common::ui::menu_code::*;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
@@ -189,7 +189,7 @@ impl UI_ControlTrait for MI_NetworkListScroll {
         unsafe {
             for iPlayer in 0..4usize {
                 if self.iControllingTeam != -1
-                    && (self.iControllingTeam != lookup_team_id(iPlayer as i16) || game_values.playercontrol[iPlayer] != 1)
+                    && (self.iControllingTeam != lookup_team_id(iPlayer as i16) || game().game_values.playercontrol[iPlayer] != 1)
                 {
                     continue;
                 }

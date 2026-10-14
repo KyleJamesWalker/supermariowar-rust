@@ -2,7 +2,7 @@
 
 use crate::game::game;
 use crate::common::game::App;
-use crate::common::game_values::{game_values, if_sound_on_play};
+use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::*;
 use crate::common::io_block::{IO_Block, IO_BlockTrait};
@@ -62,9 +62,9 @@ pub fn io_block_update<T: IO_BlockTrait + ?Sized>(this: &mut T) {
     unsafe {
         let b = this.block_mut();
         if b.ishiddentype && !b.hidden {
-            if game_values.hiddenblockrespawn > 0 && {
+            if game().game_values.hiddenblockrespawn > 0 && {
                 b.iHiddenTimer += 1;
-                b.iHiddenTimer > game_values.hiddenblockrespawn
+                b.iHiddenTimer > game().game_values.hiddenblockrespawn
             } {
                 b.iHiddenTimer = 0;
                 b.hidden = true;
@@ -219,7 +219,7 @@ pub fn io_block_bounce_moving_object<T: IO_BlockTrait + ?Sized>(this: &mut T, mu
             enemy.die_and_drop_shell(true, true);
 
             let iBumpPlayerID = this.block().iBumpPlayerID;
-            if !game_values.gamemode.gameover && iBumpPlayerID >= 0 {
+            if !game().game_values.gamemode.gameover && iBumpPlayerID >= 0 {
                 let mut player = get_player_from_global_id(iBumpPlayerID);
 
                 if !player.is_null() {

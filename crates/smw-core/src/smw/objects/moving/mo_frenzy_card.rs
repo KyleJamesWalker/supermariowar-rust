@@ -93,10 +93,10 @@ impl CObjectTrait for MO_FrenzyCard {
     fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
         unsafe {
             let r#type = self.r#type;
-            if r#type < 14 || r#type > 17 || game_values.gamemodesettings.frenzy.storedshells {
+            if r#type < 14 || r#type > 17 || game().game_values.gamemodesettings.frenzy.storedshells {
                 player.set_powerup(r#type);
-                if game_values.gamemode.gamemode == game_mode_frenzy {
-                    game_values.gamemode.as_any().downcast_mut::<CGM_Frenzy>().unwrap().set_frenzy_owner(player);
+                if game().game_values.gamemode.gamemode == game_mode_frenzy {
+                    game().game_values.gamemode.get().as_any().downcast_mut::<CGM_Frenzy>().unwrap().set_frenzy_owner(player);
                 }
             } else {
                 match r#type {

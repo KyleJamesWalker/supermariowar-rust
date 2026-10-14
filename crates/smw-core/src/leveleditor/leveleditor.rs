@@ -519,7 +519,7 @@ pub fn inner_main() {
 
         resetselectedtiles();
 
-        crate::common::game_values::CGameValues::init(&mut game_values); // Needed for FPSLimiter
+        crate::common::game_values::CGameValues::init(&mut game().game_values); // Needed for FPSLimiter
 
         editor_harness::init();
         editor_harness::set_dumper(dump_editor_state);

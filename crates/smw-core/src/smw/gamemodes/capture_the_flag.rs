@@ -52,14 +52,14 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
                     let base: Ptr<MO_FlagBase> = Ptr::new_box(MO_FlagBase::new(Ptr::from_mut(&mut game().rm.spr_flagbases), iTeamID, iColorID));
                     objectcontainer[0].add(base);
 
-                    if !game_values.gamemodesettings.flag.centerflag {
+                    if !game().game_values.gamemodesettings.flag.centerflag {
                         let flag: Ptr<CO_Flag> = CO_Flag::new(Ptr::from_mut(&mut game().rm.spr_flags), base, iTeamID, iColorID);
                         objectcontainer[1].add(flag);
                     }
                 }
             }
 
-            if game_values.gamemodesettings.flag.centerflag {
+            if game().game_values.gamemodesettings.flag.centerflag {
                 let centerflag: Ptr<CO_Flag> = CO_Flag::new(Ptr::from_mut(&mut game().rm.spr_flags), Ptr::null(), -1, -1);
                 objectcontainer[1].add(centerflag);
             }

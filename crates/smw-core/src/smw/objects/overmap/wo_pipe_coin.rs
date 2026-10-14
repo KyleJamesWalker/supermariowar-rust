@@ -137,7 +137,7 @@ impl CObjectTrait for OMO_PipeCoin {
         }
 
         unsafe {
-            if !game_values.gamemode.gameover {
+            if !game().game_values.gamemode.gameover {
                 if self.iTeamID != -1 {
                     if player.teamID == self.iTeamID {
                         player.score().adjust_score(1);
@@ -154,7 +154,7 @@ impl CObjectTrait for OMO_PipeCoin {
                     if_sound_on_play(&mut game().rm.sfx_extraguysound);
                 }
 
-                game_values.gamemode.check_winner(player);
+                game().game_values.gamemode.check_winner(player);
             }
 
             eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_coinsparkle), self.ix, self.iy, 7, 4));

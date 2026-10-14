@@ -350,8 +350,8 @@ impl EC_Leaf {
         self.ec_oscillating_animation.animate();
 
         unsafe {
-            self.dx += self.velx + game_values.flags.gamewindx;
-            self.dy += self.vely + game_values.flags.gamewindy;
+            self.dx += self.velx + game().game_values.flags.gamewindx;
+            self.dy += self.vely + game().game_values.flags.gamewindy;
         }
 
         if self.dx >= screenWidth as f32 {
@@ -432,8 +432,8 @@ impl EC_Snow {
 
     pub fn update(&mut self) {
         unsafe {
-            self.dx += self.velx + game_values.flags.gamewindx;
-            self.dy += self.vely + game_values.flags.gamewindy;
+            self.dx += self.velx + game().game_values.flags.gamewindx;
+            self.dy += self.vely + game().game_values.flags.gamewindy;
         }
 
         if self.dx >= screenWidth as f32 {
@@ -1800,7 +1800,7 @@ impl SpotlightManager {
 
     pub fn add_spotlight(&mut self, ix: i16, iy: i16, iSize: i16) -> Ptr<Spotlight> {
         unsafe {
-            if !game_values.spotlights {
+            if !game().game_values.spotlights {
                 return Ptr::null();
             }
         }

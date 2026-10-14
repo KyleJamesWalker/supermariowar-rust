@@ -162,7 +162,7 @@ impl UI_Menu {
                 // Only allow the controlling team to control the menu (if there is one)
                 if self.iControllingTeam != -1 {
                     // Pay attention to other player's exit button pushes so we can exit when AI is controlling
-                    if game_values.playercontrol[iPlayer as usize] != 1
+                    if game().game_values.playercontrol[iPlayer as usize] != 1
                         || (self.iControllingTeam != lookup_team_id(iPlayer) && (!self.fAllowExitButton || !out.menu_cancel().fPressed))
                     {
                         continue;
@@ -171,9 +171,9 @@ impl UI_Menu {
                 // Only let player 1 on the keyboard control the menu unless there is another controlling team
                 // Not in upstream: the first keyboard player may too, when joysticks took the players before it.
                 else if iPlayer != 0
-                    && !game_values.playerInput.inputControls[iPlayer as usize].is_null()
-                    && game_values.playerInput.inputControls[iPlayer as usize].iDevice == DEVICE_KEYBOARD
-                    && (0..iPlayer as usize).any(|p| game_values.playerInput.inputControls[p].is_null() || game_values.playerInput.inputControls[p].iDevice == DEVICE_KEYBOARD)
+                    && !game().game_values.playerInput.inputControls[iPlayer as usize].is_null()
+                    && game().game_values.playerInput.inputControls[iPlayer as usize].iDevice == DEVICE_KEYBOARD
+                    && (0..iPlayer as usize).any(|p| game().game_values.playerInput.inputControls[p].is_null() || game().game_values.playerInput.inputControls[p].iDevice == DEVICE_KEYBOARD)
                 {
                     continue;
                 }

@@ -3,7 +3,7 @@
 use crate::game::game;
 use crate::common::game_mode::{GameModeType, *};
 use crate::common::game_mode_settings::GAMEMODESETTINGS_RAW_SIZE;
-use crate::common::global::{game_values};
+
 use crate::common::global_constants::WAITTIME;
 use crate::common::input::{COutputControl, CPlayerInput};
 use crate::common::path::get_home_directory;
@@ -134,9 +134,9 @@ impl GameModeSettingsUnion {
             return;
         };
         unsafe {
-            let mut raw: [u8; GAMEMODESETTINGS_RAW_SIZE] = game_values.gamemodesettings.to_raw_bytes();
+            let mut raw: [u8; GAMEMODESETTINGS_RAW_SIZE] = game().game_values.gamemodesettings.to_raw_bytes();
             raw[off..off + size].copy_from_slice(&self.bytes[..size]);
-            game_values.gamemodesettings.from_raw_bytes(&raw);
+            game().game_values.gamemodesettings.from_raw_bytes(&raw);
         }
     }
 
@@ -145,7 +145,7 @@ impl GameModeSettingsUnion {
             return;
         };
         unsafe {
-            let raw = game_values.gamemodesettings.to_raw_bytes();
+            let raw = game().game_values.gamemodesettings.to_raw_bytes();
             self.bytes[..size].copy_from_slice(&raw[off..off + size]);
         }
     }
@@ -244,7 +244,7 @@ pub fn net_start_session() -> bool {
 
         let nullinput = COutputControl::default();
         for p in 0..4 {
-            backup_playercontrol[p] = game_values.playercontrol[p];
+            backup_playercontrol[p] = game().game_values.playercontrol[p];
 
             netplay.latest_playerdata.player_input[p].clear();
             netplay.latest_playerdata.player_input[p].push_back(nullinput);
@@ -268,7 +268,7 @@ pub fn net_end_session() {
             netplay.connectSuccessful = false;
 
             for p in 0..4 {
-                game_values.playercontrol[p] = backup_playercontrol[p];
+                game().game_values.playercontrol[p] = backup_playercontrol[p];
             }
         }
     }
@@ -298,7 +298,7 @@ pub fn draw_match_preview() {
         game().rm.menu_dialog.draw_src(144, 364, &sdl2::sys::SDL_Rect { x: 0, y: 464, w: 336, h: 16 });
         game().rm.menu_dialog.draw_src(480, 364, &sdl2::sys::SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
 
-        let gm = game_values.gamemode;
+        let gm = game().game_values.gamemode;
         let mut lines = vec![gm.szModeName.clone()];
         if !gm.szGoalName.is_empty() {
             lines.push(if gm.goal < 0 { format!("{}: Unlimited", gm.szGoalName) } else { format!("{}: {}", gm.szGoalName, gm.goal) });
@@ -515,8 +515,8 @@ impl NetClient {
         unsafe {
             let mut msg = pkgs::NewRoom::with(&netplay.newroom_name, &netplay.newroom_password);
             msg.gamemodeID = currentgamemode as u8;
-            game_values.gamemode = gamemodes[currentgamemode as usize];
-            msg.gamemodeGoal = game_values.gamemode.goal as u16;
+            game().game_values.gamemode = gamemodes[currentgamemode as usize];
+            msg.gamemodeGoal = game().game_values.gamemode.goal as u16;
 
             self.send_message_to_lobby_server(msg.as_bytes());
             netplay.operationInProgress = true;
@@ -540,10 +540,10 @@ impl NetClient {
             netplay.joinSuccessful = true;
             netplay.theHostIsMe = true;
 
-            game_values.playercontrol[0] = 1;
-            game_values.playercontrol[1] = 0;
-            game_values.playercontrol[2] = 0;
-            game_values.playercontrol[3] = 0;
+            game().game_values.playercontrol[0] = 1;
+            game().game_values.playercontrol[1] = 0;
+            game().game_values.playercontrol[2] = 0;
+            game().game_values.playercontrol[3] = 0;
         }
 
         self.send_map_change_message();
@@ -598,18 +598,18 @@ impl NetClient {
                 println!();
 
                 if netplay.currentRoom.playerNames[p as usize] == "(empty)" {
-                    game_values.playercontrol[p as usize] = 0;
+                    game().game_values.playercontrol[p as usize] = 0;
                 } else {
-                    game_values.playercontrol[p as usize] = 1;
+                    game().game_values.playercontrol[p as usize] = 1;
                 }
             }
 
             currentgamemode = pkg.gamemodeID as i16;
-            game_values.gamemode = gamemodes[currentgamemode as usize];
-            game_values.gamemode.goal = pkg.gamemodeGoal as i16;
+            game().game_values.gamemode = gamemodes[currentgamemode as usize];
+            game().game_values.gamemode.goal = pkg.gamemodeGoal as i16;
 
             let gm = gamemodes[currentgamemode as usize];
-            println!("  Game mode #{}: {} with {}: {}", currentgamemode, gm.get_mode_name(), gm.get_goal_name(), game_values.gamemode.goal);
+            println!("  Game mode #{}: {} with {}: {}", currentgamemode, gm.get_mode_name(), gm.get_goal_name(), game().game_values.gamemode.goal);
 
             netplay.theHostIsMe = false;
             netplay.currentRoom.hostPlayerNumber = pkg.hostPlayerNumber;
@@ -698,7 +698,7 @@ impl NetClient {
     }
 
     pub fn send_skin_change(&mut self) {
-        let skinpath = unsafe { game().skinlist.at(game_values.skinids[netplay.remotePlayerNumber as usize] as usize).path.to_string_lossy().into_owned() };
+        let skinpath = unsafe { game().skinlist.at(game().game_values.skinids[netplay.remotePlayerNumber as usize] as usize).path.to_string_lossy().into_owned() };
         println!("[net] Sending skin: {}", skinpath);
 
         let mut compressed = FileCompressor::compress(&skinpath, std::mem::size_of::<MessageHeader>() + 1);
@@ -741,7 +741,7 @@ impl NetClient {
         unsafe {
             if !game().rm.load_menu_skin_path(playerID as i16, Path::new(&path), playerID as i16, false) {
                 println!("[warning] Could not load netplay skin of player {}, using default", playerID);
-                game().rm.load_menu_skin(playerID as i16, game_values.skinids[playerID as usize], playerID as i16, false);
+                game().rm.load_menu_skin(playerID as i16, game().game_values.skinids[playerID as usize], playerID as i16, false);
             }
         }
     }
@@ -851,7 +851,7 @@ impl NetClient {
     pub fn store_local_input(&mut self) {
         unsafe {
             if netplay.theHostIsMe {
-                let c = game_values.playerInput.outputControls[0];
+                let c = game().game_values.playerInput.outputControls[0];
                 netplay.local_input_buffer.push_back(c);
             }
         }
@@ -862,7 +862,7 @@ impl NetClient {
             if netplay.theHostIsMe {
                 self.local_gamehost.send_local_input();
             } else {
-                let mut pkg = gpkgs::ClientInput::new(&game_values.playerInput.outputControls[0]);
+                let mut pkg = gpkgs::ClientInput::new(&game().game_values.playerInput.outputControls[0]);
                 pkg.input_id = netplay.current_input_counter;
                 self.send_message_to_game_host(pkg.as_bytes());
             }
@@ -896,7 +896,7 @@ impl NetClient {
             player.powerupused = Some(PowerupType::from_u8(pkg.powerup_id));
             player.powerupradius = 100.0;
             while missed_frames > 0 {
-                player.powerupradius -= game_values.storedpowerupdelay as f32 / 2.0;
+                player.powerupradius -= game().game_values.storedpowerupdelay as f32 / 2.0;
                 missed_frames -= 1;
             }
 
@@ -1551,12 +1551,12 @@ impl NetGameHost {
                 return;
             }
 
-            let powerupused: i32 = game_values.gamepowerups[playerID as usize] as i32;
+            let powerupused: i32 = game().game_values.gamepowerups[playerID as usize] as i32;
             if powerupused <= 0 {
                 return;
             }
 
-            game_values.gamepowerups[playerID as usize] = -1;
+            game().game_values.gamepowerups[playerID as usize] = -1;
 
             let pkg = gpkgs::StartPowerup::new(playerID, powerupused as u8, net_record::value_u32("rtt", || player.average_rtt()) / 2);
             for c in 0..self.expected_client_count as usize {
@@ -1957,7 +1957,7 @@ pub fn checkpoint(s: &mut Snap) {
                 names.push("net_last.map".to_string());
             }
             for k in 0..4 {
-                if game_values.playercontrol[k] > 0 && k != netplay.remotePlayerNumber as usize {
+                if game().game_values.playercontrol[k] > 0 && k != netplay.remotePlayerNumber as usize {
                     names.push(format!("net_skin{}.bmp", k));
                 }
             }

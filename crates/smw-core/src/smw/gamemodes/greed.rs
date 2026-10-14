@@ -90,7 +90,7 @@ impl CGM_Greed {
 
             player.shield().turn_on();
 
-            let mut iDamage: i16 = (kill_style_damage(style) as i32 * game_values.gamemodesettings.greed.multiplier as i32 / 2) as i16;
+            let mut iDamage: i16 = (kill_style_damage(style) as i32 * game().game_values.gamemodesettings.greed.multiplier as i32 / 2) as i16;
 
             if self.goal != -1 {
                 if player.score().score < iDamage {

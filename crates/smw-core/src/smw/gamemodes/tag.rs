@@ -111,7 +111,7 @@ impl CGameModeTrait for CGM_Tag {
             if tagged.isready() {
                 unsafe {
                     counter += 1;
-                    if counter >= game_values.pointspeed {
+                    if counter >= game().game_values.pointspeed {
                         counter = 0;
 
                         if self.fReverseScoring {
@@ -235,7 +235,7 @@ impl CGameModeTrait for CGM_Tag {
 }
 
 fn tag_mode() -> Option<&'static mut CGM_Tag> {
-    unsafe { game_values.gamemode.as_any().downcast_mut::<CGM_Tag>() }
+    unsafe { game().game_values.gamemode.get().as_any().downcast_mut::<CGM_Tag>() }
 }
 
 pub fn net_reassign() {

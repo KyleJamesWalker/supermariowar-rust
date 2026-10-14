@@ -1,7 +1,7 @@
 //! Port of src/smw/menu/network/NetRoomMenu.cpp
 
 use crate::game::game;
-use crate::common::global::{game_values};
+
 use crate::common::path::{file_exists, get_home_directory};
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
@@ -142,11 +142,11 @@ impl UI_NetRoomMenu {
                 let path = format!("{}net_skin{}.bmp", get_home_directory(), p);
                 if p == netplay.remotePlayerNumber as i16 {
                     println!("  player {} -> local", p);
-                    game().rm.load_menu_skin(p, game_values.skinids[0], p, false);
+                    game().rm.load_menu_skin(p, game().game_values.skinids[0], p, false);
                 } else if file_exists(&path) {
                     println!("  player {} -> {}", p, path);
                     if !game().rm.load_menu_skin_path(p, Path::new(&path), p, false) {
-                        game().rm.load_menu_skin(p, game_values.skinids[p as usize], p, false);
+                        game().rm.load_menu_skin(p, game().game_values.skinids[p as usize], p, false);
                     }
                 } else {
                     println!("  player {} -> default", p);

@@ -76,7 +76,7 @@ impl MO_CheepCheep {
 
             p.add_killer_award(Ptr::null(), KillStyle::CheepCheep);
 
-            if game_values.gamemode.gamemode == game_mode_stomp && !game_values.gamemode.gameover {
+            if game().game_values.gamemode.gamemode == game_mode_stomp && !game().game_values.gamemode.gameover {
                 p.score().adjust_score(1);
             }
 
@@ -109,7 +109,7 @@ impl MO_CheepCheep {
             eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, (iBrokenIceY as i32 + 16) as i16, -1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
             eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, (iBrokenIceY as i32 + 16) as i16, 1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
 
-            game_values.unlocksecret2part2 += 1;
+            game().game_values.unlocksecret2part2 += 1;
         }
     }
 }
@@ -157,7 +157,7 @@ impl CObjectTrait for MO_CheepCheep {
             if player.is_invincible() || self.frozen {
                 player.add_killer_award(Ptr::null(), KillStyle::CheepCheep);
 
-                if game_values.gamemode.gamemode == game_mode_stomp && !game_values.gamemode.gameover {
+                if game().game_values.gamemode.gamemode == game_mode_stomp && !game().game_values.gamemode.gameover {
                     player.score().adjust_score(1);
                 }
 
@@ -207,7 +207,7 @@ impl CObjectTrait for MO_CheepCheep {
                         return;
                     }
 
-                    if game_values.gamemode.gamemode == game_mode_stomp && !game_values.gamemode.gameover {
+                    if game().game_values.gamemode.gamemode == game_mode_stomp && !game().game_values.gamemode.gameover {
                         // Find the player that shot this projectile so we can attribute a kill
                         let mut killer = get_player_from_global_id(object.iPlayerID);
 

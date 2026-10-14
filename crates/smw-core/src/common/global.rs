@@ -2,7 +2,6 @@
 
 pub static mut RootDataDirectory: String = String::new();
 
-pub static mut game_values: Global<CGameValues> = Global::uninit();
 
 //Joystick-Init
 pub static mut joysticks: *mut *mut SDL_Joystick = std::ptr::null_mut();
@@ -13,7 +12,7 @@ pub fn init_globals() {
         // Upstream's global.cpp reads data from the settings directory on Android.
         let root = if cfg!(target_os = "android") { crate::common::path::get_home_directory() } else { crate::common::path::get_root_directory() };
         RootDataDirectory = root + "data";
-        game_values.init(CGameValues::new());
+        game().game_values.init(CGameValues::new());
     }
     crate::common::gfx::init_globals();
 }

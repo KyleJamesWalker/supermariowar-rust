@@ -124,7 +124,7 @@ impl UI_GameSettingsMenu {
             // Add user defined filters
             for iFilter in 0..game().filterslist.count() {
                 let szTemp = get_name_from_file_name(&game().filterslist.at(iFilter).to_string_lossy(), true);
-                this.miMapFilterScroll.add(szTemp, game_values.piFilterIcons[NUM_AUTO_FILTERS as usize + iFilter]);
+                this.miMapFilterScroll.add(szTemp, game().game_values.piFilterIcons[NUM_AUTO_FILTERS as usize + iFilter]);
             }
 
             this.miGameSettingsLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
@@ -235,7 +235,7 @@ impl UI_GameSettingsMenu {
         self.restore_current();
 
         unsafe {
-            self.miMapFiltersOnImage.set_visible(game_values.fFiltersOn);
+            self.miMapFiltersOnImage.set_visible(game().game_values.fFiltersOn);
         }
     }
 

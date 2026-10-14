@@ -57,7 +57,7 @@ impl MO_Hammer {
 
         o.velx = vel.x;
         o.vely = vel.y;
-        o.ttl = unsafe { game_values.hammerttl };
+        o.ttl = unsafe { game().game_values.hammerttl };
 
         o.fSuper = superHammer;
 
@@ -124,7 +124,7 @@ impl CObjectTrait for MO_Hammer {
                 || (self.fSuper && (self.iy as i32) < -(self.ih as i32))
             {
                 removeifprojectile(self.as_mo_ptr(), false, true);
-            } else if game_values.spotlights {
+            } else if game().game_values.spotlights {
                 let sx = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
                 let sy = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
                 if self.sSpotlight.is_null() {
@@ -156,7 +156,7 @@ impl CObjectTrait for MO_Hammer {
 
     fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
         unsafe {
-            if self.iPlayerID != player.globalID && (game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID) {
+            if self.iPlayerID != player.globalID && (game().game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID) {
                 if !player.is_shielded() {
                     removeifprojectile(self.as_mo_ptr(), false, false);
 

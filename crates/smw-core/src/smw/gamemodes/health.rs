@@ -36,7 +36,7 @@ impl CGameModeTrait for CGM_Health {
         unsafe {
             for iScore in 0..score_cnt {
                 let mut s = score[iScore as usize];
-                s.subscore[0] = game_values.gamemodesettings.health.startlife;
+                s.subscore[0] = game().game_values.gamemodesettings.health.startlife;
                 s.subscore[1] = s.subscore[0];
             }
         }

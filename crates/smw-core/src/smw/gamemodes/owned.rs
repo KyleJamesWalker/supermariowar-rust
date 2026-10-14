@@ -47,7 +47,7 @@ impl CGameModeTrait for CGM_Owned {
 
             unsafe {
                 counter += 1;
-                if counter >= game_values.pointspeed {
+                if counter >= game().game_values.pointspeed {
                     counter = 0;
 
                     let mut i = 0;

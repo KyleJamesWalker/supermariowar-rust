@@ -293,10 +293,10 @@ impl WorldPlayer {
     pub fn set_sprite(&mut self, iPlayer: i16) {
         unsafe {
             let p = iPlayer as usize;
-            while !game().rm.load_menu_skin(iPlayer, game_values.skinids[p], game_values.colorids[p], true) {
-                game_values.skinids[p] += 1;
-                if game_values.skinids[p] as usize >= game().skinlist.count() {
-                    game_values.skinids[p] = 0;
+            while !game().rm.load_menu_skin(iPlayer, game().game_values.skinids[p], game().game_values.colorids[p], true) {
+                game().game_values.skinids[p] += 1;
+                if game().game_values.skinids[p] as usize >= game().skinlist.count() {
+                    game().game_values.skinids[p] = 0;
                 }
             }
         }
@@ -833,12 +833,12 @@ impl WorldMap {
                     //stage details
                     let ts = Ptr::new_box(parse_tour_stop_line(raw, &version, true));
 
-                    game_values.tourstops.push(ts);
+                    game().game_values.tourstops.push(ts);
 
                     iCurrentStage += 1;
                     if iCurrentStage >= this.iNumStages {
                         //Scan stage IDs and make sure we have a stage for each one
-                        let iMaxStage: i16 = (game_values.tourstops.len() + 5) as i16;
+                        let iMaxStage: i16 = (game().game_values.tourstops.len() + 5) as i16;
                         let mut invalid = false;
                         'scan: for iRow in 0..this.iHeight {
                             for iCol in 0..this.iWidth {
@@ -1077,10 +1077,10 @@ impl WorldMap {
         file += "#Stage Type 1,Bonus House Name,Sequential/Random Order,Display Text,Powerup List(Max 5)\n";
 
         unsafe {
-            let _ = writeln!(file, "{}", game_values.tourstops.len() as i32);
+            let _ = writeln!(file, "{}", game().game_values.tourstops.len() as i32);
 
-            for iStage in 0..game_values.tourstops.len() {
-                let line = write_tour_stop_line(&game_values.tourstops[iStage], true);
+            for iStage in 0..game().game_values.tourstops.len() {
+                let line = write_tour_stop_line(&game().game_values.tourstops[iStage], true);
                 file += &line;
             }
         }
@@ -1496,7 +1496,7 @@ impl WorldMap {
     }
 
     pub fn get_vehicle_stage_score(&self, iVehicleIndex: i16) -> i16 {
-        unsafe { game_values.tourstops[self.vehicles[iVehicleIndex as usize].iActionId as usize].iPoints }
+        unsafe { game().game_values.tourstops[self.vehicles[iVehicleIndex as usize].iActionId as usize].iPoints }
     }
 
     pub fn get_warp_in_player_tile(&self, iWarpCol: &mut i16, iWarpRow: &mut i16) -> bool {
@@ -1767,10 +1767,10 @@ impl WorldMap {
     pub fn set_initial_powerups(&self) {
         unsafe {
             for iTeam in 0..4usize {
-                game_values.worldpowerupcount[iTeam] = self.iNumInitialBonuses;
+                game().game_values.worldpowerupcount[iTeam] = self.iNumInitialBonuses;
 
                 for iItem in 0..self.iNumInitialBonuses as usize {
-                    game_values.worldpowerups[iTeam][iItem] = self.iInitialBonuses[iItem];
+                    game().game_values.worldpowerups[iTeam][iItem] = self.iInitialBonuses[iItem];
                 }
             }
         }

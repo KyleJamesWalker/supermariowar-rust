@@ -124,7 +124,7 @@ impl MI_MapBrowser {
 
     /// `mapListNodes[i]->pfFilters[game_values.selectedmapfilter]`
     fn node_filter(&self, i: usize) -> bool {
-        unsafe { game().maplist.node_at(self.mapListItr[i]).pfFilters[game_values.selectedmapfilter as usize] }
+        unsafe { game().maplist.node_at(self.mapListItr[i]).pfFilters[game().game_values.selectedmapfilter as usize] }
     }
 }
 
@@ -212,7 +212,7 @@ impl UI_ControlTrait for MI_MapBrowser {
             for iPlayer in 0..4i16 {
                 //Only allow the controlling team to control the menu (if there is one)
                 if self.iControllingTeam != -1
-                    && (self.iControllingTeam != lookup_team_id(iPlayer) || game_values.playercontrol[iPlayer as usize] != 1)
+                    && (self.iControllingTeam != lookup_team_id(iPlayer) || game().game_values.playercontrol[iPlayer as usize] != 1)
                 {
                     continue;
                 }
@@ -321,9 +321,9 @@ impl UI_ControlTrait for MI_MapBrowser {
                     let itr = self.mapListItr[(self.iSelectedRow * 3 + self.iSelectedCol) as usize];
                     if self.iType == 0 {
                         let mut maplist = game().maplist;
-                        let f = &mut maplist.maps.node_mut(itr).pfFilters[game_values.selectedmapfilter as usize];
+                        let f = &mut maplist.maps.node_mut(itr).pfFilters[game().game_values.selectedmapfilter as usize];
                         *f = !*f;
-                        game_values.fNeedWriteFilters = true;
+                        game().game_values.fNeedWriteFilters = true;
                     } else {
                         game().maplist.set_current(itr);
                         return MENU_CODE_MAP_BROWSER_EXIT;

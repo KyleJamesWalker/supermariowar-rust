@@ -315,7 +315,7 @@ fn dump_editor_state(out: &mut dyn Write) {
             draw_offset_row,
             iWorldWidth,
             iWorldHeight,
-            game_values.tourstops.len(),
+            game().game_values.tourstops.len(),
             vehiclelist.len(),
             warplist.len(),
             game().worldlist.current_path().file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default()
@@ -403,13 +403,13 @@ pub fn inner_main() {
         game().gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
         game().worldlist = Ptr::new_box(WorldList::new());
 
-        game_values.sound = false;
-        game_values.music = false;
+        game().game_values.sound = false;
+        game().game_values.music = false;
 
         let title = format!("{} {}", TITLESTRING, MAPTITLESTRING);
         gfx_settitle(&title);
 
-        game_values.toplayer = true;
+        game().game_values.toplayer = true;
 
         println!("\n---------------- loading graphics ----------------");
 
@@ -513,7 +513,7 @@ pub fn inner_main() {
 
         let fs = findstring.clone();
         game().worldlist.find(&fs);
-        game_values.worldindex = game().worldlist.current_index() as i16;
+        game().game_values.worldindex = game().worldlist.current_index() as i16;
         loadcurrentworld();
         findstring.clear(); //clear out the find string so that pressing "f" will give you the find dialog
 
@@ -524,15 +524,15 @@ pub fn inner_main() {
         }
 
         //Setup input for menus
-        game_values.inputConfiguration[0][0].iDevice = DEVICE_KEYBOARD;
+        game().game_values.inputConfiguration[0][0].iDevice = DEVICE_KEYBOARD;
         for iInputState in 0..2usize {
             //for game/menu
             for iKey in 0..NUM_KEYS as usize {
-                game_values.inputConfiguration[0][0].inputGameControls[iInputState].keys[iKey] = controlkeys[0][iInputState][0][iKey];
+                game().game_values.inputConfiguration[0][0].inputGameControls[iInputState].keys[iKey] = controlkeys[0][iInputState][0][iKey];
             }
         }
 
-        game_values.playerInput.inputControls[0] = Ptr::from_mut(&mut game_values.inputConfiguration[0][0]);
+        game().game_values.playerInput.inputControls[0] = Ptr::from_mut(&mut game().game_values.inputConfiguration[0][0]);
 
         stagemodes = vec![StageMode { options: vec![StageModeOption::default(); GAMEMODE_NUM_OPTIONS - 1], ..Default::default() }; GAMEMODE_LAST as usize];
 
@@ -1361,9 +1361,9 @@ pub fn editor_edit() -> i32 {
                             }
 
                             if key_sym() == SDLK_PAGEUP as i32 {
-                                game_values.worldindex -= 1;
-                                if game_values.worldindex < 0 {
-                                    game_values.worldindex = game().worldlist.count() as i16 - 1;
+                                game().game_values.worldindex -= 1;
+                                if game().game_values.worldindex < 0 {
+                                    game().game_values.worldindex = game().worldlist.count() as i16 - 1;
                                 }
 
                                 game().worldlist.prev();
@@ -1374,9 +1374,9 @@ pub fn editor_edit() -> i32 {
                             }
 
                             if key_sym() == SDLK_PAGEDOWN as i32 {
-                                game_values.worldindex += 1;
-                                if game_values.worldindex as usize >= game().worldlist.count() {
-                                    game_values.worldindex = 0;
+                                game().game_values.worldindex += 1;
+                                if game().game_values.worldindex as usize >= game().worldlist.count() {
+                                    game().game_values.worldindex = 0;
                                 }
 
                                 game().worldlist.next();
@@ -2918,7 +2918,7 @@ pub fn editor_vehicles() -> i32 {
         miVehicleStageField.clear();
 
         for iStage in 0..g_worldmap.iNumStages {
-            let ts = game_values.tourstops[iStage as usize];
+            let ts = game().game_values.tourstops[iStage as usize];
             let szStageName = format!("({}) {}", iStage + 1, ts.szName);
 
             let item = miVehicleStageField.add(szStageName, iStage);
@@ -2930,7 +2930,7 @@ pub fn editor_vehicles() -> i32 {
         while !done {
             let framestart = crate::services::ticks() as i32;
 
-            game_values.playerInput.clear_pressed_keys(1);
+            game().game_values.playerInput.clear_pressed_keys(1);
 
             let mut code: MenuCodeEnum = MENU_CODE_NONE;
 
@@ -2939,7 +2939,7 @@ pub fn editor_vehicles() -> i32 {
                 match event_type() {
                     T_QUIT => {
                         edit_mode = 5;
-                        game_values.playerInput.reset_keys();
+                        game().game_values.playerInput.reset_keys();
                         return EDITOR_EDIT;
                     }
 
@@ -2947,7 +2947,7 @@ pub fn editor_vehicles() -> i32 {
                         if key_sym() == SDLK_v as i32 {
                             if !mCurrentMenu.is_modifying() {
                                 edit_mode = 5;
-                                game_values.playerInput.reset_keys();
+                                game().game_values.playerInput.reset_keys();
                                 return EDITOR_EDIT;
                             }
                         }
@@ -2965,16 +2965,16 @@ pub fn editor_vehicles() -> i32 {
                     _ => {}
                 }
 
-                game_values.playerInput.update_input(event.input(), 1);
+                game().game_values.playerInput.update_input(event.input(), 1);
             }
 
             if MENU_CODE_NONE == code {
-                code = mCurrentMenu.send_input(Ptr::from_mut(&mut game_values.playerInput));
+                code = mCurrentMenu.send_input(Ptr::from_mut(&mut game().game_values.playerInput));
             }
 
             if MENU_CODE_EXIT_APPLICATION == code {
                 edit_mode = 5;
-                game_values.playerInput.reset_keys();
+                game().game_values.playerInput.reset_keys();
                 return EDITOR_EDIT;
             } else if MENU_CODE_VEHICLE_MIN_MOVES_CHANGED == code {
                 let iMaxMoves: i16 = miVehicleMaxMovesField.current_value();
@@ -2989,7 +2989,7 @@ pub fn editor_vehicles() -> i32 {
             } else if MENU_CODE_CREATE_VEHICLE == code {
                 edit_mode = 5;
                 ignoreclick = true;
-                game_values.playerInput.reset_keys();
+                game().game_values.playerInput.reset_keys();
                 return EDITOR_EDIT;
             }
 
@@ -3064,7 +3064,7 @@ pub fn editor_path() -> i32 {
 
 pub fn DisplayStageDetails(fForce: bool, iStageId: i16, mut iMouseX: i16, mut iMouseY: i16) {
     unsafe {
-        let ts = game_values.tourstops[iStageId as usize];
+        let ts = game().game_values.tourstops[iStageId as usize];
 
         //If we're pointing to a new stage or no stage at all
         if iStageId != iOldStageId || fForce {
@@ -3300,7 +3300,7 @@ pub fn AdjustBonuses(mut ts: Ptr<TourStop>) {
 
 pub fn SaveStage(iEditStage: i16) {
     unsafe {
-        let mut ts = game_values.tourstops[iEditStage as usize];
+        let mut ts = game().game_values.tourstops[iEditStage as usize];
 
         if ts.iMode >= 25 && ts.iMode <= 27 {
             ts.iMode += 975;
@@ -3308,18 +3308,18 @@ pub fn SaveStage(iEditStage: i16) {
 
         //Set the number of game mode settings to the maximum so we write them all out
         ts.fUseSettings = true;
-        ts.iNumUsedSettings = serialize_gms(ts.iMode, &game_values.gamemodemenusettings).len() as i16;
+        ts.iNumUsedSettings = serialize_gms(ts.iMode, &game().game_values.gamemodemenusettings).len() as i16;
 
         //Copy the working values back into the structure that will be saved
-        ts.gmsSettings = game_values.gamemodemenusettings.clone();
+        ts.gmsSettings = game().game_values.gamemodemenusettings.clone();
     }
 }
 
 pub fn EditStage(iEditStage: i16) {
     unsafe {
-        let mut ts = game_values.tourstops[iEditStage as usize];
+        let mut ts = game().game_values.tourstops[iEditStage as usize];
 
-        game_values.gamemodemenusettings = ts.gmsSettings.clone();
+        game().game_values.gamemodemenusettings = ts.gmsSettings.clone();
 
         //Set fields to write data to the selected stage
         miModeField.set_output_ptr(&mut ts.iMode as *mut i16);
@@ -3463,17 +3463,17 @@ pub fn NewStage(iEditStage: &mut i16) {
         ts.iBonusType = 0;
         ts.iNumBonuses = 0;
 
-        ts.szName = format!("Tour Stop {}", game_values.tourstops.len() + 1);
+        ts.szName = format!("Tour Stop {}", game().game_values.tourstops.len() + 1);
 
         ts.fEndStage = false;
 
         //Copy in default values first
-        ts.gmsSettings = game_values.gamemodemenusettings.clone();
+        ts.gmsSettings = game().game_values.gamemodemenusettings.clone();
 
-        game_values.tourstops.push(ts);
+        game().game_values.tourstops.push(ts);
         g_worldmap.iNumStages += 1;
 
-        *iEditStage = (game_values.tourstops.len() - 1) as i16;
+        *iEditStage = (game().game_values.tourstops.len() - 1) as i16;
         EditStage(*iEditStage);
     }
 }
@@ -3526,7 +3526,7 @@ pub fn editor_stage() -> i32 {
             let framestart = crate::services::ticks() as i32;
 
             //Reset the keys that were down the last frame
-            game_values.playerInput.clear_pressed_keys(1);
+            game().game_values.playerInput.clear_pressed_keys(1);
 
             let mut code: MenuCodeEnum = MENU_CODE_NONE;
 
@@ -3552,7 +3552,7 @@ pub fn editor_stage() -> i32 {
 
                             return EDITOR_EDIT;
                         } else if mCurrentMenu == mBonusItemPicker.as_ptr() && key_sym() >= SDLK_1 as i32 && key_sym() <= SDLK_4 as i32 {
-                            let ts = game_values.tourstops[iEditStage as usize];
+                            let ts = game().game_values.tourstops[iEditStage as usize];
                             if ts.iStageType == 0 {
                                 let iPlace: i16 = (key_sym() - SDLK_1 as i32 + 1) as i16;
 
@@ -3602,7 +3602,7 @@ pub fn editor_stage() -> i32 {
                                     NewStage(&mut iEditStage);
                                 }
                             } else if mCurrentMenu == mBonusItemPicker.as_ptr() {
-                                let mut ts = game_values.tourstops[iEditStage as usize];
+                                let mut ts = game().game_values.tourstops[iEditStage as usize];
 
                                 //See if we clicked an item and add it if we did
                                 TestAndSetBonusItem(ts, 0, iButtonX, iButtonY);
@@ -3662,12 +3662,12 @@ pub fn editor_stage() -> i32 {
                     _ => {}
                 }
 
-                game_values.playerInput.update_input(event.input(), 1);
+                game().game_values.playerInput.update_input(event.input(), 1);
             }
 
             if iEditStage >= 0 {
                 if MENU_CODE_NONE == code {
-                    code = mCurrentMenu.send_input(Ptr::from_mut(&mut game_values.playerInput));
+                    code = mCurrentMenu.send_input(Ptr::from_mut(&mut game().game_values.playerInput));
                 }
 
                 if MENU_CODE_EXIT_APPLICATION == code {
@@ -3696,7 +3696,7 @@ pub fn editor_stage() -> i32 {
 
                     miBonusItemsButton.set_position(430, if iMode != 24 { 220 } else { 340 });
 
-                    let mut ts = game_values.tourstops[iEditStage as usize];
+                    let mut ts = game().game_values.tourstops[iEditStage as usize];
 
                     if iMode >= 0 && (iMode as i32) < GAMEMODE_LAST {
                         miModeSettingsButton.set_visible(iMode as i32 != game_mode_owned);
@@ -3757,7 +3757,7 @@ pub fn editor_stage() -> i32 {
                     mCurrentMenu = mStageSettingsMenu.as_ptr();
                     mCurrentMenu.reset_menu();
                 } else if MENU_CODE_MAP_CHANGED == code {
-                    let mut ts = game_values.tourstops[iEditStage as usize];
+                    let mut ts = game().game_values.tourstops[iEditStage as usize];
                     ts.pszMapFile = game().maplist.current_shortmapname().to_string();
                     fForceStageDisplay = true;
                 } else if MENU_CODE_TO_BONUS_PICKER_MENU == code {
@@ -3818,11 +3818,11 @@ pub fn editor_stage() -> i32 {
 
                         //Remove stage from tourstops vector
                         let mut iIndex: i16 = 0;
-                        while (iIndex as usize) < game_values.tourstops.len() {
+                        while (iIndex as usize) < game().game_values.tourstops.len() {
                             if iIndex == iEditStage {
-                                game_values.tourstops[iIndex as usize].delete();
+                                game().game_values.tourstops[iIndex as usize].delete();
 
-                                game_values.tourstops.remove(iIndex as usize);
+                                game().game_values.tourstops.remove(iIndex as usize);
                                 g_worldmap.iNumStages -= 1;
 
                                 break;
@@ -3884,7 +3884,7 @@ pub fn editor_stage() -> i32 {
             }
 
             if mCurrentMenu == mBonusItemPicker.as_ptr() {
-                let ts = game_values.tourstops[iEditStage as usize];
+                let ts = game().game_values.tourstops[iEditStage as usize];
 
                 //Game powerups
                 for iItem in 0..NUM_POWERUPS as usize {
@@ -4063,7 +4063,7 @@ pub fn save_as() -> i32 {
             mapLocation.push_str(&fileName);
             game().worldlist.add(mapLocation.into());
             game().worldlist.find(&fileName);
-            game_values.worldindex = game().worldlist.current_index() as i16;
+            game().game_values.worldindex = game().worldlist.current_index() as i16;
             savecurrentworld();
             loadcurrentworld();
         }
@@ -4182,7 +4182,7 @@ pub fn find() -> i32 {
 
             let fs = findstring.clone();
             if game().worldlist.find(&fs) {
-                game_values.worldindex = game().worldlist.current_index() as i16;
+                game().game_values.worldindex = game().worldlist.current_index() as i16;
                 loadcurrentworld();
             }
         }
@@ -4203,8 +4203,8 @@ pub fn clear_world() -> i32 {
 
 pub fn loadcurrentworld() {
     unsafe {
-        game_values.worldindex = game().worldlist.current_index() as i16;
-        let path = game().worldlist.at(game_values.worldindex as usize).to_string_lossy().into_owned();
+        game().game_values.worldindex = game().worldlist.current_index() as i16;
+        let path = game().worldlist.at(game().game_values.worldindex as usize).to_string_lossy().into_owned();
         *g_worldmap = WorldMap::new_path(&path, TILESIZE as i16);
         ReadVehiclesIntoEditor();
         ReadWarpsIntoEditor();
@@ -4249,7 +4249,7 @@ pub fn savecurrentworld() -> i32 {
 
         WriteVehiclesIntoWorld();
         WriteWarpsIntoWorld();
-        let path = game().worldlist.at(game_values.worldindex as usize).to_string_lossy().into_owned();
+        let path = game().worldlist.at(game().game_values.worldindex as usize).to_string_lossy().into_owned();
         g_worldmap.save(&path);
         0
     }
@@ -4270,7 +4270,7 @@ pub fn findcurrentstring() -> i32 {
         if !findstring.is_empty() {
             let fs = findstring.clone();
             if game().worldlist.find(&fs) {
-                game_values.worldindex = game().worldlist.current_index() as i16;
+                game().game_values.worldindex = game().worldlist.current_index() as i16;
                 loadcurrentworld();
             }
         }
@@ -4341,7 +4341,7 @@ pub fn new_world() -> i32 {
             worldLocation.push_str(&fileName);
             game().worldlist.add(convert_path(&worldLocation).into());
             game().worldlist.find(&fileName);
-            game_values.worldindex = game().worldlist.current_index() as i16;
+            game().game_values.worldindex = game().worldlist.current_index() as i16;
             savecurrentworld();
             loadcurrentworld();
         }
@@ -4398,7 +4398,7 @@ pub fn takescreenshot() {
 
         for iScreenshotSize in 0..3usize {
             let iTileSize: i16 = iTileSizes[iScreenshotSize];
-            let path = game().worldlist.at(game_values.worldindex as usize).to_string_lossy().into_owned();
+            let path = game().worldlist.at(game().game_values.worldindex as usize).to_string_lossy().into_owned();
             *g_worldmap = WorldMap::new_path(&path, iTileSize);
 
             let mut w: i16 = 0;
@@ -4459,7 +4459,7 @@ pub fn takescreenshot() {
             SDL_FreeSurface(sScreenshot);
         }
 
-        let path = game().worldlist.at(game_values.worldindex as usize).to_string_lossy().into_owned();
+        let path = game().worldlist.at(game().game_values.worldindex as usize).to_string_lossy().into_owned();
         *g_worldmap = WorldMap::new_path(&path, iTileSizes[0]);
         blitdest = screen;
     }

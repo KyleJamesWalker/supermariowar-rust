@@ -119,15 +119,15 @@ impl CObjectTrait for MO_BonusHouseChest {
 
     fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
         unsafe {
-            if self.state == 1 && !game_values.gamemode.gameover && player.playerKeys.game_turbo().fPressed {
+            if self.state == 1 && !game().game_values.gamemode.gameover && player.playerKeys.game_turbo().fPressed {
                 let teamID = player.teamID as usize;
                 if (self.bonusitem as i32) < NUM_POWERUPS + NUM_WORLD_POWERUPS {
-                    if game_values.worldpowerupcount[teamID] < 32 {
-                        let idx = game_values.worldpowerupcount[teamID] as usize;
-                        game_values.worldpowerupcount[teamID] += 1;
-                        game_values.worldpowerups[teamID][idx] = self.bonusitem;
+                    if game().game_values.worldpowerupcount[teamID] < 32 {
+                        let idx = game().game_values.worldpowerupcount[teamID] as usize;
+                        game().game_values.worldpowerupcount[teamID] += 1;
+                        game().game_values.worldpowerups[teamID][idx] = self.bonusitem;
                     } else {
-                        game_values.worldpowerups[teamID][31] = self.bonusitem;
+                        game().game_values.worldpowerups[teamID][31] = self.bonusitem;
                     }
                 } else {
                     let mut iBonus: i16 = (self.bonusitem as i32 - NUM_POWERUPS - NUM_WORLD_POWERUPS) as i16;
@@ -137,10 +137,10 @@ impl CObjectTrait for MO_BonusHouseChest {
                         iBonus = 9 - iBonus;
                     }
 
-                    game_values.tournament_scores[teamID].total = (game_values.tournament_scores[teamID].total as i32 + iBonus as i32) as i16;
+                    game().game_values.tournament_scores[teamID].total = (game().game_values.tournament_scores[teamID].total as i32 + iBonus as i32) as i16;
 
-                    if game_values.tournament_scores[teamID].total < 0 {
-                        game_values.tournament_scores[teamID].total = 0;
+                    if game().game_values.tournament_scores[teamID].total < 0 {
+                        game().game_values.tournament_scores[teamID].total = 0;
                     }
                 }
 
@@ -150,9 +150,9 @@ impl CObjectTrait for MO_BonusHouseChest {
                 self.drawbonusitemy = (self.iy as i32 + 32) as i16;
                 self.drawbonusitemtimer = 75;
 
-                game_values.flags.forceexittimer = 180;
-                game_values.gamemode.gameover = true;
-                game_values.gamemode.winningteam = player.teamID;
+                game().game_values.flags.forceexittimer = 180;
+                game().game_values.gamemode.gameover = true;
+                game().game_values.gamemode.winningteam = player.teamID;
             }
         }
 

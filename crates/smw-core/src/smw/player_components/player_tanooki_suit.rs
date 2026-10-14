@@ -129,7 +129,7 @@ impl PlayerTanookiSuit {
                     if_sound_on_play(&mut game().rm.sfx_transform);
 
                     //Decrease the amount of tanooki uses, if feature is turned on
-                    if game_values.tanookilimit > 0 || self.statue_uses_left > 0 {
+                    if game().game_values.tanookilimit > 0 || self.statue_uses_left > 0 {
                         self.statue_uses_left = self.statue_uses_left.wrapping_sub(1);
                         if self.statue_uses_left == 0 {
                             self.tanooki_on = false;
@@ -182,8 +182,8 @@ impl PlayerTanookiSuit {
             if_sound_on_play(&mut game().rm.sfx_collectpowerup);
             self.tanooki_on = true;
 
-            if game_values.tanookilimit > 0 {
-                self.statue_uses_left = game_values.tanookilimit as u16;
+            if game().game_values.tanookilimit > 0 {
+                self.statue_uses_left = game().game_values.tanookilimit as u16;
             }
         }
     }

@@ -57,8 +57,8 @@ impl UI_SoundOptionsMenu {
             for &(name, value) in VOLUMES {
                 f.add(name, value);
             }
-            f.set_output_ptr(&mut game_values.soundvolume);
-            f.set_current_value(game_values.soundvolume);
+            f.set_output_ptr(&mut game().game_values.soundvolume);
+            f.set_current_value(game().game_values.soundvolume);
             f.allow_wrap(false);
             f.set_item_changed_code(MENU_CODE_SOUND_VOLUME_CHANGED);
             this.miSoundVolumeField = f;
@@ -67,13 +67,13 @@ impl UI_SoundOptionsMenu {
             for &(name, value) in VOLUMES {
                 f.add(name, value);
             }
-            f.set_output_ptr(&mut game_values.musicvolume);
-            f.set_current_value(game_values.musicvolume);
+            f.set_output_ptr(&mut game().game_values.musicvolume);
+            f.set_current_value(game().game_values.musicvolume);
             f.allow_wrap(false);
             f.set_item_changed_code(MENU_CODE_MUSIC_VOLUME_CHANGED);
             this.miMusicVolumeField = f;
 
-            this.miPlayNextMusicField = select_field(spr, 70, 180, "Next Music", 500, 220, OFF_ON, &mut game_values.playnextmusic);
+            this.miPlayNextMusicField = select_field(spr, 70, 180, "Next Music", 500, 220, OFF_ON, &mut game().game_values.playnextmusic);
             this.miPlayNextMusicField.set_auto_advance(true);
 
             this.miAnnouncerField = Ptr::new_box(MI_AnnouncerField::new(spr, 70, 220, "Announcer", 500, 220, Ptr::from_mut(&mut game().announcerlist.simple_file_list)));

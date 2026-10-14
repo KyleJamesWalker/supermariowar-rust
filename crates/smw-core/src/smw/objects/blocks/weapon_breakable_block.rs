@@ -2,7 +2,7 @@
 
 use crate::game::game;
 use crate::common::eyecandy::EC_FallingObject;
-use crate::common::game_values::{game_values, if_sound_on_play};
+use crate::common::game_values::if_sound_on_play;
 use crate::common::gameplay_styles::TeamCollisionStyle;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::*;
@@ -166,7 +166,7 @@ impl IO_BlockTrait for B_WeaponBreakableBlock {
                 let iKillType = PlayerKillType::NonKill;
                 if self.iBumpPlayerID >= 0
                     && !player.is_invincible_on_bottom()
-                    && (player.teamID != self.iBumpTeamID || game_values.teamcollision == TeamCollisionStyle::On)
+                    && (player.teamID != self.iBumpTeamID || game().game_values.teamcollision == TeamCollisionStyle::On)
                 {
                     player_killed_player(self.iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
                 }

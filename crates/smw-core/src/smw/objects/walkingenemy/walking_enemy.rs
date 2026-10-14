@@ -309,7 +309,7 @@ pub fn mo_walking_enemy_collide_player<T: MO_WalkingEnemyTrait + ?Sized>(this: &
             let killStyle = this.we().killStyle;
             player.add_killer_award(Ptr::null(), killStyle);
 
-            if game_values.gamemode.gamemode == game_mode_stomp && !game_values.gamemode.gameover {
+            if game().game_values.gamemode.gamemode == game_mode_stomp && !game().game_values.gamemode.gameover {
                 player.score().adjust_score(1);
             }
 
@@ -375,7 +375,7 @@ pub fn mo_walking_enemy_collide_object<T: MO_WalkingEnemyTrait + ?Sized>(this: &
                     return;
                 }
 
-                if game_values.gamemode.gamemode == game_mode_stomp && !game_values.gamemode.gameover {
+                if game().game_values.gamemode.gamemode == game_mode_stomp && !game().game_values.gamemode.gameover {
                     // Find the player that shot this fireball so we can attribute a kill
                     let mut killer: Ptr<CPlayer> = get_player_from_global_id(object.iPlayerID);
 
@@ -463,7 +463,7 @@ pub fn mo_walking_enemy_shatter_die<T: MO_WalkingEnemyTrait + ?Sized>(this: &mut
         eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, (iBrokenIceY as i32 + 16) as i16, -1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
         eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, (iBrokenIceY as i32 + 16) as i16, 1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
 
-        game_values.unlocksecret2part2 += 1;
+        game().game_values.unlocksecret2part2 += 1;
     }
 }
 

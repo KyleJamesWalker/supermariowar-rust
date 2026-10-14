@@ -461,8 +461,8 @@ impl MapList {
 
     pub fn write_filters(&mut self) {
         unsafe {
-            if game_values.fNeedWriteFilters {
-                game_values.fNeedWriteFilters = false;
+            if game().game_values.fNeedWriteFilters {
+                game().game_values.fNeedWriteFilters = false;
 
                 for iFilter in 0..game().filterslist.count() {
                     let path = game().filterslist.at(iFilter).clone();
@@ -475,7 +475,7 @@ impl MapList {
                     out += &format!("{}.{}.{}.{}\n\n", GAME_VERSION.major, GAME_VERSION.minor, GAME_VERSION.patch, GAME_VERSION.build);
 
                     out += "#Icon\n";
-                    out += &format!("{}\n\n", game_values.piFilterIcons[iFilter + NUM_AUTO_FILTERS as usize]);
+                    out += &format!("{}\n\n", game().game_values.piFilterIcons[iFilter + NUM_AUTO_FILTERS as usize]);
 
                     out += "#Maps\n";
 
@@ -564,7 +564,7 @@ impl MapList {
                         iReadState = 1;
                         continue;
                     } else if iReadState == 1 {
-                        game_values.piFilterIcons[iFilter + NUM_AUTO_FILTERS as usize] = atoi(&buffer) as i16;
+                        game().game_values.piFilterIcons[iFilter + NUM_AUTO_FILTERS as usize] = atoi(&buffer) as i16;
                         iReadState = 2;
                         continue;
                     } else {
@@ -644,7 +644,7 @@ impl MapList {
         }
 
         unsafe {
-            game_values.fFiltersOn = pfFilters.contains(&true);
+            game().game_values.fFiltersOn = pfFilters.contains(&true);
         }
         self.find_filtered_map();
     }

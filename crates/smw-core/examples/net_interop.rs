@@ -72,10 +72,10 @@ fn main() {
         game().worldgraphicspacklist = Ptr::new_box(GraphicsList::new());
         game().gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
         game().menugraphicspacklist.set_current_index(0);
-        if !game_values.is_initialized() {
-            game_values.init(CGameValues::new());
+        if !game().game_values.is_initialized() {
+            game().game_values.init(CGameValues::new());
         }
-        CGameValues::init(&mut game_values);
+        CGameValues::init(&mut game().game_values);
         create_gamemodes();
 
         if !net_init() {
@@ -154,7 +154,7 @@ fn main() {
                 }
                 4 => {
                     if frame < FRAMES {
-                        game_values.playerInput.outputControls[0] = pattern(if is_host { 1 } else { 2 }, frame);
+                        game().game_values.playerInput.outputControls[0] = pattern(if is_host { 1 } else { 2 }, frame);
                         netplay.client.store_local_input();
                         netplay.client.send_local_input();
                         frame += 1;

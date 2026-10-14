@@ -1,6 +1,6 @@
 //! Port of src/smw/ui/MI_NetRoomTeamSelect.cpp
 
-use crate::common::global::{game_values};
+
 use crate::common::input::CPlayerInput;
 use crate::common::random_number_generator::RANDOM_INT;
 use crate::common::ui::menu_code::*;
@@ -60,8 +60,8 @@ impl MI_NetRoomTeamSelect {
     unsafe fn cycle_skin(&mut self, step: impl Fn(&mut i16)) {
         let p = self.owner_player as usize;
         loop {
-            step(&mut game_values.skinids[p]);
-            if game().rm.load_menu_skin(self.owner_player, game_values.skinids[p], game_values.colorids[p], false) {
+            step(&mut game().game_values.skinids[p]);
+            if game().rm.load_menu_skin(self.owner_player, game().game_values.skinids[p], game().game_values.colorids[p], false) {
                 break;
             }
         }
@@ -125,10 +125,10 @@ impl UI_ControlTrait for MI_NetRoomTeamSelect {
         }
 
         unsafe {
-            let playerKeys = game_values.playerInput.outputControls[0];
+            let playerKeys = game().game_values.playerInput.outputControls[0];
             let count = game().skinlist.count() as i16;
 
-            if !game_values.randomskin[0] {
+            if !game().game_values.randomskin[0] {
                 if playerKeys.menu_up().fPressed {
                     let down = playerKeys.menu_down().fDown;
                     self.cycle_skin(|id| {

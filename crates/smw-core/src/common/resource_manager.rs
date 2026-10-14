@@ -754,7 +754,7 @@ impl CResourceManager {
 
     /// Panics where the C++ throws on a missing sound (the C++ callers do not catch).
     pub fn load_game_sounds(&mut self) -> bool {
-        unsafe { game_values.soundcapable = false };
+        unsafe { game().game_values.soundcapable = false };
 
         if !sfx_can_play_audio() {
             return false;
@@ -816,7 +816,7 @@ impl CResourceManager {
         self.sfx_gameover = open("sfx/packs/gameover.wav");
         self.sfx_pickup = open("sfx/packs/pickup.wav");
 
-        unsafe { game_values.soundcapable = true };
+        unsafe { game().game_values.soundcapable = true };
         true
     }
 }

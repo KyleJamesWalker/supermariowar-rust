@@ -23,13 +23,13 @@ fn adjust_player_areas(container: &CObjectContainer, player: Ptr<CPlayer>, other
             };
 
             if area.get_color_id() == other.get_color_id() {
-                if game_values.gamemodesettings.domination.relocateondeath {
+                if game().game_values.gamemodesettings.domination.relocateondeath {
                     area.place_area();
                 }
 
-                if game_values.gamemodesettings.domination.stealondeath && !player.is_null() {
+                if game().game_values.gamemodesettings.domination.stealondeath && !player.is_null() {
                     area.set_owner(player);
-                } else if game_values.gamemodesettings.domination.loseondeath {
+                } else if game().game_values.gamemodesettings.domination.loseondeath {
                     area.reset();
                 }
             }
@@ -60,11 +60,11 @@ pub fn cgm_domination_init<T: CGameModeTrait + ?Sized>(this: &mut T) {
     gm::cgamemode_init(this);
 
     unsafe {
-        let mut iNumAreas: i16 = game_values.gamemodesettings.domination.quantity;
+        let mut iNumAreas: i16 = game().game_values.gamemodesettings.domination.quantity;
 
         if iNumAreas < 1 {
             iNumAreas = 1;
-            game_values.gamemodesettings.domination.quantity = iNumAreas;
+            game().game_values.gamemodesettings.domination.quantity = iNumAreas;
         }
 
         if iNumAreas > 18 {

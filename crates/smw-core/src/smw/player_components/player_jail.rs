@@ -38,10 +38,10 @@ impl PlayerJail {
 
     pub fn lock_in_by(&mut self, inflictor: &mut CPlayer) {
         unsafe {
-            self.timer = game_values.gamemodesettings.jail.timetofree;
+            self.timer = game().game_values.gamemodesettings.jail.timetofree;
             self.owner_teamID = inflictor.teamID as i8;
 
-            if game_values.gamemodesettings.jail.style == JailStyle::Owned {
+            if game().game_values.gamemodesettings.jail.style == JailStyle::Owned {
                 self.color = inflictor.colorID as i8;
             } else {
                 self.color = -1;
@@ -87,7 +87,7 @@ impl PlayerJail {
 
     pub fn update(&mut self, player: &mut CPlayer) {
         unsafe {
-            if self.is_active() && game_values.gamemodesettings.jail.timetofree > 1 {
+            if self.is_active() && game().game_values.gamemodesettings.jail.timetofree > 1 {
                 self.timer -= 1;
                 if self.timer <= 0 {
                     self.timer = 0;

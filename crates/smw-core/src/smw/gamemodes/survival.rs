@@ -48,24 +48,24 @@ impl CGM_Survival {
                 self.ratetimer = 0;
 
                 self.rate -= 1;
-                if self.rate < game_values.gamemodesettings.survival.density {
-                    self.rate = game_values.gamemodesettings.survival.density;
+                if self.rate < game().game_values.gamemodesettings.survival.density {
+                    self.rate = game().game_values.gamemodesettings.survival.density;
                 }
             }
 
             //Randomly choose an enemy from the weighted list
             let iRandEnemy: i32 = RANDOM_INT(self.iEnemyWeightCount as i32) + 1;
             self.iSelectedEnemy = 0;
-            let mut iWeightCount: i32 = game_values.gamemodesettings.survival.enemyweight[self.iSelectedEnemy as usize] as i32;
+            let mut iWeightCount: i32 = game().game_values.gamemodesettings.survival.enemyweight[self.iSelectedEnemy as usize] as i32;
 
             while iWeightCount < iRandEnemy {
                 self.iSelectedEnemy += 1;
-                iWeightCount += game_values.gamemodesettings.survival.enemyweight[self.iSelectedEnemy as usize] as i32;
+                iWeightCount += game().game_values.gamemodesettings.survival.enemyweight[self.iSelectedEnemy as usize] as i32;
             }
 
             if 0 == self.iSelectedEnemy {
                 let x = RANDOM_INT((App::screenWidth as f32 * 0.92f32) as i32) as i16;
-                let nspeed = game_values.gamemodesettings.survival.speed as f32 / 2.0f32 + (RANDOM_INT(20) as f32) / 10.0f32;
+                let nspeed = game().game_values.gamemodesettings.survival.speed as f32 / 2.0f32 + (RANDOM_INT(20) as f32) / 10.0f32;
                 objectcontainer[2].add(Ptr::new_box(OMO_Thwomp::new(Ptr::from_mut(&mut game().rm.spr_thwomp), x, nspeed)));
                 self.timer = (RANDOM_INT(21) - 10 + self.rate as i32) as i16;
             } else if 1 == self.iSelectedEnemy {
@@ -92,7 +92,7 @@ impl CGM_Survival {
 
 pub fn net_spawn_enemy() {
     unsafe {
-        if let Some(this) = game_values.gamemode.as_any().downcast_mut::<CGM_Survival>() {
+        if let Some(this) = game().game_values.gamemode.get().as_any().downcast_mut::<CGM_Survival>() {
             this.spawn_enemy();
         }
     }
@@ -105,13 +105,13 @@ impl CGameModeTrait for CGM_Survival {
         cgm_classic_init(&mut self.cgm_classic);
 
         unsafe {
-            self.rate = (3 * game_values.gamemodesettings.survival.density as i32) as i16;
+            self.rate = (3 * game().game_values.gamemodesettings.survival.density as i32) as i16;
             self.timer = (RANDOM_INT(21) - 10 + self.rate as i32) as i16;
             self.ratetimer = 0;
 
             self.iEnemyWeightCount = 0;
             for iEnemy in 0..NUMSURVIVALENEMIES as usize {
-                self.iEnemyWeightCount += game_values.gamemodesettings.survival.enemyweight[iEnemy];
+                self.iEnemyWeightCount += game().game_values.gamemodesettings.survival.enemyweight[iEnemy];
             }
 
             if self.iEnemyWeightCount == 0 {

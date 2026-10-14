@@ -79,8 +79,8 @@ impl OMO_RaceGoal {
         this.place_race_goal();
 
         unsafe {
-            this.speed = game_values.gamemodesettings.race.speed as f32 / 4.0f32;
-            this.quantity = game_values.gamemodesettings.race.quantity;
+            this.speed = game().game_values.gamemodesettings.race.speed as f32 / 4.0f32;
+            this.quantity = game().game_values.gamemodesettings.race.quantity;
         }
         this.isfinishline = this.goalID as i32 == this.quantity as i32 - 1;
         this
@@ -206,8 +206,8 @@ impl CObjectTrait for OMO_RaceGoal {
 
     fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
         unsafe {
-            if game_values.gamemode.getgamemode() == game_mode_race && player.tanookisuit.not_statue() {
-                let gamemode: &mut CGM_Race = game_values.gamemode.as_any().downcast_mut::<CGM_Race>().unwrap();
+            if game().game_values.gamemode.getgamemode() == game_mode_race && player.tanookisuit.not_statue() {
+                let gamemode: &mut CGM_Race = game().game_values.gamemode.get().as_any().downcast_mut::<CGM_Race>().unwrap();
 
                 if self.tagged[player.teamID as usize] != player.colorID && gamemode.get_next_goal(player.teamID) >= self.goalID {
                     self.tagged[player.teamID as usize] = player.colorID;

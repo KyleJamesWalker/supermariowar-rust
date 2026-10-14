@@ -76,7 +76,7 @@ impl UI_WorldMenu {
 
     pub fn open_stage_start(&mut self) {
         unsafe {
-            self.miWorldStop.refresh(game_values.tourstopcurrent as i16);
+            self.miWorldStop.refresh(game().game_values.tourstopcurrent as i16);
         }
         self.miWorldStop.set_visible(true);
 

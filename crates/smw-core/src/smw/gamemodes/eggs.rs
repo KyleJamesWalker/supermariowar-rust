@@ -43,7 +43,7 @@ impl CGameModeTrait for CGM_Eggs {
 
         unsafe {
             for iEggs in 0..4i16 {
-                for iEgg in 0..game_values.gamemodesettings.egg.eggs[iEggs as usize] {
+                for iEgg in 0..game().game_values.gamemodesettings.egg.eggs[iEggs as usize] {
                     if iEgg > 9 {
                         break;
                     }
@@ -54,7 +54,7 @@ impl CGameModeTrait for CGM_Eggs {
             }
 
             for iYoshis in 0..4i16 {
-                for iYoshi in 0..game_values.gamemodesettings.egg.yoshis[iYoshis as usize] {
+                for iYoshi in 0..game().game_values.gamemodesettings.egg.yoshis[iYoshis as usize] {
                     if iYoshi > 9 {
                         break;
                     }

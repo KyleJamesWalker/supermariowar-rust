@@ -50,8 +50,8 @@ impl UI_MatchSelectionMenu {
             f.add("Tour", MatchType::Tour);
             f.add("World", MatchType::World);
             f.add("Minigame", MatchType::MiniGame);
-            f.set_output_ptr(&mut game_values.matchtype);
-            f.set_current_value(game_values.matchtype);
+            f.set_output_ptr(&mut game().game_values.matchtype);
+            f.set_current_value(game().game_values.matchtype);
             f.set_item_changed_code(MENU_CODE_MATCH_SELECTION_MATCH_CHANGED);
 
             this.miTournamentField = Ptr::new_box(MI_SelectField::new(spr_selectfield, 130, 380, "Wins", 380, 100));
@@ -65,8 +65,8 @@ impl UI_MatchSelectionMenu {
             f.add("8", 8);
             f.add("9", 9);
             f.add("10", 10);
-            f.set_output_ptr(&mut game_values.tournamentgames);
-            f.set_current_value(game_values.tournamentgames);
+            f.set_output_ptr(&mut game().game_values.tournamentgames);
+            f.set_current_value(game().game_values.tournamentgames);
             f.set_visible(false);
 
             this.miTourField = Ptr::new_box(MI_SelectField::new(spr_selectfield, 130, 380, "Tour", 380, 100));
@@ -76,8 +76,8 @@ impl UI_MatchSelectionMenu {
                 // strcat(szTemp, " Tour");
                 f.add(szTemp, iTour as i16);
             }
-            f.set_output_ptr(&mut game_values.tourindex);
-            f.set_current_value(game_values.tourindex);
+            f.set_output_ptr(&mut game().game_values.tourindex);
+            f.set_current_value(game().game_values.tourindex);
             f.set_visible(false);
 
             this.miWorldField = Ptr::new_box(MI_SelectField::new(spr_selectfield, 130, 380, "World", 380, 100));
@@ -86,8 +86,8 @@ impl UI_MatchSelectionMenu {
                 let szTemp = get_name_from_file_name(&game().worldlist.at(iWorld).to_string_lossy(), true);
                 f.add(szTemp, iWorld as i16);
             }
-            f.set_output_ptr(&mut game_values.worldindex);
-            f.set_current_value(game_values.worldindex);
+            f.set_output_ptr(&mut game().game_values.worldindex);
+            f.set_current_value(game().game_values.worldindex);
             f.set_item_changed_code(MENU_CODE_WORLD_MAP_CHANGED);
             f.set_visible(false);
 
@@ -98,8 +98,8 @@ impl UI_MatchSelectionMenu {
             f.add("Bomb Boss Game", Minigame::BombBoss);
             f.add("Fire Boss Game", Minigame::FireBoss);
             f.add("Boxes Game", Minigame::Boxes);
-            f.set_output_ptr(&mut game_values.selectedminigame);
-            f.set_current_value(game_values.selectedminigame);
+            f.set_output_ptr(&mut game().game_values.selectedminigame);
+            f.set_current_value(game().game_values.selectedminigame);
             f.set_visible(false);
 
             this.miMatchSelectionMenuLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
@@ -145,7 +145,7 @@ impl UI_MatchSelectionMenu {
 
     pub fn selection_changed(&mut self) {
         unsafe {
-            let matchtype = game_values.matchtype;
+            let matchtype = game().game_values.matchtype;
             self.miTournamentField.set_visible(matchtype == MatchType::Tournament);
             self.miTourField.set_visible(matchtype == MatchType::Tour);
             self.miWorldField.set_visible(matchtype == MatchType::World);
@@ -178,7 +178,7 @@ impl UI_MatchSelectionMenu {
         self.miMatchSelectionDisplayImage.set_visible(true);
         self.miWorldPreviewDisplay.set_visible(false);
         unsafe {
-            self.miMatchSelectionDisplayImage.set_image(0, (240 * game_values.matchtype as i32) as i16, 320, 240);
+            self.miMatchSelectionDisplayImage.set_image(0, (240 * game().game_values.matchtype as i32) as i16, 320, 240);
         }
     }
 

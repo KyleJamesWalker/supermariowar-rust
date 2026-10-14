@@ -177,7 +177,7 @@ impl CO_ThrowBlock {
             eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, (iy + 16) as i16, -1.5, -4.0, 4, 2, 0, 0, 16, 16));
             eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, (iy + 16) as i16, 1.5, -4.0, 4, 2, 0, 0, 16, 16));
 
-            game_values.unlocksecret2part2 += 1;
+            game().game_values.unlocksecret2part2 += 1;
         }
 
         self.die_helper();
@@ -271,9 +271,9 @@ impl CObjectTrait for CO_ThrowBlock {
                         8,
                     ));
                 }
-            } else if game_values.blueblockttl > 0 && {
+            } else if game().game_values.blueblockttl > 0 && {
                 self.iDeathTime += 1;
-                self.iDeathTime >= game_values.blueblockttl
+                self.iDeathTime >= game().game_values.blueblockttl
             } {
                 eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
                 self.dead = true;
@@ -304,7 +304,7 @@ impl CObjectTrait for CO_ThrowBlock {
         self.animate();
 
         unsafe {
-            if game_values.spotlights && self.state == 1 {
+            if game().game_values.spotlights && self.state == 1 {
                 let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
                 let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
                 if self.sSpotlight.is_null() {

@@ -93,8 +93,8 @@ impl CO_Egg {
 
         self.relocatetimer = 0;
         unsafe {
-            if game_values.gamemodesettings.egg.explode > 0 {
-                self.explosiondrawframe = game_values.gamemodesettings.egg.explode - 1;
+            if game().game_values.gamemodesettings.egg.explode > 0 {
+                self.explosiondrawframe = game().game_values.gamemodesettings.egg.explode - 1;
                 self.explosiondrawtimer = 62;
 
                 if self.explosiondrawframe < 5 {
@@ -189,7 +189,7 @@ impl CObjectTrait for CO_Egg {
 
         // Explode
         unsafe {
-            if game_values.gamemodesettings.egg.explode > 0 {
+            if game().game_values.gamemodesettings.egg.explode > 0 {
                 self.explosiondrawtimer -= 1;
                 if self.explosiondrawtimer <= 0 {
                     self.explosiondrawtimer = 62;
@@ -224,7 +224,7 @@ impl CObjectTrait for CO_Egg {
 
         // Display explosion timer
         unsafe {
-            if game_values.gamemodesettings.egg.explode > 0 && self.explosiondrawframe < 5 {
+            if game().game_values.gamemodesettings.egg.explode > 0 && self.explosiondrawframe < 5 {
                 let x = self.ix as i32 - self.collisionOffsetX as i32;
                 let y = self.iy as i32 - self.collisionOffsetY as i32;
                 let src = SDL_Rect { x: (self.explosiondrawframe as i32) << 5, y: (self.color as i32) << 5, w: 32, h: 32 };

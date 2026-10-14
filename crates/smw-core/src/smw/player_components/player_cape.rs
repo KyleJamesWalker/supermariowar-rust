@@ -97,10 +97,10 @@ impl PlayerCape {
                 self.iCapeTimer = 0;
             }
 
-            let mut fPlayerFacingRight = !game_values.reversewalk;
+            let mut fPlayerFacingRight = !game().game_values.reversewalk;
             if player.spin.is_spin_in_progress() {
                 if player.spin.is_reverse_walking() {
-                    fPlayerFacingRight = game_values.reversewalk;
+                    fPlayerFacingRight = game().game_values.reversewalk;
                 }
             } else {
                 fPlayerFacingRight = player.is_facing_right();

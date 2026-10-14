@@ -118,7 +118,7 @@ impl MO_WalkingEnemyTrait for MO_Goomba {
             player.collisions.checktop(p.get());
             player.platform = Ptr::null();
 
-            if game_values.gamemode.gamemode == game_mode_stomp && !game_values.gamemode.gameover {
+            if game().game_values.gamemode.gamemode == game_mode_stomp && !game().game_values.gamemode.gameover {
                 player.score().adjust_score(1);
             }
 

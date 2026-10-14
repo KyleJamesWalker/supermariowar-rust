@@ -26,7 +26,7 @@ unsafe fn draw_map() {
     game().g_map.draw_platforms(0);
     game().g_map.draw_platforms(1);
     game().g_map.draw_platforms(2);
-    if game_values.toplayer {
+    if game().game_values.toplayer {
         game().g_map.drawfrontlayer();
     }
     game().g_map.draw_warp_locks();
@@ -49,10 +49,10 @@ fn main() {
         game().menugraphicspacklist = Ptr::new_box(GraphicsList::new());
         game().worldgraphicspacklist = Ptr::new_box(GraphicsList::new());
         game().gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
-        if !game_values.is_initialized() {
-            game_values.init(CGameValues::new());
+        if !game().game_values.is_initialized() {
+            game().game_values.init(CGameValues::new());
         }
-        CGameValues::init(&mut game_values);
+        CGameValues::init(&mut game().game_values);
         game().menugraphicspacklist.set_current_index(0);
         game().worldgraphicspacklist.set_current_index(0);
         game().gamegraphicspacklist.set_current_index(0);

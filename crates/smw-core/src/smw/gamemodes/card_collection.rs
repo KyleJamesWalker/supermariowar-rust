@@ -86,7 +86,7 @@ pub fn net_spawn_card() {
 
 pub fn net_release_card(mut player: Ptr<CPlayer>, x: i16, y: i16) {
     unsafe {
-        if let Some(this) = game_values.gamemode.as_any().downcast_mut::<CGM_Collection>() {
+        if let Some(this) = game().game_values.gamemode.get().as_any().downcast_mut::<CGM_Collection>() {
             if !player.is_null() && player.score().subscore[0] > 0 {
                 this.drop_card(player, Vec2s::new(x, y));
             }
@@ -121,10 +121,10 @@ impl CGameModeTrait for CGM_Collection {
     fn think(&mut self) {
         unsafe {
             self.timer += 1;
-            if self.timer >= game_values.gamemodesettings.collection.rate {
+            if self.timer >= game().game_values.gamemodesettings.collection.rate {
                 self.timer = 0;
 
-                let mut iPowerupQuantity: i16 = game_values.gamemodemenusettings.collection.quantity;
+                let mut iPowerupQuantity: i16 = game().game_values.gamemodemenusettings.collection.quantity;
 
                 if 5 < iPowerupQuantity {
                     iPowerupQuantity = players.len().wrapping_add(iPowerupQuantity as usize).wrapping_sub(7) as i16;
@@ -144,7 +144,7 @@ impl CGameModeTrait for CGM_Collection {
             for iScore in 0..score_cnt as usize {
                 if score[iScore].subscore[0] >= 3 {
                     score[iScore].subscore[2] += 1;
-                    if score[iScore].subscore[2] >= game_values.gamemodemenusettings.collection.banktime {
+                    if score[iScore].subscore[2] >= game().game_values.gamemodemenusettings.collection.banktime {
                         let mut iPoints: i16 = 1;
 
                         if (score[iScore].subscore[1] & 63) == 0 {

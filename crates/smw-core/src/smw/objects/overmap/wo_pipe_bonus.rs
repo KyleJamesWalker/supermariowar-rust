@@ -116,7 +116,7 @@ impl CObjectTrait for OMO_PipeBonus {
                 }
 
                 return false;
-            } else if !game_values.gamemode.gameover {
+            } else if !game().game_values.gamemode.gameover {
                 pipegamemode.set_bonus((self.iType as i32 + 1) as i16, self.iDuration, player.get_team_id());
             }
         }

@@ -36,7 +36,7 @@ impl GameTimerDisplay {
         self.framesleft_persecond = self.iFramesPerSecond;
 
         unsafe {
-            if game_values.scoreboardstyle == ScoreboardStyle::Top {
+            if game().game_values.scoreboardstyle == ScoreboardStyle::Top {
                 self.iScoreOffsetX = 5;
             } else {
                 self.iScoreOffsetX = 291;

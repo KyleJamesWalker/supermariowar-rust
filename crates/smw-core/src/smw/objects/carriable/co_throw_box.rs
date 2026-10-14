@@ -97,7 +97,7 @@ impl CO_ThrowBox {
             eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, (iy + 16) as i16, -1.5, -4.0, 4, 2, 0, 0, 16, 16));
             eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, (iy + 16) as i16, 1.5, -4.0, 4, 2, 0, 0, 16, 16));
 
-            game_values.unlocksecret2part2 += 1;
+            game().game_values.unlocksecret2part2 += 1;
         }
 
         self.die_helper();
@@ -154,7 +154,7 @@ impl CObjectTrait for CO_ThrowBox {
         //Kill player when another player is holding the box
         else
         {
-            if (owner && player != owner && (game_values.teamcollision == TeamCollisionStyle::On || player->teamID != owner->teamID))
+            if (owner && player != owner && (game().game_values.teamcollision == TeamCollisionStyle::On || player->teamID != owner->teamID))
             {
                     iPlayerID = owner->globalID;
                     iTeamID = owner->teamID;
@@ -250,7 +250,7 @@ impl CObjectTrait for CO_ThrowBox {
         self.animate();
 
         unsafe {
-            if game_values.spotlights && self.has_kill_velocity() {
+            if game().game_values.spotlights && self.has_kill_velocity() {
                 let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
                 let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
                 if self.sSpotlight.is_null() {

@@ -172,7 +172,7 @@ impl MO_SledgeBrother {
 
         o.wait_timer = 0;
 
-        o.hit_points = unsafe { game_values.gamemodesettings.boss.hitpoints };
+        o.hit_points = unsafe { game().game_values.gamemodesettings.boss.hitpoints };
         o.face_right = false;
 
         o.vely = 0.0f32;
@@ -221,8 +221,8 @@ impl MO_SledgeBrother {
                 self.die();
 
                 unsafe {
-                    if game_values.gamemode.gamemode == game_mode_boss_minigame {
-                        game_values.gamemode.as_any().downcast_mut::<CGM_Boss_MiniGame>().unwrap().set_winner(killer);
+                    if game().game_values.gamemode.gamemode == game_mode_boss_minigame {
+                        game().game_values.gamemode.get().as_any().downcast_mut::<CGM_Boss_MiniGame>().unwrap().set_winner(killer);
                     }
                 }
             } else {
@@ -246,7 +246,7 @@ impl MO_SledgeBrother {
             let randaction: i32 = RANDOM_INT(100);
 
             let t = self.iType as usize;
-            let d = game_values.gamemodesettings.boss.difficulty as usize;
+            let d = game().game_values.gamemodesettings.boss.difficulty as usize;
             let need = &g_iSledgeBrotherNeedAction[t][d];
             let actions = &g_iSledgeBrotherActions[t][d];
             let max = &g_iSledgeBrotherMaxAction[t][d];
@@ -388,7 +388,7 @@ impl MO_SledgeBrother {
     fn turn(&mut self) {
         self.face_right = !self.face_right;
         unsafe {
-            let waittime = g_iSledgeBrotherWaitTime[self.iType as usize][game_values.gamemodesettings.boss.difficulty as usize];
+            let waittime = g_iSledgeBrotherWaitTime[self.iType as usize][game().game_values.gamemodesettings.boss.difficulty as usize];
             self.wait(waittime[0] >> 1, waittime[1] >> 1);
         }
 
@@ -467,11 +467,11 @@ impl CObjectTrait for MO_SledgeBrother {
                     if self.iType == 0 {
                         // Shake screen and kill players
                         if_sound_on_play(&mut game().rm.sfx_thunder);
-                        game_values.flags.screenshaketimer = 20;
-                        game_values.flags.screenshakeplayerid = -1;
-                        game_values.flags.screenshaketeamid = -1;
-                        game_values.flags.screenshakekillinair = false;
-                        game_values.flags.screenshakekillscount = 0;
+                        game().game_values.flags.screenshaketimer = 20;
+                        game().game_values.flags.screenshakeplayerid = -1;
+                        game().game_values.flags.screenshaketeamid = -1;
+                        game().game_values.flags.screenshakekillinair = false;
+                        game().game_values.flags.screenshakekillscount = 0;
                     } else if self.iType == 1 {
                         // Spawn thwomps
                         if_sound_on_play(&mut game().rm.sfx_thunder);
@@ -514,7 +514,7 @@ impl CObjectTrait for MO_SledgeBrother {
             } else if self.iActionState == 4 {
                 // move towards destination
                 if self.ix < self.iDestX {
-                    self.ix += if game_values.gamemodesettings.boss.difficulty >= 3 { 2 } else { 1 };
+                    self.ix += if game().game_values.gamemodesettings.boss.difficulty >= 3 { 2 } else { 1 };
 
                     if self.ix >= self.iDestX {
                         self.ix = self.iDestX;
@@ -523,7 +523,7 @@ impl CObjectTrait for MO_SledgeBrother {
                         self.leg_movement_timer = 0;
                     }
                 } else if self.ix > self.iDestX {
-                    self.ix -= if game_values.gamemodesettings.boss.difficulty >= 3 { 2 } else { 1 };
+                    self.ix -= if game().game_values.gamemodesettings.boss.difficulty >= 3 { 2 } else { 1 };
 
                     if self.ix <= self.iDestX {
                         self.ix = self.iDestX;
@@ -611,8 +611,8 @@ impl CObjectTrait for MO_SledgeBrother {
                 if_sound_on_play(&mut game().rm.sfx_kicksound);
                 self.die();
 
-                if game_values.gamemode.gamemode == game_mode_boss_minigame {
-                    game_values.gamemode.as_any().downcast_mut::<CGM_Boss_MiniGame>().unwrap().set_winner(player);
+                if game().game_values.gamemode.gamemode == game_mode_boss_minigame {
+                    game().game_values.gamemode.get().as_any().downcast_mut::<CGM_Boss_MiniGame>().unwrap().set_winner(player);
                 }
             }
         } else {

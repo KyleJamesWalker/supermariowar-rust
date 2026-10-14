@@ -126,7 +126,7 @@ impl MI_TourStop {
     /// `MI_TourStop::Refresh(short iTourStop)`; hides the `UI_Control::Refresh()` virtual like the C++ overload.
     pub fn refresh(&mut self, iTourStop: i16) {
         unsafe {
-            let tourstop: Ptr<TourStop> = game_values.tourstops[iTourStop as usize];
+            let tourstop: Ptr<TourStop> = game().game_values.tourstops[iTourStop as usize];
 
             if tourstop.iStageType == 0 {
                 self.miModeField.clear();

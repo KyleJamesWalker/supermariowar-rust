@@ -15,7 +15,7 @@ use std::any::Any;
 
 fn remove_player_race_goals(container: &CObjectContainer, id: i16, iGoal: i16) {
     unsafe {
-        if game_values.gamemodesettings.race.penalty == 0 && iGoal != -1 {
+        if game().game_values.gamemodesettings.race.penalty == 0 && iGoal != -1 {
             return;
         }
 
@@ -26,7 +26,7 @@ fn remove_player_race_goals(container: &CObjectContainer, id: i16, iGoal: i16) {
                 continue;
             };
 
-            if iGoal == -1 || 2 == game_values.gamemodesettings.race.penalty || (1 == game_values.gamemodesettings.race.penalty && goal.get_goal_id() == iGoal) {
+            if iGoal == -1 || 2 == game().game_values.gamemodesettings.race.penalty || (1 == game().game_values.gamemodesettings.race.penalty && goal.get_goal_id() == iGoal) {
                 goal.reset(id);
             }
         }
@@ -124,16 +124,16 @@ impl CGameModeTrait for CGM_Race {
         gm::cgamemode_init(self);
 
         unsafe {
-            self.quantity = game_values.gamemodesettings.race.quantity;
+            self.quantity = game().game_values.gamemodesettings.race.quantity;
             if self.quantity < 2 {
                 self.quantity = 2;
-                game_values.gamemodesettings.race.quantity = self.quantity;
+                game().game_values.gamemodesettings.race.quantity = self.quantity;
             }
 
-            self.penalty = game_values.gamemodesettings.race.penalty;
+            self.penalty = game().game_values.gamemodesettings.race.penalty;
             if self.penalty < 0 || self.penalty > 2 {
                 self.penalty = 0;
-                game_values.gamemodesettings.race.penalty = self.penalty;
+                game().game_values.gamemodesettings.race.penalty = self.penalty;
             }
 
             for iRaceGoal in 0..self.quantity {

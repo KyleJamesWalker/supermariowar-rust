@@ -83,7 +83,7 @@ impl CGameModeTrait for CGM_Chicken {
             if chicken.isready() && !chicken.is_tanooki_statue() {
                 unsafe {
                     counter += 1;
-                    if counter >= game_values.pointspeed {
+                    if counter >= game().game_values.pointspeed {
                         counter = 0;
                         chicken.score().adjust_score(1);
                         self.check_winner(chicken);
@@ -96,7 +96,7 @@ impl CGameModeTrait for CGM_Chicken {
     fn draw_foreground(&mut self) {
         unsafe {
             //Draw the chicken indicator around the chicken
-            if game_values.gamemodesettings.chicken.usetarget && !self.gameover && !self.m_chicken.is_null() {
+            if game().game_values.gamemodesettings.chicken.usetarget && !self.gameover && !self.m_chicken.is_null() {
                 let chicken = self.m_chicken;
                 if chicken.iswarping() {
                     game().rm.spr_chicken.draw_clip(

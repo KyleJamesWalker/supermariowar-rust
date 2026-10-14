@@ -80,7 +80,7 @@ pub fn mo_attack_zone_collide_player<T: MO_AttackZoneTrait + ?Sized>(this: &mut 
             return false;
         }
 
-        if game_values.teamcollision != TeamCollisionStyle::On && player.teamID == iTeamID {
+        if game().game_values.teamcollision != TeamCollisionStyle::On && player.teamID == iTeamID {
             return false;
         }
 

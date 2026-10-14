@@ -644,7 +644,7 @@ pub fn frame_end() {
 
         h.frame += 1;
         if h.maxFrames >= 0 && h.frame as i64 >= h.maxFrames {
-            crate::common::global::game_values.appstate = AppState::Quit;
+            crate::game::game().game_values.appstate = AppState::Quit;
             h.dump = None;
         }
     }
@@ -1034,7 +1034,7 @@ fn record_frame_start(frame: u32) {
     if r.quit {
         // The recording ends before this frame; frames= excludes it.
         r.quitFrame.get_or_insert(frame);
-        unsafe { crate::common::global::game_values.appstate = AppState::Quit };
+        unsafe { crate::game::game().game_values.appstate = AppState::Quit };
     }
 }
 
@@ -1177,7 +1177,7 @@ pub fn match_checkpoint() {
 fn marker_state() -> &'static str {
     match state_name() {
         "menu" if MenuState::instance().harness_menu_name() == "world" => "worldmap",
-        "gameplay" if unsafe { crate::common::global::game_values.gamemode.gameover } => "scoreboard",
+        "gameplay" if unsafe { crate::game::game().game_values.gamemode.gameover } => "scoreboard",
         name => name,
     }
 }

@@ -131,10 +131,10 @@ impl PlayerWarpStatus {
         self.warpid = warp.id;
 
         unsafe {
-            if game_values.warplocktime > 0 {
-                match game_values.warplockstyle {
+            if game().game_values.warplocktime > 0 {
+                match game().game_values.warplockstyle {
                     WarpLockStyle::EntranceOnly | WarpLockStyle::EntranceAndExit => {
-                        game().g_map.warpexits[warp.id as usize].locktimer = game_values.warplocktime;
+                        game().g_map.warpexits[warp.id as usize].locktimer = game().game_values.warplocktime;
                     }
                     WarpLockStyle::EntireConnection => {
                         game().g_map.lockconnection(self.warpconnection as i32);
@@ -242,17 +242,17 @@ impl PlayerWarpStatus {
             }
 
             //Make player shielded when exiting the warp (if that option is turned on)
-            if game_values.shieldstyle != ShieldStyle::NoShield {
-                if !player.is_shielded() || (player.shield.time_left() as i32) < game_values.shieldtime as i32 {
+            if game().game_values.shieldstyle != ShieldStyle::NoShield {
+                if !player.is_shielded() || (player.shield.time_left() as i32) < game().game_values.shieldtime as i32 {
                     player.shield.reset();
                 }
             }
 
             //Lock the warp (if that option is turned on)
-            if game_values.warplocktime > 0 {
-                if game_values.warplockstyle == WarpLockStyle::ExitOnly || game_values.warplockstyle == WarpLockStyle::EntranceAndExit {
+            if game().game_values.warplocktime > 0 {
+                if game().game_values.warplockstyle == WarpLockStyle::ExitOnly || game().game_values.warplockstyle == WarpLockStyle::EntranceAndExit {
                     //Lock the warp exit
-                    exit.locktimer = game_values.warplocktime;
+                    exit.locktimer = game().game_values.warplocktime;
                 }
             }
         }

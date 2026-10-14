@@ -50,11 +50,11 @@ impl CGM_Stomp {
                 //Otherwise randomly choose an enemy from the weighted list
                 let iRandEnemy: i32 = RANDOM_INT(self.iEnemyWeightCount as i32) + 1;
                 self.iSelectedEnemy = 0;
-                let mut iWeightCount: i32 = game_values.gamemodesettings.stomp.enemyweight[self.iSelectedEnemy as usize] as i32;
+                let mut iWeightCount: i32 = game().game_values.gamemodesettings.stomp.enemyweight[self.iSelectedEnemy as usize] as i32;
 
                 while iWeightCount < iRandEnemy {
                     self.iSelectedEnemy += 1;
-                    iWeightCount += game_values.gamemodesettings.stomp.enemyweight[self.iSelectedEnemy as usize] as i32;
+                    iWeightCount += game().game_values.gamemodesettings.stomp.enemyweight[self.iSelectedEnemy as usize] as i32;
                 }
             }
 
@@ -82,7 +82,7 @@ impl CGM_Stomp {
 
     fn reset_spawn_timer(&mut self) {
         unsafe {
-            let rate = game_values.gamemodesettings.stomp.rate;
+            let rate = game().game_values.gamemodesettings.stomp.rate;
             self.spawntimer = ((RANDOM_INT(rate as i32) as i16) as i32 + rate as i32) as i16;
         }
     }
@@ -90,7 +90,7 @@ impl CGM_Stomp {
 
 pub fn net_spawn_enemy() {
     unsafe {
-        if let Some(this) = game_values.gamemode.as_any().downcast_mut::<CGM_Stomp>() {
+        if let Some(this) = game().game_values.gamemode.get().as_any().downcast_mut::<CGM_Stomp>() {
             this.spawn_enemy();
         }
     }
@@ -106,7 +106,7 @@ impl CGameModeTrait for CGM_Stomp {
         self.iEnemyWeightCount = 0;
         unsafe {
             for iEnemy in 0..NUMSTOMPENEMIES as usize {
-                self.iEnemyWeightCount += game_values.gamemodesettings.stomp.enemyweight[iEnemy];
+                self.iEnemyWeightCount += game().game_values.gamemodesettings.stomp.enemyweight[iEnemy];
             }
         }
 

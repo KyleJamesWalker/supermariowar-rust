@@ -97,7 +97,7 @@ pub fn setup_score_board_now(fOrderMatters: bool) {
                 if !doneWithScore[j as usize] {
                     let sj = score[j as usize];
                     //The boxes minigame doesn't use "score" it uses "subscore[0]" to determine the winner
-                    if game_values.gamemode.gamemode == game_mode_boxes_minigame {
+                    if game().game_values.gamemode.gamemode == game_mode_boxes_minigame {
                         if max == -1
                             || sj.subscore[0] > score[max as usize].subscore[0]
                             || (sj.subscore[0] == score[max as usize].subscore[0] && sj.score > score[max as usize].score)
@@ -122,7 +122,7 @@ pub fn setup_score_board_now(fOrderMatters: bool) {
             score[max as usize].place = i;
 
             if !fOrderMatters && i > 0 {
-                if game_values.gamemode.gamemode == game_mode_boxes_minigame {
+                if game().game_values.gamemode.gamemode == game_mode_boxes_minigame {
                     if score[oldmax as usize].subscore[0] == score[max as usize].subscore[0]
                         && score[oldmax as usize].score == score[max as usize].score
                     {
@@ -137,16 +137,16 @@ pub fn setup_score_board_now(fOrderMatters: bool) {
         }
 
         //Add the treasure chests to the map in world mode if there were any awards for winning this match
-        if game_values.matchtype == MatchType::World && game_values.gamemode.winningteam > -1 && game_values.gamemode.gamemode != game_mode_bonus {
-            let tourStop = game_values.tourstops[game_values.tourstopcurrent];
+        if game().game_values.matchtype == MatchType::World && game().game_values.gamemode.winningteam > -1 && game().game_values.gamemode.gamemode != game_mode_bonus {
+            let tourStop = game().game_values.tourstops[game().game_values.tourstopcurrent];
             let iNumBonuses: i16 = tourStop.iNumBonuses;
 
             for iBonus in 0..iNumBonuses {
                 if tourStop.wsbBonuses[iBonus as usize].iWinnerPlace == 0 {
                     let iBonusType: i16 = tourStop.wsbBonuses[iBonus as usize].iBonus;
                     objectcontainer[0].add(Ptr::new_box(PU_TreasureChestBonus::new(Ptr::from_mut(&mut game().rm.spr_bonuschest), 1, 0, 30, 30, 1, 1, iBonusType)));
-                    game_values.flags.noexittimer = 0;
-                    game_values.flags.noexit = false;
+                    game().game_values.flags.noexittimer = 0;
+                    game().game_values.flags.noexit = false;
                 }
             }
         }
@@ -161,23 +161,23 @@ pub fn show_score_board() {
 
 pub fn show_score_board_now() {
     unsafe {
-        game_values.flags.showscoreboard = true;
+        game().game_values.flags.showscoreboard = true;
 
         let mut iScoreboardElementHeight: i16 = 45;
-        if game_values.gamemode.gamemode == game_mode_health
-            || game_values.gamemode.gamemode == game_mode_collection
-            || game_values.gamemode.gamemode == game_mode_boxes_minigame
+        if game().game_values.gamemode.gamemode == game_mode_health
+            || game().game_values.gamemode.gamemode == game_mode_collection
+            || game().game_values.gamemode.gamemode == game_mode_boxes_minigame
         {
             iScoreboardElementHeight = 63;
         }
 
         for i in 0..score_cnt {
             let mut s = score[i as usize];
-            s.destx = (309 - 34 * game_values.teamcounts[i as usize] as i32) as i16;
+            s.destx = (309 - 34 * game().game_values.teamcounts[i as usize] as i32) as i16;
             s.desty = (s.displayorder as i32 * iScoreboardElementHeight as i32 + 140) as i16;
         }
 
-        if game_values.music {
+        if game().game_values.music {
             game().rm.sfx_invinciblemusic.stop();
             game().rm.sfx_timewarning.stop();
             game().rm.sfx_slowdownmusic.stop();
@@ -199,7 +199,7 @@ pub fn remove_team_now(teamid: i16) -> bool {
     unsafe {
         //If we have already removed this team then return
         if score[teamid as usize].order > -1 {
-            return game_values.flags.teamdeadcounter as i32 == score_cnt as i32 - 1;
+            return game().game_values.flags.teamdeadcounter as i32 == score_cnt as i32 - 1;
         }
 
         //kill all players on the dead team
@@ -215,11 +215,11 @@ pub fn remove_team_now(teamid: i16) -> bool {
             }
         }
 
-        score[teamid as usize].order = game_values.flags.teamdeadcounter;
-        game_values.flags.teamdeadcounter += 1;
+        score[teamid as usize].order = game().game_values.flags.teamdeadcounter;
+        game().game_values.flags.teamdeadcounter += 1;
 
         //Announce that a team was removed
-        if game_values.deadteamnotice && (game_values.flags.teamdeadcounter as i32) < score_cnt as i32 - 1 {
+        if game().game_values.deadteamnotice && (game().game_values.flags.teamdeadcounter as i32) < score_cnt as i32 - 1 {
             eyecandy[2].emplace(EC_Announcement::new(
                 Ptr::from_mut(&mut game().rm.game_font_large),
                 Ptr::from_mut(&mut game().rm.spr_announcementicons),
@@ -231,7 +231,7 @@ pub fn remove_team_now(teamid: i16) -> bool {
             game().rm.sfx_announcer[(iAnnouncementColor as i32 + 16) as usize].play();
         }
 
-        game_values.flags.teamdeadcounter as i32 == score_cnt as i32 - 1
+        game().game_values.flags.teamdeadcounter as i32 == score_cnt as i32 - 1
     }
 }
 
@@ -276,7 +276,7 @@ impl CGameMode {
         unsafe {
             game().rm.sfx_invinciblemusic.stop();
 
-            if game_values.music && game_values.sound {
+            if game().game_values.music && game().game_values.sound {
                 game().rm.backgroundmusic[0].stop();
             }
 

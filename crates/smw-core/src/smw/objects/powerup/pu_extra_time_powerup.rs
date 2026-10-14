@@ -44,8 +44,8 @@ impl CObjectTrait for PU_ExtraTimePowerup {
     fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
         unsafe {
             if self.state > 0 {
-                if game_values.gamemode.gamemode == game_mode_timelimit || game_values.gamemode.gamemode == game_mode_star {
-                    let mut gamemode = game_values.gamemode;
+                if game().game_values.gamemode.gamemode == game_mode_timelimit || game().game_values.gamemode.gamemode == game_mode_star {
+                    let mut gamemode = game().game_values.gamemode;
                     let timelimitmode: &mut CGM_TimeLimit = if gamemode.as_any().is::<CGM_Star>() {
                         gamemode.as_any().downcast_mut::<CGM_Star>().unwrap()
                     } else {

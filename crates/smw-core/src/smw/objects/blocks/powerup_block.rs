@@ -2,7 +2,7 @@
 
 use crate::game::game;
 use crate::common::game_mode::*;
-use crate::common::game_values::{game_values, if_sound_on_play};
+use crate::common::game_values::if_sound_on_play;
 use crate::common::gameplay_styles::TeamCollisionStyle;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::*;
@@ -75,22 +75,22 @@ impl B_PowerupBlock {
 
         unsafe {
             let n = NUM_POWERUPS as usize;
-            if piSettings[0] == -1 || game_values.overridepowerupsettings == 1 {
+            if piSettings[0] == -1 || game().game_values.overridepowerupsettings == 1 {
                 //Game Only
                 for iSetting in 0..n {
-                    b.settings[iSetting] = game_values.powerupweights[iSetting];
+                    b.settings[iSetting] = game().game_values.powerupweights[iSetting];
                 }
-            } else if game_values.overridepowerupsettings == 0 {
+            } else if game().game_values.overridepowerupsettings == 0 {
                 //Map Only
                 for iSetting in 0..n {
                     b.settings[iSetting] = piSettings[iSetting];
                 }
-            } else if game_values.overridepowerupsettings == 2 {
+            } else if game().game_values.overridepowerupsettings == 2 {
                 //Average
                 for iSetting in 0..n {
-                    b.settings[iSetting] = (piSettings[iSetting] as i32 + game_values.powerupweights[iSetting] as i32) as i16;
+                    b.settings[iSetting] = (piSettings[iSetting] as i32 + game().game_values.powerupweights[iSetting] as i32) as i16;
                 }
-            } else if game_values.overridepowerupsettings == 3 {
+            } else if game().game_values.overridepowerupsettings == 3 {
                 //Weighted
                 let mut dMapWeightCount: f32 = 0.0;
                 for iPowerup in 0..n {
@@ -99,11 +99,11 @@ impl B_PowerupBlock {
 
                 let mut dGameWeightCount: f32 = 0.0;
                 for iPowerup in 0..n {
-                    dGameWeightCount += game_values.powerupweights[iPowerup] as f32;
+                    dGameWeightCount += game().game_values.powerupweights[iPowerup] as f32;
                 }
 
                 for iSetting in 0..n {
-                    let dWeight: f32 = (piSettings[iSetting] as f32 / dMapWeightCount + game_values.powerupweights[iSetting] as f32 / dGameWeightCount) * 100.0f32;
+                    let dWeight: f32 = (piSettings[iSetting] as f32 / dMapWeightCount + game().game_values.powerupweights[iSetting] as f32 / dGameWeightCount) * 100.0f32;
 
                     //Cap lowest value at 1
                     if dWeight < 1.0f32 && dWeight > 0.0f32 {
@@ -194,10 +194,10 @@ pub fn b_powerup_block_update<T: B_PowerupBlockTrait + ?Sized>(this: &mut T) {
 
                 if_sound_on_play(&mut game().rm.sfx_sprout);
             } else if state == 3 {
-                if game_values.itemrespawntime > 0 && {
+                if game().game_values.itemrespawntime > 0 && {
                     let b = this.pb_mut();
                     b.timer += 1;
-                    b.timer >= game_values.itemrespawntime
+                    b.timer >= game().game_values.itemrespawntime
                 } {
                     this.reset();
                 }
@@ -219,8 +219,8 @@ pub fn b_powerup_block_update<T: B_PowerupBlockTrait + ?Sized>(this: &mut T) {
 
 fn b_powerup_block_release<T: B_PowerupBlockTrait + ?Sized>(this: &mut T, pos: Vec2s, side: bool) {
     unsafe {
-        let gm = game_values.gamemode.gamemode;
-        let gs = &game_values.gamemodesettings;
+        let gm = game().game_values.gamemode.gamemode;
+        let gs = &game().game_values.gamemodesettings;
         let iType = if gm == game_mode_health && RANDOM_INT(100) < gs.health.percentextralife as i32 {
             HEALTH_POWERUP as i16
         } else if (gm == game_mode_timelimit && RANDOM_INT(100) < gs.time.percentextratime as i32)
@@ -313,7 +313,7 @@ pub fn b_powerup_block_hittop_player<T: B_PowerupBlockTrait + ?Sized>(this: &mut
             let (iBumpPlayerID, iBumpTeamID) = (this.pb().iBumpPlayerID, this.pb().iBumpTeamID);
             if iBumpPlayerID >= 0
                 && !player.is_invincible_on_bottom()
-                && (player.teamID != iBumpTeamID || game_values.teamcollision == TeamCollisionStyle::On)
+                && (player.teamID != iBumpTeamID || game().game_values.teamcollision == TeamCollisionStyle::On)
             {
                 iKillType = player_killed_player(iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
             }

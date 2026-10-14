@@ -73,10 +73,10 @@ impl UI_OptionsMenu {
             this.miEyeCandyOptionsMenuButton = Ptr::new_box(MI_Button::new(spr_selectfield, 120, 320, "Eye Candy", 400, TextAlign::CENTER));
             this.miEyeCandyOptionsMenuButton.set_code(MENU_CODE_TO_EYECANDY_OPTIONS_MENU);
 
-            let sound_spr = if game_values.soundcapable { spr_selectfield } else { Ptr::from_mut(&mut game().rm.spr_selectfielddisabled) };
+            let sound_spr = if game().game_values.soundcapable { spr_selectfield } else { Ptr::from_mut(&mut game().rm.spr_selectfielddisabled) };
             this.miSoundOptionsMenuButton = Ptr::new_box(MI_Button::new(sound_spr, 120, 360, "Music & Sound", 400, TextAlign::CENTER));
 
-            if game_values.soundcapable {
+            if game().game_values.soundcapable {
                 this.miSoundOptionsMenuButton.set_code(MENU_CODE_TO_SOUND_OPTIONS_MENU);
             }
 

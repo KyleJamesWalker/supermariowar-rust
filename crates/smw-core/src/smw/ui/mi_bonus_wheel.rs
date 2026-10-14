@@ -124,15 +124,15 @@ impl MI_BonusWheel {
             self.iDisplayPowerupTimer = 0;
 
             if fTournament {
-                self.iWinningTeam = game_values.tournamentwinner;
+                self.iWinningTeam = game().game_values.tournamentwinner;
             } else {
-                self.iWinningTeam = game_values.gamemode.gm().winningteam;
+                self.iWinningTeam = game().game_values.gamemode.gm().winningteam;
             }
 
             //Randomly display the powerups around the ring
             let mut iCountWeight: i16 = 0;
             for iPowerup in 0..NUM_POWERUPS as usize {
-                iCountWeight += game_values.powerupweights[iPowerup];
+                iCountWeight += game().game_values.powerupweights[iPowerup];
             }
 
             //Always have at least 1 poison mushroom to try to avoid
@@ -143,11 +143,11 @@ impl MI_BonusWheel {
 
                 if iCountWeight > 0 && iPoisonMushroom != iPowerup {
                     let iRandPowerup = RANDOM_INT(iCountWeight as i32 + 1);
-                    let mut iPowerupWeightCount: i32 = game_values.powerupweights[iChoosePowerup as usize] as i32;
+                    let mut iPowerupWeightCount: i32 = game().game_values.powerupweights[iChoosePowerup as usize] as i32;
 
                     while iPowerupWeightCount < iRandPowerup {
                         iChoosePowerup += 1;
-                        iPowerupWeightCount += game_values.powerupweights[iChoosePowerup as usize] as i32;
+                        iPowerupWeightCount += game().game_values.powerupweights[iChoosePowerup as usize] as i32;
                     }
                 }
 
@@ -158,13 +158,13 @@ impl MI_BonusWheel {
             //Setup player images on wheel
             self.miPlayerImages.clear();
 
-            self.iNumPlayers = game_values.teamcounts[self.iWinningTeam as usize];
+            self.iNumPlayers = game().game_values.teamcounts[self.iWinningTeam as usize];
 
             self.miPlayerImages = Vec::with_capacity(self.iNumPlayers.max(0) as usize);
 
             let mut iPlayerX = (self.m_pos.x as i32 + 160 - ((self.iNumPlayers as i32 - 1) * 17)) as i16;
             for iPlayer in 0..self.iNumPlayers as usize {
-                let id = game_values.teamids[self.iWinningTeam as usize][iPlayer] as usize;
+                let id = game().game_values.teamids[self.iWinningTeam as usize][iPlayer] as usize;
                 self.miPlayerImages.push(Box::new(MI_Image::new(
                     Ptr::from_mut(&mut game().rm.spr_player[id][PGFX_JUMPING_R as usize]),
                     iPlayerX,
@@ -206,8 +206,8 @@ impl MI_BonusWheel {
 
             //Figure out if only cpus are on the winning team, if so, the wheel will be stopped early
             self.fCpuControlled = true;
-            for iPlayer in 0..game_values.teamcounts[self.iWinningTeam as usize] as usize {
-                if game_values.playercontrol[game_values.teamids[self.iWinningTeam as usize][iPlayer] as usize] == 1 {
+            for iPlayer in 0..game().game_values.teamcounts[self.iWinningTeam as usize] as usize {
+                if game().game_values.playercontrol[game().game_values.teamids[self.iWinningTeam as usize][iPlayer] as usize] == 1 {
                     self.fCpuControlled = false;
                 }
             }
@@ -335,16 +335,16 @@ impl UI_ControlTrait for MI_BonusWheel {
                         self.miContinueButton.select(true);
 
                         //Reset all player's stored item
-                        if !game_values.keeppowerup {
+                        if !game().game_values.keeppowerup {
                             for iPlayer in 0..4usize {
-                                game_values.storedpowerups[iPlayer] = -1;
+                                game().game_values.storedpowerups[iPlayer] = -1;
                             }
                         }
 
                         //Give the newly won stored item to the winning players
                         let w = self.iWinningTeam as usize;
-                        for iPlayer in 0..game_values.teamcounts[w] as usize {
-                            game_values.storedpowerups[game_values.teamids[w][iPlayer] as usize] = self.iSelectedPowerup;
+                        for iPlayer in 0..game().game_values.teamcounts[w] as usize {
+                            game().game_values.storedpowerups[game().game_values.teamids[w][iPlayer] as usize] = self.iSelectedPowerup;
                         }
 
                         if_sound_on_play(&mut game().rm.sfx_collectpowerup);

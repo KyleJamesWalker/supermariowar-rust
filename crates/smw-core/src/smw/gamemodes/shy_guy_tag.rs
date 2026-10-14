@@ -145,9 +145,9 @@ impl CGameModeTrait for CGM_ShyGuyTag {
             //If we are not waiting to clear, check if we need to start waiting
             if !self.fRunClock {
                 if shyguycount as usize == players.len() {
-                    if game_values.gamemodesettings.shyguytag.freetime > 0 {
+                    if game().game_values.gamemodesettings.shyguytag.freetime > 0 {
                         self.fRunClock = true;
-                        self.gameClock.set_time(game_values.gamemodesettings.shyguytag.freetime);
+                        self.gameClock.set_time(game().game_values.gamemodesettings.shyguytag.freetime);
                         if_sound_on_play(&mut game().rm.sfx_starwarning);
                     } else {
                         self.free_shy_guys();
@@ -168,7 +168,7 @@ impl CGameModeTrait for CGM_ShyGuyTag {
             //Award points to non shyguys
             if shyguycount > 0 {
                 self.scorecounter += 1;
-                if self.scorecounter >= game_values.pointspeed {
+                if self.scorecounter >= game().game_values.pointspeed {
                     self.scorecounter = 0;
 
                     let mut pCheckWinner: Ptr<CPlayer> = Ptr::null();
@@ -206,7 +206,7 @@ impl CGameModeTrait for CGM_ShyGuyTag {
             return PlayerKillType::Normal;
         }
 
-        if self.count_shy_guys() == 0 || unsafe { game_values.gamemodesettings.shyguytag.tagtransfer } != 0 {
+        if self.count_shy_guys() == 0 || unsafe { game().game_values.gamemodesettings.shyguytag.tagtransfer } != 0 {
             self.set_shy_guy(other.get_team_id());
         }
 
@@ -216,7 +216,7 @@ impl CGameModeTrait for CGM_ShyGuyTag {
     fn playerkilledself(&mut self, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
         gm::cgamemode_playerkilledself(self, player, style);
 
-        if !self.gameover && unsafe { game_values.gamemodesettings.shyguytag.tagonsuicide } {
+        if !self.gameover && unsafe { game().game_values.gamemodesettings.shyguytag.tagonsuicide } {
             self.set_shy_guy(player.get_team_id());
         }
 
