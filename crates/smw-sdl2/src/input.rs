@@ -5,6 +5,9 @@ use sdl2::sys::SDL_EventType::*;
 use sdl2::sys::{SDL_Event, SDL_PRESSED, SDL_RELEASED};
 use smw_platform::{DeviceChange, Input, InputEvent, Keycode, MouseEvent, PadSlot, TouchPhase};
 
+/// The `SDL_USEREVENT` code that carries an `InputEvent::Tap`.
+const TAP_CODE: i32 = 0x5441;
+
 fn state(down: bool) -> u8 {
     (if down { SDL_PRESSED } else { SDL_RELEASED }) as u8
 }
@@ -75,6 +78,8 @@ pub fn from_sdl(e: &SDL_Event) -> Input {
                 which: b.which,
                 event: MouseEvent::Button { button: b.button, down: is(SDL_MOUSEBUTTONDOWN), clicks: b.clicks, x: b.x, y: b.y },
             }
+        } else if is(SDL_USEREVENT) && e.user.code == TAP_CODE {
+            InputEvent::Tap { x: e.user.data1 as isize as i16, y: e.user.data2 as isize as i16 }
         } else if is(SDL_MOUSEWHEEL) {
             let w = e.wheel;
             InputEvent::Mouse { window: w.windowID, which: w.which, event: MouseEvent::Wheel { x: w.x, y: w.y } }
@@ -190,6 +195,12 @@ pub fn to_sdl(input: &Input) -> SDL_Event {
                     e.wheel.y = y;
                 }
             },
+            &InputEvent::Tap { x, y } => {
+                e.user.type_ = SDL_USEREVENT as u32;
+                e.user.code = TAP_CODE;
+                e.user.data1 = x as isize as *mut std::ffi::c_void;
+                e.user.data2 = y as isize as *mut std::ffi::c_void;
+            }
             &InputEvent::Other(t) => e.type_ = t,
         }
         e.common.timestamp = input.timestamp;
@@ -231,6 +242,7 @@ mod tests {
         round_trip(InputEvent::Text("Kyle_7! é".to_string()));
         round_trip(InputEvent::Mouse { window: 1, which: 0, event: MouseEvent::Motion { x: 320, y: 240, xrel: -3, yrel: 6, buttons: 5 } });
         round_trip(InputEvent::Mouse { window: 1, which: 0, event: MouseEvent::Wheel { x: 0, y: -1 } });
+        round_trip(InputEvent::Tap { x: 639, y: 0 });
         round_trip(InputEvent::Other(0x200));
     }
 

@@ -18,7 +18,7 @@ use sdl2::sys::{
     SDL_JoystickInstanceID, SDL_JoystickType, SDL_KeyCode, SDL_Keymod, SDL_SetHint, SDL_INIT_JOYSTICK,
     SDL_PRESSED, SDL_RELEASED,
 };
-use smw_platform::{Input, InputEvent, Keycode, PadSlot};
+use smw_platform::{Input, InputEvent, Keycode, PadSlot, SCREEN_H, SCREEN_W};
 use std::ffi::CStr;
 use std::collections::BTreeSet;
 use std::ffi::CString;
@@ -36,6 +36,7 @@ enum EventKind {
     JoyAxis,
     JoyButton,
     JoyHat,
+    Tap,
 }
 
 struct ReplayEvent {
@@ -208,7 +209,17 @@ fn load_events(path: &str) -> Vec<ReplayEvent> {
             }
             continue;
         }
-        if dir == "jaxis" || dir == "jbutton" || dir == "jhat" {
+        if dir == "tap" {
+            let nums: Vec<Option<i32>> = rest.split_whitespace().map(|t| t.parse::<i32>().ok()).collect();
+            match nums.as_slice() {
+                [Some(x), Some(y)] if (0..SCREEN_W as i32).contains(x) && (0..SCREEN_H as i32).contains(y) => {
+                    ev.kind = EventKind::Tap;
+                    ev.index = *x;
+                    ev.value = *y;
+                }
+                _ => fail(format!("{}:{}: expected '<frame> tap <x> <y>'", path, lineno)),
+            }
+        } else if dir == "jaxis" || dir == "jbutton" || dir == "jhat" {
             ev.kind = match dir {
                 "jaxis" => EventKind::JoyAxis,
                 "jbutton" => EventKind::JoyButton,
@@ -311,6 +322,7 @@ fn input_for(ev: &ReplayEvent) -> InputEvent {
         EventKind::JoyAxis => InputEvent::PadAxis { pad, axis: ev.index as u8, value: ev.value as i16 },
         EventKind::JoyButton => InputEvent::PadButton { pad, button: ev.index as u8, down: ev.value != 0 },
         EventKind::JoyHat => InputEvent::PadHat { pad, hat: ev.index as u8, value: ev.value as u8 },
+        EventKind::Tap => InputEvent::Tap { x: ev.index as i16, y: ev.value as i16 },
     }
 }
 
@@ -828,7 +840,7 @@ fn is_input_event(t: u32) -> bool {
         SDL_KEYDOWN, SDL_KEYUP, SDL_TEXTEDITING, SDL_TEXTINPUT, SDL_KEYMAPCHANGED, SDL_MOUSEMOTION, SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP,
         SDL_MOUSEWHEEL, SDL_JOYAXISMOTION, SDL_JOYBALLMOTION, SDL_JOYHATMOTION, SDL_JOYBUTTONDOWN, SDL_JOYBUTTONUP, SDL_JOYDEVICEADDED,
         SDL_JOYDEVICEREMOVED, SDL_CONTROLLERAXISMOTION, SDL_CONTROLLERBUTTONDOWN, SDL_CONTROLLERBUTTONUP, SDL_CONTROLLERDEVICEADDED,
-        SDL_CONTROLLERDEVICEREMOVED, SDL_CONTROLLERDEVICEREMAPPED, SDL_FINGERDOWN, SDL_FINGERUP, SDL_FINGERMOTION, SDL_QUIT,
+        SDL_CONTROLLERDEVICEREMOVED, SDL_CONTROLLERDEVICEREMAPPED, SDL_FINGERDOWN, SDL_FINGERUP, SDL_FINGERMOTION, SDL_QUIT, SDL_USEREVENT,
     ]
     .iter()
     .any(|&e| e as u32 == t)
@@ -853,7 +865,14 @@ unsafe extern "C" fn record_filter(_userdata: *mut std::ffi::c_void, event: *mut
 /// The replay line for a raw SDL event, or None for input the replay format cannot express.
 fn to_replay_event(raw: &SDL_Event, frame: u32) -> Option<ReplayEvent> {
     let mut ev = ReplayEvent { frame, kind: EventKind::Key, down: false, keyName: String::new(), device: 0, index: 0, value: 0 };
-    let (which, kind, index, value) = match smw_sdl2::input::from_sdl(raw).event {
+    let input = smw_sdl2::input::from_sdl(raw).event;
+    if let Some((x, y)) = input.tap() {
+        ev.kind = EventKind::Tap;
+        ev.index = x as i32;
+        ev.value = y as i32;
+        return Some(ev);
+    }
+    let (which, kind, index, value) = match input {
         InputEvent::Key { key, down, .. } => unsafe {
             let name = CStr::from_ptr(SDL_GetKeyName(key.0)).to_string_lossy().into_owned();
             if name.is_empty() || SDL_GetKeyFromName(CString::new(name.as_bytes()).ok()?.as_ptr()) != key.0 {
@@ -903,6 +922,7 @@ fn line_for(ev: &ReplayEvent) -> String {
         EventKind::JoyAxis => format!("{} jaxis {} {} {}", ev.frame, ev.device, ev.index, ev.value),
         EventKind::JoyButton => format!("{} jbutton {} {} {}", ev.frame, ev.device, ev.index, ev.value),
         EventKind::JoyHat => format!("{} jhat {} {} {}", ev.frame, ev.device, ev.index, ev.value),
+        EventKind::Tap => format!("{} tap {} {}", ev.frame, ev.index, ev.value),
     }
 }
 
