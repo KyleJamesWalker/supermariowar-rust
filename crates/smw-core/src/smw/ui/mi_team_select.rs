@@ -557,4 +557,33 @@ impl UI_ControlTrait for MI_TeamSelect {
         self.fModifying = modify;
         MENU_CODE_MODIFY_ACCEPTED
     }
+
+    /// Not in upstream: a tap on a player's box readies that player, and a tap on Continue starts setup.
+    /// Every tap counts as on this control, which fills the screen and only takes input while modifying.
+    fn mouse_click(&mut self, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
+        if !self.m_visible {
+            return MENU_CODE_NONE;
+        }
+
+        let (mx, my) = (iMouseX as i32, iMouseY as i32);
+        let (px, py) = (self.m_pos.x as i32, self.m_pos.y as i32);
+
+        if self.fAllReady {
+            let fy = (py as f32 + App::screenHeight as f32 * 0.47f32) as i32;
+            if mx >= px + 108 && mx < px + 308 && my >= fy && my < fy + 32 {
+                self.fModifying = false;
+                return MENU_CODE_TO_GAME_SETUP_MENU;
+            }
+        }
+
+        for p in 0..4usize {
+            let x = p as i32 * 160 + 16;
+            if game().game_values.playercontrol[p] > 0 && mx >= x && mx < x + 128 && my >= 368 && my < 464 {
+                self.fReady[p] = !self.fReady[p];
+                self.fAllReady = self.fReady.iter().all(|&r| r);
+            }
+        }
+
+        MENU_CODE_CLICKED
+    }
 }
