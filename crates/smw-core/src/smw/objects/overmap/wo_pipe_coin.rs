@@ -9,7 +9,6 @@ use crate::common::math::vec2::{Vec2f, Vec2s};
 use crate::common::object_base::{object_pipe_coin, CObjectTrait};
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::main::pipegamemode;
 use crate::smw::objects::overmap::over_map_object::{IO_OverMapObject, IO_OverMapObjectTrait};
 use crate::smw::player::CPlayer;
 use sdl2::sys::SDL_Rect;
@@ -46,7 +45,7 @@ impl OMO_PipeCoin {
         this.velx = vel.x;
 
         unsafe {
-            if pipegamemode.is_slowdown() {
+            if game().pipegamemode.is_slowdown() {
                 this.vely = vel.y / 2.0f32;
             } else {
                 this.vely = vel.y;
@@ -84,7 +83,7 @@ impl CObjectTrait for OMO_PipeCoin {
         }
 
         unsafe {
-            if pipegamemode.is_slowdown() {
+            if game().pipegamemode.is_slowdown() {
                 self.vely += GRAVITATION / 1.5f32;
             } else {
                 self.vely += GRAVITATION;

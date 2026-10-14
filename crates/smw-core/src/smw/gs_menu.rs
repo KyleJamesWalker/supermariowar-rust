@@ -21,11 +21,11 @@ use crate::common::world_tour_stop::{parse_tour_stop_line, reset_tour_stops, Str
 use crate::globals::*;
 use crate::common::eyecandy::EC_Announcement;
 use crate::smw::world::{g_worldmap, WorldMap};
-use crate::smw::main::{bonushousemode, bossgamemode, boxesgamemode, pipegamemode};
+
 use crate::smw::game_state::{GameState, GameStateManager};
 use crate::smw::gs_gameplay::{lookup_team_id, GameplayState};
 use crate::smw::harness;
-use crate::smw::main::{currentgamemode, gamemodes};
+
 use crate::smw::menu::bonus_wheel_menu::UI_BonusWheelMenu;
 use crate::smw::menu::game_settings_menu::UI_GameSettingsMenu;
 use crate::smw::menu::main_menu::UI_MainMenu;
@@ -511,19 +511,19 @@ impl MenuState {
                 let minigame: Minigame = self.mMatchSelectionMenu.get_minigame();
                 match minigame {
                     Minigame::PipeCoin => {
-                        pipegamemode.goal = 50;
-                        game().game_values.gamemode = Ptr::from_raw(pipegamemode.as_ptr() as *mut dyn CGameModeTrait);
+                        game().pipegamemode.goal = 50;
+                        game().game_values.gamemode = Ptr::from_raw(game().pipegamemode.as_ptr() as *mut dyn CGameModeTrait);
                     }
                     Minigame::HammerBoss | Minigame::BombBoss | Minigame::FireBoss => {
                         game().game_values.gamemodemenusettings.boss.difficulty = 2;
                         game().game_values.gamemodemenusettings.boss.hitpoints = 5;
 
-                        bossgamemode.goal = 5;
-                        game().game_values.gamemode = Ptr::from_raw(bossgamemode.as_ptr() as *mut dyn CGameModeTrait);
+                        game().bossgamemode.goal = 5;
+                        game().game_values.gamemode = Ptr::from_raw(game().bossgamemode.as_ptr() as *mut dyn CGameModeTrait);
                     }
                     Minigame::Boxes => {
-                        boxesgamemode.goal = 10;
-                        game().game_values.gamemode = Ptr::from_raw(boxesgamemode.as_ptr() as *mut dyn CGameModeTrait);
+                        game().boxesgamemode.goal = 10;
+                        game().game_values.gamemode = Ptr::from_raw(game().boxesgamemode.as_ptr() as *mut dyn CGameModeTrait);
                     }
                 }
                 match minigame {
@@ -542,7 +542,7 @@ impl MenuState {
             } else if MatchType::QuickGame == game().game_values.matchtype {
                 println!(" Match type: Quick game");
                 let iRandomMode = RANDOM_INT(GAMEMODE_LAST) as i16;
-                game().game_values.gamemode = gamemodes[iRandomMode as usize];
+                game().game_values.gamemode = game().gamemodes[iRandomMode as usize];
 
                 //Choose a goal from the lower values for a quicker game
                 let iRandOption = (RANDOM_INT(6) + 1) as i16;
@@ -638,10 +638,10 @@ impl MenuState {
                         game().maplist.findexact(&szCurrentMapName, false);
                         self.mGameSettingsMenu.miMapField.load_current_map();
 
-                        game().game_values.gamemode = gamemodes[self.mGameSettingsMenu.get_current_game_mode_id() as usize];
+                        game().game_values.gamemode = game().gamemodes[self.mGameSettingsMenu.get_current_game_mode_id() as usize];
 
                         for iMode in 0..GAMEMODE_LAST as usize {
-                            gamemodes[iMode].goal = self.mGameSettingsMenu.miGoalField[iMode].current_value();
+                            game().gamemodes[iMode].goal = self.mGameSettingsMenu.miGoalField[iMode].current_value();
                         }
 
                         if self.mGameSettingsMenu.get_current_game_mode_id() as GameModeType == game_mode_owned {
@@ -848,7 +848,7 @@ impl MenuState {
                 } else if game().game_values.gamemode.gamemode == game_mode_boss_minigame {
                     if !fMiniGameMapFound {
                         let bossType: Boss = game().game_values.gamemodesettings.boss.bosstype;
-                        bossgamemode.set_boss_type(bossType);
+                        game().bossgamemode.set_boss_type(bossType);
                         match bossType {
                             Boss::Hammer => load_match_map(&convert_path("maps/special/two52_special_hammerboss_minigame.map")),
                             Boss::Bomb => load_match_map(&convert_path("maps/special/two52_special_bombboss_minigame.map")),
@@ -904,7 +904,7 @@ pub fn roll_net_game_mode_settings() {
     unsafe {
         if let Some(state) = ms.as_mut() {
             if !state.mModeOptionsMenu.is_null() {
-                state.mModeOptionsMenu.set_random_game_mode_settings(currentgamemode);
+                state.mModeOptionsMenu.set_random_game_mode_settings(game().currentgamemode);
             }
         }
     }
@@ -914,7 +914,7 @@ pub fn roll_net_game_mode_settings() {
 pub fn describe_net_game_mode_settings() -> Vec<String> {
     unsafe {
         match ms.as_ref() {
-            Some(state) if !state.mModeOptionsMenu.is_null() => state.mModeOptionsMenu.describe_game_mode_settings(currentgamemode),
+            Some(state) if !state.mModeOptionsMenu.is_null() => state.mModeOptionsMenu.describe_game_mode_settings(game().currentgamemode),
             _ => Vec::new(),
         }
     }
@@ -1088,7 +1088,7 @@ impl MenuState {
                     self.mCurrentMenu = menu(self.mGameSettingsMenu);
                 }
             } else if MENU_CODE_MODE_CHANGED == code {
-                game().game_values.gamemode = gamemodes[self.mGameSettingsMenu.get_current_game_mode_id() as usize];
+                game().game_values.gamemode = game().gamemodes[self.mGameSettingsMenu.get_current_game_mode_id() as usize];
                 self.mGameSettingsMenu.refresh_game_mode_buttons();
                 self.mNetNewRoomSettingsMenu.refresh_game_mode_buttons();
             } else if MENU_CODE_BACK_TEAM_SELECT_MENU == code {
@@ -1253,19 +1253,19 @@ impl MenuState {
 
                 //Tour bonus house
                 if game().game_values.matchtype == MatchType::World && game().game_values.tourstops[game().game_values.tourstopcurrent].iStageType == 1 {
-                    bonushousemode.goal = 0;
-                    game().game_values.gamemode = Ptr::from_raw(bonushousemode.as_ptr() as *mut dyn CGameModeTrait);
+                    game().bonushousemode.goal = 0;
+                    game().game_values.gamemode = Ptr::from_raw(game().bonushousemode.as_ptr() as *mut dyn CGameModeTrait);
                 } else {
                     let iGameMode = game().game_values.tourstops[game().game_values.tourstopcurrent].iMode;
 
                     if iGameMode as GameModeType == game_mode_pipe_minigame {
-                        game().game_values.gamemode = Ptr::from_raw(pipegamemode.as_ptr() as *mut dyn CGameModeTrait);
+                        game().game_values.gamemode = Ptr::from_raw(game().pipegamemode.as_ptr() as *mut dyn CGameModeTrait);
                     } else if iGameMode as GameModeType == game_mode_boss_minigame {
-                        game().game_values.gamemode = Ptr::from_raw(bossgamemode.as_ptr() as *mut dyn CGameModeTrait);
+                        game().game_values.gamemode = Ptr::from_raw(game().bossgamemode.as_ptr() as *mut dyn CGameModeTrait);
                     } else if iGameMode as GameModeType == game_mode_boxes_minigame {
-                        game().game_values.gamemode = Ptr::from_raw(boxesgamemode.as_ptr() as *mut dyn CGameModeTrait);
+                        game().game_values.gamemode = Ptr::from_raw(game().boxesgamemode.as_ptr() as *mut dyn CGameModeTrait);
                     } else {
-                        game().game_values.gamemode = gamemodes[iGameMode as usize];
+                        game().game_values.gamemode = game().gamemodes[iGameMode as usize];
                     }
 
                     game().game_values.gamemode.goal = game().game_values.tourstops[game().game_values.tourstopcurrent].iGoal;
@@ -1624,7 +1624,7 @@ impl GameState for MenuState {
             }
 
             //Reset game mode back to the current game mode in case we came from boss mode
-            game().game_values.gamemode = gamemodes[currentgamemode as usize];
+            game().game_values.gamemode = game().gamemodes[game().currentgamemode as usize];
 
             //Keep track if we entered the menu loop as part of a tournament, if we exit the tournament
             //we need to reset the menu music back to normal
@@ -1721,10 +1721,10 @@ impl GameState for MenuState {
 
                         self.iTournamentAITimer = 60;
                     } else if self.iTournamentAIStep == 2 {
-                        currentgamemode = RANDOM_INT(GAMEMODE_LAST) as i16;
-                        game().game_values.gamemode = gamemodes[currentgamemode as usize];
-                        self.mGameSettingsMenu.game_mode_changed(currentgamemode);
-                        game().game_values.gamemode = gamemodes[self.mGameSettingsMenu.get_current_game_mode_id() as usize];
+                        game().currentgamemode = RANDOM_INT(GAMEMODE_LAST) as i16;
+                        game().game_values.gamemode = game().gamemodes[game().currentgamemode as usize];
+                        self.mGameSettingsMenu.game_mode_changed(game().currentgamemode);
+                        game().game_values.gamemode = game().gamemodes[self.mGameSettingsMenu.get_current_game_mode_id() as usize];
 
                         self.iTournamentAITimer = 60;
                     } else if self.iTournamentAIStep == 3 {
@@ -1733,8 +1733,8 @@ impl GameState for MenuState {
                         let goal = game().game_values.gamemode.get_options()[iRandOption as usize].iValue;
                         game().game_values.gamemode.goal = goal;
 
-                        let modeGoal = gamemodes[currentgamemode as usize].goal;
-                        self.mGameSettingsMenu.miGoalField[currentgamemode as usize].set_current_value(modeGoal);
+                        let modeGoal = game().gamemodes[game().currentgamemode as usize].goal;
+                        self.mGameSettingsMenu.miGoalField[game().currentgamemode as usize].set_current_value(modeGoal);
 
                         self.mModeOptionsMenu.set_random_game_mode_settings(game().game_values.gamemode.gamemode as i16);
 

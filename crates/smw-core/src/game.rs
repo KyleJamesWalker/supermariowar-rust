@@ -1,6 +1,7 @@
 //! The game's state as one value (docs/ARCHITECTURE_V2.md, Step 2: globals into a `Game` struct).
 
 use crate::common::eyecandy::CEyecandyContainer;
+use crate::common::game_mode::{CGameModeTrait, GAMEMODE_LAST};
 use crate::common::file_list::{AnnouncerList, FiltersList, GraphicsList, MusicList, SkinList, SoundsList, TourList, WorldList, WorldMusicList};
 use crate::common::map::CMap;
 use crate::common::map_list::MapList;
@@ -11,6 +12,7 @@ use crate::common::resource_manager::CResourceManager;
 use crate::common::tileset_manager::CTilesetManager;
 use crate::common::game_values::CGameValues;
 use crate::globals::{Global, Ptr};
+use crate::smw::gamemodes::{bonus_house::CGM_Bonus, mini_boss::CGM_Boss_MiniGame, mini_boxes::CGM_Boxes_MiniGame, mini_pipe::CGM_Pipe_MiniGame};
 use crate::smw::object_container::CObjectContainer;
 use crate::smw::player::CPlayer;
 
@@ -38,6 +40,12 @@ pub struct Game {
     pub players: Vec<Ptr<CPlayer>>,
     pub score: [Ptr<CScore>; 4],
     pub score_cnt: i16,
+    pub gamemodes: [Ptr<dyn CGameModeTrait>; GAMEMODE_LAST as usize],
+    pub bonushousemode: Ptr<CGM_Bonus>,
+    pub pipegamemode: Ptr<CGM_Pipe_MiniGame>,
+    pub bossgamemode: Ptr<CGM_Boss_MiniGame>,
+    pub boxesgamemode: Ptr<CGM_Boxes_MiniGame>,
+    pub currentgamemode: i16,
     pub rng: RngState,
     pub sfx: SfxState,
 }
@@ -67,6 +75,12 @@ impl Game {
             players: Vec::new(),
             score: [Ptr::null(); 4],
             score_cnt: 0,
+            gamemodes: [Ptr::null(); GAMEMODE_LAST as usize],
+            bonushousemode: Ptr::null(),
+            pipegamemode: Ptr::null(),
+            bossgamemode: Ptr::null(),
+            boxesgamemode: Ptr::null(),
+            currentgamemode: 0,
             rng: RngState::new(),
             sfx: SfxState::new(),
         }

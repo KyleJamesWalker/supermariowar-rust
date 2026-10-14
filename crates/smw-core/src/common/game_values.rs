@@ -809,7 +809,7 @@ impl CGameConfig {
             self.fullscreen = options.read_bool();
 
             for iGameMode in 0..GAMEMODE_LAST as usize {
-                crate::smw::main::gamemodes[iGameMode].goal = options.read_i16();
+                crate::game::game().gamemodes[iGameMode].goal = options.read_i16();
             }
 
             let mut gms = [0u8; GAMEMODESETTINGS_RAW_SIZE];
@@ -953,7 +953,7 @@ impl CGameConfig {
             options.write_bool(self.fullscreen);
 
             for k in 0..GAMEMODE_LAST as usize {
-                options.write_i16(crate::smw::main::gamemodes[k].goal);
+                options.write_i16(crate::game::game().gamemodes[k].goal);
             }
 
             options.write_raw(&self.gamemodemenusettings.to_raw_bytes());

@@ -11,7 +11,6 @@ use crate::common::match_types::Boss;
 use crate::common::random_number_generator::RANDOM_INT;
 use crate::common::version::Version;
 use crate::globals::{Ptr, Aliased};
-use crate::smw::main::gamemodes;
 
 const DELIM_EMPTY: &str = "";
 const DELIM_COMMA: &str = ",";
@@ -187,7 +186,7 @@ pub fn parse_tour_stop_line(buffer: &[u8], version: &Version, fIsWorld: bool) ->
         if ts.iGoal <= 0 {
             if (ts.iMode as i32) < GAMEMODE_LAST {
                 let idx = RANDOM_INT(GAMEMODE_NUM_OPTIONS as i32 - 1) as usize;
-                ts.iGoal = unsafe { gamemodes[ts.iMode as usize].get_options()[idx].iValue };
+                ts.iGoal = unsafe { game().gamemodes[ts.iMode as usize].get_options()[idx].iValue };
             } else {
                 ts.iGoal = 50;
             }

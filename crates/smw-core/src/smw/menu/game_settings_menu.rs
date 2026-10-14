@@ -13,7 +13,7 @@ use crate::common::ui::mi_text::{MI_HeaderText, MI_Text};
 use crate::common::uicontrol::{ctl_ptr, ControlPtr, TextAlign};
 use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
-use crate::smw::main::{currentgamemode, gamemodes};
+
 use crate::smw::ui::mi_map_filter_scroll::MI_MapFilterScroll;
 
 const g_szAutoFilterNames: [&str; NUM_AUTO_FILTERS as usize] = [
@@ -75,15 +75,15 @@ impl UI_GameSettingsMenu {
             this.miModeField = Ptr::new_box(MI_ImageSelectField::new(spr_selectfield, Ptr::from_mut(&mut game().rm.menu_mode_small), 70, 85, "Mode", 500, 120, 16, 16));
 
             for iGameMode in 0..GAMEMODE_LAST as i16 {
-                let name = gamemodes[iGameMode as usize].gm().get_mode_name().to_string();
+                let name = game().gamemodes[iGameMode as usize].gm().get_mode_name().to_string();
                 this.miModeField.add(name, iGameMode);
             }
-            this.miModeField.set_output_ptr(&mut currentgamemode);
+            this.miModeField.set_output_ptr(&mut game().currentgamemode);
             this.miModeField.set_current_value(0);
             this.miModeField.set_item_changed_code(MENU_CODE_MODE_CHANGED);
 
             for iGameMode in 0..GM_LAST {
-                let mut mode = gamemodes[iGameMode];
+                let mut mode = game().gamemodes[iGameMode];
                 let mut field = Ptr::new_box(MI_SelectField::<i16>::new(spr_selectfield, 70, 125, mode.gm().get_goal_name(), 352, 120));
                 this.miGoalField[iGameMode] = field;
                 // miGoalField[iGameMode]->SetKey(gamemodes[iGameMode]->goal);

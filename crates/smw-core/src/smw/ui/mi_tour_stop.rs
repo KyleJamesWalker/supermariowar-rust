@@ -5,7 +5,6 @@ use crate::common::global_constants::NUM_POWERUPS;
 use crate::common::match_types::Boss;
 use crate::common::ui::menu_code::*;
 use crate::common::world_tour_stop::TourStop;
-use crate::smw::main::gamemodes;
 use crate::common::ui::mi_button::MI_Button;
 use crate::common::ui::mi_image::MI_Image;
 use crate::common::ui::mi_image_select_field::MI_ImageSelectField;
@@ -14,7 +13,7 @@ use crate::common::ui::mi_select_field::MI_SelectField;
 use crate::common::ui::mi_text::{MI_HeaderText, MI_Text};
 use crate::common::uicontrol::{TextAlign, UI_Control, UI_ControlTrait};
 use crate::globals::*;
-use crate::smw::main::{bossgamemode, boxesgamemode, pipegamemode};
+
 
 pub struct MI_TourStop {
     pub ui_control: UI_Control,
@@ -134,17 +133,17 @@ impl MI_TourStop {
                 let gamemode: Ptr<dyn CGameModeTrait>;
                 let tourstopicon: i16;
                 if tourstop.iMode as i32 == game_mode_pipe_minigame {
-                    gamemode = Ptr::from_raw(pipegamemode.as_ptr() as *mut dyn CGameModeTrait);
+                    gamemode = Ptr::from_raw(game().pipegamemode.as_ptr() as *mut dyn CGameModeTrait);
                     tourstopicon = 25;
                 } else if tourstop.iMode as i32 == game_mode_boss_minigame {
-                    bossgamemode.set_boss_type(tourstop.gmsSettings.boss.bosstype);
-                    gamemode = Ptr::from_raw(bossgamemode.as_ptr() as *mut dyn CGameModeTrait);
+                    game().bossgamemode.set_boss_type(tourstop.gmsSettings.boss.bosstype);
+                    gamemode = Ptr::from_raw(game().bossgamemode.as_ptr() as *mut dyn CGameModeTrait);
                     tourstopicon = 26;
                 } else if tourstop.iMode as i32 == game_mode_boxes_minigame {
-                    gamemode = Ptr::from_raw(boxesgamemode.as_ptr() as *mut dyn CGameModeTrait);
+                    gamemode = Ptr::from_raw(game().boxesgamemode.as_ptr() as *mut dyn CGameModeTrait);
                     tourstopicon = 27;
                 } else {
-                    gamemode = gamemodes[tourstop.iMode as usize];
+                    gamemode = game().gamemodes[tourstop.iMode as usize];
                     tourstopicon = tourstop.iMode;
                 }
 

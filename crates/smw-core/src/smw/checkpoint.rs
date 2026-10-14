@@ -356,25 +356,25 @@ fn walk(s: &mut Snap, online: bool) {
         s.io(&mut gv.unlocksecret3part2);
         s.io(&mut gv.unlocksecretunlocked);
 
-        use crate::smw::main::{bonushousemode, bossgamemode, boxesgamemode, currentgamemode, gamemodes, pipegamemode};
+        
         use crate::common::game_mode::*;
-        s.io(&mut currentgamemode);
+        s.io(&mut game().currentgamemode);
         let mut mode = gv.gamemode.gamemode;
         s.io(&mut mode);
-        let mut boss = bossgamemode.get_boss_type();
+        let mut boss = game().bossgamemode.get_boss_type();
         s.io(&mut boss);
-        s.io(&mut bonushousemode.goal);
-        s.io(&mut pipegamemode.goal);
-        s.io(&mut bossgamemode.goal);
-        s.io(&mut boxesgamemode.goal);
+        s.io(&mut game().bonushousemode.goal);
+        s.io(&mut game().pipegamemode.goal);
+        s.io(&mut game().bossgamemode.goal);
+        s.io(&mut game().boxesgamemode.goal);
         if s.load {
-            bossgamemode.set_boss_type(boss);
+            game().bossgamemode.set_boss_type(boss);
             gv.gamemode = match mode {
-                game_mode_bonus => Ptr::from_raw(bonushousemode.as_ptr() as *mut dyn CGameModeTrait),
-                game_mode_pipe_minigame => Ptr::from_raw(pipegamemode.as_ptr() as *mut dyn CGameModeTrait),
-                game_mode_boss_minigame => Ptr::from_raw(bossgamemode.as_ptr() as *mut dyn CGameModeTrait),
-                game_mode_boxes_minigame => Ptr::from_raw(boxesgamemode.as_ptr() as *mut dyn CGameModeTrait),
-                m => gamemodes[(m as usize).min(GAMEMODE_LAST as usize - 1)],
+                game_mode_bonus => Ptr::from_raw(game().bonushousemode.as_ptr() as *mut dyn CGameModeTrait),
+                game_mode_pipe_minigame => Ptr::from_raw(game().pipegamemode.as_ptr() as *mut dyn CGameModeTrait),
+                game_mode_boss_minigame => Ptr::from_raw(game().bossgamemode.as_ptr() as *mut dyn CGameModeTrait),
+                game_mode_boxes_minigame => Ptr::from_raw(game().boxesgamemode.as_ptr() as *mut dyn CGameModeTrait),
+                m => game().gamemodes[(m as usize).min(GAMEMODE_LAST as usize - 1)],
             };
         }
 

@@ -13,7 +13,7 @@ use crate::common_netplay::protocol_definitions::*;
 use crate::common_netplay::protocol_packages::{self as pkgs, cstr_field, MessageHeader};
 use crate::globals::{Aliased, Global, Ptr};
 use crate::smw::checkpoint::{local_path, portable_path, Field, Snap};
-use crate::smw::main::{currentgamemode, gamemodes};
+
 use crate::smw::network::file_compressor::FileCompressor;
 use crate::smw::network::net_config_manager::NetConfigManager;
 use crate::smw::network::net_record::{self, PeerInfo, ReplayPeer, Side};
@@ -359,7 +359,7 @@ fn game_mode_settings_package() -> Vec<u8> {
     blob[..3].copy_from_slice(header.as_bytes());
 
     let mut modesettings = GameModeSettingsUnion::new();
-    modesettings.read_global(unsafe { currentgamemode } as GameModeType);
+    modesettings.read_global(unsafe { game().currentgamemode } as GameModeType);
     blob[3..].copy_from_slice(&modesettings.bytes);
     blob
 }
@@ -514,8 +514,8 @@ impl NetClient {
     pub fn send_create_room_message(&mut self) {
         unsafe {
             let mut msg = pkgs::NewRoom::with(&netplay.newroom_name, &netplay.newroom_password);
-            msg.gamemodeID = currentgamemode as u8;
-            game().game_values.gamemode = gamemodes[currentgamemode as usize];
+            msg.gamemodeID = game().currentgamemode as u8;
+            game().game_values.gamemode = game().gamemodes[game().currentgamemode as usize];
             msg.gamemodeGoal = game().game_values.gamemode.goal as u16;
 
             self.send_message_to_lobby_server(msg.as_bytes());
@@ -604,12 +604,12 @@ impl NetClient {
                 }
             }
 
-            currentgamemode = pkg.gamemodeID as i16;
-            game().game_values.gamemode = gamemodes[currentgamemode as usize];
+            game().currentgamemode = pkg.gamemodeID as i16;
+            game().game_values.gamemode = game().gamemodes[game().currentgamemode as usize];
             game().game_values.gamemode.goal = pkg.gamemodeGoal as i16;
 
-            let gm = gamemodes[currentgamemode as usize];
-            println!("  Game mode #{}: {} with {}: {}", currentgamemode, gm.get_mode_name(), gm.get_goal_name(), game().game_values.gamemode.goal);
+            let gm = game().gamemodes[game().currentgamemode as usize];
+            println!("  Game mode #{}: {} with {}: {}", game().currentgamemode, gm.get_mode_name(), gm.get_goal_name(), game().game_values.gamemode.goal);
 
             netplay.theHostIsMe = false;
             netplay.currentRoom.hostPlayerNumber = pkg.hostPlayerNumber;
@@ -684,7 +684,7 @@ impl NetClient {
 
         let mut modesettings = GameModeSettingsUnion::new();
         modesettings.bytes.copy_from_slice(&data[3..]);
-        modesettings.set_global(unsafe { currentgamemode } as GameModeType);
+        modesettings.set_global(unsafe { game().currentgamemode } as GameModeType);
 
         println!("[net] Game mode settings changed");
     }

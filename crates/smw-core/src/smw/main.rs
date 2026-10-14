@@ -56,13 +56,7 @@ pub static mut y_shake: i16 = 0;
 //Locations for swirl spawn effects
 pub static mut g_iSwirlSpawnLocations: [[[i16; 25]; 2]; 4] = [[[0; 25]; 2]; 4];
 
-pub static mut gamemodes: [Ptr<dyn CGameModeTrait>; GAMEMODE_LAST as usize] = [Ptr::null(); GAMEMODE_LAST as usize];
-pub static mut bonushousemode: Ptr<CGM_Bonus> = Ptr::null();
-pub static mut pipegamemode: Ptr<CGM_Pipe_MiniGame> = Ptr::null();
-pub static mut bossgamemode: Ptr<CGM_Boss_MiniGame> = Ptr::null();
-pub static mut boxesgamemode: Ptr<CGM_Boxes_MiniGame> = Ptr::null();
 
-pub static mut currentgamemode: i16 = 0;
 
 //*************************************
 //  MAIN LOOP
@@ -382,37 +376,37 @@ fn new_mode<T: CGameModeTrait + 'static>(mode: T) -> Ptr<dyn CGameModeTrait> {
 pub fn create_gamemodes() {
     unsafe {
         //set game modes
-        gamemodes[0] = new_mode(CGM_Classic::new());
-        gamemodes[1] = new_mode(CGM_Frag::new());
-        gamemodes[2] = new_mode(CGM_TimeLimit::new());
-        gamemodes[3] = new_mode(CGM_Jail::new());
-        gamemodes[4] = new_mode(CGM_Coins::new());
-        gamemodes[5] = new_mode(CGM_Stomp::new());
-        gamemodes[6] = new_mode(CGM_Eggs::new());
-        gamemodes[7] = new_mode(CGM_CaptureTheFlag::new());
-        gamemodes[8] = new_mode(CGM_Chicken::new());
-        gamemodes[9] = new_mode(CGM_Tag::new());
-        gamemodes[10] = new_mode(CGM_Star::new());
-        gamemodes[11] = new_mode(CGM_Domination::new());
-        gamemodes[12] = new_mode(CGM_KingOfTheHill::new());
-        gamemodes[13] = new_mode(CGM_Race::new());
-        gamemodes[14] = new_mode(CGM_Owned::new());
-        gamemodes[15] = new_mode(CGM_Frenzy::new());
-        gamemodes[16] = new_mode(CGM_Survival::new());
-        gamemodes[17] = new_mode(CGM_Greed::new());
-        gamemodes[18] = new_mode(CGM_Health::new());
-        gamemodes[19] = new_mode(CGM_Collection::new());
-        gamemodes[20] = new_mode(CGM_Chase::new());
-        gamemodes[21] = new_mode(CGM_ShyGuyTag::new());
+        game().gamemodes[0] = new_mode(CGM_Classic::new());
+        game().gamemodes[1] = new_mode(CGM_Frag::new());
+        game().gamemodes[2] = new_mode(CGM_TimeLimit::new());
+        game().gamemodes[3] = new_mode(CGM_Jail::new());
+        game().gamemodes[4] = new_mode(CGM_Coins::new());
+        game().gamemodes[5] = new_mode(CGM_Stomp::new());
+        game().gamemodes[6] = new_mode(CGM_Eggs::new());
+        game().gamemodes[7] = new_mode(CGM_CaptureTheFlag::new());
+        game().gamemodes[8] = new_mode(CGM_Chicken::new());
+        game().gamemodes[9] = new_mode(CGM_Tag::new());
+        game().gamemodes[10] = new_mode(CGM_Star::new());
+        game().gamemodes[11] = new_mode(CGM_Domination::new());
+        game().gamemodes[12] = new_mode(CGM_KingOfTheHill::new());
+        game().gamemodes[13] = new_mode(CGM_Race::new());
+        game().gamemodes[14] = new_mode(CGM_Owned::new());
+        game().gamemodes[15] = new_mode(CGM_Frenzy::new());
+        game().gamemodes[16] = new_mode(CGM_Survival::new());
+        game().gamemodes[17] = new_mode(CGM_Greed::new());
+        game().gamemodes[18] = new_mode(CGM_Health::new());
+        game().gamemodes[19] = new_mode(CGM_Collection::new());
+        game().gamemodes[20] = new_mode(CGM_Chase::new());
+        game().gamemodes[21] = new_mode(CGM_ShyGuyTag::new());
 
-        currentgamemode = 0;
-        game().game_values.gamemode = gamemodes[currentgamemode as usize];
+        game().currentgamemode = 0;
+        game().game_values.gamemode = game().gamemodes[game().currentgamemode as usize];
 
         //Special modes
-        bonushousemode = Ptr::new_box(CGM_Bonus::new());
-        pipegamemode = Ptr::new_box(CGM_Pipe_MiniGame::new());
-        bossgamemode = Ptr::new_box(CGM_Boss_MiniGame::new());
-        boxesgamemode = Ptr::new_box(CGM_Boxes_MiniGame::new());
+        game().bonushousemode = Ptr::new_box(CGM_Bonus::new());
+        game().pipegamemode = Ptr::new_box(CGM_Pipe_MiniGame::new());
+        game().bossgamemode = Ptr::new_box(CGM_Boss_MiniGame::new());
+        game().boxesgamemode = Ptr::new_box(CGM_Boxes_MiniGame::new());
     }
 }
 
@@ -561,7 +555,7 @@ pub fn main_game() {
         harness::finish();
 
         for i in 0..GAMEMODE_LAST as usize {
-            gamemodes[i].delete();
+            game().gamemodes[i].delete();
         }
 
         sfx_close();

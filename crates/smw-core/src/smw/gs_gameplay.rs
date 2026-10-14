@@ -34,7 +34,7 @@ use crate::smw::gamemodes::chicken::CGM_Chicken;
 use crate::smw::gamemodes::game_mode::{setup_score_board, show_score_board};
 use crate::smw::gamemodes::tag::CGM_Tag;
 use crate::smw::gs_menu::MenuState;
-use crate::smw::main::{currentgamemode};
+
 use crate::common_netplay::protocol_definitions::NET_GAMESTATE_FRAMES_TO_SEND;
 use crate::smw::net::{netplay, Net_IndexedPlayerData};
 use crate::smw::net_random::{self, Ev};
@@ -1830,7 +1830,7 @@ pub fn update_score_board() {
             if maxTeam > -1 {
                 let mt = maxTeam as usize;
                 let wins = game().game_values.tournament_scores[mt].wins as usize;
-                game().game_values.tournament_scores[mt].type_[wins] = currentgamemode;
+                game().game_values.tournament_scores[mt].type_[wins] = game().currentgamemode;
 
                 game().game_values.tournament_scores[mt].wins += 1;
                 if game().game_values.tournament_scores[mt].wins >= game().game_values.tournamentgames {
