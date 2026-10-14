@@ -312,6 +312,19 @@ jobs:
             sed -n '/^=== summary/,$p' blit-editor.log | grep -v -E 'dump MATCH, shots ([0-9]+)/\1, files ([0-9]+)/\2$'
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+          fallbacks=$(grep -L '^\[blit\] SDL fallbacks: none' "$RUNNER_TEMP"/parity/blit-game/*/stdout.log "$RUNNER_TEMP"/parity/blit-editor/*/*/stdout.log || true)
+          if [[ -n "$fallbacks" ]]; then
+            {
+              echo "SDL fallbacks with SMW_BLIT=rust:"
+              echo '```'
+              for log in $fallbacks; do
+                echo "${log#"$RUNNER_TEMP"/parity/}: $(grep -h '^\[blit\] SDL fallback' "$log" | tr '\n' ' ')"
+              done
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::SMW_BLIT=rust handed draws to SDL; see the job summary."
+            exit 1
+          fi
 
       - name: Determinism manifest
         if: always() && steps.game.outcome != 'skipped'
@@ -511,6 +524,19 @@ jobs:
             sed -n '/^=== summary/,$p' blit-editor.log | grep -v -E 'dump MATCH, shots ([0-9]+)/\1, files ([0-9]+)/\2$'
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+          fallbacks=$(grep -L '^\[blit\] SDL fallbacks: none' "$RUNNER_TEMP"/parity/blit-game/*/stdout.log "$RUNNER_TEMP"/parity/blit-editor/*/*/stdout.log || true)
+          if [[ -n "$fallbacks" ]]; then
+            {
+              echo "SDL fallbacks with SMW_BLIT=rust:"
+              echo '```'
+              for log in $fallbacks; do
+                echo "${log#"$RUNNER_TEMP"/parity/}: $(grep -h '^\[blit\] SDL fallback' "$log" | tr '\n' ' ')"
+              done
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::SMW_BLIT=rust handed draws to SDL; see the job summary."
+            exit 1
+          fi
 
       - name: Determinism manifest
         if: always()
