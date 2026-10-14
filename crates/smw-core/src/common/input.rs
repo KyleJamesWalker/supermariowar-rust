@@ -221,11 +221,6 @@ impl CPlayerInput {
     //configured keys were pressed.  If they were, then turn on
     //key flags to be used by game logic
     //iGameState == 0 for in game and 1 for menu
-    pub fn update(&mut self, event: SDL_Event, iGameState: i16) {
-        self.update_input(&smw_sdl2::input::from_sdl(&event), iGameState);
-    }
-
-    /// Not in upstream: `Update` on the backend's normalized event (docs/ARCHITECTURE_V2.md, Normalized input).
     pub fn update_input(&mut self, input: &Input, iGameState: i16) {
         #[cfg(not(target_os = "emscripten"))]
         crate::smw::pad::log_event(2, &smw_sdl2::input::to_sdl(input));

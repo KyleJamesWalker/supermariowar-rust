@@ -27,10 +27,11 @@ use crate::common::tileset_manager::{CTileset, CTilesetManager};
 use crate::globals::*;
 use crate::smw::fps_limiter::FPSLimiter;
 use sdl2::sys::image::IMG_SavePNG;
+use crate::common::editor_event::EditorEvent;
 use crate::common::util::sdl_helpers::poll_event;
 use sdl2::sys::SDL_KeyCode::*;
 use sdl2::sys::{
-    SDL_Event, SDL_EventType, SDL_FillRect, SDL_GetError, SDL_GetScancodeFromKey, SDL_KeyCode,
+    SDL_EventType, SDL_FillRect, SDL_GetError, SDL_GetScancodeFromKey, SDL_KeyCode,
     SDL_Keycode, SDL_MapRGB, SDL_Rect, SDL_SetColorKey, SDL_Surface, SDL_UpperBlit, SDL_bool, SDL_Keymod,
     SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT,
 };
@@ -120,7 +121,7 @@ impl EditorMapTile {
     }
 }
 
-pub static mut event: SDL_Event = unsafe { std::mem::zeroed() };
+pub static mut event: EditorEvent = EditorEvent::new();
 
 pub static mut set_type: TileType = TileType::Solid;
 pub static mut set_tile_rows: i32 = 0;
@@ -181,8 +182,8 @@ pub fn bound_to_window_h(y: i32) -> i32 {
 
 pub fn bound_mouse_motion_coords() {
     unsafe {
-        mouse_x = bound_to_window_w(event.motion.x);
-        mouse_y = bound_to_window_h(event.motion.y);
+        mouse_x = bound_to_window_w(event.motion_x());
+        mouse_y = bound_to_window_h(event.motion_y());
     }
 }
 
@@ -680,14 +681,14 @@ pub fn editor_edit() -> i32 {
         if fExiting {
             //handle messages
             while poll_event(&mut event) != 0 {
-                if event.type_ == SDL_KEYDOWN_EV {
-                    let key = event.key.keysym.sym;
+                if event.type_() == SDL_KEYDOWN_EV {
+                    let key = event.key_sym();
 
                     if key == k(SDLK_LEFT) {
                         fSelectedYes = true;
                     } else if key == k(SDLK_RIGHT) {
                         fSelectedYes = false;
-                    } else if event.key.keysym.sym == k(SDLK_KP_ENTER) || event.key.keysym.sym == k(SDLK_RETURN) {
+                    } else if event.key_sym() == k(SDLK_KP_ENTER) || event.key_sym() == k(SDLK_RETURN) {
                         if fSelectedYes {
                             return EDITOR_QUIT;
                         }
@@ -701,11 +702,11 @@ pub fn editor_edit() -> i32 {
             while poll_event(&mut event) != 0 {
                 let keystate = get_keyboard_state();
 
-                match event.type_ {
+                match event.type_() {
                     SDL_QUIT_EV => return EDITOR_QUIT,
 
                     SDL_KEYDOWN_EV => {
-                        let key = event.key.keysym.sym;
+                        let key = event.key_sym();
 
                         if key == k(SDLK_ESCAPE) {
                             if g_musiccategorydisplaytimer > 0 {
@@ -718,8 +719,8 @@ pub fn editor_edit() -> i32 {
                             }
                         }
 
-                        if event.key.keysym.mod_ & (SDL_Keymod::KMOD_LALT as u16 | SDL_Keymod::KMOD_RALT as u16) != 0 {
-                            if event.key.keysym.sym == k(SDLK_RETURN) {
+                        if event.key_mod() & (SDL_Keymod::KMOD_LALT as u16 | SDL_Keymod::KMOD_RALT as u16) != 0 {
+                            if event.key_sym() == k(SDLK_RETURN) {
                                 g_fFullScreen = !g_fFullScreen;
                                 gfx_changefullscreen(g_fFullScreen);
                                 blitdest = screen;
@@ -961,16 +962,16 @@ pub fn editor_edit() -> i32 {
                     }
 
                     SDL_KEYUP_EV => {
-                        if event.key.keysym.sym == k(SDLK_LCTRL) {
+                        if event.key_sym() == k(SDLK_LCTRL) {
                             move_nodrag = false;
                         }
                     }
 
                     SDL_MOUSEBUTTONDOWN_EV => {
-                        let iClickX = (event.button.x / TILESIZE) as i16;
-                        let iClickY = (event.button.y / TILESIZE) as i16;
+                        let iClickX = (event.button_x() / TILESIZE) as i16;
+                        let iClickY = (event.button_y() / TILESIZE) as i16;
 
-                        if event.button.button == BUTTON_LEFT && !ignoreclick {
+                        if event.button_button() == BUTTON_LEFT && !ignoreclick {
                             if edit_mode == 0 {
                                 //paint selected blocks
                                 paint_block(iClickX, iClickY);
@@ -1074,17 +1075,17 @@ pub fn editor_edit() -> i32 {
                                 //animated tiles
                                 paint_animated_tiles(iClickX, iClickY);
                             }
-                        } else if event.button.button == BUTTON_RIGHT {
+                        } else if event.button_button() == BUTTON_RIGHT {
                             erase_at(iClickX, iClickY, true);
                         }
                     }
 
                     SDL_MOUSEMOTION_EV => {
                         bound_mouse_motion_coords();
-                        let iClickX = (bound_to_window_w(event.motion.x) / TILESIZE) as i16;
-                        let iClickY = (bound_to_window_h(event.motion.y) / TILESIZE) as i16;
+                        let iClickX = (bound_to_window_w(event.motion_x()) / TILESIZE) as i16;
+                        let iClickY = (bound_to_window_h(event.motion_y()) / TILESIZE) as i16;
 
-                        if event.motion.state == sdl_button(SDL_BUTTON_LEFT) && !ignoreclick {
+                        if event.motion_state() == sdl_button(SDL_BUTTON_LEFT) && !ignoreclick {
                             if edit_mode == 0 {
                                 paint_block(iClickX, iClickY);
 
@@ -1132,16 +1133,16 @@ pub fn editor_edit() -> i32 {
                             } else if edit_mode == 8 {
                                 paint_animated_tiles(iClickX, iClickY);
                             }
-                        } else if event.motion.state == sdl_button(SDL_BUTTON_RIGHT) {
+                        } else if event.motion_state() == sdl_button(SDL_BUTTON_RIGHT) {
                             erase_at(iClickX, iClickY, false);
                         }
                     }
 
                     SDL_MOUSEBUTTONUP_EV => {
-                        let iClickX = event.button.x / TILESIZE;
-                        let iClickY = event.button.y / TILESIZE;
+                        let iClickX = event.button_x() / TILESIZE;
+                        let iClickY = event.button_y() / TILESIZE;
 
-                        if event.button.button == BUTTON_LEFT {
+                        if event.button_button() == BUTTON_LEFT {
                             ignoreclick = false;
 
                             if move_mode == 1 {
@@ -1697,7 +1698,7 @@ pub fn editor_warp() -> i32 {
     unsafe {
         //handle messages
         while poll_event(&mut event) != 0 {
-            match event.type_ {
+            match event.type_() {
                 SDL_QUIT_EV => return EDITOR_QUIT,
 
                 SDL_KEYDOWN_EV => {
@@ -1706,10 +1707,10 @@ pub fn editor_warp() -> i32 {
                 }
 
                 SDL_MOUSEBUTTONDOWN_EV => {
-                    if event.button.button == BUTTON_LEFT {
-                        if event.button.x / TILESIZE < 10 && event.button.y / TILESIZE < 4 {
-                            set_direction = event.button.y / TILESIZE;
-                            set_connection = event.button.x / TILESIZE;
+                    if event.button_button() == BUTTON_LEFT {
+                        if event.button_x() / TILESIZE < 10 && event.button_y() / TILESIZE < 4 {
+                            set_direction = event.button_y() / TILESIZE;
+                            set_connection = event.button_x() / TILESIZE;
                         }
 
                         edit_mode = 2; //change to edit mode using warps
@@ -1749,7 +1750,7 @@ pub fn editor_eyecandy() -> i32 {
     unsafe {
         //handle messages
         while poll_event(&mut event) != 0 {
-            let ty = event.type_;
+            let ty = event.type_();
             let mut fall = false;
 
             if ty == SDL_QUIT_EV {
@@ -1757,21 +1758,21 @@ pub fn editor_eyecandy() -> i32 {
             }
 
             if ty == SDL_KEYDOWN_EV {
-                if event.key.keysym.sym == k(SDLK_ESCAPE) || event.key.keysym.sym == k(SDLK_e) {
+                if event.key_sym() == k(SDLK_ESCAPE) || event.key_sym() == k(SDLK_e) {
                     return EDITOR_EDIT;
                 }
                 fall = true;
             }
 
             if fall || ty == SDL_MOUSEBUTTONDOWN_EV {
-                if event.button.button == BUTTON_LEFT {
+                if event.button_button() == BUTTON_LEFT {
                     let mut ix: i16 = 165;
                     for iLayer in 0..3usize {
                         for kk in 0..NUM_EYECANDY {
-                            if event.button.x >= ix as i32
-                                && event.button.x < ix as i32 + 90
-                                && event.button.y >= kk as i32 * 65 + 20
-                                && event.button.y < kk as i32 * 65 + 72
+                            if event.button_x() >= ix as i32
+                                && event.button_x() < ix as i32 + 90
+                                && event.button_y() >= kk as i32 * 65 + 20
+                                && event.button_y() < kk as i32 * 65 + 72
                             {
                                 let mask: i16 = 1 << kk;
                                 if g_map.eyecandy[iLayer] & mask != 0 {
@@ -1867,7 +1868,7 @@ pub fn editor_properties(iBlockCol: i16, iBlockRow: i16) -> i32 {
             FPSLimiter::instance().frame_start();
             //handle messages
             while poll_event(&mut event) != 0 {
-                let ty = event.type_;
+                let ty = event.type_();
                 let mut fall = false;
 
                 if ty == SDL_QUIT_EV {
@@ -1875,7 +1876,7 @@ pub fn editor_properties(iBlockCol: i16, iBlockRow: i16) -> i32 {
                 }
 
                 if ty == SDL_KEYDOWN_EV {
-                    let sym = event.key.keysym.sym;
+                    let sym = event.key_sym();
                     if sym == k(SDLK_ESCAPE) || sym == k(SDLK_k) {
                         editor_properties_initialized = false;
                         return EDITOR_EDIT;
@@ -1897,7 +1898,7 @@ pub fn editor_properties(iBlockCol: i16, iBlockRow: i16) -> i32 {
                         let keystate = get_keyboard_state();
                         if check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT) {
                             for iSetting in 0..NUM_BLOCK_SETTINGS as usize {
-                                if event.key.keysym.sym == k(SDLK_d) {
+                                if event.key_sym() == k(SDLK_d) {
                                     iValue = default_powerup_setting(0, iSetting);
                                 }
 
@@ -1914,21 +1915,21 @@ pub fn editor_properties(iBlockCol: i16, iBlockRow: i16) -> i32 {
                     let mut iHiddenCheckboxY: i16 = 0;
                     if iBlockType == 1 || iBlockType == 15 {
                         let mut iSettingIndex: i16 = 0;
-                        let piSetting = get_block_property(event.button.x, event.button.y, Some(&mut iSettingIndex));
+                        let piSetting = get_block_property(event.button_x(), event.button_y(), Some(&mut iSettingIndex));
 
                         if let Some(s) = piSetting {
                             let iMouseState = get_mouse_state() as u8 as u32;
                             let setting = &mut g_map.objectdata[bc][br].iSettings[s];
 
-                            if (event.button.button == BUTTON_RIGHT && (iMouseState & SDL_BUTTON_LMASK) != 0)
-                                || (event.button.button == BUTTON_LEFT && (iMouseState & SDL_BUTTON_RMASK) != 0)
+                            if (event.button_button() == BUTTON_RIGHT && (iMouseState & SDL_BUTTON_LMASK) != 0)
+                                || (event.button_button() == BUTTON_LEFT && (iMouseState & SDL_BUTTON_RMASK) != 0)
                             {
                                 *setting = default_powerup_setting(0, iSettingIndex as usize);
-                            } else if event.button.button == BUTTON_LEFT {
+                            } else if event.button_button() == BUTTON_LEFT {
                                 if *setting < 10 {
                                     *setting += 1;
                                 }
-                            } else if event.button.button == BUTTON_RIGHT {
+                            } else if event.button_button() == BUTTON_RIGHT {
                                 if *setting > 0 {
                                     *setting -= 1;
                                 }
@@ -1940,15 +1941,15 @@ pub fn editor_properties(iBlockCol: i16, iBlockRow: i16) -> i32 {
                         iHiddenCheckboxY = 214;
                     }
 
-                    if event.button.x >= 270 && event.button.x < 370 && event.button.y >= iHiddenCheckboxY as i32 && event.button.y < iHiddenCheckboxY as i32 + 52 {
-                        if event.button.button == BUTTON_LEFT {
+                    if event.button_x() >= 270 && event.button_x() < 370 && event.button_y() >= iHiddenCheckboxY as i32 && event.button_y() < iHiddenCheckboxY as i32 + 52 {
+                        if event.button_button() == BUTTON_LEFT {
                             g_map.objectdata[bc][br].fHidden = !g_map.objectdata[bc][br].fHidden;
                         }
                     }
 
                     if iBlockType == 1 || iBlockType == 15 {
-                        if event.button.x >= 390 && event.button.x < 490 && event.button.y >= iHiddenCheckboxY as i32 && event.button.y < iHiddenCheckboxY as i32 + 52 {
-                            if event.button.button == BUTTON_LEFT {
+                        if event.button_x() >= 390 && event.button_x() < 490 && event.button_y() >= iHiddenCheckboxY as i32 && event.button_y() < iHiddenCheckboxY as i32 + 52 {
+                            if event.button_button() == BUTTON_LEFT {
                                 if g_map.objectdata[bc][br].iSettings[0] >= 0 {
                                     g_map.objectdata[bc][br].iSettings[0] = -1;
                                 } else {
@@ -2190,7 +2191,7 @@ pub fn editor_platforms() -> i32 {
     unsafe {
         //handle messages
         while poll_event(&mut event) != 0 {
-            let ty = event.type_;
+            let ty = event.type_();
             let mut fall = false;
 
             if ty == SDL_QUIT_EV {
@@ -2198,7 +2199,7 @@ pub fn editor_platforms() -> i32 {
             }
 
             if ty == SDL_KEYDOWN_EV {
-                let sym = event.key.keysym.sym;
+                let sym = event.key_sym();
                 let ep = iEditPlatform as usize;
                 if sym == k(SDLK_s) {
                     savecurrentmap();
@@ -2362,12 +2363,12 @@ pub fn editor_platforms() -> i32 {
                 }
             } else if ty == SDL_MOUSEBUTTONDOWN_EV {
                 let ep = iEditPlatform as usize;
-                if event.button.button == BUTTON_LEFT && !ignoreclick {
+                if event.button_button() == BUTTON_LEFT && !ignoreclick {
                     if PLATFORM_EDIT_STATE_SELECT == iPlatformEditState || PLATFORM_EDIT_STATE_MOVE == iPlatformEditState {
                         //check clicks on existing platforms
                         for iPlatform in 0..g_iNumPlatforms as i32 {
                             let ic = g_Platforms[iPlatform as usize].rIcon[1];
-                            if event.button.x >= ic.x && event.button.x < ic.x + ic.w && event.button.y >= ic.y && event.button.y < ic.y + ic.h {
+                            if event.button_x() >= ic.x && event.button_x() < ic.x + ic.w && event.button_y() >= ic.y && event.button_y() < ic.y + ic.h {
                                 if PLATFORM_EDIT_STATE_SELECT == iPlatformEditState {
                                     iEditPlatform = iPlatform as i16;
                                     iPlatformEditState = PLATFORM_EDIT_STATE_EDIT;
@@ -2390,10 +2391,10 @@ pub fn editor_platforms() -> i32 {
 
                         if PLATFORM_EDIT_STATE_SELECT == iPlatformEditState
                             && (g_iNumPlatforms as i32) < MAX_PLATFORMS
-                            && event.button.x >= rNewButton[1].x
-                            && event.button.x < rNewButton[1].x + rNewButton[1].w
-                            && event.button.y >= rNewButton[1].y
-                            && event.button.y < rNewButton[1].y + rNewButton[1].h
+                            && event.button_x() >= rNewButton[1].x
+                            && event.button_x() < rNewButton[1].x + rNewButton[1].w
+                            && event.button_y() >= rNewButton[1].y
+                            && event.button_y() < rNewButton[1].y + rNewButton[1].h
                         {
                             //Create a new platform then edit it
 
@@ -2405,8 +2406,8 @@ pub fn editor_platforms() -> i32 {
                         }
                     } else if PLATFORM_EDIT_STATE_PATH_TYPE == iPlatformEditState || PLATFORM_EDIT_STATE_CHANGE_PATH_TYPE == iPlatformEditState {
                         if !ignoreclick {
-                            let iClickX = event.button.x as i16 as i32;
-                            let iClickY = event.button.y as i16 as i32;
+                            let iClickX = event.button_x() as i16 as i32;
+                            let iClickY = event.button_y() as i16 as i32;
 
                             for iType in 0..3usize {
                                 let tb = rTypeButton[iType][1];
@@ -2428,8 +2429,8 @@ pub fn editor_platforms() -> i32 {
                         }
                     } else if PLATFORM_EDIT_STATE_EDIT == iPlatformEditState {
                         if !ignoreclick {
-                            let ix = (event.button.x / TILESIZE) as i16;
-                            let iy = (event.button.y / TILESIZE) as i16;
+                            let ix = (event.button_x() / TILESIZE) as i16;
+                            let iy = (event.button_y() / TILESIZE) as i16;
 
                             for i in 0..set_tile_cols as i16 {
                                 for j in 0..set_tile_rows as i16 {
@@ -2447,8 +2448,8 @@ pub fn editor_platforms() -> i32 {
                     } else if PLATFORM_EDIT_STATE_ANIMATED == iPlatformEditState {
                         //animated tiles
                         if !ignoreclick {
-                            let ix = (event.button.x / TILESIZE) as i16;
-                            let iy = (event.button.y / TILESIZE) as i16;
+                            let ix = (event.button_x() / TILESIZE) as i16;
+                            let iy = (event.button_y() / TILESIZE) as i16;
 
                             for i in 0..set_tile_cols as i16 {
                                 for j in 0..set_tile_rows as i16 {
@@ -2465,8 +2466,8 @@ pub fn editor_platforms() -> i32 {
                         }
                     } else if PLATFORM_EDIT_STATE_TILETYPE == iPlatformEditState {
                         if !ignoreclick {
-                            let ix = event.button.x / TILESIZE;
-                            let iy = event.button.y / TILESIZE;
+                            let ix = event.button_x() / TILESIZE;
+                            let iy = event.button_y() / TILESIZE;
 
                             g_Platforms[ep].types[(ix * MAPHEIGHT + iy) as usize] = set_tiletype;
                         }
@@ -2475,20 +2476,20 @@ pub fn editor_platforms() -> i32 {
                         if g_Platforms[ep].iPathType == PlatformPathType::Ellipse && (check_key(keystate, SDLK_z) || check_key(keystate, SDLK_x) || check_key(keystate, SDLK_c)) {
                             update_platform_path_radius(
                                 iEditPlatform,
-                                event.button.x as i16,
-                                event.button.y as i16,
+                                event.button_x() as i16,
+                                event.button_y() as i16,
                                 check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT),
                                 check_key(keystate, SDLK_z),
                                 check_key(keystate, SDLK_c),
                             );
                         } else {
-                            update_platform_path_start(iEditPlatform, event.button.x as i16, event.button.y as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
+                            update_platform_path_start(iEditPlatform, event.button_x() as i16, event.button_y() as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
                         }
                     }
                 } else {
-                    if event.button.button == BUTTON_RIGHT {
-                        let ix = event.button.x / TILESIZE;
-                        let iy = event.button.y / TILESIZE;
+                    if event.button_button() == BUTTON_RIGHT {
+                        let ix = event.button_x() / TILESIZE;
+                        let iy = event.button_y() / TILESIZE;
 
                         if PLATFORM_EDIT_STATE_EDIT == iPlatformEditState || PLATFORM_EDIT_STATE_ANIMATED == iPlatformEditState {
                             clear_tileset_tile(&mut g_Platforms[ep].tiles[(ix * MAPHEIGHT + iy) as usize]);
@@ -2498,9 +2499,9 @@ pub fn editor_platforms() -> i32 {
                         } else if PLATFORM_EDIT_STATE_PATH == iPlatformEditState {
                             let keystate = get_keyboard_state();
                             if g_Platforms[ep].iPathType == PlatformPathType::Straight {
-                                update_platform_path_end(iEditPlatform, event.button.x as i16, event.button.y as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
+                                update_platform_path_end(iEditPlatform, event.button_x() as i16, event.button_y() as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
                             } else if g_Platforms[ep].iPathType == PlatformPathType::StraightContinuous || g_Platforms[ep].iPathType == PlatformPathType::Ellipse {
-                                update_platform_path_angle(iEditPlatform, event.button.x as i16, event.button.y as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
+                                update_platform_path_angle(iEditPlatform, event.button_x() as i16, event.button_y() as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
                             }
                         }
                     }
@@ -2511,11 +2512,11 @@ pub fn editor_platforms() -> i32 {
             if fall || ty == SDL_MOUSEMOTION_EV {
                 let ep = iEditPlatform as usize;
                 bound_mouse_motion_coords();
-                let ix = (bound_to_window_w(event.motion.x) / TILESIZE) as i16;
-                let iy = (bound_to_window_h(event.motion.y) / TILESIZE) as i16;
+                let ix = (bound_to_window_w(event.motion_x()) / TILESIZE) as i16;
+                let iy = (bound_to_window_h(event.motion_y()) / TILESIZE) as i16;
 
                 if PLATFORM_EDIT_STATE_EDIT == iPlatformEditState || PLATFORM_EDIT_STATE_ANIMATED == iPlatformEditState {
-                    if event.motion.state == sdl_button(SDL_BUTTON_LEFT) && !ignoreclick {
+                    if event.motion_state() == sdl_button(SDL_BUTTON_LEFT) && !ignoreclick {
                         for i in 0..set_tile_cols as i16 {
                             for j in 0..set_tile_rows as i16 {
                                 let (cx, cy) = (ix as i32 + i as i32, iy as i32 + j as i32);
@@ -2535,39 +2536,39 @@ pub fn editor_platforms() -> i32 {
                                 }
                             }
                         }
-                    } else if event.motion.state == sdl_button(SDL_BUTTON_RIGHT) {
+                    } else if event.motion_state() == sdl_button(SDL_BUTTON_RIGHT) {
                         let idx = (ix as i32 * MAPHEIGHT + iy as i32) as usize;
                         clear_tileset_tile(&mut g_Platforms[ep].tiles[idx]);
                         g_Platforms[ep].types[idx] = TileType::NonSolid;
                     }
                 } else if PLATFORM_EDIT_STATE_TILETYPE == iPlatformEditState {
                     let idx = (ix as i32 * MAPHEIGHT + iy as i32) as usize;
-                    if event.motion.state == sdl_button(SDL_BUTTON_LEFT) && !ignoreclick {
+                    if event.motion_state() == sdl_button(SDL_BUTTON_LEFT) && !ignoreclick {
                         g_Platforms[ep].types[idx] = set_tiletype;
-                    } else if event.motion.state == sdl_button(SDL_BUTTON_RIGHT) {
+                    } else if event.motion_state() == sdl_button(SDL_BUTTON_RIGHT) {
                         g_Platforms[ep].types[idx] = TileType::NonSolid;
                     }
                 } else if PLATFORM_EDIT_STATE_PATH == iPlatformEditState {
-                    if event.motion.state == sdl_button(SDL_BUTTON_LEFT) {
+                    if event.motion_state() == sdl_button(SDL_BUTTON_LEFT) {
                         let keystate = get_keyboard_state();
                         if g_Platforms[ep].iPathType == PlatformPathType::Ellipse && (check_key(keystate, SDLK_z) || check_key(keystate, SDLK_x) || check_key(keystate, SDLK_c)) {
                             update_platform_path_radius(
                                 iEditPlatform,
-                                event.button.x as i16,
-                                event.button.y as i16,
+                                event.button_x() as i16,
+                                event.button_y() as i16,
                                 check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT),
                                 check_key(keystate, SDLK_z),
                                 check_key(keystate, SDLK_c),
                             );
                         } else {
-                            update_platform_path_start(iEditPlatform, event.button.x as i16, event.button.y as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
+                            update_platform_path_start(iEditPlatform, event.button_x() as i16, event.button_y() as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
                         }
-                    } else if event.motion.state == sdl_button(SDL_BUTTON_RIGHT) {
+                    } else if event.motion_state() == sdl_button(SDL_BUTTON_RIGHT) {
                         let keystate = get_keyboard_state();
                         if g_Platforms[ep].iPathType == PlatformPathType::Straight {
-                            update_platform_path_end(iEditPlatform, event.button.x as i16, event.button.y as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
+                            update_platform_path_end(iEditPlatform, event.button_x() as i16, event.button_y() as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
                         } else if g_Platforms[ep].iPathType == PlatformPathType::StraightContinuous || g_Platforms[ep].iPathType == PlatformPathType::Ellipse {
-                            update_platform_path_angle(iEditPlatform, event.button.x as i16, event.button.y as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
+                            update_platform_path_angle(iEditPlatform, event.button_x() as i16, event.button_y() as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
                         }
                     }
                 }
@@ -2576,13 +2577,13 @@ pub fn editor_platforms() -> i32 {
                     iPlatformPreview = -1;
                     for iPlatform in 0..g_iNumPlatforms as i32 {
                         let ic = g_Platforms[iPlatform as usize].rIcon[1];
-                        if event.button.x >= ic.x && event.button.x < ic.x + ic.w && event.button.y >= ic.y && event.button.y < ic.y + ic.h {
+                        if event.button_x() >= ic.x && event.button_x() < ic.x + ic.w && event.button_y() >= ic.y && event.button_y() < ic.y + ic.h {
                             iPlatformPreview = iPlatform as i16;
                         }
                     }
                 }
             } else if ty == SDL_MOUSEBUTTONUP_EV {
-                if event.button.button == BUTTON_LEFT {
+                if event.button_button() == BUTTON_LEFT {
                     ignoreclick = false;
                 }
             }
@@ -2624,7 +2625,7 @@ pub fn editor_platforms() -> i32 {
             }
 
             if iPlatformPreview >= 0 {
-                display_platform_preview(iPlatformPreview, event.button.x as i16, event.button.y as i16);
+                display_platform_preview(iPlatformPreview, event.button_x() as i16, event.button_y() as i16);
             }
         } else if PLATFORM_EDIT_STATE_PATH_TYPE == iPlatformEditState || PLATFORM_EDIT_STATE_CHANGE_PATH_TYPE == iPlatformEditState {
             //Draw path options
@@ -2966,7 +2967,7 @@ pub fn editor_maphazards() -> i32 {
     unsafe {
         //handle messages
         while poll_event(&mut event) != 0 {
-            let ty = event.type_;
+            let ty = event.type_();
             let mut fall = false;
 
             if ty == SDL_QUIT_EV {
@@ -2974,7 +2975,7 @@ pub fn editor_maphazards() -> i32 {
             }
 
             if ty == SDL_KEYDOWN_EV {
-                let sym = event.key.keysym.sym;
+                let sym = event.key_sym();
                 let eh = iEditMapHazard as usize;
                 if sym == k(SDLK_s) {
                     savecurrentmap();
@@ -3102,9 +3103,9 @@ pub fn editor_maphazards() -> i32 {
                     }
                 }
             } else if ty == SDL_MOUSEBUTTONDOWN_EV {
-                if event.button.button == BUTTON_LEFT && !ignoreclick {
-                    let iClickX = event.button.x as i16;
-                    let iClickY = event.button.y as i16;
+                if event.button_button() == BUTTON_LEFT && !ignoreclick {
+                    let iClickX = event.button_x() as i16;
+                    let iClickY = event.button_y() as i16;
                     let (cx, cy) = (iClickX as i32, iClickY as i32);
 
                     if MAPHAZARD_EDIT_STATE_SELECT == iEditState {
@@ -3186,10 +3187,10 @@ pub fn editor_maphazards() -> i32 {
 
             if fall || ty == SDL_MOUSEMOTION_EV {
                 bound_mouse_motion_coords();
-                let iClickX = bound_to_window_w(event.motion.x) as i16;
-                let iClickY = bound_to_window_h(event.motion.y) as i16;
+                let iClickX = bound_to_window_w(event.motion_x()) as i16;
+                let iClickY = bound_to_window_h(event.motion_y()) as i16;
 
-                if event.motion.state == sdl_button(SDL_BUTTON_LEFT) && !ignoreclick {
+                if event.motion_state() == sdl_button(SDL_BUTTON_LEFT) && !ignoreclick {
                     if MAPHAZARD_EDIT_STATE_LOCATION == iEditState && !ignoreclick {
                         let hazard = &mut g_map.maphazards[iEditMapHazard as usize];
                         hazard.ix = iClickX / 16;
@@ -3203,7 +3204,7 @@ pub fn editor_maphazards() -> i32 {
                     }
                 }
             } else if ty == SDL_MOUSEBUTTONUP_EV {
-                if event.button.button == BUTTON_LEFT {
+                if event.button_button() == BUTTON_LEFT {
                     ignoreclick = false;
                 }
             }
@@ -3408,12 +3409,12 @@ pub fn editor_tiles() -> i32 {
     unsafe {
         //handle messages
         while poll_event(&mut event) != 0 {
-            match event.type_ {
+            match event.type_() {
                 SDL_QUIT_EV => return EDITOR_QUIT,
 
                 SDL_KEYDOWN_EV => {
                     if !set_tile_drag {
-                        let sym = event.key.keysym.sym;
+                        let sym = event.key_sym();
                         if sym >= k(SDLK_1) && sym <= k(SDLK_9) && (sym as i64) < k(SDLK_1) as i64 + g_tilesetmanager.count() as i64 {
                             set_tile_tileset = sym - k(SDLK_1);
                             tileset = g_tilesetmanager.tileset(set_tile_tileset as usize);
@@ -3467,7 +3468,7 @@ pub fn editor_tiles() -> i32 {
                 }
 
                 SDL_KEYUP_EV => {
-                    let sym = event.key.keysym.sym;
+                    let sym = event.key_sym();
                     if sym == k(SDLK_UP) || sym == k(SDLK_DOWN) || sym == k(SDLK_LEFT) || sym == k(SDLK_RIGHT) {
                         view_tileset_repeat_direction = -1;
                         view_tileset_repeat_timer = 0;
@@ -3475,10 +3476,10 @@ pub fn editor_tiles() -> i32 {
                 }
 
                 SDL_MOUSEBUTTONDOWN_EV => {
-                    let iCol = (event.button.x / TILESIZE + view_tileset_x) as i16;
-                    let iRow = (event.button.y / TILESIZE + view_tileset_y) as i16;
+                    let iCol = (event.button_x() / TILESIZE + view_tileset_x) as i16;
+                    let iRow = (event.button_y() / TILESIZE + view_tileset_y) as i16;
 
-                    if event.button.button == BUTTON_LEFT {
+                    if event.button_button() == BUTTON_LEFT {
                         let tileset_ = g_tilesetmanager.tileset(set_tile_tileset as usize);
 
                         if iCol < tileset_.width() && iRow < tileset_.height() {
@@ -3489,18 +3490,18 @@ pub fn editor_tiles() -> i32 {
 
                             set_tile_drag = true;
                         }
-                    } else if event.button.button == BUTTON_RIGHT {
+                    } else if event.button_button() == BUTTON_RIGHT {
                         set_type = tileset.get().increment_tile_type(iCol as isize as usize, iRow as isize as usize);
-                    } else if event.button.button == BUTTON_MIDDLE {
+                    } else if event.button_button() == BUTTON_MIDDLE {
                         set_type = tileset.get().decrement_tile_type(iCol as isize as usize, iRow as isize as usize);
                     }
                 }
 
                 SDL_MOUSEBUTTONUP_EV => {
-                    let iCol = (event.button.x / TILESIZE + view_tileset_x) as i16;
-                    let iRow = (event.button.y / TILESIZE + view_tileset_y) as i16;
+                    let iCol = (event.button_x() / TILESIZE + view_tileset_x) as i16;
+                    let iRow = (event.button_y() / TILESIZE + view_tileset_y) as i16;
 
-                    if event.button.button == BUTTON_LEFT {
+                    if event.button_button() == BUTTON_LEFT {
                         if iCol < tileset.width() && iRow < tileset.height() {
                             set_tile_cols = set_tile_end_x - set_tile_start_x + 1;
                             set_tile_rows = set_tile_end_y - set_tile_start_y + 1;
@@ -3515,11 +3516,11 @@ pub fn editor_tiles() -> i32 {
 
                 SDL_MOUSEMOTION_EV => {
                     bound_mouse_motion_coords();
-                    let iCol = (bound_to_window_w(event.motion.x) / TILESIZE + view_tileset_x) as i16;
-                    let iRow = (bound_to_window_h(event.motion.y) / TILESIZE + view_tileset_y) as i16;
+                    let iCol = (bound_to_window_w(event.motion_x()) / TILESIZE + view_tileset_x) as i16;
+                    let iRow = (bound_to_window_h(event.motion_y()) / TILESIZE + view_tileset_y) as i16;
 
                     if iCol < tileset.width() && iRow < tileset.height() {
-                        if event.motion.state == sdl_button(SDL_BUTTON_LEFT) {
+                        if event.motion_state() == sdl_button(SDL_BUTTON_LEFT) {
                             if (iCol as i32) < set_tile_start_x {
                                 set_tile_start_x = iCol as i32;
                             }
@@ -3535,7 +3536,7 @@ pub fn editor_tiles() -> i32 {
                             if iRow as i32 > set_tile_end_y {
                                 set_tile_end_y = iRow as i32;
                             }
-                        } else if event.motion.state == sdl_button(SDL_BUTTON_RIGHT) || event.motion.state == sdl_button(SDL_BUTTON_MIDDLE) {
+                        } else if event.motion_state() == sdl_button(SDL_BUTTON_RIGHT) || event.motion_state() == sdl_button(SDL_BUTTON_MIDDLE) {
                             tileset.get().set_tile_type(iCol as isize as usize, iRow as isize as usize, set_type);
                         }
                     }
@@ -3608,7 +3609,7 @@ pub fn editor_blocks() -> i32 {
     unsafe {
         //handle messages
         while poll_event(&mut event) != 0 {
-            match event.type_ {
+            match event.type_() {
                 SDL_QUIT_EV => return EDITOR_QUIT,
 
                 SDL_KEYDOWN_EV => {
@@ -3617,9 +3618,9 @@ pub fn editor_blocks() -> i32 {
                 }
 
                 SDL_MOUSEBUTTONDOWN_EV => {
-                    if event.button.button == BUTTON_LEFT {
-                        let set_block_x = (event.button.x / TILESIZE) as i16;
-                        let set_block_y = (event.button.y / TILESIZE) as i16;
+                    if event.button_button() == BUTTON_LEFT {
+                        let set_block_x = (event.button_x() / TILESIZE) as i16;
+                        let set_block_y = (event.button_y() / TILESIZE) as i16;
 
                         //Set the selected block to one of the interaction blocks
                         if set_block_y == 0 && set_block_x >= 0 && set_block_x <= 6 {
@@ -3674,7 +3675,7 @@ pub fn editor_mapitems() -> i32 {
     unsafe {
         //handle messages
         while poll_event(&mut event) != 0 {
-            match event.type_ {
+            match event.type_() {
                 SDL_QUIT_EV => return EDITOR_QUIT,
 
                 SDL_KEYDOWN_EV => {
@@ -3683,9 +3684,9 @@ pub fn editor_mapitems() -> i32 {
                 }
 
                 SDL_MOUSEBUTTONDOWN_EV => {
-                    if event.button.button == BUTTON_LEFT {
-                        let set_item_x = (event.button.x / TILESIZE) as i16;
-                        let set_item_y = (event.button.y / TILESIZE) as i16;
+                    if event.button_button() == BUTTON_LEFT {
+                        let set_item_x = (event.button_x() / TILESIZE) as i16;
+                        let set_item_y = (event.button_y() / TILESIZE) as i16;
 
                         //Set the selected block to one of the interaction blocks
                         if set_item_y == 0 && set_item_x >= 0 && set_item_x <= 5 {
@@ -3744,7 +3745,7 @@ pub fn editor_modeitems() -> i32 {
     unsafe {
         //handle messages
         while poll_event(&mut event) != 0 {
-            let ty = event.type_;
+            let ty = event.type_();
             let mut fall = false;
 
             if ty == SDL_QUIT_EV {
@@ -3754,7 +3755,7 @@ pub fn editor_modeitems() -> i32 {
             if ty == SDL_KEYDOWN_EV {
                 dragmodeitem = -1;
 
-                let sym = event.key.keysym.sym;
+                let sym = event.key_sym();
                 if sym == k(SDLK_s) {
                     savecurrentmap();
                 } else if sym == k(SDLK_ESCAPE) || sym == k(SDLK_j) {
@@ -3782,9 +3783,9 @@ pub fn editor_modeitems() -> i32 {
             }
 
             if fall || ty == SDL_MOUSEBUTTONDOWN_EV {
-                if event.button.button == BUTTON_LEFT {
-                    let iMouseX = event.button.x as i16;
-                    let iMouseY = event.button.y as i16;
+                if event.button_button() == BUTTON_LEFT {
+                    let iMouseX = event.button_x() as i16;
+                    let iMouseY = event.button_y() as i16;
 
                     dragmodeitem = -1;
                     if modeitemmode == 0 {
@@ -3808,12 +3809,12 @@ pub fn editor_modeitems() -> i32 {
                     }
                 }
             } else if ty == SDL_MOUSEBUTTONUP_EV {
-                if event.button.button == BUTTON_LEFT {
+                if event.button_button() == BUTTON_LEFT {
                     dragmodeitem = -1;
                 }
             } else if ty == SDL_MOUSEMOTION_EV {
                 bound_mouse_motion_coords();
-                if dragmodeitem >= 0 && event.motion.state == sdl_button(SDL_BUTTON_LEFT) {
+                if dragmodeitem >= 0 && event.motion_state() == sdl_button(SDL_BUTTON_LEFT) {
                     let keystate = get_keyboard_state();
                     let fShiftDown = check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT);
 
@@ -3826,12 +3827,12 @@ pub fn editor_modeitems() -> i32 {
                         None
                     };
                     if let Some(loc) = loc {
-                        loc.x = (event.motion.x - dragoffsetx as i32) as i16;
-                        loc.y = (event.motion.y - dragoffsety as i32) as i16;
+                        loc.x = (event.motion_x() - dragoffsetx as i32) as i16;
+                        loc.y = (event.motion_y() - dragoffsety as i32) as i16;
 
                         if fShiftDown {
-                            loc.x = ((event.motion.x >> 5) << 5) as i16;
-                            loc.y = ((event.motion.y >> 5) << 5) as i16;
+                            loc.x = ((event.motion_x() >> 5) << 5) as i16;
+                            loc.y = ((event.motion_y() >> 5) << 5) as i16;
                         }
                     }
                 }
@@ -3881,7 +3882,7 @@ pub fn editor_tiletype() -> i32 {
     unsafe {
         //handle messages
         while poll_event(&mut event) != 0 {
-            match event.type_ {
+            match event.type_() {
                 SDL_QUIT_EV => return EDITOR_QUIT,
 
                 SDL_KEYDOWN_EV => {
@@ -3890,9 +3891,9 @@ pub fn editor_tiletype() -> i32 {
                 }
 
                 SDL_MOUSEBUTTONDOWN_EV => {
-                    if event.button.button == BUTTON_LEFT {
-                        let iCol = (event.button.x / TILESIZE) as i16;
-                        let iRow = (event.button.y / TILESIZE) as i16;
+                    if event.button_button() == BUTTON_LEFT {
+                        let iCol = (event.button_x() / TILESIZE) as i16;
+                        let iRow = (event.button_y() / TILESIZE) as i16;
 
                         if (iCol as i32) < NUMTILETYPES - 1 && iRow == 0 {
                             set_tiletype = TileType::from_i32(iCol as i32 + 1);
@@ -3960,7 +3961,7 @@ pub fn editor_backgrounds() -> i32 {
     unsafe {
         //handle messages
         while poll_event(&mut event) != 0 {
-            match event.type_ {
+            match event.type_() {
                 SDL_QUIT_EV => {
                     free_background_surfaces();
 
@@ -3969,7 +3970,7 @@ pub fn editor_backgrounds() -> i32 {
                 }
 
                 SDL_KEYDOWN_EV => {
-                    let sym = event.key.keysym.sym;
+                    let sym = event.key_sym();
                     if sym == k(SDLK_ESCAPE) {
                         free_background_surfaces();
 
@@ -3989,20 +3990,20 @@ pub fn editor_backgrounds() -> i32 {
                 }
 
                 SDL_MOUSEBUTTONDOWN_EV => {
-                    if event.button.button == BUTTON_LEFT || event.button.button == BUTTON_RIGHT {
+                    if event.button_button() == BUTTON_LEFT || event.button_button() == BUTTON_RIGHT {
                         for iBackground in 0..16i32 {
                             if iPage as i32 * 16 + iBackground >= backgroundlist.count() as i32 {
                                 break;
                             }
 
                             let d = rDst[iBackground as usize];
-                            if event.button.x >= d.x && event.button.x < d.x + d.w && event.button.y >= d.y && event.button.y < d.y + d.h {
+                            if event.button_x() >= d.x && event.button_x() < d.x + d.w && event.button_y() >= d.y && event.button_y() < d.y + d.h {
                                 backgroundlist.set_current_index((iPage as i32 * 16 + iBackground) as usize);
 
                                 rm.spr_background = ImageLoader::new(backgroundlist.current_path()).without_color_key().create();
                                 g_map.szBackgroundFile = get_filename_from_path(&backgroundlist.current_path().to_string_lossy());
 
-                                if event.button.button == BUTTON_LEFT {
+                                if event.button_button() == BUTTON_LEFT {
                                     //Set music to background default
                                     set_music_category_from_background();
                                 }
@@ -4070,16 +4071,16 @@ pub fn editor_animation() -> i32 {
     unsafe {
         //handle messages
         while poll_event(&mut event) != 0 {
-            let iCol = (event.button.x / TILESIZE + view_animated_tileset_x) as i16;
-            let iRow = (event.button.y / TILESIZE) as i16;
+            let iCol = (event.button_x() / TILESIZE + view_animated_tileset_x) as i16;
+            let iRow = (event.button_y() / TILESIZE) as i16;
 
             let fInValidTile = iRow >= 0 && iRow <= 7;
 
-            match event.type_ {
+            match event.type_() {
                 SDL_QUIT_EV => return EDITOR_QUIT,
 
                 SDL_KEYDOWN_EV => {
-                    let sym = event.key.keysym.sym;
+                    let sym = event.key_sym();
                     if sym == k(SDLK_ESCAPE) || sym == k(SDLK_a) {
                         if !set_tile_drag {
                             edit_mode = 8;
@@ -4102,7 +4103,7 @@ pub fn editor_animation() -> i32 {
                 }
 
                 SDL_KEYUP_EV => {
-                    let sym = event.key.keysym.sym;
+                    let sym = event.key_sym();
                     if sym == k(SDLK_LEFT) || sym == k(SDLK_RIGHT) {
                         view_tileset_repeat_direction = -1;
                         view_tileset_repeat_timer = 0;
@@ -4111,7 +4112,7 @@ pub fn editor_animation() -> i32 {
 
                 SDL_MOUSEBUTTONDOWN_EV => {
                     let idx = (iCol as i32 + ((iRow as i32) << 5)) as usize;
-                    if event.button.button == BUTTON_LEFT {
+                    if event.button_button() == BUTTON_LEFT {
                         if fInValidTile {
                             set_tile_start_x = iCol as i32;
                             set_tile_start_y = iRow as i32;
@@ -4120,17 +4121,17 @@ pub fn editor_animation() -> i32 {
 
                             set_tile_drag = true;
                         }
-                    } else if event.button.button == BUTTON_RIGHT {
+                    } else if event.button_button() == BUTTON_RIGHT {
                         animatedtiletypes[idx] = next_tile_type(animatedtiletypes[idx]);
                         set_type = animatedtiletypes[idx];
-                    } else if event.button.button == BUTTON_MIDDLE {
+                    } else if event.button_button() == BUTTON_MIDDLE {
                         animatedtiletypes[idx] = prev_tile_type(animatedtiletypes[idx]);
                         set_type = animatedtiletypes[idx];
                     }
                 }
 
                 SDL_MOUSEBUTTONUP_EV => {
-                    if event.button.button == BUTTON_LEFT {
+                    if event.button_button() == BUTTON_LEFT {
                         if fInValidTile {
                             set_tile_cols = set_tile_end_x - set_tile_start_x + 1;
                             set_tile_rows = set_tile_end_y - set_tile_start_y + 1;
@@ -4146,7 +4147,7 @@ pub fn editor_animation() -> i32 {
                 SDL_MOUSEMOTION_EV => {
                     bound_mouse_motion_coords();
                     if fInValidTile {
-                        if event.motion.state == sdl_button(SDL_BUTTON_LEFT) {
+                        if event.motion_state() == sdl_button(SDL_BUTTON_LEFT) {
                             if (iCol as i32) < set_tile_start_x {
                                 set_tile_start_x = iCol as i32;
                             }
@@ -4162,7 +4163,7 @@ pub fn editor_animation() -> i32 {
                             if iRow as i32 > set_tile_end_y {
                                 set_tile_end_y = iRow as i32;
                             }
-                        } else if event.motion.state == sdl_button(SDL_BUTTON_RIGHT) || event.motion.state == sdl_button(SDL_BUTTON_MIDDLE) {
+                        } else if event.motion_state() == sdl_button(SDL_BUTTON_RIGHT) || event.motion_state() == sdl_button(SDL_BUTTON_MIDDLE) {
                             animatedtiletypes[(iCol as i32 + ((iRow as i32) << 5)) as usize] = set_type;
                         }
                     }
@@ -4325,7 +4326,7 @@ pub fn display_help() -> i32 {
 
         //handle messages
         while poll_event(&mut event) != 0 {
-            match event.type_ {
+            match event.type_() {
                 SDL_QUIT_EV => return 0,
                 SDL_KEYDOWN_EV => return 0,
                 _ => {}
@@ -4379,11 +4380,11 @@ pub fn dialog(title: &str, instructions: &str, input: &mut String, inputsize: i3
 
             //handle messages
             while poll_event(&mut event) != 0 {
-                match event.type_ {
+                match event.type_() {
                     SDL_QUIT_EV => return false,
 
                     SDL_KEYDOWN_EV => {
-                        let sym = event.key.keysym.sym;
+                        let sym = event.key_sym();
                         if sym == k(SDLK_KP_ENTER) || sym == k(SDLK_RETURN) {
                             return true;
                         } else if sym == k(SDLK_ESCAPE) {
