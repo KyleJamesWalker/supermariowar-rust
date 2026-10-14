@@ -361,7 +361,7 @@ pub fn keyboard_state() -> *const u8 {
 /// Net games only (not in the C++ harness): a `C` line, compared across clients.
 pub fn note_net(line: String) {
     unsafe {
-        if crate::smw::net::netplay.active && h.dump.is_some() {
+        if crate::game::game().netplay.active && h.dump.is_some() {
             spawn_events.push(format!("C {}", line));
         }
     }

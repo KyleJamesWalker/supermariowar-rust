@@ -21,7 +21,6 @@ use crate::common::random_number_generator::RandomNumberGenerator;
 use crate::globals::Ptr;
 
 use crate::smw::harness;
-use crate::smw::net::netplay;
 use crate::smw::network::protocol_game_packages::RandomEvent;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -207,11 +206,11 @@ pub fn end_game() {
 /// True when the caller must not run the site's own code: this function ran it, or the game host decides it.
 pub fn event(ev: Ev, args: &[i32]) -> bool {
     unsafe {
-        if !netplay.active || !g_inGame || g_added.is_some() || RandomNumberGenerator::tape_active() {
+        if !game().netplay.active || !g_inGame || g_added.is_some() || RandomNumberGenerator::tape_active() {
             return false;
         }
 
-        if netplay.theHostIsMe {
+        if game().netplay.theHostIsMe {
             g_sent = g_sent.wrapping_add(1);
             let context = context_of(g_sent);
             set_network_id_context(context as u32);
@@ -238,7 +237,7 @@ pub fn event(ev: Ev, args: &[i32]) -> bool {
                 }
             }
             let pkg = RandomEvent { kind: ev as u8, context, args, draws };
-            netplay.client.local_gamehost.send_message_to_my_peers(&pkg.to_bytes());
+            game().netplay.client.local_gamehost.send_message_to_my_peers(&pkg.to_bytes());
         } else if let Some(i) = g_pending.iter().position(|(p, _)| p.kind == ev as u8 && same_target(ev, &p.args, args)) {
             let (pkg, _) = g_pending.remove(i);
             replay(&pkg);
@@ -266,12 +265,12 @@ pub fn in_event() -> bool {
 
 /// A joiner whose game host decides random outcomes, deaths and scores.
 pub fn host_decides() -> bool {
-    unsafe { netplay.active && !netplay.theHostIsMe }
+    unsafe { game().netplay.active && !game().netplay.theHostIsMe }
 }
 
 /// While true, a joiner leaves its hazard timers waiting for the game host's.
 pub fn awaiting_host() -> bool {
-    unsafe { netplay.active && !netplay.theHostIsMe && g_inGame }
+    unsafe { game().netplay.active && !game().netplay.theHostIsMe && g_inGame }
 }
 
 /// Contexts 0 and 1 number untracked objects and setup objects.
@@ -285,7 +284,7 @@ pub fn receive(data: &[u8]) {
         return;
     };
     unsafe {
-        if netplay.theHostIsMe || Ev::from_u8(pkg.kind).is_none() {
+        if game().netplay.theHostIsMe || Ev::from_u8(pkg.kind).is_none() {
             return;
         }
         if !g_inGame {

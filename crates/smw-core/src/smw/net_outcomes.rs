@@ -12,8 +12,6 @@ use crate::game::game;
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
 use crate::smw::harness;
-
-use crate::smw::net::netplay;
 use crate::smw::net_random::{self, Ev};
 use crate::smw::player::{get_player_from_global_id, player_killed_player_now, PlayerDeathStyle, PlayerState};
 
@@ -38,7 +36,7 @@ pub fn begin_game() {
 
 pub fn note_death(player: i16, style: i32, removed: bool) {
     unsafe {
-        if netplay.active {
+        if game().netplay.active {
             harness::note_net(format!("death p={} style={} removed={}", player, style, removed as i32));
         }
     }
@@ -63,10 +61,10 @@ pub fn frame_start() {
 /// End of a gameplay frame: the host sends changed scores; every client but a deciding host's joiner records them.
 pub fn sample() {
     unsafe {
-        if !netplay.active || game().game_values.gamemode.is_null() {
+        if !game().netplay.active || game().game_values.gamemode.is_null() {
             return;
         }
-        if netplay.theHostIsMe && net_random::in_game() {
+        if game().netplay.theHostIsMe && net_random::in_game() {
             let snapshot = snapshot();
             if snapshot != g_lastSent {
                 g_lastSent = snapshot.clone();
@@ -112,7 +110,7 @@ pub fn net_apply_scores(args: &[i32]) {
     unsafe {
         g_hostGameOver = args[0] != 0;
         g_hostWinner = args[1] as i16;
-        if netplay.theHostIsMe {
+        if game().netplay.theHostIsMe {
             return;
         }
         g_applying = true;
@@ -137,7 +135,7 @@ pub fn kill(args: &[i32]) -> Option<PlayerKillType> {
     if !net_random::event(Ev::Kill, args) {
         return None;
     }
-    unsafe { Some(if netplay.theHostIsMe { g_killResult } else { PlayerKillType::NonKill }) }
+    unsafe { Some(if game().netplay.theHostIsMe { g_killResult } else { PlayerKillType::NonKill }) }
 }
 
 pub fn kill_result() -> PlayerKillType {
@@ -194,7 +192,7 @@ pub fn remove_team_event(teamid: i16) -> Option<bool> {
         return None;
     }
     unsafe {
-        if netplay.theHostIsMe {
+        if game().netplay.theHostIsMe {
             Some(g_removeResult)
         } else {
             let removed = game().score[teamid as usize].order > -1;

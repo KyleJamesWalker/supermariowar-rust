@@ -13,7 +13,6 @@ use crate::common::uicontrol::ctl_ptr;
 use crate::common::uimenu::UI_Menu;
 use crate::globals::Ptr;
 use crate::smw::menu::game_settings_menu::UI_GameSettingsMenu;
-use crate::smw::net::netplay;
 
 const GM_LAST: usize = GAMEMODE_LAST as usize;
 
@@ -50,7 +49,7 @@ impl UI_NetNewRoomSettingsMenu {
             }
 
             this.miMapField = Ptr::new_box(MI_MapField::new(selectfield, 70, 165, "Map", 400, 120, true));
-            netplay.mapfilepath = this.get_current_map_path();
+            game().netplay.mapfilepath = this.get_current_map_path();
 
             this.miModeSettingsButton = Ptr::new_box(MI_Button::new_left(selectfield, 430, 125, "Settings", 140));
             this.miModeSettingsButton.set_code(MENU_CODE_TO_MODE_SETTINGS_MENU);
@@ -58,8 +57,8 @@ impl UI_NetNewRoomSettingsMenu {
             this.miRandomizeField = Ptr::new_box(MI_SelectField::<bool>::new(selectfield, 440, 205, "Random", 130, 80));
             this.miRandomizeField.add("Off", false);
             this.miRandomizeField.add("On", true);
-            this.miRandomizeField.set_output_ptr(&mut netplay.randomize_settings as *mut _);
-            this.miRandomizeField.set_current_value(netplay.randomize_settings);
+            this.miRandomizeField.set_output_ptr(&mut game().netplay.randomize_settings as *mut _);
+            this.miRandomizeField.set_current_value(game().netplay.randomize_settings);
         }
 
         let cont = ctl_ptr(this.miContinueButton);

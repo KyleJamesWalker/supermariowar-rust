@@ -13,6 +13,7 @@ use crate::common::tileset_manager::CTilesetManager;
 use crate::common::game_values::CGameValues;
 use crate::globals::{Global, Ptr};
 use crate::smw::gamemodes::{bonus_house::CGM_Bonus, mini_boss::CGM_Boss_MiniGame, mini_boxes::CGM_Boxes_MiniGame, mini_pipe::CGM_Pipe_MiniGame};
+use crate::smw::net::{NetworkHandler, Networking};
 use crate::smw::object_container::CObjectContainer;
 use crate::smw::player::CPlayer;
 
@@ -48,6 +49,9 @@ pub struct Game {
     pub currentgamemode: i16,
     pub rng: RngState,
     pub sfx: SfxState,
+    pub networkHandler: Global<NetworkHandler>,
+    pub netplay: Global<Networking>,
+    pub backup_playercontrol: [i16; 4],
 }
 
 impl Game {
@@ -83,6 +87,9 @@ impl Game {
             currentgamemode: 0,
             rng: RngState::new(),
             sfx: SfxState::new(),
+            networkHandler: Global::uninit(),
+            netplay: Global::uninit(),
+            backup_playercontrol: [0; 4],
         }
     }
 }

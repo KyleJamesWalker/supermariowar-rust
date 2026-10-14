@@ -8,8 +8,6 @@ use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
 use crate::common::random_number_generator::{RANDOM_BOOL, RANDOM_INT};
 use crate::globals::*;
-
-use crate::smw::net::netplay;
 use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::powerup::pu_treasure_chest_bonus::PU_TreasureChestBonus;
 use crate::smw::player::{CPlayer, PlayerState};
@@ -419,9 +417,9 @@ pub fn cgamemode_init<T: CGameModeTrait + ?Sized>(this: &mut T) {
 
 pub fn cgamemode_think<T: CGameModeTrait + ?Sized>(this: &mut T) {
     unsafe {
-        if netplay.active {
+        if game().netplay.active {
             for k in 0..game().players.len() {
-                if netplay.player_disconnected[k] {
+                if game().netplay.player_disconnected[k] {
                     game().players[k].spawn_text("Disconnected!");
                 }
             }

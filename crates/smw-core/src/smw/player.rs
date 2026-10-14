@@ -30,7 +30,6 @@ use crate::smw::gamemodes::star::CGM_Star;
 use crate::smw::gamemodes::tag::CGM_Tag;
 use crate::smw::gs_gameplay::{g_iWinningPlayer, spotlightManager, swap_players};
 use crate::smw::main::{g_iSwirlSpawnLocations};
-use crate::smw::net::netplay;
 use crate::smw::net_random::{self, Ev};
 use crate::smw::objectgame::{check_secret, PowerupType};
 use crate::smw::objects::carriable::co_bomb::CO_Bomb;
@@ -291,7 +290,7 @@ pub fn get_player_from_global_id(iGlobalID: i16) -> Ptr<CPlayer> {
 
 pub fn should_update_sprite() -> bool {
     unsafe {
-        if netplay.active {
+        if game().netplay.active {
             return true;
         }
     }
@@ -416,12 +415,12 @@ impl CPlayer {
         }
 
         unsafe {
-            if netplay.active {
-                if this.globalID == netplay.remotePlayerNumber as i16 {
+            if game().netplay.active {
+                if this.globalID == game().netplay.remotePlayerNumber as i16 {
                     this.playerKeys = Ptr::from_mut(&mut game().game_values.playerInput.outputControls[0]);
                     println!("[net] Player {} reads local input.", this.globalID);
                 } else {
-                    this.playerKeys = Ptr::from_mut(&mut netplay.netPlayerInput.outputControls[this.globalID as usize]);
+                    this.playerKeys = Ptr::from_mut(&mut game().netplay.netPlayerInput.outputControls[this.globalID as usize]);
                     println!("[net] Player {} reads network input.", this.globalID);
                 }
             } else {
@@ -1088,7 +1087,7 @@ impl CPlayer {
         }
         self.powerupangle += 0.05f32;
 
-        if unsafe { netplay.active } && self.net_waitingForPowerupTrigger {
+        if unsafe { game().netplay.active } && self.net_waitingForPowerupTrigger {
             return;
         }
 
@@ -1285,7 +1284,7 @@ impl CPlayer {
             game().game_values.gamepowerups[self.globalID as usize] = -1;
 
             self.powerupradius = 100.0;
-            if netplay.active {
+            if game().netplay.active {
                 self.powerupangle = 0.0;
             } else {
                 self.powerupangle = RANDOM_INT(1000) as f32 * 0.00628f32;
@@ -1294,17 +1293,17 @@ impl CPlayer {
             if_sound_on_play(&mut game().rm.sfx_storedpowerupsound);
 
             // only the locally controlled player should be able to send requests
-            if netplay.active && self.globalID == netplay.remotePlayerNumber as i16 {
-                if netplay.theHostIsMe {
+            if game().netplay.active && self.globalID == game().netplay.remotePlayerNumber as i16 {
+                if game().netplay.theHostIsMe {
                     // this happens when the game host player triggers a powerup
-                    netplay.client.local_gamehost.send_powerup_start_by_gh();
+                    game().netplay.client.local_gamehost.send_powerup_start_by_gh();
 
                     // otherwise, when a remote client presses the trigger button,
                     // it sends a powerup trigger request, so we don't have to handle
                     // this on the host side here
                 } else {
                     self.net_waitingForPowerupTrigger = true;
-                    netplay.client.send_powerup_request();
+                    game().netplay.client.send_powerup_request();
                 }
             }
         }
@@ -2727,26 +2726,26 @@ impl CPlayer {
                     return;
                 }
 
-                if netplay.active && netplay.theHostIsMe {
-                    netplay.client.local_gamehost.prepare_map_collision_event(self);
+                if game().netplay.active && game().netplay.theHostIsMe {
+                    game().netplay.client.local_gamehost.prepare_map_collision_event(self);
                 }
 
                 let mut collisionresult = true;
 
                 if fTopBlockSolid {
                     // collide with top block
-                    collisionresult &= topblock.get().collide_player_dir(this, counter_direction, if netplay.active { netplay.theHostIsMe || netplay.allowMapCollisionEvent } else { true });
+                    collisionresult &= topblock.get().collide_player_dir(this, counter_direction, if game().netplay.active { game().netplay.theHostIsMe || game().netplay.allowMapCollisionEvent } else { true });
                     self.flipsidesifneeded();
                 }
 
                 if fBottomBlockSolid {
                     // then bottom
-                    collisionresult &= bottomblock.get().collide_player_dir(this, counter_direction, if netplay.active { netplay.theHostIsMe || netplay.allowMapCollisionEvent } else { true });
+                    collisionresult &= bottomblock.get().collide_player_dir(this, counter_direction, if game().netplay.active { game().netplay.theHostIsMe || game().netplay.allowMapCollisionEvent } else { true });
                     self.flipsidesifneeded();
                 }
 
-                if netplay.active && netplay.theHostIsMe && collisionresult {
-                    netplay.client.local_gamehost.send_map_collision_event();
+                if game().netplay.active && game().netplay.theHostIsMe && collisionresult {
+                    game().netplay.client.local_gamehost.send_map_collision_event();
                 }
             } else if superDeathTileBehind || (deathTileBehind && !self.is_invincible() && !self.is_shielded() && !self.shyguy) {
                 if PlayerKillType::NonKill != self.kill_player_map_hazard(superDeathTileBehind, KillStyle::Environment, false, -1) {
@@ -2810,17 +2809,17 @@ impl CPlayer {
             }
 
             if !centerblock.is_null() && !centerblock.get().is_transparent() {
-                if netplay.active && netplay.theHostIsMe {
-                    netplay.client.local_gamehost.prepare_map_collision_event(self);
+                if game().netplay.active && game().netplay.theHostIsMe {
+                    game().netplay.client.local_gamehost.prepare_map_collision_event(self);
                 }
 
-                if !centerblock.get().collide_player_dir(this, 0, if netplay.active { netplay.theHostIsMe || netplay.allowMapCollisionEvent } else { true }) {
+                if !centerblock.get().collide_player_dir(this, 0, if game().netplay.active { game().netplay.theHostIsMe || game().netplay.allowMapCollisionEvent } else { true }) {
                     if self.iVerticalPlatformCollision == 2 && !centerblock.get().is_hidden() {
                         self.kill_player_map_hazard(true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
                     }
 
-                    if netplay.active && netplay.theHostIsMe {
-                        netplay.client.local_gamehost.send_map_collision_event();
+                    if game().netplay.active && game().netplay.theHostIsMe {
+                        game().netplay.client.local_gamehost.send_map_collision_event();
                     }
 
                     return;
@@ -2858,17 +2857,17 @@ impl CPlayer {
                 //then left
                 let useBehavior = alignedBlockX == txl || rightblock.is_null() || rightblock.get().is_transparent() || rightblock.get().is_hidden();
 
-                if netplay.active && netplay.theHostIsMe {
-                    netplay.client.local_gamehost.prepare_map_collision_event(self);
+                if game().netplay.active && game().netplay.theHostIsMe {
+                    game().netplay.client.local_gamehost.prepare_map_collision_event(self);
                 }
 
-                if !leftblock.get().collide_player_dir(this, 0, if netplay.active { (netplay.theHostIsMe || netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior }) {
+                if !leftblock.get().collide_player_dir(this, 0, if game().netplay.active { (game().netplay.theHostIsMe || game().netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior }) {
                     if self.iVerticalPlatformCollision == 2 && !leftblock.get().is_hidden() {
                         self.kill_player_map_hazard(true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
                     }
 
-                    if netplay.active && netplay.theHostIsMe {
-                        netplay.client.local_gamehost.send_map_collision_event();
+                    if game().netplay.active && game().netplay.theHostIsMe {
+                        game().netplay.client.local_gamehost.send_map_collision_event();
                     }
 
                     return;
@@ -2879,17 +2878,17 @@ impl CPlayer {
                 //then right
                 let useBehavior = alignedBlockX == txr || leftblock.is_null() || leftblock.get().is_transparent() || leftblock.get().is_hidden();
 
-                if netplay.active && netplay.theHostIsMe {
-                    netplay.client.local_gamehost.prepare_map_collision_event(self);
+                if game().netplay.active && game().netplay.theHostIsMe {
+                    game().netplay.client.local_gamehost.prepare_map_collision_event(self);
                 }
 
-                if !rightblock.get().collide_player_dir(this, 0, if netplay.active { (netplay.theHostIsMe || netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior }) {
+                if !rightblock.get().collide_player_dir(this, 0, if game().netplay.active { (game().netplay.theHostIsMe || game().netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior }) {
                     if self.iVerticalPlatformCollision == 2 && !rightblock.get().is_hidden() {
                         self.kill_player_map_hazard(true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
                     }
 
-                    if netplay.active && netplay.theHostIsMe {
-                        netplay.client.local_gamehost.send_map_collision_event();
+                    if game().netplay.active && game().netplay.theHostIsMe {
+                        game().netplay.client.local_gamehost.send_map_collision_event();
                     }
 
                     return;
@@ -2960,17 +2959,17 @@ impl CPlayer {
 
             if fLeftBlockSolid || fRightBlockSolid {
                 let mut collisionresult = true;
-                if netplay.active && netplay.theHostIsMe {
-                    netplay.client.local_gamehost.prepare_map_collision_event(self);
+                if game().netplay.active && game().netplay.theHostIsMe {
+                    game().netplay.client.local_gamehost.prepare_map_collision_event(self);
                 }
 
                 if fLeftBlockSolid {
                     //collide with left block
                     let useBehavior = alignedBlockX == txl || rightblock.is_null() || rightblock.get().is_transparent() || rightblock.get().is_hidden();
-                    collisionresult &= leftblock.get().collide_player_dir(this, 2, if netplay.active { (netplay.theHostIsMe || netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior });
+                    collisionresult &= leftblock.get().collide_player_dir(this, 2, if game().netplay.active { (game().netplay.theHostIsMe || game().netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior });
 
-                    if netplay.active && netplay.theHostIsMe && collisionresult {
-                        netplay.client.local_gamehost.send_map_collision_event();
+                    if game().netplay.active && game().netplay.theHostIsMe && collisionresult {
+                        game().netplay.client.local_gamehost.send_map_collision_event();
                     }
 
                     //If player was bumped and killed then return
@@ -2982,10 +2981,10 @@ impl CPlayer {
                 if fRightBlockSolid {
                     //then right
                     let useBehavior = alignedBlockX == txr || leftblock.is_null() || leftblock.get().is_transparent() || leftblock.get().is_hidden();
-                    collisionresult &= rightblock.get().collide_player_dir(this, 2, if netplay.active { (netplay.theHostIsMe || netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior });
+                    collisionresult &= rightblock.get().collide_player_dir(this, 2, if game().netplay.active { (game().netplay.theHostIsMe || game().netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior });
 
-                    if netplay.active && netplay.theHostIsMe && collisionresult {
-                        netplay.client.local_gamehost.send_map_collision_event();
+                    if game().netplay.active && game().netplay.theHostIsMe && collisionresult {
+                        game().netplay.client.local_gamehost.send_map_collision_event();
                     }
 
                     //If player was bumped and killed then return

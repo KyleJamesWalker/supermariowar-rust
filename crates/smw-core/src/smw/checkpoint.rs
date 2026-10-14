@@ -242,7 +242,7 @@ pub fn unsupported_reason() -> Option<&'static str> {
 
 /// The checkpoint at the current point of `MenuState::enter_gameplay`.
 pub fn capture() -> Vec<u8> {
-    let online = unsafe { crate::smw::net::netplay.active };
+    let online = unsafe { crate::game::game().netplay.active };
     let mut s = Snap::saver();
     s.put(MAGIC);
     s.put(&[if online { ONLINE_VERSION } else { VERSION }]);

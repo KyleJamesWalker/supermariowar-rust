@@ -9,7 +9,6 @@ use crate::common::uicontrol::{ctl_ptr, TextAlign};
 use crate::common::uimenu::UI_Menu;
 use crate::common_netplay::protocol_definitions::NET_MAX_ROOM_NAME_LENGTH;
 use crate::globals::Ptr;
-use crate::smw::net::netplay;
 use crate::smw::ui::network_list_scroll::MI_NetworkListScroll;
 
 #[derive(Default)]
@@ -42,7 +41,7 @@ impl UI_NetLobbyMenu {
             this.miNetLobbyNewRoomButton.set_code(MENU_CODE_TO_NET_NEW_ROOM_LEVEL_SELECT_MENU);
 
             this.miNetLobbyFilterField = Ptr::new_box(MI_TextField::new(plain, 320 + 20, 160, "Search", 320 - 30, 90));
-            this.miNetLobbyFilterField.set_data(&mut netplay.roomFilter, NET_MAX_ROOM_NAME_LENGTH as i16);
+            this.miNetLobbyFilterField.set_data(&mut game().netplay.roomFilter, NET_MAX_ROOM_NAME_LENGTH as i16);
 
             this.miNetLobbyRefreshButton = Ptr::new_box(MI_Button::new(selectfield, 320 + 20, 200, "Refresh", 320 - 30, TextAlign::CENTER));
             this.miNetLobbyRefreshButton.set_code(MENU_CODE_TO_NET_LOBBY_MENU);
@@ -60,10 +59,10 @@ impl UI_NetLobbyMenu {
                 MENU_CODE_NET_JOIN_ROOM_IN_PROGRESS,
                 MENU_CODE_TO_NET_SERVERS_MENU,
             ));
-            this.miNetLobbyScroll.remote_index(&mut netplay.selectedRoomIndex);
+            this.miNetLobbyScroll.remote_index(&mut game().netplay.selectedRoomIndex);
             this.miNetLobbyScroll.set_auto_modify(true);
 
-            netplay.client.set_room_list_ui_control(this.miNetLobbyScroll);
+            game().netplay.client.set_room_list_ui_control(this.miNetLobbyScroll);
 
             this.miNetLobbyJoiningDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut game().rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
             this.miNetLobbyJoiningDialogText = Ptr::new_box(MI_HeaderText::new("Joining...", 320, 240 - 12));
@@ -105,8 +104,8 @@ impl UI_NetLobbyMenu {
 
     pub fn join_in_progress(&mut self) {
         unsafe {
-            netplay.client.send_join_room_message();
-            netplay.operationInProgress = true;
+            game().netplay.client.send_join_room_message();
+            game().netplay.operationInProgress = true;
         }
 
         self.miNetLobbyJoiningDialogImage.set_visible(true);
@@ -119,7 +118,7 @@ impl UI_NetLobbyMenu {
     }
 
     pub fn abort_join(&mut self) {
-        unsafe { netplay.operationInProgress = false };
+        unsafe { game().netplay.operationInProgress = false };
         self.restore();
     }
 

@@ -36,7 +36,7 @@ use crate::smw::gamemodes::tag::CGM_Tag;
 use crate::smw::gs_menu::MenuState;
 
 use crate::common_netplay::protocol_definitions::NET_GAMESTATE_FRAMES_TO_SEND;
-use crate::smw::net::{netplay, Net_IndexedPlayerData};
+use crate::smw::net::{Net_IndexedPlayerData};
 use crate::smw::net_random::{self, Ev};
 use crate::smw::object_container::CObjectContainer;
 use crate::smw::objects::blocks::bounce_block::B_BounceBlock;
@@ -1051,8 +1051,8 @@ pub fn handle_p2p_collisions() {
                     assert!(!player2.is_null());
                     if player2.state > PlayerState::Dead {
                         if coldec_player2player(player1, player2) {
-                            if netplay.active {
-                                netplay.client.local_gamehost.send_p2p_collision_event(&player1, &player2);
+                            if game().netplay.active {
+                                game().netplay.client.local_gamehost.send_p2p_collision_event(&player1, &player2);
                             }
 
                             player1.collides_with_player(player2);
@@ -2391,7 +2391,7 @@ impl GameplayState {
 
 pub fn should_update() -> bool {
     unsafe {
-        if netplay.active {
+        if game().netplay.active {
             return true;
         }
 
@@ -2406,61 +2406,61 @@ pub fn should_update() -> bool {
 impl GameplayState {
     fn read_network(&mut self) {
         unsafe {
-            if !netplay.active {
+            if !game().netplay.active {
                 return;
             }
 
             // React to network events
             // The host receives remote input
-            netplay.gamestate_changed = false;
-            netplay.client.update();
+            game().netplay.gamestate_changed = false;
+            game().netplay.client.update();
 
-            let percent_new: f32 = 1.0f32.min(netplay.frames_since_last_gamestate as f32 / NET_GAMESTATE_FRAMES_TO_SEND as f32);
+            let percent_new: f32 = 1.0f32.min(game().netplay.frames_since_last_gamestate as f32 / NET_GAMESTATE_FRAMES_TO_SEND as f32);
             let percent_old: f32 = 1.0 - percent_new;
             debug_assert!(0.0 <= percent_new && percent_new <= 1.0);
             debug_assert!(0.0 <= percent_old && percent_old <= 1.0);
             debug_assert!(0.99 < (percent_old + percent_new) as f64 && (percent_old + percent_new) as f64 <= 1.01);
 
-            if !netplay.theHostIsMe {
+            if !game().netplay.theHostIsMe {
                 for p in 0..game().players.len() {
                     let mut player = game().players[p];
 
                     // if local player
-                    if p == netplay.remotePlayerNumber as usize {
+                    if p == game().netplay.remotePlayerNumber as usize {
                         // save the player data that was cause by the input of the previous frame
-                        let mut pdata = Net_IndexedPlayerData::new(netplay.current_input_counter);
+                        let mut pdata = Net_IndexedPlayerData::new(game().netplay.current_input_counter);
                         pdata.data.x = player.fx;
                         pdata.data.y = player.fy;
                         pdata.data.xvel = player.velx;
                         pdata.data.yvel = player.vely;
-                        netplay.local_playerdata_buffer.push_back(pdata);
-                        netplay.local_playerdata_store_count = netplay.local_playerdata_store_count.wrapping_add(1);
-                        netplay.local_playerdata_store_time[netplay.current_input_counter as usize] = netplay.local_playerdata_store_count;
-                        netplay.current_input_counter = netplay.current_input_counter.wrapping_add(1);
+                        game().netplay.local_playerdata_buffer.push_back(pdata);
+                        game().netplay.local_playerdata_store_count = game().netplay.local_playerdata_store_count.wrapping_add(1);
+                        game().netplay.local_playerdata_store_time[game().netplay.current_input_counter as usize] = game().netplay.local_playerdata_store_count;
+                        game().netplay.current_input_counter = game().netplay.current_input_counter.wrapping_add(1);
 
-                        if netplay.gamestate_changed {
+                        if game().netplay.gamestate_changed {
                             // remove old, saved player data
-                            let confirmed_index: u8 = (netplay.last_confirmed_input as u8).wrapping_add(1);
-                            let confirmed_until = netplay.local_playerdata_store_time[confirmed_index as usize];
+                            let confirmed_index: u8 = (game().netplay.last_confirmed_input as u8).wrapping_add(1);
+                            let confirmed_until = game().netplay.local_playerdata_store_time[confirmed_index as usize];
                             let mut last_popped_local = Net_IndexedPlayerData::new(0xFF);
-                            while let Some(front) = netplay.local_playerdata_buffer.front() {
+                            while let Some(front) = game().netplay.local_playerdata_buffer.front() {
                                 let iid = front.input_id;
-                                if confirmed_until <= netplay.local_playerdata_store_time[iid as usize] {
+                                if confirmed_until <= game().netplay.local_playerdata_store_time[iid as usize] {
                                     break;
                                 }
 
                                 last_popped_local = *front;
-                                netplay.local_playerdata_buffer.pop_front();
+                                game().netplay.local_playerdata_buffer.pop_front();
                             }
 
                             // check if we can use the local player data,
                             // or the difference is so big we have to fall back
                             // to the remote, confirmed positions
                             let mut use_remote_pdata = false;
-                            if netplay.local_playerdata_buffer.is_empty() {
+                            if game().netplay.local_playerdata_buffer.is_empty() {
                                 use_remote_pdata = true;
                             } else {
-                                let pd_remote = netplay.latest_playerdata.player[p];
+                                let pd_remote = game().netplay.latest_playerdata.player[p];
 
                                 if (last_popped_local.data.x - pd_remote.x).abs() > 0.45f32
                                     || (last_popped_local.data.y - pd_remote.y).abs() > 0.45f32
@@ -2471,26 +2471,26 @@ impl GameplayState {
 
                             if use_remote_pdata {
                                 // the buffered data is now invalid
-                                netplay.local_playerdata_buffer.clear();
+                                game().netplay.local_playerdata_buffer.clear();
 
                                 // set confirmed data
-                                player.fx = netplay.latest_playerdata.player[p].x;
-                                player.fy = netplay.latest_playerdata.player[p].y;
-                                player.velx = netplay.latest_playerdata.player[p].xvel;
-                                player.vely = netplay.latest_playerdata.player[p].yvel;
+                                player.fx = game().netplay.latest_playerdata.player[p].x;
+                                player.fy = game().netplay.latest_playerdata.player[p].y;
+                                player.velx = game().netplay.latest_playerdata.player[p].xvel;
+                                player.vely = game().netplay.latest_playerdata.player[p].yvel;
                             }
                         }
                     }
                     // for remote players, interpolate
-                    else if netplay.gamestate_received {
-                        player.fx = percent_old * netplay.previous_playerdata.player[p].x + percent_new * netplay.latest_playerdata.player[p].x;
-                        player.fy = percent_old * netplay.previous_playerdata.player[p].y + percent_new * netplay.latest_playerdata.player[p].y;
-                        player.velx = percent_old * netplay.previous_playerdata.player[p].xvel + percent_new * netplay.latest_playerdata.player[p].xvel;
-                        player.vely = percent_old * netplay.previous_playerdata.player[p].yvel + percent_new * netplay.latest_playerdata.player[p].yvel;
+                    else if game().netplay.gamestate_received {
+                        player.fx = percent_old * game().netplay.previous_playerdata.player[p].x + percent_new * game().netplay.latest_playerdata.player[p].x;
+                        player.fy = percent_old * game().netplay.previous_playerdata.player[p].y + percent_new * game().netplay.latest_playerdata.player[p].y;
+                        player.velx = percent_old * game().netplay.previous_playerdata.player[p].xvel + percent_new * game().netplay.latest_playerdata.player[p].xvel;
+                        player.vely = percent_old * game().netplay.previous_playerdata.player[p].yvel + percent_new * game().netplay.latest_playerdata.player[p].yvel;
                     }
                 }
 
-                netplay.frames_since_last_gamestate += 1;
+                game().netplay.frames_since_last_gamestate += 1;
             }
 
             if self.previous_playerKeys != *self.current_playerKeys {
@@ -2498,13 +2498,13 @@ impl GameplayState {
             }
 
             // Consume the next input from the remote input buffer
-            netplay.netPlayerInput.clear_game_action_keys();
-            if netplay.theHostIsMe {
-                netplay.client.local_gamehost.confirm_current_inputs();
+            game().netplay.netPlayerInput.clear_game_action_keys();
+            if game().netplay.theHostIsMe {
+                game().netplay.client.local_gamehost.confirm_current_inputs();
             }
             for p in 0..game().players.len() {
-                if let Some(front) = netplay.remote_input_buffer[p].pop_front() {
-                    netplay.netPlayerInput.outputControls[p] = front.1;
+                if let Some(front) = game().netplay.remote_input_buffer[p].pop_front() {
+                    game().netplay.netPlayerInput.outputControls[p] = front.1;
                 }
             }
         }
@@ -2513,21 +2513,21 @@ impl GameplayState {
 
 pub fn network_send_local_input() {
     unsafe {
-        if !netplay.active {
+        if !game().netplay.active {
             return;
         }
 
-        netplay.client.store_local_input();
-        netplay.client.send_local_input();
+        game().netplay.client.store_local_input();
+        game().netplay.client.send_local_input();
     }
 }
 
 pub fn network_broadcast_game_state() {
     // The host sends the game state to clients
     unsafe {
-        if netplay.active && netplay.theHostIsMe {
-            netplay.client.local_gamehost.send_current_game_state_if_needed();
-            netplay.client.local_gamehost.update();
+        if game().netplay.active && game().netplay.theHostIsMe {
+            game().netplay.client.local_gamehost.send_current_game_state_if_needed();
+            game().netplay.client.local_gamehost.update();
         }
     }
 }
@@ -2612,7 +2612,7 @@ impl GameplayState {
                 game().game_values.cputurn = 0;
             }
 
-            if !netplay.active || (netplay.active && netplay.theHostIsMe) {
+            if !game().netplay.active || (game().netplay.active && game().netplay.theHostIsMe) {
                 handle_p2p_collisions();
             }
 
@@ -2704,7 +2704,7 @@ impl GameState for GameplayState {
             net_random::gameplay_frame();
             self.read_network();
 
-            if !netplay.active {
+            if !game().netplay.active {
                 check_wind_event(&mut self.iWindTimer, &mut self.dNextWind);
             }
 
@@ -2716,8 +2716,8 @@ impl GameState for GameplayState {
             network_send_local_input();
 
             if update_exit_pause_dialog(self.iCountDownState) {
-                if netplay.active {
-                    netplay.client.send_leave_game_message();
+                if game().netplay.active {
+                    game().netplay.client.send_leave_game_message();
                 }
                 GameStateManager::instance().change_state_to(Ptr::from_mut(MenuState::instance() as &mut dyn GameState));
                 return;

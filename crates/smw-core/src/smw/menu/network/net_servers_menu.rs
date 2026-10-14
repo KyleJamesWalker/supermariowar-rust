@@ -9,7 +9,6 @@ use crate::common::uicontrol::{ctl_ptr, TextAlign};
 use crate::common::uimenu::UI_Menu;
 use crate::common_netplay::protocol_definitions::NET_MAX_PLAYER_NAME_LENGTH;
 use crate::globals::Ptr;
-use crate::smw::net::netplay;
 use crate::smw::ui::network_list_scroll::MI_NetworkListScroll;
 
 #[derive(Default)]
@@ -60,20 +59,20 @@ impl UI_NetServersMenu {
             ));
             this.miNetServersScroll.set_auto_modify(true);
             this.miNetServersScroll.set_visible(false);
-            this.miNetServersScroll.remote_index(&mut netplay.selectedServerIndex);
+            this.miNetServersScroll.remote_index(&mut game().netplay.selectedServerIndex);
 
             this.miNetServersNicknameField = Ptr::new_box(MI_TextField::new(plain, 70, 120, "Your name", 640 - 2 * 70, 150));
-            this.miNetServersNicknameField.set_data(&mut netplay.myPlayerName, NET_MAX_PLAYER_NAME_LENGTH as i16);
+            this.miNetServersNicknameField.set_data(&mut game().netplay.myPlayerName, NET_MAX_PLAYER_NAME_LENGTH as i16);
 
-            for iServer in 0..netplay.savedServers.len() {
-                let host = netplay.savedServers[iServer].hostname.clone();
+            for iServer in 0..game().netplay.savedServers.len() {
+                let host = game().netplay.savedServers[iServer].hostname.clone();
                 this.miNetServersScroll.add(&host, "");
             }
 
             this.miNetServersSelectButton = Ptr::new_box(MI_Button::new_left(selectfield, 70, 200, "Selected Server", 640 - 2 * 70));
             this.miNetServersSelectButton.set_code(MENU_CODE_TO_NET_SERVERLIST);
-            if !netplay.savedServers.is_empty() {
-                let host = netplay.savedServers[netplay.selectedServerIndex as usize].hostname.clone();
+            if !game().netplay.savedServers.is_empty() {
+                let host = game().netplay.savedServers[game().netplay.selectedServerIndex as usize].hostname.clone();
                 this.miNetServersSelectedHostText = Ptr::new_box(MI_Text::new(host, 640 - 90, 205, 0, true, TextAlign::RIGHT));
             } else {
                 this.miNetServersSelectedHostText = Ptr::new_box(MI_Text::new("(none)", 640 - 90, 205, 0, true, TextAlign::RIGHT));
@@ -127,8 +126,8 @@ impl UI_NetServersMenu {
 
     pub fn refresh(&mut self) {
         unsafe {
-            if !netplay.savedServers.is_empty() {
-                let nethostname = netplay.savedServers[netplay.selectedServerIndex as usize].hostname.clone();
+            if !game().netplay.savedServers.is_empty() {
+                let nethostname = game().netplay.savedServers[game().netplay.selectedServerIndex as usize].hostname.clone();
                 self.miNetServersSelectedHostText.set_text(nethostname);
             }
         }
@@ -137,13 +136,13 @@ impl UI_NetServersMenu {
     pub fn refresh_scroll(&mut self) {
         unsafe {
             self.miNetServersScroll.clear();
-            for iServer in 0..netplay.savedServers.len() {
-                let host = netplay.savedServers[iServer].hostname.clone();
+            for iServer in 0..game().netplay.savedServers.len() {
+                let host = game().netplay.savedServers[iServer].hostname.clone();
                 self.miNetServersScroll.add(&host, "");
             }
 
-            if !netplay.savedServers.is_empty() {
-                let host = netplay.savedServers[netplay.selectedServerIndex as usize].hostname.clone();
+            if !game().netplay.savedServers.is_empty() {
+                let host = game().netplay.savedServers[game().netplay.selectedServerIndex as usize].hostname.clone();
                 self.miNetServersSelectedHostText.set_text(host);
             } else {
                 self.miNetServersSelectedHostText.set_text("(none)");
@@ -153,12 +152,12 @@ impl UI_NetServersMenu {
 
     pub fn connect_in_progress(&mut self) {
         unsafe {
-            if netplay.savedServers.is_empty() {
+            if game().netplay.savedServers.is_empty() {
                 return;
             }
 
-            netplay.client.send_connect_request_to_selected_server();
-            netplay.operationInProgress = true;
+            game().netplay.client.send_connect_request_to_selected_server();
+            game().netplay.operationInProgress = true;
         }
 
         self.miNetServersConnectingDialogImage.set_visible(true);
@@ -172,7 +171,7 @@ impl UI_NetServersMenu {
     }
 
     pub fn open_server_list(&mut self) {
-        unsafe { netplay.connectSuccessful = false };
+        unsafe { game().netplay.connectSuccessful = false };
         self.miNetServersScroll.set_visible(true);
         self.remember_current();
 
