@@ -858,6 +858,9 @@ unsafe extern "C" fn record_filter(_userdata: *mut std::ffi::c_void, event: *mut
     if !crate::smw::pad::translate(&mut *event) {
         return 0;
     }
+    if (*event).type_ == SDL_EventType::SDL_MOUSEBUTTONUP as u32 {
+        smw_sdl2::button_to_logical(&mut (*event).button);
+    }
     r.pending.push(*event);
     0
 }
