@@ -560,6 +560,7 @@ pub fn main_game() {
         //**********************************************************
 
         println!("\n---------------- shutdown ----------------");
+        crate::common::gfx::blit::report_fallbacks();
         harness::finish();
 
         for i in 0..GAMEMODE_LAST as usize {

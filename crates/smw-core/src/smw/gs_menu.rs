@@ -1768,7 +1768,7 @@ impl GameState for MenuState {
             if self.mCurrentMenu != menu(self.mWorldMenu) {
                 rm.menu_backdrop.draw(0, 0);
             } else {
-                SDL_FillRect(screen, std::ptr::null(), SDL_MapRGB((*screen).format, 0, 0, 0));
+                crate::common::gfx::blit::fill_rect(screen, std::ptr::null(), SDL_MapRGB((*screen).format, 0, 0, 0));
             }
 
             self.mCurrentMenu.update();

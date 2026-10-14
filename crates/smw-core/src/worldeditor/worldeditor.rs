@@ -899,6 +899,7 @@ pub fn inner_main() {
         }
 
         println!("\n---------------- shutdown ----------------");
+        crate::common::gfx::blit::report_fallbacks();
     }
 }
 
