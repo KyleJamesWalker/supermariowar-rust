@@ -100,10 +100,9 @@ int main(int argc, char** argv) {
         drawMap();
         SDL_SaveBMP(screen, (outdir + "/" + std::to_string(n) + "_f40.bmp").c_str());
 
-        SDL_Surface* thumb = g_map->createThumbnailSurface(false);
+        gfxSprite thumb = g_map->createThumbnailSurface(false);
         if (thumb) {
-            SDL_SaveBMP(thumb, (outdir + "/" + std::to_string(n) + "_thumb.bmp").c_str());
-            SDL_FreeSurface(thumb);
+            SDL_SaveBMP(thumb.getSurface(), (outdir + "/" + std::to_string(n) + "_thumb.bmp").c_str());
         }
     }
     printf("\n---\nrendered %d\n", argc - 3);
