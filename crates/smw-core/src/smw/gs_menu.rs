@@ -249,7 +249,7 @@ impl MenuState {
         unsafe {
             reset_tour_stops();
 
-            let fp = std::fs::File::open(tourlist.at(game_values.tourindex as usize)).expect("fopen tour file");
+            let fp = std::fs::File::open(game().tourlist.at(game_values.tourindex as usize)).expect("fopen tour file");
             let ignorable_leads: &[u8] = b" #\n\r\t";
 
             let mut fReadVersion = false;
@@ -341,7 +341,7 @@ impl MenuState {
                             }
                         }
                     } else if game_values.randomskin[k] {
-                        game_values.skinids[k] = RANDOM_INT(skinlist.count() as i32) as i16;
+                        game_values.skinids[k] = RANDOM_INT(game().skinlist.count() as i32) as i16;
                         let skin = rm.load_full_skin(game_values.skinids[k], game_values.colorids[k]);
                         rm.spr_player[k] = skin;
                     } else {
@@ -352,15 +352,15 @@ impl MenuState {
             }
 
             //Load announcer sounds if changed
-            if game_values.loadedannouncer != announcerlist.current_index() {
-                game_values.loadedannouncer = announcerlist.current_index();
+            if game_values.loadedannouncer != game().announcerlist.current_index() {
+                game_values.loadedannouncer = game().announcerlist.current_index();
 
                 //Delete the old sounds
                 for k in 0..PANNOUNCER_SOUND_LAST as usize {
                     rm.sfx_announcer[k] = sfxSound::new();
                 }
 
-                let announcerfile = std::fs::File::open(announcerlist.current_path()).expect("fopen announcer file");
+                let announcerfile = std::fs::File::open(game().announcerlist.current_path()).expect("fopen announcer file");
 
                 let mut announcerIndex: i32 = 0;
 
@@ -391,11 +391,11 @@ impl MenuState {
             }
 
             //Load soundtrack music if changed
-            if game_values.loadedmusic as i64 != musiclist.current_index() as i64 {
-                game_values.loadedmusic = musiclist.current_index() as i16;
-                rm.backgroundmusic[1] = sfxMusic::from_file(musiclist.music(0)).unwrap_or_else(|e| std::panic::panic_any(e)); //Stage Clear
-                rm.backgroundmusic[3] = sfxMusic::from_file(musiclist.music(2)).unwrap_or_else(|e| std::panic::panic_any(e)); //Tournament Menu
-                rm.backgroundmusic[4] = sfxMusic::from_file(musiclist.music(3)).unwrap_or_else(|e| std::panic::panic_any(e)); //Tournament Over
+            if game_values.loadedmusic as i64 != game().musiclist.current_index() as i64 {
+                game_values.loadedmusic = game().musiclist.current_index() as i16;
+                rm.backgroundmusic[1] = sfxMusic::from_file(game().musiclist.music(0)).unwrap_or_else(|e| std::panic::panic_any(e)); //Stage Clear
+                rm.backgroundmusic[3] = sfxMusic::from_file(game().musiclist.music(2)).unwrap_or_else(|e| std::panic::panic_any(e)); //Tournament Menu
+                rm.backgroundmusic[4] = sfxMusic::from_file(game().musiclist.music(3)).unwrap_or_else(|e| std::panic::panic_any(e)); //Tournament Over
             }
 
             rm.backgroundmusic[2].stop();
@@ -587,7 +587,7 @@ impl MenuState {
                     let this = Ptr::from_mut(self);
                     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                         let mut this = this;
-                        g_worldmap.init(WorldMap::new_path(&worldlist.at(game_values.worldindex as usize).to_string_lossy(), TILESIZE as i16));
+                        g_worldmap.init(WorldMap::new_path(&game().worldlist.at(game_values.worldindex as usize).to_string_lossy(), TILESIZE as i16));
 
                         this.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(score_cnt, 0, Ptr::from_mut(&mut rm.spr_tour_markers));
 
@@ -635,7 +635,7 @@ impl MenuState {
                         println!("  MatchType::SingleGame || MatchType::Tournament");
                         println!("current map: {}", *self.szCurrentMapName);
                         let szCurrentMapName = (*self.szCurrentMapName).clone();
-                        maplist.findexact(&szCurrentMapName, false);
+                        game().maplist.findexact(&szCurrentMapName, false);
                         self.mGameSettingsMenu.miMapField.load_current_map();
 
                         game_values.gamemode = gamemodes[self.mGameSettingsMenu.get_current_game_mode_id() as usize];
@@ -818,7 +818,7 @@ impl MenuState {
                 crate::common::global::load_current_map_background();
 
                 if game_values.music {
-                    rm.backgroundmusic[0] = sfxMusic::from_file(worldmusiclist.current_music(WorldMusicCategory::Bonus, "")).unwrap_or_else(|e| std::panic::panic_any(e));
+                    rm.backgroundmusic[0] = sfxMusic::from_file(game().worldmusiclist.current_music(WorldMusicCategory::Bonus, "")).unwrap_or_else(|e| std::panic::panic_any(e));
                     rm.backgroundmusic[0].play(false, false);
                 }
             } else {
@@ -830,12 +830,12 @@ impl MenuState {
                     let gm = game_values.gamemode.gamemode;
                     if gm == game_mode_pipe_minigame || gm == game_mode_boss_minigame || gm == game_mode_boxes_minigame {
                         let mapFile = game_values.tourstops[game_values.tourstopcurrent].pszMapFile.clone();
-                        fMiniGameMapFound = maplist.findexact(&mapFile, true);
+                        fMiniGameMapFound = game().maplist.findexact(&mapFile, true);
 
                         if fMiniGameMapFound {
-                            let filename = maplist.current_filename().to_string();
+                            let filename = game().maplist.current_filename().to_string();
                             load_match_map(&filename);
-                            sShortMapName = maplist.current_shortmapname().to_string();
+                            sShortMapName = game().maplist.current_shortmapname().to_string();
                         }
                     }
                 }
@@ -863,7 +863,7 @@ impl MenuState {
                     }
                 } else if game_values.matchtype == MatchType::QuickGame {
                     //Load a random map for the quick game
-                    let szMapName = maplist.random_filename();
+                    let szMapName = game().maplist.random_filename();
                     load_match_map(&szMapName);
                     sShortMapName = strip_path_and_extension(&szMapName);
 
@@ -874,9 +874,9 @@ impl MenuState {
                     load_match_map(&netplay.mapfilepath);
                     sShortMapName = strip_path_and_extension(&netplay.mapfilepath);
                 } else {
-                    let filename = maplist.current_filename().to_string();
+                    let filename = game().maplist.current_filename().to_string();
                     load_match_map(&filename);
-                    sShortMapName = maplist.current_shortmapname().to_string();
+                    sShortMapName = game().maplist.current_shortmapname().to_string();
                 }
 
                 crate::common::global::load_current_map_background();
@@ -887,8 +887,8 @@ impl MenuState {
                 if game_values.music {
                     let category = MusicCategory::ALL[g_map.musicCategoryID as usize];
                     let background = g_map.szBackgroundFile.clone();
-                    musiclist.set_random_music(category, &sShortMapName, &background);
-                    rm.backgroundmusic[0] = sfxMusic::from_file(musiclist.current_music()).unwrap_or_else(|e| std::panic::panic_any(e));
+                    game().musiclist.set_random_music(category, &sShortMapName, &background);
+                    rm.backgroundmusic[0] = sfxMusic::from_file(game().musiclist.current_music()).unwrap_or_else(|e| std::panic::panic_any(e));
                     rm.backgroundmusic[0].play(game_values.playnextmusic, false);
                 }
             }
@@ -1220,7 +1220,7 @@ impl MenuState {
             } else if MENU_CODE_WORLD_GRAPHICS_PACK_CHANGED == code {
                 rm.load_world_graphics();
             } else if MENU_CODE_GAME_GRAPHICS_PACK_CHANGED == code {
-                let packdir = gamegraphicspacklist.current_path().to_string_lossy().into_owned();
+                let packdir = game().gamegraphicspacklist.current_path().to_string_lossy().into_owned();
                 let png = std::panic::catch_unwind(|| gfx_loadpalette(Path::new(&convert_path_pack("gfx/packs/palette.png", &packdir))));
                 if let Err(payload) = png {
                     let Some(err) = payload.downcast_ref::<String>() else { std::panic::resume_unwind(payload) };
@@ -1242,7 +1242,7 @@ impl MenuState {
             } else if MENU_CODE_WORLD_STAGE_NO_START == code {
                 self.mWorldMenu.close_stage_start();
             } else if MENU_CODE_WORLD_MUSIC_CHANGED == code {
-                worldmusiclist.set_current(self.mSoundOptionsMenu.get_current_world_music_id() as usize);
+                game().worldmusiclist.set_current(self.mSoundOptionsMenu.get_current_world_music_id() as usize);
             } else if MENU_CODE_TOUR_STOP_CONTINUE == code || MENU_CODE_TOUR_STOP_CONTINUE_FORCED == code {
                 //If this tour stop is forced, we need to load the map first
                 if MENU_CODE_TOUR_STOP_CONTINUE_FORCED == code {
@@ -1286,10 +1286,10 @@ impl MenuState {
                     self.szCurrentMapName = Ptr::from_mut(&mut self.mGameSettingsMenu.miMapField.szMapName);
                 }
             } else if MENU_CODE_MAP_FILTER_EXIT == code {
-                maplist.apply_filters(&game_values.pfFilters);
+                game().maplist.apply_filters(&game_values.pfFilters);
 
                 //If the filtered map list has at least 1 map in it, then allow exiting the filter menu
-                if maplist.map_in_filtered_set() {
+                if game().maplist.map_in_filtered_set() {
                     self.mGameSettingsMenu.miMapField.load_current_map();
                     self.szCurrentMapName = Ptr::from_mut(&mut self.mGameSettingsMenu.miMapField.szMapName);
 
@@ -1519,7 +1519,7 @@ impl GameState for MenuState {
             self.mCurrentMenu = menu(self.mMainMenu);
 
             if let Some(forcedMap) = harness::forced_map() {
-                if !maplist.findexact(forcedMap, false) && !maplist.find(forcedMap) {
+                if !game().maplist.findexact(forcedMap, false) && !game().maplist.find(forcedMap) {
                     eprintln!("[harness] SMW_MAP '{}' not found", forcedMap);
                     std::process::exit(2);
                 }
@@ -1822,7 +1822,7 @@ impl GameState for MenuState {
                     self.mCurrentMenu.reset_menu();
 
                     rm.backgroundmusic[2].stop();
-                    let worldMusic = worldmusiclist.current_music(g_worldmap.get_music_category(), g_worldmap.get_world_name()).clone();
+                    let worldMusic = game().worldmusiclist.current_music(g_worldmap.get_music_category(), g_worldmap.get_world_name()).clone();
                     rm.backgroundmusic[5] = sfxMusic::from_file(&worldMusic).unwrap_or_else(|e| std::panic::panic_any(e));
                     rm.backgroundmusic[5].play(false, false);
                     self.fNeedMenuMusicReset = true;
@@ -1846,14 +1846,14 @@ impl GameState for MenuState {
                 rm.backgroundmusic[2].toggle_pause();
 
                 //Reload map auto filters from live map files (don't use the cache)
-                maplist.reload_map_auto_filters();
+                game().maplist.reload_map_auto_filters();
 
                 //Write out all the map thumbnails for the map browser and filter editor
-                let mut itr = maplist.get_iterator_at(0, false);
+                let mut itr = game().maplist.get_iterator_at(0, false);
 
-                let iMapCount = maplist.count() as i16;
+                let iMapCount = game().maplist.count() as i16;
                 for _iMap in 0..iMapCount {
-                    let filename = maplist.node_at(itr).filename.clone();
+                    let filename = game().maplist.node_at(itr).filename.clone();
                     let mut szThumbnail = String::from("maps/cache/");
                     szThumbnail += &get_name_from_file_name(&filename, false);
                     szThumbnail += ".png";

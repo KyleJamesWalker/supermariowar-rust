@@ -386,12 +386,12 @@ pub fn inner_main() {
         rm = Ptr::new_box(CResourceManager::new());
         g_tilesetmanager = Ptr::new_box(CTilesetManager::new(&convert_path("gfx/Classic/tilesets")));
         g_map = Ptr::from_box(CMap::new());
-        filterslist = Ptr::new_box(crate::common::file_list::FiltersList::new());
-        maplist = Ptr::new_box(MapList::new(false));
+        game().filterslist = Ptr::new_box(crate::common::file_list::FiltersList::new());
+        game().maplist = Ptr::new_box(MapList::new(false));
         backgroundlist = Ptr::new_box(BackgroundList::new());
 
         //Add all of the maps that are world only so we can edit them
-        maplist.add_world_maps();
+        game().maplist.add_world_maps();
         let title = format!("{} {}", TITLESTRING, MAPTITLESTRING);
         gfx_settitle(&title);
 
@@ -511,7 +511,7 @@ pub fn inner_main() {
         read_animated_tile_type_file(&convert_path("gfx/packs/Classic/tilesets/tile_animation_tileset.tls"));
 
         let fs = findstring.clone();
-        maplist.find(&fs);
+        game().maplist.find(&fs);
         loadcurrentmap();
         findstring.clear(); //clear out the find string so that pressing "f" will give you the find dialog
 
@@ -570,7 +570,7 @@ pub fn inner_main() {
             let mut editor_settings = BinaryFile::new(&options_path, "wb");
             if editor_settings.is_open() {
                 editor_settings.write_bool(g_fFullScreen);
-                let current = maplist.current_filename().to_string();
+                let current = game().maplist.current_filename().to_string();
                 editor_settings.write_string_long(&current);
             }
         }
@@ -894,8 +894,8 @@ pub fn editor_edit() -> i32 {
 
                         if key == k(SDLK_PAGEUP) {
                             loop {
-                                maplist.prev(false);
-                                if maplist.is_valid() {
+                                game().maplist.prev(false);
+                                if game().maplist.is_valid() {
                                     break;
                                 }
                             }
@@ -905,8 +905,8 @@ pub fn editor_edit() -> i32 {
 
                         if key == k(SDLK_PAGEDOWN) {
                             loop {
-                                maplist.next(false);
-                                if maplist.is_valid() {
+                                game().maplist.next(false);
+                                if game().maplist.is_valid() {
                                     break;
                                 }
                             }
@@ -1184,7 +1184,7 @@ pub fn editor_edit() -> i32 {
             }
         }
 
-        if maplist.is_valid() {
+        if game().maplist.is_valid() {
             drawmap(false, TILESIZE as i16, false);
         } else {
             crate::common::gfx::blit::fill_rect(screen, null(), 0x0);
@@ -1309,7 +1309,7 @@ pub fn editor_edit() -> i32 {
                 rm.menu_font_small.draw(0, 0, "Map Item Mode");
             }
 
-            rm.menu_font_small.draw_right_justified(640, 0, maplist.current_filename());
+            rm.menu_font_small.draw_right_justified(640, 0, game().maplist.current_filename());
 
             if g_musiccategorydisplaytimer > 0 {
                 g_musiccategorydisplaytimer -= 1;
@@ -1735,7 +1735,7 @@ pub fn editor_warp() -> i32 {
         r.h = 480;
 
         rm.spr_warps[0].draw_to(screen, &r);
-        rm.menu_font_small.draw_right_justified(640, 0, maplist.current_filename());
+        rm.menu_font_small.draw_right_justified(640, 0, game().maplist.current_filename());
 
         draw_message();
         EDITOR_WARP
@@ -2027,7 +2027,7 @@ pub fn editor_properties(iBlockCol: i16, iBlockRow: i16) -> i32 {
                 }
             }
 
-            rm.menu_font_small.draw_right_justified(640, 0, maplist.current_filename());
+            rm.menu_font_small.draw_right_justified(640, 0, game().maplist.current_filename());
 
             draw_message();
             editor_harness::frame_delay(0);
@@ -2601,7 +2601,7 @@ pub fn editor_platforms() -> i32 {
             rm.menu_font_small.draw_centered(320, r.y + 18, "Platforms");
 
             rm.menu_font_small.draw(0, 480 - rm.menu_font_small.get_height(), "Platform Mode: [esc] Exit  [c] Check Paths, [1-8] Select, [n] New");
-            rm.menu_font_small.draw_right_justified(640, 0, maplist.current_filename());
+            rm.menu_font_small.draw_right_justified(640, 0, game().maplist.current_filename());
 
             for iPlatform in 0..g_iNumPlatforms as usize {
                 let p = &mut g_Platforms[iPlatform];
@@ -3275,7 +3275,7 @@ pub fn editor_maphazards() -> i32 {
             }
         }
 
-        rm.menu_font_small.draw_right_justified(640, 0, maplist.current_filename());
+        rm.menu_font_small.draw_right_justified(640, 0, game().maplist.current_filename());
 
         draw_message();
         EDITOR_MAPHAZARDS
@@ -3664,7 +3664,7 @@ pub fn editor_blocks() -> i32 {
         rm.spr_blocks[0].draw_src_to(&rect(0, 32, 160, 32), screen, &rect(224, 0, 160, 32));
         rm.spr_blocks[0].draw_src_to(&rect(0, 64, 320, 32), screen, &rect(0, 96, 320, 32));
 
-        rm.menu_font_small.draw_right_justified(640, 0, maplist.current_filename());
+        rm.menu_font_small.draw_right_justified(640, 0, game().maplist.current_filename());
 
         draw_message();
         EDITOR_BLOCKS
@@ -3710,7 +3710,7 @@ pub fn editor_mapitems() -> i32 {
 
         rm.spr_mapitems[0].draw_src(0, 0, &rect(0, 0, 192, 32));
 
-        rm.menu_font_small.draw_right_justified(640, 0, maplist.current_filename());
+        rm.menu_font_small.draw_right_justified(640, 0, game().maplist.current_filename());
         rm.menu_font_small.draw_right_justified(0, 480 - rm.menu_font_small.get_height(), "Map Items");
 
         draw_message();
@@ -3871,7 +3871,7 @@ pub fn editor_modeitems() -> i32 {
             rm.menu_font_small.draw(0, 480 - rm.menu_font_small.get_height(), "Set Flag Base Locations - Press [1] for Race Goals");
         }
 
-        rm.menu_font_small.draw_right_justified(640, 0, maplist.current_filename());
+        rm.menu_font_small.draw_right_justified(640, 0, game().maplist.current_filename());
 
         draw_message();
         EDITOR_MODEITEMS
@@ -3914,7 +3914,7 @@ pub fn editor_tiletype() -> i32 {
 
         rm.spr_transparenttiles.draw(0, 0);
 
-        rm.menu_font_small.draw_right_justified(640, 0, maplist.current_filename());
+        rm.menu_font_small.draw_right_justified(640, 0, game().maplist.current_filename());
 
         draw_message();
         EDITOR_TILETYPE
@@ -4213,7 +4213,7 @@ pub fn editor_animation() -> i32 {
             }
         }
 
-        rm.menu_font_small.draw_right_justified(640, 0, maplist.current_filename());
+        rm.menu_font_small.draw_right_justified(640, 0, game().maplist.current_filename());
 
         rm.menu_font_small.draw(0, 480 - rm.menu_font_small.get_height(), "Use Arrow Keys To Scroll");
 
@@ -4347,8 +4347,8 @@ pub fn save_as() -> i32 {
         save_map(&convert_path(&mapLocation));
         fileName.push_str(".map");
         unsafe {
-            maplist.add(&fileName);
-            maplist.find(&fileName);
+            game().maplist.add(&fileName);
+            game().maplist.find(&fileName);
         }
         loadcurrentmap();
     }
@@ -4365,7 +4365,7 @@ unsafe fn draw_dialog(title: &str, instructions: &str, input: Option<&str>) {
     if let Some(input) = input {
         rm.menu_font_small.draw(240, 255, input);
     }
-    rm.menu_font_small.draw_right_justified(640, 0, maplist.current_filename());
+    rm.menu_font_small.draw_right_justified(640, 0, game().maplist.current_filename());
     gfx_flipscreen();
 }
 
@@ -4462,7 +4462,7 @@ pub fn find() -> i32 {
             findstring = fileName.clone();
 
             let fs = findstring.clone();
-            if maplist.find(&fs) {
+            if game().maplist.find(&fs) {
                 loadcurrentmap();
             }
         }
@@ -4483,7 +4483,7 @@ pub fn clear_map() -> i32 {
 
 pub fn loadcurrentmap() {
     unsafe {
-        let filename = maplist.current_filename().to_string();
+        let filename = game().maplist.current_filename().to_string();
         g_map.load_map(&filename, read_type_full);
 
         if g_map.iNumRaceGoals == 0 {
@@ -4589,7 +4589,7 @@ pub fn savecurrentmap() -> i32 {
         g_szMessageLine[1] = "been saved.".to_string();
         g_szMessageLine[2] = String::new();
 
-        let file = maplist.current_filename().to_string();
+        let file = game().maplist.current_filename().to_string();
         save_map(&file);
     }
     0
@@ -4704,7 +4704,7 @@ pub fn findcurrentstring() -> i32 {
     unsafe {
         if !findstring.is_empty() {
             let fs = findstring.clone();
-            if maplist.find(&fs) {
+            if game().maplist.find(&fs) {
                 loadcurrentmap();
             }
         }
@@ -4725,8 +4725,8 @@ pub fn newmap() -> i32 {
             mapLocation.push_str(".map");
             g_map.save_map(&convert_path(&mapLocation));
             fileName.push_str(".map");
-            maplist.add(&fileName);
-            maplist.find(&fileName);
+            game().maplist.add(&fileName);
+            game().maplist.find(&fileName);
         }
         loadcurrentmap();
     }
@@ -5028,7 +5028,7 @@ pub fn takescreenshot() {
 
             //Save the screenshot with the same name as the map file
             let mut szSaveFile = String::from("maps/screenshots/");
-            szSaveFile.push_str(&get_name_from_file_name(maplist.current_filename(), false));
+            szSaveFile.push_str(&get_name_from_file_name(game().maplist.current_filename(), false));
 
             if iTileSize as i32 == PREVIEWTILESIZE {
                 szSaveFile.push_str("_preview");

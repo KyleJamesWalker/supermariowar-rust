@@ -76,21 +76,21 @@ impl UI_SoundOptionsMenu {
             this.miPlayNextMusicField = select_field(spr, 70, 180, "Next Music", 500, 220, OFF_ON, &mut game_values.playnextmusic);
             this.miPlayNextMusicField.set_auto_advance(true);
 
-            this.miAnnouncerField = Ptr::new_box(MI_AnnouncerField::new(spr, 70, 220, "Announcer", 500, 220, Ptr::from_mut(&mut announcerlist.simple_file_list)));
-            this.miSoundPackField = Ptr::new_box(MI_PacksField::new(spr, 70, 260, "Sound Pack", 500, 220, Ptr::from_mut(&mut soundpacklist.simple_directory_list.simple_file_list), MENU_CODE_SOUND_PACK_CHANGED));
+            this.miAnnouncerField = Ptr::new_box(MI_AnnouncerField::new(spr, 70, 220, "Announcer", 500, 220, Ptr::from_mut(&mut game().announcerlist.simple_file_list)));
+            this.miSoundPackField = Ptr::new_box(MI_PacksField::new(spr, 70, 260, "Sound Pack", 500, 220, Ptr::from_mut(&mut game().soundpacklist.simple_directory_list.simple_file_list), MENU_CODE_SOUND_PACK_CHANGED));
 
             this.miPlaylistField = Ptr::new_box(MI_PlaylistField::new(spr, 70, 300, "Game Music Pack", 500, 220));
             this.miWorldMusicField = Ptr::new_box(MI_SelectField::new(spr, 70, 340, "World Music Pack", 500, 220));
 
-            let iCurrentMusic = worldmusiclist.current_index() as i32;
-            worldmusiclist.set_current(0);
-            for iMusic in 0..worldmusiclist.count() {
-                let name = worldmusiclist.current_name().to_string();
+            let iCurrentMusic = game().worldmusiclist.current_index() as i32;
+            game().worldmusiclist.set_current(0);
+            for iMusic in 0..game().worldmusiclist.count() {
+                let name = game().worldmusiclist.current_name().to_string();
                 this.miWorldMusicField.add(name, iMusic as i16);
-                worldmusiclist.next();
+                game().worldmusiclist.next();
             }
             this.miWorldMusicField.set_current_value(iCurrentMusic as i16);
-            worldmusiclist.set_current(iCurrentMusic as usize);
+            game().worldmusiclist.set_current(iCurrentMusic as usize);
             this.miWorldMusicField.set_item_changed_code(MENU_CODE_WORLD_MUSIC_CHANGED);
 
             this.miSoundOptionsMenuBackButton = Ptr::new_box(MI_Button::new(spr, 544, 432, "Back", 80, TextAlign::CENTER));

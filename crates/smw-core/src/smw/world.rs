@@ -295,7 +295,7 @@ impl WorldPlayer {
             let p = iPlayer as usize;
             while !rm.load_menu_skin(iPlayer, game_values.skinids[p], game_values.colorids[p], true) {
                 game_values.skinids[p] += 1;
-                if game_values.skinids[p] as usize >= skinlist.count() {
+                if game_values.skinids[p] as usize >= game().skinlist.count() {
                     game_values.skinids[p] = 0;
                 }
             }

@@ -66,12 +66,12 @@ fn main() {
         gfx_init(640, 480, false);
         blitdest = screen;
         rm = Ptr::new_box(CResourceManager::new());
-        filterslist = Ptr::new_box(FiltersList::new());
-        skinlist = Ptr::new_box(SkinList::new());
-        menugraphicspacklist = Ptr::new_box(GraphicsList::new());
-        worldgraphicspacklist = Ptr::new_box(GraphicsList::new());
-        gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
-        menugraphicspacklist.set_current_index(0);
+        game().filterslist = Ptr::new_box(FiltersList::new());
+        game().skinlist = Ptr::new_box(SkinList::new());
+        game().menugraphicspacklist = Ptr::new_box(GraphicsList::new());
+        game().worldgraphicspacklist = Ptr::new_box(GraphicsList::new());
+        game().gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
+        game().menugraphicspacklist.set_current_index(0);
         if !game_values.is_initialized() {
             game_values.init(CGameValues::new());
         }

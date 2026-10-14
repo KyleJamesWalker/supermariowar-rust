@@ -7,6 +7,7 @@ pub mod map_reader17xx;
 pub mod map_reader18xx;
 pub mod map_reader_constants;
 
+use crate::game::game;
 use crate::common::file_io::BinaryFile;
 use crate::common::game::App;
 use crate::common::gfx::gfx_sprite::{gfxSprite, ImageLoader};
@@ -1590,7 +1591,7 @@ impl CMap {
                 }
             } else {
                 let localSzBackgroundFile = concat("gfx/packs/backgrounds/", &g_map.szBackgroundFile);
-                let pack = gamegraphicspacklist.current_path().to_string_lossy().into_owned();
+                let pack = game().gamegraphicspacklist.current_path().to_string_lossy().into_owned();
                 path = convert_path_pack(&localSzBackgroundFile, &pack);
 
                 if !file_exists(&path) {
@@ -2784,7 +2785,7 @@ pub(crate) mod tests {
             SDL_Init(0);
             screen = SDL_CreateRGBSurface(0, 640, 480, 32, 0, 0, 0, 0);
             blitdest = screen;
-            filterslist = Ptr::new_box(FiltersList::new());
+            game().filterslist = Ptr::new_box(FiltersList::new());
             if !game_values.is_initialized() {
                 game_values.init(CGameValues::new());
             }
@@ -2957,17 +2958,17 @@ pub(crate) mod tests {
 
     /// Same text as tools/ref/map_list_dump.cpp prints after `---`.
     fn map_list_dump() -> String {
-        use crate::common::global::maplist;
         use crate::common::map_list::MapList;
         use crate::common::random_number_generator::{RandomNumberGenerator, RandomNumberGeneratorType};
         unsafe {
             let root = RootDataDirectory.clone();
             let rel = |p: &str| if p.len() > root.len() { p[root.len()..].to_string() } else { p.to_string() };
-            maplist = Ptr::new_box(MapList::new(false));
+            game().maplist = Ptr::new_box(MapList::new(false));
+            let mut maplist = game().maplist;
             maplist.read_filters();
 
             let mut o = String::new();
-            let cur = |o: &mut String, what: &str| {
+            let cur = move |o: &mut String, what: &str| {
                 let _ = writeln!(o, "{} cur={} file={}", what, maplist.current_shortmapname(), rel(maplist.current_filename()));
             };
             let _ = writeln!(o, "count={} filtered={}", maplist.count(), maplist.filtered_count());
@@ -3009,7 +3010,7 @@ pub(crate) mod tests {
             cur(&mut o, "after startswith m");
             let _ = writeln!(o, "startswithstr {}", maplist.startswith("bo") as i32);
             cur(&mut o, "after startswith bo");
-            let nfilters = NUM_AUTO_FILTERS as usize + filterslist.count();
+            let nfilters = NUM_AUTO_FILTERS as usize + game().filterslist.count();
             for f in 0..NUM_AUTO_FILTERS as usize {
                 let mut filters = vec![false; nfilters];
                 filters[f] = true;

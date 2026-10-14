@@ -71,8 +71,8 @@ impl UI_MatchSelectionMenu {
 
             this.miTourField = Ptr::new_box(MI_SelectField::new(spr_selectfield, 130, 380, "Tour", 380, 100));
             let mut f = this.miTourField;
-            for iTour in 0..tourlist.count() {
-                let szTemp = get_name_from_file_name(&tourlist.at(iTour).to_string_lossy(), true);
+            for iTour in 0..game().tourlist.count() {
+                let szTemp = get_name_from_file_name(&game().tourlist.at(iTour).to_string_lossy(), true);
                 // strcat(szTemp, " Tour");
                 f.add(szTemp, iTour as i16);
             }
@@ -82,8 +82,8 @@ impl UI_MatchSelectionMenu {
 
             this.miWorldField = Ptr::new_box(MI_SelectField::new(spr_selectfield, 130, 380, "World", 380, 100));
             let mut f = this.miWorldField;
-            for iWorld in 0..worldlist.count() {
-                let szTemp = get_name_from_file_name(&worldlist.at(iWorld).to_string_lossy(), true);
+            for iWorld in 0..game().worldlist.count() {
+                let szTemp = get_name_from_file_name(&game().worldlist.at(iWorld).to_string_lossy(), true);
                 f.add(szTemp, iWorld as i16);
             }
             f.set_output_ptr(&mut game_values.worldindex);

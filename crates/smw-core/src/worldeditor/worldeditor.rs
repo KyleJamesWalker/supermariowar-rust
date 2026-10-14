@@ -318,7 +318,7 @@ fn dump_editor_state(out: &mut dyn Write) {
             game_values.tourstops.len(),
             vehiclelist.len(),
             warplist.len(),
-            worldlist.current_path().file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default()
+            game().worldlist.current_path().file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default()
         );
     }
 }
@@ -397,11 +397,11 @@ pub fn inner_main() {
 
         g_map = Ptr::from_box(CMap::new());
         g_tilesetmanager = Ptr::new_box(CTilesetManager::new(&convert_path("gfx/Classic/tilesets")));
-        filterslist = Ptr::new_box(FiltersList::new());
-        maplist = Ptr::new_box(MapList::new(true));
-        menugraphicspacklist = Ptr::new_box(GraphicsList::new());
-        gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
-        worldlist = Ptr::new_box(WorldList::new());
+        game().filterslist = Ptr::new_box(FiltersList::new());
+        game().maplist = Ptr::new_box(MapList::new(true));
+        game().menugraphicspacklist = Ptr::new_box(GraphicsList::new());
+        game().gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
+        game().worldlist = Ptr::new_box(WorldList::new());
 
         game_values.sound = false;
         game_values.music = false;
@@ -512,8 +512,8 @@ pub fn inner_main() {
         sMapSurface = SDL_CreateRGBSurface((*screen).flags, 768, 608, (*(*screen).format).BitsPerPixel as i32, 0, 0, 0, 0);
 
         let fs = findstring.clone();
-        worldlist.find(&fs);
-        game_values.worldindex = worldlist.current_index() as i16;
+        game().worldlist.find(&fs);
+        game_values.worldindex = game().worldlist.current_index() as i16;
         loadcurrentworld();
         findstring.clear(); //clear out the find string so that pressing "f" will give you the find dialog
 
@@ -894,7 +894,7 @@ pub fn inner_main() {
                 editor_settings.write_i32(draw_offset_col);
                 editor_settings.write_i32(draw_offset_row);
                 editor_settings.write_bool(g_fFullScreen);
-                editor_settings.write_string_long(&worldlist.current_path().to_string_lossy());
+                editor_settings.write_string_long(&game().worldlist.current_path().to_string_lossy());
             }
         }
 
@@ -1362,10 +1362,10 @@ pub fn editor_edit() -> i32 {
                             if key_sym() == SDLK_PAGEUP as i32 {
                                 game_values.worldindex -= 1;
                                 if game_values.worldindex < 0 {
-                                    game_values.worldindex = worldlist.count() as i16 - 1;
+                                    game_values.worldindex = game().worldlist.count() as i16 - 1;
                                 }
 
-                                worldlist.prev();
+                                game().worldlist.prev();
 
                                 loadcurrentworld();
 
@@ -1374,11 +1374,11 @@ pub fn editor_edit() -> i32 {
 
                             if key_sym() == SDLK_PAGEDOWN as i32 {
                                 game_values.worldindex += 1;
-                                if game_values.worldindex as usize >= worldlist.count() {
+                                if game_values.worldindex as usize >= game().worldlist.count() {
                                     game_values.worldindex = 0;
                                 }
 
-                                worldlist.next();
+                                game().worldlist.next();
 
                                 loadcurrentworld();
 
@@ -1615,7 +1615,7 @@ pub fn editor_edit() -> i32 {
                     rm.menu_font_small.draw(0, 16, "Auto Paint");
                 }
 
-                rm.menu_font_small.draw_right_justified(640, 0, &worldlist.current_path().to_string_lossy());
+                rm.menu_font_small.draw_right_justified(640, 0, &game().worldlist.current_path().to_string_lossy());
 
                 g_musiccategorydisplaytimer -= 1;
                 if g_musiccategorydisplaytimer > 0 {
@@ -2259,7 +2259,7 @@ pub fn editor_warp() -> i32 {
 
             spr_warps[0].draw_src(0, 0, &r(0, 0, 320, 32));
 
-            rm.menu_font_small.draw_right_justified(640, 0, &worldlist.current_path().to_string_lossy());
+            rm.menu_font_small.draw_right_justified(640, 0, &game().worldlist.current_path().to_string_lossy());
 
             DrawMessage();
             gfx_flipscreen();
@@ -2387,7 +2387,7 @@ pub fn editor_start_items() -> i32 {
                 }
             }
 
-            rm.menu_font_small.draw_right_justified(640, 0, &worldlist.current_path().to_string_lossy());
+            rm.menu_font_small.draw_right_justified(640, 0, &game().worldlist.current_path().to_string_lossy());
 
             DrawMessage();
             gfx_flipscreen();
@@ -2449,7 +2449,7 @@ pub fn editor_boundary() -> i32 {
 
             rm.spr_worldforegroundspecial[0].draw_src(0, 0, &r(0, 0, 320, 320));
 
-            rm.menu_font_small.draw_right_justified(640, 0, &worldlist.current_path().to_string_lossy());
+            rm.menu_font_small.draw_right_justified(640, 0, &game().worldlist.current_path().to_string_lossy());
 
             DrawMessage();
             gfx_flipscreen();
@@ -2511,7 +2511,7 @@ pub fn editor_type() -> i32 {
 
             rm.spr_worldforegroundspecial[0].draw_src(64, 0, &r(448, 64, 128, 32));
 
-            rm.menu_font_small.draw_right_justified(640, 0, &worldlist.current_path().to_string_lossy());
+            rm.menu_font_small.draw_right_justified(640, 0, &game().worldlist.current_path().to_string_lossy());
 
             DrawMessage();
             gfx_flipscreen();
@@ -2998,7 +2998,7 @@ pub fn editor_vehicles() -> i32 {
             mCurrentMenu.update();
             mCurrentMenu.draw();
 
-            rm.menu_font_small.draw_right_justified(640, 0, &worldlist.current_path().to_string_lossy());
+            rm.menu_font_small.draw_right_justified(640, 0, &game().worldlist.current_path().to_string_lossy());
 
             DrawMessage();
             gfx_flipscreen();
@@ -3072,8 +3072,8 @@ pub fn DisplayStageDetails(fForce: bool, iStageId: i16, mut iMouseX: i16, mut iM
             } else if !ts.pszMapFile.is_empty() {
                 sMapThumbnail = gfxSprite::new();
 
-                if maplist.findexact(&ts.pszMapFile, false) {
-                    let file = maplist.current_filename().to_string();
+                if game().maplist.findexact(&ts.pszMapFile, false) {
+                    let file = game().maplist.current_filename().to_string();
                     g_map.load_map(&file, read_type_preview);
                     sMapThumbnail = g_map.create_thumbnail_surface(true);
                 } else {
@@ -3327,7 +3327,7 @@ pub fn EditStage(iEditStage: i16) {
         miFinalStageField.set_output_ptr(&mut ts.fEndStage as *mut bool);
 
         if ts.pszMapFile.is_empty() {
-            ts.pszMapFile = maplist.current_shortmapname().to_string();
+            ts.pszMapFile = game().maplist.current_shortmapname().to_string();
         }
 
         let mapfile = ts.pszMapFile.clone();
@@ -3449,7 +3449,7 @@ pub fn NewStage(iEditStage: &mut i16) {
         ts.szBonusText[3].clear();
         ts.szBonusText[4].clear();
 
-        ts.pszMapFile = maplist.current_shortmapname().to_string();
+        ts.pszMapFile = game().maplist.current_shortmapname().to_string();
         ts.iMode = 0;
 
         ts.fUseSettings = true;
@@ -3756,7 +3756,7 @@ pub fn editor_stage() -> i32 {
                     mCurrentMenu.reset_menu();
                 } else if MENU_CODE_MAP_CHANGED == code {
                     let mut ts = game_values.tourstops[iEditStage as usize];
-                    ts.pszMapFile = maplist.current_shortmapname().to_string();
+                    ts.pszMapFile = game().maplist.current_shortmapname().to_string();
                     fForceStageDisplay = true;
                 } else if MENU_CODE_TO_BONUS_PICKER_MENU == code {
                     mCurrentMenu = mBonusItemPicker.as_ptr();
@@ -3943,7 +3943,7 @@ pub fn editor_stage() -> i32 {
                 }
             }
 
-            rm.menu_font_small.draw_right_justified(640, 0, &worldlist.current_path().to_string_lossy());
+            rm.menu_font_small.draw_right_justified(640, 0, &game().worldlist.current_path().to_string_lossy());
 
             DrawMessage();
             gfx_flipscreen();
@@ -4059,9 +4059,9 @@ pub fn save_as() -> i32 {
         if dialog("Save As", "Enter name:", &mut fileName, 64) {
             fileName.push_str(".txt");
             mapLocation.push_str(&fileName);
-            worldlist.add(mapLocation.into());
-            worldlist.find(&fileName);
-            game_values.worldindex = worldlist.current_index() as i16;
+            game().worldlist.add(mapLocation.into());
+            game().worldlist.find(&fileName);
+            game_values.worldindex = game().worldlist.current_index() as i16;
             savecurrentworld();
             loadcurrentworld();
         }
@@ -4080,7 +4080,7 @@ fn draw_dialog(title: &str, instructions: &str, input: Option<&str>) {
         if let Some(input) = input {
             rm.menu_font_small.draw(240, 255, input);
         }
-        rm.menu_font_small.draw_right_justified(640, 0, &worldlist.current_path().to_string_lossy());
+        rm.menu_font_small.draw_right_justified(640, 0, &game().worldlist.current_path().to_string_lossy());
         gfx_flipscreen();
     }
 }
@@ -4179,8 +4179,8 @@ pub fn find() -> i32 {
             findstring = fileName.clone();
 
             let fs = findstring.clone();
-            if worldlist.find(&fs) {
-                game_values.worldindex = worldlist.current_index() as i16;
+            if game().worldlist.find(&fs) {
+                game_values.worldindex = game().worldlist.current_index() as i16;
                 loadcurrentworld();
             }
         }
@@ -4201,8 +4201,8 @@ pub fn clear_world() -> i32 {
 
 pub fn loadcurrentworld() {
     unsafe {
-        game_values.worldindex = worldlist.current_index() as i16;
-        let path = worldlist.at(game_values.worldindex as usize).to_string_lossy().into_owned();
+        game_values.worldindex = game().worldlist.current_index() as i16;
+        let path = game().worldlist.at(game_values.worldindex as usize).to_string_lossy().into_owned();
         *g_worldmap = WorldMap::new_path(&path, TILESIZE as i16);
         ReadVehiclesIntoEditor();
         ReadWarpsIntoEditor();
@@ -4247,7 +4247,7 @@ pub fn savecurrentworld() -> i32 {
 
         WriteVehiclesIntoWorld();
         WriteWarpsIntoWorld();
-        let path = worldlist.at(game_values.worldindex as usize).to_string_lossy().into_owned();
+        let path = game().worldlist.at(game_values.worldindex as usize).to_string_lossy().into_owned();
         g_worldmap.save(&path);
         0
     }
@@ -4267,8 +4267,8 @@ pub fn findcurrentstring() -> i32 {
     unsafe {
         if !findstring.is_empty() {
             let fs = findstring.clone();
-            if worldlist.find(&fs) {
-                game_values.worldindex = worldlist.current_index() as i16;
+            if game().worldlist.find(&fs) {
+                game_values.worldindex = game().worldlist.current_index() as i16;
                 loadcurrentworld();
             }
         }
@@ -4337,9 +4337,9 @@ pub fn new_world() -> i32 {
             *g_worldmap = WorldMap::new(iWidth, iHeight);
             fileName.push_str(".txt");
             worldLocation.push_str(&fileName);
-            worldlist.add(convert_path(&worldLocation).into());
-            worldlist.find(&fileName);
-            game_values.worldindex = worldlist.current_index() as i16;
+            game().worldlist.add(convert_path(&worldLocation).into());
+            game().worldlist.find(&fileName);
+            game_values.worldindex = game().worldlist.current_index() as i16;
             savecurrentworld();
             loadcurrentworld();
         }
@@ -4396,7 +4396,7 @@ pub fn takescreenshot() {
 
         for iScreenshotSize in 0..3usize {
             let iTileSize: i16 = iTileSizes[iScreenshotSize];
-            let path = worldlist.at(game_values.worldindex as usize).to_string_lossy().into_owned();
+            let path = game().worldlist.at(game_values.worldindex as usize).to_string_lossy().into_owned();
             *g_worldmap = WorldMap::new_path(&path, iTileSize);
 
             let mut w: i16 = 0;
@@ -4442,7 +4442,7 @@ pub fn takescreenshot() {
 
             //Save the screenshot with the same name as the map file
             let mut szSaveFile = String::from("worlds/screenshots/");
-            szSaveFile += &get_name_from_file_name(&worldlist.current_path().to_string_lossy(), false);
+            szSaveFile += &get_name_from_file_name(&game().worldlist.current_path().to_string_lossy(), false);
 
             if iTileSize as i32 == PREVIEWTILESIZE {
                 szSaveFile += "_preview";
@@ -4457,7 +4457,7 @@ pub fn takescreenshot() {
             SDL_FreeSurface(sScreenshot);
         }
 
-        let path = worldlist.at(game_values.worldindex as usize).to_string_lossy().into_owned();
+        let path = game().worldlist.at(game_values.worldindex as usize).to_string_lossy().into_owned();
         *g_worldmap = WorldMap::new_path(&path, iTileSizes[0]);
         blitdest = screen;
     }

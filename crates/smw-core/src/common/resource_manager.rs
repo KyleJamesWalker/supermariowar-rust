@@ -363,7 +363,7 @@ impl CResourceManager {
     }
 
     pub fn load_menu_skin(&mut self, playerID: i16, skinID: i16, colorID: i16, fLoadBothDirections: bool) -> bool {
-        let path = unsafe { skinlist.at(skinID as usize).path.clone() };
+        let path = unsafe { game().skinlist.at(skinID as usize).path.clone() };
         self.load_menu_skin_path(playerID, &path, colorID, fLoadBothDirections)
     }
 
@@ -399,12 +399,12 @@ impl CResourceManager {
     }
 
     pub fn load_full_skin(&self, skinID: i16, colorID: i16) -> SpriteStrip {
-        let path = unsafe { skinlist.at(skinID as usize).path.clone() };
+        let path = unsafe { game().skinlist.at(skinID as usize).path.clone() };
         gfx_loadfullskin(&path, colorID).unwrap_or_else(|what| panic!("{}", what))
     }
 
     fn load_all_sprites(&mut self) {
-        let graphicspack = unsafe { gamegraphicspacklist.current_path().to_string_lossy().into_owned() };
+        let graphicspack = unsafe { game().gamegraphicspacklist.current_path().to_string_lossy().into_owned() };
         let builder = |relpath: &str| ImageLoader::new(convert_path_pack(relpath, &graphicspack));
 
         let mut shyguyPath = convert_path_pack("gfx/packs/modeskins/shyguy.png", &graphicspack);
@@ -643,7 +643,7 @@ impl CResourceManager {
     }
 
     pub fn load_menu_graphics(&mut self) {
-        let graphicspack = unsafe { menugraphicspacklist.current_path().to_string_lossy().into_owned() };
+        let graphicspack = unsafe { game().menugraphicspacklist.current_path().to_string_lossy().into_owned() };
         let builder = |relpath: &str| ImageLoader::new(convert_path_pack(relpath, &graphicspack));
 
         self.menu_shade = builder("gfx/packs/menu/menu_shade.png").with_alpha(App::menuTransparency as u8).without_color_key().create();
@@ -687,7 +687,7 @@ impl CResourceManager {
     }
 
     pub fn load_world_graphics(&mut self) {
-        let graphicspack = unsafe { worldgraphicspacklist.current_path().to_string_lossy().into_owned() };
+        let graphicspack = unsafe { game().worldgraphicspacklist.current_path().to_string_lossy().into_owned() };
         let builder = |relpath: &str| ImageLoader::new(convert_path_pack(relpath, &graphicspack));
 
         self.spr_worldbackground[0] = builder("gfx/packs/world/world_background.png").create();
@@ -713,7 +713,7 @@ impl CResourceManager {
     }
 
     pub fn load_game_graphics(&mut self) {
-        let graphicspack = unsafe { gamegraphicspacklist.current_path().to_string_lossy().into_owned() };
+        let graphicspack = unsafe { game().gamegraphicspacklist.current_path().to_string_lossy().into_owned() };
 
         unsafe { g_tilesetmanager = Ptr::new_box(crate::common::tileset_manager::CTilesetManager::new(&graphicspack)) };
 
@@ -724,7 +724,7 @@ impl CResourceManager {
     }
 
     pub fn load_start_graphics(&mut self) {
-        let graphicspack = unsafe { menugraphicspacklist.current_path().to_string_lossy().into_owned() };
+        let graphicspack = unsafe { game().menugraphicspacklist.current_path().to_string_lossy().into_owned() };
         let builder = |relpath: &str| ImageLoader::new(convert_path_pack(relpath, &graphicspack));
 
         self.menu_font_small = gfxFont::from_path(&convert_path_pack("gfx/packs/menu/menu_font_small.png", &graphicspack));
@@ -737,7 +737,7 @@ impl CResourceManager {
     }
 
     pub fn load_all_graphics(&mut self) {
-        let graphicspack = unsafe { gamegraphicspacklist.current_path().to_string_lossy().into_owned() };
+        let graphicspack = unsafe { game().gamegraphicspacklist.current_path().to_string_lossy().into_owned() };
         let builder = |relpath: &str| ImageLoader::new(convert_path_pack(relpath, &graphicspack));
 
         self.load_menu_graphics();
@@ -760,7 +760,7 @@ impl CResourceManager {
             return false;
         }
 
-        let soundpack = unsafe { soundpacklist.current_path().to_string_lossy().into_owned() };
+        let soundpack = unsafe { game().soundpacklist.current_path().to_string_lossy().into_owned() };
         let open = |relpath: &str| {
             sfxSound::from_file(Path::new(&convert_path_pack(relpath, &soundpack))).unwrap_or_else(|what| panic!("{}", what))
         };

@@ -20,6 +20,7 @@ pub use smw_globals::{enum_from_u8, impl_base};
 pub mod globals;
 
 pub mod common;
+pub mod game;
 pub use smw_netplay::{common_netplay, net_package};
 pub mod services;
 pub mod smw;

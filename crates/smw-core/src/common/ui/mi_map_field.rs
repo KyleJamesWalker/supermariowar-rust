@@ -14,7 +14,7 @@ use sdl2::sys::SDL_Rect;
 /// `maplist->GetCurrent()->second.iIndex`
 fn current_map_index() -> i16 {
     unsafe {
-        maplist.node_at(maplist.get_current()).iIndex
+        game().maplist.node_at(game().maplist.get_current()).iIndex
     }
 }
 
@@ -71,7 +71,7 @@ impl MI_MapField {
 
     pub fn choose_random_map(&mut self) -> MenuCodeEnum {
         let iOldIndex = current_map_index();
-        unsafe { maplist.random(true) };
+        unsafe { game().maplist.random(true) };
 
         if iOldIndex != current_map_index() {
             self.load_current_map();
@@ -113,9 +113,9 @@ impl MI_MapField {
         for _ in 0..numadvance {
             unsafe {
                 if fNext {
-                    maplist.next(true);
+                    game().maplist.next(true);
                 } else {
-                    maplist.prev(true);
+                    game().maplist.prev(true);
                 }
             }
         }
@@ -191,7 +191,7 @@ impl UI_ControlTrait for MI_MapField {
                     self.sSearchString.push(iPressedKey as u8 as char);
                     self.iSearchStringTimer = 10;
 
-                    if unsafe { !maplist.startswith(&self.sSearchString) } {
+                    if unsafe { !game().maplist.startswith(&self.sSearchString) } {
                         self.sSearchString = String::new();
                         self.iSearchStringTimer = 0;
                     }

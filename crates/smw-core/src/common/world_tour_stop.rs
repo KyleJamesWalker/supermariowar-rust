@@ -1,10 +1,11 @@
 //! Port of src/common/WorldTourStop.cpp
 
+use crate::game::game;
 use crate::common::game_mode::*;
 use crate::common::game_mode_settings::*;
 use crate::common::game_mode_settings_serialization::{deserialize_gms, serialize_gms};
 use crate::common::gameplay_styles::*;
-use crate::common::global::{game_values, maplist};
+use crate::common::global::{game_values};
 use crate::common::global_constants::*;
 use crate::common::match_types::Boss;
 use crate::common::random_number_generator::RANDOM_INT;
@@ -150,21 +151,21 @@ pub fn parse_tour_stop_line(buffer: &[u8], version: &Version, fIsWorld: bool) ->
             if *version <= v(1, 8, 0, 2) && isMinigame {
                 ts.pszMapFile = UNKNOWN_MAP_NAME.to_string();
             } else {
-                maplist.save_current();
+                game().maplist.save_current();
 
-                let fMapFound = maplist.findexact(&szMap, true);
+                let fMapFound = game().maplist.findexact(&szMap, true);
                 if !fMapFound {
                     if isMinigame {
                         ts.pszMapFile = UNKNOWN_MAP_NAME.to_string();
                     } else {
-                        maplist.random(false);
-                        ts.pszMapFile = maplist.current_shortmapname().to_string();
+                        game().maplist.random(false);
+                        ts.pszMapFile = game().maplist.current_shortmapname().to_string();
                     }
                 } else {
-                    ts.pszMapFile = maplist.current_shortmapname().to_string();
+                    ts.pszMapFile = game().maplist.current_shortmapname().to_string();
                 }
 
-                maplist.resume_current();
+                game().maplist.resume_current();
             }
         }
 

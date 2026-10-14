@@ -44,18 +44,18 @@ fn main() {
         blitdest = screen;
         rm = Ptr::new_box(CResourceManager::new());
         g_map = Ptr::from_box(CMap::new());
-        filterslist = Ptr::new_box(FiltersList::new());
-        skinlist = Ptr::new_box(SkinList::new());
-        menugraphicspacklist = Ptr::new_box(GraphicsList::new());
-        worldgraphicspacklist = Ptr::new_box(GraphicsList::new());
-        gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
+        game().filterslist = Ptr::new_box(FiltersList::new());
+        game().skinlist = Ptr::new_box(SkinList::new());
+        game().menugraphicspacklist = Ptr::new_box(GraphicsList::new());
+        game().worldgraphicspacklist = Ptr::new_box(GraphicsList::new());
+        game().gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
         if !game_values.is_initialized() {
             game_values.init(CGameValues::new());
         }
         CGameValues::init(&mut game_values);
-        menugraphicspacklist.set_current_index(0);
-        worldgraphicspacklist.set_current_index(0);
-        gamegraphicspacklist.set_current_index(0);
+        game().menugraphicspacklist.set_current_index(0);
+        game().worldgraphicspacklist.set_current_index(0);
+        game().gamegraphicspacklist.set_current_index(0);
         rm.load_all_graphics();
 
         for (n, file) in args[3..].iter().enumerate() {

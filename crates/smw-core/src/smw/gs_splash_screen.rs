@@ -56,7 +56,7 @@ impl GameState for SplashScreenState {
 
             self.menu_credits = Ptr::new_box(gfxSprite::new());
             *self.menu_credits =
-                ImageLoader::new(convert_path_pack("gfx/packs/menu/splash_credits.png", &menugraphicspacklist.current_path().to_string_lossy())).create();
+                ImageLoader::new(convert_path_pack("gfx/packs/menu/splash_credits.png", &game().menugraphicspacklist.current_path().to_string_lossy())).create();
         }
 
         true
@@ -165,7 +165,7 @@ impl GameState for SplashScreenState {
 pub fn load_game_data() {
     unsafe {
         // load initial coin sound
-        rm.backgroundmusic[2] = sfxMusic::from_file(musiclist.music(1)).unwrap_or_else(|e| std::panic::panic_any(e));
+        rm.backgroundmusic[2] = sfxMusic::from_file(game().musiclist.music(1)).unwrap_or_else(|e| std::panic::panic_any(e));
 
         rm.load_all_graphics();
         rm.load_game_sounds();
@@ -178,7 +178,7 @@ pub fn load_game_data() {
         }
 
         //Read the map filter lists
-        maplist.read_filters();
-        maplist.apply_filters(&game_values.pfFilters.clone());
+        game().maplist.read_filters();
+        game().maplist.apply_filters(&game_values.pfFilters.clone());
     }
 }

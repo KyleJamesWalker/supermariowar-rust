@@ -409,16 +409,17 @@ fn walk(s: &mut Snap, online: bool) {
 
         // The map and the music the menu chose. A net game's joiner plays the host's map from its settings directory.
         let mut map = portable_path(&match_map);
-        let mut map_index = maplist.get_current();
+        let mut map_index = game().maplist.get_current();
         s.io(&mut map);
         s.io(&mut map_index);
         map = local_path(&map);
         if s.load {
-            maplist.set_current(map_index);
+            game().maplist.set_current(map_index);
             g_map.load_map(&data_path(&map), crate::common::map::read_type_full);
             note_match_map(&map);
             crate::common::global::load_current_map_background();
         }
+        let mut musiclist = game().musiclist;
         let (song, song_index) = musiclist.song_state_mut();
         let mut song_name = data_relative(&song.to_string_lossy());
         s.io(&mut song_name);
@@ -552,7 +553,7 @@ pub fn start_fields() -> String {
             }
             MatchType::Tour | MatchType::World => {
                 let name = if gv.matchtype == MatchType::World { crate::smw::world::g_worldmap.get_world_name().to_string() } else {
-                    tourlist.current_path().file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default()
+                    game().tourlist.current_path().file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default()
                 };
                 f.push(kv(if gv.matchtype == MatchType::World { "world" } else { "tour" }, &name));
                 f.push(kv("stop", &format!("{}/{}", gv.tourstopcurrent + 1, gv.tourstops.len())));
@@ -577,7 +578,7 @@ pub fn start_fields() -> String {
                     format!("keys{}", set + 1)
                 }
             };
-            let skin = skinlist.at(gv.skinids[p].max(0) as usize).name.clone();
+            let skin = game().skinlist.at(gv.skinids[p].max(0) as usize).name.clone();
             f.push(kv(&format!("p{}", p + 1), &format!("{},team{},{}", who, lookup_team_id(p as i16) + 1, skin)));
         }
         f.join(" ")

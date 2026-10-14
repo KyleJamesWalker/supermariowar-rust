@@ -1,8 +1,9 @@
 //! Port of src/smw/net.cpp
 
+use crate::game::game;
 use crate::common::game_mode::{GameModeType, *};
 use crate::common::game_mode_settings::GAMEMODESETTINGS_RAW_SIZE;
-use crate::common::global::{game_values, rm, skinlist};
+use crate::common::global::{game_values, rm};
 use crate::common::global_constants::WAITTIME;
 use crate::common::input::{COutputControl, CPlayerInput};
 use crate::common::path::get_home_directory;
@@ -697,7 +698,7 @@ impl NetClient {
     }
 
     pub fn send_skin_change(&mut self) {
-        let skinpath = unsafe { skinlist.at(game_values.skinids[netplay.remotePlayerNumber as usize] as usize).path.to_string_lossy().into_owned() };
+        let skinpath = unsafe { game().skinlist.at(game_values.skinids[netplay.remotePlayerNumber as usize] as usize).path.to_string_lossy().into_owned() };
         println!("[net] Sending skin: {}", skinpath);
 
         let mut compressed = FileCompressor::compress(&skinpath, std::mem::size_of::<MessageHeader>() + 1);

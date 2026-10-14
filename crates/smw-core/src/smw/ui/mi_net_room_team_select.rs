@@ -1,6 +1,6 @@
 //! Port of src/smw/ui/MI_NetRoomTeamSelect.cpp
 
-use crate::common::global::{game_values, rm, skinlist};
+use crate::common::global::{game_values, rm};
 use crate::common::input::CPlayerInput;
 use crate::common::random_number_generator::RANDOM_INT;
 use crate::common::ui::menu_code::*;
@@ -126,7 +126,7 @@ impl UI_ControlTrait for MI_NetRoomTeamSelect {
 
         unsafe {
             let playerKeys = game_values.playerInput.outputControls[0];
-            let count = skinlist.count() as i16;
+            let count = game().skinlist.count() as i16;
 
             if !game_values.randomskin[0] {
                 if playerKeys.menu_up().fPressed {

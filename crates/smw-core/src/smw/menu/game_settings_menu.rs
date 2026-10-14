@@ -122,8 +122,8 @@ impl UI_GameSettingsMenu {
             }
 
             // Add user defined filters
-            for iFilter in 0..filterslist.count() {
-                let szTemp = get_name_from_file_name(&filterslist.at(iFilter).to_string_lossy(), true);
+            for iFilter in 0..game().filterslist.count() {
+                let szTemp = get_name_from_file_name(&game().filterslist.at(iFilter).to_string_lossy(), true);
                 this.miMapFilterScroll.add(szTemp, game_values.piFilterIcons[NUM_AUTO_FILTERS as usize + iFilter]);
             }
 

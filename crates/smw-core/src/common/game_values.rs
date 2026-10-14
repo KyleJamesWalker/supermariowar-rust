@@ -597,7 +597,7 @@ impl CGameValues {
         self.poweruppreset = 0;
         self.tournamentcontrolstyle = TournamentControlStyle::All;
 
-        let filtercount = unsafe { filterslist.count() };
+        let filtercount = unsafe { game().filterslist.count() };
         self.pfFilters.resize(NUM_AUTO_FILTERS as usize + filtercount, false);
         self.piFilterIcons.resize(NUM_AUTO_FILTERS as usize + filtercount, 0);
         self.fNeedWriteFilters = false;
@@ -834,18 +834,18 @@ impl CGameConfig {
             }
 
             for iPlayer in 0..MAX_PLAYERS as usize {
-                if self.skinids[iPlayer] as i64 >= skinlist.count() as i64 || self.skinids[iPlayer] < 0 {
+                if self.skinids[iPlayer] as i64 >= game().skinlist.count() as i64 || self.skinids[iPlayer] < 0 {
                     self.skinids[iPlayer] = 0;
                 }
             }
 
-            announcerlist.set_current_index(options.read_u8() as usize);
-            musiclist.set_current(options.read_u8() as usize);
-            worldmusiclist.set_current(options.read_u8() as usize);
-            soundpacklist.set_current_index(options.read_u8() as usize);
-            menugraphicspacklist.set_current_index(options.read_u8() as usize);
-            worldgraphicspacklist.set_current_index(options.read_u8() as usize);
-            gamegraphicspacklist.set_current_index(options.read_u8() as usize);
+            game().announcerlist.set_current_index(options.read_u8() as usize);
+            game().musiclist.set_current(options.read_u8() as usize);
+            game().worldmusiclist.set_current(options.read_u8() as usize);
+            game().soundpacklist.set_current_index(options.read_u8() as usize);
+            game().menugraphicspacklist.set_current_index(options.read_u8() as usize);
+            game().worldgraphicspacklist.set_current_index(options.read_u8() as usize);
+            game().gamegraphicspacklist.set_current_index(options.read_u8() as usize);
 
             sfx_setmusicvolume(self.musicvolume as i32);
             sfx_setsoundvolume(self.soundvolume as i32);
@@ -972,13 +972,13 @@ impl CGameConfig {
             }
             options.write_raw(&raw);
 
-            options.write_u8(announcerlist.current_index() as u8);
-            options.write_u8(musiclist.current_index() as u8);
-            options.write_u8(worldmusiclist.current_index() as u8);
-            options.write_u8(soundpacklist.current_index() as u8);
-            options.write_u8(menugraphicspacklist.current_index() as u8);
-            options.write_u8(worldgraphicspacklist.current_index() as u8);
-            options.write_u8(gamegraphicspacklist.current_index() as u8);
+            options.write_u8(game().announcerlist.current_index() as u8);
+            options.write_u8(game().musiclist.current_index() as u8);
+            options.write_u8(game().worldmusiclist.current_index() as u8);
+            options.write_u8(game().soundpacklist.current_index() as u8);
+            options.write_u8(game().menugraphicspacklist.current_index() as u8);
+            options.write_u8(game().worldgraphicspacklist.current_index() as u8);
+            options.write_u8(game().gamegraphicspacklist.current_index() as u8);
         }
     }
 
@@ -1041,8 +1041,8 @@ impl CGameConfig {
         }
 
         unsafe {
-            maplist.write_filters();
-            maplist.write_map_summary_cache();
+            game().maplist.write_filters();
+            game().maplist.write_map_summary_cache();
         }
     }
 }
