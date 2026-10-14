@@ -1,0 +1,12 @@
+# Taps only: leave the title screen, make player 3 a CPU on the Players row, Go!, ready both humans on team
+# select by their boxes, then Continue into the match (Rust golden).
+#@ seed=1
+#@ frames=160
+#@ shots=40,70,100,130,159
+10 tap 320 240
+30 tap 417 282
+50 tap 417 282
+80 tap 480 226
+110 tap 80 410
+115 tap 240 410
+125 tap 320 337
