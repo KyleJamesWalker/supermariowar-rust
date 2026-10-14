@@ -578,6 +578,7 @@ pub fn inner_main() {
         g_tilesetmanager.save_tilesets();
 
         println!("\n---------------- shutdown ----------------");
+        crate::common::gfx::blit::report_fallbacks();
     }
 }
 
