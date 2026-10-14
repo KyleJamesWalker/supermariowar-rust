@@ -51,11 +51,6 @@ pub trait RandomNumberGeneratorType {
 
 pub struct RandomNumberGenerator;
 
-static mut grng: Option<Well512RandomNumberGenerator> = None;
-
-// Replay-harness counters (tools/cpp-harness.patch), reported in the dump's `R` line.
-static mut g_callCount: u64 = 0;
-static mut g_lastValue: u32 = 0;
 
 /// Not in the C++: netplay records the game host's draws and replays them on joiners (smw/net_random.rs).
 enum Tape {
@@ -64,47 +59,64 @@ enum Tape {
     Play(Vec<u32>, usize),
 }
 
-static mut g_tape: Tape = Tape::Off;
+/// The RNG's part of `Game`.
+pub struct RngState {
+    grng: Option<Well512RandomNumberGenerator>,
+    // Replay-harness counters (tools/cpp-harness.patch), reported in the dump's `R` line.
+    g_callCount: u64,
+    g_lastValue: u32,
+    g_tape: Tape,
+}
+
+impl RngState {
+    pub const fn new() -> Self {
+        RngState { grng: None, g_callCount: 0, g_lastValue: 0, g_tape: Tape::Off }
+    }
+}
+
+fn rng() -> &'static mut RngState {
+    &mut crate::game::game().get().rng
+}
 
 impl RandomNumberGenerator {
     pub fn call_count() -> u64 {
-        unsafe { g_callCount }
+        unsafe { rng().g_callCount }
     }
 
     pub fn last_value() -> u32 {
-        unsafe { g_lastValue }
+        unsafe { rng().g_lastValue }
     }
 
     /// Not in the C++: a replay checkpoint (smw/checkpoint.rs) restores the counters.
     pub fn set_counters(calls: u64, last: u32) {
         unsafe {
-            g_callCount = calls;
-            g_lastValue = last;
+            rng().g_callCount = calls;
+            rng().g_lastValue = last;
         }
     }
 
     pub fn reset_call_count() {
         unsafe {
-            g_callCount = 0;
-            g_lastValue = 0;
+            rng().g_callCount = 0;
+            rng().g_lastValue = 0;
         }
     }
 
     pub fn tape_active() -> bool {
-        unsafe { !matches!(g_tape, Tape::Off) }
+        unsafe { !matches!(rng().g_tape, Tape::Off) }
     }
 
     pub fn start_recording() {
-        unsafe { g_tape = Tape::Record(Vec::new()) }
+        unsafe { rng().g_tape = Tape::Record(Vec::new()) }
     }
 
     pub fn start_playback(values: Vec<u32>) {
-        unsafe { g_tape = Tape::Play(values, 0) }
+        unsafe { rng().g_tape = Tape::Play(values, 0) }
     }
 
     /// Ends recording or playback; returns the recorded draws, or the draws playback left unused.
     pub fn stop_tape() -> Vec<u32> {
-        match unsafe { std::mem::replace(&mut g_tape, Tape::Off) } {
+        match unsafe { std::mem::replace(&mut rng().g_tape, Tape::Off) } {
             Tape::Off => Vec::new(),
             Tape::Record(values) => values,
             Tape::Play(values, next) => values[next.min(values.len())..].to_vec(),
@@ -113,10 +125,10 @@ impl RandomNumberGenerator {
 
     pub fn generator() -> &'static mut Well512RandomNumberGenerator {
         unsafe {
-            if grng.is_none() {
-                grng = Some(Well512RandomNumberGenerator::new());
+            if rng().grng.is_none() {
+                rng().grng = Some(Well512RandomNumberGenerator::new());
             }
-            grng.as_mut().unwrap()
+            rng().grng.as_mut().unwrap()
         }
     }
 }
@@ -152,7 +164,7 @@ impl Well512RandomNumberGenerator {
 
     fn get_next(&mut self) -> u32 {
         unsafe {
-            if let Tape::Play(values, next) = &mut g_tape {
+            if let Tape::Play(values, next) = &mut rng().g_tape {
                 if let Some(&v) = values.get(*next) {
                     *next += 1;
                     return v;
@@ -161,7 +173,7 @@ impl Well512RandomNumberGenerator {
         }
         let value = self.draw();
         unsafe {
-            if let Tape::Record(values) = &mut g_tape {
+            if let Tape::Record(values) = &mut rng().g_tape {
                 values.push(value);
             }
         }
@@ -169,7 +181,7 @@ impl Well512RandomNumberGenerator {
     }
 
     fn draw(&mut self) -> u32 {
-        unsafe { g_callCount += 1 };
+        unsafe { rng().g_callCount += 1 };
         let state = &mut self.state;
         let index = self.index as usize;
         let mut a = state[index];
@@ -184,7 +196,7 @@ impl Well512RandomNumberGenerator {
         self.index = index as u32;
         a = state[index];
         state[index] = a ^ b ^ d ^ (a << 2) ^ (b << 18) ^ (c << 28);
-        unsafe { g_lastValue = state[index] };
+        unsafe { rng().g_lastValue = state[index] };
         state[index]
     }
 

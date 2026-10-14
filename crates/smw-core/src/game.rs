@@ -4,6 +4,7 @@ use crate::common::eyecandy::CEyecandyContainer;
 use crate::common::file_list::{AnnouncerList, FiltersList, GraphicsList, MusicList, SkinList, SoundsList, TourList, WorldList, WorldMusicList};
 use crate::common::map::CMap;
 use crate::common::map_list::MapList;
+use crate::common::random_number_generator::RngState;
 use crate::common::score::CScore;
 use crate::common::resource_manager::CResourceManager;
 use crate::common::tileset_manager::CTilesetManager;
@@ -36,6 +37,7 @@ pub struct Game {
     pub players: Vec<Ptr<CPlayer>>,
     pub score: [Ptr<CScore>; 4],
     pub score_cnt: i16,
+    pub rng: RngState,
 }
 
 impl Game {
@@ -63,6 +65,7 @@ impl Game {
             players: Vec::new(),
             score: [Ptr::null(); 4],
             score_cnt: 0,
+            rng: RngState::new(),
         }
     }
 }
