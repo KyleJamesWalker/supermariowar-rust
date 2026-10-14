@@ -52,7 +52,7 @@ impl GameState for SplashScreenState {
 
     fn init(&mut self) -> bool {
         unsafe {
-            rm.load_start_graphics();
+            game().rm.load_start_graphics();
 
             self.menu_credits = Ptr::new_box(gfxSprite::new());
             *self.menu_credits =
@@ -98,9 +98,9 @@ impl GameState for SplashScreenState {
                 for iPlayer in 0..4usize {
                     let out = &game_values.playerInput.outputControls[iPlayer];
                     if out.menu_select().fPressed || out.menu_cancel().fPressed || out.menu_random().fPressed {
-                        blitdest = rm.menu_backdrop.get_surface();
-                        rm.menu_shade.setalpha(App::menuTransparency as u8);
-                        rm.menu_shade.draw(0, 0);
+                        blitdest = game().rm.menu_backdrop.get_surface();
+                        game().rm.menu_shade.setalpha(App::menuTransparency as u8);
+                        game().rm.menu_shade.draw(0, 0);
                         blitdest = screen;
 
                         eyecandy[2].clean();
@@ -119,25 +119,25 @@ impl GameState for SplashScreenState {
             crate::common::gfx::blit::fill_rect(screen, std::ptr::null(), 0x0);
 
             if self.state == 6 || self.state == 7 || self.state == 8 {
-                rm.menu_backdrop.setalpha(self.alpha as u8);
-                rm.menu_backdrop.draw(0, 0);
+                game().rm.menu_backdrop.setalpha(self.alpha as u8);
+                game().rm.menu_backdrop.draw(0, 0);
 
-                rm.menu_smw.setalpha(self.alpha as u8);
-                rm.menu_smw.draw(App::screenWidth / 2 - ((rm.menu_smw.get_width() as i16 >> 1) as i32), 30); //smw logo
+                game().rm.menu_smw.setalpha(self.alpha as u8);
+                game().rm.menu_smw.draw(App::screenWidth / 2 - ((game().rm.menu_smw.get_width() as i16 >> 1) as i32), 30); //smw logo
 
-                rm.menu_version.setalpha(self.alpha as u8);
-                rm.menu_version.draw(628 - rm.menu_version.get_width(), 10); //smw logo
+                game().rm.menu_version.setalpha(self.alpha as u8);
+                game().rm.menu_version.draw(628 - game().rm.menu_version.get_width(), 10); //smw logo
 
-                rm.menu_font_large.set_alpha(self.alpha as u8);
+                game().rm.menu_font_large.set_alpha(self.alpha as u8);
 
                 self.menu_credits.setalpha(self.alpha as u8);
                 self.menu_credits.draw(227, 200);
             }
 
             if self.state == 7 {
-                rm.menu_font_large.draw_centered(App::screenWidth / 2, (App::screenHeight as f32 * 0.875f32) as i32, "Loading...");
+                game().rm.menu_font_large.draw_centered(App::screenWidth / 2, (App::screenHeight as f32 * 0.875f32) as i32, "Loading...");
             } else if self.state == 8 {
-                rm.menu_font_large.draw_centered(App::screenWidth / 2, (App::screenHeight as f32 * 0.875f32) as i32, "Press Any Key To Continue");
+                game().rm.menu_font_large.draw_centered(App::screenWidth / 2, (App::screenHeight as f32 * 0.875f32) as i32, "Press Any Key To Continue");
 
                 eyecandy[2].clean_dead_objects();
                 eyecandy[2].update();
@@ -153,7 +153,7 @@ impl GameState for SplashScreenState {
             if self.state == 7 {
                 load_game_data();
 
-                if_sound_on_play(&mut rm.sfx_coin);
+                if_sound_on_play(&mut game().rm.sfx_coin);
 
                 self.state += 1;
             }
@@ -165,10 +165,10 @@ impl GameState for SplashScreenState {
 pub fn load_game_data() {
     unsafe {
         // load initial coin sound
-        rm.backgroundmusic[2] = sfxMusic::from_file(game().musiclist.music(1)).unwrap_or_else(|e| std::panic::panic_any(e));
+        game().rm.backgroundmusic[2] = sfxMusic::from_file(game().musiclist.music(1)).unwrap_or_else(|e| std::panic::panic_any(e));
 
-        rm.load_all_graphics();
-        rm.load_game_sounds();
+        game().rm.load_all_graphics();
+        game().rm.load_game_sounds();
 
         if !game_values.soundcapable {
             game_values.sound = false;

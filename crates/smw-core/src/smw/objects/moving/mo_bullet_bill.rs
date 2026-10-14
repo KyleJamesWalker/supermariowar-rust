@@ -131,7 +131,7 @@ impl MO_BulletBill {
 
             p.add_killer_award(Ptr::null(), KillStyle::BulletBill);
 
-            if_sound_on_play(&mut rm.sfx_mip);
+            if_sound_on_play(&mut game().rm.sfx_mip);
         }
 
         self.die();
@@ -212,7 +212,7 @@ impl CObjectTrait for MO_BulletBill {
         if player.is_invincible() || player.shyguy {
             player.add_killer_award(Ptr::null(), KillStyle::BulletBill);
             unsafe {
-                if_sound_on_play(&mut rm.sfx_kicksound);
+                if_sound_on_play(&mut game().rm.sfx_kicksound);
             }
 
             self.die();
@@ -260,7 +260,7 @@ impl CObjectTrait for MO_BulletBill {
                 let iCenterY: i16 = (((iy - biy) >> 1) + (biy + (bulletbill.ih as i32 >> 1))) as i16;
 
                 objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
-                    Ptr::from_mut(&mut rm.spr_explosion),
+                    Ptr::from_mut(&mut game().rm.spr_explosion),
                     Vec2s::new((iCenterX as i32 - 96) as i16, (iCenterY as i32 - 64) as i16),
                     2,
                     4,
@@ -268,7 +268,7 @@ impl CObjectTrait for MO_BulletBill {
                     -1,
                     KillStyle::BulletBill,
                 )));
-                if_sound_on_play(&mut rm.sfx_bobombsound);
+                if_sound_on_play(&mut game().rm.sfx_bobombsound);
             } else if r#type == movingobject_shell
                 || r#type == movingobject_throwblock
                 || r#type == movingobject_throwbox
@@ -289,7 +289,7 @@ impl CObjectTrait for MO_BulletBill {
                     object.die();
                 }
 
-                if_sound_on_play(&mut rm.sfx_kicksound);
+                if_sound_on_play(&mut game().rm.sfx_kicksound);
                 self.die();
             }
         }

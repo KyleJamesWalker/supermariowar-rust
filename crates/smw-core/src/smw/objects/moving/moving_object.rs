@@ -881,7 +881,7 @@ pub fn io_moving_object_kill_object_map_hazard<T: IO_MovingObjectTrait + ?Sized>
             let o = this.mo_mut();
             o.dead = true;
             eyecandy[2].emplace(EC_SingleAnimation::new(
-                Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                 (o.ix as i32 + (o.iw as i32 >> 1) - 16) as i16,
                 (o.iy as i32 + (o.ih as i32 >> 1) - 16) as i16,
                 3,
@@ -895,34 +895,34 @@ pub fn io_moving_object_kill_object_map_hazard<T: IO_MovingObjectTrait + ?Sized>
                 player.decrease_projectiles_count();
             }
 
-            if_sound_on_play(&mut rm.sfx_hit);
+            if_sound_on_play(&mut game().rm.sfx_hit);
         } else if movingObjectType == movingobject_egg {
             this.mo_mut().dead = false;
             this.as_any().downcast_mut::<CO_Egg>().unwrap().place_egg();
-            if_sound_on_play(&mut rm.sfx_transform);
+            if_sound_on_play(&mut game().rm.sfx_transform);
         } else if movingObjectType == movingobject_star {
             this.mo_mut().dead = false;
             this.as_any().downcast_mut::<CO_Star>().unwrap().place_star();
-            if_sound_on_play(&mut rm.sfx_transform);
+            if_sound_on_play(&mut game().rm.sfx_transform);
         } else if movingObjectType == movingobject_flag {
             this.mo_mut().dead = false;
             this.as_any().downcast_mut::<CO_Flag>().unwrap().place_flag();
-            if_sound_on_play(&mut rm.sfx_transform);
+            if_sound_on_play(&mut game().rm.sfx_transform);
         } else if movingObjectType == movingobject_bomb {
             let mut player = get_player_from_global_id(this.mo().iPlayerID);
             if !player.is_null() {
                 player.decrease_projectiles_count();
             }
 
-            if_sound_on_play(&mut rm.sfx_hit);
+            if_sound_on_play(&mut game().rm.sfx_hit);
         } else if movingObjectType == movingobject_phantokey {
             this.mo_mut().dead = false;
             this.as_any().downcast_mut::<CO_PhantoKey>().unwrap().place_key();
-            if_sound_on_play(&mut rm.sfx_transform);
+            if_sound_on_play(&mut game().rm.sfx_transform);
         } else if game_mode_boxes_minigame == game_values.gamemode.gamemode && movingObjectType == movingobject_coin {
             this.mo_mut().dead = false;
             this.as_any().downcast_mut::<MO_Coin>().unwrap().place_coin();
-            if_sound_on_play(&mut rm.sfx_transform);
+            if_sound_on_play(&mut game().rm.sfx_transform);
         } else if game_values.gamemode.gamemode == game_mode_stomp
             && (movingObjectType == movingobject_goomba
                 || movingObjectType == movingobject_koopa
@@ -938,9 +938,9 @@ pub fn io_moving_object_kill_object_map_hazard<T: IO_MovingObjectTrait + ?Sized>
                 }
             }
 
-            if_sound_on_play(&mut rm.sfx_hit);
+            if_sound_on_play(&mut game().rm.sfx_hit);
         } else {
-            if_sound_on_play(&mut rm.sfx_hit);
+            if_sound_on_play(&mut game().rm.sfx_hit);
         }
     }
 }

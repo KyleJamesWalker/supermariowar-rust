@@ -12,7 +12,7 @@ use crate::common::moving_object_types::*;
 use crate::common::object_base::CObjectTrait;
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
-use crate::globals::{rm, Ptr};
+use crate::globals::Ptr;
 use crate::impl_base;
 use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::objectgame::removeifprojectile;
@@ -65,7 +65,7 @@ impl B_WeaponBreakableBlock {
     pub fn trigger_behavior_player(&mut self, iPlayerID: i16, iTeamID: i16) {
         if self.state == 0 {
             unsafe {
-                let spr = Ptr::from_mut(&mut rm.spr_brokengrayblock);
+                let spr = Ptr::from_mut(&mut game().rm.spr_brokengrayblock);
                 let (ix, iy) = (self.ix, self.iy);
                 eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy, -2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
                 eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy, 2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
@@ -73,7 +73,7 @@ impl B_WeaponBreakableBlock {
                 eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
 
                 self.state = 1;
-                if_sound_on_play(&mut rm.sfx_breakblock);
+                if_sound_on_play(&mut game().rm.sfx_breakblock);
             }
 
             self.iBumpPlayerID = iPlayerID;

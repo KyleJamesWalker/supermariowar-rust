@@ -54,8 +54,8 @@ impl UI_PowerupSettingsMenu {
     pub fn new() -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let spr_selectfield = Ptr::from_mut(&mut rm.spr_selectfield);
-            let menu_plain_field = Ptr::from_mut(&mut rm.menu_plain_field);
+            let spr_selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
+            let menu_plain_field = Ptr::from_mut(&mut game().rm.menu_plain_field);
 
             this.miStoredPowerupDelayField = select_field(spr_selectfield, 70, 100, "Item Use Speed", 500, 220,
                 &[("Very Slow", 2), ("Slow", 3), ("Moderate", 4), ("Fast", 5), ("Very Fast", 6)],

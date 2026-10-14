@@ -13,7 +13,7 @@ use crate::common::object_base::{cap_falling_velocity, CObjectTrait};
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
 use crate::common::random_number_generator::RANDOM_INT;
-use crate::globals::{rm, Ptr};
+use crate::globals::Ptr;
 use crate::impl_base;
 use crate::smw::net_random::{self, Ev};
 use crate::smw::objectgame::createpowerup;
@@ -192,7 +192,7 @@ pub fn b_powerup_block_update<T: B_PowerupBlockTrait + ?Sized>(this: &mut T) {
                     b_powerup_block_release(this, pos, side);
                 }
 
-                if_sound_on_play(&mut rm.sfx_sprout);
+                if_sound_on_play(&mut game().rm.sfx_sprout);
             } else if state == 3 {
                 if game_values.itemrespawntime > 0 && {
                     let b = this.pb_mut();
@@ -357,7 +357,7 @@ pub fn b_powerup_block_hitbottom_player<T: B_PowerupBlockTrait + ?Sized>(this: &
             game().g_map.update_tile_gap(col, row);
 
             if this.pb().state == 0 {
-                if_sound_on_play(&mut rm.sfx_bump);
+                if_sound_on_play(&mut game().rm.sfx_bump);
 
                 let b = this.pb_mut();
                 b.iBumpPlayerID = player.globalID;
@@ -391,7 +391,7 @@ pub fn b_powerup_block_hittop_object<T: B_PowerupBlockTrait + ?Sized>(this: &mut
     if r#type == movingobject_throwbox && object.as_any().downcast_mut::<CO_ThrowBox>().unwrap().has_kill_velocity() {
         if this.pb().state == 0 {
             unsafe {
-                if_sound_on_play(&mut rm.sfx_bump);
+                if_sound_on_play(&mut game().rm.sfx_bump);
             }
 
             let b = this.pb_mut();
@@ -439,7 +439,7 @@ pub fn b_powerup_block_hitright_object<T: B_PowerupBlockTrait + ?Sized>(this: &m
 
         if this.pb().state == 0 {
             unsafe {
-                if_sound_on_play(&mut rm.sfx_bump);
+                if_sound_on_play(&mut game().rm.sfx_bump);
             }
 
             let b = this.pb_mut();
@@ -481,7 +481,7 @@ pub fn b_powerup_block_hitleft_object<T: B_PowerupBlockTrait + ?Sized>(this: &mu
 
         if this.pb().state == 0 {
             unsafe {
-                if_sound_on_play(&mut rm.sfx_bump);
+                if_sound_on_play(&mut game().rm.sfx_bump);
             }
 
             let b = this.pb_mut();
@@ -500,7 +500,7 @@ pub fn b_powerup_block_hitleft_object<T: B_PowerupBlockTrait + ?Sized>(this: &mu
 pub fn b_powerup_block_trigger_behavior<T: B_PowerupBlockTrait + ?Sized>(this: &mut T) {
     if this.pb().state == 0 {
         unsafe {
-            if_sound_on_play(&mut rm.sfx_bump);
+            if_sound_on_play(&mut game().rm.sfx_bump);
         }
 
         let b = this.pb_mut();

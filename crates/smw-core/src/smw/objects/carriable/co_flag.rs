@@ -127,7 +127,7 @@ impl CObjectTrait for CO_Flag {
         if self.owner.is_null() && player.isready() && (!self.fInBase || self.teamID != player.teamID) {
             if unsafe { game_values.gamemodesettings.flag.touchreturn } && self.teamID == player.teamID {
                 self.place_flag();
-                unsafe { if_sound_on_play(&mut rm.sfx_areatag) };
+                unsafe { if_sound_on_play(&mut game().rm.sfx_areatag) };
             } else if player.accept_item(self.as_carried_ptr()) {
                 self.owner = player;
                 self.owner_throw = player;

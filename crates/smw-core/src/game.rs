@@ -3,6 +3,7 @@
 use crate::common::file_list::{AnnouncerList, FiltersList, GraphicsList, MusicList, SkinList, SoundsList, TourList, WorldList, WorldMusicList};
 use crate::common::map::CMap;
 use crate::common::map_list::MapList;
+use crate::common::resource_manager::CResourceManager;
 use crate::common::tileset_manager::CTilesetManager;
 use crate::globals::Ptr;
 
@@ -20,6 +21,7 @@ pub struct Game {
     pub soundpacklist: Ptr<SoundsList>,
     pub tourlist: Ptr<TourList>,
     pub worldlist: Ptr<WorldList>,
+    pub rm: Ptr<CResourceManager>,
     pub g_map: Ptr<CMap>,
     pub g_tilesetmanager: Ptr<CTilesetManager>,
 }
@@ -39,6 +41,7 @@ impl Game {
             soundpacklist: Ptr::null(),
             tourlist: Ptr::null(),
             worldlist: Ptr::null(),
+            rm: Ptr::null(),
             g_map: Ptr::null(),
             g_tilesetmanager: Ptr::null(),
         }

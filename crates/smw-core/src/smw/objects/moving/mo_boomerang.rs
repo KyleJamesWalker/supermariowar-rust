@@ -113,7 +113,7 @@ impl MO_Boomerang {
     fn forcedead(&mut self) {
         unsafe {
             removeifprojectile(self.as_mo_ptr(), false, true);
-            rm.sfx_boomerang.stop();
+            game().rm.sfx_boomerang.stop();
 
             if game_values.boomeranglimit == 0 {
                 return;
@@ -139,8 +139,8 @@ impl CObjectTrait for MO_Boomerang {
 
     fn update(&mut self) {
         unsafe {
-            if !rm.sfx_boomerang.is_playing() {
-                if_sound_on_play(&mut rm.sfx_boomerang);
+            if !game().rm.sfx_boomerang.is_playing() {
+                if_sound_on_play(&mut game().rm.sfx_boomerang);
             }
 
             self.animate();

@@ -47,14 +47,14 @@ impl CGM_ShyGuyTag {
                 if player.get_team_id() == iTeam {
                     player.shyguy = true;
                     eyecandy[2].emplace(EC_GravText::new(
-                        Ptr::from_mut(&mut rm.game_font_large),
+                        Ptr::from_mut(&mut game().rm.game_font_large),
                         player.center_x(),
                         player.bottom_y(),
                         "Shyguy!".to_string(),
                         (-(VELJUMP as f64) * 1.5) as f32,
                     ));
                     eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                        Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                         (player.center_x() as i32 - 16) as i16,
                         (player.center_y() as i32 - 16) as i16,
                         3,
@@ -66,19 +66,19 @@ impl CGM_ShyGuyTag {
                 }
             }
 
-            if_sound_on_play(&mut rm.sfx_transform);
+            if_sound_on_play(&mut game().rm.sfx_transform);
         }
     }
 
     fn free_shy_guys(&mut self) {
         unsafe {
-            if_sound_on_play(&mut rm.sfx_thunder);
+            if_sound_on_play(&mut game().rm.sfx_thunder);
 
             for &player in players.iter() {
                 let mut player = player;
                 player.shyguy = false;
                 eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                    Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                     (player.center_x() as i32 - 16) as i16,
                     (player.center_y() as i32 - 16) as i16,
                     3,
@@ -148,7 +148,7 @@ impl CGameModeTrait for CGM_ShyGuyTag {
                     if game_values.gamemodesettings.shyguytag.freetime > 0 {
                         self.fRunClock = true;
                         self.gameClock.set_time(game_values.gamemodesettings.shyguytag.freetime);
-                        if_sound_on_play(&mut rm.sfx_starwarning);
+                        if_sound_on_play(&mut game().rm.sfx_starwarning);
                     } else {
                         self.free_shy_guys();
                     }
@@ -161,7 +161,7 @@ impl CGameModeTrait for CGM_ShyGuyTag {
                     self.fRunClock = false;
                     self.free_shy_guys();
                 } else if iTime > 0 {
-                    if_sound_on_play(&mut rm.sfx_starwarning);
+                    if_sound_on_play(&mut game().rm.sfx_starwarning);
                 }
             }
 

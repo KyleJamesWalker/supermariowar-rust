@@ -204,7 +204,7 @@ impl MI_TournamentScoreboard {
                 for iPlayer in 0..self.iTeamCounts[t] {
                     let p = iPlayer as usize;
                     self.miPlayerImages[t].push(Box::new(MI_Image::new(
-                        Ptr::from_mut(&mut rm.spr_player[self.iTeamIDs[t][p] as usize][PGFX_STANDING_R as usize]),
+                        Ptr::from_mut(&mut game().rm.spr_player[self.iTeamIDs[t][p] as usize][PGFX_STANDING_R as usize]),
                         (x + iScoreboardPlayerOffsetsX[(self.iTeamCounts[t] - 1) as usize][p] as i32 - if fTour { 40 } else { 0 }) as i16,
                         iTeamY + 16,
                         0,
@@ -226,7 +226,7 @@ impl MI_TournamentScoreboard {
                     self.worldPlace[t] = Some(Box::new(MI_Image::new(self.sprIcons, (x + 102) as i16, iTeamY + 14, 0, 0, 32, 32, 4, 1, 8)));
 
                     for iBonus in 0..MWB {
-                        let mut bonus = Box::new(MI_Image::new(Ptr::from_mut(&mut rm.spr_worlditems), (x + 180 + 38 * iBonus as i32) as i16, iTeamY + 14, 0, 0, 32, 32, 1, 1, 0));
+                        let mut bonus = Box::new(MI_Image::new(Ptr::from_mut(&mut game().rm.spr_worlditems), (x + 180 + 38 * iBonus as i32) as i16, iTeamY + 14, 0, 0, 32, 32, 1, 1, 0));
                         bonus.set_visible(false);
                         self.worldBonus[t][iBonus] = Some(bonus);
                     }
@@ -234,7 +234,7 @@ impl MI_TournamentScoreboard {
             }
 
             if game_values.matchtype == MatchType::World {
-                self.worldScoreModifier = Some(Box::new(MI_Image::new(Ptr::from_mut(&mut rm.spr_worlditems), 0, 0, 0, 0, 32, 32, 1, 1, 0)));
+                self.worldScoreModifier = Some(Box::new(MI_Image::new(Ptr::from_mut(&mut game().rm.spr_worlditems), 0, 0, 0, 0, 32, 32, 1, 1, 0)));
                 self.worldScore = Some(Box::new(MI_ScoreText::new(0, 0)));
             }
 
@@ -278,7 +278,7 @@ impl MI_TournamentScoreboard {
                     let img = &mut self.miPlayerImages[t][p];
                     img.set_position((x + iScoreboardPlayerOffsetsX[(self.iTeamCounts[t] - 1) as usize][p] as i32 - 40) as i16, iTeamY + 16);
                     img.set_image_source(Ptr::from_mut(
-                        &mut rm.spr_player[self.iTeamIDs[t][p] as usize][iPlaceSprite[game_values.tournament_scores[t].wins as usize] as usize],
+                        &mut game().rm.spr_player[self.iTeamIDs[t][p] as usize][iPlaceSprite[game_values.tournament_scores[t].wins as usize] as usize],
                     ));
                 }
 
@@ -356,7 +356,7 @@ impl MI_TournamentScoreboard {
                     let img = &mut self.miPlayerImages[t][p];
                     img.set_position((x + iScoreboardPlayerOffsetsX[(self.iTeamCounts[t] - 1) as usize][p] as i32 - 40) as i16, iTeamY + 16);
                     img.set_image_source(Ptr::from_mut(
-                        &mut rm.spr_player[self.iTeamIDs[t][p] as usize][iPlaceSprite[game_values.tournament_scores[t].wins as usize] as usize],
+                        &mut game().rm.spr_player[self.iTeamIDs[t][p] as usize][iPlaceSprite[game_values.tournament_scores[t].wins as usize] as usize],
                     ));
                 }
 
@@ -527,7 +527,7 @@ impl UI_ControlTrait for MI_TournamentScoreboard {
                         if self.iExplosionCounter < 0 {
                             self.iExplosionCounter = (RANDOM_INT(6) + 5) as i16;
 
-                            if_sound_on_play(&mut rm.sfx_bobombsound);
+                            if_sound_on_play(&mut game().rm.sfx_bobombsound);
 
                             let mut dAngle: f32 = 0.0;
                             let iRandX = (RANDOM_INT(440) + 100) as i16;
@@ -544,7 +544,7 @@ impl UI_ControlTrait for MI_TournamentScoreboard {
                                 dAngle -= PI / 14.0f32;
                             }
                         } else {
-                            if_sound_on_play(&mut rm.sfx_cannon);
+                            if_sound_on_play(&mut game().rm.sfx_cannon);
 
                             let iRandX = RANDOM_INT(576) as i16;
                             let iRandY = RANDOM_INT(416) as i16;
@@ -568,7 +568,7 @@ impl UI_ControlTrait for MI_TournamentScoreboard {
                             szWinnerText = format!("Team {} Wins!", self.iTournamentWinner + 1);
                         }
 
-                        let iStringWidth = rm.menu_font_large.get_width(&szWinnerText) as i16;
+                        let iStringWidth = game().rm.menu_font_large.get_width(&szWinnerText) as i16;
                         let iRandX = (RANDOM_INT(App::screenWidth - iStringWidth as i32) + (iStringWidth >> 1) as i32) as i16;
                         let iRandY = (RANDOM_INT(App::screenHeight - 100) + 100) as i16;
 

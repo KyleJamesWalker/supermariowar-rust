@@ -39,7 +39,7 @@ impl PlayerCape {
 
     pub fn spin(&mut self, player: &mut CPlayer) {
         unsafe {
-            if_sound_on_play(&mut rm.sfx_tailspin);
+            if_sound_on_play(&mut game().rm.sfx_tailspin);
 
             self.restart_animation(); //Add one extra frame to sync with spinning player sprite
 
@@ -116,9 +116,9 @@ impl PlayerCape {
             };
             if player.iswarping() {
                 let edge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);
-                rm.spr_cape.draw_clip(x, y, &src, edge, player.get_warp_plane() as i32);
+                game().rm.spr_cape.draw_clip(x, y, &src, edge, player.get_warp_plane() as i32);
             } else {
-                rm.spr_cape.draw_src(x, y, &src);
+                game().rm.spr_cape.draw_src(x, y, &src);
             }
         }
     }

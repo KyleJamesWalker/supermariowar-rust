@@ -171,13 +171,13 @@ impl MovingPlatform {
                         if tile.iID >= 0 {
                             game().g_tilesetmanager.draw(this.sprites[iSurface].get_surface(), tile.iID, iTileSizeIndex, tile.iCol, tile.iRow, iCol, iRow);
                         } else if tile.iID as i32 == TILESETANIMATED {
-                            rm.spr_tileanimation[iTileSizeIndex as usize].draw_src_to(
+                            game().rm.spr_tileanimation[iTileSizeIndex as usize].draw_src_to(
                                 &*game().g_tilesetmanager.rect(iTileSizeIndex, tile.iCol * 4, tile.iRow),
                                 this.sprites[iSurface].get_surface(),
                                 &*game().g_tilesetmanager.rect(iTileSizeIndex, iCol, iRow),
                             );
                         } else if tile.iID as i32 == TILESETUNKNOWN {
-                            rm.spr_unknowntile[iTileSizeIndex as usize].draw_src_to(
+                            game().rm.spr_unknowntile[iTileSizeIndex as usize].draw_src_to(
                                 &*game().g_tilesetmanager.rect(iTileSizeIndex, 0, 0),
                                 this.sprites[iSurface].get_surface(),
                                 &*game().g_tilesetmanager.rect(iTileSizeIndex, iCol, iRow),

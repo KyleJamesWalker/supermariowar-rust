@@ -25,11 +25,11 @@ crate::impl_base!(MI_PlaylistField => ui_control: UI_Control);
 
 /// The music switch shared by every scroll direction.
 unsafe fn restart_menu_music() {
-    rm.backgroundmusic[2].stop();
-    rm.backgroundmusic[2] = sfxMusic::from_file(game().musiclist.music(1)).unwrap_or_else(|e| std::panic::panic_any(e));
+    game().rm.backgroundmusic[2].stop();
+    game().rm.backgroundmusic[2] = sfxMusic::from_file(game().musiclist.music(1)).unwrap_or_else(|e| std::panic::panic_any(e));
 
     if game_values.music {
-        rm.backgroundmusic[2].play(false, false);
+        game().rm.backgroundmusic[2].play(false, false);
     }
 }
 
@@ -115,8 +115,8 @@ impl UI_ControlTrait for MI_PlaylistField {
             self.spr.draw_src(x + iIndent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
             self.spr.draw_src(x + iIndent + 16, y, &SDL_Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 32 } else { 0 }, w: iWidth - iIndent - 16, h: 32 });
 
-            rm.menu_font_large.draw_chop_right(x + 16, y + 5, iIndent - 8, &self.szName);
-            rm.menu_font_large.draw_chop_right(x + iIndent + 8, y + 5, iWidth - iIndent - 24, game().musiclist.current_name());
+            game().rm.menu_font_large.draw_chop_right(x + 16, y + 5, iIndent - 8, &self.szName);
+            game().rm.menu_font_large.draw_chop_right(x + iIndent + 8, y + 5, iWidth - iIndent - 24, game().musiclist.current_name());
         }
 
         self.miModifyImageLeft.draw();

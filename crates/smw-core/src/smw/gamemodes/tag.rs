@@ -147,20 +147,20 @@ impl CGameModeTrait for CGM_Tag {
                 self.m_tagged = other;
                 inflictor.shield().reset();
                 eyecandy[2].emplace(EC_GravText::new(
-                    Ptr::from_mut(&mut rm.game_font_large),
+                    Ptr::from_mut(&mut game().rm.game_font_large),
                     other.center_x(),
                     other.bottom_y(),
                     "Tagged!".to_string(),
                     (-(VELJUMP as f64) * 1.5) as f32,
                 ));
                 eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                    Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                     (other.center_x() as i32 - 16) as i16,
                     (other.center_y() as i32 - 16) as i16,
                     3,
                     8,
                 ));
-                if_sound_on_play(&mut rm.sfx_transform);
+                if_sound_on_play(&mut game().rm.sfx_transform);
             }
 
             if !self.gameover {

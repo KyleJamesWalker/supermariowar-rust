@@ -39,8 +39,8 @@ impl PlayerTail {
 
     pub fn shake(&mut self, player: &mut CPlayer) {
         unsafe {
-            rm.sfx_tailspin.stop();
-            if_sound_on_play(&mut rm.sfx_tailspin);
+            game().rm.sfx_tailspin.stop();
+            if_sound_on_play(&mut game().rm.sfx_tailspin);
         }
         player.lockjump = true;
 
@@ -51,7 +51,7 @@ impl PlayerTail {
 
     pub fn spin(&mut self, player: &mut CPlayer) {
         unsafe {
-            if_sound_on_play(&mut rm.sfx_tailspin);
+            if_sound_on_play(&mut game().rm.sfx_tailspin);
         }
 
         self.iTailState = TAIL_SPIN_AND_SHAKE; //cause tail to shake
@@ -159,9 +159,9 @@ impl PlayerTail {
                 };
                 if player.iswarping() {
                     let edge: ClipEdge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);
-                    rm.spr_tail.draw_clip(x, y, &src, edge, player.get_warp_plane() as i32);
+                    game().rm.spr_tail.draw_clip(x, y, &src, edge, player.get_warp_plane() as i32);
                 } else {
-                    rm.spr_tail.draw_src(x, y, &src);
+                    game().rm.spr_tail.draw_src(x, y, &src);
                 }
             }
         }

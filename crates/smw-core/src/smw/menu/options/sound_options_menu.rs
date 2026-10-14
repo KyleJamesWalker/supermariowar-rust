@@ -49,9 +49,9 @@ impl UI_SoundOptionsMenu {
     pub fn new() -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let spr = Ptr::from_mut(&mut rm.spr_selectfield);
-            let menu_plain_field = Ptr::from_mut(&mut rm.menu_plain_field);
-            let menu_slider_bar = Ptr::from_mut(&mut rm.menu_slider_bar);
+            let spr = Ptr::from_mut(&mut game().rm.spr_selectfield);
+            let menu_plain_field = Ptr::from_mut(&mut game().rm.menu_plain_field);
+            let menu_slider_bar = Ptr::from_mut(&mut game().rm.menu_slider_bar);
 
             let mut f = Ptr::new_box(MI_SliderField::new(spr, menu_slider_bar, 70, 100, "Sound Volume", 500, 220, 484));
             for &(name, value) in VOLUMES {

@@ -258,8 +258,8 @@ impl UI_ControlTrait for MI_MapField {
             self.spr.draw_src(x + indent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
             self.spr.draw_src(x + indent + 16, y, &SDL_Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
 
-            rm.menu_font_large.draw_chop_right(x + 16, y + 5, indent - 8, &self.szName);
-            rm.menu_font_large.draw_chop_right(x + indent + 8, y + 5, width - indent - 24, &self.szMapName);
+            game().rm.menu_font_large.draw_chop_right(x + 16, y + 5, indent - 8, &self.szName);
+            game().rm.menu_font_large.draw_chop_right(x + indent + 8, y + 5, width - indent - 24, &self.szMapName);
         }
 
         self.mi_map_preview.draw_impl();

@@ -80,7 +80,7 @@ impl CGM_Star {
                 while (iStar as i32) < iNumPlayers as i32 - 1 {
                     self.starPlayer[iStar as usize] = rankedPlayers[iStar as usize];
 
-                    self.starItem[iStar as usize] = Ptr::new_box(CO_Star::new(Ptr::from_mut(&mut rm.spr_star), 1, iStar));
+                    self.starItem[iStar as usize] = Ptr::new_box(CO_Star::new(Ptr::from_mut(&mut game().rm.spr_star), 1, iStar));
                     self.starItem[iStar as usize].set_player_color(self.starPlayer[iStar as usize].get_color_id());
                     objectcontainer[1].add(self.starItem[iStar as usize]);
                     iStar += 1;
@@ -90,7 +90,7 @@ impl CGM_Star {
                 let fGetHighest = !self.fReverseScoring && self.iCurrentModeType == StarStyle::Ztar;
                 self.starPlayer[0] = self.get_highest_score_player(fGetHighest);
 
-                self.starItem[0] = Ptr::new_box(CO_Star::new(Ptr::from_mut(&mut rm.spr_star), if self.iCurrentModeType == StarStyle::Ztar { 0 } else { 1 }, 0));
+                self.starItem[0] = Ptr::new_box(CO_Star::new(Ptr::from_mut(&mut game().rm.spr_star), if self.iCurrentModeType == StarStyle::Ztar { 0 } else { 1 }, 0));
                 objectcontainer[1].add(self.starItem[0]);
             }
         }
@@ -117,7 +117,7 @@ impl CGM_Star {
                 oldstar = self.starPlayer[id as usize];
                 oldstar.shield().turn_on();
                 eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                    Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                     (oldstar.center_x() as i32 - 16) as i16,
                     (oldstar.center_y() as i32 - 16) as i16,
                     3,
@@ -135,7 +135,7 @@ impl CGM_Star {
             if self.starItem[id as usize].get_type() == 1 {
                 let text = if self.iCurrentModeType == StarStyle::Multi { "Star Get!" } else { "Shine Get!" };
                 eyecandy[2].emplace(EC_GravText::new(
-                    Ptr::from_mut(&mut rm.game_font_large),
+                    Ptr::from_mut(&mut game().rm.game_font_large),
                     player.center_x(),
                     player.bottom_y(),
                     text.to_string(),
@@ -143,7 +143,7 @@ impl CGM_Star {
                 ));
             } else {
                 eyecandy[2].emplace(EC_GravText::new(
-                    Ptr::from_mut(&mut rm.game_font_large),
+                    Ptr::from_mut(&mut game().rm.game_font_large),
                     player.center_x(),
                     player.bottom_y(),
                     "Ztarred!".to_string(),
@@ -152,13 +152,13 @@ impl CGM_Star {
             }
 
             eyecandy[2].emplace(EC_SingleAnimation::new(
-                Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                 (player.center_x() as i32 - 16) as i16,
                 (player.center_y() as i32 - 16) as i16,
                 3,
                 8,
             ));
-            if_sound_on_play(&mut rm.sfx_transform);
+            if_sound_on_play(&mut game().rm.sfx_transform);
 
             oldstar
         }
@@ -287,7 +287,7 @@ fn reassign(this: &mut CGM_Star) {
 fn time_out(this: &mut CGM_Star) {
     unsafe {
         this.gameClock.set_time(star_time());
-        if_sound_on_play(&mut rm.sfx_thunder);
+        if_sound_on_play(&mut game().rm.sfx_thunder);
 
         if this.iCurrentModeType == StarStyle::Ztar {
             if score[this.starPlayer[0].get_team_id() as usize].score > 1 || this.fReverseScoring {
@@ -467,7 +467,7 @@ pub fn cgm_star_think(this: &mut CGM_Star) {
         //Count down the game time
         let iTime: i16 = this.gameClock.run_clock();
         if iTime <= 5 && iTime > 0 {
-            if_sound_on_play(&mut rm.sfx_starwarning);
+            if_sound_on_play(&mut game().rm.sfx_starwarning);
         }
 
         //If the game time ran out, somebody needs to die and scores changed

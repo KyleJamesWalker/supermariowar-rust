@@ -120,9 +120,9 @@ impl CObjectTrait for MO_Coin {
                 game_values.gamemode.check_winner(player);
             }
 
-            eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut rm.spr_coinsparkle), self.ix, self.iy, 7, 4));
+            eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_coinsparkle), self.ix, self.iy, 7, 4));
 
-            if_sound_on_play(&mut rm.sfx_coin);
+            if_sound_on_play(&mut game().rm.sfx_coin);
         }
 
         if self.iType == 0 {
@@ -161,7 +161,7 @@ impl CObjectTrait for MO_Coin {
 
             unsafe {
                 if self.iType == 1 && (self.iUncollectableTime as i32) < -(game_values.gamemodesettings.greed.coinlife as i32) {
-                    eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
+                    eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
                     self.dead = true;
                 }
             }
@@ -174,7 +174,7 @@ impl CObjectTrait for MO_Coin {
         // Draw sparkles
         if self.iType != 1 {
             unsafe {
-                rm.spr_shinesparkle.draw_src(
+                game().rm.spr_shinesparkle.draw_src(
                     self.ix as i32 - self.collisionOffsetX as i32,
                     self.iy as i32 - self.collisionOffsetY as i32,
                     &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },

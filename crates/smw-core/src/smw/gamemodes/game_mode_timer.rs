@@ -70,14 +70,14 @@ impl GameTimerDisplay {
 
     pub fn draw(&mut self) {
         unsafe {
-            rm.spr_timershade.draw(self.iScoreOffsetX as i32, 5);
-            rm.spr_scoretext.draw_src(self.iDigitRightDstX as i32, 13, &SDL_Rect { x: self.iDigitRightSrcX as i32, y: 0, w: 16, h: 16 });
+            game().rm.spr_timershade.draw(self.iScoreOffsetX as i32, 5);
+            game().rm.spr_scoretext.draw_src(self.iDigitRightDstX as i32, 13, &SDL_Rect { x: self.iDigitRightSrcX as i32, y: 0, w: 16, h: 16 });
 
             if self.iDigitLeftSrcX > 0 {
-                rm.spr_scoretext.draw_src(self.iDigitMiddleDstX as i32, 13, &SDL_Rect { x: self.iDigitMiddleSrcX as i32, y: 0, w: 16, h: 16 });
-                rm.spr_scoretext.draw_src(self.iDigitLeftDstX as i32, 13, &SDL_Rect { x: self.iDigitLeftSrcX as i32, y: 0, w: 16, h: 16 });
+                game().rm.spr_scoretext.draw_src(self.iDigitMiddleDstX as i32, 13, &SDL_Rect { x: self.iDigitMiddleSrcX as i32, y: 0, w: 16, h: 16 });
+                game().rm.spr_scoretext.draw_src(self.iDigitLeftDstX as i32, 13, &SDL_Rect { x: self.iDigitLeftSrcX as i32, y: 0, w: 16, h: 16 });
             } else if self.iDigitMiddleSrcX > 0 {
-                rm.spr_scoretext.draw_src(self.iDigitMiddleDstX as i32, 13, &SDL_Rect { x: self.iDigitMiddleSrcX as i32, y: 0, w: 16, h: 16 });
+                game().rm.spr_scoretext.draw_src(self.iDigitMiddleDstX as i32, 13, &SDL_Rect { x: self.iDigitMiddleSrcX as i32, y: 0, w: 16, h: 16 });
             }
         }
     }

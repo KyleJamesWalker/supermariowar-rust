@@ -150,7 +150,7 @@ impl CObjectTrait for MO_Yoshi {
 
                     egg.place_egg();
 
-                    if_sound_on_play(&mut rm.sfx_yoshi);
+                    if_sound_on_play(&mut game().rm.sfx_yoshi);
                 }
             }
 
@@ -183,7 +183,7 @@ impl CObjectTrait for MO_Yoshi {
                     self.place_yoshi();
                     egg.place_egg();
 
-                    if_sound_on_play(&mut rm.sfx_yoshi);
+                    if_sound_on_play(&mut game().rm.sfx_yoshi);
                 }
             }
         }

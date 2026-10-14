@@ -23,7 +23,7 @@ impl UI_PlayerControlsMenu {
         let mut this = Box::<Self>::default();
 
         unsafe {
-            this.miInputContainer = Ptr::new_box(MI_InputControlContainer::new(Ptr::from_mut(&mut rm.menu_plain_field), 94, 10, 0));
+            this.miInputContainer = Ptr::new_box(MI_InputControlContainer::new(Ptr::from_mut(&mut game().rm.menu_plain_field), 94, 10, 0));
         }
         this.miInputContainer.set_auto_modify(true);
 

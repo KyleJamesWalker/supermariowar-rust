@@ -1,6 +1,5 @@
 //! Port of src/smw/menu/network/NetLobbyMenu.cpp
-
-use crate::common::global::rm;
+use crate::game::game;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
 use crate::common::ui::mi_image::MI_Image;
@@ -36,8 +35,8 @@ impl UI_NetLobbyMenu {
     pub fn new() -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let selectfield = Ptr::from_mut(&mut rm.spr_selectfield);
-            let plain = Ptr::from_mut(&mut rm.menu_plain_field);
+            let selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
+            let plain = Ptr::from_mut(&mut game().rm.menu_plain_field);
 
             this.miNetLobbyNewRoomButton = Ptr::new_box(MI_Button::new(selectfield, 320 + 20, 80, "New room", 320 - 30, TextAlign::CENTER));
             this.miNetLobbyNewRoomButton.set_code(MENU_CODE_TO_NET_NEW_ROOM_LEVEL_SELECT_MENU);
@@ -66,7 +65,7 @@ impl UI_NetLobbyMenu {
 
             netplay.client.set_room_list_ui_control(this.miNetLobbyScroll);
 
-            this.miNetLobbyJoiningDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
+            this.miNetLobbyJoiningDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut game().rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
             this.miNetLobbyJoiningDialogText = Ptr::new_box(MI_HeaderText::new("Joining...", 320, 240 - 12));
 
             this.miNetLobbyJoiningDialogImage.set_visible(false);

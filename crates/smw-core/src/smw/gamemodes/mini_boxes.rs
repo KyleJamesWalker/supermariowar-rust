@@ -52,9 +52,9 @@ impl CGM_Boxes_MiniGame {
             let vel = Vec2f::new(speed * cosf(angle), speed * sinf(angle));
 
             unsafe {
-                if_sound_on_play(&mut rm.sfx_coin);
+                if_sound_on_play(&mut game().rm.sfx_coin);
 
-                objectcontainer[1].add(Ptr::new_box(MO_Coin::new(Ptr::from_mut(&mut rm.spr_coin), vel, pos, 2, -1, 2, 30, false)));
+                objectcontainer[1].add(Ptr::new_box(MO_Coin::new(Ptr::from_mut(&mut game().rm.spr_coin), vel, pos, 2, -1, 2, 30, false)));
             }
         }
     }

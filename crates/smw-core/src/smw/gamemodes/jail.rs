@@ -56,7 +56,7 @@ impl CGameModeTrait for CGM_Jail {
 
 unsafe fn emplace_poof(player: Ptr<CPlayer>) {
     eyecandy[2].emplace(EC_SingleAnimation::new(
-        Ptr::from_mut(&mut rm.spr_poof),
+        Ptr::from_mut(&mut game().rm.spr_poof),
         (player.center_x() as i32 - 24) as i16,
         (player.center_y() as i32 - 24) as i16,
         4,
@@ -117,7 +117,7 @@ pub fn cgm_jail_playerkilledplayer(this: &mut CGM_Jail, mut inflictor: Ptr<CPlay
                             //If they weren't just the one killed and they were jailed, give them a transform cloud
                             if player != other && player.jail().is_active() {
                                 emplace_poof(player);
-                                if_sound_on_play(&mut rm.sfx_transform);
+                                if_sound_on_play(&mut game().rm.sfx_transform);
                             }
 
                             if player.jail().is_active() && player.get_team_id() != iTeamPoint {
@@ -211,7 +211,7 @@ pub fn cgm_jail_playerkilledplayer(this: &mut CGM_Jail, mut inflictor: Ptr<CPlay
                                 //If they weren't just the one killed and they were jailed, give them a transform cloud
                                 if player != other && player.jail().is_active() {
                                     emplace_poof(player);
-                                    if_sound_on_play(&mut rm.sfx_transform);
+                                    if_sound_on_play(&mut game().rm.sfx_transform);
                                 }
 
                                 player.jail().timer = 0;

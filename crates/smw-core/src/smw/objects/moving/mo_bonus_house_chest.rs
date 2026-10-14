@@ -67,7 +67,7 @@ impl CObjectTrait for MO_BonusHouseChest {
             if self.drawbonusitemtimer <= 0 {
                 unsafe {
                     eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                        Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                         (self.ix as i32 + 16) as i16,
                         self.drawbonusitemy,
                         3,
@@ -101,13 +101,13 @@ impl CObjectTrait for MO_BonusHouseChest {
                     let iBonus: i16 = (bonusitem - NUM_POWERUPS - NUM_WORLD_POWERUPS) as i16;
                     let iBonusX: i16 = ((iBonus as i32 % 10) << 5) as i16;
                     let iBonusY: i16 = (((iBonus as i32 / 10) << 5) + 32) as i16;
-                    rm.spr_worlditems.draw_src(ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: iBonusX as i32, y: iBonusY as i32, w: 32, h: 32 });
+                    game().rm.spr_worlditems.draw_src(ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: iBonusX as i32, y: iBonusY as i32, w: 32, h: 32 });
                 } else if bonusitem >= NUM_POWERUPS {
                     // World Item
-                    rm.spr_worlditems.draw_src(ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: (bonusitem - NUM_POWERUPS) << 5, y: 0, w: 32, h: 32 });
+                    game().rm.spr_worlditems.draw_src(ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: (bonusitem - NUM_POWERUPS) << 5, y: 0, w: 32, h: 32 });
                 } else {
                     // Normal Powerup
-                    rm.spr_storedpoweruplarge.draw_src(ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: bonusitem << 5, y: 0, w: 32, h: 32 });
+                    game().rm.spr_storedpoweruplarge.draw_src(ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: bonusitem << 5, y: 0, w: 32, h: 32 });
                 }
             }
         }
@@ -144,7 +144,7 @@ impl CObjectTrait for MO_BonusHouseChest {
                     }
                 }
 
-                if_sound_on_play(&mut rm.sfx_treasurechest);
+                if_sound_on_play(&mut game().rm.sfx_treasurechest);
                 self.state = 2;
 
                 self.drawbonusitemy = (self.iy as i32 + 32) as i16;

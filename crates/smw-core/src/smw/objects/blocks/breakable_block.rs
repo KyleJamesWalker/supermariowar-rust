@@ -12,7 +12,7 @@ use crate::common::moving_object_types::*;
 use crate::common::object_base::{cap_falling_velocity, CObjectTrait};
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
-use crate::globals::{rm, Ptr};
+use crate::globals::Ptr;
 use crate::impl_base;
 use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::objectgame::check_secret;
@@ -223,7 +223,7 @@ impl IO_BlockTrait for B_BreakableBlock {
     fn trigger_behavior(&mut self) {
         unsafe {
             if self.state == 0 {
-                let spr = Ptr::from_mut(&mut rm.spr_brokenyellowblock);
+                let spr = Ptr::from_mut(&mut game().rm.spr_brokenyellowblock);
                 let (ix, iy) = (self.ix, self.iy);
                 eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy, -2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
                 eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy, 2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
@@ -231,7 +231,7 @@ impl IO_BlockTrait for B_BreakableBlock {
                 eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
 
                 self.state = 1;
-                if_sound_on_play(&mut rm.sfx_breakblock);
+                if_sound_on_play(&mut game().rm.sfx_breakblock);
             }
 
             game_values.unlocksecret1part2 += 1;

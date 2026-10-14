@@ -321,12 +321,12 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
             }
 
             if self.m_indent > 0 {
-                rm.menu_font_large.draw_chop_right(x + 16, y + 5, indent - 8, &self.m_name);
+                game().rm.menu_font_large.draw_chop_right(x + 16, y + 5, indent - 8, &self.m_name);
             }
 
             if !self.m_items.is_empty() {
                 let indent = if self.m_indent > 0 { indent } else { 8 };
-                rm.menu_font_large.draw_chop_right(x + indent + 8, y + 5, width - indent - 24, &self.current_item().name);
+                game().rm.menu_font_large.draw_chop_right(x + indent + 8, y + 5, width - indent - 24, &self.current_item().name);
             }
         }
 

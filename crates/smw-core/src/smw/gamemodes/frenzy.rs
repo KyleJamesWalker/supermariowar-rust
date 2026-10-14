@@ -97,7 +97,7 @@ fn spawn_card(this: &mut CGM_Frenzy) {
             }
         }
 
-        objectcontainer[1].add(Ptr::new_box(MO_FrenzyCard::new(Ptr::from_mut(&mut rm.spr_frenzycards), this.iSelectedPowerup)));
+        objectcontainer[1].add(Ptr::new_box(MO_FrenzyCard::new(Ptr::from_mut(&mut game().rm.spr_frenzycards), this.iSelectedPowerup)));
     }
 }
 

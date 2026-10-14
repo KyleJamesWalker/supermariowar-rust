@@ -137,7 +137,7 @@ impl CGameModeTrait for CGM_Race {
             }
 
             for iRaceGoal in 0..self.quantity {
-                objectcontainer[2].add(Ptr::new_box(OMO_RaceGoal::new(Ptr::from_mut(&mut rm.spr_racegoal), iRaceGoal)));
+                objectcontainer[2].add(Ptr::new_box(OMO_RaceGoal::new(Ptr::from_mut(&mut game().rm.spr_racegoal), iRaceGoal)));
             }
         }
 

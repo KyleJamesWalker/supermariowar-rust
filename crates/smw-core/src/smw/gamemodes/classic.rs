@@ -98,7 +98,7 @@ pub fn cgm_classic_playerkilledplayer(this: &mut CGM_Classic, mut inflictor: Ptr
         }
 
         if game_values.gamemode.gamemode == game_mode_classic && game_values.gamemodesettings.classic.style == DeathStyle::Shield {
-            if_sound_on_play(&mut rm.sfx_powerdown);
+            if_sound_on_play(&mut game().rm.sfx_powerdown);
             other.shield().reset();
             return PlayerKillType::NonKill;
         }
@@ -149,7 +149,7 @@ pub fn cgm_classic_playerkilledself(this: &mut CGM_Classic, mut player: Ptr<CPla
             }
 
             if game_values.gamemode.gamemode == game_mode_classic && game_values.gamemodesettings.classic.style == DeathStyle::Shield {
-                if_sound_on_play(&mut rm.sfx_powerdown);
+                if_sound_on_play(&mut game().rm.sfx_powerdown);
                 player.shield().reset();
                 return PlayerKillType::NonKill;
             }

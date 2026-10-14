@@ -276,17 +276,17 @@ impl UI_ControlTrait for MI_InputControlField {
             self.spr.draw_src(x + iIndent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
             self.spr.draw_src(x + iIndent + 16, y, &SDL_Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 32 } else { 0 }, w: iWidth - iIndent - 16, h: 32 });
 
-            rm.menu_font_large.draw_chop_right(x + 16, y + 5, iIndent - 8, &self.szName);
+            game().rm.menu_font_large.draw_chop_right(x + 16, y + 5, iIndent - 8, &self.szName);
 
             if self.iKey.is_null() {
-                rm.menu_font_large.draw_chop_right(x + iIndent + 8, y + 5, iWidth - iIndent - 16, "Unassigned");
+                game().rm.menu_font_large.draw_chop_right(x + iIndent + 8, y + 5, iWidth - iIndent - 16, "Unassigned");
             } else if self.fModifying {
-                rm.menu_font_large.draw_chop_right(x + iIndent + 8, y + 5, iWidth - iIndent - 16, "(Press Button)");
+                game().rm.menu_font_large.draw_chop_right(x + iIndent + 8, y + 5, iWidth - iIndent - 16, "(Press Button)");
             } else if self.iDevice == DEVICE_KEYBOARD {
                 let name = CStr::from_ptr(SDL_GetKeyName(*self.iKey)).to_string_lossy();
-                rm.menu_font_large.draw_chop_right(x + iIndent + 8, y + 5, iWidth - iIndent - 16, &name);
+                game().rm.menu_font_large.draw_chop_right(x + iIndent + 8, y + 5, iWidth - iIndent - 16, &name);
             } else {
-                rm.menu_font_large.draw_chop_right(x + iIndent + 8, y + 5, iWidth - iIndent - 16, Self::Joynames[*self.iKey as usize]);
+                game().rm.menu_font_large.draw_chop_right(x + iIndent + 8, y + 5, iWidth - iIndent - 16, Self::Joynames[*self.iKey as usize]);
             }
         }
     }
@@ -395,7 +395,7 @@ impl MI_InputControlContainer {
                 miMenuInputControlFields[iKey] = f;
             }
 
-            let mut miBackButton = Ptr::new_box(MI_Button::new(Ptr::from_mut(&mut rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
+            let mut miBackButton = Ptr::new_box(MI_Button::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             miBackButton.set_code(MENU_CODE_BACK_TO_CONTROLS_MENU);
 
             let mut this = MI_InputControlContainer {

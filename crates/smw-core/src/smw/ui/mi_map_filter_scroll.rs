@@ -198,12 +198,12 @@ impl UI_ControlTrait for MI_MapFilterScroll {
 
         unsafe {
             //Draw the background for the map preview
-            rm.menu_dialog.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: iWidth - 16, h: iNumLines * 32 + 32 });
-            rm.menu_dialog.draw_src(x + iWidth - 16, y, &SDL_Rect { x: 496, y: 0, w: 16, h: iNumLines * 32 + 32 });
-            rm.menu_dialog.draw_src(x, y + iNumLines * 32 + 32, &SDL_Rect { x: 0, y: 464, w: iWidth - 16, h: 16 });
-            rm.menu_dialog.draw_src(x + iWidth - 16, y + iNumLines * 32 + 32, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+            game().rm.menu_dialog.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: iWidth - 16, h: iNumLines * 32 + 32 });
+            game().rm.menu_dialog.draw_src(x + iWidth - 16, y, &SDL_Rect { x: 496, y: 0, w: 16, h: iNumLines * 32 + 32 });
+            game().rm.menu_dialog.draw_src(x, y + iNumLines * 32 + 32, &SDL_Rect { x: 0, y: 464, w: iWidth - 16, h: 16 });
+            game().rm.menu_dialog.draw_src(x + iWidth - 16, y + iNumLines * 32 + 32, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
 
-            rm.menu_font_large.draw_centered(x + (iWidth >> 1), y + 5, "Map Filters");
+            game().rm.menu_font_large.draw_centered(x + (iWidth >> 1), y + 5, "Map Filters");
 
             //Draw each filter field
             let mut iLine: i16 = 0;
@@ -222,7 +222,7 @@ impl UI_ControlTrait for MI_MapFilterScroll {
                     );
 
                     let colSel = self.iSelectedLine == iLine && self.iSelectedColumn == 1;
-                    rm.menu_map_filter.draw_src(x + iWidth - 48, y + 32 + l * 32, &SDL_Rect { x: 48, y: if colSel { 32 } else { 0 }, w: 32, h: 32 });
+                    game().rm.menu_map_filter.draw_src(x + iWidth - 48, y + 32 + l * 32, &SDL_Rect { x: 48, y: if colSel { 32 } else { 0 }, w: 32, h: 32 });
                 } else {
                     let iHalfLineWidth = ((iWidth - 32) as i16 >> 1) as i32;
                     let iLineWidth = (iWidth - 32) as i16 as i32;
@@ -236,12 +236,12 @@ impl UI_ControlTrait for MI_MapFilterScroll {
 
                 let item = &self.items[(self.iOffset as i32 + l) as usize];
                 if item.fSelected {
-                    rm.menu_map_filter.draw_src(x + 24, y + 32 + l * 32 + 4, &SDL_Rect { x: 24, y: 0, w: 24, h: 24 });
+                    game().rm.menu_map_filter.draw_src(x + 24, y + 32 + l * 32 + 4, &SDL_Rect { x: 24, y: 0, w: 24, h: 24 });
                 }
 
-                rm.menu_font_large.draw_chop_right(x + 52, y + 5 + l * 32 + 32, iWidth - 104, &item.sName);
+                game().rm.menu_font_large.draw_chop_right(x + 52, y + 5 + l * 32 + 32, iWidth - 104, &item.sName);
                 let icon = item.iIcon as i32;
-                rm.spr_map_filter_icons.draw_src(x + 28, y + 32 + l * 32 + 8, &SDL_Rect { x: icon % 10 * 16, y: icon / 10 * 16, w: 16, h: 16 });
+                game().rm.spr_map_filter_icons.draw_src(x + 28, y + 32 + l * 32 + 8, &SDL_Rect { x: icon % 10 * 16, y: icon / 10 * 16, w: 16, h: 16 });
                 iLine += 1;
             }
         }

@@ -152,7 +152,7 @@ pub fn mo_walking_enemy_draw<T: MO_WalkingEnemyTrait + ?Sized>(this: &mut T) {
             displayangle += addangle;
 
             unsafe {
-                rm.spr_awardsouls.draw_src(spawnX as i32, spawnY as i32, &SDL_Rect { x: o.iSpawnIconOffset as i32, y: 0, w: 16, h: 16 });
+                game().rm.spr_awardsouls.draw_src(spawnX as i32, spawnY as i32, &SDL_Rect { x: o.iSpawnIconOffset as i32, y: 0, w: 16, h: 16 });
             }
         }
     } else {
@@ -161,7 +161,7 @@ pub fn mo_walking_enemy_draw<T: MO_WalkingEnemyTrait + ?Sized>(this: &mut T) {
         let o = this.we();
         if o.frozen {
             unsafe {
-                rm.spr_iceblock.draw_src(
+                game().rm.spr_iceblock.draw_src(
                     o.ix as i32 - o.collisionOffsetX as i32 + o.iw as i32 - 32,
                     o.iy as i32 - o.collisionOffsetY as i32 + o.ih as i32 - 32,
                     &SDL_Rect { x: 0, y: 0, w: 32, h: 32 },
@@ -189,7 +189,7 @@ pub fn mo_walking_enemy_update<T: MO_WalkingEnemyTrait + ?Sized>(this: &mut T) {
                     }
 
                     eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                        Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                         (o.ix as i32 - o.collisionOffsetX as i32 + o.iw as i32 - 32) as i16,
                         (o.iy as i32 - o.collisionOffsetY as i32 + o.ih as i32 - 32) as i16,
                         3,
@@ -220,7 +220,7 @@ pub fn mo_walking_enemy_update<T: MO_WalkingEnemyTrait + ?Sized>(this: &mut T) {
                 } else {
                     let o = this.we();
                     eyecandy[0].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut rm.spr_burnup),
+                        Ptr::from_mut(&mut game().rm.spr_burnup),
                         (o.ix as i32 + (o.collisionWidth as i32 >> 1) - 16) as i16,
                         (o.iy as i32 + (o.collisionHeight as i32 >> 1) - 16) as i16,
                         5,
@@ -316,7 +316,7 @@ pub fn mo_walking_enemy_collide_player<T: MO_WalkingEnemyTrait + ?Sized>(this: &
             if this.we().frozen {
                 this.shatter_die();
             } else {
-                if_sound_on_play(&mut rm.sfx_kicksound);
+                if_sound_on_play(&mut game().rm.sfx_kicksound);
                 this.die();
             }
         } else {
@@ -393,7 +393,7 @@ pub fn mo_walking_enemy_collide_object<T: MO_WalkingEnemyTrait + ?Sized>(this: &
                 if this.we().frozen {
                     this.shatter_die();
                 } else {
-                    if_sound_on_play(&mut rm.sfx_kicksound);
+                    if_sound_on_play(&mut game().rm.sfx_kicksound);
 
                     if r#type == movingobject_attackzone {
                         this.die_and_drop_shell(true, false);
@@ -419,7 +419,7 @@ pub fn mo_walking_enemy_collide_object<T: MO_WalkingEnemyTrait + ?Sized>(this: &
                 o.frozentimer = 300;
 
                 eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                    Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                     (o.ix as i32 - o.collisionOffsetX as i32 + o.iw as i32 - 32) as i16,
                     (o.iy as i32 - o.collisionOffsetY as i32 + o.ih as i32 - 32) as i16,
                     3,
@@ -451,13 +451,13 @@ pub fn mo_walking_enemy_place(this: &mut MO_WalkingEnemy) {
 
 pub fn mo_walking_enemy_shatter_die<T: MO_WalkingEnemyTrait + ?Sized>(this: &mut T) {
     unsafe {
-        if_sound_on_play(&mut rm.sfx_breakblock);
+        if_sound_on_play(&mut game().rm.sfx_breakblock);
         let o = this.we_mut();
         o.dead = true;
 
         let iBrokenIceX: i16 = (o.ix as i32 - o.collisionOffsetX as i32 + o.iw as i32 - 32) as i16;
         let iBrokenIceY: i16 = (o.iy as i32 - o.collisionOffsetY as i32 + o.ih as i32 - 32) as i16;
-        let spr = Ptr::from_mut(&mut rm.spr_brokeniceblock);
+        let spr = Ptr::from_mut(&mut game().rm.spr_brokeniceblock);
         eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, iBrokenIceY, -1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
         eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, iBrokenIceY, 1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
         eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, (iBrokenIceY as i32 + 16) as i16, -1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));

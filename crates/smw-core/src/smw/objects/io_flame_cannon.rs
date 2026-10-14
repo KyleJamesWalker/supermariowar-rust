@@ -55,7 +55,7 @@ impl IO_FlameCannon {
             let rect = &g_rFlameRects[self.iDirection as usize][self.iFrame as usize];
             unsafe {
                 gfx_drawpreview(
-                    &rm.spr_hazard_flame[1],
+                    &game().rm.spr_hazard_flame[1],
                     (((self.ix as i32) >> 1) + iOffsetX as i32) as i16,
                     (((self.iy as i32) >> 1) + iOffsetY as i32) as i16,
                     (rect.x >> 1) as i16,
@@ -95,7 +95,7 @@ impl CObjectTrait for IO_FlameCannon {
 
                 self.state = 1;
                 unsafe {
-                    if_sound_on_play(&mut rm.sfx_flamecannon);
+                    if_sound_on_play(&mut game().rm.sfx_flamecannon);
                 }
             }
         } else if self.state == 1 || self.state == 3 {
@@ -147,7 +147,7 @@ impl CObjectTrait for IO_FlameCannon {
         if self.state > 0 {
             let rect = &g_rFlameRects[self.iDirection as usize][self.iFrame as usize];
             unsafe {
-                rm.spr_hazard_flame[0].draw_src(self.ix as i32, self.iy as i32, rect);
+                game().rm.spr_hazard_flame[0].draw_src(self.ix as i32, self.iy as i32, rect);
             }
         }
     }

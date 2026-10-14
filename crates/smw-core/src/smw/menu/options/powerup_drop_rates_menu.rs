@@ -31,7 +31,7 @@ impl UI_PowerupDropRatesMenu {
     pub fn new() -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let menu_plain_field = Ptr::from_mut(&mut rm.menu_plain_field);
+            let menu_plain_field = Ptr::from_mut(&mut game().rm.menu_plain_field);
 
             this.miPowerupSelection = Ptr::new_box(MI_PowerupSelection::new(50, 44, 640, 8));
             this.miPowerupSelection.set_auto_modify(true);

@@ -109,13 +109,13 @@ impl CObjectTrait for MO_SuperFireball {
             if !player.is_shielded() {
                 self.dead = true;
                 eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                    Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                     (self.ix as i32 + (self.iw as i32 >> 1) - 16) as i16,
                     (self.iy as i32 + (self.ih as i32 >> 1) - 16) as i16,
                     3,
                     4,
                 ));
-                if_sound_on_play(&mut rm.sfx_hit);
+                if_sound_on_play(&mut game().rm.sfx_hit);
 
                 if !player.is_invincible() && !player.shyguy {
                     return player.kill_player_map_hazard(false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;

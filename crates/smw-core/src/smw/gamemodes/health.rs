@@ -64,7 +64,7 @@ impl CGameModeTrait for CGM_Health {
             return iRet;
         } else {
             unsafe {
-                if_sound_on_play(&mut rm.sfx_powerdown);
+                if_sound_on_play(&mut game().rm.sfx_powerdown);
             }
             other.shield().reset();
         }
@@ -94,7 +94,7 @@ impl CGameModeTrait for CGM_Health {
             return iRet;
         } else {
             unsafe {
-                if_sound_on_play(&mut rm.sfx_powerdown);
+                if_sound_on_play(&mut game().rm.sfx_powerdown);
             }
             player.shield().reset();
         }

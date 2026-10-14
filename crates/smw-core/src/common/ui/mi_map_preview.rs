@@ -101,10 +101,10 @@ impl MI_MapPreview {
 
         unsafe {
             //Draw the background for the map preview
-            rm.menu_dialog.draw_src(bx, y + 30, &SDL_Rect { x: 0, y: 0, w: 336, h: 254 });
-            rm.menu_dialog.draw_src(bx + 336, y + 30, &SDL_Rect { x: 496, y: 0, w: 16, h: 254 });
-            rm.menu_dialog.draw_src(bx, y + 284, &SDL_Rect { x: 0, y: 464, w: 336, h: 16 });
-            rm.menu_dialog.draw_src(bx + 336, y + 284, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+            game().rm.menu_dialog.draw_src(bx, y + 30, &SDL_Rect { x: 0, y: 0, w: 336, h: 254 });
+            game().rm.menu_dialog.draw_src(bx + 336, y + 30, &SDL_Rect { x: 496, y: 0, w: 16, h: 254 });
+            game().rm.menu_dialog.draw_src(bx, y + 284, &SDL_Rect { x: 0, y: 464, w: 336, h: 16 });
+            game().rm.menu_dialog.draw_src(bx + 336, y + 284, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
 
             self.rectDst.x = bx + 16;
 
@@ -162,7 +162,7 @@ impl MI_MapPreview {
             load_current_map_background();
             small_delay();
 
-            game().g_map.pre_draw_preview_background_spr(&rm.spr_background, self.surfaceMapBackground.get_surface(), false);
+            game().g_map.pre_draw_preview_background_spr(&game().rm.spr_background, self.surfaceMapBackground.get_surface(), false);
             small_delay();
 
             game().g_map.pre_draw_preview_blocks(self.surfaceMapBlockLayer.get_surface(), false);

@@ -185,9 +185,9 @@ impl CObjectTrait for CO_Star {
         unsafe {
             if !self.owner.is_null() && self.owner.iswarping() {
                 let edge: ClipEdge = std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32);
-                rm.spr_shinesparkle.draw_clip(x, y, &src, edge, self.owner.get_warp_plane() as i32);
+                game().rm.spr_shinesparkle.draw_clip(x, y, &src, edge, self.owner.get_warp_plane() as i32);
             } else {
-                rm.spr_shinesparkle.draw_src(x, y, &src);
+                game().rm.spr_shinesparkle.draw_src(x, y, &src);
             }
         }
     }

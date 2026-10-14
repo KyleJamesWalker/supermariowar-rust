@@ -98,7 +98,7 @@ impl CObjectTrait for OMO_StraightPathHazard {
         if !player.is_shielded() {
             unsafe {
                 eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                    Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                     (self.ix as i32 + (self.iw as i32 >> 2) - 16) as i16,
                     (self.iy as i32 + (self.ih as i32 >> 2) - 16) as i16,
                     3,

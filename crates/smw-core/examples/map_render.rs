@@ -22,7 +22,7 @@ fn save_bmp(s: *mut SDL_Surface, path: &str) {
 
 unsafe fn draw_map() {
     blitdest = screen;
-    rm.spr_backmap[g_iCurrentDrawIndex as usize].draw(0, 0);
+    game().rm.spr_backmap[g_iCurrentDrawIndex as usize].draw(0, 0);
     game().g_map.draw_platforms(0);
     game().g_map.draw_platforms(1);
     game().g_map.draw_platforms(2);
@@ -42,7 +42,7 @@ fn main() {
         let outdir = &args[2];
         gfx_init(640, 480, false);
         blitdest = screen;
-        rm = Ptr::new_box(CResourceManager::new());
+        game().rm = Ptr::new_box(CResourceManager::new());
         game().g_map = Ptr::from_box(CMap::new());
         game().filterslist = Ptr::new_box(FiltersList::new());
         game().skinlist = Ptr::new_box(SkinList::new());
@@ -56,12 +56,12 @@ fn main() {
         game().menugraphicspacklist.set_current_index(0);
         game().worldgraphicspacklist.set_current_index(0);
         game().gamegraphicspacklist.set_current_index(0);
-        rm.load_all_graphics();
+        game().rm.load_all_graphics();
 
         for (n, file) in args[3..].iter().enumerate() {
             game().g_map.load_map(file, read_type_full);
             load_current_map_background();
-            let rmp = rm;
+            let rmp = game().rm;
             game().g_map.predrawbackground(&rmp.spr_background, &rmp.spr_backmap[0]);
             game().g_map.predrawforeground(&rmp.spr_frontmap[0]);
             game().g_map.predrawbackground(&rmp.spr_background, &rmp.spr_backmap[1]);

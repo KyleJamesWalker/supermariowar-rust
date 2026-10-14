@@ -428,15 +428,15 @@ fn walk(s: &mut Snap, online: bool) {
             *song = data_path(&song_name).into();
             for k in 0..4 {
                 if gv.playercontrol[k] > 0 {
-                    rm.spr_player[k] = match crate::smw::net::net_skin_path(k) {
-                        Some(path) => rm.load_full_skin_path(Path::new(&path), k as i16),
-                        None => rm.load_full_skin(gv.skinids[k], gv.colorids[k]),
+                    game().rm.spr_player[k] = match crate::smw::net::net_skin_path(k) {
+                        Some(path) => game().rm.load_full_skin_path(Path::new(&path), k as i16),
+                        None => game().rm.load_full_skin(gv.skinids[k], gv.colorids[k]),
                     };
                 }
             }
         }
 
-        let tracks: Vec<*mut sfxMusic> = rm.backgroundmusic.iter_mut().map(|t| t as *mut sfxMusic).collect();
+        let tracks: Vec<*mut sfxMusic> = game().rm.backgroundmusic.iter_mut().map(|t| t as *mut sfxMusic).collect();
         for &t in tracks.iter() {
             let mut name = (*t).name().to_string();
             let mut paused = (*t).paused();
@@ -449,7 +449,7 @@ fn walk(s: &mut Snap, online: bool) {
                 (*t).set_paused(paused);
             }
         }
-        let sounds = rm.sounds();
+        let sounds = game().rm.sounds();
         for &snd in sounds.iter() {
             let mut name = (*snd).name().to_string();
             let (mut channels, mut last_start) = (*snd).state();

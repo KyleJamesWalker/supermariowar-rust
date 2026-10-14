@@ -348,7 +348,7 @@ pub fn musicfinished() {
         }
 
         if crate::common::sfx::fResumeMusic {
-            rm.backgroundmusic[3].play(false, false);
+            game().rm.backgroundmusic[3].play(false, false);
         }
     }
 }
@@ -412,7 +412,7 @@ impl GameplayState {
                             teamid,
                             subteamid,
                             game_values.colorids[p],
-                            Ptr::from_mut(&mut rm.spr_player[p]),
+                            Ptr::from_mut(&mut game().rm.spr_player[p]),
                             score[teamid as usize],
                             Ptr::from_mut(&mut self.respawnCount[p]),
                             ai.map(|a| a as Box<dyn crate::smw::ai::CPlayerAITrait>),
@@ -505,7 +505,7 @@ impl GameplayState {
                         //add cloud to eyecandy array
                         let x = RANDOM_INT(App::screenWidth) as f32;
                         let y = RANDOM_INT(100) as f32;
-                        eyecandy[iEyeCandyLayer].emplace(EC_Cloud::new(spr(&mut rm.spr_clouds), x, y, velx, 0, srcy, w, h));
+                        eyecandy[iEyeCandyLayer].emplace(EC_Cloud::new(spr(&mut game().rm.spr_clouds), x, y, velx, 0, srcy, w, h));
                     }
                 }
 
@@ -521,7 +521,7 @@ impl GameplayState {
                         let x = RANDOM_INT(App::screenWidth) as f32;
                         let y = RANDOM_INT(100) as f32;
                         eyecandy[iEyeCandyLayer].emplace(EC_Ghost::new(
-                            spr(&mut rm.spr_ghosts),
+                            spr(&mut game().rm.spr_ghosts),
                             x,
                             y,
                             velx,
@@ -540,7 +540,7 @@ impl GameplayState {
                     for _i in 0..15 {
                         let x = RANDOM_INT(App::screenWidth) as f32;
                         let y = RANDOM_INT(App::screenHeight) as f32;
-                        eyecandy[iEyeCandyLayer].emplace(EC_Leaf::new(spr(&mut rm.spr_leaves), x, y));
+                        eyecandy[iEyeCandyLayer].emplace(EC_Leaf::new(spr(&mut game().rm.spr_leaves), x, y));
                     }
                 }
 
@@ -549,7 +549,7 @@ impl GameplayState {
                     for _i in 0..15 {
                         let x = RANDOM_INT(App::screenWidth) as f32;
                         let y = RANDOM_INT(App::screenHeight) as f32;
-                        eyecandy[iEyeCandyLayer].emplace(EC_Snow::new(spr(&mut rm.spr_snow), x, y, 0));
+                        eyecandy[iEyeCandyLayer].emplace(EC_Snow::new(spr(&mut game().rm.spr_snow), x, y, 0));
                     }
                 }
 
@@ -587,7 +587,7 @@ impl GameplayState {
                         let dDestY: f32 = (RANDOM_INT(iPossibleY as i32) + iPossibleY as i32 * i as i32) as f32;
                         let x = RANDOM_INT(App::screenWidth) as f32;
                         eyecandy[iEyeCandyLayer].emplace(EC_Cloud::new(
-                            spr(&mut rm.spr_fish),
+                            spr(&mut game().rm.spr_fish),
                             x,
                             dDestY,
                             velx,
@@ -604,7 +604,7 @@ impl GameplayState {
                     for _i in 0..20 {
                         let x = RANDOM_INT(App::screenWidth) as f32;
                         let y = RANDOM_INT(App::screenHeight) as f32;
-                        eyecandy[iEyeCandyLayer].emplace(EC_Rain::new(spr(&mut rm.spr_rain), x, y));
+                        eyecandy[iEyeCandyLayer].emplace(EC_Rain::new(spr(&mut game().rm.spr_rain), x, y));
                     }
                 }
 
@@ -613,7 +613,7 @@ impl GameplayState {
                     for _i in 0..10 {
                         let x = RANDOM_INT(App::screenWidth) as f32;
                         let y = RANDOM_INT(App::screenHeight) as f32;
-                        eyecandy[iEyeCandyLayer].emplace(EC_Bubble::new(spr(&mut rm.spr_rain), x, y));
+                        eyecandy[iEyeCandyLayer].emplace(EC_Bubble::new(spr(&mut game().rm.spr_rain), x, y));
                     }
                 }
             }
@@ -932,7 +932,7 @@ pub fn shake_screen() {
                             killer.score.adjust_score(1);
                         }
 
-                        if_sound_on_play(&mut rm.sfx_kicksound);
+                        if_sound_on_play(&mut game().rm.sfx_kicksound);
                         movingobject.as_walking_enemy().unwrap().die_and_drop_shell(true, true);
 
                         game_values.flags.screenshakekillscount += 1;
@@ -1204,7 +1204,7 @@ impl GameplayState {
                         gameovertext = "Tie Game".to_string();
                     }
 
-                    rm.game_font_large.draw_centered(App::screenWidth / 2, 90, &gameovertext);
+                    game().rm.game_font_large.draw_centered(App::screenWidth / 2, 90, &gameovertext);
                 }
 
                 //in game scoreboards
@@ -1213,9 +1213,9 @@ impl GameplayState {
                     let teamcount = game_values.teamcounts[i];
                     let gm = game_values.gamemode.gamemode;
                     if gm == game_mode_health || gm == game_mode_collection || gm == game_mode_boxes_minigame {
-                        rm.spr_shade[(teamcount - 1) as usize].draw(s.x as i32, s.y as i32);
+                        game().rm.spr_shade[(teamcount - 1) as usize].draw(s.x as i32, s.y as i32);
                     } else {
-                        draw_rect(&rm.spr_shade[(teamcount - 1) as usize], s.x as i32, s.y as i32, 0, 0, 256, 41);
+                        draw_rect(&game().rm.spr_shade[(teamcount - 1) as usize], s.x as i32, s.y as i32, 0, 0, 256, 41);
                     }
 
                     for k in 0..teamcount as usize {
@@ -1236,9 +1236,9 @@ impl GameplayState {
 
                             let scorex: i16 = (s.x as i32 + Self::scoreoffsets[k] as i32) as i16;
                             let scorey: i16 = (s.y as i32 + 2) as i16;
-                            draw_rect(&rm.spr_egg, scorex as i32, scorey as i32, self.respawnanimationframe[g] as i32, (game_values.colorids[g] as i32) << 5, 32, 32);
+                            draw_rect(&game().rm.spr_egg, scorex as i32, scorey as i32, self.respawnanimationframe[g] as i32, (game_values.colorids[g] as i32) << 5, 32, 32);
                             draw_rect(
-                                &rm.spr_eggnumbers,
+                                &game().rm.spr_eggnumbers,
                                 scorex as i32,
                                 scorey as i32,
                                 ((self.respawnCount[g] as i32 - 1) >> 1) << 5,
@@ -1268,28 +1268,28 @@ impl GameplayState {
                                 let (ox, oy) = (iScoreOffsetX as i32, iScoreOffsetY as i32);
 
                                 if player.ownerPlayerID > -1 {
-                                    draw_rect(&rm.spr_ownedtags, ox - 8, oy - 8, player.ownerColorOffsetX as i32, 0, 48, 48);
+                                    draw_rect(&game().rm.spr_ownedtags, ox - 8, oy - 8, player.ownerColorOffsetX as i32, 0, 48, 48);
                                 }
 
                                 draw_rect(&player.get_scoreboard_sprite()[iScoreboardSprite as usize], ox, oy, player.iSrcOffsetX as i32, 0, 32, 32);
 
                                 //Display jail if player is jailed
                                 if player.jail.is_active() {
-                                    draw_rect(&rm.spr_jail, ox - 6, oy - 6, (player.jail.get_color() as i32 + 1) * 44, 0, 44, 44);
+                                    draw_rect(&game().rm.spr_jail, ox - 6, oy - 6, (player.jail.get_color() as i32 + 1) * 44, 0, 44, 44);
                                 }
 
                                 //Display current powerup if player is using one
                                 if player.powerup > 0 {
-                                    draw_rect(&rm.spr_storedpowerupsmall, ox, oy + 16, Self::g_iPowerupToIcon[(player.powerup - 1) as usize] as i32, 0, 16, 16);
+                                    draw_rect(&game().rm.spr_storedpowerupsmall, ox, oy + 16, Self::g_iPowerupToIcon[(player.powerup - 1) as usize] as i32, 0, 16, 16);
                                 }
 
                                 //Display tanooki powerup if player has it
                                 if player.tanookisuit.is_on() {
-                                    draw_rect(&rm.spr_storedpowerupsmall, ox + 16, oy + 16, App::screenWidth / 2, 0, 16, 16);
+                                    draw_rect(&game().rm.spr_storedpowerupsmall, ox + 16, oy + 16, App::screenWidth / 2, 0, 16, 16);
                                 }
                             } else {
                                 draw_rect(
-                                    &rm.spr_player[g][iScoreboardSprite as usize],
+                                    &game().rm.spr_player[g][iScoreboardSprite as usize],
                                     s.x as i32 + Self::scoreoffsets[k] as i32,
                                     s.y as i32 + 2,
                                     0,
@@ -1301,7 +1301,7 @@ impl GameplayState {
 
                             //give crown to player(s) with most kills
                             if g_iWinningPlayer as i32 == i as i32 {
-                                rm.spr_crown.draw(s.x as i32 + Self::scoreoffsets[k] as i32 + 12, s.y as i32 - 4);
+                                game().rm.spr_crown.draw(s.x as i32 + Self::scoreoffsets[k] as i32 + 12, s.y as i32 - 4);
                             }
                         }
 
@@ -1311,7 +1311,7 @@ impl GameplayState {
                         if storedpowerupid != -1 {
                             if !game_values.flags.swapplayers {
                                 draw_rect(
-                                    &rm.spr_storedpowerupsmall,
+                                    &game().rm.spr_storedpowerupsmall,
                                     s.x as i32 + scorepowerupoffsets[(teamcount - 1) as usize][k] as i32,
                                     s.y as i32 + 25,
                                     storedpowerupid as i32 * 16,
@@ -1333,9 +1333,9 @@ impl GameplayState {
                         while iHeart < iLife {
                             let dx = iHeartX as i32 + iHeart as i32 * 8;
                             if iHeart == iMax - 1 && iHeart % 2 == 0 {
-                                draw_rect(&rm.spr_scorehearts, dx, s.y as i32 + 43, 32, 0, 8, 16);
+                                draw_rect(&game().rm.spr_scorehearts, dx, s.y as i32 + 43, 32, 0, 8, 16);
                             } else {
-                                draw_rect(&rm.spr_scorehearts, dx, s.y as i32 + 43, if iHeart % 2 != 0 { 8 } else { 0 }, 0, 8, 16);
+                                draw_rect(&game().rm.spr_scorehearts, dx, s.y as i32 + 43, if iHeart % 2 != 0 { 8 } else { 0 }, 0, 8, 16);
                             }
                             iHeart += 1;
                         }
@@ -1344,9 +1344,9 @@ impl GameplayState {
                         while iHeart < iMax {
                             let dx = iHeartX as i32 + iHeart as i32 * 8;
                             if iHeart == iMax - 1 && iHeart % 2 == 0 {
-                                draw_rect(&rm.spr_scorehearts, dx, s.y as i32 + 43, 40, 0, 8, 16);
+                                draw_rect(&game().rm.spr_scorehearts, dx, s.y as i32 + 43, 40, 0, 8, 16);
                             } else {
-                                draw_rect(&rm.spr_scorehearts, dx, s.y as i32 + 43, if iHeart % 2 != 0 { 24 } else { 16 }, 0, 8, 16);
+                                draw_rect(&game().rm.spr_scorehearts, dx, s.y as i32 + 43, if iHeart % 2 != 0 { 24 } else { 16 }, 0, 8, 16);
                             }
                             iHeart += 1;
                         }
@@ -1359,7 +1359,7 @@ impl GameplayState {
                             let iCardX: i16 = (s.x as i32 + scorepowerupoffsets[(teamcount - 1) as usize][0] as i32 - 20) as i16;
 
                             for iCard in 0..iNumCards {
-                                draw_rect(&rm.spr_scorecards, iCardX as i32 + iCard as i32 * 20, s.y as i32 + 43, (iCardValues as i32 & 3) << 4, 0, 16, 16);
+                                draw_rect(&game().rm.spr_scorecards, iCardX as i32 + iCard as i32 * 20, s.y as i32 + 43, (iCardValues as i32 & 3) << 4, 0, 16, 16);
                                 iCardValues >>= 2;
                             }
                         }
@@ -1370,12 +1370,12 @@ impl GameplayState {
 
                         let mut iCoin: i16 = 0;
                         while iCoin < iNumCoins {
-                            draw_rect(&rm.spr_scorecoins, iCoinX as i32 + iCoin as i32 * 16, s.y as i32 + 43, 0, 0, 16, 16);
+                            draw_rect(&game().rm.spr_scorecoins, iCoinX as i32 + iCoin as i32 * 16, s.y as i32 + 43, 0, 0, 16, 16);
                             iCoin += 1;
                         }
 
                         for iEmptyCoin in iCoin..5 {
-                            draw_rect(&rm.spr_scorecoins, iCoinX as i32 + iEmptyCoin as i32 * 16, s.y as i32 + 43, 16, 0, 16, 16);
+                            draw_rect(&game().rm.spr_scorecoins, iCoinX as i32 + iEmptyCoin as i32 * 16, s.y as i32 + 43, 16, 0, 16, 16);
                         }
                     }
 
@@ -1383,9 +1383,9 @@ impl GameplayState {
                     let iScoreY: i16 = (s.y as i32 + 4) as i16;
                     let (sx, sy) = (iScoreX as i32, iScoreY as i32);
 
-                    draw_rect(&rm.spr_scoretext, sx, sy, s.iDigitLeft as i32, if s.iDigitLeft == 0 { 16 } else { 0 }, 16, 16);
-                    draw_rect(&rm.spr_scoretext, sx + 18, sy, s.iDigitMiddle as i32, if s.iDigitLeft == 0 && s.iDigitMiddle == 0 { 16 } else { 0 }, 16, 16);
-                    draw_rect(&rm.spr_scoretext, sx + 36, sy, s.iDigitRight as i32, 0, 16, 16);
+                    draw_rect(&game().rm.spr_scoretext, sx, sy, s.iDigitLeft as i32, if s.iDigitLeft == 0 { 16 } else { 0 }, 16, 16);
+                    draw_rect(&game().rm.spr_scoretext, sx + 18, sy, s.iDigitMiddle as i32, if s.iDigitLeft == 0 && s.iDigitMiddle == 0 { 16 } else { 0 }, 16, 16);
+                    draw_rect(&game().rm.spr_scoretext, sx + 36, sy, s.iDigitRight as i32, 0, 16, 16);
                 }
             }
         }
@@ -1414,8 +1414,8 @@ impl GameplayState {
                         let iMode = get_mode_icon_index_from_mode(gm.gamemode as i16);
 
                         eyecandy[2].emplace(EC_Announcement::new(
-                            Ptr::from_mut(&mut rm.game_font_large),
-                            spr(&mut rm.menu_mode_large),
+                            Ptr::from_mut(&mut game().rm.game_font_large),
+                            spr(&mut game().rm.menu_mode_large),
                             szMode,
                             iMode,
                             130,
@@ -1429,8 +1429,8 @@ impl GameplayState {
             }
 
             if game_values.screenfade > 0 {
-                rm.menu_shade.setalpha(game_values.screenfade as u8);
-                rm.menu_shade.draw(0, 0);
+                game().rm.menu_shade.setalpha(game_values.screenfade as u8);
+                game().rm.menu_shade.draw(0, 0);
             }
         }
     }
@@ -1479,13 +1479,13 @@ impl GameplayState {
                                 + player.iOldPowerupY as i32) as i16;
                         }
 
-                        draw_rect(&rm.spr_storedpowerupsmall, iPowerupX as i32, iPowerupY as i32, storedpowerupid as i32 * 16, 0, 16, 16);
+                        draw_rect(&game().rm.spr_storedpowerupsmall, iPowerupX as i32, iPowerupY as i32, storedpowerupid as i32 * 16, 0, 16, 16);
                     }
                 }
 
                 if game_values.swapstyle == 0 {
-                    if !rm.sfx_skid.is_playing() {
-                        if_sound_on_play(&mut rm.sfx_skid);
+                    if !game().rm.sfx_skid.is_playing() {
+                        if_sound_on_play(&mut game().rm.sfx_skid);
                     }
                 }
 
@@ -1502,16 +1502,16 @@ impl GameplayState {
                     game_values.screenfade = 0;
 
                     if game_values.swapstyle == 0 {
-                        rm.sfx_skid.stop();
+                        game().rm.sfx_skid.stop();
                     }
 
-                    if_sound_on_play(&mut rm.sfx_transform);
+                    if_sound_on_play(&mut game().rm.sfx_transform);
 
                     if game_values.swapstyle == 1 {
                         for i in 0..players.len() {
                             let player = players[i];
                             eyecandy[2].emplace(EC_SingleAnimation::new(
-                                spr(&mut rm.spr_fireballexplosion),
+                                spr(&mut game().rm.spr_fireballexplosion),
                                 (player.left_x() as i32 + HALFPW - 16) as i16,
                                 (player.top_y() as i32 + HALFPH - 16) as i16,
                                 3,
@@ -1526,7 +1526,7 @@ impl GameplayState {
 
     fn draw_back_layer(&mut self) {
         unsafe {
-            rm.spr_backmap[g_iCurrentDrawIndex as usize].draw(0, 0);
+            game().rm.spr_backmap[g_iCurrentDrawIndex as usize].draw(0, 0);
 
             //draw back eyecandy behind players
             game().g_map.draw_platforms(0);
@@ -1581,9 +1581,9 @@ impl GameplayState {
         unsafe {
             if game_values.windaffectsplayers {
                 let iDisplayWindMeterY: i16 = if game_values.scoreboardstyle == ScoreboardStyle::Bottom { 8 } else { 440 };
-                draw_rect(&rm.spr_windmeter, 210, iDisplayWindMeterY as i32, 0, 0, 220, 32);
+                draw_rect(&game().rm.spr_windmeter, 210, iDisplayWindMeterY as i32, 0, 0, 220, 32);
                 draw_rect(
-                    &rm.spr_windmeter,
+                    &game().rm.spr_windmeter,
                     ((game_values.flags.gamewindx * 20.0f32) as i16) as i32 + App::screenWidth / 2,
                     iDisplayWindMeterY as i32 + 6,
                     220,
@@ -1601,7 +1601,7 @@ impl GameplayState {
             if self.iCountDownState > 0 && game_values.screenfade == 0 {
                 let idx = (28 - self.iCountDownState) as usize;
                 let rects: &[SDL_Rect; 2] = &iCountDownNumbers[iCountDownRectGroup[idx] as usize][iCountDownRectSize[idx] as usize];
-                rm.spr_countdown_numbers.draw_src(rects[1].x, rects[1].y, &rects[0]);
+                game().rm.spr_countdown_numbers.draw_src(rects[1].x, rects[1].y, &rects[0]);
             }
         }
     }
@@ -1643,12 +1643,12 @@ impl GameplayState {
 pub fn draw_exit_pause_dialog() {
     unsafe {
         if game_values.flags.pausegame {
-            rm.spr_dialog.draw(224, 176);
-            rm.menu_font_large.draw_centered(App::screenWidth / 2, 194, "Pause");
+            game().rm.spr_dialog.draw(224, 176);
+            game().rm.menu_font_large.draw_centered(App::screenWidth / 2, 194, "Pause");
 
             let iMode = get_mode_icon_index_from_mode(game_values.gamemode.gamemode as i16);
 
-            draw_rect(&rm.menu_mode_large, 304, 224, (iMode as i32) << 5, 0, 32, 32);
+            draw_rect(&game().rm.menu_mode_large, 304, 224, (iMode as i32) << 5, 0, 32, 32);
 
             let mut szGoal: String = game_values.gamemode.get_goal_name().to_string() + ": ";
 
@@ -1658,26 +1658,26 @@ pub fn draw_exit_pause_dialog() {
                 szGoal += &game_values.gamemode.goal.to_string();
             }
 
-            rm.menu_font_large.draw_centered(App::screenWidth / 2, 264, &szGoal);
+            game().rm.menu_font_large.draw_centered(App::screenWidth / 2, 264, &szGoal);
         }
 
         if game_values.flags.exitinggame {
             let sw = App::screenWidth as f32;
             let sh = App::screenHeight as f32;
-            rm.spr_dialog.draw((sw * 0.35f32) as i32, (sh * 0.37f32) as i32);
-            rm.menu_font_large.draw_centered((sw * 0.5f32) as i32, (sh * 0.46f32 - (rm.menu_font_large.get_height() >> 1) as f32) as i32, "Exit Game");
+            game().rm.spr_dialog.draw((sw * 0.35f32) as i32, (sh * 0.37f32) as i32);
+            game().rm.menu_font_large.draw_centered((sw * 0.5f32) as i32, (sh * 0.46f32 - (game().rm.menu_font_large.get_height() >> 1) as f32) as i32, "Exit Game");
 
-            draw_rect(&rm.spr_dialogbutton, (sw * 0.37f32) as i32, (sh * 0.52f32) as i32, 0, if game_values.flags.exityes { 34 } else { 0 }, 80, 34);
-            draw_rect(&rm.spr_dialogbutton, (sw * 0.51f32) as i32, (sh * 0.52f32) as i32, 0, if game_values.flags.exityes { 0 } else { 34 }, 80, 34);
+            draw_rect(&game().rm.spr_dialogbutton, (sw * 0.37f32) as i32, (sh * 0.52f32) as i32, 0, if game_values.flags.exityes { 34 } else { 0 }, 80, 34);
+            draw_rect(&game().rm.spr_dialogbutton, (sw * 0.51f32) as i32, (sh * 0.52f32) as i32, 0, if game_values.flags.exityes { 0 } else { 34 }, 80, 34);
 
-            rm.menu_font_large.draw(
-                (sw * 0.43f32 - (rm.menu_font_large.get_width("Yes") >> 1) as f32) as i32,
-                (sh * 0.56f32 - (rm.menu_font_large.get_height() >> 1) as f32) as i32,
+            game().rm.menu_font_large.draw(
+                (sw * 0.43f32 - (game().rm.menu_font_large.get_width("Yes") >> 1) as f32) as i32,
+                (sh * 0.56f32 - (game().rm.menu_font_large.get_height() >> 1) as f32) as i32,
                 "Yes",
             );
-            rm.menu_font_large.draw(
-                (sw * 0.57f32 - (rm.menu_font_large.get_width("No") >> 1) as f32) as i32,
-                (sh * 0.56f32 - (rm.menu_font_large.get_height() >> 1) as f32) as i32,
+            game().rm.menu_font_large.draw(
+                (sw * 0.57f32 - (game().rm.menu_font_large.get_width("No") >> 1) as f32) as i32,
+                (sh * 0.56f32 - (game().rm.menu_font_large.get_height() >> 1) as f32) as i32,
                 "No",
             );
         }
@@ -1715,7 +1715,7 @@ pub fn update_score_board() {
             //If this was the last stage, signal that the world is over
             if game_values.tourstops[game_values.tourstopcurrent].fEndStage {
                 game_values.tournamentwinner = 1;
-                rm.backgroundmusic[4].play(true, true);
+                game().rm.backgroundmusic[4].play(true, true);
             }
 
             //Add up all the winnings so far and determine overall place in the standings
@@ -1814,7 +1814,7 @@ pub fn update_score_board() {
                 }
 
                 game_values.tournamentwinner = iWinningTeam;
-                rm.backgroundmusic[4].play(true, true);
+                game().rm.backgroundmusic[4].play(true, true);
             }
         } else if game_values.matchtype == MatchType::Tournament {
             let mut maxScore: i16 = -1; //Max score for game
@@ -1840,7 +1840,7 @@ pub fn update_score_board() {
                     game_values.tournamentwinner = maxTeam;
 
                     if game_values.music {
-                        rm.backgroundmusic[4].play(true, true);
+                        game().rm.backgroundmusic[4].play(true, true);
                     }
                 }
             }
@@ -1888,28 +1888,28 @@ fn new_block<T: IO_BlockTrait + 'static>(b: T) -> Ptr<dyn IO_BlockTrait> {
 
 pub fn spawn_map_block(typeId: i16, drawPos: Vec2s, objdata: &MapBlock, switchStates: &[i16; 4]) -> Ptr<dyn IO_BlockTrait> {
     unsafe {
-        let wbb = || spr(&mut rm.spr_weaponbreakableblock);
+        let wbb = || spr(&mut game().rm.spr_weaponbreakableblock);
         match typeId as i32 {
-            MapBlock_BrickYellow => new_block(B_BreakableBlock::new(spr(&mut rm.spr_breakableblock), drawPos, 4, 10)),
-            MapBlock_Powerup => new_block(B_PowerupBlock::new(spr(&mut rm.spr_powerupblock), drawPos, 4, 10, objdata.fHidden, &objdata.iSettings)),
-            MapBlock_Donut => new_block(B_DonutBlock::new(spr(&mut rm.spr_donutblock), drawPos)),
-            MapBlock_Flip => new_block(B_FlipBlock::new(spr(&mut rm.spr_flipblock), drawPos, objdata.fHidden)),
-            MapBlock_Bounce => new_block(B_BounceBlock::new(spr(&mut rm.spr_bounceblock), drawPos, objdata.fHidden)),
-            MapBlock_NoteGray => new_block(B_NoteBlock::new(spr(&mut rm.spr_noteblock), drawPos, 4, 10, NoteBlockType::Gray, objdata.fHidden)),
-            MapBlock_BrickBlue => new_block(B_ThrowBlock::new(spr(&mut rm.spr_throwblock), drawPos, 4, 10, ThrowBlockType::Blue)),
-            MapBlock_SwitchToggleRed => new_block(B_OnOffSwitchBlock::new(spr(&mut rm.spr_switchblocks), drawPos, SwitchColor::Red, switchStates[0])),
-            MapBlock_SwitchToggleGreen => new_block(B_OnOffSwitchBlock::new(spr(&mut rm.spr_switchblocks), drawPos, SwitchColor::Green, switchStates[1])),
-            MapBlock_SwitchToggleYellow => new_block(B_OnOffSwitchBlock::new(spr(&mut rm.spr_switchblocks), drawPos, SwitchColor::Yellow, switchStates[2])),
-            MapBlock_SwitchToggleBlue => new_block(B_OnOffSwitchBlock::new(spr(&mut rm.spr_switchblocks), drawPos, SwitchColor::Blue, switchStates[3])),
-            MapBlock_SwitchBlockRed => new_block(B_SwitchBlock::new(spr(&mut rm.spr_switchblocks), drawPos, SwitchColor::Red, objdata.iSettings[0])),
-            MapBlock_SwitchBlockGreen => new_block(B_SwitchBlock::new(spr(&mut rm.spr_switchblocks), drawPos, SwitchColor::Green, objdata.iSettings[0])),
-            MapBlock_SwitchBlockYellow => new_block(B_SwitchBlock::new(spr(&mut rm.spr_switchblocks), drawPos, SwitchColor::Yellow, objdata.iSettings[0])),
-            MapBlock_SwitchBlockBlue => new_block(B_SwitchBlock::new(spr(&mut rm.spr_switchblocks), drawPos, SwitchColor::Blue, objdata.iSettings[0])),
-            MapBlock_View => new_block(B_ViewBlock::new(spr(&mut rm.spr_viewblock), drawPos, objdata.fHidden, &objdata.iSettings)),
-            MapBlock_BrickRed => new_block(B_ThrowBlock::new(spr(&mut rm.spr_throwblock), drawPos, 4, 10, ThrowBlockType::Red)),
-            MapBlock_NoteRed => new_block(B_NoteBlock::new(spr(&mut rm.spr_noteblock), drawPos, 4, 10, NoteBlockType::Red, objdata.fHidden)),
-            MapBlock_NoteBlue => new_block(B_NoteBlock::new(spr(&mut rm.spr_noteblock), drawPos, 4, 10, NoteBlockType::Blue, objdata.fHidden)),
-            MapBlock_BrickGray => new_block(B_ThrowBlock::new(spr(&mut rm.spr_throwblock), drawPos, 4, 10, ThrowBlockType::Gray)),
+            MapBlock_BrickYellow => new_block(B_BreakableBlock::new(spr(&mut game().rm.spr_breakableblock), drawPos, 4, 10)),
+            MapBlock_Powerup => new_block(B_PowerupBlock::new(spr(&mut game().rm.spr_powerupblock), drawPos, 4, 10, objdata.fHidden, &objdata.iSettings)),
+            MapBlock_Donut => new_block(B_DonutBlock::new(spr(&mut game().rm.spr_donutblock), drawPos)),
+            MapBlock_Flip => new_block(B_FlipBlock::new(spr(&mut game().rm.spr_flipblock), drawPos, objdata.fHidden)),
+            MapBlock_Bounce => new_block(B_BounceBlock::new(spr(&mut game().rm.spr_bounceblock), drawPos, objdata.fHidden)),
+            MapBlock_NoteGray => new_block(B_NoteBlock::new(spr(&mut game().rm.spr_noteblock), drawPos, 4, 10, NoteBlockType::Gray, objdata.fHidden)),
+            MapBlock_BrickBlue => new_block(B_ThrowBlock::new(spr(&mut game().rm.spr_throwblock), drawPos, 4, 10, ThrowBlockType::Blue)),
+            MapBlock_SwitchToggleRed => new_block(B_OnOffSwitchBlock::new(spr(&mut game().rm.spr_switchblocks), drawPos, SwitchColor::Red, switchStates[0])),
+            MapBlock_SwitchToggleGreen => new_block(B_OnOffSwitchBlock::new(spr(&mut game().rm.spr_switchblocks), drawPos, SwitchColor::Green, switchStates[1])),
+            MapBlock_SwitchToggleYellow => new_block(B_OnOffSwitchBlock::new(spr(&mut game().rm.spr_switchblocks), drawPos, SwitchColor::Yellow, switchStates[2])),
+            MapBlock_SwitchToggleBlue => new_block(B_OnOffSwitchBlock::new(spr(&mut game().rm.spr_switchblocks), drawPos, SwitchColor::Blue, switchStates[3])),
+            MapBlock_SwitchBlockRed => new_block(B_SwitchBlock::new(spr(&mut game().rm.spr_switchblocks), drawPos, SwitchColor::Red, objdata.iSettings[0])),
+            MapBlock_SwitchBlockGreen => new_block(B_SwitchBlock::new(spr(&mut game().rm.spr_switchblocks), drawPos, SwitchColor::Green, objdata.iSettings[0])),
+            MapBlock_SwitchBlockYellow => new_block(B_SwitchBlock::new(spr(&mut game().rm.spr_switchblocks), drawPos, SwitchColor::Yellow, objdata.iSettings[0])),
+            MapBlock_SwitchBlockBlue => new_block(B_SwitchBlock::new(spr(&mut game().rm.spr_switchblocks), drawPos, SwitchColor::Blue, objdata.iSettings[0])),
+            MapBlock_View => new_block(B_ViewBlock::new(spr(&mut game().rm.spr_viewblock), drawPos, objdata.fHidden, &objdata.iSettings)),
+            MapBlock_BrickRed => new_block(B_ThrowBlock::new(spr(&mut game().rm.spr_throwblock), drawPos, 4, 10, ThrowBlockType::Red)),
+            MapBlock_NoteRed => new_block(B_NoteBlock::new(spr(&mut game().rm.spr_noteblock), drawPos, 4, 10, NoteBlockType::Red, objdata.fHidden)),
+            MapBlock_NoteBlue => new_block(B_NoteBlock::new(spr(&mut game().rm.spr_noteblock), drawPos, 4, 10, NoteBlockType::Blue, objdata.fHidden)),
+            MapBlock_BrickGray => new_block(B_ThrowBlock::new(spr(&mut game().rm.spr_throwblock), drawPos, 4, 10, ThrowBlockType::Gray)),
             MapBlock_WpnBreakFireball => new_block(B_WeaponBreakableBlock::new(wbb(), drawPos, WeaponDamageType::Fireball)),
             MapBlock_WpnBreakFeather => new_block(B_WeaponBreakableBlock::new(wbb(), drawPos, WeaponDamageType::Feather)),
             MapBlock_WpnBreakShell => new_block(B_WeaponBreakableBlock::new(wbb(), drawPos, WeaponDamageType::Shell)),
@@ -2003,7 +2003,7 @@ pub fn load_map_objects(fPreview: bool) {
             //If map has less than 5 boxes, then insert coins into map in random locations
             let iExtraCoinsNeeded: i16 = 5 - iThrowBoxCount;
             for _iExtraCoin in 0..iExtraCoinsNeeded {
-                objectcontainer[1].add(Ptr::new_box(MO_Coin::new(spr(&mut rm.spr_coin), Vec2f::zero(), Vec2s::zero(), 2, -1, 2, 0, true)));
+                objectcontainer[1].add(Ptr::new_box(MO_Coin::new(spr(&mut game().rm.spr_coin), Vec2f::zero(), Vec2s::zero(), 2, -1, 2, 0, true)));
             }
         }
 
@@ -2016,15 +2016,15 @@ pub fn load_map_objects(fPreview: bool) {
             let pos = Vec2s::new((item.ix as i32 * 32) as i16, (item.iy as i32 * 32) as i16);
 
             if iType == 0 {
-                objectcontainer[1].add(Ptr::new_box(CO_Spring::new(spr(&mut rm.spr_spring), pos, false)));
+                objectcontainer[1].add(Ptr::new_box(CO_Spring::new(spr(&mut game().rm.spr_spring), pos, false)));
             } else if iType == 1 {
-                objectcontainer[1].add(Ptr::new_box(CO_Spike::new(spr(&mut rm.spr_spike), pos)));
+                objectcontainer[1].add(Ptr::new_box(CO_Spike::new(spr(&mut game().rm.spr_spike), pos)));
             } else if iType == 2 {
-                objectcontainer[1].add(Ptr::new_box(CO_KuriboShoe::new(spr(&mut rm.spr_kuriboshoe), pos, false)));
+                objectcontainer[1].add(Ptr::new_box(CO_KuriboShoe::new(spr(&mut game().rm.spr_kuriboshoe), pos, false)));
             } else if iType == 3 {
-                objectcontainer[1].add(Ptr::new_box(CO_Spring::new(spr(&mut rm.spr_spring), pos, true)));
+                objectcontainer[1].add(Ptr::new_box(CO_Spring::new(spr(&mut game().rm.spr_spring), pos, true)));
             } else if iType == 4 {
-                objectcontainer[1].add(Ptr::new_box(CO_KuriboShoe::new(spr(&mut rm.spr_kuriboshoe), pos, true)));
+                objectcontainer[1].add(Ptr::new_box(CO_KuriboShoe::new(spr(&mut game().rm.spr_kuriboshoe), pos, true)));
             } else if iType == 5 {
                 let mut iItem: i16 = NO_POWERUP as i16;
                 if !fPreview {
@@ -2059,7 +2059,7 @@ pub fn load_map_objects(fPreview: bool) {
                     }
                 }
 
-                objectcontainer[1].add(Ptr::new_box(CO_ThrowBox::new(spr(&mut rm.spr_throwbox), pos, iItem)));
+                objectcontainer[1].add(Ptr::new_box(CO_ThrowBox::new(spr(&mut game().rm.spr_throwbox), pos, iItem)));
                 iAddThrowBoxIndex += 1;
             }
         }
@@ -2097,8 +2097,8 @@ pub fn clean_up() {
 
         //Stop all game sounds
         sfx_stopallsounds();
-        rm.sfx_invinciblemusic.stop();
-        rm.sfx_slowdownmusic.stop();
+        game().rm.sfx_invinciblemusic.stop();
+        game().rm.sfx_slowdownmusic.stop();
 
         x_shake = 0;
         y_shake = 0;
@@ -2128,16 +2128,16 @@ pub fn update_exit_pause_dialog(iCountDownState: i16) -> bool {
                         game_values.flags.pausegame = !game_values.flags.pausegame;
 
                         if game_values.flags.pausegame {
-                            rm.menu_shade.setalpha(App::menuTransparency as u8);
-                            rm.menu_shade.draw(0, 0);
+                            game().rm.menu_shade.setalpha(App::menuTransparency as u8);
+                            game().rm.menu_shade.draw(0, 0);
 
                             //Stop the pwings sound if it is on
-                            if rm.sfx_flyingsound.is_playing() {
-                                rm.sfx_flyingsound.stop();
+                            if game().rm.sfx_flyingsound.is_playing() {
+                                game().rm.sfx_flyingsound.stop();
                             }
                         }
 
-                        if_sound_on_play(&mut rm.sfx_pause);
+                        if_sound_on_play(&mut game().rm.sfx_pause);
                     }
                 }
 
@@ -2152,8 +2152,8 @@ pub fn update_exit_pause_dialog(iCountDownState: i16) -> bool {
 
                         return true;
                     } else if !game_values.flags.pausegame && !game_values.flags.exitinggame {
-                        rm.menu_shade.setalpha(App::menuTransparency as u8);
-                        rm.menu_shade.draw(0, 0);
+                        game().rm.menu_shade.setalpha(App::menuTransparency as u8);
+                        game().rm.menu_shade.draw(0, 0);
                         game_values.flags.exitinggame = true;
 
                         //Reset the keys each time we switch from menu to game and back
@@ -2227,14 +2227,14 @@ pub fn net_bullet_bill(p: usize) {
         let posy = RANDOM_INT(448) as i16;
         let vel = if RANDOM_INT(2) != 0 { speed } else { -speed };
         objectcontainer[2].add(Ptr::new_box(MO_BulletBill::new(
-            spr(&mut rm.spr_bulletbill),
-            spr(&mut rm.spr_bulletbilldead),
+            spr(&mut game().rm.spr_bulletbill),
+            spr(&mut game().rm.spr_bulletbilldead),
             Vec2s::new(0, posy),
             vel,
             p as i16,
             false,
         )));
-        if_sound_on_play(&mut rm.sfx_bulletbillsound);
+        if_sound_on_play(&mut game().rm.sfx_bulletbillsound);
     }
 }
 
@@ -2281,20 +2281,20 @@ pub fn play_sfx() {
     unsafe {
         //Play sound for skidding players
         if game_values.flags.playskidsound {
-            if !rm.sfx_skid.is_playing() {
-                if_sound_on_play(&mut rm.sfx_skid);
+            if !game().rm.sfx_skid.is_playing() {
+                if_sound_on_play(&mut game().rm.sfx_skid);
             }
-        } else if rm.sfx_skid.is_playing() {
-            rm.sfx_skid.stop();
+        } else if game().rm.sfx_skid.is_playing() {
+            game().rm.sfx_skid.stop();
         }
 
         //Play sound for players using PWings
         if game_values.flags.playflyingsound {
-            if !rm.sfx_flyingsound.is_playing() {
-                if_sound_on_play(&mut rm.sfx_flyingsound);
+            if !game().rm.sfx_flyingsound.is_playing() {
+                if_sound_on_play(&mut game().rm.sfx_flyingsound);
             }
-        } else if rm.sfx_flyingsound.is_playing() {
-            rm.sfx_flyingsound.stop();
+        } else if game().rm.sfx_flyingsound.is_playing() {
+            game().rm.sfx_flyingsound.stop();
         }
     }
 }
@@ -2303,47 +2303,47 @@ pub fn play_music() {
     unsafe {
         //Make sure music and sound effects keep playing
         if game_values.flags.slowdownon != -1 {
-            if !rm.sfx_slowdownmusic.is_playing() {
-                if_sound_on_play(&mut rm.sfx_slowdownmusic);
+            if !game().rm.sfx_slowdownmusic.is_playing() {
+                if_sound_on_play(&mut game().rm.sfx_slowdownmusic);
             }
-        } else if rm.sfx_slowdownmusic.is_playing() {
-            rm.sfx_slowdownmusic.stop();
+        } else if game().rm.sfx_slowdownmusic.is_playing() {
+            game().rm.sfx_slowdownmusic.stop();
         }
 
         if game_values.flags.playinvinciblesound && game_values.musicvolume > 0 {
-            if !rm.sfx_invinciblemusic.is_playing() && !rm.sfx_timewarning.is_playing() && !rm.backgroundmusic[0].is_playing() {
-                if_sound_on_play(&mut rm.sfx_invinciblemusic);
+            if !game().rm.sfx_invinciblemusic.is_playing() && !game().rm.sfx_timewarning.is_playing() && !game().rm.backgroundmusic[0].is_playing() {
+                if_sound_on_play(&mut game().rm.sfx_invinciblemusic);
             }
-        } else if rm.sfx_invinciblemusic.is_playing() {
-            rm.sfx_invinciblemusic.stop();
+        } else if game().rm.sfx_invinciblemusic.is_playing() {
+            game().rm.sfx_invinciblemusic.stop();
         }
 
         //If no background music is playing, then play some
-        if !rm.backgroundmusic[0].is_playing() && !rm.sfx_invinciblemusic.is_playing() && !rm.sfx_timewarning.is_playing() && !game_values.gamemode.gameover {
+        if !game().rm.backgroundmusic[0].is_playing() && !game().rm.sfx_invinciblemusic.is_playing() && !game().rm.sfx_timewarning.is_playing() && !game_values.gamemode.gameover {
             if game_values.playnextmusic {
                 let mapname = game().maplist.current_shortmapname().to_string();
                 game().musiclist.set_next_music(music_category(game().g_map.musicCategoryID), &mapname, &game().g_map.szBackgroundFile);
                 let path = game().musiclist.current_music().clone();
-                rm.backgroundmusic[0] = load_music(&path);
+                game().rm.backgroundmusic[0] = load_music(&path);
             }
 
-            rm.backgroundmusic[0].play(game_values.playnextmusic, false);
+            game().rm.backgroundmusic[0].play(game_values.playnextmusic, false);
         }
     }
 }
 
 pub fn play_next_music_track() {
     unsafe {
-        if game_values.gamemode.gameover || game_values.flags.playinvinciblesound || rm.sfx_timewarning.is_playing() {
+        if game_values.gamemode.gameover || game_values.flags.playinvinciblesound || game().rm.sfx_timewarning.is_playing() {
             return;
         }
 
-        rm.backgroundmusic[0].stop();
+        game().rm.backgroundmusic[0].stop();
         let mapname = game().maplist.current_shortmapname().to_string();
         game().musiclist.set_next_music(music_category(game().g_map.musicCategoryID), &mapname, &game().g_map.szBackgroundFile);
         let path = game().musiclist.current_music().clone();
-        rm.backgroundmusic[0] = load_music(&path);
-        rm.backgroundmusic[0].play(game_values.playnextmusic, false);
+        game().rm.backgroundmusic[0] = load_music(&path);
+        game().rm.backgroundmusic[0].play(game_values.playnextmusic, false);
     }
 }
 
@@ -2544,8 +2544,8 @@ pub fn start_gameplay() {
         if game_values.music {
             game().musiclist.set_random_music(music_category(game().g_map.musicCategoryID), "", "");
             let path = game().musiclist.current_music().clone();
-            rm.backgroundmusic[0] = load_music(&path);
-            rm.backgroundmusic[0].play(game_values.playnextmusic, false);
+            game().rm.backgroundmusic[0] = load_music(&path);
+            game().rm.backgroundmusic[0].play(game_values.playnextmusic, false);
         }
     }
 }
@@ -2573,7 +2573,7 @@ impl GameplayState {
 
                         let countDownAnnounce = iCountDownAnnounce[(28 - self.iCountDownState) as usize];
                         if countDownAnnounce >= 0 {
-                            rm.sfx_announcer[countDownAnnounce as usize].play();
+                            game().rm.sfx_announcer[countDownAnnounce as usize].play();
                         }
                     }
                 }
@@ -2902,7 +2902,7 @@ pub fn net_mystery_swap(iUsingPlayerID: i16) -> bool {
 
             if game_values.swapstyle != 1 {
                 eyecandy[2].emplace(EC_SingleAnimation::new(
-                    spr(&mut rm.spr_fireballexplosion),
+                    spr(&mut game().rm.spr_fireballexplosion),
                     ((player.fNewSwapX as i16) as i32 + HALFPW - 16) as i16,
                     ((player.fNewSwapY as i16) as i32 + HALFPH - 16) as i16,
                     3,

@@ -146,7 +146,7 @@ impl PlayerWarpStatus {
                 }
             }
 
-            if_sound_on_play(&mut rm.sfx_pipe);
+            if_sound_on_play(&mut game().rm.sfx_pipe);
         }
     }
 

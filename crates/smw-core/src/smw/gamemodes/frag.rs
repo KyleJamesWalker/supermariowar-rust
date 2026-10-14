@@ -64,7 +64,7 @@ pub fn cgm_frag_playerkilledplayer<T: CGameModeTrait + ?Sized>(this: &mut T, mut
         let iRet = this.check_winner(inflictor);
 
         if game_values.gamemode.gamemode == game_mode_frag && game_values.gamemodesettings.frag.style == DeathStyle::Shield {
-            if_sound_on_play(&mut rm.sfx_powerdown);
+            if_sound_on_play(&mut game().rm.sfx_powerdown);
             other.shield().reset();
             return PlayerKillType::NonKill;
         }
@@ -81,7 +81,7 @@ pub fn cgm_frag_playerkilledself<T: CGameModeTrait + ?Sized>(this: &mut T, mut p
 
         unsafe {
             if game_values.gamemode.gamemode == game_mode_frag && game_values.gamemodesettings.frag.style == DeathStyle::Shield {
-                if_sound_on_play(&mut rm.sfx_powerdown);
+                if_sound_on_play(&mut game().rm.sfx_powerdown);
                 player.shield().reset();
                 return PlayerKillType::NonKill;
             }

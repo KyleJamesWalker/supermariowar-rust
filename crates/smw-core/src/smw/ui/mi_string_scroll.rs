@@ -19,7 +19,7 @@ impl StringScrollElement {
     }
 
     pub fn draw(&self, x: i32, y: i32, max_w: u32) {
-        unsafe { rm.menu_font_large.draw_chop_right(x + 28, y + 5, max_w as i32, &self.str) };
+        unsafe { game().rm.menu_font_large.draw_chop_right(x + 28, y + 5, max_w as i32, &self.str) };
     }
 }
 
@@ -218,12 +218,12 @@ impl UI_ControlTrait for MI_StringScroll {
         let iNumLines = self.iNumLines as i32;
 
         unsafe {
-            rm.menu_dialog.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: iWidth - 16, h: iNumLines * 32 + 32 });
-            rm.menu_dialog.draw_src(x + iWidth - 16, y, &SDL_Rect { x: 496, y: 0, w: 16, h: iNumLines * 32 + 32 });
-            rm.menu_dialog.draw_src(x, y + iNumLines * 32 + 32, &SDL_Rect { x: 0, y: 464, w: iWidth - 16, h: 16 });
-            rm.menu_dialog.draw_src(x + iWidth - 16, y + iNumLines * 32 + 32, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+            game().rm.menu_dialog.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: iWidth - 16, h: iNumLines * 32 + 32 });
+            game().rm.menu_dialog.draw_src(x + iWidth - 16, y, &SDL_Rect { x: 496, y: 0, w: 16, h: iNumLines * 32 + 32 });
+            game().rm.menu_dialog.draw_src(x, y + iNumLines * 32 + 32, &SDL_Rect { x: 0, y: 464, w: iWidth - 16, h: 16 });
+            game().rm.menu_dialog.draw_src(x + iWidth - 16, y + iNumLines * 32 + 32, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
 
-            rm.menu_font_large.draw_centered(x + (iWidth >> 1), y + 5, &self.sTitle);
+            game().rm.menu_font_large.draw_centered(x + (iWidth >> 1), y + 5, &self.sTitle);
 
             //Draw each filter field
             let mut iLine: i16 = 0;

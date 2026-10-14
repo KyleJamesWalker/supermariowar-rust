@@ -38,8 +38,8 @@ impl UI_GraphicsOptionsMenu {
     pub fn new() -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let spr_selectfield = Ptr::from_mut(&mut rm.spr_selectfield);
-            let menu_plain_field = Ptr::from_mut(&mut rm.menu_plain_field);
+            let spr_selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
+            let menu_plain_field = Ptr::from_mut(&mut game().rm.menu_plain_field);
 
             this.miTopLayerField = select_field(spr_selectfield, 70, 120, "Draw Top Layer", 500, 220,
                 &[("Background", false), ("Foreground", true)],

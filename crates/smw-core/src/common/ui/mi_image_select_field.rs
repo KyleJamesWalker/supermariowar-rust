@@ -72,10 +72,10 @@ impl UI_ControlTrait for MI_ImageSelectField {
             self.m_spr.draw_src(x + indent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
             self.m_spr.draw_src(x + indent + 16, y, &SDL_Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
 
-            rm.menu_font_large.draw_chop_right(x + 16, y + 5, indent - 8, &self.m_name);
+            game().rm.menu_font_large.draw_chop_right(x + 16, y + 5, indent - 8, &self.m_name);
 
             if !self.m_items.is_empty() {
-                rm.menu_font_large.draw_chop_right(x + indent + self.iImageWidth as i32 + 10, y + 5, width - indent - 24, &self.current_item().name);
+                game().rm.menu_font_large.draw_chop_right(x + indent + self.iImageWidth as i32 + 10, y + 5, width - indent - 24, &self.current_item().name);
             }
         }
 

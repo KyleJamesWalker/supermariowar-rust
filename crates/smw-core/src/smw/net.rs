@@ -3,7 +3,7 @@
 use crate::game::game;
 use crate::common::game_mode::{GameModeType, *};
 use crate::common::game_mode_settings::GAMEMODESETTINGS_RAW_SIZE;
-use crate::common::global::{game_values, rm};
+use crate::common::global::{game_values};
 use crate::common::global_constants::WAITTIME;
 use crate::common::input::{COutputControl, CPlayerInput};
 use crate::common::path::get_home_directory;
@@ -292,11 +292,11 @@ const PREVIEW_MS: u32 = 2500;
 /// Not in the C++: the match settings every client shows while it waits to start (`waiting_to_start`).
 pub fn draw_match_preview() {
     unsafe {
-        rm.menu_backdrop.draw(0, 0);
-        rm.menu_dialog.draw_src(144, 100, &sdl2::sys::SDL_Rect { x: 0, y: 0, w: 336, h: 264 });
-        rm.menu_dialog.draw_src(480, 100, &sdl2::sys::SDL_Rect { x: 496, y: 0, w: 16, h: 264 });
-        rm.menu_dialog.draw_src(144, 364, &sdl2::sys::SDL_Rect { x: 0, y: 464, w: 336, h: 16 });
-        rm.menu_dialog.draw_src(480, 364, &sdl2::sys::SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+        game().rm.menu_backdrop.draw(0, 0);
+        game().rm.menu_dialog.draw_src(144, 100, &sdl2::sys::SDL_Rect { x: 0, y: 0, w: 336, h: 264 });
+        game().rm.menu_dialog.draw_src(480, 100, &sdl2::sys::SDL_Rect { x: 496, y: 0, w: 16, h: 264 });
+        game().rm.menu_dialog.draw_src(144, 364, &sdl2::sys::SDL_Rect { x: 0, y: 464, w: 336, h: 16 });
+        game().rm.menu_dialog.draw_src(480, 364, &sdl2::sys::SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
 
         let gm = game_values.gamemode;
         let mut lines = vec![gm.szModeName.clone()];
@@ -307,11 +307,11 @@ pub fn draw_match_preview() {
         if !netplay.match_map_name.is_empty() {
             lines.push(format!("Map: {}", netplay.match_map_name));
         }
-        rm.menu_font_large.draw_centered(320, 116, "Match Settings");
+        game().rm.menu_font_large.draw_centered(320, 116, "Match Settings");
         for (i, line) in lines.iter().enumerate() {
-            rm.menu_font_large.draw_chop_centered(320, 160 + 30 * i as i32, 320, line);
+            game().rm.menu_font_large.draw_chop_centered(320, 160 + 30 * i as i32, 320, line);
         }
-        rm.menu_font_small.draw_centered(320, 340, if netplay.match_randomized { "Randomized by the host" } else { "Chosen by the host" });
+        game().rm.menu_font_small.draw_centered(320, 340, if netplay.match_randomized { "Randomized by the host" } else { "Chosen by the host" });
     }
 }
 
@@ -739,9 +739,9 @@ impl NetClient {
         }
 
         unsafe {
-            if !rm.load_menu_skin_path(playerID as i16, Path::new(&path), playerID as i16, false) {
+            if !game().rm.load_menu_skin_path(playerID as i16, Path::new(&path), playerID as i16, false) {
                 println!("[warning] Could not load netplay skin of player {}, using default", playerID);
-                rm.load_menu_skin(playerID as i16, game_values.skinids[playerID as usize], playerID as i16, false);
+                game().rm.load_menu_skin(playerID as i16, game_values.skinids[playerID as usize], playerID as i16, false);
             }
         }
     }

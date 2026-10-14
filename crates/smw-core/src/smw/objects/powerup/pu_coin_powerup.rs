@@ -79,10 +79,10 @@ impl CObjectTrait for PU_CoinPowerup {
             if self.state == 0 {
                 let iHeight = (32.0f32 - self.fy + self.desty) as i16;
                 self.spr.draw_src(x, y, &SDL_Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32, w: 32, h: iHeight as i32 });
-                rm.spr_shinesparkle.draw_src(x, y, &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: iHeight as i32 });
+                game().rm.spr_shinesparkle.draw_src(x, y, &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: iHeight as i32 });
             } else {
                 self.spr.draw_src(x, y, &SDL_Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32, w: 32, h: 32 });
-                rm.spr_shinesparkle.draw_src(x, y, &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 });
+                game().rm.spr_shinesparkle.draw_src(x, y, &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 });
             }
         }
     }
@@ -98,7 +98,7 @@ impl CObjectTrait for PU_CoinPowerup {
                     }
                 }
 
-                if_sound_on_play(&mut rm.sfx_coin);
+                if_sound_on_play(&mut game().rm.sfx_coin);
                 self.dead = true;
             }
         }

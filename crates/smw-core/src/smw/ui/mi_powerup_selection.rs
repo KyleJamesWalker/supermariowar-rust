@@ -80,7 +80,7 @@ impl MI_PowerupSelection {
         };
 
         unsafe {
-            let spr_selectfield = Ptr::from_mut(&mut rm.spr_selectfield);
+            let spr_selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
 
             this.miOverride = Ptr::new_box(MI_SelectField::<i16>::new(spr_selectfield, 70, this.m_pos.y, "Use Settings From", 500, 250));
             this.miOverride.add("Map Only", 0);
@@ -117,8 +117,8 @@ impl MI_PowerupSelection {
                 let pos = iPowerupPositionMap[iPowerup] as usize;
                 let mut slider = Ptr::new_box(MI_PowerupSlider::new(
                     spr_selectfield,
-                    Ptr::from_mut(&mut rm.menu_slider_bar),
-                    Ptr::from_mut(&mut rm.spr_storedpoweruplarge),
+                    Ptr::from_mut(&mut game().rm.menu_slider_bar),
+                    Ptr::from_mut(&mut game().rm.spr_storedpoweruplarge),
                     0,
                     0,
                     245,
@@ -141,7 +141,7 @@ impl MI_PowerupSelection {
             this.miClearButton.set_code(MENU_CODE_CLEAR_POWERUP_WEIGHTS);
 
             //Are You Sure dialog box
-            this.miDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
+            this.miDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut game().rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
             this.miDialogAreYouText = Ptr::new_box(MI_HeaderText::new("Are You", 320, 195));
             this.miDialogSureText = Ptr::new_box(MI_HeaderText::new("Sure?", 320, 220));
             this.miDialogYesButton = Ptr::new_box(MI_Button::new(spr_selectfield, 235, 250, "Yes", 80, TextAlign::CENTER));
@@ -162,8 +162,8 @@ impl MI_PowerupSelection {
             this.mMenu.add_control(ctl_ptr(this.miOverride), null, ctl_ptr(this.miPreset), null, null);
             this.mMenu.add_control(ctl_ptr(this.miPreset), ctl_ptr(this.miOverride), sliders[0], null, null);
 
-            this.miUpArrow = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut rm.menu_verticalarrows), 310, 128, 20, 0, 20, 20, 1, 4, 8));
-            this.miDownArrow = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut rm.menu_verticalarrows), 310, 406, 0, 0, 20, 20, 1, 4, 8));
+            this.miUpArrow = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut game().rm.menu_verticalarrows), 310, 128, 20, 0, 20, 20, 1, 4, 8));
+            this.miDownArrow = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut game().rm.menu_verticalarrows), 310, 406, 0, 0, 20, 20, 1, 4, 8));
             this.miUpArrow.set_visible(false);
 
             let mut iPowerup = 0usize;

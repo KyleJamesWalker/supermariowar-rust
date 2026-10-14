@@ -115,7 +115,7 @@ impl MO_FlagBase {
         unsafe {
             if flag.teamID == self.teamID {
                 flag.place_flag();
-                if_sound_on_play(&mut rm.sfx_areatag);
+                if_sound_on_play(&mut game().rm.sfx_areatag);
             } else if !game_values.gamemodesettings.flag.homescore || !self.homeflag.is_null() || game_values.gamemodesettings.flag.centerflag {
                 flag.place_flag();
                 if !game_values.gamemode.gameover {
@@ -123,7 +123,7 @@ impl MO_FlagBase {
                     game_values.gamemode.check_winner(player);
                 }
 
-                if_sound_on_play(&mut rm.sfx_racesound);
+                if_sound_on_play(&mut game().rm.sfx_racesound);
 
                 if game_values.gamemodesettings.flag.pointmove {
                     // Set the values way outside the map so it will place the base correctly

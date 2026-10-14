@@ -832,7 +832,7 @@ impl EC_Announcement {
     pub fn draw(&self) {
         unsafe {
             for iRect in 0..4 {
-                rm.menu_dialog.draw_part(
+                game().rm.menu_dialog.draw_part(
                     self.rDstRect[iRect].x,
                     self.rDstRect[iRect].y,
                     self.rSrcRect[iRect].x,
@@ -983,7 +983,7 @@ impl_eyecandy!(EC_LoopingAnimation);
 
 /// `eyecandy[2].emplace<EC_SingleAnimation>(&rm->spr_fireballexplosion, x, y, 3, 8)`
 unsafe fn emplace_fireball_explosion(x: i16, y: i16) {
-    let spr = Ptr::from_mut(&mut rm.spr_fireballexplosion);
+    let spr = Ptr::from_mut(&mut game().rm.spr_fireballexplosion);
     eyecandy[2].emplace(EC_SingleAnimation::new(spr, x, y, 3, 8));
 }
 
@@ -1406,7 +1406,7 @@ impl EC_SoulsAward {
             let vely = self.speed * sinf(angle);
 
             unsafe {
-                let spr = Ptr::from_mut(&mut rm.spr_awardsouls);
+                let spr = Ptr::from_mut(&mut game().rm.spr_awardsouls);
                 eyecandy[2].emplace(EC_RocketAward::new(
                     spr,
                     (self.x as i32 - 8) as i16,
@@ -1770,14 +1770,14 @@ impl Spotlight {
         unsafe {
             let (ix, iy, hw, w) = (self.ix as i32, self.iy as i32, self.iHalfWidth as i32, self.iWidth as i32);
             let rDst = SDL_Rect { x: ix - hw, y: iy - hw, w, h: w };
-            rm.spr_overlayhole.draw_src_to(&self.rSrc, rm.spr_overlay.get_surface(), &rDst);
+            game().rm.spr_overlayhole.draw_src_to(&self.rSrc, game().rm.spr_overlay.get_surface(), &rDst);
 
             if ix - hw < 0 {
                 let rDstWrap = SDL_Rect { x: ix - hw + screenWidth, y: iy - hw, w, h: w };
-                rm.spr_overlayhole.draw_src_to(&self.rSrc, rm.spr_overlay.get_surface(), &rDstWrap);
+                game().rm.spr_overlayhole.draw_src_to(&self.rSrc, game().rm.spr_overlay.get_surface(), &rDstWrap);
             } else if ix + hw >= screenWidth {
                 let rDstWrap = SDL_Rect { x: ix - hw - screenWidth, y: iy - hw, w, h: w };
-                rm.spr_overlayhole.draw_src_to(&self.rSrc, rm.spr_overlay.get_surface(), &rDstWrap);
+                game().rm.spr_overlayhole.draw_src_to(&self.rSrc, game().rm.spr_overlay.get_surface(), &rDstWrap);
             }
         }
     }
@@ -1813,7 +1813,7 @@ impl SpotlightManager {
     pub fn draw_spotlights(&mut self) {
         unsafe {
             // Clear the overlay surface again with black
-            crate::common::gfx::blit::fill_rect(rm.spr_overlay.get_surface(), null(), 0x0);
+            crate::common::gfx::blit::fill_rect(game().rm.spr_overlay.get_surface(), null(), 0x0);
         }
 
         let mut i = 0;
@@ -1831,7 +1831,7 @@ impl SpotlightManager {
         }
 
         // Draw the overlay
-        unsafe { rm.spr_overlay.draw(0, 0) };
+        unsafe { game().rm.spr_overlay.draw(0, 0) };
     }
 
     pub fn clear_spotlights(&mut self) {

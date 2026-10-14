@@ -118,7 +118,7 @@ impl CObjectTrait for MO_CollectionCard {
         }
 
         unsafe {
-            if_sound_on_play(&mut rm.sfx_areatag);
+            if_sound_on_play(&mut game().rm.sfx_areatag);
         }
 
         let value = self.value as i32;
@@ -164,7 +164,7 @@ impl CObjectTrait for MO_CollectionCard {
             if self.timer > 200 {
                 self.dead = true;
                 unsafe {
-                    eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
+                    eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
                 }
             }
         }
@@ -190,7 +190,7 @@ impl CObjectTrait for MO_CollectionCard {
             self.uncollectabletime -= 1;
             unsafe {
                 if (self.uncollectabletime as i32) < -(game_values.gamemodesettings.collection.cardlife as i32) {
-                    eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
+                    eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
                     self.dead = true;
                 }
             }
@@ -202,7 +202,7 @@ impl CObjectTrait for MO_CollectionCard {
 
         // Draw sparkles
         unsafe {
-            rm.spr_shinesparkle.draw_src(
+            game().rm.spr_shinesparkle.draw_src(
                 self.ix as i32 - self.collisionOffsetX as i32,
                 self.iy as i32 - self.collisionOffsetY as i32,
                 &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },

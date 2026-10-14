@@ -199,7 +199,7 @@ impl CObjectTrait for OMO_Phanto {
 
                         if !game_values.gamemode.gameover && self.iType == 1 {
                             player.score().adjust_score(-10);
-                            if_sound_on_play(&mut rm.sfx_stun);
+                            if_sound_on_play(&mut game().rm.sfx_stun);
                         }
 
                         return true;

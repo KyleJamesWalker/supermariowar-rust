@@ -144,7 +144,7 @@ pub fn setup_score_board_now(fOrderMatters: bool) {
             for iBonus in 0..iNumBonuses {
                 if tourStop.wsbBonuses[iBonus as usize].iWinnerPlace == 0 {
                     let iBonusType: i16 = tourStop.wsbBonuses[iBonus as usize].iBonus;
-                    objectcontainer[0].add(Ptr::new_box(PU_TreasureChestBonus::new(Ptr::from_mut(&mut rm.spr_bonuschest), 1, 0, 30, 30, 1, 1, iBonusType)));
+                    objectcontainer[0].add(Ptr::new_box(PU_TreasureChestBonus::new(Ptr::from_mut(&mut game().rm.spr_bonuschest), 1, 0, 30, 30, 1, 1, iBonusType)));
                     game_values.flags.noexittimer = 0;
                     game_values.flags.noexit = false;
                 }
@@ -178,11 +178,11 @@ pub fn show_score_board_now() {
         }
 
         if game_values.music {
-            rm.sfx_invinciblemusic.stop();
-            rm.sfx_timewarning.stop();
-            rm.sfx_slowdownmusic.stop();
+            game().rm.sfx_invinciblemusic.stop();
+            game().rm.sfx_timewarning.stop();
+            game().rm.sfx_slowdownmusic.stop();
 
-            rm.backgroundmusic[1].play(true, false);
+            game().rm.backgroundmusic[1].play(true, false);
         }
     }
 }
@@ -221,14 +221,14 @@ pub fn remove_team_now(teamid: i16) -> bool {
         //Announce that a team was removed
         if game_values.deadteamnotice && (game_values.flags.teamdeadcounter as i32) < score_cnt as i32 - 1 {
             eyecandy[2].emplace(EC_Announcement::new(
-                Ptr::from_mut(&mut rm.game_font_large),
-                Ptr::from_mut(&mut rm.spr_announcementicons),
+                Ptr::from_mut(&mut game().rm.game_font_large),
+                Ptr::from_mut(&mut game().rm.spr_announcementicons),
                 "Team Removed!".to_string(),
                 iAnnouncementColor,
                 90,
                 200,
             ));
-            rm.sfx_announcer[(iAnnouncementColor as i32 + 16) as usize].play();
+            game().rm.sfx_announcer[(iAnnouncementColor as i32 + 16) as usize].play();
         }
 
         game_values.flags.teamdeadcounter as i32 == score_cnt as i32 - 1
@@ -274,13 +274,13 @@ impl CGameMode {
 
         self.playedwarningsound = true;
         unsafe {
-            rm.sfx_invinciblemusic.stop();
+            game().rm.sfx_invinciblemusic.stop();
 
             if game_values.music && game_values.sound {
-                rm.backgroundmusic[0].stop();
+                game().rm.backgroundmusic[0].stop();
             }
 
-            if_sound_on_play(&mut rm.sfx_timewarning);
+            if_sound_on_play(&mut game().rm.sfx_timewarning);
         }
     }
 

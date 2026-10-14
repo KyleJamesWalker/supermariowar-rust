@@ -80,8 +80,8 @@ impl UI_ProjectileOptionsMenu {
     pub fn new() -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let spr = Ptr::from_mut(&mut rm.spr_selectfield);
-            let menu_plain_field = Ptr::from_mut(&mut rm.menu_plain_field);
+            let spr = Ptr::from_mut(&mut game().rm.spr_selectfield);
+            let menu_plain_field = Ptr::from_mut(&mut game().rm.menu_plain_field);
 
             this.miFireballLifeField = select_field(spr, 10, 80, "Life", 305, 120, LIFE_1_TO_10, &mut game_values.fireballttl);
 

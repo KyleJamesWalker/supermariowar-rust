@@ -59,11 +59,11 @@ impl CGM_Boss_MiniGame {
             show_score_board();
 
             if game_values.music {
-                rm.sfx_invinciblemusic.stop();
-                rm.sfx_timewarning.stop();
-                rm.sfx_slowdownmusic.stop();
+                game().rm.sfx_invinciblemusic.stop();
+                game().rm.sfx_timewarning.stop();
+                game().rm.sfx_slowdownmusic.stop();
 
-                rm.backgroundmusic[1].play(true, false);
+                game().rm.backgroundmusic[1].play(true, false);
             }
         }
 
@@ -112,7 +112,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
             } else {
                 (App::screenWidth / 2) as i16
             };
-            objectcontainer[0].add(Ptr::new_box(MO_SledgeBrother::new(Ptr::from_mut(&mut rm.spr_sledgebrothers), platformY, self.iBossType)));
+            objectcontainer[0].add(Ptr::new_box(MO_SledgeBrother::new(Ptr::from_mut(&mut game().rm.spr_sledgebrothers), platformY, self.iBossType)));
         }
     }
 
@@ -122,12 +122,12 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
                 self.gameover = true;
 
                 if game_values.music {
-                    rm.sfx_invinciblemusic.stop();
-                    rm.sfx_timewarning.stop();
-                    rm.sfx_slowdownmusic.stop();
-                    if_sound_on_play(&mut rm.sfx_gameover);
+                    game().rm.sfx_invinciblemusic.stop();
+                    game().rm.sfx_timewarning.stop();
+                    game().rm.sfx_slowdownmusic.stop();
+                    if_sound_on_play(&mut game().rm.sfx_gameover);
 
-                    rm.backgroundmusic[1].stop();
+                    game().rm.backgroundmusic[1].stop();
                 }
             }
 
@@ -138,7 +138,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
                     //Randomly spawn koopas
                     self.enemytimer -= 1;
                     if self.enemytimer <= 0 {
-                        objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(Ptr::from_mut(&mut rm.spr_koopa), RANDOM_BOOL(), false, false, true)));
+                        objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(Ptr::from_mut(&mut game().rm.spr_koopa), RANDOM_BOOL(), false, false, true)));
                         self.enemytimer = (RANDOM_INT(120) as i16 as i32 + 120) as i16; //Spawn koopas slowly
                     }
                 } else if self.iBossType == Boss::Bomb {
@@ -149,7 +149,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
                         let x = RANDOM_INT((App::screenWidth as f32 * 0.95f32) as i32) as i16;
                         let pos = Vec2s::new(x, App::screenHeight as i16);
                         let nspeed: f32 = -((RANDOM_INT(9) as f32) / 2.0f32) - 9.0f32;
-                        objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(Ptr::from_mut(&mut rm.spr_podobo), pos, nspeed, -1, -1, -1, false)));
+                        objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(Ptr::from_mut(&mut game().rm.spr_podobo), pos, nspeed, -1, -1, -1, false)));
                         self.enemytimer = (RANDOM_INT(80) + 60) as i16;
                     }
 
@@ -158,7 +158,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
                         self.poweruptimer = (RANDOM_INT(80) + 60) as i16;
 
                         if objectcontainer[1].count_types(object_frenzycard) < players.len() {
-                            objectcontainer[1].add(Ptr::new_box(MO_FrenzyCard::new(Ptr::from_mut(&mut rm.spr_frenzycards), 0)));
+                            objectcontainer[1].add(Ptr::new_box(MO_FrenzyCard::new(Ptr::from_mut(&mut game().rm.spr_frenzycards), 0)));
                         }
                     }
                 }
@@ -170,12 +170,12 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
         if self.gameover {
             if self.winningteam == -1 {
                 unsafe {
-                    rm.game_font_large.draw_centered(App::screenWidth / 2, 96, "You Failed To Defeat");
+                    game().rm.game_font_large.draw_centered(App::screenWidth / 2, 96, "You Failed To Defeat");
 
                     match self.iBossType {
-                        Boss::Hammer => rm.game_font_large.draw_centered(App::screenWidth / 2, 118, "The Mighty Sledge Brother"),
-                        Boss::Bomb => rm.game_font_large.draw_centered(App::screenWidth / 2, 118, "The Mighty Bomb Brother"),
-                        Boss::Fire => rm.game_font_large.draw_centered(App::screenWidth / 2, 118, "The Mighty Flame Brother"),
+                        Boss::Hammer => game().rm.game_font_large.draw_centered(App::screenWidth / 2, 118, "The Mighty Sledge Brother"),
+                        Boss::Bomb => game().rm.game_font_large.draw_centered(App::screenWidth / 2, 118, "The Mighty Bomb Brother"),
+                        Boss::Fire => game().rm.game_font_large.draw_centered(App::screenWidth / 2, 118, "The Mighty Flame Brother"),
                     }
                 }
             }

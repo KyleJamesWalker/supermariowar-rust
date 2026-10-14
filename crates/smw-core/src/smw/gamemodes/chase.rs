@@ -60,13 +60,13 @@ impl CGameModeTrait for CGM_Chase {
                 while iNumPhantos < game_values.gamemodesettings.chase.phantoquantity[iPhanto as usize] {
                     let x = RANDOM_INT(App::screenWidth);
                     let y = if RANDOM_BOOL() { -32 - CRUNCHMAX } else { App::screenHeight };
-                    objectcontainer[1].add(Ptr::new_box(OMO_Phanto::new(Ptr::from_mut(&mut rm.spr_phanto), Vec2s::new(x as i16, y as i16), 0.0f32, 0.0f32, iPhanto)));
+                    objectcontainer[1].add(Ptr::new_box(OMO_Phanto::new(Ptr::from_mut(&mut game().rm.spr_phanto), Vec2s::new(x as i16, y as i16), 0.0f32, 0.0f32, iPhanto)));
                     iNumPhantos += 1;
                 }
             }
 
             //Add a key
-            self.key = Ptr::new_box(CO_PhantoKey::new(Ptr::from_mut(&mut rm.spr_phantokey)));
+            self.key = Ptr::new_box(CO_PhantoKey::new(Ptr::from_mut(&mut game().rm.spr_phantokey)));
             objectcontainer[1].add(self.key);
         }
     }

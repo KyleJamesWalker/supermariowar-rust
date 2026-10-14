@@ -53,8 +53,8 @@ impl PlayerSuperStomp {
         //super stomp attack zone, play the sound and show the stomp gfx
         if self.is_stomping {
             unsafe {
-                eyecandy[2].emplace(EC_SuperStompExplosion::new(Ptr::from_mut(&mut rm.spr_superstomp), player.center_x(), player.bottom_y(), 4));
-                if_sound_on_play(&mut rm.sfx_bobombsound);
+                eyecandy[2].emplace(EC_SuperStompExplosion::new(Ptr::from_mut(&mut game().rm.spr_superstomp), player.center_x(), player.bottom_y(), 4));
+                if_sound_on_play(&mut game().rm.sfx_bobombsound);
                 self.is_stomping = false;
 
                 objectcontainer[1].add(Ptr::new_box(MO_AttackZone::new(

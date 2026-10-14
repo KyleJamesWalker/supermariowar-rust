@@ -23,7 +23,6 @@ use crate::common::game_values::CGameValues;
 use crate::globals::{Global, Ptr};
 use sdl2::sys::SDL_Joystick;
 
-pub static mut rm: Ptr<crate::common::resource_manager::CResourceManager> = Ptr::null();
 
 pub static g_szMusicCategoryNames: [&str; crate::common::global_constants::MAXMUSICCATEGORY as usize] =
     ["Land", "Underground", "Underwater", "Castle", "Platforms", "Ghost", "Bonus", "Battle", "Desert", "Clouds", "Snow"];
@@ -40,6 +39,6 @@ pub fn load_current_map_background() {
             path = convert_path_pack("gfx/packs/backgrounds/Land_Classic.png", &pack);
         }
 
-        rm.spr_background = ImageLoader::new(path).without_color_key().create();
+        game().rm.spr_background = ImageLoader::new(path).without_color_key().create();
     }
 }

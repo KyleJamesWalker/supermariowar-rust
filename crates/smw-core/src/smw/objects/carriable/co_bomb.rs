@@ -163,7 +163,7 @@ impl IO_MovingObjectTrait for CO_Bomb {
         self.dead = true;
         unsafe {
             objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
-                Ptr::from_mut(&mut rm.spr_explosion),
+                Ptr::from_mut(&mut game().rm.spr_explosion),
                 Vec2s::new((self.ix as i32 + (self.iw as i32 >> 2) - 96) as i16, (self.iy as i32 + (self.ih as i32 >> 2) - 64) as i16),
                 2,
                 4,
@@ -171,7 +171,7 @@ impl IO_MovingObjectTrait for CO_Bomb {
                 self.iTeamID,
                 KillStyle::Bomb,
             )));
-            if_sound_on_play(&mut rm.sfx_bobombsound);
+            if_sound_on_play(&mut game().rm.sfx_bobombsound);
         }
     }
 }

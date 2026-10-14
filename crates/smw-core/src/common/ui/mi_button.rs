@@ -37,7 +37,7 @@ crate::impl_base!(MI_Button => ui_control: UI_Control);
 impl MI_Button {
     pub fn new(nspr: Ptr<gfxSprite>, x: i16, y: i16, name: impl Into<String>, width: i16, align: TextAlign) -> Self {
         let szName: String = name.into();
-        let iTextW = unsafe { rm.menu_font_large.get_width(&szName) } as i16;
+        let iTextW = unsafe { game().rm.menu_font_large.get_width(&szName) } as i16;
         MI_Button {
             ui_control: UI_Control::new(x, y),
             spr: nspr,
@@ -65,7 +65,7 @@ impl MI_Button {
 
     pub fn set_name(&mut self, name: impl Into<String>) {
         self.szName = name.into();
-        self.iTextW = unsafe { rm.menu_font_large.get_width(&self.szName) } as i16;
+        self.iTextW = unsafe { game().rm.menu_font_large.get_width(&self.szName) } as i16;
     }
 
     pub fn set_code(&mut self, code: MenuCodeEnum) {
@@ -124,19 +124,19 @@ impl UI_ControlTrait for MI_Button {
 
             match self.m_text_align {
                 TextAlign::LEFT => {
-                    rm.menu_font_large.draw_chop_right(x + 16 + (if iImageW > 0 { iImageW + 2 } else { 0 }), y + 5, iWidth - 32, &self.szName);
+                    game().rm.menu_font_large.draw_chop_right(x + 16 + (if iImageW > 0 { iImageW + 2 } else { 0 }), y + 5, iWidth - 32, &self.szName);
                     if !self.sprImage.is_null() {
                         self.sprImage.draw_src(x + 16, y + 16 - (iImageH >> 1), &srcRect);
                     }
                 }
                 TextAlign::CENTER => {
-                    rm.menu_font_large.draw_centered(x + ((iWidth + (if iImageW > 0 { iImageW + 2 } else { 0 })) >> 1), y + 5, &self.szName);
+                    game().rm.menu_font_large.draw_centered(x + ((iWidth + (if iImageW > 0 { iImageW + 2 } else { 0 })) >> 1), y + 5, &self.szName);
                     if !self.sprImage.is_null() {
                         self.sprImage.draw_src(x + (iWidth >> 1) - ((self.iTextW as i32 + iImageW) >> 1) - 1, y + 16 - (iImageH >> 1), &srcRect);
                     }
                 }
                 TextAlign::RIGHT => {
-                    rm.menu_font_large.draw_right_justified(x + iWidth - 16, y + 5, &self.szName);
+                    game().rm.menu_font_large.draw_right_justified(x + iWidth - 16, y + 5, &self.szName);
                     if !self.sprImage.is_null() {
                         self.sprImage.draw_src(x + iWidth - 18 - self.iTextW as i32 - iImageW, y + 16 - (iImageH >> 1), &srcRect);
                     }

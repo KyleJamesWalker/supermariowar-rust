@@ -16,7 +16,7 @@ crate::impl_base!(MI_Text => ui_control: UI_Control);
 
 impl MI_Text {
     pub fn new(text: impl Into<String>, x: i16, y: i16, w: i16, use_large_font: bool, align: TextAlign) -> Self {
-        let font = unsafe { if use_large_font { Ptr::from_mut(&mut rm.menu_font_large) } else { Ptr::from_mut(&mut rm.menu_font_small) } };
+        let font = unsafe { if use_large_font { Ptr::from_mut(&mut game().rm.menu_font_large) } else { Ptr::from_mut(&mut game().rm.menu_font_small) } };
         MI_Text { ui_control: UI_Control::new(x, y), szText: text.into(), iw: w, m_align: align, font }
     }
 

@@ -159,7 +159,7 @@ impl UI_ControlTrait for MI_PlayerSelect {
             self.spr.draw_src(x + iIndent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 192 } else { 128 }, w: 32, h: 64 });
             self.spr.draw_src(x + iIndent + 16, y, &SDL_Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 64 } else { 0 }, w: iWidth - iIndent - 16, h: 64 });
 
-            rm.menu_font_large.draw_chop_right(x + 16, y + 20, iIndent - 8, &self.szName);
+            game().rm.menu_font_large.draw_chop_right(x + 16, y + 20, iIndent - 8, &self.szName);
 
             self.miModifyImage.draw();
 

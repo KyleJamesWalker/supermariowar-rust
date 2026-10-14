@@ -51,11 +51,11 @@ impl CObjectTrait for PU_ExtraGuyPowerup {
         unsafe {
             if self.state > 0 {
                 game_values.gamemode.playerextraguy(player, self.iType);
-                if_sound_on_play(&mut rm.sfx_extraguysound);
+                if_sound_on_play(&mut game().rm.sfx_extraguysound);
 
                 let iSrcY = ((if self.iType == 5 { 3 } else { self.iType as i32 - 1 }) * 16) as i16;
                 eyecandy[2].emplace(EC_FloatingObject::new(
-                    Ptr::from_mut(&mut rm.spr_extralife),
+                    Ptr::from_mut(&mut game().rm.spr_extralife),
                     (player.ix as i32 + HALFPW - 19) as i16,
                     (player.iy as i32 - 16) as i16,
                     0.0f32,

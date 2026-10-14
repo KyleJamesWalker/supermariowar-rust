@@ -36,8 +36,8 @@ impl UI_EyeCandyOptionsMenu {
     pub fn new() -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let spr_selectfield = Ptr::from_mut(&mut rm.spr_selectfield);
-            let menu_plain_field = Ptr::from_mut(&mut rm.menu_plain_field);
+            let spr_selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
+            let menu_plain_field = Ptr::from_mut(&mut game().rm.menu_plain_field);
 
             this.miSpawnStyleField = select_field(spr_selectfield, 70, 80, "Spawn Style", 500, 220,
                 &[("Instant", SpawnStyle::Instant), ("Door", SpawnStyle::Door), ("Swirl", SpawnStyle::Swirl)],

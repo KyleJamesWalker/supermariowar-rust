@@ -182,7 +182,7 @@ unsafe extern "C-unwind" fn gameloop_frame() {
 pub fn create_globals() {
     unsafe {
         // this instance will contain the other relevant objects
-        rm = Ptr::new_box(CResourceManager::new());
+        game().rm = Ptr::new_box(CResourceManager::new());
 
         game().g_map = Ptr::from_box(CMap::new());
         game().filterslist = Ptr::new_box(FiltersList::new());
@@ -577,6 +577,6 @@ pub fn main_game() {
         }
 
         // release all resources
-        rm.delete();
+        game().rm.delete();
     }
 }

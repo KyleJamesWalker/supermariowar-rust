@@ -66,14 +66,14 @@ impl MI_BonusWheel {
                 let iPowerupX = (x as i32 + 160 + (110.0f32 * cosf(dSelectionSector[iImage])) as i16 as i32) as i16;
                 let iPowerupY = (y as i32 + 208 + (110.0f32 * sinf(dSelectionSector[iImage])) as i16 as i32) as i16;
 
-                Box::new(MI_Image::new(Ptr::from_mut(&mut rm.spr_storedpoweruplarge), iPowerupX, iPowerupY, 0, 0, 32, 32, 1, 1, 0))
+                Box::new(MI_Image::new(Ptr::from_mut(&mut game().rm.spr_storedpoweruplarge), iPowerupX, iPowerupY, 0, 0, 32, 32, 1, 1, 0))
             });
 
             //Fix the last sector to allow correct detection of sector for tick sound
             dSelectionSector[NB] = TWO_PI;
 
             let mut miContinueButton = Box::new(MI_Button::new(
-                Ptr::from_mut(&mut rm.menu_plain_field),
+                Ptr::from_mut(&mut game().rm.menu_plain_field),
                 ui_control.m_pos.x + 76,
                 ui_control.m_pos.y + 390,
                 "Continue",
@@ -166,7 +166,7 @@ impl MI_BonusWheel {
             for iPlayer in 0..self.iNumPlayers as usize {
                 let id = game_values.teamids[self.iWinningTeam as usize][iPlayer] as usize;
                 self.miPlayerImages.push(Box::new(MI_Image::new(
-                    Ptr::from_mut(&mut rm.spr_player[id][PGFX_JUMPING_R as usize]),
+                    Ptr::from_mut(&mut game().rm.spr_player[id][PGFX_JUMPING_R as usize]),
                     iPlayerX,
                     self.m_pos.y + 210,
                     0,
@@ -265,7 +265,7 @@ impl UI_ControlTrait for MI_BonusWheel {
                     let _ = (iPoofX, iPoofY);
                     // TODO(eyecandy): m_parentMenu->AddEyeCandy<EC_SingleAnimation>(&rm->spr_poof, iPoofX, iPoofY, 4, 5);
 
-                    if_sound_on_play(&mut rm.sfx_cannon);
+                    if_sound_on_play(&mut game().rm.sfx_cannon);
 
                     self.iDisplayPowerupIndex += 1;
                     if self.iDisplayPowerupIndex as i32 >= NUMBONUSITEMSONWHEEL {
@@ -347,7 +347,7 @@ impl UI_ControlTrait for MI_BonusWheel {
                             game_values.storedpowerups[game_values.teamids[w][iPlayer] as usize] = self.iSelectedPowerup;
                         }
 
-                        if_sound_on_play(&mut rm.sfx_collectpowerup);
+                        if_sound_on_play(&mut game().rm.sfx_collectpowerup);
                     }
                 }
 
@@ -355,7 +355,7 @@ impl UI_ControlTrait for MI_BonusWheel {
 
                 //If we hit the next powerup, play a tick sound
                 if self.dSelectionAngle >= self.dSelectionSector[self.iNextSelectionSoundIndex as usize] {
-                    if_sound_on_play(&mut rm.sfx_worldmove);
+                    if_sound_on_play(&mut game().rm.sfx_worldmove);
 
                     self.iNextSelectionSoundIndex += 1;
                     if self.iNextSelectionSoundIndex as i32 > NUMBONUSITEMSONWHEEL {
@@ -379,13 +379,13 @@ impl UI_ControlTrait for MI_BonusWheel {
             let x = self.m_pos.x as i32;
             let y = self.m_pos.y as i32;
 
-            rm.spr_tournament_powerup_splash.draw(x, y);
+            game().rm.spr_tournament_powerup_splash.draw(x, y);
 
             let iSelectorX = (x + 144 + (110.0f32 * cosf(self.dSelectionAngle)) as i16 as i32) as i16;
             let iSelectorY = (y + 190 + (110.0f32 * sinf(self.dSelectionAngle)) as i16 as i32) as i16;
 
             if self.iState > 0 {
-                rm.spr_powerupselector.draw_src(iSelectorX as i32, iSelectorY as i32, &SDL_Rect { x: self.iSelectorAnimation as i32 * 64, y: 0, w: 64, h: 64 });
+                game().rm.spr_powerupselector.draw_src(iSelectorX as i32, iSelectorY as i32, &SDL_Rect { x: self.iSelectorAnimation as i32 * 64, y: 0, w: 64, h: 64 });
             }
 
             for iImage in 0..NB {
@@ -403,7 +403,7 @@ impl UI_ControlTrait for MI_BonusWheel {
             self.miContinueButton.draw();
 
             if self.iState == 1 && !self.fPressedSelect {
-                rm.menu_font_large.draw_centered(App::screenWidth / 2, y + 390, "Press a Button To Stop The Wheel");
+                game().rm.menu_font_large.draw_centered(App::screenWidth / 2, y + 390, "Press a Button To Stop The Wheel");
             }
         }
     }

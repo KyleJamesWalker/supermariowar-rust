@@ -1,7 +1,7 @@
 //! Port of src/smw/menu/network/NetNewRoomSettingsMenu.cpp
 
+use crate::game::game;
 use crate::common::game_mode::GAMEMODE_LAST;
-use crate::common::global::rm;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
 use crate::common::ui::mi_image::MI_Image;
@@ -39,7 +39,7 @@ impl UI_NetNewRoomSettingsMenu {
     pub fn new(gsm: &UI_GameSettingsMenu) -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let selectfield = Ptr::from_mut(&mut rm.spr_selectfield);
+            let selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
 
             this.miContinueButton = Ptr::new_box(MI_Button::new_left(selectfield, 70, 45, "Continue", 500));
             this.miContinueButton.set_code(MENU_CODE_TO_NET_NEW_ROOM_SETTINGS_MENU);
@@ -82,7 +82,7 @@ impl UI_NetNewRoomSettingsMenu {
         this.add_control(map, goals[GM_LAST - 1], cont, null, null);
 
         unsafe {
-            let plain = Ptr::from_mut(&mut rm.menu_plain_field);
+            let plain = Ptr::from_mut(&mut game().rm.menu_plain_field);
             this.miLeftHeaderBar = Ptr::new_box(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miRightHeaderBar = Ptr::new_box(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0));
             this.miHeaderText = Ptr::new_box(MI_HeaderText::new("Multiplayer Level Select Menu", 320, 5));

@@ -56,15 +56,15 @@ impl PlayerJail {
                 self.owner_teamID = -1;
 
                 eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut rm.spr_poof),
+                    Ptr::from_mut(&mut game().rm.spr_poof),
                     (player.center_x() as i32 - 24) as i16,
                     (player.center_y() as i32 - 24) as i16,
                     4,
                     5,
                 ));
-                if_sound_on_play(&mut rm.sfx_transform);
+                if_sound_on_play(&mut game().rm.sfx_transform);
             } else {
-                if_sound_on_play(&mut rm.sfx_hit);
+                if_sound_on_play(&mut game().rm.sfx_hit);
             }
         }
     }
@@ -74,13 +74,13 @@ impl PlayerJail {
             if self.is_active() {
                 self.timer = 0;
                 eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                    Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                     (player.center_x() as i32 - 16) as i16,
                     (player.center_y() as i32 - 16) as i16,
                     3,
                     8,
                 ));
-                if_sound_on_play(&mut rm.sfx_transform);
+                if_sound_on_play(&mut game().rm.sfx_transform);
             }
         }
     }
@@ -93,13 +93,13 @@ impl PlayerJail {
                     self.timer = 0;
                     self.owner_teamID = -1;
                     eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                        Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                         (player.center_x() as i32 - 16) as i16,
                         (player.center_y() as i32 - 16) as i16,
                         3,
                         8,
                     ));
-                    if_sound_on_play(&mut rm.sfx_transform);
+                    if_sound_on_play(&mut game().rm.sfx_transform);
                 }
             }
         }
@@ -113,9 +113,9 @@ impl PlayerJail {
                 let src = SDL_Rect { x: (self.color as i32 + 1) * 44, y: 0, w: 44, h: 44 };
                 if player.iswarping() {
                     let edge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);
-                    rm.spr_jail.draw_clip(x, y, &src, edge, player.get_warp_plane() as i32);
+                    game().rm.spr_jail.draw_clip(x, y, &src, edge, player.get_warp_plane() as i32);
                 } else {
-                    rm.spr_jail.draw_src(x, y, &src);
+                    game().rm.spr_jail.draw_src(x, y, &src);
                 }
             }
         }

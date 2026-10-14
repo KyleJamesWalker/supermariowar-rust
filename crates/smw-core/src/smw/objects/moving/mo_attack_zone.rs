@@ -151,7 +151,7 @@ pub fn mo_attack_zone_collide_object<T: MO_AttackZoneTrait + ?Sized>(this: &mut 
                 }
             }
 
-            if_sound_on_play(&mut rm.sfx_kicksound);
+            if_sound_on_play(&mut game().rm.sfx_kicksound);
         }
     }
 }

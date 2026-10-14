@@ -11,7 +11,7 @@ use crate::common::moving_object_types::*;
 use crate::common::object_base::{cap_falling_velocity, CObjectTrait};
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
-use crate::globals::{rm, Ptr};
+use crate::globals::Ptr;
 use crate::impl_base;
 use crate::smw::objects::blocks::io_block::*;
 use crate::smw::objects::blocks::switch_block::B_SwitchBlock;
@@ -51,7 +51,7 @@ impl B_OnOffSwitchBlock {
     pub fn trigger_behavior_player(&mut self, playerID: i16) {
         if self.state == 0 || self.state == 3 {
             unsafe {
-                if_sound_on_play(&mut rm.sfx_switchpress);
+                if_sound_on_play(&mut game().rm.sfx_switchpress);
             }
             self.vely = -VELBLOCKBOUNCE;
 
@@ -213,7 +213,7 @@ impl IO_BlockTrait for B_OnOffSwitchBlock {
                 self.trigger_behavior_player(object.iPlayerID);
             } else {
                 unsafe {
-                    if_sound_on_play(&mut rm.sfx_bump);
+                    if_sound_on_play(&mut game().rm.sfx_bump);
                 }
             }
 
@@ -250,7 +250,7 @@ impl IO_BlockTrait for B_OnOffSwitchBlock {
                 self.trigger_behavior_player(object.iPlayerID);
             } else {
                 unsafe {
-                    if_sound_on_play(&mut rm.sfx_bump);
+                    if_sound_on_play(&mut game().rm.sfx_bump);
                 }
             }
 

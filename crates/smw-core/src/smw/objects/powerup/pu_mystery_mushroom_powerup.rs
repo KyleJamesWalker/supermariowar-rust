@@ -52,13 +52,13 @@ impl CObjectTrait for PU_MysteryMushroomPowerup {
 
                 if !swap_players(player.localID) {
                     eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                        Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                         (player.ix as i32 + (HALFPW) - 16) as i16,
                         (player.iy as i32 + (HALFPH) - 16) as i16,
                         3,
                         8,
                     ));
-                    if_sound_on_play(&mut rm.sfx_spit);
+                    if_sound_on_play(&mut game().rm.sfx_spit);
                 }
             }
         }

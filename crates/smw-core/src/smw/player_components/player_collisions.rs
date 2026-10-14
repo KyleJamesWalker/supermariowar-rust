@@ -462,7 +462,7 @@ impl PlayerCollisions {
                         game_values.gamepowerups[o1.globalID as usize] = game_values.gamepowerups[o2.globalID as usize];
                         game_values.gamepowerups[o2.globalID as usize] = iTempPowerup;
 
-                        if_sound_on_play(&mut rm.sfx_storepowerup);
+                        if_sound_on_play(&mut game().rm.sfx_storepowerup);
 
                         o1.playerKeys.game_powerup_mut().fPressed = false;
                         o1.playerKeys.game_powerup_mut().fDown = false;

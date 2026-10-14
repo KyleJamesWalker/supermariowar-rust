@@ -7,7 +7,7 @@ use crate::common::global_constants::*;
 use crate::common::io_block::{IO_Block, IO_BlockTrait};
 use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::CObjectTrait;
-use crate::globals::{rm, Ptr};
+use crate::globals::Ptr;
 use crate::impl_base;
 use crate::smw::objectgame::check_secret;
 use crate::smw::objects::blocks::io_block::*;
@@ -160,7 +160,7 @@ impl IO_BlockTrait for B_NoteBlock {
             }
 
             unsafe {
-                if_sound_on_play(&mut rm.sfx_bump);
+                if_sound_on_play(&mut game().rm.sfx_bump);
 
                 game_values.unlocksecret3part2[player.globalID as usize] += 2;
                 check_secret(2);
@@ -183,7 +183,7 @@ impl IO_BlockTrait for B_NoteBlock {
                 self.state = 3;
 
                 unsafe {
-                    if_sound_on_play(&mut rm.sfx_bump);
+                    if_sound_on_play(&mut game().rm.sfx_bump);
                 }
             }
 
@@ -213,7 +213,7 @@ impl IO_BlockTrait for B_NoteBlock {
             }
 
             unsafe {
-                if_sound_on_play(&mut rm.sfx_bump);
+                if_sound_on_play(&mut game().rm.sfx_bump);
             }
         }
 
@@ -233,7 +233,7 @@ impl IO_BlockTrait for B_NoteBlock {
             }
 
             unsafe {
-                if_sound_on_play(&mut rm.sfx_bump);
+                if_sound_on_play(&mut game().rm.sfx_bump);
             }
         }
 

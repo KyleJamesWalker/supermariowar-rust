@@ -10,7 +10,7 @@ use crate::common::math::vec2::Vec2s;
 use crate::common::moving_object_types::*;
 use crate::common::object_base::{cap_falling_velocity, object_block, CObject, CObjectTrait};
 use crate::common::player_kill_styles::KillStyle;
-use crate::globals::{rm, Ptr};
+use crate::globals::Ptr;
 use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::main::players;
 use crate::smw::objects::carriable::co_shell::CO_Shell;
@@ -211,7 +211,7 @@ pub fn io_block_bounce_moving_object<T: IO_BlockTrait + ?Sized>(this: &mut T, mu
     unsafe {
         let r#type = object.get_moving_object_type();
         if r#type == movingobject_goomba || r#type == movingobject_koopa || r#type == movingobject_buzzybeetle || r#type == movingobject_spiny {
-            if_sound_on_play(&mut rm.sfx_kicksound);
+            if_sound_on_play(&mut game().rm.sfx_kicksound);
 
             let enemy = object.as_walking_enemy().unwrap();
             let style = enemy.we().get_kill_style();

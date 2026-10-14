@@ -60,8 +60,8 @@ impl CObjectTrait for MO_Goomba {
             unsafe {
                 let x = self.ix as i32 - self.collisionOffsetX as i32 + self.iw as i32 - 32;
                 let y = self.iy as i32 - self.collisionOffsetY as i32 + self.ih as i32 - 32;
-                rm.spr_goomba.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
-                rm.spr_iceblock.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
+                game().rm.spr_goomba.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
+                game().rm.spr_iceblock.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
             }
         } else {
             mo_walking_enemy_draw(self);
@@ -101,7 +101,7 @@ impl IO_MovingObjectTrait for MO_Goomba {
 
         self.dead = true;
         unsafe {
-            eyecandy[2].emplace(EC_FallingObject::new(Ptr::from_mut(&mut rm.spr_goombadeadflying), self.ix, self.iy, 0.0f32, -VELJUMP / 2.0f32, 1, 0, 0, 0, 0, 0));
+            eyecandy[2].emplace(EC_FallingObject::new(Ptr::from_mut(&mut game().rm.spr_goombadeadflying), self.ix, self.iy, 0.0f32, -VELJUMP / 2.0f32, 1, 0, 0, 0, 0, 0));
         }
     }
 }
@@ -140,7 +140,7 @@ impl MO_WalkingEnemyTrait for MO_Goomba {
                 self.drawframe = 0;
 
                 self.animationOffsetY = if self.velx > 0.0f32 { 0 } else { self.ih };
-                self.spr = Ptr::from_mut(&mut rm.spr_goomba);
+                self.spr = Ptr::from_mut(&mut game().rm.spr_goomba);
             } else {
                 self.dead = true;
 
@@ -148,14 +148,14 @@ impl MO_WalkingEnemyTrait for MO_Goomba {
                 player.add_killer_award(Ptr::null(), killStyle);
 
                 eyecandy[0].emplace(EC_Corpse::new(
-                    Ptr::from_mut(&mut rm.spr_goombadead),
+                    Ptr::from_mut(&mut game().rm.spr_goombadead),
                     (self.ix as i32 - self.collisionOffsetX as i32) as f32,
                     (self.iy as i32 + self.collisionHeight as i32 - 32) as f32,
                     0,
                 ));
             }
 
-            if_sound_on_play(&mut rm.sfx_mip);
+            if_sound_on_play(&mut game().rm.sfx_mip);
         }
 
         false

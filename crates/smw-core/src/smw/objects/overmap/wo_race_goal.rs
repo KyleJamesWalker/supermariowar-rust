@@ -150,12 +150,12 @@ impl CObjectTrait for OMO_RaceGoal {
                 for k in 0..score_cnt {
                     if self.tagged[k as usize] > -1 {
                         let fp = &flagpositions[(score_cnt - 2) as usize][k as usize];
-                        rm.spr_bonus.draw_src(x + fp[0] as i32, y + fp[1] as i32, &SDL_Rect { x: 0, y: self.tagged[k as usize] as i32 * 16, w: 16, h: 16 });
+                        game().rm.spr_bonus.draw_src(x + fp[0] as i32, y + fp[1] as i32, &SDL_Rect { x: 0, y: self.tagged[k as usize] as i32 * 16, w: 16, h: 16 });
                     }
                 }
             }
 
-            rm.spr_racetext.draw_src(x + 26, y, &SDL_Rect { x: (self.goalID as i32 + 1) * 16, y: 0, w: 16, h: 16 });
+            game().rm.spr_racetext.draw_src(x + 26, y, &SDL_Rect { x: (self.goalID as i32 + 1) * 16, y: 0, w: 16, h: 16 });
         }
     }
 
@@ -213,9 +213,9 @@ impl CObjectTrait for OMO_RaceGoal {
                     self.tagged[player.teamID as usize] = player.colorID;
 
                     if self.isfinishline {
-                        if_sound_on_play(&mut rm.sfx_racesound);
+                        if_sound_on_play(&mut game().rm.sfx_racesound);
                     } else {
-                        if_sound_on_play(&mut rm.sfx_areatag);
+                        if_sound_on_play(&mut game().rm.sfx_areatag);
                     }
                 }
 

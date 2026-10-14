@@ -232,7 +232,7 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
 
                 if self.multiplier > 1 {
                     unsafe {
-                        rm.spr_awardkillsinrow.draw_src(
+                        game().rm.spr_awardkillsinrow.draw_src(
                             iColX as i32 + 8,
                             iRowX as i32 + 8,
                             &SDL_Rect { x: (self.multiplier as i32 - 1) << 4, y: (self.colorID as i32) << 4, w: 16, h: 16 },

@@ -1,7 +1,7 @@
 //! Port of src/smw/ui/NetworkListScroll.cpp
 
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::global::{game_values, rm};
+use crate::common::global::{game_values};
 use crate::common::input::CPlayerInput;
 use crate::common::ui::menu_code::*;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
@@ -157,12 +157,12 @@ impl UI_ControlTrait for MI_NetworkListScroll {
             let (x, y) = (self.m_pos.x as i32, self.m_pos.y as i32);
             let w = self.iWidth as i32;
             let n = self.iNumLines as i32;
-            rm.menu_dialog.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: w - 16, h: n * 32 + 32 });
-            rm.menu_dialog.draw_src(x + w - 16, y, &SDL_Rect { x: 496, y: 0, w: 16, h: n * 32 + 32 });
-            rm.menu_dialog.draw_src(x, y + n * 32 + 32, &SDL_Rect { x: 0, y: 464, w: w - 16, h: 16 });
-            rm.menu_dialog.draw_src(x + w - 16, y + n * 32 + 32, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+            game().rm.menu_dialog.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: w - 16, h: n * 32 + 32 });
+            game().rm.menu_dialog.draw_src(x + w - 16, y, &SDL_Rect { x: 496, y: 0, w: 16, h: n * 32 + 32 });
+            game().rm.menu_dialog.draw_src(x, y + n * 32 + 32, &SDL_Rect { x: 0, y: 464, w: w - 16, h: 16 });
+            game().rm.menu_dialog.draw_src(x + w - 16, y + n * 32 + 32, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
 
-            rm.menu_font_large.draw_centered(x + (w >> 1), y + 5, &self.sTitle);
+            game().rm.menu_font_large.draw_centered(x + (w >> 1), y + 5, &self.sTitle);
 
             let mut iLine: i16 = 0;
             while iLine < self.iNumLines && (iLine as u16 as usize) < self.items.len() {
@@ -178,8 +178,8 @@ impl UI_ControlTrait for MI_NetworkListScroll {
                 );
 
                 let item = &self.items[(self.iOffset + iLine) as usize];
-                rm.menu_font_large.draw_chop_right(x + 28, y + 5 + iLine as i32 * 32 + 32, w - 104, &item.sLeft);
-                rm.menu_font_large.draw_right_justified(x + 28 + w - 64, y + 5 + iLine as i32 * 32 + 32, &item.sRight);
+                game().rm.menu_font_large.draw_chop_right(x + 28, y + 5 + iLine as i32 * 32 + 32, w - 104, &item.sLeft);
+                game().rm.menu_font_large.draw_right_justified(x + 28 + w - 64, y + 5 + iLine as i32 * 32 + 32, &item.sRight);
                 iLine += 1;
             }
         }

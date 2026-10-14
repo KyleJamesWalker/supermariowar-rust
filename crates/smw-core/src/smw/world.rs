@@ -282,7 +282,7 @@ impl WorldPlayer {
 
     pub fn draw(&self, iMapOffsetX: i16, iMapOffsetY: i16) {
         unsafe {
-            rm.spr_player[self.iDrawSprite as usize][(self.iAnimationFrame + self.iDrawDirection) as usize].draw_src(
+            game().rm.spr_player[self.iDrawSprite as usize][(self.iAnimationFrame + self.iDrawDirection) as usize].draw_src(
                 self.pos.x as i32 + iMapOffsetX as i32,
                 self.pos.y as i32 + iMapOffsetY as i32,
                 &SDL_Rect { x: 0, y: 0, w: 32, h: 32 },
@@ -293,7 +293,7 @@ impl WorldPlayer {
     pub fn set_sprite(&mut self, iPlayer: i16) {
         unsafe {
             let p = iPlayer as usize;
-            while !rm.load_menu_skin(iPlayer, game_values.skinids[p], game_values.colorids[p], true) {
+            while !game().rm.load_menu_skin(iPlayer, game_values.skinids[p], game_values.colorids[p], true) {
                 game_values.skinids[p] += 1;
                 if game_values.skinids[p] as usize >= game().skinlist.count() {
                     game_values.skinids[p] = 0;
@@ -489,10 +489,10 @@ impl WorldVehicle {
             let ts = self.iTileSize as i32;
             if fVehiclesSleeping {
                 let rDst = SDL_Rect { x: self.pos.x as i32 + iWorldOffsetX as i32, y: self.pos.y as i32 + iWorldOffsetY as i32, w: ts, h: ts };
-                rm.spr_worldvehicle[self.iTileSheet as usize].draw_src_to(&self.srcRects[4], blitdest, &rDst);
+                game().rm.spr_worldvehicle[self.iTileSheet as usize].draw_src_to(&self.srcRects[4], blitdest, &rDst);
             } else {
                 let rDst = SDL_Rect { x: self.pos.x as i32 + iWorldOffsetX as i32 + self.iPaceOffset as i32, y: self.pos.y as i32 + iWorldOffsetY as i32, w: ts, h: ts };
-                rm.spr_worldvehicle[self.iTileSheet as usize].draw_src_to(&self.srcRects[(self.iDrawDirection + self.iAnimationFrame) as usize], blitdest, &rDst);
+                game().rm.spr_worldvehicle[self.iTileSheet as usize].draw_src_to(&self.srcRects[(self.iDrawDirection + self.iAnimationFrame) as usize], blitdest, &rDst);
             }
         }
     }
@@ -1226,8 +1226,8 @@ impl WorldMap {
         }
 
         unsafe {
-            if fPlayMovingVehicleSound && !rm.sfx_boomerang.is_playing() {
-                if_sound_on_play(&mut rm.sfx_boomerang);
+            if fPlayMovingVehicleSound && !game().rm.sfx_boomerang.is_playing() {
+                if_sound_on_play(&mut game().rm.sfx_boomerang);
             }
         }
 
@@ -1331,7 +1331,7 @@ impl WorldMap {
         unsafe {
             //The solid background tile is not animated, but all the rest are
             if iLayer != 2 {
-                let bg = &rm.spr_worldbackground[sheet];
+                let bg = &game().rm.spr_worldbackground[sheet];
                 if iBackgroundSprite == 1 {
                     let rSrc = SDL_Rect { x: ts + iBackgroundStyleOffset, y: ts, w: ts, h: ts };
                     bg.draw_src_to(&rSrc, surface, &r);
@@ -1359,12 +1359,12 @@ impl WorldMap {
             }
 
             if iLayer != 1 {
-                let special = &rm.spr_worldforegroundspecial[sheet];
+                let special = &game().rm.spr_worldforegroundspecial[sheet];
                 if tile.iCompleted >= 0 {
                     let rSrc = SDL_Rect { x: (tile.iCompleted as i32 + 10) << shift, y: 5 << shift, w: ts, h: ts };
                     special.draw_src_to(&rSrc, surface, &r);
                 } else if iForegroundSprite >= 0 && iForegroundSprite < WORLD_FOREGROUND_STAGE_OFFSET {
-                    let paths = &rm.spr_worldpaths[sheet];
+                    let paths = &game().rm.spr_worldpaths[sheet];
                     let iPathStyle = iForegroundSprite / WORLD_PATH_SPRITE_SET_SIZE;
                     let iPathOffsetX = ((iPathStyle as i32 % 4) * (5 << shift)) as i16 as i32;
                     let iPathOffsetY = ((iPathStyle as i32 >> 2) * (10 << shift)) as i16 as i32;
@@ -1405,11 +1405,11 @@ impl WorldMap {
                 } else if iForegroundSprite >= WORLD_FOREGROUND_SPRITE_OFFSET && iForegroundSprite <= WORLD_FOREGROUND_SPRITE_OFFSET + 179 {
                     let iSprite = (iForegroundSprite - WORLD_FOREGROUND_SPRITE_OFFSET) as i32;
                     let rSrc = SDL_Rect { x: (iSprite % 12) << shift, y: (iSprite / 12) << shift, w: ts, h: ts };
-                    rm.spr_worldforeground[sheet].draw_src_to(&rSrc, surface, &r);
+                    game().rm.spr_worldforeground[sheet].draw_src_to(&rSrc, surface, &r);
                 } else if iForegroundSprite >= WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET && iForegroundSprite <= WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET + 29 {
                     let iSprite = (iForegroundSprite - WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET) as i32;
                     let rSrc = SDL_Rect { x: (if iSprite >= 15 { 16 << shift } else { 12 << shift }) + iAnimationFrame, y: (iSprite % 15) << shift, w: ts, h: ts };
-                    rm.spr_worldforeground[sheet].draw_src_to(&rSrc, surface, &r);
+                    game().rm.spr_worldforeground[sheet].draw_src_to(&rSrc, surface, &r);
                 }
 
                 //Draw doors

@@ -103,7 +103,7 @@ pub fn cgm_timelimit_playerkilledplayer(this: &mut CGM_TimeLimit, mut inflictor:
             }
 
             if game_values.gamemode.gamemode == game_mode_timelimit && game_values.gamemodesettings.time.style == DeathStyle::Shield {
-                if_sound_on_play(&mut rm.sfx_powerdown);
+                if_sound_on_play(&mut game().rm.sfx_powerdown);
                 other.shield().reset();
                 return PlayerKillType::NonKill;
             }

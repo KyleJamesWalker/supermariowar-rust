@@ -24,9 +24,9 @@ impl UI_TeamSelectMenu {
     pub fn new() -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let menu_plain_field = Ptr::from_mut(&mut rm.menu_plain_field);
+            let menu_plain_field = Ptr::from_mut(&mut game().rm.menu_plain_field);
 
-            this.miTeamSelect = Ptr::new_box(MI_TeamSelect::new(Ptr::from_mut(&mut rm.spr_player_select_background), 112, 96));
+            this.miTeamSelect = Ptr::new_box(MI_TeamSelect::new(Ptr::from_mut(&mut game().rm.spr_player_select_background), 112, 96));
             this.miTeamSelect.set_auto_modify(true);
 
             this.miTeamSelectLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));

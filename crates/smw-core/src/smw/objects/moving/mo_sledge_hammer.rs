@@ -72,8 +72,8 @@ impl MO_SledgeHammer {
         unsafe {
             if self.fSuper {
                 let pos = Vec2s::new((self.ix as i32 + (self.iw as i32 >> 2) - 96) as i16, (self.iy as i32 + (self.ih as i32 >> 2) - 64) as i16);
-                objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(Ptr::from_mut(&mut rm.spr_explosion), pos, 2, 4, -1, -1, KillStyle::Hammer)));
-                if_sound_on_play(&mut rm.sfx_bobombsound);
+                objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(Ptr::from_mut(&mut game().rm.spr_explosion), pos, 2, 4, -1, -1, KillStyle::Hammer)));
+                if_sound_on_play(&mut game().rm.sfx_bobombsound);
             } else {
                 let iCenterX: i16 = (self.ix as i32 + (self.iw as i32 >> 1) - 14) as i16;
                 let iCenterY: i16 = (self.iy as i32 + (self.ih as i32 >> 1) - 14) as i16;
@@ -85,7 +85,7 @@ impl MO_SledgeHammer {
                     let dVelX: f32 = dVel * cosf(dAngle);
                     let dVelY: f32 = dVel * sinf(dAngle);
                     objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(
-                        Ptr::from_mut(&mut rm.spr_hammer),
+                        Ptr::from_mut(&mut game().rm.spr_hammer),
                         Vec2s::new(iCenterX, iCenterY),
                         6,
                         Vec2f::new(dVelX, dVelY),
@@ -101,7 +101,7 @@ impl MO_SledgeHammer {
 
                 player.increase_projectiles_count(3);
 
-                if_sound_on_play(&mut rm.sfx_cannon);
+                if_sound_on_play(&mut game().rm.sfx_cannon);
             }
         }
     }
@@ -157,8 +157,8 @@ impl CObjectTrait for MO_SledgeHammer {
             unsafe {
                 let x = (self.ix as i32 + (self.iw as i32 >> 1) - 16) as i16;
                 let y = (self.iy as i32 + (self.ih as i32 >> 1) - 16) as i16;
-                eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut rm.spr_fireballexplosion), x, y, 3, 4));
-                if_sound_on_play(&mut rm.sfx_hit);
+                eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), x, y, 3, 4));
+                if_sound_on_play(&mut game().rm.sfx_hit);
             }
 
             if !player.is_invincible() && !player.shyguy {

@@ -227,7 +227,7 @@ impl MO_SledgeBrother {
                 }
             } else {
                 self.hit_timer = 60;
-                unsafe { if_sound_on_play(&mut rm.sfx_stun) };
+                unsafe { if_sound_on_play(&mut game().rm.sfx_stun) };
             }
         }
     }
@@ -325,7 +325,7 @@ impl MO_SledgeBrother {
                 let fHammerVelX: f32 = (RANDOM_INT(9) + 2) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 6.0f32 };
                 let pos = Vec2s::new(((if self.face_right { ix + 32 } else { ix }) - self.collisionOffsetX as i32) as i16, self.iy);
                 objectcontainer[2].add(Ptr::new_box(MO_SledgeHammer::new(
-                    Ptr::from_mut(&mut rm.spr_sledgehammer),
+                    Ptr::from_mut(&mut game().rm.spr_sledgehammer),
                     pos,
                     8,
                     Vec2f::new(fHammerVelX, -HAMMERTHROW),
@@ -341,7 +341,7 @@ impl MO_SledgeBrother {
                 let pos = Vec2s::new((if self.face_right { ix + iw - 32 } else { ix - 20 }) as i16, iy as i16);
                 let timetolive = (RANDOM_INT(60) + 120) as i16;
                 objectcontainer[2].add(Ptr::new_box(CO_Bomb::new(
-                    Ptr::from_mut(&mut rm.spr_bomb),
+                    Ptr::from_mut(&mut game().rm.spr_bomb),
                     pos,
                     Vec2f::new(fBombVelX, fBombVelY),
                     4,
@@ -355,7 +355,7 @@ impl MO_SledgeBrother {
                 let fFireVelY: f32 = RANDOM_INT(17) as f32 / 2.0f32 - 4.0f32;
                 let pos = Vec2s::new((if self.face_right { ix + iw - 32 } else { ix - 16 }) as i16, iy as i16);
                 objectcontainer[2].add(Ptr::new_box(MO_SuperFireball::new(
-                    Ptr::from_mut(&mut rm.spr_superfireball),
+                    Ptr::from_mut(&mut game().rm.spr_superfireball),
                     pos,
                     4,
                     Vec2f::new(fFireVelX, fFireVelY),
@@ -373,7 +373,7 @@ impl MO_SledgeBrother {
     fn taunt(&mut self) {
         self.set_last_action(2);
 
-        unsafe { rm.sfx_boomerang.play_loop(3) };
+        unsafe { game().rm.sfx_boomerang.play_loop(3) };
         self.taunt_timer = 60;
         self.iActionState = 5;
 
@@ -435,7 +435,7 @@ impl CObjectTrait for MO_SledgeBrother {
         if self.hit_timer != 0 {
             for iHeart in 0..self.hit_points {
                 unsafe {
-                    rm.spr_scorehearts.draw_src(
+                    game().rm.spr_scorehearts.draw_src(
                         self.ix as i32 - self.collisionOffsetX as i32 + iHeart as i32 * 8,
                         self.iy as i32 - self.collisionOffsetY as i32 - 18,
                         &SDL_Rect { x: 0, y: 0, w: 16, h: 16 },
@@ -466,7 +466,7 @@ impl CObjectTrait for MO_SledgeBrother {
 
                     if self.iType == 0 {
                         // Shake screen and kill players
-                        if_sound_on_play(&mut rm.sfx_thunder);
+                        if_sound_on_play(&mut game().rm.sfx_thunder);
                         game_values.flags.screenshaketimer = 20;
                         game_values.flags.screenshakeplayerid = -1;
                         game_values.flags.screenshaketeamid = -1;
@@ -474,18 +474,18 @@ impl CObjectTrait for MO_SledgeBrother {
                         game_values.flags.screenshakekillscount = 0;
                     } else if self.iType == 1 {
                         // Spawn thwomps
-                        if_sound_on_play(&mut rm.sfx_thunder);
+                        if_sound_on_play(&mut game().rm.sfx_thunder);
 
                         let numThwomps: i16 = (RANDOM_INT(5) + 6) as i16;
 
                         for _iThwomp in 0..numThwomps {
                             let x = RANDOM_INT(591) as i16;
                             let nspeed = 2.0f32 + RANDOM_INT(20) as f32 / 10.0f32;
-                            objectcontainer[2].add(Ptr::new_box(OMO_Thwomp::new(Ptr::from_mut(&mut rm.spr_thwomp), x, nspeed)));
+                            objectcontainer[2].add(Ptr::new_box(OMO_Thwomp::new(Ptr::from_mut(&mut game().rm.spr_thwomp), x, nspeed)));
                         }
                     } else if self.iType == 2 {
                         // Spawn lots of podobos
-                        if_sound_on_play(&mut rm.sfx_thunder);
+                        if_sound_on_play(&mut game().rm.sfx_thunder);
 
                         let numPodobos: i16 = (RANDOM_INT(5) + 8) as i16;
 
@@ -493,7 +493,7 @@ impl CObjectTrait for MO_SledgeBrother {
                             let x = RANDOM_INT(608) as i16;
                             let dVelY = -(RANDOM_INT(9) as f32 / 2.0f32) - 9.0f32;
                             objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(
-                                Ptr::from_mut(&mut rm.spr_podobo),
+                                Ptr::from_mut(&mut game().rm.spr_podobo),
                                 Vec2s::new(x, App::screenHeight as i16),
                                 dVelY,
                                 -1,
@@ -608,7 +608,7 @@ impl CObjectTrait for MO_SledgeBrother {
 
         if player.is_invincible() {
             unsafe {
-                if_sound_on_play(&mut rm.sfx_kicksound);
+                if_sound_on_play(&mut game().rm.sfx_kicksound);
                 self.die();
 
                 if game_values.gamemode.gamemode == game_mode_boss_minigame {
@@ -665,11 +665,11 @@ impl CObjectTrait for MO_SledgeBrother {
                 self.damage(iPlayerID);
 
                 if r#type == movingobject_shell || r#type == movingobject_throwblock || r#type == movingobject_throwbox || r#type == movingobject_attackzone {
-                    unsafe { if_sound_on_play(&mut rm.sfx_kicksound) };
+                    unsafe { if_sound_on_play(&mut game().rm.sfx_kicksound) };
                     object.die();
                 }
             } else {
-                unsafe { if_sound_on_play(&mut rm.sfx_hit) };
+                unsafe { if_sound_on_play(&mut game().rm.sfx_hit) };
 
                 if r#type == movingobject_attackzone || r#type == movingobject_bulletbill {
                     object.die();
@@ -686,7 +686,7 @@ impl IO_MovingObjectTrait for MO_SledgeBrother {
         self.dead = true;
         unsafe {
             eyecandy[2].emplace(EC_FallingObject::new(
-                Ptr::from_mut(&mut rm.spr_sledgebrothersdead),
+                Ptr::from_mut(&mut game().rm.spr_sledgebrothersdead),
                 self.ix,
                 self.iy,
                 0.0f32,

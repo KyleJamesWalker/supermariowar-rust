@@ -90,7 +90,7 @@ impl CO_ThrowBox {
         }
 
         unsafe {
-            let spr = Ptr::from_mut(&mut rm.spr_brokeniceblock);
+            let spr = Ptr::from_mut(&mut game().rm.spr_brokeniceblock);
             let (ix, iy) = (self.ix as i32, self.iy as i32);
             eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, iy as i16, -1.5, -7.0, 4, 2, 0, 0, 16, 16));
             eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, iy as i16, 1.5, -7.0, 4, 2, 0, 0, 16, 16));
@@ -105,7 +105,7 @@ impl CO_ThrowBox {
 
     fn die_helper(&mut self) {
         self.dead = true;
-        unsafe { if_sound_on_play(&mut rm.sfx_breakblock) };
+        unsafe { if_sound_on_play(&mut game().rm.sfx_breakblock) };
 
         if !self.owner.is_null() {
             self.owner.carriedItem = Ptr::null();
@@ -205,7 +205,7 @@ impl CObjectTrait for CO_ThrowBox {
 
             unsafe {
                 eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                    Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                     (self.ix as i32 - self.collisionOffsetX as i32) as i16,
                     (self.iy as i32 - self.collisionOffsetY as i32) as i16,
                     3,
@@ -226,7 +226,7 @@ impl CObjectTrait for CO_ThrowBox {
 
                 unsafe {
                     eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                        Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                         (self.ix as i32 - self.collisionOffsetX as i32) as i16,
                         (self.iy as i32 - self.collisionOffsetY as i32) as i16,
                         3,
@@ -276,7 +276,7 @@ impl CObjectTrait for CO_ThrowBox {
         }
 
         if self.frozen {
-            unsafe { rm.spr_iceblock.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 }) };
+            unsafe { game().rm.spr_iceblock.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 }) };
         }
     }
 }
@@ -298,7 +298,7 @@ impl IO_MovingObjectTrait for CO_ThrowBox {
         }
 
         unsafe {
-            let spr = Ptr::from_mut(&mut rm.spr_brokenyellowblock);
+            let spr = Ptr::from_mut(&mut game().rm.spr_brokenyellowblock);
             let (ix, iy) = (self.ix as i32, self.iy as i32);
             eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, iy as i16, -2.2, -10.0, 4, 2, 0, 0, 16, 16));
             eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, iy as i16, 2.2, -10.0, 4, 2, 0, 0, 16, 16));

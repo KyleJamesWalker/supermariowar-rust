@@ -324,29 +324,29 @@ impl MenuState {
                         if k == netplay.remotePlayerNumber as usize {
                             // local player uses local skin
                             println!("  player {} -> local", k);
-                            let skin = rm.load_full_skin(game_values.skinids[k], game_values.colorids[k]);
-                            rm.spr_player[k] = skin;
+                            let skin = game().rm.load_full_skin(game_values.skinids[k], game_values.colorids[k]);
+                            game().rm.spr_player[k] = skin;
                         } else {
                             let path = format!("{}net_skin{}.bmp", get_home_directory(), k);
                             println!("  player {} -> {}", k, path);
 
-                            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| rm.load_full_skin_path(Path::new(&path), k as i16)));
+                            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| game().rm.load_full_skin_path(Path::new(&path), k as i16)));
                             match result {
-                                Ok(skin) => rm.spr_player[k] = skin,
+                                Ok(skin) => game().rm.spr_player[k] = skin,
                                 Err(_) => {
                                     println!("[warning] Could not load netplay skin of player {}, using default", k);
-                                    let skin = rm.load_full_skin(game_values.skinids[k], game_values.colorids[k]);
-                                    rm.spr_player[k] = skin;
+                                    let skin = game().rm.load_full_skin(game_values.skinids[k], game_values.colorids[k]);
+                                    game().rm.spr_player[k] = skin;
                                 }
                             }
                         }
                     } else if game_values.randomskin[k] {
                         game_values.skinids[k] = RANDOM_INT(game().skinlist.count() as i32) as i16;
-                        let skin = rm.load_full_skin(game_values.skinids[k], game_values.colorids[k]);
-                        rm.spr_player[k] = skin;
+                        let skin = game().rm.load_full_skin(game_values.skinids[k], game_values.colorids[k]);
+                        game().rm.spr_player[k] = skin;
                     } else {
-                        let skin = rm.load_full_skin(game_values.skinids[k], game_values.colorids[k]);
-                        rm.spr_player[k] = skin;
+                        let skin = game().rm.load_full_skin(game_values.skinids[k], game_values.colorids[k]);
+                        game().rm.spr_player[k] = skin;
                     }
                 }
             }
@@ -357,7 +357,7 @@ impl MenuState {
 
                 //Delete the old sounds
                 for k in 0..PANNOUNCER_SOUND_LAST as usize {
-                    rm.sfx_announcer[k] = sfxSound::new();
+                    game().rm.sfx_announcer[k] = sfxSound::new();
                 }
 
                 let announcerfile = std::fs::File::open(game().announcerlist.current_path()).expect("fopen announcer file");
@@ -383,7 +383,7 @@ impl MenuState {
                     //If it is not "[none]", then add this announcer sound
                     if szBuffer != "[none]" {
                         let sound = sfxSound::from_file(Path::new(&convert_path(&szBuffer))).unwrap_or_else(|e| std::panic::panic_any(e));
-                        rm.sfx_announcer[announcerIndex as usize] = sound;
+                        game().rm.sfx_announcer[announcerIndex as usize] = sound;
                     }
 
                     announcerIndex += 1;
@@ -393,13 +393,13 @@ impl MenuState {
             //Load soundtrack music if changed
             if game_values.loadedmusic as i64 != game().musiclist.current_index() as i64 {
                 game_values.loadedmusic = game().musiclist.current_index() as i16;
-                rm.backgroundmusic[1] = sfxMusic::from_file(game().musiclist.music(0)).unwrap_or_else(|e| std::panic::panic_any(e)); //Stage Clear
-                rm.backgroundmusic[3] = sfxMusic::from_file(game().musiclist.music(2)).unwrap_or_else(|e| std::panic::panic_any(e)); //Tournament Menu
-                rm.backgroundmusic[4] = sfxMusic::from_file(game().musiclist.music(3)).unwrap_or_else(|e| std::panic::panic_any(e)); //Tournament Over
+                game().rm.backgroundmusic[1] = sfxMusic::from_file(game().musiclist.music(0)).unwrap_or_else(|e| std::panic::panic_any(e)); //Stage Clear
+                game().rm.backgroundmusic[3] = sfxMusic::from_file(game().musiclist.music(2)).unwrap_or_else(|e| std::panic::panic_any(e)); //Tournament Menu
+                game().rm.backgroundmusic[4] = sfxMusic::from_file(game().musiclist.music(3)).unwrap_or_else(|e| std::panic::panic_any(e)); //Tournament Over
             }
 
-            rm.backgroundmusic[2].stop();
-            rm.sfx_announcer[11].play();
+            game().rm.backgroundmusic[2].stop();
+            game().rm.sfx_announcer[11].play();
 
             game_values.screenfade = 8;
             game_values.screenfadespeed = 8;
@@ -455,8 +455,8 @@ impl MenuState {
 
             let iIcon: i16 = if iControlTeam < 0 { 4 } else { game_values.colorids[game_values.teamids[iControlTeam as usize][0] as usize] };
             self.mCurrentMenu.eyeCandy.emplace(EC_Announcement::new(
-                Ptr::from_mut(&mut rm.menu_font_large),
-                Ptr::from_mut(&mut rm.spr_announcementicons),
+                Ptr::from_mut(&mut game().rm.menu_font_large),
+                Ptr::from_mut(&mut game().rm.spr_announcementicons),
                 szMessage,
                 iIcon,
                 120,
@@ -488,8 +488,8 @@ impl MenuState {
 
             if game_values.matchtype != MatchType::SingleGame && game_values.matchtype != MatchType::QuickGame && game_values.matchtype != MatchType::MiniGame && game_values.matchtype != MatchType::NetGame {
                 if self.fNeedMenuMusicReset {
-                    rm.backgroundmusic[3].stop();
-                    rm.backgroundmusic[2].play(false, false);
+                    game().rm.backgroundmusic[3].stop();
+                    game().rm.backgroundmusic[2].play(false, false);
                     self.fNeedMenuMusicReset = false;
                 }
             }
@@ -562,7 +562,7 @@ impl MenuState {
                         fErrorReadingTourFile = true;
                     } else {
                         let numGames = game_values.tourstops.len() as i16;
-                        self.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(score_cnt, numGames, Ptr::from_mut(&mut rm.spr_tour_markers));
+                        self.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(score_cnt, numGames, Ptr::from_mut(&mut game().rm.spr_tour_markers));
                     }
                 } else if game_values.matchtype == MatchType::Tournament {
                     println!("  Match type: Tournament");
@@ -581,7 +581,7 @@ impl MenuState {
                     game_values.tournamentnextcontrol = 1; //if round robin is selected, choose the next team next
 
                     let numGames = game_values.tournamentgames;
-                    self.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(score_cnt, numGames, Ptr::from_mut(&mut rm.menu_mode_large));
+                    self.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(score_cnt, numGames, Ptr::from_mut(&mut game().rm.menu_mode_large));
                 } else if game_values.matchtype == MatchType::World {
                     println!("  Match type: World");
                     let this = Ptr::from_mut(self);
@@ -589,7 +589,7 @@ impl MenuState {
                         let mut this = this;
                         g_worldmap.init(WorldMap::new_path(&game().worldlist.at(game_values.worldindex as usize).to_string_lossy(), TILESIZE as i16));
 
-                        this.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(score_cnt, 0, Ptr::from_mut(&mut rm.spr_tour_markers));
+                        this.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(score_cnt, 0, Ptr::from_mut(&mut game().rm.spr_tour_markers));
 
                         g_worldmap.set_initial_powerups();
 
@@ -664,7 +664,7 @@ impl MenuState {
                         game_values.appstate = AppState::StartWorld;
 
                         //Play enter world sound
-                        rm.sfx_enterstage.play();
+                        game().rm.sfx_enterstage.play();
                     }
 
                     //Setup items on next menu
@@ -818,8 +818,8 @@ impl MenuState {
                 crate::common::global::load_current_map_background();
 
                 if game_values.music {
-                    rm.backgroundmusic[0] = sfxMusic::from_file(game().worldmusiclist.current_music(WorldMusicCategory::Bonus, "")).unwrap_or_else(|e| std::panic::panic_any(e));
-                    rm.backgroundmusic[0].play(false, false);
+                    game().rm.backgroundmusic[0] = sfxMusic::from_file(game().worldmusiclist.current_music(WorldMusicCategory::Bonus, "")).unwrap_or_else(|e| std::panic::panic_any(e));
+                    game().rm.backgroundmusic[0].play(false, false);
                 }
             } else {
                 let mut sShortMapName = String::new();
@@ -888,8 +888,8 @@ impl MenuState {
                     let category = MusicCategory::ALL[game().g_map.musicCategoryID as usize];
                     let background = game().g_map.szBackgroundFile.clone();
                     game().musiclist.set_random_music(category, &sShortMapName, &background);
-                    rm.backgroundmusic[0] = sfxMusic::from_file(game().musiclist.current_music()).unwrap_or_else(|e| std::panic::panic_any(e));
-                    rm.backgroundmusic[0].play(game_values.playnextmusic, false);
+                    game().rm.backgroundmusic[0] = sfxMusic::from_file(game().musiclist.current_music()).unwrap_or_else(|e| std::panic::panic_any(e));
+                    game().rm.backgroundmusic[0].play(game_values.playnextmusic, false);
                 }
             }
 
@@ -933,11 +933,11 @@ pub fn enter_gameplay_tail() {
         game_values.appstate = AppState::Game;
         println!("  GS_GAME");
 
-        game().g_map.predrawbackground(&rm.spr_background, &rm.spr_backmap[0]);
-        game().g_map.predrawforeground(&rm.spr_frontmap[0]);
+        game().g_map.predrawbackground(&game().rm.spr_background, &game().rm.spr_backmap[0]);
+        game().g_map.predrawforeground(&game().rm.spr_frontmap[0]);
 
-        game().g_map.predrawbackground(&rm.spr_background, &rm.spr_backmap[1]);
-        game().g_map.predrawforeground(&rm.spr_frontmap[1]);
+        game().g_map.predrawbackground(&game().rm.spr_background, &game().rm.spr_backmap[1]);
+        game().g_map.predrawforeground(&game().rm.spr_frontmap[1]);
 
         game().g_map.setup_animated_tiles();
         crate::smw::gs_gameplay::load_map_objects(false);
@@ -1109,14 +1109,14 @@ impl MenuState {
             } else if MENU_CODE_SOUND_VOLUME_CHANGED == code {
                 game_values.sound = game_values.soundvolume > 0;
                 sfx_setsoundvolume(game_values.soundvolume as i32);
-                if_sound_on_play(&mut rm.sfx_coin);
+                if_sound_on_play(&mut game().rm.sfx_coin);
             } else if MENU_CODE_MUSIC_VOLUME_CHANGED == code {
                 sfx_setmusicvolume(game_values.musicvolume as i32);
 
                 if game_values.musicvolume == 0 {
-                    rm.backgroundmusic[2].stop();
+                    game().rm.backgroundmusic[2].stop();
                 } else if game_values.musicvolume > 0 && !game_values.music {
-                    rm.backgroundmusic[2].play(false, false);
+                    game().rm.backgroundmusic[2].play(false, false);
                 }
 
                 game_values.music = game_values.musicvolume > 0;
@@ -1211,14 +1211,14 @@ impl MenuState {
                     }
                 }
             } else if MENU_CODE_MENU_GRAPHICS_PACK_CHANGED == code {
-                rm.load_menu_graphics();
+                game().rm.load_menu_graphics();
 
-                blitdest = rm.menu_backdrop.get_surface();
-                rm.menu_shade.setalpha(App::menuTransparency as u8);
-                rm.menu_shade.draw(0, 0);
+                blitdest = game().rm.menu_backdrop.get_surface();
+                game().rm.menu_shade.setalpha(App::menuTransparency as u8);
+                game().rm.menu_shade.draw(0, 0);
                 blitdest = screen;
             } else if MENU_CODE_WORLD_GRAPHICS_PACK_CHANGED == code {
-                rm.load_world_graphics();
+                game().rm.load_world_graphics();
             } else if MENU_CODE_GAME_GRAPHICS_PACK_CHANGED == code {
                 let packdir = game().gamegraphicspacklist.current_path().to_string_lossy().into_owned();
                 let png = std::panic::catch_unwind(|| gfx_loadpalette(Path::new(&convert_path_pack("gfx/packs/palette.png", &packdir))));
@@ -1227,9 +1227,9 @@ impl MenuState {
                     println!("\nwarning: {} -> falling back to BMP", err);
                     gfx_loadpalette(Path::new(&convert_path_pack("gfx/packs/palette.bmp", &packdir)));
                 }
-                rm.load_game_graphics();
+                game().rm.load_game_graphics();
             } else if MENU_CODE_SOUND_PACK_CHANGED == code {
-                rm.load_game_sounds();
+                game().rm.load_game_sounds();
 
                 if !game_values.soundcapable {
                     game_values.sound = false;
@@ -1635,11 +1635,11 @@ impl GameState for MenuState {
 
             if game_values.music && game_values.tournamentwinner < 0 {
                 if matchtype == MatchType::SingleGame || matchtype == MatchType::QuickGame || matchtype == MatchType::MiniGame || matchtype == MatchType::NetGame {
-                    rm.backgroundmusic[2].play(false, false);
+                    game().rm.backgroundmusic[2].play(false, false);
                 } else if matchtype == MatchType::World {
-                    rm.backgroundmusic[5].play(false, false);
+                    game().rm.backgroundmusic[5].play(false, false);
                 } else {
-                    rm.backgroundmusic[3].play(false, false);
+                    game().rm.backgroundmusic[3].play(false, false);
                 }
             }
 
@@ -1766,7 +1766,7 @@ impl GameState for MenuState {
 
             //Don't draw backdrop for world
             if self.mCurrentMenu != menu(self.mWorldMenu) {
-                rm.menu_backdrop.draw(0, 0);
+                game().rm.menu_backdrop.draw(0, 0);
             } else {
                 crate::common::gfx::blit::fill_rect(screen, std::ptr::null(), SDL_MapRGB((*screen).format, 0, 0, 0));
             }
@@ -1775,16 +1775,16 @@ impl GameState for MenuState {
             self.mCurrentMenu.draw();
 
             if self.iDisplayError > DISPLAY_ERROR_NONE {
-                rm.spr_selectfield.draw_src(70, 400, &rect(0, 0, 484, 32));
-                rm.spr_selectfield.draw_src(554, 400, &rect(496, 0, 16, 32));
+                game().rm.spr_selectfield.draw_src(70, 400, &rect(0, 0, 484, 32));
+                game().rm.spr_selectfield.draw_src(554, 400, &rect(496, 0, 16, 32));
 
                 if self.iDisplayError == DISPLAY_ERROR_READ_TOUR_FILE {
-                    rm.menu_font_large.draw_centered(320, 405, "Error Reading Tour File!");
+                    game().rm.menu_font_large.draw_centered(320, 405, "Error Reading Tour File!");
                 }
                 if self.iDisplayError == DISPLAY_ERROR_READ_WORLD_FILE {
-                    rm.menu_font_large.draw_centered(320, 405, "Error Reading World File!");
+                    game().rm.menu_font_large.draw_centered(320, 405, "Error Reading World File!");
                 } else if self.iDisplayError == DISPLAY_ERROR_MAP_FILTER {
-                    rm.menu_font_large.draw_centered(320, 405, "No Maps Meet All Filter Conditions!");
+                    game().rm.menu_font_large.draw_centered(320, 405, "No Maps Meet All Filter Conditions!");
                 }
 
                 self.iDisplayErrorTimer -= 1;
@@ -1806,8 +1806,8 @@ impl GameState for MenuState {
             }
 
             if game_values.screenfade > 0 {
-                rm.menu_shade.setalpha(game_values.screenfade as u8);
-                rm.menu_shade.draw(0, 0);
+                game().rm.menu_shade.setalpha(game_values.screenfade as u8);
+                game().rm.menu_shade.draw(0, 0);
             }
 
             if game_values.screenfade == 255 {
@@ -1821,10 +1821,10 @@ impl GameState for MenuState {
                     self.mCurrentMenu = menu(self.mWorldMenu);
                     self.mCurrentMenu.reset_menu();
 
-                    rm.backgroundmusic[2].stop();
+                    game().rm.backgroundmusic[2].stop();
                     let worldMusic = game().worldmusiclist.current_music(g_worldmap.get_music_category(), g_worldmap.get_world_name()).clone();
-                    rm.backgroundmusic[5] = sfxMusic::from_file(&worldMusic).unwrap_or_else(|e| std::panic::panic_any(e));
-                    rm.backgroundmusic[5].play(false, false);
+                    game().rm.backgroundmusic[5] = sfxMusic::from_file(&worldMusic).unwrap_or_else(|e| std::panic::panic_any(e));
+                    game().rm.backgroundmusic[5].play(false, false);
                     self.fNeedMenuMusicReset = true;
 
                     self.mWorldMenu.miWorld.display_team_control_announcement();
@@ -1834,16 +1834,16 @@ impl GameState for MenuState {
             }
 
             if fGenerateMapThumbs {
-                rm.menu_dialog.draw_src(160, 176, &rect(0, 0, 160, 64));
-                rm.menu_dialog.draw_src(App::screenWidth / 2, 176, &rect(352, 0, 160, 64));
-                rm.menu_dialog.draw_src(160, 240, &rect(0, 416, 160, 64));
-                rm.menu_dialog.draw_src(App::screenWidth / 2, App::screenHeight / 2, &rect(352, 416, 160, 64));
-                rm.menu_font_large.draw_centered(App::screenWidth / 2, 215, "Refreshing Map Thumbnails");
-                rm.menu_font_large.draw_centered(App::screenWidth / 2, 245, "Please Wait...");
+                game().rm.menu_dialog.draw_src(160, 176, &rect(0, 0, 160, 64));
+                game().rm.menu_dialog.draw_src(App::screenWidth / 2, 176, &rect(352, 0, 160, 64));
+                game().rm.menu_dialog.draw_src(160, 240, &rect(0, 416, 160, 64));
+                game().rm.menu_dialog.draw_src(App::screenWidth / 2, App::screenHeight / 2, &rect(352, 416, 160, 64));
+                game().rm.menu_font_large.draw_centered(App::screenWidth / 2, 215, "Refreshing Map Thumbnails");
+                game().rm.menu_font_large.draw_centered(App::screenWidth / 2, 245, "Please Wait...");
             }
 
             if fGenerateMapThumbs {
-                rm.backgroundmusic[2].toggle_pause();
+                game().rm.backgroundmusic[2].toggle_pause();
 
                 //Reload map auto filters from live map files (don't use the cache)
                 game().maplist.reload_map_auto_filters();
@@ -1864,7 +1864,7 @@ impl GameState for MenuState {
                     itr += 1;
                 }
 
-                rm.backgroundmusic[2].toggle_pause();
+                game().rm.backgroundmusic[2].toggle_pause();
             }
         }
     }

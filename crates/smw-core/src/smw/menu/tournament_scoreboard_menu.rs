@@ -23,12 +23,12 @@ impl UI_TournamentScoreboardMenu {
     pub fn new() -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            this.miTournamentScoreboard = Ptr::new_box(MI_TournamentScoreboard::new(Ptr::from_mut(&mut rm.spr_tournament_background), 70, 98));
+            this.miTournamentScoreboard = Ptr::new_box(MI_TournamentScoreboard::new(Ptr::from_mut(&mut game().rm.spr_tournament_background), 70, 98));
 
-            this.miTournamentScoreboardNextButton = Ptr::new_box(MI_Button::new(Ptr::from_mut(&mut rm.spr_selectfield), 220, 416, "Next", 200, TextAlign::CENTER));
+            this.miTournamentScoreboardNextButton = Ptr::new_box(MI_Button::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 220, 416, "Next", 200, TextAlign::CENTER));
             this.miTournamentScoreboardNextButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU);
 
-            this.miTournamentScoreboardImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut rm.spr_scoreboard), 124, 12, 0, 0, 386, 59, 1, 1, 0));
+            this.miTournamentScoreboardImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut game().rm.spr_scoreboard), 124, 12, 0, 0, 386, 59, 1, 1, 0));
         }
 
         let sb = ctl_ptr(this.miTournamentScoreboard);

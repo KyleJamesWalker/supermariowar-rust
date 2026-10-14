@@ -79,7 +79,7 @@ pub fn co_spring_hittop<T: CO_SpringTrait + ?Sized>(this: &mut T, player: Ptr<CP
     player.superjumptype = if fSuper { 2 } else { 1 };
     player.vely = -VELNOTEBLOCKREPEL;
 
-    unsafe { if_sound_on_play(&mut rm.sfx_bump) };
+    unsafe { if_sound_on_play(&mut game().rm.sfx_bump) };
 }
 
 pub fn co_spring_hitother<T: CO_SpringTrait + ?Sized>(this: &mut T, player: Ptr<CPlayer>) {

@@ -170,7 +170,7 @@ impl CO_ThrowBlock {
         }
 
         unsafe {
-            let spr = Ptr::from_mut(&mut rm.spr_brokeniceblock);
+            let spr = Ptr::from_mut(&mut game().rm.spr_brokeniceblock);
             let (ix, iy) = (self.ix as i32, self.iy as i32);
             eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, iy as i16, -1.5, -7.0, 4, 2, 0, 0, 16, 16));
             eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, iy as i16, 1.5, -7.0, 4, 2, 0, 0, 16, 16));
@@ -185,7 +185,7 @@ impl CO_ThrowBlock {
 
     fn die_helper(&mut self) {
         self.dead = true;
-        unsafe { if_sound_on_play(&mut rm.sfx_breakblock) };
+        unsafe { if_sound_on_play(&mut game().rm.sfx_breakblock) };
 
         if !self.owner.is_null() {
             self.owner.carriedItem = Ptr::null();
@@ -238,7 +238,7 @@ impl CObjectTrait for CO_ThrowBlock {
 
             unsafe {
                 eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                    Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                     (self.ix as i32 - self.collisionOffsetX as i32) as i16,
                     (self.iy as i32 - self.collisionOffsetY as i32) as i16,
                     3,
@@ -264,7 +264,7 @@ impl CObjectTrait for CO_ThrowBlock {
                     self.animationspeed = self.frozenanimationspeed;
 
                     eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                        Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                         (self.ix as i32 - self.collisionOffsetX as i32) as i16,
                         (self.iy as i32 - self.collisionOffsetY as i32) as i16,
                         3,
@@ -275,7 +275,7 @@ impl CObjectTrait for CO_ThrowBlock {
                 self.iDeathTime += 1;
                 self.iDeathTime >= game_values.blueblockttl
             } {
-                eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
+                eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
                 self.dead = true;
 
                 if !self.owner.is_null() {
@@ -332,10 +332,10 @@ impl CObjectTrait for CO_ThrowBlock {
 
         unsafe {
             if self.frozen {
-                rm.spr_iceblock.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
+                game().rm.spr_iceblock.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
             } else if self.fSmoking {
                 eyecandy[0].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut rm.spr_burnup),
+                    Ptr::from_mut(&mut game().rm.spr_burnup),
                     (x + (self.iw as i32 >> 1) - 16) as i16,
                     (y + (self.ih as i32 >> 1) - 16) as i16,
                     5,
@@ -370,7 +370,7 @@ impl IO_MovingObjectTrait for CO_ThrowBlock {
 
         let srcY = (self.iType as i32 * 16) as i16;
         unsafe {
-            let spr = Ptr::from_mut(&mut rm.spr_brokenblueblock);
+            let spr = Ptr::from_mut(&mut game().rm.spr_brokenblueblock);
             let (ix, iy) = (self.ix as i32, self.iy as i32);
             eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, iy as i16, -1.5, -7.0, 6, 2, 0, srcY, 16, 16));
             eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, iy as i16, 1.5, -7.0, 6, 2, 0, srcY, 16, 16));
@@ -388,13 +388,13 @@ impl IO_MovingObjectTrait for CO_ThrowBlock {
             if self.iBounceCounter == 0 {
                 unsafe {
                     eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut rm.spr_shellbounce),
+                        Ptr::from_mut(&mut game().rm.spr_shellbounce),
                         (self.ix as i32 + (if self.velx > 0.0 { 0 } else { self.collisionWidth as i32 }) - 21) as i16,
                         (self.iy as i32 + (self.collisionHeight as i32 >> 1) - 20) as i16,
                         4,
                         4,
                     ));
-                    if_sound_on_play(&mut rm.sfx_bump);
+                    if_sound_on_play(&mut game().rm.sfx_bump);
                 }
 
                 self.iBounceCounter = 7; // Allow bounce stars to show on each bounce on a 2x wide pit
@@ -416,7 +416,7 @@ impl MO_CarriedObjectTrait for CO_ThrowBlock {
         {
             vel = 12.0f;
             fSmoking = true;
-            ifSoundOnPlay(rm->sfx_cannon);
+            ifSoundOnPlay(game().rm->sfx_cannon);
         }
         */
 
@@ -456,7 +456,7 @@ impl MO_CarriedObjectTrait for CO_ThrowBlock {
         if io_moving_object_collision_detection_checksides(self) {
             self.die();
         } else {
-            unsafe { if_sound_on_play(&mut rm.sfx_kicksound) };
+            unsafe { if_sound_on_play(&mut game().rm.sfx_kicksound) };
         }
     }
 }

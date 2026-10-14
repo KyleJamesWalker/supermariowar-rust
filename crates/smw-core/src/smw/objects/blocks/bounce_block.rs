@@ -10,7 +10,7 @@ use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::{cap_falling_velocity, CObjectTrait};
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
-use crate::globals::{rm, Ptr};
+use crate::globals::Ptr;
 use crate::impl_base;
 use crate::smw::objects::blocks::io_block::*;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
@@ -161,7 +161,7 @@ impl IO_BlockTrait for B_BounceBlock {
             self.vely = -VELBLOCKBOUNCE;
             self.state = 1;
             unsafe {
-                if_sound_on_play(&mut rm.sfx_bump);
+                if_sound_on_play(&mut game().rm.sfx_bump);
             }
         }
     }

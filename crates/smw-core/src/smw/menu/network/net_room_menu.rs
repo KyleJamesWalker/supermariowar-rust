@@ -1,6 +1,7 @@
 //! Port of src/smw/menu/network/NetRoomMenu.cpp
 
-use crate::common::global::{game_values, rm};
+use crate::game::game;
+use crate::common::global::{game_values};
 use crate::common::path::{file_exists, get_home_directory};
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
@@ -46,8 +47,8 @@ impl UI_NetRoomMenu {
     pub fn new() -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let selectfield = Ptr::from_mut(&mut rm.spr_selectfield);
-            let plain = Ptr::from_mut(&mut rm.menu_plain_field);
+            let selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
+            let plain = Ptr::from_mut(&mut game().rm.menu_plain_field);
 
             this.miNetRoomName = Ptr::new_box(MI_Text::new("", 40, 50, 0, true, TextAlign::LEFT));
 
@@ -97,7 +98,7 @@ impl UI_NetRoomMenu {
         this.add_control(back, start, start, send, field);
 
         unsafe {
-            this.miNetRoomStartingDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
+            this.miNetRoomStartingDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut game().rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
             this.miNetRoomStartingDialogText = Ptr::new_box(MI_HeaderText::new("Starting...", 320, 240 - 40));
         }
 
@@ -109,7 +110,7 @@ impl UI_NetRoomMenu {
         this.add_non_control(dt);
 
         unsafe {
-            let plain = Ptr::from_mut(&mut rm.menu_plain_field);
+            let plain = Ptr::from_mut(&mut game().rm.menu_plain_field);
             this.miNetRoomLeftHeaderBar = Ptr::new_box(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miNetRoomRightHeaderBar = Ptr::new_box(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0));
             this.miNetRoomHeaderText = Ptr::new_box(MI_HeaderText::new("Multiplayer Room Menu", 320, 5));
@@ -141,15 +142,15 @@ impl UI_NetRoomMenu {
                 let path = format!("{}net_skin{}.bmp", get_home_directory(), p);
                 if p == netplay.remotePlayerNumber as i16 {
                     println!("  player {} -> local", p);
-                    rm.load_menu_skin(p, game_values.skinids[0], p, false);
+                    game().rm.load_menu_skin(p, game_values.skinids[0], p, false);
                 } else if file_exists(&path) {
                     println!("  player {} -> {}", p, path);
-                    if !rm.load_menu_skin_path(p, Path::new(&path), p, false) {
-                        rm.load_menu_skin(p, game_values.skinids[p as usize], p, false);
+                    if !game().rm.load_menu_skin_path(p, Path::new(&path), p, false) {
+                        game().rm.load_menu_skin(p, game_values.skinids[p as usize], p, false);
                     }
                 } else {
                     println!("  player {} -> default", p);
-                    rm.load_menu_skin(p, 0, p, false);
+                    game().rm.load_menu_skin(p, 0, p, false);
                 }
             }
 

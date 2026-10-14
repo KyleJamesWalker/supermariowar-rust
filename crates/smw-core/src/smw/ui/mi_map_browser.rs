@@ -174,10 +174,10 @@ impl UI_ControlTrait for MI_MapBrowser {
                         self.mapSurfaces[i].draw_src_to(&rSrc, blitdest, &rDst);
 
                         if self.iType == 0 && self.node_filter(i) {
-                            rm.menu_map_filter.draw_src(rDst.x, rDst.y, &filterSrc);
+                            game().rm.menu_map_filter.draw_src(rDst.x, rDst.y, &filterSrc);
                         }
 
-                        rm.menu_font_large.draw_chop_right(rDst.x, rDst.y + 120, 165, &self.mapNames[i]);
+                        game().rm.menu_font_large.draw_chop_right(rDst.x, rDst.y + 120, 165, &self.mapNames[i]);
                     }
                 }
             }
@@ -186,19 +186,19 @@ impl UI_ControlTrait for MI_MapBrowser {
             rDst.y = self.iSelectedRow as i32 * 150 + 30;
             rDst.x = self.iSelectedCol as i32 * 200 + 40;
 
-            rm.menu_dialog.draw_src(rDst.x - 16, rDst.y - 16, &SDL_Rect { x: 0, y: 0, w: 176, h: 148 });
-            rm.menu_dialog.draw_src(rDst.x + 160, rDst.y - 16, &SDL_Rect { x: 496, y: 0, w: 16, h: 148 });
-            rm.menu_dialog.draw_src(rDst.x - 16, rDst.y + 132, &SDL_Rect { x: 0, y: 464, w: 176, h: 16 });
-            rm.menu_dialog.draw_src(rDst.x + 160, rDst.y + 132, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+            game().rm.menu_dialog.draw_src(rDst.x - 16, rDst.y - 16, &SDL_Rect { x: 0, y: 0, w: 176, h: 148 });
+            game().rm.menu_dialog.draw_src(rDst.x + 160, rDst.y - 16, &SDL_Rect { x: 496, y: 0, w: 16, h: 148 });
+            game().rm.menu_dialog.draw_src(rDst.x - 16, rDst.y + 132, &SDL_Rect { x: 0, y: 464, w: 176, h: 16 });
+            game().rm.menu_dialog.draw_src(rDst.x + 160, rDst.y + 132, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
 
             let sel = (self.iSelectedRow * 3 + self.iSelectedCol) as usize;
             self.mapSurfaces[sel].draw_src_to(&rSrc, blitdest, &rDst);
 
             if self.iType == 0 && self.node_filter(sel) {
-                rm.menu_map_filter.draw_src(rDst.x, rDst.y, &filterSrc);
+                game().rm.menu_map_filter.draw_src(rDst.x, rDst.y, &filterSrc);
             }
 
-            rm.menu_font_large.draw_chop_right(rDst.x, rDst.y + 120, 165, &self.mapNames[sel]);
+            game().rm.menu_font_large.draw_chop_right(rDst.x, rDst.y + 120, 165, &self.mapNames[sel]);
         }
     }
 

@@ -99,7 +99,7 @@ impl OMO_Area {
 
             self.frame = ((self.colorID as i32 + 1) * self.iw as i32) as i16;
             unsafe {
-                if_sound_on_play(&mut rm.sfx_areatag);
+                if_sound_on_play(&mut game().rm.sfx_areatag);
             }
         }
     }

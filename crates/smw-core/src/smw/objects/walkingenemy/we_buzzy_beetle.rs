@@ -80,7 +80,7 @@ impl IO_MovingObjectTrait for MO_BuzzyBeetle {
 
         self.dead = true;
         unsafe {
-            eyecandy[2].emplace(EC_FallingObject::new(Ptr::from_mut(&mut rm.spr_shelldead), self.ix, self.iy, 0.0f32, -VELJUMP / 2.0f32, 1, 0, 96, 0, 32, 32));
+            eyecandy[2].emplace(EC_FallingObject::new(Ptr::from_mut(&mut game().rm.spr_shelldead), self.ix, self.iy, 0.0f32, -VELJUMP / 2.0f32, 1, 0, 96, 0, 32, 32));
         }
     }
 }
@@ -104,7 +104,7 @@ impl MO_WalkingEnemyTrait for MO_BuzzyBeetle {
                 player.score().adjust_score(1);
             }
 
-            if_sound_on_play(&mut rm.sfx_mip);
+            if_sound_on_play(&mut game().rm.sfx_mip);
         }
 
         self.drop_shell(false, false);

@@ -1,6 +1,5 @@
 //! Port of src/smw/menu/network/NetEditServersMenu.cpp
-
-use crate::common::global::rm;
+use crate::game::game;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
 use crate::common::ui::mi_image::MI_Image;
@@ -57,8 +56,8 @@ impl UI_NetEditServersMenu {
         this.dialogTextData.clear();
 
         unsafe {
-            let selectfield = Ptr::from_mut(&mut rm.spr_selectfield);
-            let plain = Ptr::from_mut(&mut rm.menu_plain_field);
+            let selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
+            let plain = Ptr::from_mut(&mut game().rm.menu_plain_field);
 
             this.miBackButton = Ptr::new_box(MI_Button::new(selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
             this.miBackButton.set_code(MENU_CODE_TO_NET_SERVERS_MENU);

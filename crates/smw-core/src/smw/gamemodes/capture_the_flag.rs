@@ -49,18 +49,18 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
                     fTeamUsed[iTeamID as usize] = true;
 
                     let iColorID: i16 = player.get_color_id();
-                    let base: Ptr<MO_FlagBase> = Ptr::new_box(MO_FlagBase::new(Ptr::from_mut(&mut rm.spr_flagbases), iTeamID, iColorID));
+                    let base: Ptr<MO_FlagBase> = Ptr::new_box(MO_FlagBase::new(Ptr::from_mut(&mut game().rm.spr_flagbases), iTeamID, iColorID));
                     objectcontainer[0].add(base);
 
                     if !game_values.gamemodesettings.flag.centerflag {
-                        let flag: Ptr<CO_Flag> = CO_Flag::new(Ptr::from_mut(&mut rm.spr_flags), base, iTeamID, iColorID);
+                        let flag: Ptr<CO_Flag> = CO_Flag::new(Ptr::from_mut(&mut game().rm.spr_flags), base, iTeamID, iColorID);
                         objectcontainer[1].add(flag);
                     }
                 }
             }
 
             if game_values.gamemodesettings.flag.centerflag {
-                let centerflag: Ptr<CO_Flag> = CO_Flag::new(Ptr::from_mut(&mut rm.spr_flags), Ptr::null(), -1, -1);
+                let centerflag: Ptr<CO_Flag> = CO_Flag::new(Ptr::from_mut(&mut game().rm.spr_flags), Ptr::null(), -1, -1);
                 objectcontainer[1].add(centerflag);
             }
         }
@@ -77,7 +77,7 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
         if !item.is_null() && item.get_moving_object_type() == movingobject_flag {
             item.as_any().downcast_mut::<CO_Flag>().expect("carried flag").place_flag();
             unsafe {
-                if_sound_on_play(&mut rm.sfx_transform);
+                if_sound_on_play(&mut game().rm.sfx_transform);
             }
         }
 

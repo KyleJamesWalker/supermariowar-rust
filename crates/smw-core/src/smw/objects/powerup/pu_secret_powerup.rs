@@ -88,7 +88,7 @@ impl CObjectTrait for PU_SecretPowerup {
 
         // Draw sparkles
         unsafe {
-            rm.spr_shinesparkle.draw_src(
+            game().rm.spr_shinesparkle.draw_src(
                 self.ix as i32 - self.collisionOffsetX as i32,
                 self.iy as i32 - self.collisionOffsetY as i32,
                 &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
@@ -105,7 +105,7 @@ impl CObjectTrait for PU_SecretPowerup {
                     let x = RANDOM_INT(App::screenWidth) as f32;
                     let y = RANDOM_INT(App::screenHeight) as f32;
                     let t = (RANDOM_INT(4) + 1) as i16;
-                    eyecandy[2].emplace(EC_Snow::new(Ptr::from_mut(&mut rm.spr_snow), x, y, t));
+                    eyecandy[2].emplace(EC_Snow::new(Ptr::from_mut(&mut game().rm.spr_snow), x, y, t));
                 }
             } else if self.itemtype == 1 {
                 game_values.spinscreen = true;
@@ -115,7 +115,7 @@ impl CObjectTrait for PU_SecretPowerup {
                 game_values.spotlights = true;
             }
 
-            if_sound_on_play(&mut rm.sfx_pickup);
+            if_sound_on_play(&mut game().rm.sfx_pickup);
         }
 
         self.dead = true;
