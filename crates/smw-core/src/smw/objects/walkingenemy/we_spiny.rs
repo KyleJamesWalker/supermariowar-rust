@@ -12,7 +12,7 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::{eyecandy, objectcontainer};
+
 use crate::smw::objects::carriable::co_shell::{ShellType, CO_Shell};
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::objects::walkingenemy::walking_enemy::*;
@@ -81,7 +81,7 @@ impl IO_MovingObjectTrait for MO_Spiny {
 
         self.dead = true;
         unsafe {
-            eyecandy[2].emplace(EC_FallingObject::new(Ptr::from_mut(&mut rm.spr_shelldead), self.ix, self.iy, 0.0f32, -VELJUMP / 2.0f32, 1, 0, 64, 0, 32, 32));
+            game().eyecandy[2].emplace(EC_FallingObject::new(Ptr::from_mut(&mut game().rm.spr_shelldead), self.ix, self.iy, 0.0f32, -VELJUMP / 2.0f32, 1, 0, 64, 0, 32, 32));
         }
     }
 }
@@ -108,13 +108,13 @@ impl MO_WalkingEnemyTrait for MO_Spiny {
 
                 player.add_killer_award(Ptr::null(), KillStyle::Spiny);
 
-                if game_values.gamemode.gamemode == game_mode_stomp && !game_values.gamemode.gameover {
+                if game().game_values.gamemode.gamemode == game_mode_stomp && !game().game_values.gamemode.gameover {
                     player.score().adjust_score(1);
                 }
 
                 self.drop_shell(false, false);
 
-                if_sound_on_play(&mut rm.sfx_mip);
+                if_sound_on_play(&mut game().rm.sfx_mip);
             }
         }
 
@@ -131,7 +131,7 @@ impl MO_WalkingEnemyTrait for MO_Spiny {
         }
 
         unsafe {
-            objectcontainer[1].add(shell);
+            game().objectcontainer[1].add(shell);
         }
     }
 }

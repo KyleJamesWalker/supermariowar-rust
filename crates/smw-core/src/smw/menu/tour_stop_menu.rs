@@ -26,12 +26,12 @@ impl UI_TourStopMenu {
     pub fn new() -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let spr_selectfield = Ptr::from_mut(&mut rm.spr_selectfield);
+            let spr_selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
 
             this.miTourStop = Ptr::new_box(MI_TourStop::new(70, 45, false));
 
             // Exit tour dialog box
-            this.miTourStopExitDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
+            this.miTourStopExitDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut game().rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
             this.miTourStopExitDialogExitTourText = Ptr::new_box(MI_HeaderText::new("Exit Tour", 320, 205));
 
             this.miTourStopExitDialogYesButton = Ptr::new_box(MI_Button::new(spr_selectfield, 235, 250, "Yes", 80, TextAlign::CENTER));

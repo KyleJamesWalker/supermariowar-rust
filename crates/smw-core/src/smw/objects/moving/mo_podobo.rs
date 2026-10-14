@@ -95,7 +95,7 @@ impl CObjectTrait for MO_Podobo {
     fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
         unsafe {
             if player.globalID != self.iPlayerID
-                && (game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID)
+                && (game().game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID)
                 && !player.is_invincible()
                 && !player.is_shielded()
                 && !player.shyguy
@@ -125,7 +125,7 @@ impl CObjectTrait for MO_Podobo {
             // ((CO_Shell*)object)->Die() / ((CO_ThrowBlock*)object)->Die() / ((MO_BulletBill*)object)->Die() are all virtual calls
             object.die();
 
-            unsafe { if_sound_on_play(&mut rm.sfx_kicksound) };
+            unsafe { if_sound_on_play(&mut game().rm.sfx_kicksound) };
         }
     }
 }

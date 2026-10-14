@@ -14,7 +14,7 @@ use crate::common::player_kill_styles::KillStyle;
 use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::{eyecandy, objectcontainer, spotlightManager};
+use crate::smw::gs_gameplay::{spotlightManager};
 use crate::smw::objectgame::removeifprojectile;
 use crate::smw::objects::moving::mo_carried_object::{MO_CarriedObject, MO_CarriedObjectTrait};
 use crate::smw::objects::moving::moving_object::{io_moving_object_collision_detection_checksides, io_moving_object_update, IO_MovingObjectTrait};
@@ -72,7 +72,7 @@ impl_base!(CO_Shell => mo_carried_object: MO_CarriedObject);
 impl CO_Shell {
     pub fn new(r#type: ShellType, pos: Vec2s, dieOnMovingPlayerCollision: bool, dieOnHoldingPlayerCollision: bool, dieOnFire: bool, killBouncePlayer: bool) -> Self {
         let mut o = CO_Shell {
-            mo_carried_object: MO_CarriedObject::new_anim(unsafe { Ptr::from_mut(&mut rm.spr_shell) }, pos, 4, 4, 30, 20, 1, 11, 0, (r#type as i32 * 32) as i16, 32, 32),
+            mo_carried_object: MO_CarriedObject::new_anim(unsafe { Ptr::from_mut(&mut game().rm.spr_shell) }, pos, 4, 4, 30, 20, 1, 11, 0, (r#type as i32 * 32) as i16, 32, 32),
             iShellType: r#type,
             iIgnoreBounceTimer: 0,
             iDestY: 0,
@@ -181,7 +181,7 @@ impl CO_Shell {
             player.platform = Ptr::null();
         } else if self.state == 3 {
             // Holding
-            if player != self.owner && (unsafe { game_values.teamcollision } == TeamCollisionStyle::On || player.teamID != self.owner.teamID) {
+            if player != self.owner && (unsafe { game().game_values.teamcollision } == TeamCollisionStyle::On || player.teamID != self.owner.teamID) {
                 if !self.owner.is_null() {
                     self.owner.carriedItem = Ptr::null();
                 }
@@ -233,7 +233,7 @@ impl CO_Shell {
             }
         } else if self.state == 3 {
             // Holding
-            if player != self.owner && (unsafe { game_values.teamcollision } == TeamCollisionStyle::On || player.teamID != self.owner.teamID) {
+            if player != self.owner && (unsafe { game().game_values.teamcollision } == TeamCollisionStyle::On || player.teamID != self.owner.teamID) {
                 self.iPlayerID = self.owner.globalID;
                 self.iTeamID = self.owner.teamID;
                 return self.kill_player(player);
@@ -275,7 +275,7 @@ impl CO_Shell {
 
     pub fn add_moving_kill(&mut self, killer: Ptr<CPlayer>) {
         let mut killer = killer;
-        if self.state == 1 && unsafe { game_values.awardstyle } != AwardStyle::None {
+        if self.state == 1 && unsafe { game().game_values.awardstyle } != AwardStyle::None {
             // If the shell is moving, the keep track of how many people we kill in a row with it
             self.iKillCounter += 1;
             if self.iKillCounter > 1 {
@@ -286,7 +286,7 @@ impl CO_Shell {
 
     pub fn shatter_die(&mut self) {
         self.dead = true;
-        unsafe { if_sound_on_play(&mut rm.sfx_breakblock) };
+        unsafe { if_sound_on_play(&mut game().rm.sfx_breakblock) };
         self.iKillCounter = 0;
 
         if !self.owner.is_null() {
@@ -297,11 +297,11 @@ impl CO_Shell {
         let iBrokenIceX = (self.ix as i32 - self.collisionOffsetX as i32) as i16;
         let iBrokenIceY = (self.iy as i32 - self.collisionOffsetY as i32) as i16;
         unsafe {
-            let spr = Ptr::from_mut(&mut rm.spr_brokeniceblock);
-            eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, iBrokenIceY, -1.5, -7.0, 4, 2, 0, 0, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, iBrokenIceY, 1.5, -7.0, 4, 2, 0, 0, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, (iBrokenIceY as i32 + 16) as i16, -1.5, -4.0, 4, 2, 0, 0, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, (iBrokenIceY as i32 + 16) as i16, 1.5, -4.0, 4, 2, 0, 0, 16, 16));
+            let spr = Ptr::from_mut(&mut game().rm.spr_brokeniceblock);
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, iBrokenIceY, -1.5, -7.0, 4, 2, 0, 0, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, iBrokenIceY, 1.5, -7.0, 4, 2, 0, 0, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, (iBrokenIceY as i32 + 16) as i16, -1.5, -4.0, 4, 2, 0, 0, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, (iBrokenIceY as i32 + 16) as i16, 1.5, -4.0, 4, 2, 0, 0, 16, 16));
         }
     }
 
@@ -334,7 +334,7 @@ impl CO_Shell {
         self.velx = 0.0;
         self.state = 2;
         self.fSmoking = false;
-        unsafe { if_sound_on_play(&mut rm.sfx_kicksound) };
+        unsafe { if_sound_on_play(&mut game().rm.sfx_kicksound) };
         self.iKillCounter = 0;
     }
 
@@ -449,8 +449,8 @@ impl CObjectTrait for CO_Shell {
             self.frozentimer = 300;
 
             unsafe {
-                eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                game().eyecandy[2].emplace(EC_SingleAnimation::new(
+                    Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                     (self.ix as i32 - self.collisionOffsetX as i32) as i16,
                     (self.iy as i32 - self.collisionOffsetY as i32) as i16,
                     3,
@@ -475,8 +475,8 @@ impl CObjectTrait for CO_Shell {
                     self.velx = self.frozenvelocity;
                     self.animationspeed = self.frozenanimationspeed;
 
-                    eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
+                        Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                         (self.ix as i32 - self.collisionOffsetX as i32) as i16,
                         (self.iy as i32 - self.collisionOffsetY as i32) as i16,
                         3,
@@ -484,13 +484,13 @@ impl CObjectTrait for CO_Shell {
                     ));
                 }
             } else if self.state == 1 {
-                if game_values.shellttl > 0 && {
+                if game().game_values.shellttl > 0 && {
                     self.iDeathTime += 1;
-                    self.iDeathTime >= game_values.shellttl
+                    self.iDeathTime >= game().game_values.shellttl
                 } {
-                    eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
                     self.dead = true;
-                    if_sound_on_play(&mut rm.sfx_kicksound);
+                    if_sound_on_play(&mut game().rm.sfx_kicksound);
 
                     if !self.owner.is_null() {
                         self.owner.carriedItem = Ptr::null();
@@ -535,7 +535,7 @@ impl CObjectTrait for CO_Shell {
         }
 
         unsafe {
-            if game_values.spotlights {
+            if game().game_values.spotlights {
                 if self.state == 1 {
                     let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
                     let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
@@ -575,10 +575,10 @@ impl CObjectTrait for CO_Shell {
 
         unsafe {
             if self.frozen {
-                rm.spr_iceblock.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
+                game().rm.spr_iceblock.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
             } else if self.fSmoking {
-                eyecandy[0].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut rm.spr_burnup),
+                game().eyecandy[0].emplace(EC_SingleAnimation::new(
+                    Ptr::from_mut(&mut game().rm.spr_burnup),
                     (x + (self.iw as i32 >> 1) - 16) as i16,
                     (y + (self.ih as i32 >> 1) - 16) as i16,
                     5,
@@ -602,7 +602,7 @@ pub fn net_shell_death(obj: Ptr<dyn CObjectTrait>, holder: i32) {
     let mut shell = obj;
     if shell.is_null() {
         unsafe {
-            for &o in objectcontainer[1].list() {
+            for &o in game().objectcontainer[1].list() {
                 let mut o = o;
                 if let Some(s) = o.as_any().downcast_mut::<CO_Shell>() {
                     if s.state == 3 && !s.owner.is_null() && s.owner.globalID as i32 == holder {
@@ -644,8 +644,8 @@ impl IO_MovingObjectTrait for CO_Shell {
         }
 
         unsafe {
-            eyecandy[2].emplace(EC_FallingObject::new(
-                Ptr::from_mut(&mut rm.spr_shelldead),
+            game().eyecandy[2].emplace(EC_FallingObject::new(
+                Ptr::from_mut(&mut game().rm.spr_shelldead),
                 self.ix,
                 self.iy,
                 -self.velx / 4.0,
@@ -658,7 +658,7 @@ impl IO_MovingObjectTrait for CO_Shell {
                 32,
             ));
             self.dead = true;
-            if_sound_on_play(&mut rm.sfx_kicksound);
+            if_sound_on_play(&mut game().rm.sfx_kicksound);
         }
         self.iKillCounter = 0;
 
@@ -672,14 +672,14 @@ impl IO_MovingObjectTrait for CO_Shell {
         if self.state == 1 {
             if self.iBounceCounter == 0 {
                 unsafe {
-                    eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut rm.spr_shellbounce),
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
+                        Ptr::from_mut(&mut game().rm.spr_shellbounce),
                         (self.ix as i32 + (if self.velx > 0.0 { 0 } else { self.collisionWidth as i32 }) - 21) as i16,
                         (self.iy as i32 + (self.collisionHeight as i32 >> 1) - 20) as i16,
                         4,
                         4,
                     ));
-                    if_sound_on_play(&mut rm.sfx_bump);
+                    if_sound_on_play(&mut game().rm.sfx_bump);
                 }
 
                 self.iBounceCounter = 7; // Allow bounce stars to show on each bounce on a 2x wide pit
@@ -717,7 +717,7 @@ impl MO_CarriedObjectTrait for CO_Shell {
         {
             vel = 10.0f;
             fSmoking = true;
-            ifSoundOnPlay(rm->sfx_cannon);
+            ifSoundOnPlay(game().rm->sfx_cannon);
         }
         */
 
@@ -755,7 +755,7 @@ impl MO_CarriedObjectTrait for CO_Shell {
         if io_moving_object_collision_detection_checksides(self) {
             self.die();
         } else {
-            unsafe { if_sound_on_play(&mut rm.sfx_kicksound) };
+            unsafe { if_sound_on_play(&mut game().rm.sfx_kicksound) };
         }
     }
 }

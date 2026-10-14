@@ -1,7 +1,7 @@
 //! Port of src/smw/menu/network/NetNewRoomSettingsMenu.cpp
 
+use crate::game::game;
 use crate::common::game_mode::GAMEMODE_LAST;
-use crate::common::global::rm;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
 use crate::common::ui::mi_image::MI_Image;
@@ -13,7 +13,6 @@ use crate::common::uicontrol::ctl_ptr;
 use crate::common::uimenu::UI_Menu;
 use crate::globals::Ptr;
 use crate::smw::menu::game_settings_menu::UI_GameSettingsMenu;
-use crate::smw::net::netplay;
 
 const GM_LAST: usize = GAMEMODE_LAST as usize;
 
@@ -39,7 +38,7 @@ impl UI_NetNewRoomSettingsMenu {
     pub fn new(gsm: &UI_GameSettingsMenu) -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let selectfield = Ptr::from_mut(&mut rm.spr_selectfield);
+            let selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
 
             this.miContinueButton = Ptr::new_box(MI_Button::new_left(selectfield, 70, 45, "Continue", 500));
             this.miContinueButton.set_code(MENU_CODE_TO_NET_NEW_ROOM_SETTINGS_MENU);
@@ -50,7 +49,7 @@ impl UI_NetNewRoomSettingsMenu {
             }
 
             this.miMapField = Ptr::new_box(MI_MapField::new(selectfield, 70, 165, "Map", 400, 120, true));
-            netplay.mapfilepath = this.get_current_map_path();
+            game().netplay.mapfilepath = this.get_current_map_path();
 
             this.miModeSettingsButton = Ptr::new_box(MI_Button::new_left(selectfield, 430, 125, "Settings", 140));
             this.miModeSettingsButton.set_code(MENU_CODE_TO_MODE_SETTINGS_MENU);
@@ -58,8 +57,8 @@ impl UI_NetNewRoomSettingsMenu {
             this.miRandomizeField = Ptr::new_box(MI_SelectField::<bool>::new(selectfield, 440, 205, "Random", 130, 80));
             this.miRandomizeField.add("Off", false);
             this.miRandomizeField.add("On", true);
-            this.miRandomizeField.set_output_ptr(&mut netplay.randomize_settings as *mut _);
-            this.miRandomizeField.set_current_value(netplay.randomize_settings);
+            this.miRandomizeField.set_output_ptr(&mut game().netplay.randomize_settings as *mut _);
+            this.miRandomizeField.set_current_value(game().netplay.randomize_settings);
         }
 
         let cont = ctl_ptr(this.miContinueButton);
@@ -82,7 +81,7 @@ impl UI_NetNewRoomSettingsMenu {
         this.add_control(map, goals[GM_LAST - 1], cont, null, null);
 
         unsafe {
-            let plain = Ptr::from_mut(&mut rm.menu_plain_field);
+            let plain = Ptr::from_mut(&mut game().rm.menu_plain_field);
             this.miLeftHeaderBar = Ptr::new_box(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miRightHeaderBar = Ptr::new_box(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0));
             this.miHeaderText = Ptr::new_box(MI_HeaderText::new("Multiplayer Level Select Menu", 320, 5));

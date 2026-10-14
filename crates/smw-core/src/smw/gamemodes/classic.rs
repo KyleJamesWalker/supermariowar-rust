@@ -8,7 +8,7 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::*;
-use crate::smw::main::{score, score_cnt};
+
 use crate::smw::player::CPlayer;
 
 //mariowar classic
@@ -52,11 +52,11 @@ pub fn cgm_classic_init(this: &mut CGM_Classic) {
     this.fReverseScoring = this.goal == -1;
 
     unsafe {
-        for iScore in 0..score_cnt {
+        for iScore in 0..game().score_cnt {
             if this.fReverseScoring {
-                score[iScore as usize].set_score(0);
+                game().score[iScore as usize].set_score(0);
             } else {
-                score[iScore as usize].set_score(this.goal);
+                game().score[iScore as usize].set_score(this.goal);
             }
         }
     }
@@ -69,7 +69,7 @@ pub fn cgm_classic_playerkilledplayer(this: &mut CGM_Classic, mut inflictor: Ptr
 
     unsafe {
         //If we are playing classic "sumo" mode, then only score hazard kills
-        if game_values.gamemode.gamemode != game_mode_classic || game_values.gamemodesettings.classic.scoring == ScoringStyle::AllKills || style == KillStyle::Push {
+        if game().game_values.gamemode.gamemode != game_mode_classic || game().game_values.gamemodesettings.classic.scoring == ScoringStyle::AllKills || style == KillStyle::Push {
             if this.fReverseScoring {
                 other.score().adjust_score(1);
             } else {
@@ -77,12 +77,12 @@ pub fn cgm_classic_playerkilledplayer(this: &mut CGM_Classic, mut inflictor: Ptr
 
                 if !this.playedwarningsound {
                     let mut countscore: i16 = 0;
-                    for k in 0..score_cnt {
-                        if Ptr::from_mut(inflictor.score()) == score[k as usize] {
+                    for k in 0..game().score_cnt {
+                        if Ptr::from_mut(inflictor.score()) == game().score[k as usize] {
                             continue;
                         }
 
-                        countscore = (countscore as i32 + score[k as usize].score as i32) as i16;
+                        countscore = (countscore as i32 + game().score[k as usize].score as i32) as i16;
                     }
 
                     if countscore <= 2 {
@@ -97,8 +97,8 @@ pub fn cgm_classic_playerkilledplayer(this: &mut CGM_Classic, mut inflictor: Ptr
             }
         }
 
-        if game_values.gamemode.gamemode == game_mode_classic && game_values.gamemodesettings.classic.style == DeathStyle::Shield {
-            if_sound_on_play(&mut rm.sfx_powerdown);
+        if game().game_values.gamemode.gamemode == game_mode_classic && game().game_values.gamemodesettings.classic.style == DeathStyle::Shield {
+            if_sound_on_play(&mut game().rm.sfx_powerdown);
             other.shield().reset();
             return PlayerKillType::NonKill;
         }
@@ -120,13 +120,13 @@ pub fn cgm_classic_playerkilledself(this: &mut CGM_Classic, mut player: Ptr<CPla
                 if !this.playedwarningsound {
                     let mut countscore: i16 = 0;
                     let mut playwarning = false;
-                    for j in 0..score_cnt {
-                        for k in 0..score_cnt {
+                    for j in 0..game().score_cnt {
+                        for k in 0..game().score_cnt {
                             if j == k {
                                 continue;
                             }
 
-                            countscore = (countscore as i32 + score[k as usize].score as i32) as i16;
+                            countscore = (countscore as i32 + game().score[k as usize].score as i32) as i16;
                         }
 
                         if countscore <= 2 {
@@ -148,8 +148,8 @@ pub fn cgm_classic_playerkilledself(this: &mut CGM_Classic, mut player: Ptr<CPla
                 }
             }
 
-            if game_values.gamemode.gamemode == game_mode_classic && game_values.gamemodesettings.classic.style == DeathStyle::Shield {
-                if_sound_on_play(&mut rm.sfx_powerdown);
+            if game().game_values.gamemode.gamemode == game_mode_classic && game().game_values.gamemodesettings.classic.style == DeathStyle::Shield {
+                if_sound_on_play(&mut game().rm.sfx_powerdown);
                 player.shield().reset();
                 return PlayerKillType::NonKill;
             }

@@ -1,7 +1,7 @@
 //! Port of src/common/ObjectBase.cpp
 
+use crate::game::game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::global::g_map;
 use crate::common::global_constants::*;
 use crate::common::io_block::IO_BlockTrait;
 use crate::common::math::vec2::Vec2s;
@@ -219,14 +219,14 @@ impl CObject {
         unsafe {
             if iy >= 0 && iy < 480 {
                 let yt = (iy / TILESIZE) as i16;
-                blocks[0] = g_map.block(xl, yt);
-                blocks[1] = g_map.block(xr, yt);
+                blocks[0] = game().g_map.block(xl, yt);
+                blocks[1] = game().g_map.block(xr, yt);
             }
 
             if iy + ih >= 0 && iy + ih < 480 {
                 let yb = ((iy + ih) / TILESIZE) as i16;
-                blocks[2] = g_map.block(xl, yb);
-                blocks[3] = g_map.block(xr, yb);
+                blocks[2] = game().g_map.block(xl, yb);
+                blocks[3] = game().g_map.block(xr, yb);
             }
         }
 

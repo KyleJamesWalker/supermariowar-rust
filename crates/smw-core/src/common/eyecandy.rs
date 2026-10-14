@@ -13,7 +13,6 @@ use crate::common::random_number_generator::{RANDOM_BOOL, RANDOM_INT};
 use crate::common::tile_types::TileType;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::eyecandy;
 use sdl2::sys::{SDL_FillRect, SDL_Rect};
 use std::ptr::null;
 
@@ -350,8 +349,8 @@ impl EC_Leaf {
         self.ec_oscillating_animation.animate();
 
         unsafe {
-            self.dx += self.velx + game_values.flags.gamewindx;
-            self.dy += self.vely + game_values.flags.gamewindy;
+            self.dx += self.velx + game().game_values.flags.gamewindx;
+            self.dy += self.vely + game().game_values.flags.gamewindy;
         }
 
         if self.dx >= screenWidth as f32 {
@@ -432,8 +431,8 @@ impl EC_Snow {
 
     pub fn update(&mut self) {
         unsafe {
-            self.dx += self.velx + game_values.flags.gamewindx;
-            self.dy += self.vely + game_values.flags.gamewindy;
+            self.dx += self.velx + game().game_values.flags.gamewindx;
+            self.dy += self.vely + game().game_values.flags.gamewindy;
         }
 
         if self.dx >= screenWidth as f32 {
@@ -656,8 +655,8 @@ impl EC_Corpse {
                     let ty = (nexty as i32 / TILESIZE) as i16;
 
                     // FIXME: This seems to be wrong
-                    if g_map.map(self.tx as i32, ty as i32) == TileType::SolidOnTop.0 as i32
-                        || g_map.map(self.tx2 as i32, ty as i32) == TileType::SolidOnTop.0 as i32
+                    if game().g_map.map(self.tx as i32, ty as i32) == TileType::SolidOnTop.0 as i32
+                        || game().g_map.map(self.tx2 as i32, ty as i32) == TileType::SolidOnTop.0 as i32
                     {
                         // on ground on tile solid_on_top
                         if (self.dy + 32.0f32 - self.vely) / (TILESIZE as f32) < ty as f32 {
@@ -670,11 +669,11 @@ impl EC_Corpse {
                         }
                     }
 
-                    let mut leftblock = g_map.block(self.tx, ty);
-                    let mut rightblock = g_map.block(self.tx2, ty);
+                    let mut leftblock = game().g_map.block(self.tx, ty);
+                    let mut rightblock = game().g_map.block(self.tx2, ty);
 
-                    if (g_map.map(self.tx as i32, ty as i32) & 0x13) > 0
-                        || (g_map.map(self.tx2 as i32, ty as i32) & 0x13) > 0
+                    if (game().g_map.map(self.tx as i32, ty as i32) & 0x13) > 0
+                        || (game().g_map.map(self.tx2 as i32, ty as i32) & 0x13) > 0
                         || (!leftblock.is_null() && !leftblock.is_transparent() && !leftblock.is_hidden())
                         || (!rightblock.is_null() && !rightblock.is_transparent() && !rightblock.is_hidden())
                     {
@@ -832,7 +831,7 @@ impl EC_Announcement {
     pub fn draw(&self) {
         unsafe {
             for iRect in 0..4 {
-                rm.menu_dialog.draw_part(
+                game().rm.menu_dialog.draw_part(
                     self.rDstRect[iRect].x,
                     self.rDstRect[iRect].y,
                     self.rSrcRect[iRect].x,
@@ -983,8 +982,8 @@ impl_eyecandy!(EC_LoopingAnimation);
 
 /// `eyecandy[2].emplace<EC_SingleAnimation>(&rm->spr_fireballexplosion, x, y, 3, 8)`
 unsafe fn emplace_fireball_explosion(x: i16, y: i16) {
-    let spr = Ptr::from_mut(&mut rm.spr_fireballexplosion);
-    eyecandy[2].emplace(EC_SingleAnimation::new(spr, x, y, 3, 8));
+    let spr = Ptr::from_mut(&mut game().rm.spr_fireballexplosion);
+    game().eyecandy[2].emplace(EC_SingleAnimation::new(spr, x, y, 3, 8));
 }
 
 //------------------------------------------------------------------------------
@@ -1406,8 +1405,8 @@ impl EC_SoulsAward {
             let vely = self.speed * sinf(angle);
 
             unsafe {
-                let spr = Ptr::from_mut(&mut rm.spr_awardsouls);
-                eyecandy[2].emplace(EC_RocketAward::new(
+                let spr = Ptr::from_mut(&mut game().rm.spr_awardsouls);
+                game().eyecandy[2].emplace(EC_RocketAward::new(
                     spr,
                     (self.x as i32 - 8) as i16,
                     (self.y as i32 - 8) as i16,
@@ -1770,14 +1769,14 @@ impl Spotlight {
         unsafe {
             let (ix, iy, hw, w) = (self.ix as i32, self.iy as i32, self.iHalfWidth as i32, self.iWidth as i32);
             let rDst = SDL_Rect { x: ix - hw, y: iy - hw, w, h: w };
-            rm.spr_overlayhole.draw_src_to(&self.rSrc, rm.spr_overlay.get_surface(), &rDst);
+            game().rm.spr_overlayhole.draw_src_to(&self.rSrc, game().rm.spr_overlay.get_surface(), &rDst);
 
             if ix - hw < 0 {
                 let rDstWrap = SDL_Rect { x: ix - hw + screenWidth, y: iy - hw, w, h: w };
-                rm.spr_overlayhole.draw_src_to(&self.rSrc, rm.spr_overlay.get_surface(), &rDstWrap);
+                game().rm.spr_overlayhole.draw_src_to(&self.rSrc, game().rm.spr_overlay.get_surface(), &rDstWrap);
             } else if ix + hw >= screenWidth {
                 let rDstWrap = SDL_Rect { x: ix - hw - screenWidth, y: iy - hw, w, h: w };
-                rm.spr_overlayhole.draw_src_to(&self.rSrc, rm.spr_overlay.get_surface(), &rDstWrap);
+                game().rm.spr_overlayhole.draw_src_to(&self.rSrc, game().rm.spr_overlay.get_surface(), &rDstWrap);
             }
         }
     }
@@ -1800,7 +1799,7 @@ impl SpotlightManager {
 
     pub fn add_spotlight(&mut self, ix: i16, iy: i16, iSize: i16) -> Ptr<Spotlight> {
         unsafe {
-            if !game_values.spotlights {
+            if !game().game_values.spotlights {
                 return Ptr::null();
             }
         }
@@ -1813,7 +1812,7 @@ impl SpotlightManager {
     pub fn draw_spotlights(&mut self) {
         unsafe {
             // Clear the overlay surface again with black
-            crate::common::gfx::blit::fill_rect(rm.spr_overlay.get_surface(), null(), 0x0);
+            crate::common::gfx::blit::fill_rect(game().rm.spr_overlay.get_surface(), null(), 0x0);
         }
 
         let mut i = 0;
@@ -1831,7 +1830,7 @@ impl SpotlightManager {
         }
 
         // Draw the overlay
-        unsafe { rm.spr_overlay.draw(0, 0) };
+        unsafe { game().rm.spr_overlay.draw(0, 0) };
     }
 
     pub fn clear_spotlights(&mut self) {

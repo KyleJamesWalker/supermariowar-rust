@@ -1,7 +1,7 @@
 //! Port of src/smw/objects/blocks/SwitchBlock.cpp
 
+use crate::game::game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::global::g_map;
 use crate::common::global_constants::*;
 use crate::common::io_block::{IO_Block, IO_BlockTrait};
 use crate::common::math::vec2::Vec2s;
@@ -37,7 +37,7 @@ impl B_SwitchBlock {
     pub fn flip_state(&mut self, playerID: i16) {
         self.state = (1 - self.state as i32) as i16;
         unsafe {
-            g_map.update_tile_gap(self.col, self.row);
+            game().g_map.update_tile_gap(self.col, self.row);
         }
 
         if self.state == 0 {

@@ -65,30 +65,30 @@ fn main() {
         ensure_settings_dir();
         gfx_init(640, 480, false);
         blitdest = screen;
-        rm = Ptr::new_box(CResourceManager::new());
+        game().rm = Ptr::new_box(CResourceManager::new());
         game().filterslist = Ptr::new_box(FiltersList::new());
         game().skinlist = Ptr::new_box(SkinList::new());
         game().menugraphicspacklist = Ptr::new_box(GraphicsList::new());
         game().worldgraphicspacklist = Ptr::new_box(GraphicsList::new());
         game().gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
         game().menugraphicspacklist.set_current_index(0);
-        if !game_values.is_initialized() {
-            game_values.init(CGameValues::new());
+        if !game().game_values.is_initialized() {
+            game().game_values.init(CGameValues::new());
         }
-        CGameValues::init(&mut game_values);
+        CGameValues::init(&mut game().game_values);
         create_gamemodes();
 
         if !net_init() {
             println!("EV net_init failed");
             std::process::exit(2);
         }
-        netplay.myPlayerName = name;
-        netplay.savedServers = vec![ServerAddress { hostname: server }];
-        netplay.selectedServerIndex = 0;
-        netplay.mapfilepath = format!("{}/maps/0smw.map", data);
-        netplay.newroom_name = "InteropRoom".to_string();
+        game().netplay.myPlayerName = name;
+        game().netplay.savedServers = vec![ServerAddress { hostname: server }];
+        game().netplay.selectedServerIndex = 0;
+        game().netplay.mapfilepath = format!("{}/maps/0smw.map", data);
+        game().netplay.newroom_name = "InteropRoom".to_string();
 
-        if !net_start_session() || !netplay.client.send_connect_request_to_selected_server() {
+        if !net_start_session() || !game().netplay.client.send_connect_request_to_selected_server() {
             println!("EV connect failed");
             std::process::exit(2);
         }
@@ -101,65 +101,65 @@ fn main() {
         let other = if is_host { 1 } else { 0 };
 
         while start.elapsed() < Duration::from_secs(20) {
-            netplay.client.update();
+            game().netplay.client.update();
 
             match stage {
-                0 if netplay.connectSuccessful && role == "connect" => {
-                    let (sent, recv) = (netplay.client.lastSentMessage, netplay.client.lastReceivedMessage);
+                0 if game().netplay.connectSuccessful && role == "connect" => {
+                    let (sent, recv) = (game().netplay.client.lastSentMessage, game().netplay.client.lastReceivedMessage);
                     let advances = sent.packageType == NET_NOTICE_SKIN_CHANGE && recv.packageType == NET_RESPONSE_CONNECT_OK && sent.timestamp >= recv.timestamp;
                     println!("EV servers menu advances {} (sent {}@{}, received {}@{})", advances, sent.packageType, sent.timestamp, recv.packageType, recv.timestamp);
                     net_close();
                     std::process::exit(if advances { 0 } else { 1 });
                 }
-                0 if netplay.connectSuccessful => {
+                0 if game().netplay.connectSuccessful => {
                     println!("EV connected");
                     if is_host {
-                        netplay.client.send_create_room_message();
+                        game().netplay.client.send_create_room_message();
                     } else {
-                        netplay.client.request_room_list();
+                        game().netplay.client.request_room_list();
                     }
                     stage = 1;
                 }
-                1 if is_host && netplay.joinSuccessful => {
+                1 if is_host && game().netplay.joinSuccessful => {
                     println!("EV room created");
                     stage = 2;
                 }
-                1 if !is_host && !netplay.currentRooms.is_empty() => {
-                    println!("EV room listed: {} ({}/4)", netplay.currentRooms[0].name, netplay.currentRooms[0].playerCount);
-                    netplay.selectedRoomIndex = 0;
-                    netplay.client.send_join_room_message();
+                1 if !is_host && !game().netplay.currentRooms.is_empty() => {
+                    println!("EV room listed: {} ({}/4)", game().netplay.currentRooms[0].name, game().netplay.currentRooms[0].playerCount);
+                    game().netplay.selectedRoomIndex = 0;
+                    game().netplay.client.send_join_room_message();
                     stage = 2;
                 }
-                2 if netplay.currentRoom.player_count() >= 2 => {
+                2 if game().netplay.currentRoom.player_count() >= 2 => {
                     println!(
                         "EV room {} players: {} | {} | {} | {} me={} host={}",
-                        netplay.currentRoom.name,
-                        netplay.currentRoom.playerNames[0],
-                        netplay.currentRoom.playerNames[1],
-                        netplay.currentRoom.playerNames[2],
-                        netplay.currentRoom.playerNames[3],
-                        netplay.remotePlayerNumber,
-                        netplay.hostPlayerNumber
+                        game().netplay.currentRoom.name,
+                        game().netplay.currentRoom.playerNames[0],
+                        game().netplay.currentRoom.playerNames[1],
+                        game().netplay.currentRoom.playerNames[2],
+                        game().netplay.currentRoom.playerNames[3],
+                        game().netplay.remotePlayerNumber,
+                        game().netplay.hostPlayerNumber
                     );
-                    seen_players = netplay.currentRoom.player_count();
+                    seen_players = game().netplay.currentRoom.player_count();
                     if is_host {
-                        netplay.client.send_chat_message("hello from host");
-                        netplay.client.local_gamehost.send_start_room_message();
+                        game().netplay.client.send_chat_message("hello from host");
+                        game().netplay.client.local_gamehost.send_start_room_message();
                     }
                     stage = 3;
                 }
-                3 if netplay.gameRunning => {
+                3 if game().netplay.gameRunning => {
                     println!("EV game running, players in room {}", seen_players);
                     stage = 4;
                 }
                 4 => {
                     if frame < FRAMES {
-                        game_values.playerInput.outputControls[0] = pattern(if is_host { 1 } else { 2 }, frame);
-                        netplay.client.store_local_input();
-                        netplay.client.send_local_input();
+                        game().game_values.playerInput.outputControls[0] = pattern(if is_host { 1 } else { 2 }, frame);
+                        game().netplay.client.store_local_input();
+                        game().netplay.client.send_local_input();
                         frame += 1;
                     }
-                    while let Some((_, keys)) = netplay.remote_input_buffer[other].pop_front() {
+                    while let Some((_, keys)) = game().netplay.remote_input_buffer[other].pop_front() {
                         received.push(bits(&keys));
                     }
                     if frame >= FRAMES && (received.len() >= FRAMES as usize || start.elapsed() > Duration::from_secs(8)) {
@@ -181,11 +181,11 @@ fn main() {
         println!("EV inputs received {} matching {}", received.len(), matched);
         println!("EV final stage {}", stage);
 
-        if netplay.gameRunning {
-            netplay.client.send_leave_game_message();
+        if game().netplay.gameRunning {
+            game().netplay.client.send_leave_game_message();
         }
         for _ in 0..20 {
-            netplay.client.update();
+            game().netplay.client.update();
             std::thread::sleep(Duration::from_millis(5));
         }
         net_close();

@@ -1,8 +1,8 @@
 //! Port of src/common/map/MapReader17xx.cpp
 
+use crate::game::game;
 use crate::common::file_io::BinaryFile;
 use crate::common::game_values::default_powerup_setting;
-use crate::common::global::g_tilesetmanager;
 use crate::common::global_constants::*;
 use crate::common::map::map_reader::MapReader;
 use crate::common::map::map_reader_constants::g_szBackgroundConversion;
@@ -27,7 +27,7 @@ impl MapReader {
     }
 
     pub(super) fn read_tiles_1700(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) {
-        let iClassicTilesetID: i16 = unsafe { g_tilesetmanager.classic_tileset_index() as i16 };
+        let iClassicTilesetID: i16 = unsafe { game().g_tilesetmanager.classic_tileset_index() as i16 };
 
         for j in 0..MAPHEIGHT as usize {
             for i in 0..MAPWIDTH as usize {
@@ -217,11 +217,11 @@ impl MapReader {
                     r#type = TileType::NonSolid;
                 } else {
                     unsafe {
-                        tile.iID = g_tilesetmanager.classic_tileset_index() as i16;
+                        tile.iID = game().g_tilesetmanager.classic_tileset_index() as i16;
                         tile.iCol = (iTile as i32 % TILESETWIDTH) as i16;
                         tile.iRow = (iTile as i32 / TILESETWIDTH) as i16;
 
-                        r#type = g_tilesetmanager.classic_tileset().tile_type(tile.iCol as isize as usize, tile.iRow as isize as usize);
+                        r#type = game().g_tilesetmanager.classic_tileset().tile_type(tile.iCol as isize as usize, tile.iRow as isize as usize);
                     }
                 }
 

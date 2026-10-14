@@ -88,7 +88,7 @@ impl CObjectTrait for MO_IceBlast {
             self.ttl -= 1;
             if self.ttl <= 0 {
                 removeifprojectile(self.as_mo_ptr(), false, true);
-            } else if game_values.spotlights {
+            } else if game().game_values.spotlights {
                 let sx = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
                 let sy = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
                 if self.sSpotlight.is_null() {
@@ -104,9 +104,9 @@ impl CObjectTrait for MO_IceBlast {
 
     fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
         unsafe {
-            if self.iPlayerID != player.globalID && (game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID) {
+            if self.iPlayerID != player.globalID && (game().game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID) {
                 if !player.is_shielded() && !player.is_invincible() && !player.shyguy {
-                    player.makefrozen(game_values.wandfreezetime);
+                    player.makefrozen(game().game_values.wandfreezetime);
                     removeifprojectile(self.as_mo_ptr(), false, true);
                 }
             }

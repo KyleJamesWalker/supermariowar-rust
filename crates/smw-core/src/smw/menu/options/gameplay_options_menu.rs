@@ -41,8 +41,8 @@ impl UI_GameplayOptionsMenu {
     pub fn new() -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let spr_selectfield = Ptr::from_mut(&mut rm.spr_selectfield);
-            let menu_plain_field = Ptr::from_mut(&mut rm.menu_plain_field);
+            let spr_selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
+            let menu_plain_field = Ptr::from_mut(&mut game().rm.menu_plain_field);
 
             this.miRespawnField = select_field(spr_selectfield, 70, 40, "Respawn Time", 500, 220,
                 &[
@@ -68,7 +68,7 @@ impl UI_GameplayOptionsMenu {
                     ("9.5 Seconds", 19),
                     ("10.0 Seconds", 20),
                 ],
-                &mut game_values.respawn);
+                &mut game().game_values.respawn);
 
             this.miShieldStyleField = select_field(spr_selectfield, 70, 80, "Shield Style", 500, 220,
                 &[
@@ -77,7 +77,7 @@ impl UI_GameplayOptionsMenu {
                     ("Soft with Stomp", ShieldStyle::SoftWithStomp),
                     ("Hard", ShieldStyle::Hard),
                 ],
-                &mut game_values.shieldstyle);
+                &mut game().game_values.shieldstyle);
 
             this.miShieldTimeField = select_field(spr_selectfield, 70, 120, "Shield Time", 500, 220,
                 &[
@@ -92,7 +92,7 @@ impl UI_GameplayOptionsMenu {
                     ("4.5 Seconds", 279),
                     ("5.0 Seconds", 310),
                 ],
-                &mut game_values.shieldtime);
+                &mut game().game_values.shieldtime);
 
             this.miBoundsTimeField = select_field(spr_selectfield, 70, 160, "Bounds Time", 500, 220,
                 &[
@@ -108,7 +108,7 @@ impl UI_GameplayOptionsMenu {
                     ("9 Seconds", 9),
                     ("10 Seconds", 10),
                 ],
-                &mut game_values.outofboundstime);
+                &mut game().game_values.outofboundstime);
 
             this.miSuicideTimeField = select_field(spr_selectfield, 70, 200, "Suicide Time", 500, 220,
                 &[
@@ -120,7 +120,7 @@ impl UI_GameplayOptionsMenu {
                     ("15 Seconds", 930),
                     ("20 Seconds", 1240),
                 ],
-                &mut game_values.suicidetime);
+                &mut game().game_values.suicidetime);
 
             this.miWarpLockStyleField = select_field(spr_selectfield, 70, 240, "Warp Lock Style", 500, 220,
                 &[
@@ -130,7 +130,7 @@ impl UI_GameplayOptionsMenu {
                     ("Entire Connection", WarpLockStyle::EntireConnection),
                     ("All Warps", WarpLockStyle::AllWarps),
                 ],
-                &mut game_values.warplockstyle);
+                &mut game().game_values.warplockstyle);
 
             this.miWarpLockTimeField = select_field(spr_selectfield, 70, 280, "Warp Lock Time", 500, 220,
                 &[
@@ -146,17 +146,17 @@ impl UI_GameplayOptionsMenu {
                     ("9 Seconds", 558),
                     ("10 Seconds", 620),
                 ],
-                &mut game_values.warplocktime);
+                &mut game().game_values.warplocktime);
 
             this.miBotsField = select_field(spr_selectfield, 70, 320, "Bot Difficulty", 500, 220,
                 &[("Very Easy", 0), ("Easy", 1), ("Moderate", 2), ("Hard", 3), ("Very Hard", 4)],
-                &mut game_values.cpudifficulty);
+                &mut game().game_values.cpudifficulty);
 
             this.miPointSpeedField = select_field(spr_selectfield, 70, 360, "Point Speed", 500, 220,
                 &[("Very Slow", 60), ("Slow", 40), ("Moderate", 20), ("Fast", 10), ("Very Fast", 5)],
-                &mut game_values.pointspeed);
+                &mut game().game_values.pointspeed);
 
-            this.miSecretsField = select_field(spr_selectfield, 70, 400, "Secrets", 500, 220, OFF_ON, &mut game_values.secretsenabled);
+            this.miSecretsField = select_field(spr_selectfield, 70, 400, "Secrets", 500, 220, OFF_ON, &mut game().game_values.secretsenabled);
 
             this.miGameplayOptionsMenuBackButton = Ptr::new_box(MI_Button::new(spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
             this.miGameplayOptionsMenuBackButton.set_code(MENU_CODE_BACK_TO_OPTIONS_MENU);

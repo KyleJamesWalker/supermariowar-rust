@@ -24,7 +24,7 @@ fn main() {
         blitdest = screen;
         sfx_init();
 
-        rm = Ptr::new_box(CResourceManager::new());
+        game().rm = Ptr::new_box(CResourceManager::new());
         game().skinlist = Ptr::new_box(SkinList::new());
         game().soundpacklist = Ptr::new_box(SoundsList::new());
         game().menugraphicspacklist = Ptr::new_box(GraphicsList::new());
@@ -38,15 +38,15 @@ fn main() {
         let pack = game().gamegraphicspacklist.current_path().to_string_lossy().into_owned();
         assert!(gfx_loadpalette(Path::new(&convert_path_pack("gfx/packs/palette.png", &pack))));
 
-        rm.load_start_graphics();
-        rm.load_all_graphics();
-        let sound = rm.load_game_sounds();
+        game().rm.load_start_graphics();
+        game().rm.load_all_graphics();
+        let sound = game().rm.load_game_sounds();
 
         let mut skins = 0;
         for k in 0..game().skinlist.count() {
             for color in 0..4i16 {
-                let _ = rm.load_full_skin(k as i16, color);
-                assert!(rm.load_menu_skin(color, k as i16, color, true), "menu skin {}", k);
+                let _ = game().rm.load_full_skin(k as i16, color);
+                assert!(game().rm.load_menu_skin(color, k as i16, color, true), "menu skin {}", k);
             }
             skins += 1;
         }

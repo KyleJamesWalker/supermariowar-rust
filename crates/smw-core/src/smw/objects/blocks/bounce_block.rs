@@ -1,16 +1,16 @@
 //! Port of src/smw/objects/blocks/BounceBlock.cpp
 
-use crate::common::game_values::{game_values, if_sound_on_play};
+use crate::game::game;
+use crate::common::game_values::if_sound_on_play;
 use crate::common::gameplay_styles::TeamCollisionStyle;
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::global::g_map;
 use crate::common::global_constants::*;
 use crate::common::io_block::{IO_Block, IO_BlockTrait};
 use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::{cap_falling_velocity, CObjectTrait};
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
-use crate::globals::{rm, Ptr};
+use crate::globals::Ptr;
 use crate::impl_base;
 use crate::smw::objects::blocks::io_block::*;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
@@ -92,7 +92,7 @@ impl IO_BlockTrait for B_BounceBlock {
                 let mut iKillType = PlayerKillType::NonKill;
                 if self.iBumpPlayerID >= 0
                     && !player.is_invincible_on_bottom()
-                    && (player.teamID != self.iBumpTeamID || game_values.teamcollision == TeamCollisionStyle::On)
+                    && (player.teamID != self.iBumpTeamID || game().game_values.teamcollision == TeamCollisionStyle::On)
                 {
                     iKillType = player_killed_player(self.iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
                 }
@@ -126,7 +126,7 @@ impl IO_BlockTrait for B_BounceBlock {
             }
 
             unsafe {
-                g_map.update_tile_gap(self.col, self.row);
+                game().g_map.update_tile_gap(self.col, self.row);
             }
         }
 
@@ -161,7 +161,7 @@ impl IO_BlockTrait for B_BounceBlock {
             self.vely = -VELBLOCKBOUNCE;
             self.state = 1;
             unsafe {
-                if_sound_on_play(&mut rm.sfx_bump);
+                if_sound_on_play(&mut game().rm.sfx_bump);
             }
         }
     }

@@ -9,7 +9,6 @@ use crate::common::object_base::CObjectTrait;
 use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::objects::powerup::powerup::{mo_powerup_draw, mo_powerup_update, MO_Powerup, MO_PowerupTrait};
 use crate::smw::player::CPlayer;
@@ -50,7 +49,7 @@ impl PU_SecretPowerup {
         let collisionHeight = self.collisionHeight;
         let mut iAttempts: i16 = 10;
         unsafe {
-            while !g_map.findspawnpoint(5, &mut ix, &mut iy, collisionWidth, collisionHeight, false) && {
+            while !game().g_map.findspawnpoint(5, &mut ix, &mut iy, collisionWidth, collisionHeight, false) && {
                 let a = iAttempts;
                 iAttempts -= 1;
                 a > 0
@@ -88,7 +87,7 @@ impl CObjectTrait for PU_SecretPowerup {
 
         // Draw sparkles
         unsafe {
-            rm.spr_shinesparkle.draw_src(
+            game().rm.spr_shinesparkle.draw_src(
                 self.ix as i32 - self.collisionOffsetX as i32,
                 self.iy as i32 - self.collisionOffsetY as i32,
                 &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
@@ -99,23 +98,23 @@ impl CObjectTrait for PU_SecretPowerup {
     fn collide_player(&mut self, _player: Ptr<CPlayer>) -> bool {
         unsafe {
             if self.itemtype == 0 {
-                game_values.windaffectsplayers = true;
+                game().game_values.windaffectsplayers = true;
 
                 for _i in 0..15i16 {
                     let x = RANDOM_INT(App::screenWidth) as f32;
                     let y = RANDOM_INT(App::screenHeight) as f32;
                     let t = (RANDOM_INT(4) + 1) as i16;
-                    eyecandy[2].emplace(EC_Snow::new(Ptr::from_mut(&mut rm.spr_snow), x, y, t));
+                    game().eyecandy[2].emplace(EC_Snow::new(Ptr::from_mut(&mut game().rm.spr_snow), x, y, t));
                 }
             } else if self.itemtype == 1 {
-                game_values.spinscreen = true;
+                game().game_values.spinscreen = true;
             } else if self.itemtype == 2 {
-                game_values.reversewalk = true;
+                game().game_values.reversewalk = true;
             } else if self.itemtype == 3 {
-                game_values.spotlights = true;
+                game().game_values.spotlights = true;
             }
 
-            if_sound_on_play(&mut rm.sfx_pickup);
+            if_sound_on_play(&mut game().rm.sfx_pickup);
         }
 
         self.dead = true;

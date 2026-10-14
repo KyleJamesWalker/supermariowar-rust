@@ -10,7 +10,7 @@ use crate::common::object_base::CObjectTrait;
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::{eyecandy, spotlightManager};
+use crate::smw::gs_gameplay::{spotlightManager};
 use crate::smw::objectgame::{createpowerup, removeifprojectile};
 use crate::smw::objects::moving::mo_carried_object::{mo_carried_object_drop, mo_carried_object_kick, MO_CarriedObject, MO_CarriedObjectTrait};
 use crate::smw::objects::moving::moving_object::{io_moving_object_collision_detection_checksides, io_moving_object_collision_detection_map, IO_MovingObjectTrait};
@@ -90,14 +90,14 @@ impl CO_ThrowBox {
         }
 
         unsafe {
-            let spr = Ptr::from_mut(&mut rm.spr_brokeniceblock);
+            let spr = Ptr::from_mut(&mut game().rm.spr_brokeniceblock);
             let (ix, iy) = (self.ix as i32, self.iy as i32);
-            eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, iy as i16, -1.5, -7.0, 4, 2, 0, 0, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, iy as i16, 1.5, -7.0, 4, 2, 0, 0, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, (iy + 16) as i16, -1.5, -4.0, 4, 2, 0, 0, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, (iy + 16) as i16, 1.5, -4.0, 4, 2, 0, 0, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, iy as i16, -1.5, -7.0, 4, 2, 0, 0, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, iy as i16, 1.5, -7.0, 4, 2, 0, 0, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, (iy + 16) as i16, -1.5, -4.0, 4, 2, 0, 0, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, (iy + 16) as i16, 1.5, -4.0, 4, 2, 0, 0, 16, 16));
 
-            game_values.unlocksecret2part2 += 1;
+            game().game_values.unlocksecret2part2 += 1;
         }
 
         self.die_helper();
@@ -105,7 +105,7 @@ impl CO_ThrowBox {
 
     fn die_helper(&mut self) {
         self.dead = true;
-        unsafe { if_sound_on_play(&mut rm.sfx_breakblock) };
+        unsafe { if_sound_on_play(&mut game().rm.sfx_breakblock) };
 
         if !self.owner.is_null() {
             self.owner.carriedItem = Ptr::null();
@@ -154,7 +154,7 @@ impl CObjectTrait for CO_ThrowBox {
         //Kill player when another player is holding the box
         else
         {
-            if (owner && player != owner && (game_values.teamcollision == TeamCollisionStyle::On || player->teamID != owner->teamID))
+            if (owner && player != owner && (game().game_values.teamcollision == TeamCollisionStyle::On || player->teamID != owner->teamID))
             {
                     iPlayerID = owner->globalID;
                     iTeamID = owner->teamID;
@@ -204,8 +204,8 @@ impl CObjectTrait for CO_ThrowBox {
             self.frozentimer = 300;
 
             unsafe {
-                eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                game().eyecandy[2].emplace(EC_SingleAnimation::new(
+                    Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                     (self.ix as i32 - self.collisionOffsetX as i32) as i16,
                     (self.iy as i32 - self.collisionOffsetY as i32) as i16,
                     3,
@@ -225,8 +225,8 @@ impl CObjectTrait for CO_ThrowBox {
                 self.animationspeed = self.frozenanimationspeed;
 
                 unsafe {
-                    eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
+                        Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                         (self.ix as i32 - self.collisionOffsetX as i32) as i16,
                         (self.iy as i32 - self.collisionOffsetY as i32) as i16,
                         3,
@@ -250,7 +250,7 @@ impl CObjectTrait for CO_ThrowBox {
         self.animate();
 
         unsafe {
-            if game_values.spotlights && self.has_kill_velocity() {
+            if game().game_values.spotlights && self.has_kill_velocity() {
                 let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
                 let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
                 if self.sSpotlight.is_null() {
@@ -276,7 +276,7 @@ impl CObjectTrait for CO_ThrowBox {
         }
 
         if self.frozen {
-            unsafe { rm.spr_iceblock.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 }) };
+            unsafe { game().rm.spr_iceblock.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 }) };
         }
     }
 }
@@ -298,12 +298,12 @@ impl IO_MovingObjectTrait for CO_ThrowBox {
         }
 
         unsafe {
-            let spr = Ptr::from_mut(&mut rm.spr_brokenyellowblock);
+            let spr = Ptr::from_mut(&mut game().rm.spr_brokenyellowblock);
             let (ix, iy) = (self.ix as i32, self.iy as i32);
-            eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, iy as i16, -2.2, -10.0, 4, 2, 0, 0, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, iy as i16, 2.2, -10.0, 4, 2, 0, 0, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, (iy + 16) as i16, -2.2, -5.5, 4, 2, 0, 0, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, (iy + 16) as i16, 2.2, -5.5, 4, 2, 0, 0, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, iy as i16, -2.2, -10.0, 4, 2, 0, 0, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, iy as i16, 2.2, -10.0, 4, 2, 0, 0, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, (iy + 16) as i16, -2.2, -5.5, 4, 2, 0, 0, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, (iy + 16) as i16, 2.2, -5.5, 4, 2, 0, 0, 16, 16));
         }
 
         self.die_helper();

@@ -1,17 +1,16 @@
 //! Port of src/smw/objects/blocks/FlipBlock.cpp
 
+use crate::game::game;
 use crate::common::eyecandy::EC_FallingObject;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::global::g_map;
 use crate::common::global_constants::*;
 use crate::common::io_block::{IO_Block, IO_BlockTrait};
 use crate::common::math::vec2::Vec2s;
 use crate::common::moving_object_types::*;
 use crate::common::object_base::{cap_falling_velocity, CObjectTrait};
-use crate::globals::{rm, Ptr};
+use crate::globals::Ptr;
 use crate::impl_base;
-use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::objects::blocks::io_block::*;
 use crate::smw::objects::carriable::co_throw_box::CO_ThrowBox;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
@@ -62,14 +61,14 @@ impl B_FlipBlock {
 
     fn explode(&mut self) {
         unsafe {
-            let spr = Ptr::from_mut(&mut rm.spr_brokenflipblock);
+            let spr = Ptr::from_mut(&mut game().rm.spr_brokenflipblock);
             let (ix, iy) = (self.ix, self.iy);
-            eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy, -2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy, 2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy, -2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy, 2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
 
-            if_sound_on_play(&mut rm.sfx_breakblock);
+            if_sound_on_play(&mut game().rm.sfx_breakblock);
         }
     }
 
@@ -100,7 +99,7 @@ impl B_FlipBlock {
             }
 
             unsafe {
-                g_map.update_tile_gap(self.col, self.row);
+                game().g_map.update_tile_gap(self.col, self.row);
             }
 
             self.trigger_behavior();
@@ -149,7 +148,7 @@ impl CObjectTrait for B_FlipBlock {
             if self.timer >= 240 {
                 self.reset();
                 unsafe {
-                    g_map.update_tile_gap(self.col, self.row);
+                    game().g_map.update_tile_gap(self.col, self.row);
                 }
 
                 let iBumpPlayerID = self.iBumpPlayerID;
@@ -161,8 +160,8 @@ impl CObjectTrait for B_FlipBlock {
         } else if self.state == 3 {
             self.dead = true;
             unsafe {
-                g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
-                g_map.update_tile_gap(self.col, self.row);
+                game().g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
+                game().g_map.update_tile_gap(self.col, self.row);
             }
         }
     }
@@ -245,7 +244,7 @@ impl IO_BlockTrait for B_FlipBlock {
             }
 
             unsafe {
-                g_map.update_tile_gap(self.col, self.row);
+                game().g_map.update_tile_gap(self.col, self.row);
             }
 
             self.trigger_behavior();
@@ -336,7 +335,7 @@ impl IO_BlockTrait for B_FlipBlock {
             self.frame = self.iw;
 
             unsafe {
-                g_map.update_tile_gap(self.col, self.row);
+                game().g_map.update_tile_gap(self.col, self.row);
             }
         }
     }

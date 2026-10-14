@@ -6,8 +6,6 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::{self as gm, remove_players_but_team, setup_score_board, show_score_board};
-use crate::smw::gs_gameplay::objectcontainer;
-use crate::smw::main::score;
 use crate::smw::object_container::CObjectContainer;
 use crate::smw::objects::overmap::wo_race_goal::OMO_RaceGoal;
 use crate::smw::player::CPlayer;
@@ -15,7 +13,7 @@ use std::any::Any;
 
 fn remove_player_race_goals(container: &CObjectContainer, id: i16, iGoal: i16) {
     unsafe {
-        if game_values.gamemodesettings.race.penalty == 0 && iGoal != -1 {
+        if game().game_values.gamemodesettings.race.penalty == 0 && iGoal != -1 {
             return;
         }
 
@@ -26,7 +24,7 @@ fn remove_player_race_goals(container: &CObjectContainer, id: i16, iGoal: i16) {
                 continue;
             };
 
-            if iGoal == -1 || 2 == game_values.gamemodesettings.race.penalty || (1 == game_values.gamemodesettings.race.penalty && goal.get_goal_id() == iGoal) {
+            if iGoal == -1 || 2 == game().game_values.gamemodesettings.race.penalty || (1 == game().game_values.gamemodesettings.race.penalty && goal.get_goal_id() == iGoal) {
                 goal.reset(id);
             }
         }
@@ -67,25 +65,25 @@ impl CGM_Race {
             self.nextGoal[teamID as usize] += 1;
             if self.nextGoal[teamID as usize] >= self.quantity {
                 self.nextGoal[teamID as usize] = 0;
-                remove_player_race_goals(&objectcontainer[2], teamID, -1);
+                remove_player_race_goals(&game().objectcontainer[2], teamID, -1);
 
                 if !self.gameover {
-                    score[teamID as usize].adjust_score(1);
+                    game().score[teamID as usize].adjust_score(1);
 
                     //Don't end the game if the goal is infinite
                     if self.goal == -1 {
                         return;
                     }
 
-                    if score[teamID as usize].score >= self.goal {
-                        score[teamID as usize].set_score(self.goal);
+                    if game().score[teamID as usize].score >= self.goal {
+                        game().score[teamID as usize].set_score(self.goal);
                         self.winningteam = teamID;
                         self.gameover = true;
 
                         remove_players_but_team(self.winningteam);
                         setup_score_board(false);
                         show_score_board();
-                    } else if score[teamID as usize].score as i32 >= self.goal as i32 - 1 && !self.playedwarningsound {
+                    } else if game().score[teamID as usize].score as i32 >= self.goal as i32 - 1 && !self.playedwarningsound {
                         self.playwarningsound();
                     }
                 }
@@ -96,7 +94,7 @@ impl CGM_Race {
     //Player loses control of his areas
     pub fn penalize_race_goals(&mut self, player: Ptr<CPlayer>) {
         unsafe {
-            remove_player_race_goals(&objectcontainer[2], player.get_team_id(), (self.nextGoal[player.get_team_id() as usize] as i32 - 1) as i16);
+            remove_player_race_goals(&game().objectcontainer[2], player.get_team_id(), (self.nextGoal[player.get_team_id() as usize] as i32 - 1) as i16);
         }
 
         if 2 == self.penalty {
@@ -124,20 +122,20 @@ impl CGameModeTrait for CGM_Race {
         gm::cgamemode_init(self);
 
         unsafe {
-            self.quantity = game_values.gamemodesettings.race.quantity;
+            self.quantity = game().game_values.gamemodesettings.race.quantity;
             if self.quantity < 2 {
                 self.quantity = 2;
-                game_values.gamemodesettings.race.quantity = self.quantity;
+                game().game_values.gamemodesettings.race.quantity = self.quantity;
             }
 
-            self.penalty = game_values.gamemodesettings.race.penalty;
+            self.penalty = game().game_values.gamemodesettings.race.penalty;
             if self.penalty < 0 || self.penalty > 2 {
                 self.penalty = 0;
-                game_values.gamemodesettings.race.penalty = self.penalty;
+                game().game_values.gamemodesettings.race.penalty = self.penalty;
             }
 
             for iRaceGoal in 0..self.quantity {
-                objectcontainer[2].add(Ptr::new_box(OMO_RaceGoal::new(Ptr::from_mut(&mut rm.spr_racegoal), iRaceGoal)));
+                game().objectcontainer[2].add(Ptr::new_box(OMO_RaceGoal::new(Ptr::from_mut(&mut game().rm.spr_racegoal), iRaceGoal)));
             }
         }
 

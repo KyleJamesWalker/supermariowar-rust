@@ -64,7 +64,7 @@ impl MI_FrenzyModeOptions {
         };
 
         unsafe {
-            let spr_selectfield = Ptr::from_mut(&mut rm.spr_selectfield);
+            let spr_selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
 
             this.miQuantityField = Ptr::new_box(MI_SelectField::<i16>::new(spr_selectfield, 120, 40, "Limit", 400, 180));
             this.miQuantityField.add("Single Powerup", 0);
@@ -78,8 +78,8 @@ impl MI_FrenzyModeOptions {
             this.miQuantityField.add_random("# Players + 1", 8, false);
             this.miQuantityField.add_random("# Players + 2", 9, false);
             this.miQuantityField.add_random("# Players + 3", 10, false);
-            this.miQuantityField.set_output_ptr(&mut game_values.gamemodemenusettings.frenzy.quantity as *mut i16);
-            this.miQuantityField.set_current_value(game_values.gamemodemenusettings.frenzy.quantity);
+            this.miQuantityField.set_output_ptr(&mut game().game_values.gamemodemenusettings.frenzy.quantity as *mut i16);
+            this.miQuantityField.set_current_value(game().game_values.gamemodemenusettings.frenzy.quantity);
 
             this.miRateField = Ptr::new_box(MI_SelectField::<i16>::new(spr_selectfield, 120, 80, "Rate", 400, 180));
             this.miRateField.add("Instant", 0);
@@ -92,22 +92,22 @@ impl MI_FrenzyModeOptions {
             this.miRateField.add_random("20 Seconds", 1240, false);
             this.miRateField.add_random("25 Seconds", 1550, false);
             this.miRateField.add_random("30 Seconds", 1860, false);
-            this.miRateField.set_output_ptr(&mut game_values.gamemodemenusettings.frenzy.rate as *mut i16);
-            this.miRateField.set_current_value(game_values.gamemodemenusettings.frenzy.rate);
+            this.miRateField.set_output_ptr(&mut game().game_values.gamemodemenusettings.frenzy.rate as *mut i16);
+            this.miRateField.set_current_value(game().game_values.gamemodemenusettings.frenzy.rate);
 
             this.miStoredShellsField = Ptr::new_box(MI_SelectField::<bool>::new(spr_selectfield, 120, 120, "Store Shells", 400, 180));
             this.miStoredShellsField.add("Off", false);
             this.miStoredShellsField.add("On", true);
-            this.miStoredShellsField.set_output_ptr(&mut game_values.gamemodemenusettings.frenzy.storedshells as *mut bool);
-            this.miStoredShellsField.set_current_value(game_values.gamemodemenusettings.frenzy.storedshells);
+            this.miStoredShellsField.set_output_ptr(&mut game().game_values.gamemodemenusettings.frenzy.storedshells as *mut bool);
+            this.miStoredShellsField.set_current_value(game().game_values.gamemodemenusettings.frenzy.storedshells);
             this.miStoredShellsField.set_auto_advance(true);
 
             let iPowerupMap: [i16; NF] = [8, 5, 11, 17, 19, 21, 23, 24, 25, 20, 9, 16, 10, 22, 12, 13, 14, 15, 27];
             for iPowerup in 0..NF {
                 let mut slider = Ptr::new_box(MI_PowerupSlider::new(
                     spr_selectfield,
-                    Ptr::from_mut(&mut rm.menu_slider_bar),
-                    Ptr::from_mut(&mut rm.spr_storedpoweruplarge),
+                    Ptr::from_mut(&mut game().rm.menu_slider_bar),
+                    Ptr::from_mut(&mut game().rm.spr_storedpoweruplarge),
                     if iPowerup < 10 { 65 } else { 330 },
                     0,
                     245,
@@ -117,16 +117,16 @@ impl MI_FrenzyModeOptions {
                     slider.add("", v);
                 }
                 slider.allow_wrap(false);
-                slider.set_output_ptr(&mut game_values.gamemodemenusettings.frenzy.powerupweight[iPowerup] as *mut i16);
-                slider.set_current_value(game_values.gamemodemenusettings.frenzy.powerupweight[iPowerup]);
+                slider.set_output_ptr(&mut game().game_values.gamemodemenusettings.frenzy.powerupweight[iPowerup] as *mut i16);
+                slider.set_current_value(game().game_values.gamemodemenusettings.frenzy.powerupweight[iPowerup]);
                 this.miPowerupSlider[iPowerup] = slider;
             }
 
             this.miBackButton = Ptr::new_box(MI_Button::new(spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
             this.miBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
-            this.miUpArrow = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut rm.menu_verticalarrows), 310, 162, 20, 0, 20, 20, 1, 4, 8));
-            this.miDownArrow = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut rm.menu_verticalarrows), 310, 402, 0, 0, 20, 20, 1, 4, 8));
+            this.miUpArrow = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut game().rm.menu_verticalarrows), 310, 162, 20, 0, 20, 20, 1, 4, 8));
+            this.miDownArrow = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut game().rm.menu_verticalarrows), 310, 402, 0, 0, 20, 20, 1, 4, 8));
             this.miUpArrow.set_visible(false);
 
             let null: ControlPtr = Ptr::null();
@@ -214,12 +214,12 @@ impl MI_FrenzyModeOptions {
 
     pub fn set_random_game_mode_settings(&mut self) {
         unsafe {
-            game_values.gamemodesettings.frenzy.quantity = self.miQuantityField.random_value();
-            game_values.gamemodesettings.frenzy.rate = self.miRateField.random_value();
-            game_values.gamemodesettings.frenzy.storedshells = self.miStoredShellsField.random_value();
+            game().game_values.gamemodesettings.frenzy.quantity = self.miQuantityField.random_value();
+            game().game_values.gamemodesettings.frenzy.rate = self.miRateField.random_value();
+            game().game_values.gamemodesettings.frenzy.storedshells = self.miStoredShellsField.random_value();
 
             for iPowerup in 0..NF {
-                game_values.gamemodesettings.frenzy.powerupweight[iPowerup] = self.miPowerupSlider[iPowerup].random_value();
+                game().game_values.gamemodesettings.frenzy.powerupweight[iPowerup] = self.miPowerupSlider[iPowerup].random_value();
             }
         }
     }

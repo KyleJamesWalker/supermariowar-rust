@@ -44,9 +44,9 @@ impl PlayerWings {
         unsafe {
             if player.iswarping() {
                 let edge: ClipEdge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);
-                rm.spr_wings.draw_clip(x, y, &src, edge, player.get_warp_plane() as i32);
+                game().rm.spr_wings.draw_clip(x, y, &src, edge, player.get_warp_plane() as i32);
             } else {
-                rm.spr_wings.draw_src(x, y, &src);
+                game().rm.spr_wings.draw_src(x, y, &src);
             }
         }
     }

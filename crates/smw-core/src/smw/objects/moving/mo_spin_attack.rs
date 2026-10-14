@@ -127,13 +127,13 @@ impl CObjectTrait for MO_SpinAttack {
                 let mut bottomrightblock: Ptr<dyn IO_BlockTrait> = Ptr::null();
 
                 if iTop >= 0 && iTop < 15 {
-                    topleftblock = g_map.block(iLeft, iTop);
-                    toprightblock = g_map.block(iRight, iTop);
+                    topleftblock = game().g_map.block(iLeft, iTop);
+                    toprightblock = game().g_map.block(iRight, iTop);
                 }
 
                 if iBottom >= 0 && iBottom < 15 {
-                    bottomleftblock = g_map.block(iLeft, iBottom);
-                    bottomrightblock = g_map.block(iRight, iBottom);
+                    bottomleftblock = game().g_map.block(iLeft, iBottom);
+                    bottomrightblock = game().g_map.block(iRight, iBottom);
                 }
 
                 let mut fHitBlock = false;
@@ -178,7 +178,7 @@ impl CObjectTrait for MO_SpinAttack {
                         shell.shatter_die();
                     } else {
                         shell.flip();
-                        if_sound_on_play(&mut rm.sfx_kicksound);
+                        if_sound_on_play(&mut game().rm.sfx_kicksound);
                     }
 
                     self.die();
@@ -189,7 +189,7 @@ impl CObjectTrait for MO_SpinAttack {
                         block.shatter_die();
                     } else if block.owner.is_null() || block.owner.globalID != self.iPlayerID {
                         block.die();
-                        if_sound_on_play(&mut rm.sfx_kicksound);
+                        if_sound_on_play(&mut game().rm.sfx_kicksound);
                         self.die();
                     }
                 } else if r#type == movingobject_throwbox {
@@ -199,7 +199,7 @@ impl CObjectTrait for MO_SpinAttack {
                         r#box.shatter_die();
                     } else if r#box.owner.is_null() || r#box.owner.globalID != self.iPlayerID {
                         r#box.die();
-                        if_sound_on_play(&mut rm.sfx_kicksound);
+                        if_sound_on_play(&mut game().rm.sfx_kicksound);
                         self.die();
                     }
                 }

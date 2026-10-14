@@ -9,8 +9,6 @@ use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::{self as gm, remove_players_but_team, setup_score_board, show_score_board};
-use crate::smw::gs_gameplay::objectcontainer;
-use crate::smw::main::score_cnt;
 use crate::smw::objects::overmap::wo_pipe_bonus::OMO_PipeBonus;
 use crate::smw::objects::overmap::wo_pipe_coin::OMO_PipeCoin;
 use crate::smw::player::CPlayer;
@@ -57,9 +55,9 @@ impl CGM_Pipe_MiniGame {
 
         unsafe {
             if self.iBonusType == 3 {
-                if_sound_on_play(&mut rm.sfx_powerdown);
+                if_sound_on_play(&mut game().rm.sfx_powerdown);
             } else {
-                if_sound_on_play(&mut rm.sfx_collectpowerup);
+                if_sound_on_play(&mut game().rm.sfx_collectpowerup);
             }
         }
     }
@@ -115,31 +113,31 @@ impl CGameModeTrait for CGM_Pipe_MiniGame {
                     let iRandPowerup: i16 = RANDOM_INT(50) as i16;
                     if self.iBonusType == 0 && iRandPowerup < 5 {
                         //bonuses
-                        objectcontainer[1].add(Ptr::new_box(OMO_PipeBonus::new(Ptr::from_mut(&mut rm.spr_pipegamebonus), vel, pos, iRandPowerup, 620, 15)));
+                        game().objectcontainer[1].add(Ptr::new_box(OMO_PipeBonus::new(Ptr::from_mut(&mut game().rm.spr_pipegamebonus), vel, pos, iRandPowerup, 620, 15)));
                     } else if iRandPowerup < 10 {
                         //fireballs
-                        objectcontainer[1].add(Ptr::new_box(OMO_PipeBonus::new(Ptr::from_mut(&mut rm.spr_pipegamebonus), vel, pos, 5, 0, 15)));
+                        game().objectcontainer[1].add(Ptr::new_box(OMO_PipeBonus::new(Ptr::from_mut(&mut game().rm.spr_pipegamebonus), vel, pos, 5, 0, 15)));
                     } else {
                         //coins
                         let iRandCoin: i16 = RANDOM_INT(20) as i16;
-                        objectcontainer[1].add(Ptr::new_box(OMO_PipeCoin::new(Ptr::from_mut(&mut rm.spr_coin), vel, pos, -1, if iRandCoin < 16 { 2 } else if iRandCoin < 19 { 0 } else { 1 }, 15)));
+                        game().objectcontainer[1].add(Ptr::new_box(OMO_PipeCoin::new(Ptr::from_mut(&mut game().rm.spr_coin), vel, pos, -1, if iRandCoin < 16 { 2 } else if iRandCoin < 19 { 0 } else { 1 }, 15)));
                     }
                 } else if self.iBonusType == 1 {
                     self.iNextItemTimer = (RANDOM_INT(10) + 10) as i16;
 
-                    let mut iRandTeam: i16 = RANDOM_INT(score_cnt as i32 + 2) as i16;
+                    let mut iRandTeam: i16 = RANDOM_INT(game().score_cnt as i32 + 2) as i16;
 
                     //Give an advantage to the team that got the item
-                    if iRandTeam >= score_cnt {
+                    if iRandTeam >= game().score_cnt {
                         iRandTeam = self.iBonusTeam;
                     }
 
-                    let iRandPlayer: i16 = game_values.teamids[iRandTeam as usize][RANDOM_INT(game_values.teamcounts[iRandTeam as usize] as i32) as usize];
+                    let iRandPlayer: i16 = game().game_values.teamids[iRandTeam as usize][RANDOM_INT(game().game_values.teamcounts[iRandTeam as usize] as i32) as usize];
 
-                    objectcontainer[1].add(Ptr::new_box(OMO_PipeCoin::new(Ptr::from_mut(&mut rm.spr_coin), vel, pos, iRandTeam, game_values.colorids[iRandPlayer as usize], 15)));
+                    game().objectcontainer[1].add(Ptr::new_box(OMO_PipeCoin::new(Ptr::from_mut(&mut game().rm.spr_coin), vel, pos, iRandTeam, game().game_values.colorids[iRandPlayer as usize], 15)));
                 } else if self.iBonusType == 3 {
                     self.iNextItemTimer = (RANDOM_INT(5) + 10) as i16;
-                    objectcontainer[1].add(Ptr::new_box(OMO_PipeCoin::new(Ptr::from_mut(&mut rm.spr_coin), vel, pos, -1, 0, 15)));
+                    game().objectcontainer[1].add(Ptr::new_box(OMO_PipeCoin::new(Ptr::from_mut(&mut game().rm.spr_coin), vel, pos, -1, 0, 15)));
                 }
             }
         }

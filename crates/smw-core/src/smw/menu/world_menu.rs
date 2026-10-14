@@ -28,7 +28,7 @@ impl UI_WorldMenu {
     pub fn new() -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let spr_selectfield = Ptr::from_mut(&mut rm.spr_selectfield);
+            let spr_selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
 
             this.miWorld = Ptr::new_box(MI_World::new());
             this.miWorld.set_auto_modify(true);
@@ -37,7 +37,7 @@ impl UI_WorldMenu {
             this.miWorldStop.set_visible(false);
 
             // Exit tour dialog box
-            this.miWorldExitDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
+            this.miWorldExitDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut game().rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
             this.miWorldExitDialogExitTourText = Ptr::new_box(MI_HeaderText::new("Exit World", 320, 205));
 
             this.miWorldExitDialogYesButton = Ptr::new_box(MI_Button::new(spr_selectfield, 235, 250, "Yes", 80, TextAlign::CENTER));
@@ -76,7 +76,7 @@ impl UI_WorldMenu {
 
     pub fn open_stage_start(&mut self) {
         unsafe {
-            self.miWorldStop.refresh(game_values.tourstopcurrent as i16);
+            self.miWorldStop.refresh(game().game_values.tourstopcurrent as i16);
         }
         self.miWorldStop.set_visible(true);
 

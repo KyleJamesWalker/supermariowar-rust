@@ -1,12 +1,13 @@
 //! Port of src/smw/objects/blocks/ViewBlock.cpp
 
+use crate::game::game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::*;
 use crate::common::io_block::IO_BlockTrait;
 use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::CObjectTrait;
 use crate::common::random_number_generator::RANDOM_INT;
-use crate::globals::{rm, Ptr};
+use crate::globals::Ptr;
 use crate::impl_base;
 use crate::smw::objects::blocks::powerup_block::*;
 use sdl2::sys::SDL_Rect;
@@ -78,7 +79,7 @@ impl CObjectTrait for B_ViewBlock {
         //Draw powerup behind block
         if self.state == 0 && !self.fNoPowerupsSelected {
             unsafe {
-                rm.spr_storedpoweruplarge.draw_src(
+                game().rm.spr_storedpoweruplarge.draw_src(
                     self.ix as i32,
                     self.iy as i32,
                     &SDL_Rect { x: self.powerupindex as i32 * 32, y: 0, w: 32, h: 32 },

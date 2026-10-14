@@ -9,7 +9,7 @@ use crate::common::moving_object_types::*;
 use crate::common::object_base::{object_moving, CObjectTrait};
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::{eyecandy, objectcontainer};
+
 use crate::smw::objects::moving::moving_object::{
     io_moving_object_collision_detection_checksides, io_moving_object_draw, io_moving_object_update, IO_MovingObject, IO_MovingObjectTrait,
 };
@@ -83,8 +83,8 @@ impl MO_Coin {
         let mut y: i16 = 0;
         let mut iAttempts: i16 = 32;
         unsafe {
-            while (!g_map.findspawnpoint(5, &mut x, &mut y, self.collisionWidth, self.collisionHeight, false)
-                || objectcontainer[1].get_closest_moving_object(x, y, movingobject_coin) < 150.0f32)
+            while (!game().g_map.findspawnpoint(5, &mut x, &mut y, self.collisionWidth, self.collisionHeight, false)
+                || game().objectcontainer[1].get_closest_moving_object(x, y, movingobject_coin) < 150.0f32)
                 && {
                     let a = iAttempts;
                     iAttempts -= 1;
@@ -106,23 +106,23 @@ impl CObjectTrait for MO_Coin {
 
     fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
         unsafe {
-            if self.iUncollectableTime > 0 || (self.iType == 1 && (!game_values.gamemodesettings.greed.owncoins && self.iTeam == player.get_team_id())) {
+            if self.iUncollectableTime > 0 || (self.iType == 1 && (!game().game_values.gamemodesettings.greed.owncoins && self.iTeam == player.get_team_id())) {
                 return false;
             }
 
-            if !game_values.gamemode.gameover {
+            if !game().game_values.gamemode.gameover {
                 if self.iType == 2 {
                     player.score().subscore[0] += 1;
                 } else {
                     player.score().adjust_score(1);
                 }
 
-                game_values.gamemode.check_winner(player);
+                game().game_values.gamemode.check_winner(player);
             }
 
-            eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut rm.spr_coinsparkle), self.ix, self.iy, 7, 4));
+            game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_coinsparkle), self.ix, self.iy, 7, 4));
 
-            if_sound_on_play(&mut rm.sfx_coin);
+            if_sound_on_play(&mut game().rm.sfx_coin);
         }
 
         if self.iType == 0 {
@@ -160,8 +160,8 @@ impl CObjectTrait for MO_Coin {
             self.iUncollectableTime -= 1;
 
             unsafe {
-                if self.iType == 1 && (self.iUncollectableTime as i32) < -(game_values.gamemodesettings.greed.coinlife as i32) {
-                    eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
+                if self.iType == 1 && (self.iUncollectableTime as i32) < -(game().game_values.gamemodesettings.greed.coinlife as i32) {
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
                     self.dead = true;
                 }
             }
@@ -174,7 +174,7 @@ impl CObjectTrait for MO_Coin {
         // Draw sparkles
         if self.iType != 1 {
             unsafe {
-                rm.spr_shinesparkle.draw_src(
+                game().rm.spr_shinesparkle.draw_src(
                     self.ix as i32 - self.collisionOffsetX as i32,
                     self.iy as i32 - self.collisionOffsetY as i32,
                     &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },

@@ -1,7 +1,7 @@
 //! Port of src/smw/objects/blocks/DonutBlock.cpp
 
+use crate::game::game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::global::g_map;
 use crate::common::global_constants::TILESETNONE;
 use crate::common::io_block::{IO_Block, IO_BlockTrait};
 use crate::common::map::TilesetTile;
@@ -42,11 +42,11 @@ impl B_DonutBlock {
             let spr = self.spr;
             platform.paint_sprite_at(&*spr, 0, 0);
 
-            g_map.add_temporary_platform(platform);
+            game().g_map.add_temporary_platform(platform);
 
             self.dead = true;
-            g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
-            g_map.update_tile_gap(self.col, self.row);
+            game().g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
+            game().g_map.update_tile_gap(self.col, self.row);
         }
     }
 }

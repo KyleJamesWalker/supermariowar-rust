@@ -4,7 +4,6 @@ use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::ClipEdge;
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::objects::moving::mo_spin_attack::MO_SpinAttack;
 use crate::smw::player::CPlayer;
 use sdl2::sys::SDL_Rect;
@@ -39,8 +38,8 @@ impl PlayerTail {
 
     pub fn shake(&mut self, player: &mut CPlayer) {
         unsafe {
-            rm.sfx_tailspin.stop();
-            if_sound_on_play(&mut rm.sfx_tailspin);
+            game().rm.sfx_tailspin.stop();
+            if_sound_on_play(&mut game().rm.sfx_tailspin);
         }
         player.lockjump = true;
 
@@ -51,7 +50,7 @@ impl PlayerTail {
 
     pub fn spin(&mut self, player: &mut CPlayer) {
         unsafe {
-            if_sound_on_play(&mut rm.sfx_tailspin);
+            if_sound_on_play(&mut game().rm.sfx_tailspin);
         }
 
         self.iTailState = TAIL_SPIN_AND_SHAKE; //cause tail to shake
@@ -62,7 +61,7 @@ impl PlayerTail {
         player.spin.spin(pp.get());
 
         unsafe {
-            objectcontainer[1].add(Ptr::new_box(MO_SpinAttack::new(
+            game().objectcontainer[1].add(Ptr::new_box(MO_SpinAttack::new(
                 player.get_global_id(),
                 player.get_team_id(),
                 KillStyle::Leaf,
@@ -93,7 +92,7 @@ impl PlayerTail {
                     if self.iTailFrame < 66 {
                         self.iTailState = TAIL_NOT_IN_USE;
 
-                        if player.powerup == 7 && game_values.leaflimit > 0 {
+                        if player.powerup == 7 && game().game_values.leaflimit > 0 {
                             player.decrease_projectile_limit();
                         }
                     }
@@ -108,7 +107,7 @@ impl PlayerTail {
                         self.iTailState = TAIL_NOT_IN_USE;
                         self.iTailFrame = 66;
 
-                        if player.powerup == 7 && game_values.leaflimit > 0 {
+                        if player.powerup == 7 && game().game_values.leaflimit > 0 {
                             player.decrease_projectile_limit();
                         }
                     }
@@ -140,10 +139,10 @@ impl PlayerTail {
                     }
                 }
 
-                let mut fPlayerFacingRight = !game_values.reversewalk;
+                let mut fPlayerFacingRight = !game().game_values.reversewalk;
                 if self.iTailState == TAIL_SPIN_AND_SHAKE {
                     if player.spin.is_reverse_walking() {
-                        fPlayerFacingRight = game_values.reversewalk;
+                        fPlayerFacingRight = game().game_values.reversewalk;
                     }
                 } else {
                     fPlayerFacingRight = player.is_facing_right();
@@ -159,9 +158,9 @@ impl PlayerTail {
                 };
                 if player.iswarping() {
                     let edge: ClipEdge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);
-                    rm.spr_tail.draw_clip(x, y, &src, edge, player.get_warp_plane() as i32);
+                    game().rm.spr_tail.draw_clip(x, y, &src, edge, player.get_warp_plane() as i32);
                 } else {
-                    rm.spr_tail.draw_src(x, y, &src);
+                    game().rm.spr_tail.draw_src(x, y, &src);
                 }
             }
         }

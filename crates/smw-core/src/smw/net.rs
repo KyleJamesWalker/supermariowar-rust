@@ -3,7 +3,7 @@
 use crate::game::game;
 use crate::common::game_mode::{GameModeType, *};
 use crate::common::game_mode_settings::GAMEMODESETTINGS_RAW_SIZE;
-use crate::common::global::{game_values, rm};
+
 use crate::common::global_constants::WAITTIME;
 use crate::common::input::{COutputControl, CPlayerInput};
 use crate::common::path::get_home_directory;
@@ -13,7 +13,7 @@ use crate::common_netplay::protocol_definitions::*;
 use crate::common_netplay::protocol_packages::{self as pkgs, cstr_field, MessageHeader};
 use crate::globals::{Aliased, Global, Ptr};
 use crate::smw::checkpoint::{local_path, portable_path, Field, Snap};
-use crate::smw::main::{currentgamemode, gamemodes, players};
+
 use crate::smw::network::file_compressor::FileCompressor;
 use crate::smw::network::net_config_manager::NetConfigManager;
 use crate::smw::network::net_record::{self, PeerInfo, ReplayPeer, Side};
@@ -31,16 +31,13 @@ pub type NetworkHandler = crate::smw::platform::network::enet::network_layer_ene
 #[cfg(all(not(feature = "no_network"), target_os = "emscripten"))]
 pub type NetworkHandler = crate::smw::platform::network::websocket::network_layer_websocket::NetworkLayerWebSocket;
 
-pub static mut networkHandler: Global<NetworkHandler> = Global::uninit();
-pub static mut netplay: Global<Networking> = Global::uninit();
 
-static mut backup_playercontrol: [i16; 4] = [0; 4];
 
 /// Constructs the statics C++ builds before `main`.
 pub fn init_globals() {
     unsafe {
-        networkHandler.init(NetworkHandler::default());
-        netplay.init(Networking::new());
+        game().networkHandler.init(NetworkHandler::default());
+        game().netplay.init(Networking::new());
     }
 }
 
@@ -134,9 +131,9 @@ impl GameModeSettingsUnion {
             return;
         };
         unsafe {
-            let mut raw: [u8; GAMEMODESETTINGS_RAW_SIZE] = game_values.gamemodesettings.to_raw_bytes();
+            let mut raw: [u8; GAMEMODESETTINGS_RAW_SIZE] = game().game_values.gamemodesettings.to_raw_bytes();
             raw[off..off + size].copy_from_slice(&self.bytes[..size]);
-            game_values.gamemodesettings.from_raw_bytes(&raw);
+            game().game_values.gamemodesettings.from_raw_bytes(&raw);
         }
     }
 
@@ -145,7 +142,7 @@ impl GameModeSettingsUnion {
             return;
         };
         unsafe {
-            let raw = game_values.gamemodesettings.to_raw_bytes();
+            let raw = game().game_values.gamemodesettings.to_raw_bytes();
             self.bytes[..size].copy_from_slice(&raw[off..off + size]);
         }
     }
@@ -154,7 +151,7 @@ impl GameModeSettingsUnion {
 /// Not in the C++, which indexes `players` by ID: a client that already removed players at the end of its game
 /// would read past the vector.
 fn net_player(id: u8) -> Ptr<crate::smw::player::CPlayer> {
-    unsafe { players.iter().copied().find(|p| p.globalID as u8 == id).unwrap_or(Ptr::null()) }
+    unsafe { game().players.iter().copied().find(|p| p.globalID as u8 == id).unwrap_or(Ptr::null()) }
 }
 
 fn ticks() -> u32 {
@@ -163,27 +160,27 @@ fn ticks() -> u32 {
 
 pub fn net_init() -> bool {
     unsafe {
-        netplay.active = false;
-        netplay.connectSuccessful = false;
-        netplay.joinSuccessful = false;
-        netplay.gameRunning = false;
+        game().netplay.active = false;
+        game().netplay.connectSuccessful = false;
+        game().netplay.joinSuccessful = false;
+        game().netplay.gameRunning = false;
 
-        netplay.myPlayerName = "Player".to_string();
-        netplay.currentMenuChanged = false;
-        netplay.theHostIsMe = false;
-        netplay.selectedRoomIndex = 0;
-        netplay.selectedServerIndex = 0;
-        netplay.roomFilter.clear();
-        netplay.newroom_name.clear();
-        netplay.newroom_password.clear();
-        netplay.mychatmessage.clear();
-        netplay.allowMapCollisionEvent = false;
+        game().netplay.myPlayerName = "Player".to_string();
+        game().netplay.currentMenuChanged = false;
+        game().netplay.theHostIsMe = false;
+        game().netplay.selectedRoomIndex = 0;
+        game().netplay.selectedServerIndex = 0;
+        game().netplay.roomFilter.clear();
+        game().netplay.newroom_name.clear();
+        game().netplay.newroom_password.clear();
+        game().netplay.mychatmessage.clear();
+        game().netplay.allowMapCollisionEvent = false;
 
-        if !networkHandler.deref_handler().init() {
+        if !game().networkHandler.deref_handler().init() {
             return false;
         }
 
-        if !netplay.client.init() {
+        if !game().netplay.client.init() {
             return false;
         }
 
@@ -199,9 +196,9 @@ pub fn net_close() {
 
     net_end_session();
     unsafe {
-        netplay.client.cleanup();
+        game().netplay.client.cleanup();
 
-        networkHandler.deref_handler().cleanup();
+        game().networkHandler.deref_handler().cleanup();
     }
 }
 
@@ -221,8 +218,8 @@ pub fn net_load_server_list() {
     // Recorded on every build, so a native replay of a browser recording lists the same servers.
     if let Some(url) = net_record::value_opt("relay", relay_url) {
         unsafe {
-            netplay.savedServers.retain(|s| s.hostname != url);
-            netplay.savedServers.insert(0, ServerAddress { hostname: url });
+            game().netplay.savedServers.retain(|s| s.hostname != url);
+            game().netplay.savedServers.insert(0, ServerAddress { hostname: url });
         }
     }
 }
@@ -236,39 +233,39 @@ pub fn net_start_session() -> bool {
 
     unsafe {
         println!("[net] Session start.");
-        netplay.active = true;
-        netplay.connectSuccessful = false;
-        netplay.gamestate_changed = false;
-        netplay.frames_since_last_gamestate = 0;
-        netplay.player_disconnected = [false; 4];
+        game().netplay.active = true;
+        game().netplay.connectSuccessful = false;
+        game().netplay.gamestate_changed = false;
+        game().netplay.frames_since_last_gamestate = 0;
+        game().netplay.player_disconnected = [false; 4];
 
         let nullinput = COutputControl::default();
         for p in 0..4 {
-            backup_playercontrol[p] = game_values.playercontrol[p];
+            game().backup_playercontrol[p] = game().game_values.playercontrol[p];
 
-            netplay.latest_playerdata.player_input[p].clear();
-            netplay.latest_playerdata.player_input[p].push_back(nullinput);
+            game().netplay.latest_playerdata.player_input[p].clear();
+            game().netplay.latest_playerdata.player_input[p].push_back(nullinput);
 
-            netplay.local_input_buffer.clear();
-            netplay.remote_input_buffer[p].clear();
+            game().netplay.local_input_buffer.clear();
+            game().netplay.remote_input_buffer[p].clear();
         }
 
-        netplay.client.start()
+        game().netplay.client.start()
     }
 }
 
 pub fn net_end_session() {
     unsafe {
-        if netplay.active {
+        if game().netplay.active {
             println!("[net] Session end.");
 
-            netplay.client.stop();
+            game().netplay.client.stop();
 
-            netplay.active = false;
-            netplay.connectSuccessful = false;
+            game().netplay.active = false;
+            game().netplay.connectSuccessful = false;
 
             for p in 0..4 {
-                game_values.playercontrol[p] = backup_playercontrol[p];
+                game().game_values.playercontrol[p] = game().backup_playercontrol[p];
             }
         }
     }
@@ -292,26 +289,26 @@ const PREVIEW_MS: u32 = 2500;
 /// Not in the C++: the match settings every client shows while it waits to start (`waiting_to_start`).
 pub fn draw_match_preview() {
     unsafe {
-        rm.menu_backdrop.draw(0, 0);
-        rm.menu_dialog.draw_src(144, 100, &sdl2::sys::SDL_Rect { x: 0, y: 0, w: 336, h: 264 });
-        rm.menu_dialog.draw_src(480, 100, &sdl2::sys::SDL_Rect { x: 496, y: 0, w: 16, h: 264 });
-        rm.menu_dialog.draw_src(144, 364, &sdl2::sys::SDL_Rect { x: 0, y: 464, w: 336, h: 16 });
-        rm.menu_dialog.draw_src(480, 364, &sdl2::sys::SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+        game().rm.menu_backdrop.draw(0, 0);
+        game().rm.menu_dialog.draw_src(144, 100, &sdl2::sys::SDL_Rect { x: 0, y: 0, w: 336, h: 264 });
+        game().rm.menu_dialog.draw_src(480, 100, &sdl2::sys::SDL_Rect { x: 496, y: 0, w: 16, h: 264 });
+        game().rm.menu_dialog.draw_src(144, 364, &sdl2::sys::SDL_Rect { x: 0, y: 464, w: 336, h: 16 });
+        game().rm.menu_dialog.draw_src(480, 364, &sdl2::sys::SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
 
-        let gm = game_values.gamemode;
+        let gm = game().game_values.gamemode;
         let mut lines = vec![gm.szModeName.clone()];
         if !gm.szGoalName.is_empty() {
             lines.push(if gm.goal < 0 { format!("{}: Unlimited", gm.szGoalName) } else { format!("{}: {}", gm.szGoalName, gm.goal) });
         }
         lines.extend(crate::smw::gs_menu::describe_net_game_mode_settings());
-        if !netplay.match_map_name.is_empty() {
-            lines.push(format!("Map: {}", netplay.match_map_name));
+        if !game().netplay.match_map_name.is_empty() {
+            lines.push(format!("Map: {}", game().netplay.match_map_name));
         }
-        rm.menu_font_large.draw_centered(320, 116, "Match Settings");
+        game().rm.menu_font_large.draw_centered(320, 116, "Match Settings");
         for (i, line) in lines.iter().enumerate() {
-            rm.menu_font_large.draw_chop_centered(320, 160 + 30 * i as i32, 320, line);
+            game().rm.menu_font_large.draw_chop_centered(320, 160 + 30 * i as i32, 320, line);
         }
-        rm.menu_font_small.draw_centered(320, 340, if netplay.match_randomized { "Randomized by the host" } else { "Chosen by the host" });
+        game().rm.menu_font_small.draw_centered(320, 340, if game().netplay.match_randomized { "Randomized by the host" } else { "Chosen by the host" });
     }
 }
 
@@ -319,36 +316,36 @@ pub fn draw_match_preview() {
 /// plays gameplay frame 1 before every client has loaded the match (`NET_P2G_LOADED`, then the host's `NET_G2P_GO`).
 pub fn waiting_to_start() -> bool {
     unsafe {
-        if !netplay.active || !netplay.start_waiting {
+        if !game().netplay.active || !game().netplay.start_waiting {
             return false;
         }
         let now = ticks();
-        if netplay.start_waited_since == 0 {
-            netplay.start_waited_since = now.max(1);
-            if !netplay.theHostIsMe {
-                let peer = netplay.client.foreign_gamehost;
-                netplay.client.send_to(peer, MessageHeader::new(NET_P2G_LOADED).as_bytes(), false);
+        if game().netplay.start_waited_since == 0 {
+            game().netplay.start_waited_since = now.max(1);
+            if !game().netplay.theHostIsMe {
+                let peer = game().netplay.client.foreign_gamehost;
+                game().netplay.client.send_to(peer, MessageHeader::new(NET_P2G_LOADED).as_bytes(), false);
             }
         }
-        netplay.client.update();
-        if netplay.theHostIsMe && netplay.start_waiting {
-            netplay.client.local_gamehost.start_if_everyone_loaded();
+        game().netplay.client.update();
+        if game().netplay.theHostIsMe && game().netplay.start_waiting {
+            game().netplay.client.local_gamehost.start_if_everyone_loaded();
         }
-        let limit = if netplay.theHostIsMe { START_TIMEOUT_MS } else { 2 * START_TIMEOUT_MS };
-        if netplay.start_waiting && now.wrapping_sub(netplay.start_waited_since) > limit {
+        let limit = if game().netplay.theHostIsMe { START_TIMEOUT_MS } else { 2 * START_TIMEOUT_MS };
+        if game().netplay.start_waiting && now.wrapping_sub(game().netplay.start_waited_since) > limit {
             println!("[net] Not every client loaded the match in time; starting anyway.");
-            if netplay.theHostIsMe {
-                netplay.client.local_gamehost.send_go_message();
+            if game().netplay.theHostIsMe {
+                game().netplay.client.local_gamehost.send_go_message();
             }
-            netplay.start_waiting = false;
+            game().netplay.start_waiting = false;
         }
-        netplay.start_waiting
+        game().netplay.start_waiting
     }
 }
 
 /// Not in the C++: every client draws in step from the start of the match, whatever its menus drew since the sync.
 pub fn reseed_for_match() {
-    RandomNumberGenerator::generator().reseed(unsafe { netplay.common_random_seed });
+    RandomNumberGenerator::generator().reseed(unsafe { game().netplay.common_random_seed });
 }
 
 /// `NET_NOTICE_GAMEMODESETTINGS` with the current game mode's settings.
@@ -359,7 +356,7 @@ fn game_mode_settings_package() -> Vec<u8> {
     blob[..3].copy_from_slice(header.as_bytes());
 
     let mut modesettings = GameModeSettingsUnion::new();
-    modesettings.read_global(unsafe { currentgamemode } as GameModeType);
+    modesettings.read_global(unsafe { game().currentgamemode } as GameModeType);
     blob[3..].copy_from_slice(&modesettings.bytes);
     blob
 }
@@ -410,18 +407,18 @@ impl NetClient {
     }
 
     pub fn start(&mut self) -> bool {
-        net_record::value_bool("client_restart", || unsafe { networkHandler.deref_handler().client_restart() })
+        net_record::value_bool("client_restart", || unsafe { game().networkHandler.deref_handler().client_restart() })
     }
 
     pub fn update(&mut self) {
         self.local_gamehost.update();
-        net_record::listen(Side::Client, self, |handler| unsafe { networkHandler.deref_handler().client_listen(handler) });
+        net_record::listen(Side::Client, self, |handler| unsafe { game().networkHandler.deref_handler().client_listen(handler) });
     }
 
     pub fn stop(&mut self) {
         self.local_gamehost.stop();
 
-        if unsafe { netplay.connectSuccessful } {
+        if unsafe { game().netplay.connectSuccessful } {
             self.send_goodbye();
         }
 
@@ -435,7 +432,7 @@ impl NetClient {
         }
 
         if !net_record::replaying() {
-            unsafe { networkHandler.deref_handler().client_shutdown() };
+            unsafe { game().networkHandler.deref_handler().client_shutdown() };
         }
     }
 
@@ -452,12 +449,12 @@ impl NetClient {
     ****************************/
 
     pub fn send_connect_request_to_selected_server(&mut self) -> bool {
-        let hostname = unsafe { netplay.savedServers[netplay.selectedServerIndex as usize].hostname.clone() };
+        let hostname = unsafe { game().netplay.savedServers[game().netplay.selectedServerIndex as usize].hostname.clone() };
         if !self.connect_lobby(&hostname, NET_LOBBYSERVER_PORT) {
             return false;
         }
 
-        unsafe { netplay.operationInProgress = true };
+        unsafe { game().netplay.operationInProgress = true };
         true
     }
 
@@ -490,7 +487,7 @@ impl NetClient {
         let msg = pkgs::RoomList::new();
         self.send_message_to_lobby_server(msg.as_bytes());
 
-        unsafe { netplay.currentRooms.clear() };
+        unsafe { game().netplay.currentRooms.clear() };
         if !self.uiRoomList.is_null() {
             self.uiRoomList.clear();
         }
@@ -502,7 +499,7 @@ impl NetClient {
         let newRoom = RoomListEntry { roomID: roomInfo.roomID, name: cstr_field(&roomInfo.name), playerCount: roomInfo.currentPlayerCount };
         println!("  Incoming room entry: [{}] {} ({}/4)", newRoom.roomID, newRoom.name, newRoom.playerCount);
         let name = newRoom.name.clone();
-        unsafe { netplay.currentRooms.push(newRoom) };
+        unsafe { game().netplay.currentRooms.push(newRoom) };
 
         if !self.uiRoomList.is_null() {
             let playerCountString: String =
@@ -513,13 +510,13 @@ impl NetClient {
 
     pub fn send_create_room_message(&mut self) {
         unsafe {
-            let mut msg = pkgs::NewRoom::with(&netplay.newroom_name, &netplay.newroom_password);
-            msg.gamemodeID = currentgamemode as u8;
-            game_values.gamemode = gamemodes[currentgamemode as usize];
-            msg.gamemodeGoal = game_values.gamemode.goal as u16;
+            let mut msg = pkgs::NewRoom::with(&game().netplay.newroom_name, &game().netplay.newroom_password);
+            msg.gamemodeID = game().currentgamemode as u8;
+            game().game_values.gamemode = game().gamemodes[game().currentgamemode as usize];
+            msg.gamemodeGoal = game().game_values.gamemode.goal as u16;
 
             self.send_message_to_lobby_server(msg.as_bytes());
-            netplay.operationInProgress = true;
+            game().netplay.operationInProgress = true;
         }
     }
 
@@ -528,22 +525,22 @@ impl NetClient {
         let pkg = pkgs::NewRoomCreated::from_bytes(data);
 
         unsafe {
-            netplay.currentRoom.roomID = pkg.roomID;
-            netplay.currentRoom.hostPlayerNumber = 0;
-            netplay.currentRoom.name = netplay.newroom_name.clone();
-            netplay.currentRoom.playerNames[0] = netplay.myPlayerName.clone();
-            netplay.currentRoom.playerNames[1] = "(empty)".to_string();
-            netplay.currentRoom.playerNames[2] = "(empty)".to_string();
-            netplay.currentRoom.playerNames[3] = "(empty)".to_string();
+            game().netplay.currentRoom.roomID = pkg.roomID;
+            game().netplay.currentRoom.hostPlayerNumber = 0;
+            game().netplay.currentRoom.name = game().netplay.newroom_name.clone();
+            game().netplay.currentRoom.playerNames[0] = game().netplay.myPlayerName.clone();
+            game().netplay.currentRoom.playerNames[1] = "(empty)".to_string();
+            game().netplay.currentRoom.playerNames[2] = "(empty)".to_string();
+            game().netplay.currentRoom.playerNames[3] = "(empty)".to_string();
 
-            netplay.currentMenuChanged = true;
-            netplay.joinSuccessful = true;
-            netplay.theHostIsMe = true;
+            game().netplay.currentMenuChanged = true;
+            game().netplay.joinSuccessful = true;
+            game().netplay.theHostIsMe = true;
 
-            game_values.playercontrol[0] = 1;
-            game_values.playercontrol[1] = 0;
-            game_values.playercontrol[2] = 0;
-            game_values.playercontrol[3] = 0;
+            game().game_values.playercontrol[0] = 1;
+            game().game_values.playercontrol[1] = 0;
+            game().game_values.playercontrol[2] = 0;
+            game().game_values.playercontrol[3] = 0;
         }
 
         self.send_map_change_message();
@@ -555,19 +552,19 @@ impl NetClient {
 
     pub fn send_join_room_message(&mut self) {
         unsafe {
-            let entry = netplay.currentRooms[netplay.selectedRoomIndex as usize].clone();
+            let entry = game().netplay.currentRooms[game().netplay.selectedRoomIndex as usize].clone();
             println!(
                 "currentRooms[{}] = {{id={}, name='{}', cnt={}}}, össz: {}",
-                netplay.selectedRoomIndex,
+                game().netplay.selectedRoomIndex,
                 entry.roomID,
                 entry.name,
                 entry.playerCount,
-                netplay.currentRooms.len()
+                game().netplay.currentRooms.len()
             );
 
             let msg = pkgs::JoinRoom::with(entry.roomID, "");
             self.send_message_to_lobby_server(msg.as_bytes());
-            netplay.operationInProgress = true;
+            game().netplay.operationInProgress = true;
         }
     }
 
@@ -582,13 +579,13 @@ impl NetClient {
         let pkg = pkgs::CurrentRoom::from_bytes(data);
 
         unsafe {
-            netplay.currentRoom.roomID = pkg.roomID;
-            netplay.currentRoom.name = cstr_field(&pkg.name);
+            game().netplay.currentRoom.roomID = pkg.roomID;
+            game().netplay.currentRoom.name = cstr_field(&pkg.name);
 
             println!("Room {} ({}) changed:", pkg.roomID, cstr_field(&pkg.name));
             for p in 0..4u8 {
-                netplay.currentRoom.playerNames[p as usize] = cstr_field(&pkg.playerName[p as usize]);
-                print!("  player {}: {}", p + 1, netplay.currentRoom.playerNames[p as usize]);
+                game().netplay.currentRoom.playerNames[p as usize] = cstr_field(&pkg.playerName[p as usize]);
+                print!("  player {}: {}", p + 1, game().netplay.currentRoom.playerNames[p as usize]);
                 if p == pkg.remotePlayerNumber {
                     print!(" (me)");
                 }
@@ -597,44 +594,44 @@ impl NetClient {
                 }
                 println!();
 
-                if netplay.currentRoom.playerNames[p as usize] == "(empty)" {
-                    game_values.playercontrol[p as usize] = 0;
+                if game().netplay.currentRoom.playerNames[p as usize] == "(empty)" {
+                    game().game_values.playercontrol[p as usize] = 0;
                 } else {
-                    game_values.playercontrol[p as usize] = 1;
+                    game().game_values.playercontrol[p as usize] = 1;
                 }
             }
 
-            currentgamemode = pkg.gamemodeID as i16;
-            game_values.gamemode = gamemodes[currentgamemode as usize];
-            game_values.gamemode.goal = pkg.gamemodeGoal as i16;
+            game().currentgamemode = pkg.gamemodeID as i16;
+            game().game_values.gamemode = game().gamemodes[game().currentgamemode as usize];
+            game().game_values.gamemode.goal = pkg.gamemodeGoal as i16;
 
-            let gm = gamemodes[currentgamemode as usize];
-            println!("  Game mode #{}: {} with {}: {}", currentgamemode, gm.get_mode_name(), gm.get_goal_name(), game_values.gamemode.goal);
+            let gm = game().gamemodes[game().currentgamemode as usize];
+            println!("  Game mode #{}: {} with {}: {}", game().currentgamemode, gm.get_mode_name(), gm.get_goal_name(), game().game_values.gamemode.goal);
 
-            netplay.theHostIsMe = false;
-            netplay.currentRoom.hostPlayerNumber = pkg.hostPlayerNumber;
-            netplay.remotePlayerNumber = pkg.remotePlayerNumber;
-            netplay.hostPlayerNumber = pkg.hostPlayerNumber;
-            if netplay.remotePlayerNumber == pkg.hostPlayerNumber {
-                netplay.theHostIsMe = true;
+            game().netplay.theHostIsMe = false;
+            game().netplay.currentRoom.hostPlayerNumber = pkg.hostPlayerNumber;
+            game().netplay.remotePlayerNumber = pkg.remotePlayerNumber;
+            game().netplay.hostPlayerNumber = pkg.hostPlayerNumber;
+            if game().netplay.remotePlayerNumber == pkg.hostPlayerNumber {
+                game().netplay.theHostIsMe = true;
                 let lobby = self.foreign_lobbyserver;
                 self.local_gamehost.start(lobby);
             } else {
                 self.local_gamehost.stop();
             }
 
-            netplay.currentMenuChanged = true;
+            game().netplay.currentMenuChanged = true;
         }
     }
 
     pub fn send_chat_message(&mut self, message: &str) {
         debug_assert!(!message.is_empty());
-        let pkg = pkgs::RoomChatMsg::with(unsafe { netplay.remotePlayerNumber }, message);
+        let pkg = pkgs::RoomChatMsg::with(unsafe { game().netplay.remotePlayerNumber }, message);
         self.send_message_to_lobby_server(pkg.as_bytes());
     }
 
     pub fn send_map_change_message(&mut self) {
-        let mapfilepath = unsafe { netplay.mapfilepath.clone() };
+        let mapfilepath = unsafe { game().netplay.mapfilepath.clone() };
         println!("[net] Sending map: {}", mapfilepath);
 
         let mut compressed = FileCompressor::compress(&mapfilepath, std::mem::size_of::<MessageHeader>());
@@ -663,8 +660,8 @@ impl NetClient {
         println!("[net] Map arrived (C:{} unC:{})", compressed_size, full_size);
 
         unsafe {
-            netplay.mapfilepath = get_home_directory() + "net_last.map";
-            let path = netplay.mapfilepath.clone();
+            game().netplay.mapfilepath = get_home_directory() + "net_last.map";
+            let path = game().netplay.mapfilepath.clone();
             if !FileCompressor::decompress(&data[3..], &path) {
                 return;
             }
@@ -684,7 +681,7 @@ impl NetClient {
 
         let mut modesettings = GameModeSettingsUnion::new();
         modesettings.bytes.copy_from_slice(&data[3..]);
-        modesettings.set_global(unsafe { currentgamemode } as GameModeType);
+        modesettings.set_global(unsafe { game().currentgamemode } as GameModeType);
 
         println!("[net] Game mode settings changed");
     }
@@ -693,12 +690,12 @@ impl NetClient {
         let pkg = pkgs::RoomChatMsg::from_bytes(data);
 
         unsafe {
-            println!("Not implemented: [net] {}: {}", netplay.currentRoom.playerNames[pkg.senderNum as usize], cstr_field(&pkg.message));
+            println!("Not implemented: [net] {}: {}", game().netplay.currentRoom.playerNames[pkg.senderNum as usize], cstr_field(&pkg.message));
         }
     }
 
     pub fn send_skin_change(&mut self) {
-        let skinpath = unsafe { game().skinlist.at(game_values.skinids[netplay.remotePlayerNumber as usize] as usize).path.to_string_lossy().into_owned() };
+        let skinpath = unsafe { game().skinlist.at(game().game_values.skinids[game().netplay.remotePlayerNumber as usize] as usize).path.to_string_lossy().into_owned() };
         println!("[net] Sending skin: {}", skinpath);
 
         let mut compressed = FileCompressor::compress(&skinpath, std::mem::size_of::<MessageHeader>() + 1);
@@ -739,9 +736,9 @@ impl NetClient {
         }
 
         unsafe {
-            if !rm.load_menu_skin_path(playerID as i16, Path::new(&path), playerID as i16, false) {
+            if !game().rm.load_menu_skin_path(playerID as i16, Path::new(&path), playerID as i16, false) {
                 println!("[warning] Could not load netplay skin of player {}, using default", playerID);
-                rm.load_menu_skin(playerID as i16, game_values.skinids[playerID as usize], playerID as i16, false);
+                game().rm.load_menu_skin(playerID as i16, game().game_values.skinids[playerID as usize], playerID as i16, false);
             }
         }
     }
@@ -765,7 +762,7 @@ impl NetClient {
             return;
         }
 
-        unsafe { netplay.operationInProgress = true };
+        unsafe { game().netplay.operationInProgress = true };
     }
 
     fn handle_expected_clients_message(&mut self, client: &dyn NetPeer, data: &[u8]) {
@@ -799,21 +796,21 @@ impl NetClient {
         println!("reseed: {}", pkg.commonRandomSeed as i32);
         RandomNumberGenerator::generator().reseed(pkg.commonRandomSeed);
         unsafe {
-            netplay.common_random_seed = pkg.commonRandomSeed;
-            netplay.start_waiting = true;
-            netplay.start_waited_since = 0;
-            netplay.gamestate_received = false;
+            game().netplay.common_random_seed = pkg.commonRandomSeed;
+            game().netplay.start_waiting = true;
+            game().netplay.start_waited_since = 0;
+            game().netplay.gamestate_received = false;
         }
         crate::smw::net_random::begin_setup();
 
         unsafe {
-            netplay.player_disconnected = [false; 4];
-            netplay.last_confirmed_input = 0xFF;
-            netplay.current_input_counter = 0;
-            netplay.local_playerdata_store_count = netplay.local_playerdata_store_count.wrapping_add(1);
-            netplay.local_playerdata_store_time = [netplay.local_playerdata_store_count; 256];
+            game().netplay.player_disconnected = [false; 4];
+            game().netplay.last_confirmed_input = 0xFF;
+            game().netplay.current_input_counter = 0;
+            game().netplay.local_playerdata_store_count = game().netplay.local_playerdata_store_count.wrapping_add(1);
+            game().netplay.local_playerdata_store_time = [game().netplay.local_playerdata_store_count; 256];
 
-            if netplay.theHostIsMe {
+            if game().netplay.theHostIsMe {
                 self.set_as_last_sent_message(NET_P2G_SYNC_OK);
             } else {
                 let respond_pkg = gpkgs::SyncOK::new();
@@ -824,7 +821,7 @@ impl NetClient {
 
     pub fn handle_game_start_message(&mut self) {
         println!("[net] Game start!");
-        unsafe { netplay.gameRunning = true };
+        unsafe { game().netplay.gameRunning = true };
     }
 
     /****************************
@@ -834,7 +831,7 @@ impl NetClient {
     pub fn send_leave_game_message(&mut self) {
         let pkg = gpkgs::LeaveGame::new();
         unsafe {
-            if netplay.theHostIsMe {
+            if game().netplay.theHostIsMe {
                 self.local_gamehost.send_message_to_my_peers(pkg.as_bytes());
                 self.local_gamehost.update();
                 self.local_gamehost.stop();
@@ -844,26 +841,26 @@ impl NetClient {
                 self.send_message_to_game_host_reliable(pkg.as_bytes());
             }
 
-            netplay.gameRunning = false;
+            game().netplay.gameRunning = false;
         }
     }
 
     pub fn store_local_input(&mut self) {
         unsafe {
-            if netplay.theHostIsMe {
-                let c = game_values.playerInput.outputControls[0];
-                netplay.local_input_buffer.push_back(c);
+            if game().netplay.theHostIsMe {
+                let c = game().game_values.playerInput.outputControls[0];
+                game().netplay.local_input_buffer.push_back(c);
             }
         }
     }
 
     pub fn send_local_input(&mut self) {
         unsafe {
-            if netplay.theHostIsMe {
+            if game().netplay.theHostIsMe {
                 self.local_gamehost.send_local_input();
             } else {
-                let mut pkg = gpkgs::ClientInput::new(&game_values.playerInput.outputControls[0]);
-                pkg.input_id = netplay.current_input_counter;
+                let mut pkg = gpkgs::ClientInput::new(&game().game_values.playerInput.outputControls[0]);
+                pkg.input_id = game().netplay.current_input_counter;
                 self.send_message_to_game_host(pkg.as_bytes());
             }
         }
@@ -888,7 +885,7 @@ impl NetClient {
             }
 
             let mut missed_frames: u32 = pkg.delay;
-            if !netplay.theHostIsMe {
+            if !game().netplay.theHostIsMe {
                 missed_frames = missed_frames.wrapping_add(net_record::value_u32("rtt", || self.foreign_gamehost.average_rtt()) / 2);
             }
             missed_frames /= WAITTIME as u32;
@@ -896,7 +893,7 @@ impl NetClient {
             player.powerupused = Some(PowerupType::from_u8(pkg.powerup_id));
             player.powerupradius = 100.0;
             while missed_frames > 0 {
-                player.powerupradius -= game_values.storedpowerupdelay as f32 / 2.0;
+                player.powerupradius -= game().game_values.storedpowerupdelay as f32 / 2.0;
                 missed_frames -= 1;
             }
 
@@ -927,9 +924,9 @@ impl NetClient {
             player.velx = pkg.player_xvel;
             player.vely = pkg.player_yvel;
 
-            netplay.allowMapCollisionEvent = true;
+            game().netplay.allowMapCollisionEvent = true;
             player.collision_detection_map();
-            netplay.allowMapCollisionEvent = false;
+            game().netplay.allowMapCollisionEvent = false;
 
             if player.isdead() {
                 return;
@@ -976,28 +973,28 @@ impl NetClient {
         let pkg = gpkgs::RemoteInput::from_bytes(data);
         let mut keys = COutputControl::default();
         pkg.read_keys(&mut keys);
-        unsafe { netplay.remote_input_buffer[pkg.playerNumber as usize].push_back((0, keys)) };
+        unsafe { game().netplay.remote_input_buffer[pkg.playerNumber as usize].push_back((0, keys)) };
     }
 
     pub fn handle_remote_game_state(&mut self, data: &[u8]) {
         let pkg = gpkgs::GameState::from_bytes(data);
 
         unsafe {
-            netplay.previous_playerdata = netplay.latest_playerdata.clone();
+            game().netplay.previous_playerdata = game().netplay.latest_playerdata.clone();
 
-            for p in 0..players.len() as u8 {
-                let d = &mut netplay.latest_playerdata.player[p as usize];
+            for p in 0..game().players.len() as u8 {
+                let d = &mut game().netplay.latest_playerdata.player[p as usize];
                 pkg.get_player_coord(p, &mut d.x, &mut d.y);
                 pkg.get_player_vel(p, &mut d.xvel, &mut d.yvel);
             }
 
-            if !netplay.gamestate_received {
-                netplay.previous_playerdata = netplay.latest_playerdata.clone();
+            if !game().netplay.gamestate_received {
+                game().netplay.previous_playerdata = game().netplay.latest_playerdata.clone();
             }
-            netplay.gamestate_changed = true;
-            netplay.gamestate_received = true;
-            netplay.frames_since_last_gamestate = 0;
-            netplay.last_confirmed_input = pkg.last_confirmed_local_input_id as u16;
+            game().netplay.gamestate_changed = true;
+            game().netplay.gamestate_received = true;
+            game().netplay.frames_since_last_gamestate = 0;
+            game().netplay.last_confirmed_input = pkg.last_confirmed_local_input_id as u16;
         }
     }
 
@@ -1007,15 +1004,15 @@ impl NetClient {
 
     fn connect_lobby(&mut self, hostname: &str, port: u16) -> bool {
         unsafe {
-            netplay.connectSuccessful = false;
-            net_record::value_bool("connect_lobby", || networkHandler.deref_handler().connect_to_lobby_server(hostname, port))
+            game().netplay.connectSuccessful = false;
+            net_record::value_bool("connect_lobby", || game().networkHandler.deref_handler().connect_to_lobby_server(hostname, port))
         }
     }
 
     fn connect_game_host(&mut self, hostname: &str, port: u16) -> bool {
         unsafe {
-            netplay.connectSuccessful = false;
-            net_record::value_bool("connect_game_host", || networkHandler.deref_handler().connect_to_foreign_game_host(hostname, port))
+            game().netplay.connectSuccessful = false;
+            net_record::value_bool("connect_game_host", || game().networkHandler.deref_handler().connect_to_foreign_game_host(hostname, port))
         }
     }
 
@@ -1066,7 +1063,7 @@ impl NetworkEventHandler for NetClient {
         if self.foreign_lobbyserver.is_null() {
             self.foreign_lobbyserver = newPeer;
 
-            let message = pkgs::ClientConnection::with(unsafe { &netplay.myPlayerName });
+            let message = pkgs::ClientConnection::with(unsafe { &game().netplay.myPlayerName });
             self.send_message_to_lobby_server(message.as_bytes());
         } else if self.foreign_gamehost.is_null() {
             self.foreign_gamehost = newPeer;
@@ -1078,7 +1075,7 @@ impl NetworkEventHandler for NetClient {
     fn on_disconnect(&mut self, client: &mut dyn NetPeer) {
         if !self.foreign_gamehost.is_null() && client.same_peer(&*self.foreign_gamehost) {
             println!("[net] Disconnected from game host.");
-            unsafe { netplay.player_disconnected[netplay.remotePlayerNumber as usize] = true };
+            unsafe { game().netplay.player_disconnected[game().netplay.remotePlayerNumber as usize] = true };
             return;
         }
 
@@ -1114,24 +1111,24 @@ impl NetworkEventHandler for NetClient {
                 NET_RESPONSE_CONNECT_OK => {
                     // Not in the C++: the Servers menu moves on only if the skin goes out no earlier than this receive.
                     self.set_as_last_received_message(packageType);
-                    netplay.connectSuccessful = true;
+                    game().netplay.connectSuccessful = true;
                     self.send_skin_change();
                     return;
                 }
 
                 NET_RESPONSE_CONNECT_DENIED => {
                     println!("Not implemented: NET_RESPONSE_CONNECT_DENIED");
-                    netplay.connectSuccessful = false;
+                    game().netplay.connectSuccessful = false;
                 }
 
                 NET_RESPONSE_CONNECT_SERVERFULL => {
                     println!("Not implemented: NET_RESPONSE_CONNECT_SERVERFULL");
-                    netplay.connectSuccessful = false;
+                    game().netplay.connectSuccessful = false;
                 }
 
                 NET_RESPONSE_CONNECT_NAMETAKEN => {
                     println!("Not implemented: NET_RESPONSE_CONNECT_NAMETAKEN");
-                    netplay.connectSuccessful = false;
+                    game().netplay.connectSuccessful = false;
                 }
 
                 NET_RESPONSE_ROOM_LIST_ENTRY => self.handle_new_room_list_entry(data),
@@ -1140,13 +1137,13 @@ impl NetworkEventHandler for NetClient {
 
                 NET_RESPONSE_JOIN_OK => {
                     println!("Not implemented: [net] Joined to room.");
-                    netplay.joinSuccessful = true;
-                    netplay.theHostIsMe = false;
+                    game().netplay.joinSuccessful = true;
+                    game().netplay.theHostIsMe = false;
                 }
 
                 NET_RESPONSE_ROOM_FULL => {
                     println!("Not implemented: [net] The room is full");
-                    netplay.joinSuccessful = false;
+                    game().netplay.joinSuccessful = false;
                 }
 
                 NET_NOTICE_ROOM_CHANGE => self.handle_room_changed_message(data),
@@ -1182,11 +1179,11 @@ impl NetworkEventHandler for NetClient {
                 NET_G2P_TRIGGER_P2PCOLL => self.handle_p2p_collision(data),
 
 
-                NET_G2P_GO => netplay.start_waiting = false,
+                NET_G2P_GO => game().netplay.start_waiting = false,
 
                 NET_G2P_MATCH_MAP if data.len() > 3 => {
-                    netplay.match_randomized = data[3] != 0;
-                    netplay.match_map_name = String::from_utf8_lossy(&data[4..]).into_owned();
+                    game().netplay.match_randomized = data[3] != 0;
+                    game().netplay.match_map_name = String::from_utf8_lossy(&data[4..]).into_owned();
                 }
 
                 NET_G2P_RANDOM_EVENT => crate::smw::net_random::receive(data),
@@ -1288,7 +1285,7 @@ impl NetGameHost {
 
         self.foreign_lobbyserver = lobbyserver;
 
-        if !net_record::value_bool("gamehost_restart", || unsafe { networkHandler.deref_handler().gamehost_restart() }) {
+        if !net_record::value_bool("gamehost_restart", || unsafe { game().networkHandler.deref_handler().gamehost_restart() }) {
             return false;
         }
 
@@ -1299,7 +1296,7 @@ impl NetGameHost {
 
     pub fn update(&mut self) {
         if self.active {
-            net_record::listen(Side::Host, self, |handler| unsafe { networkHandler.deref_handler().gamehost_listen(handler) });
+            net_record::listen(Side::Host, self, |handler| unsafe { game().networkHandler.deref_handler().gamehost_listen(handler) });
         }
     }
 
@@ -1321,7 +1318,7 @@ impl NetGameHost {
         }
 
         if !net_record::replaying() {
-            unsafe { networkHandler.deref_handler().gamehost_shutdown() };
+            unsafe { game().networkHandler.deref_handler().gamehost_shutdown() };
         }
         self.active = false;
         println!("[net] GameHost stopped.");
@@ -1341,20 +1338,20 @@ impl NetGameHost {
         println!("[net] Prepare launching the game...");
 
         RandomNumberGenerator::generator().reseed(net_record::value_u32("time", || crate::smw::harness::net_seed().unwrap_or(unsafe { libc_time() } as u32)));
-        if unsafe { netplay.randomize_settings } {
+        if unsafe { game().netplay.randomize_settings } {
             crate::smw::gs_menu::roll_net_game_mode_settings();
         } else {
             crate::smw::gs_gameplay::set_game_mode_settings_from_menu();
         }
         let settings = game_mode_settings_package();
         let map_name = unsafe {
-            let path = netplay.mapfilepath.clone();
-            netplay.match_map_name = Path::new(&path).file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
-            netplay.match_map_name.clone()
+            let path = game().netplay.mapfilepath.clone();
+            game().netplay.match_map_name = Path::new(&path).file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+            game().netplay.match_map_name.clone()
         };
-        unsafe { netplay.match_randomized = netplay.randomize_settings };
+        unsafe { game().netplay.match_randomized = game().netplay.randomize_settings };
         let mut map_pkg = MessageHeader::new(NET_G2P_MATCH_MAP).as_bytes().to_vec();
-        map_pkg.push(unsafe { netplay.randomize_settings } as u8);
+        map_pkg.push(unsafe { game().netplay.randomize_settings } as u8);
         map_pkg.extend_from_slice(map_name.as_bytes());
         let pkg = pkgs::StartSync::new(RANDOM_INT(32767) as u32);
         for c in 0..3 {
@@ -1365,8 +1362,8 @@ impl NetGameHost {
         self.send_message_to_my_peers(pkg.as_bytes());
 
         unsafe {
-            netplay.client.handle_start_sync_message(pkg.as_bytes());
-            netplay.client.set_as_last_received_message(pkg.header.packageType);
+            game().netplay.client.handle_start_sync_message(pkg.as_bytes());
+            game().netplay.client.set_as_last_received_message(pkg.header.packageType);
         }
     }
 
@@ -1400,7 +1397,7 @@ impl NetGameHost {
         for c in 0..self.expected_client_count as usize {
             let (h, p) = (self.expected_clients[c].host, self.expected_clients[c].port);
             if !net_record::replaying() {
-                unsafe { networkHandler.deref_handler().nat_punch(h, p) };
+                unsafe { game().networkHandler.deref_handler().nat_punch(h, p) };
             }
         }
     }
@@ -1409,8 +1406,8 @@ impl NetGameHost {
     fn start_if_everyone_loaded(&mut self) {
         unsafe {
             let everyone = (0..self.expected_client_count as usize)
-                .all(|c| self.expected_clients[c].loaded || self.clients[c].is_null() || netplay.player_disconnected[c + 1]);
-            if everyone && ticks().wrapping_sub(netplay.start_waited_since) >= PREVIEW_MS {
+                .all(|c| self.expected_clients[c].loaded || self.clients[c].is_null() || game().netplay.player_disconnected[c + 1]);
+            if everyone && ticks().wrapping_sub(game().netplay.start_waited_since) >= PREVIEW_MS {
                 self.send_go_message();
             }
         }
@@ -1418,7 +1415,7 @@ impl NetGameHost {
 
     fn send_go_message(&mut self) {
         self.send_message_to_my_peers(MessageHeader::new(NET_G2P_GO).as_bytes());
-        unsafe { netplay.start_waiting = false };
+        unsafe { game().netplay.start_waiting = false };
     }
 
     fn send_start_game_message(&mut self) {
@@ -1427,21 +1424,21 @@ impl NetGameHost {
         self.send_message_to_my_peers(pkg.as_bytes());
 
         unsafe {
-            netplay.client.handle_game_start_message();
-            netplay.client.set_as_last_received_message(pkg.header.packageType);
+            game().netplay.client.handle_game_start_message();
+            game().netplay.client.set_as_last_received_message(pkg.header.packageType);
         }
     }
 
     pub fn send_local_input(&mut self) {
         unsafe {
-            if netplay.local_input_buffer.is_empty() {
+            if game().netplay.local_input_buffer.is_empty() {
                 return;
             }
 
             let mut pkg = gpkgs::RemoteInput::new(0);
-            let front = *netplay.local_input_buffer.front().unwrap();
+            let front = *game().netplay.local_input_buffer.front().unwrap();
             pkg.write_keys(&front);
-            netplay.local_input_buffer.pop_front();
+            game().netplay.local_input_buffer.pop_front();
 
             for c in 0..3 {
                 if !self.clients[c].is_null() {
@@ -1449,8 +1446,8 @@ impl NetGameHost {
                 }
             }
 
-            netplay.client.handle_remote_input(pkg.as_bytes());
-            netplay.client.set_as_last_received_message(pkg.header.packageType);
+            game().netplay.client.handle_remote_input(pkg.as_bytes());
+            game().netplay.client.set_as_last_received_message(pkg.header.packageType);
         }
     }
 
@@ -1466,8 +1463,8 @@ impl NetGameHost {
         let mut pkg = gpkgs::GameState::new();
 
         unsafe {
-            for p in 0..players.len() as u8 {
-                let pl = players[p as usize];
+            for p in 0..game().players.len() as u8 {
+                let pl = game().players[p as usize];
                 pkg.set_player_coord(p, pl.fx, pl.fy);
                 pkg.set_player_vel(p, pl.velx, pl.vely);
             }
@@ -1479,15 +1476,16 @@ impl NetGameHost {
                 }
             }
 
-            netplay.client.handle_remote_game_state(pkg.as_bytes());
-            netplay.client.set_as_last_received_message(pkg.header.packageType);
+            game().netplay.client.handle_remote_game_state(pkg.as_bytes());
+            game().netplay.client.set_as_last_received_message(pkg.header.packageType);
         }
     }
 
     pub fn confirm_current_inputs(&mut self) {
         unsafe {
+            let g = game();
             for c in 0..self.expected_client_count as usize {
-                let Some(front) = netplay.remote_input_buffer[c + 1].front() else {
+                let Some(front) = g.netplay.remote_input_buffer[c + 1].front() else {
                     continue;
                 };
 
@@ -1507,7 +1505,7 @@ impl NetGameHost {
             if player.same_peer(&*self.clients[c]) {
                 let mut keys = COutputControl::default();
                 pkg.read_keys(&mut keys);
-                unsafe { netplay.remote_input_buffer[c + 1].push_back((pkg.input_id, keys)) };
+                unsafe { game().netplay.remote_input_buffer[c + 1].push_back((pkg.input_id, keys)) };
 
                 let pkg_out = gpkgs::RemoteInput::with_input((c + 1) as u8, pkg.input);
                 for c_out in 0..self.expected_client_count as usize {
@@ -1523,8 +1521,8 @@ impl NetGameHost {
 
     pub fn send_powerup_start_by_gh(&mut self) {
         unsafe {
-            let me = players[netplay.remotePlayerNumber as usize];
-            let pkg = gpkgs::StartPowerup::new(netplay.remotePlayerNumber, me.powerupused.unwrap() as u8, 0);
+            let me = game().players[game().netplay.remotePlayerNumber as usize];
+            let pkg = gpkgs::StartPowerup::new(game().netplay.remotePlayerNumber, me.powerupused.unwrap() as u8, 0);
             self.send_message_to_my_peers(pkg.as_bytes());
 
             let mut me = me;
@@ -1551,12 +1549,12 @@ impl NetGameHost {
                 return;
             }
 
-            let powerupused: i32 = game_values.gamepowerups[playerID as usize] as i32;
+            let powerupused: i32 = game().game_values.gamepowerups[playerID as usize] as i32;
             if powerupused <= 0 {
                 return;
             }
 
-            game_values.gamepowerups[playerID as usize] = -1;
+            game().game_values.gamepowerups[playerID as usize] = -1;
 
             let pkg = gpkgs::StartPowerup::new(playerID, powerupused as u8, net_record::value_u32("rtt", || player.average_rtt()) / 2);
             for c in 0..self.expected_client_count as usize {
@@ -1564,8 +1562,8 @@ impl NetGameHost {
                     self.clients[c].send_reliable(pkg.as_bytes());
                 }
             }
-            netplay.client.handle_powerup_start(pkg.as_bytes());
-            netplay.client.set_as_last_received_message(pkg.header.packageType);
+            game().netplay.client.handle_powerup_start(pkg.as_bytes());
+            game().netplay.client.set_as_last_received_message(pkg.header.packageType);
         }
     }
 
@@ -1650,7 +1648,7 @@ impl NetworkEventHandler for NetGameHost {
         println!("[net] Client {} disconnected", player.address_as_string());
         for c in 0..self.expected_client_count as usize {
             if !self.clients[c].is_null() && self.clients[c].same_peer(player) {
-                unsafe { netplay.player_disconnected[c + 1] = true };
+                unsafe { game().netplay.player_disconnected[c + 1] = true };
                 return;
             }
         }
@@ -1938,7 +1936,7 @@ fn peer_io(s: &mut Snap, peer: &mut Ptr<dyn NetPeer>) {
 /// The skin a net game's remote player plays with, as `MenuState::start_game` loaded it.
 pub fn net_skin_path(player: usize) -> Option<String> {
     unsafe {
-        if !netplay.active || player == netplay.remotePlayerNumber as usize {
+        if !game().netplay.active || player == game().netplay.remotePlayerNumber as usize {
             return None;
         }
     }
@@ -1953,11 +1951,11 @@ pub fn checkpoint(s: &mut Snap) {
         let mut files: Vec<(String, Vec<u8>)> = Vec::new();
         if !s.loading() {
             let mut names = Vec::new();
-            if netplay.mapfilepath == home.clone() + "net_last.map" {
+            if game().netplay.mapfilepath == home.clone() + "net_last.map" {
                 names.push("net_last.map".to_string());
             }
             for k in 0..4 {
-                if game_values.playercontrol[k] > 0 && k != netplay.remotePlayerNumber as usize {
+                if game().game_values.playercontrol[k] > 0 && k != game().netplay.remotePlayerNumber as usize {
                     names.push(format!("net_skin{}.bmp", k));
                 }
             }
@@ -1972,7 +1970,7 @@ pub fn checkpoint(s: &mut Snap) {
             }
         }
 
-        let n = &mut *netplay;
+        let n = &mut *game().netplay;
         s.io(&mut n.active);
         s.io(&mut n.connectSuccessful);
         s.io(&mut n.joinSuccessful);
@@ -2006,7 +2004,7 @@ pub fn checkpoint(s: &mut Snap) {
         s.io(&mut n.start_waiting);
         s.io(&mut n.start_waited_since);
         s.io(&mut n.gamestate_received);
-        s.io(&mut *(&raw mut backup_playercontrol));
+        s.io(&mut *(&raw mut game().backup_playercontrol));
 
         let c = &mut n.client;
         s.io(&mut c.lastSentMessage);

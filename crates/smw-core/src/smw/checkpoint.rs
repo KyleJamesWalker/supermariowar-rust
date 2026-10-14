@@ -15,7 +15,7 @@ use crate::common::sfx::{self, checkpoint as mixer, data_relative, sfxMusic, sfx
 use crate::common::world_tour_stop::{parse_tour_stop_line, write_tour_stop_line};
 use crate::globals::*;
 use crate::smw::game_state::GameState;
-use crate::smw::gs_gameplay::{eyecandy, lookup_team_id, GameplayState};
+use crate::smw::gs_gameplay::{lookup_team_id, GameplayState};
 use crate::smw::gs_menu::{enter_gameplay_tail, MenuState};
 use std::path::Path;
 
@@ -231,8 +231,9 @@ fn data_path(name: &str) -> String {
 /// Matches a checkpoint cannot start: a World's bonus house, which no replay covers yet.
 pub fn unsupported_reason() -> Option<&'static str> {
     unsafe {
-        let stop = game_values.tourstops.get(game_values.tourstopcurrent);
-        if game_values.matchtype == MatchType::World && stop.is_some_and(|s| s.iStageType == 1) {
+        let g = game();
+        let stop = g.game_values.tourstops.get(g.game_values.tourstopcurrent);
+        if g.game_values.matchtype == MatchType::World && stop.is_some_and(|s| s.iStageType == 1) {
             return Some("bonus_house");
         }
     }
@@ -241,7 +242,7 @@ pub fn unsupported_reason() -> Option<&'static str> {
 
 /// The checkpoint at the current point of `MenuState::enter_gameplay`.
 pub fn capture() -> Vec<u8> {
-    let online = unsafe { crate::smw::net::netplay.active };
+    let online = unsafe { crate::game::game().netplay.active };
     let mut s = Snap::saver();
     s.put(MAGIC);
     s.put(&[if online { ONLINE_VERSION } else { VERSION }]);
@@ -271,7 +272,7 @@ pub fn restore(bytes: Vec<u8>) -> Result<(), String> {
 /// Saves or restores every part of the checkpoint, in the order a restore must apply them.
 fn walk(s: &mut Snap, online: bool) {
     unsafe {
-        let gv = &mut *game_values;
+        let gv = &mut *game().game_values;
         if online {
             crate::smw::net::checkpoint(s);
         }
@@ -355,25 +356,25 @@ fn walk(s: &mut Snap, online: bool) {
         s.io(&mut gv.unlocksecret3part2);
         s.io(&mut gv.unlocksecretunlocked);
 
-        use crate::smw::main::{bonushousemode, bossgamemode, boxesgamemode, currentgamemode, gamemodes, pipegamemode, score, score_cnt};
+        
         use crate::common::game_mode::*;
-        s.io(&mut currentgamemode);
+        s.io(&mut game().currentgamemode);
         let mut mode = gv.gamemode.gamemode;
         s.io(&mut mode);
-        let mut boss = bossgamemode.get_boss_type();
+        let mut boss = game().bossgamemode.get_boss_type();
         s.io(&mut boss);
-        s.io(&mut bonushousemode.goal);
-        s.io(&mut pipegamemode.goal);
-        s.io(&mut bossgamemode.goal);
-        s.io(&mut boxesgamemode.goal);
+        s.io(&mut game().bonushousemode.goal);
+        s.io(&mut game().pipegamemode.goal);
+        s.io(&mut game().bossgamemode.goal);
+        s.io(&mut game().boxesgamemode.goal);
         if s.load {
-            bossgamemode.set_boss_type(boss);
+            game().bossgamemode.set_boss_type(boss);
             gv.gamemode = match mode {
-                game_mode_bonus => Ptr::from_raw(bonushousemode.as_ptr() as *mut dyn CGameModeTrait),
-                game_mode_pipe_minigame => Ptr::from_raw(pipegamemode.as_ptr() as *mut dyn CGameModeTrait),
-                game_mode_boss_minigame => Ptr::from_raw(bossgamemode.as_ptr() as *mut dyn CGameModeTrait),
-                game_mode_boxes_minigame => Ptr::from_raw(boxesgamemode.as_ptr() as *mut dyn CGameModeTrait),
-                m => gamemodes[(m as usize).min(GAMEMODE_LAST as usize - 1)],
+                game_mode_bonus => Ptr::from_raw(game().bonushousemode.as_ptr() as *mut dyn CGameModeTrait),
+                game_mode_pipe_minigame => Ptr::from_raw(game().pipegamemode.as_ptr() as *mut dyn CGameModeTrait),
+                game_mode_boss_minigame => Ptr::from_raw(game().bossgamemode.as_ptr() as *mut dyn CGameModeTrait),
+                game_mode_boxes_minigame => Ptr::from_raw(game().boxesgamemode.as_ptr() as *mut dyn CGameModeTrait),
+                m => game().gamemodes[(m as usize).min(GAMEMODE_LAST as usize - 1)],
             };
         }
 
@@ -388,7 +389,7 @@ fn walk(s: &mut Snap, online: bool) {
         }
 
         for k in 0..4 {
-            let mut sc = score[k];
+            let mut sc = game().score[k];
             s.io(&mut sc.score);
             s.io(&mut sc.subscore);
             s.io(&mut sc.x);
@@ -404,7 +405,7 @@ fn walk(s: &mut Snap, online: bool) {
             s.io(&mut sc.iDigitMiddle);
             s.io(&mut sc.iDigitLeft);
         }
-        s.io(&mut score_cnt);
+        s.io(&mut game().score_cnt);
         GameplayState::instance().checkpoint(s);
 
         // The map and the music the menu chose. A net game's joiner plays the host's map from its settings directory.
@@ -415,7 +416,7 @@ fn walk(s: &mut Snap, online: bool) {
         map = local_path(&map);
         if s.load {
             game().maplist.set_current(map_index);
-            g_map.load_map(&data_path(&map), crate::common::map::read_type_full);
+            game().g_map.load_map(&data_path(&map), crate::common::map::read_type_full);
             note_match_map(&map);
             crate::common::global::load_current_map_background();
         }
@@ -428,15 +429,15 @@ fn walk(s: &mut Snap, online: bool) {
             *song = data_path(&song_name).into();
             for k in 0..4 {
                 if gv.playercontrol[k] > 0 {
-                    rm.spr_player[k] = match crate::smw::net::net_skin_path(k) {
-                        Some(path) => rm.load_full_skin_path(Path::new(&path), k as i16),
-                        None => rm.load_full_skin(gv.skinids[k], gv.colorids[k]),
+                    game().rm.spr_player[k] = match crate::smw::net::net_skin_path(k) {
+                        Some(path) => game().rm.load_full_skin_path(Path::new(&path), k as i16),
+                        None => game().rm.load_full_skin(gv.skinids[k], gv.colorids[k]),
                     };
                 }
             }
         }
 
-        let tracks: Vec<*mut sfxMusic> = rm.backgroundmusic.iter_mut().map(|t| t as *mut sfxMusic).collect();
+        let tracks: Vec<*mut sfxMusic> = game().rm.backgroundmusic.iter_mut().map(|t| t as *mut sfxMusic).collect();
         for &t in tracks.iter() {
             let mut name = (*t).name().to_string();
             let mut paused = (*t).paused();
@@ -449,7 +450,7 @@ fn walk(s: &mut Snap, online: bool) {
                 (*t).set_paused(paused);
             }
         }
-        let sounds = rm.sounds();
+        let sounds = game().rm.sounds();
         for &snd in sounds.iter() {
             let mut name = (*snd).name().to_string();
             let (mut channels, mut last_start) = (*snd).state();
@@ -497,7 +498,7 @@ fn walk(s: &mut Snap, online: bool) {
         }
 
         // Sound commands of this frame so far, which belong to its dump block.
-        s.io(&mut sfx::sfx_events);
+        s.io(&mut game().sfx.sfx_events);
     }
 }
 
@@ -518,7 +519,7 @@ fn slug(text: &str) -> String {
 /// The fields of a match's start marker: what was played, where, by whom.
 pub fn start_fields() -> String {
     unsafe {
-        let gv = &mut *game_values;
+        let gv = &mut *game().game_values;
         let mut f: Vec<String> = Vec::new();
         f.push(kv("type", match gv.matchtype {
             MatchType::SingleGame => "single",
@@ -588,8 +589,8 @@ pub fn start_fields() -> String {
 /// The result fields of a match's later markers.
 pub fn result_fields() -> String {
     unsafe {
-        let gm = game_values.gamemode;
-        let scores: Vec<String> = (0..crate::smw::main::score_cnt.max(0) as usize).map(|k| crate::smw::main::score[k].score.to_string()).collect();
+        let gm = game().game_values.gamemode;
+        let scores: Vec<String> = (0..game().score_cnt.max(0) as usize).map(|k| game().score[k].score.to_string()).collect();
         let mut f = vec![kv("scores", &scores.join(","))];
         if gm.gameover {
             f.push(kv("winner", &if gm.winningteam >= 0 { format!("team{}", gm.winningteam + 1) } else { "tie".to_string() }));
@@ -608,9 +609,9 @@ impl GameState for SegmentState {
     fn update(&mut self) {
         unsafe {
             crate::smw::gs_splash_screen::load_game_data();
-            eyecandy[2].clean();
-            game_values.playerInput.reset_keys();
-            game_values.appstate = AppState::Menu;
+            game().eyecandy[2].clean();
+            game().game_values.playerInput.reset_keys();
+            game().game_values.appstate = AppState::Menu;
             MenuState::instance().init();
             GameplayState::instance().init();
         }

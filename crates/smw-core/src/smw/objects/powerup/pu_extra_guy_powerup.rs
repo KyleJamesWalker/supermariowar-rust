@@ -8,7 +8,6 @@ use crate::impl_base;
 use crate::common::eyecandy::EC_FloatingObject;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::global_constants::*;
-use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::objects::powerup::powerup::{mo_powerup_draw, mo_powerup_update, MO_Powerup, MO_PowerupTrait};
 use crate::smw::player::CPlayer;
@@ -50,12 +49,12 @@ impl CObjectTrait for PU_ExtraGuyPowerup {
     fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
         unsafe {
             if self.state > 0 {
-                game_values.gamemode.playerextraguy(player, self.iType);
-                if_sound_on_play(&mut rm.sfx_extraguysound);
+                game().game_values.gamemode.playerextraguy(player, self.iType);
+                if_sound_on_play(&mut game().rm.sfx_extraguysound);
 
                 let iSrcY = ((if self.iType == 5 { 3 } else { self.iType as i32 - 1 }) * 16) as i16;
-                eyecandy[2].emplace(EC_FloatingObject::new(
-                    Ptr::from_mut(&mut rm.spr_extralife),
+                game().eyecandy[2].emplace(EC_FloatingObject::new(
+                    Ptr::from_mut(&mut game().rm.spr_extralife),
                     (player.ix as i32 + HALFPW - 19) as i16,
                     (player.iy as i32 - 16) as i16,
                     0.0f32,

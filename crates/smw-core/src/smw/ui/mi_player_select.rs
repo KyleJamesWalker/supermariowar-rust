@@ -90,41 +90,41 @@ impl UI_ControlTrait for MI_PlayerSelect {
                 let sel = self.iSelectedPlayer as usize;
 
                 if out.menu_up().fPressed {
-                    game_values.playercontrol[sel] -= 1;
-                    if game_values.playercontrol[sel] < 0 {
-                        game_values.playercontrol[sel] = 2;
+                    game().game_values.playercontrol[sel] -= 1;
+                    if game().game_values.playercontrol[sel] < 0 {
+                        game().game_values.playercontrol[sel] = 2;
                     }
 
-                    if game_values.playercontrol[sel] == 0 {
+                    if game().game_values.playercontrol[sel] == 0 {
                         let mut iCountPlayers = 0;
                         for iPlayer in 0..4usize {
-                            if game_values.playercontrol[iPlayer] > 0 {
+                            if game().game_values.playercontrol[iPlayer] > 0 {
                                 iCountPlayers += 1;
                             }
                         }
 
                         if iCountPlayers < 2 {
-                            game_values.playercontrol[sel] = 2;
+                            game().game_values.playercontrol[sel] = 2;
                         }
                     }
                 }
 
                 if out.menu_down().fPressed {
-                    game_values.playercontrol[sel] += 1;
-                    if game_values.playercontrol[sel] > 2 {
-                        game_values.playercontrol[sel] = 0;
+                    game().game_values.playercontrol[sel] += 1;
+                    if game().game_values.playercontrol[sel] > 2 {
+                        game().game_values.playercontrol[sel] = 0;
                     }
 
-                    if game_values.playercontrol[sel] == 0 {
+                    if game().game_values.playercontrol[sel] == 0 {
                         let mut iCountPlayers = 0;
                         for iPlayer in 0..4usize {
-                            if game_values.playercontrol[iPlayer] > 0 {
+                            if game().game_values.playercontrol[iPlayer] > 0 {
                                 iCountPlayers += 1;
                             }
                         }
 
                         if iCountPlayers < 2 {
-                            game_values.playercontrol[sel] = 1;
+                            game().game_values.playercontrol[sel] = 1;
                         }
                     }
                 }
@@ -159,7 +159,7 @@ impl UI_ControlTrait for MI_PlayerSelect {
             self.spr.draw_src(x + iIndent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 192 } else { 128 }, w: 32, h: 64 });
             self.spr.draw_src(x + iIndent + 16, y, &SDL_Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 64 } else { 0 }, w: iWidth - iIndent - 16, h: 64 });
 
-            rm.menu_font_large.draw_chop_right(x + 16, y + 20, iIndent - 8, &self.szName);
+            game().rm.menu_font_large.draw_chop_right(x + 16, y + 20, iIndent - 8, &self.szName);
 
             self.miModifyImage.draw();
 
@@ -167,7 +167,7 @@ impl UI_ControlTrait for MI_PlayerSelect {
                 self.spr.draw_src(
                     x + self.iPlayerPosition[iPlayer] as i32,
                     y + 16,
-                    &SDL_Rect { x: game_values.playercontrol[iPlayer] as i32 * 34 + 32, y: 206, w: 34, h: 32 },
+                    &SDL_Rect { x: game().game_values.playercontrol[iPlayer] as i32 * 34 + 32, y: 206, w: 34, h: 32 },
                 );
             }
         }

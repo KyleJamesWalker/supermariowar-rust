@@ -22,16 +22,16 @@ fn save_bmp(s: *mut SDL_Surface, path: &str) {
 
 unsafe fn draw_map() {
     blitdest = screen;
-    rm.spr_backmap[g_iCurrentDrawIndex as usize].draw(0, 0);
-    g_map.draw_platforms(0);
-    g_map.draw_platforms(1);
-    g_map.draw_platforms(2);
-    if game_values.toplayer {
-        g_map.drawfrontlayer();
+    game().rm.spr_backmap[g_iCurrentDrawIndex as usize].draw(0, 0);
+    game().g_map.draw_platforms(0);
+    game().g_map.draw_platforms(1);
+    game().g_map.draw_platforms(2);
+    if game().game_values.toplayer {
+        game().g_map.drawfrontlayer();
     }
-    g_map.draw_warp_locks();
-    g_map.draw_platforms(3);
-    g_map.draw_platforms(4);
+    game().g_map.draw_warp_locks();
+    game().g_map.draw_platforms(3);
+    game().g_map.draw_platforms(4);
 }
 
 fn main() {
@@ -42,46 +42,46 @@ fn main() {
         let outdir = &args[2];
         gfx_init(640, 480, false);
         blitdest = screen;
-        rm = Ptr::new_box(CResourceManager::new());
-        g_map = Ptr::from_box(CMap::new());
+        game().rm = Ptr::new_box(CResourceManager::new());
+        game().g_map = Ptr::from_box(CMap::new());
         game().filterslist = Ptr::new_box(FiltersList::new());
         game().skinlist = Ptr::new_box(SkinList::new());
         game().menugraphicspacklist = Ptr::new_box(GraphicsList::new());
         game().worldgraphicspacklist = Ptr::new_box(GraphicsList::new());
         game().gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
-        if !game_values.is_initialized() {
-            game_values.init(CGameValues::new());
+        if !game().game_values.is_initialized() {
+            game().game_values.init(CGameValues::new());
         }
-        CGameValues::init(&mut game_values);
+        CGameValues::init(&mut game().game_values);
         game().menugraphicspacklist.set_current_index(0);
         game().worldgraphicspacklist.set_current_index(0);
         game().gamegraphicspacklist.set_current_index(0);
-        rm.load_all_graphics();
+        game().rm.load_all_graphics();
 
         for (n, file) in args[3..].iter().enumerate() {
-            g_map.load_map(file, read_type_full);
+            game().g_map.load_map(file, read_type_full);
             load_current_map_background();
-            let rmp = rm;
-            g_map.predrawbackground(&rmp.spr_background, &rmp.spr_backmap[0]);
-            g_map.predrawforeground(&rmp.spr_frontmap[0]);
-            g_map.predrawbackground(&rmp.spr_background, &rmp.spr_backmap[1]);
-            g_map.predrawforeground(&rmp.spr_frontmap[1]);
-            g_map.setup_animated_tiles();
+            let rmp = game().rm;
+            game().g_map.predrawbackground(&rmp.spr_background, &rmp.spr_backmap[0]);
+            game().g_map.predrawforeground(&rmp.spr_frontmap[0]);
+            game().g_map.predrawbackground(&rmp.spr_background, &rmp.spr_backmap[1]);
+            game().g_map.predrawforeground(&rmp.spr_frontmap[1]);
+            game().g_map.setup_animated_tiles();
 
             smw::common::gfx::blit::fill_rect(screen, std::ptr::null(), 0);
             draw_map();
             save_bmp(screen, &format!("{}/{}_f0.bmp", outdir, n));
 
             for _ in 0..40 {
-                g_map.update_platforms();
-                g_map.update();
+                game().g_map.update_platforms();
+                game().g_map.update();
             }
-            g_map.lockconnection(0);
+            game().g_map.lockconnection(0);
             smw::common::gfx::blit::fill_rect(screen, std::ptr::null(), 0);
             draw_map();
             save_bmp(screen, &format!("{}/{}_f40.bmp", outdir, n));
 
-            let thumb = g_map.create_thumbnail_surface(false);
+            let thumb = game().g_map.create_thumbnail_surface(false);
             if !thumb.get_surface().is_null() {
                 save_bmp(thumb.get_surface(), &format!("{}/{}_thumb.bmp", outdir, n));
             }

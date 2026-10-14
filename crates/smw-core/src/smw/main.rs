@@ -50,22 +50,13 @@ pub static mut x_shake: i16 = 0;
 pub static mut y_shake: i16 = 0;
 
 //------ game relevant stuff ------
-pub static mut players: Vec<Ptr<CPlayer>> = Vec::new();
 
-pub static mut score: [Ptr<CScore>; 4] = [Ptr::null(); 4];
 
-pub static mut score_cnt: i16 = 0;
 
 //Locations for swirl spawn effects
 pub static mut g_iSwirlSpawnLocations: [[[i16; 25]; 2]; 4] = [[[0; 25]; 2]; 4];
 
-pub static mut gamemodes: [Ptr<dyn CGameModeTrait>; GAMEMODE_LAST as usize] = [Ptr::null(); GAMEMODE_LAST as usize];
-pub static mut bonushousemode: Ptr<CGM_Bonus> = Ptr::null();
-pub static mut pipegamemode: Ptr<CGM_Pipe_MiniGame> = Ptr::null();
-pub static mut bossgamemode: Ptr<CGM_Boss_MiniGame> = Ptr::null();
-pub static mut boxesgamemode: Ptr<CGM_Boxes_MiniGame> = Ptr::null();
 
-pub static mut currentgamemode: i16 = 0;
 
 //*************************************
 //  MAIN LOOP
@@ -92,7 +83,7 @@ pub fn gameloop() {
         emscripten_set_main_loop(gameloop_frame_web, 0, 1);
 
         #[cfg(not(target_os = "emscripten"))]
-        while game_values.appstate != crate::common::game_values::AppState::Quit {
+        while game().game_values.appstate != crate::common::game_values::AppState::Quit {
             gameloop_frame();
         }
     }
@@ -108,7 +99,7 @@ unsafe extern "C-unwind" fn gameloop_frame_web() {
     static mut last_time: f64 = -1.0;
     static mut accumulated: f64 = 0.0;
 
-    let frame_ms = game_values.framelimiter as f64;
+    let frame_ms = game().game_values.framelimiter as f64;
     if harness::no_limit() || frame_ms <= 0.0 {
         gameloop_frame();
         web_quit_if_done();
@@ -122,7 +113,7 @@ unsafe extern "C-unwind" fn gameloop_frame_web() {
     last_time = now;
 
     let mut frames = 0;
-    while accumulated >= frame_ms && frames < MAX_CATCH_UP_FRAMES && game_values.appstate != crate::common::game_values::AppState::Quit {
+    while accumulated >= frame_ms && frames < MAX_CATCH_UP_FRAMES && game().game_values.appstate != crate::common::game_values::AppState::Quit {
         assign_hotplugged();
         harness::frame_start();
         GameStateManager::instance().currentState.get().update();
@@ -145,7 +136,7 @@ unsafe extern "C-unwind" fn gameloop_frame_web() {
 /// the loop, close the harness, and let the page offer what to do next (web/shell.html).
 #[cfg(target_os = "emscripten")]
 unsafe fn web_quit_if_done() {
-    if game_values.appstate != crate::common::game_values::AppState::Quit {
+    if game().game_values.appstate != crate::common::game_values::AppState::Quit {
         return;
     }
     emscripten_cancel_main_loop();
@@ -182,9 +173,9 @@ unsafe extern "C-unwind" fn gameloop_frame() {
 pub fn create_globals() {
     unsafe {
         // this instance will contain the other relevant objects
-        rm = Ptr::new_box(CResourceManager::new());
+        game().rm = Ptr::new_box(CResourceManager::new());
 
-        g_map = Ptr::from_box(CMap::new());
+        game().g_map = Ptr::from_box(CMap::new());
         game().filterslist = Ptr::new_box(FiltersList::new());
         game().maplist = Ptr::new_box(MapList::new(false));
 
@@ -213,7 +204,7 @@ pub fn create_globals() {
         game().gamegraphicspacklist.set_current_index(0);
         game().soundpacklist.set_current_index(0);
 
-        players.reserve(4);
+        game().players.reserve(4);
 
         update_music_with_overrides(&mut game().musiclist, &mut game().worldmusiclist);
     }
@@ -268,17 +259,17 @@ fn assign_inputs() {
                 let saved: Vec<i16> = text.split_whitespace().filter_map(|v| v.parse().ok()).collect();
                 if saved.len() == MAX_PLAYERS as usize {
                     for p in 0..MAX_PLAYERS as usize {
-                        game_values.playerInput.inputControls[p] = Ptr::from_mut(&mut game_values.inputConfiguration[p][0]);
-                        game_values.playercontrol[p] = saved[p];
+                        game().game_values.playerInput.inputControls[p] = Ptr::from_mut(&mut game().game_values.inputConfiguration[p][0]);
+                        game().game_values.playercontrol[p] = saved[p];
                     }
-                    game_values.write_config();
+                    game().game_values.write_config();
                 }
                 let _ = std::fs::remove_file(&marker);
             }
             return;
         }
         if !touch_session && !std::path::Path::new(&marker).exists() {
-            let saved: Vec<String> = game_values.playercontrol.iter().map(|c| c.to_string()).collect();
+            let saved: Vec<String> = game().game_values.playercontrol.iter().map(|c| c.to_string()).collect();
             let _ = std::fs::write(&marker, saved.join(" ") + "\n");
         }
 
@@ -300,20 +291,20 @@ fn assign_inputs() {
         for p in 0..MAX_PLAYERS as usize {
             let control = match order.get(p) {
                 Some(&(true, k)) => {
-                    game_values.inputConfiguration[k][1].iDevice = k as i16;
-                    &mut game_values.inputConfiguration[k][1]
+                    game().game_values.inputConfiguration[k][1].iDevice = k as i16;
+                    &mut game().game_values.inputConfiguration[k][1]
                 }
-                Some(&(false, q)) => &mut game_values.inputConfiguration[q][0],
+                Some(&(false, q)) => &mut game().game_values.inputConfiguration[q][0],
                 None => {
-                    game_values.playerInput.inputControls[p] = Ptr::from_mut(&mut game_values.inputConfiguration[p][0]);
-                    if !keyboard && game_values.playercontrol[p] == 1 {
-                        game_values.playercontrol[p] = 2;
+                    game().game_values.playerInput.inputControls[p] = Ptr::from_mut(&mut game().game_values.inputConfiguration[p][0]);
+                    if !keyboard && game().game_values.playercontrol[p] == 1 {
+                        game().game_values.playercontrol[p] = 2;
                     }
                     continue;
                 }
             };
-            game_values.playerInput.inputControls[p] = Ptr::from_mut(control);
-            game_values.playercontrol[p] = 1;
+            game().game_values.playerInput.inputControls[p] = Ptr::from_mut(control);
+            game().game_values.playercontrol[p] = 1;
         }
     }
 }
@@ -385,37 +376,37 @@ fn new_mode<T: CGameModeTrait + 'static>(mode: T) -> Ptr<dyn CGameModeTrait> {
 pub fn create_gamemodes() {
     unsafe {
         //set game modes
-        gamemodes[0] = new_mode(CGM_Classic::new());
-        gamemodes[1] = new_mode(CGM_Frag::new());
-        gamemodes[2] = new_mode(CGM_TimeLimit::new());
-        gamemodes[3] = new_mode(CGM_Jail::new());
-        gamemodes[4] = new_mode(CGM_Coins::new());
-        gamemodes[5] = new_mode(CGM_Stomp::new());
-        gamemodes[6] = new_mode(CGM_Eggs::new());
-        gamemodes[7] = new_mode(CGM_CaptureTheFlag::new());
-        gamemodes[8] = new_mode(CGM_Chicken::new());
-        gamemodes[9] = new_mode(CGM_Tag::new());
-        gamemodes[10] = new_mode(CGM_Star::new());
-        gamemodes[11] = new_mode(CGM_Domination::new());
-        gamemodes[12] = new_mode(CGM_KingOfTheHill::new());
-        gamemodes[13] = new_mode(CGM_Race::new());
-        gamemodes[14] = new_mode(CGM_Owned::new());
-        gamemodes[15] = new_mode(CGM_Frenzy::new());
-        gamemodes[16] = new_mode(CGM_Survival::new());
-        gamemodes[17] = new_mode(CGM_Greed::new());
-        gamemodes[18] = new_mode(CGM_Health::new());
-        gamemodes[19] = new_mode(CGM_Collection::new());
-        gamemodes[20] = new_mode(CGM_Chase::new());
-        gamemodes[21] = new_mode(CGM_ShyGuyTag::new());
+        game().gamemodes[0] = new_mode(CGM_Classic::new());
+        game().gamemodes[1] = new_mode(CGM_Frag::new());
+        game().gamemodes[2] = new_mode(CGM_TimeLimit::new());
+        game().gamemodes[3] = new_mode(CGM_Jail::new());
+        game().gamemodes[4] = new_mode(CGM_Coins::new());
+        game().gamemodes[5] = new_mode(CGM_Stomp::new());
+        game().gamemodes[6] = new_mode(CGM_Eggs::new());
+        game().gamemodes[7] = new_mode(CGM_CaptureTheFlag::new());
+        game().gamemodes[8] = new_mode(CGM_Chicken::new());
+        game().gamemodes[9] = new_mode(CGM_Tag::new());
+        game().gamemodes[10] = new_mode(CGM_Star::new());
+        game().gamemodes[11] = new_mode(CGM_Domination::new());
+        game().gamemodes[12] = new_mode(CGM_KingOfTheHill::new());
+        game().gamemodes[13] = new_mode(CGM_Race::new());
+        game().gamemodes[14] = new_mode(CGM_Owned::new());
+        game().gamemodes[15] = new_mode(CGM_Frenzy::new());
+        game().gamemodes[16] = new_mode(CGM_Survival::new());
+        game().gamemodes[17] = new_mode(CGM_Greed::new());
+        game().gamemodes[18] = new_mode(CGM_Health::new());
+        game().gamemodes[19] = new_mode(CGM_Collection::new());
+        game().gamemodes[20] = new_mode(CGM_Chase::new());
+        game().gamemodes[21] = new_mode(CGM_ShyGuyTag::new());
 
-        currentgamemode = 0;
-        game_values.gamemode = gamemodes[currentgamemode as usize];
+        game().currentgamemode = 0;
+        game().game_values.gamemode = game().gamemodes[game().currentgamemode as usize];
 
         //Special modes
-        bonushousemode = Ptr::new_box(CGM_Bonus::new());
-        pipegamemode = Ptr::new_box(CGM_Pipe_MiniGame::new());
-        bossgamemode = Ptr::new_box(CGM_Boss_MiniGame::new());
-        boxesgamemode = Ptr::new_box(CGM_Boxes_MiniGame::new());
+        game().bonushousemode = Ptr::new_box(CGM_Bonus::new());
+        game().pipegamemode = Ptr::new_box(CGM_Pipe_MiniGame::new());
+        game().bossgamemode = Ptr::new_box(CGM_Boss_MiniGame::new());
+        game().boxesgamemode = Ptr::new_box(CGM_Boxes_MiniGame::new());
     }
 }
 
@@ -520,22 +511,22 @@ pub fn main_game() {
         println!("\n---------------- loading ----------------");
 
         for iScore in 0..4 {
-            score[iScore] = Ptr::new_box(CScore::new(iScore as i16));
+            game().score[iScore] = Ptr::new_box(CScore::new(iScore as i16));
         }
 
-        CGameValues::init(&mut game_values);
+        CGameValues::init(&mut game().game_values);
 
         create_gamemodes();
 
-        game_values.read_binary_config();
+        game().game_values.read_binary_config();
         assign_inputs();
 
         //Assign the powerup weights to the selected preset
         for iPowerup in 0..NUM_POWERUPS as usize {
-            game_values.powerupweights[iPowerup] = game_values.allPowerupPresets[game_values.poweruppreset as usize][iPowerup];
+            game().game_values.powerupweights[iPowerup] = game().game_values.allPowerupPresets[game().game_values.poweruppreset as usize][iPowerup];
         }
 
-        if game_values.fullscreen {
+        if game().game_values.fullscreen {
             crate::common::gfx::gfx_changefullscreen(true);
             blitdest = screen;
         }
@@ -564,7 +555,7 @@ pub fn main_game() {
         harness::finish();
 
         for i in 0..GAMEMODE_LAST as usize {
-            gamemodes[i].delete();
+            game().gamemodes[i].delete();
         }
 
         sfx_close();
@@ -573,10 +564,10 @@ pub fn main_game() {
 
         //Delete player skins
         for k in 0..MAX_PLAYERS as usize {
-            score[k].delete();
+            game().score[k].delete();
         }
 
         // release all resources
-        rm.delete();
+        game().rm.delete();
     }
 }

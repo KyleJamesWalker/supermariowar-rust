@@ -10,8 +10,6 @@ use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::eyecandy;
-use crate::smw::main::pipegamemode;
 use crate::smw::objects::overmap::over_map_object::{io_over_map_object_update, IO_OverMapObject, IO_OverMapObjectTrait};
 use crate::smw::player::CPlayer;
 use sdl2::sys::SDL_Rect;
@@ -42,7 +40,7 @@ impl OMO_PipeBonus {
         this.velx = vel.x;
 
         unsafe {
-            if pipegamemode.is_slowdown() {
+            if game().pipegamemode.is_slowdown() {
                 this.vely = vel.y / 1.5f32;
             } else {
                 this.vely = vel.y;
@@ -69,7 +67,7 @@ impl CObjectTrait for OMO_PipeBonus {
         }
 
         unsafe {
-            if pipegamemode.is_slowdown() {
+            if game().pipegamemode.is_slowdown() {
                 self.vely += GRAVITATION / 2.0f32;
             } else {
                 self.vely += GRAVITATION;
@@ -102,8 +100,8 @@ impl CObjectTrait for OMO_PipeBonus {
             if self.iType == 5 {
                 if !player.is_shielded() {
                     self.dead = true;
-                    eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
+                        Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                         (self.ix as i32 - 1) as i16,
                         (self.iy as i32 - 1) as i16,
                         3,
@@ -116,8 +114,8 @@ impl CObjectTrait for OMO_PipeBonus {
                 }
 
                 return false;
-            } else if !game_values.gamemode.gameover {
-                pipegamemode.set_bonus((self.iType as i32 + 1) as i16, self.iDuration, player.get_team_id());
+            } else if !game().game_values.gamemode.gameover {
+                game().pipegamemode.set_bonus((self.iType as i32 + 1) as i16, self.iDuration, player.get_team_id());
             }
         }
 

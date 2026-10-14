@@ -8,7 +8,6 @@ use crate::common::random_number_generator::RANDOM_INT;
 use crate::common::tile_types::{tile_flag_death_on_top, tile_flag_solid, tile_flag_solid_on_top};
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::main::players;
 use crate::smw::objects::overmap::over_map_object::{IO_OverMapObject, IO_OverMapObjectTrait};
 use crate::smw::player::CPlayer;
 use sdl2::sys::SDL_Rect;
@@ -55,11 +54,11 @@ impl OMO_KingOfTheHillZone {
             multipliertimer: 0,
         };
         unsafe {
-            this.size = game_values.gamemodesettings.kingofthehill.areasize;
+            this.size = game().game_values.gamemodesettings.kingofthehill.areasize;
 
             if this.size < 2 {
                 this.size = 2;
-                game_values.gamemodesettings.kingofthehill.areasize = this.size;
+                game().game_values.gamemodesettings.kingofthehill.areasize = this.size;
             }
         }
 
@@ -111,9 +110,9 @@ impl OMO_KingOfTheHillZone {
 
                 while !fDone {
                     for iCol in 0..size {
-                        let r#type: i32 = g_map.map(x as i32 + iCol as i32, iFindY as i32);
+                        let r#type: i32 = game().g_map.map(x as i32 + iCol as i32, iFindY as i32);
                         if (((r#type & tile_flag_solid_on_top) != 0 || (r#type & tile_flag_solid) != 0) && (r#type & tile_flag_death_on_top) == 0)
-                            || !g_map.block((x as i32 + iCol as i32) as i16, iFindY).is_null()
+                            || !game().g_map.block((x as i32 + iCol as i32) as i16, iFindY).is_null()
                         {
                             fDone = true;
                             break;
@@ -149,7 +148,7 @@ impl OMO_KingOfTheHillZone {
                         let tx = (x as i32 + iCol as i32) as i16;
                         let ty = (y as i32 + iRow as i32) as i16;
                         // If there is a solid tile inside the zone
-                        if (g_map.map(tx as i32, ty as i32) & tile_flag_solid) != 0 || !g_map.spawn(1, tx, ty) || !g_map.block(tx, ty).is_null() {
+                        if (game().g_map.map(tx as i32, ty as i32) & tile_flag_solid) != 0 || !game().g_map.spawn(1, tx, ty) || !game().g_map.block(tx, ty).is_null() {
                             iCountSolidTiles += 1;
 
                             // Be more picky in the first few loops, but allow solid tiles to be in
@@ -175,7 +174,7 @@ impl OMO_KingOfTheHillZone {
                 }
 
                 // Verify zone is not in a platform
-                if g_map.is_in_platform_no_spawn_zone(
+                if game().g_map.is_in_platform_no_spawn_zone(
                     ((x as i32) << 5) as i16,
                     ((y as i32) << 5) as i16,
                     ((size as i32) << 5) as i16,
@@ -232,7 +231,7 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
 
                 if self.multiplier > 1 {
                     unsafe {
-                        rm.spr_awardkillsinrow.draw_src(
+                        game().rm.spr_awardkillsinrow.draw_src(
                             iColX as i32 + 8,
                             iRowX as i32 + 8,
                             &SDL_Rect { x: (self.multiplier as i32 - 1) << 4, y: (self.colorID as i32) << 4, w: 16, h: 16 },
@@ -268,22 +267,22 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
         }
 
         unsafe {
-            if self.iPlayerID != -1 && !game_values.gamemode.gameover {
+            if self.iPlayerID != -1 && !game().game_values.gamemode.gameover {
                 // Speed of point accumulation is proportional to how many players are in zone
                 self.scoretimer = (self.scoretimer as i32 + (((iMax as i32) << 1) - self.totalTouchingPlayers as i32)) as i16;
 
-                if self.scoretimer >= game_values.pointspeed {
+                if self.scoretimer >= game().game_values.pointspeed {
                     self.scoretimer = 0;
-                    players[self.iPlayerID as usize].score().adjust_score(self.multiplier);
-                    game_values.gamemode.check_winner(players[self.iPlayerID as usize]);
+                    game().players[self.iPlayerID as usize].score().adjust_score(self.multiplier);
+                    game().game_values.gamemode.check_winner(game().players[self.iPlayerID as usize]);
 
-                    if game_values.gamemodesettings.kingofthehill.maxmultiplier > 1 && {
+                    if game().game_values.gamemodesettings.kingofthehill.maxmultiplier > 1 && {
                         self.multipliertimer += 1;
                         self.multipliertimer >= 5
                     } {
                         self.multipliertimer = 0;
 
-                        if self.multiplier < game_values.gamemodesettings.kingofthehill.maxmultiplier {
+                        if self.multiplier < game().game_values.gamemodesettings.kingofthehill.maxmultiplier {
                             self.multiplier += 1;
                         }
                     }
@@ -293,9 +292,9 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
                 self.multipliertimer = 0;
             }
 
-            if game_values.gamemodesettings.kingofthehill.relocationfrequency > 0 {
+            if game().game_values.gamemodesettings.kingofthehill.relocationfrequency > 0 {
                 self.relocatetimer += 1;
-                if self.relocatetimer >= game_values.gamemodesettings.kingofthehill.relocationfrequency {
+                if self.relocatetimer >= game().game_values.gamemodesettings.kingofthehill.relocationfrequency {
                     self.relocatetimer = 0;
                     self.place_area();
                 }

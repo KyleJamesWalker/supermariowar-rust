@@ -7,7 +7,6 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::*;
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::objects::carriable::co_egg::CO_Egg;
 use crate::smw::objects::moving::mo_yoshi::MO_Yoshi;
 use crate::smw::player::CPlayer;
@@ -43,18 +42,18 @@ impl CGameModeTrait for CGM_Eggs {
 
         unsafe {
             for iEggs in 0..4i16 {
-                for iEgg in 0..game_values.gamemodesettings.egg.eggs[iEggs as usize] {
+                for iEgg in 0..game().game_values.gamemodesettings.egg.eggs[iEggs as usize] {
                     if iEgg > 9 {
                         break;
                     }
 
                     fEgg[iEggs as usize] = true;
-                    objectcontainer[1].add(Ptr::new_box(CO_Egg::new(Ptr::from_mut(&mut rm.spr_egg), iEggs)));
+                    game().objectcontainer[1].add(Ptr::new_box(CO_Egg::new(Ptr::from_mut(&mut game().rm.spr_egg), iEggs)));
                 }
             }
 
             for iYoshis in 0..4i16 {
-                for iYoshi in 0..game_values.gamemodesettings.egg.yoshis[iYoshis as usize] {
+                for iYoshi in 0..game().game_values.gamemodesettings.egg.yoshis[iYoshis as usize] {
                     if iYoshi > 9 {
                         break;
                     }
@@ -63,13 +62,13 @@ impl CGameModeTrait for CGM_Eggs {
                         fAtLeastOneMatch = true;
                     }
 
-                    objectcontainer[1].add(Ptr::new_box(MO_Yoshi::new(Ptr::from_mut(&mut rm.spr_yoshi), iYoshis)));
+                    game().objectcontainer[1].add(Ptr::new_box(MO_Yoshi::new(Ptr::from_mut(&mut game().rm.spr_yoshi), iYoshis)));
                 }
             }
 
             if !fAtLeastOneMatch {
-                objectcontainer[1].add(Ptr::new_box(CO_Egg::new(Ptr::from_mut(&mut rm.spr_egg), 1)));
-                objectcontainer[1].add(Ptr::new_box(MO_Yoshi::new(Ptr::from_mut(&mut rm.spr_yoshi), 1)));
+                game().objectcontainer[1].add(Ptr::new_box(CO_Egg::new(Ptr::from_mut(&mut game().rm.spr_egg), 1)));
+                game().objectcontainer[1].add(Ptr::new_box(MO_Yoshi::new(Ptr::from_mut(&mut game().rm.spr_yoshi), 1)));
             }
         }
     }

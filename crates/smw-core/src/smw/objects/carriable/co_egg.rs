@@ -10,7 +10,6 @@ use crate::common::object_base::CObjectTrait;
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::objects::moving::mo_carried_object::{mo_carried_object_draw, mo_carried_object_drop, MO_CarriedObject, MO_CarriedObjectTrait};
 use crate::smw::objects::moving::mo_explosion::MO_Explosion;
 use crate::smw::objects::moving::moving_object::{io_moving_object_collision_detection_map, IO_MovingObjectTrait};
@@ -93,8 +92,8 @@ impl CO_Egg {
 
         self.relocatetimer = 0;
         unsafe {
-            if game_values.gamemodesettings.egg.explode > 0 {
-                self.explosiondrawframe = game_values.gamemodesettings.egg.explode - 1;
+            if game().game_values.gamemodesettings.egg.explode > 0 {
+                self.explosiondrawframe = game().game_values.gamemodesettings.egg.explode - 1;
                 self.explosiondrawtimer = 62;
 
                 if self.explosiondrawframe < 5 {
@@ -110,7 +109,7 @@ impl CO_Egg {
             let mut y: i16 = 0;
             let mut iAttempts: i16 = 32;
             let (w, h) = (self.collisionWidth, self.collisionHeight);
-            while (!g_map.findspawnpoint(5, &mut x, &mut y, w, h, false) || objectcontainer[1].get_closest_moving_object(x, y, movingobject_yoshi) < 250.0) && {
+            while (!game().g_map.findspawnpoint(5, &mut x, &mut y, w, h, false) || game().objectcontainer[1].get_closest_moving_object(x, y, movingobject_yoshi) < 250.0) && {
                 let t = iAttempts;
                 iAttempts -= 1;
                 t > 0
@@ -189,14 +188,14 @@ impl CObjectTrait for CO_Egg {
 
         // Explode
         unsafe {
-            if game_values.gamemodesettings.egg.explode > 0 {
+            if game().game_values.gamemodesettings.egg.explode > 0 {
                 self.explosiondrawtimer -= 1;
                 if self.explosiondrawtimer <= 0 {
                     self.explosiondrawtimer = 62;
                     self.explosiondrawframe -= 1;
                     if self.explosiondrawframe < 0 {
-                        objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
-                            Ptr::from_mut(&mut rm.spr_explosion),
+                        game().objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
+                            Ptr::from_mut(&mut game().rm.spr_explosion),
                             Vec2s::new((self.ix as i32 + (self.iw as i32 >> 1) - 96) as i16, (self.iy as i32 + (self.ih as i32 >> 1) - 64) as i16),
                             2,
                             4,
@@ -206,7 +205,7 @@ impl CObjectTrait for CO_Egg {
                         )));
                         self.place_egg();
 
-                        if_sound_on_play(&mut rm.sfx_bobombsound);
+                        if_sound_on_play(&mut game().rm.sfx_bobombsound);
                     } else if self.explosiondrawframe < 5 {
                         self.animationspeed = self.egganimationrates[self.explosiondrawframe as usize];
                     } else {
@@ -224,15 +223,15 @@ impl CObjectTrait for CO_Egg {
 
         // Display explosion timer
         unsafe {
-            if game_values.gamemodesettings.egg.explode > 0 && self.explosiondrawframe < 5 {
+            if game().game_values.gamemodesettings.egg.explode > 0 && self.explosiondrawframe < 5 {
                 let x = self.ix as i32 - self.collisionOffsetX as i32;
                 let y = self.iy as i32 - self.collisionOffsetY as i32;
                 let src = SDL_Rect { x: (self.explosiondrawframe as i32) << 5, y: (self.color as i32) << 5, w: 32, h: 32 };
                 if !self.owner.is_null() && self.owner.iswarping() {
                     let edge: ClipEdge = std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32);
-                    rm.spr_eggnumbers.draw_clip(x, y, &src, edge, self.owner.get_warp_plane() as i32);
+                    game().rm.spr_eggnumbers.draw_clip(x, y, &src, edge, self.owner.get_warp_plane() as i32);
                 } else {
-                    rm.spr_eggnumbers.draw_src(x, y, &src);
+                    game().rm.spr_eggnumbers.draw_src(x, y, &src);
                 }
             }
         }

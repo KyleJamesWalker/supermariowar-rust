@@ -27,16 +27,16 @@ impl PlayerSuicideTimer {
 
     pub fn update(&mut self, player: &mut CPlayer) {
         unsafe {
-            if game_values.gamemode.gameover || game_values.singleplayermode >= 0 {
+            if game().game_values.gamemode.gameover || game().game_values.singleplayermode >= 0 {
                 self.reset();
             }
 
             if !player.is_invincible()
                 && !player.is_frozen()
-                && game_values.suicidetime > 0
+                && game().game_values.suicidetime > 0
                 && {
                     self.timer = self.timer.wrapping_add(1);
-                    self.timer > game_values.suicidetime
+                    self.timer > game().game_values.suicidetime
                 }
             {
                 self.counttimer = self.counttimer.wrapping_add(1);
@@ -54,8 +54,8 @@ impl PlayerSuicideTimer {
 
     pub fn draw(&mut self, player: &mut CPlayer) {
         unsafe {
-            if self.timer > game_values.suicidetime {
-                rm.spr_awardkillsinrow.draw_src(
+            if self.timer > game().game_values.suicidetime {
+                game().rm.spr_awardkillsinrow.draw_src(
                     player.left_x() as i32 - PWOFFSET + 8,
                     player.top_y() as i32 - PHOFFSET + 8,
                     &SDL_Rect { x: (self.displaytimer as i32) << 4, y: (player.get_color_id() as i32) << 4, w: 16, h: 16 },

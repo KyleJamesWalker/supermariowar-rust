@@ -7,7 +7,7 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::classic::{cgm_classic_init, cgm_classic_playerkilledplayer, cgm_classic_playerkilledself, CGM_Classic};
-use crate::smw::main::{score, score_cnt};
+
 use crate::smw::player::CPlayer;
 
 pub struct CGM_Health {
@@ -34,9 +34,9 @@ impl CGameModeTrait for CGM_Health {
         cgm_classic_init(&mut self.cgm_classic);
 
         unsafe {
-            for iScore in 0..score_cnt {
-                let mut s = score[iScore as usize];
-                s.subscore[0] = game_values.gamemodesettings.health.startlife;
+            for iScore in 0..game().score_cnt {
+                let mut s = game().score[iScore as usize];
+                s.subscore[0] = game().game_values.gamemodesettings.health.startlife;
                 s.subscore[1] = s.subscore[0];
             }
         }
@@ -64,7 +64,7 @@ impl CGameModeTrait for CGM_Health {
             return iRet;
         } else {
             unsafe {
-                if_sound_on_play(&mut rm.sfx_powerdown);
+                if_sound_on_play(&mut game().rm.sfx_powerdown);
             }
             other.shield().reset();
         }
@@ -94,7 +94,7 @@ impl CGameModeTrait for CGM_Health {
             return iRet;
         } else {
             unsafe {
-                if_sound_on_play(&mut rm.sfx_powerdown);
+                if_sound_on_play(&mut game().rm.sfx_powerdown);
             }
             player.shield().reset();
         }

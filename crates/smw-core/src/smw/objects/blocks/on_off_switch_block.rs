@@ -1,9 +1,9 @@
 //! Port of src/smw/objects/blocks/OnOffSwitchBlock.cpp
 
-use crate::common::game_values::{game_values, if_sound_on_play};
+use crate::game::game;
+use crate::common::game_values::if_sound_on_play;
 use crate::common::gameplay_styles::TeamCollisionStyle;
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::global::g_map;
 use crate::common::global_constants::*;
 use crate::common::io_block::{IO_Block, IO_BlockTrait};
 use crate::common::math::vec2::Vec2s;
@@ -11,7 +11,7 @@ use crate::common::moving_object_types::*;
 use crate::common::object_base::{cap_falling_velocity, CObjectTrait};
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
-use crate::globals::{rm, Ptr};
+use crate::globals::Ptr;
 use crate::impl_base;
 use crate::smw::objects::blocks::io_block::*;
 use crate::smw::objects::blocks::switch_block::B_SwitchBlock;
@@ -51,7 +51,7 @@ impl B_OnOffSwitchBlock {
     pub fn trigger_behavior_player(&mut self, playerID: i16) {
         if self.state == 0 || self.state == 3 {
             unsafe {
-                if_sound_on_play(&mut rm.sfx_switchpress);
+                if_sound_on_play(&mut game().rm.sfx_switchpress);
             }
             self.vely = -VELBLOCKBOUNCE;
 
@@ -62,16 +62,16 @@ impl B_OnOffSwitchBlock {
             unsafe {
                 //Switch all the switch blocks and all the on/off blocks of the same color
                 let mut i = 0;
-                while i < g_map.switchBlocks[colorIdx].len() {
-                    let mut block = g_map.switchBlocks[colorIdx][i];
+                while i < game().g_map.switchBlocks[colorIdx].len() {
+                    let mut block = game().g_map.switchBlocks[colorIdx][i];
                     block.as_any().downcast_mut::<B_OnOffSwitchBlock>().unwrap().flip_state();
                     i += 1;
                 }
 
                 //Switch all the switch blocks
                 let mut i = 0;
-                while i < g_map.switchBlocks[colorIdx + 4].len() {
-                    let mut block = g_map.switchBlocks[colorIdx + 4][i];
+                while i < game().g_map.switchBlocks[colorIdx + 4].len() {
+                    let mut block = game().g_map.switchBlocks[colorIdx + 4][i];
                     block.as_any().downcast_mut::<B_SwitchBlock>().unwrap().flip_state(playerID);
                     i += 1;
                 }
@@ -124,7 +124,7 @@ impl IO_BlockTrait for B_OnOffSwitchBlock {
                 let mut iKillType = PlayerKillType::NonKill;
                 if self.iBumpPlayerID >= 0
                     && !player.is_invincible_on_bottom()
-                    && (player.teamID != self.iBumpTeamID || game_values.teamcollision == TeamCollisionStyle::On)
+                    && (player.teamID != self.iBumpTeamID || game().game_values.teamcollision == TeamCollisionStyle::On)
                 {
                     iKillType = player_killed_player(self.iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
                 }
@@ -213,7 +213,7 @@ impl IO_BlockTrait for B_OnOffSwitchBlock {
                 self.trigger_behavior_player(object.iPlayerID);
             } else {
                 unsafe {
-                    if_sound_on_play(&mut rm.sfx_bump);
+                    if_sound_on_play(&mut game().rm.sfx_bump);
                 }
             }
 
@@ -250,7 +250,7 @@ impl IO_BlockTrait for B_OnOffSwitchBlock {
                 self.trigger_behavior_player(object.iPlayerID);
             } else {
                 unsafe {
-                    if_sound_on_play(&mut rm.sfx_bump);
+                    if_sound_on_play(&mut game().rm.sfx_bump);
                 }
             }
 

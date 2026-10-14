@@ -15,7 +15,6 @@ use crate::common::random_number_generator::RANDOM_INT;
 use crate::common::tile_types::{tile_flag_nonsolid, tile_flag_solid, tile_flag_solid_on_top, tile_flag_super_death_top};
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::objectgame::removeifprojectile;
 use crate::smw::objects::carriable::co_shell::CO_Shell;
 use crate::smw::objects::carriable::co_throw_box::CO_ThrowBox;
@@ -152,7 +151,7 @@ pub fn mo_walking_enemy_draw<T: MO_WalkingEnemyTrait + ?Sized>(this: &mut T) {
             displayangle += addangle;
 
             unsafe {
-                rm.spr_awardsouls.draw_src(spawnX as i32, spawnY as i32, &SDL_Rect { x: o.iSpawnIconOffset as i32, y: 0, w: 16, h: 16 });
+                game().rm.spr_awardsouls.draw_src(spawnX as i32, spawnY as i32, &SDL_Rect { x: o.iSpawnIconOffset as i32, y: 0, w: 16, h: 16 });
             }
         }
     } else {
@@ -161,7 +160,7 @@ pub fn mo_walking_enemy_draw<T: MO_WalkingEnemyTrait + ?Sized>(this: &mut T) {
         let o = this.we();
         if o.frozen {
             unsafe {
-                rm.spr_iceblock.draw_src(
+                game().rm.spr_iceblock.draw_src(
                     o.ix as i32 - o.collisionOffsetX as i32 + o.iw as i32 - 32,
                     o.iy as i32 - o.collisionOffsetY as i32 + o.ih as i32 - 32,
                     &SDL_Rect { x: 0, y: 0, w: 32, h: 32 },
@@ -188,8 +187,8 @@ pub fn mo_walking_enemy_update<T: MO_WalkingEnemyTrait + ?Sized>(this: &mut T) {
                         o.bounce = -VELENEMYBOUNCE;
                     }
 
-                    eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
+                        Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                         (o.ix as i32 - o.collisionOffsetX as i32 + o.iw as i32 - 32) as i16,
                         (o.iy as i32 - o.collisionOffsetY as i32 + o.ih as i32 - 32) as i16,
                         3,
@@ -219,8 +218,8 @@ pub fn mo_walking_enemy_update<T: MO_WalkingEnemyTrait + ?Sized>(this: &mut T) {
                     this.kill_object_map_hazard(-1);
                 } else {
                     let o = this.we();
-                    eyecandy[0].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut rm.spr_burnup),
+                    game().eyecandy[0].emplace(EC_SingleAnimation::new(
+                        Ptr::from_mut(&mut game().rm.spr_burnup),
                         (o.ix as i32 + (o.collisionWidth as i32 >> 1) - 16) as i16,
                         (o.iy as i32 + (o.collisionHeight as i32 >> 1) - 16) as i16,
                         5,
@@ -275,15 +274,15 @@ pub fn mo_walking_enemy_update<T: MO_WalkingEnemyTrait + ?Sized>(this: &mut T) {
                     probeCenterX = (probeCenterX as i32 / TILESIZE) as i16;
                     probeY = (probeY as i32 / TILESIZE) as i16;
 
-                    let mut frontBlock = g_map.block(probeFrontX, probeY);
-                    let mut centerBlock = g_map.block(probeCenterX, probeY);
+                    let mut frontBlock = game().g_map.block(probeFrontX, probeY);
+                    let mut centerBlock = game().g_map.block(probeCenterX, probeY);
 
                     let fFoundFrontBlock = !frontBlock.is_null() && !frontBlock.is_transparent() && !frontBlock.is_hidden();
                     let fFoundCenterBlock = !centerBlock.is_null() && !centerBlock.is_transparent() && !centerBlock.is_hidden();
 
                     if !fFoundFrontBlock && !fFoundCenterBlock {
-                        let frontTile: i32 = g_map.map(probeFrontX as i32, probeY as i32);
-                        let centerTile: i32 = g_map.map(probeCenterX as i32, probeY as i32);
+                        let frontTile: i32 = game().g_map.map(probeFrontX as i32, probeY as i32);
+                        let centerTile: i32 = game().g_map.map(probeCenterX as i32, probeY as i32);
 
                         let fFrontGap = (frontTile & tile_flag_super_death_top) != 0 || ((frontTile & tile_flag_solid) == 0 && (frontTile & tile_flag_solid_on_top) == 0);
                         let fCenterGap = (centerTile & tile_flag_super_death_top) != 0 || ((centerTile & tile_flag_solid) == 0 && (centerTile & tile_flag_solid_on_top) == 0);
@@ -309,14 +308,14 @@ pub fn mo_walking_enemy_collide_player<T: MO_WalkingEnemyTrait + ?Sized>(this: &
             let killStyle = this.we().killStyle;
             player.add_killer_award(Ptr::null(), killStyle);
 
-            if game_values.gamemode.gamemode == game_mode_stomp && !game_values.gamemode.gameover {
+            if game().game_values.gamemode.gamemode == game_mode_stomp && !game().game_values.gamemode.gameover {
                 player.score().adjust_score(1);
             }
 
             if this.we().frozen {
                 this.shatter_die();
             } else {
-                if_sound_on_play(&mut rm.sfx_kicksound);
+                if_sound_on_play(&mut game().rm.sfx_kicksound);
                 this.die();
             }
         } else {
@@ -375,7 +374,7 @@ pub fn mo_walking_enemy_collide_object<T: MO_WalkingEnemyTrait + ?Sized>(this: &
                     return;
                 }
 
-                if game_values.gamemode.gamemode == game_mode_stomp && !game_values.gamemode.gameover {
+                if game().game_values.gamemode.gamemode == game_mode_stomp && !game().game_values.gamemode.gameover {
                     // Find the player that shot this fireball so we can attribute a kill
                     let mut killer: Ptr<CPlayer> = get_player_from_global_id(object.iPlayerID);
 
@@ -393,7 +392,7 @@ pub fn mo_walking_enemy_collide_object<T: MO_WalkingEnemyTrait + ?Sized>(this: &
                 if this.we().frozen {
                     this.shatter_die();
                 } else {
-                    if_sound_on_play(&mut rm.sfx_kicksound);
+                    if_sound_on_play(&mut game().rm.sfx_kicksound);
 
                     if r#type == movingobject_attackzone {
                         this.die_and_drop_shell(true, false);
@@ -418,8 +417,8 @@ pub fn mo_walking_enemy_collide_object<T: MO_WalkingEnemyTrait + ?Sized>(this: &
                 o.frozen = true;
                 o.frozentimer = 300;
 
-                eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                game().eyecandy[2].emplace(EC_SingleAnimation::new(
+                    Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                     (o.ix as i32 - o.collisionOffsetX as i32 + o.iw as i32 - 32) as i16,
                     (o.iy as i32 - o.collisionOffsetY as i32 + o.ih as i32 - 32) as i16,
                     3,
@@ -437,7 +436,7 @@ pub fn mo_walking_enemy_place(this: &mut MO_WalkingEnemy) {
     let collisionHeight = this.collisionHeight;
     let mut iAttempts: i16 = 10;
     unsafe {
-        while !g_map.findspawnpoint(5, &mut ix, &mut iy, collisionWidth, collisionHeight, false) && {
+        while !game().g_map.findspawnpoint(5, &mut ix, &mut iy, collisionWidth, collisionHeight, false) && {
             let a = iAttempts;
             iAttempts -= 1;
             a > 0
@@ -451,19 +450,19 @@ pub fn mo_walking_enemy_place(this: &mut MO_WalkingEnemy) {
 
 pub fn mo_walking_enemy_shatter_die<T: MO_WalkingEnemyTrait + ?Sized>(this: &mut T) {
     unsafe {
-        if_sound_on_play(&mut rm.sfx_breakblock);
+        if_sound_on_play(&mut game().rm.sfx_breakblock);
         let o = this.we_mut();
         o.dead = true;
 
         let iBrokenIceX: i16 = (o.ix as i32 - o.collisionOffsetX as i32 + o.iw as i32 - 32) as i16;
         let iBrokenIceY: i16 = (o.iy as i32 - o.collisionOffsetY as i32 + o.ih as i32 - 32) as i16;
-        let spr = Ptr::from_mut(&mut rm.spr_brokeniceblock);
-        eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, iBrokenIceY, -1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
-        eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, iBrokenIceY, 1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
-        eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, (iBrokenIceY as i32 + 16) as i16, -1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
-        eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, (iBrokenIceY as i32 + 16) as i16, 1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
+        let spr = Ptr::from_mut(&mut game().rm.spr_brokeniceblock);
+        game().eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, iBrokenIceY, -1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
+        game().eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, iBrokenIceY, 1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
+        game().eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, (iBrokenIceY as i32 + 16) as i16, -1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
+        game().eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, (iBrokenIceY as i32 + 16) as i16, 1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
 
-        game_values.unlocksecret2part2 += 1;
+        game().game_values.unlocksecret2part2 += 1;
     }
 }
 

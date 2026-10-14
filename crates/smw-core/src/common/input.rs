@@ -273,11 +273,11 @@ impl CPlayerInput {
                 //Allow keyboard input from player 1 at all times (even when he is configured to use joystick)
                 // Not in upstream: unless another player now has those keys (see assign_inputs).
                 if iPlayer == -1 {
-                    let keyboard = &mut game_values.inputConfiguration[0][0] as *mut CInputPlayerControl;
+                    let keyboard = &mut game().game_values.inputConfiguration[0][0] as *mut CInputPlayerControl;
                     if iGameState == 1 && self.inputControls[0].iDevice != DEVICE_KEYBOARD && !self.inputControls.iter().any(|c| c.as_ptr() == keyboard) {
-                        inputControl = &game_values.inputConfiguration[0][0].inputGameControls[1];
+                        inputControl = &game().game_values.inputConfiguration[0][0].inputGameControls[1];
                         outputControl = &mut self.outputControls[0];
-                        iDeviceID = game_values.inputConfiguration[0][0].iDevice;
+                        iDeviceID = game().game_values.inputConfiguration[0][0].iDevice;
                     } else {
                         continue;
                     }
@@ -297,7 +297,7 @@ impl CPlayerInput {
                 // game_values.playercontrol[-1] is read for the keyboard fallback player in C++ only
                 // when iGameState == 0, which the iPlayer == -1 branch excludes.
                 let ignore_cpu = |iKey: usize| -> bool {
-                    iGameState == 0 && game_values.playercontrol[iPlayer as usize] != 1 && iKey < 6
+                    iGameState == 0 && game().game_values.playercontrol[iPlayer as usize] != 1 && iKey < 6
                 };
 
                 if iDeviceID == DEVICE_KEYBOARD {

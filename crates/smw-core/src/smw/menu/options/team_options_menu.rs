@@ -34,16 +34,16 @@ impl UI_TeamOptionsMenu {
     pub fn new() -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let spr = Ptr::from_mut(&mut rm.spr_selectfield);
-            let menu_plain_field = Ptr::from_mut(&mut rm.menu_plain_field);
+            let spr = Ptr::from_mut(&mut game().rm.spr_selectfield);
+            let menu_plain_field = Ptr::from_mut(&mut game().rm.menu_plain_field);
 
             this.miTeamKillsField = select_field(spr, 70, 180, "Player Collision", 500, 220,
                 &[("Off", TeamCollisionStyle::Off), ("Assist", TeamCollisionStyle::Assist), ("On", TeamCollisionStyle::On)],
-                &mut game_values.teamcollision);
+                &mut game().game_values.teamcollision);
 
             this.miTeamColorsField = select_field(spr, 70, 220, "Colors", 500, 220,
                 &[("Individual", false), ("Team", true)],
-                &mut game_values.teamcolors);
+                &mut game().game_values.teamcolors);
             this.miTeamColorsField.set_auto_advance(true);
 
             this.miTournamentControlField = select_field(spr, 70, 260, "Tournament Control", 500, 220,
@@ -57,7 +57,7 @@ impl UI_TeamOptionsMenu {
                     ("Random Loser", TournamentControlStyle::RandomLoser),
                     ("Round Robin", TournamentControlStyle::RoundRobin),
                 ],
-                &mut game_values.tournamentcontrolstyle);
+                &mut game().game_values.tournamentcontrolstyle);
 
             this.miTeamOptionsMenuBackButton = Ptr::new_box(MI_Button::new(spr, 544, 432, "Back", 80, TextAlign::CENTER));
             this.miTeamOptionsMenuBackButton.set_code(MENU_CODE_BACK_TO_OPTIONS_MENU);

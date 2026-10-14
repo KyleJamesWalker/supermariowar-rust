@@ -11,8 +11,6 @@ use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::race::CGM_Race;
-use crate::smw::gs_gameplay::objectcontainer;
-use crate::smw::main::score_cnt;
 use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::overmap::over_map_object::{io_over_map_object_update, IO_OverMapObject, IO_OverMapObjectTrait};
 use crate::smw::player::CPlayer;
@@ -79,8 +77,8 @@ impl OMO_RaceGoal {
         this.place_race_goal();
 
         unsafe {
-            this.speed = game_values.gamemodesettings.race.speed as f32 / 4.0f32;
-            this.quantity = game_values.gamemodesettings.race.quantity;
+            this.speed = game().game_values.gamemodesettings.race.speed as f32 / 4.0f32;
+            this.quantity = game().game_values.gamemodesettings.race.quantity;
         }
         this.isfinishline = this.goalID as i32 == this.quantity as i32 - 1;
         this
@@ -96,9 +94,9 @@ impl OMO_RaceGoal {
         let mut y: i16 = 0;
 
         unsafe {
-            if self.goalID < g_map.iNumRaceGoals {
-                x = g_map.racegoallocations[self.goalID as usize].x;
-                y = g_map.racegoallocations[self.goalID as usize].y;
+            if self.goalID < game().g_map.iNumRaceGoals {
+                x = game().g_map.racegoallocations[self.goalID as usize].x;
+                y = game().g_map.racegoallocations[self.goalID as usize].y;
             } else {
                 let mut tries: i16 = 0;
                 loop {
@@ -110,7 +108,7 @@ impl OMO_RaceGoal {
                     x = RANDOM_INT(App::screenWidth - self.collisionWidth as i32) as i16;
                     y = RANDOM_INT(App::screenHeight - self.collisionHeight as i32) as i16;
 
-                    if !(objectcontainer[2].get_closest_object(x, y, object_race_goal) <= 250.0f32 - (self.quantity as f32 * 25.0f32)) {
+                    if !(game().objectcontainer[2].get_closest_object(x, y, object_race_goal) <= 250.0f32 - (self.quantity as f32 * 25.0f32)) {
                         break;
                     }
                 }
@@ -147,15 +145,15 @@ impl CObjectTrait for OMO_RaceGoal {
             } else {
                 self.spr.draw_src(x, y, &SDL_Rect { x: self.drawframe as i32, y: 0, w: self.iw as i32, h: self.ih as i32 });
 
-                for k in 0..score_cnt {
+                for k in 0..game().score_cnt {
                     if self.tagged[k as usize] > -1 {
-                        let fp = &flagpositions[(score_cnt - 2) as usize][k as usize];
-                        rm.spr_bonus.draw_src(x + fp[0] as i32, y + fp[1] as i32, &SDL_Rect { x: 0, y: self.tagged[k as usize] as i32 * 16, w: 16, h: 16 });
+                        let fp = &flagpositions[(game().score_cnt - 2) as usize][k as usize];
+                        game().rm.spr_bonus.draw_src(x + fp[0] as i32, y + fp[1] as i32, &SDL_Rect { x: 0, y: self.tagged[k as usize] as i32 * 16, w: 16, h: 16 });
                     }
                 }
             }
 
-            rm.spr_racetext.draw_src(x + 26, y, &SDL_Rect { x: (self.goalID as i32 + 1) * 16, y: 0, w: 16, h: 16 });
+            game().rm.spr_racetext.draw_src(x + 26, y, &SDL_Rect { x: (self.goalID as i32 + 1) * 16, y: 0, w: 16, h: 16 });
         }
     }
 
@@ -206,16 +204,16 @@ impl CObjectTrait for OMO_RaceGoal {
 
     fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
         unsafe {
-            if game_values.gamemode.getgamemode() == game_mode_race && player.tanookisuit.not_statue() {
-                let gamemode: &mut CGM_Race = game_values.gamemode.as_any().downcast_mut::<CGM_Race>().unwrap();
+            if game().game_values.gamemode.getgamemode() == game_mode_race && player.tanookisuit.not_statue() {
+                let gamemode: &mut CGM_Race = game().game_values.gamemode.get().as_any().downcast_mut::<CGM_Race>().unwrap();
 
                 if self.tagged[player.teamID as usize] != player.colorID && gamemode.get_next_goal(player.teamID) >= self.goalID {
                     self.tagged[player.teamID as usize] = player.colorID;
 
                     if self.isfinishline {
-                        if_sound_on_play(&mut rm.sfx_racesound);
+                        if_sound_on_play(&mut game().rm.sfx_racesound);
                     } else {
-                        if_sound_on_play(&mut rm.sfx_areatag);
+                        if_sound_on_play(&mut game().rm.sfx_areatag);
                     }
                 }
 

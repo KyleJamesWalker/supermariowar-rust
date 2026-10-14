@@ -1,6 +1,7 @@
 //! Port of src/smw/menu/network/NetRoomMenu.cpp
 
-use crate::common::global::{game_values, rm};
+use crate::game::game;
+
 use crate::common::path::{file_exists, get_home_directory};
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
@@ -12,7 +13,6 @@ use crate::common::uicontrol::{ctl_ptr, TextAlign};
 use crate::common::uimenu::UI_Menu;
 use crate::common_netplay::protocol_definitions::NET_MAX_CHAT_MSG_LENGTH;
 use crate::globals::Ptr;
-use crate::smw::net::netplay;
 use crate::smw::ui::mi_chat_message_box::MI_ChatMessageBox;
 use crate::smw::ui::mi_net_room_team_select::MI_NetRoomTeamSelect;
 use std::path::Path;
@@ -46,8 +46,8 @@ impl UI_NetRoomMenu {
     pub fn new() -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let selectfield = Ptr::from_mut(&mut rm.spr_selectfield);
-            let plain = Ptr::from_mut(&mut rm.menu_plain_field);
+            let selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
+            let plain = Ptr::from_mut(&mut game().rm.menu_plain_field);
 
             this.miNetRoomName = Ptr::new_box(MI_Text::new("", 40, 50, 0, true, TextAlign::LEFT));
 
@@ -58,7 +58,7 @@ impl UI_NetRoomMenu {
             this.miNetRoomMapPreview = Ptr::new_box(MI_MapPreview::new(selectfield, 264, 2, 400, 120));
 
             this.miNetRoomMessageField = Ptr::new_box(MI_TextField::new(plain, 26, 432, "Say", 464 - 36, 60));
-            this.miNetRoomMessageField.set_data(&mut netplay.mychatmessage, NET_MAX_CHAT_MSG_LENGTH as i16);
+            this.miNetRoomMessageField.set_data(&mut game().netplay.mychatmessage, NET_MAX_CHAT_MSG_LENGTH as i16);
 
             this.miNetRoomSendButton = Ptr::new_box(MI_Button::new(selectfield, 464, 432, "Send", 80, TextAlign::CENTER));
             this.miNetRoomSendButton.set_code(MENU_CODE_NET_CHAT_SEND);
@@ -79,7 +79,7 @@ impl UI_NetRoomMenu {
                 16,
                 72 + p * 60,
                 p,
-                Box::new(|| unsafe { netplay.client.send_skin_change() }),
+                Box::new(|| unsafe { game().netplay.client.send_skin_change() }),
             ));
             let sel = ctl_ptr(this.miSkinSelector[p as usize]);
             this.add_control(sel, field, start, null, null);
@@ -97,7 +97,7 @@ impl UI_NetRoomMenu {
         this.add_control(back, start, start, send, field);
 
         unsafe {
-            this.miNetRoomStartingDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
+            this.miNetRoomStartingDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut game().rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
             this.miNetRoomStartingDialogText = Ptr::new_box(MI_HeaderText::new("Starting...", 320, 240 - 40));
         }
 
@@ -109,7 +109,7 @@ impl UI_NetRoomMenu {
         this.add_non_control(dt);
 
         unsafe {
-            let plain = Ptr::from_mut(&mut rm.menu_plain_field);
+            let plain = Ptr::from_mut(&mut game().rm.menu_plain_field);
             this.miNetRoomLeftHeaderBar = Ptr::new_box(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miNetRoomRightHeaderBar = Ptr::new_box(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0));
             this.miNetRoomHeaderText = Ptr::new_box(MI_HeaderText::new("Multiplayer Room Menu", 320, 5));
@@ -127,48 +127,48 @@ impl UI_NetRoomMenu {
 
     pub fn refresh(&mut self) {
         unsafe {
-            let name = netplay.currentRoom.name.clone();
+            let name = game().netplay.currentRoom.name.clone();
             self.miNetRoomHeaderText.set_text(name);
 
-            let me = ctl_ptr(self.miSkinSelector[netplay.remotePlayerNumber as usize]);
+            let me = ctl_ptr(self.miSkinSelector[game().netplay.remotePlayerNumber as usize]);
             self.miNetRoomStartButton.set_neighbor(MenuNavDirection::Up, me);
             self.miNetRoomMessageField.set_neighbor(MenuNavDirection::Down, me);
 
             for p in 0..4i16 {
-                let pname = netplay.currentRoom.playerNames[p as usize].clone();
+                let pname = game().netplay.currentRoom.playerNames[p as usize].clone();
                 self.miNetRoomPlayerName[p as usize].set_text(pname);
 
                 let path = format!("{}net_skin{}.bmp", get_home_directory(), p);
-                if p == netplay.remotePlayerNumber as i16 {
+                if p == game().netplay.remotePlayerNumber as i16 {
                     println!("  player {} -> local", p);
-                    rm.load_menu_skin(p, game_values.skinids[0], p, false);
+                    game().rm.load_menu_skin(p, game().game_values.skinids[0], p, false);
                 } else if file_exists(&path) {
                     println!("  player {} -> {}", p, path);
-                    if !rm.load_menu_skin_path(p, Path::new(&path), p, false) {
-                        rm.load_menu_skin(p, game_values.skinids[p as usize], p, false);
+                    if !game().rm.load_menu_skin_path(p, Path::new(&path), p, false) {
+                        game().rm.load_menu_skin(p, game().game_values.skinids[p as usize], p, false);
                     }
                 } else {
                     println!("  player {} -> default", p);
-                    rm.load_menu_skin(p, 0, p, false);
+                    game().rm.load_menu_skin(p, 0, p, false);
                 }
             }
 
-            if netplay.theHostIsMe && netplay.currentRoom.player_count() > 1 {
+            if game().netplay.theHostIsMe && game().netplay.currentRoom.player_count() > 1 {
                 self.miNetRoomStartButton.set_name("Start");
             } else {
                 self.miNetRoomStartButton.set_name("(waiting)");
             }
 
-            let path = netplay.mapfilepath.clone();
+            let path = game().netplay.mapfilepath.clone();
             self.set_preview_map_path(&path);
         }
     }
 
     pub fn start_in_progress(&mut self) {
         unsafe {
-            if netplay.theHostIsMe && netplay.currentRoom.player_count() > 1 {
-                netplay.client.local_gamehost.send_start_room_message();
-                netplay.operationInProgress = true;
+            if game().netplay.theHostIsMe && game().netplay.currentRoom.player_count() > 1 {
+                game().netplay.client.local_gamehost.send_start_room_message();
+                game().netplay.operationInProgress = true;
 
                 self.miNetRoomStartingDialogImage.set_visible(true);
                 self.miNetRoomStartingDialogText.set_visible(true);

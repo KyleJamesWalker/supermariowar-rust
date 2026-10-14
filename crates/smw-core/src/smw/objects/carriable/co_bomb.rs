@@ -9,7 +9,7 @@ use crate::common::object_base::CObjectTrait;
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::{objectcontainer, spotlightManager};
+use crate::smw::gs_gameplay::{spotlightManager};
 use crate::smw::objects::moving::mo_carried_object::{MO_CarriedObject, MO_CarriedObjectTrait};
 use crate::smw::objects::moving::mo_explosion::MO_Explosion;
 use crate::smw::objects::moving::moving_object::{io_moving_object_collision_detection_map, IO_MovingObjectTrait};
@@ -115,7 +115,7 @@ impl CObjectTrait for CO_Bomb {
         self.animate();
 
         unsafe {
-            if game_values.spotlights {
+            if game().game_values.spotlights {
                 let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
                 let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
                 if self.sSpotlight.is_null() {
@@ -162,8 +162,8 @@ impl IO_MovingObjectTrait for CO_Bomb {
 
         self.dead = true;
         unsafe {
-            objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
-                Ptr::from_mut(&mut rm.spr_explosion),
+            game().objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
+                Ptr::from_mut(&mut game().rm.spr_explosion),
                 Vec2s::new((self.ix as i32 + (self.iw as i32 >> 2) - 96) as i16, (self.iy as i32 + (self.ih as i32 >> 2) - 64) as i16),
                 2,
                 4,
@@ -171,7 +171,7 @@ impl IO_MovingObjectTrait for CO_Bomb {
                 self.iTeamID,
                 KillStyle::Bomb,
             )));
-            if_sound_on_play(&mut rm.sfx_bobombsound);
+            if_sound_on_play(&mut game().rm.sfx_bobombsound);
         }
     }
 }

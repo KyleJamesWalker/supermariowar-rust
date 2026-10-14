@@ -1,10 +1,10 @@
 //! Port of src/smw/objects/blocks/BreakableBlock.cpp
 
+use crate::game::game;
 use crate::common::eyecandy::EC_FallingObject;
-use crate::common::game_values::{game_values, if_sound_on_play};
+use crate::common::game_values::if_sound_on_play;
 use crate::common::gameplay_styles::TeamCollisionStyle;
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::global::g_map;
 use crate::common::global_constants::*;
 use crate::common::io_block::{IO_Block, IO_BlockTrait};
 use crate::common::math::vec2::Vec2s;
@@ -12,9 +12,8 @@ use crate::common::moving_object_types::*;
 use crate::common::object_base::{cap_falling_velocity, CObjectTrait};
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
-use crate::globals::{rm, Ptr};
+use crate::globals::Ptr;
 use crate::impl_base;
-use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::objectgame::check_secret;
 use crate::smw::objects::blocks::io_block::*;
 use crate::smw::objects::carriable::co_throw_box::CO_ThrowBox;
@@ -80,8 +79,8 @@ impl CObjectTrait for B_BreakableBlock {
                 self.iBumpPlayerID = -1;
                 self.dead = true;
                 unsafe {
-                    g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
-                    g_map.update_tile_gap(self.col, self.row);
+                    game().g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
+                    game().g_map.update_tile_gap(self.col, self.row);
                 }
             }
         }
@@ -109,7 +108,7 @@ impl IO_BlockTrait for B_BreakableBlock {
                 let mut iKillType = PlayerKillType::NonKill;
                 if self.iBumpPlayerID >= 0
                     && !player.is_invincible_on_bottom()
-                    && (player.teamID != self.iBumpTeamID || game_values.teamcollision == TeamCollisionStyle::On)
+                    && (player.teamID != self.iBumpTeamID || game().game_values.teamcollision == TeamCollisionStyle::On)
                 {
                     iKillType = player_killed_player(self.iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
                 }
@@ -223,18 +222,18 @@ impl IO_BlockTrait for B_BreakableBlock {
     fn trigger_behavior(&mut self) {
         unsafe {
             if self.state == 0 {
-                let spr = Ptr::from_mut(&mut rm.spr_brokenyellowblock);
+                let spr = Ptr::from_mut(&mut game().rm.spr_brokenyellowblock);
                 let (ix, iy) = (self.ix, self.iy);
-                eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy, -2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
-                eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy, 2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
-                eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
-                eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
+                game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy, -2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
+                game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy, 2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
+                game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
+                game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
 
                 self.state = 1;
-                if_sound_on_play(&mut rm.sfx_breakblock);
+                if_sound_on_play(&mut game().rm.sfx_breakblock);
             }
 
-            game_values.unlocksecret1part2 += 1;
+            game().game_values.unlocksecret1part2 += 1;
             check_secret(0);
         }
     }

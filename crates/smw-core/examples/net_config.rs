@@ -4,13 +4,13 @@
 
 #![allow(static_mut_refs)]
 
-use smw::smw::net::netplay;
+use smw::game::game;
 use smw::smw::network::net_config_manager::NetConfigManager;
 
 fn main() {
     smw::globals::init_globals();
     unsafe {
-        netplay.myPlayerName = "Player".to_string();
+        game().netplay.myPlayerName = "Player".to_string();
     }
     NetConfigManager.load();
     NetConfigManager.save();

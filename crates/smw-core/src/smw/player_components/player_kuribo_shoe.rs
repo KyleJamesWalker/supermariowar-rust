@@ -6,9 +6,7 @@ use crate::common::gfx::gfx_sprite::ClipEdge;
 use crate::common::global_constants::{PHOFFSET, PWOFFSET};
 use crate::common::math::vec2::Vec2s;
 use crate::globals::*;
-use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::objects::carriable::co_kuribo_shoe::CO_KuriboShoe;
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::objects::moving::moving_object::io_moving_object_collision_detection_checksides;
 use crate::smw::player::CPlayer;
 use sdl2::sys::SDL_Rect;
@@ -83,14 +81,14 @@ impl PlayerKuriboShoe {
 
                 if self.exitIndex == 4 && self.exitTimer < 32 {
                     let shoe = Ptr::new_box(CO_KuriboShoe::new(
-                        Ptr::from_mut(&mut rm.spr_kuriboshoe),
+                        Ptr::from_mut(&mut game().rm.spr_kuriboshoe),
                         Vec2s::new((player.ix as i32 - PWOFFSET) as i16, (player.iy as i32 - PHOFFSET - 2) as i16),
                         self.r#type == STICKY,
                     ));
                     io_moving_object_collision_detection_checksides(shoe.get());
-                    objectcontainer[1].add(shoe);
-                    eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                    game().objectcontainer[1].add(shoe);
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
+                        Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                         (player.center_x() as i32 - 16) as i16,
                         (player.center_y() as i32 - 16) as i16,
                         3,
@@ -99,7 +97,7 @@ impl PlayerKuriboShoe {
 
                     self.exitIndex = 0;
                     self.exitTimer = 0;
-                    if_sound_on_play(&mut rm.sfx_transform);
+                    if_sound_on_play(&mut game().rm.sfx_transform);
                     self.r#type = NONE;
 
                     player.superstomp.reset();
@@ -143,9 +141,9 @@ impl PlayerKuriboShoe {
                 };
                 if player.iswarping() {
                     let edge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);
-                    rm.spr_kuriboshoe.draw_clip(x, y, &src, edge, player.get_warp_plane() as i32);
+                    game().rm.spr_kuriboshoe.draw_clip(x, y, &src, edge, player.get_warp_plane() as i32);
                 } else {
-                    rm.spr_kuriboshoe.draw_src(x, y, &src);
+                    game().rm.spr_kuriboshoe.draw_src(x, y, &src);
                 }
             }
         }

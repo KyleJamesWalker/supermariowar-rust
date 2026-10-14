@@ -11,8 +11,7 @@ use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::classic::CGM_Classic;
 use crate::smw::gamemodes::game_mode::*;
-use crate::smw::gs_gameplay::objectcontainer;
-use crate::smw::main::{score, score_cnt};
+
 use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::moving::mo_coin::MO_Coin;
 use crate::smw::player::CPlayer;
@@ -63,7 +62,7 @@ fn drop_coins(player: Ptr<CPlayer>, iDamage: i16, pos: Vec2s) {
             let angle: f32 = -(RANDOM_INT(314) as f32) / 100.0f32;
             let vel: Vec2f = Vec2f::new(speed * cosf(angle), speed * sinf(angle));
 
-            objectcontainer[1].add(Ptr::new_box(MO_Coin::new(Ptr::from_mut(&mut rm.spr_coin), vel, pos, player.get_color_id(), player.get_team_id(), 1, 30, false)));
+            game().objectcontainer[1].add(Ptr::new_box(MO_Coin::new(Ptr::from_mut(&mut game().rm.spr_coin), vel, pos, player.get_color_id(), player.get_team_id(), 1, 30, false)));
         }
     }
 }
@@ -86,11 +85,11 @@ impl CGM_Greed {
 
     pub fn release_coins(&mut self, mut player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
         unsafe {
-            if_sound_on_play(&mut rm.sfx_cannon);
+            if_sound_on_play(&mut game().rm.sfx_cannon);
 
             player.shield().turn_on();
 
-            let mut iDamage: i16 = (kill_style_damage(style) as i32 * game_values.gamemodesettings.greed.multiplier as i32 / 2) as i16;
+            let mut iDamage: i16 = (kill_style_damage(style) as i32 * game().game_values.gamemodesettings.greed.multiplier as i32 / 2) as i16;
 
             if self.goal != -1 {
                 if player.score().score < iDamage {
@@ -109,14 +108,14 @@ impl CGM_Greed {
             //Play warning sound if game is almost over
             if self.goal != -1 && !self.playedwarningsound {
                 let mut playwarning = false;
-                for j in 0..score_cnt {
+                for j in 0..game().score_cnt {
                     let mut countscore: i16 = 0;
-                    for k in 0..score_cnt {
+                    for k in 0..game().score_cnt {
                         if j == k {
                             continue;
                         }
 
-                        countscore = (countscore as i32 + score[k as usize].score as i32) as i16;
+                        countscore = (countscore as i32 + game().score[k as usize].score as i32) as i16;
                     }
 
                     if countscore <= 10 {
@@ -149,8 +148,8 @@ impl CGameModeTrait for CGM_Greed {
         let iGoal: i16 = if self.goal == -1 { 0 } else { self.goal };
 
         unsafe {
-            for iScore in 0..score_cnt {
-                score[iScore as usize].set_score(iGoal);
+            for iScore in 0..game().score_cnt {
+                game().score[iScore as usize].set_score(iGoal);
             }
         }
     }

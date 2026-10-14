@@ -1,8 +1,8 @@
 //! Port of src/common/map/MapReader15xx.cpp
 
+use crate::game::game;
 use crate::common::file_io::BinaryFile;
 use crate::common::game_values::default_powerup_setting;
-use crate::common::global::g_tilesetmanager;
 use crate::common::global_constants::*;
 use crate::common::map::map_reader::MapReader;
 use crate::common::map::map_reader_constants::g_szBackgroundConversion;
@@ -24,11 +24,11 @@ impl MapReader {
                     let iTileID: i16 = mapfile.read_i32() as i16;
 
                     let tile = &mut map.mapdata[i][j][1];
-                    tile.iID = g_tilesetmanager.classic_tileset_index() as i16;
+                    tile.iID = game().g_tilesetmanager.classic_tileset_index() as i16;
                     tile.iCol = iTileID % 32;
                     tile.iRow = iTileID / 32;
 
-                    let iType = g_tilesetmanager.classic_tileset().tile_type(tile.iCol as isize as usize, tile.iRow as isize as usize);
+                    let iType = game().g_tilesetmanager.classic_tileset().tile_type(tile.iCol as isize as usize, tile.iRow as isize as usize);
                     map.mapdatatop[i][j] = iType;
 
                     map.mapdata[i][j][0].iID = TILESETNONE as i16;

@@ -43,17 +43,17 @@ impl CObjectTrait for PU_ExtraHeartPowerup {
         let mut player = player;
         unsafe {
             if self.state > 0 {
-                if game_values.gamemode.gamemode == game_mode_health {
-                    if player.score().subscore[1] < game_values.gamemodesettings.health.maxlife {
+                if game().game_values.gamemode.gamemode == game_mode_health {
+                    if player.score().subscore[1] < game().game_values.gamemodesettings.health.maxlife {
                         player.score().subscore[1] += 1;
                     }
 
-                    if player.score().subscore[0] < game_values.gamemodesettings.health.maxlife {
+                    if player.score().subscore[0] < game().game_values.gamemodesettings.health.maxlife {
                         player.score().subscore[0] += 1;
                     }
                 }
 
-                if_sound_on_play(&mut rm.sfx_collectpowerup);
+                if_sound_on_play(&mut game().rm.sfx_collectpowerup);
                 self.dead = true;
             }
         }

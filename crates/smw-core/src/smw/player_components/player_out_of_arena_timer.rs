@@ -21,7 +21,7 @@ impl PlayerOutOfArenaTimer {
     pub fn reset(&mut self) {
         unsafe {
             self.timer = 0;
-            self.displaytimer = (game_values.outofboundstime as i32 - 1) as i16;
+            self.displaytimer = (game().game_values.outofboundstime as i32 - 1) as i16;
         }
     }
 
@@ -29,7 +29,7 @@ impl PlayerOutOfArenaTimer {
         unsafe {
             if player.iy < 0 {
                 if (player.bottom_y() < -1 || (player.bottom_y() <= 1 && player.vely <= 0.8f32))
-                    && game_values.outofboundstime > 0
+                    && game().game_values.outofboundstime > 0
                     && !player.is_invincible()
                 {
                     self.timer += 1;
@@ -55,15 +55,15 @@ impl PlayerOutOfArenaTimer {
 
             if player.top_y() < 0 {
                 if player.bottom_y() < -1 || (player.bottom_y() <= 0 && player.vely <= 1.0f32) {
-                    rm.spr_abovearrows.draw_src(
+                    game().rm.spr_abovearrows.draw_src(
                         player.left_x() as i32 - PWOFFSET,
                         0,
                         &SDL_Rect { x: player.get_color_id() as i32 * 32, y: 0, w: 32, h: 26 },
                     );
 
                     //This displays the out of arena timer before the player is killed
-                    if game_values.outofboundstime > 0 && self.displaytimer >= 0 {
-                        rm.spr_awardkillsinrow.draw_src(
+                    if game().game_values.outofboundstime > 0 && self.displaytimer >= 0 {
+                        game().rm.spr_awardkillsinrow.draw_src(
                             player.left_x() as i32 - PWOFFSET + 8,
                             18,
                             &SDL_Rect { x: (self.displaytimer as i32) << 4, y: (player.get_color_id() as i32) << 4, w: 16, h: 16 },

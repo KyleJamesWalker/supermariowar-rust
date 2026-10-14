@@ -6,7 +6,6 @@ use crate::common::object_base::{object_bulletbillcannon, CObject, CObjectTrait}
 use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::objects::moving::mo_bullet_bill::MO_BulletBill;
 use crate::smw::player::CPlayer;
 
@@ -59,15 +58,15 @@ impl IO_BulletBillCannon {
 
         let pos = Vec2s::new((self.ix as i32 + if self.m_vel < 0.0f32 { 32 } else { -32 }) as i16, self.iy);
         unsafe {
-            objectcontainer[1].add(Ptr::new_box(MO_BulletBill::new(
-                Ptr::from_mut(&mut rm.spr_hazard_bulletbill[if self.m_preview { 1 } else { 0 }]),
-                Ptr::from_mut(&mut rm.spr_hazard_bulletbilldead),
+            game().objectcontainer[1].add(Ptr::new_box(MO_BulletBill::new(
+                Ptr::from_mut(&mut game().rm.spr_hazard_bulletbill[if self.m_preview { 1 } else { 0 }]),
+                Ptr::from_mut(&mut game().rm.spr_hazard_bulletbilldead),
                 pos,
                 self.m_vel,
                 0,
                 true,
             )));
-            if_sound_on_play(&mut rm.sfx_bulletbillsound);
+            if_sound_on_play(&mut game().rm.sfx_bulletbillsound);
         }
     }
 }

@@ -46,8 +46,8 @@ impl UI_OptionsMenu {
     pub fn new() -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let spr_selectfield = Ptr::from_mut(&mut rm.spr_selectfield);
-            let menu_plain_field = Ptr::from_mut(&mut rm.menu_plain_field);
+            let spr_selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
+            let menu_plain_field = Ptr::from_mut(&mut game().rm.menu_plain_field);
 
             this.miGameplayOptionsMenuButton = Ptr::new_box(MI_Button::new(spr_selectfield, 120, 40, "Gameplay", 400, TextAlign::CENTER));
             this.miGameplayOptionsMenuButton.set_code(MENU_CODE_TO_GAMEPLAY_OPTIONS_MENU);
@@ -73,10 +73,10 @@ impl UI_OptionsMenu {
             this.miEyeCandyOptionsMenuButton = Ptr::new_box(MI_Button::new(spr_selectfield, 120, 320, "Eye Candy", 400, TextAlign::CENTER));
             this.miEyeCandyOptionsMenuButton.set_code(MENU_CODE_TO_EYECANDY_OPTIONS_MENU);
 
-            let sound_spr = if game_values.soundcapable { spr_selectfield } else { Ptr::from_mut(&mut rm.spr_selectfielddisabled) };
+            let sound_spr = if game().game_values.soundcapable { spr_selectfield } else { Ptr::from_mut(&mut game().rm.spr_selectfielddisabled) };
             this.miSoundOptionsMenuButton = Ptr::new_box(MI_Button::new(sound_spr, 120, 360, "Music & Sound", 400, TextAlign::CENTER));
 
-            if game_values.soundcapable {
+            if game().game_values.soundcapable {
                 this.miSoundOptionsMenuButton.set_code(MENU_CODE_TO_SOUND_OPTIONS_MENU);
             }
 
@@ -90,7 +90,7 @@ impl UI_OptionsMenu {
             this.miOptionsMenuRightHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
             this.miOptionsMenuHeaderText = Ptr::new_box(MI_HeaderText::new("Options Menu", 320, 5));
 
-            this.miGenerateThumbsDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
+            this.miGenerateThumbsDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut game().rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
             this.miGenerateThumbsDialogAreYouText = Ptr::new_box(MI_HeaderText::new("Are You", 320, 195));
             this.miGenerateThumbsDialogSureText = Ptr::new_box(MI_HeaderText::new("Sure?", 320, 220));
             this.miGenerateThumbsDialogYesButton = Ptr::new_box(MI_Button::new(spr_selectfield, 235, 250, "Yes", 80, TextAlign::CENTER));

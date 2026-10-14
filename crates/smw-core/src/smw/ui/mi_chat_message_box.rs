@@ -1,6 +1,5 @@
 //! Port of src/smw/ui/MI_ChatMessageBox.cpp
-
-use crate::common::global::rm;
+use crate::game::game;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use sdl2::sys::SDL_Rect;
 
@@ -42,10 +41,10 @@ impl UI_ControlTrait for MI_ChatMessageBox {
             let (x, y) = (self.m_pos.x as i32, self.m_pos.y as i32);
             let w = self.iWidth as i32;
             let n = self.iNumLines as i32;
-            rm.menu_dialog.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: w - 16, h: n * 32 + 32 });
-            rm.menu_dialog.draw_src(x + w - 16, y, &SDL_Rect { x: 496, y: 0, w: 16, h: n * 32 + 32 });
-            rm.menu_dialog.draw_src(x, y + n * 32 + 32, &SDL_Rect { x: 0, y: 464, w: w - 16, h: 16 });
-            rm.menu_dialog.draw_src(x + w - 16, y + n * 32 + 32, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+            game().rm.menu_dialog.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: w - 16, h: n * 32 + 32 });
+            game().rm.menu_dialog.draw_src(x + w - 16, y, &SDL_Rect { x: 496, y: 0, w: 16, h: n * 32 + 32 });
+            game().rm.menu_dialog.draw_src(x, y + n * 32 + 32, &SDL_Rect { x: 0, y: 464, w: w - 16, h: 16 });
+            game().rm.menu_dialog.draw_src(x + w - 16, y + n * 32 + 32, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
         }
     }
 }

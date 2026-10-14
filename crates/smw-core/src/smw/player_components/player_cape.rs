@@ -6,7 +6,6 @@ use crate::common::global_constants::{PHOFFSET, PWOFFSET};
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
 use crate::smw::objects::moving::mo_spin_attack::MO_SpinAttack;
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::player::CPlayer;
 use sdl2::sys::SDL_Rect;
 
@@ -39,13 +38,13 @@ impl PlayerCape {
 
     pub fn spin(&mut self, player: &mut CPlayer) {
         unsafe {
-            if_sound_on_play(&mut rm.sfx_tailspin);
+            if_sound_on_play(&mut game().rm.sfx_tailspin);
 
             self.restart_animation(); //Add one extra frame to sync with spinning player sprite
 
             Ptr::from_mut(&mut player.spin).get().spin(player);
 
-            objectcontainer[1].add(Ptr::new_box(MO_SpinAttack::new(
+            game().objectcontainer[1].add(Ptr::new_box(MO_SpinAttack::new(
                 player.get_global_id(),
                 player.get_team_id(),
                 KillStyle::Feather,
@@ -56,7 +55,7 @@ impl PlayerCape {
     }
 
     pub fn draw(&mut self, player: &mut CPlayer) {
-        /* See eyecandy/cape.png for reference */
+        /* See game().eyecandy/cape.png for reference */
         unsafe {
             self.iCapeTimer = self.iCapeTimer.wrapping_add(1);
             if self.iCapeTimer > 3 {
@@ -97,10 +96,10 @@ impl PlayerCape {
                 self.iCapeTimer = 0;
             }
 
-            let mut fPlayerFacingRight = !game_values.reversewalk;
+            let mut fPlayerFacingRight = !game().game_values.reversewalk;
             if player.spin.is_spin_in_progress() {
                 if player.spin.is_reverse_walking() {
-                    fPlayerFacingRight = game_values.reversewalk;
+                    fPlayerFacingRight = game().game_values.reversewalk;
                 }
             } else {
                 fPlayerFacingRight = player.is_facing_right();
@@ -116,9 +115,9 @@ impl PlayerCape {
             };
             if player.iswarping() {
                 let edge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);
-                rm.spr_cape.draw_clip(x, y, &src, edge, player.get_warp_plane() as i32);
+                game().rm.spr_cape.draw_clip(x, y, &src, edge, player.get_warp_plane() as i32);
             } else {
-                rm.spr_cape.draw_src(x, y, &src);
+                game().rm.spr_cape.draw_src(x, y, &src);
             }
         }
     }

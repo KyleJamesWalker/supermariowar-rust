@@ -13,7 +13,6 @@ use crate::common::path::get_home_directory;
 use crate::common::sfx::{sfx_setmusicvolume, sfx_setsoundvolume, sfxSound};
 use crate::common::version::{Version, GAME_VERSION};
 use crate::globals::*;
-pub use crate::common::global::game_values;
 use sdl2::sys::SDL_KeyCode::*;
 use sdl2::sys::SDL_Keycode;
 
@@ -213,7 +212,7 @@ const DEFAULT_POWERUP_PRESETS: [[i16; NUM_POWERUPS as usize]; NUM_POWERUP_PRESET
 
 pub fn if_sound_on_play(sfx: &mut sfxSound) {
     unsafe {
-        if game_values.sound {
+        if game().game_values.sound {
             sfx.play();
         }
     }
@@ -810,7 +809,7 @@ impl CGameConfig {
             self.fullscreen = options.read_bool();
 
             for iGameMode in 0..GAMEMODE_LAST as usize {
-                crate::smw::main::gamemodes[iGameMode].goal = options.read_i16();
+                crate::game::game().gamemodes[iGameMode].goal = options.read_i16();
             }
 
             let mut gms = [0u8; GAMEMODESETTINGS_RAW_SIZE];
@@ -954,7 +953,7 @@ impl CGameConfig {
             options.write_bool(self.fullscreen);
 
             for k in 0..GAMEMODE_LAST as usize {
-                options.write_i16(crate::smw::main::gamemodes[k].goal);
+                options.write_i16(crate::game::game().gamemodes[k].goal);
             }
 
             options.write_raw(&self.gamemodemenusettings.to_raw_bytes());

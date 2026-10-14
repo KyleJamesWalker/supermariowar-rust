@@ -80,15 +80,15 @@ impl MI_PowerupSelection {
         };
 
         unsafe {
-            let spr_selectfield = Ptr::from_mut(&mut rm.spr_selectfield);
+            let spr_selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
 
             this.miOverride = Ptr::new_box(MI_SelectField::<i16>::new(spr_selectfield, 70, this.m_pos.y, "Use Settings From", 500, 250));
             this.miOverride.add("Map Only", 0);
             this.miOverride.add("Game Only", 1);
             this.miOverride.add("Basic Average", 2);
             this.miOverride.add("Weighted Average", 3);
-            this.miOverride.set_output_ptr(&mut game_values.overridepowerupsettings as *mut i16);
-            this.miOverride.set_current_value(game_values.overridepowerupsettings);
+            this.miOverride.set_output_ptr(&mut game().game_values.overridepowerupsettings as *mut i16);
+            this.miOverride.set_current_value(game().game_values.overridepowerupsettings);
             //miOverride->SetItemChangedCode(MENU_CODE_POWERUP_OVERRIDE_CHANGED);
 
             this.miPreset = Ptr::new_box(MI_SelectField::<i16>::new(spr_selectfield, 70, this.m_pos.y + 40, "Item Set", 500, 250));
@@ -109,16 +109,16 @@ impl MI_PowerupSelection {
             this.miPreset.add("Super Mario Bros 2", 14);
             this.miPreset.add("Super Mario Bros 3", 15);
             this.miPreset.add("Super Mario World", 16);
-            this.miPreset.set_output_ptr(&mut game_values.poweruppreset as *mut i16);
-            this.miPreset.set_current_value(game_values.poweruppreset);
+            this.miPreset.set_output_ptr(&mut game().game_values.poweruppreset as *mut i16);
+            this.miPreset.set_current_value(game().game_values.poweruppreset);
             this.miPreset.set_item_changed_code(MENU_CODE_POWERUP_PRESET_CHANGED);
 
             for iPowerup in 0..NP {
                 let pos = iPowerupPositionMap[iPowerup] as usize;
                 let mut slider = Ptr::new_box(MI_PowerupSlider::new(
                     spr_selectfield,
-                    Ptr::from_mut(&mut rm.menu_slider_bar),
-                    Ptr::from_mut(&mut rm.spr_storedpoweruplarge),
+                    Ptr::from_mut(&mut game().rm.menu_slider_bar),
+                    Ptr::from_mut(&mut game().rm.spr_storedpoweruplarge),
                     0,
                     0,
                     245,
@@ -128,8 +128,8 @@ impl MI_PowerupSelection {
                     slider.add("", v);
                 }
                 slider.allow_wrap(false);
-                slider.set_output_ptr(&mut game_values.powerupweights[pos] as *mut i16);
-                slider.set_current_value(game_values.powerupweights[pos]);
+                slider.set_output_ptr(&mut game().game_values.powerupweights[pos] as *mut i16);
+                slider.set_current_value(game().game_values.powerupweights[pos]);
                 slider.set_item_changed_code(MENU_CODE_POWERUP_SETTING_CHANGED);
                 this.miPowerupSlider[iPowerup] = slider;
             }
@@ -141,7 +141,7 @@ impl MI_PowerupSelection {
             this.miClearButton.set_code(MENU_CODE_CLEAR_POWERUP_WEIGHTS);
 
             //Are You Sure dialog box
-            this.miDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
+            this.miDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut game().rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
             this.miDialogAreYouText = Ptr::new_box(MI_HeaderText::new("Are You", 320, 195));
             this.miDialogSureText = Ptr::new_box(MI_HeaderText::new("Sure?", 320, 220));
             this.miDialogYesButton = Ptr::new_box(MI_Button::new(spr_selectfield, 235, 250, "Yes", 80, TextAlign::CENTER));
@@ -162,8 +162,8 @@ impl MI_PowerupSelection {
             this.mMenu.add_control(ctl_ptr(this.miOverride), null, ctl_ptr(this.miPreset), null, null);
             this.mMenu.add_control(ctl_ptr(this.miPreset), ctl_ptr(this.miOverride), sliders[0], null, null);
 
-            this.miUpArrow = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut rm.menu_verticalarrows), 310, 128, 20, 0, 20, 20, 1, 4, 8));
-            this.miDownArrow = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut rm.menu_verticalarrows), 310, 406, 0, 0, 20, 20, 1, 4, 8));
+            this.miUpArrow = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut game().rm.menu_verticalarrows), 310, 128, 20, 0, 20, 20, 1, 4, 8));
+            this.miDownArrow = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut game().rm.menu_verticalarrows), 310, 406, 0, 0, 20, 20, 1, 4, 8));
             this.miUpArrow.set_visible(false);
 
             let mut iPowerup = 0usize;
@@ -299,9 +299,9 @@ impl UI_ControlTrait for MI_PowerupSelection {
             } else if MENU_CODE_POWERUP_PRESET_CHANGED == ret {
                 for iPowerup in 0..NP {
                     let pos = iPowerupPositionMap[iPowerup] as usize;
-                    let iCurrentValue = game_values.allPowerupPresets[game_values.poweruppreset as usize][pos];
+                    let iCurrentValue = game().game_values.allPowerupPresets[game().game_values.poweruppreset as usize][pos];
                     self.miPowerupSlider[iPowerup].set_current_value(iCurrentValue);
-                    game_values.powerupweights[pos] = iCurrentValue;
+                    game().game_values.powerupweights[pos] = iCurrentValue;
                 }
 
                 //If it is a custom preset, then allow modification
@@ -310,7 +310,7 @@ impl UI_ControlTrait for MI_PowerupSelection {
                 //Update the custom presets
                 for iPowerup in 0..NP {
                     let pos = iPowerupPositionMap[iPowerup] as usize;
-                    game_values.allPowerupPresets[game_values.poweruppreset as usize][pos] = game_values.powerupweights[pos];
+                    game().game_values.allPowerupPresets[game().game_values.poweruppreset as usize][pos] = game().game_values.powerupweights[pos];
                 }
             } else if MENU_CODE_RESTORE_DEFAULT_POWERUP_WEIGHTS == ret || MENU_CODE_CLEAR_POWERUP_WEIGHTS == ret {
                 self.miDialogImage.set_visible(true);
@@ -346,19 +346,19 @@ impl UI_ControlTrait for MI_PowerupSelection {
                     //restore default powerup weights for powerup selection menu
                     for iPowerup in 0..NP {
                         let pos = iPowerupPositionMap[iPowerup] as usize;
-                        let iDefaultValue = default_powerup_setting(game_values.poweruppreset as usize, pos);
+                        let iDefaultValue = default_powerup_setting(game().game_values.poweruppreset as usize, pos);
                         self.miPowerupSlider[iPowerup].set_current_value(iDefaultValue);
-                        game_values.powerupweights[pos] = iDefaultValue;
+                        game().game_values.powerupweights[pos] = iDefaultValue;
 
-                        game_values.allPowerupPresets[game_values.poweruppreset as usize][pos] = iDefaultValue;
+                        game().game_values.allPowerupPresets[game().game_values.poweruppreset as usize][pos] = iDefaultValue;
                     }
                 } else if MENU_CODE_POWERUP_CLEAR_YES == ret {
                     //restore default powerup weights for powerup selection menu
                     for iPowerup in 0..NP {
                         self.miPowerupSlider[iPowerup].set_current_value(0);
-                        game_values.powerupweights[iPowerup] = 0;
+                        game().game_values.powerupweights[iPowerup] = 0;
 
-                        game_values.allPowerupPresets[game_values.poweruppreset as usize][iPowerup] = 0;
+                        game().game_values.allPowerupPresets[game().game_values.poweruppreset as usize][iPowerup] = 0;
                     }
                 }
             } else if MENU_CODE_NEIGHBOR_UP == ret {

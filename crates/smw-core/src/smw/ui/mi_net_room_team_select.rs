@@ -1,6 +1,6 @@
 //! Port of src/smw/ui/MI_NetRoomTeamSelect.cpp
 
-use crate::common::global::{game_values, rm};
+
 use crate::common::input::CPlayerInput;
 use crate::common::random_number_generator::RANDOM_INT;
 use crate::common::ui::menu_code::*;
@@ -33,7 +33,7 @@ crate::impl_base!(MI_NetRoomTeamSelect => ui_control: UI_Control);
 impl MI_NetRoomTeamSelect {
     pub fn new(x: i16, y: i16, player_id: i16, on_change_accepted: Box<dyn FnMut()>) -> Self {
         unsafe {
-            let sel = Ptr::from_mut(&mut rm.menu_player_select);
+            let sel = Ptr::from_mut(&mut game().rm.menu_player_select);
             let mut miHoverImage = Box::new(MI_Image::new(sel, x - 6, y - 6, 32 + 18, 128 + 18, 44, 44, 1, 1, 1));
             miHoverImage.set_visible(false);
             let mut miModifyImage = Box::new(MI_Image::new(sel, x - 24, y - 24, 32, 128, 78, 78, 4, 1, 8));
@@ -60,8 +60,8 @@ impl MI_NetRoomTeamSelect {
     unsafe fn cycle_skin(&mut self, step: impl Fn(&mut i16)) {
         let p = self.owner_player as usize;
         loop {
-            step(&mut game_values.skinids[p]);
-            if rm.load_menu_skin(self.owner_player, game_values.skinids[p], game_values.colorids[p], false) {
+            step(&mut game().game_values.skinids[p]);
+            if game().rm.load_menu_skin(self.owner_player, game().game_values.skinids[p], game().game_values.colorids[p], false) {
                 break;
             }
         }
@@ -113,7 +113,7 @@ impl UI_ControlTrait for MI_NetRoomTeamSelect {
         unsafe {
             let p = self.owner_player as usize;
             let frame = if self.fSelected { self.iAnimationFrame as usize } else { 0 };
-            rm.spr_player[p][frame].draw_src(self.x as i32, self.y as i32, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
+            game().rm.spr_player[p][frame].draw_src(self.x as i32, self.y as i32, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
         }
     }
 
@@ -125,10 +125,10 @@ impl UI_ControlTrait for MI_NetRoomTeamSelect {
         }
 
         unsafe {
-            let playerKeys = game_values.playerInput.outputControls[0];
+            let playerKeys = game().game_values.playerInput.outputControls[0];
             let count = game().skinlist.count() as i16;
 
-            if !game_values.randomskin[0] {
+            if !game().game_values.randomskin[0] {
                 if playerKeys.menu_up().fPressed {
                     let down = playerKeys.menu_down().fDown;
                     self.cycle_skin(|id| {

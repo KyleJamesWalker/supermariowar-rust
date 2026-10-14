@@ -107,9 +107,9 @@ impl MI_MapBrowser {
 
                 if !file_exists(&sConvertedPath) {
                     let filename = game().maplist.node_at(itr).filename.clone();
-                    g_map.load_map(&filename, read_type_preview);
+                    game().g_map.load_map(&filename, read_type_preview);
                     small_delay(); //Sleeps to help the music from skipping
-                    g_map.save_thumbnail(&sConvertedPath, false);
+                    game().g_map.save_thumbnail(&sConvertedPath, false);
                     small_delay();
                 }
 
@@ -124,7 +124,7 @@ impl MI_MapBrowser {
 
     /// `mapListNodes[i]->pfFilters[game_values.selectedmapfilter]`
     fn node_filter(&self, i: usize) -> bool {
-        unsafe { game().maplist.node_at(self.mapListItr[i]).pfFilters[game_values.selectedmapfilter as usize] }
+        unsafe { game().maplist.node_at(self.mapListItr[i]).pfFilters[game().game_values.selectedmapfilter as usize] }
     }
 }
 
@@ -174,10 +174,10 @@ impl UI_ControlTrait for MI_MapBrowser {
                         self.mapSurfaces[i].draw_src_to(&rSrc, blitdest, &rDst);
 
                         if self.iType == 0 && self.node_filter(i) {
-                            rm.menu_map_filter.draw_src(rDst.x, rDst.y, &filterSrc);
+                            game().rm.menu_map_filter.draw_src(rDst.x, rDst.y, &filterSrc);
                         }
 
-                        rm.menu_font_large.draw_chop_right(rDst.x, rDst.y + 120, 165, &self.mapNames[i]);
+                        game().rm.menu_font_large.draw_chop_right(rDst.x, rDst.y + 120, 165, &self.mapNames[i]);
                     }
                 }
             }
@@ -186,19 +186,19 @@ impl UI_ControlTrait for MI_MapBrowser {
             rDst.y = self.iSelectedRow as i32 * 150 + 30;
             rDst.x = self.iSelectedCol as i32 * 200 + 40;
 
-            rm.menu_dialog.draw_src(rDst.x - 16, rDst.y - 16, &SDL_Rect { x: 0, y: 0, w: 176, h: 148 });
-            rm.menu_dialog.draw_src(rDst.x + 160, rDst.y - 16, &SDL_Rect { x: 496, y: 0, w: 16, h: 148 });
-            rm.menu_dialog.draw_src(rDst.x - 16, rDst.y + 132, &SDL_Rect { x: 0, y: 464, w: 176, h: 16 });
-            rm.menu_dialog.draw_src(rDst.x + 160, rDst.y + 132, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+            game().rm.menu_dialog.draw_src(rDst.x - 16, rDst.y - 16, &SDL_Rect { x: 0, y: 0, w: 176, h: 148 });
+            game().rm.menu_dialog.draw_src(rDst.x + 160, rDst.y - 16, &SDL_Rect { x: 496, y: 0, w: 16, h: 148 });
+            game().rm.menu_dialog.draw_src(rDst.x - 16, rDst.y + 132, &SDL_Rect { x: 0, y: 464, w: 176, h: 16 });
+            game().rm.menu_dialog.draw_src(rDst.x + 160, rDst.y + 132, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
 
             let sel = (self.iSelectedRow * 3 + self.iSelectedCol) as usize;
             self.mapSurfaces[sel].draw_src_to(&rSrc, blitdest, &rDst);
 
             if self.iType == 0 && self.node_filter(sel) {
-                rm.menu_map_filter.draw_src(rDst.x, rDst.y, &filterSrc);
+                game().rm.menu_map_filter.draw_src(rDst.x, rDst.y, &filterSrc);
             }
 
-            rm.menu_font_large.draw_chop_right(rDst.x, rDst.y + 120, 165, &self.mapNames[sel]);
+            game().rm.menu_font_large.draw_chop_right(rDst.x, rDst.y + 120, 165, &self.mapNames[sel]);
         }
     }
 
@@ -212,7 +212,7 @@ impl UI_ControlTrait for MI_MapBrowser {
             for iPlayer in 0..4i16 {
                 //Only allow the controlling team to control the menu (if there is one)
                 if self.iControllingTeam != -1
-                    && (self.iControllingTeam != lookup_team_id(iPlayer) || game_values.playercontrol[iPlayer as usize] != 1)
+                    && (self.iControllingTeam != lookup_team_id(iPlayer) || game().game_values.playercontrol[iPlayer as usize] != 1)
                 {
                     continue;
                 }
@@ -321,9 +321,9 @@ impl UI_ControlTrait for MI_MapBrowser {
                     let itr = self.mapListItr[(self.iSelectedRow * 3 + self.iSelectedCol) as usize];
                     if self.iType == 0 {
                         let mut maplist = game().maplist;
-                        let f = &mut maplist.maps.node_mut(itr).pfFilters[game_values.selectedmapfilter as usize];
+                        let f = &mut maplist.maps.node_mut(itr).pfFilters[game().game_values.selectedmapfilter as usize];
                         *f = !*f;
-                        game_values.fNeedWriteFilters = true;
+                        game().game_values.fNeedWriteFilters = true;
                     } else {
                         game().maplist.set_current(itr);
                         return MENU_CODE_MAP_BROWSER_EXIT;

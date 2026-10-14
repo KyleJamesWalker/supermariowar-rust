@@ -1,6 +1,5 @@
 //! Port of src/smw/menu/network/NetNewRoomMenu.cpp
-
-use crate::common::global::rm;
+use crate::game::game;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
 use crate::common::ui::mi_image::MI_Image;
@@ -10,7 +9,6 @@ use crate::common::uicontrol::{ctl_ptr, TextAlign};
 use crate::common::uimenu::UI_Menu;
 use crate::common_netplay::protocol_definitions::{NET_MAX_ROOM_NAME_LENGTH, NET_MAX_ROOM_PASSWORD_LENGTH};
 use crate::globals::Ptr;
-use crate::smw::net::netplay;
 
 #[derive(Default)]
 pub struct UI_NetNewRoomMenu {
@@ -34,14 +32,14 @@ impl UI_NetNewRoomMenu {
     pub fn new() -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let selectfield = Ptr::from_mut(&mut rm.spr_selectfield);
-            let plain = Ptr::from_mut(&mut rm.menu_plain_field);
+            let selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
+            let plain = Ptr::from_mut(&mut game().rm.menu_plain_field);
 
             this.miNetNewRoomNameField = Ptr::new_box(MI_TextField::new(plain, 70, 160, "Room name", 640 - 2 * 70, 230));
-            this.miNetNewRoomNameField.set_data(&mut netplay.newroom_name, NET_MAX_ROOM_NAME_LENGTH as i16);
+            this.miNetNewRoomNameField.set_data(&mut game().netplay.newroom_name, NET_MAX_ROOM_NAME_LENGTH as i16);
 
             this.miNetNewRoomPasswordField = Ptr::new_box(MI_TextField::new(plain, 70, 200, "Password (optional)", 640 - 2 * 70, 230));
-            this.miNetNewRoomPasswordField.set_data(&mut netplay.newroom_password, NET_MAX_ROOM_PASSWORD_LENGTH as i16);
+            this.miNetNewRoomPasswordField.set_data(&mut game().netplay.newroom_password, NET_MAX_ROOM_PASSWORD_LENGTH as i16);
 
             this.miNetNewRoomCreateButton = Ptr::new_box(MI_Button::new(selectfield, 70, 240, "Create!", 640 - 2 * 70, TextAlign::CENTER));
             this.miNetNewRoomCreateButton.set_code(MENU_CODE_TO_NET_NEW_ROOM_CREATE_IN_PROGRESS);
@@ -62,7 +60,7 @@ impl UI_NetNewRoomMenu {
         this.add_control(back, create, name, null, null);
 
         unsafe {
-            this.miNetNewRoomCreatingDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
+            this.miNetNewRoomCreatingDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut game().rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
             this.miNetNewRoomCreatingDialogText = Ptr::new_box(MI_HeaderText::new("Creating...", 320, 240 - 12));
         }
 
@@ -74,7 +72,7 @@ impl UI_NetNewRoomMenu {
         this.add_non_control(dt);
 
         unsafe {
-            let plain = Ptr::from_mut(&mut rm.menu_plain_field);
+            let plain = Ptr::from_mut(&mut game().rm.menu_plain_field);
             this.miNetNewRoomLeftHeaderBar = Ptr::new_box(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miNetNewRoomRightHeaderBar = Ptr::new_box(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0));
             this.miNetNewRoomHeaderText = Ptr::new_box(MI_HeaderText::new("New Room Settings Menu", 320, 5));
@@ -92,9 +90,9 @@ impl UI_NetNewRoomMenu {
 
     pub fn create_in_progress(&mut self) {
         unsafe {
-            if netplay.newroom_name.len() > 2 {
-                netplay.client.send_create_room_message();
-                netplay.operationInProgress = true;
+            if game().netplay.newroom_name.len() > 2 {
+                game().netplay.client.send_create_room_message();
+                game().netplay.operationInProgress = true;
 
                 self.miNetNewRoomCreatingDialogImage.set_visible(true);
                 self.miNetNewRoomCreatingDialogText.set_visible(true);
@@ -111,7 +109,7 @@ impl UI_NetNewRoomMenu {
     }
 
     pub fn abort_create(&mut self) {
-        unsafe { netplay.operationInProgress = false };
+        unsafe { game().netplay.operationInProgress = false };
         self.restore();
     }
 

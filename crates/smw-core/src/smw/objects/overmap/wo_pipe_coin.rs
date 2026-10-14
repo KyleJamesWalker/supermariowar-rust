@@ -9,8 +9,6 @@ use crate::common::math::vec2::{Vec2f, Vec2s};
 use crate::common::object_base::{object_pipe_coin, CObjectTrait};
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::eyecandy;
-use crate::smw::main::pipegamemode;
 use crate::smw::objects::overmap::over_map_object::{IO_OverMapObject, IO_OverMapObjectTrait};
 use crate::smw::player::CPlayer;
 use sdl2::sys::SDL_Rect;
@@ -47,7 +45,7 @@ impl OMO_PipeCoin {
         this.velx = vel.x;
 
         unsafe {
-            if pipegamemode.is_slowdown() {
+            if game().pipegamemode.is_slowdown() {
                 this.vely = vel.y / 2.0f32;
             } else {
                 this.vely = vel.y;
@@ -85,7 +83,7 @@ impl CObjectTrait for OMO_PipeCoin {
         }
 
         unsafe {
-            if pipegamemode.is_slowdown() {
+            if game().pipegamemode.is_slowdown() {
                 self.vely += GRAVITATION / 1.5f32;
             } else {
                 self.vely += GRAVITATION;
@@ -118,14 +116,14 @@ impl CObjectTrait for OMO_PipeCoin {
 
                 // Draw sparkles
                 if self.iTeamID == -1 {
-                    rm.spr_shinesparkle.draw_clip(x, y, &sparkleRect, ClipEdge::Bottom, 256);
+                    game().rm.spr_shinesparkle.draw_clip(x, y, &sparkleRect, ClipEdge::Bottom, 256);
                 }
             } else {
                 self.spr.draw_src(x, y, &srcRect);
 
                 // Draw sparkles
                 if self.iTeamID == -1 {
-                    rm.spr_shinesparkle.draw_src(x, y, &sparkleRect);
+                    game().rm.spr_shinesparkle.draw_src(x, y, &sparkleRect);
                 }
             }
         }
@@ -137,27 +135,27 @@ impl CObjectTrait for OMO_PipeCoin {
         }
 
         unsafe {
-            if !game_values.gamemode.gameover {
+            if !game().game_values.gamemode.gameover {
                 if self.iTeamID != -1 {
                     if player.teamID == self.iTeamID {
                         player.score().adjust_score(1);
-                        if_sound_on_play(&mut rm.sfx_coin);
+                        if_sound_on_play(&mut game().rm.sfx_coin);
                     }
                 } else if self.iColorID == 2 {
                     player.score().adjust_score(1);
-                    if_sound_on_play(&mut rm.sfx_coin);
+                    if_sound_on_play(&mut game().rm.sfx_coin);
                 } else if self.iColorID == 0 {
                     player.score().adjust_score(-1);
-                    if_sound_on_play(&mut rm.sfx_stun);
+                    if_sound_on_play(&mut game().rm.sfx_stun);
                 } else if self.iColorID == 1 {
                     player.score().adjust_score(5);
-                    if_sound_on_play(&mut rm.sfx_extraguysound);
+                    if_sound_on_play(&mut game().rm.sfx_extraguysound);
                 }
 
-                game_values.gamemode.check_winner(player);
+                game().game_values.gamemode.check_winner(player);
             }
 
-            eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut rm.spr_coinsparkle), self.ix, self.iy, 7, 4));
+            game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_coinsparkle), self.ix, self.iy, 7, 4));
         }
 
         self.dead = true;

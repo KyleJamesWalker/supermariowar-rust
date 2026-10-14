@@ -7,7 +7,6 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::*;
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::objects::moving::mo_coin::MO_Coin;
 use crate::smw::player::CPlayer;
 
@@ -37,12 +36,12 @@ impl CGameModeTrait for CGM_Coins {
         cgamemode_init(self);
 
         unsafe {
-            if game_values.gamemodesettings.coins.quantity < 1 {
-                game_values.gamemodesettings.coins.quantity = 1;
+            if game().game_values.gamemodesettings.coins.quantity < 1 {
+                game().game_values.gamemodesettings.coins.quantity = 1;
             }
 
-            for _iCoin in 0..game_values.gamemodesettings.coins.quantity {
-                objectcontainer[1].add(Ptr::new_box(MO_Coin::new(Ptr::from_mut(&mut rm.spr_coin), Vec2f::zero(), Vec2s::zero(), 2, 0, 0, 0, true)));
+            for _iCoin in 0..game().game_values.gamemodesettings.coins.quantity {
+                game().objectcontainer[1].add(Ptr::new_box(MO_Coin::new(Ptr::from_mut(&mut game().rm.spr_coin), Vec2f::zero(), Vec2s::zero(), 2, 0, 0, 0, true)));
             }
         }
     }
@@ -53,7 +52,7 @@ impl CGameModeTrait for CGM_Coins {
         }
 
         unsafe {
-            if game_values.gamemodesettings.coins.penalty {
+            if game().game_values.gamemodesettings.coins.penalty {
                 other.score().adjust_score(-1);
             }
         }
@@ -67,7 +66,7 @@ impl CGameModeTrait for CGM_Coins {
         }
 
         unsafe {
-            if game_values.gamemodesettings.coins.penalty {
+            if game().game_values.gamemodesettings.coins.penalty {
                 player.score().adjust_score(-1);
             }
         }

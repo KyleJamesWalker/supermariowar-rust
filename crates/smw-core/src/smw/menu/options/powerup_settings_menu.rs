@@ -54,28 +54,28 @@ impl UI_PowerupSettingsMenu {
     pub fn new() -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let spr_selectfield = Ptr::from_mut(&mut rm.spr_selectfield);
-            let menu_plain_field = Ptr::from_mut(&mut rm.menu_plain_field);
+            let spr_selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
+            let menu_plain_field = Ptr::from_mut(&mut game().rm.menu_plain_field);
 
             this.miStoredPowerupDelayField = select_field(spr_selectfield, 70, 100, "Item Use Speed", 500, 220,
                 &[("Very Slow", 2), ("Slow", 3), ("Moderate", 4), ("Fast", 5), ("Very Fast", 6)],
-                &mut game_values.storedpowerupdelay);
+                &mut game().game_values.storedpowerupdelay);
 
-            this.miItemRespawnField = select_field(spr_selectfield, 70, 140, "Item Spawn", 500, 220, RESPAWN_TIMES, &mut game_values.itemrespawntime);
+            this.miItemRespawnField = select_field(spr_selectfield, 70, 140, "Item Spawn", 500, 220, RESPAWN_TIMES, &mut game().game_values.itemrespawntime);
 
-            this.miHiddenBlockRespawnField = select_field(spr_selectfield, 70, 180, "Hidden Block Hide", 500, 220, RESPAWN_TIMES, &mut game_values.hiddenblockrespawn);
+            this.miHiddenBlockRespawnField = select_field(spr_selectfield, 70, 180, "Hidden Block Hide", 500, 220, RESPAWN_TIMES, &mut game().game_values.hiddenblockrespawn);
 
             this.miSwapStyleField = select_field(spr_selectfield, 70, 220, "Swap Style", 500, 220,
                 &[("Walk", 0), ("Blink", 1), ("Instant", 2)],
-                &mut game_values.swapstyle);
+                &mut game().game_values.swapstyle);
 
             this.miBonusWheelField = select_field(spr_selectfield, 70, 260, "Bonus Wheel", 500, 220,
                 &[("Off", 0), ("Tournament Win", 1), ("Every Game", 2)],
-                &mut game_values.bonuswheel);
+                &mut game().game_values.bonuswheel);
 
             this.miKeepPowerupField = select_field(spr_selectfield, 70, 300, "Bonus Item", 500, 220,
                 &[("Until Next Spin", false), ("Keep Always", true)],
-                &mut game_values.keeppowerup);
+                &mut game().game_values.keeppowerup);
             this.miKeepPowerupField.set_auto_advance(true);
 
             this.miStoredPowerupResetButton = Ptr::new_box(MI_StoredPowerupResetButton::new(spr_selectfield, 70, 340, "Reset Stored Items", 500, TextAlign::LEFT));

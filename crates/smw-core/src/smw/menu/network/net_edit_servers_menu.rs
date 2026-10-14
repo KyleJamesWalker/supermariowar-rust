@@ -1,6 +1,5 @@
 //! Port of src/smw/menu/network/NetEditServersMenu.cpp
-
-use crate::common::global::rm;
+use crate::game::game;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
 use crate::common::ui::mi_image::MI_Image;
@@ -9,7 +8,7 @@ use crate::common::ui::mi_text_field::MI_TextField;
 use crate::common::uicontrol::{ctl_ptr, TextAlign, UI_ControlTrait};
 use crate::common::uimenu::UI_Menu;
 use crate::globals::Ptr;
-use crate::smw::net::{netplay, ServerAddress};
+use crate::smw::net::{ServerAddress};
 use crate::smw::ui::mi_string_scroll::MI_StringScroll;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
@@ -57,8 +56,8 @@ impl UI_NetEditServersMenu {
         this.dialogTextData.clear();
 
         unsafe {
-            let selectfield = Ptr::from_mut(&mut rm.spr_selectfield);
-            let plain = Ptr::from_mut(&mut rm.menu_plain_field);
+            let selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
+            let plain = Ptr::from_mut(&mut game().rm.menu_plain_field);
 
             this.miBackButton = Ptr::new_box(MI_Button::new(selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
             this.miBackButton.set_code(MENU_CODE_TO_NET_SERVERS_MENU);
@@ -137,8 +136,8 @@ impl UI_NetEditServersMenu {
     fn reload_scroll(&mut self) {
         self.miServerScroll.clear_items();
         unsafe {
-            for iServer in 0..netplay.savedServers.len() {
-                let host = netplay.savedServers[iServer].hostname.clone();
+            for iServer in 0..game().netplay.savedServers.len() {
+                let host = game().netplay.savedServers[iServer].hostname.clone();
                 self.miServerScroll.add(&host);
             }
         }
@@ -184,7 +183,7 @@ impl UI_NetEditServersMenu {
     }
 
     pub fn on_press_edit(&mut self) {
-        if unsafe { netplay.savedServers.is_empty() } {
+        if unsafe { game().netplay.savedServers.is_empty() } {
             return;
         }
 
@@ -201,7 +200,7 @@ impl UI_NetEditServersMenu {
     }
 
     pub fn on_press_delete(&mut self) {
-        if unsafe { netplay.savedServers.is_empty() } {
+        if unsafe { game().netplay.savedServers.is_empty() } {
             return;
         }
 
@@ -222,7 +221,7 @@ impl UI_NetEditServersMenu {
         unsafe {
             match self.currentState {
                 MenuState::EDIT => {
-                    self.dialogTextData = netplay.savedServers[idx].hostname.clone();
+                    self.dialogTextData = game().netplay.savedServers[idx].hostname.clone();
                     self.miDialogTextField.refresh();
                     self.show_dialog();
                     let f = ctl_ptr(self.miDialogTextField);
@@ -231,11 +230,11 @@ impl UI_NetEditServersMenu {
                 }
 
                 MenuState::DELETE => {
-                    netplay.savedServers.remove(idx);
+                    game().netplay.savedServers.remove(idx);
                     self.reload_scroll();
                     self.miServerScroll.activate();
 
-                    if netplay.savedServers.is_empty() {
+                    if game().netplay.savedServers.is_empty() {
                         self.restore();
                     }
                 }
@@ -250,10 +249,10 @@ impl UI_NetEditServersMenu {
 
         unsafe {
             match self.currentState {
-                MenuState::ADD => netplay.savedServers.push(new_address),
+                MenuState::ADD => game().netplay.savedServers.push(new_address),
                 MenuState::EDIT => {
                     let idx = self.miServerScroll.current_index() as usize;
-                    netplay.savedServers[idx] = new_address;
+                    game().netplay.savedServers[idx] = new_address;
                 }
                 _ => {}
             }

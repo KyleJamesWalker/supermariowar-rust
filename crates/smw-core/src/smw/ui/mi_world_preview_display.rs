@@ -123,7 +123,7 @@ impl MI_WorldPreviewDisplay {
     pub fn set_world(&mut self) {
         let (mut w, mut h): (i16, i16) = (0, 0);
         unsafe {
-            g_worldmap.init(WorldMap::new_path(&game().worldlist.at(game_values.worldindex as usize).to_string_lossy(), PREVIEWTILESIZE as i16));
+            g_worldmap.init(WorldMap::new_path(&game().worldlist.at(game().game_values.worldindex as usize).to_string_lossy(), PREVIEWTILESIZE as i16));
             g_worldmap.get_world_size(&mut w, &mut h);
         }
 

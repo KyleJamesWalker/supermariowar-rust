@@ -6,8 +6,6 @@ use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::{object_area, CObjectTrait};
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::objectcontainer;
-use crate::smw::main::players;
 use crate::smw::objects::overmap::over_map_object::{IO_OverMapObject, IO_OverMapObjectTrait};
 use crate::smw::player::CPlayer;
 use sdl2::sys::SDL_Rect;
@@ -64,8 +62,8 @@ impl OMO_Area {
             let mut x: i16 = 0;
             let mut y: i16 = 0;
             let mut iAttempts: i16 = 32;
-            while (!g_map.findspawnpoint(5, &mut x, &mut y, self.collisionWidth, self.collisionHeight, false)
-                || objectcontainer[0].get_closest_object(x, y, object_area) <= (200.0f32 - ((self.numareas as i32 - 3) as f32 * 25.0f32)))
+            while (!game().g_map.findspawnpoint(5, &mut x, &mut y, self.collisionWidth, self.collisionHeight, false)
+                || game().objectcontainer[0].get_closest_object(x, y, object_area) <= (200.0f32 - ((self.numareas as i32 - 3) as f32 * 25.0f32)))
                 && {
                     let a = iAttempts;
                     iAttempts -= 1;
@@ -99,7 +97,7 @@ impl OMO_Area {
 
             self.frame = ((self.colorID as i32 + 1) * self.iw as i32) as i16;
             unsafe {
-                if_sound_on_play(&mut rm.sfx_areatag);
+                if_sound_on_play(&mut game().rm.sfx_areatag);
             }
         }
     }
@@ -119,18 +117,18 @@ impl CObjectTrait for OMO_Area {
                 self.set_owner(p);
             }
 
-            if self.iPlayerID != -1 && !game_values.gamemode.gameover {
+            if self.iPlayerID != -1 && !game().game_values.gamemode.gameover {
                 self.scoretimer += 1;
-                if self.scoretimer as i32 >= ((game_values.pointspeed as i32) << 1) {
+                if self.scoretimer as i32 >= ((game().game_values.pointspeed as i32) << 1) {
                     self.scoretimer = 0;
-                    players[self.iPlayerID as usize].score().adjust_score(1);
-                    game_values.gamemode.check_winner(players[self.iPlayerID as usize]);
+                    game().players[self.iPlayerID as usize].score().adjust_score(1);
+                    game().game_values.gamemode.check_winner(game().players[self.iPlayerID as usize]);
                 }
             }
 
-            if game_values.gamemodesettings.domination.relocationfrequency > 0 {
+            if game().game_values.gamemodesettings.domination.relocationfrequency > 0 {
                 self.relocatetimer += 1;
-                if self.relocatetimer >= game_values.gamemodesettings.domination.relocationfrequency {
+                if self.relocatetimer >= game().game_values.gamemodesettings.domination.relocationfrequency {
                     self.relocatetimer = 0;
                     self.place_area();
                 }

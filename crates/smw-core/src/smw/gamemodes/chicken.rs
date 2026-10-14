@@ -10,7 +10,6 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::*;
-use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::player::CPlayer;
 use sdl2::sys::SDL_Rect;
 
@@ -83,7 +82,7 @@ impl CGameModeTrait for CGM_Chicken {
             if chicken.isready() && !chicken.is_tanooki_statue() {
                 unsafe {
                     counter += 1;
-                    if counter >= game_values.pointspeed {
+                    if counter >= game().game_values.pointspeed {
                         counter = 0;
                         chicken.score().adjust_score(1);
                         self.check_winner(chicken);
@@ -96,10 +95,10 @@ impl CGameModeTrait for CGM_Chicken {
     fn draw_foreground(&mut self) {
         unsafe {
             //Draw the chicken indicator around the chicken
-            if game_values.gamemodesettings.chicken.usetarget && !self.gameover && !self.m_chicken.is_null() {
+            if game().game_values.gamemodesettings.chicken.usetarget && !self.gameover && !self.m_chicken.is_null() {
                 let chicken = self.m_chicken;
                 if chicken.iswarping() {
-                    rm.spr_chicken.draw_clip(
+                    game().rm.spr_chicken.draw_clip(
                         chicken.left_x() as i32 - PWOFFSET - 16,
                         chicken.top_y() as i32 - PHOFFSET - 16,
                         &SDL_Rect { x: 0, y: 0, w: 64, h: 64 },
@@ -107,7 +106,7 @@ impl CGameModeTrait for CGM_Chicken {
                         chicken.get_warp_plane() as i32,
                     );
                 } else if chicken.isready() {
-                    rm.spr_chicken.draw(chicken.center_x() as i32 - 32, chicken.center_y() as i32 - 32);
+                    game().rm.spr_chicken.draw(chicken.center_x() as i32 - 32, chicken.center_y() as i32 - 32);
                 }
             }
         }
@@ -117,22 +116,22 @@ impl CGameModeTrait for CGM_Chicken {
         unsafe {
             if self.m_chicken.is_null() || other == self.m_chicken {
                 self.m_chicken = inflictor;
-                eyecandy[2].emplace(EC_GravText::new(
-                    Ptr::from_mut(&mut rm.game_font_large),
+                game().eyecandy[2].emplace(EC_GravText::new(
+                    Ptr::from_mut(&mut game().rm.game_font_large),
                     inflictor.center_x(),
                     inflictor.bottom_y(),
                     "Chicken!".to_string(),
                     (-(VELJUMP as f64) * 1.5) as f32,
                 ));
                 //eyecandy[2].emplace<EC_SingleAnimation>(&rm->spr_fireballexplosion, inflictor.centerX() - 16, inflictor.centerY() - 16, 3, 8));
-                eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut rm.spr_poof),
+                game().eyecandy[2].emplace(EC_SingleAnimation::new(
+                    Ptr::from_mut(&mut game().rm.spr_poof),
                     (inflictor.center_x() as i32 - 24) as i16,
                     (inflictor.center_y() as i32 - 24) as i16,
                     4,
                     5,
                 ));
-                if_sound_on_play(&mut rm.sfx_transform);
+                if_sound_on_play(&mut game().rm.sfx_transform);
 
                 if other == self.m_chicken {
                     other.set_corpse_type(1); //flag to use chicken corpse sprite

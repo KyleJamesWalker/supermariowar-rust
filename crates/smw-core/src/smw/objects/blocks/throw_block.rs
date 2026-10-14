@@ -1,16 +1,16 @@
 //! Port of src/smw/objects/blocks/ThrowBlock.cpp
 
+use crate::game::game;
 use crate::common::eyecandy::EC_FallingObject;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::global::g_map;
 use crate::common::global_constants::*;
 use crate::common::io_block::{IO_Block, IO_BlockTrait};
 use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::CObjectTrait;
-use crate::globals::{rm, Ptr};
+use crate::globals::Ptr;
 use crate::impl_base;
-use crate::smw::gs_gameplay::{eyecandy, objectcontainer};
+
 use crate::smw::objects::carriable::co_throw_block::CO_ThrowBlock;
 use crate::smw::objects::moving::mo_carried_object::MO_CarriedObjectTrait;
 use crate::smw::objects::throw_block_type::ThrowBlockType;
@@ -53,16 +53,16 @@ impl B_ThrowBlock {
 
     pub fn give_block_to_player(&mut self, mut player: Ptr<CPlayer>) {
         unsafe {
-            let mut block = Ptr::new_box(CO_ThrowBlock::new(Ptr::from_mut(&mut rm.spr_blueblock), Vec2s::new(self.ix, self.iy), self.iType));
+            let mut block = Ptr::new_box(CO_ThrowBlock::new(Ptr::from_mut(&mut game().rm.spr_blueblock), Vec2s::new(self.ix, self.iy), self.iType));
             let item: Ptr<dyn MO_CarriedObjectTrait> = Ptr::from_mut(block.get() as &mut dyn MO_CarriedObjectTrait);
             if player.accept_item(item) {
                 self.dead = true;
-                g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
-                g_map.update_tile_gap(self.col, self.row);
+                game().g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
+                game().g_map.update_tile_gap(self.col, self.row);
 
                 block.owner = player;
                 block.iPlayerID = player.globalID;
-                objectcontainer[1].add(block);
+                game().objectcontainer[1].add(block);
             } else {
                 block.delete();
             }
@@ -172,18 +172,18 @@ impl IO_BlockTrait for B_ThrowBlock {
     fn trigger_behavior(&mut self) {
         unsafe {
             self.dead = true;
-            g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
-            g_map.update_tile_gap(self.col, self.row);
+            game().g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
+            game().g_map.update_tile_gap(self.col, self.row);
 
             let srcY = (self.iType as i32 * 16) as i16;
-            let spr = Ptr::from_mut(&mut rm.spr_brokenblueblock);
+            let spr = Ptr::from_mut(&mut game().rm.spr_brokenblueblock);
             let (ix, iy) = (self.ix, self.iy);
-            eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy, -1.5f32, -7.0f32, 6, 2, 0, srcY, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy, 1.5f32, -7.0f32, 6, 2, 0, srcY, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -1.5f32, -4.0f32, 6, 2, 0, srcY, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 1.5f32, -4.0f32, 6, 2, 0, srcY, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy, -1.5f32, -7.0f32, 6, 2, 0, srcY, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy, 1.5f32, -7.0f32, 6, 2, 0, srcY, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -1.5f32, -4.0f32, 6, 2, 0, srcY, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 1.5f32, -4.0f32, 6, 2, 0, srcY, 16, 16));
 
-            if_sound_on_play(&mut rm.sfx_breakblock);
+            if_sound_on_play(&mut game().rm.sfx_breakblock);
         }
     }
 }

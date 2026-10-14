@@ -1,10 +1,10 @@
 //! Port of src/smw/objects/blocks/PowerupBlock.cpp
 
+use crate::game::game;
 use crate::common::game_mode::*;
-use crate::common::game_values::{game_values, if_sound_on_play};
+use crate::common::game_values::if_sound_on_play;
 use crate::common::gameplay_styles::TeamCollisionStyle;
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::global::g_map;
 use crate::common::global_constants::*;
 use crate::common::io_block::{IO_Block, IO_BlockTrait};
 use crate::common::math::vec2::Vec2s;
@@ -13,7 +13,7 @@ use crate::common::object_base::{cap_falling_velocity, CObjectTrait};
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
 use crate::common::random_number_generator::RANDOM_INT;
-use crate::globals::{rm, Ptr};
+use crate::globals::Ptr;
 use crate::impl_base;
 use crate::smw::net_random::{self, Ev};
 use crate::smw::objectgame::createpowerup;
@@ -75,22 +75,22 @@ impl B_PowerupBlock {
 
         unsafe {
             let n = NUM_POWERUPS as usize;
-            if piSettings[0] == -1 || game_values.overridepowerupsettings == 1 {
+            if piSettings[0] == -1 || game().game_values.overridepowerupsettings == 1 {
                 //Game Only
                 for iSetting in 0..n {
-                    b.settings[iSetting] = game_values.powerupweights[iSetting];
+                    b.settings[iSetting] = game().game_values.powerupweights[iSetting];
                 }
-            } else if game_values.overridepowerupsettings == 0 {
+            } else if game().game_values.overridepowerupsettings == 0 {
                 //Map Only
                 for iSetting in 0..n {
                     b.settings[iSetting] = piSettings[iSetting];
                 }
-            } else if game_values.overridepowerupsettings == 2 {
+            } else if game().game_values.overridepowerupsettings == 2 {
                 //Average
                 for iSetting in 0..n {
-                    b.settings[iSetting] = (piSettings[iSetting] as i32 + game_values.powerupweights[iSetting] as i32) as i16;
+                    b.settings[iSetting] = (piSettings[iSetting] as i32 + game().game_values.powerupweights[iSetting] as i32) as i16;
                 }
-            } else if game_values.overridepowerupsettings == 3 {
+            } else if game().game_values.overridepowerupsettings == 3 {
                 //Weighted
                 let mut dMapWeightCount: f32 = 0.0;
                 for iPowerup in 0..n {
@@ -99,11 +99,11 @@ impl B_PowerupBlock {
 
                 let mut dGameWeightCount: f32 = 0.0;
                 for iPowerup in 0..n {
-                    dGameWeightCount += game_values.powerupweights[iPowerup] as f32;
+                    dGameWeightCount += game().game_values.powerupweights[iPowerup] as f32;
                 }
 
                 for iSetting in 0..n {
-                    let dWeight: f32 = (piSettings[iSetting] as f32 / dMapWeightCount + game_values.powerupweights[iSetting] as f32 / dGameWeightCount) * 100.0f32;
+                    let dWeight: f32 = (piSettings[iSetting] as f32 / dMapWeightCount + game().game_values.powerupweights[iSetting] as f32 / dGameWeightCount) * 100.0f32;
 
                     //Cap lowest value at 1
                     if dWeight < 1.0f32 && dWeight > 0.0f32 {
@@ -192,12 +192,12 @@ pub fn b_powerup_block_update<T: B_PowerupBlockTrait + ?Sized>(this: &mut T) {
                     b_powerup_block_release(this, pos, side);
                 }
 
-                if_sound_on_play(&mut rm.sfx_sprout);
+                if_sound_on_play(&mut game().rm.sfx_sprout);
             } else if state == 3 {
-                if game_values.itemrespawntime > 0 && {
+                if game().game_values.itemrespawntime > 0 && {
                     let b = this.pb_mut();
                     b.timer += 1;
-                    b.timer >= game_values.itemrespawntime
+                    b.timer >= game().game_values.itemrespawntime
                 } {
                     this.reset();
                 }
@@ -219,8 +219,8 @@ pub fn b_powerup_block_update<T: B_PowerupBlockTrait + ?Sized>(this: &mut T) {
 
 fn b_powerup_block_release<T: B_PowerupBlockTrait + ?Sized>(this: &mut T, pos: Vec2s, side: bool) {
     unsafe {
-        let gm = game_values.gamemode.gamemode;
-        let gs = &game_values.gamemodesettings;
+        let gm = game().game_values.gamemode.gamemode;
+        let gs = &game().game_values.gamemodesettings;
         let iType = if gm == game_mode_health && RANDOM_INT(100) < gs.health.percentextralife as i32 {
             HEALTH_POWERUP as i16
         } else if (gm == game_mode_timelimit && RANDOM_INT(100) < gs.time.percentextratime as i32)
@@ -247,7 +247,7 @@ pub fn net_release(col: i16, row: i16, pos: Vec2s, side: bool) {
         if col < 0 || row < 0 || col as i32 >= MAPWIDTH || row as i32 >= MAPHEIGHT {
             return;
         }
-        let mut block = g_map.blockdata[col as usize][row as usize];
+        let mut block = game().g_map.blockdata[col as usize][row as usize];
         if block.is_null() {
             return;
         }
@@ -267,7 +267,7 @@ pub fn net_block_ready(col: i16, row: i16) -> bool {
         if col < 0 || row < 0 || col as i32 >= MAPWIDTH || row as i32 >= MAPHEIGHT {
             return true;
         }
-        let mut block = g_map.blockdata[col as usize][row as usize];
+        let mut block = game().g_map.blockdata[col as usize][row as usize];
         if block.is_null() {
             return true;
         }
@@ -277,7 +277,7 @@ pub fn net_block_ready(col: i16, row: i16) -> bool {
             0 => {
                 b.state = 3;
                 b.hidden = false;
-                g_map.update_tile_gap(col, row);
+                game().g_map.update_tile_gap(col, row);
                 true
             }
             _ => true,
@@ -313,7 +313,7 @@ pub fn b_powerup_block_hittop_player<T: B_PowerupBlockTrait + ?Sized>(this: &mut
             let (iBumpPlayerID, iBumpTeamID) = (this.pb().iBumpPlayerID, this.pb().iBumpTeamID);
             if iBumpPlayerID >= 0
                 && !player.is_invincible_on_bottom()
-                && (player.teamID != iBumpTeamID || game_values.teamcollision == TeamCollisionStyle::On)
+                && (player.teamID != iBumpTeamID || game().game_values.teamcollision == TeamCollisionStyle::On)
             {
                 iKillType = player_killed_player(iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
             }
@@ -354,10 +354,10 @@ pub fn b_powerup_block_hitbottom_player<T: B_PowerupBlockTrait + ?Sized>(this: &
             }
 
             let (col, row) = (this.pb().col, this.pb().row);
-            g_map.update_tile_gap(col, row);
+            game().g_map.update_tile_gap(col, row);
 
             if this.pb().state == 0 {
-                if_sound_on_play(&mut rm.sfx_bump);
+                if_sound_on_play(&mut game().rm.sfx_bump);
 
                 let b = this.pb_mut();
                 b.iBumpPlayerID = player.globalID;
@@ -391,7 +391,7 @@ pub fn b_powerup_block_hittop_object<T: B_PowerupBlockTrait + ?Sized>(this: &mut
     if r#type == movingobject_throwbox && object.as_any().downcast_mut::<CO_ThrowBox>().unwrap().has_kill_velocity() {
         if this.pb().state == 0 {
             unsafe {
-                if_sound_on_play(&mut rm.sfx_bump);
+                if_sound_on_play(&mut game().rm.sfx_bump);
             }
 
             let b = this.pb_mut();
@@ -439,7 +439,7 @@ pub fn b_powerup_block_hitright_object<T: B_PowerupBlockTrait + ?Sized>(this: &m
 
         if this.pb().state == 0 {
             unsafe {
-                if_sound_on_play(&mut rm.sfx_bump);
+                if_sound_on_play(&mut game().rm.sfx_bump);
             }
 
             let b = this.pb_mut();
@@ -481,7 +481,7 @@ pub fn b_powerup_block_hitleft_object<T: B_PowerupBlockTrait + ?Sized>(this: &mu
 
         if this.pb().state == 0 {
             unsafe {
-                if_sound_on_play(&mut rm.sfx_bump);
+                if_sound_on_play(&mut game().rm.sfx_bump);
             }
 
             let b = this.pb_mut();
@@ -500,7 +500,7 @@ pub fn b_powerup_block_hitleft_object<T: B_PowerupBlockTrait + ?Sized>(this: &mu
 pub fn b_powerup_block_trigger_behavior<T: B_PowerupBlockTrait + ?Sized>(this: &mut T) {
     if this.pb().state == 0 {
         unsafe {
-            if_sound_on_play(&mut rm.sfx_bump);
+            if_sound_on_play(&mut game().rm.sfx_bump);
         }
 
         let b = this.pb_mut();

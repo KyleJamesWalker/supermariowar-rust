@@ -5,13 +5,12 @@ use crate::common::game_mode::*;
 use crate::common::game_mode_settings::*;
 use crate::common::game_mode_settings_serialization::{deserialize_gms, serialize_gms};
 use crate::common::gameplay_styles::*;
-use crate::common::global::{game_values};
+
 use crate::common::global_constants::*;
 use crate::common::match_types::Boss;
 use crate::common::random_number_generator::RANDOM_INT;
 use crate::common::version::Version;
 use crate::globals::{Ptr, Aliased};
-use crate::smw::main::gamemodes;
 
 const DELIM_EMPTY: &str = "";
 const DELIM_COMMA: &str = ",";
@@ -187,7 +186,7 @@ pub fn parse_tour_stop_line(buffer: &[u8], version: &Version, fIsWorld: bool) ->
         if ts.iGoal <= 0 {
             if (ts.iMode as i32) < GAMEMODE_LAST {
                 let idx = RANDOM_INT(GAMEMODE_NUM_OPTIONS as i32 - 1) as usize;
-                ts.iGoal = unsafe { gamemodes[ts.iMode as usize].get_options()[idx].iValue };
+                ts.iGoal = unsafe { game().gamemodes[ts.iMode as usize].get_options()[idx].iValue };
             } else {
                 ts.iGoal = 50;
             }
@@ -256,12 +255,12 @@ pub fn parse_tour_stop_line(buffer: &[u8], version: &Version, fIsWorld: bool) ->
 
             ts.szName = match pszTemp {
                 Some(p) => st.cstr(p),
-                None => format!("Tour Stop {}", unsafe { game_values.tourstops.len() } + 1),
+                None => format!("Tour Stop {}", unsafe { game().game_values.tourstops.len() } + 1),
             };
         } else {
             ts.iPoints = 1;
             ts.iBonusType = 0;
-            ts.szName = format!("Tour Stop {}", unsafe { game_values.tourstops.len() } + 1);
+            ts.szName = format!("Tour Stop {}", unsafe { game().game_values.tourstops.len() } + 1);
         }
 
         if *version >= v(1, 8, 0, 0) {
@@ -274,10 +273,10 @@ pub fn parse_tour_stop_line(buffer: &[u8], version: &Version, fIsWorld: bool) ->
                 };
             }
 
-            ts.gmsSettings = unsafe { game_values.gamemodemenusettings.clone() };
+            ts.gmsSettings = unsafe { game().game_values.gamemodemenusettings.clone() };
 
             let mut gms = ts.gmsSettings.clone();
-            let usedSettings = deserialize_gms(&mut st, ts.iMode, &mut gms, unsafe { &game_values.gamemodesettings });
+            let usedSettings = deserialize_gms(&mut st, ts.iMode, &mut gms, unsafe { &game().game_values.gamemodesettings });
             ts.gmsSettings = gms;
             ts.iNumUsedSettings = usedSettings.iter().filter(|&&b| b).count() as i16;
             ts.fUseSettings = !usedSettings.is_empty();
@@ -285,7 +284,7 @@ pub fn parse_tour_stop_line(buffer: &[u8], version: &Version, fIsWorld: bool) ->
     } else if ts.iStageType == 1 {
         ts.szName = match pszTemp {
             Some(p) => st.cstr(p),
-            None => format!("Bonus House {}", unsafe { game_values.tourstops.len() } + 1),
+            None => format!("Bonus House {}", unsafe { game().game_values.tourstops.len() } + 1),
         };
 
         pszTemp = st.tok(b",\n");
@@ -434,10 +433,10 @@ pub fn write_tour_stop_line(ts: &TourStop, fIsWorld: bool) -> String {
 
 pub fn reset_tour_stops() {
     unsafe {
-        game_values.tourstopcurrent = 0;
+        game().game_values.tourstopcurrent = 0;
 
-        if !game_values.tourstops.is_empty() {
-            game_values.tourstops.clear();
+        if !game().game_values.tourstops.is_empty() {
+            game().game_values.tourstops.clear();
         }
     }
 }

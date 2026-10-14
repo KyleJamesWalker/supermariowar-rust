@@ -11,7 +11,7 @@ use crate::common::object_base::CObjectTrait;
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::{eyecandy, objectcontainer};
+
 use crate::smw::objects::carriable::co_shell::{ShellType, CO_Shell};
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::objects::walkingenemy::walking_enemy::*;
@@ -54,8 +54,8 @@ impl CObjectTrait for MO_Koopa {
             unsafe {
                 let x = self.ix as i32 - self.collisionOffsetX as i32 + self.iw as i32 - 32;
                 let y = self.iy as i32 - self.collisionOffsetY as i32 + self.ih as i32 - 32;
-                rm.spr_shell.draw_src(x, y, &SDL_Rect { x: 0, y: if self.fRed { 32 } else { 0 }, w: 32, h: 32 });
-                rm.spr_iceblock.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
+                game().rm.spr_shell.draw_src(x, y, &SDL_Rect { x: 0, y: if self.fRed { 32 } else { 0 }, w: 32, h: 32 });
+                game().rm.spr_iceblock.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
             }
         } else {
             mo_walking_enemy_draw(self);
@@ -95,7 +95,7 @@ impl IO_MovingObjectTrait for MO_Koopa {
 
         self.dead = true;
         unsafe {
-            eyecandy[2].emplace(EC_FallingObject::new(Ptr::from_mut(&mut rm.spr_shelldead), self.ix, self.iy, 0.0f32, -VELJUMP / 2.0f32, 1, 0, if self.fRed { 32 } else { 0 }, 0, 32, 32));
+            game().eyecandy[2].emplace(EC_FallingObject::new(Ptr::from_mut(&mut game().rm.spr_shelldead), self.ix, self.iy, 0.0f32, -VELJUMP / 2.0f32, 1, 0, if self.fRed { 32 } else { 0 }, 0, 32, 32));
         }
     }
 }
@@ -112,7 +112,7 @@ impl MO_WalkingEnemyTrait for MO_Koopa {
             player.collisions.checktop(p.get());
             player.platform = Ptr::null();
 
-            if game_values.gamemode.gamemode == game_mode_stomp && !game_values.gamemode.gameover {
+            if game().game_values.gamemode.gamemode == game_mode_stomp && !game().game_values.gamemode.gameover {
                 player.score().adjust_score(1);
             }
 
@@ -124,7 +124,7 @@ impl MO_WalkingEnemyTrait for MO_Koopa {
                     self.vely = GRAVITATION;
                 }
 
-                self.spr = if self.fRed { Ptr::from_mut(&mut rm.spr_redkoopa) } else { Ptr::from_mut(&mut rm.spr_koopa) };
+                self.spr = if self.fRed { Ptr::from_mut(&mut game().rm.spr_redkoopa) } else { Ptr::from_mut(&mut game().rm.spr_koopa) };
             } else {
                 self.dead = true;
 
@@ -133,7 +133,7 @@ impl MO_WalkingEnemyTrait for MO_Koopa {
                 self.drop_shell(false, false);
             }
 
-            if_sound_on_play(&mut rm.sfx_mip);
+            if_sound_on_play(&mut game().rm.sfx_mip);
         }
 
         false
@@ -152,7 +152,7 @@ impl MO_WalkingEnemyTrait for MO_Koopa {
         }
 
         unsafe {
-            objectcontainer[1].add(shell);
+            game().objectcontainer[1].add(shell);
         }
     }
 }

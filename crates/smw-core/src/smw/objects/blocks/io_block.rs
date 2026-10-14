@@ -1,18 +1,16 @@
 //! Port of src/smw/objects/blocks/IO_Block.cpp
 
+use crate::game::game;
 use crate::common::game::App;
-use crate::common::game_values::{game_values, if_sound_on_play};
+use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::global::g_map;
 use crate::common::global_constants::*;
 use crate::common::io_block::{IO_Block, IO_BlockTrait};
 use crate::common::math::vec2::Vec2s;
 use crate::common::moving_object_types::*;
 use crate::common::object_base::{cap_falling_velocity, object_block, CObject, CObjectTrait};
 use crate::common::player_kill_styles::KillStyle;
-use crate::globals::{rm, Ptr};
-use crate::smw::gs_gameplay::objectcontainer;
-use crate::smw::main::players;
+use crate::globals::Ptr;
 use crate::smw::objects::carriable::co_shell::CO_Shell;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::player::{get_player_from_global_id, CPlayer};
@@ -62,16 +60,16 @@ pub fn io_block_update<T: IO_BlockTrait + ?Sized>(this: &mut T) {
     unsafe {
         let b = this.block_mut();
         if b.ishiddentype && !b.hidden {
-            if game_values.hiddenblockrespawn > 0 && {
+            if game().game_values.hiddenblockrespawn > 0 && {
                 b.iHiddenTimer += 1;
-                b.iHiddenTimer > game_values.hiddenblockrespawn
+                b.iHiddenTimer > game().game_values.hiddenblockrespawn
             } {
                 b.iHiddenTimer = 0;
                 b.hidden = true;
                 this.reset();
 
                 let b = this.block();
-                g_map.update_tile_gap(b.col, b.row);
+                game().g_map.update_tile_gap(b.col, b.row);
             }
         }
     }
@@ -211,7 +209,7 @@ pub fn io_block_bounce_moving_object<T: IO_BlockTrait + ?Sized>(this: &mut T, mu
     unsafe {
         let r#type = object.get_moving_object_type();
         if r#type == movingobject_goomba || r#type == movingobject_koopa || r#type == movingobject_buzzybeetle || r#type == movingobject_spiny {
-            if_sound_on_play(&mut rm.sfx_kicksound);
+            if_sound_on_play(&mut game().rm.sfx_kicksound);
 
             let enemy = object.as_walking_enemy().unwrap();
             let style = enemy.we().get_kill_style();
@@ -219,7 +217,7 @@ pub fn io_block_bounce_moving_object<T: IO_BlockTrait + ?Sized>(this: &mut T, mu
             enemy.die_and_drop_shell(true, true);
 
             let iBumpPlayerID = this.block().iBumpPlayerID;
-            if !game_values.gamemode.gameover && iBumpPlayerID >= 0 {
+            if !game().game_values.gamemode.gameover && iBumpPlayerID >= 0 {
                 let mut player = get_player_from_global_id(iBumpPlayerID);
 
                 if !player.is_null() {
@@ -246,8 +244,8 @@ pub fn io_block_kill_players_and_objects_inside_block<T: IO_BlockTrait + ?Sized>
         let iposy = this.block().iposy;
 
         //Loop through players
-        for i in 0..players.len() {
-            let mut player = players[i];
+        for i in 0..game().players.len() {
+            let mut player = game().players[i];
             if !player.isready() {
                 continue;
             }
@@ -270,9 +268,9 @@ pub fn io_block_kill_players_and_objects_inside_block<T: IO_BlockTrait + ?Sized>
 
         //Loop through objects
         for iLayer in 0..3usize {
-            let count = objectcontainer[iLayer].list().len();
+            let count = game().objectcontainer[iLayer].list().len();
             for i in 0..count {
-                let mut obj: Ptr<dyn CObjectTrait> = objectcontainer[iLayer].list()[i];
+                let mut obj: Ptr<dyn CObjectTrait> = game().objectcontainer[iLayer].list()[i];
                 let movingobject: &mut dyn IO_MovingObjectTrait = match obj.as_io_moving_object() {
                     Some(m) => m,
                     None => continue,

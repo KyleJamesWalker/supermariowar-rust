@@ -7,7 +7,6 @@ use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::domination::{cgm_domination_check_winner, CGM_Domination};
 use crate::smw::gamemodes::game_mode as gm;
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::objects::overmap::wo_king_of_the_hill_zone::OMO_KingOfTheHillZone;
 use crate::smw::player::CPlayer;
 use std::any::Any;
@@ -43,7 +42,7 @@ impl CGameModeTrait for CGM_KingOfTheHill {
     fn init(&mut self) {
         gm::cgamemode_init(self);
         unsafe {
-            objectcontainer[2].add(Ptr::new_box(OMO_KingOfTheHillZone::new(Ptr::from_mut(&mut rm.spr_kingofthehillarea))));
+            game().objectcontainer[2].add(Ptr::new_box(OMO_KingOfTheHillZone::new(Ptr::from_mut(&mut game().rm.spr_kingofthehillarea))));
         }
     }
 

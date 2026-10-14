@@ -57,10 +57,10 @@ impl MI_TeamSelect {
 
         unsafe {
             for iTeam in 0..4usize {
-                this.iTeamCounts[iTeam] = game_values.teamcounts[iTeam];
+                this.iTeamCounts[iTeam] = game().game_values.teamcounts[iTeam];
 
                 for iSlot in 0..3usize {
-                    this.iTeamIDs[iTeam][iSlot] = game_values.teamids[iTeam][iSlot];
+                    this.iTeamIDs[iTeam][iSlot] = game().game_values.teamids[iTeam][iSlot];
                 }
 
                 this.fReady[iTeam] = false;
@@ -118,14 +118,14 @@ impl MI_TeamSelect {
                         self.iTeamIDs[iNewTeam as usize][self.iTeamCounts[iNewTeam as usize] as usize] = iPlayerID;
                         self.iTeamCounts[iNewTeam as usize] += 1;
 
-                        if game_values.teamcolors {
-                            game_values.colorids[iPlayerID as usize] = iNewTeam;
+                        if game().game_values.teamcolors {
+                            game().game_values.colorids[iPlayerID as usize] = iNewTeam;
 
                             //Skip skins that are invalid
-                            while !rm.load_menu_skin(iPlayerID, game_values.skinids[iPlayerID as usize], iNewTeam, false) {
-                                game_values.skinids[iPlayerID as usize] += 1;
-                                if game_values.skinids[iPlayerID as usize] as usize >= game().skinlist.count() {
-                                    game_values.skinids[iPlayerID as usize] = 0;
+                            while !game().rm.load_menu_skin(iPlayerID, game().game_values.skinids[iPlayerID as usize], iNewTeam, false) {
+                                game().game_values.skinids[iPlayerID as usize] += 1;
+                                if game().game_values.skinids[iPlayerID as usize] as usize >= game().skinlist.count() {
+                                    game().game_values.skinids[iPlayerID as usize] = 0;
                                 }
                             }
                         }
@@ -162,7 +162,7 @@ impl MI_TeamSelect {
 
                 if fFound {
                     //Need to remove the player
-                    if game_values.playercontrol[iPlayer as usize] == 0 {
+                    if game().game_values.playercontrol[iPlayer as usize] == 0 {
                         self.iTeamCounts[iTeamID as usize] -= 1;
 
                         if self.iTeamCounts[iTeamID as usize] > iSlotID {
@@ -175,7 +175,7 @@ impl MI_TeamSelect {
                     }
                 } else {
                     //A new player was added so find a spot for him
-                    if game_values.playercontrol[iPlayer as usize] > 0 {
+                    if game().game_values.playercontrol[iPlayer as usize] > 0 {
                         let mut iLookForNewTeam = iPlayer;
 
                         while self.iTeamCounts[iLookForNewTeam as usize] >= 3 {
@@ -188,8 +188,8 @@ impl MI_TeamSelect {
                         self.iTeamIDs[iLookForNewTeam as usize][self.iTeamCounts[iLookForNewTeam as usize] as usize] = iPlayer;
                         self.iTeamCounts[iLookForNewTeam as usize] += 1;
 
-                        if game_values.teamcolors {
-                            game_values.colorids[iPlayer as usize] = iLookForNewTeam;
+                        if game().game_values.teamcolors {
+                            game().game_values.colorids[iPlayer as usize] = iLookForNewTeam;
                         }
                     }
                 }
@@ -218,8 +218,8 @@ impl MI_TeamSelect {
                 self.iTeamIDs[iLookForNewTeam as usize][self.iTeamCounts[iLookForNewTeam as usize] as usize] = iPlayer;
                 self.iTeamCounts[iLookForNewTeam as usize] += 1;
 
-                if game_values.teamcolors {
-                    game_values.colorids[iPlayer as usize] = iLookForNewTeam;
+                if game().game_values.teamcolors {
+                    game().game_values.colorids[iPlayer as usize] = iLookForNewTeam;
                 }
             }
 
@@ -233,28 +233,28 @@ impl MI_TeamSelect {
                 self.iFastScroll[p] = 0;
                 self.iFastScrollTimer[p] = 0;
 
-                if game_values.playercontrol[p] == 1 {
+                if game().game_values.playercontrol[p] == 1 {
                     self.fReady[p] = false;
                     self.fAllReady = false;
                 } else {
                     self.fReady[p] = true;
                 }
 
-                if game_values.playercontrol[p] == 0 {
+                if game().game_values.playercontrol[p] == 0 {
                     continue;
                 }
 
-                if game_values.teamcolors {
-                    game_values.colorids[p] = self.get_team(iPlayer);
+                if game().game_values.teamcolors {
+                    game().game_values.colorids[p] = self.get_team(iPlayer);
                 } else {
-                    game_values.colorids[p] = iPlayer;
+                    game().game_values.colorids[p] = iPlayer;
                 }
 
                 //Skip skins that are invalid
-                while !rm.load_menu_skin(iPlayer, game_values.skinids[p], game_values.colorids[p], false) {
-                    game_values.skinids[p] += 1;
-                    if game_values.skinids[p] as usize >= game().skinlist.count() {
-                        game_values.skinids[p] = 0;
+                while !game().rm.load_menu_skin(iPlayer, game().game_values.skinids[p], game().game_values.colorids[p], false) {
+                    game().game_values.skinids[p] += 1;
+                    if game().game_values.skinids[p] as usize >= game().skinlist.count() {
+                        game().game_values.skinids[p] = 0;
                     }
                 }
             }
@@ -265,14 +265,14 @@ impl MI_TeamSelect {
         unsafe {
             self.iNumTeams = 0;
             for iTeam in 0..4usize {
-                game_values.teamcounts[iTeam] = 0;
+                game().game_values.teamcounts[iTeam] = 0;
 
                 if self.iTeamCounts[iTeam] > 0 {
                     for iTeamSpot in 0..3usize {
-                        game_values.teamids[self.iNumTeams as usize][iTeamSpot] = self.iTeamIDs[iTeam][iTeamSpot];
+                        game().game_values.teamids[self.iNumTeams as usize][iTeamSpot] = self.iTeamIDs[iTeam][iTeamSpot];
                     }
 
-                    game_values.teamcounts[self.iNumTeams as usize] = self.iTeamCounts[iTeam];
+                    game().game_values.teamcounts[self.iNumTeams as usize] = self.iTeamCounts[iTeam];
                     self.iNumTeams += 1;
                 }
             }
@@ -325,7 +325,7 @@ impl UI_ControlTrait for MI_TeamSelect {
             let mut iPlayerCount: i16 = 0;
 
             for iPlayer in 0..4usize {
-                if game_values.playercontrol[iPlayer] > 0 {
+                if game().game_values.playercontrol[iPlayer] > 0 {
                     iPlayerCount += 1;
                 }
             }
@@ -338,7 +338,7 @@ impl UI_ControlTrait for MI_TeamSelect {
                     let iPlayerID = self.iTeamIDs[iTeam as usize][iTeamItem as usize];
                     let pid = iPlayerID as usize;
 
-                    if game_values.randomskin[pid] {
+                    if game().game_values.randomskin[pid] {
                         self.spr.draw_src(
                             iTeam * 96 + 43 + px,
                             iTeamItem * 36 + 52 + py,
@@ -346,42 +346,42 @@ impl UI_ControlTrait for MI_TeamSelect {
                         );
                     } else {
                         let frame = if self.fReady[pid] { 0 } else { self.iAnimationFrame as usize };
-                        rm.spr_player[pid][frame].draw_src(iTeam * 96 + 48 + px, iTeamItem * 36 + 52 + py, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
+                        game().rm.spr_player[pid][frame].draw_src(iTeam * 96 + 48 + px, iTeamItem * 36 + 52 + py, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
                     }
 
-                    rm.spr_menu_boxed_numbers.draw_src(
+                    game().rm.spr_menu_boxed_numbers.draw_src(
                         iTeam * 96 + 44 + px,
                         iTeamItem * 36 + 72 + py,
-                        &SDL_Rect { x: iPlayerID as i32 * 16, y: game_values.colorids[pid] as i32 * 16, w: 16, h: 16 },
+                        &SDL_Rect { x: iPlayerID as i32 * 16, y: game().game_values.colorids[pid] as i32 * 16, w: 16, h: 16 },
                     );
                 }
 
                 let t = iTeam as usize;
-                if game_values.playercontrol[t] > 0 {
-                    rm.spr_player_select_ready.draw_src(iTeam * 160 + 16, 368, &SDL_Rect { x: 0, y: 0, w: 128, h: 96 });
+                if game().game_values.playercontrol[t] > 0 {
+                    game().rm.spr_player_select_ready.draw_src(iTeam * 160 + 16, 368, &SDL_Rect { x: 0, y: 0, w: 128, h: 96 });
 
-                    rm.spr_menu_boxed_numbers.draw_src(iTeam * 160 + 32, 388, &SDL_Rect { x: iTeam * 16, y: game_values.colorids[t] as i32 * 16, w: 16, h: 16 });
+                    game().rm.spr_menu_boxed_numbers.draw_src(iTeam * 160 + 32, 388, &SDL_Rect { x: iTeam * 16, y: game().game_values.colorids[t] as i32 * 16, w: 16, h: 16 });
                     let skinlist = game().skinlist;
-                    let name: &str = if game_values.randomskin[t] { "Random" } else { &skinlist.at(game_values.skinids[t] as usize).name };
-                    rm.menu_font_small.draw_chop_right(iTeam * 160 + 52, 404 - rm.menu_font_small.get_height(), 80, name);
+                    let name: &str = if game().game_values.randomskin[t] { "Random" } else { &skinlist.at(game().game_values.skinids[t] as usize).name };
+                    game().rm.menu_font_small.draw_chop_right(iTeam * 160 + 52, 404 - game().rm.menu_font_small.get_height(), 80, name);
 
                     let srcy = if !self.fReady[t] {
                         0
-                    } else if game_values.playercontrol[t] == 1 {
+                    } else if game().game_values.playercontrol[t] == 1 {
                         32
                     } else {
                         64
                     };
-                    rm.spr_player_select_ready.draw_src(iTeam * 160 + 64, 408, &SDL_Rect { x: 128, y: srcy, w: 34, h: 32 });
+                    game().rm.spr_player_select_ready.draw_src(iTeam * 160 + 64, 408, &SDL_Rect { x: 128, y: srcy, w: 34, h: 32 });
                 }
             }
             let _ = iPlayerCount;
 
             if self.fAllReady {
                 let fy = (py as f32 + App::screenHeight as f32 * 0.47f32) as i32;
-                rm.menu_plain_field.draw_src(px + 108, fy, &SDL_Rect { x: 0, y: 160, w: 100, h: 32 });
-                rm.menu_plain_field.draw_src(px + 208, fy, &SDL_Rect { x: 412, y: 160, w: 100, h: 32 });
-                rm.menu_font_large.draw_centered(App::screenWidth / 2, (py as f32 + App::screenHeight as f32 * 0.48f32) as i32, "Continue");
+                game().rm.menu_plain_field.draw_src(px + 108, fy, &SDL_Rect { x: 0, y: 160, w: 100, h: 32 });
+                game().rm.menu_plain_field.draw_src(px + 208, fy, &SDL_Rect { x: 412, y: 160, w: 100, h: 32 });
+                game().rm.menu_font_large.draw_centered(App::screenWidth / 2, (py as f32 + App::screenHeight as f32 * 0.48f32) as i32, "Continue");
             }
         }
     }
@@ -390,13 +390,13 @@ impl UI_ControlTrait for MI_TeamSelect {
         unsafe {
             for iPlayer in 0..4i16 {
                 let p = iPlayer as usize;
-                let playerKeys: Ptr<COutputControl> = Ptr::from_mut(&mut game_values.playerInput.outputControls[p]);
+                let playerKeys: Ptr<COutputControl> = Ptr::from_mut(&mut game().game_values.playerInput.outputControls[p]);
 
-                if game_values.playercontrol[p] > 0 && !self.fReady[p] {
+                if game().game_values.playercontrol[p] > 0 && !self.fReady[p] {
                     //if this player is player or cpu
                     if playerKeys.menu_left().fPressed {
                         if playerKeys.menu_right().fDown {
-                            game_values.randomskin[p] = !game_values.randomskin[p];
+                            game().game_values.randomskin[p] = !game().game_values.randomskin[p];
                         } else {
                             self.find_new_team(iPlayer, -1);
                         }
@@ -404,25 +404,25 @@ impl UI_ControlTrait for MI_TeamSelect {
 
                     if playerKeys.menu_right().fPressed {
                         if playerKeys.menu_left().fDown {
-                            game_values.randomskin[p] = !game_values.randomskin[p];
+                            game().game_values.randomskin[p] = !game().game_values.randomskin[p];
                         } else {
                             self.find_new_team(iPlayer, 1);
                         }
                     }
 
                     //Scroll up/down through player skins
-                    if !game_values.randomskin[p] {
+                    if !game().game_values.randomskin[p] {
                         if playerKeys.menu_up().fPressed {
                             loop {
                                 if playerKeys.menu_down().fDown {
-                                    game_values.skinids[p] = RANDOM_INT(game().skinlist.count() as i32) as i16;
+                                    game().game_values.skinids[p] = RANDOM_INT(game().skinlist.count() as i32) as i16;
                                 } else {
-                                    game_values.skinids[p] -= 1;
-                                    if game_values.skinids[p] < 0 {
-                                        game_values.skinids[p] = game().skinlist.count() as i16 - 1;
+                                    game().game_values.skinids[p] -= 1;
+                                    if game().game_values.skinids[p] < 0 {
+                                        game().game_values.skinids[p] = game().skinlist.count() as i16 - 1;
                                     }
                                 }
-                                if rm.load_menu_skin(iPlayer, game_values.skinids[p], game_values.colorids[p], false) {
+                                if game().rm.load_menu_skin(iPlayer, game().game_values.skinids[p], game().game_values.colorids[p], false) {
                                     break;
                                 }
                             }
@@ -436,11 +436,11 @@ impl UI_ControlTrait for MI_TeamSelect {
                                 self.iFastScrollTimer[p] += 1;
                                 if self.iFastScrollTimer[p] > 5 {
                                     loop {
-                                        game_values.skinids[p] -= 1;
-                                        if game_values.skinids[p] < 0 {
-                                            game_values.skinids[p] = game().skinlist.count() as i16 - 1;
+                                        game().game_values.skinids[p] -= 1;
+                                        if game().game_values.skinids[p] < 0 {
+                                            game().game_values.skinids[p] = game().skinlist.count() as i16 - 1;
                                         }
-                                        if rm.load_menu_skin(iPlayer, game_values.skinids[p], game_values.colorids[p], false) {
+                                        if game().rm.load_menu_skin(iPlayer, game().game_values.skinids[p], game().game_values.colorids[p], false) {
                                             break;
                                         }
                                     }
@@ -453,14 +453,14 @@ impl UI_ControlTrait for MI_TeamSelect {
                         if playerKeys.menu_down().fPressed {
                             loop {
                                 if playerKeys.menu_up().fDown {
-                                    game_values.skinids[p] = RANDOM_INT(game().skinlist.count() as i32) as i16;
+                                    game().game_values.skinids[p] = RANDOM_INT(game().skinlist.count() as i32) as i16;
                                 } else {
-                                    game_values.skinids[p] += 1;
-                                    if game_values.skinids[p] as usize >= game().skinlist.count() {
-                                        game_values.skinids[p] = 0;
+                                    game().game_values.skinids[p] += 1;
+                                    if game().game_values.skinids[p] as usize >= game().skinlist.count() {
+                                        game().game_values.skinids[p] = 0;
                                     }
                                 }
-                                if rm.load_menu_skin(iPlayer, game_values.skinids[p], game_values.colorids[p], false) {
+                                if game().rm.load_menu_skin(iPlayer, game().game_values.skinids[p], game().game_values.colorids[p], false) {
                                     break;
                                 }
                             }
@@ -474,11 +474,11 @@ impl UI_ControlTrait for MI_TeamSelect {
                                 self.iFastScrollTimer[p] += 1;
                                 if self.iFastScrollTimer[p] > 5 {
                                     loop {
-                                        game_values.skinids[p] += 1;
-                                        if game_values.skinids[p] as usize >= game().skinlist.count() {
-                                            game_values.skinids[p] = 0;
+                                        game().game_values.skinids[p] += 1;
+                                        if game().game_values.skinids[p] as usize >= game().skinlist.count() {
+                                            game().game_values.skinids[p] = 0;
                                         }
-                                        if rm.load_menu_skin(iPlayer, game_values.skinids[p], game_values.colorids[p], false) {
+                                        if game().rm.load_menu_skin(iPlayer, game().game_values.skinids[p], game().game_values.colorids[p], false) {
                                             break;
                                         }
                                     }
@@ -499,11 +499,11 @@ impl UI_ControlTrait for MI_TeamSelect {
 
                     if playerKeys.menu_random().fPressed {
                         if playerKeys.menu_scrollfast().fDown {
-                            game_values.randomskin[p] = !game_values.randomskin[p];
-                        } else if !game_values.randomskin[p] {
+                            game().game_values.randomskin[p] = !game().game_values.randomskin[p];
+                        } else if !game().game_values.randomskin[p] {
                             loop {
-                                game_values.skinids[p] = RANDOM_INT(game().skinlist.count() as i32) as i16;
-                                if rm.load_menu_skin(iPlayer, game_values.skinids[p], game_values.colorids[p], false) {
+                                game().game_values.skinids[p] = RANDOM_INT(game().skinlist.count() as i32) as i16;
+                                if game().rm.load_menu_skin(iPlayer, game().game_values.skinids[p], game().game_values.colorids[p], false) {
                                     break;
                                 }
                             }
@@ -530,7 +530,7 @@ impl UI_ControlTrait for MI_TeamSelect {
                 }
 
                 if playerInput.outputControls[p].menu_cancel().fPressed {
-                    if game_values.playercontrol[p] > 0 && self.fReady[p] {
+                    if game().game_values.playercontrol[p] > 0 && self.fReady[p] {
                         self.fReady[p] = false;
                         self.fAllReady = false;
                     } else if DEVICE_KEYBOARD != playerInput.inputControls[p].iDevice || iPlayer == 0 {

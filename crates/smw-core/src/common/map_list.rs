@@ -461,8 +461,8 @@ impl MapList {
 
     pub fn write_filters(&mut self) {
         unsafe {
-            if game_values.fNeedWriteFilters {
-                game_values.fNeedWriteFilters = false;
+            if game().game_values.fNeedWriteFilters {
+                game().game_values.fNeedWriteFilters = false;
 
                 for iFilter in 0..game().filterslist.count() {
                     let path = game().filterslist.at(iFilter).clone();
@@ -475,7 +475,7 @@ impl MapList {
                     out += &format!("{}.{}.{}.{}\n\n", GAME_VERSION.major, GAME_VERSION.minor, GAME_VERSION.patch, GAME_VERSION.build);
 
                     out += "#Icon\n";
-                    out += &format!("{}\n\n", game_values.piFilterIcons[iFilter + NUM_AUTO_FILTERS as usize]);
+                    out += &format!("{}\n\n", game().game_values.piFilterIcons[iFilter + NUM_AUTO_FILTERS as usize]);
 
                     out += "#Maps\n";
 
@@ -538,8 +538,8 @@ impl MapList {
             while self.current != self.maps.len() {
                 if !self.maps.node(self.current).fReadFromCache {
                     let filename = self.maps.node(self.current).filename.clone();
-                    g_map.load_map(&filename, read_type_summary);
-                    let af = g_map.fAutoFilter;
+                    game().g_map.load_map(&filename, read_type_summary);
+                    let af = game().g_map.fAutoFilter;
                     let mln = self.maps.node_mut(self.current);
                     mln.pfFilters[..af.len()].copy_from_slice(&af);
                 }
@@ -564,7 +564,7 @@ impl MapList {
                         iReadState = 1;
                         continue;
                     } else if iReadState == 1 {
-                        game_values.piFilterIcons[iFilter + NUM_AUTO_FILTERS as usize] = atoi(&buffer) as i16;
+                        game().game_values.piFilterIcons[iFilter + NUM_AUTO_FILTERS as usize] = atoi(&buffer) as i16;
                         iReadState = 2;
                         continue;
                     } else {
@@ -586,8 +586,8 @@ impl MapList {
         unsafe {
             for itr in 0..self.maps.len() {
                 let filename = self.maps.node(itr).filename.clone();
-                g_map.load_map(&filename, read_type_summary);
-                let af = g_map.fAutoFilter;
+                game().g_map.load_map(&filename, read_type_summary);
+                let af = game().g_map.fAutoFilter;
                 self.maps.node_mut(itr).pfFilters[..af.len()].copy_from_slice(&af);
             }
         }
@@ -644,7 +644,7 @@ impl MapList {
         }
 
         unsafe {
-            game_values.fFiltersOn = pfFilters.contains(&true);
+            game().game_values.fFiltersOn = pfFilters.contains(&true);
         }
         self.find_filtered_map();
     }

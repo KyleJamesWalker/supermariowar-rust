@@ -8,7 +8,7 @@ use crate::impl_base;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::global_constants::*;
-use crate::smw::gs_gameplay::{eyecandy, swap_players};
+use crate::smw::gs_gameplay::{swap_players};
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::objects::powerup::powerup::{mo_powerup_draw, mo_powerup_update, MO_Powerup, MO_PowerupTrait};
 use crate::smw::player::CPlayer;
@@ -51,14 +51,14 @@ impl CObjectTrait for PU_MysteryMushroomPowerup {
                 self.dead = true;
 
                 if !swap_players(player.localID) {
-                    eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
+                        Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                         (player.ix as i32 + (HALFPW) - 16) as i16,
                         (player.iy as i32 + (HALFPH) - 16) as i16,
                         3,
                         8,
                     ));
-                    if_sound_on_play(&mut rm.sfx_spit);
+                    if_sound_on_play(&mut game().rm.sfx_spit);
                 }
             }
         }

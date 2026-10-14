@@ -9,7 +9,6 @@ use crate::common::moving_object_types::movingobject_carried;
 use crate::common::object_base::CObjectTrait;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::objects::carriable::co_spring::{co_spring_collide_player, co_spring_draw, co_spring_update, CO_Spring, CO_SpringTrait};
 use crate::smw::objects::moving::mo_carried_object::MO_CarriedObjectTrait;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
@@ -86,9 +85,9 @@ impl CO_SpringTrait for CO_KuriboShoe {
             self.dead = true;
             player.set_kuribo_shoe(if self.fSticky { STICKY } else { NORMAL });
             unsafe {
-                if_sound_on_play(&mut rm.sfx_transform);
-                eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                if_sound_on_play(&mut game().rm.sfx_transform);
+                game().eyecandy[2].emplace(EC_SingleAnimation::new(
+                    Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                     (player.ix as i32 + HALFPW - 16) as i16,
                     (player.iy as i32 + HALFPH - 16) as i16,
                     3,

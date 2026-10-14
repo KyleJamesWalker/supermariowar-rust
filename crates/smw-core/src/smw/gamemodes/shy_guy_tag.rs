@@ -10,8 +10,8 @@ use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::{self as gm, remove_players_but_highest_scoring, setup_score_board, show_score_board};
 use crate::smw::gamemodes::game_mode_timer::GameTimerDisplay;
-use crate::smw::gs_gameplay::{count_alive_teams, eyecandy};
-use crate::smw::main::{players, score, score_cnt};
+use crate::smw::gs_gameplay::{count_alive_teams};
+
 use crate::smw::player::CPlayer;
 use std::any::Any;
 
@@ -42,19 +42,19 @@ impl CGM_ShyGuyTag {
 
     pub fn set_shy_guy(&mut self, iTeam: i16) {
         unsafe {
-            for &player in players.iter() {
+            for &player in game().players.iter() {
                 let mut player = player;
                 if player.get_team_id() == iTeam {
                     player.shyguy = true;
-                    eyecandy[2].emplace(EC_GravText::new(
-                        Ptr::from_mut(&mut rm.game_font_large),
+                    game().eyecandy[2].emplace(EC_GravText::new(
+                        Ptr::from_mut(&mut game().rm.game_font_large),
                         player.center_x(),
                         player.bottom_y(),
                         "Shyguy!".to_string(),
                         (-(VELJUMP as f64) * 1.5) as f32,
                     ));
-                    eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
+                        Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                         (player.center_x() as i32 - 16) as i16,
                         (player.center_y() as i32 - 16) as i16,
                         3,
@@ -66,19 +66,19 @@ impl CGM_ShyGuyTag {
                 }
             }
 
-            if_sound_on_play(&mut rm.sfx_transform);
+            if_sound_on_play(&mut game().rm.sfx_transform);
         }
     }
 
     fn free_shy_guys(&mut self) {
         unsafe {
-            if_sound_on_play(&mut rm.sfx_thunder);
+            if_sound_on_play(&mut game().rm.sfx_thunder);
 
-            for &player in players.iter() {
+            for &player in game().players.iter() {
                 let mut player = player;
                 player.shyguy = false;
-                eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                game().eyecandy[2].emplace(EC_SingleAnimation::new(
+                    Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                     (player.center_x() as i32 - 16) as i16,
                     (player.center_y() as i32 - 16) as i16,
                     3,
@@ -91,7 +91,7 @@ impl CGM_ShyGuyTag {
     fn count_shy_guys(&mut self) -> i16 {
         let mut shyguycount: i16 = 0;
         unsafe {
-            for &player in players.iter() {
+            for &player in game().players.iter() {
                 if player.shyguy {
                     shyguycount += 1;
                 }
@@ -121,11 +121,11 @@ impl CGameModeTrait for CGM_ShyGuyTag {
         self.gameClock.init(0, true);
 
         unsafe {
-            for iScore in 0..score_cnt as usize {
-                score[iScore].set_score(0);
+            for iScore in 0..game().score_cnt as usize {
+                game().score[iScore].set_score(0);
             }
 
-            for &player in players.iter() {
+            for &player in game().players.iter() {
                 let mut player = player;
                 player.ownerColorOffsetX = (player.get_color_id() as i32 * 48) as i16;
             }
@@ -144,11 +144,11 @@ impl CGameModeTrait for CGM_ShyGuyTag {
 
             //If we are not waiting to clear, check if we need to start waiting
             if !self.fRunClock {
-                if shyguycount as usize == players.len() {
-                    if game_values.gamemodesettings.shyguytag.freetime > 0 {
+                if shyguycount as usize == game().players.len() {
+                    if game().game_values.gamemodesettings.shyguytag.freetime > 0 {
                         self.fRunClock = true;
-                        self.gameClock.set_time(game_values.gamemodesettings.shyguytag.freetime);
-                        if_sound_on_play(&mut rm.sfx_starwarning);
+                        self.gameClock.set_time(game().game_values.gamemodesettings.shyguytag.freetime);
+                        if_sound_on_play(&mut game().rm.sfx_starwarning);
                     } else {
                         self.free_shy_guys();
                     }
@@ -161,19 +161,19 @@ impl CGameModeTrait for CGM_ShyGuyTag {
                     self.fRunClock = false;
                     self.free_shy_guys();
                 } else if iTime > 0 {
-                    if_sound_on_play(&mut rm.sfx_starwarning);
+                    if_sound_on_play(&mut game().rm.sfx_starwarning);
                 }
             }
 
             //Award points to non shyguys
             if shyguycount > 0 {
                 self.scorecounter += 1;
-                if self.scorecounter >= game_values.pointspeed {
+                if self.scorecounter >= game().game_values.pointspeed {
                     self.scorecounter = 0;
 
                     let mut pCheckWinner: Ptr<CPlayer> = Ptr::null();
                     let mut fAlreadyScored: [bool; 4] = [false, false, false, false];
-                    for &player in players.iter() {
+                    for &player in game().players.iter() {
                         let mut player = player;
                         if !player.shyguy {
                             let iTeam: i16 = player.get_team_id();
@@ -206,7 +206,7 @@ impl CGameModeTrait for CGM_ShyGuyTag {
             return PlayerKillType::Normal;
         }
 
-        if self.count_shy_guys() == 0 || unsafe { game_values.gamemodesettings.shyguytag.tagtransfer } != 0 {
+        if self.count_shy_guys() == 0 || unsafe { game().game_values.gamemodesettings.shyguytag.tagtransfer } != 0 {
             self.set_shy_guy(other.get_team_id());
         }
 
@@ -216,7 +216,7 @@ impl CGameModeTrait for CGM_ShyGuyTag {
     fn playerkilledself(&mut self, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
         gm::cgamemode_playerkilledself(self, player, style);
 
-        if !self.gameover && unsafe { game_values.gamemodesettings.shyguytag.tagonsuicide } {
+        if !self.gameover && unsafe { game().game_values.gamemodesettings.shyguytag.tagonsuicide } {
             self.set_shy_guy(player.get_team_id());
         }
 

@@ -5,7 +5,6 @@ use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::ClipEdge;
 use crate::common::global_constants::*;
 use crate::globals::*;
-use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::player::CPlayer;
 use crate::smw::player_components::player_shield::{OFF, SOFT_WITH_STOMP};
 use sdl2::sys::SDL_Rect;
@@ -68,14 +67,14 @@ impl PlayerTanookiSuit {
                 self.statue_timer = 123;
 
                 // perform tansformation effects
-                eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut rm.spr_poof),
+                game().eyecandy[2].emplace(EC_SingleAnimation::new(
+                    Ptr::from_mut(&mut game().rm.spr_poof),
                     (player.center_x() as i32 - 24) as i16,
                     (player.center_y() as i32 - 24) as i16,
                     4,
                     5,
                 ));
-                if_sound_on_play(&mut rm.sfx_transform);
+                if_sound_on_play(&mut game().rm.sfx_transform);
 
                 // Neutralize lateral velocity
                 let tv: f32 = 1.6f32;
@@ -119,22 +118,22 @@ impl PlayerTanookiSuit {
                     }
 
                     // perform transformation effects
-                    eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut rm.spr_poof),
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
+                        Ptr::from_mut(&mut game().rm.spr_poof),
                         (player.center_x() as i32 - 24) as i16,
                         (player.center_y() as i32 - 24) as i16,
                         4,
                         5,
                     ));
-                    if_sound_on_play(&mut rm.sfx_transform);
+                    if_sound_on_play(&mut game().rm.sfx_transform);
 
                     //Decrease the amount of tanooki uses, if feature is turned on
-                    if game_values.tanookilimit > 0 || self.statue_uses_left > 0 {
+                    if game().game_values.tanookilimit > 0 || self.statue_uses_left > 0 {
                         self.statue_uses_left = self.statue_uses_left.wrapping_sub(1);
                         if self.statue_uses_left == 0 {
                             self.tanooki_on = false;
                             self.statue_uses_left = 0;
-                            if_sound_on_play(&mut rm.sfx_powerdown);
+                            if_sound_on_play(&mut game().rm.sfx_powerdown);
                         }
                     }
                 }
@@ -179,11 +178,11 @@ impl PlayerTanookiSuit {
 
     pub fn on_pickup(&mut self) {
         unsafe {
-            if_sound_on_play(&mut rm.sfx_collectpowerup);
+            if_sound_on_play(&mut game().rm.sfx_collectpowerup);
             self.tanooki_on = true;
 
-            if game_values.tanookilimit > 0 {
-                self.statue_uses_left = game_values.tanookilimit as u16;
+            if game().game_values.tanookilimit > 0 {
+                self.statue_uses_left = game().game_values.tanookilimit as u16;
             }
         }
     }
@@ -207,9 +206,9 @@ impl PlayerTanookiSuit {
         unsafe {
             if player.iswarping() {
                 let edge: ClipEdge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);
-                rm.spr_statue.draw_clip(x, y, &src, edge, player.get_warp_plane() as i32);
+                game().rm.spr_statue.draw_clip(x, y, &src, edge, player.get_warp_plane() as i32);
             } else {
-                rm.spr_statue.draw_src(x, y, &src);
+                game().rm.spr_statue.draw_src(x, y, &src);
             }
         }
     }

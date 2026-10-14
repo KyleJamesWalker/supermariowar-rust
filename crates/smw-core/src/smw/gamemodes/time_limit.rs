@@ -93,7 +93,7 @@ pub fn cgm_timelimit_think(this: &mut CGM_TimeLimit) {
 pub fn cgm_timelimit_playerkilledplayer(this: &mut CGM_TimeLimit, mut inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
     if !this.gameover {
         unsafe {
-            if game_values.gamemode.gamemode != game_mode_timelimit || game_values.gamemodesettings.time.scoring == ScoringStyle::AllKills || style == KillStyle::Push {
+            if game().game_values.gamemode.gamemode != game_mode_timelimit || game().game_values.gamemodesettings.time.scoring == ScoringStyle::AllKills || style == KillStyle::Push {
                 //Penalize killing your team mates
                 if inflictor.get_team_id() == other.get_team_id() {
                     inflictor.score().adjust_score(-1);
@@ -102,8 +102,8 @@ pub fn cgm_timelimit_playerkilledplayer(this: &mut CGM_TimeLimit, mut inflictor:
                 }
             }
 
-            if game_values.gamemode.gamemode == game_mode_timelimit && game_values.gamemodesettings.time.style == DeathStyle::Shield {
-                if_sound_on_play(&mut rm.sfx_powerdown);
+            if game().game_values.gamemode.gamemode == game_mode_timelimit && game().game_values.gamemodesettings.time.style == DeathStyle::Shield {
+                if_sound_on_play(&mut game().rm.sfx_powerdown);
                 other.shield().reset();
                 return PlayerKillType::NonKill;
             }

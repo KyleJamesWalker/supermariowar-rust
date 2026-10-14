@@ -13,7 +13,7 @@ use crate::common::object_base::CObjectTrait;
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::{eyecandy, lookup_team_id, objectcontainer};
+use crate::smw::gs_gameplay::{lookup_team_id};
 use crate::smw::objectgame::removeifprojectile;
 use crate::smw::objects::carriable::co_throw_box::CO_ThrowBox;
 use crate::smw::objects::moving::mo_explosion::MO_Explosion;
@@ -92,7 +92,7 @@ impl MO_BulletBill {
             }
 
             o.iPlayerID = playerID;
-            o.iColorID = unsafe { game_values.colorids[o.iPlayerID as usize] };
+            o.iColorID = unsafe { game().game_values.colorids[o.iPlayerID as usize] };
             o.iTeamID = lookup_team_id(o.iPlayerID);
         }
 
@@ -131,7 +131,7 @@ impl MO_BulletBill {
 
             p.add_killer_award(Ptr::null(), KillStyle::BulletBill);
 
-            if_sound_on_play(&mut rm.sfx_mip);
+            if_sound_on_play(&mut game().rm.sfx_mip);
         }
 
         self.die();
@@ -145,7 +145,7 @@ impl MO_BulletBill {
                 return false;
             }
 
-            if game_values.teamcollision != TeamCollisionStyle::On && self.iTeamID == player.teamID {
+            if game().game_values.teamcollision != TeamCollisionStyle::On && self.iTeamID == player.teamID {
                 return false;
             }
 
@@ -212,7 +212,7 @@ impl CObjectTrait for MO_BulletBill {
         if player.is_invincible() || player.shyguy {
             player.add_killer_award(Ptr::null(), KillStyle::BulletBill);
             unsafe {
-                if_sound_on_play(&mut rm.sfx_kicksound);
+                if_sound_on_play(&mut game().rm.sfx_kicksound);
             }
 
             self.die();
@@ -259,8 +259,8 @@ impl CObjectTrait for MO_BulletBill {
                 let iCenterX: i16 = (((ix + iOffsetX as i32 - bix) >> 1) + (bix + (bulletbill.iw as i32 >> 1))) as i16;
                 let iCenterY: i16 = (((iy - biy) >> 1) + (biy + (bulletbill.ih as i32 >> 1))) as i16;
 
-                objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
-                    Ptr::from_mut(&mut rm.spr_explosion),
+                game().objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
+                    Ptr::from_mut(&mut game().rm.spr_explosion),
                     Vec2s::new((iCenterX as i32 - 96) as i16, (iCenterY as i32 - 64) as i16),
                     2,
                     4,
@@ -268,7 +268,7 @@ impl CObjectTrait for MO_BulletBill {
                     -1,
                     KillStyle::BulletBill,
                 )));
-                if_sound_on_play(&mut rm.sfx_bobombsound);
+                if_sound_on_play(&mut game().rm.sfx_bobombsound);
             } else if r#type == movingobject_shell
                 || r#type == movingobject_throwblock
                 || r#type == movingobject_throwbox
@@ -289,7 +289,7 @@ impl CObjectTrait for MO_BulletBill {
                     object.die();
                 }
 
-                if_sound_on_play(&mut rm.sfx_kicksound);
+                if_sound_on_play(&mut game().rm.sfx_kicksound);
                 self.die();
             }
         }
@@ -302,7 +302,7 @@ impl IO_MovingObjectTrait for MO_BulletBill {
     fn die(&mut self) {
         self.dead = true;
         unsafe {
-            eyecandy[2].emplace(EC_FallingObject::new(
+            game().eyecandy[2].emplace(EC_FallingObject::new(
                 self.spr_dead,
                 self.ix,
                 self.iy,

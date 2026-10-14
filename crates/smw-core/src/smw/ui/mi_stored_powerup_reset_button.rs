@@ -45,11 +45,11 @@ impl UI_ControlTrait for MI_StoredPowerupResetButton {
 
         unsafe {
             for iPowerup in 0..4i32 {
-                rm.spr_selectfield.draw_src(x + iWidth - 142 + iPowerup * 30, y + 4, &SDL_Rect { x: 188, y: 88, w: 24, h: 24 });
-                rm.spr_storedpowerupsmall.draw_src(
+                game().rm.spr_selectfield.draw_src(x + iWidth - 142 + iPowerup * 30, y + 4, &SDL_Rect { x: 188, y: 88, w: 24, h: 24 });
+                game().rm.spr_storedpowerupsmall.draw_src(
                     x + iWidth - 138 + iPowerup * 30,
                     y + 8,
-                    &SDL_Rect { x: game_values.storedpowerups[iPowerup as usize] as i32 * 16, y: 0, w: 16, h: 16 },
+                    &SDL_Rect { x: game().game_values.storedpowerups[iPowerup as usize] as i32 * 16, y: 0, w: 16, h: 16 },
                 );
             }
         }

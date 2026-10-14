@@ -8,8 +8,6 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::*;
-use crate::smw::gs_gameplay::objectcontainer;
-use crate::smw::main::players;
 use crate::smw::objects::carriable::co_flag::CO_Flag;
 use crate::smw::objects::moving::mo_flag_base::MO_FlagBase;
 use crate::smw::player::CPlayer;
@@ -42,26 +40,26 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
         let mut fTeamUsed: [bool; 4] = [false, false, false, false];
 
         unsafe {
-            for i in 0..players.len() {
-                let player = players[i];
+            for i in 0..game().players.len() {
+                let player = game().players[i];
                 let iTeamID: i16 = player.get_team_id();
                 if !fTeamUsed[iTeamID as usize] {
                     fTeamUsed[iTeamID as usize] = true;
 
                     let iColorID: i16 = player.get_color_id();
-                    let base: Ptr<MO_FlagBase> = Ptr::new_box(MO_FlagBase::new(Ptr::from_mut(&mut rm.spr_flagbases), iTeamID, iColorID));
-                    objectcontainer[0].add(base);
+                    let base: Ptr<MO_FlagBase> = Ptr::new_box(MO_FlagBase::new(Ptr::from_mut(&mut game().rm.spr_flagbases), iTeamID, iColorID));
+                    game().objectcontainer[0].add(base);
 
-                    if !game_values.gamemodesettings.flag.centerflag {
-                        let flag: Ptr<CO_Flag> = CO_Flag::new(Ptr::from_mut(&mut rm.spr_flags), base, iTeamID, iColorID);
-                        objectcontainer[1].add(flag);
+                    if !game().game_values.gamemodesettings.flag.centerflag {
+                        let flag: Ptr<CO_Flag> = CO_Flag::new(Ptr::from_mut(&mut game().rm.spr_flags), base, iTeamID, iColorID);
+                        game().objectcontainer[1].add(flag);
                     }
                 }
             }
 
-            if game_values.gamemodesettings.flag.centerflag {
-                let centerflag: Ptr<CO_Flag> = CO_Flag::new(Ptr::from_mut(&mut rm.spr_flags), Ptr::null(), -1, -1);
-                objectcontainer[1].add(centerflag);
+            if game().game_values.gamemodesettings.flag.centerflag {
+                let centerflag: Ptr<CO_Flag> = CO_Flag::new(Ptr::from_mut(&mut game().rm.spr_flags), Ptr::null(), -1, -1);
+                game().objectcontainer[1].add(centerflag);
             }
         }
     }
@@ -77,7 +75,7 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
         if !item.is_null() && item.get_moving_object_type() == movingobject_flag {
             item.as_any().downcast_mut::<CO_Flag>().expect("carried flag").place_flag();
             unsafe {
-                if_sound_on_play(&mut rm.sfx_transform);
+                if_sound_on_play(&mut game().rm.sfx_transform);
             }
         }
 

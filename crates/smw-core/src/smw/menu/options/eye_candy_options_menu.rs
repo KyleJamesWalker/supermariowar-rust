@@ -36,12 +36,12 @@ impl UI_EyeCandyOptionsMenu {
     pub fn new() -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let spr_selectfield = Ptr::from_mut(&mut rm.spr_selectfield);
-            let menu_plain_field = Ptr::from_mut(&mut rm.menu_plain_field);
+            let spr_selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
+            let menu_plain_field = Ptr::from_mut(&mut game().rm.menu_plain_field);
 
             this.miSpawnStyleField = select_field(spr_selectfield, 70, 80, "Spawn Style", 500, 220,
                 &[("Instant", SpawnStyle::Instant), ("Door", SpawnStyle::Door), ("Swirl", SpawnStyle::Swirl)],
-                &mut game_values.spawnstyle);
+                &mut game().game_values.spawnstyle);
 
             this.miAwardStyleField = select_field(spr_selectfield, 70, 120, "Award Style", 500, 220,
                 &[
@@ -52,25 +52,25 @@ impl UI_EyeCandyOptionsMenu {
                     ("Souls", AwardStyle::Souls),
                     ("Text", AwardStyle::Text),
                 ],
-                &mut game_values.awardstyle);
+                &mut game().game_values.awardstyle);
 
             this.miScoreStyleField = select_field(spr_selectfield, 70, 160, "Score Location", 500, 220,
                 &[("Top", ScoreboardStyle::Top), ("Bottom", ScoreboardStyle::Bottom), ("Corners", ScoreboardStyle::Corners)],
-                &mut game_values.scoreboardstyle);
+                &mut game().game_values.scoreboardstyle);
 
-            this.miCrunchField = select_field(spr_selectfield, 70, 200, "Screen Crunch", 500, 220, OFF_ON, &mut game_values.screencrunch);
+            this.miCrunchField = select_field(spr_selectfield, 70, 200, "Screen Crunch", 500, 220, OFF_ON, &mut game().game_values.screencrunch);
             this.miCrunchField.set_auto_advance(true);
 
-            this.miWinningCrownField = select_field(spr_selectfield, 70, 240, "Leader Crown", 500, 220, OFF_ON, &mut game_values.showwinningcrown);
+            this.miWinningCrownField = select_field(spr_selectfield, 70, 240, "Leader Crown", 500, 220, OFF_ON, &mut game().game_values.showwinningcrown);
             this.miWinningCrownField.set_auto_advance(true);
 
-            this.miStartCountDownField = select_field(spr_selectfield, 70, 280, "Start Countdown", 500, 220, OFF_ON, &mut game_values.startgamecountdown);
+            this.miStartCountDownField = select_field(spr_selectfield, 70, 280, "Start Countdown", 500, 220, OFF_ON, &mut game().game_values.startgamecountdown);
             this.miStartCountDownField.set_auto_advance(true);
 
-            this.miStartModeDisplayField = select_field(spr_selectfield, 70, 320, "Show Mode", 500, 220, OFF_ON, &mut game_values.startmodedisplay);
+            this.miStartModeDisplayField = select_field(spr_selectfield, 70, 320, "Show Mode", 500, 220, OFF_ON, &mut game().game_values.startmodedisplay);
             this.miStartModeDisplayField.set_auto_advance(true);
 
-            this.miDeadTeamNoticeField = select_field(spr_selectfield, 70, 360, "Dead Team Notice", 500, 220, OFF_ON, &mut game_values.deadteamnotice);
+            this.miDeadTeamNoticeField = select_field(spr_selectfield, 70, 360, "Dead Team Notice", 500, 220, OFF_ON, &mut game().game_values.deadteamnotice);
             this.miDeadTeamNoticeField.set_auto_advance(true);
 
             this.miEyeCandyOptionsMenuBackButton = Ptr::new_box(MI_Button::new(spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));

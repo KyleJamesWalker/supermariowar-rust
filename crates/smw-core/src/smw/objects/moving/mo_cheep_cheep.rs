@@ -14,7 +14,6 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::objectgame::removeifprojectile;
 use crate::smw::objects::carriable::co_shell::CO_Shell;
 use crate::smw::objects::carriable::co_throw_box::CO_ThrowBox;
@@ -76,11 +75,11 @@ impl MO_CheepCheep {
 
             p.add_killer_award(Ptr::null(), KillStyle::CheepCheep);
 
-            if game_values.gamemode.gamemode == game_mode_stomp && !game_values.gamemode.gameover {
+            if game().game_values.gamemode.gamemode == game_mode_stomp && !game().game_values.gamemode.gameover {
                 p.score().adjust_score(1);
             }
 
-            if_sound_on_play(&mut rm.sfx_mip);
+            if_sound_on_play(&mut game().rm.sfx_mip);
         }
 
         self.die();
@@ -98,18 +97,18 @@ impl MO_CheepCheep {
 
     pub fn shatter_die(&mut self) {
         unsafe {
-            if_sound_on_play(&mut rm.sfx_breakblock);
+            if_sound_on_play(&mut game().rm.sfx_breakblock);
             self.dead = true;
 
             let iBrokenIceX: i16 = (self.ix as i32 - self.collisionOffsetX as i32) as i16;
             let iBrokenIceY: i16 = (self.iy as i32 - self.collisionOffsetY as i32) as i16;
-            let spr = Ptr::from_mut(&mut rm.spr_brokeniceblock);
-            eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, iBrokenIceY, -1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, iBrokenIceY, 1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, (iBrokenIceY as i32 + 16) as i16, -1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, (iBrokenIceY as i32 + 16) as i16, 1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
+            let spr = Ptr::from_mut(&mut game().rm.spr_brokeniceblock);
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, iBrokenIceY, -1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, iBrokenIceY, 1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, (iBrokenIceY as i32 + 16) as i16, -1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, (iBrokenIceY as i32 + 16) as i16, 1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
 
-            game_values.unlocksecret2part2 += 1;
+            game().game_values.unlocksecret2part2 += 1;
         }
     }
 }
@@ -147,7 +146,7 @@ impl CObjectTrait for MO_CheepCheep {
 
         if self.frozen {
             unsafe {
-                rm.spr_iceblock.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
+                game().rm.spr_iceblock.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
             }
         }
     }
@@ -157,14 +156,14 @@ impl CObjectTrait for MO_CheepCheep {
             if player.is_invincible() || self.frozen {
                 player.add_killer_award(Ptr::null(), KillStyle::CheepCheep);
 
-                if game_values.gamemode.gamemode == game_mode_stomp && !game_values.gamemode.gameover {
+                if game().game_values.gamemode.gamemode == game_mode_stomp && !game().game_values.gamemode.gameover {
                     player.score().adjust_score(1);
                 }
 
                 if self.frozen {
                     self.shatter_die();
                 } else {
-                    if_sound_on_play(&mut rm.sfx_kicksound);
+                    if_sound_on_play(&mut game().rm.sfx_kicksound);
                     self.die();
                 }
             } else {
@@ -207,7 +206,7 @@ impl CObjectTrait for MO_CheepCheep {
                         return;
                     }
 
-                    if game_values.gamemode.gamemode == game_mode_stomp && !game_values.gamemode.gameover {
+                    if game().game_values.gamemode.gamemode == game_mode_stomp && !game().game_values.gamemode.gameover {
                         // Find the player that shot this projectile so we can attribute a kill
                         let mut killer = get_player_from_global_id(object.iPlayerID);
 
@@ -224,7 +223,7 @@ impl CObjectTrait for MO_CheepCheep {
                     if self.frozen {
                         self.shatter_die();
                     } else {
-                        if_sound_on_play(&mut rm.sfx_kicksound);
+                        if_sound_on_play(&mut game().rm.sfx_kicksound);
                         self.die();
                     }
 
@@ -237,8 +236,8 @@ impl CObjectTrait for MO_CheepCheep {
                     self.animationspeed = 0;
                     self.frozen = true;
 
-                    eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut rm.spr_fireballexplosion),
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
+                        Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                         (self.ix as i32 - self.collisionOffsetX as i32) as i16,
                         (self.iy as i32 - self.collisionOffsetY as i32) as i16,
                         3,
@@ -261,8 +260,8 @@ impl IO_MovingObjectTrait for MO_CheepCheep {
 
         self.dead = true;
         unsafe {
-            eyecandy[2].emplace(EC_FallingObject::new(
-                Ptr::from_mut(&mut rm.spr_cheepcheepdead),
+            game().eyecandy[2].emplace(EC_FallingObject::new(
+                Ptr::from_mut(&mut game().rm.spr_cheepcheepdead),
                 self.ix,
                 self.iy,
                 0.0,

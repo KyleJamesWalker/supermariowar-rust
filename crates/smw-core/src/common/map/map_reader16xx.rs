@@ -1,8 +1,8 @@
 //! Port of src/common/map/MapReader16xx.cpp
 
+use crate::game::game;
 use crate::common::file_io::BinaryFile;
 use crate::common::game_values::default_powerup_setting;
-use crate::common::global::g_tilesetmanager;
 use crate::common::global_constants::*;
 use crate::common::map::map_reader::MapReader;
 use crate::common::map::{read_type_summary, CMap, ReadType, WarpEnterDirection, WarpExitDirection};
@@ -36,7 +36,7 @@ impl MapReader {
                             let iTileID = g_iTileConversion[iTile as isize as usize];
 
                             let tile = &mut map.mapdata[i][j][k];
-                            tile.iID = g_tilesetmanager.classic_tileset_index() as i16;
+                            tile.iID = game().g_tilesetmanager.classic_tileset_index() as i16;
                             tile.iCol = iTileID % 32;
                             tile.iRow = iTileID / 32;
                         }
@@ -46,7 +46,7 @@ impl MapReader {
 
                     for k in (0..MAPLAYERS as usize).rev() {
                         let tile = map.mapdata[i][j][k];
-                        let r#type = g_tilesetmanager.classic_tileset().tile_type(tile.iCol as isize as usize, tile.iRow as isize as usize);
+                        let r#type = game().g_tilesetmanager.classic_tileset().tile_type(tile.iCol as isize as usize, tile.iRow as isize as usize);
                         if r#type != TileType::NonSolid {
                             map.mapdatatop[i][j] = r#type;
                             break;

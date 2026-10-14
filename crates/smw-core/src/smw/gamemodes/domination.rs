@@ -6,8 +6,6 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::{self as gm, remove_players_but_team, setup_score_board, show_score_board};
-use crate::smw::gs_gameplay::objectcontainer;
-use crate::smw::main::players;
 use crate::smw::object_container::CObjectContainer;
 use crate::smw::objects::overmap::wo_area::OMO_Area;
 use crate::smw::player::CPlayer;
@@ -23,13 +21,13 @@ fn adjust_player_areas(container: &CObjectContainer, player: Ptr<CPlayer>, other
             };
 
             if area.get_color_id() == other.get_color_id() {
-                if game_values.gamemodesettings.domination.relocateondeath {
+                if game().game_values.gamemodesettings.domination.relocateondeath {
                     area.place_area();
                 }
 
-                if game_values.gamemodesettings.domination.stealondeath && !player.is_null() {
+                if game().game_values.gamemodesettings.domination.stealondeath && !player.is_null() {
                     area.set_owner(player);
-                } else if game_values.gamemodesettings.domination.loseondeath {
+                } else if game().game_values.gamemodesettings.domination.loseondeath {
                     area.reset();
                 }
             }
@@ -60,28 +58,28 @@ pub fn cgm_domination_init<T: CGameModeTrait + ?Sized>(this: &mut T) {
     gm::cgamemode_init(this);
 
     unsafe {
-        let mut iNumAreas: i16 = game_values.gamemodesettings.domination.quantity;
+        let mut iNumAreas: i16 = game().game_values.gamemodesettings.domination.quantity;
 
         if iNumAreas < 1 {
             iNumAreas = 1;
-            game_values.gamemodesettings.domination.quantity = iNumAreas;
+            game().game_values.gamemodesettings.domination.quantity = iNumAreas;
         }
 
         if iNumAreas > 18 {
-            iNumAreas = 2usize.wrapping_mul(players.len()).wrapping_add(iNumAreas as usize).wrapping_sub(22) as i16;
+            iNumAreas = 2usize.wrapping_mul(game().players.len()).wrapping_add(iNumAreas as usize).wrapping_sub(22) as i16;
         } else if iNumAreas > 10 {
-            iNumAreas = players.len().wrapping_add(iNumAreas as usize).wrapping_sub(12) as i16;
+            iNumAreas = game().players.len().wrapping_add(iNumAreas as usize).wrapping_sub(12) as i16;
         }
 
         for _k in 0..iNumAreas {
-            objectcontainer[0].add(Ptr::new_box(OMO_Area::new(Ptr::from_mut(&mut rm.spr_areas), iNumAreas)));
+            game().objectcontainer[0].add(Ptr::new_box(OMO_Area::new(Ptr::from_mut(&mut game().rm.spr_areas), iNumAreas)));
         }
     }
 }
 
 pub fn cgm_domination_playerkilledplayer<T: CGameModeTrait + ?Sized>(_this: &mut T, player: Ptr<CPlayer>, other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
     //Update areas the dead player owned
-    unsafe { adjust_player_areas(&objectcontainer[0], player, other) };
+    unsafe { adjust_player_areas(&game().objectcontainer[0], player, other) };
 
     PlayerKillType::Normal
 }
@@ -90,7 +88,7 @@ pub fn cgm_domination_playerkilledself<T: CGameModeTrait + ?Sized>(this: &mut T,
     gm::cgamemode_playerkilledself(this, player, style);
 
     //Update areas the dead player owned
-    unsafe { adjust_player_areas(&objectcontainer[0], Ptr::null(), player) };
+    unsafe { adjust_player_areas(&game().objectcontainer[0], Ptr::null(), player) };
 
     PlayerKillType::Normal
 }
