@@ -405,6 +405,36 @@ jobs:
           [[ -s summary.txt ]] || exit 1
           exit $status
 
+      - name: Sweep with the software blitter (report-only)
+        if: always()
+        env:
+          SMW_BLIT: rust
+          SMW_NO_BUILD: '1'
+          PARITY_OUT: ${{ runner.temp }}/parity/blit-sweep
+        run: |
+          tools/parity_sweep.sh > blit-sweep.log || true
+          sed -n '/^=== summary/,$p' blit-sweep.log > blit-sweep-summary.txt
+          {
+            echo "### Map sweep with SMW_BLIT=rust (${{ matrix.os }}, report-only)"
+            echo "$(grep -c 'MATCH all' blit-sweep-summary.txt) of $(($(wc -l < blit-sweep-summary.txt) - 1)) dumps match"
+            echo '```'
+            grep -v -E 'MATCH all .* shots ([0-9]+)/\1$' blit-sweep-summary.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          fallbacks=$(grep -L '^\[blit\] SDL fallbacks: none' "$PARITY_OUT"/*/stdout.log || true)
+          if [[ -n "$fallbacks" ]]; then
+            {
+              echo "SDL fallbacks with SMW_BLIT=rust:"
+              echo '```'
+              for log in $fallbacks; do
+                echo "${log#"$PARITY_OUT"/}: $(grep -h '^\[blit\] SDL fallback' "$log" | tr '\n' ' ')"
+              done
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::SMW_BLIT=rust handed draws to SDL; see the job summary."
+            exit 1
+          fi
+
       - name: Determinism manifest
         if: always()
         run: python3 tools/determinism.py manifest sweep-${{ matrix.os }} sweep "$RUNNER_TEMP/parity/sweep" > "$RUNNER_TEMP/determinism-sweep-${{ matrix.os }}.txt"
@@ -515,6 +545,7 @@ jobs:
         run: |
           PARITY_OUT="$RUNNER_TEMP/parity/blit-game" tools/parity.sh > blit-game.log || true
           PARITY_OUT="$RUNNER_TEMP/parity/blit-editor" tools/editor_parity.sh > blit-editor.log || true
+          PARITY_OUT="$RUNNER_TEMP/parity/blit-sweep" tools/parity_sweep.sh > blit-sweep.log || true
           {
             echo "### Parity with SMW_BLIT=rust (windows, report-only)"
             sed -n '/^=== summary/,$p' blit-game.log > blit-game-summary.txt
@@ -523,8 +554,13 @@ jobs:
             grep -v -E 'MATCH all .* shots ([0-9]+)/\1$' blit-game-summary.txt
             sed -n '/^=== summary/,$p' blit-editor.log | grep -v -E 'dump MATCH, shots ([0-9]+)/\1, files ([0-9]+)/\2$'
             echo '```'
+            sed -n '/^=== summary/,$p' blit-sweep.log > blit-sweep-summary.txt
+            echo "sweep: $(grep -c 'MATCH all' blit-sweep-summary.txt) of $(($(wc -l < blit-sweep-summary.txt) - 1)) dumps match"
+            echo '```'
+            grep -v -E 'MATCH all .* shots ([0-9]+)/\1$' blit-sweep-summary.txt
+            echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          fallbacks=$(grep -L '^\[blit\] SDL fallbacks: none' "$RUNNER_TEMP"/parity/blit-game/*/stdout.log "$RUNNER_TEMP"/parity/blit-editor/*/*/stdout.log || true)
+          fallbacks=$(grep -L '^\[blit\] SDL fallbacks: none' "$RUNNER_TEMP"/parity/blit-game/*/stdout.log "$RUNNER_TEMP"/parity/blit-editor/*/*/stdout.log "$RUNNER_TEMP"/parity/blit-sweep/*/stdout.log || true)
           if [[ -n "$fallbacks" ]]; then
             {
               echo "SDL fallbacks with SMW_BLIT=rust:"
