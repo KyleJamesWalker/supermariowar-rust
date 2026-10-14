@@ -68,7 +68,9 @@ impl GameState for SplashScreenState {
 
             // TODO: move this out of this method maybe
 
+            let mut tapped = false;
             while let Some(input) = smw_sdl2::events::poll_input() {
+                tapped |= input.event.tap().is_some();
                 if input.event == InputEvent::Quit {
                     game().game_values.appstate = AppState::Quit;
                     return;
@@ -97,7 +99,7 @@ impl GameState for SplashScreenState {
             if self.state == 8 {
                 for iPlayer in 0..4usize {
                     let out = &game().game_values.playerInput.outputControls[iPlayer];
-                    if out.menu_select().fPressed || out.menu_cancel().fPressed || out.menu_random().fPressed {
+                    if tapped || out.menu_select().fPressed || out.menu_cancel().fPressed || out.menu_random().fPressed {
                         blitdest = game().rm.menu_backdrop.get_surface();
                         game().rm.menu_shade.setalpha(App::menuTransparency as u8);
                         game().rm.menu_shade.draw(0, 0);
