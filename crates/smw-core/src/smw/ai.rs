@@ -13,7 +13,6 @@ use crate::smw::gamemodes::chicken::CGM_Chicken;
 use crate::smw::gamemodes::race::CGM_Race;
 use crate::smw::gamemodes::star::CGM_Star;
 use crate::smw::gamemodes::tag::CGM_Tag;
-use crate::smw::main::players;
 use crate::smw::objectgame::PowerupType;
 use crate::smw::objects::carriable::co_bomb::CO_Bomb;
 use crate::smw::objects::carriable::co_egg::CO_Egg;
@@ -789,30 +788,30 @@ impl CPlayerAI {
             let gmChicken = dynamic_cast_gamemode::<CGM_Chicken>();
 
             //Figure out where the other players are
-            for iPlayer in 0..players.len() {
-                if iPlayer == pPlayer.localID as usize || players[iPlayer].state != PlayerState::Ready {
+            for iPlayer in 0..game().players.len() {
+                if iPlayer == pPlayer.localID as usize || game().players[iPlayer].state != PlayerState::Ready {
                     continue;
                 }
 
                 //Find players in jail on own team to tag
                 if game().game_values.gamemode.gamemode == game_mode_jail {
-                    if players[iPlayer].jail.is_active() && players[iPlayer].teamID == iTeamID {
-                        nearest!(self.distance_to_player(players[iPlayer], teammate, teammatedistance, teammatewrap));
+                    if game().players[iPlayer].jail.is_active() && game().players[iPlayer].teamID == iTeamID {
+                        nearest!(self.distance_to_player(game().players[iPlayer], teammate, teammatedistance, teammatewrap));
                     }
                 }
 
-                if players[iPlayer].teamID == iTeamID || players[iPlayer].state != PlayerState::Ready {
+                if game().players[iPlayer].teamID == iTeamID || game().players[iPlayer].state != PlayerState::Ready {
                     continue;
                 }
 
                 //If there is a chicken, only focus on stomping him
                 if !gmChicken.is_null() && !gmChicken.chicken().is_null() {
-                    if gmChicken.chicken().teamID != iTeamID && gmChicken.chicken() != players[iPlayer] {
+                    if gmChicken.chicken().teamID != iTeamID && gmChicken.chicken() != game().players[iPlayer] {
                         continue;
                     }
                 }
 
-                nearest!(self.distance_to_player(players[iPlayer], player, playerdistance, playerwrap));
+                nearest!(self.distance_to_player(game().players[iPlayer], player, playerdistance, playerwrap));
             }
         }
     }
@@ -1563,11 +1562,11 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
                     PowerupType::JailKey => return pPlayer.jail.is_active(),
                     PowerupType::MysteryMushroom => {
                         //See if another player has a powerup
-                        for iPlayer in 0..players.len() {
-                            if iPlayer == pPlayer.localID as usize || players[iPlayer].teamID == iTeamID {
+                        for iPlayer in 0..game().players.len() {
+                            if iPlayer == pPlayer.localID as usize || game().players[iPlayer].teamID == iTeamID {
                                 continue;
                             }
-                            if game().game_values.gamepowerups[players[iPlayer].globalID as usize] > 0 {
+                            if game().game_values.gamepowerups[game().players[iPlayer].globalID as usize] > 0 {
                                 return true;
                             }
                         }

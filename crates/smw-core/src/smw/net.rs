@@ -13,7 +13,7 @@ use crate::common_netplay::protocol_definitions::*;
 use crate::common_netplay::protocol_packages::{self as pkgs, cstr_field, MessageHeader};
 use crate::globals::{Aliased, Global, Ptr};
 use crate::smw::checkpoint::{local_path, portable_path, Field, Snap};
-use crate::smw::main::{currentgamemode, gamemodes, players};
+use crate::smw::main::{currentgamemode, gamemodes};
 use crate::smw::network::file_compressor::FileCompressor;
 use crate::smw::network::net_config_manager::NetConfigManager;
 use crate::smw::network::net_record::{self, PeerInfo, ReplayPeer, Side};
@@ -154,7 +154,7 @@ impl GameModeSettingsUnion {
 /// Not in the C++, which indexes `players` by ID: a client that already removed players at the end of its game
 /// would read past the vector.
 fn net_player(id: u8) -> Ptr<crate::smw::player::CPlayer> {
-    unsafe { players.iter().copied().find(|p| p.globalID as u8 == id).unwrap_or(Ptr::null()) }
+    unsafe { game().players.iter().copied().find(|p| p.globalID as u8 == id).unwrap_or(Ptr::null()) }
 }
 
 fn ticks() -> u32 {
@@ -985,7 +985,7 @@ impl NetClient {
         unsafe {
             netplay.previous_playerdata = netplay.latest_playerdata.clone();
 
-            for p in 0..players.len() as u8 {
+            for p in 0..game().players.len() as u8 {
                 let d = &mut netplay.latest_playerdata.player[p as usize];
                 pkg.get_player_coord(p, &mut d.x, &mut d.y);
                 pkg.get_player_vel(p, &mut d.xvel, &mut d.yvel);
@@ -1466,8 +1466,8 @@ impl NetGameHost {
         let mut pkg = gpkgs::GameState::new();
 
         unsafe {
-            for p in 0..players.len() as u8 {
-                let pl = players[p as usize];
+            for p in 0..game().players.len() as u8 {
+                let pl = game().players[p as usize];
                 pkg.set_player_coord(p, pl.fx, pl.fy);
                 pkg.set_player_vel(p, pl.velx, pl.vely);
             }
@@ -1523,7 +1523,7 @@ impl NetGameHost {
 
     pub fn send_powerup_start_by_gh(&mut self) {
         unsafe {
-            let me = players[netplay.remotePlayerNumber as usize];
+            let me = game().players[netplay.remotePlayerNumber as usize];
             let pkg = gpkgs::StartPowerup::new(netplay.remotePlayerNumber, me.powerupused.unwrap() as u8, 0);
             self.send_message_to_my_peers(pkg.as_bytes());
 

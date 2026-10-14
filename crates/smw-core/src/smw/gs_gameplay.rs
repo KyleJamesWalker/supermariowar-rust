@@ -34,7 +34,7 @@ use crate::smw::gamemodes::chicken::CGM_Chicken;
 use crate::smw::gamemodes::game_mode::{setup_score_board, show_score_board};
 use crate::smw::gamemodes::tag::CGM_Tag;
 use crate::smw::gs_menu::MenuState;
-use crate::smw::main::{currentgamemode, players, score, score_cnt};
+use crate::smw::main::{currentgamemode};
 use crate::common_netplay::protocol_definitions::NET_GAMESTATE_FRAMES_TO_SEND;
 use crate::smw::net::{netplay, Net_IndexedPlayerData};
 use crate::smw::net_random::{self, Ev};
@@ -176,7 +176,7 @@ impl GameplayState {
             let gm = game().game_values.gamemode;
             writeln!(out, "G mode={} gameover={} winner={}", gm.gamemode as i32, gm.gameover as i32, gm.winningteam)?;
 
-            for player in players.iter() {
+            for player in game().players.iter() {
                 let p = *player;
                 let s = if p.score.is_null() { 0 } else { p.score.score as i32 };
                 writeln!(
@@ -302,7 +302,7 @@ pub fn collisionhandler_o2o(o1: Ptr<dyn IO_MovingObjectTrait>, mut o2: Ptr<dyn I
 //Must only be called after organizeteams() is called
 pub fn lookup_team_id_sub(id: i16, teamID: Option<&mut i16>, subTeamID: Option<&mut i16>) -> i16 {
     unsafe {
-        for i in 0..score_cnt {
+        for i in 0..game().score_cnt {
             for j in 0..game().game_values.teamcounts[i as usize] {
                 if game().game_values.teamids[i as usize][j as usize] == id {
                     if let Some(t) = teamID {
@@ -402,15 +402,15 @@ impl GameplayState {
                             ai = Some(Box::new(CPlayerAI::new()));
                         }
 
-                        let localID = players.len() as i16;
-                        players.push(CPlayer::new(
+                        let localID = game().players.len() as i16;
+                        game().players.push(CPlayer::new(
                             iPlayer,
                             localID,
                             teamid,
                             subteamid,
                             game().game_values.colorids[p],
                             Ptr::from_mut(&mut game().rm.spr_player[p]),
-                            score[teamid as usize],
+                            game().score[teamid as usize],
                             Ptr::from_mut(&mut self.respawnCount[p]),
                             ai.map(|a| a as Box<dyn crate::smw::ai::CPlayerAITrait>),
                         ));
@@ -436,13 +436,13 @@ impl GameplayState {
     fn init_score_display_position(&mut self) {
         unsafe {
             let mut totalspace: i16 = 0;
-            for i in 0..score_cnt as usize {
+            for i in 0..game().score_cnt as usize {
                 totalspace = (totalspace as i32 + 56 + game().game_values.teamcounts[i] as i32 * 34) as i16;
             }
-            totalspace = (totalspace as i32 + 20 * (score_cnt as i32 - 1)) as i16;
+            totalspace = (totalspace as i32 + 20 * (game().score_cnt as i32 - 1)) as i16;
 
-            for i in 0..score_cnt as usize {
-                let mut s = score[i];
+            for i in 0..game().score_cnt as usize {
+                let mut s = game().score[i];
                 if game().game_values.scoreboardstyle == ScoreboardStyle::Top || game().game_values.scoreboardstyle == ScoreboardStyle::Bottom {
                     s.x = ((App::screenWidth - totalspace as i32) >> 1) as i16;
 
@@ -643,8 +643,8 @@ impl GameplayState {
             game().game_values.flags.gamewindx = ((RANDOM_INT(41)) - 20) as f32 / 4.0f32;
 
             //Initialize players after game init has finished
-            for i in 0..players.len() {
-                let mut player = players[i];
+            for i in 0..game().players.len() {
+                let mut player = game().players[i];
                 player.init();
             }
         }
@@ -660,7 +660,7 @@ pub fn count_alive_teams(lastteam: Option<&mut i16>) -> i16 {
         let mut findlastteam: i16 = 0;
 
         let mut teamalive: [bool; 4] = [false, false, false, false];
-        for player in players.iter() {
+        for player in game().players.iter() {
             if !player.isdead() {
                 teamalive[player.teamID as usize] = true;
             }
@@ -702,23 +702,23 @@ impl GameplayState {
 
             // The index still advances after a removal, so the player shifted into slot i is skipped this frame (as in C++).
             let mut i: usize = 0;
-            while i < players.len() {
-                if players[i].state == PlayerState::Dead {
+            while i < game().players.len() {
+                if game().players[i].state == PlayerState::Dead {
                     fCheckForGameOver = true;
 
-                    let globalID = players[i].globalID as usize;
+                    let globalID = game().players[i].globalID as usize;
                     crate::smw::net_outcomes::note_death(globalID as i16, PlayerDeathStyle::Jump as i32, true);
                     if self.respawnCount[globalID] <= 0 {
-                        players[i].die(PlayerDeathStyle::Jump, true, false);
+                        game().players[i].die(PlayerDeathStyle::Jump, true, false);
                     }
 
                     self.respawnCount[globalID] = 0;
 
-                    if !gmTag.is_null() && gmTag.get().tagged() == players[i] {
+                    if !gmTag.is_null() && gmTag.get().tagged() == game().players[i] {
                         gmTag.get().set_tagged(Ptr::null());
                     }
 
-                    if !gmChicken.is_null() && gmChicken.get().chicken() == players[i] {
+                    if !gmChicken.is_null() && gmChicken.get().chicken() == game().players[i] {
                         gmChicken.get().clear_chicken();
                     }
 
@@ -726,22 +726,22 @@ impl GameplayState {
                     for &obj in game().objectcontainer[1].list() {
                         let mut obj = obj;
                         if let Some(flag) = obj.as_any().downcast_mut::<CO_Flag>() {
-                            if flag.owner_throw == players[i] {
+                            if flag.owner_throw == game().players[i] {
                                 flag.owner_throw = Ptr::null();
                             }
                         }
                     }
 
-                    players[i].delete();
+                    game().players[i].delete();
 
                     let mut j = i;
-                    while j < players.len() - 1 {
-                        players[j] = players[j + 1];
-                        players[j].localID = j as i16;
+                    while j < game().players.len() - 1 {
+                        game().players[j] = game().players[j + 1];
+                        game().players[j].localID = j as i16;
                         j += 1;
                     }
 
-                    players.pop();
+                    game().players.pop();
                 }
                 i += 1;
             }
@@ -821,7 +821,7 @@ pub fn animate_during_countdown() {
 
 pub fn net_pow_kills(ids: &[i32]) {
     unsafe {
-        let pKillPlayers: Vec<Ptr<CPlayer>> = ids.iter().filter_map(|&id| players.iter().copied().find(|p| p.globalID as i32 == id)).collect();
+        let pKillPlayers: Vec<Ptr<CPlayer>> = ids.iter().filter_map(|&id| game().players.iter().copied().find(|p| p.globalID as i32 == id)).collect();
         let iNumKillPlayers = pKillPlayers.len() as i16;
         if iNumKillPlayers == 0 {
             return;
@@ -874,8 +874,8 @@ pub fn shake_screen() {
 
         let mut killer1 = get_player_from_global_id(game().game_values.flags.screenshakeplayerid);
 
-        for i in 0..players.len() {
-            let player = players[i];
+        for i in 0..game().players.len() {
+            let player = game().players[i];
             //Don't kill the player that triggered the POW/MOd
             if player.globalID == game().game_values.flags.screenshakeplayerid {
                 continue;
@@ -1041,13 +1041,13 @@ pub fn handle_p2p_collisions() {
     unsafe {
         //Player to player collisions
         let mut i: usize = 0;
-        while i < players.len() {
-            let mut player1 = players[i];
+        while i < game().players.len() {
+            let mut player1 = game().players[i];
             assert!(!player1.is_null());
             if player1.state > PlayerState::Dead {
                 let mut j = i + 1;
-                while j < players.len() {
-                    let player2 = players[j];
+                while j < game().players.len() {
+                    let player2 = game().players[j];
                     assert!(!player2.is_null());
                     if player2.state > PlayerState::Dead {
                         if coldec_player2player(player1, player2) {
@@ -1074,9 +1074,9 @@ pub fn handle_p2p_collisions() {
 pub fn handle_p2obj_collisions() {
     unsafe {
         //Collide player with objects
-        let nPlayers = players.len();
+        let nPlayers = game().players.len();
         for iPlayer in 0..nPlayers {
-            let mut player = players[iPlayer];
+            let mut player = game().players[iPlayer];
             if player.state != PlayerState::Ready {
                 continue;
             }
@@ -1173,10 +1173,10 @@ impl GameplayState {
                     highestScore = 32000;
                 }
 
-                for i in 0..score_cnt {
-                    let mut scoreValue: i32 = score[i as usize].score as i32;
+                for i in 0..game().score_cnt {
+                    let mut scoreValue: i32 = game().score[i as usize].score as i32;
                     if game().game_values.gamemode.gamemode == game_mode_boxes_minigame {
-                        scoreValue = score[i as usize].subscore[0] as i32;
+                        scoreValue = game().score[i as usize].subscore[0] as i32;
                     }
 
                     if (scoreValue > highestScore as i32 && !fReverseScoring) || (scoreValue < highestScore as i32 && fReverseScoring) {
@@ -1205,8 +1205,8 @@ impl GameplayState {
                 }
 
                 //in game scoreboards
-                for i in 0..score_cnt as usize {
-                    let s = score[i];
+                for i in 0..game().score_cnt as usize {
+                    let s = game().score[i];
                     let teamcount = game().game_values.teamcounts[i];
                     let gm = game().game_values.gamemode.gamemode;
                     if gm == game_mode_health || gm == game_mode_collection || gm == game_mode_boxes_minigame {
@@ -1456,8 +1456,8 @@ impl GameplayState {
     fn draw_player_swap(&mut self) {
         unsafe {
             if game().game_values.flags.swapplayers {
-                for i in 0..players.len() {
-                    let mut player = players[i];
+                for i in 0..game().players.len() {
+                    let mut player = game().players[i];
                     player.drawswap();
 
                     let storedpowerupid = game().game_values.gamepowerups[player.get_global_id() as usize];
@@ -1505,8 +1505,8 @@ impl GameplayState {
                     if_sound_on_play(&mut game().rm.sfx_transform);
 
                     if game().game_values.swapstyle == 1 {
-                        for i in 0..players.len() {
-                            let player = players[i];
+                        for i in 0..game().players.len() {
+                            let player = game().players[i];
                             game().eyecandy[2].emplace(EC_SingleAnimation::new(
                                 spr(&mut game().rm.spr_fireballexplosion),
                                 (player.left_x() as i32 + HALFPW - 16) as i16,
@@ -1542,8 +1542,8 @@ impl GameplayState {
             game().g_map.draw_platforms(1);
 
             if !game().game_values.flags.swapplayers {
-                for i in 0..players.len() {
-                    let mut player = players[i];
+                for i in 0..game().players.len() {
+                    let mut player = game().players[i];
                     player.draw();
                 }
             }
@@ -1614,8 +1614,8 @@ impl GameplayState {
     fn draw_out_of_screen_indicators(&mut self) {
         unsafe {
             //draw arrows for being above the top of the screen
-            for i in 0..players.len() {
-                let mut player = players[i];
+            for i in 0..game().players.len() {
+                let mut player = game().players[i];
                 player.draw_out_of_screen_indicators();
             }
         }
@@ -1687,11 +1687,11 @@ pub fn is_pause_allowed() -> bool {
 
 pub fn is_exit_allowed() -> bool {
     unsafe {
-        if !game().game_values.flags.noexit || players.is_empty() {
+        if !game().game_values.flags.noexit || game().players.is_empty() {
             return true;
         }
 
-        for player in players.iter() {
+        for player in game().players.iter() {
             if game().game_values.playercontrol[player.get_global_id() as usize] == 1 {
                 return false;
             }
@@ -1716,13 +1716,13 @@ pub fn update_score_board() {
             }
 
             //Add up all the winnings so far and determine overall place in the standings
-            for iScore in 0..score_cnt as usize {
+            for iScore in 0..game().score_cnt as usize {
                 game().game_values.tournament_scores[iScore].wins = 0;
             }
 
             //Assign the order that players will show up on the scoreboard (ordered by score)
-            for iMyScore in 0..score_cnt as usize {
-                for iTheirScore in 0..score_cnt as usize {
+            for iMyScore in 0..game().score_cnt as usize {
+                for iTheirScore in 0..game().score_cnt as usize {
                     if game().game_values.tournament_scores[iMyScore].total > game().game_values.tournament_scores[iTheirScore].total {
                         game().game_values.tournament_scores[iTheirScore].wins += 1;
                     }
@@ -1732,9 +1732,9 @@ pub fn update_score_board() {
             //Give players the item bonuses that were won
             let tourStop = game().game_values.tourstops[game().game_values.tourstopcurrent];
 
-            for iScore in 0..score_cnt as usize {
+            for iScore in 0..game().score_cnt as usize {
                 for iBonus in 0..tourStop.iNumBonuses as usize {
-                    if tourStop.wsbBonuses[iBonus].iWinnerPlace == score[iScore].place {
+                    if tourStop.wsbBonuses[iBonus].iWinnerPlace == game().score[iScore].place {
                         if game().game_values.worldpowerupcount[iScore] < 32 {
                             let c = game().game_values.worldpowerupcount[iScore] as usize;
                             game().game_values.worldpowerupcount[iScore] += 1;
@@ -1763,13 +1763,13 @@ pub fn update_score_board() {
             }
 
             //For this game, set the player's place as the type of win
-            for iScore in 0..score_cnt as usize {
+            for iScore in 0..game().score_cnt as usize {
                 let cur = game().game_values.tourstopcurrent;
-                game().game_values.tournament_scores[iScore].type_[cur] = score[iScore].place;
+                game().game_values.tournament_scores[iScore].type_[cur] = game().score[iScore].place;
             }
 
             //Add up all the winnings so far and determine overall place in tour
-            for iScore in 0..score_cnt as usize {
+            for iScore in 0..game().score_cnt as usize {
                 game().game_values.tournament_scores[iScore].total = 0;
 
                 let mut iTourStop: usize = 0;
@@ -1783,8 +1783,8 @@ pub fn update_score_board() {
                 game().game_values.tournament_scores[iScore].wins = 0;
             }
 
-            for iMyScore in 0..score_cnt as usize {
-                for iTheirScore in 0..score_cnt as usize {
+            for iMyScore in 0..game().score_cnt as usize {
+                for iTheirScore in 0..game().score_cnt as usize {
                     if game().game_values.tournament_scores[iMyScore].total > game().game_values.tournament_scores[iTheirScore].total {
                         game().game_values.tournament_scores[iTheirScore].wins += 1;
                     }
@@ -1798,7 +1798,7 @@ pub fn update_score_board() {
                 let mut iWinningTeam: i16 = -2; //Set winning team to -2 to signify a tie between teams
                 let mut iWinningScore: i16 = 0;
 
-                for iScore in 0..score_cnt {
+                for iScore in 0..game().score_cnt {
                     let total = game().game_values.tournament_scores[iScore as usize].total;
                     if total > iWinningScore {
                         //New winner found
@@ -1817,8 +1817,8 @@ pub fn update_score_board() {
             let mut maxScore: i16 = -1; //Max score for game
             let mut maxTeam: i16 = -1; //Team ID with the max score -> reset to -1 if two teams tied for win
 
-            for i in 0..score_cnt {
-                let sc = score[i as usize].score;
+            for i in 0..game().score_cnt {
+                let sc = game().score[i as usize].score;
                 if sc > maxScore {
                     maxScore = sc;
                     maxTeam = i;
@@ -2072,10 +2072,10 @@ pub fn clean_up() {
     net_random::end_game();
     unsafe {
         //delete object list
-        for player in players.iter() {
+        for player in game().players.iter() {
             player.delete();
         }
-        players.clear();
+        game().players.clear();
 
         game().eyecandy[0].clean();
         game().eyecandy[1].clean();
@@ -2249,8 +2249,8 @@ pub fn update_scoreboard_animation() {
                 game().game_values.flags.scorepercentmove = 1.0f32;
             }
 
-            for i in 0..score_cnt as usize {
-                let mut s = score[i];
+            for i in 0..game().score_cnt as usize {
+                let mut s = game().score[i];
                 s.x = ((((s.destx as i32 - s.fromx as i32) as f32 * game().game_values.flags.scorepercentmove) as i16) as i32 + s.fromx as i32) as i16;
                 s.y = ((((s.desty as i32 - s.fromy as i32) as f32 * game().game_values.flags.scorepercentmove) as i16) as i32 + s.fromy as i32) as i16;
             }
@@ -2422,8 +2422,8 @@ impl GameplayState {
             debug_assert!(0.99 < (percent_old + percent_new) as f64 && (percent_old + percent_new) as f64 <= 1.01);
 
             if !netplay.theHostIsMe {
-                for p in 0..players.len() {
-                    let mut player = players[p];
+                for p in 0..game().players.len() {
+                    let mut player = game().players[p];
 
                     // if local player
                     if p == netplay.remotePlayerNumber as usize {
@@ -2502,7 +2502,7 @@ impl GameplayState {
             if netplay.theHostIsMe {
                 netplay.client.local_gamehost.confirm_current_inputs();
             }
-            for p in 0..players.len() {
+            for p in 0..game().players.len() {
                 if let Some(front) = netplay.remote_input_buffer[p].pop_front() {
                     netplay.netPlayerInput.outputControls[p] = front.1;
                 }
@@ -2582,8 +2582,8 @@ impl GameplayState {
 pub fn update_playerswap() {
     unsafe {
         if game().game_values.flags.swapplayers {
-            for i in 0..players.len() {
-                let mut player = players[i];
+            for i in 0..game().players.len() {
+                let mut player = game().players[i];
                 player.updateswap();
             }
         }
@@ -2624,8 +2624,8 @@ impl GameplayState {
             game().game_values.flags.playflyingsound = false;
 
             // Move every player before object collisions, so they test against post-map-collision positions.
-            for i in 0..players.len() {
-                let mut player = players[i];
+            for i in 0..game().players.len() {
+                let mut player = game().players[i];
                 player.r#move();
             }
 
@@ -2646,8 +2646,8 @@ impl GameplayState {
 
             //Commit all player actions at this point (after we have collided with any objects
             //that the player might have picked up)
-            for i in 0..players.len() {
-                let mut player = players[i];
+            for i in 0..game().players.len() {
+                let mut player = game().players[i];
                 player.commit_action();
             }
 
@@ -2708,7 +2708,7 @@ impl GameState for GameplayState {
                 check_wind_event(&mut self.iWindTimer, &mut self.dNextWind);
             }
 
-            for iTeam in 0..score_cnt as usize {
+            for iTeam in 0..game().score_cnt as usize {
                 self.iScoreTextOffset[iTeam] = (34 * game().game_values.teamcounts[iTeam] as i32 + 1) as i16;
             }
 
@@ -2813,7 +2813,7 @@ pub fn coldec_obj2obj(o1: Ptr<dyn CObjectTrait>, o2: Ptr<dyn CObjectTrait>) -> b
 }
 
 pub fn swap_players(iUsingPlayerID: i16) -> bool {
-    let ready = unsafe { players.iter().filter(|p| p.isready()).count() };
+    let ready = unsafe { game().players.iter().filter(|p| p.isready()).count() };
     if ready > 1 && net_random::event(Ev::MysterySwap, &[iUsingPlayerID as i32]) {
         return true;
     }
@@ -2824,8 +2824,8 @@ pub fn net_mystery_swap(iUsingPlayerID: i16) -> bool {
     unsafe {
         //Count available players to switch with
         let mut iNumAvailablePlayers: i16 = 0;
-        for i in 0..players.len() {
-            let mut player = players[i];
+        for i in 0..game().players.len() {
+            let mut player = game().players[i];
             if player.isready() {
                 iNumAvailablePlayers += 1;
                 player.fOldSwapX = player.left_x() as f32;
@@ -2857,8 +2857,8 @@ pub fn net_mystery_swap(iUsingPlayerID: i16) -> bool {
 
         let mut spots: [MysteryMushroomTempPlayer; 4] =
             [MysteryMushroomTempPlayer::new(), MysteryMushroomTempPlayer::new(), MysteryMushroomTempPlayer::new(), MysteryMushroomTempPlayer::new()];
-        for iPlayer in 0..players.len() {
-            let mut player = players[iPlayer];
+        for iPlayer in 0..game().players.len() {
+            let mut player = game().players[iPlayer];
 
             if !player.isready() {
                 continue;
@@ -2868,16 +2868,16 @@ pub fn net_mystery_swap(iUsingPlayerID: i16) -> bool {
 
             loop {
                 iNewSpot += 1;
-                if iNewSpot as usize >= players.len() {
+                if iNewSpot as usize >= game().players.len() {
                     iNewSpot = 0;
                 }
-                if !(spots[iNewSpot as usize].fUsed || !players[iNewSpot as usize].isready()) {
+                if !(spots[iNewSpot as usize].fUsed || !game().players[iNewSpot as usize].isready()) {
                     break;
                 }
             }
 
             spots[iNewSpot as usize].fUsed = true;
-            let newPlayer = players[iNewSpot as usize];
+            let newPlayer = game().players[iNewSpot as usize];
             spots[iPlayer].set_player(newPlayer, game().game_values.gamepowerups[newPlayer.get_global_id() as usize]);
 
             //Give credit for deaths to the player that used the mystery mushroom
@@ -2887,8 +2887,8 @@ pub fn net_mystery_swap(iUsingPlayerID: i16) -> bool {
             }
         }
 
-        for iPlayer in 0..players.len() {
-            let mut player = players[iPlayer];
+        for iPlayer in 0..game().players.len() {
+            let mut player = game().players[iPlayer];
 
             if !player.isready() {
                 continue;

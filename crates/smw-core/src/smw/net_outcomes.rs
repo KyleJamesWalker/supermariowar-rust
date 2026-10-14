@@ -12,7 +12,7 @@ use crate::game::game;
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
 use crate::smw::harness;
-use crate::smw::main::{score, score_cnt};
+
 use crate::smw::net::netplay;
 use crate::smw::net_random::{self, Ev};
 use crate::smw::player::{get_player_from_global_id, player_killed_player_now, PlayerDeathStyle, PlayerState};
@@ -83,9 +83,9 @@ fn snapshot() -> Vec<i32> {
     unsafe {
         let gm = game().game_values.gamemode;
         let mut v = vec![gm.gameover as i32, gm.winningteam as i32];
-        for t in 0..score_cnt as usize {
-            v.push(score[t].score as i32);
-            v.extend(score[t].subscore.iter().map(|s| *s as i32));
+        for t in 0..game().score_cnt as usize {
+            v.push(game().score[t].score as i32);
+            v.extend(game().score[t].subscore.iter().map(|s| *s as i32));
         }
         v
     }
@@ -93,7 +93,7 @@ fn snapshot() -> Vec<i32> {
 
 fn record() {
     unsafe {
-        let scores: Vec<i16> = (0..score_cnt as usize).map(|t| score[t].score).collect();
+        let scores: Vec<i16> = (0..game().score_cnt as usize).map(|t| game().score[t].score).collect();
         if scores != g_lastScores {
             let text: Vec<String> = scores.iter().map(|s| s.to_string()).collect();
             harness::note_net(format!("scores {}", text.join(",")));
@@ -116,10 +116,10 @@ pub fn net_apply_scores(args: &[i32]) {
             return;
         }
         g_applying = true;
-        for (t, v) in args[2..].chunks(4).enumerate().take(score_cnt as usize) {
-            score[t].set_score(v[0] as i16);
+        for (t, v) in args[2..].chunks(4).enumerate().take(game().score_cnt as usize) {
+            game().score[t].set_score(v[0] as i16);
             for (i, s) in v[1..].iter().enumerate() {
-                score[t].subscore[i] = *s as i16;
+                game().score[t].subscore[i] = *s as i16;
             }
         }
         g_applying = false;
@@ -197,15 +197,15 @@ pub fn remove_team_event(teamid: i16) -> Option<bool> {
         if netplay.theHostIsMe {
             Some(g_removeResult)
         } else {
-            let removed = score[teamid as usize].order > -1;
-            Some(game().game_values.flags.teamdeadcounter as i32 + if removed { 0 } else { 1 } == score_cnt as i32 - 1)
+            let removed = game().score[teamid as usize].order > -1;
+            Some(game().game_values.flags.teamdeadcounter as i32 + if removed { 0 } else { 1 } == game().score_cnt as i32 - 1)
         }
     }
 }
 
 pub fn net_remove_team(teamid: i16) {
     unsafe {
-        if (0..score_cnt).contains(&teamid) {
+        if (0..game().score_cnt).contains(&teamid) {
             g_removeResult = crate::smw::gamemodes::game_mode::remove_team_now(teamid);
         }
     }

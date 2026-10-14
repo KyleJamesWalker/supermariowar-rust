@@ -4,11 +4,13 @@ use crate::common::eyecandy::CEyecandyContainer;
 use crate::common::file_list::{AnnouncerList, FiltersList, GraphicsList, MusicList, SkinList, SoundsList, TourList, WorldList, WorldMusicList};
 use crate::common::map::CMap;
 use crate::common::map_list::MapList;
+use crate::common::score::CScore;
 use crate::common::resource_manager::CResourceManager;
 use crate::common::tileset_manager::CTilesetManager;
 use crate::common::game_values::CGameValues;
 use crate::globals::{Global, Ptr};
 use crate::smw::object_container::CObjectContainer;
+use crate::smw::player::CPlayer;
 
 pub struct Game {
     pub game_values: Global<CGameValues>,
@@ -31,6 +33,9 @@ pub struct Game {
     pub noncolcontainer: CObjectContainer,
     pub objectcontainer: [CObjectContainer; 3],
     pub eyecandy: [CEyecandyContainer; 3],
+    pub players: Vec<Ptr<CPlayer>>,
+    pub score: [Ptr<CScore>; 4],
+    pub score_cnt: i16,
 }
 
 impl Game {
@@ -55,6 +60,9 @@ impl Game {
             noncolcontainer: CObjectContainer::new(),
             objectcontainer: [CObjectContainer::new(), CObjectContainer::new(), CObjectContainer::new()],
             eyecandy: [CEyecandyContainer::new(), CEyecandyContainer::new(), CEyecandyContainer::new()],
+            players: Vec::new(),
+            score: [Ptr::null(); 4],
+            score_cnt: 0,
         }
     }
 }

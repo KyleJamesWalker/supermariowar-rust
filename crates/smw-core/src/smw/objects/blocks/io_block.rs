@@ -11,7 +11,6 @@ use crate::common::moving_object_types::*;
 use crate::common::object_base::{cap_falling_velocity, object_block, CObject, CObjectTrait};
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::Ptr;
-use crate::smw::main::players;
 use crate::smw::objects::carriable::co_shell::CO_Shell;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::player::{get_player_from_global_id, CPlayer};
@@ -245,8 +244,8 @@ pub fn io_block_kill_players_and_objects_inside_block<T: IO_BlockTrait + ?Sized>
         let iposy = this.block().iposy;
 
         //Loop through players
-        for i in 0..players.len() {
-            let mut player = players[i];
+        for i in 0..game().players.len() {
+            let mut player = game().players[i];
             if !player.isready() {
                 continue;
             }

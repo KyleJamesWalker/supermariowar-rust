@@ -11,7 +11,6 @@ use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::race::CGM_Race;
-use crate::smw::main::score_cnt;
 use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::overmap::over_map_object::{io_over_map_object_update, IO_OverMapObject, IO_OverMapObjectTrait};
 use crate::smw::player::CPlayer;
@@ -146,9 +145,9 @@ impl CObjectTrait for OMO_RaceGoal {
             } else {
                 self.spr.draw_src(x, y, &SDL_Rect { x: self.drawframe as i32, y: 0, w: self.iw as i32, h: self.ih as i32 });
 
-                for k in 0..score_cnt {
+                for k in 0..game().score_cnt {
                     if self.tagged[k as usize] > -1 {
-                        let fp = &flagpositions[(score_cnt - 2) as usize][k as usize];
+                        let fp = &flagpositions[(game().score_cnt - 2) as usize][k as usize];
                         game().rm.spr_bonus.draw_src(x + fp[0] as i32, y + fp[1] as i32, &SDL_Rect { x: 0, y: self.tagged[k as usize] as i32 * 16, w: 16, h: 16 });
                     }
                 }

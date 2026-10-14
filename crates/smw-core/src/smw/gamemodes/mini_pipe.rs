@@ -9,7 +9,6 @@ use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::{self as gm, remove_players_but_team, setup_score_board, show_score_board};
-use crate::smw::main::score_cnt;
 use crate::smw::objects::overmap::wo_pipe_bonus::OMO_PipeBonus;
 use crate::smw::objects::overmap::wo_pipe_coin::OMO_PipeCoin;
 use crate::smw::player::CPlayer;
@@ -126,10 +125,10 @@ impl CGameModeTrait for CGM_Pipe_MiniGame {
                 } else if self.iBonusType == 1 {
                     self.iNextItemTimer = (RANDOM_INT(10) + 10) as i16;
 
-                    let mut iRandTeam: i16 = RANDOM_INT(score_cnt as i32 + 2) as i16;
+                    let mut iRandTeam: i16 = RANDOM_INT(game().score_cnt as i32 + 2) as i16;
 
                     //Give an advantage to the team that got the item
-                    if iRandTeam >= score_cnt {
+                    if iRandTeam >= game().score_cnt {
                         iRandTeam = self.iBonusTeam;
                     }
 

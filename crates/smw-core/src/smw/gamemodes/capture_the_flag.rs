@@ -8,7 +8,6 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::*;
-use crate::smw::main::players;
 use crate::smw::objects::carriable::co_flag::CO_Flag;
 use crate::smw::objects::moving::mo_flag_base::MO_FlagBase;
 use crate::smw::player::CPlayer;
@@ -41,8 +40,8 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
         let mut fTeamUsed: [bool; 4] = [false, false, false, false];
 
         unsafe {
-            for i in 0..players.len() {
-                let player = players[i];
+            for i in 0..game().players.len() {
+                let player = game().players[i];
                 let iTeamID: i16 = player.get_team_id();
                 if !fTeamUsed[iTeamID as usize] {
                     fTeamUsed[iTeamID as usize] = true;

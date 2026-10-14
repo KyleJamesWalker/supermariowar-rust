@@ -6,7 +6,6 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::{self as gm, remove_players_but_team, setup_score_board, show_score_board};
-use crate::smw::main::players;
 use crate::smw::object_container::CObjectContainer;
 use crate::smw::objects::overmap::wo_area::OMO_Area;
 use crate::smw::player::CPlayer;
@@ -67,9 +66,9 @@ pub fn cgm_domination_init<T: CGameModeTrait + ?Sized>(this: &mut T) {
         }
 
         if iNumAreas > 18 {
-            iNumAreas = 2usize.wrapping_mul(players.len()).wrapping_add(iNumAreas as usize).wrapping_sub(22) as i16;
+            iNumAreas = 2usize.wrapping_mul(game().players.len()).wrapping_add(iNumAreas as usize).wrapping_sub(22) as i16;
         } else if iNumAreas > 10 {
-            iNumAreas = players.len().wrapping_add(iNumAreas as usize).wrapping_sub(12) as i16;
+            iNumAreas = game().players.len().wrapping_add(iNumAreas as usize).wrapping_sub(12) as i16;
         }
 
         for _k in 0..iNumAreas {

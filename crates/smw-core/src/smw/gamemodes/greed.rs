@@ -11,7 +11,7 @@ use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::classic::CGM_Classic;
 use crate::smw::gamemodes::game_mode::*;
-use crate::smw::main::{score, score_cnt};
+
 use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::moving::mo_coin::MO_Coin;
 use crate::smw::player::CPlayer;
@@ -108,14 +108,14 @@ impl CGM_Greed {
             //Play warning sound if game is almost over
             if self.goal != -1 && !self.playedwarningsound {
                 let mut playwarning = false;
-                for j in 0..score_cnt {
+                for j in 0..game().score_cnt {
                     let mut countscore: i16 = 0;
-                    for k in 0..score_cnt {
+                    for k in 0..game().score_cnt {
                         if j == k {
                             continue;
                         }
 
-                        countscore = (countscore as i32 + score[k as usize].score as i32) as i16;
+                        countscore = (countscore as i32 + game().score[k as usize].score as i32) as i16;
                     }
 
                     if countscore <= 10 {
@@ -148,8 +148,8 @@ impl CGameModeTrait for CGM_Greed {
         let iGoal: i16 = if self.goal == -1 { 0 } else { self.goal };
 
         unsafe {
-            for iScore in 0..score_cnt {
-                score[iScore as usize].set_score(iGoal);
+            for iScore in 0..game().score_cnt {
+                game().score[iScore as usize].set_score(iGoal);
             }
         }
     }

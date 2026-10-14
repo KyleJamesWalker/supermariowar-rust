@@ -313,7 +313,7 @@ impl MI_TournamentScoreboard {
 
                 let wp = self.worldPlace[t].as_mut().unwrap();
                 wp.set_position((x + 102) as i16, iTeamY + 14);
-                wp.set_image(0, crate::smw::main::score[t].place << 5, 32, 32);
+                wp.set_image(0, crate::game::game().score[t].place << 5, 32, 32);
                 wp.set_visible(gameWinner >= 0);
             }
 

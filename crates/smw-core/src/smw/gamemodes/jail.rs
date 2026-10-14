@@ -10,7 +10,7 @@ use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::frag::{cgm_frag_check_winner, cgm_frag_playerkilledself, CGM_Frag};
 use crate::smw::gamemodes::game_mode::*;
-use crate::smw::main::{players, score, score_cnt};
+
 use crate::smw::player::CPlayer;
 
 //Similar to frag limit but:
@@ -80,13 +80,13 @@ pub fn cgm_jail_playerkilledplayer(this: &mut CGM_Jail, mut inflictor: Ptr<CPlay
                 if game().game_values.gamemodesettings.jail.style == JailStyle::Classic {
                     let mut jailedteams: [i16; 4] = [0; 4];
 
-                    for i in 0..score_cnt {
+                    for i in 0..game().score_cnt {
                         jailedteams[i as usize] = game().game_values.teamcounts[i as usize];
                     }
 
                     //Figure out which teams have been jailed
-                    for i in 0..players.len() {
-                        let mut player = players[i];
+                    for i in 0..game().players.len() {
+                        let mut player = game().players[i];
                         if player.jail().is_active() {
                             jailedteams[player.get_team_id() as usize] -= 1;
                         }
@@ -94,7 +94,7 @@ pub fn cgm_jail_playerkilledplayer(this: &mut CGM_Jail, mut inflictor: Ptr<CPlay
 
                     //Determine if a single team is the only one not completely jailed
                     let mut iTeamPoint: i16 = -1;
-                    for i in 0..score_cnt {
+                    for i in 0..game().score_cnt {
                         if jailedteams[i as usize] == 0 {
                             continue;
                         }
@@ -111,8 +111,8 @@ pub fn cgm_jail_playerkilledplayer(this: &mut CGM_Jail, mut inflictor: Ptr<CPlay
                     if iTeamPoint >= 0 {
                         let mut numjailedplayers: i16 = 0;
 
-                        for i in 0..players.len() {
-                            let mut player = players[i];
+                        for i in 0..game().players.len() {
+                            let mut player = game().players[i];
                             //If they weren't just the one killed and they were jailed, give them a transform cloud
                             if player != other && player.jail().is_active() {
                                 emplace_poof(player);
@@ -128,7 +128,7 @@ pub fn cgm_jail_playerkilledplayer(this: &mut CGM_Jail, mut inflictor: Ptr<CPlay
 
                         //Give extra bonus score for being on the non-jailed team
                         if numjailedplayers > 1 {
-                            score[iTeamPoint as usize].adjust_score(1);
+                            game().score[iTeamPoint as usize].adjust_score(1);
                         }
                     }
                 }
@@ -137,8 +137,8 @@ pub fn cgm_jail_playerkilledplayer(this: &mut CGM_Jail, mut inflictor: Ptr<CPlay
                     let mut jailedteams: [i16; 4] = [-1, -1, -1, -1];
 
                     //Figure out which teams have been jailed
-                    for i in 0..players.len() {
-                        let mut player = players[i];
+                    for i in 0..game().players.len() {
+                        let mut player = game().players[i];
                         let piMarker = &mut jailedteams[player.get_team_id() as usize];
 
                         if *piMarker == -2 {
@@ -156,9 +156,9 @@ pub fn cgm_jail_playerkilledplayer(this: &mut CGM_Jail, mut inflictor: Ptr<CPlay
 
                     //Determine if a single team is the only one not completely jailed
                     let mut iTeamPoint: i16 = -1;
-                    for i in 0..score_cnt {
+                    for i in 0..game().score_cnt {
                         let mut iJailOwner: i16 = -1;
-                        for j in 0..score_cnt {
+                        for j in 0..game().score_cnt {
                             if i == j {
                                 continue;
                             }
@@ -188,8 +188,8 @@ pub fn cgm_jail_playerkilledplayer(this: &mut CGM_Jail, mut inflictor: Ptr<CPlay
                     if iTeamPoint >= 0 {
                         let mut numjailedplayers: i16 = 0;
 
-                        for i in 0..players.len() {
-                            let mut player = players[i];
+                        for i in 0..game().players.len() {
+                            let mut player = game().players[i];
                             if player.jail().is_active() && player.get_team_id() != iTeamPoint {
                                 numjailedplayers += 1;
                             }
@@ -197,11 +197,11 @@ pub fn cgm_jail_playerkilledplayer(this: &mut CGM_Jail, mut inflictor: Ptr<CPlay
 
                         //Give extra bonus score for being on the non-jailed team
                         if numjailedplayers > 1 {
-                            score[iTeamPoint as usize].adjust_score(1);
+                            game().score[iTeamPoint as usize].adjust_score(1);
 
                             //Release other teams if a bonus was awarded for locking them up
-                            for i in 0..players.len() {
-                                let mut player = players[i];
+                            for i in 0..game().players.len() {
+                                let mut player = game().players[i];
                                 //Don't release players that were not jailed by this team
                                 if player.jail().owner_teamID as i16 != iTeamPoint {
                                     continue;

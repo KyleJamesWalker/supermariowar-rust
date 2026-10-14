@@ -15,8 +15,6 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::*;
 use crate::impl_base;
-
-use crate::smw::main::players;
 use crate::smw::objectgame::removeifprojectile;
 use crate::smw::objects::carriable::co_throw_box::CO_ThrowBox;
 use crate::smw::objects::moving::moving_object::{IO_MovingObject, IO_MovingObjectTrait};
@@ -287,8 +285,8 @@ impl CObjectTrait for MO_PirhanaPlant {
                 let iPlantY: i16 = (self.iy as i32 + if self.iDirection == 0 { 16 } else { self.ih as i32 - 16 }) as i16;
 
                 unsafe {
-                    for i in 0..players.len() {
-                        let player = players[i];
+                    for i in 0..game().players.len() {
+                        let player = game().players[i];
                         if player.state != PlayerState::Ready {
                             continue;
                         }

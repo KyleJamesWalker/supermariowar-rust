@@ -8,7 +8,6 @@ use crate::common::random_number_generator::RANDOM_INT;
 use crate::common::tile_types::{tile_flag_death_on_top, tile_flag_solid, tile_flag_solid_on_top};
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::main::players;
 use crate::smw::objects::overmap::over_map_object::{IO_OverMapObject, IO_OverMapObjectTrait};
 use crate::smw::player::CPlayer;
 use sdl2::sys::SDL_Rect;
@@ -274,8 +273,8 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
 
                 if self.scoretimer >= game().game_values.pointspeed {
                     self.scoretimer = 0;
-                    players[self.iPlayerID as usize].score().adjust_score(self.multiplier);
-                    game().game_values.gamemode.check_winner(players[self.iPlayerID as usize]);
+                    game().players[self.iPlayerID as usize].score().adjust_score(self.multiplier);
+                    game().game_values.gamemode.check_winner(game().players[self.iPlayerID as usize]);
 
                     if game().game_values.gamemodesettings.kingofthehill.maxmultiplier > 1 && {
                         self.multipliertimer += 1;

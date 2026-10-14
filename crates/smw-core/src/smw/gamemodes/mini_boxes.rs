@@ -10,7 +10,7 @@ use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::{self as gm, remove_players_but_team, remove_team, setup_score_board, show_score_board};
-use crate::smw::main::{score, score_cnt};
+
 use crate::smw::objects::moving::mo_coin::MO_Coin;
 use crate::smw::player::CPlayer;
 use std::any::Any;
@@ -82,9 +82,9 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
         self.fReverseScoring = false;
 
         unsafe {
-            for iScore in 0..score_cnt as usize {
-                score[iScore].set_score(self.goal);
-                score[iScore].subscore[0] = 0;
+            for iScore in 0..game().score_cnt as usize {
+                game().score[iScore].set_score(self.goal);
+                game().score[iScore].subscore[0] = 0;
             }
         }
     }
@@ -107,12 +107,12 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
         if !self.playedwarningsound {
             let mut countscore: i16 = 0;
             unsafe {
-                for k in 0..score_cnt as usize {
-                    if Ptr::from_mut(inflictor.score()) == score[k] {
+                for k in 0..game().score_cnt as usize {
+                    if Ptr::from_mut(inflictor.score()) == game().score[k] {
                         continue;
                     }
 
-                    countscore = countscore.wrapping_add(score[k].score);
+                    countscore = countscore.wrapping_add(game().score[k].score);
                 }
             }
 
@@ -143,13 +143,13 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
             let mut countscore: i16 = 0;
             let mut playwarning = false;
             unsafe {
-                for j in 0..score_cnt {
-                    for k in 0..score_cnt {
+                for j in 0..game().score_cnt {
+                    for k in 0..game().score_cnt {
                         if j == k {
                             continue;
                         }
 
-                        countscore = countscore.wrapping_add(score[k as usize].score);
+                        countscore = countscore.wrapping_add(game().score[k as usize].score);
                     }
 
                     if countscore <= 2 {

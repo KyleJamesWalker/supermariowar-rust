@@ -6,7 +6,6 @@ use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::{object_area, CObjectTrait};
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::main::players;
 use crate::smw::objects::overmap::over_map_object::{IO_OverMapObject, IO_OverMapObjectTrait};
 use crate::smw::player::CPlayer;
 use sdl2::sys::SDL_Rect;
@@ -122,8 +121,8 @@ impl CObjectTrait for OMO_Area {
                 self.scoretimer += 1;
                 if self.scoretimer as i32 >= ((game().game_values.pointspeed as i32) << 1) {
                     self.scoretimer = 0;
-                    players[self.iPlayerID as usize].score().adjust_score(1);
-                    game().game_values.gamemode.check_winner(players[self.iPlayerID as usize]);
+                    game().players[self.iPlayerID as usize].score().adjust_score(1);
+                    game().game_values.gamemode.check_winner(game().players[self.iPlayerID as usize]);
                 }
             }
 

@@ -8,7 +8,6 @@ use crate::common::random_number_generator::{RANDOM_BOOL, RANDOM_INT};
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::*;
-use crate::smw::main::players;
 use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::moving::mo_cheep_cheep::MO_CheepCheep;
 use crate::smw::objects::walkingenemy::we_buzzy_beetle::MO_BuzzyBeetle;
@@ -118,8 +117,8 @@ impl CGameModeTrait for CGM_Stomp {
             if self.gameover {
                 self.displayplayertext();
             } else {
-                for i in 0..players.len() {
-                    let player = players[i];
+                for i in 0..game().players.len() {
+                    let player = game().players[i];
                     self.check_winner(player);
                 }
             }

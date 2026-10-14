@@ -9,7 +9,7 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::*;
-use crate::smw::main::{score, score_cnt};
+
 use crate::smw::net_random::{self, Ev};
 use crate::smw::player::CPlayer;
 
@@ -24,13 +24,13 @@ impl_base!(CGM_Tag => cgame_mode: CGameMode);
 unsafe fn tag_warning_needed(goal: i16) -> bool {
     let mut countscore: i16 = 0;
     let mut playwarning = false;
-    for j in 0..score_cnt {
-        for k in 0..score_cnt {
+    for j in 0..game().score_cnt {
+        for k in 0..game().score_cnt {
             if j == k {
                 continue;
             }
 
-            countscore = (countscore as i32 + score[k as usize].score as i32) as i16;
+            countscore = (countscore as i32 + game().score[k as usize].score as i32) as i16;
         }
 
         if countscore as f64 <= goal as f64 * 0.2 {
@@ -81,11 +81,11 @@ impl CGameModeTrait for CGM_Tag {
         self.fReverseScoring = self.goal == -1;
 
         unsafe {
-            for iScore in 0..score_cnt {
+            for iScore in 0..game().score_cnt {
                 if self.fReverseScoring {
-                    score[iScore as usize].set_score(0);
+                    game().score[iScore as usize].set_score(0);
                 } else {
-                    score[iScore as usize].set_score(self.goal);
+                    game().score[iScore as usize].set_score(self.goal);
                 }
             }
         }
@@ -171,12 +171,12 @@ impl CGameModeTrait for CGM_Tag {
                 }
 
                 let mut countscore: i16 = 0;
-                for k in 0..score_cnt {
-                    if Ptr::from_mut(inflictor.score()) == score[k as usize] {
+                for k in 0..game().score_cnt {
+                    if Ptr::from_mut(inflictor.score()) == game().score[k as usize] {
                         continue;
                     }
 
-                    countscore = (countscore as i32 + score[k as usize].score as i32) as i16;
+                    countscore = (countscore as i32 + game().score[k as usize].score as i32) as i16;
                 }
 
                 if countscore as f64 <= self.goal as f64 * 0.2 && !self.playedwarningsound {

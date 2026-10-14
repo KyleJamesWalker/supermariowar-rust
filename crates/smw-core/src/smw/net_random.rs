@@ -21,7 +21,6 @@ use crate::common::random_number_generator::RandomNumberGenerator;
 use crate::globals::Ptr;
 
 use crate::smw::harness;
-use crate::smw::main::players;
 use crate::smw::net::netplay;
 use crate::smw::network::protocol_game_packages::RandomEvent;
 
@@ -446,7 +445,7 @@ pub fn arg_f32(v: i32) -> f32 {
 fn player(args: &[i32]) -> Ptr<crate::smw::player::CPlayer> {
     unsafe {
         let id = args[0];
-        players.iter().copied().find(|p| p.globalID as i32 == id).unwrap_or(Ptr::null())
+        game().players.iter().copied().find(|p| p.globalID as i32 == id).unwrap_or(Ptr::null())
     }
 }
 

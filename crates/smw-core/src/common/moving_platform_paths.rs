@@ -9,7 +9,6 @@ use crate::common::math::vec2::Vec2f;
 use crate::common::movingplatform::MovingPlatform;
 use crate::common::object_base::cap_falling_velocity;
 use crate::globals::{Ptr, Aliased};
-use crate::smw::main::players;
 use std::any::Any;
 
 #[repr(u8)]
@@ -468,7 +467,7 @@ impl MovingPlatformPathTrait for FallingPath {
         let mut platform = self.base.m_platform;
         if platform.fy - platform.iHalfHeight as f32 >= App::screenHeight as f32 {
             unsafe {
-                for player in players.iter_mut() {
+                for player in game().players.iter_mut() {
                     if player.platform == platform {
                         player.platform = Ptr::null();
                         player.vely = self.base.m_velocity[t].y;

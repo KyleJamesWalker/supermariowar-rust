@@ -356,7 +356,7 @@ fn walk(s: &mut Snap, online: bool) {
         s.io(&mut gv.unlocksecret3part2);
         s.io(&mut gv.unlocksecretunlocked);
 
-        use crate::smw::main::{bonushousemode, bossgamemode, boxesgamemode, currentgamemode, gamemodes, pipegamemode, score, score_cnt};
+        use crate::smw::main::{bonushousemode, bossgamemode, boxesgamemode, currentgamemode, gamemodes, pipegamemode};
         use crate::common::game_mode::*;
         s.io(&mut currentgamemode);
         let mut mode = gv.gamemode.gamemode;
@@ -389,7 +389,7 @@ fn walk(s: &mut Snap, online: bool) {
         }
 
         for k in 0..4 {
-            let mut sc = score[k];
+            let mut sc = game().score[k];
             s.io(&mut sc.score);
             s.io(&mut sc.subscore);
             s.io(&mut sc.x);
@@ -405,7 +405,7 @@ fn walk(s: &mut Snap, online: bool) {
             s.io(&mut sc.iDigitMiddle);
             s.io(&mut sc.iDigitLeft);
         }
-        s.io(&mut score_cnt);
+        s.io(&mut game().score_cnt);
         GameplayState::instance().checkpoint(s);
 
         // The map and the music the menu chose. A net game's joiner plays the host's map from its settings directory.
@@ -590,7 +590,7 @@ pub fn start_fields() -> String {
 pub fn result_fields() -> String {
     unsafe {
         let gm = game().game_values.gamemode;
-        let scores: Vec<String> = (0..crate::smw::main::score_cnt.max(0) as usize).map(|k| crate::smw::main::score[k].score.to_string()).collect();
+        let scores: Vec<String> = (0..crate::game::game().score_cnt.max(0) as usize).map(|k| crate::game::game().score[k].score.to_string()).collect();
         let mut f = vec![kv("scores", &scores.join(","))];
         if gm.gameover {
             f.push(kv("winner", &if gm.winningteam >= 0 { format!("team{}", gm.winningteam + 1) } else { "tie".to_string() }));

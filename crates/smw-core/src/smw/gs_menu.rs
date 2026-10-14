@@ -25,7 +25,7 @@ use crate::smw::main::{bonushousemode, bossgamemode, boxesgamemode, pipegamemode
 use crate::smw::game_state::{GameState, GameStateManager};
 use crate::smw::gs_gameplay::{lookup_team_id, GameplayState};
 use crate::smw::harness;
-use crate::smw::main::{currentgamemode, gamemodes, score, score_cnt};
+use crate::smw::main::{currentgamemode, gamemodes};
 use crate::smw::menu::bonus_wheel_menu::UI_BonusWheelMenu;
 use crate::smw::menu::game_settings_menu::UI_GameSettingsMenu;
 use crate::smw::menu::main_menu::UI_MainMenu;
@@ -501,7 +501,7 @@ impl MenuState {
         unsafe {
             println!("MENU_CODE_TO_GAME_SETUP_MENU");
             //Moves teams to the first arrays in the list and counts the number of teams
-            score_cnt = self.mTeamSelectMenu.get_team_count();
+            game().score_cnt = self.mTeamSelectMenu.get_team_count();
             self.iDisplayError = DISPLAY_ERROR_NONE;
             self.iDisplayErrorTimer = 0;
             let mut fErrorReadingTourFile = false;
@@ -562,14 +562,14 @@ impl MenuState {
                         fErrorReadingTourFile = true;
                     } else {
                         let numGames = game().game_values.tourstops.len() as i16;
-                        self.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(score_cnt, numGames, Ptr::from_mut(&mut game().rm.spr_tour_markers));
+                        self.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(game().score_cnt, numGames, Ptr::from_mut(&mut game().rm.spr_tour_markers));
                     }
                 } else if game().game_values.matchtype == MatchType::Tournament {
                     println!("  Match type: Tournament");
                     //Set who is controlling the tournament menu
                     if game().game_values.tournamentcontrolstyle == TournamentControlStyle::Random || game().game_values.tournamentcontrolstyle == TournamentControlStyle::RandomLoser {
                         //Random
-                        game().game_values.tournamentcontrolteam = RANDOM_INT(score_cnt as i32) as i16;
+                        game().game_values.tournamentcontrolteam = RANDOM_INT(game().score_cnt as i32) as i16;
                     } else if game().game_values.tournamentcontrolstyle == TournamentControlStyle::RoundRobin {
                         //Round robin
                         game().game_values.tournamentcontrolteam = 0;
@@ -581,7 +581,7 @@ impl MenuState {
                     game().game_values.tournamentnextcontrol = 1; //if round robin is selected, choose the next team next
 
                     let numGames = game().game_values.tournamentgames;
-                    self.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(score_cnt, numGames, Ptr::from_mut(&mut game().rm.menu_mode_large));
+                    self.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(game().score_cnt, numGames, Ptr::from_mut(&mut game().rm.menu_mode_large));
                 } else if game().game_values.matchtype == MatchType::World {
                     println!("  Match type: World");
                     let this = Ptr::from_mut(self);
@@ -589,7 +589,7 @@ impl MenuState {
                         let mut this = this;
                         g_worldmap.init(WorldMap::new_path(&game().worldlist.at(game().game_values.worldindex as usize).to_string_lossy(), TILESIZE as i16));
 
-                        this.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(score_cnt, 0, Ptr::from_mut(&mut game().rm.spr_tour_markers));
+                        this.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(game().score_cnt, 0, Ptr::from_mut(&mut game().rm.spr_tour_markers));
 
                         g_worldmap.set_initial_powerups();
 
@@ -608,7 +608,7 @@ impl MenuState {
                         }
 
                         this.mWorldMenu.miWorld.init();
-                        let team = RANDOM_INT(score_cnt as i32) as i16;
+                        let team = RANDOM_INT(game().score_cnt as i32) as i16;
                         this.mWorldMenu.miWorld.set_controlling_team(team);
                     }));
                     if result.is_err() {
@@ -701,14 +701,14 @@ impl MenuState {
                     let mut iNumInPlace: i16 = 0;
                     let mut iInPlace: [i16; 4] = [0; 4];
                     let mut iLowestPlace: i16 = 0;
-                    for iScore in 0..score_cnt {
-                        if score[iScore as usize].place == iLowestPlace {
+                    for iScore in 0..game().score_cnt {
+                        if game().score[iScore as usize].place == iLowestPlace {
                             iInPlace[iNumInPlace as usize] = iScore;
                             iNumInPlace += 1;
-                        } else if score[iScore as usize].place > iLowestPlace {
+                        } else if game().score[iScore as usize].place > iLowestPlace {
                             iNumInPlace = 1;
                             iInPlace[0] = iScore;
-                            iLowestPlace = score[iScore as usize].place;
+                            iLowestPlace = game().score[iScore as usize].place;
                         }
                     }
 
@@ -720,7 +720,7 @@ impl MenuState {
                     let mut iNumInPlace: i16 = 0;
                     let mut iInPlace: [i16; 4] = [0; 4];
                     let mut iMostWins: i16 = 0;
-                    for iTeam in 0..score_cnt {
+                    for iTeam in 0..game().score_cnt {
                         if game().game_values.tournament_scores[iTeam as usize].wins == iMostWins {
                             iInPlace[iNumInPlace as usize] = iTeam;
                             iNumInPlace += 1;
@@ -740,7 +740,7 @@ impl MenuState {
                     let mut iInPlace: [i16; 4] = [0, 0, 0, 0];
                     let mut iLeastWins: i16 = 20; //Most possible wins are 10
 
-                    for iTeam in 0..score_cnt {
+                    for iTeam in 0..game().score_cnt {
                         if game().game_values.tournament_scores[iTeam as usize].wins == iLeastWins {
                             iInPlace[iNumInPlace as usize] = iTeam;
                             iNumInPlace += 1;
@@ -756,7 +756,7 @@ impl MenuState {
 
                 TournamentControlStyle::Random => {
                     //Random
-                    game().game_values.tournamentcontrolteam = RANDOM_INT(score_cnt as i32) as i16;
+                    game().game_values.tournamentcontrolteam = RANDOM_INT(game().score_cnt as i32) as i16;
                 }
 
                 TournamentControlStyle::RandomLoser => {
@@ -765,14 +765,14 @@ impl MenuState {
                     let mut iInPlace: [i16; 4] = [0, 0, 0, 0];
                     let mut iWinner: i16 = 0;
 
-                    for iTeam in 0..score_cnt {
-                        if score[iTeam as usize].place == 0 {
+                    for iTeam in 0..game().score_cnt {
+                        if game().score[iTeam as usize].place == 0 {
                             iWinner = iTeam;
                             break;
                         }
                     }
 
-                    for iTeam in 0..score_cnt {
+                    for iTeam in 0..game().score_cnt {
                         if iTeam == iWinner {
                             continue;
                         }
@@ -789,7 +789,7 @@ impl MenuState {
                     game().game_values.tournamentcontrolteam = game().game_values.tournamentnextcontrol;
 
                     game().game_values.tournamentnextcontrol += 1;
-                    if game().game_values.tournamentnextcontrol >= score_cnt {
+                    if game().game_values.tournamentnextcontrol >= game().score_cnt {
                         game().game_values.tournamentnextcontrol = 0;
                     }
                 }
@@ -1448,7 +1448,7 @@ impl MenuState {
 
                     self.mTeamSelectMenu.reset_team_select();
                     self.mTeamSelectMenu.reset_menu();
-                    score_cnt = self.mTeamSelectMenu.get_team_count();
+                    game().score_cnt = self.mTeamSelectMenu.get_team_count();
 
                     game().game_values.tournamentcontrolteam = -1;
                     game().game_values.tournamentwinner = -1;

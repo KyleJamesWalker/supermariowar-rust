@@ -6,7 +6,6 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::{self as gm, remove_players_but_team, setup_score_board, show_score_board};
-use crate::smw::main::score;
 use crate::smw::object_container::CObjectContainer;
 use crate::smw::objects::overmap::wo_race_goal::OMO_RaceGoal;
 use crate::smw::player::CPlayer;
@@ -69,22 +68,22 @@ impl CGM_Race {
                 remove_player_race_goals(&game().objectcontainer[2], teamID, -1);
 
                 if !self.gameover {
-                    score[teamID as usize].adjust_score(1);
+                    game().score[teamID as usize].adjust_score(1);
 
                     //Don't end the game if the goal is infinite
                     if self.goal == -1 {
                         return;
                     }
 
-                    if score[teamID as usize].score >= self.goal {
-                        score[teamID as usize].set_score(self.goal);
+                    if game().score[teamID as usize].score >= self.goal {
+                        game().score[teamID as usize].set_score(self.goal);
                         self.winningteam = teamID;
                         self.gameover = true;
 
                         remove_players_but_team(self.winningteam);
                         setup_score_board(false);
                         show_score_board();
-                    } else if score[teamID as usize].score as i32 >= self.goal as i32 - 1 && !self.playedwarningsound {
+                    } else if game().score[teamID as usize].score as i32 >= self.goal as i32 - 1 && !self.playedwarningsound {
                         self.playwarningsound();
                     }
                 }

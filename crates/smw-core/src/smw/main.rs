@@ -50,11 +50,8 @@ pub static mut x_shake: i16 = 0;
 pub static mut y_shake: i16 = 0;
 
 //------ game relevant stuff ------
-pub static mut players: Vec<Ptr<CPlayer>> = Vec::new();
 
-pub static mut score: [Ptr<CScore>; 4] = [Ptr::null(); 4];
 
-pub static mut score_cnt: i16 = 0;
 
 //Locations for swirl spawn effects
 pub static mut g_iSwirlSpawnLocations: [[[i16; 25]; 2]; 4] = [[[0; 25]; 2]; 4];
@@ -213,7 +210,7 @@ pub fn create_globals() {
         game().gamegraphicspacklist.set_current_index(0);
         game().soundpacklist.set_current_index(0);
 
-        players.reserve(4);
+        game().players.reserve(4);
 
         update_music_with_overrides(&mut game().musiclist, &mut game().worldmusiclist);
     }
@@ -520,7 +517,7 @@ pub fn main_game() {
         println!("\n---------------- loading ----------------");
 
         for iScore in 0..4 {
-            score[iScore] = Ptr::new_box(CScore::new(iScore as i16));
+            game().score[iScore] = Ptr::new_box(CScore::new(iScore as i16));
         }
 
         CGameValues::init(&mut game().game_values);
@@ -573,7 +570,7 @@ pub fn main_game() {
 
         //Delete player skins
         for k in 0..MAX_PLAYERS as usize {
-            score[k].delete();
+            game().score[k].delete();
         }
 
         // release all resources

@@ -29,7 +29,7 @@ use crate::smw::gamemodes::shy_guy_tag::CGM_ShyGuyTag;
 use crate::smw::gamemodes::star::CGM_Star;
 use crate::smw::gamemodes::tag::CGM_Tag;
 use crate::smw::gs_gameplay::{g_iWinningPlayer, spotlightManager, swap_players};
-use crate::smw::main::{g_iSwirlSpawnLocations, players};
+use crate::smw::main::{g_iSwirlSpawnLocations};
 use crate::smw::net::netplay;
 use crate::smw::net_random::{self, Ev};
 use crate::smw::objectgame::{check_secret, PowerupType};
@@ -279,7 +279,7 @@ impl CScore {
 
 pub fn get_player_from_global_id(iGlobalID: i16) -> Ptr<CPlayer> {
     unsafe {
-        for &player in players.iter() {
+        for &player in game().players.iter() {
             if player.globalID == iGlobalID {
                 return player;
             }

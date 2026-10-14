@@ -11,7 +11,7 @@ use crate::impl_base;
 use crate::smw::gamemodes::game_mode::{self as gm, remove_players_but_highest_scoring, setup_score_board, show_score_board};
 use crate::smw::gamemodes::game_mode_timer::GameTimerDisplay;
 use crate::smw::gs_gameplay::{count_alive_teams};
-use crate::smw::main::{players, score, score_cnt};
+
 use crate::smw::player::CPlayer;
 use std::any::Any;
 
@@ -42,7 +42,7 @@ impl CGM_ShyGuyTag {
 
     pub fn set_shy_guy(&mut self, iTeam: i16) {
         unsafe {
-            for &player in players.iter() {
+            for &player in game().players.iter() {
                 let mut player = player;
                 if player.get_team_id() == iTeam {
                     player.shyguy = true;
@@ -74,7 +74,7 @@ impl CGM_ShyGuyTag {
         unsafe {
             if_sound_on_play(&mut game().rm.sfx_thunder);
 
-            for &player in players.iter() {
+            for &player in game().players.iter() {
                 let mut player = player;
                 player.shyguy = false;
                 game().eyecandy[2].emplace(EC_SingleAnimation::new(
@@ -91,7 +91,7 @@ impl CGM_ShyGuyTag {
     fn count_shy_guys(&mut self) -> i16 {
         let mut shyguycount: i16 = 0;
         unsafe {
-            for &player in players.iter() {
+            for &player in game().players.iter() {
                 if player.shyguy {
                     shyguycount += 1;
                 }
@@ -121,11 +121,11 @@ impl CGameModeTrait for CGM_ShyGuyTag {
         self.gameClock.init(0, true);
 
         unsafe {
-            for iScore in 0..score_cnt as usize {
-                score[iScore].set_score(0);
+            for iScore in 0..game().score_cnt as usize {
+                game().score[iScore].set_score(0);
             }
 
-            for &player in players.iter() {
+            for &player in game().players.iter() {
                 let mut player = player;
                 player.ownerColorOffsetX = (player.get_color_id() as i32 * 48) as i16;
             }
@@ -144,7 +144,7 @@ impl CGameModeTrait for CGM_ShyGuyTag {
 
             //If we are not waiting to clear, check if we need to start waiting
             if !self.fRunClock {
-                if shyguycount as usize == players.len() {
+                if shyguycount as usize == game().players.len() {
                     if game().game_values.gamemodesettings.shyguytag.freetime > 0 {
                         self.fRunClock = true;
                         self.gameClock.set_time(game().game_values.gamemodesettings.shyguytag.freetime);
@@ -173,7 +173,7 @@ impl CGameModeTrait for CGM_ShyGuyTag {
 
                     let mut pCheckWinner: Ptr<CPlayer> = Ptr::null();
                     let mut fAlreadyScored: [bool; 4] = [false, false, false, false];
-                    for &player in players.iter() {
+                    for &player in game().players.iter() {
                         let mut player = player;
                         if !player.shyguy {
                             let iTeam: i16 = player.get_team_id();

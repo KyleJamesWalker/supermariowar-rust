@@ -11,7 +11,6 @@ use crate::common::world_tour_stop::TourStop;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode as gm;
-use crate::smw::main::players;
 use crate::smw::objects::moving::mo_bonus_house_chest::MO_BonusHouseChest;
 use crate::smw::player::CPlayer;
 use sdl2::sys::SDL_Rect;
@@ -105,7 +104,7 @@ impl CGameModeTrait for CGM_Bonus {
     fn draw_background(&mut self) {
         unsafe {
             //Draw Toad
-            game().rm.spr_worldbonushouse.draw_src(544, 256, &SDL_Rect { x: if players[0].left_x() > 544 { 224 } else { 192 }, y: 0, w: 32, h: 64 });
+            game().rm.spr_worldbonushouse.draw_src(544, 256, &SDL_Rect { x: if game().players[0].left_x() > 544 { 224 } else { 192 }, y: 0, w: 32, h: 64 });
 
             //Draw Bonus House Title
             game().rm.menu_plain_field.draw_src(0, 0, &SDL_Rect { x: 0, y: 0, w: App::screenWidth / 2, h: 32 });

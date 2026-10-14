@@ -12,7 +12,7 @@ use crate::common::random_number_generator::{RANDOM_BOOL, RANDOM_INT};
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::{self as gm, remove_players_but_team, remove_team, setup_score_board, show_score_board};
-use crate::smw::main::{players, score, score_cnt};
+
 use crate::smw::objects::moving::mo_frenzy_card::MO_FrenzyCard;
 use crate::smw::objects::moving::mo_podobo::MO_Podobo;
 use crate::smw::objects::moving::mo_sledge_brother::MO_SledgeBrother;
@@ -46,12 +46,12 @@ impl CGM_Boss_MiniGame {
         remove_players_but_team(self.winningteam);
 
         unsafe {
-            for iScore in 0..score_cnt {
+            for iScore in 0..game().score_cnt {
                 if self.winningteam == iScore {
                     continue;
                 }
 
-                score[iScore as usize].set_score(0);
+                game().score[iScore as usize].set_score(0);
             }
 
             setup_score_board(false);
@@ -100,8 +100,8 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
         self.poweruptimer = 120;
 
         unsafe {
-            for iScore in 0..score_cnt as usize {
-                score[iScore].set_score(self.goal);
+            for iScore in 0..game().score_cnt as usize {
+                game().score[iScore].set_score(self.goal);
             }
 
             let platformY: i16 = if self.iBossType == Boss::Hammer {
@@ -117,7 +117,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
 
     fn think(&mut self) {
         unsafe {
-            if !self.gameover && players.len() == 0 {
+            if !self.gameover && game().players.len() == 0 {
                 self.gameover = true;
 
                 if game().game_values.music {
@@ -156,7 +156,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
                     if self.poweruptimer <= 0 {
                         self.poweruptimer = (RANDOM_INT(80) + 60) as i16;
 
-                        if game().objectcontainer[1].count_types(object_frenzycard) < players.len() {
+                        if game().objectcontainer[1].count_types(object_frenzycard) < game().players.len() {
                             game().objectcontainer[1].add(Ptr::new_box(MO_FrenzyCard::new(Ptr::from_mut(&mut game().rm.spr_frenzycards), 0)));
                         }
                     }
@@ -188,8 +188,8 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
             if !self.playedwarningsound {
                 let mut countscore: i16 = 0;
                 unsafe {
-                    for k in 0..score_cnt as usize {
-                        countscore = countscore.wrapping_add(score[k].score);
+                    for k in 0..game().score_cnt as usize {
+                        countscore = countscore.wrapping_add(game().score[k].score);
                     }
                 }
 
@@ -216,8 +216,8 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
             if !self.playedwarningsound {
                 let mut countscore: i16 = 0;
                 unsafe {
-                    for k in 0..score_cnt as usize {
-                        countscore = countscore.wrapping_add(score[k].score);
+                    for k in 0..game().score_cnt as usize {
+                        countscore = countscore.wrapping_add(game().score[k].score);
                     }
                 }
 

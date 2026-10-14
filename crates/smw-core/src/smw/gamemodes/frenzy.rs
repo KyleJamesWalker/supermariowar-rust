@@ -10,7 +10,6 @@ use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::frag::{cgm_frag_check_winner, cgm_frag_playerextraguy, cgm_frag_playerkilledplayer, cgm_frag_playerkilledself, CGM_Frag};
 use crate::smw::gamemodes::game_mode::*;
-use crate::smw::main::players;
 use crate::smw::net_random::{self, Ev};
 use crate::smw::objectgame::PowerupType;
 use crate::smw::objects::moving::mo_frenzy_card::MO_FrenzyCard;
@@ -129,7 +128,7 @@ pub fn cgm_frenzy_think(this: &mut CGM_Frenzy) {
                     iPowerupQuantity = 1;
                 }
                 if 5 < iPowerupQuantity {
-                    iPowerupQuantity = (players.len() as i32 + iPowerupQuantity as i32 - 7) as i16;
+                    iPowerupQuantity = (game().players.len() as i32 + iPowerupQuantity as i32 - 7) as i16;
                 }
 
                 if game().objectcontainer[1].count_types(object_frenzycard) < iPowerupQuantity as isize as usize && !net_random::event(Ev::FrenzyCard, &[]) {
