@@ -1,5 +1,5 @@
-//! `SDL_UpperBlit` and `SDL_FillRect` for the game's surfaces. `SMW_BLIT=rust` draws with the software blitter
-//! (`soft_surface`) on ARGB8888 surfaces; the default, `SMW_BLIT=sdl`, calls SDL.
+//! `SDL_UpperBlit` and `SDL_FillRect` for the game's surfaces. By default they draw with the software blitter
+//! (`soft_surface`) on ARGB8888 surfaces; `SMW_BLIT=sdl` calls SDL instead.
 
 use crate::common::gfx::soft_surface::{self, BlendMode, BlitState, Pixels, PixelsMut, Rect};
 use sdl2::sys::*;
@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 pub fn rust_blit() -> bool {
     static RUST: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-    *RUST.get_or_init(|| std::env::var("SMW_BLIT").as_deref() == Ok("rust"))
+    *RUST.get_or_init(|| std::env::var("SMW_BLIT").as_deref() != Ok("sdl"))
 }
 
 #[derive(Clone, Copy)]
