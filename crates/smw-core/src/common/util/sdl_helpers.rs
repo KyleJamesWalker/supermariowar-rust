@@ -58,7 +58,13 @@ sdl_unique_ptr!(SdlRendererPtr, SDL_Renderer, SDL_DestroyRenderer);
 sdl_unique_ptr!(SdlTexturePtr, SDL_Texture, SDL_DestroyTexture);
 sdl_unique_ptr!(SdlSurfacePtr, SDL_Surface, SDL_FreeSurface);
 
-/// The editors' poll: the last event stays in `*event` when the queue runs dry (smw_sdl2::events::poll_keep_last).
-pub unsafe fn poll_event(event: *mut sdl2::sys::SDL_Event) -> i32 {
-    smw_sdl2::events::poll_keep_last(event)
+/// The editors' poll: the last event stays in `event` when the queue runs dry, as sdl2-compat leaves it.
+pub fn poll_event(event: &mut crate::common::editor_event::EditorEvent) -> i32 {
+    match smw_sdl2::events::poll_input() {
+        Some(input) => {
+            event.set(input);
+            1
+        }
+        None => 0,
+    }
 }

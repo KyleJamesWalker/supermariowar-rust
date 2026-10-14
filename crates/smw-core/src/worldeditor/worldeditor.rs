@@ -39,10 +39,11 @@ use crate::globals::*;
 use crate::smw::menu::mode_options_menu::UI_ModeOptionsMenu;
 use crate::smw::world::*;
 use sdl2::sys::image::{IMG_Load, IMG_SavePNG};
+use crate::common::editor_event::EditorEvent;
 use crate::common::util::sdl_helpers::poll_event;
 use sdl2::sys::SDL_KeyCode::*;
 use sdl2::sys::{
-    SDL_CreateRGBSurface, SDL_Event, SDL_EventType, SDL_FillRect, SDL_FreeSurface, SDL_GetKeyboardState, SDL_GetScancodeFromKey, SDL_Keycode, SDL_Keymod,
+    SDL_CreateRGBSurface, SDL_EventType, SDL_FillRect, SDL_FreeSurface, SDL_GetKeyboardState, SDL_GetScancodeFromKey, SDL_Keycode, SDL_Keymod,
     SDL_MapRGB, SDL_Rect, SDL_Surface, SDL_UpperBlit, SDL_BUTTON_LEFT, SDL_BUTTON_RIGHT,
 };
 use std::ffi::CString;
@@ -96,7 +97,7 @@ pub static mut fNeedBlackBackground: bool = false;
 pub static mut iWorldWidth: i16 = 0;
 pub static mut iWorldHeight: i16 = 0;
 
-pub static mut event: SDL_Event = unsafe { std::mem::zeroed() };
+pub static mut event: EditorEvent = EditorEvent::new();
 
 pub static mut spr_dialog: Global<gfxSprite> = Global::uninit();
 pub static mut menu_shade: Global<gfxSprite> = Global::uninit();
@@ -134,8 +135,8 @@ fn bound_to_window_h(y: i32) -> i32 {
 
 fn bound_mouse_motion_coords() {
     unsafe {
-        mouse_x = bound_to_window_w(event.motion.x);
-        mouse_y = bound_to_window_h(event.motion.y);
+        mouse_x = bound_to_window_w(event.motion_x());
+        mouse_y = bound_to_window_h(event.motion_y());
     }
 }
 
@@ -262,11 +263,11 @@ fn r(x: i32, y: i32, w: i32, h: i32) -> SDL_Rect {
 }
 
 fn key_sym() -> i32 {
-    unsafe { event.key.keysym.sym }
+    unsafe { event.key_sym() }
 }
 
 fn event_type() -> u32 {
-    unsafe { event.type_ }
+    unsafe { event.type_() }
 }
 
 const T_QUIT: u32 = SDL_EventType::SDL_QUIT as u32;
@@ -1185,7 +1186,7 @@ pub fn editor_edit() -> i32 {
                                 }
                             }
 
-                            if event.key.keysym.mod_ & (SDL_Keymod::KMOD_LALT as u16 | SDL_Keymod::KMOD_RALT as u16) != 0 {
+                            if event.key_mod() & (SDL_Keymod::KMOD_LALT as u16 | SDL_Keymod::KMOD_RALT as u16) != 0 {
                                 if key_sym() == SDLK_RETURN as i32 {
                                     g_fFullScreen = !g_fFullScreen;
                                     gfx_changefullscreen(g_fFullScreen);
@@ -1393,15 +1394,15 @@ pub fn editor_edit() -> i32 {
                         }
 
                         T_MOUSEBUTTONDOWN => {
-                            let iButtonX: i16 = (bound_to_window_w(event.button.x) - draw_offset_x) as i16;
-                            let iButtonY: i16 = (bound_to_window_h(event.button.y) - draw_offset_y) as i16;
+                            let iButtonX: i16 = (bound_to_window_w(event.button_x()) - draw_offset_x) as i16;
+                            let iButtonY: i16 = (bound_to_window_h(event.button_y()) - draw_offset_y) as i16;
                             let iCol: i16 = (iButtonX as i32 / TILESIZE + draw_offset_col) as i16;
                             let iRow: i16 = (iButtonY as i32 / TILESIZE + draw_offset_row) as i16;
 
                             if iButtonX >= 0 && iButtonY >= 0 && (iButtonX as i32) < iWorldWidth as i32 * TILESIZE && (iButtonY as i32) < iWorldHeight as i32 * TILESIZE {
-                                if event.button.button == BUTTON_LEFT && !ignoreclick {
+                                if event.button_button() == BUTTON_LEFT && !ignoreclick {
                                     paint_left(iCol, iRow, false);
-                                } else if event.button.button == BUTTON_RIGHT {
+                                } else if event.button_button() == BUTTON_RIGHT {
                                     paint_right(iCol, iRow, false, &mut iStageDisplay);
                                 }
                             }
@@ -1409,15 +1410,15 @@ pub fn editor_edit() -> i32 {
                         //Painting tiles with mouse movement
                         T_MOUSEMOTION => {
                             bound_mouse_motion_coords();
-                            let iButtonX: i16 = (bound_to_window_w(event.motion.x) - draw_offset_x) as i16;
-                            let iButtonY: i16 = (bound_to_window_h(event.motion.y) - draw_offset_y) as i16;
+                            let iButtonX: i16 = (bound_to_window_w(event.motion_x()) - draw_offset_x) as i16;
+                            let iButtonY: i16 = (bound_to_window_h(event.motion_y()) - draw_offset_y) as i16;
                             let iCol: i16 = ((iButtonX as i32 >> 5) + draw_offset_col) as i16;
                             let iRow: i16 = ((iButtonY as i32 >> 5) + draw_offset_row) as i16;
 
                             if iButtonX >= 0 && iButtonY >= 0 && (iButtonX as i32) < iWorldWidth as i32 * TILESIZE && (iButtonY as i32) < iWorldHeight as i32 * TILESIZE {
-                                if event.motion.state == SDL_BUTTON_LMASK && !ignoreclick {
+                                if event.motion_state() == SDL_BUTTON_LMASK && !ignoreclick {
                                     paint_left(iCol, iRow, true);
-                                } else if event.motion.state == SDL_BUTTON_RMASK {
+                                } else if event.motion_state() == SDL_BUTTON_RMASK {
                                     paint_right(iCol, iRow, true, &mut iStageDisplay);
                                 }
                             }
@@ -1444,7 +1445,7 @@ pub fn editor_edit() -> i32 {
                         }
 
                         T_MOUSEBUTTONUP => {
-                            if event.button.button == BUTTON_LEFT {
+                            if event.button_button() == BUTTON_LEFT {
                                 ignoreclick = false;
                             }
                         }
@@ -2232,10 +2233,10 @@ pub fn editor_warp() -> i32 {
                     }
 
                     T_MOUSEBUTTONDOWN => {
-                        let iButtonX: i16 = (bound_to_window_w(event.button.x) / TILESIZE) as i16;
-                        let iButtonY: i16 = (bound_to_window_h(event.button.y) / TILESIZE) as i16;
+                        let iButtonX: i16 = (bound_to_window_w(event.button_x()) / TILESIZE) as i16;
+                        let iButtonY: i16 = (bound_to_window_h(event.button_y()) / TILESIZE) as i16;
 
-                        if event.button.button == BUTTON_LEFT {
+                        if event.button_button() == BUTTON_LEFT {
                             if iButtonX >= 0 && iButtonX <= 9 && iButtonY == 0 {
                                 set_tile = iButtonX as i32;
 
@@ -2324,10 +2325,10 @@ pub fn editor_start_items() -> i32 {
                     }
 
                     T_MOUSEBUTTONDOWN => {
-                        let iButtonX: i16 = bound_to_window_w(event.button.x) as i16;
-                        let iButtonY: i16 = bound_to_window_h(event.button.y) as i16;
+                        let iButtonX: i16 = bound_to_window_w(event.button_x()) as i16;
+                        let iButtonY: i16 = bound_to_window_h(event.button_y()) as i16;
 
-                        if event.button.button == BUTTON_LEFT || event.button.button == BUTTON_RIGHT {
+                        if event.button_button() == BUTTON_LEFT || event.button_button() == BUTTON_RIGHT {
                             if g_worldmap.iNumInitialBonuses < 32 {
                                 for iItem in 0..(NUM_POWERUPS + NUM_WORLD_POWERUPS) as usize {
                                     if point_in(iButtonX, iButtonY, &rStartItemDst[iItem]) {
@@ -2418,10 +2419,10 @@ pub fn editor_boundary() -> i32 {
                     }
 
                     T_MOUSEBUTTONDOWN => {
-                        let iButtonX: i16 = (bound_to_window_w(event.button.x) / TILESIZE) as i16;
-                        let iButtonY: i16 = (bound_to_window_h(event.button.y) / TILESIZE) as i16;
+                        let iButtonX: i16 = (bound_to_window_w(event.button_x()) / TILESIZE) as i16;
+                        let iButtonY: i16 = (bound_to_window_h(event.button_y()) / TILESIZE) as i16;
 
-                        if event.button.button == BUTTON_LEFT {
+                        if event.button_button() == BUTTON_LEFT {
                             if iButtonX >= 0 && iButtonX <= 9 && iButtonY >= 0 && iButtonY <= 9 {
                                 set_tile = iButtonX as i32 + 10 * iButtonY as i32 + 1;
 
@@ -2480,9 +2481,9 @@ pub fn editor_type() -> i32 {
                     }
 
                     T_MOUSEBUTTONDOWN => {
-                        if event.button.button == BUTTON_LEFT {
-                            let iButtonX: i16 = (bound_to_window_w(event.button.x) / TILESIZE) as i16;
-                            let iButtonY: i16 = (bound_to_window_h(event.button.y) / TILESIZE) as i16;
+                        if event.button_button() == BUTTON_LEFT {
+                            let iButtonX: i16 = (bound_to_window_w(event.button_x()) / TILESIZE) as i16;
+                            let iButtonY: i16 = (bound_to_window_h(event.button_y()) / TILESIZE) as i16;
 
                             //Start and doors
                             if iButtonX >= 0 && iButtonX <= 5 && iButtonY == 0 {
@@ -2542,9 +2543,9 @@ pub fn editor_water() -> i32 {
                     }
 
                     T_MOUSEBUTTONDOWN => {
-                        if event.button.button == BUTTON_LEFT {
-                            let iButtonX: i16 = (bound_to_window_w(event.button.x) / TILESIZE) as i16;
-                            let iButtonY: i16 = (bound_to_window_h(event.button.y) / TILESIZE) as i16;
+                        if event.button_button() == BUTTON_LEFT {
+                            let iButtonX: i16 = (bound_to_window_w(event.button_x()) / TILESIZE) as i16;
+                            let iButtonY: i16 = (bound_to_window_h(event.button_y()) / TILESIZE) as i16;
 
                             if iButtonY == 0 {
                                 if iButtonX >= 0 && iButtonX <= 2 {
@@ -2604,9 +2605,9 @@ pub fn editor_background() -> i32 {
                     }
 
                     T_MOUSEBUTTONDOWN => {
-                        if event.button.button == BUTTON_LEFT {
-                            let mut iButtonX: i16 = (bound_to_window_w(event.button.x) / TILESIZE) as i16;
-                            let iButtonY: i16 = (bound_to_window_h(event.button.y) / TILESIZE) as i16;
+                        if event.button_button() == BUTTON_LEFT {
+                            let mut iButtonX: i16 = (bound_to_window_w(event.button_x()) / TILESIZE) as i16;
+                            let iButtonY: i16 = (bound_to_window_h(event.button_y()) / TILESIZE) as i16;
 
                             let iTileStyleOffset: i16 = ((iButtonX / 4) + (iPage * 5)) * WORLD_BACKGROUND_SPRITE_SET_SIZE;
 
@@ -2687,9 +2688,9 @@ pub fn editor_stageforeground() -> i32 {
                     }
 
                     T_MOUSEBUTTONDOWN => {
-                        if event.button.button == BUTTON_LEFT {
-                            let iButtonX: i16 = (bound_to_window_w(event.button.x) / TILESIZE) as i16;
-                            let iButtonY: i16 = (bound_to_window_h(event.button.y) / TILESIZE) as i16;
+                        if event.button_button() == BUTTON_LEFT {
+                            let iButtonX: i16 = (bound_to_window_w(event.button_x()) / TILESIZE) as i16;
+                            let iButtonY: i16 = (bound_to_window_h(event.button_y()) / TILESIZE) as i16;
 
                             if iButtonX >= 0 && iButtonX < 10 {
                                 if iButtonY >= 0 && iButtonY < 10 {
@@ -2747,9 +2748,9 @@ pub fn editor_bridges() -> i32 {
                     }
 
                     T_MOUSEBUTTONDOWN => {
-                        if event.button.button == BUTTON_LEFT {
-                            let iButtonX: i16 = (bound_to_window_w(event.button.x) / TILESIZE) as i16;
-                            let iButtonY: i16 = (bound_to_window_h(event.button.y) / TILESIZE) as i16;
+                        if event.button_button() == BUTTON_LEFT {
+                            let iButtonX: i16 = (bound_to_window_w(event.button_x()) / TILESIZE) as i16;
+                            let iButtonY: i16 = (bound_to_window_h(event.button_y()) / TILESIZE) as i16;
 
                             if iButtonX >= 0 && iButtonX < 4 {
                                 if iButtonY >= 0 && iButtonY < 1 {
@@ -2801,9 +2802,9 @@ pub fn editor_structureforeground() -> i32 {
                     }
 
                     T_MOUSEBUTTONDOWN => {
-                        if event.button.button == BUTTON_LEFT {
-                            let iButtonX: i16 = (bound_to_window_w(event.button.x) / TILESIZE) as i16;
-                            let iButtonY: i16 = (bound_to_window_h(event.button.y) / TILESIZE) as i16;
+                        if event.button_button() == BUTTON_LEFT {
+                            let iButtonX: i16 = (bound_to_window_w(event.button_x()) / TILESIZE) as i16;
+                            let iButtonY: i16 = (bound_to_window_h(event.button_y()) / TILESIZE) as i16;
 
                             if iButtonY >= 0 && iButtonY < 15 {
                                 if iButtonX >= 0 && iButtonX < 12 {
@@ -2862,9 +2863,9 @@ pub fn editor_pathsprite() -> i32 {
                     }
 
                     T_MOUSEBUTTONDOWN => {
-                        if event.button.button == BUTTON_LEFT {
-                            let iButtonX: i16 = (bound_to_window_w(event.button.x) / TILESIZE) as i16;
-                            let iButtonY: i16 = (bound_to_window_h(event.button.y) / TILESIZE) as i16;
+                        if event.button_button() == BUTTON_LEFT {
+                            let iButtonX: i16 = (bound_to_window_w(event.button_x()) / TILESIZE) as i16;
+                            let iButtonY: i16 = (bound_to_window_h(event.button_y()) / TILESIZE) as i16;
 
                             if iButtonX >= 0 && iButtonX < 8 {
                                 if iButtonY >= 0 && iButtonY < 6 {
@@ -2952,10 +2953,10 @@ pub fn editor_vehicles() -> i32 {
                     }
 
                     T_MOUSEBUTTONDOWN => {
-                        let iButtonX: i16 = bound_to_window_w(event.button.x) as i16;
-                        let iButtonY: i16 = bound_to_window_h(event.button.y) as i16;
+                        let iButtonX: i16 = bound_to_window_w(event.button_x()) as i16;
+                        let iButtonY: i16 = bound_to_window_h(event.button_y()) as i16;
 
-                        if event.button.button == BUTTON_LEFT {
+                        if event.button_button() == BUTTON_LEFT {
                             code = mCurrentMenu.mouse_click(iButtonX, iButtonY);
                         }
                     }
@@ -2963,7 +2964,7 @@ pub fn editor_vehicles() -> i32 {
                     _ => {}
                 }
 
-                game_values.playerInput.update(event, 1);
+                game_values.playerInput.update_input(event.input(), 1);
             }
 
             if MENU_CODE_NONE == code {
@@ -3029,9 +3030,9 @@ pub fn editor_path() -> i32 {
                     }
 
                     T_MOUSEBUTTONDOWN => {
-                        if event.button.button == BUTTON_LEFT {
-                            let iButtonX: i16 = (bound_to_window_w(event.button.x) / TILESIZE) as i16;
-                            let iButtonY: i16 = (bound_to_window_h(event.button.y) / TILESIZE) as i16;
+                        if event.button_button() == BUTTON_LEFT {
+                            let iButtonX: i16 = (bound_to_window_w(event.button_x()) / TILESIZE) as i16;
+                            let iButtonY: i16 = (bound_to_window_h(event.button_y()) / TILESIZE) as i16;
 
                             if iButtonX >= 0 && iButtonX <= 15 && iButtonY == 0 {
                                 set_tile = iButtonX as i32 + 1;
@@ -3576,12 +3577,12 @@ pub fn editor_stage() -> i32 {
                     }
 
                     T_MOUSEBUTTONDOWN => {
-                        let iTileX: i16 = (bound_to_window_w(event.button.x) / TILESIZE) as i16;
-                        let iTileY: i16 = (bound_to_window_h(event.button.y) / TILESIZE) as i16;
-                        let iButtonX: i16 = bound_to_window_w(event.button.x) as i16;
-                        let iButtonY: i16 = bound_to_window_h(event.button.y) as i16;
+                        let iTileX: i16 = (bound_to_window_w(event.button_x()) / TILESIZE) as i16;
+                        let iTileY: i16 = (bound_to_window_h(event.button_y()) / TILESIZE) as i16;
+                        let iButtonX: i16 = bound_to_window_w(event.button_x()) as i16;
+                        let iButtonY: i16 = bound_to_window_h(event.button_y()) as i16;
 
-                        if event.button.button == BUTTON_LEFT {
+                        if event.button_button() == BUTTON_LEFT {
                             //Stages
                             if iEditStage == -1 {
                                 if iTileX >= 0 && (iTileX as i32) < g_worldmap.iNumStages as i32 - (iTileY as i32 * 20) && iTileY >= 0 && iTileY <= (g_worldmap.iNumStages - 1) / 20 {
@@ -3628,7 +3629,7 @@ pub fn editor_stage() -> i32 {
                             } else {
                                 code = mCurrentMenu.mouse_click(iButtonX, iButtonY);
                             }
-                        } else if event.button.button == BUTTON_RIGHT {
+                        } else if event.button_button() == BUTTON_RIGHT {
                             if iEditStage == -1 {
                                 if iTileX >= 0 && (iTileX as i32) < g_worldmap.iNumStages as i32 - (iTileY as i32 * 20) && iTileY >= 0 && iTileY <= (g_worldmap.iNumStages - 1) / 20 {
                                     iEditStage = iTileX + (iTileY * 20);
@@ -3647,8 +3648,8 @@ pub fn editor_stage() -> i32 {
                         iStageDisplay = -1;
 
                         if iEditStage == -1 {
-                            let iMouseX: i16 = (bound_to_window_w(event.button.x) / TILESIZE) as i16;
-                            let iMouseY: i16 = (bound_to_window_h(event.button.y) / TILESIZE) as i16;
+                            let iMouseX: i16 = (bound_to_window_w(event.button_x()) / TILESIZE) as i16;
+                            let iMouseY: i16 = (bound_to_window_h(event.button_y()) / TILESIZE) as i16;
 
                             if iMouseX >= 0 && (iMouseX as i32) < g_worldmap.iNumStages as i32 - (iMouseY as i32 * 20) && iMouseY >= 0 && iMouseY <= (g_worldmap.iNumStages - 1) / 20 {
                                 iStageDisplay = iMouseX + (iMouseY * 20);
@@ -3659,7 +3660,7 @@ pub fn editor_stage() -> i32 {
                     _ => {}
                 }
 
-                game_values.playerInput.update(event, 1);
+                game_values.playerInput.update_input(event.input(), 1);
             }
 
             if iEditStage >= 0 {
@@ -4115,7 +4116,7 @@ pub fn dialog(title: &str, instructions: &str, input: &mut String, inputsize: i3
                             }
                         } else {
                             /* I realize the if statement below is long and can be substituted with
-                            the function isalnum(event.key.keysym.sym) but I did it this way because
+                            the function isalnum(event.key_sym()) but I did it this way because
                             isalnum acts funny (ie wrong) when the number pad is pressed. */
                             let isdigit = (b'0' as i32..=b'9' as i32).contains(&sym);
                             if (isdigit || sym == 45 || sym == 32 || sym == 61 || (sym >= 95 && sym <= 122)) && currentChar < (inputsize as u32).wrapping_sub(1) {

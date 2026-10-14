@@ -9,17 +9,6 @@ pub unsafe fn poll(event: *mut SDL_Event) -> i32 {
     sdl2::sys::SDL_PollEvent(event)
 }
 
-/// `SDL_PollEvent` that leaves `*event` as is on an empty queue, as sdl2-compat does. SDL2 writes its poll
-/// sentinel there, and the editors read `event` after their poll loops.
-pub unsafe fn poll_keep_last(event: *mut SDL_Event) -> i32 {
-    let mut polled: SDL_Event = std::mem::zeroed();
-    let result = sdl2::sys::SDL_PollEvent(&mut polled);
-    if result != 0 {
-        *event = polled;
-    }
-    result
-}
-
 /// `SDL_PollEvent`, normalized.
 pub fn poll_input() -> Option<smw_platform::Input> {
     unsafe {
