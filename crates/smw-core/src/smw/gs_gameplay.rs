@@ -2680,6 +2680,7 @@ impl GameplayState {
 impl GameState for GameplayState {
     fn on_enter_state(&mut self) {
         unsafe {
+            sdl2::sys::SDL_ShowCursor(sdl2::sys::SDL_DISABLE as i32);
             self.iCountDownState = 0;
             self.iCountDownTimer = 0;
 

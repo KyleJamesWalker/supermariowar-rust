@@ -26,6 +26,7 @@ const CONTROLLERDEVICEREMAPPED: u32 = 0x655;
 const FINGERDOWN: u32 = 0x700;
 const FINGERUP: u32 = 0x701;
 const FINGERMOTION: u32 = 0x702;
+const USEREVENT: u32 = 0x8000;
 
 pub struct EditorEvent(Input);
 
@@ -70,6 +71,7 @@ impl EditorEvent {
                 MouseEvent::Wheel { .. } => MOUSEWHEEL,
             },
             InputEvent::Quit => QUIT,
+            InputEvent::Tap { .. } => USEREVENT,
             InputEvent::Other(t) => *t,
         }
     }

@@ -164,9 +164,26 @@ pub enum InputEvent {
     Text(String),
     /// The window the event belongs to, then the event.
     Mouse { window: u32, which: u32, event: MouseEvent },
+    /// A menu tap or click, in the game's 640x480 coordinates.
+    Tap { x: i16, y: i16 },
     Quit,
     /// Any other backend event, by the backend's type number. Nothing reads its contents.
     Other(u32),
+}
+
+impl InputEvent {
+    /// The point a menu should treat as tapped: a `Tap`, or a left-button release inside the picture.
+    pub fn tap(&self) -> Option<(i16, i16)> {
+        match *self {
+            InputEvent::Tap { x, y } => Some((x, y)),
+            InputEvent::Mouse { event: MouseEvent::Button { button: 1, down: false, x, y, .. }, .. }
+                if (0..SCREEN_W as i32).contains(&x) && (0..SCREEN_H as i32).contains(&y) =>
+            {
+                Some((x as i16, y as i16))
+            }
+            _ => None,
+        }
+    }
 }
 
 #[cfg(test)]

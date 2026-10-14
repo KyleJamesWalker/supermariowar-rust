@@ -57,6 +57,27 @@ impl MI_PlayerSelect {
     }
 }
 
+/// Steps a player through none, human and CPU, keeping at least two players in the game.
+fn next_control(sel: usize) {
+    game().game_values.playercontrol[sel] += 1;
+    if game().game_values.playercontrol[sel] > 2 {
+        game().game_values.playercontrol[sel] = 0;
+    }
+
+    if game().game_values.playercontrol[sel] == 0 {
+        let mut iCountPlayers = 0;
+        for iPlayer in 0..4usize {
+            if game().game_values.playercontrol[iPlayer] > 0 {
+                iCountPlayers += 1;
+            }
+        }
+
+        if iCountPlayers < 2 {
+            game().game_values.playercontrol[sel] = 1;
+        }
+    }
+}
+
 impl UI_ControlTrait for MI_PlayerSelect {
     crate::impl_ctl!();
 
@@ -110,23 +131,7 @@ impl UI_ControlTrait for MI_PlayerSelect {
                 }
 
                 if out.menu_down().fPressed {
-                    game().game_values.playercontrol[sel] += 1;
-                    if game().game_values.playercontrol[sel] > 2 {
-                        game().game_values.playercontrol[sel] = 0;
-                    }
-
-                    if game().game_values.playercontrol[sel] == 0 {
-                        let mut iCountPlayers = 0;
-                        for iPlayer in 0..4usize {
-                            if game().game_values.playercontrol[iPlayer] > 0 {
-                                iCountPlayers += 1;
-                            }
-                        }
-
-                        if iCountPlayers < 2 {
-                            game().game_values.playercontrol[sel] = 1;
-                        }
-                    }
+                    next_control(sel);
                 }
 
                 if out.menu_select().fPressed || out.menu_cancel().fPressed {
@@ -138,6 +143,31 @@ impl UI_ControlTrait for MI_PlayerSelect {
         }
 
         MENU_CODE_NONE
+    }
+
+    /// Not in upstream: tapping a player's icon selects that player and steps its control, as Down does.
+    fn mouse_click(&mut self, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
+        if self.fDisable {
+            return MENU_CODE_NONE;
+        }
+
+        let (mx, my) = (iMouseX as i32, iMouseY as i32);
+        let (x, y) = (self.m_pos.x as i32, self.m_pos.y as i32);
+        if mx < x || mx >= x + self.iWidth as i32 || my < y || my >= y + 64 {
+            return MENU_CODE_NONE;
+        }
+
+        for iPlayer in 0..4usize {
+            let px = x + self.iPlayerPosition[iPlayer] as i32;
+            if mx >= px && mx < px + 34 && my >= y + 16 && my < y + 48 {
+                self.iSelectedPlayer = iPlayer as i16;
+                self.set_image_position();
+                next_control(iPlayer);
+                break;
+            }
+        }
+
+        MENU_CODE_CLICKED
     }
 
     fn update(&mut self) {

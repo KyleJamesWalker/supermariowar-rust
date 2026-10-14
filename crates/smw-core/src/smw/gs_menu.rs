@@ -1538,6 +1538,7 @@ impl GameState for MenuState {
 
     fn on_enter_state(&mut self) {
         unsafe {
+            sdl2::sys::SDL_ShowCursor(sdl2::sys::SDL_ENABLE as i32);
             self.iUnlockMinigameOptionIndex = 0;
 
             self.iTournamentAIStep = 0;
@@ -1671,6 +1672,8 @@ impl GameState for MenuState {
             //Reset the keys that were down the last frame
             game().game_values.playerInput.clear_pressed_keys(1);
 
+            let mut fGenerateMapThumbs = false;
+
             //handle messages
             #[cfg(target_os = "emscripten")]
             frame_events.clear();
@@ -1708,6 +1711,15 @@ impl GameState for MenuState {
                 }
 
                 game().game_values.playerInput.update_input(&input, 1);
+
+                if let Some((x, y)) = input.event.tap() {
+                    if AppState::Menu == game().game_values.appstate {
+                        let code = self.mCurrentMenu.mouse_click(x, y);
+                        if self.handle_menu_code(code, &mut fGenerateMapThumbs) {
+                            return;
+                        }
+                    }
+                }
             }
 
             //If AI is controlling the tournament menu, select the options
@@ -1753,7 +1765,6 @@ impl GameState for MenuState {
             }
             */
 
-            let mut fGenerateMapThumbs = false;
             if AppState::Menu == game().game_values.appstate {
                 let code = self.mCurrentMenu.send_input(Ptr::from_mut(&mut game().game_values.playerInput));
 

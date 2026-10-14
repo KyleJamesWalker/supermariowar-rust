@@ -8,7 +8,7 @@ pub mod events;
 pub mod input;
 mod video;
 pub use audio::Sdl2Audio;
-pub use video::Sdl2Video;
+pub use video::{button_to_logical, Sdl2Video};
 
 pub struct Sdl2Clock;
 

@@ -36,6 +36,18 @@ unsafe fn create_window(fullscreen: bool) -> *mut SDL_Window {
     window
 }
 
+/// Rescales a mouse button event to the logical viewport, which SDL's renderer only does after event filters run.
+pub unsafe fn button_to_logical(b: &mut SDL_MouseButtonEvent) {
+    let renderer = SDL_GetRenderer(SDL_GetWindowFromID(b.windowID));
+    if renderer.is_null() {
+        return;
+    }
+    let (mut x, mut y) = (0.0f32, 0.0f32);
+    SDL_RenderWindowToLogical(renderer, b.x, b.y, &mut x, &mut y);
+    b.x = x.floor() as i32;
+    b.y = y.floor() as i32;
+}
+
 fn find_preferred_renderer_index() -> i32 {
     -1
 }
