@@ -382,7 +382,7 @@ fn dump_frame(out: &mut impl Write) -> std::io::Result<()> {
         GameplayState::instance().harness_dump(out)?;
     }
 
-    for line in unsafe { sfx::sfx_events.iter().chain(spawn_events.iter()) } {
+    for line in unsafe { game().sfx.sfx_events.iter().chain(spawn_events.iter()) } {
         writeln!(out, "{}", line)?;
     }
 
@@ -400,9 +400,9 @@ pub fn init() {
             RandomNumberGenerator::generator().reseed(h.seed);
             srand(h.seed);
             RandomNumberGenerator::reset_call_count();
-            sfx::sfx_ticks = virtual_ticks;
-            sfx::sfx_ignore_channel_failure = true;
-            sfx::sfx_log_events = true;
+            game().sfx.sfx_ticks = virtual_ticks;
+            game().sfx.sfx_ignore_channel_failure = true;
+            game().sfx.sfx_log_events = true;
         }
 
         h.noLimit = env("SMW_NOLIMIT").is_some();
@@ -430,7 +430,7 @@ pub fn init() {
 
         h.audible = record || env("SMW_AUDIBLE").is_some();
         // Unseeded runs (SMW_NO_RECORD) are live play, so they are audible too.
-        sfx::sfx_audible = h.audible || !h.seeded;
+        game().sfx.sfx_audible = h.audible || !h.seeded;
         if let Some(speed) = env("SMW_REPLAY_SPEED").and_then(|v| v.parse::<f32>().ok()).filter(|v| *v > 0.0) {
             h.speed = speed;
         }
@@ -622,7 +622,7 @@ pub fn frame_end() {
             let _ = out.flush();
             h.dump = Some(out);
         }
-        sfx::sfx_events.clear();
+        game().sfx.sfx_events.clear();
         spawn_events.clear();
         record_markers(h.frame);
 
@@ -644,7 +644,7 @@ pub fn frame_end() {
 
         h.frame += 1;
         if h.maxFrames >= 0 && h.frame as i64 >= h.maxFrames {
-            crate::game::game().game_values.appstate = AppState::Quit;
+            game().game_values.appstate = AppState::Quit;
             h.dump = None;
         }
     }
@@ -1034,7 +1034,7 @@ fn record_frame_start(frame: u32) {
     if r.quit {
         // The recording ends before this frame; frames= excludes it.
         r.quitFrame.get_or_insert(frame);
-        unsafe { crate::game::game().game_values.appstate = AppState::Quit };
+        unsafe { game().game_values.appstate = AppState::Quit };
     }
 }
 
@@ -1177,7 +1177,7 @@ pub fn match_checkpoint() {
 fn marker_state() -> &'static str {
     match state_name() {
         "menu" if MenuState::instance().harness_menu_name() == "world" => "worldmap",
-        "gameplay" if unsafe { crate::game::game().game_values.gamemode.gameover } => "scoreboard",
+        "gameplay" if unsafe { game().game_values.gamemode.gameover } => "scoreboard",
         name => name,
     }
 }

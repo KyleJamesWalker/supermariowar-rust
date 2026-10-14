@@ -80,7 +80,7 @@ pub static mut scorepowerupoffsets: [[i16; 3]; 3] = [[37, 0, 0], [71, 89, 0], [1
 pub fn init_globals() {
     unsafe {
         spotlightManager.init(SpotlightManager::new());
-        crate::common::sfx::musicfinished = musicfinished;
+        game().sfx.musicfinished = game().sfx.musicfinished;
     }
 }
 
@@ -344,7 +344,7 @@ pub fn musicfinished() {
             return;
         }
 
-        if crate::common::sfx::fResumeMusic {
+        if game().sfx.fResumeMusic {
             game().rm.backgroundmusic[3].play(false, false);
         }
     }

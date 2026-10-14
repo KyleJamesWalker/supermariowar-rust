@@ -498,7 +498,7 @@ fn walk(s: &mut Snap, online: bool) {
         }
 
         // Sound commands of this frame so far, which belong to its dump block.
-        s.io(&mut sfx::sfx_events);
+        s.io(&mut game().sfx.sfx_events);
     }
 }
 
@@ -590,7 +590,7 @@ pub fn start_fields() -> String {
 pub fn result_fields() -> String {
     unsafe {
         let gm = game().game_values.gamemode;
-        let scores: Vec<String> = (0..crate::game::game().score_cnt.max(0) as usize).map(|k| crate::game::game().score[k].score.to_string()).collect();
+        let scores: Vec<String> = (0..game().score_cnt.max(0) as usize).map(|k| game().score[k].score.to_string()).collect();
         let mut f = vec![kv("scores", &scores.join(","))];
         if gm.gameover {
             f.push(kv("winner", &if gm.winningteam >= 0 { format!("team{}", gm.winningteam + 1) } else { "tie".to_string() }));

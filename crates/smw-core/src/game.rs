@@ -5,6 +5,7 @@ use crate::common::file_list::{AnnouncerList, FiltersList, GraphicsList, MusicLi
 use crate::common::map::CMap;
 use crate::common::map_list::MapList;
 use crate::common::random_number_generator::RngState;
+use crate::common::sfx::SfxState;
 use crate::common::score::CScore;
 use crate::common::resource_manager::CResourceManager;
 use crate::common::tileset_manager::CTilesetManager;
@@ -38,6 +39,7 @@ pub struct Game {
     pub score: [Ptr<CScore>; 4],
     pub score_cnt: i16,
     pub rng: RngState,
+    pub sfx: SfxState,
 }
 
 impl Game {
@@ -66,6 +68,7 @@ impl Game {
             score: [Ptr::null(); 4],
             score_cnt: 0,
             rng: RngState::new(),
+            sfx: SfxState::new(),
         }
     }
 }
