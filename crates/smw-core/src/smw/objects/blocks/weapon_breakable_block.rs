@@ -1,10 +1,10 @@
 //! Port of src/smw/objects/blocks/WeaponBreakableBlock.cpp
 
+use crate::game::game;
 use crate::common::eyecandy::EC_FallingObject;
 use crate::common::game_values::{game_values, if_sound_on_play};
 use crate::common::gameplay_styles::TeamCollisionStyle;
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::global::g_map;
 use crate::common::global_constants::*;
 use crate::common::io_block::{IO_Block, IO_BlockTrait};
 use crate::common::math::vec2::Vec2s;
@@ -147,8 +147,8 @@ impl CObjectTrait for B_WeaponBreakableBlock {
                 self.iBumpPlayerID = -1;
                 self.dead = true;
                 unsafe {
-                    g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
-                    g_map.update_tile_gap(self.col, self.row);
+                    game().g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
+                    game().g_map.update_tile_gap(self.col, self.row);
                 }
             }
         }

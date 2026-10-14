@@ -1,9 +1,9 @@
 //! Port of src/smw/objects/blocks/FlipBlock.cpp
 
+use crate::game::game;
 use crate::common::eyecandy::EC_FallingObject;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::global::g_map;
 use crate::common::global_constants::*;
 use crate::common::io_block::{IO_Block, IO_BlockTrait};
 use crate::common::math::vec2::Vec2s;
@@ -100,7 +100,7 @@ impl B_FlipBlock {
             }
 
             unsafe {
-                g_map.update_tile_gap(self.col, self.row);
+                game().g_map.update_tile_gap(self.col, self.row);
             }
 
             self.trigger_behavior();
@@ -149,7 +149,7 @@ impl CObjectTrait for B_FlipBlock {
             if self.timer >= 240 {
                 self.reset();
                 unsafe {
-                    g_map.update_tile_gap(self.col, self.row);
+                    game().g_map.update_tile_gap(self.col, self.row);
                 }
 
                 let iBumpPlayerID = self.iBumpPlayerID;
@@ -161,8 +161,8 @@ impl CObjectTrait for B_FlipBlock {
         } else if self.state == 3 {
             self.dead = true;
             unsafe {
-                g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
-                g_map.update_tile_gap(self.col, self.row);
+                game().g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
+                game().g_map.update_tile_gap(self.col, self.row);
             }
         }
     }
@@ -245,7 +245,7 @@ impl IO_BlockTrait for B_FlipBlock {
             }
 
             unsafe {
-                g_map.update_tile_gap(self.col, self.row);
+                game().g_map.update_tile_gap(self.col, self.row);
             }
 
             self.trigger_behavior();
@@ -336,7 +336,7 @@ impl IO_BlockTrait for B_FlipBlock {
             self.frame = self.iw;
 
             unsafe {
-                g_map.update_tile_gap(self.col, self.row);
+                game().g_map.update_tile_gap(self.col, self.row);
             }
         }
     }

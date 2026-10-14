@@ -20,8 +20,8 @@ pub fn load_map_hazards(fPreview: bool) {
         let iPreview: usize = if fPreview { 1 } else { 0 };
 
         //Create objects for all the map hazards
-        for i in 0..g_map.maphazards.len() {
-            let hazard = g_map.maphazards[i].clone();
+        for i in 0..game().g_map.maphazards.len() {
+            let hazard = game().g_map.maphazards[i].clone();
             let pos = Vec2s::new((hazard.ix as i32 * 16) as i16, (hazard.iy as i32 * 16) as i16);
 
             if hazard.itype == 0 {

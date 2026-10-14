@@ -481,7 +481,7 @@ impl GameplayState {
         unsafe {
             for iEyeCandyLayer in 0..3usize {
                 //Clouds
-                if g_map.eyecandy[iEyeCandyLayer] & 1 != 0 {
+                if game().g_map.eyecandy[iEyeCandyLayer] & 1 != 0 {
                     for _i in 0..4 {
                         let mut velx: f32; //speed of cloud, small clouds are slower than big ones
                         let srcy: i16;
@@ -510,7 +510,7 @@ impl GameplayState {
                 }
 
                 //Ghosts
-                if g_map.eyecandy[iEyeCandyLayer] & 2 != 0 {
+                if game().g_map.eyecandy[iEyeCandyLayer] & 2 != 0 {
                     for _i in 0..8 {
                         let iGhostSrcY: i16 = (((RANDOM_INT(3) as i16) as i32) << 5) as i16; //ghost type
                         let mut velx: f32 = ((RANDOM_INT(51) - 25) as i16) as f32 / 10.0f32; //big clouds: -3 - +3 pixel/frame
@@ -536,7 +536,7 @@ impl GameplayState {
                 }
 
                 //Leaves
-                if g_map.eyecandy[iEyeCandyLayer] & 4 != 0 {
+                if game().g_map.eyecandy[iEyeCandyLayer] & 4 != 0 {
                     for _i in 0..15 {
                         let x = RANDOM_INT(App::screenWidth) as f32;
                         let y = RANDOM_INT(App::screenHeight) as f32;
@@ -545,7 +545,7 @@ impl GameplayState {
                 }
 
                 //Snow
-                if g_map.eyecandy[iEyeCandyLayer] & 8 != 0 {
+                if game().g_map.eyecandy[iEyeCandyLayer] & 8 != 0 {
                     for _i in 0..15 {
                         let x = RANDOM_INT(App::screenWidth) as f32;
                         let y = RANDOM_INT(App::screenHeight) as f32;
@@ -557,7 +557,7 @@ impl GameplayState {
                 let iFishWeights: [i16; 8] = [20, 20, 15, 10, 10, 5, 10, 10];
                 let iFishSettings: [[i16; 4]; 8] =
                     [[0, 0, 64, 44], [0, 44, 64, 44], [0, 44, 48, 44], [32, 32, 16, 12], [32, 44, 16, 12], [32, 16, 16, 28], [32, 0, 32, 28], [32, 44, 32, 28]];
-                if g_map.eyecandy[iEyeCandyLayer] & 16 != 0 {
+                if game().g_map.eyecandy[iEyeCandyLayer] & 16 != 0 {
                     for i in 0..8i16 {
                         let mut velx: f32 = ((RANDOM_INT(41) - 20) as i16) as f32 / 10.0f32;
                         velx = if velx < 0.5f32 && velx > -0.5f32 { 1.0f32 } else { velx }; //Keep fish from moving too slowly
@@ -600,7 +600,7 @@ impl GameplayState {
                 }
 
                 //Rain
-                if g_map.eyecandy[iEyeCandyLayer] & 32 != 0 {
+                if game().g_map.eyecandy[iEyeCandyLayer] & 32 != 0 {
                     for _i in 0..20 {
                         let x = RANDOM_INT(App::screenWidth) as f32;
                         let y = RANDOM_INT(App::screenHeight) as f32;
@@ -609,7 +609,7 @@ impl GameplayState {
                 }
 
                 //Bubbles
-                if g_map.eyecandy[iEyeCandyLayer] & 64 != 0 {
+                if game().g_map.eyecandy[iEyeCandyLayer] & 64 != 0 {
                     for _i in 0..10 {
                         let x = RANDOM_INT(App::screenWidth) as f32;
                         let y = RANDOM_INT(App::screenHeight) as f32;
@@ -804,7 +804,7 @@ pub fn clean_dead_non_player_objects() {
 pub fn animate_during_countdown() {
     unsafe {
         //Move platforms
-        g_map.update_platforms();
+        game().g_map.update_platforms();
 
         clean_dead_non_player_objects();
 
@@ -818,7 +818,7 @@ pub fn animate_during_countdown() {
         eyecandy[1].update();
         eyecandy[2].update();
 
-        g_map.update();
+        game().g_map.update();
     }
 }
 
@@ -1394,7 +1394,7 @@ impl GameplayState {
     fn draw_screen_fade(&mut self) {
         unsafe {
             if game_values.screenfadespeed != 0 {
-                g_map.update();
+                game().g_map.update();
                 game_values.screenfade = (game_values.screenfade as i32 + game_values.screenfadespeed as i32) as i16;
 
                 if game_values.screenfade <= 0 {
@@ -1529,7 +1529,7 @@ impl GameplayState {
             rm.spr_backmap[g_iCurrentDrawIndex as usize].draw(0, 0);
 
             //draw back eyecandy behind players
-            g_map.draw_platforms(0);
+            game().g_map.draw_platforms(0);
 
             eyecandy[0].draw();
             noncolcontainer.draw();
@@ -1542,7 +1542,7 @@ impl GameplayState {
 
     fn draw_middle_layer(&mut self) {
         unsafe {
-            g_map.draw_platforms(1);
+            game().g_map.draw_platforms(1);
 
             if !game_values.flags.swapplayers {
                 for i in 0..players.len() {
@@ -1559,21 +1559,21 @@ impl GameplayState {
 
     fn draw_front_layer(&mut self) {
         unsafe {
-            g_map.draw_platforms(2);
+            game().g_map.draw_platforms(2);
 
             if game_values.toplayer {
-                g_map.drawfrontlayer();
+                game().g_map.drawfrontlayer();
             }
 
-            g_map.draw_warp_locks();
+            game().g_map.draw_warp_locks();
 
-            g_map.draw_platforms(3);
+            game().g_map.draw_platforms(3);
 
             objectcontainer[2].draw();
             eyecandy[2].draw();
             game_values.gamemode.draw_foreground();
 
-            g_map.draw_platforms(4);
+            game().g_map.draw_platforms(4);
         }
     }
 
@@ -1931,18 +1931,18 @@ pub fn load_map_objects(fPreview: bool) {
 
         //Clear all the previous switch settings
         for iSwitch in 0..8usize {
-            g_map.switchBlocks[iSwitch].clear();
+            game().g_map.switchBlocks[iSwitch].clear();
         }
 
         //Add blocks (breakable, note, switch, throwable, etc)
         for x in 0..MAPWIDTH as i16 {
             for y in 0..MAPHEIGHT as i16 {
                 let (xu, yu) = (x as usize, y as usize);
-                let typeId: i16 = g_map.objectdata[xu][yu].iType;
-                let objdata = g_map.objectdata[xu][yu];
-                let switches = g_map.iSwitches;
+                let typeId: i16 = game().g_map.objectdata[xu][yu].iType;
+                let objdata = game().g_map.objectdata[xu][yu];
+                let switches = game().g_map.iSwitches;
                 let mut block = spawn_map_block(typeId, Vec2s::new((x as i32 * 32) as i16, (y as i32 * 32) as i16), &objdata, &switches);
-                g_map.blockdata[xu][yu] = block;
+                game().g_map.blockdata[xu][yu] = block;
 
                 if !block.is_null() {
                     noncolcontainer.add_dyn(block.as_object_ptr());
@@ -1957,7 +1957,7 @@ pub fn load_map_objects(fPreview: bool) {
                     | MapBlock_SwitchBlockGreen
                     | MapBlock_SwitchBlockYellow
                     | MapBlock_SwitchBlockBlue => {
-                        g_map.switchBlocks[(typeId as i32 - MapBlock_SwitchToggleRed) as usize].push(block);
+                        game().g_map.switchBlocks[(typeId as i32 - MapBlock_SwitchToggleRed) as usize].push(block);
                     }
                     _ => {}
                 }
@@ -1975,7 +1975,7 @@ pub fn load_map_objects(fPreview: bool) {
         let mut fBoxHasCoin: Option<Vec<bool>> = None;
 
         if game_values.gamemode.gamemode == game_mode_boxes_minigame {
-            for item in g_map.mapitems.iter() {
+            for item in game().g_map.mapitems.iter() {
                 if item.itype == 5 {
                     iThrowBoxCount += 1;
                 }
@@ -2009,9 +2009,9 @@ pub fn load_map_objects(fPreview: bool) {
 
         //Add map objects like springs, shoes and spikes
         let mut iAddThrowBoxIndex: i16 = 0;
-        let nItems = g_map.mapitems.len();
+        let nItems = game().g_map.mapitems.len();
         for iMapItem in 0..nItems {
-            let item = g_map.mapitems[iMapItem];
+            let item = game().g_map.mapitems[iMapItem];
             let iType: i16 = item.itype as i16;
             let pos = Vec2s::new((item.ix as i32 * 32) as i16, (item.iy as i32 * 32) as i16);
 
@@ -2067,7 +2067,7 @@ pub fn load_map_objects(fPreview: bool) {
         drop(fBoxHasCoin);
 
         //Set all the 1x1 gaps up so players can run across them
-        g_map.update_all_tile_gaps();
+        game().g_map.update_all_tile_gaps();
     }
 }
 
@@ -2092,8 +2092,8 @@ pub fn clean_up() {
         objectcontainer[2].clean();
 
         load_map_objects(true);
-        g_map.clear_warp_locks();
-        g_map.reset_platforms();
+        game().g_map.clear_warp_locks();
+        game().g_map.reset_platforms();
 
         //Stop all game sounds
         sfx_stopallsounds();
@@ -2322,7 +2322,7 @@ pub fn play_music() {
         if !rm.backgroundmusic[0].is_playing() && !rm.sfx_invinciblemusic.is_playing() && !rm.sfx_timewarning.is_playing() && !game_values.gamemode.gameover {
             if game_values.playnextmusic {
                 let mapname = game().maplist.current_shortmapname().to_string();
-                game().musiclist.set_next_music(music_category(g_map.musicCategoryID), &mapname, &g_map.szBackgroundFile);
+                game().musiclist.set_next_music(music_category(game().g_map.musicCategoryID), &mapname, &game().g_map.szBackgroundFile);
                 let path = game().musiclist.current_music().clone();
                 rm.backgroundmusic[0] = load_music(&path);
             }
@@ -2340,7 +2340,7 @@ pub fn play_next_music_track() {
 
         rm.backgroundmusic[0].stop();
         let mapname = game().maplist.current_shortmapname().to_string();
-        game().musiclist.set_next_music(music_category(g_map.musicCategoryID), &mapname, &g_map.szBackgroundFile);
+        game().musiclist.set_next_music(music_category(game().g_map.musicCategoryID), &mapname, &game().g_map.szBackgroundFile);
         let path = game().musiclist.current_music().clone();
         rm.backgroundmusic[0] = load_music(&path);
         rm.backgroundmusic[0].play(game_values.playnextmusic, false);
@@ -2542,7 +2542,7 @@ pub fn start_gameplay() {
         game_values.appstate = AppState::Game;
 
         if game_values.music {
-            game().musiclist.set_random_music(music_category(g_map.musicCategoryID), "", "");
+            game().musiclist.set_random_music(music_category(game().g_map.musicCategoryID), "", "");
             let path = game().musiclist.current_music().clone();
             rm.backgroundmusic[0] = load_music(&path);
             rm.backgroundmusic[0].play(game_values.playnextmusic, false);
@@ -2620,7 +2620,7 @@ impl GameplayState {
             }
 
             //Move platforms
-            g_map.update_platforms();
+            game().g_map.update_platforms();
 
             game_values.flags.playskidsound = false;
             game_values.flags.playinvinciblesound = false;
@@ -2671,7 +2671,7 @@ impl GameplayState {
                 }
             }
 
-            g_map.update();
+            game().g_map.update();
 
             update_screen_shake();
 

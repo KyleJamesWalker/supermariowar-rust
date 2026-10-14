@@ -62,7 +62,7 @@ impl CO_PhantoKey {
         let mut y: i16 = 0;
         let mut iAttempts: i16 = 10;
         let (w, h) = (self.collisionWidth, self.collisionHeight);
-        while !unsafe { g_map.findspawnpoint(5, &mut x, &mut y, w, h, false) } && {
+        while !unsafe { game().g_map.findspawnpoint(5, &mut x, &mut y, w, h, false) } && {
             let t = iAttempts;
             iAttempts -= 1;
             t > 0

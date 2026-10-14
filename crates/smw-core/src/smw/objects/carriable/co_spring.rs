@@ -146,7 +146,7 @@ pub fn co_spring_place<T: CO_SpringTrait + ?Sized>(this: &mut T) {
         let mut iAttempts: i16 = 10;
         let (mut ix, mut iy) = (o.ix, o.iy);
         let (w, h) = (o.collisionWidth, o.collisionHeight);
-        while !unsafe { g_map.findspawnpoint(5, &mut ix, &mut iy, w, h, false) } && {
+        while !unsafe { game().g_map.findspawnpoint(5, &mut ix, &mut iy, w, h, false) } && {
             let t = iAttempts;
             iAttempts -= 1;
             t > 0

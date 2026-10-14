@@ -395,8 +395,8 @@ pub fn inner_main() {
 
         rm = Ptr::new_box(CResourceManager::new());
 
-        g_map = Ptr::from_box(CMap::new());
-        g_tilesetmanager = Ptr::new_box(CTilesetManager::new(&convert_path("gfx/Classic/tilesets")));
+        game().g_map = Ptr::from_box(CMap::new());
+        game().g_tilesetmanager = Ptr::new_box(CTilesetManager::new(&convert_path("gfx/Classic/tilesets")));
         game().filterslist = Ptr::new_box(FiltersList::new());
         game().maplist = Ptr::new_box(MapList::new(true));
         game().menugraphicspacklist = Ptr::new_box(GraphicsList::new());
@@ -3075,8 +3075,8 @@ pub fn DisplayStageDetails(fForce: bool, iStageId: i16, mut iMouseX: i16, mut iM
 
                 if game().maplist.findexact(&ts.pszMapFile, false) {
                     let file = game().maplist.current_filename().to_string();
-                    g_map.load_map(&file, read_type_preview);
-                    sMapThumbnail = g_map.create_thumbnail_surface(true);
+                    game().g_map.load_map(&file, read_type_preview);
+                    sMapThumbnail = game().g_map.create_thumbnail_surface(true);
                 } else {
                     //otherwise show a unknown map icon
                     sMapThumbnail = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_mapnotfound.png")).without_color_key().create();

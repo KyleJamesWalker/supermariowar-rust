@@ -86,7 +86,7 @@ impl MI_MapPreview {
             objectcontainer[1].update();
             objectcontainer[1].clean_dead_objects();
 
-            g_map.update_platforms();
+            game().g_map.update_platforms();
         }
     }
 
@@ -110,11 +110,11 @@ impl MI_MapPreview {
 
             self.surfaceMapBackground.draw_to(blitdest, &self.rectDst);
 
-            g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 0);
+            game().g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 0);
 
             self.surfaceMapBlockLayer.draw_to(blitdest, &self.rectDst);
 
-            g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 1);
+            game().g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 1);
 
             //Draw map hazards
             let (ox, oy) = (self.rectDst.x as i16, self.rectDst.y as i16);
@@ -134,14 +134,14 @@ impl MI_MapPreview {
                 }
             }
 
-            g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 2);
+            game().g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 2);
 
             if game_values.toplayer {
                 self.surfaceMapForeground.draw_to(blitdest, &self.rectDst);
             }
 
-            g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 3);
-            g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 4);
+            game().g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 3);
+            game().g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 4);
         }
     }
 
@@ -156,25 +156,25 @@ impl MI_MapPreview {
 
     pub fn load_map(&mut self, szMapPath: &str) {
         unsafe {
-            g_map.load_map(szMapPath, read_type_preview);
+            game().g_map.load_map(szMapPath, read_type_preview);
             small_delay(); //Sleeps to help the music from skipping
 
             load_current_map_background();
             small_delay();
 
-            g_map.pre_draw_preview_background_spr(&rm.spr_background, self.surfaceMapBackground.get_surface(), false);
+            game().g_map.pre_draw_preview_background_spr(&rm.spr_background, self.surfaceMapBackground.get_surface(), false);
             small_delay();
 
-            g_map.pre_draw_preview_blocks(self.surfaceMapBlockLayer.get_surface(), false);
+            game().g_map.pre_draw_preview_blocks(self.surfaceMapBlockLayer.get_surface(), false);
             small_delay();
 
-            g_map.pre_draw_preview_map_items(self.surfaceMapBackground.get_surface(), false);
+            game().g_map.pre_draw_preview_map_items(self.surfaceMapBackground.get_surface(), false);
             small_delay();
 
-            g_map.pre_draw_preview_foreground(self.surfaceMapForeground.get_surface(), false);
+            game().g_map.pre_draw_preview_foreground(self.surfaceMapForeground.get_surface(), false);
             small_delay();
 
-            g_map.pre_draw_preview_warps(if game_values.toplayer { self.surfaceMapForeground.get_surface() } else { self.surfaceMapBackground.get_surface() }, false);
+            game().g_map.pre_draw_preview_warps(if game_values.toplayer { self.surfaceMapForeground.get_surface() } else { self.surfaceMapBackground.get_surface() }, false);
             small_delay();
 
             load_map_hazards(true);

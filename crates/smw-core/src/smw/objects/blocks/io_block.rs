@@ -1,9 +1,9 @@
 //! Port of src/smw/objects/blocks/IO_Block.cpp
 
+use crate::game::game;
 use crate::common::game::App;
 use crate::common::game_values::{game_values, if_sound_on_play};
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::global::g_map;
 use crate::common::global_constants::*;
 use crate::common::io_block::{IO_Block, IO_BlockTrait};
 use crate::common::math::vec2::Vec2s;
@@ -71,7 +71,7 @@ pub fn io_block_update<T: IO_BlockTrait + ?Sized>(this: &mut T) {
                 this.reset();
 
                 let b = this.block();
-                g_map.update_tile_gap(b.col, b.row);
+                game().g_map.update_tile_gap(b.col, b.row);
             }
         }
     }

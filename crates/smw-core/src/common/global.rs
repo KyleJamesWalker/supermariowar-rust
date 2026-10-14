@@ -24,8 +24,6 @@ use crate::globals::{Global, Ptr};
 use sdl2::sys::SDL_Joystick;
 
 pub static mut rm: Ptr<crate::common::resource_manager::CResourceManager> = Ptr::null();
-pub static mut g_map: Ptr<crate::common::map::CMap> = Ptr::null();
-pub static mut g_tilesetmanager: Ptr<crate::common::tileset_manager::CTilesetManager> = Ptr::null();
 
 pub static g_szMusicCategoryNames: [&str; crate::common::global_constants::MAXMUSICCATEGORY as usize] =
     ["Land", "Underground", "Underwater", "Castle", "Platforms", "Ghost", "Bonus", "Battle", "Desert", "Clouds", "Snow"];
@@ -35,7 +33,7 @@ pub fn load_current_map_background() {
     use crate::common::path::{concat, convert_path_pack, file_exists};
     unsafe {
         let pack = game().gamegraphicspacklist.current_path().to_string_lossy().into_owned();
-        let mut path = concat("gfx/packs/backgrounds/", &g_map.szBackgroundFile);
+        let mut path = concat("gfx/packs/backgrounds/", &game().g_map.szBackgroundFile);
         path = convert_path_pack(&path, &pack);
 
         if !file_exists(&path) {

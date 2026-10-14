@@ -415,7 +415,7 @@ fn walk(s: &mut Snap, online: bool) {
         map = local_path(&map);
         if s.load {
             game().maplist.set_current(map_index);
-            g_map.load_map(&data_path(&map), crate::common::map::read_type_full);
+            game().g_map.load_map(&data_path(&map), crate::common::map::read_type_full);
             note_match_map(&map);
             crate::common::global::load_current_map_background();
         }

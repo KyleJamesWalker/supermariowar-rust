@@ -275,15 +275,15 @@ pub fn mo_walking_enemy_update<T: MO_WalkingEnemyTrait + ?Sized>(this: &mut T) {
                     probeCenterX = (probeCenterX as i32 / TILESIZE) as i16;
                     probeY = (probeY as i32 / TILESIZE) as i16;
 
-                    let mut frontBlock = g_map.block(probeFrontX, probeY);
-                    let mut centerBlock = g_map.block(probeCenterX, probeY);
+                    let mut frontBlock = game().g_map.block(probeFrontX, probeY);
+                    let mut centerBlock = game().g_map.block(probeCenterX, probeY);
 
                     let fFoundFrontBlock = !frontBlock.is_null() && !frontBlock.is_transparent() && !frontBlock.is_hidden();
                     let fFoundCenterBlock = !centerBlock.is_null() && !centerBlock.is_transparent() && !centerBlock.is_hidden();
 
                     if !fFoundFrontBlock && !fFoundCenterBlock {
-                        let frontTile: i32 = g_map.map(probeFrontX as i32, probeY as i32);
-                        let centerTile: i32 = g_map.map(probeCenterX as i32, probeY as i32);
+                        let frontTile: i32 = game().g_map.map(probeFrontX as i32, probeY as i32);
+                        let centerTile: i32 = game().g_map.map(probeCenterX as i32, probeY as i32);
 
                         let fFrontGap = (frontTile & tile_flag_super_death_top) != 0 || ((frontTile & tile_flag_solid) == 0 && (frontTile & tile_flag_solid_on_top) == 0);
                         let fCenterGap = (centerTile & tile_flag_super_death_top) != 0 || ((centerTile & tile_flag_solid) == 0 && (centerTile & tile_flag_solid_on_top) == 0);
@@ -437,7 +437,7 @@ pub fn mo_walking_enemy_place(this: &mut MO_WalkingEnemy) {
     let collisionHeight = this.collisionHeight;
     let mut iAttempts: i16 = 10;
     unsafe {
-        while !g_map.findspawnpoint(5, &mut ix, &mut iy, collisionWidth, collisionHeight, false) && {
+        while !game().g_map.findspawnpoint(5, &mut ix, &mut iy, collisionWidth, collisionHeight, false) && {
             let a = iAttempts;
             iAttempts -= 1;
             a > 0

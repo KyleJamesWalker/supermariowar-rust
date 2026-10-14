@@ -184,7 +184,7 @@ pub fn create_globals() {
         // this instance will contain the other relevant objects
         rm = Ptr::new_box(CResourceManager::new());
 
-        g_map = Ptr::from_box(CMap::new());
+        game().g_map = Ptr::from_box(CMap::new());
         game().filterslist = Ptr::new_box(FiltersList::new());
         game().maplist = Ptr::new_box(MapList::new(false));
 

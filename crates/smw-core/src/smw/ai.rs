@@ -230,18 +230,18 @@ unsafe fn cmap_byte(off: i32) -> u8 {
     if (CMAP_OFF_MAPDATA..CMAP_OFF_MAPDATA + cells * MAPLAYERS * 6).contains(&off) {
         let rel = off - CMAP_OFF_MAPDATA;
         let e = rel / 6;
-        let t = &g_map.mapdata[(e / (MAPHEIGHT * MAPLAYERS)) as usize][((e / MAPLAYERS) % MAPHEIGHT) as usize][(e % MAPLAYERS) as usize];
+        let t = &game().g_map.mapdata[(e / (MAPHEIGHT * MAPLAYERS)) as usize][((e / MAPLAYERS) % MAPHEIGHT) as usize][(e % MAPLAYERS) as usize];
         let v = [t.iID, t.iCol, t.iRow][((rel % 6) / 2) as usize];
         return v.to_le_bytes()[(rel % 2) as usize];
     }
     if (CMAP_OFF_MAPDATATOP..CMAP_OFF_MAPDATATOP + cells).contains(&off) {
         let e = off - CMAP_OFF_MAPDATATOP;
-        return g_map.mapdatatop[(e / MAPHEIGHT) as usize][(e % MAPHEIGHT) as usize].0;
+        return game().g_map.mapdatatop[(e / MAPHEIGHT) as usize][(e % MAPHEIGHT) as usize].0;
     }
     if (CMAP_OFF_OBJECTDATA..CMAP_OFF_OBJECTDATA + cells * CMAP_SIZEOF_MAPBLOCK).contains(&off) {
         let rel = off - CMAP_OFF_OBJECTDATA;
         let e = rel / CMAP_SIZEOF_MAPBLOCK;
-        let b = &g_map.objectdata[(e / MAPHEIGHT) as usize][(e % MAPHEIGHT) as usize];
+        let b = &game().g_map.objectdata[(e / MAPHEIGHT) as usize][(e % MAPHEIGHT) as usize];
         let r = rel % CMAP_SIZEOF_MAPBLOCK;
         return match r {
             0..=1 => b.iType.to_le_bytes()[r as usize],
@@ -252,12 +252,12 @@ unsafe fn cmap_byte(off: i32) -> u8 {
     }
     if (CMAP_OFF_NOSPAWN..CMAP_OFF_NOSPAWN + NUMSPAWNAREATYPES * cells).contains(&off) {
         let rel = off - CMAP_OFF_NOSPAWN;
-        return g_map.nospawn[(rel / cells) as usize][((rel % cells) / MAPHEIGHT) as usize][(rel % MAPHEIGHT) as usize] as u8;
+        return game().g_map.nospawn[(rel / cells) as usize][((rel % cells) / MAPHEIGHT) as usize][(rel % MAPHEIGHT) as usize] as u8;
     }
     if (CMAP_OFF_WARPDATA..CMAP_OFF_NUMWARPEXITS).contains(&off) {
         let rel = off - CMAP_OFF_WARPDATA;
         let e = rel / 8;
-        let w = &g_map.warpdata[(e / MAPHEIGHT) as usize][(e % MAPHEIGHT) as usize];
+        let w = &game().g_map.warpdata[(e / MAPHEIGHT) as usize][(e % MAPHEIGHT) as usize];
         let r = (rel % 8) as usize;
         return match r {
             0..=3 => (w.direction as i32).to_le_bytes()[r],
@@ -267,11 +267,11 @@ unsafe fn cmap_byte(off: i32) -> u8 {
     }
     if (CMAP_OFF_NUMWARPEXITS..CMAP_OFF_WARPEXITS).contains(&off) {
         let r = (off - CMAP_OFF_NUMWARPEXITS) as usize;
-        return if r < 2 { g_map.numwarpexits.to_le_bytes()[r] } else { 0 };
+        return if r < 2 { game().g_map.numwarpexits.to_le_bytes()[r] } else { 0 };
     }
     if (CMAP_OFF_WARPEXITS..CMAP_OFF_WARPLOCKTIMER).contains(&off) {
         let rel = off - CMAP_OFF_WARPEXITS;
-        let x = &g_map.warpexits[(rel / CMAP_SIZEOF_WARPEXIT) as usize];
+        let x = &game().g_map.warpexits[(rel / CMAP_SIZEOF_WARPEXIT) as usize];
         let r = (rel % CMAP_SIZEOF_WARPEXIT) as usize;
         if r < 4 {
             return (x.direction as i32).to_le_bytes()[r];
@@ -281,10 +281,10 @@ unsafe fn cmap_byte(off: i32) -> u8 {
     }
     if (CMAP_OFF_WARPLOCKTIMER..CMAP_OFF_WARPLOCKED).contains(&off) {
         let rel = (off - CMAP_OFF_WARPLOCKTIMER) as usize;
-        return g_map.warplocktimer[rel / 2].to_le_bytes()[rel % 2];
+        return game().g_map.warplocktimer[rel / 2].to_le_bytes()[rel % 2];
     }
     if (CMAP_OFF_WARPLOCKED..CMAP_OFF_MAXCONNECTION).contains(&off) {
-        return g_map.warplocked[(off - CMAP_OFF_WARPLOCKED) as usize] as u8;
+        return game().g_map.warplocked[(off - CMAP_OFF_WARPLOCKED) as usize] as u8;
     }
     panic!("ai: C++ out-of-bounds CMap read at offset {} is not modelled", off);
 }
@@ -300,7 +300,7 @@ unsafe fn cmap_i32(off: i32) -> i32 {
 /// `g_map->map(x, y)`, including the C++ out-of-bounds reads.
 unsafe fn ai_map(x: i32, y: i32) -> i32 {
     if in_map(x, y) {
-        return g_map.map(x, y);
+        return game().g_map.map(x, y);
     }
     tile_to_flags(TileType(cmap_byte(CMAP_OFF_MAPDATATOP + x * MAPHEIGHT + y))) as i32
 }
@@ -308,7 +308,7 @@ unsafe fn ai_map(x: i32, y: i32) -> i32 {
 /// `g_map->block(x, y) != NULL`, including the C++ out-of-bounds reads.
 unsafe fn ai_block_nonnull(x: i16, y: i16) -> bool {
     if in_map(x as i32, y as i32) {
-        return !g_map.block(x, y).is_null();
+        return !game().g_map.block(x, y).is_null();
     }
     let off = CMAP_OFF_BLOCKDATA + (x as i32 * MAPHEIGHT + y as i32) * 8;
     (0..8).any(|i| cmap_byte(off + i) != 0)
@@ -317,7 +317,7 @@ unsafe fn ai_block_nonnull(x: i16, y: i16) -> bool {
 /// `&warpdata[x][y]` as (direction, connection, id), including the C++ out-of-bounds reads.
 unsafe fn ai_warp(x: i16, y: i16) -> (i32, i16, i16) {
     if in_map(x as i32, y as i32) {
-        let w = &g_map.warpdata[x as usize][y as usize];
+        let w = &game().g_map.warpdata[x as usize][y as usize];
         return (w.direction as i32, w.connection, w.id);
     }
     let off = CMAP_OFF_WARPDATA + (x as i32 * MAPHEIGHT + y as i32) * 8;
@@ -327,19 +327,19 @@ unsafe fn ai_warp(x: i16, y: i16) -> (i32, i16, i16) {
 /// `g_map->checkforwarp(x1, x2, y, 2)`, including the C++ out-of-bounds reads.
 unsafe fn ai_checkforwarp_up(x1: i16, x2: i16, y: i16) -> bool {
     if in_map(x1 as i32, y as i32) && in_map(x2 as i32, y as i32) {
-        return g_map.checkforwarp(x1, x2, y, 2);
+        return game().g_map.checkforwarp(x1, x2, y, 2);
     }
     let w1 = ai_warp(x1, y);
     let w2 = ai_warp(x2, y);
     if !(w1.0 == w2.0 && w1.2 == w2.2 && w1.0 == 2) {
         return false;
     }
-    let locked = if (0..10).contains(&w1.1) { g_map.warplocked[w1.1 as usize] as u8 } else { cmap_byte(CMAP_OFF_WARPLOCKED + w1.1 as i32) };
+    let locked = if (0..10).contains(&w1.1) { game().g_map.warplocked[w1.1 as usize] as u8 } else { cmap_byte(CMAP_OFF_WARPLOCKED + w1.1 as i32) };
     if locked != 0 {
         return false;
     }
     let locktimer = if (0..32).contains(&w1.2) {
-        g_map.warpexits[w1.2 as usize].locktimer
+        game().g_map.warpexits[w1.2 as usize].locktimer
     } else {
         cmap_i16(CMAP_OFF_WARPEXITS + w1.2 as i32 * CMAP_SIZEOF_WARPEXIT + 22)
     };
@@ -1447,10 +1447,10 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
 
             //Look through all platforms and see if we are hitting solid or death tiles in them
             let mut iPlatform: i16 = 0;
-            while (iPlatform as usize) < g_map.platforms.len() {
-                let lefttile: i32 = g_map.platforms[iPlatform as usize].get_tile_type_from_coord(ix, ((iDeathY as i32) << 5) as i16);
+            while (iPlatform as usize) < game().g_map.platforms.len() {
+                let lefttile: i32 = game().g_map.platforms[iPlatform as usize].get_tile_type_from_coord(ix, ((iDeathY as i32) << 5) as i16);
                 let righttile: i32 =
-                    g_map.platforms[iPlatform as usize].get_tile_type_from_coord((ix32 + PW) as i16, ((iDeathY as i32) << 5) as i16);
+                    game().g_map.platforms[iPlatform as usize].get_tile_type_from_coord((ix32 + PW) as i16, ((iDeathY as i32) << 5) as i16);
 
                 let fDeathTileUnderPlayer2 = ((lefttile & tile_flag_death_on_top) != 0 && (righttile & tile_flag_death_on_top) != 0)
                     || ((lefttile & tile_flag_death_on_top) != 0 && (righttile & tile_flag_solid) == 0)

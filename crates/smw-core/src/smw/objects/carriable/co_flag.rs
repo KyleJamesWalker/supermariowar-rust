@@ -85,7 +85,7 @@ impl CO_Flag {
             let mut iAttempts: i16 = 10;
             let (mut ix, mut iy) = (self.ix, self.iy);
             let (w, h) = (self.collisionWidth, self.collisionHeight);
-            while !unsafe { g_map.findspawnpoint(5, &mut ix, &mut iy, w, h, false) } && {
+            while !unsafe { game().g_map.findspawnpoint(5, &mut ix, &mut iy, w, h, false) } && {
                 let t = iAttempts;
                 iAttempts -= 1;
                 t > 0

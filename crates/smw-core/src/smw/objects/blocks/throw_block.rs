@@ -1,9 +1,9 @@
 //! Port of src/smw/objects/blocks/ThrowBlock.cpp
 
+use crate::game::game;
 use crate::common::eyecandy::EC_FallingObject;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::global::g_map;
 use crate::common::global_constants::*;
 use crate::common::io_block::{IO_Block, IO_BlockTrait};
 use crate::common::math::vec2::Vec2s;
@@ -57,8 +57,8 @@ impl B_ThrowBlock {
             let item: Ptr<dyn MO_CarriedObjectTrait> = Ptr::from_mut(block.get() as &mut dyn MO_CarriedObjectTrait);
             if player.accept_item(item) {
                 self.dead = true;
-                g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
-                g_map.update_tile_gap(self.col, self.row);
+                game().g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
+                game().g_map.update_tile_gap(self.col, self.row);
 
                 block.owner = player;
                 block.iPlayerID = player.globalID;
@@ -172,8 +172,8 @@ impl IO_BlockTrait for B_ThrowBlock {
     fn trigger_behavior(&mut self) {
         unsafe {
             self.dead = true;
-            g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
-            g_map.update_tile_gap(self.col, self.row);
+            game().g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
+            game().g_map.update_tile_gap(self.col, self.row);
 
             let srcY = (self.iType as i32 * 16) as i16;
             let spr = Ptr::from_mut(&mut rm.spr_brokenblueblock);

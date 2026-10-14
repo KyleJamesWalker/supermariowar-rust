@@ -96,9 +96,9 @@ impl OMO_RaceGoal {
         let mut y: i16 = 0;
 
         unsafe {
-            if self.goalID < g_map.iNumRaceGoals {
-                x = g_map.racegoallocations[self.goalID as usize].x;
-                y = g_map.racegoallocations[self.goalID as usize].y;
+            if self.goalID < game().g_map.iNumRaceGoals {
+                x = game().g_map.racegoallocations[self.goalID as usize].x;
+                y = game().g_map.racegoallocations[self.goalID as usize].y;
             } else {
                 let mut tries: i16 = 0;
                 loop {

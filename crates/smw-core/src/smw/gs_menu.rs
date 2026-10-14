@@ -885,8 +885,8 @@ impl MenuState {
                 game_values.singleplayermode = -1;
 
                 if game_values.music {
-                    let category = MusicCategory::ALL[g_map.musicCategoryID as usize];
-                    let background = g_map.szBackgroundFile.clone();
+                    let category = MusicCategory::ALL[game().g_map.musicCategoryID as usize];
+                    let background = game().g_map.szBackgroundFile.clone();
                     game().musiclist.set_random_music(category, &sShortMapName, &background);
                     rm.backgroundmusic[0] = sfxMusic::from_file(game().musiclist.current_music()).unwrap_or_else(|e| std::panic::panic_any(e));
                     rm.backgroundmusic[0].play(game_values.playnextmusic, false);
@@ -922,7 +922,7 @@ pub fn describe_net_game_mode_settings() -> Vec<String> {
 
 /// Loads the map a match is played on; replay checkpoints (smw/checkpoint.rs) note its file.
 fn load_match_map(path: &str) {
-    unsafe { g_map.load_map(path, read_type_full) };
+    unsafe { game().g_map.load_map(path, read_type_full) };
     harness::note_match_map(path);
 }
 
@@ -933,13 +933,13 @@ pub fn enter_gameplay_tail() {
         game_values.appstate = AppState::Game;
         println!("  GS_GAME");
 
-        g_map.predrawbackground(&rm.spr_background, &rm.spr_backmap[0]);
-        g_map.predrawforeground(&rm.spr_frontmap[0]);
+        game().g_map.predrawbackground(&rm.spr_background, &rm.spr_backmap[0]);
+        game().g_map.predrawforeground(&rm.spr_frontmap[0]);
 
-        g_map.predrawbackground(&rm.spr_background, &rm.spr_backmap[1]);
-        g_map.predrawforeground(&rm.spr_frontmap[1]);
+        game().g_map.predrawbackground(&rm.spr_background, &rm.spr_backmap[1]);
+        game().g_map.predrawforeground(&rm.spr_frontmap[1]);
 
-        g_map.setup_animated_tiles();
+        game().g_map.setup_animated_tiles();
         crate::smw::gs_gameplay::load_map_objects(false);
 
         GameStateManager::instance().change_state_to(Ptr::from_mut(GameplayState::instance() as &mut dyn GameState));
@@ -1858,8 +1858,8 @@ impl GameState for MenuState {
                     szThumbnail += &get_name_from_file_name(&filename, false);
                     szThumbnail += ".png";
 
-                    g_map.load_map(&filename, read_type_preview);
-                    g_map.save_thumbnail(&convert_path(&szThumbnail), false);
+                    game().g_map.load_map(&filename, read_type_preview);
+                    game().g_map.save_thumbnail(&convert_path(&szThumbnail), false);
 
                     itr += 1;
                 }

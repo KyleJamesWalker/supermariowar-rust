@@ -290,7 +290,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
         o.iHorizontalPlatformCollision = -1;
         o.iVerticalPlatformCollision = -1;
 
-        g_map.moving_platform_collision_object(o);
+        game().g_map.moving_platform_collision_object(o);
 
         o.fy = fTempY;
 
@@ -333,8 +333,8 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                     tx = (((o.fx as i16) as i32 + o.collisionWidth as i32) / TILESIZE) as i16;
                 }
 
-                let topblock = g_map.block(tx, ty);
-                let bottomblock = g_map.block(tx, ty2);
+                let topblock = game().g_map.block(tx, ty);
+                let bottomblock = game().g_map.block(tx, ty2);
 
                 let fTopBlockSolid = !topblock.is_null() && !topblock.get().is_transparent() && !topblock.get().is_hidden();
                 let fBottomBlockSolid = !bottomblock.is_null() && !bottomblock.get().is_transparent() && !bottomblock.get().is_hidden();
@@ -369,7 +369,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
 
                         o.side_bounce(true);
                     }
-                } else if (g_map.map(tx as i32, ty as i32) & tile_flag_solid) != 0 || (g_map.map(tx as i32, ty2 as i32) & tile_flag_solid) != 0 {
+                } else if (game().g_map.map(tx as i32, ty as i32) & tile_flag_solid) != 0 || (game().g_map.map(tx as i32, ty2 as i32) & tile_flag_solid) != 0 {
                     // collision on the right side.
 
                     if o.iHorizontalPlatformCollision == 3 {
@@ -399,8 +399,8 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                     tx = 0;
                 }
 
-                let topblock = g_map.block(tx, ty);
-                let bottomblock = g_map.block(tx, ty2);
+                let topblock = game().g_map.block(tx, ty);
+                let bottomblock = game().g_map.block(tx, ty2);
 
                 let fTopBlockSolid = !topblock.is_null() && !topblock.get().is_transparent() && !topblock.get().is_hidden();
                 let fBottomBlockSolid = !bottomblock.is_null() && !bottomblock.get().is_transparent() && !bottomblock.get().is_hidden();
@@ -435,7 +435,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
 
                         o.side_bounce(false);
                     }
-                } else if (g_map.map(tx as i32, ty as i32) & tile_flag_solid) != 0 || (g_map.map(tx as i32, ty2 as i32) & tile_flag_solid) != 0 {
+                } else if (game().g_map.map(tx as i32, ty as i32) & tile_flag_solid) != 0 || (game().g_map.map(tx as i32, ty2 as i32) & tile_flag_solid) != 0 {
                     if o.iHorizontalPlatformCollision == 1 {
                         o.kill_object_map_hazard(-1);
                         return;
@@ -476,8 +476,8 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
         if fMovingUp < -0.01 {
             ty = ((o.fPrecalculatedY as i16) as i32 / TILESIZE) as i16;
 
-            let leftblock = g_map.block(txl, ty);
-            let rightblock = g_map.block(txr, ty);
+            let leftblock = game().g_map.block(txl, ty);
+            let rightblock = game().g_map.block(txr, ty);
 
             if !leftblock.is_null() && !leftblock.get().is_transparent() && !leftblock.get().is_hidden() {
                 // then left
@@ -499,7 +499,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                 return;
             }
 
-            if (g_map.map(txl as i32, ty as i32) & tile_flag_solid) != 0 || (g_map.map(txr as i32, ty as i32) & tile_flag_solid) != 0 {
+            if (game().g_map.map(txl as i32, ty as i32) & tile_flag_solid) != 0 || (game().g_map.map(txr as i32, ty as i32) & tile_flag_solid) != 0 {
                 if o.iVerticalPlatformCollision == 2 {
                     o.kill_object_map_hazard(-1);
                 }
@@ -525,8 +525,8 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
             // moving down / on ground
             ty = (((o.fPrecalculatedY as i16) as i32 + o.collisionHeight as i32) / TILESIZE) as i16;
 
-            let leftblock = g_map.block(txl, ty);
-            let rightblock = g_map.block(txr, ty);
+            let leftblock = game().g_map.block(txl, ty);
+            let rightblock = game().g_map.block(txr, ty);
 
             let fLeftBlockSolid = !leftblock.is_null() && !leftblock.get().is_transparent() && !leftblock.get().is_hidden();
             let fRightBlockSolid = !rightblock.is_null() && !rightblock.get().is_transparent() && !rightblock.get().is_hidden();
@@ -560,8 +560,8 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                 return;
             }
 
-            let leftTile: i32 = g_map.map(txl as i32, ty as i32);
-            let rightTile: i32 = g_map.map(txr as i32, ty as i32);
+            let leftTile: i32 = game().g_map.map(txl as i32, ty as i32);
+            let rightTile: i32 = game().g_map.map(txr as i32, ty as i32);
 
             if (leftTile & tile_flag_solid_on_top) != 0 || (rightTile & tile_flag_solid_on_top) != 0 {
                 if (o.fOldY + o.collisionHeight as f32) / (TILESIZE as f32) < ty as f32 {
@@ -660,13 +660,13 @@ pub fn io_moving_object_collision_detection_checksides<T: IO_MovingObjectTrait +
         if o.iy >= 0 {
             if (ty as i32) < MAPHEIGHT {
                 if txl >= 0 && (txl as i32) < MAPWIDTH {
-                    if block_is_solid(g_map.block(txl, ty)) || (g_map.map(txl as i32, ty as i32) & tile_flag_solid) > 0 {
+                    if block_is_solid(game().g_map.block(txl, ty)) || (game().g_map.map(txl as i32, ty as i32) & tile_flag_solid) > 0 {
                         iCase |= 0x01;
                     }
                 }
 
                 if txr >= 0 && (txr as i32) < MAPWIDTH {
-                    if block_is_solid(g_map.block(txr, ty)) || (g_map.map(txr as i32, ty as i32) & tile_flag_solid) > 0 {
+                    if block_is_solid(game().g_map.block(txr, ty)) || (game().g_map.map(txr as i32, ty as i32) & tile_flag_solid) > 0 {
                         iCase |= 0x02;
                     }
                 }
@@ -676,13 +676,13 @@ pub fn io_moving_object_collision_detection_checksides<T: IO_MovingObjectTrait +
         if (o.iy as i32 + o.collisionHeight as i32) as f32 >= 0.0 {
             if (ty2 as i32) < MAPHEIGHT {
                 if txl >= 0 && (txl as i32) < MAPWIDTH {
-                    if block_is_solid(g_map.block(txl, ty2)) || (g_map.map(txl as i32, ty2 as i32) & tile_flag_solid) > 0 {
+                    if block_is_solid(game().g_map.block(txl, ty2)) || (game().g_map.map(txl as i32, ty2 as i32) & tile_flag_solid) > 0 {
                         iCase |= 0x04;
                     }
                 }
 
                 if txr >= 0 && (txr as i32) < MAPWIDTH {
-                    if block_is_solid(g_map.block(txr, ty2)) || (g_map.map(txr as i32, ty2 as i32) & tile_flag_solid) > 0 {
+                    if block_is_solid(game().g_map.block(txr, ty2)) || (game().g_map.map(txr as i32, ty2 as i32) & tile_flag_solid) > 0 {
                         iCase |= 0x08;
                     }
                 }
@@ -854,7 +854,7 @@ pub fn io_moving_object_collision_detection_checksides<T: IO_MovingObjectTrait +
         o.fPrecalculatedY = o.fy;
 
         // Check moving platforms and make sure this object is not inside one
-        fRet |= g_map.moving_platform_check_sides(o);
+        fRet |= game().g_map.moving_platform_check_sides(o);
 
         fRet
     }

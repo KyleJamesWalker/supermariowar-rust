@@ -1,5 +1,6 @@
 //! Port of src/common/movingplatform.cpp
 
+use crate::game::game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::game::App;
 use crate::common::gfx::gfx_drawpreview;
@@ -168,18 +169,18 @@ impl MovingPlatform {
                         }
 
                         if tile.iID >= 0 {
-                            g_tilesetmanager.draw(this.sprites[iSurface].get_surface(), tile.iID, iTileSizeIndex, tile.iCol, tile.iRow, iCol, iRow);
+                            game().g_tilesetmanager.draw(this.sprites[iSurface].get_surface(), tile.iID, iTileSizeIndex, tile.iCol, tile.iRow, iCol, iRow);
                         } else if tile.iID as i32 == TILESETANIMATED {
                             rm.spr_tileanimation[iTileSizeIndex as usize].draw_src_to(
-                                &*g_tilesetmanager.rect(iTileSizeIndex, tile.iCol * 4, tile.iRow),
+                                &*game().g_tilesetmanager.rect(iTileSizeIndex, tile.iCol * 4, tile.iRow),
                                 this.sprites[iSurface].get_surface(),
-                                &*g_tilesetmanager.rect(iTileSizeIndex, iCol, iRow),
+                                &*game().g_tilesetmanager.rect(iTileSizeIndex, iCol, iRow),
                             );
                         } else if tile.iID as i32 == TILESETUNKNOWN {
                             rm.spr_unknowntile[iTileSizeIndex as usize].draw_src_to(
-                                &*g_tilesetmanager.rect(iTileSizeIndex, 0, 0),
+                                &*game().g_tilesetmanager.rect(iTileSizeIndex, 0, 0),
                                 this.sprites[iSurface].get_surface(),
-                                &*g_tilesetmanager.rect(iTileSizeIndex, iCol, iRow),
+                                &*game().g_tilesetmanager.rect(iTileSizeIndex, iCol, iRow),
                             );
                         }
                     }
@@ -676,10 +677,10 @@ impl MovingPlatform {
 
             let iTestBackgroundY: i16 = (((player.fy as i16) as i32 + PH) / TILESIZE) as i16;
 
-            let mut topblock = g_map.block(iTestBackgroundX, iTestBackgroundY);
+            let mut topblock = game().g_map.block(iTestBackgroundX, iTestBackgroundY);
 
             if (!topblock.is_null() && !topblock.is_transparent() && !topblock.is_hidden())
-                || (g_map.map(iTestBackgroundX as i32, iTestBackgroundY as i32) & tile_flag_solid) != 0
+                || (game().g_map.map(iTestBackgroundX as i32, iTestBackgroundY as i32) & tile_flag_solid) != 0
             {
                 player.set_xf((((iTestBackgroundX as i32) << 5) - PW) as f32 - 0.2);
                 player.flipsidesifneeded();
@@ -692,10 +693,10 @@ impl MovingPlatform {
 
             let iTestBackgroundY2: i16 = tile_of(player.fy);
 
-            let mut bottomblock = g_map.block(iTestBackgroundX, iTestBackgroundY2);
+            let mut bottomblock = game().g_map.block(iTestBackgroundX, iTestBackgroundY2);
 
             if (!bottomblock.is_null() && !bottomblock.is_transparent() && !bottomblock.is_hidden())
-                || (g_map.map(iTestBackgroundX as i32, iTestBackgroundY2 as i32) & tile_flag_solid) != 0
+                || (game().g_map.map(iTestBackgroundX as i32, iTestBackgroundY2 as i32) & tile_flag_solid) != 0
             {
                 player.set_xf((((iTestBackgroundX as i32) << 5) - PW) as f32 - 0.2);
                 player.flipsidesifneeded();
@@ -712,10 +713,10 @@ impl MovingPlatform {
             let iTestBackgroundX: i16 = tile_of(player.fx);
             let iTestBackgroundY: i16 = (((player.fy as i16) as i32 + PH) / TILESIZE) as i16;
 
-            let mut topblock = g_map.block(iTestBackgroundX, iTestBackgroundY);
+            let mut topblock = game().g_map.block(iTestBackgroundX, iTestBackgroundY);
 
             if (!topblock.is_null() && !topblock.is_transparent() && !topblock.is_hidden())
-                || (g_map.map(iTestBackgroundX as i32, iTestBackgroundY as i32) & tile_flag_solid) != 0
+                || (game().g_map.map(iTestBackgroundX as i32, iTestBackgroundY as i32) & tile_flag_solid) != 0
             {
                 player.set_xf((((iTestBackgroundX as i32) << 5) + TILESIZE) as f32 + 0.2);
                 player.flipsidesifneeded();
@@ -728,10 +729,10 @@ impl MovingPlatform {
 
             let iTestBackgroundY2: i16 = tile_of(player.fy);
 
-            let mut bottomblock = g_map.block(iTestBackgroundX, iTestBackgroundY2);
+            let mut bottomblock = game().g_map.block(iTestBackgroundX, iTestBackgroundY2);
 
             if (!bottomblock.is_null() && !bottomblock.is_transparent() && !bottomblock.is_hidden())
-                || (g_map.map(iTestBackgroundX as i32, iTestBackgroundY2 as i32) & tile_flag_solid) != 0
+                || (game().g_map.map(iTestBackgroundX as i32, iTestBackgroundY2 as i32) & tile_flag_solid) != 0
             {
                 player.set_xf((((iTestBackgroundX as i32) << 5) + TILESIZE) as f32 + 0.2);
                 player.flipsidesifneeded();
@@ -1117,13 +1118,13 @@ impl MovingPlatform {
                         };
 
                         unsafe {
-                            let mut topblock = g_map.block(iTestBackgroundX, iTestBackgroundY);
-                            let mut bottomblock = g_map.block(iTestBackgroundX, iTestBackgroundY2);
+                            let mut topblock = game().g_map.block(iTestBackgroundX, iTestBackgroundY);
+                            let mut bottomblock = game().g_map.block(iTestBackgroundX, iTestBackgroundY2);
 
                             if (!topblock.is_null() && !topblock.is_transparent() && !topblock.is_hidden())
                                 || (!bottomblock.is_null() && !bottomblock.is_transparent() && !bottomblock.is_hidden())
-                                || (g_map.map(iTestBackgroundX as i32, iTestBackgroundY as i32) & tile_flag_solid) != 0
-                                || (g_map.map(iTestBackgroundX as i32, iTestBackgroundY2 as i32) & tile_flag_solid) != 0
+                                || (game().g_map.map(iTestBackgroundX as i32, iTestBackgroundY as i32) & tile_flag_solid) != 0
+                                || (game().g_map.map(iTestBackgroundX as i32, iTestBackgroundY2 as i32) & tile_flag_solid) != 0
                             {
                                 let cwi = object.collisionWidth as i32;
                                 object.set_xf((((iTestBackgroundX as i32) << 5) - cwi) as f32 - 0.2);
@@ -1185,13 +1186,13 @@ impl MovingPlatform {
                         let iTestBackgroundX: i16 = tile_of(object.fx);
 
                         unsafe {
-                            let mut topblock = g_map.block(iTestBackgroundX, iTestBackgroundY);
-                            let mut bottomblock = g_map.block(iTestBackgroundX, iTestBackgroundY2);
+                            let mut topblock = game().g_map.block(iTestBackgroundX, iTestBackgroundY);
+                            let mut bottomblock = game().g_map.block(iTestBackgroundX, iTestBackgroundY2);
 
                             if (!topblock.is_null() && !topblock.is_transparent() && !topblock.is_hidden())
                                 || (!bottomblock.is_null() && !bottomblock.is_transparent() && !bottomblock.is_hidden())
-                                || (g_map.map(iTestBackgroundX as i32, iTestBackgroundY as i32) & tile_flag_solid) != 0
-                                || (g_map.map(iTestBackgroundX as i32, iTestBackgroundY2 as i32) & tile_flag_solid) != 0
+                                || (game().g_map.map(iTestBackgroundX as i32, iTestBackgroundY as i32) & tile_flag_solid) != 0
+                                || (game().g_map.map(iTestBackgroundX as i32, iTestBackgroundY2 as i32) & tile_flag_solid) != 0
                             {
                                 object.set_xf((((iTestBackgroundX as i32) << 5) + TILESIZE) as f32 + 0.2);
                                 object.flipsidesifneeded();

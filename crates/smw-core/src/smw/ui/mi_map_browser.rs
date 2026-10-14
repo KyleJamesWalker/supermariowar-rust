@@ -107,9 +107,9 @@ impl MI_MapBrowser {
 
                 if !file_exists(&sConvertedPath) {
                     let filename = game().maplist.node_at(itr).filename.clone();
-                    g_map.load_map(&filename, read_type_preview);
+                    game().g_map.load_map(&filename, read_type_preview);
                     small_delay(); //Sleeps to help the music from skipping
-                    g_map.save_thumbnail(&sConvertedPath, false);
+                    game().g_map.save_thumbnail(&sConvertedPath, false);
                     small_delay();
                 }
 

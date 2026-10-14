@@ -64,7 +64,7 @@ impl OMO_Area {
             let mut x: i16 = 0;
             let mut y: i16 = 0;
             let mut iAttempts: i16 = 32;
-            while (!g_map.findspawnpoint(5, &mut x, &mut y, self.collisionWidth, self.collisionHeight, false)
+            while (!game().g_map.findspawnpoint(5, &mut x, &mut y, self.collisionWidth, self.collisionHeight, false)
                 || objectcontainer[0].get_closest_object(x, y, object_area) <= (200.0f32 - ((self.numareas as i32 - 3) as f32 * 25.0f32)))
                 && {
                     let a = iAttempts;

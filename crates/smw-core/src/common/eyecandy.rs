@@ -656,8 +656,8 @@ impl EC_Corpse {
                     let ty = (nexty as i32 / TILESIZE) as i16;
 
                     // FIXME: This seems to be wrong
-                    if g_map.map(self.tx as i32, ty as i32) == TileType::SolidOnTop.0 as i32
-                        || g_map.map(self.tx2 as i32, ty as i32) == TileType::SolidOnTop.0 as i32
+                    if game().g_map.map(self.tx as i32, ty as i32) == TileType::SolidOnTop.0 as i32
+                        || game().g_map.map(self.tx2 as i32, ty as i32) == TileType::SolidOnTop.0 as i32
                     {
                         // on ground on tile solid_on_top
                         if (self.dy + 32.0f32 - self.vely) / (TILESIZE as f32) < ty as f32 {
@@ -670,11 +670,11 @@ impl EC_Corpse {
                         }
                     }
 
-                    let mut leftblock = g_map.block(self.tx, ty);
-                    let mut rightblock = g_map.block(self.tx2, ty);
+                    let mut leftblock = game().g_map.block(self.tx, ty);
+                    let mut rightblock = game().g_map.block(self.tx2, ty);
 
-                    if (g_map.map(self.tx as i32, ty as i32) & 0x13) > 0
-                        || (g_map.map(self.tx2 as i32, ty as i32) & 0x13) > 0
+                    if (game().g_map.map(self.tx as i32, ty as i32) & 0x13) > 0
+                        || (game().g_map.map(self.tx2 as i32, ty as i32) & 0x13) > 0
                         || (!leftblock.is_null() && !leftblock.is_transparent() && !leftblock.is_hidden())
                         || (!rightblock.is_null() && !rightblock.is_transparent() && !rightblock.is_hidden())
                     {

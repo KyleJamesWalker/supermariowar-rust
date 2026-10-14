@@ -1,10 +1,10 @@
 //! Port of src/smw/objects/blocks/PowerupBlock.cpp
 
+use crate::game::game;
 use crate::common::game_mode::*;
 use crate::common::game_values::{game_values, if_sound_on_play};
 use crate::common::gameplay_styles::TeamCollisionStyle;
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::global::g_map;
 use crate::common::global_constants::*;
 use crate::common::io_block::{IO_Block, IO_BlockTrait};
 use crate::common::math::vec2::Vec2s;
@@ -247,7 +247,7 @@ pub fn net_release(col: i16, row: i16, pos: Vec2s, side: bool) {
         if col < 0 || row < 0 || col as i32 >= MAPWIDTH || row as i32 >= MAPHEIGHT {
             return;
         }
-        let mut block = g_map.blockdata[col as usize][row as usize];
+        let mut block = game().g_map.blockdata[col as usize][row as usize];
         if block.is_null() {
             return;
         }
@@ -267,7 +267,7 @@ pub fn net_block_ready(col: i16, row: i16) -> bool {
         if col < 0 || row < 0 || col as i32 >= MAPWIDTH || row as i32 >= MAPHEIGHT {
             return true;
         }
-        let mut block = g_map.blockdata[col as usize][row as usize];
+        let mut block = game().g_map.blockdata[col as usize][row as usize];
         if block.is_null() {
             return true;
         }
@@ -277,7 +277,7 @@ pub fn net_block_ready(col: i16, row: i16) -> bool {
             0 => {
                 b.state = 3;
                 b.hidden = false;
-                g_map.update_tile_gap(col, row);
+                game().g_map.update_tile_gap(col, row);
                 true
             }
             _ => true,
@@ -354,7 +354,7 @@ pub fn b_powerup_block_hitbottom_player<T: B_PowerupBlockTrait + ?Sized>(this: &
             }
 
             let (col, row) = (this.pb().col, this.pb().row);
-            g_map.update_tile_gap(col, row);
+            game().g_map.update_tile_gap(col, row);
 
             if this.pb().state == 0 {
                 if_sound_on_play(&mut rm.sfx_bump);

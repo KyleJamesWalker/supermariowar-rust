@@ -64,19 +64,19 @@ impl MO_Yoshi {
                 let iyt: i16 = (iy / TILESIZE) as i16;
                 let iyb: i16 = ((iy + ih) / TILESIZE) as i16;
 
-                let upperLeft: i32 = g_map.map(ixl as i32, iyt as i32);
-                let upperRight: i32 = g_map.map(ixr as i32, iyt as i32);
-                let lowerLeft: i32 = g_map.map(ixl as i32, iyb as i32);
-                let lowerRight: i32 = g_map.map(ixr as i32, iyb as i32);
+                let upperLeft: i32 = game().g_map.map(ixl as i32, iyt as i32);
+                let upperRight: i32 = game().g_map.map(ixr as i32, iyt as i32);
+                let lowerLeft: i32 = game().g_map.map(ixl as i32, iyb as i32);
+                let lowerRight: i32 = game().g_map.map(ixr as i32, iyb as i32);
 
                 if (upperLeft & tile_flag_solid) == 0
                     && (upperRight & tile_flag_solid) == 0
                     && (lowerLeft & tile_flag_solid) == 0
                     && (lowerRight & tile_flag_solid) == 0
-                    && g_map.block(ixl, iyt).is_null()
-                    && g_map.block(ixr, iyt).is_null()
-                    && g_map.block(ixl, iyb).is_null()
-                    && g_map.block(ixr, iyb).is_null()
+                    && game().g_map.block(ixl, iyt).is_null()
+                    && game().g_map.block(ixr, iyt).is_null()
+                    && game().g_map.block(ixl, iyb).is_null()
+                    && game().g_map.block(ixr, iyb).is_null()
                 {
                     // spawn on ground, but not on spikes
                     let mut iDeathY: i16 = ((iy + ih) / TILESIZE) as i16;
@@ -84,20 +84,20 @@ impl MO_Yoshi {
                     let iDeathX2: i16 = ((ix + iw) / TILESIZE) as i16;
 
                     while (iDeathY as i32) < MAPHEIGHT {
-                        let ttLeftTile: i32 = g_map.map(iDeathX1 as i32, iDeathY as i32);
-                        let ttRightTile: i32 = g_map.map(iDeathX2 as i32, iDeathY as i32);
+                        let ttLeftTile: i32 = game().g_map.map(iDeathX1 as i32, iDeathY as i32);
+                        let ttRightTile: i32 = game().g_map.map(iDeathX2 as i32, iDeathY as i32);
 
                         if (((ttLeftTile & tile_flag_solid) != 0 || (ttLeftTile & tile_flag_solid_on_top) != 0) && (ttLeftTile & tile_flag_death_on_top) == 0)
                             || (((ttRightTile & tile_flag_solid) != 0 || (ttRightTile & tile_flag_solid_on_top) != 0) && (ttRightTile & tile_flag_death_on_top) == 0)
-                            || !g_map.block(iDeathX1, iDeathY).is_null()
-                            || !g_map.block(iDeathX2, iDeathY).is_null()
+                            || !game().g_map.block(iDeathX1, iDeathY).is_null()
+                            || !game().g_map.block(iDeathX2, iDeathY).is_null()
                         {
                             let top: i16 = ((((iDeathY as i32) << 5) - ih) / TILESIZE) as i16;
 
-                            if g_map.spawn(1, iDeathX1, top)
-                                && g_map.spawn(1, iDeathX2, top)
-                                && g_map.spawn(1, iDeathX1, iDeathY - 1)
-                                && g_map.spawn(1, iDeathX2, iDeathY - 1)
+                            if game().g_map.spawn(1, iDeathX1, top)
+                                && game().g_map.spawn(1, iDeathX2, top)
+                                && game().g_map.spawn(1, iDeathX1, iDeathY - 1)
+                                && game().g_map.spawn(1, iDeathX2, iDeathY - 1)
                             {
                                 let ix = self.ix;
                                 self.set_xi(ix);

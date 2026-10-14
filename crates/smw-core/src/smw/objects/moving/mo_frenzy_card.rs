@@ -69,7 +69,7 @@ impl MO_FrenzyCard {
             let mut y: i16 = 0;
             let mut iAttempts: i16 = 32;
             let (cw, ch) = (self.collisionWidth, self.collisionHeight);
-            while (!g_map.findspawnpoint(5, &mut x, &mut y, cw, ch, false) || objectcontainer[1].get_closest_object(x, y, object_frenzycard) <= 150.0f32) && {
+            while (!game().g_map.findspawnpoint(5, &mut x, &mut y, cw, ch, false) || objectcontainer[1].get_closest_object(x, y, object_frenzycard) <= 150.0f32) && {
                 let a = iAttempts;
                 iAttempts -= 1;
                 a > 0

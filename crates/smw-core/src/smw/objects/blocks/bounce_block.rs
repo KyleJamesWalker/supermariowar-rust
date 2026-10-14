@@ -1,9 +1,9 @@
 //! Port of src/smw/objects/blocks/BounceBlock.cpp
 
+use crate::game::game;
 use crate::common::game_values::{game_values, if_sound_on_play};
 use crate::common::gameplay_styles::TeamCollisionStyle;
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::global::g_map;
 use crate::common::global_constants::*;
 use crate::common::io_block::{IO_Block, IO_BlockTrait};
 use crate::common::math::vec2::Vec2s;
@@ -126,7 +126,7 @@ impl IO_BlockTrait for B_BounceBlock {
             }
 
             unsafe {
-                g_map.update_tile_gap(self.col, self.row);
+                game().g_map.update_tile_gap(self.col, self.row);
             }
         }
 

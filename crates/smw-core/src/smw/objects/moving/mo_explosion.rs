@@ -90,7 +90,7 @@ impl CObjectTrait for MO_Explosion {
                 if iTestY >= 0 && (iTestY as i32) < App::screenHeight {
                     let iTestRow: i16 = (iTestY as i32 / TILESIZE) as i16;
                     for _iCol in 0..7i16 {
-                        let mut block = unsafe { g_map.block((iTestX as i32 / TILESIZE) as i16, iTestRow) };
+                        let mut block = unsafe { game().g_map.block((iTestX as i32 / TILESIZE) as i16, iTestRow) };
                         if !block.is_null() {
                             if let Some(weaponbreakableblock) = block.as_any().downcast_mut::<B_WeaponBreakableBlock>() {
                                 if weaponbreakableblock.r#type() == WeaponDamageType::Bomb {

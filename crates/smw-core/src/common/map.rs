@@ -397,15 +397,15 @@ pub fn draw_map_hazard(hazard: &MapHazard, iSize: i16, fDrawCenter: bool, dst: *
 unsafe fn blit_platform_tile(tile: &TilesetTile, iSize: i16, bltrect: &mut SDL_Rect, dst: *mut SDL_Surface) {
     if tile.iID >= 0 {
         blit(
-            g_tilesetmanager.tileset(tile.iID as usize).surface(iSize as usize),
-            g_tilesetmanager.rect(iSize, tile.iCol, tile.iRow),
+            game().g_tilesetmanager.tileset(tile.iID as usize).surface(iSize as usize),
+            game().g_tilesetmanager.rect(iSize, tile.iCol, tile.iRow),
             dst,
             bltrect,
         );
     } else if tile.iID as i32 == TILESETANIMATED {
-        blit(rm.spr_tileanimation[iSize as usize].get_surface(), g_tilesetmanager.rect(iSize, tile.iCol * 4, tile.iRow), dst, bltrect);
+        blit(rm.spr_tileanimation[iSize as usize].get_surface(), game().g_tilesetmanager.rect(iSize, tile.iCol * 4, tile.iRow), dst, bltrect);
     } else if tile.iID as i32 == TILESETUNKNOWN {
-        blit(rm.spr_unknowntile[iSize as usize].get_surface(), g_tilesetmanager.rect(iSize, 0, 0), dst, bltrect);
+        blit(rm.spr_unknowntile[iSize as usize].get_surface(), game().g_tilesetmanager.rect(iSize, 0, 0), dst, bltrect);
     }
 }
 
@@ -1160,7 +1160,7 @@ impl CMap {
         mapfile.write_i32(iDensity);
 
         unsafe {
-            let iTilesetCount: i16 = g_tilesetmanager.count() as i16;
+            let iTilesetCount: i16 = game().g_tilesetmanager.count() as i16;
             let mut fTilesetUsed = vec![false; iTilesetCount.max(0) as usize];
 
             for j in 0..MH {
@@ -1191,7 +1191,7 @@ impl CMap {
             for iTileset in 0..iTilesetCount {
                 if fTilesetUsed[iTileset as usize] {
                     mapfile.write_i32(iTileset as i32);
-                    let name = g_tilesetmanager.tileset(iTileset as usize).name().to_string();
+                    let name = game().g_tilesetmanager.tileset(iTileset as usize).name().to_string();
                     mapfile.write_string_long(&name);
                 }
             }
@@ -1202,7 +1202,7 @@ impl CMap {
                         let tile = &mut self.mapdata[i][j][k];
 
                         if tile.iID >= 0 {
-                            let ts = g_tilesetmanager.tileset(tile.iID as usize);
+                            let ts = game().g_tilesetmanager.tileset(tile.iID as usize);
                             if tile.iCol < 0 || tile.iCol >= ts.width() {
                                 tile.iCol = 0;
                             }
@@ -1239,7 +1239,7 @@ impl CMap {
                         let mut tile = *platform.tile_at(iCol as usize, iRow as usize);
 
                         if tile.iID >= 0 {
-                            let ts = g_tilesetmanager.tileset(tile.iID as usize);
+                            let ts = game().g_tilesetmanager.tileset(tile.iID as usize);
                             if tile.iCol < 0 || tile.iCol >= ts.width() {
                                 tile.iCol = 0;
                             }
@@ -1583,14 +1583,14 @@ impl CMap {
             let mut path;
 
             if fUseClassicPack {
-                let localSzBackgroundFile = concat("gfx/packs/Classic/backgrounds/", &g_map.szBackgroundFile);
+                let localSzBackgroundFile = concat("gfx/packs/Classic/backgrounds/", &game().g_map.szBackgroundFile);
                 path = convert_path(&localSzBackgroundFile);
 
                 if !file_exists(&path) {
                     path = convert_path("gfx/packs/Classic/backgrounds/Land_Classic.png");
                 }
             } else {
-                let localSzBackgroundFile = concat("gfx/packs/backgrounds/", &g_map.szBackgroundFile);
+                let localSzBackgroundFile = concat("gfx/packs/backgrounds/", &game().g_map.szBackgroundFile);
                 let pack = game().gamegraphicspacklist.current_path().to_string_lossy().into_owned();
                 path = convert_path_pack(&localSzBackgroundFile, &pack);
 
@@ -1829,7 +1829,7 @@ impl CMap {
                     }
 
                     if tile.iID >= 0 {
-                        g_tilesetmanager.draw(targetSurface, tile.iID, 0, tile.iCol, tile.iRow, i as i16, j as i16);
+                        game().g_tilesetmanager.draw(targetSurface, tile.iID, 0, tile.iCol, tile.iRow, i as i16, j as i16);
                     } else if tile.iID as i32 == TILESETANIMATED {
                         let iNewTileId: i16 = (j * MW + i) as i16;
                         let fNeedNewAnimatedTile = !self.animatedtiles.iter().any(|t| t.id == iNewTileId);
@@ -1873,7 +1873,7 @@ impl CMap {
                             self.animatedtiles.push(animatedtile);
                         }
                     } else if tile.iID as i32 == TILESETUNKNOWN {
-                        blit(rm.spr_unknowntile[0].get_surface(), g_tilesetmanager.rect(0, 0, 0), targetSurface, &mut self.bltrect);
+                        blit(rm.spr_unknowntile[0].get_surface(), game().g_tilesetmanager.rect(0, 0, 0), targetSurface, &mut self.bltrect);
                     }
                 }
 
@@ -2014,7 +2014,7 @@ impl CMap {
         unsafe {
             for j in 0..MH {
                 for i in 0..MW {
-                    let wWarp = g_map.warpdata[i][j];
+                    let wWarp = game().g_map.warpdata[i][j];
 
                     if wWarp.connection != -1 {
                         let ts = iTileSize as i32;
@@ -2129,20 +2129,20 @@ impl CMap {
                     }
 
                     if tile.iID >= 0 {
-                        g_tilesetmanager.draw(targetSurface, tile.iID, iTilesetSize, tile.iCol, tile.iRow, i as i16, j as i16);
+                        game().g_tilesetmanager.draw(targetSurface, tile.iID, iTilesetSize, tile.iCol, tile.iRow, i as i16, j as i16);
                     } else if tile.iID as i32 == TILESETANIMATED {
                         blit(
                             rm.spr_tileanimation[iTilesetSize as usize].get_surface(),
-                            g_tilesetmanager.rect(iTilesetSize, tile.iCol * 4, tile.iRow),
+                            game().g_tilesetmanager.rect(iTilesetSize, tile.iCol * 4, tile.iRow),
                             targetSurface,
-                            g_tilesetmanager.rect(iTilesetSize, i as i16, j as i16),
+                            game().g_tilesetmanager.rect(iTilesetSize, i as i16, j as i16),
                         );
                     } else if tile.iID as i32 == TILESETUNKNOWN {
                         blit(
                             rm.spr_unknowntile[iTilesetSize as usize].get_surface(),
-                            g_tilesetmanager.rect(iTilesetSize, 0, 0),
+                            game().g_tilesetmanager.rect(iTilesetSize, 0, 0),
                             targetSurface,
-                            g_tilesetmanager.rect(iTilesetSize, i as i16, j as i16),
+                            game().g_tilesetmanager.rect(iTilesetSize, i as i16, j as i16),
                         );
                     }
                 }
@@ -2286,7 +2286,7 @@ impl CMap {
                                 let tilesetTile = tile.layers[iLayer];
                                 if tilesetTile.iID >= 0 {
                                     blit(
-                                        g_tilesetmanager.tileset(tilesetTile.iID as usize).surface(0),
+                                        game().g_tilesetmanager.tileset(tilesetTile.iID as usize).surface(0),
                                         &tile.rSrc[iLayer][0],
                                         ats,
                                         &mut rDst,
@@ -2294,7 +2294,7 @@ impl CMap {
                                 } else if tilesetTile.iID as i32 == TILESETANIMATED {
                                     rm.spr_tileanimation[0].draw_src_to(&tile.rSrc[iLayer][sTileAnimationFrame], ats, &rDst);
                                 } else if tilesetTile.iID as i32 == TILESETUNKNOWN {
-                                    blit(rm.spr_unknowntile[0].get_surface(), g_tilesetmanager.rect(0, 0, 0), ats, &mut rDst);
+                                    blit(rm.spr_unknowntile[0].get_surface(), game().g_tilesetmanager.rect(0, 0, 0), ats, &mut rDst);
                                 }
                             }
 
@@ -2326,7 +2326,7 @@ impl CMap {
                                 let tilesetTile = tile.layers[iLayer];
                                 if tilesetTile.iID >= 0 {
                                     blit(
-                                        g_tilesetmanager.tileset(tilesetTile.iID as usize).surface(0),
+                                        game().g_tilesetmanager.tileset(tilesetTile.iID as usize).surface(0),
                                         &tile.rSrc[iLayer][0],
                                         ats,
                                         &mut rDst,
@@ -2334,7 +2334,7 @@ impl CMap {
                                 } else if tilesetTile.iID as i32 == TILESETANIMATED {
                                     rm.spr_tileanimation[0].draw_src_to(&tile.rSrc[iLayer][sTileAnimationFrame], ats, &rDst);
                                 } else if tilesetTile.iID as i32 == TILESETUNKNOWN {
-                                    blit(rm.spr_unknowntile[0].get_surface(), g_tilesetmanager.rect(0, 0, 0), ats, &mut rDst);
+                                    blit(rm.spr_unknowntile[0].get_surface(), game().g_tilesetmanager.rect(0, 0, 0), ats, &mut rDst);
                                 }
                             }
 
@@ -2734,7 +2734,7 @@ impl CMap {
                 for i in 0..MW {
                     for m in 1..ML {
                         let tile = self.mapdata[i][j][m];
-                        let r#type = g_tilesetmanager.tileset(tile.iID as isize as usize).tile_type(tile.iCol as usize, tile.iRow as usize);
+                        let r#type = game().g_tilesetmanager.tileset(tile.iID as isize as usize).tile_type(tile.iCol as usize, tile.iRow as usize);
                         if r#type != TileType::NonSolid && r#type != TileType::Gap && r#type != TileType::SolidOnTop {
                             let mut k = m as i32 - 1;
                             while k >= 0 {
@@ -2797,8 +2797,8 @@ pub(crate) mod tests {
                 rm.spr_tileanimation[i] = ImageLoader::new(convert_path_pack(&format!("gfx/packs/tilesets/tile_animation{}.png", size), &pack)).create();
                 rm.spr_unknowntile[i] = ImageLoader::new(convert_path_pack(&format!("gfx/packs/tilesets/unknown_tile{}.png", size), &pack)).create();
             }
-            g_tilesetmanager = Ptr::new_box(CTilesetManager::new(&convert_path("gfx/packs/Classic")));
-            g_map = Ptr::from_box(CMap::new());
+            game().g_tilesetmanager = Ptr::new_box(CTilesetManager::new(&convert_path("gfx/packs/Classic")));
+            game().g_map = Ptr::from_box(CMap::new());
         });
     }
 
@@ -2949,8 +2949,8 @@ pub(crate) mod tests {
         unsafe {
             for f in &maps {
                 for rt in [read_type_summary, read_type_preview, read_type_full] {
-                    g_map.load_map(f, rt);
-                    let _ = dump(&mut g_map, rt);
+                    game().g_map.load_map(f, rt);
+                    let _ = dump(&mut game().g_map, rt);
                 }
             }
         }
@@ -3076,9 +3076,9 @@ pub(crate) mod tests {
                     let text = String::from_utf8_lossy(&out.stdout);
                     let expected = text.split("\n---\n").nth(1).unwrap_or("").to_string();
 
-                    g_map = Ptr::from_box(CMap::new());
-                    g_map.load_map(&f, rt);
-                    let actual = dump(&mut g_map, rt);
+                    game().g_map = Ptr::from_box(CMap::new());
+                    game().g_map.load_map(&f, rt);
+                    let actual = dump(&mut game().g_map, rt);
                     if actual != expected {
                         let line = actual.lines().zip(expected.lines()).position(|(a, b)| a != b);
                         let show = line.map(|l| format!("\n  rust: {}\n  c++:  {}", actual.lines().nth(l).unwrap_or(""), expected.lines().nth(l).unwrap_or("")));

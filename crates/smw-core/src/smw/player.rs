@@ -666,7 +666,7 @@ impl CPlayer {
                 }
 
                 //If rain candy is turned on
-                if (b(g_map.eyecandy[0] as i32 & 32) || b(g_map.eyecandy[1] as i32 & 32) || b(g_map.eyecandy[2] as i32 & 32))
+                if (b(game().g_map.eyecandy[0] as i32 & 32) || b(game().g_map.eyecandy[1] as i32 & 32) || b(game().g_map.eyecandy[2] as i32 & 32))
                     && self.velx.abs() > VELMOVINGADD
                     && {
                         self.rainsteptimer += 1;
@@ -1147,8 +1147,8 @@ impl CPlayer {
                     (self.right_x() as i32 / TILESIZE) as i16
                 };
 
-                let mut lefttile = g_map.map(left_tile_x as i32, under_tile_y as i32);
-                let mut righttile = g_map.map(right_tile_x as i32, under_tile_y as i32);
+                let mut lefttile = game().g_map.map(left_tile_x as i32, under_tile_y as i32);
+                let mut righttile = game().g_map.map(right_tile_x as i32, under_tile_y as i32);
 
                 if (b(lefttile & tile_flag_solid_on_top) && (b(righttile & tile_flag_solid_on_top) || righttile == tile_flag_nonsolid || righttile == tile_flag_gap))
                     || (b(righttile & tile_flag_solid_on_top) && (b(lefttile & tile_flag_solid_on_top) || lefttile == tile_flag_nonsolid || lefttile == tile_flag_gap))
@@ -2156,7 +2156,7 @@ impl CPlayer {
 
     pub fn find_spawn_point(&mut self) -> bool {
         unsafe {
-            let fRet = g_map.findspawnpoint(self.teamID + 1, &mut self.ix, &mut self.iy, PW as i16, PH as i16, false);
+            let fRet = game().g_map.findspawnpoint(self.teamID + 1, &mut self.ix, &mut self.iy, PW as i16, PH as i16, false);
 
             self.fx = self.ix as f32;
             self.fy = self.iy as f32;
@@ -2676,11 +2676,11 @@ impl CPlayer {
                 tx -= 20;
             }
 
-            let topblock = g_map.block(tx, ty);
-            let bottomblock = g_map.block(tx, ty2);
+            let topblock = game().g_map.block(tx, ty);
+            let bottomblock = game().g_map.block(tx, ty2);
 
-            let toptile = g_map.map(tx as i32, ty as i32);
-            let bottomtile = g_map.map(tx as i32, ty2 as i32);
+            let toptile = game().g_map.map(tx as i32, ty as i32);
+            let bottomtile = game().g_map.map(tx as i32, ty2 as i32);
 
             let deathTileBehind: bool;
             let superDeathTileBehind: bool;
@@ -2706,14 +2706,14 @@ impl CPlayer {
             let fBottomBlockSolid = !bottomblock.is_null() && !bottomblock.get().is_transparent() && !bottomblock.get().is_hidden();
 
             //first check to see if player hit a warp
-            if isMoveKeyDown && !self.frozen && g_map.checkforwarp(tx, ty, ty2, direction) {
+            if isMoveKeyDown && !self.frozen && game().g_map.checkforwarp(tx, ty, ty2, direction) {
                 if direction == 1 {
                     self.set_xf((((tx as i32) << 5) + TILESIZE) as f32 + 0.2f32); // move to the edge of the tile
                 } else {
                     self.set_xf((((tx as i32) << 5) - PW) as f32 - 0.2f32); // move to the edge of the tile (tile on the right -> mind the player width)
                 }
 
-                let warp = Ptr::from_mut(g_map.warp(tx, ty2));
+                let warp = Ptr::from_mut(game().g_map.warp(tx, ty2));
                 self.warpstatus.enter_warp(this.get(), warp);
 
                 if (self.iy as i32 - PHOFFSET) < ((ty as i32) << 5) {
@@ -2791,13 +2791,13 @@ impl CPlayer {
 
             let ty = (self.fPrecalculatedY as i16 as i32 / TILESIZE) as i16;
 
-            let leftblock = g_map.block(txl, ty);
-            let centerblock = g_map.block(txc, ty);
-            let rightblock = g_map.block(txr, ty);
+            let leftblock = game().g_map.block(txl, ty);
+            let centerblock = game().g_map.block(txc, ty);
+            let rightblock = game().g_map.block(txr, ty);
 
-            if self.keys().game_jump().fDown && !self.frozen && g_map.checkforwarp(alignedBlockX, unAlignedBlockX, ty, 2) {
+            if self.keys().game_jump().fDown && !self.frozen && game().g_map.checkforwarp(alignedBlockX, unAlignedBlockX, ty, 2) {
                 self.set_yf((((ty as i32) << 5) + TILESIZE) as f32 + 0.2f32);
-                let warp = Ptr::from_mut(g_map.warp(unAlignedBlockX, ty));
+                let warp = Ptr::from_mut(game().g_map.warp(unAlignedBlockX, ty));
                 self.warpstatus.enter_warp(this.get(), warp);
 
                 if (self.ix as i32 - PWOFFSET) < ((txl as i32) << 5) + 1 {
@@ -2835,7 +2835,7 @@ impl CPlayer {
             //the player will then shift over and fully hit the super death on bottom and die even if shielded
             //or invincible.
 
-            let alignedTileType = g_map.map(alignedBlockX as i32, ty as i32);
+            let alignedTileType = game().g_map.map(alignedBlockX as i32, ty as i32);
             if b(alignedTileType & tile_flag_solid)
                 && !b(alignedTileType & tile_flag_super_or_player_death_bottom)
                 && (!b(alignedTileType & tile_flag_death_on_bottom) || self.is_invincible() || self.is_shielded() || self.shyguy)
@@ -2898,7 +2898,7 @@ impl CPlayer {
 
             //Player squeezed around the block, ice or death on top
             //or if the player is invincible and hits death or death on bottom
-            let unalignedTileType = g_map.map(unAlignedBlockX as i32, ty as i32);
+            let unalignedTileType = game().g_map.map(unAlignedBlockX as i32, ty as i32);
             if b(unalignedTileType & tile_flag_solid)
                 && !b(unalignedTileType & tile_flag_super_or_player_death_bottom)
                 && (!b(unalignedTileType & tile_flag_death_on_bottom) || self.is_invincible() || self.is_shielded() || self.shyguy)
@@ -2935,9 +2935,9 @@ impl CPlayer {
             // moving down / on ground
             let ty = ((self.fPrecalculatedY as i16 as i32 + PH) / TILESIZE) as i16;
 
-            if self.keys().game_down().fDown && !self.frozen && g_map.checkforwarp(txl, txr, ty, 0) {
+            if self.keys().game_down().fDown && !self.frozen && game().g_map.checkforwarp(txl, txr, ty, 0) {
                 self.set_yf((((ty as i32) << 5) - PH) as f32 - 0.2f32);
-                let warp = Ptr::from_mut(g_map.warp(txr, ty));
+                let warp = Ptr::from_mut(game().g_map.warp(txr, ty));
                 self.warpstatus.enter_warp(this.get(), warp);
 
                 self.fallthrough = false;
@@ -2952,8 +2952,8 @@ impl CPlayer {
                 return;
             }
 
-            let leftblock = g_map.block(txl, ty);
-            let rightblock = g_map.block(txr, ty);
+            let leftblock = game().g_map.block(txl, ty);
+            let rightblock = game().g_map.block(txr, ty);
 
             let fLeftBlockSolid = !leftblock.is_null() && !leftblock.get().is_transparent() && !leftblock.get().is_hidden();
             let fRightBlockSolid = !rightblock.is_null() && !rightblock.get().is_transparent() && !rightblock.get().is_hidden();
@@ -3006,8 +3006,8 @@ impl CPlayer {
                 }
             }
 
-            let lefttile = g_map.map(txl as i32, ty as i32);
-            let righttile = g_map.map(txr as i32, ty as i32);
+            let lefttile = game().g_map.map(txl as i32, ty as i32);
+            let righttile = game().g_map.map(txr as i32, ty as i32);
 
             let fGapSupport = (self.velx >= VELTURBOMOVING || self.velx <= -VELTURBOMOVING) && (lefttile == tile_flag_gap || righttile == tile_flag_gap);
 
@@ -3033,10 +3033,10 @@ impl CPlayer {
                     self.vely = GRAVITATION;
 
                     if self.platform.is_null() {
-                        let alignedtile = g_map.map(alignedBlockX as i32, ty as i32);
+                        let alignedtile = game().g_map.map(alignedBlockX as i32, ty as i32);
 
                         if b(alignedtile & tile_flag_ice)
-                            || ((alignedtile == tile_flag_nonsolid || alignedtile == tile_flag_gap) && b(g_map.map(unAlignedBlockX as i32, ty as i32) & tile_flag_ice))
+                            || ((alignedtile == tile_flag_nonsolid || alignedtile == tile_flag_gap) && b(game().g_map.map(unAlignedBlockX as i32, ty as i32) & tile_flag_ice))
                         {
                             self.onice = true;
                         } else {
@@ -3079,10 +3079,10 @@ impl CPlayer {
                 self.vely = GRAVITATION; //1 so we test against the ground again int the next frame (0 would test against the ground in the next+1 frame)
 
                 if self.platform.is_null() {
-                    let alignedtile = g_map.map(alignedBlockX as i32, ty as i32);
+                    let alignedtile = game().g_map.map(alignedBlockX as i32, ty as i32);
 
                     if b(alignedtile & tile_flag_ice)
-                        || ((alignedtile == tile_flag_nonsolid || alignedtile == tile_flag_gap) && b(g_map.map(unAlignedBlockX as i32, ty as i32) & tile_flag_ice))
+                        || ((alignedtile == tile_flag_nonsolid || alignedtile == tile_flag_gap) && b(game().g_map.map(unAlignedBlockX as i32, ty as i32) & tile_flag_ice))
                     {
                         self.onice = true;
                     } else {
@@ -3141,7 +3141,7 @@ impl CPlayer {
         self.iPlatformCollisionPlayerId = -1;
 
         unsafe {
-            g_map.moving_platform_collision_player(this);
+            game().g_map.moving_platform_collision_player(this);
         }
 
         if self.state != PlayerState::Ready {

@@ -127,13 +127,13 @@ impl CObjectTrait for MO_SpinAttack {
                 let mut bottomrightblock: Ptr<dyn IO_BlockTrait> = Ptr::null();
 
                 if iTop >= 0 && iTop < 15 {
-                    topleftblock = g_map.block(iLeft, iTop);
-                    toprightblock = g_map.block(iRight, iTop);
+                    topleftblock = game().g_map.block(iLeft, iTop);
+                    toprightblock = game().g_map.block(iRight, iTop);
                 }
 
                 if iBottom >= 0 && iBottom < 15 {
-                    bottomleftblock = g_map.block(iLeft, iBottom);
-                    bottomrightblock = g_map.block(iRight, iBottom);
+                    bottomleftblock = game().g_map.block(iLeft, iBottom);
+                    bottomrightblock = game().g_map.block(iRight, iBottom);
                 }
 
                 let mut fHitBlock = false;

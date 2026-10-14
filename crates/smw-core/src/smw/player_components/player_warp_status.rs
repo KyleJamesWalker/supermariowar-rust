@@ -134,13 +134,13 @@ impl PlayerWarpStatus {
             if game_values.warplocktime > 0 {
                 match game_values.warplockstyle {
                     WarpLockStyle::EntranceOnly | WarpLockStyle::EntranceAndExit => {
-                        g_map.warpexits[warp.id as usize].locktimer = game_values.warplocktime;
+                        game().g_map.warpexits[warp.id as usize].locktimer = game_values.warplocktime;
                     }
                     WarpLockStyle::EntireConnection => {
-                        g_map.lockconnection(self.warpconnection as i32);
+                        game().g_map.lockconnection(self.warpconnection as i32);
                     }
                     WarpLockStyle::AllWarps => {
-                        g_map.lockconnection(-1);
+                        game().g_map.lockconnection(-1);
                     }
                     _ => {}
                 }
@@ -152,7 +152,7 @@ impl PlayerWarpStatus {
 
     pub fn choose_warp_exit(&mut self, player: &mut CPlayer) {
         unsafe {
-            let mut exit: Ptr<WarpExit> = g_map.get_random_warp_exit(self.warpconnection as i32, self.warpid as i32);
+            let mut exit: Ptr<WarpExit> = game().g_map.get_random_warp_exit(self.warpconnection as i32, self.warpid as i32);
             debug_assert!(!exit.is_null());
             player.set_xi(exit.x);
             player.set_yi(exit.y);
@@ -179,7 +179,7 @@ impl PlayerWarpStatus {
                     self.warpplane = ((exit.warpy as i32) << 5) as i16;
 
                     if iRow as i32 - 1 >= 0 {
-                        block = g_map.block(iCol, (iRow as i32 - 1) as i16);
+                        block = game().g_map.block(iCol, (iRow as i32 - 1) as i16);
 
                         if !block.is_null() && !block.is_transparent() && !block.is_hidden() {
                             block.trigger_behavior();
@@ -197,7 +197,7 @@ impl PlayerWarpStatus {
                         iCol = (iCol as i32 - 20) as i16;
                     }
 
-                    block = g_map.block((iCol as i32 + 1) as i16, iRow);
+                    block = game().g_map.block((iCol as i32 + 1) as i16, iRow);
 
                     if !block.is_null() && !block.is_transparent() && !block.is_hidden() {
                         block.trigger_behavior();
@@ -212,7 +212,7 @@ impl PlayerWarpStatus {
                     self.warpplane = (((exit.warpy as i32) << 5) + TILESIZE) as i16;
 
                     if (iRow as i32 + 1) < 15 {
-                        block = g_map.block(iCol, (iRow as i32 + 1) as i16);
+                        block = game().g_map.block(iCol, (iRow as i32 + 1) as i16);
 
                         if !block.is_null() && !block.is_transparent() && !block.is_hidden() {
                             block.trigger_behavior();
@@ -230,7 +230,7 @@ impl PlayerWarpStatus {
                         iCol = (iCol as i32 + 20) as i16;
                     }
 
-                    block = g_map.block((iCol as i32 - 1) as i16, iRow);
+                    block = game().g_map.block((iCol as i32 - 1) as i16, iRow);
 
                     if !block.is_null() && !block.is_transparent() && !block.is_hidden() {
                         block.trigger_behavior();

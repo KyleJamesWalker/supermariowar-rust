@@ -1,7 +1,7 @@
 //! Port of src/common/map/MapReader18xx.cpp
 
+use crate::game::game;
 use crate::common::file_io::BinaryFile;
-use crate::common::global::g_tilesetmanager;
 use crate::common::global_constants::*;
 use crate::common::map::map_reader::MapReader;
 use crate::common::map::{read_type_preview, read_type_summary, CMap, MapHazard, MapItem, MapItemType, ReadType, TilesetTile, WarpEnterDirection};
@@ -49,13 +49,13 @@ impl MapReader {
         unsafe {
             for t in &translation {
                 let iID = t.iID as usize;
-                translationid[iID] = g_tilesetmanager.index_from_name(&t.szName) as i16;
+                translationid[iID] = game().g_tilesetmanager.index_from_name(&t.szName) as i16;
 
                 if translationid[iID] as i32 == TILESETUNKNOWN {
                     tilesetwidths[iID] = 1;
                     tilesetheights[iID] = 1;
                 } else {
-                    let ts = g_tilesetmanager.tileset(translationid[iID] as isize as usize);
+                    let ts = game().g_tilesetmanager.tileset(translationid[iID] as isize as usize);
                     tilesetwidths[iID] = ts.width();
                     tilesetheights[iID] = ts.height();
                 }

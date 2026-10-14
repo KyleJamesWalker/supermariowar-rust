@@ -54,7 +54,7 @@ impl PU_TreasureChestBonus {
         let collisionHeight = o.collisionHeight;
         let mut iAttempts: i16 = 10;
         unsafe {
-            while !g_map.findspawnpoint(5, &mut ix, &mut iy, collisionWidth, collisionHeight, false) && {
+            while !game().g_map.findspawnpoint(5, &mut ix, &mut iy, collisionWidth, collisionHeight, false) && {
                 let a = iAttempts;
                 iAttempts -= 1;
                 a > 0
