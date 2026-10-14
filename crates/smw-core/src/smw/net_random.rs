@@ -138,18 +138,40 @@ impl Ev {
     }
 }
 
-/// The objects added to the containers while an event runs, for its `C` record.
-static mut g_added: Option<Vec<String>> = None;
-static mut g_inSetup: bool = false;
-static mut g_inGame: bool = false;
-static mut g_sent: u16 = 0;
-static mut g_frame: u32 = 0;
-/// While a joiner replays a card spawn: where the game host's card landed.
-static mut g_spawnAt: Option<(i16, i16)> = None;
-/// The game host's events this joiner cannot replay yet, with the frame they arrived.
-static mut g_pending: Vec<(RandomEvent, u32)> = Vec::new();
-/// How many frames a joiner's player has waited for the game host's respawn or warp exit.
-static mut g_waits: Vec<(Ev, i32, u32)> = Vec::new();
+/// The netplay event sync's part of `Game`.
+pub struct NetRandomState {
+    /// The objects added to the containers while an event runs, for its `C` record.
+    g_added: Option<Vec<String>>,
+    g_inSetup: bool,
+    g_inGame: bool,
+    g_sent: u16,
+    g_frame: u32,
+    /// While a joiner replays a card spawn: where the game host's card landed.
+    g_spawnAt: Option<(i16, i16)>,
+    /// The game host's events this joiner cannot replay yet, with the frame they arrived.
+    g_pending: Vec<(RandomEvent, u32)>,
+    /// How many frames a joiner's player has waited for the game host's respawn or warp exit.
+    g_waits: Vec<(Ev, i32, u32)>,
+}
+
+impl NetRandomState {
+    pub const fn new() -> Self {
+        NetRandomState {
+            g_added: None,
+            g_inSetup: false,
+            g_inGame: false,
+            g_sent: 0,
+            g_frame: 0,
+            g_spawnAt: None,
+            g_pending: Vec::new(),
+            g_waits: Vec::new(),
+        }
+    }
+}
+
+fn random_state() -> &'static mut NetRandomState {
+    &mut crate::game::game().get().net_random
+}
 
 /// A joiner's player whose death or warp the game host never saw gives up waiting after this.
 const FALLBACK_FRAMES: u32 = 90;
@@ -158,12 +180,12 @@ const PENDING_FRAMES: u32 = 180;
 /// From the net game's sync until its first gameplay frame the clients draw in step and number objects alike.
 pub fn begin_setup() {
     unsafe {
-        g_inSetup = true;
-        g_inGame = false;
-        g_sent = 0;
-        g_frame = 0;
-        g_pending.clear();
-        g_waits.clear();
+        random_state().g_inSetup = true;
+        random_state().g_inGame = false;
+        random_state().g_sent = 0;
+        random_state().g_frame = 0;
+        random_state().g_pending.clear();
+        random_state().g_waits.clear();
     }
     crate::smw::net_outcomes::begin_game();
 }
@@ -171,12 +193,12 @@ pub fn begin_setup() {
 /// Called at the start of every gameplay frame.
 pub fn gameplay_frame() {
     unsafe {
-        g_frame += 1;
+        random_state().g_frame += 1;
         crate::smw::net_outcomes::frame_start();
-        g_pending.retain(|(p, at)| p.kind != Ev::WarpExit as u8 || g_frame - at < PENDING_FRAMES);
-        if g_inSetup {
-            g_inSetup = false;
-            g_inGame = true;
+        random_state().g_pending.retain(|(p, at)| p.kind != Ev::WarpExit as u8 || random_state().g_frame - at < PENDING_FRAMES);
+        if random_state().g_inSetup {
+            random_state().g_inSetup = false;
+            random_state().g_inGame = true;
             set_network_id_context(0);
             // Menus may make objects during setup on one client only; the game's own objects are made alike.
             let mut n = 0;
@@ -187,7 +209,7 @@ pub fn gameplay_frame() {
                     o.iNetworkID = (1 << 16 | n) as i32;
                 }
             }
-            for (pkg, _) in std::mem::take(&mut g_pending) {
+            for (pkg, _) in std::mem::take(&mut random_state().g_pending) {
                 deliver(pkg);
             }
         }
@@ -197,8 +219,8 @@ pub fn gameplay_frame() {
 /// Leaving gameplay: menus (map previews) roll for themselves again.
 pub fn end_game() {
     unsafe {
-        g_inSetup = false;
-        g_inGame = false;
+        random_state().g_inSetup = false;
+        random_state().g_inGame = false;
         set_network_id_context(0);
     }
 }
@@ -206,13 +228,13 @@ pub fn end_game() {
 /// True when the caller must not run the site's own code: this function ran it, or the game host decides it.
 pub fn event(ev: Ev, args: &[i32]) -> bool {
     unsafe {
-        if !game().netplay.active || !g_inGame || g_added.is_some() || RandomNumberGenerator::tape_active() {
+        if !game().netplay.active || !random_state().g_inGame || random_state().g_added.is_some() || RandomNumberGenerator::tape_active() {
             return false;
         }
 
         if game().netplay.theHostIsMe {
-            g_sent = g_sent.wrapping_add(1);
-            let context = context_of(g_sent);
+            random_state().g_sent = random_state().g_sent.wrapping_add(1);
+            let context = context_of(random_state().g_sent);
             set_network_id_context(context as u32);
             RandomNumberGenerator::start_recording();
             let line = run_logged(ev, args);
@@ -238,8 +260,8 @@ pub fn event(ev: Ev, args: &[i32]) -> bool {
             }
             let pkg = RandomEvent { kind: ev as u8, context, args, draws };
             game().netplay.client.local_gamehost.send_message_to_my_peers(&pkg.to_bytes());
-        } else if let Some(i) = g_pending.iter().position(|(p, _)| p.kind == ev as u8 && same_target(ev, &p.args, args)) {
-            let (pkg, _) = g_pending.remove(i);
+        } else if let Some(i) = random_state().g_pending.iter().position(|(p, _)| p.kind == ev as u8 && same_target(ev, &p.args, args)) {
+            let (pkg, _) = random_state().g_pending.remove(i);
             replay(&pkg);
         } else if matches!(ev, Ev::Respawn | Ev::WarpExit) && waited(ev, args[0]) > FALLBACK_FRAMES {
             stop_waiting(ev, args[0]);
@@ -251,16 +273,16 @@ pub fn event(ev: Ev, args: &[i32]) -> bool {
 
 /// The game host's position for the card a replayed spawn makes, which the card takes after its own search.
 pub fn spawn_position() -> Option<(i16, i16)> {
-    unsafe { g_spawnAt }
+    unsafe { random_state().g_spawnAt }
 }
 
 pub fn in_game() -> bool {
-    unsafe { g_inGame }
+    unsafe { random_state().g_inGame }
 }
 
 /// Inside an event the host runs or a joiner replays.
 pub fn in_event() -> bool {
-    unsafe { g_added.is_some() || RandomNumberGenerator::tape_active() }
+    unsafe { random_state().g_added.is_some() || RandomNumberGenerator::tape_active() }
 }
 
 /// A joiner whose game host decides random outcomes, deaths and scores.
@@ -270,7 +292,7 @@ pub fn host_decides() -> bool {
 
 /// While true, a joiner leaves its hazard timers waiting for the game host's.
 pub fn awaiting_host() -> bool {
-    unsafe { game().netplay.active && !game().netplay.theHostIsMe && g_inGame }
+    unsafe { game().netplay.active && !game().netplay.theHostIsMe && random_state().g_inGame }
 }
 
 /// Contexts 0 and 1 number untracked objects and setup objects.
@@ -287,8 +309,8 @@ pub fn receive(data: &[u8]) {
         if game().netplay.theHostIsMe || Ev::from_u8(pkg.kind).is_none() {
             return;
         }
-        if !g_inGame {
-            g_pending.push((pkg, g_frame));
+        if !random_state().g_inGame {
+            random_state().g_pending.push((pkg, random_state().g_frame));
             return;
         }
     }
@@ -300,19 +322,19 @@ fn deliver(pkg: RandomEvent) {
     if ready(ev, &pkg.args) {
         replay(&pkg);
     } else {
-        unsafe { g_pending.push((pkg, g_frame)) };
+        unsafe { random_state().g_pending.push((pkg, random_state().g_frame)) };
     }
 }
 
 fn waited(ev: Ev, key: i32) -> u32 {
     unsafe {
-        match g_waits.iter_mut().find(|w| w.0 == ev && w.1 == key) {
+        match random_state().g_waits.iter_mut().find(|w| w.0 == ev && w.1 == key) {
             Some(w) => {
                 w.2 += 1;
                 w.2
             }
             None => {
-                g_waits.push((ev, key, 1));
+                random_state().g_waits.push((ev, key, 1));
                 1
             }
         }
@@ -320,7 +342,7 @@ fn waited(ev: Ev, key: i32) -> u32 {
 }
 
 fn stop_waiting(ev: Ev, key: i32) {
-    unsafe { g_waits.retain(|w| w.0 != ev || w.1 != key) };
+    unsafe { random_state().g_waits.retain(|w| w.0 != ev || w.1 != key) };
 }
 
 fn replay(pkg: &RandomEvent) {
@@ -379,9 +401,9 @@ pub fn object_event(ev: Ev, args: &[i32]) -> bool {
 /// Runs the event and returns its `C` record.
 fn run_logged(ev: Ev, args: &[i32]) -> String {
     unsafe {
-        g_added = Some(Vec::new());
+        random_state().g_added = Some(Vec::new());
         run(ev, args);
-        let mut out = g_added.take().unwrap_or_default();
+        let mut out = random_state().g_added.take().unwrap_or_default();
         out.extend(outcome(ev, args));
         let args: Vec<String> = args.iter().map(|a| a.to_string()).collect();
         let shown = match ev {
@@ -397,7 +419,7 @@ fn run_logged(ev: Ev, args: &[i32]) -> String {
 /// Called by `CObjectContainer::add_dyn`.
 pub fn note_added(obj: Ptr<dyn CObjectTrait>) {
     unsafe {
-        if let Some(added) = g_added.as_mut() {
+        if let Some(added) = random_state().g_added.as_mut() {
             let mut o = obj;
             let moving = o.as_io_moving_object().map(|m| m.get_moving_object_type() as i32).unwrap_or(-1);
             added.push(format!("{}/{}@{},{}", o.get_object_type() as i32, moving, o.ix, o.iy));
@@ -407,7 +429,7 @@ pub fn note_added(obj: Ptr<dyn CObjectTrait>) {
 
 pub fn note_powerup(iType: i16) {
     unsafe {
-        if let Some(added) = g_added.as_mut() {
+        if let Some(added) = random_state().g_added.as_mut() {
             added.push(format!("powerup{}", iType));
         }
     }
@@ -453,13 +475,13 @@ fn run(ev: Ev, args: &[i32]) {
     use crate::smw::objects as obj;
     match ev {
         Ev::FrenzyCard | Ev::CollectionCard => unsafe {
-            g_spawnAt = args.get(..2).map(|a| (a[0] as i16, a[1] as i16));
+            random_state().g_spawnAt = args.get(..2).map(|a| (a[0] as i16, a[1] as i16));
             if ev == Ev::FrenzyCard {
                 gm::frenzy::net_spawn_card();
             } else {
                 gm::card_collection::net_spawn_card();
             }
-            g_spawnAt = None;
+            random_state().g_spawnAt = None;
         },
         Ev::StompEnemy => gm::stomp::net_spawn_enemy(),
         Ev::SurvivalEnemy => gm::survival::net_spawn_enemy(),
@@ -570,18 +592,18 @@ fn gm_state_tag() -> String {
 /// A net match's checkpoint (smw/checkpoint.rs): the event state from the sync on.
 pub fn checkpoint(s: &mut crate::smw::checkpoint::Snap) {
     unsafe {
-        s.io(&mut *(&raw mut g_inSetup));
-        s.io(&mut *(&raw mut g_inGame));
-        s.io(&mut *(&raw mut g_sent));
-        s.io(&mut *(&raw mut g_frame));
-        s.io(&mut *(&raw mut g_spawnAt));
-        let mut pending: Vec<(Vec<u8>, u32)> = g_pending.iter().map(|(p, at)| (p.to_bytes(), *at)).collect();
+        s.io(&mut *(&raw mut random_state().g_inSetup));
+        s.io(&mut *(&raw mut random_state().g_inGame));
+        s.io(&mut *(&raw mut random_state().g_sent));
+        s.io(&mut *(&raw mut random_state().g_frame));
+        s.io(&mut *(&raw mut random_state().g_spawnAt));
+        let mut pending: Vec<(Vec<u8>, u32)> = random_state().g_pending.iter().map(|(p, at)| (p.to_bytes(), *at)).collect();
         s.io(&mut pending);
-        let mut waits: Vec<(u8, i32, u32)> = g_waits.iter().map(|&(ev, key, n)| (ev as u8, key, n)).collect();
+        let mut waits: Vec<(u8, i32, u32)> = random_state().g_waits.iter().map(|&(ev, key, n)| (ev as u8, key, n)).collect();
         s.io(&mut waits);
         if s.loading() {
-            g_pending = pending.iter().filter_map(|(bytes, at)| Some((RandomEvent::from_bytes(bytes)?, *at))).collect();
-            g_waits = waits.iter().filter_map(|&(ev, key, n)| Some((Ev::from_u8(ev)?, key, n))).collect();
+            random_state().g_pending = pending.iter().filter_map(|(bytes, at)| Some((RandomEvent::from_bytes(bytes)?, *at))).collect();
+            random_state().g_waits = waits.iter().filter_map(|&(ev, key, n)| Some((Ev::from_u8(ev)?, key, n))).collect();
         }
         let (context, count) = crate::common::object_base::network_id_state();
         s.io(context);

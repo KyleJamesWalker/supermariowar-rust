@@ -14,6 +14,8 @@ use crate::common::game_values::CGameValues;
 use crate::globals::{Global, Ptr};
 use crate::smw::gamemodes::{bonus_house::CGM_Bonus, mini_boss::CGM_Boss_MiniGame, mini_boxes::CGM_Boxes_MiniGame, mini_pipe::CGM_Pipe_MiniGame};
 use crate::smw::net::{NetworkHandler, Networking};
+use crate::smw::net_outcomes::NetOutcomesState;
+use crate::smw::net_random::NetRandomState;
 use crate::smw::object_container::CObjectContainer;
 use crate::smw::player::CPlayer;
 
@@ -52,6 +54,8 @@ pub struct Game {
     pub networkHandler: Global<NetworkHandler>,
     pub netplay: Global<Networking>,
     pub backup_playercontrol: [i16; 4],
+    pub net_outcomes: NetOutcomesState,
+    pub net_random: NetRandomState,
 }
 
 impl Game {
@@ -90,6 +94,8 @@ impl Game {
             networkHandler: Global::uninit(),
             netplay: Global::uninit(),
             backup_playercontrol: [0; 4],
+            net_outcomes: NetOutcomesState::new(),
+            net_random: NetRandomState::new(),
         }
     }
 }
