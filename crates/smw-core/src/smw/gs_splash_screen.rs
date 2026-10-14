@@ -9,7 +9,7 @@ use crate::common::path::convert_path_pack;
 use crate::common::sfx::sfxMusic;
 use crate::globals::*;
 use crate::smw::game_state::{GameState, GameStateManager};
-use crate::smw::gs_gameplay::{eyecandy, GameplayState};
+use crate::smw::gs_gameplay::{GameplayState};
 use crate::smw::gs_menu::MenuState;
 use sdl2::sys::{SDL_Event, SDL_EventType, SDL_FillRect, SDL_KeyCode, SDL_Keymod};
 
@@ -103,7 +103,7 @@ impl GameState for SplashScreenState {
                         game().rm.menu_shade.draw(0, 0);
                         blitdest = screen;
 
-                        eyecandy[2].clean();
+                        game().eyecandy[2].clean();
 
                         game().game_values.playerInput.reset_keys();
                         game().game_values.appstate = AppState::Menu;
@@ -139,9 +139,9 @@ impl GameState for SplashScreenState {
             } else if self.state == 8 {
                 game().rm.menu_font_large.draw_centered(App::screenWidth / 2, (App::screenHeight as f32 * 0.875f32) as i32, "Press Any Key To Continue");
 
-                eyecandy[2].clean_dead_objects();
-                eyecandy[2].update();
-                eyecandy[2].draw();
+                game().eyecandy[2].clean_dead_objects();
+                game().eyecandy[2].update();
+                game().eyecandy[2].draw();
             }
 
             // Only start loading after we displayed something, in the 2nd frame

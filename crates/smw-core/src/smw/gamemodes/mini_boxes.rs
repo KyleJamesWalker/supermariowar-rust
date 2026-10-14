@@ -10,7 +10,6 @@ use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::{self as gm, remove_players_but_team, remove_team, setup_score_board, show_score_board};
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::main::{score, score_cnt};
 use crate::smw::objects::moving::mo_coin::MO_Coin;
 use crate::smw::player::CPlayer;
@@ -54,7 +53,7 @@ impl CGM_Boxes_MiniGame {
             unsafe {
                 if_sound_on_play(&mut game().rm.sfx_coin);
 
-                objectcontainer[1].add(Ptr::new_box(MO_Coin::new(Ptr::from_mut(&mut game().rm.spr_coin), vel, pos, 2, -1, 2, 30, false)));
+                game().objectcontainer[1].add(Ptr::new_box(MO_Coin::new(Ptr::from_mut(&mut game().rm.spr_coin), vel, pos, 2, -1, 2, 30, false)));
             }
         }
     }

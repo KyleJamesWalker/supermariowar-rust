@@ -10,7 +10,7 @@ use crate::common::moving_object_types::*;
 use crate::common::object_base::CObjectTrait;
 use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::*;
-use crate::smw::gs_gameplay::{eyecandy, objectcontainer};
+
 use crate::smw::objects::carriable::co_shell::{CO_Shell, ShellType};
 use crate::smw::objects::moving::mo_coin::MO_Coin;
 use crate::smw::objects::moving::mo_podobo::MO_Podobo;
@@ -207,7 +207,7 @@ pub fn removeifprojectile(mut object: Ptr<dyn IO_MovingObjectTrait>, playsound: 
                 }
 
                 object.dead = true;
-                eyecandy[2].emplace(EC_SingleAnimation::new(
+                game().eyecandy[2].emplace(EC_SingleAnimation::new(
                     Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                     (object.x() + (object.iw as i32 >> 1) - 16) as i16,
                     (object.y() + (object.ih as i32 >> 1) - 16) as i16,
@@ -240,12 +240,12 @@ pub fn createpowerup(iType: i16, pos: Vec2s, side: bool, spawn: bool) -> Ptr<dyn
         match spawned {
             Spawned::Coin(coin) => {
                 if_sound_on_play(&mut game().rm.sfx_coin);
-                if objectcontainer[1].add(coin) {
+                if game().objectcontainer[1].add(coin) {
                     return as_moving(coin);
                 }
             }
             Spawned::Powerup(mut powerup) => {
-                if objectcontainer[0].add_dyn(Ptr::from_raw(powerup.as_ptr() as *mut dyn CObjectTrait)) {
+                if game().objectcontainer[0].add_dyn(Ptr::from_raw(powerup.as_ptr() as *mut dyn CObjectTrait)) {
                     if !spawn {
                         powerup.nospawn(pos.y);
                         io_moving_object_collision_detection_checksides(powerup.get());
@@ -255,7 +255,7 @@ pub fn createpowerup(iType: i16, pos: Vec2s, side: bool, spawn: bool) -> Ptr<dyn
                 }
             }
             Spawned::Shell(mut shell) => {
-                if objectcontainer[1].add(shell) {
+                if game().objectcontainer[1].add(shell) {
                     if !spawn {
                         shell.nospawn(pos.y, true);
                         io_moving_object_collision_detection_checksides(shell.get());
@@ -265,7 +265,7 @@ pub fn createpowerup(iType: i16, pos: Vec2s, side: bool, spawn: bool) -> Ptr<dyn
                 }
             }
             Spawned::Feather(mut feather) => {
-                if objectcontainer[0].add(feather) {
+                if game().objectcontainer[0].add(feather) {
                     if !spawn {
                         feather.nospawn(pos.y);
                     }
@@ -274,7 +274,7 @@ pub fn createpowerup(iType: i16, pos: Vec2s, side: bool, spawn: bool) -> Ptr<dyn
                 }
             }
             Spawned::Leaf(mut leaf) => {
-                if objectcontainer[0].add(leaf) {
+                if game().objectcontainer[0].add(leaf) {
                     if !spawn {
                         leaf.nospawn(pos.y);
                     }
@@ -294,7 +294,7 @@ pub fn createpowerup(iType: i16, pos: Vec2s, side: bool, spawn: bool) -> Ptr<dyn
                     -1,
                     true,
                 ));
-                objectcontainer[2].add(podobo);
+                game().objectcontainer[2].add(podobo);
                 return as_moving(podobo);
             }
         }
@@ -306,7 +306,7 @@ pub fn createpowerup(iType: i16, pos: Vec2s, side: bool, spawn: bool) -> Ptr<dyn
 fn check_secret_poof(object: Ptr<dyn IO_MovingObjectTrait>) {
     unsafe {
         if !object.is_null() {
-            eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_poof), (object.x() - 8) as i16, (object.y() - 8) as i16, 4, 5));
+            game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_poof), (object.x() - 8) as i16, (object.y() - 8) as i16, 4, 5));
         }
     }
 }

@@ -12,7 +12,6 @@ use crate::common::random_number_generator::{RANDOM_BOOL, RANDOM_INT};
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::{self as gm, remove_players_but_team, remove_team, setup_score_board, show_score_board};
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::main::{players, score, score_cnt};
 use crate::smw::objects::moving::mo_frenzy_card::MO_FrenzyCard;
 use crate::smw::objects::moving::mo_podobo::MO_Podobo;
@@ -112,7 +111,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
             } else {
                 (App::screenWidth / 2) as i16
             };
-            objectcontainer[0].add(Ptr::new_box(MO_SledgeBrother::new(Ptr::from_mut(&mut game().rm.spr_sledgebrothers), platformY, self.iBossType)));
+            game().objectcontainer[0].add(Ptr::new_box(MO_SledgeBrother::new(Ptr::from_mut(&mut game().rm.spr_sledgebrothers), platformY, self.iBossType)));
         }
     }
 
@@ -138,7 +137,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
                     //Randomly spawn koopas
                     self.enemytimer -= 1;
                     if self.enemytimer <= 0 {
-                        objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(Ptr::from_mut(&mut game().rm.spr_koopa), RANDOM_BOOL(), false, false, true)));
+                        game().objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(Ptr::from_mut(&mut game().rm.spr_koopa), RANDOM_BOOL(), false, false, true)));
                         self.enemytimer = (RANDOM_INT(120) as i16 as i32 + 120) as i16; //Spawn koopas slowly
                     }
                 } else if self.iBossType == Boss::Bomb {
@@ -149,7 +148,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
                         let x = RANDOM_INT((App::screenWidth as f32 * 0.95f32) as i32) as i16;
                         let pos = Vec2s::new(x, App::screenHeight as i16);
                         let nspeed: f32 = -((RANDOM_INT(9) as f32) / 2.0f32) - 9.0f32;
-                        objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(Ptr::from_mut(&mut game().rm.spr_podobo), pos, nspeed, -1, -1, -1, false)));
+                        game().objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(Ptr::from_mut(&mut game().rm.spr_podobo), pos, nspeed, -1, -1, -1, false)));
                         self.enemytimer = (RANDOM_INT(80) + 60) as i16;
                     }
 
@@ -157,8 +156,8 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
                     if self.poweruptimer <= 0 {
                         self.poweruptimer = (RANDOM_INT(80) + 60) as i16;
 
-                        if objectcontainer[1].count_types(object_frenzycard) < players.len() {
-                            objectcontainer[1].add(Ptr::new_box(MO_FrenzyCard::new(Ptr::from_mut(&mut game().rm.spr_frenzycards), 0)));
+                        if game().objectcontainer[1].count_types(object_frenzycard) < players.len() {
+                            game().objectcontainer[1].add(Ptr::new_box(MO_FrenzyCard::new(Ptr::from_mut(&mut game().rm.spr_frenzycards), 0)));
                         }
                     }
                 }

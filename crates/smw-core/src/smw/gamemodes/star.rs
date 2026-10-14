@@ -12,8 +12,6 @@ use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::*;
 use crate::smw::gamemodes::time_limit::{cgm_timelimit_init, CGM_TimeLimit};
-use crate::smw::gs_gameplay::eyecandy;
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::main::{players, score, score_cnt};
 use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::carriable::co_star::CO_Star;
@@ -82,7 +80,7 @@ impl CGM_Star {
 
                     self.starItem[iStar as usize] = Ptr::new_box(CO_Star::new(Ptr::from_mut(&mut game().rm.spr_star), 1, iStar));
                     self.starItem[iStar as usize].set_player_color(self.starPlayer[iStar as usize].get_color_id());
-                    objectcontainer[1].add(self.starItem[iStar as usize]);
+                    game().objectcontainer[1].add(self.starItem[iStar as usize]);
                     iStar += 1;
                 }
             } else {
@@ -91,7 +89,7 @@ impl CGM_Star {
                 self.starPlayer[0] = self.get_highest_score_player(fGetHighest);
 
                 self.starItem[0] = Ptr::new_box(CO_Star::new(Ptr::from_mut(&mut game().rm.spr_star), if self.iCurrentModeType == StarStyle::Ztar { 0 } else { 1 }, 0));
-                objectcontainer[1].add(self.starItem[0]);
+                game().objectcontainer[1].add(self.starItem[0]);
             }
         }
     }
@@ -116,7 +114,7 @@ impl CGM_Star {
             if !self.starPlayer[id as usize].is_null() {
                 oldstar = self.starPlayer[id as usize];
                 oldstar.shield().turn_on();
-                eyecandy[2].emplace(EC_SingleAnimation::new(
+                game().eyecandy[2].emplace(EC_SingleAnimation::new(
                     Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                     (oldstar.center_x() as i32 - 16) as i16,
                     (oldstar.center_y() as i32 - 16) as i16,
@@ -134,7 +132,7 @@ impl CGM_Star {
 
             if self.starItem[id as usize].get_type() == 1 {
                 let text = if self.iCurrentModeType == StarStyle::Multi { "Star Get!" } else { "Shine Get!" };
-                eyecandy[2].emplace(EC_GravText::new(
+                game().eyecandy[2].emplace(EC_GravText::new(
                     Ptr::from_mut(&mut game().rm.game_font_large),
                     player.center_x(),
                     player.bottom_y(),
@@ -142,7 +140,7 @@ impl CGM_Star {
                     (-(VELJUMP as f64) * 1.5) as f32,
                 ));
             } else {
-                eyecandy[2].emplace(EC_GravText::new(
+                game().eyecandy[2].emplace(EC_GravText::new(
                     Ptr::from_mut(&mut game().rm.game_font_large),
                     player.center_x(),
                     player.bottom_y(),
@@ -151,7 +149,7 @@ impl CGM_Star {
                 ));
             }
 
-            eyecandy[2].emplace(EC_SingleAnimation::new(
+            game().eyecandy[2].emplace(EC_SingleAnimation::new(
                 Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                 (player.center_x() as i32 - 16) as i16,
                 (player.center_y() as i32 - 16) as i16,

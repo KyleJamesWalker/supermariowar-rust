@@ -7,7 +7,6 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::*;
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::objects::carriable::co_egg::CO_Egg;
 use crate::smw::objects::moving::mo_yoshi::MO_Yoshi;
 use crate::smw::player::CPlayer;
@@ -49,7 +48,7 @@ impl CGameModeTrait for CGM_Eggs {
                     }
 
                     fEgg[iEggs as usize] = true;
-                    objectcontainer[1].add(Ptr::new_box(CO_Egg::new(Ptr::from_mut(&mut game().rm.spr_egg), iEggs)));
+                    game().objectcontainer[1].add(Ptr::new_box(CO_Egg::new(Ptr::from_mut(&mut game().rm.spr_egg), iEggs)));
                 }
             }
 
@@ -63,13 +62,13 @@ impl CGameModeTrait for CGM_Eggs {
                         fAtLeastOneMatch = true;
                     }
 
-                    objectcontainer[1].add(Ptr::new_box(MO_Yoshi::new(Ptr::from_mut(&mut game().rm.spr_yoshi), iYoshis)));
+                    game().objectcontainer[1].add(Ptr::new_box(MO_Yoshi::new(Ptr::from_mut(&mut game().rm.spr_yoshi), iYoshis)));
                 }
             }
 
             if !fAtLeastOneMatch {
-                objectcontainer[1].add(Ptr::new_box(CO_Egg::new(Ptr::from_mut(&mut game().rm.spr_egg), 1)));
-                objectcontainer[1].add(Ptr::new_box(MO_Yoshi::new(Ptr::from_mut(&mut game().rm.spr_yoshi), 1)));
+                game().objectcontainer[1].add(Ptr::new_box(CO_Egg::new(Ptr::from_mut(&mut game().rm.spr_egg), 1)));
+                game().objectcontainer[1].add(Ptr::new_box(MO_Yoshi::new(Ptr::from_mut(&mut game().rm.spr_yoshi), 1)));
             }
         }
     }

@@ -15,7 +15,7 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::{eyecandy, objectcontainer};
+
 use crate::smw::main::players;
 use crate::smw::objectgame::removeifprojectile;
 use crate::smw::objects::carriable::co_throw_box::CO_ThrowBox;
@@ -147,7 +147,7 @@ impl MO_PirhanaPlant {
             if_sound_on_play(&mut game().rm.sfx_kicksound);
             let x = (self.ix as i32 + if self.iDirection == 2 { 0 } else { self.collisionWidth as i32 - 32 }) as i16;
             let y = (self.iy as i32 + if self.iDirection == 0 { 0 } else { self.collisionHeight as i32 - 32 }) as i16;
-            eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), x, y, 3, 4));
+            game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), x, y, 3, 4));
         }
 
         if self.iDirection == 0 {
@@ -341,7 +341,7 @@ impl CObjectTrait for MO_PirhanaPlant {
                     (if self.iDirection != 1 { iy + 7 } else { iy + ih - 23 }) as i16,
                 );
                 let angle = self.get_fireball_angle();
-                objectcontainer[1].add(Ptr::new_box(OMO_StraightPathHazard::new(
+                game().objectcontainer[1].add(Ptr::new_box(OMO_StraightPathHazard::new(
                     Ptr::from_mut(&mut game().rm.spr_hazard_fireball[if self.fPreview { 1 } else { 0 }]),
                     pos,
                     angle,

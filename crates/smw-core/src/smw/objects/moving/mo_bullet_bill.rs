@@ -13,7 +13,7 @@ use crate::common::object_base::CObjectTrait;
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::{eyecandy, lookup_team_id, objectcontainer};
+use crate::smw::gs_gameplay::{lookup_team_id};
 use crate::smw::objectgame::removeifprojectile;
 use crate::smw::objects::carriable::co_throw_box::CO_ThrowBox;
 use crate::smw::objects::moving::mo_explosion::MO_Explosion;
@@ -259,7 +259,7 @@ impl CObjectTrait for MO_BulletBill {
                 let iCenterX: i16 = (((ix + iOffsetX as i32 - bix) >> 1) + (bix + (bulletbill.iw as i32 >> 1))) as i16;
                 let iCenterY: i16 = (((iy - biy) >> 1) + (biy + (bulletbill.ih as i32 >> 1))) as i16;
 
-                objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
+                game().objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
                     Ptr::from_mut(&mut game().rm.spr_explosion),
                     Vec2s::new((iCenterX as i32 - 96) as i16, (iCenterY as i32 - 64) as i16),
                     2,
@@ -302,7 +302,7 @@ impl IO_MovingObjectTrait for MO_BulletBill {
     fn die(&mut self) {
         self.dead = true;
         unsafe {
-            eyecandy[2].emplace(EC_FallingObject::new(
+            game().eyecandy[2].emplace(EC_FallingObject::new(
                 self.spr_dead,
                 self.ix,
                 self.iy,

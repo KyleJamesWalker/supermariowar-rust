@@ -6,7 +6,7 @@ use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 use crate::common::global::load_current_map_background;
-use crate::smw::gs_gameplay::{noncolcontainer, objectcontainer};
+
 use crate::smw::objecthazard::load_map_hazards;
 use crate::smw::objects::io_flame_cannon::IO_FlameCannon;
 use crate::smw::objects::moving::mo_bullet_bill::MO_BulletBill;
@@ -81,10 +81,10 @@ impl MI_MapPreview {
     pub fn update_impl(&mut self) {
         //Update hazards
         unsafe {
-            noncolcontainer.update();
+            game().noncolcontainer.update();
 
-            objectcontainer[1].update();
-            objectcontainer[1].clean_dead_objects();
+            game().objectcontainer[1].update();
+            game().objectcontainer[1].clean_dead_objects();
 
             game().g_map.update_platforms();
         }
@@ -118,8 +118,8 @@ impl MI_MapPreview {
 
             //Draw map hazards
             let (ox, oy) = (self.rectDst.x as i16, self.rectDst.y as i16);
-            for i in 0..objectcontainer[1].list().len() {
-                let mut obj = objectcontainer[1].list()[i];
+            for i in 0..game().objectcontainer[1].list().len() {
+                let mut obj = game().objectcontainer[1].list()[i];
                 let any = obj.as_any();
                 if let Some(hazard) = any.downcast_mut::<OMO_OrbitHazard>() {
                     io_over_map_object_draw_offset(hazard, ox, oy);

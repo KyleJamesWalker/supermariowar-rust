@@ -28,7 +28,7 @@ use crate::smw::gamemodes::chicken::CGM_Chicken;
 use crate::smw::gamemodes::shy_guy_tag::CGM_ShyGuyTag;
 use crate::smw::gamemodes::star::CGM_Star;
 use crate::smw::gamemodes::tag::CGM_Tag;
-use crate::smw::gs_gameplay::{eyecandy, g_iWinningPlayer, noncolcontainer, objectcontainer, spotlightManager, swap_players};
+use crate::smw::gs_gameplay::{g_iWinningPlayer, spotlightManager, swap_players};
 use crate::smw::main::{g_iSwirlSpawnLocations, players};
 use crate::smw::net::netplay;
 use crate::smw::net_random::{self, Ev};
@@ -597,7 +597,7 @@ impl CPlayer {
                 //Shield the player after becoming unfrozen to protect against being frozen again
                 self.shield.turn_on();
                 unsafe {
-                    eyecandy[2].emplace(EC_SingleAnimation::new(
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
                         Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                         (self.ix as i32 + HALFPW - 16) as i16,
                         (self.iy as i32 + HALFPH - 16) as i16,
@@ -674,7 +674,7 @@ impl CPlayer {
                     }
                 {
                     self.rainsteptimer = 0;
-                    eyecandy[1].emplace(EC_SingleAnimation::new_rect(
+                    game().eyecandy[1].emplace(EC_SingleAnimation::new_rect(
                         Ptr::from_mut(&mut game().rm.spr_frictionsmoke),
                         self.ix,
                         (self.iy as i32 + PH - 14) as i16,
@@ -803,7 +803,7 @@ impl CPlayer {
                 self.state = PlayerState::Spawning;
 
                 if game().game_values.spawnstyle == SpawnStyle::Instant {
-                    eyecandy[2].emplace(EC_SingleAnimation::new(
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
                         Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                         (self.ix as i32 + HALFPW - 16) as i16,
                         (self.iy as i32 + HALFPH - 16) as i16,
@@ -811,7 +811,7 @@ impl CPlayer {
                         8,
                     ));
                 } else if game().game_values.spawnstyle == SpawnStyle::Door {
-                    eyecandy[0].emplace(EC_Door::new(
+                    game().eyecandy[0].emplace(EC_Door::new(
                         Ptr::from_mut(&mut game().rm.spr_spawndoor),
                         Ptr::from_mut(&mut self.sprites.get()[self.sprite_state as usize]),
                         (self.ix as i32 + HALFPW - 16) as i16,
@@ -831,7 +831,7 @@ impl CPlayer {
             for _iPodobo in 0..numPodobos {
                 let x = RANDOM_INT((App::screenWidth as f32 * 0.95f32) as i32) as i16;
                 let vy = -((RANDOM_INT(9) as f32) / 2.0f32) - 9.0f32;
-                objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(
+                game().objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(
                     Ptr::from_mut(&mut game().rm.spr_podobo),
                     Vec2s::new(x, App::screenHeight as i16),
                     vy,
@@ -847,7 +847,7 @@ impl CPlayer {
 
     pub fn net_throw_boomerang(&mut self, ix: i32, iy: i32, facingRight: bool) {
         unsafe {
-            objectcontainer[2].add(Ptr::new_box(MO_Boomerang::new(
+            game().objectcontainer[2].add(Ptr::new_box(MO_Boomerang::new(
                 Ptr::from_mut(&mut game().rm.spr_boomerang),
                 Vec2s::new(ix as i16, (iy + HALFPH - 16) as i16),
                 4,
@@ -885,7 +885,7 @@ impl CPlayer {
                 bomb.get().move_to_owner();
             }
 
-            objectcontainer[1].add(bomb);
+            game().objectcontainer[1].add(bomb);
             self.projectiles += 1;
 
             self.hammertimer = 90;
@@ -934,7 +934,7 @@ impl CPlayer {
                         let iColorIdOffset = ((self.colorID as i32) << 5) as i16;
 
                         for iSwirl in 0..4usize {
-                            eyecandy[2].emplace(EC_SingleAnimation::new_rect(
+                            game().eyecandy[2].emplace(EC_SingleAnimation::new_rect(
                                 Ptr::from_mut(&mut game().rm.spr_spawnsmoke),
                                 (ixoffset as i32 + g_iSwirlSpawnLocations[iSwirl][0][swirlindex] as i32) as i16,
                                 (iyoffset as i32 + g_iSwirlSpawnLocations[iSwirl][1][swirlindex] as i32) as i16,
@@ -1007,25 +1007,25 @@ impl CPlayer {
                 }
                 PowerupType::ShellGreen => {
                     let mut shell = Ptr::new_box(CO_Shell::new(ShellType::Green, Vec2s::zero(), true, true, true, false));
-                    if objectcontainer[1].add(shell) {
+                    if game().objectcontainer[1].add(shell) {
                         shell.used_as_stored_powerup(this);
                     }
                 }
                 PowerupType::ShellRed => {
                     let mut shell = Ptr::new_box(CO_Shell::new(ShellType::Red, Vec2s::zero(), false, true, true, false));
-                    if objectcontainer[1].add(shell) {
+                    if game().objectcontainer[1].add(shell) {
                         shell.used_as_stored_powerup(this);
                     }
                 }
                 PowerupType::ShellSpiny => {
                     let mut shell = Ptr::new_box(CO_Shell::new(ShellType::Spiny, Vec2s::zero(), false, false, true, true));
-                    if objectcontainer[1].add(shell) {
+                    if game().objectcontainer[1].add(shell) {
                         shell.used_as_stored_powerup(this);
                     }
                 }
                 PowerupType::ShellBuzzy => {
                     let mut shell = Ptr::new_box(CO_Shell::new(ShellType::Buzzy, Vec2s::zero(), false, true, false, false));
-                    if objectcontainer[1].add(shell) {
+                    if game().objectcontainer[1].add(shell) {
                         shell.used_as_stored_powerup(this);
                     }
                 }
@@ -1659,7 +1659,7 @@ impl CPlayer {
             let iy = self.iy as i32;
             if PlayerAction::Bobomb == self.action {
                 self.bobomb = false;
-                objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
+                game().objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
                     Ptr::from_mut(&mut game().rm.spr_explosion),
                     Vec2s::new((ix + HALFPW - 96) as i16, (iy + HALFPH - 64) as i16),
                     2,
@@ -1670,7 +1670,7 @@ impl CPlayer {
                 )));
                 if_sound_on_play(&mut game().rm.sfx_bobombsound);
             } else if PlayerAction::Fireball == self.action {
-                objectcontainer[0].add(Ptr::new_box(MO_Fireball::new(
+                game().objectcontainer[0].add(Ptr::new_box(MO_Fireball::new(
                     Ptr::from_mut(&mut game().rm.spr_fireball),
                     Vec2s::new((ix + 6) as i16, iy as i16),
                     4,
@@ -1690,7 +1690,7 @@ impl CPlayer {
             } else if PlayerAction::Hammer == self.action {
                 let vx = if game().game_values.reversewalk { -self.velx } else { self.velx };
                 if self.is_facing_right() {
-                    objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(
+                    game().objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(
                         Ptr::from_mut(&mut game().rm.spr_hammer),
                         Vec2s::new((ix + 8) as i16, iy as i16),
                         6,
@@ -1702,7 +1702,7 @@ impl CPlayer {
                         false,
                     )));
                 } else {
-                    objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(
+                    game().objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(
                         Ptr::from_mut(&mut game().rm.spr_hammer),
                         Vec2s::new((ix - 14) as i16, iy as i16),
                         6,
@@ -1729,7 +1729,7 @@ impl CPlayer {
                 }
             } else if PlayerAction::Iceblast == self.action {
                 if self.is_facing_right() {
-                    objectcontainer[2].add(Ptr::new_box(MO_IceBlast::new(
+                    game().objectcontainer[2].add(Ptr::new_box(MO_IceBlast::new(
                         Ptr::from_mut(&mut game().rm.spr_iceblast),
                         Vec2s::new((ix + HALFPW - 2) as i16, (iy + HALFPH - 16) as i16),
                         5.0,
@@ -1738,7 +1738,7 @@ impl CPlayer {
                         self.colorID,
                     )));
                 } else {
-                    objectcontainer[2].add(Ptr::new_box(MO_IceBlast::new(
+                    game().objectcontainer[2].add(Ptr::new_box(MO_IceBlast::new(
                         Ptr::from_mut(&mut game().rm.spr_iceblast),
                         Vec2s::new((ix + HALFPW - 30) as i16, (iy + HALFPH - 16) as i16),
                         -5.0,
@@ -1816,7 +1816,7 @@ impl CPlayer {
                         self.frictionslidetimer += 1;
                         if self.frictionslidetimer > 3 {
                             self.frictionslidetimer = 0;
-                            eyecandy[1].emplace(EC_SingleAnimation::new_rect(
+                            game().eyecandy[1].emplace(EC_SingleAnimation::new_rect(
                                 Ptr::from_mut(&mut game().rm.spr_frictionsmoke),
                                 self.ix,
                                 (self.iy as i32 + PH - 12) as i16,
@@ -1864,7 +1864,7 @@ impl CPlayer {
                         self.frictionslidetimer += 1;
                         if self.frictionslidetimer > 3 {
                             self.frictionslidetimer = 0;
-                            eyecandy[1].emplace(EC_SingleAnimation::new_rect(
+                            game().eyecandy[1].emplace(EC_SingleAnimation::new_rect(
                                 Ptr::from_mut(&mut game().rm.spr_frictionsmoke),
                                 (self.ix as i32 + PW - 16) as i16,
                                 (self.iy as i32 + PH - 12) as i16,
@@ -1995,14 +1995,14 @@ impl CPlayer {
                 //Add eyecandy for the dead player
                 if deathStyle == PlayerDeathStyle::Shatter || self.frozen {
                     let ice = Ptr::from_mut(&mut game().rm.spr_brokeniceblock);
-                    eyecandy[2].emplace(EC_FallingObject::new(ice, (ix + HALFPW - 16) as i16, (iy + HALFPH - 16) as i16, -1.5, -7.0, 4, 2, 0, 0, 16, 16));
-                    eyecandy[2].emplace(EC_FallingObject::new(ice, (ix + HALFPW) as i16, (iy + HALFPH - 16) as i16, 1.5, -7.0, 4, 2, 0, 0, 16, 16));
-                    eyecandy[2].emplace(EC_FallingObject::new(ice, (ix + HALFPW - 16) as i16, (iy + HALFPH) as i16, -1.5, -4.0, 4, 2, 0, 0, 16, 16));
-                    eyecandy[2].emplace(EC_FallingObject::new(ice, (ix + HALFPW) as i16, (iy + HALFPH) as i16, 1.5, -4.0, 4, 2, 0, 0, 16, 16));
+                    game().eyecandy[2].emplace(EC_FallingObject::new(ice, (ix + HALFPW - 16) as i16, (iy + HALFPH - 16) as i16, -1.5, -7.0, 4, 2, 0, 0, 16, 16));
+                    game().eyecandy[2].emplace(EC_FallingObject::new(ice, (ix + HALFPW) as i16, (iy + HALFPH - 16) as i16, 1.5, -7.0, 4, 2, 0, 0, 16, 16));
+                    game().eyecandy[2].emplace(EC_FallingObject::new(ice, (ix + HALFPW - 16) as i16, (iy + HALFPH) as i16, -1.5, -4.0, 4, 2, 0, 0, 16, 16));
+                    game().eyecandy[2].emplace(EC_FallingObject::new(ice, (ix + HALFPW) as i16, (iy + HALFPH) as i16, 1.5, -4.0, 4, 2, 0, 0, 16, 16));
 
                     game().game_values.unlocksecret2part2 += 1;
                 } else if deathStyle == PlayerDeathStyle::Jump {
-                    eyecandy[2].emplace(EC_FallingObject::new(
+                    game().eyecandy[2].emplace(EC_FallingObject::new(
                         corpseSprite,
                         (ix + HALFPW - 16) as i16,
                         (iy + PH - 32) as i16,
@@ -2016,7 +2016,7 @@ impl CPlayer {
                         32,
                     ));
                 } else if deathStyle == PlayerDeathStyle::Squish {
-                    eyecandy[1].emplace(EC_Corpse::new(corpseSprite, (ix - PWOFFSET) as f32, (iy + PH - 32) as f32, self.iSrcOffsetX));
+                    game().eyecandy[1].emplace(EC_Corpse::new(corpseSprite, (ix - PWOFFSET) as f32, (iy + PH - 32) as f32, self.iSrcOffsetX));
                 }
             }
 
@@ -2040,7 +2040,7 @@ impl CPlayer {
                 ));
                 io_moving_object_collision_detection_checksides(shoe.get());
 
-                objectcontainer[1].add(shoe);
+                game().objectcontainer[1].add(shoe);
             }
 
             //If the game mode didn't say to remove the team from the game, then respawn the player
@@ -2169,7 +2169,7 @@ impl CPlayer {
         self.spawntext += 1;
         if self.spawntext >= 20 {
             unsafe {
-                eyecandy[2].emplace(EC_GravText::new(
+                game().eyecandy[2].emplace(EC_GravText::new(
                     Ptr::from_mut(&mut game().rm.game_font_large),
                     (self.ix as i32 + HALFPW) as i16,
                     self.iy,
@@ -2296,14 +2296,14 @@ impl CPlayer {
 
             if !tagged.is_null() {
                 let t: Ptr<CPlayer> = tagged;
-                eyecandy[2].emplace(EC_GravText::new(
+                game().eyecandy[2].emplace(EC_GravText::new(
                     Ptr::from_mut(&mut game().rm.game_font_large),
                     (t.ix as i32 + HALFPW) as i16,
                     (t.iy as i32 + PH) as i16,
                     "Tagged!".to_string(),
                     (-(VELJUMP as f64) * 1.5) as f32,
                 ));
-                eyecandy[2].emplace(EC_SingleAnimation::new(
+                game().eyecandy[2].emplace(EC_SingleAnimation::new(
                     Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                     (t.ix as i32 + HALFPW - 16) as i16,
                     (t.iy as i32 + HALFPH - 16) as i16,
@@ -2463,7 +2463,7 @@ impl CPlayer {
                     && self.state == PlayerState::Ready
                 {
                     self.bobombsmoketimer = 0;
-                    eyecandy[2].emplace(EC_SingleAnimation::new(
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
                         Ptr::from_mut(&mut game().rm.spr_bobombsmoke),
                         (ix + HALFPH - 8) as i16,
                         (iy - PHOFFSET - 8) as i16,
@@ -3305,7 +3305,7 @@ impl CPlayer {
             self.frozentimer = iTime;
 
             unsafe {
-                eyecandy[2].emplace(EC_SingleAnimation::new(
+                game().eyecandy[2].emplace(EC_SingleAnimation::new(
                     Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                     (self.ix as i32 + HALFPW - 16) as i16,
                     (self.iy as i32 + HALFPH - 16) as i16,
@@ -3389,7 +3389,7 @@ impl CPlayer {
                     self.set_stored_powerup_type(PowerupType::Bobomb);
                 } else {
                     if_sound_on_play(&mut game().rm.sfx_transform);
-                    eyecandy[2].emplace(EC_SingleAnimation::new(
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
                         Ptr::from_mut(&mut game().rm.spr_poof),
                         (self.ix as i32 + HALFPW - 24) as i16,
                         (self.iy as i32 + HALFPH - 24) as i16,
@@ -3418,7 +3418,7 @@ impl CPlayer {
                 }
             } else {
                 if iPowerup == 3 || iPowerup == 7 || iPowerup == 8 {
-                    eyecandy[2].emplace(EC_SingleAnimation::new(
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
                         Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                         (self.ix as i32 + HALFPW - 16) as i16,
                         (self.iy as i32 + HALFPH - 16) as i16,

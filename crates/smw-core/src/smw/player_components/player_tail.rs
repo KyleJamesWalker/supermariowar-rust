@@ -4,7 +4,6 @@ use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::ClipEdge;
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::objects::moving::mo_spin_attack::MO_SpinAttack;
 use crate::smw::player::CPlayer;
 use sdl2::sys::SDL_Rect;
@@ -62,7 +61,7 @@ impl PlayerTail {
         player.spin.spin(pp.get());
 
         unsafe {
-            objectcontainer[1].add(Ptr::new_box(MO_SpinAttack::new(
+            game().objectcontainer[1].add(Ptr::new_box(MO_SpinAttack::new(
                 player.get_global_id(),
                 player.get_team_id(),
                 KillStyle::Leaf,

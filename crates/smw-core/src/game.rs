@@ -1,5 +1,6 @@
 //! The game's state as one value (docs/ARCHITECTURE_V2.md, Step 2: globals into a `Game` struct).
 
+use crate::common::eyecandy::CEyecandyContainer;
 use crate::common::file_list::{AnnouncerList, FiltersList, GraphicsList, MusicList, SkinList, SoundsList, TourList, WorldList, WorldMusicList};
 use crate::common::map::CMap;
 use crate::common::map_list::MapList;
@@ -7,6 +8,7 @@ use crate::common::resource_manager::CResourceManager;
 use crate::common::tileset_manager::CTilesetManager;
 use crate::common::game_values::CGameValues;
 use crate::globals::{Global, Ptr};
+use crate::smw::object_container::CObjectContainer;
 
 pub struct Game {
     pub game_values: Global<CGameValues>,
@@ -26,6 +28,9 @@ pub struct Game {
     pub rm: Ptr<CResourceManager>,
     pub g_map: Ptr<CMap>,
     pub g_tilesetmanager: Ptr<CTilesetManager>,
+    pub noncolcontainer: CObjectContainer,
+    pub objectcontainer: [CObjectContainer; 3],
+    pub eyecandy: [CEyecandyContainer; 3],
 }
 
 impl Game {
@@ -47,6 +52,9 @@ impl Game {
             rm: Ptr::null(),
             g_map: Ptr::null(),
             g_tilesetmanager: Ptr::null(),
+            noncolcontainer: CObjectContainer::new(),
+            objectcontainer: [CObjectContainer::new(), CObjectContainer::new(), CObjectContainer::new()],
+            eyecandy: [CEyecandyContainer::new(), CEyecandyContainer::new(), CEyecandyContainer::new()],
         }
     }
 }

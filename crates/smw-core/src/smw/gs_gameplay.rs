@@ -70,10 +70,7 @@ use std::io::Write;
 
 pub const COUNTDOWN_START_INDEX: i16 = 4;
 
-pub static mut noncolcontainer: CObjectContainer = CObjectContainer::new();
-pub static mut objectcontainer: [CObjectContainer; 3] = [CObjectContainer::new(), CObjectContainer::new(), CObjectContainer::new()];
 
-pub static mut eyecandy: [CEyecandyContainer; 3] = [CEyecandyContainer::new(), CEyecandyContainer::new(), CEyecandyContainer::new()];
 pub static mut spotlightManager: Global<SpotlightManager> = Global::uninit();
 
 pub static mut g_iWinningPlayer: i16 = 0;
@@ -206,13 +203,13 @@ impl GameplayState {
             writeln!(
                 out,
                 "O noncol={} obj0={} obj1={} obj2={} ec0={} ec1={} ec2={}",
-                noncolcontainer.list().len(),
-                objectcontainer[0].list().len(),
-                objectcontainer[1].list().len(),
-                objectcontainer[2].list().len(),
-                eyecandy[0].eyecandies.len(),
-                eyecandy[1].eyecandies.len(),
-                eyecandy[2].eyecandies.len()
+                game().noncolcontainer.list().len(),
+                game().objectcontainer[0].list().len(),
+                game().objectcontainer[1].list().len(),
+                game().objectcontainer[2].list().len(),
+                game().eyecandy[0].eyecandies.len(),
+                game().eyecandy[1].eyecandies.len(),
+                game().eyecandy[2].eyecandies.len()
             )
         }
     }
@@ -505,7 +502,7 @@ impl GameplayState {
                         //add cloud to eyecandy array
                         let x = RANDOM_INT(App::screenWidth) as f32;
                         let y = RANDOM_INT(100) as f32;
-                        eyecandy[iEyeCandyLayer].emplace(EC_Cloud::new(spr(&mut game().rm.spr_clouds), x, y, velx, 0, srcy, w, h));
+                        game().eyecandy[iEyeCandyLayer].emplace(EC_Cloud::new(spr(&mut game().rm.spr_clouds), x, y, velx, 0, srcy, w, h));
                     }
                 }
 
@@ -520,7 +517,7 @@ impl GameplayState {
                         //add cloud to eyecandy array
                         let x = RANDOM_INT(App::screenWidth) as f32;
                         let y = RANDOM_INT(100) as f32;
-                        eyecandy[iEyeCandyLayer].emplace(EC_Ghost::new(
+                        game().eyecandy[iEyeCandyLayer].emplace(EC_Ghost::new(
                             spr(&mut game().rm.spr_ghosts),
                             x,
                             y,
@@ -540,7 +537,7 @@ impl GameplayState {
                     for _i in 0..15 {
                         let x = RANDOM_INT(App::screenWidth) as f32;
                         let y = RANDOM_INT(App::screenHeight) as f32;
-                        eyecandy[iEyeCandyLayer].emplace(EC_Leaf::new(spr(&mut game().rm.spr_leaves), x, y));
+                        game().eyecandy[iEyeCandyLayer].emplace(EC_Leaf::new(spr(&mut game().rm.spr_leaves), x, y));
                     }
                 }
 
@@ -549,7 +546,7 @@ impl GameplayState {
                     for _i in 0..15 {
                         let x = RANDOM_INT(App::screenWidth) as f32;
                         let y = RANDOM_INT(App::screenHeight) as f32;
-                        eyecandy[iEyeCandyLayer].emplace(EC_Snow::new(spr(&mut game().rm.spr_snow), x, y, 0));
+                        game().eyecandy[iEyeCandyLayer].emplace(EC_Snow::new(spr(&mut game().rm.spr_snow), x, y, 0));
                     }
                 }
 
@@ -586,7 +583,7 @@ impl GameplayState {
                         let iPossibleY: i16 = ((App::screenHeight - h as i32) / 10) as i16;
                         let dDestY: f32 = (RANDOM_INT(iPossibleY as i32) + iPossibleY as i32 * i as i32) as f32;
                         let x = RANDOM_INT(App::screenWidth) as f32;
-                        eyecandy[iEyeCandyLayer].emplace(EC_Cloud::new(
+                        game().eyecandy[iEyeCandyLayer].emplace(EC_Cloud::new(
                             spr(&mut game().rm.spr_fish),
                             x,
                             dDestY,
@@ -604,7 +601,7 @@ impl GameplayState {
                     for _i in 0..20 {
                         let x = RANDOM_INT(App::screenWidth) as f32;
                         let y = RANDOM_INT(App::screenHeight) as f32;
-                        eyecandy[iEyeCandyLayer].emplace(EC_Rain::new(spr(&mut game().rm.spr_rain), x, y));
+                        game().eyecandy[iEyeCandyLayer].emplace(EC_Rain::new(spr(&mut game().rm.spr_rain), x, y));
                     }
                 }
 
@@ -613,7 +610,7 @@ impl GameplayState {
                     for _i in 0..10 {
                         let x = RANDOM_INT(App::screenWidth) as f32;
                         let y = RANDOM_INT(App::screenHeight) as f32;
-                        eyecandy[iEyeCandyLayer].emplace(EC_Bubble::new(spr(&mut game().rm.spr_rain), x, y));
+                        game().eyecandy[iEyeCandyLayer].emplace(EC_Bubble::new(spr(&mut game().rm.spr_rain), x, y));
                     }
                 }
             }
@@ -726,7 +723,7 @@ impl GameplayState {
                     }
 
                     // C++ leaves this dangling and reads freed memory when the flag reaches a base.
-                    for &obj in objectcontainer[1].list() {
+                    for &obj in game().objectcontainer[1].list() {
                         let mut obj = obj;
                         if let Some(flag) = obj.as_any().downcast_mut::<CO_Flag>() {
                             if flag.owner_throw == players[i] {
@@ -790,14 +787,14 @@ pub fn check_wind_event(iWindTimer: &mut i16, dNextWind: &mut f32) {
 
 pub fn clean_dead_non_player_objects() {
     unsafe {
-        eyecandy[0].clean_dead_objects();
-        eyecandy[1].clean_dead_objects();
-        eyecandy[2].clean_dead_objects();
+        game().eyecandy[0].clean_dead_objects();
+        game().eyecandy[1].clean_dead_objects();
+        game().eyecandy[2].clean_dead_objects();
 
-        objectcontainer[2].clean_dead_objects();
-        objectcontainer[1].clean_dead_objects();
-        objectcontainer[0].clean_dead_objects();
-        noncolcontainer.clean_dead_objects();
+        game().objectcontainer[2].clean_dead_objects();
+        game().objectcontainer[1].clean_dead_objects();
+        game().objectcontainer[0].clean_dead_objects();
+        game().noncolcontainer.clean_dead_objects();
     }
 }
 
@@ -809,14 +806,14 @@ pub fn animate_during_countdown() {
         clean_dead_non_player_objects();
 
         //Keep updating map hazards
-        noncolcontainer.update();
-        objectcontainer[0].update();
-        objectcontainer[1].update();
-        objectcontainer[2].update();
+        game().noncolcontainer.update();
+        game().objectcontainer[0].update();
+        game().objectcontainer[1].update();
+        game().objectcontainer[2].update();
 
-        eyecandy[0].update();
-        eyecandy[1].update();
-        eyecandy[2].update();
+        game().eyecandy[0].update();
+        game().eyecandy[1].update();
+        game().eyecandy[2].update();
 
         game().g_map.update();
     }
@@ -915,9 +912,9 @@ pub fn shake_screen() {
         }
 
         //Kill goombas and koopas
-        let n0 = objectcontainer[0].list().len();
+        let n0 = game().objectcontainer[0].list().len();
         for iObj in 0..n0 {
-            let mut obj = objectcontainer[0].list()[iObj];
+            let mut obj = game().objectcontainer[0].list()[iObj];
             if let Some(mo) = obj.as_io_moving_object() {
                 let mut movingobject = mo.as_mo_ptr();
                 let r#type: MovingObjectType = movingobject.get_moving_object_type();
@@ -946,9 +943,9 @@ pub fn shake_screen() {
         }
 
         //Destroy throw blocks and flip shells over
-        let n1 = objectcontainer[1].list().len();
+        let n1 = game().objectcontainer[1].list().len();
         for iObj in 0..n1 {
-            let mut obj = objectcontainer[1].list()[iObj];
+            let mut obj = game().objectcontainer[1].list()[iObj];
             if let Some(mo) = obj.as_io_moving_object() {
                 let mut movingobject = mo.as_mo_ptr();
                 if game().game_values.flags.screenshakekillinair == movingobject.inair {
@@ -1086,9 +1083,9 @@ pub fn handle_p2obj_collisions() {
 
             //Collide with objects
             for iLayer in 0..3usize {
-                let n = objectcontainer[iLayer].list().len();
+                let n = game().objectcontainer[iLayer].list().len();
                 for iObj in 0..n {
-                    let obj = objectcontainer[iLayer].list()[iObj];
+                    let obj = game().objectcontainer[iLayer].list()[iObj];
                     if !obj.is_dead() {
                         if coldec_player2obj(player, obj) {
                             if player.collides_with_object(obj) {
@@ -1115,9 +1112,9 @@ pub fn handle_p2obj_collisions() {
 pub fn handle_obj2obj_collisions() {
     unsafe {
         for iLayer1 in 0..3usize {
-            let iContainerEnd1 = objectcontainer[iLayer1].list().len();
+            let iContainerEnd1 = game().objectcontainer[iLayer1].list().len();
             for iObject1 in 0..iContainerEnd1 {
-                let mut object1 = objectcontainer[iLayer1].list()[iObject1];
+                let mut object1 = game().objectcontainer[iLayer1].list()[iObject1];
 
                 let movingobject1: Ptr<dyn IO_MovingObjectTrait> = match object1.as_io_moving_object() {
                     Some(m) => m.as_mo_ptr(),
@@ -1125,10 +1122,10 @@ pub fn handle_obj2obj_collisions() {
                 };
 
                 for iLayer2 in iLayer1..3usize {
-                    let iContainerEnd2 = objectcontainer[iLayer2].list().len();
+                    let iContainerEnd2 = game().objectcontainer[iLayer2].list().len();
                     let start = if iLayer1 == iLayer2 { iObject1 + 1 } else { 0 };
                     for iObject2 in start..iContainerEnd2 {
-                        let mut object2 = objectcontainer[iLayer2].list()[iObject2];
+                        let mut object2 = game().objectcontainer[iLayer2].list()[iObject2];
 
                         if object2.is_dead() {
                             continue;
@@ -1413,7 +1410,7 @@ impl GameplayState {
 
                         let iMode = get_mode_icon_index_from_mode(gm.gamemode as i16);
 
-                        eyecandy[2].emplace(EC_Announcement::new(
+                        game().eyecandy[2].emplace(EC_Announcement::new(
                             Ptr::from_mut(&mut game().rm.game_font_large),
                             spr(&mut game().rm.menu_mode_large),
                             szMode,
@@ -1510,7 +1507,7 @@ impl GameplayState {
                     if game().game_values.swapstyle == 1 {
                         for i in 0..players.len() {
                             let player = players[i];
-                            eyecandy[2].emplace(EC_SingleAnimation::new(
+                            game().eyecandy[2].emplace(EC_SingleAnimation::new(
                                 spr(&mut game().rm.spr_fireballexplosion),
                                 (player.left_x() as i32 + HALFPW - 16) as i16,
                                 (player.top_y() as i32 + HALFPH - 16) as i16,
@@ -1531,12 +1528,12 @@ impl GameplayState {
             //draw back eyecandy behind players
             game().g_map.draw_platforms(0);
 
-            eyecandy[0].draw();
-            noncolcontainer.draw();
+            game().eyecandy[0].draw();
+            game().noncolcontainer.draw();
 
             game().game_values.gamemode.draw_background();
 
-            objectcontainer[0].draw();
+            game().objectcontainer[0].draw();
         }
     }
 
@@ -1551,9 +1548,9 @@ impl GameplayState {
                 }
             }
 
-            eyecandy[1].draw();
+            game().eyecandy[1].draw();
 
-            objectcontainer[1].draw();
+            game().objectcontainer[1].draw();
         }
     }
 
@@ -1569,8 +1566,8 @@ impl GameplayState {
 
             game().g_map.draw_platforms(3);
 
-            objectcontainer[2].draw();
-            eyecandy[2].draw();
+            game().objectcontainer[2].draw();
+            game().eyecandy[2].draw();
             game().game_values.gamemode.draw_foreground();
 
             game().g_map.draw_platforms(4);
@@ -1945,7 +1942,7 @@ pub fn load_map_objects(fPreview: bool) {
                 game().g_map.blockdata[xu][yu] = block;
 
                 if !block.is_null() {
-                    noncolcontainer.add_dyn(block.as_object_ptr());
+                    game().noncolcontainer.add_dyn(block.as_object_ptr());
                 }
 
                 match typeId as i32 {
@@ -2003,7 +2000,7 @@ pub fn load_map_objects(fPreview: bool) {
             //If map has less than 5 boxes, then insert coins into map in random locations
             let iExtraCoinsNeeded: i16 = 5 - iThrowBoxCount;
             for _iExtraCoin in 0..iExtraCoinsNeeded {
-                objectcontainer[1].add(Ptr::new_box(MO_Coin::new(spr(&mut game().rm.spr_coin), Vec2f::zero(), Vec2s::zero(), 2, -1, 2, 0, true)));
+                game().objectcontainer[1].add(Ptr::new_box(MO_Coin::new(spr(&mut game().rm.spr_coin), Vec2f::zero(), Vec2s::zero(), 2, -1, 2, 0, true)));
             }
         }
 
@@ -2016,15 +2013,15 @@ pub fn load_map_objects(fPreview: bool) {
             let pos = Vec2s::new((item.ix as i32 * 32) as i16, (item.iy as i32 * 32) as i16);
 
             if iType == 0 {
-                objectcontainer[1].add(Ptr::new_box(CO_Spring::new(spr(&mut game().rm.spr_spring), pos, false)));
+                game().objectcontainer[1].add(Ptr::new_box(CO_Spring::new(spr(&mut game().rm.spr_spring), pos, false)));
             } else if iType == 1 {
-                objectcontainer[1].add(Ptr::new_box(CO_Spike::new(spr(&mut game().rm.spr_spike), pos)));
+                game().objectcontainer[1].add(Ptr::new_box(CO_Spike::new(spr(&mut game().rm.spr_spike), pos)));
             } else if iType == 2 {
-                objectcontainer[1].add(Ptr::new_box(CO_KuriboShoe::new(spr(&mut game().rm.spr_kuriboshoe), pos, false)));
+                game().objectcontainer[1].add(Ptr::new_box(CO_KuriboShoe::new(spr(&mut game().rm.spr_kuriboshoe), pos, false)));
             } else if iType == 3 {
-                objectcontainer[1].add(Ptr::new_box(CO_Spring::new(spr(&mut game().rm.spr_spring), pos, true)));
+                game().objectcontainer[1].add(Ptr::new_box(CO_Spring::new(spr(&mut game().rm.spr_spring), pos, true)));
             } else if iType == 4 {
-                objectcontainer[1].add(Ptr::new_box(CO_KuriboShoe::new(spr(&mut game().rm.spr_kuriboshoe), pos, true)));
+                game().objectcontainer[1].add(Ptr::new_box(CO_KuriboShoe::new(spr(&mut game().rm.spr_kuriboshoe), pos, true)));
             } else if iType == 5 {
                 let mut iItem: i16 = NO_POWERUP as i16;
                 if !fPreview {
@@ -2059,7 +2056,7 @@ pub fn load_map_objects(fPreview: bool) {
                     }
                 }
 
-                objectcontainer[1].add(Ptr::new_box(CO_ThrowBox::new(spr(&mut game().rm.spr_throwbox), pos, iItem)));
+                game().objectcontainer[1].add(Ptr::new_box(CO_ThrowBox::new(spr(&mut game().rm.spr_throwbox), pos, iItem)));
                 iAddThrowBoxIndex += 1;
             }
         }
@@ -2080,16 +2077,16 @@ pub fn clean_up() {
         }
         players.clear();
 
-        eyecandy[0].clean();
-        eyecandy[1].clean();
-        eyecandy[2].clean();
+        game().eyecandy[0].clean();
+        game().eyecandy[1].clean();
+        game().eyecandy[2].clean();
         spotlightManager.clear_spotlights();
 
-        noncolcontainer.clean();
+        game().noncolcontainer.clean();
 
-        objectcontainer[0].clean();
-        objectcontainer[1].clean();
-        objectcontainer[2].clean();
+        game().objectcontainer[0].clean();
+        game().objectcontainer[1].clean();
+        game().objectcontainer[2].clean();
 
         load_map_objects(true);
         game().g_map.clear_warp_locks();
@@ -2226,7 +2223,7 @@ pub fn net_bullet_bill(p: usize) {
         let speed: f32 = ((RANDOM_INT(21) + 20) as f32) / 10.0f32;
         let posy = RANDOM_INT(448) as i16;
         let vel = if RANDOM_INT(2) != 0 { speed } else { -speed };
-        objectcontainer[2].add(Ptr::new_box(MO_BulletBill::new(
+        game().objectcontainer[2].add(Ptr::new_box(MO_BulletBill::new(
             spr(&mut game().rm.spr_bulletbill),
             spr(&mut game().rm.spr_bulletbilldead),
             Vec2s::new(0, posy),
@@ -2634,10 +2631,10 @@ impl GameplayState {
 
             play_sfx();
 
-            noncolcontainer.update();
-            objectcontainer[0].update();
-            objectcontainer[1].update();
-            objectcontainer[2].update();
+            game().noncolcontainer.update();
+            game().objectcontainer[0].update();
+            game().objectcontainer[1].update();
+            game().objectcontainer[2].update();
 
             handle_p2obj_collisions();
             if game().game_values.flags.swapplayers {
@@ -2657,9 +2654,9 @@ impl GameplayState {
             clean_dead_non_player_objects();
             self.clean_dead_players();
 
-            eyecandy[0].update();
-            eyecandy[1].update();
-            eyecandy[2].update();
+            game().eyecandy[0].update();
+            game().eyecandy[1].update();
+            game().eyecandy[2].update();
 
             game().game_values.gamemode.think();
 
@@ -2901,7 +2898,7 @@ pub fn net_mystery_swap(iUsingPlayerID: i16) -> bool {
             spots[iPlayer].get_player(player, &mut game().game_values.gamepowerups[g]);
 
             if game().game_values.swapstyle != 1 {
-                eyecandy[2].emplace(EC_SingleAnimation::new(
+                game().eyecandy[2].emplace(EC_SingleAnimation::new(
                     spr(&mut game().rm.spr_fireballexplosion),
                     ((player.fNewSwapX as i16) as i32 + HALFPW - 16) as i16,
                     ((player.fNewSwapY as i16) as i32 + HALFPH - 16) as i16,

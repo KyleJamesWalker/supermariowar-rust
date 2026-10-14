@@ -14,7 +14,7 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::{eyecandy, objectcontainer};
+
 use crate::smw::objects::moving::mo_explosion::MO_Explosion;
 use crate::smw::objects::moving::mo_hammer::MO_Hammer;
 use crate::smw::objects::moving::moving_object::{IO_MovingObject, IO_MovingObjectTrait};
@@ -72,7 +72,7 @@ impl MO_SledgeHammer {
         unsafe {
             if self.fSuper {
                 let pos = Vec2s::new((self.ix as i32 + (self.iw as i32 >> 2) - 96) as i16, (self.iy as i32 + (self.ih as i32 >> 2) - 64) as i16);
-                objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(Ptr::from_mut(&mut game().rm.spr_explosion), pos, 2, 4, -1, -1, KillStyle::Hammer)));
+                game().objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(Ptr::from_mut(&mut game().rm.spr_explosion), pos, 2, 4, -1, -1, KillStyle::Hammer)));
                 if_sound_on_play(&mut game().rm.sfx_bobombsound);
             } else {
                 let iCenterX: i16 = (self.ix as i32 + (self.iw as i32 >> 1) - 14) as i16;
@@ -84,7 +84,7 @@ impl MO_SledgeHammer {
                     let dVel: f32 = RANDOM_INT(5) as f32 / 2.0f32 + 3.0f32;
                     let dVelX: f32 = dVel * cosf(dAngle);
                     let dVelY: f32 = dVel * sinf(dAngle);
-                    objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(
+                    game().objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(
                         Ptr::from_mut(&mut game().rm.spr_hammer),
                         Vec2s::new(iCenterX, iCenterY),
                         6,
@@ -157,7 +157,7 @@ impl CObjectTrait for MO_SledgeHammer {
             unsafe {
                 let x = (self.ix as i32 + (self.iw as i32 >> 1) - 16) as i16;
                 let y = (self.iy as i32 + (self.ih as i32 >> 1) - 16) as i16;
-                eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), x, y, 3, 4));
+                game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), x, y, 3, 4));
                 if_sound_on_play(&mut game().rm.sfx_hit);
             }
 

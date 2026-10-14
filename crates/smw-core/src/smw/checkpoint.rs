@@ -15,7 +15,7 @@ use crate::common::sfx::{self, checkpoint as mixer, data_relative, sfxMusic, sfx
 use crate::common::world_tour_stop::{parse_tour_stop_line, write_tour_stop_line};
 use crate::globals::*;
 use crate::smw::game_state::GameState;
-use crate::smw::gs_gameplay::{eyecandy, lookup_team_id, GameplayState};
+use crate::smw::gs_gameplay::{lookup_team_id, GameplayState};
 use crate::smw::gs_menu::{enter_gameplay_tail, MenuState};
 use std::path::Path;
 
@@ -609,7 +609,7 @@ impl GameState for SegmentState {
     fn update(&mut self) {
         unsafe {
             crate::smw::gs_splash_screen::load_game_data();
-            eyecandy[2].clean();
+            game().eyecandy[2].clean();
             game().game_values.playerInput.reset_keys();
             game().game_values.appstate = AppState::Menu;
             MenuState::instance().init();

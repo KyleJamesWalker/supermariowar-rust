@@ -14,7 +14,6 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::objectgame::removeifprojectile;
 use crate::smw::objects::carriable::co_shell::CO_Shell;
 use crate::smw::objects::carriable::co_throw_box::CO_ThrowBox;
@@ -104,10 +103,10 @@ impl MO_CheepCheep {
             let iBrokenIceX: i16 = (self.ix as i32 - self.collisionOffsetX as i32) as i16;
             let iBrokenIceY: i16 = (self.iy as i32 - self.collisionOffsetY as i32) as i16;
             let spr = Ptr::from_mut(&mut game().rm.spr_brokeniceblock);
-            eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, iBrokenIceY, -1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, iBrokenIceY, 1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, (iBrokenIceY as i32 + 16) as i16, -1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, (iBrokenIceY as i32 + 16) as i16, 1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, iBrokenIceY, -1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, iBrokenIceY, 1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, (iBrokenIceY as i32 + 16) as i16, -1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, (iBrokenIceY as i32 + 16) as i16, 1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
 
             game().game_values.unlocksecret2part2 += 1;
         }
@@ -237,7 +236,7 @@ impl CObjectTrait for MO_CheepCheep {
                     self.animationspeed = 0;
                     self.frozen = true;
 
-                    eyecandy[2].emplace(EC_SingleAnimation::new(
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
                         Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                         (self.ix as i32 - self.collisionOffsetX as i32) as i16,
                         (self.iy as i32 - self.collisionOffsetY as i32) as i16,
@@ -261,7 +260,7 @@ impl IO_MovingObjectTrait for MO_CheepCheep {
 
         self.dead = true;
         unsafe {
-            eyecandy[2].emplace(EC_FallingObject::new(
+            game().eyecandy[2].emplace(EC_FallingObject::new(
                 Ptr::from_mut(&mut game().rm.spr_cheepcheepdead),
                 self.ix,
                 self.iy,

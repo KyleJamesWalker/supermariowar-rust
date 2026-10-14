@@ -13,7 +13,6 @@ use crate::smw::gamemodes::chicken::CGM_Chicken;
 use crate::smw::gamemodes::race::CGM_Race;
 use crate::smw::gamemodes::star::CGM_Star;
 use crate::smw::gamemodes::tag::CGM_Tag;
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::main::players;
 use crate::smw::objectgame::PowerupType;
 use crate::smw::objects::carriable::co_bomb::CO_Bomb;
@@ -424,9 +423,9 @@ impl CPlayerAI {
             let fInvincible = pPlayer.is_invincible() || pPlayer.is_shielded() || pPlayer.shyguy;
             let iTeamID: i16 = pPlayer.teamID;
 
-            let n = objectcontainer[1].list().len();
+            let n = game().objectcontainer[1].list().len();
             for i in 0..n {
-                let mut obj = objectcontainer[1].list()[i];
+                let mut obj = game().objectcontainer[1].list()[i];
                 if self.attentionObjects.contains_key(&obj.network_id()) {
                     //DistanceToObject(object, &nearestObjects.threat, &nearestObjects.threatdistance, &nearestObjects.threatwrap);
                     continue;
@@ -628,9 +627,9 @@ impl CPlayerAI {
                 }
             }
 
-            let n = objectcontainer[0].list().len();
+            let n = game().objectcontainer[0].list().len();
             for i in 0..n {
-                let mut obj = objectcontainer[0].list()[i];
+                let mut obj = game().objectcontainer[0].list()[i];
                 if self.attentionObjects.contains_key(&obj.network_id()) {
                     //DistanceToObject(object, &nearestObjects.threat, &nearestObjects.threatdistance, &nearestObjects.threatwrap);
                     continue;
@@ -696,9 +695,9 @@ impl CPlayerAI {
                 }
             }
 
-            let n = objectcontainer[2].list().len();
+            let n = game().objectcontainer[2].list().len();
             for i in 0..n {
-                let mut obj = objectcontainer[2].list()[i];
+                let mut obj = game().objectcontainer[2].list()[i];
                 if self.attentionObjects.contains_key(&obj.network_id()) {
                     //DistanceToObject(object, &nearestObjects.threat, &nearestObjects.threatdistance, &nearestObjects.threatwrap);
                     continue;
@@ -903,9 +902,9 @@ pub fn cplayer_ai_init(this: &mut CPlayerAI) {
             let mut fYoshi: [bool; 4] = [false, false, false, false];
 
             //Scan Yoshis to see which ones are present
-            let n = objectcontainer[1].list().len();
+            let n = game().objectcontainer[1].list().len();
             for i in 0..n {
-                let obj = objectcontainer[1].list()[i];
+                let obj = game().objectcontainer[1].list()[i];
                 let mut yoshi = dynamic_cast::<MO_Yoshi>(obj);
                 if !yoshi.is_null() {
                     fYoshi[yoshi.get_color() as usize] = true;
@@ -913,9 +912,9 @@ pub fn cplayer_ai_init(this: &mut CPlayerAI) {
             }
 
             //Now scan eggs and ignore any egg that doesn't have a yoshi
-            let n = objectcontainer[1].list().len();
+            let n = game().objectcontainer[1].list().len();
             for i in 0..n {
-                let obj = objectcontainer[1].list()[i];
+                let obj = game().objectcontainer[1].list()[i];
                 let mut egg = dynamic_cast::<CO_Egg>(obj);
                 if !egg.is_null() {
                     if !fYoshi[egg.get_color() as usize] {

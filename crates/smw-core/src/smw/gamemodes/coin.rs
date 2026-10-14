@@ -7,7 +7,6 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::*;
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::objects::moving::mo_coin::MO_Coin;
 use crate::smw::player::CPlayer;
 
@@ -42,7 +41,7 @@ impl CGameModeTrait for CGM_Coins {
             }
 
             for _iCoin in 0..game().game_values.gamemodesettings.coins.quantity {
-                objectcontainer[1].add(Ptr::new_box(MO_Coin::new(Ptr::from_mut(&mut game().rm.spr_coin), Vec2f::zero(), Vec2s::zero(), 2, 0, 0, 0, true)));
+                game().objectcontainer[1].add(Ptr::new_box(MO_Coin::new(Ptr::from_mut(&mut game().rm.spr_coin), Vec2f::zero(), Vec2s::zero(), 2, 0, 0, 0, true)));
             }
         }
     }

@@ -5,7 +5,6 @@ use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::ClipEdge;
 use crate::common::global_constants::*;
 use crate::globals::*;
-use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::player::CPlayer;
 use crate::smw::player_components::player_shield::{OFF, SOFT_WITH_STOMP};
 use sdl2::sys::SDL_Rect;
@@ -68,7 +67,7 @@ impl PlayerTanookiSuit {
                 self.statue_timer = 123;
 
                 // perform tansformation effects
-                eyecandy[2].emplace(EC_SingleAnimation::new(
+                game().eyecandy[2].emplace(EC_SingleAnimation::new(
                     Ptr::from_mut(&mut game().rm.spr_poof),
                     (player.center_x() as i32 - 24) as i16,
                     (player.center_y() as i32 - 24) as i16,
@@ -119,7 +118,7 @@ impl PlayerTanookiSuit {
                     }
 
                     // perform transformation effects
-                    eyecandy[2].emplace(EC_SingleAnimation::new(
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
                         Ptr::from_mut(&mut game().rm.spr_poof),
                         (player.center_x() as i32 - 24) as i16,
                         (player.center_y() as i32 - 24) as i16,

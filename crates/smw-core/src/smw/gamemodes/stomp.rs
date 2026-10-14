@@ -8,7 +8,6 @@ use crate::common::random_number_generator::{RANDOM_BOOL, RANDOM_INT};
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::*;
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::main::players;
 use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::moving::mo_cheep_cheep::MO_CheepCheep;
@@ -59,23 +58,23 @@ impl CGM_Stomp {
             }
 
             if 0 == self.iSelectedEnemy {
-                objectcontainer[0].add(Ptr::new_box(MO_Goomba::new(Ptr::from_mut(&mut game().rm.spr_goomba), RANDOM_BOOL(), false)));
+                game().objectcontainer[0].add(Ptr::new_box(MO_Goomba::new(Ptr::from_mut(&mut game().rm.spr_goomba), RANDOM_BOOL(), false)));
             } else if 1 == self.iSelectedEnemy {
-                objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(Ptr::from_mut(&mut game().rm.spr_koopa), RANDOM_BOOL(), false, false, true)));
+                game().objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(Ptr::from_mut(&mut game().rm.spr_koopa), RANDOM_BOOL(), false, false, true)));
             } else if 2 == self.iSelectedEnemy {
-                objectcontainer[2].add(Ptr::new_box(MO_CheepCheep::new(Ptr::from_mut(&mut game().rm.spr_cheepcheep))));
+                game().objectcontainer[2].add(Ptr::new_box(MO_CheepCheep::new(Ptr::from_mut(&mut game().rm.spr_cheepcheep))));
             } else if 3 == self.iSelectedEnemy {
-                objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(Ptr::from_mut(&mut game().rm.spr_redkoopa), RANDOM_BOOL(), true, false, false)));
+                game().objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(Ptr::from_mut(&mut game().rm.spr_redkoopa), RANDOM_BOOL(), true, false, false)));
             } else if 4 == self.iSelectedEnemy {
-                objectcontainer[0].add(Ptr::new_box(MO_Spiny::new(Ptr::from_mut(&mut game().rm.spr_spiny), RANDOM_BOOL())));
+                game().objectcontainer[0].add(Ptr::new_box(MO_Spiny::new(Ptr::from_mut(&mut game().rm.spr_spiny), RANDOM_BOOL())));
             } else if 5 == self.iSelectedEnemy {
-                objectcontainer[0].add(Ptr::new_box(MO_BuzzyBeetle::new(Ptr::from_mut(&mut game().rm.spr_buzzybeetle), RANDOM_BOOL())));
+                game().objectcontainer[0].add(Ptr::new_box(MO_BuzzyBeetle::new(Ptr::from_mut(&mut game().rm.spr_buzzybeetle), RANDOM_BOOL())));
             } else if 6 == self.iSelectedEnemy {
-                objectcontainer[0].add(Ptr::new_box(MO_Goomba::new(Ptr::from_mut(&mut game().rm.spr_paragoomba), RANDOM_BOOL(), true)));
+                game().objectcontainer[0].add(Ptr::new_box(MO_Goomba::new(Ptr::from_mut(&mut game().rm.spr_paragoomba), RANDOM_BOOL(), true)));
             } else if 7 == self.iSelectedEnemy {
-                objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(Ptr::from_mut(&mut game().rm.spr_parakoopa), RANDOM_BOOL(), false, true, true)));
+                game().objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(Ptr::from_mut(&mut game().rm.spr_parakoopa), RANDOM_BOOL(), false, true, true)));
             } else {
-                objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(Ptr::from_mut(&mut game().rm.spr_redparakoopa), RANDOM_BOOL(), true, true, true)));
+                game().objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(Ptr::from_mut(&mut game().rm.spr_redparakoopa), RANDOM_BOOL(), true, true, true)));
             }
         }
     }

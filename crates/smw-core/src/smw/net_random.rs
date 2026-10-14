@@ -14,11 +14,12 @@
 //! Objects made during setup and inside events get the same `iNetworkID` on every client, so events
 //! can name them.
 
+use crate::game::game;
 use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::{set_network_id_context, CObjectTrait};
 use crate::common::random_number_generator::RandomNumberGenerator;
 use crate::globals::Ptr;
-use crate::smw::gs_gameplay::{noncolcontainer, objectcontainer};
+
 use crate::smw::harness;
 use crate::smw::main::players;
 use crate::smw::net::netplay;
@@ -181,7 +182,7 @@ pub fn gameplay_frame() {
             set_network_id_context(0);
             // Menus may make objects during setup on one client only; the game's own objects are made alike.
             let mut n = 0;
-            for container in [&noncolcontainer, &objectcontainer[0], &objectcontainer[1], &objectcontainer[2]] {
+            for container in [&game().noncolcontainer, &game().objectcontainer[0], &game().objectcontainer[1], &game().objectcontainer[2]] {
                 for &obj in container.list() {
                     let mut o = obj;
                     n += 1;
@@ -419,7 +420,7 @@ pub fn find_object(id: i32) -> Ptr<dyn CObjectTrait> {
         if id == 0 {
             return Ptr::null();
         }
-        for container in [&noncolcontainer, &objectcontainer[0], &objectcontainer[1], &objectcontainer[2]] {
+        for container in [&game().noncolcontainer, &game().objectcontainer[0], &game().objectcontainer[1], &game().objectcontainer[2]] {
             for &obj in container.list() {
                 if obj.iNetworkID == id && !obj.dead {
                     return obj;

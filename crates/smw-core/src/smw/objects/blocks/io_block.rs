@@ -11,7 +11,6 @@ use crate::common::moving_object_types::*;
 use crate::common::object_base::{cap_falling_velocity, object_block, CObject, CObjectTrait};
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::Ptr;
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::main::players;
 use crate::smw::objects::carriable::co_shell::CO_Shell;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
@@ -270,9 +269,9 @@ pub fn io_block_kill_players_and_objects_inside_block<T: IO_BlockTrait + ?Sized>
 
         //Loop through objects
         for iLayer in 0..3usize {
-            let count = objectcontainer[iLayer].list().len();
+            let count = game().objectcontainer[iLayer].list().len();
             for i in 0..count {
-                let mut obj: Ptr<dyn CObjectTrait> = objectcontainer[iLayer].list()[i];
+                let mut obj: Ptr<dyn CObjectTrait> = game().objectcontainer[iLayer].list()[i];
                 let movingobject: &mut dyn IO_MovingObjectTrait = match obj.as_io_moving_object() {
                     Some(m) => m,
                     None => continue,

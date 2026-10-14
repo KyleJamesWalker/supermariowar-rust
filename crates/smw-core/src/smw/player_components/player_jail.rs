@@ -6,7 +6,6 @@ use crate::common::gameplay_styles::JailStyle;
 use crate::common::gfx::gfx_sprite::ClipEdge;
 use crate::common::global_constants::{PHOFFSET, PWOFFSET};
 use crate::globals::*;
-use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::player::CPlayer;
 use sdl2::sys::SDL_Rect;
 
@@ -55,7 +54,7 @@ impl PlayerJail {
                 self.timer = 0;
                 self.owner_teamID = -1;
 
-                eyecandy[2].emplace(EC_SingleAnimation::new(
+                game().eyecandy[2].emplace(EC_SingleAnimation::new(
                     Ptr::from_mut(&mut game().rm.spr_poof),
                     (player.center_x() as i32 - 24) as i16,
                     (player.center_y() as i32 - 24) as i16,
@@ -73,7 +72,7 @@ impl PlayerJail {
         unsafe {
             if self.is_active() {
                 self.timer = 0;
-                eyecandy[2].emplace(EC_SingleAnimation::new(
+                game().eyecandy[2].emplace(EC_SingleAnimation::new(
                     Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                     (player.center_x() as i32 - 16) as i16,
                     (player.center_y() as i32 - 16) as i16,
@@ -92,7 +91,7 @@ impl PlayerJail {
                 if self.timer <= 0 {
                     self.timer = 0;
                     self.owner_teamID = -1;
-                    eyecandy[2].emplace(EC_SingleAnimation::new(
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
                         Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                         (player.center_x() as i32 - 16) as i16,
                         (player.center_y() as i32 - 16) as i16,

@@ -6,7 +6,6 @@ use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::{object_area, CObjectTrait};
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::main::players;
 use crate::smw::objects::overmap::over_map_object::{IO_OverMapObject, IO_OverMapObjectTrait};
 use crate::smw::player::CPlayer;
@@ -65,7 +64,7 @@ impl OMO_Area {
             let mut y: i16 = 0;
             let mut iAttempts: i16 = 32;
             while (!game().g_map.findspawnpoint(5, &mut x, &mut y, self.collisionWidth, self.collisionHeight, false)
-                || objectcontainer[0].get_closest_object(x, y, object_area) <= (200.0f32 - ((self.numareas as i32 - 3) as f32 * 25.0f32)))
+                || game().objectcontainer[0].get_closest_object(x, y, object_area) <= (200.0f32 - ((self.numareas as i32 - 3) as f32 * 25.0f32)))
                 && {
                     let a = iAttempts;
                     iAttempts -= 1;

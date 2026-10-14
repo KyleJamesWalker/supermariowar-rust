@@ -13,7 +13,6 @@ use crate::common::random_number_generator::{RANDOM_BOOL, RANDOM_INT};
 use crate::common::tile_types::TileType;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::eyecandy;
 use sdl2::sys::{SDL_FillRect, SDL_Rect};
 use std::ptr::null;
 
@@ -984,7 +983,7 @@ impl_eyecandy!(EC_LoopingAnimation);
 /// `eyecandy[2].emplace<EC_SingleAnimation>(&rm->spr_fireballexplosion, x, y, 3, 8)`
 unsafe fn emplace_fireball_explosion(x: i16, y: i16) {
     let spr = Ptr::from_mut(&mut game().rm.spr_fireballexplosion);
-    eyecandy[2].emplace(EC_SingleAnimation::new(spr, x, y, 3, 8));
+    game().eyecandy[2].emplace(EC_SingleAnimation::new(spr, x, y, 3, 8));
 }
 
 //------------------------------------------------------------------------------
@@ -1407,7 +1406,7 @@ impl EC_SoulsAward {
 
             unsafe {
                 let spr = Ptr::from_mut(&mut game().rm.spr_awardsouls);
-                eyecandy[2].emplace(EC_RocketAward::new(
+                game().eyecandy[2].emplace(EC_RocketAward::new(
                     spr,
                     (self.x as i32 - 8) as i16,
                     (self.y as i32 - 8) as i16,

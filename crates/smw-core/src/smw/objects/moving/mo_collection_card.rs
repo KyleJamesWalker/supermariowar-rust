@@ -9,7 +9,7 @@ use crate::common::moving_object_types::*;
 use crate::common::object_base::{object_moving, CObjectTrait};
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::{eyecandy, objectcontainer};
+
 use crate::smw::objects::moving::moving_object::{
     io_moving_object_collision_detection_checksides, io_moving_object_draw, io_moving_object_update, IO_MovingObject, IO_MovingObjectTrait,
 };
@@ -88,7 +88,7 @@ impl MO_CollectionCard {
         let mut iAttempts: i16 = 32;
         unsafe {
             while (!game().g_map.findspawnpoint(5, &mut x, &mut y, self.collisionWidth, self.collisionHeight, false)
-                || objectcontainer[1].get_closest_moving_object(x, y, movingobject_collectioncard) <= 150.0f32)
+                || game().objectcontainer[1].get_closest_moving_object(x, y, movingobject_collectioncard) <= 150.0f32)
                 && {
                     let a = iAttempts;
                     iAttempts -= 1;
@@ -164,7 +164,7 @@ impl CObjectTrait for MO_CollectionCard {
             if self.timer > 200 {
                 self.dead = true;
                 unsafe {
-                    eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
                 }
             }
         }
@@ -190,7 +190,7 @@ impl CObjectTrait for MO_CollectionCard {
             self.uncollectabletime -= 1;
             unsafe {
                 if (self.uncollectabletime as i32) < -(game().game_values.gamemodesettings.collection.cardlife as i32) {
-                    eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
                     self.dead = true;
                 }
             }

@@ -6,8 +6,6 @@ use crate::common::global_constants::*;
 use crate::common::math::vec2::Vec2s;
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
-use crate::smw::gs_gameplay::eyecandy;
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::objects::moving::mo_attack_zone::MO_AttackZone;
 use crate::smw::player::CPlayer;
 
@@ -53,11 +51,11 @@ impl PlayerSuperStomp {
         //super stomp attack zone, play the sound and show the stomp gfx
         if self.is_stomping {
             unsafe {
-                eyecandy[2].emplace(EC_SuperStompExplosion::new(Ptr::from_mut(&mut game().rm.spr_superstomp), player.center_x(), player.bottom_y(), 4));
+                game().eyecandy[2].emplace(EC_SuperStompExplosion::new(Ptr::from_mut(&mut game().rm.spr_superstomp), player.center_x(), player.bottom_y(), 4));
                 if_sound_on_play(&mut game().rm.sfx_bobombsound);
                 self.is_stomping = false;
 
-                objectcontainer[1].add(Ptr::new_box(MO_AttackZone::new(
+                game().objectcontainer[1].add(Ptr::new_box(MO_AttackZone::new(
                     player.get_global_id(),
                     player.get_team_id(),
                     Vec2s::new((player.left_x() as i32 - 32) as i16, (player.top_y() as i32 + 10) as i16),
@@ -66,7 +64,7 @@ impl PlayerSuperStomp {
                     KillStyle::KuriboShoe,
                     false,
                 )));
-                objectcontainer[1].add(Ptr::new_box(MO_AttackZone::new(
+                game().objectcontainer[1].add(Ptr::new_box(MO_AttackZone::new(
                     player.get_global_id(),
                     player.get_team_id(),
                     Vec2s::new(player.right_x(), (player.top_y() as i32 + 10) as i16),

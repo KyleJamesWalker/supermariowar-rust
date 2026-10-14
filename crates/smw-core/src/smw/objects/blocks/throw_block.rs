@@ -10,7 +10,7 @@ use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::CObjectTrait;
 use crate::globals::Ptr;
 use crate::impl_base;
-use crate::smw::gs_gameplay::{eyecandy, objectcontainer};
+
 use crate::smw::objects::carriable::co_throw_block::CO_ThrowBlock;
 use crate::smw::objects::moving::mo_carried_object::MO_CarriedObjectTrait;
 use crate::smw::objects::throw_block_type::ThrowBlockType;
@@ -62,7 +62,7 @@ impl B_ThrowBlock {
 
                 block.owner = player;
                 block.iPlayerID = player.globalID;
-                objectcontainer[1].add(block);
+                game().objectcontainer[1].add(block);
             } else {
                 block.delete();
             }
@@ -178,10 +178,10 @@ impl IO_BlockTrait for B_ThrowBlock {
             let srcY = (self.iType as i32 * 16) as i16;
             let spr = Ptr::from_mut(&mut game().rm.spr_brokenblueblock);
             let (ix, iy) = (self.ix, self.iy);
-            eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy, -1.5f32, -7.0f32, 6, 2, 0, srcY, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy, 1.5f32, -7.0f32, 6, 2, 0, srcY, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -1.5f32, -4.0f32, 6, 2, 0, srcY, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 1.5f32, -4.0f32, 6, 2, 0, srcY, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy, -1.5f32, -7.0f32, 6, 2, 0, srcY, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy, 1.5f32, -7.0f32, 6, 2, 0, srcY, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -1.5f32, -4.0f32, 6, 2, 0, srcY, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 1.5f32, -4.0f32, 6, 2, 0, srcY, 16, 16));
 
             if_sound_on_play(&mut game().rm.sfx_breakblock);
         }

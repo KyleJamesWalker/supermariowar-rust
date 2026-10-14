@@ -9,7 +9,6 @@ use crate::common::math::vec2::{Vec2f, Vec2s};
 use crate::common::object_base::{object_pipe_coin, CObjectTrait};
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::main::pipegamemode;
 use crate::smw::objects::overmap::over_map_object::{IO_OverMapObject, IO_OverMapObjectTrait};
 use crate::smw::player::CPlayer;
@@ -157,7 +156,7 @@ impl CObjectTrait for OMO_PipeCoin {
                 game().game_values.gamemode.check_winner(player);
             }
 
-            eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_coinsparkle), self.ix, self.iy, 7, 4));
+            game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_coinsparkle), self.ix, self.iy, 7, 4));
         }
 
         self.dead = true;

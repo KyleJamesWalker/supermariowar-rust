@@ -16,7 +16,7 @@ use crate::common::random_number_generator::{RandomNumberGenerator, RandomNumber
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::mini_boss::CGM_Boss_MiniGame;
-use crate::smw::gs_gameplay::{eyecandy, objectcontainer};
+
 use crate::smw::object_container::CObjectContainer;
 use crate::smw::objectgame::removeifprojectile;
 use crate::smw::objects::carriable::co_bomb::CO_Bomb;
@@ -324,7 +324,7 @@ impl MO_SledgeBrother {
             if self.iType == 0 {
                 let fHammerVelX: f32 = (RANDOM_INT(9) + 2) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 6.0f32 };
                 let pos = Vec2s::new(((if self.face_right { ix + 32 } else { ix }) - self.collisionOffsetX as i32) as i16, self.iy);
-                objectcontainer[2].add(Ptr::new_box(MO_SledgeHammer::new(
+                game().objectcontainer[2].add(Ptr::new_box(MO_SledgeHammer::new(
                     Ptr::from_mut(&mut game().rm.spr_sledgehammer),
                     pos,
                     8,
@@ -340,7 +340,7 @@ impl MO_SledgeBrother {
                 let fBombVelY: f32 = -(RANDOM_INT(13) as f32) / 2.0f32 - 6.0f32;
                 let pos = Vec2s::new((if self.face_right { ix + iw - 32 } else { ix - 20 }) as i16, iy as i16);
                 let timetolive = (RANDOM_INT(60) + 120) as i16;
-                objectcontainer[2].add(Ptr::new_box(CO_Bomb::new(
+                game().objectcontainer[2].add(Ptr::new_box(CO_Bomb::new(
                     Ptr::from_mut(&mut game().rm.spr_bomb),
                     pos,
                     Vec2f::new(fBombVelX, fBombVelY),
@@ -354,7 +354,7 @@ impl MO_SledgeBrother {
                 let fFireVelX: f32 = (RANDOM_INT(9) + 6) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 10.0f32 };
                 let fFireVelY: f32 = RANDOM_INT(17) as f32 / 2.0f32 - 4.0f32;
                 let pos = Vec2s::new((if self.face_right { ix + iw - 32 } else { ix - 16 }) as i16, iy as i16);
-                objectcontainer[2].add(Ptr::new_box(MO_SuperFireball::new(
+                game().objectcontainer[2].add(Ptr::new_box(MO_SuperFireball::new(
                     Ptr::from_mut(&mut game().rm.spr_superfireball),
                     pos,
                     4,
@@ -381,7 +381,7 @@ impl MO_SledgeBrother {
 
         // If this is a bomb brother, push bombs away when taunting
         if self.iType == 1 {
-            unsafe { push_bombs(&objectcontainer[2], (self.ix as i32 + 32) as i16, (self.iy as i32 + 32) as i16) };
+            unsafe { push_bombs(&game().objectcontainer[2], (self.ix as i32 + 32) as i16, (self.iy as i32 + 32) as i16) };
         }
     }
 
@@ -481,7 +481,7 @@ impl CObjectTrait for MO_SledgeBrother {
                         for _iThwomp in 0..numThwomps {
                             let x = RANDOM_INT(591) as i16;
                             let nspeed = 2.0f32 + RANDOM_INT(20) as f32 / 10.0f32;
-                            objectcontainer[2].add(Ptr::new_box(OMO_Thwomp::new(Ptr::from_mut(&mut game().rm.spr_thwomp), x, nspeed)));
+                            game().objectcontainer[2].add(Ptr::new_box(OMO_Thwomp::new(Ptr::from_mut(&mut game().rm.spr_thwomp), x, nspeed)));
                         }
                     } else if self.iType == 2 {
                         // Spawn lots of podobos
@@ -492,7 +492,7 @@ impl CObjectTrait for MO_SledgeBrother {
                         for _iPodobo in 0..numPodobos {
                             let x = RANDOM_INT(608) as i16;
                             let dVelY = -(RANDOM_INT(9) as f32 / 2.0f32) - 9.0f32;
-                            objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(
+                            game().objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(
                                 Ptr::from_mut(&mut game().rm.spr_podobo),
                                 Vec2s::new(x, App::screenHeight as i16),
                                 dVelY,
@@ -685,7 +685,7 @@ impl IO_MovingObjectTrait for MO_SledgeBrother {
     fn die(&mut self) {
         self.dead = true;
         unsafe {
-            eyecandy[2].emplace(EC_FallingObject::new(
+            game().eyecandy[2].emplace(EC_FallingObject::new(
                 Ptr::from_mut(&mut game().rm.spr_sledgebrothersdead),
                 self.ix,
                 self.iy,

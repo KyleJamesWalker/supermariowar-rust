@@ -9,7 +9,6 @@ use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::CObjectTrait;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::objects::powerup::powerup::{mo_powerup_draw, mo_powerup_update, MO_Powerup, MO_PowerupTrait};
 use crate::smw::player::CPlayer;
@@ -98,7 +97,7 @@ impl CObjectTrait for PU_TreasureChestBonus {
             }
         } else if self.state == 4 {
             unsafe {
-                eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.drawbonusitemy, 3, 8));
+                game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.drawbonusitemy, 3, 8));
             }
             self.dead = true;
         }
@@ -150,7 +149,7 @@ impl CObjectTrait for PU_TreasureChestBonus {
                 self.drawbonusitemy = self.iy;
                 self.drawbonusitemtimer = 60;
 
-                eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
+                game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
 
                 game().game_values.flags.noexit = false;
             }

@@ -11,7 +11,6 @@ use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::race::CGM_Race;
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::main::score_cnt;
 use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::overmap::over_map_object::{io_over_map_object_update, IO_OverMapObject, IO_OverMapObjectTrait};
@@ -110,7 +109,7 @@ impl OMO_RaceGoal {
                     x = RANDOM_INT(App::screenWidth - self.collisionWidth as i32) as i16;
                     y = RANDOM_INT(App::screenHeight - self.collisionHeight as i32) as i16;
 
-                    if !(objectcontainer[2].get_closest_object(x, y, object_race_goal) <= 250.0f32 - (self.quantity as f32 * 25.0f32)) {
+                    if !(game().objectcontainer[2].get_closest_object(x, y, object_race_goal) <= 250.0f32 - (self.quantity as f32 * 25.0f32)) {
                         break;
                     }
                 }

@@ -10,7 +10,6 @@ use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::frag::{cgm_frag_check_winner, cgm_frag_playerkilledself, CGM_Frag};
 use crate::smw::gamemodes::game_mode::*;
-use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::main::{players, score, score_cnt};
 use crate::smw::player::CPlayer;
 
@@ -55,7 +54,7 @@ impl CGameModeTrait for CGM_Jail {
 }
 
 unsafe fn emplace_poof(player: Ptr<CPlayer>) {
-    eyecandy[2].emplace(EC_SingleAnimation::new(
+    game().eyecandy[2].emplace(EC_SingleAnimation::new(
         Ptr::from_mut(&mut game().rm.spr_poof),
         (player.center_x() as i32 - 24) as i16,
         (player.center_y() as i32 - 24) as i16,

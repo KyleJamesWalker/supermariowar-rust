@@ -10,7 +10,6 @@ use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::objects::overmap::over_map_object::{io_over_map_object_draw, io_over_map_object_update, IO_OverMapObject, IO_OverMapObjectTrait};
 use crate::smw::player::CPlayer;
 
@@ -97,7 +96,7 @@ impl CObjectTrait for OMO_StraightPathHazard {
     fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
         if !player.is_shielded() {
             unsafe {
-                eyecandy[2].emplace(EC_SingleAnimation::new(
+                game().eyecandy[2].emplace(EC_SingleAnimation::new(
                     Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                     (self.ix as i32 + (self.iw as i32 >> 2) - 16) as i16,
                     (self.iy as i32 + (self.ih as i32 >> 2) - 16) as i16,

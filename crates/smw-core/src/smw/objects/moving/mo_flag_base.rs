@@ -10,7 +10,6 @@ use crate::common::object_base::{object_moving, CObjectTrait};
 use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::carriable::co_flag::CO_Flag;
 use crate::smw::objects::moving::moving_object::{IO_MovingObject, IO_MovingObjectTrait};
@@ -97,7 +96,7 @@ impl MO_FlagBase {
                 let mut iAttempts: i16 = 32;
                 let (cw, ch) = (self.collisionWidth, self.collisionHeight);
                 while (!game().g_map.findspawnpoint(5, &mut x, &mut y, cw, ch, false)
-                    || objectcontainer[1].get_closest_moving_object(x, y, movingobject_flagbase) < 200.0f32)
+                    || game().objectcontainer[1].get_closest_moving_object(x, y, movingobject_flagbase) < 200.0f32)
                     && {
                         let a = iAttempts;
                         iAttempts -= 1;

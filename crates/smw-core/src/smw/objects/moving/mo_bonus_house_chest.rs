@@ -9,7 +9,6 @@ use crate::common::moving_object_types::*;
 use crate::common::object_base::CObjectTrait;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::objects::moving::moving_object::{IO_MovingObject, IO_MovingObjectTrait};
 use crate::smw::player::CPlayer;
 use sdl2::sys::SDL_Rect;
@@ -66,7 +65,7 @@ impl CObjectTrait for MO_BonusHouseChest {
             self.drawbonusitemtimer -= 1;
             if self.drawbonusitemtimer <= 0 {
                 unsafe {
-                    eyecandy[2].emplace(EC_SingleAnimation::new(
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
                         Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                         (self.ix as i32 + 16) as i16,
                         self.drawbonusitemy,

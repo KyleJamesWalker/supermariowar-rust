@@ -6,7 +6,6 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::{self as gm, remove_players_but_team, setup_score_board, show_score_board};
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::main::score;
 use crate::smw::object_container::CObjectContainer;
 use crate::smw::objects::overmap::wo_race_goal::OMO_RaceGoal;
@@ -67,7 +66,7 @@ impl CGM_Race {
             self.nextGoal[teamID as usize] += 1;
             if self.nextGoal[teamID as usize] >= self.quantity {
                 self.nextGoal[teamID as usize] = 0;
-                remove_player_race_goals(&objectcontainer[2], teamID, -1);
+                remove_player_race_goals(&game().objectcontainer[2], teamID, -1);
 
                 if !self.gameover {
                     score[teamID as usize].adjust_score(1);
@@ -96,7 +95,7 @@ impl CGM_Race {
     //Player loses control of his areas
     pub fn penalize_race_goals(&mut self, player: Ptr<CPlayer>) {
         unsafe {
-            remove_player_race_goals(&objectcontainer[2], player.get_team_id(), (self.nextGoal[player.get_team_id() as usize] as i32 - 1) as i16);
+            remove_player_race_goals(&game().objectcontainer[2], player.get_team_id(), (self.nextGoal[player.get_team_id() as usize] as i32 - 1) as i16);
         }
 
         if 2 == self.penalty {
@@ -137,7 +136,7 @@ impl CGameModeTrait for CGM_Race {
             }
 
             for iRaceGoal in 0..self.quantity {
-                objectcontainer[2].add(Ptr::new_box(OMO_RaceGoal::new(Ptr::from_mut(&mut game().rm.spr_racegoal), iRaceGoal)));
+                game().objectcontainer[2].add(Ptr::new_box(OMO_RaceGoal::new(Ptr::from_mut(&mut game().rm.spr_racegoal), iRaceGoal)));
             }
         }
 

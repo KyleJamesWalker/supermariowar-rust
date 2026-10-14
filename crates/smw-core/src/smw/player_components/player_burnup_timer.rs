@@ -5,7 +5,6 @@ use crate::common::game_values::if_sound_on_play;
 use crate::common::global_constants::MAXVELY;
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
-use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::player::CPlayer;
 
 #[derive(Default)]
@@ -34,7 +33,7 @@ impl PlayerBurnupTimer {
                         if self.timer > 80 {
                             player.kill_player_map_hazard(true, KillStyle::Environment, false, -1);
                         } else {
-                            eyecandy[0].emplace(EC_SingleAnimation::new(
+                            game().eyecandy[0].emplace(EC_SingleAnimation::new(
                                 Ptr::from_mut(&mut game().rm.spr_burnup),
                                 (player.center_x() as i32 - 16) as i16,
                                 (player.center_y() as i32 - 16) as i16,

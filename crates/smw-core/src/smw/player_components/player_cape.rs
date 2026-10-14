@@ -6,7 +6,6 @@ use crate::common::global_constants::{PHOFFSET, PWOFFSET};
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
 use crate::smw::objects::moving::mo_spin_attack::MO_SpinAttack;
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::player::CPlayer;
 use sdl2::sys::SDL_Rect;
 
@@ -45,7 +44,7 @@ impl PlayerCape {
 
             Ptr::from_mut(&mut player.spin).get().spin(player);
 
-            objectcontainer[1].add(Ptr::new_box(MO_SpinAttack::new(
+            game().objectcontainer[1].add(Ptr::new_box(MO_SpinAttack::new(
                 player.get_global_id(),
                 player.get_team_id(),
                 KillStyle::Feather,
@@ -56,7 +55,7 @@ impl PlayerCape {
     }
 
     pub fn draw(&mut self, player: &mut CPlayer) {
-        /* See eyecandy/cape.png for reference */
+        /* See game().eyecandy/cape.png for reference */
         unsafe {
             self.iCapeTimer = self.iCapeTimer.wrapping_add(1);
             if self.iCapeTimer > 3 {

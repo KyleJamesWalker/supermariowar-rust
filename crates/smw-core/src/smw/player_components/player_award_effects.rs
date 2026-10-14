@@ -8,7 +8,6 @@ use crate::common::global_constants::*;
 use crate::common::math::trig::{cosf, sinf};
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
-use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::objectgame::check_secret;
 use crate::smw::player::CPlayer;
 use sdl2::sys::SDL_Rect;
@@ -95,7 +94,7 @@ impl PlayerAwardEffects {
                 let awardvelx: f32 = 7.0f32 * cosangle;
                 let awardvely: f32 = 7.0f32 * sinangle;
 
-                eyecandy[2].emplace(EC_ExplodingAward::new(
+                game().eyecandy[2].emplace(EC_ExplodingAward::new(
                     Ptr::from_mut(&mut game().rm.spr_awardsolid),
                     awardx,
                     awardy,
@@ -123,7 +122,7 @@ impl PlayerAwardEffects {
                 let angle: f32 = k as f32 * addangle + self.awardangle;
 
                 if numawards as i32 == MAXAWARDS {
-                    eyecandy[2].emplace(EC_SwirlingAward::new(
+                    game().eyecandy[2].emplace(EC_SwirlingAward::new(
                         Ptr::from_mut(&mut game().rm.spr_awardkillsinrow),
                         (player.center_x() as i32 - 8) as i16,
                         (player.center_y() as i32 - 8) as i16,
@@ -139,7 +138,7 @@ impl PlayerAwardEffects {
                         4,
                     ));
                 } else {
-                    eyecandy[2].emplace(EC_SwirlingAward::new(
+                    game().eyecandy[2].emplace(EC_SwirlingAward::new(
                         Ptr::from_mut(&mut game().rm.spr_awardkillsinrow),
                         (player.center_x() as i32 - 8) as i16,
                         (player.center_y() as i32 - 8) as i16,
@@ -178,7 +177,7 @@ impl PlayerAwardEffects {
                 let awardvely: f32 = 9.0f32 * sinf(angle);
 
                 if numawards as i32 == MAXAWARDS {
-                    eyecandy[2].emplace(EC_RocketAward::new(
+                    game().eyecandy[2].emplace(EC_RocketAward::new(
                         Ptr::from_mut(&mut game().rm.spr_awardkillsinrow),
                         (player.center_x() as i32 - 8) as i16,
                         (player.center_y() as i32 - 8) as i16,
@@ -193,7 +192,7 @@ impl PlayerAwardEffects {
                         4,
                     ));
                 } else {
-                    eyecandy[2].emplace(EC_RocketAward::new(
+                    game().eyecandy[2].emplace(EC_RocketAward::new(
                         Ptr::from_mut(&mut game().rm.spr_awardkillsinrow),
                         (player.center_x() as i32 - 8) as i16,
                         (player.center_y() as i32 - 8) as i16,
@@ -217,7 +216,7 @@ impl PlayerAwardEffects {
             if game().game_values.awardstyle == AwardStyle::Halo {
                 self.add_exploding(player);
             } else if game().game_values.awardstyle == AwardStyle::Souls && player.killsinrow as i32 >= MINAWARDSNEEDED {
-                eyecandy[2].emplace(EC_SoulsAward::new(
+                game().eyecandy[2].emplace(EC_SoulsAward::new(
                     Ptr::from_mut(&mut game().rm.spr_awardsouls),
                     Ptr::from_mut(&mut game().rm.spr_awardsoulspawn),
                     player.center_x(),
@@ -323,7 +322,7 @@ impl PlayerAwardEffects {
                         } else {
                             Ptr::from_mut(&mut game().rm.game_font_small)
                         };
-                        eyecandy[2].emplace(EC_GravText::new(font, killer.center_x(), killer.bottom_y(), text, -VELJUMP));
+                        game().eyecandy[2].emplace(EC_GravText::new(font, killer.center_x(), killer.bottom_y(), text, -VELJUMP));
                     }
 
                     //if we stopped the other players run show another award
@@ -340,7 +339,7 @@ impl PlayerAwardEffects {
                         } else {
                             Ptr::from_mut(&mut game().rm.game_font_small)
                         };
-                        eyecandy[2].emplace(EC_GravText::new(font, killed.center_x(), killed.bottom_y(), text, -VELJUMP * 1.3f32));
+                        game().eyecandy[2].emplace(EC_GravText::new(font, killed.center_x(), killed.bottom_y(), text, -VELJUMP * 1.3f32));
                     }
                 }
             }
@@ -355,7 +354,7 @@ impl PlayerAwardEffects {
                 let awardvelx: f32 = vel * cosf(angle);
                 let awardvely: f32 = vel * sinf(angle);
 
-                eyecandy[2].emplace(EC_FallingObject::new(
+                game().eyecandy[2].emplace(EC_FallingObject::new(
                     Ptr::from_mut(&mut game().rm.spr_bonus),
                     (player.center_x() as i32 - 8) as i16,
                     (player.center_y() as i32 - 8) as i16,

@@ -9,7 +9,6 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::*;
-use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::main::{score, score_cnt};
 use crate::smw::net_random::{self, Ev};
 use crate::smw::player::CPlayer;
@@ -146,14 +145,14 @@ impl CGameModeTrait for CGM_Tag {
             if inflictor == self.m_tagged {
                 self.m_tagged = other;
                 inflictor.shield().reset();
-                eyecandy[2].emplace(EC_GravText::new(
+                game().eyecandy[2].emplace(EC_GravText::new(
                     Ptr::from_mut(&mut game().rm.game_font_large),
                     other.center_x(),
                     other.bottom_y(),
                     "Tagged!".to_string(),
                     (-(VELJUMP as f64) * 1.5) as f32,
                 ));
-                eyecandy[2].emplace(EC_SingleAnimation::new(
+                game().eyecandy[2].emplace(EC_SingleAnimation::new(
                     Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                     (other.center_x() as i32 - 16) as i16,
                     (other.center_y() as i32 - 16) as i16,

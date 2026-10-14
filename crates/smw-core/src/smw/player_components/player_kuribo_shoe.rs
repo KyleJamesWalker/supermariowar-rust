@@ -6,9 +6,7 @@ use crate::common::gfx::gfx_sprite::ClipEdge;
 use crate::common::global_constants::{PHOFFSET, PWOFFSET};
 use crate::common::math::vec2::Vec2s;
 use crate::globals::*;
-use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::objects::carriable::co_kuribo_shoe::CO_KuriboShoe;
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::objects::moving::moving_object::io_moving_object_collision_detection_checksides;
 use crate::smw::player::CPlayer;
 use sdl2::sys::SDL_Rect;
@@ -88,8 +86,8 @@ impl PlayerKuriboShoe {
                         self.r#type == STICKY,
                     ));
                     io_moving_object_collision_detection_checksides(shoe.get());
-                    objectcontainer[1].add(shoe);
-                    eyecandy[2].emplace(EC_SingleAnimation::new(
+                    game().objectcontainer[1].add(shoe);
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
                         Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                         (player.center_x() as i32 - 16) as i16,
                         (player.center_y() as i32 - 16) as i16,

@@ -11,7 +11,7 @@ use crate::common::object_base::CObjectTrait;
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::{eyecandy, spotlightManager};
+use crate::smw::gs_gameplay::{spotlightManager};
 use crate::smw::objectgame::removeifprojectile;
 use crate::smw::objects::moving::mo_carried_object::{MO_CarriedObject, MO_CarriedObjectTrait};
 use crate::smw::objects::moving::moving_object::{io_moving_object_collision_detection_checksides, io_moving_object_collision_detection_map, IO_MovingObjectTrait};
@@ -172,10 +172,10 @@ impl CO_ThrowBlock {
         unsafe {
             let spr = Ptr::from_mut(&mut game().rm.spr_brokeniceblock);
             let (ix, iy) = (self.ix as i32, self.iy as i32);
-            eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, iy as i16, -1.5, -7.0, 4, 2, 0, 0, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, iy as i16, 1.5, -7.0, 4, 2, 0, 0, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, (iy + 16) as i16, -1.5, -4.0, 4, 2, 0, 0, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, (iy + 16) as i16, 1.5, -4.0, 4, 2, 0, 0, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, iy as i16, -1.5, -7.0, 4, 2, 0, 0, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, iy as i16, 1.5, -7.0, 4, 2, 0, 0, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, (iy + 16) as i16, -1.5, -4.0, 4, 2, 0, 0, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, (iy + 16) as i16, 1.5, -4.0, 4, 2, 0, 0, 16, 16));
 
             game().game_values.unlocksecret2part2 += 1;
         }
@@ -237,7 +237,7 @@ impl CObjectTrait for CO_ThrowBlock {
             self.frozentimer = 300;
 
             unsafe {
-                eyecandy[2].emplace(EC_SingleAnimation::new(
+                game().eyecandy[2].emplace(EC_SingleAnimation::new(
                     Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                     (self.ix as i32 - self.collisionOffsetX as i32) as i16,
                     (self.iy as i32 - self.collisionOffsetY as i32) as i16,
@@ -263,7 +263,7 @@ impl CObjectTrait for CO_ThrowBlock {
                     self.velx = self.frozenvelocity;
                     self.animationspeed = self.frozenanimationspeed;
 
-                    eyecandy[2].emplace(EC_SingleAnimation::new(
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
                         Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                         (self.ix as i32 - self.collisionOffsetX as i32) as i16,
                         (self.iy as i32 - self.collisionOffsetY as i32) as i16,
@@ -275,7 +275,7 @@ impl CObjectTrait for CO_ThrowBlock {
                 self.iDeathTime += 1;
                 self.iDeathTime >= game().game_values.blueblockttl
             } {
-                eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
+                game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
                 self.dead = true;
 
                 if !self.owner.is_null() {
@@ -334,7 +334,7 @@ impl CObjectTrait for CO_ThrowBlock {
             if self.frozen {
                 game().rm.spr_iceblock.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
             } else if self.fSmoking {
-                eyecandy[0].emplace(EC_SingleAnimation::new(
+                game().eyecandy[0].emplace(EC_SingleAnimation::new(
                     Ptr::from_mut(&mut game().rm.spr_burnup),
                     (x + (self.iw as i32 >> 1) - 16) as i16,
                     (y + (self.ih as i32 >> 1) - 16) as i16,
@@ -372,10 +372,10 @@ impl IO_MovingObjectTrait for CO_ThrowBlock {
         unsafe {
             let spr = Ptr::from_mut(&mut game().rm.spr_brokenblueblock);
             let (ix, iy) = (self.ix as i32, self.iy as i32);
-            eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, iy as i16, -1.5, -7.0, 6, 2, 0, srcY, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, iy as i16, 1.5, -7.0, 6, 2, 0, srcY, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, (iy + 16) as i16, -1.5, -4.0, 6, 2, 0, srcY, 16, 16));
-            eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, (iy + 16) as i16, 1.5, -4.0, 6, 2, 0, srcY, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, iy as i16, -1.5, -7.0, 6, 2, 0, srcY, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, iy as i16, 1.5, -7.0, 6, 2, 0, srcY, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, (iy + 16) as i16, -1.5, -4.0, 6, 2, 0, srcY, 16, 16));
+            game().eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, (iy + 16) as i16, 1.5, -4.0, 6, 2, 0, srcY, 16, 16));
         }
 
         self.die_helper();
@@ -387,7 +387,7 @@ impl IO_MovingObjectTrait for CO_ThrowBlock {
         } else if self.state == 1 {
             if self.iBounceCounter == 0 {
                 unsafe {
-                    eyecandy[2].emplace(EC_SingleAnimation::new(
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
                         Ptr::from_mut(&mut game().rm.spr_shellbounce),
                         (self.ix as i32 + (if self.velx > 0.0 { 0 } else { self.collisionWidth as i32 }) - 21) as i16,
                         (self.iy as i32 + (self.collisionHeight as i32 >> 1) - 20) as i16,

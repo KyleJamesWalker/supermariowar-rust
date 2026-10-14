@@ -8,8 +8,6 @@ use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
 use crate::common::random_number_generator::{RANDOM_BOOL, RANDOM_INT};
 use crate::globals::*;
-use crate::smw::gs_gameplay::eyecandy;
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::main::{players, score, score_cnt};
 use crate::smw::net::netplay;
 use crate::smw::net_random::{self, Ev};
@@ -144,7 +142,7 @@ pub fn setup_score_board_now(fOrderMatters: bool) {
             for iBonus in 0..iNumBonuses {
                 if tourStop.wsbBonuses[iBonus as usize].iWinnerPlace == 0 {
                     let iBonusType: i16 = tourStop.wsbBonuses[iBonus as usize].iBonus;
-                    objectcontainer[0].add(Ptr::new_box(PU_TreasureChestBonus::new(Ptr::from_mut(&mut game().rm.spr_bonuschest), 1, 0, 30, 30, 1, 1, iBonusType)));
+                    game().objectcontainer[0].add(Ptr::new_box(PU_TreasureChestBonus::new(Ptr::from_mut(&mut game().rm.spr_bonuschest), 1, 0, 30, 30, 1, 1, iBonusType)));
                     game().game_values.flags.noexittimer = 0;
                     game().game_values.flags.noexit = false;
                 }
@@ -220,7 +218,7 @@ pub fn remove_team_now(teamid: i16) -> bool {
 
         //Announce that a team was removed
         if game().game_values.deadteamnotice && (game().game_values.flags.teamdeadcounter as i32) < score_cnt as i32 - 1 {
-            eyecandy[2].emplace(EC_Announcement::new(
+            game().eyecandy[2].emplace(EC_Announcement::new(
                 Ptr::from_mut(&mut game().rm.game_font_large),
                 Ptr::from_mut(&mut game().rm.spr_announcementicons),
                 "Team Removed!".to_string(),

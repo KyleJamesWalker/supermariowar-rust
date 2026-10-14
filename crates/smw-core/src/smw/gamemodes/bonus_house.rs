@@ -11,7 +11,6 @@ use crate::common::world_tour_stop::TourStop;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode as gm;
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::main::players;
 use crate::smw::objects::moving::mo_bonus_house_chest::MO_BonusHouseChest;
 use crate::smw::player::CPlayer;
@@ -97,7 +96,7 @@ impl CGameModeTrait for CGM_Bonus {
             //float dx = 288.0f - (dSpacing * (float)(iNumBonuses - 1) / 2.0f);
             for iChest in 0..iNumBonuses {
                 let iBonus = self.tsTourStop.wsbBonuses[iChestOrder[iChest as usize] as usize].iBonus;
-                objectcontainer[0].add(Ptr::new_box(MO_BonusHouseChest::new(Ptr::from_mut(&mut game().rm.spr_worldbonushouse), Vec2s::new(dx as i16, 384), iBonus)));
+                game().objectcontainer[0].add(Ptr::new_box(MO_BonusHouseChest::new(Ptr::from_mut(&mut game().rm.spr_worldbonushouse), Vec2s::new(dx as i16, 384), iBonus)));
                 dx += dSpacing + 64.0f32;
             }
         }

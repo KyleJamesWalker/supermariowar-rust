@@ -14,7 +14,6 @@ use crate::common::io_block::IO_BlockTrait;
 use crate::common::object_base::cap_falling_velocity;
 use crate::common::tile_types::*;
 use crate::globals::*;
-use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::objectgame::removeifprojectile;
 use crate::smw::objects::carriable::{co_egg::CO_Egg, co_flag::CO_Flag, co_phanto_key::CO_PhantoKey, co_star::CO_Star};
 use crate::smw::objects::moving::mo_coin::MO_Coin;
@@ -880,7 +879,7 @@ pub fn io_moving_object_kill_object_map_hazard<T: IO_MovingObjectTrait + ?Sized>
         {
             let o = this.mo_mut();
             o.dead = true;
-            eyecandy[2].emplace(EC_SingleAnimation::new(
+            game().eyecandy[2].emplace(EC_SingleAnimation::new(
                 Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                 (o.ix as i32 + (o.iw as i32 >> 1) - 16) as i16,
                 (o.iy as i32 + (o.ih as i32 >> 1) - 16) as i16,

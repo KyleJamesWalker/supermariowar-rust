@@ -10,7 +10,6 @@ use crate::common::object_base::CObjectTrait;
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::objects::moving::mo_carried_object::{mo_carried_object_draw, mo_carried_object_drop, MO_CarriedObject, MO_CarriedObjectTrait};
 use crate::smw::objects::moving::mo_explosion::MO_Explosion;
 use crate::smw::objects::moving::moving_object::{io_moving_object_collision_detection_map, IO_MovingObjectTrait};
@@ -110,7 +109,7 @@ impl CO_Egg {
             let mut y: i16 = 0;
             let mut iAttempts: i16 = 32;
             let (w, h) = (self.collisionWidth, self.collisionHeight);
-            while (!game().g_map.findspawnpoint(5, &mut x, &mut y, w, h, false) || objectcontainer[1].get_closest_moving_object(x, y, movingobject_yoshi) < 250.0) && {
+            while (!game().g_map.findspawnpoint(5, &mut x, &mut y, w, h, false) || game().objectcontainer[1].get_closest_moving_object(x, y, movingobject_yoshi) < 250.0) && {
                 let t = iAttempts;
                 iAttempts -= 1;
                 t > 0
@@ -195,7 +194,7 @@ impl CObjectTrait for CO_Egg {
                     self.explosiondrawtimer = 62;
                     self.explosiondrawframe -= 1;
                     if self.explosiondrawframe < 0 {
-                        objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
+                        game().objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
                             Ptr::from_mut(&mut game().rm.spr_explosion),
                             Vec2s::new((self.ix as i32 + (self.iw as i32 >> 1) - 96) as i16, (self.iy as i32 + (self.ih as i32 >> 1) - 64) as i16),
                             2,

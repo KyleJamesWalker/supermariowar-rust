@@ -10,7 +10,7 @@ use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::{self as gm, remove_players_but_highest_scoring, setup_score_board, show_score_board};
 use crate::smw::gamemodes::game_mode_timer::GameTimerDisplay;
-use crate::smw::gs_gameplay::{count_alive_teams, eyecandy};
+use crate::smw::gs_gameplay::{count_alive_teams};
 use crate::smw::main::{players, score, score_cnt};
 use crate::smw::player::CPlayer;
 use std::any::Any;
@@ -46,14 +46,14 @@ impl CGM_ShyGuyTag {
                 let mut player = player;
                 if player.get_team_id() == iTeam {
                     player.shyguy = true;
-                    eyecandy[2].emplace(EC_GravText::new(
+                    game().eyecandy[2].emplace(EC_GravText::new(
                         Ptr::from_mut(&mut game().rm.game_font_large),
                         player.center_x(),
                         player.bottom_y(),
                         "Shyguy!".to_string(),
                         (-(VELJUMP as f64) * 1.5) as f32,
                     ));
-                    eyecandy[2].emplace(EC_SingleAnimation::new(
+                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
                         Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                         (player.center_x() as i32 - 16) as i16,
                         (player.center_y() as i32 - 16) as i16,
@@ -77,7 +77,7 @@ impl CGM_ShyGuyTag {
             for &player in players.iter() {
                 let mut player = player;
                 player.shyguy = false;
-                eyecandy[2].emplace(EC_SingleAnimation::new(
+                game().eyecandy[2].emplace(EC_SingleAnimation::new(
                     Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                     (player.center_x() as i32 - 16) as i16,
                     (player.center_y() as i32 - 16) as i16,

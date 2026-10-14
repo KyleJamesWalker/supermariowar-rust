@@ -10,7 +10,6 @@ use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::frenzy::CGM_Frenzy;
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::objects::carriable::co_shell::{CO_Shell, ShellType};
 use crate::smw::objects::moving::moving_object::{io_moving_object_draw, IO_MovingObject, IO_MovingObjectTrait};
 use crate::smw::player::CPlayer;
@@ -69,7 +68,7 @@ impl MO_FrenzyCard {
             let mut y: i16 = 0;
             let mut iAttempts: i16 = 32;
             let (cw, ch) = (self.collisionWidth, self.collisionHeight);
-            while (!game().g_map.findspawnpoint(5, &mut x, &mut y, cw, ch, false) || objectcontainer[1].get_closest_object(x, y, object_frenzycard) <= 150.0f32) && {
+            while (!game().g_map.findspawnpoint(5, &mut x, &mut y, cw, ch, false) || game().objectcontainer[1].get_closest_object(x, y, object_frenzycard) <= 150.0f32) && {
                 let a = iAttempts;
                 iAttempts -= 1;
                 a > 0
@@ -102,25 +101,25 @@ impl CObjectTrait for MO_FrenzyCard {
                 match r#type {
                     14 => {
                         let mut shell = Ptr::new_box(CO_Shell::new(ShellType::Green, Vec2s::zero(), true, true, true, false));
-                        if objectcontainer[1].add(shell) {
+                        if game().objectcontainer[1].add(shell) {
                             shell.used_as_stored_powerup(player);
                         }
                     }
                     15 => {
                         let mut shell = Ptr::new_box(CO_Shell::new(ShellType::Red, Vec2s::zero(), false, true, true, false));
-                        if objectcontainer[1].add(shell) {
+                        if game().objectcontainer[1].add(shell) {
                             shell.used_as_stored_powerup(player);
                         }
                     }
                     16 => {
                         let mut shell = Ptr::new_box(CO_Shell::new(ShellType::Spiny, Vec2s::zero(), false, false, true, true));
-                        if objectcontainer[1].add(shell) {
+                        if game().objectcontainer[1].add(shell) {
                             shell.used_as_stored_powerup(player);
                         }
                     }
                     17 => {
                         let mut shell = Ptr::new_box(CO_Shell::new(ShellType::Buzzy, Vec2s::zero(), false, true, false, false));
-                        if objectcontainer[1].add(shell) {
+                        if game().objectcontainer[1].add(shell) {
                             shell.used_as_stored_powerup(player);
                         }
                     }

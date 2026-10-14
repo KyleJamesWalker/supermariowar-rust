@@ -9,7 +9,6 @@ use crate::common::object_base::CObjectTrait;
 use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::objects::powerup::powerup::{mo_powerup_draw, mo_powerup_update, MO_Powerup, MO_PowerupTrait};
 use crate::smw::player::CPlayer;
@@ -105,7 +104,7 @@ impl CObjectTrait for PU_SecretPowerup {
                     let x = RANDOM_INT(App::screenWidth) as f32;
                     let y = RANDOM_INT(App::screenHeight) as f32;
                     let t = (RANDOM_INT(4) + 1) as i16;
-                    eyecandy[2].emplace(EC_Snow::new(Ptr::from_mut(&mut game().rm.spr_snow), x, y, t));
+                    game().eyecandy[2].emplace(EC_Snow::new(Ptr::from_mut(&mut game().rm.spr_snow), x, y, t));
                 }
             } else if self.itemtype == 1 {
                 game().game_values.spinscreen = true;

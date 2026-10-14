@@ -10,7 +10,6 @@ use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::{self as gm, remove_players_but_team, setup_score_board, show_score_board};
-use crate::smw::gs_gameplay::objectcontainer;
 use crate::smw::main::{players, score, score_cnt};
 use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::moving::mo_collection_card::MO_CollectionCard;
@@ -60,7 +59,7 @@ impl CGM_Collection {
             player.score().subscore[1] &= iCardMaskInverted;
 
             unsafe {
-                objectcontainer[1].add(Ptr::new_box(MO_CollectionCard::new(Ptr::from_mut(&mut game().rm.spr_collectcards), 1, iValue, 30, vel, pos)));
+                game().objectcontainer[1].add(Ptr::new_box(MO_CollectionCard::new(Ptr::from_mut(&mut game().rm.spr_collectcards), 1, iValue, 30, vel, pos)));
             }
         }
     }
@@ -76,7 +75,7 @@ fn spawn_card() {
             iRandomCard = 1;
         }
 
-        objectcontainer[1].add(Ptr::new_box(MO_CollectionCard::new(Ptr::from_mut(&mut game().rm.spr_collectcards), 0, iRandomCard, 0, Vec2f::zero(), Vec2s::zero())));
+        game().objectcontainer[1].add(Ptr::new_box(MO_CollectionCard::new(Ptr::from_mut(&mut game().rm.spr_collectcards), 0, iRandomCard, 0, Vec2f::zero(), Vec2s::zero())));
     }
 }
 
@@ -130,7 +129,7 @@ impl CGameModeTrait for CGM_Collection {
                     iPowerupQuantity = players.len().wrapping_add(iPowerupQuantity as usize).wrapping_sub(7) as i16;
                 }
 
-                if objectcontainer[1].count_moving_types(movingobject_collectioncard) < iPowerupQuantity as usize && !net_random::event(Ev::CollectionCard, &[]) {
+                if game().objectcontainer[1].count_moving_types(movingobject_collectioncard) < iPowerupQuantity as usize && !net_random::event(Ev::CollectionCard, &[]) {
                     spawn_card();
                 }
             }

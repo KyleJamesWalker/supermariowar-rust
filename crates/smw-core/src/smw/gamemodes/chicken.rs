@@ -10,7 +10,6 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::*;
-use crate::smw::gs_gameplay::eyecandy;
 use crate::smw::player::CPlayer;
 use sdl2::sys::SDL_Rect;
 
@@ -117,7 +116,7 @@ impl CGameModeTrait for CGM_Chicken {
         unsafe {
             if self.m_chicken.is_null() || other == self.m_chicken {
                 self.m_chicken = inflictor;
-                eyecandy[2].emplace(EC_GravText::new(
+                game().eyecandy[2].emplace(EC_GravText::new(
                     Ptr::from_mut(&mut game().rm.game_font_large),
                     inflictor.center_x(),
                     inflictor.bottom_y(),
@@ -125,7 +124,7 @@ impl CGameModeTrait for CGM_Chicken {
                     (-(VELJUMP as f64) * 1.5) as f32,
                 ));
                 //eyecandy[2].emplace<EC_SingleAnimation>(&rm->spr_fireballexplosion, inflictor.centerX() - 16, inflictor.centerY() - 16, 3, 8));
-                eyecandy[2].emplace(EC_SingleAnimation::new(
+                game().eyecandy[2].emplace(EC_SingleAnimation::new(
                     Ptr::from_mut(&mut game().rm.spr_poof),
                     (inflictor.center_x() as i32 - 24) as i16,
                     (inflictor.center_y() as i32 - 24) as i16,
