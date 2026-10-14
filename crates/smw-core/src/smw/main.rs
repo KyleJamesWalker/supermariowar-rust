@@ -185,37 +185,37 @@ pub fn create_globals() {
         rm = Ptr::new_box(CResourceManager::new());
 
         g_map = Ptr::from_box(CMap::new());
-        filterslist = Ptr::new_box(FiltersList::new());
-        maplist = Ptr::new_box(MapList::new(false));
+        game().filterslist = Ptr::new_box(FiltersList::new());
+        game().maplist = Ptr::new_box(MapList::new(false));
 
         //TODO: add proper test via size
-        if maplist.is_empty() {
+        if game().maplist.is_empty() {
             std::panic::panic_any("Empty map directory!".to_string());
         }
 
-        skinlist = Ptr::new_box(SkinList::new());
-        musiclist = Ptr::new_box(MusicList::new());
-        worldmusiclist = Ptr::new_box(WorldMusicList::new());
-        soundpacklist = Ptr::new_box(SoundsList::new());
-        announcerlist = Ptr::new_box(AnnouncerList::new());
-        tourlist = Ptr::new_box(TourList::new());
-        worldlist = Ptr::new_box(WorldList::new());
+        game().skinlist = Ptr::new_box(SkinList::new());
+        game().musiclist = Ptr::new_box(MusicList::new());
+        game().worldmusiclist = Ptr::new_box(WorldMusicList::new());
+        game().soundpacklist = Ptr::new_box(SoundsList::new());
+        game().announcerlist = Ptr::new_box(AnnouncerList::new());
+        game().tourlist = Ptr::new_box(TourList::new());
+        game().worldlist = Ptr::new_box(WorldList::new());
 
-        menugraphicspacklist = Ptr::new_box(GraphicsList::new());
-        worldgraphicspacklist = Ptr::new_box(GraphicsList::new());
-        gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
+        game().menugraphicspacklist = Ptr::new_box(GraphicsList::new());
+        game().worldgraphicspacklist = Ptr::new_box(GraphicsList::new());
+        game().gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
 
-        announcerlist.set_current_index(0);
-        musiclist.set_current(0);
-        worldmusiclist.set_current(0);
-        menugraphicspacklist.set_current_index(0);
-        worldgraphicspacklist.set_current_index(0);
-        gamegraphicspacklist.set_current_index(0);
-        soundpacklist.set_current_index(0);
+        game().announcerlist.set_current_index(0);
+        game().musiclist.set_current(0);
+        game().worldmusiclist.set_current(0);
+        game().menugraphicspacklist.set_current_index(0);
+        game().worldgraphicspacklist.set_current_index(0);
+        game().gamegraphicspacklist.set_current_index(0);
+        game().soundpacklist.set_current_index(0);
 
         players.reserve(4);
 
-        update_music_with_overrides(&mut musiclist, &mut worldmusiclist);
+        update_music_with_overrides(&mut game().musiclist, &mut game().worldmusiclist);
     }
 }
 
@@ -543,7 +543,7 @@ pub fn main_game() {
         init_spawnlocations();
 
         //Load the gfx color palette
-        let pack = gamegraphicspacklist.current_path().to_string_lossy().into_owned();
+        let pack = game().gamegraphicspacklist.current_path().to_string_lossy().into_owned();
         let png = std::panic::catch_unwind(|| gfx_loadpalette(Path::new(&convert_path_pack("gfx/packs/palette.png", &pack))));
         if let Err(payload) = png {
             let Some(err) = payload.downcast_ref::<String>() else { std::panic::resume_unwind(payload) };

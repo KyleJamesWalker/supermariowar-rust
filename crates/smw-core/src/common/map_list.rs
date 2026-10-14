@@ -1,5 +1,6 @@
 //! Port of src/common/MapList.cpp
 
+use crate::game::game;
 use crate::common::file_list::SimpleDirectoryList;
 use crate::common::file_io::throw_runtime_error;
 use crate::common::global::*;
@@ -27,7 +28,7 @@ pub struct MapListNode {
 
 impl MapListNode {
     pub fn new(fullName: String) -> Self {
-        let count = unsafe { filterslist.count() };
+        let count = unsafe { game().filterslist.count() };
         MapListNode {
             pfFilters: vec![false; NUM_AUTO_FILTERS as usize + count],
             filename: fullName,
@@ -463,8 +464,8 @@ impl MapList {
             if game_values.fNeedWriteFilters {
                 game_values.fNeedWriteFilters = false;
 
-                for iFilter in 0..filterslist.count() {
-                    let path = filterslist.at(iFilter).clone();
+                for iFilter in 0..game().filterslist.count() {
+                    let path = game().filterslist.at(iFilter).clone();
                     let Ok(mut fp) = std::fs::File::create(&path) else {
                         continue;
                     };
@@ -547,8 +548,8 @@ impl MapList {
             }
 
             self.current = 0;
-            for iFilter in 0..filterslist.count() {
-                let Ok(f) = std::fs::File::open(filterslist.at(iFilter)) else {
+            for iFilter in 0..game().filterslist.count() {
+                let Ok(f) = std::fs::File::open(game().filterslist.at(iFilter)) else {
                     continue;
                 };
 

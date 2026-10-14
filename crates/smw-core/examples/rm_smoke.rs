@@ -25,17 +25,17 @@ fn main() {
         sfx_init();
 
         rm = Ptr::new_box(CResourceManager::new());
-        skinlist = Ptr::new_box(SkinList::new());
-        soundpacklist = Ptr::new_box(SoundsList::new());
-        menugraphicspacklist = Ptr::new_box(GraphicsList::new());
-        worldgraphicspacklist = Ptr::new_box(GraphicsList::new());
-        gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
-        menugraphicspacklist.set_current_index(0);
-        worldgraphicspacklist.set_current_index(0);
-        gamegraphicspacklist.set_current_index(0);
-        soundpacklist.set_current_index(0);
+        game().skinlist = Ptr::new_box(SkinList::new());
+        game().soundpacklist = Ptr::new_box(SoundsList::new());
+        game().menugraphicspacklist = Ptr::new_box(GraphicsList::new());
+        game().worldgraphicspacklist = Ptr::new_box(GraphicsList::new());
+        game().gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
+        game().menugraphicspacklist.set_current_index(0);
+        game().worldgraphicspacklist.set_current_index(0);
+        game().gamegraphicspacklist.set_current_index(0);
+        game().soundpacklist.set_current_index(0);
 
-        let pack = gamegraphicspacklist.current_path().to_string_lossy().into_owned();
+        let pack = game().gamegraphicspacklist.current_path().to_string_lossy().into_owned();
         assert!(gfx_loadpalette(Path::new(&convert_path_pack("gfx/packs/palette.png", &pack))));
 
         rm.load_start_graphics();
@@ -43,7 +43,7 @@ fn main() {
         let sound = rm.load_game_sounds();
 
         let mut skins = 0;
-        for k in 0..skinlist.count() {
+        for k in 0..game().skinlist.count() {
             for color in 0..4i16 {
                 let _ = rm.load_full_skin(k as i16, color);
                 assert!(rm.load_menu_skin(color, k as i16, color, true), "menu skin {}", k);

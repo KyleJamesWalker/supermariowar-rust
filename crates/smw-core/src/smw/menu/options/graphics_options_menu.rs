@@ -83,9 +83,9 @@ impl UI_GraphicsOptionsMenu {
             this.miFullscreenField.set_auto_advance(true);
             this.miFullscreenField.set_item_changed_code(MENU_CODE_TOGGLE_FULLSCREEN);
 
-            this.miMenuGraphicsPackField = Ptr::new_box(MI_PacksField::new(spr_selectfield, 70, 240, "Menu Graphics", 500, 220, Ptr::from_mut(&mut menugraphicspacklist.simple_directory_list.simple_file_list), MENU_CODE_MENU_GRAPHICS_PACK_CHANGED));
-            this.miWorldGraphicsPackField = Ptr::new_box(MI_PacksField::new(spr_selectfield, 70, 280, "World Graphics", 500, 220, Ptr::from_mut(&mut worldgraphicspacklist.simple_directory_list.simple_file_list), MENU_CODE_WORLD_GRAPHICS_PACK_CHANGED));
-            this.miGameGraphicsPackField = Ptr::new_box(MI_PacksField::new(spr_selectfield, 70, 320, "Game Graphics", 500, 220, Ptr::from_mut(&mut gamegraphicspacklist.simple_directory_list.simple_file_list), MENU_CODE_GAME_GRAPHICS_PACK_CHANGED));
+            this.miMenuGraphicsPackField = Ptr::new_box(MI_PacksField::new(spr_selectfield, 70, 240, "Menu Graphics", 500, 220, Ptr::from_mut(&mut game().menugraphicspacklist.simple_directory_list.simple_file_list), MENU_CODE_MENU_GRAPHICS_PACK_CHANGED));
+            this.miWorldGraphicsPackField = Ptr::new_box(MI_PacksField::new(spr_selectfield, 70, 280, "World Graphics", 500, 220, Ptr::from_mut(&mut game().worldgraphicspacklist.simple_directory_list.simple_file_list), MENU_CODE_WORLD_GRAPHICS_PACK_CHANGED));
+            this.miGameGraphicsPackField = Ptr::new_box(MI_PacksField::new(spr_selectfield, 70, 320, "Game Graphics", 500, 220, Ptr::from_mut(&mut game().gamegraphicspacklist.simple_directory_list.simple_file_list), MENU_CODE_GAME_GRAPHICS_PACK_CHANGED));
 
             this.miGraphicsOptionsMenuBackButton = Ptr::new_box(MI_Button::new(spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
             this.miGraphicsOptionsMenuBackButton.set_code(MENU_CODE_BACK_TO_OPTIONS_MENU);

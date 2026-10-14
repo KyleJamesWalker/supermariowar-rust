@@ -67,15 +67,15 @@ impl MI_MapBrowser {
 
         unsafe {
             if self.iType == 0 {
-                self.iSelectedIndex = maplist.node_at(maplist.get_current()).iIndex;
+                self.iSelectedIndex = game().maplist.node_at(game().maplist.get_current()).iIndex;
 
                 self.iFilterTagAnimationTimer = 0;
                 self.iFilterTagAnimationFrame = 72;
 
-                self.iMapCount = maplist.count() as i16;
+                self.iMapCount = game().maplist.count() as i16;
             } else {
-                self.iSelectedIndex = maplist.node_at(maplist.get_current()).iFilteredIndex;
-                self.iMapCount = maplist.filtered_count() as i16;
+                self.iSelectedIndex = game().maplist.node_at(game().maplist.get_current()).iFilteredIndex;
+                self.iMapCount = game().maplist.filtered_count() as i16;
             }
         }
 
@@ -95,18 +95,18 @@ impl MI_MapBrowser {
                     return;
                 }
 
-                let itr = maplist.get_iterator_at(iIndex as u16, fUseFilters);
+                let itr = game().maplist.get_iterator_at(iIndex as u16, fUseFilters);
 
                 //See if we already have a thumbnail saved for this map
 
                 let mut szThumbnail = String::from("maps/cache/");
-                szThumbnail += &get_name_from_file_name(&maplist.node_at(itr).filename, false);
+                szThumbnail += &get_name_from_file_name(&game().maplist.node_at(itr).filename, false);
                 szThumbnail += ".png";
 
                 let sConvertedPath = convert_path(&szThumbnail);
 
                 if !file_exists(&sConvertedPath) {
-                    let filename = maplist.node_at(itr).filename.clone();
+                    let filename = game().maplist.node_at(itr).filename.clone();
                     g_map.load_map(&filename, read_type_preview);
                     small_delay(); //Sleeps to help the music from skipping
                     g_map.save_thumbnail(&sConvertedPath, false);
@@ -116,7 +116,7 @@ impl MI_MapBrowser {
                 let m = iMap as usize;
                 self.mapSurfaces[m] = ImageLoader::new(&sConvertedPath).without_color_key().create();
 
-                self.mapNames[m] = maplist.key_at(itr).to_string();
+                self.mapNames[m] = game().maplist.key_at(itr).to_string();
                 self.mapListItr[m] = itr;
             }
         }
@@ -124,7 +124,7 @@ impl MI_MapBrowser {
 
     /// `mapListNodes[i]->pfFilters[game_values.selectedmapfilter]`
     fn node_filter(&self, i: usize) -> bool {
-        unsafe { maplist.node_at(self.mapListItr[i]).pfFilters[game_values.selectedmapfilter as usize] }
+        unsafe { game().maplist.node_at(self.mapListItr[i]).pfFilters[game_values.selectedmapfilter as usize] }
     }
 }
 
@@ -320,11 +320,12 @@ impl UI_ControlTrait for MI_MapBrowser {
                 if out.menu_select().fPressed {
                     let itr = self.mapListItr[(self.iSelectedRow * 3 + self.iSelectedCol) as usize];
                     if self.iType == 0 {
+                        let mut maplist = game().maplist;
                         let f = &mut maplist.maps.node_mut(itr).pfFilters[game_values.selectedmapfilter as usize];
                         *f = !*f;
                         game_values.fNeedWriteFilters = true;
                     } else {
-                        maplist.set_current(itr);
+                        game().maplist.set_current(itr);
                         return MENU_CODE_MAP_BROWSER_EXIT;
                     }
 

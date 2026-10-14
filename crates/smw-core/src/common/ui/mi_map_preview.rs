@@ -147,8 +147,8 @@ impl MI_MapPreview {
 
     pub fn load_current_map(&mut self) {
         let szMapPath = unsafe {
-            self.szMapName = copy_map_name(maplist.current_shortmapname());
-            maplist.current_filename().to_string()
+            self.szMapName = copy_map_name(game().maplist.current_shortmapname());
+            game().maplist.current_filename().to_string()
         };
 
         self.load_map(&szMapPath);
@@ -182,7 +182,7 @@ impl MI_MapPreview {
     }
 
     pub fn set_map(&mut self, paramSzMapName: &str, fWorld: bool) -> bool {
-        let fFound = unsafe { maplist.findexact(paramSzMapName, fWorld) };
+        let fFound = unsafe { game().maplist.findexact(paramSzMapName, fWorld) };
         self.load_current_map();
 
         fFound
@@ -199,7 +199,7 @@ impl MI_MapPreview {
     }
 
     pub fn get_map_file_path(&self) -> String {
-        unsafe { maplist.current_filename().to_string() }
+        unsafe { game().maplist.current_filename().to_string() }
     }
 
     pub fn set_dimensions(&mut self, width: i16, indent: i16) {

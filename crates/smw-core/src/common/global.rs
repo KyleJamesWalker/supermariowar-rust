@@ -18,24 +18,10 @@ pub fn init_globals() {
     crate::common::gfx::init_globals();
 }
 
-use crate::common::file_list::{AnnouncerList, FiltersList, GraphicsList, MusicList, SkinList, SoundsList, TourList, WorldList, WorldMusicList};
+use crate::game::game;
 use crate::common::game_values::CGameValues;
-use crate::common::map_list::MapList;
 use crate::globals::{Global, Ptr};
 use sdl2::sys::SDL_Joystick;
-
-pub static mut filterslist: Ptr<FiltersList> = Ptr::null(); //Filters list must be initiallized before maps list because it is used in maplist constructor
-pub static mut maplist: Ptr<MapList> = Ptr::null();
-pub static mut skinlist: Ptr<SkinList> = Ptr::null();
-pub static mut announcerlist: Ptr<AnnouncerList> = Ptr::null();
-pub static mut musiclist: Ptr<MusicList> = Ptr::null();
-pub static mut worldmusiclist: Ptr<WorldMusicList> = Ptr::null();
-pub static mut menugraphicspacklist: Ptr<GraphicsList> = Ptr::null();
-pub static mut worldgraphicspacklist: Ptr<GraphicsList> = Ptr::null();
-pub static mut gamegraphicspacklist: Ptr<GraphicsList> = Ptr::null();
-pub static mut soundpacklist: Ptr<SoundsList> = Ptr::null();
-pub static mut tourlist: Ptr<TourList> = Ptr::null();
-pub static mut worldlist: Ptr<WorldList> = Ptr::null();
 
 pub static mut rm: Ptr<crate::common::resource_manager::CResourceManager> = Ptr::null();
 pub static mut g_map: Ptr<crate::common::map::CMap> = Ptr::null();
@@ -48,7 +34,7 @@ pub fn load_current_map_background() {
     use crate::common::gfx::gfx_sprite::ImageLoader;
     use crate::common::path::{concat, convert_path_pack, file_exists};
     unsafe {
-        let pack = gamegraphicspacklist.current_path().to_string_lossy().into_owned();
+        let pack = game().gamegraphicspacklist.current_path().to_string_lossy().into_owned();
         let mut path = concat("gfx/packs/backgrounds/", &g_map.szBackgroundFile);
         path = convert_path_pack(&path, &pack);
 

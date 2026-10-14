@@ -2321,9 +2321,9 @@ pub fn play_music() {
         //If no background music is playing, then play some
         if !rm.backgroundmusic[0].is_playing() && !rm.sfx_invinciblemusic.is_playing() && !rm.sfx_timewarning.is_playing() && !game_values.gamemode.gameover {
             if game_values.playnextmusic {
-                let mapname = maplist.current_shortmapname().to_string();
-                musiclist.set_next_music(music_category(g_map.musicCategoryID), &mapname, &g_map.szBackgroundFile);
-                let path = musiclist.current_music().clone();
+                let mapname = game().maplist.current_shortmapname().to_string();
+                game().musiclist.set_next_music(music_category(g_map.musicCategoryID), &mapname, &g_map.szBackgroundFile);
+                let path = game().musiclist.current_music().clone();
                 rm.backgroundmusic[0] = load_music(&path);
             }
 
@@ -2339,9 +2339,9 @@ pub fn play_next_music_track() {
         }
 
         rm.backgroundmusic[0].stop();
-        let mapname = maplist.current_shortmapname().to_string();
-        musiclist.set_next_music(music_category(g_map.musicCategoryID), &mapname, &g_map.szBackgroundFile);
-        let path = musiclist.current_music().clone();
+        let mapname = game().maplist.current_shortmapname().to_string();
+        game().musiclist.set_next_music(music_category(g_map.musicCategoryID), &mapname, &g_map.szBackgroundFile);
+        let path = game().musiclist.current_music().clone();
         rm.backgroundmusic[0] = load_music(&path);
         rm.backgroundmusic[0].play(game_values.playnextmusic, false);
     }
@@ -2542,8 +2542,8 @@ pub fn start_gameplay() {
         game_values.appstate = AppState::Game;
 
         if game_values.music {
-            musiclist.set_random_music(music_category(g_map.musicCategoryID), "", "");
-            let path = musiclist.current_music().clone();
+            game().musiclist.set_random_music(music_category(g_map.musicCategoryID), "", "");
+            let path = game().musiclist.current_music().clone();
             rm.backgroundmusic[0] = load_music(&path);
             rm.backgroundmusic[0].play(game_values.playnextmusic, false);
         }
