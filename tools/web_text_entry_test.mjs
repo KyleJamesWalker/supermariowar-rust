@@ -96,7 +96,7 @@ const padScript = () => {
     hat('up');
     button(0);
     f += 10;
-    for (let i = 0; i < 16; i++) button(1);
+    for (let i = 0; i < PLAYER.length; i++) button(1);
     type(PLAYER);
     hat('down');
     hat('down');
@@ -108,7 +108,7 @@ const padScript = () => {
     f += 20;
     button(0);
     f += 10;
-    for (let i = 0; i < 32; i++) button(1);
+    for (let i = 0; i < ROOM.length; i++) button(1);
     type(PAD_ROOM);
     hat('down');
     hat('down');
@@ -423,6 +423,9 @@ try {
     console.log(`     relay: ${created.trim()}`);
     check(created.includes(`[${PLAYER}@`) && created.includes(`name: ${ROOM};`), 'the relay lists the room with the typed room and player names');
 
+    // The shell saves settings to IndexedDB every 5 s; save now so the pad session starts with the room name.
+    await evaluate(`new Promise((ok) => Module.FS.syncfs(false, (err) => ok(!err)))`);
+
     const rec = await recording();
     writeFileSync(join(out, 'recording.txt'), rec);
     const keys = rec.split('\n').filter((l) => / (down|up) /.test(l));
@@ -457,7 +460,7 @@ try {
     for (let i = 0; i < 4 && (await menu()).focus !== 0; i++) await key('ArrowUp', 'ArrowUp', 38);
     await key('Enter', 'Enter', 13);
     await waitMenu((m) => m.modifying, 'the name field (desktop)');
-    for (let i = 0; i < 16; i++) await key('Backspace', 'Backspace', 8);
+    for (let i = 0; i < PLAYER.length; i++) await key('Backspace', 'Backspace', 8);
     await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Shift', code: 'ShiftLeft', windowsVirtualKeyCode: 16, location: 1, modifiers: 8 });
     await key('D', 'KeyD', 68, 8);
     await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Shift', code: 'ShiftLeft', windowsVirtualKeyCode: 16, location: 1 });
