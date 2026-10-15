@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/BreakableBlock.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::eyecandy::EC_FallingObject;
 use crate::common::game_values::if_sound_on_play;
@@ -61,9 +62,9 @@ impl CObjectTrait for B_BreakableBlock {
         Some(self)
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         if self.state == 0 {
-            self.spr.draw_src(game().get(), 
+            self.spr.draw_src(g, 
                 self.ix as i32,
                 self.iy as i32,
                 &SDL_Rect { x: self.drawFrame as i32, y: 0, w: self.iw as i32, h: self.ih as i32 },
@@ -71,7 +72,7 @@ impl CObjectTrait for B_BreakableBlock {
         }
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         if self.state > 0 {
             if self.state == 1 {
                 self.state = 2;
@@ -79,8 +80,8 @@ impl CObjectTrait for B_BreakableBlock {
                 self.iBumpPlayerID = -1;
                 self.dead = true;
                 unsafe {
-                    game().g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
-                    game().g_map.update_tile_gap(self.col, self.row);
+                    g.g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
+                    g.g_map.update_tile_gap(self.col, self.row);
                 }
             }
         }
@@ -100,7 +101,7 @@ impl CObjectTrait for B_BreakableBlock {
 impl IO_BlockTrait for B_BreakableBlock {
     crate::impl_io_block_plumbing!();
 
-    fn hittop_player(&mut self, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hittop_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         io_block_hittop_player(self, player, useBehavior);
 
         unsafe {
@@ -108,7 +109,7 @@ impl IO_BlockTrait for B_BreakableBlock {
                 let mut iKillType = PlayerKillType::NonKill;
                 if self.iBumpPlayerID >= 0
                     && !player.is_invincible_on_bottom()
-                    && (player.teamID != self.iBumpTeamID || game().game_values.teamcollision == TeamCollisionStyle::On)
+                    && (player.teamID != self.iBumpTeamID || g.game_values.teamcollision == TeamCollisionStyle::On)
                 {
                     iKillType = player_killed_player(self.iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
                 }
@@ -120,7 +121,7 @@ impl IO_BlockTrait for B_BreakableBlock {
                 player.vely = GRAVITATION;
 
                 if player.is_super_stomping() && self.state == 0 {
-                    self.trigger_behavior();
+                    self.trigger_behavior(g);
                     return true;
                 }
             }
@@ -129,9 +130,9 @@ impl IO_BlockTrait for B_BreakableBlock {
         false
     }
 
-    fn hitbottom_player(&mut self, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitbottom_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         if useBehavior && self.state == 0 {
-            self.trigger_behavior();
+            self.trigger_behavior(g);
 
             //When breaking a block, you smash through with a small velocity, but this allows for breaking two blocks at once
             /*
@@ -148,7 +149,7 @@ impl IO_BlockTrait for B_BreakableBlock {
         false
     }
 
-    fn hittop_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+    fn hittop_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         let ch = object.collisionHeight;
         object.set_yf((self.iposy as i32 - ch as i32) as f32 - 0.2f32);
         object.fOldY = object.fy;
@@ -156,23 +157,23 @@ impl IO_BlockTrait for B_BreakableBlock {
         if self.state == 0 {
             let r#type = object.get_moving_object_type();
             if r#type == movingobject_throwbox && object.as_any().downcast_mut::<CO_ThrowBox>().unwrap().has_kill_velocity() {
-                self.trigger_behavior();
-                object.vely = object.bottom_bounce();
+                self.trigger_behavior(g);
+                object.vely = object.bottom_bounce(g);
                 return true;
             }
         }
 
         if (self.state == 1 || self.state == 2) && object.bounce == GRAVITATION {
-            io_block_bounce_moving_object(game().get(), self, object);
+            io_block_bounce_moving_object(g, self, object);
             return false;
         } else {
-            object.vely = object.bottom_bounce();
+            object.vely = object.bottom_bounce(g);
         }
 
         true
     }
 
-    fn hitright_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+    fn hitright_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         if self.state == 0 {
             object.set_xf((self.iposx as i32 + self.iw as i32) as f32 + 0.2f32);
             object.fOldX = object.fx;
@@ -187,7 +188,7 @@ impl IO_BlockTrait for B_BreakableBlock {
                 || (r#type == movingobject_throwbox && object.as_any().downcast_mut::<CO_ThrowBox>().unwrap().has_kill_velocity())
                 || r#type == movingobject_attackzone
             {
-                self.trigger_behavior();
+                self.trigger_behavior(g);
                 return true;
             }
         }
@@ -195,7 +196,7 @@ impl IO_BlockTrait for B_BreakableBlock {
         false
     }
 
-    fn hitleft_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+    fn hitleft_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         if self.state == 0 {
             let cw = object.collisionWidth;
             object.set_xf((self.iposx as i32 - cw as i32) as f32 - 0.2f32);
@@ -211,7 +212,7 @@ impl IO_BlockTrait for B_BreakableBlock {
                 || (r#type == movingobject_throwbox && object.as_any().downcast_mut::<CO_ThrowBox>().unwrap().has_kill_velocity())
                 || r#type == movingobject_attackzone
             {
-                self.trigger_behavior();
+                self.trigger_behavior(g);
                 return true;
             }
         }
@@ -219,22 +220,22 @@ impl IO_BlockTrait for B_BreakableBlock {
         false
     }
 
-    fn trigger_behavior(&mut self) {
+    fn trigger_behavior(&mut self, g: &mut Game) {
         unsafe {
             if self.state == 0 {
-                let spr = Ptr::from_mut(&mut game().rm.spr_brokenyellowblock);
+                let spr = Ptr::from_mut(&mut g.rm.spr_brokenyellowblock);
                 let (ix, iy) = (self.ix, self.iy);
-                game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy, -2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
-                game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy, 2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
-                game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
-                game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
+                g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy, -2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
+                g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy, 2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
+                g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
+                g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
 
                 self.state = 1;
-                if_sound_on_play(game().get(), &mut game().rm.sfx_breakblock);
+                if_sound_on_play(g, &mut game().rm.sfx_breakblock);
             }
 
-            game().game_values.unlocksecret1part2 += 1;
-            check_secret(game().get(), 0);
+            g.game_values.unlocksecret1part2 += 1;
+            check_secret(g, 0);
         }
     }
 }

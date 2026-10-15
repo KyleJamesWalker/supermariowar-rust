@@ -132,26 +132,26 @@ impl CObjectTrait for MO_Yoshi {
         Some(self)
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         io_moving_object_draw(self);
     }
 
-    fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         unsafe {
             if !player.carriedItem.is_null() && player.carriedItem.get_moving_object_type() == movingobject_egg {
                 let mut egg: Ptr<CO_Egg> = Ptr::from_mut(player.carriedItem.as_any().downcast_mut::<CO_Egg>().unwrap());
 
                 if egg.color == self.color {
-                    if !game().game_values.gamemode.gameover {
-                        player.score().adjust_score(game().get(), 1);
-                        game().game_values.gamemode.check_winner(player);
+                    if !g.game_values.gamemode.gameover {
+                        player.score().adjust_score(g, 1);
+                        g.game_values.gamemode.check_winner(player);
                     }
 
-                    self.place_yoshi(game().get());
+                    self.place_yoshi(g);
 
-                    egg.place_egg(game().get());
+                    egg.place_egg(g);
 
-                    if_sound_on_play(game().get(), &mut game().rm.sfx_yoshi);
+                    if_sound_on_play(g, &mut game().rm.sfx_yoshi);
                 }
             }
 
@@ -159,16 +159,16 @@ impl CObjectTrait for MO_Yoshi {
         }
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         self.animate();
 
         self.timer += 1;
         if self.timer > 2000 {
-            self.place_yoshi(game().get());
+            self.place_yoshi(g);
         }
     }
 
-    fn collide_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) {
+    fn collide_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) {
         unsafe {
             if object.get_moving_object_type() == movingobject_egg {
                 let mut egg: Ptr<CO_Egg> = Ptr::from_mut(object.as_any().downcast_mut::<CO_Egg>().unwrap());
@@ -176,15 +176,15 @@ impl CObjectTrait for MO_Yoshi {
                 if egg.color == self.color && !egg.owner_throw.is_null() {
                     let mut player: Ptr<CPlayer> = egg.owner_throw;
 
-                    if !game().game_values.gamemode.gameover {
-                        player.score().adjust_score(game().get(), 1);
-                        game().game_values.gamemode.check_winner(player);
+                    if !g.game_values.gamemode.gameover {
+                        player.score().adjust_score(g, 1);
+                        g.game_values.gamemode.check_winner(player);
                     }
 
-                    self.place_yoshi(game().get());
-                    egg.place_egg(game().get());
+                    self.place_yoshi(g);
+                    egg.place_egg(g);
 
-                    if_sound_on_play(game().get(), &mut game().rm.sfx_yoshi);
+                    if_sound_on_play(g, &mut game().rm.sfx_yoshi);
                 }
             }
         }

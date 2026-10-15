@@ -76,7 +76,7 @@ impl CObjectTrait for PU_TreasureChestBonus {
         Some(self)
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         mo_powerup_update(self);
 
         self.sparkleanimationtimer += 1;
@@ -98,19 +98,19 @@ impl CObjectTrait for PU_TreasureChestBonus {
             }
         } else if self.state == 4 {
             unsafe {
-                game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.drawbonusitemy, 3, 8));
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), self.ix, self.drawbonusitemy, 3, 8));
             }
             self.dead = true;
         }
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         if self.state < 3 {
             mo_powerup_draw(self);
 
             // Draw sparkles
             unsafe {
-                game().rm.spr_shinesparkle.draw_src(game().get(), 
+                game().rm.spr_shinesparkle.draw_src(g, 
                     self.ix as i32 - self.collisionOffsetX as i32,
                     self.iy as i32 - self.collisionOffsetY as i32,
                     &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
@@ -119,13 +119,13 @@ impl CObjectTrait for PU_TreasureChestBonus {
         } else {
             unsafe {
                 if self.bonusitem as i32 >= NUM_POWERUPS {
-                    game().rm.spr_worlditems.draw_src(game().get(), 
+                    game().rm.spr_worlditems.draw_src(g, 
                         self.drawbonusitemx as i32,
                         self.drawbonusitemy as i32,
                         &SDL_Rect { x: (self.bonusitem as i32 - NUM_POWERUPS) << 5, y: 0, w: 32, h: 32 },
                     );
                 } else {
-                    game().rm.spr_storedpoweruplarge.draw_src(game().get(), 
+                    game().rm.spr_storedpoweruplarge.draw_src(g, 
                         self.drawbonusitemx as i32,
                         self.drawbonusitemy as i32,
                         &SDL_Rect { x: (self.bonusitem as i32) << 5, y: 0, w: 32, h: 32 },
@@ -135,10 +135,10 @@ impl CObjectTrait for PU_TreasureChestBonus {
         }
     }
 
-    fn collide_player(&mut self, _player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, _player: Ptr<CPlayer>) -> bool {
         if self.state == 1 {
             unsafe {
-                if_sound_on_play(game().get(), &mut game().rm.sfx_treasurechest);
+                if_sound_on_play(g, &mut game().rm.sfx_treasurechest);
                 // if (game_values.worldpowerupcount[player->teamID] < 32)
                 //     game_values.worldpowerups[player->teamID][game_values.worldpowerupcount[player->teamID]++] = bonusitem;
                 // else
@@ -150,9 +150,9 @@ impl CObjectTrait for PU_TreasureChestBonus {
                 self.drawbonusitemy = self.iy;
                 self.drawbonusitemtimer = 60;
 
-                game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
 
-                game().game_values.flags.noexit = false;
+                g.game_values.flags.noexit = false;
             }
         }
 
@@ -166,7 +166,7 @@ impl IO_MovingObjectTrait for PU_TreasureChestBonus {
         Some(self)
     }
 
-    fn bottom_bounce(&mut self) -> f32 {
+    fn bottom_bounce(&mut self, g: &mut Game) -> f32 {
         if self.state == 2 {
             self.numbounces -= 1;
             if self.numbounces <= 0 {

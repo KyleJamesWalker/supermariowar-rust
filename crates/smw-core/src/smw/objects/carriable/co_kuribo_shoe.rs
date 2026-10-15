@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_KuriboShoe.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -49,13 +50,13 @@ impl CObjectTrait for CO_KuriboShoe {
     fn as_io_moving_object(&mut self) -> Option<&mut dyn IO_MovingObjectTrait> {
         Some(self)
     }
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         co_spring_update(self)
     }
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         co_spring_draw(self)
     }
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         co_spring_collide_player(self, player)
     }
 }
@@ -79,15 +80,15 @@ impl CO_SpringTrait for CO_KuriboShoe {
         self
     }
 
-    fn hittop(&mut self, player: Ptr<CPlayer>) {
+    fn hittop(&mut self, g: &mut Game, player: Ptr<CPlayer>) {
         let mut player = player;
         if !player.kuriboshoe.is_on() && player.tanookisuit.not_statue() {
             self.dead = true;
             player.set_kuribo_shoe(if self.fSticky { STICKY } else { NORMAL });
             unsafe {
-                if_sound_on_play(game().get(), &mut game().rm.sfx_transform);
-                game().eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
+                if_sound_on_play(g, &mut game().rm.sfx_transform);
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
                     (player.ix as i32 + HALFPW - 16) as i16,
                     (player.iy as i32 + HALFPH - 16) as i16,
                     3,

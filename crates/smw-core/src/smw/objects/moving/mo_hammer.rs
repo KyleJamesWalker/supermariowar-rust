@@ -80,7 +80,7 @@ impl CObjectTrait for MO_Hammer {
         Some(self)
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         unsafe {
             self.animationtimer += 1;
             if self.animationtimer == self.animationspeed {
@@ -123,12 +123,12 @@ impl CObjectTrait for MO_Hammer {
                 }
                 || (self.fSuper && (self.iy as i32) < -(self.ih as i32))
             {
-                removeifprojectile(game().get(), self.as_mo_ptr(), false, true);
-            } else if game().game_values.spotlights {
+                removeifprojectile(g, self.as_mo_ptr(), false, true);
+            } else if g.game_values.spotlights {
                 let sx = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
                 let sy = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
                 if self.sSpotlight.is_null() {
-                    self.sSpotlight = game().spotlightManager.add_spotlight(game().get(), sx, sy, 3);
+                    self.sSpotlight = game().spotlightManager.add_spotlight(g, sx, sy, 3);
                 }
 
                 if !self.sSpotlight.is_null() {
@@ -145,8 +145,8 @@ impl CObjectTrait for MO_Hammer {
                 }
                 if let Some(weaponbreakableblock) = block.as_any().downcast_mut::<B_WeaponBreakableBlock>() {
                     if weaponbreakableblock.r#type() == WeaponDamageType::Hammer {
-                        weaponbreakableblock.trigger_behavior_player(game().get(), self.iPlayerID, self.iTeamID);
-                        removeifprojectile(game().get(), self.as_mo_ptr(), false, false);
+                        weaponbreakableblock.trigger_behavior_player(g, self.iPlayerID, self.iTeamID);
+                        removeifprojectile(g, self.as_mo_ptr(), false, false);
                         return;
                     }
                 }
@@ -154,11 +154,11 @@ impl CObjectTrait for MO_Hammer {
         }
     }
 
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         unsafe {
-            if self.iPlayerID != player.globalID && (game().game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID) {
+            if self.iPlayerID != player.globalID && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID) {
                 if !player.is_shielded() {
-                    removeifprojectile(game().get(), self.as_mo_ptr(), false, false);
+                    removeifprojectile(g, self.as_mo_ptr(), false, false);
 
                     if !player.is_invincible() && !player.shyguy {
                         // Find the player that shot this hammer so we can attribute a kill
@@ -172,8 +172,8 @@ impl CObjectTrait for MO_Hammer {
         }
     }
 
-    fn draw(&mut self) {
-        self.spr.draw_src(game().get(), 
+    fn draw(&mut self, g: &mut Game) {
+        self.spr.draw_src(g, 
             self.ix as i32 - self.collisionOffsetX as i32,
             self.iy as i32 - self.collisionOffsetY as i32,
             &SDL_Rect { x: self.drawframe as i32, y: self.colorOffset as i32, w: self.iw as i32, h: self.ih as i32 },

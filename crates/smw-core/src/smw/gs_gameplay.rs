@@ -290,7 +290,7 @@ const g_iCollisionMap: [[i16; MOVINGOBJECT_LAST as usize]; MOVINGOBJECT_LAST as 
 
 //handles a collision between a powerup and an object
 pub fn collisionhandler_o2o(o1: Ptr<dyn IO_MovingObjectTrait>, mut o2: Ptr<dyn IO_MovingObjectTrait>) {
-    o2.collide_object(o1);
+    o2.collide_object(game().get(), o1);
 }
 
 //Must only be called after organizeteams() is called
@@ -951,18 +951,18 @@ pub fn shake_screen(g: &mut Game) {
                     } else if t == movingobject_throwblock {
                         let throwblock: &mut CO_ThrowBlock = movingobject.as_any().downcast_mut::<CO_ThrowBlock>().unwrap();
                         if throwblock.frozen || throwblock.owner.is_null() || throwblock.owner.inair == g.game_values.flags.screenshakekillinair {
-                            movingobject.die();
+                            movingobject.die(g);
                         }
                     } else if t == movingobject_throwbox {
                         let throwbox: &mut CO_ThrowBox = movingobject.as_any().downcast_mut::<CO_ThrowBox>().unwrap();
                         if throwbox.frozen {
-                            movingobject.die();
+                            movingobject.die(g);
                         }
                     } else if t == movingobject_pirhanaplant {
                         let plant: &mut MO_PirhanaPlant = movingobject.as_any().downcast_mut::<MO_PirhanaPlant>().unwrap();
                         plant.kill_plant(g);
                     } else if t == movingobject_bulletbill {
-                        movingobject.die();
+                        movingobject.die(g);
                     }
                 }
             }
@@ -2910,7 +2910,7 @@ pub fn net_mystery_swap(g: &mut Game, iUsingPlayerID: i16) -> bool {
                 player.set_yf(ny);
 
                 if !player.carriedItem.is_null() {
-                    player.carriedItem.move_to_owner();
+                    player.carriedItem.move_to_owner(g);
                 }
             }
         }

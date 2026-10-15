@@ -555,7 +555,7 @@ impl PlayerCollisions {
 
     //handles a collision between a player and an object
     pub fn handle_p2o(&mut self, o1: Ptr<CPlayer>, mut o2: Ptr<dyn CObjectTrait>) -> bool {
-        o2.collide_player(o1)
+        o2.collide_player(game().get(), o1)
     }
 
     //calculates the new positions for both players when they are pushing each other

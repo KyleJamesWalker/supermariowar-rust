@@ -135,7 +135,7 @@ impl MO_BulletBill {
             if_sound_on_play(g, &mut game().rm.sfx_mip);
         }
 
-        self.die();
+        self.die(g);
 
         false
     }
@@ -168,7 +168,7 @@ impl CObjectTrait for MO_BulletBill {
         Some(self)
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         let fx = self.fx + self.velx;
         self.set_xf(fx);
         // setYf(fy + vely);
@@ -180,7 +180,7 @@ impl CObjectTrait for MO_BulletBill {
         }
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         let src = SDL_Rect {
             x: self.drawframe as i32,
             y: self.iColorOffsetY as i32 + self.iDirectionOffsetY as i32,
@@ -189,13 +189,13 @@ impl CObjectTrait for MO_BulletBill {
         };
         if self.fIsSpawned {
             let edge = unsafe { std::mem::transmute::<i32, ClipEdge>(self.iHiddenDirection as i32) };
-            self.spr.draw_clip(game().get(), self.ix as i32, self.iy as i32, &src, edge, self.iHiddenPlane as i32);
+            self.spr.draw_clip(g, self.ix as i32, self.iy as i32, &src, edge, self.iHiddenPlane as i32);
         } else {
-            self.spr.draw_src(game().get(), self.ix as i32, self.iy as i32, &src);
+            self.spr.draw_src(g, self.ix as i32, self.iy as i32, &src);
         }
     }
 
-    fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         if self.dead {
             return false;
         }
@@ -213,24 +213,24 @@ impl CObjectTrait for MO_BulletBill {
         if player.is_invincible() || player.shyguy {
             player.add_killer_award(Ptr::null(), KillStyle::BulletBill);
             unsafe {
-                if_sound_on_play(game().get(), &mut game().rm.sfx_kicksound);
+                if_sound_on_play(g, &mut game().rm.sfx_kicksound);
             }
 
-            self.die();
+            self.die(g);
         } else {
             if player.fOldY + PH as f32 <= self.iy as f32 && player.iy as i32 + PH >= self.iy as i32 {
-                return self.hittop(game().get(), player);
+                return self.hittop(g, player);
             } else {
-                return self.hitother(game().get(), player);
+                return self.hitother(g, player);
             }
         }
 
         false
     }
 
-    fn collide_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) {
+    fn collide_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) {
         unsafe {
-            removeifprojectile(game().get(), object, true, false);
+            removeifprojectile(g, object, true, false);
 
             let r#type: MovingObjectType = object.get_moving_object_type();
 
@@ -260,8 +260,8 @@ impl CObjectTrait for MO_BulletBill {
                 let iCenterX: i16 = (((ix + iOffsetX as i32 - bix) >> 1) + (bix + (bulletbill.iw as i32 >> 1))) as i16;
                 let iCenterY: i16 = (((iy - biy) >> 1) + (biy + (bulletbill.ih as i32 >> 1))) as i16;
 
-                game().objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
-                    Ptr::from_mut(&mut game().rm.spr_explosion),
+                g.objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
+                    Ptr::from_mut(&mut g.rm.spr_explosion),
                     Vec2s::new((iCenterX as i32 - 96) as i16, (iCenterY as i32 - 64) as i16),
                     2,
                     4,
@@ -269,7 +269,7 @@ impl CObjectTrait for MO_BulletBill {
                     -1,
                     KillStyle::BulletBill,
                 )));
-                if_sound_on_play(game().get(), &mut game().rm.sfx_bobombsound);
+                if_sound_on_play(g, &mut game().rm.sfx_bobombsound);
             } else if r#type == movingobject_shell
                 || r#type == movingobject_throwblock
                 || r#type == movingobject_throwbox
@@ -287,11 +287,11 @@ impl CObjectTrait for MO_BulletBill {
                 }
 
                 if r#type != movingobject_explosion {
-                    object.die();
+                    object.die(g);
                 }
 
-                if_sound_on_play(game().get(), &mut game().rm.sfx_kicksound);
-                self.die();
+                if_sound_on_play(g, &mut game().rm.sfx_kicksound);
+                self.die(g);
             }
         }
     }
@@ -300,10 +300,10 @@ impl CObjectTrait for MO_BulletBill {
 impl IO_MovingObjectTrait for MO_BulletBill {
     crate::impl_io_moving_object_plumbing!();
 
-    fn die(&mut self) {
+    fn die(&mut self, g: &mut Game) {
         self.dead = true;
         unsafe {
-            game().eyecandy[2].emplace(EC_FallingObject::new(
+            g.eyecandy[2].emplace(EC_FallingObject::new(
                 self.spr_dead,
                 self.ix,
                 self.iy,

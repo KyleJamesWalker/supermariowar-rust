@@ -90,37 +90,37 @@ impl CObjectTrait for MO_FrenzyCard {
         Some(self)
     }
 
-    fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         unsafe {
             let r#type = self.r#type;
-            if r#type < 14 || r#type > 17 || game().game_values.gamemodesettings.frenzy.storedshells {
-                player.set_powerup(game().get(), r#type);
-                if game().game_values.gamemode.gamemode == game_mode_frenzy {
-                    game().game_values.gamemode.get().as_any().downcast_mut::<CGM_Frenzy>().unwrap().set_frenzy_owner(player);
+            if r#type < 14 || r#type > 17 || g.game_values.gamemodesettings.frenzy.storedshells {
+                player.set_powerup(g, r#type);
+                if g.game_values.gamemode.gamemode == game_mode_frenzy {
+                    g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Frenzy>().unwrap().set_frenzy_owner(player);
                 }
             } else {
                 match r#type {
                     14 => {
-                        let mut shell = Ptr::new_box(CO_Shell::new(game().get(), ShellType::Green, Vec2s::zero(), true, true, true, false));
-                        if game().objectcontainer[1].add(shell) {
+                        let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Green, Vec2s::zero(), true, true, true, false));
+                        if g.objectcontainer[1].add(shell) {
                             shell.used_as_stored_powerup(player);
                         }
                     }
                     15 => {
-                        let mut shell = Ptr::new_box(CO_Shell::new(game().get(), ShellType::Red, Vec2s::zero(), false, true, true, false));
-                        if game().objectcontainer[1].add(shell) {
+                        let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Red, Vec2s::zero(), false, true, true, false));
+                        if g.objectcontainer[1].add(shell) {
                             shell.used_as_stored_powerup(player);
                         }
                     }
                     16 => {
-                        let mut shell = Ptr::new_box(CO_Shell::new(game().get(), ShellType::Spiny, Vec2s::zero(), false, false, true, true));
-                        if game().objectcontainer[1].add(shell) {
+                        let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Spiny, Vec2s::zero(), false, false, true, true));
+                        if g.objectcontainer[1].add(shell) {
                             shell.used_as_stored_powerup(player);
                         }
                     }
                     17 => {
-                        let mut shell = Ptr::new_box(CO_Shell::new(game().get(), ShellType::Buzzy, Vec2s::zero(), false, true, false, false));
-                        if game().objectcontainer[1].add(shell) {
+                        let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Buzzy, Vec2s::zero(), false, true, false, false));
+                        if g.objectcontainer[1].add(shell) {
                             shell.used_as_stored_powerup(player);
                         }
                     }
@@ -133,7 +133,7 @@ impl CObjectTrait for MO_FrenzyCard {
         }
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         self.animate();
 
         self.sparkleanimationtimer += 1;
@@ -147,16 +147,16 @@ impl CObjectTrait for MO_FrenzyCard {
 
         self.timer += 1;
         if self.timer > 1500 {
-            self.place_card(game().get());
+            self.place_card(g);
         }
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         io_moving_object_draw(self);
 
         // Draw sparkles
         unsafe {
-            game().rm.spr_shinesparkle.draw_src(game().get(), 
+            game().rm.spr_shinesparkle.draw_src(g, 
                 self.ix as i32 - self.collisionOffsetX as i32,
                 self.iy as i32 - self.collisionOffsetY as i32,
                 &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },

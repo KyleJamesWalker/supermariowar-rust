@@ -343,7 +343,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                     if fTopBlockSolid {
                         // collide with top block
                         if o.iHorizontalPlatformCollision == 3 {
-                            o.kill_object_map_hazard(-1);
+                            o.kill_object_map_hazard(g, -1);
                             return;
                         }
 
@@ -353,13 +353,13 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
 
                         processOtherBlock = false;
 
-                        o.side_bounce(true);
+                        o.side_bounce(g, true);
                     }
 
                     if processOtherBlock && fBottomBlockSolid {
                         // then bottom
                         if o.iHorizontalPlatformCollision == 3 {
-                            o.kill_object_map_hazard(-1);
+                            o.kill_object_map_hazard(g, -1);
                             return;
                         }
 
@@ -367,13 +367,13 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                         o.flipsidesifneeded();
                         removeifprojectile(g, o, true, true);
 
-                        o.side_bounce(true);
+                        o.side_bounce(g, true);
                     }
                 } else if (g.g_map.map(tx as i32, ty as i32) & tile_flag_solid) != 0 || (g.g_map.map(tx as i32, ty2 as i32) & tile_flag_solid) != 0 {
                     // collision on the right side.
 
                     if o.iHorizontalPlatformCollision == 3 {
-                        o.kill_object_map_hazard(-1);
+                        o.kill_object_map_hazard(g, -1);
                         return;
                     }
 
@@ -388,7 +388,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                     o.flipsidesifneeded();
                     removeifprojectile(g, o, true, true);
 
-                    o.side_bounce(true);
+                    o.side_bounce(g, true);
                 }
             } else if o.velx + fPlatformVelX < -0.01 || o.iHorizontalPlatformCollision == 1 {
                 // moving left
@@ -409,7 +409,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                     if fTopBlockSolid {
                         // collide with top block
                         if o.iHorizontalPlatformCollision == 1 {
-                            o.kill_object_map_hazard(-1);
+                            o.kill_object_map_hazard(g, -1);
                             return;
                         }
 
@@ -419,13 +419,13 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
 
                         processOtherBlock = false;
 
-                        o.side_bounce(false);
+                        o.side_bounce(g, false);
                     }
 
                     if processOtherBlock && fBottomBlockSolid {
                         // then bottom
                         if o.iHorizontalPlatformCollision == 1 {
-                            o.kill_object_map_hazard(-1);
+                            o.kill_object_map_hazard(g, -1);
                             return;
                         }
 
@@ -433,11 +433,11 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                         o.flipsidesifneeded();
                         removeifprojectile(g, o, true, true);
 
-                        o.side_bounce(false);
+                        o.side_bounce(g, false);
                     }
                 } else if (g.g_map.map(tx as i32, ty as i32) & tile_flag_solid) != 0 || (g.g_map.map(tx as i32, ty2 as i32) & tile_flag_solid) != 0 {
                     if o.iHorizontalPlatformCollision == 1 {
-                        o.kill_object_map_hazard(-1);
+                        o.kill_object_map_hazard(g, -1);
                         return;
                     }
 
@@ -452,7 +452,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                     o.flipsidesifneeded();
                     removeifprojectile(g, o, true, true);
 
-                    o.side_bounce(false);
+                    o.side_bounce(g, false);
                 }
             }
         }
@@ -482,7 +482,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
             if !leftblock.is_null() && !leftblock.get().is_transparent() && !leftblock.get().is_hidden() {
                 // then left
                 if o.iVerticalPlatformCollision == 2 {
-                    o.kill_object_map_hazard(-1);
+                    o.kill_object_map_hazard(g, -1);
                 }
 
                 leftblock.get().collide_object_dir(o, 0);
@@ -492,7 +492,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
             if !rightblock.is_null() && !rightblock.get().is_transparent() && !rightblock.get().is_hidden() {
                 // then right
                 if o.iVerticalPlatformCollision == 2 {
-                    o.kill_object_map_hazard(-1);
+                    o.kill_object_map_hazard(g, -1);
                 }
 
                 rightblock.get().collide_object_dir(o, 0);
@@ -501,7 +501,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
 
             if (g.g_map.map(txl as i32, ty as i32) & tile_flag_solid) != 0 || (g.g_map.map(txr as i32, ty as i32) & tile_flag_solid) != 0 {
                 if o.iVerticalPlatformCollision == 2 {
-                    o.kill_object_map_hazard(-1);
+                    o.kill_object_map_hazard(g, -1);
                 }
 
                 let y = (((ty as i32) << 5) + TILESIZE) as f32 + 0.2;
@@ -554,7 +554,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                 }
 
                 if o.iVerticalPlatformCollision == 0 {
-                    o.kill_object_map_hazard(-1);
+                    o.kill_object_map_hazard(g, -1);
                 }
 
                 return;
@@ -565,7 +565,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
 
             if (leftTile & tile_flag_solid_on_top) != 0 || (rightTile & tile_flag_solid_on_top) != 0 {
                 if (o.fOldY + o.collisionHeight as f32) / (TILESIZE as f32) < ty as f32 {
-                    o.vely = o.bottom_bounce();
+                    o.vely = o.bottom_bounce(g);
                     let y = (((ty as i32) << 5) - o.collisionHeight as i32) as f32 - 0.2;
                     o.set_yf(y);
                     o.fOldY = o.fy - GRAVITATION;
@@ -578,7 +578,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                     o.platform = Ptr::null();
 
                     if o.iVerticalPlatformCollision == 0 {
-                        o.kill_object_map_hazard(-1);
+                        o.kill_object_map_hazard(g, -1);
                     }
 
                     return;
@@ -591,7 +591,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                     || ((leftTile & tile_flag_solid) == 0 && (rightTile & tile_flag_super_death_top) != 0));
 
             if ((leftTile & tile_flag_solid) != 0 || (rightTile & tile_flag_solid) != 0) && !fSuperDeathTileUnderObject {
-                o.vely = o.bottom_bounce();
+                o.vely = o.bottom_bounce(g);
                 let y = (((ty as i32) << 5) - o.collisionHeight as i32) as f32 - 0.2;
                 o.set_yf(y);
                 o.fOldY = o.fy;
@@ -611,10 +611,10 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                 o.platform = Ptr::null();
 
                 if o.iVerticalPlatformCollision == 0 {
-                    o.kill_object_map_hazard(-1);
+                    o.kill_object_map_hazard(g, -1);
                 }
             } else if fSuperDeathTileUnderObject {
-                o.kill_object_map_hazard(-1);
+                o.kill_object_map_hazard(g, -1);
                 return;
             } else {
                 let y = o.fPrecalculatedY;
@@ -873,7 +873,7 @@ pub fn io_moving_object_kill_object_map_hazard<T: IO_MovingObjectTrait + ?Sized>
 
         // If it is a throw box, trigger it's behavior and return
         if movingObjectType == movingobject_throwbox {
-            this.die();
+            this.die(g);
             return;
         }
 
@@ -955,21 +955,21 @@ pub trait IO_MovingObjectTrait: CObjectTrait {
         io_moving_object_animate(self.mo_mut())
     }
 
-    fn side_bounce(&mut self, _fRightSide: bool) {}
-    fn bottom_bounce(&mut self) -> f32 {
+    fn side_bounce(&mut self, g: &mut Game, _fRightSide: bool) {}
+    fn bottom_bounce(&mut self, g: &mut Game) -> f32 {
         self.mo().bounce
     }
 
-    fn check_and_die(&mut self) {
+    fn check_and_die(&mut self, g: &mut Game) {
         self.mo_mut().dead = true;
     }
-    fn die(&mut self) {
+    fn die(&mut self, g: &mut Game) {
         self.mo_mut().dead = true;
     }
 
     /// Non-virtual in C++; on the trait so it can dispatch to `die()` / downcasts.
-    fn kill_object_map_hazard(&mut self, playerID: i16) {
-        io_moving_object_kill_object_map_hazard(game().get(), self, playerID)
+    fn kill_object_map_hazard(&mut self, g: &mut Game, playerID: i16) {
+        io_moving_object_kill_object_map_hazard(g, self, playerID)
     }
 
     /// `static_cast` / `dynamic_cast` hooks for the intermediate bases.

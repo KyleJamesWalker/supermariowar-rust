@@ -70,7 +70,7 @@ impl CObjectTrait for PU_SecretPowerup {
         Some(self)
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         mo_powerup_update(self);
 
         self.sparkleanimationtimer += 1;
@@ -83,12 +83,12 @@ impl CObjectTrait for PU_SecretPowerup {
         }
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         mo_powerup_draw(self);
 
         // Draw sparkles
         unsafe {
-            game().rm.spr_shinesparkle.draw_src(game().get(), 
+            game().rm.spr_shinesparkle.draw_src(g, 
                 self.ix as i32 - self.collisionOffsetX as i32,
                 self.iy as i32 - self.collisionOffsetY as i32,
                 &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
@@ -96,26 +96,26 @@ impl CObjectTrait for PU_SecretPowerup {
         }
     }
 
-    fn collide_player(&mut self, _player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, _player: Ptr<CPlayer>) -> bool {
         unsafe {
             if self.itemtype == 0 {
-                game().game_values.windaffectsplayers = true;
+                g.game_values.windaffectsplayers = true;
 
                 for _i in 0..15i16 {
                     let x = RANDOM_INT(App::screenWidth) as f32;
                     let y = RANDOM_INT(App::screenHeight) as f32;
                     let t = (RANDOM_INT(4) + 1) as i16;
-                    game().eyecandy[2].emplace(EC_Snow::new(Ptr::from_mut(&mut game().rm.spr_snow), x, y, t));
+                    g.eyecandy[2].emplace(EC_Snow::new(Ptr::from_mut(&mut g.rm.spr_snow), x, y, t));
                 }
             } else if self.itemtype == 1 {
-                game().game_values.spinscreen = true;
+                g.game_values.spinscreen = true;
             } else if self.itemtype == 2 {
-                game().game_values.reversewalk = true;
+                g.game_values.reversewalk = true;
             } else if self.itemtype == 3 {
-                game().game_values.spotlights = true;
+                g.game_values.spotlights = true;
             }
 
-            if_sound_on_play(game().get(), &mut game().rm.sfx_pickup);
+            if_sound_on_play(g, &mut game().rm.sfx_pickup);
         }
 
         self.dead = true;

@@ -183,7 +183,7 @@ impl PlayerWarpStatus {
                         block = g.g_map.block(iCol, (iRow as i32 - 1) as i16);
 
                         if !block.is_null() && !block.is_transparent() && !block.is_hidden() {
-                            block.trigger_behavior();
+                            block.trigger_behavior(g);
                         }
                     }
                 }
@@ -201,7 +201,7 @@ impl PlayerWarpStatus {
                     block = g.g_map.block((iCol as i32 + 1) as i16, iRow);
 
                     if !block.is_null() && !block.is_transparent() && !block.is_hidden() {
-                        block.trigger_behavior();
+                        block.trigger_behavior(g);
                     }
                 }
                 WARP_EXIT_DOWN => {
@@ -216,7 +216,7 @@ impl PlayerWarpStatus {
                         block = g.g_map.block(iCol, (iRow as i32 + 1) as i16);
 
                         if !block.is_null() && !block.is_transparent() && !block.is_hidden() {
-                            block.trigger_behavior();
+                            block.trigger_behavior(g);
                         }
                     }
                 }
@@ -234,7 +234,7 @@ impl PlayerWarpStatus {
                     block = g.g_map.block((iCol as i32 - 1) as i16, iRow);
 
                     if !block.is_null() && !block.is_transparent() && !block.is_hidden() {
-                        block.trigger_behavior();
+                        block.trigger_behavior(g);
                     }
                 }
                 _ => {

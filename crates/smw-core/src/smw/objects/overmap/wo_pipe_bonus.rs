@@ -60,7 +60,7 @@ impl OMO_PipeBonus {
 impl CObjectTrait for OMO_PipeBonus {
     crate::impl_cobject_plumbing!();
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         io_over_map_object_update(self);
 
         if self.iy as i32 >= App::screenHeight {
@@ -68,7 +68,7 @@ impl CObjectTrait for OMO_PipeBonus {
         }
 
         unsafe {
-            if game().pipegamemode.is_slowdown() {
+            if g.pipegamemode.is_slowdown() {
                 self.vely += GRAVITATION / 2.0f32;
             } else {
                 self.vely += GRAVITATION;
@@ -80,18 +80,18 @@ impl CObjectTrait for OMO_PipeBonus {
         }
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         let srcRect = SDL_Rect { x: self.drawframe as i32, y: self.animationOffsetY as i32, w: self.iw as i32, h: self.ih as i32 };
         let x = self.ix as i32 - self.collisionOffsetX as i32;
         let y = self.iy as i32 - self.collisionOffsetY as i32;
         if self.iUncollectableTime > 0 {
-            self.spr.draw_clip(game().get(), x, y, &srcRect, ClipEdge::Bottom, 256);
+            self.spr.draw_clip(g, x, y, &srcRect, ClipEdge::Bottom, 256);
         } else {
-            self.spr.draw_src(game().get(), x, y, &srcRect);
+            self.spr.draw_src(g, x, y, &srcRect);
         }
     }
 
-    fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         if self.iUncollectableTime > 0 {
             return false;
         }
@@ -101,8 +101,8 @@ impl CObjectTrait for OMO_PipeBonus {
             if self.iType == 5 {
                 if !player.is_shielded() {
                     self.dead = true;
-                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
+                    g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                        Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
                         (self.ix as i32 - 1) as i16,
                         (self.iy as i32 - 1) as i16,
                         3,
@@ -115,8 +115,8 @@ impl CObjectTrait for OMO_PipeBonus {
                 }
 
                 return false;
-            } else if !game().game_values.gamemode.gameover {
-                game().pipegamemode.set_bonus(game().get(), (self.iType as i32 + 1) as i16, self.iDuration, player.get_team_id());
+            } else if !g.game_values.gamemode.gameover {
+                game().pipegamemode.set_bonus(g, (self.iType as i32 + 1) as i16, self.iDuration, player.get_team_id());
             }
         }
 

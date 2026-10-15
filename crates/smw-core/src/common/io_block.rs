@@ -1,5 +1,6 @@
 //! Port of src/common/IO_Block.h
 
+use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::{CObject, CObjectTrait};
@@ -62,33 +63,33 @@ pub trait IO_BlockTrait: CObjectTrait {
         self.block().hidden
     }
 
-    fn hittop_player(&mut self, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hittop_player(&mut self, g: &mut Game, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         crate::smw::objects::blocks::io_block::io_block_hittop_player(self, player, useBehavior)
     }
-    fn hitbottom_player(&mut self, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitbottom_player(&mut self, g: &mut Game, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         crate::smw::objects::blocks::io_block::io_block_hitbottom_player(self, player, useBehavior)
     }
-    fn hitright_player(&mut self, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitright_player(&mut self, g: &mut Game, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         crate::smw::objects::blocks::io_block::io_block_hitright_player(self, player, useBehavior)
     }
-    fn hitleft_player(&mut self, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitleft_player(&mut self, g: &mut Game, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         crate::smw::objects::blocks::io_block::io_block_hitleft_player(self, player, useBehavior)
     }
 
-    fn hittop_object(&mut self, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+    fn hittop_object(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         crate::smw::objects::blocks::io_block::io_block_hittop_object(self, object)
     }
-    fn hitbottom_object(&mut self, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+    fn hitbottom_object(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         crate::smw::objects::blocks::io_block::io_block_hitbottom_object(self, object)
     }
-    fn hitright_object(&mut self, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+    fn hitright_object(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         crate::smw::objects::blocks::io_block::io_block_hitright_object(self, object)
     }
-    fn hitleft_object(&mut self, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+    fn hitleft_object(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         crate::smw::objects::blocks::io_block::io_block_hitleft_object(self, object)
     }
 
-    fn trigger_behavior(&mut self) {}
+    fn trigger_behavior(&mut self, g: &mut Game) {}
 }
 
 impl Deref for dyn IO_BlockTrait {

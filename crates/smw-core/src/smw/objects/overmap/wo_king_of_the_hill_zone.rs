@@ -207,7 +207,7 @@ impl OMO_KingOfTheHillZone {
 impl CObjectTrait for OMO_KingOfTheHillZone {
     crate::impl_cobject_plumbing!();
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         let size = self.size;
         for iRow in 0..size {
             let mut iYPiece: i16 = TILESIZE as i16;
@@ -232,7 +232,7 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
 
                 if self.multiplier > 1 {
                     unsafe {
-                        game().rm.spr_awardkillsinrow.draw_src(game().get(), 
+                        game().rm.spr_awardkillsinrow.draw_src(g, 
                             iColX as i32 + 8,
                             iRowX as i32 + 8,
                             &SDL_Rect { x: (self.multiplier as i32 - 1) << 4, y: (self.colorID as i32) << 4, w: 16, h: 16 },
@@ -240,12 +240,12 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
                     }
                 }
 
-                self.spr.draw_src(game().get(), iColX as i32, iRowX as i32, &SDL_Rect { x: iXPiece as i32 + self.frame as i32, y: iYPiece as i32, w: TILESIZE, h: TILESIZE });
+                self.spr.draw_src(g, iColX as i32, iRowX as i32, &SDL_Rect { x: iXPiece as i32 + self.frame as i32, y: iYPiece as i32, w: TILESIZE, h: TILESIZE });
             }
         }
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         let mut iMax: i16 = 0;
         let mut iMaxTeam: i16 = -1;
 
@@ -268,22 +268,22 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
         }
 
         unsafe {
-            if self.iPlayerID != -1 && !game().game_values.gamemode.gameover {
+            if self.iPlayerID != -1 && !g.game_values.gamemode.gameover {
                 // Speed of point accumulation is proportional to how many players are in zone
                 self.scoretimer = (self.scoretimer as i32 + (((iMax as i32) << 1) - self.totalTouchingPlayers as i32)) as i16;
 
-                if self.scoretimer >= game().game_values.pointspeed {
+                if self.scoretimer >= g.game_values.pointspeed {
                     self.scoretimer = 0;
-                    game().players[self.iPlayerID as usize].score().adjust_score(game().get(), self.multiplier);
-                    game().game_values.gamemode.check_winner(game().players[self.iPlayerID as usize]);
+                    game().players[self.iPlayerID as usize].score().adjust_score(g, self.multiplier);
+                    g.game_values.gamemode.check_winner(g.players[self.iPlayerID as usize]);
 
-                    if game().game_values.gamemodesettings.kingofthehill.maxmultiplier > 1 && {
+                    if g.game_values.gamemodesettings.kingofthehill.maxmultiplier > 1 && {
                         self.multipliertimer += 1;
                         self.multipliertimer >= 5
                     } {
                         self.multipliertimer = 0;
 
-                        if self.multiplier < game().game_values.gamemodesettings.kingofthehill.maxmultiplier {
+                        if self.multiplier < g.game_values.gamemodesettings.kingofthehill.maxmultiplier {
                             self.multiplier += 1;
                         }
                     }
@@ -293,11 +293,11 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
                 self.multipliertimer = 0;
             }
 
-            if game().game_values.gamemodesettings.kingofthehill.relocationfrequency > 0 {
+            if g.game_values.gamemodesettings.kingofthehill.relocationfrequency > 0 {
                 self.relocatetimer += 1;
-                if self.relocatetimer >= game().game_values.gamemodesettings.kingofthehill.relocationfrequency {
+                if self.relocatetimer >= g.game_values.gamemodesettings.kingofthehill.relocationfrequency {
                     self.relocatetimer = 0;
-                    self.place_area(game().get());
+                    self.place_area(g);
                 }
             }
         }
@@ -310,7 +310,7 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
         self.totalTouchingPlayers = 0;
     }
 
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         if !player.is_tanooki_statue() {
             let team = player.get_team_id() as usize;
             self.playersTouching[team] = player;

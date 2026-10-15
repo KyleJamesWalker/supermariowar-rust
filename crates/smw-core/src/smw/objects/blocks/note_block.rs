@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/NoteBlock.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -75,20 +76,20 @@ impl CObjectTrait for B_NoteBlock {
         Some(self)
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         if self.hidden {
             return;
         }
 
-        self.spr.draw_src(game().get(), 
+        self.spr.draw_src(g, 
             self.ix as i32,
             self.iy as i32,
             &SDL_Rect { x: self.drawFrame as i32, y: self.iTypeOffsetY as i32, w: self.iw as i32, h: self.ih as i32 },
         );
     }
 
-    fn update(&mut self) {
-        io_block_update(game().get(), self);
+    fn update(&mut self, g: &mut Game) {
+        io_block_update(g, self);
 
         if self.state > 0 {
             let fx = self.fx + self.velx;
@@ -137,7 +138,7 @@ impl IO_BlockTrait for B_NoteBlock {
     fn collide_player_dir(&mut self, player: Ptr<CPlayer>, direction: i16, useBehavior: bool) -> bool {
         if self.hidden {
             if (player.fOldY >= (self.iposy as i32 + self.ih as i32) as f32 || self.state > 1) && direction == 0 {
-                return self.hitbottom_player(player, useBehavior);
+                return self.hitbottom_player(game().get(), player, useBehavior);
             }
 
             return true;
@@ -146,7 +147,7 @@ impl IO_BlockTrait for B_NoteBlock {
         io_block_collide_player_dir(self, player, direction, useBehavior)
     }
 
-    fn hittop_player(&mut self, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hittop_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         io_block_hittop_player(self, player, useBehavior);
 
         if useBehavior {
@@ -160,17 +161,17 @@ impl IO_BlockTrait for B_NoteBlock {
             }
 
             unsafe {
-                if_sound_on_play(game().get(), &mut game().rm.sfx_bump);
+                if_sound_on_play(g, &mut game().rm.sfx_bump);
 
-                game().game_values.unlocksecret3part2[player.globalID as usize] += 2;
-                check_secret(game().get(), 2);
+                g.game_values.unlocksecret3part2[player.globalID as usize] += 2;
+                check_secret(g, 2);
             }
         }
 
         false
     }
 
-    fn hitbottom_player(&mut self, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitbottom_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         if useBehavior {
             player.set_yf((self.iposy as i32 + self.ih as i32) as f32 + 0.2f32);
             player.vely = VELNOTEBLOCKREPEL;
@@ -183,24 +184,24 @@ impl IO_BlockTrait for B_NoteBlock {
                 self.state = 3;
 
                 unsafe {
-                    if_sound_on_play(game().get(), &mut game().rm.sfx_bump);
+                    if_sound_on_play(g, &mut game().rm.sfx_bump);
                 }
             }
 
             if self.hidden {
                 self.hidden = false;
-                io_block_kill_players_and_objects_inside_block(game().get(), self, player.globalID);
+                io_block_kill_players_and_objects_inside_block(g, self, player.globalID);
             }
 
             unsafe {
-                game().g_map.update_tile_gap(self.col, self.row);
+                g.g_map.update_tile_gap(self.col, self.row);
             }
         }
 
         false
     }
 
-    fn hitright_player(&mut self, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitright_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         if useBehavior {
             player.set_xf((self.iposx as i32 + self.iw as i32) as f32 + 0.2f32);
             player.fOldX = player.fx;
@@ -213,14 +214,14 @@ impl IO_BlockTrait for B_NoteBlock {
             }
 
             unsafe {
-                if_sound_on_play(game().get(), &mut game().rm.sfx_bump);
+                if_sound_on_play(g, &mut game().rm.sfx_bump);
             }
         }
 
         false
     }
 
-    fn hitleft_player(&mut self, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitleft_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         if useBehavior {
             player.set_xf((self.iposx as i32 - PW) as f32 - 0.2f32);
             player.fOldX = player.fx;
@@ -233,7 +234,7 @@ impl IO_BlockTrait for B_NoteBlock {
             }
 
             unsafe {
-                if_sound_on_play(game().get(), &mut game().rm.sfx_bump);
+                if_sound_on_play(g, &mut game().rm.sfx_bump);
             }
         }
 
@@ -248,16 +249,16 @@ impl IO_BlockTrait for B_NoteBlock {
         io_block_collide_object_dir(self, object, direction)
     }
 
-    fn hittop_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+    fn hittop_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         let ch = object.collisionHeight;
         object.set_yf((self.iposy as i32 - ch as i32) as f32 - 0.2f32);
         object.fOldY = object.fy;
 
         if self.state == 3 && object.bounce == GRAVITATION {
-            io_block_bounce_moving_object(game().get(), self, object);
+            io_block_bounce_moving_object(g, self, object);
             return false;
         } else {
-            object.vely = object.bottom_bounce();
+            object.vely = object.bottom_bounce(g);
         }
 
         true

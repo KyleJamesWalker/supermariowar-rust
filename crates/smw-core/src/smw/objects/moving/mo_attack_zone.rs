@@ -93,7 +93,7 @@ pub fn mo_attack_zone_collide_player<T: MO_AttackZoneTrait + ?Sized>(g: &mut Gam
 
         player_killed_player(iPlayerID, player, PlayerDeathStyle::Jump, iStyle, false, false);
 
-        this.die();
+        this.die(g);
 
         true
     }
@@ -132,7 +132,7 @@ pub fn mo_attack_zone_collide_object<T: MO_AttackZoneTrait + ?Sized>(g: &mut Gam
                 if shell.frozen {
                     shell.shatter_die(g);
                 } else {
-                    shell.die();
+                    shell.die(g);
                 }
             } else if r#type == movingobject_throwblock {
                 let block = object.as_any().downcast_mut::<CO_ThrowBlock>().unwrap();
@@ -140,7 +140,7 @@ pub fn mo_attack_zone_collide_object<T: MO_AttackZoneTrait + ?Sized>(g: &mut Gam
                 if block.frozen {
                     block.shatter_die(g);
                 } else if block.owner.is_null() || block.owner.globalID != iPlayerID {
-                    block.die();
+                    block.die(g);
                 }
             } else if r#type == movingobject_throwbox {
                 let r#box = object.as_any().downcast_mut::<CO_ThrowBox>().unwrap();
@@ -148,7 +148,7 @@ pub fn mo_attack_zone_collide_object<T: MO_AttackZoneTrait + ?Sized>(g: &mut Gam
                 if r#box.frozen {
                     r#box.shatter_die(g);
                 } else if r#box.owner.is_null() || r#box.owner.globalID != iPlayerID {
-                    r#box.die();
+                    r#box.die(g);
                 }
             }
 
@@ -170,23 +170,23 @@ impl CObjectTrait for MO_AttackZone {
         Some(self)
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         mo_attack_zone_update(self)
     }
     // This is invisible
-    fn draw(&mut self) {}
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
-        mo_attack_zone_collide_player(game().get(), self, player)
+    fn draw(&mut self, g: &mut Game) {}
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+        mo_attack_zone_collide_player(g, self, player)
     }
-    fn collide_object(&mut self, object: Ptr<dyn IO_MovingObjectTrait>) {
-        mo_attack_zone_collide_object(game().get(), self, object)
+    fn collide_object(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) {
+        mo_attack_zone_collide_object(g, self, object)
     }
 }
 
 impl IO_MovingObjectTrait for MO_AttackZone {
     crate::impl_io_moving_object_plumbing!();
 
-    fn die(&mut self) {
+    fn die(&mut self, g: &mut Game) {
         mo_attack_zone_die(self)
     }
 }

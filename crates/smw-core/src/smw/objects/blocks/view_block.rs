@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/ViewBlock.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::*;
@@ -71,7 +72,7 @@ impl CObjectTrait for B_ViewBlock {
         Some(self)
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         if self.hidden {
             return;
         }
@@ -79,7 +80,7 @@ impl CObjectTrait for B_ViewBlock {
         //Draw powerup behind block
         if self.state == 0 && !self.fNoPowerupsSelected {
             unsafe {
-                game().rm.spr_storedpoweruplarge.draw_src(game().get(), 
+                game().rm.spr_storedpoweruplarge.draw_src(g, 
                     self.ix as i32,
                     self.iy as i32,
                     &SDL_Rect { x: self.powerupindex as i32 * 32, y: 0, w: 32, h: 32 },
@@ -90,8 +91,8 @@ impl CObjectTrait for B_ViewBlock {
         b_powerup_block_draw(self);
     }
 
-    fn update(&mut self) {
-        b_powerup_block_update(game().get(), self);
+    fn update(&mut self, g: &mut Game) {
+        b_powerup_block_update(g, self);
 
         if self.state == 0 && !self.fNoPowerupsSelected {
             self.poweruptimer += 1;

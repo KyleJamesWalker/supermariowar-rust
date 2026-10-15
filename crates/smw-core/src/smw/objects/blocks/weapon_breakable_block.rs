@@ -114,7 +114,7 @@ impl B_WeaponBreakableBlock {
             if (iStyle == KillStyle::Leaf && self.iType == WeaponDamageType::Leaf) || (iStyle == KillStyle::Feather && self.iType == WeaponDamageType::Feather) {
                 let (iPlayerID, iTeamID) = (object.iPlayerID, object.iTeamID);
                 self.trigger_behavior_player(game().get(), iPlayerID, iTeamID);
-                object.die();
+                object.die(game().get());
                 return false;
             }
         }
@@ -129,9 +129,9 @@ impl CObjectTrait for B_WeaponBreakableBlock {
         Some(self)
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         if self.state == 0 {
-            self.spr.draw_src(game().get(), 
+            self.spr.draw_src(g, 
                 self.ix as i32,
                 self.iy as i32,
                 &SDL_Rect { x: self.iDrawOffsetX as i32, y: 0, w: self.iw as i32, h: self.ih as i32 },
@@ -139,7 +139,7 @@ impl CObjectTrait for B_WeaponBreakableBlock {
         }
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         if self.state > 0 {
             if self.state == 1 {
                 self.state = 2;
@@ -147,8 +147,8 @@ impl CObjectTrait for B_WeaponBreakableBlock {
                 self.iBumpPlayerID = -1;
                 self.dead = true;
                 unsafe {
-                    game().g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
-                    game().g_map.update_tile_gap(self.col, self.row);
+                    g.g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
+                    g.g_map.update_tile_gap(self.col, self.row);
                 }
             }
         }
@@ -158,7 +158,7 @@ impl CObjectTrait for B_WeaponBreakableBlock {
 impl IO_BlockTrait for B_WeaponBreakableBlock {
     crate::impl_io_block_plumbing!();
 
-    fn hittop_player(&mut self, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hittop_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         io_block_hittop_player(self, player, useBehavior);
 
         unsafe {
@@ -166,7 +166,7 @@ impl IO_BlockTrait for B_WeaponBreakableBlock {
                 let iKillType = PlayerKillType::NonKill;
                 if self.iBumpPlayerID >= 0
                     && !player.is_invincible_on_bottom()
-                    && (player.teamID != self.iBumpTeamID || game().game_values.teamcollision == TeamCollisionStyle::On)
+                    && (player.teamID != self.iBumpTeamID || g.game_values.teamcollision == TeamCollisionStyle::On)
                 {
                     player_killed_player(self.iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
                 }
@@ -179,10 +179,10 @@ impl IO_BlockTrait for B_WeaponBreakableBlock {
 
                 //Save this for when we create a super stomp destroyable block
                 if self.iType == WeaponDamageType::KuriboShoe && player.is_super_stomping() && self.state == 0 {
-                    self.trigger_behavior_player(game().get(), player.globalID, player.teamID);
+                    self.trigger_behavior_player(g, player.globalID, player.teamID);
                     return false;
                 } else if self.iType == WeaponDamageType::Star && player.is_invincible() {
-                    self.trigger_behavior_player(game().get(), player.globalID, player.teamID);
+                    self.trigger_behavior_player(g, player.globalID, player.teamID);
                     return false;
                 }
             }
@@ -191,7 +191,7 @@ impl IO_BlockTrait for B_WeaponBreakableBlock {
         false
     }
 
-    fn hitbottom_player(&mut self, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitbottom_player(&mut self, g: &mut Game, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         if useBehavior && self.state == 0 {
             //If the player has a cape and they used it for a feather destroyable block, then kill it
             let mut fTriggerBlock = false;
@@ -204,7 +204,7 @@ impl IO_BlockTrait for B_WeaponBreakableBlock {
             }
 
             if fTriggerBlock {
-                self.trigger_behavior_player(game().get(), player.globalID, player.teamID);
+                self.trigger_behavior_player(g, player.globalID, player.teamID);
             }
 
             return io_block_hitbottom_player(self, player, useBehavior);
@@ -213,10 +213,10 @@ impl IO_BlockTrait for B_WeaponBreakableBlock {
         false
     }
 
-    fn hitleft_player(&mut self, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitleft_player(&mut self, g: &mut Game, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         if useBehavior && self.state == 0 {
             if self.iType == WeaponDamageType::Star && player.is_invincible() {
-                self.trigger_behavior_player(game().get(), player.globalID, player.teamID);
+                self.trigger_behavior_player(g, player.globalID, player.teamID);
             }
 
             return io_block_hitleft_player(self, player, useBehavior);
@@ -225,10 +225,10 @@ impl IO_BlockTrait for B_WeaponBreakableBlock {
         false
     }
 
-    fn hitright_player(&mut self, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitright_player(&mut self, g: &mut Game, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         if useBehavior && self.state == 0 {
             if self.iType == WeaponDamageType::Star && player.is_invincible() {
-                self.trigger_behavior_player(game().get(), player.globalID, player.teamID);
+                self.trigger_behavior_player(g, player.globalID, player.teamID);
             }
 
             return io_block_hitright_player(self, player, useBehavior);
@@ -237,11 +237,11 @@ impl IO_BlockTrait for B_WeaponBreakableBlock {
         false
     }
 
-    fn hittop_object(&mut self, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+    fn hittop_object(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         io_block_hittop_object(self, object);
 
         if (self.state == 1 || self.state == 2) && object.bounce == GRAVITATION {
-            io_block_bounce_moving_object(game().get(), self, object);
+            io_block_bounce_moving_object(g, self, object);
             return false;
         }
 
@@ -253,15 +253,15 @@ impl IO_BlockTrait for B_WeaponBreakableBlock {
 
         if self.iType == WeaponDamageType::Fireball && r#type == movingobject_fireball {
             let (iPlayerID, iTeamID) = (object.iPlayerID, object.iTeamID);
-            self.trigger_behavior_player(game().get(), iPlayerID, iTeamID);
-            removeifprojectile(game().get(), object, false, true);
+            self.trigger_behavior_player(g, iPlayerID, iTeamID);
+            removeifprojectile(g, object, false, true);
             return false;
         }
 
         true
     }
 
-    fn hitbottom_object(&mut self, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+    fn hitbottom_object(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         if self.state != 0 {
             return true;
         }
@@ -272,15 +272,15 @@ impl IO_BlockTrait for B_WeaponBreakableBlock {
 
         if self.iType == WeaponDamageType::Fireball && r#type == movingobject_fireball {
             let (iPlayerID, iTeamID) = (object.iPlayerID, object.iTeamID);
-            self.trigger_behavior_player(game().get(), iPlayerID, iTeamID);
-            removeifprojectile(game().get(), object, false, true);
+            self.trigger_behavior_player(g, iPlayerID, iTeamID);
+            removeifprojectile(g, object, false, true);
             return false;
         }
 
         true
     }
 
-    fn hitright_object(&mut self, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+    fn hitright_object(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         if self.state != 0 {
             return true;
         }
@@ -290,7 +290,7 @@ impl IO_BlockTrait for B_WeaponBreakableBlock {
         self.objecthitside(object)
     }
 
-    fn hitleft_object(&mut self, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+    fn hitleft_object(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         if self.state != 0 {
             return true;
         }

@@ -82,13 +82,13 @@ pub fn io_block_reset<T: IO_BlockTrait + ?Sized>(this: &mut T) {
 
 pub fn io_block_collide_player_dir<T: IO_BlockTrait + ?Sized>(this: &mut T, player: Ptr<CPlayer>, direction: i16, useBehavior: bool) -> bool {
     if direction == 2 {
-        this.hittop_player(player, useBehavior)
+        this.hittop_player(game().get(), player, useBehavior)
     } else if direction == 0 {
-        this.hitbottom_player(player, useBehavior)
+        this.hitbottom_player(game().get(), player, useBehavior)
     } else if direction == 1 {
-        this.hitleft_player(player, useBehavior)
+        this.hitleft_player(game().get(), player, useBehavior)
     } else {
-        this.hitright_player(player, useBehavior)
+        this.hitright_player(game().get(), player, useBehavior)
     }
 }
 
@@ -154,13 +154,13 @@ pub fn io_block_hitleft_player<T: IO_BlockTrait + ?Sized>(this: &mut T, mut play
 
 pub fn io_block_collide_object_dir<T: IO_BlockTrait + ?Sized>(this: &mut T, object: Ptr<dyn IO_MovingObjectTrait>, direction: i16) -> bool {
     if direction == 2 {
-        this.hittop_object(object)
+        this.hittop_object(game().get(), object)
     } else if direction == 0 {
-        this.hitbottom_object(object)
+        this.hitbottom_object(game().get(), object)
     } else if direction == 1 {
-        this.hitleft_object(object)
+        this.hitleft_object(game().get(), object)
     } else {
-        this.hitright_object(object)
+        this.hitright_object(game().get(), object)
     }
 }
 
@@ -169,7 +169,7 @@ pub fn io_block_hittop_object<T: IO_BlockTrait + ?Sized>(this: &mut T, mut objec
     let ch = object.collisionHeight;
     object.set_yf((iposy as i32 - ch as i32) as f32 - 0.2);
     object.fOldY = object.fy;
-    object.vely = object.bottom_bounce();
+    object.vely = object.bottom_bounce(game().get());
     true
 }
 
@@ -230,9 +230,9 @@ pub fn io_block_bounce_moving_object<T: IO_BlockTrait + ?Sized>(g: &mut Game, th
             let shell = object.as_any().downcast_mut::<CO_Shell>().unwrap();
             shell.flip();
         } else if r#type == movingobject_throwblock {
-            object.die();
+            object.die(g);
         } else if r#type == movingobject_throwbox {
-            object.die();
+            object.die(g);
         } else {
             object.vely = -VELNOTEBLOCKREPEL;
         }
@@ -293,7 +293,7 @@ pub fn io_block_kill_players_and_objects_inside_block<T: IO_BlockTrait + ?Sized>
                     && fOldY + PH as f32 >= iposy as f32
                     && fOldY < (iposy as i32 + TILESIZE) as f32
                 {
-                    movingobject.kill_object_map_hazard(playerID);
+                    movingobject.kill_object_map_hazard(g, playerID);
                 }
             }
         }

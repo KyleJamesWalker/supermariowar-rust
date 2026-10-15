@@ -112,14 +112,14 @@ impl CObjectTrait for MO_CollectionCard {
         Some(self)
     }
 
-    fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         // If it is not collectable, return
         if (self.r#type == 1 && self.uncollectabletime > 0) || self.state != 1 {
             return false;
         }
 
         unsafe {
-            if_sound_on_play(game().get(), &mut game().rm.sfx_areatag);
+            if_sound_on_play(g, &mut game().rm.sfx_areatag);
         }
 
         let value = self.value as i32;
@@ -151,7 +151,7 @@ impl CObjectTrait for MO_CollectionCard {
         false
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         if self.r#type == 1 || self.state < 3 {
             self.animate();
         }
@@ -165,7 +165,7 @@ impl CObjectTrait for MO_CollectionCard {
             if self.timer > 200 {
                 self.dead = true;
                 unsafe {
-                    game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
+                    g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
                 }
             }
         }
@@ -182,7 +182,7 @@ impl CObjectTrait for MO_CollectionCard {
         if self.r#type == 0 {
             self.timer += 1;
             if self.timer > 1500 {
-                self.place_card(game().get());
+                self.place_card(g);
             }
         } else {
             self.applyfriction();
@@ -190,20 +190,20 @@ impl CObjectTrait for MO_CollectionCard {
 
             self.uncollectabletime -= 1;
             unsafe {
-                if (self.uncollectabletime as i32) < -(game().game_values.gamemodesettings.collection.cardlife as i32) {
-                    game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
+                if (self.uncollectabletime as i32) < -(g.game_values.gamemodesettings.collection.cardlife as i32) {
+                    g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
                     self.dead = true;
                 }
             }
         }
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         io_moving_object_draw(self);
 
         // Draw sparkles
         unsafe {
-            game().rm.spr_shinesparkle.draw_src(game().get(), 
+            game().rm.spr_shinesparkle.draw_src(g, 
                 self.ix as i32 - self.collisionOffsetX as i32,
                 self.iy as i32 - self.collisionOffsetY as i32,
                 &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },

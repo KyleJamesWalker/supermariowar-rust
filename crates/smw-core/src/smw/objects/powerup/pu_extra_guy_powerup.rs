@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_ExtraGuyPowerup.cpp
 
+use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::CObjectTrait;
@@ -40,21 +41,21 @@ impl CObjectTrait for PU_ExtraGuyPowerup {
     fn as_io_moving_object(&mut self) -> Option<&mut dyn IO_MovingObjectTrait> {
         Some(self)
     }
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         mo_powerup_draw(self)
     }
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         mo_powerup_update(self)
     }
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         unsafe {
             if self.state > 0 {
-                game().game_values.gamemode.playerextraguy(player, self.iType);
-                if_sound_on_play(game().get(), &mut game().rm.sfx_extraguysound);
+                g.game_values.gamemode.playerextraguy(player, self.iType);
+                if_sound_on_play(g, &mut game().rm.sfx_extraguysound);
 
                 let iSrcY = ((if self.iType == 5 { 3 } else { self.iType as i32 - 1 }) * 16) as i16;
-                game().eyecandy[2].emplace(EC_FloatingObject::new(
-                    Ptr::from_mut(&mut game().rm.spr_extralife),
+                g.eyecandy[2].emplace(EC_FloatingObject::new(
+                    Ptr::from_mut(&mut g.rm.spr_extralife),
                     (player.ix as i32 + HALFPW - 19) as i16,
                     (player.iy as i32 - 16) as i16,
                     0.0f32,

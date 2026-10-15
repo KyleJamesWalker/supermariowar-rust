@@ -85,7 +85,7 @@ impl IO_FlameCannon {
 impl CObjectTrait for IO_FlameCannon {
     crate::impl_cobject_plumbing!();
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         if self.state == 0 {
             // No flame, waiting
             self.iTimer -= 1;
@@ -96,7 +96,7 @@ impl CObjectTrait for IO_FlameCannon {
 
                 self.state = 1;
                 unsafe {
-                    if_sound_on_play(game().get(), &mut game().rm.sfx_flamecannon);
+                    if_sound_on_play(g, &mut game().rm.sfx_flamecannon);
                 }
             }
         } else if self.state == 1 || self.state == 3 {
@@ -144,16 +144,16 @@ impl CObjectTrait for IO_FlameCannon {
         }
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         if self.state > 0 {
             let rect = &g_rFlameRects[self.iDirection as usize][self.iFrame as usize];
             unsafe {
-                game().rm.spr_hazard_flame[0].draw_src(game().get(), self.ix as i32, self.iy as i32, rect);
+                game().rm.spr_hazard_flame[0].draw_src(g, self.ix as i32, self.iy as i32, rect);
             }
         }
     }
 
-    fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         if self.state == 2 && !player.is_invincible() && !player.is_shielded() && !player.shyguy {
             return player.kill_player_map_hazard(false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
         }

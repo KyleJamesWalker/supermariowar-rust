@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_Explosion.cpp
 
+use crate::game::Game;
 use crate::common::game::App;
 use crate::common::gameplay_styles::TeamCollisionStyle;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -52,14 +53,14 @@ impl CObjectTrait for MO_Explosion {
         Some(self)
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         io_moving_object_draw(self)
     }
 
-    fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         unsafe {
             if player.globalID != self.iPlayerID
-                && (game().game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID)
+                && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID)
                 && !player.is_invincible()
                 && !player.is_shielded()
                 && !player.shyguy
@@ -73,7 +74,7 @@ impl CObjectTrait for MO_Explosion {
         false
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         self.animate();
 
         // If this is the first frame, look for blocks to kill
@@ -90,11 +91,11 @@ impl CObjectTrait for MO_Explosion {
                 if iTestY >= 0 && (iTestY as i32) < App::screenHeight {
                     let iTestRow: i16 = (iTestY as i32 / TILESIZE) as i16;
                     for _iCol in 0..7i16 {
-                        let mut block = unsafe { game().g_map.block((iTestX as i32 / TILESIZE) as i16, iTestRow) };
+                        let mut block = unsafe { g.g_map.block((iTestX as i32 / TILESIZE) as i16, iTestRow) };
                         if !block.is_null() {
                             if let Some(weaponbreakableblock) = block.as_any().downcast_mut::<B_WeaponBreakableBlock>() {
                                 if weaponbreakableblock.r#type() == WeaponDamageType::Bomb {
-                                    weaponbreakableblock.trigger_behavior_player(game().get(), self.iPlayerID, self.iTeamID);
+                                    weaponbreakableblock.trigger_behavior_player(g, self.iPlayerID, self.iTeamID);
                                 }
                             }
                         }

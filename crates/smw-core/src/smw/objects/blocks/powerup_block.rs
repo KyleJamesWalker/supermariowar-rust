@@ -296,7 +296,7 @@ pub fn b_powerup_block_collide_player_dir<T: B_PowerupBlockTrait + ?Sized>(this:
     if this.pb().hidden {
         let b = this.pb();
         if player.fOldY >= (b.iposy as i32 + b.ih as i32) as f32 && direction == 0 {
-            return this.hitbottom_player(player, useBehavior);
+            return this.hitbottom_player(game().get(), player, useBehavior);
         }
 
         return true;
@@ -402,12 +402,12 @@ pub fn b_powerup_block_hittop_object<T: B_PowerupBlockTrait + ?Sized>(g: &mut Ga
             b.side = false;
         }
 
-        object.vely = object.bottom_bounce();
+        object.vely = object.bottom_bounce(g);
     } else if this.pb().state == 1 && object.bounce == GRAVITATION {
         io_block_bounce_moving_object(g, this, object);
         return false;
     } else {
-        object.vely = object.bottom_bounce();
+        object.vely = object.bottom_bounce(g);
     }
 
     true
@@ -548,22 +548,22 @@ macro_rules! impl_powerup_block_io_block_overrides {
         ) -> bool {
             $crate::smw::objects::blocks::powerup_block::b_powerup_block_collide_object_dir(self, object, direction)
         }
-        fn hittop_player(&mut self, player: $crate::globals::Ptr<$crate::smw::player::CPlayer>, useBehavior: bool) -> bool {
+        fn hittop_player(&mut self, g: &mut Game, player: $crate::globals::Ptr<$crate::smw::player::CPlayer>, useBehavior: bool) -> bool {
             $crate::smw::objects::blocks::powerup_block::b_powerup_block_hittop_player(game().get(), self, player, useBehavior)
         }
-        fn hitbottom_player(&mut self, player: $crate::globals::Ptr<$crate::smw::player::CPlayer>, useBehavior: bool) -> bool {
+        fn hitbottom_player(&mut self, g: &mut Game, player: $crate::globals::Ptr<$crate::smw::player::CPlayer>, useBehavior: bool) -> bool {
             $crate::smw::objects::blocks::powerup_block::b_powerup_block_hitbottom_player(game().get(), self, player, useBehavior)
         }
-        fn hittop_object(&mut self, object: $crate::globals::Ptr<dyn $crate::smw::objects::moving::moving_object::IO_MovingObjectTrait>) -> bool {
+        fn hittop_object(&mut self, g: &mut Game, object: $crate::globals::Ptr<dyn $crate::smw::objects::moving::moving_object::IO_MovingObjectTrait>) -> bool {
             $crate::smw::objects::blocks::powerup_block::b_powerup_block_hittop_object(game().get(), self, object)
         }
-        fn hitright_object(&mut self, object: $crate::globals::Ptr<dyn $crate::smw::objects::moving::moving_object::IO_MovingObjectTrait>) -> bool {
+        fn hitright_object(&mut self, g: &mut Game, object: $crate::globals::Ptr<dyn $crate::smw::objects::moving::moving_object::IO_MovingObjectTrait>) -> bool {
             $crate::smw::objects::blocks::powerup_block::b_powerup_block_hitright_object(game().get(), self, object)
         }
-        fn hitleft_object(&mut self, object: $crate::globals::Ptr<dyn $crate::smw::objects::moving::moving_object::IO_MovingObjectTrait>) -> bool {
+        fn hitleft_object(&mut self, g: &mut Game, object: $crate::globals::Ptr<dyn $crate::smw::objects::moving::moving_object::IO_MovingObjectTrait>) -> bool {
             $crate::smw::objects::blocks::powerup_block::b_powerup_block_hitleft_object(game().get(), self, object)
         }
-        fn trigger_behavior(&mut self) {
+        fn trigger_behavior(&mut self, g: &mut Game) {
             $crate::smw::objects::blocks::powerup_block::b_powerup_block_trigger_behavior(game().get(), self)
         }
     };
@@ -574,11 +574,11 @@ impl CObjectTrait for B_PowerupBlock {
     fn as_io_block(&mut self) -> Option<&mut dyn IO_BlockTrait> {
         Some(self)
     }
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         b_powerup_block_draw(self)
     }
-    fn update(&mut self) {
-        b_powerup_block_update(game().get(), self)
+    fn update(&mut self, g: &mut Game) {
+        b_powerup_block_update(g, self)
     }
 }
 

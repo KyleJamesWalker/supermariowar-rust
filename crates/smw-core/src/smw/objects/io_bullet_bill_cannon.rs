@@ -39,16 +39,16 @@ impl IO_BulletBillCannon {
 impl CObjectTrait for IO_BulletBillCannon {
     crate::impl_cobject_plumbing!();
 
-    fn draw(&mut self) {}
+    fn draw(&mut self, g: &mut Game) {}
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         self.m_timer -= 1;
         if self.m_timer <= 0 && !crate::smw::net_random::object_event(crate::smw::net_random::Ev::HazardTimer, &[self.iNetworkID]) {
-            self.fire(game().get());
+            self.fire(g);
         }
     }
 
-    fn collide_player(&mut self, _player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, _player: Ptr<CPlayer>) -> bool {
         false
     }
 }

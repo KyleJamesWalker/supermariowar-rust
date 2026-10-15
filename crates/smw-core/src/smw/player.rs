@@ -881,7 +881,7 @@ impl CPlayer {
 
             if self.accept_item(bomb.get().as_carried_ptr()) {
                 bomb.owner = this;
-                bomb.get().move_to_owner();
+                bomb.get().move_to_owner(g);
             }
 
             g.objectcontainer[1].add(bomb);
@@ -1361,17 +1361,17 @@ impl CPlayer {
         if !self.carriedItem.is_null() {
             let item = self.carriedItem.get();
             if self.keys().game_down().fDown {
-                MO_CarriedObjectTrait::drop(item);
+                MO_CarriedObjectTrait::drop(item, game().get());
             } else {
                 //Make sure the owner of the object we are kicking is this player
                 item.owner = Ptr::from_mut(self);
 
                 //Make sure the shell/block is out in front of player before kicking it
                 if item.get_moving_object_type() == movingobject_shell || item.get_moving_object_type() == movingobject_throwblock {
-                    item.move_to_owner();
+                    item.move_to_owner(game().get());
                 }
 
-                item.kick();
+                item.kick(game().get());
             }
 
             self.carriedItem = Ptr::null();
@@ -2022,9 +2022,9 @@ impl CPlayer {
             //Drop any item the dead player was carrying
             if !self.carriedItem.is_null() {
                 if fKillCarriedItem {
-                    self.carriedItem.get().kill_object_map_hazard(-1);
+                    self.carriedItem.get().kill_object_map_hazard(g, -1);
                 } else {
-                    MO_CarriedObjectTrait::drop(self.carriedItem.get());
+                    MO_CarriedObjectTrait::drop(self.carriedItem.get(), g);
                 }
 
                 self.carriedItem = Ptr::null();
@@ -2063,7 +2063,7 @@ impl CPlayer {
         self.kuriboshoe.set_type(r#type);
 
         if !self.carriedItem.is_null() && !self.carriedItem.is_carried_by_kuribo_shoe() {
-            MO_CarriedObjectTrait::drop(self.carriedItem.get());
+            MO_CarriedObjectTrait::drop(self.carriedItem.get(), game().get());
             self.carriedItem = Ptr::null();
         }
 
@@ -2571,7 +2571,7 @@ impl CPlayer {
         }
 
         if !self.carriedItem.is_null() {
-            self.carriedItem.get().move_to_owner();
+            self.carriedItem.get().move_to_owner(g);
         }
     }
 
@@ -2588,7 +2588,7 @@ impl CPlayer {
         self.draw(g);
 
         if !self.carriedItem.is_null() {
-            self.carriedItem.get().draw();
+            self.carriedItem.get().draw(g);
         }
     }
 

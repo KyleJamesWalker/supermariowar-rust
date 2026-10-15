@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/walkingenemy/WE_BuzzyBeetle.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::EC_FallingObject;
 use crate::common::game_mode::game_mode_stomp;
 use crate::common::game_values::if_sound_on_play;
@@ -43,26 +44,26 @@ impl CObjectTrait for MO_BuzzyBeetle {
         Some(self)
     }
 
-    fn draw(&mut self) {
-        mo_walking_enemy_draw(game().get(), self);
+    fn draw(&mut self, g: &mut Game) {
+        mo_walking_enemy_draw(g, self);
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         if self.velx < 0.0f32 {
             self.animationOffsetY = 32;
         } else {
             self.animationOffsetY = 0;
         }
 
-        mo_walking_enemy_update(game().get(), self);
+        mo_walking_enemy_update(g, self);
     }
 
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
-        mo_walking_enemy_collide_player(game().get(), self, player)
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+        mo_walking_enemy_collide_player(g, self, player)
     }
 
-    fn collide_object(&mut self, object: Ptr<dyn IO_MovingObjectTrait>) {
-        mo_walking_enemy_collide_object(game().get(), self, object)
+    fn collide_object(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) {
+        mo_walking_enemy_collide_object(g, self, object)
     }
 }
 
@@ -72,15 +73,15 @@ impl IO_MovingObjectTrait for MO_BuzzyBeetle {
         Some(self)
     }
 
-    fn die(&mut self) {
+    fn die(&mut self, g: &mut Game) {
         if self.frozen {
-            self.shatter_die();
+            self.shatter_die(g);
             return;
         }
 
         self.dead = true;
         unsafe {
-            game().eyecandy[2].emplace(EC_FallingObject::new(Ptr::from_mut(&mut game().rm.spr_shelldead), self.ix, self.iy, 0.0f32, -VELJUMP / 2.0f32, 1, 0, 96, 0, 32, 32));
+            g.eyecandy[2].emplace(EC_FallingObject::new(Ptr::from_mut(&mut g.rm.spr_shelldead), self.ix, self.iy, 0.0f32, -VELJUMP / 2.0f32, 1, 0, 96, 0, 32, 32));
         }
     }
 }
@@ -88,33 +89,33 @@ impl IO_MovingObjectTrait for MO_BuzzyBeetle {
 impl MO_WalkingEnemyTrait for MO_BuzzyBeetle {
     crate::impl_walking_enemy_plumbing!();
 
-    fn hittop_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    fn hittop_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         let mut player = player;
         unsafe {
             player.set_yi((self.iy as i32 - PH - 1) as i16);
             player.bouncejump();
             let p = player;
-            player.collisions.checktop(game().get(), p.get());
+            player.collisions.checktop(g, p.get());
             player.platform = Ptr::null();
             self.dead = true;
 
             player.add_killer_award(Ptr::null(), KillStyle::BuzzyBeetle);
 
-            if game().game_values.gamemode.gamemode == game_mode_stomp && !game().game_values.gamemode.gameover {
-                player.score().adjust_score(game().get(), 1);
+            if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
+                player.score().adjust_score(g, 1);
             }
 
-            if_sound_on_play(game().get(), &mut game().rm.sfx_mip);
+            if_sound_on_play(g, &mut game().rm.sfx_mip);
         }
 
-        self.drop_shell(false, false);
+        self.drop_shell(g, false, false);
 
         false
     }
 
-    fn drop_shell(&mut self, fBounce: bool, fFlip: bool) {
+    fn drop_shell(&mut self, g: &mut Game, fBounce: bool, fFlip: bool) {
         // Give the shell a state 2 so it is already spawned but sitting
-        let mut shell = Ptr::new_box(CO_Shell::new(game().get(), ShellType::Buzzy, Vec2s::new((self.ix as i32 - 1) as i16, self.iy), false, true, false, false));
+        let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Buzzy, Vec2s::new((self.ix as i32 - 1) as i16, self.iy), false, true, false, false));
         shell.nospawn(self.iy, fBounce);
 
         if fFlip {
@@ -122,7 +123,7 @@ impl MO_WalkingEnemyTrait for MO_BuzzyBeetle {
         }
 
         unsafe {
-            game().objectcontainer[1].add(shell);
+            g.objectcontainer[1].add(shell);
         }
     }
 }

@@ -155,27 +155,27 @@ impl CObjectTrait for MO_FlagBase {
         Some(self)
     }
 
-    fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         if self.teamID == player.teamID && !player.carriedItem.is_null() && player.carriedItem.get_moving_object_type() == movingobject_flag {
             let flag: Ptr<CO_Flag> = Ptr::from_mut(player.carriedItem.as_any().downcast_mut::<CO_Flag>().unwrap());
-            self.score_flag(game().get(), flag, player);
+            self.score_flag(g, flag, player);
             self.timer = 0;
         }
 
         false
     }
 
-    fn draw(&mut self) {
-        self.spr.draw_src(game().get(), 
+    fn draw(&mut self, g: &mut Game) {
+        self.spr.draw_src(g, 
             self.ix as i32 - 8,
             self.iy as i32 - 8,
             &SDL_Rect { x: self.iGraphicOffsetX as i32, y: 0, w: 48, h: 48 },
         );
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         unsafe {
-            if game().game_values.gamemodesettings.flag.speed > 0 {
+            if g.game_values.gamemodesettings.flag.speed > 0 {
                 self.anglechangetimer -= 1;
                 if self.anglechangetimer <= 0 && !net_random::object_event(Ev::Wander, &net_random::wander_args(self.iNetworkID, self.fx, self.fy, self.angle)) {
                     self.change_angle();
@@ -220,24 +220,24 @@ impl CObjectTrait for MO_FlagBase {
                 }
             }
 
-            if game().game_values.gamemodesettings.flag.speed == 0 && {
+            if g.game_values.gamemodesettings.flag.speed == 0 && {
                 let t = self.timer;
                 self.timer += 1;
                 t > 1000
             } {
-                self.place_flag_base(game().get(), false);
+                self.place_flag_base(g, false);
             }
         }
     }
 
-    fn collide_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) {
+    fn collide_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) {
         if object.get_moving_object_type() == movingobject_flag {
             let flag: Ptr<CO_Flag> = Ptr::from_mut(object.as_any().downcast_mut::<CO_Flag>().unwrap());
             let player = flag.owner_throw;
 
             if !player.is_null() {
                 if self.teamID == player.teamID {
-                    self.score_flag(game().get(), flag, player);
+                    self.score_flag(g, flag, player);
                 }
             }
         }

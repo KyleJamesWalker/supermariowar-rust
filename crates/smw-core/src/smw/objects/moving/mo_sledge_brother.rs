@@ -219,7 +219,7 @@ impl MO_SledgeBrother {
         if !killer.is_null() {
             self.hit_points -= 1;
             if self.hit_points <= 0 {
-                self.die();
+                self.die(g);
 
                 unsafe {
                     if g.game_values.gamemode.gamemode == game_mode_boss_minigame {
@@ -421,8 +421,8 @@ impl CObjectTrait for MO_SledgeBrother {
         Some(self)
     }
 
-    fn draw(&mut self) {
-        self.spr.draw_src(game().get(), 
+    fn draw(&mut self, g: &mut Game) {
+        self.spr.draw_src(g, 
             self.ix as i32 - self.collisionOffsetX as i32,
             self.iy as i32 - self.collisionOffsetY as i32,
             &SDL_Rect {
@@ -436,7 +436,7 @@ impl CObjectTrait for MO_SledgeBrother {
         if self.hit_timer != 0 {
             for iHeart in 0..self.hit_points {
                 unsafe {
-                    game().rm.spr_scorehearts.draw_src(game().get(), 
+                    game().rm.spr_scorehearts.draw_src(g, 
                         self.ix as i32 - self.collisionOffsetX as i32 + iHeart as i32 * 8,
                         self.iy as i32 - self.collisionOffsetY as i32 - 18,
                         &SDL_Rect { x: 0, y: 0, w: 16, h: 16 },
@@ -446,11 +446,11 @@ impl CObjectTrait for MO_SledgeBrother {
         }
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         unsafe {
             if self.iActionState == 0 {
                 if self.hit_timer <= 0 {
-                    self.randomaction(game().get());
+                    self.randomaction(g);
                 }
             } else if self.iActionState == 1 {
                 self.wait_timer -= 1;
@@ -467,34 +467,34 @@ impl CObjectTrait for MO_SledgeBrother {
 
                     if self.iType == 0 {
                         // Shake screen and kill players
-                        if_sound_on_play(game().get(), &mut game().rm.sfx_thunder);
-                        game().game_values.flags.screenshaketimer = 20;
-                        game().game_values.flags.screenshakeplayerid = -1;
-                        game().game_values.flags.screenshaketeamid = -1;
-                        game().game_values.flags.screenshakekillinair = false;
-                        game().game_values.flags.screenshakekillscount = 0;
+                        if_sound_on_play(g, &mut game().rm.sfx_thunder);
+                        g.game_values.flags.screenshaketimer = 20;
+                        g.game_values.flags.screenshakeplayerid = -1;
+                        g.game_values.flags.screenshaketeamid = -1;
+                        g.game_values.flags.screenshakekillinair = false;
+                        g.game_values.flags.screenshakekillscount = 0;
                     } else if self.iType == 1 {
                         // Spawn thwomps
-                        if_sound_on_play(game().get(), &mut game().rm.sfx_thunder);
+                        if_sound_on_play(g, &mut game().rm.sfx_thunder);
 
                         let numThwomps: i16 = (RANDOM_INT(5) + 6) as i16;
 
                         for _iThwomp in 0..numThwomps {
                             let x = RANDOM_INT(591) as i16;
                             let nspeed = 2.0f32 + RANDOM_INT(20) as f32 / 10.0f32;
-                            game().objectcontainer[2].add(Ptr::new_box(OMO_Thwomp::new(Ptr::from_mut(&mut game().rm.spr_thwomp), x, nspeed)));
+                            g.objectcontainer[2].add(Ptr::new_box(OMO_Thwomp::new(Ptr::from_mut(&mut g.rm.spr_thwomp), x, nspeed)));
                         }
                     } else if self.iType == 2 {
                         // Spawn lots of podobos
-                        if_sound_on_play(game().get(), &mut game().rm.sfx_thunder);
+                        if_sound_on_play(g, &mut game().rm.sfx_thunder);
 
                         let numPodobos: i16 = (RANDOM_INT(5) + 8) as i16;
 
                         for _iPodobo in 0..numPodobos {
                             let x = RANDOM_INT(608) as i16;
                             let dVelY = -(RANDOM_INT(9) as f32 / 2.0f32) - 9.0f32;
-                            game().objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(
-                                Ptr::from_mut(&mut game().rm.spr_podobo),
+                            g.objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(
+                                Ptr::from_mut(&mut g.rm.spr_podobo),
                                 Vec2s::new(x, App::screenHeight as i16),
                                 dVelY,
                                 -1,
@@ -515,7 +515,7 @@ impl CObjectTrait for MO_SledgeBrother {
             } else if self.iActionState == 4 {
                 // move towards destination
                 if self.ix < self.iDestX {
-                    self.ix += if game().game_values.gamemodesettings.boss.difficulty >= 3 { 2 } else { 1 };
+                    self.ix += if g.game_values.gamemodesettings.boss.difficulty >= 3 { 2 } else { 1 };
 
                     if self.ix >= self.iDestX {
                         self.ix = self.iDestX;
@@ -524,7 +524,7 @@ impl CObjectTrait for MO_SledgeBrother {
                         self.leg_movement_timer = 0;
                     }
                 } else if self.ix > self.iDestX {
-                    self.ix -= if game().game_values.gamemodesettings.boss.difficulty >= 3 { 2 } else { 1 };
+                    self.ix -= if g.game_values.gamemodesettings.boss.difficulty >= 3 { 2 } else { 1 };
 
                     if self.ix <= self.iDestX {
                         self.ix = self.iDestX;
@@ -602,18 +602,18 @@ impl CObjectTrait for MO_SledgeBrother {
         }
     }
 
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         if self.iActionState == 0 {
             return false;
         }
 
         if player.is_invincible() {
             unsafe {
-                if_sound_on_play(game().get(), &mut game().rm.sfx_kicksound);
-                self.die();
+                if_sound_on_play(g, &mut game().rm.sfx_kicksound);
+                self.die(g);
 
-                if game().game_values.gamemode.gamemode == game_mode_boss_minigame {
-                    game().game_values.gamemode.get().as_any().downcast_mut::<CGM_Boss_MiniGame>().unwrap().set_winner(game().get(), player);
+                if g.game_values.gamemode.gamemode == game_mode_boss_minigame {
+                    g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Boss_MiniGame>().unwrap().set_winner(g, player);
                 }
             }
         } else {
@@ -623,7 +623,7 @@ impl CObjectTrait for MO_SledgeBrother {
         false
     }
 
-    fn collide_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) {
+    fn collide_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) {
         if object.is_dead() {
             return;
         }
@@ -637,7 +637,7 @@ impl CObjectTrait for MO_SledgeBrother {
             }
         }
 
-        removeifprojectile(game().get(), object, false, false);
+        removeifprojectile(g, object, false, false);
 
         // These types of attacks damage the boss
         let fDamageWeapon =
@@ -663,17 +663,17 @@ impl CObjectTrait for MO_SledgeBrother {
 
             if fDamageWeapon {
                 let iPlayerID = object.iPlayerID;
-                self.damage(game().get(), iPlayerID);
+                self.damage(g, iPlayerID);
 
                 if r#type == movingobject_shell || r#type == movingobject_throwblock || r#type == movingobject_throwbox || r#type == movingobject_attackzone {
-                    unsafe { if_sound_on_play(game().get(), &mut game().rm.sfx_kicksound) };
-                    object.die();
+                    unsafe { if_sound_on_play(g, &mut game().rm.sfx_kicksound) };
+                    object.die(g);
                 }
             } else {
-                unsafe { if_sound_on_play(game().get(), &mut game().rm.sfx_hit) };
+                unsafe { if_sound_on_play(g, &mut game().rm.sfx_hit) };
 
                 if r#type == movingobject_attackzone || r#type == movingobject_bulletbill {
-                    object.die();
+                    object.die(g);
                 }
             }
         }
@@ -683,11 +683,11 @@ impl CObjectTrait for MO_SledgeBrother {
 impl IO_MovingObjectTrait for MO_SledgeBrother {
     crate::impl_io_moving_object_plumbing!();
 
-    fn die(&mut self) {
+    fn die(&mut self, g: &mut Game) {
         self.dead = true;
         unsafe {
-            game().eyecandy[2].emplace(EC_FallingObject::new(
-                Ptr::from_mut(&mut game().rm.spr_sledgebrothersdead),
+            g.eyecandy[2].emplace(EC_FallingObject::new(
+                Ptr::from_mut(&mut g.rm.spr_sledgebrothersdead),
                 self.ix,
                 self.iy,
                 0.0f32,

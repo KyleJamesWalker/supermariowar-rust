@@ -75,7 +75,7 @@ impl CO_PhantoKey {
         self.vely = GRAVITATION;
         self.velx = 0.0;
 
-        MO_CarriedObjectTrait::drop(self);
+        MO_CarriedObjectTrait::drop(self, g);
     }
 }
 
@@ -85,7 +85,7 @@ impl CObjectTrait for CO_PhantoKey {
         Some(self)
     }
 
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         let mut player = player;
         if self.owner.is_null() && player.isready() {
             let item = self.as_carried_ptr();
@@ -97,15 +97,15 @@ impl CObjectTrait for CO_PhantoKey {
         false
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         if !self.owner.is_null() {
-            self.move_to_owner();
+            self.move_to_owner(g);
             self.relocatetimer = 0;
         } else if {
             self.relocatetimer += 1;
             self.relocatetimer > 1000
         } {
-            self.place_key(game().get());
+            self.place_key(g);
         } else {
             self.applyfriction();
 
@@ -113,7 +113,7 @@ impl CObjectTrait for CO_PhantoKey {
             self.fOldX = self.fx;
             self.fOldY = self.fy;
 
-            io_moving_object_collision_detection_map(game().get(), self);
+            io_moving_object_collision_detection_map(g, self);
         }
 
         self.sparkleanimationtimer += 1;
@@ -126,11 +126,11 @@ impl CObjectTrait for CO_PhantoKey {
         }
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         mo_carried_object_draw(self);
 
         unsafe {
-            game().rm.spr_shinesparkle.draw_src(game().get(), 
+            game().rm.spr_shinesparkle.draw_src(g, 
                 self.ix as i32 - self.collisionOffsetX as i32,
                 self.iy as i32 - self.collisionOffsetY as i32,
                 &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },

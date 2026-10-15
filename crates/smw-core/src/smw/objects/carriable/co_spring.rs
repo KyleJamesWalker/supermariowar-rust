@@ -49,7 +49,7 @@ pub fn co_spring_collide_player<T: CO_SpringTrait + ?Sized>(this: &mut T, player
     };
     if owner_null {
         if player.fOldY + PH as f32 <= fOldY && player.iy as i32 + PH >= iy as i32 {
-            this.hittop(player);
+            this.hittop(game().get(), player);
         } else if state == 1 {
             co_spring_hitother(this, player);
         }
@@ -95,7 +95,7 @@ pub fn co_spring_hitother<T: CO_SpringTrait + ?Sized>(this: &mut T, player: Ptr<
 
 pub fn co_spring_update<T: CO_SpringTrait + ?Sized>(this: &mut T) {
     if !this.spring().owner.is_null() {
-        this.move_to_owner();
+        this.move_to_owner(game().get());
     } else {
         {
             let o = this.spring_mut();
@@ -158,7 +158,7 @@ pub fn co_spring_place<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T) {
         o.fy = o.iy as f32;
     }
 
-    MO_CarriedObjectTrait::drop(this);
+    MO_CarriedObjectTrait::drop(this, g);
 }
 
 /// Virtuals added by `CO_Spring` (`hittop`), plus the non-virtual `place` so it can dispatch `Drop()`.
@@ -166,12 +166,12 @@ pub trait CO_SpringTrait: MO_CarriedObjectTrait {
     fn spring(&self) -> &CO_Spring;
     fn spring_mut(&mut self) -> &mut CO_Spring;
 
-    fn hittop(&mut self, player: Ptr<CPlayer>) {
-        co_spring_hittop(game().get(), self, player)
+    fn hittop(&mut self, g: &mut Game, player: Ptr<CPlayer>) {
+        co_spring_hittop(g, self, player)
     }
 
-    fn place(&mut self) {
-        co_spring_place(game().get(), self)
+    fn place(&mut self, g: &mut Game) {
+        co_spring_place(g, self)
     }
 }
 
@@ -180,13 +180,13 @@ impl CObjectTrait for CO_Spring {
     fn as_io_moving_object(&mut self) -> Option<&mut dyn IO_MovingObjectTrait> {
         Some(self)
     }
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         co_spring_update(self)
     }
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         co_spring_draw(self)
     }
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         co_spring_collide_player(self, player)
     }
 }

@@ -58,11 +58,11 @@ impl CObjectTrait for B_DonutBlock {
         Some(self)
     }
 
-    fn draw(&mut self) {
-        self.spr.draw(game().get(), self.ix as i32 + self.jigglex as i32, self.iy as i32);
+    fn draw(&mut self, g: &mut Game) {
+        self.spr.draw(g, self.ix as i32 + self.jigglex as i32, self.iy as i32);
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         //If a player is standing on us, jiggle and then fall
         if self.state == 0 {
             self.counter = 0;
@@ -83,7 +83,7 @@ impl CObjectTrait for B_DonutBlock {
             self.counter += 1;
             if self.counter > 50 {
                 let iPlayerId = (self.state as i32 - 1) as i16;
-                self.trigger_behavior_player(game().get(), iPlayerId);
+                self.trigger_behavior_player(g, iPlayerId);
             }
         }
 
@@ -94,7 +94,7 @@ impl CObjectTrait for B_DonutBlock {
 impl IO_BlockTrait for B_DonutBlock {
     crate::impl_io_block_plumbing!();
 
-    fn hittop_player(&mut self, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hittop_player(&mut self, g: &mut Game, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         io_block_hittop_player(self, player, useBehavior);
 
         if useBehavior {

@@ -114,7 +114,7 @@ impl CObjectTrait for MO_SledgeHammer {
         Some(self)
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         self.animationtimer += 1;
         if self.animationtimer == self.animationspeed {
             self.animationtimer = 0;
@@ -152,14 +152,14 @@ impl CObjectTrait for MO_SledgeHammer {
         }
     }
 
-    fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         if !player.is_shielded() {
             self.dead = true;
             unsafe {
                 let x = (self.ix as i32 + (self.iw as i32 >> 1) - 16) as i16;
                 let y = (self.iy as i32 + (self.ih as i32 >> 1) - 16) as i16;
-                game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), x, y, 3, 4));
-                if_sound_on_play(game().get(), &mut game().rm.sfx_hit);
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), x, y, 3, 4));
+                if_sound_on_play(g, &mut game().rm.sfx_hit);
             }
 
             if !player.is_invincible() && !player.shyguy {
@@ -170,8 +170,8 @@ impl CObjectTrait for MO_SledgeHammer {
         false
     }
 
-    fn draw(&mut self) {
-        self.spr.draw_src(game().get(), 
+    fn draw(&mut self, g: &mut Game) {
+        self.spr.draw_src(g, 
             self.ix as i32 - self.collisionOffsetX as i32,
             self.iy as i32 - self.collisionOffsetY as i32,
             &SDL_Rect { x: self.drawframe as i32, y: self.colorOffset as i32, w: self.iw as i32, h: self.ih as i32 },

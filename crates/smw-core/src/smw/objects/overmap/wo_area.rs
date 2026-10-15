@@ -107,31 +107,31 @@ impl OMO_Area {
 impl CObjectTrait for OMO_Area {
     crate::impl_cobject_plumbing!();
 
-    fn draw(&mut self) {
-        self.spr.draw_src(game().get(), self.ix as i32, self.iy as i32, &SDL_Rect { x: self.frame as i32, y: 0, w: self.iw as i32, h: self.ih as i32 });
+    fn draw(&mut self, g: &mut Game) {
+        self.spr.draw_src(g, self.ix as i32, self.iy as i32, &SDL_Rect { x: self.frame as i32, y: 0, w: self.iw as i32, h: self.ih as i32 });
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         unsafe {
             if !self.touchingPlayer.is_null() {
                 let p = self.touchingPlayer;
-                self.set_owner(game().get(), p);
+                self.set_owner(g, p);
             }
 
-            if self.iPlayerID != -1 && !game().game_values.gamemode.gameover {
+            if self.iPlayerID != -1 && !g.game_values.gamemode.gameover {
                 self.scoretimer += 1;
-                if self.scoretimer as i32 >= ((game().game_values.pointspeed as i32) << 1) {
+                if self.scoretimer as i32 >= ((g.game_values.pointspeed as i32) << 1) {
                     self.scoretimer = 0;
-                    game().players[self.iPlayerID as usize].score().adjust_score(game().get(), 1);
-                    game().game_values.gamemode.check_winner(game().players[self.iPlayerID as usize]);
+                    game().players[self.iPlayerID as usize].score().adjust_score(g, 1);
+                    g.game_values.gamemode.check_winner(g.players[self.iPlayerID as usize]);
                 }
             }
 
-            if game().game_values.gamemodesettings.domination.relocationfrequency > 0 {
+            if g.game_values.gamemodesettings.domination.relocationfrequency > 0 {
                 self.relocatetimer += 1;
-                if self.relocatetimer >= game().game_values.gamemodesettings.domination.relocationfrequency {
+                if self.relocatetimer >= g.game_values.gamemodesettings.domination.relocationfrequency {
                     self.relocatetimer = 0;
-                    self.place_area(game().get());
+                    self.place_area(g);
                 }
             }
 
@@ -140,7 +140,7 @@ impl CObjectTrait for OMO_Area {
         }
     }
 
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         if player.tanookisuit.not_statue() && !player.isdead() {
             self.totalTouchingPlayers += 1;
 

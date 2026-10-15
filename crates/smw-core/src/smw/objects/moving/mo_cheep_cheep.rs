@@ -83,7 +83,7 @@ impl MO_CheepCheep {
             if_sound_on_play(g, &mut game().rm.sfx_mip);
         }
 
-        self.die();
+        self.die(g);
 
         false
     }
@@ -120,7 +120,7 @@ impl CObjectTrait for MO_CheepCheep {
         Some(self)
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         self.fOldX = self.fx;
         self.fOldY = self.fy;
 
@@ -140,36 +140,36 @@ impl CObjectTrait for MO_CheepCheep {
         }
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         let x = self.ix as i32 - self.collisionOffsetX as i32;
         let y = self.iy as i32 - self.collisionOffsetY as i32;
-        self.spr.draw_src(game().get(), x, y, &SDL_Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32, w: self.iw as i32, h: self.ih as i32 });
+        self.spr.draw_src(g, x, y, &SDL_Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32, w: self.iw as i32, h: self.ih as i32 });
 
         if self.frozen {
             unsafe {
-                game().rm.spr_iceblock.draw_src(game().get(), x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
+                game().rm.spr_iceblock.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
             }
         }
     }
 
-    fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         unsafe {
             if player.is_invincible() || self.frozen {
                 player.add_killer_award(Ptr::null(), KillStyle::CheepCheep);
 
-                if game().game_values.gamemode.gamemode == game_mode_stomp && !game().game_values.gamemode.gameover {
-                    player.score().adjust_score(game().get(), 1);
+                if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
+                    player.score().adjust_score(g, 1);
                 }
 
                 if self.frozen {
-                    self.shatter_die(game().get());
+                    self.shatter_die(g);
                 } else {
-                    if_sound_on_play(game().get(), &mut game().rm.sfx_kicksound);
-                    self.die();
+                    if_sound_on_play(g, &mut game().rm.sfx_kicksound);
+                    self.die(g);
                 }
             } else {
                 if player.fOldY + PH as f32 <= self.fOldY && player.iy as i32 + PH >= self.iy as i32 {
-                    return self.hittop(game().get(), player);
+                    return self.hittop(g, player);
                 } else {
                     return self.hitother(player);
                 }
@@ -179,10 +179,10 @@ impl CObjectTrait for MO_CheepCheep {
         false
     }
 
-    fn collide_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) {
+    fn collide_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) {
         unsafe {
             if !object.is_dead() {
-                removeifprojectile(game().get(), object, false, false);
+                removeifprojectile(g, object, false, false);
 
                 let r#type: MovingObjectType = object.get_moving_object_type();
 
@@ -207,38 +207,38 @@ impl CObjectTrait for MO_CheepCheep {
                         return;
                     }
 
-                    if game().game_values.gamemode.gamemode == game_mode_stomp && !game().game_values.gamemode.gameover {
+                    if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
                         // Find the player that shot this projectile so we can attribute a kill
-                        let mut killer = get_player_from_global_id(game().get(), object.iPlayerID);
+                        let mut killer = get_player_from_global_id(g, object.iPlayerID);
 
                         if !killer.is_null() {
                             killer.add_killer_award(Ptr::null(), KillStyle::CheepCheep);
-                            killer.score().adjust_score(game().get(), 1);
+                            killer.score().adjust_score(g, 1);
 
                             if r#type == movingobject_shell {
-                                object.as_any().downcast_mut::<CO_Shell>().unwrap().add_moving_kill(game().get(), killer);
+                                object.as_any().downcast_mut::<CO_Shell>().unwrap().add_moving_kill(g, killer);
                             }
                         }
                     }
 
                     if self.frozen {
-                        self.shatter_die(game().get());
+                        self.shatter_die(g);
                     } else {
-                        if_sound_on_play(game().get(), &mut game().rm.sfx_kicksound);
-                        self.die();
+                        if_sound_on_play(g, &mut game().rm.sfx_kicksound);
+                        self.die(g);
                     }
 
                     if r#type == movingobject_shell || r#type == movingobject_throwblock {
-                        object.check_and_die();
+                        object.check_and_die(g);
                     } else if r#type == movingobject_bulletbill || r#type == movingobject_attackzone || r#type == movingobject_throwbox {
-                        object.die();
+                        object.die(g);
                     }
                 } else if r#type == movingobject_iceblast {
                     self.animationspeed = 0;
                     self.frozen = true;
 
-                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
+                    g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                        Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
                         (self.ix as i32 - self.collisionOffsetX as i32) as i16,
                         (self.iy as i32 - self.collisionOffsetY as i32) as i16,
                         3,
@@ -253,16 +253,16 @@ impl CObjectTrait for MO_CheepCheep {
 impl IO_MovingObjectTrait for MO_CheepCheep {
     crate::impl_io_moving_object_plumbing!();
 
-    fn die(&mut self) {
+    fn die(&mut self, g: &mut Game) {
         if self.frozen {
-            self.shatter_die(game().get());
+            self.shatter_die(g);
             return;
         }
 
         self.dead = true;
         unsafe {
-            game().eyecandy[2].emplace(EC_FallingObject::new(
-                Ptr::from_mut(&mut game().rm.spr_cheepcheepdead),
+            g.eyecandy[2].emplace(EC_FallingObject::new(
+                Ptr::from_mut(&mut g.rm.spr_cheepcheepdead),
                 self.ix,
                 self.iy,
                 0.0,

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_ExtraHeartPowerup.cpp
 
+use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::CObjectTrait;
@@ -33,27 +34,27 @@ impl CObjectTrait for PU_ExtraHeartPowerup {
     fn as_io_moving_object(&mut self) -> Option<&mut dyn IO_MovingObjectTrait> {
         Some(self)
     }
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         mo_powerup_draw(self)
     }
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         mo_powerup_update(self)
     }
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         let mut player = player;
         unsafe {
             if self.state > 0 {
-                if game().game_values.gamemode.gamemode == game_mode_health {
-                    if player.score().subscore[1] < game().game_values.gamemodesettings.health.maxlife {
+                if g.game_values.gamemode.gamemode == game_mode_health {
+                    if player.score().subscore[1] < g.game_values.gamemodesettings.health.maxlife {
                         player.score().subscore[1] += 1;
                     }
 
-                    if player.score().subscore[0] < game().game_values.gamemodesettings.health.maxlife {
+                    if player.score().subscore[0] < g.game_values.gamemodesettings.health.maxlife {
                         player.score().subscore[0] += 1;
                     }
                 }
 
-                if_sound_on_play(game().get(), &mut game().rm.sfx_collectpowerup);
+                if_sound_on_play(g, &mut game().rm.sfx_collectpowerup);
                 self.dead = true;
             }
         }

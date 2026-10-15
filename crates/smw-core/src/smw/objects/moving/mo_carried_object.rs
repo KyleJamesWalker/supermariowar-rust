@@ -167,7 +167,7 @@ pub fn mo_carried_object_kick<T: MO_CarriedObjectTrait + ?Sized>(g: &mut Game, t
         }
     }
 
-    this.drop();
+    this.drop(g);
 }
 
 /// Virtual interface added by `MO_CarriedObject`. Implementors also forward `CObjectTrait::draw`
@@ -177,15 +177,15 @@ pub trait MO_CarriedObjectTrait: IO_MovingObjectTrait {
     fn carried_mut(&mut self) -> &mut MO_CarriedObject;
     fn as_carried_ptr(&mut self) -> Ptr<dyn MO_CarriedObjectTrait>;
 
-    fn move_to_owner(&mut self) {
+    fn move_to_owner(&mut self, g: &mut Game) {
         mo_carried_object_move_to_owner(self)
     }
 
-    fn drop(&mut self) {
+    fn drop(&mut self, g: &mut Game) {
         mo_carried_object_drop(self)
     }
-    fn kick(&mut self) {
-        mo_carried_object_kick(game().get(), self)
+    fn kick(&mut self, g: &mut Game) {
+        mo_carried_object_kick(g, self)
     }
 }
 

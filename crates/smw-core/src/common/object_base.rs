@@ -238,12 +238,12 @@ pub trait CObjectTrait: Any {
     fn as_any(&mut self) -> &mut dyn Any;
     fn as_object_ptr(&mut self) -> Ptr<dyn CObjectTrait>;
 
-    fn draw(&mut self) {}
-    fn update(&mut self);
-    fn collide_player(&mut self, _player: Ptr<CPlayer>) -> bool {
+    fn draw(&mut self, g: &mut Game) {}
+    fn update(&mut self, g: &mut Game);
+    fn collide_player(&mut self, g: &mut Game, _player: Ptr<CPlayer>) -> bool {
         false
     }
-    fn collide_object(&mut self, _object: Ptr<dyn IO_MovingObjectTrait>) {}
+    fn collide_object(&mut self, g: &mut Game, _object: Ptr<dyn IO_MovingObjectTrait>) {}
 
     fn get_object_type(&mut self) -> ObjectType {
         self.obj().objectType

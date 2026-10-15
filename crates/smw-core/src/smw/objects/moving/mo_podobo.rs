@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_Podobo.cpp
 
+use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gameplay_styles::TeamCollisionStyle;
@@ -62,7 +63,7 @@ impl CObjectTrait for MO_Podobo {
         Some(self)
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         // Special slow podobo gravity
         self.vely += 0.2f32;
 
@@ -78,7 +79,7 @@ impl CObjectTrait for MO_Podobo {
         }
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         let srcRect = SDL_Rect {
             x: self.drawframe as i32,
             y: self.iColorOffsetY as i32 + if self.vely > 0.0f32 { 32 } else { 0 },
@@ -86,16 +87,16 @@ impl CObjectTrait for MO_Podobo {
             h: self.ih as i32,
         };
         if self.fIsSpawned && self.vely < 0.0f32 {
-            self.spr.draw_clip(game().get(), self.ix as i32, self.iy as i32, &srcRect, ClipEdge::Bottom, self.iHiddenPlane as i32);
+            self.spr.draw_clip(g, self.ix as i32, self.iy as i32, &srcRect, ClipEdge::Bottom, self.iHiddenPlane as i32);
         } else {
-            self.spr.draw_src(game().get(), self.ix as i32, self.iy as i32, &srcRect);
+            self.spr.draw_src(g, self.ix as i32, self.iy as i32, &srcRect);
         }
     }
 
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         unsafe {
             if player.globalID != self.iPlayerID
-                && (game().game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID)
+                && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID)
                 && !player.is_invincible()
                 && !player.is_shielded()
                 && !player.shyguy
@@ -109,7 +110,7 @@ impl CObjectTrait for MO_Podobo {
         }
     }
 
-    fn collide_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) {
+    fn collide_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) {
         if self.iPlayerID == -1 {
             return;
         }
@@ -123,9 +124,9 @@ impl CObjectTrait for MO_Podobo {
             }
 
             // ((CO_Shell*)object)->Die() / ((CO_ThrowBlock*)object)->Die() / ((MO_BulletBill*)object)->Die() are all virtual calls
-            object.die();
+            object.die(g);
 
-            unsafe { if_sound_on_play(game().get(), &mut game().rm.sfx_kicksound) };
+            unsafe { if_sound_on_play(g, &mut game().rm.sfx_kicksound) };
         }
     }
 }

@@ -1101,7 +1101,7 @@ impl MovingPlatform {
 
                 if (t1 & tile_flag_solid) != 0 || (t2 & tile_flag_solid) != 0 {
                     if object.iHorizontalPlatformCollision == 3 {
-                        object.kill_object_map_hazard(-1);
+                        object.kill_object_map_hazard(g, -1);
                         return;
                     } else {
                         let cwi = object.collisionWidth as i32;
@@ -1146,7 +1146,7 @@ impl MovingPlatform {
 
                         removeifprojectile(g, object, true, true);
 
-                        object.side_bounce(true);
+                        object.side_bounce(g, true);
                     }
                 }
             }
@@ -1175,7 +1175,7 @@ impl MovingPlatform {
 
                 if (t1 & tile_flag_solid) != 0 || (t2 & tile_flag_solid) != 0 {
                     if object.iHorizontalPlatformCollision == 1 {
-                        object.kill_object_map_hazard(-1);
+                        object.kill_object_map_hazard(g, -1);
                         return;
                     } else {
                         object.set_xf((((tx as i32) << 5) + TILESIZE) as f32 + 0.2 + fx - iHalfWidth);
@@ -1213,7 +1213,7 @@ impl MovingPlatform {
 
                         removeifprojectile(g, object, true, true);
 
-                        object.side_bounce(false);
+                        object.side_bounce(g, false);
                     }
                 }
             }
@@ -1264,7 +1264,7 @@ impl MovingPlatform {
 
                 if (t1 & tile_flag_solid) != 0 || (t2 & tile_flag_solid) != 0 {
                     if object.iVerticalPlatformCollision == 2 {
-                        object.kill_object_map_hazard(-1);
+                        object.kill_object_map_hazard(g, -1);
                         return;
                     } else {
                         object.fPrecalculatedY = (((ty as i32) << 5) + TILESIZE) as f32 + 0.2 + fy - iHalfHeight;
@@ -1305,7 +1305,7 @@ impl MovingPlatform {
                     && object.fOldY + object.collisionHeight as f32 <= ((ty as i32) << 5) as f32 + self.fOldY - iHalfHeight
                 {
                     if object.iVerticalPlatformCollision == 0 {
-                        object.kill_object_map_hazard(-1);
+                        object.kill_object_map_hazard(g, -1);
                         return;
                     } else {
                         if object.bounce >= 0.0 {
@@ -1317,7 +1317,7 @@ impl MovingPlatform {
                         let chi = object.collisionHeight as i32;
                         object.fPrecalculatedY = (((ty as i32) << 5) - chi) as f32 - 0.2 + fy - iHalfHeight;
                         object.fOldY = object.fPrecalculatedY - self.fVelY;
-                        object.vely = object.bottom_bounce();
+                        object.vely = object.bottom_bounce(g);
                         object.inair = false;
                         object.onice = false;
                     }
@@ -1332,7 +1332,7 @@ impl MovingPlatform {
 
                 if ((t1 & tile_flag_solid) != 0 || (t2 & tile_flag_solid) != 0) && !fSuperDeathTileUnderObject {
                     if object.iVerticalPlatformCollision == 0 {
-                        object.kill_object_map_hazard(-1);
+                        object.kill_object_map_hazard(g, -1);
                         return;
                     } else {
                         if object.bounce >= 0.0 {
@@ -1344,7 +1344,7 @@ impl MovingPlatform {
                         let chi = object.collisionHeight as i32;
                         object.fPrecalculatedY = (((ty as i32) << 5) - chi) as f32 - 0.2 + fy - iHalfHeight;
                         object.fOldY = object.fPrecalculatedY - self.fVelY;
-                        object.vely = object.bottom_bounce();
+                        object.vely = object.bottom_bounce(g);
                         object.inair = false;
 
                         if ((t1 & tile_flag_ice) != 0 && ((t2 & tile_flag_ice) != 0 || t2 == tile_flag_nonsolid || t2 == tile_flag_gap))
@@ -1358,7 +1358,7 @@ impl MovingPlatform {
                         return;
                     }
                 } else if fSuperDeathTileUnderObject {
-                    object.kill_object_map_hazard(-1);
+                    object.kill_object_map_hazard(g, -1);
                     return;
                 } else if object.platform == this {
                     object.platform = Ptr::null();

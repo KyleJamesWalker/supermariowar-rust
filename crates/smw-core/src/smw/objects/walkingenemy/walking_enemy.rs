@@ -216,7 +216,7 @@ pub fn mo_walking_enemy_update<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, t
             this.we_mut().burnuptimer += 1;
             if this.we().burnuptimer > 20 {
                 if this.we().burnuptimer > 80 {
-                    this.kill_object_map_hazard(-1);
+                    this.kill_object_map_hazard(g, -1);
                 } else {
                     let o = this.we();
                     g.eyecandy[0].emplace(EC_SingleAnimation::new(
@@ -314,15 +314,15 @@ pub fn mo_walking_enemy_collide_player<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut
             }
 
             if this.we().frozen {
-                this.shatter_die();
+                this.shatter_die(g);
             } else {
                 if_sound_on_play(g, &mut game().rm.sfx_kicksound);
-                this.die();
+                this.die(g);
             }
         } else {
             let o = this.we();
             if player.fOldY + PH as f32 <= o.fOldY && player.iy as i32 + PH >= o.iy as i32 {
-                return this.hittop_player(player);
+                return this.hittop_player(g, player);
             } else {
                 return this.hitother(player);
             }
@@ -391,21 +391,21 @@ pub fn mo_walking_enemy_collide_object<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut
                 }
 
                 if this.we().frozen {
-                    this.shatter_die();
+                    this.shatter_die(g);
                 } else {
                     if_sound_on_play(g, &mut game().rm.sfx_kicksound);
 
                     if r#type == movingobject_attackzone {
                         this.die_and_drop_shell(true, false);
                     } else {
-                        this.die();
+                        this.die(g);
                     }
                 }
 
                 if r#type == movingobject_shell || r#type == movingobject_throwblock {
-                    object.check_and_die();
+                    object.check_and_die(g);
                 } else if r#type == movingobject_bulletbill || r#type == movingobject_attackzone || r#type == movingobject_throwbox {
-                    object.die();
+                    object.die(g);
                 }
             } else if r#type == movingobject_iceblast {
                 let o = this.we_mut();
@@ -475,27 +475,27 @@ pub trait MO_WalkingEnemyTrait: IO_MovingObjectTrait {
     fn we(&self) -> &MO_WalkingEnemy;
     fn we_mut(&mut self) -> &mut MO_WalkingEnemy;
 
-    fn place(&mut self) {
-        mo_walking_enemy_place(game().get(), self.we_mut())
+    fn place(&mut self, g: &mut Game) {
+        mo_walking_enemy_place(g, self.we_mut())
     }
 
-    fn hittop_player(&mut self, player: Ptr<CPlayer>) -> bool;
+    fn hittop_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool;
     fn hitother(&mut self, player: Ptr<CPlayer>) -> bool {
         mo_walking_enemy_hitother(self, player)
     }
 
-    fn shatter_die(&mut self) {
-        mo_walking_enemy_shatter_die(game().get(), self)
+    fn shatter_die(&mut self, g: &mut Game) {
+        mo_walking_enemy_shatter_die(g, self)
     }
     fn die_and_drop_shell(&mut self, fBounce: bool, fFlip: bool) {
         if self.we().frozen {
-            self.shatter_die();
+            self.shatter_die(game().get());
             return;
         }
         self.we_mut().dead = true;
-        self.drop_shell(fBounce, fFlip);
+        self.drop_shell(game().get(), fBounce, fFlip);
     }
-    fn drop_shell(&mut self, _fBounce: bool, _fFlip: bool) {}
+    fn drop_shell(&mut self, g: &mut Game, _fBounce: bool, _fFlip: bool) {}
 }
 
 impl Deref for dyn MO_WalkingEnemyTrait {

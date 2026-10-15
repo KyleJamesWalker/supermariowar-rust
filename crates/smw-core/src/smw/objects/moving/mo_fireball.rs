@@ -84,16 +84,16 @@ impl CObjectTrait for MO_Fireball {
         Some(self)
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         io_moving_object_update(self);
 
         unsafe {
             self.ttl -= 1;
             if self.ttl <= 0 {
-                removeifprojectile(game().get(), self.as_mo_ptr(), true, true);
-            } else if game().game_values.spotlights {
+                removeifprojectile(g, self.as_mo_ptr(), true, true);
+            } else if g.game_values.spotlights {
                 if self.sSpotlight.is_null() {
-                    self.sSpotlight = game().spotlightManager.add_spotlight(game().get(), 
+                    self.sSpotlight = game().spotlightManager.add_spotlight(g, 
                         (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16,
                         (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16,
                         3,
@@ -109,11 +109,11 @@ impl CObjectTrait for MO_Fireball {
         }
     }
 
-    fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         unsafe {
-            if self.iPlayerID != player.get_global_id() && (game().game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.get_team_id()) {
+            if self.iPlayerID != player.get_global_id() && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.get_team_id()) {
                 if !player.is_shielded() {
-                    removeifprojectile(game().get(), self.as_mo_ptr(), false, false);
+                    removeifprojectile(g, self.as_mo_ptr(), false, false);
 
                     if !player.is_invincible() && !player.shyguy {
                         // Find the player that shot this fireball so we can attribute a kill
@@ -127,8 +127,8 @@ impl CObjectTrait for MO_Fireball {
         false
     }
 
-    fn draw(&mut self) {
-        self.spr.draw_src(game().get(), 
+    fn draw(&mut self, g: &mut Game) {
+        self.spr.draw_src(g, 
             self.ix as i32 - self.collisionOffsetX as i32,
             self.iy as i32 - self.collisionOffsetY as i32,
             &SDL_Rect {

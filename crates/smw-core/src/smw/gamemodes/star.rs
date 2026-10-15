@@ -61,7 +61,7 @@ impl CGM_Star {
             //Clean up old stars
             for iStar in 0..3usize {
                 if !self.starItem[iStar].is_null() {
-                    MO_CarriedObjectTrait::drop(&mut *self.starItem[iStar]);
+                    MO_CarriedObjectTrait::drop(&mut *self.starItem[iStar], g);
                     self.starItem[iStar].dead = true;
                     self.starItem[iStar] = Ptr::null();
                 }

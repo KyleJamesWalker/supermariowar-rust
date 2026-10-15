@@ -128,7 +128,7 @@ impl MysteryMushroomTempPlayer {
         *iPowerup = self.gamepowerup;
 
         if !player.carriedItem.is_null() {
-            player.carriedItem.move_to_owner();
+            player.carriedItem.move_to_owner(game().get());
         }
     }
 }

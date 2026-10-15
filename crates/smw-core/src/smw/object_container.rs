@@ -1,5 +1,6 @@
 //! Port of src/smw/ObjectContainer.cpp
 
+use crate::game::game;
 use crate::common::moving_object_types::MovingObjectType;
 use crate::common::object_base::{CObjectTrait, ObjectType};
 use crate::globals::{Aliased, Ptr};
@@ -69,7 +70,7 @@ impl CObjectContainer {
         let n = self.m_list.len();
         for i in 0..n {
             let mut obj = unsafe { (&(*this).m_list)[i] };
-            obj.update();
+            obj.update(game().get());
         }
     }
 
@@ -78,7 +79,7 @@ impl CObjectContainer {
         let n = self.m_list.len();
         for i in 0..n {
             let mut obj = unsafe { (&(*this).m_list)[i] };
-            obj.draw();
+            obj.draw(game().get());
         }
     }
 

@@ -126,7 +126,7 @@ impl CO_Egg {
         self.owner_throw = Ptr::null();
         self.owner_throw_timer = 0;
 
-        MO_CarriedObjectTrait::drop(self);
+        MO_CarriedObjectTrait::drop(self, g);
     }
 }
 
@@ -136,7 +136,7 @@ impl CObjectTrait for CO_Egg {
         Some(self)
     }
 
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         let mut player = player;
         if self.owner.is_null() && player.isready() {
             let item = self.as_carried_ptr();
@@ -149,16 +149,16 @@ impl CObjectTrait for CO_Egg {
         false
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         if !self.owner.is_null() {
-            self.move_to_owner();
+            self.move_to_owner(g);
             self.relocatetimer = 0;
             self.owner_throw = self.owner;
         } else if {
             self.relocatetimer += 1;
             self.relocatetimer > 1500
         } {
-            self.place_egg(game().get());
+            self.place_egg(g);
             self.owner_throw = Ptr::null();
         } else {
             if !self.owner_throw.is_null() && {
@@ -175,7 +175,7 @@ impl CObjectTrait for CO_Egg {
             self.fOldX = self.fx;
             self.fOldY = self.fy;
 
-            io_moving_object_collision_detection_map(game().get(), self);
+            io_moving_object_collision_detection_map(g, self);
         }
 
         self.sparkleanimationtimer += 1;
@@ -189,14 +189,14 @@ impl CObjectTrait for CO_Egg {
 
         // Explode
         unsafe {
-            if game().game_values.gamemodesettings.egg.explode > 0 {
+            if g.game_values.gamemodesettings.egg.explode > 0 {
                 self.explosiondrawtimer -= 1;
                 if self.explosiondrawtimer <= 0 {
                     self.explosiondrawtimer = 62;
                     self.explosiondrawframe -= 1;
                     if self.explosiondrawframe < 0 {
-                        game().objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
-                            Ptr::from_mut(&mut game().rm.spr_explosion),
+                        g.objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
+                            Ptr::from_mut(&mut g.rm.spr_explosion),
                             Vec2s::new((self.ix as i32 + (self.iw as i32 >> 1) - 96) as i16, (self.iy as i32 + (self.ih as i32 >> 1) - 64) as i16),
                             2,
                             4,
@@ -204,9 +204,9 @@ impl CObjectTrait for CO_Egg {
                             -1,
                             KillStyle::Bomb,
                         )));
-                        self.place_egg(game().get());
+                        self.place_egg(g);
 
-                        if_sound_on_play(game().get(), &mut game().rm.sfx_bobombsound);
+                        if_sound_on_play(g, &mut game().rm.sfx_bobombsound);
                     } else if self.explosiondrawframe < 5 {
                         self.animationspeed = self.egganimationrates[self.explosiondrawframe as usize];
                     } else {
@@ -219,20 +219,20 @@ impl CObjectTrait for CO_Egg {
         self.animate();
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         mo_carried_object_draw(self);
 
         // Display explosion timer
         unsafe {
-            if game().game_values.gamemodesettings.egg.explode > 0 && self.explosiondrawframe < 5 {
+            if g.game_values.gamemodesettings.egg.explode > 0 && self.explosiondrawframe < 5 {
                 let x = self.ix as i32 - self.collisionOffsetX as i32;
                 let y = self.iy as i32 - self.collisionOffsetY as i32;
                 let src = SDL_Rect { x: (self.explosiondrawframe as i32) << 5, y: (self.color as i32) << 5, w: 32, h: 32 };
                 if !self.owner.is_null() && self.owner.iswarping() {
                     let edge: ClipEdge = std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32);
-                    game().rm.spr_eggnumbers.draw_clip(game().get(), x, y, &src, edge, self.owner.get_warp_plane() as i32);
+                    game().rm.spr_eggnumbers.draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);
                 } else {
-                    game().rm.spr_eggnumbers.draw_src(game().get(), x, y, &src);
+                    game().rm.spr_eggnumbers.draw_src(g, x, y, &src);
                 }
             }
         }
@@ -249,7 +249,7 @@ impl IO_MovingObjectTrait for CO_Egg {
 impl MO_CarriedObjectTrait for CO_Egg {
     crate::impl_carried_object_plumbing!();
 
-    fn drop(&mut self) {
+    fn drop(&mut self, g: &mut Game) {
         mo_carried_object_drop(self);
         self.owner_throw_timer = 62;
     }

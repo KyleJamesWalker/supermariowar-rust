@@ -69,7 +69,7 @@ impl OMO_PipeCoin {
 impl CObjectTrait for OMO_PipeCoin {
     crate::impl_cobject_plumbing!();
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         let x = self.fx + self.velx;
         self.set_xf(x);
         let y = self.fy + self.vely;
@@ -84,7 +84,7 @@ impl CObjectTrait for OMO_PipeCoin {
         }
 
         unsafe {
-            if game().pipegamemode.is_slowdown() {
+            if g.pipegamemode.is_slowdown() {
                 self.vely += GRAVITATION / 1.5f32;
             } else {
                 self.vely += GRAVITATION;
@@ -105,7 +105,7 @@ impl CObjectTrait for OMO_PipeCoin {
         }
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         let x = self.ix as i32 - self.collisionOffsetX as i32;
         let y = self.iy as i32 - self.collisionOffsetY as i32;
         let srcRect = SDL_Rect { x: self.drawframe as i32, y: self.animationOffsetY as i32, w: self.iw as i32, h: self.ih as i32 };
@@ -113,50 +113,50 @@ impl CObjectTrait for OMO_PipeCoin {
 
         unsafe {
             if self.iUncollectableTime > 0 {
-                self.spr.draw_clip(game().get(), x, y, &srcRect, ClipEdge::Bottom, 256);
+                self.spr.draw_clip(g, x, y, &srcRect, ClipEdge::Bottom, 256);
 
                 // Draw sparkles
                 if self.iTeamID == -1 {
-                    game().rm.spr_shinesparkle.draw_clip(game().get(), x, y, &sparkleRect, ClipEdge::Bottom, 256);
+                    game().rm.spr_shinesparkle.draw_clip(g, x, y, &sparkleRect, ClipEdge::Bottom, 256);
                 }
             } else {
-                self.spr.draw_src(game().get(), x, y, &srcRect);
+                self.spr.draw_src(g, x, y, &srcRect);
 
                 // Draw sparkles
                 if self.iTeamID == -1 {
-                    game().rm.spr_shinesparkle.draw_src(game().get(), x, y, &sparkleRect);
+                    game().rm.spr_shinesparkle.draw_src(g, x, y, &sparkleRect);
                 }
             }
         }
     }
 
-    fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         if self.iUncollectableTime > 0 {
             return false;
         }
 
         unsafe {
-            if !game().game_values.gamemode.gameover {
+            if !g.game_values.gamemode.gameover {
                 if self.iTeamID != -1 {
                     if player.teamID == self.iTeamID {
-                        player.score().adjust_score(game().get(), 1);
-                        if_sound_on_play(game().get(), &mut game().rm.sfx_coin);
+                        player.score().adjust_score(g, 1);
+                        if_sound_on_play(g, &mut game().rm.sfx_coin);
                     }
                 } else if self.iColorID == 2 {
-                    player.score().adjust_score(game().get(), 1);
-                    if_sound_on_play(game().get(), &mut game().rm.sfx_coin);
+                    player.score().adjust_score(g, 1);
+                    if_sound_on_play(g, &mut game().rm.sfx_coin);
                 } else if self.iColorID == 0 {
-                    player.score().adjust_score(game().get(), -1);
-                    if_sound_on_play(game().get(), &mut game().rm.sfx_stun);
+                    player.score().adjust_score(g, -1);
+                    if_sound_on_play(g, &mut game().rm.sfx_stun);
                 } else if self.iColorID == 1 {
-                    player.score().adjust_score(game().get(), 5);
-                    if_sound_on_play(game().get(), &mut game().rm.sfx_extraguysound);
+                    player.score().adjust_score(g, 5);
+                    if_sound_on_play(g, &mut game().rm.sfx_extraguysound);
                 }
 
-                game().game_values.gamemode.check_winner(player);
+                g.game_values.gamemode.check_winner(player);
             }
 
-            game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_coinsparkle), self.ix, self.iy, 7, 4));
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_coinsparkle), self.ix, self.iy, 7, 4));
         }
 
         self.dead = true;

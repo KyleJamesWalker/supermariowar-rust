@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_FeatherPowerup.cpp
 
+use crate::game::Game;
 use crate::common::game::App;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::*;
@@ -174,13 +175,13 @@ impl CObjectTrait for PU_FeatherPowerup {
     fn as_io_moving_object(&mut self) -> Option<&mut dyn IO_MovingObjectTrait> {
         Some(self)
     }
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         pu_feather_powerup_draw(self)
     }
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         pu_feather_powerup_update(self)
     }
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         pu_feather_powerup_collide_player(self, player)
     }
 }

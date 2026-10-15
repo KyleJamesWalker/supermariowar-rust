@@ -30,16 +30,16 @@ impl CObjectTrait for PU_Tanooki {
     fn as_io_moving_object(&mut self) -> Option<&mut dyn IO_MovingObjectTrait> {
         Some(self)
     }
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         mo_powerup_draw(self)
     }
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         mo_powerup_update(self)
     }
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         let mut player = player;
         if self.state > 0 {
-            player.set_powerup(game().get(), 9);
+            player.set_powerup(g, 9);
             self.dead = true;
         }
 

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_SuperFireball.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
@@ -79,7 +80,7 @@ impl CObjectTrait for MO_SuperFireball {
         Some(self)
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         self.animate();
 
         let fx = self.fx + self.velx;
@@ -99,22 +100,22 @@ impl CObjectTrait for MO_SuperFireball {
             self.ttl -= 1;
             self.ttl <= 0
         } {
-            removeifprojectile(game().get(), self.as_mo_ptr(), false, true);
+            removeifprojectile(g, self.as_mo_ptr(), false, true);
         }
     }
 
-    fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         unsafe {
             if !player.is_shielded() {
                 self.dead = true;
-                game().eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
                     (self.ix as i32 + (self.iw as i32 >> 1) - 16) as i16,
                     (self.iy as i32 + (self.ih as i32 >> 1) - 16) as i16,
                     3,
                     4,
                 ));
-                if_sound_on_play(game().get(), &mut game().rm.sfx_hit);
+                if_sound_on_play(g, &mut game().rm.sfx_hit);
 
                 if !player.is_invincible() && !player.shyguy {
                     return player.kill_player_map_hazard(false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
@@ -125,8 +126,8 @@ impl CObjectTrait for MO_SuperFireball {
         false
     }
 
-    fn draw(&mut self) {
-        self.spr.draw_src(game().get(), 
+    fn draw(&mut self, g: &mut Game) {
+        self.spr.draw_src(g, 
             self.ix as i32 - self.collisionOffsetX as i32,
             self.iy as i32 - self.collisionOffsetY as i32,
             &SDL_Rect { x: self.drawframe as i32, y: self.colorOffset as i32 + self.directionOffset as i32, w: self.iw as i32, h: self.ih as i32 },

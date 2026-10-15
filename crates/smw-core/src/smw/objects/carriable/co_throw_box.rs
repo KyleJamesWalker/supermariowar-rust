@@ -69,7 +69,7 @@ impl CO_ThrowBox {
 
     pub fn kill_player(&mut self, player: Ptr<CPlayer>) -> bool {
         if player.is_invincible() || player.shyguy {
-            self.die();
+            self.die(game().get());
             return false;
         }
 
@@ -77,7 +77,7 @@ impl CO_ThrowBox {
             return false;
         }
 
-        self.die();
+        self.die(game().get());
 
         // Find the player that shot this shell so we can attribute a kill
         player_killed_player(self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::ThrowBlock, false, false);
@@ -137,12 +137,12 @@ impl CObjectTrait for CO_ThrowBox {
         Some(self)
     }
 
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         let mut player = player;
         // Kill the player if it is moving
 
         if self.frozen {
-            self.shatter_die(game().get());
+            self.shatter_die(g);
             return false;
         }
 
@@ -172,21 +172,21 @@ impl CObjectTrait for CO_ThrowBox {
         false
     }
 
-    fn collide_object(&mut self, object: Ptr<dyn IO_MovingObjectTrait>) {
+    fn collide_object(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) {
         let mut object = object;
         if object.is_dead() {
             return;
         }
 
-        removeifprojectile(game().get(), object, false, false);
+        removeifprojectile(g, object, false, false);
 
         let r#type = object.get_moving_object_type();
 
         if r#type == movingobject_throwbox {
             let mut r#box: Ptr<CO_ThrowBox> = Ptr::from_mut(object.as_any().downcast_mut::<CO_ThrowBox>().unwrap());
             if self.frozen || r#box.frozen || self.has_kill_velocity() || r#box.has_kill_velocity() {
-                self.die();
-                r#box.die();
+                self.die(g);
+                r#box.die(g);
             }
         } else if r#type == movingobject_explosion
             || r#type == movingobject_fireball
@@ -195,7 +195,7 @@ impl CObjectTrait for CO_ThrowBox {
             || r#type == movingobject_superfireball
             || r#type == movingobject_sledgehammer
         {
-            self.die();
+            self.die(g);
         } else if r#type == movingobject_iceblast {
             self.velx = 0.0;
             self.animationspeed = 0;
@@ -204,8 +204,8 @@ impl CObjectTrait for CO_ThrowBox {
             self.frozentimer = 300;
 
             unsafe {
-                game().eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
                     (self.ix as i32 - self.collisionOffsetX as i32) as i16,
                     (self.iy as i32 - self.collisionOffsetY as i32) as i16,
                     3,
@@ -215,7 +215,7 @@ impl CObjectTrait for CO_ThrowBox {
         }
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         if self.frozen {
             self.frozentimer -= 1;
             if self.frozentimer <= 0 {
@@ -225,8 +225,8 @@ impl CObjectTrait for CO_ThrowBox {
                 self.animationspeed = self.frozenanimationspeed;
 
                 unsafe {
-                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
+                    g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                        Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
                         (self.ix as i32 - self.collisionOffsetX as i32) as i16,
                         (self.iy as i32 - self.collisionOffsetY as i32) as i16,
                         3,
@@ -240,21 +240,21 @@ impl CObjectTrait for CO_ThrowBox {
         self.fOldY = self.fy;
 
         if !self.owner.is_null() {
-            self.move_to_owner();
+            self.move_to_owner(g);
             self.inair = true;
         } else {
             self.applyfriction();
-            io_moving_object_collision_detection_map(game().get(), self);
+            io_moving_object_collision_detection_map(g, self);
         }
 
         self.animate();
 
         unsafe {
-            if game().game_values.spotlights && self.has_kill_velocity() {
+            if g.game_values.spotlights && self.has_kill_velocity() {
                 let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
                 let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
                 if self.sSpotlight.is_null() {
-                    self.sSpotlight = game().spotlightManager.add_spotlight(game().get(), x, y, 3);
+                    self.sSpotlight = game().spotlightManager.add_spotlight(g, x, y, 3);
                 }
 
                 if !self.sSpotlight.is_null() {
@@ -264,19 +264,19 @@ impl CObjectTrait for CO_ThrowBox {
         }
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         let x = self.ix as i32 - self.collisionOffsetX as i32;
         let y = self.iy as i32 - self.collisionOffsetY as i32;
         let src = SDL_Rect { x: self.drawframe as i32, y: 0, w: self.iw as i32, h: self.ih as i32 };
         if !self.owner.is_null() && self.owner.iswarping() {
             let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32) };
-            self.spr.draw_clip(game().get(), x, y, &src, edge, self.owner.get_warp_plane() as i32);
+            self.spr.draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);
         } else {
-            self.spr.draw_src(game().get(), x, y, &src);
+            self.spr.draw_src(g, x, y, &src);
         }
 
         if self.frozen {
-            unsafe { game().rm.spr_iceblock.draw_src(game().get(), x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 }) };
+            unsafe { game().rm.spr_iceblock.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 }) };
         }
     }
 }
@@ -287,9 +287,9 @@ impl IO_MovingObjectTrait for CO_ThrowBox {
         Some(self)
     }
 
-    fn die(&mut self) {
+    fn die(&mut self, g: &mut Game) {
         if self.frozen {
-            self.shatter_die(game().get());
+            self.shatter_die(g);
             return;
         }
 
@@ -298,41 +298,41 @@ impl IO_MovingObjectTrait for CO_ThrowBox {
         }
 
         unsafe {
-            let spr = Ptr::from_mut(&mut game().rm.spr_brokenyellowblock);
+            let spr = Ptr::from_mut(&mut g.rm.spr_brokenyellowblock);
             let (ix, iy) = (self.ix as i32, self.iy as i32);
-            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, iy as i16, -2.2, -10.0, 4, 2, 0, 0, 16, 16));
-            game().eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, iy as i16, 2.2, -10.0, 4, 2, 0, 0, 16, 16));
-            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, (iy + 16) as i16, -2.2, -5.5, 4, 2, 0, 0, 16, 16));
-            game().eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, (iy + 16) as i16, 2.2, -5.5, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, iy as i16, -2.2, -10.0, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, iy as i16, 2.2, -10.0, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, (iy + 16) as i16, -2.2, -5.5, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, (iy + 16) as i16, 2.2, -5.5, 4, 2, 0, 0, 16, 16));
         }
 
-        self.die_helper(game().get());
+        self.die_helper(g);
     }
 
-    fn side_bounce(&mut self, _fRightSide: bool) {
+    fn side_bounce(&mut self, g: &mut Game, _fRightSide: bool) {
         if self.dead {
             return;
         }
 
         if self.has_kill_velocity() {
             if self.frozen {
-                self.shatter_die(game().get());
+                self.shatter_die(g);
             } else {
-                self.die();
+                self.die(g);
             }
         }
     }
 
-    fn bottom_bounce(&mut self) -> f32 {
+    fn bottom_bounce(&mut self, g: &mut Game) -> f32 {
         if self.dead {
             return self.bounce;
         }
 
         if self.has_kill_velocity() {
             if self.frozen {
-                self.shatter_die(game().get());
+                self.shatter_die(g);
             } else {
-                self.die();
+                self.die(g);
             }
         }
 
@@ -343,29 +343,29 @@ impl IO_MovingObjectTrait for CO_ThrowBox {
 impl MO_CarriedObjectTrait for CO_ThrowBox {
     crate::impl_carried_object_plumbing!();
 
-    fn drop(&mut self) {
+    fn drop(&mut self, g: &mut Game) {
         if !self.owner.is_null() {
             self.iPlayerID = self.owner.globalID;
             self.iTeamID = self.owner.teamID;
         }
 
-        if io_moving_object_collision_detection_checksides(game().get(), self) {
-            self.die();
+        if io_moving_object_collision_detection_checksides(g, self) {
+            self.die(g);
         } else {
             mo_carried_object_drop(self);
         }
     }
 
-    fn kick(&mut self) {
+    fn kick(&mut self, g: &mut Game) {
         if !self.owner.is_null() {
             self.iPlayerID = self.owner.globalID;
             self.iTeamID = self.owner.teamID;
         }
 
-        if io_moving_object_collision_detection_checksides(game().get(), self) {
-            self.die();
+        if io_moving_object_collision_detection_checksides(g, self) {
+            self.die(g);
         } else {
-            mo_carried_object_kick(game().get(), self);
+            mo_carried_object_kick(g, self);
         }
     }
 }
