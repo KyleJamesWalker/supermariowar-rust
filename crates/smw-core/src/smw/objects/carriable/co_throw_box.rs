@@ -10,7 +10,6 @@ use crate::common::object_base::CObjectTrait;
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::{spotlightManager};
 use crate::smw::objectgame::{createpowerup, removeifprojectile};
 use crate::smw::objects::moving::mo_carried_object::{mo_carried_object_drop, mo_carried_object_kick, MO_CarriedObject, MO_CarriedObjectTrait};
 use crate::smw::objects::moving::moving_object::{io_moving_object_collision_detection_checksides, io_moving_object_collision_detection_map, IO_MovingObjectTrait};
@@ -254,7 +253,7 @@ impl CObjectTrait for CO_ThrowBox {
                 let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
                 let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
                 if self.sSpotlight.is_null() {
-                    self.sSpotlight = spotlightManager.add_spotlight(x, y, 3);
+                    self.sSpotlight = game().spotlightManager.add_spotlight(x, y, 3);
                 }
 
                 if !self.sSpotlight.is_null() {

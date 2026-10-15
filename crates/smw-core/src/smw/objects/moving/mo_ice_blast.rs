@@ -8,7 +8,6 @@ use crate::common::moving_object_types::*;
 use crate::common::object_base::CObjectTrait;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::spotlightManager;
 use crate::smw::objectgame::removeifprojectile;
 use crate::smw::objects::moving::moving_object::{io_moving_object_draw, IO_MovingObject, IO_MovingObjectTrait};
 use crate::smw::player::CPlayer;
@@ -92,7 +91,7 @@ impl CObjectTrait for MO_IceBlast {
                 let sx = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
                 let sy = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
                 if self.sSpotlight.is_null() {
-                    self.sSpotlight = spotlightManager.add_spotlight(sx, sy, 3);
+                    self.sSpotlight = game().spotlightManager.add_spotlight(sx, sy, 3);
                 }
 
                 if !self.sSpotlight.is_null() {

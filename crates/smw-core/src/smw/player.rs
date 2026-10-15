@@ -28,8 +28,7 @@ use crate::smw::gamemodes::chicken::CGM_Chicken;
 use crate::smw::gamemodes::shy_guy_tag::CGM_ShyGuyTag;
 use crate::smw::gamemodes::star::CGM_Star;
 use crate::smw::gamemodes::tag::CGM_Tag;
-use crate::smw::gs_gameplay::{g_iWinningPlayer, spotlightManager, swap_players};
-use crate::smw::main::{g_iSwirlSpawnLocations};
+use crate::smw::gs_gameplay::swap_players;
 use crate::smw::net_random::{self, Ev};
 use crate::smw::objectgame::{check_secret, PowerupType};
 use crate::smw::objects::carriable::co_bomb::CO_Bomb;
@@ -935,8 +934,8 @@ impl CPlayer {
                         for iSwirl in 0..4usize {
                             game().eyecandy[2].emplace(EC_SingleAnimation::new_rect(
                                 Ptr::from_mut(&mut game().rm.spr_spawnsmoke),
-                                (ixoffset as i32 + g_iSwirlSpawnLocations[iSwirl][0][swirlindex] as i32) as i16,
-                                (iyoffset as i32 + g_iSwirlSpawnLocations[iSwirl][1][swirlindex] as i32) as i16,
+                                (ixoffset as i32 + game().g_iSwirlSpawnLocations[iSwirl][0][swirlindex] as i32) as i16,
+                                (iyoffset as i32 + game().g_iSwirlSpawnLocations[iSwirl][1][swirlindex] as i32) as i16,
                                 4,
                                 4,
                                 0,
@@ -2045,11 +2044,11 @@ impl CPlayer {
             //If the game mode didn't say to remove the team from the game, then respawn the player
             if !fTeamRemoved {
                 if game().game_values.screencrunch && !game().game_values.spinscreen {
-                    y_shake = (y_shake as i32 + CRUNCHAMOUNT) as i16;
+                    game().y_shake = (game().y_shake as i32 + CRUNCHAMOUNT) as i16;
                 }
 
-                if y_shake as i32 > CRUNCHMAX {
-                    y_shake = CRUNCHMAX as i16;
+                if game().y_shake as i32 > CRUNCHMAX {
+                    game().y_shake = CRUNCHMAX as i16;
                 }
 
                 self.setup_new_player();
@@ -2362,7 +2361,7 @@ impl CPlayer {
         unsafe {
             if game().game_values.spotlights && self.state != PlayerState::Dead {
                 if self.sSpotlight.is_null() {
-                    self.sSpotlight = spotlightManager.add_spotlight((self.ix as i32 + HALFPW) as i16, (self.iy as i32 + HALFPH) as i16, 7);
+                    self.sSpotlight = game().spotlightManager.add_spotlight((self.ix as i32 + HALFPW) as i16, (self.iy as i32 + HALFPH) as i16, 7);
                 }
 
                 if !self.sSpotlight.is_null() {
@@ -2398,7 +2397,7 @@ impl CPlayer {
 
     pub fn draw_winner_crown(&mut self) {
         unsafe {
-            if game().game_values.showwinningcrown && g_iWinningPlayer == self.teamID {
+            if game().game_values.showwinningcrown && game().g_iWinningPlayer == self.teamID {
                 let x = self.ix as i32 + HALFPW - if self.is_facing_right() { 4 } else { 10 };
                 let y = self.iy as i32 - 10 - if self.kuriboshoe.is_on() { 16 } else { 0 };
                 if self.iswarping() {

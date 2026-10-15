@@ -13,7 +13,7 @@ use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
 use crate::common::tile_types::*;
 use crate::globals::{Aliased, Ptr};
-use crate::smw::main::{blitdest, screen, x_shake, y_shake};
+use crate::smw::main::{blitdest, screen};
 use crate::smw::objectgame::removeifprojectile;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::player::CPlayer;
@@ -252,8 +252,8 @@ impl MovingPlatform {
 
     pub fn draw(&mut self) {
         unsafe {
-            self.rDstRect.x = self.ix as i32 - self.iHalfWidth as i32 + x_shake as i32;
-            self.rDstRect.y = self.iy as i32 - self.iHalfHeight as i32 + y_shake as i32;
+            self.rDstRect.x = self.ix as i32 - self.iHalfWidth as i32 + game().x_shake as i32;
+            self.rDstRect.y = self.iy as i32 - self.iHalfHeight as i32 + game().y_shake as i32;
             self.rDstRect.w = self.iWidth as i32;
             self.rDstRect.h = self.iHeight as i32;
 

@@ -1,6 +1,6 @@
 //! The game's state as one value (docs/ARCHITECTURE_V2.md, Step 2: globals into a `Game` struct).
 
-use crate::common::eyecandy::CEyecandyContainer;
+use crate::common::eyecandy::{CEyecandyContainer, SpotlightManager};
 use crate::common::game_mode::{CGameModeTrait, GAMEMODE_LAST};
 use crate::common::file_list::{AnnouncerList, FiltersList, GraphicsList, MusicList, SkinList, SoundsList, TourList, WorldList, WorldMusicList};
 use crate::common::map::CMap;
@@ -56,6 +56,13 @@ pub struct Game {
     pub backup_playercontrol: [i16; 4],
     pub net_outcomes: NetOutcomesState,
     pub net_random: NetRandomState,
+    pub x_shake: i16,
+    pub y_shake: i16,
+    pub shakeleft: bool,
+    /// Locations for swirl spawn effects.
+    pub g_iSwirlSpawnLocations: [[[i16; 25]; 2]; 4],
+    pub spotlightManager: Global<SpotlightManager>,
+    pub g_iWinningPlayer: i16,
 }
 
 impl Game {
@@ -96,6 +103,12 @@ impl Game {
             backup_playercontrol: [0; 4],
             net_outcomes: NetOutcomesState::new(),
             net_random: NetRandomState::new(),
+            x_shake: 0,
+            y_shake: 0,
+            shakeleft: false,
+            g_iSwirlSpawnLocations: [[[0; 25]; 2]; 4],
+            spotlightManager: Global::uninit(),
+            g_iWinningPlayer: 0,
         }
     }
 }

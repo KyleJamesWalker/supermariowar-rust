@@ -361,7 +361,7 @@ pub fn gfx_adjusthiddenrects(src: &mut SDL_Rect, dst: &mut SDL_Rect, edge: ClipE
                     let diff = threshold - dst.y;
                     src.y += diff;
                     src.h -= diff;
-                    dst.y = threshold + y_shake as i32;
+                    dst.y = threshold + game().y_shake as i32;
                     dst.h = src.h;
                 }
             }
@@ -394,7 +394,7 @@ pub fn gfx_adjusthiddenrects(src: &mut SDL_Rect, dst: &mut SDL_Rect, edge: ClipE
                     let diff = threshold - dst.x;
                     src.x += diff;
                     src.w -= diff;
-                    dst.x = threshold + x_shake as i32;
+                    dst.x = threshold + game().x_shake as i32;
                     dst.w = src.w;
                 }
             }
