@@ -25,11 +25,9 @@ pub const WORLD_START_SPRITE_OFFSET: i16 = 608;
 pub const WORLD_FOREGROUND_SPRITE_OFFSET: i16 = 700;
 pub const WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET: i16 = 900;
 
-pub static mut g_worldmap: Global<WorldMap> = Global::uninit();
-
 /// Static-storage constructor of `WorldMap g_worldmap(0, 0);` (needs `game_values` constructed first).
 pub fn init_globals() {
-    unsafe { g_worldmap.init(WorldMap::new(0, 0)) };
+    unsafe { game().g_worldmap.init(WorldMap::new(0, 0)) };
 }
 
 fn pop_next<'a>(list: &mut VecDeque<&'a str>) -> &'a str {
@@ -403,13 +401,13 @@ impl WorldVehicle {
 
         unsafe {
             let currentTile = self.currentTile;
-            let tile: WorldMapTile = *g_worldmap.tiles.at(currentTile.x as usize, currentTile.y as usize);
-            let iPlayerCurrentTile = g_worldmap.get_player_current_tile();
+            let tile: WorldMapTile = *game().g_worldmap.tiles.at(currentTile.x as usize, currentTile.y as usize);
+            let iPlayerCurrentTile = game().g_worldmap.get_player_current_tile();
 
             let n = self.iNumMoves;
             self.iNumMoves -= 1;
             if n <= 0 {
-                if tile.iType == 0 && iPlayerCurrentTile != currentTile && g_worldmap.num_vehicles_in_tile(currentTile) <= 1 {
+                if tile.iType == 0 && iPlayerCurrentTile != currentTile && game().g_worldmap.num_vehicles_in_tile(currentTile) <= 1 {
                     return;
                 }
             }
@@ -428,13 +426,13 @@ impl WorldVehicle {
             for iDirection in 0..4i16 {
                 let mut fIsDoor = false;
                 if iDirection == 0 {
-                    fIsDoor = g_worldmap.is_door(cx, cy - 1) || (iBoundary != 0 && g_worldmap.get_vehicle_boundary(cx, cy - 1) == iBoundary);
+                    fIsDoor = game().g_worldmap.is_door(cx, cy - 1) || (iBoundary != 0 && game().g_worldmap.get_vehicle_boundary(cx, cy - 1) == iBoundary);
                 } else if iDirection == 1 {
-                    fIsDoor = g_worldmap.is_door(cx, cy + 1) || (iBoundary != 0 && g_worldmap.get_vehicle_boundary(cx, cy + 1) == iBoundary);
+                    fIsDoor = game().g_worldmap.is_door(cx, cy + 1) || (iBoundary != 0 && game().g_worldmap.get_vehicle_boundary(cx, cy + 1) == iBoundary);
                 } else if iDirection == 2 {
-                    fIsDoor = g_worldmap.is_door(cx - 1, cy) || (iBoundary != 0 && g_worldmap.get_vehicle_boundary(cx - 1, cy) == iBoundary);
+                    fIsDoor = game().g_worldmap.is_door(cx - 1, cy) || (iBoundary != 0 && game().g_worldmap.get_vehicle_boundary(cx - 1, cy) == iBoundary);
                 } else if iDirection == 3 {
-                    fIsDoor = g_worldmap.is_door(cx + 1, cy) || (iBoundary != 0 && g_worldmap.get_vehicle_boundary(cx + 1, cy) == iBoundary);
+                    fIsDoor = game().g_worldmap.is_door(cx + 1, cy) || (iBoundary != 0 && game().g_worldmap.get_vehicle_boundary(cx + 1, cy) == iBoundary);
                 }
 
                 if tile.fConnection[iDirection as usize] && !fIsDoor {
@@ -454,7 +452,7 @@ impl WorldVehicle {
         let fMoveDone = self.world_moving_object.update();
 
         if fMoveDone {
-            if self.currentTile == unsafe { g_worldmap.get_player_current_tile() } {
+            if self.currentTile == unsafe { game().g_worldmap.get_player_current_tile() } {
                 return true;
             }
 

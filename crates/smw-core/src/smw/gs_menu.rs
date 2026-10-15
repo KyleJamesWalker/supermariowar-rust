@@ -20,7 +20,7 @@ use crate::common::version::Version;
 use crate::common::world_tour_stop::{parse_tour_stop_line, reset_tour_stops, Strtok, TourStop};
 use crate::globals::*;
 use crate::common::eyecandy::EC_Announcement;
-use crate::smw::world::{g_worldmap, WorldMap};
+use crate::smw::world::WorldMap;
 
 use crate::smw::game_state::{GameState, GameStateManager};
 use crate::smw::gs_gameplay::{lookup_team_id, GameplayState};
@@ -587,11 +587,11 @@ impl MenuState {
                     let this = Ptr::from_mut(self);
                     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                         let mut this = this;
-                        g_worldmap.init(WorldMap::new_path(&game().worldlist.at(game().game_values.worldindex as usize).to_string_lossy(), TILESIZE as i16));
+                        game().g_worldmap.init(WorldMap::new_path(&game().worldlist.at(game().game_values.worldindex as usize).to_string_lossy(), TILESIZE as i16));
 
                         this.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(game().score_cnt, 0, Ptr::from_mut(&mut game().rm.spr_tour_markers));
 
-                        g_worldmap.set_initial_powerups();
+                        game().g_worldmap.set_initial_powerups();
 
                         //If a player had a stored powerup from another game, add it to their inventory
                         for iPlayer in 0..4i16 {
@@ -1833,7 +1833,7 @@ impl GameState for MenuState {
                     self.mCurrentMenu.reset_menu();
 
                     game().rm.backgroundmusic[2].stop();
-                    let worldMusic = game().worldmusiclist.current_music(g_worldmap.get_music_category(), g_worldmap.get_world_name()).clone();
+                    let worldMusic = game().worldmusiclist.current_music(game().g_worldmap.get_music_category(), game().g_worldmap.get_world_name()).clone();
                     game().rm.backgroundmusic[5] = sfxMusic::from_file(&worldMusic).unwrap_or_else(|e| std::panic::panic_any(e));
                     game().rm.backgroundmusic[5].play(false, false);
                     self.fNeedMenuMusicReset = true;

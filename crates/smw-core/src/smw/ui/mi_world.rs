@@ -12,7 +12,7 @@ use crate::common::ui::menu_code::*;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 use crate::smw::gs_gameplay::lookup_team_id;
-use crate::smw::world::{g_worldmap, WorldMapTile, WORLD_BRIDGE_SPRITE_OFFSET};
+use crate::smw::world::{WorldMapTile, WORLD_BRIDGE_SPRITE_OFFSET};
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::trig::{cosf, sinf};
 use sdl2::sys::{SDL_Rect, SDL_Surface};
@@ -172,7 +172,7 @@ impl MI_World {
     pub fn init(&mut self) {
         unsafe {
             self.iCycleIndex = 0;
-            g_worldmap.reset_draw_cycle();
+            game().g_worldmap.reset_draw_cycle();
 
             self.iAnimationFrame = 0;
             self.iDrawFullRefresh = 0;
@@ -200,8 +200,8 @@ impl MI_World {
             self.set_map_offset();
             self.reposition_map_image();
 
-            g_worldmap.draw_map_to_surface(-1, true, self.map_sprites[0].get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
-            g_worldmap.draw_map_to_surface(-1, true, self.map_sprites[1].get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
+            game().g_worldmap.draw_map_to_surface(-1, true, self.map_sprites[0].get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
+            game().g_worldmap.draw_map_to_surface(-1, true, self.map_sprites[1].get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
 
             self.dTeleportStarRadius = 300.0f32;
             self.dTeleportStarAngle = 0.0f32;
@@ -217,20 +217,20 @@ impl MI_World {
             self.iPressSelectTimer = 0;
             self.pressSelectKeys = Ptr::null();
 
-            self.iDrawWidth = if g_worldmap.iWidth < 20 { g_worldmap.iWidth << 5 } else { App::screenWidth as i16 };
-            self.iDrawHeight = if g_worldmap.iHeight < 15 { g_worldmap.iHeight << 5 } else { App::screenHeight as i16 };
+            self.iDrawWidth = if game().g_worldmap.iWidth < 20 { game().g_worldmap.iWidth << 5 } else { App::screenWidth as i16 };
+            self.iDrawHeight = if game().g_worldmap.iHeight < 15 { game().g_worldmap.iHeight << 5 } else { App::screenHeight as i16 };
 
             self.iSrcOffsetX = 0;
             self.iSrcOffsetY = 0;
             self.iDstOffsetX = 0;
             self.iDstOffsetY = 0;
 
-            if g_worldmap.iWidth < 20 {
-                self.iDstOffsetX = (20 - g_worldmap.iWidth) << 4;
+            if game().g_worldmap.iWidth < 20 {
+                self.iDstOffsetX = (20 - game().g_worldmap.iWidth) << 4;
             }
 
-            if g_worldmap.iHeight < 15 {
-                self.iDstOffsetY = (15 - g_worldmap.iHeight) << 4;
+            if game().g_worldmap.iHeight < 15 {
+                self.iDstOffsetY = (15 - game().g_worldmap.iHeight) << 4;
             }
         }
     }
@@ -242,7 +242,7 @@ impl MI_World {
             let ct = self.iControllingTeam as usize;
             let r = RANDOM_INT(game().game_values.teamcounts[ct] as i32);
             self.iControllingPlayerId = game().game_values.teamids[ct][r as usize];
-            g_worldmap.set_player_sprite(self.iControllingPlayerId);
+            game().g_worldmap.set_player_sprite(self.iControllingPlayerId);
 
             self.fNoInterestingMoves = false;
         }
@@ -284,13 +284,13 @@ impl MI_World {
 
             let wt = iWinningTeam as usize;
             if self.iVehicleId >= 0 {
-                let add = g_worldmap.get_vehicle_stage_score(self.iVehicleId) as i32 * iBonusMult as i32 + iBonusAdd as i32;
+                let add = game().g_worldmap.get_vehicle_stage_score(self.iVehicleId) as i32 * iBonusMult as i32 + iBonusAdd as i32;
                 game().game_values.tournament_scores[wt].total = (game().game_values.tournament_scores[wt].total as i32 + add) as i16;
-                g_worldmap.remove_vehicle(self.iVehicleId);
+                game().g_worldmap.remove_vehicle(self.iVehicleId);
             } else {
-                let iPlayerCurrentTile = g_worldmap.get_player_current_tile();
+                let iPlayerCurrentTile = game().g_worldmap.get_player_current_tile();
 
-                let tile = g_worldmap.tiles.at_mut(iPlayerCurrentTile.x as usize, iPlayerCurrentTile.y as usize);
+                let tile = game().get().g_worldmap.tiles.at_mut(iPlayerCurrentTile.x as usize, iPlayerCurrentTile.y as usize);
                 //tile->iForegroundSprite = game_values.colorids[game_values.teamids[iWinningTeam][0]] + WORLD_WINNING_TEAM_SPRITE_OFFSET; //Update with team completed sprite
                 //tile->fAnimated = false; //Update with team completed sprite
                 tile.iCompleted = game().game_values.colorids[game().game_values.teamids[wt][0] as usize];
@@ -318,15 +318,15 @@ impl MI_World {
             if self.iSleepTurns > 0 {
                 self.iSleepTurns -= 1;
                 if self.iSleepTurns <= 0 {
-                    game().rm.backgroundmusic[5] = sfxMusic::from_file(game().worldmusiclist.current_music(g_worldmap.get_music_category(), g_worldmap.get_world_name()))
+                    game().rm.backgroundmusic[5] = sfxMusic::from_file(game().worldmusiclist.current_music(game().g_worldmap.get_music_category(), game().g_worldmap.get_world_name()))
                         .unwrap_or_else(|e| std::panic::panic_any(e));
                     game().rm.backgroundmusic[5].play(false, false);
                 }
             } else {
-                g_worldmap.move_vehicles();
+                game().g_worldmap.move_vehicles();
             }
 
-            g_worldmap.move_bridges();
+            game().g_worldmap.move_bridges();
 
             //Update the map with the flipped bridges
             //TODO:: Need to update just bridge tiles across both surfaces
@@ -338,7 +338,7 @@ impl MI_World {
     fn update_map_surface(&mut self, iCycleIndex: i16) {
         if iCycleIndex >= 0 && iCycleIndex <= 15 {
             unsafe {
-                g_worldmap.draw_map_to_surface(
+                game().g_worldmap.draw_map_to_surface(
                     iCycleIndex,
                     self.iDrawFullRefresh > 0,
                     self.map_sprites[(1 - self.iCurrentSurfaceIndex) as usize].get_surface(),
@@ -352,13 +352,13 @@ impl MI_World {
 
     fn set_map_offset(&mut self) {
         unsafe {
-            let iPlayerDrawPos = g_worldmap.get_player_position();
-            let w32 = (g_worldmap.iWidth as i32) << 5;
-            let h32 = (g_worldmap.iHeight as i32) << 5;
+            let iPlayerDrawPos = game().g_worldmap.get_player_position();
+            let w32 = (game().g_worldmap.iWidth as i32) << 5;
+            let h32 = (game().g_worldmap.iHeight as i32) << 5;
             let px = iPlayerDrawPos.x as i32;
             let py = iPlayerDrawPos.y as i32;
 
-            if g_worldmap.iWidth > 20 {
+            if game().g_worldmap.iWidth > 20 {
                 if px < w32 - 336 && px > 304 {
                     self.iMapOffsetX = (304 - px) as i16;
                 } else if px <= 304 {
@@ -370,7 +370,7 @@ impl MI_World {
                 self.iMapOffsetX = ((App::screenWidth - w32) >> 1) as i16;
             }
 
-            if g_worldmap.iHeight > 15 {
+            if game().g_worldmap.iHeight > 15 {
                 if py < h32 - 256 && py > 224 {
                     self.iMapOffsetY = (224 - py) as i16;
                 } else if py <= 224 {
@@ -386,23 +386,23 @@ impl MI_World {
 
     fn reposition_map_image(&mut self) {
         unsafe {
-            let iPlayerCurrentTile = g_worldmap.get_player_current_tile();
+            let iPlayerCurrentTile = game().g_worldmap.get_player_current_tile();
 
-            if g_worldmap.iWidth > 24 {
+            if game().g_worldmap.iWidth > 24 {
                 self.iMapDrawOffsetCol = iPlayerCurrentTile.x - 11;
                 if self.iMapDrawOffsetCol < 0 {
                     self.iMapDrawOffsetCol = 0;
-                } else if self.iMapDrawOffsetCol > g_worldmap.iWidth - 24 {
-                    self.iMapDrawOffsetCol = g_worldmap.iWidth - 24;
+                } else if self.iMapDrawOffsetCol > game().g_worldmap.iWidth - 24 {
+                    self.iMapDrawOffsetCol = game().g_worldmap.iWidth - 24;
                 }
             }
 
-            if g_worldmap.iHeight > 19 {
+            if game().g_worldmap.iHeight > 19 {
                 self.iMapDrawOffsetRow = iPlayerCurrentTile.y - 9;
                 if self.iMapDrawOffsetRow < 0 {
                     self.iMapDrawOffsetRow = 0;
-                } else if self.iMapDrawOffsetRow > g_worldmap.iHeight - 19 {
-                    self.iMapDrawOffsetRow = g_worldmap.iHeight - 19;
+                } else if self.iMapDrawOffsetRow > game().g_worldmap.iHeight - 19 {
+                    self.iMapDrawOffsetRow = game().g_worldmap.iHeight - 19;
                 }
             }
 
@@ -416,30 +416,30 @@ impl MI_World {
             self.iNextMapDrawOffsetCol = self.iMapDrawOffsetCol;
             self.iNextMapDrawOffsetRow = self.iMapDrawOffsetRow;
 
-            let iPlayerDestTile = g_worldmap.get_player_dest_tile();
+            let iPlayerDestTile = game().g_worldmap.get_player_dest_tile();
 
-            if g_worldmap.iWidth > 24 {
+            if game().g_worldmap.iWidth > 24 {
                 self.iNextMapDrawOffsetCol = iPlayerDestTile.x - 11;
                 if self.iNextMapDrawOffsetCol < 0 {
                     self.iNextMapDrawOffsetCol = 0;
-                } else if self.iNextMapDrawOffsetCol > g_worldmap.iWidth - 24 {
-                    self.iNextMapDrawOffsetCol = g_worldmap.iWidth - 24;
+                } else if self.iNextMapDrawOffsetCol > game().g_worldmap.iWidth - 24 {
+                    self.iNextMapDrawOffsetCol = game().g_worldmap.iWidth - 24;
                 }
             }
 
-            if g_worldmap.iHeight > 19 {
+            if game().g_worldmap.iHeight > 19 {
                 self.iNextMapDrawOffsetRow = iPlayerDestTile.y - 9;
                 if self.iNextMapDrawOffsetRow < 0 {
                     self.iNextMapDrawOffsetRow = 0;
-                } else if self.iNextMapDrawOffsetRow > g_worldmap.iHeight - 19 {
-                    self.iNextMapDrawOffsetRow = g_worldmap.iHeight - 19;
+                } else if self.iNextMapDrawOffsetRow > game().g_worldmap.iHeight - 19 {
+                    self.iNextMapDrawOffsetRow = game().g_worldmap.iHeight - 19;
                 }
             }
 
             //Reset the draw cycle if the map offset col/row is going to move
             if self.iMapDrawOffsetCol != self.iNextMapDrawOffsetCol || self.iMapDrawOffsetRow != self.iNextMapDrawOffsetRow {
                 self.iCycleIndex = 0;
-                g_worldmap.reset_draw_cycle();
+                game().g_worldmap.reset_draw_cycle();
                 self.iDrawFullRefresh = 1;
             }
         }
@@ -448,14 +448,14 @@ impl MI_World {
     /// The paired `g_worldmap.UpdateTile(map_sprites[0..2], ...)` calls.
     fn update_tile_both(&mut self, col: i16, row: i16) {
         unsafe {
-            g_worldmap.update_tile(self.map_sprites[0].get_surface(), col, row, self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
-            g_worldmap.update_tile(self.map_sprites[1].get_surface(), col, row, self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
+            game().g_worldmap.update_tile(self.map_sprites[0].get_surface(), col, row, self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
+            game().g_worldmap.update_tile(self.map_sprites[1].get_surface(), col, row, self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
         }
     }
 
     fn use_powerup(&mut self, iPlayer: i16, iTeam: i16, iIndex: i16, fPopupIsUp: bool) -> bool {
         unsafe {
-            let iPlayerCurrentTile = g_worldmap.get_player_current_tile();
+            let iPlayerCurrentTile = game().g_worldmap.get_player_current_tile();
 
             let t = iTeam as usize;
             let iPowerup = game().game_values.worldpowerups[t][iIndex as usize];
@@ -502,8 +502,8 @@ impl MI_World {
                 }
             } else if p == NUM_POWERUPS + 3 && self.iState == -1 {
                 //Advance Turn
-                let iDest = g_worldmap.get_player_dest_tile();
-                let iSprite = g_worldmap.tiles.at(iDest.x as usize, iDest.y as usize).iForegroundSprite;
+                let iDest = game().g_worldmap.get_player_dest_tile();
+                let iSprite = game().g_worldmap.tiles.at(iDest.x as usize, iDest.y as usize).iForegroundSprite;
 
                 if iSprite < WORLD_BRIDGE_SPRITE_OFFSET || iSprite > WORLD_BRIDGE_SPRITE_OFFSET + 3 {
                     self.advance_turn();
@@ -512,8 +512,8 @@ impl MI_World {
                 }
             } else if p == NUM_POWERUPS + 4 && self.iState == -1 {
                 //Revive stage
-                let iDest = g_worldmap.get_player_dest_tile();
-                let tile = g_worldmap.tiles.at_mut(iDest.x as usize, iDest.y as usize);
+                let iDest = game().g_worldmap.get_player_dest_tile();
+                let tile = game().get().g_worldmap.tiles.at_mut(iDest.x as usize, iDest.y as usize);
 
                 if tile.iType >= 6 && tile.iCompleted >= 0 {
                     tile.iCompleted = -2;
@@ -534,7 +534,7 @@ impl MI_World {
                 }
             } else if p >= NUM_POWERUPS + 5 && p <= NUM_POWERUPS + 8 && self.iState == -1 {
                 //Door Keys
-                let iDoorsOpened = g_worldmap.use_key((p - NUM_POWERUPS - 5) as i16, iPlayerCurrentTile.x, iPlayerCurrentTile.y, self.fUsingCloud);
+                let iDoorsOpened = game().g_worldmap.use_key((p - NUM_POWERUPS - 5) as i16, iPlayerCurrentTile.x, iPlayerCurrentTile.y, self.fUsingCloud);
 
                 if iDoorsOpened > 0 {
                     if_sound_on_play(&mut game().rm.sfx_transform);
@@ -632,7 +632,7 @@ impl MI_World {
             self.fUsingCloud = fUseCloud;
             if_sound_on_play(&mut game().rm.sfx_transform);
 
-            let iPlayerDrawPos = g_worldmap.get_player_position();
+            let iPlayerDrawPos = game().g_worldmap.get_player_position();
             let mut parent = self.m_parentMenu;
             parent.eyeCandy.emplace(EC_SingleAnimation::new(
                 Ptr::from_mut(&mut game().rm.spr_poof),
@@ -648,7 +648,7 @@ impl MI_World {
     #[allow(clippy::too_many_arguments)]
     unsafe fn can_move(&self, tile: &WorldMapTile, iDirection: usize, iBridgeType: i16, iDoorCol: i16, iDoorRow: i16, iReturnDir: i16, fVehicleInTile: bool) -> bool {
         (tile.fConnection[iDirection] || tile.iConnectionType == iBridgeType)
-            && !g_worldmap.is_door(iDoorCol, iDoorRow)
+            && !game().g_worldmap.is_door(iDoorCol, iDoorRow)
             && (((tile.iCompleted >= -1 || (tile.iType >= 6 && game().game_values.tourstops[(tile.iType - 6) as usize].iStageType == 1)) && (!fVehicleInTile || self.iSleepTurns > 0))
                 || self.iReturnDirection == iReturnDir
                 || self.fUsingCloud)
@@ -661,10 +661,10 @@ impl UI_ControlTrait for MI_World {
     fn update(&mut self) {
         unsafe {
             let mut fPlayerVehicleCollision = false;
-            let fPlayerMoveDone = g_worldmap.update(&mut fPlayerVehicleCollision);
+            let fPlayerMoveDone = game().g_worldmap.update(&mut fPlayerVehicleCollision);
 
-            let iPlayerDrawPos = g_worldmap.get_player_position();
-            let iPlayerState = g_worldmap.get_player_state();
+            let iPlayerDrawPos = game().g_worldmap.get_player_position();
+            let iPlayerState = game().g_worldmap.get_player_state();
 
             self.update_map_surface(self.iCycleIndex);
 
@@ -691,34 +691,34 @@ impl UI_ControlTrait for MI_World {
             }
 
             if self.iSleepTurns <= 0 && !self.fUsingCloud && (fPlayerVehicleCollision || fPlayerMoveDone) {
-                let iStage = g_worldmap.get_vehicle_in_player_tile(&mut self.iVehicleId);
-                if iStage >= 0 && iStage < g_worldmap.iNumStages {
+                let iStage = game().g_worldmap.get_vehicle_in_player_tile(&mut self.iVehicleId);
+                if iStage >= 0 && iStage < game().g_worldmap.iNumStages {
                     game().game_values.tourstopcurrent = iStage as usize;
                     self.fForceStageStart = true;
                 }
             }
 
-            let w32 = (g_worldmap.iWidth as i32) << 5;
-            let h32 = (g_worldmap.iHeight as i32) << 5;
+            let w32 = (game().g_worldmap.iWidth as i32) << 5;
+            let h32 = (game().g_worldmap.iHeight as i32) << 5;
 
             //Player is moving from one tile to the next (up)
             if iPlayerState == 1 {
-                if g_worldmap.iHeight > 15 && self.iMapOffsetY < 0 && (iPlayerDrawPos.y as f32) < h32 as f32 - (App::screenHeight as f32 * 0.53f32) {
+                if game().g_worldmap.iHeight > 15 && self.iMapOffsetY < 0 && (iPlayerDrawPos.y as f32) < h32 as f32 - (App::screenHeight as f32 * 0.53f32) {
                     self.iMapOffsetY += 2;
                 }
             } else if iPlayerState == 2 {
                 //down
-                if g_worldmap.iHeight > 15 && (self.iMapOffsetY as i32) > App::screenHeight - h32 && (iPlayerDrawPos.y as f32) > (App::screenHeight as f32 * 0.47f32) {
+                if game().g_worldmap.iHeight > 15 && (self.iMapOffsetY as i32) > App::screenHeight - h32 && (iPlayerDrawPos.y as f32) > (App::screenHeight as f32 * 0.47f32) {
                     self.iMapOffsetY -= 2;
                 }
             } else if iPlayerState == 3 {
                 //left
-                if g_worldmap.iWidth > 20 && self.iMapOffsetX < 0 && (iPlayerDrawPos.x as f32) < w32 as f32 - (App::screenWidth as f32 * 0.525f32) {
+                if game().g_worldmap.iWidth > 20 && self.iMapOffsetX < 0 && (iPlayerDrawPos.x as f32) < w32 as f32 - (App::screenWidth as f32 * 0.525f32) {
                     self.iMapOffsetX += 2;
                 }
             } else if iPlayerState == 4 {
                 //right
-                if g_worldmap.iWidth > 20 && (self.iMapOffsetX as i32) > App::screenWidth - w32 && (iPlayerDrawPos.x as f32) > (App::screenWidth as f32 * 0.475f32) {
+                if game().g_worldmap.iWidth > 20 && (self.iMapOffsetX as i32) > App::screenWidth - w32 && (iPlayerDrawPos.x as f32) > (App::screenWidth as f32 * 0.475f32) {
                     self.iMapOffsetX -= 2;
                 }
             }
@@ -815,7 +815,7 @@ impl UI_ControlTrait for MI_World {
                 self.iScreenfade += self.iScreenfadeRate;
 
                 if self.iState == 4 && self.iScreenfade > 255 {
-                    g_worldmap.set_player_position(self.iWarpCol, self.iWarpRow);
+                    game().g_worldmap.set_player_position(self.iWarpCol, self.iWarpRow);
                     self.set_map_offset();
                     self.reposition_map_image();
 
@@ -823,11 +823,11 @@ impl UI_ControlTrait for MI_World {
                     //other surface will update with the normal flow
                     self.iCurrentSurfaceIndex = 0;
                     self.iCycleIndex = 0;
-                    g_worldmap.reset_draw_cycle();
+                    game().g_worldmap.reset_draw_cycle();
 
                     self.iDrawFullRefresh = 2; //Draw one full refresh to next surface
 
-                    g_worldmap.draw_map_to_surface(-1, true, self.map_sprites[0].get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
+                    game().g_worldmap.draw_map_to_surface(-1, true, self.map_sprites[0].get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
                     //g_worldmap.DrawMapToSurface(-1, true, map_sprites[1].getSurface(), iMapDrawOffsetCol, iMapDrawOffsetRow, iAnimationFrame);
 
                     self.iState = 5;
@@ -851,13 +851,13 @@ impl UI_ControlTrait for MI_World {
         }
 
         unsafe {
-            let iPlayerDrawPos = g_worldmap.get_player_position();
+            let iPlayerDrawPos = game().g_worldmap.get_player_position();
 
-            if g_worldmap.iWidth > 20 {
+            if game().g_worldmap.iWidth > 20 {
                 self.iSrcOffsetX = -self.iMapOffsetX - (self.iMapDrawOffsetCol << 5);
             }
 
-            if g_worldmap.iHeight > 15 {
+            if game().g_worldmap.iHeight > 15 {
                 self.iSrcOffsetY = -self.iMapOffsetY - (self.iMapDrawOffsetRow << 5);
             }
 
@@ -867,7 +867,7 @@ impl UI_ControlTrait for MI_World {
             self.map_sprites[self.iCurrentSurfaceIndex as usize].draw_src_to(&self.rectSrcSurface, blitdest, &self.rectDstSurface);
 
             //Draw the world, vehicles and player
-            g_worldmap.draw(self.iMapOffsetX, self.iMapOffsetY, self.iState == -1 && !self.fUsingCloud, self.iSleepTurns > 0);
+            game().g_worldmap.draw(self.iMapOffsetX, self.iMapOffsetY, self.iState == -1 && !self.fUsingCloud, self.iSleepTurns > 0);
 
             let px = iPlayerDrawPos.x as i32 + self.iMapOffsetX as i32;
             let py = iPlayerDrawPos.y as i32 + self.iMapOffsetY as i32;
@@ -966,7 +966,7 @@ impl UI_ControlTrait for MI_World {
     fn send_input(&mut self, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         unsafe {
             //Don't allow any input while vehicles are moving
-            if g_worldmap.is_vehicle_moving() {
+            if game().g_worldmap.is_vehicle_moving() {
                 return MENU_CODE_NONE;
             }
 
@@ -985,7 +985,7 @@ impl UI_ControlTrait for MI_World {
                 return MENU_CODE_TOUR_STOP_CONTINUE_FORCED;
             }
 
-            let mut iPlayerState = g_worldmap.get_player_state();
+            let mut iPlayerState = game().g_worldmap.get_player_state();
 
             //Handle AI movement
             let mut fNeedAiControl = false;
@@ -1001,8 +1001,8 @@ impl UI_ControlTrait for MI_World {
 
                 if fNeedAiControl {
                     if self.iPressSelectTimer == 0 {
-                        let iPlayerCurrentTile = g_worldmap.get_player_current_tile();
-                        let iNextMove = g_worldmap.get_next_interesting_move(iPlayerCurrentTile.x, iPlayerCurrentTile.y);
+                        let iPlayerCurrentTile = game().g_worldmap.get_player_current_tile();
+                        let iNextMove = game().g_worldmap.get_next_interesting_move(iPlayerCurrentTile.x, iPlayerCurrentTile.y);
 
                         //Clear out all input from cpu controlled team
                         let mut playerKeys: Ptr<COutputControl>;
@@ -1032,7 +1032,7 @@ impl UI_ControlTrait for MI_World {
 
                             //See if we are touching a door
                             let mut fDoor: [bool; 4] = [false, false, false, false];
-                            g_worldmap.is_touching_door(iPlayerCurrentTile.x, iPlayerCurrentTile.y, &mut fDoor);
+                            game().g_worldmap.is_touching_door(iPlayerCurrentTile.x, iPlayerCurrentTile.y, &mut fDoor);
 
                             //See if we can use a key to keep going
                             let mut iPowerup: i16 = 0;
@@ -1083,17 +1083,17 @@ impl UI_ControlTrait for MI_World {
                 let p = iPlayer as usize;
                 let playerKeys: Ptr<COutputControl> = Ptr::from_mut(&mut game().game_values.playerInput.outputControls[p]);
 
-                let iPlayerCurrentTile = g_worldmap.get_player_current_tile();
+                let iPlayerCurrentTile = game().g_worldmap.get_player_current_tile();
 
                 let iTeamId = lookup_team_id(iPlayer);
 
                 if self.iState == -1 && self.iNumPopups == 0 && !self.iPopupFlag[0] && !self.iPopupFlag[1] && !self.iPopupFlag[2] && !self.iPopupFlag[3] {
                     if self.iControllingTeam == lookup_team_id(iPlayer) && iPlayerState == 0 && game().game_values.playercontrol[p] > 0 {
                         //if this player is player or cpu
-                        let tile: WorldMapTile = *g_worldmap.tiles.at(iPlayerCurrentTile.x as usize, iPlayerCurrentTile.y as usize);
+                        let tile: WorldMapTile = *game().g_worldmap.tiles.at(iPlayerCurrentTile.x as usize, iPlayerCurrentTile.y as usize);
 
                         let mut iTemp: i16 = 0; //Just a temp value so we can call the GetVehicleInPlayerTile method
-                        let fVehicleInTile = g_worldmap.get_vehicle_in_player_tile(&mut iTemp) >= 0;
+                        let fVehicleInTile = game().g_worldmap.get_vehicle_in_player_tile(&mut iTemp) >= 0;
                         let (cx, cy) = (iPlayerCurrentTile.x, iPlayerCurrentTile.y);
 
                         if playerKeys.menu_up().fPressed || playerKeys.menu_up().fDown {
@@ -1103,8 +1103,8 @@ impl UI_ControlTrait for MI_World {
                                     self.use_cloud(false);
                                 }
 
-                                g_worldmap.move_player(0);
-                                iPlayerState = g_worldmap.get_player_state();
+                                game().g_worldmap.move_player(0);
+                                iPlayerState = game().g_worldmap.get_player_state();
 
                                 self.iReturnDirection = 1;
 
@@ -1121,8 +1121,8 @@ impl UI_ControlTrait for MI_World {
                                     self.use_cloud(false);
                                 }
 
-                                g_worldmap.move_player(1);
-                                iPlayerState = g_worldmap.get_player_state();
+                                game().g_worldmap.move_player(1);
+                                iPlayerState = game().g_worldmap.get_player_state();
 
                                 self.iReturnDirection = 0;
 
@@ -1139,8 +1139,8 @@ impl UI_ControlTrait for MI_World {
                                     self.use_cloud(false);
                                 }
 
-                                g_worldmap.move_player(2);
-                                iPlayerState = g_worldmap.get_player_state();
+                                game().g_worldmap.move_player(2);
+                                iPlayerState = game().g_worldmap.get_player_state();
 
                                 self.iReturnDirection = 3;
 
@@ -1149,7 +1149,7 @@ impl UI_ControlTrait for MI_World {
 
                                 if_sound_on_play(&mut game().rm.sfx_worldmove);
                             } else {
-                                g_worldmap.face_player(1);
+                                game().g_worldmap.face_player(1);
 
                                 if playerKeys.menu_left().fPressed {
                                     if_sound_on_play(&mut game().rm.sfx_hit);
@@ -1161,8 +1161,8 @@ impl UI_ControlTrait for MI_World {
                                     self.use_cloud(false);
                                 }
 
-                                g_worldmap.move_player(3);
-                                iPlayerState = g_worldmap.get_player_state();
+                                game().g_worldmap.move_player(3);
+                                iPlayerState = game().g_worldmap.get_player_state();
 
                                 self.iReturnDirection = 2;
 
@@ -1171,7 +1171,7 @@ impl UI_ControlTrait for MI_World {
 
                                 if_sound_on_play(&mut game().rm.sfx_worldmove);
                             } else {
-                                g_worldmap.face_player(0);
+                                game().g_worldmap.face_player(0);
 
                                 if playerKeys.menu_right().fPressed {
                                     if_sound_on_play(&mut game().rm.sfx_hit);
@@ -1180,20 +1180,20 @@ impl UI_ControlTrait for MI_World {
                         } else if playerInput.outputControls[p].menu_select().fPressed {
                             //Lookup current tile and see if it is a type of tile you can interact with
                             //If there is a vehicle on this tile, then load it's stage
-                            let iStage = g_worldmap.get_vehicle_in_player_tile(&mut self.iVehicleId);
-                            if iStage >= 0 && iStage < g_worldmap.iNumStages {
+                            let iStage = game().g_worldmap.get_vehicle_in_player_tile(&mut self.iVehicleId);
+                            if iStage >= 0 && iStage < game().g_worldmap.iNumStages {
                                 return self.init_game(iStage, iPlayer, fNeedAiControl);
                             }
 
                             //if it is a stage, then load the stage
-                            let tile: WorldMapTile = *g_worldmap.tiles.at(iPlayerCurrentTile.x as usize, iPlayerCurrentTile.y as usize);
+                            let tile: WorldMapTile = *game().g_worldmap.tiles.at(iPlayerCurrentTile.x as usize, iPlayerCurrentTile.y as usize);
 
                             let iType = tile.iType - 6;
-                            if iType >= 0 && iType < g_worldmap.iNumStages && tile.iCompleted == -2 {
+                            if iType >= 0 && iType < game().g_worldmap.iNumStages && tile.iCompleted == -2 {
                                 return self.init_game(iType, iPlayer, fNeedAiControl);
                             }
 
-                            if g_worldmap.get_warp_in_player_tile(&mut self.iWarpCol, &mut self.iWarpRow) {
+                            if game().g_worldmap.get_warp_in_player_tile(&mut self.iWarpCol, &mut self.iWarpRow) {
                                 self.iState = 4;
                                 self.iScreenfade = 0;
                                 self.iScreenfadeRate = 8;

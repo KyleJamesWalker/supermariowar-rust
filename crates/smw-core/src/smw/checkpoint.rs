@@ -550,7 +550,7 @@ pub fn start_fields() -> String {
                 f.push(kv("wins_needed", &gv.tournamentgames.to_string()));
             }
             MatchType::Tour | MatchType::World => {
-                let name = if gv.matchtype == MatchType::World { crate::smw::world::g_worldmap.get_world_name().to_string() } else {
+                let name = if gv.matchtype == MatchType::World { game().g_worldmap.get_world_name().to_string() } else {
                     game().tourlist.current_path().file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default()
                 };
                 f.push(kv(if gv.matchtype == MatchType::World { "world" } else { "tour" }, &name));

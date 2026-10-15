@@ -295,7 +295,7 @@ fn frame_wait(framestart: i32) {
 }
 
 fn tile(iCol: i16, iRow: i16) -> &'static mut WorldMapTile {
-    unsafe { g_worldmap.tiles.at_mut(iCol as usize, iRow as usize) }
+    unsafe { game().get().g_worldmap.tiles.at_mut(iCol as usize, iRow as usize) }
 }
 
 fn sprite(s: &mut gfxSprite) -> Ptr<gfxSprite> {
@@ -885,7 +885,7 @@ pub fn inner_main() {
 
         WriteVehiclesIntoWorld();
         WriteWarpsIntoWorld();
-        g_worldmap.save(&convert_path("worlds/ZZworldeditor.txt"));
+        game().g_worldmap.save(&convert_path("worlds/ZZworldeditor.txt"));
 
         {
             let options_path = get_home_directory() + "worldeditor.bin";
@@ -1280,7 +1280,7 @@ pub fn editor_edit() -> i32 {
 
                             if key_sym() == SDLK_r as i32 {
                                 if g_musiccategorydisplaytimer > 0 {
-                                    g_worldmap.iMusicCategory.post_increment();
+                                    game().g_worldmap.iMusicCategory.post_increment();
                                 }
 
                                 g_musiccategorydisplaytimer = 90;
@@ -1622,7 +1622,7 @@ pub fn editor_edit() -> i32 {
                 if g_musiccategorydisplaytimer > 0 {
                     spr_dialog.draw_src(224, 176, &r(0, 0, 192, 128));
                     game().rm.menu_font_small.draw_centered(320, 195, "Music Category");
-                    game().rm.menu_font_large.draw_centered(320, 220, &crate::common::file_list::world_music_category_to_string(g_worldmap.iMusicCategory));
+                    game().rm.menu_font_large.draw_centered(320, 220, &crate::common::file_list::world_music_category_to_string(game().g_worldmap.iMusicCategory));
 
                     game().rm.menu_font_small.draw_centered(320, 255, "Press 'R' Again");
                     game().rm.menu_font_small.draw_centered(320, 270, "To Change");
@@ -1697,7 +1697,7 @@ pub fn ReadVehiclesIntoEditor() {
             v.delete();
         }
 
-        for vehicle in g_worldmap.vehicles.iter() {
+        for vehicle in game().g_worldmap.vehicles.iter() {
             let mut vehiclecopy = WorldVehicle::new();
 
             vehiclecopy.iDrawSprite = vehicle.iDrawSprite;
@@ -1718,10 +1718,10 @@ pub fn ReadVehiclesIntoEditor() {
 pub fn WriteVehiclesIntoWorld() {
     unsafe {
         //Cleanup old vehicles
-        g_worldmap.vehicles.clear();
+        game().g_worldmap.vehicles.clear();
 
         //Insert new vehicles
-        g_worldmap.vehicles.reserve(vehiclelist.len());
+        game().g_worldmap.vehicles.reserve(vehiclelist.len());
 
         for vehicle in vehiclelist.iter() {
             let mut vehiclecopy = WorldVehicle::new();
@@ -1734,7 +1734,7 @@ pub fn WriteVehiclesIntoWorld() {
             vehiclecopy.fSpritePaces = vehicle.fSpritePaces;
             vehiclecopy.iDrawDirection = vehicle.iDrawDirection;
             vehiclecopy.iBoundary = vehicle.iBoundary;
-            g_worldmap.vehicles.push(vehiclecopy);
+            game().g_worldmap.vehicles.push(vehiclecopy);
         }
     }
 }
@@ -1787,7 +1787,7 @@ pub fn ReadWarpsIntoEditor() {
             w.delete();
         }
 
-        for warp in g_worldmap.warps.iter() {
+        for warp in game().g_worldmap.warps.iter() {
             warplist.push(Ptr::new_box(warp.clone()));
         }
     }
@@ -1796,13 +1796,13 @@ pub fn ReadWarpsIntoEditor() {
 pub fn WriteWarpsIntoWorld() {
     unsafe {
         //Cleanup old vehicles
-        g_worldmap.warps.clear();
+        game().g_worldmap.warps.clear();
 
         //Insert new vehicles
-        g_worldmap.warps.reserve(warplist.len());
+        game().g_worldmap.warps.reserve(warplist.len());
 
         for warp in warplist.iter() {
-            g_worldmap.warps.push((**warp).clone());
+            game().g_worldmap.warps.push((**warp).clone());
         }
     }
 }
@@ -2200,7 +2200,7 @@ pub fn AutoSetTile(iCol: i16, iRow: i16) -> bool {
 
 pub fn updateworldsurface() {
     unsafe {
-        g_worldmap.draw_map_to_surface(-1, true, sMapSurface, draw_offset_col as i16, draw_offset_row as i16, 0);
+        game().g_worldmap.draw_map_to_surface(-1, true, sMapSurface, draw_offset_col as i16, draw_offset_row as i16, 0);
     }
 }
 
@@ -2330,27 +2330,27 @@ pub fn editor_start_items() -> i32 {
                         let iButtonY: i16 = bound_to_window_h(event.button_y()) as i16;
 
                         if event.button_button() == BUTTON_LEFT || event.button_button() == BUTTON_RIGHT {
-                            if g_worldmap.iNumInitialBonuses < 32 {
+                            if game().g_worldmap.iNumInitialBonuses < 32 {
                                 for iItem in 0..(NUM_POWERUPS + NUM_WORLD_POWERUPS) as usize {
                                     if point_in(iButtonX, iButtonY, &rStartItemDst[iItem]) {
-                                        let n = g_worldmap.iNumInitialBonuses as usize;
-                                        g_worldmap.iInitialBonuses[n] = iItem as i16;
-                                        g_worldmap.iNumInitialBonuses += 1;
+                                        let n = game().g_worldmap.iNumInitialBonuses as usize;
+                                        game().g_worldmap.iInitialBonuses[n] = iItem as i16;
+                                        game().g_worldmap.iNumInitialBonuses += 1;
                                         break;
                                     }
                                 }
                             }
 
                             let mut iRemoveItem: i16 = 0;
-                            while iRemoveItem < g_worldmap.iNumInitialBonuses {
+                            while iRemoveItem < game().g_worldmap.iNumInitialBonuses {
                                 if point_in(iButtonX, iButtonY, &rPickedItemDst[iRemoveItem as usize]) {
                                     let mut iAdjust = iRemoveItem;
-                                    while iAdjust < g_worldmap.iNumInitialBonuses - 1 {
-                                        g_worldmap.iInitialBonuses[iAdjust as usize] = g_worldmap.iInitialBonuses[iAdjust as usize + 1];
+                                    while iAdjust < game().g_worldmap.iNumInitialBonuses - 1 {
+                                        game().g_worldmap.iInitialBonuses[iAdjust as usize] = game().g_worldmap.iInitialBonuses[iAdjust as usize + 1];
                                         iAdjust += 1;
                                     }
 
-                                    g_worldmap.iNumInitialBonuses -= 1;
+                                    game().g_worldmap.iNumInitialBonuses -= 1;
 
                                     break;
                                 }
@@ -2379,8 +2379,8 @@ pub fn editor_start_items() -> i32 {
                 game().rm.spr_worlditempopup.draw_src(320, 416 - (iPopup << 6), &r(192, 0, 320, 64));
             }
 
-            for iPickedItem in 0..g_worldmap.iNumInitialBonuses as usize {
-                let iPowerup: i16 = g_worldmap.iInitialBonuses[iPickedItem];
+            for iPickedItem in 0..game().g_worldmap.iNumInitialBonuses as usize {
+                let iPowerup: i16 = game().g_worldmap.iInitialBonuses[iPickedItem];
                 if iPowerup as i32 >= NUM_POWERUPS {
                     game().rm.spr_worlditems.draw_src(rPickedItemDst[iPickedItem].x, rPickedItemDst[iPickedItem].y, &r((iPowerup as i32 - NUM_POWERUPS) << 5, 0, 32, 32));
                 } else {
@@ -2905,7 +2905,7 @@ pub fn editor_pathsprite() -> i32 {
 
 pub fn editor_vehicles() -> i32 {
     unsafe {
-        if g_worldmap.iNumStages <= 0 {
+        if game().g_worldmap.iNumStages <= 0 {
             SetDisplayMessage(120, "No Stages", "You need to create", "stages before you", "can create vehicles");
             return EDITOR_EDIT;
         }
@@ -2917,7 +2917,7 @@ pub fn editor_vehicles() -> i32 {
 
         miVehicleStageField.clear();
 
-        for iStage in 0..g_worldmap.iNumStages {
+        for iStage in 0..game().g_worldmap.iNumStages {
             let ts = game().game_values.tourstops[iStage as usize];
             let szStageName = format!("({}) {}", iStage + 1, ts.szName);
 
@@ -3471,7 +3471,7 @@ pub fn NewStage(iEditStage: &mut i16) {
         ts.gmsSettings = game().game_values.gamemodemenusettings.clone();
 
         game().game_values.tourstops.push(ts);
-        g_worldmap.iNumStages += 1;
+        game().g_worldmap.iNumStages += 1;
 
         *iEditStage = (game().game_values.tourstops.len() - 1) as i16;
         EditStage(*iEditStage);
@@ -3541,9 +3541,9 @@ pub fn editor_stage() -> i32 {
                         if iEditStage == -1 && key_sym() == SDLK_n as i32 {
                             NewStage(&mut iEditStage);
                         } else if (key_sym() == SDLK_ESCAPE as i32 || key_sym() == SDLK_e as i32) && iEditStage == -1 {
-                            if g_worldmap.iNumStages == 0 {
+                            if game().g_worldmap.iNumStages == 0 {
                                 edit_mode = 1;
-                            } else if set_tile < 6 || set_tile >= g_worldmap.iNumStages as i32 + 6 {
+                            } else if set_tile < 6 || set_tile >= game().g_worldmap.iNumStages as i32 + 6 {
                                 set_tile = 6;
                                 edit_mode = 9;
                             } else {
@@ -3558,7 +3558,7 @@ pub fn editor_stage() -> i32 {
 
                                 TestAndSetBonusItem(ts, iPlace, mouse_x as i16, mouse_y as i16);
                             }
-                        } else if (key_sym() == SDLK_PAGEUP as i32 && iEditStage > 0) || (key_sym() == SDLK_PAGEDOWN as i32 && iEditStage < g_worldmap.iNumStages - 1) {
+                        } else if (key_sym() == SDLK_PAGEUP as i32 && iEditStage > 0) || (key_sym() == SDLK_PAGEDOWN as i32 && iEditStage < game().g_worldmap.iNumStages - 1) {
                             if iEditStage != -1 && mCurrentMenu == mStageSettingsMenu.as_ptr() {
                                 SaveStage(iEditStage);
 
@@ -3587,7 +3587,7 @@ pub fn editor_stage() -> i32 {
                         if event.button_button() == BUTTON_LEFT {
                             //Stages
                             if iEditStage == -1 {
-                                if iTileX >= 0 && (iTileX as i32) < g_worldmap.iNumStages as i32 - (iTileY as i32 * 20) && iTileY >= 0 && iTileY <= (g_worldmap.iNumStages - 1) / 20 {
+                                if iTileX >= 0 && (iTileX as i32) < game().g_worldmap.iNumStages as i32 - (iTileY as i32 * 20) && iTileY >= 0 && iTileY <= (game().g_worldmap.iNumStages - 1) / 20 {
                                     set_tile = iTileX as i32 + (iTileY as i32 * 20) + 6;
 
                                     edit_mode = 9; //change to edit mode using warps
@@ -3633,7 +3633,7 @@ pub fn editor_stage() -> i32 {
                             }
                         } else if event.button_button() == BUTTON_RIGHT {
                             if iEditStage == -1 {
-                                if iTileX >= 0 && (iTileX as i32) < g_worldmap.iNumStages as i32 - (iTileY as i32 * 20) && iTileY >= 0 && iTileY <= (g_worldmap.iNumStages - 1) / 20 {
+                                if iTileX >= 0 && (iTileX as i32) < game().g_worldmap.iNumStages as i32 - (iTileY as i32 * 20) && iTileY >= 0 && iTileY <= (game().g_worldmap.iNumStages - 1) / 20 {
                                     iEditStage = iTileX + (iTileY * 20);
                                     EditStage(iEditStage);
 
@@ -3653,7 +3653,7 @@ pub fn editor_stage() -> i32 {
                             let iMouseX: i16 = (bound_to_window_w(event.button_x()) / TILESIZE) as i16;
                             let iMouseY: i16 = (bound_to_window_h(event.button_y()) / TILESIZE) as i16;
 
-                            if iMouseX >= 0 && (iMouseX as i32) < g_worldmap.iNumStages as i32 - (iMouseY as i32 * 20) && iMouseY >= 0 && iMouseY <= (g_worldmap.iNumStages - 1) / 20 {
+                            if iMouseX >= 0 && (iMouseX as i32) < game().g_worldmap.iNumStages as i32 - (iMouseY as i32 * 20) && iMouseY >= 0 && iMouseY <= (game().g_worldmap.iNumStages - 1) / 20 {
                                 iStageDisplay = iMouseX + (iMouseY * 20);
                             }
                         }
@@ -3823,7 +3823,7 @@ pub fn editor_stage() -> i32 {
                                 game().game_values.tourstops[iIndex as usize].delete();
 
                                 game().game_values.tourstops.remove(iIndex as usize);
-                                g_worldmap.iNumStages -= 1;
+                                game().g_worldmap.iNumStages -= 1;
 
                                 break;
                             }
@@ -3846,7 +3846,7 @@ pub fn editor_stage() -> i32 {
             let color = SDL_MapRGB((*blitdest).format, 0, 0, 255);
 
             if iEditStage == -1 {
-                for iStage in 0..g_worldmap.iNumStages as i32 {
+                for iStage in 0..game().g_worldmap.iNumStages as i32 {
                     let ix: i16 = ((iStage % 20) << 5) as i16;
                     let iy: i16 = ((iStage / 20) << 5) as i16;
 
@@ -4193,7 +4193,7 @@ pub fn find() -> i32 {
 
 pub fn clear_world() -> i32 {
     unsafe {
-        g_worldmap.clear();
+        game().g_worldmap.clear();
         updateworldsurface();
 
         println!("World Cleared");
@@ -4205,7 +4205,7 @@ pub fn loadcurrentworld() {
     unsafe {
         game().game_values.worldindex = game().worldlist.current_index() as i16;
         let path = game().worldlist.at(game().game_values.worldindex as usize).to_string_lossy().into_owned();
-        *g_worldmap = WorldMap::new_path(&path, TILESIZE as i16);
+        *game().g_worldmap = WorldMap::new_path(&path, TILESIZE as i16);
         ReadVehiclesIntoEditor();
         ReadWarpsIntoEditor();
 
@@ -4216,7 +4216,7 @@ pub fn loadcurrentworld() {
         rectSrcSurface.y = 0;
         fNeedBlackBackground = false;
 
-        g_worldmap.get_world_size(&mut iWorldWidth, &mut iWorldHeight);
+        game().g_worldmap.get_world_size(&mut iWorldWidth, &mut iWorldHeight);
 
         if iWorldWidth >= 20 {
             rectSrcSurface.w = 640;
@@ -4250,7 +4250,7 @@ pub fn savecurrentworld() -> i32 {
         WriteVehiclesIntoWorld();
         WriteWarpsIntoWorld();
         let path = game().worldlist.at(game().game_values.worldindex as usize).to_string_lossy().into_owned();
-        g_worldmap.save(&path);
+        game().g_worldmap.save(&path);
         0
     }
 }
@@ -4336,7 +4336,7 @@ pub fn new_world() -> i32 {
 
             delete_all_vehicles_and_warps(true);
 
-            *g_worldmap = WorldMap::new(iWidth, iHeight);
+            *game().g_worldmap = WorldMap::new(iWidth, iHeight);
             fileName.push_str(".txt");
             worldLocation.push_str(&fileName);
             game().worldlist.add(convert_path(&worldLocation).into());
@@ -4381,7 +4381,7 @@ pub fn resize_world() -> i32 {
 
             delete_all_vehicles_and_warps(false);
 
-            g_worldmap.resize(iWidth, iHeight);
+            game().g_worldmap.resize(iWidth, iHeight);
 
             savecurrentworld();
             loadcurrentworld();
@@ -4399,17 +4399,17 @@ pub fn takescreenshot() {
         for iScreenshotSize in 0..3usize {
             let iTileSize: i16 = iTileSizes[iScreenshotSize];
             let path = game().worldlist.at(game().game_values.worldindex as usize).to_string_lossy().into_owned();
-            *g_worldmap = WorldMap::new_path(&path, iTileSize);
+            *game().g_worldmap = WorldMap::new_path(&path, iTileSize);
 
             let mut w: i16 = 0;
             let mut h: i16 = 0;
-            g_worldmap.get_world_size(&mut w, &mut h);
+            game().g_worldmap.get_world_size(&mut w, &mut h);
 
             //Draw most of the world to screenshot
             let sScreenshot = SDL_CreateRGBSurface((*screen).flags, iTileSize as i32 * w as i32, iTileSize as i32 * h as i32, (*(*screen).format).BitsPerPixel as i32, 0, 0, 0, 0);
             blitdest = sScreenshot;
 
-            g_worldmap.draw_map_to_surface_full(sScreenshot);
+            game().g_worldmap.draw_map_to_surface_full(sScreenshot);
 
             //Draw vehicles to screenshot
             for vehicle in vehiclelist.iter() {
@@ -4460,7 +4460,7 @@ pub fn takescreenshot() {
         }
 
         let path = game().worldlist.at(game().game_values.worldindex as usize).to_string_lossy().into_owned();
-        *g_worldmap = WorldMap::new_path(&path, iTileSizes[0]);
+        *game().g_worldmap = WorldMap::new_path(&path, iTileSizes[0]);
         blitdest = screen;
     }
 }

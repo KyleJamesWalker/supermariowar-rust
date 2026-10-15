@@ -18,6 +18,7 @@ use crate::smw::net_outcomes::NetOutcomesState;
 use crate::smw::net_random::NetRandomState;
 use crate::smw::object_container::CObjectContainer;
 use crate::smw::player::CPlayer;
+use crate::smw::world::WorldMap;
 
 pub struct Game {
     pub game_values: Global<CGameValues>,
@@ -72,6 +73,7 @@ pub struct Game {
     pub match_map: String,
     /// Whether the menu press that opened a text field came from a keyboard key; set by `UI_Menu`.
     pub text_field_opened_by_key: bool,
+    pub g_worldmap: Global<WorldMap>,
 }
 
 impl Game {
@@ -123,6 +125,7 @@ impl Game {
             g_networkIDCount: 0,
             match_map: String::new(),
             text_field_opened_by_key: false,
+            g_worldmap: Global::uninit(),
         }
     }
 }
