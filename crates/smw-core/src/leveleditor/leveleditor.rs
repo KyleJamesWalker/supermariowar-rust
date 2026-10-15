@@ -470,7 +470,7 @@ pub fn main() {
     }
 
     if !cmd.data_root.is_empty() {
-        unsafe { RootDataDirectory = cmd.data_root.clone() };
+        unsafe { game().RootDataDirectory = cmd.data_root.clone() };
     }
 
     // C++ catches `const char*`, `std::string`, `std::exception` and `...` around inner_main().

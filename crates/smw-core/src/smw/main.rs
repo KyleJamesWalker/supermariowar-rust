@@ -200,18 +200,18 @@ pub fn init_joysticks() {
     unsafe {
         // Not in upstream: a browser replay opens no pads, so a connected one cannot act in it.
         if let Some(count) = harness::replay_joysticks() {
-            joystickcount = count;
-            joysticks = Box::leak(vec![null_mut::<SDL_Joystick>(); count.max(0) as usize].into_boxed_slice()).as_mut_ptr();
+            game().joystickcount = count;
+            game().joysticks = Box::leak(vec![null_mut::<SDL_Joystick>(); count.max(0) as usize].into_boxed_slice()).as_mut_ptr();
             SDL_JoystickEventState(SDL_ENABLE as i32);
             return;
         }
 
         SDL_InitSubSystem(SDL_INIT_JOYSTICK);
-        joystickcount = SDL_NumJoysticks() as i16;
-        joysticks = Box::leak(vec![null_mut::<SDL_Joystick>(); joystickcount.max(0) as usize].into_boxed_slice()).as_mut_ptr();
+        game().joystickcount = SDL_NumJoysticks() as i16;
+        game().joysticks = Box::leak(vec![null_mut::<SDL_Joystick>(); game().joystickcount.max(0) as usize].into_boxed_slice()).as_mut_ptr();
 
-        for i in 0..joystickcount as usize {
-            *joysticks.add(i) = SDL_JoystickOpen(i as i32);
+        for i in 0..game().joystickcount as usize {
+            *game().joysticks.add(i) = SDL_JoystickOpen(i as i32);
         }
 
         SDL_JoystickEventState(SDL_ENABLE as i32);
@@ -237,7 +237,7 @@ fn assign_inputs() {
         #[cfg(not(target_os = "emscripten"))]
         let mut pads = crate::smw::pad::player_pads();
         #[cfg(target_os = "emscripten")]
-        let mut pads: Vec<usize> = (0..joystickcount.max(0) as usize).filter(|k| !game().main_loop.web_removed.contains(k)).collect();
+        let mut pads: Vec<usize> = (0..game().joystickcount.max(0) as usize).filter(|k| !game().main_loop.web_removed.contains(k)).collect();
         pads.retain(|&k| k < MAX_PLAYERS as usize);
         let touch_session = touch_session();
         if pads.is_empty() && !touch_session {
@@ -351,9 +351,9 @@ unsafe fn web_replay_device(index: usize, added: bool) {
     web_removed.retain(|&i| i != index);
     if !added {
         web_removed.push(index);
-    } else if index >= joystickcount.max(0) as usize {
-        joystickcount = index as i16 + 1;
-        joysticks = Box::leak(vec![null_mut::<SDL_Joystick>(); index + 1].into_boxed_slice()).as_mut_ptr();
+    } else if index >= game().joystickcount.max(0) as usize {
+        game().joystickcount = index as i16 + 1;
+        game().joysticks = Box::leak(vec![null_mut::<SDL_Joystick>(); index + 1].into_boxed_slice()).as_mut_ptr();
     }
 }
 
@@ -471,7 +471,7 @@ pub fn run(argv: Vec<String>) {
         cmd::show_windows_console();
     }
     if !cmd.data_root.is_empty() {
-        unsafe { RootDataDirectory = cmd.data_root.clone() };
+        unsafe { game().RootDataDirectory = cmd.data_root.clone() };
     }
     if !cmd.replay.is_empty() {
         harness::prepare_watch(&cmd.replay, cmd.replay_speed, cmd.segment);

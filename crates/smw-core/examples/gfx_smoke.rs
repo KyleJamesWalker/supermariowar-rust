@@ -17,7 +17,7 @@ fn main() {
 
     smw::globals::init_globals();
     unsafe {
-        RootDataDirectory = data.clone();
+        game().RootDataDirectory = data.clone();
     }
 
     gfx_init(640, 480, false);

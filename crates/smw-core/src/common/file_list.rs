@@ -926,11 +926,11 @@ impl WorldMusicList {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::global::RootDataDirectory;
+    use crate::globals::game;
 
     fn set_data_root() {
         unsafe {
-            RootDataDirectory = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data").to_string();
+            game().RootDataDirectory = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data").to_string();
         }
     }
 

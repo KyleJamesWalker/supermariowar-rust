@@ -80,6 +80,15 @@ pub struct Harness {
     speed: f32,
     rec: Option<Recorder>,
     segment: Option<Segment>,
+    spawn_events: Vec<String>,
+    /// The keyboard as the replayed key events left it; pushed events do not update SDL's own state.
+    replay_keys: [u8; sdl2::sys::SDL_Scancode::SDL_NUM_SCANCODES as usize],
+    watch_home: Option<std::path::PathBuf>,
+    /// Bit d set: open joystick d is a standard-mapping pad. SDL opens the connected pads in page order.
+    #[cfg(target_os = "emscripten")]
+    web_standard: i32,
+    #[cfg(target_os = "emscripten")]
+    web_hats: [i32; 8],
 }
 
 /// A segment replay (SMW_SEGMENT, `--segment`, or a clip's `#@ segment=`): one match of the replay,
@@ -115,6 +124,13 @@ impl Harness {
             speed: 1.0,
             rec: None,
             segment: None,
+            spawn_events: Vec::new(),
+            replay_keys: [0; sdl2::sys::SDL_Scancode::SDL_NUM_SCANCODES as usize],
+            watch_home: None,
+            #[cfg(target_os = "emscripten")]
+            web_standard: 0,
+            #[cfg(target_os = "emscripten")]
+            web_hats: [0; 8],
         }
     }
 }
@@ -352,16 +368,12 @@ fn state_name() -> &'static str {
     "other"
 }
 
-static mut spawn_events: Vec<String> = Vec::new();
-
-/// The keyboard as the replayed key events left it; pushed events do not update SDL's own state.
-static mut replay_keys: [u8; sdl2::sys::SDL_Scancode::SDL_NUM_SCANCODES as usize] = [0; sdl2::sys::SDL_Scancode::SDL_NUM_SCANCODES as usize];
 
 fn note_replay_key(event: &SDL_Event) {
     unsafe {
         let t = event.type_;
         if t == SDL_EventType::SDL_KEYDOWN as u32 || t == SDL_EventType::SDL_KEYUP as u32 {
-            replay_keys[event.key.keysym.scancode as usize] = (t == SDL_EventType::SDL_KEYDOWN as u32) as u8;
+            h().replay_keys[event.key.keysym.scancode as usize] = (t == SDL_EventType::SDL_KEYDOWN as u32) as u8;
         }
     }
 }
@@ -371,7 +383,7 @@ fn note_replay_key(event: &SDL_Event) {
 pub fn keyboard_state() -> *const u8 {
     unsafe {
         if h().replay {
-            (&raw const replay_keys).cast()
+            (&raw const h().replay_keys).cast()
         } else {
             sdl2::sys::SDL_GetKeyboardState(std::ptr::null_mut())
         }
@@ -382,7 +394,7 @@ pub fn keyboard_state() -> *const u8 {
 pub fn note_net(line: String) {
     unsafe {
         if crate::game::game().netplay.active && h().dump.is_some() {
-            spawn_events.push(format!("C {}", line));
+            h().spawn_events.push(format!("C {}", line));
         }
     }
 }
@@ -402,7 +414,7 @@ fn dump_frame(out: &mut impl Write) -> std::io::Result<()> {
         GameplayState::instance().harness_dump(out)?;
     }
 
-    for line in unsafe { game().sfx.sfx_events.iter().chain(spawn_events.iter()) } {
+    for line in unsafe { game().sfx.sfx_events.iter().chain(h().spawn_events.iter()) } {
         writeln!(out, "{}", line)?;
     }
 
@@ -643,7 +655,7 @@ pub fn frame_end() {
             h().dump = Some(out);
         }
         game().sfx.sfx_events.clear();
-        spawn_events.clear();
+        h().spawn_events.clear();
         record_markers(h().frame);
 
         let f = h().frame;
@@ -916,8 +928,8 @@ fn to_replay_event(raw: &SDL_Event, frame: u32) -> Option<ReplayEvent> {
 /// The game addresses a joystick by its open index; SDL events carry the instance id.
 fn device_index(which: i32) -> Option<i32> {
     unsafe {
-        let js = crate::common::global::joysticks;
-        for i in 0..crate::common::global::joystickcount.max(0) as usize {
+        let js = crate::game::game().joysticks;
+        for i in 0..crate::game::game().joystickcount.max(0) as usize {
             let j = *js.add(i);
             if !j.is_null() && SDL_JoystickInstanceID(j) == which {
                 return Some(i as i32);
@@ -974,8 +986,8 @@ fn push_live_script(r: &mut Recorder, frame: u32) {
 
 fn sdl_instance(device: i32) -> i32 {
     unsafe {
-        let js = crate::common::global::joysticks;
-        if device >= 0 && device < crate::common::global::joystickcount as i32 {
+        let js = crate::game::game().joysticks;
+        if device >= 0 && device < crate::game::game().joystickcount as i32 {
             let j = *js.add(device as usize);
             if !j.is_null() {
                 return SDL_JoystickInstanceID(j);
@@ -1003,24 +1015,21 @@ mod web_dpad {
         fn emscripten_run_script_int(script: *const std::ffi::c_char) -> i32;
     }
 
-    /// Bit d set: open joystick d is a standard-mapping pad. SDL opens the connected pads in page order.
-    static mut standard: i32 = 0;
-    static mut hats: [i32; 8] = [0; 8];
 
     pub fn init() {
         unsafe {
-            standard = emscripten_run_script_int(
+            super::h().web_standard = emscripten_run_script_int(
                 c"(navigator.getGamepads ? Array.prototype.filter.call(navigator.getGamepads(), Boolean) : []).reduce((m, p, i) => p.mapping === 'standard' ? m | (1 << i) : m, 0)".as_ptr(),
             );
         }
     }
 
     pub fn hat_for(ev: &ReplayEvent) -> Option<ReplayEvent> {
-        if ev.kind != EventKind::JoyButton || !(12..=15).contains(&ev.index) || unsafe { standard } & (1 << ev.device) == 0 {
+        if ev.kind != EventKind::JoyButton || !(12..=15).contains(&ev.index) || unsafe { super::h().web_standard } & (1 << ev.device) == 0 {
             return None;
         }
         let bit = [SDL_HAT_UP, SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT][(ev.index - 12) as usize] as i32;
-        let hat = unsafe { &mut hats[ev.device as usize] };
+        let hat = unsafe { &mut super::h().web_hats[ev.device as usize] };
         if ev.value != 0 {
             *hat |= bit;
         } else {
@@ -1035,7 +1044,7 @@ mod web_dpad {
 fn record_frame_start(frame: u32) {
     let Some(r) = rec().filter(|r| r.live) else { return };
     if frame == 0 {
-        for d in 0..unsafe { crate::common::global::joystickcount }.min(8) as i32 {
+        for d in 0..unsafe { crate::game::game().joystickcount }.min(8) as i32 {
             let ev = ReplayEvent { frame: 0, kind: EventKind::JoyHat, down: false, keyName: String::new(), device: d, index: 0, value: 0 };
             record_event(r, &ev);
         }
@@ -1100,8 +1109,6 @@ fn record_wait_event(event: &mut SDL_Event) {
     }
 }
 
-static mut watch_home: Option<std::path::PathBuf> = None;
-
 /// About three seconds at the default 16 ms frame time.
 const UNFINISHED_TAIL_FRAMES: u32 = 188;
 
@@ -1109,7 +1116,7 @@ const UNFINISHED_TAIL_FRAMES: u32 = 188;
 /// Safe to call more than once.
 pub fn finish() {
     unsafe {
-        if let Some(home) = watch_home.take() {
+        if let Some(home) = h().watch_home.take() {
             let _ = std::fs::remove_dir_all(home);
         }
         if let Some(mut r) = h().rec.take() {
@@ -1154,7 +1161,7 @@ pub fn prepare_watch(file: &str, speed: Option<f32>, segment: Option<u32>) {
         }
     }
     std::env::set_var(if cfg!(windows) { "USERPROFILE" } else { "HOME" }, &home);
-    unsafe { watch_home = Some(home) };
+    unsafe { h().watch_home = Some(home) };
     std::env::set_var("SMW_REPLAY", &path);
     std::env::set_var("SMW_SEED", directive("seed").unwrap_or_else(|| "1".to_string()));
     // A session that ended without finish() (killed, or a browser tab closed) has no frames= line:

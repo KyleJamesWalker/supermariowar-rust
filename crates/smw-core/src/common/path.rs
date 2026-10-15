@@ -1,9 +1,8 @@
 //! Port of src/common/path.cpp
 
-use crate::common::global::RootDataDirectory;
+use crate::globals::game;
 use std::path::Path;
 
-pub static mut SMW_Root_Data_Dir: String = String::new();
 
 pub fn get_home_directory() -> String {
     crate::services::services().storage.settings_dir().to_string_lossy().into_owned()
@@ -19,31 +18,30 @@ pub fn file_exists(path: &str) -> bool {
 
 pub fn initialize_paths() {
     unsafe {
-        if !SMW_Root_Data_Dir.is_empty() {
+        if !game().SMW_Root_Data_Dir.is_empty() {
             return;
         }
-        SMW_Root_Data_Dir = "./".to_string();
-        println!("Located data folder at: {}", SMW_Root_Data_Dir);
+        game().SMW_Root_Data_Dir = "./".to_string();
+        println!("Located data folder at: {}", game().SMW_Root_Data_Dir);
     }
 }
 
-static mut are_paths_initialized: bool = false;
 
 pub fn convert_path(source: &str) -> String {
     unsafe {
-        if !are_paths_initialized {
-            SMW_Root_Data_Dir = RootDataDirectory.clone();
+        if !game().are_paths_initialized {
+            game().SMW_Root_Data_Dir = game().RootDataDirectory.clone();
 
             initialize_paths();
 
-            let last_slash_pos = SMW_Root_Data_Dir.rfind('/');
-            if last_slash_pos != Some(SMW_Root_Data_Dir.len().wrapping_sub(1)) {
-                SMW_Root_Data_Dir.push('/');
+            let last_slash_pos = game().SMW_Root_Data_Dir.rfind('/');
+            if last_slash_pos != Some(game().SMW_Root_Data_Dir.len().wrapping_sub(1)) {
+                game().SMW_Root_Data_Dir.push('/');
             }
 
-            are_paths_initialized = true;
+            game().are_paths_initialized = true;
         }
-        SMW_Root_Data_Dir.clone() + source
+        game().SMW_Root_Data_Dir.clone() + source
     }
 }
 

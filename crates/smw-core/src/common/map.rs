@@ -2777,7 +2777,7 @@ pub(crate) mod tests {
     /// Brings up the globals `CMap::load_map` touches, against the repository's data/ directory.
     pub(crate) fn init_map_globals() {
         INIT.call_once(|| unsafe {
-            RootDataDirectory = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data").to_string();
+            game().RootDataDirectory = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data").to_string();
             std::env::set_var("SDL_VIDEODRIVER", "dummy");
             SDL_Init(0);
             game().screen = SDL_CreateRGBSurface(0, 640, 480, 32, 0, 0, 0, 0);
@@ -2958,7 +2958,7 @@ pub(crate) mod tests {
         use crate::common::map_list::MapList;
         use crate::common::random_number_generator::{RandomNumberGenerator, RandomNumberGeneratorType};
         unsafe {
-            let root = RootDataDirectory.clone();
+            let root = game().RootDataDirectory.clone();
             let rel = |p: &str| if p.len() > root.len() { p[root.len()..].to_string() } else { p.to_string() };
             game().maplist = Ptr::new_box(MapList::new(false));
             let mut maplist = game().maplist;
@@ -3042,7 +3042,7 @@ pub(crate) mod tests {
             return;
         };
         init_map_globals();
-        let data = unsafe { RootDataDirectory.clone() };
+        let data = unsafe { game().RootDataDirectory.clone() };
         let out = std::process::Command::new(&bin).env("SDL_VIDEODRIVER", "dummy").arg(&data).output().unwrap();
         let text = String::from_utf8_lossy(&out.stdout);
         let expected = text.split("\n---\n").nth(1).unwrap_or("").to_string();

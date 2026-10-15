@@ -18,7 +18,7 @@ fn main() {
 
     smw::globals::init_globals();
     unsafe {
-        RootDataDirectory = data;
+        game().RootDataDirectory = data;
 
         gfx_init(640, 480, false);
         game().blitdest = game().screen;

@@ -27,14 +27,11 @@ pub fn new_sprite_strip() -> SpriteStrip {
     std::array::from_fn(|_| gfxSprite::new())
 }
 
-pub static mut gfx: Global<GraphicsSDL> = Global::uninit();
-pub static mut gfx_palette: Global<gfxPalette> = Global::uninit();
-
 /// Constructors of the globals defined in gfx.cpp, in definition order.
 pub fn init_globals() {
     unsafe {
-        gfx.init(GraphicsSDL::new());
-        gfx_palette.init(gfxPalette::new());
+        game().gfx.init(GraphicsSDL::new());
+        game().gfx_palette.init(gfxPalette::new());
     }
 }
 
@@ -139,7 +136,7 @@ fn create_skin_surface(source: &gfxSprite, sourceFrame: usize, team: usize, allS
 
                 let pixelColor = get_rgb(source.get_surface(), startX + srcX, y);
 
-                if let Some(sheet) = gfx_palette.color_sheets().get(&pixelColor) {
+                if let Some(sheet) = game().gfx_palette.color_sheets().get(&pixelColor) {
                     for outFrame in 0..outFrameCount {
                         let paletteColor = sheet.replacement_for(team, outFrame as PlayerPalette);
                         set_rgb(out.get_surface(), outFrame as i32 * 32 + dstX, y, &paletteColor);
@@ -182,19 +179,19 @@ pub fn get_rgb(surf: *mut SDL_Surface, x: i32, y: i32) -> RGB {
 }
 
 pub fn gfx_init(w: i32, h: i32, fullscreen: bool) -> bool {
-    unsafe { (*gfx).init(fullscreen) }
+    unsafe { (*game().gfx).init(fullscreen) }
 }
 
 pub fn gfx_changefullscreen(fullscreen: bool) {
-    unsafe { gfx.change_full_screen(fullscreen) }
+    unsafe { game().gfx.change_full_screen(fullscreen) }
 }
 
 pub fn gfx_flipscreen() {
-    unsafe { gfx.flip_screen() }
+    unsafe { game().gfx.flip_screen() }
 }
 
 pub fn gfx_settitle(title: &str) {
-    unsafe { gfx.set_title(title) }
+    unsafe { game().gfx.set_title(title) }
 }
 
 pub fn gfx_show_catched_error(error: &str) {
@@ -210,17 +207,17 @@ pub fn gfx_show_catched_error(error: &str) {
         message += error;
     }
     eprintln!("\n{}", message);
-    unsafe { gfx.show_error_box(&message) }
+    unsafe { game().gfx.show_error_box(&message) }
 }
 
 pub fn gfx_take_screenshot() {
-    unsafe { gfx.take_screenshot() }
+    unsafe { game().gfx.take_screenshot() }
 }
 
 pub fn gfx_close() {}
 
 pub fn gfx_loadpalette(palette_path: &Path) -> bool {
-    unsafe { gfx_palette.load(palette_path) }
+    unsafe { game().gfx_palette.load(palette_path) }
 }
 
 /// Not in the C++: writes `screen` as a BMP for the differential replay harness.
@@ -475,7 +472,7 @@ pub fn gfx_setjoystickteamcolor(joystick: *mut SDL_Joystick, team: i16, mut brig
     }
     brightness = 0f32.max(1f32.min(brightness));
     unsafe {
-        if let Some(color) = gfx_palette.replacement_for(RGB { r: 0x80, g: 0x00, b: 0x00 }, team as usize, gfx_palette::normal) {
+        if let Some(color) = game().gfx_palette.replacement_for(RGB { r: 0x80, g: 0x00, b: 0x00 }, team as usize, gfx_palette::normal) {
             SDL_JoystickSetLED(
                 joystick,
                 (brightness * color.r as f32) as u8,

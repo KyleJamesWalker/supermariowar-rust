@@ -403,7 +403,7 @@ pub fn main() {
 
     unsafe {
         if !cmd.data_root.is_empty() {
-            RootDataDirectory = cmd.data_root.clone();
+            game().RootDataDirectory = cmd.data_root.clone();
         }
     }
 

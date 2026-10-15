@@ -38,7 +38,7 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
     smw::globals::init_globals();
     unsafe {
-        RootDataDirectory = args[1].clone();
+        game().RootDataDirectory = args[1].clone();
         let outdir = &args[2];
         gfx_init(640, 480, false);
         game().blitdest = game().screen;

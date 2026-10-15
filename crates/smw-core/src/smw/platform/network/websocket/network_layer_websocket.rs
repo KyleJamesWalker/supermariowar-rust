@@ -4,6 +4,7 @@
 use crate::common_netplay::network_interface::{NetPeer, NetworkEventHandler};
 use crate::common_netplay::protocol_definitions::NET_GAMEHOST_PORT;
 use crate::common_netplay::relay_frame::{self as frame, *};
+use crate::game::game;
 use crate::smw::network::network_layer::NetworkLayer;
 use std::any::Any;
 use std::collections::{BTreeMap, VecDeque};
@@ -56,20 +57,20 @@ enum Side {
 }
 
 #[derive(Clone, Copy)]
-struct Conn {
+pub struct Conn {
     side: Side,
     host: [u8; 4],
     port: u16,
     open: bool,
 }
 
-enum Event {
+pub enum Event {
     Connect(NetPeerWebSocket),
     Receive(NetPeerWebSocket, Vec<u8>),
     Disconnect(NetPeerWebSocket),
 }
 
-struct Relay {
+pub struct Relay {
     url: String,
     outbox: Vec<Vec<u8>>,
     conns: BTreeMap<u16, Conn>,
@@ -78,16 +79,18 @@ struct Relay {
     listening: bool,
 }
 
-static mut relay: Relay = Relay {
-    url: String::new(),
-    outbox: Vec::new(),
-    conns: BTreeMap::new(),
-    client_events: VecDeque::new(),
-    gamehost_events: VecDeque::new(),
-    listening: false,
-};
-
-static mut recv_buffer: [u8; MAX_MESSAGE_LEN] = [0; MAX_MESSAGE_LEN];
+impl Relay {
+    pub const fn new() -> Self {
+        Relay {
+            url: String::new(),
+            outbox: Vec::new(),
+            conns: BTreeMap::new(),
+            client_events: VecDeque::new(),
+            gamehost_events: VecDeque::new(),
+            listening: false,
+        }
+    }
+}
 
 impl Relay {
     fn send(&mut self, kind: u8, conn: u16, payload: &[u8]) {
@@ -167,12 +170,12 @@ impl Relay {
         }
 
         loop {
-            let len = unsafe { smw_ws_recv(recv_buffer.as_mut_ptr(), MAX_MESSAGE_LEN) };
+            let len = unsafe { smw_ws_recv(game().recv_buffer.as_mut_ptr(), MAX_MESSAGE_LEN) };
             if len == -1 {
                 break;
             }
             if len >= 0 {
-                let message = unsafe { recv_buffer[..len as usize].to_vec() };
+                let message = unsafe { game().recv_buffer[..len as usize].to_vec() };
                 self.dispatch(&message);
             }
         }
@@ -229,9 +232,9 @@ fn listen(side: Side, handler: &mut dyn NetworkEventHandler) {
     unsafe {
         // NetClient polls its game host first: a player's INCOMING must wait for the lobby's CLIENTS_INFO before it.
         if side == Side::Client {
-            relay.pump();
+            game().relay.pump();
         }
-        while let Some(event) = relay.events(side).pop_front() {
+        while let Some(event) = game().relay.events(side).pop_front() {
             match event {
                 Event::Connect(peer) => handler.on_connect(Box::new(peer)),
                 Event::Receive(mut peer, data) => handler.on_receive(&mut peer, &data),
@@ -256,10 +259,10 @@ impl NetPeerWebSocket {
 impl NetPeer for NetPeerWebSocket {
     fn send(&mut self, data: &[u8]) -> bool {
         unsafe {
-            if data.is_empty() || !relay.conns.contains_key(&self.conn) {
+            if data.is_empty() || !game().relay.conns.contains_key(&self.conn) {
                 return false;
             }
-            relay.send(DATA, self.conn, data);
+            game().relay.send(DATA, self.conn, data);
         }
         true
     }
@@ -270,8 +273,8 @@ impl NetPeer for NetPeerWebSocket {
 
     fn disconnect(&mut self) {
         unsafe {
-            if relay.conns.remove(&self.conn).is_some() {
-                relay.send(DISCONNECT, self.conn, &[]);
+            if game().relay.conns.remove(&self.conn).is_some() {
+                game().relay.send(DISCONNECT, self.conn, &[]);
             }
         }
     }
@@ -339,8 +342,8 @@ impl NetworkLayer for NetworkLayerWebSocket {
 
     fn client_shutdown(&mut self) {
         unsafe {
-            relay.close_side(Side::Client);
-            relay.close_if_idle();
+            game().relay.close_side(Side::Client);
+            game().relay.close_if_idle();
         }
     }
 
@@ -352,8 +355,8 @@ impl NetworkLayer for NetworkLayerWebSocket {
                 eprintln!("[error][net] Could not open game host connection port.");
                 return false;
             }
-            relay.send(LISTEN, 0, &NET_GAMEHOST_PORT.to_be_bytes());
-            relay.listening = true;
+            game().relay.send(LISTEN, 0, &NET_GAMEHOST_PORT.to_be_bytes());
+            game().relay.listening = true;
         }
         true
     }
@@ -364,19 +367,19 @@ impl NetworkLayer for NetworkLayerWebSocket {
 
     fn gamehost_shutdown(&mut self) {
         unsafe {
-            if relay.listening {
-                relay.send(UNLISTEN, 0, &NET_GAMEHOST_PORT.to_be_bytes());
-                relay.listening = false;
+            if game().relay.listening {
+                game().relay.send(UNLISTEN, 0, &NET_GAMEHOST_PORT.to_be_bytes());
+                game().relay.listening = false;
             }
-            relay.close_side(Side::GameHost);
-            relay.close_if_idle();
+            game().relay.close_side(Side::GameHost);
+            game().relay.close_if_idle();
         }
     }
 
     fn connect_to_lobby_server(&mut self, hostname: &str, port: u16) -> bool {
         unsafe {
-            relay.open(&url_for_server(hostname));
-            relay.connect([0; 4], port)
+            game().relay.open(&url_for_server(hostname));
+            game().relay.connect([0; 4], port)
         }
     }
 
@@ -385,7 +388,7 @@ impl NetworkLayer for NetworkLayerWebSocket {
             println!("[net] Could not initiate connection to this address.");
             return false;
         };
-        unsafe { relay.connect(address.octets(), port) }
+        unsafe { game().relay.connect(address.octets(), port) }
     }
 
     /// The relay connects players; there is no NAT to open.

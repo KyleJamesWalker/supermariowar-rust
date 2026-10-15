@@ -3,10 +3,8 @@
 
 use smw_platform::Services;
 
-static mut SERVICES: Option<Services> = None;
-
 pub fn services() -> &'static mut Services {
-    unsafe { SERVICES.get_or_insert_with(smw_sdl2::services) }
+    crate::game::game().get().services.get_or_insert_with(smw_sdl2::services)
 }
 
 /// `SDL_GetTicks()`.
