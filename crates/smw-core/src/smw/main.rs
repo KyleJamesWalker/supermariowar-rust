@@ -454,10 +454,11 @@ pub fn init_spawnlocations(g: &mut Game) {
 
 pub fn main() {
     cmd::attach_parent_console();
-    run(game().get(), std::env::args().collect());
+    run(std::env::args().collect());
 }
 
-pub fn run(g: &mut Game, argv: Vec<String>) {
+pub fn run(argv: Vec<String>) {
+    let g = game().get();
     crate::globals::init_globals();
 
     let cmd = cmd::parse_args(&argv);
