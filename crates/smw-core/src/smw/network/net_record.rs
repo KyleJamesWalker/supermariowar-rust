@@ -1,6 +1,7 @@
 //! Not in upstream: recording and replaying a net match at the transport boundary. A client's recording keeps every
 //! network event its listeners saw as `#@ net` lines; a replay hands them to the same handlers at the same frame.
 
+use crate::globals::game;
 use crate::smw::harness::{self, base64_decode, base64_encode};
 use smw_netplay::common_netplay::network_interface::{NetPeer, NetworkEventHandler};
 use std::any::Any;
@@ -170,27 +171,32 @@ fn parse_value(line: &str) -> Option<(u32, String, String)> {
     Some((frame.parse().ok()?, key.to_string(), value.to_string()))
 }
 
-struct Replay {
+pub struct Replay {
     events: Vec<NetEvent>,
     next: usize,
     values: BTreeMap<String, VecDeque<String>>,
 }
 
-static mut replay: Option<Replay> = None;
+pub struct NetRecordState {
+    replay: Option<Replay>,
+    /// The frame of the last poll, and how often each side was polled in it.
+    polls: (u32, [u32; 2]),
+}
 
-/// The frame of the last poll, and how often each side was polled in it.
-static mut polls: (u32, [u32; 2]) = (u32::MAX, [0; 2]);
+impl NetRecordState {
+    pub const fn new() -> Self {
+        NetRecordState { replay: None, polls: (u32::MAX, [0; 2]) }
+    }
+}
 
 fn next_poll(side: Side, frame: u32) -> u32 {
-    unsafe {
-        let p = &mut *(&raw mut polls);
-        if p.0 != frame {
-            *p = (frame, [0; 2]);
-        }
-        let n = &mut p.1[side as usize];
-        *n += 1;
-        *n - 1
+    let p = &mut game().get().net_record.polls;
+    if p.0 != frame {
+        *p = (frame, [0; 2]);
     }
+    let n = &mut p.1[side as usize];
+    *n += 1;
+    *n - 1
 }
 
 /// Loads a replay's net lines from `from` on. A recording without `#@ netrec=1` predates net recording,
@@ -207,12 +213,12 @@ pub fn load(text: &str, from: u32) {
             values.entry(key).or_default().push_back(value);
         }
     }
-    unsafe { replay = Some(Replay { events, next: 0, values }) };
+    game().get().net_record.replay = Some(Replay { events, next: 0, values });
 }
 
 /// Whether the network comes from the replay: no connections, and every listener gets the recorded events.
 pub fn replaying() -> bool {
-    unsafe { (*(&raw const replay)).is_some() }
+    game().get().net_record.replay.is_some()
 }
 
 /// A listener's poll: in a replay, the events recorded for this frame and side; otherwise `live`'s, recorded.
@@ -220,12 +226,12 @@ pub fn listen(side: Side, handler: &mut dyn NetworkEventHandler, live: impl FnOn
     let frame = harness::frame();
     let poll = next_poll(side, frame);
     let mut log = Vec::new();
-    if let Some(r) = unsafe { (*(&raw mut replay)).as_mut() } {
+    if let Some(r) = game().get().net_record.replay.as_mut() {
         // Taken out while delivering: a handler may read a recorded value.
         let events = std::mem::take(&mut r.events);
         let mut next = r.next;
         deliver(&events, &mut next, side, frame, poll, &mut Recording { inner: handler, side, frame, poll, log: &mut log });
-        if let Some(r) = unsafe { (*(&raw mut replay)).as_mut() } {
+        if let Some(r) = game().get().net_record.replay.as_mut() {
             r.events = events;
             r.next = next;
         }
@@ -239,7 +245,7 @@ pub fn listen(side: Side, handler: &mut dyn NetworkEventHandler, live: impl FnOn
 
 /// A value the game reads from the network layer or the clock: `live`'s, recorded, or in a replay the recorded one.
 pub fn value(key: &str, live: impl FnOnce() -> String) -> String {
-    let v = if let Some(r) = unsafe { (*(&raw mut replay)).as_mut() } {
+    let v = if let Some(r) = game().get().net_record.replay.as_mut() {
         match r.values.get_mut(key).and_then(|q| q.pop_front()) {
             Some(v) => v,
             None => harness::fail(format!("the replay has no recorded {} for frame {}", key, harness::frame())),
@@ -253,7 +259,7 @@ pub fn value(key: &str, live: impl FnOnce() -> String) -> String {
 
 /// `value` for one the game may lack (`-`); a replay without it reads none.
 pub fn value_opt(key: &str, live: impl FnOnce() -> Option<String>) -> Option<String> {
-    if replaying() && unsafe { (*(&raw const replay)).as_ref() }.is_some_and(|r| r.values.get(key).is_none_or(|q| q.is_empty())) {
+    if replaying() && game().get().net_record.replay.as_ref().is_some_and(|r| r.values.get(key).is_none_or(|q| q.is_empty())) {
         return None;
     }
     Some(value(key, || live().unwrap_or_else(|| "-".to_string()))).filter(|v| v != "-")

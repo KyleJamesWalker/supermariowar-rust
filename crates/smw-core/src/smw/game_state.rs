@@ -18,9 +18,11 @@ pub struct GameStateManager {
     pub _alias: Aliased,
 }
 
-static mut gsm: GameStateManager = GameStateManager { _alias: Aliased::new(), currentState: Ptr::null() };
-
 impl GameStateManager {
+    pub const fn new() -> Self {
+        GameStateManager { _alias: Aliased::new(), currentState: Ptr::null() }
+    }
+
     pub fn change_state_to(&mut self, newState: Ptr<dyn GameState>) {
         assert!(!newState.is_null());
         self.currentState.get().on_leave_state();
@@ -29,6 +31,6 @@ impl GameStateManager {
     }
 
     pub fn instance() -> &'static mut GameStateManager {
-        unsafe { &mut gsm }
+        &mut game().get().gsm
     }
 }

@@ -14,7 +14,12 @@ use crate::common::game_values::CGameValues;
 use crate::globals::{Global, Ptr};
 use crate::leveleditor::leveleditor::LevelEditorState;
 use crate::smw::gamemodes::{bonus_house::CGM_Bonus, mini_boss::CGM_Boss_MiniGame, mini_boxes::CGM_Boxes_MiniGame, mini_pipe::CGM_Pipe_MiniGame};
+use crate::smw::game_state::GameStateManager;
+use crate::smw::gs_gameplay::GameplayState;
+use crate::smw::gs_menu::MenuState;
+use crate::smw::gs_splash_screen::SplashScreenState;
 use crate::smw::net::{NetworkHandler, Networking};
+use crate::smw::network::net_record::NetRecordState;
 use crate::smw::net_outcomes::NetOutcomesState;
 use crate::smw::net_random::NetRandomState;
 use crate::smw::object_container::CObjectContainer;
@@ -78,6 +83,14 @@ pub struct Game {
     pub g_worldmap: Global<WorldMap>,
     pub level_editor: LevelEditorState,
     pub world_editor: WorldEditorState,
+    pub gsm: GameStateManager,
+    pub gps: Option<GameplayState>,
+    pub ms: Option<MenuState>,
+    pub ss: Option<SplashScreenState>,
+    /// The browser cannot block for input, so a control field being rebound reads this frame's events here.
+    #[cfg(target_os = "emscripten")]
+    pub frame_events: Vec<smw_platform::Input>,
+    pub net_record: NetRecordState,
 }
 
 impl Game {
@@ -132,6 +145,13 @@ impl Game {
             g_worldmap: Global::uninit(),
             level_editor: LevelEditorState::new(),
             world_editor: WorldEditorState::new(),
+            gsm: GameStateManager::new(),
+            gps: None,
+            ms: None,
+            ss: None,
+            #[cfg(target_os = "emscripten")]
+            frame_events: Vec::new(),
+            net_record: NetRecordState::new(),
         }
     }
 }

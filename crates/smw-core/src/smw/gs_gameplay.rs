@@ -103,8 +103,6 @@ pub struct GameplayState {
     pub _alias: Aliased,
 }
 
-static mut gps: Option<GameplayState> = None;
-
 impl GameplayState {
     pub const scoreoffsets: [i16; 3] = [2, 36, 70];
     pub const g_iPowerupToIcon: [i16; 8] = [80, 176, 272, 304, 336, 368, 384, 400];
@@ -142,13 +140,11 @@ impl GameplayState {
     }
 
     pub fn instance() -> &'static mut GameplayState {
-        unsafe {
-            // Safety net until globals::init_globals calls gs_gameplay::init_globals.
-            if !game().spotlightManager.is_initialized() {
-                init_globals();
-            }
-            gps.get_or_insert_with(GameplayState::new)
+        // Safety net until globals::init_globals calls gs_gameplay::init_globals.
+        if !game().spotlightManager.is_initialized() {
+            init_globals();
         }
+        game().get().gps.get_or_insert_with(GameplayState::new)
     }
 
     /// Not in the C++: the fields a replay checkpoint (smw/checkpoint.rs) saves and restores.

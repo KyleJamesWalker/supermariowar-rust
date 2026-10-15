@@ -27,8 +27,6 @@ pub struct SplashScreenState {
     pub _alias: Aliased,
 }
 
-static mut ss: Option<SplashScreenState> = None;
-
 impl SplashScreenState {
     fn new() -> Self {
         SplashScreenState { _alias: Aliased::new(),
@@ -41,7 +39,7 @@ impl SplashScreenState {
     }
 
     pub fn instance() -> &'static mut SplashScreenState {
-        unsafe { ss.get_or_insert_with(SplashScreenState::new) }
+        game().get().ss.get_or_insert_with(SplashScreenState::new)
     }
 }
 
