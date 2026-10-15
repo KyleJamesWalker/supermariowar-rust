@@ -283,7 +283,7 @@ Risks:
 
 | Risk | Mitigation |
 |---|---|
-| The pure-Rust blitter or image decoder differs from SDL in an edge case (palette conversion, color key on converted surfaces, clipping) | The game, sweep and editor screenshots, plus `tools/gfx_smoke` and `map_render_parity.sh`, gate phase 4. Ship it behind a switch (`SMW_BLIT=sdl`) until all of them match, then delete the switch. |
+| The pure-Rust blitter or image decoder differs from SDL in an edge case (palette conversion, color key on converted surfaces, clipping) | The game, sweep and editor screenshots, plus `tools/gfx_smoke` and `map_render_parity.sh`, gate phase 4. |
 | Sound duration table disagrees with SDL2_mixer for some file | A test on `smw-sdl2` compares every file in `data/sfx` and `data/music`. |
 | Moving files conflicts with open branches | One rename-only PR during a merge freeze. `git log --follow` and `merge.renames` handle later rebases. |
 | `Game` initialization order changes RNG draws | The `R calls=` record in every dump catches it on frame 0. Step 2 PRs move one subsystem at a time. |
