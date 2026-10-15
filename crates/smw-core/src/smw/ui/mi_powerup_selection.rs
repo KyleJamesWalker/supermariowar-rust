@@ -278,7 +278,7 @@ impl MI_PowerupSelection {
 impl UI_ControlTrait for MI_PowerupSelection {
     crate::impl_ctl!();
 
-    fn modify(&mut self, modify: bool) -> MenuCodeEnum {
+    fn modify(&mut self, g: &mut Game, modify: bool) -> MenuCodeEnum {
         self.mMenu.reset_menu();
         self.iOffset = 0;
         self.iIndex = 0;
@@ -290,8 +290,8 @@ impl UI_ControlTrait for MI_PowerupSelection {
         MENU_CODE_MODIFY_ACCEPTED
     }
 
-    fn send_input(&mut self, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
-        let ret = self.mMenu.send_input(game().get(), playerInput);
+    fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+        let ret = self.mMenu.send_input(g, playerInput);
 
         unsafe {
             if MENU_CODE_CANCEL_INPUT == ret {
@@ -300,9 +300,9 @@ impl UI_ControlTrait for MI_PowerupSelection {
             } else if MENU_CODE_POWERUP_PRESET_CHANGED == ret {
                 for iPowerup in 0..NP {
                     let pos = iPowerupPositionMap[iPowerup] as usize;
-                    let iCurrentValue = game().game_values.allPowerupPresets[game().game_values.poweruppreset as usize][pos];
+                    let iCurrentValue = g.game_values.allPowerupPresets[g.game_values.poweruppreset as usize][pos];
                     self.miPowerupSlider[iPowerup].set_current_value(iCurrentValue);
-                    game().game_values.powerupweights[pos] = iCurrentValue;
+                    g.game_values.powerupweights[pos] = iCurrentValue;
                 }
 
                 //If it is a custom preset, then allow modification
@@ -347,9 +347,9 @@ impl UI_ControlTrait for MI_PowerupSelection {
                     //restore default powerup weights for powerup selection menu
                     for iPowerup in 0..NP {
                         let pos = iPowerupPositionMap[iPowerup] as usize;
-                        let iDefaultValue = default_powerup_setting(game().game_values.poweruppreset as usize, pos);
+                        let iDefaultValue = default_powerup_setting(g.game_values.poweruppreset as usize, pos);
                         self.miPowerupSlider[iPowerup].set_current_value(iDefaultValue);
-                        game().game_values.powerupweights[pos] = iDefaultValue;
+                        g.game_values.powerupweights[pos] = iDefaultValue;
 
                         game().game_values.allPowerupPresets[game().game_values.poweruppreset as usize][pos] = iDefaultValue;
                     }
@@ -357,7 +357,7 @@ impl UI_ControlTrait for MI_PowerupSelection {
                     //restore default powerup weights for powerup selection menu
                     for iPowerup in 0..NP {
                         self.miPowerupSlider[iPowerup].set_current_value(0);
-                        game().game_values.powerupweights[iPowerup] = 0;
+                        g.game_values.powerupweights[iPowerup] = 0;
 
                         game().game_values.allPowerupPresets[game().game_values.poweruppreset as usize][iPowerup] = 0;
                     }
@@ -372,11 +372,11 @@ impl UI_ControlTrait for MI_PowerupSelection {
         ret
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         self.mMenu.update();
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         if !self.m_visible {
             return;
         }

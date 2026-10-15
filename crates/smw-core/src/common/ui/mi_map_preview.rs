@@ -212,11 +212,11 @@ impl MI_MapPreview {
 impl UI_ControlTrait for MI_MapPreview {
     crate::impl_ctl!();
 
-    fn update(&mut self) {
-        self.update_impl(game().get());
+    fn update(&mut self, g: &mut Game) {
+        self.update_impl(g);
     }
 
-    fn draw(&mut self) {
-        self.draw_impl(game().get());
+    fn draw(&mut self, g: &mut Game) {
+        self.draw_impl(g);
     }
 }

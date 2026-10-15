@@ -4,7 +4,7 @@ use crate::game::Game;
 use crate::globals::*;
 
 pub trait GameState {
-    fn init(&mut self) -> bool {
+    fn init(&mut self, _g: &mut Game) -> bool {
         true
     }
     fn update(&mut self, g: &mut Game);

@@ -29,7 +29,7 @@ impl MI_Text {
 impl UI_ControlTrait for MI_Text {
     crate::impl_ctl!();
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         if !self.m_visible {
             return;
         }

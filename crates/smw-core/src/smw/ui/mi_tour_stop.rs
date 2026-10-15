@@ -233,56 +233,56 @@ impl MI_TourStop {
 impl UI_ControlTrait for MI_TourStop {
     crate::impl_ctl!();
 
-    fn modify(&mut self, fModify: bool) -> MenuCodeEnum {
-        self.miStartButton.modify(fModify)
+    fn modify(&mut self, g: &mut Game, fModify: bool) -> MenuCodeEnum {
+        self.miStartButton.modify(g, fModify)
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         if !self.m_visible {
             return;
         }
 
-        self.miStartButton.update();
+        self.miStartButton.update(g);
 
-        self.miModeField.update();
-        self.miGoalField.update();
-        self.miPointsField.update();
-        self.miMapField.update();
+        self.miModeField.update(g);
+        self.miGoalField.update(g);
+        self.miPointsField.update(g);
+        self.miMapField.update(g);
 
         if self.fIsWorld {
-            self.miBonusField.as_mut().unwrap().update();
+            self.miBonusField.as_mut().unwrap().update(g);
         }
 
-        self.miTourStopLeftHeaderBar.update();
-        self.miTourStopMenuRightHeaderBar.update();
-        self.miTourStopMenuHeaderText.update();
+        self.miTourStopLeftHeaderBar.update(g);
+        self.miTourStopMenuRightHeaderBar.update(g);
+        self.miTourStopMenuHeaderText.update(g);
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         if !self.m_visible {
             return;
         }
 
-        self.miStartButton.draw();
+        self.miStartButton.draw(g);
 
-        self.miModeField.draw();
-        self.miGoalField.draw();
-        self.miPointsField.draw();
-        self.miMapField.draw();
+        self.miModeField.draw(g);
+        self.miGoalField.draw(g);
+        self.miPointsField.draw(g);
+        self.miMapField.draw(g);
 
         if self.fIsWorld {
-            self.miBonusField.as_mut().unwrap().draw();
-            self.miEndStageImage[0].as_mut().unwrap().draw();
-            self.miEndStageImage[1].as_mut().unwrap().draw();
+            self.miBonusField.as_mut().unwrap().draw(g);
+            self.miEndStageImage[0].as_mut().unwrap().draw(g);
+            self.miEndStageImage[1].as_mut().unwrap().draw(g);
 
             for iBonus in 0..10 {
-                self.miBonusBackground[iBonus].as_mut().unwrap().draw();
-                self.miBonusIcon[iBonus].as_mut().unwrap().draw();
+                self.miBonusBackground[iBonus].as_mut().unwrap().draw(g);
+                self.miBonusIcon[iBonus].as_mut().unwrap().draw(g);
             }
         }
 
-        self.miTourStopLeftHeaderBar.draw();
-        self.miTourStopMenuRightHeaderBar.draw();
-        self.miTourStopMenuHeaderText.draw();
+        self.miTourStopLeftHeaderBar.draw(g);
+        self.miTourStopMenuRightHeaderBar.draw(g);
+        self.miTourStopMenuHeaderText.draw(g);
     }
 }

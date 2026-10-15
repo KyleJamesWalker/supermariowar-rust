@@ -243,7 +243,7 @@ impl MI_FrenzyModeOptions {
 impl UI_ControlTrait for MI_FrenzyModeOptions {
     crate::impl_ctl!();
 
-    fn modify(&mut self, modify: bool) -> MenuCodeEnum {
+    fn modify(&mut self, g: &mut Game, modify: bool) -> MenuCodeEnum {
         self.mMenu.reset_menu();
         self.iOffset = 0;
         self.iIndex = 0;
@@ -254,10 +254,10 @@ impl UI_ControlTrait for MI_FrenzyModeOptions {
         MENU_CODE_MODIFY_ACCEPTED
     }
 
-    fn send_input(&mut self, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+    fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         let prevControl = self.mMenu.current_focus();
 
-        let ret = self.mMenu.send_input(game().get(), playerInput);
+        let ret = self.mMenu.send_input(g, playerInput);
 
         let nextControl = self.mMenu.current_focus();
 
@@ -277,11 +277,11 @@ impl UI_ControlTrait for MI_FrenzyModeOptions {
         ret
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         self.mMenu.update();
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         if !self.m_visible {
             return;
         }
@@ -289,7 +289,7 @@ impl UI_ControlTrait for MI_FrenzyModeOptions {
         self.mMenu.draw();
     }
 
-    fn mouse_click(&mut self, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
+    fn mouse_click(&mut self, g: &mut Game, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
         if self.fDisable {
             return MENU_CODE_NONE;
         }

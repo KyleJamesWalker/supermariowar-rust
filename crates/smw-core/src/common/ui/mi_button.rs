@@ -89,7 +89,7 @@ impl MI_Button {
 impl UI_ControlTrait for MI_Button {
     crate::impl_ctl!();
 
-    fn modify(&mut self, _fModify: bool) -> MenuCodeEnum {
+    fn modify(&mut self, g: &mut Game, _fModify: bool) -> MenuCodeEnum {
         if self.fDisable {
             return MENU_CODE_UNSELECT_ITEM;
         }
@@ -98,13 +98,13 @@ impl UI_ControlTrait for MI_Button {
         self.menuCode
     }
 
-    fn send_input(&mut self, _playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+    fn send_input(&mut self, g: &mut Game, _playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         //If input is being sent, that means the button is selected i.e. clicked
         (self.onPressFn)();
         self.menuCode
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         if !self.m_visible {
             return;
         }
@@ -118,35 +118,35 @@ impl UI_ControlTrait for MI_Button {
         let selY = (if self.fSelected { 32 } else { 0 }) + self.iAdjustmentY as i32;
 
         unsafe {
-            self.spr.draw_src(game().get(), x, y, &SDL_Rect { x: 0, y: selY, w: iHalfWidth, h: 32 });
-            self.spr.draw_src(game().get(), x + iHalfWidth, y, &SDL_Rect { x: 512 - iWidth + iHalfWidth, y: selY, w: iWidth - iHalfWidth, h: 32 });
+            self.spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: selY, w: iHalfWidth, h: 32 });
+            self.spr.draw_src(g, x + iHalfWidth, y, &SDL_Rect { x: 512 - iWidth + iHalfWidth, y: selY, w: iWidth - iHalfWidth, h: 32 });
 
             let srcRect = SDL_Rect { x: self.iImageSrcX as i32, y: self.iImageSrcY as i32, w: iImageW, h: iImageH };
 
             match self.m_text_align {
                 TextAlign::LEFT => {
-                    game().rm.menu_font_large.draw_chop_right(x + 16 + (if iImageW > 0 { iImageW + 2 } else { 0 }), y + 5, iWidth - 32, &self.szName);
+                    g.rm.menu_font_large.draw_chop_right(x + 16 + (if iImageW > 0 { iImageW + 2 } else { 0 }), y + 5, iWidth - 32, &self.szName);
                     if !self.sprImage.is_null() {
-                        self.sprImage.draw_src(game().get(), x + 16, y + 16 - (iImageH >> 1), &srcRect);
+                        self.sprImage.draw_src(g, x + 16, y + 16 - (iImageH >> 1), &srcRect);
                     }
                 }
                 TextAlign::CENTER => {
-                    game().rm.menu_font_large.draw_centered(x + ((iWidth + (if iImageW > 0 { iImageW + 2 } else { 0 })) >> 1), y + 5, &self.szName);
+                    g.rm.menu_font_large.draw_centered(x + ((iWidth + (if iImageW > 0 { iImageW + 2 } else { 0 })) >> 1), y + 5, &self.szName);
                     if !self.sprImage.is_null() {
-                        self.sprImage.draw_src(game().get(), x + (iWidth >> 1) - ((self.iTextW as i32 + iImageW) >> 1) - 1, y + 16 - (iImageH >> 1), &srcRect);
+                        self.sprImage.draw_src(g, x + (iWidth >> 1) - ((self.iTextW as i32 + iImageW) >> 1) - 1, y + 16 - (iImageH >> 1), &srcRect);
                     }
                 }
                 TextAlign::RIGHT => {
-                    game().rm.menu_font_large.draw_right_justified(x + iWidth - 16, y + 5, &self.szName);
+                    g.rm.menu_font_large.draw_right_justified(x + iWidth - 16, y + 5, &self.szName);
                     if !self.sprImage.is_null() {
-                        self.sprImage.draw_src(game().get(), x + iWidth - 18 - self.iTextW as i32 - iImageW, y + 16 - (iImageH >> 1), &srcRect);
+                        self.sprImage.draw_src(g, x + iWidth - 18 - self.iTextW as i32 - iImageW, y + 16 - (iImageH >> 1), &srcRect);
                     }
                 }
             }
         }
     }
 
-    fn mouse_click(&mut self, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
+    fn mouse_click(&mut self, g: &mut Game, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
         if self.fDisable {
             return MENU_CODE_NONE;
         }

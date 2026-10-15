@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_MapFilterScroll.cpp
 
+use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::NUM_AUTO_FILTERS;
 use crate::common::input::CPlayerInput;
@@ -123,16 +124,16 @@ impl MI_MapFilterScroll {
 impl UI_ControlTrait for MI_MapFilterScroll {
     crate::impl_ctl!();
 
-    fn modify(&mut self, modify: bool) -> MenuCodeEnum {
+    fn modify(&mut self, g: &mut Game, modify: bool) -> MenuCodeEnum {
         self.fModifying = modify;
         MENU_CODE_MODIFY_ACCEPTED
     }
 
-    fn send_input(&mut self, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+    fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         unsafe {
             for iPlayer in 0..4i16 {
                 //Only allow the controlling team to control the menu (if there is one)
-                if self.iControllingTeam != -1 && (self.iControllingTeam != lookup_team_id(iPlayer) || game().game_values.playercontrol[iPlayer as usize] != 1) {
+                if self.iControllingTeam != -1 && (self.iControllingTeam != lookup_team_id(iPlayer) || g.game_values.playercontrol[iPlayer as usize] != 1) {
                     continue;
                 }
 
@@ -165,10 +166,10 @@ impl UI_ControlTrait for MI_MapFilterScroll {
                     //If the left column is selected, then turn that filter on/off
                     if self.iSelectedColumn == 0 {
                         self.items[idx].fSelected = !self.items[idx].fSelected;
-                        game().game_values.pfFilters[idx] = !game().game_values.pfFilters[idx];
+                        g.game_values.pfFilters[idx] = !g.game_values.pfFilters[idx];
                     } else {
                         //otherwise if the right is selected, go into the details of that filter
-                        game().game_values.selectedmapfilter = self.iIndex as i16;
+                        g.game_values.selectedmapfilter = self.iIndex as i16;
                         return MENU_CODE_TO_MAP_FILTER_EDIT;
                     }
 
@@ -184,9 +185,9 @@ impl UI_ControlTrait for MI_MapFilterScroll {
         MENU_CODE_NONE
     }
 
-    fn update(&mut self) {}
+    fn update(&mut self, g: &mut Game) {}
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         if !self.m_visible {
             return;
         }
@@ -198,12 +199,12 @@ impl UI_ControlTrait for MI_MapFilterScroll {
 
         unsafe {
             //Draw the background for the map preview
-            game().rm.menu_dialog.draw_src(game().get(), x, y, &SDL_Rect { x: 0, y: 0, w: iWidth - 16, h: iNumLines * 32 + 32 });
-            game().rm.menu_dialog.draw_src(game().get(), x + iWidth - 16, y, &SDL_Rect { x: 496, y: 0, w: 16, h: iNumLines * 32 + 32 });
-            game().rm.menu_dialog.draw_src(game().get(), x, y + iNumLines * 32 + 32, &SDL_Rect { x: 0, y: 464, w: iWidth - 16, h: 16 });
-            game().rm.menu_dialog.draw_src(game().get(), x + iWidth - 16, y + iNumLines * 32 + 32, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+            game().rm.menu_dialog.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: iWidth - 16, h: iNumLines * 32 + 32 });
+            game().rm.menu_dialog.draw_src(g, x + iWidth - 16, y, &SDL_Rect { x: 496, y: 0, w: 16, h: iNumLines * 32 + 32 });
+            game().rm.menu_dialog.draw_src(g, x, y + iNumLines * 32 + 32, &SDL_Rect { x: 0, y: 464, w: iWidth - 16, h: 16 });
+            game().rm.menu_dialog.draw_src(g, x + iWidth - 16, y + iNumLines * 32 + 32, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
 
-            game().rm.menu_font_large.draw_centered(x + (iWidth >> 1), y + 5, "Map Filters");
+            g.rm.menu_font_large.draw_centered(x + (iWidth >> 1), y + 5, "Map Filters");
 
             //Draw each filter field
             let mut iLine: i16 = 0;
@@ -214,20 +215,20 @@ impl UI_ControlTrait for MI_MapFilterScroll {
                     let iHalfLineWidth = ((iWidth - 64) as i16 >> 1) as i32;
                     let iLineWidth = (iWidth - 64) as i16 as i32;
 
-                    self.spr.draw_src(game().get(), x + 16, y + 32 + l * 32, &SDL_Rect { x: 0, y: if lineSel { 32 } else { 0 }, w: iHalfLineWidth, h: 32 });
-                    self.spr.draw_src(game().get(), 
+                    self.spr.draw_src(g, x + 16, y + 32 + l * 32, &SDL_Rect { x: 0, y: if lineSel { 32 } else { 0 }, w: iHalfLineWidth, h: 32 });
+                    self.spr.draw_src(g, 
                         x + 16 + iHalfLineWidth,
                         y + 32 + l * 32,
                         &SDL_Rect { x: 512 - iLineWidth + iHalfLineWidth, y: if lineSel { 32 } else { 0 }, w: iLineWidth - iHalfLineWidth, h: 32 },
                     );
 
                     let colSel = self.iSelectedLine == iLine && self.iSelectedColumn == 1;
-                    game().rm.menu_map_filter.draw_src(game().get(), x + iWidth - 48, y + 32 + l * 32, &SDL_Rect { x: 48, y: if colSel { 32 } else { 0 }, w: 32, h: 32 });
+                    game().rm.menu_map_filter.draw_src(g, x + iWidth - 48, y + 32 + l * 32, &SDL_Rect { x: 48, y: if colSel { 32 } else { 0 }, w: 32, h: 32 });
                 } else {
                     let iHalfLineWidth = ((iWidth - 32) as i16 >> 1) as i32;
                     let iLineWidth = (iWidth - 32) as i16 as i32;
-                    self.spr.draw_src(game().get(), x + 16, y + 32 + l * 32, &SDL_Rect { x: 0, y: if lineSel { 32 } else { 0 }, w: iHalfLineWidth, h: 32 });
-                    self.spr.draw_src(game().get(), 
+                    self.spr.draw_src(g, x + 16, y + 32 + l * 32, &SDL_Rect { x: 0, y: if lineSel { 32 } else { 0 }, w: iHalfLineWidth, h: 32 });
+                    self.spr.draw_src(g, 
                         x + 16 + iHalfLineWidth,
                         y + 32 + l * 32,
                         &SDL_Rect { x: 512 - iLineWidth + iHalfLineWidth, y: if lineSel { 32 } else { 0 }, w: iLineWidth - iHalfLineWidth, h: 32 },
@@ -236,12 +237,12 @@ impl UI_ControlTrait for MI_MapFilterScroll {
 
                 let item = &self.items[(self.iOffset as i32 + l) as usize];
                 if item.fSelected {
-                    game().rm.menu_map_filter.draw_src(game().get(), x + 24, y + 32 + l * 32 + 4, &SDL_Rect { x: 24, y: 0, w: 24, h: 24 });
+                    game().rm.menu_map_filter.draw_src(g, x + 24, y + 32 + l * 32 + 4, &SDL_Rect { x: 24, y: 0, w: 24, h: 24 });
                 }
 
-                game().rm.menu_font_large.draw_chop_right(x + 52, y + 5 + l * 32 + 32, iWidth - 104, &item.sName);
+                g.rm.menu_font_large.draw_chop_right(x + 52, y + 5 + l * 32 + 32, iWidth - 104, &item.sName);
                 let icon = item.iIcon as i32;
-                game().rm.spr_map_filter_icons.draw_src(game().get(), x + 28, y + 32 + l * 32 + 8, &SDL_Rect { x: icon % 10 * 16, y: icon / 10 * 16, w: 16, h: 16 });
+                game().rm.spr_map_filter_icons.draw_src(g, x + 28, y + 32 + l * 32 + 8, &SDL_Rect { x: icon % 10 * 16, y: icon / 10 * 16, w: 16, h: 16 });
                 iLine += 1;
             }
         }

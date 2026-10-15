@@ -72,7 +72,7 @@ impl MI_NetRoomTeamSelect {
 impl UI_ControlTrait for MI_NetRoomTeamSelect {
     crate::impl_ctl!();
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         self.iAnimationTimer += 1;
         if self.iAnimationTimer > 7 {
             self.iAnimationTimer = 0;
@@ -95,7 +95,7 @@ impl UI_ControlTrait for MI_NetRoomTeamSelect {
             if self.fModifying {
                 self.miHoverImage.set_visible(false);
                 self.miModifyImage.set_visible(true);
-                self.miModifyImage.update();
+                self.miModifyImage.update(g);
             }
         } else {
             self.miHoverImage.set_visible(false);
@@ -103,22 +103,22 @@ impl UI_ControlTrait for MI_NetRoomTeamSelect {
         }
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         if !self.m_visible {
             return;
         }
 
-        self.miHoverImage.draw();
-        self.miModifyImage.draw();
+        self.miHoverImage.draw(g);
+        self.miModifyImage.draw(g);
 
         unsafe {
             let p = self.owner_player as usize;
             let frame = if self.fSelected { self.iAnimationFrame as usize } else { 0 };
-            game().rm.spr_player[p][frame].draw_src(game().get(), self.x as i32, self.y as i32, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
+            game().rm.spr_player[p][frame].draw_src(g, self.x as i32, self.y as i32, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
         }
     }
 
-    fn send_input(&mut self, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+    fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         if playerInput.outputControls[0].menu_select().fPressed || playerInput.outputControls[0].menu_cancel().fPressed {
             (self.onChangeAccepted)();
             self.fModifying = false;
@@ -126,13 +126,13 @@ impl UI_ControlTrait for MI_NetRoomTeamSelect {
         }
 
         unsafe {
-            let playerKeys = game().game_values.playerInput.outputControls[0];
-            let count = game().skinlist.count() as i16;
+            let playerKeys = g.game_values.playerInput.outputControls[0];
+            let count = g.skinlist.count() as i16;
 
-            if !game().game_values.randomskin[0] {
+            if !g.game_values.randomskin[0] {
                 if playerKeys.menu_up().fPressed {
                     let down = playerKeys.menu_down().fDown;
-                    self.cycle_skin(game().get(), |id| {
+                    self.cycle_skin(g, |id| {
                         if down {
                             *id = RANDOM_INT(count as i32) as i16;
                         } else {
@@ -151,7 +151,7 @@ impl UI_ControlTrait for MI_NetRoomTeamSelect {
                     } else {
                         self.iFastScrollTimer += 1;
                         if self.iFastScrollTimer > 5 {
-                            self.cycle_skin(game().get(), |id| {
+                            self.cycle_skin(g, |id| {
                                 *id -= 1;
                                 if *id < 0 {
                                     *id = count - 1;
@@ -164,7 +164,7 @@ impl UI_ControlTrait for MI_NetRoomTeamSelect {
 
                 if playerKeys.menu_down().fPressed {
                     let up = playerKeys.menu_up().fDown;
-                    self.cycle_skin(game().get(), |id| {
+                    self.cycle_skin(g, |id| {
                         if up {
                             *id = RANDOM_INT(count as i32) as i16;
                         } else {
@@ -183,7 +183,7 @@ impl UI_ControlTrait for MI_NetRoomTeamSelect {
                     } else {
                         self.iFastScrollTimer += 1;
                         if self.iFastScrollTimer > 5 {
-                            self.cycle_skin(game().get(), |id| {
+                            self.cycle_skin(g, |id| {
                                 *id += 1;
                                 if *id as i32 >= count as i32 {
                                     *id = 0;
@@ -207,7 +207,7 @@ impl UI_ControlTrait for MI_NetRoomTeamSelect {
         MENU_CODE_NONE
     }
 
-    fn modify(&mut self, modify: bool) -> MenuCodeEnum {
+    fn modify(&mut self, g: &mut Game, modify: bool) -> MenuCodeEnum {
         println!("modify");
         self.fModifying = modify;
         MENU_CODE_MODIFY_ACCEPTED

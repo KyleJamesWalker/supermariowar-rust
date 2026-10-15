@@ -99,8 +99,8 @@ impl MI_AnnouncerField {
     }
 
     pub fn update_impl(&mut self) {
-        self.miModifyImageRight.update();
-        self.miModifyImageLeft.update();
+        self.miModifyImageRight.update(game().get());
+        self.miModifyImageLeft.update(game().get());
     }
 
     pub fn draw_impl(&mut self, g: &mut Game) {
@@ -123,24 +123,24 @@ impl MI_AnnouncerField {
             g.rm.menu_font_large.draw_chop_right(x + iIndent + 8, y + 5, iWidth - iIndent - 24, &self.szFieldName);
         }
 
-        self.miModifyImageLeft.draw();
-        self.miModifyImageRight.draw();
+        self.miModifyImageLeft.draw(g);
+        self.miModifyImageRight.draw(g);
     }
 }
 
 impl UI_ControlTrait for MI_AnnouncerField {
     crate::impl_ctl!();
 
-    fn modify(&mut self, modify: bool) -> MenuCodeEnum {
+    fn modify(&mut self, g: &mut Game, modify: bool) -> MenuCodeEnum {
         self.modify_impl(modify)
     }
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         self.update_impl();
     }
-    fn draw(&mut self) {
-        self.draw_impl(game().get());
+    fn draw(&mut self, g: &mut Game) {
+        self.draw_impl(g);
     }
-    fn send_input(&mut self, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+    fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         self.send_input_impl(playerInput)
     }
 }

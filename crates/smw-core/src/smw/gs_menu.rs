@@ -1469,53 +1469,53 @@ impl MenuState {
 }
 
 impl GameState for MenuState {
-    fn init(&mut self) -> bool {
+    fn init(&mut self, g: &mut Game) -> bool {
         unsafe {
-            assign(&mut self.mMainMenu, UI_MainMenu::new(game().get()));
+            assign(&mut self.mMainMenu, UI_MainMenu::new(g));
 
             // Options menu
-            assign(&mut self.mOptionsMenu, UI_OptionsMenu::new(game().get()));
-            assign(&mut self.mGameplayOptionsMenu, UI_GameplayOptionsMenu::new(game().get()));
-            assign(&mut self.mTeamOptionsMenu, UI_TeamOptionsMenu::new(game().get()));
-            assign(&mut self.mPowerupDropRatesMenu, UI_PowerupDropRatesMenu::new(game().get()));
-            assign(&mut self.mPowerupSettingsMenu, UI_PowerupSettingsMenu::new(game().get()));
-            assign(&mut self.mProjectileLimitsMenu, UI_ProjectileLimitsMenu::new(game().get()));
-            assign(&mut self.mProjectileOptionsMenu, UI_ProjectileOptionsMenu::new(game().get()));
-            assign(&mut self.mGraphicsOptionsMenu, UI_GraphicsOptionsMenu::new(game().get()));
-            assign(&mut self.mEyeCandyOptionsMenu, UI_EyeCandyOptionsMenu::new(game().get()));
-            assign(&mut self.mSoundOptionsMenu, UI_SoundOptionsMenu::new(game().get()));
+            assign(&mut self.mOptionsMenu, UI_OptionsMenu::new(g));
+            assign(&mut self.mGameplayOptionsMenu, UI_GameplayOptionsMenu::new(g));
+            assign(&mut self.mTeamOptionsMenu, UI_TeamOptionsMenu::new(g));
+            assign(&mut self.mPowerupDropRatesMenu, UI_PowerupDropRatesMenu::new(g));
+            assign(&mut self.mPowerupSettingsMenu, UI_PowerupSettingsMenu::new(g));
+            assign(&mut self.mProjectileLimitsMenu, UI_ProjectileLimitsMenu::new(g));
+            assign(&mut self.mProjectileOptionsMenu, UI_ProjectileOptionsMenu::new(g));
+            assign(&mut self.mGraphicsOptionsMenu, UI_GraphicsOptionsMenu::new(g));
+            assign(&mut self.mEyeCandyOptionsMenu, UI_EyeCandyOptionsMenu::new(g));
+            assign(&mut self.mSoundOptionsMenu, UI_SoundOptionsMenu::new(g));
 
             // Controls menu
-            assign(&mut self.mPlayerControlsSelectMenu, UI_PlayerControlsSelectMenu::new(game().get()));
-            assign(&mut self.mPlayerControlsMenu, UI_PlayerControlsMenu::new(game().get()));
+            assign(&mut self.mPlayerControlsSelectMenu, UI_PlayerControlsSelectMenu::new(g));
+            assign(&mut self.mPlayerControlsMenu, UI_PlayerControlsMenu::new(g));
 
             // Gameplay menu
-            assign(&mut self.mModeOptionsMenu, UI_ModeOptionsMenu::new(game().get()));
-            assign(&mut self.mMatchSelectionMenu, UI_MatchSelectionMenu::new(game().get()));
-            assign(&mut self.mGameSettingsMenu, UI_GameSettingsMenu::new(game().get()));
+            assign(&mut self.mModeOptionsMenu, UI_ModeOptionsMenu::new(g));
+            assign(&mut self.mMatchSelectionMenu, UI_MatchSelectionMenu::new(g));
+            assign(&mut self.mGameSettingsMenu, UI_GameSettingsMenu::new(g));
             assign(&mut self.mMapFilterEditMenu, UI_MapFilterEditMenu::new());
-            assign(&mut self.mTourStopMenu, UI_TourStopMenu::new(game().get()));
-            assign(&mut self.mWorldMenu, UI_WorldMenu::new(game().get()));
-            assign(&mut self.mTeamSelectMenu, UI_TeamSelectMenu::new(game().get()));
-            assign(&mut self.mTournamentScoreboardMenu, UI_TournamentScoreboardMenu::new(game().get()));
+            assign(&mut self.mTourStopMenu, UI_TourStopMenu::new(g));
+            assign(&mut self.mWorldMenu, UI_WorldMenu::new(g));
+            assign(&mut self.mTeamSelectMenu, UI_TeamSelectMenu::new(g));
+            assign(&mut self.mTournamentScoreboardMenu, UI_TournamentScoreboardMenu::new(g));
             assign(&mut self.mBonusWheelMenu, UI_BonusWheelMenu::new());
 
             // Multiplayer menu
-            assign(&mut self.mNetServersMenu, UI_NetServersMenu::new(game().get()));
-            assign(&mut self.mNetEditServersMenu, UI_NetEditServersMenu::new(game().get()));
-            assign(&mut self.mNetLobbyMenu, UI_NetLobbyMenu::new(game().get()));
-            assign(&mut self.mNetNewRoomMenu, UI_NetNewRoomMenu::new(game().get()));
-            assign(&mut self.mNetNewRoomSettingsMenu, UI_NetNewRoomSettingsMenu::new(game().get(), &self.mGameSettingsMenu));
-            assign(&mut self.mNetRoomMenu, UI_NetRoomMenu::new(game().get()));
+            assign(&mut self.mNetServersMenu, UI_NetServersMenu::new(g));
+            assign(&mut self.mNetEditServersMenu, UI_NetEditServersMenu::new(g));
+            assign(&mut self.mNetLobbyMenu, UI_NetLobbyMenu::new(g));
+            assign(&mut self.mNetNewRoomMenu, UI_NetNewRoomMenu::new(g));
+            assign(&mut self.mNetNewRoomSettingsMenu, UI_NetNewRoomSettingsMenu::new(g, &self.mGameSettingsMenu));
+            assign(&mut self.mNetRoomMenu, UI_NetRoomMenu::new(g));
 
             self.mCurrentMenu = menu(self.mMainMenu);
 
             if let Some(forcedMap) = harness::forced_map() {
-                if !game().maplist.findexact(forcedMap, false) && !game().maplist.find(forcedMap) {
+                if !g.maplist.findexact(forcedMap, false) && !g.maplist.find(forcedMap) {
                     eprintln!("[harness] SMW_MAP '{}' not found", forcedMap);
                     std::process::exit(2);
                 }
-                self.mGameSettingsMenu.miMapField.load_current_map(game().get());
+                self.mGameSettingsMenu.miMapField.load_current_map(g);
             }
 
             self.szCurrentMapName = Ptr::from_mut(&mut self.mGameSettingsMenu.miMapField.szMapName);

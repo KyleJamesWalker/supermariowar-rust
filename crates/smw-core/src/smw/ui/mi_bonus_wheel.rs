@@ -219,7 +219,7 @@ impl MI_BonusWheel {
 impl UI_ControlTrait for MI_BonusWheel {
     crate::impl_ctl!();
 
-    fn modify(&mut self, fModify: bool) -> MenuCodeEnum {
+    fn modify(&mut self, g: &mut Game, fModify: bool) -> MenuCodeEnum {
         if fModify && !self.fPressedSelect {
             self.fPressedSelect = true;
 
@@ -246,13 +246,13 @@ impl UI_ControlTrait for MI_BonusWheel {
         }
 
         if self.fPowerupSelectionDone {
-            return self.miContinueButton.modify(fModify);
+            return self.miContinueButton.modify(g, fModify);
         }
 
         MENU_CODE_NONE
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         unsafe {
             if self.iState == 0 {
                 self.iDisplayPowerupTimer -= 1;
@@ -266,7 +266,7 @@ impl UI_ControlTrait for MI_BonusWheel {
                     let _ = (iPoofX, iPoofY);
                     // TODO(eyecandy): m_parentMenu->AddEyeCandy<EC_SingleAnimation>(&rm->spr_poof, iPoofX, iPoofY, 4, 5);
 
-                    if_sound_on_play(game().get(), &mut game().rm.sfx_cannon);
+                    if_sound_on_play(g, &mut game().rm.sfx_cannon);
 
                     self.iDisplayPowerupIndex += 1;
                     if self.iDisplayPowerupIndex as i32 >= NUMBONUSITEMSONWHEEL {
@@ -278,18 +278,18 @@ impl UI_ControlTrait for MI_BonusWheel {
                     self.iPressSelectTimer += 1;
                     self.iPressSelectTimer > 620
                 }) {
-                    self.modify(true);
+                    self.modify(g, true);
                 }
 
                 for iImage in 0..NB {
-                    self.miBonusImages[iImage].update();
+                    self.miBonusImages[iImage].update(g);
                 }
 
                 for iPlayer in 0..self.iNumPlayers as usize {
-                    self.miPlayerImages[iPlayer].update();
+                    self.miPlayerImages[iPlayer].update(g);
                 }
 
-                self.miContinueButton.update();
+                self.miContinueButton.update(g);
 
                 self.iSelectorAnimationCounter += 1;
                 if self.iSelectorAnimationCounter > 8 {
@@ -336,9 +336,9 @@ impl UI_ControlTrait for MI_BonusWheel {
                         self.miContinueButton.select(true);
 
                         //Reset all player's stored item
-                        if !game().game_values.keeppowerup {
+                        if !g.game_values.keeppowerup {
                             for iPlayer in 0..4usize {
-                                game().game_values.storedpowerups[iPlayer] = -1;
+                                g.game_values.storedpowerups[iPlayer] = -1;
                             }
                         }
 
@@ -348,7 +348,7 @@ impl UI_ControlTrait for MI_BonusWheel {
                             game().game_values.storedpowerups[game().game_values.teamids[w][iPlayer] as usize] = self.iSelectedPowerup;
                         }
 
-                        if_sound_on_play(game().get(), &mut game().rm.sfx_collectpowerup);
+                        if_sound_on_play(g, &mut game().rm.sfx_collectpowerup);
                     }
                 }
 
@@ -356,7 +356,7 @@ impl UI_ControlTrait for MI_BonusWheel {
 
                 //If we hit the next powerup, play a tick sound
                 if self.dSelectionAngle >= self.dSelectionSector[self.iNextSelectionSoundIndex as usize] {
-                    if_sound_on_play(game().get(), &mut game().rm.sfx_worldmove);
+                    if_sound_on_play(g, &mut game().rm.sfx_worldmove);
 
                     self.iNextSelectionSoundIndex += 1;
                     if self.iNextSelectionSoundIndex as i32 > NUMBONUSITEMSONWHEEL {
@@ -371,7 +371,7 @@ impl UI_ControlTrait for MI_BonusWheel {
         }
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         if !self.m_visible {
             return;
         }
@@ -380,13 +380,13 @@ impl UI_ControlTrait for MI_BonusWheel {
             let x = self.m_pos.x as i32;
             let y = self.m_pos.y as i32;
 
-            game().rm.spr_tournament_powerup_splash.draw(game().get(), x, y);
+            game().rm.spr_tournament_powerup_splash.draw(g, x, y);
 
             let iSelectorX = (x + 144 + (110.0f32 * cosf(self.dSelectionAngle)) as i16 as i32) as i16;
             let iSelectorY = (y + 190 + (110.0f32 * sinf(self.dSelectionAngle)) as i16 as i32) as i16;
 
             if self.iState > 0 {
-                game().rm.spr_powerupselector.draw_src(game().get(), iSelectorX as i32, iSelectorY as i32, &SDL_Rect { x: self.iSelectorAnimation as i32 * 64, y: 0, w: 64, h: 64 });
+                game().rm.spr_powerupselector.draw_src(g, iSelectorX as i32, iSelectorY as i32, &SDL_Rect { x: self.iSelectorAnimation as i32 * 64, y: 0, w: 64, h: 64 });
             }
 
             for iImage in 0..NB {
@@ -394,17 +394,17 @@ impl UI_ControlTrait for MI_BonusWheel {
                     break;
                 }
 
-                self.miBonusImages[iImage].draw();
+                self.miBonusImages[iImage].draw(g);
             }
 
             for iPlayer in 0..self.iNumPlayers as usize {
-                self.miPlayerImages[iPlayer].draw();
+                self.miPlayerImages[iPlayer].draw(g);
             }
 
-            self.miContinueButton.draw();
+            self.miContinueButton.draw(g);
 
             if self.iState == 1 && !self.fPressedSelect {
-                game().rm.menu_font_large.draw_centered(App::screenWidth / 2, y + 390, "Press a Button To Stop The Wheel");
+                g.rm.menu_font_large.draw_centered(App::screenWidth / 2, y + 390, "Press a Button To Stop The Wheel");
             }
         }
     }

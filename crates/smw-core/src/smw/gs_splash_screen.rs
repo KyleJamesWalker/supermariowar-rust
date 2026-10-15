@@ -49,13 +49,13 @@ impl GameState for SplashScreenState {
         self.menu_credits.delete();
     }
 
-    fn init(&mut self) -> bool {
+    fn init(&mut self, g: &mut Game) -> bool {
         unsafe {
-            game().rm.load_start_graphics(game().get());
+            game().rm.load_start_graphics(g);
 
             self.menu_credits = Ptr::new_box(gfxSprite::new());
             *self.menu_credits =
-                ImageLoader::new(convert_path_pack("gfx/packs/menu/splash_credits.png", &game().menugraphicspacklist.current_path().to_string_lossy())).create();
+                ImageLoader::new(convert_path_pack("gfx/packs/menu/splash_credits.png", &g.menugraphicspacklist.current_path().to_string_lossy())).create();
         }
 
         true
@@ -109,8 +109,8 @@ impl GameState for SplashScreenState {
                         g.game_values.playerInput.reset_keys();
                         g.game_values.appstate = AppState::Menu;
 
-                        MenuState::instance().init();
-                        GameplayState::instance().init();
+                        MenuState::instance().init(g);
+                        GameplayState::instance().init(g);
                         GameStateManager::instance().change_state_to(g, Ptr::from_mut(MenuState::instance() as &mut dyn GameState));
                         return;
                     }

@@ -61,7 +61,7 @@ extern "C" {
 
 pub fn gameloop(g: &mut Game) {
     unsafe {
-        SplashScreenState::instance().init();
+        SplashScreenState::instance().init(g);
         GameStateManager::instance().currentState = Ptr::from_mut(SplashScreenState::instance() as &mut dyn GameState);
         if let Some(segment) = harness::segment_state() {
             GameStateManager::instance().currentState = Ptr::from_box(Box::new(segment) as Box<dyn GameState>);

@@ -1,5 +1,6 @@
 //! Port of src/common/ui/MI_Image.cpp
 
+use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::trig::{cosf, sinf};
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
@@ -120,7 +121,7 @@ impl MI_Image {
 impl UI_ControlTrait for MI_Image {
     crate::impl_ctl!();
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         if !self.m_visible {
             return;
         }
@@ -180,7 +181,7 @@ impl UI_ControlTrait for MI_Image {
         }
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         if !self.m_visible || (self.fBlink && !self.fBlinkShow) {
             return;
         }
@@ -202,9 +203,9 @@ impl UI_ControlTrait for MI_Image {
                 w: self.iw as i32 + (pv << 1),
                 h: self.ih as i32 + (pv << 1),
             };
-            self.spr.draw_stretch(&src, unsafe { game().blitdest }, &dst);
+            self.spr.draw_stretch(&src, unsafe { g.blitdest }, &dst);
         } else {
-            self.spr.draw_src(game().get(), self.m_pos.x as i32 + iXOffset as i32, self.m_pos.y as i32 + iYOffset as i32, &src);
+            self.spr.draw_src(g, self.m_pos.x as i32 + iXOffset as i32, self.m_pos.y as i32 + iYOffset as i32, &src);
         }
     }
 }

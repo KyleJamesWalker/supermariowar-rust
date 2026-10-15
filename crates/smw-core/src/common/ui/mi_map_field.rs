@@ -133,7 +133,7 @@ impl MI_MapField {
 impl UI_ControlTrait for MI_MapField {
     crate::impl_ctl!();
 
-    fn modify(&mut self, modify: bool) -> MenuCodeEnum {
+    fn modify(&mut self, g: &mut Game, modify: bool) -> MenuCodeEnum {
         if self.fDisable {
             return MENU_CODE_UNSELECT_ITEM;
         }
@@ -145,7 +145,7 @@ impl UI_ControlTrait for MI_MapField {
         MENU_CODE_MODIFY_ACCEPTED
     }
 
-    fn send_input(&mut self, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+    fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         let iPressedKey: i16 = playerInput.iPressedKey as i16;
 
         for iPlayer in 0..4usize {
@@ -167,7 +167,7 @@ impl UI_ControlTrait for MI_MapField {
             }
 
             if out.menu_random().fPressed {
-                return self.choose_random_map(game().get());
+                return self.choose_random_map(g);
             }
 
             if out.menu_select().fPressed || out.menu_cancel().fPressed {
@@ -185,20 +185,20 @@ impl UI_ControlTrait for MI_MapField {
                     || key == SDLK_MINUS as i32
                     || key == SDLK_EQUALS as i32
                 {
-                    let iOldIndex = current_map_index(game().get());
+                    let iOldIndex = current_map_index(g);
 
                     //maplist->startswith((char)playerInput->iPressedKey);
 
                     self.sSearchString.push(iPressedKey as u8 as char);
                     self.iSearchStringTimer = 10;
 
-                    if unsafe { !game().maplist.startswith(&self.sSearchString) } {
+                    if unsafe { !g.maplist.startswith(&self.sSearchString) } {
                         self.sSearchString = String::new();
                         self.iSearchStringTimer = 0;
                     }
 
-                    if iOldIndex != current_map_index(game().get()) {
-                        self.load_current_map(game().get());
+                    if iOldIndex != current_map_index(g) {
+                        self.load_current_map(g);
                         return MENU_CODE_MAP_CHANGED;
                     }
 
@@ -210,7 +210,7 @@ impl UI_ControlTrait for MI_MapField {
         MENU_CODE_NONE
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         //Empty out the search string after a certain time
         if self.iSearchStringTimer > 0 {
             self.iSearchStringTimer -= 1;
@@ -236,13 +236,13 @@ impl UI_ControlTrait for MI_MapField {
         }
 
         //Update hazards
-        self.mi_map_preview.update_impl(game().get());
+        self.mi_map_preview.update_impl(g);
 
-        self.miModifyImageRight.update();
-        self.miModifyImageLeft.update();
+        self.miModifyImageRight.update(g);
+        self.miModifyImageLeft.update(g);
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         if !self.m_visible {
             return;
         }
@@ -255,23 +255,23 @@ impl UI_ControlTrait for MI_MapField {
 
         unsafe {
             //Draw the select field background
-            self.spr.draw_src(game().get(), x, y, &SDL_Rect { x: 0, y: selY, w: indent - 16, h: 32 });
-            self.spr.draw_src(game().get(), x + indent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
-            self.spr.draw_src(game().get(), x + indent + 16, y, &SDL_Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
+            self.spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: selY, w: indent - 16, h: 32 });
+            self.spr.draw_src(g, x + indent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
+            self.spr.draw_src(g, x + indent + 16, y, &SDL_Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
 
-            game().rm.menu_font_large.draw_chop_right(x + 16, y + 5, indent - 8, &self.szName);
-            game().rm.menu_font_large.draw_chop_right(x + indent + 8, y + 5, width - indent - 24, &self.szMapName);
+            g.rm.menu_font_large.draw_chop_right(x + 16, y + 5, indent - 8, &self.szName);
+            g.rm.menu_font_large.draw_chop_right(x + indent + 8, y + 5, width - indent - 24, &self.szMapName);
         }
 
-        self.mi_map_preview.draw_impl(game().get());
+        self.mi_map_preview.draw_impl(g);
 
-        self.miModifyImageLeft.draw();
-        self.miModifyImageRight.draw();
+        self.miModifyImageLeft.draw(g);
+        self.miModifyImageRight.draw(g);
 
         //rm->menu_font_large.draw(rectDst.x, rectDst.y, sSearchString.c_str());
     }
 
-    fn mouse_click(&mut self, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
+    fn mouse_click(&mut self, g: &mut Game, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
         if self.fDisable {
             return MENU_CODE_NONE;
         }

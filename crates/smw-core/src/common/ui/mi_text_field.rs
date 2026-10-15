@@ -219,7 +219,7 @@ impl MI_TextField {
         let key = playerInput.iPressedKey;
         if is_text_key(key) || key == SDLK_BACKSPACE as SDL_Keycode || key == SDLK_DELETE as SDL_Keycode {
             self.fOsk = false;
-            return self.send_input(playerInput);
+            return self.send_input(g, playerInput);
         }
 
         for iPlayer in 0..4usize {
@@ -358,7 +358,7 @@ impl MI_TextField {
 impl UI_ControlTrait for MI_TextField {
     crate::impl_ctl!();
 
-    fn modify(&mut self, modify: bool) -> MenuCodeEnum {
+    fn modify(&mut self, g: &mut Game, modify: bool) -> MenuCodeEnum {
         if self.fDisable {
             return MENU_CODE_UNSELECT_ITEM;
         }
@@ -369,7 +369,7 @@ impl UI_ControlTrait for MI_TextField {
 
         self.miModifyCursor.set_visible(modify);
         self.fModifying = modify;
-        self.fOsk = modify && (touch_session() || unsafe { !game().text_field_opened_by_key });
+        self.fOsk = modify && (touch_session() || unsafe { !g.text_field_opened_by_key });
         self.iOskRow = 0;
         self.iOskCol = 0;
         self.fOskShift = false;
@@ -377,9 +377,9 @@ impl UI_ControlTrait for MI_TextField {
         MENU_CODE_MODIFY_ACCEPTED
     }
 
-    fn send_input(&mut self, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+    fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         if self.fOsk && !self.szOutValue.is_null() {
-            return self.osk_input(game().get(), playerInput);
+            return self.osk_input(g, playerInput);
         }
 
         let keystate = crate::smw::harness::keyboard_state();
@@ -389,8 +389,8 @@ impl UI_ControlTrait for MI_TextField {
             // Only let player 1 on the keyboard control the menu
             unsafe {
                 if iPlayer != 0
-                    && !game().game_values.playerInput.inputControls[iPlayer].is_null()
-                    && game().game_values.playerInput.inputControls[iPlayer].iDevice == DEVICE_KEYBOARD
+                    && !g.game_values.playerInput.inputControls[iPlayer].is_null()
+                    && g.game_values.playerInput.inputControls[iPlayer].iDevice == DEVICE_KEYBOARD
                 {
                     continue;
                 }
@@ -457,29 +457,29 @@ impl UI_ControlTrait for MI_TextField {
                 unsafe { (*self.szOutValue).as_mut_vec().remove(self.iCursorIndex as usize) };
                 self.iNumChars -= 1;
 
-                self.update_cursor(game().get());
+                self.update_cursor(g);
                 return self.mcItemChangedCode;
             }
         } else if key == k(SDLK_LEFT) {
             if self.iCursorIndex > 0 {
                 self.iCursorIndex -= 1;
-                self.update_cursor(game().get());
+                self.update_cursor(g);
             }
         } else if key == k(SDLK_RIGHT) {
             if self.iCursorIndex < self.iNumChars {
                 self.iCursorIndex += 1;
-                self.update_cursor(game().get());
+                self.update_cursor(g);
             }
         }
 
         MENU_CODE_NONE
     }
 
-    fn update(&mut self) {
-        self.miModifyCursor.update();
+    fn update(&mut self, g: &mut Game) {
+        self.miModifyCursor.update(g);
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         if !self.m_visible {
             return;
         }
@@ -491,31 +491,31 @@ impl UI_ControlTrait for MI_TextField {
         let selY = (if self.fSelected { 32 } else { 0 }) + self.iAdjustmentY as i32;
 
         unsafe {
-            self.spr.draw_src(game().get(), x, y, &SDL_Rect { x: 0, y: selY, w: indent - 16, h: 32 });
-            self.spr.draw_src(game().get(), x + indent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
-            self.spr.draw_src(game().get(), x + indent + 16, y, &SDL_Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
+            self.spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: selY, w: indent - 16, h: 32 });
+            self.spr.draw_src(g, x + indent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
+            self.spr.draw_src(g, x + indent + 16, y, &SDL_Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
 
-            game().rm.menu_font_large.draw_chop_right(x + 16, y + 5, indent - 8, &self.szName);
+            g.rm.menu_font_large.draw_chop_right(x + 16, y + 5, indent - 8, &self.szName);
 
             if !self.szOutValue.is_null() {
                 if self.iStringWidth <= self.iAllowedWidth || !self.fModifying {
-                    game().rm.menu_font_large.draw_chop_right(x + indent + 8, y + 5, self.iAllowedWidth as i32, &*self.szOutValue);
+                    g.rm.menu_font_large.draw_chop_right(x + indent + 8, y + 5, self.iAllowedWidth as i32, &*self.szOutValue);
                 } else {
-                    game().rm.menu_font_large.draw_chop_left(x + width - 16, y + 5, self.iAllowedWidth as i32, &self.szTempValue);
+                    g.rm.menu_font_large.draw_chop_left(x + width - 16, y + 5, self.iAllowedWidth as i32, &self.szTempValue);
                 }
             }
         }
 
-        self.miModifyCursor.draw();
+        self.miModifyCursor.draw(g);
     }
 
-    fn draw_overlay(&mut self) {
+    fn draw_overlay(&mut self, g: &mut Game) {
         if self.fModifying && self.fOsk {
-            self.draw_osk(game().get());
+            self.draw_osk(g);
         }
     }
 
-    fn mouse_click(&mut self, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
+    fn mouse_click(&mut self, g: &mut Game, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
         if self.szOutValue.is_null() || self.fDisable {
             return MENU_CODE_NONE;
         }
@@ -527,11 +527,11 @@ impl UI_ControlTrait for MI_TextField {
             for iChar in 0..self.iNumChars {
                 let szChar = [unsafe { (*self.szOutValue).as_bytes()[iChar as usize] }];
                 let szChar = unsafe { std::str::from_utf8_unchecked(&szChar) };
-                iPixelCount = (iPixelCount as i32 + unsafe { game().rm.menu_font_large.get_width(szChar) }) as i16;
+                iPixelCount = (iPixelCount as i32 + unsafe { g.rm.menu_font_large.get_width(szChar) }) as i16;
 
                 if iPixelCount as i32 >= iMouseX as i32 - (self.m_pos.x as i32 + self.iIndent as i32 + 8) {
                     self.iCursorIndex = iChar;
-                    self.update_cursor(game().get());
+                    self.update_cursor(g);
                     return MENU_CODE_NONE;
                 }
             }
@@ -541,7 +541,7 @@ impl UI_ControlTrait for MI_TextField {
         let (mx, my) = (iMouseX as i32, iMouseY as i32);
         if mx >= self.m_pos.x as i32 && mx < self.m_pos.x as i32 + self.iWidth as i32 && my >= self.m_pos.y as i32 && my < self.m_pos.y as i32 + 32 {
             self.iCursorIndex = unsafe { (&*self.szOutValue).len() } as i16;
-            self.update_cursor(game().get());
+            self.update_cursor(g);
             return MENU_CODE_CLICKED;
         }
 

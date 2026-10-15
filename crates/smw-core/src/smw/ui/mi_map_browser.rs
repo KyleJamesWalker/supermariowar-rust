@@ -138,7 +138,7 @@ impl Default for MI_MapBrowser {
 impl UI_ControlTrait for MI_MapBrowser {
     crate::impl_ctl!();
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         self.iFilterTagAnimationTimer += 1;
         if self.iFilterTagAnimationTimer > 8 {
             self.iFilterTagAnimationTimer = 0;
@@ -150,7 +150,7 @@ impl UI_ControlTrait for MI_MapBrowser {
         }
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         if !self.m_visible {
             return;
         }
@@ -172,13 +172,13 @@ impl UI_ControlTrait for MI_MapBrowser {
                         rDst.x = iCol as i32 * 200 + 40;
 
                         let i = (iRow * 3 + iCol) as usize;
-                        self.mapSurfaces[i].draw_src_to(&rSrc, game().blitdest, &rDst);
+                        self.mapSurfaces[i].draw_src_to(&rSrc, g.blitdest, &rDst);
 
-                        if self.iType == 0 && self.node_filter(game().get(), i) {
-                            game().rm.menu_map_filter.draw_src(game().get(), rDst.x, rDst.y, &filterSrc);
+                        if self.iType == 0 && self.node_filter(g, i) {
+                            game().rm.menu_map_filter.draw_src(g, rDst.x, rDst.y, &filterSrc);
                         }
 
-                        game().rm.menu_font_large.draw_chop_right(rDst.x, rDst.y + 120, 165, &self.mapNames[i]);
+                        g.rm.menu_font_large.draw_chop_right(rDst.x, rDst.y + 120, 165, &self.mapNames[i]);
                     }
                 }
             }
@@ -187,33 +187,33 @@ impl UI_ControlTrait for MI_MapBrowser {
             rDst.y = self.iSelectedRow as i32 * 150 + 30;
             rDst.x = self.iSelectedCol as i32 * 200 + 40;
 
-            game().rm.menu_dialog.draw_src(game().get(), rDst.x - 16, rDst.y - 16, &SDL_Rect { x: 0, y: 0, w: 176, h: 148 });
-            game().rm.menu_dialog.draw_src(game().get(), rDst.x + 160, rDst.y - 16, &SDL_Rect { x: 496, y: 0, w: 16, h: 148 });
-            game().rm.menu_dialog.draw_src(game().get(), rDst.x - 16, rDst.y + 132, &SDL_Rect { x: 0, y: 464, w: 176, h: 16 });
-            game().rm.menu_dialog.draw_src(game().get(), rDst.x + 160, rDst.y + 132, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+            game().rm.menu_dialog.draw_src(g, rDst.x - 16, rDst.y - 16, &SDL_Rect { x: 0, y: 0, w: 176, h: 148 });
+            game().rm.menu_dialog.draw_src(g, rDst.x + 160, rDst.y - 16, &SDL_Rect { x: 496, y: 0, w: 16, h: 148 });
+            game().rm.menu_dialog.draw_src(g, rDst.x - 16, rDst.y + 132, &SDL_Rect { x: 0, y: 464, w: 176, h: 16 });
+            game().rm.menu_dialog.draw_src(g, rDst.x + 160, rDst.y + 132, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
 
             let sel = (self.iSelectedRow * 3 + self.iSelectedCol) as usize;
-            self.mapSurfaces[sel].draw_src_to(&rSrc, game().blitdest, &rDst);
+            self.mapSurfaces[sel].draw_src_to(&rSrc, g.blitdest, &rDst);
 
-            if self.iType == 0 && self.node_filter(game().get(), sel) {
-                game().rm.menu_map_filter.draw_src(game().get(), rDst.x, rDst.y, &filterSrc);
+            if self.iType == 0 && self.node_filter(g, sel) {
+                game().rm.menu_map_filter.draw_src(g, rDst.x, rDst.y, &filterSrc);
             }
 
-            game().rm.menu_font_large.draw_chop_right(rDst.x, rDst.y + 120, 165, &self.mapNames[sel]);
+            g.rm.menu_font_large.draw_chop_right(rDst.x, rDst.y + 120, 165, &self.mapNames[sel]);
         }
     }
 
-    fn modify(&mut self, modify: bool) -> MenuCodeEnum {
+    fn modify(&mut self, g: &mut Game, modify: bool) -> MenuCodeEnum {
         self.fModifying = modify;
         MENU_CODE_MODIFY_ACCEPTED
     }
 
-    fn send_input(&mut self, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+    fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         unsafe {
             for iPlayer in 0..4i16 {
                 //Only allow the controlling team to control the menu (if there is one)
                 if self.iControllingTeam != -1
-                    && (self.iControllingTeam != lookup_team_id(iPlayer) || game().game_values.playercontrol[iPlayer as usize] != 1)
+                    && (self.iControllingTeam != lookup_team_id(iPlayer) || g.game_values.playercontrol[iPlayer as usize] != 1)
                 {
                     continue;
                 }
@@ -239,7 +239,7 @@ impl UI_ControlTrait for MI_MapBrowser {
                     self.iPage = self.iSelectedIndex / 9;
 
                     if iOldPage != self.iPage {
-                        self.load_page(game().get(), self.iPage, self.iType == 1);
+                        self.load_page(g, self.iPage, self.iType == 1);
                     }
 
                     return MENU_CODE_NONE;
@@ -264,7 +264,7 @@ impl UI_ControlTrait for MI_MapBrowser {
                     self.iPage = self.iSelectedIndex / 9;
 
                     if iOldPage != self.iPage {
-                        self.load_page(game().get(), self.iPage, self.iType == 1);
+                        self.load_page(g, self.iPage, self.iType == 1);
                     }
 
                     return MENU_CODE_NONE;
@@ -287,7 +287,7 @@ impl UI_ControlTrait for MI_MapBrowser {
                         if self.iSelectedRow < 0 {
                             self.iSelectedRow = 2;
                             self.iPage -= 1;
-                            self.load_page(game().get(), self.iPage, self.iType == 1);
+                            self.load_page(g, self.iPage, self.iType == 1);
                         }
                     }
 
@@ -311,7 +311,7 @@ impl UI_ControlTrait for MI_MapBrowser {
                         if self.iSelectedRow > 2 {
                             self.iSelectedRow = 0;
                             self.iPage += 1;
-                            self.load_page(game().get(), self.iPage, self.iType == 1);
+                            self.load_page(g, self.iPage, self.iType == 1);
                         }
                     }
 
@@ -321,12 +321,12 @@ impl UI_ControlTrait for MI_MapBrowser {
                 if out.menu_select().fPressed {
                     let itr = self.mapListItr[(self.iSelectedRow * 3 + self.iSelectedCol) as usize];
                     if self.iType == 0 {
-                        let mut maplist = game().maplist;
-                        let f = &mut maplist.maps.node_mut(itr).pfFilters[game().game_values.selectedmapfilter as usize];
+                        let mut maplist = g.maplist;
+                        let f = &mut maplist.maps.node_mut(itr).pfFilters[g.game_values.selectedmapfilter as usize];
                         *f = !*f;
-                        game().game_values.fNeedWriteFilters = true;
+                        g.game_values.fNeedWriteFilters = true;
                     } else {
-                        game().maplist.set_current(itr);
+                        g.maplist.set_current(itr);
                         return MENU_CODE_MAP_BROWSER_EXIT;
                     }
 

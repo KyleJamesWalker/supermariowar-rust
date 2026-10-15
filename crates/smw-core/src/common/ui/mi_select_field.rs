@@ -295,8 +295,8 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
     }
 
     pub fn update_impl(&mut self) {
-        self.miModifyImageRight.update();
-        self.miModifyImageLeft.update();
+        self.miModifyImageRight.update(game().get());
+        self.miModifyImageLeft.update(game().get());
     }
 
     pub fn draw_impl(&mut self, g: &mut Game) {
@@ -333,12 +333,12 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
 
         let drawLeft = self.m_index > 0;
         if self.m_wraps || drawLeft {
-            self.miModifyImageLeft.draw();
+            self.miModifyImageLeft.draw(g);
         }
 
         let drawRight = (self.m_index + 1) < self.m_items.len();
         if self.m_wraps || drawRight {
-            self.miModifyImageRight.draw();
+            self.miModifyImageRight.draw(g);
         }
     }
 
@@ -456,22 +456,22 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
 impl<T: Copy + PartialEq + 'static> UI_ControlTrait for MI_SelectField<T> {
     crate::impl_ctl!();
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         self.update_impl();
     }
-    fn draw(&mut self) {
-        self.draw_impl(game().get());
+    fn draw(&mut self, g: &mut Game) {
+        self.draw_impl(g);
     }
     fn refresh(&mut self) {
         self.refresh_impl();
     }
-    fn modify(&mut self, modify: bool) -> MenuCodeEnum {
+    fn modify(&mut self, g: &mut Game, modify: bool) -> MenuCodeEnum {
         self.modify_impl(modify)
     }
-    fn send_input(&mut self, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+    fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         self.send_input_impl(playerInput)
     }
-    fn mouse_click(&mut self, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
+    fn mouse_click(&mut self, g: &mut Game, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
         self.mouse_click_impl(iMouseX, iMouseY)
     }
 }

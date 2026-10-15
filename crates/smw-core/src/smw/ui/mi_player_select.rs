@@ -82,13 +82,13 @@ fn next_control(g: &mut Game, sel: usize) {
 impl UI_ControlTrait for MI_PlayerSelect {
     crate::impl_ctl!();
 
-    fn modify(&mut self, modify: bool) -> MenuCodeEnum {
+    fn modify(&mut self, g: &mut Game, modify: bool) -> MenuCodeEnum {
         self.miModifyImage.set_visible(modify);
         self.fModifying = modify;
         MENU_CODE_MODIFY_ACCEPTED
     }
 
-    fn send_input(&mut self, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+    fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         unsafe {
             for iPlayer in 0..4usize {
                 let out = &playerInput.outputControls[iPlayer];
@@ -112,27 +112,27 @@ impl UI_ControlTrait for MI_PlayerSelect {
                 let sel = self.iSelectedPlayer as usize;
 
                 if out.menu_up().fPressed {
-                    game().game_values.playercontrol[sel] -= 1;
-                    if game().game_values.playercontrol[sel] < 0 {
-                        game().game_values.playercontrol[sel] = 2;
+                    g.game_values.playercontrol[sel] -= 1;
+                    if g.game_values.playercontrol[sel] < 0 {
+                        g.game_values.playercontrol[sel] = 2;
                     }
 
-                    if game().game_values.playercontrol[sel] == 0 {
+                    if g.game_values.playercontrol[sel] == 0 {
                         let mut iCountPlayers = 0;
                         for iPlayer in 0..4usize {
-                            if game().game_values.playercontrol[iPlayer] > 0 {
+                            if g.game_values.playercontrol[iPlayer] > 0 {
                                 iCountPlayers += 1;
                             }
                         }
 
                         if iCountPlayers < 2 {
-                            game().game_values.playercontrol[sel] = 2;
+                            g.game_values.playercontrol[sel] = 2;
                         }
                     }
                 }
 
                 if out.menu_down().fPressed {
-                    next_control(game().get(), sel);
+                    next_control(g, sel);
                 }
 
                 if out.menu_select().fPressed || out.menu_cancel().fPressed {
@@ -147,7 +147,7 @@ impl UI_ControlTrait for MI_PlayerSelect {
     }
 
     /// Not in upstream: tapping a player's icon selects that player and steps its control, as Down does.
-    fn mouse_click(&mut self, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
+    fn mouse_click(&mut self, g: &mut Game, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
         if self.fDisable {
             return MENU_CODE_NONE;
         }
@@ -163,7 +163,7 @@ impl UI_ControlTrait for MI_PlayerSelect {
             if mx >= px && mx < px + 34 && my >= y + 16 && my < y + 48 {
                 self.iSelectedPlayer = iPlayer as i16;
                 self.set_image_position();
-                next_control(game().get(), iPlayer);
+                next_control(g, iPlayer);
                 break;
             }
         }
@@ -171,11 +171,11 @@ impl UI_ControlTrait for MI_PlayerSelect {
         MENU_CODE_CLICKED
     }
 
-    fn update(&mut self) {
-        self.miModifyImage.update();
+    fn update(&mut self, g: &mut Game) {
+        self.miModifyImage.update(g);
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         if !self.m_visible {
             return;
         }
@@ -186,19 +186,19 @@ impl UI_ControlTrait for MI_PlayerSelect {
         let iWidth = self.iWidth as i32;
 
         unsafe {
-            self.spr.draw_src(game().get(), x, y, &SDL_Rect { x: 0, y: if self.fSelected { 64 } else { 0 }, w: iIndent - 16, h: 64 });
-            self.spr.draw_src(game().get(), x + iIndent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 192 } else { 128 }, w: 32, h: 64 });
-            self.spr.draw_src(game().get(), x + iIndent + 16, y, &SDL_Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 64 } else { 0 }, w: iWidth - iIndent - 16, h: 64 });
+            self.spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: if self.fSelected { 64 } else { 0 }, w: iIndent - 16, h: 64 });
+            self.spr.draw_src(g, x + iIndent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 192 } else { 128 }, w: 32, h: 64 });
+            self.spr.draw_src(g, x + iIndent + 16, y, &SDL_Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 64 } else { 0 }, w: iWidth - iIndent - 16, h: 64 });
 
-            game().rm.menu_font_large.draw_chop_right(x + 16, y + 20, iIndent - 8, &self.szName);
+            g.rm.menu_font_large.draw_chop_right(x + 16, y + 20, iIndent - 8, &self.szName);
 
-            self.miModifyImage.draw();
+            self.miModifyImage.draw(g);
 
             for iPlayer in 0..4usize {
-                self.spr.draw_src(game().get(), 
+                self.spr.draw_src(g, 
                     x + self.iPlayerPosition[iPlayer] as i32,
                     y + 16,
-                    &SDL_Rect { x: game().game_values.playercontrol[iPlayer] as i32 * 34 + 32, y: 206, w: 34, h: 32 },
+                    &SDL_Rect { x: g.game_values.playercontrol[iPlayer] as i32 * 34 + 32, y: 206, w: 34, h: 32 },
                 );
             }
         }

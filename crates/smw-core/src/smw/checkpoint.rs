@@ -610,8 +610,8 @@ impl GameState for SegmentState {
             g.eyecandy[2].clean();
             g.game_values.playerInput.reset_keys();
             g.game_values.appstate = AppState::Menu;
-            MenuState::instance().init();
-            GameplayState::instance().init();
+            MenuState::instance().init(g);
+            GameplayState::instance().init(g);
         }
         if let Err(e) = restore(g, std::mem::take(&mut self.checkpoint)) {
             eprintln!("[harness] {}", e);

@@ -153,7 +153,7 @@ impl MI_WorldPreviewDisplay {
 impl UI_ControlTrait for MI_WorldPreviewDisplay {
     crate::impl_ctl!();
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         if !self.m_visible {
             return;
         }
@@ -280,11 +280,11 @@ impl UI_ControlTrait for MI_WorldPreviewDisplay {
         }
 
         if fNeedMapSurfaceUpdate {
-            self.update_map_surface(game().get(), fNeedFullRefresh);
+            self.update_map_surface(g, fNeedFullRefresh);
         }
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         if !self.m_visible {
             return;
         }
@@ -292,6 +292,6 @@ impl UI_ControlTrait for MI_WorldPreviewDisplay {
         self.rectSrcSurface.x = self.iMapOffsetX as i32;
         self.rectSrcSurface.y = self.iMapOffsetY as i32;
 
-        self.map_sprite.draw_src_to(&self.rectSrcSurface, unsafe { game().blitdest }, &self.rectDstSurface);
+        self.map_sprite.draw_src_to(&self.rectSrcSurface, unsafe { g.blitdest }, &self.rectDstSurface);
     }
 }

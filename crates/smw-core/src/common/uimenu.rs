@@ -107,7 +107,7 @@ impl UI_Menu {
 
     pub fn reset_menu(&mut self) {
         if !self.m_currentFocus.is_null() {
-            self.m_currentFocus.modify(false);
+            self.m_currentFocus.modify(game().get(), false);
             self.m_currentFocus.select(false);
         }
 
@@ -122,7 +122,7 @@ impl UI_Menu {
 
     pub fn update(&mut self) {
         for i in 0..self.controls.len() {
-            self.controls[i].update();
+            self.controls[i].update(game().get());
         }
 
         self.eyeCandy.clean_dead_objects();
@@ -131,20 +131,20 @@ impl UI_Menu {
 
     pub fn draw(&mut self) {
         for i in 0..self.controls.len() {
-            self.controls[i].draw();
+            self.controls[i].draw(game().get());
         }
 
         self.eyeCandy.draw();
 
         if self.fModifyingItem && !self.m_currentFocus.is_null() {
-            self.m_currentFocus.draw_overlay();
+            self.m_currentFocus.draw_overlay(game().get());
         }
     }
 
     pub fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         unsafe {
             if self.fModifyingItem {
-                let ret = self.m_currentFocus.send_input(playerInput);
+                let ret = self.m_currentFocus.send_input(g, playerInput);
 
                 if MENU_CODE_UNSELECT_ITEM == ret {
                     self.fModifyingItem = false;
@@ -200,7 +200,7 @@ impl UI_Menu {
 
                     if !self.m_currentFocus.is_null() {
                         crate::common::ui::mi_text_field::note_opener(g, playerInput.iPressedKey != 0);
-                        ret = self.m_currentFocus.modify(true);
+                        ret = self.m_currentFocus.modify(g, true);
 
                         if MENU_CODE_MODIFY_ACCEPTED == ret {
                             self.fModifyingItem = true;
@@ -252,7 +252,7 @@ impl UI_Menu {
 
     pub fn restore_current(&mut self) {
         if !self.m_currentFocus.is_null() {
-            self.m_currentFocus.modify(false);
+            self.m_currentFocus.modify(game().get(), false);
             self.m_currentFocus.select(false);
         }
 
@@ -279,7 +279,7 @@ impl UI_Menu {
         for i in 0..self.controls.len() {
             let mut control = self.controls[i];
             if control.ctl().is_visible() {
-                code = control.mouse_click(iMouseX, iMouseY);
+                code = control.mouse_click(game().get(), iMouseX, iMouseY);
                 if code != MENU_CODE_NONE {
                     pFound = control;
                     break;
@@ -292,7 +292,7 @@ impl UI_Menu {
             // If we clicked the same control we have selected
             if pFound != self.m_currentFocus {
                 if self.fModifyingItem {
-                    self.m_currentFocus.modify(false);
+                    self.m_currentFocus.modify(game().get(), false);
                     self.fModifyingItem = false;
                 }
 
@@ -301,15 +301,15 @@ impl UI_Menu {
                 self.fModifyingItem = self.m_currentFocus.select(true);
 
                 if !self.fModifyingItem {
-                    self.fModifyingItem = self.m_currentFocus.modify(true) == MENU_CODE_MODIFY_ACCEPTED;
+                    self.fModifyingItem = self.m_currentFocus.modify(game().get(), true) == MENU_CODE_MODIFY_ACCEPTED;
                 }
             } else if !self.fModifyingItem {
-                self.fModifyingItem = self.m_currentFocus.modify(true) == MENU_CODE_MODIFY_ACCEPTED;
+                self.fModifyingItem = self.m_currentFocus.modify(game().get(), true) == MENU_CODE_MODIFY_ACCEPTED;
             }
         } else {
             // If nothing was clicked, then stop modifying the current control
             if self.fModifyingItem {
-                self.m_currentFocus.modify(false);
+                self.m_currentFocus.modify(game().get(), false);
                 self.fModifyingItem = false;
             }
         }
