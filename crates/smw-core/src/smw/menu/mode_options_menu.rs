@@ -230,7 +230,7 @@ impl UI_ModeOptionsMenu {
 
             this.miClassicModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miClassicModeRightHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miClassicModeHeaderText = Ptr::new_box(MI_HeaderText::new("Classic Mode Menu", 320, 5));
+            this.miClassicModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Classic Mode Menu", 320, 5));
 
             this.mModeSettingsMenu[0].add_control(ctl_ptr(this.miClassicModeStyleField), ctl_ptr(this.miClassicModeBackButton), ctl_ptr(this.miClassicModeScoringField), Ptr::null(), ctl_ptr(this.miClassicModeBackButton));
             this.mModeSettingsMenu[0].add_control(ctl_ptr(this.miClassicModeScoringField), ctl_ptr(this.miClassicModeStyleField), ctl_ptr(this.miClassicModeBackButton), Ptr::null(), ctl_ptr(this.miClassicModeBackButton));
@@ -240,7 +240,7 @@ impl UI_ModeOptionsMenu {
             this.mModeSettingsMenu[0].add_non_control(ctl_ptr(this.miClassicModeRightHeaderBar));
             this.mModeSettingsMenu[0].add_non_control(ctl_ptr(this.miClassicModeHeaderText));
 
-            this.mModeSettingsMenu[0].set_initial_focus(ctl_ptr(this.miClassicModeStyleField));
+            this.mModeSettingsMenu[0].set_initial_focus(g, ctl_ptr(this.miClassicModeStyleField));
             this.mModeSettingsMenu[0].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -265,7 +265,7 @@ impl UI_ModeOptionsMenu {
 
             this.miFragModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miFragModeRightHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miFragModeHeaderText = Ptr::new_box(MI_HeaderText::new("Frag Mode Menu", 320, 5));
+            this.miFragModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Frag Mode Menu", 320, 5));
 
             this.mModeSettingsMenu[1].add_control(ctl_ptr(this.miFragModeStyleField), ctl_ptr(this.miFragModeBackButton), ctl_ptr(this.miFragModeScoringField), Ptr::null(), ctl_ptr(this.miFragModeBackButton));
             this.mModeSettingsMenu[1].add_control(ctl_ptr(this.miFragModeScoringField), ctl_ptr(this.miFragModeStyleField), ctl_ptr(this.miFragModeBackButton), Ptr::null(), ctl_ptr(this.miFragModeBackButton));
@@ -275,7 +275,7 @@ impl UI_ModeOptionsMenu {
             this.mModeSettingsMenu[1].add_non_control(ctl_ptr(this.miFragModeRightHeaderBar));
             this.mModeSettingsMenu[1].add_non_control(ctl_ptr(this.miFragModeHeaderText));
 
-            this.mModeSettingsMenu[1].set_initial_focus(ctl_ptr(this.miFragModeStyleField));
+            this.mModeSettingsMenu[1].set_initial_focus(g, ctl_ptr(this.miFragModeStyleField));
             this.mModeSettingsMenu[1].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -326,7 +326,7 @@ impl UI_ModeOptionsMenu {
 
             this.miTimeLimitModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miTimeLimitModeRightHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miTimeLimitModeHeaderText = Ptr::new_box(MI_HeaderText::new("Time Mode Menu", 320, 5));
+            this.miTimeLimitModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Time Mode Menu", 320, 5));
 
             this.mModeSettingsMenu[2].add_control(ctl_ptr(this.miTimeLimitModeStyleField), ctl_ptr(this.miTimeLimitModeBackButton), ctl_ptr(this.miTimeLimitModeScoringField), Ptr::null(), ctl_ptr(this.miTimeLimitModeBackButton));
             this.mModeSettingsMenu[2].add_control(ctl_ptr(this.miTimeLimitModeScoringField), ctl_ptr(this.miTimeLimitModeStyleField), ctl_ptr(this.miTimeLimitModePercentExtraTime), Ptr::null(), ctl_ptr(this.miTimeLimitModeBackButton));
@@ -337,7 +337,7 @@ impl UI_ModeOptionsMenu {
             this.mModeSettingsMenu[2].add_non_control(ctl_ptr(this.miTimeLimitModeRightHeaderBar));
             this.mModeSettingsMenu[2].add_non_control(ctl_ptr(this.miTimeLimitModeHeaderText));
 
-            this.mModeSettingsMenu[2].set_initial_focus(ctl_ptr(this.miTimeLimitModeStyleField));
+            this.mModeSettingsMenu[2].set_initial_focus(g, ctl_ptr(this.miTimeLimitModeStyleField));
             this.mModeSettingsMenu[2].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -407,7 +407,7 @@ impl UI_ModeOptionsMenu {
 
             this.miJailModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miJailModeRightHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miJailModeHeaderText = Ptr::new_box(MI_HeaderText::new("Jail Mode Menu", 320, 5));
+            this.miJailModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Jail Mode Menu", 320, 5));
 
             this.mModeSettingsMenu[3].add_control(ctl_ptr(this.miJailModeStyleField), ctl_ptr(this.miJailModeBackButton), ctl_ptr(this.miJailModeTimeFreeField), Ptr::null(), ctl_ptr(this.miJailModeBackButton));
             this.mModeSettingsMenu[3].add_control(ctl_ptr(this.miJailModeTimeFreeField), ctl_ptr(this.miJailModeStyleField), ctl_ptr(this.miJailModeTagFreeField), Ptr::null(), ctl_ptr(this.miJailModeBackButton));
@@ -419,7 +419,7 @@ impl UI_ModeOptionsMenu {
             this.mModeSettingsMenu[3].add_non_control(ctl_ptr(this.miJailModeRightHeaderBar));
             this.mModeSettingsMenu[3].add_non_control(ctl_ptr(this.miJailModeHeaderText));
 
-            this.mModeSettingsMenu[3].set_initial_focus(ctl_ptr(this.miJailModeStyleField));
+            this.mModeSettingsMenu[3].set_initial_focus(g, ctl_ptr(this.miJailModeStyleField));
             this.mModeSettingsMenu[3].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -479,7 +479,7 @@ impl UI_ModeOptionsMenu {
 
             this.miCoinModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miCoinModeRightHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miCoinModeHeaderText = Ptr::new_box(MI_HeaderText::new("Coin Collection Mode Menu", 320, 5));
+            this.miCoinModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Coin Collection Mode Menu", 320, 5));
 
             this.mModeSettingsMenu[4].add_control(ctl_ptr(this.miCoinModePenaltyField), ctl_ptr(this.miCoinModeBackButton), ctl_ptr(this.miCoinModeQuantityField), Ptr::null(), ctl_ptr(this.miCoinModeBackButton));
             this.mModeSettingsMenu[4].add_control(ctl_ptr(this.miCoinModeQuantityField), ctl_ptr(this.miCoinModePenaltyField), ctl_ptr(this.miCoinModePercentExtraCoin), Ptr::null(), ctl_ptr(this.miCoinModeBackButton));
@@ -490,7 +490,7 @@ impl UI_ModeOptionsMenu {
             this.mModeSettingsMenu[4].add_non_control(ctl_ptr(this.miCoinModeRightHeaderBar));
             this.mModeSettingsMenu[4].add_non_control(ctl_ptr(this.miCoinModeHeaderText));
 
-            this.mModeSettingsMenu[4].set_initial_focus(ctl_ptr(this.miCoinModePenaltyField));
+            this.mModeSettingsMenu[4].set_initial_focus(g, ctl_ptr(this.miCoinModePenaltyField));
             this.mModeSettingsMenu[4].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -532,7 +532,7 @@ impl UI_ModeOptionsMenu {
 
             this.miStompModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miStompModeRightHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miStompModeHeaderText = Ptr::new_box(MI_HeaderText::new("Stomp Mode Menu", 320, 5));
+            this.miStompModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Stomp Mode Menu", 320, 5));
 
 
             this.mModeSettingsMenu[5].add_control(ctl_ptr(this.miStompModeRateField), ctl_ptr(this.miStompModeBackButton), ctl_ptr(this.miStompModeEnemySlider[0]), Ptr::null(), ctl_ptr(this.miStompModeBackButton));
@@ -553,7 +553,7 @@ impl UI_ModeOptionsMenu {
             this.mModeSettingsMenu[5].add_non_control(ctl_ptr(this.miStompModeRightHeaderBar));
             this.mModeSettingsMenu[5].add_non_control(ctl_ptr(this.miStompModeHeaderText));
 
-            this.mModeSettingsMenu[5].set_initial_focus(ctl_ptr(this.miStompModeRateField));
+            this.mModeSettingsMenu[5].set_initial_focus(g, ctl_ptr(this.miStompModeRateField));
             this.mModeSettingsMenu[5].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -601,7 +601,7 @@ impl UI_ModeOptionsMenu {
 
             this.miEggModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miEggModeRightHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miEggModeHeaderText = Ptr::new_box(MI_HeaderText::new("Yoshi's Eggs Mode Menu", 320, 5));
+            this.miEggModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Yoshi's Eggs Mode Menu", 320, 5));
 
             this.mModeSettingsMenu[6].add_control(ctl_ptr(this.miEggModeEggQuantityField[0]), ctl_ptr(this.miEggModeBackButton), ctl_ptr(this.miEggModeEggQuantityField[1]), Ptr::null(), ctl_ptr(this.miEggModeBackButton));
             this.mModeSettingsMenu[6].add_control(ctl_ptr(this.miEggModeEggQuantityField[1]), ctl_ptr(this.miEggModeEggQuantityField[0]), ctl_ptr(this.miEggModeEggQuantityField[2]), Ptr::null(), ctl_ptr(this.miEggModeBackButton));
@@ -621,7 +621,7 @@ impl UI_ModeOptionsMenu {
             this.mModeSettingsMenu[6].add_non_control(ctl_ptr(this.miEggModeRightHeaderBar));
             this.mModeSettingsMenu[6].add_non_control(ctl_ptr(this.miEggModeHeaderText));
 
-            this.mModeSettingsMenu[6].set_initial_focus(ctl_ptr(this.miEggModeEggQuantityField[0]));
+            this.mModeSettingsMenu[6].set_initial_focus(g, ctl_ptr(this.miEggModeEggQuantityField[0]));
             this.mModeSettingsMenu[6].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
             //***********************
@@ -693,7 +693,7 @@ impl UI_ModeOptionsMenu {
 
             this.miFlagModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miFlagModeRightHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miFlagModeHeaderText = Ptr::new_box(MI_HeaderText::new("Capture The Flag Mode Menu", 320, 5));
+            this.miFlagModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Capture The Flag Mode Menu", 320, 5));
 
             this.mModeSettingsMenu[7].add_control(ctl_ptr(this.miFlagModeSpeedField), ctl_ptr(this.miFlagModeBackButton), ctl_ptr(this.miFlagModeTouchReturnField), Ptr::null(), ctl_ptr(this.miFlagModeBackButton));
             this.mModeSettingsMenu[7].add_control(ctl_ptr(this.miFlagModeTouchReturnField), ctl_ptr(this.miFlagModeSpeedField), ctl_ptr(this.miFlagModePointMoveField), Ptr::null(), ctl_ptr(this.miFlagModeBackButton));
@@ -708,7 +708,7 @@ impl UI_ModeOptionsMenu {
             this.mModeSettingsMenu[7].add_non_control(ctl_ptr(this.miFlagModeRightHeaderBar));
             this.mModeSettingsMenu[7].add_non_control(ctl_ptr(this.miFlagModeHeaderText));
 
-            this.mModeSettingsMenu[7].set_initial_focus(ctl_ptr(this.miFlagModeSpeedField));
+            this.mModeSettingsMenu[7].set_initial_focus(g, ctl_ptr(this.miFlagModeSpeedField));
             this.mModeSettingsMenu[7].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -735,7 +735,7 @@ impl UI_ModeOptionsMenu {
 
             this.miChickenModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miChickenModeRightHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miChickenModeHeaderText = Ptr::new_box(MI_HeaderText::new("Chicken Mode Menu", 320, 5));
+            this.miChickenModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Chicken Mode Menu", 320, 5));
 
 
             this.mModeSettingsMenu[8].add_control(ctl_ptr(this.miChickenModeShowTargetField), ctl_ptr(this.miChickenModeBackButton), ctl_ptr(this.miChickenModeGlideField), Ptr::null(), ctl_ptr(this.miChickenModeBackButton));
@@ -746,7 +746,7 @@ impl UI_ModeOptionsMenu {
             this.mModeSettingsMenu[8].add_non_control(ctl_ptr(this.miChickenModeRightHeaderBar));
             this.mModeSettingsMenu[8].add_non_control(ctl_ptr(this.miChickenModeHeaderText));
 
-            this.mModeSettingsMenu[8].set_initial_focus(ctl_ptr(this.miChickenModeShowTargetField));
+            this.mModeSettingsMenu[8].set_initial_focus(g, ctl_ptr(this.miChickenModeShowTargetField));
             this.mModeSettingsMenu[8].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -766,7 +766,7 @@ impl UI_ModeOptionsMenu {
 
             this.miTagModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miTagModeRightHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miTagModeHeaderText = Ptr::new_box(MI_HeaderText::new("Tag Mode Menu", 320, 5));
+            this.miTagModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Tag Mode Menu", 320, 5));
 
 
             this.mModeSettingsMenu[9].add_control(ctl_ptr(this.miTagModeTagOnTouchField), ctl_ptr(this.miTagModeBackButton), ctl_ptr(this.miTagModeBackButton), Ptr::null(), ctl_ptr(this.miTagModeBackButton));
@@ -776,7 +776,7 @@ impl UI_ModeOptionsMenu {
             this.mModeSettingsMenu[9].add_non_control(ctl_ptr(this.miTagModeRightHeaderBar));
             this.mModeSettingsMenu[9].add_non_control(ctl_ptr(this.miTagModeHeaderText));
 
-            this.mModeSettingsMenu[9].set_initial_focus(ctl_ptr(this.miTagModeTagOnTouchField));
+            this.mModeSettingsMenu[9].set_initial_focus(g, ctl_ptr(this.miTagModeTagOnTouchField));
             this.mModeSettingsMenu[9].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -839,7 +839,7 @@ impl UI_ModeOptionsMenu {
 
             this.miStarModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miStarModeRightHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miStarModeHeaderText = Ptr::new_box(MI_HeaderText::new("Star Mode Menu", 320, 5));
+            this.miStarModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Star Mode Menu", 320, 5));
 
             this.mModeSettingsMenu[10].add_control(ctl_ptr(this.miStarModeTimeField), ctl_ptr(this.miStarModeBackButton), ctl_ptr(this.miStarModeShineField), Ptr::null(), ctl_ptr(this.miStarModeBackButton));
             this.mModeSettingsMenu[10].add_control(ctl_ptr(this.miStarModeShineField), ctl_ptr(this.miStarModeTimeField), ctl_ptr(this.miStarModePercentExtraTime), Ptr::null(), ctl_ptr(this.miStarModeBackButton));
@@ -850,7 +850,7 @@ impl UI_ModeOptionsMenu {
             this.mModeSettingsMenu[10].add_non_control(ctl_ptr(this.miStarModeRightHeaderBar));
             this.mModeSettingsMenu[10].add_non_control(ctl_ptr(this.miStarModeHeaderText));
 
-            this.mModeSettingsMenu[10].set_initial_focus(ctl_ptr(this.miStarModeTimeField));
+            this.mModeSettingsMenu[10].set_initial_focus(g, ctl_ptr(this.miStarModeTimeField));
             this.mModeSettingsMenu[10].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -931,7 +931,7 @@ impl UI_ModeOptionsMenu {
 
             this.miDominationModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miDominationModeRightHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miDominationModeHeaderText = Ptr::new_box(MI_HeaderText::new("Domination Mode Menu", 320, 5));
+            this.miDominationModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Domination Mode Menu", 320, 5));
 
             this.mModeSettingsMenu[11].add_control(ctl_ptr(this.miDominationModeQuantityField), ctl_ptr(this.miDominationModeBackButton), ctl_ptr(this.miDominationModeRelocateFrequencyField), Ptr::null(), ctl_ptr(this.miDominationModeBackButton));
             this.mModeSettingsMenu[11].add_control(ctl_ptr(this.miDominationModeRelocateFrequencyField), ctl_ptr(this.miDominationModeQuantityField), ctl_ptr(this.miDominationModeLoseOnDeathField), Ptr::null(), ctl_ptr(this.miDominationModeBackButton));
@@ -946,7 +946,7 @@ impl UI_ModeOptionsMenu {
             this.mModeSettingsMenu[11].add_non_control(ctl_ptr(this.miDominationModeHeaderText));
             this.mModeSettingsMenu[11].add_non_control(ctl_ptr(this.miDominationModeDeathText));
 
-            this.mModeSettingsMenu[11].set_initial_focus(ctl_ptr(this.miDominationModeQuantityField));
+            this.mModeSettingsMenu[11].set_initial_focus(g, ctl_ptr(this.miDominationModeQuantityField));
             this.mModeSettingsMenu[11].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -994,7 +994,7 @@ impl UI_ModeOptionsMenu {
 
             this.miKingOfTheHillModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miKingOfTheHillModeRightHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miKingOfTheHillModeHeaderText = Ptr::new_box(MI_HeaderText::new("King of the Hill Mode Menu", 320, 5));
+            this.miKingOfTheHillModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "King of the Hill Mode Menu", 320, 5));
 
             this.mModeSettingsMenu[12].add_control(ctl_ptr(this.miKingOfTheHillModeSizeField), ctl_ptr(this.miKingOfTheHillModeBackButton), ctl_ptr(this.miKingOfTheHillModeRelocateFrequencyField), Ptr::null(), ctl_ptr(this.miKingOfTheHillModeBackButton));
             this.mModeSettingsMenu[12].add_control(ctl_ptr(this.miKingOfTheHillModeRelocateFrequencyField), ctl_ptr(this.miKingOfTheHillModeSizeField), ctl_ptr(this.miKingOfTheHillModeMultiplierField), Ptr::null(), ctl_ptr(this.miKingOfTheHillModeBackButton));
@@ -1006,7 +1006,7 @@ impl UI_ModeOptionsMenu {
             this.mModeSettingsMenu[12].add_non_control(ctl_ptr(this.miKingOfTheHillModeRightHeaderBar));
             this.mModeSettingsMenu[12].add_non_control(ctl_ptr(this.miKingOfTheHillModeHeaderText));
 
-            this.mModeSettingsMenu[12].set_initial_focus(ctl_ptr(this.miKingOfTheHillModeSizeField));
+            this.mModeSettingsMenu[12].set_initial_focus(g, ctl_ptr(this.miKingOfTheHillModeSizeField));
             this.mModeSettingsMenu[12].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -1049,7 +1049,7 @@ impl UI_ModeOptionsMenu {
 
             this.miRaceModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miRaceModeRightHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miRaceModeHeaderText = Ptr::new_box(MI_HeaderText::new("Race Mode Menu", 320, 5));
+            this.miRaceModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Race Mode Menu", 320, 5));
 
             this.mModeSettingsMenu[13].add_control(ctl_ptr(this.miRaceModeQuantityField), ctl_ptr(this.miRaceModeBackButton), ctl_ptr(this.miRaceModeSpeedField), Ptr::null(), ctl_ptr(this.miRaceModeBackButton));
             this.mModeSettingsMenu[13].add_control(ctl_ptr(this.miRaceModeSpeedField), ctl_ptr(this.miRaceModeQuantityField), ctl_ptr(this.miRaceModePenaltyField), Ptr::null(), ctl_ptr(this.miRaceModeBackButton));
@@ -1061,7 +1061,7 @@ impl UI_ModeOptionsMenu {
             this.mModeSettingsMenu[13].add_non_control(ctl_ptr(this.miRaceModeRightHeaderBar));
             this.mModeSettingsMenu[13].add_non_control(ctl_ptr(this.miRaceModeHeaderText));
 
-            this.mModeSettingsMenu[13].set_initial_focus(ctl_ptr(this.miRaceModeQuantityField));
+            this.mModeSettingsMenu[13].set_initial_focus(g, ctl_ptr(this.miRaceModeQuantityField));
             this.mModeSettingsMenu[13].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -1074,7 +1074,7 @@ impl UI_ModeOptionsMenu {
 
             this.miFrenzyModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miFrenzyModeRightHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miFrenzyModeHeaderText = Ptr::new_box(MI_HeaderText::new("Frenzy Mode Menu", 320, 5));
+            this.miFrenzyModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Frenzy Mode Menu", 320, 5));
 
             this.mModeSettingsMenu[15].add_control(ctl_ptr(this.miFrenzyModeOptions), Ptr::null(), Ptr::null(), Ptr::null(), Ptr::null());
 
@@ -1082,7 +1082,7 @@ impl UI_ModeOptionsMenu {
             this.mModeSettingsMenu[15].add_non_control(ctl_ptr(this.miFrenzyModeRightHeaderBar));
             this.mModeSettingsMenu[15].add_non_control(ctl_ptr(this.miFrenzyModeHeaderText));
 
-            this.mModeSettingsMenu[15].set_initial_focus(ctl_ptr(this.miFrenzyModeOptions));
+            this.mModeSettingsMenu[15].set_initial_focus(g, ctl_ptr(this.miFrenzyModeOptions));
             this.mModeSettingsMenu[15].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -1142,7 +1142,7 @@ impl UI_ModeOptionsMenu {
 
             this.miSurvivalModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miSurvivalModeRightHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miSurvivalModeHeaderText = Ptr::new_box(MI_HeaderText::new("Survival Mode Menu", 320, 5));
+            this.miSurvivalModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Survival Mode Menu", 320, 5));
 
             this.mModeSettingsMenu[16].add_control(ctl_ptr(this.miSurvivalModeEnemySlider[0]), ctl_ptr(this.miSurvivalModeBackButton), ctl_ptr(this.miSurvivalModeEnemySlider[1]), Ptr::null(), ctl_ptr(this.miSurvivalModeBackButton));
             this.mModeSettingsMenu[16].add_control(ctl_ptr(this.miSurvivalModeEnemySlider[1]), ctl_ptr(this.miSurvivalModeEnemySlider[0]), ctl_ptr(this.miSurvivalModeEnemySlider[2]), Ptr::null(), ctl_ptr(this.miSurvivalModeBackButton));
@@ -1156,7 +1156,7 @@ impl UI_ModeOptionsMenu {
             this.mModeSettingsMenu[16].add_non_control(ctl_ptr(this.miSurvivalModeRightHeaderBar));
             this.mModeSettingsMenu[16].add_non_control(ctl_ptr(this.miSurvivalModeHeaderText));
 
-            this.mModeSettingsMenu[16].set_initial_focus(ctl_ptr(this.miSurvivalModeEnemySlider[0]));
+            this.mModeSettingsMenu[16].set_initial_focus(g, ctl_ptr(this.miSurvivalModeEnemySlider[0]));
             this.mModeSettingsMenu[16].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -1231,7 +1231,7 @@ impl UI_ModeOptionsMenu {
 
             this.miGreedModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miGreedModeRightHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miGreedModeHeaderText = Ptr::new_box(MI_HeaderText::new("Greed Mode Menu", 320, 5));
+            this.miGreedModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Greed Mode Menu", 320, 5));
 
             this.mModeSettingsMenu[17].add_control(ctl_ptr(this.miGreedModeCoinLife), ctl_ptr(this.miGreedModeBackButton), ctl_ptr(this.miGreedModeOwnCoins), Ptr::null(), ctl_ptr(this.miGreedModeBackButton));
             this.mModeSettingsMenu[17].add_control(ctl_ptr(this.miGreedModeOwnCoins), ctl_ptr(this.miGreedModeCoinLife), ctl_ptr(this.miGreedModeMultiplier), Ptr::null(), ctl_ptr(this.miGreedModeBackButton));
@@ -1244,7 +1244,7 @@ impl UI_ModeOptionsMenu {
             this.mModeSettingsMenu[17].add_non_control(ctl_ptr(this.miGreedModeRightHeaderBar));
             this.mModeSettingsMenu[17].add_non_control(ctl_ptr(this.miGreedModeHeaderText));
 
-            this.mModeSettingsMenu[17].set_initial_focus(ctl_ptr(this.miGreedModeCoinLife));
+            this.mModeSettingsMenu[17].set_initial_focus(g, ctl_ptr(this.miGreedModeCoinLife));
             this.mModeSettingsMenu[17].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -1312,7 +1312,7 @@ impl UI_ModeOptionsMenu {
 
             this.miHealthModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miHealthModeRightHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miHealthModeHeaderText = Ptr::new_box(MI_HeaderText::new("Health Mode Menu", 320, 5));
+            this.miHealthModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Health Mode Menu", 320, 5));
 
             this.mModeSettingsMenu[18].add_control(ctl_ptr(this.miHealthModeStartLife), ctl_ptr(this.miHealthModeBackButton), ctl_ptr(this.miHealthModeMaxLife), Ptr::null(), ctl_ptr(this.miHealthModeBackButton));
             this.mModeSettingsMenu[18].add_control(ctl_ptr(this.miHealthModeMaxLife), ctl_ptr(this.miHealthModeStartLife), ctl_ptr(this.miHealthModePercentExtraLife), Ptr::null(), ctl_ptr(this.miHealthModeBackButton));
@@ -1323,7 +1323,7 @@ impl UI_ModeOptionsMenu {
             this.mModeSettingsMenu[18].add_non_control(ctl_ptr(this.miHealthModeRightHeaderBar));
             this.mModeSettingsMenu[18].add_non_control(ctl_ptr(this.miHealthModeHeaderText));
 
-            this.mModeSettingsMenu[18].set_initial_focus(ctl_ptr(this.miHealthModeStartLife));
+            this.mModeSettingsMenu[18].set_initial_focus(g, ctl_ptr(this.miHealthModeStartLife));
             this.mModeSettingsMenu[18].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -1399,7 +1399,7 @@ impl UI_ModeOptionsMenu {
 
             this.miCollectionModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miCollectionModeRightHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miCollectionModeHeaderText = Ptr::new_box(MI_HeaderText::new("Card Collection Mode Menu", 320, 5));
+            this.miCollectionModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Card Collection Mode Menu", 320, 5));
 
             this.mModeSettingsMenu[19].add_control(ctl_ptr(this.miCollectionModeQuantityField), ctl_ptr(this.miCollectionModeBackButton), ctl_ptr(this.miCollectionModeRateField), Ptr::null(), ctl_ptr(this.miCollectionModeBackButton));
             this.mModeSettingsMenu[19].add_control(ctl_ptr(this.miCollectionModeRateField), ctl_ptr(this.miCollectionModeQuantityField), ctl_ptr(this.miCollectionModeBankTimeField), Ptr::null(), ctl_ptr(this.miCollectionModeBackButton));
@@ -1411,7 +1411,7 @@ impl UI_ModeOptionsMenu {
             this.mModeSettingsMenu[19].add_non_control(ctl_ptr(this.miCollectionModeRightHeaderBar));
             this.mModeSettingsMenu[19].add_non_control(ctl_ptr(this.miCollectionModeHeaderText));
 
-            this.mModeSettingsMenu[19].set_initial_focus(ctl_ptr(this.miCollectionModeQuantityField));
+            this.mModeSettingsMenu[19].set_initial_focus(g, ctl_ptr(this.miCollectionModeQuantityField));
             this.mModeSettingsMenu[19].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
             //***********************
@@ -1447,7 +1447,7 @@ impl UI_ModeOptionsMenu {
 
             this.miChaseModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miChaseModeRightHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miChaseModeHeaderText = Ptr::new_box(MI_HeaderText::new("Phanto Mode Menu", 320, 5));
+            this.miChaseModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Phanto Mode Menu", 320, 5));
 
             this.mModeSettingsMenu[20].add_control(ctl_ptr(this.miChaseModeSpeedField), ctl_ptr(this.miChaseModeBackButton), ctl_ptr(this.miChaseModeQuantitySlider[0]), Ptr::null(), ctl_ptr(this.miChaseModeBackButton));
 
@@ -1461,7 +1461,7 @@ impl UI_ModeOptionsMenu {
             this.mModeSettingsMenu[20].add_non_control(ctl_ptr(this.miChaseModeRightHeaderBar));
             this.mModeSettingsMenu[20].add_non_control(ctl_ptr(this.miChaseModeHeaderText));
 
-            this.mModeSettingsMenu[20].set_initial_focus(ctl_ptr(this.miChaseModeSpeedField));
+            this.mModeSettingsMenu[20].set_initial_focus(g, ctl_ptr(this.miChaseModeSpeedField));
             this.mModeSettingsMenu[20].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -1503,7 +1503,7 @@ impl UI_ModeOptionsMenu {
 
             this.miShyGuyTagModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miShyGuyTagModeRightHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miShyGuyTagModeHeaderText = Ptr::new_box(MI_HeaderText::new("Shyguy Tag Mode Menu", 320, 5));
+            this.miShyGuyTagModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Shyguy Tag Mode Menu", 320, 5));
 
             this.mModeSettingsMenu[21].add_control(ctl_ptr(this.miShyGuyTagModeTagOnSuicideField), ctl_ptr(this.miShyGuyTagModeBackButton), ctl_ptr(this.miShyGuyTagModeTagOnStompField), Ptr::null(), ctl_ptr(this.miShyGuyTagModeBackButton));
             this.mModeSettingsMenu[21].add_control(ctl_ptr(this.miShyGuyTagModeTagOnStompField), ctl_ptr(this.miShyGuyTagModeTagOnSuicideField), ctl_ptr(this.miShyGuyTagModeFreeTimeField), Ptr::null(), ctl_ptr(this.miShyGuyTagModeBackButton));
@@ -1514,7 +1514,7 @@ impl UI_ModeOptionsMenu {
             this.mModeSettingsMenu[21].add_non_control(ctl_ptr(this.miShyGuyTagModeRightHeaderBar));
             this.mModeSettingsMenu[21].add_non_control(ctl_ptr(this.miShyGuyTagModeHeaderText));
 
-            this.mModeSettingsMenu[21].set_initial_focus(ctl_ptr(this.miShyGuyTagModeTagOnSuicideField));
+            this.mModeSettingsMenu[21].set_initial_focus(g, ctl_ptr(this.miShyGuyTagModeTagOnSuicideField));
             this.mModeSettingsMenu[21].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -1567,7 +1567,7 @@ impl UI_ModeOptionsMenu {
 
             this.miBossModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miBossModeRightHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miBossModeHeaderText = Ptr::new_box(MI_HeaderText::new("Boss Minigame Menu", 320, 5));
+            this.miBossModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Boss Minigame Menu", 320, 5));
 
             this.mBossSettingsMenu.add_control(ctl_ptr(this.miBossModeTypeField), ctl_ptr(this.miBossModeBackButton), ctl_ptr(this.miBossModeDifficultyField), Ptr::null(), ctl_ptr(this.miBossModeBackButton));
             this.mBossSettingsMenu.add_control(ctl_ptr(this.miBossModeDifficultyField), ctl_ptr(this.miBossModeTypeField), ctl_ptr(this.miBossModeHitPointsField), Ptr::null(), ctl_ptr(this.miBossModeBackButton));
@@ -1578,7 +1578,7 @@ impl UI_ModeOptionsMenu {
             this.mBossSettingsMenu.add_non_control(ctl_ptr(this.miBossModeRightHeaderBar));
             this.mBossSettingsMenu.add_non_control(ctl_ptr(this.miBossModeHeaderText));
 
-            this.mBossSettingsMenu.set_initial_focus(ctl_ptr(this.miBossModeTypeField));
+            this.mBossSettingsMenu.set_initial_focus(g, ctl_ptr(this.miBossModeTypeField));
             this.mBossSettingsMenu.set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
         }
         this

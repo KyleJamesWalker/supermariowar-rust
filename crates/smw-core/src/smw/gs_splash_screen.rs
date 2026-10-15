@@ -56,13 +56,14 @@ impl GameState for SplashScreenState {
 
             self.menu_credits = Ptr::new_box(gfxSprite::new());
             *self.menu_credits =
-                ImageLoader::new(convert_path_pack(g, "gfx/packs/menu/splash_credits.png", &gp.menugraphicspacklist.current_path().to_string_lossy())).create();
+                ImageLoader::new(convert_path_pack(g, "gfx/packs/menu/splash_credits.png", &gp.menugraphicspacklist.current_path().to_string_lossy())).create(g);
         }
 
         true
     }
 
     fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let mut gp = g.ptr();
         unsafe {
             g.game_values.playerInput.clear_pressed_keys(1);
@@ -143,8 +144,8 @@ impl GameState for SplashScreenState {
                 g.rm.menu_font_large.draw_centered(App::screenWidth / 2, (App::screenHeight as f32 * 0.875f32) as i32, "Press Any Key To Continue");
 
                 g.eyecandy[2].clean_dead_objects();
-                g.eyecandy[2].update();
-                g.eyecandy[2].draw();
+                gp.eyecandy[2].update(g);
+                gp.eyecandy[2].draw(g);
             }
 
             // Only start loading after we displayed something, in the 2nd frame

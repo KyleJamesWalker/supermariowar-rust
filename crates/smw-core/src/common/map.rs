@@ -915,7 +915,7 @@ impl CMap {
         }
 
         let mut reader = get_loader_by_version(&version);
-        reader.load(self, &mut mapfile, iReadType);
+        reader.load(game().get(), self, &mut mapfile, iReadType);
         drop(reader);
 
         if iReadType == read_type_summary {
@@ -1600,7 +1600,7 @@ impl CMap {
             }
 
             {
-                let sBackground = ImageLoader::new(path).without_color_key().create();
+                let sBackground = ImageLoader::new(path).without_color_key().create(g);
                 let srcRectBackground = SDL_Rect { x: 0, y: 0, w: App::screenWidth, h: App::screenHeight };
                 let dstRectBackground = SDL_Rect { x: 0, y: 0, w: 160, h: 120 };
                 sBackground.draw_stretch(&srcRectBackground, sThumbnail.get_surface(), &dstRectBackground);
@@ -2445,18 +2445,18 @@ impl CMap {
     }
 
     /// `drawPlatforms(short iOffsetX, short iOffsetY, short iLayer)`
-    pub fn draw_platforms_offset(&mut self, iOffsetX: i16, iOffsetY: i16, iLayer: i16) {
+    pub fn draw_platforms_offset(&mut self, g: &mut Game, iOffsetX: i16, iOffsetY: i16, iLayer: i16) {
         for &platform in &self.platformdrawlayer[iLayer as usize].clone() {
             let mut p = platform;
-            p.draw_offset(game().get(), iOffsetX, iOffsetY);
+            p.draw_offset(g, iOffsetX, iOffsetY);
         }
     }
 
     /// `movingPlatformCollision(CPlayer*)`; defined in smw/player.cpp.
-    pub fn moving_platform_collision_player(&mut self, player: Ptr<CPlayer>) {
+    pub fn moving_platform_collision_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) {
         for i in 0..self.platforms.len() {
             let mut p = self.platforms[i];
-            p.collide_player(game().get(), player);
+            p.collide_player(g, player);
             if !player.isready() {
                 return;
             }
@@ -2464,7 +2464,7 @@ impl CMap {
 
         for i in 0..self.tempPlatforms.len() {
             let mut p = self.tempPlatforms[i];
-            p.collide_player(game().get(), player);
+            p.collide_player(g, player);
             if !player.isready() {
                 return;
             }
@@ -2782,6 +2782,7 @@ pub(crate) mod tests {
     /// Brings up the globals `CMap::load_map` touches, against the repository's data/ directory.
     pub(crate) fn init_map_globals(g: &mut Game) {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
         INIT.call_once(|| unsafe {
             g.RootDataDirectory = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data").to_string();
             std::env::set_var("SDL_VIDEODRIVER", "dummy");
@@ -2797,10 +2798,10 @@ pub(crate) mod tests {
             // Moving platforms draw these while loading a map.
             let pack = convert_path(g, "gfx/packs/Classic");
             for (i, size) in ["", "_preview", "_thumbnail"].iter().enumerate() {
-                g.rm.spr_tileanimation[i] = ImageLoader::new(convert_path_pack(g, &format!("gfx/packs/tilesets/tile_animation{}.png", size), &pack)).create();
-                g.rm.spr_unknowntile[i] = ImageLoader::new(convert_path_pack(g, &format!("gfx/packs/tilesets/unknown_tile{}.png", size), &pack)).create();
+                g.rm.spr_tileanimation[i] = ImageLoader::new(convert_path_pack(g, &format!("gfx/packs/tilesets/tile_animation{}.png", size), &pack)).create(g);
+                g.rm.spr_unknowntile[i] = ImageLoader::new(convert_path_pack(g, &format!("gfx/packs/tilesets/unknown_tile{}.png", size), &pack)).create(g);
             }
-            g.g_tilesetmanager = Ptr::new_box(CTilesetManager::new(&convert_path(g, "gfx/packs/Classic")));
+            gp.g_tilesetmanager = Ptr::new_box(CTilesetManager::new(g, &convert_path(gp.get(), "gfx/packs/Classic")));
             g.g_map = Ptr::from_box(CMap::new());
         });
     }
@@ -2967,7 +2968,7 @@ pub(crate) mod tests {
         unsafe {
             let root = g.RootDataDirectory.clone();
             let rel = |p: &str| if p.len() > root.len() { p[root.len()..].to_string() } else { p.to_string() };
-            g.maplist = Ptr::new_box(MapList::new(false));
+            g.maplist = Ptr::new_box(MapList::new(g, false));
             let mut maplist = g.maplist;
             maplist.read_filters(g);
 

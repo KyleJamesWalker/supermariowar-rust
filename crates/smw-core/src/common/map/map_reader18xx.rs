@@ -324,7 +324,7 @@ impl MapReader {
         self.read_tiles(g, map, mapfile);
         self.read_background(map, mapfile);
         self.read_switches(map, mapfile);
-        self.read_platforms(map, mapfile, readtype == read_type_preview);
+        self.read_platforms(g, map, mapfile, readtype == read_type_preview);
 
         self.translationid = None;
         self.tilesetwidths = None;

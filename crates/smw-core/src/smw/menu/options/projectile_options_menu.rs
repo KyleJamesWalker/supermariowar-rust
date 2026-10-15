@@ -166,7 +166,7 @@ impl UI_ProjectileOptionsMenu {
 
             this.miProjectileOptionsMenuLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miProjectileOptionsMenuRightHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miProjectileOptionsMenuHeaderText = Ptr::new_box(MI_HeaderText::new("Projectile & Weapon Options Menu", 320, 5));
+            this.miProjectileOptionsMenuHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Projectile & Weapon Options Menu", 320, 5));
 
             this.miFireballText = Ptr::new_box(MI_Text::new(g, "Fireball", 10, 50, 0, true, TextAlign::LEFT));
             this.miFeatherText = Ptr::new_box(MI_Text::new(g, "Feather", 10, 120, 0, true, TextAlign::LEFT));
@@ -235,7 +235,7 @@ impl UI_ProjectileOptionsMenu {
         let c = ctl_ptr(this.miProjectileOptionsMenuHeaderText);
         this.add_non_control(c);
 
-        this.set_initial_focus(fireball);
+        this.set_initial_focus(g, fireball);
         this.set_cancel_code(MENU_CODE_BACK_TO_OPTIONS_MENU);
         this
     }

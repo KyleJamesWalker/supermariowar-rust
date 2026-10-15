@@ -130,12 +130,12 @@ impl UI_GameSettingsMenu {
 
             this.miGameSettingsLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miGameSettingsMenuRightHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miGameSettingsMenuHeaderText = Ptr::new_box(MI_HeaderText::new("Single Game Menu", 320, 5));
+            this.miGameSettingsMenuHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Single Game Menu", 320, 5));
 
             // Exit tournament dialog box
             this.miGameSettingsExitDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
-            this.miGameSettingsExitDialogExitText = Ptr::new_box(MI_HeaderText::new("Exit", 320, 195));
-            this.miGameSettingsExitDialogTournamentText = Ptr::new_box(MI_HeaderText::new("Tournament", 320, 220));
+            this.miGameSettingsExitDialogExitText = Ptr::new_box(MI_HeaderText::new(g, "Exit", 320, 195));
+            this.miGameSettingsExitDialogTournamentText = Ptr::new_box(MI_HeaderText::new(g, "Tournament", 320, 220));
             this.miGameSettingsExitDialogYesButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 235, 250, "Yes", 80, TextAlign::CENTER));
             this.miGameSettingsExitDialogNoButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 325, 250, "No", 80, TextAlign::CENTER));
         }
@@ -199,7 +199,7 @@ impl UI_GameSettingsMenu {
         this.add_control(yes, null, null, null, no);
         this.add_control(no, null, null, yes, null);
 
-        this.set_initial_focus(start);
+        this.set_initial_focus(g, start);
 
         this.set_cancel_code(MENU_CODE_BACK_TEAM_SELECT_MENU);
         this
@@ -216,21 +216,21 @@ impl UI_GameSettingsMenu {
         }
     }
 
-    pub fn open_map_filters(&mut self) {
+    pub fn open_map_filters(&mut self, g: &mut Game) {
         self.miMapFilterScroll.set_visible(true);
         self.remember_current();
 
         let focus = ctl_ptr(self.miMapFilterScroll);
-        self.set_initial_focus(focus);
+        self.set_initial_focus(g, focus);
         self.set_cancel_code(MENU_CODE_NONE);
-        self.reset_menu(game().get());
+        self.reset_menu(g);
     }
 
     pub fn close_map_filters(&mut self, g: &mut Game) {
         self.miMapFilterScroll.set_visible(false);
 
         let focus = ctl_ptr(self.miSettingsStartButton);
-        self.set_initial_focus(focus);
+        self.set_initial_focus(g, focus);
         self.set_cancel_code(MENU_CODE_BACK_TEAM_SELECT_MENU);
 
         self.restore_current(g);
@@ -240,7 +240,7 @@ impl UI_GameSettingsMenu {
         }
     }
 
-    pub fn open_exit_dialog(&mut self) {
+    pub fn open_exit_dialog(&mut self, g: &mut Game) {
         self.miGameSettingsExitDialogImage.set_visible(true);
         self.miGameSettingsExitDialogTournamentText.set_visible(true);
         self.miGameSettingsExitDialogExitText.set_visible(true);
@@ -250,12 +250,12 @@ impl UI_GameSettingsMenu {
         self.remember_current();
 
         let focus = ctl_ptr(self.miGameSettingsExitDialogNoButton);
-        self.set_initial_focus(focus);
+        self.set_initial_focus(g, focus);
         self.set_cancel_code(MENU_CODE_NONE);
-        self.reset_menu(game().get());
+        self.reset_menu(g);
     }
 
-    pub fn close_exit_dialog(&mut self) {
+    pub fn close_exit_dialog(&mut self, g: &mut Game) {
         self.miGameSettingsExitDialogImage.set_visible(false);
         self.miGameSettingsExitDialogTournamentText.set_visible(false);
         self.miGameSettingsExitDialogExitText.set_visible(false);
@@ -263,10 +263,10 @@ impl UI_GameSettingsMenu {
         self.miGameSettingsExitDialogNoButton.set_visible(false);
 
         let focus = ctl_ptr(self.miSettingsStartButton);
-        self.set_initial_focus(focus);
+        self.set_initial_focus(g, focus);
         self.set_cancel_code(MENU_CODE_BACK_TEAM_SELECT_MENU);
 
-        self.restore_current(game().get());
+        self.restore_current(g);
     }
 
     pub fn set_header_text(&mut self, string: &str) {

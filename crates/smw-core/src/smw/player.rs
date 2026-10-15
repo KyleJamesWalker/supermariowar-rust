@@ -1514,7 +1514,7 @@ impl CPlayer {
                 if self.isspawning() {
                     self.update_respawning(game().get());
                 } else if self.iswarping() {
-                    self.warpstatus.update(this.get());
+                    self.warpstatus.update(game().get(), this.get());
                 }
             } else if self.powerupused.is_some() {
                 self.update_use_powerup(game().get());
@@ -2751,13 +2751,13 @@ impl CPlayer {
 
                 if fTopBlockSolid {
                     // collide with top block
-                    collisionresult &= topblock.get().collide_player_dir(this, counter_direction, if g.netplay.active { g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent } else { true });
+                    collisionresult &= topblock.get().collide_player_dir(g, this, counter_direction, if g.netplay.active { g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent } else { true });
                     self.flipsidesifneeded();
                 }
 
                 if fBottomBlockSolid {
                     // then bottom
-                    collisionresult &= bottomblock.get().collide_player_dir(this, counter_direction, if g.netplay.active { g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent } else { true });
+                    collisionresult &= bottomblock.get().collide_player_dir(g, this, counter_direction, if g.netplay.active { g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent } else { true });
                     self.flipsidesifneeded();
                 }
 
@@ -2830,7 +2830,7 @@ impl CPlayer {
                     g.netplay.client.local_gamehost.prepare_map_collision_event(self);
                 }
 
-                if !centerblock.get().collide_player_dir(this, 0, if g.netplay.active { g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent } else { true }) {
+                if !centerblock.get().collide_player_dir(g, this, 0, if g.netplay.active { g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent } else { true }) {
                     if self.iVerticalPlatformCollision == 2 && !centerblock.get().is_hidden() {
                         self.kill_player_map_hazard(g, true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
                     }
@@ -2878,7 +2878,7 @@ impl CPlayer {
                     g.netplay.client.local_gamehost.prepare_map_collision_event(self);
                 }
 
-                if !leftblock.get().collide_player_dir(this, 0, if g.netplay.active { (g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior }) {
+                if !leftblock.get().collide_player_dir(g, this, 0, if g.netplay.active { (g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior }) {
                     if self.iVerticalPlatformCollision == 2 && !leftblock.get().is_hidden() {
                         self.kill_player_map_hazard(g, true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
                     }
@@ -2899,7 +2899,7 @@ impl CPlayer {
                     g.netplay.client.local_gamehost.prepare_map_collision_event(self);
                 }
 
-                if !rightblock.get().collide_player_dir(this, 0, if g.netplay.active { (g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior }) {
+                if !rightblock.get().collide_player_dir(g, this, 0, if g.netplay.active { (g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior }) {
                     if self.iVerticalPlatformCollision == 2 && !rightblock.get().is_hidden() {
                         self.kill_player_map_hazard(g, true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
                     }
@@ -2983,7 +2983,7 @@ impl CPlayer {
                 if fLeftBlockSolid {
                     //collide with left block
                     let useBehavior = alignedBlockX == txl || rightblock.is_null() || rightblock.get().is_transparent() || rightblock.get().is_hidden();
-                    collisionresult &= leftblock.get().collide_player_dir(this, 2, if g.netplay.active { (g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior });
+                    collisionresult &= leftblock.get().collide_player_dir(g, this, 2, if g.netplay.active { (g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior });
 
                     if g.netplay.active && g.netplay.theHostIsMe && collisionresult {
                         g.netplay.client.local_gamehost.send_map_collision_event();
@@ -2998,7 +2998,7 @@ impl CPlayer {
                 if fRightBlockSolid {
                     //then right
                     let useBehavior = alignedBlockX == txr || leftblock.is_null() || leftblock.get().is_transparent() || leftblock.get().is_hidden();
-                    collisionresult &= rightblock.get().collide_player_dir(this, 2, if g.netplay.active { (g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior });
+                    collisionresult &= rightblock.get().collide_player_dir(g, this, 2, if g.netplay.active { (g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior });
 
                     if g.netplay.active && g.netplay.theHostIsMe && collisionresult {
                         g.netplay.client.local_gamehost.send_map_collision_event();
@@ -3138,6 +3138,7 @@ impl CPlayer {
     }
 
     pub fn collision_detection_map(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let this = self.this();
 
         self.set_xf(self.fx + self.velx);
@@ -3157,7 +3158,7 @@ impl CPlayer {
         self.iPlatformCollisionPlayerId = -1;
 
         unsafe {
-            g.g_map.moving_platform_collision_player(this);
+            gp.g_map.moving_platform_collision_player(g, this);
         }
 
         if self.state != PlayerState::Ready {
@@ -3294,9 +3295,9 @@ impl CPlayer {
     }
 
     /// `collidesWith(CObject*)`
-    pub fn collides_with_object(&mut self, object: Ptr<dyn CObjectTrait>) -> bool {
+    pub fn collides_with_object(&mut self, g: &mut Game, object: Ptr<dyn CObjectTrait>) -> bool {
         let this = self.this();
-        self.collisions.handle_p2o(game().get(), this, object)
+        self.collisions.handle_p2o(g, this, object)
     }
 
     pub fn flipsidesifneeded(&mut self) {

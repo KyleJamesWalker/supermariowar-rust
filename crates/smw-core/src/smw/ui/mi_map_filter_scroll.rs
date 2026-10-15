@@ -189,6 +189,7 @@ impl UI_ControlTrait for MI_MapFilterScroll {
 
     fn draw(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
         if !self.m_visible {
             return;
         }
@@ -241,7 +242,7 @@ impl UI_ControlTrait for MI_MapFilterScroll {
                     gp.rm.menu_map_filter.draw_src(g, x + 24, y + 32 + l * 32 + 4, &SDL_Rect { x: 24, y: 0, w: 24, h: 24 });
                 }
 
-                g.rm.menu_font_large.draw_chop_right(x + 52, y + 5 + l * 32 + 32, iWidth - 104, &item.sName);
+                gp.rm.menu_font_large.draw_chop_right(g, x + 52, y + 5 + l * 32 + 32, iWidth - 104, &item.sName);
                 let icon = item.iIcon as i32;
                 gp.rm.spr_map_filter_icons.draw_src(g, x + 28, y + 32 + l * 32 + 8, &SDL_Rect { x: icon % 10 * 16, y: icon / 10 * 16, w: 16, h: 16 });
                 iLine += 1;

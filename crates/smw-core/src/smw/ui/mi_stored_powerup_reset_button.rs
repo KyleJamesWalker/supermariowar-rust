@@ -15,8 +15,8 @@ pub struct MI_StoredPowerupResetButton {
 crate::impl_base!(MI_StoredPowerupResetButton => mi_button: MI_Button);
 
 impl MI_StoredPowerupResetButton {
-    pub fn new(nspr: Ptr<gfxSprite>, x: i16, y: i16, name: impl Into<String>, width: i16, align: TextAlign) -> Self {
-        MI_StoredPowerupResetButton { mi_button: MI_Button::new(game().get(), nspr, x, y, name, width, align) }
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, x: i16, y: i16, name: impl Into<String>, width: i16, align: TextAlign) -> Self {
+        MI_StoredPowerupResetButton { mi_button: MI_Button::new(g, nspr, x, y, name, width, align) }
     }
 }
 

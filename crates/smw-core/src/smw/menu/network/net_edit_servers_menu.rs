@@ -77,7 +77,7 @@ impl UI_NetEditServersMenu {
 
             this.miLeftHeaderBar = Ptr::new_box(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miRightHeaderBar = Ptr::new_box(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miHeaderText = Ptr::new_box(MI_HeaderText::new("Add/Remove Servers Menu", 320, 5));
+            this.miHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Add/Remove Servers Menu", 320, 5));
 
             this.miServerScroll = Ptr::new_box(MI_StringScroll::new(plain, 260, 32, 350, 9));
             this.miServerScroll.set_auto_modify(true);
@@ -129,7 +129,7 @@ impl UI_NetEditServersMenu {
         this.add_control(ok, field, field, cancel, cancel);
         this.add_control(cancel, field, field, ok, ok);
 
-        this.set_initial_focus(add);
+        this.set_initial_focus(g, add);
         this.set_cancel_code(MENU_CODE_TO_NET_SERVERS_MENU);
         this
     }
@@ -179,7 +179,7 @@ impl UI_NetEditServersMenu {
 
         self.show_dialog();
         let f = ctl_ptr(self.miDialogTextField);
-        self.set_initial_focus(f);
+        self.set_initial_focus(game().get(), f);
         self.set_cancel_code(MENU_CODE_TO_NET_ADDREMOVE_SERVER_MENU);
     }
 
@@ -192,7 +192,7 @@ impl UI_NetEditServersMenu {
         self.currentState = MenuState::EDIT;
 
         let s = ctl_ptr(self.miServerScroll);
-        self.set_initial_focus(s);
+        self.set_initial_focus(g, s);
         self.set_cancel_code(MENU_CODE_TO_NET_ADDREMOVE_SERVER_MENU);
         self.miServerScroll.activate();
 
@@ -209,7 +209,7 @@ impl UI_NetEditServersMenu {
         self.currentState = MenuState::DELETE;
 
         let s = ctl_ptr(self.miServerScroll);
-        self.set_initial_focus(s);
+        self.set_initial_focus(g, s);
         self.set_cancel_code(MENU_CODE_TO_NET_ADDREMOVE_SERVER_MENU);
         self.miServerScroll.activate();
 
@@ -223,10 +223,10 @@ impl UI_NetEditServersMenu {
             match self.currentState {
                 MenuState::EDIT => {
                     self.dialogTextData = g.netplay.savedServers[idx].hostname.clone();
-                    self.miDialogTextField.refresh();
+                    self.miDialogTextField.refresh(g);
                     self.show_dialog();
                     let f = ctl_ptr(self.miDialogTextField);
-                    self.set_initial_focus(f);
+                    self.set_initial_focus(g, f);
                     self.set_cancel_code(MENU_CODE_TO_NET_ADDREMOVE_SERVER_MENU);
                 }
 
@@ -260,7 +260,7 @@ impl UI_NetEditServersMenu {
         }
 
         self.dialogTextData.clear();
-        self.miDialogTextField.refresh();
+        self.miDialogTextField.refresh(g);
         self.restore(g);
     }
 }

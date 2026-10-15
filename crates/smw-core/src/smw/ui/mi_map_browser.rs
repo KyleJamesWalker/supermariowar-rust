@@ -116,7 +116,7 @@ impl MI_MapBrowser {
                 }
 
                 let m = iMap as usize;
-                self.mapSurfaces[m] = ImageLoader::new(&sConvertedPath).without_color_key().create();
+                self.mapSurfaces[m] = ImageLoader::new(&sConvertedPath).without_color_key().create(g);
 
                 self.mapNames[m] = g.maplist.key_at(itr).to_string();
                 self.mapListItr[m] = itr;
@@ -153,6 +153,7 @@ impl UI_ControlTrait for MI_MapBrowser {
 
     fn draw(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
         if !self.m_visible {
             return;
         }
@@ -180,7 +181,7 @@ impl UI_ControlTrait for MI_MapBrowser {
                             gp.rm.menu_map_filter.draw_src(g, rDst.x, rDst.y, &filterSrc);
                         }
 
-                        g.rm.menu_font_large.draw_chop_right(rDst.x, rDst.y + 120, 165, &self.mapNames[i]);
+                        gp.rm.menu_font_large.draw_chop_right(g, rDst.x, rDst.y + 120, 165, &self.mapNames[i]);
                     }
                 }
             }
@@ -201,7 +202,7 @@ impl UI_ControlTrait for MI_MapBrowser {
                 gp.rm.menu_map_filter.draw_src(g, rDst.x, rDst.y, &filterSrc);
             }
 
-            g.rm.menu_font_large.draw_chop_right(rDst.x, rDst.y + 120, 165, &self.mapNames[sel]);
+            gp.rm.menu_font_large.draw_chop_right(g, rDst.x, rDst.y + 120, 165, &self.mapNames[sel]);
         }
     }
 

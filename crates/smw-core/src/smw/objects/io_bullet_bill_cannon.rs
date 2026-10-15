@@ -25,7 +25,7 @@ impl_base!(IO_BulletBillCannon => cobject: CObject);
 
 impl IO_BulletBillCannon {
     pub fn new(pos: Vec2s, freq: i16, vel: f32, preview: bool) -> Self {
-        let mut this = IO_BulletBillCannon { cobject: CObject::new(Ptr::null(), pos), m_freq: freq, m_timer: 0, m_vel: vel, m_preview: preview };
+        let mut this = IO_BulletBillCannon { cobject: CObject::new(game().get(), Ptr::null(), pos), m_freq: freq, m_timer: 0, m_vel: vel, m_preview: preview };
         this.objectType = object_bulletbillcannon;
         this.set_new_timer();
         this

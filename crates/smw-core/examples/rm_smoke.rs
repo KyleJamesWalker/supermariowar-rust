@@ -25,7 +25,7 @@ fn main() {
         sfx_init();
 
         game().rm = Ptr::new_box(CResourceManager::new());
-        game().skinlist = Ptr::new_box(SkinList::new());
+        game().skinlist = Ptr::new_box(SkinList::new(game().get()));
         game().soundpacklist = Ptr::new_box(SoundsList::new());
         game().menugraphicspacklist = Ptr::new_box(GraphicsList::new());
         game().worldgraphicspacklist = Ptr::new_box(GraphicsList::new());

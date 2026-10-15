@@ -43,6 +43,7 @@ impl CGameModeTrait for CGM_Owned {
 
     fn think(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
         if self.gameover {
             self.displayplayertext(g);
         } else {
@@ -63,7 +64,7 @@ impl CGameModeTrait for CGM_Owned {
 
                         if self.goal > -1 {
                             if g.players[i].score().score >= self.goal {
-                                g.players[i].score().set_score(self.goal);
+                                gp.players[i].score().set_score(g, self.goal);
 
                                 self.winningteam = g.players[i].get_team_id();
                                 self.gameover = true;
@@ -139,7 +140,7 @@ impl CGameModeTrait for CGM_Owned {
         }
 
         if player.score().score >= self.goal {
-            player.score().set_score(self.goal);
+            player.score().set_score(g, self.goal);
             self.winningteam = player.get_team_id();
             self.gameover = true;
 

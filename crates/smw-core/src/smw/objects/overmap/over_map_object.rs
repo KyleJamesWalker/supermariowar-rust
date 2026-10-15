@@ -46,7 +46,7 @@ impl IO_OverMapObject {
         iAnimationWidth: i16,
     ) -> Self {
         let mut o = IO_OverMapObject {
-            cobject: CObject::new(nspr, pos),
+            cobject: CObject::new(game().get(), nspr, pos),
             iNumSprites: 0,
             drawframe: 0,
             animationtimer: 0,

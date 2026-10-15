@@ -64,7 +64,7 @@ impl UI_NetNewRoomMenu {
 
         unsafe {
             this.miNetNewRoomCreatingDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
-            this.miNetNewRoomCreatingDialogText = Ptr::new_box(MI_HeaderText::new("Creating...", 320, 240 - 12));
+            this.miNetNewRoomCreatingDialogText = Ptr::new_box(MI_HeaderText::new(g, "Creating...", 320, 240 - 12));
         }
 
         this.miNetNewRoomCreatingDialogImage.set_visible(false);
@@ -78,7 +78,7 @@ impl UI_NetNewRoomMenu {
             let plain = Ptr::from_mut(&mut g.rm.menu_plain_field);
             this.miNetNewRoomLeftHeaderBar = Ptr::new_box(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miNetNewRoomRightHeaderBar = Ptr::new_box(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miNetNewRoomHeaderText = Ptr::new_box(MI_HeaderText::new("New Room Settings Menu", 320, 5));
+            this.miNetNewRoomHeaderText = Ptr::new_box(MI_HeaderText::new(g, "New Room Settings Menu", 320, 5));
         }
 
         let (l, r, h) = (ctl_ptr(this.miNetNewRoomLeftHeaderBar), ctl_ptr(this.miNetNewRoomRightHeaderBar), ctl_ptr(this.miNetNewRoomHeaderText));
@@ -86,7 +86,7 @@ impl UI_NetNewRoomMenu {
         this.add_non_control(r);
         this.add_non_control(h);
 
-        this.set_initial_focus(name);
+        this.set_initial_focus(g, name);
         this.set_cancel_code(MENU_CODE_TO_NET_NEW_ROOM_LEVEL_SELECT_MENU);
         this
     }
@@ -104,7 +104,7 @@ impl UI_NetNewRoomMenu {
                 self.remember_current();
 
                 let t = ctl_ptr(self.miNetNewRoomCreatingDialogText);
-                self.set_initial_focus(t);
+                self.set_initial_focus(g, t);
                 self.set_cancel_code(MENU_CODE_TO_NET_NEW_ROOM_CREATE_ABORT);
                 self.reset_menu(g);
             } else {
@@ -123,7 +123,7 @@ impl UI_NetNewRoomMenu {
         self.miNetNewRoomCreatingDialogText.set_visible(false);
 
         let n = ctl_ptr(self.miNetNewRoomNameField);
-        self.set_initial_focus(n);
+        self.set_initial_focus(game().get(), n);
         self.set_cancel_code(MENU_CODE_TO_NET_NEW_ROOM_LEVEL_SELECT_MENU);
     }
 }

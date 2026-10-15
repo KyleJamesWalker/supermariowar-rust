@@ -80,6 +80,7 @@ pub fn cgm_frenzy_init(g: &mut Game, this: &mut CGM_Frenzy) {
 }
 
 fn spawn_card(g: &mut Game, this: &mut CGM_Frenzy) {
+        let mut gp = g.ptr();
     unsafe {
         if this.iItemWeightCount == 0 {
             //If all weights are zero, then choose the random powerup
@@ -96,7 +97,7 @@ fn spawn_card(g: &mut Game, this: &mut CGM_Frenzy) {
             }
         }
 
-        g.objectcontainer[1].add(Ptr::new_box(MO_FrenzyCard::new(Ptr::from_mut(&mut g.rm.spr_frenzycards), this.iSelectedPowerup)));
+        gp.get().objectcontainer[1].add(Ptr::new_box(MO_FrenzyCard::new(g, Ptr::from_mut(&mut gp.get().rm.spr_frenzycards), this.iSelectedPowerup)));
     }
 }
 

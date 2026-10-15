@@ -797,6 +797,7 @@ pub fn clean_dead_non_player_objects(g: &mut Game) {
 
 pub fn animate_during_countdown(g: &mut Game) {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
     unsafe {
         //Move platforms
         g.g_map.update_platforms();
@@ -809,9 +810,9 @@ pub fn animate_during_countdown(g: &mut Game) {
         gp.objectcontainer[1].update(g);
         gp.objectcontainer[2].update(g);
 
-        g.eyecandy[0].update();
-        g.eyecandy[1].update();
-        g.eyecandy[2].update();
+        gp.eyecandy[0].update(g);
+        gp.eyecandy[1].update(g);
+        gp.eyecandy[2].update(g);
 
         gp.g_map.update(g);
     }
@@ -928,7 +929,7 @@ pub fn shake_screen(g: &mut Game) {
                         }
 
                         if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
-                        movingobject.as_walking_enemy().unwrap().die_and_drop_shell(true, true);
+                        movingobject.as_walking_enemy().unwrap().die_and_drop_shell(g, true, true);
 
                         g.game_values.flags.screenshakekillscount += 1;
 
@@ -1086,7 +1087,7 @@ pub fn handle_p2obj_collisions(g: &mut Game) {
                     let obj = g.objectcontainer[iLayer].list()[iObj];
                     if !obj.is_dead() {
                         if coldec_player2obj(player, obj) {
-                            if player.collides_with_object(obj) {
+                            if player.collides_with_object(g, obj) {
                                 break;
                             }
                         }
@@ -1524,13 +1525,14 @@ impl GameplayState {
 
     fn draw_back_layer(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
         unsafe {
             gp.rm.spr_backmap[gp.g_iCurrentDrawIndex as usize].draw(g, 0, 0);
 
             //draw back eyecandy behind players
             gp.g_map.draw_platforms(g, 0);
 
-            g.eyecandy[0].draw();
+            gp.eyecandy[0].draw(g);
             gp.noncolcontainer.draw(g);
 
             gp.game_values.gamemode.draw_background(g);
@@ -1540,6 +1542,7 @@ impl GameplayState {
     }
 
     fn draw_middle_layer(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let mut gp = g.ptr();
         unsafe {
             gp.g_map.draw_platforms(g, 1);
@@ -1551,13 +1554,14 @@ impl GameplayState {
                 }
             }
 
-            g.eyecandy[1].draw();
+            gp.eyecandy[1].draw(g);
 
             gp.objectcontainer[1].draw(g);
         }
     }
 
     fn draw_front_layer(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let mut gp = g.ptr();
         unsafe {
             gp.g_map.draw_platforms(g, 2);
@@ -1571,7 +1575,7 @@ impl GameplayState {
             gp.g_map.draw_platforms(g, 3);
 
             gp.objectcontainer[2].draw(g);
-            g.eyecandy[2].draw();
+            gp.eyecandy[2].draw(g);
             gp.game_values.gamemode.draw_foreground(g);
 
             gp.g_map.draw_platforms(g, 4);
@@ -1646,6 +1650,7 @@ impl GameplayState {
 
 pub fn draw_exit_pause_dialog(g: &mut Game) {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
     unsafe {
         if g.game_values.flags.pausegame {
             gp.rm.spr_dialog.draw(g, 224, 176);
@@ -1675,14 +1680,14 @@ pub fn draw_exit_pause_dialog(g: &mut Game) {
             draw_rect(g, &gp.rm.spr_dialogbutton, (sw * 0.37f32) as i32, (sh * 0.52f32) as i32, 0, if gp.game_values.flags.exityes { 34 } else { 0 }, 80, 34);
             draw_rect(g, &gp.rm.spr_dialogbutton, (sw * 0.51f32) as i32, (sh * 0.52f32) as i32, 0, if gp.game_values.flags.exityes { 0 } else { 34 }, 80, 34);
 
-            g.rm.menu_font_large.draw(
-                (sw * 0.43f32 - (g.rm.menu_font_large.get_width("Yes") >> 1) as f32) as i32,
-                (sh * 0.56f32 - (g.rm.menu_font_large.get_height() >> 1) as f32) as i32,
+            gp.rm.menu_font_large.draw(g, 
+                (sw * 0.43f32 - (gp.rm.menu_font_large.get_width("Yes") >> 1) as f32) as i32,
+                (sh * 0.56f32 - (gp.rm.menu_font_large.get_height() >> 1) as f32) as i32,
                 "Yes",
             );
-            g.rm.menu_font_large.draw(
-                (sw * 0.57f32 - (g.rm.menu_font_large.get_width("No") >> 1) as f32) as i32,
-                (sh * 0.56f32 - (g.rm.menu_font_large.get_height() >> 1) as f32) as i32,
+            gp.rm.menu_font_large.draw(g, 
+                (sw * 0.57f32 - (gp.rm.menu_font_large.get_width("No") >> 1) as f32) as i32,
+                (sh * 0.56f32 - (gp.rm.menu_font_large.get_height() >> 1) as f32) as i32,
                 "No",
             );
         }
@@ -1893,6 +1898,7 @@ fn new_block<T: IO_BlockTrait + 'static>(b: T) -> Ptr<dyn IO_BlockTrait> {
 
 pub fn spawn_map_block(g: &mut Game, typeId: i16, drawPos: Vec2s, objdata: &MapBlock, switchStates: &[i16; 4]) -> Ptr<dyn IO_BlockTrait> {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
     unsafe {
         let wbb = || spr(&mut gp.get().rm.spr_weaponbreakableblock);
         match typeId as i32 {
@@ -1911,7 +1917,7 @@ pub fn spawn_map_block(g: &mut Game, typeId: i16, drawPos: Vec2s, objdata: &MapB
             MapBlock_SwitchBlockGreen => new_block(B_SwitchBlock::new(spr(&mut g.rm.spr_switchblocks), drawPos, SwitchColor::Green, objdata.iSettings[0])),
             MapBlock_SwitchBlockYellow => new_block(B_SwitchBlock::new(spr(&mut g.rm.spr_switchblocks), drawPos, SwitchColor::Yellow, objdata.iSettings[0])),
             MapBlock_SwitchBlockBlue => new_block(B_SwitchBlock::new(spr(&mut g.rm.spr_switchblocks), drawPos, SwitchColor::Blue, objdata.iSettings[0])),
-            MapBlock_View => new_block(B_ViewBlock::new(spr(&mut g.rm.spr_viewblock), drawPos, objdata.fHidden, &objdata.iSettings)),
+            MapBlock_View => new_block(B_ViewBlock::new(g, spr(&mut gp.rm.spr_viewblock), drawPos, objdata.fHidden, &objdata.iSettings)),
             MapBlock_BrickRed => new_block(B_ThrowBlock::new(spr(&mut g.rm.spr_throwblock), drawPos, 4, 10, ThrowBlockType::Red)),
             MapBlock_NoteRed => new_block(B_NoteBlock::new(spr(&mut g.rm.spr_noteblock), drawPos, 4, 10, NoteBlockType::Red, objdata.fHidden)),
             MapBlock_NoteBlue => new_block(B_NoteBlock::new(spr(&mut g.rm.spr_noteblock), drawPos, 4, 10, NoteBlockType::Blue, objdata.fHidden)),
@@ -1932,6 +1938,7 @@ pub fn spawn_map_block(g: &mut Game, typeId: i16, drawPos: Vec2s, objdata: &MapB
 }
 
 pub fn load_map_objects(g: &mut Game, fPreview: bool) {
+        let mut gp = g.ptr();
     unsafe {
         crate::smw::objecthazard::load_map_hazards(g, fPreview);
 
@@ -2009,7 +2016,7 @@ pub fn load_map_objects(g: &mut Game, fPreview: bool) {
             //If map has less than 5 boxes, then insert coins into map in random locations
             let iExtraCoinsNeeded: i16 = 5 - iThrowBoxCount;
             for _iExtraCoin in 0..iExtraCoinsNeeded {
-                g.objectcontainer[1].add(Ptr::new_box(MO_Coin::new(spr(&mut g.rm.spr_coin), Vec2f::zero(), Vec2s::zero(), 2, -1, 2, 0, true)));
+                gp.get().objectcontainer[1].add(Ptr::new_box(MO_Coin::new(g, spr(&mut gp.get().rm.spr_coin), Vec2f::zero(), Vec2s::zero(), 2, -1, 2, 0, true)));
             }
         }
 
@@ -2613,6 +2620,7 @@ pub fn update_playerswap(g: &mut Game) {
 impl GameplayState {
     fn update_world(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
         unsafe {
             shake_screen(g);
             self.spin_screen(g);
@@ -2675,9 +2683,9 @@ impl GameplayState {
             clean_dead_non_player_objects(g);
             self.clean_dead_players(g);
 
-            g.eyecandy[0].update();
-            g.eyecandy[1].update();
-            g.eyecandy[2].update();
+            gp.eyecandy[0].update(g);
+            gp.eyecandy[1].update(g);
+            gp.eyecandy[2].update(g);
 
             gp.game_values.gamemode.think(g);
 

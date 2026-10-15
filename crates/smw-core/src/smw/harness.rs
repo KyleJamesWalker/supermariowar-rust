@@ -1202,12 +1202,12 @@ pub fn note_match_map(g: &mut Game, path: &str) {
 }
 
 /// Called where a match starts (`MenuState::enter_gameplay`): the next marker opens a new match.
-pub fn match_checkpoint() {
+pub fn match_checkpoint(g: &mut Game) {
     let Some(r) = rec() else { return };
     r.matches += 1;
     r.checkpoint = Some(match crate::smw::checkpoint::unsupported_reason() {
         Some(reason) => format!("#@ checkpoint match={} frame={} unsupported={}", r.matches, unsafe { h().frame }, reason),
-        None => format!("#@ checkpoint match={} frame={} z64={}", r.matches, unsafe { h().frame }, base64_encode(&deflate(&crate::smw::checkpoint::capture(game().get())))),
+        None => format!("#@ checkpoint match={} frame={} z64={}", r.matches, unsafe { h().frame }, base64_encode(&deflate(&crate::smw::checkpoint::capture(g)))),
     });
 }
 

@@ -376,12 +376,12 @@ pub fn b_powerup_block_hitbottom_player<T: B_PowerupBlockTrait + ?Sized>(g: &mut
     false
 }
 
-pub fn b_powerup_block_collide_object_dir<T: B_PowerupBlockTrait + ?Sized>(this: &mut T, object: Ptr<dyn IO_MovingObjectTrait>, direction: i16) -> bool {
+pub fn b_powerup_block_collide_object_dir<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, object: Ptr<dyn IO_MovingObjectTrait>, direction: i16) -> bool {
     if this.pb().hidden {
         return true;
     }
 
-    io_block_collide_object_dir(game().get(), this, object, direction)
+    io_block_collide_object_dir(g, this, object, direction)
 }
 
 pub fn b_powerup_block_hittop_object<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
@@ -544,15 +544,15 @@ macro_rules! impl_powerup_block_io_block_overrides {
         fn reset(&mut self) {
             $crate::smw::objects::blocks::powerup_block::b_powerup_block_reset(self)
         }
-        fn collide_player_dir(&mut self, player: $crate::globals::Ptr<$crate::smw::player::CPlayer>, direction: i16, useBehavior: bool) -> bool {
-            $crate::smw::objects::blocks::powerup_block::b_powerup_block_collide_player_dir(game().get(), self, player, direction, useBehavior)
+        fn collide_player_dir(&mut self, g: &mut Game, player: $crate::globals::Ptr<$crate::smw::player::CPlayer>, direction: i16, useBehavior: bool) -> bool {
+            $crate::smw::objects::blocks::powerup_block::b_powerup_block_collide_player_dir(g, self, player, direction, useBehavior)
         }
         fn collide_object_dir(
-            &mut self,
+            &mut self, g: &mut Game,
             object: $crate::globals::Ptr<dyn $crate::smw::objects::moving::moving_object::IO_MovingObjectTrait>,
             direction: i16,
         ) -> bool {
-            $crate::smw::objects::blocks::powerup_block::b_powerup_block_collide_object_dir(self, object, direction)
+            $crate::smw::objects::blocks::powerup_block::b_powerup_block_collide_object_dir(g, self, object, direction)
         }
         fn hittop_player(&mut self, g: &mut Game, player: $crate::globals::Ptr<$crate::smw::player::CPlayer>, useBehavior: bool) -> bool {
         let mut gp = g.ptr();

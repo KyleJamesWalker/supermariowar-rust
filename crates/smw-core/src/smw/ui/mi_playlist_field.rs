@@ -101,6 +101,7 @@ impl UI_ControlTrait for MI_PlaylistField {
     }
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if !self.m_visible {
             return;
         }
@@ -116,8 +117,8 @@ impl UI_ControlTrait for MI_PlaylistField {
             self.spr.draw_src(g, x + iIndent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
             self.spr.draw_src(g, x + iIndent + 16, y, &SDL_Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 32 } else { 0 }, w: iWidth - iIndent - 16, h: 32 });
 
-            g.rm.menu_font_large.draw_chop_right(x + 16, y + 5, iIndent - 8, &self.szName);
-            g.rm.menu_font_large.draw_chop_right(x + iIndent + 8, y + 5, iWidth - iIndent - 24, g.musiclist.current_name());
+            gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 5, iIndent - 8, &self.szName);
+            gp.rm.menu_font_large.draw_chop_right(g, x + iIndent + 8, y + 5, iWidth - iIndent - 24, gp.musiclist.current_name());
         }
 
         self.miModifyImageLeft.draw(g);

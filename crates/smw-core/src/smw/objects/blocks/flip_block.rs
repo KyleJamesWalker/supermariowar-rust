@@ -179,7 +179,7 @@ impl IO_BlockTrait for B_FlipBlock {
         self.state = 0;
     }
 
-    fn collide_player_dir(&mut self, player: Ptr<CPlayer>, direction: i16, useBehavior: bool) -> bool {
+    fn collide_player_dir(&mut self, g: &mut Game, player: Ptr<CPlayer>, direction: i16, useBehavior: bool) -> bool {
         let iposx = self.iposx as i32;
         let iposy = self.iposy as i32;
         let iw = self.iw as i32;
@@ -187,20 +187,20 @@ impl IO_BlockTrait for B_FlipBlock {
 
         if self.hidden {
             if player.fOldY >= (iposy + ih) as f32 && direction == 0 {
-                return self.hitbottom_player(game().get(), player, useBehavior);
+                return self.hitbottom_player(g, player, useBehavior);
             }
 
             return true;
         }
 
         if (player.fOldY + PH as f32 <= iposy as f32 || self.state > 1) && direction == 2 {
-            return self.hittop_player(game().get(), player, useBehavior);
+            return self.hittop_player(g, player, useBehavior);
         } else if (player.fOldY >= (iposy + ih) as f32 || self.state > 1) && direction == 0 {
-            return self.hitbottom_player(game().get(), player, useBehavior);
+            return self.hitbottom_player(g, player, useBehavior);
         } else if (player.fOldX + PW as f32 <= iposx as f32 || self.state > 1) && direction == 1 {
-            return self.hitleft_player(game().get(), player, useBehavior);
+            return self.hitleft_player(g, player, useBehavior);
         } else if (player.fOldX >= (iposx + iw) as f32 || self.state > 1) && direction == 3 {
-            return self.hitright_player(game().get(), player, useBehavior);
+            return self.hitright_player(g, player, useBehavior);
         }
 
         true
@@ -272,12 +272,12 @@ impl IO_BlockTrait for B_FlipBlock {
         true
     }
 
-    fn collide_object_dir(&mut self, object: Ptr<dyn IO_MovingObjectTrait>, direction: i16) -> bool {
+    fn collide_object_dir(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>, direction: i16) -> bool {
         if self.hidden {
             return true;
         }
 
-        io_block_collide_object_dir(game().get(), self, object, direction)
+        io_block_collide_object_dir(g, self, object, direction)
     }
 
     fn hittop_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {

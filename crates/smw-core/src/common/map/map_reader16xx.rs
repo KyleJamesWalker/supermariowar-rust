@@ -194,7 +194,7 @@ impl MapReader {
         true
     }
 
-    pub(super) fn load_1600(&mut self, map: &mut CMap, mapfile: &mut BinaryFile, readtype: ReadType) -> bool {
+    pub(super) fn load_1600(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile, readtype: ReadType) -> bool {
         self.read_autofilters(map, mapfile);
 
         if readtype == read_type_summary {
@@ -203,7 +203,7 @@ impl MapReader {
 
         map.clear_platforms();
 
-        self.read_tiles(game().get(), map, mapfile);
+        self.read_tiles(g, map, mapfile);
         self.read_background(map, mapfile);
         self.read_music_category(map, mapfile);
 
@@ -218,7 +218,7 @@ impl MapReader {
     }
 
     pub(super) fn load_1610(&mut self, map: &mut CMap, mapfile: &mut BinaryFile, readtype: ReadType) -> bool {
-        if !self.load_1600(map, mapfile, readtype) {
+        if !self.load_1600(game().get(), map, mapfile, readtype) {
             return false;
         }
 

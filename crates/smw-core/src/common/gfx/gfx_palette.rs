@@ -1,5 +1,6 @@
 //! Port of src/common/gfx/gfxPalette.cpp
 
+use crate::game::game;
 use crate::globals::Aliased;
 use crate::common::gfx::color::RGB;
 use crate::common::gfx::get_rgb;
@@ -61,7 +62,7 @@ impl gfxPalette {
     pub fn load(&mut self, path: &Path) -> bool {
         self.m_colorsheets.clear();
 
-        let sprite = ImageLoader::new(path).without_color_key().without_optimization().create();
+        let sprite = ImageLoader::new(path).without_color_key().without_optimization().create(game().get());
 
         unsafe {
             let surf = sprite.get_surface();

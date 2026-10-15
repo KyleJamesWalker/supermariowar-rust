@@ -17,7 +17,7 @@ use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::player::{get_player_from_global_id, CPlayer};
 
 pub fn io_block_new(nspr: Ptr<gfxSprite>, pos: Vec2s) -> IO_Block {
-    let cobject = CObject::new(nspr, pos);
+    let cobject = CObject::new(game().get(), nspr, pos);
     let mut b = IO_Block {
         iBumpPlayerID: 0,
         iBumpTeamID: 0,
@@ -216,7 +216,7 @@ pub fn io_block_bounce_moving_object<T: IO_BlockTrait + ?Sized>(g: &mut Game, th
             let enemy = object.as_walking_enemy().unwrap();
             let style = enemy.we().get_kill_style();
 
-            enemy.die_and_drop_shell(true, true);
+            enemy.die_and_drop_shell(g, true, true);
 
             let iBumpPlayerID = this.block().iBumpPlayerID;
             if !g.game_values.gamemode.gameover && iBumpPlayerID >= 0 {

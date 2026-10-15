@@ -165,16 +165,16 @@ pub fn create_globals(g: &mut Game) {
 
         g.g_map = Ptr::from_box(CMap::new());
         g.filterslist = Ptr::new_box(FiltersList::new());
-        g.maplist = Ptr::new_box(MapList::new(false));
+        g.maplist = Ptr::new_box(MapList::new(g, false));
 
         //TODO: add proper test via size
         if g.maplist.is_empty() {
             std::panic::panic_any("Empty map directory!".to_string());
         }
 
-        g.skinlist = Ptr::new_box(SkinList::new());
-        g.musiclist = Ptr::new_box(MusicList::new());
-        g.worldmusiclist = Ptr::new_box(WorldMusicList::new());
+        g.skinlist = Ptr::new_box(SkinList::new(g));
+        g.musiclist = Ptr::new_box(MusicList::new(g));
+        g.worldmusiclist = Ptr::new_box(WorldMusicList::new(g));
         g.soundpacklist = Ptr::new_box(SoundsList::new());
         g.announcerlist = Ptr::new_box(AnnouncerList::new());
         g.tourlist = Ptr::new_box(TourList::new());

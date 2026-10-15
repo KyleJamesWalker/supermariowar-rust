@@ -48,6 +48,7 @@ impl CGameModeTrait for CGM_Classic {
 }
 
 pub fn cgm_classic_init(g: &mut Game, this: &mut CGM_Classic) {
+        let mut gp = g.ptr();
     cgamemode_init(g, this);
 
     this.fReverseScoring = this.goal == -1;
@@ -55,9 +56,9 @@ pub fn cgm_classic_init(g: &mut Game, this: &mut CGM_Classic) {
     unsafe {
         for iScore in 0..game().score_cnt {
             if this.fReverseScoring {
-                g.score[iScore as usize].set_score(0);
+                gp.score[iScore as usize].set_score(g, 0);
             } else {
-                g.score[iScore as usize].set_score(this.goal);
+                gp.score[iScore as usize].set_score(g, this.goal);
             }
         }
     }

@@ -402,6 +402,7 @@ impl Default for CGameMode {
 }
 
 pub fn cgamemode_init<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T) {
+        let mut gp = g.ptr();
     let this = this.gm_mut();
     if this.goal == 1000 {
         this.goal = 999; //Cap goal for 3 digit scoreboard
@@ -413,7 +414,7 @@ pub fn cgamemode_init<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T) {
 
     unsafe {
         for iScore in 0..game().score_cnt {
-            g.score[iScore as usize].set_score(0);
+            gp.score[iScore as usize].set_score(g, 0);
         }
     }
 }

@@ -79,7 +79,7 @@ impl UI_EyeCandyOptionsMenu {
 
             this.miEyeCandyOptionsMenuLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miEyeCandyOptionsMenuRightHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miEyeCandyOptionsMenuHeaderText = Ptr::new_box(MI_HeaderText::new("Eye Candy Options Menu", 320, 5));
+            this.miEyeCandyOptionsMenuHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Eye Candy Options Menu", 320, 5));
         }
 
         let spawn = ctl_ptr(this.miSpawnStyleField);
@@ -111,7 +111,7 @@ impl UI_EyeCandyOptionsMenu {
         let c = ctl_ptr(this.miEyeCandyOptionsMenuHeaderText);
         this.add_non_control(c);
 
-        this.set_initial_focus(spawn);
+        this.set_initial_focus(g, spawn);
         this.set_cancel_code(MENU_CODE_BACK_TO_OPTIONS_MENU);
         this
     }

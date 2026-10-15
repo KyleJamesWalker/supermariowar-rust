@@ -298,7 +298,7 @@ impl MovingPlatform {
     }
 
     pub fn reset_path(&mut self) {
-        self.pPath.reset();
+        self.pPath.reset(game().get());
 
         let x = self.pPath.current_pos0().x;
         let y = self.pPath.current_pos0().y;

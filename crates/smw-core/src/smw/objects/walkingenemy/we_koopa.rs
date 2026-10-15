@@ -32,7 +32,7 @@ impl_base!(MO_Koopa => mo_walking_enemy: MO_WalkingEnemy);
 impl MO_Koopa {
     pub fn new(nspr: Ptr<gfxSprite>, moveToRight: bool, red: bool, fBouncing: bool, bFallOffLedges: bool) -> Self {
         let mut o = MO_Koopa {
-            mo_walking_enemy: MO_WalkingEnemy::new(nspr, 2, 8, 30, 28, 1, 25, 0, if moveToRight { 0 } else { 54 }, 54, 32, moveToRight, true, fBouncing, bFallOffLedges),
+            mo_walking_enemy: MO_WalkingEnemy::new(game().get(), nspr, 2, 8, 30, 28, 1, 25, 0, if moveToRight { 0 } else { 54 }, 54, 32, moveToRight, true, fBouncing, bFallOffLedges),
             fRed: false,
         };
         o.fRed = red;

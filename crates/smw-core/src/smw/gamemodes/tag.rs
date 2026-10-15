@@ -79,15 +79,16 @@ impl CGameModeTrait for CGM_Tag {
     crate::impl_cgamemode_plumbing!();
 
     fn init(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         cgamemode_init(g, self);
         self.fReverseScoring = self.goal == -1;
 
         unsafe {
             for iScore in 0..game().score_cnt {
                 if self.fReverseScoring {
-                    g.score[iScore as usize].set_score(0);
+                    gp.score[iScore as usize].set_score(g, 0);
                 } else {
-                    g.score[iScore as usize].set_score(self.goal);
+                    gp.score[iScore as usize].set_score(g, self.goal);
                 }
             }
         }
@@ -185,7 +186,7 @@ impl CGameModeTrait for CGM_Tag {
                 }
 
                 if other.score().score <= 0 {
-                    other.score().set_score(0);
+                    other.score().set_score(g, 0);
 
                     remove_team(g, other.get_team_id());
                     return PlayerKillType::Removed;
@@ -214,7 +215,7 @@ impl CGameModeTrait for CGM_Tag {
             }
 
             if player.score().score <= 0 {
-                player.score().set_score(0);
+                player.score().set_score(g, 0);
                 remove_team(g, player.get_team_id());
                 return PlayerKillType::Removed;
             }
@@ -238,10 +239,10 @@ fn tag_mode() -> Option<&'static mut CGM_Tag> {
     unsafe { game().game_values.gamemode.get().as_any().downcast_mut::<CGM_Tag>() }
 }
 
-pub fn net_reassign() {
+pub fn net_reassign(g: &mut Game) {
     if let Some(this) = tag_mode() {
         if this.m_tagged.is_null() {
-            this.reassign(game().get());
+            this.reassign(g);
         }
     }
 }

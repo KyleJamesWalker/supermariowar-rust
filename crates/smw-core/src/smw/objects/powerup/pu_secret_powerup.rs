@@ -28,14 +28,14 @@ pub struct PU_SecretPowerup {
 impl_base!(PU_SecretPowerup => mo_powerup: MO_Powerup);
 
 impl PU_SecretPowerup {
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s, r#type: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, r#type: i16) -> Self {
         let mut o = PU_SecretPowerup {
             mo_powerup: MO_Powerup::new(nspr, pos, 4, 8, 30, 30, 1, 1),
             itemtype: r#type,
             sparkleanimationtimer: 0,
             sparkledrawframe: 0,
         };
-        o.place(game().get());
+        o.place(g);
         o
     }
 

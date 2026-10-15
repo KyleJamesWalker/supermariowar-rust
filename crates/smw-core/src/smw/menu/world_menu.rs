@@ -31,7 +31,7 @@ impl UI_WorldMenu {
         unsafe {
             let spr_selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
 
-            this.miWorld = Ptr::new_box(MI_World::new());
+            this.miWorld = Ptr::new_box(MI_World::new(g));
             this.miWorld.set_auto_modify(true);
 
             this.miWorldStop = Ptr::new_box(MI_TourStop::new(g, 70, 45, true));
@@ -39,7 +39,7 @@ impl UI_WorldMenu {
 
             // Exit tour dialog box
             this.miWorldExitDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
-            this.miWorldExitDialogExitTourText = Ptr::new_box(MI_HeaderText::new("Exit World", 320, 205));
+            this.miWorldExitDialogExitTourText = Ptr::new_box(MI_HeaderText::new(g, "Exit World", 320, 205));
 
             this.miWorldExitDialogYesButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 235, 250, "Yes", 80, TextAlign::CENTER));
             this.miWorldExitDialogNoButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 325, 250, "No", 80, TextAlign::CENTER));
@@ -70,7 +70,7 @@ impl UI_WorldMenu {
         this.add_control(yes, Ptr::null(), Ptr::null(), Ptr::null(), no);
         this.add_control(no, Ptr::null(), Ptr::null(), yes, Ptr::null());
 
-        this.set_initial_focus(world);
+        this.set_initial_focus(g, world);
         this.set_cancel_code(MENU_CODE_BACK_TEAM_SELECT_MENU);
         this
     }
@@ -84,23 +84,23 @@ impl UI_WorldMenu {
         self.remember_current();
 
         let focus = ctl_ptr(self.miWorldStop);
-        self.set_initial_focus(focus);
+        self.set_initial_focus(g, focus);
         self.set_cancel_code(MENU_CODE_WORLD_STAGE_NO_START);
 
         self.reset_menu(g);
     }
 
-    pub fn close_stage_start(&mut self) {
+    pub fn close_stage_start(&mut self, g: &mut Game) {
         self.miWorldStop.set_visible(false);
 
         let focus = ctl_ptr(self.miWorld);
-        self.set_initial_focus(focus);
+        self.set_initial_focus(g, focus);
         self.set_cancel_code(MENU_CODE_BACK_TEAM_SELECT_MENU);
 
-        self.restore_current(game().get());
+        self.restore_current(g);
     }
 
-    pub fn open_exit_dialog(&mut self) {
+    pub fn open_exit_dialog(&mut self, g: &mut Game) {
         self.miWorldExitDialogImage.set_visible(true);
         self.miWorldExitDialogExitTourText.set_visible(true);
         self.miWorldExitDialogYesButton.set_visible(true);
@@ -109,21 +109,21 @@ impl UI_WorldMenu {
         self.remember_current();
 
         let focus = ctl_ptr(self.miWorldExitDialogNoButton);
-        self.set_initial_focus(focus);
+        self.set_initial_focus(g, focus);
         self.set_cancel_code(MENU_CODE_NONE);
-        self.reset_menu(game().get());
+        self.reset_menu(g);
     }
 
-    pub fn close_exit_dialog(&mut self) {
+    pub fn close_exit_dialog(&mut self, g: &mut Game) {
         self.miWorldExitDialogImage.set_visible(false);
         self.miWorldExitDialogExitTourText.set_visible(false);
         self.miWorldExitDialogYesButton.set_visible(false);
         self.miWorldExitDialogNoButton.set_visible(false);
 
         let focus = ctl_ptr(self.miWorld);
-        self.set_initial_focus(focus);
+        self.set_initial_focus(g, focus);
         self.set_cancel_code(MENU_CODE_BACK_TEAM_SELECT_MENU);
 
-        self.restore_current(game().get());
+        self.restore_current(g);
     }
 }

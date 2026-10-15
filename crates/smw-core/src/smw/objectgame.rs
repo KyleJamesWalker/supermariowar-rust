@@ -127,6 +127,7 @@ fn spawn_regular_powerup(g: &mut Game, r#type: PowerupType, spawnPos: Vec2s, mov
 }
 
 fn spawn_special_powerup(g: &mut Game, r#type: i16, spawnPos: Vec2s) -> Spawned {
+        let mut gp = g.ptr();
     static iCoinValue: [i16; 4] = [3, 5, 2, 10];
     static iGreedValue: [i16; 4] = [10, 15, 5, 20];
 
@@ -152,8 +153,8 @@ fn spawn_special_powerup(g: &mut Game, r#type: i16, spawnPos: Vec2s) -> Spawned 
                 let value = if g.game_values.gamemode.gamemode == game_mode_greed { iGreedValue[colorIdx] } else { iCoinValue[colorIdx] };
                 new_powerup(PU_CoinPowerup::new(Ptr::from_mut(&mut g.rm.spr_coin), spawnPos, color, value))
             }
-            MINIGAME_COIN => Spawned::Coin(Ptr::new_box(MO_Coin::new(
-                Ptr::from_mut(&mut g.rm.spr_coin),
+            MINIGAME_COIN => Spawned::Coin(Ptr::new_box(MO_Coin::new(g, 
+                Ptr::from_mut(&mut gp.rm.spr_coin),
                 Vec2f::new(0.0, (-VELJUMP as f64 / 2.0) as f32),
                 spawnPos,
                 2,
@@ -162,10 +163,10 @@ fn spawn_special_powerup(g: &mut Game, r#type: i16, spawnPos: Vec2s) -> Spawned 
                 0,
                 false,
             ))),
-            SECRET1_POWERUP => new_powerup(PU_SecretPowerup::new(Ptr::from_mut(&mut g.rm.spr_secret1), spawnPos, 0)),
-            SECRET2_POWERUP => new_powerup(PU_SecretPowerup::new(Ptr::from_mut(&mut g.rm.spr_secret2), spawnPos, 1)),
-            SECRET3_POWERUP => new_powerup(PU_SecretPowerup::new(Ptr::from_mut(&mut g.rm.spr_secret3), spawnPos, 2)),
-            SECRET4_POWERUP => new_powerup(PU_SecretPowerup::new(Ptr::from_mut(&mut g.rm.spr_secret4), spawnPos, 3)),
+            SECRET1_POWERUP => new_powerup(PU_SecretPowerup::new(g, Ptr::from_mut(&mut gp.rm.spr_secret1), spawnPos, 0)),
+            SECRET2_POWERUP => new_powerup(PU_SecretPowerup::new(g, Ptr::from_mut(&mut gp.rm.spr_secret2), spawnPos, 1)),
+            SECRET3_POWERUP => new_powerup(PU_SecretPowerup::new(g, Ptr::from_mut(&mut gp.rm.spr_secret3), spawnPos, 2)),
+            SECRET4_POWERUP => new_powerup(PU_SecretPowerup::new(g, Ptr::from_mut(&mut gp.rm.spr_secret4), spawnPos, 3)),
             _ => Spawned::None,
         }
     }

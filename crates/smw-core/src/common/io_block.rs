@@ -50,11 +50,11 @@ pub trait IO_BlockTrait: CObjectTrait {
         crate::smw::objects::blocks::io_block::io_block_reset(self)
     }
 
-    fn collide_player_dir(&mut self, player: Ptr<CPlayer>, direction: i16, useBehavior: bool) -> bool {
-        crate::smw::objects::blocks::io_block::io_block_collide_player_dir(game().get(), self, player, direction, useBehavior)
+    fn collide_player_dir(&mut self, g: &mut Game, player: Ptr<CPlayer>, direction: i16, useBehavior: bool) -> bool {
+        crate::smw::objects::blocks::io_block::io_block_collide_player_dir(g, self, player, direction, useBehavior)
     }
-    fn collide_object_dir(&mut self, object: Ptr<dyn IO_MovingObjectTrait>, direction: i16) -> bool {
-        crate::smw::objects::blocks::io_block::io_block_collide_object_dir(game().get(), self, object, direction)
+    fn collide_object_dir(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>, direction: i16) -> bool {
+        crate::smw::objects::blocks::io_block::io_block_collide_object_dir(g, self, object, direction)
     }
 
     fn is_transparent(&mut self) -> bool {

@@ -25,9 +25,9 @@ pub struct B_ViewBlock {
 impl_base!(B_ViewBlock => b_powerup_block: B_PowerupBlock);
 
 impl B_ViewBlock {
-    pub fn new(nspr1: Ptr<gfxSprite>, pos: Vec2s, fHidden: bool, piSettings: &[i16]) -> Self {
+    pub fn new(g: &mut Game, nspr1: Ptr<gfxSprite>, pos: Vec2s, fHidden: bool, piSettings: &[i16]) -> Self {
         let mut b = B_ViewBlock {
-            b_powerup_block: B_PowerupBlock::new(game().get(), nspr1, pos, 1, 32000, fHidden, piSettings),
+            b_powerup_block: B_PowerupBlock::new(g, nspr1, pos, 1, 32000, fHidden, piSettings),
             poweruptimer: 0,
             powerupindex: 0,
             fNoPowerupsSelected: false,

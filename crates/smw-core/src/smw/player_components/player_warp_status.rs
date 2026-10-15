@@ -45,7 +45,7 @@ impl PlayerWarpStatus {
         self.warpplane
     }
 
-    pub fn update(&mut self, player: &mut CPlayer) {
+    pub fn update(&mut self, g: &mut Game, player: &mut CPlayer) {
         debug_assert!(player.iswarping());
 
         player.fOldY = player.fy;
@@ -56,19 +56,19 @@ impl PlayerWarpStatus {
         match player.state {
             PlayerState::EnteringWarpLeft => {
                 player.set_xi((player.left_x() as i32 - 1) as i16);
-                self.increasewarpcounter(game().get(), player, (PW + PWOFFSET) as i16);
+                self.increasewarpcounter(g, player, (PW + PWOFFSET) as i16);
             }
             PlayerState::EnteringWarpRight => {
                 player.set_xi((player.left_x() as i32 + 1) as i16);
-                self.increasewarpcounter(game().get(), player, (PW + PWOFFSET) as i16);
+                self.increasewarpcounter(g, player, (PW + PWOFFSET) as i16);
             }
             PlayerState::EnteringWarpUp => {
                 player.set_yi((player.top_y() as i32 - 1) as i16);
-                self.increasewarpcounter(game().get(), player, (TILESIZE - PHOFFSET) as i16);
+                self.increasewarpcounter(g, player, (TILESIZE - PHOFFSET) as i16);
             }
             PlayerState::EnteringWarpDown => {
                 player.set_yi((player.top_y() as i32 + 1) as i16);
-                self.increasewarpcounter(game().get(), player, (PH + PHOFFSET) as i16);
+                self.increasewarpcounter(g, player, (PH + PHOFFSET) as i16);
             }
             PlayerState::LeavingWarpLeft => {
                 player.set_xi((player.left_x() as i32 - 1) as i16);

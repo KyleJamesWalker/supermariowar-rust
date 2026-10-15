@@ -42,7 +42,7 @@ pub struct MO_PirhanaPlant {
 impl_base!(MO_PirhanaPlant => io_moving_object: IO_MovingObject);
 
 impl MO_PirhanaPlant {
-    pub fn new(pos: Vec2s, r#type: i16, freq: i16, direction: i16, preview: bool) -> Self {
+    pub fn new(g: &mut Game, pos: Vec2s, r#type: i16, freq: i16, direction: i16, preview: bool) -> Self {
         let mut o = MO_PirhanaPlant {
             io_moving_object: IO_MovingObject::new(Ptr::null(), pos, 1, 0, -1, -1, -1, -1, -1, -1, -1, -1),
             iType: 0,
@@ -64,7 +64,7 @@ impl MO_PirhanaPlant {
         o.movingObjectType = movingobject_pirhanaplant;
 
         o.state = 0;
-        o.set_new_timer(game().get());
+        o.set_new_timer(g);
 
         if o.iDirection <= 1 {
             o.iw = 32;

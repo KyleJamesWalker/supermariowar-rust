@@ -85,7 +85,7 @@ impl UI_NetNewRoomSettingsMenu {
             let plain = Ptr::from_mut(&mut g.rm.menu_plain_field);
             this.miLeftHeaderBar = Ptr::new_box(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miRightHeaderBar = Ptr::new_box(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miHeaderText = Ptr::new_box(MI_HeaderText::new("Multiplayer Level Select Menu", 320, 5));
+            this.miHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Multiplayer Level Select Menu", 320, 5));
         }
 
         let (l, r, h) = (ctl_ptr(this.miLeftHeaderBar), ctl_ptr(this.miRightHeaderBar), ctl_ptr(this.miHeaderText));
@@ -93,7 +93,7 @@ impl UI_NetNewRoomSettingsMenu {
         this.add_non_control(r);
         this.add_non_control(h);
 
-        this.set_initial_focus(cont);
+        this.set_initial_focus(g, cont);
         this.set_cancel_code(MENU_CODE_TO_NET_LOBBY_MENU);
         this
     }

@@ -39,7 +39,7 @@ impl UI_TournamentScoreboardMenu {
         this.add_non_control(sb);
         this.add_non_control(img);
         this.add_control(next, Ptr::null(), Ptr::null(), Ptr::null(), Ptr::null());
-        this.set_initial_focus(next);
+        this.set_initial_focus(g, next);
         this.set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU);
         this
     }

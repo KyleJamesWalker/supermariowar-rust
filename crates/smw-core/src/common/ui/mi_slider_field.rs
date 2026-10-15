@@ -47,6 +47,7 @@ impl UI_ControlTrait for MI_SliderField {
     }
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if !self.m_visible {
             return;
         }
@@ -63,10 +64,10 @@ impl UI_ControlTrait for MI_SliderField {
             self.m_spr.draw_src(g, x + indent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
             self.m_spr.draw_src(g, x + indent + 16, y, &SDL_Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
 
-            g.rm.menu_font_large.draw_chop_right(x + 16, y + 5, indent - 8, &self.m_name);
+            gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 5, indent - 8, &self.m_name);
 
             if !self.m_items.is_empty() {
-                g.rm.menu_font_large.draw_chop_right(x + indent2 + 16, y + 5, width - indent2 - 24, &self.current_item().name);
+                gp.rm.menu_font_large.draw_chop_right(g, x + indent2 + 16, y + 5, width - indent2 - 24, &self.current_item().name);
             }
         }
 
@@ -98,7 +99,7 @@ impl UI_ControlTrait for MI_SliderField {
         }
     }
 
-    fn refresh(&mut self) {
+    fn refresh(&mut self, g: &mut Game) {
         self.mi_select_field.refresh_impl();
     }
 

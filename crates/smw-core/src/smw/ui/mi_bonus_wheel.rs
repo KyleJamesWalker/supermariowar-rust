@@ -335,7 +335,7 @@ impl UI_ControlTrait for MI_BonusWheel {
                     if !self.fPowerupSelectionDone {
                         self.fPowerupSelectionDone = true;
                         self.miContinueButton.set_visible(true);
-                        self.miContinueButton.select(true);
+                        self.miContinueButton.select(g, true);
 
                         //Reset all player's stored item
                         if !g.game_values.keeppowerup {

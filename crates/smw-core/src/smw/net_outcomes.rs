@@ -130,6 +130,7 @@ fn record(g: &mut Game) {
 
 /// `Ev::Scores`.
 pub fn net_apply_scores(g: &mut Game, args: &[i32]) {
+        let mut gp = g.ptr();
     unsafe {
         outcome_state().g_hostGameOver = args[0] != 0;
         outcome_state().g_hostWinner = args[1] as i16;
@@ -138,7 +139,7 @@ pub fn net_apply_scores(g: &mut Game, args: &[i32]) {
         }
         outcome_state().g_applying = true;
         for (t, v) in args[2..].chunks(4).enumerate().take(g.score_cnt as usize) {
-            g.score[t].set_score(v[0] as i16);
+            gp.score[t].set_score(g, v[0] as i16);
             for (i, s) in v[1..].iter().enumerate() {
                 g.score[t].subscore[i] = *s as i16;
             }

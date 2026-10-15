@@ -57,13 +57,14 @@ impl_base!(CGM_Greed => cgm_classic: CGM_Classic);
 
 //Greed - steal other players coins - if you have 0 coins, you're removed from the game!
 fn drop_coins(g: &mut Game, player: Ptr<CPlayer>, iDamage: i16, pos: Vec2s) {
+        let mut gp = g.ptr();
     unsafe {
         for _k in 0..iDamage {
             let speed: f32 = 7.0f32 + (RANDOM_INT(9) as f32) / 2.0f32;
             let angle: f32 = -(RANDOM_INT(314) as f32) / 100.0f32;
             let vel: Vec2f = Vec2f::new(speed * cosf(angle), speed * sinf(angle));
 
-            g.objectcontainer[1].add(Ptr::new_box(MO_Coin::new(Ptr::from_mut(&mut g.rm.spr_coin), vel, pos, player.get_color_id(), player.get_team_id(), 1, 30, false)));
+            gp.get().objectcontainer[1].add(Ptr::new_box(MO_Coin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), vel, pos, player.get_color_id(), player.get_team_id(), 1, 30, false)));
         }
     }
 }
@@ -145,13 +146,14 @@ impl CGameModeTrait for CGM_Greed {
     crate::impl_cgamemode_plumbing!();
 
     fn init(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         cgamemode_init(g, self);
 
         let iGoal: i16 = if self.goal == -1 { 0 } else { self.goal };
 
         unsafe {
             for iScore in 0..game().score_cnt {
-                g.score[iScore as usize].set_score(iGoal);
+                gp.score[iScore as usize].set_score(g, iGoal);
             }
         }
     }

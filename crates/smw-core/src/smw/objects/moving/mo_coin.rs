@@ -35,7 +35,7 @@ impl_base!(MO_Coin => io_moving_object: IO_MovingObject);
 
 impl MO_Coin {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(nspr: Ptr<gfxSprite>, vel: Vec2f, pos: Vec2s, color: i16, team: i16, r#type: i16, uncollectabletime: i16, placecoin: bool) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, vel: Vec2f, pos: Vec2s, color: i16, team: i16, r#type: i16, uncollectabletime: i16, placecoin: bool) -> Self {
         let mut o = MO_Coin {
             io_moving_object: IO_MovingObject::new(nspr, pos, 4, 8, 30, 30, 1, 1, 0, ((color as i32) << 5) as i16, 32, 32),
             timer: 0,
@@ -62,13 +62,13 @@ impl MO_Coin {
 
         o.timer = 0;
         if placecoin {
-            o.place_coin(game().get());
+            o.place_coin(g);
         }
 
         if o.iType == 0 {
             o.fObjectCollidesWithMap = false;
         } else {
-            io_moving_object_collision_detection_checksides(game().get(), &mut o);
+            io_moving_object_collision_detection_checksides(g, &mut o);
         }
         o
     }

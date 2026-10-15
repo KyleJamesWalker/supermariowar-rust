@@ -1,5 +1,6 @@
 //! Port of src/smw/menu/BonusWheelMenu.cpp
 
+use crate::game::Game;
 use crate::common::ui::menu_code::*;
 use crate::common::uicontrol::ctl_ptr;
 use crate::common::uimenu::UI_Menu;
@@ -15,14 +16,14 @@ pub struct UI_BonusWheelMenu {
 crate::impl_base!(UI_BonusWheelMenu => ui_menu: UI_Menu);
 
 impl UI_BonusWheelMenu {
-    pub fn new() -> Box<Self> {
+    pub fn new(g: &mut Game) -> Box<Self> {
         let mut this = Box::<Self>::default();
 
-        this.miBonusWheel = Ptr::new_box(MI_BonusWheel::new(game().get(), 144, 38));
+        this.miBonusWheel = Ptr::new_box(MI_BonusWheel::new(g, 144, 38));
 
         let w = ctl_ptr(this.miBonusWheel);
         this.add_control(w, Ptr::null(), Ptr::null(), Ptr::null(), Ptr::null());
-        this.set_initial_focus(w);
+        this.set_initial_focus(g, w);
         this.set_cancel_code(MENU_CODE_BONUS_DONE);
         this
     }

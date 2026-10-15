@@ -31,7 +31,7 @@ impl UI_PlayerControlsMenu {
 
         let c = ctl_ptr(this.miInputContainer);
         this.add_control(c, Ptr::null(), Ptr::null(), Ptr::null(), Ptr::null());
-        this.set_initial_focus(c);
+        this.set_initial_focus(g, c);
         this.set_cancel_code(MENU_CODE_BACK_TO_CONTROLS_MENU);
         this
     }

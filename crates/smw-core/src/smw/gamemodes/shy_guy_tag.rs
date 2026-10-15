@@ -117,6 +117,7 @@ impl CGameModeTrait for CGM_ShyGuyTag {
     }
 
     fn init(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         gm::cgamemode_init(g, self);
         self.fReverseScoring = self.goal == -1;
 
@@ -125,7 +126,7 @@ impl CGameModeTrait for CGM_ShyGuyTag {
 
         unsafe {
             for iScore in 0..game().score_cnt as usize {
-                g.score[iScore].set_score(0);
+                gp.score[iScore].set_score(g, 0);
             }
 
             for &player in g.players.iter() {
@@ -240,7 +241,7 @@ impl CGameModeTrait for CGM_ShyGuyTag {
         }
 
         if player.score().score >= self.goal {
-            player.score().set_score(self.goal);
+            player.score().set_score(g, self.goal);
             setup_score_board(g, false);
             show_score_board(g);
 

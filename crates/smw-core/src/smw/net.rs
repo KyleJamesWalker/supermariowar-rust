@@ -293,6 +293,7 @@ const PREVIEW_MS: u32 = 2500;
 /// Not in the C++: the match settings every client shows while it waits to start (`waiting_to_start`).
 pub fn draw_match_preview(g: &mut Game) {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
     unsafe {
         gp.rm.menu_backdrop.draw(g, 0, 0);
         gp.rm.menu_dialog.draw_src(g, 144, 100, &sdl2::sys::SDL_Rect { x: 0, y: 0, w: 336, h: 264 });
@@ -311,7 +312,7 @@ pub fn draw_match_preview(g: &mut Game) {
         }
         g.rm.menu_font_large.draw_centered(320, 116, "Match Settings");
         for (i, line) in lines.iter().enumerate() {
-            g.rm.menu_font_large.draw_chop_centered(320, 160 + 30 * i as i32, 320, line);
+            gp.rm.menu_font_large.draw_chop_centered(g, 320, 160 + 30 * i as i32, 320, line);
         }
         g.rm.menu_font_small.draw_centered(320, 340, if g.netplay.match_randomized { "Randomized by the host" } else { "Chosen by the host" });
     }
@@ -723,6 +724,7 @@ impl NetClient {
 
     fn handle_skin_change_message(&mut self, g: &mut Game, data: &[u8]) {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
         if data.len() <= std::mem::size_of::<MessageHeader>() + 5 || data.len() > 20000 {
             println!("[error] Corrupt skin arrived");
             return;
@@ -745,7 +747,7 @@ impl NetClient {
         }
 
         unsafe {
-            if !g.rm.load_menu_skin_path(playerID as i16, Path::new(&path), playerID as i16, false) {
+            if !gp.rm.load_menu_skin_path(g, playerID as i16, Path::new(&path), playerID as i16, false) {
                 println!("[warning] Could not load netplay skin of player {}, using default", playerID);
                 gp.get().rm.load_menu_skin(g, playerID as i16, gp.get().game_values.skinids[playerID as usize], playerID as i16, false);
             }

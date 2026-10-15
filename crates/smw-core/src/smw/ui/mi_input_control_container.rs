@@ -264,6 +264,7 @@ impl UI_ControlTrait for MI_InputControlField {
     }
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if !self.m_visible {
             return;
         }
@@ -278,17 +279,17 @@ impl UI_ControlTrait for MI_InputControlField {
             self.spr.draw_src(g, x + iIndent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
             self.spr.draw_src(g, x + iIndent + 16, y, &SDL_Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 32 } else { 0 }, w: iWidth - iIndent - 16, h: 32 });
 
-            g.rm.menu_font_large.draw_chop_right(x + 16, y + 5, iIndent - 8, &self.szName);
+            gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 5, iIndent - 8, &self.szName);
 
             if self.iKey.is_null() {
-                g.rm.menu_font_large.draw_chop_right(x + iIndent + 8, y + 5, iWidth - iIndent - 16, "Unassigned");
+                gp.rm.menu_font_large.draw_chop_right(g, x + iIndent + 8, y + 5, iWidth - iIndent - 16, "Unassigned");
             } else if self.fModifying {
-                g.rm.menu_font_large.draw_chop_right(x + iIndent + 8, y + 5, iWidth - iIndent - 16, "(Press Button)");
+                gp.rm.menu_font_large.draw_chop_right(g, x + iIndent + 8, y + 5, iWidth - iIndent - 16, "(Press Button)");
             } else if self.iDevice == DEVICE_KEYBOARD {
                 let name = CStr::from_ptr(SDL_GetKeyName(*self.iKey)).to_string_lossy();
-                g.rm.menu_font_large.draw_chop_right(x + iIndent + 8, y + 5, iWidth - iIndent - 16, &name);
+                gp.rm.menu_font_large.draw_chop_right(g, x + iIndent + 8, y + 5, iWidth - iIndent - 16, &name);
             } else {
-                g.rm.menu_font_large.draw_chop_right(x + iIndent + 8, y + 5, iWidth - iIndent - 16, Self::Joynames[*self.iKey as usize]);
+                gp.rm.menu_font_large.draw_chop_right(g, x + iIndent + 8, y + 5, iWidth - iIndent - 16, Self::Joynames[*self.iKey as usize]);
             }
         }
     }
@@ -348,13 +349,14 @@ impl MI_InputControlContainer {
     //call with x = 94, y = 19
     pub fn new(g: &mut Game, spr_button: Ptr<gfxSprite>, x: i16, y: i16, playerID: i16) -> Self {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
         unsafe {
             let iPlayerID = playerID;
             let mut iDevice = g.game_values.playerInput.inputControls[iPlayerID as usize].iDevice;
             let iSelectedInputType: i16 = 0;
 
             let szTitle = format!("Player {} Controls", iPlayerID as i32 + 1);
-            let miText = Ptr::new_box(MI_HeaderText::new(szTitle, 320, 5));
+            let miText = Ptr::new_box(MI_HeaderText::new(g, szTitle, 320, 5));
 
             let miImage = [
                 Ptr::new_box(MI_Image::new(spr_button, 0, 0, 0, 0, 320, 32, 1, 1, 0)),
@@ -451,7 +453,7 @@ impl MI_InputControlContainer {
 
             menu.add_control(back, m(7), dev, dev, null);
 
-            menu.set_initial_focus(dev);
+            menu.set_initial_focus(gp.get(), dev);
 
             this.set_visible_input_fields();
             this

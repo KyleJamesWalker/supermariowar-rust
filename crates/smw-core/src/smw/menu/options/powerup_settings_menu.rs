@@ -79,7 +79,7 @@ impl UI_PowerupSettingsMenu {
                 &mut g.game_values.keeppowerup);
             this.miKeepPowerupField.set_auto_advance(true);
 
-            this.miStoredPowerupResetButton = Ptr::new_box(MI_StoredPowerupResetButton::new(spr_selectfield, 70, 340, "Reset Stored Items", 500, TextAlign::LEFT));
+            this.miStoredPowerupResetButton = Ptr::new_box(MI_StoredPowerupResetButton::new(g, spr_selectfield, 70, 340, "Reset Stored Items", 500, TextAlign::LEFT));
             this.miStoredPowerupResetButton.set_code(MENU_CODE_RESET_STORED_POWERUPS);
 
             this.miPowerupSettingsMenuBackButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
@@ -87,7 +87,7 @@ impl UI_PowerupSettingsMenu {
 
             this.miPowerupSettingsMenuLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miPowerupSettingsMenuRightHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miPowerupSettingsMenuHeaderText = Ptr::new_box(MI_HeaderText::new("Item Settings Menu", 320, 5));
+            this.miPowerupSettingsMenuHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Item Settings Menu", 320, 5));
         }
 
         let delay = ctl_ptr(this.miStoredPowerupDelayField);
@@ -117,7 +117,7 @@ impl UI_PowerupSettingsMenu {
         let c = ctl_ptr(this.miPowerupSettingsMenuHeaderText);
         this.add_non_control(c);
 
-        this.set_initial_focus(delay);
+        this.set_initial_focus(g, delay);
         this.set_cancel_code(MENU_CODE_BACK_TO_OPTIONS_MENU);
         this
     }

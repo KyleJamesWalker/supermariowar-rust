@@ -135,16 +135,16 @@ impl IO_BlockTrait for B_NoteBlock {
         self.set_yf(fposy);
     }
 
-    fn collide_player_dir(&mut self, player: Ptr<CPlayer>, direction: i16, useBehavior: bool) -> bool {
+    fn collide_player_dir(&mut self, g: &mut Game, player: Ptr<CPlayer>, direction: i16, useBehavior: bool) -> bool {
         if self.hidden {
             if (player.fOldY >= (self.iposy as i32 + self.ih as i32) as f32 || self.state > 1) && direction == 0 {
-                return self.hitbottom_player(game().get(), player, useBehavior);
+                return self.hitbottom_player(g, player, useBehavior);
             }
 
             return true;
         }
 
-        io_block_collide_player_dir(game().get(), self, player, direction, useBehavior)
+        io_block_collide_player_dir(g, self, player, direction, useBehavior)
     }
 
     fn hittop_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
@@ -245,12 +245,12 @@ impl IO_BlockTrait for B_NoteBlock {
         false
     }
 
-    fn collide_object_dir(&mut self, object: Ptr<dyn IO_MovingObjectTrait>, direction: i16) -> bool {
+    fn collide_object_dir(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>, direction: i16) -> bool {
         if self.hidden {
             return true;
         }
 
-        io_block_collide_object_dir(game().get(), self, object, direction)
+        io_block_collide_object_dir(g, self, object, direction)
     }
 
     fn hittop_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {

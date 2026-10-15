@@ -148,18 +148,18 @@ pub trait UI_ControlTrait {
         MENU_CODE_NONE
     }
 
-    fn refresh(&mut self) {}
+    fn refresh(&mut self, g: &mut Game) {}
 
     fn disable(&mut self, disable: bool) {
         self.ctl_mut().fDisable = disable;
     }
 
     /// Non-virtual in C++.
-    fn select(&mut self, select: bool) -> bool {
+    fn select(&mut self, g: &mut Game, select: bool) -> bool {
         self.ctl_mut().fSelected = select;
 
         if self.ctl().fSelected && self.ctl().fAutoModify {
-            self.modify(game().get(), true);
+            self.modify(g, true);
         }
 
         self.ctl().fModifying

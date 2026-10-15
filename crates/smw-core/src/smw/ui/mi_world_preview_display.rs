@@ -44,10 +44,10 @@ crate::impl_base!(MI_WorldPreviewDisplay => ui_control: UI_Control);
 const ZERO_RECT: SDL_Rect = SDL_Rect { x: 0, y: 0, w: 0, h: 0 };
 
 impl MI_WorldPreviewDisplay {
-    pub fn new(x: i16, y: i16, cols: i16, rows: i16) -> Self {
+    pub fn new(g: &mut Game, x: i16, y: i16, cols: i16, rows: i16) -> Self {
         let mut this = MI_WorldPreviewDisplay {
             ui_control: UI_Control::new(x, y),
-            map_sprite: gfxSprite::blank(game().get(), 384, 304),
+            map_sprite: gfxSprite::blank(g, 384, 304),
             iCols: cols,
             iRows: rows,
             iMapOffsetX: 0,
@@ -66,7 +66,7 @@ impl MI_WorldPreviewDisplay {
             iScrollSpeed: 0,
             iScrollSpeedTimer: 0,
         };
-        this.init(game().get());
+        this.init(g);
         this
     }
 

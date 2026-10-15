@@ -101,7 +101,7 @@ fn next_network_id(g: &mut Game) -> i32 {
 }
 
 impl CObject {
-    pub fn new(nspr1: Ptr<gfxSprite>, pos: Vec2s) -> Self {
+    pub fn new(g: &mut Game, nspr1: Ptr<gfxSprite>, pos: Vec2s) -> Self {
         let mut o = CObject {
             objectType: object_none,
             ix: 0,
@@ -119,7 +119,7 @@ impl CObject {
             spr: nspr1,
             state: 0,
             dead: false,
-            iNetworkID: next_network_id(game().get()),
+            iNetworkID: next_network_id(g),
             _alias: Aliased::new(),
         };
 

@@ -200,12 +200,12 @@ impl MO_SledgeBrother {
         o
     }
 
-    pub fn hit(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    pub fn hit(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         if player.is_shielded() {
             return false;
         }
 
-        player.kill_player_map_hazard(game().get(), false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill
+        player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill
     }
 
     pub fn damage(&mut self, g: &mut Game, playerID: i16) {
@@ -621,7 +621,7 @@ impl CObjectTrait for MO_SledgeBrother {
                 }
             }
         } else {
-            return self.hit(player);
+            return self.hit(g, player);
         }
 
         false

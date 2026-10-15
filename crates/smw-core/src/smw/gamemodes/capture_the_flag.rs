@@ -37,6 +37,7 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
 
     fn init(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
         cgamemode_init(g, self);
 
         let mut fTeamUsed: [bool; 4] = [false, false, false, false];
@@ -53,14 +54,14 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
                     g.objectcontainer[0].add(base);
 
                     if !g.game_values.gamemodesettings.flag.centerflag {
-                        let flag: Ptr<CO_Flag> = CO_Flag::new(Ptr::from_mut(&mut g.rm.spr_flags), base, iTeamID, iColorID);
+                        let flag: Ptr<CO_Flag> = CO_Flag::new(g, Ptr::from_mut(&mut gp.rm.spr_flags), base, iTeamID, iColorID);
                         g.objectcontainer[1].add(flag);
                     }
                 }
             }
 
             if g.game_values.gamemodesettings.flag.centerflag {
-                let centerflag: Ptr<CO_Flag> = CO_Flag::new(Ptr::from_mut(&mut g.rm.spr_flags), Ptr::null(), -1, -1);
+                let centerflag: Ptr<CO_Flag> = CO_Flag::new(g, Ptr::from_mut(&mut gp.rm.spr_flags), Ptr::null(), -1, -1);
                 g.objectcontainer[1].add(centerflag);
             }
         }
@@ -97,7 +98,7 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
     fn check_winner(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> PlayerKillType {
         if self.goal > -1 {
             if player.score().score >= self.goal {
-                player.score().set_score(self.goal);
+                player.score().set_score(g, self.goal);
                 self.winningteam = player.get_team_id();
                 self.gameover = true;
 
