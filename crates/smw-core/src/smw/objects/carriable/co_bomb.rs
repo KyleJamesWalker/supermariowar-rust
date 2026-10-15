@@ -91,6 +91,7 @@ impl CObjectTrait for CO_Bomb {
     }
 
     fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         self.ttl -= 1;
         if self.ttl <= 0 {
             self.die(g);
@@ -119,7 +120,7 @@ impl CObjectTrait for CO_Bomb {
                 let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
                 let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
                 if self.sSpotlight.is_null() {
-                    self.sSpotlight = game().spotlightManager.add_spotlight(g, x, y, 3);
+                    self.sSpotlight = gp.spotlightManager.add_spotlight(g, x, y, 3);
                 }
 
                 if !self.sSpotlight.is_null() {
@@ -149,6 +150,7 @@ impl IO_MovingObjectTrait for CO_Bomb {
     }
 
     fn die(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if !self.owner.is_null() {
             self.owner.carriedItem = Ptr::null();
             self.owner = Ptr::null();
@@ -171,7 +173,7 @@ impl IO_MovingObjectTrait for CO_Bomb {
                 self.iTeamID,
                 KillStyle::Bomb,
             )));
-            if_sound_on_play(g, &mut game().rm.sfx_bobombsound);
+            if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
         }
     }
 }

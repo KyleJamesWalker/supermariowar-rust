@@ -285,8 +285,9 @@ impl CO_Shell {
     }
 
     pub fn shatter_die(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         self.dead = true;
-        unsafe { if_sound_on_play(g, &mut game().rm.sfx_breakblock) };
+        unsafe { if_sound_on_play(g, &mut gp.rm.sfx_breakblock) };
         self.iKillCounter = 0;
 
         if !self.owner.is_null() {
@@ -330,11 +331,12 @@ impl CO_Shell {
     }
 
     fn stop(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         self.owner = Ptr::null();
         self.velx = 0.0;
         self.state = 2;
         self.fSmoking = false;
-        unsafe { if_sound_on_play(g, &mut game().rm.sfx_kicksound) };
+        unsafe { if_sound_on_play(g, &mut gp.rm.sfx_kicksound) };
         self.iKillCounter = 0;
     }
 
@@ -461,6 +463,7 @@ impl CObjectTrait for CO_Shell {
     }
 
     fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if self.iNoOwnerKillTime > 0 {
             self.iNoOwnerKillTime -= 1;
         }
@@ -490,7 +493,7 @@ impl CObjectTrait for CO_Shell {
                 } {
                     g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
                     self.dead = true;
-                    if_sound_on_play(g, &mut game().rm.sfx_kicksound);
+                    if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
 
                     if !self.owner.is_null() {
                         self.owner.carriedItem = Ptr::null();
@@ -540,7 +543,7 @@ impl CObjectTrait for CO_Shell {
                     let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
                     let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
                     if self.sSpotlight.is_null() {
-                        self.sSpotlight = game().spotlightManager.add_spotlight(g, x, y, 3);
+                        self.sSpotlight = gp.spotlightManager.add_spotlight(g, x, y, 3);
                     }
 
                     if !self.sSpotlight.is_null() {
@@ -554,6 +557,7 @@ impl CObjectTrait for CO_Shell {
     }
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let x = self.ix as i32 - self.collisionOffsetX as i32;
         let y = self.iy as i32 - self.collisionOffsetY as i32;
         if self.state == 0 {
@@ -575,7 +579,7 @@ impl CObjectTrait for CO_Shell {
 
         unsafe {
             if self.frozen {
-                game().rm.spr_iceblock.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
+                gp.rm.spr_iceblock.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
             } else if self.fSmoking {
                 g.eyecandy[0].emplace(EC_SingleAnimation::new(
                     Ptr::from_mut(&mut g.rm.spr_burnup),
@@ -638,6 +642,7 @@ impl IO_MovingObjectTrait for CO_Shell {
     }
 
     fn die(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if self.frozen {
             self.shatter_die(g);
             return;
@@ -658,7 +663,7 @@ impl IO_MovingObjectTrait for CO_Shell {
                 32,
             ));
             self.dead = true;
-            if_sound_on_play(g, &mut game().rm.sfx_kicksound);
+            if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
         }
         self.iKillCounter = 0;
 
@@ -669,6 +674,7 @@ impl IO_MovingObjectTrait for CO_Shell {
     }
 
     fn side_bounce(&mut self, g: &mut Game, _fRightSide: bool) {
+        let mut gp = g.ptr();
         if self.state == 1 {
             if self.iBounceCounter == 0 {
                 unsafe {
@@ -679,7 +685,7 @@ impl IO_MovingObjectTrait for CO_Shell {
                         4,
                         4,
                     ));
-                    if_sound_on_play(g, &mut game().rm.sfx_bump);
+                    if_sound_on_play(g, &mut gp.rm.sfx_bump);
                 }
 
                 self.iBounceCounter = 7; // Allow bounce stars to show on each bounce on a 2x wide pit
@@ -712,6 +718,7 @@ impl MO_CarriedObjectTrait for CO_Shell {
     }
 
     fn kick(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         /*
         if (superkick)
         {
@@ -755,7 +762,7 @@ impl MO_CarriedObjectTrait for CO_Shell {
         if io_moving_object_collision_detection_checksides(g, self) {
             self.die(g);
         } else {
-            unsafe { if_sound_on_play(g, &mut game().rm.sfx_kicksound) };
+            unsafe { if_sound_on_play(g, &mut gp.rm.sfx_kicksound) };
         }
     }
 }

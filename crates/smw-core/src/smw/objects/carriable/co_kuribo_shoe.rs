@@ -81,12 +81,13 @@ impl CO_SpringTrait for CO_KuriboShoe {
     }
 
     fn hittop(&mut self, g: &mut Game, player: Ptr<CPlayer>) {
+        let mut gp = g.ptr();
         let mut player = player;
         if !player.kuriboshoe.is_on() && player.tanookisuit.not_statue() {
             self.dead = true;
             player.set_kuribo_shoe(g, if self.fSticky { STICKY } else { NORMAL });
             unsafe {
-                if_sound_on_play(g, &mut game().rm.sfx_transform);
+                if_sound_on_play(g, &mut gp.rm.sfx_transform);
                 g.eyecandy[2].emplace(EC_SingleAnimation::new(
                     Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
                     (player.ix as i32 + HALFPW - 16) as i16,

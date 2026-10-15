@@ -38,14 +38,15 @@ impl PlayerCape {
     }
 
     pub fn spin(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         unsafe {
-            if_sound_on_play(g, &mut game().rm.sfx_tailspin);
+            if_sound_on_play(g, &mut gp.rm.sfx_tailspin);
 
             self.restart_animation(); //Add one extra frame to sync with spinning player sprite
 
             Ptr::from_mut(&mut player.spin).get().spin(g, player);
 
-            game().objectcontainer[1].add(Ptr::new_box(MO_SpinAttack::new(
+            gp.objectcontainer[1].add(Ptr::new_box(MO_SpinAttack::new(
                 player.get_global_id(),
                 player.get_team_id(),
                 KillStyle::Feather,
@@ -56,6 +57,7 @@ impl PlayerCape {
     }
 
     pub fn draw(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         /* See game().eyecandy/cape.png for reference */
         unsafe {
             self.iCapeTimer = self.iCapeTimer.wrapping_add(1);
@@ -116,9 +118,9 @@ impl PlayerCape {
             };
             if player.iswarping() {
                 let edge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);
-                game().rm.spr_cape.draw_clip(g, x, y, &src, edge, player.get_warp_plane() as i32);
+                gp.rm.spr_cape.draw_clip(g, x, y, &src, edge, player.get_warp_plane() as i32);
             } else {
-                game().rm.spr_cape.draw_src(g, x, y, &src);
+                gp.rm.spr_cape.draw_src(g, x, y, &src);
             }
         }
     }

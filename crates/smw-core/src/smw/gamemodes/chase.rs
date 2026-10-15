@@ -52,6 +52,7 @@ impl CGameModeTrait for CGM_Chase {
     }
 
     fn init(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         gm::cgamemode_init(g, self);
 
         unsafe {
@@ -61,7 +62,7 @@ impl CGameModeTrait for CGM_Chase {
                 while iNumPhantos < g.game_values.gamemodesettings.chase.phantoquantity[iPhanto as usize] {
                     let x = RANDOM_INT(App::screenWidth);
                     let y = if RANDOM_BOOL() { -32 - CRUNCHMAX } else { App::screenHeight };
-                    game().objectcontainer[1].add(Ptr::new_box(OMO_Phanto::new(g, Ptr::from_mut(&mut game().rm.spr_phanto), Vec2s::new(x as i16, y as i16), 0.0f32, 0.0f32, iPhanto)));
+                    gp.get().objectcontainer[1].add(Ptr::new_box(OMO_Phanto::new(g, Ptr::from_mut(&mut gp.get().rm.spr_phanto), Vec2s::new(x as i16, y as i16), 0.0f32, 0.0f32, iPhanto)));
                     iNumPhantos += 1;
                 }
             }

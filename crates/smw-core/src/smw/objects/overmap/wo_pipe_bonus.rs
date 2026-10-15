@@ -92,6 +92,7 @@ impl CObjectTrait for OMO_PipeBonus {
     }
 
     fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         if self.iUncollectableTime > 0 {
             return false;
         }
@@ -116,7 +117,7 @@ impl CObjectTrait for OMO_PipeBonus {
 
                 return false;
             } else if !g.game_values.gamemode.gameover {
-                game().pipegamemode.set_bonus(g, (self.iType as i32 + 1) as i16, self.iDuration, player.get_team_id());
+                gp.pipegamemode.set_bonus(g, (self.iType as i32 + 1) as i16, self.iDuration, player.get_team_id());
             }
         }
 

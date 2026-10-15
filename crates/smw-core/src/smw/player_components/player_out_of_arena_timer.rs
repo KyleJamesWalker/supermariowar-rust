@@ -49,6 +49,7 @@ impl PlayerOutOfArenaTimer {
     }
 
     pub fn draw(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         unsafe {
             if !player.isready() {
                 return;
@@ -56,7 +57,7 @@ impl PlayerOutOfArenaTimer {
 
             if player.top_y() < 0 {
                 if player.bottom_y() < -1 || (player.bottom_y() <= 0 && player.vely <= 1.0f32) {
-                    game().rm.spr_abovearrows.draw_src(g, 
+                    gp.rm.spr_abovearrows.draw_src(g, 
                         player.left_x() as i32 - PWOFFSET,
                         0,
                         &SDL_Rect { x: player.get_color_id() as i32 * 32, y: 0, w: 32, h: 26 },
@@ -64,7 +65,7 @@ impl PlayerOutOfArenaTimer {
 
                     //This displays the out of arena timer before the player is killed
                     if g.game_values.outofboundstime > 0 && self.displaytimer >= 0 {
-                        game().rm.spr_awardkillsinrow.draw_src(g, 
+                        gp.rm.spr_awardkillsinrow.draw_src(g, 
                             player.left_x() as i32 - PWOFFSET + 8,
                             18,
                             &SDL_Rect { x: (self.displaytimer as i32) << 4, y: (player.get_color_id() as i32) << 4, w: 16, h: 16 },

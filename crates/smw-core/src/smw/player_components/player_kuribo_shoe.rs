@@ -63,6 +63,7 @@ impl PlayerKuriboShoe {
 
     // Free player from the kuribo shoe
     fn update_getting_out_of_the_shoe(&mut self, g: &mut Game, player: &mut CPlayer, keymask: u8) {
+        let mut gp = g.ptr();
         unsafe {
             if self.is_on() && player.isready() && !player.frozen {
                 if self.exitIndex > 0 {
@@ -98,7 +99,7 @@ impl PlayerKuriboShoe {
 
                     self.exitIndex = 0;
                     self.exitTimer = 0;
-                    if_sound_on_play(g, &mut game().rm.sfx_transform);
+                    if_sound_on_play(g, &mut gp.rm.sfx_transform);
                     self.r#type = NONE;
 
                     player.superstomp.reset();
@@ -130,6 +131,7 @@ impl PlayerKuriboShoe {
     }
 
     pub fn draw(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         unsafe {
             if self.r#type > 0 {
                 let x = player.left_x() as i32 - PWOFFSET;
@@ -142,9 +144,9 @@ impl PlayerKuriboShoe {
                 };
                 if player.iswarping() {
                     let edge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);
-                    game().rm.spr_kuriboshoe.draw_clip(g, x, y, &src, edge, player.get_warp_plane() as i32);
+                    gp.rm.spr_kuriboshoe.draw_clip(g, x, y, &src, edge, player.get_warp_plane() as i32);
                 } else {
-                    game().rm.spr_kuriboshoe.draw_src(g, x, y, &src);
+                    gp.rm.spr_kuriboshoe.draw_src(g, x, y, &src);
                 }
             }
         }

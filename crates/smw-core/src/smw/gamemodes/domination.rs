@@ -79,17 +79,19 @@ pub fn cgm_domination_init<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut 
 }
 
 pub fn cgm_domination_playerkilledplayer<T: CGameModeTrait + ?Sized>(g: &mut Game, _this: &mut T, player: Ptr<CPlayer>, other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+        let mut gp = g.ptr();
     //Update areas the dead player owned
-    unsafe { adjust_player_areas(g, &game().objectcontainer[0], player, other) };
+    unsafe { adjust_player_areas(g, &gp.objectcontainer[0], player, other) };
 
     PlayerKillType::Normal
 }
 
 pub fn cgm_domination_playerkilledself<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+        let mut gp = g.ptr();
     gm::cgamemode_playerkilledself(this, player, style);
 
     //Update areas the dead player owned
-    unsafe { adjust_player_areas(g, &game().objectcontainer[0], Ptr::null(), player) };
+    unsafe { adjust_player_areas(g, &gp.objectcontainer[0], Ptr::null(), player) };
 
     PlayerKillType::Normal
 }

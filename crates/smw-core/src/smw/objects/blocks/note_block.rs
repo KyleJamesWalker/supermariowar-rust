@@ -148,6 +148,7 @@ impl IO_BlockTrait for B_NoteBlock {
     }
 
     fn hittop_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+        let mut gp = g.ptr();
         io_block_hittop_player(self, player, useBehavior);
 
         if useBehavior {
@@ -161,7 +162,7 @@ impl IO_BlockTrait for B_NoteBlock {
             }
 
             unsafe {
-                if_sound_on_play(g, &mut game().rm.sfx_bump);
+                if_sound_on_play(g, &mut gp.rm.sfx_bump);
 
                 g.game_values.unlocksecret3part2[player.globalID as usize] += 2;
                 check_secret(g, 2);
@@ -172,6 +173,7 @@ impl IO_BlockTrait for B_NoteBlock {
     }
 
     fn hitbottom_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+        let mut gp = g.ptr();
         if useBehavior {
             player.set_yf((self.iposy as i32 + self.ih as i32) as f32 + 0.2f32);
             player.vely = VELNOTEBLOCKREPEL;
@@ -184,7 +186,7 @@ impl IO_BlockTrait for B_NoteBlock {
                 self.state = 3;
 
                 unsafe {
-                    if_sound_on_play(g, &mut game().rm.sfx_bump);
+                    if_sound_on_play(g, &mut gp.rm.sfx_bump);
                 }
             }
 
@@ -202,6 +204,7 @@ impl IO_BlockTrait for B_NoteBlock {
     }
 
     fn hitright_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+        let mut gp = g.ptr();
         if useBehavior {
             player.set_xf((self.iposx as i32 + self.iw as i32) as f32 + 0.2f32);
             player.fOldX = player.fx;
@@ -214,7 +217,7 @@ impl IO_BlockTrait for B_NoteBlock {
             }
 
             unsafe {
-                if_sound_on_play(g, &mut game().rm.sfx_bump);
+                if_sound_on_play(g, &mut gp.rm.sfx_bump);
             }
         }
 
@@ -222,6 +225,7 @@ impl IO_BlockTrait for B_NoteBlock {
     }
 
     fn hitleft_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+        let mut gp = g.ptr();
         if useBehavior {
             player.set_xf((self.iposx as i32 - PW) as f32 - 0.2f32);
             player.fOldX = player.fx;
@@ -234,7 +238,7 @@ impl IO_BlockTrait for B_NoteBlock {
             }
 
             unsafe {
-                if_sound_on_play(g, &mut game().rm.sfx_bump);
+                if_sound_on_play(g, &mut gp.rm.sfx_bump);
             }
         }
 

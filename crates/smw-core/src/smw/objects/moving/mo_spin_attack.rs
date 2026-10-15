@@ -164,6 +164,7 @@ impl CObjectTrait for MO_SpinAttack {
     }
 
     fn collide_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) {
+        let mut gp = g.ptr();
         if self.dead || self.iTimer > 11 {
             return;
         }
@@ -179,7 +180,7 @@ impl CObjectTrait for MO_SpinAttack {
                         shell.shatter_die(g);
                     } else {
                         shell.flip(g);
-                        if_sound_on_play(g, &mut game().rm.sfx_kicksound);
+                        if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
                     }
 
                     self.die(g);
@@ -190,7 +191,7 @@ impl CObjectTrait for MO_SpinAttack {
                         block.shatter_die(g);
                     } else if block.owner.is_null() || block.owner.globalID != self.iPlayerID {
                         block.die(g);
-                        if_sound_on_play(g, &mut game().rm.sfx_kicksound);
+                        if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
                         self.die(g);
                     }
                 } else if r#type == movingobject_throwbox {
@@ -200,7 +201,7 @@ impl CObjectTrait for MO_SpinAttack {
                         r#box.shatter_die(g);
                     } else if r#box.owner.is_null() || r#box.owner.globalID != self.iPlayerID {
                         r#box.die(g);
-                        if_sound_on_play(g, &mut game().rm.sfx_kicksound);
+                        if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
                         self.die(g);
                     }
                 }

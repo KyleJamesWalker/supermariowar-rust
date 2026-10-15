@@ -257,6 +257,7 @@ pub fn io_moving_object_collide_player<T: IO_MovingObjectTrait + ?Sized>(this: &
 
 // TODO / FIXME: The collision code is almost the same as in CPlayer
 pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized>(g: &mut Game, this: &mut T) {
+        let mut gp = g.ptr();
     let mut o = this.as_mo_ptr();
     unsafe {
         let x = o.fx + o.velx;
@@ -290,7 +291,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
         o.iHorizontalPlatformCollision = -1;
         o.iVerticalPlatformCollision = -1;
 
-        game().g_map.moving_platform_collision_object(g, o);
+        gp.g_map.moving_platform_collision_object(g, o);
 
         o.fy = fTempY;
 
@@ -864,6 +865,7 @@ pub fn io_moving_object_collision_detection_checksides<T: IO_MovingObjectTrait +
 // And let it handle not dying and placing itself somewhere else if necessary
 /// `KillObjectMapHazard(short playerID = -1)`
 pub fn io_moving_object_kill_object_map_hazard<T: IO_MovingObjectTrait + ?Sized>(g: &mut Game, this: &mut T, playerID: i16) {
+        let mut gp = g.ptr();
     unsafe {
         if this.mo().dead {
             return;
@@ -895,34 +897,34 @@ pub fn io_moving_object_kill_object_map_hazard<T: IO_MovingObjectTrait + ?Sized>
                 player.decrease_projectiles_count();
             }
 
-            if_sound_on_play(g, &mut game().rm.sfx_hit);
+            if_sound_on_play(g, &mut gp.rm.sfx_hit);
         } else if movingObjectType == movingobject_egg {
             this.mo_mut().dead = false;
             this.as_any().downcast_mut::<CO_Egg>().unwrap().place_egg(g);
-            if_sound_on_play(g, &mut game().rm.sfx_transform);
+            if_sound_on_play(g, &mut gp.rm.sfx_transform);
         } else if movingObjectType == movingobject_star {
             this.mo_mut().dead = false;
             this.as_any().downcast_mut::<CO_Star>().unwrap().place_star(g);
-            if_sound_on_play(g, &mut game().rm.sfx_transform);
+            if_sound_on_play(g, &mut gp.rm.sfx_transform);
         } else if movingObjectType == movingobject_flag {
             this.mo_mut().dead = false;
             this.as_any().downcast_mut::<CO_Flag>().unwrap().place_flag(g);
-            if_sound_on_play(g, &mut game().rm.sfx_transform);
+            if_sound_on_play(g, &mut gp.rm.sfx_transform);
         } else if movingObjectType == movingobject_bomb {
             let mut player = get_player_from_global_id(g, this.mo().iPlayerID);
             if !player.is_null() {
                 player.decrease_projectiles_count();
             }
 
-            if_sound_on_play(g, &mut game().rm.sfx_hit);
+            if_sound_on_play(g, &mut gp.rm.sfx_hit);
         } else if movingObjectType == movingobject_phantokey {
             this.mo_mut().dead = false;
             this.as_any().downcast_mut::<CO_PhantoKey>().unwrap().place_key(g);
-            if_sound_on_play(g, &mut game().rm.sfx_transform);
+            if_sound_on_play(g, &mut gp.rm.sfx_transform);
         } else if game_mode_boxes_minigame == g.game_values.gamemode.gamemode && movingObjectType == movingobject_coin {
             this.mo_mut().dead = false;
             this.as_any().downcast_mut::<MO_Coin>().unwrap().place_coin(g);
-            if_sound_on_play(g, &mut game().rm.sfx_transform);
+            if_sound_on_play(g, &mut gp.rm.sfx_transform);
         } else if g.game_values.gamemode.gamemode == game_mode_stomp
             && (movingObjectType == movingobject_goomba
                 || movingObjectType == movingobject_koopa
@@ -938,9 +940,9 @@ pub fn io_moving_object_kill_object_map_hazard<T: IO_MovingObjectTrait + ?Sized>
                 }
             }
 
-            if_sound_on_play(g, &mut game().rm.sfx_hit);
+            if_sound_on_play(g, &mut gp.rm.sfx_hit);
         } else {
-            if_sound_on_play(g, &mut game().rm.sfx_hit);
+            if_sound_on_play(g, &mut gp.rm.sfx_hit);
         }
     }
 }

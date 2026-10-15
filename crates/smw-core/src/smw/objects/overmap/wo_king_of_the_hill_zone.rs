@@ -208,6 +208,7 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
     crate::impl_cobject_plumbing!();
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let size = self.size;
         for iRow in 0..size {
             let mut iYPiece: i16 = TILESIZE as i16;
@@ -232,7 +233,7 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
 
                 if self.multiplier > 1 {
                     unsafe {
-                        game().rm.spr_awardkillsinrow.draw_src(g, 
+                        gp.rm.spr_awardkillsinrow.draw_src(g, 
                             iColX as i32 + 8,
                             iRowX as i32 + 8,
                             &SDL_Rect { x: (self.multiplier as i32 - 1) << 4, y: (self.colorID as i32) << 4, w: 16, h: 16 },
@@ -246,6 +247,7 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
     }
 
     fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let mut iMax: i16 = 0;
         let mut iMaxTeam: i16 = -1;
 
@@ -274,8 +276,8 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
 
                 if self.scoretimer >= g.game_values.pointspeed {
                     self.scoretimer = 0;
-                    game().players[self.iPlayerID as usize].score().adjust_score(g, self.multiplier);
-                    game().game_values.gamemode.check_winner(g, game().players[self.iPlayerID as usize]);
+                    gp.players[self.iPlayerID as usize].score().adjust_score(g, self.multiplier);
+                    gp.get().game_values.gamemode.check_winner(g, gp.get().players[self.iPlayerID as usize]);
 
                     if g.game_values.gamemodesettings.kingofthehill.maxmultiplier > 1 && {
                         self.multipliertimer += 1;

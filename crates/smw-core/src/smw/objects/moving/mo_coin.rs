@@ -106,6 +106,7 @@ impl CObjectTrait for MO_Coin {
     }
 
     fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         unsafe {
             if self.iUncollectableTime > 0 || (self.iType == 1 && (!g.game_values.gamemodesettings.greed.owncoins && self.iTeam == player.get_team_id())) {
                 return false;
@@ -118,12 +119,12 @@ impl CObjectTrait for MO_Coin {
                     player.score().adjust_score(g, 1);
                 }
 
-                game().game_values.gamemode.check_winner(g, player);
+                gp.game_values.gamemode.check_winner(g, player);
             }
 
             g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_coinsparkle), self.ix, self.iy, 7, 4));
 
-            if_sound_on_play(g, &mut game().rm.sfx_coin);
+            if_sound_on_play(g, &mut gp.rm.sfx_coin);
         }
 
         if self.iType == 0 {
@@ -170,12 +171,13 @@ impl CObjectTrait for MO_Coin {
     }
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         io_moving_object_draw(g, self);
 
         // Draw sparkles
         if self.iType != 1 {
             unsafe {
-                game().rm.spr_shinesparkle.draw_src(g, 
+                gp.rm.spr_shinesparkle.draw_src(g, 
                     self.ix as i32 - self.collisionOffsetX as i32,
                     self.iy as i32 - self.collisionOffsetY as i32,
                     &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },

@@ -85,6 +85,7 @@ impl CObjectTrait for MO_Fireball {
     }
 
     fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         io_moving_object_update(g, self);
 
         unsafe {
@@ -93,7 +94,7 @@ impl CObjectTrait for MO_Fireball {
                 removeifprojectile(g, self.as_mo_ptr(), true, true);
             } else if g.game_values.spotlights {
                 if self.sSpotlight.is_null() {
-                    self.sSpotlight = game().spotlightManager.add_spotlight(g, 
+                    self.sSpotlight = gp.spotlightManager.add_spotlight(g, 
                         (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16,
                         (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16,
                         3,

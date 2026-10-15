@@ -159,6 +159,7 @@ pub fn b_powerup_block_draw<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this:
 }
 
 pub fn b_powerup_block_update<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T) {
+        let mut gp = g.ptr();
     io_block_update(g, this);
 
     unsafe {
@@ -193,7 +194,7 @@ pub fn b_powerup_block_update<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, thi
                     b_powerup_block_release(g, this, pos, side);
                 }
 
-                if_sound_on_play(g, &mut game().rm.sfx_sprout);
+                if_sound_on_play(g, &mut gp.rm.sfx_sprout);
             } else if state == 3 {
                 if g.game_values.itemrespawntime > 0 && {
                     let b = this.pb_mut();
@@ -340,6 +341,7 @@ pub fn b_powerup_block_hittop_player<T: B_PowerupBlockTrait + ?Sized>(g: &mut Ga
 }
 
 pub fn b_powerup_block_hitbottom_player<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+        let mut gp = g.ptr();
     if useBehavior {
         unsafe {
             //Player bounces off
@@ -358,7 +360,7 @@ pub fn b_powerup_block_hitbottom_player<T: B_PowerupBlockTrait + ?Sized>(g: &mut
             g.g_map.update_tile_gap(col, row);
 
             if this.pb().state == 0 {
-                if_sound_on_play(g, &mut game().rm.sfx_bump);
+                if_sound_on_play(g, &mut gp.rm.sfx_bump);
 
                 let b = this.pb_mut();
                 b.iBumpPlayerID = player.globalID;
@@ -383,6 +385,7 @@ pub fn b_powerup_block_collide_object_dir<T: B_PowerupBlockTrait + ?Sized>(this:
 }
 
 pub fn b_powerup_block_hittop_object<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+        let mut gp = g.ptr();
     let iposy = this.pb().iposy;
     let ch = object.collisionHeight;
     object.set_yf((iposy as i32 - ch as i32) as f32 - 0.2f32);
@@ -392,7 +395,7 @@ pub fn b_powerup_block_hittop_object<T: B_PowerupBlockTrait + ?Sized>(g: &mut Ga
     if r#type == movingobject_throwbox && object.as_any().downcast_mut::<CO_ThrowBox>().unwrap().has_kill_velocity() {
         if this.pb().state == 0 {
             unsafe {
-                if_sound_on_play(g, &mut game().rm.sfx_bump);
+                if_sound_on_play(g, &mut gp.rm.sfx_bump);
             }
 
             let b = this.pb_mut();
@@ -414,6 +417,7 @@ pub fn b_powerup_block_hittop_object<T: B_PowerupBlockTrait + ?Sized>(g: &mut Ga
 }
 
 pub fn b_powerup_block_hitright_object<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+        let mut gp = g.ptr();
     //Object bounces off
     {
         let b = this.pb();
@@ -440,7 +444,7 @@ pub fn b_powerup_block_hitright_object<T: B_PowerupBlockTrait + ?Sized>(g: &mut 
 
         if this.pb().state == 0 {
             unsafe {
-                if_sound_on_play(g, &mut game().rm.sfx_bump);
+                if_sound_on_play(g, &mut gp.rm.sfx_bump);
             }
 
             let b = this.pb_mut();
@@ -457,6 +461,7 @@ pub fn b_powerup_block_hitright_object<T: B_PowerupBlockTrait + ?Sized>(g: &mut 
 }
 
 pub fn b_powerup_block_hitleft_object<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+        let mut gp = g.ptr();
     //Object bounces off
     let iposx = this.pb().iposx;
     let cw = object.collisionWidth;
@@ -482,7 +487,7 @@ pub fn b_powerup_block_hitleft_object<T: B_PowerupBlockTrait + ?Sized>(g: &mut G
 
         if this.pb().state == 0 {
             unsafe {
-                if_sound_on_play(g, &mut game().rm.sfx_bump);
+                if_sound_on_play(g, &mut gp.rm.sfx_bump);
             }
 
             let b = this.pb_mut();
@@ -499,9 +504,10 @@ pub fn b_powerup_block_hitleft_object<T: B_PowerupBlockTrait + ?Sized>(g: &mut G
 }
 
 pub fn b_powerup_block_trigger_behavior<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T) {
+        let mut gp = g.ptr();
     if this.pb().state == 0 {
         unsafe {
-            if_sound_on_play(g, &mut game().rm.sfx_bump);
+            if_sound_on_play(g, &mut gp.rm.sfx_bump);
         }
 
         let b = this.pb_mut();
@@ -549,22 +555,28 @@ macro_rules! impl_powerup_block_io_block_overrides {
             $crate::smw::objects::blocks::powerup_block::b_powerup_block_collide_object_dir(self, object, direction)
         }
         fn hittop_player(&mut self, g: &mut Game, player: $crate::globals::Ptr<$crate::smw::player::CPlayer>, useBehavior: bool) -> bool {
-            $crate::smw::objects::blocks::powerup_block::b_powerup_block_hittop_player(game().get(), self, player, useBehavior)
+        let mut gp = g.ptr();
+            $crate::smw::objects::blocks::powerup_block::b_powerup_block_hittop_player(gp.get(), self, player, useBehavior)
         }
         fn hitbottom_player(&mut self, g: &mut Game, player: $crate::globals::Ptr<$crate::smw::player::CPlayer>, useBehavior: bool) -> bool {
-            $crate::smw::objects::blocks::powerup_block::b_powerup_block_hitbottom_player(game().get(), self, player, useBehavior)
+        let mut gp = g.ptr();
+            $crate::smw::objects::blocks::powerup_block::b_powerup_block_hitbottom_player(gp.get(), self, player, useBehavior)
         }
         fn hittop_object(&mut self, g: &mut Game, object: $crate::globals::Ptr<dyn $crate::smw::objects::moving::moving_object::IO_MovingObjectTrait>) -> bool {
-            $crate::smw::objects::blocks::powerup_block::b_powerup_block_hittop_object(game().get(), self, object)
+        let mut gp = g.ptr();
+            $crate::smw::objects::blocks::powerup_block::b_powerup_block_hittop_object(gp.get(), self, object)
         }
         fn hitright_object(&mut self, g: &mut Game, object: $crate::globals::Ptr<dyn $crate::smw::objects::moving::moving_object::IO_MovingObjectTrait>) -> bool {
-            $crate::smw::objects::blocks::powerup_block::b_powerup_block_hitright_object(game().get(), self, object)
+        let mut gp = g.ptr();
+            $crate::smw::objects::blocks::powerup_block::b_powerup_block_hitright_object(gp.get(), self, object)
         }
         fn hitleft_object(&mut self, g: &mut Game, object: $crate::globals::Ptr<dyn $crate::smw::objects::moving::moving_object::IO_MovingObjectTrait>) -> bool {
-            $crate::smw::objects::blocks::powerup_block::b_powerup_block_hitleft_object(game().get(), self, object)
+        let mut gp = g.ptr();
+            $crate::smw::objects::blocks::powerup_block::b_powerup_block_hitleft_object(gp.get(), self, object)
         }
         fn trigger_behavior(&mut self, g: &mut Game) {
-            $crate::smw::objects::blocks::powerup_block::b_powerup_block_trigger_behavior(game().get(), self)
+        let mut gp = g.ptr();
+            $crate::smw::objects::blocks::powerup_block::b_powerup_block_trigger_behavior(gp.get(), self)
         }
     };
 }

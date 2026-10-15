@@ -63,6 +63,7 @@ impl B_WeaponBreakableBlock {
     }
 
     pub fn trigger_behavior_player(&mut self, g: &mut Game, iPlayerID: i16, iTeamID: i16) {
+        let mut gp = g.ptr();
         if self.state == 0 {
             unsafe {
                 let spr = Ptr::from_mut(&mut g.rm.spr_brokengrayblock);
@@ -73,7 +74,7 @@ impl B_WeaponBreakableBlock {
                 g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
 
                 self.state = 1;
-                if_sound_on_play(g, &mut game().rm.sfx_breakblock);
+                if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
             }
 
             self.iBumpPlayerID = iPlayerID;

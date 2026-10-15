@@ -24,6 +24,7 @@ impl PlayerWings {
     }
 
     pub fn draw(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         if player.flying {
             self.iWingsTimer = self.iWingsTimer.wrapping_add(1);
             if self.iWingsTimer >= 8 {
@@ -45,9 +46,9 @@ impl PlayerWings {
         unsafe {
             if player.iswarping() {
                 let edge: ClipEdge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);
-                game().rm.spr_wings.draw_clip(g, x, y, &src, edge, player.get_warp_plane() as i32);
+                gp.rm.spr_wings.draw_clip(g, x, y, &src, edge, player.get_warp_plane() as i32);
             } else {
-                game().rm.spr_wings.draw_src(g, x, y, &src);
+                gp.rm.spr_wings.draw_src(g, x, y, &src);
             }
         }
     }

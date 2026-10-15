@@ -37,6 +37,7 @@ crate::impl_base!(UI_NetServersMenu => ui_menu: UI_Menu);
 
 impl UI_NetServersMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
+        let mut gp = g.ptr();
         let mut this = Box::<Self>::default();
         unsafe {
             let selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
@@ -64,7 +65,7 @@ impl UI_NetServersMenu {
             this.miNetServersScroll.remote_index(&mut g.netplay.selectedServerIndex);
 
             this.miNetServersNicknameField = Ptr::new_box(MI_TextField::new(plain, 70, 120, "Your name", 640 - 2 * 70, 150));
-            this.miNetServersNicknameField.set_data(g, &mut game().netplay.myPlayerName, NET_MAX_PLAYER_NAME_LENGTH as i16);
+            this.miNetServersNicknameField.set_data(g, &mut gp.netplay.myPlayerName, NET_MAX_PLAYER_NAME_LENGTH as i16);
 
             for iServer in 0..game().netplay.savedServers.len() {
                 let host = g.netplay.savedServers[iServer].hostname.clone();
@@ -153,12 +154,13 @@ impl UI_NetServersMenu {
     }
 
     pub fn connect_in_progress(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             if g.netplay.savedServers.is_empty() {
                 return;
             }
 
-            game().netplay.client.send_connect_request_to_selected_server(g);
+            gp.netplay.client.send_connect_request_to_selected_server(g);
             g.netplay.operationInProgress = true;
         }
         net_save_server_list(g);

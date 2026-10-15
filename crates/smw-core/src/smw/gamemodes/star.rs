@@ -110,6 +110,7 @@ impl CGM_Star {
     }
 
     pub fn swapplayer(&mut self, g: &mut Game, id: i16, player: Ptr<CPlayer>) -> Ptr<CPlayer> {
+        let mut gp = g.ptr();
         unsafe {
             let mut oldstar: Ptr<CPlayer> = Ptr::null();
             if !self.starPlayer[id as usize].is_null() {
@@ -157,7 +158,7 @@ impl CGM_Star {
                 3,
                 8,
             ));
-            if_sound_on_play(g, &mut game().rm.sfx_transform);
+            if_sound_on_play(g, &mut gp.rm.sfx_transform);
 
             oldstar
         }
@@ -221,11 +222,12 @@ fn star_time(g: &mut Game) -> i16 {
 }
 
 pub fn cgm_star_init(g: &mut Game, this: &mut CGM_Star) {
+        let mut gp = g.ptr();
     cgm_timelimit_init(g, &mut this.cgm_time_limit);
 
     this.fDisplayTimer = true;
 
-    this.gameClock.init(g, star_time(game().get()), true);
+    this.gameClock.init(g, star_time(gp.get()), true);
 
     unsafe {
         this.iCurrentModeType = g.game_values.gamemodesettings.star.shine;
@@ -284,9 +286,10 @@ fn reassign(g: &mut Game, this: &mut CGM_Star) {
 }
 
 fn time_out(g: &mut Game, this: &mut CGM_Star) {
+        let mut gp = g.ptr();
     unsafe {
         this.gameClock.set_time(star_time(g));
-        if_sound_on_play(g, &mut game().rm.sfx_thunder);
+        if_sound_on_play(g, &mut gp.rm.sfx_thunder);
 
         if this.iCurrentModeType == StarStyle::Ztar {
             if g.score[this.starPlayer[0].get_team_id() as usize].score > 1 || this.fReverseScoring {
@@ -328,7 +331,7 @@ fn time_out(g: &mut Game, this: &mut CGM_Star) {
                         continue;
                     }
 
-                    game().score[iTeam as usize].adjust_score(g, -1);
+                    gp.score[iTeam as usize].adjust_score(g, -1);
 
                     if g.score[iTeam as usize].score <= 0 {
                         this.fDisplayTimer = !remove_team(g, iTeam);
@@ -452,6 +455,7 @@ pub fn harness_record() -> Option<String> {
 }
 
 pub fn cgm_star_think(g: &mut Game, this: &mut CGM_Star) {
+        let mut gp = g.ptr();
     if this.gameover {
         this.displayplayertext(g);
         return;
@@ -466,7 +470,7 @@ pub fn cgm_star_think(g: &mut Game, this: &mut CGM_Star) {
         //Count down the game time
         let iTime: i16 = this.gameClock.run_clock();
         if iTime <= 5 && iTime > 0 {
-            if_sound_on_play(g, &mut game().rm.sfx_starwarning);
+            if_sound_on_play(g, &mut gp.rm.sfx_starwarning);
         }
 
         //If the game time ran out, somebody needs to die and scores changed

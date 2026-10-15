@@ -41,9 +41,10 @@ impl CGameModeTrait for CGM_KingOfTheHill {
     }
 
     fn init(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         gm::cgamemode_init(g, self);
         unsafe {
-            game().objectcontainer[2].add(Ptr::new_box(OMO_KingOfTheHillZone::new(g, Ptr::from_mut(&mut game().rm.spr_kingofthehillarea))));
+            gp.get().objectcontainer[2].add(Ptr::new_box(OMO_KingOfTheHillZone::new(g, Ptr::from_mut(&mut gp.get().rm.spr_kingofthehillarea))));
         }
     }
 

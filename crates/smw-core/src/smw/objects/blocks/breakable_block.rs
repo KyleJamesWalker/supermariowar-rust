@@ -221,6 +221,7 @@ impl IO_BlockTrait for B_BreakableBlock {
     }
 
     fn trigger_behavior(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             if self.state == 0 {
                 let spr = Ptr::from_mut(&mut g.rm.spr_brokenyellowblock);
@@ -231,7 +232,7 @@ impl IO_BlockTrait for B_BreakableBlock {
                 g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
 
                 self.state = 1;
-                if_sound_on_play(g, &mut game().rm.sfx_breakblock);
+                if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
             }
 
             g.game_values.unlocksecret1part2 += 1;

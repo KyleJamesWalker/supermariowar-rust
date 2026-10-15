@@ -57,6 +57,7 @@ crate::impl_base!(MI_BonusWheel => ui_control: UI_Control);
 
 impl MI_BonusWheel {
     pub fn new(g: &mut Game, x: i16, y: i16) -> Self {
+        let mut gp = g.ptr();
         unsafe {
             let ui_control = UI_Control::new(x, y);
             let mut dSelectionSector = [0.0f32; NB + 1];
@@ -74,7 +75,7 @@ impl MI_BonusWheel {
             dSelectionSector[NB] = TWO_PI;
 
             let mut miContinueButton = Box::new(MI_Button::new(g, 
-                Ptr::from_mut(&mut game().rm.menu_plain_field),
+                Ptr::from_mut(&mut gp.rm.menu_plain_field),
                 ui_control.m_pos.x + 76,
                 ui_control.m_pos.y + 390,
                 "Continue",
@@ -253,6 +254,7 @@ impl UI_ControlTrait for MI_BonusWheel {
     }
 
     fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             if self.iState == 0 {
                 self.iDisplayPowerupTimer -= 1;
@@ -266,7 +268,7 @@ impl UI_ControlTrait for MI_BonusWheel {
                     let _ = (iPoofX, iPoofY);
                     // TODO(eyecandy): m_parentMenu->AddEyeCandy<EC_SingleAnimation>(&rm->spr_poof, iPoofX, iPoofY, 4, 5);
 
-                    if_sound_on_play(g, &mut game().rm.sfx_cannon);
+                    if_sound_on_play(g, &mut gp.rm.sfx_cannon);
 
                     self.iDisplayPowerupIndex += 1;
                     if self.iDisplayPowerupIndex as i32 >= NUMBONUSITEMSONWHEEL {
@@ -345,10 +347,10 @@ impl UI_ControlTrait for MI_BonusWheel {
                         //Give the newly won stored item to the winning players
                         let w = self.iWinningTeam as usize;
                         for iPlayer in 0..game().game_values.teamcounts[w] as usize {
-                            game().game_values.storedpowerups[game().game_values.teamids[w][iPlayer] as usize] = self.iSelectedPowerup;
+                            gp.get().game_values.storedpowerups[gp.get().game_values.teamids[w][iPlayer] as usize] = self.iSelectedPowerup;
                         }
 
-                        if_sound_on_play(g, &mut game().rm.sfx_collectpowerup);
+                        if_sound_on_play(g, &mut gp.rm.sfx_collectpowerup);
                     }
                 }
 
@@ -356,7 +358,7 @@ impl UI_ControlTrait for MI_BonusWheel {
 
                 //If we hit the next powerup, play a tick sound
                 if self.dSelectionAngle >= self.dSelectionSector[self.iNextSelectionSoundIndex as usize] {
-                    if_sound_on_play(g, &mut game().rm.sfx_worldmove);
+                    if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
 
                     self.iNextSelectionSoundIndex += 1;
                     if self.iNextSelectionSoundIndex as i32 > NUMBONUSITEMSONWHEEL {
@@ -372,6 +374,7 @@ impl UI_ControlTrait for MI_BonusWheel {
     }
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if !self.m_visible {
             return;
         }
@@ -380,13 +383,13 @@ impl UI_ControlTrait for MI_BonusWheel {
             let x = self.m_pos.x as i32;
             let y = self.m_pos.y as i32;
 
-            game().rm.spr_tournament_powerup_splash.draw(g, x, y);
+            gp.rm.spr_tournament_powerup_splash.draw(g, x, y);
 
             let iSelectorX = (x + 144 + (110.0f32 * cosf(self.dSelectionAngle)) as i16 as i32) as i16;
             let iSelectorY = (y + 190 + (110.0f32 * sinf(self.dSelectionAngle)) as i16 as i32) as i16;
 
             if self.iState > 0 {
-                game().rm.spr_powerupselector.draw_src(g, iSelectorX as i32, iSelectorY as i32, &SDL_Rect { x: self.iSelectorAnimation as i32 * 64, y: 0, w: 64, h: 64 });
+                gp.rm.spr_powerupselector.draw_src(g, iSelectorX as i32, iSelectorY as i32, &SDL_Rect { x: self.iSelectorAnimation as i32 * 64, y: 0, w: 64, h: 64 });
             }
 
             for iImage in 0..NB {

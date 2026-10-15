@@ -61,6 +61,7 @@ impl B_FlipBlock {
     }
 
     fn explode(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             let spr = Ptr::from_mut(&mut g.rm.spr_brokenflipblock);
             let (ix, iy) = (self.ix, self.iy);
@@ -69,7 +70,7 @@ impl B_FlipBlock {
             g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
             g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
 
-            if_sound_on_play(g, &mut game().rm.sfx_breakblock);
+            if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
         }
     }
 

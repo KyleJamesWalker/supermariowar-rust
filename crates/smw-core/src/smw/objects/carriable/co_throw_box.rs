@@ -104,8 +104,9 @@ impl CO_ThrowBox {
     }
 
     fn die_helper(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         self.dead = true;
-        unsafe { if_sound_on_play(g, &mut game().rm.sfx_breakblock) };
+        unsafe { if_sound_on_play(g, &mut gp.rm.sfx_breakblock) };
 
         if !self.owner.is_null() {
             self.owner.carriedItem = Ptr::null();
@@ -216,6 +217,7 @@ impl CObjectTrait for CO_ThrowBox {
     }
 
     fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if self.frozen {
             self.frozentimer -= 1;
             if self.frozentimer <= 0 {
@@ -254,7 +256,7 @@ impl CObjectTrait for CO_ThrowBox {
                 let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
                 let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
                 if self.sSpotlight.is_null() {
-                    self.sSpotlight = game().spotlightManager.add_spotlight(g, x, y, 3);
+                    self.sSpotlight = gp.spotlightManager.add_spotlight(g, x, y, 3);
                 }
 
                 if !self.sSpotlight.is_null() {
@@ -265,6 +267,7 @@ impl CObjectTrait for CO_ThrowBox {
     }
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let x = self.ix as i32 - self.collisionOffsetX as i32;
         let y = self.iy as i32 - self.collisionOffsetY as i32;
         let src = SDL_Rect { x: self.drawframe as i32, y: 0, w: self.iw as i32, h: self.ih as i32 };
@@ -276,7 +279,7 @@ impl CObjectTrait for CO_ThrowBox {
         }
 
         if self.frozen {
-            unsafe { game().rm.spr_iceblock.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 }) };
+            unsafe { gp.rm.spr_iceblock.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 }) };
         }
     }
 }

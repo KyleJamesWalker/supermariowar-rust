@@ -59,10 +59,11 @@ impl MI_NetRoomTeamSelect {
 
     /// `do { step } while (!rm->LoadMenuSkin(...))`
     unsafe fn cycle_skin(&mut self, g: &mut Game, step: impl Fn(&mut i16)) {
+        let mut gp = g.ptr();
         let p = self.owner_player as usize;
         loop {
             step(&mut g.game_values.skinids[p]);
-            if game().rm.load_menu_skin(g, self.owner_player, game().game_values.skinids[p], game().game_values.colorids[p], false) {
+            if gp.get().rm.load_menu_skin(g, self.owner_player, gp.get().game_values.skinids[p], gp.get().game_values.colorids[p], false) {
                 break;
             }
         }
@@ -104,6 +105,7 @@ impl UI_ControlTrait for MI_NetRoomTeamSelect {
     }
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if !self.m_visible {
             return;
         }
@@ -114,7 +116,7 @@ impl UI_ControlTrait for MI_NetRoomTeamSelect {
         unsafe {
             let p = self.owner_player as usize;
             let frame = if self.fSelected { self.iAnimationFrame as usize } else { 0 };
-            game().rm.spr_player[p][frame].draw_src(g, self.x as i32, self.y as i32, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
+            gp.rm.spr_player[p][frame].draw_src(g, self.x as i32, self.y as i32, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
         }
     }
 

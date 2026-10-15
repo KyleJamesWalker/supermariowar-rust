@@ -50,6 +50,7 @@ impl PlayerJail {
     }
 
     pub fn escape(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         unsafe {
             if self.is_active() {
                 self.timer = 0;
@@ -62,14 +63,15 @@ impl PlayerJail {
                     4,
                     5,
                 ));
-                if_sound_on_play(g, &mut game().rm.sfx_transform);
+                if_sound_on_play(g, &mut gp.rm.sfx_transform);
             } else {
-                if_sound_on_play(g, &mut game().rm.sfx_hit);
+                if_sound_on_play(g, &mut gp.rm.sfx_hit);
             }
         }
     }
 
     pub fn free_by_teammate(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         unsafe {
             if self.is_active() {
                 self.timer = 0;
@@ -80,12 +82,13 @@ impl PlayerJail {
                     3,
                     8,
                 ));
-                if_sound_on_play(g, &mut game().rm.sfx_transform);
+                if_sound_on_play(g, &mut gp.rm.sfx_transform);
             }
         }
     }
 
     pub fn update(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         unsafe {
             if self.is_active() && g.game_values.gamemodesettings.jail.timetofree > 1 {
                 self.timer -= 1;
@@ -99,13 +102,14 @@ impl PlayerJail {
                         3,
                         8,
                     ));
-                    if_sound_on_play(g, &mut game().rm.sfx_transform);
+                    if_sound_on_play(g, &mut gp.rm.sfx_transform);
                 }
             }
         }
     }
 
     pub fn draw(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         unsafe {
             if self.is_active() {
                 let x = player.left_x() as i32 - PWOFFSET - 6;
@@ -113,9 +117,9 @@ impl PlayerJail {
                 let src = SDL_Rect { x: (self.color as i32 + 1) * 44, y: 0, w: 44, h: 44 };
                 if player.iswarping() {
                     let edge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);
-                    game().rm.spr_jail.draw_clip(g, x, y, &src, edge, player.get_warp_plane() as i32);
+                    gp.rm.spr_jail.draw_clip(g, x, y, &src, edge, player.get_warp_plane() as i32);
                 } else {
-                    game().rm.spr_jail.draw_src(g, x, y, &src);
+                    gp.rm.spr_jail.draw_src(g, x, y, &src);
                 }
             }
         }

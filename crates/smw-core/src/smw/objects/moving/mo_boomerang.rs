@@ -138,9 +138,10 @@ impl CObjectTrait for MO_Boomerang {
     }
 
     fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             if !g.rm.sfx_boomerang.is_playing() {
-                if_sound_on_play(g, &mut game().rm.sfx_boomerang);
+                if_sound_on_play(g, &mut gp.rm.sfx_boomerang);
             }
 
             self.animate();
@@ -368,7 +369,7 @@ impl CObjectTrait for MO_Boomerang {
 
             if g.game_values.spotlights {
                 if self.sSpotlight.is_null() {
-                    self.sSpotlight = game().spotlightManager.add_spotlight(g, 
+                    self.sSpotlight = gp.spotlightManager.add_spotlight(g, 
                         (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16,
                         (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16,
                         3,

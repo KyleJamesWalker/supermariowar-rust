@@ -55,13 +55,14 @@ impl CObjectTrait for MO_Goomba {
     }
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         // if frozen, just draw shell, not entire koopa
         if self.frozen {
             unsafe {
                 let x = self.ix as i32 - self.collisionOffsetX as i32 + self.iw as i32 - 32;
                 let y = self.iy as i32 - self.collisionOffsetY as i32 + self.ih as i32 - 32;
-                game().rm.spr_goomba.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
-                game().rm.spr_iceblock.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
+                gp.rm.spr_goomba.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
+                gp.rm.spr_iceblock.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
             }
         } else {
             mo_walking_enemy_draw(g, self);
@@ -110,6 +111,7 @@ impl MO_WalkingEnemyTrait for MO_Goomba {
     crate::impl_walking_enemy_plumbing!();
 
     fn hittop_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         let mut player = player;
         unsafe {
             player.set_yi((self.iy as i32 - PH - 1) as i16);
@@ -155,7 +157,7 @@ impl MO_WalkingEnemyTrait for MO_Goomba {
                 ));
             }
 
-            if_sound_on_play(g, &mut game().rm.sfx_mip);
+            if_sound_on_play(g, &mut gp.rm.sfx_mip);
         }
 
         false

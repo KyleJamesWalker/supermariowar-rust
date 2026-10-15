@@ -207,10 +207,11 @@ pub fn io_block_hitleft_object<T: IO_BlockTrait + ?Sized>(this: &mut T, mut obje
 }
 
 pub fn io_block_bounce_moving_object<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) {
+        let mut gp = g.ptr();
     unsafe {
         let r#type = object.get_moving_object_type();
         if r#type == movingobject_goomba || r#type == movingobject_koopa || r#type == movingobject_buzzybeetle || r#type == movingobject_spiny {
-            if_sound_on_play(g, &mut game().rm.sfx_kicksound);
+            if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
 
             let enemy = object.as_walking_enemy().unwrap();
             let style = enemy.we().get_kill_style();

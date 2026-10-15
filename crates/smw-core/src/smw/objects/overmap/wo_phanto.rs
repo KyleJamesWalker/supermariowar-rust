@@ -181,6 +181,7 @@ impl CObjectTrait for OMO_Phanto {
     }
 
     fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         if self.iy as i32 <= -(self.ih as i32) || self.iy as i32 >= App::screenHeight {
             return false;
         }
@@ -200,7 +201,7 @@ impl CObjectTrait for OMO_Phanto {
 
                         if !g.game_values.gamemode.gameover && self.iType == 1 {
                             player.score().adjust_score(g, -10);
-                            if_sound_on_play(g, &mut game().rm.sfx_stun);
+                            if_sound_on_play(g, &mut gp.rm.sfx_stun);
                         }
 
                         return true;

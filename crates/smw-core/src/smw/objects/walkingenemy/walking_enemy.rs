@@ -139,6 +139,7 @@ impl MO_WalkingEnemy {
 }
 
 pub fn mo_walking_enemy_draw<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, this: &mut T) {
+        let mut gp = g.ptr();
     if this.we().state == 0 {
         let o = this.we();
         let numeyecandy: i16 = 8;
@@ -152,7 +153,7 @@ pub fn mo_walking_enemy_draw<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, thi
             displayangle += addangle;
 
             unsafe {
-                game().rm.spr_awardsouls.draw_src(g, spawnX as i32, spawnY as i32, &SDL_Rect { x: o.iSpawnIconOffset as i32, y: 0, w: 16, h: 16 });
+                gp.rm.spr_awardsouls.draw_src(g, spawnX as i32, spawnY as i32, &SDL_Rect { x: o.iSpawnIconOffset as i32, y: 0, w: 16, h: 16 });
             }
         }
     } else {
@@ -161,7 +162,7 @@ pub fn mo_walking_enemy_draw<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, thi
         let o = this.we();
         if o.frozen {
             unsafe {
-                game().rm.spr_iceblock.draw_src(g, 
+                gp.rm.spr_iceblock.draw_src(g, 
                     o.ix as i32 - o.collisionOffsetX as i32 + o.iw as i32 - 32,
                     o.iy as i32 - o.collisionOffsetY as i32 + o.ih as i32 - 32,
                     &SDL_Rect { x: 0, y: 0, w: 32, h: 32 },
@@ -299,6 +300,7 @@ pub fn mo_walking_enemy_update<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, t
 }
 
 pub fn mo_walking_enemy_collide_player<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, this: &mut T, player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
     let mut player = player;
     if this.we().state == 0 {
         return false;
@@ -316,7 +318,7 @@ pub fn mo_walking_enemy_collide_player<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut
             if this.we().frozen {
                 this.shatter_die(g);
             } else {
-                if_sound_on_play(g, &mut game().rm.sfx_kicksound);
+                if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
                 this.die(g);
             }
         } else {
@@ -342,6 +344,7 @@ pub fn mo_walking_enemy_hitother<T: MO_WalkingEnemyTrait + ?Sized>(_this: &mut T
 }
 
 pub fn mo_walking_enemy_collide_object<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, this: &mut T, object: Ptr<dyn IO_MovingObjectTrait>) {
+        let mut gp = g.ptr();
     let mut object = object;
     if this.we().state == 0 {
         return;
@@ -393,7 +396,7 @@ pub fn mo_walking_enemy_collide_object<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut
                 if this.we().frozen {
                     this.shatter_die(g);
                 } else {
-                    if_sound_on_play(g, &mut game().rm.sfx_kicksound);
+                    if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
 
                     if r#type == movingobject_attackzone {
                         this.die_and_drop_shell(true, false);
@@ -450,8 +453,9 @@ pub fn mo_walking_enemy_place(g: &mut Game, this: &mut MO_WalkingEnemy) {
 }
 
 pub fn mo_walking_enemy_shatter_die<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, this: &mut T) {
+        let mut gp = g.ptr();
     unsafe {
-        if_sound_on_play(g, &mut game().rm.sfx_breakblock);
+        if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
         let o = this.we_mut();
         o.dead = true;
 

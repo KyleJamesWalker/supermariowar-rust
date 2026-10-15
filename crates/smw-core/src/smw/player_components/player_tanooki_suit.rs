@@ -52,6 +52,7 @@ impl PlayerTanookiSuit {
     }
 
     pub fn update(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         if !self.tanooki_on || !player.isready() {
             return;
         }
@@ -75,7 +76,7 @@ impl PlayerTanookiSuit {
                     4,
                     5,
                 ));
-                if_sound_on_play(g, &mut game().rm.sfx_transform);
+                if_sound_on_play(g, &mut gp.rm.sfx_transform);
 
                 // Neutralize lateral velocity
                 let tv: f32 = 1.6f32;
@@ -126,7 +127,7 @@ impl PlayerTanookiSuit {
                         4,
                         5,
                     ));
-                    if_sound_on_play(g, &mut game().rm.sfx_transform);
+                    if_sound_on_play(g, &mut gp.rm.sfx_transform);
 
                     //Decrease the amount of tanooki uses, if feature is turned on
                     if g.game_values.tanookilimit > 0 || self.statue_uses_left > 0 {
@@ -134,7 +135,7 @@ impl PlayerTanookiSuit {
                         if self.statue_uses_left == 0 {
                             self.tanooki_on = false;
                             self.statue_uses_left = 0;
-                            if_sound_on_play(g, &mut game().rm.sfx_powerdown);
+                            if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
                         }
                     }
                 }
@@ -178,8 +179,9 @@ impl PlayerTanookiSuit {
     }
 
     pub fn on_pickup(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
-            if_sound_on_play(g, &mut game().rm.sfx_collectpowerup);
+            if_sound_on_play(g, &mut gp.rm.sfx_collectpowerup);
             self.tanooki_on = true;
 
             if g.game_values.tanookilimit > 0 {
@@ -193,6 +195,7 @@ impl PlayerTanookiSuit {
     }
 
     pub fn draw_statue(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         debug_assert!(self.is_statue());
 
         //Blink the statue if the time is almost up
@@ -207,9 +210,9 @@ impl PlayerTanookiSuit {
         unsafe {
             if player.iswarping() {
                 let edge: ClipEdge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);
-                game().rm.spr_statue.draw_clip(g, x, y, &src, edge, player.get_warp_plane() as i32);
+                gp.rm.spr_statue.draw_clip(g, x, y, &src, edge, player.get_warp_plane() as i32);
             } else {
-                game().rm.spr_statue.draw_src(g, x, y, &src);
+                gp.rm.spr_statue.draw_src(g, x, y, &src);
             }
         }
     }

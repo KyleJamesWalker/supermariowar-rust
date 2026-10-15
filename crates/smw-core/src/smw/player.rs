@@ -307,6 +307,7 @@ pub fn player_killed_player(g: &mut Game, iKiller: i16, killed: Ptr<CPlayer>, de
 }
 
 pub fn player_killed_player_now(g: &mut Game, iKiller: i16, mut killed: Ptr<CPlayer>, deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
+        let mut gp = g.ptr();
     unsafe {
         let mut killer = get_player_from_global_id(g, iKiller);
 
@@ -323,9 +324,9 @@ pub fn player_killed_player_now(g: &mut Game, iKiller: i16, mut killed: Ptr<CPla
 
             if PlayerKillType::NonKill != iKillType {
                 if deathstyle == PlayerDeathStyle::Shatter {
-                    if_sound_on_play(g, &mut game().rm.sfx_breakblock);
+                    if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
                 } else {
-                    if_sound_on_play(g, &mut game().rm.sfx_deathsound);
+                    if_sound_on_play(g, &mut gp.rm.sfx_deathsound);
                 }
             }
 
@@ -825,6 +826,7 @@ impl CPlayer {
     }
 
     pub fn net_podobo_rain(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             let numPodobos = (RANDOM_INT(6) + 10) as i16;
             for _iPodobo in 0..numPodobos {
@@ -840,14 +842,15 @@ impl CPlayer {
                     false,
                 )));
             }
-            if_sound_on_play(g, &mut game().rm.sfx_thunder);
+            if_sound_on_play(g, &mut gp.rm.sfx_thunder);
         }
     }
 
     pub fn net_throw_boomerang(&mut self, g: &mut Game, ix: i32, iy: i32, facingRight: bool) {
+        let mut gp = g.ptr();
         unsafe {
-            game().objectcontainer[2].add(Ptr::new_box(MO_Boomerang::new(g, 
-                Ptr::from_mut(&mut game().rm.spr_boomerang),
+            gp.get().objectcontainer[2].add(Ptr::new_box(MO_Boomerang::new(g, 
+                Ptr::from_mut(&mut gp.get().rm.spr_boomerang),
                 Vec2s::new(ix as i16, (iy + HALFPH - 16) as i16),
                 4,
                 facingRight,
@@ -865,6 +868,7 @@ impl CPlayer {
     }
 
     pub fn net_throw_bomb(&mut self, g: &mut Game, ix: i32, iy: i32, facingRight: bool) {
+        let mut gp = g.ptr();
         let this = self.this();
         unsafe {
             let ttl = (RANDOM_INT(120) + 120) as i16;
@@ -889,7 +893,7 @@ impl CPlayer {
 
             self.hammertimer = 90;
 
-            if_sound_on_play(g, &mut game().rm.sfx_fireball);
+            if_sound_on_play(g, &mut gp.rm.sfx_fireball);
 
             if g.game_values.bombslimit > 0 {
                 self.decrease_projectile_limit(g);
@@ -952,25 +956,26 @@ impl CPlayer {
     }
 
     pub fn trigger_powerup(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let this = self.this();
         unsafe {
             match self.powerupused.unwrap() {
                 PowerupType::PoisonMushroom => {}
                 PowerupType::ExtraLife1 => {
                     g.game_values.gamemode.get().playerextraguy(g, this, 1);
-                    if_sound_on_play(g, &mut game().rm.sfx_extraguysound);
+                    if_sound_on_play(g, &mut gp.rm.sfx_extraguysound);
                 }
                 PowerupType::ExtraLife2 => {
                     g.game_values.gamemode.get().playerextraguy(g, this, 2);
-                    if_sound_on_play(g, &mut game().rm.sfx_extraguysound);
+                    if_sound_on_play(g, &mut gp.rm.sfx_extraguysound);
                 }
                 PowerupType::ExtraLife3 => {
                     g.game_values.gamemode.get().playerextraguy(g, this, 3);
-                    if_sound_on_play(g, &mut game().rm.sfx_extraguysound);
+                    if_sound_on_play(g, &mut gp.rm.sfx_extraguysound);
                 }
                 PowerupType::ExtraLife5 => {
                     g.game_values.gamemode.get().playerextraguy(g, this, 5);
-                    if_sound_on_play(g, &mut game().rm.sfx_extraguysound);
+                    if_sound_on_play(g, &mut gp.rm.sfx_extraguysound);
                 }
                 PowerupType::Fire => {
                     self.powerup = -1;
@@ -989,7 +994,7 @@ impl CPlayer {
                     self.set_powerup(g, 0);
                 }
                 PowerupType::Pow => {
-                    if_sound_on_play(g, &mut game().rm.sfx_thunder);
+                    if_sound_on_play(g, &mut gp.rm.sfx_thunder);
                     g.game_values.flags.screenshaketimer = 20;
                     g.game_values.flags.screenshakeplayerid = self.globalID;
                     g.game_values.flags.screenshaketeamid = self.teamID;
@@ -1029,7 +1034,7 @@ impl CPlayer {
                     }
                 }
                 PowerupType::Mod => {
-                    if_sound_on_play(g, &mut game().rm.sfx_thunder);
+                    if_sound_on_play(g, &mut gp.rm.sfx_thunder);
                     g.game_values.flags.screenshaketimer = 20;
                     g.game_values.flags.screenshakeplayerid = self.globalID;
                     g.game_values.flags.screenshaketeamid = self.teamID;
@@ -1125,6 +1130,7 @@ impl CPlayer {
     }
 
     pub fn try_falling_through_platform(&mut self, g: &mut Game, movement_direction: i16) {
+        let mut gp = g.ptr();
         unsafe {
             //only if on the ground and the jump key was released somewhen after it was pressed the last time
             let mut fFellThrough = false;
@@ -1173,7 +1179,7 @@ impl CPlayer {
                 self.fallthrough = true;
             } else {
                 self.jump(g, movement_direction, 1.0, false);
-                if_sound_on_play(g, &mut game().rm.sfx_jump);
+                if_sound_on_play(g, &mut gp.rm.sfx_jump);
             }
 
             self.lockjump = true;
@@ -1181,22 +1187,23 @@ impl CPlayer {
     }
 
     pub fn try_super_jumping(&mut self, g: &mut Game, movement_direction: i16) {
+        let mut gp = g.ptr();
         debug_assert!(self.superjumptype > 0);
 
         unsafe {
             if self.superjumptype == 3 {
                 //Kuribo's Shoe Jump
                 self.jump(g, movement_direction, 1.0, false);
-                if_sound_on_play(g, &mut game().rm.sfx_jump);
+                if_sound_on_play(g, &mut gp.rm.sfx_jump);
             }
             if self.superjumptype == 2 {
                 self.vely = -VELSUPERJUMP;
                 self.inair = true;
-                if_sound_on_play(g, &mut game().rm.sfx_superspring);
+                if_sound_on_play(g, &mut gp.rm.sfx_superspring);
             } else if self.superjumptype == 1 {
                 self.vely = -VELTURBOJUMP;
                 self.inair = true;
-                if_sound_on_play(g, &mut game().rm.sfx_springjump);
+                if_sound_on_play(g, &mut gp.rm.sfx_springjump);
             }
         }
 
@@ -1205,6 +1212,7 @@ impl CPlayer {
     }
 
     pub fn try_cape_double_jump(&mut self, g: &mut Game, movement_direction: i16) {
+        let mut gp = g.ptr();
         debug_assert!(self.powerup == 3);
         if self.kuriboshoe.is_on() {
             return;
@@ -1215,7 +1223,7 @@ impl CPlayer {
                 if g.game_values.featherlimit == 0 || self.projectilelimit > 0 {
                     if self.extrajumps < g.game_values.featherjumps {
                         self.jump(g, movement_direction, 0.8, false);
-                        if_sound_on_play(g, &mut game().rm.sfx_capejump);
+                        if_sound_on_play(g, &mut gp.rm.sfx_capejump);
                         self.lockjump = true;
                     }
 
@@ -1265,6 +1273,7 @@ impl CPlayer {
     }
 
     pub fn try_releasing_powerup(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             if self.tanookisuit.is_statue() || g.game_values.gamemode.gamemode == game_mode_bonus {
                 return;
@@ -1290,13 +1299,13 @@ impl CPlayer {
                 self.powerupangle = RANDOM_INT(1000) as f32 * 0.00628f32;
             }
 
-            if_sound_on_play(g, &mut game().rm.sfx_storedpowerupsound);
+            if_sound_on_play(g, &mut gp.rm.sfx_storedpowerupsound);
 
             // only the locally controlled player should be able to send requests
             if g.netplay.active && self.globalID == g.netplay.remotePlayerNumber as i16 {
                 if g.netplay.theHostIsMe {
                     // this happens when the game host player triggers a powerup
-                    game().netplay.client.local_gamehost.send_powerup_start_by_gh(g);
+                    gp.netplay.client.local_gamehost.send_powerup_start_by_gh(g);
 
                     // otherwise, when a remote client presses the trigger button,
                     // it sends a powerup trigger request, so we don't have to handle
@@ -1652,6 +1661,7 @@ impl CPlayer {
     }
 
     pub fn commit_action(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let this = self.this();
         unsafe {
             let ix = self.ix as i32;
@@ -1667,19 +1677,19 @@ impl CPlayer {
                     self.teamID,
                     KillStyle::Bobomb,
                 )));
-                if_sound_on_play(g, &mut game().rm.sfx_bobombsound);
+                if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
             } else if PlayerAction::Fireball == self.action {
-                game().objectcontainer[0].add(Ptr::new_box(MO_Fireball::new(g, 
-                    Ptr::from_mut(&mut game().rm.spr_fireball),
+                gp.get().objectcontainer[0].add(Ptr::new_box(MO_Fireball::new(g, 
+                    Ptr::from_mut(&mut gp.get().rm.spr_fireball),
                     Vec2s::new((ix + 6) as i16, iy as i16),
                     4,
-                    self.is_facing_right(game().get()),
+                    self.is_facing_right(gp.get()),
                     5,
                     self.globalID,
                     self.teamID,
                     self.colorID,
                 )));
-                if_sound_on_play(g, &mut game().rm.sfx_fireball);
+                if_sound_on_play(g, &mut gp.rm.sfx_fireball);
 
                 self.projectiles += 1;
 
@@ -1689,8 +1699,8 @@ impl CPlayer {
             } else if PlayerAction::Hammer == self.action {
                 let vx = if g.game_values.reversewalk { -self.velx } else { self.velx };
                 if self.is_facing_right(g) {
-                    game().objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(g, 
-                        Ptr::from_mut(&mut game().rm.spr_hammer),
+                    gp.get().objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(g, 
+                        Ptr::from_mut(&mut gp.get().rm.spr_hammer),
                         Vec2s::new((ix + 8) as i16, iy as i16),
                         6,
                         Vec2f::new(vx + 2.0f32, -HAMMERTHROW),
@@ -1701,8 +1711,8 @@ impl CPlayer {
                         false,
                     )));
                 } else {
-                    game().objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(g, 
-                        Ptr::from_mut(&mut game().rm.spr_hammer),
+                    gp.get().objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(g, 
+                        Ptr::from_mut(&mut gp.get().rm.spr_hammer),
                         Vec2s::new((ix - 14) as i16, iy as i16),
                         6,
                         Vec2f::new(vx - 2.0f32, -HAMMERTHROW),
@@ -1716,7 +1726,7 @@ impl CPlayer {
                 self.projectiles += 1;
 
                 self.hammertimer = g.game_values.hammerdelay;
-                if_sound_on_play(g, &mut game().rm.sfx_fireball);
+                if_sound_on_play(g, &mut gp.rm.sfx_fireball);
 
                 if g.game_values.hammerlimit > 0 {
                     self.decrease_projectile_limit(g);
@@ -1724,7 +1734,7 @@ impl CPlayer {
             } else if PlayerAction::Boomerang == self.action {
                 let args = [self.globalID as i32, ix, iy, self.is_facing_right(g) as i32];
                 if g.game_values.boomerangstyle != BoomerangStyle::Random || !net_random::event(g, Ev::Boomerang, &args) {
-                    self.net_throw_boomerang(g, ix, iy, self.is_facing_right(game().get()));
+                    self.net_throw_boomerang(g, ix, iy, self.is_facing_right(gp.get()));
                 }
             } else if PlayerAction::Iceblast == self.action {
                 if self.is_facing_right(g) {
@@ -1749,14 +1759,14 @@ impl CPlayer {
 
                 self.projectiles += 1;
 
-                if_sound_on_play(g, &mut game().rm.sfx_wand);
+                if_sound_on_play(g, &mut gp.rm.sfx_wand);
 
                 if g.game_values.wandlimit > 0 {
                     self.decrease_projectile_limit(g);
                 }
             } else if PlayerAction::Bomb == self.action {
-                if !net_random::event(g, Ev::Bomb, &[self.globalID as i32, ix, iy, self.is_facing_right(game().get()) as i32]) {
-                    self.net_throw_bomb(g, ix, iy, self.is_facing_right(game().get()));
+                if !net_random::event(g, Ev::Bomb, &[self.globalID as i32, ix, iy, self.is_facing_right(gp.get()) as i32]) {
+                    self.net_throw_bomb(g, ix, iy, self.is_facing_right(gp.get()));
                 }
             } else if PlayerAction::SpinCape == self.action {
                 self.cape.spin(g, this.get());
@@ -2217,6 +2227,7 @@ impl CPlayer {
     }
 
     pub fn killed_player_now(&mut self, g: &mut Game, mut killed: Ptr<CPlayer>, mut deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
+        let mut gp = g.ptr();
         let mut killer = self.this();
 
         unsafe {
@@ -2227,7 +2238,7 @@ impl CPlayer {
 
             if let Some(gmChicken) = gamemode_as::<CGM_Chicken>() {
                 if gmChicken.chicken() == killer && style != KillStyle::Pow {
-                    if_sound_on_play(g, &mut game().rm.sfx_chicken);
+                    if_sound_on_play(g, &mut gp.rm.sfx_chicken);
                 }
             }
 
@@ -2253,11 +2264,11 @@ impl CPlayer {
                 }
 
                 if deathstyle == PlayerDeathStyle::Jump {
-                    if_sound_on_play(g, &mut game().rm.sfx_deathsound);
+                    if_sound_on_play(g, &mut gp.rm.sfx_deathsound);
                 } else if deathstyle == PlayerDeathStyle::Squish {
-                    if_sound_on_play(g, &mut game().rm.sfx_mip);
+                    if_sound_on_play(g, &mut gp.rm.sfx_mip);
                 } else if deathstyle == PlayerDeathStyle::Shatter {
-                    if_sound_on_play(g, &mut game().rm.sfx_breakblock);
+                    if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
                 }
             }
 
@@ -2270,6 +2281,7 @@ impl CPlayer {
     }
 
     pub fn transfer_tag(&mut self, g: &mut Game, mut o2: Ptr<CPlayer>) {
+        let mut gp = g.ptr();
         let mut o1 = self.this();
 
         unsafe {
@@ -2309,7 +2321,7 @@ impl CPlayer {
                     3,
                     8,
                 ));
-                if_sound_on_play(g, &mut game().rm.sfx_transform);
+                if_sound_on_play(g, &mut gp.rm.sfx_transform);
             }
         }
     }
@@ -2338,6 +2350,7 @@ impl CPlayer {
     }
 
     pub fn bounce_assist_player(&mut self, g: &mut Game, o2: Ptr<CPlayer>) {
+        let mut gp = g.ptr();
         let mut o1 = self.this();
 
         if o1.state == PlayerState::Ready
@@ -2353,16 +2366,17 @@ impl CPlayer {
             o1.superstomp.reset();
 
             unsafe {
-                if_sound_on_play(g, &mut game().rm.sfx_superspring);
+                if_sound_on_play(g, &mut gp.rm.sfx_superspring);
             }
         }
     }
 
     pub fn draw_spotlight(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             if g.game_values.spotlights && self.state != PlayerState::Dead {
                 if self.sSpotlight.is_null() {
-                    self.sSpotlight = game().spotlightManager.add_spotlight(g, (self.ix as i32 + HALFPW) as i16, (self.iy as i32 + HALFPH) as i16, 7);
+                    self.sSpotlight = gp.spotlightManager.add_spotlight(g, (self.ix as i32 + HALFPW) as i16, (self.iy as i32 + HALFPH) as i16, 7);
                 }
 
                 if !self.sSpotlight.is_null() {
@@ -2373,6 +2387,7 @@ impl CPlayer {
     }
 
     pub fn draw_powerup_ring(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if let Some(used) = self.powerupused {
             let numeyecandy: i16 = 8;
             let addangle: f32 = TWO_PI / numeyecandy as f32;
@@ -2387,9 +2402,9 @@ impl CPlayer {
                 let src = SDL_Rect { x: used as i32 * 16, y: 0, w: 16, h: 16 };
                 unsafe {
                     if self.iswarping() {
-                        game().rm.spr_storedpowerupsmall.draw_clip(g, powerupX as i32, powerupY as i32, &src, self.clip_edge(), self.get_warp_plane() as i32);
+                        gp.rm.spr_storedpowerupsmall.draw_clip(g, powerupX as i32, powerupY as i32, &src, self.clip_edge(), self.get_warp_plane() as i32);
                     } else {
-                        game().rm.spr_storedpowerupsmall.draw_src(g, powerupX as i32, powerupY as i32, &src);
+                        gp.rm.spr_storedpowerupsmall.draw_src(g, powerupX as i32, powerupY as i32, &src);
                     }
                 }
             }
@@ -2397,20 +2412,22 @@ impl CPlayer {
     }
 
     pub fn draw_winner_crown(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             if g.game_values.showwinningcrown && g.g_iWinningPlayer == self.teamID {
                 let x = self.ix as i32 + HALFPW - if self.is_facing_right(g) { 4 } else { 10 };
                 let y = self.iy as i32 - 10 - if self.kuriboshoe.is_on() { 16 } else { 0 };
                 if self.iswarping() {
-                    game().rm.spr_crown.draw_clip(g, x, y, &SDL_Rect { x: 0, y: 0, w: 14, h: 14 }, self.clip_edge(), self.get_warp_plane() as i32);
+                    gp.rm.spr_crown.draw_clip(g, x, y, &SDL_Rect { x: 0, y: 0, w: 14, h: 14 }, self.clip_edge(), self.get_warp_plane() as i32);
                 } else {
-                    game().rm.spr_crown.draw(g, x, y);
+                    gp.rm.spr_crown.draw(g, x, y);
                 }
             }
         }
     }
 
     pub fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let this = self.this();
 
         //Don't draw a player that is waiting to respawn
@@ -2476,15 +2493,15 @@ impl CPlayer {
             } else if self.shyguy {
                 //draw him as chicken
                 self.pScoreboardSprite = Ptr::from_mut(&mut g.rm.spr_shyguy[colorID]);
-                game().rm.spr_ownedtags.draw_src(g, ix - PWOFFSET - 8, iy - PHOFFSET - 8, &SDL_Rect { x: self.ownerColorOffsetX as i32, y: 0, w: 48, h: 48 });
+                gp.rm.spr_ownedtags.draw_src(g, ix - PWOFFSET - 8, iy - PHOFFSET - 8, &SDL_Rect { x: self.ownerColorOffsetX as i32, y: 0, w: 48, h: 48 });
             }
 
             if self.ownerPlayerID > -1 {
                 let src = SDL_Rect { x: self.ownerColorOffsetX as i32, y: 0, w: 48, h: 48 };
                 if self.iswarping() {
-                    game().rm.spr_ownedtags.draw_clip(g, ix - PWOFFSET - 8, iy - PHOFFSET - 8, &src, self.clip_edge(), self.get_warp_plane() as i32);
+                    gp.rm.spr_ownedtags.draw_clip(g, ix - PWOFFSET - 8, iy - PHOFFSET - 8, &src, self.clip_edge(), self.get_warp_plane() as i32);
                 } else {
-                    game().rm.spr_ownedtags.draw_src(g, ix - PWOFFSET - 8, iy - PHOFFSET - 8, &src);
+                    gp.rm.spr_ownedtags.draw_src(g, ix - PWOFFSET - 8, iy - PHOFFSET - 8, &src);
                 }
             }
 
@@ -2531,9 +2548,9 @@ impl CPlayer {
             if self.frozen {
                 let src = SDL_Rect { x: 0, y: 0, w: 32, h: 32 };
                 if self.iswarping() {
-                    game().rm.spr_iceblock.draw_clip(g, ix - PWOFFSET, iy - PHOFFSET, &src, self.clip_edge(), self.get_warp_plane() as i32);
+                    gp.rm.spr_iceblock.draw_clip(g, ix - PWOFFSET, iy - PHOFFSET, &src, self.clip_edge(), self.get_warp_plane() as i32);
                 } else {
-                    game().rm.spr_iceblock.draw_src(g, ix - PWOFFSET, iy - PHOFFSET, &src);
+                    gp.rm.spr_iceblock.draw_src(g, ix - PWOFFSET, iy - PHOFFSET, &src);
                 }
             }
 
@@ -3243,6 +3260,7 @@ impl CPlayer {
     }
 
     pub fn kill_player_map_hazard_now(&mut self, g: &mut Game, fForce: bool, style: KillStyle, fKillCarriedItem: bool, iPlayerIdCredit: i16) -> PlayerKillType {
+        let mut gp = g.ptr();
         let this = self.this();
         if iPlayerIdCredit >= 0 || self.iSuicideCreditPlayerID >= 0 {
             player_killed_player(g, 
@@ -3262,7 +3280,7 @@ impl CPlayer {
                     self.die(g, PlayerDeathStyle::Jump, false, fKillCarriedItem);
                 }
 
-                if_sound_on_play(g, &mut game().rm.sfx_deathsound);
+                if_sound_on_play(g, &mut gp.rm.sfx_deathsound);
 
                 iKillType
             }
@@ -3377,9 +3395,10 @@ impl CPlayer {
     }
 
     pub fn set_powerup(&mut self, g: &mut Game, iPowerup: i16) {
+        let mut gp = g.ptr();
         unsafe {
             if self.shyguy {
-                if_sound_on_play(g, &mut game().rm.sfx_stun);
+                if_sound_on_play(g, &mut gp.rm.sfx_stun);
                 return;
             }
 
@@ -3387,7 +3406,7 @@ impl CPlayer {
                 if self.bobomb {
                     self.set_stored_powerup_type(g, PowerupType::Bobomb);
                 } else {
-                    if_sound_on_play(g, &mut game().rm.sfx_transform);
+                    if_sound_on_play(g, &mut gp.rm.sfx_transform);
                     g.eyecandy[2].emplace(EC_SingleAnimation::new(
                         Ptr::from_mut(&mut g.rm.spr_poof),
                         (self.ix as i32 + HALFPW - 24) as i16,
@@ -3428,9 +3447,9 @@ impl CPlayer {
 
                 if self.powerup != iPowerup {
                     if iPowerup == 3 {
-                        if_sound_on_play(g, &mut game().rm.sfx_collectfeather);
+                        if_sound_on_play(g, &mut gp.rm.sfx_collectfeather);
                     } else {
-                        if_sound_on_play(g, &mut game().rm.sfx_collectpowerup);
+                        if_sound_on_play(g, &mut gp.rm.sfx_collectpowerup);
                     }
                 }
 
@@ -3502,15 +3521,16 @@ impl CPlayer {
     }
 
     pub fn set_stored_powerup(&mut self, g: &mut Game, iPowerup: i16) {
+        let mut gp = g.ptr();
         unsafe {
             //If the player as the poison mushroom or the game is over, don't store the powerup
             if g.game_values.gamepowerups[self.globalID as usize] == PowerupType::PoisonMushroom as i16 || g.game_values.gamemode.gameover {
-                if_sound_on_play(g, &mut game().rm.sfx_stun);
+                if_sound_on_play(g, &mut gp.rm.sfx_stun);
                 return;
             }
 
             g.game_values.gamepowerups[self.globalID as usize] = iPowerup;
-            if_sound_on_play(g, &mut game().rm.sfx_storepowerup);
+            if_sound_on_play(g, &mut gp.rm.sfx_storepowerup);
         }
     }
 
@@ -3524,12 +3544,13 @@ impl CPlayer {
     }
 
     pub fn decrease_projectile_limit(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         self.projectilelimit -= 1;
         if self.projectilelimit <= 0 {
             self.projectilelimit = 0;
             self.powerup = -1;
             unsafe {
-                if_sound_on_play(g, &mut game().rm.sfx_powerdown);
+                if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
             }
         }
     }

@@ -111,6 +111,7 @@ impl CObjectTrait for MO_Podobo {
     }
 
     fn collide_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) {
+        let mut gp = g.ptr();
         if self.iPlayerID == -1 {
             return;
         }
@@ -126,7 +127,7 @@ impl CObjectTrait for MO_Podobo {
             // ((CO_Shell*)object)->Die() / ((CO_ThrowBlock*)object)->Die() / ((MO_BulletBill*)object)->Die() are all virtual calls
             object.die(g);
 
-            unsafe { if_sound_on_play(g, &mut game().rm.sfx_kicksound) };
+            unsafe { if_sound_on_play(g, &mut gp.rm.sfx_kicksound) };
         }
     }
 }

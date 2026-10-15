@@ -438,6 +438,7 @@ impl MI_TournamentScoreboard {
 
     //Called by Tournament -- Keeps players where they are and displays number of wins and mode type of win
     pub fn refresh_tournament_scores(&mut self, g: &mut Game, gameWinner: i16) {
+        let mut gp = g.ptr();
         self.iGameWinner = gameWinner;
         self.iSwirlIconTeam = -1;
         self.iSwirlIconGame = -1;
@@ -457,9 +458,9 @@ impl MI_TournamentScoreboard {
                 let t = iTeam as usize;
                 for iGame in 0..game().game_values.tournament_scores[t].wins {
                     let g = iGame as usize;
-                    self.miIconImages[t][g].set_image(game().game_values.tournament_scores[t].type_[g] * 32, 0, 32, 32);
+                    self.miIconImages[t][g].set_image(gp.game_values.tournament_scores[t].type_[g] * 32, 0, 32, 32);
 
-                    if self.iTournamentWinner < 0 && self.iGameWinner == iTeam && iGame == game().game_values.tournament_scores[t].wins - 1 {
+                    if self.iTournamentWinner < 0 && self.iGameWinner == iTeam && iGame == gp.game_values.tournament_scores[t].wins - 1 {
                         self.iSwirlIconTeam = iTeam;
                         self.iSwirlIconGame = iGame;
 
@@ -491,6 +492,7 @@ impl UI_ControlTrait for MI_TournamentScoreboard {
     crate::impl_ctl!();
 
     fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             for iTeam in 0..self.iNumTeams as usize {
                 self.miTeamImages[iTeam].update(g);
@@ -528,7 +530,7 @@ impl UI_ControlTrait for MI_TournamentScoreboard {
                         if self.iExplosionCounter < 0 {
                             self.iExplosionCounter = (RANDOM_INT(6) + 5) as i16;
 
-                            if_sound_on_play(g, &mut game().rm.sfx_bobombsound);
+                            if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
 
                             let mut dAngle: f32 = 0.0;
                             let iRandX = (RANDOM_INT(440) + 100) as i16;
@@ -545,7 +547,7 @@ impl UI_ControlTrait for MI_TournamentScoreboard {
                                 dAngle -= PI / 14.0f32;
                             }
                         } else {
-                            if_sound_on_play(g, &mut game().rm.sfx_cannon);
+                            if_sound_on_play(g, &mut gp.rm.sfx_cannon);
 
                             let iRandX = RANDOM_INT(576) as i16;
                             let iRandY = RANDOM_INT(416) as i16;

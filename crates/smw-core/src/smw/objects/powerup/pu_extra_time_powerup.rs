@@ -43,6 +43,7 @@ impl CObjectTrait for PU_ExtraTimePowerup {
         mo_powerup_update(g, self)
     }
     fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         unsafe {
             if self.state > 0 {
                 if g.game_values.gamemode.gamemode == game_mode_timelimit || g.game_values.gamemode.gamemode == game_mode_star {
@@ -56,7 +57,7 @@ impl CObjectTrait for PU_ExtraTimePowerup {
                     timelimitmode.addtime(goal / 5);
                 }
 
-                if_sound_on_play(g, &mut game().rm.sfx_collectpowerup);
+                if_sound_on_play(g, &mut gp.rm.sfx_collectpowerup);
                 self.dead = true;
             }
         }

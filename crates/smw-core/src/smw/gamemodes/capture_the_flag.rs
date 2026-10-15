@@ -36,6 +36,7 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
     crate::impl_cgamemode_plumbing!();
 
     fn init(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         cgamemode_init(g, self);
 
         let mut fTeamUsed: [bool; 4] = [false, false, false, false];
@@ -48,7 +49,7 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
                     fTeamUsed[iTeamID as usize] = true;
 
                     let iColorID: i16 = player.get_color_id();
-                    let base: Ptr<MO_FlagBase> = Ptr::new_box(MO_FlagBase::new(g, Ptr::from_mut(&mut game().rm.spr_flagbases), iTeamID, iColorID));
+                    let base: Ptr<MO_FlagBase> = Ptr::new_box(MO_FlagBase::new(g, Ptr::from_mut(&mut gp.rm.spr_flagbases), iTeamID, iColorID));
                     g.objectcontainer[0].add(base);
 
                     if !g.game_values.gamemodesettings.flag.centerflag {
@@ -70,13 +71,14 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
     }
 
     fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+        let mut gp = g.ptr();
         cgamemode_playerkilledself(self, player, style);
 
         let mut item = player.carriedItem;
         if !item.is_null() && item.get_moving_object_type() == movingobject_flag {
             item.as_any().downcast_mut::<CO_Flag>().expect("carried flag").place_flag(g);
             unsafe {
-                if_sound_on_play(g, &mut game().rm.sfx_transform);
+                if_sound_on_play(g, &mut gp.rm.sfx_transform);
             }
         }
 

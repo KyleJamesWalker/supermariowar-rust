@@ -59,6 +59,7 @@ pub fn co_spring_collide_player<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: 
 }
 
 pub fn co_spring_hittop<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T, player: Ptr<CPlayer>) {
+        let mut gp = g.ptr();
     let mut player = player;
     let (iy, fSuper) = {
         let o = this.spring_mut();
@@ -80,7 +81,7 @@ pub fn co_spring_hittop<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T, 
     player.superjumptype = if fSuper { 2 } else { 1 };
     player.vely = -VELNOTEBLOCKREPEL;
 
-    unsafe { if_sound_on_play(g, &mut game().rm.sfx_bump) };
+    unsafe { if_sound_on_play(g, &mut gp.rm.sfx_bump) };
 }
 
 pub fn co_spring_hitother<T: CO_SpringTrait + ?Sized>(this: &mut T, player: Ptr<CPlayer>) {

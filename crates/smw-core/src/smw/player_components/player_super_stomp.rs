@@ -36,6 +36,7 @@ impl PlayerSuperStomp {
     }
 
     pub fn update_on_ground_hit(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         if player.inair {
             return;
         }
@@ -53,7 +54,7 @@ impl PlayerSuperStomp {
         if self.is_stomping {
             unsafe {
                 g.eyecandy[2].emplace(EC_SuperStompExplosion::new(Ptr::from_mut(&mut g.rm.spr_superstomp), player.center_x(), player.bottom_y(), 4));
-                if_sound_on_play(g, &mut game().rm.sfx_bobombsound);
+                if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
                 self.is_stomping = false;
 
                 g.objectcontainer[1].add(Ptr::new_box(MO_AttackZone::new(

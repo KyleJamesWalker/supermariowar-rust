@@ -81,6 +81,7 @@ impl CObjectTrait for MO_Hammer {
     }
 
     fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             self.animationtimer += 1;
             if self.animationtimer == self.animationspeed {
@@ -128,7 +129,7 @@ impl CObjectTrait for MO_Hammer {
                 let sx = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
                 let sy = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
                 if self.sSpotlight.is_null() {
-                    self.sSpotlight = game().spotlightManager.add_spotlight(g, sx, sy, 3);
+                    self.sSpotlight = gp.spotlightManager.add_spotlight(g, sx, sy, 3);
                 }
 
                 if !self.sSpotlight.is_null() {

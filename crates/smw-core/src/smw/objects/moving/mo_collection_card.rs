@@ -113,13 +113,14 @@ impl CObjectTrait for MO_CollectionCard {
     }
 
     fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         // If it is not collectable, return
         if (self.r#type == 1 && self.uncollectabletime > 0) || self.state != 1 {
             return false;
         }
 
         unsafe {
-            if_sound_on_play(g, &mut game().rm.sfx_areatag);
+            if_sound_on_play(g, &mut gp.rm.sfx_areatag);
         }
 
         let value = self.value as i32;
@@ -199,11 +200,12 @@ impl CObjectTrait for MO_CollectionCard {
     }
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         io_moving_object_draw(g, self);
 
         // Draw sparkles
         unsafe {
-            game().rm.spr_shinesparkle.draw_src(g, 
+            gp.rm.spr_shinesparkle.draw_src(g, 
                 self.ix as i32 - self.collisionOffsetX as i32,
                 self.iy as i32 - self.collisionOffsetY as i32,
                 &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },

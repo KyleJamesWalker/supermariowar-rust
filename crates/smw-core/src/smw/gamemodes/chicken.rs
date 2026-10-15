@@ -93,12 +93,13 @@ impl CGameModeTrait for CGM_Chicken {
     }
 
     fn draw_foreground(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             //Draw the chicken indicator around the chicken
             if g.game_values.gamemodesettings.chicken.usetarget && !self.gameover && !self.m_chicken.is_null() {
                 let chicken = self.m_chicken;
                 if chicken.iswarping() {
-                    game().rm.spr_chicken.draw_clip(g, 
+                    gp.rm.spr_chicken.draw_clip(g, 
                         chicken.left_x() as i32 - PWOFFSET - 16,
                         chicken.top_y() as i32 - PHOFFSET - 16,
                         &SDL_Rect { x: 0, y: 0, w: 64, h: 64 },
@@ -106,13 +107,14 @@ impl CGameModeTrait for CGM_Chicken {
                         chicken.get_warp_plane() as i32,
                     );
                 } else if chicken.isready() {
-                    game().rm.spr_chicken.draw(g, chicken.center_x() as i32 - 32, chicken.center_y() as i32 - 32);
+                    gp.rm.spr_chicken.draw(g, chicken.center_x() as i32 - 32, chicken.center_y() as i32 - 32);
                 }
             }
         }
     }
 
     fn playerkilledplayer(&mut self, g: &mut Game, mut inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+        let mut gp = g.ptr();
         unsafe {
             if self.m_chicken.is_null() || other == self.m_chicken {
                 self.m_chicken = inflictor;
@@ -131,7 +133,7 @@ impl CGameModeTrait for CGM_Chicken {
                     4,
                     5,
                 ));
-                if_sound_on_play(g, &mut game().rm.sfx_transform);
+                if_sound_on_play(g, &mut gp.rm.sfx_transform);
 
                 if other == self.m_chicken {
                     other.set_corpse_type(1); //flag to use chicken corpse sprite

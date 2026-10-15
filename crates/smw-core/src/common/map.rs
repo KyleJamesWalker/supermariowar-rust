@@ -252,6 +252,7 @@ unsafe fn blit(src: *mut SDL_Surface, srcrect: *const SDL_Rect, dst: *mut SDL_Su
 }
 
 pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter: bool, dst: *mut SDL_Surface) {
+        let mut gp = g.ptr();
     unsafe {
         let s = iSize as usize;
         let iSizeShift: i16 = 5 - iSize;
@@ -284,7 +285,7 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
                 rDotDst.w = dot;
                 rDotDst.h = dot;
 
-                game().rm.spr_platformpath.draw_src(g, rDotDst.x, rDotDst.y, &SDL_Rect { x: rDotSrc.x, y: rDotSrc.y, w: rDotDst.w, h: rDotDst.h });
+                gp.rm.spr_platformpath.draw_src(g, rDotDst.x, rDotDst.y, &SDL_Rect { x: rDotSrc.x, y: rDotSrc.y, w: rDotDst.w, h: rDotDst.h });
                 dAngle += TWO_PI / iNumDots as f32;
             }
 
@@ -299,7 +300,7 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
                     + (ts >> 1)
                     - (fb >> 1)) as i16;
 
-                game().rm.spr_hazard_fireball[s].draw_src(g, x as i32, y as i32, &SDL_Rect { x: 0, y: 0, w: fb, h: fb });
+                gp.rm.spr_hazard_fireball[s].draw_src(g, x as i32, y as i32, &SDL_Rect { x: 0, y: 0, w: fb, h: fb });
             }
         } else if hazard.itype == 1 {
             let iNumDots: i16 = 16;
@@ -311,7 +312,7 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
                 rDotDst.w = dot;
                 rDotDst.h = dot;
 
-                game().rm.spr_platformpath.draw_src(g, rDotDst.x, rDotDst.y, &SDL_Rect { x: rDotSrc.x, y: rDotSrc.y, w: rDotDst.w, h: rDotDst.h });
+                gp.rm.spr_platformpath.draw_src(g, rDotDst.x, rDotDst.y, &SDL_Rect { x: rDotSrc.x, y: rDotSrc.y, w: rDotDst.w, h: rDotDst.h });
                 dAngle += TWO_PI / iNumDots as f32;
             }
 
@@ -322,12 +323,12 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
                 let x: i16 = (rPathDst.x + (dRadius * cosf(dAngle)) as i16 as i32) as i16;
                 let y: i16 = (rPathDst.y + (dRadius * sinf(dAngle)) as i16 as i32) as i16;
 
-                game().rm.spr_hazard_rotodisc[s].draw_src(g, x as i32, y as i32, &SDL_Rect { x: 0, y: 0, w: ts, h: ts });
+                gp.rm.spr_hazard_rotodisc[s].draw_src(g, x as i32, y as i32, &SDL_Rect { x: 0, y: 0, w: ts, h: ts });
 
                 dAngle += dSector;
             }
         } else if hazard.itype == 2 {
-            game().rm.spr_hazard_bulletbill[s].draw_src(g, 
+            gp.rm.spr_hazard_bulletbill[s].draw_src(g, 
                 rPathDst.x,
                 rPathDst.y,
                 &SDL_Rect { x: 0, y: if hazard.dparam[0] < 0.0 { 0 } else { ts }, w: ts, h: ts },
@@ -359,7 +360,7 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
                 iOffsetY = -(iTileSize << 1);
             }
 
-            game().rm.spr_hazard_flame[s].draw_src(g, 
+            gp.rm.spr_hazard_flame[s].draw_src(g, 
                 rPathDst.x + iOffsetX as i32,
                 rPathDst.y + iOffsetY as i32,
                 &SDL_Rect { x: rect.x >> iSize, y: rect.y >> iSize, w: rect.w >> iSize, h: rect.h >> iSize },
@@ -383,7 +384,7 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
                 }
             }
 
-            game().rm.spr_hazard_pirhanaplant[s].draw_src(g, 
+            gp.rm.spr_hazard_pirhanaplant[s].draw_src(g, 
                 rPathDst.x + iOffsetX as i32,
                 rPathDst.y + iOffsetY as i32,
                 &SDL_Rect { x: rect.x >> iSize, y: rect.y >> iSize, w: rect.w >> iSize, h: rect.h >> iSize },
@@ -425,6 +426,7 @@ pub fn draw_platform(g: &mut Game,
     fDrawShadow: bool,
     dst: *mut SDL_Surface,
 ) {
+        let mut gp = g.ptr();
     unsafe {
         let s = iSize as usize;
         let iStartX: i16 = startX >> iSize;
@@ -502,8 +504,8 @@ pub fn draw_platform(g: &mut Game,
 
         if pathtype == PlatformPathType::Straight {
             if fDrawShadow {
-                draw_tile_marks(&game().rm.spr_platformstarttile, iStartX as i32 - (pw << (iSizeShift - 1)), iStartY as i32 - (ph << (iSizeShift - 1)));
-                draw_tile_marks(&game().rm.spr_platformendtile, iEndX as i32 - (pw << (iSizeShift - 1)), iEndY as i32 - (ph << (iSizeShift - 1)));
+                draw_tile_marks(&gp.rm.spr_platformstarttile, iStartX as i32 - (pw << (iSizeShift - 1)), iStartY as i32 - (ph << (iSizeShift - 1)));
+                draw_tile_marks(&gp.rm.spr_platformendtile, iEndX as i32 - (pw << (iSizeShift - 1)), iEndY as i32 - (ph << (iSizeShift - 1)));
             }
 
             let dDiffX: f32 = (iEndX as i32 - iStartX as i32) as f32;
@@ -527,7 +529,7 @@ pub fn draw_platform(g: &mut Game,
             }
         } else if pathtype == PlatformPathType::StraightContinuous {
             if fDrawShadow {
-                draw_tile_marks(&game().rm.spr_platformstarttile, iStartX as i32 - (pw << (iSizeShift - 1)), iStartY as i32 - (ph << (iSizeShift - 1)));
+                draw_tile_marks(&gp.rm.spr_platformstarttile, iStartX as i32 - (pw << (iSizeShift - 1)), iStartY as i32 - (ph << (iSizeShift - 1)));
             }
 
             let dIncrementX: f32 = iTileSize as f32 * cosf(angle);
@@ -572,7 +574,7 @@ pub fn draw_platform(g: &mut Game,
                 let iEllipseStartX: i16 = ((fRadiusX * cosf(angle)) as i16 as i32 - (pw << (iSizeShift - 1)) + iStartX as i32) as i16;
                 let iEllipseStartY: i16 = ((fRadiusY * sinf(angle)) as i16 as i32 - (ph << (iSizeShift - 1)) + iStartY as i32) as i16;
 
-                draw_tile_marks(&game().rm.spr_platformstarttile, iEllipseStartX as i32, iEllipseStartY as i32);
+                draw_tile_marks(&gp.rm.spr_platformstarttile, iEllipseStartX as i32, iEllipseStartY as i32);
             }
 
             let mut fAngle: f32 = angle;
@@ -2554,11 +2556,12 @@ impl CMap {
     }
 
     pub fn draw_warp_locks(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             for iWarpExit in 0..self.numwarpexits as usize {
                 let we = self.warpexits[iWarpExit];
                 if self.warplocked[we.connection as usize] || we.locktimer > 0 {
-                    game().rm.spr_warplock.draw(g, we.lockx as i32, we.locky as i32);
+                    gp.rm.spr_warplock.draw(g, we.lockx as i32, we.locky as i32);
                 }
             }
         }
@@ -2704,10 +2707,11 @@ impl CMap {
     }
 
     pub fn drawfrontlayer(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             for k in 0..self.numdrawareas as usize {
                 let d = self.drawareas[k];
-                game().rm.spr_frontmap[game().g_iCurrentDrawIndex as usize].draw_src(g, d.x, d.y, &d);
+                gp.rm.spr_frontmap[gp.g_iCurrentDrawIndex as usize].draw_src(g, d.x, d.y, &d);
             }
         }
     }
@@ -2777,6 +2781,7 @@ pub(crate) mod tests {
 
     /// Brings up the globals `CMap::load_map` touches, against the repository's data/ directory.
     pub(crate) fn init_map_globals(g: &mut Game) {
+        let mut gp = g.ptr();
         INIT.call_once(|| unsafe {
             g.RootDataDirectory = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data").to_string();
             std::env::set_var("SDL_VIDEODRIVER", "dummy");
@@ -2787,7 +2792,7 @@ pub(crate) mod tests {
             if !g.game_values.is_initialized() {
                 g.game_values.init(CGameValues::new());
             }
-            CGameValues::init(&mut game().game_values, g);
+            CGameValues::init(&mut gp.game_values, g);
             g.rm = Ptr::new_box(CResourceManager::new());
             // Moving platforms draw these while loading a map.
             let pack = convert_path(g, "gfx/packs/Classic");

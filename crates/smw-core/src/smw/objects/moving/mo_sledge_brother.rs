@@ -209,6 +209,7 @@ impl MO_SledgeBrother {
     }
 
     pub fn damage(&mut self, g: &mut Game, playerID: i16) {
+        let mut gp = g.ptr();
         if self.hit_timer != 0 || playerID == -1 {
             return;
         }
@@ -228,7 +229,7 @@ impl MO_SledgeBrother {
                 }
             } else {
                 self.hit_timer = 60;
-                unsafe { if_sound_on_play(g, &mut game().rm.sfx_stun) };
+                unsafe { if_sound_on_play(g, &mut gp.rm.sfx_stun) };
             }
         }
     }
@@ -422,6 +423,7 @@ impl CObjectTrait for MO_SledgeBrother {
     }
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         self.spr.draw_src(g, 
             self.ix as i32 - self.collisionOffsetX as i32,
             self.iy as i32 - self.collisionOffsetY as i32,
@@ -436,7 +438,7 @@ impl CObjectTrait for MO_SledgeBrother {
         if self.hit_timer != 0 {
             for iHeart in 0..self.hit_points {
                 unsafe {
-                    game().rm.spr_scorehearts.draw_src(g, 
+                    gp.rm.spr_scorehearts.draw_src(g, 
                         self.ix as i32 - self.collisionOffsetX as i32 + iHeart as i32 * 8,
                         self.iy as i32 - self.collisionOffsetY as i32 - 18,
                         &SDL_Rect { x: 0, y: 0, w: 16, h: 16 },
@@ -447,6 +449,7 @@ impl CObjectTrait for MO_SledgeBrother {
     }
 
     fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             if self.iActionState == 0 {
                 if self.hit_timer <= 0 {
@@ -467,7 +470,7 @@ impl CObjectTrait for MO_SledgeBrother {
 
                     if self.iType == 0 {
                         // Shake screen and kill players
-                        if_sound_on_play(g, &mut game().rm.sfx_thunder);
+                        if_sound_on_play(g, &mut gp.rm.sfx_thunder);
                         g.game_values.flags.screenshaketimer = 20;
                         g.game_values.flags.screenshakeplayerid = -1;
                         g.game_values.flags.screenshaketeamid = -1;
@@ -475,7 +478,7 @@ impl CObjectTrait for MO_SledgeBrother {
                         g.game_values.flags.screenshakekillscount = 0;
                     } else if self.iType == 1 {
                         // Spawn thwomps
-                        if_sound_on_play(g, &mut game().rm.sfx_thunder);
+                        if_sound_on_play(g, &mut gp.rm.sfx_thunder);
 
                         let numThwomps: i16 = (RANDOM_INT(5) + 6) as i16;
 
@@ -486,7 +489,7 @@ impl CObjectTrait for MO_SledgeBrother {
                         }
                     } else if self.iType == 2 {
                         // Spawn lots of podobos
-                        if_sound_on_play(g, &mut game().rm.sfx_thunder);
+                        if_sound_on_play(g, &mut gp.rm.sfx_thunder);
 
                         let numPodobos: i16 = (RANDOM_INT(5) + 8) as i16;
 
@@ -603,13 +606,14 @@ impl CObjectTrait for MO_SledgeBrother {
     }
 
     fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         if self.iActionState == 0 {
             return false;
         }
 
         if player.is_invincible() {
             unsafe {
-                if_sound_on_play(g, &mut game().rm.sfx_kicksound);
+                if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
                 self.die(g);
 
                 if g.game_values.gamemode.gamemode == game_mode_boss_minigame {
@@ -624,6 +628,7 @@ impl CObjectTrait for MO_SledgeBrother {
     }
 
     fn collide_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) {
+        let mut gp = g.ptr();
         if object.is_dead() {
             return;
         }
@@ -666,11 +671,11 @@ impl CObjectTrait for MO_SledgeBrother {
                 self.damage(g, iPlayerID);
 
                 if r#type == movingobject_shell || r#type == movingobject_throwblock || r#type == movingobject_throwbox || r#type == movingobject_attackzone {
-                    unsafe { if_sound_on_play(g, &mut game().rm.sfx_kicksound) };
+                    unsafe { if_sound_on_play(g, &mut gp.rm.sfx_kicksound) };
                     object.die(g);
                 }
             } else {
-                unsafe { if_sound_on_play(g, &mut game().rm.sfx_hit) };
+                unsafe { if_sound_on_play(g, &mut gp.rm.sfx_hit) };
 
                 if r#type == movingobject_attackzone || r#type == movingobject_bulletbill {
                     object.die(g);

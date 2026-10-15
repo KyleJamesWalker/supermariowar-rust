@@ -105,12 +105,13 @@ impl CObjectTrait for PU_TreasureChestBonus {
     }
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if self.state < 3 {
             mo_powerup_draw(g, self);
 
             // Draw sparkles
             unsafe {
-                game().rm.spr_shinesparkle.draw_src(g, 
+                gp.rm.spr_shinesparkle.draw_src(g, 
                     self.ix as i32 - self.collisionOffsetX as i32,
                     self.iy as i32 - self.collisionOffsetY as i32,
                     &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
@@ -119,13 +120,13 @@ impl CObjectTrait for PU_TreasureChestBonus {
         } else {
             unsafe {
                 if self.bonusitem as i32 >= NUM_POWERUPS {
-                    game().rm.spr_worlditems.draw_src(g, 
+                    gp.rm.spr_worlditems.draw_src(g, 
                         self.drawbonusitemx as i32,
                         self.drawbonusitemy as i32,
                         &SDL_Rect { x: (self.bonusitem as i32 - NUM_POWERUPS) << 5, y: 0, w: 32, h: 32 },
                     );
                 } else {
-                    game().rm.spr_storedpoweruplarge.draw_src(g, 
+                    gp.rm.spr_storedpoweruplarge.draw_src(g, 
                         self.drawbonusitemx as i32,
                         self.drawbonusitemy as i32,
                         &SDL_Rect { x: (self.bonusitem as i32) << 5, y: 0, w: 32, h: 32 },
@@ -136,9 +137,10 @@ impl CObjectTrait for PU_TreasureChestBonus {
     }
 
     fn collide_player(&mut self, g: &mut Game, _player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         if self.state == 1 {
             unsafe {
-                if_sound_on_play(g, &mut game().rm.sfx_treasurechest);
+                if_sound_on_play(g, &mut gp.rm.sfx_treasurechest);
                 // if (game_values.worldpowerupcount[player->teamID] < 32)
                 //     game_values.worldpowerups[player->teamID][game_values.worldpowerupcount[player->teamID]++] = bonusitem;
                 // else

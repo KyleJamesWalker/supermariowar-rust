@@ -112,10 +112,11 @@ impl MO_PirhanaPlant {
 
     // For preview drawing
     pub fn draw_offset(&mut self, g: &mut Game, iOffsetX: i16, iOffsetY: i16) {
+        let mut gp = g.ptr();
         if self.state > 0 {
             unsafe {
                 let rect = &g_rPirhanaRects[self.iType as usize][self.iDirection as usize][self.iFrame as usize];
-                let surface = &game().rm.spr_hazard_pirhanaplant[1];
+                let surface = &gp.rm.spr_hazard_pirhanaplant[1];
                 let clipRect = SDL_Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: 320, h: 240 };
                 let dstX = ((self.ix as i32 >> 1) + iOffsetX as i32) as i16;
                 let dstY = ((self.iy as i32 >> 1) + iOffsetY as i32) as i16;
@@ -135,6 +136,7 @@ impl MO_PirhanaPlant {
     }
 
     pub fn kill_plant(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if self.state == 0 {
             return;
         }
@@ -143,7 +145,7 @@ impl MO_PirhanaPlant {
         self.state = 0;
 
         unsafe {
-            if_sound_on_play(g, &mut game().rm.sfx_kicksound);
+            if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
             let x = (self.ix as i32 + if self.iDirection == 2 { 0 } else { self.collisionWidth as i32 - 32 }) as i16;
             let y = (self.iy as i32 + if self.iDirection == 0 { 0 } else { self.collisionHeight as i32 - 32 }) as i16;
             g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), x, y, 3, 4));
@@ -361,6 +363,7 @@ impl CObjectTrait for MO_PirhanaPlant {
     }
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if self.state > 0 {
             unsafe {
                 let rect = &g_rPirhanaRects[self.iType as usize][self.iDirection as usize][self.iFrame as usize];
@@ -368,13 +371,13 @@ impl CObjectTrait for MO_PirhanaPlant {
                 let (ih, iw) = (self.ih as i32, self.iw as i32);
                 let (ch, cw) = (self.collisionHeight as i32, self.collisionWidth as i32);
                 if self.iDirection == 0 {
-                    game().rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &SDL_Rect { x: rect.x, y: rect.y, w: 32, h: ch });
+                    gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &SDL_Rect { x: rect.x, y: rect.y, w: 32, h: ch });
                 } else if self.iDirection == 1 {
-                    game().rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &SDL_Rect { x: rect.x, y: rect.y + ih - ch, w: 32, h: ch });
+                    gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &SDL_Rect { x: rect.x, y: rect.y + ih - ch, w: 32, h: ch });
                 } else if self.iDirection == 2 {
-                    game().rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &SDL_Rect { x: rect.x, y: rect.y, w: cw, h: 32 });
+                    gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &SDL_Rect { x: rect.x, y: rect.y, w: cw, h: 32 });
                 } else {
-                    game().rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &SDL_Rect { x: rect.x + iw - cw, y: rect.y, w: cw, h: 32 });
+                    gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &SDL_Rect { x: rect.x + iw - cw, y: rect.y, w: cw, h: 32 });
                 }
             }
         }

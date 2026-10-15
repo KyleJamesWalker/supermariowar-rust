@@ -269,8 +269,9 @@ pub fn restore(g: &mut Game, bytes: Vec<u8>) -> Result<(), String> {
 
 /// Saves or restores every part of the checkpoint, in the order a restore must apply them.
 fn walk(g: &mut Game, s: &mut Snap, online: bool) {
+        let mut gp = g.ptr();
     unsafe {
-        let gv = &mut *game().game_values;
+        let gv = &mut *gp.get().game_values;
         if online {
             crate::smw::net::checkpoint(g, s);
         }
@@ -414,7 +415,7 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
         map = local_path(&map);
         if s.load {
             g.maplist.set_current(map_index);
-            game().g_map.load_map(&data_path(g, &map), crate::common::map::read_type_full);
+            gp.get().g_map.load_map(&data_path(g, &map), crate::common::map::read_type_full);
             note_match_map(g, &map);
             crate::common::global::load_current_map_background(g);
         }
@@ -427,9 +428,9 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
             *song = data_path(g, &song_name).into();
             for k in 0..4 {
                 if gv.playercontrol[k] > 0 {
-                    game().rm.spr_player[k] = match crate::smw::net::net_skin_path(g, k) {
+                    gp.get().rm.spr_player[k] = match crate::smw::net::net_skin_path(g, k) {
                         Some(path) => g.rm.load_full_skin_path(Path::new(&path), k as i16),
-                        None => game().rm.load_full_skin(g, gv.skinids[k], gv.colorids[k]),
+                        None => gp.get().rm.load_full_skin(g, gv.skinids[k], gv.colorids[k]),
                     };
                 }
             }
@@ -516,8 +517,9 @@ fn slug(text: &str) -> String {
 
 /// The fields of a match's start marker: what was played, where, by whom.
 pub fn start_fields(g: &mut Game) -> String {
+        let mut gp = g.ptr();
     unsafe {
-        let gv = &mut *game().game_values;
+        let gv = &mut *gp.game_values;
         let mut f: Vec<String> = Vec::new();
         f.push(kv("type", match gv.matchtype {
             MatchType::SingleGame => "single",

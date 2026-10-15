@@ -158,6 +158,7 @@ unsafe extern "C-unwind" fn gameloop_frame() {
 }
 
 pub fn create_globals(g: &mut Game) {
+        let mut gp = g.ptr();
     unsafe {
         // this instance will contain the other relevant objects
         g.rm = Ptr::new_box(CResourceManager::new());
@@ -193,7 +194,7 @@ pub fn create_globals(g: &mut Game) {
 
         g.players.reserve(4);
 
-        update_music_with_overrides(g, &mut game().musiclist, &mut game().worldmusiclist);
+        update_music_with_overrides(g, &mut gp.get().musiclist, &mut gp.get().worldmusiclist);
     }
 }
 
@@ -233,6 +234,7 @@ pub fn init_joysticks(g: &mut Game) {
 /// With Android's touch controls (`touch::session`) the touch keys take player 1 or the slot after the pads,
 /// the keyboard sets get no other player, and the rest are bots, also when no pad is connected.
 fn assign_inputs(g: &mut Game) {
+        let mut gp = g.ptr();
     unsafe {
         let marker = get_home_directory() + PAD_PLAYERS_FILE;
         #[cfg(not(target_os = "emscripten"))]
@@ -249,7 +251,7 @@ fn assign_inputs(g: &mut Game) {
                         g.game_values.playerInput.inputControls[p] = Ptr::from_mut(&mut g.game_values.inputConfiguration[p][0]);
                         g.game_values.playercontrol[p] = saved[p];
                     }
-                    game().game_values.write_config(g);
+                    gp.game_values.write_config(g);
                 }
                 let _ = std::fs::remove_file(&marker);
             }
@@ -299,8 +301,9 @@ fn assign_inputs(g: &mut Game) {
 /// Not in upstream: a pad connected after launch (`pad::hotplug`, or a replay's `jadd` line) gets a player as at
 /// launch, once no match is on.
 fn assign_hotplugged(g: &mut Game) {
+        let mut gp = g.ptr();
     unsafe {
-        let pending = &mut game().main_loop.hotplug_pending;
+        let pending = &mut gp.main_loop.hotplug_pending;
         for (index, added) in harness::replay_device_changes() {
             #[cfg(not(target_os = "emscripten"))]
             crate::smw::pad::replay_device(g, index, added);

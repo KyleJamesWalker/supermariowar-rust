@@ -90,6 +90,7 @@ impl MO_WalkingEnemyTrait for MO_BuzzyBeetle {
     crate::impl_walking_enemy_plumbing!();
 
     fn hittop_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         let mut player = player;
         unsafe {
             player.set_yi((self.iy as i32 - PH - 1) as i16);
@@ -105,7 +106,7 @@ impl MO_WalkingEnemyTrait for MO_BuzzyBeetle {
                 player.score().adjust_score(g, 1);
             }
 
-            if_sound_on_play(g, &mut game().rm.sfx_mip);
+            if_sound_on_play(g, &mut gp.rm.sfx_mip);
         }
 
         self.drop_shell(g, false, false);

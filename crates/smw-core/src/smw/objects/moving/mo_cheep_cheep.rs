@@ -67,6 +67,7 @@ impl MO_CheepCheep {
     }
 
     pub fn hittop(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         unsafe {
             let mut p = player;
             p.set_yi((self.iy as i32 - PH - 1) as i16);
@@ -80,7 +81,7 @@ impl MO_CheepCheep {
                 p.score().adjust_score(g, 1);
             }
 
-            if_sound_on_play(g, &mut game().rm.sfx_mip);
+            if_sound_on_play(g, &mut gp.rm.sfx_mip);
         }
 
         self.die(g);
@@ -97,8 +98,9 @@ impl MO_CheepCheep {
     }
 
     pub fn shatter_die(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
-            if_sound_on_play(g, &mut game().rm.sfx_breakblock);
+            if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
             self.dead = true;
 
             let iBrokenIceX: i16 = (self.ix as i32 - self.collisionOffsetX as i32) as i16;
@@ -141,18 +143,20 @@ impl CObjectTrait for MO_CheepCheep {
     }
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let x = self.ix as i32 - self.collisionOffsetX as i32;
         let y = self.iy as i32 - self.collisionOffsetY as i32;
         self.spr.draw_src(g, x, y, &SDL_Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32, w: self.iw as i32, h: self.ih as i32 });
 
         if self.frozen {
             unsafe {
-                game().rm.spr_iceblock.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
+                gp.rm.spr_iceblock.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
             }
         }
     }
 
     fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         unsafe {
             if player.is_invincible() || self.frozen {
                 player.add_killer_award(g, Ptr::null(), KillStyle::CheepCheep);
@@ -164,7 +168,7 @@ impl CObjectTrait for MO_CheepCheep {
                 if self.frozen {
                     self.shatter_die(g);
                 } else {
-                    if_sound_on_play(g, &mut game().rm.sfx_kicksound);
+                    if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
                     self.die(g);
                 }
             } else {
@@ -180,6 +184,7 @@ impl CObjectTrait for MO_CheepCheep {
     }
 
     fn collide_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) {
+        let mut gp = g.ptr();
         unsafe {
             if !object.is_dead() {
                 removeifprojectile(g, object, false, false);
@@ -224,7 +229,7 @@ impl CObjectTrait for MO_CheepCheep {
                     if self.frozen {
                         self.shatter_die(g);
                     } else {
-                        if_sound_on_play(g, &mut game().rm.sfx_kicksound);
+                        if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
                         self.die(g);
                     }
 

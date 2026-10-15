@@ -64,6 +64,7 @@ pub fn cgm_classic_init(g: &mut Game, this: &mut CGM_Classic) {
 }
 
 pub fn cgm_classic_playerkilledplayer(g: &mut Game, this: &mut CGM_Classic, mut inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+        let mut gp = g.ptr();
     if this.gameover {
         return PlayerKillType::Normal;
     }
@@ -99,7 +100,7 @@ pub fn cgm_classic_playerkilledplayer(g: &mut Game, this: &mut CGM_Classic, mut 
         }
 
         if g.game_values.gamemode.gamemode == game_mode_classic && g.game_values.gamemodesettings.classic.style == DeathStyle::Shield {
-            if_sound_on_play(g, &mut game().rm.sfx_powerdown);
+            if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
             other.shield().reset(g);
             return PlayerKillType::NonKill;
         }
@@ -109,6 +110,7 @@ pub fn cgm_classic_playerkilledplayer(g: &mut Game, this: &mut CGM_Classic, mut 
 }
 
 pub fn cgm_classic_playerkilledself(g: &mut Game, this: &mut CGM_Classic, mut player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+        let mut gp = g.ptr();
     cgamemode_playerkilledself(this, player, style);
 
     if !this.gameover {
@@ -150,7 +152,7 @@ pub fn cgm_classic_playerkilledself(g: &mut Game, this: &mut CGM_Classic, mut pl
             }
 
             if g.game_values.gamemode.gamemode == game_mode_classic && g.game_values.gamemodesettings.classic.style == DeathStyle::Shield {
-                if_sound_on_play(g, &mut game().rm.sfx_powerdown);
+                if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
                 player.shield().reset(g);
                 return PlayerKillType::NonKill;
             }

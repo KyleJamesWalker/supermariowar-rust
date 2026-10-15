@@ -150,6 +150,7 @@ impl CObjectTrait for CO_Egg {
     }
 
     fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if !self.owner.is_null() {
             self.move_to_owner(g);
             self.relocatetimer = 0;
@@ -206,7 +207,7 @@ impl CObjectTrait for CO_Egg {
                         )));
                         self.place_egg(g);
 
-                        if_sound_on_play(g, &mut game().rm.sfx_bobombsound);
+                        if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
                     } else if self.explosiondrawframe < 5 {
                         self.animationspeed = self.egganimationrates[self.explosiondrawframe as usize];
                     } else {
@@ -220,6 +221,7 @@ impl CObjectTrait for CO_Egg {
     }
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         mo_carried_object_draw(g, self);
 
         // Display explosion timer
@@ -230,9 +232,9 @@ impl CObjectTrait for CO_Egg {
                 let src = SDL_Rect { x: (self.explosiondrawframe as i32) << 5, y: (self.color as i32) << 5, w: 32, h: 32 };
                 if !self.owner.is_null() && self.owner.iswarping() {
                     let edge: ClipEdge = std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32);
-                    game().rm.spr_eggnumbers.draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);
+                    gp.rm.spr_eggnumbers.draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);
                 } else {
-                    game().rm.spr_eggnumbers.draw_src(g, x, y, &src);
+                    gp.rm.spr_eggnumbers.draw_src(g, x, y, &src);
                 }
             }
         }

@@ -280,8 +280,9 @@ impl WorldPlayer {
     }
 
     pub fn draw(&self, g: &mut Game, iMapOffsetX: i16, iMapOffsetY: i16) {
+        let mut gp = g.ptr();
         unsafe {
-            game().rm.spr_player[self.iDrawSprite as usize][(self.iAnimationFrame + self.iDrawDirection) as usize].draw_src(g, 
+            gp.rm.spr_player[self.iDrawSprite as usize][(self.iAnimationFrame + self.iDrawDirection) as usize].draw_src(g, 
                 self.pos.x as i32 + iMapOffsetX as i32,
                 self.pos.y as i32 + iMapOffsetY as i32,
                 &SDL_Rect { x: 0, y: 0, w: 32, h: 32 },
@@ -290,9 +291,10 @@ impl WorldPlayer {
     }
 
     pub fn set_sprite(&mut self, g: &mut Game, iPlayer: i16) {
+        let mut gp = g.ptr();
         unsafe {
             let p = iPlayer as usize;
-            while !game().rm.load_menu_skin(g, iPlayer, game().game_values.skinids[p], game().game_values.colorids[p], true) {
+            while !gp.get().rm.load_menu_skin(g, iPlayer, gp.get().game_values.skinids[p], gp.get().game_values.colorids[p], true) {
                 g.game_values.skinids[p] += 1;
                 if g.game_values.skinids[p] as usize >= g.skinlist.count() {
                     g.game_values.skinids[p] = 0;
@@ -1206,6 +1208,7 @@ impl WorldMap {
     }
 
     pub fn update(&mut self, g: &mut Game, fPlayerVehicleCollision: &mut bool) -> bool {
+        let mut gp = g.ptr();
         let mut fPlayMovingVehicleSound = false;
 
         let fPlayerDoneMove = self.player.update();
@@ -1226,7 +1229,7 @@ impl WorldMap {
 
         unsafe {
             if fPlayMovingVehicleSound && !g.rm.sfx_boomerang.is_playing() {
-                if_sound_on_play(g, &mut game().rm.sfx_boomerang);
+                if_sound_on_play(g, &mut gp.rm.sfx_boomerang);
             }
         }
 

@@ -21,13 +21,14 @@ impl PlayerBurnupTimer {
     }
 
     pub fn update(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         unsafe {
             if player.vely >= MAXVELY {
                 if !player.is_invincible() && !player.is_shielded() {
                     self.starttimer += 1;
                     if self.starttimer >= 20 {
                         if self.starttimer == 20 {
-                            if_sound_on_play(g, &mut game().rm.sfx_burnup);
+                            if_sound_on_play(g, &mut gp.rm.sfx_burnup);
                         }
 
                         self.timer += 1;

@@ -45,6 +45,7 @@ crate::impl_base!(UI_NetRoomMenu => ui_menu: UI_Menu);
 
 impl UI_NetRoomMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
+        let mut gp = g.ptr();
         let mut this = Box::<Self>::default();
         unsafe {
             let selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
@@ -59,7 +60,7 @@ impl UI_NetRoomMenu {
             this.miNetRoomMapPreview = Ptr::new_box(MI_MapPreview::new(selectfield, 264, 2, 400, 120));
 
             this.miNetRoomMessageField = Ptr::new_box(MI_TextField::new(plain, 26, 432, "Say", 464 - 36, 60));
-            this.miNetRoomMessageField.set_data(g, &mut game().netplay.mychatmessage, NET_MAX_CHAT_MSG_LENGTH as i16);
+            this.miNetRoomMessageField.set_data(g, &mut gp.netplay.mychatmessage, NET_MAX_CHAT_MSG_LENGTH as i16);
 
             this.miNetRoomSendButton = Ptr::new_box(MI_Button::new(g, selectfield, 464, 432, "Send", 80, TextAlign::CENTER));
             this.miNetRoomSendButton.set_code(MENU_CODE_NET_CHAT_SEND);
@@ -80,7 +81,7 @@ impl UI_NetRoomMenu {
                 16,
                 72 + p * 60,
                 p,
-                Box::new(|| unsafe { game().netplay.client.send_skin_change(game().get()) }),
+                Box::new(|| unsafe { game().get().netplay.client.send_skin_change(game().get()) }),
             ));
             let sel = ctl_ptr(this.miSkinSelector[p as usize]);
             this.add_control(sel, field, start, null, null);
@@ -127,6 +128,7 @@ impl UI_NetRoomMenu {
     }
 
     pub fn refresh(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             let name = g.netplay.currentRoom.name.clone();
             self.miNetRoomHeaderText.set_text(name);
@@ -142,15 +144,15 @@ impl UI_NetRoomMenu {
                 let path = format!("{}net_skin{}.bmp", get_home_directory(), p);
                 if p == g.netplay.remotePlayerNumber as i16 {
                     println!("  player {} -> local", p);
-                    game().rm.load_menu_skin(g, p, game().game_values.skinids[0], p, false);
+                    gp.get().rm.load_menu_skin(g, p, gp.get().game_values.skinids[0], p, false);
                 } else if file_exists(&path) {
                     println!("  player {} -> {}", p, path);
                     if !g.rm.load_menu_skin_path(p, Path::new(&path), p, false) {
-                        game().rm.load_menu_skin(g, p, game().game_values.skinids[p as usize], p, false);
+                        gp.get().rm.load_menu_skin(g, p, gp.get().game_values.skinids[p as usize], p, false);
                     }
                 } else {
                     println!("  player {} -> default", p);
-                    game().rm.load_menu_skin(g, p, 0, p, false);
+                    gp.rm.load_menu_skin(g, p, 0, p, false);
                 }
             }
 

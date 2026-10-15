@@ -42,6 +42,7 @@ impl CGameModeTrait for CGM_Owned {
     }
 
     fn think(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if self.gameover {
             self.displayplayertext(g);
         } else {
@@ -55,7 +56,7 @@ impl CGameModeTrait for CGM_Owned {
                         let mut k = 0;
                         while k < g.players.len() {
                             if i != k && g.players[k].ownerPlayerID == g.players[i].get_global_id() {
-                                game().players[i].score().adjust_score(g, 1);
+                                gp.players[i].score().adjust_score(g, 1);
                             }
                             k += 1;
                         }

@@ -91,6 +91,7 @@ impl OMO_Area {
     }
 
     pub fn set_owner(&mut self, g: &mut Game, player: Ptr<CPlayer>) {
+        let mut gp = g.ptr();
         if self.colorID != player.colorID {
             self.iPlayerID = player.localID;
             self.iTeamID = player.teamID;
@@ -98,7 +99,7 @@ impl OMO_Area {
 
             self.frame = ((self.colorID as i32 + 1) * self.iw as i32) as i16;
             unsafe {
-                if_sound_on_play(g, &mut game().rm.sfx_areatag);
+                if_sound_on_play(g, &mut gp.rm.sfx_areatag);
             }
         }
     }
@@ -112,6 +113,7 @@ impl CObjectTrait for OMO_Area {
     }
 
     fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             if !self.touchingPlayer.is_null() {
                 let p = self.touchingPlayer;
@@ -122,8 +124,8 @@ impl CObjectTrait for OMO_Area {
                 self.scoretimer += 1;
                 if self.scoretimer as i32 >= ((g.game_values.pointspeed as i32) << 1) {
                     self.scoretimer = 0;
-                    game().players[self.iPlayerID as usize].score().adjust_score(g, 1);
-                    game().game_values.gamemode.check_winner(g, game().players[self.iPlayerID as usize]);
+                    gp.players[self.iPlayerID as usize].score().adjust_score(g, 1);
+                    gp.get().game_values.gamemode.check_winner(g, gp.get().players[self.iPlayerID as usize]);
                 }
             }
 

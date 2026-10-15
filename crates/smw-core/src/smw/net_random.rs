@@ -472,6 +472,7 @@ fn player(g: &mut Game, args: &[i32]) -> Ptr<crate::smw::player::CPlayer> {
 }
 
 fn run(g: &mut Game, ev: Ev, args: &[i32]) {
+        let mut gp = g.ptr();
     use crate::smw::gamemodes as gm;
     use crate::smw::objects as obj;
     match ev {
@@ -486,8 +487,8 @@ fn run(g: &mut Game, ev: Ev, args: &[i32]) {
         },
         Ev::StompEnemy => gm::stomp::net_spawn_enemy(g),
         Ev::SurvivalEnemy => gm::survival::net_spawn_enemy(g),
-        Ev::ReleaseCard => gm::card_collection::net_release_card(g, player(game().get(), args), args[1] as i16, args[2] as i16),
-        Ev::GreedCoins => gm::greed::net_drop_coins(g, player(game().get(), args), args[1] as i16, args[2] as i16, args[3] as i16),
+        Ev::ReleaseCard => gm::card_collection::net_release_card(g, player(gp.get(), args), args[1] as i16, args[2] as i16),
+        Ev::GreedCoins => gm::greed::net_drop_coins(g, player(gp.get(), args), args[1] as i16, args[2] as i16, args[3] as i16),
         Ev::Place => {
             let mut o = find_object(g, args[0]);
             obj::net_place(g, o, args[1]);
@@ -497,7 +498,7 @@ fn run(g: &mut Game, ev: Ev, args: &[i32]) {
             }
         }
         Ev::Wander => obj::net_wander(find_object(g, args[0]), args),
-        Ev::HazardTimer => obj::net_hazard_timer(g, find_object(game().get(), args[0])),
+        Ev::HazardTimer => obj::net_hazard_timer(g, find_object(gp.get(), args[0])),
         Ev::Respawn => {
             let mut p = player(g, args);
             if !p.is_null() {
@@ -521,7 +522,7 @@ fn run(g: &mut Game, ev: Ev, args: &[i32]) {
             crate::smw::gs_gameplay::net_mystery_swap(g, args[0] as i16);
         }
         Ev::BulletBills => crate::smw::gs_gameplay::net_bullet_bill(g, args[0] as usize),
-        Ev::ShellDeath => obj::carriable::co_shell::net_shell_death(g, find_object(game().get(), args[0]), args[1]),
+        Ev::ShellDeath => obj::carriable::co_shell::net_shell_death(g, find_object(gp.get(), args[0]), args[1]),
         Ev::Secret => crate::smw::objectgame::net_check_secret(g, args[0] as i16),
         Ev::ThrowBoxItem => obj::carriable::co_throw_box::net_release_item(g, args),
         Ev::StarTimeout => gm::star::net_timeout(g),

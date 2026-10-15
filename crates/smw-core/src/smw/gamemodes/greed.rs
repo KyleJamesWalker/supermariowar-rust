@@ -85,8 +85,9 @@ impl CGM_Greed {
     }
 
     pub fn release_coins(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+        let mut gp = g.ptr();
         unsafe {
-            if_sound_on_play(g, &mut game().rm.sfx_cannon);
+            if_sound_on_play(g, &mut gp.rm.sfx_cannon);
 
             player.shield().turn_on(g);
 

@@ -44,6 +44,7 @@ impl PlayerAwardEffects {
     }
 
     pub fn draw_ring_award(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         unsafe {
             self.awardangle += 0.02f32;
 
@@ -65,21 +66,22 @@ impl PlayerAwardEffects {
                 let src = SDL_Rect { x: self.awards[k as usize] as i32 * 16, y: 0, w: 16, h: 16 };
                 if player.iswarping() {
                     let edge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);
-                    game().rm.spr_award.draw_clip(g, awardx as i32, awardy as i32, &src, edge, player.get_warp_plane() as i32);
+                    gp.rm.spr_award.draw_clip(g, awardx as i32, awardy as i32, &src, edge, player.get_warp_plane() as i32);
                 } else {
-                    game().rm.spr_award.draw_src(g, awardx as i32, awardy as i32, &src);
+                    gp.rm.spr_award.draw_src(g, awardx as i32, awardy as i32, &src);
                 }
             }
         }
     }
 
     fn add_exploding(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         unsafe {
             if (player.killsinrow as i32) < MINAWARDSNEEDED {
                 return;
             }
 
-            if_sound_on_play(g, &mut game().rm.sfx_cannon);
+            if_sound_on_play(g, &mut gp.rm.sfx_cannon);
 
             let numawards: i16 = if player.killsinrow as i32 > MAXAWARDS { MAXAWARDS as i16 } else { player.killsinrow };
             let addangle: f32 = TWO_PI / numawards as f32;
@@ -109,12 +111,13 @@ impl PlayerAwardEffects {
     }
 
     fn add_swirling(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         unsafe {
             if (player.killsinrow as i32) < MINAWARDSNEEDED {
                 return;
             }
 
-            if_sound_on_play(g, &mut game().rm.sfx_cannon);
+            if_sound_on_play(g, &mut gp.rm.sfx_cannon);
 
             let numawards: i16 = if player.killsinrow as i32 > MAXAWARDS { MAXAWARDS as i16 } else { player.killsinrow };
             let addangle: f32 = TWO_PI / numawards as f32;
@@ -160,12 +163,13 @@ impl PlayerAwardEffects {
     }
 
     fn add_rocket(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         unsafe {
             if (player.killsinrow as i32) < MINAWARDSNEEDED {
                 return;
             }
 
-            if_sound_on_play(g, &mut game().rm.sfx_cannon);
+            if_sound_on_play(g, &mut gp.rm.sfx_cannon);
 
             let numawards: i16 = if player.killsinrow as i32 > MAXAWARDS { MAXAWARDS as i16 } else { player.killsinrow };
 

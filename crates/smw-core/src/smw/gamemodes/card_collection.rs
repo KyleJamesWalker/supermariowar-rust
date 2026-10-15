@@ -119,6 +119,7 @@ impl CGameModeTrait for CGM_Collection {
     }
 
     fn think(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             self.timer += 1;
             if self.timer >= g.game_values.gamemodesettings.collection.rate {
@@ -158,7 +159,7 @@ impl CGameModeTrait for CGM_Collection {
                             iPoints = 5;
                         }
 
-                        game().score[iScore].adjust_score(g, iPoints);
+                        gp.score[iScore].adjust_score(g, iPoints);
 
                         g.score[iScore].subscore[0] = 0;
                         g.score[iScore].subscore[1] = 0;
@@ -167,7 +168,7 @@ impl CGameModeTrait for CGM_Collection {
                 }
             }
 
-            for &player in game().players.iter() {
+            for &player in gp.players.iter() {
                 self.check_winner(g, player);
             }
         }

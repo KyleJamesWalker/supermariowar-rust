@@ -84,11 +84,12 @@ impl CObjectTrait for PU_SecretPowerup {
     }
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         mo_powerup_draw(g, self);
 
         // Draw sparkles
         unsafe {
-            game().rm.spr_shinesparkle.draw_src(g, 
+            gp.rm.spr_shinesparkle.draw_src(g, 
                 self.ix as i32 - self.collisionOffsetX as i32,
                 self.iy as i32 - self.collisionOffsetY as i32,
                 &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
@@ -97,6 +98,7 @@ impl CObjectTrait for PU_SecretPowerup {
     }
 
     fn collide_player(&mut self, g: &mut Game, _player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         unsafe {
             if self.itemtype == 0 {
                 g.game_values.windaffectsplayers = true;
@@ -115,7 +117,7 @@ impl CObjectTrait for PU_SecretPowerup {
                 g.game_values.spotlights = true;
             }
 
-            if_sound_on_play(g, &mut game().rm.sfx_pickup);
+            if_sound_on_play(g, &mut gp.rm.sfx_pickup);
         }
 
         self.dead = true;

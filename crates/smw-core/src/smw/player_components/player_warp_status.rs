@@ -95,6 +95,7 @@ impl PlayerWarpStatus {
     }
 
     pub fn enter_warp(&mut self, g: &mut Game, player: &mut CPlayer, warp: Ptr<Warp>) {
+        let mut gp = g.ptr();
         debug_assert!(warp.direction != WARP_UNDEFINED);
 
         match warp.direction {
@@ -147,7 +148,7 @@ impl PlayerWarpStatus {
                 }
             }
 
-            if_sound_on_play(g, &mut game().rm.sfx_pipe);
+            if_sound_on_play(g, &mut gp.rm.sfx_pipe);
         }
     }
 

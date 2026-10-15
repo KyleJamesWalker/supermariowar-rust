@@ -55,19 +55,20 @@ impl CObjectTrait for IO_BulletBillCannon {
 
 impl IO_BulletBillCannon {
     pub fn fire(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         self.set_new_timer();
 
         let pos = Vec2s::new((self.ix as i32 + if self.m_vel < 0.0f32 { 32 } else { -32 }) as i16, self.iy);
         unsafe {
-            game().objectcontainer[1].add(Ptr::new_box(MO_BulletBill::new(g, 
-                Ptr::from_mut(&mut game().rm.spr_hazard_bulletbill[if self.m_preview { 1 } else { 0 }]),
-                Ptr::from_mut(&mut game().rm.spr_hazard_bulletbilldead),
+            gp.get().objectcontainer[1].add(Ptr::new_box(MO_BulletBill::new(g, 
+                Ptr::from_mut(&mut gp.get().rm.spr_hazard_bulletbill[if self.m_preview { 1 } else { 0 }]),
+                Ptr::from_mut(&mut gp.get().rm.spr_hazard_bulletbilldead),
                 pos,
                 self.m_vel,
                 0,
                 true,
             )));
-            if_sound_on_play(g, &mut game().rm.sfx_bulletbillsound);
+            if_sound_on_play(g, &mut gp.rm.sfx_bulletbillsound);
         }
     }
 }

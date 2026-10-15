@@ -112,18 +112,19 @@ impl MO_FlagBase {
     }
 
     pub fn score_flag(&mut self, g: &mut Game, mut flag: Ptr<CO_Flag>, mut player: Ptr<CPlayer>) {
+        let mut gp = g.ptr();
         unsafe {
             if flag.teamID == self.teamID {
                 flag.place_flag(g);
-                if_sound_on_play(g, &mut game().rm.sfx_areatag);
+                if_sound_on_play(g, &mut gp.rm.sfx_areatag);
             } else if !g.game_values.gamemodesettings.flag.homescore || !self.homeflag.is_null() || g.game_values.gamemodesettings.flag.centerflag {
                 flag.place_flag(g);
                 if !g.game_values.gamemode.gameover {
                     player.score().adjust_score(g, 1);
-                    game().game_values.gamemode.check_winner(g, player);
+                    gp.game_values.gamemode.check_winner(g, player);
                 }
 
-                if_sound_on_play(g, &mut game().rm.sfx_racesound);
+                if_sound_on_play(g, &mut gp.rm.sfx_racesound);
 
                 if g.game_values.gamemodesettings.flag.pointmove {
                     // Set the values way outside the map so it will place the base correctly

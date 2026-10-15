@@ -38,9 +38,10 @@ impl PlayerTail {
     }
 
     pub fn shake(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         unsafe {
             g.rm.sfx_tailspin.stop();
-            if_sound_on_play(g, &mut game().rm.sfx_tailspin);
+            if_sound_on_play(g, &mut gp.rm.sfx_tailspin);
         }
         player.lockjump = true;
 
@@ -50,8 +51,9 @@ impl PlayerTail {
     }
 
     pub fn spin(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         unsafe {
-            if_sound_on_play(g, &mut game().rm.sfx_tailspin);
+            if_sound_on_play(g, &mut gp.rm.sfx_tailspin);
         }
 
         self.iTailState = TAIL_SPIN_AND_SHAKE; //cause tail to shake
@@ -62,7 +64,7 @@ impl PlayerTail {
         player.spin.spin(g, pp.get());
 
         unsafe {
-            game().objectcontainer[1].add(Ptr::new_box(MO_SpinAttack::new(
+            gp.objectcontainer[1].add(Ptr::new_box(MO_SpinAttack::new(
                 player.get_global_id(),
                 player.get_team_id(),
                 KillStyle::Leaf,
@@ -82,6 +84,7 @@ impl PlayerTail {
     }
 
     pub fn draw(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         unsafe {
             let mut iOffsetY: i16 = 0;
             if self.iTailState == TAIL_SHAKE {
@@ -159,9 +162,9 @@ impl PlayerTail {
                 };
                 if player.iswarping() {
                     let edge: ClipEdge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);
-                    game().rm.spr_tail.draw_clip(g, x, y, &src, edge, player.get_warp_plane() as i32);
+                    gp.rm.spr_tail.draw_clip(g, x, y, &src, edge, player.get_warp_plane() as i32);
                 } else {
-                    game().rm.spr_tail.draw_src(g, x, y, &src);
+                    gp.rm.spr_tail.draw_src(g, x, y, &src);
                 }
             }
         }

@@ -42,6 +42,7 @@ crate::impl_base!(MI_TourStop => ui_control: UI_Control);
 impl MI_TourStop {
     //Call with x = 70 and y == 80
     pub fn new(g: &mut Game, x: i16, y: i16, fWorld: bool) -> Self {
+        let mut gp = g.ptr();
         unsafe {
             let fIsWorld = fWorld;
             let spr_disabled = Ptr::from_mut(&mut g.rm.spr_selectfielddisabled);
@@ -89,7 +90,7 @@ impl MI_TourStop {
                 miBonusField = None;
             }
 
-            let mut miStartButton = Box::new(MI_Button::new(g, Ptr::from_mut(&mut game().rm.spr_selectfield), 70, 45, "Start", 500, TextAlign::LEFT));
+            let mut miStartButton = Box::new(MI_Button::new(g, Ptr::from_mut(&mut gp.rm.spr_selectfield), 70, 45, "Start", 500, TextAlign::LEFT));
             miStartButton.set_code(MENU_CODE_TOUR_STOP_CONTINUE);
             miStartButton.select(true);
 

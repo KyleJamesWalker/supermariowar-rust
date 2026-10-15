@@ -206,6 +206,7 @@ crate::impl_base!(UI_ModeOptionsMenu => ui_menu: UI_Menu);
 
 impl UI_ModeOptionsMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
+        let mut gp = g.ptr();
         let mut this = Box::<Self>::default();
         unsafe {
             //***********************
@@ -224,7 +225,7 @@ impl UI_ModeOptionsMenu {
             this.miClassicModeScoringField.set_output_ptr(&mut g.game_values.gamemodemenusettings.classic.scoring as *mut _);
             this.miClassicModeScoringField.set_current_value(g.game_values.gamemodemenusettings.classic.scoring);
 
-            this.miClassicModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miClassicModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut gp.rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miClassicModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
             this.miClassicModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
@@ -259,7 +260,7 @@ impl UI_ModeOptionsMenu {
             this.miFragModeScoringField.set_output_ptr(&mut g.game_values.gamemodemenusettings.frag.scoring as *mut _);
             this.miFragModeScoringField.set_current_value(g.game_values.gamemodemenusettings.frag.scoring);
 
-            this.miFragModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miFragModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut gp.rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miFragModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
             this.miFragModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
@@ -320,7 +321,7 @@ impl UI_ModeOptionsMenu {
             this.miTimeLimitModePercentExtraTime.set_current_value(g.game_values.gamemodemenusettings.time.percentextratime);
             this.miTimeLimitModePercentExtraTime.allow_wrap(false);
 
-            this.miTimeLimitModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miTimeLimitModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut gp.rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miTimeLimitModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
             this.miTimeLimitModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
@@ -401,7 +402,7 @@ impl UI_ModeOptionsMenu {
             this.miJailModeJailKeyField.set_current_value(g.game_values.gamemodemenusettings.jail.percentkey);
             this.miJailModeJailKeyField.allow_wrap(false);
 
-            this.miJailModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miJailModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut gp.rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miJailModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
             this.miJailModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
@@ -473,7 +474,7 @@ impl UI_ModeOptionsMenu {
             this.miCoinModePercentExtraCoin.set_current_value(g.game_values.gamemodemenusettings.coins.percentextracoin);
             this.miCoinModePercentExtraCoin.allow_wrap(false);
 
-            this.miCoinModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miCoinModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut gp.rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miCoinModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
             this.miCoinModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
@@ -526,7 +527,7 @@ impl UI_ModeOptionsMenu {
                 this.miStompModeEnemySlider[iEnemy as usize].set_current_value(g.game_values.gamemodemenusettings.stomp.enemyweight[iEnemy as usize]);
             }
 
-            this.miStompModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miStompModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut gp.rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miStompModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
             this.miStompModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
@@ -595,7 +596,7 @@ impl UI_ModeOptionsMenu {
             this.miEggModeExplosionTimeField.set_output_ptr(&mut g.game_values.gamemodemenusettings.egg.explode as *mut _);
             this.miEggModeExplosionTimeField.set_current_value(g.game_values.gamemodemenusettings.egg.explode);
 
-            this.miEggModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miEggModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut gp.rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miEggModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
             this.miEggModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
@@ -687,7 +688,7 @@ impl UI_ModeOptionsMenu {
             this.miFlagModeCenterFlagField.set_current_value(g.game_values.gamemodemenusettings.flag.centerflag);
             this.miFlagModeCenterFlagField.set_auto_advance(true);
 
-            this.miFlagModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miFlagModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut gp.rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miFlagModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
             this.miFlagModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
@@ -729,7 +730,7 @@ impl UI_ModeOptionsMenu {
             this.miChickenModeGlideField.set_current_value(g.game_values.gamemodemenusettings.chicken.glide);
             this.miChickenModeGlideField.set_auto_advance(true);
 
-            this.miChickenModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miChickenModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut gp.rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miChickenModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
             this.miChickenModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
@@ -760,7 +761,7 @@ impl UI_ModeOptionsMenu {
             this.miTagModeTagOnTouchField.set_current_value(g.game_values.gamemodemenusettings.tag.tagontouch);
             this.miTagModeTagOnTouchField.set_auto_advance(true);
 
-            this.miTagModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miTagModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut gp.rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miTagModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
             this.miTagModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
@@ -833,7 +834,7 @@ impl UI_ModeOptionsMenu {
             this.miStarModePercentExtraTime.set_current_value(g.game_values.gamemodemenusettings.star.percentextratime);
             this.miStarModePercentExtraTime.allow_wrap(false);
 
-            this.miStarModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miStarModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut gp.rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miStarModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
             this.miStarModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
@@ -925,7 +926,7 @@ impl UI_ModeOptionsMenu {
             this.miDominationModeStealOnDeathField.set_auto_advance(true);
 
 
-            this.miDominationModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miDominationModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut gp.rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miDominationModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
             this.miDominationModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
@@ -988,7 +989,7 @@ impl UI_ModeOptionsMenu {
             this.miKingOfTheHillModeMultiplierField.set_output_ptr(&mut g.game_values.gamemodemenusettings.kingofthehill.maxmultiplier as *mut _);
             this.miKingOfTheHillModeMultiplierField.set_current_value(g.game_values.gamemodemenusettings.kingofthehill.maxmultiplier);
 
-            this.miKingOfTheHillModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miKingOfTheHillModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut gp.rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miKingOfTheHillModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
             this.miKingOfTheHillModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
@@ -1043,7 +1044,7 @@ impl UI_ModeOptionsMenu {
             this.miRaceModePenaltyField.set_output_ptr(&mut g.game_values.gamemodemenusettings.race.penalty as *mut _);
             this.miRaceModePenaltyField.set_current_value(g.game_values.gamemodemenusettings.race.penalty);
 
-            this.miRaceModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miRaceModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut gp.rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miRaceModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
             this.miRaceModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
@@ -1136,7 +1137,7 @@ impl UI_ModeOptionsMenu {
             this.miSurvivalModeShieldField.set_current_value(g.game_values.gamemodemenusettings.survival.shield);
             this.miSurvivalModeShieldField.set_auto_advance(true);
 
-            this.miSurvivalModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miSurvivalModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut gp.rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miSurvivalModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
             this.miSurvivalModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
@@ -1225,7 +1226,7 @@ impl UI_ModeOptionsMenu {
             this.miGreedModePercentExtraCoin.set_current_value(g.game_values.gamemodemenusettings.greed.percentextracoin);
             this.miGreedModePercentExtraCoin.allow_wrap(false);
 
-            this.miGreedModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miGreedModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut gp.rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miGreedModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
             this.miGreedModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
@@ -1306,7 +1307,7 @@ impl UI_ModeOptionsMenu {
             this.miHealthModePercentExtraLife.set_current_value(g.game_values.gamemodemenusettings.health.percentextralife);
             this.miHealthModePercentExtraLife.allow_wrap(false);
 
-            this.miHealthModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miHealthModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut gp.rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miHealthModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
             this.miHealthModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
@@ -1393,7 +1394,7 @@ impl UI_ModeOptionsMenu {
             this.miCollectionModeCardLifeField.set_output_ptr(&mut g.game_values.gamemodemenusettings.collection.cardlife as *mut _);
             this.miCollectionModeCardLifeField.set_current_value(g.game_values.gamemodemenusettings.collection.cardlife);
 
-            this.miCollectionModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miCollectionModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut gp.rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miCollectionModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
             this.miCollectionModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
@@ -1441,7 +1442,7 @@ impl UI_ModeOptionsMenu {
                 this.miChaseModeQuantitySlider[iPhanto as usize].set_current_value(g.game_values.gamemodemenusettings.chase.phantoquantity[iPhanto as usize]);
             }
 
-            this.miChaseModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miChaseModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut gp.rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miChaseModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
             this.miChaseModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
@@ -1497,7 +1498,7 @@ impl UI_ModeOptionsMenu {
             this.miShyGuyTagModeFreeTimeField.set_output_ptr(&mut g.game_values.gamemodemenusettings.shyguytag.freetime as *mut _);
             this.miShyGuyTagModeFreeTimeField.set_current_value(g.game_values.gamemodemenusettings.shyguytag.freetime);
 
-            this.miShyGuyTagModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miShyGuyTagModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut gp.rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miShyGuyTagModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
             this.miShyGuyTagModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
@@ -1561,7 +1562,7 @@ impl UI_ModeOptionsMenu {
             this.miBossModeHitPointsField.set_output_ptr(&mut g.game_values.gamemodemenusettings.boss.hitpoints as *mut _);
             this.miBossModeHitPointsField.set_current_value(g.game_values.gamemodemenusettings.boss.hitpoints);
 
-            this.miBossModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miBossModeBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut gp.rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             this.miBossModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
             this.miBossModeLeftHeaderBar = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));

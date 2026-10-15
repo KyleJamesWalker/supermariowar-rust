@@ -209,6 +209,7 @@ impl UI_ControlTrait for MI_StringScroll {
     fn update(&mut self, g: &mut Game) {}
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if !self.m_visible {
             return;
         }
@@ -219,10 +220,10 @@ impl UI_ControlTrait for MI_StringScroll {
         let iNumLines = self.iNumLines as i32;
 
         unsafe {
-            game().rm.menu_dialog.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: iWidth - 16, h: iNumLines * 32 + 32 });
-            game().rm.menu_dialog.draw_src(g, x + iWidth - 16, y, &SDL_Rect { x: 496, y: 0, w: 16, h: iNumLines * 32 + 32 });
-            game().rm.menu_dialog.draw_src(g, x, y + iNumLines * 32 + 32, &SDL_Rect { x: 0, y: 464, w: iWidth - 16, h: 16 });
-            game().rm.menu_dialog.draw_src(g, x + iWidth - 16, y + iNumLines * 32 + 32, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+            gp.rm.menu_dialog.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: iWidth - 16, h: iNumLines * 32 + 32 });
+            gp.rm.menu_dialog.draw_src(g, x + iWidth - 16, y, &SDL_Rect { x: 496, y: 0, w: 16, h: iNumLines * 32 + 32 });
+            gp.rm.menu_dialog.draw_src(g, x, y + iNumLines * 32 + 32, &SDL_Rect { x: 0, y: 464, w: iWidth - 16, h: 16 });
+            gp.rm.menu_dialog.draw_src(g, x + iWidth - 16, y + iNumLines * 32 + 32, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
 
             g.rm.menu_font_large.draw_centered(x + (iWidth >> 1), y + 5, &self.sTitle);
 

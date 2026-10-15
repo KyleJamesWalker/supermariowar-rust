@@ -93,6 +93,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
     }
 
     fn init(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         gm::cgamemode_init(g, self);
 
         self.fReverseScoring = false;
@@ -112,11 +113,12 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
             } else {
                 (App::screenWidth / 2) as i16
             };
-            game().objectcontainer[0].add(Ptr::new_box(MO_SledgeBrother::new(g, Ptr::from_mut(&mut game().rm.spr_sledgebrothers), platformY, self.iBossType)));
+            gp.get().objectcontainer[0].add(Ptr::new_box(MO_SledgeBrother::new(g, Ptr::from_mut(&mut gp.get().rm.spr_sledgebrothers), platformY, self.iBossType)));
         }
     }
 
     fn think(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             if !self.gameover && g.players.len() == 0 {
                 self.gameover = true;
@@ -125,7 +127,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
                     g.rm.sfx_invinciblemusic.stop();
                     g.rm.sfx_timewarning.stop();
                     g.rm.sfx_slowdownmusic.stop();
-                    if_sound_on_play(g, &mut game().rm.sfx_gameover);
+                    if_sound_on_play(g, &mut gp.rm.sfx_gameover);
 
                     g.rm.backgroundmusic[1].stop();
                 }

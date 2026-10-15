@@ -47,6 +47,7 @@ impl CObjectTrait for PU_MysteryMushroomPowerup {
         mo_powerup_update(g, self)
     }
     fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         unsafe {
             if self.state > 0 {
                 self.dead = true;
@@ -59,7 +60,7 @@ impl CObjectTrait for PU_MysteryMushroomPowerup {
                         3,
                         8,
                     ));
-                    if_sound_on_play(g, &mut game().rm.sfx_spit);
+                    if_sound_on_play(g, &mut gp.rm.sfx_spit);
                 }
             }
         }

@@ -1194,6 +1194,7 @@ fn copy_vehicle_into_stamp(vehicle: &WorldVehicle) {
 }
 
 pub fn editor_edit(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         let mut done = false;
         ed().g_musiccategorydisplaytimer = 0;
@@ -1607,7 +1608,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                                 let mut rr = r(ix as i32, iy as i32, 32, 32);
                                 crate::common::gfx::blit::fill_rect(g.blitdest, &mut rr, color);
 
-                                game().rm.spr_worldforegroundspecial[0].draw_src(g, ix as i32, iy as i32, &r(((iBoundary % 10) as i32) << 5, ((iBoundary / 10) as i32) << 5, 32, 32));
+                                gp.rm.spr_worldforegroundspecial[0].draw_src(g, ix as i32, iy as i32, &r(((iBoundary % 10) as i32) << 5, ((iBoundary / 10) as i32) << 5, 32, 32));
                             }
                             iCol += 1;
                         }
@@ -1628,7 +1629,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                                 let mut rr = r(ix as i32, iy as i32, 32, 32);
                                 crate::common::gfx::blit::fill_rect(g.blitdest, &mut rr, color);
 
-                                game().rm.spr_worldforegroundspecial[0].draw_src(g, ix as i32, iy as i32, &r(((iType % 10) as i32) << 5, ((iType / 10) as i32) << 5, 32, 32));
+                                gp.rm.spr_worldforegroundspecial[0].draw_src(g, ix as i32, iy as i32, &r(((iType % 10) as i32) << 5, ((iType / 10) as i32) << 5, 32, 32));
                             }
                             iCol += 1;
                         }
@@ -1650,18 +1651,18 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                         let mut rr = r(ix as i32, iy as i32, 32, 32);
                         crate::common::gfx::blit::fill_rect(g.blitdest, &mut rr, color);
 
-                        game().rm.spr_worldvehicle[0].draw_src(g, ix as i32, iy as i32, &r((vehicle.iDrawDirection as i32) << 5, (vehicle.iDrawSprite as i32) << 5, 32, 32));
+                        gp.rm.spr_worldvehicle[0].draw_src(g, ix as i32, iy as i32, &r((vehicle.iDrawDirection as i32) << 5, (vehicle.iDrawSprite as i32) << 5, 32, 32));
 
                         if ed().edit_mode == 5 {
-                            game().rm.spr_worldforegroundspecial[0].draw_src(g, ix as i32, iy as i32, &r(((vehicle.iActionId % 10) as i32) << 5, ((vehicle.iActionId / 10) as i32) << 5, 32, 32));
+                            gp.rm.spr_worldforegroundspecial[0].draw_src(g, ix as i32, iy as i32, &r(((vehicle.iActionId % 10) as i32) << 5, ((vehicle.iActionId / 10) as i32) << 5, 32, 32));
                         }
 
                         if ed().edit_mode == 8 {
                             let iBoundary: i16 = vehicle.iBoundary - 1;
                             if iBoundary == -1 {
-                                game().rm.spr_worldforegroundspecial[0].draw_src(g, ix as i32, iy as i32, &r(288, 288, 32, 32));
+                                gp.rm.spr_worldforegroundspecial[0].draw_src(g, ix as i32, iy as i32, &r(288, 288, 32, 32));
                             } else {
-                                game().rm.spr_worldforegroundspecial[0].draw_src(g, ix as i32, iy as i32, &r(((iBoundary % 10) as i32) << 5, ((iBoundary / 10) as i32) << 5, 32, 32));
+                                gp.rm.spr_worldforegroundspecial[0].draw_src(g, ix as i32, iy as i32, &r(((iBoundary % 10) as i32) << 5, ((iBoundary / 10) as i32) << 5, 32, 32));
                             }
                         }
                     }
@@ -2262,8 +2263,9 @@ pub fn AutoSetTile(iCol: i16, iRow: i16) -> bool {
 }
 
 pub fn updateworldsurface(g: &mut Game) {
+        let mut gp = g.ptr();
     unsafe {
-        game().g_worldmap.draw_map_to_surface(g, -1, true, ed().sMapSurface, ed().draw_offset_col as i16, ed().draw_offset_row as i16, 0);
+        gp.g_worldmap.draw_map_to_surface(g, -1, true, ed().sMapSurface, ed().draw_offset_col as i16, ed().draw_offset_row as i16, 0);
     }
 }
 
@@ -2340,6 +2342,7 @@ fn point_in(x: i16, y: i16, rect: &SDL_Rect) -> bool {
 }
 
 pub fn editor_start_items(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         let mut done = false;
 
@@ -2430,24 +2433,24 @@ pub fn editor_start_items(g: &mut Game) -> i32 {
             ed().menu_shade.draw(g, 0, 0);
 
             for iItem in 0..NUM_POWERUPS as usize {
-                game().rm.spr_storedpoweruplarge.draw_src(g, rStartItemDst[iItem].x, rStartItemDst[iItem].y, &r((iItem as i32) << 5, 0, 32, 32));
+                gp.rm.spr_storedpoweruplarge.draw_src(g, rStartItemDst[iItem].x, rStartItemDst[iItem].y, &r((iItem as i32) << 5, 0, 32, 32));
             }
 
             for iWorldItem in 0..NUM_WORLD_POWERUPS as usize {
-                game().rm.spr_worlditems.draw_src(g, rStartItemDst[iWorldItem + NUM_POWERUPS as usize].x, rStartItemDst[iWorldItem + NUM_POWERUPS as usize].y, &r((iWorldItem as i32) << 5, 0, 32, 32));
+                gp.rm.spr_worlditems.draw_src(g, rStartItemDst[iWorldItem + NUM_POWERUPS as usize].x, rStartItemDst[iWorldItem + NUM_POWERUPS as usize].y, &r((iWorldItem as i32) << 5, 0, 32, 32));
             }
 
             for iPopup in 0..4i32 {
-                game().rm.spr_worlditempopup.draw_src(g, 0, 416 - (iPopup << 6), &r(0, 0, 320, 64));
-                game().rm.spr_worlditempopup.draw_src(g, 320, 416 - (iPopup << 6), &r(192, 0, 320, 64));
+                gp.rm.spr_worlditempopup.draw_src(g, 0, 416 - (iPopup << 6), &r(0, 0, 320, 64));
+                gp.rm.spr_worlditempopup.draw_src(g, 320, 416 - (iPopup << 6), &r(192, 0, 320, 64));
             }
 
             for iPickedItem in 0..game().g_worldmap.iNumInitialBonuses as usize {
                 let iPowerup: i16 = g.g_worldmap.iInitialBonuses[iPickedItem];
                 if iPowerup as i32 >= NUM_POWERUPS {
-                    game().rm.spr_worlditems.draw_src(g, rPickedItemDst[iPickedItem].x, rPickedItemDst[iPickedItem].y, &r((iPowerup as i32 - NUM_POWERUPS) << 5, 0, 32, 32));
+                    gp.rm.spr_worlditems.draw_src(g, rPickedItemDst[iPickedItem].x, rPickedItemDst[iPickedItem].y, &r((iPowerup as i32 - NUM_POWERUPS) << 5, 0, 32, 32));
                 } else {
-                    game().rm.spr_storedpoweruplarge.draw_src(g, rPickedItemDst[iPickedItem].x, rPickedItemDst[iPickedItem].y, &r((iPowerup as i32) << 5, 0, 32, 32));
+                    gp.rm.spr_storedpoweruplarge.draw_src(g, rPickedItemDst[iPickedItem].x, rPickedItemDst[iPickedItem].y, &r((iPowerup as i32) << 5, 0, 32, 32));
                 }
             }
 
@@ -2464,6 +2467,7 @@ pub fn editor_start_items(g: &mut Game) -> i32 {
 }
 
 pub fn editor_boundary(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         let mut done = false;
 
@@ -2511,7 +2515,7 @@ pub fn editor_boundary(g: &mut Game) -> i32 {
             let mut rr = r(0, 0, 320, 320);
             crate::common::gfx::blit::fill_rect(g.blitdest, &mut rr, color);
 
-            game().rm.spr_worldforegroundspecial[0].draw_src(g, 0, 0, &r(0, 0, 320, 320));
+            gp.rm.spr_worldforegroundspecial[0].draw_src(g, 0, 0, &r(0, 0, 320, 320));
 
             g.rm.menu_font_small.draw_right_justified(640, 0, &g.worldlist.current_path().to_string_lossy());
 
@@ -2526,6 +2530,7 @@ pub fn editor_boundary(g: &mut Game) -> i32 {
 }
 
 pub fn editor_type(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         let mut done = false;
 
@@ -2570,10 +2575,10 @@ pub fn editor_type(g: &mut Game) -> i32 {
             drawmap(g, false, TILESIZE as i16);
             ed().menu_shade.draw(g, 0, 0);
 
-            game().rm.spr_worldforegroundspecial[0].draw_src(g, 0, 0, &r(320, 128, 64, 32));
-            game().rm.spr_worldforegroundspecial[0].draw_src(g, 64, 0, &r(320, 192, 128, 32));
+            gp.rm.spr_worldforegroundspecial[0].draw_src(g, 0, 0, &r(320, 128, 64, 32));
+            gp.rm.spr_worldforegroundspecial[0].draw_src(g, 64, 0, &r(320, 192, 128, 32));
 
-            game().rm.spr_worldforegroundspecial[0].draw_src(g, 64, 0, &r(448, 64, 128, 32));
+            gp.rm.spr_worldforegroundspecial[0].draw_src(g, 64, 0, &r(448, 64, 128, 32));
 
             g.rm.menu_font_small.draw_right_justified(640, 0, &g.worldlist.current_path().to_string_lossy());
 
@@ -2588,6 +2593,7 @@ pub fn editor_type(g: &mut Game) -> i32 {
 }
 
 pub fn editor_water(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         let mut done = false;
 
@@ -2630,7 +2636,7 @@ pub fn editor_water(g: &mut Game) -> i32 {
             crate::common::gfx::blit::fill_rect(g.screen, null(), 0x0);
 
             for iWater in 0..3i32 {
-                game().rm.spr_worldbackground[0].draw_src(g, iWater << 5, 0, &r(512 + (iWater << 7), 0, 32, 32));
+                gp.rm.spr_worldbackground[0].draw_src(g, iWater << 5, 0, &r(512 + (iWater << 7), 0, 32, 32));
             }
 
             DrawMessage(g);
@@ -2644,6 +2650,7 @@ pub fn editor_water(g: &mut Game) -> i32 {
 }
 
 pub fn editor_background(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         let mut done = false;
         let mut iPage: i16 = 0;
@@ -2713,7 +2720,7 @@ pub fn editor_background(g: &mut Game) -> i32 {
 
             crate::common::gfx::blit::fill_rect(g.screen, null(), 0x0);
 
-            game().rm.spr_worldbackground[0].draw_src(g, 0, 0, &r(iPage as i32 * 640, 32, 640, 480));
+            gp.rm.spr_worldbackground[0].draw_src(g, 0, 0, &r(iPage as i32 * 640, 32, 640, 480));
 
             DrawMessage(g);
             gfx_flipscreen(g);
@@ -2726,6 +2733,7 @@ pub fn editor_background(g: &mut Game) -> i32 {
 }
 
 pub fn editor_stageforeground(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         let mut done = false;
         let mut iForegroundScreen: i16 = 0;
@@ -2776,11 +2784,11 @@ pub fn editor_stageforeground(g: &mut Game) -> i32 {
 
             for iRow in 0..10i32 {
                 for iCol in 0..10i32 {
-                    game().rm.spr_worldforegroundspecial[0].draw_src(g, iCol << 5, iRow << 5, &r(384, (iForegroundScreen as i32) << 5, 32, 32));
+                    gp.rm.spr_worldforegroundspecial[0].draw_src(g, iCol << 5, iRow << 5, &r(384, (iForegroundScreen as i32) << 5, 32, 32));
                 }
             }
 
-            game().rm.spr_worldforegroundspecial[0].draw_src(g, 0, 0, &r(0, 0, 320, 320));
+            gp.rm.spr_worldforegroundspecial[0].draw_src(g, 0, 0, &r(0, 0, 320, 320));
 
             DrawMessage(g);
             gfx_flipscreen(g);
@@ -2793,6 +2801,7 @@ pub fn editor_stageforeground(g: &mut Game) -> i32 {
 }
 
 pub fn editor_bridges(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         let mut done = false;
 
@@ -2834,7 +2843,7 @@ pub fn editor_bridges(g: &mut Game) -> i32 {
 
             crate::common::gfx::blit::fill_rect(g.screen, null(), 0x0);
 
-            game().rm.spr_worldforegroundspecial[0].draw_src(g, 0, 0, &r(320, 224, 128, 32));
+            gp.rm.spr_worldforegroundspecial[0].draw_src(g, 0, 0, &r(320, 224, 128, 32));
 
             DrawMessage(g);
             gfx_flipscreen(g);
@@ -2847,6 +2856,7 @@ pub fn editor_bridges(g: &mut Game) -> i32 {
 }
 
 pub fn editor_structureforeground(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         let mut done = false;
 
@@ -2894,8 +2904,8 @@ pub fn editor_structureforeground(g: &mut Game) -> i32 {
 
             crate::common::gfx::blit::fill_rect(g.screen, null(), 0x0);
 
-            game().rm.spr_worldforeground[0].draw_src(g, 0, 0, &r(0, 0, 416, 480));
-            game().rm.spr_worldforeground[0].draw_src(g, 416, 0, &r(512, 0, 32, 480));
+            gp.rm.spr_worldforeground[0].draw_src(g, 0, 0, &r(0, 0, 416, 480));
+            gp.rm.spr_worldforeground[0].draw_src(g, 416, 0, &r(512, 0, 32, 480));
 
             DrawMessage(g);
             gfx_flipscreen(g);
@@ -2908,6 +2918,7 @@ pub fn editor_structureforeground(g: &mut Game) -> i32 {
 }
 
 pub fn editor_pathsprite(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         let mut done = false;
 
@@ -2950,7 +2961,7 @@ pub fn editor_pathsprite(g: &mut Game) -> i32 {
             crate::common::gfx::blit::fill_rect(g.screen, null(), 0x0);
 
             for iPath in 0..8i32 {
-                game().rm.spr_worldpaths[0].draw_src(g, iPath << 5, 0, &r((iPath % 4) * 160, (iPath / 4) * 320, 32, 192));
+                gp.rm.spr_worldpaths[0].draw_src(g, iPath << 5, 0, &r((iPath % 4) * 160, (iPath / 4) * 320, 32, 192));
             }
 
             DrawMessage(g);
@@ -2967,6 +2978,7 @@ pub fn editor_pathsprite(g: &mut Game) -> i32 {
 //allow setting of stages on vehicles
 
 pub fn editor_vehicles(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         if g.g_worldmap.iNumStages <= 0 {
             SetDisplayMessage(120, "No Stages", "You need to create", "stages before you", "can create vehicles");
@@ -3028,11 +3040,11 @@ pub fn editor_vehicles(g: &mut Game) -> i32 {
                     _ => {}
                 }
 
-                game().game_values.playerInput.update_input(g, ed().event.input(), 1);
+                gp.game_values.playerInput.update_input(g, ed().event.input(), 1);
             }
 
             if MENU_CODE_NONE == code {
-                code = ed().mCurrentMenu.send_input(g, Ptr::from_mut(&mut game().game_values.playerInput));
+                code = ed().mCurrentMenu.send_input(g, Ptr::from_mut(&mut gp.game_values.playerInput));
             }
 
             if MENU_CODE_EXIT_APPLICATION == code {
@@ -3126,6 +3138,7 @@ pub fn editor_path(g: &mut Game) -> i32 {
 }
 
 pub fn DisplayStageDetails(g: &mut Game, fForce: bool, iStageId: i16, mut iMouseX: i16, mut iMouseY: i16) {
+        let mut gp = g.ptr();
     unsafe {
         let ts = g.game_values.tourstops[iStageId as usize];
 
@@ -3139,7 +3152,7 @@ pub fn DisplayStageDetails(g: &mut Game, fForce: bool, iStageId: i16, mut iMouse
                 if g.maplist.findexact(&ts.pszMapFile, false) {
                     let file = g.maplist.current_filename().to_string();
                     g.g_map.load_map(&file, read_type_preview);
-                    ed().sMapThumbnail = game().g_map.create_thumbnail_surface(g, true);
+                    ed().sMapThumbnail = gp.g_map.create_thumbnail_surface(g, true);
                 } else {
                     //otherwise show a unknown map icon
                     ed().sMapThumbnail = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_mapnotfound.png")).without_color_key().create();
@@ -3186,7 +3199,7 @@ pub fn DisplayStageDetails(g: &mut Game, fForce: bool, iStageId: i16, mut iMouse
 
         let (x, y) = (iMouseX as i32, iMouseY as i32);
 
-        game().rm.menu_mode_large.draw_src(g, x + 16, y + 16, &r((iMode as i32) << 5, 0, 32, 32));
+        gp.rm.menu_mode_large.draw_src(g, x + 16, y + 16, &r((iMode as i32) << 5, 0, 32, 32));
 
         g.rm.menu_font_small.draw_chop_right(x + 52, y + 16, 164, &ts.szName);
 
@@ -3202,10 +3215,10 @@ pub fn DisplayStageDetails(g: &mut Game, fForce: bool, iStageId: i16, mut iMouse
 
             for iBonus in 0..ts.iNumBonuses as i32 {
                 let wsb = &ts.wsbBonuses[iBonus as usize];
-                game().rm.spr_worlditemsplace.draw_src(g, x + iBonus * 20 + 16, y + 194, &r(wsb.iWinnerPlace as i32 * 20, 0, 20, 20));
+                gp.rm.spr_worlditemsplace.draw_src(g, x + iBonus * 20 + 16, y + 194, &r(wsb.iWinnerPlace as i32 * 20, 0, 20, 20));
 
                 let iBonusIcon: i32 = wsb.iBonus as i32;
-                let spr_icon: &gfxSprite = if iBonusIcon < NUM_POWERUPS { &game().rm.spr_storedpowerupsmall } else { &game().rm.spr_worlditemssmall };
+                let spr_icon: &gfxSprite = if iBonusIcon < NUM_POWERUPS { &gp.rm.spr_storedpowerupsmall } else { &gp.rm.spr_worlditemssmall };
                 let src = (if iBonusIcon < NUM_POWERUPS { iBonusIcon } else { iBonusIcon - NUM_POWERUPS }) << 4;
                 spr_icon.draw_src(g, x + iBonus * 20 + 18, y + 196, &r(src, 0, 16, 16));
             }
@@ -3538,6 +3551,7 @@ pub fn NewStage(g: &mut Game, iEditStage: &mut i16) {
 }
 
 pub fn editor_stage(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         ed().mCurrentMenu = ed().mStageSettingsMenu.as_ptr();
         ed().mCurrentMenu.reset_menu(g);
@@ -3721,12 +3735,12 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                     _ => {}
                 }
 
-                game().game_values.playerInput.update_input(g, ed().event.input(), 1);
+                gp.game_values.playerInput.update_input(g, ed().event.input(), 1);
             }
 
             if iEditStage >= 0 {
                 if MENU_CODE_NONE == code {
-                    code = ed().mCurrentMenu.send_input(g, Ptr::from_mut(&mut game().game_values.playerInput));
+                    code = ed().mCurrentMenu.send_input(g, Ptr::from_mut(&mut gp.game_values.playerInput));
                 }
 
                 if MENU_CODE_EXIT_APPLICATION == code {
@@ -3912,7 +3926,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                     let mut rr = r(ix as i32, iy as i32, 32, 32);
                     crate::common::gfx::blit::fill_rect(g.blitdest, &mut rr, color);
 
-                    game().rm.spr_worldforegroundspecial[0].draw_src(g, ix as i32, iy as i32, &r((iStage % 10) << 5, (iStage / 10) << 5, 32, 32));
+                    gp.rm.spr_worldforegroundspecial[0].draw_src(g, ix as i32, iy as i32, &r((iStage % 10) << 5, (iStage / 10) << 5, 32, 32));
                 }
 
                 if iStageDisplay >= 0 {
@@ -3921,8 +3935,8 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                 }
 
                 //Display New button
-                game().rm.spr_selectfield.draw_src(g, 256, 420, &r(0, 0, 64, 32));
-                game().rm.spr_selectfield.draw_src(g, 320, 420, &r(448, 0, 64, 32));
+                gp.rm.spr_selectfield.draw_src(g, 256, 420, &r(0, 0, 64, 32));
+                gp.rm.spr_selectfield.draw_src(g, 320, 420, &r(448, 0, 64, 32));
 
                 g.rm.menu_font_large.draw_centered(320, 425, "New Stage");
 
@@ -3938,7 +3952,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                     let mut rr = r(ix as i32, iy as i32, 32, 32);
                     crate::common::gfx::blit::fill_rect(g.blitdest, &mut rr, color);
 
-                    game().rm.spr_worldforegroundspecial[0].draw_src(g, ix as i32, iy as i32, &r(((iEditStage % 10) as i32) << 5, ((iEditStage / 10) as i32) << 5, 32, 32));
+                    gp.rm.spr_worldforegroundspecial[0].draw_src(g, ix as i32, iy as i32, &r(((iEditStage % 10) as i32) << 5, ((iEditStage / 10) as i32) << 5, 32, 32));
                 }
             }
 
@@ -3947,20 +3961,20 @@ pub fn editor_stage(g: &mut Game) -> i32 {
 
                 //Game powerups
                 for iItem in 0..NUM_POWERUPS as usize {
-                    game().rm.spr_storedpoweruplarge.draw_src(g, ed().rItemDst[iItem].x, ed().rItemDst[iItem].y, &r((iItem as i32) << 5, 0, 32, 32));
+                    gp.rm.spr_storedpoweruplarge.draw_src(g, ed().rItemDst[iItem].x, ed().rItemDst[iItem].y, &r((iItem as i32) << 5, 0, 32, 32));
                 }
 
                 //World Powerups
                 for iWorldItem in 0..NUM_WORLD_POWERUPS as usize {
                     let d = ed().rItemDst[iWorldItem + NUM_POWERUPS as usize];
-                    game().rm.spr_worlditems.draw_src(g, d.x, d.y, &r((iWorldItem as i32) << 5, 0, 32, 32));
+                    gp.rm.spr_worlditems.draw_src(g, d.x, d.y, &r((iWorldItem as i32) << 5, 0, 32, 32));
                 }
 
                 //Score Bonuses
                 if ts.iStageType == 1 {
                     for iScoreBonus in 0..NUM_WORLD_SCORE_BONUSES {
                         let d = ed().rItemDst[(iScoreBonus + NUM_POWERUPS + NUM_WORLD_POWERUPS) as usize];
-                        game().rm.spr_worlditems.draw_src(g, 
+                        gp.rm.spr_worlditems.draw_src(g, 
                             d.x,
                             d.y,
                             &r(if iScoreBonus < 10 { iScoreBonus << 5 } else { (iScoreBonus - 10) << 5 }, if iScoreBonus < 10 { 32 } else { 64 }, 32, 32),
@@ -3969,8 +3983,8 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                 }
 
                 //Draw background container
-                game().rm.spr_worlditempopup.draw_src(g, 0, 344, &r(0, 0, 320, 64));
-                game().rm.spr_worlditempopup.draw_src(g, 320, 344, &r(192, 0, 320, 64));
+                gp.rm.spr_worlditempopup.draw_src(g, 0, 344, &r(0, 0, 320, 64));
+                gp.rm.spr_worlditempopup.draw_src(g, 320, 344, &r(192, 0, 320, 64));
 
                 let rects: &[SDL_Rect] = if ts.iStageType == 1 { &rHouseBonusDst } else { &rStageBonusDst };
 
@@ -3980,20 +3994,20 @@ pub fn editor_stage(g: &mut Game) -> i32 {
 
                     //Draw place behind bonus
                     if ts.iStageType == 0 {
-                        game().rm.spr_worlditempopup.draw_src(g, rects[iPickedItem].x - 8, rects[iPickedItem].y - 8, &r(iPlace * 48, 256, 48, 48));
+                        gp.rm.spr_worlditempopup.draw_src(g, rects[iPickedItem].x - 8, rects[iPickedItem].y - 8, &r(iPlace * 48, 256, 48, 48));
                     }
 
                     if iBonus >= NUM_POWERUPS + NUM_WORLD_POWERUPS {
                         let iBonusIndex: i32 = iBonus - NUM_POWERUPS - NUM_WORLD_POWERUPS;
-                        game().rm.spr_worlditems.draw_src(g, 
+                        gp.rm.spr_worlditems.draw_src(g, 
                             rects[iPickedItem].x,
                             rects[iPickedItem].y,
                             &r(if iBonusIndex < 10 { iBonusIndex << 5 } else { (iBonusIndex - 10) << 5 }, if iBonusIndex < 10 { 32 } else { 64 }, 32, 32),
                         );
                     } else if iBonus >= NUM_POWERUPS {
-                        game().rm.spr_worlditems.draw_src(g, rects[iPickedItem].x, rects[iPickedItem].y, &r((iBonus - NUM_POWERUPS) << 5, 0, 32, 32));
+                        gp.rm.spr_worlditems.draw_src(g, rects[iPickedItem].x, rects[iPickedItem].y, &r((iBonus - NUM_POWERUPS) << 5, 0, 32, 32));
                     } else {
-                        game().rm.spr_storedpoweruplarge.draw_src(g, rects[iPickedItem].x, rects[iPickedItem].y, &r(iBonus << 5, 0, 32, 32));
+                        gp.rm.spr_storedpoweruplarge.draw_src(g, rects[iPickedItem].x, rects[iPickedItem].y, &r(iBonus << 5, 0, 32, 32));
                     }
                 }
 
@@ -4303,13 +4317,14 @@ pub fn loadcurrentworld(g: &mut Game) {
 }
 
 pub fn savecurrentworld(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         SetDisplayMessage(60, "Saved", "Your world has", "been saved.", "");
 
         WriteVehiclesIntoWorld(g);
         WriteWarpsIntoWorld(g);
         let path = g.worldlist.at(g.game_values.worldindex as usize).to_string_lossy().into_owned();
-        game().g_worldmap.save(g, &path);
+        gp.g_worldmap.save(g, &path);
         0
     }
 }
@@ -4375,6 +4390,7 @@ fn delete_all_vehicles_and_warps(fVehicles: bool) {
 }
 
 pub fn new_world(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         let mut fileName = String::new();
         let mut worldLocation = String::from("worlds/");
@@ -4398,7 +4414,7 @@ pub fn new_world(g: &mut Game) -> i32 {
             *g.g_worldmap = WorldMap::new(iWidth, iHeight);
             fileName.push_str(".txt");
             worldLocation.push_str(&fileName);
-            game().worldlist.add(convert_path(g, &worldLocation).into());
+            gp.worldlist.add(convert_path(g, &worldLocation).into());
             g.worldlist.find(&fileName);
             g.game_values.worldindex = g.worldlist.current_index() as i16;
             savecurrentworld(g);
@@ -4452,6 +4468,7 @@ pub fn resize_world(g: &mut Game) -> i32 {
 
 //take screenshots in full and thumbnail sizes
 pub fn takescreenshot(g: &mut Game) {
+        let mut gp = g.ptr();
     unsafe {
         let iTileSizes: [i16; 3] = [32, 16, 8];
 
@@ -4468,14 +4485,14 @@ pub fn takescreenshot(g: &mut Game) {
             let sScreenshot = SDL_CreateRGBSurface((*g.screen).flags, iTileSize as i32 * w as i32, iTileSize as i32 * h as i32, (*(*g.screen).format).BitsPerPixel as i32, 0, 0, 0, 0);
             g.blitdest = sScreenshot;
 
-            game().g_worldmap.draw_map_to_surface_full(g, sScreenshot);
+            gp.g_worldmap.draw_map_to_surface_full(g, sScreenshot);
 
             //Draw vehicles to screenshot
             for vehicle in ed().vehiclelist.iter() {
                 let ix: i16 = vehicle.currentTile.x * iTileSize;
                 let iy: i16 = vehicle.currentTile.y * iTileSize;
 
-                game().rm.spr_worldvehicle[iScreenshotSize].draw_src(g, 
+                gp.rm.spr_worldvehicle[iScreenshotSize].draw_src(g, 
                     ix as i32,
                     iy as i32,
                     &r(vehicle.iDrawDirection as i32 * iTileSize as i32, vehicle.iDrawSprite as i32 * iTileSize as i32, iTileSize as i32, iTileSize as i32),

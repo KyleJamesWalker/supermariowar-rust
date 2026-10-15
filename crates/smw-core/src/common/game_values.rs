@@ -1014,6 +1014,7 @@ impl CGameConfig {
     }
 
     pub fn write_config(&self, g: &mut Game) {
+        let mut gp = g.ptr();
         let ok = catch_runtime_error(|| {
             let options_path = get_home_directory() + "options.bin";
             let mut options = BinaryFile::new(&options_path, "wb");
@@ -1041,8 +1042,8 @@ impl CGameConfig {
         }
 
         unsafe {
-            game().maplist.write_filters(g);
-            game().maplist.write_map_summary_cache(g);
+            gp.maplist.write_filters(g);
+            gp.maplist.write_map_summary_cache(g);
         }
     }
 }

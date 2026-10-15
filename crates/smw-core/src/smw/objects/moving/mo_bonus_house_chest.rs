@@ -80,6 +80,7 @@ impl CObjectTrait for MO_BonusHouseChest {
     }
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let ix = self.ix as i32;
         let iy = self.iy as i32;
         let iw = self.iw as i32;
@@ -101,13 +102,13 @@ impl CObjectTrait for MO_BonusHouseChest {
                     let iBonus: i16 = (bonusitem - NUM_POWERUPS - NUM_WORLD_POWERUPS) as i16;
                     let iBonusX: i16 = ((iBonus as i32 % 10) << 5) as i16;
                     let iBonusY: i16 = (((iBonus as i32 / 10) << 5) + 32) as i16;
-                    game().rm.spr_worlditems.draw_src(g, ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: iBonusX as i32, y: iBonusY as i32, w: 32, h: 32 });
+                    gp.rm.spr_worlditems.draw_src(g, ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: iBonusX as i32, y: iBonusY as i32, w: 32, h: 32 });
                 } else if bonusitem >= NUM_POWERUPS {
                     // World Item
-                    game().rm.spr_worlditems.draw_src(g, ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: (bonusitem - NUM_POWERUPS) << 5, y: 0, w: 32, h: 32 });
+                    gp.rm.spr_worlditems.draw_src(g, ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: (bonusitem - NUM_POWERUPS) << 5, y: 0, w: 32, h: 32 });
                 } else {
                     // Normal Powerup
-                    game().rm.spr_storedpoweruplarge.draw_src(g, ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: bonusitem << 5, y: 0, w: 32, h: 32 });
+                    gp.rm.spr_storedpoweruplarge.draw_src(g, ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: bonusitem << 5, y: 0, w: 32, h: 32 });
                 }
             }
         }
@@ -118,6 +119,7 @@ impl CObjectTrait for MO_BonusHouseChest {
     }
 
     fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         unsafe {
             if self.state == 1 && !g.game_values.gamemode.gameover && player.playerKeys.game_turbo().fPressed {
                 let teamID = player.teamID as usize;
@@ -144,7 +146,7 @@ impl CObjectTrait for MO_BonusHouseChest {
                     }
                 }
 
-                if_sound_on_play(g, &mut game().rm.sfx_treasurechest);
+                if_sound_on_play(g, &mut gp.rm.sfx_treasurechest);
                 self.state = 2;
 
                 self.drawbonusitemy = (self.iy as i32 + 32) as i16;

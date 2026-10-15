@@ -50,9 +50,10 @@ impl B_OnOffSwitchBlock {
     }
 
     pub fn trigger_behavior_player(&mut self, g: &mut Game, playerID: i16) {
+        let mut gp = g.ptr();
         if self.state == 0 || self.state == 3 {
             unsafe {
-                if_sound_on_play(g, &mut game().rm.sfx_switchpress);
+                if_sound_on_play(g, &mut gp.rm.sfx_switchpress);
             }
             self.vely = -VELBLOCKBOUNCE;
 
@@ -189,6 +190,7 @@ impl IO_BlockTrait for B_OnOffSwitchBlock {
     }
 
     fn hitright_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+        let mut gp = g.ptr();
         //Object bounces off
         object.set_xf((self.iposx as i32 + self.iw as i32) as f32 + 0.2f32);
         object.fOldX = object.fx;
@@ -214,7 +216,7 @@ impl IO_BlockTrait for B_OnOffSwitchBlock {
                 self.trigger_behavior_player(g, object.iPlayerID);
             } else {
                 unsafe {
-                    if_sound_on_play(g, &mut game().rm.sfx_bump);
+                    if_sound_on_play(g, &mut gp.rm.sfx_bump);
                 }
             }
 
@@ -225,6 +227,7 @@ impl IO_BlockTrait for B_OnOffSwitchBlock {
     }
 
     fn hitleft_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+        let mut gp = g.ptr();
         //Object bounces off
         let cw = object.collisionWidth;
         object.set_xf((self.iposx as i32 - cw as i32) as f32 - 0.2f32);
@@ -251,7 +254,7 @@ impl IO_BlockTrait for B_OnOffSwitchBlock {
                 self.trigger_behavior_player(g, object.iPlayerID);
             } else {
                 unsafe {
-                    if_sound_on_play(g, &mut game().rm.sfx_bump);
+                    if_sound_on_play(g, &mut gp.rm.sfx_bump);
                 }
             }
 

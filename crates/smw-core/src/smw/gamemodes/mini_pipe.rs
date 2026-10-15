@@ -40,6 +40,7 @@ impl CGM_Pipe_MiniGame {
     }
 
     pub fn set_bonus(&mut self, g: &mut Game, iType: i16, iTimer: i16, iTeamID: i16) {
+        let mut gp = g.ptr();
         self.iBonusType = iType;
 
         //This is the random bonus
@@ -56,9 +57,9 @@ impl CGM_Pipe_MiniGame {
 
         unsafe {
             if self.iBonusType == 3 {
-                if_sound_on_play(g, &mut game().rm.sfx_powerdown);
+                if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
             } else {
-                if_sound_on_play(g, &mut game().rm.sfx_collectpowerup);
+                if_sound_on_play(g, &mut gp.rm.sfx_collectpowerup);
             }
         }
     }
@@ -91,6 +92,7 @@ impl CGameModeTrait for CGM_Pipe_MiniGame {
     }
 
     fn think(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if self.gameover {
             self.displayplayertext(g);
             return;
@@ -114,14 +116,14 @@ impl CGameModeTrait for CGM_Pipe_MiniGame {
                     let iRandPowerup: i16 = RANDOM_INT(50) as i16;
                     if self.iBonusType == 0 && iRandPowerup < 5 {
                         //bonuses
-                        game().objectcontainer[1].add(Ptr::new_box(OMO_PipeBonus::new(g, Ptr::from_mut(&mut game().rm.spr_pipegamebonus), vel, pos, iRandPowerup, 620, 15)));
+                        gp.get().objectcontainer[1].add(Ptr::new_box(OMO_PipeBonus::new(g, Ptr::from_mut(&mut gp.get().rm.spr_pipegamebonus), vel, pos, iRandPowerup, 620, 15)));
                     } else if iRandPowerup < 10 {
                         //fireballs
-                        game().objectcontainer[1].add(Ptr::new_box(OMO_PipeBonus::new(g, Ptr::from_mut(&mut game().rm.spr_pipegamebonus), vel, pos, 5, 0, 15)));
+                        gp.get().objectcontainer[1].add(Ptr::new_box(OMO_PipeBonus::new(g, Ptr::from_mut(&mut gp.get().rm.spr_pipegamebonus), vel, pos, 5, 0, 15)));
                     } else {
                         //coins
                         let iRandCoin: i16 = RANDOM_INT(20) as i16;
-                        game().objectcontainer[1].add(Ptr::new_box(OMO_PipeCoin::new(g, Ptr::from_mut(&mut game().rm.spr_coin), vel, pos, -1, if iRandCoin < 16 { 2 } else if iRandCoin < 19 { 0 } else { 1 }, 15)));
+                        gp.get().objectcontainer[1].add(Ptr::new_box(OMO_PipeCoin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), vel, pos, -1, if iRandCoin < 16 { 2 } else if iRandCoin < 19 { 0 } else { 1 }, 15)));
                     }
                 } else if self.iBonusType == 1 {
                     self.iNextItemTimer = (RANDOM_INT(10) + 10) as i16;
@@ -135,10 +137,10 @@ impl CGameModeTrait for CGM_Pipe_MiniGame {
 
                     let iRandPlayer: i16 = g.game_values.teamids[iRandTeam as usize][RANDOM_INT(g.game_values.teamcounts[iRandTeam as usize] as i32) as usize];
 
-                    game().objectcontainer[1].add(Ptr::new_box(OMO_PipeCoin::new(g, Ptr::from_mut(&mut game().rm.spr_coin), vel, pos, iRandTeam, game().game_values.colorids[iRandPlayer as usize], 15)));
+                    gp.get().objectcontainer[1].add(Ptr::new_box(OMO_PipeCoin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), vel, pos, iRandTeam, gp.get().game_values.colorids[iRandPlayer as usize], 15)));
                 } else if self.iBonusType == 3 {
                     self.iNextItemTimer = (RANDOM_INT(5) + 10) as i16;
-                    game().objectcontainer[1].add(Ptr::new_box(OMO_PipeCoin::new(g, Ptr::from_mut(&mut game().rm.spr_coin), vel, pos, -1, 0, 15)));
+                    gp.get().objectcontainer[1].add(Ptr::new_box(OMO_PipeCoin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), vel, pos, -1, 0, 15)));
                 }
             }
         }

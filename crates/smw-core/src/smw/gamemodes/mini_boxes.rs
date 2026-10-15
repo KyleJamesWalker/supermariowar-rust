@@ -42,6 +42,7 @@ impl CGM_Boxes_MiniGame {
     }
 
     fn release_coin(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) {
+        let mut gp = g.ptr();
         if player.score().subscore[0] > 0 {
             player.score().subscore[0] -= 1;
 
@@ -52,7 +53,7 @@ impl CGM_Boxes_MiniGame {
             let vel = Vec2f::new(speed * cosf(angle), speed * sinf(angle));
 
             unsafe {
-                if_sound_on_play(g, &mut game().rm.sfx_coin);
+                if_sound_on_play(g, &mut gp.rm.sfx_coin);
 
                 g.objectcontainer[1].add(Ptr::new_box(MO_Coin::new(Ptr::from_mut(&mut g.rm.spr_coin), vel, pos, 2, -1, 2, 30, false)));
             }

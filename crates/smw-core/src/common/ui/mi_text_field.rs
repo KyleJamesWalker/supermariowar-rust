@@ -283,14 +283,15 @@ impl MI_TextField {
 
     /// Drawn over the menu, away from the field: below it for a field in the top half, else above.
     fn draw_osk(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let top = if (self.m_pos.y as i32) < 240 { 480 - OSK_H - 8 } else { 8 };
         // The dialog image is 512 wide, so the panel is its left and right halves.
         let half = OSK_W / 2;
         unsafe {
-            game().rm.menu_dialog.draw_src(g, OSK_X, top, &SDL_Rect { x: 0, y: 0, w: half, h: OSK_H - 16 });
-            game().rm.menu_dialog.draw_src(g, OSK_X + half, top, &SDL_Rect { x: 512 - half, y: 0, w: half, h: OSK_H - 16 });
-            game().rm.menu_dialog.draw_src(g, OSK_X, top + OSK_H - 16, &SDL_Rect { x: 0, y: 464, w: half, h: 16 });
-            game().rm.menu_dialog.draw_src(g, OSK_X + half, top + OSK_H - 16, &SDL_Rect { x: 512 - half, y: 464, w: half, h: 16 });
+            gp.rm.menu_dialog.draw_src(g, OSK_X, top, &SDL_Rect { x: 0, y: 0, w: half, h: OSK_H - 16 });
+            gp.rm.menu_dialog.draw_src(g, OSK_X + half, top, &SDL_Rect { x: 512 - half, y: 0, w: half, h: OSK_H - 16 });
+            gp.rm.menu_dialog.draw_src(g, OSK_X, top + OSK_H - 16, &SDL_Rect { x: 0, y: 464, w: half, h: 16 });
+            gp.rm.menu_dialog.draw_src(g, OSK_X + half, top + OSK_H - 16, &SDL_Rect { x: 512 - half, y: 464, w: half, h: 16 });
         }
         let mut key = |spr: &Ptr<gfxSprite>, col: i16, row: i16, span: i16, selected: bool, label: &str| {
             let x = OSK_X + 16 + col as i32 * OSK_CELL;

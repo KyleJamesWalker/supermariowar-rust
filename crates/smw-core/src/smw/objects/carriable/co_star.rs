@@ -166,6 +166,7 @@ impl CObjectTrait for CO_Star {
     }
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let x = self.ix as i32 - self.collisionOffsetX as i32;
         let y = self.iy as i32 - self.collisionOffsetY as i32;
         if !self.owner.is_null() {
@@ -186,9 +187,9 @@ impl CObjectTrait for CO_Star {
         unsafe {
             if !self.owner.is_null() && self.owner.iswarping() {
                 let edge: ClipEdge = std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32);
-                game().rm.spr_shinesparkle.draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);
+                gp.rm.spr_shinesparkle.draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);
             } else {
-                game().rm.spr_shinesparkle.draw_src(g, x, y, &src);
+                gp.rm.spr_shinesparkle.draw_src(g, x, y, &src);
             }
         }
     }

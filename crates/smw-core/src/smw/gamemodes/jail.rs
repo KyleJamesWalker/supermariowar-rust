@@ -65,6 +65,7 @@ unsafe fn emplace_poof(g: &mut Game, player: Ptr<CPlayer>) {
 }
 
 pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+        let mut gp = g.ptr();
     if !this.gameover {
         unsafe {
             //Penalize killing your teammates
@@ -117,7 +118,7 @@ pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflic
                             //If they weren't just the one killed and they were jailed, give them a transform cloud
                             if player != other && player.jail().is_active() {
                                 emplace_poof(g, player);
-                                if_sound_on_play(g, &mut game().rm.sfx_transform);
+                                if_sound_on_play(g, &mut gp.rm.sfx_transform);
                             }
 
                             if player.jail().is_active() && player.get_team_id() != iTeamPoint {
@@ -129,7 +130,7 @@ pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflic
 
                         //Give extra bonus score for being on the non-jailed team
                         if numjailedplayers > 1 {
-                            game().score[iTeamPoint as usize].adjust_score(g, 1);
+                            gp.score[iTeamPoint as usize].adjust_score(g, 1);
                         }
                     }
                 }
@@ -198,7 +199,7 @@ pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflic
 
                         //Give extra bonus score for being on the non-jailed team
                         if numjailedplayers > 1 {
-                            game().score[iTeamPoint as usize].adjust_score(g, 1);
+                            gp.score[iTeamPoint as usize].adjust_score(g, 1);
 
                             //Release other teams if a bonus was awarded for locking them up
                             for i in 0..game().players.len() {
@@ -211,7 +212,7 @@ pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflic
                                 //If they weren't just the one killed and they were jailed, give them a transform cloud
                                 if player != other && player.jail().is_active() {
                                     emplace_poof(g, player);
-                                    if_sound_on_play(g, &mut game().rm.sfx_transform);
+                                    if_sound_on_play(g, &mut gp.rm.sfx_transform);
                                 }
 
                                 player.jail().timer = 0;

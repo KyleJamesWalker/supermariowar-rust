@@ -41,6 +41,7 @@ impl CObjectTrait for PU_ExtraHeartPowerup {
         mo_powerup_update(g, self)
     }
     fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         let mut player = player;
         unsafe {
             if self.state > 0 {
@@ -54,7 +55,7 @@ impl CObjectTrait for PU_ExtraHeartPowerup {
                     }
                 }
 
-                if_sound_on_play(g, &mut game().rm.sfx_collectpowerup);
+                if_sound_on_play(g, &mut gp.rm.sfx_collectpowerup);
                 self.dead = true;
             }
         }

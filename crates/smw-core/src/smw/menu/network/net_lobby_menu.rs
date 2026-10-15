@@ -33,6 +33,7 @@ crate::impl_base!(UI_NetLobbyMenu => ui_menu: UI_Menu);
 
 impl UI_NetLobbyMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
+        let mut gp = g.ptr();
         let mut this = Box::<Self>::default();
         unsafe {
             let selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
@@ -42,7 +43,7 @@ impl UI_NetLobbyMenu {
             this.miNetLobbyNewRoomButton.set_code(MENU_CODE_TO_NET_NEW_ROOM_LEVEL_SELECT_MENU);
 
             this.miNetLobbyFilterField = Ptr::new_box(MI_TextField::new(plain, 320 + 20, 160, "Search", 320 - 30, 90));
-            this.miNetLobbyFilterField.set_data(g, &mut game().netplay.roomFilter, NET_MAX_ROOM_NAME_LENGTH as i16);
+            this.miNetLobbyFilterField.set_data(g, &mut gp.netplay.roomFilter, NET_MAX_ROOM_NAME_LENGTH as i16);
 
             this.miNetLobbyRefreshButton = Ptr::new_box(MI_Button::new(g, selectfield, 320 + 20, 200, "Refresh", 320 - 30, TextAlign::CENTER));
             this.miNetLobbyRefreshButton.set_code(MENU_CODE_TO_NET_LOBBY_MENU);
@@ -104,8 +105,9 @@ impl UI_NetLobbyMenu {
     }
 
     pub fn join_in_progress(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
-            game().netplay.client.send_join_room_message(g);
+            gp.netplay.client.send_join_room_message(g);
             g.netplay.operationInProgress = true;
         }
 

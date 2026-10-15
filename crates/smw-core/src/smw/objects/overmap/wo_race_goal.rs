@@ -137,6 +137,7 @@ impl CObjectTrait for OMO_RaceGoal {
     crate::impl_cobject_plumbing!();
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let x = self.ix as i32 - self.collisionOffsetX as i32;
         let y = self.iy as i32 - self.collisionOffsetY as i32;
 
@@ -149,12 +150,12 @@ impl CObjectTrait for OMO_RaceGoal {
                 for k in 0..game().score_cnt {
                     if self.tagged[k as usize] > -1 {
                         let fp = &flagpositions[(g.score_cnt - 2) as usize][k as usize];
-                        game().rm.spr_bonus.draw_src(g, x + fp[0] as i32, y + fp[1] as i32, &SDL_Rect { x: 0, y: self.tagged[k as usize] as i32 * 16, w: 16, h: 16 });
+                        gp.rm.spr_bonus.draw_src(g, x + fp[0] as i32, y + fp[1] as i32, &SDL_Rect { x: 0, y: self.tagged[k as usize] as i32 * 16, w: 16, h: 16 });
                     }
                 }
             }
 
-            game().rm.spr_racetext.draw_src(g, x + 26, y, &SDL_Rect { x: (self.goalID as i32 + 1) * 16, y: 0, w: 16, h: 16 });
+            gp.rm.spr_racetext.draw_src(g, x + 26, y, &SDL_Rect { x: (self.goalID as i32 + 1) * 16, y: 0, w: 16, h: 16 });
         }
     }
 
@@ -204,6 +205,7 @@ impl CObjectTrait for OMO_RaceGoal {
     }
 
     fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         unsafe {
             if g.game_values.gamemode.getgamemode() == game_mode_race && player.tanookisuit.not_statue() {
                 let gamemode: &mut CGM_Race = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Race>().unwrap();
@@ -212,9 +214,9 @@ impl CObjectTrait for OMO_RaceGoal {
                     self.tagged[player.teamID as usize] = player.colorID;
 
                     if self.isfinishline {
-                        if_sound_on_play(g, &mut game().rm.sfx_racesound);
+                        if_sound_on_play(g, &mut gp.rm.sfx_racesound);
                     } else {
-                        if_sound_on_play(g, &mut game().rm.sfx_areatag);
+                        if_sound_on_play(g, &mut gp.rm.sfx_areatag);
                     }
                 }
 

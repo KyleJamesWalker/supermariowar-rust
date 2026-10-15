@@ -429,6 +429,7 @@ impl PlayerCollisions {
 
     //handles a collision between two players (is being called if o1, o2 collide)
     pub fn handle_p2p(&mut self, g: &mut Game, mut o1: Ptr<CPlayer>, mut o2: Ptr<CPlayer>) {
+        let mut gp = g.ptr();
         unsafe {
             //If teams tag each other
             if o1.teamID == o2.teamID {
@@ -463,7 +464,7 @@ impl PlayerCollisions {
                         g.game_values.gamepowerups[o1.globalID as usize] = g.game_values.gamepowerups[o2.globalID as usize];
                         g.game_values.gamepowerups[o2.globalID as usize] = iTempPowerup;
 
-                        if_sound_on_play(g, &mut game().rm.sfx_storepowerup);
+                        if_sound_on_play(g, &mut gp.rm.sfx_storepowerup);
 
                         o1.playerKeys.game_powerup_mut().fPressed = false;
                         o1.playerKeys.game_powerup_mut().fDown = false;

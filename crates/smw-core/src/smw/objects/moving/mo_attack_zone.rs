@@ -117,6 +117,7 @@ pub fn mo_attack_zone_update<T: MO_AttackZoneTrait + ?Sized>(this: &mut T) {
 }
 
 pub fn mo_attack_zone_collide_object<T: MO_AttackZoneTrait + ?Sized>(g: &mut Game, this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) {
+        let mut gp = g.ptr();
     unsafe {
         if this.az().dead {
             return;
@@ -152,7 +153,7 @@ pub fn mo_attack_zone_collide_object<T: MO_AttackZoneTrait + ?Sized>(g: &mut Gam
                 }
             }
 
-            if_sound_on_play(g, &mut game().rm.sfx_kicksound);
+            if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
         }
     }
 }

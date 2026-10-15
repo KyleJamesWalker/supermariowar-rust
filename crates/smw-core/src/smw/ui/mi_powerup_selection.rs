@@ -291,6 +291,7 @@ impl UI_ControlTrait for MI_PowerupSelection {
     }
 
     fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+        let mut gp = g.ptr();
         let ret = self.mMenu.send_input(g, playerInput);
 
         unsafe {
@@ -311,7 +312,7 @@ impl UI_ControlTrait for MI_PowerupSelection {
                 //Update the custom presets
                 for iPowerup in 0..NP {
                     let pos = iPowerupPositionMap[iPowerup] as usize;
-                    game().game_values.allPowerupPresets[game().game_values.poweruppreset as usize][pos] = game().game_values.powerupweights[pos];
+                    gp.get().game_values.allPowerupPresets[gp.get().game_values.poweruppreset as usize][pos] = gp.get().game_values.powerupweights[pos];
                 }
             } else if MENU_CODE_RESTORE_DEFAULT_POWERUP_WEIGHTS == ret || MENU_CODE_CLEAR_POWERUP_WEIGHTS == ret {
                 self.miDialogImage.set_visible(true);
@@ -351,7 +352,7 @@ impl UI_ControlTrait for MI_PowerupSelection {
                         self.miPowerupSlider[iPowerup].set_current_value(iDefaultValue);
                         g.game_values.powerupweights[pos] = iDefaultValue;
 
-                        game().game_values.allPowerupPresets[game().game_values.poweruppreset as usize][pos] = iDefaultValue;
+                        gp.get().game_values.allPowerupPresets[gp.get().game_values.poweruppreset as usize][pos] = iDefaultValue;
                     }
                 } else if MENU_CODE_POWERUP_CLEAR_YES == ret {
                     //restore default powerup weights for powerup selection menu
@@ -359,7 +360,7 @@ impl UI_ControlTrait for MI_PowerupSelection {
                         self.miPowerupSlider[iPowerup].set_current_value(0);
                         g.game_values.powerupweights[iPowerup] = 0;
 
-                        game().game_values.allPowerupPresets[game().game_values.poweruppreset as usize][iPowerup] = 0;
+                        gp.get().game_values.allPowerupPresets[gp.get().game_values.poweruppreset as usize][iPowerup] = 0;
                     }
                 }
             } else if MENU_CODE_NEIGHBOR_UP == ret {

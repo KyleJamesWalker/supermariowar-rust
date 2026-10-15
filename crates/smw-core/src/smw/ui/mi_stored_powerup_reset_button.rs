@@ -34,6 +34,7 @@ impl UI_ControlTrait for MI_StoredPowerupResetButton {
     }
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if !self.m_visible {
             return;
         }
@@ -46,11 +47,11 @@ impl UI_ControlTrait for MI_StoredPowerupResetButton {
 
         unsafe {
             for iPowerup in 0..4i32 {
-                game().rm.spr_selectfield.draw_src(g, x + iWidth - 142 + iPowerup * 30, y + 4, &SDL_Rect { x: 188, y: 88, w: 24, h: 24 });
-                game().rm.spr_storedpowerupsmall.draw_src(g, 
+                gp.rm.spr_selectfield.draw_src(g, x + iWidth - 142 + iPowerup * 30, y + 4, &SDL_Rect { x: 188, y: 88, w: 24, h: 24 });
+                gp.rm.spr_storedpowerupsmall.draw_src(g, 
                     x + iWidth - 138 + iPowerup * 30,
                     y + 8,
-                    &SDL_Rect { x: game().game_values.storedpowerups[iPowerup as usize] as i32 * 16, y: 0, w: 16, h: 16 },
+                    &SDL_Rect { x: gp.game_values.storedpowerups[iPowerup as usize] as i32 * 16, y: 0, w: 16, h: 16 },
                 );
             }
         }

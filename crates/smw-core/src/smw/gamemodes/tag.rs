@@ -141,6 +141,7 @@ impl CGameModeTrait for CGM_Tag {
     }
 
     fn playerkilledplayer(&mut self, g: &mut Game, mut inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+        let mut gp = g.ptr();
         unsafe {
             if inflictor == self.m_tagged {
                 self.m_tagged = other;
@@ -159,7 +160,7 @@ impl CGameModeTrait for CGM_Tag {
                     3,
                     8,
                 ));
-                if_sound_on_play(g, &mut game().rm.sfx_transform);
+                if_sound_on_play(g, &mut gp.rm.sfx_transform);
             }
 
             if !self.gameover {

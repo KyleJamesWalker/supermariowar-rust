@@ -830,9 +830,10 @@ impl EC_Announcement {
     }
 
     pub fn draw(&self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             for iRect in 0..4 {
-                game().rm.menu_dialog.draw_part(g, 
+                gp.rm.menu_dialog.draw_part(g, 
                     self.rDstRect[iRect].x,
                     self.rDstRect[iRect].y,
                     self.rSrcRect[iRect].x,
@@ -1811,6 +1812,7 @@ impl SpotlightManager {
     }
 
     pub fn draw_spotlights(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             // Clear the overlay surface again with black
             crate::common::gfx::blit::fill_rect(g.rm.spr_overlay.get_surface(), null(), 0x0);
@@ -1831,7 +1833,7 @@ impl SpotlightManager {
         }
 
         // Draw the overlay
-        unsafe { game().rm.spr_overlay.draw(g, 0, 0) };
+        unsafe { gp.rm.spr_overlay.draw(g, 0, 0) };
     }
 
     pub fn clear_spotlights(&mut self) {

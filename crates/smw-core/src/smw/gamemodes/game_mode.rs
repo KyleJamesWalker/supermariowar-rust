@@ -81,6 +81,7 @@ pub fn setup_score_board(g: &mut Game, fOrderMatters: bool) {
 }
 
 pub fn setup_score_board_now(g: &mut Game, fOrderMatters: bool) {
+        let mut gp = g.ptr();
     unsafe {
         let mut doneWithScore: [bool; 4] = [false, false, false, false];
 
@@ -141,7 +142,7 @@ pub fn setup_score_board_now(g: &mut Game, fOrderMatters: bool) {
             for iBonus in 0..iNumBonuses {
                 if tourStop.wsbBonuses[iBonus as usize].iWinnerPlace == 0 {
                     let iBonusType: i16 = tourStop.wsbBonuses[iBonus as usize].iBonus;
-                    game().objectcontainer[0].add(Ptr::new_box(PU_TreasureChestBonus::new(g, Ptr::from_mut(&mut game().rm.spr_bonuschest), 1, 0, 30, 30, 1, 1, iBonusType)));
+                    gp.get().objectcontainer[0].add(Ptr::new_box(PU_TreasureChestBonus::new(g, Ptr::from_mut(&mut gp.get().rm.spr_bonuschest), 1, 0, 30, 30, 1, 1, iBonusType)));
                     g.game_values.flags.noexittimer = 0;
                     g.game_values.flags.noexit = false;
                 }
@@ -265,6 +266,7 @@ impl CGameMode {
     }
 
     pub fn playwarningsound(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if self.playedwarningsound {
             return;
         }
@@ -277,7 +279,7 @@ impl CGameMode {
                 g.rm.backgroundmusic[0].stop();
             }
 
-            if_sound_on_play(g, &mut game().rm.sfx_timewarning);
+            if_sound_on_play(g, &mut gp.rm.sfx_timewarning);
         }
     }
 
@@ -417,11 +419,12 @@ pub fn cgamemode_init<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T) {
 }
 
 pub fn cgamemode_think<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T) {
+        let mut gp = g.ptr();
     unsafe {
         if g.netplay.active {
             for k in 0..game().players.len() {
                 if g.netplay.player_disconnected[k] {
-                    game().players[k].spawn_text(g, "Disconnected!");
+                    gp.players[k].spawn_text(g, "Disconnected!");
                 }
             }
         }

@@ -50,18 +50,20 @@ impl GameState for SplashScreenState {
     }
 
     fn init(&mut self, g: &mut Game) -> bool {
+        let mut gp = g.ptr();
         unsafe {
-            game().rm.load_start_graphics(g);
+            gp.rm.load_start_graphics(g);
 
             self.menu_credits = Ptr::new_box(gfxSprite::new());
             *self.menu_credits =
-                ImageLoader::new(convert_path_pack(g, "gfx/packs/menu/splash_credits.png", &game().menugraphicspacklist.current_path().to_string_lossy())).create();
+                ImageLoader::new(convert_path_pack(g, "gfx/packs/menu/splash_credits.png", &gp.menugraphicspacklist.current_path().to_string_lossy())).create();
         }
 
         true
     }
 
     fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             g.game_values.playerInput.clear_pressed_keys(1);
 
@@ -91,7 +93,7 @@ impl GameState for SplashScreenState {
                     }
                 }
 
-                game().game_values.playerInput.update_input(g, &input, 1);
+                gp.game_values.playerInput.update_input(g, &input, 1);
             }
 
             // Not in upstream: a press before load_game_data() would open the menus without their graphics.
@@ -101,7 +103,7 @@ impl GameState for SplashScreenState {
                     if tapped || out.menu_select().fPressed || out.menu_cancel().fPressed || out.menu_random().fPressed {
                         g.blitdest = g.rm.menu_backdrop.get_surface();
                         g.rm.menu_shade.setalpha(App::menuTransparency as u8);
-                        game().rm.menu_shade.draw(g, 0, 0);
+                        gp.rm.menu_shade.draw(g, 0, 0);
                         g.blitdest = g.screen;
 
                         g.eyecandy[2].clean();
@@ -121,13 +123,13 @@ impl GameState for SplashScreenState {
 
             if self.state == 6 || self.state == 7 || self.state == 8 {
                 g.rm.menu_backdrop.setalpha(self.alpha as u8);
-                game().rm.menu_backdrop.draw(g, 0, 0);
+                gp.rm.menu_backdrop.draw(g, 0, 0);
 
                 g.rm.menu_smw.setalpha(self.alpha as u8);
-                game().rm.menu_smw.draw(g, App::screenWidth / 2 - ((game().rm.menu_smw.get_width() as i16 >> 1) as i32), 30); //smw logo
+                gp.rm.menu_smw.draw(g, App::screenWidth / 2 - ((gp.rm.menu_smw.get_width() as i16 >> 1) as i32), 30); //smw logo
 
                 g.rm.menu_version.setalpha(self.alpha as u8);
-                game().rm.menu_version.draw(g, 628 - game().rm.menu_version.get_width(), 10); //smw logo
+                gp.rm.menu_version.draw(g, 628 - gp.rm.menu_version.get_width(), 10); //smw logo
 
                 g.rm.menu_font_large.set_alpha(self.alpha as u8);
 
@@ -154,7 +156,7 @@ impl GameState for SplashScreenState {
             if self.state == 7 {
                 load_game_data(g);
 
-                if_sound_on_play(g, &mut game().rm.sfx_coin);
+                if_sound_on_play(g, &mut gp.rm.sfx_coin);
 
                 self.state += 1;
             }
@@ -164,12 +166,13 @@ impl GameState for SplashScreenState {
 
 /// The splash screen's second-frame load; a segment replay (smw/checkpoint.rs) runs it before restoring a match.
 pub fn load_game_data(g: &mut Game) {
+        let mut gp = g.ptr();
     unsafe {
         // load initial coin sound
         g.rm.backgroundmusic[2] = sfxMusic::from_file(g.musiclist.music(1)).unwrap_or_else(|e| std::panic::panic_any(e));
 
-        game().rm.load_all_graphics(g);
-        game().rm.load_game_sounds(g);
+        gp.rm.load_all_graphics(g);
+        gp.rm.load_game_sounds(g);
 
         if !g.game_values.soundcapable {
             g.game_values.sound = false;
@@ -179,7 +182,7 @@ pub fn load_game_data(g: &mut Game) {
         }
 
         //Read the map filter lists
-        game().maplist.read_filters(g);
-        game().maplist.apply_filters(g, &game().game_values.pfFilters.clone());
+        gp.maplist.read_filters(g);
+        gp.get().maplist.apply_filters(g, &gp.get().game_values.pfFilters.clone());
     }
 }

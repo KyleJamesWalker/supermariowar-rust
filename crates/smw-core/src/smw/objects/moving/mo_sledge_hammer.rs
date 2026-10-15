@@ -70,11 +70,12 @@ impl MO_SledgeHammer {
     }
 
     pub fn explode(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             if self.fSuper {
                 let pos = Vec2s::new((self.ix as i32 + (self.iw as i32 >> 2) - 96) as i16, (self.iy as i32 + (self.ih as i32 >> 2) - 64) as i16);
                 g.objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(Ptr::from_mut(&mut g.rm.spr_explosion), pos, 2, 4, -1, -1, KillStyle::Hammer)));
-                if_sound_on_play(g, &mut game().rm.sfx_bobombsound);
+                if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
             } else {
                 let iCenterX: i16 = (self.ix as i32 + (self.iw as i32 >> 1) - 14) as i16;
                 let iCenterY: i16 = (self.iy as i32 + (self.ih as i32 >> 1) - 14) as i16;
@@ -85,8 +86,8 @@ impl MO_SledgeHammer {
                     let dVel: f32 = RANDOM_INT(5) as f32 / 2.0f32 + 3.0f32;
                     let dVelX: f32 = dVel * cosf(dAngle);
                     let dVelY: f32 = dVel * sinf(dAngle);
-                    game().objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(g, 
-                        Ptr::from_mut(&mut game().rm.spr_hammer),
+                    gp.get().objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(g, 
+                        Ptr::from_mut(&mut gp.get().rm.spr_hammer),
                         Vec2s::new(iCenterX, iCenterY),
                         6,
                         Vec2f::new(dVelX, dVelY),
@@ -102,7 +103,7 @@ impl MO_SledgeHammer {
 
                 player.increase_projectiles_count(3);
 
-                if_sound_on_play(g, &mut game().rm.sfx_cannon);
+                if_sound_on_play(g, &mut gp.rm.sfx_cannon);
             }
         }
     }
@@ -153,13 +154,14 @@ impl CObjectTrait for MO_SledgeHammer {
     }
 
     fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         if !player.is_shielded() {
             self.dead = true;
             unsafe {
                 let x = (self.ix as i32 + (self.iw as i32 >> 1) - 16) as i16;
                 let y = (self.iy as i32 + (self.ih as i32 >> 1) - 16) as i16;
                 g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), x, y, 3, 4));
-                if_sound_on_play(g, &mut game().rm.sfx_hit);
+                if_sound_on_play(g, &mut gp.rm.sfx_hit);
             }
 
             if !player.is_invincible() && !player.shyguy {

@@ -302,6 +302,7 @@ impl MenuState {
     }
 
     fn start_game(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             println!("> StartGame");
 
@@ -309,7 +310,7 @@ impl MenuState {
             //backgroundonly = false;
             //fastmap = false;
 
-            game().game_values.write_config(g);
+            gp.game_values.write_config(g);
 
             //Load skins for players
             println!("Loading player skins...");
@@ -319,7 +320,7 @@ impl MenuState {
                         if k == g.netplay.remotePlayerNumber as usize {
                             // local player uses local skin
                             println!("  player {} -> local", k);
-                            let skin = game().rm.load_full_skin(g, game().game_values.skinids[k], game().game_values.colorids[k]);
+                            let skin = gp.rm.load_full_skin(g, gp.game_values.skinids[k], gp.game_values.colorids[k]);
                             g.rm.spr_player[k] = skin;
                         } else {
                             let path = format!("{}net_skin{}.bmp", get_home_directory(), k);
@@ -330,17 +331,17 @@ impl MenuState {
                                 Ok(skin) => g.rm.spr_player[k] = skin,
                                 Err(_) => {
                                     println!("[warning] Could not load netplay skin of player {}, using default", k);
-                                    let skin = game().rm.load_full_skin(g, game().game_values.skinids[k], game().game_values.colorids[k]);
+                                    let skin = gp.rm.load_full_skin(g, gp.game_values.skinids[k], gp.game_values.colorids[k]);
                                     g.rm.spr_player[k] = skin;
                                 }
                             }
                         }
                     } else if g.game_values.randomskin[k] {
                         g.game_values.skinids[k] = RANDOM_INT(g.skinlist.count() as i32) as i16;
-                        let skin = game().rm.load_full_skin(g, game().game_values.skinids[k], game().game_values.colorids[k]);
+                        let skin = gp.rm.load_full_skin(g, gp.game_values.skinids[k], gp.game_values.colorids[k]);
                         g.rm.spr_player[k] = skin;
                     } else {
-                        let skin = game().rm.load_full_skin(g, game().game_values.skinids[k], game().game_values.colorids[k]);
+                        let skin = gp.rm.load_full_skin(g, gp.game_values.skinids[k], gp.game_values.colorids[k]);
                         g.rm.spr_player[k] = skin;
                     }
                 }
@@ -470,9 +471,10 @@ impl MenuState {
     /// Not in upstream: `exit` without its web early return. The main menu's Exit button uses it, so the web build
     /// ends the session and the page shows its game-over overlay (web_quit_if_done in main.rs).
     fn quit(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             g.game_values.appstate = AppState::Quit;
-            game().game_values.write_config(g);
+            gp.game_values.write_config(g);
         }
     }
 
@@ -493,6 +495,7 @@ impl MenuState {
 
     /// The `MENU_CODE_TO_GAME_SETUP_MENU` branch of `MenuState::update`.
     fn to_game_setup_menu(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             println!("MENU_CODE_TO_GAME_SETUP_MENU");
             //Moves teams to the first arrays in the list and counts the number of teams
@@ -557,7 +560,7 @@ impl MenuState {
                         fErrorReadingTourFile = true;
                     } else {
                         let numGames = g.game_values.tourstops.len() as i16;
-                        self.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(g, game().score_cnt, numGames, Ptr::from_mut(&mut game().rm.spr_tour_markers));
+                        self.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(g, gp.score_cnt, numGames, Ptr::from_mut(&mut gp.rm.spr_tour_markers));
                     }
                 } else if g.game_values.matchtype == MatchType::Tournament {
                     println!("  Match type: Tournament");
@@ -576,17 +579,17 @@ impl MenuState {
                     g.game_values.tournamentnextcontrol = 1; //if round robin is selected, choose the next team next
 
                     let numGames = g.game_values.tournamentgames;
-                    self.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(g, game().score_cnt, numGames, Ptr::from_mut(&mut game().rm.menu_mode_large));
+                    self.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(g, gp.score_cnt, numGames, Ptr::from_mut(&mut gp.rm.menu_mode_large));
                 } else if g.game_values.matchtype == MatchType::World {
                     println!("  Match type: World");
                     let this = Ptr::from_mut(self);
                     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                         let mut this = this;
-                        game().g_worldmap.init(WorldMap::new_path(g, &game().worldlist.at(game().game_values.worldindex as usize).to_string_lossy(), TILESIZE as i16));
+                        gp.get().g_worldmap.init(WorldMap::new_path(g, &gp.get().worldlist.at(gp.get().game_values.worldindex as usize).to_string_lossy(), TILESIZE as i16));
 
-                        this.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(g, game().score_cnt, 0, Ptr::from_mut(&mut game().rm.spr_tour_markers));
+                        this.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(g, gp.score_cnt, 0, Ptr::from_mut(&mut gp.rm.spr_tour_markers));
 
-                        game().g_worldmap.set_initial_powerups(g);
+                        gp.g_worldmap.set_initial_powerups(g);
 
                         //If a player had a stored powerup from another game, add it to their inventory
                         for iPlayer in 0..4i16 {
@@ -798,6 +801,7 @@ impl MenuState {
 
     /// The `game_values.screenfade == 255` + `AppState::StartGame` block of `MenuState::update`.
     fn enter_gameplay(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             if g.game_values.matchtype == MatchType::QuickGame {
                 self.mModeOptionsMenu.set_random_game_mode_settings(g, g.game_values.gamemode.gamemode as i16);
@@ -809,7 +813,7 @@ impl MenuState {
             }
 
             if g.game_values.matchtype == MatchType::World && g.game_values.tourstops[g.game_values.tourstopcurrent].iStageType == 1 {
-                load_match_map(g, &convert_path(game().get(), "maps/special/two52_special_bonushouse.map"));
+                load_match_map(g, &convert_path(gp.get(), "maps/special/two52_special_bonushouse.map"));
                 crate::common::global::load_current_map_background(g);
 
                 if g.game_values.music {
@@ -837,7 +841,7 @@ impl MenuState {
 
                 if g.game_values.gamemode.gamemode == game_mode_pipe_minigame {
                     if !fMiniGameMapFound {
-                        load_match_map(g, &convert_path(game().get(), "maps/special/two52_special_pipe_minigame.map"));
+                        load_match_map(g, &convert_path(gp.get(), "maps/special/two52_special_pipe_minigame.map"));
                         sShortMapName = "minigamepipe".to_string();
                     }
                 } else if g.game_values.gamemode.gamemode == game_mode_boss_minigame {
@@ -845,15 +849,15 @@ impl MenuState {
                         let bossType: Boss = g.game_values.gamemodesettings.boss.bosstype;
                         g.bossgamemode.set_boss_type(bossType);
                         match bossType {
-                            Boss::Hammer => load_match_map(g, &convert_path(game().get(), "maps/special/two52_special_hammerboss_minigame.map")),
-                            Boss::Bomb => load_match_map(g, &convert_path(game().get(), "maps/special/two52_special_bombboss_minigame.map")),
-                            Boss::Fire => load_match_map(g, &convert_path(game().get(), "maps/special/two52_special_fireboss_minigame.map")),
+                            Boss::Hammer => load_match_map(g, &convert_path(gp.get(), "maps/special/two52_special_hammerboss_minigame.map")),
+                            Boss::Bomb => load_match_map(g, &convert_path(gp.get(), "maps/special/two52_special_bombboss_minigame.map")),
+                            Boss::Fire => load_match_map(g, &convert_path(gp.get(), "maps/special/two52_special_fireboss_minigame.map")),
                         }
                         sShortMapName = "minigameboss".to_string();
                     }
                 } else if g.game_values.gamemode.gamemode == game_mode_boxes_minigame {
                     if !fMiniGameMapFound {
-                        load_match_map(g, &convert_path(game().get(), "maps/special/two52_special_boxes_minigame.map"));
+                        load_match_map(g, &convert_path(gp.get(), "maps/special/two52_special_boxes_minigame.map"));
                         sShortMapName = "minigameboxes".to_string();
                     }
                 } else if g.game_values.matchtype == MatchType::QuickGame {
@@ -897,17 +901,19 @@ impl MenuState {
 
 /// The game host rolls a net game's random mode settings, when it plays with "Randomize" on (`NetGameHost::send_sync_messages`).
 pub fn roll_net_game_mode_settings(g: &mut Game) {
-    if let Some(state) = game().ms.as_mut() {
+        let mut gp = g.ptr();
+    if let Some(state) = gp.get().ms.as_mut() {
         if !state.mModeOptionsMenu.is_null() {
-            state.mModeOptionsMenu.set_random_game_mode_settings(g, game().currentgamemode);
+            state.mModeOptionsMenu.set_random_game_mode_settings(g, gp.get().currentgamemode);
         }
     }
 }
 
 /// The current mode's options as the mode options menu names them.
 pub fn describe_net_game_mode_settings(g: &mut Game) -> Vec<String> {
-    match game().ms.as_ref() {
-        Some(state) if !state.mModeOptionsMenu.is_null() => state.mModeOptionsMenu.describe_game_mode_settings(g, game().currentgamemode),
+        let mut gp = g.ptr();
+    match gp.ms.as_ref() {
+        Some(state) if !state.mModeOptionsMenu.is_null() => state.mModeOptionsMenu.describe_game_mode_settings(g, gp.currentgamemode),
         _ => Vec::new(),
     }
 }
@@ -921,17 +927,18 @@ fn load_match_map(g: &mut Game, path: &str) {
 /// The rest of `MenuState::enter_gameplay`, after the map and its music are loaded. A segment replay
 /// (smw/checkpoint.rs) restores the state up to that point and starts the match here.
 pub fn enter_gameplay_tail(g: &mut Game) {
+        let mut gp = g.ptr();
     unsafe {
         g.game_values.appstate = AppState::Game;
         println!("  GS_GAME");
 
-        game().g_map.predrawbackground(g, &game().rm.spr_background, &game().rm.spr_backmap[0]);
-        game().g_map.predrawforeground(g, &game().rm.spr_frontmap[0]);
+        gp.get().g_map.predrawbackground(g, &gp.get().rm.spr_background, &gp.get().rm.spr_backmap[0]);
+        gp.get().g_map.predrawforeground(g, &gp.get().rm.spr_frontmap[0]);
 
-        game().g_map.predrawbackground(g, &game().rm.spr_background, &game().rm.spr_backmap[1]);
-        game().g_map.predrawforeground(g, &game().rm.spr_frontmap[1]);
+        gp.get().g_map.predrawbackground(g, &gp.get().rm.spr_background, &gp.get().rm.spr_backmap[1]);
+        gp.get().g_map.predrawforeground(g, &gp.get().rm.spr_frontmap[1]);
 
-        game().g_map.setup_animated_tiles(g);
+        gp.g_map.setup_animated_tiles(g);
         crate::smw::gs_gameplay::load_map_objects(g, false);
 
         GameStateManager::instance().change_state_to(g, Ptr::from_mut(GameplayState::instance() as &mut dyn GameState));
@@ -941,6 +948,7 @@ pub fn enter_gameplay_tail(g: &mut Game) {
 impl MenuState {
     /// Handles one `MenuCodeEnum` from `mCurrentMenu->SendInput`. Returns true where C++ `return`s from `update`.
     fn handle_menu_code(&mut self, g: &mut Game, mut code: MenuCodeEnum, fGenerateMapThumbs: &mut bool) -> bool {
+        let mut gp = g.ptr();
         unsafe {
             // Shortcut to game start
             if g.netplay.active {
@@ -1101,7 +1109,7 @@ impl MenuState {
             } else if MENU_CODE_SOUND_VOLUME_CHANGED == code {
                 g.game_values.sound = g.game_values.soundvolume > 0;
                 sfx_setsoundvolume(g.game_values.soundvolume as i32);
-                if_sound_on_play(g, &mut game().rm.sfx_coin);
+                if_sound_on_play(g, &mut gp.rm.sfx_coin);
             } else if MENU_CODE_MUSIC_VOLUME_CHANGED == code {
                 sfx_setmusicvolume(g.game_values.musicvolume as i32);
 
@@ -1203,25 +1211,25 @@ impl MenuState {
                     }
                 }
             } else if MENU_CODE_MENU_GRAPHICS_PACK_CHANGED == code {
-                game().rm.load_menu_graphics(g);
+                gp.rm.load_menu_graphics(g);
 
                 g.blitdest = g.rm.menu_backdrop.get_surface();
                 g.rm.menu_shade.setalpha(App::menuTransparency as u8);
-                game().rm.menu_shade.draw(g, 0, 0);
+                gp.rm.menu_shade.draw(g, 0, 0);
                 g.blitdest = g.screen;
             } else if MENU_CODE_WORLD_GRAPHICS_PACK_CHANGED == code {
-                game().rm.load_world_graphics(g);
+                gp.rm.load_world_graphics(g);
             } else if MENU_CODE_GAME_GRAPHICS_PACK_CHANGED == code {
                 let packdir = g.gamegraphicspacklist.current_path().to_string_lossy().into_owned();
                 let png = std::panic::catch_unwind(|| gfx_loadpalette(game().get(), Path::new(&convert_path_pack(game().get(), "gfx/packs/palette.png", &packdir))));
                 if let Err(payload) = png {
                     let Some(err) = payload.downcast_ref::<String>() else { std::panic::resume_unwind(payload) };
                     println!("\nwarning: {} -> falling back to BMP", err);
-                    gfx_loadpalette(g, Path::new(&convert_path_pack(game().get(), "gfx/packs/palette.bmp", &packdir)));
+                    gfx_loadpalette(g, Path::new(&convert_path_pack(gp.get(), "gfx/packs/palette.bmp", &packdir)));
                 }
-                game().rm.load_game_graphics(g);
+                gp.rm.load_game_graphics(g);
             } else if MENU_CODE_SOUND_PACK_CHANGED == code {
-                game().rm.load_game_sounds(g);
+                gp.rm.load_game_sounds(g);
 
                 if !g.game_values.soundcapable {
                     g.game_values.sound = false;
@@ -1273,7 +1281,7 @@ impl MenuState {
                     debug_assert!(g.netplay.active);
                     g.netplay.mapfilepath = self.mNetNewRoomSettingsMenu.get_current_map_path(g);
                     println!("[net] Selected map: {}", g.netplay.mapfilepath);
-                    self.mNetRoomMenu.set_preview_map_path(g, &game().netplay.mapfilepath);
+                    self.mNetRoomMenu.set_preview_map_path(g, &gp.netplay.mapfilepath);
                 } else if g.game_values.matchtype != MatchType::Tour {
                     self.szCurrentMapName = Ptr::from_mut(&mut self.mGameSettingsMenu.miMapField.szMapName);
                 }
@@ -1386,12 +1394,12 @@ impl MenuState {
                 } else if MENU_CODE_TO_NET_LOBBY_MENU == code {
                     // If we are leaving a room
                     if g.netplay.currentRoom.roomID != 0 {
-                        game().netplay.client.send_leave_room_message(g);
+                        gp.netplay.client.send_leave_room_message(g);
                         g.netplay.currentRoom.roomID = 0;
                         g.netplay.joinSuccessful = false;
                         g.netplay.gameRunning = false;
                     }
-                    game().netplay.client.request_room_list(g);
+                    gp.netplay.client.request_room_list(g);
 
                     // Restore layouts
                     self.mNetServersMenu.restore();
@@ -1409,7 +1417,7 @@ impl MenuState {
                 } else if MENU_CODE_NET_CHAT_SEND == code {
                     if !g.netplay.mychatmessage.is_empty() {
                         let message = g.netplay.mychatmessage.clone();
-                        game().netplay.client.send_chat_message(g, &message);
+                        gp.netplay.client.send_chat_message(g, &message);
                     } else {
                         code = MENU_CODE_TO_NET_ROOM_MENU;
                     }
@@ -1529,6 +1537,7 @@ impl GameState for MenuState {
     //---------------------------------------------------------------
 
     fn on_enter_state(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             sdl2::sys::SDL_ShowCursor(sdl2::sys::SDL_ENABLE as i32);
             self.iUnlockMinigameOptionIndex = 0;
@@ -1645,20 +1654,21 @@ impl GameState for MenuState {
             // On return from a game, refresh room list
             if g.netplay.active {
                 if g.netplay.currentRoom.roomID != 0 {
-                    game().netplay.client.send_leave_room_message(g);
+                    gp.netplay.client.send_leave_room_message(g);
                     g.netplay.currentRoom.roomID = 0;
                     g.netplay.joinSuccessful = false;
                     g.netplay.gameRunning = false;
                 }
-                game().netplay.client.request_room_list(g);
+                gp.netplay.client.request_room_list(g);
             }
         }
     }
 
     fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             if g.netplay.active {
-                game().netplay.client.update(g);
+                gp.netplay.client.update(g);
             }
 
             //Reset the keys that were down the last frame
@@ -1702,7 +1712,7 @@ impl GameState for MenuState {
                     }
                 }
 
-                game().game_values.playerInput.update_input(g, &input, 1);
+                gp.game_values.playerInput.update_input(g, &input, 1);
 
                 if let Some((x, y)) = input.event.tap() {
                     if AppState::Menu == g.game_values.appstate {
@@ -1758,7 +1768,7 @@ impl GameState for MenuState {
             */
 
             if AppState::Menu == g.game_values.appstate {
-                let code = self.mCurrentMenu.send_input(g, Ptr::from_mut(&mut game().game_values.playerInput));
+                let code = self.mCurrentMenu.send_input(g, Ptr::from_mut(&mut gp.game_values.playerInput));
 
                 if self.handle_menu_code(g, code, &mut fGenerateMapThumbs) {
                     return;
@@ -1769,7 +1779,7 @@ impl GameState for MenuState {
 
             //Don't draw backdrop for world
             if self.mCurrentMenu != menu(self.mWorldMenu) {
-                game().rm.menu_backdrop.draw(g, 0, 0);
+                gp.rm.menu_backdrop.draw(g, 0, 0);
             } else {
                 crate::common::gfx::blit::fill_rect(g.screen, std::ptr::null(), SDL_MapRGB((*g.screen).format, 0, 0, 0));
             }
@@ -1778,8 +1788,8 @@ impl GameState for MenuState {
             self.mCurrentMenu.draw(g);
 
             if self.iDisplayError > DISPLAY_ERROR_NONE {
-                game().rm.spr_selectfield.draw_src(g, 70, 400, &rect(0, 0, 484, 32));
-                game().rm.spr_selectfield.draw_src(g, 554, 400, &rect(496, 0, 16, 32));
+                gp.rm.spr_selectfield.draw_src(g, 70, 400, &rect(0, 0, 484, 32));
+                gp.rm.spr_selectfield.draw_src(g, 554, 400, &rect(496, 0, 16, 32));
 
                 if self.iDisplayError == DISPLAY_ERROR_READ_TOUR_FILE {
                     g.rm.menu_font_large.draw_centered(320, 405, "Error Reading Tour File!");
@@ -1810,7 +1820,7 @@ impl GameState for MenuState {
 
             if g.game_values.screenfade > 0 {
                 g.rm.menu_shade.setalpha(g.game_values.screenfade as u8);
-                game().rm.menu_shade.draw(g, 0, 0);
+                gp.rm.menu_shade.draw(g, 0, 0);
             }
 
             if g.game_values.screenfade == 255 {
@@ -1837,10 +1847,10 @@ impl GameState for MenuState {
             }
 
             if fGenerateMapThumbs {
-                game().rm.menu_dialog.draw_src(g, 160, 176, &rect(0, 0, 160, 64));
-                game().rm.menu_dialog.draw_src(g, App::screenWidth / 2, 176, &rect(352, 0, 160, 64));
-                game().rm.menu_dialog.draw_src(g, 160, 240, &rect(0, 416, 160, 64));
-                game().rm.menu_dialog.draw_src(g, App::screenWidth / 2, App::screenHeight / 2, &rect(352, 416, 160, 64));
+                gp.rm.menu_dialog.draw_src(g, 160, 176, &rect(0, 0, 160, 64));
+                gp.rm.menu_dialog.draw_src(g, App::screenWidth / 2, 176, &rect(352, 0, 160, 64));
+                gp.rm.menu_dialog.draw_src(g, 160, 240, &rect(0, 416, 160, 64));
+                gp.rm.menu_dialog.draw_src(g, App::screenWidth / 2, App::screenHeight / 2, &rect(352, 416, 160, 64));
                 g.rm.menu_font_large.draw_centered(App::screenWidth / 2, 215, "Refreshing Map Thumbnails");
                 g.rm.menu_font_large.draw_centered(App::screenWidth / 2, 245, "Please Wait...");
             }
@@ -1849,7 +1859,7 @@ impl GameState for MenuState {
                 g.rm.backgroundmusic[2].toggle_pause();
 
                 //Reload map auto filters from live map files (don't use the cache)
-                game().maplist.reload_map_auto_filters(g);
+                gp.maplist.reload_map_auto_filters(g);
 
                 //Write out all the map thumbnails for the map browser and filter editor
                 let mut itr = g.maplist.get_iterator_at(0, false);
@@ -1862,7 +1872,7 @@ impl GameState for MenuState {
                     szThumbnail += ".png";
 
                     g.g_map.load_map(&filename, read_type_preview);
-                    game().g_map.save_thumbnail(g, &convert_path(game().get(), &szThumbnail), false);
+                    gp.get().g_map.save_thumbnail(g, &convert_path(gp.get(), &szThumbnail), false);
 
                     itr += 1;
                 }

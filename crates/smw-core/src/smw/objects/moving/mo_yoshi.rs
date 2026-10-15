@@ -137,6 +137,7 @@ impl CObjectTrait for MO_Yoshi {
     }
 
     fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         unsafe {
             if !player.carriedItem.is_null() && player.carriedItem.get_moving_object_type() == movingobject_egg {
                 let mut egg: Ptr<CO_Egg> = Ptr::from_mut(player.carriedItem.as_any().downcast_mut::<CO_Egg>().unwrap());
@@ -144,14 +145,14 @@ impl CObjectTrait for MO_Yoshi {
                 if egg.color == self.color {
                     if !g.game_values.gamemode.gameover {
                         player.score().adjust_score(g, 1);
-                        game().game_values.gamemode.check_winner(g, player);
+                        gp.game_values.gamemode.check_winner(g, player);
                     }
 
                     self.place_yoshi(g);
 
                     egg.place_egg(g);
 
-                    if_sound_on_play(g, &mut game().rm.sfx_yoshi);
+                    if_sound_on_play(g, &mut gp.rm.sfx_yoshi);
                 }
             }
 
@@ -169,6 +170,7 @@ impl CObjectTrait for MO_Yoshi {
     }
 
     fn collide_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) {
+        let mut gp = g.ptr();
         unsafe {
             if object.get_moving_object_type() == movingobject_egg {
                 let mut egg: Ptr<CO_Egg> = Ptr::from_mut(object.as_any().downcast_mut::<CO_Egg>().unwrap());
@@ -178,13 +180,13 @@ impl CObjectTrait for MO_Yoshi {
 
                     if !g.game_values.gamemode.gameover {
                         player.score().adjust_score(g, 1);
-                        game().game_values.gamemode.check_winner(g, player);
+                        gp.game_values.gamemode.check_winner(g, player);
                     }
 
                     self.place_yoshi(g);
                     egg.place_egg(g);
 
-                    if_sound_on_play(g, &mut game().rm.sfx_yoshi);
+                    if_sound_on_play(g, &mut gp.rm.sfx_yoshi);
                 }
             }
         }

@@ -123,6 +123,7 @@ impl MO_BulletBill {
     }
 
     pub fn hittop(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         unsafe {
             let mut p = player;
             p.set_yi((self.iy as i32 - PH - 1) as i16);
@@ -132,7 +133,7 @@ impl MO_BulletBill {
 
             p.add_killer_award(g, Ptr::null(), KillStyle::BulletBill);
 
-            if_sound_on_play(g, &mut game().rm.sfx_mip);
+            if_sound_on_play(g, &mut gp.rm.sfx_mip);
         }
 
         self.die(g);
@@ -196,6 +197,7 @@ impl CObjectTrait for MO_BulletBill {
     }
 
     fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         if self.dead {
             return false;
         }
@@ -213,7 +215,7 @@ impl CObjectTrait for MO_BulletBill {
         if player.is_invincible() || player.shyguy {
             player.add_killer_award(g, Ptr::null(), KillStyle::BulletBill);
             unsafe {
-                if_sound_on_play(g, &mut game().rm.sfx_kicksound);
+                if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
             }
 
             self.die(g);
@@ -229,6 +231,7 @@ impl CObjectTrait for MO_BulletBill {
     }
 
     fn collide_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) {
+        let mut gp = g.ptr();
         unsafe {
             removeifprojectile(g, object, true, false);
 
@@ -269,7 +272,7 @@ impl CObjectTrait for MO_BulletBill {
                     -1,
                     KillStyle::BulletBill,
                 )));
-                if_sound_on_play(g, &mut game().rm.sfx_bobombsound);
+                if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
             } else if r#type == movingobject_shell
                 || r#type == movingobject_throwblock
                 || r#type == movingobject_throwbox
@@ -290,7 +293,7 @@ impl CObjectTrait for MO_BulletBill {
                     object.die(g);
                 }
 
-                if_sound_on_play(g, &mut game().rm.sfx_kicksound);
+                if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
                 self.die(g);
             }
         }

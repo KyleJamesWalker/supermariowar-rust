@@ -150,6 +150,7 @@ impl UI_ControlTrait for MI_NetworkListScroll {
     fn update(&mut self, g: &mut Game) {}
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if !self.m_visible {
             return;
         }
@@ -158,10 +159,10 @@ impl UI_ControlTrait for MI_NetworkListScroll {
             let (x, y) = (self.m_pos.x as i32, self.m_pos.y as i32);
             let w = self.iWidth as i32;
             let n = self.iNumLines as i32;
-            game().rm.menu_dialog.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: w - 16, h: n * 32 + 32 });
-            game().rm.menu_dialog.draw_src(g, x + w - 16, y, &SDL_Rect { x: 496, y: 0, w: 16, h: n * 32 + 32 });
-            game().rm.menu_dialog.draw_src(g, x, y + n * 32 + 32, &SDL_Rect { x: 0, y: 464, w: w - 16, h: 16 });
-            game().rm.menu_dialog.draw_src(g, x + w - 16, y + n * 32 + 32, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+            gp.rm.menu_dialog.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: w - 16, h: n * 32 + 32 });
+            gp.rm.menu_dialog.draw_src(g, x + w - 16, y, &SDL_Rect { x: 496, y: 0, w: 16, h: n * 32 + 32 });
+            gp.rm.menu_dialog.draw_src(g, x, y + n * 32 + 32, &SDL_Rect { x: 0, y: 464, w: w - 16, h: 16 });
+            gp.rm.menu_dialog.draw_src(g, x + w - 16, y + n * 32 + 32, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
 
             g.rm.menu_font_large.draw_centered(x + (w >> 1), y + 5, &self.sTitle);
 

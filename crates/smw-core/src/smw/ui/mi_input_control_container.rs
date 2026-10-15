@@ -128,6 +128,7 @@ impl UI_ControlTrait for MI_InputControlField {
     }
 
     fn send_input(&mut self, g: &mut Game, _playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+        let mut gp = g.ptr();
         unsafe {
             let mut done = false;
             #[cfg(target_os = "emscripten")]
@@ -145,7 +146,7 @@ impl UI_ControlTrait for MI_InputControlField {
                     return MENU_CODE_NONE;
                 };
 
-                game().game_values.playerInput.update_input(g, &input, 1);
+                gp.game_values.playerInput.update_input(g, &input, 1);
 
                 use InputEvent as E;
                 let ev = &input.event;
@@ -346,6 +347,7 @@ fn key_ptr(g: &mut Game, iPlayerID: i16, iType: usize, iKey: usize) -> *mut SDL_
 impl MI_InputControlContainer {
     //call with x = 94, y = 19
     pub fn new(g: &mut Game, spr_button: Ptr<gfxSprite>, x: i16, y: i16, playerID: i16) -> Self {
+        let mut gp = g.ptr();
         unsafe {
             let iPlayerID = playerID;
             let mut iDevice = g.game_values.playerInput.inputControls[iPlayerID as usize].iDevice;
@@ -396,7 +398,7 @@ impl MI_InputControlContainer {
                 miMenuInputControlFields[iKey] = f;
             }
 
-            let mut miBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut game().rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
+            let mut miBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut gp.rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
             miBackButton.set_code(MENU_CODE_BACK_TO_CONTROLS_MENU);
 
             let mut this = MI_InputControlContainer {

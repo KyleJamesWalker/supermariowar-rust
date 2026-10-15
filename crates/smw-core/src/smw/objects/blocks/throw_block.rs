@@ -171,6 +171,7 @@ impl IO_BlockTrait for B_ThrowBlock {
     }
 
     fn trigger_behavior(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             self.dead = true;
             g.g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
@@ -184,7 +185,7 @@ impl IO_BlockTrait for B_ThrowBlock {
             g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -1.5f32, -4.0f32, 6, 2, 0, srcY, 16, 16));
             g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 1.5f32, -4.0f32, 6, 2, 0, srcY, 16, 16));
 
-            if_sound_on_play(g, &mut game().rm.sfx_breakblock);
+            if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
         }
     }
 }

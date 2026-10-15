@@ -158,11 +158,12 @@ impl IO_BlockTrait for B_BounceBlock {
     }
 
     fn trigger_behavior(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if self.state == 0 {
             self.vely = -VELBLOCKBOUNCE;
             self.state = 1;
             unsafe {
-                if_sound_on_play(g, &mut game().rm.sfx_bump);
+                if_sound_on_play(g, &mut gp.rm.sfx_bump);
             }
         }
     }

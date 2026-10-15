@@ -180,6 +180,7 @@ fn as_moving<T: IO_MovingObjectTrait>(p: Ptr<T>) -> Ptr<dyn IO_MovingObjectTrait
 }
 
 pub fn removeifprojectile(g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>, playsound: bool, forcedead: bool) {
+        let mut gp = g.ptr();
     unsafe {
         if object.dead {
             return;
@@ -218,13 +219,14 @@ pub fn removeifprojectile(g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait
             }
 
             if playsound {
-                if_sound_on_play(g, &mut game().rm.sfx_hit);
+                if_sound_on_play(g, &mut gp.rm.sfx_hit);
             }
         }
     }
 }
 
 pub fn createpowerup(g: &mut Game, iType: i16, pos: Vec2s, side: bool, spawn: bool) -> Ptr<dyn IO_MovingObjectTrait> {
+        let mut gp = g.ptr();
     unsafe {
         crate::smw::harness::note_powerup_spawn(iType, pos.x, pos.y);
         crate::smw::net_random::note_powerup(iType);
@@ -240,7 +242,7 @@ pub fn createpowerup(g: &mut Game, iType: i16, pos: Vec2s, side: bool, spawn: bo
 
         match spawned {
             Spawned::Coin(coin) => {
-                if_sound_on_play(g, &mut game().rm.sfx_coin);
+                if_sound_on_play(g, &mut gp.rm.sfx_coin);
                 if g.objectcontainer[1].add(coin) {
                     return as_moving(coin);
                 }
@@ -323,6 +325,7 @@ pub fn check_secret(g: &mut Game, id: i16) {
 }
 
 pub fn net_check_secret(g: &mut Game, id: i16) {
+        let mut gp = g.ptr();
     unsafe {
         let rx = RANDOM_INT(App::screenWidth) as i16;
         let ry = RANDOM_INT(App::screenHeight) as i16;
@@ -338,7 +341,7 @@ pub fn net_check_secret(g: &mut Game, id: i16) {
 
             if iCountTeams >= 2 && g.game_values.unlocksecret1part2 >= 8 {
                 g.game_values.unlocksecretunlocked[0] = true;
-                if_sound_on_play(g, &mut game().rm.sfx_transform);
+                if_sound_on_play(g, &mut gp.rm.sfx_transform);
 
                 let object = createpowerup(g, SECRET1_POWERUP as i16, randomPos, true, false);
                 check_secret_poof(g, object);
@@ -346,7 +349,7 @@ pub fn net_check_secret(g: &mut Game, id: i16) {
         } else if id == 1 && !g.game_values.unlocksecretunlocked[1] {
             if g.game_values.unlocksecret2part1 && g.game_values.unlocksecret2part2 >= 3 {
                 g.game_values.unlocksecretunlocked[1] = true;
-                if_sound_on_play(g, &mut game().rm.sfx_transform);
+                if_sound_on_play(g, &mut gp.rm.sfx_transform);
 
                 let object = createpowerup(g, SECRET2_POWERUP as i16, randomPos, true, false);
                 check_secret_poof(g, object);
@@ -356,7 +359,7 @@ pub fn net_check_secret(g: &mut Game, id: i16) {
                 //number of songs on thriller + number of released albums (figure it out :))
                 if g.game_values.unlocksecret3part1[iPlayer] >= 9 && g.game_values.unlocksecret3part2[iPlayer] >= 13 {
                     g.game_values.unlocksecretunlocked[2] = true;
-                    if_sound_on_play(g, &mut game().rm.sfx_transform);
+                    if_sound_on_play(g, &mut gp.rm.sfx_transform);
 
                     let object = createpowerup(g, SECRET3_POWERUP as i16, randomPos, true, false);
                     check_secret_poof(g, object);
@@ -364,7 +367,7 @@ pub fn net_check_secret(g: &mut Game, id: i16) {
             }
         } else if id == 3 && !g.game_values.unlocksecretunlocked[3] {
             g.game_values.unlocksecretunlocked[3] = true;
-            if_sound_on_play(g, &mut game().rm.sfx_transform);
+            if_sound_on_play(g, &mut gp.rm.sfx_transform);
 
             let object = createpowerup(g, SECRET4_POWERUP as i16, randomPos, true, false);
             check_secret_poof(g, object);

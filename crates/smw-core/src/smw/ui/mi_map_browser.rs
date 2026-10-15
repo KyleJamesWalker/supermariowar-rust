@@ -88,6 +88,7 @@ impl MI_MapBrowser {
     }
 
     fn load_page(&mut self, g: &mut Game, page: i16, fUseFilters: bool) {
+        let mut gp = g.ptr();
         unsafe {
             for iMap in 0..9i16 {
                 let iIndex: i16 = (iMap as i32 + page as i32 * 9) as i16;
@@ -110,7 +111,7 @@ impl MI_MapBrowser {
                     let filename = g.maplist.node_at(itr).filename.clone();
                     g.g_map.load_map(&filename, read_type_preview);
                     small_delay(); //Sleeps to help the music from skipping
-                    game().g_map.save_thumbnail(g, &sConvertedPath, false);
+                    gp.g_map.save_thumbnail(g, &sConvertedPath, false);
                     small_delay();
                 }
 
@@ -151,6 +152,7 @@ impl UI_ControlTrait for MI_MapBrowser {
     }
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if !self.m_visible {
             return;
         }
@@ -175,7 +177,7 @@ impl UI_ControlTrait for MI_MapBrowser {
                         self.mapSurfaces[i].draw_src_to(&rSrc, g.blitdest, &rDst);
 
                         if self.iType == 0 && self.node_filter(g, i) {
-                            game().rm.menu_map_filter.draw_src(g, rDst.x, rDst.y, &filterSrc);
+                            gp.rm.menu_map_filter.draw_src(g, rDst.x, rDst.y, &filterSrc);
                         }
 
                         g.rm.menu_font_large.draw_chop_right(rDst.x, rDst.y + 120, 165, &self.mapNames[i]);
@@ -187,16 +189,16 @@ impl UI_ControlTrait for MI_MapBrowser {
             rDst.y = self.iSelectedRow as i32 * 150 + 30;
             rDst.x = self.iSelectedCol as i32 * 200 + 40;
 
-            game().rm.menu_dialog.draw_src(g, rDst.x - 16, rDst.y - 16, &SDL_Rect { x: 0, y: 0, w: 176, h: 148 });
-            game().rm.menu_dialog.draw_src(g, rDst.x + 160, rDst.y - 16, &SDL_Rect { x: 496, y: 0, w: 16, h: 148 });
-            game().rm.menu_dialog.draw_src(g, rDst.x - 16, rDst.y + 132, &SDL_Rect { x: 0, y: 464, w: 176, h: 16 });
-            game().rm.menu_dialog.draw_src(g, rDst.x + 160, rDst.y + 132, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+            gp.rm.menu_dialog.draw_src(g, rDst.x - 16, rDst.y - 16, &SDL_Rect { x: 0, y: 0, w: 176, h: 148 });
+            gp.rm.menu_dialog.draw_src(g, rDst.x + 160, rDst.y - 16, &SDL_Rect { x: 496, y: 0, w: 16, h: 148 });
+            gp.rm.menu_dialog.draw_src(g, rDst.x - 16, rDst.y + 132, &SDL_Rect { x: 0, y: 464, w: 176, h: 16 });
+            gp.rm.menu_dialog.draw_src(g, rDst.x + 160, rDst.y + 132, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
 
             let sel = (self.iSelectedRow * 3 + self.iSelectedCol) as usize;
             self.mapSurfaces[sel].draw_src_to(&rSrc, g.blitdest, &rDst);
 
             if self.iType == 0 && self.node_filter(g, sel) {
-                game().rm.menu_map_filter.draw_src(g, rDst.x, rDst.y, &filterSrc);
+                gp.rm.menu_map_filter.draw_src(g, rDst.x, rDst.y, &filterSrc);
             }
 
             g.rm.menu_font_large.draw_chop_right(rDst.x, rDst.y + 120, 165, &self.mapNames[sel]);

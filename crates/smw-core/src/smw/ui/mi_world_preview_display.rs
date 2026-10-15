@@ -122,9 +122,10 @@ impl MI_WorldPreviewDisplay {
     }
 
     pub fn set_world(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let (mut w, mut h): (i16, i16) = (0, 0);
         unsafe {
-            game().g_worldmap.init(WorldMap::new_path(g, &game().worldlist.at(game().game_values.worldindex as usize).to_string_lossy(), PREVIEWTILESIZE as i16));
+            gp.get().g_worldmap.init(WorldMap::new_path(g, &gp.get().worldlist.at(gp.get().game_values.worldindex as usize).to_string_lossy(), PREVIEWTILESIZE as i16));
             g.g_worldmap.get_world_size(&mut w, &mut h);
         }
 
@@ -137,14 +138,15 @@ impl MI_WorldPreviewDisplay {
     }
 
     fn update_map_surface(&mut self, g: &mut Game, fFullRefresh: bool) {
+        let mut gp = g.ptr();
         unsafe {
-            game().g_worldmap.draw_map_to_surface(g, -1, fFullRefresh, self.map_sprite.get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
+            gp.g_worldmap.draw_map_to_surface(g, -1, fFullRefresh, self.map_sprite.get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
         }
 
         unsafe {
             let olddest = g.blitdest;
             g.blitdest = self.map_sprite.get_surface();
-            game().g_worldmap.draw(g, self.iMapGlobalOffsetX, self.iMapGlobalOffsetY, false, false);
+            gp.g_worldmap.draw(g, self.iMapGlobalOffsetX, self.iMapGlobalOffsetY, false, false);
             g.blitdest = olddest;
         }
     }

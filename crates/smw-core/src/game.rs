@@ -128,6 +128,12 @@ pub struct Game {
 }
 
 impl Game {
+    /// A copyable handle to this game, for reaching a field while `self` is also passed on.
+    #[inline(always)]
+    pub fn ptr(&mut self) -> Ptr<Game> {
+        Ptr::from_mut(self)
+    }
+
     pub const fn new() -> Self {
         Game {
             _alias: Aliased::new(),

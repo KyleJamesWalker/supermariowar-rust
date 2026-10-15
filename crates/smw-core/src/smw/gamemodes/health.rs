@@ -44,6 +44,7 @@ impl CGameModeTrait for CGM_Health {
     }
 
     fn playerkilledplayer(&mut self, g: &mut Game, inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+        let mut gp = g.ptr();
         if self.gameover {
             return PlayerKillType::Normal;
         }
@@ -65,7 +66,7 @@ impl CGameModeTrait for CGM_Health {
             return iRet;
         } else {
             unsafe {
-                if_sound_on_play(g, &mut game().rm.sfx_powerdown);
+                if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
             }
             other.shield().reset(g);
         }
@@ -74,6 +75,7 @@ impl CGameModeTrait for CGM_Health {
     }
 
     fn playerkilledself(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+        let mut gp = g.ptr();
         if self.gameover {
             return PlayerKillType::Normal;
         }
@@ -95,7 +97,7 @@ impl CGameModeTrait for CGM_Health {
             return iRet;
         } else {
             unsafe {
-                if_sound_on_play(g, &mut game().rm.sfx_powerdown);
+                if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
             }
             player.shield().reset(g);
         }

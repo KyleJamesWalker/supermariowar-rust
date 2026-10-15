@@ -157,13 +157,14 @@ pub fn mo_carried_object_drop<T: MO_CarriedObjectTrait + ?Sized>(g: &mut Game, t
 }
 
 pub fn mo_carried_object_kick<T: MO_CarriedObjectTrait + ?Sized>(g: &mut Game, this: &mut T) {
+        let mut gp = g.ptr();
     {
         let o = this.carried_mut();
         if !o.owner.is_null() {
             let owner = o.owner;
             o.velx = owner.velx + if owner.is_facing_right(g) { o.dKickX } else { -o.dKickX };
             o.vely = -o.dKickY;
-            unsafe { if_sound_on_play(g, &mut game().rm.sfx_kicksound) };
+            unsafe { if_sound_on_play(g, &mut gp.rm.sfx_kicksound) };
         }
     }
 

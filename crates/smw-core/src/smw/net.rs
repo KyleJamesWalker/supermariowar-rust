@@ -193,11 +193,12 @@ pub fn net_init(g: &mut Game) -> bool {
 }
 
 pub fn net_close(g: &mut Game) {
+        let mut gp = g.ptr();
     net_save_server_list(g);
 
     net_end_session(g);
     unsafe {
-        game().netplay.client.cleanup(g);
+        gp.netplay.client.cleanup(g);
 
         g.networkHandler.deref_handler().cleanup();
     }
@@ -230,6 +231,7 @@ pub fn net_load_server_list(g: &mut Game) {
 ****************************/
 
 pub fn net_start_session(g: &mut Game) -> bool {
+        let mut gp = g.ptr();
     net_end_session(g);
 
     unsafe {
@@ -251,16 +253,17 @@ pub fn net_start_session(g: &mut Game) -> bool {
             g.netplay.remote_input_buffer[p].clear();
         }
 
-        game().netplay.client.start(g)
+        gp.netplay.client.start(g)
     }
 }
 
 pub fn net_end_session(g: &mut Game) {
+        let mut gp = g.ptr();
     unsafe {
         if g.netplay.active {
             println!("[net] Session end.");
 
-            game().netplay.client.stop(g);
+            gp.netplay.client.stop(g);
 
             g.netplay.active = false;
             g.netplay.connectSuccessful = false;
@@ -289,12 +292,13 @@ const PREVIEW_MS: u32 = 2500;
 
 /// Not in the C++: the match settings every client shows while it waits to start (`waiting_to_start`).
 pub fn draw_match_preview(g: &mut Game) {
+        let mut gp = g.ptr();
     unsafe {
-        game().rm.menu_backdrop.draw(g, 0, 0);
-        game().rm.menu_dialog.draw_src(g, 144, 100, &sdl2::sys::SDL_Rect { x: 0, y: 0, w: 336, h: 264 });
-        game().rm.menu_dialog.draw_src(g, 480, 100, &sdl2::sys::SDL_Rect { x: 496, y: 0, w: 16, h: 264 });
-        game().rm.menu_dialog.draw_src(g, 144, 364, &sdl2::sys::SDL_Rect { x: 0, y: 464, w: 336, h: 16 });
-        game().rm.menu_dialog.draw_src(g, 480, 364, &sdl2::sys::SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+        gp.rm.menu_backdrop.draw(g, 0, 0);
+        gp.rm.menu_dialog.draw_src(g, 144, 100, &sdl2::sys::SDL_Rect { x: 0, y: 0, w: 336, h: 264 });
+        gp.rm.menu_dialog.draw_src(g, 480, 100, &sdl2::sys::SDL_Rect { x: 496, y: 0, w: 16, h: 264 });
+        gp.rm.menu_dialog.draw_src(g, 144, 364, &sdl2::sys::SDL_Rect { x: 0, y: 464, w: 336, h: 16 });
+        gp.rm.menu_dialog.draw_src(g, 480, 364, &sdl2::sys::SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
 
         let gm = g.game_values.gamemode;
         let mut lines = vec![gm.szModeName.clone()];
@@ -316,6 +320,7 @@ pub fn draw_match_preview(g: &mut Game) {
 /// Not in the C++: called before every gameplay frame. While true, the frame only polls the network, so no client
 /// plays gameplay frame 1 before every client has loaded the match (`NET_P2G_LOADED`, then the host's `NET_G2P_GO`).
 pub fn waiting_to_start(g: &mut Game) -> bool {
+        let mut gp = g.ptr();
     unsafe {
         if !g.netplay.active || !g.netplay.start_waiting {
             return false;
@@ -328,15 +333,15 @@ pub fn waiting_to_start(g: &mut Game) -> bool {
                 g.netplay.client.send_to(peer, MessageHeader::new(NET_P2G_LOADED).as_bytes(), false);
             }
         }
-        game().netplay.client.update(g);
+        gp.netplay.client.update(g);
         if g.netplay.theHostIsMe && g.netplay.start_waiting {
-            game().netplay.client.local_gamehost.start_if_everyone_loaded(g);
+            gp.netplay.client.local_gamehost.start_if_everyone_loaded(g);
         }
         let limit = if g.netplay.theHostIsMe { START_TIMEOUT_MS } else { 2 * START_TIMEOUT_MS };
         if g.netplay.start_waiting && now.wrapping_sub(g.netplay.start_waited_since) > limit {
             println!("[net] Not every client loaded the match in time; starting anyway.");
             if g.netplay.theHostIsMe {
-                game().netplay.client.local_gamehost.send_go_message(g);
+                gp.netplay.client.local_gamehost.send_go_message(g);
             }
             g.netplay.start_waiting = false;
         }
@@ -408,12 +413,14 @@ impl NetClient {
     }
 
     pub fn start(&mut self, g: &mut Game) -> bool {
-        net_record::value_bool(g, "client_restart", || unsafe { game().networkHandler.deref_handler().client_restart() })
+        let mut gp = g.ptr();
+        net_record::value_bool(g, "client_restart", || unsafe { gp.networkHandler.deref_handler().client_restart() })
     }
 
     pub fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         self.local_gamehost.update(g);
-        net_record::listen(g, Side::Client, self, |handler| unsafe { game().networkHandler.deref_handler().client_listen(handler) });
+        net_record::listen(g, Side::Client, self, |handler| unsafe { gp.networkHandler.deref_handler().client_listen(handler) });
     }
 
     pub fn stop(&mut self, g: &mut Game) {
@@ -715,6 +722,7 @@ impl NetClient {
     }
 
     fn handle_skin_change_message(&mut self, g: &mut Game, data: &[u8]) {
+        let mut gp = g.ptr();
         if data.len() <= std::mem::size_of::<MessageHeader>() + 5 || data.len() > 20000 {
             println!("[error] Corrupt skin arrived");
             return;
@@ -739,7 +747,7 @@ impl NetClient {
         unsafe {
             if !g.rm.load_menu_skin_path(playerID as i16, Path::new(&path), playerID as i16, false) {
                 println!("[warning] Could not load netplay skin of player {}, using default", playerID);
-                game().rm.load_menu_skin(g, playerID as i16, game().game_values.skinids[playerID as usize], playerID as i16, false);
+                gp.get().rm.load_menu_skin(g, playerID as i16, gp.get().game_values.skinids[playerID as usize], playerID as i16, false);
             }
         }
     }
@@ -1004,16 +1012,18 @@ impl NetClient {
     ****************************/
 
     fn connect_lobby(&mut self, g: &mut Game, hostname: &str, port: u16) -> bool {
+        let mut gp = g.ptr();
         unsafe {
             g.netplay.connectSuccessful = false;
-            net_record::value_bool(g, "connect_lobby", || game().networkHandler.deref_handler().connect_to_lobby_server(hostname, port))
+            net_record::value_bool(g, "connect_lobby", || gp.networkHandler.deref_handler().connect_to_lobby_server(hostname, port))
         }
     }
 
     fn connect_game_host(&mut self, g: &mut Game, hostname: &str, port: u16) -> bool {
+        let mut gp = g.ptr();
         unsafe {
             g.netplay.connectSuccessful = false;
-            net_record::value_bool(g, "connect_game_host", || game().networkHandler.deref_handler().connect_to_foreign_game_host(hostname, port))
+            net_record::value_bool(g, "connect_game_host", || gp.networkHandler.deref_handler().connect_to_foreign_game_host(hostname, port))
         }
     }
 
@@ -1280,13 +1290,14 @@ impl NetGameHost {
     }
 
     pub fn start(&mut self, g: &mut Game, lobbyserver: Ptr<dyn NetPeer>) -> bool {
+        let mut gp = g.ptr();
         if self.active {
             return true;
         }
 
         self.foreign_lobbyserver = lobbyserver;
 
-        if !net_record::value_bool(g, "gamehost_restart", || unsafe { game().networkHandler.deref_handler().gamehost_restart() }) {
+        if !net_record::value_bool(g, "gamehost_restart", || unsafe { gp.networkHandler.deref_handler().gamehost_restart() }) {
             return false;
         }
 
@@ -1296,8 +1307,9 @@ impl NetGameHost {
     }
 
     pub fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if self.active {
-            net_record::listen(g, Side::Host, self, |handler| unsafe { game().networkHandler.deref_handler().gamehost_listen(handler) });
+            net_record::listen(g, Side::Host, self, |handler| unsafe { gp.networkHandler.deref_handler().gamehost_listen(handler) });
         }
     }
 
@@ -1336,6 +1348,7 @@ impl NetGameHost {
     }
 
     fn send_sync_messages(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         println!("[net] Prepare launching the game...");
 
         RandomNumberGenerator::generator().reseed(net_record::value_u32(g, "time", || crate::smw::harness::net_seed().unwrap_or(unsafe { libc_time() } as u32)));
@@ -1363,7 +1376,7 @@ impl NetGameHost {
         self.send_message_to_my_peers(pkg.as_bytes());
 
         unsafe {
-            game().netplay.client.handle_start_sync_message(g, pkg.as_bytes());
+            gp.netplay.client.handle_start_sync_message(g, pkg.as_bytes());
             g.netplay.client.set_as_last_received_message(pkg.header.packageType);
         }
     }
@@ -1420,17 +1433,19 @@ impl NetGameHost {
     }
 
     fn send_start_game_message(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let pkg = gpkgs::StartGame::new();
         self.foreign_lobbyserver.send_reliable(pkg.as_bytes());
         self.send_message_to_my_peers(pkg.as_bytes());
 
         unsafe {
-            game().netplay.client.handle_game_start_message(g);
+            gp.netplay.client.handle_game_start_message(g);
             g.netplay.client.set_as_last_received_message(pkg.header.packageType);
         }
     }
 
     pub fn send_local_input(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             if g.netplay.local_input_buffer.is_empty() {
                 return;
@@ -1447,7 +1462,7 @@ impl NetGameHost {
                 }
             }
 
-            game().netplay.client.handle_remote_input(g, pkg.as_bytes());
+            gp.netplay.client.handle_remote_input(g, pkg.as_bytes());
             g.netplay.client.set_as_last_received_message(pkg.header.packageType);
         }
     }
@@ -1461,6 +1476,7 @@ impl NetGameHost {
     }
 
     fn send_current_game_state_now(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let mut pkg = gpkgs::GameState::new();
 
         unsafe {
@@ -1477,7 +1493,7 @@ impl NetGameHost {
                 }
             }
 
-            game().netplay.client.handle_remote_game_state(g, pkg.as_bytes());
+            gp.netplay.client.handle_remote_game_state(g, pkg.as_bytes());
             g.netplay.client.set_as_last_received_message(pkg.header.packageType);
         }
     }
@@ -1533,6 +1549,7 @@ impl NetGameHost {
     }
 
     fn handle_powerup_request(&mut self, g: &mut Game, player: &dyn NetPeer, _data: &[u8]) {
+        let mut gp = g.ptr();
         let mut playerID: u8 = 0xFF;
         for c in 0..self.expected_client_count as usize {
             if player.same_peer(&*self.clients[c]) {
@@ -1563,7 +1580,7 @@ impl NetGameHost {
                     self.clients[c].send_reliable(pkg.as_bytes());
                 }
             }
-            game().netplay.client.handle_powerup_start(g, pkg.as_bytes());
+            gp.netplay.client.handle_powerup_start(g, pkg.as_bytes());
             g.netplay.client.set_as_last_received_message(pkg.header.packageType);
         }
     }

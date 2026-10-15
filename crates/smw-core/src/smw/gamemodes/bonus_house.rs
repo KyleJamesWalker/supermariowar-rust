@@ -103,18 +103,19 @@ impl CGameModeTrait for CGM_Bonus {
     }
 
     fn draw_background(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             //Draw Toad
-            game().rm.spr_worldbonushouse.draw_src(g, 544, 256, &SDL_Rect { x: if game().players[0].left_x() > 544 { 224 } else { 192 }, y: 0, w: 32, h: 64 });
+            gp.rm.spr_worldbonushouse.draw_src(g, 544, 256, &SDL_Rect { x: if gp.players[0].left_x() > 544 { 224 } else { 192 }, y: 0, w: 32, h: 64 });
 
             //Draw Bonus House Title
-            game().rm.menu_plain_field.draw_src(g, 0, 0, &SDL_Rect { x: 0, y: 0, w: App::screenWidth / 2, h: 32 });
-            game().rm.menu_plain_field.draw_src(g, App::screenWidth / 2, 0, &SDL_Rect { x: 192, y: 0, w: App::screenWidth / 2, h: 32 });
+            gp.rm.menu_plain_field.draw_src(g, 0, 0, &SDL_Rect { x: 0, y: 0, w: App::screenWidth / 2, h: 32 });
+            gp.rm.menu_plain_field.draw_src(g, App::screenWidth / 2, 0, &SDL_Rect { x: 192, y: 0, w: App::screenWidth / 2, h: 32 });
             g.rm.game_font_large.draw_centered(App::screenWidth / 2, 5, &self.tsTourStop.szName);
 
             //Draw Bonus House Text
             if self.tsTourStop.iBonusTextLines > 0 {
-                game().rm.spr_worldbonushouse.draw_src(g, 128, 128, &SDL_Rect { x: 0, y: 64, w: 384, h: 128 });
+                gp.rm.spr_worldbonushouse.draw_src(g, 128, 128, &SDL_Rect { x: 0, y: 64, w: 384, h: 128 });
 
                 for iTextLine in 0..self.tsTourStop.iBonusTextLines {
                     g.rm.game_font_large.draw_chop_centered(App::screenWidth / 2, 132 + 24 * iTextLine as i32, 372, &self.tsTourStop.szBonusText[iTextLine as usize]);

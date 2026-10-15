@@ -180,7 +180,8 @@ pub fn get_rgb(surf: *mut SDL_Surface, x: i32, y: i32) -> RGB {
 }
 
 pub fn gfx_init(g: &mut Game, w: i32, h: i32, fullscreen: bool) -> bool {
-    unsafe { (*game().gfx).init(g, fullscreen) }
+        let mut gp = g.ptr();
+    unsafe { (*gp.gfx).init(g, fullscreen) }
 }
 
 pub fn gfx_changefullscreen(g: &mut Game, fullscreen: bool) {
@@ -212,7 +213,8 @@ pub fn gfx_show_catched_error(g: &mut Game, error: &str) {
 }
 
 pub fn gfx_take_screenshot(g: &mut Game) {
-    unsafe { game().gfx.take_screenshot(g) }
+        let mut gp = g.ptr();
+    unsafe { gp.gfx.take_screenshot(g) }
 }
 
 pub fn gfx_close() {}

@@ -42,6 +42,7 @@ impl CGM_ShyGuyTag {
     }
 
     pub fn set_shy_guy(&mut self, g: &mut Game, iTeam: i16) {
+        let mut gp = g.ptr();
         unsafe {
             for &player in g.players.iter() {
                 let mut player = player;
@@ -67,13 +68,14 @@ impl CGM_ShyGuyTag {
                 }
             }
 
-            if_sound_on_play(g, &mut game().rm.sfx_transform);
+            if_sound_on_play(g, &mut gp.rm.sfx_transform);
         }
     }
 
     fn free_shy_guys(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
-            if_sound_on_play(g, &mut game().rm.sfx_thunder);
+            if_sound_on_play(g, &mut gp.rm.sfx_thunder);
 
             for &player in g.players.iter() {
                 let mut player = player;
@@ -134,6 +136,7 @@ impl CGameModeTrait for CGM_ShyGuyTag {
     }
 
     fn think(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if self.gameover {
             self.displayplayertext(g);
             return;
@@ -149,7 +152,7 @@ impl CGameModeTrait for CGM_ShyGuyTag {
                     if g.game_values.gamemodesettings.shyguytag.freetime > 0 {
                         self.fRunClock = true;
                         self.gameClock.set_time(g.game_values.gamemodesettings.shyguytag.freetime);
-                        if_sound_on_play(g, &mut game().rm.sfx_starwarning);
+                        if_sound_on_play(g, &mut gp.rm.sfx_starwarning);
                     } else {
                         self.free_shy_guys(g);
                     }
@@ -162,7 +165,7 @@ impl CGameModeTrait for CGM_ShyGuyTag {
                     self.fRunClock = false;
                     self.free_shy_guys(g);
                 } else if iTime > 0 {
-                    if_sound_on_play(g, &mut game().rm.sfx_starwarning);
+                    if_sound_on_play(g, &mut gp.rm.sfx_starwarning);
                 }
             }
 
@@ -174,7 +177,7 @@ impl CGameModeTrait for CGM_ShyGuyTag {
 
                     let mut pCheckWinner: Ptr<CPlayer> = Ptr::null();
                     let mut fAlreadyScored: [bool; 4] = [false, false, false, false];
-                    for &player in game().players.iter() {
+                    for &player in gp.players.iter() {
                         let mut player = player;
                         if !player.shyguy {
                             let iTeam: i16 = player.get_team_id();

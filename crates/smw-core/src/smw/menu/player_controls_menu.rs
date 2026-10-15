@@ -21,10 +21,11 @@ crate::impl_base!(UI_PlayerControlsMenu => ui_menu: UI_Menu);
 
 impl UI_PlayerControlsMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
+        let mut gp = g.ptr();
         let mut this = Box::<Self>::default();
 
         unsafe {
-            this.miInputContainer = Ptr::new_box(MI_InputControlContainer::new(g, Ptr::from_mut(&mut game().rm.menu_plain_field), 94, 10, 0));
+            this.miInputContainer = Ptr::new_box(MI_InputControlContainer::new(g, Ptr::from_mut(&mut gp.rm.menu_plain_field), 94, 10, 0));
         }
         this.miInputContainer.set_auto_modify(true);
 

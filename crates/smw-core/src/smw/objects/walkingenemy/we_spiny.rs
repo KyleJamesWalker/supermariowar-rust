@@ -91,6 +91,7 @@ impl MO_WalkingEnemyTrait for MO_Spiny {
     crate::impl_walking_enemy_plumbing!();
 
     fn hittop_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         let mut player = player;
         // Kill player here
         if player.isready() && !player.is_shielded() && !player.is_invincible() && !player.kuriboshoe.is_on() {
@@ -115,7 +116,7 @@ impl MO_WalkingEnemyTrait for MO_Spiny {
 
                 self.drop_shell(g, false, false);
 
-                if_sound_on_play(g, &mut game().rm.sfx_mip);
+                if_sound_on_play(g, &mut gp.rm.sfx_mip);
             }
         }
 

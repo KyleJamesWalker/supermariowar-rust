@@ -152,11 +152,12 @@ impl CObjectTrait for MO_FrenzyCard {
     }
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         io_moving_object_draw(g, self);
 
         // Draw sparkles
         unsafe {
-            game().rm.spr_shinesparkle.draw_src(g, 
+            gp.rm.spr_shinesparkle.draw_src(g, 
                 self.ix as i32 - self.collisionOffsetX as i32,
                 self.iy as i32 - self.collisionOffsetY as i32,
                 &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
