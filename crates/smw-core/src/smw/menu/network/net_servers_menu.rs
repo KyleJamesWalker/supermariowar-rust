@@ -9,6 +9,7 @@ use crate::common::uicontrol::{ctl_ptr, TextAlign};
 use crate::common::uimenu::UI_Menu;
 use crate::common_netplay::protocol_definitions::NET_MAX_PLAYER_NAME_LENGTH;
 use crate::globals::Ptr;
+use crate::smw::net::net_save_server_list;
 use crate::smw::ui::network_list_scroll::MI_NetworkListScroll;
 
 #[derive(Default)]
@@ -159,6 +160,7 @@ impl UI_NetServersMenu {
             game().netplay.client.send_connect_request_to_selected_server();
             game().netplay.operationInProgress = true;
         }
+        net_save_server_list();
 
         self.miNetServersConnectingDialogImage.set_visible(true);
         self.miNetServersConnectingDialogText.set_visible(true);
