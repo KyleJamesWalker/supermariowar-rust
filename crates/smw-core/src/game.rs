@@ -20,6 +20,7 @@ use crate::smw::net_random::NetRandomState;
 use crate::smw::object_container::CObjectContainer;
 use crate::smw::player::CPlayer;
 use crate::smw::world::WorldMap;
+use crate::worldeditor::worldeditor::WorldEditorState;
 
 pub struct Game {
     pub game_values: Global<CGameValues>,
@@ -76,6 +77,7 @@ pub struct Game {
     pub text_field_opened_by_key: bool,
     pub g_worldmap: Global<WorldMap>,
     pub level_editor: LevelEditorState,
+    pub world_editor: WorldEditorState,
 }
 
 impl Game {
@@ -129,6 +131,7 @@ impl Game {
             text_field_opened_by_key: false,
             g_worldmap: Global::uninit(),
             level_editor: LevelEditorState::new(),
+            world_editor: WorldEditorState::new(),
         }
     }
 }
