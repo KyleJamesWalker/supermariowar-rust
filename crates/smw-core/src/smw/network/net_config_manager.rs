@@ -2,7 +2,7 @@
 
 use crate::game::game;
 use crate::common::path::get_home_directory;
-use crate::common_netplay::protocol_definitions::NET_MAX_PLAYER_NAME_LENGTH;
+use crate::common_netplay::protocol_definitions::{NET_MAX_PLAYER_NAME_LENGTH, NET_MAX_ROOM_NAME_LENGTH};
 use crate::smw::net::{ServerAddress};
 
 const CONFIG_FILENAME: &str = "servers.toml";
@@ -29,7 +29,7 @@ fn toml_basic_string(s: &str) -> String {
 
 /// toml11 v4 `toml::format` of the `{player_name, servers}` table. libc++'s unordered_map puts
 /// `servers` first; an array goes multiline once its approximate inline length passes 60.
-fn format_config(player_name: &str, servers: &[String]) -> String {
+fn format_config(player_name: &str, room_name: &str, servers: &[String]) -> String {
     let mut approx_len = 0;
     let mut multiline = false;
     for server in servers {
@@ -51,7 +51,8 @@ fn format_config(player_name: &str, servers: &[String]) -> String {
         format!("[{}]", servers.iter().map(|s| toml_basic_string(s)).collect::<Vec<_>>().join(", "))
     };
 
-    format!("servers = {}\nplayer_name = {}\n\n", array, toml_basic_string(player_name))
+    let room = if room_name.is_empty() { String::new() } else { format!("room_name = {}\n", toml_basic_string(room_name)) };
+    format!("servers = {}\nplayer_name = {}\n{}\n", array, toml_basic_string(player_name), room)
 }
 
 fn load_file() -> Option<toml::Table> {
@@ -93,6 +94,16 @@ fn read_playername(config: &toml::Table) {
 
     if let Err(error) = result {
         println!("[net][warning] {}: {}", CONFIG_FILENAME, error);
+    }
+}
+
+fn read_roomname(config: &toml::Table) {
+    let Some(room_name) = config.get("room_name").and_then(|v| v.as_str()) else {
+        return;
+    };
+
+    if (3..NET_MAX_ROOM_NAME_LENGTH).contains(&room_name.len()) {
+        unsafe { game().netplay.newroom_name = room_name.to_string() };
     }
 }
 
@@ -141,7 +152,7 @@ impl NetConfigManager {
             }
 
             let servers: Vec<String> = game().netplay.savedServers.iter().map(|s| s.hostname.clone()).collect();
-            let content = format_config(&game().netplay.myPlayerName, &servers);
+            let content = format_config(&game().netplay.myPlayerName, &game().netplay.newroom_name, &servers);
 
             if std::fs::write(get_home_directory() + CONFIG_FILENAME, content).is_err() {
                 println!("[net][error] Could not save network settings");
@@ -155,6 +166,7 @@ impl NetConfigManager {
         };
 
         read_playername(&config);
+        read_roomname(&config);
         read_servers(&config);
     }
 }
@@ -167,16 +179,21 @@ mod tests {
     #[test]
     fn format_matches_toml11() {
         let s = |v: &[&str]| v.iter().map(|x| x.to_string()).collect::<Vec<_>>();
-        assert_eq!(format_config("Player", &[]), "servers = []\nplayer_name = \"Player\"\n\n");
+        assert_eq!(format_config("Player", "", &[]), "servers = []\nplayer_name = \"Player\"\n\n");
         assert_eq!(
-            format_config("Player", &s(&["127.0.0.1", "smw.example.org"])),
+            format_config("Player", "", &s(&["127.0.0.1", "smw.example.org"])),
             "servers = [\"127.0.0.1\", \"smw.example.org\"]\nplayer_name = \"Player\"\n\n"
         );
-        assert_eq!(format_config("Pl\"a\\y\ter", &[]), "servers = []\nplayer_name = \"Pl\\\"a\\\\y\\ter\"\n\n");
-        assert_eq!(format_config("h\u{e9}\u{7f}\u{1}", &[]), "servers = []\nplayer_name = \"h\u{e9}\\u007F\\u0001\"\n\n");
+        assert_eq!(format_config("Pl\"a\\y\ter", "", &[]), "servers = []\nplayer_name = \"Pl\\\"a\\\\y\\ter\"\n\n");
+        assert_eq!(format_config("h\u{e9}\u{7f}\u{1}", "", &[]), "servers = []\nplayer_name = \"h\u{e9}\\u007F\\u0001\"\n\n");
         assert_eq!(
-            format_config("P", &s(&["123456789012", "123456789012", "123456789012", "123456789012", "12345678901"])),
+            format_config("P", "", &s(&["123456789012", "123456789012", "123456789012", "123456789012", "12345678901"])),
             "servers = [\n    \"123456789012\",\n    \"123456789012\",\n    \"123456789012\",\n    \"123456789012\",\n    \"12345678901\",\n]\nplayer_name = \"P\"\n\n"
         );
+    }
+
+    #[test]
+    fn room_name_follows_player_name() {
+        assert_eq!(format_config("Player", "My Room", &[]), "servers = []\nplayer_name = \"Player\"\nroom_name = \"My Room\"\n\n");
     }
 }

@@ -47,7 +47,7 @@ Scope order: core game + menus + sound, then netplay, level editor, world editor
 | leveleditor/leveleditor.cpp | leveleditor/leveleditor.rs, bin/leveleditor.rs | done | `tools/editor_parity.sh`: 6 scripted sessions (tiles, blocks/items/warps/no-spawn/eyecandy, platforms, hazards/move/copy/mode items/Save As/Find, tile and animated tile types/backgrounds/clear, smoke) match C++ dump, screenshots and saved .map/.tls files byte for byte |
 | (harness) common/EditorHarness.cpp | common/editor_harness.rs | done | shared by both editors; see EDITOR_REPLAY.md |
 | common/GameModeSettingsSerialization.cpp | common/game_mode_settings_serialization.rs | done | tour-stop settings in every replay that loads a tour or world |
-| smw/network/NetConfigManager.cpp (servers.toml) | smw/network/net_config_manager.rs | done | `tools/ref/net_config_interop.sh`: 300 fuzzed files written byte-identically to toml11 |
+| smw/network/NetConfigManager.cpp (servers.toml) | smw/network/net_config_manager.rs | done | `tools/ref/net_config_interop.sh`: 300 fuzzed files written byte-identically to toml11. Adds `room_name` (last hosted room), written only when set |
 
 ## Known C++ issues
 
