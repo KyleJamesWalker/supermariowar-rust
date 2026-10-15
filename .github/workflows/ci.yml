@@ -539,9 +539,41 @@ jobs:
     secrets: inherit
 
   web:
+    name: web (${{ matrix.name }})
     needs: build-web
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: clip
+            native: true
+            timeout: 15
+            run: node tools/web_clip_test.mjs "$RUNNER_TEMP/web-clip"
+          - name: ui
+            timeout: 10
+            run: node tools/web_ui_test.mjs "$RUNNER_TEMP/web-ui"
+          - name: text entry
+            native: true
+            timeout: 6
+            run: node tools/web_text_entry_test.mjs "$RUNNER_TEMP/web-text-entry"
+          - name: netplay 1
+            native: true
+            timeout: 30
+            games: net_game net_game_blocks net_game_stomp net_game_coins
+            run: node tools/web_netplay_test.mjs "$RUNNER_TEMP/web-netplay"
+          - name: netplay 2
+            native: true
+            timeout: 30
+            games: net_game_classic net_game_frenzy net_game_stompkill net_game_stompkill_powerup
+            run: node tools/web_netplay_test.mjs "$RUNNER_TEMP/web-netplay"
+          - name: replays
+            timeout: 20
+            replays: true
+            run: |
+              printf '%s\0' tools/replays/*.txt | xargs -0 -n 1 -P 4 bash -c \
+                'timeout 5m node tools/web_replay.mjs "$0" "$RUNNER_TEMP/web-replays/$(basename "$0" .txt)" > /dev/null 2>&1 || echo "::warning::web_replay $0 failed"'
     runs-on: ubuntu-24.04
-    timeout-minutes: 115
+    timeout-minutes: 45
     env:
       SDL_RENDER_DRIVER: software
       CHROME: /usr/bin/google-chrome
@@ -549,9 +581,15 @@ jobs:
       - uses: actions/checkout@v7
         with:
           submodules: recursive
-      - uses: ./.github/actions/setup-native
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - if: matrix.native
+        uses: ./.github/actions/setup-native
+      - if: matrix.native
+        uses: dtolnay/rust-toolchain@stable
+      - if: matrix.native
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: web
+          save-if: ${{ matrix.name == 'clip' }}
 
       - uses: actions/download-artifact@v8
         with:
@@ -565,6 +603,7 @@ jobs:
           mv "$RUNNER_TEMP/SuperMarioWar-web" dist/web
 
       - name: Build
+        if: matrix.native
         run: |
           cargo build --release --locked --bin smw
           cargo build --release --locked --package smw_relay
@@ -572,36 +611,19 @@ jobs:
       - name: Allow Chrome's sandbox
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
-      - name: Web clip test
-        run: timeout 15m node tools/web_clip_test.mjs "$RUNNER_TEMP/web-clip"
-
-      - name: Web UI test
-        if: always()
-        run: timeout 10m node tools/web_ui_test.mjs "$RUNNER_TEMP/web-ui"
-
-      - name: Web text entry test
-        if: always()
-        run: timeout 6m node tools/web_text_entry_test.mjs "$RUNNER_TEMP/web-text-entry"
-
-      - name: Web netplay test
-        if: always()
+      - name: Test
+        continue-on-error: ${{ matrix.replays == true }}
+        timeout-minutes: ${{ matrix.timeout }}
         env:
-          NET_GAMES: net_game net_game_blocks net_game_stomp net_game_coins net_game_classic net_game_frenzy net_game_stompkill net_game_stompkill_powerup
-        run: timeout 60m node tools/web_netplay_test.mjs "$RUNNER_TEMP/web-netplay"
-
-      - name: Web replays
-        if: always()
-        continue-on-error: true
-        run: |
-          printf '%s\0' tools/replays/*.txt | timeout 20m xargs -0 -n 1 -P 4 bash -c \
-            'timeout 5m node tools/web_replay.mjs "$0" "$RUNNER_TEMP/web-replays/$(basename "$0" .txt)" > /dev/null 2>&1 || echo "::warning::web_replay $0 failed"'
+          NET_GAMES: ${{ matrix.games }}
+        run: ${{ matrix.run }}
 
       - name: Determinism manifest
-        if: always()
+        if: always() && matrix.replays
         run: python3 tools/determinism.py manifest web game "$RUNNER_TEMP/web-replays" > "$RUNNER_TEMP/determinism-web.txt"
 
       - uses: actions/upload-artifact@v7
-        if: always()
+        if: always() && matrix.replays
         with:
           name: determinism-web
           path: ${{ runner.temp }}/determinism-web.txt
@@ -611,7 +633,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: web-test
+          name: web-test-${{ strategy.job-index }}
           path: ${{ runner.temp }}/web-*
           retention-days: 7
 
