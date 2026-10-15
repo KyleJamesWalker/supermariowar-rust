@@ -10,6 +10,7 @@ use crate::common::sfx::SfxState;
 use crate::common::score::CScore;
 use crate::common::resource_manager::CResourceManager;
 use crate::common::tileset_manager::CTilesetManager;
+use crate::common::editor_harness::EditorHarness;
 use crate::common::game_values::CGameValues;
 use crate::globals::{Global, Ptr};
 use crate::leveleditor::leveleditor::LevelEditorState;
@@ -19,6 +20,7 @@ use crate::smw::game_state::GameStateManager;
 use crate::smw::gs_gameplay::GameplayState;
 use crate::smw::gs_menu::MenuState;
 use crate::smw::gs_splash_screen::SplashScreenState;
+use crate::smw::harness::Harness;
 use crate::smw::main::MainLoopState;
 use crate::smw::net::{NetworkHandler, Networking};
 use crate::smw::network::net_record::NetRecordState;
@@ -98,6 +100,8 @@ pub struct Game {
     pub blitdest: *mut sdl2::sys::SDL_Surface,
     pub fps_limiter: FPSLimiter,
     pub main_loop: MainLoopState,
+    pub(crate) harness: Harness,
+    pub(crate) editor_harness: EditorHarness,
 }
 
 impl Game {
@@ -163,6 +167,8 @@ impl Game {
             blitdest: std::ptr::null_mut(),
             fps_limiter: FPSLimiter::new(),
             main_loop: MainLoopState::new(),
+            harness: Harness::new(),
+            editor_harness: EditorHarness::new(),
         }
     }
 }
