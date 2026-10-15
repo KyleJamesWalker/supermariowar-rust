@@ -96,7 +96,7 @@ const padScript = () => {
     hat('up');
     button(0);
     f += 10;
-    for (let i = 0; i < 'Player'.length; i++) button(1);
+    for (let i = 0; i < 16; i++) button(1);
     type(PLAYER);
     hat('down');
     hat('down');
@@ -108,6 +108,7 @@ const padScript = () => {
     f += 20;
     button(0);
     f += 10;
+    for (let i = 0; i < 32; i++) button(1);
     type(PAD_ROOM);
     hat('down');
     hat('down');
@@ -456,7 +457,7 @@ try {
     for (let i = 0; i < 4 && (await menu()).focus !== 0; i++) await key('ArrowUp', 'ArrowUp', 38);
     await key('Enter', 'Enter', 13);
     await waitMenu((m) => m.modifying, 'the name field (desktop)');
-    for (let i = 0; i < PLAYER.length; i++) await key('Backspace', 'Backspace', 8);
+    for (let i = 0; i < 16; i++) await key('Backspace', 'Backspace', 8);
     await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Shift', code: 'ShiftLeft', windowsVirtualKeyCode: 16, location: 1, modifiers: 8 });
     await key('D', 'KeyD', 68, 8);
     await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Shift', code: 'ShiftLeft', windowsVirtualKeyCode: 16, location: 1 });
