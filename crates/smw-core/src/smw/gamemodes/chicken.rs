@@ -17,7 +17,8 @@ use sdl2::sys::SDL_Rect;
 pub struct CGM_Chicken {
     pub cgame_mode: CGameMode,
 
-    pub m_chicken: Ptr<CPlayer>,
+    pub m_chicken: Ptr<CPlayer>,    /// Frames toward the next point; never reset between games, like the C++ function-local static.
+    counter: i16,
 }
 impl_base!(CGM_Chicken => cgame_mode: CGameMode);
 
@@ -37,7 +38,7 @@ pub(crate) fn clip_edge_from(v: i16) -> ClipEdge {
 //get points for being the chicken
 impl CGM_Chicken {
     pub fn new() -> Self {
-        let mut this = CGM_Chicken { cgame_mode: CGameMode::new(), m_chicken: Ptr::null() };
+        let mut this = CGM_Chicken { cgame_mode: CGameMode::new(), m_chicken: Ptr::null(), counter: 0 };
         this.goal = 200;
         this.gamemode = game_mode_chicken;
 
@@ -77,13 +78,11 @@ impl CGameModeTrait for CGM_Chicken {
                 chicken.velx = -VELMOVING_CHICKEN;
             }
 
-            static mut counter: i16 = 0;
-
             if chicken.isready() && !chicken.is_tanooki_statue() {
                 unsafe {
-                    counter += 1;
-                    if counter >= game().game_values.pointspeed {
-                        counter = 0;
+                    self.counter += 1;
+                    if self.counter >= game().game_values.pointspeed {
+                        self.counter = 0;
                         chicken.score().adjust_score(1);
                         self.check_winner(chicken);
                     }

@@ -6,7 +6,7 @@ use smw::common::file_list::{FiltersList, GraphicsList, SkinList};
 use smw::common::game_values::CGameValues;
 use smw::common::gfx::gfx_init;
 use smw::common::global::load_current_map_background;
-use smw::common::map::{g_iCurrentDrawIndex, read_type_full, CMap};
+use smw::common::map::{read_type_full, CMap};
 use smw::common::resource_manager::CResourceManager;
 use smw::common::tileset_manager::CTilesetManager;
 use smw::globals::*;
@@ -22,7 +22,7 @@ fn save_bmp(s: *mut SDL_Surface, path: &str) {
 
 unsafe fn draw_map() {
     blitdest = screen;
-    game().rm.spr_backmap[g_iCurrentDrawIndex as usize].draw(0, 0);
+    game().rm.spr_backmap[game().g_iCurrentDrawIndex as usize].draw(0, 0);
     game().g_map.draw_platforms(0);
     game().g_map.draw_platforms(1);
     game().g_map.draw_platforms(2);

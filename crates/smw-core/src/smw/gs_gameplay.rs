@@ -18,7 +18,7 @@ use crate::common::gfx::{gfx_changefullscreen, gfx_take_screenshot};
 use crate::common::global_constants::*;
 use crate::common::input::COutputControl;
 use crate::common::io_block::IO_BlockTrait;
-use crate::common::map::{g_iCurrentDrawIndex, MapBlock};
+use crate::common::map::MapBlock;
 use crate::common::match_types::MatchType;
 use crate::common::math::trig::{cosf, sinf};
 use crate::common::math::vec2::{Vec2f, Vec2s};
@@ -71,7 +71,7 @@ use std::io::Write;
 pub const COUNTDOWN_START_INDEX: i16 = 4;
 
 
-pub static mut scorepowerupoffsets: [[i16; 3]; 3] = [[37, 0, 0], [71, 89, 0], [105, 123, 141]];
+pub static scorepowerupoffsets: [[i16; 3]; 3] = [[37, 0, 0], [71, 89, 0], [105, 123, 141]];
 
 /// Constructors of this file's class-type globals, plus the link-time `musicfinished` hook in sfx.
 pub fn init_globals() {
@@ -1519,7 +1519,7 @@ impl GameplayState {
 
     fn draw_back_layer(&mut self) {
         unsafe {
-            game().rm.spr_backmap[g_iCurrentDrawIndex as usize].draw(0, 0);
+            game().rm.spr_backmap[game().g_iCurrentDrawIndex as usize].draw(0, 0);
 
             //draw back eyecandy behind players
             game().g_map.draw_platforms(0);

@@ -14,7 +14,7 @@ use crate::smw::ui::mi_powerup_slider::MI_PowerupSlider;
 const NF: usize = NUMFRENZYCARDS as usize;
 
 //Rearrange display of powerups
-pub static mut iFrenzyCardPositionMap: [i16; NF] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+pub static iFrenzyCardPositionMap: [i16; NF] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
 
 pub struct MI_FrenzyModeOptions {
     pub ui_control: UI_Control,

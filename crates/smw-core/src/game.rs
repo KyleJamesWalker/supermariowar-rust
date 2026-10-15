@@ -63,6 +63,15 @@ pub struct Game {
     pub g_iSwirlSpawnLocations: [[[i16; 25]; 2]; 4],
     pub spotlightManager: Global<SpotlightManager>,
     pub g_iWinningPlayer: i16,
+    pub g_iCurrentDrawIndex: i16,
+    /// Not in the C++ (whose `iNetworkID` is unused): while nonzero, new objects get `context << 16 | n`, so a net
+    /// game's clients give the objects an event makes the same IDs (smw/net_random.rs).
+    pub g_networkIDContext: u32,
+    pub g_networkIDCount: u32,
+    /// The file a match loaded, relative to the data directory so a checkpoint works with any data root.
+    pub match_map: String,
+    /// Whether the menu press that opened a text field came from a keyboard key; set by `UI_Menu`.
+    pub text_field_opened_by_key: bool,
 }
 
 impl Game {
@@ -109,6 +118,11 @@ impl Game {
             g_iSwirlSpawnLocations: [[[0; 25]; 2]; 4],
             spotlightManager: Global::uninit(),
             g_iWinningPlayer: 0,
+            g_iCurrentDrawIndex: 0,
+            g_networkIDContext: 0,
+            g_networkIDCount: 0,
+            match_map: String::new(),
+            text_field_opened_by_key: false,
         }
     }
 }

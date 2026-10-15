@@ -76,30 +76,26 @@ pub struct CObject {
     pub _alias: Aliased,
 }
 
-/// Not in the C++ (whose `iNetworkID` is unused): while nonzero, new objects get `context << 16 | n`, so a net
-/// game's clients give the objects an event makes the same IDs (smw/net_random.rs).
-pub static mut g_networkIDContext: u32 = 0;
-static mut g_networkIDCount: u32 = 0;
-
 pub fn set_network_id_context(context: u32) {
     unsafe {
-        g_networkIDContext = context;
-        g_networkIDCount = 0;
+        game().g_networkIDContext = context;
+        game().g_networkIDCount = 0;
     }
 }
 
 /// The ID context and the count of objects made in it, for checkpoints.
 pub fn network_id_state() -> (&'static mut u32, &'static mut u32) {
-    unsafe { (&mut *(&raw mut g_networkIDContext), &mut *(&raw mut g_networkIDCount)) }
+    let g = game().get();
+    (&mut g.g_networkIDContext, &mut g.g_networkIDCount)
 }
 
 fn next_network_id() -> i32 {
     unsafe {
-        if g_networkIDContext == 0 {
+        if game().g_networkIDContext == 0 {
             return 0;
         }
-        g_networkIDCount += 1;
-        (g_networkIDContext << 16 | (g_networkIDCount & 0xFFFF)) as i32
+        game().g_networkIDCount += 1;
+        (game().g_networkIDContext << 16 | (game().g_networkIDCount & 0xFFFF)) as i32
     }
 }
 

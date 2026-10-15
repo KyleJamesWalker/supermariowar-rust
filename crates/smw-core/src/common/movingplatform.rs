@@ -6,7 +6,7 @@ use crate::common::game::App;
 use crate::common::gfx::gfx_drawpreview;
 use crate::common::global::*;
 use crate::common::global_constants::*;
-use crate::common::map::{g_iCurrentDrawIndex, TilesetTile};
+use crate::common::map::TilesetTile;
 use crate::common::moving_platform_paths::MovingPlatformPathTrait;
 use crate::common::object_base::cap_falling_velocity;
 use crate::common::player_kill_styles::KillStyle;
@@ -257,7 +257,7 @@ impl MovingPlatform {
             self.rDstRect.w = self.iWidth as i32;
             self.rDstRect.h = self.iHeight as i32;
 
-            self.sprites[(1 - g_iCurrentDrawIndex) as usize].draw_src_to(&self.rSrcRect, blitdest, &self.rDstRect);
+            self.sprites[(1 - game().g_iCurrentDrawIndex) as usize].draw_src_to(&self.rSrcRect, blitdest, &self.rDstRect);
         }
     }
 

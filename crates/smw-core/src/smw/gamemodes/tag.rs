@@ -16,7 +16,8 @@ use crate::smw::player::CPlayer;
 pub struct CGM_Tag {
     pub cgame_mode: CGameMode,
 
-    pub m_tagged: Ptr<CPlayer>,
+    pub m_tagged: Ptr<CPlayer>,    /// Frames toward the next point; never reset between games, like the C++ function-local static.
+    counter: i16,
 }
 impl_base!(CGM_Tag => cgame_mode: CGameMode);
 
@@ -56,7 +57,7 @@ impl CGM_Tag {
     }
 
     pub fn new() -> Self {
-        let mut this = CGM_Tag { cgame_mode: CGameMode::new(), m_tagged: Ptr::null() };
+        let mut this = CGM_Tag { cgame_mode: CGameMode::new(), m_tagged: Ptr::null(), counter: 0 };
         this.goal = 200;
         this.gamemode = game_mode_tag;
 
@@ -104,14 +105,12 @@ impl CGameModeTrait for CGM_Tag {
                 return;
             }
 
-            static mut counter: i16 = 0;
-
             let mut tagged = self.m_tagged;
             if tagged.isready() {
                 unsafe {
-                    counter += 1;
-                    if counter >= game().game_values.pointspeed {
-                        counter = 0;
+                    self.counter += 1;
+                    if self.counter >= game().game_values.pointspeed {
+                        self.counter = 0;
 
                         if self.fReverseScoring {
                             tagged.score().adjust_score(1);

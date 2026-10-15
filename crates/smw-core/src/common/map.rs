@@ -169,8 +169,6 @@ impl Default for MapBlock {
     }
 }
 
-pub static mut g_iCurrentDrawIndex: i16 = 0;
-
 const fn r(x: i32, y: i32, w: i32, h: i32) -> SDL_Rect {
     SDL_Rect { x, y, w, h }
 }
@@ -1805,7 +1803,7 @@ impl CMap {
                 if !tile.pPlatform.is_null() {
                     self.animatedTilesSurface.draw_src_to(
                         &tile.rAnimationSrc[0][frame],
-                        tile.pPlatform.sprites[g_iCurrentDrawIndex as usize].get_surface(),
+                        tile.pPlatform.sprites[game().g_iCurrentDrawIndex as usize].get_surface(),
                         &tile.rDest,
                     );
                 }
@@ -2252,15 +2250,15 @@ impl CMap {
                 self.iAnimatedBackgroundLayers = 4;
             }
 
-            g_iCurrentDrawIndex = 0;
+            game().g_iCurrentDrawIndex = 0;
 
             self.iAnimatedTileCount = self.animatedtiles.len() as i16;
 
             self.animatedTilesSurface = gfxSprite::new();
 
             if self.iAnimatedTileCount > 0 {
-                self.animatedFrontmapSurface = game().rm.spr_frontmap[g_iCurrentDrawIndex as usize].get_surface();
-                self.animatedBackmapSurface = game().rm.spr_backmap[g_iCurrentDrawIndex as usize].get_surface();
+                self.animatedFrontmapSurface = game().rm.spr_frontmap[game().g_iCurrentDrawIndex as usize].get_surface();
+                self.animatedBackmapSurface = game().rm.spr_backmap[game().g_iCurrentDrawIndex as usize].get_surface();
                 self.animatedTilesSurface = gfxSprite::blank(1024, 1024);
                 let ats = self.animatedTilesSurface.get_surface();
 
@@ -2403,8 +2401,8 @@ impl CMap {
                     self.animate_tiles(iFrame);
                 }
 
-                self.animatedFrontmapSurface = game().rm.spr_frontmap[(1 - g_iCurrentDrawIndex) as usize].get_surface();
-                self.animatedBackmapSurface = game().rm.spr_backmap[(1 - g_iCurrentDrawIndex) as usize].get_surface();
+                self.animatedFrontmapSurface = game().rm.spr_frontmap[(1 - game().g_iCurrentDrawIndex) as usize].get_surface();
+                self.animatedBackmapSurface = game().rm.spr_backmap[(1 - game().g_iCurrentDrawIndex) as usize].get_surface();
 
                 self.animate_tiles(0);
             }
@@ -2589,10 +2587,10 @@ impl CMap {
             if self.iTileAnimationTimer >= NUM_FRAMES_BETWEEN_TILE_ANIMATION {
                 self.iTileAnimationTimer = 0;
 
-                self.animatedFrontmapSurface = game().rm.spr_frontmap[g_iCurrentDrawIndex as usize].get_surface();
-                self.animatedBackmapSurface = game().rm.spr_backmap[g_iCurrentDrawIndex as usize].get_surface();
+                self.animatedFrontmapSurface = game().rm.spr_frontmap[game().g_iCurrentDrawIndex as usize].get_surface();
+                self.animatedBackmapSurface = game().rm.spr_backmap[game().g_iCurrentDrawIndex as usize].get_surface();
 
-                g_iCurrentDrawIndex = 1 - g_iCurrentDrawIndex;
+                game().g_iCurrentDrawIndex = 1 - game().g_iCurrentDrawIndex;
 
                 self.iTileAnimationFrame += 1;
                 if self.iTileAnimationFrame >= NUM_FRAMES_IN_TILE_ANIMATION {
@@ -2709,7 +2707,7 @@ impl CMap {
         unsafe {
             for k in 0..self.numdrawareas as usize {
                 let d = self.drawareas[k];
-                game().rm.spr_frontmap[g_iCurrentDrawIndex as usize].draw_src(d.x, d.y, &d);
+                game().rm.spr_frontmap[game().g_iCurrentDrawIndex as usize].draw_src(d.x, d.y, &d);
             }
         }
     }
