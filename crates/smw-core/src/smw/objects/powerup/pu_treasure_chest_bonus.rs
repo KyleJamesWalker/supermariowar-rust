@@ -77,7 +77,7 @@ impl CObjectTrait for PU_TreasureChestBonus {
     }
 
     fn update(&mut self, g: &mut Game) {
-        mo_powerup_update(self);
+        mo_powerup_update(g, self);
 
         self.sparkleanimationtimer += 1;
         if self.sparkleanimationtimer >= 4 {
@@ -106,7 +106,7 @@ impl CObjectTrait for PU_TreasureChestBonus {
 
     fn draw(&mut self, g: &mut Game) {
         if self.state < 3 {
-            mo_powerup_draw(self);
+            mo_powerup_draw(g, self);
 
             // Draw sparkles
             unsafe {

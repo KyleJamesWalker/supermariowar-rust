@@ -141,6 +141,6 @@ impl CGameModeTrait for CGM_Survival {
         cgm_classic_playerkilledself(g, &mut self.cgm_classic, player, style)
     }
     fn playerextraguy(&mut self, g: &mut Game, player: Ptr<CPlayer>, iType: i16) {
-        cgm_classic_playerextraguy(&mut self.cgm_classic, player, iType)
+        cgm_classic_playerextraguy(g, &mut self.cgm_classic, player, iType)
     }
 }

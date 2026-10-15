@@ -163,8 +163,8 @@ impl UI_MatchSelectionMenu {
         }
     }
 
-    pub fn world_map_changed(&mut self) {
-        self.miWorldPreviewDisplay.set_world(game().get());
+    pub fn world_map_changed(&mut self, g: &mut Game) {
+        self.miWorldPreviewDisplay.set_world(g);
     }
 
     pub fn activate_minigame_field(&mut self, g: &mut Game) {

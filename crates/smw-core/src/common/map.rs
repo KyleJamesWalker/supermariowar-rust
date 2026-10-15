@@ -1590,10 +1590,10 @@ impl CMap {
             } else {
                 let localSzBackgroundFile = concat("gfx/packs/backgrounds/", &g.g_map.szBackgroundFile);
                 let pack = g.gamegraphicspacklist.current_path().to_string_lossy().into_owned();
-                path = convert_path_pack(&localSzBackgroundFile, &pack);
+                path = convert_path_pack(g, &localSzBackgroundFile, &pack);
 
                 if !file_exists(&path) {
-                    path = convert_path_pack("gfx/packs/backgrounds/Land_Classic.png", &pack);
+                    path = convert_path_pack(g, "gfx/packs/backgrounds/Land_Classic.png", &pack);
                 }
             }
 
@@ -1605,10 +1605,10 @@ impl CMap {
             }
 
             self.pre_draw_preview_background(g, sThumbnail.get_surface(), true);
-            self.pre_draw_preview_blocks(sThumbnail.get_surface(), true);
+            self.pre_draw_preview_blocks(g, sThumbnail.get_surface(), true);
             self.pre_draw_preview_map_items(g, sThumbnail.get_surface(), true);
-            self.draw_thumbnail_hazards(sThumbnail.get_surface());
-            self.draw_thumbnail_platforms(sThumbnail.get_surface());
+            self.draw_thumbnail_hazards(g, sThumbnail.get_surface());
+            self.draw_thumbnail_platforms(g, sThumbnail.get_surface());
             self.pre_draw_preview_foreground(g, sThumbnail.get_surface(), true);
             self.pre_draw_preview_warps(g, sThumbnail.get_surface(), true);
 
@@ -1616,8 +1616,8 @@ impl CMap {
         }
     }
 
-    pub fn save_thumbnail(&mut self, sFile: &str, fUseClassicPack: bool) {
-        let sThumbnail = self.create_thumbnail_surface(game().get(), fUseClassicPack);
+    pub fn save_thumbnail(&mut self, g: &mut Game, sFile: &str, fUseClassicPack: bool) {
+        let sThumbnail = self.create_thumbnail_surface(g, fUseClassicPack);
 
         //Save the screenshot with the same name as the map file
         unsafe {
@@ -1924,15 +1924,15 @@ impl CMap {
         }
     }
 
-    fn draw_thumbnail_hazards(&mut self, targetSurface: *mut SDL_Surface) {
+    fn draw_thumbnail_hazards(&mut self, g: &mut Game, targetSurface: *mut SDL_Surface) {
         unsafe {
             for hazard in &self.maphazards {
-                draw_map_hazard(game().get(), hazard, 2, false, targetSurface);
+                draw_map_hazard(g, hazard, 2, false, targetSurface);
             }
         }
     }
 
-    fn draw_thumbnail_platforms(&mut self, targetSurface: *mut SDL_Surface) {
+    fn draw_thumbnail_platforms(&mut self, g: &mut Game, targetSurface: *mut SDL_Surface) {
         unsafe {
             for &platform in &self.platforms {
                 let mut p = platform;
@@ -1942,7 +1942,7 @@ impl CMap {
                 let basepath = p.pPath.as_any();
 
                 if let Some(path) = basepath.downcast_ref::<StraightPath>() {
-                    draw_platform(game().get(), 
+                    draw_platform(g, 
                         path.path_type_id(),
                         &tiles,
                         (path.start_pos().x * 2.0) as i16,
@@ -1960,7 +1960,7 @@ impl CMap {
                         targetSurface,
                     );
                 } else if let Some(path) = basepath.downcast_ref::<StraightPathContinuous>() {
-                    draw_platform(game().get(), 
+                    draw_platform(g, 
                         path.path_type_id(),
                         &tiles,
                         (path.start_pos().x * 2.0) as i16,
@@ -1978,7 +1978,7 @@ impl CMap {
                         targetSurface,
                     );
                 } else if let Some(path) = basepath.downcast_ref::<EllipsePath>() {
-                    draw_platform(game().get(), 
+                    draw_platform(g, 
                         path.path_type_id(),
                         &tiles,
                         (path.center_pos().x * 2.0) as i16,
@@ -2062,7 +2062,7 @@ impl CMap {
     }
 
     /// `preDrawPreviewBackground(gfxSprite*, SDL_Surface*, bool)`
-    pub fn pre_draw_preview_background_spr(&mut self, background: &gfxSprite, targetSurface: *mut SDL_Surface, fThumbnail: bool) {
+    pub fn pre_draw_preview_background_spr(&mut self, g: &mut Game, background: &gfxSprite, targetSurface: *mut SDL_Surface, fThumbnail: bool) {
         let srcrect = SDL_Rect { x: 0, y: 0, w: App::screenWidth, h: App::screenHeight };
 
         let mut dstrect = SDL_Rect { x: 0, y: 0, w: 0, h: 0 };
@@ -2078,10 +2078,10 @@ impl CMap {
         background.draw_stretch(&srcrect, targetSurface, &dstrect);
 
         small_delay();
-        self.pre_draw_preview_background(game().get(), targetSurface, fThumbnail);
+        self.pre_draw_preview_background(g, targetSurface, fThumbnail);
     }
 
-    pub fn pre_draw_preview_blocks(&mut self, targetSurface: *mut SDL_Surface, fThumbnail: bool) {
+    pub fn pre_draw_preview_blocks(&mut self, g: &mut Game, targetSurface: *mut SDL_Surface, fThumbnail: bool) {
         if !fThumbnail {
             unsafe {
                 crate::common::gfx::blit::fill_rect(targetSurface, null(), SDL_MapRGB((*targetSurface).format, 255, 0, 255));
@@ -2090,7 +2090,7 @@ impl CMap {
             small_delay();
         }
 
-        self.draw_preview_blocks(game().get(), targetSurface, fThumbnail);
+        self.draw_preview_blocks(g, targetSurface, fThumbnail);
     }
 
     pub fn pre_draw_preview_foreground(&mut self, g: &mut Game, targetSurface: *mut SDL_Surface, fThumbnail: bool) {
@@ -2224,7 +2224,7 @@ impl CMap {
         self.add_platform_animated_tiles();
     }
 
-    pub fn predrawforeground(&mut self, foregroundspr: &gfxSprite) {
+    pub fn predrawforeground(&mut self, g: &mut Game, foregroundspr: &gfxSprite) {
         unsafe {
             let s = foregroundspr.get_surface();
             if (*s).flags & SDL_RLEACCEL != 0 {
@@ -2238,8 +2238,8 @@ impl CMap {
                 SDL_UnlockSurface(s);
             }
 
-            self.draw(game().get(), s, 2);
-            self.draw(game().get(), s, 3);
+            self.draw(g, s, 2);
+            self.draw(g, s, 3);
         }
     }
 
@@ -2428,16 +2428,16 @@ impl CMap {
         }
     }
 
-    pub fn draw_platforms(&mut self, iLayer: i16) {
+    pub fn draw_platforms(&mut self, g: &mut Game, iLayer: i16) {
         for &platform in &self.platformdrawlayer[iLayer as usize].clone() {
             let mut p = platform;
-            p.draw(game().get());
+            p.draw(g);
         }
 
         if iLayer == 2 {
             for &platform in &self.tempPlatforms.clone() {
                 let mut p = platform;
-                p.draw(game().get());
+                p.draw(g);
             }
         }
     }
@@ -2446,7 +2446,7 @@ impl CMap {
     pub fn draw_platforms_offset(&mut self, iOffsetX: i16, iOffsetY: i16, iLayer: i16) {
         for &platform in &self.platformdrawlayer[iLayer as usize].clone() {
             let mut p = platform;
-            p.draw_offset(iOffsetX, iOffsetY);
+            p.draw_offset(game().get(), iOffsetX, iOffsetY);
         }
     }
 
@@ -2454,7 +2454,7 @@ impl CMap {
     pub fn moving_platform_collision_player(&mut self, player: Ptr<CPlayer>) {
         for i in 0..self.platforms.len() {
             let mut p = self.platforms[i];
-            p.collide_player(player);
+            p.collide_player(game().get(), player);
             if !player.isready() {
                 return;
             }
@@ -2462,7 +2462,7 @@ impl CMap {
 
         for i in 0..self.tempPlatforms.len() {
             let mut p = self.tempPlatforms[i];
-            p.collide_player(player);
+            p.collide_player(game().get(), player);
             if !player.isready() {
                 return;
             }
@@ -2470,15 +2470,15 @@ impl CMap {
     }
 
     /// `movingPlatformCollision(IO_MovingObject*)`
-    pub fn moving_platform_collision_object(&mut self, object: Ptr<dyn IO_MovingObjectTrait>) {
+    pub fn moving_platform_collision_object(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) {
         for i in 0..self.platforms.len() {
             let mut p = self.platforms[i];
-            p.collide_object(game().get(), object);
+            p.collide_object(g, object);
         }
 
         for i in 0..self.tempPlatforms.len() {
             let mut p = self.tempPlatforms[i];
-            p.collide_object(game().get(), object);
+            p.collide_object(g, object);
         }
     }
 
@@ -2792,8 +2792,8 @@ pub(crate) mod tests {
             // Moving platforms draw these while loading a map.
             let pack = convert_path(g, "gfx/packs/Classic");
             for (i, size) in ["", "_preview", "_thumbnail"].iter().enumerate() {
-                g.rm.spr_tileanimation[i] = ImageLoader::new(convert_path_pack(&format!("gfx/packs/tilesets/tile_animation{}.png", size), &pack)).create();
-                g.rm.spr_unknowntile[i] = ImageLoader::new(convert_path_pack(&format!("gfx/packs/tilesets/unknown_tile{}.png", size), &pack)).create();
+                g.rm.spr_tileanimation[i] = ImageLoader::new(convert_path_pack(g, &format!("gfx/packs/tilesets/tile_animation{}.png", size), &pack)).create();
+                g.rm.spr_unknowntile[i] = ImageLoader::new(convert_path_pack(g, &format!("gfx/packs/tilesets/unknown_tile{}.png", size), &pack)).create();
             }
             g.g_tilesetmanager = Ptr::new_box(CTilesetManager::new(&convert_path(g, "gfx/packs/Classic")));
             g.g_map = Ptr::from_box(CMap::new());

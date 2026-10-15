@@ -91,7 +91,7 @@ pub fn mo_attack_zone_collide_player<T: MO_AttackZoneTrait + ?Sized>(g: &mut Gam
             return false;
         }
 
-        player_killed_player(iPlayerID, player, PlayerDeathStyle::Jump, iStyle, false, false);
+        player_killed_player(g, iPlayerID, player, PlayerDeathStyle::Jump, iStyle, false, false);
 
         this.die(g);
 

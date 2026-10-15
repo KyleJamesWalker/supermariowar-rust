@@ -23,12 +23,12 @@ impl PlayerWarpStatus {
         PlayerWarpStatus { warpcounter: 0, warpconnection: 0, warpid: 0, warpplane: 0, _alias: Aliased::default() }
     }
 
-    fn increasewarpcounter(&mut self, player: &mut CPlayer, iGoal: i16) {
+    fn increasewarpcounter(&mut self, g: &mut Game, player: &mut CPlayer, iGoal: i16) {
         self.warpcounter = self.warpcounter.wrapping_add(1);
         if self.warpcounter > iGoal {
             self.warpcounter = iGoal;
-            if !crate::smw::net_random::event(game().get(), crate::smw::net_random::Ev::WarpExit, &[player.globalID as i32]) {
-                self.choose_warp_exit(game().get(), player);
+            if !crate::smw::net_random::event(g, crate::smw::net_random::Ev::WarpExit, &[player.globalID as i32]) {
+                self.choose_warp_exit(g, player);
             }
         }
     }
@@ -56,19 +56,19 @@ impl PlayerWarpStatus {
         match player.state {
             PlayerState::EnteringWarpLeft => {
                 player.set_xi((player.left_x() as i32 - 1) as i16);
-                self.increasewarpcounter(player, (PW + PWOFFSET) as i16);
+                self.increasewarpcounter(game().get(), player, (PW + PWOFFSET) as i16);
             }
             PlayerState::EnteringWarpRight => {
                 player.set_xi((player.left_x() as i32 + 1) as i16);
-                self.increasewarpcounter(player, (PW + PWOFFSET) as i16);
+                self.increasewarpcounter(game().get(), player, (PW + PWOFFSET) as i16);
             }
             PlayerState::EnteringWarpUp => {
                 player.set_yi((player.top_y() as i32 - 1) as i16);
-                self.increasewarpcounter(player, (TILESIZE - PHOFFSET) as i16);
+                self.increasewarpcounter(game().get(), player, (TILESIZE - PHOFFSET) as i16);
             }
             PlayerState::EnteringWarpDown => {
                 player.set_yi((player.top_y() as i32 + 1) as i16);
-                self.increasewarpcounter(player, (PH + PHOFFSET) as i16);
+                self.increasewarpcounter(game().get(), player, (PH + PHOFFSET) as i16);
             }
             PlayerState::LeavingWarpLeft => {
                 player.set_xi((player.left_x() as i32 - 1) as i16);

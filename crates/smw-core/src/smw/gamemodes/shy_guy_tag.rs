@@ -238,10 +238,10 @@ impl CGameModeTrait for CGM_ShyGuyTag {
 
         if player.score().score >= self.goal {
             player.score().set_score(self.goal);
-            setup_score_board(false);
-            show_score_board();
+            setup_score_board(g, false);
+            show_score_board(g);
 
-            remove_players_but_highest_scoring();
+            remove_players_but_highest_scoring(g);
             self.gameover = true;
 
             count_alive_teams(g, Some(&mut self.cgame_mode.winningteam));

@@ -61,7 +61,7 @@ impl CObjectTrait for PU_CoinPowerup {
     }
 
     fn update(&mut self, g: &mut Game) {
-        mo_powerup_update(self);
+        mo_powerup_update(g, self);
 
         self.sparkleanimationtimer += 1;
         if self.sparkleanimationtimer >= 4 {

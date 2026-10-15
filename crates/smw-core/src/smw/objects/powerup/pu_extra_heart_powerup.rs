@@ -35,10 +35,10 @@ impl CObjectTrait for PU_ExtraHeartPowerup {
         Some(self)
     }
     fn draw(&mut self, g: &mut Game) {
-        mo_powerup_draw(self)
+        mo_powerup_draw(g, self)
     }
     fn update(&mut self, g: &mut Game) {
-        mo_powerup_update(self)
+        mo_powerup_update(g, self)
     }
     fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         let mut player = player;

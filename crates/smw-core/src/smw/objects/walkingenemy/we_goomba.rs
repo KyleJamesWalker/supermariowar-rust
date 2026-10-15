@@ -145,7 +145,7 @@ impl MO_WalkingEnemyTrait for MO_Goomba {
                 self.dead = true;
 
                 let killStyle = self.killStyle;
-                player.add_killer_award(Ptr::null(), killStyle);
+                player.add_killer_award(g, Ptr::null(), killStyle);
 
                 g.eyecandy[0].emplace(EC_Corpse::new(
                     Ptr::from_mut(&mut g.rm.spr_goombadead),

@@ -161,14 +161,14 @@ impl NetConfigManager {
         }
     }
 
-    pub fn load(&mut self) {
+    pub fn load(&mut self, g: &mut Game) {
         let Some(config) = load_file() else {
             return;
         };
 
-        read_playername(game().get(), &config);
-        read_roomname(game().get(), &config);
-        read_servers(game().get(), &config);
+        read_playername(g, &config);
+        read_roomname(g, &config);
+        read_servers(g, &config);
     }
 }
 

@@ -91,8 +91,8 @@ fn try_load_image(g: &mut Game, path: &Path, optimize: bool, color_key: Option<R
     }
 }
 
-fn load_image(path: &Path, optimize: bool, color_key: Option<RGB>, alpha: Option<u8>) -> SdlSurfacePtr {
-    try_load_image(game().get(), path, optimize, color_key, alpha).unwrap_or_else(|what| throw(what))
+fn load_image(g: &mut Game, path: &Path, optimize: bool, color_key: Option<RGB>, alpha: Option<u8>) -> SdlSurfacePtr {
+    try_load_image(g, path, optimize, color_key, alpha).unwrap_or_else(|what| throw(what))
 }
 
 
@@ -186,8 +186,8 @@ impl gfxSprite {
     }
 
     /// `draw(x, y, srcx, srcy, w, h)` convenience used all over the C++ via `SDL_Rect{...}` temporaries.
-    pub fn draw_part(&self, x: i32, y: i32, srcx: i32, srcy: i32, w: i32, h: i32) {
-        self.draw_src(game().get(), x, y, &SDL_Rect { x: srcx, y: srcy, w, h });
+    pub fn draw_part(&self, g: &mut Game, x: i32, y: i32, srcx: i32, srcy: i32, w: i32, h: i32) {
+        self.draw_src(g, x, y, &SDL_Rect { x: srcx, y: srcy, w, h });
     }
 
     /// Draw part of the sprite at the given coordinate, clipped along a given direction.
@@ -317,11 +317,11 @@ impl ImageLoader {
     }
 
     pub fn create(&self) -> gfxSprite {
-        gfxSprite::from_surface(load_image(&self.m_path, self.m_optimize, self.m_color_key, self.m_alpha), self.m_wrap_x)
+        gfxSprite::from_surface(load_image(game().get(), &self.m_path, self.m_optimize, self.m_color_key, self.m_alpha), self.m_wrap_x)
     }
 
     /// `create()` for callers that catch the `std::string` the C++ throws on a load failure.
-    pub fn try_create(&self) -> Result<gfxSprite, String> {
-        Ok(gfxSprite::from_surface(try_load_image(game().get(), &self.m_path, self.m_optimize, self.m_color_key, self.m_alpha)?, self.m_wrap_x))
+    pub fn try_create(&self, g: &mut Game) -> Result<gfxSprite, String> {
+        Ok(gfxSprite::from_surface(try_load_image(g, &self.m_path, self.m_optimize, self.m_color_key, self.m_alpha)?, self.m_wrap_x))
     }
 }

@@ -120,9 +120,9 @@ impl CGameModeTrait for CGM_Chase {
             self.winningteam = player.get_team_id();
             self.gameover = true;
 
-            setup_score_board(false);
-            show_score_board();
-            remove_players_but_team(self.winningteam);
+            setup_score_board(g, false);
+            show_score_board(g);
+            remove_players_but_team(g, self.winningteam);
 
             return PlayerKillType::Removed;
         } else if player.score().score as f64 >= self.goal as f64 * 0.8 && !self.playedwarningsound {

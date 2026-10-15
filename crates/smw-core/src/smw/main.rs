@@ -102,7 +102,7 @@ unsafe extern "C-unwind" fn gameloop_frame_web() {
     let mut frames = 0;
     while ml.web_accumulated >= frame_ms && frames < MAX_CATCH_UP_FRAMES && game().game_values.appstate != crate::common::game_values::AppState::Quit {
         assign_hotplugged(game().get());
-        harness::frame_start();
+        harness::frame_start(game().get());
         GameStateManager::instance().currentState.get().update(game().get());
         harness::frame_end(game().get());
 
@@ -143,7 +143,7 @@ unsafe extern "C-unwind" fn gameloop_frame() {
     assign_hotplugged(game().get());
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::touch::flush();
-    harness::frame_start();
+    harness::frame_start(game().get());
     phase(5);
     GameStateManager::instance().currentState.get().update(game().get());
     phase(6);
@@ -193,7 +193,7 @@ pub fn create_globals(g: &mut Game) {
 
         g.players.reserve(4);
 
-        update_music_with_overrides(&mut g.musiclist, &mut g.worldmusiclist);
+        update_music_with_overrides(g, &mut game().musiclist, &mut game().worldmusiclist);
     }
 }
 
@@ -459,7 +459,7 @@ pub fn main() {
 
 pub fn run(argv: Vec<String>) {
     let g = game().get();
-    crate::globals::init_globals();
+    crate::globals::init_globals(g);
 
     let cmd = cmd::parse_args(&argv);
     if !cmd.success {
@@ -529,7 +529,7 @@ pub fn main_game() {
 
         create_gamemodes(g);
 
-        g.game_values.read_binary_config();
+        game().game_values.read_binary_config(g);
         assign_inputs(g);
 
         //Assign the powerup weights to the selected preset
@@ -546,11 +546,11 @@ pub fn main_game() {
 
         //Load the gfx color palette
         let pack = g.gamegraphicspacklist.current_path().to_string_lossy().into_owned();
-        let png = std::panic::catch_unwind(|| gfx_loadpalette(game().get(), Path::new(&convert_path_pack("gfx/packs/palette.png", &pack))));
+        let png = std::panic::catch_unwind(|| gfx_loadpalette(game().get(), Path::new(&convert_path_pack(game().get(), "gfx/packs/palette.png", &pack))));
         if let Err(payload) = png {
             let Some(err) = payload.downcast_ref::<String>() else { std::panic::resume_unwind(payload) };
             println!("\nwarning: {} -> falling back to BMP", err);
-            gfx_loadpalette(g, Path::new(&convert_path_pack("gfx/packs/palette.bmp", &pack)));
+            gfx_loadpalette(g, Path::new(&convert_path_pack(game().get(), "gfx/packs/palette.bmp", &pack)));
         }
 
         srand(harness::libc_seed(time(null_mut()) as u32));

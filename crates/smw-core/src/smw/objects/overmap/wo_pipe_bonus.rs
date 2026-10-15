@@ -110,7 +110,7 @@ impl CObjectTrait for OMO_PipeBonus {
                     ));
 
                     if !player.is_invincible() {
-                        return player.kill_player_map_hazard(false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
+                        return player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
                     }
                 }
 

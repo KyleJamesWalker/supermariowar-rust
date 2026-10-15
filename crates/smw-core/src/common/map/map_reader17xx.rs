@@ -172,7 +172,7 @@ impl MapReader {
         true
     }
 
-    pub(super) fn read_platforms_1700(&mut self, map: &mut CMap, mapfile: &mut BinaryFile, fPreview: bool) {
+    pub(super) fn read_platforms_1700(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile, fPreview: bool) {
         map.clear_platforms();
 
         let iNumPlatforms: usize = mapfile.read_i32() as i16 as isize as usize;
@@ -182,7 +182,7 @@ impl MapReader {
             let iWidth: i16 = mapfile.read_i32() as i16;
             let iHeight: i16 = mapfile.read_i32() as i16;
 
-            let (tiles, types) = self.read_platform_tiles_1700(game().get(), map, mapfile, iWidth, iHeight);
+            let (tiles, types) = self.read_platform_tiles_1700(g, map, mapfile, iWidth, iHeight);
 
             let iDrawLayer: i16 = 2;
 
@@ -192,7 +192,7 @@ impl MapReader {
                 continue;
             };
 
-            let platform = MovingPlatform::new(game().get(), tiles, types, iWidth, iHeight, iDrawLayer, path, fPreview);
+            let platform = MovingPlatform::new(g, tiles, types, iWidth, iHeight, iDrawLayer, path, fPreview);
             map.platforms.push(platform);
             map.platformdrawlayer[iDrawLayer as usize].push(platform);
         }
@@ -279,7 +279,7 @@ impl MapReader {
 
         map.clear_platforms();
 
-        self.read_tiles(map, mapfile);
+        self.read_tiles(game().get(), map, mapfile);
         self.read_background(map, mapfile);
 
         if self.patch_version >= 1 {

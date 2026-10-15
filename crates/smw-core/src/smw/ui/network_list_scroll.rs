@@ -190,7 +190,7 @@ impl UI_ControlTrait for MI_NetworkListScroll {
         unsafe {
             for iPlayer in 0..4usize {
                 if self.iControllingTeam != -1
-                    && (self.iControllingTeam != lookup_team_id(iPlayer as i16) || g.game_values.playercontrol[iPlayer] != 1)
+                    && (self.iControllingTeam != lookup_team_id(g, iPlayer as i16) || g.game_values.playercontrol[iPlayer] != 1)
                 {
                     continue;
                 }

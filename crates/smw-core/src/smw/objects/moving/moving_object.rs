@@ -215,23 +215,23 @@ impl IO_MovingObject {
     }
 }
 
-pub fn io_moving_object_draw<T: IO_MovingObjectTrait + ?Sized>(this: &mut T) {
+pub fn io_moving_object_draw<T: IO_MovingObjectTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let o = this.mo();
-    o.spr.draw_src(game().get(), 
+    o.spr.draw_src(g, 
         (o.ix - o.collisionOffsetX) as i32,
         (o.iy - o.collisionOffsetY) as i32,
         &SDL_Rect { x: o.drawframe as i32, y: o.animationOffsetY as i32, w: o.iw as i32, h: o.ih as i32 },
     );
 }
 
-pub fn io_moving_object_update<T: IO_MovingObjectTrait + ?Sized>(this: &mut T) {
+pub fn io_moving_object_update<T: IO_MovingObjectTrait + ?Sized>(g: &mut Game, this: &mut T) {
     {
         let o = this.mo_mut();
         o.fOldX = o.fx;
         o.fOldY = o.fy;
     }
 
-    io_moving_object_collision_detection_map(game().get(), this);
+    io_moving_object_collision_detection_map(g, this);
 
     this.animate();
 }
@@ -290,7 +290,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
         o.iHorizontalPlatformCollision = -1;
         o.iVerticalPlatformCollision = -1;
 
-        g.g_map.moving_platform_collision_object(o);
+        game().g_map.moving_platform_collision_object(g, o);
 
         o.fy = fTempY;
 

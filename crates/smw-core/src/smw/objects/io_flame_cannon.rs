@@ -32,7 +32,7 @@ impl IO_FlameCannon {
         let mut this = IO_FlameCannon { cobject: CObject::new(Ptr::null(), pos), iFreq: freq, iTimer: 0, iCycle: 0, iFrame: 0, iDirection: direction };
         this.objectType = object_flamecannon;
 
-        this.set_new_timer();
+        this.set_new_timer(game().get());
 
         this.iw = g_rFlameRects[direction as usize][0].w as i16;
         this.ih = g_rFlameRects[direction as usize][0].h as i16;
@@ -71,9 +71,9 @@ impl IO_FlameCannon {
         }
     }
 
-    pub fn set_new_timer(&mut self) {
-        if crate::smw::net_random::object_event(crate::smw::net_random::Ev::HazardTimer, &[self.iNetworkID]) {
-            if crate::smw::net_random::awaiting_host(game().get()) {
+    pub fn set_new_timer(&mut self, g: &mut Game) {
+        if crate::smw::net_random::object_event(g, crate::smw::net_random::Ev::HazardTimer, &[self.iNetworkID]) {
+            if crate::smw::net_random::awaiting_host(g) {
                 self.iTimer = i16::MAX;
             }
             return;
@@ -118,7 +118,7 @@ impl CObjectTrait for IO_FlameCannon {
                             self.state = 2;
                         } else {
                             self.state = 0;
-                            self.set_new_timer();
+                            self.set_new_timer(g);
                         }
                     }
                 }
@@ -155,7 +155,7 @@ impl CObjectTrait for IO_FlameCannon {
 
     fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         if self.state == 2 && !player.is_invincible() && !player.is_shielded() && !player.shyguy {
-            return player.kill_player_map_hazard(false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
+            return player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
         }
 
         false

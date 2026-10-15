@@ -43,7 +43,7 @@ impl CGameModeTrait for CGM_Classic {
         cgm_classic_playerkilledself(g, self, player, style)
     }
     fn playerextraguy(&mut self, g: &mut Game, player: Ptr<CPlayer>, iType: i16) {
-        cgm_classic_playerextraguy(self, player, iType)
+        cgm_classic_playerextraguy(g, self, player, iType)
     }
 }
 
@@ -92,7 +92,7 @@ pub fn cgm_classic_playerkilledplayer(g: &mut Game, this: &mut CGM_Classic, mut 
                 }
 
                 if other.score().score <= 0 {
-                    remove_team(other.get_team_id());
+                    remove_team(g, other.get_team_id());
                     return PlayerKillType::Removed;
                 }
             }
@@ -144,7 +144,7 @@ pub fn cgm_classic_playerkilledself(g: &mut Game, this: &mut CGM_Classic, mut pl
                 }
 
                 if player.score().score <= 0 {
-                    remove_team(player.get_team_id());
+                    remove_team(g, player.get_team_id());
                     return PlayerKillType::Removed;
                 }
             }
@@ -160,12 +160,12 @@ pub fn cgm_classic_playerkilledself(g: &mut Game, this: &mut CGM_Classic, mut pl
     PlayerKillType::Normal
 }
 
-pub fn cgm_classic_playerextraguy(this: &mut CGM_Classic, mut player: Ptr<CPlayer>, iType: i16) {
+pub fn cgm_classic_playerextraguy(g: &mut Game, this: &mut CGM_Classic, mut player: Ptr<CPlayer>, iType: i16) {
     if !this.gameover {
         if this.fReverseScoring {
-            player.score().adjust_score(game().get(), -iType);
+            player.score().adjust_score(g, -iType);
         } else {
-            player.score().adjust_score(game().get(), iType);
+            player.score().adjust_score(g, iType);
         }
     }
 }

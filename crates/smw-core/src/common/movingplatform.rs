@@ -262,8 +262,8 @@ impl MovingPlatform {
     }
 
     /// `draw(short iOffsetX, short iOffsetY)`: path drawing for the map preview.
-    pub fn draw_offset(&mut self, iOffsetX: i16, iOffsetY: i16) {
-        gfx_drawpreview(game().get(), 
+    pub fn draw_offset(&mut self, g: &mut Game, iOffsetX: i16, iOffsetY: i16) {
+        gfx_drawpreview(g, 
             &self.sprites[0],
             (self.ix as i32 - self.iHalfWidth as i32 + iOffsetX as i32) as i16,
             (self.iy as i32 - self.iHalfHeight as i32 + iOffsetY as i32) as i16,
@@ -310,7 +310,7 @@ impl MovingPlatform {
     }
 
     /// `collide(CPlayer*)`
-    pub fn collide_player(&mut self, mut player: Ptr<CPlayer>) {
+    pub fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) {
         let this = Ptr::from_mut(self);
         let fx = self.fx;
         let fy = self.fy;
@@ -389,17 +389,17 @@ impl MovingPlatform {
                         || ((t1 & tile_flag_solid) == 0 && (t2 & tile_flag_super_or_player_death_left) != 0);
 
                     if player.iHorizontalPlatformCollision == 3 {
-                        player.kill_player_map_hazard(true, KillStyle::Environment, true, iPlayerId);
+                        player.kill_player_map_hazard(g, true, KillStyle::Environment, true, iPlayerId);
                         return;
                     } else if fSuperDeathTileToLeft || (fDeathTileToLeft && !player.is_invincible() && !player.is_shielded() && !player.shyguy) {
-                        if PlayerKillType::NonKill != player.kill_player_map_hazard(fSuperDeathTileToLeft, KillStyle::Environment, false, iPlayerId) {
+                        if PlayerKillType::NonKill != player.kill_player_map_hazard(g, fSuperDeathTileToLeft, KillStyle::Environment, false, iPlayerId) {
                             return;
                         }
                     } else {
                         player.set_xf((((tx as i32) << 5) - PW) as f32 - 0.2 + fx - iHalfWidth);
                         player.flipsidesifneeded();
 
-                        self.check_map_collision_right(game().get(), player);
+                        self.check_map_collision_right(g, player);
 
                         if self.fOldVelX < 0.0 {
                             player.fOldX = fx + 10.0;
@@ -450,17 +450,17 @@ impl MovingPlatform {
                         || ((t1 & tile_flag_solid) == 0 && (t2 & tile_flag_super_or_player_death_right) != 0);
 
                     if player.iHorizontalPlatformCollision == 1 {
-                        player.kill_player_map_hazard(true, KillStyle::Environment, true, iPlayerId);
+                        player.kill_player_map_hazard(g, true, KillStyle::Environment, true, iPlayerId);
                         return;
                     } else if fSuperDeathTileToRight || (fDeathTileToRight && !player.is_invincible() && !player.is_shielded() && !player.shyguy) {
-                        if PlayerKillType::NonKill != player.kill_player_map_hazard(fSuperDeathTileToRight, KillStyle::Environment, false, iPlayerId) {
+                        if PlayerKillType::NonKill != player.kill_player_map_hazard(g, fSuperDeathTileToRight, KillStyle::Environment, false, iPlayerId) {
                             return;
                         }
                     } else {
                         player.set_xf((((tx as i32) << 5) + TILESIZE) as f32 + 0.2 + fx - iHalfWidth);
                         player.flipsidesifneeded();
 
-                        self.check_map_collision_left(game().get(), player);
+                        self.check_map_collision_left(g, player);
 
                         if self.fOldVelX < 0.0 {
                             player.fOldX = fx + 10.0;
@@ -537,7 +537,7 @@ impl MovingPlatform {
                     && (!fDeathTileOverPlayer || player.is_invincible() || player.is_shielded() || player.shyguy)
                 {
                     if player.iVerticalPlatformCollision == 2 {
-                        player.kill_player_map_hazard(true, KillStyle::Environment, true, iPlayerId);
+                        player.kill_player_map_hazard(g, true, KillStyle::Environment, true, iPlayerId);
                         return;
                     } else {
                         player.fPrecalculatedY = (((ty as i32) << 5) + TILESIZE) as f32 + 0.2 + fy - iHalfHeight;
@@ -557,7 +557,7 @@ impl MovingPlatform {
 
                     return;
                 } else if (t1 & tile_flag_player_or_death_on_bottom) != 0 || (t2 & tile_flag_player_or_death_on_bottom) != 0 {
-                    if PlayerKillType::NonKill != player.kill_player_map_hazard(true, KillStyle::Environment, false, iPlayerId) {
+                    if PlayerKillType::NonKill != player.kill_player_map_hazard(g, true, KillStyle::Environment, false, iPlayerId) {
                         return;
                     }
                 }
@@ -590,7 +590,7 @@ impl MovingPlatform {
                         player.inair = true;
                         player.platform = Ptr::null();
                     } else if player.iVerticalPlatformCollision == 0 {
-                        player.kill_player_map_hazard(true, KillStyle::Environment, true, iPlayerId);
+                        player.kill_player_map_hazard(g, true, KillStyle::Environment, true, iPlayerId);
                         return;
                     } else {
                         player.platform = this;
@@ -625,7 +625,7 @@ impl MovingPlatform {
                     && (!fDeathTileUnderPlayer || player.is_invincible() || player.is_shielded() || player.kuriboshoe.is_on() || player.shyguy)
                 {
                     if player.iVerticalPlatformCollision == 0 {
-                        player.kill_player_map_hazard(true, KillStyle::Environment, true, iPlayerId);
+                        player.kill_player_map_hazard(g, true, KillStyle::Environment, true, iPlayerId);
                         return;
                     } else {
                         player.platform = this;
@@ -653,7 +653,7 @@ impl MovingPlatform {
                         return;
                     }
                 } else if fDeathTileUnderPlayer || fSuperDeathTileUnderPlayer {
-                    if PlayerKillType::NonKill != player.kill_player_map_hazard(fSuperDeathTileUnderPlayer, KillStyle::Environment, false, iPlayerId) {
+                    if PlayerKillType::NonKill != player.kill_player_map_hazard(g, fSuperDeathTileUnderPlayer, KillStyle::Environment, false, iPlayerId) {
                         return;
                     }
                 } else if player.platform == this {

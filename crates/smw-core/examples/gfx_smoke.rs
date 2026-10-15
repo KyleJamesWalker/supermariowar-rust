@@ -15,7 +15,7 @@ fn main() {
     let data = args.get(1).cloned().unwrap_or_else(|| concat!(env!("CARGO_MANIFEST_DIR"), "/../../data").to_string());
     let out = args.get(2).cloned().unwrap_or_else(|| "gfx_smoke_rust.bmp".to_string());
 
-    smw::globals::init_globals();
+    smw::globals::init_globals(game().get());
     unsafe {
         game().RootDataDirectory = data.clone();
     }
@@ -37,20 +37,20 @@ fn main() {
     let mut font_large = gfxFont::from_path(game().get(), &format!("{}/menu/menu_font_large.png", pack));
     let font_small = gfxFont::from_path(game().get(), &format!("{}/fonts/font_small.png", pack));
 
-    let skin = gfx_loadfullskin(Path::new(&format!("{}/gfx/skins/0smw.png", data)), 1).unwrap();
-    let menuskin = gfx_loadmenuskin(Path::new(&format!("{}/gfx/skins/0smw.png", data)), 2, true).unwrap();
+    let skin = gfx_loadfullskin(game().get(), Path::new(&format!("{}/gfx/skins/0smw.png", data)), 1).unwrap();
+    let menuskin = gfx_loadmenuskin(game().get(), Path::new(&format!("{}/gfx/skins/0smw.png", data)), 2, true).unwrap();
 
     backdrop.draw(game().get(), 0, 0);
     smw_logo.draw(game().get(), 70, 30);
-    shade.draw_part(100, 200, 0, 0, 200, 100);
-    ghost.draw_part(620, 300, 0, 0, 32, 32);
-    overlay.draw_part(400, 350, 0, 0, 64, 64);
+    shade.draw_part(game().get(), 100, 200, 0, 0, 200, 100);
+    ghost.draw_part(game().get(), 620, 300, 0, 0, 32, 32);
+    overlay.draw_part(game().get(), 400, 350, 0, 0, 64, 64);
     for i in 0..10 {
-        skin[i].draw_part(20 + i as i32 * 34, 400, 0, 0, 32, 32);
-        skin[i].draw_part(20 + i as i32 * 34, 434, 32 * (i as i32 % 9), 0, 32, 32);
+        skin[i].draw_part(game().get(), 20 + i as i32 * 34, 400, 0, 0, 32, 32);
+        skin[i].draw_part(game().get(), 20 + i as i32 * 34, 434, 32 * (i as i32 % 9), 0, 32, 32);
     }
-    menuskin[0].draw_part(380, 400, 0, 0, 32, 32);
-    menuskin[3].draw_part(414, 400, 96, 0, 32, 32);
+    menuskin[0].draw_part(game().get(), 380, 400, 0, 0, 32, 32);
+    menuskin[3].draw_part(game().get(), 414, 400, 96, 0, 32, 32);
     skin[0].draw_clip(game().get(), 450, 400, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 }, ClipEdge::Left, 460);
     skin[0].draw_stretch(&SDL_Rect { x: 0, y: 0, w: 32, h: 32 }, unsafe { game().blitdest }, &SDL_Rect { x: 500, y: 380, w: 64, h: 64 });
     gfx_drawpreview(game().get(), &skin[2], 620, 300, 0, 0, 32, 32, &SDL_Rect { x: 0, y: 0, w: 640, h: 480 }, true, None);
@@ -68,7 +68,7 @@ fn main() {
         game().y_shake = -2;
     }
     font_small.draw(10, 330, "shaken");
-    smw_logo.draw_part(300, 330, 0, 0, 40, 20);
+    smw_logo.draw_part(game().get(), 300, 330, 0, 0, 40, 20);
 
     assert!(gfx_save_screen_bmp(game().get(), &out));
     println!("wrote {}", out);

@@ -89,13 +89,13 @@ impl CO_ThrowBlock {
         o
     }
 
-    pub fn hit_top(&mut self, player: Ptr<CPlayer>) -> bool {
+    pub fn hit_top(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         let mut player = player;
         if player.is_invincible() || player.shyguy {
-            self.die(game().get());
+            self.die(g);
         } else if self.state == 1 {
             // moving
-            return self.kill_player(player);
+            return self.kill_player(g, player);
         } else if self.state == 2 {
             // Holding
             if player != self.owner {
@@ -103,12 +103,12 @@ impl CO_ThrowBlock {
                     self.owner.carriedItem = Ptr::null();
                 }
 
-                self.kick(game().get());
+                self.kick(g);
 
                 player.set_yi((self.iy as i32 - PH - 1) as i16);
                 player.bouncejump();
                 let p = player.get();
-                player.collisions.checktop(game().get(), p);
+                player.collisions.checktop(g, p);
                 player.platform = Ptr::null();
             }
         }
@@ -133,23 +133,23 @@ impl CO_ThrowBlock {
                 || (px > self.ix as i32 + (self.iw as i32 >> 1) && self.velx > 0.0)
                 || (px <= self.ix as i32 - (self.iw as i32 >> 1) && self.velx < 0.0)
             {
-                return self.kill_player(player);
+                return self.kill_player(game().get(), player);
             }
         } else if self.state == 2 {
             // Holding
             if player != self.owner {
                 self.iPlayerID = self.owner.globalID;
                 self.iTeamID = self.owner.teamID;
-                return self.kill_player(player);
+                return self.kill_player(game().get(), player);
             }
         }
 
         false
     }
 
-    pub fn kill_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    pub fn kill_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         if player.is_invincible() || player.shyguy {
-            self.die(game().get());
+            self.die(g);
             return false;
         }
 
@@ -157,10 +157,10 @@ impl CO_ThrowBlock {
             return false;
         }
 
-        self.check_and_die(game().get());
+        self.check_and_die(g);
 
         // Find the player that shot this shell so we can attribute a kill
-        player_killed_player(self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::ThrowBlock, false, false);
+        player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::ThrowBlock, false, false);
         true
     }
 
@@ -207,7 +207,7 @@ impl CObjectTrait for CO_ThrowBlock {
         }
 
         if player.fOldY + PH as f32 <= self.iy as f32 && player.iy as i32 + PH >= self.iy as i32 {
-            self.hit_top(player)
+            self.hit_top(g, player)
         } else {
             self.hit_other(player)
         }

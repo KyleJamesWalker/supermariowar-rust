@@ -42,7 +42,7 @@ impl UI_NetLobbyMenu {
             this.miNetLobbyNewRoomButton.set_code(MENU_CODE_TO_NET_NEW_ROOM_LEVEL_SELECT_MENU);
 
             this.miNetLobbyFilterField = Ptr::new_box(MI_TextField::new(plain, 320 + 20, 160, "Search", 320 - 30, 90));
-            this.miNetLobbyFilterField.set_data(&mut g.netplay.roomFilter, NET_MAX_ROOM_NAME_LENGTH as i16);
+            this.miNetLobbyFilterField.set_data(g, &mut game().netplay.roomFilter, NET_MAX_ROOM_NAME_LENGTH as i16);
 
             this.miNetLobbyRefreshButton = Ptr::new_box(MI_Button::new(g, selectfield, 320 + 20, 200, "Refresh", 320 - 30, TextAlign::CENTER));
             this.miNetLobbyRefreshButton.set_code(MENU_CODE_TO_NET_LOBBY_MENU);
@@ -115,7 +115,7 @@ impl UI_NetLobbyMenu {
         let t = ctl_ptr(self.miNetLobbyJoiningDialogText);
         self.set_initial_focus(t);
         self.set_cancel_code(MENU_CODE_NET_JOIN_ROOM_ABORT);
-        self.reset_menu();
+        self.reset_menu(g);
     }
 
     pub fn abort_join(&mut self, g: &mut Game) {

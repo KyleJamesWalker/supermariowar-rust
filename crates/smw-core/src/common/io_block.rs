@@ -1,5 +1,6 @@
 //! Port of src/common/IO_Block.h
 
+use crate::game::game;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::vec2::Vec2s;
@@ -50,10 +51,10 @@ pub trait IO_BlockTrait: CObjectTrait {
     }
 
     fn collide_player_dir(&mut self, player: Ptr<CPlayer>, direction: i16, useBehavior: bool) -> bool {
-        crate::smw::objects::blocks::io_block::io_block_collide_player_dir(self, player, direction, useBehavior)
+        crate::smw::objects::blocks::io_block::io_block_collide_player_dir(game().get(), self, player, direction, useBehavior)
     }
     fn collide_object_dir(&mut self, object: Ptr<dyn IO_MovingObjectTrait>, direction: i16) -> bool {
-        crate::smw::objects::blocks::io_block::io_block_collide_object_dir(self, object, direction)
+        crate::smw::objects::blocks::io_block::io_block_collide_object_dir(game().get(), self, object, direction)
     }
 
     fn is_transparent(&mut self) -> bool {
@@ -77,7 +78,7 @@ pub trait IO_BlockTrait: CObjectTrait {
     }
 
     fn hittop_object(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
-        crate::smw::objects::blocks::io_block::io_block_hittop_object(self, object)
+        crate::smw::objects::blocks::io_block::io_block_hittop_object(g, self, object)
     }
     fn hitbottom_object(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         crate::smw::objects::blocks::io_block::io_block_hitbottom_object(self, object)

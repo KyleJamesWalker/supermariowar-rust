@@ -451,7 +451,7 @@ fn rect(x: i32, y: i32, w: i32, h: i32) -> SDL_Rect {
 pub fn main() {
     let g = game().get();
     cmd::attach_parent_console();
-    crate::globals::init_globals();
+    crate::globals::init_globals(g);
     unsafe {
         ed().copiedtiles.init([[EditorMapTile::zeroed(); MH]; MW]);
         ed().g_Platforms.init((0..MAX_PLATFORMS).map(|_| MapPlatform::new()).collect());
@@ -523,7 +523,7 @@ pub fn inner_main() {
         ed().backgroundlist = Ptr::new_box(BackgroundList::new());
 
         //Add all of the maps that are world only so we can edit them
-        g.maplist.add_world_maps();
+        game().maplist.add_world_maps(g);
         let title = format!("{} {}", TITLESTRING, MAPTITLESTRING);
         gfx_settitle(g, &title);
 
@@ -1666,7 +1666,7 @@ pub fn drawmap(g: &mut Game, fScreenshot: bool, iBlockSize: i16, fWithPlatforms:
         }
 
         if fWithPlatforms {
-            g.g_map.draw_platforms(0);
+            game().g_map.draw_platforms(g, 0);
         }
 
         if (ed().viewblocks && !ed().view_only_layer) || fScreenshot {
@@ -1723,7 +1723,7 @@ pub fn drawmap(g: &mut Game, fScreenshot: bool, iBlockSize: i16, fWithPlatforms:
         }
 
         if fWithPlatforms {
-            g.g_map.draw_platforms(1);
+            game().g_map.draw_platforms(g, 1);
         }
 
         if !ed().view_only_layer || fScreenshot {
@@ -1762,7 +1762,7 @@ pub fn drawmap(g: &mut Game, fScreenshot: bool, iBlockSize: i16, fWithPlatforms:
         }
 
         if fWithPlatforms {
-            g.g_map.draw_platforms(2);
+            game().g_map.draw_platforms(g, 2);
         }
 
         if (ed().view_only_layer && ed().selected_layer == 2) || !ed().view_only_layer {
@@ -1786,7 +1786,7 @@ pub fn drawmap(g: &mut Game, fScreenshot: bool, iBlockSize: i16, fWithPlatforms:
         }
 
         if fWithPlatforms {
-            g.g_map.draw_platforms(3);
+            game().g_map.draw_platforms(g, 3);
         }
 
         if (ed().viewwarps && !ed().view_only_layer) || fScreenshot {
@@ -1816,7 +1816,7 @@ pub fn drawmap(g: &mut Game, fScreenshot: bool, iBlockSize: i16, fWithPlatforms:
         }
 
         if fWithPlatforms {
-            g.g_map.draw_platforms(4);
+            game().g_map.draw_platforms(g, 4);
         }
     }
 }
@@ -2199,7 +2199,7 @@ pub fn editor_platforms_update_layout(g: &mut Game) {
     }
 }
 
-pub fn init_editor_platforms() {
+pub fn init_editor_platforms(g: &mut Game) {
     unsafe {
         if ed().editor_platforms_initialized {
             return;
@@ -2210,7 +2210,7 @@ pub fn init_editor_platforms() {
         ed().rNewButton[1].w = ed().rNewButton[0].w;
         ed().rNewButton[1].h = ed().rNewButton[0].h;
 
-        editor_platforms_update_layout(game().get());
+        editor_platforms_update_layout(g);
 
         for iType in 0..3usize {
             ed().rTypeButton[iType][0] = rect(0, 0, 192, 32);
@@ -2243,7 +2243,7 @@ pub fn editor_platforms_draw_background_section(g: &mut Game, src_area: &SDL_Rec
     }
 }
 
-pub fn editor_platforms_draw_background() {
+pub fn editor_platforms_draw_background(g: &mut Game) {
     const corner: i32 = 24;
 
     unsafe {
@@ -2266,7 +2266,7 @@ pub fn editor_platforms_draw_background() {
             for col in 0..3 {
                 src.w = src_w[col];
                 dst.w = dst_w[col];
-                editor_platforms_draw_background_section(game().get(), &src, &dst);
+                editor_platforms_draw_background_section(g, &src, &dst);
                 src.x += src_w[col];
                 dst.x += dst_w[col];
             }
@@ -2284,19 +2284,19 @@ fn platform_edit_or_animated_or_tiletype() -> bool {
 }
 
 /// The nested `while (editor_x() == EDITOR_X)` loops the platform editor runs for tiles, animation and tile types.
-unsafe fn run_nested_editor(f: fn() -> i32, stay: i32) {
+unsafe fn run_nested_editor(g: &mut Game, f: fn() -> i32, stay: i32) {
     FPSLimiter::instance().frame_start();
     while f() == stay {
-        editor_harness::frame_delay(game().get(), 0);
-        FPSLimiter::instance().before_flip(game().get());
-        gfx_flipscreen(game().get());
-        FPSLimiter::instance().after_flip(game().get());
+        editor_harness::frame_delay(g, 0);
+        FPSLimiter::instance().before_flip(g);
+        gfx_flipscreen(g);
+        FPSLimiter::instance().after_flip(g);
         FPSLimiter::instance().frame_start();
     }
 }
 
 pub fn editor_platforms(g: &mut Game) -> i32 {
-    init_editor_platforms();
+    init_editor_platforms(g);
 
     unsafe {
         //handle messages
@@ -2331,7 +2331,7 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
                         }
                     } else if PLATFORM_EDIT_STATE_MOVE == ed().iPlatformEditState && sym - k(SDLK_1) < ed().g_iNumPlatforms as i32 {
                         if ed().iPlatformSwitchState == 1 {
-                            switch_platforms(ed().iPlatformSwitchIndex, (sym - k(SDLK_1)) as i16);
+                            switch_platforms(g, ed().iPlatformSwitchIndex, (sym - k(SDLK_1)) as i16);
 
                             ed().iPlatformPreview = -1;
 
@@ -2357,19 +2357,19 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
                     }
                 } else if sym == k(SDLK_t) {
                     if platform_edit_or_animated_or_tiletype() {
-                        run_nested_editor(editor_tiles, EDITOR_TILES);
+                        run_nested_editor(g, editor_tiles, EDITOR_TILES);
                         ed().iPlatformEditState = PLATFORM_EDIT_STATE_EDIT;
                     } else if PLATFORM_EDIT_STATE_PATH == ed().iPlatformEditState {
                         ed().iPlatformEditState = PLATFORM_EDIT_STATE_CHANGE_PATH_TYPE;
                     }
                 } else if sym == k(SDLK_a) {
                     if platform_edit_or_animated_or_tiletype() {
-                        run_nested_editor(editor_animation, EDITOR_ANIMATION);
+                        run_nested_editor(g, editor_animation, EDITOR_ANIMATION);
                         ed().iPlatformEditState = PLATFORM_EDIT_STATE_ANIMATED;
                     }
                 } else if sym == k(SDLK_l) {
                     if platform_edit_or_animated_or_tiletype() {
-                        run_nested_editor(editor_tiletype, EDITOR_TILETYPE);
+                        run_nested_editor(g, editor_tiletype, EDITOR_TILETYPE);
                         ed().iPlatformEditState = PLATFORM_EDIT_STATE_TILETYPE;
                     }
                 } else if sym == k(SDLK_y) {
@@ -2485,7 +2485,7 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
                                     ed().ignoreclick = true;
                                 } else if PLATFORM_EDIT_STATE_MOVE == ed().iPlatformEditState {
                                     if ed().iPlatformSwitchState == 1 {
-                                        switch_platforms(ed().iPlatformSwitchIndex, iPlatform as i16);
+                                        switch_platforms(g, ed().iPlatformSwitchIndex, iPlatform as i16);
 
                                         ed().iPlatformPreview = -1;
 
@@ -2706,7 +2706,7 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
 
         let ep = ed().iEditPlatform as usize;
         if PLATFORM_EDIT_STATE_SELECT == ed().iPlatformEditState || PLATFORM_EDIT_STATE_MOVE == ed().iPlatformEditState {
-            editor_platforms_draw_background();
+            editor_platforms_draw_background(g);
 
             g.rm.menu_font_small.draw_centered(320, ed().r.y + 18, "Platforms");
 
@@ -2848,7 +2848,7 @@ pub fn display_platform_preview(g: &mut Game, iPlatformId: i16, iMouseX: i16, iM
     }
 }
 
-pub fn switch_platforms(iPlatformId1: i16, iPlatformId2: i16) {
+pub fn switch_platforms(g: &mut Game, iPlatformId1: i16, iPlatformId2: i16) {
     unsafe {
         let mut tempPlatform = MapPlatform::new();
         let (a, b) = (iPlatformId1 as usize, iPlatformId2 as usize);
@@ -2857,8 +2857,8 @@ pub fn switch_platforms(iPlatformId1: i16, iPlatformId2: i16) {
         copy_platform(&mut ed().g_Platforms[a], &from);
         copy_platform(&mut ed().g_Platforms[b], &tempPlatform);
 
-        ed().g_Platforms[a].update_preview(game().get());
-        ed().g_Platforms[b].update_preview(game().get());
+        ed().g_Platforms[a].update_preview(g);
+        ed().g_Platforms[b].update_preview(g);
     }
 }
 
@@ -4015,7 +4015,7 @@ pub fn editor_tiletype() -> i32 {
     }
 }
 
-pub fn init_editor_backgrounds() {
+pub fn init_editor_backgrounds(g: &mut Game) {
     unsafe {
         if ed().editor_backgrounds_initialized {
             return;
@@ -4029,7 +4029,7 @@ pub fn init_editor_backgrounds() {
             }
         }
 
-        ed().sBackgrounds.init(std::array::from_fn(|_| gfxSprite::blank(game().get(), 160, 120)));
+        ed().sBackgrounds.init(std::array::from_fn(|_| gfxSprite::blank(g, 160, 120)));
 
         load_background_page(ed().iPage);
 
@@ -4044,7 +4044,7 @@ unsafe fn free_background_surfaces() {
 }
 
 pub fn editor_backgrounds(g: &mut Game) -> i32 {
-    init_editor_backgrounds();
+    init_editor_backgrounds(g);
 
     unsafe {
         //handle messages
@@ -4429,13 +4429,13 @@ pub fn save_as(g: &mut Game) -> i32 {
     let mut fileName = String::new();
     let mut mapLocation = String::from("maps/");
 
-    if dialog("Save As", "Enter name:", &mut fileName, 64) {
+    if dialog(g, "Save As", "Enter name:", &mut fileName, 64) {
         mapLocation.push_str(&fileName);
         mapLocation.push_str(".map");
         save_map(g, &convert_path(game().get(), &mapLocation));
         fileName.push_str(".map");
         unsafe {
-            g.maplist.add(&fileName);
+            game().maplist.add(g, &fileName);
             g.maplist.find(&fileName);
         }
         loadcurrentmap(g);
@@ -4457,11 +4457,11 @@ unsafe fn draw_dialog(g: &mut Game, title: &str, instructions: &str, input: Opti
     gfx_flipscreen(g);
 }
 
-pub fn dialog(title: &str, instructions: &str, input: &mut String, inputsize: i32) -> bool {
+pub fn dialog(g: &mut Game, title: &str, instructions: &str, input: &mut String, inputsize: i32) -> bool {
     unsafe {
         let mut currentChar: u32 = 0;
 
-        draw_dialog(game().get(), title, instructions, None);
+        draw_dialog(g, title, instructions, None);
 
         loop {
             let framestart = crate::services::ticks() as i32;
@@ -4481,7 +4481,7 @@ pub fn dialog(title: &str, instructions: &str, input: &mut String, inputsize: i3
                             if currentChar > 0 {
                                 input.truncate((currentChar - 1) as usize);
 
-                                draw_dialog(game().get(), title, instructions, Some(input));
+                                draw_dialog(g, title, instructions, Some(input));
 
                                 currentChar -= 1;
                             }
@@ -4522,7 +4522,7 @@ pub fn dialog(title: &str, instructions: &str, input: &mut String, inputsize: i3
                             input.push(key as char);
                             currentChar += 1;
 
-                            draw_dialog(game().get(), title, instructions, Some(input));
+                            draw_dialog(g, title, instructions, Some(input));
                         }
                     }
 
@@ -4537,7 +4537,7 @@ pub fn dialog(title: &str, instructions: &str, input: &mut String, inputsize: i3
                 delay = WAITTIME;
             }
 
-            editor_harness::frame_delay(game().get(), delay as u32);
+            editor_harness::frame_delay(g, delay as u32);
         }
     }
 }
@@ -4545,7 +4545,7 @@ pub fn dialog(title: &str, instructions: &str, input: &mut String, inputsize: i3
 pub fn find(g: &mut Game) -> i32 {
     let mut fileName = String::new();
 
-    if dialog("Find Map", "Enter name:", &mut fileName, 64) {
+    if dialog(g, "Find Map", "Enter name:", &mut fileName, 64) {
         unsafe {
             ed().findstring = fileName.clone();
 
@@ -4805,7 +4805,7 @@ pub fn newmap(g: &mut Game) -> i32 {
     let mut fileName = String::new();
     let mut mapLocation = String::from("maps/");
 
-    if dialog("New Map", "Enter name:", &mut fileName, 64) {
+    if dialog(g, "New Map", "Enter name:", &mut fileName, 64) {
         unsafe {
             g.g_map.clear_map();
             g.g_map.clear_platforms();
@@ -4813,7 +4813,7 @@ pub fn newmap(g: &mut Game) -> i32 {
             mapLocation.push_str(".map");
             game().g_map.save_map(g, &convert_path(game().get(), &mapLocation));
             fileName.push_str(".map");
-            g.maplist.add(&fileName);
+            game().maplist.add(g, &fileName);
             g.maplist.find(&fileName);
         }
         loadcurrentmap(g);

@@ -44,7 +44,7 @@ impl CGM_Boss_MiniGame {
         self.winningteam = player.get_team_id();
         self.gameover = true;
 
-        remove_players_but_team(self.winningteam);
+        remove_players_but_team(g, self.winningteam);
 
         unsafe {
             for iScore in 0..game().score_cnt {
@@ -55,8 +55,8 @@ impl CGM_Boss_MiniGame {
                 g.score[iScore as usize].set_score(0);
             }
 
-            setup_score_board(false);
-            show_score_board();
+            setup_score_board(g, false);
+            show_score_board(g);
 
             if g.game_values.music {
                 g.rm.sfx_invinciblemusic.stop();
@@ -200,7 +200,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
             }
 
             if other.score().score <= 0 {
-                remove_team(other.get_team_id());
+                remove_team(g, other.get_team_id());
                 return PlayerKillType::Removed;
             }
         }
@@ -228,7 +228,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
             }
 
             if player.score().score <= 0 {
-                remove_team(player.get_team_id());
+                remove_team(g, player.get_team_id());
                 return PlayerKillType::Removed;
             }
         }

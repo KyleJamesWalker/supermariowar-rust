@@ -205,7 +205,7 @@ impl MO_SledgeBrother {
             return false;
         }
 
-        player.kill_player_map_hazard(false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill
+        player.kill_player_map_hazard(game().get(), false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill
     }
 
     pub fn damage(&mut self, g: &mut Game, playerID: i16) {

@@ -84,15 +84,15 @@ impl MapMultimap {
 }
 
 fn add_maps_from(dirpath: &str, container: &mut MapMultimap) {
-    add_maps_from_with(dirpath, |key, node| {
+    add_maps_from_with(game().get(), dirpath, |key, node| {
         container.emplace(key, node);
     });
 }
 
-fn add_maps_from_with(dirpath: &str, mut emplace: impl FnMut(String, MapListNode)) {
+fn add_maps_from_with(g: &mut Game, dirpath: &str, mut emplace: impl FnMut(String, MapListNode)) {
     let mut dir = FilesIterator::new(dirpath.to_string(), vec![".map".to_string()]);
     while let Some(path) = dir.next() {
-        let node = MapListNode::new(game().get(), path.to_string_lossy().into_owned());
+        let node = MapListNode::new(g, path.to_string_lossy().into_owned());
         let fname = path.file_name().map(|f| f.to_string_lossy().into_owned()).unwrap_or_default();
         emplace(strip_creator_and_ext(&fname), node);
     }
@@ -177,18 +177,18 @@ impl MapList {
         }
     }
 
-    pub fn add_world_maps(&mut self) {
-        let mut worldmapdirs = SimpleDirectoryList::new(convert_path(game().get(), "worlds/"));
+    pub fn add_world_maps(&mut self, g: &mut Game) {
+        let mut worldmapdirs = SimpleDirectoryList::new(convert_path(g, "worlds/"));
         for _iDir in 0..worldmapdirs.count() {
             let szName = worldmapdirs.current_path().to_string_lossy().into_owned() + "/";
-            add_maps_from_with(&szName, |key, node| self.emplace_map(key, node));
+            add_maps_from_with(g, &szName, |key, node| self.emplace_map(key, node));
             worldmapdirs.next();
         }
     }
 
-    pub fn add(&mut self, name: &str) {
-        let fullName = convert_path(game().get(), "maps/") + name;
-        let node = MapListNode::new(game().get(), fullName);
+    pub fn add(&mut self, g: &mut Game, name: &str) {
+        let fullName = convert_path(g, "maps/") + name;
+        let node = MapListNode::new(g, fullName);
         self.emplace_map(strip_creator_and_ext(name), node);
     }
 
@@ -594,8 +594,8 @@ impl MapList {
         }
     }
 
-    pub fn write_map_summary_cache(&mut self) {
-        let path = convert_path(game().get(), "maps/cache/mapsummary.txt");
+    pub fn write_map_summary_cache(&mut self, g: &mut Game) {
+        let path = convert_path(g, "maps/cache/mapsummary.txt");
         let Ok(mut fp) = std::fs::File::create(&path) else {
             return;
         };

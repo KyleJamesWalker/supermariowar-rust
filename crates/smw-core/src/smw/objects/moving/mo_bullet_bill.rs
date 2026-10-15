@@ -94,7 +94,7 @@ impl MO_BulletBill {
 
             o.iPlayerID = playerID;
             o.iColorID = unsafe { g.game_values.colorids[o.iPlayerID as usize] };
-            o.iTeamID = lookup_team_id(o.iPlayerID);
+            o.iTeamID = lookup_team_id(g, o.iPlayerID);
         }
 
         o.iColorOffsetY = (64 * o.iColorID as i32) as i16;
@@ -105,7 +105,7 @@ impl MO_BulletBill {
     }
 
     // For preview drawing
-    pub fn draw_offset(&mut self, iOffsetX: i16, iOffsetY: i16) {
+    pub fn draw_offset(&mut self, g: &mut Game, iOffsetX: i16, iOffsetY: i16) {
         let surface = &*self.spr;
         let clipRect = SDL_Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: 320, h: 240 };
         let dstX = ((self.ix as i32 >> 1) + iOffsetX as i32) as i16;
@@ -116,9 +116,9 @@ impl MO_BulletBill {
         let h = (self.ih as i32 >> 1) as i16;
         if self.fIsSpawned {
             let edge = unsafe { std::mem::transmute::<i32, ClipEdge>(self.iHiddenDirection as i32) };
-            gfx_drawpreview(game().get(), surface, dstX, dstY, srcX, srcY, w, h, &clipRect, false, Some((edge, (self.iHiddenPlane as i32 >> 1) + iOffsetX as i32)));
+            gfx_drawpreview(g, surface, dstX, dstY, srcX, srcY, w, h, &clipRect, false, Some((edge, (self.iHiddenPlane as i32 >> 1) + iOffsetX as i32)));
         } else {
-            gfx_drawpreview(game().get(), surface, dstX, dstY, srcX, srcY, w, h, &clipRect, false, None);
+            gfx_drawpreview(g, surface, dstX, dstY, srcX, srcY, w, h, &clipRect, false, None);
         }
     }
 
@@ -130,7 +130,7 @@ impl MO_BulletBill {
             p.get().collisions.checktop(g, player.get());
             p.platform = Ptr::null();
 
-            p.add_killer_award(Ptr::null(), KillStyle::BulletBill);
+            p.add_killer_award(g, Ptr::null(), KillStyle::BulletBill);
 
             if_sound_on_play(g, &mut game().rm.sfx_mip);
         }
@@ -151,7 +151,7 @@ impl MO_BulletBill {
             }
 
             // Find the player that owns this bullet bill so we can attribute a kill
-            player_killed_player(self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::BulletBill, false, false);
+            player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::BulletBill, false, false);
         }
 
         true
@@ -211,7 +211,7 @@ impl CObjectTrait for MO_BulletBill {
         }
 
         if player.is_invincible() || player.shyguy {
-            player.add_killer_award(Ptr::null(), KillStyle::BulletBill);
+            player.add_killer_award(g, Ptr::null(), KillStyle::BulletBill);
             unsafe {
                 if_sound_on_play(g, &mut game().rm.sfx_kicksound);
             }

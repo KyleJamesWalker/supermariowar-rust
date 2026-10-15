@@ -156,7 +156,7 @@ pub fn mo_walking_enemy_draw<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, thi
             }
         }
     } else {
-        io_moving_object_draw(this);
+        io_moving_object_draw(g, this);
 
         let o = this.we();
         if o.frozen {
@@ -208,7 +208,7 @@ pub fn mo_walking_enemy_update<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, t
                 o.state = 1;
             }
         } else {
-            io_moving_object_update(this);
+            io_moving_object_update(g, this);
         }
 
         // Deal with terminal burnup velocity
@@ -307,7 +307,7 @@ pub fn mo_walking_enemy_collide_player<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut
     unsafe {
         if player.is_invincible() || this.we().frozen {
             let killStyle = this.we().killStyle;
-            player.add_killer_award(Ptr::null(), killStyle);
+            player.add_killer_award(g, Ptr::null(), killStyle);
 
             if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
                 player.score().adjust_score(g, 1);
@@ -338,7 +338,7 @@ pub fn mo_walking_enemy_hitother<T: MO_WalkingEnemyTrait + ?Sized>(_this: &mut T
         return false;
     }
 
-    player.kill_player_map_hazard(false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill
+    player.kill_player_map_hazard(game().get(), false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill
 }
 
 pub fn mo_walking_enemy_collide_object<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, this: &mut T, object: Ptr<dyn IO_MovingObjectTrait>) {
@@ -381,7 +381,7 @@ pub fn mo_walking_enemy_collide_object<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut
 
                     if !killer.is_null() {
                         let killStyle = this.we().killStyle;
-                        killer.add_killer_award(Ptr::null(), killStyle);
+                        killer.add_killer_award(g, Ptr::null(), killStyle);
                         killer.score().adjust_score(g, 1);
 
                         if r#type == movingobject_shell {

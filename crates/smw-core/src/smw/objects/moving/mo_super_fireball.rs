@@ -118,7 +118,7 @@ impl CObjectTrait for MO_SuperFireball {
                 if_sound_on_play(g, &mut game().rm.sfx_hit);
 
                 if !player.is_invincible() && !player.shyguy {
-                    return player.kill_player_map_hazard(false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
+                    return player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
                 }
             }
         }

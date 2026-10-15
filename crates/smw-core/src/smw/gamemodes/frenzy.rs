@@ -58,10 +58,10 @@ impl CGameModeTrait for CGM_Frenzy {
         cgm_frag_playerkilledself(g, self, player, style)
     }
     fn playerextraguy(&mut self, g: &mut Game, player: Ptr<CPlayer>, iType: i16) {
-        cgm_frag_playerextraguy(self, player, iType)
+        cgm_frag_playerextraguy(g, self, player, iType)
     }
     fn check_winner(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> PlayerKillType {
-        cgm_frag_check_winner(self, player)
+        cgm_frag_check_winner(g, self, player)
     }
 }
 

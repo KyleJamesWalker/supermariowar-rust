@@ -42,7 +42,7 @@ impl CObjectTrait for B_BounceBlock {
             return;
         }
 
-        io_block_draw(self);
+        io_block_draw(g, self);
     }
 
     fn update(&mut self, g: &mut Game) {
@@ -82,7 +82,7 @@ impl IO_BlockTrait for B_BounceBlock {
             return true;
         }
 
-        io_block_collide_player_dir(self, player, direction, useBehavior)
+        io_block_collide_player_dir(game().get(), self, player, direction, useBehavior)
     }
 
     fn hittop_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
@@ -95,7 +95,7 @@ impl IO_BlockTrait for B_BounceBlock {
                     && !player.is_invincible_on_bottom()
                     && (player.teamID != self.iBumpTeamID || g.game_values.teamcollision == TeamCollisionStyle::On)
                 {
-                    iKillType = player_killed_player(self.iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
+                    iKillType = player_killed_player(g, self.iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
                 }
 
                 if PlayerKillType::NonKill == iKillType {
@@ -139,7 +139,7 @@ impl IO_BlockTrait for B_BounceBlock {
             return true;
         }
 
-        io_block_collide_object_dir(self, object, direction)
+        io_block_collide_object_dir(game().get(), self, object, direction)
     }
 
     fn hittop_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {

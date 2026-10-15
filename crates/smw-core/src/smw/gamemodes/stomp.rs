@@ -159,9 +159,9 @@ impl CGameModeTrait for CGM_Stomp {
             self.winningteam = player.get_team_id();
             self.gameover = true;
 
-            setup_score_board(false);
-            show_score_board();
-            remove_players_but_team(self.winningteam);
+            setup_score_board(g, false);
+            show_score_board(g);
+            remove_players_but_team(g, self.winningteam);
             return PlayerKillType::Removed;
         } else if player.score().score as i32 >= self.goal as i32 - 2 && !self.playedwarningsound {
             self.playwarningsound(g);

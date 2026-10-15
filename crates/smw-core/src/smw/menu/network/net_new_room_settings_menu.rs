@@ -41,7 +41,7 @@ impl UI_NetNewRoomSettingsMenu {
         unsafe {
             let selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
 
-            this.miContinueButton = Ptr::new_box(MI_Button::new_left(selectfield, 70, 45, "Continue", 500));
+            this.miContinueButton = Ptr::new_box(MI_Button::new_left(g, selectfield, 70, 45, "Continue", 500));
             this.miContinueButton.set_code(MENU_CODE_TO_NET_NEW_ROOM_SETTINGS_MENU);
 
             this.miModeField = Ptr::new_box(MI_ImageSelectField::copy_from(&gsm.miModeField));
@@ -50,9 +50,9 @@ impl UI_NetNewRoomSettingsMenu {
             }
 
             this.miMapField = Ptr::new_box(MI_MapField::new(selectfield, 70, 165, "Map", 400, 120, true));
-            g.netplay.mapfilepath = this.get_current_map_path();
+            g.netplay.mapfilepath = this.get_current_map_path(g);
 
-            this.miModeSettingsButton = Ptr::new_box(MI_Button::new_left(selectfield, 430, 125, "Settings", 140));
+            this.miModeSettingsButton = Ptr::new_box(MI_Button::new_left(g, selectfield, 430, 125, "Settings", 140));
             this.miModeSettingsButton.set_code(MENU_CODE_TO_MODE_SETTINGS_MENU);
 
             this.miRandomizeField = Ptr::new_box(MI_SelectField::<bool>::new(selectfield, 440, 205, "Random", 130, 80));
@@ -105,8 +105,8 @@ impl UI_NetNewRoomSettingsMenu {
         }
     }
 
-    pub fn get_current_map_path(&self) -> String {
-        self.miMapField.get_map_file_path(game().get())
+    pub fn get_current_map_path(&self, g: &mut Game) -> String {
+        self.miMapField.get_map_file_path(g)
     }
 
     pub fn get_selected_game_mode_id(&self) -> i16 {

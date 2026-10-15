@@ -64,7 +64,7 @@ impl MO_PirhanaPlant {
         o.movingObjectType = movingobject_pirhanaplant;
 
         o.state = 0;
-        o.set_new_timer();
+        o.set_new_timer(game().get());
 
         if o.iDirection <= 1 {
             o.iw = 32;
@@ -139,7 +139,7 @@ impl MO_PirhanaPlant {
             return;
         }
 
-        self.set_new_timer();
+        self.set_new_timer(g);
         self.state = 0;
 
         unsafe {
@@ -162,9 +162,9 @@ impl MO_PirhanaPlant {
         }
     }
 
-    pub fn set_new_timer(&mut self) {
-        if crate::smw::net_random::object_event(crate::smw::net_random::Ev::HazardTimer, &[self.iNetworkID]) {
-            if crate::smw::net_random::awaiting_host(game().get()) {
+    pub fn set_new_timer(&mut self, g: &mut Game) {
+        if crate::smw::net_random::object_event(g, crate::smw::net_random::Ev::HazardTimer, &[self.iNetworkID]) {
+            if crate::smw::net_random::awaiting_host(g) {
                 self.iTimer = i16::MAX;
             }
             return;
@@ -267,7 +267,7 @@ impl CObjectTrait for MO_PirhanaPlant {
 
             if (self.iDirection <= 1 && self.collisionHeight <= 0) || (self.iDirection >= 2 && self.collisionWidth <= 0) {
                 self.state = 0;
-                self.set_new_timer();
+                self.set_new_timer(g);
             }
         }
 
@@ -390,7 +390,7 @@ impl CObjectTrait for MO_PirhanaPlant {
         if player.is_invincible() || player.tanookisuit.is_statue() || (player.kuriboshoe.is_on() && !fHitPlayerTop) {
             self.kill_plant(g);
         } else if !player.is_shielded() && !player.shyguy {
-            return player.kill_player_map_hazard(false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
+            return player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
         }
 
         false

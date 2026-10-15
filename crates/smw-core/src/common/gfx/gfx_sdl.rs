@@ -127,10 +127,10 @@ impl GraphicsSDL {
         services().video.set_fullscreen(fullscreen);
     }
 
-    pub fn take_screenshot(&self) {
+    pub fn take_screenshot(&self, g: &mut Game) {
         // NOTE: %F and %T don't work on Windows
         let path_format = "screenshots/%Y-%m-%d_%H%M%S.png";
-        let path = convert_path(game().get(), &strftime_local(path_format));
+        let path = convert_path(g, &strftime_local(path_format));
 
         let cpath = CString::new(path.as_bytes()).unwrap();
         unsafe {

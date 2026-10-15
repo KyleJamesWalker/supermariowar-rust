@@ -74,7 +74,7 @@ impl MO_CheepCheep {
             p.get().collisions.checktop(g, player.get());
             p.platform = Ptr::null();
 
-            p.add_killer_award(Ptr::null(), KillStyle::CheepCheep);
+            p.add_killer_award(g, Ptr::null(), KillStyle::CheepCheep);
 
             if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
                 p.score().adjust_score(g, 1);
@@ -93,7 +93,7 @@ impl MO_CheepCheep {
             return false;
         }
 
-        player.kill_player_map_hazard(false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill
+        player.kill_player_map_hazard(game().get(), false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill
     }
 
     pub fn shatter_die(&mut self, g: &mut Game) {
@@ -155,7 +155,7 @@ impl CObjectTrait for MO_CheepCheep {
     fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         unsafe {
             if player.is_invincible() || self.frozen {
-                player.add_killer_award(Ptr::null(), KillStyle::CheepCheep);
+                player.add_killer_award(g, Ptr::null(), KillStyle::CheepCheep);
 
                 if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
                     player.score().adjust_score(g, 1);
@@ -212,7 +212,7 @@ impl CObjectTrait for MO_CheepCheep {
                         let mut killer = get_player_from_global_id(g, object.iPlayerID);
 
                         if !killer.is_null() {
-                            killer.add_killer_award(Ptr::null(), KillStyle::CheepCheep);
+                            killer.add_killer_award(g, Ptr::null(), KillStyle::CheepCheep);
                             killer.score().adjust_score(g, 1);
 
                             if r#type == movingobject_shell {

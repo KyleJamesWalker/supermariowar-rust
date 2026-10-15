@@ -160,7 +160,7 @@ impl CObjectTrait for OMO_RaceGoal {
 
     fn update(&mut self, g: &mut Game) {
         self.anglechangetimer -= 1;
-        if self.anglechangetimer <= 0 && !net_random::object_event(Ev::Wander, &net_random::wander_args(self.iNetworkID, self.fx, self.fy, self.angle)) {
+        if self.anglechangetimer <= 0 && !net_random::object_event(g, Ev::Wander, &net_random::wander_args(self.iNetworkID, self.fx, self.fy, self.angle)) {
             self.change_angle();
         }
 

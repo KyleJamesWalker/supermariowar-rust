@@ -32,7 +32,7 @@ impl PlayerBurnupTimer {
 
                         self.timer += 1;
                         if self.timer > 80 {
-                            player.kill_player_map_hazard(true, KillStyle::Environment, false, -1);
+                            player.kill_player_map_hazard(g, true, KillStyle::Environment, false, -1);
                         } else {
                             g.eyecandy[0].emplace(EC_SingleAnimation::new(
                                 Ptr::from_mut(&mut g.rm.spr_burnup),

@@ -294,9 +294,9 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
         true
     }
 
-    pub fn update_impl(&mut self) {
-        self.miModifyImageRight.update(game().get());
-        self.miModifyImageLeft.update(game().get());
+    pub fn update_impl(&mut self, g: &mut Game) {
+        self.miModifyImageRight.update(g);
+        self.miModifyImageLeft.update(g);
     }
 
     pub fn draw_impl(&mut self, g: &mut Game) {
@@ -457,7 +457,7 @@ impl<T: Copy + PartialEq + 'static> UI_ControlTrait for MI_SelectField<T> {
     crate::impl_ctl!();
 
     fn update(&mut self, g: &mut Game) {
-        self.update_impl();
+        self.update_impl(g);
     }
     fn draw(&mut self, g: &mut Game) {
         self.draw_impl(g);

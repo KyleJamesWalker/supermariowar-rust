@@ -129,7 +129,7 @@ impl MO_WalkingEnemyTrait for MO_Koopa {
             } else {
                 self.dead = true;
 
-                player.add_killer_award(Ptr::null(), KillStyle::Koopa);
+                player.add_killer_award(g, Ptr::null(), KillStyle::Koopa);
 
                 self.drop_shell(g, false, false);
             }
@@ -149,7 +149,7 @@ impl MO_WalkingEnemyTrait for MO_Koopa {
         shell.nospawn((self.iy as i32 + 8) as i16, fBounce);
 
         if fFlip {
-            shell.flip();
+            shell.flip(g);
         }
 
         unsafe {

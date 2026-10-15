@@ -90,7 +90,7 @@ impl UI_Menu {
     /// Sets the initially focused element on opening/resetting the menu.
     pub fn set_initial_focus(&mut self, control: ControlPtr) {
         self.m_initialFocus = control;
-        self.reset_menu();
+        self.reset_menu(game().get());
     }
     /// The initially focused element on opening/resetting the menu.
     pub fn initial_focus(&self) -> ControlPtr {
@@ -105,9 +105,9 @@ impl UI_Menu {
         self.cancelCode = code;
     }
 
-    pub fn reset_menu(&mut self) {
+    pub fn reset_menu(&mut self, g: &mut Game) {
         if !self.m_currentFocus.is_null() {
-            self.m_currentFocus.modify(game().get(), false);
+            self.m_currentFocus.modify(g, false);
             self.m_currentFocus.select(false);
         }
 
@@ -120,24 +120,24 @@ impl UI_Menu {
         self.eyeCandy.clean();
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, g: &mut Game) {
         for i in 0..self.controls.len() {
-            self.controls[i].update(game().get());
+            self.controls[i].update(g);
         }
 
         self.eyeCandy.clean_dead_objects();
         self.eyeCandy.update();
     }
 
-    pub fn draw(&mut self) {
+    pub fn draw(&mut self, g: &mut Game) {
         for i in 0..self.controls.len() {
-            self.controls[i].draw(game().get());
+            self.controls[i].draw(g);
         }
 
         self.eyeCandy.draw();
 
         if self.fModifyingItem && !self.m_currentFocus.is_null() {
-            self.m_currentFocus.draw_overlay(game().get());
+            self.m_currentFocus.draw_overlay(g);
         }
     }
 
@@ -164,7 +164,7 @@ impl UI_Menu {
                 if self.iControllingTeam != -1 {
                     // Pay attention to other player's exit button pushes so we can exit when AI is controlling
                     if g.game_values.playercontrol[iPlayer as usize] != 1
-                        || (self.iControllingTeam != lookup_team_id(iPlayer) && (!self.fAllowExitButton || !out.menu_cancel().fPressed))
+                        || (self.iControllingTeam != lookup_team_id(g, iPlayer) && (!self.fAllowExitButton || !out.menu_cancel().fPressed))
                     {
                         continue;
                     }
@@ -250,9 +250,9 @@ impl UI_Menu {
         self.m_savedCurrent = self.m_currentFocus;
     }
 
-    pub fn restore_current(&mut self) {
+    pub fn restore_current(&mut self, g: &mut Game) {
         if !self.m_currentFocus.is_null() {
-            self.m_currentFocus.modify(game().get(), false);
+            self.m_currentFocus.modify(g, false);
             self.m_currentFocus.select(false);
         }
 
@@ -272,14 +272,14 @@ impl UI_Menu {
         self.fAllowExitButton = allowExit;
     }
 
-    pub fn mouse_click(&mut self, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
+    pub fn mouse_click(&mut self, g: &mut Game, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
         // Loop through all controls to see if one was clicked on
         let mut pFound: ControlPtr = Ptr::null();
         let mut code = MENU_CODE_NONE;
         for i in 0..self.controls.len() {
             let mut control = self.controls[i];
             if control.ctl().is_visible() {
-                code = control.mouse_click(game().get(), iMouseX, iMouseY);
+                code = control.mouse_click(g, iMouseX, iMouseY);
                 if code != MENU_CODE_NONE {
                     pFound = control;
                     break;
@@ -288,11 +288,11 @@ impl UI_Menu {
         }
 
         if !pFound.is_null() {
-            crate::common::ui::mi_text_field::note_opener(game().get(), false);
+            crate::common::ui::mi_text_field::note_opener(g, false);
             // If we clicked the same control we have selected
             if pFound != self.m_currentFocus {
                 if self.fModifyingItem {
-                    self.m_currentFocus.modify(game().get(), false);
+                    self.m_currentFocus.modify(g, false);
                     self.fModifyingItem = false;
                 }
 
@@ -301,15 +301,15 @@ impl UI_Menu {
                 self.fModifyingItem = self.m_currentFocus.select(true);
 
                 if !self.fModifyingItem {
-                    self.fModifyingItem = self.m_currentFocus.modify(game().get(), true) == MENU_CODE_MODIFY_ACCEPTED;
+                    self.fModifyingItem = self.m_currentFocus.modify(g, true) == MENU_CODE_MODIFY_ACCEPTED;
                 }
             } else if !self.fModifyingItem {
-                self.fModifyingItem = self.m_currentFocus.modify(game().get(), true) == MENU_CODE_MODIFY_ACCEPTED;
+                self.fModifyingItem = self.m_currentFocus.modify(g, true) == MENU_CODE_MODIFY_ACCEPTED;
             }
         } else {
             // If nothing was clicked, then stop modifying the current control
             if self.fModifyingItem {
-                self.m_currentFocus.modify(game().get(), false);
+                self.m_currentFocus.modify(g, false);
                 self.fModifyingItem = false;
             }
         }

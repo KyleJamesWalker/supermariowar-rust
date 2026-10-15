@@ -218,11 +218,11 @@ pub fn note_match_map(g: &mut Game, path: &str) {
     unsafe { g.match_map = data_relative(path) };
 }
 
-fn data_path(name: &str) -> String {
+fn data_path(g: &mut Game, name: &str) -> String {
     if name.is_empty() || name.starts_with('/') {
         name.to_string()
     } else {
-        convert_path(game().get(), name)
+        convert_path(g, name)
     }
 }
 
@@ -239,12 +239,12 @@ pub fn unsupported_reason() -> Option<&'static str> {
 }
 
 /// The checkpoint at the current point of `MenuState::enter_gameplay`.
-pub fn capture() -> Vec<u8> {
+pub fn capture(g: &mut Game) -> Vec<u8> {
     let online = unsafe { crate::game::game().netplay.active };
     let mut s = Snap::saver();
     s.put(MAGIC);
     s.put(&[if online { ONLINE_VERSION } else { VERSION }]);
-    walk(game().get(), &mut s, online);
+    walk(g, &mut s, online);
     s.buf
 }
 
@@ -276,11 +276,11 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
         }
 
         // Settings, as options.bin and controls.sdl2.bin would hold them now.
-        let (mut options, mut controls) = if s.load { (Vec::new(), Vec::new()) } else { gv.config_bytes() };
+        let (mut options, mut controls) = if s.load { (Vec::new(), Vec::new()) } else { gv.config_bytes(g) };
         s.io(&mut options);
         s.io(&mut controls);
         if s.load {
-            gv.read_config_bytes(options, controls);
+            gv.read_config_bytes(g, options, controls);
         }
 
         // Which input configuration each player reads, as `inputConfiguration` index * 2 + keyboard/joystick.
@@ -414,7 +414,7 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
         map = local_path(&map);
         if s.load {
             g.maplist.set_current(map_index);
-            g.g_map.load_map(&data_path(&map), crate::common::map::read_type_full);
+            game().g_map.load_map(&data_path(g, &map), crate::common::map::read_type_full);
             note_match_map(g, &map);
             crate::common::global::load_current_map_background(g);
         }
@@ -424,7 +424,7 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
         s.io(&mut song_name);
         s.io(song_index);
         if s.load {
-            *song = data_path(&song_name).into();
+            *song = data_path(g, &song_name).into();
             for k in 0..4 {
                 if gv.playercontrol[k] > 0 {
                     game().rm.spr_player[k] = match crate::smw::net::net_skin_path(g, k) {
@@ -443,7 +443,7 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
             s.io(&mut paused);
             if s.load {
                 if (*t).name() != name {
-                    *t = if name.is_empty() { sfxMusic::new() } else { sfxMusic::from_file(Path::new(&data_path(&name))).unwrap_or_else(|e| std::panic::panic_any(e)) };
+                    *t = if name.is_empty() { sfxMusic::new() } else { sfxMusic::from_file(Path::new(&data_path(g, &name))).unwrap_or_else(|e| std::panic::panic_any(e)) };
                 }
                 (*t).set_paused(paused);
             }
@@ -457,7 +457,7 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
             s.io(&mut last_start);
             if s.load {
                 if (*snd).name() != name {
-                    *snd = if name.is_empty() { sfxSound::new() } else { sfxSound::from_file(Path::new(&data_path(&name))).unwrap_or_else(|e| std::panic::panic_any(e)) };
+                    *snd = if name.is_empty() { sfxSound::new() } else { sfxSound::from_file(Path::new(&data_path(g, &name))).unwrap_or_else(|e| std::panic::panic_any(e)) };
                 }
                 (*snd).set_state(channels, last_start);
             }
@@ -517,7 +517,7 @@ fn slug(text: &str) -> String {
 /// The fields of a match's start marker: what was played, where, by whom.
 pub fn start_fields(g: &mut Game) -> String {
     unsafe {
-        let gv = &mut *g.game_values;
+        let gv = &mut *game().game_values;
         let mut f: Vec<String> = Vec::new();
         f.push(kv("type", match gv.matchtype {
             MatchType::SingleGame => "single",
@@ -578,7 +578,7 @@ pub fn start_fields(g: &mut Game) -> String {
                 }
             };
             let skin = g.skinlist.at(gv.skinids[p].max(0) as usize).name.clone();
-            f.push(kv(&format!("p{}", p + 1), &format!("{},team{},{}", who, lookup_team_id(p as i16) + 1, skin)));
+            f.push(kv(&format!("p{}", p + 1), &format!("{},team{},{}", who, lookup_team_id(g, p as i16) + 1, skin)));
         }
         f.join(" ")
     }

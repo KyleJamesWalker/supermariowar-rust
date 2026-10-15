@@ -94,25 +94,25 @@ pub fn cgm_domination_playerkilledself<T: CGameModeTrait + ?Sized>(g: &mut Game,
     PlayerKillType::Normal
 }
 
-pub fn cgm_domination_playerextraguy<T: CGameModeTrait + ?Sized>(this: &mut T, mut player: Ptr<CPlayer>, iType: i16) {
+pub fn cgm_domination_playerextraguy<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: Ptr<CPlayer>, iType: i16) {
     if !this.gm().gameover {
-        player.score().adjust_score(game().get(), (10 * iType as i32) as i16);
-        this.check_winner(game().get(), player);
+        player.score().adjust_score(g, (10 * iType as i32) as i16);
+        this.check_winner(g, player);
     }
 }
 
-pub fn cgm_domination_check_winner<T: CGameModeTrait + ?Sized>(this: &mut T, mut player: Ptr<CPlayer>) -> PlayerKillType {
+pub fn cgm_domination_check_winner<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: Ptr<CPlayer>) -> PlayerKillType {
     if this.gm().goal > -1 {
         if player.score().score >= this.gm().goal {
             player.score().set_score(this.gm().goal);
             this.gm_mut().winningteam = player.get_team_id();
             this.gm_mut().gameover = true;
 
-            setup_score_board(false);
-            show_score_board();
-            remove_players_but_team(this.gm().winningteam);
+            setup_score_board(g, false);
+            show_score_board(g);
+            remove_players_but_team(g, this.gm().winningteam);
         } else if player.score().score as f64 >= this.gm().goal as f64 * 0.8 && !this.gm().playedwarningsound {
-            this.gm_mut().playwarningsound(game().get());
+            this.gm_mut().playwarningsound(g);
         }
     }
 
@@ -140,9 +140,9 @@ impl CGameModeTrait for CGM_Domination {
         cgm_domination_playerkilledself(g, self, player, style)
     }
     fn playerextraguy(&mut self, g: &mut Game, player: Ptr<CPlayer>, iType: i16) {
-        cgm_domination_playerextraguy(self, player, iType)
+        cgm_domination_playerextraguy(g, self, player, iType)
     }
     fn check_winner(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> PlayerKillType {
-        cgm_domination_check_winner(self, player)
+        cgm_domination_check_winner(g, self, player)
     }
 }

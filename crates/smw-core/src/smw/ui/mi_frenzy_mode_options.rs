@@ -244,7 +244,7 @@ impl UI_ControlTrait for MI_FrenzyModeOptions {
     crate::impl_ctl!();
 
     fn modify(&mut self, g: &mut Game, modify: bool) -> MenuCodeEnum {
-        self.mMenu.reset_menu();
+        self.mMenu.reset_menu(g);
         self.iOffset = 0;
         self.iIndex = 0;
         self.setup_powerup_fields();
@@ -278,7 +278,7 @@ impl UI_ControlTrait for MI_FrenzyModeOptions {
     }
 
     fn update(&mut self, g: &mut Game) {
-        self.mMenu.update();
+        self.mMenu.update(g);
     }
 
     fn draw(&mut self, g: &mut Game) {
@@ -286,7 +286,7 @@ impl UI_ControlTrait for MI_FrenzyModeOptions {
             return;
         }
 
-        self.mMenu.draw();
+        self.mMenu.draw(g);
     }
 
     fn mouse_click(&mut self, g: &mut Game, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
@@ -295,7 +295,7 @@ impl UI_ControlTrait for MI_FrenzyModeOptions {
         }
 
         //Loop through all controls to see if one was clicked on
-        let ret = self.mMenu.mouse_click(iMouseX, iMouseY);
+        let ret = self.mMenu.mouse_click(g, iMouseX, iMouseY);
 
         if ret == MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS {
             return ret;

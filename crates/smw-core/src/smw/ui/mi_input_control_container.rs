@@ -522,7 +522,7 @@ impl MI_InputControlContainer {
 
             let szNewTitle = format!("Player {} Controls", self.iPlayerID as i32 + 1);
             self.miText.set_text(szNewTitle);
-            self.mInputMenu.reset_menu();
+            self.mInputMenu.reset_menu(g);
         }
     }
 
@@ -562,7 +562,7 @@ impl UI_ControlTrait for MI_InputControlContainer {
     crate::impl_ctl!();
 
     fn update(&mut self, g: &mut Game) {
-        self.mInputMenu.update();
+        self.mInputMenu.update(g);
     }
 
     fn draw(&mut self, g: &mut Game) {
@@ -570,7 +570,7 @@ impl UI_ControlTrait for MI_InputControlContainer {
             return;
         }
 
-        self.mInputMenu.draw();
+        self.mInputMenu.draw(g);
     }
 
     fn send_input(&mut self, g: &mut Game, mut playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {

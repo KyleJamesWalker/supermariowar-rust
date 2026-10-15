@@ -40,7 +40,7 @@ impl PlayerOutOfArenaTimer {
 
                         self.displaytimer -= 1;
                         if self.displaytimer < 0 {
-                            player.kill_player_map_hazard(false, KillStyle::Environment, false, -1);
+                            player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1);
                         }
                     }
                 }

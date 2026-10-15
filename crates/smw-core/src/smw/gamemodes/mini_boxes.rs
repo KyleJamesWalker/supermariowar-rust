@@ -59,9 +59,9 @@ impl CGM_Boxes_MiniGame {
         }
     }
 
-    fn release_all_coins_from_team(&mut self, mut player: Ptr<CPlayer>) {
+    fn release_all_coins_from_team(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) {
         while player.score().subscore[0] > 0 {
-            self.release_coin(game().get(), player);
+            self.release_coin(g, player);
         }
     }
 }
@@ -123,8 +123,8 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
         }
 
         if other.score().score <= 0 {
-            self.release_all_coins_from_team(other);
-            remove_team(other.get_team_id());
+            self.release_all_coins_from_team(g, other);
+            remove_team(g, other.get_team_id());
             return PlayerKillType::Removed;
         }
 
@@ -168,8 +168,8 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
         }
 
         if player.score().score <= 0 {
-            self.release_all_coins_from_team(player);
-            remove_team(player.get_team_id());
+            self.release_all_coins_from_team(g, player);
+            remove_team(g, player.get_team_id());
             return PlayerKillType::Removed;
         }
 
@@ -191,9 +191,9 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
             self.winningteam = player.get_team_id();
             self.gameover = true;
 
-            remove_players_but_team(self.winningteam);
-            setup_score_board(false);
-            show_score_board();
+            remove_players_but_team(g, self.winningteam);
+            setup_score_board(g, false);
+            show_score_board(g);
         } else if player.score().subscore[0] >= 4 && !self.playedwarningsound {
             self.playwarningsound(g);
         }

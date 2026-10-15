@@ -54,7 +54,7 @@ impl CObjectTrait for MO_Explosion {
     }
 
     fn draw(&mut self, g: &mut Game) {
-        io_moving_object_draw(self)
+        io_moving_object_draw(g, self)
     }
 
     fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
@@ -66,7 +66,7 @@ impl CObjectTrait for MO_Explosion {
                 && !player.shyguy
             {
                 // Find the player that made this explosion so we can attribute a kill
-                player_killed_player(self.iPlayerID, player, PlayerDeathStyle::Jump, self.iStyle, false, false);
+                player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, self.iStyle, false, false);
                 return true;
             }
         }

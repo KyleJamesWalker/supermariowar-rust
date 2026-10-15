@@ -64,14 +64,14 @@ impl UI_NetServersMenu {
             this.miNetServersScroll.remote_index(&mut g.netplay.selectedServerIndex);
 
             this.miNetServersNicknameField = Ptr::new_box(MI_TextField::new(plain, 70, 120, "Your name", 640 - 2 * 70, 150));
-            this.miNetServersNicknameField.set_data(&mut g.netplay.myPlayerName, NET_MAX_PLAYER_NAME_LENGTH as i16);
+            this.miNetServersNicknameField.set_data(g, &mut game().netplay.myPlayerName, NET_MAX_PLAYER_NAME_LENGTH as i16);
 
             for iServer in 0..game().netplay.savedServers.len() {
                 let host = g.netplay.savedServers[iServer].hostname.clone();
                 this.miNetServersScroll.add(&host, "");
             }
 
-            this.miNetServersSelectButton = Ptr::new_box(MI_Button::new_left(selectfield, 70, 200, "Selected Server", 640 - 2 * 70));
+            this.miNetServersSelectButton = Ptr::new_box(MI_Button::new_left(g, selectfield, 70, 200, "Selected Server", 640 - 2 * 70));
             this.miNetServersSelectButton.set_code(MENU_CODE_TO_NET_SERVERLIST);
             if !g.netplay.savedServers.is_empty() {
                 let host = g.netplay.savedServers[g.netplay.selectedServerIndex as usize].hostname.clone();
@@ -161,7 +161,7 @@ impl UI_NetServersMenu {
             game().netplay.client.send_connect_request_to_selected_server(g);
             g.netplay.operationInProgress = true;
         }
-        net_save_server_list();
+        net_save_server_list(g);
 
         self.miNetServersConnectingDialogImage.set_visible(true);
         self.miNetServersConnectingDialogText.set_visible(true);
@@ -170,7 +170,7 @@ impl UI_NetServersMenu {
         let t = ctl_ptr(self.miNetServersConnectingDialogText);
         self.set_initial_focus(t);
         self.set_cancel_code(MENU_CODE_NET_CONNECT_ABORT);
-        self.reset_menu();
+        self.reset_menu(g);
     }
 
     pub fn open_server_list(&mut self, g: &mut Game) {
@@ -181,7 +181,7 @@ impl UI_NetServersMenu {
         let s = ctl_ptr(self.miNetServersScroll);
         self.set_initial_focus(s);
         self.set_cancel_code(MENU_CODE_NONE);
-        self.reset_menu();
+        self.reset_menu(g);
     }
 
     pub fn restore(&mut self) {
@@ -192,6 +192,6 @@ impl UI_NetServersMenu {
         let s = ctl_ptr(self.miNetServersSelectButton);
         self.set_initial_focus(s);
         self.set_cancel_code(MENU_CODE_TO_MAIN_MENU);
-        self.restore_current();
+        self.restore_current(game().get());
     }
 }

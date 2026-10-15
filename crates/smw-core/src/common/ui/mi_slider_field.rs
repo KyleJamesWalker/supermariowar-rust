@@ -43,7 +43,7 @@ impl UI_ControlTrait for MI_SliderField {
     crate::impl_ctl!();
 
     fn update(&mut self, g: &mut Game) {
-        self.mi_select_field.update_impl();
+        self.mi_select_field.update_impl(g);
     }
 
     fn draw(&mut self, g: &mut Game) {

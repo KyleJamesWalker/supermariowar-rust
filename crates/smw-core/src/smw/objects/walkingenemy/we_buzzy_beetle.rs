@@ -99,7 +99,7 @@ impl MO_WalkingEnemyTrait for MO_BuzzyBeetle {
             player.platform = Ptr::null();
             self.dead = true;
 
-            player.add_killer_award(Ptr::null(), KillStyle::BuzzyBeetle);
+            player.add_killer_award(g, Ptr::null(), KillStyle::BuzzyBeetle);
 
             if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
                 player.score().adjust_score(g, 1);
@@ -119,7 +119,7 @@ impl MO_WalkingEnemyTrait for MO_BuzzyBeetle {
         shell.nospawn(self.iy, fBounce);
 
         if fFlip {
-            shell.flip();
+            shell.flip(g);
         }
 
         unsafe {

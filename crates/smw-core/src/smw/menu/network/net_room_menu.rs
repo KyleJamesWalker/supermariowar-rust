@@ -59,7 +59,7 @@ impl UI_NetRoomMenu {
             this.miNetRoomMapPreview = Ptr::new_box(MI_MapPreview::new(selectfield, 264, 2, 400, 120));
 
             this.miNetRoomMessageField = Ptr::new_box(MI_TextField::new(plain, 26, 432, "Say", 464 - 36, 60));
-            this.miNetRoomMessageField.set_data(&mut g.netplay.mychatmessage, NET_MAX_CHAT_MSG_LENGTH as i16);
+            this.miNetRoomMessageField.set_data(g, &mut game().netplay.mychatmessage, NET_MAX_CHAT_MSG_LENGTH as i16);
 
             this.miNetRoomSendButton = Ptr::new_box(MI_Button::new(g, selectfield, 464, 432, "Send", 80, TextAlign::CENTER));
             this.miNetRoomSendButton.set_code(MENU_CODE_NET_CHAT_SEND);
@@ -161,7 +161,7 @@ impl UI_NetRoomMenu {
             }
 
             let path = g.netplay.mapfilepath.clone();
-            self.set_preview_map_path(&path);
+            self.set_preview_map_path(g, &path);
         }
     }
 
@@ -178,7 +178,7 @@ impl UI_NetRoomMenu {
                 let t = ctl_ptr(self.miNetRoomStartingDialogText);
                 self.set_initial_focus(t);
                 self.set_cancel_code(MENU_CODE_TO_NET_ROOM_MENU);
-                self.reset_menu();
+                self.reset_menu(g);
             }
         }
     }
@@ -192,7 +192,7 @@ impl UI_NetRoomMenu {
         self.set_cancel_code(MENU_CODE_TO_NET_LOBBY_MENU);
     }
 
-    pub fn set_preview_map_path(&mut self, path: &str) {
-        self.miNetRoomMapPreview.load_map(game().get(), path);
+    pub fn set_preview_map_path(&mut self, g: &mut Game, path: &str) {
+        self.miNetRoomMapPreview.load_map(g, path);
     }
 }

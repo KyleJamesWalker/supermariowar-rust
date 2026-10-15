@@ -195,8 +195,8 @@ fn dynamic_cast_gamemode<T: Any>(g: &mut Game) -> Ptr<T> {
 }
 
 /// `(T*)game_values.gamemode`
-fn static_cast_gamemode<T: Any>() -> Ptr<T> {
-    let p = dynamic_cast_gamemode::<T>(game().get());
+fn static_cast_gamemode<T: Any>(g: &mut Game) -> Ptr<T> {
+    let p = dynamic_cast_gamemode::<T>(g);
     if p.is_null() {
         panic!("ai: bad static_cast of gamemode to {}", std::any::type_name::<T>());
     }
@@ -288,12 +288,12 @@ unsafe fn cmap_byte(g: &mut Game, off: i32) -> u8 {
     panic!("ai: C++ out-of-bounds CMap read at offset {} is not modelled", off);
 }
 
-unsafe fn cmap_i16(off: i32) -> i16 {
-    i16::from_le_bytes([cmap_byte(game().get(), off), cmap_byte(game().get(), off + 1)])
+unsafe fn cmap_i16(g: &mut Game, off: i32) -> i16 {
+    i16::from_le_bytes([cmap_byte(g, off), cmap_byte(g, off + 1)])
 }
 
-unsafe fn cmap_i32(off: i32) -> i32 {
-    i32::from_le_bytes([cmap_byte(game().get(), off), cmap_byte(game().get(), off + 1), cmap_byte(game().get(), off + 2), cmap_byte(game().get(), off + 3)])
+unsafe fn cmap_i32(g: &mut Game, off: i32) -> i32 {
+    i32::from_le_bytes([cmap_byte(g, off), cmap_byte(g, off + 1), cmap_byte(g, off + 2), cmap_byte(g, off + 3)])
 }
 
 /// `g_map->map(x, y)`, including the C++ out-of-bounds reads.
@@ -320,7 +320,7 @@ unsafe fn ai_warp(g: &mut Game, x: i16, y: i16) -> (i32, i16, i16) {
         return (w.direction as i32, w.connection, w.id);
     }
     let off = CMAP_OFF_WARPDATA + (x as i32 * MAPHEIGHT + y as i32) * 8;
-    (cmap_i32(off), cmap_i16(off + 4), cmap_i16(off + 6))
+    (cmap_i32(g, off), cmap_i16(g, off + 4), cmap_i16(g, off + 6))
 }
 
 /// `g_map->checkforwarp(x1, x2, y, 2)`, including the C++ out-of-bounds reads.
@@ -340,7 +340,7 @@ unsafe fn ai_checkforwarp_up(g: &mut Game, x1: i16, x2: i16, y: i16) -> bool {
     let locktimer = if (0..32).contains(&w1.2) {
         g.g_map.warpexits[w1.2 as usize].locktimer
     } else {
-        cmap_i16(CMAP_OFF_WARPEXITS + w1.2 as i32 * CMAP_SIZEOF_WARPEXIT + 22)
+        cmap_i16(g, CMAP_OFF_WARPEXITS + w1.2 as i32 * CMAP_SIZEOF_WARPEXIT + 22)
     };
     locktimer <= 0
 }
@@ -511,7 +511,7 @@ impl CPlayerAI {
                                 continue;
                             }
 
-                            let mut starmode = static_cast_gamemode::<CGM_Star>();
+                            let mut starmode = static_cast_gamemode::<CGM_Star>(g);
                             let mut star = static_cast::<CO_Star>(obj);
 
                             if star.get_type() == 1 || starmode.isplayerstar(g, pPlayer) {
@@ -773,7 +773,7 @@ impl CPlayerAI {
 
                         let mut racegoal = static_cast::<OMO_RaceGoal>(obj);
 
-                        if racegoal.get_goal_id() != static_cast_gamemode::<CGM_Race>().get_next_goal(iTeamID) {
+                        if racegoal.get_goal_id() != static_cast_gamemode::<CGM_Race>(g).get_next_goal(iTeamID) {
                             continue;
                         }
 
@@ -1339,7 +1339,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
         //"Star Mode" specific stuff
         //Drop the star if we're not it
         if g.game_values.gamemode.gamemode == game_mode_star {
-            let mut starmode = static_cast_gamemode::<CGM_Star>();
+            let mut starmode = static_cast_gamemode::<CGM_Star>(g);
 
             if !carriedItem.is_null()
                 && carriedItem.get_moving_object_type() == movingobject_star

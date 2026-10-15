@@ -144,7 +144,7 @@ impl IO_BlockTrait for B_NoteBlock {
             return true;
         }
 
-        io_block_collide_player_dir(self, player, direction, useBehavior)
+        io_block_collide_player_dir(game().get(), self, player, direction, useBehavior)
     }
 
     fn hittop_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
@@ -246,7 +246,7 @@ impl IO_BlockTrait for B_NoteBlock {
             return true;
         }
 
-        io_block_collide_object_dir(self, object, direction)
+        io_block_collide_object_dir(game().get(), self, object, direction)
     }
 
     fn hittop_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {

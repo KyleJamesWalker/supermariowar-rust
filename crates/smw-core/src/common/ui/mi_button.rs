@@ -60,8 +60,8 @@ impl MI_Button {
     }
 
     /// `new MI_Button(spr, x, y, name, width)` with the default `TextAlign::LEFT`.
-    pub fn new_left(nspr: Ptr<gfxSprite>, x: i16, y: i16, name: impl Into<String>, width: i16) -> Self {
-        Self::new(game().get(), nspr, x, y, name, width, TextAlign::LEFT)
+    pub fn new_left(g: &mut Game, nspr: Ptr<gfxSprite>, x: i16, y: i16, name: impl Into<String>, width: i16) -> Self {
+        Self::new(g, nspr, x, y, name, width, TextAlign::LEFT)
     }
 
     pub fn set_name(&mut self, g: &mut Game, name: impl Into<String>) {

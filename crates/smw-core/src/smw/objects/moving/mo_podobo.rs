@@ -102,7 +102,7 @@ impl CObjectTrait for MO_Podobo {
                 && !player.shyguy
             {
                 // Find the player that made this explosion so we can attribute a kill
-                player_killed_player(self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Podobo, false, false);
+                player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Podobo, false, false);
                 return true;
             }
 

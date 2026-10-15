@@ -177,9 +177,9 @@ impl CGameModeTrait for CGM_Pipe_MiniGame {
                 self.winningteam = player.get_team_id();
                 self.gameover = true;
 
-                remove_players_but_team(self.winningteam);
-                setup_score_board(false);
-                show_score_board();
+                remove_players_but_team(g, self.winningteam);
+                setup_score_board(g, false);
+                show_score_board(g);
             } else if player.score().score as i32 >= self.goal as i32 - 5 && !self.playedwarningsound {
                 self.playwarningsound(g);
             }

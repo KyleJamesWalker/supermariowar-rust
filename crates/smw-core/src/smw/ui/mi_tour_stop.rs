@@ -166,7 +166,7 @@ impl MI_TourStop {
                     let fFound = self.miMapField.set_map(g, &tourstop.pszMapFile, true);
 
                     if !fFound {
-                        self.miMapField.set_special_map("Pipe Minigame", "maps/special/two52_special_pipe_minigame.map");
+                        self.miMapField.set_special_map(g, "Pipe Minigame", "maps/special/two52_special_pipe_minigame.map");
                     }
                 } else if tourstop.iMode as i32 == game_mode_boss_minigame {
                     let fFound = self.miMapField.set_map(g, &tourstop.pszMapFile, true);
@@ -174,13 +174,13 @@ impl MI_TourStop {
                     if !fFound {
                         match tourstop.gmsSettings.boss.bosstype {
                             Boss::Hammer => {
-                                self.miMapField.set_special_map("Hammer Boss Minigame", "maps/special/two52_special_hammerboss_minigame.map");
+                                self.miMapField.set_special_map(g, "Hammer Boss Minigame", "maps/special/two52_special_hammerboss_minigame.map");
                             }
                             Boss::Bomb => {
-                                self.miMapField.set_special_map("Bomb Boss Minigame", "maps/special/two52_special_bombboss_minigame.map");
+                                self.miMapField.set_special_map(g, "Bomb Boss Minigame", "maps/special/two52_special_bombboss_minigame.map");
                             }
                             Boss::Fire => {
-                                self.miMapField.set_special_map("Fire Boss Minigame", "maps/special/two52_special_fireboss_minigame.map");
+                                self.miMapField.set_special_map(g, "Fire Boss Minigame", "maps/special/two52_special_fireboss_minigame.map");
                             }
                         }
                     }
@@ -188,7 +188,7 @@ impl MI_TourStop {
                     let fFound = self.miMapField.set_map(g, &tourstop.pszMapFile, true);
 
                     if !fFound {
-                        self.miMapField.set_special_map("Boxes Minigame", "maps/special/two52_special_boxes_minigame.map");
+                        self.miMapField.set_special_map(g, "Boxes Minigame", "maps/special/two52_special_boxes_minigame.map");
                     }
                 } else {
                     self.miMapField.set_map(g, &tourstop.pszMapFile, true);

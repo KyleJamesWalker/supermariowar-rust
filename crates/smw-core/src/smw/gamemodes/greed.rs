@@ -68,9 +68,9 @@ fn drop_coins(g: &mut Game, player: Ptr<CPlayer>, iDamage: i16, pos: Vec2s) {
     }
 }
 
-pub fn net_drop_coins(player: Ptr<CPlayer>, iDamage: i16, x: i16, y: i16) {
+pub fn net_drop_coins(g: &mut Game, player: Ptr<CPlayer>, iDamage: i16, x: i16, y: i16) {
     if !player.is_null() {
-        drop_coins(game().get(), player, iDamage, Vec2s::new(x, y));
+        drop_coins(g, player, iDamage, Vec2s::new(x, y));
     }
 }
 
@@ -131,7 +131,7 @@ impl CGM_Greed {
             }
 
             if self.goal != -1 && player.score().score <= 0 {
-                remove_team(player.get_team_id());
+                remove_team(g, player.get_team_id());
                 return PlayerKillType::Removed;
             }
 

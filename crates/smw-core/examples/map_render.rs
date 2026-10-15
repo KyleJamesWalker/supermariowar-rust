@@ -23,20 +23,20 @@ fn save_bmp(s: *mut SDL_Surface, path: &str) {
 unsafe fn draw_map() {
     game().blitdest = game().screen;
     game().rm.spr_backmap[game().g_iCurrentDrawIndex as usize].draw(game().get(), 0, 0);
-    game().g_map.draw_platforms(0);
-    game().g_map.draw_platforms(1);
-    game().g_map.draw_platforms(2);
+    game().g_map.draw_platforms(game().get(), 0);
+    game().g_map.draw_platforms(game().get(), 1);
+    game().g_map.draw_platforms(game().get(), 2);
     if game().game_values.toplayer {
         game().g_map.drawfrontlayer(game().get());
     }
     game().g_map.draw_warp_locks(game().get());
-    game().g_map.draw_platforms(3);
-    game().g_map.draw_platforms(4);
+    game().g_map.draw_platforms(game().get(), 3);
+    game().g_map.draw_platforms(game().get(), 4);
 }
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    smw::globals::init_globals();
+    smw::globals::init_globals(game().get());
     unsafe {
         game().RootDataDirectory = args[1].clone();
         let outdir = &args[2];
@@ -63,9 +63,9 @@ fn main() {
             load_current_map_background(game().get());
             let rmp = game().rm;
             game().g_map.predrawbackground(game().get(), &rmp.spr_background, &rmp.spr_backmap[0]);
-            game().g_map.predrawforeground(&rmp.spr_frontmap[0]);
+            game().g_map.predrawforeground(game().get(), &rmp.spr_frontmap[0]);
             game().g_map.predrawbackground(game().get(), &rmp.spr_background, &rmp.spr_backmap[1]);
-            game().g_map.predrawforeground(&rmp.spr_frontmap[1]);
+            game().g_map.predrawforeground(game().get(), &rmp.spr_frontmap[1]);
             game().g_map.setup_animated_tiles(game().get());
 
             smw::common::gfx::blit::fill_rect(game().screen, std::ptr::null(), 0);

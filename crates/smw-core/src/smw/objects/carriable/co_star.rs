@@ -152,7 +152,7 @@ impl CObjectTrait for CO_Star {
             self.applyfriction();
 
             // Collision detect map
-            io_moving_object_update(self);
+            io_moving_object_update(g, self);
         }
 
         self.sparkleanimationtimer += 1;

@@ -67,9 +67,9 @@ impl CO_ThrowBox {
         o
     }
 
-    pub fn kill_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    pub fn kill_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         if player.is_invincible() || player.shyguy {
-            self.die(game().get());
+            self.die(g);
             return false;
         }
 
@@ -77,10 +77,10 @@ impl CO_ThrowBox {
             return false;
         }
 
-        self.die(game().get());
+        self.die(g);
 
         // Find the player that shot this shell so we can attribute a kill
-        player_killed_player(self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::ThrowBlock, false, false);
+        player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::ThrowBlock, false, false);
         true
     }
 
@@ -127,8 +127,8 @@ impl CO_ThrowBox {
 }
 
 /// `net_random::Ev::ThrowBoxItem`: the box may already be gone, so the item and spot come with the event.
-pub fn net_release_item(args: &[i32]) {
-    createpowerup(game().get(), args[1] as i16, Vec2s::new(args[2] as i16, args[3] as i16), args[4] != 0, false);
+pub fn net_release_item(g: &mut Game, args: &[i32]) {
+    createpowerup(g, args[1] as i16, Vec2s::new(args[2] as i16, args[3] as i16), args[4] != 0, false);
 }
 
 impl CObjectTrait for CO_ThrowBox {
@@ -147,7 +147,7 @@ impl CObjectTrait for CO_ThrowBox {
         }
 
         if self.has_kill_velocity() && player.globalID != self.iPlayerID {
-            return self.kill_player(player);
+            return self.kill_player(g, player);
         }
 
         /*
@@ -352,7 +352,7 @@ impl MO_CarriedObjectTrait for CO_ThrowBox {
         if io_moving_object_collision_detection_checksides(g, self) {
             self.die(g);
         } else {
-            mo_carried_object_drop(self);
+            mo_carried_object_drop(g, self);
         }
     }
 

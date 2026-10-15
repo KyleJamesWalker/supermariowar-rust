@@ -47,10 +47,10 @@ impl CGameModeTrait for CGM_Jail {
         cgm_frag_playerkilledself(g, self, player, style)
     }
     fn playerextraguy(&mut self, g: &mut Game, player: Ptr<CPlayer>, iType: i16) {
-        cgm_jail_playerextraguy(self, player, iType)
+        cgm_jail_playerextraguy(g, self, player, iType)
     }
     fn check_winner(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> PlayerKillType {
-        cgm_frag_check_winner(self, player)
+        cgm_frag_check_winner(g, self, player)
     }
 }
 
@@ -231,10 +231,10 @@ pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflic
             this.winningteam = inflictor.get_team_id();
             this.gameover = true;
 
-            remove_players_but_team(this.winningteam);
+            remove_players_but_team(g, this.winningteam);
 
-            setup_score_board(false);
-            show_score_board();
+            setup_score_board(g, false);
+            show_score_board(g);
 
             return PlayerKillType::Removed;
         } else if inflictor.score().score as i32 >= this.goal as i32 - 3 && !this.playedwarningsound {
@@ -245,9 +245,9 @@ pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflic
     PlayerKillType::Normal
 }
 
-pub fn cgm_jail_playerextraguy(this: &mut CGM_Jail, mut player: Ptr<CPlayer>, iType: i16) {
+pub fn cgm_jail_playerextraguy(g: &mut Game, this: &mut CGM_Jail, mut player: Ptr<CPlayer>, iType: i16) {
     if !this.gameover {
-        player.score().adjust_score(game().get(), iType);
+        player.score().adjust_score(g, iType);
         player.jail().timer = 0;
 
         //Don't end the game if the goal is infinite
@@ -260,11 +260,11 @@ pub fn cgm_jail_playerextraguy(this: &mut CGM_Jail, mut player: Ptr<CPlayer>, iT
             this.winningteam = player.get_team_id();
             this.gameover = true;
 
-            remove_players_but_team(this.winningteam);
-            setup_score_board(false);
-            show_score_board();
+            remove_players_but_team(g, this.winningteam);
+            setup_score_board(g, false);
+            show_score_board(g);
         } else if player.score().score as i32 >= this.goal as i32 - 3 && !this.playedwarningsound {
-            this.playwarningsound(game().get());
+            this.playwarningsound(g);
         }
     }
 }

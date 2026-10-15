@@ -35,7 +35,7 @@ impl UI_PlayerControlsMenu {
         this
     }
 
-    pub fn set_player(&mut self, playerID: i16) {
-        self.miInputContainer.set_player(game().get(), playerID);
+    pub fn set_player(&mut self, g: &mut Game, playerID: i16) {
+        self.miInputContainer.set_player(g, playerID);
     }
 }

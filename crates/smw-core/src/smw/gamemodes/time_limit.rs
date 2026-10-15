@@ -42,30 +42,30 @@ impl CGameModeTrait for CGM_TimeLimit {
     crate::impl_cgamemode_plumbing!();
 
     fn init(&mut self, g: &mut Game) {
-        cgm_timelimit_init(self)
+        cgm_timelimit_init(g, self)
     }
     fn think(&mut self, g: &mut Game) {
         cgm_timelimit_think(g, self)
     }
     fn draw_foreground(&mut self, g: &mut Game) {
-        cgm_timelimit_draw_foreground(self)
+        cgm_timelimit_draw_foreground(g, self)
     }
     fn playerkilledplayer(&mut self, g: &mut Game, inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
         cgm_timelimit_playerkilledplayer(g, self, inflictor, other, style)
     }
     fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
-        cgm_timelimit_playerkilledself(self, player, style)
+        cgm_timelimit_playerkilledself(g, self, player, style)
     }
 }
 
-pub fn cgm_timelimit_init(this: &mut CGM_TimeLimit) {
-    cgamemode_init(game().get(), this);
+pub fn cgm_timelimit_init(g: &mut Game, this: &mut CGM_TimeLimit) {
+    cgamemode_init(g, this);
 
     if this.goal == -1 {
-        this.gameClock.init(game().get(), 0, false);
+        this.gameClock.init(g, 0, false);
     } else {
         let goal = this.goal;
-        this.gameClock.init(game().get(), goal, true);
+        this.gameClock.init(g, goal, true);
     }
 }
 
@@ -80,10 +80,10 @@ pub fn cgm_timelimit_think(g: &mut Game, this: &mut CGM_TimeLimit) {
 
         if iTime == 0 {
             //the game ends
-            setup_score_board(false);
-            show_score_board();
+            setup_score_board(g, false);
+            show_score_board(g);
 
-            remove_players_but_highest_scoring();
+            remove_players_but_highest_scoring(g);
             this.gameover = true;
 
             count_alive_teams(g, Some(&mut this.cgame_mode.winningteam));
@@ -114,18 +114,18 @@ pub fn cgm_timelimit_playerkilledplayer(g: &mut Game, this: &mut CGM_TimeLimit, 
     PlayerKillType::Normal
 }
 
-pub fn cgm_timelimit_playerkilledself(this: &mut CGM_TimeLimit, mut player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+pub fn cgm_timelimit_playerkilledself(g: &mut Game, this: &mut CGM_TimeLimit, mut player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
     cgamemode_playerkilledself(this, player, style);
 
     if player.score().score > 0 && !this.gameover {
-        player.score().adjust_score(game().get(), -1);
+        player.score().adjust_score(g, -1);
     }
 
     PlayerKillType::Normal
 }
 
-pub fn cgm_timelimit_draw_foreground(this: &mut CGM_TimeLimit) {
+pub fn cgm_timelimit_draw_foreground(g: &mut Game, this: &mut CGM_TimeLimit) {
     if !this.gameover {
-        this.gameClock.draw(game().get());
+        this.gameClock.draw(g);
     }
 }

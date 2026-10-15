@@ -46,7 +46,7 @@ impl PlayerSuicideTimer {
 
                     self.displaytimer = self.displaytimer.wrapping_sub(1);
                     if self.displaytimer < 0 {
-                        player.kill_player_map_hazard(true, KillStyle::Environment, false, -1);
+                        player.kill_player_map_hazard(g, true, KillStyle::Environment, false, -1);
                     }
                 }
             }

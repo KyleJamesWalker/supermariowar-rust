@@ -25,10 +25,10 @@ pub fn load_current_map_background(g: &mut Game) {
     unsafe {
         let pack = g.gamegraphicspacklist.current_path().to_string_lossy().into_owned();
         let mut path = concat("gfx/packs/backgrounds/", &g.g_map.szBackgroundFile);
-        path = convert_path_pack(&path, &pack);
+        path = convert_path_pack(g, &path, &pack);
 
         if !file_exists(&path) {
-            path = convert_path_pack("gfx/packs/backgrounds/Land_Classic.png", &pack);
+            path = convert_path_pack(g, "gfx/packs/backgrounds/Land_Classic.png", &pack);
         }
 
         g.rm.spr_background = ImageLoader::new(path).without_color_key().create();

@@ -58,7 +58,7 @@ impl MO_FrenzyCard {
     }
 
     pub fn place_card(&mut self, g: &mut Game) {
-        if crate::smw::net_random::place_event(self.iNetworkID, 0) {
+        if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
             return;
         }
 
@@ -103,25 +103,25 @@ impl CObjectTrait for MO_FrenzyCard {
                     14 => {
                         let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Green, Vec2s::zero(), true, true, true, false));
                         if g.objectcontainer[1].add(shell) {
-                            shell.used_as_stored_powerup(player);
+                            shell.used_as_stored_powerup(g, player);
                         }
                     }
                     15 => {
                         let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Red, Vec2s::zero(), false, true, true, false));
                         if g.objectcontainer[1].add(shell) {
-                            shell.used_as_stored_powerup(player);
+                            shell.used_as_stored_powerup(g, player);
                         }
                     }
                     16 => {
                         let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Spiny, Vec2s::zero(), false, false, true, true));
                         if g.objectcontainer[1].add(shell) {
-                            shell.used_as_stored_powerup(player);
+                            shell.used_as_stored_powerup(g, player);
                         }
                     }
                     17 => {
                         let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Buzzy, Vec2s::zero(), false, true, false, false));
                         if g.objectcontainer[1].add(shell) {
-                            shell.used_as_stored_powerup(player);
+                            shell.used_as_stored_powerup(g, player);
                         }
                     }
                     _ => {}
@@ -152,7 +152,7 @@ impl CObjectTrait for MO_FrenzyCard {
     }
 
     fn draw(&mut self, g: &mut Game) {
-        io_moving_object_draw(self);
+        io_moving_object_draw(g, self);
 
         // Draw sparkles
         unsafe {

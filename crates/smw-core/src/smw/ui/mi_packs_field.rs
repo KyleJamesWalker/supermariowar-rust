@@ -30,7 +30,7 @@ impl UI_ControlTrait for MI_PacksField {
         self.modify_impl(modify)
     }
     fn update(&mut self, g: &mut Game) {
-        self.update_impl();
+        self.update_impl(g);
     }
     fn draw(&mut self, g: &mut Game) {
         self.draw_impl(g);

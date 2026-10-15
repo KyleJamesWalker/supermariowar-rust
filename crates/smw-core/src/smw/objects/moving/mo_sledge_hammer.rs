@@ -163,7 +163,7 @@ impl CObjectTrait for MO_SledgeHammer {
             }
 
             if !player.is_invincible() && !player.shyguy {
-                return player.kill_player_map_hazard(false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
+                return player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
             }
         }
 

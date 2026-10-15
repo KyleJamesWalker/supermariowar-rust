@@ -87,7 +87,7 @@ impl UI_WorldMenu {
         self.set_initial_focus(focus);
         self.set_cancel_code(MENU_CODE_WORLD_STAGE_NO_START);
 
-        self.reset_menu();
+        self.reset_menu(g);
     }
 
     pub fn close_stage_start(&mut self) {
@@ -97,7 +97,7 @@ impl UI_WorldMenu {
         self.set_initial_focus(focus);
         self.set_cancel_code(MENU_CODE_BACK_TEAM_SELECT_MENU);
 
-        self.restore_current();
+        self.restore_current(game().get());
     }
 
     pub fn open_exit_dialog(&mut self) {
@@ -111,7 +111,7 @@ impl UI_WorldMenu {
         let focus = ctl_ptr(self.miWorldExitDialogNoButton);
         self.set_initial_focus(focus);
         self.set_cancel_code(MENU_CODE_NONE);
-        self.reset_menu();
+        self.reset_menu(game().get());
     }
 
     pub fn close_exit_dialog(&mut self) {
@@ -124,6 +124,6 @@ impl UI_WorldMenu {
         self.set_initial_focus(focus);
         self.set_cancel_code(MENU_CODE_BACK_TEAM_SELECT_MENU);
 
-        self.restore_current();
+        self.restore_current(game().get());
     }
 }

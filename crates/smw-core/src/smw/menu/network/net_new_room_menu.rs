@@ -38,10 +38,10 @@ impl UI_NetNewRoomMenu {
             let plain = Ptr::from_mut(&mut g.rm.menu_plain_field);
 
             this.miNetNewRoomNameField = Ptr::new_box(MI_TextField::new(plain, 70, 160, "Room name", 640 - 2 * 70, 230));
-            this.miNetNewRoomNameField.set_data(&mut g.netplay.newroom_name, NET_MAX_ROOM_NAME_LENGTH as i16);
+            this.miNetNewRoomNameField.set_data(g, &mut game().netplay.newroom_name, NET_MAX_ROOM_NAME_LENGTH as i16);
 
             this.miNetNewRoomPasswordField = Ptr::new_box(MI_TextField::new(plain, 70, 200, "Password (optional)", 640 - 2 * 70, 230));
-            this.miNetNewRoomPasswordField.set_data(&mut g.netplay.newroom_password, NET_MAX_ROOM_PASSWORD_LENGTH as i16);
+            this.miNetNewRoomPasswordField.set_data(g, &mut game().netplay.newroom_password, NET_MAX_ROOM_PASSWORD_LENGTH as i16);
 
             this.miNetNewRoomCreateButton = Ptr::new_box(MI_Button::new(g, selectfield, 70, 240, "Create!", 640 - 2 * 70, TextAlign::CENTER));
             this.miNetNewRoomCreateButton.set_code(MENU_CODE_TO_NET_NEW_ROOM_CREATE_IN_PROGRESS);
@@ -95,7 +95,7 @@ impl UI_NetNewRoomMenu {
             if g.netplay.newroom_name.len() > 2 {
                 game().netplay.client.send_create_room_message(g);
                 g.netplay.operationInProgress = true;
-                net_save_server_list();
+                net_save_server_list(g);
 
                 self.miNetNewRoomCreatingDialogImage.set_visible(true);
                 self.miNetNewRoomCreatingDialogText.set_visible(true);
@@ -104,7 +104,7 @@ impl UI_NetNewRoomMenu {
                 let t = ctl_ptr(self.miNetNewRoomCreatingDialogText);
                 self.set_initial_focus(t);
                 self.set_cancel_code(MENU_CODE_TO_NET_NEW_ROOM_CREATE_ABORT);
-                self.reset_menu();
+                self.reset_menu(g);
             } else {
                 println!("[net] Room name is too short!");
             }

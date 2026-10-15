@@ -110,7 +110,7 @@ impl MI_MapBrowser {
                     let filename = g.maplist.node_at(itr).filename.clone();
                     g.g_map.load_map(&filename, read_type_preview);
                     small_delay(); //Sleeps to help the music from skipping
-                    g.g_map.save_thumbnail(&sConvertedPath, false);
+                    game().g_map.save_thumbnail(g, &sConvertedPath, false);
                     small_delay();
                 }
 
@@ -213,7 +213,7 @@ impl UI_ControlTrait for MI_MapBrowser {
             for iPlayer in 0..4i16 {
                 //Only allow the controlling team to control the menu (if there is one)
                 if self.iControllingTeam != -1
-                    && (self.iControllingTeam != lookup_team_id(iPlayer) || g.game_values.playercontrol[iPlayer as usize] != 1)
+                    && (self.iControllingTeam != lookup_team_id(g, iPlayer) || g.game_values.playercontrol[iPlayer as usize] != 1)
                 {
                     continue;
                 }

@@ -81,7 +81,7 @@ impl B_WeaponBreakableBlock {
         }
     }
 
-    fn objecthitside(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+    fn objecthitside(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         let r#type = object.get_moving_object_type();
 
         if self.iType == WeaponDamageType::Shell
@@ -96,12 +96,12 @@ impl B_WeaponBreakableBlock {
                 iTeamID = object.iTeamID;
             }
 
-            self.trigger_behavior_player(game().get(), iPlayerID, iTeamID);
+            self.trigger_behavior_player(g, iPlayerID, iTeamID);
             return false;
         } else if self.iType == WeaponDamageType::Fireball && r#type == movingobject_fireball {
             let (iPlayerID, iTeamID) = (object.iPlayerID, object.iTeamID);
-            self.trigger_behavior_player(game().get(), iPlayerID, iTeamID);
-            removeifprojectile(game().get(), object, false, true);
+            self.trigger_behavior_player(g, iPlayerID, iTeamID);
+            removeifprojectile(g, object, false, true);
             return false;
         } else if r#type == movingobject_attackzone {
             let any = object.as_any();
@@ -113,8 +113,8 @@ impl B_WeaponBreakableBlock {
 
             if (iStyle == KillStyle::Leaf && self.iType == WeaponDamageType::Leaf) || (iStyle == KillStyle::Feather && self.iType == WeaponDamageType::Feather) {
                 let (iPlayerID, iTeamID) = (object.iPlayerID, object.iTeamID);
-                self.trigger_behavior_player(game().get(), iPlayerID, iTeamID);
-                object.die(game().get());
+                self.trigger_behavior_player(g, iPlayerID, iTeamID);
+                object.die(g);
                 return false;
             }
         }
@@ -168,7 +168,7 @@ impl IO_BlockTrait for B_WeaponBreakableBlock {
                     && !player.is_invincible_on_bottom()
                     && (player.teamID != self.iBumpTeamID || g.game_values.teamcollision == TeamCollisionStyle::On)
                 {
-                    player_killed_player(self.iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
+                    player_killed_player(g, self.iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
                 }
 
                 if PlayerKillType::NonKill == iKillType {
@@ -238,7 +238,7 @@ impl IO_BlockTrait for B_WeaponBreakableBlock {
     }
 
     fn hittop_object(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
-        io_block_hittop_object(self, object);
+        io_block_hittop_object(g, self, object);
 
         if (self.state == 1 || self.state == 2) && object.bounce == GRAVITATION {
             io_block_bounce_moving_object(g, self, object);
@@ -287,7 +287,7 @@ impl IO_BlockTrait for B_WeaponBreakableBlock {
 
         io_block_hitright_object(self, object);
 
-        self.objecthitside(object)
+        self.objecthitside(g, object)
     }
 
     fn hitleft_object(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
@@ -297,6 +297,6 @@ impl IO_BlockTrait for B_WeaponBreakableBlock {
 
         io_block_hitleft_object(self, object);
 
-        self.objecthitside(object)
+        self.objecthitside(g, object)
     }
 }

@@ -178,7 +178,7 @@ impl CObjectTrait for MO_SpinAttack {
                     if shell.frozen {
                         shell.shatter_die(g);
                     } else {
-                        shell.flip();
+                        shell.flip(g);
                         if_sound_on_play(g, &mut game().rm.sfx_kicksound);
                     }
 

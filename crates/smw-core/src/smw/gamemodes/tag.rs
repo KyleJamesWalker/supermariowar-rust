@@ -52,9 +52,9 @@ unsafe fn tag_warning_needed(g: &mut Game, goal: i16) -> bool {
 //the "it" player is chosen at random.  Someone is
 //always "it".
 impl CGM_Tag {
-    fn reassign(&mut self) {
+    fn reassign(&mut self, g: &mut Game) {
         let fGetHighest = !self.fReverseScoring;
-        self.m_tagged = self.get_highest_score_player(game().get(), fGetHighest);
+        self.m_tagged = self.get_highest_score_player(g, fGetHighest);
     }
 
     pub fn new() -> Self {
@@ -100,7 +100,7 @@ impl CGameModeTrait for CGM_Tag {
             self.displayplayertext(g);
         } else {
             if self.m_tagged.is_null() && !net_random::event(g, Ev::TagReassign, &[]) {
-                self.reassign();
+                self.reassign(g);
             }
             if self.m_tagged.is_null() {
                 return;
@@ -134,7 +134,7 @@ impl CGameModeTrait for CGM_Tag {
 
             let mut tagged = self.m_tagged;
             if tagged.score().score <= 0 {
-                remove_team(tagged.get_team_id());
+                remove_team(g, tagged.get_team_id());
                 self.m_tagged = Ptr::null();
             }
         }
@@ -186,7 +186,7 @@ impl CGameModeTrait for CGM_Tag {
                 if other.score().score <= 0 {
                     other.score().set_score(0);
 
-                    remove_team(other.get_team_id());
+                    remove_team(g, other.get_team_id());
                     return PlayerKillType::Removed;
                 }
             }
@@ -214,7 +214,7 @@ impl CGameModeTrait for CGM_Tag {
 
             if player.score().score <= 0 {
                 player.score().set_score(0);
-                remove_team(player.get_team_id());
+                remove_team(g, player.get_team_id());
                 return PlayerKillType::Removed;
             }
         }
@@ -240,7 +240,7 @@ fn tag_mode() -> Option<&'static mut CGM_Tag> {
 pub fn net_reassign() {
     if let Some(this) = tag_mode() {
         if this.m_tagged.is_null() {
-            this.reassign();
+            this.reassign(game().get());
         }
     }
 }

@@ -82,12 +82,12 @@ impl MI_MapField {
         MENU_CODE_NONE
     }
 
-    pub fn move_prev(&mut self, fScrollFast: bool) -> bool {
-        self.move_(game().get(), false, fScrollFast)
+    pub fn move_prev(&mut self, g: &mut Game, fScrollFast: bool) -> bool {
+        self.move_(g, false, fScrollFast)
     }
 
-    pub fn move_next(&mut self, fScrollFast: bool) -> bool {
-        self.move_(game().get(), true, fScrollFast)
+    pub fn move_next(&mut self, g: &mut Game, fScrollFast: bool) -> bool {
+        self.move_(g, true, fScrollFast)
     }
 
     pub fn set_dimensions(&mut self, width: i16, indent: i16) {
@@ -151,7 +151,7 @@ impl UI_ControlTrait for MI_MapField {
         for iPlayer in 0..4usize {
             let out = playerInput.outputControls[iPlayer];
             if out.menu_right().fPressed || out.menu_down().fPressed {
-                if self.move_next(out.menu_scrollfast().fDown) {
+                if self.move_next(g, out.menu_scrollfast().fDown) {
                     return MENU_CODE_MAP_CHANGED;
                 }
 
@@ -159,7 +159,7 @@ impl UI_ControlTrait for MI_MapField {
             }
 
             if out.menu_left().fPressed || out.menu_up().fPressed {
-                if self.move_prev(out.menu_scrollfast().fDown) {
+                if self.move_prev(g, out.menu_scrollfast().fDown) {
                     return MENU_CODE_MAP_CHANGED;
                 }
 
@@ -283,13 +283,13 @@ impl UI_ControlTrait for MI_MapField {
             let (mut x, mut y, mut w, mut h) = (0i16, 0i16, 0i16, 0i16);
             self.miModifyImageLeft.get_position_and_size(&mut x, &mut y, &mut w, &mut h);
 
-            if mx >= x as i32 && mx < x as i32 + w as i32 && my >= y as i32 && my < y as i32 + h as i32 && self.move_prev(false) {
+            if mx >= x as i32 && mx < x as i32 + w as i32 && my >= y as i32 && my < y as i32 + h as i32 && self.move_prev(g, false) {
                 return MENU_CODE_MAP_CHANGED;
             }
 
             self.miModifyImageRight.get_position_and_size(&mut x, &mut y, &mut w, &mut h);
 
-            if mx >= x as i32 && mx < x as i32 + w as i32 && my >= y as i32 && my < y as i32 + h as i32 && self.move_next(false) {
+            if mx >= x as i32 && mx < x as i32 + w as i32 && my >= y as i32 && my < y as i32 + h as i32 && self.move_next(g, false) {
                 return MENU_CODE_MAP_CHANGED;
             }
         }

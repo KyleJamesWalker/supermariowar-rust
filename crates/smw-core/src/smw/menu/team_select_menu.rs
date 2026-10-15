@@ -48,12 +48,12 @@ impl UI_TeamSelectMenu {
         this
     }
 
-    pub fn reset_team_select(&mut self) {
-        self.miTeamSelect.reset(game().get());
+    pub fn reset_team_select(&mut self, g: &mut Game) {
+        self.miTeamSelect.reset(g);
     }
 
-    pub fn get_team_count(&self) -> i16 {
+    pub fn get_team_count(&self, g: &mut Game) -> i16 {
         let mut ts = self.miTeamSelect;
-        ts.organize_teams(game().get())
+        ts.organize_teams(g)
     }
 }

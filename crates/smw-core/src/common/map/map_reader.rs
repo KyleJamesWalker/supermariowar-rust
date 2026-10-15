@@ -3,6 +3,7 @@
 //! The C++ reader class hierarchy (MapReader1500 ... MapReader1802) is one struct tagged with the
 //! concrete class; each `read_*` method dispatches to the override that class would use.
 
+use crate::game::Game;
 use crate::game::game;
 use crate::globals::Aliased;
 use crate::common::file_io::BinaryFile;
@@ -72,7 +73,7 @@ impl MapReader {
             R1600 | R160A => self.load_1600(map, mapfile, readtype),
             R1610 => self.load_1610(map, mapfile, readtype),
             R1700 | R1701 | R1702 => self.load_1700(map, mapfile, readtype),
-            R1800 | R1801 | R1802 => self.load_1800(map, mapfile, readtype),
+            R1800 | R1801 | R1802 => self.load_1800(game().get(), map, mapfile, readtype),
         }
     }
 
@@ -85,12 +86,12 @@ impl MapReader {
         }
     }
 
-    pub(super) fn read_tiles(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) {
+    pub(super) fn read_tiles(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile) {
         use MapReaderKind::*;
         match self.kind {
-            R1500 => self.read_tiles_1500(game().get(), map, mapfile),
-            R1600 | R160A | R1610 => self.read_tiles_1600(game().get(), map, mapfile),
-            R1700 | R1701 | R1702 => self.read_tiles_1700(game().get(), map, mapfile),
+            R1500 => self.read_tiles_1500(g, map, mapfile),
+            R1600 | R160A | R1610 => self.read_tiles_1600(g, map, mapfile),
+            R1700 | R1701 | R1702 => self.read_tiles_1700(g, map, mapfile),
             R1800 | R1801 | R1802 => self.read_tiles_1800(map, mapfile),
         }
     }
@@ -147,8 +148,8 @@ impl MapReader {
     pub(super) fn read_platforms(&mut self, map: &mut CMap, mapfile: &mut BinaryFile, preview: bool) {
         use MapReaderKind::*;
         match self.kind {
-            R1800 | R1801 | R1802 => self.read_platforms_1800(map, mapfile, preview),
-            _ => self.read_platforms_1700(map, mapfile, preview),
+            R1800 | R1801 | R1802 => self.read_platforms_1800(game().get(), map, mapfile, preview),
+            _ => self.read_platforms_1700(game().get(), map, mapfile, preview),
         }
     }
 }

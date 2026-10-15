@@ -88,7 +88,7 @@ impl UI_NetEditServersMenu {
             this.miDialogTitle = Ptr::new_box(MI_Text::new(g, "Enter a new server address below:", 40, 370, 0, true, TextAlign::LEFT));
             this.miDialogTextField = Ptr::new_box(MI_TextField::new(plain, 40, 395, "URL or IP", 640 - 2 * 40, 150));
             let data = &mut this.dialogTextData as *mut String;
-            this.miDialogTextField.set_data(&mut *data, 127);
+            this.miDialogTextField.set_data(g, &mut *data, 127);
             this.miDialogOK = Ptr::new_box(MI_Button::new(g, selectfield, 40, 432, "OK", 100, TextAlign::CENTER));
             this.miDialogOK.set_code(MENU_CODE_NET_ADDREMOVE_SERVER_ON_DIALOG_OK_BTN);
             this.miDialogCancel = Ptr::new_box(MI_Button::new(g, selectfield, 150, 432, "Cancel", 100, TextAlign::CENTER));
@@ -158,9 +158,9 @@ impl UI_NetEditServersMenu {
         self.miDialogCancel.set_visible(false);
     }
 
-    pub fn restore(&mut self) {
+    pub fn restore(&mut self, g: &mut Game) {
         if !self.m_savedCurrent.is_null() {
-            self.restore_current();
+            self.restore_current(g);
         }
 
         self.set_cancel_code(MENU_CODE_TO_NET_SERVERS_MENU);
@@ -170,7 +170,7 @@ impl UI_NetEditServersMenu {
         self.miInstructionsText2.set_text("");
 
         self.hide_dialog();
-        self.reload_scroll(game().get());
+        self.reload_scroll(g);
     }
 
     pub fn on_press_add(&mut self) {
@@ -236,7 +236,7 @@ impl UI_NetEditServersMenu {
                     self.miServerScroll.activate();
 
                     if g.netplay.savedServers.is_empty() {
-                        self.restore();
+                        self.restore(g);
                     }
                 }
 
@@ -261,6 +261,6 @@ impl UI_NetEditServersMenu {
 
         self.dialogTextData.clear();
         self.miDialogTextField.refresh();
-        self.restore();
+        self.restore(g);
     }
 }

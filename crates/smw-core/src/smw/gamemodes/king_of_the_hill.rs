@@ -63,6 +63,6 @@ impl CGameModeTrait for CGM_KingOfTheHill {
     }
 
     fn check_winner(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> PlayerKillType {
-        cgm_domination_check_winner(self, player)
+        cgm_domination_check_winner(g, self, player)
     }
 }

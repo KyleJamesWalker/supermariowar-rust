@@ -157,7 +157,7 @@ impl CO_Shell {
         }
 
         if self.fKillBouncePlayer && !self.fFlipped {
-            self.kill_player(player);
+            self.kill_player(g, player);
         } else if self.state == 2 {
             // Sitting
             self.owner = player;
@@ -229,45 +229,45 @@ impl CO_Shell {
             let px = player.ix as i32 + HALFPW + flipx as i32;
             let cx = self.ix as i32 + (self.iw as i32 >> 1);
             if self.iNoOwnerKillTime == 0 || player.globalID != self.iPlayerID || (px >= cx && self.velx > 0.0) || (px < cx && self.velx < 0.0) {
-                return self.kill_player(player);
+                return self.kill_player(g, player);
             }
         } else if self.state == 3 {
             // Holding
             if player != self.owner && (unsafe { g.game_values.teamcollision } == TeamCollisionStyle::On || player.teamID != self.owner.teamID) {
                 self.iPlayerID = self.owner.globalID;
                 self.iTeamID = self.owner.teamID;
-                return self.kill_player(player);
+                return self.kill_player(g, player);
             }
         }
 
         false
     }
 
-    pub fn used_as_stored_powerup(&mut self, player: Ptr<CPlayer>) {
+    pub fn used_as_stored_powerup(&mut self, g: &mut Game, player: Ptr<CPlayer>) {
         let mut player = player;
         self.owner = player;
-        self.move_to_owner(game().get());
+        self.move_to_owner(g);
 
         if player.accept_item(self.as_carried_ptr()) {
             self.state = 3;
         } else {
-            self.kick(game().get());
+            self.kick(g);
         }
     }
 
-    pub fn kill_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    pub fn kill_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         if player.is_shielded() || player.is_invincible() || player.shyguy {
             return false;
         }
 
-        self.check_and_die(game().get());
+        self.check_and_die(g);
 
         // Find the player that shot this shell so we can attribute a kill
-        player_killed_player(self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Shell, false, false);
+        player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Shell, false, false);
 
-        let killer = get_player_from_global_id(game().get(), self.iPlayerID);
+        let killer = get_player_from_global_id(g, self.iPlayerID);
         if !killer.is_null() && self.iPlayerID != player.globalID {
-            self.add_moving_kill(game().get(), killer);
+            self.add_moving_kill(g, killer);
         }
 
         true
@@ -279,7 +279,7 @@ impl CO_Shell {
             // If the shell is moving, the keep track of how many people we kill in a row with it
             self.iKillCounter += 1;
             if self.iKillCounter > 1 {
-                killer.add_kills_in_row_in_air_award();
+                killer.add_kills_in_row_in_air_award(g);
             }
         }
     }
@@ -309,14 +309,14 @@ impl CO_Shell {
         self.state == 1 || self.state == 3
     }
 
-    pub fn flip(&mut self) {
+    pub fn flip(&mut self, g: &mut Game) {
         if self.frozen {
-            self.shatter_die(game().get());
+            self.shatter_die(g);
             return;
         }
 
         if !self.owner.is_null() {
-            self.die(game().get());
+            self.die(g);
             return;
         }
 
@@ -325,7 +325,7 @@ impl CO_Shell {
             self.iFlippedOffset = 128;
         }
 
-        self.stop(game().get());
+        self.stop(g);
         self.vely = (-VELJUMP as f64 / 2.0) as f32;
     }
 
@@ -531,7 +531,7 @@ impl CObjectTrait for CO_Shell {
             self.move_to_owner(g);
             self.inair = true;
         } else {
-            io_moving_object_update(self);
+            io_moving_object_update(g, self);
         }
 
         unsafe {
@@ -590,9 +590,9 @@ impl CObjectTrait for CO_Shell {
 }
 
 impl CO_Shell {
-    fn maybe_die(&mut self) {
+    fn maybe_die(&mut self, g: &mut Game) {
         if RANDOM_INT(5) == 0 {
-            self.die(game().get());
+            self.die(g);
         }
     }
 }
@@ -615,7 +615,7 @@ pub fn net_shell_death(g: &mut Game, obj: Ptr<dyn CObjectTrait>, holder: i32) {
     }
     if !shell.is_null() {
         if let Some(s) = shell.as_any().downcast_mut::<CO_Shell>() {
-            s.maybe_die();
+            s.maybe_die(g);
         }
     }
 }
@@ -632,7 +632,7 @@ impl IO_MovingObjectTrait for CO_Shell {
         } else if !self.fDieOnHoldingPlayerCollision && self.state == 3 {
             let holder = if self.owner.is_null() { -1 } else { self.owner.globalID as i32 };
             if !crate::smw::net_random::event(g, crate::smw::net_random::Ev::ShellDeath, &[self.iNetworkID, holder]) {
-                self.maybe_die();
+                self.maybe_die(g);
             }
         }
     }

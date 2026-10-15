@@ -276,7 +276,7 @@ impl IO_BlockTrait for B_FlipBlock {
             return true;
         }
 
-        io_block_collide_object_dir(self, object, direction)
+        io_block_collide_object_dir(game().get(), self, object, direction)
     }
 
     fn hittop_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {

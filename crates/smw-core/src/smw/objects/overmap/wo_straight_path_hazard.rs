@@ -76,7 +76,7 @@ impl CObjectTrait for OMO_StraightPathHazard {
     crate::impl_cobject_plumbing!();
 
     fn draw(&mut self, g: &mut Game) {
-        io_over_map_object_draw(self);
+        io_over_map_object_draw(g, self);
     }
 
     fn update(&mut self, g: &mut Game) {
@@ -108,7 +108,7 @@ impl CObjectTrait for OMO_StraightPathHazard {
             self.dead = true;
 
             if !player.is_invincible() && !player.shyguy {
-                return player.kill_player_map_hazard(false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
+                return player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
             }
         }
 

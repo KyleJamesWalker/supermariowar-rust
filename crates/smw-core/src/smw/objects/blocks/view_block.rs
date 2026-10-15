@@ -88,7 +88,7 @@ impl CObjectTrait for B_ViewBlock {
             }
         }
 
-        b_powerup_block_draw(self);
+        b_powerup_block_draw(g, self);
     }
 
     fn update(&mut self, g: &mut Game) {

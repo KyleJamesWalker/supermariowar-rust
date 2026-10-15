@@ -95,7 +95,7 @@ impl MysteryMushroomTempPlayer {
         }
     }
 
-    pub fn get_player(&mut self, mut player: Ptr<CPlayer>, iPowerup: &mut i16) {
+    pub fn get_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iPowerup: &mut i16) {
         player.fNewSwapX = self.fx;
         player.fNewSwapY = self.fy;
 
@@ -128,7 +128,7 @@ impl MysteryMushroomTempPlayer {
         *iPowerup = self.gamepowerup;
 
         if !player.carriedItem.is_null() {
-            player.carriedItem.move_to_owner(game().get());
+            player.carriedItem.move_to_owner(g);
         }
     }
 }

@@ -85,7 +85,7 @@ impl CObjectTrait for MO_Fireball {
     }
 
     fn update(&mut self, g: &mut Game) {
-        io_moving_object_update(self);
+        io_moving_object_update(g, self);
 
         unsafe {
             self.ttl -= 1;
@@ -117,7 +117,7 @@ impl CObjectTrait for MO_Fireball {
 
                     if !player.is_invincible() && !player.shyguy {
                         // Find the player that shot this fireball so we can attribute a kill
-                        player_killed_player(self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Fireball, false, false);
+                        player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Fireball, false, false);
                         return true;
                     }
                 }

@@ -218,11 +218,11 @@ pub fn gameplay_frame(g: &mut Game) {
 }
 
 /// Leaving gameplay: menus (map previews) roll for themselves again.
-pub fn end_game() {
+pub fn end_game(g: &mut Game) {
     unsafe {
         random_state().g_inSetup = false;
         random_state().g_inGame = false;
-        set_network_id_context(game().get(), 0);
+        set_network_id_context(g, 0);
     }
 }
 
@@ -238,7 +238,7 @@ pub fn event(g: &mut Game, ev: Ev, args: &[i32]) -> bool {
             let context = context_of(random_state().g_sent);
             set_network_id_context(g, context as u32);
             RandomNumberGenerator::start_recording();
-            let line = run_logged(ev, args);
+            let line = run_logged(g, ev, args);
             let draws = RandomNumberGenerator::stop_tape();
             set_network_id_context(g, 0);
             if ev == Ev::Kill && !crate::smw::net_outcomes::kill_had_effect() {
@@ -263,7 +263,7 @@ pub fn event(g: &mut Game, ev: Ev, args: &[i32]) -> bool {
             g.netplay.client.local_gamehost.send_message_to_my_peers(&pkg.to_bytes());
         } else if let Some(i) = random_state().g_pending.iter().position(|(p, _)| p.kind == ev as u8 && same_target(ev, &p.args, args)) {
             let (pkg, _) = random_state().g_pending.remove(i);
-            replay(&pkg);
+            replay(g, &pkg);
         } else if matches!(ev, Ev::Respawn | Ev::WarpExit) && waited(ev, args[0]) > FALLBACK_FRAMES {
             stop_waiting(ev, args[0]);
             return false;
@@ -320,8 +320,8 @@ pub fn receive(g: &mut Game, data: &[u8]) {
 
 fn deliver(pkg: RandomEvent) {
     let ev = Ev::from_u8(pkg.kind).unwrap();
-    if ready(ev, &pkg.args) {
-        replay(&pkg);
+    if ready(game().get(), ev, &pkg.args) {
+        replay(game().get(), &pkg);
     } else {
         unsafe { random_state().g_pending.push((pkg, random_state().g_frame)) };
     }
@@ -346,16 +346,16 @@ fn stop_waiting(ev: Ev, key: i32) {
     unsafe { random_state().g_waits.retain(|w| w.0 != ev || w.1 != key) };
 }
 
-fn replay(pkg: &RandomEvent) {
+fn replay(g: &mut Game, pkg: &RandomEvent) {
     let ev = Ev::from_u8(pkg.kind).unwrap();
     if let Some(&key) = pkg.args.first() {
         stop_waiting(ev, key);
     }
-    set_network_id_context(game().get(), pkg.context as u32);
+    set_network_id_context(g, pkg.context as u32);
     RandomNumberGenerator::start_playback(pkg.draws.clone());
-    harness::note_net(run_logged(ev, &pkg.args));
+    harness::note_net(run_logged(g, ev, &pkg.args));
     let left = RandomNumberGenerator::stop_tape();
-    set_network_id_context(game().get(), 0);
+    set_network_id_context(g, 0);
     if !left.is_empty() {
         println!("[net] {:?} left {} of the game host's draws unused", ev, left.len());
     }
@@ -363,11 +363,11 @@ fn replay(pkg: &RandomEvent) {
 
 /// Events that must wait for the joiner's own copy of their block or warping player. A respawn applies at once:
 /// the game host waits for the respawn counter, so a joiner that saw the death is already waiting.
-fn ready(ev: Ev, args: &[i32]) -> bool {
+fn ready(g: &mut Game, ev: Ev, args: &[i32]) -> bool {
     match ev {
-        Ev::Block => crate::smw::objects::blocks::powerup_block::net_block_ready(game().get(), args[0] as i16, args[1] as i16),
+        Ev::Block => crate::smw::objects::blocks::powerup_block::net_block_ready(g, args[0] as i16, args[1] as i16),
         Ev::WarpExit => {
-            let p = player(game().get(), args);
+            let p = player(g, args);
             p.is_null() || p.is_entering_warp()
         }
         _ => true,
@@ -382,30 +382,30 @@ fn same_target(ev: Ev, a: &[i32], b: &[i32]) -> bool {
 }
 
 /// A placement that is not part of creating the object.
-pub fn place_event(id: i32, extra: i32) -> bool {
-    let mut obj = find_object(game().get(), id);
-    if id == 0 || obj.is_null() || !event(game().get(), Ev::Place, &[id, extra]) {
+pub fn place_event(g: &mut Game, id: i32, extra: i32) -> bool {
+    let mut obj = find_object(g, id);
+    if id == 0 || obj.is_null() || !event(g, Ev::Place, &[id, extra]) {
         return false;
     }
     // Out of reach until the game host's placement arrives, so it cannot be collected again meanwhile.
-    if awaiting_host(game().get()) {
+    if awaiting_host(g) {
         obj.set_yi(-2000);
     }
     true
 }
 
 /// An event about one object; objects that only one client numbered roll for themselves.
-pub fn object_event(ev: Ev, args: &[i32]) -> bool {
-    args[0] != 0 && event(game().get(), ev, args)
+pub fn object_event(g: &mut Game, ev: Ev, args: &[i32]) -> bool {
+    args[0] != 0 && event(g, ev, args)
 }
 
 /// Runs the event and returns its `C` record.
-fn run_logged(ev: Ev, args: &[i32]) -> String {
+fn run_logged(g: &mut Game, ev: Ev, args: &[i32]) -> String {
     unsafe {
         random_state().g_added = Some(Vec::new());
-        run(game().get(), ev, args);
+        run(g, ev, args);
         let mut out = random_state().g_added.take().unwrap_or_default();
-        out.extend(outcome(ev, args));
+        out.extend(outcome(g, ev, args));
         let args: Vec<String> = args.iter().map(|a| a.to_string()).collect();
         let shown = match ev {
             Ev::Place => &args[..2.min(args.len())],
@@ -480,24 +480,24 @@ fn run(g: &mut Game, ev: Ev, args: &[i32]) {
             if ev == Ev::FrenzyCard {
                 gm::frenzy::net_spawn_card(g);
             } else {
-                gm::card_collection::net_spawn_card();
+                gm::card_collection::net_spawn_card(g);
             }
             random_state().g_spawnAt = None;
         },
         Ev::StompEnemy => gm::stomp::net_spawn_enemy(g),
         Ev::SurvivalEnemy => gm::survival::net_spawn_enemy(g),
         Ev::ReleaseCard => gm::card_collection::net_release_card(g, player(game().get(), args), args[1] as i16, args[2] as i16),
-        Ev::GreedCoins => gm::greed::net_drop_coins(player(g, args), args[1] as i16, args[2] as i16, args[3] as i16),
+        Ev::GreedCoins => gm::greed::net_drop_coins(g, player(game().get(), args), args[1] as i16, args[2] as i16, args[3] as i16),
         Ev::Place => {
             let mut o = find_object(g, args[0]);
-            obj::net_place(o, args[1]);
+            obj::net_place(g, o, args[1]);
             if let (false, Some(&x), Some(&y)) = (o.is_null(), args.get(2), args.get(3)) {
                 o.set_xi(x as i16);
                 o.set_yi(y as i16);
             }
         }
         Ev::Wander => obj::net_wander(find_object(g, args[0]), args),
-        Ev::HazardTimer => obj::net_hazard_timer(find_object(g, args[0])),
+        Ev::HazardTimer => obj::net_hazard_timer(g, find_object(game().get(), args[0])),
         Ev::Respawn => {
             let mut p = player(g, args);
             if !p.is_null() {
@@ -507,7 +507,7 @@ fn run(g: &mut Game, ev: Ev, args: &[i32]) {
         Ev::WarpExit => {
             let mut p = player(g, args);
             if !p.is_null() {
-                p.net_choose_warp_exit();
+                p.net_choose_warp_exit(g);
             }
         }
         Ev::PodoboRain => {
@@ -523,9 +523,9 @@ fn run(g: &mut Game, ev: Ev, args: &[i32]) {
         Ev::BulletBills => crate::smw::gs_gameplay::net_bullet_bill(g, args[0] as usize),
         Ev::ShellDeath => obj::carriable::co_shell::net_shell_death(g, find_object(game().get(), args[0]), args[1]),
         Ev::Secret => crate::smw::objectgame::net_check_secret(g, args[0] as i16),
-        Ev::ThrowBoxItem => obj::carriable::co_throw_box::net_release_item(args),
-        Ev::StarTimeout => gm::star::net_timeout(),
-        Ev::StarReassign => gm::star::net_reassign(),
+        Ev::ThrowBoxItem => obj::carriable::co_throw_box::net_release_item(g, args),
+        Ev::StarTimeout => gm::star::net_timeout(g),
+        Ev::StarReassign => gm::star::net_reassign(g),
         Ev::TagReassign => gm::tag::net_reassign(),
         Ev::Bomb => {
             let mut p = player(g, args);
@@ -540,8 +540,8 @@ fn run(g: &mut Game, ev: Ev, args: &[i32]) {
             }
         }
         Ev::PhantoReturn => obj::overmap::wo_phanto::net_return(find_object(g, args[0])),
-        Ev::Kill => crate::smw::net_outcomes::net_kill(args),
-        Ev::RemoveTeam => crate::smw::net_outcomes::net_remove_team(args[0] as i16),
+        Ev::Kill => crate::smw::net_outcomes::net_kill(g, args),
+        Ev::RemoveTeam => crate::smw::net_outcomes::net_remove_team(g, args[0] as i16),
         Ev::RemoveButTeam => crate::smw::gamemodes::game_mode::remove_players_but_team_now(g, args[0] as i16),
         Ev::RemoveButHighest => crate::smw::gamemodes::game_mode::remove_players_but_highest_scoring_now(g),
         Ev::ScoreBoard => crate::smw::gamemodes::game_mode::setup_score_board_now(g, args[0] != 0),
@@ -552,10 +552,10 @@ fn run(g: &mut Game, ev: Ev, args: &[i32]) {
 }
 
 /// What each event changed besides adding objects.
-fn outcome(ev: Ev, args: &[i32]) -> Vec<String> {
+fn outcome(g: &mut Game, ev: Ev, args: &[i32]) -> Vec<String> {
     match ev {
         Ev::Place | Ev::Wander | Ev::PhantoReturn => {
-            let o = find_object(game().get(), args[0]);
+            let o = find_object(g, args[0]);
             if o.is_null() {
                 vec!["gone".to_string()]
             } else {
@@ -563,20 +563,20 @@ fn outcome(ev: Ev, args: &[i32]) -> Vec<String> {
             }
         }
         Ev::Respawn | Ev::WarpExit => {
-            let p = player(game().get(), args);
+            let p = player(g, args);
             if p.is_null() {
                 vec![]
             } else {
                 vec![format!("p{}@{},{} s{}", p.globalID, p.ix, p.iy, p.state as i32)]
             }
         }
-        Ev::HazardTimer => vec![crate::smw::objects::net_hazard_state(find_object(game().get(), args[0]))],
+        Ev::HazardTimer => vec![crate::smw::objects::net_hazard_state(find_object(g, args[0]))],
         Ev::ShellDeath => {
-            let o = find_object(game().get(), args[0]);
+            let o = find_object(g, args[0]);
             vec![if o.is_null() { "gone".to_string() } else { format!("dead{}", o.dead as i32) }]
         }
         Ev::StarTimeout | Ev::StarReassign => vec![gm_state_star()],
-        Ev::Kill => vec![crate::smw::net_outcomes::kill_outcome(args)],
+        Ev::Kill => vec![crate::smw::net_outcomes::kill_outcome(g, args)],
         Ev::TagReassign => vec![gm_state_tag()],
         _ => vec![],
     }

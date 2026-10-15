@@ -637,14 +637,14 @@ impl CGameValues {
         }
     }
 
-    pub fn reset_gameplay_settings(&mut self) {
+    pub fn reset_gameplay_settings(&mut self, g: &mut Game) {
         self.flags = GameplayFlags::default();
 
         self.screenfade = 255;
         self.screenfadespeed = -8;
 
         //Initialize game mode
-        self.gamemode.get().init(game().get());
+        self.gamemode.get().init(g);
     }
 
     pub fn reset_secret_counters(&mut self) {
@@ -703,7 +703,7 @@ fn catch_runtime_error<R>(f: impl FnOnce() -> R) -> Option<R> {
 }
 
 impl CGameConfig {
-    pub fn read_binary_config(&mut self) {
+    pub fn read_binary_config(&mut self, g: &mut Game) {
         let ok = catch_runtime_error(|| {
             let options_path = get_home_directory() + "options.bin";
             let mut options = BinaryFile::new(&options_path, "rb");
@@ -711,7 +711,7 @@ impl CGameConfig {
                 throw_runtime_error(&format!("Could not open {}", options_path));
             }
 
-            self.read_options(game().get(), &mut options)
+            self.read_options(g, &mut options)
         });
         if ok != Some(true) {
             return;
@@ -724,7 +724,7 @@ impl CGameConfig {
                 throw_runtime_error(&format!("Could not open {}", controls_path));
             }
 
-            self.read_controls(game().get(), &mut controls);
+            self.read_controls(g, &mut controls);
         });
     }
 
@@ -998,18 +998,18 @@ impl CGameConfig {
     }
 
     /// Not in the C++: the bytes `write_config` would write to options.bin and controls.sdl2.bin.
-    pub fn config_bytes(&self) -> (Vec<u8>, Vec<u8>) {
+    pub fn config_bytes(&self, g: &mut Game) -> (Vec<u8>, Vec<u8>) {
         let mut options = BinaryFile::memory("options.bin", Vec::new());
-        self.write_options(game().get(), &mut options);
+        self.write_options(g, &mut options);
         let mut controls = BinaryFile::memory("controls.sdl2.bin", Vec::new());
         self.write_controls(&mut controls);
         (options.into_bytes(), controls.into_bytes())
     }
 
     /// Not in the C++: `read_binary_config` from the bytes `config_bytes` returned.
-    pub fn read_config_bytes(&mut self, options: Vec<u8>, controls: Vec<u8>) {
-        if catch_runtime_error(|| self.read_options(game().get(), &mut BinaryFile::memory("options.bin", options))) == Some(true) {
-            catch_runtime_error(|| self.read_controls(game().get(), &mut BinaryFile::memory("controls.sdl2.bin", controls)));
+    pub fn read_config_bytes(&mut self, g: &mut Game, options: Vec<u8>, controls: Vec<u8>) {
+        if catch_runtime_error(|| self.read_options(g, &mut BinaryFile::memory("options.bin", options))) == Some(true) {
+            catch_runtime_error(|| self.read_controls(g, &mut BinaryFile::memory("controls.sdl2.bin", controls)));
         }
     }
 
@@ -1042,7 +1042,7 @@ impl CGameConfig {
 
         unsafe {
             game().maplist.write_filters(g);
-            g.maplist.write_map_summary_cache();
+            game().maplist.write_map_summary_cache(g);
         }
     }
 }

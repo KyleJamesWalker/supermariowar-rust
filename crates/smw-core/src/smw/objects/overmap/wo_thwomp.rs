@@ -35,7 +35,7 @@ impl CObjectTrait for OMO_Thwomp {
     crate::impl_cobject_plumbing!();
 
     fn draw(&mut self, g: &mut Game) {
-        io_over_map_object_draw(self);
+        io_over_map_object_draw(g, self);
     }
 
     fn update(&mut self, g: &mut Game) {
@@ -49,7 +49,7 @@ impl CObjectTrait for OMO_Thwomp {
     fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         unsafe {
             if !player.is_invincible() && !player.is_shielded() && (player.score().score > 0 || g.game_values.gamemode.goal == -1) {
-                return player.kill_player_map_hazard(false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
+                return player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
             }
         }
 

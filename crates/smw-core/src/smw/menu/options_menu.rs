@@ -182,6 +182,6 @@ impl UI_OptionsMenu {
         self.set_initial_focus(focus);
         self.set_cancel_code(MENU_CODE_TO_MAIN_MENU);
 
-        self.restore_current();
+        self.restore_current(game().get());
     }
 }

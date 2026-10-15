@@ -33,7 +33,7 @@ impl CObjectTrait for PU_LeafPowerup {
         Some(self)
     }
     fn draw(&mut self, g: &mut Game) {
-        pu_feather_powerup_draw(self)
+        pu_feather_powerup_draw(g, self)
     }
     fn update(&mut self, g: &mut Game) {
         pu_feather_powerup_update(self)

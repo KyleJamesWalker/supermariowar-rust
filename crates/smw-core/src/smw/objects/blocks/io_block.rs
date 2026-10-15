@@ -52,9 +52,9 @@ pub fn io_block_new(nspr: Ptr<gfxSprite>, pos: Vec2s) -> IO_Block {
     b
 }
 
-pub fn io_block_draw<T: IO_BlockTrait + ?Sized>(this: &mut T) {
+pub fn io_block_draw<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let b = this.block();
-    b.spr.draw(game().get(), b.ix as i32, b.iy as i32);
+    b.spr.draw(g, b.ix as i32, b.iy as i32);
 }
 
 pub fn io_block_update<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T) {
@@ -80,15 +80,15 @@ pub fn io_block_reset<T: IO_BlockTrait + ?Sized>(this: &mut T) {
     this.block_mut().state = 0;
 }
 
-pub fn io_block_collide_player_dir<T: IO_BlockTrait + ?Sized>(this: &mut T, player: Ptr<CPlayer>, direction: i16, useBehavior: bool) -> bool {
+pub fn io_block_collide_player_dir<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T, player: Ptr<CPlayer>, direction: i16, useBehavior: bool) -> bool {
     if direction == 2 {
-        this.hittop_player(game().get(), player, useBehavior)
+        this.hittop_player(g, player, useBehavior)
     } else if direction == 0 {
-        this.hitbottom_player(game().get(), player, useBehavior)
+        this.hitbottom_player(g, player, useBehavior)
     } else if direction == 1 {
-        this.hitleft_player(game().get(), player, useBehavior)
+        this.hitleft_player(g, player, useBehavior)
     } else {
-        this.hitright_player(game().get(), player, useBehavior)
+        this.hitright_player(g, player, useBehavior)
     }
 }
 
@@ -152,24 +152,24 @@ pub fn io_block_hitleft_player<T: IO_BlockTrait + ?Sized>(this: &mut T, mut play
     false
 }
 
-pub fn io_block_collide_object_dir<T: IO_BlockTrait + ?Sized>(this: &mut T, object: Ptr<dyn IO_MovingObjectTrait>, direction: i16) -> bool {
+pub fn io_block_collide_object_dir<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T, object: Ptr<dyn IO_MovingObjectTrait>, direction: i16) -> bool {
     if direction == 2 {
-        this.hittop_object(game().get(), object)
+        this.hittop_object(g, object)
     } else if direction == 0 {
-        this.hitbottom_object(game().get(), object)
+        this.hitbottom_object(g, object)
     } else if direction == 1 {
-        this.hitleft_object(game().get(), object)
+        this.hitleft_object(g, object)
     } else {
-        this.hitright_object(game().get(), object)
+        this.hitright_object(g, object)
     }
 }
 
-pub fn io_block_hittop_object<T: IO_BlockTrait + ?Sized>(this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+pub fn io_block_hittop_object<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
     let iposy = this.block().iposy;
     let ch = object.collisionHeight;
     object.set_yf((iposy as i32 - ch as i32) as f32 - 0.2);
     object.fOldY = object.fy;
-    object.vely = object.bottom_bounce(game().get());
+    object.vely = object.bottom_bounce(g);
     true
 }
 
@@ -222,13 +222,13 @@ pub fn io_block_bounce_moving_object<T: IO_BlockTrait + ?Sized>(g: &mut Game, th
                 let mut player = get_player_from_global_id(g, iBumpPlayerID);
 
                 if !player.is_null() {
-                    player.add_killer_award(Ptr::null(), style);
+                    player.add_killer_award(g, Ptr::null(), style);
                     player.score.adjust_score(g, 1);
                 }
             }
         } else if r#type == movingobject_shell {
             let shell = object.as_any().downcast_mut::<CO_Shell>().unwrap();
-            shell.flip();
+            shell.flip(g);
         } else if r#type == movingobject_throwblock {
             object.die(g);
         } else if r#type == movingobject_throwbox {
@@ -263,7 +263,7 @@ pub fn io_block_kill_players_and_objects_inside_block<T: IO_BlockTrait + ?Sized>
             {
                 player.iSuicideCreditPlayerID = playerID;
                 player.iSuicideCreditTimer = 1;
-                player.kill_player_map_hazard(true, KillStyle::Environment, true, -1);
+                player.kill_player_map_hazard(g, true, KillStyle::Environment, true, -1);
             }
         }
 

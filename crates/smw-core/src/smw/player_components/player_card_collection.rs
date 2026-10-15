@@ -45,7 +45,7 @@ impl PlayerCardCollection {
                     self.timer = 0;
                     self.index = 0;
 
-                    g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Collection>().unwrap().release_card(Ptr::from_mut(player));
+                    g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Collection>().unwrap().release_card(g, Ptr::from_mut(player));
                 }
             }
         }

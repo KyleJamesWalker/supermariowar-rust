@@ -22,8 +22,8 @@ const screenHeight: i32 = App::screenHeight;
 
 // eyecandy base class
 pub trait CEyecandyTrait {
-    fn update(&mut self);
-    fn draw(&self);
+    fn update(&mut self, g: &mut Game);
+    fn draw(&self, g: &mut Game);
     fn is_dead(&self) -> bool;
 }
 
@@ -42,11 +42,11 @@ impl CEyecandy {
 macro_rules! impl_eyecandy {
     ($ty:ty) => {
         impl CEyecandyTrait for $ty {
-            fn update(&mut self) {
-                <$ty>::update(self)
+            fn update(&mut self, g: &mut Game) {
+                <$ty>::update(self, g)
             }
-            fn draw(&self) {
-                <$ty>::draw(self)
+            fn draw(&self, g: &mut Game) {
+                <$ty>::draw(self, g)
             }
             fn is_dead(&self) -> bool {
                 self.dead
@@ -100,7 +100,7 @@ impl EC_StillImage {
 
     pub fn draw(&self) {
         if !self.dead {
-            spr(self.spr).draw_part(self.ix as i32, self.iy as i32, self.iSrcX as i32, self.iSrcY as i32, self.iw as i32, self.ih as i32);
+            spr(self.spr).draw_part(game().get(), self.ix as i32, self.iy as i32, self.iSrcX as i32, self.iSrcY as i32, self.iw as i32, self.ih as i32);
         }
     }
 }
@@ -177,13 +177,13 @@ impl EC_Animated {
         }
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, _g: &mut Game) {
         self.animate();
     }
 
-    pub fn draw(&self) {
+    pub fn draw(&self, _g: &mut Game) {
         if !self.dead {
-            spr(self.spr).draw_part(
+            spr(self.spr).draw_part(game().get(), 
                 self.ix as i32,
                 self.iy as i32,
                 self.iAnimationFrame as i32,
@@ -233,12 +233,12 @@ impl EC_OscillatingAnimation {
         }
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, _g: &mut Game) {
         self.animate();
     }
 
-    pub fn draw(&self) {
-        self.ec_animated.draw();
+    pub fn draw(&self, _g: &mut Game) {
+        self.ec_animated.draw(game().get());
     }
 }
 impl_eyecandy!(EC_OscillatingAnimation);
@@ -259,7 +259,7 @@ impl EC_Cloud {
         EC_Cloud { ec_still_image: EC_StillImage::new(nspr, nx as i16, ny as i16, srcx, srcy, w, h), dx: nx, dy: ny, velx: nvelx }
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, _g: &mut Game) {
         self.dx += self.velx;
 
         if self.dx > screenWidth as f32 {
@@ -271,7 +271,7 @@ impl EC_Cloud {
         self.ix = self.dx as i16;
     }
 
-    pub fn draw(&self) {
+    pub fn draw(&self, _g: &mut Game) {
         self.ec_still_image.draw();
     }
 }
@@ -298,7 +298,7 @@ impl EC_Ghost {
         }
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, _g: &mut Game) {
         self.ec_animated.animate();
 
         self.dx += self.velx;
@@ -313,8 +313,8 @@ impl EC_Ghost {
         self.iy = self.dy as i16;
     }
 
-    pub fn draw(&self) {
-        self.ec_animated.draw();
+    pub fn draw(&self, _g: &mut Game) {
+        self.ec_animated.draw(game().get());
     }
 }
 impl_eyecandy!(EC_Ghost);
@@ -346,12 +346,12 @@ impl EC_Leaf {
         this
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, g: &mut Game) {
         self.ec_oscillating_animation.animate();
 
         unsafe {
-            self.dx += self.velx + game().game_values.flags.gamewindx;
-            self.dy += self.vely + game().game_values.flags.gamewindy;
+            self.dx += self.velx + g.game_values.flags.gamewindx;
+            self.dy += self.vely + g.game_values.flags.gamewindy;
         }
 
         if self.dx >= screenWidth as f32 {
@@ -396,8 +396,8 @@ impl EC_Leaf {
         self.iAnimationTimer = RANDOM_INT(16) as i16;
     }
 
-    pub fn draw(&self) {
-        self.ec_oscillating_animation.draw();
+    pub fn draw(&self, _g: &mut Game) {
+        self.ec_oscillating_animation.draw(game().get());
     }
 }
 impl_eyecandy!(EC_Leaf);
@@ -430,10 +430,10 @@ impl EC_Snow {
         this
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, g: &mut Game) {
         unsafe {
-            self.dx += self.velx + game().game_values.flags.gamewindx;
-            self.dy += self.vely + game().game_values.flags.gamewindy;
+            self.dx += self.velx + g.game_values.flags.gamewindx;
+            self.dy += self.vely + g.game_values.flags.gamewindy;
         }
 
         if self.dx >= screenWidth as f32 {
@@ -454,7 +454,7 @@ impl EC_Snow {
         self.iy = self.dy as i16;
     }
 
-    pub fn draw(&self) {
+    pub fn draw(&self, _g: &mut Game) {
         self.ec_still_image.draw();
     }
 }
@@ -487,7 +487,7 @@ impl EC_Rain {
         this
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, _g: &mut Game) {
         self.dx += self.velx;
         self.dy += self.vely;
 
@@ -515,7 +515,7 @@ impl EC_Rain {
         self.iSrcX = (RANDOM_INT(8) * 10) as i16;
     }
 
-    pub fn draw(&self) {
+    pub fn draw(&self, _g: &mut Game) {
         self.ec_still_image.draw();
     }
 }
@@ -548,7 +548,7 @@ impl EC_Bubble {
         this
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, _g: &mut Game) {
         self.ec_oscillating_animation.animate();
 
         self.dx += self.velx;
@@ -580,8 +580,8 @@ impl EC_Bubble {
         self.iAnimationFrame = (RANDOM_INT(4) << 4) as i16;
     }
 
-    pub fn draw(&self) {
-        self.ec_oscillating_animation.draw();
+    pub fn draw(&self, _g: &mut Game) {
+        self.ec_oscillating_animation.draw(game().get());
     }
 }
 impl_eyecandy!(EC_Bubble);
@@ -642,7 +642,7 @@ impl EC_Corpse {
         this
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, g: &mut Game) {
         unsafe {
             if self.vely != 0.0f32 {
                 let nexty = (self.dy + 32.0f32 + self.vely) as i16;
@@ -656,8 +656,8 @@ impl EC_Corpse {
                     let ty = (nexty as i32 / TILESIZE) as i16;
 
                     // FIXME: This seems to be wrong
-                    if game().g_map.map(self.tx as i32, ty as i32) == TileType::SolidOnTop.0 as i32
-                        || game().g_map.map(self.tx2 as i32, ty as i32) == TileType::SolidOnTop.0 as i32
+                    if g.g_map.map(self.tx as i32, ty as i32) == TileType::SolidOnTop.0 as i32
+                        || g.g_map.map(self.tx2 as i32, ty as i32) == TileType::SolidOnTop.0 as i32
                     {
                         // on ground on tile solid_on_top
                         if (self.dy + 32.0f32 - self.vely) / (TILESIZE as f32) < ty as f32 {
@@ -670,11 +670,11 @@ impl EC_Corpse {
                         }
                     }
 
-                    let mut leftblock = game().g_map.block(self.tx, ty);
-                    let mut rightblock = game().g_map.block(self.tx2, ty);
+                    let mut leftblock = g.g_map.block(self.tx, ty);
+                    let mut rightblock = g.g_map.block(self.tx2, ty);
 
-                    if (game().g_map.map(self.tx as i32, ty as i32) & 0x13) > 0
-                        || (game().g_map.map(self.tx2 as i32, ty as i32) & 0x13) > 0
+                    if (g.g_map.map(self.tx as i32, ty as i32) & 0x13) > 0
+                        || (g.g_map.map(self.tx2 as i32, ty as i32) & 0x13) > 0
                         || (!leftblock.is_null() && !leftblock.is_transparent() && !leftblock.is_hidden())
                         || (!rightblock.is_null() && !rightblock.is_transparent() && !rightblock.is_hidden())
                     {
@@ -702,7 +702,7 @@ impl EC_Corpse {
         }
     }
 
-    pub fn draw(&self) {
+    pub fn draw(&self, _g: &mut Game) {
         self.ec_still_image.draw();
     }
 }
@@ -731,7 +731,7 @@ impl EC_GravText {
         this
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, _g: &mut Game) {
         self.y += self.vely;
         self.vely += GRAVITATION;
 
@@ -740,7 +740,7 @@ impl EC_GravText {
         }
     }
 
-    pub fn draw(&self) {
+    pub fn draw(&self, _g: &mut Game) {
         self.font.draw(self.x as i16 as i32, self.y as i16 as i32, &self.text);
 
         if self.x < 0.0 {
@@ -822,17 +822,17 @@ impl EC_Announcement {
         this
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, _g: &mut Game) {
         self.iTimer += 1;
         if self.iTimer >= self.iTime {
             self.dead = true;
         }
     }
 
-    pub fn draw(&self) {
+    pub fn draw(&self, g: &mut Game) {
         unsafe {
             for iRect in 0..4 {
-                game().rm.menu_dialog.draw_part(
+                game().rm.menu_dialog.draw_part(g, 
                     self.rDstRect[iRect].x,
                     self.rDstRect[iRect].y,
                     self.rSrcRect[iRect].x,
@@ -846,7 +846,7 @@ impl EC_Announcement {
         self.font.draw(self.ix as i32 + self.iFontOffsetX as i32, self.iFontY as i32, &self.text);
 
         if !self.sprite.is_null() {
-            self.sprite.draw_part(self.ix as i32 + 16, self.iy as i32 + 16, (self.iIcon as i32) << 5, 0, 32, 32);
+            self.sprite.draw_part(g, self.ix as i32 + 16, self.iy as i32 + 16, (self.iIcon as i32) << 5, 0, 32, 32);
         }
     }
 }
@@ -887,7 +887,7 @@ impl EC_FallingObject {
         }
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, _g: &mut Game) {
         self.ec_animated.animate();
 
         self.fy += self.vely;
@@ -904,8 +904,8 @@ impl EC_FallingObject {
         self.vely += GRAVITATION;
     }
 
-    pub fn draw(&self) {
-        self.ec_animated.draw();
+    pub fn draw(&self, _g: &mut Game) {
+        self.ec_animated.draw(game().get());
     }
 }
 impl_eyecandy!(EC_FallingObject);
@@ -928,7 +928,7 @@ impl EC_SingleAnimation {
         EC_SingleAnimation { ec_animated: EC_Animated::new(nspr, x, y, offsetx, offsety, w, h, irate, iframes) }
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, _g: &mut Game) {
         self.ec_animated.animate();
 
         // This means that the animation wrapped and it is time to kill it
@@ -937,8 +937,8 @@ impl EC_SingleAnimation {
         }
     }
 
-    pub fn draw(&self) {
-        self.ec_animated.draw();
+    pub fn draw(&self, _g: &mut Game) {
+        self.ec_animated.draw(game().get());
     }
 }
 impl_eyecandy!(EC_SingleAnimation);
@@ -962,7 +962,7 @@ impl EC_LoopingAnimation {
         }
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, _g: &mut Game) {
         self.ec_animated.animate();
 
         if self.iAnimationTimer == 0 && self.iAnimationFrame == self.iAnimationX {
@@ -975,8 +975,8 @@ impl EC_LoopingAnimation {
         }
     }
 
-    pub fn draw(&self) {
-        self.ec_animated.draw();
+    pub fn draw(&self, _g: &mut Game) {
+        self.ec_animated.draw(game().get());
     }
 }
 impl_eyecandy!(EC_LoopingAnimation);
@@ -1023,7 +1023,7 @@ impl EC_ExplodingAward {
         }
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, g: &mut Game) {
         self.y += self.vely;
         self.x += self.velx;
 
@@ -1031,7 +1031,7 @@ impl EC_ExplodingAward {
         if self.timer > self.ttl {
             self.dead = true;
             unsafe {
-                emplace_fireball_explosion(game().get(), 
+                emplace_fireball_explosion(g, 
                     (self.x as i16 as i32 + (self.w as i32 >> 1) - 16) as i16,
                     (self.y as i16 as i32 + (self.h as i32 >> 1) - 16) as i16,
                 )
@@ -1039,8 +1039,8 @@ impl EC_ExplodingAward {
         }
     }
 
-    pub fn draw(&self) {
-        spr(self.spr).draw_part(self.x as i16 as i32, self.y as i16 as i32, self.id as i32, 0, self.w as i32, self.h as i32);
+    pub fn draw(&self, _g: &mut Game) {
+        spr(self.spr).draw_part(game().get(), self.x as i16 as i32, self.y as i16 as i32, self.id as i32, 0, self.w as i32, self.h as i32);
     }
 }
 impl_eyecandy!(EC_ExplodingAward);
@@ -1110,7 +1110,7 @@ impl EC_SwirlingAward {
         }
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, g: &mut Game) {
         self.angle += self.vel;
         self.radius += 3.0f32;
 
@@ -1118,7 +1118,7 @@ impl EC_SwirlingAward {
         if self.timer > self.ttl {
             let awardx = (self.x as i32 + (self.radius * cosf(self.angle)) as i16 as i32 + (self.w as i32 >> 1) - 16) as i16;
             let awardy = (self.y as i32 + (self.radius * sinf(self.angle)) as i16 as i32 + (self.h as i32 >> 1) - 16) as i16;
-            unsafe { emplace_fireball_explosion(game().get(), awardx, awardy) };
+            unsafe { emplace_fireball_explosion(g, awardx, awardy) };
 
             self.dead = true;
         }
@@ -1136,11 +1136,11 @@ impl EC_SwirlingAward {
         }
     }
 
-    pub fn draw(&self) {
+    pub fn draw(&self, _g: &mut Game) {
         let awardx = (self.x as i32 + (self.radius * cosf(self.angle)) as i16 as i32) as i16;
         let awardy = (self.y as i32 + (self.radius * sinf(self.angle)) as i16 as i32) as i16;
 
-        spr(self.spr).draw_part(awardx as i32, awardy as i32, self.iAnimationFrame as i32, self.iSrcY as i32, self.w as i32, self.h as i32);
+        spr(self.spr).draw_part(game().get(), awardx as i32, awardy as i32, self.iAnimationFrame as i32, self.iSrcY as i32, self.w as i32, self.h as i32);
     }
 }
 impl_eyecandy!(EC_SwirlingAward);
@@ -1207,7 +1207,7 @@ impl EC_RocketAward {
         }
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, g: &mut Game) {
         self.vely += 0.2f32;
 
         self.y += self.vely;
@@ -1216,7 +1216,7 @@ impl EC_RocketAward {
         self.timer += 1;
         if self.timer > self.ttl {
             unsafe {
-                emplace_fireball_explosion(game().get(), 
+                emplace_fireball_explosion(g, 
                     (self.x as i16 as i32 + (self.w as i32 >> 1) - 16) as i16,
                     (self.y as i16 as i32 + (self.h as i32 >> 1) - 16) as i16,
                 )
@@ -1237,8 +1237,8 @@ impl EC_RocketAward {
         }
     }
 
-    pub fn draw(&self) {
-        spr(self.spr).draw_part(
+    pub fn draw(&self, _g: &mut Game) {
+        spr(self.spr).draw_part(game().get(), 
             self.x as i16 as i32,
             self.y as i16 as i32,
             self.iAnimationFrame as i32,
@@ -1298,14 +1298,14 @@ impl EC_FloatingObject {
         }
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, g: &mut Game) {
         self.y += self.vely;
         self.x += self.velx;
 
         self.timer += 1;
         if self.timer > self.ttl {
             unsafe {
-                emplace_fireball_explosion(game().get(), 
+                emplace_fireball_explosion(g, 
                     (self.x as i16 as i32 + (self.w as i32 >> 1) - 16) as i16,
                     (self.y as i16 as i32 + (self.h as i32 >> 1) - 16) as i16,
                 )
@@ -1314,8 +1314,8 @@ impl EC_FloatingObject {
         }
     }
 
-    pub fn draw(&self) {
-        spr(self.spr).draw_part(self.x as i16 as i32, self.y as i16 as i32, self.srcx as i32, self.srcy as i32, self.w as i32, self.h as i32);
+    pub fn draw(&self, _g: &mut Game) {
+        spr(self.spr).draw_part(game().get(), self.x as i16 as i32, self.y as i16 as i32, self.srcx as i32, self.srcy as i32, self.w as i32, self.h as i32);
     }
 }
 impl_eyecandy!(EC_FloatingObject);
@@ -1391,7 +1391,7 @@ impl EC_SoulsAward {
         this
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, g: &mut Game) {
         if !self.endmode && {
             self.timer += 1;
             self.timer as f32 > self.speed
@@ -1406,8 +1406,8 @@ impl EC_SoulsAward {
             let vely = self.speed * sinf(angle);
 
             unsafe {
-                let spr = Ptr::from_mut(&mut game().rm.spr_awardsouls);
-                game().eyecandy[2].emplace(EC_RocketAward::new(
+                let spr = Ptr::from_mut(&mut g.rm.spr_awardsouls);
+                g.eyecandy[2].emplace(EC_RocketAward::new(
                     spr,
                     (self.x as i32 - 8) as i16,
                     (self.y as i32 - 8) as i16,
@@ -1444,8 +1444,8 @@ impl EC_SoulsAward {
         }
     }
 
-    pub fn draw(&self) {
-        spr(self.spawnspr).draw_part(
+    pub fn draw(&self, _g: &mut Game) {
+        spr(self.spawnspr).draw_part(game().get(), 
             self.x as i32 - 16,
             self.y as i32 - 16,
             self.frame as i32 * self.w as i32,
@@ -1500,7 +1500,7 @@ impl EC_Door {
         }
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, _g: &mut Game) {
         self.timer += 1;
         if self.timer > self.rate {
             self.timer = 0;
@@ -1539,12 +1539,12 @@ impl EC_Door {
         }
     }
 
-    pub fn draw(&self) {
+    pub fn draw(&self, _g: &mut Game) {
         let (x, y, iw, ih, offsety) = (self.x as i32, self.y as i32, self.iw as i32, self.ih as i32, self.offsety as i32);
-        spr(self.spr).draw_part(x, y + offsety, 0, self.colorOffset as i32, iw, ih - offsety);
+        spr(self.spr).draw_part(game().get(), x, y + offsety, 0, self.colorOffset as i32, iw, ih - offsety);
 
         if self.state == 1 {
-            spr(self.mariospr).draw_part(
+            spr(self.mariospr).draw_part(game().get(), 
                 x + 16 - HALFPW - PWOFFSET,
                 y + 16 - HALFPH - PHOFFSET + offsety,
                 self.offsetx as i32,
@@ -1554,7 +1554,7 @@ impl EC_Door {
             );
         }
 
-        spr(self.spr).draw_part(x, y + offsety, self.frame as i32 * iw, self.colorOffset as i32, iw, ih - offsety);
+        spr(self.spr).draw_part(game().get(), x, y + offsety, self.frame as i32 * iw, self.colorOffset as i32, iw, ih - offsety);
     }
 }
 impl_eyecandy!(EC_Door);
@@ -1599,7 +1599,7 @@ impl EC_SuperStompExplosion {
         EC_SuperStompExplosion { c_eyecandy: CEyecandy::default(), spr: nspr, iRate: irate, ix: x, iy: y, iAnimationFrame: 0, iAnimationTimer: 0 }
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, _g: &mut Game) {
         self.iAnimationTimer += 1;
         if self.iAnimationTimer >= self.iRate {
             self.iAnimationTimer = 0;
@@ -1611,14 +1611,14 @@ impl EC_SuperStompExplosion {
         }
     }
 
-    pub fn draw(&self) {
+    pub fn draw(&self, g: &mut Game) {
         if self.dead {
             return;
         }
 
         let f = self.iAnimationFrame as usize;
-        spr(self.spr).draw_src(game().get(), rectSuperStompLeftDst[f].x + self.ix as i32, rectSuperStompLeftDst[f].y + self.iy as i32, &rectSuperStompLeftSrc[f]);
-        spr(self.spr).draw_src(game().get(), rectSuperStompRightDst[f].x + self.ix as i32, rectSuperStompRightDst[f].y + self.iy as i32, &rectSuperStompRightSrc[f]);
+        spr(self.spr).draw_src(g, rectSuperStompLeftDst[f].x + self.ix as i32, rectSuperStompLeftDst[f].y + self.iy as i32, &rectSuperStompLeftSrc[f]);
+        spr(self.spr).draw_src(g, rectSuperStompRightDst[f].x + self.ix as i32, rectSuperStompRightDst[f].y + self.iy as i32, &rectSuperStompRightSrc[f]);
     }
 }
 impl_eyecandy!(EC_SuperStompExplosion);
@@ -1654,13 +1654,13 @@ impl CEyecandyContainer {
         let n = self.eyecandies.len();
         for i in 0..n {
             let ec: *mut dyn CEyecandyTrait = unsafe { &mut *(&mut (*this).eyecandies)[i] };
-            unsafe { (*ec).update() };
+            unsafe { (*ec).update(game().get()) };
         }
     }
 
     pub fn draw(&self) {
         for ec in &self.eyecandies {
-            ec.draw();
+            ec.draw(game().get());
         }
     }
 
@@ -1766,18 +1766,18 @@ impl Spotlight {
         self.fUpdated = true;
     }
 
-    pub fn draw(&mut self) {
+    pub fn draw(&mut self, g: &mut Game) {
         unsafe {
             let (ix, iy, hw, w) = (self.ix as i32, self.iy as i32, self.iHalfWidth as i32, self.iWidth as i32);
             let rDst = SDL_Rect { x: ix - hw, y: iy - hw, w, h: w };
-            game().rm.spr_overlayhole.draw_src_to(&self.rSrc, game().rm.spr_overlay.get_surface(), &rDst);
+            g.rm.spr_overlayhole.draw_src_to(&self.rSrc, g.rm.spr_overlay.get_surface(), &rDst);
 
             if ix - hw < 0 {
                 let rDstWrap = SDL_Rect { x: ix - hw + screenWidth, y: iy - hw, w, h: w };
-                game().rm.spr_overlayhole.draw_src_to(&self.rSrc, game().rm.spr_overlay.get_surface(), &rDstWrap);
+                g.rm.spr_overlayhole.draw_src_to(&self.rSrc, g.rm.spr_overlay.get_surface(), &rDstWrap);
             } else if ix + hw >= screenWidth {
                 let rDstWrap = SDL_Rect { x: ix - hw - screenWidth, y: iy - hw, w, h: w };
-                game().rm.spr_overlayhole.draw_src_to(&self.rSrc, game().rm.spr_overlay.get_surface(), &rDstWrap);
+                g.rm.spr_overlayhole.draw_src_to(&self.rSrc, g.rm.spr_overlay.get_surface(), &rDstWrap);
             }
         }
     }
@@ -1825,7 +1825,7 @@ impl SpotlightManager {
                 s.delete();
                 self.spotlightList.remove(i);
             } else {
-                s.draw();
+                s.draw(g);
                 i += 1;
             }
         }

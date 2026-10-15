@@ -30,9 +30,9 @@ macro_rules! impl_cgamemode_plumbing {
     };
 }
 
-pub fn remove_players_but_team(teamid: i16) {
-    if !net_random::event(game().get(), Ev::RemoveButTeam, &[teamid as i32]) {
-        remove_players_but_team_now(game().get(), teamid);
+pub fn remove_players_but_team(g: &mut Game, teamid: i16) {
+    if !net_random::event(g, Ev::RemoveButTeam, &[teamid as i32]) {
+        remove_players_but_team_now(g, teamid);
     }
 }
 
@@ -47,9 +47,9 @@ pub fn remove_players_but_team_now(g: &mut Game, teamid: i16) {
     }
 }
 
-pub fn remove_players_but_highest_scoring() {
-    if !net_random::event(game().get(), Ev::RemoveButHighest, &[]) {
-        remove_players_but_highest_scoring_now(game().get());
+pub fn remove_players_but_highest_scoring(g: &mut Game) {
+    if !net_random::event(g, Ev::RemoveButHighest, &[]) {
+        remove_players_but_highest_scoring_now(g);
     }
 }
 
@@ -74,9 +74,9 @@ pub fn remove_players_but_highest_scoring_now(g: &mut Game) {
     }
 }
 
-pub fn setup_score_board(fOrderMatters: bool) {
-    if !net_random::event(game().get(), Ev::ScoreBoard, &[fOrderMatters as i32]) {
-        setup_score_board_now(game().get(), fOrderMatters);
+pub fn setup_score_board(g: &mut Game, fOrderMatters: bool) {
+    if !net_random::event(g, Ev::ScoreBoard, &[fOrderMatters as i32]) {
+        setup_score_board_now(g, fOrderMatters);
     }
 }
 
@@ -150,9 +150,9 @@ pub fn setup_score_board_now(g: &mut Game, fOrderMatters: bool) {
     }
 }
 
-pub fn show_score_board() {
-    if !net_random::event(game().get(), Ev::ShowScoreBoard, &[]) {
-        show_score_board_now(game().get());
+pub fn show_score_board(g: &mut Game) {
+    if !net_random::event(g, Ev::ShowScoreBoard, &[]) {
+        show_score_board_now(g);
     }
 }
 
@@ -185,10 +185,10 @@ pub fn show_score_board_now(g: &mut Game) {
 }
 
 //Returns true if all but one team is dead
-pub fn remove_team(teamid: i16) -> bool {
-    match crate::smw::net_outcomes::remove_team_event(game().get(), teamid) {
+pub fn remove_team(g: &mut Game, teamid: i16) -> bool {
+    match crate::smw::net_outcomes::remove_team_event(g, teamid) {
         Some(result) => result,
-        None => remove_team_now(game().get(), teamid),
+        None => remove_team_now(g, teamid),
     }
 }
 
@@ -432,13 +432,13 @@ pub fn cgamemode_think<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T) {
     }
 }
 
-pub fn cgamemode_playerkilledplayer<T: CGameModeTrait + ?Sized>(this: &mut T, mut inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+pub fn cgamemode_playerkilledplayer<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, mut inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
     //Penalize killing your team mates
     if !this.gm().gameover {
         if inflictor.get_team_id() == other.get_team_id() {
-            inflictor.score().adjust_score(game().get(), -1);
+            inflictor.score().adjust_score(g, -1);
         } else {
-            inflictor.score().adjust_score(game().get(), 1);
+            inflictor.score().adjust_score(g, 1);
         }
     }
 
@@ -453,8 +453,8 @@ pub fn cgamemode_playerkilledself<T: CGameModeTrait + ?Sized>(_this: &mut T, mut
     PlayerKillType::Normal
 }
 
-pub fn cgamemode_playerextraguy<T: CGameModeTrait + ?Sized>(this: &mut T, mut player: Ptr<CPlayer>, iType: i16) {
+pub fn cgamemode_playerextraguy<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: Ptr<CPlayer>, iType: i16) {
     if !this.gm().gameover {
-        player.score().adjust_score(game().get(), iType);
+        player.score().adjust_score(g, iType);
     }
 }

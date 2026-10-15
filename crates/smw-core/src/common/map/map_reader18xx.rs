@@ -244,7 +244,7 @@ impl MapReader {
         }
     }
 
-    pub(super) fn read_platforms_1800(&mut self, map: &mut CMap, mapfile: &mut BinaryFile, fPreview: bool) {
+    pub(super) fn read_platforms_1800(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile, fPreview: bool) {
         map.clear_platforms();
 
         let iNumPlatforms: usize = mapfile.read_i32() as i16 as isize as usize;
@@ -267,7 +267,7 @@ impl MapReader {
                 continue;
             };
 
-            let platform = MovingPlatform::new(game().get(), tiles, types, iWidth, iHeight, iDrawLayer, path, fPreview);
+            let platform = MovingPlatform::new(g, tiles, types, iWidth, iHeight, iDrawLayer, path, fPreview);
             map.platforms.push(platform);
             map.platformdrawlayer[iDrawLayer as usize].push(platform);
         }
@@ -310,7 +310,7 @@ impl MapReader {
         (tiles, types)
     }
 
-    pub(super) fn load_1800(&mut self, map: &mut CMap, mapfile: &mut BinaryFile, readtype: ReadType) -> bool {
+    pub(super) fn load_1800(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile, readtype: ReadType) -> bool {
         self.read_autofilters(map, mapfile);
 
         if readtype == read_type_summary {
@@ -319,9 +319,9 @@ impl MapReader {
 
         map.clear_platforms();
 
-        self.read_tileset(game().get(), mapfile);
+        self.read_tileset(g, mapfile);
 
-        self.read_tiles(map, mapfile);
+        self.read_tiles(g, map, mapfile);
         self.read_background(map, mapfile);
         self.read_switches(map, mapfile);
         self.read_platforms(map, mapfile, readtype == read_type_preview);

@@ -48,7 +48,7 @@ impl MO_Yoshi {
     }
 
     pub fn place_yoshi(&mut self, g: &mut Game) {
-        if crate::smw::net_random::place_event(self.iNetworkID, 0) {
+        if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
             return;
         }
 
@@ -133,7 +133,7 @@ impl CObjectTrait for MO_Yoshi {
     }
 
     fn draw(&mut self, g: &mut Game) {
-        io_moving_object_draw(self);
+        io_moving_object_draw(g, self);
     }
 
     fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {

@@ -116,7 +116,7 @@ impl CObjectTrait for MO_IceBlast {
     }
 
     fn draw(&mut self, g: &mut Game) {
-        io_moving_object_draw(self);
+        io_moving_object_draw(g, self);
     }
 }
 

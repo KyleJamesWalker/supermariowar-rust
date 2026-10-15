@@ -35,11 +35,11 @@ impl CGM_Collection {
         this
     }
 
-    pub fn release_card(&mut self, mut player: Ptr<CPlayer>) {
+    pub fn release_card(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) {
         if player.score().subscore[0] > 0 {
             let pos = Vec2s::new((player.center_x() as i32 - 16) as i16, (player.center_y() as i32 - 16) as i16);
-            if !net_random::event(game().get(), Ev::ReleaseCard, &[player.globalID as i32, pos.x as i32, pos.y as i32]) {
-                self.drop_card(game().get(), player, pos);
+            if !net_random::event(g, Ev::ReleaseCard, &[player.globalID as i32, pos.x as i32, pos.y as i32]) {
+                self.drop_card(g, player, pos);
             }
         }
     }
@@ -80,8 +80,8 @@ fn spawn_card(g: &mut Game) {
     }
 }
 
-pub fn net_spawn_card() {
-    spawn_card(game().get());
+pub fn net_spawn_card(g: &mut Game) {
+    spawn_card(g);
 }
 
 pub fn net_release_card(g: &mut Game, mut player: Ptr<CPlayer>, x: i16, y: i16) {
@@ -175,7 +175,7 @@ impl CGameModeTrait for CGM_Collection {
 
     fn playerkilledplayer(&mut self, g: &mut Game, _player: Ptr<CPlayer>, other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
         //Causes a card to come out of the player
-        self.release_card(other);
+        self.release_card(g, other);
 
         PlayerKillType::Normal
     }
@@ -184,7 +184,7 @@ impl CGameModeTrait for CGM_Collection {
         gm::cgamemode_playerkilledself(self, player, style);
 
         //Causes a card to come out of the player
-        self.release_card(player);
+        self.release_card(g, player);
 
         PlayerKillType::Normal
     }
@@ -203,9 +203,9 @@ impl CGameModeTrait for CGM_Collection {
                 self.winningteam = player.get_team_id();
                 self.gameover = true;
 
-                setup_score_board(false);
-                show_score_board();
-                remove_players_but_team(self.winningteam);
+                setup_score_board(g, false);
+                show_score_board(g);
+                remove_players_but_team(g, self.winningteam);
 
                 unsafe {
                     for iScore in 0..game().score_cnt as usize {

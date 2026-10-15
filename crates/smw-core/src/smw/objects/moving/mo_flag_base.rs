@@ -81,7 +81,7 @@ impl MO_FlagBase {
     }
 
     pub fn place_flag_base(&mut self, g: &mut Game, fInit: bool) {
-        if crate::smw::net_random::place_event(self.iNetworkID, fInit as i32) {
+        if crate::smw::net_random::place_event(g, self.iNetworkID, fInit as i32) {
             return;
         }
 
@@ -177,7 +177,7 @@ impl CObjectTrait for MO_FlagBase {
         unsafe {
             if g.game_values.gamemodesettings.flag.speed > 0 {
                 self.anglechangetimer -= 1;
-                if self.anglechangetimer <= 0 && !net_random::object_event(Ev::Wander, &net_random::wander_args(self.iNetworkID, self.fx, self.fy, self.angle)) {
+                if self.anglechangetimer <= 0 && !net_random::object_event(g, Ev::Wander, &net_random::wander_args(self.iNetworkID, self.fx, self.fy, self.angle)) {
                     self.change_angle();
                 }
 

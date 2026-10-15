@@ -94,7 +94,7 @@ impl MO_WalkingEnemyTrait for MO_Spiny {
         let mut player = player;
         // Kill player here
         if player.isready() && !player.is_shielded() && !player.is_invincible() && !player.kuriboshoe.is_on() {
-            return player.kill_player_map_hazard(false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
+            return player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
         }
 
         if player.kuriboshoe.is_on() {
@@ -107,7 +107,7 @@ impl MO_WalkingEnemyTrait for MO_Spiny {
 
                 self.dead = true;
 
-                player.add_killer_award(Ptr::null(), KillStyle::Spiny);
+                player.add_killer_award(g, Ptr::null(), KillStyle::Spiny);
 
                 if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
                     player.score().adjust_score(g, 1);
@@ -128,7 +128,7 @@ impl MO_WalkingEnemyTrait for MO_Spiny {
         shell.nospawn(self.iy, fBounce);
 
         if fFlip {
-            shell.flip();
+            shell.flip(g);
         }
 
         unsafe {

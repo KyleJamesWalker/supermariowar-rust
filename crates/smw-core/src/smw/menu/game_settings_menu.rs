@@ -223,7 +223,7 @@ impl UI_GameSettingsMenu {
         let focus = ctl_ptr(self.miMapFilterScroll);
         self.set_initial_focus(focus);
         self.set_cancel_code(MENU_CODE_NONE);
-        self.reset_menu();
+        self.reset_menu(game().get());
     }
 
     pub fn close_map_filters(&mut self, g: &mut Game) {
@@ -233,7 +233,7 @@ impl UI_GameSettingsMenu {
         self.set_initial_focus(focus);
         self.set_cancel_code(MENU_CODE_BACK_TEAM_SELECT_MENU);
 
-        self.restore_current();
+        self.restore_current(g);
 
         unsafe {
             self.miMapFiltersOnImage.set_visible(g.game_values.fFiltersOn);
@@ -252,7 +252,7 @@ impl UI_GameSettingsMenu {
         let focus = ctl_ptr(self.miGameSettingsExitDialogNoButton);
         self.set_initial_focus(focus);
         self.set_cancel_code(MENU_CODE_NONE);
-        self.reset_menu();
+        self.reset_menu(game().get());
     }
 
     pub fn close_exit_dialog(&mut self) {
@@ -266,7 +266,7 @@ impl UI_GameSettingsMenu {
         self.set_initial_focus(focus);
         self.set_cancel_code(MENU_CODE_BACK_TEAM_SELECT_MENU);
 
-        self.restore_current();
+        self.restore_current(game().get());
     }
 
     pub fn set_header_text(&mut self, string: &str) {

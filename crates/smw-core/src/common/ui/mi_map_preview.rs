@@ -82,9 +82,9 @@ impl MI_MapPreview {
     pub fn update_impl(&mut self, g: &mut Game) {
         //Update hazards
         unsafe {
-            g.noncolcontainer.update();
+            game().noncolcontainer.update(g);
 
-            g.objectcontainer[1].update();
+            game().objectcontainer[1].update(g);
             g.objectcontainer[1].clean_dead_objects();
 
             g.g_map.update_platforms();
@@ -123,13 +123,13 @@ impl MI_MapPreview {
                 let mut obj = g.objectcontainer[1].list()[i];
                 let any = obj.as_any();
                 if let Some(hazard) = any.downcast_mut::<OMO_OrbitHazard>() {
-                    io_over_map_object_draw_offset(hazard, ox, oy);
+                    io_over_map_object_draw_offset(g, hazard, ox, oy);
                 } else if let Some(hazard) = any.downcast_mut::<OMO_StraightPathHazard>() {
-                    io_over_map_object_draw_offset(hazard, ox, oy);
+                    io_over_map_object_draw_offset(g, hazard, ox, oy);
                 } else if let Some(hazard) = any.downcast_mut::<IO_FlameCannon>() {
                     hazard.draw_offset(g, ox, oy);
                 } else if let Some(hazard) = any.downcast_mut::<MO_BulletBill>() {
-                    hazard.draw_offset(ox, oy);
+                    hazard.draw_offset(g, ox, oy);
                 } else if let Some(hazard) = any.downcast_mut::<MO_PirhanaPlant>() {
                     hazard.draw_offset(g, ox, oy);
                 }
@@ -163,10 +163,10 @@ impl MI_MapPreview {
             load_current_map_background(g);
             small_delay();
 
-            g.g_map.pre_draw_preview_background_spr(&g.rm.spr_background, self.surfaceMapBackground.get_surface(), false);
+            game().g_map.pre_draw_preview_background_spr(g, &game().rm.spr_background, self.surfaceMapBackground.get_surface(), false);
             small_delay();
 
-            g.g_map.pre_draw_preview_blocks(self.surfaceMapBlockLayer.get_surface(), false);
+            game().g_map.pre_draw_preview_blocks(g, self.surfaceMapBlockLayer.get_surface(), false);
             small_delay();
 
             game().g_map.pre_draw_preview_map_items(g, self.surfaceMapBackground.get_surface(), false);
@@ -189,10 +189,10 @@ impl MI_MapPreview {
         fFound
     }
 
-    pub fn set_special_map(&mut self, mapName: &str, szMapPath: &str) {
+    pub fn set_special_map(&mut self, g: &mut Game, mapName: &str, szMapPath: &str) {
         self.szMapName = copy_map_name(mapName);
 
-        self.load_map(game().get(), szMapPath);
+        self.load_map(g, szMapPath);
     }
 
     pub fn get_map_name(&self) -> &str {

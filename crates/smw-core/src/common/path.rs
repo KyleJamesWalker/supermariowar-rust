@@ -46,7 +46,7 @@ pub fn convert_path(g: &mut Game, source: &str) -> String {
     }
 }
 
-pub fn convert_path_pack(relpath: &str, packdir: &str) -> String {
+pub fn convert_path_pack(g: &mut Game, relpath: &str, packdir: &str) -> String {
     const prefixes: [&str; 2] = ["gfx/packs/", "sfx/packs/"];
     for prefix in prefixes {
         let Some(rel) = relpath.strip_prefix(prefix) else {
@@ -58,9 +58,9 @@ pub fn convert_path_pack(relpath: &str, packdir: &str) -> String {
             return path.to_string_lossy().into_owned();
         }
 
-        return convert_path(game().get(), &(prefix.to_string() + "Classic/" + rel));
+        return convert_path(g, &(prefix.to_string() + "Classic/" + rel));
     }
-    convert_path(game().get(), relpath)
+    convert_path(g, relpath)
 }
 
 pub fn concat(a: &str, b: &str) -> String {

@@ -75,7 +75,7 @@ impl CO_Flag {
     }
 
     pub fn place_flag(&mut self, g: &mut Game) {
-        if crate::smw::net_random::place_event(self.iNetworkID, 0) {
+        if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
             return;
         }
 
@@ -231,7 +231,7 @@ impl MO_CarriedObjectTrait for CO_Flag {
     crate::impl_carried_object_plumbing!();
 
     fn move_to_owner(&mut self, g: &mut Game) {
-        mo_carried_object_move_to_owner(self);
+        mo_carried_object_move_to_owner(g, self);
 
         if !self.owner.is_null() {
             self.fLastFlagDirection = self.owner.is_facing_right(g);
@@ -239,7 +239,7 @@ impl MO_CarriedObjectTrait for CO_Flag {
     }
 
     fn drop(&mut self, g: &mut Game) {
-        mo_carried_object_drop(self);
+        mo_carried_object_drop(g, self);
         self.owner_throw_timer = 62;
     }
 }

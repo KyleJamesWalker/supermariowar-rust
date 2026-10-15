@@ -201,8 +201,8 @@ impl MI_World {
             self.set_map_offset(g);
             self.reposition_map_image(g);
 
-            g.g_worldmap.draw_map_to_surface(-1, true, self.map_sprites[0].get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
-            g.g_worldmap.draw_map_to_surface(-1, true, self.map_sprites[1].get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
+            game().g_worldmap.draw_map_to_surface(g, -1, true, self.map_sprites[0].get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
+            game().g_worldmap.draw_map_to_surface(g, -1, true, self.map_sprites[1].get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
 
             self.dTeleportStarRadius = 300.0f32;
             self.dTeleportStarAngle = 0.0f32;
@@ -243,7 +243,7 @@ impl MI_World {
             let ct = self.iControllingTeam as usize;
             let r = RANDOM_INT(g.game_values.teamcounts[ct] as i32);
             self.iControllingPlayerId = g.game_values.teamids[ct][r as usize];
-            g.g_worldmap.set_player_sprite(self.iControllingPlayerId);
+            game().g_worldmap.set_player_sprite(g, self.iControllingPlayerId);
 
             self.fNoInterestingMoves = false;
         }
@@ -339,7 +339,7 @@ impl MI_World {
     fn update_map_surface(&mut self, g: &mut Game, iCycleIndex: i16) {
         if iCycleIndex >= 0 && iCycleIndex <= 15 {
             unsafe {
-                g.g_worldmap.draw_map_to_surface(
+                game().g_worldmap.draw_map_to_surface(g, 
                     iCycleIndex,
                     self.iDrawFullRefresh > 0,
                     self.map_sprites[(1 - self.iCurrentSurfaceIndex) as usize].get_surface(),
@@ -449,8 +449,8 @@ impl MI_World {
     /// The paired `g_worldmap.UpdateTile(map_sprites[0..2], ...)` calls.
     fn update_tile_both(&mut self, g: &mut Game, col: i16, row: i16) {
         unsafe {
-            g.g_worldmap.update_tile(self.map_sprites[0].get_surface(), col, row, self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
-            g.g_worldmap.update_tile(self.map_sprites[1].get_surface(), col, row, self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
+            game().g_worldmap.update_tile(g, self.map_sprites[0].get_surface(), col, row, self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
+            game().g_worldmap.update_tile(g, self.map_sprites[1].get_surface(), col, row, self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
         }
     }
 
@@ -828,7 +828,7 @@ impl UI_ControlTrait for MI_World {
 
                     self.iDrawFullRefresh = 2; //Draw one full refresh to next surface
 
-                    g.g_worldmap.draw_map_to_surface(-1, true, self.map_sprites[0].get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
+                    game().g_worldmap.draw_map_to_surface(g, -1, true, self.map_sprites[0].get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
                     //g_worldmap.DrawMapToSurface(-1, true, map_sprites[1].getSurface(), iMapDrawOffsetCol, iMapDrawOffsetRow, iAnimationFrame);
 
                     self.iState = 5;
@@ -868,7 +868,7 @@ impl UI_ControlTrait for MI_World {
             self.map_sprites[self.iCurrentSurfaceIndex as usize].draw_src_to(&self.rectSrcSurface, g.blitdest, &self.rectDstSurface);
 
             //Draw the world, vehicles and player
-            g.g_worldmap.draw(self.iMapOffsetX, self.iMapOffsetY, self.iState == -1 && !self.fUsingCloud, self.iSleepTurns > 0);
+            game().g_worldmap.draw(g, self.iMapOffsetX, self.iMapOffsetY, self.iState == -1 && !self.fUsingCloud, self.iSleepTurns > 0);
 
             let px = iPlayerDrawPos.x as i32 + self.iMapOffsetX as i32;
             let py = iPlayerDrawPos.y as i32 + self.iMapOffsetY as i32;
@@ -1086,10 +1086,10 @@ impl UI_ControlTrait for MI_World {
 
                 let iPlayerCurrentTile = g.g_worldmap.get_player_current_tile();
 
-                let iTeamId = lookup_team_id(iPlayer);
+                let iTeamId = lookup_team_id(g, iPlayer);
 
                 if self.iState == -1 && self.iNumPopups == 0 && !self.iPopupFlag[0] && !self.iPopupFlag[1] && !self.iPopupFlag[2] && !self.iPopupFlag[3] {
-                    if self.iControllingTeam == lookup_team_id(iPlayer) && iPlayerState == 0 && g.game_values.playercontrol[p] > 0 {
+                    if self.iControllingTeam == lookup_team_id(g, iPlayer) && iPlayerState == 0 && g.game_values.playercontrol[p] > 0 {
                         //if this player is player or cpu
                         let tile: WorldMapTile = *g.g_worldmap.tiles.at(iPlayerCurrentTile.x as usize, iPlayerCurrentTile.y as usize);
 

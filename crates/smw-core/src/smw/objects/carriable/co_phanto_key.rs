@@ -53,7 +53,7 @@ impl CO_PhantoKey {
     }
 
     pub fn place_key(&mut self, g: &mut Game) {
-        if crate::smw::net_random::place_event(self.iNetworkID, 0) {
+        if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
             return;
         }
 
@@ -127,7 +127,7 @@ impl CObjectTrait for CO_PhantoKey {
     }
 
     fn draw(&mut self, g: &mut Game) {
-        mo_carried_object_draw(self);
+        mo_carried_object_draw(g, self);
 
         unsafe {
             game().rm.spr_shinesparkle.draw_src(g, 

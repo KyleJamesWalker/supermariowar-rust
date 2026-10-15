@@ -51,13 +51,13 @@ impl CObjectTrait for CO_KuriboShoe {
         Some(self)
     }
     fn update(&mut self, g: &mut Game) {
-        co_spring_update(self)
+        co_spring_update(g, self)
     }
     fn draw(&mut self, g: &mut Game) {
-        co_spring_draw(self)
+        co_spring_draw(g, self)
     }
     fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
-        co_spring_collide_player(self, player)
+        co_spring_collide_player(g, self, player)
     }
 }
 
@@ -84,7 +84,7 @@ impl CO_SpringTrait for CO_KuriboShoe {
         let mut player = player;
         if !player.kuriboshoe.is_on() && player.tanookisuit.not_statue() {
             self.dead = true;
-            player.set_kuribo_shoe(if self.fSticky { STICKY } else { NORMAL });
+            player.set_kuribo_shoe(g, if self.fSticky { STICKY } else { NORMAL });
             unsafe {
                 if_sound_on_play(g, &mut game().rm.sfx_transform);
                 g.eyecandy[2].emplace(EC_SingleAnimation::new(

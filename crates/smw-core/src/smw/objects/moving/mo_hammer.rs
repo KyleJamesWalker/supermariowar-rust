@@ -162,7 +162,7 @@ impl CObjectTrait for MO_Hammer {
 
                     if !player.is_invincible() && !player.shyguy {
                         // Find the player that shot this hammer so we can attribute a kill
-                        player_killed_player(self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Hammer, false, false);
+                        player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Hammer, false, false);
                         return true;
                     }
                 }

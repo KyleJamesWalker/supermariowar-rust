@@ -405,7 +405,7 @@ impl PlayerCollisions {
                     style = KillStyle::Feather;
                 }
 
-                player.killed_player(other, PlayerDeathStyle::Squish, style, false, false);
+                player.killed_player(g, other, PlayerDeathStyle::Squish, style, false, false);
             } else {
                 unsafe {
                     if g.game_values.gamemode.gamemode == game_mode_tag {
@@ -492,12 +492,12 @@ impl PlayerCollisions {
             //--- 1. kill frozen players ---
             let mut fFrozenDeath = false;
             if o1.frozen && !o1.is_shielded() && !o1.is_invincible() {
-                o2.killed_player(o1, PlayerDeathStyle::Shatter, KillStyle::IceBlast, true, false);
+                o2.killed_player(g, o1, PlayerDeathStyle::Shatter, KillStyle::IceBlast, true, false);
                 fFrozenDeath = true;
             }
 
             if o2.frozen && !o2.is_shielded() && !o2.is_invincible() {
-                o1.killed_player(o2, PlayerDeathStyle::Shatter, KillStyle::IceBlast, true, false);
+                o1.killed_player(g, o2, PlayerDeathStyle::Shatter, KillStyle::IceBlast, true, false);
                 fFrozenDeath = true;
             }
 
@@ -507,12 +507,12 @@ impl PlayerCollisions {
 
             //--- 2. is player invincible? ---
             if o1.is_invincible() && !o2.is_shielded() && !o2.is_invincible() {
-                o1.killed_player(o2, PlayerDeathStyle::Jump, KillStyle::Star, false, false);
+                o1.killed_player(g, o2, PlayerDeathStyle::Jump, KillStyle::Star, false, false);
                 return;
             }
 
             if o2.is_invincible() && !o1.is_shielded() && !o1.is_invincible() {
-                o2.killed_player(o1, PlayerDeathStyle::Jump, KillStyle::Star, false, false);
+                o2.killed_player(g, o1, PlayerDeathStyle::Jump, KillStyle::Star, false, false);
                 return;
             }
 
@@ -554,8 +554,8 @@ impl PlayerCollisions {
     }
 
     //handles a collision between a player and an object
-    pub fn handle_p2o(&mut self, o1: Ptr<CPlayer>, mut o2: Ptr<dyn CObjectTrait>) -> bool {
-        o2.collide_player(game().get(), o1)
+    pub fn handle_p2o(&mut self, g: &mut Game, o1: Ptr<CPlayer>, mut o2: Ptr<dyn CObjectTrait>) -> bool {
+        o2.collide_player(g, o1)
     }
 
     //calculates the new positions for both players when they are pushing each other

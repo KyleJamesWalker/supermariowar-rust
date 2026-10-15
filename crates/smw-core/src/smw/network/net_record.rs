@@ -266,12 +266,12 @@ pub fn value_opt(g: &mut Game, key: &str, live: impl FnOnce() -> Option<String>)
     Some(value(g, key, || live().unwrap_or_else(|| "-".to_string()))).filter(|v| v != "-")
 }
 
-pub fn value_u32(key: &str, live: impl FnOnce() -> u32) -> u32 {
-    value(game().get(), key, || live().to_string()).parse().unwrap_or(0)
+pub fn value_u32(g: &mut Game, key: &str, live: impl FnOnce() -> u32) -> u32 {
+    value(g, key, || live().to_string()).parse().unwrap_or(0)
 }
 
-pub fn value_bool(key: &str, live: impl FnOnce() -> bool) -> bool {
-    value(game().get(), key, || (live() as u8).to_string()) == "1"
+pub fn value_bool(g: &mut Game, key: &str, live: impl FnOnce() -> bool) -> bool {
+    value(g, key, || (live() as u8).to_string()) == "1"
 }
 
 #[cfg(test)]

@@ -87,7 +87,7 @@ impl CO_Egg {
     }
 
     pub fn place_egg(&mut self, g: &mut Game) {
-        if crate::smw::net_random::place_event(self.iNetworkID, 0) {
+        if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
             return;
         }
 
@@ -220,7 +220,7 @@ impl CObjectTrait for CO_Egg {
     }
 
     fn draw(&mut self, g: &mut Game) {
-        mo_carried_object_draw(self);
+        mo_carried_object_draw(g, self);
 
         // Display explosion timer
         unsafe {
@@ -250,7 +250,7 @@ impl MO_CarriedObjectTrait for CO_Egg {
     crate::impl_carried_object_plumbing!();
 
     fn drop(&mut self, g: &mut Game) {
-        mo_carried_object_drop(self);
+        mo_carried_object_drop(g, self);
         self.owner_throw_timer = 62;
     }
 }

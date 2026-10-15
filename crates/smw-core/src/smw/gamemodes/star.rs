@@ -163,17 +163,17 @@ impl CGM_Star {
         }
     }
 
-    fn rebalance_multi_stars(&mut self) {
+    fn rebalance_multi_stars(&mut self, g: &mut Game) {
         let mut rankedPlayers: [Ptr<CPlayer>; 4] = [Ptr::null(); 4];
         let fReverseScoring = self.fReverseScoring;
-        let iNumPlayers: i16 = self.get_score_ranked_player_list(game().get(), &mut rankedPlayers, fReverseScoring);
+        let iNumPlayers: i16 = self.get_score_ranked_player_list(g, &mut rankedPlayers, fReverseScoring);
 
         let mut iStar: i16 = 0;
         while (iStar as i32) < iNumPlayers as i32 - 1 {
             self.starPlayer[iStar as usize] = rankedPlayers[iStar as usize];
             let iColor = self.starPlayer[iStar as usize].get_color_id();
             self.starItem[iStar as usize].set_player_color(iColor);
-            self.starItem[iStar as usize].place_star(game().get());
+            self.starItem[iStar as usize].place_star(g);
             iStar += 1;
         }
     }
@@ -221,7 +221,7 @@ fn star_time(g: &mut Game) -> i16 {
 }
 
 pub fn cgm_star_init(g: &mut Game, this: &mut CGM_Star) {
-    cgm_timelimit_init(&mut this.cgm_time_limit);
+    cgm_timelimit_init(g, &mut this.cgm_time_limit);
 
     this.fDisplayTimer = true;
 
@@ -270,7 +270,7 @@ fn reassign(g: &mut Game, this: &mut CGM_Star) {
             while iStar1 + 1 < g.players.len() {
                 //If we're missing a star player, then reassign them all
                 if this.starPlayer[iStar1].is_null() {
-                    this.rebalance_multi_stars();
+                    this.rebalance_multi_stars(g);
                     break;
                 }
                 iStar1 += 1;
@@ -290,7 +290,7 @@ fn time_out(g: &mut Game, this: &mut CGM_Star) {
 
         if this.iCurrentModeType == StarStyle::Ztar {
             if g.score[this.starPlayer[0].get_team_id() as usize].score > 1 || this.fReverseScoring {
-                this.starPlayer[0].kill_player_map_hazard(true, KillStyle::Environment, false, -1);
+                this.starPlayer[0].kill_player_map_hazard(g, true, KillStyle::Environment, false, -1);
             }
 
             if this.fReverseScoring {
@@ -299,7 +299,7 @@ fn time_out(g: &mut Game, this: &mut CGM_Star) {
                 this.starPlayer[0].score().adjust_score(g, -1);
 
                 if this.starPlayer[0].score().score <= 0 {
-                    this.fDisplayTimer = !remove_team(this.starPlayer[0].get_team_id());
+                    this.fDisplayTimer = !remove_team(g, this.starPlayer[0].get_team_id());
                     this.starPlayer[0] = Ptr::null();
                 }
             }
@@ -316,7 +316,7 @@ fn time_out(g: &mut Game, this: &mut CGM_Star) {
 
                 //Let the cleanup function remove the player on the last kill
                 if g.score[player.get_team_id() as usize].score > 1 || this.fReverseScoring {
-                    player.kill_player_map_hazard(true, KillStyle::Environment, false, -1);
+                    player.kill_player_map_hazard(g, true, KillStyle::Environment, false, -1);
                 }
             }
 
@@ -331,7 +331,7 @@ fn time_out(g: &mut Game, this: &mut CGM_Star) {
                     game().score[iTeam as usize].adjust_score(g, -1);
 
                     if g.score[iTeam as usize].score <= 0 {
-                        this.fDisplayTimer = !remove_team(iTeam);
+                        this.fDisplayTimer = !remove_team(g, iTeam);
                     }
                 }
             }
@@ -356,7 +356,7 @@ fn time_out(g: &mut Game, this: &mut CGM_Star) {
 
                 let mut p = g.players[iPlayer];
                 if g.score[p.get_team_id() as usize].score > 1 || this.fReverseScoring {
-                    p.kill_player_map_hazard(true, KillStyle::Environment, false, -1);
+                    p.kill_player_map_hazard(g, true, KillStyle::Environment, false, -1);
                 }
 
                 let mut fNeedRebalance = true;
@@ -367,7 +367,7 @@ fn time_out(g: &mut Game, this: &mut CGM_Star) {
                     p.score().adjust_score(g, -1);
 
                     if p.score().score <= 0 {
-                        this.fDisplayTimer = !remove_team(p.get_team_id());
+                        this.fDisplayTimer = !remove_team(g, p.get_team_id());
 
                         if g.game_values.gamemodesettings.star.shine != StarStyle::Random {
                             this.setup_mode(g);
@@ -377,7 +377,7 @@ fn time_out(g: &mut Game, this: &mut CGM_Star) {
                 }
 
                 if g.game_values.gamemodesettings.star.shine != StarStyle::Random && fNeedRebalance {
-                    this.rebalance_multi_stars();
+                    this.rebalance_multi_stars(g);
                 }
 
                 break;
@@ -417,18 +417,18 @@ fn star_mode() -> Option<&'static mut CGM_Star> {
     unsafe { game().game_values.gamemode.get().as_any().downcast_mut::<CGM_Star>() }
 }
 
-pub fn net_reassign() {
+pub fn net_reassign(g: &mut Game) {
     if let Some(this) = star_mode() {
         if star_needs_reassign(this) {
-            reassign(game().get(), this);
+            reassign(g, this);
         }
     }
 }
 
-pub fn net_timeout() {
+pub fn net_timeout(g: &mut Game) {
     if let Some(this) = star_mode() {
         if !star_needs_reassign(this) {
-            time_out(game().get(), this);
+            time_out(g, this);
         }
     }
 }

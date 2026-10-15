@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/OverMapObject.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::gfx::gfx_drawpreview;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -101,18 +102,18 @@ impl IO_OverMapObject {
     }
 }
 
-pub fn io_over_map_object_draw<T: IO_OverMapObjectTrait + ?Sized>(this: &mut T) {
+pub fn io_over_map_object_draw<T: IO_OverMapObjectTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let o = this.omo();
-    o.spr.draw_src(game().get(), 
+    o.spr.draw_src(g, 
         (o.ix - o.collisionOffsetX) as i32,
         (o.iy - o.collisionOffsetY) as i32,
         &SDL_Rect { x: o.drawframe as i32, y: o.animationOffsetY as i32, w: o.iw as i32, h: o.ih as i32 },
     );
 }
 
-pub fn io_over_map_object_draw_offset<T: IO_OverMapObjectTrait + ?Sized>(this: &mut T, iOffsetX: i16, iOffsetY: i16) {
+pub fn io_over_map_object_draw_offset<T: IO_OverMapObjectTrait + ?Sized>(g: &mut Game, this: &mut T, iOffsetX: i16, iOffsetY: i16) {
     let o = this.omo();
-    gfx_drawpreview(game().get(), 
+    gfx_drawpreview(g, 
         &*o.spr,
         (((o.ix - o.collisionOffsetX) as i32 >> 1) + iOffsetX as i32) as i16,
         (((o.iy - o.collisionOffsetY) as i32 >> 1) + iOffsetY as i32) as i16,
@@ -159,7 +160,7 @@ pub trait IO_OverMapObjectTrait: CObjectTrait {
     fn omo_mut(&mut self) -> &mut IO_OverMapObject;
 
     fn draw_offset(&mut self, iOffsetX: i16, iOffsetY: i16) {
-        io_over_map_object_draw_offset(self, iOffsetX, iOffsetY)
+        io_over_map_object_draw_offset(game().get(), self, iOffsetX, iOffsetY)
     }
     fn animate(&mut self) {
         io_over_map_object_animate(self.omo_mut())

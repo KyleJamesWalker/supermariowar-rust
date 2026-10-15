@@ -1233,29 +1233,29 @@ impl WorldMap {
         fPlayerDoneMove
     }
 
-    pub fn draw(&self, iMapOffsetX: i16, iMapOffsetY: i16, fDrawPlayer: bool, fVehiclesSleeping: bool) {
+    pub fn draw(&self, g: &mut Game, iMapOffsetX: i16, iMapOffsetY: i16, fDrawPlayer: bool, fVehiclesSleeping: bool) {
         for vehicle in &self.vehicles {
             if !vehicle.fEnabled {
                 continue;
             }
 
-            vehicle.draw(game().get(), iMapOffsetX, iMapOffsetY, fVehiclesSleeping);
+            vehicle.draw(g, iMapOffsetX, iMapOffsetY, fVehiclesSleeping);
         }
 
         if fDrawPlayer {
-            self.player.draw(game().get(), iMapOffsetX, iMapOffsetY);
+            self.player.draw(g, iMapOffsetX, iMapOffsetY);
         }
     }
 
-    pub fn update_tile(&mut self, surface: *mut SDL_Surface, iCol: i16, iRow: i16, iMapDrawOffsetCol: i16, iMapDrawOffsetRow: i16, iAnimationFrame: i16) {
-        self.draw_tile_to_surface(game().get(), surface, iCol, iRow, iMapDrawOffsetCol, iMapDrawOffsetRow, true, iAnimationFrame, 0);
+    pub fn update_tile(&mut self, g: &mut Game, surface: *mut SDL_Surface, iCol: i16, iRow: i16, iMapDrawOffsetCol: i16, iMapDrawOffsetRow: i16, iAnimationFrame: i16) {
+        self.draw_tile_to_surface(g, surface, iCol, iRow, iMapDrawOffsetCol, iMapDrawOffsetRow, true, iAnimationFrame, 0);
     }
 
     /// `DrawMapToSurface(SDL_Surface*)`: the whole map in one pass.
-    pub fn draw_map_to_surface_full(&self, surface: *mut SDL_Surface) {
+    pub fn draw_map_to_surface_full(&self, g: &mut Game, surface: *mut SDL_Surface) {
         for iRow in 0..self.iHeight {
             for iCol in 0..self.iWidth {
-                self.draw_tile_to_surface(game().get(), surface, iCol, iRow, 0, 0, true, 0, 0);
+                self.draw_tile_to_surface(g, surface, iCol, iRow, 0, 0, true, 0, 0);
             }
         }
     }
@@ -1265,7 +1265,7 @@ impl WorldMap {
         self.iLastDrawCol = 0;
     }
 
-    pub fn draw_map_to_surface(&mut self, iCycleIndex: i16, fFullRefresh: bool, surface: *mut SDL_Surface, iMapDrawOffsetCol: i16, iMapDrawOffsetRow: i16, iAnimationFrame: i16) {
+    pub fn draw_map_to_surface(&mut self, g: &mut Game, iCycleIndex: i16, fFullRefresh: bool, surface: *mut SDL_Surface, iMapDrawOffsetCol: i16, iMapDrawOffsetRow: i16, iAnimationFrame: i16) {
         let iRowEnd: i16 = if 19 + (iMapDrawOffsetRow as i32) < self.iHeight as i32 { 19 } else { self.iHeight - iMapDrawOffsetRow };
         let iColEnd: i16 = if 24 + (iMapDrawOffsetCol as i32) < self.iWidth as i32 { 24 } else { self.iWidth - iMapDrawOffsetCol };
 
@@ -1281,7 +1281,7 @@ impl WorldMap {
         while iRow < iRowEnd {
             let mut iCol = self.iLastDrawCol;
             while iCol < iColEnd {
-                self.draw_tile_to_surface(game().get(), surface, iCol, iRow, iMapDrawOffsetCol, iMapDrawOffsetRow, fFullRefresh, iAnimationFrame, iLayer);
+                self.draw_tile_to_surface(g, surface, iCol, iRow, iMapDrawOffsetCol, iMapDrawOffsetRow, fFullRefresh, iAnimationFrame, iLayer);
 
                 if iCycleIndex >= 0 && iCycleIndex != 7 && iCycleIndex != 15 && {
                     iCounter += 1;
@@ -1439,8 +1439,8 @@ impl WorldMap {
         self.player.pos
     }
 
-    pub fn set_player_sprite(&mut self, iPlayerSprite: i16) {
-        self.player.set_sprite(game().get(), iPlayerSprite);
+    pub fn set_player_sprite(&mut self, g: &mut Game, iPlayerSprite: i16) {
+        self.player.set_sprite(g, iPlayerSprite);
     }
 
     pub fn set_player_position(&mut self, iPlayerCol: i16, iPlayerRow: i16) {

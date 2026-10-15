@@ -16,7 +16,7 @@ use std::path::Path;
 fn main() {
     let data = std::env::args().nth(1).unwrap_or_else(|| concat!(env!("CARGO_MANIFEST_DIR"), "/../../data").to_string());
 
-    smw::globals::init_globals();
+    smw::globals::init_globals(game().get());
     unsafe {
         game().RootDataDirectory = data;
 
@@ -36,7 +36,7 @@ fn main() {
         game().soundpacklist.set_current_index(0);
 
         let pack = game().gamegraphicspacklist.current_path().to_string_lossy().into_owned();
-        assert!(gfx_loadpalette(game().get(), Path::new(&convert_path_pack("gfx/packs/palette.png", &pack))));
+        assert!(gfx_loadpalette(game().get(), Path::new(&convert_path_pack(game().get(), "gfx/packs/palette.png", &pack))));
 
         game().rm.load_start_graphics(game().get());
         game().rm.load_all_graphics(game().get());

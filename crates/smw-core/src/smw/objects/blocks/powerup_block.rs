@@ -147,10 +147,10 @@ macro_rules! impl_powerup_block_plumbing {
     };
 }
 
-pub fn b_powerup_block_draw<T: B_PowerupBlockTrait + ?Sized>(this: &mut T) {
+pub fn b_powerup_block_draw<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let b = this.pb();
     if !b.hidden {
-        b.spr.draw_src(game().get(), 
+        b.spr.draw_src(g, 
             b.ix as i32,
             b.iy as i32,
             &SDL_Rect { x: b.drawFrame as i32, y: if b.state == 0 { 0 } else { b.ih as i32 }, w: b.iw as i32, h: b.ih as i32 },
@@ -292,17 +292,17 @@ pub fn b_powerup_block_reset<T: B_PowerupBlockTrait + ?Sized>(this: &mut T) {
     b.state = 0;
 }
 
-pub fn b_powerup_block_collide_player_dir<T: B_PowerupBlockTrait + ?Sized>(this: &mut T, player: Ptr<CPlayer>, direction: i16, useBehavior: bool) -> bool {
+pub fn b_powerup_block_collide_player_dir<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, player: Ptr<CPlayer>, direction: i16, useBehavior: bool) -> bool {
     if this.pb().hidden {
         let b = this.pb();
         if player.fOldY >= (b.iposy as i32 + b.ih as i32) as f32 && direction == 0 {
-            return this.hitbottom_player(game().get(), player, useBehavior);
+            return this.hitbottom_player(g, player, useBehavior);
         }
 
         return true;
     }
 
-    io_block_collide_player_dir(this, player, direction, useBehavior)
+    io_block_collide_player_dir(g, this, player, direction, useBehavior)
 }
 
 pub fn b_powerup_block_hittop_player<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
@@ -316,7 +316,7 @@ pub fn b_powerup_block_hittop_player<T: B_PowerupBlockTrait + ?Sized>(g: &mut Ga
                 && !player.is_invincible_on_bottom()
                 && (player.teamID != iBumpTeamID || g.game_values.teamcollision == TeamCollisionStyle::On)
             {
-                iKillType = player_killed_player(iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
+                iKillType = player_killed_player(g, iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
             }
 
             if PlayerKillType::NonKill == iKillType {
@@ -379,7 +379,7 @@ pub fn b_powerup_block_collide_object_dir<T: B_PowerupBlockTrait + ?Sized>(this:
         return true;
     }
 
-    io_block_collide_object_dir(this, object, direction)
+    io_block_collide_object_dir(game().get(), this, object, direction)
 }
 
 pub fn b_powerup_block_hittop_object<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
@@ -539,7 +539,7 @@ macro_rules! impl_powerup_block_io_block_overrides {
             $crate::smw::objects::blocks::powerup_block::b_powerup_block_reset(self)
         }
         fn collide_player_dir(&mut self, player: $crate::globals::Ptr<$crate::smw::player::CPlayer>, direction: i16, useBehavior: bool) -> bool {
-            $crate::smw::objects::blocks::powerup_block::b_powerup_block_collide_player_dir(self, player, direction, useBehavior)
+            $crate::smw::objects::blocks::powerup_block::b_powerup_block_collide_player_dir(game().get(), self, player, direction, useBehavior)
         }
         fn collide_object_dir(
             &mut self,
@@ -575,7 +575,7 @@ impl CObjectTrait for B_PowerupBlock {
         Some(self)
     }
     fn draw(&mut self, g: &mut Game) {
-        b_powerup_block_draw(self)
+        b_powerup_block_draw(g, self)
     }
     fn update(&mut self, g: &mut Game) {
         b_powerup_block_update(g, self)

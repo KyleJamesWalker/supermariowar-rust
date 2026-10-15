@@ -39,10 +39,10 @@ impl CGameModeTrait for CGM_Frag {
         cgm_frag_playerkilledself(g, self, player, style)
     }
     fn playerextraguy(&mut self, g: &mut Game, player: Ptr<CPlayer>, iType: i16) {
-        cgm_frag_playerextraguy(self, player, iType)
+        cgm_frag_playerextraguy(g, self, player, iType)
     }
     fn check_winner(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> PlayerKillType {
-        cgm_frag_check_winner(self, player)
+        cgm_frag_check_winner(g, self, player)
     }
 }
 
@@ -92,14 +92,14 @@ pub fn cgm_frag_playerkilledself<T: CGameModeTrait + ?Sized>(g: &mut Game, this:
     PlayerKillType::Normal
 }
 
-pub fn cgm_frag_playerextraguy<T: CGameModeTrait + ?Sized>(this: &mut T, mut player: Ptr<CPlayer>, iType: i16) {
+pub fn cgm_frag_playerextraguy<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: Ptr<CPlayer>, iType: i16) {
     if !this.gm().gameover {
-        player.score().adjust_score(game().get(), iType);
-        this.check_winner(game().get(), player);
+        player.score().adjust_score(g, iType);
+        this.check_winner(g, player);
     }
 }
 
-pub fn cgm_frag_check_winner<T: CGameModeTrait + ?Sized>(this: &mut T, mut player: Ptr<CPlayer>) -> PlayerKillType {
+pub fn cgm_frag_check_winner<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: Ptr<CPlayer>) -> PlayerKillType {
     let this = this.gm_mut();
     if this.goal > -1 {
         if player.score().score >= this.goal {
@@ -107,13 +107,13 @@ pub fn cgm_frag_check_winner<T: CGameModeTrait + ?Sized>(this: &mut T, mut playe
             this.winningteam = player.get_team_id();
             this.gameover = true;
 
-            remove_players_but_team(this.winningteam);
-            setup_score_board(false);
-            show_score_board();
+            remove_players_but_team(g, this.winningteam);
+            setup_score_board(g, false);
+            show_score_board(g);
 
             return PlayerKillType::Removed;
         } else if player.score().score as i32 >= this.goal as i32 - 2 && !this.playedwarningsound {
-            this.playwarningsound(game().get());
+            this.playwarningsound(g);
         }
     }
 

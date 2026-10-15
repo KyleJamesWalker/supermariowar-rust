@@ -59,16 +59,16 @@ impl PU_FeatherPowerup {
     }
 }
 
-pub fn pu_feather_powerup_draw<T: PU_FeatherPowerupTrait + ?Sized>(this: &mut T) {
+pub fn pu_feather_powerup_draw<T: PU_FeatherPowerupTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let o = this.fp();
     let x = o.ix as i32 - o.collisionOffsetX as i32;
     let y = o.iy as i32 - o.collisionOffsetY as i32;
     if o.state == 0 {
-        o.spr.draw_src(game().get(), x, y, &SDL_Rect { x: 0, y: 0, w: o.iw as i32, h: (o.ih as f32 - o.fy + o.desty) as i16 as i32 });
+        o.spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: o.iw as i32, h: (o.ih as f32 - o.fy + o.desty) as i16 as i32 });
     } else if o.state == 1 {
-        o.spr.draw_src(game().get(), x, y, &SDL_Rect { x: 0, y: 0, w: o.iw as i32, h: o.ih as i32 });
+        o.spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: o.iw as i32, h: o.ih as i32 });
     } else {
-        o.spr.draw_src(game().get(), x, y, &SDL_Rect { x: if o.fFloatDirectionRight { 0 } else { 32 }, y: 0, w: o.iw as i32, h: o.ih as i32 });
+        o.spr.draw_src(g, x, y, &SDL_Rect { x: if o.fFloatDirectionRight { 0 } else { 32 }, y: 0, w: o.iw as i32, h: o.ih as i32 });
     }
 }
 
@@ -124,11 +124,11 @@ pub fn pu_feather_powerup_update<T: PU_FeatherPowerupTrait + ?Sized>(this: &mut 
     }
 }
 
-pub fn pu_feather_powerup_collide_player<T: PU_FeatherPowerupTrait + ?Sized>(this: &mut T, player: Ptr<CPlayer>) -> bool {
+pub fn pu_feather_powerup_collide_player<T: PU_FeatherPowerupTrait + ?Sized>(g: &mut Game, this: &mut T, player: Ptr<CPlayer>) -> bool {
     let mut player = player;
     let o = this.fp_mut();
     if o.state > 0 {
-        player.set_powerup(game().get(), 3);
+        player.set_powerup(g, 3);
         o.dead = true;
     }
 
@@ -176,13 +176,13 @@ impl CObjectTrait for PU_FeatherPowerup {
         Some(self)
     }
     fn draw(&mut self, g: &mut Game) {
-        pu_feather_powerup_draw(self)
+        pu_feather_powerup_draw(g, self)
     }
     fn update(&mut self, g: &mut Game) {
         pu_feather_powerup_update(self)
     }
     fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
-        pu_feather_powerup_collide_player(self, player)
+        pu_feather_powerup_collide_player(g, self, player)
     }
 }
 

@@ -40,7 +40,7 @@ impl PU_SecretPowerup {
     }
 
     pub fn place(&mut self, g: &mut Game) {
-        if crate::smw::net_random::place_event(self.iNetworkID, 0) {
+        if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
             return;
         }
 
@@ -71,7 +71,7 @@ impl CObjectTrait for PU_SecretPowerup {
     }
 
     fn update(&mut self, g: &mut Game) {
-        mo_powerup_update(self);
+        mo_powerup_update(g, self);
 
         self.sparkleanimationtimer += 1;
         if self.sparkleanimationtimer >= 4 {
@@ -84,7 +84,7 @@ impl CObjectTrait for PU_SecretPowerup {
     }
 
     fn draw(&mut self, g: &mut Game) {
-        mo_powerup_draw(self);
+        mo_powerup_draw(g, self);
 
         // Draw sparkles
         unsafe {

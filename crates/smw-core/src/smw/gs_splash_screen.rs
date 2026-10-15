@@ -55,7 +55,7 @@ impl GameState for SplashScreenState {
 
             self.menu_credits = Ptr::new_box(gfxSprite::new());
             *self.menu_credits =
-                ImageLoader::new(convert_path_pack("gfx/packs/menu/splash_credits.png", &g.menugraphicspacklist.current_path().to_string_lossy())).create();
+                ImageLoader::new(convert_path_pack(g, "gfx/packs/menu/splash_credits.png", &game().menugraphicspacklist.current_path().to_string_lossy())).create();
         }
 
         true

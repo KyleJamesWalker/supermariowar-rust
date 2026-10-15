@@ -59,7 +59,7 @@ fn main() {
         smw::services::services().clock = Box::new(TickingClock(Cell::new(0)));
     }
 
-    smw::globals::init_globals();
+    smw::globals::init_globals(game().get());
     unsafe {
         game().RootDataDirectory = data.clone();
         ensure_settings_dir();

@@ -127,7 +127,7 @@ impl IO_BlockTrait for B_OnOffSwitchBlock {
                     && !player.is_invincible_on_bottom()
                     && (player.teamID != self.iBumpTeamID || g.game_values.teamcollision == TeamCollisionStyle::On)
                 {
-                    iKillType = player_killed_player(self.iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
+                    iKillType = player_killed_player(g, self.iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
                 }
 
                 if PlayerKillType::NonKill == iKillType {

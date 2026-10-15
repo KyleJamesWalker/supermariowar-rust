@@ -212,7 +212,7 @@ pub fn gfx_show_catched_error(g: &mut Game, error: &str) {
 }
 
 pub fn gfx_take_screenshot(g: &mut Game) {
-    unsafe { g.gfx.take_screenshot() }
+    unsafe { game().gfx.take_screenshot(g) }
 }
 
 pub fn gfx_close() {}
@@ -255,7 +255,7 @@ pub fn gfx_write_screen_raw(g: &mut Game, out: &mut impl std::io::Write) -> std:
 }
 
 fn load_skin(path: &Path) -> Result<gfxSprite, String> {
-    let skin = ImageLoader::new(path).without_color_key().without_optimization().try_create()?;
+    let skin = ImageLoader::new(path).without_color_key().without_optimization().try_create(game().get())?;
 
     if !valid_skin_surface(&skin) {
         return Err(format!("Invalid skin file: {} has incorrect dimensions", path.display()));
@@ -265,19 +265,19 @@ fn load_skin(path: &Path) -> Result<gfxSprite, String> {
 }
 
 /// Returns `Err` where the C++ throws a `std::string`.
-pub fn gfx_loadmenuskin(path: &Path, colorScheme: i16, fLoadBothDirections: bool) -> Result<SpriteStrip, String> {
+pub fn gfx_loadmenuskin(g: &mut Game, path: &Path, colorScheme: i16, fLoadBothDirections: bool) -> Result<SpriteStrip, String> {
     let skin = load_skin(path)?;
 
     let mut strip = new_sprite_strip();
 
     for i in 0..2usize {
-        let skinSurface = create_skin_surface(game().get(), &skin, i, colorScheme as usize, true, false);
+        let skinSurface = create_skin_surface(g, &skin, i, colorScheme as usize, true, false);
         strip[i * 2] = skinSurface;
     }
 
     if fLoadBothDirections {
         for i in 0..2usize {
-            let skinSurface = create_skin_surface(game().get(), &skin, i, colorScheme as usize, true, true);
+            let skinSurface = create_skin_surface(g, &skin, i, colorScheme as usize, true, true);
             strip[i * 2 + 1] = skinSurface;
         }
     }
@@ -286,24 +286,24 @@ pub fn gfx_loadmenuskin(path: &Path, colorScheme: i16, fLoadBothDirections: bool
 }
 
 /// Returns `Err` where the C++ throws a `std::string`.
-pub fn gfx_loadfullskin(path: &Path, colorScheme: i16) -> Result<SpriteStrip, String> {
+pub fn gfx_loadfullskin(g: &mut Game, path: &Path, colorScheme: i16) -> Result<SpriteStrip, String> {
     let skin = load_skin(path)?;
 
     let mut strip = new_sprite_strip();
 
     for k in 0..4usize {
         for j in 0..2usize {
-            let skinSurface = create_skin_surface(game().get(), &skin, k, colorScheme as usize, true, j != 0);
+            let skinSurface = create_skin_surface(g, &skin, k, colorScheme as usize, true, j != 0);
             strip[(k * 2) + j] = skinSurface;
         }
     }
 
     //Dead Flying Sprite
-    let skinSurface = create_skin_surface(game().get(), &skin, 4, colorScheme as usize, true, false);
+    let skinSurface = create_skin_surface(g, &skin, 4, colorScheme as usize, true, false);
     strip[8] = skinSurface;
 
     //Dead Stomped Sprite
-    let skinSurface = create_skin_surface(game().get(), &skin, 5, colorScheme as usize, true, false);
+    let skinSurface = create_skin_surface(g, &skin, 5, colorScheme as usize, true, false);
     strip[9] = skinSurface;
 
     Ok(strip)

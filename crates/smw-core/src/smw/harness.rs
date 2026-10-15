@@ -601,7 +601,7 @@ pub fn forced_map() -> Option<&'static str> {
     }
 }
 
-pub fn frame_start() {
+pub fn frame_start(g: &mut Game) {
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::debug_frame(unsafe { h().frame });
     #[cfg(not(target_os = "emscripten"))]
@@ -609,7 +609,7 @@ pub fn frame_start() {
     sfx::sfx_virtual_advance();
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::phase(3);
-    record_frame_start(game().get(), unsafe { h().frame });
+    record_frame_start(g, unsafe { h().frame });
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::phase(4);
 
@@ -657,7 +657,7 @@ pub fn frame_end(g: &mut Game) {
         }
         g.sfx.sfx_events.clear();
         h().spawn_events.clear();
-        record_markers(h().frame);
+        record_markers(g, h().frame);
 
         let f = h().frame;
         let periodic = h().shotEvery > 0 && f >= h().shotFrom && f <= h().shotTo && (f - h().shotFrom) % h().shotEvery == 0;
@@ -1197,8 +1197,8 @@ fn copy_replay_event(ev: &ReplayEvent) {
     }
 }
 
-pub fn note_match_map(path: &str) {
-    crate::smw::checkpoint::note_match_map(game().get(), path);
+pub fn note_match_map(g: &mut Game, path: &str) {
+    crate::smw::checkpoint::note_match_map(g, path);
 }
 
 /// Called where a match starts (`MenuState::enter_gameplay`): the next marker opens a new match.
@@ -1207,7 +1207,7 @@ pub fn match_checkpoint() {
     r.matches += 1;
     r.checkpoint = Some(match crate::smw::checkpoint::unsupported_reason() {
         Some(reason) => format!("#@ checkpoint match={} frame={} unsupported={}", r.matches, unsafe { h().frame }, reason),
-        None => format!("#@ checkpoint match={} frame={} z64={}", r.matches, unsafe { h().frame }, base64_encode(&deflate(&crate::smw::checkpoint::capture()))),
+        None => format!("#@ checkpoint match={} frame={} z64={}", r.matches, unsafe { h().frame }, base64_encode(&deflate(&crate::smw::checkpoint::capture(game().get())))),
     });
 }
 
@@ -1223,7 +1223,7 @@ fn marker_state() -> &'static str {
 
 /// Frame end while recording: a `#@ mark` line when the state changed this frame, and when a match
 /// started, its checkpoint.
-fn record_markers(frame: u32) {
+fn record_markers(g: &mut Game, frame: u32) {
     let Some(r) = rec() else { return };
     let state = marker_state();
     if state == r.state {
@@ -1233,7 +1233,7 @@ fn record_markers(frame: u32) {
     r.state = state.to_string();
     let mut line = format!("#@ mark frame={} state={}", frame, state);
     if state == "gameplay" && !was_match {
-        line += &format!(" match={} {}", r.matches, crate::smw::checkpoint::start_fields(game().get()));
+        line += &format!(" match={} {}", r.matches, crate::smw::checkpoint::start_fields(g));
         let checkpoint = r.checkpoint.take();
         let _ = writeln!(r.out, "{}", line);
         if let Some(checkpoint) = checkpoint {
@@ -1243,7 +1243,7 @@ fn record_markers(frame: u32) {
         return;
     }
     if state == "scoreboard" || was_match {
-        line += &format!(" match={} {}", r.matches, crate::smw::checkpoint::result_fields(game().get()));
+        line += &format!(" match={} {}", r.matches, crate::smw::checkpoint::result_fields(g));
     }
     let _ = writeln!(r.out, "{}", line);
 }

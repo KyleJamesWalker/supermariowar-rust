@@ -42,14 +42,14 @@ impl CO_Spring {
     }
 }
 
-pub fn co_spring_collide_player<T: CO_SpringTrait + ?Sized>(this: &mut T, player: Ptr<CPlayer>) -> bool {
+pub fn co_spring_collide_player<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T, player: Ptr<CPlayer>) -> bool {
     let (owner_null, fOldY, iy, state) = {
         let o = this.spring();
         (o.owner.is_null(), o.fOldY, o.iy, o.state)
     };
     if owner_null {
         if player.fOldY + PH as f32 <= fOldY && player.iy as i32 + PH >= iy as i32 {
-            this.hittop(game().get(), player);
+            this.hittop(g, player);
         } else if state == 1 {
             co_spring_hitother(this, player);
         }
@@ -93,9 +93,9 @@ pub fn co_spring_hitother<T: CO_SpringTrait + ?Sized>(this: &mut T, player: Ptr<
     }
 }
 
-pub fn co_spring_update<T: CO_SpringTrait + ?Sized>(this: &mut T) {
+pub fn co_spring_update<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T) {
     if !this.spring().owner.is_null() {
-        this.move_to_owner(game().get());
+        this.move_to_owner(g);
     } else {
         {
             let o = this.spring_mut();
@@ -106,7 +106,7 @@ pub fn co_spring_update<T: CO_SpringTrait + ?Sized>(this: &mut T) {
             o.fOldY = o.fy;
         }
 
-        io_moving_object_collision_detection_map(game().get(), this);
+        io_moving_object_collision_detection_map(g, this);
     }
 
     let o = this.spring_mut();
@@ -124,7 +124,7 @@ pub fn co_spring_update<T: CO_SpringTrait + ?Sized>(this: &mut T) {
     }
 }
 
-pub fn co_spring_draw<T: CO_SpringTrait + ?Sized>(this: &mut T) {
+pub fn co_spring_draw<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let o = this.spring();
     let x = o.ix as i32 - o.collisionOffsetX as i32;
     let y = o.iy as i32 - o.collisionOffsetY as i32;
@@ -132,12 +132,12 @@ pub fn co_spring_draw<T: CO_SpringTrait + ?Sized>(this: &mut T) {
         let src = SDL_Rect { x: o.animationOffsetX as i32, y: o.iOffsetY as i32, w: 32, h: 32 };
         if o.owner.iswarping() {
             let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(o.owner.get_warp_state() as i32) };
-            o.spr.draw_clip(game().get(), x, y, &src, edge, o.owner.get_warp_plane() as i32);
+            o.spr.draw_clip(g, x, y, &src, edge, o.owner.get_warp_plane() as i32);
         } else {
-            o.spr.draw_src(game().get(), x, y, &src);
+            o.spr.draw_src(g, x, y, &src);
         }
     } else {
-        o.spr.draw_src(game().get(), x, y, &SDL_Rect { x: o.animationOffsetX as i32 + o.drawframe as i32, y: o.iOffsetY as i32, w: 32, h: 32 });
+        o.spr.draw_src(g, x, y, &SDL_Rect { x: o.animationOffsetX as i32 + o.drawframe as i32, y: o.iOffsetY as i32, w: 32, h: 32 });
     }
 }
 
@@ -181,13 +181,13 @@ impl CObjectTrait for CO_Spring {
         Some(self)
     }
     fn update(&mut self, g: &mut Game) {
-        co_spring_update(self)
+        co_spring_update(g, self)
     }
     fn draw(&mut self, g: &mut Game) {
-        co_spring_draw(self)
+        co_spring_draw(g, self)
     }
     fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
-        co_spring_collide_player(self, player)
+        co_spring_collide_player(g, self, player)
     }
 }
 

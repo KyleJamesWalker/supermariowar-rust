@@ -279,7 +279,7 @@ impl UI_ControlTrait for MI_PowerupSelection {
     crate::impl_ctl!();
 
     fn modify(&mut self, g: &mut Game, modify: bool) -> MenuCodeEnum {
-        self.mMenu.reset_menu();
+        self.mMenu.reset_menu(g);
         self.iOffset = 0;
         self.iIndex = 0;
         self.setup_powerup_fields();
@@ -324,7 +324,7 @@ impl UI_ControlTrait for MI_PowerupSelection {
 
                 self.mMenu.set_initial_focus(ctl_ptr(self.miDialogNoButton));
                 self.mMenu.set_cancel_code(MENU_CODE_POWERUP_RESET_NO);
-                self.mMenu.reset_menu();
+                self.mMenu.reset_menu(g);
 
                 if MENU_CODE_CLEAR_POWERUP_WEIGHTS == ret {
                     self.miDialogYesButton.set_code(MENU_CODE_POWERUP_CLEAR_YES);
@@ -341,7 +341,7 @@ impl UI_ControlTrait for MI_PowerupSelection {
                 self.mMenu.set_initial_focus(ctl_ptr(self.miOverride));
                 self.mMenu.set_cancel_code(MENU_CODE_BACK_TO_OPTIONS_MENU);
 
-                self.mMenu.restore_current();
+                self.mMenu.restore_current(g);
 
                 if MENU_CODE_POWERUP_RESET_YES == ret {
                     //restore default powerup weights for powerup selection menu
@@ -373,7 +373,7 @@ impl UI_ControlTrait for MI_PowerupSelection {
     }
 
     fn update(&mut self, g: &mut Game) {
-        self.mMenu.update();
+        self.mMenu.update(g);
     }
 
     fn draw(&mut self, g: &mut Game) {
@@ -381,6 +381,6 @@ impl UI_ControlTrait for MI_PowerupSelection {
             return;
         }
 
-        self.mMenu.draw();
+        self.mMenu.draw(g);
     }
 }

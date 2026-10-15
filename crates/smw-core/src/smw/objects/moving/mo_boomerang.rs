@@ -392,7 +392,7 @@ impl CObjectTrait for MO_Boomerang {
 
                     if !player.is_invincible() && !player.shyguy {
                         // Find the player that shot this boomerang so we can attribute a kill
-                        player_killed_player(self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Boomerang, false, false);
+                        player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Boomerang, false, false);
                         return true;
                     }
                 }

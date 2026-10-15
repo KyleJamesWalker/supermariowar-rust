@@ -86,7 +86,7 @@ impl CObjectTrait for OMO_Phanto {
     crate::impl_cobject_plumbing!();
 
     fn draw(&mut self, g: &mut Game) {
-        io_over_map_object_draw(self);
+        io_over_map_object_draw(g, self);
     }
 
     fn update(&mut self, g: &mut Game) {
@@ -104,7 +104,7 @@ impl CObjectTrait for OMO_Phanto {
         }
 
         self.iSpeedTimer += 1;
-        if self.iSpeedTimer > 62 && !net_random::object_event(Ev::Wander, &net_random::wander_args(self.iNetworkID, self.fx, self.fy, 0.0)) {
+        if self.iSpeedTimer > 62 && !net_random::object_event(g, Ev::Wander, &net_random::wander_args(self.iNetworkID, self.fx, self.fy, 0.0)) {
             self.change_speed();
         }
 
@@ -171,7 +171,7 @@ impl CObjectTrait for OMO_Phanto {
                         self.velx = 0.0f32;
 
                         // Randomly position phanto off screen
-                        if !net_random::object_event(Ev::PhantoReturn, &[self.iNetworkID]) {
+                        if !net_random::object_event(g, Ev::PhantoReturn, &[self.iNetworkID]) {
                             self.return_offscreen();
                         }
                     }
@@ -189,14 +189,14 @@ impl CObjectTrait for OMO_Phanto {
             // If the player is holding the key, kill him
             if !player.is_invincible() && !player.is_shielded() {
                 if self.iType == 2 {
-                    player.kill_player_map_hazard(false, KillStyle::Phanto, false, -1);
+                    player.kill_player_map_hazard(g, false, KillStyle::Phanto, false, -1);
                     return true;
                 } else if g.game_values.gamemode.gamemode == game_mode_chase {
                     let chasemode: &mut CGM_Chase = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Chase>().unwrap();
                     let keyholder: Ptr<CPlayer> = chasemode.get_key_holder();
 
                     if keyholder == player {
-                        player.kill_player_map_hazard(false, KillStyle::Phanto, false, -1);
+                        player.kill_player_map_hazard(g, false, KillStyle::Phanto, false, -1);
 
                         if !g.game_values.gamemode.gameover && self.iType == 1 {
                             player.score().adjust_score(g, -10);

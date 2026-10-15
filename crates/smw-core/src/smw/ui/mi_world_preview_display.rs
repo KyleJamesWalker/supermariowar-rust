@@ -138,13 +138,13 @@ impl MI_WorldPreviewDisplay {
 
     fn update_map_surface(&mut self, g: &mut Game, fFullRefresh: bool) {
         unsafe {
-            g.g_worldmap.draw_map_to_surface(-1, fFullRefresh, self.map_sprite.get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
+            game().g_worldmap.draw_map_to_surface(g, -1, fFullRefresh, self.map_sprite.get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
         }
 
         unsafe {
             let olddest = g.blitdest;
             g.blitdest = self.map_sprite.get_surface();
-            g.g_worldmap.draw(self.iMapGlobalOffsetX, self.iMapGlobalOffsetY, false, false);
+            game().g_worldmap.draw(g, self.iMapGlobalOffsetX, self.iMapGlobalOffsetY, false, false);
             g.blitdest = olddest;
         }
     }

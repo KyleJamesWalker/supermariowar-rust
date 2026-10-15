@@ -74,7 +74,7 @@ impl MO_Coin {
     }
 
     pub fn place_coin(&mut self, g: &mut Game) {
-        if crate::smw::net_random::place_event(self.iNetworkID, 0) {
+        if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
             return;
         }
 
@@ -156,7 +156,7 @@ impl CObjectTrait for MO_Coin {
 
         if self.iType != 0 {
             self.applyfriction();
-            io_moving_object_update(self);
+            io_moving_object_update(g, self);
 
             self.iUncollectableTime -= 1;
 
@@ -170,7 +170,7 @@ impl CObjectTrait for MO_Coin {
     }
 
     fn draw(&mut self, g: &mut Game) {
-        io_moving_object_draw(self);
+        io_moving_object_draw(g, self);
 
         // Draw sparkles
         if self.iType != 1 {

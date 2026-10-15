@@ -255,7 +255,7 @@ impl CTilesetManager {
         let mut m_tilesets: Vec<Box<CTileset>> = Vec::new();
         let mut found_tileset_names: HashSet<String> = HashSet::new();
 
-        let mut dir = SubdirsIterator::new(convert_path_pack("gfx/packs/tilesets", gfxPack) + "/");
+        let mut dir = SubdirsIterator::new(convert_path_pack(game().get(), "gfx/packs/tilesets", gfxPack) + "/");
         while let Some(path) = dir.next() {
             let tileset = Box::new(CTileset::new(path));
             found_tileset_names.insert(tileset.name().to_string());

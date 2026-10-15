@@ -289,8 +289,8 @@ const g_iCollisionMap: [[i16; MOVINGOBJECT_LAST as usize]; MOVINGOBJECT_LAST as 
 ];
 
 //handles a collision between a powerup and an object
-pub fn collisionhandler_o2o(o1: Ptr<dyn IO_MovingObjectTrait>, mut o2: Ptr<dyn IO_MovingObjectTrait>) {
-    o2.collide_object(game().get(), o1);
+pub fn collisionhandler_o2o(g: &mut Game, o1: Ptr<dyn IO_MovingObjectTrait>, mut o2: Ptr<dyn IO_MovingObjectTrait>) {
+    o2.collide_object(g, o1);
 }
 
 //Must only be called after organizeteams() is called
@@ -324,8 +324,8 @@ pub fn lookup_team_id_sub(g: &mut Game, id: i16, teamID: Option<&mut i16>, subTe
     }
 }
 
-pub fn lookup_team_id(id: i16) -> i16 {
-    lookup_team_id_sub(game().get(), id, None, None)
+pub fn lookup_team_id(g: &mut Game, id: i16) -> i16 {
+    lookup_team_id_sub(g, id, None, None)
 }
 
 pub fn musicfinished(g: &mut Game) {
@@ -360,8 +360,8 @@ fn spr(s: &mut gfxSprite) -> Ptr<gfxSprite> {
     Ptr::from_mut(s)
 }
 
-fn draw_rect(sprite: &gfxSprite, x: i32, y: i32, sx: i32, sy: i32, w: i32, h: i32) {
-    sprite.draw_src(game().get(), x, y, &SDL_Rect { x: sx, y: sy, w, h });
+fn draw_rect(g: &mut Game, sprite: &gfxSprite, x: i32, y: i32, sx: i32, sy: i32, w: i32, h: i32) {
+    sprite.draw_src(g, x, y, &SDL_Rect { x: sx, y: sy, w, h });
 }
 
 /// `static_cast<MusicCategory>(id)`.
@@ -628,7 +628,7 @@ impl GameplayState {
             g.game_values.playerInput.reset_keys();
 
             self.create_players(g);
-            g.game_values.reset_gameplay_settings();
+            game().game_values.reset_gameplay_settings(g);
             self.init_score_display_position(g);
             self.init_eye_candy(g);
 
@@ -745,8 +745,8 @@ impl GameplayState {
                 if !g.game_values.gamemode.gameover && count_alive_teams(g, Some(&mut lastteam)) <= 1 {
                     g.game_values.gamemode.gameover = true;
                     g.game_values.gamemode.winningteam = lastteam;
-                    setup_score_board(true);
-                    show_score_board();
+                    setup_score_board(g, true);
+                    show_score_board(g);
                 }
             }
         }
@@ -800,10 +800,10 @@ pub fn animate_during_countdown(g: &mut Game) {
         clean_dead_non_player_objects(g);
 
         //Keep updating map hazards
-        g.noncolcontainer.update();
-        g.objectcontainer[0].update();
-        g.objectcontainer[1].update();
-        g.objectcontainer[2].update();
+        game().noncolcontainer.update(g);
+        game().objectcontainer[0].update(g);
+        game().objectcontainer[1].update(g);
+        game().objectcontainer[2].update(g);
 
         g.eyecandy[0].update();
         g.eyecandy[1].update();
@@ -822,7 +822,7 @@ pub fn net_pow_kills(g: &mut Game, ids: &[i32]) {
         }
         let mut iRandPlayer = RANDOM_INT(iNumKillPlayers as i32) as i16;
         for _iPlayer in 0..iNumKillPlayers {
-            player_killed_player(
+            player_killed_player(g, 
                 g.game_values.flags.screenshakeplayerid,
                 pKillPlayers[iRandPlayer as usize],
                 PlayerDeathStyle::Jump,
@@ -946,7 +946,7 @@ pub fn shake_screen(g: &mut Game) {
                     if t == movingobject_shell {
                         let shell: &mut CO_Shell = movingobject.as_any().downcast_mut::<CO_Shell>().unwrap();
                         if shell.frozen || shell.owner.is_null() || shell.owner.inair == g.game_values.flags.screenshakekillinair {
-                            shell.flip(); //also breaks shells if frozen
+                            shell.flip(g); //also breaks shells if frozen
                         }
                     } else if t == movingobject_throwblock {
                         let throwblock: &mut CO_ThrowBlock = movingobject.as_any().downcast_mut::<CO_ThrowBlock>().unwrap();
@@ -975,7 +975,7 @@ pub fn shake_screen(g: &mut Game) {
             let mut killer2 = get_player_from_global_id(g, g.game_values.flags.screenshakeplayerid);
 
             if !killer2.is_null() {
-                killer2.add_kills_in_row_in_air_award();
+                killer2.add_kills_in_row_in_air_award(g);
             }
         }
     }
@@ -1048,7 +1048,7 @@ pub fn handle_p2p_collisions(g: &mut Game) {
                                 g.netplay.client.local_gamehost.send_p2p_collision_event(&player1, &player2);
                             }
 
-                            player1.collides_with_player(player2);
+                            player1.collides_with_player(g, player2);
 
                             //if player was killed by another player, continue with next player for collision detection
                             if player1.state <= PlayerState::Dead {
@@ -1133,11 +1133,11 @@ pub fn handle_obj2obj_collisions(g: &mut Game) {
                         let iType2 = movingobject2.get_moving_object_type() as usize;
                         if g_iCollisionMap[iType1][iType2] != 0 {
                             if coldec_obj2obj(movingobject1.get().as_object_ptr(), movingobject2.get().as_object_ptr()) {
-                                collisionhandler_o2o(movingobject1, movingobject2);
+                                collisionhandler_o2o(g, movingobject1, movingobject2);
                             }
                         } else if g_iCollisionMap[iType2][iType1] != 0 {
                             if coldec_obj2obj(movingobject2.get().as_object_ptr(), movingobject1.get().as_object_ptr()) {
-                                collisionhandler_o2o(movingobject2, movingobject1);
+                                collisionhandler_o2o(g, movingobject2, movingobject1);
                             }
                         }
 
@@ -1205,7 +1205,7 @@ impl GameplayState {
                     if gm == game_mode_health || gm == game_mode_collection || gm == game_mode_boxes_minigame {
                         game().rm.spr_shade[(teamcount - 1) as usize].draw(g, s.x as i32, s.y as i32);
                     } else {
-                        draw_rect(&g.rm.spr_shade[(teamcount - 1) as usize], s.x as i32, s.y as i32, 0, 0, 256, 41);
+                        draw_rect(g, &game().rm.spr_shade[(teamcount - 1) as usize], s.x as i32, s.y as i32, 0, 0, 256, 41);
                     }
 
                     for k in 0..teamcount as usize {
@@ -1226,8 +1226,8 @@ impl GameplayState {
 
                             let scorex: i16 = (s.x as i32 + Self::scoreoffsets[k] as i32) as i16;
                             let scorey: i16 = (s.y as i32 + 2) as i16;
-                            draw_rect(&game().rm.spr_egg, scorex as i32, scorey as i32, self.respawnanimationframe[gid] as i32, (g.game_values.colorids[gid] as i32) << 5, 32, 32);
-                            draw_rect(
+                            draw_rect(g, &game().rm.spr_egg, scorex as i32, scorey as i32, self.respawnanimationframe[gid] as i32, (g.game_values.colorids[gid] as i32) << 5, 32, 32);
+                            draw_rect(g, 
                                 &game().rm.spr_eggnumbers,
                                 scorex as i32,
                                 scorey as i32,
@@ -1258,27 +1258,27 @@ impl GameplayState {
                                 let (ox, oy) = (iScoreOffsetX as i32, iScoreOffsetY as i32);
 
                                 if player.ownerPlayerID > -1 {
-                                    draw_rect(&game().rm.spr_ownedtags, ox - 8, oy - 8, player.ownerColorOffsetX as i32, 0, 48, 48);
+                                    draw_rect(g, &game().rm.spr_ownedtags, ox - 8, oy - 8, player.ownerColorOffsetX as i32, 0, 48, 48);
                                 }
 
-                                draw_rect(&player.get_scoreboard_sprite()[iScoreboardSprite as usize], ox, oy, player.iSrcOffsetX as i32, 0, 32, 32);
+                                draw_rect(g, &player.get_scoreboard_sprite()[iScoreboardSprite as usize], ox, oy, player.iSrcOffsetX as i32, 0, 32, 32);
 
                                 //Display jail if player is jailed
                                 if player.jail.is_active() {
-                                    draw_rect(&game().rm.spr_jail, ox - 6, oy - 6, (player.jail.get_color() as i32 + 1) * 44, 0, 44, 44);
+                                    draw_rect(g, &game().rm.spr_jail, ox - 6, oy - 6, (player.jail.get_color() as i32 + 1) * 44, 0, 44, 44);
                                 }
 
                                 //Display current powerup if player is using one
                                 if player.powerup > 0 {
-                                    draw_rect(&game().rm.spr_storedpowerupsmall, ox, oy + 16, Self::g_iPowerupToIcon[(player.powerup - 1) as usize] as i32, 0, 16, 16);
+                                    draw_rect(g, &game().rm.spr_storedpowerupsmall, ox, oy + 16, Self::g_iPowerupToIcon[(player.powerup - 1) as usize] as i32, 0, 16, 16);
                                 }
 
                                 //Display tanooki powerup if player has it
                                 if player.tanookisuit.is_on() {
-                                    draw_rect(&game().rm.spr_storedpowerupsmall, ox + 16, oy + 16, App::screenWidth / 2, 0, 16, 16);
+                                    draw_rect(g, &game().rm.spr_storedpowerupsmall, ox + 16, oy + 16, App::screenWidth / 2, 0, 16, 16);
                                 }
                             } else {
-                                draw_rect(
+                                draw_rect(g, 
                                     &game().rm.spr_player[gid][iScoreboardSprite as usize],
                                     s.x as i32 + Self::scoreoffsets[k] as i32,
                                     s.y as i32 + 2,
@@ -1300,7 +1300,7 @@ impl GameplayState {
                         //Draw stored powerup
                         if storedpowerupid != -1 {
                             if !g.game_values.flags.swapplayers {
-                                draw_rect(
+                                draw_rect(g, 
                                     &game().rm.spr_storedpowerupsmall,
                                     s.x as i32 + scorepowerupoffsets[(teamcount - 1) as usize][k] as i32,
                                     s.y as i32 + 25,
@@ -1323,9 +1323,9 @@ impl GameplayState {
                         while iHeart < iLife {
                             let dx = iHeartX as i32 + iHeart as i32 * 8;
                             if iHeart == iMax - 1 && iHeart % 2 == 0 {
-                                draw_rect(&g.rm.spr_scorehearts, dx, s.y as i32 + 43, 32, 0, 8, 16);
+                                draw_rect(g, &game().rm.spr_scorehearts, dx, s.y as i32 + 43, 32, 0, 8, 16);
                             } else {
-                                draw_rect(&g.rm.spr_scorehearts, dx, s.y as i32 + 43, if iHeart % 2 != 0 { 8 } else { 0 }, 0, 8, 16);
+                                draw_rect(g, &game().rm.spr_scorehearts, dx, s.y as i32 + 43, if iHeart % 2 != 0 { 8 } else { 0 }, 0, 8, 16);
                             }
                             iHeart += 1;
                         }
@@ -1334,9 +1334,9 @@ impl GameplayState {
                         while iHeart < iMax {
                             let dx = iHeartX as i32 + iHeart as i32 * 8;
                             if iHeart == iMax - 1 && iHeart % 2 == 0 {
-                                draw_rect(&g.rm.spr_scorehearts, dx, s.y as i32 + 43, 40, 0, 8, 16);
+                                draw_rect(g, &game().rm.spr_scorehearts, dx, s.y as i32 + 43, 40, 0, 8, 16);
                             } else {
-                                draw_rect(&g.rm.spr_scorehearts, dx, s.y as i32 + 43, if iHeart % 2 != 0 { 24 } else { 16 }, 0, 8, 16);
+                                draw_rect(g, &game().rm.spr_scorehearts, dx, s.y as i32 + 43, if iHeart % 2 != 0 { 24 } else { 16 }, 0, 8, 16);
                             }
                             iHeart += 1;
                         }
@@ -1349,7 +1349,7 @@ impl GameplayState {
                             let iCardX: i16 = (s.x as i32 + scorepowerupoffsets[(teamcount - 1) as usize][0] as i32 - 20) as i16;
 
                             for iCard in 0..iNumCards {
-                                draw_rect(&g.rm.spr_scorecards, iCardX as i32 + iCard as i32 * 20, s.y as i32 + 43, (iCardValues as i32 & 3) << 4, 0, 16, 16);
+                                draw_rect(g, &game().rm.spr_scorecards, iCardX as i32 + iCard as i32 * 20, s.y as i32 + 43, (iCardValues as i32 & 3) << 4, 0, 16, 16);
                                 iCardValues >>= 2;
                             }
                         }
@@ -1360,12 +1360,12 @@ impl GameplayState {
 
                         let mut iCoin: i16 = 0;
                         while iCoin < iNumCoins {
-                            draw_rect(&g.rm.spr_scorecoins, iCoinX as i32 + iCoin as i32 * 16, s.y as i32 + 43, 0, 0, 16, 16);
+                            draw_rect(g, &game().rm.spr_scorecoins, iCoinX as i32 + iCoin as i32 * 16, s.y as i32 + 43, 0, 0, 16, 16);
                             iCoin += 1;
                         }
 
                         for iEmptyCoin in iCoin..5 {
-                            draw_rect(&g.rm.spr_scorecoins, iCoinX as i32 + iEmptyCoin as i32 * 16, s.y as i32 + 43, 16, 0, 16, 16);
+                            draw_rect(g, &game().rm.spr_scorecoins, iCoinX as i32 + iEmptyCoin as i32 * 16, s.y as i32 + 43, 16, 0, 16, 16);
                         }
                     }
 
@@ -1373,9 +1373,9 @@ impl GameplayState {
                     let iScoreY: i16 = (s.y as i32 + 4) as i16;
                     let (sx, sy) = (iScoreX as i32, iScoreY as i32);
 
-                    draw_rect(&g.rm.spr_scoretext, sx, sy, s.iDigitLeft as i32, if s.iDigitLeft == 0 { 16 } else { 0 }, 16, 16);
-                    draw_rect(&g.rm.spr_scoretext, sx + 18, sy, s.iDigitMiddle as i32, if s.iDigitLeft == 0 && s.iDigitMiddle == 0 { 16 } else { 0 }, 16, 16);
-                    draw_rect(&g.rm.spr_scoretext, sx + 36, sy, s.iDigitRight as i32, 0, 16, 16);
+                    draw_rect(g, &game().rm.spr_scoretext, sx, sy, s.iDigitLeft as i32, if s.iDigitLeft == 0 { 16 } else { 0 }, 16, 16);
+                    draw_rect(g, &game().rm.spr_scoretext, sx + 18, sy, s.iDigitMiddle as i32, if s.iDigitLeft == 0 && s.iDigitMiddle == 0 { 16 } else { 0 }, 16, 16);
+                    draw_rect(g, &game().rm.spr_scoretext, sx + 36, sy, s.iDigitRight as i32, 0, 16, 16);
                 }
             }
         }
@@ -1469,7 +1469,7 @@ impl GameplayState {
                                 + player.iOldPowerupY as i32) as i16;
                         }
 
-                        draw_rect(&g.rm.spr_storedpowerupsmall, iPowerupX as i32, iPowerupY as i32, storedpowerupid as i32 * 16, 0, 16, 16);
+                        draw_rect(g, &game().rm.spr_storedpowerupsmall, iPowerupX as i32, iPowerupY as i32, storedpowerupid as i32 * 16, 0, 16, 16);
                     }
                 }
 
@@ -1519,20 +1519,20 @@ impl GameplayState {
             game().rm.spr_backmap[game().g_iCurrentDrawIndex as usize].draw(g, 0, 0);
 
             //draw back eyecandy behind players
-            g.g_map.draw_platforms(0);
+            game().g_map.draw_platforms(g, 0);
 
             g.eyecandy[0].draw();
-            g.noncolcontainer.draw();
+            game().noncolcontainer.draw(g);
 
             game().game_values.gamemode.draw_background(g);
 
-            g.objectcontainer[0].draw();
+            game().objectcontainer[0].draw(g);
         }
     }
 
     fn draw_middle_layer(&mut self, g: &mut Game) {
         unsafe {
-            g.g_map.draw_platforms(1);
+            game().g_map.draw_platforms(g, 1);
 
             if !g.game_values.flags.swapplayers {
                 for i in 0..game().players.len() {
@@ -1543,13 +1543,13 @@ impl GameplayState {
 
             g.eyecandy[1].draw();
 
-            g.objectcontainer[1].draw();
+            game().objectcontainer[1].draw(g);
         }
     }
 
     fn draw_front_layer(&mut self, g: &mut Game) {
         unsafe {
-            g.g_map.draw_platforms(2);
+            game().g_map.draw_platforms(g, 2);
 
             if g.game_values.toplayer {
                 game().g_map.drawfrontlayer(g);
@@ -1557,13 +1557,13 @@ impl GameplayState {
 
             game().g_map.draw_warp_locks(g);
 
-            g.g_map.draw_platforms(3);
+            game().g_map.draw_platforms(g, 3);
 
-            g.objectcontainer[2].draw();
+            game().objectcontainer[2].draw(g);
             g.eyecandy[2].draw();
             game().game_values.gamemode.draw_foreground(g);
 
-            g.g_map.draw_platforms(4);
+            game().g_map.draw_platforms(g, 4);
         }
     }
 
@@ -1571,10 +1571,10 @@ impl GameplayState {
         unsafe {
             if g.game_values.windaffectsplayers {
                 let iDisplayWindMeterY: i16 = if g.game_values.scoreboardstyle == ScoreboardStyle::Bottom { 8 } else { 440 };
-                draw_rect(&g.rm.spr_windmeter, 210, iDisplayWindMeterY as i32, 0, 0, 220, 32);
-                draw_rect(
-                    &g.rm.spr_windmeter,
-                    ((g.game_values.flags.gamewindx * 20.0f32) as i16) as i32 + App::screenWidth / 2,
+                draw_rect(g, &game().rm.spr_windmeter, 210, iDisplayWindMeterY as i32, 0, 0, 220, 32);
+                draw_rect(g, 
+                    &game().rm.spr_windmeter,
+                    ((game().game_values.flags.gamewindx * 20.0f32) as i16) as i32 + App::screenWidth / 2,
                     iDisplayWindMeterY as i32 + 6,
                     220,
                     0,
@@ -1609,24 +1609,24 @@ impl GameplayState {
             //draw arrows for being above the top of the screen
             for i in 0..game().players.len() {
                 let mut player = g.players[i];
-                player.draw_out_of_screen_indicators();
+                player.draw_out_of_screen_indicators(g);
             }
         }
     }
 
-    fn draw_everything(&mut self, _iCountDownState: i16, iScoreTextOffset: [i16; 4]) {
-        self.draw_back_layer(game().get());
-        self.draw_middle_layer(game().get());
-        self.draw_front_layer(game().get());
+    fn draw_everything(&mut self, g: &mut Game, _iCountDownState: i16, iScoreTextOffset: [i16; 4]) {
+        self.draw_back_layer(g);
+        self.draw_middle_layer(g);
+        self.draw_front_layer(g);
 
-        self.draw_spotlights(game().get());
-        self.draw_scoreboard(game().get(), iScoreTextOffset);
-        self.draw_wind_meter(game().get());
-        self.draw_out_of_screen_indicators(game().get());
-        self.draw_countdown(game().get());
-        self.draw_screen_fade(game().get());
-        self.draw_player_swap(game().get());
-        self.draw_screen_shake_background(game().get());
+        self.draw_spotlights(g);
+        self.draw_scoreboard(g, iScoreTextOffset);
+        self.draw_wind_meter(g);
+        self.draw_out_of_screen_indicators(g);
+        self.draw_countdown(g);
+        self.draw_screen_fade(g);
+        self.draw_player_swap(g);
+        self.draw_screen_shake_background(g);
     }
 }
 
@@ -1638,7 +1638,7 @@ pub fn draw_exit_pause_dialog(g: &mut Game) {
 
             let iMode = get_mode_icon_index_from_mode(g.game_values.gamemode.gamemode as i16);
 
-            draw_rect(&g.rm.menu_mode_large, 304, 224, (iMode as i32) << 5, 0, 32, 32);
+            draw_rect(g, &game().rm.menu_mode_large, 304, 224, (iMode as i32) << 5, 0, 32, 32);
 
             let mut szGoal: String = g.game_values.gamemode.get_goal_name().to_string() + ": ";
 
@@ -1657,8 +1657,8 @@ pub fn draw_exit_pause_dialog(g: &mut Game) {
             game().rm.spr_dialog.draw(g, (sw * 0.35f32) as i32, (sh * 0.37f32) as i32);
             g.rm.menu_font_large.draw_centered((sw * 0.5f32) as i32, (sh * 0.46f32 - (g.rm.menu_font_large.get_height() >> 1) as f32) as i32, "Exit Game");
 
-            draw_rect(&g.rm.spr_dialogbutton, (sw * 0.37f32) as i32, (sh * 0.52f32) as i32, 0, if g.game_values.flags.exityes { 34 } else { 0 }, 80, 34);
-            draw_rect(&g.rm.spr_dialogbutton, (sw * 0.51f32) as i32, (sh * 0.52f32) as i32, 0, if g.game_values.flags.exityes { 0 } else { 34 }, 80, 34);
+            draw_rect(g, &game().rm.spr_dialogbutton, (sw * 0.37f32) as i32, (sh * 0.52f32) as i32, 0, if game().game_values.flags.exityes { 34 } else { 0 }, 80, 34);
+            draw_rect(g, &game().rm.spr_dialogbutton, (sw * 0.51f32) as i32, (sh * 0.52f32) as i32, 0, if game().game_values.flags.exityes { 0 } else { 34 }, 80, 34);
 
             g.rm.menu_font_large.draw(
                 (sw * 0.43f32 - (g.rm.menu_font_large.get_width("Yes") >> 1) as f32) as i32,
@@ -1742,7 +1742,7 @@ pub fn update_score_board(g: &mut Game) {
             //Add powerups to player's world item inventory that they held at the end of the game
             for iPlayer in 0..MAX_PLAYERS as i16 {
                 if g.game_values.gamepowerups[iPlayer as usize] != -1 {
-                    let iTeamId = lookup_team_id(iPlayer) as usize;
+                    let iTeamId = lookup_team_id(g, iPlayer) as usize;
                     if g.game_values.worldpowerupcount[iTeamId] < 32 {
                         let c = g.game_values.worldpowerupcount[iTeamId] as usize;
                         g.game_values.worldpowerupcount[iTeamId] += 1;
@@ -2062,7 +2062,7 @@ pub fn load_map_objects(g: &mut Game, fPreview: bool) {
 }
 
 pub fn clean_up(g: &mut Game) {
-    net_random::end_game();
+    net_random::end_game(g);
     unsafe {
         //delete object list
         for player in g.players.iter() {
@@ -2522,7 +2522,7 @@ pub fn network_broadcast_game_state(g: &mut Game) {
     // The host sends the game state to clients
     unsafe {
         if g.netplay.active && g.netplay.theHostIsMe {
-            g.netplay.client.local_gamehost.send_current_game_state_if_needed();
+            game().netplay.client.local_gamehost.send_current_game_state_if_needed(g);
             game().netplay.client.local_gamehost.update(g);
         }
     }
@@ -2627,10 +2627,10 @@ impl GameplayState {
 
             play_sfx(g);
 
-            g.noncolcontainer.update();
-            g.objectcontainer[0].update();
-            g.objectcontainer[1].update();
-            g.objectcontainer[2].update();
+            game().noncolcontainer.update(g);
+            game().objectcontainer[0].update(g);
+            game().objectcontainer[1].update(g);
+            game().objectcontainer[2].update(g);
 
             handle_p2obj_collisions(g);
             if g.game_values.flags.swapplayers {
@@ -2747,7 +2747,7 @@ impl GameState for GameplayState {
 
                 //--------------- draw everything ----------------------
                 let (state, offsets) = (self.iCountDownState, self.iScoreTextOffset);
-                self.draw_everything(state, offsets);
+                self.draw_everything(g, state, offsets);
             }
 
             if g.game_values.flags.pausegame || g.game_values.flags.exitinggame {
@@ -2892,7 +2892,7 @@ pub fn net_mystery_swap(g: &mut Game, iUsingPlayerID: i16) -> bool {
             }
 
             let gid = player.get_global_id() as usize;
-            spots[iPlayer].get_player(player, &mut g.game_values.gamepowerups[gid]);
+            spots[iPlayer].get_player(g, player, &mut game().game_values.gamepowerups[gid]);
 
             if g.game_values.swapstyle != 1 {
                 game().eyecandy[2].emplace(EC_SingleAnimation::new(

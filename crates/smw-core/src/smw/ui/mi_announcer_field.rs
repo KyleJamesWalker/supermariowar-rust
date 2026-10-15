@@ -98,9 +98,9 @@ impl MI_AnnouncerField {
         MENU_CODE_NONE
     }
 
-    pub fn update_impl(&mut self) {
-        self.miModifyImageRight.update(game().get());
-        self.miModifyImageLeft.update(game().get());
+    pub fn update_impl(&mut self, g: &mut Game) {
+        self.miModifyImageRight.update(g);
+        self.miModifyImageLeft.update(g);
     }
 
     pub fn draw_impl(&mut self, g: &mut Game) {
@@ -135,7 +135,7 @@ impl UI_ControlTrait for MI_AnnouncerField {
         self.modify_impl(modify)
     }
     fn update(&mut self, g: &mut Game) {
-        self.update_impl();
+        self.update_impl(g);
     }
     fn draw(&mut self, g: &mut Game) {
         self.draw_impl(g);

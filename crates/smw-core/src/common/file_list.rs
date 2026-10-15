@@ -1,5 +1,6 @@
 //! Port of src/common/FileList.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::globals::Aliased;
 use crate::common::file_io::cstr_bytes_to_string;
@@ -35,7 +36,7 @@ fn filename_string(path: &Path) -> String {
     path.file_name().map(|f| f.to_string_lossy().into_owned()).unwrap_or_default()
 }
 
-pub fn update_music_with_overrides(musiclist: &mut MusicList, worldmusiclist: &mut WorldMusicList) {
+pub fn update_music_with_overrides(g: &mut Game, musiclist: &mut MusicList, worldmusiclist: &mut WorldMusicList) {
     let mut mapmusicoverrides: Vec<MapMusicOverride> = Vec::new();
     let mut worldmusicoverrides: Vec<WorldMusicOverride> = Vec::new();
 
@@ -46,7 +47,7 @@ pub fn update_music_with_overrides(musiclist: &mut MusicList, worldmusiclist: &m
         Worlds,
     }
 
-    let Some(lines) = read_lines(Path::new(&convert_path(game().get(), "music/Overrides.txt"))) else {
+    let Some(lines) = read_lines(Path::new(&convert_path(g, "music/Overrides.txt"))) else {
         return;
     };
 
@@ -85,7 +86,7 @@ pub fn update_music_with_overrides(musiclist: &mut MusicList, worldmusiclist: &m
             let mut ovr = MapMusicOverride { mapname: tokens.remove(0).to_string(), songs: Vec::new() };
 
             for token in tokens {
-                let path = PathBuf::from(convert_path(game().get(), token));
+                let path = PathBuf::from(convert_path(g, token));
                 if path.exists() {
                     ovr.songs.push(path);
                 }
@@ -97,7 +98,7 @@ pub fn update_music_with_overrides(musiclist: &mut MusicList, worldmusiclist: &m
             let worldname = tokens.remove(0).to_string();
 
             // C++ reads front() of an empty list here (UB) when the line has no comma.
-            let path = PathBuf::from(convert_path(game().get(), tokens.first().copied().unwrap_or("")));
+            let path = PathBuf::from(convert_path(g, tokens.first().copied().unwrap_or("")));
             if path.exists() {
                 worldmusicoverrides.push(WorldMusicOverride { worldname, song: path });
             }
@@ -970,7 +971,7 @@ mod tests {
         assert!(!music.current_name().is_empty());
         let mut worldmusic = WorldMusicList::new();
         assert!(worldmusic.count() >= 1);
-        update_music_with_overrides(&mut music, &mut worldmusic);
+        update_music_with_overrides(game().get(), &mut music, &mut worldmusic);
         assert!(music.music(0).exists());
         assert!(worldmusic.current_music(WorldMusicCategory::Grass, "nonexistent").exists());
     }

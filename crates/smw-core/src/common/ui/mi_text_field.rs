@@ -143,7 +143,7 @@ impl MI_TextField {
     }
 
     /// Set where the data of this control is written to (some member of game_values probably)
-    pub fn set_data(&mut self, data: &mut String, maxchars: i16) {
+    pub fn set_data(&mut self, g: &mut Game, data: &mut String, maxchars: i16) {
         self.iMaxChars = maxchars;
         self.szOutValue = data as *mut String;
         self.iCursorIndex = data.len() as i16;
@@ -152,7 +152,7 @@ impl MI_TextField {
         self.szTempValue.clear();
         self.szTempValue.reserve(self.iMaxChars.max(0) as usize);
 
-        self.update_cursor(game().get());
+        self.update_cursor(g);
     }
 
     pub fn set_disallowed_chars(&mut self, chars: &str) {
@@ -181,7 +181,7 @@ impl MI_TextField {
         }
     }
 
-    fn insert_char(&mut self, c: u8) -> MenuCodeEnum {
+    fn insert_char(&mut self, g: &mut Game, c: u8) -> MenuCodeEnum {
         if self.iNumChars >= self.iMaxChars - 1 || self.szDisallowedChars.as_bytes().contains(&c) {
             return MENU_CODE_NONE;
         }
@@ -189,17 +189,17 @@ impl MI_TextField {
         self.iCursorIndex += 1;
         self.iNumChars += 1;
 
-        self.update_cursor(game().get());
+        self.update_cursor(g);
         self.mcItemChangedCode
     }
 
-    fn backspace(&mut self) -> MenuCodeEnum {
+    fn backspace(&mut self, g: &mut Game) -> MenuCodeEnum {
         if self.iCursorIndex > 0 {
             self.iCursorIndex -= 1;
             self.iNumChars -= 1;
             unsafe { (*self.szOutValue).as_mut_vec().remove(self.iCursorIndex as usize) };
 
-            self.update_cursor(game().get());
+            self.update_cursor(g);
             return self.mcItemChangedCode;
         }
         MENU_CODE_NONE
@@ -254,7 +254,7 @@ impl MI_TextField {
                 return self.osk_press();
             }
             if out.menu_cancel().fPressed {
-                return if self.iNumChars > 0 { self.backspace() } else { self.finish() };
+                return if self.iNumChars > 0 { self.backspace(g) } else { self.finish() };
             }
         }
         MENU_CODE_NONE
@@ -268,15 +268,15 @@ impl MI_TextField {
         if self.iOskRow < OSK_ROWS - 1 {
             let rows = if self.fOskShift { OSK_SHIFTED } else { OSK_KEYS };
             self.fOskShift = false;
-            return self.insert_char(rows[self.iOskRow as usize][self.iOskCol as usize]);
+            return self.insert_char(game().get(), rows[self.iOskRow as usize][self.iOskCol as usize]);
         }
         match self.osk_bottom_key() {
             0 => {
                 self.fOskShift = !self.fOskShift;
                 MENU_CODE_NONE
             }
-            1 => self.insert_char(b' '),
-            2 => self.backspace(),
+            1 => self.insert_char(game().get(), b' '),
+            2 => self.backspace(game().get()),
             _ => self.finish(),
         }
     }
@@ -448,10 +448,10 @@ impl UI_ControlTrait for MI_TextField {
                     }
                 }
 
-                return self.insert_char(key as u8);
+                return self.insert_char(g, key as u8);
             }
         } else if key == k(SDLK_BACKSPACE) {
-            return self.backspace();
+            return self.backspace(g);
         } else if key == k(SDLK_DELETE) {
             if self.iCursorIndex < self.iNumChars {
                 unsafe { (*self.szOutValue).as_mut_vec().remove(self.iCursorIndex as usize) };
@@ -556,6 +556,6 @@ impl UI_ControlTrait for MI_TextField {
         }
 
         let p = self.szOutValue;
-        self.set_data(unsafe { &mut *p }, self.iMaxChars);
+        self.set_data(game().get(), unsafe { &mut *p }, self.iMaxChars);
     }
 }

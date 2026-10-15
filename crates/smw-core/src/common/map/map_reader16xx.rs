@@ -203,7 +203,7 @@ impl MapReader {
 
         map.clear_platforms();
 
-        self.read_tiles(map, mapfile);
+        self.read_tiles(game().get(), map, mapfile);
         self.read_background(map, mapfile);
         self.read_music_category(map, mapfile);
 
