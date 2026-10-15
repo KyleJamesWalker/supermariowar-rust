@@ -27,7 +27,11 @@ use crate::smw::network::net_record::NetRecordState;
 use crate::smw::net_outcomes::NetOutcomesState;
 use crate::smw::net_random::NetRandomState;
 use crate::smw::object_container::CObjectContainer;
+#[cfg(not(target_os = "emscripten"))]
+use crate::smw::pad::PadState;
 use crate::smw::player::CPlayer;
+#[cfg(not(target_os = "emscripten"))]
+use crate::smw::touch::TouchState;
 use crate::smw::world::WorldMap;
 use crate::worldeditor::worldeditor::WorldEditorState;
 
@@ -102,6 +106,10 @@ pub struct Game {
     pub main_loop: MainLoopState,
     pub(crate) harness: Harness,
     pub(crate) editor_harness: EditorHarness,
+    #[cfg(not(target_os = "emscripten"))]
+    pub pad: PadState,
+    #[cfg(not(target_os = "emscripten"))]
+    pub touch: TouchState,
 }
 
 impl Game {
@@ -169,6 +177,10 @@ impl Game {
             main_loop: MainLoopState::new(),
             harness: Harness::new(),
             editor_harness: EditorHarness::new(),
+            #[cfg(not(target_os = "emscripten"))]
+            pad: PadState::new(),
+            #[cfg(not(target_os = "emscripten"))]
+            touch: TouchState::new(),
         }
     }
 }
