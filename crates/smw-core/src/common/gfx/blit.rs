@@ -1,14 +1,9 @@
-//! `SDL_UpperBlit` and `SDL_FillRect` for the game's surfaces. By default they draw with the software blitter
-//! (`soft_surface`) on ARGB8888 surfaces; `SMW_BLIT=sdl` calls SDL instead.
+//! `SDL_UpperBlit` and `SDL_FillRect` for the game's surfaces, drawn with the software blitter (`soft_surface`)
+//! on ARGB8888 surfaces.
 
 use crate::common::gfx::soft_surface::{self, BlendMode, BlitState, Pixels, PixelsMut, Rect};
 use sdl2::sys::*;
 use std::sync::atomic::{AtomicU32, Ordering};
-
-pub fn rust_blit() -> bool {
-    static RUST: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-    *RUST.get_or_init(|| std::env::var("SMW_BLIT").as_deref() != Ok("sdl"))
-}
 
 #[derive(Clone, Copy)]
 enum Fallback {
@@ -49,18 +44,15 @@ unsafe fn describe(surf: *mut SDL_Surface) -> String {
     )
 }
 
-/// Counts a call `SMW_BLIT=rust` hands to SDL, and prints the first of each kind.
+/// Counts a call the software blitter hands to SDL, and prints the first of each kind.
 unsafe fn fallback(kind: Fallback, src: *mut SDL_Surface, dst: *mut SDL_Surface) {
     if FALLBACKS[kind as usize].fetch_add(1, Ordering::Relaxed) == 0 {
         println!("[blit] SDL fallback: {} (src {}, dst {})", FALLBACK_NAMES[kind as usize], describe(src), describe(dst));
     }
 }
 
-/// Prints how many calls `SMW_BLIT=rust` handed to SDL, by kind.
+/// Prints how many calls the software blitter handed to SDL, by kind.
 pub fn report_fallbacks() {
-    if !rust_blit() {
-        return;
-    }
     let counts: Vec<String> = FALLBACK_NAMES
         .iter()
         .zip(&FALLBACKS)
@@ -132,9 +124,6 @@ unsafe fn blit_state(src: *mut SDL_Surface) -> Option<BlitState> {
 
 /// `SDL_UpperBlit`.
 pub unsafe fn upper_blit(src: *mut SDL_Surface, src_rect: *const SDL_Rect, dst: *mut SDL_Surface, dst_rect: *mut SDL_Rect) -> i32 {
-    if !rust_blit() {
-        return SDL_UpperBlit(src, src_rect, dst, dst_rect);
-    }
     if src == dst {
         fallback(Fallback::SameSurface, src, dst);
         return SDL_UpperBlit(src, src_rect, dst, dst_rect);
@@ -158,9 +147,6 @@ pub unsafe fn upper_blit(src: *mut SDL_Surface, src_rect: *const SDL_Rect, dst: 
 
 /// `SDL_FillRect`.
 pub unsafe fn fill_rect(dst: *mut SDL_Surface, rect: *const SDL_Rect, color: u32) -> i32 {
-    if !rust_blit() {
-        return SDL_FillRect(dst, rect, color);
-    }
     let Some(alpha) = layout(dst) else {
         fallback(Fallback::Fill, std::ptr::null_mut(), dst);
         return SDL_FillRect(dst, rect, color);
@@ -170,11 +156,8 @@ pub unsafe fn fill_rect(dst: *mut SDL_Surface, rect: *const SDL_Rect, color: u32
     0
 }
 
-/// The decoded PNG at `path` when `SMW_BLIT=rust` and the software decoder handles it.
+/// The decoded PNG at `path` when the software decoder handles it.
 pub fn decode_for_load(path: &std::path::Path) -> Option<crate::common::gfx::soft_image::Decoded> {
-    if !rust_blit() {
-        return Option::None;
-    }
     crate::common::gfx::soft_image::decode_png(&std::fs::read(path).ok()?)
 }
 
@@ -198,7 +181,7 @@ pub unsafe fn to_sdl_surface(s: &soft_surface::Surface) -> *mut SDL_Surface {
 
 /// `SDL_UpperBlitScaled`.
 pub unsafe fn upper_blit_scaled(src: *mut SDL_Surface, src_rect: *const SDL_Rect, dst: *mut SDL_Surface, dst_rect: *mut SDL_Rect) -> i32 {
-    if let (true, true, Some(true), Some(true)) = (rust_blit(), src != dst, layout(src), layout(dst)) {
+    if let (true, Some(true), Some(true)) = (src != dst, layout(src), layout(dst)) {
         if let Some(state) = blit_state(src) {
             let sr = src_rect.as_ref().map(|r| Rect::new(r.x, r.y, r.w, r.h));
             let mut dr = dst_rect.as_ref().map(|r| Rect::new(r.x, r.y, r.w, r.h));
@@ -210,8 +193,6 @@ pub unsafe fn upper_blit_scaled(src: *mut SDL_Surface, src_rect: *const SDL_Rect
             }
         }
     }
-    if rust_blit() {
-        fallback(Fallback::Scaled, src, dst);
-    }
+    fallback(Fallback::Scaled, src, dst);
     SDL_UpperBlitScaled(src, src_rect, dst, dst_rect)
 }
