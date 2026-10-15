@@ -1,7 +1,8 @@
 //! Not in upstream: on-screen touch controls for Android (`SMW_TOUCH=1`), drawn beside the 4:3 picture. Like
-//! web/touch.js they press player 1's default keys, so recordings hold ordinary key input.
+//! web/touch.js they press player 1's default keys, so recordings hold ordinary key input;
+//! a still tap off the controls is a menu tap.
 
-use smw_platform::{Overlay, OverlayImage, OverlayQuad};
+use smw_platform::{Input, InputEvent, Overlay, OverlayImage, OverlayQuad, SCREEN_H, SCREEN_W};
 use std::sync::Arc;
 use crate::common::path::get_home_directory;
 use sdl2::sys::{SDL_Event, SDL_EventType, SDL_GetKeyboardFocus, SDL_GetScancodeFromKey, SDL_KeyCode, SDL_PRESSED, SDL_RELEASED};
@@ -220,6 +221,13 @@ impl Layout {
         keys
     }
 
+    /// (x, y) in the game's 640x480 coordinates, if it is on the picture.
+    fn logical(&self, x: f32, y: f32) -> Option<(i16, i16)> {
+        let lx = ((x - self.view.x) * SCREEN_W as f32 / self.view.w).floor();
+        let ly = ((y - self.view.y) * SCREEN_H as f32 / self.view.h).floor();
+        ((0.0..SCREEN_W as f32).contains(&lx) && (0.0..SCREEN_H as f32).contains(&ly)).then_some((lx as i16, ly as i16))
+    }
+
     fn zone(&self, mode: Mode, x: f32, y: f32) -> Option<Zone> {
         if self.toggle.contains(x, y) {
             return Some(Zone::Toggle);
@@ -261,11 +269,14 @@ struct Controls {
     fingers: Vec<Finger>,
     held: [u8; 8],
     queue: Vec<(Key, bool)>,
+    /// Fingers that went down outside the controls, by where they went down.
+    presses: Vec<(i64, (f32, f32))>,
+    taps: Vec<(i16, i16)>,
 }
 
 impl Controls {
     fn new(mode: Mode, layout: Layout) -> Self {
-        Controls { mode, layout, fingers: Vec::new(), held: [0; 8], queue: Vec::new() }
+        Controls { mode, layout, fingers: Vec::new(), held: [0; 8], queue: Vec::new(), presses: Vec::new(), taps: Vec::new() }
     }
 
     fn set_keys(&mut self, i: usize, keys: u8) {
@@ -286,13 +297,19 @@ impl Controls {
     }
 
     fn down(&mut self, id: i64, x: f32, y: f32) {
+        self.presses.retain(|p| p.0 != id);
         self.up(id, x, y);
-        let Some(zone) = self.layout.zone(self.mode, x, y) else { return };
+        let Some(zone) = self.layout.zone(self.mode, x, y) else {
+            self.presses.push((id, (x, y)));
+            return;
+        };
         self.fingers.push(Finger { id, zone, keys: 0, origin: (x, y), pos: (x, y) });
         self.moved(id, x, y);
     }
 
     fn moved(&mut self, id: i64, x: f32, y: f32) {
+        let slop = 12.0 * self.layout.dp;
+        self.presses.retain(|&(p, (px, py))| p != id || (x - px).hypot(y - py) <= slop);
         let Some(i) = self.fingers.iter().position(|f| f.id == id) else { return };
         let layout = self.layout;
         let keys = layout.track(&mut self.fingers[i], x, y);
@@ -300,6 +317,10 @@ impl Controls {
     }
 
     fn up(&mut self, id: i64, x: f32, y: f32) {
+        if let Some(i) = self.presses.iter().position(|p| p.0 == id) {
+            self.presses.remove(i);
+            self.taps.extend(self.layout.logical(x, y));
+        }
         let Some(i) = self.fingers.iter().position(|f| f.id == id) else { return };
         if self.fingers[i].zone == Zone::Toggle && self.layout.toggle.contains(x, y) {
             self.mode = if self.mode == Mode::Dpad { Mode::Stick } else { Mode::Dpad };
@@ -310,6 +331,7 @@ impl Controls {
     }
 
     fn release_all(&mut self) {
+        self.presses.clear();
         while !self.fingers.is_empty() {
             self.set_keys(self.fingers.len() - 1, 0);
             self.fingers.pop();
@@ -439,6 +461,9 @@ pub fn flush() {
             smw_sdl2::events::push(&mut event);
         }
         pushing = false;
+        for (x, y) in std::mem::take(&mut t.controls.taps) {
+            smw_sdl2::events::push(&mut smw_sdl2::input::to_sdl(&Input { timestamp: 0, event: InputEvent::Tap { x, y } }));
+        }
     }
 }
 
@@ -888,6 +913,31 @@ mod tests {
         c.queue.clear();
         c.moved(1, l.jump.x, l.jump.y);
         assert_eq!(c.queue, [(Key::Run, false), (Key::Item, false), (U, true)]);
+    }
+
+    #[test]
+    fn a_still_finger_off_the_controls_taps_the_picture() {
+        let l = pixel();
+        let mut c = Controls::new(Mode::Dpad, l);
+        c.down(1, 1122.0, 504.0);
+        c.moved(1, 1122.0 + 6.0 * l.dp, 504.0);
+        c.up(1, 1122.0 + 6.0 * l.dp, 504.0);
+        assert_eq!(c.taps, [(328, 240)]);
+        c.taps.clear();
+        c.down(2, 1122.0, 504.0);
+        c.moved(2, 1122.0 + 20.0 * l.dp, 504.0);
+        c.moved(2, 1122.0, 504.0);
+        c.up(2, 1122.0, 504.0);
+        c.down(3, l.jump.x, l.jump.y);
+        c.up(3, l.jump.x, l.jump.y);
+        c.down(4, l.view.x + l.view.w + 5.0, 10.0);
+        c.up(4, l.view.x + l.view.w + 5.0, 10.0);
+        assert!(c.taps.is_empty());
+        assert_eq!(c.queue, [(U, true), (U, false)]);
+        c.down(5, 1122.0, 504.0);
+        c.release_all();
+        c.up(5, 1122.0, 504.0);
+        assert!(c.taps.is_empty() && c.presses.is_empty());
     }
 
     #[test]
