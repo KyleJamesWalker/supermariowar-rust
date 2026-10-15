@@ -213,11 +213,8 @@ pub fn local_path(path: &str) -> String {
     }
 }
 
-/// The file a match loaded, relative to the data directory so a checkpoint works with any data root.
-static mut match_map: String = String::new();
-
 pub fn note_match_map(path: &str) {
-    unsafe { match_map = data_relative(path) };
+    unsafe { game().match_map = data_relative(path) };
 }
 
 fn data_path(name: &str) -> String {
@@ -409,7 +406,7 @@ fn walk(s: &mut Snap, online: bool) {
         GameplayState::instance().checkpoint(s);
 
         // The map and the music the menu chose. A net game's joiner plays the host's map from its settings directory.
-        let mut map = portable_path(&match_map);
+        let mut map = portable_path(&game().match_map);
         let mut map_index = game().maplist.get_current();
         s.io(&mut map);
         s.io(&mut map_index);
@@ -541,7 +538,7 @@ pub fn start_fields() -> String {
             }));
         }
         f.push(kv("goal", &gm.goal.to_string()));
-        let map = match_map.clone();
+        let map = game().match_map.clone();
         let short = Path::new(&map).file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
         let short = short.split_once('_').map(|(_, rest)| rest.to_string()).unwrap_or(short);
         f.push(kv("map", &short));
@@ -553,7 +550,7 @@ pub fn start_fields() -> String {
                 f.push(kv("wins_needed", &gv.tournamentgames.to_string()));
             }
             MatchType::Tour | MatchType::World => {
-                let name = if gv.matchtype == MatchType::World { crate::smw::world::g_worldmap.get_world_name().to_string() } else {
+                let name = if gv.matchtype == MatchType::World { game().g_worldmap.get_world_name().to_string() } else {
                     game().tourlist.current_path().file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default()
                 };
                 f.push(kv(if gv.matchtype == MatchType::World { "world" } else { "tour" }, &name));

@@ -176,12 +176,12 @@ impl gfxSprite {
 
     /// Draw the whole sprite at the given coordinate.
     pub fn draw(&self, x: i32, y: i32) {
-        unsafe { self.blit(null(), blitdest, x + x_shake as i32, y + y_shake as i32) };
+        unsafe { self.blit(null(), blitdest, x + game().x_shake as i32, y + game().y_shake as i32) };
     }
 
     /// Draw part of the sprite at the given coordinate.
     pub fn draw_src(&self, x: i32, y: i32, srcRect: &SDL_Rect) {
-        unsafe { self.blit(srcRect, blitdest, x + x_shake as i32, y + y_shake as i32) };
+        unsafe { self.blit(srcRect, blitdest, x + game().x_shake as i32, y + game().y_shake as i32) };
     }
 
     /// `draw(x, y, srcx, srcy, w, h)` convenience used all over the C++ via `SDL_Rect{...}` temporaries.
@@ -194,7 +194,7 @@ impl gfxSprite {
         debug_assert!(!self.m_picture.is_null());
 
         unsafe {
-            let dstRect = SDL_Rect { x: x + x_shake as i32, y: y + y_shake as i32, w: srcRect.w, h: srcRect.h };
+            let dstRect = SDL_Rect { x: x + game().x_shake as i32, y: y + game().y_shake as i32, w: srcRect.w, h: srcRect.h };
             let mut adjustedSrcRect = *srcRect;
             let mut adjustedDstRect = dstRect;
 

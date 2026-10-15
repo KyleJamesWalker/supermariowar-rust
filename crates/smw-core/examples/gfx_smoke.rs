@@ -64,8 +64,8 @@ fn main() {
     font_large.set_alpha(128);
     font_large.draw(10, 300, "translucent");
     unsafe {
-        x_shake = 3;
-        y_shake = -2;
+        game().x_shake = 3;
+        game().y_shake = -2;
     }
     font_small.draw(10, 330, "shaken");
     smw_logo.draw_part(300, 330, 0, 0, 40, 20);

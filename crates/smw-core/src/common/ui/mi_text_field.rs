@@ -24,12 +24,9 @@ const OSK_X: i32 = 24;
 const OSK_W: i32 = 592;
 const OSK_H: i32 = 16 + OSK_ROWS as i32 * OSK_ROW_H + 12;
 
-/// Whether the menu press that opened the field came from a keyboard key; set by `UI_Menu`.
-static mut OPENED_BY_KEY: bool = false;
-
 /// Not in upstream. `UI_Menu` reports what opened a field: a pad button or a mouse click opens the on-screen keyboard.
 pub fn note_opener(keyboard: bool) {
-    unsafe { OPENED_BY_KEY = keyboard };
+    unsafe { game().text_field_opened_by_key = keyboard };
 }
 
 fn touch_session() -> bool {
@@ -371,7 +368,7 @@ impl UI_ControlTrait for MI_TextField {
 
         self.miModifyCursor.set_visible(modify);
         self.fModifying = modify;
-        self.fOsk = modify && (touch_session() || unsafe { !OPENED_BY_KEY });
+        self.fOsk = modify && (touch_session() || unsafe { !game().text_field_opened_by_key });
         self.iOskRow = 0;
         self.iOskCol = 0;
         self.fOskShift = false;

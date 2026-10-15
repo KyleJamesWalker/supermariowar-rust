@@ -3,7 +3,7 @@
 use crate::common::global_constants::PREVIEWTILESIZE;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
-use crate::smw::world::{g_worldmap, WorldMap};
+use crate::smw::world::WorldMap;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use sdl2::sys::{SDL_Rect, SDL_Surface};
 
@@ -84,7 +84,7 @@ impl MI_WorldPreviewDisplay {
         self.iAnimationTimer = 0;
         self.iAnimationFrame = 0;
 
-        let (iWidth, iHeight): (i16, i16) = unsafe { (g_worldmap.iWidth, g_worldmap.iHeight) };
+        let (iWidth, iHeight): (i16, i16) = unsafe { (game().g_worldmap.iWidth, game().g_worldmap.iHeight) };
 
         if iWidth > 20 {
             self.rectSrcSurface.w = 320;
@@ -123,8 +123,8 @@ impl MI_WorldPreviewDisplay {
     pub fn set_world(&mut self) {
         let (mut w, mut h): (i16, i16) = (0, 0);
         unsafe {
-            g_worldmap.init(WorldMap::new_path(&game().worldlist.at(game().game_values.worldindex as usize).to_string_lossy(), PREVIEWTILESIZE as i16));
-            g_worldmap.get_world_size(&mut w, &mut h);
+            game().g_worldmap.init(WorldMap::new_path(&game().worldlist.at(game().game_values.worldindex as usize).to_string_lossy(), PREVIEWTILESIZE as i16));
+            game().g_worldmap.get_world_size(&mut w, &mut h);
         }
 
         self.iScrollCols = if w > 20 { w - 20 } else { 0 };
@@ -137,13 +137,13 @@ impl MI_WorldPreviewDisplay {
 
     fn update_map_surface(&mut self, fFullRefresh: bool) {
         unsafe {
-            g_worldmap.draw_map_to_surface(-1, fFullRefresh, self.map_sprite.get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
+            game().g_worldmap.draw_map_to_surface(-1, fFullRefresh, self.map_sprite.get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
         }
 
         unsafe {
             let olddest = blitdest;
             blitdest = self.map_sprite.get_surface();
-            g_worldmap.draw(self.iMapGlobalOffsetX, self.iMapGlobalOffsetY, false, false);
+            game().g_worldmap.draw(self.iMapGlobalOffsetX, self.iMapGlobalOffsetY, false, false);
             blitdest = olddest;
         }
     }

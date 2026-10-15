@@ -13,12 +13,14 @@ use std::any::Any;
 //Players rack up points like domination for each player they have "owned"
 pub struct CGM_Owned {
     pub cgame_mode: CGameMode,
+    /// Frames toward the next point; never reset between games, like the C++ function-local static.
+    counter: i16,
 }
 impl_base!(CGM_Owned => cgame_mode: CGameMode);
 
 impl CGM_Owned {
     pub fn new() -> Self {
-        let mut this = CGM_Owned { cgame_mode: CGameMode::new() };
+        let mut this = CGM_Owned { cgame_mode: CGameMode::new(), counter: 0 };
         this.goal = 200;
         this.gamemode = game_mode_owned;
 
@@ -42,12 +44,10 @@ impl CGameModeTrait for CGM_Owned {
         if self.gameover {
             self.displayplayertext();
         } else {
-            static mut counter: i16 = 0;
-
             unsafe {
-                counter += 1;
-                if counter >= game().game_values.pointspeed {
-                    counter = 0;
+                self.counter += 1;
+                if self.counter >= game().game_values.pointspeed {
+                    self.counter = 0;
 
                     let mut i = 0;
                     while i < game().players.len() {

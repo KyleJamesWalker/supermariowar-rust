@@ -10,7 +10,6 @@ use crate::common::object_base::CObjectTrait;
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::gs_gameplay::spotlightManager;
 use crate::smw::objectgame::removeifprojectile;
 use crate::smw::objects::moving::moving_object::{io_moving_object_update, IO_MovingObject, IO_MovingObjectTrait};
 use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
@@ -93,7 +92,7 @@ impl CObjectTrait for MO_Fireball {
                 removeifprojectile(self.as_mo_ptr(), true, true);
             } else if game().game_values.spotlights {
                 if self.sSpotlight.is_null() {
-                    self.sSpotlight = spotlightManager.add_spotlight(
+                    self.sSpotlight = game().spotlightManager.add_spotlight(
                         (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16,
                         (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16,
                         3,

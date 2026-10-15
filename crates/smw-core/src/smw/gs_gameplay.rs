@@ -18,7 +18,7 @@ use crate::common::gfx::{gfx_changefullscreen, gfx_take_screenshot};
 use crate::common::global_constants::*;
 use crate::common::input::COutputControl;
 use crate::common::io_block::IO_BlockTrait;
-use crate::common::map::{g_iCurrentDrawIndex, MapBlock};
+use crate::common::map::MapBlock;
 use crate::common::match_types::MatchType;
 use crate::common::math::trig::{cosf, sinf};
 use crate::common::math::vec2::{Vec2f, Vec2s};
@@ -71,15 +71,12 @@ use std::io::Write;
 pub const COUNTDOWN_START_INDEX: i16 = 4;
 
 
-pub static mut spotlightManager: Global<SpotlightManager> = Global::uninit();
-
-pub static mut g_iWinningPlayer: i16 = 0;
-pub static mut scorepowerupoffsets: [[i16; 3]; 3] = [[37, 0, 0], [71, 89, 0], [105, 123, 141]];
+pub static scorepowerupoffsets: [[i16; 3]; 3] = [[37, 0, 0], [71, 89, 0], [105, 123, 141]];
 
 /// Constructors of this file's class-type globals, plus the link-time `musicfinished` hook in sfx.
 pub fn init_globals() {
     unsafe {
-        spotlightManager.init(SpotlightManager::new());
+        game().spotlightManager.init(SpotlightManager::new());
         game().sfx.musicfinished = game().sfx.musicfinished;
     }
 }
@@ -147,7 +144,7 @@ impl GameplayState {
     pub fn instance() -> &'static mut GameplayState {
         unsafe {
             // Safety net until globals::init_globals calls gs_gameplay::init_globals.
-            if !spotlightManager.is_initialized() {
+            if !game().spotlightManager.is_initialized() {
                 init_globals();
             }
             gps.get_or_insert_with(GameplayState::new)
@@ -619,8 +616,8 @@ impl GameplayState {
 
     fn init_run_game(&mut self) {
         unsafe {
-            y_shake = 0;
-            x_shake = 0;
+            game().y_shake = 0;
+            game().x_shake = 0;
 
             //Reset the screen spin variables
             self.spinangle = 0.0f32;
@@ -849,22 +846,21 @@ pub fn shake_screen() {
     unsafe {
         if game().game_values.flags.screenshaketimer <= 0 {
             //Make sure we zero out the shake value after it is done
-            x_shake = 0;
+            game().x_shake = 0;
             return;
         }
 
         game().game_values.flags.screenshaketimer -= 1;
 
-        static mut shakeleft: bool = false;
-        if shakeleft {
-            x_shake -= 2;
-            if x_shake <= -2 {
-                shakeleft = false;
+        if game().shakeleft {
+            game().x_shake -= 2;
+            if game().x_shake <= -2 {
+                game().shakeleft = false;
             }
         } else {
-            x_shake += 2;
-            if x_shake >= 2 {
-                shakeleft = true;
+            game().x_shake += 2;
+            if game().x_shake >= 2 {
+                game().shakeleft = true;
             }
         }
 
@@ -1031,8 +1027,8 @@ impl GameplayState {
                 shakey -= 1.0f32;
             }
 
-            x_shake = (self.spinspeed * App::screenWidth as f32 * cosf(self.spinangle)) as i16;
-            y_shake = shakey as i16;
+            game().x_shake = (self.spinspeed * App::screenWidth as f32 * cosf(self.spinangle)) as i16;
+            game().y_shake = shakey as i16;
         }
     }
 }
@@ -1162,7 +1158,7 @@ pub fn handle_obj2obj_collisions() {
 impl GameplayState {
     fn draw_scoreboard(&mut self, iScoreTextOffset: [i16; 4]) {
         unsafe {
-            g_iWinningPlayer = -1;
+            game().g_iWinningPlayer = -1;
 
             //Draw scoreboards for all games (except special cases where we have a single player walking the map)
             if game().game_values.singleplayermode == -1 {
@@ -1181,9 +1177,9 @@ impl GameplayState {
 
                     if (scoreValue > highestScore as i32 && !fReverseScoring) || (scoreValue < highestScore as i32 && fReverseScoring) {
                         highestScore = scoreValue as i16;
-                        g_iWinningPlayer = i;
+                        game().g_iWinningPlayer = i;
                     } else if scoreValue == highestScore as i32 {
-                        g_iWinningPlayer = -1;
+                        game().g_iWinningPlayer = -1;
                     }
                 }
 
@@ -1247,7 +1243,7 @@ impl GameplayState {
                             //otherwise draw the player's skin in the scoreboard
                             let iScoreboardSprite: i32;
                             if game().game_values.gamemode.gameover {
-                                if g_iWinningPlayer as i32 != i as i32 {
+                                if game().g_iWinningPlayer as i32 != i as i32 {
                                     iScoreboardSprite = PGFX_DEADFLYING;
                                 } else {
                                     iScoreboardSprite = PGFX_JUMPING_R;
@@ -1297,7 +1293,7 @@ impl GameplayState {
                             }
 
                             //give crown to player(s) with most kills
-                            if g_iWinningPlayer as i32 == i as i32 {
+                            if game().g_iWinningPlayer as i32 == i as i32 {
                                 game().rm.spr_crown.draw(s.x as i32 + Self::scoreoffsets[k] as i32 + 12, s.y as i32 - 4);
                             }
                         }
@@ -1435,19 +1431,19 @@ impl GameplayState {
     fn draw_screen_shake_background(&mut self) {
         unsafe {
             //Draw black "behind" the game if we are shaking/moving the screen
-            if y_shake > 0 {
-                let rect = SDL_Rect { x: 0, y: 0, w: App::screenWidth, h: y_shake as i32 };
+            if game().y_shake > 0 {
+                let rect = SDL_Rect { x: 0, y: 0, w: App::screenWidth, h: game().y_shake as i32 };
                 crate::common::gfx::blit::fill_rect(screen, &rect, 0x0); //fill empty area with black
-            } else if y_shake < 0 {
-                let rect = SDL_Rect { x: 0, y: App::screenHeight + y_shake as i32, w: App::screenWidth, h: App::screenHeight };
+            } else if game().y_shake < 0 {
+                let rect = SDL_Rect { x: 0, y: App::screenHeight + game().y_shake as i32, w: App::screenWidth, h: App::screenHeight };
                 crate::common::gfx::blit::fill_rect(screen, &rect, 0x0); //fill empty area with black
             }
 
-            if x_shake > 0 {
-                let rect = SDL_Rect { x: 0, y: 0, w: x_shake as i32, h: App::screenHeight };
+            if game().x_shake > 0 {
+                let rect = SDL_Rect { x: 0, y: 0, w: game().x_shake as i32, h: App::screenHeight };
                 crate::common::gfx::blit::fill_rect(screen, &rect, 0x0); //fill empty area with black
-            } else if x_shake < 0 {
-                let rect = SDL_Rect { x: App::screenWidth + x_shake as i32, y: 0, w: App::screenWidth, h: App::screenHeight };
+            } else if game().x_shake < 0 {
+                let rect = SDL_Rect { x: App::screenWidth + game().x_shake as i32, y: 0, w: App::screenWidth, h: App::screenHeight };
                 crate::common::gfx::blit::fill_rect(screen, &rect, 0x0); //fill empty area with black
             }
         }
@@ -1523,7 +1519,7 @@ impl GameplayState {
 
     fn draw_back_layer(&mut self) {
         unsafe {
-            game().rm.spr_backmap[g_iCurrentDrawIndex as usize].draw(0, 0);
+            game().rm.spr_backmap[game().g_iCurrentDrawIndex as usize].draw(0, 0);
 
             //draw back eyecandy behind players
             game().g_map.draw_platforms(0);
@@ -1606,7 +1602,7 @@ impl GameplayState {
     fn draw_spotlights(&mut self) {
         unsafe {
             if game().game_values.spotlights {
-                spotlightManager.draw_spotlights();
+                game().spotlightManager.draw_spotlights();
             }
         }
     }
@@ -2080,7 +2076,7 @@ pub fn clean_up() {
         game().eyecandy[0].clean();
         game().eyecandy[1].clean();
         game().eyecandy[2].clean();
-        spotlightManager.clear_spotlights();
+        game().spotlightManager.clear_spotlights();
 
         game().noncolcontainer.clean();
 
@@ -2097,8 +2093,8 @@ pub fn clean_up() {
         game().rm.sfx_invinciblemusic.stop();
         game().rm.sfx_slowdownmusic.stop();
 
-        x_shake = 0;
-        y_shake = 0;
+        game().x_shake = 0;
+        game().y_shake = 0;
     }
 }
 
@@ -2190,11 +2186,11 @@ pub fn update_exit_pause_dialog(iCountDownState: i16) -> bool {
 
 pub fn update_screen_shake() {
     unsafe {
-        if y_shake > 0 && !game().game_values.spinscreen {
-            y_shake -= CRUNCHVELOCITY as i16;
+        if game().y_shake > 0 && !game().game_values.spinscreen {
+            game().y_shake -= CRUNCHVELOCITY as i16;
 
-            if y_shake < 0 {
-                y_shake = 0;
+            if game().y_shake < 0 {
+                game().y_shake = 0;
             }
         }
     }

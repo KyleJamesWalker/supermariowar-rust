@@ -19,13 +19,14 @@ use std::any::Any;
 pub struct CGM_Chase {
     pub cgame_mode: CGameMode,
 
-    key: Ptr<CO_PhantoKey>,
+    key: Ptr<CO_PhantoKey>,    /// Frames toward the next point; never reset between games, like the C++ function-local static.
+    counter: i16,
 }
 impl_base!(CGM_Chase => cgame_mode: CGameMode);
 
 impl CGM_Chase {
     pub fn new() -> Self {
-        let mut this = CGM_Chase { cgame_mode: CGameMode::new(), key: Ptr::null() };
+        let mut this = CGM_Chase { cgame_mode: CGameMode::new(), key: Ptr::null(), counter: 0 };
         this.goal = 200;
         this.gamemode = game_mode_chase;
 
@@ -78,13 +79,11 @@ impl CGameModeTrait for CGM_Chase {
 
         let mut keyholder: Ptr<CPlayer> = self.key.owner;
         if !keyholder.is_null() {
-            static mut counter: i16 = 0;
-
             if keyholder.isready() && !keyholder.is_tanooki_statue() {
                 unsafe {
-                    counter += 1;
-                    if counter >= game().game_values.pointspeed {
-                        counter = 0;
+                    self.counter += 1;
+                    if self.counter >= game().game_values.pointspeed {
+                        self.counter = 0;
                         keyholder.score().adjust_score(1);
                         self.check_winner(keyholder);
                     }

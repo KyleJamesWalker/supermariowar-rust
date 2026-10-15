@@ -46,17 +46,6 @@ const GIT_DATE: &str = "";
 pub static mut screen: *mut SDL_Surface = null_mut(); //for gfx (maybe the gfx system should be improved -> resource manager)
 pub static mut blitdest: *mut SDL_Surface = null_mut(); //the destination surface for all drawing (can be swapped from screen to another surface)
 
-pub static mut x_shake: i16 = 0;
-pub static mut y_shake: i16 = 0;
-
-//------ game relevant stuff ------
-
-
-
-//Locations for swirl spawn effects
-pub static mut g_iSwirlSpawnLocations: [[[i16; 25]; 2]; 4] = [[[0; 25]; 2]; 4];
-
-
 
 //*************************************
 //  MAIN LOOP
@@ -417,20 +406,20 @@ pub fn init_spawnlocations() {
         let mut spawnangle: f32 = 0.0;
 
         for i in 0..25usize {
-            g_iSwirlSpawnLocations[0][0][i] = (spawnradius * cosf(spawnangle)) as i16;
-            g_iSwirlSpawnLocations[0][1][i] = (spawnradius * sinf(spawnangle)) as i16;
+            game().g_iSwirlSpawnLocations[0][0][i] = (spawnradius * cosf(spawnangle)) as i16;
+            game().g_iSwirlSpawnLocations[0][1][i] = (spawnradius * sinf(spawnangle)) as i16;
 
             let mut angle = spawnangle + HALF_PI;
-            g_iSwirlSpawnLocations[1][0][i] = (spawnradius * cosf(angle)) as i16;
-            g_iSwirlSpawnLocations[1][1][i] = (spawnradius * sinf(angle)) as i16;
+            game().g_iSwirlSpawnLocations[1][0][i] = (spawnradius * cosf(angle)) as i16;
+            game().g_iSwirlSpawnLocations[1][1][i] = (spawnradius * sinf(angle)) as i16;
 
             angle = spawnangle + PI;
-            g_iSwirlSpawnLocations[2][0][i] = (spawnradius * cosf(angle)) as i16;
-            g_iSwirlSpawnLocations[2][1][i] = (spawnradius * sinf(angle)) as i16;
+            game().g_iSwirlSpawnLocations[2][0][i] = (spawnradius * cosf(angle)) as i16;
+            game().g_iSwirlSpawnLocations[2][1][i] = (spawnradius * sinf(angle)) as i16;
 
             angle = spawnangle + THREE_HALF_PI;
-            g_iSwirlSpawnLocations[3][0][i] = (spawnradius * cosf(angle)) as i16;
-            g_iSwirlSpawnLocations[3][1][i] = (spawnradius * sinf(angle)) as i16;
+            game().g_iSwirlSpawnLocations[3][0][i] = (spawnradius * cosf(angle)) as i16;
+            game().g_iSwirlSpawnLocations[3][1][i] = (spawnradius * sinf(angle)) as i16;
 
             spawnradius -= 4.0;
             spawnangle += 0.1;
