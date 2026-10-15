@@ -144,7 +144,7 @@ impl CObjectTrait for MO_Yoshi {
                 if egg.color == self.color {
                     if !g.game_values.gamemode.gameover {
                         player.score().adjust_score(g, 1);
-                        g.game_values.gamemode.check_winner(player);
+                        game().game_values.gamemode.check_winner(g, player);
                     }
 
                     self.place_yoshi(g);
@@ -178,7 +178,7 @@ impl CObjectTrait for MO_Yoshi {
 
                     if !g.game_values.gamemode.gameover {
                         player.score().adjust_score(g, 1);
-                        g.game_values.gamemode.check_winner(player);
+                        game().game_values.gamemode.check_winner(g, player);
                     }
 
                     self.place_yoshi(g);

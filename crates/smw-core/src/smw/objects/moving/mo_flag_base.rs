@@ -120,7 +120,7 @@ impl MO_FlagBase {
                 flag.place_flag(g);
                 if !g.game_values.gamemode.gameover {
                     player.score().adjust_score(g, 1);
-                    g.game_values.gamemode.check_winner(player);
+                    game().game_values.gamemode.check_winner(g, player);
                 }
 
                 if_sound_on_play(g, &mut game().rm.sfx_racesound);

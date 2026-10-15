@@ -118,7 +118,7 @@ impl CObjectTrait for MO_Coin {
                     player.score().adjust_score(g, 1);
                 }
 
-                g.game_values.gamemode.check_winner(player);
+                game().game_values.gamemode.check_winner(g, player);
             }
 
             g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_coinsparkle), self.ix, self.iy, 7, 4));

@@ -315,7 +315,7 @@ pub fn player_killed_player_now(g: &mut Game, iKiller: i16, mut killed: Ptr<CPla
         } else {
             killed.death_awards();
 
-            let iKillType = g.game_values.gamemode.get().playerkilledself(killed, style);
+            let iKillType = g.game_values.gamemode.get().playerkilledself(g, killed, style);
 
             if PlayerKillType::Normal == iKillType || (fForce && PlayerKillType::NonKill == iKillType) {
                 killed.die(g, PlayerDeathStyle::Jump, false, fKillCarriedItem);
@@ -957,19 +957,19 @@ impl CPlayer {
             match self.powerupused.unwrap() {
                 PowerupType::PoisonMushroom => {}
                 PowerupType::ExtraLife1 => {
-                    g.game_values.gamemode.get().playerextraguy(this, 1);
+                    g.game_values.gamemode.get().playerextraguy(g, this, 1);
                     if_sound_on_play(g, &mut game().rm.sfx_extraguysound);
                 }
                 PowerupType::ExtraLife2 => {
-                    g.game_values.gamemode.get().playerextraguy(this, 2);
+                    g.game_values.gamemode.get().playerextraguy(g, this, 2);
                     if_sound_on_play(g, &mut game().rm.sfx_extraguysound);
                 }
                 PowerupType::ExtraLife3 => {
-                    g.game_values.gamemode.get().playerextraguy(this, 3);
+                    g.game_values.gamemode.get().playerextraguy(g, this, 3);
                     if_sound_on_play(g, &mut game().rm.sfx_extraguysound);
                 }
                 PowerupType::ExtraLife5 => {
-                    g.game_values.gamemode.get().playerextraguy(this, 5);
+                    g.game_values.gamemode.get().playerextraguy(g, this, 5);
                     if_sound_on_play(g, &mut game().rm.sfx_extraguysound);
                 }
                 PowerupType::Fire => {
@@ -2244,7 +2244,7 @@ impl CPlayer {
             }
 
             //now kill the player (don't call this function earlier because we need the old position, etc.
-            let iKillType = g.game_values.gamemode.get().playerkilledplayer(killer, killed, style);
+            let iKillType = g.game_values.gamemode.get().playerkilledplayer(g, killer, killed, style);
 
             if PlayerKillType::NonKill != iKillType || fForce {
                 if killed.bobomb {
@@ -3257,7 +3257,7 @@ impl CPlayer {
             self.death_awards();
 
             unsafe {
-                let iKillType = g.game_values.gamemode.get().playerkilledself(this, style);
+                let iKillType = g.game_values.gamemode.get().playerkilledself(g, this, style);
                 if PlayerKillType::Normal == iKillType || (PlayerKillType::NonKill == iKillType && fForce) {
                     self.die(g, PlayerDeathStyle::Jump, false, fKillCarriedItem);
                 }

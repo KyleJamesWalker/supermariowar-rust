@@ -41,19 +41,19 @@ impl CGM_TimeLimit {
 impl CGameModeTrait for CGM_TimeLimit {
     crate::impl_cgamemode_plumbing!();
 
-    fn init(&mut self) {
+    fn init(&mut self, g: &mut Game) {
         cgm_timelimit_init(self)
     }
-    fn think(&mut self) {
-        cgm_timelimit_think(game().get(), self)
+    fn think(&mut self, g: &mut Game) {
+        cgm_timelimit_think(g, self)
     }
-    fn draw_foreground(&mut self) {
+    fn draw_foreground(&mut self, g: &mut Game) {
         cgm_timelimit_draw_foreground(self)
     }
-    fn playerkilledplayer(&mut self, inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
-        cgm_timelimit_playerkilledplayer(game().get(), self, inflictor, other, style)
+    fn playerkilledplayer(&mut self, g: &mut Game, inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+        cgm_timelimit_playerkilledplayer(g, self, inflictor, other, style)
     }
-    fn playerkilledself(&mut self, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
         cgm_timelimit_playerkilledself(self, player, style)
     }
 }

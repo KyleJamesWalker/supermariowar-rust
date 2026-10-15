@@ -77,48 +77,48 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
         self
     }
 
-    fn init(&mut self) {
-        gm::cgamemode_init(game().get(), self);
+    fn init(&mut self, g: &mut Game) {
+        gm::cgamemode_init(g, self);
 
         self.fReverseScoring = false;
 
         unsafe {
             for iScore in 0..game().score_cnt as usize {
-                game().score[iScore].set_score(self.goal);
-                game().score[iScore].subscore[0] = 0;
+                g.score[iScore].set_score(self.goal);
+                g.score[iScore].subscore[0] = 0;
             }
         }
     }
 
-    fn think(&mut self) {
+    fn think(&mut self, g: &mut Game) {
         if self.gameover {
-            self.displayplayertext(game().get());
+            self.displayplayertext(g);
         }
     }
 
-    fn playerkilledplayer(&mut self, mut inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, mut inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
         if self.gameover {
             return PlayerKillType::Normal;
         }
 
-        self.release_coin(game().get(), other);
+        self.release_coin(g, other);
 
-        other.score().adjust_score(game().get(), -1);
+        other.score().adjust_score(g, -1);
 
         if !self.playedwarningsound {
             let mut countscore: i16 = 0;
             unsafe {
                 for k in 0..game().score_cnt as usize {
-                    if Ptr::from_mut(inflictor.score()) == game().score[k] {
+                    if Ptr::from_mut(inflictor.score()) == g.score[k] {
                         continue;
                     }
 
-                    countscore = countscore.wrapping_add(game().score[k].score);
+                    countscore = countscore.wrapping_add(g.score[k].score);
                 }
             }
 
             if countscore <= 2 {
-                self.playwarningsound(game().get());
+                self.playwarningsound(g);
             }
         }
 
@@ -131,14 +131,14 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
         PlayerKillType::Normal
     }
 
-    fn playerkilledself(&mut self, mut player: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
         if self.gameover {
             return PlayerKillType::Normal;
         }
 
-        self.release_coin(game().get(), player);
+        self.release_coin(g, player);
 
-        player.score().adjust_score(game().get(), -1);
+        player.score().adjust_score(g, -1);
 
         if !self.playedwarningsound {
             let mut countscore: i16 = 0;
@@ -150,7 +150,7 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
                             continue;
                         }
 
-                        countscore = countscore.wrapping_add(game().score[k as usize].score);
+                        countscore = countscore.wrapping_add(g.score[k as usize].score);
                     }
 
                     if countscore <= 2 {
@@ -163,7 +163,7 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
             }
 
             if playwarning {
-                self.playwarningsound(game().get());
+                self.playwarningsound(g);
             }
         }
 
@@ -176,15 +176,15 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
         PlayerKillType::Normal
     }
 
-    fn playerextraguy(&mut self, mut player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iType: i16) {
         if self.gameover {
             return;
         }
 
-        player.score().adjust_score(game().get(), iType);
+        player.score().adjust_score(g, iType);
     }
 
-    fn check_winner(&mut self, mut player: Ptr<CPlayer>) -> PlayerKillType {
+    fn check_winner(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> PlayerKillType {
         if player.score().subscore[0] >= 5 {
             player.score().subscore[0] = 5;
 
@@ -195,7 +195,7 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
             setup_score_board(false);
             show_score_board();
         } else if player.score().subscore[0] >= 4 && !self.playedwarningsound {
-            self.playwarningsound(game().get());
+            self.playwarningsound(g);
         }
 
         PlayerKillType::Normal

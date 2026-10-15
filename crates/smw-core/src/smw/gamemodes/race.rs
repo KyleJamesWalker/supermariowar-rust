@@ -119,24 +119,24 @@ impl CGameModeTrait for CGM_Race {
         self
     }
 
-    fn init(&mut self) {
-        gm::cgamemode_init(game().get(), self);
+    fn init(&mut self, g: &mut Game) {
+        gm::cgamemode_init(g, self);
 
         unsafe {
-            self.quantity = game().game_values.gamemodesettings.race.quantity;
+            self.quantity = g.game_values.gamemodesettings.race.quantity;
             if self.quantity < 2 {
                 self.quantity = 2;
-                game().game_values.gamemodesettings.race.quantity = self.quantity;
+                g.game_values.gamemodesettings.race.quantity = self.quantity;
             }
 
-            self.penalty = game().game_values.gamemodesettings.race.penalty;
+            self.penalty = g.game_values.gamemodesettings.race.penalty;
             if self.penalty < 0 || self.penalty > 2 {
                 self.penalty = 0;
-                game().game_values.gamemodesettings.race.penalty = self.penalty;
+                g.game_values.gamemodesettings.race.penalty = self.penalty;
             }
 
             for iRaceGoal in 0..self.quantity {
-                game().objectcontainer[2].add(Ptr::new_box(OMO_RaceGoal::new(game().get(), Ptr::from_mut(&mut game().rm.spr_racegoal), iRaceGoal)));
+                game().objectcontainer[2].add(Ptr::new_box(OMO_RaceGoal::new(g, Ptr::from_mut(&mut game().rm.spr_racegoal), iRaceGoal)));
             }
         }
 
@@ -145,21 +145,21 @@ impl CGameModeTrait for CGM_Race {
         }
     }
 
-    fn playerkilledplayer(&mut self, _inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
-        self.penalize_race_goals(game().get(), other);
+    fn playerkilledplayer(&mut self, g: &mut Game, _inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+        self.penalize_race_goals(g, other);
         PlayerKillType::Normal
     }
 
-    fn playerkilledself(&mut self, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
         gm::cgamemode_playerkilledself(self, player, style);
 
-        self.penalize_race_goals(game().get(), player);
+        self.penalize_race_goals(g, player);
         PlayerKillType::Normal
     }
 
-    fn playerextraguy(&mut self, mut player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iType: i16) {
         if !self.gameover {
-            player.score().adjust_score(game().get(), 1 + if iType == 5 { 1 } else { 0 });
+            player.score().adjust_score(g, 1 + if iType == 5 { 1 } else { 0 });
 
             //Don't end the game if the goal is infinite
             if self.goal == -1 {
@@ -175,7 +175,7 @@ impl CGameModeTrait for CGM_Race {
                 setup_score_board(false);
                 show_score_board();
             } else if player.score().score as i32 >= self.goal as i32 - 1 && !self.playedwarningsound {
-                self.playwarningsound(game().get());
+                self.playwarningsound(g);
             }
         }
     }

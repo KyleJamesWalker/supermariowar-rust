@@ -123,7 +123,7 @@ impl CObjectTrait for OMO_Area {
                 if self.scoretimer as i32 >= ((g.game_values.pointspeed as i32) << 1) {
                     self.scoretimer = 0;
                     game().players[self.iPlayerID as usize].score().adjust_score(g, 1);
-                    g.game_values.gamemode.check_winner(g.players[self.iPlayerID as usize]);
+                    game().game_values.gamemode.check_winner(g, game().players[self.iPlayerID as usize]);
                 }
             }
 

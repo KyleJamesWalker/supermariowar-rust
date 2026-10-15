@@ -143,39 +143,39 @@ impl CGM_Greed {
 impl CGameModeTrait for CGM_Greed {
     crate::impl_cgamemode_plumbing!();
 
-    fn init(&mut self) {
-        cgamemode_init(game().get(), self);
+    fn init(&mut self, g: &mut Game) {
+        cgamemode_init(g, self);
 
         let iGoal: i16 = if self.goal == -1 { 0 } else { self.goal };
 
         unsafe {
             for iScore in 0..game().score_cnt {
-                game().score[iScore as usize].set_score(iGoal);
+                g.score[iScore as usize].set_score(iGoal);
             }
         }
     }
 
-    fn playerkilledplayer(&mut self, _inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, _inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
         if self.gameover {
             return PlayerKillType::Normal;
         }
 
         //create coins around player
-        self.release_coins(game().get(), other, style)
+        self.release_coins(g, other, style)
     }
 
-    fn playerkilledself(&mut self, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
         if self.gameover {
             return PlayerKillType::Normal;
         }
 
         //create coins around player
-        self.release_coins(game().get(), player, style)
+        self.release_coins(g, player, style)
     }
 
-    fn playerextraguy(&mut self, mut player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iType: i16) {
         if !self.gameover {
-            player.score().adjust_score(game().get(), (iType as i32 * 5) as i16);
+            player.score().adjust_score(g, (iType as i32 * 5) as i16);
         }
     }
 }

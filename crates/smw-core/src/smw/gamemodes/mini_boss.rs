@@ -92,8 +92,8 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
         self
     }
 
-    fn init(&mut self) {
-        gm::cgamemode_init(game().get(), self);
+    fn init(&mut self, g: &mut Game) {
+        gm::cgamemode_init(g, self);
 
         self.fReverseScoring = false;
 
@@ -102,7 +102,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
 
         unsafe {
             for iScore in 0..game().score_cnt as usize {
-                game().score[iScore].set_score(self.goal);
+                g.score[iScore].set_score(self.goal);
             }
 
             let platformY: i16 = if self.iBossType == Boss::Hammer {
@@ -112,44 +112,44 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
             } else {
                 (App::screenWidth / 2) as i16
             };
-            game().objectcontainer[0].add(Ptr::new_box(MO_SledgeBrother::new(game().get(), Ptr::from_mut(&mut game().rm.spr_sledgebrothers), platformY, self.iBossType)));
+            game().objectcontainer[0].add(Ptr::new_box(MO_SledgeBrother::new(g, Ptr::from_mut(&mut game().rm.spr_sledgebrothers), platformY, self.iBossType)));
         }
     }
 
-    fn think(&mut self) {
+    fn think(&mut self, g: &mut Game) {
         unsafe {
-            if !self.gameover && game().players.len() == 0 {
+            if !self.gameover && g.players.len() == 0 {
                 self.gameover = true;
 
-                if game().game_values.music {
-                    game().rm.sfx_invinciblemusic.stop();
-                    game().rm.sfx_timewarning.stop();
-                    game().rm.sfx_slowdownmusic.stop();
-                    if_sound_on_play(game().get(), &mut game().rm.sfx_gameover);
+                if g.game_values.music {
+                    g.rm.sfx_invinciblemusic.stop();
+                    g.rm.sfx_timewarning.stop();
+                    g.rm.sfx_slowdownmusic.stop();
+                    if_sound_on_play(g, &mut game().rm.sfx_gameover);
 
-                    game().rm.backgroundmusic[1].stop();
+                    g.rm.backgroundmusic[1].stop();
                 }
             }
 
             if self.gameover {
-                self.displayplayertext(game().get());
+                self.displayplayertext(g);
             } else {
                 if self.iBossType == Boss::Hammer {
                     //Randomly spawn koopas
                     self.enemytimer -= 1;
                     if self.enemytimer <= 0 {
-                        game().objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(Ptr::from_mut(&mut game().rm.spr_koopa), RANDOM_BOOL(), false, false, true)));
+                        g.objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(Ptr::from_mut(&mut g.rm.spr_koopa), RANDOM_BOOL(), false, false, true)));
                         self.enemytimer = (RANDOM_INT(120) as i16 as i32 + 120) as i16; //Spawn koopas slowly
                     }
                 } else if self.iBossType == Boss::Bomb {
                 } else if self.iBossType == Boss::Fire {
                     //Only create podobos if the difficulty is moderate or greater
                     self.enemytimer -= 1;
-                    if self.enemytimer <= 0 && game().game_values.gamemodesettings.boss.difficulty >= 2 {
+                    if self.enemytimer <= 0 && g.game_values.gamemodesettings.boss.difficulty >= 2 {
                         let x = RANDOM_INT((App::screenWidth as f32 * 0.95f32) as i32) as i16;
                         let pos = Vec2s::new(x, App::screenHeight as i16);
                         let nspeed: f32 = -((RANDOM_INT(9) as f32) / 2.0f32) - 9.0f32;
-                        game().objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(Ptr::from_mut(&mut game().rm.spr_podobo), pos, nspeed, -1, -1, -1, false)));
+                        g.objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(Ptr::from_mut(&mut g.rm.spr_podobo), pos, nspeed, -1, -1, -1, false)));
                         self.enemytimer = (RANDOM_INT(80) + 60) as i16;
                     }
 
@@ -157,8 +157,8 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
                     if self.poweruptimer <= 0 {
                         self.poweruptimer = (RANDOM_INT(80) + 60) as i16;
 
-                        if game().objectcontainer[1].count_types(object_frenzycard) < game().players.len() {
-                            game().objectcontainer[1].add(Ptr::new_box(MO_FrenzyCard::new(Ptr::from_mut(&mut game().rm.spr_frenzycards), 0)));
+                        if g.objectcontainer[1].count_types(object_frenzycard) < g.players.len() {
+                            g.objectcontainer[1].add(Ptr::new_box(MO_FrenzyCard::new(Ptr::from_mut(&mut g.rm.spr_frenzycards), 0)));
                         }
                     }
                 }
@@ -166,36 +166,36 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
         }
     }
 
-    fn draw_foreground(&mut self) {
+    fn draw_foreground(&mut self, g: &mut Game) {
         if self.gameover {
             if self.winningteam == -1 {
                 unsafe {
-                    game().rm.game_font_large.draw_centered(App::screenWidth / 2, 96, "You Failed To Defeat");
+                    g.rm.game_font_large.draw_centered(App::screenWidth / 2, 96, "You Failed To Defeat");
 
                     match self.iBossType {
-                        Boss::Hammer => game().rm.game_font_large.draw_centered(App::screenWidth / 2, 118, "The Mighty Sledge Brother"),
-                        Boss::Bomb => game().rm.game_font_large.draw_centered(App::screenWidth / 2, 118, "The Mighty Bomb Brother"),
-                        Boss::Fire => game().rm.game_font_large.draw_centered(App::screenWidth / 2, 118, "The Mighty Flame Brother"),
+                        Boss::Hammer => g.rm.game_font_large.draw_centered(App::screenWidth / 2, 118, "The Mighty Sledge Brother"),
+                        Boss::Bomb => g.rm.game_font_large.draw_centered(App::screenWidth / 2, 118, "The Mighty Bomb Brother"),
+                        Boss::Fire => g.rm.game_font_large.draw_centered(App::screenWidth / 2, 118, "The Mighty Flame Brother"),
                     }
                 }
             }
         }
     }
 
-    fn playerkilledplayer(&mut self, _inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, _inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
         if !self.gameover {
-            other.score().adjust_score(game().get(), -1);
+            other.score().adjust_score(g, -1);
 
             if !self.playedwarningsound {
                 let mut countscore: i16 = 0;
                 unsafe {
                     for k in 0..game().score_cnt as usize {
-                        countscore = countscore.wrapping_add(game().score[k].score);
+                        countscore = countscore.wrapping_add(g.score[k].score);
                     }
                 }
 
                 if countscore <= 2 {
-                    self.playwarningsound(game().get());
+                    self.playwarningsound(g);
                 }
             }
 
@@ -208,22 +208,22 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
         PlayerKillType::Normal
     }
 
-    fn playerkilledself(&mut self, mut player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
         gm::cgamemode_playerkilledself(self, player, style);
 
         if !self.gameover {
-            player.score().adjust_score(game().get(), -1);
+            player.score().adjust_score(g, -1);
 
             if !self.playedwarningsound {
                 let mut countscore: i16 = 0;
                 unsafe {
                     for k in 0..game().score_cnt as usize {
-                        countscore = countscore.wrapping_add(game().score[k].score);
+                        countscore = countscore.wrapping_add(g.score[k].score);
                     }
                 }
 
                 if countscore <= 2 {
-                    self.playwarningsound(game().get());
+                    self.playwarningsound(g);
                 }
             }
 
@@ -236,9 +236,9 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
         PlayerKillType::Normal
     }
 
-    fn playerextraguy(&mut self, mut player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iType: i16) {
         if !self.gameover {
-            player.score().adjust_score(game().get(), iType);
+            player.score().adjust_score(g, iType);
         }
     }
 

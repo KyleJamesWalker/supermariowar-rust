@@ -182,27 +182,27 @@ impl CGM_Star {
 impl CGameModeTrait for CGM_Star {
     crate::impl_cgamemode_plumbing!();
 
-    fn init(&mut self) {
-        cgm_star_init(game().get(), self)
+    fn init(&mut self, g: &mut Game) {
+        cgm_star_init(g, self)
     }
-    fn think(&mut self) {
-        cgm_star_think(game().get(), self)
+    fn think(&mut self, g: &mut Game) {
+        cgm_star_think(g, self)
     }
-    fn draw_foreground(&mut self) {
+    fn draw_foreground(&mut self, g: &mut Game) {
         if self.fDisplayTimer {
-            self.gameClock.draw(game().get());
+            self.gameClock.draw(g);
         }
     }
-    fn playerkilledplayer(&mut self, _inflictor: Ptr<CPlayer>, _other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, _inflictor: Ptr<CPlayer>, _other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
         PlayerKillType::Normal
     }
-    fn playerkilledself(&mut self, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
         cgamemode_playerkilledself(self, player, style)
     }
-    fn playerextraguy(&mut self, mut player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iType: i16) {
         if !self.gameover {
             if iType == 5 {
-                player.score().adjust_score(game().get(), if self.fReverseScoring { -1 } else { 1 });
+                player.score().adjust_score(g, if self.fReverseScoring { -1 } else { 1 });
             } else {
                 self.gameClock.add_time((iType as i32 * 10) as i16);
             }

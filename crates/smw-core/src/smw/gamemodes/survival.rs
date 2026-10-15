@@ -101,17 +101,17 @@ pub fn net_spawn_enemy(g: &mut Game) {
 impl CGameModeTrait for CGM_Survival {
     crate::impl_cgamemode_plumbing!();
 
-    fn init(&mut self) {
-        cgm_classic_init(game().get(), &mut self.cgm_classic);
+    fn init(&mut self, g: &mut Game) {
+        cgm_classic_init(g, &mut self.cgm_classic);
 
         unsafe {
-            self.rate = (3 * game().game_values.gamemodesettings.survival.density as i32) as i16;
+            self.rate = (3 * g.game_values.gamemodesettings.survival.density as i32) as i16;
             self.timer = (RANDOM_INT(21) - 10 + self.rate as i32) as i16;
             self.ratetimer = 0;
 
             self.iEnemyWeightCount = 0;
             for iEnemy in 0..NUMSURVIVALENEMIES as usize {
-                self.iEnemyWeightCount += game().game_values.gamemodesettings.survival.enemyweight[iEnemy];
+                self.iEnemyWeightCount += g.game_values.gamemodesettings.survival.enemyweight[iEnemy];
             }
 
             if self.iEnemyWeightCount == 0 {
@@ -120,27 +120,27 @@ impl CGameModeTrait for CGM_Survival {
         }
     }
 
-    fn think(&mut self) {
+    fn think(&mut self, g: &mut Game) {
         if self.gameover {
-            self.displayplayertext(game().get());
+            self.displayplayertext(g);
             return;
         }
 
         unsafe {
             self.timer -= 1;
-            if self.timer <= 0 && !net_random::event(game().get(), Ev::SurvivalEnemy, &[]) {
-                self.spawn_enemy(game().get());
+            if self.timer <= 0 && !net_random::event(g, Ev::SurvivalEnemy, &[]) {
+                self.spawn_enemy(g);
             }
         }
     }
 
-    fn playerkilledplayer(&mut self, inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
-        cgm_classic_playerkilledplayer(game().get(), &mut self.cgm_classic, inflictor, other, style)
+    fn playerkilledplayer(&mut self, g: &mut Game, inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+        cgm_classic_playerkilledplayer(g, &mut self.cgm_classic, inflictor, other, style)
     }
-    fn playerkilledself(&mut self, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
-        cgm_classic_playerkilledself(game().get(), &mut self.cgm_classic, player, style)
+    fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+        cgm_classic_playerkilledself(g, &mut self.cgm_classic, player, style)
     }
-    fn playerextraguy(&mut self, player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, player: Ptr<CPlayer>, iType: i16) {
         cgm_classic_playerextraguy(&mut self.cgm_classic, player, iType)
     }
 }

@@ -153,7 +153,7 @@ impl CObjectTrait for OMO_PipeCoin {
                     if_sound_on_play(g, &mut game().rm.sfx_extraguysound);
                 }
 
-                g.game_values.gamemode.check_winner(player);
+                game().game_values.gamemode.check_winner(g, player);
             }
 
             g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_coinsparkle), self.ix, self.iy, 7, 4));

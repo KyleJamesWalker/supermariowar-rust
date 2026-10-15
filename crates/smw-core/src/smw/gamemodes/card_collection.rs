@@ -105,82 +105,82 @@ impl CGameModeTrait for CGM_Collection {
         self
     }
 
-    fn init(&mut self) {
-        gm::cgamemode_init(game().get(), self);
+    fn init(&mut self, g: &mut Game) {
+        gm::cgamemode_init(g, self);
         self.timer = 0;
 
         //Zero out the number of cards teams have
         unsafe {
             for iScore in 0..game().score_cnt as usize {
-                game().score[iScore].subscore[0] = 0;
-                game().score[iScore].subscore[1] = 0;
+                g.score[iScore].subscore[0] = 0;
+                g.score[iScore].subscore[1] = 0;
             }
         }
     }
 
-    fn think(&mut self) {
+    fn think(&mut self, g: &mut Game) {
         unsafe {
             self.timer += 1;
-            if self.timer >= game().game_values.gamemodesettings.collection.rate {
+            if self.timer >= g.game_values.gamemodesettings.collection.rate {
                 self.timer = 0;
 
-                let mut iPowerupQuantity: i16 = game().game_values.gamemodemenusettings.collection.quantity;
+                let mut iPowerupQuantity: i16 = g.game_values.gamemodemenusettings.collection.quantity;
 
                 if 5 < iPowerupQuantity {
-                    iPowerupQuantity = game().players.len().wrapping_add(iPowerupQuantity as usize).wrapping_sub(7) as i16;
+                    iPowerupQuantity = g.players.len().wrapping_add(iPowerupQuantity as usize).wrapping_sub(7) as i16;
                 }
 
-                if game().objectcontainer[1].count_moving_types(movingobject_collectioncard) < iPowerupQuantity as usize && !net_random::event(game().get(), Ev::CollectionCard, &[]) {
-                    spawn_card(game().get());
+                if g.objectcontainer[1].count_moving_types(movingobject_collectioncard) < iPowerupQuantity as usize && !net_random::event(g, Ev::CollectionCard, &[]) {
+                    spawn_card(g);
                 }
             }
 
             if self.gameover {
-                self.displayplayertext(game().get());
+                self.displayplayertext(g);
                 return;
             }
 
             //Check if this team has collected 3 cards
             for iScore in 0..game().score_cnt as usize {
-                if game().score[iScore].subscore[0] >= 3 {
-                    game().score[iScore].subscore[2] += 1;
-                    if game().score[iScore].subscore[2] >= game().game_values.gamemodemenusettings.collection.banktime {
+                if g.score[iScore].subscore[0] >= 3 {
+                    g.score[iScore].subscore[2] += 1;
+                    if g.score[iScore].subscore[2] >= g.game_values.gamemodemenusettings.collection.banktime {
                         let mut iPoints: i16 = 1;
 
-                        if (game().score[iScore].subscore[1] & 63) == 0 {
+                        if (g.score[iScore].subscore[1] & 63) == 0 {
                             //All Mushrooms
                             iPoints = 2;
-                        } else if (game().score[iScore].subscore[1] & 63) == 21 {
+                        } else if (g.score[iScore].subscore[1] & 63) == 21 {
                             //All Flowers
                             iPoints = 3;
-                        } else if (game().score[iScore].subscore[1] & 63) == 42 {
+                        } else if (g.score[iScore].subscore[1] & 63) == 42 {
                             //All Stars
                             iPoints = 5;
                         }
 
-                        game().score[iScore].adjust_score(game().get(), iPoints);
+                        game().score[iScore].adjust_score(g, iPoints);
 
-                        game().score[iScore].subscore[0] = 0;
-                        game().score[iScore].subscore[1] = 0;
-                        game().score[iScore].subscore[2] = 0;
+                        g.score[iScore].subscore[0] = 0;
+                        g.score[iScore].subscore[1] = 0;
+                        g.score[iScore].subscore[2] = 0;
                     }
                 }
             }
 
             for &player in game().players.iter() {
-                self.check_winner(player);
+                self.check_winner(g, player);
             }
         }
     }
 
-    fn playerkilledplayer(&mut self, _player: Ptr<CPlayer>, other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, _player: Ptr<CPlayer>, other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
         //Causes a card to come out of the player
         self.release_card(other);
 
         PlayerKillType::Normal
     }
 
-    fn playerkilledself(&mut self, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
         gm::cgamemode_playerkilledself(self, player, style);
 
         //Causes a card to come out of the player
@@ -189,14 +189,14 @@ impl CGameModeTrait for CGM_Collection {
         PlayerKillType::Normal
     }
 
-    fn playerextraguy(&mut self, mut player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iType: i16) {
         if !self.gameover {
-            player.score().adjust_score(game().get(), iType);
-            self.check_winner(player);
+            player.score().adjust_score(g, iType);
+            self.check_winner(g, player);
         }
     }
 
-    fn check_winner(&mut self, mut player: Ptr<CPlayer>) -> PlayerKillType {
+    fn check_winner(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> PlayerKillType {
         if self.goal > -1 {
             if player.score().score >= self.goal {
                 player.score().set_score(self.goal);
@@ -209,13 +209,13 @@ impl CGameModeTrait for CGM_Collection {
 
                 unsafe {
                     for iScore in 0..game().score_cnt as usize {
-                        game().score[iScore].subscore[0] = 0;
-                        game().score[iScore].subscore[1] = 0;
-                        game().score[iScore].subscore[2] = 0;
+                        g.score[iScore].subscore[0] = 0;
+                        g.score[iScore].subscore[1] = 0;
+                        g.score[iScore].subscore[2] = 0;
                     }
                 }
             } else if player.score().score as f64 >= self.goal as f64 * 0.8 && !self.playedwarningsound {
-                self.playwarningsound(game().get());
+                self.playwarningsound(g);
             }
         }
 

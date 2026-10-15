@@ -644,7 +644,7 @@ impl CGameValues {
         self.screenfadespeed = -8;
 
         //Initialize game mode
-        self.gamemode.get().init();
+        self.gamemode.get().init(game().get());
     }
 
     pub fn reset_secret_counters(&mut self) {

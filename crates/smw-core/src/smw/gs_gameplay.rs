@@ -1524,7 +1524,7 @@ impl GameplayState {
             g.eyecandy[0].draw();
             g.noncolcontainer.draw();
 
-            g.game_values.gamemode.draw_background();
+            game().game_values.gamemode.draw_background(g);
 
             g.objectcontainer[0].draw();
         }
@@ -1561,7 +1561,7 @@ impl GameplayState {
 
             g.objectcontainer[2].draw();
             g.eyecandy[2].draw();
-            g.game_values.gamemode.draw_foreground();
+            game().game_values.gamemode.draw_foreground(g);
 
             g.g_map.draw_platforms(4);
         }
@@ -2654,7 +2654,7 @@ impl GameplayState {
             g.eyecandy[1].update();
             g.eyecandy[2].update();
 
-            g.game_values.gamemode.think();
+            game().game_values.gamemode.think(g);
 
             if g.game_values.flags.slowdownon != -1 {
                 g.game_values.flags.slowdowncounter += 1;

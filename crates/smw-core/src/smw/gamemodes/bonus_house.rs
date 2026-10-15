@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/BonusHouse.cpp
 
+use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_mode::{game_mode_bonus, CGameMode, CGameModeTrait};
 use crate::common::global_constants::MAX_BONUS_CHESTS;
@@ -44,18 +45,18 @@ impl CGameModeTrait for CGM_Bonus {
         self
     }
 
-    fn init(&mut self) {
-        gm::cgamemode_init(game().get(), self);
+    fn init(&mut self, g: &mut Game) {
+        gm::cgamemode_init(g, self);
 
         unsafe {
             //Unlock the chests
-            game().game_values.flags.noexit = true;
+            g.game_values.flags.noexit = true;
 
             //Will cause the flow to skip the scoreboard screen and go straight back to the world map
-            game().game_values.worldskipscoreboard = true;
+            g.game_values.worldskipscoreboard = true;
 
             //Add number of treasure chests to the bonus house
-            self.tsTourStop = game().game_values.tourstops[game().game_values.tourstopcurrent];
+            self.tsTourStop = g.game_values.tourstops[g.game_values.tourstopcurrent];
             let iNumBonuses: i16 = self.tsTourStop.iNumBonuses;
 
             let mut fChestUsed: [bool; MAX_BONUS_CHESTS as usize] = [false; MAX_BONUS_CHESTS as usize];
@@ -95,44 +96,44 @@ impl CGameModeTrait for CGM_Bonus {
             //float dx = 288.0f - (dSpacing * (float)(iNumBonuses - 1) / 2.0f);
             for iChest in 0..iNumBonuses {
                 let iBonus = self.tsTourStop.wsbBonuses[iChestOrder[iChest as usize] as usize].iBonus;
-                game().objectcontainer[0].add(Ptr::new_box(MO_BonusHouseChest::new(Ptr::from_mut(&mut game().rm.spr_worldbonushouse), Vec2s::new(dx as i16, 384), iBonus)));
+                g.objectcontainer[0].add(Ptr::new_box(MO_BonusHouseChest::new(Ptr::from_mut(&mut g.rm.spr_worldbonushouse), Vec2s::new(dx as i16, 384), iBonus)));
                 dx += dSpacing + 64.0f32;
             }
         }
     }
 
-    fn draw_background(&mut self) {
+    fn draw_background(&mut self, g: &mut Game) {
         unsafe {
             //Draw Toad
-            game().rm.spr_worldbonushouse.draw_src(game().get(), 544, 256, &SDL_Rect { x: if game().players[0].left_x() > 544 { 224 } else { 192 }, y: 0, w: 32, h: 64 });
+            game().rm.spr_worldbonushouse.draw_src(g, 544, 256, &SDL_Rect { x: if game().players[0].left_x() > 544 { 224 } else { 192 }, y: 0, w: 32, h: 64 });
 
             //Draw Bonus House Title
-            game().rm.menu_plain_field.draw_src(game().get(), 0, 0, &SDL_Rect { x: 0, y: 0, w: App::screenWidth / 2, h: 32 });
-            game().rm.menu_plain_field.draw_src(game().get(), App::screenWidth / 2, 0, &SDL_Rect { x: 192, y: 0, w: App::screenWidth / 2, h: 32 });
-            game().rm.game_font_large.draw_centered(App::screenWidth / 2, 5, &self.tsTourStop.szName);
+            game().rm.menu_plain_field.draw_src(g, 0, 0, &SDL_Rect { x: 0, y: 0, w: App::screenWidth / 2, h: 32 });
+            game().rm.menu_plain_field.draw_src(g, App::screenWidth / 2, 0, &SDL_Rect { x: 192, y: 0, w: App::screenWidth / 2, h: 32 });
+            g.rm.game_font_large.draw_centered(App::screenWidth / 2, 5, &self.tsTourStop.szName);
 
             //Draw Bonus House Text
             if self.tsTourStop.iBonusTextLines > 0 {
-                game().rm.spr_worldbonushouse.draw_src(game().get(), 128, 128, &SDL_Rect { x: 0, y: 64, w: 384, h: 128 });
+                game().rm.spr_worldbonushouse.draw_src(g, 128, 128, &SDL_Rect { x: 0, y: 64, w: 384, h: 128 });
 
                 for iTextLine in 0..self.tsTourStop.iBonusTextLines {
-                    game().rm.game_font_large.draw_chop_centered(App::screenWidth / 2, 132 + 24 * iTextLine as i32, 372, &self.tsTourStop.szBonusText[iTextLine as usize]);
+                    g.rm.game_font_large.draw_chop_centered(App::screenWidth / 2, 132 + 24 * iTextLine as i32, 372, &self.tsTourStop.szBonusText[iTextLine as usize]);
                 }
             }
         }
     }
 
     //Override so it doesn't display winner text after you choose a powerup
-    fn think(&mut self) {}
+    fn think(&mut self, g: &mut Game) {}
 
-    fn playerkilledplayer(&mut self, _inflictor: Ptr<CPlayer>, _other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, _inflictor: Ptr<CPlayer>, _other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
         PlayerKillType::None
     }
-    fn playerkilledself(&mut self, _player: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, _player: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
         PlayerKillType::None
     }
 
-    fn playerextraguy(&mut self, _player: Ptr<CPlayer>, _iType: i16) {}
+    fn playerextraguy(&mut self, g: &mut Game, _player: Ptr<CPlayer>, _iType: i16) {}
 
     fn has_stored_powerups(&mut self) -> bool {
         false

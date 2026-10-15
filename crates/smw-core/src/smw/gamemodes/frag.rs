@@ -32,16 +32,16 @@ impl CGM_Frag {
 impl CGameModeTrait for CGM_Frag {
     crate::impl_cgamemode_plumbing!();
 
-    fn playerkilledplayer(&mut self, inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
-        cgm_frag_playerkilledplayer(game().get(), self, inflictor, other, style)
+    fn playerkilledplayer(&mut self, g: &mut Game, inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+        cgm_frag_playerkilledplayer(g, self, inflictor, other, style)
     }
-    fn playerkilledself(&mut self, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
-        cgm_frag_playerkilledself(game().get(), self, player, style)
+    fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+        cgm_frag_playerkilledself(g, self, player, style)
     }
-    fn playerextraguy(&mut self, player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, player: Ptr<CPlayer>, iType: i16) {
         cgm_frag_playerextraguy(self, player, iType)
     }
-    fn check_winner(&mut self, player: Ptr<CPlayer>) -> PlayerKillType {
+    fn check_winner(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> PlayerKillType {
         cgm_frag_check_winner(self, player)
     }
 }
@@ -62,7 +62,7 @@ pub fn cgm_frag_playerkilledplayer<T: CGameModeTrait + ?Sized>(g: &mut Game, thi
             }
         }
 
-        let iRet = this.check_winner(inflictor);
+        let iRet = this.check_winner(g, inflictor);
 
         if g.game_values.gamemode.gamemode == game_mode_frag && g.game_values.gamemodesettings.frag.style == DeathStyle::Shield {
             if_sound_on_play(g, &mut game().rm.sfx_powerdown);
@@ -95,7 +95,7 @@ pub fn cgm_frag_playerkilledself<T: CGameModeTrait + ?Sized>(g: &mut Game, this:
 pub fn cgm_frag_playerextraguy<T: CGameModeTrait + ?Sized>(this: &mut T, mut player: Ptr<CPlayer>, iType: i16) {
     if !this.gm().gameover {
         player.score().adjust_score(game().get(), iType);
-        this.check_winner(player);
+        this.check_winner(game().get(), player);
     }
 }
 

@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/CaptureTheFlag.cpp
 
+use crate::game::Game;
 use crate::common::game_mode::*;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::moving_object_types::movingobject_flag;
@@ -34,64 +35,64 @@ impl CGM_CaptureTheFlag {
 impl CGameModeTrait for CGM_CaptureTheFlag {
     crate::impl_cgamemode_plumbing!();
 
-    fn init(&mut self) {
-        cgamemode_init(game().get(), self);
+    fn init(&mut self, g: &mut Game) {
+        cgamemode_init(g, self);
 
         let mut fTeamUsed: [bool; 4] = [false, false, false, false];
 
         unsafe {
             for i in 0..game().players.len() {
-                let player = game().players[i];
+                let player = g.players[i];
                 let iTeamID: i16 = player.get_team_id();
                 if !fTeamUsed[iTeamID as usize] {
                     fTeamUsed[iTeamID as usize] = true;
 
                     let iColorID: i16 = player.get_color_id();
-                    let base: Ptr<MO_FlagBase> = Ptr::new_box(MO_FlagBase::new(game().get(), Ptr::from_mut(&mut game().rm.spr_flagbases), iTeamID, iColorID));
-                    game().objectcontainer[0].add(base);
+                    let base: Ptr<MO_FlagBase> = Ptr::new_box(MO_FlagBase::new(g, Ptr::from_mut(&mut game().rm.spr_flagbases), iTeamID, iColorID));
+                    g.objectcontainer[0].add(base);
 
-                    if !game().game_values.gamemodesettings.flag.centerflag {
-                        let flag: Ptr<CO_Flag> = CO_Flag::new(Ptr::from_mut(&mut game().rm.spr_flags), base, iTeamID, iColorID);
-                        game().objectcontainer[1].add(flag);
+                    if !g.game_values.gamemodesettings.flag.centerflag {
+                        let flag: Ptr<CO_Flag> = CO_Flag::new(Ptr::from_mut(&mut g.rm.spr_flags), base, iTeamID, iColorID);
+                        g.objectcontainer[1].add(flag);
                     }
                 }
             }
 
-            if game().game_values.gamemodesettings.flag.centerflag {
-                let centerflag: Ptr<CO_Flag> = CO_Flag::new(Ptr::from_mut(&mut game().rm.spr_flags), Ptr::null(), -1, -1);
-                game().objectcontainer[1].add(centerflag);
+            if g.game_values.gamemodesettings.flag.centerflag {
+                let centerflag: Ptr<CO_Flag> = CO_Flag::new(Ptr::from_mut(&mut g.rm.spr_flags), Ptr::null(), -1, -1);
+                g.objectcontainer[1].add(centerflag);
             }
         }
     }
 
-    fn playerkilledplayer(&mut self, _inflictor: Ptr<CPlayer>, _other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, _inflictor: Ptr<CPlayer>, _other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
         PlayerKillType::Normal
     }
 
-    fn playerkilledself(&mut self, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
         cgamemode_playerkilledself(self, player, style);
 
         let mut item = player.carriedItem;
         if !item.is_null() && item.get_moving_object_type() == movingobject_flag {
-            item.as_any().downcast_mut::<CO_Flag>().expect("carried flag").place_flag(game().get());
+            item.as_any().downcast_mut::<CO_Flag>().expect("carried flag").place_flag(g);
             unsafe {
-                if_sound_on_play(game().get(), &mut game().rm.sfx_transform);
+                if_sound_on_play(g, &mut game().rm.sfx_transform);
             }
         }
 
         PlayerKillType::Normal
     }
 
-    fn playerextraguy(&mut self, mut player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iType: i16) {
         if self.gameover {
             return;
         }
 
-        player.score().adjust_score(game().get(), iType);
-        self.check_winner(player);
+        player.score().adjust_score(g, iType);
+        self.check_winner(g, player);
     }
 
-    fn check_winner(&mut self, mut player: Ptr<CPlayer>) -> PlayerKillType {
+    fn check_winner(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> PlayerKillType {
         if self.goal > -1 {
             if player.score().score >= self.goal {
                 player.score().set_score(self.goal);
@@ -102,7 +103,7 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
                 setup_score_board(false);
                 show_score_board();
             } else if player.score().score as i32 >= self.goal as i32 - 2 && !self.playedwarningsound {
-                self.playwarningsound(game().get());
+                self.playwarningsound(g);
             }
         }
 

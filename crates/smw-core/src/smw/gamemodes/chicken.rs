@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/Chicken.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::{EC_GravText, EC_SingleAnimation};
 use crate::common::game_mode::*;
 use crate::common::game_values::if_sound_on_play;
@@ -59,14 +60,14 @@ impl CGameModeTrait for CGM_Chicken {
     crate::impl_cgamemode_plumbing!();
 
     //called once when the game is started
-    fn init(&mut self) {
-        cgamemode_init(game().get(), self);
+    fn init(&mut self, g: &mut Game) {
+        cgamemode_init(g, self);
         self.clear_chicken();
     }
 
-    fn think(&mut self) {
+    fn think(&mut self, g: &mut Game) {
         if self.gameover {
-            self.displayplayertext(game().get());
+            self.displayplayertext(g);
             return;
         }
 
@@ -81,23 +82,23 @@ impl CGameModeTrait for CGM_Chicken {
             if chicken.isready() && !chicken.is_tanooki_statue() {
                 unsafe {
                     self.counter += 1;
-                    if self.counter >= game().game_values.pointspeed {
+                    if self.counter >= g.game_values.pointspeed {
                         self.counter = 0;
-                        chicken.score().adjust_score(game().get(), 1);
-                        self.check_winner(chicken);
+                        chicken.score().adjust_score(g, 1);
+                        self.check_winner(g, chicken);
                     }
                 }
             }
         }
     }
 
-    fn draw_foreground(&mut self) {
+    fn draw_foreground(&mut self, g: &mut Game) {
         unsafe {
             //Draw the chicken indicator around the chicken
-            if game().game_values.gamemodesettings.chicken.usetarget && !self.gameover && !self.m_chicken.is_null() {
+            if g.game_values.gamemodesettings.chicken.usetarget && !self.gameover && !self.m_chicken.is_null() {
                 let chicken = self.m_chicken;
                 if chicken.iswarping() {
-                    game().rm.spr_chicken.draw_clip(game().get(), 
+                    game().rm.spr_chicken.draw_clip(g, 
                         chicken.left_x() as i32 - PWOFFSET - 16,
                         chicken.top_y() as i32 - PHOFFSET - 16,
                         &SDL_Rect { x: 0, y: 0, w: 64, h: 64 },
@@ -105,40 +106,40 @@ impl CGameModeTrait for CGM_Chicken {
                         chicken.get_warp_plane() as i32,
                     );
                 } else if chicken.isready() {
-                    game().rm.spr_chicken.draw(game().get(), chicken.center_x() as i32 - 32, chicken.center_y() as i32 - 32);
+                    game().rm.spr_chicken.draw(g, chicken.center_x() as i32 - 32, chicken.center_y() as i32 - 32);
                 }
             }
         }
     }
 
-    fn playerkilledplayer(&mut self, mut inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, mut inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
         unsafe {
             if self.m_chicken.is_null() || other == self.m_chicken {
                 self.m_chicken = inflictor;
-                game().eyecandy[2].emplace(EC_GravText::new(
-                    Ptr::from_mut(&mut game().rm.game_font_large),
+                g.eyecandy[2].emplace(EC_GravText::new(
+                    Ptr::from_mut(&mut g.rm.game_font_large),
                     inflictor.center_x(),
                     inflictor.bottom_y(),
                     "Chicken!".to_string(),
                     (-(VELJUMP as f64) * 1.5) as f32,
                 ));
                 //eyecandy[2].emplace<EC_SingleAnimation>(&rm->spr_fireballexplosion, inflictor.centerX() - 16, inflictor.centerY() - 16, 3, 8));
-                game().eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut game().rm.spr_poof),
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                    Ptr::from_mut(&mut g.rm.spr_poof),
                     (inflictor.center_x() as i32 - 24) as i16,
                     (inflictor.center_y() as i32 - 24) as i16,
                     4,
                     5,
                 ));
-                if_sound_on_play(game().get(), &mut game().rm.sfx_transform);
+                if_sound_on_play(g, &mut game().rm.sfx_transform);
 
                 if other == self.m_chicken {
                     other.set_corpse_type(1); //flag to use chicken corpse sprite
                 }
             } else if inflictor == self.m_chicken {
                 if !self.gameover {
-                    inflictor.score().adjust_score(game().get(), 5);
-                    return self.check_winner(inflictor);
+                    inflictor.score().adjust_score(g, 5);
+                    return self.check_winner(g, inflictor);
                 }
             }
         }
@@ -146,7 +147,7 @@ impl CGameModeTrait for CGM_Chicken {
         PlayerKillType::Normal
     }
 
-    fn playerkilledself(&mut self, mut player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
         cgamemode_playerkilledself(self, player, style);
 
         if self.m_chicken == player {
@@ -160,14 +161,14 @@ impl CGameModeTrait for CGM_Chicken {
         PlayerKillType::Normal
     }
 
-    fn playerextraguy(&mut self, mut player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iType: i16) {
         if !self.gameover {
-            player.score().adjust_score(game().get(), (10 * iType as i32) as i16);
-            self.check_winner(player);
+            player.score().adjust_score(g, (10 * iType as i32) as i16);
+            self.check_winner(g, player);
         }
     }
 
-    fn check_winner(&mut self, mut player: Ptr<CPlayer>) -> PlayerKillType {
+    fn check_winner(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> PlayerKillType {
         if self.goal == -1 {
             return PlayerKillType::Normal;
         }
@@ -182,7 +183,7 @@ impl CGameModeTrait for CGM_Chicken {
             remove_players_but_team(self.winningteam);
             return PlayerKillType::Removed;
         } else if player.score().score as f64 >= self.goal as f64 * 0.8 && !self.playedwarningsound {
-            self.playwarningsound(game().get());
+            self.playwarningsound(g);
         }
 
         PlayerKillType::Normal

@@ -33,16 +33,16 @@ impl CGM_Classic {
 impl CGameModeTrait for CGM_Classic {
     crate::impl_cgamemode_plumbing!();
 
-    fn init(&mut self) {
-        cgm_classic_init(game().get(), self)
+    fn init(&mut self, g: &mut Game) {
+        cgm_classic_init(g, self)
     }
-    fn playerkilledplayer(&mut self, inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
-        cgm_classic_playerkilledplayer(game().get(), self, inflictor, other, style)
+    fn playerkilledplayer(&mut self, g: &mut Game, inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+        cgm_classic_playerkilledplayer(g, self, inflictor, other, style)
     }
-    fn playerkilledself(&mut self, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
-        cgm_classic_playerkilledself(game().get(), self, player, style)
+    fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+        cgm_classic_playerkilledself(g, self, player, style)
     }
-    fn playerextraguy(&mut self, player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, player: Ptr<CPlayer>, iType: i16) {
         cgm_classic_playerextraguy(self, player, iType)
     }
 }

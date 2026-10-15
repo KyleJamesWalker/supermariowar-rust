@@ -45,22 +45,22 @@ impl CGM_Frenzy {
 impl CGameModeTrait for CGM_Frenzy {
     crate::impl_cgamemode_plumbing!();
 
-    fn init(&mut self) {
-        cgm_frenzy_init(game().get(), self)
+    fn init(&mut self, g: &mut Game) {
+        cgm_frenzy_init(g, self)
     }
-    fn think(&mut self) {
-        cgm_frenzy_think(game().get(), self)
+    fn think(&mut self, g: &mut Game) {
+        cgm_frenzy_think(g, self)
     }
-    fn playerkilledplayer(&mut self, inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
-        cgm_frag_playerkilledplayer(game().get(), self, inflictor, other, style)
+    fn playerkilledplayer(&mut self, g: &mut Game, inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+        cgm_frag_playerkilledplayer(g, self, inflictor, other, style)
     }
-    fn playerkilledself(&mut self, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
-        cgm_frag_playerkilledself(game().get(), self, player, style)
+    fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+        cgm_frag_playerkilledself(g, self, player, style)
     }
-    fn playerextraguy(&mut self, player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, player: Ptr<CPlayer>, iType: i16) {
         cgm_frag_playerextraguy(self, player, iType)
     }
-    fn check_winner(&mut self, player: Ptr<CPlayer>) -> PlayerKillType {
+    fn check_winner(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> PlayerKillType {
         cgm_frag_check_winner(self, player)
     }
 }

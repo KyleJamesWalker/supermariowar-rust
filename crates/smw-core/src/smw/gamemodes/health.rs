@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/Health.cpp
 
+use crate::game::Game;
 use crate::common::game_mode::*;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::player_kill_styles::KillStyle;
@@ -30,19 +31,19 @@ impl CGM_Health {
 impl CGameModeTrait for CGM_Health {
     crate::impl_cgamemode_plumbing!();
 
-    fn init(&mut self) {
-        cgm_classic_init(game().get(), &mut self.cgm_classic);
+    fn init(&mut self, g: &mut Game) {
+        cgm_classic_init(g, &mut self.cgm_classic);
 
         unsafe {
             for iScore in 0..game().score_cnt {
-                let mut s = game().score[iScore as usize];
-                s.subscore[0] = game().game_values.gamemodesettings.health.startlife;
+                let mut s = g.score[iScore as usize];
+                s.subscore[0] = g.game_values.gamemodesettings.health.startlife;
                 s.subscore[1] = s.subscore[0];
             }
         }
     }
 
-    fn playerkilledplayer(&mut self, inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
         if self.gameover {
             return PlayerKillType::Normal;
         }
@@ -55,7 +56,7 @@ impl CGameModeTrait for CGM_Health {
 
         if other.score().subscore[0] <= 0 {
             other.score().subscore[0] = 0;
-            let iRet = cgm_classic_playerkilledplayer(game().get(), &mut self.cgm_classic, inflictor, other, style);
+            let iRet = cgm_classic_playerkilledplayer(g, &mut self.cgm_classic, inflictor, other, style);
 
             if iRet == PlayerKillType::Normal {
                 other.score().subscore[0] = other.score().subscore[1];
@@ -64,15 +65,15 @@ impl CGameModeTrait for CGM_Health {
             return iRet;
         } else {
             unsafe {
-                if_sound_on_play(game().get(), &mut game().rm.sfx_powerdown);
+                if_sound_on_play(g, &mut game().rm.sfx_powerdown);
             }
-            other.shield().reset(game().get());
+            other.shield().reset(g);
         }
 
         PlayerKillType::NonKill
     }
 
-    fn playerkilledself(&mut self, mut player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
         if self.gameover {
             return PlayerKillType::Normal;
         }
@@ -85,7 +86,7 @@ impl CGameModeTrait for CGM_Health {
 
         if player.score().subscore[0] <= 0 {
             player.score().subscore[0] = 0;
-            let iRet = cgm_classic_playerkilledself(game().get(), &mut self.cgm_classic, player, style);
+            let iRet = cgm_classic_playerkilledself(g, &mut self.cgm_classic, player, style);
 
             if iRet == PlayerKillType::Normal {
                 player.score().subscore[0] = player.score().subscore[1];
@@ -94,15 +95,15 @@ impl CGameModeTrait for CGM_Health {
             return iRet;
         } else {
             unsafe {
-                if_sound_on_play(game().get(), &mut game().rm.sfx_powerdown);
+                if_sound_on_play(g, &mut game().rm.sfx_powerdown);
             }
-            player.shield().reset(game().get());
+            player.shield().reset(g);
         }
 
         PlayerKillType::NonKill
     }
 
-    fn playerextraguy(&mut self, mut player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iType: i16) {
         if !self.gameover {
             player.score().subscore[0] += iType;
 

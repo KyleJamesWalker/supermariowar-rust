@@ -114,44 +114,44 @@ impl CGameModeTrait for CGM_ShyGuyTag {
         self
     }
 
-    fn init(&mut self) {
-        gm::cgamemode_init(game().get(), self);
+    fn init(&mut self, g: &mut Game) {
+        gm::cgamemode_init(g, self);
         self.fReverseScoring = self.goal == -1;
 
         self.fRunClock = false;
-        self.gameClock.init(game().get(), 0, true);
+        self.gameClock.init(g, 0, true);
 
         unsafe {
             for iScore in 0..game().score_cnt as usize {
-                game().score[iScore].set_score(0);
+                g.score[iScore].set_score(0);
             }
 
-            for &player in game().players.iter() {
+            for &player in g.players.iter() {
                 let mut player = player;
                 player.ownerColorOffsetX = (player.get_color_id() as i32 * 48) as i16;
             }
         }
     }
 
-    fn think(&mut self) {
+    fn think(&mut self, g: &mut Game) {
         if self.gameover {
-            self.displayplayertext(game().get());
+            self.displayplayertext(g);
             return;
         }
 
         unsafe {
             //See how many players are shy guys
-            let shyguycount: i16 = self.count_shy_guys(game().get());
+            let shyguycount: i16 = self.count_shy_guys(g);
 
             //If we are not waiting to clear, check if we need to start waiting
             if !self.fRunClock {
-                if shyguycount as usize == game().players.len() {
-                    if game().game_values.gamemodesettings.shyguytag.freetime > 0 {
+                if shyguycount as usize == g.players.len() {
+                    if g.game_values.gamemodesettings.shyguytag.freetime > 0 {
                         self.fRunClock = true;
-                        self.gameClock.set_time(game().game_values.gamemodesettings.shyguytag.freetime);
-                        if_sound_on_play(game().get(), &mut game().rm.sfx_starwarning);
+                        self.gameClock.set_time(g.game_values.gamemodesettings.shyguytag.freetime);
+                        if_sound_on_play(g, &mut game().rm.sfx_starwarning);
                     } else {
-                        self.free_shy_guys(game().get());
+                        self.free_shy_guys(g);
                     }
                 }
             } else {
@@ -160,16 +160,16 @@ impl CGameModeTrait for CGM_ShyGuyTag {
                 if iTime == 0 {
                     //Clear the shy guys
                     self.fRunClock = false;
-                    self.free_shy_guys(game().get());
+                    self.free_shy_guys(g);
                 } else if iTime > 0 {
-                    if_sound_on_play(game().get(), &mut game().rm.sfx_starwarning);
+                    if_sound_on_play(g, &mut game().rm.sfx_starwarning);
                 }
             }
 
             //Award points to non shyguys
             if shyguycount > 0 {
                 self.scorecounter += 1;
-                if self.scorecounter >= game().game_values.pointspeed {
+                if self.scorecounter >= g.game_values.pointspeed {
                     self.scorecounter = 0;
 
                     let mut pCheckWinner: Ptr<CPlayer> = Ptr::null();
@@ -180,7 +180,7 @@ impl CGameModeTrait for CGM_ShyGuyTag {
                             let iTeam: i16 = player.get_team_id();
                             if !fAlreadyScored[iTeam as usize] {
                                 fAlreadyScored[iTeam as usize] = true;
-                                player.score().adjust_score(game().get(), shyguycount);
+                                player.score().adjust_score(g, shyguycount);
 
                                 pCheckWinner = player;
                             }
@@ -188,7 +188,7 @@ impl CGameModeTrait for CGM_ShyGuyTag {
                     }
 
                     if !pCheckWinner.is_null() && !self.fReverseScoring {
-                        self.check_winner(pCheckWinner);
+                        self.check_winner(g, pCheckWinner);
                     }
                 }
             }
@@ -196,42 +196,42 @@ impl CGameModeTrait for CGM_ShyGuyTag {
     }
 
     //Draw count down timer here
-    fn draw_foreground(&mut self) {
+    fn draw_foreground(&mut self, g: &mut Game) {
         if self.fRunClock {
-            self.gameClock.draw(game().get());
+            self.gameClock.draw(g);
         }
     }
 
-    fn playerkilledplayer(&mut self, _inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, _inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
         if self.gameover || other.shyguy {
             return PlayerKillType::Normal;
         }
 
-        if self.count_shy_guys(game().get()) == 0 || unsafe { game().game_values.gamemodesettings.shyguytag.tagtransfer } != 0 {
-            self.set_shy_guy(game().get(), other.get_team_id());
+        if self.count_shy_guys(g) == 0 || unsafe { g.game_values.gamemodesettings.shyguytag.tagtransfer } != 0 {
+            self.set_shy_guy(g, other.get_team_id());
         }
 
         PlayerKillType::Normal
     }
 
-    fn playerkilledself(&mut self, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
         gm::cgamemode_playerkilledself(self, player, style);
 
-        if !self.gameover && unsafe { game().game_values.gamemodesettings.shyguytag.tagonsuicide } {
-            self.set_shy_guy(game().get(), player.get_team_id());
+        if !self.gameover && unsafe { g.game_values.gamemodesettings.shyguytag.tagonsuicide } {
+            self.set_shy_guy(g, player.get_team_id());
         }
 
         PlayerKillType::Normal
     }
 
-    fn playerextraguy(&mut self, mut player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iType: i16) {
         if !self.gameover {
-            player.score().adjust_score(game().get(), (10 * iType as i32) as i16);
-            self.check_winner(player);
+            player.score().adjust_score(g, (10 * iType as i32) as i16);
+            self.check_winner(g, player);
         }
     }
 
-    fn check_winner(&mut self, mut player: Ptr<CPlayer>) -> PlayerKillType {
+    fn check_winner(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> PlayerKillType {
         if self.gameover || self.goal == -1 {
             return PlayerKillType::Normal;
         }
@@ -244,9 +244,9 @@ impl CGameModeTrait for CGM_ShyGuyTag {
             remove_players_but_highest_scoring();
             self.gameover = true;
 
-            count_alive_teams(game().get(), Some(&mut self.cgame_mode.winningteam));
+            count_alive_teams(g, Some(&mut self.cgame_mode.winningteam));
         } else if !self.playedwarningsound && self.goal != -1 && player.score().score as f64 >= self.goal as f64 * 0.8 {
-            self.playwarningsound(game().get());
+            self.playwarningsound(g);
         }
 
         PlayerKillType::Normal

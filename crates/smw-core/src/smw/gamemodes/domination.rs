@@ -97,7 +97,7 @@ pub fn cgm_domination_playerkilledself<T: CGameModeTrait + ?Sized>(g: &mut Game,
 pub fn cgm_domination_playerextraguy<T: CGameModeTrait + ?Sized>(this: &mut T, mut player: Ptr<CPlayer>, iType: i16) {
     if !this.gm().gameover {
         player.score().adjust_score(game().get(), (10 * iType as i32) as i16);
-        this.check_winner(player);
+        this.check_winner(game().get(), player);
     }
 }
 
@@ -130,19 +130,19 @@ impl CGameModeTrait for CGM_Domination {
         self
     }
 
-    fn init(&mut self) {
-        cgm_domination_init(game().get(), self)
+    fn init(&mut self, g: &mut Game) {
+        cgm_domination_init(g, self)
     }
-    fn playerkilledplayer(&mut self, player: Ptr<CPlayer>, other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
-        cgm_domination_playerkilledplayer(game().get(), self, player, other, style)
+    fn playerkilledplayer(&mut self, g: &mut Game, player: Ptr<CPlayer>, other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+        cgm_domination_playerkilledplayer(g, self, player, other, style)
     }
-    fn playerkilledself(&mut self, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
-        cgm_domination_playerkilledself(game().get(), self, player, style)
+    fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+        cgm_domination_playerkilledself(g, self, player, style)
     }
-    fn playerextraguy(&mut self, player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, player: Ptr<CPlayer>, iType: i16) {
         cgm_domination_playerextraguy(self, player, iType)
     }
-    fn check_winner(&mut self, player: Ptr<CPlayer>) -> PlayerKillType {
+    fn check_winner(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> PlayerKillType {
         cgm_domination_check_winner(self, player)
     }
 }

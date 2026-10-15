@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/Coin.cpp
 
+use crate::game::Game;
 use crate::common::game_mode::*;
 use crate::common::math::vec2::{Vec2f, Vec2s};
 use crate::common::player_kill_styles::KillStyle;
@@ -32,56 +33,56 @@ impl CGM_Coins {
 impl CGameModeTrait for CGM_Coins {
     crate::impl_cgamemode_plumbing!();
 
-    fn init(&mut self) {
-        cgamemode_init(game().get(), self);
+    fn init(&mut self, g: &mut Game) {
+        cgamemode_init(g, self);
 
         unsafe {
-            if game().game_values.gamemodesettings.coins.quantity < 1 {
-                game().game_values.gamemodesettings.coins.quantity = 1;
+            if g.game_values.gamemodesettings.coins.quantity < 1 {
+                g.game_values.gamemodesettings.coins.quantity = 1;
             }
 
             for _iCoin in 0..game().game_values.gamemodesettings.coins.quantity {
-                game().objectcontainer[1].add(Ptr::new_box(MO_Coin::new(Ptr::from_mut(&mut game().rm.spr_coin), Vec2f::zero(), Vec2s::zero(), 2, 0, 0, 0, true)));
+                g.objectcontainer[1].add(Ptr::new_box(MO_Coin::new(Ptr::from_mut(&mut g.rm.spr_coin), Vec2f::zero(), Vec2s::zero(), 2, 0, 0, 0, true)));
             }
         }
     }
 
-    fn playerkilledplayer(&mut self, _player: Ptr<CPlayer>, mut other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, _player: Ptr<CPlayer>, mut other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
         if self.gameover {
             return PlayerKillType::Normal;
         }
 
         unsafe {
-            if game().game_values.gamemodesettings.coins.penalty {
-                other.score().adjust_score(game().get(), -1);
+            if g.game_values.gamemodesettings.coins.penalty {
+                other.score().adjust_score(g, -1);
             }
         }
 
         PlayerKillType::Normal
     }
 
-    fn playerkilledself(&mut self, mut player: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
         if self.gameover {
             return PlayerKillType::Normal;
         }
 
         unsafe {
-            if game().game_values.gamemodesettings.coins.penalty {
-                player.score().adjust_score(game().get(), -1);
+            if g.game_values.gamemodesettings.coins.penalty {
+                player.score().adjust_score(g, -1);
             }
         }
 
         PlayerKillType::Normal
     }
 
-    fn playerextraguy(&mut self, mut player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iType: i16) {
         if !self.gameover {
-            player.score().adjust_score(game().get(), ((iType as i32) << 1) as i16);
-            self.check_winner(player);
+            player.score().adjust_score(g, ((iType as i32) << 1) as i16);
+            self.check_winner(g, player);
         }
     }
 
-    fn check_winner(&mut self, mut player: Ptr<CPlayer>) -> PlayerKillType {
+    fn check_winner(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> PlayerKillType {
         if !self.gameover && self.goal > -1 {
             if player.score().score >= self.goal {
                 player.score().set_score(self.goal);
@@ -92,7 +93,7 @@ impl CGameModeTrait for CGM_Coins {
                 setup_score_board(false);
                 show_score_board();
             } else if player.score().score as i32 >= self.goal as i32 - 5 && !self.playedwarningsound {
-                self.playwarningsound(game().get());
+                self.playwarningsound(g);
             }
         }
 
