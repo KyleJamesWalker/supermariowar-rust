@@ -40,7 +40,7 @@ const QUIT_GRACE_FRAMES: u32 = 60;
 
 pub type Dumper = fn(out: &mut dyn Write);
 
-struct EditorHarness {
+pub struct EditorHarness {
     active: bool,
     noLimit: bool,
     maxFrames: i64,
@@ -58,22 +58,30 @@ struct EditorHarness {
     mouseY: i32,
 }
 
-static mut h: EditorHarness = EditorHarness {
-    active: false,
-    noLimit: false,
-    maxFrames: -1,
-    dump: None,
-    shotFrames: BTreeSet::new(),
-    shotDir: String::new(),
-    events: Vec::new(),
-    nextEvent: 0,
-    frame: 0,
-    dumper: None,
-    buttons: 0,
-    mod_: 0,
-    mouseX: 0,
-    mouseY: 0,
-};
+impl EditorHarness {
+    pub const fn new() -> Self {
+        EditorHarness {
+            active: false,
+            noLimit: false,
+            maxFrames: -1,
+            dump: None,
+            shotFrames: BTreeSet::new(),
+            shotDir: String::new(),
+            events: Vec::new(),
+            nextEvent: 0,
+            frame: 0,
+            dumper: None,
+            buttons: 0,
+            mod_: 0,
+            mouseX: 0,
+            mouseY: 0,
+        }
+    }
+}
+
+fn h() -> &'static mut EditorHarness {
+    &mut crate::game::game().get().editor_harness
+}
 
 static mut keys: [u8; sdl2::sys::SDL_Scancode::SDL_NUM_SCANCODES as usize] = [0; sdl2::sys::SDL_Scancode::SDL_NUM_SCANCODES as usize];
 
@@ -134,7 +142,7 @@ fn load_replay(path: &str) {
         eprintln!("[editorharness] cannot open replay {}", path);
         std::process::exit(2);
     });
-    let events = unsafe { &mut h.events };
+    let events = unsafe { &mut h().events };
     for (i, raw) in text.split('\n').enumerate() {
         let lineno = i + 1;
         let line = raw.strip_suffix('\r').unwrap_or(raw);
@@ -236,23 +244,23 @@ fn push_event(ev: &ScriptEvent) {
 
                 let m = modifier_for(key);
                 if ev.down {
-                    h.mod_ |= m;
+                    h().mod_ |= m;
                 } else {
-                    h.mod_ &= !m;
+                    h().mod_ &= !m;
                 }
 
                 event.key.type_ = if ev.down { SDL_EventType::SDL_KEYDOWN as u32 } else { SDL_EventType::SDL_KEYUP as u32 };
                 event.key.state = if ev.down { SDL_PRESSED as u8 } else { SDL_RELEASED as u8 };
                 event.key.keysym.sym = key;
                 event.key.keysym.scancode = SDL_GetScancodeFromKey(key);
-                event.key.keysym.mod_ = h.mod_;
+                event.key.keysym.mod_ = h().mod_;
                 keys[event.key.keysym.scancode as usize] = ev.down as u8;
             }
             EventKind::MouseButton => {
                 if ev.down {
-                    h.buttons |= sdl_button_mask(ev.button);
+                    h().buttons |= sdl_button_mask(ev.button);
                 } else {
-                    h.buttons &= !sdl_button_mask(ev.button);
+                    h().buttons &= !sdl_button_mask(ev.button);
                 }
 
                 event.button.type_ = if ev.down { SDL_EventType::SDL_MOUSEBUTTONDOWN as u32 } else { SDL_EventType::SDL_MOUSEBUTTONUP as u32 };
@@ -261,18 +269,18 @@ fn push_event(ev: &ScriptEvent) {
                 event.button.clicks = 1;
                 event.button.x = ev.x;
                 event.button.y = ev.y;
-                h.mouseX = ev.x;
-                h.mouseY = ev.y;
+                h().mouseX = ev.x;
+                h().mouseY = ev.y;
             }
             EventKind::MouseMove => {
                 event.motion.type_ = SDL_EventType::SDL_MOUSEMOTION as u32;
-                event.motion.state = h.buttons;
+                event.motion.state = h().buttons;
                 event.motion.x = ev.x;
                 event.motion.y = ev.y;
-                event.motion.xrel = ev.x - h.mouseX;
-                event.motion.yrel = ev.y - h.mouseY;
-                h.mouseX = ev.x;
-                h.mouseY = ev.y;
+                event.motion.xrel = ev.x - h().mouseX;
+                event.motion.yrel = ev.y - h().mouseY;
+                h().mouseX = ev.x;
+                h().mouseY = ev.y;
             }
         }
 
@@ -282,12 +290,12 @@ fn push_event(ev: &ScriptEvent) {
 
 fn push_frame_events() {
     unsafe {
-        while h.nextEvent < h.events.len() && h.events[h.nextEvent].frame <= h.frame {
-            if h.events[h.nextEvent].frame == h.frame {
-                let ev: *const ScriptEvent = &h.events[h.nextEvent];
+        while h().nextEvent < h().events.len() && h().events[h().nextEvent].frame <= h().frame {
+            if h().events[h().nextEvent].frame == h().frame {
+                let ev: *const ScriptEvent = &h().events[h().nextEvent];
                 push_event(&*ev);
             }
-            h.nextEvent += 1;
+            h().nextEvent += 1;
         }
     }
 }
@@ -309,10 +317,10 @@ pub fn init() {
             RandomNumberGenerator::reset_call_count();
         }
 
-        h.noLimit = env("SMW_NOLIMIT").is_some();
+        h().noLimit = env("SMW_NOLIMIT").is_some();
 
         if let Some(frames) = env("SMW_FRAMES") {
-            h.maxFrames = strtol10(&frames);
+            h().maxFrames = strtol10(&frames);
         }
 
         if let Some(replay) = env("SMW_REPLAY") {
@@ -321,7 +329,7 @@ pub fn init() {
 
         if let Some(dump) = env("SMW_DUMP") {
             match std::fs::OpenOptions::new().append(true).create(true).open(&dump) {
-                Ok(f) => h.dump = Some(f),
+                Ok(f) => h().dump = Some(f),
                 Err(_) => {
                     eprintln!("[editorharness] cannot open dump {}", dump);
                     std::process::exit(2);
@@ -332,35 +340,35 @@ pub fn init() {
         if let Some(shots) = env("SMW_SHOT_FRAMES") {
             for item in shots.split(',') {
                 if !item.is_empty() {
-                    h.shotFrames.insert(strtoul0(item));
+                    h().shotFrames.insert(strtoul0(item));
                 }
             }
         }
-        h.shotDir = env("SMW_SHOT_DIR").unwrap_or_else(|| ".".to_string());
+        h().shotDir = env("SMW_SHOT_DIR").unwrap_or_else(|| ".".to_string());
 
-        h.active = true;
+        h().active = true;
         push_frame_events();
     }
 }
 
 pub fn set_dumper(dumper: Dumper) {
-    unsafe { h.dumper = Some(dumper) };
+    unsafe { h().dumper = Some(dumper) };
 }
 
 pub fn no_limit() -> bool {
-    unsafe { h.noLimit }
+    unsafe { h().noLimit }
 }
 
 /// Ends one editor frame: dump, screenshot, advance, push the next frame's scripted events,
 /// then sleep `delay` ms unless SMW_NOLIMIT is set. The C++ editors `#define SDL_Delay` to this.
 pub fn frame_delay(delay: u32) {
     unsafe {
-        if h.active {
-            if h.maxFrames < 0 || (h.frame as i64) < h.maxFrames {
-                if let Some(dump) = h.dump.as_mut() {
+        if h().active {
+            if h().maxFrames < 0 || (h().frame as i64) < h().maxFrames {
+                if let Some(dump) = h().dump.as_mut() {
                     let mut block: Vec<u8> = Vec::new();
-                    let _ = writeln!(block, "F {}", h.frame);
-                    if let Some(dumper) = h.dumper {
+                    let _ = writeln!(block, "F {}", h().frame);
+                    if let Some(dumper) = h().dumper {
                         dumper(&mut block);
                     }
                     let _ = writeln!(block, "R calls={} last={}", RandomNumberGenerator::call_count(), RandomNumberGenerator::last_value());
@@ -368,21 +376,21 @@ pub fn frame_delay(delay: u32) {
                     let _ = dump.flush();
                 }
 
-                if h.shotFrames.contains(&h.frame) {
-                    let path = format!("{}/frame_{}.bmp", h.shotDir, h.frame);
+                if h().shotFrames.contains(&h().frame) {
+                    let path = format!("{}/frame_{}.bmp", h().shotDir, h().frame);
                     let cpath = CString::new(path.as_bytes()).unwrap();
                     let rw = SDL_RWFromFile(cpath.as_ptr(), b"wb\0".as_ptr() as *const _);
-                    if SDL_SaveBMP_RW(screen, rw, 1) != 0 {
+                    if SDL_SaveBMP_RW(game().screen, rw, 1) != 0 {
                         eprintln!("[editorharness] cannot save {}: {}", path, CStr::from_ptr(SDL_GetError()).to_string_lossy());
                     }
                 }
             }
 
-            h.frame += 1;
+            h().frame += 1;
 
-            if h.maxFrames >= 0 && h.frame as i64 >= h.maxFrames {
-                h.dump = None;
-                if h.frame as i64 >= h.maxFrames + QUIT_GRACE_FRAMES as i64 {
+            if h().maxFrames >= 0 && h().frame as i64 >= h().maxFrames {
+                h().dump = None;
+                if h().frame as i64 >= h().maxFrames + QUIT_GRACE_FRAMES as i64 {
                     eprintln!("[editorharness] editor ignored SDL_QUIT for {} frames", QUIT_GRACE_FRAMES);
                     std::process::exit(3);
                 }
@@ -392,7 +400,7 @@ pub fn frame_delay(delay: u32) {
             }
         }
 
-        if !h.noLimit {
+        if !h().noLimit {
             crate::services::delay(delay);
         }
     }
@@ -401,7 +409,7 @@ pub fn frame_delay(delay: u32) {
 /// `SDL_GetKeyboardState(NULL)`; while active, the scripted key state, since pushed events do not update SDL's.
 pub fn keyboard_state() -> *const u8 {
     unsafe {
-        if h.active {
+        if h().active {
             keys.as_ptr()
         } else {
             sdl2::sys::SDL_GetKeyboardState(std::ptr::null_mut())
@@ -412,8 +420,8 @@ pub fn keyboard_state() -> *const u8 {
 /// `SDL_GetMouseState(NULL, NULL)`; while active, the scripted button mask.
 pub fn mouse_state() -> u32 {
     unsafe {
-        if h.active {
-            h.buttons
+        if h().active {
+            h().buttons
         } else {
             sdl2::sys::SDL_GetMouseState(std::ptr::null_mut(), std::ptr::null_mut())
         }

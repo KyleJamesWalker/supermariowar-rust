@@ -108,11 +108,11 @@ impl MI_MapPreview {
 
             self.rectDst.x = bx + 16;
 
-            self.surfaceMapBackground.draw_to(blitdest, &self.rectDst);
+            self.surfaceMapBackground.draw_to(game().blitdest, &self.rectDst);
 
             game().g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 0);
 
-            self.surfaceMapBlockLayer.draw_to(blitdest, &self.rectDst);
+            self.surfaceMapBlockLayer.draw_to(game().blitdest, &self.rectDst);
 
             game().g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 1);
 
@@ -137,7 +137,7 @@ impl MI_MapPreview {
             game().g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 2);
 
             if game().game_values.toplayer {
-                self.surfaceMapForeground.draw_to(blitdest, &self.rectDst);
+                self.surfaceMapForeground.draw_to(game().blitdest, &self.rectDst);
             }
 
             game().g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 3);

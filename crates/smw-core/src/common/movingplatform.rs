@@ -13,7 +13,6 @@ use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
 use crate::common::tile_types::*;
 use crate::globals::{Aliased, Ptr};
-use crate::smw::main::{blitdest, screen};
 use crate::smw::objectgame::removeifprojectile;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::player::CPlayer;
@@ -257,7 +256,7 @@ impl MovingPlatform {
             self.rDstRect.w = self.iWidth as i32;
             self.rDstRect.h = self.iHeight as i32;
 
-            self.sprites[(1 - game().g_iCurrentDrawIndex) as usize].draw_src_to(&self.rSrcRect, blitdest, &self.rDstRect);
+            self.sprites[(1 - game().g_iCurrentDrawIndex) as usize].draw_src_to(&self.rSrcRect, game().blitdest, &self.rDstRect);
         }
     }
 

@@ -10,15 +10,28 @@ use crate::common::sfx::SfxState;
 use crate::common::score::CScore;
 use crate::common::resource_manager::CResourceManager;
 use crate::common::tileset_manager::CTilesetManager;
+use crate::common::editor_harness::EditorHarness;
 use crate::common::game_values::CGameValues;
 use crate::globals::{Global, Ptr};
 use crate::leveleditor::leveleditor::LevelEditorState;
 use crate::smw::gamemodes::{bonus_house::CGM_Bonus, mini_boss::CGM_Boss_MiniGame, mini_boxes::CGM_Boxes_MiniGame, mini_pipe::CGM_Pipe_MiniGame};
+use crate::smw::fps_limiter::FPSLimiter;
+use crate::smw::game_state::GameStateManager;
+use crate::smw::gs_gameplay::GameplayState;
+use crate::smw::gs_menu::MenuState;
+use crate::smw::gs_splash_screen::SplashScreenState;
+use crate::smw::harness::Harness;
+use crate::smw::main::MainLoopState;
 use crate::smw::net::{NetworkHandler, Networking};
+use crate::smw::network::net_record::NetRecordState;
 use crate::smw::net_outcomes::NetOutcomesState;
 use crate::smw::net_random::NetRandomState;
 use crate::smw::object_container::CObjectContainer;
+#[cfg(not(target_os = "emscripten"))]
+use crate::smw::pad::PadState;
 use crate::smw::player::CPlayer;
+#[cfg(not(target_os = "emscripten"))]
+use crate::smw::touch::TouchState;
 use crate::smw::world::WorldMap;
 use crate::worldeditor::worldeditor::WorldEditorState;
 
@@ -78,6 +91,25 @@ pub struct Game {
     pub g_worldmap: Global<WorldMap>,
     pub level_editor: LevelEditorState,
     pub world_editor: WorldEditorState,
+    pub gsm: GameStateManager,
+    pub gps: Option<GameplayState>,
+    pub ms: Option<MenuState>,
+    pub ss: Option<SplashScreenState>,
+    /// The browser cannot block for input, so a control field being rebound reads this frame's events here.
+    #[cfg(target_os = "emscripten")]
+    pub frame_events: Vec<smw_platform::Input>,
+    pub net_record: NetRecordState,
+    pub screen: *mut sdl2::sys::SDL_Surface,
+    /// The destination surface for all drawing; swapped from `screen` to another surface at times.
+    pub blitdest: *mut sdl2::sys::SDL_Surface,
+    pub fps_limiter: FPSLimiter,
+    pub main_loop: MainLoopState,
+    pub(crate) harness: Harness,
+    pub(crate) editor_harness: EditorHarness,
+    #[cfg(not(target_os = "emscripten"))]
+    pub pad: PadState,
+    #[cfg(not(target_os = "emscripten"))]
+    pub touch: TouchState,
 }
 
 impl Game {
@@ -132,6 +164,23 @@ impl Game {
             g_worldmap: Global::uninit(),
             level_editor: LevelEditorState::new(),
             world_editor: WorldEditorState::new(),
+            gsm: GameStateManager::new(),
+            gps: None,
+            ms: None,
+            ss: None,
+            #[cfg(target_os = "emscripten")]
+            frame_events: Vec::new(),
+            net_record: NetRecordState::new(),
+            screen: std::ptr::null_mut(),
+            blitdest: std::ptr::null_mut(),
+            fps_limiter: FPSLimiter::new(),
+            main_loop: MainLoopState::new(),
+            harness: Harness::new(),
+            editor_harness: EditorHarness::new(),
+            #[cfg(not(target_os = "emscripten"))]
+            pad: PadState::new(),
+            #[cfg(not(target_os = "emscripten"))]
+            touch: TouchState::new(),
         }
     }
 }

@@ -228,7 +228,7 @@ pub fn gfx_save_screen_bmp(path: &str) -> bool {
     let cpath = CString::new(path).unwrap();
     unsafe {
         let rw = SDL_RWFromFile(cpath.as_ptr(), b"wb\0".as_ptr() as *const _);
-        !rw.is_null() && SDL_SaveBMP_RW(screen, rw, 1) == 0
+        !rw.is_null() && SDL_SaveBMP_RW(game().screen, rw, 1) == 0
     }
 }
 
@@ -236,10 +236,10 @@ pub fn gfx_save_screen_bmp(path: &str) -> bool {
 pub fn gfx_write_screen_raw(out: &mut impl std::io::Write) -> std::io::Result<()> {
     unsafe {
         let argb = SDL_PixelFormatEnum::SDL_PIXELFORMAT_ARGB8888 as u32;
-        let surface = if (*(*screen).format).format == argb {
-            screen
+        let surface = if (*(*game().screen).format).format == argb {
+            game().screen
         } else {
-            SDL_ConvertSurfaceFormat(screen, argb, 0)
+            SDL_ConvertSurfaceFormat(game().screen, argb, 0)
         };
         if surface.is_null() {
             return Err(std::io::Error::other("cannot convert the screen surface"));
@@ -249,7 +249,7 @@ pub fn gfx_write_screen_raw(out: &mut impl std::io::Write) -> std::io::Result<()
         let pixels = std::slice::from_raw_parts((*surface).pixels as *const u8, pitch * rows);
         let result = (0..rows).try_for_each(|y| out.write_all(&pixels[y * pitch..y * pitch + w]));
         SDL_UnlockSurface(surface);
-        if surface != screen {
+        if surface != game().screen {
             SDL_FreeSurface(surface);
         }
         result
@@ -430,7 +430,7 @@ pub fn gfx_drawpreview(
         }
 
         // Blit onto the screen surface
-        sprite.draw_src_to(&rSrcRect, blitdest, &rDstRect);
+        sprite.draw_src_to(&rSrcRect, game().blitdest, &rDstRect);
 
         if wrap {
             //Deal with wrapping over sides of screen
@@ -462,7 +462,7 @@ pub fn gfx_drawpreview(
                     }
                 }
 
-                sprite.draw_src_to(&rSrcRect, blitdest, &rDstRect);
+                sprite.draw_src_to(&rSrcRect, game().blitdest, &rDstRect);
             }
         }
     }

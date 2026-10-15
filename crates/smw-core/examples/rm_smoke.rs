@@ -21,7 +21,7 @@ fn main() {
         RootDataDirectory = data;
 
         gfx_init(640, 480, false);
-        blitdest = screen;
+        game().blitdest = game().screen;
         sfx_init();
 
         game().rm = Ptr::new_box(CResourceManager::new());

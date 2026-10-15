@@ -487,10 +487,10 @@ impl WorldVehicle {
             let ts = self.iTileSize as i32;
             if fVehiclesSleeping {
                 let rDst = SDL_Rect { x: self.pos.x as i32 + iWorldOffsetX as i32, y: self.pos.y as i32 + iWorldOffsetY as i32, w: ts, h: ts };
-                game().rm.spr_worldvehicle[self.iTileSheet as usize].draw_src_to(&self.srcRects[4], blitdest, &rDst);
+                game().rm.spr_worldvehicle[self.iTileSheet as usize].draw_src_to(&self.srcRects[4], game().blitdest, &rDst);
             } else {
                 let rDst = SDL_Rect { x: self.pos.x as i32 + iWorldOffsetX as i32 + self.iPaceOffset as i32, y: self.pos.y as i32 + iWorldOffsetY as i32, w: ts, h: ts };
-                game().rm.spr_worldvehicle[self.iTileSheet as usize].draw_src_to(&self.srcRects[(self.iDrawDirection + self.iAnimationFrame) as usize], blitdest, &rDst);
+                game().rm.spr_worldvehicle[self.iTileSheet as usize].draw_src_to(&self.srcRects[(self.iDrawDirection + self.iAnimationFrame) as usize], game().blitdest, &rDst);
             }
         }
     }

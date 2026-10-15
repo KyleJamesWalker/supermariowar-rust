@@ -864,7 +864,7 @@ impl UI_ControlTrait for MI_World {
             self.rectSrcSurface = SDL_Rect { x: self.iSrcOffsetX as i32, y: self.iSrcOffsetY as i32, w: self.iDrawWidth as i32, h: self.iDrawHeight as i32 };
             self.rectDstSurface = SDL_Rect { x: self.iDstOffsetX as i32, y: self.iDstOffsetY as i32, w: self.iDrawWidth as i32, h: self.iDrawHeight as i32 };
 
-            self.map_sprites[self.iCurrentSurfaceIndex as usize].draw_src_to(&self.rectSrcSurface, blitdest, &self.rectDstSurface);
+            self.map_sprites[self.iCurrentSurfaceIndex as usize].draw_src_to(&self.rectSrcSurface, game().blitdest, &self.rectDstSurface);
 
             //Draw the world, vehicles and player
             game().g_worldmap.draw(self.iMapOffsetX, self.iMapOffsetY, self.iState == -1 && !self.fUsingCloud, self.iSleepTurns > 0);

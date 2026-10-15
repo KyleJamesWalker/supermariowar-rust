@@ -43,8 +43,6 @@ const GIT_REVISION: &str = "";
 const GIT_DATE: &str = "";
 
 //------ system stuff ------
-pub static mut screen: *mut SDL_Surface = null_mut(); //for gfx (maybe the gfx system should be improved -> resource manager)
-pub static mut blitdest: *mut SDL_Surface = null_mut(); //the destination surface for all drawing (can be swapped from screen to another surface)
 
 
 //*************************************
@@ -85,8 +83,7 @@ pub fn gameloop() {
 #[cfg(target_os = "emscripten")]
 unsafe extern "C-unwind" fn gameloop_frame_web() {
     const MAX_CATCH_UP_FRAMES: u32 = 5;
-    static mut last_time: f64 = -1.0;
-    static mut accumulated: f64 = 0.0;
+    let ml = &mut game().get().main_loop;
 
     let frame_ms = game().game_values.framelimiter as f64;
     if harness::no_limit() || frame_ms <= 0.0 {
@@ -96,23 +93,23 @@ unsafe extern "C-unwind" fn gameloop_frame_web() {
     }
 
     let now = emscripten_get_now();
-    if last_time >= 0.0 {
-        accumulated += now - last_time;
+    if ml.web_last_time >= 0.0 {
+        ml.web_accumulated += now - ml.web_last_time;
     }
-    last_time = now;
+    ml.web_last_time = now;
 
     let mut frames = 0;
-    while accumulated >= frame_ms && frames < MAX_CATCH_UP_FRAMES && game().game_values.appstate != crate::common::game_values::AppState::Quit {
+    while ml.web_accumulated >= frame_ms && frames < MAX_CATCH_UP_FRAMES && game().game_values.appstate != crate::common::game_values::AppState::Quit {
         assign_hotplugged();
         harness::frame_start();
         GameStateManager::instance().currentState.get().update();
         harness::frame_end();
 
-        accumulated -= frame_ms;
+        ml.web_accumulated -= frame_ms;
         frames += 1;
     }
     if frames == MAX_CATCH_UP_FRAMES {
-        accumulated = accumulated.min(frame_ms);
+        ml.web_accumulated = ml.web_accumulated.min(frame_ms);
     }
 
     if frames > 0 {
@@ -240,7 +237,7 @@ fn assign_inputs() {
         #[cfg(not(target_os = "emscripten"))]
         let mut pads = crate::smw::pad::player_pads();
         #[cfg(target_os = "emscripten")]
-        let mut pads: Vec<usize> = (0..joystickcount.max(0) as usize).filter(|k| !web_removed.contains(k)).collect();
+        let mut pads: Vec<usize> = (0..joystickcount.max(0) as usize).filter(|k| !game().main_loop.web_removed.contains(k)).collect();
         pads.retain(|&k| k < MAX_PLAYERS as usize);
         let touch_session = touch_session();
         if pads.is_empty() && !touch_session {
@@ -301,33 +298,56 @@ fn assign_inputs() {
 /// Not in upstream: a pad connected after launch (`pad::hotplug`, or a replay's `jadd` line) gets a player as at
 /// launch, once no match is on.
 fn assign_hotplugged() {
-    static mut pending: bool = false;
     unsafe {
+        let pending = &mut game().get().main_loop.hotplug_pending;
         for (index, added) in harness::replay_device_changes() {
             #[cfg(not(target_os = "emscripten"))]
             crate::smw::pad::replay_device(index, added);
             #[cfg(target_os = "emscripten")]
             web_replay_device(index, added);
-            pending |= added;
+            *pending |= added;
         }
         #[cfg(not(target_os = "emscripten"))]
         if crate::smw::pad::hotplug() {
-            pending = true;
+            *pending = true;
         }
         let playing = GameStateManager::instance().currentState.addr() == crate::smw::gs_gameplay::GameplayState::instance() as *mut _ as usize;
-        if pending && !playing {
-            pending = false;
+        if *pending && !playing {
+            *pending = false;
             assign_inputs();
         }
     }
 }
 
-/// A browser replay's joysticks exist only as the device index its events carry.
-#[cfg(target_os = "emscripten")]
-static mut web_removed: Vec<usize> = Vec::new();
+/// Not in the C++: the main loop's own state.
+pub struct MainLoopState {
+    #[cfg(target_os = "emscripten")]
+    web_last_time: f64,
+    #[cfg(target_os = "emscripten")]
+    web_accumulated: f64,
+    hotplug_pending: bool,
+    /// A browser replay's joysticks exist only as the device index its events carry.
+    #[cfg(target_os = "emscripten")]
+    web_removed: Vec<usize>,
+}
+
+impl MainLoopState {
+    pub const fn new() -> Self {
+        MainLoopState {
+            #[cfg(target_os = "emscripten")]
+            web_last_time: -1.0,
+            #[cfg(target_os = "emscripten")]
+            web_accumulated: 0.0,
+            hotplug_pending: false,
+            #[cfg(target_os = "emscripten")]
+            web_removed: Vec::new(),
+        }
+    }
+}
 
 #[cfg(target_os = "emscripten")]
 unsafe fn web_replay_device(index: usize, added: bool) {
+    let web_removed = &mut game().get().main_loop.web_removed;
     web_removed.retain(|&i| i != index);
     if !added {
         web_removed.push(index);
@@ -484,7 +504,7 @@ pub fn main_game() {
         create_globals();
 
         gfx_init(App::screenWidth, App::screenHeight, false); //initialize the graphics (SDL)
-        blitdest = screen;
+        game().blitdest = game().screen;
 
         sfx_init(); //init the sound system
         net_init(); //init the networking
@@ -516,7 +536,7 @@ pub fn main_game() {
 
         if game().game_values.fullscreen {
             crate::common::gfx::gfx_changefullscreen(true);
-            blitdest = screen;
+            game().blitdest = game().screen;
         }
 
         init_spawnlocations();

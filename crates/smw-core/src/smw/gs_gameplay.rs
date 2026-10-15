@@ -103,8 +103,6 @@ pub struct GameplayState {
     pub _alias: Aliased,
 }
 
-static mut gps: Option<GameplayState> = None;
-
 impl GameplayState {
     pub const scoreoffsets: [i16; 3] = [2, 36, 70];
     pub const g_iPowerupToIcon: [i16; 8] = [80, 176, 272, 304, 336, 368, 384, 400];
@@ -142,13 +140,11 @@ impl GameplayState {
     }
 
     pub fn instance() -> &'static mut GameplayState {
-        unsafe {
-            // Safety net until globals::init_globals calls gs_gameplay::init_globals.
-            if !game().spotlightManager.is_initialized() {
-                init_globals();
-            }
-            gps.get_or_insert_with(GameplayState::new)
+        // Safety net until globals::init_globals calls gs_gameplay::init_globals.
+        if !game().spotlightManager.is_initialized() {
+            init_globals();
         }
+        game().get().gps.get_or_insert_with(GameplayState::new)
     }
 
     /// Not in the C++: the fields a replay checkpoint (smw/checkpoint.rs) saves and restores.
@@ -1433,18 +1429,18 @@ impl GameplayState {
             //Draw black "behind" the game if we are shaking/moving the screen
             if game().y_shake > 0 {
                 let rect = SDL_Rect { x: 0, y: 0, w: App::screenWidth, h: game().y_shake as i32 };
-                crate::common::gfx::blit::fill_rect(screen, &rect, 0x0); //fill empty area with black
+                crate::common::gfx::blit::fill_rect(game().screen, &rect, 0x0); //fill empty area with black
             } else if game().y_shake < 0 {
                 let rect = SDL_Rect { x: 0, y: App::screenHeight + game().y_shake as i32, w: App::screenWidth, h: App::screenHeight };
-                crate::common::gfx::blit::fill_rect(screen, &rect, 0x0); //fill empty area with black
+                crate::common::gfx::blit::fill_rect(game().screen, &rect, 0x0); //fill empty area with black
             }
 
             if game().x_shake > 0 {
                 let rect = SDL_Rect { x: 0, y: 0, w: game().x_shake as i32, h: App::screenHeight };
-                crate::common::gfx::blit::fill_rect(screen, &rect, 0x0); //fill empty area with black
+                crate::common::gfx::blit::fill_rect(game().screen, &rect, 0x0); //fill empty area with black
             } else if game().x_shake < 0 {
                 let rect = SDL_Rect { x: App::screenWidth + game().x_shake as i32, y: 0, w: App::screenWidth, h: App::screenHeight };
-                crate::common::gfx::blit::fill_rect(screen, &rect, 0x0); //fill empty area with black
+                crate::common::gfx::blit::fill_rect(game().screen, &rect, 0x0); //fill empty area with black
             }
         }
     }
@@ -2360,7 +2356,7 @@ impl GameplayState {
                         } else if sym == SDL_KeyCode::SDLK_RETURN as i32 {
                             game().game_values.fullscreen = !game().game_values.fullscreen;
                             gfx_changefullscreen(game().game_values.fullscreen);
-                            blitdest = screen;
+                            game().blitdest = game().screen;
 
                             // Not fed to the input, or the Return would also pause the game.
                             continue;

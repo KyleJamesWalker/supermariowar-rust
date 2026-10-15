@@ -12,11 +12,13 @@ pub struct FPSLimiter {
     pub _alias: Aliased,
 }
 
-static mut instance: FPSLimiter = FPSLimiter { _alias: Aliased::new(), framestart: 0, ticks: 0, realfps: 0.0, flipfps: 0.0 };
-
 impl FPSLimiter {
+    pub const fn new() -> Self {
+        FPSLimiter { _alias: Aliased::new(), framestart: 0, ticks: 0, realfps: 0.0, flipfps: 0.0 }
+    }
+
     pub fn instance() -> &'static mut FPSLimiter {
-        unsafe { &mut instance }
+        &mut game().get().fps_limiter
     }
 
     // the browser limits the frame rate

@@ -448,7 +448,7 @@ pub fn inner_main() {
         }
 
         gfx_init(640, 480, ed().g_fFullScreen);
-        blitdest = screen;
+        game().blitdest = game().screen;
         editor_harness::init();
         editor_harness::set_dumper(dump_editor_state);
 
@@ -568,7 +568,7 @@ pub fn inner_main() {
 
         game().rm.load_menu_graphics();
 
-        ed().sMapSurface = SDL_CreateRGBSurface((*screen).flags, 768, 608, (*(*screen).format).BitsPerPixel as i32, 0, 0, 0, 0);
+        ed().sMapSurface = SDL_CreateRGBSurface((*game().screen).flags, 768, 608, (*(*game().screen).format).BitsPerPixel as i32, 0, 0, 0, 0);
 
         let fs = ed().findstring.clone();
         game().worldlist.find(&fs);
@@ -1250,7 +1250,7 @@ pub fn editor_edit() -> i32 {
                                 if key_sym() == SDLK_RETURN as i32 {
                                     ed().g_fFullScreen = !ed().g_fFullScreen;
                                     gfx_changefullscreen(ed().g_fFullScreen);
-                                    blitdest = screen;
+                                    game().blitdest = game().screen;
                                 }
                             }
 
@@ -1590,7 +1590,7 @@ pub fn editor_edit() -> i32 {
                     }
                 } else if ed().edit_mode == 8 {
                     //draw boundaries
-                    let color = SDL_MapRGB((*blitdest).format, 255, 0, 255);
+                    let color = SDL_MapRGB((*game().blitdest).format, 255, 0, 255);
                     let mut iRow = ed().draw_offset_row as i16;
                     while (iRow as i32) < ed().draw_offset_row + 15 && iRow < ed().iWorldHeight {
                         let mut iCol = ed().draw_offset_col as i16;
@@ -1601,7 +1601,7 @@ pub fn editor_edit() -> i32 {
                                 let ix: i16 = ((iCol as i32 - ed().draw_offset_col) * TILESIZE + ed().draw_offset_x) as i16;
                                 let iy: i16 = ((iRow as i32 - ed().draw_offset_row) * TILESIZE + ed().draw_offset_y) as i16;
                                 let mut rr = r(ix as i32, iy as i32, 32, 32);
-                                crate::common::gfx::blit::fill_rect(blitdest, &mut rr, color);
+                                crate::common::gfx::blit::fill_rect(game().blitdest, &mut rr, color);
 
                                 game().rm.spr_worldforegroundspecial[0].draw_src(ix as i32, iy as i32, &r(((iBoundary % 10) as i32) << 5, ((iBoundary / 10) as i32) << 5, 32, 32));
                             }
@@ -1611,7 +1611,7 @@ pub fn editor_edit() -> i32 {
                     }
                 } else if ed().edit_mode == 9 {
                     //draw stages
-                    let color = SDL_MapRGB((*blitdest).format, 0, 0, 255);
+                    let color = SDL_MapRGB((*game().blitdest).format, 0, 0, 255);
                     let mut iRow = ed().draw_offset_row as i16;
                     while (iRow as i32) < ed().draw_offset_row + 15 && iRow < ed().iWorldHeight {
                         let mut iCol = ed().draw_offset_col as i16;
@@ -1622,7 +1622,7 @@ pub fn editor_edit() -> i32 {
                                 let ix: i16 = ((iCol as i32 - ed().draw_offset_col) * TILESIZE + ed().draw_offset_x) as i16;
                                 let iy: i16 = ((iRow as i32 - ed().draw_offset_row) * TILESIZE + ed().draw_offset_y) as i16;
                                 let mut rr = r(ix as i32, iy as i32, 32, 32);
-                                crate::common::gfx::blit::fill_rect(blitdest, &mut rr, color);
+                                crate::common::gfx::blit::fill_rect(game().blitdest, &mut rr, color);
 
                                 game().rm.spr_worldforegroundspecial[0].draw_src(ix as i32, iy as i32, &r(((iType % 10) as i32) << 5, ((iType / 10) as i32) << 5, 32, 32));
                             }
@@ -1638,13 +1638,13 @@ pub fn editor_edit() -> i32 {
 
                 if ed().edit_mode == 5 || ed().edit_mode == 8 {
                     //draw vehicles
-                    let color = SDL_MapRGB((*blitdest).format, 0, 0, 128);
+                    let color = SDL_MapRGB((*game().blitdest).format, 0, 0, 128);
                     for vehicle in ed().vehiclelist.iter() {
                         let ix: i16 = ((vehicle.currentTile.x as i32 - ed().draw_offset_col) * TILESIZE + ed().draw_offset_x) as i16;
                         let iy: i16 = ((vehicle.currentTile.y as i32 - ed().draw_offset_row) * TILESIZE + ed().draw_offset_y) as i16;
 
                         let mut rr = r(ix as i32, iy as i32, 32, 32);
-                        crate::common::gfx::blit::fill_rect(blitdest, &mut rr, color);
+                        crate::common::gfx::blit::fill_rect(game().blitdest, &mut rr, color);
 
                         game().rm.spr_worldvehicle[0].draw_src(ix as i32, iy as i32, &r((vehicle.iDrawDirection as i32) << 5, (vehicle.iDrawSprite as i32) << 5, 32, 32));
 
@@ -2266,10 +2266,10 @@ pub fn updateworldsurface() {
 pub fn drawmap(_fScreenshot: bool, _iBlockSize: i16) {
     unsafe {
         if ed().fNeedBlackBackground {
-            crate::common::gfx::blit::fill_rect(screen, null(), 0x0);
+            crate::common::gfx::blit::fill_rect(game().screen, null(), 0x0);
         }
 
-        crate::common::gfx::blit::upper_blit(ed().sMapSurface, &ed().rectSrcSurface, blitdest, &mut ed().rectDstSurface);
+        crate::common::gfx::blit::upper_blit(ed().sMapSurface, &ed().rectSrcSurface, game().blitdest, &mut ed().rectDstSurface);
     }
 }
 
@@ -2503,9 +2503,9 @@ pub fn editor_boundary() -> i32 {
             drawmap(false, TILESIZE as i16);
             ed().menu_shade.draw(0, 0);
 
-            let color = SDL_MapRGB((*blitdest).format, 255, 0, 255);
+            let color = SDL_MapRGB((*game().blitdest).format, 255, 0, 255);
             let mut rr = r(0, 0, 320, 320);
-            crate::common::gfx::blit::fill_rect(blitdest, &mut rr, color);
+            crate::common::gfx::blit::fill_rect(game().blitdest, &mut rr, color);
 
             game().rm.spr_worldforegroundspecial[0].draw_src(0, 0, &r(0, 0, 320, 320));
 
@@ -2623,7 +2623,7 @@ pub fn editor_water() -> i32 {
                 }
             }
 
-            crate::common::gfx::blit::fill_rect(screen, null(), 0x0);
+            crate::common::gfx::blit::fill_rect(game().screen, null(), 0x0);
 
             for iWater in 0..3i32 {
                 game().rm.spr_worldbackground[0].draw_src(iWater << 5, 0, &r(512 + (iWater << 7), 0, 32, 32));
@@ -2707,7 +2707,7 @@ pub fn editor_background() -> i32 {
                 }
             }
 
-            crate::common::gfx::blit::fill_rect(screen, null(), 0x0);
+            crate::common::gfx::blit::fill_rect(game().screen, null(), 0x0);
 
             game().rm.spr_worldbackground[0].draw_src(0, 0, &r(iPage as i32 * 640, 32, 640, 480));
 
@@ -2768,7 +2768,7 @@ pub fn editor_stageforeground() -> i32 {
                 }
             }
 
-            crate::common::gfx::blit::fill_rect(screen, null(), 0x0);
+            crate::common::gfx::blit::fill_rect(game().screen, null(), 0x0);
 
             for iRow in 0..10i32 {
                 for iCol in 0..10i32 {
@@ -2828,7 +2828,7 @@ pub fn editor_bridges() -> i32 {
                 }
             }
 
-            crate::common::gfx::blit::fill_rect(screen, null(), 0x0);
+            crate::common::gfx::blit::fill_rect(game().screen, null(), 0x0);
 
             game().rm.spr_worldforegroundspecial[0].draw_src(0, 0, &r(320, 224, 128, 32));
 
@@ -2888,7 +2888,7 @@ pub fn editor_structureforeground() -> i32 {
                 }
             }
 
-            crate::common::gfx::blit::fill_rect(screen, null(), 0x0);
+            crate::common::gfx::blit::fill_rect(game().screen, null(), 0x0);
 
             game().rm.spr_worldforeground[0].draw_src(0, 0, &r(0, 0, 416, 480));
             game().rm.spr_worldforeground[0].draw_src(416, 0, &r(512, 0, 32, 480));
@@ -2943,7 +2943,7 @@ pub fn editor_pathsprite() -> i32 {
                 }
             }
 
-            crate::common::gfx::blit::fill_rect(screen, null(), 0x0);
+            crate::common::gfx::blit::fill_rect(game().screen, null(), 0x0);
 
             for iPath in 0..8i32 {
                 game().rm.spr_worldpaths[0].draw_src(iPath << 5, 0, &r((iPath % 4) * 160, (iPath / 4) * 320, 32, 192));
@@ -3108,7 +3108,7 @@ pub fn editor_path() -> i32 {
                 }
             }
 
-            crate::common::gfx::blit::fill_rect(screen, null(), 0x0);
+            crate::common::gfx::blit::fill_rect(game().screen, null(), 0x0);
             ed().spr_path.draw_src(0, 0, &r(0, 0, 480, 32));
 
             DrawMessage();
@@ -3209,7 +3209,7 @@ pub fn DisplayStageDetails(fForce: bool, iStageId: i16, mut iMouseX: i16, mut iM
             if !ed().sMapThumbnail.get_surface().is_null() {
                 let rSrc = r(0, 0, 160, 120);
                 let rDst = r(x + 16, y + 52, 160, 120);
-                ed().sMapThumbnail.draw_src_to(&rSrc, blitdest, &rDst);
+                ed().sMapThumbnail.draw_src_to(&rSrc, game().blitdest, &rDst);
             }
         } else {
             let szPrint = format!("Sort: {}", if ts.iBonusType == 0 { "Fixed" } else { "Random" });
@@ -3898,7 +3898,7 @@ pub fn editor_stage() -> i32 {
             drawmap(false, TILESIZE as i16);
             ed().menu_shade.draw(0, 0);
 
-            let color = SDL_MapRGB((*blitdest).format, 0, 0, 255);
+            let color = SDL_MapRGB((*game().blitdest).format, 0, 0, 255);
 
             if iEditStage == -1 {
                 for iStage in 0..game().g_worldmap.iNumStages as i32 {
@@ -3906,7 +3906,7 @@ pub fn editor_stage() -> i32 {
                     let iy: i16 = ((iStage / 20) << 5) as i16;
 
                     let mut rr = r(ix as i32, iy as i32, 32, 32);
-                    crate::common::gfx::blit::fill_rect(blitdest, &mut rr, color);
+                    crate::common::gfx::blit::fill_rect(game().blitdest, &mut rr, color);
 
                     game().rm.spr_worldforegroundspecial[0].draw_src(ix as i32, iy as i32, &r((iStage % 10) << 5, (iStage / 10) << 5, 32, 32));
                 }
@@ -3932,7 +3932,7 @@ pub fn editor_stage() -> i32 {
                     let iy: i16 = 20;
 
                     let mut rr = r(ix as i32, iy as i32, 32, 32);
-                    crate::common::gfx::blit::fill_rect(blitdest, &mut rr, color);
+                    crate::common::gfx::blit::fill_rect(game().blitdest, &mut rr, color);
 
                     game().rm.spr_worldforegroundspecial[0].draw_src(ix as i32, iy as i32, &r(((iEditStage % 10) as i32) << 5, ((iEditStage / 10) as i32) << 5, 32, 32));
                 }
@@ -4461,8 +4461,8 @@ pub fn takescreenshot() {
             game().g_worldmap.get_world_size(&mut w, &mut h);
 
             //Draw most of the world to screenshot
-            let sScreenshot = SDL_CreateRGBSurface((*screen).flags, iTileSize as i32 * w as i32, iTileSize as i32 * h as i32, (*(*screen).format).BitsPerPixel as i32, 0, 0, 0, 0);
-            blitdest = sScreenshot;
+            let sScreenshot = SDL_CreateRGBSurface((*game().screen).flags, iTileSize as i32 * w as i32, iTileSize as i32 * h as i32, (*(*game().screen).format).BitsPerPixel as i32, 0, 0, 0, 0);
+            game().blitdest = sScreenshot;
 
             game().g_worldmap.draw_map_to_surface_full(sScreenshot);
 
@@ -4516,6 +4516,6 @@ pub fn takescreenshot() {
 
         let path = game().worldlist.at(game().game_values.worldindex as usize).to_string_lossy().into_owned();
         *game().g_worldmap = WorldMap::new_path(&path, iTileSizes[0]);
-        blitdest = screen;
+        game().blitdest = game().screen;
     }
 }

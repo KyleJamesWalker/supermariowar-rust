@@ -27,8 +27,6 @@ pub struct SplashScreenState {
     pub _alias: Aliased,
 }
 
-static mut ss: Option<SplashScreenState> = None;
-
 impl SplashScreenState {
     fn new() -> Self {
         SplashScreenState { _alias: Aliased::new(),
@@ -41,7 +39,7 @@ impl SplashScreenState {
     }
 
     pub fn instance() -> &'static mut SplashScreenState {
-        unsafe { ss.get_or_insert_with(SplashScreenState::new) }
+        game().get().ss.get_or_insert_with(SplashScreenState::new)
     }
 }
 
@@ -80,7 +78,7 @@ impl GameState for SplashScreenState {
                         if alt {
                             game().game_values.fullscreen = !game().game_values.fullscreen;
                             gfx_changefullscreen(game().game_values.fullscreen);
-                            blitdest = screen;
+                            game().blitdest = game().screen;
                         }
                     } else if key.0 == SDL_KeyCode::SDLK_F4 as i32 {
                         if alt {
@@ -100,10 +98,10 @@ impl GameState for SplashScreenState {
                 for iPlayer in 0..4usize {
                     let out = &game().game_values.playerInput.outputControls[iPlayer];
                     if tapped || out.menu_select().fPressed || out.menu_cancel().fPressed || out.menu_random().fPressed {
-                        blitdest = game().rm.menu_backdrop.get_surface();
+                        game().blitdest = game().rm.menu_backdrop.get_surface();
                         game().rm.menu_shade.setalpha(App::menuTransparency as u8);
                         game().rm.menu_shade.draw(0, 0);
-                        blitdest = screen;
+                        game().blitdest = game().screen;
 
                         game().eyecandy[2].clean();
 
@@ -118,7 +116,7 @@ impl GameState for SplashScreenState {
                 }
             }
 
-            crate::common::gfx::blit::fill_rect(screen, std::ptr::null(), 0x0);
+            crate::common::gfx::blit::fill_rect(game().screen, std::ptr::null(), 0x0);
 
             if self.state == 6 || self.state == 7 || self.state == 8 {
                 game().rm.menu_backdrop.setalpha(self.alpha as u8);

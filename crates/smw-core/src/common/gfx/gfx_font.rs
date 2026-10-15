@@ -88,7 +88,7 @@ impl gfxFont {
                 throw(format!("Couldn't set color key on font image: {}", sdl_error()));
             }
 
-            let surf_opti = SdlSurfacePtr::new(SDL_ConvertSurface(s, (*screen).format, 0));
+            let surf_opti = SdlSurfacePtr::new(SDL_ConvertSurface(s, (*game().screen).format, 0));
             if surf_opti.is_null() {
                 throw(format!("Couldn't convert {} to the display's pixel format: {}", path_str, sdl_error()));
             }

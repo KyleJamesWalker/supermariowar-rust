@@ -130,7 +130,7 @@ impl UI_ControlTrait for MI_InputControlField {
         unsafe {
             let mut done = false;
             #[cfg(target_os = "emscripten")]
-            let mut events = std::mem::take(&mut crate::smw::gs_menu::frame_events).into_iter();
+            let mut events = std::mem::take(&mut game().get().frame_events).into_iter();
 
             while !done {
                 #[cfg(not(target_os = "emscripten"))]

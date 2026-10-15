@@ -23,7 +23,6 @@ use crate::common::random_number_generator::RANDOM_INT;
 use crate::common::tile_types::*;
 use crate::common::version::Version;
 use crate::globals::{Aliased, Ptr};
-use crate::smw::main::{blitdest, screen};
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::player::CPlayer;
 use sdl2::sys::image::{IMG_Load, IMG_SavePNG};
@@ -2781,8 +2780,8 @@ pub(crate) mod tests {
             RootDataDirectory = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data").to_string();
             std::env::set_var("SDL_VIDEODRIVER", "dummy");
             SDL_Init(0);
-            screen = SDL_CreateRGBSurface(0, 640, 480, 32, 0, 0, 0, 0);
-            blitdest = screen;
+            game().screen = SDL_CreateRGBSurface(0, 640, 480, 32, 0, 0, 0, 0);
+            game().blitdest = game().screen;
             game().filterslist = Ptr::new_box(FiltersList::new());
             if !game().game_values.is_initialized() {
                 game().game_values.init(CGameValues::new());

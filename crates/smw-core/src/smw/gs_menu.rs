@@ -141,12 +141,6 @@ pub struct MenuState {
     _alias: Aliased,
 }
 
-static mut ms: Option<MenuState> = None;
-
-/// The browser cannot block for input, so a control field being rebound reads this frame's events here.
-#[cfg(target_os = "emscripten")]
-pub static mut frame_events: Vec<Input> = Vec::new();
-
 impl MenuState {
     fn new() -> Self {
         MenuState {
@@ -191,7 +185,7 @@ impl MenuState {
     }
 
     pub fn instance() -> &'static mut MenuState {
-        unsafe { ms.get_or_insert_with(MenuState::new) }
+        game().get().ms.get_or_insert_with(MenuState::new)
     }
 
     pub fn harness_menu_name(&self) -> &'static str {
@@ -901,22 +895,18 @@ impl MenuState {
 
 /// The game host rolls a net game's random mode settings, when it plays with "Randomize" on (`NetGameHost::send_sync_messages`).
 pub fn roll_net_game_mode_settings() {
-    unsafe {
-        if let Some(state) = ms.as_mut() {
-            if !state.mModeOptionsMenu.is_null() {
-                state.mModeOptionsMenu.set_random_game_mode_settings(game().currentgamemode);
-            }
+    if let Some(state) = game().get().ms.as_mut() {
+        if !state.mModeOptionsMenu.is_null() {
+            state.mModeOptionsMenu.set_random_game_mode_settings(game().currentgamemode);
         }
     }
 }
 
 /// The current mode's options as the mode options menu names them.
 pub fn describe_net_game_mode_settings() -> Vec<String> {
-    unsafe {
-        match ms.as_ref() {
-            Some(state) if !state.mModeOptionsMenu.is_null() => state.mModeOptionsMenu.describe_game_mode_settings(game().currentgamemode),
-            _ => Vec::new(),
-        }
+    match game().get().ms.as_ref() {
+        Some(state) if !state.mModeOptionsMenu.is_null() => state.mModeOptionsMenu.describe_game_mode_settings(game().currentgamemode),
+        _ => Vec::new(),
     }
 }
 
@@ -1034,7 +1024,7 @@ impl MenuState {
                 self.mCurrentMenu.reset_menu();
             } else if MENU_CODE_TOGGLE_FULLSCREEN == code {
                 gfx_changefullscreen(game().game_values.fullscreen);
-                blitdest = screen;
+                game().blitdest = game().screen;
             } else if MENU_CODE_TO_GAME_SETUP_MENU == code {
                 self.to_game_setup_menu();
             } else if MENU_CODE_BACK_TO_GAME_SETUP_MENU == code {
@@ -1213,10 +1203,10 @@ impl MenuState {
             } else if MENU_CODE_MENU_GRAPHICS_PACK_CHANGED == code {
                 game().rm.load_menu_graphics();
 
-                blitdest = game().rm.menu_backdrop.get_surface();
+                game().blitdest = game().rm.menu_backdrop.get_surface();
                 game().rm.menu_shade.setalpha(App::menuTransparency as u8);
                 game().rm.menu_shade.draw(0, 0);
-                blitdest = screen;
+                game().blitdest = game().screen;
             } else if MENU_CODE_WORLD_GRAPHICS_PACK_CHANGED == code {
                 game().rm.load_world_graphics();
             } else if MENU_CODE_GAME_GRAPHICS_PACK_CHANGED == code {
@@ -1676,10 +1666,10 @@ impl GameState for MenuState {
 
             //handle messages
             #[cfg(target_os = "emscripten")]
-            frame_events.clear();
+            game().get().frame_events.clear();
             while let Some(input) = smw_sdl2::events::poll_input() {
                 #[cfg(target_os = "emscripten")]
-                frame_events.push(input.clone());
+                game().get().frame_events.push(input.clone());
                 if input.event == InputEvent::Quit {
                     self.exit();
                     return;
@@ -1699,7 +1689,7 @@ impl GameState for MenuState {
                         else if sym == SDL_KeyCode::SDLK_RETURN as i32 {
                             game().game_values.fullscreen = !game().game_values.fullscreen;
                             gfx_changefullscreen(game().game_values.fullscreen);
-                            blitdest = screen;
+                            game().blitdest = game().screen;
 
                             continue;
                         }
@@ -1779,7 +1769,7 @@ impl GameState for MenuState {
             if self.mCurrentMenu != menu(self.mWorldMenu) {
                 game().rm.menu_backdrop.draw(0, 0);
             } else {
-                crate::common::gfx::blit::fill_rect(screen, std::ptr::null(), SDL_MapRGB((*screen).format, 0, 0, 0));
+                crate::common::gfx::blit::fill_rect(game().screen, std::ptr::null(), SDL_MapRGB((*game().screen).format, 0, 0, 0));
             }
 
             self.mCurrentMenu.update();

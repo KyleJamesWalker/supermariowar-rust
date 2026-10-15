@@ -53,7 +53,7 @@ const VIRTUAL_AXES: i32 = 64;
 const VIRTUAL_BUTTONS: i32 = 64;
 const VIRTUAL_HATS: i32 = 1;
 
-struct Harness {
+pub struct Harness {
     seeded: bool,
     seed: u32,
     noLimit: bool,
@@ -88,32 +88,40 @@ struct Segment {
     checkpoint: Vec<u8>,
 }
 
-static mut h: Harness = Harness {
-    seeded: false,
-    seed: 0,
-    noLimit: false,
-    map: String::new(),
-    maxFrames: -1,
-    dump: None,
-    shotFrames: BTreeSet::new(),
-    shotDir: String::new(),
-    shotEvery: 0,
-    shotFrom: 0,
-    shotTo: u32::MAX,
-    shotStream: None,
-    events: Vec::new(),
-    joysticks: 0,
-    devices: Vec::new(),
-    nextDevice: 0,
-    touch: false,
-    replay: false,
-    nextEvent: 0,
-    frame: 0,
-    audible: false,
-    speed: 1.0,
-    rec: None,
-    segment: None,
-};
+impl Harness {
+    pub const fn new() -> Self {
+        Harness {
+            seeded: false,
+            seed: 0,
+            noLimit: false,
+            map: String::new(),
+            maxFrames: -1,
+            dump: None,
+            shotFrames: BTreeSet::new(),
+            shotDir: String::new(),
+            shotEvery: 0,
+            shotFrom: 0,
+            shotTo: u32::MAX,
+            shotStream: None,
+            events: Vec::new(),
+            joysticks: 0,
+            devices: Vec::new(),
+            nextDevice: 0,
+            touch: false,
+            replay: false,
+            nextEvent: 0,
+            frame: 0,
+            audible: false,
+            speed: 1.0,
+            rec: None,
+            segment: None,
+        }
+    }
+}
+
+fn h() -> &'static mut Harness {
+    &mut crate::game::game().get().harness
+}
 
 fn env(name: &str) -> Option<String> {
     std::env::var(name).ok().filter(|v| !v.is_empty())
@@ -153,7 +161,7 @@ fn strtol10(s: &str) -> i64 {
 }
 
 extern "C" fn virtual_ticks() -> u32 {
-    unsafe { 1000u32.wrapping_add(h.frame.wrapping_mul(WAITTIME as u32)) }
+    unsafe { 1000u32.wrapping_add(h().frame.wrapping_mul(WAITTIME as u32)) }
 }
 
 /// A recording's text: plain, or gzipped (.smwrp, .txt.gz).
@@ -173,7 +181,7 @@ fn load_events(path: &str) -> Vec<ReplayEvent> {
         let line = raw.strip_suffix('\r').unwrap_or(raw);
         let trimmed = line.trim_start_matches([' ', '\t']);
         if let Some(value) = trimmed.strip_prefix("#@ touch=") {
-            unsafe { h.touch = value.trim() == "1" };
+            unsafe { h().touch = value.trim() == "1" };
         }
         if trimmed.is_empty() || trimmed.starts_with('#') {
             continue;
@@ -205,7 +213,7 @@ fn load_events(path: &str) -> Vec<ReplayEvent> {
             let Some(device) = device else { fail(format!("{}:{}: expected '<frame> {} <dev>'", path, lineno, dir)) };
             added_later[device as usize].get_or_insert(dir == "jadd");
             unsafe {
-                h.devices.push((frame, device, dir == "jadd"));
+                h().devices.push((frame, device, dir == "jadd"));
             }
             continue;
         }
@@ -260,7 +268,7 @@ fn load_events(path: &str) -> Vec<ReplayEvent> {
         events.push(ev);
     }
     unsafe {
-        h.joysticks = (0..8).filter(|&d| added_later[d as usize] == Some(false)).map(|d| d + 1).max().unwrap_or(0);
+        h().joysticks = (0..8).filter(|&d| added_later[d as usize] == Some(false)).map(|d| d + 1).max().unwrap_or(0);
     }
     std::mem::take(events)
 }
@@ -269,7 +277,7 @@ fn load_events(path: &str) -> Vec<ReplayEvent> {
 fn attach_joysticks() {
     unsafe {
         SDL_InitSubSystem(SDL_INIT_JOYSTICK);
-        for i in 0..h.joysticks {
+        for i in 0..h().joysticks {
             if attach_virtual() != i {
                 fail(format!("cannot attach virtual joystick {}: {}", i, CStr::from_ptr(SDL_GetError()).to_string_lossy()));
             }
@@ -287,12 +295,12 @@ pub fn attach_virtual() -> i32 {
 pub fn replay_device_changes() -> Vec<(usize, bool)> {
     let mut changes = Vec::new();
     unsafe {
-        while h.nextDevice < h.devices.len() && h.devices[h.nextDevice].0 <= h.frame {
-            let (frame, device, added) = h.devices[h.nextDevice];
-            if frame == h.frame {
+        while h().nextDevice < h().devices.len() && h().devices[h().nextDevice].0 <= h().frame {
+            let (frame, device, added) = h().devices[h().nextDevice];
+            if frame == h().frame {
                 changes.push((device as usize, added));
             }
-            h.nextDevice += 1;
+            h().nextDevice += 1;
         }
     }
     changes
@@ -302,7 +310,7 @@ pub fn replay_device_changes() -> Vec<(usize, bool)> {
 pub fn record_device(index: usize, added: bool) {
     let Some(r) = rec().filter(|r| r.live) else { return };
     if index < 8 {
-        let _ = writeln!(r.out, "{} {} {}", unsafe { h.frame }, if added { "jadd" } else { "jremove" }, index);
+        let _ = writeln!(r.out, "{} {} {}", unsafe { h().frame }, if added { "jadd" } else { "jremove" }, index);
     }
 }
 
@@ -362,7 +370,7 @@ fn note_replay_key(event: &SDL_Event) {
 /// in a text field replays as it was recorded.
 pub fn keyboard_state() -> *const u8 {
     unsafe {
-        if h.replay {
+        if h().replay {
             (&raw const replay_keys).cast()
         } else {
             sdl2::sys::SDL_GetKeyboardState(std::ptr::null_mut())
@@ -373,7 +381,7 @@ pub fn keyboard_state() -> *const u8 {
 /// Net games only (not in the C++ harness): a `C` line, compared across clients.
 pub fn note_net(line: String) {
     unsafe {
-        if crate::game::game().netplay.active && h.dump.is_some() {
+        if crate::game::game().netplay.active && h().dump.is_some() {
             spawn_events.push(format!("C {}", line));
         }
     }
@@ -385,7 +393,7 @@ pub fn note_powerup_spawn(iType: i16, x: i16, y: i16) {
 
 fn dump_frame(out: &mut impl Write) -> std::io::Result<()> {
     let state = state_name();
-    writeln!(out, "F {} {}", unsafe { h.frame }, state)?;
+    writeln!(out, "F {} {}", unsafe { h().frame }, state)?;
 
     if state == "menu" {
         let menu = MenuState::instance();
@@ -407,54 +415,54 @@ pub fn init() {
         let record = env("SMW_REPLAY").is_none() && env("SMW_NO_RECORD").is_none();
         let seed_text = env("SMW_SEED").or_else(|| if record { Some(random_seed().to_string()) } else { None });
         if let Some(seed) = seed_text {
-            h.seeded = true;
-            h.seed = strtoul0(&seed);
-            RandomNumberGenerator::generator().reseed(h.seed);
-            srand(h.seed);
+            h().seeded = true;
+            h().seed = strtoul0(&seed);
+            RandomNumberGenerator::generator().reseed(h().seed);
+            srand(h().seed);
             RandomNumberGenerator::reset_call_count();
             game().sfx.sfx_ticks = virtual_ticks;
             game().sfx.sfx_ignore_channel_failure = true;
             game().sfx.sfx_log_events = true;
         }
 
-        h.noLimit = env("SMW_NOLIMIT").is_some();
+        h().noLimit = env("SMW_NOLIMIT").is_some();
 
         if let Some(map) = env("SMW_MAP") {
-            h.map = map;
+            h().map = map;
         }
 
         if let Some(frames) = env("SMW_FRAMES") {
-            h.maxFrames = strtol10(&frames);
+            h().maxFrames = strtol10(&frames);
         }
 
         if let Some(replay) = env("SMW_REPLAY") {
-            h.events = load_events(&replay);
-            h.replay = true;
+            h().events = load_events(&replay);
+            h().replay = true;
             load_segment(&replay);
             // A segment starts mid-session with every joystick the replay uses.
-            if h.segment.is_some() {
-                h.joysticks = h.joysticks.max(h.devices.iter().map(|&(_, d, _)| d + 1).max().unwrap_or(0));
-                h.devices.clear();
+            if h().segment.is_some() {
+                h().joysticks = h().joysticks.max(h().devices.iter().map(|&(_, d, _)| d + 1).max().unwrap_or(0));
+                h().devices.clear();
             }
-            let from = if h.segment.is_some() { h.frame + 1 } else { 0 };
+            let from = if h().segment.is_some() { h().frame + 1 } else { 0 };
             crate::smw::network::net_record::load(&read_recording(&replay).unwrap_or_default(), from);
         }
 
-        h.audible = record || env("SMW_AUDIBLE").is_some();
+        h().audible = record || env("SMW_AUDIBLE").is_some();
         // Unseeded runs (SMW_NO_RECORD) are live play, so they are audible too.
-        game().sfx.sfx_audible = h.audible || !h.seeded;
+        game().sfx.sfx_audible = h().audible || !h().seeded;
         if let Some(speed) = env("SMW_REPLAY_SPEED").and_then(|v| v.parse::<f32>().ok()).filter(|v| *v > 0.0) {
-            h.speed = speed;
+            h().speed = speed;
         }
         if record {
-            start_recording(h.seed, None);
-        } else if let Some(path) = env("SMW_RECORD_TO").filter(|_| h.replay && h.segment.is_none()) {
-            start_recording(h.seed, Some(path));
+            start_recording(h().seed, None);
+        } else if let Some(path) = env("SMW_RECORD_TO").filter(|_| h().replay && h().segment.is_none()) {
+            start_recording(h().seed, Some(path));
         }
 
         // Not in upstream: a connected pad must not join a replay's joysticks.
         #[cfg(not(target_os = "emscripten"))]
-        if h.replay {
+        if h().replay {
             for hint in [c"SDL_JOYSTICK_HIDAPI", c"SDL_JOYSTICK_MFI", c"SDL_JOYSTICK_IOKIT"] {
                 SDL_SetHint(hint.as_ptr(), c"0".as_ptr());
             }
@@ -462,7 +470,7 @@ pub fn init() {
 
         // The browser's SDL has no virtual joysticks; there init_joysticks takes the count from replay_joysticks.
         #[cfg(not(target_os = "emscripten"))]
-        if h.joysticks > 0 {
+        if h().joysticks > 0 {
             attach_joysticks();
         }
 
@@ -472,25 +480,25 @@ pub fn init() {
                 .append(true)
                 .open(&dump)
                 .unwrap_or_else(|_| fail(format!("cannot open dump {}", dump)));
-            h.dump = Some(BufWriter::new(file));
+            h().dump = Some(BufWriter::new(file));
         }
 
         if let Some(shots) = env("SMW_SHOT_FRAMES") {
             for item in shots.split(',').filter(|s| !s.is_empty()) {
-                h.shotFrames.insert(strtol10(item) as u32);
+                h().shotFrames.insert(strtol10(item) as u32);
             }
         }
-        h.shotDir = env("SMW_SHOT_DIR").unwrap_or_else(|| ".".to_string());
+        h().shotDir = env("SMW_SHOT_DIR").unwrap_or_else(|| ".".to_string());
         if let Some(range) = env("SMW_SHOT_RANGE") {
             let (from, to) = range.split_once('-').unwrap_or((&range, ""));
-            h.shotFrom = strtol10(from) as u32;
+            h().shotFrom = strtol10(from) as u32;
             if !to.is_empty() {
-                h.shotTo = strtol10(to) as u32;
+                h().shotTo = strtol10(to) as u32;
             }
-            h.shotEvery = 1;
+            h().shotEvery = 1;
         }
         if let Some(every) = env("SMW_SHOT_EVERY") {
-            h.shotEvery = strtol10(&every).max(1) as u32;
+            h().shotEvery = strtol10(&every).max(1) as u32;
         }
         if let Some(stream) = env("SMW_SHOT_STREAM") {
             let file = std::fs::OpenOptions::new()
@@ -498,15 +506,15 @@ pub fn init() {
                 .append(true)
                 .open(&stream)
                 .unwrap_or_else(|_| fail(format!("cannot open shot stream {}", stream)));
-            h.shotStream = Some(BufWriter::with_capacity(640 * 480 * 4, file));
+            h().shotStream = Some(BufWriter::with_capacity(640 * 480 * 4, file));
         }
     }
 }
 
 pub fn libc_seed(fallback: u32) -> u32 {
     unsafe {
-        if h.seeded {
-            h.seed
+        if h().seeded {
+            h().seed
         } else {
             fallback
         }
@@ -518,8 +526,8 @@ pub fn libc_seed(fallback: u32) -> u32 {
 pub fn replay_joysticks() -> Option<i16> {
     #[cfg(target_os = "emscripten")]
     unsafe {
-        if h.replay {
-            return Some(h.joysticks as i16);
+        if h().replay {
+            return Some(h().joysticks as i16);
         }
     }
     None
@@ -534,20 +542,20 @@ pub fn record_touch() {
 
 /// Whether the replay was recorded with Android's touch controls on (`touch::touch_first`).
 pub fn replay_touch() -> bool {
-    unsafe { h.replay && h.touch }
+    unsafe { h().replay && h().touch }
 }
 
 pub fn replaying() -> bool {
-    unsafe { h.replay }
+    unsafe { h().replay }
 }
 
 pub fn frame() -> u32 {
-    unsafe { h.frame }
+    unsafe { h().frame }
 }
 
 /// The clock net code decides by: frame-based in seeded runs, so a replay reads the recorded session's times.
 pub fn net_ticks() -> u32 {
-    if unsafe { h.seeded } {
+    if unsafe { h().seeded } {
         virtual_ticks()
     } else {
         crate::services::ticks()
@@ -567,41 +575,41 @@ pub fn net_seed() -> Option<u32> {
 }
 
 pub fn no_limit() -> bool {
-    unsafe { h.noLimit }
+    unsafe { h().noLimit }
 }
 
 pub fn forced_map() -> Option<&'static str> {
     unsafe {
-        if h.map.is_empty() {
+        if h().map.is_empty() {
             None
         } else {
-            Some(h.map.as_str())
+            Some(h().map.as_str())
         }
     }
 }
 
 pub fn frame_start() {
     #[cfg(not(target_os = "emscripten"))]
-    crate::smw::pad::debug_frame(unsafe { h.frame });
+    crate::smw::pad::debug_frame(unsafe { h().frame });
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::phase(2);
     sfx::sfx_virtual_advance();
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::phase(3);
-    record_frame_start(unsafe { h.frame });
+    record_frame_start(unsafe { h().frame });
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::phase(4);
 
     unsafe {
-        while h.nextEvent < h.events.len() && h.events[h.nextEvent].frame <= h.frame {
-            if h.events[h.nextEvent].frame == h.frame {
+        while h().nextEvent < h().events.len() && h().events[h().nextEvent].frame <= h().frame {
+            if h().events[h().nextEvent].frame == h().frame {
                 let mut event: SDL_Event = std::mem::zeroed();
-                fill_event(&h.events[h.nextEvent], &mut event);
+                fill_event(&h().events[h().nextEvent], &mut event);
                 note_replay_key(&event);
                 smw_sdl2::events::push(&mut event);
-                copy_replay_event(&h.events[h.nextEvent]);
+                copy_replay_event(&h().events[h().nextEvent]);
             }
-            h.nextEvent += 1;
+            h().nextEvent += 1;
         }
     }
 }
@@ -609,55 +617,55 @@ pub fn frame_start() {
 /// Blocking waits take the next replay event immediately instead of waiting for input.
 pub fn wait_event(event: &mut SDL_Event) {
     unsafe {
-        if h.rec.as_ref().is_some_and(|r| r.live) {
+        if h().rec.as_ref().is_some_and(|r| r.live) {
             record_wait_event(event);
             return;
         }
-        if !h.replay {
+        if !h().replay {
             smw_sdl2::events::wait(event);
             return;
         }
-        if h.nextEvent >= h.events.len() {
-            fail(format!("blocking wait at frame {} but the replay has no events left", h.frame));
+        if h().nextEvent >= h().events.len() {
+            fail(format!("blocking wait at frame {} but the replay has no events left", h().frame));
         }
-        fill_event(&h.events[h.nextEvent], event);
+        fill_event(&h().events[h().nextEvent], event);
         note_replay_key(event);
-        copy_replay_event(&h.events[h.nextEvent]);
-        h.nextEvent += 1;
+        copy_replay_event(&h().events[h().nextEvent]);
+        h().nextEvent += 1;
     }
 }
 
 pub fn frame_end() {
     unsafe {
-        if let Some(mut out) = h.dump.take() {
+        if let Some(mut out) = h().dump.take() {
             let _ = dump_frame(&mut out);
             let _ = out.flush();
-            h.dump = Some(out);
+            h().dump = Some(out);
         }
         game().sfx.sfx_events.clear();
         spawn_events.clear();
-        record_markers(h.frame);
+        record_markers(h().frame);
 
-        let f = h.frame;
-        let periodic = h.shotEvery > 0 && f >= h.shotFrom && f <= h.shotTo && (f - h.shotFrom) % h.shotEvery == 0;
+        let f = h().frame;
+        let periodic = h().shotEvery > 0 && f >= h().shotFrom && f <= h().shotTo && (f - h().shotFrom) % h().shotEvery == 0;
         if periodic {
-            if let Some(out) = h.shotStream.as_mut() {
+            if let Some(out) = h().shotStream.as_mut() {
                 if crate::common::gfx::gfx_write_screen_raw(out).and_then(|_| out.flush()).is_err() {
                     fail(format!("cannot write shot stream at frame {}", f));
                 }
             }
         }
-        if h.shotFrames.contains(&f) || (periodic && h.shotStream.is_none()) {
-            let path = format!("{}/frame_{}.bmp", h.shotDir, h.frame);
+        if h().shotFrames.contains(&f) || (periodic && h().shotStream.is_none()) {
+            let path = format!("{}/frame_{}.bmp", h().shotDir, h().frame);
             if !crate::common::gfx::gfx_save_screen_bmp(&path) {
                 eprintln!("[harness] cannot save {}", path);
             }
         }
 
-        h.frame += 1;
-        if h.maxFrames >= 0 && h.frame as i64 >= h.maxFrames {
+        h().frame += 1;
+        if h().maxFrames >= 0 && h().frame as i64 >= h().maxFrames {
             game().game_values.appstate = AppState::Quit;
-            h.dump = None;
+            h().dump = None;
         }
     }
 }
@@ -693,7 +701,7 @@ struct Recorder {
 }
 
 fn rec() -> Option<&'static mut Recorder> {
-    unsafe { h.rec.as_mut() }
+    unsafe { h().rec.as_mut() }
 }
 
 const BASE64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -812,7 +820,7 @@ fn start_recording(seed: u32, to: Option<String>) {
 
     let script = if live { env("SMW_LIVE_SCRIPT").map(|p| load_events(&p)).unwrap_or_default() } else { Vec::new() };
     unsafe {
-        h.rec = Some(Recorder {
+        h().rec = Some(Recorder {
             out,
             path,
             pending: Vec::new(),
@@ -1068,7 +1076,7 @@ fn record_wait_event(event: &mut SDL_Event) {
         #[cfg(not(target_os = "emscripten"))]
         crate::smw::touch::flush();
         let Some(r) = rec() else { return };
-        push_live_script(r, unsafe { h.frame } + 1);
+        push_live_script(r, unsafe { h().frame } + 1);
         smw_sdl2::events::pump();
         while !r.pending.is_empty() {
             let raw = r.pending.remove(0);
@@ -1077,7 +1085,7 @@ fn record_wait_event(event: &mut SDL_Event) {
                 r.pending.insert(0, raw);
                 break;
             }
-            if let Some(ev) = to_replay_event(&raw, unsafe { h.frame } + 1) {
+            if let Some(ev) = to_replay_event(&raw, unsafe { h().frame } + 1) {
                 let _ = writeln!(r.out, "{}", line_for(&ev));
                 fill_event(&ev, event);
                 return;
@@ -1104,11 +1112,11 @@ pub fn finish() {
         if let Some(home) = watch_home.take() {
             let _ = std::fs::remove_dir_all(home);
         }
-        if let Some(mut r) = h.rec.take() {
+        if let Some(mut r) = h().rec.take() {
             if r.live {
                 smw_sdl2::events::set_filter(None, std::ptr::null_mut());
             }
-            let frames = r.quitFrame.unwrap_or(h.frame);
+            let frames = r.quitFrame.unwrap_or(h().frame);
             let _ = writeln!(r.out, "#@ frames={}", frames);
             let _ = r.out.flush();
             println!("[harness] recorded {} frames to {}", frames, r.path);
@@ -1118,12 +1126,12 @@ pub fn finish() {
 
 /// Real SDL_mixer output on top of the virtual mixer (recorded sessions and --replay watching).
 pub fn audible() -> bool {
-    unsafe { h.audible }
+    unsafe { h().audible }
 }
 
 /// Playback speed multiplier for watching a recording (SMW_REPLAY_SPEED); 1 otherwise.
 pub fn speed() -> f32 {
-    unsafe { h.speed }
+    unsafe { h().speed }
 }
 
 /// `--replay <file>`: watch a recording in a normal window at normal speed with sound. The settings
@@ -1190,8 +1198,8 @@ pub fn match_checkpoint() {
     let Some(r) = rec() else { return };
     r.matches += 1;
     r.checkpoint = Some(match crate::smw::checkpoint::unsupported_reason() {
-        Some(reason) => format!("#@ checkpoint match={} frame={} unsupported={}", r.matches, unsafe { h.frame }, reason),
-        None => format!("#@ checkpoint match={} frame={} z64={}", r.matches, unsafe { h.frame }, base64_encode(&deflate(&crate::smw::checkpoint::capture()))),
+        Some(reason) => format!("#@ checkpoint match={} frame={} unsupported={}", r.matches, unsafe { h().frame }, reason),
+        None => format!("#@ checkpoint match={} frame={} z64={}", r.matches, unsafe { h().frame }, base64_encode(&deflate(&crate::smw::checkpoint::capture()))),
     });
 }
 
@@ -1286,15 +1294,15 @@ fn load_segment(path: &str) {
         .find(|(f, state)| *f > start && state != "gameplay" && state != "scoreboard")
         .map(|(f, _)| f);
     unsafe {
-        h.frame = start;
+        h().frame = start;
         if let Some(end) = end {
-            h.maxFrames = if h.maxFrames >= 0 { h.maxFrames.min(end as i64) } else { end as i64 };
+            h().maxFrames = if h().maxFrames >= 0 { h().maxFrames.min(end as i64) } else { end as i64 };
         }
         // The menu consumed this frame's input before the checkpoint.
-        while h.nextEvent < h.events.len() && h.events[h.nextEvent].frame <= start {
-            h.nextEvent += 1;
+        while h().nextEvent < h().events.len() && h().events[h().nextEvent].frame <= start {
+            h().nextEvent += 1;
         }
-        h.segment = Some(Segment { checkpoint: bytes });
+        h().segment = Some(Segment { checkpoint: bytes });
     }
 }
 
@@ -1317,7 +1325,7 @@ fn checkpoint_bytes(d: &[(String, String)]) -> Result<Vec<u8>, String> {
 
 /// The state a segment replay starts in, if this is one.
 pub fn segment_state() -> Option<crate::smw::checkpoint::SegmentState> {
-    unsafe { h.segment.as_mut().map(|s| crate::smw::checkpoint::SegmentState { checkpoint: std::mem::take(&mut s.checkpoint), _alias: Aliased::new() }) }
+    unsafe { h().segment.as_mut().map(|s| crate::smw::checkpoint::SegmentState { checkpoint: std::mem::take(&mut s.checkpoint), _alias: Aliased::new() }) }
 }
 
 #[cfg(test)]

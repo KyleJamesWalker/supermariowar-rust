@@ -171,7 +171,7 @@ impl UI_ControlTrait for MI_MapBrowser {
                         rDst.x = iCol as i32 * 200 + 40;
 
                         let i = (iRow * 3 + iCol) as usize;
-                        self.mapSurfaces[i].draw_src_to(&rSrc, blitdest, &rDst);
+                        self.mapSurfaces[i].draw_src_to(&rSrc, game().blitdest, &rDst);
 
                         if self.iType == 0 && self.node_filter(i) {
                             game().rm.menu_map_filter.draw_src(rDst.x, rDst.y, &filterSrc);
@@ -192,7 +192,7 @@ impl UI_ControlTrait for MI_MapBrowser {
             game().rm.menu_dialog.draw_src(rDst.x + 160, rDst.y + 132, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
 
             let sel = (self.iSelectedRow * 3 + self.iSelectedCol) as usize;
-            self.mapSurfaces[sel].draw_src_to(&rSrc, blitdest, &rDst);
+            self.mapSurfaces[sel].draw_src_to(&rSrc, game().blitdest, &rDst);
 
             if self.iType == 0 && self.node_filter(sel) {
                 game().rm.menu_map_filter.draw_src(rDst.x, rDst.y, &filterSrc);
