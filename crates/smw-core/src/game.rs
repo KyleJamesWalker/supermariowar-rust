@@ -91,6 +91,9 @@ pub struct Game {
     #[cfg(target_os = "emscripten")]
     pub frame_events: Vec<smw_platform::Input>,
     pub net_record: NetRecordState,
+    pub screen: *mut sdl2::sys::SDL_Surface,
+    /// The destination surface for all drawing; swapped from `screen` to another surface at times.
+    pub blitdest: *mut sdl2::sys::SDL_Surface,
 }
 
 impl Game {
@@ -152,6 +155,8 @@ impl Game {
             #[cfg(target_os = "emscripten")]
             frame_events: Vec::new(),
             net_record: NetRecordState::new(),
+            screen: std::ptr::null_mut(),
+            blitdest: std::ptr::null_mut(),
         }
     }
 }

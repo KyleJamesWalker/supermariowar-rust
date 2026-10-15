@@ -43,8 +43,6 @@ const GIT_REVISION: &str = "";
 const GIT_DATE: &str = "";
 
 //------ system stuff ------
-pub static mut screen: *mut SDL_Surface = null_mut(); //for gfx (maybe the gfx system should be improved -> resource manager)
-pub static mut blitdest: *mut SDL_Surface = null_mut(); //the destination surface for all drawing (can be swapped from screen to another surface)
 
 
 //*************************************
@@ -484,7 +482,7 @@ pub fn main_game() {
         create_globals();
 
         gfx_init(App::screenWidth, App::screenHeight, false); //initialize the graphics (SDL)
-        blitdest = screen;
+        game().blitdest = game().screen;
 
         sfx_init(); //init the sound system
         net_init(); //init the networking
@@ -516,7 +514,7 @@ pub fn main_game() {
 
         if game().game_values.fullscreen {
             crate::common::gfx::gfx_changefullscreen(true);
-            blitdest = screen;
+            game().blitdest = game().screen;
         }
 
         init_spawnlocations();

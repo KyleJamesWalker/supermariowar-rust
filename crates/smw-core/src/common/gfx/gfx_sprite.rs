@@ -66,7 +66,7 @@ fn try_load_image(path: &Path, optimize: bool, color_key: Option<RGB>, alpha: Op
                 }
             }
 
-            SdlSurfacePtr::new(SDL_ConvertSurface(raw.get(), (*screen).format, 0))
+            SdlSurfacePtr::new(SDL_ConvertSurface(raw.get(), (*game().screen).format, 0))
         };
         if img.is_null() {
             return Err(format!("Couldn't convert {} to the display's pixel format: {}", path_str, sdl_error()));
@@ -121,7 +121,7 @@ impl gfxSprite {
     /// `gfxSprite::blank(w, h)`: a screen-format surface with blending off.
     pub fn blank(w: u32, h: u32) -> Self {
         unsafe {
-            let sf = (*screen).format;
+            let sf = (*game().screen).format;
             let surf = SdlSurfacePtr::new(SDL_CreateRGBSurfaceWithFormat(0x0, w as i32, h as i32, (*sf).BitsPerPixel as i32, (*sf).format));
             if surf.is_null() {
                 throw(format!("Couldn't create blank surface: {}", sdl_error()));
@@ -176,12 +176,12 @@ impl gfxSprite {
 
     /// Draw the whole sprite at the given coordinate.
     pub fn draw(&self, x: i32, y: i32) {
-        unsafe { self.blit(null(), blitdest, x + game().x_shake as i32, y + game().y_shake as i32) };
+        unsafe { self.blit(null(), game().blitdest, x + game().x_shake as i32, y + game().y_shake as i32) };
     }
 
     /// Draw part of the sprite at the given coordinate.
     pub fn draw_src(&self, x: i32, y: i32, srcRect: &SDL_Rect) {
-        unsafe { self.blit(srcRect, blitdest, x + game().x_shake as i32, y + game().y_shake as i32) };
+        unsafe { self.blit(srcRect, game().blitdest, x + game().x_shake as i32, y + game().y_shake as i32) };
     }
 
     /// `draw(x, y, srcx, srcy, w, h)` convenience used all over the C++ via `SDL_Rect{...}` temporaries.
@@ -202,7 +202,7 @@ impl gfxSprite {
                 return;
             }
 
-            blit_surface(self.m_picture.get(), &adjustedSrcRect, blitdest, &mut adjustedDstRect);
+            blit_surface(self.m_picture.get(), &adjustedSrcRect, game().blitdest, &mut adjustedDstRect);
 
             if let Some(wrap_x) = self.m_wrap_x {
                 if x + srcRect.w >= wrap_x {
@@ -214,7 +214,7 @@ impl gfxSprite {
                         return;
                     }
 
-                    blit_surface(self.m_picture.get(), &adjustedSrcRect, blitdest, &mut adjustedDstRect);
+                    blit_surface(self.m_picture.get(), &adjustedSrcRect, game().blitdest, &mut adjustedDstRect);
                 } else if x < 0 {
                     adjustedSrcRect = *srcRect;
                     adjustedDstRect = dstRect;
@@ -224,7 +224,7 @@ impl gfxSprite {
                         return;
                     }
 
-                    blit_surface(self.m_picture.get(), &adjustedSrcRect, blitdest, &mut adjustedDstRect);
+                    blit_surface(self.m_picture.get(), &adjustedSrcRect, game().blitdest, &mut adjustedDstRect);
                 }
             }
         }

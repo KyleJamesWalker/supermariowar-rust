@@ -1429,18 +1429,18 @@ impl GameplayState {
             //Draw black "behind" the game if we are shaking/moving the screen
             if game().y_shake > 0 {
                 let rect = SDL_Rect { x: 0, y: 0, w: App::screenWidth, h: game().y_shake as i32 };
-                crate::common::gfx::blit::fill_rect(screen, &rect, 0x0); //fill empty area with black
+                crate::common::gfx::blit::fill_rect(game().screen, &rect, 0x0); //fill empty area with black
             } else if game().y_shake < 0 {
                 let rect = SDL_Rect { x: 0, y: App::screenHeight + game().y_shake as i32, w: App::screenWidth, h: App::screenHeight };
-                crate::common::gfx::blit::fill_rect(screen, &rect, 0x0); //fill empty area with black
+                crate::common::gfx::blit::fill_rect(game().screen, &rect, 0x0); //fill empty area with black
             }
 
             if game().x_shake > 0 {
                 let rect = SDL_Rect { x: 0, y: 0, w: game().x_shake as i32, h: App::screenHeight };
-                crate::common::gfx::blit::fill_rect(screen, &rect, 0x0); //fill empty area with black
+                crate::common::gfx::blit::fill_rect(game().screen, &rect, 0x0); //fill empty area with black
             } else if game().x_shake < 0 {
                 let rect = SDL_Rect { x: App::screenWidth + game().x_shake as i32, y: 0, w: App::screenWidth, h: App::screenHeight };
-                crate::common::gfx::blit::fill_rect(screen, &rect, 0x0); //fill empty area with black
+                crate::common::gfx::blit::fill_rect(game().screen, &rect, 0x0); //fill empty area with black
             }
         }
     }
@@ -2356,7 +2356,7 @@ impl GameplayState {
                         } else if sym == SDL_KeyCode::SDLK_RETURN as i32 {
                             game().game_values.fullscreen = !game().game_values.fullscreen;
                             gfx_changefullscreen(game().game_values.fullscreen);
-                            blitdest = screen;
+                            game().blitdest = game().screen;
 
                             // Not fed to the input, or the Return would also pause the game.
                             continue;

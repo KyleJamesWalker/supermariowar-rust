@@ -141,10 +141,10 @@ impl MI_WorldPreviewDisplay {
         }
 
         unsafe {
-            let olddest = blitdest;
-            blitdest = self.map_sprite.get_surface();
+            let olddest = game().blitdest;
+            game().blitdest = self.map_sprite.get_surface();
             game().g_worldmap.draw(self.iMapGlobalOffsetX, self.iMapGlobalOffsetY, false, false);
-            blitdest = olddest;
+            game().blitdest = olddest;
         }
     }
 }
@@ -291,6 +291,6 @@ impl UI_ControlTrait for MI_WorldPreviewDisplay {
         self.rectSrcSurface.x = self.iMapOffsetX as i32;
         self.rectSrcSurface.y = self.iMapOffsetY as i32;
 
-        self.map_sprite.draw_src_to(&self.rectSrcSurface, unsafe { blitdest }, &self.rectDstSurface);
+        self.map_sprite.draw_src_to(&self.rectSrcSurface, unsafe { game().blitdest }, &self.rectDstSurface);
     }
 }

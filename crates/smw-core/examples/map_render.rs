@@ -21,7 +21,7 @@ fn save_bmp(s: *mut SDL_Surface, path: &str) {
 }
 
 unsafe fn draw_map() {
-    blitdest = screen;
+    game().blitdest = game().screen;
     game().rm.spr_backmap[game().g_iCurrentDrawIndex as usize].draw(0, 0);
     game().g_map.draw_platforms(0);
     game().g_map.draw_platforms(1);
@@ -41,7 +41,7 @@ fn main() {
         RootDataDirectory = args[1].clone();
         let outdir = &args[2];
         gfx_init(640, 480, false);
-        blitdest = screen;
+        game().blitdest = game().screen;
         game().rm = Ptr::new_box(CResourceManager::new());
         game().g_map = Ptr::from_box(CMap::new());
         game().filterslist = Ptr::new_box(FiltersList::new());
@@ -68,18 +68,18 @@ fn main() {
             game().g_map.predrawforeground(&rmp.spr_frontmap[1]);
             game().g_map.setup_animated_tiles();
 
-            smw::common::gfx::blit::fill_rect(screen, std::ptr::null(), 0);
+            smw::common::gfx::blit::fill_rect(game().screen, std::ptr::null(), 0);
             draw_map();
-            save_bmp(screen, &format!("{}/{}_f0.bmp", outdir, n));
+            save_bmp(game().screen, &format!("{}/{}_f0.bmp", outdir, n));
 
             for _ in 0..40 {
                 game().g_map.update_platforms();
                 game().g_map.update();
             }
             game().g_map.lockconnection(0);
-            smw::common::gfx::blit::fill_rect(screen, std::ptr::null(), 0);
+            smw::common::gfx::blit::fill_rect(game().screen, std::ptr::null(), 0);
             draw_map();
-            save_bmp(screen, &format!("{}/{}_f40.bmp", outdir, n));
+            save_bmp(game().screen, &format!("{}/{}_f40.bmp", outdir, n));
 
             let thumb = game().g_map.create_thumbnail_surface(false);
             if !thumb.get_surface().is_null() {

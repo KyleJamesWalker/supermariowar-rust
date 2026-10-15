@@ -96,7 +96,7 @@ impl GraphicsSDL {
                 (*(*self.sdl_screen_surface).format).BitsPerPixel
             );
 
-            screen = self.sdl_screen_surface;
+            game().screen = self.sdl_screen_surface;
         }
         true
     }

@@ -372,7 +372,7 @@ pub fn frame_delay(delay: u32) {
                     let path = format!("{}/frame_{}.bmp", h.shotDir, h.frame);
                     let cpath = CString::new(path.as_bytes()).unwrap();
                     let rw = SDL_RWFromFile(cpath.as_ptr(), b"wb\0".as_ptr() as *const _);
-                    if SDL_SaveBMP_RW(screen, rw, 1) != 0 {
+                    if SDL_SaveBMP_RW(game().screen, rw, 1) != 0 {
                         eprintln!("[editorharness] cannot save {}: {}", path, CStr::from_ptr(SDL_GetError()).to_string_lossy());
                     }
                 }

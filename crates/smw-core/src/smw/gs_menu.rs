@@ -1024,7 +1024,7 @@ impl MenuState {
                 self.mCurrentMenu.reset_menu();
             } else if MENU_CODE_TOGGLE_FULLSCREEN == code {
                 gfx_changefullscreen(game().game_values.fullscreen);
-                blitdest = screen;
+                game().blitdest = game().screen;
             } else if MENU_CODE_TO_GAME_SETUP_MENU == code {
                 self.to_game_setup_menu();
             } else if MENU_CODE_BACK_TO_GAME_SETUP_MENU == code {
@@ -1203,10 +1203,10 @@ impl MenuState {
             } else if MENU_CODE_MENU_GRAPHICS_PACK_CHANGED == code {
                 game().rm.load_menu_graphics();
 
-                blitdest = game().rm.menu_backdrop.get_surface();
+                game().blitdest = game().rm.menu_backdrop.get_surface();
                 game().rm.menu_shade.setalpha(App::menuTransparency as u8);
                 game().rm.menu_shade.draw(0, 0);
-                blitdest = screen;
+                game().blitdest = game().screen;
             } else if MENU_CODE_WORLD_GRAPHICS_PACK_CHANGED == code {
                 game().rm.load_world_graphics();
             } else if MENU_CODE_GAME_GRAPHICS_PACK_CHANGED == code {
@@ -1689,7 +1689,7 @@ impl GameState for MenuState {
                         else if sym == SDL_KeyCode::SDLK_RETURN as i32 {
                             game().game_values.fullscreen = !game().game_values.fullscreen;
                             gfx_changefullscreen(game().game_values.fullscreen);
-                            blitdest = screen;
+                            game().blitdest = game().screen;
 
                             continue;
                         }
@@ -1769,7 +1769,7 @@ impl GameState for MenuState {
             if self.mCurrentMenu != menu(self.mWorldMenu) {
                 game().rm.menu_backdrop.draw(0, 0);
             } else {
-                crate::common::gfx::blit::fill_rect(screen, std::ptr::null(), SDL_MapRGB((*screen).format, 0, 0, 0));
+                crate::common::gfx::blit::fill_rect(game().screen, std::ptr::null(), SDL_MapRGB((*game().screen).format, 0, 0, 0));
             }
 
             self.mCurrentMenu.update();

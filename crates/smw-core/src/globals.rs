@@ -4,7 +4,6 @@ pub use smw_globals::{Aliased, Global, Ptr};
 
 pub use crate::common::global::*;
 pub use crate::game::game;
-pub use crate::smw::main::{blitdest, screen};
 
 /// Runs the constructors of C++ globals that have static storage, in C++ definition order.
 pub fn init_globals() {

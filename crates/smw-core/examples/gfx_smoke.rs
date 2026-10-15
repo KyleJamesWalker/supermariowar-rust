@@ -21,7 +21,7 @@ fn main() {
     }
 
     gfx_init(640, 480, false);
-    unsafe { blitdest = screen };
+    unsafe { game().blitdest = game().screen };
 
     let pack = format!("{}/gfx/packs/Classic", data);
     assert!(gfx_loadpalette(Path::new(&format!("{}/palette.png", pack))));
@@ -52,7 +52,7 @@ fn main() {
     menuskin[0].draw_part(380, 400, 0, 0, 32, 32);
     menuskin[3].draw_part(414, 400, 96, 0, 32, 32);
     skin[0].draw_clip(450, 400, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 }, ClipEdge::Left, 460);
-    skin[0].draw_stretch(&SDL_Rect { x: 0, y: 0, w: 32, h: 32 }, unsafe { blitdest }, &SDL_Rect { x: 500, y: 380, w: 64, h: 64 });
+    skin[0].draw_stretch(&SDL_Rect { x: 0, y: 0, w: 32, h: 32 }, unsafe { game().blitdest }, &SDL_Rect { x: 500, y: 380, w: 64, h: 64 });
     gfx_drawpreview(&skin[2], 620, 300, 0, 0, 32, 32, &SDL_Rect { x: 0, y: 0, w: 640, h: 480 }, true, None);
 
     font_large.draw(10, 150, "Super Mario War: 0123456789");
