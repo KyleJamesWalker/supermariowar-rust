@@ -18,7 +18,7 @@ if [ -z "$SMW_RUST_BIN" ] || [ -z "$SMW_RUST_SERVER" ]; then
   cargo build --release --quiet --locked --manifest-path "$PORT/Cargo.toml" --bin smw --bin smw_server || exit 2
 fi
 WORK=$(mktemp -d)
-games=(${NET_GAMES:-net_game net_game_blocks net_game_frenzy net_game_stomp net_game_coins net_game_classic net_game_stompkill})
+games=(${NET_GAMES:-net_game net_game_blocks net_game_frenzy net_game_stomp net_game_coins net_game_classic net_game_stompkill net_game_stompkill_powerup})
 
 param() { sed -n "s/^#@ $1=//p" "$HERE/$2/host.txt"; }
 

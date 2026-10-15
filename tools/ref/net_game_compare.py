@@ -12,6 +12,7 @@ the last SPAWN_TAIL gameplay frames. --min KIND=N fails when the host recorded f
 is --min powerup=N). With --spawns, a game over must also come within GAMEOVER_SLACK gameplay frames on both
 clients. --min-close overrides MIN_CLOSE for scenarios whose tracks drift for a few frames per block bump,
 as they do between two C++ clients. --forbid TEXT fails when any `C` record of either client contains TEXT, --require REGEX when none of the host's matches.
+--drops-powerup ID fails unless, on both clients, player ID dies holding a powerup and holds none on its death frame.
 """
 import argparse
 import re
@@ -40,7 +41,7 @@ def parse(path):
             menus.append(f[1])
         elif f[0] == 'P' and frames:
             kv = dict(x.split('=', 1) for x in f[1:])
-            frames[-1][int(kv['id'])] = (float(kv['fx']), float(kv['fy']), int(kv['state']))
+            frames[-1][int(kv['id'])] = (float(kv['fx']), float(kv['fy']), int(kv['state']), int(kv['powerup']))
         elif f[0] == 'G' and gameover is None and 'gameover=1' in f:
             gameover = len(frames) - 1
         elif f[0] == 'C' and frames:
@@ -108,6 +109,7 @@ def main():
     ap.add_argument('--min-close', type=float, default=MIN_CLOSE)
     ap.add_argument('--forbid', action='append', default=[], metavar='TEXT')
     ap.add_argument('--require', action='append', default=[], metavar='REGEX')
+    ap.add_argument('--drops-powerup', type=int, action='append', default=[], metavar='ID')
     args = ap.parse_args()
     hmenus, host, hspawns, hend = parse(args.host)
     jmenus, join, jspawns, jend = parse(args.join)
@@ -151,6 +153,14 @@ def main():
         hits = [s for s in hspawns if re.search(text, f'{s[1]} {s[2]}')]
         print(f'  require {text!r}: ' + (f'host frame {hits[0][0]}' if hits else 'MISSING'))
         ok &= bool(hits)
+    for pid in args.drops_powerup:
+        for who, frames, spawns in (('host', host, hspawns), ('join', join, jspawns)):
+            deaths = [s[0] for s in spawns if s[1] == 'death' and s[2].startswith(f'p={pid} ')]
+            held = [f for f in deaths if f > 0 and (frames[f - 1].get(pid) or (0, 0, 0, -1))[3] >= 0]
+            dropped = [f for f in held if (frames[f].get(pid) or (0, 0, 0, 0))[3] < 0]
+            print(f'  player {pid} drops its powerup on death ({who}): ' + (f'frame {dropped[0]}' if dropped else
+                  f'NO ({len(deaths)} deaths, {len(held)} holding one)'))
+            ok &= bool(dropped)
     print('  ' + ('SYNCED' if ok else 'NOT SYNCED'))
     return 0 if ok else 1
 
