@@ -1,6 +1,6 @@
 # Releasing
 
-Pushing a `v*` tag publishes a GitHub Release: `.github/workflows/release.yml` builds every platform, checks the builds, and uploads the packages with a `SHA256SUMS` file and generated release notes. The web page and the relay image do not follow tags: they deploy from `main` (`web.yml`, `relay.yml`).
+Publishing a GitHub Release runs `.github/workflows/release.yml`: it builds every platform, checks the builds, and uploads the packages and a `SHA256SUMS` file to that release. Pushing a tag alone runs nothing. The web page and the relay image do not follow releases: they deploy from `main` (`web.yml`, `relay.yml`).
 
 ## Assets
 
@@ -19,7 +19,7 @@ Pushing a `v*` tag publishes a GitHub Release: `.github/workflows/release.yml` b
 1. Check that CI is green on the `main` commit you will tag.
 2. Optional: run a dry run from Actions > Release > Run workflow, or `gh workflow run release.yml --ref main`. It builds everything and uploads the packages as the `release-assets` artifact without creating a release. The run summary lists each file's size and checksum.
 3. Set `version` in `Cargo.toml` to the new version (it becomes the macOS app's `CFBundleShortVersionString`), run `cargo check` to update `Cargo.lock`, and merge that change to `main`.
-4. Create the release on that `main` commit. GitHub creates the tag, which starts the Release run, and the run uploads the packages to this release:
+4. Create the release on that `main` commit. Publishing it starts the Release run, which uploads the packages to it:
 
    ```sh
    gh release create v0.2.0 --target main --generate-notes

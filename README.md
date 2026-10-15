@@ -21,7 +21,7 @@ Every CI run also uploads these packages as workflow artifacts (`smw-linux-x86_6
 
 ### Releases
 
-Pushing a `v*` tag runs `.github/workflows/release.yml`. It builds every package with the same `build_*.yml` workflows that CI uses, checks them, and publishes a GitHub Release with `SHA256SUMS` and generated notes. The web page and the relay image do not follow tags: they deploy from `main`. `docs/RELEASING.md` has the steps, including a dry run that builds the packages without a release.
+Publishing a GitHub Release runs `.github/workflows/release.yml`. It builds every package with the same `build_*.yml` workflows that CI uses, checks them, and uploads them to the release with `SHA256SUMS`. Pushing a tag alone runs nothing. The web page and the relay image do not follow releases: they deploy from `main`. `docs/RELEASING.md` has the steps, including a dry run that builds the packages without a release.
 
 ## Build and run
 

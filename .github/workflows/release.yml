@@ -1,8 +1,8 @@
 name: Release
 
 on:
-  push:
-    tags: ['v*']
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -21,7 +21,7 @@ jobs:
     steps:
       - id: version
         run: |
-          if [[ $GITHUB_EVENT_NAME == push && $GITHUB_REF == refs/tags/v* ]]; then
+          if [[ $GITHUB_EVENT_NAME == release ]]; then
             echo "version=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
             echo "publish=true" >> "$GITHUB_OUTPUT"
           else
@@ -104,12 +104,10 @@ jobs:
           name: release-assets
           path: dist
 
-      - name: Create the release
+      - name: Upload the assets
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.version.outputs.version }}
         run: |
-          gh release view "$TAG" > /dev/null 2>&1 \
-            || gh release create "$TAG" --verify-tag --generate-notes --title "$TAG"
           gh release upload "$TAG" dist/* --clobber
