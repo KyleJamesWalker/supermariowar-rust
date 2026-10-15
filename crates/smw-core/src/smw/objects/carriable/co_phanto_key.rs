@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_PhantoKey.cpp
 
+use crate::game::Game;
 use crate::common::game::App;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::*;
@@ -47,12 +48,12 @@ impl CO_PhantoKey {
 
         o.fCarriedByKuriboShoe = true;
 
-        o.place_key();
+        o.place_key(game().get());
         o
     }
 
-    pub fn place_key(&mut self) {
-        if crate::smw::net_random::place_event(self.iNetworkID, 0) {
+    pub fn place_key(&mut self, g: &mut Game) {
+        if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
             return;
         }
 
@@ -62,7 +63,7 @@ impl CO_PhantoKey {
         let mut y: i16 = 0;
         let mut iAttempts: i16 = 10;
         let (w, h) = (self.collisionWidth, self.collisionHeight);
-        while !unsafe { game().g_map.findspawnpoint(5, &mut x, &mut y, w, h, false) } && {
+        while !unsafe { g.g_map.findspawnpoint(5, &mut x, &mut y, w, h, false) } && {
             let t = iAttempts;
             iAttempts -= 1;
             t > 0
@@ -74,7 +75,7 @@ impl CO_PhantoKey {
         self.vely = GRAVITATION;
         self.velx = 0.0;
 
-        MO_CarriedObjectTrait::drop(self);
+        MO_CarriedObjectTrait::drop(self, g);
     }
 }
 
@@ -84,7 +85,7 @@ impl CObjectTrait for CO_PhantoKey {
         Some(self)
     }
 
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         let mut player = player;
         if self.owner.is_null() && player.isready() {
             let item = self.as_carried_ptr();
@@ -96,15 +97,15 @@ impl CObjectTrait for CO_PhantoKey {
         false
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         if !self.owner.is_null() {
-            self.move_to_owner();
+            self.move_to_owner(g);
             self.relocatetimer = 0;
         } else if {
             self.relocatetimer += 1;
             self.relocatetimer > 1000
         } {
-            self.place_key();
+            self.place_key(g);
         } else {
             self.applyfriction();
 
@@ -112,7 +113,7 @@ impl CObjectTrait for CO_PhantoKey {
             self.fOldX = self.fx;
             self.fOldY = self.fy;
 
-            io_moving_object_collision_detection_map(self);
+            io_moving_object_collision_detection_map(g, self);
         }
 
         self.sparkleanimationtimer += 1;
@@ -125,11 +126,12 @@ impl CObjectTrait for CO_PhantoKey {
         }
     }
 
-    fn draw(&mut self) {
-        mo_carried_object_draw(self);
+    fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        mo_carried_object_draw(g, self);
 
         unsafe {
-            game().rm.spr_shinesparkle.draw_src(
+            gp.rm.spr_shinesparkle.draw_src(g, 
                 self.ix as i32 - self.collisionOffsetX as i32,
                 self.iy as i32 - self.collisionOffsetY as i32,
                 &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },

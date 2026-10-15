@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_World.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::{EC_Announcement, EC_SingleAnimation};
 use crate::common::file_list::WorldMusicCategory;
 use crate::common::game::App;
@@ -89,12 +90,12 @@ pub struct MI_World {
 crate::impl_base!(MI_World => ui_control: UI_Control);
 
 /// `game_values.teamids[iTeam][iMember]` read as the flat C++ array, where a member index of 3 runs into the next row.
-unsafe fn teamids_flat(iTeam: i16, iMember: i16) -> i16 {
+unsafe fn teamids_flat(g: &mut Game, iTeam: i16, iMember: i16) -> i16 {
     let idx = iTeam as usize * 3 + iMember as usize;
     if idx < 12 {
-        game().game_values.teamids[idx / 3][idx % 3]
+        g.game_values.teamids[idx / 3][idx % 3]
     } else {
-        game().game_values.teamcounts[idx - 12]
+        g.game_values.teamcounts[idx - 12]
     }
 }
 
@@ -119,7 +120,7 @@ impl MI_World {
             iPopupFlag: [false; 4],
             iItemCol: [0; 4],
             iItemPage: [0; 4],
-            map_sprites: [gfxSprite::blank(768, 608), gfxSprite::blank(768, 608)],
+            map_sprites: [gfxSprite::blank(game().get(), 768, 608), gfxSprite::blank(game().get(), 768, 608)],
             rectSrcSurface: SDL_Rect { x: 0, y: 0, w: 768, h: 608 },
             rectDstSurface: SDL_Rect { x: 0, y: 0, w: App::screenWidth, h: App::screenHeight },
             iCurrentSurfaceIndex: 0,
@@ -169,10 +170,11 @@ impl MI_World {
         }
     }
 
-    pub fn init(&mut self) {
+    pub fn init(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             self.iCycleIndex = 0;
-            game().g_worldmap.reset_draw_cycle();
+            g.g_worldmap.reset_draw_cycle();
 
             self.iAnimationFrame = 0;
             self.iDrawFullRefresh = 0;
@@ -197,11 +199,11 @@ impl MI_World {
 
             self.iVehicleId = -1;
 
-            self.set_map_offset();
-            self.reposition_map_image();
+            self.set_map_offset(g);
+            self.reposition_map_image(g);
 
-            game().g_worldmap.draw_map_to_surface(-1, true, self.map_sprites[0].get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
-            game().g_worldmap.draw_map_to_surface(-1, true, self.map_sprites[1].get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
+            gp.g_worldmap.draw_map_to_surface(g, -1, true, self.map_sprites[0].get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
+            gp.g_worldmap.draw_map_to_surface(g, -1, true, self.map_sprites[1].get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
 
             self.dTeleportStarRadius = 300.0f32;
             self.dTeleportStarAngle = 0.0f32;
@@ -212,99 +214,101 @@ impl MI_World {
             self.fNoInterestingMoves = false;
             self.iSleepTurns = 0;
             self.fUsingCloud = false;
-            game().game_values.worldpointsbonus = -1;
+            g.game_values.worldpointsbonus = -1;
 
             self.iPressSelectTimer = 0;
             self.pressSelectKeys = Ptr::null();
 
-            self.iDrawWidth = if game().g_worldmap.iWidth < 20 { game().g_worldmap.iWidth << 5 } else { App::screenWidth as i16 };
-            self.iDrawHeight = if game().g_worldmap.iHeight < 15 { game().g_worldmap.iHeight << 5 } else { App::screenHeight as i16 };
+            self.iDrawWidth = if g.g_worldmap.iWidth < 20 { g.g_worldmap.iWidth << 5 } else { App::screenWidth as i16 };
+            self.iDrawHeight = if g.g_worldmap.iHeight < 15 { g.g_worldmap.iHeight << 5 } else { App::screenHeight as i16 };
 
             self.iSrcOffsetX = 0;
             self.iSrcOffsetY = 0;
             self.iDstOffsetX = 0;
             self.iDstOffsetY = 0;
 
-            if game().g_worldmap.iWidth < 20 {
-                self.iDstOffsetX = (20 - game().g_worldmap.iWidth) << 4;
+            if g.g_worldmap.iWidth < 20 {
+                self.iDstOffsetX = (20 - g.g_worldmap.iWidth) << 4;
             }
 
-            if game().g_worldmap.iHeight < 15 {
-                self.iDstOffsetY = (15 - game().g_worldmap.iHeight) << 4;
+            if g.g_worldmap.iHeight < 15 {
+                self.iDstOffsetY = (15 - g.g_worldmap.iHeight) << 4;
             }
         }
     }
 
     /// `MI_World::SetControllingTeam`; hides `UI_Control::SetControllingTeam` like the C++.
-    pub fn set_controlling_team(&mut self, iWinningTeam: i16) {
+    pub fn set_controlling_team(&mut self, g: &mut Game, iWinningTeam: i16) {
+        let mut gp = g.ptr();
         unsafe {
             self.iControllingTeam = iWinningTeam;
             let ct = self.iControllingTeam as usize;
-            let r = RANDOM_INT(game().game_values.teamcounts[ct] as i32);
-            self.iControllingPlayerId = game().game_values.teamids[ct][r as usize];
-            game().g_worldmap.set_player_sprite(self.iControllingPlayerId);
+            let r = RANDOM_INT(g.game_values.teamcounts[ct] as i32);
+            self.iControllingPlayerId = g.game_values.teamids[ct][r as usize];
+            gp.g_worldmap.set_player_sprite(g, self.iControllingPlayerId);
 
             self.fNoInterestingMoves = false;
         }
     }
 
-    pub fn display_team_control_announcement(&mut self) {
+    pub fn display_team_control_announcement(&mut self, g: &mut Game) {
         unsafe {
             let ct = self.iControllingTeam as usize;
-            let szMessage = if game().game_values.teamcounts[ct] <= 1 {
-                format!("Player {} Is In Control", game().game_values.teamids[ct][0] as i32 + 1)
+            let szMessage = if g.game_values.teamcounts[ct] <= 1 {
+                format!("Player {} Is In Control", g.game_values.teamids[ct][0] as i32 + 1)
             } else {
                 format!("Team {} Is In Control", self.iControllingTeam as i32 + 1)
             };
 
             let mut parent = self.m_parentMenu;
             parent.eyeCandy.emplace(EC_Announcement::new(
-                Ptr::from_mut(&mut game().rm.menu_font_large),
-                Ptr::from_mut(&mut game().rm.spr_announcementicons),
+                Ptr::from_mut(&mut g.rm.menu_font_large),
+                Ptr::from_mut(&mut g.rm.spr_announcementicons),
                 szMessage,
-                game().game_values.colorids[self.iControllingPlayerId as usize],
+                g.game_values.colorids[self.iControllingPlayerId as usize],
                 120,
                 100,
             ));
         }
     }
 
-    pub fn set_current_stage_to_completed(&mut self, iWinningTeam: i16) {
+    pub fn set_current_stage_to_completed(&mut self, g: &mut Game, iWinningTeam: i16) {
+        let mut gp = g.ptr();
         unsafe {
             let mut iBonusAdd: i16 = 0;
             let mut iBonusMult: i16 = 1;
 
-            if game().game_values.worldpointsbonus == 0 {
+            if g.game_values.worldpointsbonus == 0 {
                 iBonusMult = 0;
-            } else if game().game_values.worldpointsbonus >= 1 && game().game_values.worldpointsbonus <= 3 {
-                iBonusAdd = game().game_values.worldpointsbonus;
-            } else if game().game_values.worldpointsbonus >= 4 && game().game_values.worldpointsbonus <= 5 {
-                iBonusMult = game().game_values.worldpointsbonus - 2;
+            } else if g.game_values.worldpointsbonus >= 1 && g.game_values.worldpointsbonus <= 3 {
+                iBonusAdd = g.game_values.worldpointsbonus;
+            } else if g.game_values.worldpointsbonus >= 4 && g.game_values.worldpointsbonus <= 5 {
+                iBonusMult = g.game_values.worldpointsbonus - 2;
             }
 
             let wt = iWinningTeam as usize;
             if self.iVehicleId >= 0 {
-                let add = game().g_worldmap.get_vehicle_stage_score(self.iVehicleId) as i32 * iBonusMult as i32 + iBonusAdd as i32;
-                game().game_values.tournament_scores[wt].total = (game().game_values.tournament_scores[wt].total as i32 + add) as i16;
-                game().g_worldmap.remove_vehicle(self.iVehicleId);
+                let add = gp.g_worldmap.get_vehicle_stage_score(g, self.iVehicleId) as i32 * iBonusMult as i32 + iBonusAdd as i32;
+                g.game_values.tournament_scores[wt].total = (g.game_values.tournament_scores[wt].total as i32 + add) as i16;
+                g.g_worldmap.remove_vehicle(self.iVehicleId);
             } else {
-                let iPlayerCurrentTile = game().g_worldmap.get_player_current_tile();
+                let iPlayerCurrentTile = g.g_worldmap.get_player_current_tile();
 
-                let tile = game().get().g_worldmap.tiles.at_mut(iPlayerCurrentTile.x as usize, iPlayerCurrentTile.y as usize);
+                let tile = g.g_worldmap.tiles.at_mut(iPlayerCurrentTile.x as usize, iPlayerCurrentTile.y as usize);
                 //tile->iForegroundSprite = game_values.colorids[game_values.teamids[iWinningTeam][0]] + WORLD_WINNING_TEAM_SPRITE_OFFSET; //Update with team completed sprite
                 //tile->fAnimated = false; //Update with team completed sprite
-                tile.iCompleted = game().game_values.colorids[game().game_values.teamids[wt][0] as usize];
+                tile.iCompleted = g.game_values.colorids[g.game_values.teamids[wt][0] as usize];
                 let iType = tile.iType;
 
-                self.update_tile_both(iPlayerCurrentTile.x - self.iMapDrawOffsetCol, iPlayerCurrentTile.y - self.iMapDrawOffsetRow);
+                self.update_tile_both(g, iPlayerCurrentTile.x - self.iMapDrawOffsetCol, iPlayerCurrentTile.y - self.iMapDrawOffsetRow);
 
-                let add = game().game_values.tourstops[(iType - 6) as usize].iPoints as i32 * iBonusMult as i32 + iBonusAdd as i32;
-                game().game_values.tournament_scores[wt].total = (game().game_values.tournament_scores[wt].total as i32 + add) as i16;
+                let add = g.game_values.tourstops[(iType - 6) as usize].iPoints as i32 * iBonusMult as i32 + iBonusAdd as i32;
+                g.game_values.tournament_scores[wt].total = (g.game_values.tournament_scores[wt].total as i32 + add) as i16;
             }
 
             //Only advance the turn if the players played a real game, no bonus houses
-            if game().game_values.singleplayermode == -1 {
-                self.advance_turn();
+            if g.game_values.singleplayermode == -1 {
+                self.advance_turn(g);
             }
         }
     }
@@ -313,20 +317,20 @@ impl MI_World {
         self.fUsingCloud = false;
     }
 
-    fn advance_turn(&mut self) {
+    fn advance_turn(&mut self, g: &mut Game) {
         unsafe {
             if self.iSleepTurns > 0 {
                 self.iSleepTurns -= 1;
                 if self.iSleepTurns <= 0 {
-                    game().rm.backgroundmusic[5] = sfxMusic::from_file(game().worldmusiclist.current_music(game().g_worldmap.get_music_category(), game().g_worldmap.get_world_name()))
+                    g.rm.backgroundmusic[5] = sfxMusic::from_file(g.worldmusiclist.current_music(g.g_worldmap.get_music_category(), g.g_worldmap.get_world_name()))
                         .unwrap_or_else(|e| std::panic::panic_any(e));
-                    game().rm.backgroundmusic[5].play(false, false);
+                    g.rm.backgroundmusic[5].play(false, false);
                 }
             } else {
-                game().g_worldmap.move_vehicles();
+                g.g_worldmap.move_vehicles();
             }
 
-            game().g_worldmap.move_bridges();
+            g.g_worldmap.move_bridges();
 
             //Update the map with the flipped bridges
             //TODO:: Need to update just bridge tiles across both surfaces
@@ -335,10 +339,11 @@ impl MI_World {
         }
     }
 
-    fn update_map_surface(&mut self, iCycleIndex: i16) {
+    fn update_map_surface(&mut self, g: &mut Game, iCycleIndex: i16) {
+        let mut gp = g.ptr();
         if iCycleIndex >= 0 && iCycleIndex <= 15 {
             unsafe {
-                game().g_worldmap.draw_map_to_surface(
+                gp.g_worldmap.draw_map_to_surface(g, 
                     iCycleIndex,
                     self.iDrawFullRefresh > 0,
                     self.map_sprites[(1 - self.iCurrentSurfaceIndex) as usize].get_surface(),
@@ -350,15 +355,15 @@ impl MI_World {
         }
     }
 
-    fn set_map_offset(&mut self) {
+    fn set_map_offset(&mut self, g: &mut Game) {
         unsafe {
-            let iPlayerDrawPos = game().g_worldmap.get_player_position();
-            let w32 = (game().g_worldmap.iWidth as i32) << 5;
-            let h32 = (game().g_worldmap.iHeight as i32) << 5;
+            let iPlayerDrawPos = g.g_worldmap.get_player_position();
+            let w32 = (g.g_worldmap.iWidth as i32) << 5;
+            let h32 = (g.g_worldmap.iHeight as i32) << 5;
             let px = iPlayerDrawPos.x as i32;
             let py = iPlayerDrawPos.y as i32;
 
-            if game().g_worldmap.iWidth > 20 {
+            if g.g_worldmap.iWidth > 20 {
                 if px < w32 - 336 && px > 304 {
                     self.iMapOffsetX = (304 - px) as i16;
                 } else if px <= 304 {
@@ -370,7 +375,7 @@ impl MI_World {
                 self.iMapOffsetX = ((App::screenWidth - w32) >> 1) as i16;
             }
 
-            if game().g_worldmap.iHeight > 15 {
+            if g.g_worldmap.iHeight > 15 {
                 if py < h32 - 256 && py > 224 {
                     self.iMapOffsetY = (224 - py) as i16;
                 } else if py <= 224 {
@@ -384,25 +389,25 @@ impl MI_World {
         }
     }
 
-    fn reposition_map_image(&mut self) {
+    fn reposition_map_image(&mut self, g: &mut Game) {
         unsafe {
-            let iPlayerCurrentTile = game().g_worldmap.get_player_current_tile();
+            let iPlayerCurrentTile = g.g_worldmap.get_player_current_tile();
 
-            if game().g_worldmap.iWidth > 24 {
+            if g.g_worldmap.iWidth > 24 {
                 self.iMapDrawOffsetCol = iPlayerCurrentTile.x - 11;
                 if self.iMapDrawOffsetCol < 0 {
                     self.iMapDrawOffsetCol = 0;
-                } else if self.iMapDrawOffsetCol > game().g_worldmap.iWidth - 24 {
-                    self.iMapDrawOffsetCol = game().g_worldmap.iWidth - 24;
+                } else if self.iMapDrawOffsetCol > g.g_worldmap.iWidth - 24 {
+                    self.iMapDrawOffsetCol = g.g_worldmap.iWidth - 24;
                 }
             }
 
-            if game().g_worldmap.iHeight > 19 {
+            if g.g_worldmap.iHeight > 19 {
                 self.iMapDrawOffsetRow = iPlayerCurrentTile.y - 9;
                 if self.iMapDrawOffsetRow < 0 {
                     self.iMapDrawOffsetRow = 0;
-                } else if self.iMapDrawOffsetRow > game().g_worldmap.iHeight - 19 {
-                    self.iMapDrawOffsetRow = game().g_worldmap.iHeight - 19;
+                } else if self.iMapDrawOffsetRow > g.g_worldmap.iHeight - 19 {
+                    self.iMapDrawOffsetRow = g.g_worldmap.iHeight - 19;
                 }
             }
 
@@ -411,54 +416,56 @@ impl MI_World {
         }
     }
 
-    fn restart_draw_cycle_if_needed(&mut self) {
+    fn restart_draw_cycle_if_needed(&mut self, g: &mut Game) {
         unsafe {
             self.iNextMapDrawOffsetCol = self.iMapDrawOffsetCol;
             self.iNextMapDrawOffsetRow = self.iMapDrawOffsetRow;
 
-            let iPlayerDestTile = game().g_worldmap.get_player_dest_tile();
+            let iPlayerDestTile = g.g_worldmap.get_player_dest_tile();
 
-            if game().g_worldmap.iWidth > 24 {
+            if g.g_worldmap.iWidth > 24 {
                 self.iNextMapDrawOffsetCol = iPlayerDestTile.x - 11;
                 if self.iNextMapDrawOffsetCol < 0 {
                     self.iNextMapDrawOffsetCol = 0;
-                } else if self.iNextMapDrawOffsetCol > game().g_worldmap.iWidth - 24 {
-                    self.iNextMapDrawOffsetCol = game().g_worldmap.iWidth - 24;
+                } else if self.iNextMapDrawOffsetCol > g.g_worldmap.iWidth - 24 {
+                    self.iNextMapDrawOffsetCol = g.g_worldmap.iWidth - 24;
                 }
             }
 
-            if game().g_worldmap.iHeight > 19 {
+            if g.g_worldmap.iHeight > 19 {
                 self.iNextMapDrawOffsetRow = iPlayerDestTile.y - 9;
                 if self.iNextMapDrawOffsetRow < 0 {
                     self.iNextMapDrawOffsetRow = 0;
-                } else if self.iNextMapDrawOffsetRow > game().g_worldmap.iHeight - 19 {
-                    self.iNextMapDrawOffsetRow = game().g_worldmap.iHeight - 19;
+                } else if self.iNextMapDrawOffsetRow > g.g_worldmap.iHeight - 19 {
+                    self.iNextMapDrawOffsetRow = g.g_worldmap.iHeight - 19;
                 }
             }
 
             //Reset the draw cycle if the map offset col/row is going to move
             if self.iMapDrawOffsetCol != self.iNextMapDrawOffsetCol || self.iMapDrawOffsetRow != self.iNextMapDrawOffsetRow {
                 self.iCycleIndex = 0;
-                game().g_worldmap.reset_draw_cycle();
+                g.g_worldmap.reset_draw_cycle();
                 self.iDrawFullRefresh = 1;
             }
         }
     }
 
     /// The paired `g_worldmap.UpdateTile(map_sprites[0..2], ...)` calls.
-    fn update_tile_both(&mut self, col: i16, row: i16) {
+    fn update_tile_both(&mut self, g: &mut Game, col: i16, row: i16) {
+        let mut gp = g.ptr();
         unsafe {
-            game().g_worldmap.update_tile(self.map_sprites[0].get_surface(), col, row, self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
-            game().g_worldmap.update_tile(self.map_sprites[1].get_surface(), col, row, self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
+            gp.g_worldmap.update_tile(g, self.map_sprites[0].get_surface(), col, row, self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
+            gp.g_worldmap.update_tile(g, self.map_sprites[1].get_surface(), col, row, self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
         }
     }
 
-    fn use_powerup(&mut self, iPlayer: i16, iTeam: i16, iIndex: i16, fPopupIsUp: bool) -> bool {
+    fn use_powerup(&mut self, g: &mut Game, iPlayer: i16, iTeam: i16, iIndex: i16, fPopupIsUp: bool) -> bool {
+        let mut gp = g.ptr();
         unsafe {
-            let iPlayerCurrentTile = game().g_worldmap.get_player_current_tile();
+            let iPlayerCurrentTile = g.g_worldmap.get_player_current_tile();
 
             let t = iTeam as usize;
-            let iPowerup = game().game_values.worldpowerups[t][iIndex as usize];
+            let iPowerup = g.game_values.worldpowerups[t][iIndex as usize];
             let p = iPowerup as i32;
             let mut fUsedItem = false;
 
@@ -471,58 +478,58 @@ impl MI_World {
                 }*/
 
                 //Give the powerup only to the player that selected it
-                game().game_values.storedpowerups[iPlayer as usize] = iPowerup;
+                g.game_values.storedpowerups[iPlayer as usize] = iPowerup;
 
-                if_sound_on_play(&mut game().rm.sfx_collectpowerup);
+                if_sound_on_play(g, &mut gp.rm.sfx_collectpowerup);
                 fUsedItem = true;
             } else if p == NUM_POWERUPS {
                 //Music Box (put vehicles to sleep)
                 self.iSleepTurns = (RANDOM_INT(4) + 2) as i16;
                 fUsedItem = true;
-                if_sound_on_play(&mut game().rm.sfx_collectpowerup);
+                if_sound_on_play(g, &mut gp.rm.sfx_collectpowerup);
 
-                game().rm.backgroundmusic[5] = sfxMusic::from_file(game().worldmusiclist.current_music(WorldMusicCategory::Sleep, "")).unwrap_or_else(|e| std::panic::panic_any(e));
-                game().rm.backgroundmusic[5].play(false, false);
+                g.rm.backgroundmusic[5] = sfxMusic::from_file(g.worldmusiclist.current_music(WorldMusicCategory::Sleep, "")).unwrap_or_else(|e| std::panic::panic_any(e));
+                g.rm.backgroundmusic[5].play(false, false);
             } else if p == NUM_POWERUPS + 1 {
                 //Cloud (allows player to skip stages)
                 if !self.fUsingCloud && self.iState == -1 {
-                    self.use_cloud(true);
+                    self.use_cloud(g, true);
                     fUsedItem = true;
                 }
             } else if p == NUM_POWERUPS + 2 {
                 //Player Switch
                 if self.iControllingTeam != iTeam && self.iState == -1 {
-                    self.set_controlling_team(iTeam);
-                    self.display_team_control_announcement();
+                    self.set_controlling_team(g, iTeam);
+                    self.display_team_control_announcement(g);
 
                     fUsedItem = true;
-                    if_sound_on_play(&mut game().rm.sfx_switchpress);
+                    if_sound_on_play(g, &mut gp.rm.sfx_switchpress);
                     self.iState = 6;
                     self.fNoInterestingMoves = false;
                 }
             } else if p == NUM_POWERUPS + 3 && self.iState == -1 {
                 //Advance Turn
-                let iDest = game().g_worldmap.get_player_dest_tile();
-                let iSprite = game().g_worldmap.tiles.at(iDest.x as usize, iDest.y as usize).iForegroundSprite;
+                let iDest = g.g_worldmap.get_player_dest_tile();
+                let iSprite = g.g_worldmap.tiles.at(iDest.x as usize, iDest.y as usize).iForegroundSprite;
 
                 if iSprite < WORLD_BRIDGE_SPRITE_OFFSET || iSprite > WORLD_BRIDGE_SPRITE_OFFSET + 3 {
-                    self.advance_turn();
+                    self.advance_turn(g);
                     fUsedItem = true;
-                    if_sound_on_play(&mut game().rm.sfx_switchpress);
+                    if_sound_on_play(g, &mut gp.rm.sfx_switchpress);
                 }
             } else if p == NUM_POWERUPS + 4 && self.iState == -1 {
                 //Revive stage
-                let iDest = game().g_worldmap.get_player_dest_tile();
-                let tile = game().get().g_worldmap.tiles.at_mut(iDest.x as usize, iDest.y as usize);
+                let iDest = g.g_worldmap.get_player_dest_tile();
+                let tile = g.g_worldmap.tiles.at_mut(iDest.x as usize, iDest.y as usize);
 
                 if tile.iType >= 6 && tile.iCompleted >= 0 {
                     tile.iCompleted = -2;
 
-                    self.update_tile_both(iDest.x - self.iMapDrawOffsetCol, iDest.y - self.iMapDrawOffsetRow);
+                    self.update_tile_both(g, iDest.x - self.iMapDrawOffsetCol, iDest.y - self.iMapDrawOffsetRow);
 
                     let mut parent = self.m_parentMenu;
                     parent.eyeCandy.emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut game().rm.spr_poof),
+                        Ptr::from_mut(&mut g.rm.spr_poof),
                         (((iDest.x as i32) << 5) + self.iMapOffsetX as i32 - 8) as i16,
                         (((iDest.y as i32) << 5) + self.iMapOffsetY as i32 - 8) as i16,
                         4,
@@ -530,14 +537,14 @@ impl MI_World {
                     ));
 
                     fUsedItem = true;
-                    if_sound_on_play(&mut game().rm.sfx_transform);
+                    if_sound_on_play(g, &mut gp.rm.sfx_transform);
                 }
             } else if p >= NUM_POWERUPS + 5 && p <= NUM_POWERUPS + 8 && self.iState == -1 {
                 //Door Keys
-                let iDoorsOpened = game().g_worldmap.use_key((p - NUM_POWERUPS - 5) as i16, iPlayerCurrentTile.x, iPlayerCurrentTile.y, self.fUsingCloud);
+                let iDoorsOpened = g.g_worldmap.use_key((p - NUM_POWERUPS - 5) as i16, iPlayerCurrentTile.x, iPlayerCurrentTile.y, self.fUsingCloud);
 
                 if iDoorsOpened > 0 {
-                    if_sound_on_play(&mut game().rm.sfx_transform);
+                    if_sound_on_play(g, &mut gp.rm.sfx_transform);
 
                     let iPlayerX = (((iPlayerCurrentTile.x as i32) << 5) + self.iMapOffsetX as i32) as i16;
                     let iPlayerY = (((iPlayerCurrentTile.y as i32) << 5) + self.iMapOffsetY as i32) as i16;
@@ -547,30 +554,30 @@ impl MI_World {
 
                     if iDoorsOpened & 0x1 != 0 {
                         let mut parent = self.m_parentMenu;
-                        parent.eyeCandy.emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), iPlayerX - ts, iPlayerY, 3, 8));
+                        parent.eyeCandy.emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), iPlayerX - ts, iPlayerY, 3, 8));
 
-                        self.update_tile_both(col - 1, row);
+                        self.update_tile_both(g, col - 1, row);
                     }
 
                     if iDoorsOpened & 0x2 != 0 {
                         let mut parent = self.m_parentMenu;
-                        parent.eyeCandy.emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), iPlayerX + ts, iPlayerY, 3, 8));
+                        parent.eyeCandy.emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), iPlayerX + ts, iPlayerY, 3, 8));
 
-                        self.update_tile_both(col + 1, row);
+                        self.update_tile_both(g, col + 1, row);
                     }
 
                     if iDoorsOpened & 0x4 != 0 {
                         let mut parent = self.m_parentMenu;
-                        parent.eyeCandy.emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), iPlayerX, iPlayerY - ts, 3, 8));
+                        parent.eyeCandy.emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), iPlayerX, iPlayerY - ts, 3, 8));
 
-                        self.update_tile_both(col, row - 1);
+                        self.update_tile_both(g, col, row - 1);
                     }
 
                     if iDoorsOpened & 0x8 != 0 {
                         let mut parent = self.m_parentMenu;
-                        parent.eyeCandy.emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), iPlayerX, iPlayerY + ts, 3, 8));
+                        parent.eyeCandy.emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), iPlayerX, iPlayerY + ts, 3, 8));
 
-                        self.update_tile_both(col, row + 1);
+                        self.update_tile_both(g, col, row + 1);
                     }
 
                     fUsedItem = true;
@@ -578,18 +585,18 @@ impl MI_World {
                 }
             } else if p >= NUM_POWERUPS + 9 && p <= NUM_POWERUPS + 14 {
                 //Stage Points Modifiers
-                game().game_values.worldpointsbonus = (p - NUM_POWERUPS - 9) as i16;
+                g.game_values.worldpointsbonus = (p - NUM_POWERUPS - 9) as i16;
                 fUsedItem = true;
-                if_sound_on_play(&mut game().rm.sfx_switchpress);
+                if_sound_on_play(g, &mut gp.rm.sfx_switchpress);
             }
 
             if fUsedItem {
-                game().game_values.worldpowerupcount[t] -= 1;
-                let iNumItems = game().game_values.worldpowerupcount[t];
+                g.game_values.worldpowerupcount[t] -= 1;
+                let iNumItems = g.game_values.worldpowerupcount[t];
 
                 let mut iItem = iIndex;
                 while iItem < iNumItems {
-                    game().game_values.worldpowerups[t][iItem as usize] = game().game_values.worldpowerups[t][iItem as usize + 1];
+                    g.game_values.worldpowerups[t][iItem as usize] = g.game_values.worldpowerups[t][iItem as usize + 1];
                     iItem += 1;
                 }
 
@@ -597,22 +604,22 @@ impl MI_World {
                     self.iStateTransition[t] = 2;
                 }
             } else {
-                if_sound_on_play(&mut game().rm.sfx_stun);
+                if_sound_on_play(g, &mut gp.rm.sfx_stun);
             }
 
             fUsedItem
         }
     }
 
-    fn init_game(&mut self, iStage: i16, iPlayer: i16, fNeedAiControl: bool) -> MenuCodeEnum {
+    fn init_game(&mut self, g: &mut Game, iStage: i16, iPlayer: i16, fNeedAiControl: bool) -> MenuCodeEnum {
         unsafe {
-            game().game_values.tourstopcurrent = iStage as usize;
-            game().game_values.worldskipscoreboard = false;
+            g.game_values.tourstopcurrent = iStage as usize;
+            g.game_values.worldskipscoreboard = false;
 
-            let fBonusHouse = game().game_values.tourstops[game().game_values.tourstopcurrent].iStageType == 1;
+            let fBonusHouse = g.game_values.tourstops[g.game_values.tourstopcurrent].iStageType == 1;
 
             if fBonusHouse {
-                game().game_values.singleplayermode = iPlayer;
+                g.game_values.singleplayermode = iPlayer;
             }
 
             for iTeam in 0..4 {
@@ -627,15 +634,16 @@ impl MI_World {
         }
     }
 
-    fn use_cloud(&mut self, fUseCloud: bool) {
+    fn use_cloud(&mut self, g: &mut Game, fUseCloud: bool) {
+        let mut gp = g.ptr();
         unsafe {
             self.fUsingCloud = fUseCloud;
-            if_sound_on_play(&mut game().rm.sfx_transform);
+            if_sound_on_play(g, &mut gp.rm.sfx_transform);
 
-            let iPlayerDrawPos = game().g_worldmap.get_player_position();
+            let iPlayerDrawPos = g.g_worldmap.get_player_position();
             let mut parent = self.m_parentMenu;
             parent.eyeCandy.emplace(EC_SingleAnimation::new(
-                Ptr::from_mut(&mut game().rm.spr_poof),
+                Ptr::from_mut(&mut g.rm.spr_poof),
                 (iPlayerDrawPos.x as i32 + self.iMapOffsetX as i32 - 8) as i16,
                 (iPlayerDrawPos.y as i32 + self.iMapOffsetY as i32 - 8) as i16,
                 4,
@@ -646,10 +654,10 @@ impl MI_World {
 
     /// The movement test shared by the four directions of `SendInput`.
     #[allow(clippy::too_many_arguments)]
-    unsafe fn can_move(&self, tile: &WorldMapTile, iDirection: usize, iBridgeType: i16, iDoorCol: i16, iDoorRow: i16, iReturnDir: i16, fVehicleInTile: bool) -> bool {
+    unsafe fn can_move(&self, g: &mut Game, tile: &WorldMapTile, iDirection: usize, iBridgeType: i16, iDoorCol: i16, iDoorRow: i16, iReturnDir: i16, fVehicleInTile: bool) -> bool {
         (tile.fConnection[iDirection] || tile.iConnectionType == iBridgeType)
-            && !game().g_worldmap.is_door(iDoorCol, iDoorRow)
-            && (((tile.iCompleted >= -1 || (tile.iType >= 6 && game().game_values.tourstops[(tile.iType - 6) as usize].iStageType == 1)) && (!fVehicleInTile || self.iSleepTurns > 0))
+            && !g.g_worldmap.is_door(iDoorCol, iDoorRow)
+            && (((tile.iCompleted >= -1 || (tile.iType >= 6 && g.game_values.tourstops[(tile.iType - 6) as usize].iStageType == 1)) && (!fVehicleInTile || self.iSleepTurns > 0))
                 || self.iReturnDirection == iReturnDir
                 || self.fUsingCloud)
     }
@@ -658,15 +666,16 @@ impl MI_World {
 impl UI_ControlTrait for MI_World {
     crate::impl_ctl!();
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             let mut fPlayerVehicleCollision = false;
-            let fPlayerMoveDone = game().g_worldmap.update(&mut fPlayerVehicleCollision);
+            let fPlayerMoveDone = gp.g_worldmap.update(g, &mut fPlayerVehicleCollision);
 
-            let iPlayerDrawPos = game().g_worldmap.get_player_position();
-            let iPlayerState = game().g_worldmap.get_player_state();
+            let iPlayerDrawPos = g.g_worldmap.get_player_position();
+            let iPlayerState = g.g_worldmap.get_player_state();
 
-            self.update_map_surface(self.iCycleIndex);
+            self.update_map_surface(g, self.iCycleIndex);
 
             self.iCycleIndex += 1;
             if self.iCycleIndex > 16 {
@@ -687,38 +696,38 @@ impl UI_ControlTrait for MI_World {
             }
 
             if fPlayerMoveDone {
-                self.reposition_map_image();
+                self.reposition_map_image(g);
             }
 
             if self.iSleepTurns <= 0 && !self.fUsingCloud && (fPlayerVehicleCollision || fPlayerMoveDone) {
-                let iStage = game().g_worldmap.get_vehicle_in_player_tile(&mut self.iVehicleId);
-                if iStage >= 0 && iStage < game().g_worldmap.iNumStages {
-                    game().game_values.tourstopcurrent = iStage as usize;
+                let iStage = g.g_worldmap.get_vehicle_in_player_tile(&mut self.iVehicleId);
+                if iStage >= 0 && iStage < g.g_worldmap.iNumStages {
+                    g.game_values.tourstopcurrent = iStage as usize;
                     self.fForceStageStart = true;
                 }
             }
 
-            let w32 = (game().g_worldmap.iWidth as i32) << 5;
-            let h32 = (game().g_worldmap.iHeight as i32) << 5;
+            let w32 = (g.g_worldmap.iWidth as i32) << 5;
+            let h32 = (g.g_worldmap.iHeight as i32) << 5;
 
             //Player is moving from one tile to the next (up)
             if iPlayerState == 1 {
-                if game().g_worldmap.iHeight > 15 && self.iMapOffsetY < 0 && (iPlayerDrawPos.y as f32) < h32 as f32 - (App::screenHeight as f32 * 0.53f32) {
+                if g.g_worldmap.iHeight > 15 && self.iMapOffsetY < 0 && (iPlayerDrawPos.y as f32) < h32 as f32 - (App::screenHeight as f32 * 0.53f32) {
                     self.iMapOffsetY += 2;
                 }
             } else if iPlayerState == 2 {
                 //down
-                if game().g_worldmap.iHeight > 15 && (self.iMapOffsetY as i32) > App::screenHeight - h32 && (iPlayerDrawPos.y as f32) > (App::screenHeight as f32 * 0.47f32) {
+                if g.g_worldmap.iHeight > 15 && (self.iMapOffsetY as i32) > App::screenHeight - h32 && (iPlayerDrawPos.y as f32) > (App::screenHeight as f32 * 0.47f32) {
                     self.iMapOffsetY -= 2;
                 }
             } else if iPlayerState == 3 {
                 //left
-                if game().g_worldmap.iWidth > 20 && self.iMapOffsetX < 0 && (iPlayerDrawPos.x as f32) < w32 as f32 - (App::screenWidth as f32 * 0.525f32) {
+                if g.g_worldmap.iWidth > 20 && self.iMapOffsetX < 0 && (iPlayerDrawPos.x as f32) < w32 as f32 - (App::screenWidth as f32 * 0.525f32) {
                     self.iMapOffsetX += 2;
                 }
             } else if iPlayerState == 4 {
                 //right
-                if game().g_worldmap.iWidth > 20 && (self.iMapOffsetX as i32) > App::screenWidth - w32 && (iPlayerDrawPos.x as f32) > (App::screenWidth as f32 * 0.475f32) {
+                if g.g_worldmap.iWidth > 20 && (self.iMapOffsetX as i32) > App::screenWidth - w32 && (iPlayerDrawPos.x as f32) > (App::screenWidth as f32 * 0.475f32) {
                     self.iMapOffsetX -= 2;
                 }
             }
@@ -815,19 +824,19 @@ impl UI_ControlTrait for MI_World {
                 self.iScreenfade += self.iScreenfadeRate;
 
                 if self.iState == 4 && self.iScreenfade > 255 {
-                    game().g_worldmap.set_player_position(self.iWarpCol, self.iWarpRow);
-                    self.set_map_offset();
-                    self.reposition_map_image();
+                    g.g_worldmap.set_player_position(self.iWarpCol, self.iWarpRow);
+                    self.set_map_offset(g);
+                    self.reposition_map_image(g);
 
                     //These 3 lines allow us to only refresh the entire map to one surface and sets it up so that the
                     //other surface will update with the normal flow
                     self.iCurrentSurfaceIndex = 0;
                     self.iCycleIndex = 0;
-                    game().g_worldmap.reset_draw_cycle();
+                    g.g_worldmap.reset_draw_cycle();
 
                     self.iDrawFullRefresh = 2; //Draw one full refresh to next surface
 
-                    game().g_worldmap.draw_map_to_surface(-1, true, self.map_sprites[0].get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
+                    gp.g_worldmap.draw_map_to_surface(g, -1, true, self.map_sprites[0].get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
                     //g_worldmap.DrawMapToSurface(-1, true, map_sprites[1].getSurface(), iMapDrawOffsetCol, iMapDrawOffsetRow, iAnimationFrame);
 
                     self.iState = 5;
@@ -845,41 +854,42 @@ impl UI_ControlTrait for MI_World {
         }
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if !self.m_visible {
             return;
         }
 
         unsafe {
-            let iPlayerDrawPos = game().g_worldmap.get_player_position();
+            let iPlayerDrawPos = g.g_worldmap.get_player_position();
 
-            if game().g_worldmap.iWidth > 20 {
+            if g.g_worldmap.iWidth > 20 {
                 self.iSrcOffsetX = -self.iMapOffsetX - (self.iMapDrawOffsetCol << 5);
             }
 
-            if game().g_worldmap.iHeight > 15 {
+            if g.g_worldmap.iHeight > 15 {
                 self.iSrcOffsetY = -self.iMapOffsetY - (self.iMapDrawOffsetRow << 5);
             }
 
             self.rectSrcSurface = SDL_Rect { x: self.iSrcOffsetX as i32, y: self.iSrcOffsetY as i32, w: self.iDrawWidth as i32, h: self.iDrawHeight as i32 };
             self.rectDstSurface = SDL_Rect { x: self.iDstOffsetX as i32, y: self.iDstOffsetY as i32, w: self.iDrawWidth as i32, h: self.iDrawHeight as i32 };
 
-            self.map_sprites[self.iCurrentSurfaceIndex as usize].draw_src_to(&self.rectSrcSurface, game().blitdest, &self.rectDstSurface);
+            self.map_sprites[self.iCurrentSurfaceIndex as usize].draw_src_to(&self.rectSrcSurface, g.blitdest, &self.rectDstSurface);
 
             //Draw the world, vehicles and player
-            game().g_worldmap.draw(self.iMapOffsetX, self.iMapOffsetY, self.iState == -1 && !self.fUsingCloud, self.iSleepTurns > 0);
+            gp.g_worldmap.draw(g, self.iMapOffsetX, self.iMapOffsetY, self.iState == -1 && !self.fUsingCloud, self.iSleepTurns > 0);
 
             let px = iPlayerDrawPos.x as i32 + self.iMapOffsetX as i32;
             let py = iPlayerDrawPos.y as i32 + self.iMapOffsetY as i32;
 
             //Draw the cloud if the player is one
             if self.fUsingCloud && self.iState == -1 {
-                game().rm.spr_worlditems.draw_src(px, py, &SDL_Rect { x: 32, y: 0, w: 32, h: 32 });
+                gp.rm.spr_worlditems.draw_src(g, px, py, &SDL_Rect { x: 32, y: 0, w: 32, h: 32 });
             }
 
             //If a points modifier is in place, display it
-            if game().game_values.worldpointsbonus >= 0 {
-                game().rm.spr_worlditems.draw_src(603, 5, &SDL_Rect { x: (game().game_values.worldpointsbonus as i32 + 9) << 5, y: 0, w: 32, h: 32 });
+            if g.game_values.worldpointsbonus >= 0 {
+                gp.rm.spr_worlditems.draw_src(g, 603, 5, &SDL_Rect { x: (gp.game_values.worldpointsbonus as i32 + 9) << 5, y: 0, w: 32, h: 32 });
             }
 
             //Draw the teleport/warp stars effect
@@ -889,7 +899,7 @@ impl UI_ControlTrait for MI_World {
                     let iStarX = (self.dTeleportStarRadius * cosf(dAngle)) as i16;
                     let iStarY = (self.dTeleportStarRadius * sinf(dAngle)) as i16;
 
-                    game().rm.spr_teleportstar.draw_src(iStarX as i32 + px, iStarY as i32 + py, &SDL_Rect { x: self.iTeleportStarAnimationFrame as i32, y: 0, w: 32, h: 32 });
+                    gp.rm.spr_teleportstar.draw_src(g, iStarX as i32 + px, iStarY as i32 + py, &SDL_Rect { x: self.iTeleportStarAnimationFrame as i32, y: 0, w: 32, h: 32 });
                 }
             }
 
@@ -898,24 +908,24 @@ impl UI_ControlTrait for MI_World {
                 //Draw Spots and Stored Powerups
                 let mut iPlayerCount: i16 = 0;
                 for iCountPlayers in 0..4usize {
-                    iPlayerCount += game().game_values.teamcounts[iCountPlayers];
+                    iPlayerCount += g.game_values.teamcounts[iCountPlayers];
                 }
 
                 let mut iStoredPowerupBoxX: i16 = (296 - 48 * (iPlayerCount as i32 - 1)) as i16;
                 for iTeamStore in 0..4usize {
                     for iMemberStore in 0..game().game_values.teamcounts[iTeamStore] {
-                        let iPlayerId = game().game_values.teamids[iTeamStore][iMemberStore as usize] as usize;
+                        let iPlayerId = g.game_values.teamids[iTeamStore][iMemberStore as usize] as usize;
 
-                        game().rm.spr_worlditempopup.draw_src(
+                        gp.rm.spr_worlditempopup.draw_src(g, 
                             iStoredPowerupBoxX as i32,
                             self.iStoredItemPopupDrawY as i32,
-                            &SDL_Rect { x: game().game_values.colorids[iPlayerId] as i32 * 48, y: 256, w: 48, h: 48 },
+                            &SDL_Rect { x: gp.game_values.colorids[iPlayerId] as i32 * 48, y: 256, w: 48, h: 48 },
                         );
 
-                        game().rm.spr_storedpoweruplarge.draw_src(
+                        gp.rm.spr_storedpoweruplarge.draw_src(g, 
                             iStoredPowerupBoxX as i32 + 8,
                             self.iStoredItemPopupDrawY as i32 + 8,
-                            &SDL_Rect { x: (game().game_values.storedpowerups[iPlayerId] as i32) << 5, y: 0, w: 32, h: 32 },
+                            &SDL_Rect { x: (gp.game_values.storedpowerups[iPlayerId] as i32) << 5, y: 0, w: 32, h: 32 },
                         );
 
                         iStoredPowerupBoxX += 96;
@@ -924,28 +934,28 @@ impl UI_ControlTrait for MI_World {
 
                 for t in 0..4usize {
                     if self.iStateTransition[t] != 0 {
-                        let iColorId = game().game_values.colorids[game().game_values.teamids[t][0] as usize] as i32;
+                        let iColorId = g.game_values.colorids[g.game_values.teamids[t][0] as usize] as i32;
                         let drawY = self.iItemPopupDrawY[t] as i32;
                         let offCur = self.iPopupOffsetsCurrent[t] as i32;
-                        game().rm.spr_worlditempopup.draw_src(0, 448 - drawY - offCur, &SDL_Rect { x: 0, y: iColorId * 64 + 32 - drawY, w: 320, h: drawY << 1 });
-                        game().rm.spr_worlditempopup.draw_src(320, 448 - drawY - offCur, &SDL_Rect { x: 192, y: iColorId * 64 + 32 - drawY, w: 320, h: drawY << 1 });
+                        gp.rm.spr_worlditempopup.draw_src(g, 0, 448 - drawY - offCur, &SDL_Rect { x: 0, y: iColorId * 64 + 32 - drawY, w: 320, h: drawY << 1 });
+                        gp.rm.spr_worlditempopup.draw_src(g, 320, 448 - drawY - offCur, &SDL_Rect { x: 192, y: iColorId * 64 + 32 - drawY, w: 320, h: drawY << 1 });
 
                         if self.iStateTransition[t] == 3 {
-                            let iNumPowerups = game().game_values.worldpowerupcount[t];
+                            let iNumPowerups = g.game_values.worldpowerupcount[t];
 
                             if iNumPowerups > 0 {
-                                game().rm.spr_worlditempopup.draw_src(self.iItemCol[t] as i32 * 52 + 114, 424 - offCur, &SDL_Rect { x: iColorId * 48, y: 256, w: 48, h: 48 });
+                                gp.rm.spr_worlditempopup.draw_src(g, self.iItemCol[t] as i32 * 52 + 114, 424 - offCur, &SDL_Rect { x: iColorId * 48, y: 256, w: 48, h: 48 });
                             }
 
                             let iStartItem: i16 = self.iItemPage[t] << 3;
                             let mut iItem = iStartItem;
                             while iItem < iStartItem + 8 && iItem < iNumPowerups {
-                                let iPowerup = game().game_values.worldpowerups[t][iItem as usize] as i32;
+                                let iPowerup = g.game_values.worldpowerups[t][iItem as usize] as i32;
                                 let x = (iItem as i32 - self.iItemPage[t] as i32 * 8) * 52 + 122;
                                 if iPowerup >= NUM_POWERUPS {
-                                    game().rm.spr_worlditems.draw_src(x, 432 - offCur, &SDL_Rect { x: (iPowerup - NUM_POWERUPS) << 5, y: 0, w: 32, h: 32 });
+                                    gp.rm.spr_worlditems.draw_src(g, x, 432 - offCur, &SDL_Rect { x: (iPowerup - NUM_POWERUPS) << 5, y: 0, w: 32, h: 32 });
                                 } else {
-                                    game().rm.spr_storedpoweruplarge.draw_src(x, 432 - offCur, &SDL_Rect { x: iPowerup << 5, y: 0, w: 32, h: 32 });
+                                    gp.rm.spr_storedpoweruplarge.draw_src(g, x, 432 - offCur, &SDL_Rect { x: iPowerup << 5, y: 0, w: 32, h: 32 });
                                 }
                                 iItem += 1;
                             }
@@ -955,18 +965,19 @@ impl UI_ControlTrait for MI_World {
             }
 
             if self.iState == 4 || self.iState == 5 {
-                game().rm.menu_shade.setalpha(self.iScreenfade as u8);
-                game().rm.menu_shade.draw(0, 0);
+                g.rm.menu_shade.setalpha(self.iScreenfade as u8);
+                gp.rm.menu_shade.draw(g, 0, 0);
             }
         }
     }
 
     //TODO:: need a way for AI to use world items like keys
     //Also, there is a problem if you put a key into a stage but someone exits before it is collected
-    fn send_input(&mut self, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+    fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+        let mut gp = g.ptr();
         unsafe {
             //Don't allow any input while vehicles are moving
-            if game().g_worldmap.is_vehicle_moving() {
+            if g.g_worldmap.is_vehicle_moving() {
                 return MENU_CODE_NONE;
             }
 
@@ -985,7 +996,7 @@ impl UI_ControlTrait for MI_World {
                 return MENU_CODE_TOUR_STOP_CONTINUE_FORCED;
             }
 
-            let mut iPlayerState = game().g_worldmap.get_player_state();
+            let mut iPlayerState = g.g_worldmap.get_player_state();
 
             //Handle AI movement
             let mut fNeedAiControl = false;
@@ -993,7 +1004,7 @@ impl UI_ControlTrait for MI_World {
                 fNeedAiControl = true;
                 let ct = self.iControllingTeam as usize;
                 for iTeamMember in 0..game().game_values.teamcounts[ct] {
-                    if game().game_values.playercontrol[game().game_values.teamids[ct][iTeamMember as usize] as usize] == 1 {
+                    if g.game_values.playercontrol[g.game_values.teamids[ct][iTeamMember as usize] as usize] == 1 {
                         fNeedAiControl = false;
                         break;
                     }
@@ -1001,14 +1012,14 @@ impl UI_ControlTrait for MI_World {
 
                 if fNeedAiControl {
                     if self.iPressSelectTimer == 0 {
-                        let iPlayerCurrentTile = game().g_worldmap.get_player_current_tile();
-                        let iNextMove = game().g_worldmap.get_next_interesting_move(iPlayerCurrentTile.x, iPlayerCurrentTile.y);
+                        let iPlayerCurrentTile = g.g_worldmap.get_player_current_tile();
+                        let iNextMove = g.g_worldmap.get_next_interesting_move(iPlayerCurrentTile.x, iPlayerCurrentTile.y);
 
                         //Clear out all input from cpu controlled team
                         let mut playerKeys: Ptr<COutputControl>;
                         let mut iTeamMember: i16 = 0;
-                        while iTeamMember < game().game_values.teamcounts[ct] {
-                            playerKeys = Ptr::from_mut(&mut game().game_values.playerInput.outputControls[game().game_values.teamids[ct][iTeamMember as usize] as usize]);
+                        while iTeamMember < g.game_values.teamcounts[ct] {
+                            playerKeys = Ptr::from_mut(&mut gp.get().game_values.playerInput.outputControls[gp.get().game_values.teamids[ct][iTeamMember as usize] as usize]);
 
                             playerKeys.menu_up_mut().fPressed = false;
                             playerKeys.menu_down_mut().fPressed = false;
@@ -1024,7 +1035,7 @@ impl UI_ControlTrait for MI_World {
                             iTeamMember += 1;
                         }
 
-                        playerKeys = Ptr::from_mut(&mut game().game_values.playerInput.outputControls[game().game_values.teamids[ct][0] as usize]);
+                        playerKeys = Ptr::from_mut(&mut gp.get().game_values.playerInput.outputControls[gp.get().game_values.teamids[ct][0] as usize]);
 
                         //If there are no AI moves to make
                         if iNextMove == -1 {
@@ -1032,20 +1043,20 @@ impl UI_ControlTrait for MI_World {
 
                             //See if we are touching a door
                             let mut fDoor: [bool; 4] = [false, false, false, false];
-                            game().g_worldmap.is_touching_door(iPlayerCurrentTile.x, iPlayerCurrentTile.y, &mut fDoor);
+                            g.g_worldmap.is_touching_door(iPlayerCurrentTile.x, iPlayerCurrentTile.y, &mut fDoor);
 
                             //See if we can use a key to keep going
                             let mut iPowerup: i16 = 0;
-                            while iPowerup < game().game_values.worldpowerupcount[self.iControllingTeam as usize] {
-                                let iType = game().game_values.worldpowerups[self.iControllingTeam as usize][iPowerup as usize] as i32;
+                            while iPowerup < g.game_values.worldpowerupcount[self.iControllingTeam as usize] {
+                                let iType = g.game_values.worldpowerups[self.iControllingTeam as usize][iPowerup as usize] as i32;
 
                                 if iType >= NUM_POWERUPS + 5 && iType <= NUM_POWERUPS + 8 {
                                     //Door Keys
                                     let iKeyType = iType - NUM_POWERUPS - 5;
                                     if fDoor[iKeyType as usize] {
                                         // iTeamMember is the member count left by the loop above, as in the C++.
-                                        let iPlayer = teamids_flat(self.iControllingTeam, iTeamMember);
-                                        fUsedItem = self.use_powerup(iPlayer, self.iControllingTeam, iPowerup, false);
+                                        let iPlayer = teamids_flat(g, self.iControllingTeam, iTeamMember);
+                                        fUsedItem = self.use_powerup(g, iPlayer, self.iControllingTeam, iPowerup, false);
                                     }
                                 }
                                 iPowerup += 1;
@@ -1081,124 +1092,124 @@ impl UI_ControlTrait for MI_World {
 
             for iPlayer in 0..4i16 {
                 let p = iPlayer as usize;
-                let playerKeys: Ptr<COutputControl> = Ptr::from_mut(&mut game().game_values.playerInput.outputControls[p]);
+                let playerKeys: Ptr<COutputControl> = Ptr::from_mut(&mut g.game_values.playerInput.outputControls[p]);
 
-                let iPlayerCurrentTile = game().g_worldmap.get_player_current_tile();
+                let iPlayerCurrentTile = g.g_worldmap.get_player_current_tile();
 
-                let iTeamId = lookup_team_id(iPlayer);
+                let iTeamId = lookup_team_id(g, iPlayer);
 
                 if self.iState == -1 && self.iNumPopups == 0 && !self.iPopupFlag[0] && !self.iPopupFlag[1] && !self.iPopupFlag[2] && !self.iPopupFlag[3] {
-                    if self.iControllingTeam == lookup_team_id(iPlayer) && iPlayerState == 0 && game().game_values.playercontrol[p] > 0 {
+                    if self.iControllingTeam == lookup_team_id(g, iPlayer) && iPlayerState == 0 && g.game_values.playercontrol[p] > 0 {
                         //if this player is player or cpu
-                        let tile: WorldMapTile = *game().g_worldmap.tiles.at(iPlayerCurrentTile.x as usize, iPlayerCurrentTile.y as usize);
+                        let tile: WorldMapTile = *g.g_worldmap.tiles.at(iPlayerCurrentTile.x as usize, iPlayerCurrentTile.y as usize);
 
                         let mut iTemp: i16 = 0; //Just a temp value so we can call the GetVehicleInPlayerTile method
-                        let fVehicleInTile = game().g_worldmap.get_vehicle_in_player_tile(&mut iTemp) >= 0;
+                        let fVehicleInTile = g.g_worldmap.get_vehicle_in_player_tile(&mut iTemp) >= 0;
                         let (cx, cy) = (iPlayerCurrentTile.x, iPlayerCurrentTile.y);
 
                         if playerKeys.menu_up().fPressed || playerKeys.menu_up().fDown {
                             //Make sure there is a path connection and that there is no stage or vehicle blocking the way
-                            if self.can_move(&tile, 0, 14, cx, cy - 1, 0, fVehicleInTile) {
+                            if self.can_move(g, &tile, 0, 14, cx, cy - 1, 0, fVehicleInTile) {
                                 if self.fUsingCloud && (tile.iCompleted == -2 || fVehicleInTile) && self.iReturnDirection != 0 {
-                                    self.use_cloud(false);
+                                    self.use_cloud(g, false);
                                 }
 
-                                game().g_worldmap.move_player(0);
-                                iPlayerState = game().g_worldmap.get_player_state();
+                                g.g_worldmap.move_player(0);
+                                iPlayerState = g.g_worldmap.get_player_state();
 
                                 self.iReturnDirection = 1;
 
-                                if_sound_on_play(&mut game().rm.sfx_worldmove);
+                                if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
 
                                 //Start draw cycle over
-                                self.restart_draw_cycle_if_needed();
+                                self.restart_draw_cycle_if_needed(g);
                             } else if playerKeys.menu_up().fPressed {
-                                if_sound_on_play(&mut game().rm.sfx_hit);
+                                if_sound_on_play(g, &mut gp.rm.sfx_hit);
                             }
                         } else if playerKeys.menu_down().fPressed || playerKeys.menu_down().fDown {
-                            if self.can_move(&tile, 1, 14, cx, cy + 1, 1, fVehicleInTile) {
+                            if self.can_move(g, &tile, 1, 14, cx, cy + 1, 1, fVehicleInTile) {
                                 if self.fUsingCloud && (tile.iCompleted == -2 || fVehicleInTile) && self.iReturnDirection != 1 {
-                                    self.use_cloud(false);
+                                    self.use_cloud(g, false);
                                 }
 
-                                game().g_worldmap.move_player(1);
-                                iPlayerState = game().g_worldmap.get_player_state();
+                                g.g_worldmap.move_player(1);
+                                iPlayerState = g.g_worldmap.get_player_state();
 
                                 self.iReturnDirection = 0;
 
                                 //Start draw cycle over
-                                self.restart_draw_cycle_if_needed();
+                                self.restart_draw_cycle_if_needed(g);
 
-                                if_sound_on_play(&mut game().rm.sfx_worldmove);
+                                if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
                             } else if playerKeys.menu_down().fPressed {
-                                if_sound_on_play(&mut game().rm.sfx_hit);
+                                if_sound_on_play(g, &mut gp.rm.sfx_hit);
                             }
                         } else if playerKeys.menu_left().fPressed || playerKeys.menu_left().fDown {
-                            if self.can_move(&tile, 2, 12, cx - 1, cy, 2, fVehicleInTile) {
+                            if self.can_move(g, &tile, 2, 12, cx - 1, cy, 2, fVehicleInTile) {
                                 if self.fUsingCloud && (tile.iCompleted == -2 || fVehicleInTile) && self.iReturnDirection != 2 {
-                                    self.use_cloud(false);
+                                    self.use_cloud(g, false);
                                 }
 
-                                game().g_worldmap.move_player(2);
-                                iPlayerState = game().g_worldmap.get_player_state();
+                                g.g_worldmap.move_player(2);
+                                iPlayerState = g.g_worldmap.get_player_state();
 
                                 self.iReturnDirection = 3;
 
                                 //Start draw cycle over
-                                self.restart_draw_cycle_if_needed();
+                                self.restart_draw_cycle_if_needed(g);
 
-                                if_sound_on_play(&mut game().rm.sfx_worldmove);
+                                if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
                             } else {
-                                game().g_worldmap.face_player(1);
+                                g.g_worldmap.face_player(1);
 
                                 if playerKeys.menu_left().fPressed {
-                                    if_sound_on_play(&mut game().rm.sfx_hit);
+                                    if_sound_on_play(g, &mut gp.rm.sfx_hit);
                                 }
                             }
                         } else if playerKeys.menu_right().fPressed || playerKeys.menu_right().fDown {
-                            if self.can_move(&tile, 3, 12, cx + 1, cy, 3, fVehicleInTile) {
+                            if self.can_move(g, &tile, 3, 12, cx + 1, cy, 3, fVehicleInTile) {
                                 if self.fUsingCloud && (tile.iCompleted == -2 || fVehicleInTile) && self.iReturnDirection != 3 {
-                                    self.use_cloud(false);
+                                    self.use_cloud(g, false);
                                 }
 
-                                game().g_worldmap.move_player(3);
-                                iPlayerState = game().g_worldmap.get_player_state();
+                                g.g_worldmap.move_player(3);
+                                iPlayerState = g.g_worldmap.get_player_state();
 
                                 self.iReturnDirection = 2;
 
                                 //Start draw cycle over
-                                self.restart_draw_cycle_if_needed();
+                                self.restart_draw_cycle_if_needed(g);
 
-                                if_sound_on_play(&mut game().rm.sfx_worldmove);
+                                if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
                             } else {
-                                game().g_worldmap.face_player(0);
+                                g.g_worldmap.face_player(0);
 
                                 if playerKeys.menu_right().fPressed {
-                                    if_sound_on_play(&mut game().rm.sfx_hit);
+                                    if_sound_on_play(g, &mut gp.rm.sfx_hit);
                                 }
                             }
                         } else if playerInput.outputControls[p].menu_select().fPressed {
                             //Lookup current tile and see if it is a type of tile you can interact with
                             //If there is a vehicle on this tile, then load it's stage
-                            let iStage = game().g_worldmap.get_vehicle_in_player_tile(&mut self.iVehicleId);
-                            if iStage >= 0 && iStage < game().g_worldmap.iNumStages {
-                                return self.init_game(iStage, iPlayer, fNeedAiControl);
+                            let iStage = g.g_worldmap.get_vehicle_in_player_tile(&mut self.iVehicleId);
+                            if iStage >= 0 && iStage < g.g_worldmap.iNumStages {
+                                return self.init_game(g, iStage, iPlayer, fNeedAiControl);
                             }
 
                             //if it is a stage, then load the stage
-                            let tile: WorldMapTile = *game().g_worldmap.tiles.at(iPlayerCurrentTile.x as usize, iPlayerCurrentTile.y as usize);
+                            let tile: WorldMapTile = *g.g_worldmap.tiles.at(iPlayerCurrentTile.x as usize, iPlayerCurrentTile.y as usize);
 
                             let iType = tile.iType - 6;
-                            if iType >= 0 && iType < game().g_worldmap.iNumStages && tile.iCompleted == -2 {
-                                return self.init_game(iType, iPlayer, fNeedAiControl);
+                            if iType >= 0 && iType < g.g_worldmap.iNumStages && tile.iCompleted == -2 {
+                                return self.init_game(g, iType, iPlayer, fNeedAiControl);
                             }
 
-                            if game().g_worldmap.get_warp_in_player_tile(&mut self.iWarpCol, &mut self.iWarpRow) {
+                            if g.g_worldmap.get_warp_in_player_tile(&mut self.iWarpCol, &mut self.iWarpRow) {
                                 self.iState = 4;
                                 self.iScreenfade = 0;
                                 self.iScreenfadeRate = 8;
 
-                                if_sound_on_play(&mut game().rm.sfx_pipe);
+                                if_sound_on_play(g, &mut gp.rm.sfx_pipe);
                             }
                         }
                     }
@@ -1209,46 +1220,46 @@ impl UI_ControlTrait for MI_World {
                         if self.iItemPage[t] > 0 {
                             self.iItemPage[t] -= 1;
                             self.iItemCol[t] = 0;
-                            if_sound_on_play(&mut game().rm.sfx_worldmove);
+                            if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
                         } else {
-                            if_sound_on_play(&mut game().rm.sfx_hit);
+                            if_sound_on_play(g, &mut gp.rm.sfx_hit);
                         }
                     } else if playerKeys.menu_down().fPressed {
-                        if self.iItemPage[t] < 3 && (self.iItemPage[t] as i32 + 1) * 8 < game().game_values.worldpowerupcount[t] as i32 {
+                        if self.iItemPage[t] < 3 && (self.iItemPage[t] as i32 + 1) * 8 < g.game_values.worldpowerupcount[t] as i32 {
                             self.iItemPage[t] += 1;
                             self.iItemCol[t] = 0;
-                            if_sound_on_play(&mut game().rm.sfx_worldmove);
+                            if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
                         } else {
-                            if_sound_on_play(&mut game().rm.sfx_hit);
+                            if_sound_on_play(g, &mut gp.rm.sfx_hit);
                         }
                     } else if playerKeys.menu_left().fPressed {
                         if self.iItemCol[t] > 0 {
                             self.iItemCol[t] -= 1;
-                            if_sound_on_play(&mut game().rm.sfx_worldmove);
+                            if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
                         } else if self.iItemCol[t] == 0 && self.iItemPage[t] > 0 {
                             self.iItemCol[t] = 7;
                             self.iItemPage[t] -= 1;
-                            if_sound_on_play(&mut game().rm.sfx_worldmove);
+                            if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
                         } else {
-                            if_sound_on_play(&mut game().rm.sfx_hit);
+                            if_sound_on_play(g, &mut gp.rm.sfx_hit);
                         }
                     } else if playerKeys.menu_right().fPressed {
-                        if (self.iItemPage[t] as i32 * 8 + self.iItemCol[t] as i32 + 1) < game().game_values.worldpowerupcount[t] as i32 {
+                        if (self.iItemPage[t] as i32 * 8 + self.iItemCol[t] as i32 + 1) < g.game_values.worldpowerupcount[t] as i32 {
                             if self.iItemCol[t] < 7 {
                                 self.iItemCol[t] += 1;
-                                if_sound_on_play(&mut game().rm.sfx_worldmove);
+                                if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
                             } else if self.iItemCol[t] == 7 && self.iItemPage[t] < 3 {
                                 self.iItemCol[t] = 0;
                                 self.iItemPage[t] += 1;
-                                if_sound_on_play(&mut game().rm.sfx_worldmove);
+                                if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
                             } else {
-                                if_sound_on_play(&mut game().rm.sfx_hit);
+                                if_sound_on_play(g, &mut gp.rm.sfx_hit);
                             }
                         }
                     } else if playerKeys.menu_select().fPressed {
-                        if game().game_values.worldpowerupcount[t] > 0 {
+                        if g.game_values.worldpowerupcount[t] > 0 {
                             let iIndex = self.iItemPage[t] * 8 + self.iItemCol[t];
-                            self.use_powerup(iPlayer, iTeamId, iIndex, true);
+                            self.use_powerup(g, iPlayer, iTeamId, iIndex, true);
                         }
                     }
                 }
@@ -1262,7 +1273,7 @@ impl UI_ControlTrait for MI_World {
                         }
                     }
 
-                    if (game().game_values.playercontrol[p] == 1 || self.fNoInterestingMoves)
+                    if (g.game_values.playercontrol[p] == 1 || self.fNoInterestingMoves)
                         && (self.iPopupFlag[t]
                             || playerKeys.menu_random().fPressed
                             || (iPlayer != 0 && playerInput.inputControls[p].iDevice == DEVICE_KEYBOARD && playerKeys.menu_cancel().fPressed))
@@ -1282,12 +1293,12 @@ impl UI_ControlTrait for MI_World {
                             self.iItemPage[t] = 0;
                             self.iItemCol[t] = 0;
 
-                            if_sound_on_play(&mut game().rm.sfx_inventory);
+                            if_sound_on_play(g, &mut gp.rm.sfx_inventory);
                         } else if self.iStateTransition[t] == 3 {
                             self.iPopupFlag[t] = false;
 
                             self.iStateTransition[t] = 2;
-                            if_sound_on_play(&mut game().rm.sfx_inventory);
+                            if_sound_on_play(g, &mut gp.rm.sfx_inventory);
                         }
                     }
                 }
@@ -1297,7 +1308,7 @@ impl UI_ControlTrait for MI_World {
         }
     }
 
-    fn modify(&mut self, modify: bool) -> MenuCodeEnum {
+    fn modify(&mut self, g: &mut Game, modify: bool) -> MenuCodeEnum {
         self.fModifying = modify;
         MENU_CODE_MODIFY_ACCEPTED
     }

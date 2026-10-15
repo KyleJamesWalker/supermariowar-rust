@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/DonutBlock.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::TILESETNONE;
@@ -29,7 +30,7 @@ impl B_DonutBlock {
         B_DonutBlock { io_block: IO_Block::new(nspr, pos), counter: 0, jigglex: 0, jigglecounter: 0 }
     }
 
-    pub fn trigger_behavior_player(&mut self, iPlayerId: i16) {
+    pub fn trigger_behavior_player(&mut self, g: &mut Game, iPlayerId: i16) {
         //The falling block uses this block's own graphic instead of a tileset tile
         unsafe {
             let tile = TilesetTile { iID: TILESETNONE as i16, iCol: 0, iRow: 0 };
@@ -37,16 +38,16 @@ impl B_DonutBlock {
             let r#type = TileType::Solid;
 
             let path = Box::new(FallingPath::new(Vec2f::new(self.ix as f32 + 16.0f32, self.iy as f32 + 15.8f32)));
-            let mut platform = MovingPlatform::new(vec![tile], vec![r#type], 1, 1, 2, path, false);
+            let mut platform = MovingPlatform::new(g, vec![tile], vec![r#type], 1, 1, 2, path, false);
             platform.set_player_id(iPlayerId);
             let spr = self.spr;
             platform.paint_sprite_at(&*spr, 0, 0);
 
-            game().g_map.add_temporary_platform(platform);
+            g.g_map.add_temporary_platform(platform);
 
             self.dead = true;
-            game().g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
-            game().g_map.update_tile_gap(self.col, self.row);
+            g.g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
+            g.g_map.update_tile_gap(self.col, self.row);
         }
     }
 }
@@ -57,11 +58,11 @@ impl CObjectTrait for B_DonutBlock {
         Some(self)
     }
 
-    fn draw(&mut self) {
-        self.spr.draw(self.ix as i32 + self.jigglex as i32, self.iy as i32);
+    fn draw(&mut self, g: &mut Game) {
+        self.spr.draw(g, self.ix as i32 + self.jigglex as i32, self.iy as i32);
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         //If a player is standing on us, jiggle and then fall
         if self.state == 0 {
             self.counter = 0;
@@ -82,7 +83,7 @@ impl CObjectTrait for B_DonutBlock {
             self.counter += 1;
             if self.counter > 50 {
                 let iPlayerId = (self.state as i32 - 1) as i16;
-                self.trigger_behavior_player(iPlayerId);
+                self.trigger_behavior_player(g, iPlayerId);
             }
         }
 
@@ -93,7 +94,7 @@ impl CObjectTrait for B_DonutBlock {
 impl IO_BlockTrait for B_DonutBlock {
     crate::impl_io_block_plumbing!();
 
-    fn hittop_player(&mut self, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hittop_player(&mut self, g: &mut Game, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         io_block_hittop_player(self, player, useBehavior);
 
         if useBehavior {

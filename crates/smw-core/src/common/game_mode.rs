@@ -1,5 +1,7 @@
 //! Port of src/common/GameMode.h
 
+use crate::game::Game;
+use crate::game::game;
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
 use crate::globals::{Aliased, Ptr};
@@ -85,24 +87,24 @@ pub trait CGameModeTrait: Any {
     fn gm_mut(&mut self) -> &mut CGameMode;
     fn as_any(&mut self) -> &mut dyn Any;
 
-    fn init(&mut self) {
-        gm::cgamemode_init(self)
+    fn init(&mut self, g: &mut Game) {
+        gm::cgamemode_init(g, self)
     }
-    fn think(&mut self) {
-        gm::cgamemode_think(self)
+    fn think(&mut self, g: &mut Game) {
+        gm::cgamemode_think(g, self)
     }
-    fn draw_background(&mut self) {}
-    fn draw_foreground(&mut self) {}
-    fn playerkilledplayer(&mut self, inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
-        gm::cgamemode_playerkilledplayer(self, inflictor, other, style)
+    fn draw_background(&mut self, g: &mut Game) {}
+    fn draw_foreground(&mut self, g: &mut Game) {}
+    fn playerkilledplayer(&mut self, g: &mut Game, inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+        gm::cgamemode_playerkilledplayer(g, self, inflictor, other, style)
     }
-    fn playerkilledself(&mut self, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
         gm::cgamemode_playerkilledself(self, player, style)
     }
-    fn playerextraguy(&mut self, player: Ptr<CPlayer>, iType: i16) {
-        gm::cgamemode_playerextraguy(self, player, iType)
+    fn playerextraguy(&mut self, g: &mut Game, player: Ptr<CPlayer>, iType: i16) {
+        gm::cgamemode_playerextraguy(g, self, player, iType)
     }
-    fn check_winner(&mut self, _player: Ptr<CPlayer>) -> PlayerKillType {
+    fn check_winner(&mut self, g: &mut Game, _player: Ptr<CPlayer>) -> PlayerKillType {
         PlayerKillType::Normal
     }
     fn has_stored_powerups(&mut self) -> bool {

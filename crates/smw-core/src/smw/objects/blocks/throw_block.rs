@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/ThrowBlock.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::eyecandy::EC_FallingObject;
 use crate::common::game_values::if_sound_on_play;
@@ -51,18 +52,18 @@ impl B_ThrowBlock {
         b
     }
 
-    pub fn give_block_to_player(&mut self, mut player: Ptr<CPlayer>) {
+    pub fn give_block_to_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) {
         unsafe {
-            let mut block = Ptr::new_box(CO_ThrowBlock::new(Ptr::from_mut(&mut game().rm.spr_blueblock), Vec2s::new(self.ix, self.iy), self.iType));
+            let mut block = Ptr::new_box(CO_ThrowBlock::new(Ptr::from_mut(&mut g.rm.spr_blueblock), Vec2s::new(self.ix, self.iy), self.iType));
             let item: Ptr<dyn MO_CarriedObjectTrait> = Ptr::from_mut(block.get() as &mut dyn MO_CarriedObjectTrait);
             if player.accept_item(item) {
                 self.dead = true;
-                game().g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
-                game().g_map.update_tile_gap(self.col, self.row);
+                g.g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
+                g.g_map.update_tile_gap(self.col, self.row);
 
                 block.owner = player;
                 block.iPlayerID = player.globalID;
-                game().objectcontainer[1].add(block);
+                g.objectcontainer[1].add(block);
             } else {
                 block.delete();
             }
@@ -76,15 +77,15 @@ impl CObjectTrait for B_ThrowBlock {
         Some(self)
     }
 
-    fn draw(&mut self) {
-        self.spr.draw_src(
+    fn draw(&mut self, g: &mut Game) {
+        self.spr.draw_src(g, 
             self.ix as i32,
             self.iy as i32,
             &SDL_Rect { x: self.drawFrame as i32, y: (self.iType as i16 * 32) as i32, w: self.iw as i32, h: self.ih as i32 },
         );
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         self.animationTimer += 1;
         if self.animationTimer >= self.animationSpeed {
             self.animationTimer = 0;
@@ -100,7 +101,7 @@ impl CObjectTrait for B_ThrowBlock {
 impl IO_BlockTrait for B_ThrowBlock {
     crate::impl_io_block_plumbing!();
 
-    fn hittop_player(&mut self, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hittop_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         if useBehavior {
             player.set_yf((self.iposy as i32 - PH) as f32 - 0.2f32);
             player.fOldY = player.fy;
@@ -111,7 +112,7 @@ impl IO_BlockTrait for B_ThrowBlock {
             player.vely = GRAVITATION;
 
             if player.pressed_accept_item_key() && player.is_accepting_item() {
-                self.give_block_to_player(player);
+                self.give_block_to_player(g, player);
                 return true;
             } else {
                 return false;
@@ -121,7 +122,7 @@ impl IO_BlockTrait for B_ThrowBlock {
         false
     }
 
-    fn hitright_player(&mut self, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitright_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         if useBehavior {
             player.set_xf((self.iposx as i32 + self.iw as i32) as f32 + 0.2f32);
             player.fOldX = player.fx;
@@ -135,7 +136,7 @@ impl IO_BlockTrait for B_ThrowBlock {
             }
 
             if player.is_accepting_item() {
-                self.give_block_to_player(player);
+                self.give_block_to_player(g, player);
                 return true;
             } else {
                 return false;
@@ -145,7 +146,7 @@ impl IO_BlockTrait for B_ThrowBlock {
         true
     }
 
-    fn hitleft_player(&mut self, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitleft_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         if useBehavior {
             player.set_xf((self.iposx as i32 - PW) as f32 - 0.2f32);
             player.fOldX = player.fx;
@@ -159,7 +160,7 @@ impl IO_BlockTrait for B_ThrowBlock {
             }
 
             if player.is_accepting_item() {
-                self.give_block_to_player(player);
+                self.give_block_to_player(g, player);
                 return true;
             } else {
                 return false;
@@ -169,21 +170,22 @@ impl IO_BlockTrait for B_ThrowBlock {
         true
     }
 
-    fn trigger_behavior(&mut self) {
+    fn trigger_behavior(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             self.dead = true;
-            game().g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
-            game().g_map.update_tile_gap(self.col, self.row);
+            g.g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
+            g.g_map.update_tile_gap(self.col, self.row);
 
             let srcY = (self.iType as i32 * 16) as i16;
-            let spr = Ptr::from_mut(&mut game().rm.spr_brokenblueblock);
+            let spr = Ptr::from_mut(&mut g.rm.spr_brokenblueblock);
             let (ix, iy) = (self.ix, self.iy);
-            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy, -1.5f32, -7.0f32, 6, 2, 0, srcY, 16, 16));
-            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy, 1.5f32, -7.0f32, 6, 2, 0, srcY, 16, 16));
-            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -1.5f32, -4.0f32, 6, 2, 0, srcY, 16, 16));
-            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 1.5f32, -4.0f32, 6, 2, 0, srcY, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy, -1.5f32, -7.0f32, 6, 2, 0, srcY, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy, 1.5f32, -7.0f32, 6, 2, 0, srcY, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -1.5f32, -4.0f32, 6, 2, 0, srcY, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 1.5f32, -4.0f32, 6, 2, 0, srcY, 16, 16));
 
-            if_sound_on_play(&mut game().rm.sfx_breakblock);
+            if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
         }
     }
 }

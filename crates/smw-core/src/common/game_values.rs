@@ -1,5 +1,6 @@
 //! Port of src/common/GameValues.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy_styles::{AwardStyle, ScoreboardStyle, SpawnStyle};
 use crate::common::file_io::{throw_runtime_error, BinaryFile};
 use crate::common::game::perror;
@@ -210,9 +211,9 @@ const DEFAULT_POWERUP_PRESETS: [[i16; NUM_POWERUPS as usize]; NUM_POWERUP_PRESET
     [0, 10, 0, 0, 0, 10, 6, 0, 0, 0, 2, 0, 8, 4, 2, 4, 0, 4, 0, 0, 0, 0, 5, 0, 0, 0], //Super Mario World
 ];
 
-pub fn if_sound_on_play(sfx: &mut sfxSound) {
+pub fn if_sound_on_play(g: &mut Game, sfx: &mut sfxSound) {
     unsafe {
-        if game().game_values.sound {
+        if g.game_values.sound {
             sfx.play();
         }
     }
@@ -515,7 +516,7 @@ impl CGameValues {
         }
     }
 
-    pub fn init(&mut self) {
+    pub fn init(&mut self, g: &mut Game) {
         //set standard game values
         self.playercontrol[0] = 1;
         self.playercontrol[1] = 1;
@@ -596,7 +597,7 @@ impl CGameValues {
         self.poweruppreset = 0;
         self.tournamentcontrolstyle = TournamentControlStyle::All;
 
-        let filtercount = unsafe { game().filterslist.count() };
+        let filtercount = unsafe { g.filterslist.count() };
         self.pfFilters.resize(NUM_AUTO_FILTERS as usize + filtercount, false);
         self.piFilterIcons.resize(NUM_AUTO_FILTERS as usize + filtercount, 0);
         self.fNeedWriteFilters = false;
@@ -636,14 +637,14 @@ impl CGameValues {
         }
     }
 
-    pub fn reset_gameplay_settings(&mut self) {
+    pub fn reset_gameplay_settings(&mut self, g: &mut Game) {
         self.flags = GameplayFlags::default();
 
         self.screenfade = 255;
         self.screenfadespeed = -8;
 
         //Initialize game mode
-        self.gamemode.get().init();
+        self.gamemode.get().init(g);
     }
 
     pub fn reset_secret_counters(&mut self) {
@@ -702,7 +703,7 @@ fn catch_runtime_error<R>(f: impl FnOnce() -> R) -> Option<R> {
 }
 
 impl CGameConfig {
-    pub fn read_binary_config(&mut self) {
+    pub fn read_binary_config(&mut self, g: &mut Game) {
         let ok = catch_runtime_error(|| {
             let options_path = get_home_directory() + "options.bin";
             let mut options = BinaryFile::new(&options_path, "rb");
@@ -710,7 +711,7 @@ impl CGameConfig {
                 throw_runtime_error(&format!("Could not open {}", options_path));
             }
 
-            self.read_options(&mut options)
+            self.read_options(g, &mut options)
         });
         if ok != Some(true) {
             return;
@@ -723,11 +724,11 @@ impl CGameConfig {
                 throw_runtime_error(&format!("Could not open {}", controls_path));
             }
 
-            self.read_controls(&mut controls);
+            self.read_controls(g, &mut controls);
         });
     }
 
-    fn read_options(&mut self, options: &mut BinaryFile) -> bool {
+    fn read_options(&mut self, g: &mut Game, options: &mut BinaryFile) -> bool {
         unsafe {
             let version = Version {
                 major: options.read_i32() as u8,
@@ -833,18 +834,18 @@ impl CGameConfig {
             }
 
             for iPlayer in 0..MAX_PLAYERS as usize {
-                if self.skinids[iPlayer] as i64 >= game().skinlist.count() as i64 || self.skinids[iPlayer] < 0 {
+                if self.skinids[iPlayer] as i64 >= g.skinlist.count() as i64 || self.skinids[iPlayer] < 0 {
                     self.skinids[iPlayer] = 0;
                 }
             }
 
-            game().announcerlist.set_current_index(options.read_u8() as usize);
-            game().musiclist.set_current(options.read_u8() as usize);
-            game().worldmusiclist.set_current(options.read_u8() as usize);
-            game().soundpacklist.set_current_index(options.read_u8() as usize);
-            game().menugraphicspacklist.set_current_index(options.read_u8() as usize);
-            game().worldgraphicspacklist.set_current_index(options.read_u8() as usize);
-            game().gamegraphicspacklist.set_current_index(options.read_u8() as usize);
+            g.announcerlist.set_current_index(options.read_u8() as usize);
+            g.musiclist.set_current(options.read_u8() as usize);
+            g.worldmusiclist.set_current(options.read_u8() as usize);
+            g.soundpacklist.set_current_index(options.read_u8() as usize);
+            g.menugraphicspacklist.set_current_index(options.read_u8() as usize);
+            g.worldgraphicspacklist.set_current_index(options.read_u8() as usize);
+            g.gamegraphicspacklist.set_current_index(options.read_u8() as usize);
 
             sfx_setmusicvolume(self.musicvolume as i32);
             sfx_setsoundvolume(self.soundvolume as i32);
@@ -852,7 +853,7 @@ impl CGameConfig {
         }
     }
 
-    fn read_controls(&mut self, controls: &mut BinaryFile) {
+    fn read_controls(&mut self, g: &mut Game, controls: &mut BinaryFile) {
         unsafe {
             let mut raw = [0u8; CINPUTPLAYERCONTROL_RAW_SIZE * 8];
             controls.read_raw(&mut raw);
@@ -866,7 +867,7 @@ impl CGameConfig {
             for iPlayer in 0..MAX_PLAYERS as usize {
                 let mut iDevice = controls.read_i16();
 
-                if iDevice >= joystickcount {
+                if iDevice >= g.joystickcount {
                     iDevice = DEVICE_KEYBOARD;
                 }
 
@@ -876,7 +877,7 @@ impl CGameConfig {
         }
     }
 
-    fn write_options(&self, options: &mut BinaryFile) {
+    fn write_options(&self, g: &mut Game, options: &mut BinaryFile) {
         unsafe {
             options.write_i32(GAME_VERSION.major as i32);
             options.write_i32(GAME_VERSION.minor as i32);
@@ -971,13 +972,13 @@ impl CGameConfig {
             }
             options.write_raw(&raw);
 
-            options.write_u8(game().announcerlist.current_index() as u8);
-            options.write_u8(game().musiclist.current_index() as u8);
-            options.write_u8(game().worldmusiclist.current_index() as u8);
-            options.write_u8(game().soundpacklist.current_index() as u8);
-            options.write_u8(game().menugraphicspacklist.current_index() as u8);
-            options.write_u8(game().worldgraphicspacklist.current_index() as u8);
-            options.write_u8(game().gamegraphicspacklist.current_index() as u8);
+            options.write_u8(g.announcerlist.current_index() as u8);
+            options.write_u8(g.musiclist.current_index() as u8);
+            options.write_u8(g.worldmusiclist.current_index() as u8);
+            options.write_u8(g.soundpacklist.current_index() as u8);
+            options.write_u8(g.menugraphicspacklist.current_index() as u8);
+            options.write_u8(g.worldgraphicspacklist.current_index() as u8);
+            options.write_u8(g.gamegraphicspacklist.current_index() as u8);
         }
     }
 
@@ -997,22 +998,23 @@ impl CGameConfig {
     }
 
     /// Not in the C++: the bytes `write_config` would write to options.bin and controls.sdl2.bin.
-    pub fn config_bytes(&self) -> (Vec<u8>, Vec<u8>) {
+    pub fn config_bytes(&self, g: &mut Game) -> (Vec<u8>, Vec<u8>) {
         let mut options = BinaryFile::memory("options.bin", Vec::new());
-        self.write_options(&mut options);
+        self.write_options(g, &mut options);
         let mut controls = BinaryFile::memory("controls.sdl2.bin", Vec::new());
         self.write_controls(&mut controls);
         (options.into_bytes(), controls.into_bytes())
     }
 
     /// Not in the C++: `read_binary_config` from the bytes `config_bytes` returned.
-    pub fn read_config_bytes(&mut self, options: Vec<u8>, controls: Vec<u8>) {
-        if catch_runtime_error(|| self.read_options(&mut BinaryFile::memory("options.bin", options))) == Some(true) {
-            catch_runtime_error(|| self.read_controls(&mut BinaryFile::memory("controls.sdl2.bin", controls)));
+    pub fn read_config_bytes(&mut self, g: &mut Game, options: Vec<u8>, controls: Vec<u8>) {
+        if catch_runtime_error(|| self.read_options(g, &mut BinaryFile::memory("options.bin", options))) == Some(true) {
+            catch_runtime_error(|| self.read_controls(g, &mut BinaryFile::memory("controls.sdl2.bin", controls)));
         }
     }
 
-    pub fn write_config(&self) {
+    pub fn write_config(&self, g: &mut Game) {
+        let mut gp = g.ptr();
         let ok = catch_runtime_error(|| {
             let options_path = get_home_directory() + "options.bin";
             let mut options = BinaryFile::new(&options_path, "wb");
@@ -1020,7 +1022,7 @@ impl CGameConfig {
                 throw_runtime_error(&format!("Could not open {}", options_path));
             }
 
-            self.write_options(&mut options);
+            self.write_options(g, &mut options);
         });
         if ok.is_none() {
             return;
@@ -1040,8 +1042,8 @@ impl CGameConfig {
         }
 
         unsafe {
-            game().maplist.write_filters();
-            game().maplist.write_map_summary_cache();
+            gp.maplist.write_filters(g);
+            gp.maplist.write_map_summary_cache(g);
         }
     }
 }

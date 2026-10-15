@@ -1,5 +1,6 @@
 //! Port of src/smw/player_components/PlayerTail.cpp
 
+use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::ClipEdge;
 use crate::common::player_kill_styles::KillStyle;
@@ -36,10 +37,11 @@ impl PlayerTail {
         self.iTailState > TAIL_NOT_IN_USE
     }
 
-    pub fn shake(&mut self, player: &mut CPlayer) {
+    pub fn shake(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         unsafe {
-            game().rm.sfx_tailspin.stop();
-            if_sound_on_play(&mut game().rm.sfx_tailspin);
+            g.rm.sfx_tailspin.stop();
+            if_sound_on_play(g, &mut gp.rm.sfx_tailspin);
         }
         player.lockjump = true;
 
@@ -48,9 +50,10 @@ impl PlayerTail {
         self.iTailFrame = 110;
     }
 
-    pub fn spin(&mut self, player: &mut CPlayer) {
+    pub fn spin(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         unsafe {
-            if_sound_on_play(&mut game().rm.sfx_tailspin);
+            if_sound_on_play(g, &mut gp.rm.sfx_tailspin);
         }
 
         self.iTailState = TAIL_SPIN_AND_SHAKE; //cause tail to shake
@@ -58,14 +61,14 @@ impl PlayerTail {
         self.iTailFrame = 22;
 
         let pp = Ptr::from_mut(player);
-        player.spin.spin(pp.get());
+        player.spin.spin(g, pp.get());
 
         unsafe {
-            game().objectcontainer[1].add(Ptr::new_box(MO_SpinAttack::new(
+            gp.objectcontainer[1].add(Ptr::new_box(MO_SpinAttack::new(
                 player.get_global_id(),
                 player.get_team_id(),
                 KillStyle::Leaf,
-                player.is_facing_right(),
+                player.is_facing_right(g),
                 13,
             )));
         }
@@ -80,7 +83,8 @@ impl PlayerTail {
         }
     }
 
-    pub fn draw(&mut self, player: &mut CPlayer) {
+    pub fn draw(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         unsafe {
             let mut iOffsetY: i16 = 0;
             if self.iTailState == TAIL_SHAKE {
@@ -92,8 +96,8 @@ impl PlayerTail {
                     if self.iTailFrame < 66 {
                         self.iTailState = TAIL_NOT_IN_USE;
 
-                        if player.powerup == 7 && game().game_values.leaflimit > 0 {
-                            player.decrease_projectile_limit();
+                        if player.powerup == 7 && g.game_values.leaflimit > 0 {
+                            player.decrease_projectile_limit(g);
                         }
                     }
                 }
@@ -107,8 +111,8 @@ impl PlayerTail {
                         self.iTailState = TAIL_NOT_IN_USE;
                         self.iTailFrame = 66;
 
-                        if player.powerup == 7 && game().game_values.leaflimit > 0 {
-                            player.decrease_projectile_limit();
+                        if player.powerup == 7 && g.game_values.leaflimit > 0 {
+                            player.decrease_projectile_limit(g);
                         }
                     }
                 }
@@ -139,13 +143,13 @@ impl PlayerTail {
                     }
                 }
 
-                let mut fPlayerFacingRight = !game().game_values.reversewalk;
+                let mut fPlayerFacingRight = !g.game_values.reversewalk;
                 if self.iTailState == TAIL_SPIN_AND_SHAKE {
                     if player.spin.is_reverse_walking() {
-                        fPlayerFacingRight = game().game_values.reversewalk;
+                        fPlayerFacingRight = g.game_values.reversewalk;
                     }
                 } else {
-                    fPlayerFacingRight = player.is_facing_right();
+                    fPlayerFacingRight = player.is_facing_right(g);
                 }
 
                 let x = player.left_x() as i32 + if fPlayerFacingRight { -18 } else { 18 };
@@ -158,9 +162,9 @@ impl PlayerTail {
                 };
                 if player.iswarping() {
                     let edge: ClipEdge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);
-                    game().rm.spr_tail.draw_clip(x, y, &src, edge, player.get_warp_plane() as i32);
+                    gp.rm.spr_tail.draw_clip(g, x, y, &src, edge, player.get_warp_plane() as i32);
                 } else {
-                    game().rm.spr_tail.draw_src(x, y, &src);
+                    gp.rm.spr_tail.draw_src(g, x, y, &src);
                 }
             }
         }

@@ -1,9 +1,9 @@
 //! Port of src/common/path.cpp
 
-use crate::common::global::RootDataDirectory;
+use crate::game::Game;
+use crate::globals::game;
 use std::path::Path;
 
-pub static mut SMW_Root_Data_Dir: String = String::new();
 
 pub fn get_home_directory() -> String {
     crate::services::services().storage.settings_dir().to_string_lossy().into_owned()
@@ -17,37 +17,36 @@ pub fn file_exists(path: &str) -> bool {
     std::fs::metadata(path).is_ok()
 }
 
-pub fn initialize_paths() {
+pub fn initialize_paths(g: &mut Game) {
     unsafe {
-        if !SMW_Root_Data_Dir.is_empty() {
+        if !g.SMW_Root_Data_Dir.is_empty() {
             return;
         }
-        SMW_Root_Data_Dir = "./".to_string();
-        println!("Located data folder at: {}", SMW_Root_Data_Dir);
+        g.SMW_Root_Data_Dir = "./".to_string();
+        println!("Located data folder at: {}", g.SMW_Root_Data_Dir);
     }
 }
 
-static mut are_paths_initialized: bool = false;
 
-pub fn convert_path(source: &str) -> String {
+pub fn convert_path(g: &mut Game, source: &str) -> String {
     unsafe {
-        if !are_paths_initialized {
-            SMW_Root_Data_Dir = RootDataDirectory.clone();
+        if !g.are_paths_initialized {
+            g.SMW_Root_Data_Dir = g.RootDataDirectory.clone();
 
-            initialize_paths();
+            initialize_paths(g);
 
-            let last_slash_pos = SMW_Root_Data_Dir.rfind('/');
-            if last_slash_pos != Some(SMW_Root_Data_Dir.len().wrapping_sub(1)) {
-                SMW_Root_Data_Dir.push('/');
+            let last_slash_pos = g.SMW_Root_Data_Dir.rfind('/');
+            if last_slash_pos != Some(g.SMW_Root_Data_Dir.len().wrapping_sub(1)) {
+                g.SMW_Root_Data_Dir.push('/');
             }
 
-            are_paths_initialized = true;
+            g.are_paths_initialized = true;
         }
-        SMW_Root_Data_Dir.clone() + source
+        g.SMW_Root_Data_Dir.clone() + source
     }
 }
 
-pub fn convert_path_pack(relpath: &str, packdir: &str) -> String {
+pub fn convert_path_pack(g: &mut Game, relpath: &str, packdir: &str) -> String {
     const prefixes: [&str; 2] = ["gfx/packs/", "sfx/packs/"];
     for prefix in prefixes {
         let Some(rel) = relpath.strip_prefix(prefix) else {
@@ -59,9 +58,9 @@ pub fn convert_path_pack(relpath: &str, packdir: &str) -> String {
             return path.to_string_lossy().into_owned();
         }
 
-        return convert_path(&(prefix.to_string() + "Classic/" + rel));
+        return convert_path(g, &(prefix.to_string() + "Classic/" + rel));
     }
-    convert_path(relpath)
+    convert_path(g, relpath)
 }
 
 pub fn concat(a: &str, b: &str) -> String {

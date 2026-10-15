@@ -18,7 +18,7 @@ impl UI_BonusWheelMenu {
     pub fn new() -> Box<Self> {
         let mut this = Box::<Self>::default();
 
-        this.miBonusWheel = Ptr::new_box(MI_BonusWheel::new(144, 38));
+        this.miBonusWheel = Ptr::new_box(MI_BonusWheel::new(game().get(), 144, 38));
 
         let w = ctl_ptr(this.miBonusWheel);
         this.add_control(w, Ptr::null(), Ptr::null(), Ptr::null(), Ptr::null());

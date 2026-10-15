@@ -1,5 +1,6 @@
 //! Port of src/smw/menu/options/ProjectileLimitsMenu.cpp
 
+use crate::game::Game;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
 use crate::common::ui::mi_image::MI_Image;
@@ -52,23 +53,23 @@ pub struct UI_ProjectileLimitsMenu {
 crate::impl_base!(UI_ProjectileLimitsMenu => ui_menu: UI_Menu);
 
 impl UI_ProjectileLimitsMenu {
-    pub fn new() -> Box<Self> {
+    pub fn new(g: &mut Game) -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let spr = Ptr::from_mut(&mut game().rm.spr_selectfield);
-            let menu_plain_field = Ptr::from_mut(&mut game().rm.menu_plain_field);
+            let spr = Ptr::from_mut(&mut g.rm.spr_selectfield);
+            let menu_plain_field = Ptr::from_mut(&mut g.rm.menu_plain_field);
 
-            this.miFireballLimitField = select_field(spr, 70, 60, "Fireball Limit", 500, 220, LIMITS, &mut game().game_values.fireballlimit);
-            this.miHammerLimitField = select_field(spr, 70, 100, "Hammer Limit", 500, 220, LIMITS, &mut game().game_values.hammerlimit);
-            this.miBoomerangLimitField = select_field(spr, 70, 140, "Boomerang Limit", 500, 220, LIMITS, &mut game().game_values.boomeranglimit);
-            this.miFeatherLimitField = select_field(spr, 70, 180, "Feather Limit", 500, 220, LIMITS, &mut game().game_values.featherlimit);
-            this.miLeafLimitField = select_field(spr, 70, 220, "Leaf Limit", 500, 220, LIMITS, &mut game().game_values.leaflimit);
-            this.miPwingsLimitField = select_field(spr, 70, 260, "P-Wings Limit", 500, 220, LIMITS, &mut game().game_values.pwingslimit);
-            this.miTanookiLimitField = select_field(spr, 70, 300, "Tanooki Limit", 500, 220, LIMITS, &mut game().game_values.tanookilimit);
-            this.miBombLimitField = select_field(spr, 70, 340, "Bomb Limit", 500, 220, LIMITS, &mut game().game_values.bombslimit);
-            this.miWandLimitField = select_field(spr, 70, 380, "Wand Limit", 500, 220, LIMITS, &mut game().game_values.wandlimit);
+            this.miFireballLimitField = select_field(spr, 70, 60, "Fireball Limit", 500, 220, LIMITS, &mut g.game_values.fireballlimit);
+            this.miHammerLimitField = select_field(spr, 70, 100, "Hammer Limit", 500, 220, LIMITS, &mut g.game_values.hammerlimit);
+            this.miBoomerangLimitField = select_field(spr, 70, 140, "Boomerang Limit", 500, 220, LIMITS, &mut g.game_values.boomeranglimit);
+            this.miFeatherLimitField = select_field(spr, 70, 180, "Feather Limit", 500, 220, LIMITS, &mut g.game_values.featherlimit);
+            this.miLeafLimitField = select_field(spr, 70, 220, "Leaf Limit", 500, 220, LIMITS, &mut g.game_values.leaflimit);
+            this.miPwingsLimitField = select_field(spr, 70, 260, "P-Wings Limit", 500, 220, LIMITS, &mut g.game_values.pwingslimit);
+            this.miTanookiLimitField = select_field(spr, 70, 300, "Tanooki Limit", 500, 220, LIMITS, &mut g.game_values.tanookilimit);
+            this.miBombLimitField = select_field(spr, 70, 340, "Bomb Limit", 500, 220, LIMITS, &mut g.game_values.bombslimit);
+            this.miWandLimitField = select_field(spr, 70, 380, "Wand Limit", 500, 220, LIMITS, &mut g.game_values.wandlimit);
 
-            this.miProjectilesLimitsMenuBackButton = Ptr::new_box(MI_Button::new(spr, 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miProjectilesLimitsMenuBackButton = Ptr::new_box(MI_Button::new(g, spr, 544, 432, "Back", 80, TextAlign::CENTER));
             this.miProjectilesLimitsMenuBackButton.set_code(MENU_CODE_BACK_TO_OPTIONS_MENU);
 
             this.miProjectilesLimitsMenuLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));

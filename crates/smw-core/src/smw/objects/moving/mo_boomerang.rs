@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_Boomerang.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::Spotlight;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
@@ -37,7 +38,7 @@ impl_base!(MO_Boomerang => io_moving_object: IO_MovingObject);
 
 impl MO_Boomerang {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, moveToRight: bool, aniSpeed: i16, iGlobalID: i16, teamID: i16, iColorID: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, moveToRight: bool, aniSpeed: i16, iGlobalID: i16, teamID: i16, iColorID: i16) -> Self {
         let mut o = MO_Boomerang {
             io_moving_object: IO_MovingObject::new(
                 nspr,
@@ -95,10 +96,10 @@ impl MO_Boomerang {
         o.iStateTimer = 0;
 
         unsafe {
-            if game().game_values.boomerangstyle == BoomerangStyle::Random {
+            if g.game_values.boomerangstyle == BoomerangStyle::Random {
                 o.iStyle = BoomerangStyle::from_u8(RANDOM_INT(3) as u8);
             } else {
-                o.iStyle = game().game_values.boomerangstyle;
+                o.iStyle = g.game_values.boomerangstyle;
             }
         }
 
@@ -109,21 +110,21 @@ impl MO_Boomerang {
     }
 
     // Call to kill boomerang when it is not caught by player
-    fn forcedead(&mut self) {
+    fn forcedead(&mut self, g: &mut Game) {
         unsafe {
-            removeifprojectile(self.as_mo_ptr(), false, true);
-            game().rm.sfx_boomerang.stop();
+            removeifprojectile(g, self.as_mo_ptr(), false, true);
+            g.rm.sfx_boomerang.stop();
 
-            if game().game_values.boomeranglimit == 0 {
+            if g.game_values.boomeranglimit == 0 {
                 return;
             }
 
             // Penalize player if they did not catch it
-            let mut player = get_player_from_global_id(self.iPlayerID);
+            let mut player = get_player_from_global_id(g, self.iPlayerID);
 
             if !player.is_null() {
                 if player.projectilelimit > 0 {
-                    player.decrease_projectile_limit();
+                    player.decrease_projectile_limit(g);
                 }
             }
         }
@@ -136,10 +137,11 @@ impl CObjectTrait for MO_Boomerang {
         Some(self)
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
-            if !game().rm.sfx_boomerang.is_playing() {
-                if_sound_on_play(&mut game().rm.sfx_boomerang);
+            if !g.rm.sfx_boomerang.is_playing() {
+                if_sound_on_play(g, &mut gp.rm.sfx_boomerang);
             }
 
             self.animate();
@@ -153,8 +155,8 @@ impl CObjectTrait for MO_Boomerang {
                 }
                 if let Some(weaponbreakableblock) = block.as_any().downcast_mut::<B_WeaponBreakableBlock>() {
                     if weaponbreakableblock.r#type() == WeaponDamageType::Boomerang {
-                        weaponbreakableblock.trigger_behavior_player(self.iPlayerID, self.iTeamID);
-                        self.forcedead();
+                        weaponbreakableblock.trigger_behavior_player(g, self.iPlayerID, self.iTeamID);
+                        self.forcedead(g);
                         return;
                     }
                 }
@@ -170,7 +172,7 @@ impl CObjectTrait for MO_Boomerang {
 
                 if self.fMoveToRight && self.fx + self.iw as f32 >= screenWidth && self.fOldX + (self.iw as f32) < screenWidth {
                     if self.fFlipped {
-                        self.forcedead();
+                        self.forcedead(g);
                         return;
                     } else {
                         let fx = (App::screenWidth - self.iw as i32) as f32;
@@ -181,7 +183,7 @@ impl CObjectTrait for MO_Boomerang {
                     }
                 } else if !self.fMoveToRight && self.fx < 0.0 && self.fOldX >= 0.0 {
                     if self.fFlipped {
-                        self.forcedead();
+                        self.forcedead(g);
                         return;
                     } else {
                         self.set_xf(0.0);
@@ -250,7 +252,7 @@ impl CObjectTrait for MO_Boomerang {
                         if (self.fMoveToRight && self.fx < 0.0 && self.fOldX >= 0.0)
                             || (!self.fMoveToRight && self.fx + self.iw as f32 >= screenWidth && self.fOldX + (self.iw as f32) < screenWidth)
                         {
-                            self.forcedead();
+                            self.forcedead(g);
                             return;
                         }
                     }
@@ -271,8 +273,8 @@ impl CObjectTrait for MO_Boomerang {
                     self.set_xf(fx);
                 }
 
-                if self.iStateTimer > game().game_values.boomeranglife {
-                    self.forcedead();
+                if self.iStateTimer > g.game_values.boomeranglife {
+                    self.forcedead(g);
                     return;
                 }
 
@@ -304,7 +306,7 @@ impl CObjectTrait for MO_Boomerang {
                     self.set_yf(fy);
 
                     // Follow the player zelda style
-                    let player = get_player_from_global_id(self.iPlayerID);
+                    let player = get_player_from_global_id(g, self.iPlayerID);
 
                     if !player.is_null() {
                         let mut fWrap = false;
@@ -344,7 +346,7 @@ impl CObjectTrait for MO_Boomerang {
                         }
                     } else {
                         // Remove boomerang if player was removed from game
-                        self.forcedead();
+                        self.forcedead(g);
                         return;
 
                         /*
@@ -365,9 +367,9 @@ impl CObjectTrait for MO_Boomerang {
                 }
             }
 
-            if game().game_values.spotlights {
+            if g.game_values.spotlights {
                 if self.sSpotlight.is_null() {
-                    self.sSpotlight = game().spotlightManager.add_spotlight(
+                    self.sSpotlight = gp.spotlightManager.add_spotlight(g, 
                         (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16,
                         (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16,
                         3,
@@ -383,28 +385,28 @@ impl CObjectTrait for MO_Boomerang {
         }
     }
 
-    fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         unsafe {
-            if self.iPlayerID != player.globalID && (game().game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID) {
+            if self.iPlayerID != player.globalID && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID) {
                 if !player.is_shielded() {
-                    removeifprojectile(self.as_mo_ptr(), false, false);
+                    removeifprojectile(g, self.as_mo_ptr(), false, false);
 
                     if !player.is_invincible() && !player.shyguy {
                         // Find the player that shot this boomerang so we can attribute a kill
-                        player_killed_player(self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Boomerang, false, false);
+                        player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Boomerang, false, false);
                         return true;
                     }
                 }
             } else if self.iPlayerID == player.globalID && self.fFlipped {
-                removeifprojectile(self.as_mo_ptr(), false, true);
+                removeifprojectile(g, self.as_mo_ptr(), false, true);
             }
         }
 
         false
     }
 
-    fn draw(&mut self) {
-        self.spr.draw_src(
+    fn draw(&mut self, g: &mut Game) {
+        self.spr.draw_src(g, 
             self.ix as i32 - self.collisionOffsetX as i32,
             self.iy as i32 - self.collisionOffsetY as i32,
             &SDL_Rect {

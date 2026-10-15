@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_Spike.cpp
 
+use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::vec2::Vec2s;
 use crate::common::moving_object_types::movingobject_carried;
@@ -37,14 +38,14 @@ impl CObjectTrait for CO_Spike {
     fn as_io_moving_object(&mut self) -> Option<&mut dyn IO_MovingObjectTrait> {
         Some(self)
     }
-    fn update(&mut self) {
-        co_spring_update(self)
+    fn update(&mut self, g: &mut Game) {
+        co_spring_update(g, self)
     }
-    fn draw(&mut self) {
-        co_spring_draw(self)
+    fn draw(&mut self, g: &mut Game) {
+        co_spring_draw(g, self)
     }
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
-        co_spring_collide_player(self, player)
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+        co_spring_collide_player(g, self, player)
     }
 }
 
@@ -67,10 +68,10 @@ impl CO_SpringTrait for CO_Spike {
         self
     }
 
-    fn hittop(&mut self, player: Ptr<CPlayer>) {
+    fn hittop(&mut self, g: &mut Game, player: Ptr<CPlayer>) {
         let mut player = player;
         if player.isready() && !player.is_shielded() && !player.is_invincible() && !player.kuriboshoe.is_on() && !player.shyguy {
-            player.kill_player_map_hazard(false, KillStyle::Environment, false, -1);
+            player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1);
         }
     }
 }

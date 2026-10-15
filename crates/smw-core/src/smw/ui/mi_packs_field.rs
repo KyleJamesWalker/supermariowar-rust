@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_PacksField.cpp
 
+use crate::game::Game;
 use crate::common::file_list::SimpleFileList;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::input::CPlayerInput;
@@ -25,17 +26,17 @@ impl MI_PacksField {
 impl UI_ControlTrait for MI_PacksField {
     crate::impl_ctl!();
 
-    fn modify(&mut self, modify: bool) -> MenuCodeEnum {
+    fn modify(&mut self, g: &mut Game, modify: bool) -> MenuCodeEnum {
         self.modify_impl(modify)
     }
-    fn update(&mut self) {
-        self.update_impl();
+    fn update(&mut self, g: &mut Game) {
+        self.update_impl(g);
     }
-    fn draw(&mut self) {
-        self.draw_impl();
+    fn draw(&mut self, g: &mut Game) {
+        self.draw_impl(g);
     }
 
-    fn send_input(&mut self, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+    fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         let iLastIndex = self.list.current_index();
         let code = self.mi_announcer_field.send_input_impl(playerInput);
 

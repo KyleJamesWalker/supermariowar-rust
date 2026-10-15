@@ -1,5 +1,6 @@
 //! Port of src/smw/player_components/PlayerAwardEffects.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::{EC_ExplodingAward, EC_FallingObject, EC_GravText, EC_RocketAward, EC_SoulsAward, EC_SwirlingAward};
 use crate::common::eyecandy_styles::AwardStyle;
 use crate::common::game_values::if_sound_on_play;
@@ -42,7 +43,8 @@ impl PlayerAwardEffects {
         Self::default()
     }
 
-    pub fn draw_ring_award(&mut self, player: &mut CPlayer) {
+    pub fn draw_ring_award(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         unsafe {
             self.awardangle += 0.02f32;
 
@@ -64,21 +66,22 @@ impl PlayerAwardEffects {
                 let src = SDL_Rect { x: self.awards[k as usize] as i32 * 16, y: 0, w: 16, h: 16 };
                 if player.iswarping() {
                     let edge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);
-                    game().rm.spr_award.draw_clip(awardx as i32, awardy as i32, &src, edge, player.get_warp_plane() as i32);
+                    gp.rm.spr_award.draw_clip(g, awardx as i32, awardy as i32, &src, edge, player.get_warp_plane() as i32);
                 } else {
-                    game().rm.spr_award.draw_src(awardx as i32, awardy as i32, &src);
+                    gp.rm.spr_award.draw_src(g, awardx as i32, awardy as i32, &src);
                 }
             }
         }
     }
 
-    fn add_exploding(&mut self, player: &mut CPlayer) {
+    fn add_exploding(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         unsafe {
             if (player.killsinrow as i32) < MINAWARDSNEEDED {
                 return;
             }
 
-            if_sound_on_play(&mut game().rm.sfx_cannon);
+            if_sound_on_play(g, &mut gp.rm.sfx_cannon);
 
             let numawards: i16 = if player.killsinrow as i32 > MAXAWARDS { MAXAWARDS as i16 } else { player.killsinrow };
             let addangle: f32 = TWO_PI / numawards as f32;
@@ -94,8 +97,8 @@ impl PlayerAwardEffects {
                 let awardvelx: f32 = 7.0f32 * cosangle;
                 let awardvely: f32 = 7.0f32 * sinangle;
 
-                game().eyecandy[2].emplace(EC_ExplodingAward::new(
-                    Ptr::from_mut(&mut game().rm.spr_awardsolid),
+                g.eyecandy[2].emplace(EC_ExplodingAward::new(
+                    Ptr::from_mut(&mut g.rm.spr_awardsolid),
                     awardx,
                     awardy,
                     awardvelx,
@@ -107,13 +110,14 @@ impl PlayerAwardEffects {
         }
     }
 
-    fn add_swirling(&mut self, player: &mut CPlayer) {
+    fn add_swirling(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         unsafe {
             if (player.killsinrow as i32) < MINAWARDSNEEDED {
                 return;
             }
 
-            if_sound_on_play(&mut game().rm.sfx_cannon);
+            if_sound_on_play(g, &mut gp.rm.sfx_cannon);
 
             let numawards: i16 = if player.killsinrow as i32 > MAXAWARDS { MAXAWARDS as i16 } else { player.killsinrow };
             let addangle: f32 = TWO_PI / numawards as f32;
@@ -122,8 +126,8 @@ impl PlayerAwardEffects {
                 let angle: f32 = k as f32 * addangle + self.awardangle;
 
                 if numawards as i32 == MAXAWARDS {
-                    game().eyecandy[2].emplace(EC_SwirlingAward::new(
-                        Ptr::from_mut(&mut game().rm.spr_awardkillsinrow),
+                    g.eyecandy[2].emplace(EC_SwirlingAward::new(
+                        Ptr::from_mut(&mut g.rm.spr_awardkillsinrow),
                         (player.center_x() as i32 - 8) as i16,
                         (player.center_y() as i32 - 8) as i16,
                         angle,
@@ -138,8 +142,8 @@ impl PlayerAwardEffects {
                         4,
                     ));
                 } else {
-                    game().eyecandy[2].emplace(EC_SwirlingAward::new(
-                        Ptr::from_mut(&mut game().rm.spr_awardkillsinrow),
+                    g.eyecandy[2].emplace(EC_SwirlingAward::new(
+                        Ptr::from_mut(&mut g.rm.spr_awardkillsinrow),
                         (player.center_x() as i32 - 8) as i16,
                         (player.center_y() as i32 - 8) as i16,
                         angle,
@@ -158,13 +162,14 @@ impl PlayerAwardEffects {
         }
     }
 
-    fn add_rocket(&mut self, player: &mut CPlayer) {
+    fn add_rocket(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         unsafe {
             if (player.killsinrow as i32) < MINAWARDSNEEDED {
                 return;
             }
 
-            if_sound_on_play(&mut game().rm.sfx_cannon);
+            if_sound_on_play(g, &mut gp.rm.sfx_cannon);
 
             let numawards: i16 = if player.killsinrow as i32 > MAXAWARDS { MAXAWARDS as i16 } else { player.killsinrow };
 
@@ -177,8 +182,8 @@ impl PlayerAwardEffects {
                 let awardvely: f32 = 9.0f32 * sinf(angle);
 
                 if numawards as i32 == MAXAWARDS {
-                    game().eyecandy[2].emplace(EC_RocketAward::new(
-                        Ptr::from_mut(&mut game().rm.spr_awardkillsinrow),
+                    g.eyecandy[2].emplace(EC_RocketAward::new(
+                        Ptr::from_mut(&mut g.rm.spr_awardkillsinrow),
                         (player.center_x() as i32 - 8) as i16,
                         (player.center_y() as i32 - 8) as i16,
                         awardvelx,
@@ -192,8 +197,8 @@ impl PlayerAwardEffects {
                         4,
                     ));
                 } else {
-                    game().eyecandy[2].emplace(EC_RocketAward::new(
-                        Ptr::from_mut(&mut game().rm.spr_awardkillsinrow),
+                    g.eyecandy[2].emplace(EC_RocketAward::new(
+                        Ptr::from_mut(&mut g.rm.spr_awardkillsinrow),
                         (player.center_x() as i32 - 8) as i16,
                         (player.center_y() as i32 - 8) as i16,
                         awardvelx,
@@ -211,14 +216,14 @@ impl PlayerAwardEffects {
         }
     }
 
-    pub fn add_death_award(&mut self, player: &mut CPlayer) {
+    pub fn add_death_award(&mut self, g: &mut Game, player: &mut CPlayer) {
         unsafe {
-            if game().game_values.awardstyle == AwardStyle::Halo {
-                self.add_exploding(player);
-            } else if game().game_values.awardstyle == AwardStyle::Souls && player.killsinrow as i32 >= MINAWARDSNEEDED {
-                game().eyecandy[2].emplace(EC_SoulsAward::new(
-                    Ptr::from_mut(&mut game().rm.spr_awardsouls),
-                    Ptr::from_mut(&mut game().rm.spr_awardsoulspawn),
+            if g.game_values.awardstyle == AwardStyle::Halo {
+                self.add_exploding(g, player);
+            } else if g.game_values.awardstyle == AwardStyle::Souls && player.killsinrow as i32 >= MINAWARDSNEEDED {
+                g.eyecandy[2].emplace(EC_SoulsAward::new(
+                    Ptr::from_mut(&mut g.rm.spr_awardsouls),
+                    Ptr::from_mut(&mut g.rm.spr_awardsoulspawn),
                     player.center_x(),
                     player.center_y(),
                     60,
@@ -233,7 +238,7 @@ impl PlayerAwardEffects {
         }
     }
 
-    pub fn add_killer_award(&mut self, killer: &mut CPlayer, killed: Ptr<CPlayer>, style: KillStyle) {
+    pub fn add_killer_award(&mut self, g: &mut Game, killer: &mut CPlayer, killed: Ptr<CPlayer>, style: KillStyle) {
         unsafe {
             killer.killsinrow += 1;
 
@@ -251,13 +256,13 @@ impl PlayerAwardEffects {
             //Play announcer
             let mut fSoundPlayed = false;
             if killer.killsinrowinair > 1 {
-                if game().rm.sfx_announcer[9].play() {
+                if g.rm.sfx_announcer[9].play() {
                     fSoundPlayed = true;
                 }
             }
 
             if !killed.is_null() && killed.killsinrow >= 2 && !fSoundPlayed {
-                if game().rm.sfx_announcer[10].play() {
+                if g.rm.sfx_announcer[10].play() {
                     fSoundPlayed = true;
                 }
             }
@@ -271,23 +276,23 @@ impl PlayerAwardEffects {
                 };
 
                 if !fSoundPlayed {
-                    if game().rm.sfx_announcer[awardIndex as usize].play() {
+                    if g.rm.sfx_announcer[awardIndex as usize].play() {
                         fSoundPlayed = true;
                     }
                 }
 
                 if killer.killsinrow >= 5 {
-                    game().game_values.unlocksecret2part1 = true;
-                    check_secret(1);
+                    g.game_values.unlocksecret2part1 = true;
+                    check_secret(g, 1);
                 }
             }
 
             //Add eyecandy
-            if game().game_values.awardstyle != AwardStyle::None {
+            if g.game_values.awardstyle != AwardStyle::None {
                 let slot = ((killer.killsinrow as i32 - 1) % MAXAWARDS) as usize;
-                if game().game_values.awardstyle == AwardStyle::Halo {
+                if g.game_values.awardstyle == AwardStyle::Halo {
                     killer.awardeffects.awards[slot] = style as i16;
-                } else if game().game_values.awardstyle == AwardStyle::Souls {
+                } else if g.game_values.awardstyle == AwardStyle::Souls {
                     if !killed.is_null() {
                         killer.awardeffects.awards[slot] = killed.get_color_id();
                     } else if style == KillStyle::Goomba {
@@ -301,28 +306,28 @@ impl PlayerAwardEffects {
                     } else {
                         killer.awardeffects.awards[slot] = 8; //soul id for ?
                     }
-                } else if game().game_values.awardstyle == AwardStyle::Swirl {
-                    Ptr::from_mut(&mut killer.awardeffects).get().add_swirling(killer);
-                } else if game().game_values.awardstyle == AwardStyle::Fireworks {
-                    Ptr::from_mut(&mut killer.awardeffects).get().add_rocket(killer);
+                } else if g.game_values.awardstyle == AwardStyle::Swirl {
+                    Ptr::from_mut(&mut killer.awardeffects).get().add_swirling(g, killer);
+                } else if g.game_values.awardstyle == AwardStyle::Fireworks {
+                    Ptr::from_mut(&mut killer.awardeffects).get().add_rocket(g, killer);
                 }
 
                 if killer.killsinrowinair > 1 {
-                    Ptr::from_mut(&mut killer.awardeffects).get().add_kills_in_row_in_air_award(killer);
+                    Ptr::from_mut(&mut killer.awardeffects).get().add_kills_in_row_in_air_award(g, killer);
                 }
 
                 //if we have enough kills in a row -> spawn an award
 
-                if game().game_values.awardstyle == AwardStyle::Text {
+                if g.game_values.awardstyle == AwardStyle::Text {
                     if killer.killsinrow >= 2 {
                         let text = format!("{} - {}", killer.killsinrow, awardtexts[awardIndex as usize].name);
 
                         let font = if awardtexts[awardIndex as usize].large {
-                            Ptr::from_mut(&mut game().rm.game_font_large)
+                            Ptr::from_mut(&mut g.rm.game_font_large)
                         } else {
-                            Ptr::from_mut(&mut game().rm.game_font_small)
+                            Ptr::from_mut(&mut g.rm.game_font_small)
                         };
-                        game().eyecandy[2].emplace(EC_GravText::new(font, killer.center_x(), killer.bottom_y(), text, -VELJUMP));
+                        g.eyecandy[2].emplace(EC_GravText::new(font, killer.center_x(), killer.bottom_y(), text, -VELJUMP));
                     }
 
                     //if we stopped the other players run show another award
@@ -335,18 +340,18 @@ impl PlayerAwardEffects {
                         let text = format!("{} Stopped!", awardtexts[a as usize].name);
 
                         let font = if awardtexts[a as usize].large {
-                            Ptr::from_mut(&mut game().rm.game_font_large)
+                            Ptr::from_mut(&mut g.rm.game_font_large)
                         } else {
-                            Ptr::from_mut(&mut game().rm.game_font_small)
+                            Ptr::from_mut(&mut g.rm.game_font_small)
                         };
-                        game().eyecandy[2].emplace(EC_GravText::new(font, killed.center_x(), killed.bottom_y(), text, -VELJUMP * 1.3f32));
+                        g.eyecandy[2].emplace(EC_GravText::new(font, killed.center_x(), killed.bottom_y(), text, -VELJUMP * 1.3f32));
                     }
                 }
             }
         }
     }
 
-    pub fn add_kills_in_row_in_air_award(&mut self, player: &mut CPlayer) {
+    pub fn add_kills_in_row_in_air_award(&mut self, g: &mut Game, player: &mut CPlayer) {
         unsafe {
             let mut angle: f32 = 0.0f32;
             for k in 0..15i16 {
@@ -354,8 +359,8 @@ impl PlayerAwardEffects {
                 let awardvelx: f32 = vel * cosf(angle);
                 let awardvely: f32 = vel * sinf(angle);
 
-                game().eyecandy[2].emplace(EC_FallingObject::new(
-                    Ptr::from_mut(&mut game().rm.spr_bonus),
+                g.eyecandy[2].emplace(EC_FallingObject::new(
+                    Ptr::from_mut(&mut g.rm.spr_bonus),
                     (player.center_x() as i32 - 8) as i16,
                     (player.center_y() as i32 - 8) as i16,
                     awardvelx,
@@ -371,8 +376,8 @@ impl PlayerAwardEffects {
             }
 
             //Track to unlock secret
-            game().game_values.unlocksecret1part1[player.get_global_id() as usize] = true;
-            check_secret(0);
+            g.game_values.unlocksecret1part1[player.get_global_id() as usize] = true;
+            check_secret(g, 0);
         }
     }
 }

@@ -1,5 +1,6 @@
 //! Port of src/smw/menu/options/GraphicsOptionsMenu.cpp
 
+use crate::game::Game;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
 use crate::common::ui::mi_image::MI_Image;
@@ -35,15 +36,15 @@ pub struct UI_GraphicsOptionsMenu {
 crate::impl_base!(UI_GraphicsOptionsMenu => ui_menu: UI_Menu);
 
 impl UI_GraphicsOptionsMenu {
-    pub fn new() -> Box<Self> {
+    pub fn new(g: &mut Game) -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let spr_selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
-            let menu_plain_field = Ptr::from_mut(&mut game().rm.menu_plain_field);
+            let spr_selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
+            let menu_plain_field = Ptr::from_mut(&mut g.rm.menu_plain_field);
 
             this.miTopLayerField = select_field(spr_selectfield, 70, 120, "Draw Top Layer", 500, 220,
                 &[("Background", false), ("Foreground", true)],
-                &mut game().game_values.toplayer);
+                &mut g.game_values.toplayer);
             this.miTopLayerField.set_auto_advance(true);
 
             this.miFrameLimiterField = select_field(spr_selectfield, 70, 160, "Frame Limit", 500, 220,
@@ -75,19 +76,19 @@ impl UI_GraphicsOptionsMenu {
                     ("500 FPS", 2),
                     ("No Limit", 0),
                 ],
-                &mut game().game_values.framelimiter);
+                &mut g.game_values.framelimiter);
 
             this.miFullscreenField = select_field(spr_selectfield, 70, 200, "Screen Size", 500, 220,
                 &[("Windowed", false), ("Fullscreen", true)],
-                &mut game().game_values.fullscreen);
+                &mut g.game_values.fullscreen);
             this.miFullscreenField.set_auto_advance(true);
             this.miFullscreenField.set_item_changed_code(MENU_CODE_TOGGLE_FULLSCREEN);
 
-            this.miMenuGraphicsPackField = Ptr::new_box(MI_PacksField::new(spr_selectfield, 70, 240, "Menu Graphics", 500, 220, Ptr::from_mut(&mut game().menugraphicspacklist.simple_directory_list.simple_file_list), MENU_CODE_MENU_GRAPHICS_PACK_CHANGED));
-            this.miWorldGraphicsPackField = Ptr::new_box(MI_PacksField::new(spr_selectfield, 70, 280, "World Graphics", 500, 220, Ptr::from_mut(&mut game().worldgraphicspacklist.simple_directory_list.simple_file_list), MENU_CODE_WORLD_GRAPHICS_PACK_CHANGED));
-            this.miGameGraphicsPackField = Ptr::new_box(MI_PacksField::new(spr_selectfield, 70, 320, "Game Graphics", 500, 220, Ptr::from_mut(&mut game().gamegraphicspacklist.simple_directory_list.simple_file_list), MENU_CODE_GAME_GRAPHICS_PACK_CHANGED));
+            this.miMenuGraphicsPackField = Ptr::new_box(MI_PacksField::new(spr_selectfield, 70, 240, "Menu Graphics", 500, 220, Ptr::from_mut(&mut g.menugraphicspacklist.simple_directory_list.simple_file_list), MENU_CODE_MENU_GRAPHICS_PACK_CHANGED));
+            this.miWorldGraphicsPackField = Ptr::new_box(MI_PacksField::new(spr_selectfield, 70, 280, "World Graphics", 500, 220, Ptr::from_mut(&mut g.worldgraphicspacklist.simple_directory_list.simple_file_list), MENU_CODE_WORLD_GRAPHICS_PACK_CHANGED));
+            this.miGameGraphicsPackField = Ptr::new_box(MI_PacksField::new(spr_selectfield, 70, 320, "Game Graphics", 500, 220, Ptr::from_mut(&mut g.gamegraphicspacklist.simple_directory_list.simple_file_list), MENU_CODE_GAME_GRAPHICS_PACK_CHANGED));
 
-            this.miGraphicsOptionsMenuBackButton = Ptr::new_box(MI_Button::new(spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miGraphicsOptionsMenuBackButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
             this.miGraphicsOptionsMenuBackButton.set_code(MENU_CODE_BACK_TO_OPTIONS_MENU);
 
             this.miGraphicsOptionsMenuLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));

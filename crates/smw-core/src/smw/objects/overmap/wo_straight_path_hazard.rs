@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_StraightPathHazard.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game::App;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -74,11 +75,11 @@ impl OMO_StraightPathHazard {
 impl CObjectTrait for OMO_StraightPathHazard {
     crate::impl_cobject_plumbing!();
 
-    fn draw(&mut self) {
-        io_over_map_object_draw(self);
+    fn draw(&mut self, g: &mut Game) {
+        io_over_map_object_draw(g, self);
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         io_over_map_object_update(self);
 
         if (self.iy as i32 + self.ih as i32) < 0 || self.iy as i32 >= App::screenHeight {
@@ -93,11 +94,11 @@ impl CObjectTrait for OMO_StraightPathHazard {
         }
     }
 
-    fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         if !player.is_shielded() {
             unsafe {
-                game().eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
                     (self.ix as i32 + (self.iw as i32 >> 2) - 16) as i16,
                     (self.iy as i32 + (self.ih as i32 >> 2) - 16) as i16,
                     3,
@@ -107,7 +108,7 @@ impl CObjectTrait for OMO_StraightPathHazard {
             self.dead = true;
 
             if !player.is_invincible() && !player.shyguy {
-                return player.kill_player_map_hazard(false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
+                return player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
             }
         }
 

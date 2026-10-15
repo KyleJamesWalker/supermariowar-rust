@@ -1,4 +1,5 @@
 //! Port of src/smw/menu/network/NetEditServersMenu.cpp
+use crate::game::Game;
 use crate::game::game;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
@@ -50,29 +51,29 @@ pub struct UI_NetEditServersMenu {
 crate::impl_base!(UI_NetEditServersMenu => ui_menu: UI_Menu);
 
 impl UI_NetEditServersMenu {
-    pub fn new() -> Box<Self> {
+    pub fn new(g: &mut Game) -> Box<Self> {
         let mut this = Box::<Self>::default();
         this.currentState = MenuState::DEFAULT;
         this.dialogTextData.clear();
 
         unsafe {
-            let selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
-            let plain = Ptr::from_mut(&mut game().rm.menu_plain_field);
+            let selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
+            let plain = Ptr::from_mut(&mut g.rm.menu_plain_field);
 
-            this.miBackButton = Ptr::new_box(MI_Button::new(selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miBackButton = Ptr::new_box(MI_Button::new(g, selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
             this.miBackButton.set_code(MENU_CODE_TO_NET_SERVERS_MENU);
 
-            this.miAddButton = Ptr::new_box(MI_Button::new(selectfield, 40, 40, "Add", 200, TextAlign::CENTER));
+            this.miAddButton = Ptr::new_box(MI_Button::new(g, selectfield, 40, 40, "Add", 200, TextAlign::CENTER));
             this.miAddButton.set_code(MENU_CODE_NET_ADDREMOVE_SERVER_ON_ADD_BTN);
 
-            this.miEditButton = Ptr::new_box(MI_Button::new(selectfield, 40, 80, "Edit", 200, TextAlign::CENTER));
+            this.miEditButton = Ptr::new_box(MI_Button::new(g, selectfield, 40, 80, "Edit", 200, TextAlign::CENTER));
             this.miEditButton.set_code(MENU_CODE_NET_ADDREMOVE_SERVER_ON_EDIT_BTN);
 
-            this.miRemoveButton = Ptr::new_box(MI_Button::new(selectfield, 40, 120, "Remove", 200, TextAlign::CENTER));
+            this.miRemoveButton = Ptr::new_box(MI_Button::new(g, selectfield, 40, 120, "Remove", 200, TextAlign::CENTER));
             this.miRemoveButton.set_code(MENU_CODE_NET_ADDREMOVE_SERVER_ON_DELETE_BTN);
 
-            this.miInstructionsText1 = Ptr::new_box(MI_Text::new("", 40, 195, 0, true, TextAlign::LEFT));
-            this.miInstructionsText2 = Ptr::new_box(MI_Text::new("", 40, 215, 0, true, TextAlign::LEFT));
+            this.miInstructionsText1 = Ptr::new_box(MI_Text::new(g, "", 40, 195, 0, true, TextAlign::LEFT));
+            this.miInstructionsText2 = Ptr::new_box(MI_Text::new(g, "", 40, 215, 0, true, TextAlign::LEFT));
 
             this.miLeftHeaderBar = Ptr::new_box(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miRightHeaderBar = Ptr::new_box(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0));
@@ -84,13 +85,13 @@ impl UI_NetEditServersMenu {
             this.miServerScroll.set_cancel_code(MENU_CODE_TO_NET_ADDREMOVE_SERVER_MENU);
             this.miServerScroll.deactivate();
 
-            this.miDialogTitle = Ptr::new_box(MI_Text::new("Enter a new server address below:", 40, 370, 0, true, TextAlign::LEFT));
+            this.miDialogTitle = Ptr::new_box(MI_Text::new(g, "Enter a new server address below:", 40, 370, 0, true, TextAlign::LEFT));
             this.miDialogTextField = Ptr::new_box(MI_TextField::new(plain, 40, 395, "URL or IP", 640 - 2 * 40, 150));
             let data = &mut this.dialogTextData as *mut String;
-            this.miDialogTextField.set_data(&mut *data, 127);
-            this.miDialogOK = Ptr::new_box(MI_Button::new(selectfield, 40, 432, "OK", 100, TextAlign::CENTER));
+            this.miDialogTextField.set_data(g, &mut *data, 127);
+            this.miDialogOK = Ptr::new_box(MI_Button::new(g, selectfield, 40, 432, "OK", 100, TextAlign::CENTER));
             this.miDialogOK.set_code(MENU_CODE_NET_ADDREMOVE_SERVER_ON_DIALOG_OK_BTN);
-            this.miDialogCancel = Ptr::new_box(MI_Button::new(selectfield, 150, 432, "Cancel", 100, TextAlign::CENTER));
+            this.miDialogCancel = Ptr::new_box(MI_Button::new(g, selectfield, 150, 432, "Cancel", 100, TextAlign::CENTER));
             this.miDialogCancel.set_code(MENU_CODE_TO_NET_ADDREMOVE_SERVER_MENU);
         }
 
@@ -133,11 +134,11 @@ impl UI_NetEditServersMenu {
         this
     }
 
-    fn reload_scroll(&mut self) {
+    fn reload_scroll(&mut self, g: &mut Game) {
         self.miServerScroll.clear_items();
         unsafe {
             for iServer in 0..game().netplay.savedServers.len() {
-                let host = game().netplay.savedServers[iServer].hostname.clone();
+                let host = g.netplay.savedServers[iServer].hostname.clone();
                 self.miServerScroll.add(&host);
             }
         }
@@ -157,9 +158,9 @@ impl UI_NetEditServersMenu {
         self.miDialogCancel.set_visible(false);
     }
 
-    pub fn restore(&mut self) {
+    pub fn restore(&mut self, g: &mut Game) {
         if !self.m_savedCurrent.is_null() {
-            self.restore_current();
+            self.restore_current(g);
         }
 
         self.set_cancel_code(MENU_CODE_TO_NET_SERVERS_MENU);
@@ -169,7 +170,7 @@ impl UI_NetEditServersMenu {
         self.miInstructionsText2.set_text("");
 
         self.hide_dialog();
-        self.reload_scroll();
+        self.reload_scroll(g);
     }
 
     pub fn on_press_add(&mut self) {
@@ -182,8 +183,8 @@ impl UI_NetEditServersMenu {
         self.set_cancel_code(MENU_CODE_TO_NET_ADDREMOVE_SERVER_MENU);
     }
 
-    pub fn on_press_edit(&mut self) {
-        if unsafe { game().netplay.savedServers.is_empty() } {
+    pub fn on_press_edit(&mut self, g: &mut Game) {
+        if unsafe { g.netplay.savedServers.is_empty() } {
             return;
         }
 
@@ -199,8 +200,8 @@ impl UI_NetEditServersMenu {
         self.miInstructionsText2.set_text("to edit");
     }
 
-    pub fn on_press_delete(&mut self) {
-        if unsafe { game().netplay.savedServers.is_empty() } {
+    pub fn on_press_delete(&mut self, g: &mut Game) {
+        if unsafe { g.netplay.savedServers.is_empty() } {
             return;
         }
 
@@ -216,12 +217,12 @@ impl UI_NetEditServersMenu {
         self.miInstructionsText2.set_text("to delete");
     }
 
-    pub fn on_entry_select(&mut self) {
+    pub fn on_entry_select(&mut self, g: &mut Game) {
         let idx = self.miServerScroll.current_index() as usize;
         unsafe {
             match self.currentState {
                 MenuState::EDIT => {
-                    self.dialogTextData = game().netplay.savedServers[idx].hostname.clone();
+                    self.dialogTextData = g.netplay.savedServers[idx].hostname.clone();
                     self.miDialogTextField.refresh();
                     self.show_dialog();
                     let f = ctl_ptr(self.miDialogTextField);
@@ -230,12 +231,12 @@ impl UI_NetEditServersMenu {
                 }
 
                 MenuState::DELETE => {
-                    game().netplay.savedServers.remove(idx);
-                    self.reload_scroll();
+                    g.netplay.savedServers.remove(idx);
+                    self.reload_scroll(g);
                     self.miServerScroll.activate();
 
-                    if game().netplay.savedServers.is_empty() {
-                        self.restore();
+                    if g.netplay.savedServers.is_empty() {
+                        self.restore(g);
                     }
                 }
 
@@ -244,15 +245,15 @@ impl UI_NetEditServersMenu {
         }
     }
 
-    pub fn on_dialog_ok(&mut self) {
+    pub fn on_dialog_ok(&mut self, g: &mut Game) {
         let new_address = ServerAddress { hostname: self.dialogTextData.clone() };
 
         unsafe {
             match self.currentState {
-                MenuState::ADD => game().netplay.savedServers.push(new_address),
+                MenuState::ADD => g.netplay.savedServers.push(new_address),
                 MenuState::EDIT => {
                     let idx = self.miServerScroll.current_index() as usize;
-                    game().netplay.savedServers[idx] = new_address;
+                    g.netplay.savedServers[idx] = new_address;
                 }
                 _ => {}
             }
@@ -260,6 +261,6 @@ impl UI_NetEditServersMenu {
 
         self.dialogTextData.clear();
         self.miDialogTextField.refresh();
-        self.restore();
+        self.restore(g);
     }
 }

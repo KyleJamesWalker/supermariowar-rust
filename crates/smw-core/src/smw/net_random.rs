@@ -14,6 +14,7 @@
 //! Objects made during setup and inside events get the same `iNetworkID` on every client, so events
 //! can name them.
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::{set_network_id_context, CObjectTrait};
@@ -191,18 +192,18 @@ pub fn begin_setup() {
 }
 
 /// Called at the start of every gameplay frame.
-pub fn gameplay_frame() {
+pub fn gameplay_frame(g: &mut Game) {
     unsafe {
         random_state().g_frame += 1;
-        crate::smw::net_outcomes::frame_start();
+        crate::smw::net_outcomes::frame_start(g);
         random_state().g_pending.retain(|(p, at)| p.kind != Ev::WarpExit as u8 || random_state().g_frame - at < PENDING_FRAMES);
         if random_state().g_inSetup {
             random_state().g_inSetup = false;
             random_state().g_inGame = true;
-            set_network_id_context(0);
+            set_network_id_context(g, 0);
             // Menus may make objects during setup on one client only; the game's own objects are made alike.
             let mut n = 0;
-            for container in [&game().noncolcontainer, &game().objectcontainer[0], &game().objectcontainer[1], &game().objectcontainer[2]] {
+            for container in [&g.noncolcontainer, &g.objectcontainer[0], &g.objectcontainer[1], &g.objectcontainer[2]] {
                 for &obj in container.list() {
                     let mut o = obj;
                     n += 1;
@@ -217,29 +218,29 @@ pub fn gameplay_frame() {
 }
 
 /// Leaving gameplay: menus (map previews) roll for themselves again.
-pub fn end_game() {
+pub fn end_game(g: &mut Game) {
     unsafe {
         random_state().g_inSetup = false;
         random_state().g_inGame = false;
-        set_network_id_context(0);
+        set_network_id_context(g, 0);
     }
 }
 
 /// True when the caller must not run the site's own code: this function ran it, or the game host decides it.
-pub fn event(ev: Ev, args: &[i32]) -> bool {
+pub fn event(g: &mut Game, ev: Ev, args: &[i32]) -> bool {
     unsafe {
-        if !game().netplay.active || !random_state().g_inGame || random_state().g_added.is_some() || RandomNumberGenerator::tape_active() {
+        if !g.netplay.active || !random_state().g_inGame || random_state().g_added.is_some() || RandomNumberGenerator::tape_active() {
             return false;
         }
 
-        if game().netplay.theHostIsMe {
+        if g.netplay.theHostIsMe {
             random_state().g_sent = random_state().g_sent.wrapping_add(1);
             let context = context_of(random_state().g_sent);
-            set_network_id_context(context as u32);
+            set_network_id_context(g, context as u32);
             RandomNumberGenerator::start_recording();
-            let line = run_logged(ev, args);
+            let line = run_logged(g, ev, args);
             let draws = RandomNumberGenerator::stop_tape();
-            set_network_id_context(0);
+            set_network_id_context(g, 0);
             if ev == Ev::Kill && !crate::smw::net_outcomes::kill_had_effect() {
                 return true;
             }
@@ -247,22 +248,22 @@ pub fn event(ev: Ev, args: &[i32]) -> bool {
             let mut args = args.to_vec();
             if ev == Ev::Place {
                 // Placements also test the spots against other objects, which a joiner may have elsewhere.
-                let o = find_object(args[0]);
+                let o = find_object(g, args[0]);
                 args.extend([o.ix as i32, o.iy as i32]);
             } else if ev == Ev::Kill {
                 args.push(crate::smw::net_outcomes::kill_result() as i32);
             } else if matches!(ev, Ev::FrenzyCard | Ev::CollectionCard) {
                 // A new card keeps away from the other cards, which a joiner may have elsewhere or not at all.
-                let card = find_object((context as i32) << 16 | 1);
+                let card = find_object(g, (context as i32) << 16 | 1);
                 if !card.is_null() {
                     args.extend([card.ix as i32, card.iy as i32]);
                 }
             }
             let pkg = RandomEvent { kind: ev as u8, context, args, draws };
-            game().netplay.client.local_gamehost.send_message_to_my_peers(&pkg.to_bytes());
+            g.netplay.client.local_gamehost.send_message_to_my_peers(&pkg.to_bytes());
         } else if let Some(i) = random_state().g_pending.iter().position(|(p, _)| p.kind == ev as u8 && same_target(ev, &p.args, args)) {
             let (pkg, _) = random_state().g_pending.remove(i);
-            replay(&pkg);
+            replay(g, &pkg);
         } else if matches!(ev, Ev::Respawn | Ev::WarpExit) && waited(ev, args[0]) > FALLBACK_FRAMES {
             stop_waiting(ev, args[0]);
             return false;
@@ -286,13 +287,13 @@ pub fn in_event() -> bool {
 }
 
 /// A joiner whose game host decides random outcomes, deaths and scores.
-pub fn host_decides() -> bool {
-    unsafe { game().netplay.active && !game().netplay.theHostIsMe }
+pub fn host_decides(g: &mut Game) -> bool {
+    unsafe { g.netplay.active && !g.netplay.theHostIsMe }
 }
 
 /// While true, a joiner leaves its hazard timers waiting for the game host's.
-pub fn awaiting_host() -> bool {
-    unsafe { game().netplay.active && !game().netplay.theHostIsMe && random_state().g_inGame }
+pub fn awaiting_host(g: &mut Game) -> bool {
+    unsafe { g.netplay.active && !g.netplay.theHostIsMe && random_state().g_inGame }
 }
 
 /// Contexts 0 and 1 number untracked objects and setup objects.
@@ -301,12 +302,12 @@ fn context_of(sent: u16) -> u16 {
 }
 
 /// `NET_G2P_RANDOM_EVENT` from the game host.
-pub fn receive(data: &[u8]) {
+pub fn receive(g: &mut Game, data: &[u8]) {
     let Some(pkg) = RandomEvent::from_bytes(data) else {
         return;
     };
     unsafe {
-        if game().netplay.theHostIsMe || Ev::from_u8(pkg.kind).is_none() {
+        if g.netplay.theHostIsMe || Ev::from_u8(pkg.kind).is_none() {
             return;
         }
         if !random_state().g_inGame {
@@ -319,8 +320,8 @@ pub fn receive(data: &[u8]) {
 
 fn deliver(pkg: RandomEvent) {
     let ev = Ev::from_u8(pkg.kind).unwrap();
-    if ready(ev, &pkg.args) {
-        replay(&pkg);
+    if ready(game().get(), ev, &pkg.args) {
+        replay(game().get(), &pkg);
     } else {
         unsafe { random_state().g_pending.push((pkg, random_state().g_frame)) };
     }
@@ -345,16 +346,16 @@ fn stop_waiting(ev: Ev, key: i32) {
     unsafe { random_state().g_waits.retain(|w| w.0 != ev || w.1 != key) };
 }
 
-fn replay(pkg: &RandomEvent) {
+fn replay(g: &mut Game, pkg: &RandomEvent) {
     let ev = Ev::from_u8(pkg.kind).unwrap();
     if let Some(&key) = pkg.args.first() {
         stop_waiting(ev, key);
     }
-    set_network_id_context(pkg.context as u32);
+    set_network_id_context(g, pkg.context as u32);
     RandomNumberGenerator::start_playback(pkg.draws.clone());
-    harness::note_net(run_logged(ev, &pkg.args));
+    harness::note_net(run_logged(g, ev, &pkg.args));
     let left = RandomNumberGenerator::stop_tape();
-    set_network_id_context(0);
+    set_network_id_context(g, 0);
     if !left.is_empty() {
         println!("[net] {:?} left {} of the game host's draws unused", ev, left.len());
     }
@@ -362,11 +363,11 @@ fn replay(pkg: &RandomEvent) {
 
 /// Events that must wait for the joiner's own copy of their block or warping player. A respawn applies at once:
 /// the game host waits for the respawn counter, so a joiner that saw the death is already waiting.
-fn ready(ev: Ev, args: &[i32]) -> bool {
+fn ready(g: &mut Game, ev: Ev, args: &[i32]) -> bool {
     match ev {
-        Ev::Block => crate::smw::objects::blocks::powerup_block::net_block_ready(args[0] as i16, args[1] as i16),
+        Ev::Block => crate::smw::objects::blocks::powerup_block::net_block_ready(g, args[0] as i16, args[1] as i16),
         Ev::WarpExit => {
-            let p = player(args);
+            let p = player(g, args);
             p.is_null() || p.is_entering_warp()
         }
         _ => true,
@@ -381,30 +382,30 @@ fn same_target(ev: Ev, a: &[i32], b: &[i32]) -> bool {
 }
 
 /// A placement that is not part of creating the object.
-pub fn place_event(id: i32, extra: i32) -> bool {
-    let mut obj = find_object(id);
-    if id == 0 || obj.is_null() || !event(Ev::Place, &[id, extra]) {
+pub fn place_event(g: &mut Game, id: i32, extra: i32) -> bool {
+    let mut obj = find_object(g, id);
+    if id == 0 || obj.is_null() || !event(g, Ev::Place, &[id, extra]) {
         return false;
     }
     // Out of reach until the game host's placement arrives, so it cannot be collected again meanwhile.
-    if awaiting_host() {
+    if awaiting_host(g) {
         obj.set_yi(-2000);
     }
     true
 }
 
 /// An event about one object; objects that only one client numbered roll for themselves.
-pub fn object_event(ev: Ev, args: &[i32]) -> bool {
-    args[0] != 0 && event(ev, args)
+pub fn object_event(g: &mut Game, ev: Ev, args: &[i32]) -> bool {
+    args[0] != 0 && event(g, ev, args)
 }
 
 /// Runs the event and returns its `C` record.
-fn run_logged(ev: Ev, args: &[i32]) -> String {
+fn run_logged(g: &mut Game, ev: Ev, args: &[i32]) -> String {
     unsafe {
         random_state().g_added = Some(Vec::new());
-        run(ev, args);
+        run(g, ev, args);
         let mut out = random_state().g_added.take().unwrap_or_default();
-        out.extend(outcome(ev, args));
+        out.extend(outcome(g, ev, args));
         let args: Vec<String> = args.iter().map(|a| a.to_string()).collect();
         let shown = match ev {
             Ev::Place => &args[..2.min(args.len())],
@@ -435,12 +436,12 @@ pub fn note_powerup(iType: i16) {
     }
 }
 
-pub fn find_object(id: i32) -> Ptr<dyn CObjectTrait> {
+pub fn find_object(g: &mut Game, id: i32) -> Ptr<dyn CObjectTrait> {
     unsafe {
         if id == 0 {
             return Ptr::null();
         }
-        for container in [&game().noncolcontainer, &game().objectcontainer[0], &game().objectcontainer[1], &game().objectcontainer[2]] {
+        for container in [&g.noncolcontainer, &g.objectcontainer[0], &g.objectcontainer[1], &g.objectcontainer[2]] {
             for &obj in container.list() {
                 if obj.iNetworkID == id && !obj.dead {
                     return obj;
@@ -463,98 +464,99 @@ pub fn arg_f32(v: i32) -> f32 {
     f32::from_bits(v as u32)
 }
 
-fn player(args: &[i32]) -> Ptr<crate::smw::player::CPlayer> {
+fn player(g: &mut Game, args: &[i32]) -> Ptr<crate::smw::player::CPlayer> {
     unsafe {
         let id = args[0];
-        game().players.iter().copied().find(|p| p.globalID as i32 == id).unwrap_or(Ptr::null())
+        g.players.iter().copied().find(|p| p.globalID as i32 == id).unwrap_or(Ptr::null())
     }
 }
 
-fn run(ev: Ev, args: &[i32]) {
+fn run(g: &mut Game, ev: Ev, args: &[i32]) {
+        let mut gp = g.ptr();
     use crate::smw::gamemodes as gm;
     use crate::smw::objects as obj;
     match ev {
         Ev::FrenzyCard | Ev::CollectionCard => unsafe {
             random_state().g_spawnAt = args.get(..2).map(|a| (a[0] as i16, a[1] as i16));
             if ev == Ev::FrenzyCard {
-                gm::frenzy::net_spawn_card();
+                gm::frenzy::net_spawn_card(g);
             } else {
-                gm::card_collection::net_spawn_card();
+                gm::card_collection::net_spawn_card(g);
             }
             random_state().g_spawnAt = None;
         },
-        Ev::StompEnemy => gm::stomp::net_spawn_enemy(),
-        Ev::SurvivalEnemy => gm::survival::net_spawn_enemy(),
-        Ev::ReleaseCard => gm::card_collection::net_release_card(player(args), args[1] as i16, args[2] as i16),
-        Ev::GreedCoins => gm::greed::net_drop_coins(player(args), args[1] as i16, args[2] as i16, args[3] as i16),
+        Ev::StompEnemy => gm::stomp::net_spawn_enemy(g),
+        Ev::SurvivalEnemy => gm::survival::net_spawn_enemy(g),
+        Ev::ReleaseCard => gm::card_collection::net_release_card(g, player(gp.get(), args), args[1] as i16, args[2] as i16),
+        Ev::GreedCoins => gm::greed::net_drop_coins(g, player(gp.get(), args), args[1] as i16, args[2] as i16, args[3] as i16),
         Ev::Place => {
-            let mut o = find_object(args[0]);
-            obj::net_place(o, args[1]);
+            let mut o = find_object(g, args[0]);
+            obj::net_place(g, o, args[1]);
             if let (false, Some(&x), Some(&y)) = (o.is_null(), args.get(2), args.get(3)) {
                 o.set_xi(x as i16);
                 o.set_yi(y as i16);
             }
         }
-        Ev::Wander => obj::net_wander(find_object(args[0]), args),
-        Ev::HazardTimer => obj::net_hazard_timer(find_object(args[0])),
+        Ev::Wander => obj::net_wander(find_object(g, args[0]), args),
+        Ev::HazardTimer => obj::net_hazard_timer(g, find_object(gp.get(), args[0])),
         Ev::Respawn => {
-            let mut p = player(args);
+            let mut p = player(g, args);
             if !p.is_null() {
-                p.net_respawn();
+                p.net_respawn(g);
             }
         }
         Ev::WarpExit => {
-            let mut p = player(args);
+            let mut p = player(g, args);
             if !p.is_null() {
-                p.net_choose_warp_exit();
+                p.net_choose_warp_exit(g);
             }
         }
         Ev::PodoboRain => {
-            let mut p = player(args);
+            let mut p = player(g, args);
             if !p.is_null() {
-                p.net_podobo_rain();
+                p.net_podobo_rain(g);
             }
         }
-        Ev::Pow => crate::smw::gs_gameplay::net_pow_kills(args),
+        Ev::Pow => crate::smw::gs_gameplay::net_pow_kills(g, args),
         Ev::MysterySwap => {
-            crate::smw::gs_gameplay::net_mystery_swap(args[0] as i16);
+            crate::smw::gs_gameplay::net_mystery_swap(g, args[0] as i16);
         }
-        Ev::BulletBills => crate::smw::gs_gameplay::net_bullet_bill(args[0] as usize),
-        Ev::ShellDeath => obj::carriable::co_shell::net_shell_death(find_object(args[0]), args[1]),
-        Ev::Secret => crate::smw::objectgame::net_check_secret(args[0] as i16),
-        Ev::ThrowBoxItem => obj::carriable::co_throw_box::net_release_item(args),
-        Ev::StarTimeout => gm::star::net_timeout(),
-        Ev::StarReassign => gm::star::net_reassign(),
+        Ev::BulletBills => crate::smw::gs_gameplay::net_bullet_bill(g, args[0] as usize),
+        Ev::ShellDeath => obj::carriable::co_shell::net_shell_death(g, find_object(gp.get(), args[0]), args[1]),
+        Ev::Secret => crate::smw::objectgame::net_check_secret(g, args[0] as i16),
+        Ev::ThrowBoxItem => obj::carriable::co_throw_box::net_release_item(g, args),
+        Ev::StarTimeout => gm::star::net_timeout(g),
+        Ev::StarReassign => gm::star::net_reassign(g),
         Ev::TagReassign => gm::tag::net_reassign(),
         Ev::Bomb => {
-            let mut p = player(args);
+            let mut p = player(g, args);
             if !p.is_null() {
-                p.net_throw_bomb(args[1], args[2], args[3] != 0);
+                p.net_throw_bomb(g, args[1], args[2], args[3] != 0);
             }
         }
         Ev::Boomerang => {
-            let mut p = player(args);
+            let mut p = player(g, args);
             if !p.is_null() {
-                p.net_throw_boomerang(args[1], args[2], args[3] != 0);
+                p.net_throw_boomerang(g, args[1], args[2], args[3] != 0);
             }
         }
-        Ev::PhantoReturn => obj::overmap::wo_phanto::net_return(find_object(args[0])),
-        Ev::Kill => crate::smw::net_outcomes::net_kill(args),
-        Ev::RemoveTeam => crate::smw::net_outcomes::net_remove_team(args[0] as i16),
-        Ev::RemoveButTeam => crate::smw::gamemodes::game_mode::remove_players_but_team_now(args[0] as i16),
-        Ev::RemoveButHighest => crate::smw::gamemodes::game_mode::remove_players_but_highest_scoring_now(),
-        Ev::ScoreBoard => crate::smw::gamemodes::game_mode::setup_score_board_now(args[0] != 0),
-        Ev::ShowScoreBoard => crate::smw::gamemodes::game_mode::show_score_board_now(),
-        Ev::Scores => crate::smw::net_outcomes::net_apply_scores(args),
-        Ev::Block => obj::blocks::powerup_block::net_release(args[0] as i16, args[1] as i16, Vec2s::new(args[3] as i16, args[4] as i16), args[2] != 0),
+        Ev::PhantoReturn => obj::overmap::wo_phanto::net_return(find_object(g, args[0])),
+        Ev::Kill => crate::smw::net_outcomes::net_kill(g, args),
+        Ev::RemoveTeam => crate::smw::net_outcomes::net_remove_team(g, args[0] as i16),
+        Ev::RemoveButTeam => crate::smw::gamemodes::game_mode::remove_players_but_team_now(g, args[0] as i16),
+        Ev::RemoveButHighest => crate::smw::gamemodes::game_mode::remove_players_but_highest_scoring_now(g),
+        Ev::ScoreBoard => crate::smw::gamemodes::game_mode::setup_score_board_now(g, args[0] != 0),
+        Ev::ShowScoreBoard => crate::smw::gamemodes::game_mode::show_score_board_now(g),
+        Ev::Scores => crate::smw::net_outcomes::net_apply_scores(g, args),
+        Ev::Block => obj::blocks::powerup_block::net_release(g, args[0] as i16, args[1] as i16, Vec2s::new(args[3] as i16, args[4] as i16), args[2] != 0),
     }
 }
 
 /// What each event changed besides adding objects.
-fn outcome(ev: Ev, args: &[i32]) -> Vec<String> {
+fn outcome(g: &mut Game, ev: Ev, args: &[i32]) -> Vec<String> {
     match ev {
         Ev::Place | Ev::Wander | Ev::PhantoReturn => {
-            let o = find_object(args[0]);
+            let o = find_object(g, args[0]);
             if o.is_null() {
                 vec!["gone".to_string()]
             } else {
@@ -562,20 +564,20 @@ fn outcome(ev: Ev, args: &[i32]) -> Vec<String> {
             }
         }
         Ev::Respawn | Ev::WarpExit => {
-            let p = player(args);
+            let p = player(g, args);
             if p.is_null() {
                 vec![]
             } else {
                 vec![format!("p{}@{},{} s{}", p.globalID, p.ix, p.iy, p.state as i32)]
             }
         }
-        Ev::HazardTimer => vec![crate::smw::objects::net_hazard_state(find_object(args[0]))],
+        Ev::HazardTimer => vec![crate::smw::objects::net_hazard_state(find_object(g, args[0]))],
         Ev::ShellDeath => {
-            let o = find_object(args[0]);
+            let o = find_object(g, args[0]);
             vec![if o.is_null() { "gone".to_string() } else { format!("dead{}", o.dead as i32) }]
         }
         Ev::StarTimeout | Ev::StarReassign => vec![gm_state_star()],
-        Ev::Kill => vec![crate::smw::net_outcomes::kill_outcome(args)],
+        Ev::Kill => vec![crate::smw::net_outcomes::kill_outcome(g, args)],
         Ev::TagReassign => vec![gm_state_tag()],
         _ => vec![],
     }

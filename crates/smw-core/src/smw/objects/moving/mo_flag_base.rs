@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_FlagBase.cpp
 
+use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -35,7 +36,7 @@ pub struct MO_FlagBase {
 impl_base!(MO_FlagBase => io_moving_object: IO_MovingObject);
 
 impl MO_FlagBase {
-    pub fn new(nspr: Ptr<gfxSprite>, iTeamID: i16, iColorID: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, iTeamID: i16, iColorID: i16) -> Self {
         let mut o = MO_FlagBase {
             // use 1280 and 960 so when placing base, it doesn't interfere (look in getClosestObject())
             io_moving_object: IO_MovingObject::new(nspr, Vec2s::new(1280, 960), 5, 0, -1, -1, -1, -1, -1, -1, -1, -1),
@@ -69,9 +70,9 @@ impl MO_FlagBase {
 
         o.homeflag = Ptr::null();
 
-        o.place_flag_base(true);
+        o.place_flag_base(g, true);
 
-        o.speed = unsafe { game().game_values.gamemodesettings.flag.speed } as f32 / 4.0f32;
+        o.speed = unsafe { g.game_values.gamemodesettings.flag.speed } as f32 / 4.0f32;
 
         o.timer = 0;
 
@@ -79,8 +80,8 @@ impl MO_FlagBase {
         o
     }
 
-    pub fn place_flag_base(&mut self, fInit: bool) {
-        if crate::smw::net_random::place_event(self.iNetworkID, fInit as i32) {
+    pub fn place_flag_base(&mut self, g: &mut Game, fInit: bool) {
+        if crate::smw::net_random::place_event(g, self.iNetworkID, fInit as i32) {
             return;
         }
 
@@ -89,14 +90,14 @@ impl MO_FlagBase {
             let mut x: i16 = 0;
             let mut y: i16 = 0;
 
-            if fInit && self.teamID < game().g_map.iNumFlagBases {
-                x = game().g_map.flagbaselocations[self.teamID as usize].x;
-                y = game().g_map.flagbaselocations[self.teamID as usize].y;
+            if fInit && self.teamID < g.g_map.iNumFlagBases {
+                x = g.g_map.flagbaselocations[self.teamID as usize].x;
+                y = g.g_map.flagbaselocations[self.teamID as usize].y;
             } else {
                 let mut iAttempts: i16 = 32;
                 let (cw, ch) = (self.collisionWidth, self.collisionHeight);
-                while (!game().g_map.findspawnpoint(5, &mut x, &mut y, cw, ch, false)
-                    || game().objectcontainer[1].get_closest_moving_object(x, y, movingobject_flagbase) < 200.0f32)
+                while (!g.g_map.findspawnpoint(5, &mut x, &mut y, cw, ch, false)
+                    || g.objectcontainer[1].get_closest_moving_object(x, y, movingobject_flagbase) < 200.0f32)
                     && {
                         let a = iAttempts;
                         iAttempts -= 1;
@@ -110,25 +111,26 @@ impl MO_FlagBase {
         }
     }
 
-    pub fn score_flag(&mut self, mut flag: Ptr<CO_Flag>, mut player: Ptr<CPlayer>) {
+    pub fn score_flag(&mut self, g: &mut Game, mut flag: Ptr<CO_Flag>, mut player: Ptr<CPlayer>) {
+        let mut gp = g.ptr();
         unsafe {
             if flag.teamID == self.teamID {
-                flag.place_flag();
-                if_sound_on_play(&mut game().rm.sfx_areatag);
-            } else if !game().game_values.gamemodesettings.flag.homescore || !self.homeflag.is_null() || game().game_values.gamemodesettings.flag.centerflag {
-                flag.place_flag();
-                if !game().game_values.gamemode.gameover {
-                    player.score().adjust_score(1);
-                    game().game_values.gamemode.check_winner(player);
+                flag.place_flag(g);
+                if_sound_on_play(g, &mut gp.rm.sfx_areatag);
+            } else if !g.game_values.gamemodesettings.flag.homescore || !self.homeflag.is_null() || g.game_values.gamemodesettings.flag.centerflag {
+                flag.place_flag(g);
+                if !g.game_values.gamemode.gameover {
+                    player.score().adjust_score(g, 1);
+                    gp.game_values.gamemode.check_winner(g, player);
                 }
 
-                if_sound_on_play(&mut game().rm.sfx_racesound);
+                if_sound_on_play(g, &mut gp.rm.sfx_racesound);
 
-                if game().game_values.gamemodesettings.flag.pointmove {
+                if g.game_values.gamemodesettings.flag.pointmove {
                     // Set the values way outside the map so it will place the base correctly
                     self.ix = 1280;
                     self.iy = 960;
-                    self.place_flag_base(false);
+                    self.place_flag_base(g, false);
                 }
             }
         }
@@ -154,29 +156,29 @@ impl CObjectTrait for MO_FlagBase {
         Some(self)
     }
 
-    fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         if self.teamID == player.teamID && !player.carriedItem.is_null() && player.carriedItem.get_moving_object_type() == movingobject_flag {
             let flag: Ptr<CO_Flag> = Ptr::from_mut(player.carriedItem.as_any().downcast_mut::<CO_Flag>().unwrap());
-            self.score_flag(flag, player);
+            self.score_flag(g, flag, player);
             self.timer = 0;
         }
 
         false
     }
 
-    fn draw(&mut self) {
-        self.spr.draw_src(
+    fn draw(&mut self, g: &mut Game) {
+        self.spr.draw_src(g, 
             self.ix as i32 - 8,
             self.iy as i32 - 8,
             &SDL_Rect { x: self.iGraphicOffsetX as i32, y: 0, w: 48, h: 48 },
         );
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         unsafe {
-            if game().game_values.gamemodesettings.flag.speed > 0 {
+            if g.game_values.gamemodesettings.flag.speed > 0 {
                 self.anglechangetimer -= 1;
-                if self.anglechangetimer <= 0 && !net_random::object_event(Ev::Wander, &net_random::wander_args(self.iNetworkID, self.fx, self.fy, self.angle)) {
+                if self.anglechangetimer <= 0 && !net_random::object_event(g, Ev::Wander, &net_random::wander_args(self.iNetworkID, self.fx, self.fy, self.angle)) {
                     self.change_angle();
                 }
 
@@ -219,24 +221,24 @@ impl CObjectTrait for MO_FlagBase {
                 }
             }
 
-            if game().game_values.gamemodesettings.flag.speed == 0 && {
+            if g.game_values.gamemodesettings.flag.speed == 0 && {
                 let t = self.timer;
                 self.timer += 1;
                 t > 1000
             } {
-                self.place_flag_base(false);
+                self.place_flag_base(g, false);
             }
         }
     }
 
-    fn collide_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) {
+    fn collide_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) {
         if object.get_moving_object_type() == movingobject_flag {
             let flag: Ptr<CO_Flag> = Ptr::from_mut(object.as_any().downcast_mut::<CO_Flag>().unwrap());
             let player = flag.owner_throw;
 
             if !player.is_null() {
                 if self.teamID == player.teamID {
-                    self.score_flag(flag, player);
+                    self.score_flag(g, flag, player);
                 }
             }
         }

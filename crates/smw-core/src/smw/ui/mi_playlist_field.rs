@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_PlaylistField.cpp
 
+use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::input::CPlayerInput;
 use crate::common::sfx::sfxMusic;
@@ -24,12 +25,12 @@ pub struct MI_PlaylistField {
 crate::impl_base!(MI_PlaylistField => ui_control: UI_Control);
 
 /// The music switch shared by every scroll direction.
-unsafe fn restart_menu_music() {
-    game().rm.backgroundmusic[2].stop();
-    game().rm.backgroundmusic[2] = sfxMusic::from_file(game().musiclist.music(1)).unwrap_or_else(|e| std::panic::panic_any(e));
+unsafe fn restart_menu_music(g: &mut Game) {
+    g.rm.backgroundmusic[2].stop();
+    g.rm.backgroundmusic[2] = sfxMusic::from_file(g.musiclist.music(1)).unwrap_or_else(|e| std::panic::panic_any(e));
 
-    if game().game_values.music {
-        game().rm.backgroundmusic[2].play(false, false);
+    if g.game_values.music {
+        g.rm.backgroundmusic[2].play(false, false);
     }
 }
 
@@ -50,7 +51,7 @@ impl MI_PlaylistField {
 impl UI_ControlTrait for MI_PlaylistField {
     crate::impl_ctl!();
 
-    fn modify(&mut self, modify: bool) -> MenuCodeEnum {
+    fn modify(&mut self, g: &mut Game, modify: bool) -> MenuCodeEnum {
         self.miModifyImageLeft.set_visible(modify);
         self.miModifyImageRight.set_visible(modify);
 
@@ -58,25 +59,25 @@ impl UI_ControlTrait for MI_PlaylistField {
         MENU_CODE_MODIFY_ACCEPTED
     }
 
-    fn send_input(&mut self, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+    fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         unsafe {
             for iPlayer in 0..4usize {
                 let out = &playerInput.outputControls[iPlayer];
                 if out.menu_right().fPressed || out.menu_down().fPressed {
-                    game().musiclist.next();
-                    restart_menu_music();
+                    g.musiclist.next();
+                    restart_menu_music(g);
                     return MENU_CODE_NONE;
                 }
 
                 if out.menu_left().fPressed || out.menu_up().fPressed {
-                    game().musiclist.prev();
-                    restart_menu_music();
+                    g.musiclist.prev();
+                    restart_menu_music(g);
                     return MENU_CODE_NONE;
                 }
 
                 if out.menu_random().fPressed {
-                    game().musiclist.random();
-                    restart_menu_music();
+                    g.musiclist.random();
+                    restart_menu_music(g);
                     return MENU_CODE_NONE;
                 }
 
@@ -94,12 +95,12 @@ impl UI_ControlTrait for MI_PlaylistField {
         MENU_CODE_NONE
     }
 
-    fn update(&mut self) {
-        self.miModifyImageRight.update();
-        self.miModifyImageLeft.update();
+    fn update(&mut self, g: &mut Game) {
+        self.miModifyImageRight.update(g);
+        self.miModifyImageLeft.update(g);
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         if !self.m_visible {
             return;
         }
@@ -111,15 +112,15 @@ impl UI_ControlTrait for MI_PlaylistField {
 
         unsafe {
             //Draw the select field background
-            self.spr.draw_src(x, y, &SDL_Rect { x: 0, y: if self.fSelected { 32 } else { 0 }, w: iIndent - 16, h: 32 });
-            self.spr.draw_src(x + iIndent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
-            self.spr.draw_src(x + iIndent + 16, y, &SDL_Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 32 } else { 0 }, w: iWidth - iIndent - 16, h: 32 });
+            self.spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: if self.fSelected { 32 } else { 0 }, w: iIndent - 16, h: 32 });
+            self.spr.draw_src(g, x + iIndent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
+            self.spr.draw_src(g, x + iIndent + 16, y, &SDL_Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 32 } else { 0 }, w: iWidth - iIndent - 16, h: 32 });
 
-            game().rm.menu_font_large.draw_chop_right(x + 16, y + 5, iIndent - 8, &self.szName);
-            game().rm.menu_font_large.draw_chop_right(x + iIndent + 8, y + 5, iWidth - iIndent - 24, game().musiclist.current_name());
+            g.rm.menu_font_large.draw_chop_right(x + 16, y + 5, iIndent - 8, &self.szName);
+            g.rm.menu_font_large.draw_chop_right(x + iIndent + 8, y + 5, iWidth - iIndent - 24, g.musiclist.current_name());
         }
 
-        self.miModifyImageLeft.draw();
-        self.miModifyImageRight.draw();
+        self.miModifyImageLeft.draw(g);
+        self.miModifyImageRight.draw(g);
     }
 }

@@ -3,6 +3,7 @@
 //! `std::string_view` text is taken as bytes; `char` is signed on the reference platforms, so
 //! bytes >= 0x80 are below `ASCII_FIRST_PRINTABLE` and advance like a space.
 
+use crate::game::Game;
 use crate::common::gfx::{blit, get_raw_pixel, rle_enabled, soft_image};
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::util::sdl_helpers::SdlSurfacePtr;
@@ -46,7 +47,7 @@ impl gfxFont {
     }
 
     /// `gfxFont(const std::filesystem::path& path)`; throws `std::string` on failure.
-    pub fn from_path(path: &str) -> Self {
+    pub fn from_path(g: &mut Game, path: &str) -> Self {
         let path_str = Path::new(path).to_string_lossy().into_owned();
 
         print!("loading font {} ...", path_str);
@@ -88,7 +89,7 @@ impl gfxFont {
                 throw(format!("Couldn't set color key on font image: {}", sdl_error()));
             }
 
-            let surf_opti = SdlSurfacePtr::new(SDL_ConvertSurface(s, (*game().screen).format, 0));
+            let surf_opti = SdlSurfacePtr::new(SDL_ConvertSurface(s, (*g.screen).format, 0));
             if surf_opti.is_null() {
                 throw(format!("Couldn't convert {} to the display's pixel format: {}", path_str, sdl_error()));
             }
@@ -128,11 +129,11 @@ impl gfxFont {
     }
 
     pub fn draw(&self, x: i32, y: i32, text: &str) {
-        self.draw_range(x, y, text, i32::MIN, i32::MAX);
+        self.draw_range(game().get(), x, y, text, i32::MIN, i32::MAX);
     }
 
     /// `draw(x, y, text, dst_min_x, dst_max_x)`
-    pub fn draw_range(&self, mut x: i32, y: i32, text: &str, dst_min_x: i32, dst_max_x: i32) {
+    pub fn draw_range(&self, g: &mut Game, mut x: i32, y: i32, text: &str, dst_min_x: i32, dst_max_x: i32) {
         for &b in text.as_bytes() {
             if dst_max_x < x {
                 break;
@@ -156,7 +157,7 @@ impl gfxFont {
                 h: self.m_sprite.get_height() - 1,
             };
             if dst_min_x <= x + src.w {
-                self.m_sprite.draw_src(x, y, &src);
+                self.m_sprite.draw_src(g, x, y, &src);
             }
 
             x += self.m_glyph_areas[idx].w;
@@ -169,7 +170,7 @@ impl gfxFont {
 
     pub fn draw_chop_centered(&self, x: i32, y: i32, mut width: i32, text: &str) {
         width /= 2;
-        self.draw_range(x - self.get_width(text) / 2, y, text, x - width, x + width);
+        self.draw_range(game().get(), x - self.get_width(text) / 2, y, text, x - width, x + width);
     }
 
     pub fn draw_right_justified(&self, x: i32, y: i32, text: &str) {
@@ -177,11 +178,11 @@ impl gfxFont {
     }
 
     pub fn draw_chop_right(&self, x: i32, y: i32, width: i32, text: &str) {
-        self.draw_range(x, y, text, x, x + width);
+        self.draw_range(game().get(), x, y, text, x, x + width);
     }
 
     pub fn draw_chop_left(&self, x: i32, y: i32, width: i32, text: &str) {
-        self.draw_range(x - self.get_width(text), y, text, x - width, x);
+        self.draw_range(game().get(), x - self.get_width(text), y, text, x - width, x);
     }
 
     pub fn set_alpha(&mut self, alpha: u8) {

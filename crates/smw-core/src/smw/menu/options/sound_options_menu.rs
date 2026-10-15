@@ -1,5 +1,6 @@
 //! Port of src/smw/menu/options/SoundOptionsMenu.cpp
 
+use crate::game::Game;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
 use crate::common::ui::mi_image::MI_Image;
@@ -46,19 +47,19 @@ pub struct UI_SoundOptionsMenu {
 crate::impl_base!(UI_SoundOptionsMenu => ui_menu: UI_Menu);
 
 impl UI_SoundOptionsMenu {
-    pub fn new() -> Box<Self> {
+    pub fn new(g: &mut Game) -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let spr = Ptr::from_mut(&mut game().rm.spr_selectfield);
-            let menu_plain_field = Ptr::from_mut(&mut game().rm.menu_plain_field);
-            let menu_slider_bar = Ptr::from_mut(&mut game().rm.menu_slider_bar);
+            let spr = Ptr::from_mut(&mut g.rm.spr_selectfield);
+            let menu_plain_field = Ptr::from_mut(&mut g.rm.menu_plain_field);
+            let menu_slider_bar = Ptr::from_mut(&mut g.rm.menu_slider_bar);
 
             let mut f = Ptr::new_box(MI_SliderField::new(spr, menu_slider_bar, 70, 100, "Sound Volume", 500, 220, 484));
             for &(name, value) in VOLUMES {
                 f.add(name, value);
             }
-            f.set_output_ptr(&mut game().game_values.soundvolume);
-            f.set_current_value(game().game_values.soundvolume);
+            f.set_output_ptr(&mut g.game_values.soundvolume);
+            f.set_current_value(g.game_values.soundvolume);
             f.allow_wrap(false);
             f.set_item_changed_code(MENU_CODE_SOUND_VOLUME_CHANGED);
             this.miSoundVolumeField = f;
@@ -67,33 +68,33 @@ impl UI_SoundOptionsMenu {
             for &(name, value) in VOLUMES {
                 f.add(name, value);
             }
-            f.set_output_ptr(&mut game().game_values.musicvolume);
-            f.set_current_value(game().game_values.musicvolume);
+            f.set_output_ptr(&mut g.game_values.musicvolume);
+            f.set_current_value(g.game_values.musicvolume);
             f.allow_wrap(false);
             f.set_item_changed_code(MENU_CODE_MUSIC_VOLUME_CHANGED);
             this.miMusicVolumeField = f;
 
-            this.miPlayNextMusicField = select_field(spr, 70, 180, "Next Music", 500, 220, OFF_ON, &mut game().game_values.playnextmusic);
+            this.miPlayNextMusicField = select_field(spr, 70, 180, "Next Music", 500, 220, OFF_ON, &mut g.game_values.playnextmusic);
             this.miPlayNextMusicField.set_auto_advance(true);
 
-            this.miAnnouncerField = Ptr::new_box(MI_AnnouncerField::new(spr, 70, 220, "Announcer", 500, 220, Ptr::from_mut(&mut game().announcerlist.simple_file_list)));
-            this.miSoundPackField = Ptr::new_box(MI_PacksField::new(spr, 70, 260, "Sound Pack", 500, 220, Ptr::from_mut(&mut game().soundpacklist.simple_directory_list.simple_file_list), MENU_CODE_SOUND_PACK_CHANGED));
+            this.miAnnouncerField = Ptr::new_box(MI_AnnouncerField::new(spr, 70, 220, "Announcer", 500, 220, Ptr::from_mut(&mut g.announcerlist.simple_file_list)));
+            this.miSoundPackField = Ptr::new_box(MI_PacksField::new(spr, 70, 260, "Sound Pack", 500, 220, Ptr::from_mut(&mut g.soundpacklist.simple_directory_list.simple_file_list), MENU_CODE_SOUND_PACK_CHANGED));
 
             this.miPlaylistField = Ptr::new_box(MI_PlaylistField::new(spr, 70, 300, "Game Music Pack", 500, 220));
             this.miWorldMusicField = Ptr::new_box(MI_SelectField::new(spr, 70, 340, "World Music Pack", 500, 220));
 
-            let iCurrentMusic = game().worldmusiclist.current_index() as i32;
-            game().worldmusiclist.set_current(0);
+            let iCurrentMusic = g.worldmusiclist.current_index() as i32;
+            g.worldmusiclist.set_current(0);
             for iMusic in 0..game().worldmusiclist.count() {
-                let name = game().worldmusiclist.current_name().to_string();
+                let name = g.worldmusiclist.current_name().to_string();
                 this.miWorldMusicField.add(name, iMusic as i16);
-                game().worldmusiclist.next();
+                g.worldmusiclist.next();
             }
             this.miWorldMusicField.set_current_value(iCurrentMusic as i16);
-            game().worldmusiclist.set_current(iCurrentMusic as usize);
+            g.worldmusiclist.set_current(iCurrentMusic as usize);
             this.miWorldMusicField.set_item_changed_code(MENU_CODE_WORLD_MUSIC_CHANGED);
 
-            this.miSoundOptionsMenuBackButton = Ptr::new_box(MI_Button::new(spr, 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miSoundOptionsMenuBackButton = Ptr::new_box(MI_Button::new(g, spr, 544, 432, "Back", 80, TextAlign::CENTER));
             this.miSoundOptionsMenuBackButton.set_code(MENU_CODE_BACK_TO_OPTIONS_MENU);
 
             this.miSoundOptionsMenuLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));

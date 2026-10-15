@@ -1,5 +1,6 @@
 //! Port of src/smw/GSMenu.cpp (reference build: original + tools/cpp-harness.patch).
 
+use crate::game::Game;
 use smw_platform::{Input, InputEvent};
 use crate::common::file_list::{MusicCategory, WorldMusicCategory};
 use crate::common::game::App;
@@ -239,17 +240,17 @@ impl MenuState {
         !self.mCurrentMenu.is_null() && self.mCurrentMenu.is_modifying()
     }
 
-    fn read_tour_file(&mut self) -> bool {
+    fn read_tour_file(&mut self, g: &mut Game) -> bool {
         unsafe {
-            reset_tour_stops();
+            reset_tour_stops(g);
 
-            let fp = std::fs::File::open(game().tourlist.at(game().game_values.tourindex as usize)).expect("fopen tour file");
+            let fp = std::fs::File::open(g.tourlist.at(g.game_values.tourindex as usize)).expect("fopen tour file");
             let ignorable_leads: &[u8] = b" #\n\r\t";
 
             let mut fReadVersion = false;
             let mut version = Version::default();
             for buffer in fgets_lines(fp) {
-                if game().game_values.tourstops.len() >= 10 {
+                if g.game_values.tourstops.len() >= 10 {
                     break;
                 }
 
@@ -282,79 +283,80 @@ impl MenuState {
                     continue;
                 }
 
-                let ts: TourStop = parse_tour_stop_line(buffer.as_bytes(), &version, false);
-                game().game_values.tourstops.push(Ptr::new_box(ts));
+                let ts: TourStop = parse_tour_stop_line(g, buffer.as_bytes(), &version, false);
+                g.game_values.tourstops.push(Ptr::new_box(ts));
             }
 
-            if !game().game_values.tourstops.is_empty() {
-                self.mTourStopMenu.miTourStop.refresh(game().game_values.tourstopcurrent as i16);
+            if !g.game_values.tourstops.is_empty() {
+                self.mTourStopMenu.miTourStop.refresh(g, g.game_values.tourstopcurrent as i16);
 
                 //For old tours, turn on the bonus wheel at the end
                 if version.major == 1 && version.minor == 7 && version.patch == 0 && version.build <= 1 {
-                    let last = game().game_values.tourstops.len() - 1;
-                    game().game_values.tourstops[last].iBonusType = 1;
+                    let last = g.game_values.tourstops.len() - 1;
+                    g.game_values.tourstops[last].iBonusType = 1;
                 }
             }
 
-            !game().game_values.tourstops.is_empty()
+            !g.game_values.tourstops.is_empty()
         }
     }
 
-    fn start_game(&mut self) {
+    fn start_game(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             println!("> StartGame");
 
-            game().game_values.appstate = AppState::StartGame;
+            g.game_values.appstate = AppState::StartGame;
             //backgroundonly = false;
             //fastmap = false;
 
-            game().game_values.write_config();
+            gp.game_values.write_config(g);
 
             //Load skins for players
             println!("Loading player skins...");
             for k in 0..4usize {
-                if game().game_values.playercontrol[k] > 0 {
-                    if game().netplay.active {
-                        if k == game().netplay.remotePlayerNumber as usize {
+                if g.game_values.playercontrol[k] > 0 {
+                    if g.netplay.active {
+                        if k == g.netplay.remotePlayerNumber as usize {
                             // local player uses local skin
                             println!("  player {} -> local", k);
-                            let skin = game().rm.load_full_skin(game().game_values.skinids[k], game().game_values.colorids[k]);
-                            game().rm.spr_player[k] = skin;
+                            let skin = gp.rm.load_full_skin(g, gp.game_values.skinids[k], gp.game_values.colorids[k]);
+                            g.rm.spr_player[k] = skin;
                         } else {
                             let path = format!("{}net_skin{}.bmp", get_home_directory(), k);
                             println!("  player {} -> {}", k, path);
 
-                            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| game().rm.load_full_skin_path(Path::new(&path), k as i16)));
+                            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| g.rm.load_full_skin_path(Path::new(&path), k as i16)));
                             match result {
-                                Ok(skin) => game().rm.spr_player[k] = skin,
+                                Ok(skin) => g.rm.spr_player[k] = skin,
                                 Err(_) => {
                                     println!("[warning] Could not load netplay skin of player {}, using default", k);
-                                    let skin = game().rm.load_full_skin(game().game_values.skinids[k], game().game_values.colorids[k]);
-                                    game().rm.spr_player[k] = skin;
+                                    let skin = gp.rm.load_full_skin(g, gp.game_values.skinids[k], gp.game_values.colorids[k]);
+                                    g.rm.spr_player[k] = skin;
                                 }
                             }
                         }
-                    } else if game().game_values.randomskin[k] {
-                        game().game_values.skinids[k] = RANDOM_INT(game().skinlist.count() as i32) as i16;
-                        let skin = game().rm.load_full_skin(game().game_values.skinids[k], game().game_values.colorids[k]);
-                        game().rm.spr_player[k] = skin;
+                    } else if g.game_values.randomskin[k] {
+                        g.game_values.skinids[k] = RANDOM_INT(g.skinlist.count() as i32) as i16;
+                        let skin = gp.rm.load_full_skin(g, gp.game_values.skinids[k], gp.game_values.colorids[k]);
+                        g.rm.spr_player[k] = skin;
                     } else {
-                        let skin = game().rm.load_full_skin(game().game_values.skinids[k], game().game_values.colorids[k]);
-                        game().rm.spr_player[k] = skin;
+                        let skin = gp.rm.load_full_skin(g, gp.game_values.skinids[k], gp.game_values.colorids[k]);
+                        g.rm.spr_player[k] = skin;
                     }
                 }
             }
 
             //Load announcer sounds if changed
-            if game().game_values.loadedannouncer != game().announcerlist.current_index() {
-                game().game_values.loadedannouncer = game().announcerlist.current_index();
+            if g.game_values.loadedannouncer != g.announcerlist.current_index() {
+                g.game_values.loadedannouncer = g.announcerlist.current_index();
 
                 //Delete the old sounds
                 for k in 0..PANNOUNCER_SOUND_LAST as usize {
-                    game().rm.sfx_announcer[k] = sfxSound::new();
+                    g.rm.sfx_announcer[k] = sfxSound::new();
                 }
 
-                let announcerfile = std::fs::File::open(game().announcerlist.current_path()).expect("fopen announcer file");
+                let announcerfile = std::fs::File::open(g.announcerlist.current_path()).expect("fopen announcer file");
 
                 let mut announcerIndex: i32 = 0;
 
@@ -376,8 +378,8 @@ impl MenuState {
 
                     //If it is not "[none]", then add this announcer sound
                     if szBuffer != "[none]" {
-                        let sound = sfxSound::from_file(Path::new(&convert_path(&szBuffer))).unwrap_or_else(|e| std::panic::panic_any(e));
-                        game().rm.sfx_announcer[announcerIndex as usize] = sound;
+                        let sound = sfxSound::from_file(Path::new(&convert_path(g, &szBuffer))).unwrap_or_else(|e| std::panic::panic_any(e));
+                        g.rm.sfx_announcer[announcerIndex as usize] = sound;
                     }
 
                     announcerIndex += 1;
@@ -385,23 +387,23 @@ impl MenuState {
             }
 
             //Load soundtrack music if changed
-            if game().game_values.loadedmusic as i64 != game().musiclist.current_index() as i64 {
-                game().game_values.loadedmusic = game().musiclist.current_index() as i16;
-                game().rm.backgroundmusic[1] = sfxMusic::from_file(game().musiclist.music(0)).unwrap_or_else(|e| std::panic::panic_any(e)); //Stage Clear
-                game().rm.backgroundmusic[3] = sfxMusic::from_file(game().musiclist.music(2)).unwrap_or_else(|e| std::panic::panic_any(e)); //Tournament Menu
-                game().rm.backgroundmusic[4] = sfxMusic::from_file(game().musiclist.music(3)).unwrap_or_else(|e| std::panic::panic_any(e)); //Tournament Over
+            if g.game_values.loadedmusic as i64 != g.musiclist.current_index() as i64 {
+                g.game_values.loadedmusic = g.musiclist.current_index() as i16;
+                g.rm.backgroundmusic[1] = sfxMusic::from_file(g.musiclist.music(0)).unwrap_or_else(|e| std::panic::panic_any(e)); //Stage Clear
+                g.rm.backgroundmusic[3] = sfxMusic::from_file(g.musiclist.music(2)).unwrap_or_else(|e| std::panic::panic_any(e)); //Tournament Menu
+                g.rm.backgroundmusic[4] = sfxMusic::from_file(g.musiclist.music(3)).unwrap_or_else(|e| std::panic::panic_any(e)); //Tournament Over
             }
 
-            game().rm.backgroundmusic[2].stop();
-            game().rm.sfx_announcer[11].play();
+            g.rm.backgroundmusic[2].stop();
+            g.rm.sfx_announcer[11].play();
 
-            game().game_values.screenfade = 8;
-            game().game_values.screenfadespeed = 8;
+            g.game_values.screenfade = 8;
+            g.game_values.screenfadespeed = 8;
             println!("< StartGame");
         }
     }
 
-    fn set_controlling_team_for_settings_menu(&mut self, iControlTeam: i16, fDisplayMessage: bool) {
+    fn set_controlling_team_for_settings_menu(&mut self, g: &mut Game, iControlTeam: i16, fDisplayMessage: bool) {
         unsafe {
             self.mGameSettingsMenu.set_controlling_team(iControlTeam);
 
@@ -411,7 +413,7 @@ impl MenuState {
             self.mMapFilterEditMenu.miMapBrowser.set_controlling_team(iControlTeam);
 
             if fDisplayMessage {
-                self.display_controlling_team_message(iControlTeam);
+                self.display_controlling_team_message(g, iControlTeam);
             }
 
             //Scan controlling team members and if they are only bots, then let the cpu control the selection
@@ -422,7 +424,7 @@ impl MenuState {
             if iControlTeam >= 0 {
                 let mut fNeedAI = true;
                 for iPlayer in 0..game().game_values.teamcounts[iControlTeam as usize] {
-                    if game().game_values.playercontrol[game().game_values.teamids[iControlTeam as usize][iPlayer as usize] as usize] == 1 {
+                    if g.game_values.playercontrol[g.game_values.teamids[iControlTeam as usize][iPlayer as usize] as usize] == 1 {
                         fNeedAI = false;
                         break;
                     }
@@ -436,21 +438,21 @@ impl MenuState {
         }
     }
 
-    fn display_controlling_team_message(&mut self, iControlTeam: i16) {
+    fn display_controlling_team_message(&mut self, g: &mut Game, iControlTeam: i16) {
         unsafe {
             //Display the team that is in control of selecting the next game
             let szMessage = if iControlTeam < 0 {
                 "All Teams Are In Control".to_string()
-            } else if game().game_values.teamcounts[iControlTeam as usize] <= 1 {
-                format!("Player {} Is In Control", game().game_values.teamids[iControlTeam as usize][0] + 1)
+            } else if g.game_values.teamcounts[iControlTeam as usize] <= 1 {
+                format!("Player {} Is In Control", g.game_values.teamids[iControlTeam as usize][0] + 1)
             } else {
                 format!("Team {} Is In Control", iControlTeam + 1)
             };
 
-            let iIcon: i16 = if iControlTeam < 0 { 4 } else { game().game_values.colorids[game().game_values.teamids[iControlTeam as usize][0] as usize] };
+            let iIcon: i16 = if iControlTeam < 0 { 4 } else { g.game_values.colorids[g.game_values.teamids[iControlTeam as usize][0] as usize] };
             self.mCurrentMenu.eyeCandy.emplace(EC_Announcement::new(
-                Ptr::from_mut(&mut game().rm.menu_font_large),
-                Ptr::from_mut(&mut game().rm.spr_announcementicons),
+                Ptr::from_mut(&mut g.rm.menu_font_large),
+                Ptr::from_mut(&mut g.rm.spr_announcementicons),
                 szMessage,
                 iIcon,
                 120,
@@ -459,31 +461,32 @@ impl MenuState {
         }
     }
 
-    fn exit(&mut self) {
+    fn exit(&mut self, g: &mut Game) {
         #[cfg(target_os = "emscripten")]
         return;
 
-        self.quit();
+        self.quit(g);
     }
 
     /// Not in upstream: `exit` without its web early return. The main menu's Exit button uses it, so the web build
     /// ends the session and the page shows its game-over overlay (web_quit_if_done in main.rs).
-    fn quit(&mut self) {
+    fn quit(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
-            game().game_values.appstate = AppState::Quit;
-            game().game_values.write_config();
+            g.game_values.appstate = AppState::Quit;
+            gp.game_values.write_config(g);
         }
     }
 
-    fn reset_tournament_back_to_main_menu(&mut self) {
+    fn reset_tournament_back_to_main_menu(&mut self, g: &mut Game) {
         unsafe {
             self.mCurrentMenu = menu(self.mMainMenu);
-            self.mCurrentMenu.reset_menu();
+            self.mCurrentMenu.reset_menu(g);
 
-            if game().game_values.matchtype != MatchType::SingleGame && game().game_values.matchtype != MatchType::QuickGame && game().game_values.matchtype != MatchType::MiniGame && game().game_values.matchtype != MatchType::NetGame {
+            if g.game_values.matchtype != MatchType::SingleGame && g.game_values.matchtype != MatchType::QuickGame && g.game_values.matchtype != MatchType::MiniGame && g.game_values.matchtype != MatchType::NetGame {
                 if self.fNeedMenuMusicReset {
-                    game().rm.backgroundmusic[3].stop();
-                    game().rm.backgroundmusic[2].play(false, false);
+                    g.rm.backgroundmusic[3].stop();
+                    g.rm.backgroundmusic[2].play(false, false);
                     self.fNeedMenuMusicReset = false;
                 }
             }
@@ -491,119 +494,120 @@ impl MenuState {
     }
 
     /// The `MENU_CODE_TO_GAME_SETUP_MENU` branch of `MenuState::update`.
-    fn to_game_setup_menu(&mut self) {
+    fn to_game_setup_menu(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             println!("MENU_CODE_TO_GAME_SETUP_MENU");
             //Moves teams to the first arrays in the list and counts the number of teams
-            game().score_cnt = self.mTeamSelectMenu.get_team_count();
+            g.score_cnt = self.mTeamSelectMenu.get_team_count(g);
             self.iDisplayError = DISPLAY_ERROR_NONE;
             self.iDisplayErrorTimer = 0;
             let mut fErrorReadingTourFile = false;
 
-            if MatchType::MiniGame == game().game_values.matchtype {
+            if MatchType::MiniGame == g.game_values.matchtype {
                 println!(" Match type: Minigame");
                 let minigame: Minigame = self.mMatchSelectionMenu.get_minigame();
                 match minigame {
                     Minigame::PipeCoin => {
-                        game().pipegamemode.goal = 50;
-                        game().game_values.gamemode = Ptr::from_raw(game().pipegamemode.as_ptr() as *mut dyn CGameModeTrait);
+                        g.pipegamemode.goal = 50;
+                        g.game_values.gamemode = Ptr::from_raw(g.pipegamemode.as_ptr() as *mut dyn CGameModeTrait);
                     }
                     Minigame::HammerBoss | Minigame::BombBoss | Minigame::FireBoss => {
-                        game().game_values.gamemodemenusettings.boss.difficulty = 2;
-                        game().game_values.gamemodemenusettings.boss.hitpoints = 5;
+                        g.game_values.gamemodemenusettings.boss.difficulty = 2;
+                        g.game_values.gamemodemenusettings.boss.hitpoints = 5;
 
-                        game().bossgamemode.goal = 5;
-                        game().game_values.gamemode = Ptr::from_raw(game().bossgamemode.as_ptr() as *mut dyn CGameModeTrait);
+                        g.bossgamemode.goal = 5;
+                        g.game_values.gamemode = Ptr::from_raw(g.bossgamemode.as_ptr() as *mut dyn CGameModeTrait);
                     }
                     Minigame::Boxes => {
-                        game().boxesgamemode.goal = 10;
-                        game().game_values.gamemode = Ptr::from_raw(game().boxesgamemode.as_ptr() as *mut dyn CGameModeTrait);
+                        g.boxesgamemode.goal = 10;
+                        g.game_values.gamemode = Ptr::from_raw(g.boxesgamemode.as_ptr() as *mut dyn CGameModeTrait);
                     }
                 }
                 match minigame {
                     Minigame::HammerBoss => {
-                        game().game_values.gamemodemenusettings.boss.bosstype = Boss::Hammer;
+                        g.game_values.gamemodemenusettings.boss.bosstype = Boss::Hammer;
                     }
                     Minigame::BombBoss => {
-                        game().game_values.gamemodemenusettings.boss.bosstype = Boss::Bomb;
+                        g.game_values.gamemodemenusettings.boss.bosstype = Boss::Bomb;
                     }
                     Minigame::FireBoss => {
-                        game().game_values.gamemodemenusettings.boss.bosstype = Boss::Fire;
+                        g.game_values.gamemodemenusettings.boss.bosstype = Boss::Fire;
                     }
                     _ => {}
                 }
-                self.start_game();
-            } else if MatchType::QuickGame == game().game_values.matchtype {
+                self.start_game(g);
+            } else if MatchType::QuickGame == g.game_values.matchtype {
                 println!(" Match type: Quick game");
                 let iRandomMode = RANDOM_INT(GAMEMODE_LAST) as i16;
-                game().game_values.gamemode = game().gamemodes[iRandomMode as usize];
+                g.game_values.gamemode = g.gamemodes[iRandomMode as usize];
 
                 //Choose a goal from the lower values for a quicker game
                 let iRandOption = (RANDOM_INT(6) + 1) as i16;
-                let goal = game().game_values.gamemode.get_options()[iRandOption as usize].iValue;
-                game().game_values.gamemode.goal = goal;
+                let goal = g.game_values.gamemode.get_options()[iRandOption as usize].iValue;
+                g.game_values.gamemode.goal = goal;
 
-                game().game_values.tournamentwinner = -1;
+                g.game_values.tournamentwinner = -1;
 
-                self.start_game();
+                self.start_game(g);
             } else {
                 //Load the tour here if one was selected
-                if game().game_values.matchtype == MatchType::Tour {
+                if g.game_values.matchtype == MatchType::Tour {
                     println!("  Match type: Tour");
-                    if !self.read_tour_file() {
+                    if !self.read_tour_file(g) {
                         self.iDisplayError = DISPLAY_ERROR_READ_TOUR_FILE;
                         self.iDisplayErrorTimer = 120;
                         fErrorReadingTourFile = true;
                     } else {
-                        let numGames = game().game_values.tourstops.len() as i16;
-                        self.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(game().score_cnt, numGames, Ptr::from_mut(&mut game().rm.spr_tour_markers));
+                        let numGames = g.game_values.tourstops.len() as i16;
+                        self.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(g, gp.score_cnt, numGames, Ptr::from_mut(&mut gp.rm.spr_tour_markers));
                     }
-                } else if game().game_values.matchtype == MatchType::Tournament {
+                } else if g.game_values.matchtype == MatchType::Tournament {
                     println!("  Match type: Tournament");
                     //Set who is controlling the tournament menu
-                    if game().game_values.tournamentcontrolstyle == TournamentControlStyle::Random || game().game_values.tournamentcontrolstyle == TournamentControlStyle::RandomLoser {
+                    if g.game_values.tournamentcontrolstyle == TournamentControlStyle::Random || g.game_values.tournamentcontrolstyle == TournamentControlStyle::RandomLoser {
                         //Random
-                        game().game_values.tournamentcontrolteam = RANDOM_INT(game().score_cnt as i32) as i16;
-                    } else if game().game_values.tournamentcontrolstyle == TournamentControlStyle::RoundRobin {
+                        g.game_values.tournamentcontrolteam = RANDOM_INT(g.score_cnt as i32) as i16;
+                    } else if g.game_values.tournamentcontrolstyle == TournamentControlStyle::RoundRobin {
                         //Round robin
-                        game().game_values.tournamentcontrolteam = 0;
+                        g.game_values.tournamentcontrolteam = 0;
                     } else {
                         //The first game of the tournament is controlled by all players
-                        game().game_values.tournamentcontrolteam = -1;
+                        g.game_values.tournamentcontrolteam = -1;
                     }
 
-                    game().game_values.tournamentnextcontrol = 1; //if round robin is selected, choose the next team next
+                    g.game_values.tournamentnextcontrol = 1; //if round robin is selected, choose the next team next
 
-                    let numGames = game().game_values.tournamentgames;
-                    self.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(game().score_cnt, numGames, Ptr::from_mut(&mut game().rm.menu_mode_large));
-                } else if game().game_values.matchtype == MatchType::World {
+                    let numGames = g.game_values.tournamentgames;
+                    self.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(g, gp.score_cnt, numGames, Ptr::from_mut(&mut gp.rm.menu_mode_large));
+                } else if g.game_values.matchtype == MatchType::World {
                     println!("  Match type: World");
                     let this = Ptr::from_mut(self);
                     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                         let mut this = this;
-                        game().g_worldmap.init(WorldMap::new_path(&game().worldlist.at(game().game_values.worldindex as usize).to_string_lossy(), TILESIZE as i16));
+                        gp.get().g_worldmap.init(WorldMap::new_path(g, &gp.get().worldlist.at(gp.get().game_values.worldindex as usize).to_string_lossy(), TILESIZE as i16));
 
-                        this.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(game().score_cnt, 0, Ptr::from_mut(&mut game().rm.spr_tour_markers));
+                        this.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(g, gp.score_cnt, 0, Ptr::from_mut(&mut gp.rm.spr_tour_markers));
 
-                        game().g_worldmap.set_initial_powerups();
+                        gp.g_worldmap.set_initial_powerups(g);
 
                         //If a player had a stored powerup from another game, add it to their inventory
                         for iPlayer in 0..4i16 {
-                            if game().game_values.storedpowerups[iPlayer as usize] != -1 {
-                                let iTeamId = lookup_team_id(iPlayer) as usize;
-                                if game().game_values.worldpowerupcount[iTeamId] < 32 {
-                                    let count = game().game_values.worldpowerupcount[iTeamId] as usize;
-                                    game().game_values.worldpowerupcount[iTeamId] += 1;
-                                    game().game_values.worldpowerups[iTeamId][count] = game().game_values.storedpowerups[iPlayer as usize];
+                            if g.game_values.storedpowerups[iPlayer as usize] != -1 {
+                                let iTeamId = lookup_team_id(g, iPlayer) as usize;
+                                if g.game_values.worldpowerupcount[iTeamId] < 32 {
+                                    let count = g.game_values.worldpowerupcount[iTeamId] as usize;
+                                    g.game_values.worldpowerupcount[iTeamId] += 1;
+                                    g.game_values.worldpowerups[iTeamId][count] = g.game_values.storedpowerups[iPlayer as usize];
                                 }
 
-                                game().game_values.storedpowerups[iPlayer as usize] = -1;
+                                g.game_values.storedpowerups[iPlayer as usize] = -1;
                             }
                         }
 
-                        this.mWorldMenu.miWorld.init();
-                        let team = RANDOM_INT(game().score_cnt as i32) as i16;
-                        this.mWorldMenu.miWorld.set_controlling_team(team);
+                        this.mWorldMenu.miWorld.init(g);
+                        let team = RANDOM_INT(g.score_cnt as i32) as i16;
+                        this.mWorldMenu.miWorld.set_controlling_team(g, team);
                     }));
                     if result.is_err() {
                         self.iDisplayError = DISPLAY_ERROR_READ_WORLD_FILE;
@@ -617,25 +621,25 @@ impl MenuState {
                     self.mTournamentScoreboardMenu.eyeCandy.clean();
 
                     //Initialize tournament values
-                    game().game_values.tournamentwinner = -1;
+                    g.game_values.tournamentwinner = -1;
 
                     //Setup wins counters for tournament/tour
                     for k in 0..4usize {
-                        game().game_values.tournament_scores[k].wins = 0;
-                        game().game_values.tournament_scores[k].total = 0;
+                        g.game_values.tournament_scores[k].wins = 0;
+                        g.game_values.tournament_scores[k].total = 0;
                     }
 
-                    if MatchType::SingleGame == game().game_values.matchtype || MatchType::Tournament == game().game_values.matchtype || MatchType::NetGame == game().game_values.matchtype {
+                    if MatchType::SingleGame == g.game_values.matchtype || MatchType::Tournament == g.game_values.matchtype || MatchType::NetGame == g.game_values.matchtype {
                         println!("  MatchType::SingleGame || MatchType::Tournament");
                         println!("current map: {}", *self.szCurrentMapName);
                         let szCurrentMapName = (*self.szCurrentMapName).clone();
-                        game().maplist.findexact(&szCurrentMapName, false);
-                        self.mGameSettingsMenu.miMapField.load_current_map();
+                        g.maplist.findexact(&szCurrentMapName, false);
+                        self.mGameSettingsMenu.miMapField.load_current_map(g);
 
-                        game().game_values.gamemode = game().gamemodes[self.mGameSettingsMenu.get_current_game_mode_id() as usize];
+                        g.game_values.gamemode = g.gamemodes[self.mGameSettingsMenu.get_current_game_mode_id() as usize];
 
                         for iMode in 0..GAMEMODE_LAST as usize {
-                            game().gamemodes[iMode].goal = self.mGameSettingsMenu.miGoalField[iMode].current_value();
+                            g.gamemodes[iMode].goal = self.mGameSettingsMenu.miGoalField[iMode].current_value();
                         }
 
                         if self.mGameSettingsMenu.get_current_game_mode_id() as GameModeType == game_mode_owned {
@@ -643,34 +647,34 @@ impl MenuState {
                         }
 
                         self.mCurrentMenu = menu(self.mGameSettingsMenu);
-                        self.mCurrentMenu.reset_menu();
+                        self.mCurrentMenu.reset_menu(g);
 
                         //If it is a tournament, then set the controlling team
-                        if MatchType::Tournament == game().game_values.matchtype {
-                            self.set_controlling_team_for_settings_menu(game().game_values.tournamentcontrolteam, true);
+                        if MatchType::Tournament == g.game_values.matchtype {
+                            self.set_controlling_team_for_settings_menu(g, g.game_values.tournamentcontrolteam, true);
                         }
-                    } else if MatchType::Tour == game().game_values.matchtype {
+                    } else if MatchType::Tour == g.game_values.matchtype {
                         self.mCurrentMenu = menu(self.mTourStopMenu);
-                        self.mCurrentMenu.reset_menu();
-                    } else if MatchType::World == game().game_values.matchtype {
-                        game().game_values.screenfadespeed = 8;
-                        game().game_values.screenfade = 8;
-                        game().game_values.appstate = AppState::StartWorld;
+                        self.mCurrentMenu.reset_menu(g);
+                    } else if MatchType::World == g.game_values.matchtype {
+                        g.game_values.screenfadespeed = 8;
+                        g.game_values.screenfade = 8;
+                        g.game_values.appstate = AppState::StartWorld;
 
                         //Play enter world sound
-                        game().rm.sfx_enterstage.play();
+                        g.rm.sfx_enterstage.play();
                     }
 
                     //Setup items on next menu
                     for iGameMode in 0..GAMEMODE_LAST as usize {
-                        self.mGameSettingsMenu.miGoalField[iGameMode].hide_item(-1, game().game_values.matchtype == MatchType::Tournament);
+                        self.mGameSettingsMenu.miGoalField[iGameMode].hide_item(-1, g.game_values.matchtype == MatchType::Tournament);
                     }
 
-                    if game().game_values.matchtype == MatchType::World {
+                    if g.game_values.matchtype == MatchType::World {
                         self.mGameSettingsMenu.set_header_text("World Game Menu");
-                    } else if game().game_values.matchtype == MatchType::Tour {
+                    } else if g.game_values.matchtype == MatchType::Tour {
                         self.mGameSettingsMenu.set_header_text("Tour Game Menu");
-                    } else if game().game_values.matchtype == MatchType::Tournament {
+                    } else if g.game_values.matchtype == MatchType::Tournament {
                         self.mGameSettingsMenu.set_header_text("Tournament Game Menu");
                     } else {
                         self.mGameSettingsMenu.set_header_text("Single Game Menu");
@@ -681,13 +685,13 @@ impl MenuState {
     }
 
     /// The tournament-control branch of `MenuState::onEnterState`, run when a tournament game was won.
-    fn choose_next_tournament_control_team(&mut self) {
+    fn choose_next_tournament_control_team(&mut self, g: &mut Game) {
         unsafe {
             //Set the next controlling team
-            match game().game_values.tournamentcontrolstyle {
+            match g.game_values.tournamentcontrolstyle {
                 TournamentControlStyle::GameWinner => {
                     //Winning Team
-                    game().game_values.tournamentcontrolteam = game().game_values.gamemode.winningteam;
+                    g.game_values.tournamentcontrolteam = g.game_values.gamemode.winningteam;
                 }
 
                 TournamentControlStyle::GameLoser => {
@@ -696,17 +700,17 @@ impl MenuState {
                     let mut iInPlace: [i16; 4] = [0; 4];
                     let mut iLowestPlace: i16 = 0;
                     for iScore in 0..game().score_cnt {
-                        if game().score[iScore as usize].place == iLowestPlace {
+                        if g.score[iScore as usize].place == iLowestPlace {
                             iInPlace[iNumInPlace as usize] = iScore;
                             iNumInPlace += 1;
-                        } else if game().score[iScore as usize].place > iLowestPlace {
+                        } else if g.score[iScore as usize].place > iLowestPlace {
                             iNumInPlace = 1;
                             iInPlace[0] = iScore;
-                            iLowestPlace = game().score[iScore as usize].place;
+                            iLowestPlace = g.score[iScore as usize].place;
                         }
                     }
 
-                    game().game_values.tournamentcontrolteam = iInPlace[RANDOM_INT(iNumInPlace as i32) as usize];
+                    g.game_values.tournamentcontrolteam = iInPlace[RANDOM_INT(iNumInPlace as i32) as usize];
                 }
 
                 TournamentControlStyle::LeadingTeams => {
@@ -715,17 +719,17 @@ impl MenuState {
                     let mut iInPlace: [i16; 4] = [0; 4];
                     let mut iMostWins: i16 = 0;
                     for iTeam in 0..game().score_cnt {
-                        if game().game_values.tournament_scores[iTeam as usize].wins == iMostWins {
+                        if g.game_values.tournament_scores[iTeam as usize].wins == iMostWins {
                             iInPlace[iNumInPlace as usize] = iTeam;
                             iNumInPlace += 1;
-                        } else if game().game_values.tournament_scores[iTeam as usize].wins > iMostWins {
+                        } else if g.game_values.tournament_scores[iTeam as usize].wins > iMostWins {
                             iNumInPlace = 1;
                             iInPlace[0] = iTeam;
-                            iMostWins = game().game_values.tournament_scores[iTeam as usize].wins;
+                            iMostWins = g.game_values.tournament_scores[iTeam as usize].wins;
                         }
                     }
 
-                    game().game_values.tournamentcontrolteam = iInPlace[RANDOM_INT(iNumInPlace as i32) as usize];
+                    g.game_values.tournamentcontrolteam = iInPlace[RANDOM_INT(iNumInPlace as i32) as usize];
                 }
 
                 TournamentControlStyle::TrailingTeams => {
@@ -735,22 +739,22 @@ impl MenuState {
                     let mut iLeastWins: i16 = 20; //Most possible wins are 10
 
                     for iTeam in 0..game().score_cnt {
-                        if game().game_values.tournament_scores[iTeam as usize].wins == iLeastWins {
+                        if g.game_values.tournament_scores[iTeam as usize].wins == iLeastWins {
                             iInPlace[iNumInPlace as usize] = iTeam;
                             iNumInPlace += 1;
-                        } else if game().game_values.tournament_scores[iTeam as usize].wins < iLeastWins {
+                        } else if g.game_values.tournament_scores[iTeam as usize].wins < iLeastWins {
                             iNumInPlace = 1;
                             iInPlace[0] = iTeam;
-                            iLeastWins = game().game_values.tournament_scores[iTeam as usize].wins;
+                            iLeastWins = g.game_values.tournament_scores[iTeam as usize].wins;
                         }
                     }
 
-                    game().game_values.tournamentcontrolteam = iInPlace[RANDOM_INT(iNumInPlace as i32) as usize];
+                    g.game_values.tournamentcontrolteam = iInPlace[RANDOM_INT(iNumInPlace as i32) as usize];
                 }
 
                 TournamentControlStyle::Random => {
                     //Random
-                    game().game_values.tournamentcontrolteam = RANDOM_INT(game().score_cnt as i32) as i16;
+                    g.game_values.tournamentcontrolteam = RANDOM_INT(g.score_cnt as i32) as i16;
                 }
 
                 TournamentControlStyle::RandomLoser => {
@@ -760,7 +764,7 @@ impl MenuState {
                     let mut iWinner: i16 = 0;
 
                     for iTeam in 0..game().score_cnt {
-                        if game().score[iTeam as usize].place == 0 {
+                        if g.score[iTeam as usize].place == 0 {
                             iWinner = iTeam;
                             break;
                         }
@@ -775,175 +779,181 @@ impl MenuState {
                         iNumInPlace += 1;
                     }
 
-                    game().game_values.tournamentcontrolteam = iInPlace[RANDOM_INT(iNumInPlace as i32) as usize];
+                    g.game_values.tournamentcontrolteam = iInPlace[RANDOM_INT(iNumInPlace as i32) as usize];
                 }
 
                 TournamentControlStyle::RoundRobin => {
                     //Round Robin
-                    game().game_values.tournamentcontrolteam = game().game_values.tournamentnextcontrol;
+                    g.game_values.tournamentcontrolteam = g.game_values.tournamentnextcontrol;
 
-                    game().game_values.tournamentnextcontrol += 1;
-                    if game().game_values.tournamentnextcontrol >= game().score_cnt {
-                        game().game_values.tournamentnextcontrol = 0;
+                    g.game_values.tournamentnextcontrol += 1;
+                    if g.game_values.tournamentnextcontrol >= g.score_cnt {
+                        g.game_values.tournamentnextcontrol = 0;
                     }
                 }
 
                 _ => {
-                    game().game_values.tournamentcontrolteam = -1;
+                    g.game_values.tournamentcontrolteam = -1;
                 }
             }
         }
     }
 
     /// The `game_values.screenfade == 255` + `AppState::StartGame` block of `MenuState::update`.
-    fn enter_gameplay(&mut self) {
+    fn enter_gameplay(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
-            if game().game_values.matchtype == MatchType::QuickGame {
-                self.mModeOptionsMenu.set_random_game_mode_settings(game().game_values.gamemode.gamemode as i16);
-            } else if game().game_values.matchtype == MatchType::NetGame {
+            if g.game_values.matchtype == MatchType::QuickGame {
+                self.mModeOptionsMenu.set_random_game_mode_settings(g, g.game_values.gamemode.gamemode as i16);
+            } else if g.game_values.matchtype == MatchType::NetGame {
                 // Not in the C++ (whose TODO rolls random ones here on every client): the host sent the match's at the sync.
-                crate::smw::net::reseed_for_match();
+                crate::smw::net::reseed_for_match(g);
             } else {
-                crate::smw::gs_gameplay::set_game_mode_settings_from_menu();
+                crate::smw::gs_gameplay::set_game_mode_settings_from_menu(g);
             }
 
-            if game().game_values.matchtype == MatchType::World && game().game_values.tourstops[game().game_values.tourstopcurrent].iStageType == 1 {
-                load_match_map(&convert_path("maps/special/two52_special_bonushouse.map"));
-                crate::common::global::load_current_map_background();
+            if g.game_values.matchtype == MatchType::World && g.game_values.tourstops[g.game_values.tourstopcurrent].iStageType == 1 {
+                load_match_map(g, &convert_path(gp.get(), "maps/special/two52_special_bonushouse.map"));
+                crate::common::global::load_current_map_background(g);
 
-                if game().game_values.music {
-                    game().rm.backgroundmusic[0] = sfxMusic::from_file(game().worldmusiclist.current_music(WorldMusicCategory::Bonus, "")).unwrap_or_else(|e| std::panic::panic_any(e));
-                    game().rm.backgroundmusic[0].play(false, false);
+                if g.game_values.music {
+                    g.rm.backgroundmusic[0] = sfxMusic::from_file(g.worldmusiclist.current_music(WorldMusicCategory::Bonus, "")).unwrap_or_else(|e| std::panic::panic_any(e));
+                    g.rm.backgroundmusic[0].play(false, false);
                 }
             } else {
                 let mut sShortMapName = String::new();
 
                 let mut fMiniGameMapFound = false;
 
-                if game().game_values.matchtype == MatchType::World {
-                    let gm = game().game_values.gamemode.gamemode;
+                if g.game_values.matchtype == MatchType::World {
+                    let gm = g.game_values.gamemode.gamemode;
                     if gm == game_mode_pipe_minigame || gm == game_mode_boss_minigame || gm == game_mode_boxes_minigame {
-                        let mapFile = game().game_values.tourstops[game().game_values.tourstopcurrent].pszMapFile.clone();
-                        fMiniGameMapFound = game().maplist.findexact(&mapFile, true);
+                        let mapFile = g.game_values.tourstops[g.game_values.tourstopcurrent].pszMapFile.clone();
+                        fMiniGameMapFound = g.maplist.findexact(&mapFile, true);
 
                         if fMiniGameMapFound {
-                            let filename = game().maplist.current_filename().to_string();
-                            load_match_map(&filename);
-                            sShortMapName = game().maplist.current_shortmapname().to_string();
+                            let filename = g.maplist.current_filename().to_string();
+                            load_match_map(g, &filename);
+                            sShortMapName = g.maplist.current_shortmapname().to_string();
                         }
                     }
                 }
 
-                if game().game_values.gamemode.gamemode == game_mode_pipe_minigame {
+                if g.game_values.gamemode.gamemode == game_mode_pipe_minigame {
                     if !fMiniGameMapFound {
-                        load_match_map(&convert_path("maps/special/two52_special_pipe_minigame.map"));
+                        load_match_map(g, &convert_path(gp.get(), "maps/special/two52_special_pipe_minigame.map"));
                         sShortMapName = "minigamepipe".to_string();
                     }
-                } else if game().game_values.gamemode.gamemode == game_mode_boss_minigame {
+                } else if g.game_values.gamemode.gamemode == game_mode_boss_minigame {
                     if !fMiniGameMapFound {
-                        let bossType: Boss = game().game_values.gamemodesettings.boss.bosstype;
-                        game().bossgamemode.set_boss_type(bossType);
+                        let bossType: Boss = g.game_values.gamemodesettings.boss.bosstype;
+                        g.bossgamemode.set_boss_type(bossType);
                         match bossType {
-                            Boss::Hammer => load_match_map(&convert_path("maps/special/two52_special_hammerboss_minigame.map")),
-                            Boss::Bomb => load_match_map(&convert_path("maps/special/two52_special_bombboss_minigame.map")),
-                            Boss::Fire => load_match_map(&convert_path("maps/special/two52_special_fireboss_minigame.map")),
+                            Boss::Hammer => load_match_map(g, &convert_path(gp.get(), "maps/special/two52_special_hammerboss_minigame.map")),
+                            Boss::Bomb => load_match_map(g, &convert_path(gp.get(), "maps/special/two52_special_bombboss_minigame.map")),
+                            Boss::Fire => load_match_map(g, &convert_path(gp.get(), "maps/special/two52_special_fireboss_minigame.map")),
                         }
                         sShortMapName = "minigameboss".to_string();
                     }
-                } else if game().game_values.gamemode.gamemode == game_mode_boxes_minigame {
+                } else if g.game_values.gamemode.gamemode == game_mode_boxes_minigame {
                     if !fMiniGameMapFound {
-                        load_match_map(&convert_path("maps/special/two52_special_boxes_minigame.map"));
+                        load_match_map(g, &convert_path(gp.get(), "maps/special/two52_special_boxes_minigame.map"));
                         sShortMapName = "minigameboxes".to_string();
                     }
-                } else if game().game_values.matchtype == MatchType::QuickGame {
+                } else if g.game_values.matchtype == MatchType::QuickGame {
                     //Load a random map for the quick game
-                    let szMapName = game().maplist.random_filename();
-                    load_match_map(&szMapName);
+                    let szMapName = g.maplist.random_filename();
+                    load_match_map(g, &szMapName);
                     sShortMapName = strip_path_and_extension(&szMapName);
 
                     println!("  State: GS_START_GAME, Match type: MatchType::QuickGame");
-                } else if game().netplay.active {
+                } else if g.netplay.active {
                     // NOTE: for the host, netplay.mapfilepath will be ./data/something
                     // while for the other players, it's ~/.smw/net_last.map
-                    load_match_map(&game().netplay.mapfilepath);
-                    sShortMapName = strip_path_and_extension(&game().netplay.mapfilepath);
+                    let mapfilepath = g.netplay.mapfilepath.clone();
+                    load_match_map(g, &mapfilepath);
+                    sShortMapName = strip_path_and_extension(&g.netplay.mapfilepath);
                 } else {
-                    let filename = game().maplist.current_filename().to_string();
-                    load_match_map(&filename);
-                    sShortMapName = game().maplist.current_shortmapname().to_string();
+                    let filename = g.maplist.current_filename().to_string();
+                    load_match_map(g, &filename);
+                    sShortMapName = g.maplist.current_shortmapname().to_string();
                 }
 
-                crate::common::global::load_current_map_background();
+                crate::common::global::load_current_map_background(g);
 
                 //Allows all players to start the game
-                game().game_values.singleplayermode = -1;
+                g.game_values.singleplayermode = -1;
 
-                if game().game_values.music {
-                    let category = MusicCategory::ALL[game().g_map.musicCategoryID as usize];
-                    let background = game().g_map.szBackgroundFile.clone();
-                    game().musiclist.set_random_music(category, &sShortMapName, &background);
-                    game().rm.backgroundmusic[0] = sfxMusic::from_file(game().musiclist.current_music()).unwrap_or_else(|e| std::panic::panic_any(e));
-                    game().rm.backgroundmusic[0].play(game().game_values.playnextmusic, false);
+                if g.game_values.music {
+                    let category = MusicCategory::ALL[g.g_map.musicCategoryID as usize];
+                    let background = g.g_map.szBackgroundFile.clone();
+                    g.musiclist.set_random_music(category, &sShortMapName, &background);
+                    g.rm.backgroundmusic[0] = sfxMusic::from_file(g.musiclist.current_music()).unwrap_or_else(|e| std::panic::panic_any(e));
+                    g.rm.backgroundmusic[0].play(g.game_values.playnextmusic, false);
                 }
             }
 
             harness::match_checkpoint();
-            enter_gameplay_tail();
+            enter_gameplay_tail(g);
         }
     }
 }
 
 /// The game host rolls a net game's random mode settings, when it plays with "Randomize" on (`NetGameHost::send_sync_messages`).
-pub fn roll_net_game_mode_settings() {
-    if let Some(state) = game().get().ms.as_mut() {
+pub fn roll_net_game_mode_settings(g: &mut Game) {
+        let mut gp = g.ptr();
+    if let Some(state) = gp.get().ms.as_mut() {
         if !state.mModeOptionsMenu.is_null() {
-            state.mModeOptionsMenu.set_random_game_mode_settings(game().currentgamemode);
+            state.mModeOptionsMenu.set_random_game_mode_settings(g, gp.get().currentgamemode);
         }
     }
 }
 
 /// The current mode's options as the mode options menu names them.
-pub fn describe_net_game_mode_settings() -> Vec<String> {
-    match game().get().ms.as_ref() {
-        Some(state) if !state.mModeOptionsMenu.is_null() => state.mModeOptionsMenu.describe_game_mode_settings(game().currentgamemode),
+pub fn describe_net_game_mode_settings(g: &mut Game) -> Vec<String> {
+        let mut gp = g.ptr();
+    match gp.ms.as_ref() {
+        Some(state) if !state.mModeOptionsMenu.is_null() => state.mModeOptionsMenu.describe_game_mode_settings(g, gp.currentgamemode),
         _ => Vec::new(),
     }
 }
 
 /// Loads the map a match is played on; replay checkpoints (smw/checkpoint.rs) note its file.
-fn load_match_map(path: &str) {
-    unsafe { game().g_map.load_map(path, read_type_full) };
-    harness::note_match_map(path);
+fn load_match_map(g: &mut Game, path: &str) {
+    unsafe { g.g_map.load_map(path, read_type_full) };
+    harness::note_match_map(g, path);
 }
 
 /// The rest of `MenuState::enter_gameplay`, after the map and its music are loaded. A segment replay
 /// (smw/checkpoint.rs) restores the state up to that point and starts the match here.
-pub fn enter_gameplay_tail() {
+pub fn enter_gameplay_tail(g: &mut Game) {
+        let mut gp = g.ptr();
     unsafe {
-        game().game_values.appstate = AppState::Game;
+        g.game_values.appstate = AppState::Game;
         println!("  GS_GAME");
 
-        game().g_map.predrawbackground(&game().rm.spr_background, &game().rm.spr_backmap[0]);
-        game().g_map.predrawforeground(&game().rm.spr_frontmap[0]);
+        gp.get().g_map.predrawbackground(g, &gp.get().rm.spr_background, &gp.get().rm.spr_backmap[0]);
+        gp.get().g_map.predrawforeground(g, &gp.get().rm.spr_frontmap[0]);
 
-        game().g_map.predrawbackground(&game().rm.spr_background, &game().rm.spr_backmap[1]);
-        game().g_map.predrawforeground(&game().rm.spr_frontmap[1]);
+        gp.get().g_map.predrawbackground(g, &gp.get().rm.spr_background, &gp.get().rm.spr_backmap[1]);
+        gp.get().g_map.predrawforeground(g, &gp.get().rm.spr_frontmap[1]);
 
-        game().g_map.setup_animated_tiles();
-        crate::smw::gs_gameplay::load_map_objects(false);
+        gp.g_map.setup_animated_tiles(g);
+        crate::smw::gs_gameplay::load_map_objects(g, false);
 
-        GameStateManager::instance().change_state_to(Ptr::from_mut(GameplayState::instance() as &mut dyn GameState));
+        GameStateManager::instance().change_state_to(g, Ptr::from_mut(GameplayState::instance() as &mut dyn GameState));
     }
 }
 
 impl MenuState {
     /// Handles one `MenuCodeEnum` from `mCurrentMenu->SendInput`. Returns true where C++ `return`s from `update`.
-    fn handle_menu_code(&mut self, mut code: MenuCodeEnum, fGenerateMapThumbs: &mut bool) -> bool {
+    fn handle_menu_code(&mut self, g: &mut Game, mut code: MenuCodeEnum, fGenerateMapThumbs: &mut bool) -> bool {
+        let mut gp = g.ptr();
         unsafe {
             // Shortcut to game start
-            if game().netplay.active {
-                let lastSendType = game().netplay.client.lastSentMessage.packageType;
-                let lastRecvType = game().netplay.client.lastReceivedMessage.packageType;
+            if g.netplay.active {
+                let lastSendType = g.netplay.client.lastSentMessage.packageType;
+                let lastRecvType = g.netplay.client.lastReceivedMessage.packageType;
 
                 if lastSendType == NET_P2G_SYNC_OK && lastRecvType == NET_G2E_GAME_START {
                     code = MENU_CODE_NET_ROOM_GO;
@@ -951,180 +961,180 @@ impl MenuState {
             }
 
             if MENU_CODE_EXIT_APPLICATION == code {
-                self.quit();
+                self.quit(g);
                 return true;
             } else if MENU_CODE_TO_MAIN_MENU == code {
                 self.iDisplayError = DISPLAY_ERROR_NONE;
                 self.iDisplayErrorTimer = 0;
-                net_end_session();
+                net_end_session(g);
 
                 self.mCurrentMenu = menu(self.mMainMenu);
             } else if MENU_CODE_BACK_TO_MATCH_SELECTION_MENU == code {
                 self.mCurrentMenu = menu(self.mMatchSelectionMenu);
                 self.iUnlockMinigameOptionIndex = 0;
             } else if MENU_CODE_TO_MATCH_SELECTION_MENU == code {
-                self.mMatchSelectionMenu.world_map_changed();
+                self.mMatchSelectionMenu.world_map_changed(g);
 
                 self.mCurrentMenu = menu(self.mMatchSelectionMenu);
-                self.mCurrentMenu.reset_menu();
+                self.mCurrentMenu.reset_menu(g);
                 self.iUnlockMinigameOptionIndex = 0;
             } else if MENU_CODE_MATCH_SELECTION_START == code || MENU_CODE_QUICK_GAME_START == code {
                 println!("itt vagyok");
 
                 if MENU_CODE_QUICK_GAME_START == code {
-                    game().game_values.matchtype = MatchType::QuickGame;
+                    g.game_values.matchtype = MatchType::QuickGame;
                 } else {
-                    game().game_values.matchtype = self.mMatchSelectionMenu.get_selected_match_type();
+                    g.game_values.matchtype = self.mMatchSelectionMenu.get_selected_match_type();
                 }
 
-                self.mTeamSelectMenu.reset_team_select();
+                self.mTeamSelectMenu.reset_team_select(g);
                 self.mCurrentMenu = menu(self.mTeamSelectMenu);
-                self.mCurrentMenu.reset_menu();
+                self.mCurrentMenu.reset_menu(g);
                 println!("Hello");
 
-                if game().game_values.matchtype != MatchType::Tournament {
-                    game().game_values.tournamentcontrolteam = -1;
-                    self.set_controlling_team_for_settings_menu(game().game_values.tournamentcontrolteam, false);
+                if g.game_values.matchtype != MatchType::Tournament {
+                    g.game_values.tournamentcontrolteam = -1;
+                    self.set_controlling_team_for_settings_menu(g, g.game_values.tournamentcontrolteam, false);
                 }
             } else if MENU_CODE_MATCH_SELECTION_MATCH_CHANGED == code {
-                self.mMatchSelectionMenu.selection_changed();
+                self.mMatchSelectionMenu.selection_changed(g);
             } else if MENU_CODE_WORLD_MAP_CHANGED == code {
-                self.mMatchSelectionMenu.world_map_changed();
+                self.mMatchSelectionMenu.world_map_changed(g);
             } else if MENU_CODE_TO_OPTIONS_MENU == code {
                 self.mCurrentMenu = menu(self.mOptionsMenu);
-                self.mCurrentMenu.reset_menu();
+                self.mCurrentMenu.reset_menu(g);
             } else if MENU_CODE_BACK_TO_OPTIONS_MENU == code {
                 self.mCurrentMenu = menu(self.mOptionsMenu);
             } else if MENU_CODE_TO_NET_SERVERS_MENU == code {
                 self.mCurrentMenu = menu(self.mNetServersMenu);
-                self.mCurrentMenu.reset_menu();
-                net_start_session();
+                self.mCurrentMenu.reset_menu(g);
+                net_start_session(g);
             } else if MENU_CODE_BACK_TO_GRAPHIC_OPTIONS_MENU == code {
                 self.mCurrentMenu = menu(self.mGraphicsOptionsMenu);
             } else if MENU_CODE_TO_CONTROLS_MENU == code {
                 self.mCurrentMenu = menu(self.mPlayerControlsSelectMenu);
-                self.mCurrentMenu.reset_menu();
+                self.mCurrentMenu.reset_menu(g);
             } else if MENU_CODE_BACK_TO_CONTROLS_MENU == code {
                 self.mCurrentMenu = menu(self.mPlayerControlsSelectMenu);
             } else if MENU_CODE_TO_PLAYER_1_CONTROLS == code {
-                self.mPlayerControlsMenu.set_player(0);
+                self.mPlayerControlsMenu.set_player(g, 0);
                 self.mCurrentMenu = menu(self.mPlayerControlsMenu);
-                self.mCurrentMenu.reset_menu();
+                self.mCurrentMenu.reset_menu(g);
             } else if MENU_CODE_TO_PLAYER_2_CONTROLS == code {
-                self.mPlayerControlsMenu.set_player(1);
+                self.mPlayerControlsMenu.set_player(g, 1);
                 self.mCurrentMenu = menu(self.mPlayerControlsMenu);
-                self.mCurrentMenu.reset_menu();
+                self.mCurrentMenu.reset_menu(g);
             } else if MENU_CODE_TO_PLAYER_3_CONTROLS == code {
-                self.mPlayerControlsMenu.set_player(2);
+                self.mPlayerControlsMenu.set_player(g, 2);
                 self.mCurrentMenu = menu(self.mPlayerControlsMenu);
-                self.mCurrentMenu.reset_menu();
+                self.mCurrentMenu.reset_menu(g);
             } else if MENU_CODE_TO_PLAYER_4_CONTROLS == code {
-                self.mPlayerControlsMenu.set_player(3);
+                self.mPlayerControlsMenu.set_player(g, 3);
                 self.mCurrentMenu = menu(self.mPlayerControlsMenu);
-                self.mCurrentMenu.reset_menu();
+                self.mCurrentMenu.reset_menu(g);
             } else if MENU_CODE_TOGGLE_FULLSCREEN == code {
-                gfx_changefullscreen(game().game_values.fullscreen);
-                game().blitdest = game().screen;
+                gfx_changefullscreen(g, g.game_values.fullscreen);
+                g.blitdest = g.screen;
             } else if MENU_CODE_TO_GAME_SETUP_MENU == code {
-                self.to_game_setup_menu();
+                self.to_game_setup_menu(g);
             } else if MENU_CODE_BACK_TO_GAME_SETUP_MENU == code {
                 let mut fNeedTeamAnnouncement = false;
-                if game().game_values.matchtype == MatchType::World {
-                    if game().game_values.tournamentwinner == -2 || (game().game_values.tournamentwinner >= 0 && game().game_values.bonuswheel == 0) {
-                        self.reset_tournament_back_to_main_menu();
-                    } else if game().game_values.tournamentwinner >= 0 {
-                        self.mBonusWheelMenu.miBonusWheel.reset(true);
+                if g.game_values.matchtype == MatchType::World {
+                    if g.game_values.tournamentwinner == -2 || (g.game_values.tournamentwinner >= 0 && g.game_values.bonuswheel == 0) {
+                        self.reset_tournament_back_to_main_menu(g);
+                    } else if g.game_values.tournamentwinner >= 0 {
+                        self.mBonusWheelMenu.miBonusWheel.reset(g, true);
                         self.mCurrentMenu = menu(self.mBonusWheelMenu);
                     } else {
                         self.mCurrentMenu = menu(self.mWorldMenu);
-                        self.mWorldMenu.miWorldStop.refresh(game().game_values.tourstopcurrent as i16);
+                        self.mWorldMenu.miWorldStop.refresh(g, g.game_values.tourstopcurrent as i16);
 
                         fNeedTeamAnnouncement = true;
                     }
-                } else if game().game_values.tournamentwinner == -2 {
+                } else if g.game_values.tournamentwinner == -2 {
                     //Tied Tour Result
-                    self.reset_tournament_back_to_main_menu();
-                } else if game().game_values.tournamentwinner >= 0 {
+                    self.reset_tournament_back_to_main_menu(g);
+                } else if g.game_values.tournamentwinner >= 0 {
                     //Tournament/Tour Won and Bonus Wheel will be spun
-                    if game().game_values.bonuswheel == 0 || (game().game_values.matchtype == MatchType::Tour && game().game_values.tourstops[game().game_values.tourstopcurrent - 1].iBonusType == 0) {
-                        self.reset_tournament_back_to_main_menu();
+                    if g.game_values.bonuswheel == 0 || (g.game_values.matchtype == MatchType::Tour && g.game_values.tourstops[g.game_values.tourstopcurrent - 1].iBonusType == 0) {
+                        self.reset_tournament_back_to_main_menu(g);
                     } else {
-                        self.mBonusWheelMenu.miBonusWheel.reset(true);
+                        self.mBonusWheelMenu.miBonusWheel.reset(g, true);
                         self.mCurrentMenu = menu(self.mBonusWheelMenu);
                     }
                 } else {
                     //Next Tour/Tourament Game
-                    if game().game_values.matchtype == MatchType::Tour {
+                    if g.game_values.matchtype == MatchType::Tour {
                         self.mCurrentMenu = menu(self.mTourStopMenu);
                     } else {
                         self.mCurrentMenu = menu(self.mGameSettingsMenu);
                     }
                 }
 
-                self.mCurrentMenu.reset_menu();
+                self.mCurrentMenu.reset_menu(g);
 
                 //Set the controlling team for tournament mode
-                if MatchType::Tournament == game().game_values.matchtype && game().game_values.tournamentwinner == -1 {
-                    self.set_controlling_team_for_settings_menu(game().game_values.tournamentcontrolteam, true);
+                if MatchType::Tournament == g.game_values.matchtype && g.game_values.tournamentwinner == -1 {
+                    self.set_controlling_team_for_settings_menu(g, g.game_values.tournamentcontrolteam, true);
                 }
 
                 if fNeedTeamAnnouncement {
-                    self.mWorldMenu.miWorld.display_team_control_announcement();
+                    self.mWorldMenu.miWorld.display_team_control_announcement(g);
                 }
             } else if MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS == code {
-                if game().netplay.active {
+                if g.netplay.active {
                     self.mCurrentMenu = menu(self.mNetNewRoomSettingsMenu);
                 } else {
                     self.mCurrentMenu = menu(self.mGameSettingsMenu);
                 }
             } else if MENU_CODE_MODE_CHANGED == code {
-                game().game_values.gamemode = game().gamemodes[self.mGameSettingsMenu.get_current_game_mode_id() as usize];
+                g.game_values.gamemode = g.gamemodes[self.mGameSettingsMenu.get_current_game_mode_id() as usize];
                 self.mGameSettingsMenu.refresh_game_mode_buttons();
                 self.mNetNewRoomSettingsMenu.refresh_game_mode_buttons();
             } else if MENU_CODE_BACK_TEAM_SELECT_MENU == code {
-                if game().game_values.matchtype == MatchType::World {
+                if g.game_values.matchtype == MatchType::World {
                     self.mWorldMenu.open_exit_dialog();
-                } else if game().game_values.matchtype == MatchType::Tour {
+                } else if g.game_values.matchtype == MatchType::Tour {
                     self.mTourStopMenu.open_exit_dialog();
-                } else if game().game_values.matchtype == MatchType::Tournament {
+                } else if g.game_values.matchtype == MatchType::Tournament {
                     self.mGameSettingsMenu.open_exit_dialog();
 
                     if self.iTournamentAITimer > 0 {
-                        self.set_controlling_team_for_settings_menu(-1, false);
+                        self.set_controlling_team_for_settings_menu(g, -1, false);
                     }
                 } else {
                     self.mCurrentMenu = menu(self.mTeamSelectMenu);
-                    self.mCurrentMenu.reset_menu();
+                    self.mCurrentMenu.reset_menu(g);
                 }
             } else if MENU_CODE_SOUND_VOLUME_CHANGED == code {
-                game().game_values.sound = game().game_values.soundvolume > 0;
-                sfx_setsoundvolume(game().game_values.soundvolume as i32);
-                if_sound_on_play(&mut game().rm.sfx_coin);
+                g.game_values.sound = g.game_values.soundvolume > 0;
+                sfx_setsoundvolume(g.game_values.soundvolume as i32);
+                if_sound_on_play(g, &mut gp.rm.sfx_coin);
             } else if MENU_CODE_MUSIC_VOLUME_CHANGED == code {
-                sfx_setmusicvolume(game().game_values.musicvolume as i32);
+                sfx_setmusicvolume(g.game_values.musicvolume as i32);
 
-                if game().game_values.musicvolume == 0 {
-                    game().rm.backgroundmusic[2].stop();
-                } else if game().game_values.musicvolume > 0 && !game().game_values.music {
-                    game().rm.backgroundmusic[2].play(false, false);
+                if g.game_values.musicvolume == 0 {
+                    g.rm.backgroundmusic[2].stop();
+                } else if g.game_values.musicvolume > 0 && !g.game_values.music {
+                    g.rm.backgroundmusic[2].play(false, false);
                 }
 
-                game().game_values.music = game().game_values.musicvolume > 0;
+                g.game_values.music = g.game_values.musicvolume > 0;
             } else if MENU_CODE_START_GAME == code {
-                self.start_game();
+                self.start_game(g);
             } else if MENU_CODE_EXIT_TOURNAMENT_YES == code || MENU_CODE_EXIT_TOURNAMENT_NO == code {
                 self.mGameSettingsMenu.close_exit_dialog();
 
                 if MENU_CODE_EXIT_TOURNAMENT_YES == code {
-                    self.reset_tournament_back_to_main_menu();
+                    self.reset_tournament_back_to_main_menu(g);
                 } else {
-                    self.set_controlling_team_for_settings_menu(game().game_values.tournamentcontrolteam, false);
+                    self.set_controlling_team_for_settings_menu(g, g.game_values.tournamentcontrolteam, false);
                 }
             } else if MENU_CODE_EXIT_TOUR_YES == code || MENU_CODE_EXIT_TOUR_NO == code {
                 self.mTourStopMenu.close_exit_dialog();
 
                 if MENU_CODE_EXIT_TOUR_YES == code {
-                    self.reset_tournament_back_to_main_menu();
+                    self.reset_tournament_back_to_main_menu(g);
                 }
             } else if MENU_CODE_EXIT_WORLD_YES == code || MENU_CODE_EXIT_WORLD_NO == code {
                 self.mWorldMenu.close_exit_dialog();
@@ -1132,158 +1142,158 @@ impl MenuState {
                 if MENU_CODE_EXIT_WORLD_YES == code {
                     //Clear out any stored items a player might have
                     for iPlayer in 0..4usize {
-                        game().game_values.storedpowerups[iPlayer] = -1;
+                        g.game_values.storedpowerups[iPlayer] = -1;
                     }
 
-                    self.reset_tournament_back_to_main_menu();
+                    self.reset_tournament_back_to_main_menu(g);
                     self.mWorldMenu.miWorldStop.set_visible(false);
                 }
             } else if MENU_CODE_BONUS_DONE == code {
                 if self.mBonusWheelMenu.miBonusWheel.get_powerup_selection_done() {
-                    if game().game_values.matchtype == MatchType::World {
-                        if game().game_values.tournamentwinner == -1 {
+                    if g.game_values.matchtype == MatchType::World {
+                        if g.game_values.tournamentwinner == -1 {
                             self.mCurrentMenu = menu(self.mTournamentScoreboardMenu);
                         } else {
-                            self.reset_tournament_back_to_main_menu();
+                            self.reset_tournament_back_to_main_menu(g);
                         }
-                    } else if (game().game_values.matchtype == MatchType::Tour || game().game_values.matchtype == MatchType::Tournament)
-                        && game().game_values.tournamentwinner == -1
-                        && ((game().game_values.matchtype != MatchType::Tour && game().game_values.bonuswheel == 2)
-                            || (game().game_values.matchtype == MatchType::Tour && game().game_values.tourstops[game().game_values.tourstopcurrent - 1].iBonusType != 0))
+                    } else if (g.game_values.matchtype == MatchType::Tour || g.game_values.matchtype == MatchType::Tournament)
+                        && g.game_values.tournamentwinner == -1
+                        && ((g.game_values.matchtype != MatchType::Tour && g.game_values.bonuswheel == 2)
+                            || (g.game_values.matchtype == MatchType::Tour && g.game_values.tourstops[g.game_values.tourstopcurrent - 1].iBonusType != 0))
                     {
                         self.mCurrentMenu = menu(self.mTournamentScoreboardMenu);
-                    } else if game().game_values.matchtype == MatchType::SingleGame {
+                    } else if g.game_values.matchtype == MatchType::SingleGame {
                         self.mCurrentMenu = menu(self.mGameSettingsMenu);
-                        self.mCurrentMenu.reset_menu();
-                        self.mGameSettingsMenu.miMapField.load_current_map();
+                        self.mCurrentMenu.reset_menu(g);
+                        self.mGameSettingsMenu.miMapField.load_current_map(g);
                     } else {
-                        self.reset_tournament_back_to_main_menu();
+                        self.reset_tournament_back_to_main_menu(g);
                     }
                 }
             } else if MENU_CODE_TO_POWERUP_SELECTION_MENU == code {
                 self.mCurrentMenu = menu(self.mPowerupDropRatesMenu);
-                self.mCurrentMenu.reset_menu();
+                self.mCurrentMenu.reset_menu(g);
             } else if MENU_CODE_TO_POWERUP_SETTINGS_MENU == code {
                 self.mCurrentMenu = menu(self.mPowerupSettingsMenu);
-                self.mCurrentMenu.reset_menu();
+                self.mCurrentMenu.reset_menu(g);
             } else if MENU_CODE_TO_GRAPHICS_OPTIONS_MENU == code {
                 self.mCurrentMenu = menu(self.mGraphicsOptionsMenu);
-                self.mCurrentMenu.reset_menu();
+                self.mCurrentMenu.reset_menu(g);
             } else if MENU_CODE_TO_EYECANDY_OPTIONS_MENU == code {
                 self.mCurrentMenu = menu(self.mEyeCandyOptionsMenu);
-                self.mCurrentMenu.reset_menu();
+                self.mCurrentMenu.reset_menu(g);
             } else if MENU_CODE_TO_SOUND_OPTIONS_MENU == code {
                 self.mCurrentMenu = menu(self.mSoundOptionsMenu);
-                self.mCurrentMenu.reset_menu();
+                self.mCurrentMenu.reset_menu(g);
             } else if MENU_CODE_TO_GAMEPLAY_OPTIONS_MENU == code {
                 self.mCurrentMenu = menu(self.mGameplayOptionsMenu);
-                self.mCurrentMenu.reset_menu();
+                self.mCurrentMenu.reset_menu(g);
             } else if MENU_CODE_TO_TEAM_OPTIONS_MENU == code {
                 self.mCurrentMenu = menu(self.mTeamOptionsMenu);
-                self.mCurrentMenu.reset_menu();
+                self.mCurrentMenu.reset_menu(g);
             } else if MENU_CODE_TO_PROJECTILES_OPTIONS_MENU == code {
                 self.mCurrentMenu = menu(self.mProjectileOptionsMenu);
-                self.mCurrentMenu.reset_menu();
+                self.mCurrentMenu.reset_menu(g);
             } else if MENU_CODE_TO_PROJECTILES_LIMITS_MENU == code {
                 self.mCurrentMenu = menu(self.mProjectileLimitsMenu);
-                self.mCurrentMenu.reset_menu();
+                self.mCurrentMenu.reset_menu(g);
             } else if MENU_CODE_TO_MODE_SETTINGS_MENU == code {
-                if game().netplay.active {
+                if g.netplay.active {
                     self.mCurrentMenu = self.mModeOptionsMenu.get_options_menu(self.mNetNewRoomSettingsMenu.get_selected_game_mode_id());
-                    self.mCurrentMenu.reset_menu();
+                    self.mCurrentMenu.reset_menu(g);
                 } else {
                     for iGameMode in 0..GAMEMODE_LAST as i16 {
                         if self.mGameSettingsMenu.miGoalField[iGameMode as usize].is_visible() {
                             self.mCurrentMenu = self.mModeOptionsMenu.get_options_menu(iGameMode);
-                            self.mCurrentMenu.reset_menu();
+                            self.mCurrentMenu.reset_menu(g);
                             break;
                         }
                     }
                 }
             } else if MENU_CODE_MENU_GRAPHICS_PACK_CHANGED == code {
-                game().rm.load_menu_graphics();
+                gp.rm.load_menu_graphics(g);
 
-                game().blitdest = game().rm.menu_backdrop.get_surface();
-                game().rm.menu_shade.setalpha(App::menuTransparency as u8);
-                game().rm.menu_shade.draw(0, 0);
-                game().blitdest = game().screen;
+                g.blitdest = g.rm.menu_backdrop.get_surface();
+                g.rm.menu_shade.setalpha(App::menuTransparency as u8);
+                gp.rm.menu_shade.draw(g, 0, 0);
+                g.blitdest = g.screen;
             } else if MENU_CODE_WORLD_GRAPHICS_PACK_CHANGED == code {
-                game().rm.load_world_graphics();
+                gp.rm.load_world_graphics(g);
             } else if MENU_CODE_GAME_GRAPHICS_PACK_CHANGED == code {
-                let packdir = game().gamegraphicspacklist.current_path().to_string_lossy().into_owned();
-                let png = std::panic::catch_unwind(|| gfx_loadpalette(Path::new(&convert_path_pack("gfx/packs/palette.png", &packdir))));
+                let packdir = g.gamegraphicspacklist.current_path().to_string_lossy().into_owned();
+                let png = std::panic::catch_unwind(|| gfx_loadpalette(game().get(), Path::new(&convert_path_pack(game().get(), "gfx/packs/palette.png", &packdir))));
                 if let Err(payload) = png {
                     let Some(err) = payload.downcast_ref::<String>() else { std::panic::resume_unwind(payload) };
                     println!("\nwarning: {} -> falling back to BMP", err);
-                    gfx_loadpalette(Path::new(&convert_path_pack("gfx/packs/palette.bmp", &packdir)));
+                    gfx_loadpalette(g, Path::new(&convert_path_pack(gp.get(), "gfx/packs/palette.bmp", &packdir)));
                 }
-                game().rm.load_game_graphics();
+                gp.rm.load_game_graphics(g);
             } else if MENU_CODE_SOUND_PACK_CHANGED == code {
-                game().rm.load_game_sounds();
+                gp.rm.load_game_sounds(g);
 
-                if !game().game_values.soundcapable {
-                    game().game_values.sound = false;
-                    game().game_values.music = false;
-                    game().game_values.soundvolume = 0;
-                    game().game_values.musicvolume = 0;
+                if !g.game_values.soundcapable {
+                    g.game_values.sound = false;
+                    g.game_values.music = false;
+                    g.game_values.soundvolume = 0;
+                    g.game_values.musicvolume = 0;
                 }
             } else if MENU_CODE_WORLD_STAGE_START == code {
-                self.mWorldMenu.open_stage_start();
+                self.mWorldMenu.open_stage_start(g);
             } else if MENU_CODE_WORLD_STAGE_NO_START == code {
                 self.mWorldMenu.close_stage_start();
             } else if MENU_CODE_WORLD_MUSIC_CHANGED == code {
-                game().worldmusiclist.set_current(self.mSoundOptionsMenu.get_current_world_music_id() as usize);
+                g.worldmusiclist.set_current(self.mSoundOptionsMenu.get_current_world_music_id() as usize);
             } else if MENU_CODE_TOUR_STOP_CONTINUE == code || MENU_CODE_TOUR_STOP_CONTINUE_FORCED == code {
                 //If this tour stop is forced, we need to load the map first
                 if MENU_CODE_TOUR_STOP_CONTINUE_FORCED == code {
-                    self.mWorldMenu.miWorldStop.refresh(game().game_values.tourstopcurrent as i16);
+                    self.mWorldMenu.miWorldStop.refresh(g, g.game_values.tourstopcurrent as i16);
                 }
 
                 self.mWorldMenu.miWorld.clear_cloud();
 
                 //Tour bonus house
-                if game().game_values.matchtype == MatchType::World && game().game_values.tourstops[game().game_values.tourstopcurrent].iStageType == 1 {
-                    game().bonushousemode.goal = 0;
-                    game().game_values.gamemode = Ptr::from_raw(game().bonushousemode.as_ptr() as *mut dyn CGameModeTrait);
+                if g.game_values.matchtype == MatchType::World && g.game_values.tourstops[g.game_values.tourstopcurrent].iStageType == 1 {
+                    g.bonushousemode.goal = 0;
+                    g.game_values.gamemode = Ptr::from_raw(g.bonushousemode.as_ptr() as *mut dyn CGameModeTrait);
                 } else {
-                    let iGameMode = game().game_values.tourstops[game().game_values.tourstopcurrent].iMode;
+                    let iGameMode = g.game_values.tourstops[g.game_values.tourstopcurrent].iMode;
 
                     if iGameMode as GameModeType == game_mode_pipe_minigame {
-                        game().game_values.gamemode = Ptr::from_raw(game().pipegamemode.as_ptr() as *mut dyn CGameModeTrait);
+                        g.game_values.gamemode = Ptr::from_raw(g.pipegamemode.as_ptr() as *mut dyn CGameModeTrait);
                     } else if iGameMode as GameModeType == game_mode_boss_minigame {
-                        game().game_values.gamemode = Ptr::from_raw(game().bossgamemode.as_ptr() as *mut dyn CGameModeTrait);
+                        g.game_values.gamemode = Ptr::from_raw(g.bossgamemode.as_ptr() as *mut dyn CGameModeTrait);
                     } else if iGameMode as GameModeType == game_mode_boxes_minigame {
-                        game().game_values.gamemode = Ptr::from_raw(game().boxesgamemode.as_ptr() as *mut dyn CGameModeTrait);
+                        g.game_values.gamemode = Ptr::from_raw(g.boxesgamemode.as_ptr() as *mut dyn CGameModeTrait);
                     } else {
-                        game().game_values.gamemode = game().gamemodes[iGameMode as usize];
+                        g.game_values.gamemode = g.gamemodes[iGameMode as usize];
                     }
 
-                    game().game_values.gamemode.goal = game().game_values.tourstops[game().game_values.tourstopcurrent].iGoal;
+                    g.game_values.gamemode.goal = g.game_values.tourstops[g.game_values.tourstopcurrent].iGoal;
                 }
 
-                self.start_game();
+                self.start_game(g);
             } else if MENU_CODE_RESET_STORED_POWERUPS == code {
                 for iPlayer in 0..4usize {
-                    game().game_values.storedpowerups[iPlayer] = -1;
+                    g.game_values.storedpowerups[iPlayer] = -1;
                 }
             } else if MENU_CODE_MAP_CHANGED == code {
                 if self.mCurrentMenu == menu(self.mNetNewRoomSettingsMenu) {
-                    debug_assert!(game().netplay.active);
-                    game().netplay.mapfilepath = self.mNetNewRoomSettingsMenu.get_current_map_path();
-                    println!("[net] Selected map: {}", game().netplay.mapfilepath);
-                    self.mNetRoomMenu.set_preview_map_path(&game().netplay.mapfilepath);
-                } else if game().game_values.matchtype != MatchType::Tour {
+                    debug_assert!(g.netplay.active);
+                    g.netplay.mapfilepath = self.mNetNewRoomSettingsMenu.get_current_map_path(g);
+                    println!("[net] Selected map: {}", g.netplay.mapfilepath);
+                    self.mNetRoomMenu.set_preview_map_path(g, &gp.netplay.mapfilepath);
+                } else if g.game_values.matchtype != MatchType::Tour {
                     self.szCurrentMapName = Ptr::from_mut(&mut self.mGameSettingsMenu.miMapField.szMapName);
                 }
             } else if MENU_CODE_MAP_FILTER_EXIT == code {
-                game().maplist.apply_filters(&game().game_values.pfFilters);
+                game().maplist.apply_filters(g, &game().game_values.pfFilters);
 
                 //If the filtered map list has at least 1 map in it, then allow exiting the filter menu
-                if game().maplist.map_in_filtered_set() {
-                    self.mGameSettingsMenu.miMapField.load_current_map();
+                if g.maplist.map_in_filtered_set() {
+                    self.mGameSettingsMenu.miMapField.load_current_map(g);
                     self.szCurrentMapName = Ptr::from_mut(&mut self.mGameSettingsMenu.miMapField.szMapName);
 
-                    self.mGameSettingsMenu.close_map_filters();
+                    self.mGameSettingsMenu.close_map_filters(g);
 
                     self.iDisplayError = DISPLAY_ERROR_NONE;
                 } else {
@@ -1294,25 +1304,25 @@ impl MenuState {
             } else if MENU_CODE_TO_MAP_FILTERS == code {
                 self.mGameSettingsMenu.open_map_filters();
             } else if MENU_CODE_TO_MAP_FILTER_EDIT == code {
-                self.mMapFilterEditMenu.miMapBrowser.reset(0);
+                self.mMapFilterEditMenu.miMapBrowser.reset(g, 0);
 
                 self.mCurrentMenu = menu(self.mMapFilterEditMenu);
-                self.mCurrentMenu.reset_menu();
+                self.mCurrentMenu.reset_menu(g);
             } else if MENU_CODE_MAP_BROWSER_EXIT == code {
-                self.mGameSettingsMenu.miMapField.load_current_map();
+                self.mGameSettingsMenu.miMapField.load_current_map(g);
                 self.szCurrentMapName = Ptr::from_mut(&mut self.mGameSettingsMenu.miMapField.szMapName);
 
                 self.mCurrentMenu = menu(self.mGameSettingsMenu);
                 //mCurrentMenu->ResetMenu();
             } else if MENU_CODE_TO_MAP_BROWSER_THUMBNAILS == code {
-                self.mMapFilterEditMenu.miMapBrowser.reset(1);
+                self.mMapFilterEditMenu.miMapBrowser.reset(g, 1);
 
                 self.mCurrentMenu = menu(self.mMapFilterEditMenu);
-                self.mCurrentMenu.reset_menu();
+                self.mCurrentMenu.reset_menu(g);
             } else if MENU_CODE_SAVE_ALL_MAP_THUMBNAILS == code {
                 // C++ casts mCurrentMenu to UI_OptionsMenu*; only the options menu emits this code.
                 self.mOptionsMenu.show_thumbnails_popup();
-                self.mCurrentMenu.reset_menu();
+                self.mCurrentMenu.reset_menu(g);
             } else if MENU_CODE_GENERATE_THUMBS_RESET_YES == code || MENU_CODE_GENERATE_THUMBS_RESET_NO == code {
                 self.mOptionsMenu.hide_thumbnails_popup();
 
@@ -1325,12 +1335,12 @@ impl MenuState {
                 self.mModeOptionsMenu.health_mode_max_life_changed();
             }
 
-            if game().netplay.active {
-                let lastSent = game().netplay.client.lastSentMessage;
-                let lastRecv = game().netplay.client.lastReceivedMessage;
+            if g.netplay.active {
+                let lastSent = g.netplay.client.lastSentMessage;
+                let lastRecv = g.netplay.client.lastReceivedMessage;
 
                 // Override menu code if response has arrived
-                if game().netplay.operationInProgress {
+                if g.netplay.operationInProgress {
                     let previousCode = code;
 
                     // if sent connect request,
@@ -1347,49 +1357,49 @@ impl MenuState {
 
                     // If we have finished the waiting
                     if code != previousCode {
-                        game().netplay.operationInProgress = false;
+                        g.netplay.operationInProgress = false;
                     }
                 }
 
                 if MENU_CODE_TO_NET_SERVERLIST == code {
-                    self.mNetServersMenu.open_server_list();
+                    self.mNetServersMenu.open_server_list(g);
                 } else if MENU_CODE_TO_NET_ADDREMOVE_SERVER_MENU == code {
                     self.mCurrentMenu = menu(self.mNetEditServersMenu);
-                    self.mCurrentMenu.reset_menu();
-                    self.mNetEditServersMenu.restore();
+                    self.mCurrentMenu.reset_menu(g);
+                    self.mNetEditServersMenu.restore(g);
                 } else if MENU_CODE_NET_ADDREMOVE_SERVER_ON_ADD_BTN == code {
                     self.mNetEditServersMenu.on_press_add();
                 } else if MENU_CODE_NET_ADDREMOVE_SERVER_ON_EDIT_BTN == code {
-                    self.mNetEditServersMenu.on_press_edit();
+                    self.mNetEditServersMenu.on_press_edit(g);
                 } else if MENU_CODE_NET_ADDREMOVE_SERVER_ON_DELETE_BTN == code {
-                    self.mNetEditServersMenu.on_press_delete();
+                    self.mNetEditServersMenu.on_press_delete(g);
                 } else if MENU_CODE_NET_ADDREMOVE_SERVER_ON_SELECT == code {
-                    self.mNetEditServersMenu.on_entry_select();
-                    self.mNetServersMenu.refresh_scroll();
+                    self.mNetEditServersMenu.on_entry_select(g);
+                    self.mNetServersMenu.refresh_scroll(g);
                 } else if MENU_CODE_NET_ADDREMOVE_SERVER_ON_DIALOG_OK_BTN == code {
-                    self.mNetEditServersMenu.on_dialog_ok();
-                    self.mNetServersMenu.refresh_scroll();
+                    self.mNetEditServersMenu.on_dialog_ok(g);
+                    self.mNetServersMenu.refresh_scroll(g);
                 } else if MENU_CODE_NET_SERVERLIST_EXIT == code || MENU_CODE_NET_CONNECT_ABORT == code {
                     if MENU_CODE_NET_SERVERLIST_EXIT == code {
-                        game().netplay.currentMenuChanged = true;
+                        g.netplay.currentMenuChanged = true;
                     } else {
-                        net_start_session(); // release & restart socket
-                        game().netplay.operationInProgress = false;
+                        net_start_session(g); // release & restart socket
+                        g.netplay.operationInProgress = false;
                     }
 
                     self.mNetServersMenu.restore();
                     self.iDisplayError = DISPLAY_ERROR_NONE;
                 } else if MENU_CODE_NET_CONNECT_IN_PROGRESS == code {
-                    self.mNetServersMenu.connect_in_progress();
+                    self.mNetServersMenu.connect_in_progress(g);
                 } else if MENU_CODE_TO_NET_LOBBY_MENU == code {
                     // If we are leaving a room
-                    if game().netplay.currentRoom.roomID != 0 {
-                        game().netplay.client.send_leave_room_message();
-                        game().netplay.currentRoom.roomID = 0;
-                        game().netplay.joinSuccessful = false;
-                        game().netplay.gameRunning = false;
+                    if g.netplay.currentRoom.roomID != 0 {
+                        gp.netplay.client.send_leave_room_message(g);
+                        g.netplay.currentRoom.roomID = 0;
+                        g.netplay.joinSuccessful = false;
+                        g.netplay.gameRunning = false;
                     }
-                    game().netplay.client.request_room_list();
+                    gp.netplay.client.request_room_list(g);
 
                     // Restore layouts
                     self.mNetServersMenu.restore();
@@ -1397,65 +1407,65 @@ impl MenuState {
                     self.mNetNewRoomMenu.restore();
 
                     self.mCurrentMenu = menu(self.mNetLobbyMenu);
-                    self.mCurrentMenu.reset_menu();
+                    self.mCurrentMenu.reset_menu(g);
                 } else if MENU_CODE_TO_NET_NEW_ROOM_LEVEL_SELECT_MENU == code {
                     self.mCurrentMenu = menu(self.mNetNewRoomSettingsMenu);
-                    self.mCurrentMenu.reset_menu();
+                    self.mCurrentMenu.reset_menu(g);
                 } else if MENU_CODE_TO_NET_NEW_ROOM_SETTINGS_MENU == code {
                     self.mCurrentMenu = menu(self.mNetNewRoomMenu);
-                    self.mCurrentMenu.reset_menu();
+                    self.mCurrentMenu.reset_menu(g);
                 } else if MENU_CODE_NET_CHAT_SEND == code {
-                    if !game().netplay.mychatmessage.is_empty() {
-                        let message = game().netplay.mychatmessage.clone();
-                        game().netplay.client.send_chat_message(&message);
+                    if !g.netplay.mychatmessage.is_empty() {
+                        let message = g.netplay.mychatmessage.clone();
+                        gp.netplay.client.send_chat_message(g, &message);
                     } else {
                         code = MENU_CODE_TO_NET_ROOM_MENU;
                     }
                 } else if MENU_CODE_TO_NET_ROOM_MENU == code {
                     self.mCurrentMenu = menu(self.mNetRoomMenu);
-                    self.mCurrentMenu.reset_menu();
-                    game().netplay.currentMenuChanged = true;
-                    game().netplay.operationInProgress = false;
+                    self.mCurrentMenu.reset_menu(g);
+                    g.netplay.currentMenuChanged = true;
+                    g.netplay.operationInProgress = false;
 
                     self.mNetRoomMenu.restore(); // Restore Room layout
                     self.mNetLobbyMenu.restore(); // Restore Lobby layout
                     self.mNetNewRoomMenu.restore(); // remove 'in progress' dialog
                 } else if MENU_CODE_NET_JOIN_ROOM_IN_PROGRESS == code {
-                    self.mNetLobbyMenu.join_in_progress();
+                    self.mNetLobbyMenu.join_in_progress(g);
                 } else if MENU_CODE_NET_JOIN_ROOM_ABORT == code {
-                    self.mNetLobbyMenu.abort_join();
+                    self.mNetLobbyMenu.abort_join(g);
                     self.iDisplayError = DISPLAY_ERROR_NONE;
                 } else if MENU_CODE_TO_NET_NEW_ROOM_CREATE_IN_PROGRESS == code {
-                    self.mNetNewRoomMenu.create_in_progress();
+                    self.mNetNewRoomMenu.create_in_progress(g);
                 } else if MENU_CODE_TO_NET_NEW_ROOM_CREATE_ABORT == code {
-                    self.mNetNewRoomMenu.abort_create();
+                    self.mNetNewRoomMenu.abort_create(g);
                     self.iDisplayError = DISPLAY_ERROR_NONE;
                 } else if MENU_CODE_TO_NET_ROOM_START_IN_PROGRESS == code {
-                    self.mNetRoomMenu.start_in_progress();
+                    self.mNetRoomMenu.start_in_progress(g);
                 } else if MENU_CODE_NET_ROOM_GO == code {
-                    game().netplay.operationInProgress = false;
-                    game().game_values.matchtype = MatchType::NetGame;
+                    g.netplay.operationInProgress = false;
+                    g.game_values.matchtype = MatchType::NetGame;
 
-                    self.mTeamSelectMenu.reset_team_select();
-                    self.mTeamSelectMenu.reset_menu();
-                    game().score_cnt = self.mTeamSelectMenu.get_team_count();
+                    self.mTeamSelectMenu.reset_team_select(g);
+                    self.mTeamSelectMenu.reset_menu(g);
+                    g.score_cnt = self.mTeamSelectMenu.get_team_count(g);
 
-                    game().game_values.tournamentcontrolteam = -1;
-                    game().game_values.tournamentwinner = -1;
+                    g.game_values.tournamentcontrolteam = -1;
+                    g.game_values.tournamentwinner = -1;
 
                     self.iDisplayError = DISPLAY_ERROR_NONE;
                     self.iDisplayErrorTimer = 0;
 
                     //game_values.noexit = true;
-                    self.start_game();
+                    self.start_game(g);
                 }
 
                 // on room change
-                if game().netplay.currentMenuChanged {
-                    self.mNetServersMenu.refresh();
-                    self.mNetRoomMenu.refresh();
+                if g.netplay.currentMenuChanged {
+                    self.mNetServersMenu.refresh(g);
+                    self.mNetRoomMenu.refresh(g);
 
-                    game().netplay.currentMenuChanged = false;
+                    g.netplay.currentMenuChanged = false;
                 }
             }
 
@@ -1467,53 +1477,53 @@ impl MenuState {
 }
 
 impl GameState for MenuState {
-    fn init(&mut self) -> bool {
+    fn init(&mut self, g: &mut Game) -> bool {
         unsafe {
-            assign(&mut self.mMainMenu, UI_MainMenu::new());
+            assign(&mut self.mMainMenu, UI_MainMenu::new(g));
 
             // Options menu
-            assign(&mut self.mOptionsMenu, UI_OptionsMenu::new());
-            assign(&mut self.mGameplayOptionsMenu, UI_GameplayOptionsMenu::new());
-            assign(&mut self.mTeamOptionsMenu, UI_TeamOptionsMenu::new());
-            assign(&mut self.mPowerupDropRatesMenu, UI_PowerupDropRatesMenu::new());
-            assign(&mut self.mPowerupSettingsMenu, UI_PowerupSettingsMenu::new());
-            assign(&mut self.mProjectileLimitsMenu, UI_ProjectileLimitsMenu::new());
-            assign(&mut self.mProjectileOptionsMenu, UI_ProjectileOptionsMenu::new());
-            assign(&mut self.mGraphicsOptionsMenu, UI_GraphicsOptionsMenu::new());
-            assign(&mut self.mEyeCandyOptionsMenu, UI_EyeCandyOptionsMenu::new());
-            assign(&mut self.mSoundOptionsMenu, UI_SoundOptionsMenu::new());
+            assign(&mut self.mOptionsMenu, UI_OptionsMenu::new(g));
+            assign(&mut self.mGameplayOptionsMenu, UI_GameplayOptionsMenu::new(g));
+            assign(&mut self.mTeamOptionsMenu, UI_TeamOptionsMenu::new(g));
+            assign(&mut self.mPowerupDropRatesMenu, UI_PowerupDropRatesMenu::new(g));
+            assign(&mut self.mPowerupSettingsMenu, UI_PowerupSettingsMenu::new(g));
+            assign(&mut self.mProjectileLimitsMenu, UI_ProjectileLimitsMenu::new(g));
+            assign(&mut self.mProjectileOptionsMenu, UI_ProjectileOptionsMenu::new(g));
+            assign(&mut self.mGraphicsOptionsMenu, UI_GraphicsOptionsMenu::new(g));
+            assign(&mut self.mEyeCandyOptionsMenu, UI_EyeCandyOptionsMenu::new(g));
+            assign(&mut self.mSoundOptionsMenu, UI_SoundOptionsMenu::new(g));
 
             // Controls menu
-            assign(&mut self.mPlayerControlsSelectMenu, UI_PlayerControlsSelectMenu::new());
-            assign(&mut self.mPlayerControlsMenu, UI_PlayerControlsMenu::new());
+            assign(&mut self.mPlayerControlsSelectMenu, UI_PlayerControlsSelectMenu::new(g));
+            assign(&mut self.mPlayerControlsMenu, UI_PlayerControlsMenu::new(g));
 
             // Gameplay menu
-            assign(&mut self.mModeOptionsMenu, UI_ModeOptionsMenu::new());
-            assign(&mut self.mMatchSelectionMenu, UI_MatchSelectionMenu::new());
-            assign(&mut self.mGameSettingsMenu, UI_GameSettingsMenu::new());
+            assign(&mut self.mModeOptionsMenu, UI_ModeOptionsMenu::new(g));
+            assign(&mut self.mMatchSelectionMenu, UI_MatchSelectionMenu::new(g));
+            assign(&mut self.mGameSettingsMenu, UI_GameSettingsMenu::new(g));
             assign(&mut self.mMapFilterEditMenu, UI_MapFilterEditMenu::new());
-            assign(&mut self.mTourStopMenu, UI_TourStopMenu::new());
-            assign(&mut self.mWorldMenu, UI_WorldMenu::new());
-            assign(&mut self.mTeamSelectMenu, UI_TeamSelectMenu::new());
-            assign(&mut self.mTournamentScoreboardMenu, UI_TournamentScoreboardMenu::new());
+            assign(&mut self.mTourStopMenu, UI_TourStopMenu::new(g));
+            assign(&mut self.mWorldMenu, UI_WorldMenu::new(g));
+            assign(&mut self.mTeamSelectMenu, UI_TeamSelectMenu::new(g));
+            assign(&mut self.mTournamentScoreboardMenu, UI_TournamentScoreboardMenu::new(g));
             assign(&mut self.mBonusWheelMenu, UI_BonusWheelMenu::new());
 
             // Multiplayer menu
-            assign(&mut self.mNetServersMenu, UI_NetServersMenu::new());
-            assign(&mut self.mNetEditServersMenu, UI_NetEditServersMenu::new());
-            assign(&mut self.mNetLobbyMenu, UI_NetLobbyMenu::new());
-            assign(&mut self.mNetNewRoomMenu, UI_NetNewRoomMenu::new());
-            assign(&mut self.mNetNewRoomSettingsMenu, UI_NetNewRoomSettingsMenu::new(&self.mGameSettingsMenu));
-            assign(&mut self.mNetRoomMenu, UI_NetRoomMenu::new());
+            assign(&mut self.mNetServersMenu, UI_NetServersMenu::new(g));
+            assign(&mut self.mNetEditServersMenu, UI_NetEditServersMenu::new(g));
+            assign(&mut self.mNetLobbyMenu, UI_NetLobbyMenu::new(g));
+            assign(&mut self.mNetNewRoomMenu, UI_NetNewRoomMenu::new(g));
+            assign(&mut self.mNetNewRoomSettingsMenu, UI_NetNewRoomSettingsMenu::new(g, &self.mGameSettingsMenu));
+            assign(&mut self.mNetRoomMenu, UI_NetRoomMenu::new(g));
 
             self.mCurrentMenu = menu(self.mMainMenu);
 
             if let Some(forcedMap) = harness::forced_map() {
-                if !game().maplist.findexact(forcedMap, false) && !game().maplist.find(forcedMap) {
+                if !g.maplist.findexact(forcedMap, false) && !g.maplist.find(forcedMap) {
                     eprintln!("[harness] SMW_MAP '{}' not found", forcedMap);
                     std::process::exit(2);
                 }
-                self.mGameSettingsMenu.miMapField.load_current_map();
+                self.mGameSettingsMenu.miMapField.load_current_map(g);
             }
 
             self.szCurrentMapName = Ptr::from_mut(&mut self.mGameSettingsMenu.miMapField.szMapName);
@@ -1526,7 +1536,8 @@ impl GameState for MenuState {
     // RUN THE MENU
     //---------------------------------------------------------------
 
-    fn on_enter_state(&mut self) {
+    fn on_enter_state(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             sdl2::sys::SDL_ShowCursor(sdl2::sys::SDL_ENABLE as i32);
             self.iUnlockMinigameOptionIndex = 0;
@@ -1535,47 +1546,47 @@ impl GameState for MenuState {
             self.iTournamentAITimer = 0;
 
             //Reset the keys each time we switch from menu to game and back
-            game().game_values.playerInput.reset_keys();
+            g.game_values.playerInput.reset_keys();
 
             self.fNeedMenuMusicReset = false;
 
-            let matchtype = game().game_values.matchtype;
-            if game().game_values.gamemode.winningteam > -1
-                && game().game_values.tournamentwinner == -1
+            let matchtype = g.game_values.matchtype;
+            if g.game_values.gamemode.winningteam > -1
+                && g.game_values.tournamentwinner == -1
                 && (((matchtype == MatchType::SingleGame || matchtype == MatchType::QuickGame || matchtype == MatchType::MiniGame || matchtype == MatchType::Tournament || matchtype == MatchType::NetGame)
-                    && game().game_values.bonuswheel == 2)
-                    || (matchtype == MatchType::Tour && game().game_values.tourstops[game().game_values.tourstopcurrent - 1].iBonusType != 0))
+                    && g.game_values.bonuswheel == 2)
+                    || (matchtype == MatchType::Tour && g.game_values.tourstops[g.game_values.tourstopcurrent - 1].iBonusType != 0))
             {
-                self.mBonusWheelMenu.miBonusWheel.reset(false);
+                self.mBonusWheelMenu.miBonusWheel.reset(g, false);
                 self.mCurrentMenu = menu(self.mBonusWheelMenu);
             } else if matchtype != MatchType::SingleGame && matchtype != MatchType::QuickGame && matchtype != MatchType::MiniGame && matchtype != MatchType::NetGame {
                 self.mCurrentMenu = menu(self.mTournamentScoreboardMenu);
             } else if matchtype == MatchType::QuickGame {
                 //Reset back to main menu after quick game
                 self.mCurrentMenu = menu(self.mMainMenu);
-                self.mCurrentMenu.reset_menu();
+                self.mCurrentMenu.reset_menu(g);
             } else if matchtype == MatchType::NetGame {
                 self.mCurrentMenu = menu(self.mNetLobbyMenu);
-                self.mCurrentMenu.reset_menu();
-                game().netplay.joinSuccessful = false;
-                game().netplay.gameRunning = false;
+                self.mCurrentMenu.reset_menu(g);
+                g.netplay.joinSuccessful = false;
+                g.netplay.gameRunning = false;
             }
 
-            if game().game_values.matchtype == MatchType::World {
-                if game().game_values.gamemode.winningteam > -1 && game().game_values.tournamentwinner == -1 {
+            if g.game_values.matchtype == MatchType::World {
+                if g.game_values.gamemode.winningteam > -1 && g.game_values.tournamentwinner == -1 {
                     //Stage is completed
-                    let winningteam = game().game_values.gamemode.winningteam;
-                    self.mWorldMenu.miWorld.set_controlling_team(winningteam);
-                    self.mWorldMenu.miWorld.set_current_stage_to_completed(winningteam);
+                    let winningteam = g.game_values.gamemode.winningteam;
+                    self.mWorldMenu.miWorld.set_controlling_team(g, winningteam);
+                    self.mWorldMenu.miWorld.set_current_stage_to_completed(g, winningteam);
 
                     self.mWorldMenu.close_stage_start();
 
                     //Clear out the stored powerups after a game that had a winner
-                    if !game().game_values.worldskipscoreboard {
+                    if !g.game_values.worldskipscoreboard {
                         //Only clear out the stored powerup if we were allowed to use it in the game
-                        if game().game_values.gamemode.has_stored_powerups() {
+                        if g.game_values.gamemode.has_stored_powerups() {
                             for iPlayer in 0..MAX_PLAYERS as usize {
-                                game().game_values.storedpowerups[iPlayer] = -1;
+                                g.game_values.storedpowerups[iPlayer] = -1;
                             }
                         }
                     }
@@ -1586,126 +1597,127 @@ impl GameState for MenuState {
                     mCurrentMenu = mBonusWheelMenu;
                 }*/
 
-                crate::smw::gs_gameplay::update_score_board();
+                crate::smw::gs_gameplay::update_score_board(g);
 
                 //If we're suposed to skip the scoreboard, then reset back to the world map
-                if game().game_values.worldskipscoreboard {
+                if g.game_values.worldskipscoreboard {
                     self.mCurrentMenu = menu(self.mWorldMenu);
-                    self.mCurrentMenu.reset_menu();
+                    self.mCurrentMenu.reset_menu(g);
 
-                    game().game_values.worldskipscoreboard = false;
+                    g.game_values.worldskipscoreboard = false;
                 } else {
-                    let winningteam = game().game_values.gamemode.winningteam;
-                    self.mTournamentScoreboardMenu.miTournamentScoreboard.refresh_world_scores(winningteam);
+                    let winningteam = g.game_values.gamemode.winningteam;
+                    self.mTournamentScoreboardMenu.miTournamentScoreboard.refresh_world_scores(g, winningteam);
                 }
-            } else if game().game_values.matchtype == MatchType::Tour {
-                self.mTournamentScoreboardMenu.miTournamentScoreboard.refresh_tour_scores();
+            } else if g.game_values.matchtype == MatchType::Tour {
+                self.mTournamentScoreboardMenu.miTournamentScoreboard.refresh_tour_scores(g);
 
-                if game().game_values.tourstopcurrent < game().game_values.tourstops.len() {
-                    self.mTourStopMenu.miTourStop.refresh(game().game_values.tourstopcurrent as i16);
+                if g.game_values.tourstopcurrent < g.game_values.tourstops.len() {
+                    self.mTourStopMenu.miTourStop.refresh(g, g.game_values.tourstopcurrent as i16);
                 }
-            } else if game().game_values.matchtype == MatchType::Tournament {
+            } else if g.game_values.matchtype == MatchType::Tournament {
                 self.mTournamentScoreboardMenu.miTournamentScoreboard.stop_swirl();
-                if game().game_values.gamemode.winningteam > -1 {
-                    let winningteam = game().game_values.gamemode.winningteam;
-                    self.mTournamentScoreboardMenu.miTournamentScoreboard.refresh_tournament_scores(winningteam);
+                if g.game_values.gamemode.winningteam > -1 {
+                    let winningteam = g.game_values.gamemode.winningteam;
+                    self.mTournamentScoreboardMenu.miTournamentScoreboard.refresh_tournament_scores(g, winningteam);
 
-                    self.choose_next_tournament_control_team();
+                    self.choose_next_tournament_control_team(g);
                 }
             }
 
             //Reset game mode back to the current game mode in case we came from boss mode
-            game().game_values.gamemode = game().gamemodes[game().currentgamemode as usize];
+            g.game_values.gamemode = g.gamemodes[g.currentgamemode as usize];
 
             //Keep track if we entered the menu loop as part of a tournament, if we exit the tournament
             //we need to reset the menu music back to normal
-            let matchtype = game().game_values.matchtype;
+            let matchtype = g.game_values.matchtype;
             if matchtype != MatchType::SingleGame && matchtype != MatchType::QuickGame && matchtype != MatchType::MiniGame && matchtype != MatchType::NetGame {
                 self.fNeedMenuMusicReset = true;
             }
 
-            if game().game_values.music && game().game_values.tournamentwinner < 0 {
+            if g.game_values.music && g.game_values.tournamentwinner < 0 {
                 if matchtype == MatchType::SingleGame || matchtype == MatchType::QuickGame || matchtype == MatchType::MiniGame || matchtype == MatchType::NetGame {
-                    game().rm.backgroundmusic[2].play(false, false);
+                    g.rm.backgroundmusic[2].play(false, false);
                 } else if matchtype == MatchType::World {
-                    game().rm.backgroundmusic[5].play(false, false);
+                    g.rm.backgroundmusic[5].play(false, false);
                 } else {
-                    game().rm.backgroundmusic[3].play(false, false);
+                    g.rm.backgroundmusic[3].play(false, false);
                 }
             }
 
             if matchtype != MatchType::World && matchtype != MatchType::QuickGame && matchtype != MatchType::NetGame {
                 if self.mCurrentMenu == menu(self.mGameSettingsMenu) || self.mCurrentMenu == menu(self.mTournamentScoreboardMenu) {
-                    self.mGameSettingsMenu.miMapField.load_current_map();
+                    self.mGameSettingsMenu.miMapField.load_current_map(g);
                 }
             }
 
             // On return from a game, refresh room list
-            if game().netplay.active {
-                if game().netplay.currentRoom.roomID != 0 {
-                    game().netplay.client.send_leave_room_message();
-                    game().netplay.currentRoom.roomID = 0;
-                    game().netplay.joinSuccessful = false;
-                    game().netplay.gameRunning = false;
+            if g.netplay.active {
+                if g.netplay.currentRoom.roomID != 0 {
+                    gp.netplay.client.send_leave_room_message(g);
+                    g.netplay.currentRoom.roomID = 0;
+                    g.netplay.joinSuccessful = false;
+                    g.netplay.gameRunning = false;
                 }
-                game().netplay.client.request_room_list();
+                gp.netplay.client.request_room_list(g);
             }
         }
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
-            if game().netplay.active {
-                game().netplay.client.update();
+            if g.netplay.active {
+                gp.netplay.client.update(g);
             }
 
             //Reset the keys that were down the last frame
-            game().game_values.playerInput.clear_pressed_keys(1);
+            g.game_values.playerInput.clear_pressed_keys(1);
 
             let mut fGenerateMapThumbs = false;
 
             //handle messages
             #[cfg(target_os = "emscripten")]
-            game().get().frame_events.clear();
+            g.frame_events.clear();
             while let Some(input) = smw_sdl2::events::poll_input() {
                 #[cfg(target_os = "emscripten")]
-                game().get().frame_events.push(input.clone());
+                g.frame_events.push(input.clone());
                 if input.event == InputEvent::Quit {
-                    self.exit();
+                    self.exit(g);
                     return;
                 } else if let InputEvent::Key { key, mods, down: true, .. } = input.event {
                     let sym = key.0;
                     if sym == SDL_KeyCode::SDLK_F1 as i32 {
-                        game().game_values.showfps = !game().game_values.showfps;
+                        g.game_values.showfps = !g.game_values.showfps;
                     }
 
                     if (mods as u32) & (SDL_Keymod::KMOD_LALT as u32 | SDL_Keymod::KMOD_RALT as u32) != 0 {
                         //ALT + F4 = close window
                         if sym == SDL_KeyCode::SDLK_F4 as i32 {
-                            self.exit();
+                            self.exit(g);
                             return;
                         }
                         //ALT + Enter = fullscreen/windowed toggle
                         else if sym == SDL_KeyCode::SDLK_RETURN as i32 {
-                            game().game_values.fullscreen = !game().game_values.fullscreen;
-                            gfx_changefullscreen(game().game_values.fullscreen);
-                            game().blitdest = game().screen;
+                            g.game_values.fullscreen = !g.game_values.fullscreen;
+                            gfx_changefullscreen(g, g.game_values.fullscreen);
+                            g.blitdest = g.screen;
 
                             continue;
                         }
                     }
 
                     if sym == SDL_KeyCode::SDLK_INSERT as i32 {
-                        gfx_take_screenshot();
+                        gfx_take_screenshot(g);
                     }
                 }
 
-                game().game_values.playerInput.update_input(&input, 1);
+                gp.game_values.playerInput.update_input(g, &input, 1);
 
                 if let Some((x, y)) = input.event.tap() {
-                    if AppState::Menu == game().game_values.appstate {
-                        let code = self.mCurrentMenu.mouse_click(x, y);
-                        if self.handle_menu_code(code, &mut fGenerateMapThumbs) {
+                    if AppState::Menu == g.game_values.appstate {
+                        let code = self.mCurrentMenu.mouse_click(g, x, y);
+                        if self.handle_menu_code(g, code, &mut fGenerateMapThumbs) {
                             return;
                         }
                     }
@@ -1713,37 +1725,37 @@ impl GameState for MenuState {
             }
 
             //If AI is controlling the tournament menu, select the options
-            if game().game_values.matchtype == MatchType::Tournament && self.iTournamentAITimer > 0 && self.mCurrentMenu == menu(self.mGameSettingsMenu) && self.mGameSettingsMenu.is_on_start_btn() {
+            if g.game_values.matchtype == MatchType::Tournament && self.iTournamentAITimer > 0 && self.mCurrentMenu == menu(self.mGameSettingsMenu) && self.mGameSettingsMenu.is_on_start_btn() {
                 self.iTournamentAITimer -= 1;
                 if self.iTournamentAITimer == 0 {
                     self.iTournamentAIStep += 1;
 
                     if self.iTournamentAIStep == 1 {
-                        self.mGameSettingsMenu.miMapField.choose_random_map();
+                        self.mGameSettingsMenu.miMapField.choose_random_map(g);
 
                         self.iTournamentAITimer = 60;
                     } else if self.iTournamentAIStep == 2 {
-                        game().currentgamemode = RANDOM_INT(GAMEMODE_LAST) as i16;
-                        game().game_values.gamemode = game().gamemodes[game().currentgamemode as usize];
-                        self.mGameSettingsMenu.game_mode_changed(game().currentgamemode);
-                        game().game_values.gamemode = game().gamemodes[self.mGameSettingsMenu.get_current_game_mode_id() as usize];
+                        g.currentgamemode = RANDOM_INT(GAMEMODE_LAST) as i16;
+                        g.game_values.gamemode = g.gamemodes[g.currentgamemode as usize];
+                        self.mGameSettingsMenu.game_mode_changed(g.currentgamemode);
+                        g.game_values.gamemode = g.gamemodes[self.mGameSettingsMenu.get_current_game_mode_id() as usize];
 
                         self.iTournamentAITimer = 60;
                     } else if self.iTournamentAIStep == 3 {
                         //Choose a goal from the lower values for a quicker game
                         let iRandOption = (RANDOM_INT(6) + 1) as i16;
-                        let goal = game().game_values.gamemode.get_options()[iRandOption as usize].iValue;
-                        game().game_values.gamemode.goal = goal;
+                        let goal = g.game_values.gamemode.get_options()[iRandOption as usize].iValue;
+                        g.game_values.gamemode.goal = goal;
 
-                        let modeGoal = game().gamemodes[game().currentgamemode as usize].goal;
-                        self.mGameSettingsMenu.miGoalField[game().currentgamemode as usize].set_current_value(modeGoal);
+                        let modeGoal = g.gamemodes[g.currentgamemode as usize].goal;
+                        self.mGameSettingsMenu.miGoalField[g.currentgamemode as usize].set_current_value(modeGoal);
 
-                        self.mModeOptionsMenu.set_random_game_mode_settings(game().game_values.gamemode.gamemode as i16);
+                        self.mModeOptionsMenu.set_random_game_mode_settings(g, g.game_values.gamemode.gamemode as i16);
 
                         self.iTournamentAITimer = 60;
                     } else if self.iTournamentAIStep == 4 {
                         self.iTournamentAIStep = 0;
-                        self.start_game();
+                        self.start_game(g);
                     }
                 }
             }
@@ -1755,10 +1767,10 @@ impl GameState for MenuState {
             }
             */
 
-            if AppState::Menu == game().game_values.appstate {
-                let code = self.mCurrentMenu.send_input(Ptr::from_mut(&mut game().game_values.playerInput));
+            if AppState::Menu == g.game_values.appstate {
+                let code = self.mCurrentMenu.send_input(g, Ptr::from_mut(&mut gp.game_values.playerInput));
 
-                if self.handle_menu_code(code, &mut fGenerateMapThumbs) {
+                if self.handle_menu_code(g, code, &mut fGenerateMapThumbs) {
                     return;
                 }
             }
@@ -1767,25 +1779,25 @@ impl GameState for MenuState {
 
             //Don't draw backdrop for world
             if self.mCurrentMenu != menu(self.mWorldMenu) {
-                game().rm.menu_backdrop.draw(0, 0);
+                gp.rm.menu_backdrop.draw(g, 0, 0);
             } else {
-                crate::common::gfx::blit::fill_rect(game().screen, std::ptr::null(), SDL_MapRGB((*game().screen).format, 0, 0, 0));
+                crate::common::gfx::blit::fill_rect(g.screen, std::ptr::null(), SDL_MapRGB((*g.screen).format, 0, 0, 0));
             }
 
-            self.mCurrentMenu.update();
-            self.mCurrentMenu.draw();
+            self.mCurrentMenu.update(g);
+            self.mCurrentMenu.draw(g);
 
             if self.iDisplayError > DISPLAY_ERROR_NONE {
-                game().rm.spr_selectfield.draw_src(70, 400, &rect(0, 0, 484, 32));
-                game().rm.spr_selectfield.draw_src(554, 400, &rect(496, 0, 16, 32));
+                gp.rm.spr_selectfield.draw_src(g, 70, 400, &rect(0, 0, 484, 32));
+                gp.rm.spr_selectfield.draw_src(g, 554, 400, &rect(496, 0, 16, 32));
 
                 if self.iDisplayError == DISPLAY_ERROR_READ_TOUR_FILE {
-                    game().rm.menu_font_large.draw_centered(320, 405, "Error Reading Tour File!");
+                    g.rm.menu_font_large.draw_centered(320, 405, "Error Reading Tour File!");
                 }
                 if self.iDisplayError == DISPLAY_ERROR_READ_WORLD_FILE {
-                    game().rm.menu_font_large.draw_centered(320, 405, "Error Reading World File!");
+                    g.rm.menu_font_large.draw_centered(320, 405, "Error Reading World File!");
                 } else if self.iDisplayError == DISPLAY_ERROR_MAP_FILTER {
-                    game().rm.menu_font_large.draw_centered(320, 405, "No Maps Meet All Filter Conditions!");
+                    g.rm.menu_font_large.draw_centered(320, 405, "No Maps Meet All Filter Conditions!");
                 }
 
                 self.iDisplayErrorTimer -= 1;
@@ -1794,78 +1806,78 @@ impl GameState for MenuState {
                 }
             }
 
-            if game().game_values.screenfadespeed != 0 {
-                game().game_values.screenfade += game().game_values.screenfadespeed;
+            if g.game_values.screenfadespeed != 0 {
+                g.game_values.screenfade += g.game_values.screenfadespeed;
 
-                if game().game_values.screenfade <= 0 {
-                    game().game_values.screenfadespeed = 0;
-                    game().game_values.screenfade = 0;
-                } else if game().game_values.screenfade >= 255 {
-                    game().game_values.screenfadespeed = 0;
-                    game().game_values.screenfade = 255;
+                if g.game_values.screenfade <= 0 {
+                    g.game_values.screenfadespeed = 0;
+                    g.game_values.screenfade = 0;
+                } else if g.game_values.screenfade >= 255 {
+                    g.game_values.screenfadespeed = 0;
+                    g.game_values.screenfade = 255;
                 }
             }
 
-            if game().game_values.screenfade > 0 {
-                game().rm.menu_shade.setalpha(game().game_values.screenfade as u8);
-                game().rm.menu_shade.draw(0, 0);
+            if g.game_values.screenfade > 0 {
+                g.rm.menu_shade.setalpha(g.game_values.screenfade as u8);
+                gp.rm.menu_shade.draw(g, 0, 0);
             }
 
-            if game().game_values.screenfade == 255 {
-                if AppState::StartGame == game().game_values.appstate {
-                    self.enter_gameplay();
+            if g.game_values.screenfade == 255 {
+                if AppState::StartGame == g.game_values.appstate {
+                    self.enter_gameplay(g);
                     return;
-                } else if AppState::StartWorld == game().game_values.appstate {
+                } else if AppState::StartWorld == g.game_values.appstate {
                     //Fade to world match type
-                    game().game_values.screenfadespeed = -8;
+                    g.game_values.screenfadespeed = -8;
 
                     self.mCurrentMenu = menu(self.mWorldMenu);
-                    self.mCurrentMenu.reset_menu();
+                    self.mCurrentMenu.reset_menu(g);
 
-                    game().rm.backgroundmusic[2].stop();
-                    let worldMusic = game().worldmusiclist.current_music(game().g_worldmap.get_music_category(), game().g_worldmap.get_world_name()).clone();
-                    game().rm.backgroundmusic[5] = sfxMusic::from_file(&worldMusic).unwrap_or_else(|e| std::panic::panic_any(e));
-                    game().rm.backgroundmusic[5].play(false, false);
+                    g.rm.backgroundmusic[2].stop();
+                    let worldMusic = g.worldmusiclist.current_music(g.g_worldmap.get_music_category(), g.g_worldmap.get_world_name()).clone();
+                    g.rm.backgroundmusic[5] = sfxMusic::from_file(&worldMusic).unwrap_or_else(|e| std::panic::panic_any(e));
+                    g.rm.backgroundmusic[5].play(false, false);
                     self.fNeedMenuMusicReset = true;
 
-                    self.mWorldMenu.miWorld.display_team_control_announcement();
+                    self.mWorldMenu.miWorld.display_team_control_announcement(g);
 
-                    game().game_values.appstate = AppState::Menu;
+                    g.game_values.appstate = AppState::Menu;
                 }
             }
 
             if fGenerateMapThumbs {
-                game().rm.menu_dialog.draw_src(160, 176, &rect(0, 0, 160, 64));
-                game().rm.menu_dialog.draw_src(App::screenWidth / 2, 176, &rect(352, 0, 160, 64));
-                game().rm.menu_dialog.draw_src(160, 240, &rect(0, 416, 160, 64));
-                game().rm.menu_dialog.draw_src(App::screenWidth / 2, App::screenHeight / 2, &rect(352, 416, 160, 64));
-                game().rm.menu_font_large.draw_centered(App::screenWidth / 2, 215, "Refreshing Map Thumbnails");
-                game().rm.menu_font_large.draw_centered(App::screenWidth / 2, 245, "Please Wait...");
+                gp.rm.menu_dialog.draw_src(g, 160, 176, &rect(0, 0, 160, 64));
+                gp.rm.menu_dialog.draw_src(g, App::screenWidth / 2, 176, &rect(352, 0, 160, 64));
+                gp.rm.menu_dialog.draw_src(g, 160, 240, &rect(0, 416, 160, 64));
+                gp.rm.menu_dialog.draw_src(g, App::screenWidth / 2, App::screenHeight / 2, &rect(352, 416, 160, 64));
+                g.rm.menu_font_large.draw_centered(App::screenWidth / 2, 215, "Refreshing Map Thumbnails");
+                g.rm.menu_font_large.draw_centered(App::screenWidth / 2, 245, "Please Wait...");
             }
 
             if fGenerateMapThumbs {
-                game().rm.backgroundmusic[2].toggle_pause();
+                g.rm.backgroundmusic[2].toggle_pause();
 
                 //Reload map auto filters from live map files (don't use the cache)
-                game().maplist.reload_map_auto_filters();
+                gp.maplist.reload_map_auto_filters(g);
 
                 //Write out all the map thumbnails for the map browser and filter editor
-                let mut itr = game().maplist.get_iterator_at(0, false);
+                let mut itr = g.maplist.get_iterator_at(0, false);
 
-                let iMapCount = game().maplist.count() as i16;
+                let iMapCount = g.maplist.count() as i16;
                 for _iMap in 0..iMapCount {
-                    let filename = game().maplist.node_at(itr).filename.clone();
+                    let filename = g.maplist.node_at(itr).filename.clone();
                     let mut szThumbnail = String::from("maps/cache/");
                     szThumbnail += &get_name_from_file_name(&filename, false);
                     szThumbnail += ".png";
 
-                    game().g_map.load_map(&filename, read_type_preview);
-                    game().g_map.save_thumbnail(&convert_path(&szThumbnail), false);
+                    g.g_map.load_map(&filename, read_type_preview);
+                    gp.get().g_map.save_thumbnail(g, &convert_path(gp.get(), &szThumbnail), false);
 
                     itr += 1;
                 }
 
-                game().rm.backgroundmusic[2].toggle_pause();
+                g.rm.backgroundmusic[2].toggle_pause();
             }
         }
     }

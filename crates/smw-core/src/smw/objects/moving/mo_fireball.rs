@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_Fireball.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::Spotlight;
 use crate::common::gameplay_styles::TeamCollisionStyle;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -30,7 +31,7 @@ impl_base!(MO_Fireball => io_moving_object: IO_MovingObject);
 
 impl MO_Fireball {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, moveToRight: bool, aniSpeed: i16, iGlobalID: i16, teamID: i16, iColorID: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, moveToRight: bool, aniSpeed: i16, iGlobalID: i16, teamID: i16, iColorID: i16) -> Self {
         let mut o = MO_Fireball {
             io_moving_object: IO_MovingObject::new(
                 nspr,
@@ -70,7 +71,7 @@ impl MO_Fireball {
 
         o.state = 1;
 
-        o.ttl = unsafe { game().game_values.fireballttl };
+        o.ttl = unsafe { g.game_values.fireballttl };
 
         o.sSpotlight = Ptr::null();
         o
@@ -83,16 +84,17 @@ impl CObjectTrait for MO_Fireball {
         Some(self)
     }
 
-    fn update(&mut self) {
-        io_moving_object_update(self);
+    fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        io_moving_object_update(g, self);
 
         unsafe {
             self.ttl -= 1;
             if self.ttl <= 0 {
-                removeifprojectile(self.as_mo_ptr(), true, true);
-            } else if game().game_values.spotlights {
+                removeifprojectile(g, self.as_mo_ptr(), true, true);
+            } else if g.game_values.spotlights {
                 if self.sSpotlight.is_null() {
-                    self.sSpotlight = game().spotlightManager.add_spotlight(
+                    self.sSpotlight = gp.spotlightManager.add_spotlight(g, 
                         (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16,
                         (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16,
                         3,
@@ -108,15 +110,15 @@ impl CObjectTrait for MO_Fireball {
         }
     }
 
-    fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         unsafe {
-            if self.iPlayerID != player.get_global_id() && (game().game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.get_team_id()) {
+            if self.iPlayerID != player.get_global_id() && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.get_team_id()) {
                 if !player.is_shielded() {
-                    removeifprojectile(self.as_mo_ptr(), false, false);
+                    removeifprojectile(g, self.as_mo_ptr(), false, false);
 
                     if !player.is_invincible() && !player.shyguy {
                         // Find the player that shot this fireball so we can attribute a kill
-                        player_killed_player(self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Fireball, false, false);
+                        player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Fireball, false, false);
                         return true;
                     }
                 }
@@ -126,8 +128,8 @@ impl CObjectTrait for MO_Fireball {
         false
     }
 
-    fn draw(&mut self) {
-        self.spr.draw_src(
+    fn draw(&mut self, g: &mut Game) {
+        self.spr.draw_src(g, 
             self.ix as i32 - self.collisionOffsetX as i32,
             self.iy as i32 - self.collisionOffsetY as i32,
             &SDL_Rect {

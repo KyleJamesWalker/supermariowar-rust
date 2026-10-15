@@ -1,5 +1,6 @@
 //! Port of src/smw/player_components/PlayerInvincibility.cpp
 
+use crate::game::Game;
 use crate::common::gfx::gfx_palette::{invincibility_1, invincibility_2, invincibility_3, normal, PlayerPalette};
 use crate::globals::*;
 use crate::smw::player::CPlayer;
@@ -27,7 +28,7 @@ impl PlayerInvincibility {
         self.timer = 0;
     }
 
-    pub fn turn_on(&mut self, player: &mut CPlayer) {
+    pub fn turn_on(&mut self, g: &mut Game, player: &mut CPlayer) {
         unsafe {
             self.invincible = true;
             self.timer = 0;
@@ -35,13 +36,13 @@ impl PlayerInvincibility {
 
             //Stop the invincible music if a player is already invincible
             //(we don't want two invincible music sounds playing at the same time)
-            game().rm.sfx_invinciblemusic.stop();
+            g.rm.sfx_invinciblemusic.stop();
 
-            if !game().game_values.gamemode.gameover {
-                game().game_values.flags.playinvinciblesound = true;
+            if !g.game_values.gamemode.gameover {
+                g.game_values.flags.playinvinciblesound = true;
 
-                if game().game_values.music && game().game_values.sound {
-                    game().rm.backgroundmusic[0].stop();
+                if g.game_values.music && g.game_values.sound {
+                    g.rm.backgroundmusic[0].stop();
                 }
             }
         }

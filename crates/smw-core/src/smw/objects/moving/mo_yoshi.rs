@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_Yoshi.cpp
 
+use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -40,14 +41,14 @@ impl MO_Yoshi {
 
         o.color = iColor;
 
-        o.place_yoshi();
+        o.place_yoshi(game().get());
 
         o.fObjectCollidesWithMap = false;
         o
     }
 
-    pub fn place_yoshi(&mut self) {
-        if crate::smw::net_random::place_event(self.iNetworkID, 0) {
+    pub fn place_yoshi(&mut self, g: &mut Game) {
+        if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
             return;
         }
 
@@ -64,19 +65,19 @@ impl MO_Yoshi {
                 let iyt: i16 = (iy / TILESIZE) as i16;
                 let iyb: i16 = ((iy + ih) / TILESIZE) as i16;
 
-                let upperLeft: i32 = game().g_map.map(ixl as i32, iyt as i32);
-                let upperRight: i32 = game().g_map.map(ixr as i32, iyt as i32);
-                let lowerLeft: i32 = game().g_map.map(ixl as i32, iyb as i32);
-                let lowerRight: i32 = game().g_map.map(ixr as i32, iyb as i32);
+                let upperLeft: i32 = g.g_map.map(ixl as i32, iyt as i32);
+                let upperRight: i32 = g.g_map.map(ixr as i32, iyt as i32);
+                let lowerLeft: i32 = g.g_map.map(ixl as i32, iyb as i32);
+                let lowerRight: i32 = g.g_map.map(ixr as i32, iyb as i32);
 
                 if (upperLeft & tile_flag_solid) == 0
                     && (upperRight & tile_flag_solid) == 0
                     && (lowerLeft & tile_flag_solid) == 0
                     && (lowerRight & tile_flag_solid) == 0
-                    && game().g_map.block(ixl, iyt).is_null()
-                    && game().g_map.block(ixr, iyt).is_null()
-                    && game().g_map.block(ixl, iyb).is_null()
-                    && game().g_map.block(ixr, iyb).is_null()
+                    && g.g_map.block(ixl, iyt).is_null()
+                    && g.g_map.block(ixr, iyt).is_null()
+                    && g.g_map.block(ixl, iyb).is_null()
+                    && g.g_map.block(ixr, iyb).is_null()
                 {
                     // spawn on ground, but not on spikes
                     let mut iDeathY: i16 = ((iy + ih) / TILESIZE) as i16;
@@ -84,20 +85,20 @@ impl MO_Yoshi {
                     let iDeathX2: i16 = ((ix + iw) / TILESIZE) as i16;
 
                     while (iDeathY as i32) < MAPHEIGHT {
-                        let ttLeftTile: i32 = game().g_map.map(iDeathX1 as i32, iDeathY as i32);
-                        let ttRightTile: i32 = game().g_map.map(iDeathX2 as i32, iDeathY as i32);
+                        let ttLeftTile: i32 = g.g_map.map(iDeathX1 as i32, iDeathY as i32);
+                        let ttRightTile: i32 = g.g_map.map(iDeathX2 as i32, iDeathY as i32);
 
                         if (((ttLeftTile & tile_flag_solid) != 0 || (ttLeftTile & tile_flag_solid_on_top) != 0) && (ttLeftTile & tile_flag_death_on_top) == 0)
                             || (((ttRightTile & tile_flag_solid) != 0 || (ttRightTile & tile_flag_solid_on_top) != 0) && (ttRightTile & tile_flag_death_on_top) == 0)
-                            || !game().g_map.block(iDeathX1, iDeathY).is_null()
-                            || !game().g_map.block(iDeathX2, iDeathY).is_null()
+                            || !g.g_map.block(iDeathX1, iDeathY).is_null()
+                            || !g.g_map.block(iDeathX2, iDeathY).is_null()
                         {
                             let top: i16 = ((((iDeathY as i32) << 5) - ih) / TILESIZE) as i16;
 
-                            if game().g_map.spawn(1, iDeathX1, top)
-                                && game().g_map.spawn(1, iDeathX2, top)
-                                && game().g_map.spawn(1, iDeathX1, iDeathY - 1)
-                                && game().g_map.spawn(1, iDeathX2, iDeathY - 1)
+                            if g.g_map.spawn(1, iDeathX1, top)
+                                && g.g_map.spawn(1, iDeathX2, top)
+                                && g.g_map.spawn(1, iDeathX1, iDeathY - 1)
+                                && g.g_map.spawn(1, iDeathX2, iDeathY - 1)
                             {
                                 let ix = self.ix;
                                 self.set_xi(ix);
@@ -131,26 +132,27 @@ impl CObjectTrait for MO_Yoshi {
         Some(self)
     }
 
-    fn draw(&mut self) {
-        io_moving_object_draw(self);
+    fn draw(&mut self, g: &mut Game) {
+        io_moving_object_draw(g, self);
     }
 
-    fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         unsafe {
             if !player.carriedItem.is_null() && player.carriedItem.get_moving_object_type() == movingobject_egg {
                 let mut egg: Ptr<CO_Egg> = Ptr::from_mut(player.carriedItem.as_any().downcast_mut::<CO_Egg>().unwrap());
 
                 if egg.color == self.color {
-                    if !game().game_values.gamemode.gameover {
-                        player.score().adjust_score(1);
-                        game().game_values.gamemode.check_winner(player);
+                    if !g.game_values.gamemode.gameover {
+                        player.score().adjust_score(g, 1);
+                        gp.game_values.gamemode.check_winner(g, player);
                     }
 
-                    self.place_yoshi();
+                    self.place_yoshi(g);
 
-                    egg.place_egg();
+                    egg.place_egg(g);
 
-                    if_sound_on_play(&mut game().rm.sfx_yoshi);
+                    if_sound_on_play(g, &mut gp.rm.sfx_yoshi);
                 }
             }
 
@@ -158,16 +160,17 @@ impl CObjectTrait for MO_Yoshi {
         }
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         self.animate();
 
         self.timer += 1;
         if self.timer > 2000 {
-            self.place_yoshi();
+            self.place_yoshi(g);
         }
     }
 
-    fn collide_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) {
+    fn collide_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) {
+        let mut gp = g.ptr();
         unsafe {
             if object.get_moving_object_type() == movingobject_egg {
                 let mut egg: Ptr<CO_Egg> = Ptr::from_mut(object.as_any().downcast_mut::<CO_Egg>().unwrap());
@@ -175,15 +178,15 @@ impl CObjectTrait for MO_Yoshi {
                 if egg.color == self.color && !egg.owner_throw.is_null() {
                     let mut player: Ptr<CPlayer> = egg.owner_throw;
 
-                    if !game().game_values.gamemode.gameover {
-                        player.score().adjust_score(1);
-                        game().game_values.gamemode.check_winner(player);
+                    if !g.game_values.gamemode.gameover {
+                        player.score().adjust_score(g, 1);
+                        gp.game_values.gamemode.check_winner(g, player);
                     }
 
-                    self.place_yoshi();
-                    egg.place_egg();
+                    self.place_yoshi(g);
+                    egg.place_egg(g);
 
-                    if_sound_on_play(&mut game().rm.sfx_yoshi);
+                    if_sound_on_play(g, &mut gp.rm.sfx_yoshi);
                 }
             }
         }

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/walkingenemy/WE_Goomba.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::{EC_Corpse, EC_FallingObject};
 use crate::common::game_mode::game_mode_stomp;
 use crate::common::game_values::if_sound_on_play;
@@ -53,36 +54,37 @@ impl CObjectTrait for MO_Goomba {
         Some(self)
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         // if frozen, just draw shell, not entire koopa
         if self.frozen {
             unsafe {
                 let x = self.ix as i32 - self.collisionOffsetX as i32 + self.iw as i32 - 32;
                 let y = self.iy as i32 - self.collisionOffsetY as i32 + self.ih as i32 - 32;
-                game().rm.spr_goomba.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
-                game().rm.spr_iceblock.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
+                gp.rm.spr_goomba.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
+                gp.rm.spr_iceblock.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
             }
         } else {
-            mo_walking_enemy_draw(self);
+            mo_walking_enemy_draw(g, self);
         }
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         if self.velx < 0.0f32 {
             self.animationOffsetY = self.ih;
         } else {
             self.animationOffsetY = 0;
         }
 
-        mo_walking_enemy_update(self);
+        mo_walking_enemy_update(g, self);
     }
 
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
-        mo_walking_enemy_collide_player(self, player)
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+        mo_walking_enemy_collide_player(g, self, player)
     }
 
-    fn collide_object(&mut self, object: Ptr<dyn IO_MovingObjectTrait>) {
-        mo_walking_enemy_collide_object(self, object)
+    fn collide_object(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) {
+        mo_walking_enemy_collide_object(g, self, object)
     }
 }
 
@@ -92,15 +94,15 @@ impl IO_MovingObjectTrait for MO_Goomba {
         Some(self)
     }
 
-    fn die(&mut self) {
+    fn die(&mut self, g: &mut Game) {
         if self.frozen {
-            self.shatter_die();
+            self.shatter_die(g);
             return;
         }
 
         self.dead = true;
         unsafe {
-            game().eyecandy[2].emplace(EC_FallingObject::new(Ptr::from_mut(&mut game().rm.spr_goombadeadflying), self.ix, self.iy, 0.0f32, -VELJUMP / 2.0f32, 1, 0, 0, 0, 0, 0));
+            g.eyecandy[2].emplace(EC_FallingObject::new(Ptr::from_mut(&mut g.rm.spr_goombadeadflying), self.ix, self.iy, 0.0f32, -VELJUMP / 2.0f32, 1, 0, 0, 0, 0, 0));
         }
     }
 }
@@ -108,17 +110,18 @@ impl IO_MovingObjectTrait for MO_Goomba {
 impl MO_WalkingEnemyTrait for MO_Goomba {
     crate::impl_walking_enemy_plumbing!();
 
-    fn hittop_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    fn hittop_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         let mut player = player;
         unsafe {
             player.set_yi((self.iy as i32 - PH - 1) as i16);
             player.bouncejump();
             let p = player;
-            player.collisions.checktop(p.get());
+            player.collisions.checktop(g, p.get());
             player.platform = Ptr::null();
 
-            if game().game_values.gamemode.gamemode == game_mode_stomp && !game().game_values.gamemode.gameover {
-                player.score().adjust_score(1);
+            if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
+                player.score().adjust_score(g, 1);
             }
 
             if self.fBouncing {
@@ -139,28 +142,28 @@ impl MO_WalkingEnemyTrait for MO_Goomba {
                 self.drawframe = 0;
 
                 self.animationOffsetY = if self.velx > 0.0f32 { 0 } else { self.ih };
-                self.spr = Ptr::from_mut(&mut game().rm.spr_goomba);
+                self.spr = Ptr::from_mut(&mut g.rm.spr_goomba);
             } else {
                 self.dead = true;
 
                 let killStyle = self.killStyle;
-                player.add_killer_award(Ptr::null(), killStyle);
+                player.add_killer_award(g, Ptr::null(), killStyle);
 
-                game().eyecandy[0].emplace(EC_Corpse::new(
-                    Ptr::from_mut(&mut game().rm.spr_goombadead),
+                g.eyecandy[0].emplace(EC_Corpse::new(
+                    Ptr::from_mut(&mut g.rm.spr_goombadead),
                     (self.ix as i32 - self.collisionOffsetX as i32) as f32,
                     (self.iy as i32 + self.collisionHeight as i32 - 32) as f32,
                     0,
                 ));
             }
 
-            if_sound_on_play(&mut game().rm.sfx_mip);
+            if_sound_on_play(g, &mut gp.rm.sfx_mip);
         }
 
         false
     }
 
     fn die_and_drop_shell(&mut self, _fBounce: bool, _fFlip: bool) {
-        self.die();
+        self.die(game().get());
     }
 }

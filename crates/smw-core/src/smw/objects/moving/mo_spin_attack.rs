@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_SpinAttack.cpp
 
+use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::global_constants::*;
@@ -51,12 +52,12 @@ impl CObjectTrait for MO_SpinAttack {
         Some(self)
     }
 
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         if self.iTimer > 11 {
             return false;
         }
 
-        mo_attack_zone_collide_player(self, player)
+        mo_attack_zone_collide_player(g, self, player)
     }
 
     /*
@@ -69,9 +70,9 @@ impl CObjectTrait for MO_SpinAttack {
             }
     }
     */
-    fn draw(&mut self) {}
+    fn draw(&mut self, g: &mut Game) {}
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         mo_attack_zone_update(self);
 
         if self.iTimer <= 11 {
@@ -79,7 +80,7 @@ impl CObjectTrait for MO_SpinAttack {
         }
 
         unsafe {
-            let owner = get_player_from_global_id(self.iPlayerID);
+            let owner = get_player_from_global_id(g, self.iPlayerID);
 
             if !owner.is_null() {
                 // Move to the owner
@@ -127,13 +128,13 @@ impl CObjectTrait for MO_SpinAttack {
                 let mut bottomrightblock: Ptr<dyn IO_BlockTrait> = Ptr::null();
 
                 if iTop >= 0 && iTop < 15 {
-                    topleftblock = game().g_map.block(iLeft, iTop);
-                    toprightblock = game().g_map.block(iRight, iTop);
+                    topleftblock = g.g_map.block(iLeft, iTop);
+                    toprightblock = g.g_map.block(iRight, iTop);
                 }
 
                 if iBottom >= 0 && iBottom < 15 {
-                    bottomleftblock = game().g_map.block(iLeft, iBottom);
-                    bottomrightblock = game().g_map.block(iRight, iBottom);
+                    bottomleftblock = g.g_map.block(iLeft, iBottom);
+                    bottomrightblock = g.g_map.block(iRight, iBottom);
                 }
 
                 let mut fHitBlock = false;
@@ -162,7 +163,8 @@ impl CObjectTrait for MO_SpinAttack {
         }
     }
 
-    fn collide_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) {
+    fn collide_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) {
+        let mut gp = g.ptr();
         if self.dead || self.iTimer > 11 {
             return;
         }
@@ -175,32 +177,32 @@ impl CObjectTrait for MO_SpinAttack {
                     let shell = object.as_any().downcast_mut::<CO_Shell>().unwrap();
 
                     if shell.frozen {
-                        shell.shatter_die();
+                        shell.shatter_die(g);
                     } else {
-                        shell.flip();
-                        if_sound_on_play(&mut game().rm.sfx_kicksound);
+                        shell.flip(g);
+                        if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
                     }
 
-                    self.die();
+                    self.die(g);
                 } else if r#type == movingobject_throwblock {
                     let block = object.as_any().downcast_mut::<CO_ThrowBlock>().unwrap();
 
                     if block.frozen {
-                        block.shatter_die();
+                        block.shatter_die(g);
                     } else if block.owner.is_null() || block.owner.globalID != self.iPlayerID {
-                        block.die();
-                        if_sound_on_play(&mut game().rm.sfx_kicksound);
-                        self.die();
+                        block.die(g);
+                        if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
+                        self.die(g);
                     }
                 } else if r#type == movingobject_throwbox {
                     let r#box = object.as_any().downcast_mut::<CO_ThrowBox>().unwrap();
 
                     if r#box.frozen {
-                        r#box.shatter_die();
+                        r#box.shatter_die(g);
                     } else if r#box.owner.is_null() || r#box.owner.globalID != self.iPlayerID {
-                        r#box.die();
-                        if_sound_on_play(&mut game().rm.sfx_kicksound);
-                        self.die();
+                        r#box.die(g);
+                        if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
+                        self.die(g);
                     }
                 }
             }
@@ -211,7 +213,7 @@ impl CObjectTrait for MO_SpinAttack {
 impl IO_MovingObjectTrait for MO_SpinAttack {
     crate::impl_io_moving_object_plumbing!();
 
-    fn die(&mut self) {
+    fn die(&mut self, g: &mut Game) {
         mo_attack_zone_die(self)
     }
 }

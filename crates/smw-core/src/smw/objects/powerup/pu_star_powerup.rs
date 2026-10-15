@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_StarPowerup.cpp
 
+use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::CObjectTrait;
@@ -39,21 +40,21 @@ impl CObjectTrait for PU_StarPowerup {
     fn as_io_moving_object(&mut self) -> Option<&mut dyn IO_MovingObjectTrait> {
         Some(self)
     }
-    fn draw(&mut self) {
-        mo_powerup_draw(self)
+    fn draw(&mut self, g: &mut Game) {
+        mo_powerup_draw(g, self)
     }
-    fn update(&mut self) {
-        mo_powerup_update(self)
+    fn update(&mut self, g: &mut Game) {
+        mo_powerup_update(g, self)
     }
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         let mut player = player;
         if self.state > 0 {
             self.dead = true;
 
             if !player.is_invincible() && !player.shyguy {
-                player.makeinvincible();
+                player.makeinvincible(g);
             } else {
-                player.set_stored_powerup(PowerupType::Star as i16);
+                player.set_stored_powerup(g, PowerupType::Star as i16);
             }
         }
 

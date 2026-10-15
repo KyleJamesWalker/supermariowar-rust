@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_BowserFire.cpp
 
+use crate::game::Game;
 use crate::common::game::App;
 use crate::common::gameplay_styles::TeamCollisionStyle;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -46,11 +47,11 @@ impl OMO_BowserFire {
 impl CObjectTrait for OMO_BowserFire {
     crate::impl_cobject_plumbing!();
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         io_over_map_object_update(self);
 
         if (self.velx < 0.0 && (self.ix as i32) < -(self.iw as i32)) || (self.velx > 0.0 && self.ix as i32 > App::screenWidth) {
-            let mut player: Ptr<CPlayer> = get_player_from_global_id(self.iPlayerID);
+            let mut player: Ptr<CPlayer> = get_player_from_global_id(g, self.iPlayerID);
 
             if !player.is_null() {
                 player.decrease_projectiles_count();
@@ -60,15 +61,15 @@ impl CObjectTrait for OMO_BowserFire {
         }
     }
 
-    fn draw(&mut self) {
-        self.spr.draw_src(
+    fn draw(&mut self, g: &mut Game) {
+        self.spr.draw_src(g, 
             self.ix as i32,
             self.iy as i32,
             &SDL_Rect { x: self.drawframe as i32, y: (if self.velx > 0.0f32 { 32 } else { 0 }) + self.iColorOffsetY as i32, w: self.iw as i32, h: self.ih as i32 },
         );
     }
 
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         let ix = self.ix as i32;
         let iw = self.iw as i32;
         let pix = player.ix as i32;
@@ -79,9 +80,9 @@ impl CObjectTrait for OMO_BowserFire {
         }
 
         unsafe {
-            if player.globalID != self.iPlayerID && (game().game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID) && !player.is_invincible() && !player.is_shielded() {
+            if player.globalID != self.iPlayerID && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID) && !player.is_invincible() && !player.is_shielded() {
                 // Find the player that made this explosion so we can attribute a kill
-                player_killed_player(self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Fireball, false, false);
+                player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Fireball, false, false);
                 return true;
             }
         }

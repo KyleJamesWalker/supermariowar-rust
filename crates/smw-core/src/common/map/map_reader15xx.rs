@@ -1,5 +1,6 @@
 //! Port of src/common/map/MapReader15xx.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::file_io::BinaryFile;
 use crate::common::game_values::default_powerup_setting;
@@ -17,18 +18,18 @@ impl MapReader {
         }
     }
 
-    pub(super) fn read_tiles_1500(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) {
+    pub(super) fn read_tiles_1500(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile) {
         unsafe {
             for j in 0..MAPHEIGHT as usize {
                 for i in 0..MAPWIDTH as usize {
                     let iTileID: i16 = mapfile.read_i32() as i16;
 
                     let tile = &mut map.mapdata[i][j][1];
-                    tile.iID = game().g_tilesetmanager.classic_tileset_index() as i16;
+                    tile.iID = g.g_tilesetmanager.classic_tileset_index() as i16;
                     tile.iCol = iTileID % 32;
                     tile.iRow = iTileID / 32;
 
-                    let iType = game().g_tilesetmanager.classic_tileset().tile_type(tile.iCol as isize as usize, tile.iRow as isize as usize);
+                    let iType = g.g_tilesetmanager.classic_tileset().tile_type(tile.iCol as isize as usize, tile.iRow as isize as usize);
                     map.mapdatatop[i][j] = iType;
 
                     map.mapdata[i][j][0].iID = TILESETNONE as i16;
@@ -78,7 +79,7 @@ impl MapReader {
 
         map.clear_map();
 
-        self.read_tiles(map, mapfile);
+        self.read_tiles(game().get(), map, mapfile);
         self.read_background(map, mapfile);
         self.read_music_category(map, mapfile);
 

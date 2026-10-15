@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/Stomp.cpp
 
+use crate::game::Game;
 use crate::common::game_mode::*;
 use crate::common::global_constants::NUMSTOMPENEMIES;
 use crate::common::player_kill_styles::KillStyle;
@@ -37,9 +38,9 @@ impl CGM_Stomp {
         this
     }
 
-    fn spawn_enemy(&mut self) {
+    fn spawn_enemy(&mut self, g: &mut Game) {
         unsafe {
-            self.reset_spawn_timer();
+            self.reset_spawn_timer(g);
 
             //If all weights were zero, then randomly choose an enemy
             if self.iEnemyWeightCount == 0 {
@@ -48,48 +49,48 @@ impl CGM_Stomp {
                 //Otherwise randomly choose an enemy from the weighted list
                 let iRandEnemy: i32 = RANDOM_INT(self.iEnemyWeightCount as i32) + 1;
                 self.iSelectedEnemy = 0;
-                let mut iWeightCount: i32 = game().game_values.gamemodesettings.stomp.enemyweight[self.iSelectedEnemy as usize] as i32;
+                let mut iWeightCount: i32 = g.game_values.gamemodesettings.stomp.enemyweight[self.iSelectedEnemy as usize] as i32;
 
                 while iWeightCount < iRandEnemy {
                     self.iSelectedEnemy += 1;
-                    iWeightCount += game().game_values.gamemodesettings.stomp.enemyweight[self.iSelectedEnemy as usize] as i32;
+                    iWeightCount += g.game_values.gamemodesettings.stomp.enemyweight[self.iSelectedEnemy as usize] as i32;
                 }
             }
 
             if 0 == self.iSelectedEnemy {
-                game().objectcontainer[0].add(Ptr::new_box(MO_Goomba::new(Ptr::from_mut(&mut game().rm.spr_goomba), RANDOM_BOOL(), false)));
+                g.objectcontainer[0].add(Ptr::new_box(MO_Goomba::new(Ptr::from_mut(&mut g.rm.spr_goomba), RANDOM_BOOL(), false)));
             } else if 1 == self.iSelectedEnemy {
-                game().objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(Ptr::from_mut(&mut game().rm.spr_koopa), RANDOM_BOOL(), false, false, true)));
+                g.objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(Ptr::from_mut(&mut g.rm.spr_koopa), RANDOM_BOOL(), false, false, true)));
             } else if 2 == self.iSelectedEnemy {
-                game().objectcontainer[2].add(Ptr::new_box(MO_CheepCheep::new(Ptr::from_mut(&mut game().rm.spr_cheepcheep))));
+                g.objectcontainer[2].add(Ptr::new_box(MO_CheepCheep::new(Ptr::from_mut(&mut g.rm.spr_cheepcheep))));
             } else if 3 == self.iSelectedEnemy {
-                game().objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(Ptr::from_mut(&mut game().rm.spr_redkoopa), RANDOM_BOOL(), true, false, false)));
+                g.objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(Ptr::from_mut(&mut g.rm.spr_redkoopa), RANDOM_BOOL(), true, false, false)));
             } else if 4 == self.iSelectedEnemy {
-                game().objectcontainer[0].add(Ptr::new_box(MO_Spiny::new(Ptr::from_mut(&mut game().rm.spr_spiny), RANDOM_BOOL())));
+                g.objectcontainer[0].add(Ptr::new_box(MO_Spiny::new(Ptr::from_mut(&mut g.rm.spr_spiny), RANDOM_BOOL())));
             } else if 5 == self.iSelectedEnemy {
-                game().objectcontainer[0].add(Ptr::new_box(MO_BuzzyBeetle::new(Ptr::from_mut(&mut game().rm.spr_buzzybeetle), RANDOM_BOOL())));
+                g.objectcontainer[0].add(Ptr::new_box(MO_BuzzyBeetle::new(Ptr::from_mut(&mut g.rm.spr_buzzybeetle), RANDOM_BOOL())));
             } else if 6 == self.iSelectedEnemy {
-                game().objectcontainer[0].add(Ptr::new_box(MO_Goomba::new(Ptr::from_mut(&mut game().rm.spr_paragoomba), RANDOM_BOOL(), true)));
+                g.objectcontainer[0].add(Ptr::new_box(MO_Goomba::new(Ptr::from_mut(&mut g.rm.spr_paragoomba), RANDOM_BOOL(), true)));
             } else if 7 == self.iSelectedEnemy {
-                game().objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(Ptr::from_mut(&mut game().rm.spr_parakoopa), RANDOM_BOOL(), false, true, true)));
+                g.objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(Ptr::from_mut(&mut g.rm.spr_parakoopa), RANDOM_BOOL(), false, true, true)));
             } else {
-                game().objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(Ptr::from_mut(&mut game().rm.spr_redparakoopa), RANDOM_BOOL(), true, true, true)));
+                g.objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(Ptr::from_mut(&mut g.rm.spr_redparakoopa), RANDOM_BOOL(), true, true, true)));
             }
         }
     }
 
-    fn reset_spawn_timer(&mut self) {
+    fn reset_spawn_timer(&mut self, g: &mut Game) {
         unsafe {
-            let rate = game().game_values.gamemodesettings.stomp.rate;
+            let rate = g.game_values.gamemodesettings.stomp.rate;
             self.spawntimer = ((RANDOM_INT(rate as i32) as i16) as i32 + rate as i32) as i16;
         }
     }
 }
 
-pub fn net_spawn_enemy() {
+pub fn net_spawn_enemy(g: &mut Game) {
     unsafe {
-        if let Some(this) = game().game_values.gamemode.get().as_any().downcast_mut::<CGM_Stomp>() {
-            this.spawn_enemy();
+        if let Some(this) = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Stomp>() {
+            this.spawn_enemy(g);
         }
     }
 }
@@ -97,14 +98,14 @@ pub fn net_spawn_enemy() {
 impl CGameModeTrait for CGM_Stomp {
     crate::impl_cgamemode_plumbing!();
 
-    fn init(&mut self) {
-        cgamemode_init(self);
-        self.reset_spawn_timer();
+    fn init(&mut self, g: &mut Game) {
+        cgamemode_init(g, self);
+        self.reset_spawn_timer(g);
 
         self.iEnemyWeightCount = 0;
         unsafe {
             for iEnemy in 0..NUMSTOMPENEMIES as usize {
-                self.iEnemyWeightCount += game().game_values.gamemodesettings.stomp.enemyweight[iEnemy];
+                self.iEnemyWeightCount += g.game_values.gamemodesettings.stomp.enemyweight[iEnemy];
             }
         }
 
@@ -112,43 +113,43 @@ impl CGameModeTrait for CGM_Stomp {
         //  iEnemyWeightCount = 1;
     }
 
-    fn think(&mut self) {
+    fn think(&mut self, g: &mut Game) {
         unsafe {
             if self.gameover {
-                self.displayplayertext();
+                self.displayplayertext(g);
             } else {
                 for i in 0..game().players.len() {
-                    let player = game().players[i];
-                    self.check_winner(player);
+                    let player = g.players[i];
+                    self.check_winner(g, player);
                 }
             }
 
             if !self.gameover {
                 //Randomly spawn enemies
                 self.spawntimer -= 1;
-                if self.spawntimer <= 0 && !net_random::event(Ev::StompEnemy, &[]) {
-                    self.spawn_enemy();
+                if self.spawntimer <= 0 && !net_random::event(g, Ev::StompEnemy, &[]) {
+                    self.spawn_enemy(g);
                 }
             }
         }
     }
 
-    fn playerkilledplayer(&mut self, _player: Ptr<CPlayer>, _other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, _player: Ptr<CPlayer>, _other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
         PlayerKillType::Normal
     }
 
-    fn playerkilledself(&mut self, _player: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, _player: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
         PlayerKillType::Normal
     }
 
-    fn playerextraguy(&mut self, mut player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iType: i16) {
         if !self.gameover {
-            player.score().adjust_score(iType);
-            self.check_winner(player);
+            player.score().adjust_score(g, iType);
+            self.check_winner(g, player);
         }
     }
 
-    fn check_winner(&mut self, mut player: Ptr<CPlayer>) -> PlayerKillType {
+    fn check_winner(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> PlayerKillType {
         if self.goal == -1 {
             return PlayerKillType::Normal;
         }
@@ -158,12 +159,12 @@ impl CGameModeTrait for CGM_Stomp {
             self.winningteam = player.get_team_id();
             self.gameover = true;
 
-            setup_score_board(false);
-            show_score_board();
-            remove_players_but_team(self.winningteam);
+            setup_score_board(g, false);
+            show_score_board(g);
+            remove_players_but_team(g, self.winningteam);
             return PlayerKillType::Removed;
         } else if player.score().score as i32 >= self.goal as i32 - 2 && !self.playedwarningsound {
-            self.playwarningsound();
+            self.playwarningsound(g);
         }
 
         PlayerKillType::Normal

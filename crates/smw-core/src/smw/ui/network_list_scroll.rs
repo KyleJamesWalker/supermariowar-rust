@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/NetworkListScroll.cpp
 
+use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 
 use crate::common::input::CPlayerInput;
@@ -146,9 +147,10 @@ impl MI_NetworkListScroll {
 impl UI_ControlTrait for MI_NetworkListScroll {
     crate::impl_ctl!();
 
-    fn update(&mut self) {}
+    fn update(&mut self, g: &mut Game) {}
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if !self.m_visible {
             return;
         }
@@ -157,12 +159,12 @@ impl UI_ControlTrait for MI_NetworkListScroll {
             let (x, y) = (self.m_pos.x as i32, self.m_pos.y as i32);
             let w = self.iWidth as i32;
             let n = self.iNumLines as i32;
-            game().rm.menu_dialog.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: w - 16, h: n * 32 + 32 });
-            game().rm.menu_dialog.draw_src(x + w - 16, y, &SDL_Rect { x: 496, y: 0, w: 16, h: n * 32 + 32 });
-            game().rm.menu_dialog.draw_src(x, y + n * 32 + 32, &SDL_Rect { x: 0, y: 464, w: w - 16, h: 16 });
-            game().rm.menu_dialog.draw_src(x + w - 16, y + n * 32 + 32, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+            gp.rm.menu_dialog.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: w - 16, h: n * 32 + 32 });
+            gp.rm.menu_dialog.draw_src(g, x + w - 16, y, &SDL_Rect { x: 496, y: 0, w: 16, h: n * 32 + 32 });
+            gp.rm.menu_dialog.draw_src(g, x, y + n * 32 + 32, &SDL_Rect { x: 0, y: 464, w: w - 16, h: 16 });
+            gp.rm.menu_dialog.draw_src(g, x + w - 16, y + n * 32 + 32, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
 
-            game().rm.menu_font_large.draw_centered(x + (w >> 1), y + 5, &self.sTitle);
+            g.rm.menu_font_large.draw_centered(x + (w >> 1), y + 5, &self.sTitle);
 
             let mut iLine: i16 = 0;
             while iLine < self.iNumLines && (iLine as u16 as usize) < self.items.len() {
@@ -170,26 +172,26 @@ impl UI_ControlTrait for MI_NetworkListScroll {
                 let iLineWidth: i16 = self.iWidth - 32;
                 let sel = if self.iSelectedLine == iLine { 32 } else { 0 };
                 let ly = y + 32 + iLine as i32 * 32;
-                self.spr.draw_src(x + 16, ly, &SDL_Rect { x: 0, y: sel, w: iHalfLineWidth as i32, h: 32 });
-                self.spr.draw_src(
+                self.spr.draw_src(g, x + 16, ly, &SDL_Rect { x: 0, y: sel, w: iHalfLineWidth as i32, h: 32 });
+                self.spr.draw_src(g, 
                     x + 16 + iHalfLineWidth as i32,
                     ly,
                     &SDL_Rect { x: 512 - iLineWidth as i32 + iHalfLineWidth as i32, y: sel, w: (iLineWidth - iHalfLineWidth) as i32, h: 32 },
                 );
 
                 let item = &self.items[(self.iOffset + iLine) as usize];
-                game().rm.menu_font_large.draw_chop_right(x + 28, y + 5 + iLine as i32 * 32 + 32, w - 104, &item.sLeft);
-                game().rm.menu_font_large.draw_right_justified(x + 28 + w - 64, y + 5 + iLine as i32 * 32 + 32, &item.sRight);
+                g.rm.menu_font_large.draw_chop_right(x + 28, y + 5 + iLine as i32 * 32 + 32, w - 104, &item.sLeft);
+                g.rm.menu_font_large.draw_right_justified(x + 28 + w - 64, y + 5 + iLine as i32 * 32 + 32, &item.sRight);
                 iLine += 1;
             }
         }
     }
 
-    fn send_input(&mut self, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+    fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         unsafe {
             for iPlayer in 0..4usize {
                 if self.iControllingTeam != -1
-                    && (self.iControllingTeam != lookup_team_id(iPlayer as i16) || game().game_values.playercontrol[iPlayer] != 1)
+                    && (self.iControllingTeam != lookup_team_id(g, iPlayer as i16) || g.game_values.playercontrol[iPlayer] != 1)
                 {
                     continue;
                 }
@@ -242,7 +244,7 @@ impl UI_ControlTrait for MI_NetworkListScroll {
         MENU_CODE_NONE
     }
 
-    fn modify(&mut self, modify: bool) -> MenuCodeEnum {
+    fn modify(&mut self, g: &mut Game, modify: bool) -> MenuCodeEnum {
         self.fModifying = modify;
         if self.iSelectedLine == -1 {
             self.iSelectedLine = self.iSelectedLineBackup;

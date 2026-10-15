@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/OnOffSwitchBlock.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gameplay_styles::TeamCollisionStyle;
@@ -48,10 +49,11 @@ impl B_OnOffSwitchBlock {
         self.state = if self.state < 3 { self.state + 3 } else { self.state - 3 };
     }
 
-    pub fn trigger_behavior_player(&mut self, playerID: i16) {
+    pub fn trigger_behavior_player(&mut self, g: &mut Game, playerID: i16) {
+        let mut gp = g.ptr();
         if self.state == 0 || self.state == 3 {
             unsafe {
-                if_sound_on_play(&mut game().rm.sfx_switchpress);
+                if_sound_on_play(g, &mut gp.rm.sfx_switchpress);
             }
             self.vely = -VELBLOCKBOUNCE;
 
@@ -62,17 +64,17 @@ impl B_OnOffSwitchBlock {
             unsafe {
                 //Switch all the switch blocks and all the on/off blocks of the same color
                 let mut i = 0;
-                while i < game().g_map.switchBlocks[colorIdx].len() {
-                    let mut block = game().g_map.switchBlocks[colorIdx][i];
+                while i < g.g_map.switchBlocks[colorIdx].len() {
+                    let mut block = g.g_map.switchBlocks[colorIdx][i];
                     block.as_any().downcast_mut::<B_OnOffSwitchBlock>().unwrap().flip_state();
                     i += 1;
                 }
 
                 //Switch all the switch blocks
                 let mut i = 0;
-                while i < game().g_map.switchBlocks[colorIdx + 4].len() {
-                    let mut block = game().g_map.switchBlocks[colorIdx + 4][i];
-                    block.as_any().downcast_mut::<B_SwitchBlock>().unwrap().flip_state(playerID);
+                while i < g.g_map.switchBlocks[colorIdx + 4].len() {
+                    let mut block = g.g_map.switchBlocks[colorIdx + 4][i];
+                    block.as_any().downcast_mut::<B_SwitchBlock>().unwrap().flip_state(g, playerID);
                     i += 1;
                 }
             }
@@ -86,7 +88,7 @@ impl CObjectTrait for B_OnOffSwitchBlock {
         Some(self)
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         if self.state != 0 && self.state != 3 {
             let fy = self.fy + self.vely;
             self.set_yf(fy);
@@ -104,8 +106,8 @@ impl CObjectTrait for B_OnOffSwitchBlock {
         }
     }
 
-    fn draw(&mut self) {
-        self.spr.draw_src(
+    fn draw(&mut self, g: &mut Game) {
+        self.spr.draw_src(g, 
             self.ix as i32,
             self.iy as i32,
             &SDL_Rect { x: self.iSrcX as i32, y: if self.state == 0 { 0 } else { 32 }, w: self.iw as i32, h: self.ih as i32 },
@@ -116,7 +118,7 @@ impl CObjectTrait for B_OnOffSwitchBlock {
 impl IO_BlockTrait for B_OnOffSwitchBlock {
     crate::impl_io_block_plumbing!();
 
-    fn hittop_player(&mut self, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hittop_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         io_block_hittop_player(self, player, useBehavior);
 
         unsafe {
@@ -124,9 +126,9 @@ impl IO_BlockTrait for B_OnOffSwitchBlock {
                 let mut iKillType = PlayerKillType::NonKill;
                 if self.iBumpPlayerID >= 0
                     && !player.is_invincible_on_bottom()
-                    && (player.teamID != self.iBumpTeamID || game().game_values.teamcollision == TeamCollisionStyle::On)
+                    && (player.teamID != self.iBumpTeamID || g.game_values.teamcollision == TeamCollisionStyle::On)
                 {
-                    iKillType = player_killed_player(self.iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
+                    iKillType = player_killed_player(g, self.iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
                 }
 
                 if PlayerKillType::NonKill == iKillType {
@@ -136,7 +138,7 @@ impl IO_BlockTrait for B_OnOffSwitchBlock {
                 player.vely = GRAVITATION;
 
                 if (self.state == 0 || self.state == 3) && player.is_super_stomping() {
-                    self.trigger_behavior_player(player.globalID);
+                    self.trigger_behavior_player(g, player.globalID);
                 }
             }
         }
@@ -144,7 +146,7 @@ impl IO_BlockTrait for B_OnOffSwitchBlock {
         false
     }
 
-    fn hitbottom_player(&mut self, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitbottom_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         //Player bounces off
         if useBehavior {
             player.vely = cap_falling_velocity(-player.vely * BOUNCESTRENGTH);
@@ -155,14 +157,14 @@ impl IO_BlockTrait for B_OnOffSwitchBlock {
                 self.iBumpTeamID = player.teamID;
 
                 let iBumpPlayerID = self.iBumpPlayerID;
-                self.trigger_behavior_player(iBumpPlayerID);
+                self.trigger_behavior_player(g, iBumpPlayerID);
             }
         }
 
         false
     }
 
-    fn hittop_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+    fn hittop_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         let ch = object.collisionHeight;
         object.set_yf((self.iposy as i32 - ch as i32) as f32 - 0.2f32);
         object.fOldY = object.fy;
@@ -171,23 +173,24 @@ impl IO_BlockTrait for B_OnOffSwitchBlock {
         if r#type == movingobject_throwbox && object.as_any().downcast_mut::<CO_ThrowBox>().unwrap().has_kill_velocity() {
             if self.state == 0 || self.state == 3 {
                 self.iBumpPlayerID = -1;
-                self.trigger_behavior_player(object.iPlayerID);
+                self.trigger_behavior_player(g, object.iPlayerID);
             }
 
-            object.vely = object.bottom_bounce();
+            object.vely = object.bottom_bounce(g);
 
             return true;
         } else if (self.state == 1 || self.state == 4) && object.bounce == GRAVITATION {
-            io_block_bounce_moving_object(self, object);
+            io_block_bounce_moving_object(g, self, object);
             return false;
         } else {
-            object.vely = object.bottom_bounce();
+            object.vely = object.bottom_bounce(g);
         }
 
         true
     }
 
-    fn hitright_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+    fn hitright_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+        let mut gp = g.ptr();
         //Object bounces off
         object.set_xf((self.iposx as i32 + self.iw as i32) as f32 + 0.2f32);
         object.fOldX = object.fx;
@@ -210,10 +213,10 @@ impl IO_BlockTrait for B_OnOffSwitchBlock {
 
             if self.state == 0 || self.state == 3 {
                 self.iBumpPlayerID = -1;
-                self.trigger_behavior_player(object.iPlayerID);
+                self.trigger_behavior_player(g, object.iPlayerID);
             } else {
                 unsafe {
-                    if_sound_on_play(&mut game().rm.sfx_bump);
+                    if_sound_on_play(g, &mut gp.rm.sfx_bump);
                 }
             }
 
@@ -223,7 +226,8 @@ impl IO_BlockTrait for B_OnOffSwitchBlock {
         false
     }
 
-    fn hitleft_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+    fn hitleft_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+        let mut gp = g.ptr();
         //Object bounces off
         let cw = object.collisionWidth;
         object.set_xf((self.iposx as i32 - cw as i32) as f32 - 0.2f32);
@@ -247,10 +251,10 @@ impl IO_BlockTrait for B_OnOffSwitchBlock {
 
             if self.state == 0 || self.state == 3 {
                 self.iBumpPlayerID = -1;
-                self.trigger_behavior_player(object.iPlayerID);
+                self.trigger_behavior_player(g, object.iPlayerID);
             } else {
                 unsafe {
-                    if_sound_on_play(&mut game().rm.sfx_bump);
+                    if_sound_on_play(g, &mut gp.rm.sfx_bump);
                 }
             }
 

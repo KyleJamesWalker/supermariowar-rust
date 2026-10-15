@@ -16,11 +16,11 @@ use std::path::Path;
 fn main() {
     let data = std::env::args().nth(1).unwrap_or_else(|| concat!(env!("CARGO_MANIFEST_DIR"), "/../../data").to_string());
 
-    smw::globals::init_globals();
+    smw::globals::init_globals(game().get());
     unsafe {
-        RootDataDirectory = data;
+        game().RootDataDirectory = data;
 
-        gfx_init(640, 480, false);
+        gfx_init(game().get(), 640, 480, false);
         game().blitdest = game().screen;
         sfx_init();
 
@@ -36,17 +36,17 @@ fn main() {
         game().soundpacklist.set_current_index(0);
 
         let pack = game().gamegraphicspacklist.current_path().to_string_lossy().into_owned();
-        assert!(gfx_loadpalette(Path::new(&convert_path_pack("gfx/packs/palette.png", &pack))));
+        assert!(gfx_loadpalette(game().get(), Path::new(&convert_path_pack(game().get(), "gfx/packs/palette.png", &pack))));
 
-        game().rm.load_start_graphics();
-        game().rm.load_all_graphics();
-        let sound = game().rm.load_game_sounds();
+        game().rm.load_start_graphics(game().get());
+        game().rm.load_all_graphics(game().get());
+        let sound = game().rm.load_game_sounds(game().get());
 
         let mut skins = 0;
         for k in 0..game().skinlist.count() {
             for color in 0..4i16 {
-                let _ = game().rm.load_full_skin(k as i16, color);
-                assert!(game().rm.load_menu_skin(color, k as i16, color, true), "menu skin {}", k);
+                let _ = game().rm.load_full_skin(game().get(), k as i16, color);
+                assert!(game().rm.load_menu_skin(game().get(), color, k as i16, color, true), "menu skin {}", k);
             }
             skins += 1;
         }

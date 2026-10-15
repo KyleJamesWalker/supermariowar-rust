@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_BonusHouseChest.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -57,7 +58,7 @@ impl CObjectTrait for MO_BonusHouseChest {
         Some(self)
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         // Draw rising powerup from chest
         if self.state == 2 {
             self.drawbonusitemy -= 2;
@@ -65,8 +66,8 @@ impl CObjectTrait for MO_BonusHouseChest {
             self.drawbonusitemtimer -= 1;
             if self.drawbonusitemtimer <= 0 {
                 unsafe {
-                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
+                    g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                        Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
                         (self.ix as i32 + 16) as i16,
                         self.drawbonusitemy,
                         3,
@@ -78,18 +79,19 @@ impl CObjectTrait for MO_BonusHouseChest {
         }
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let ix = self.ix as i32;
         let iy = self.iy as i32;
         let iw = self.iw as i32;
         let ih = self.ih as i32;
 
         if self.state < 2 {
-            self.spr.draw_src(ix, iy, &SDL_Rect { x: 0, y: 0, w: iw, h: ih });
+            self.spr.draw_src(g, ix, iy, &SDL_Rect { x: 0, y: 0, w: iw, h: ih });
         }
 
         if self.state >= 2 {
-            self.spr.draw_src(ix, iy, &SDL_Rect { x: 128, y: 0, w: iw, h: ih });
+            self.spr.draw_src(g, ix, iy, &SDL_Rect { x: 128, y: 0, w: iw, h: ih });
         }
 
         if self.state == 2 {
@@ -100,33 +102,34 @@ impl CObjectTrait for MO_BonusHouseChest {
                     let iBonus: i16 = (bonusitem - NUM_POWERUPS - NUM_WORLD_POWERUPS) as i16;
                     let iBonusX: i16 = ((iBonus as i32 % 10) << 5) as i16;
                     let iBonusY: i16 = (((iBonus as i32 / 10) << 5) + 32) as i16;
-                    game().rm.spr_worlditems.draw_src(ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: iBonusX as i32, y: iBonusY as i32, w: 32, h: 32 });
+                    gp.rm.spr_worlditems.draw_src(g, ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: iBonusX as i32, y: iBonusY as i32, w: 32, h: 32 });
                 } else if bonusitem >= NUM_POWERUPS {
                     // World Item
-                    game().rm.spr_worlditems.draw_src(ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: (bonusitem - NUM_POWERUPS) << 5, y: 0, w: 32, h: 32 });
+                    gp.rm.spr_worlditems.draw_src(g, ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: (bonusitem - NUM_POWERUPS) << 5, y: 0, w: 32, h: 32 });
                 } else {
                     // Normal Powerup
-                    game().rm.spr_storedpoweruplarge.draw_src(ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: bonusitem << 5, y: 0, w: 32, h: 32 });
+                    gp.rm.spr_storedpoweruplarge.draw_src(g, ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: bonusitem << 5, y: 0, w: 32, h: 32 });
                 }
             }
         }
 
         if self.state >= 2 {
-            self.spr.draw_src(ix, iy, &SDL_Rect { x: 64, y: 0, w: iw, h: ih });
+            self.spr.draw_src(g, ix, iy, &SDL_Rect { x: 64, y: 0, w: iw, h: ih });
         }
     }
 
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         unsafe {
-            if self.state == 1 && !game().game_values.gamemode.gameover && player.playerKeys.game_turbo().fPressed {
+            if self.state == 1 && !g.game_values.gamemode.gameover && player.playerKeys.game_turbo().fPressed {
                 let teamID = player.teamID as usize;
                 if (self.bonusitem as i32) < NUM_POWERUPS + NUM_WORLD_POWERUPS {
-                    if game().game_values.worldpowerupcount[teamID] < 32 {
-                        let idx = game().game_values.worldpowerupcount[teamID] as usize;
-                        game().game_values.worldpowerupcount[teamID] += 1;
-                        game().game_values.worldpowerups[teamID][idx] = self.bonusitem;
+                    if g.game_values.worldpowerupcount[teamID] < 32 {
+                        let idx = g.game_values.worldpowerupcount[teamID] as usize;
+                        g.game_values.worldpowerupcount[teamID] += 1;
+                        g.game_values.worldpowerups[teamID][idx] = self.bonusitem;
                     } else {
-                        game().game_values.worldpowerups[teamID][31] = self.bonusitem;
+                        g.game_values.worldpowerups[teamID][31] = self.bonusitem;
                     }
                 } else {
                     let mut iBonus: i16 = (self.bonusitem as i32 - NUM_POWERUPS - NUM_WORLD_POWERUPS) as i16;
@@ -136,22 +139,22 @@ impl CObjectTrait for MO_BonusHouseChest {
                         iBonus = 9 - iBonus;
                     }
 
-                    game().game_values.tournament_scores[teamID].total = (game().game_values.tournament_scores[teamID].total as i32 + iBonus as i32) as i16;
+                    g.game_values.tournament_scores[teamID].total = (g.game_values.tournament_scores[teamID].total as i32 + iBonus as i32) as i16;
 
-                    if game().game_values.tournament_scores[teamID].total < 0 {
-                        game().game_values.tournament_scores[teamID].total = 0;
+                    if g.game_values.tournament_scores[teamID].total < 0 {
+                        g.game_values.tournament_scores[teamID].total = 0;
                     }
                 }
 
-                if_sound_on_play(&mut game().rm.sfx_treasurechest);
+                if_sound_on_play(g, &mut gp.rm.sfx_treasurechest);
                 self.state = 2;
 
                 self.drawbonusitemy = (self.iy as i32 + 32) as i16;
                 self.drawbonusitemtimer = 75;
 
-                game().game_values.flags.forceexittimer = 180;
-                game().game_values.gamemode.gameover = true;
-                game().game_values.gamemode.winningteam = player.teamID;
+                g.game_values.flags.forceexittimer = 180;
+                g.game_values.gamemode.gameover = true;
+                g.game_values.gamemode.winningteam = player.teamID;
             }
         }
 

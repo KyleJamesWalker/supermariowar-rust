@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_PirhanaPlant.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
@@ -63,7 +64,7 @@ impl MO_PirhanaPlant {
         o.movingObjectType = movingobject_pirhanaplant;
 
         o.state = 0;
-        o.set_new_timer();
+        o.set_new_timer(game().get());
 
         if o.iDirection <= 1 {
             o.iw = 32;
@@ -110,42 +111,44 @@ impl MO_PirhanaPlant {
     }
 
     // For preview drawing
-    pub fn draw_offset(&mut self, iOffsetX: i16, iOffsetY: i16) {
+    pub fn draw_offset(&mut self, g: &mut Game, iOffsetX: i16, iOffsetY: i16) {
+        let mut gp = g.ptr();
         if self.state > 0 {
             unsafe {
                 let rect = &g_rPirhanaRects[self.iType as usize][self.iDirection as usize][self.iFrame as usize];
-                let surface = &game().rm.spr_hazard_pirhanaplant[1];
+                let surface = &gp.rm.spr_hazard_pirhanaplant[1];
                 let clipRect = SDL_Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: 320, h: 240 };
                 let dstX = ((self.ix as i32 >> 1) + iOffsetX as i32) as i16;
                 let dstY = ((self.iy as i32 >> 1) + iOffsetY as i32) as i16;
                 let (ih, iw) = (self.ih as i32, self.iw as i32);
                 let (ch, cw) = (self.collisionHeight as i32, self.collisionWidth as i32);
                 if self.iDirection == 0 {
-                    gfx_drawpreview(surface, dstX, dstY, (rect.x >> 1) as i16, (rect.y >> 1) as i16, 16, (ch >> 1) as i16, &clipRect, true, None);
+                    gfx_drawpreview(g, surface, dstX, dstY, (rect.x >> 1) as i16, (rect.y >> 1) as i16, 16, (ch >> 1) as i16, &clipRect, true, None);
                 } else if self.iDirection == 1 {
-                    gfx_drawpreview(surface, dstX, dstY, (rect.x >> 1) as i16, ((rect.y + ih - ch) >> 1) as i16, 16, (ch >> 1) as i16, &clipRect, true, None);
+                    gfx_drawpreview(g, surface, dstX, dstY, (rect.x >> 1) as i16, ((rect.y + ih - ch) >> 1) as i16, 16, (ch >> 1) as i16, &clipRect, true, None);
                 } else if self.iDirection == 2 {
-                    gfx_drawpreview(surface, dstX, dstY, (rect.x >> 1) as i16, (rect.y >> 1) as i16, (cw >> 1) as i16, 16, &clipRect, true, None);
+                    gfx_drawpreview(g, surface, dstX, dstY, (rect.x >> 1) as i16, (rect.y >> 1) as i16, (cw >> 1) as i16, 16, &clipRect, true, None);
                 } else {
-                    gfx_drawpreview(surface, dstX, dstY, ((rect.x + iw - cw) >> 1) as i16, (rect.y >> 1) as i16, (cw >> 1) as i16, 16, &clipRect, true, None);
+                    gfx_drawpreview(g, surface, dstX, dstY, ((rect.x + iw - cw) >> 1) as i16, (rect.y >> 1) as i16, (cw >> 1) as i16, 16, &clipRect, true, None);
                 }
             }
         }
     }
 
-    pub fn kill_plant(&mut self) {
+    pub fn kill_plant(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if self.state == 0 {
             return;
         }
 
-        self.set_new_timer();
+        self.set_new_timer(g);
         self.state = 0;
 
         unsafe {
-            if_sound_on_play(&mut game().rm.sfx_kicksound);
+            if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
             let x = (self.ix as i32 + if self.iDirection == 2 { 0 } else { self.collisionWidth as i32 - 32 }) as i16;
             let y = (self.iy as i32 + if self.iDirection == 0 { 0 } else { self.collisionHeight as i32 - 32 }) as i16;
-            game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), x, y, 3, 4));
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), x, y, 3, 4));
         }
 
         if self.iDirection == 0 {
@@ -161,9 +164,9 @@ impl MO_PirhanaPlant {
         }
     }
 
-    pub fn set_new_timer(&mut self) {
-        if crate::smw::net_random::object_event(crate::smw::net_random::Ev::HazardTimer, &[self.iNetworkID]) {
-            if crate::smw::net_random::awaiting_host() {
+    pub fn set_new_timer(&mut self, g: &mut Game) {
+        if crate::smw::net_random::object_event(g, crate::smw::net_random::Ev::HazardTimer, &[self.iNetworkID]) {
+            if crate::smw::net_random::awaiting_host(g) {
                 self.iTimer = i16::MAX;
             }
             return;
@@ -214,7 +217,7 @@ impl CObjectTrait for MO_PirhanaPlant {
         Some(self)
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         // Needed for collisions with player and kuribo's shoe to know
         // if the plant hit the player from the top or not
         self.fOldY = self.iy as f32;
@@ -266,7 +269,7 @@ impl CObjectTrait for MO_PirhanaPlant {
 
             if (self.iDirection <= 1 && self.collisionHeight <= 0) || (self.iDirection >= 2 && self.collisionWidth <= 0) {
                 self.state = 0;
-                self.set_new_timer();
+                self.set_new_timer(g);
             }
         }
 
@@ -286,7 +289,7 @@ impl CObjectTrait for MO_PirhanaPlant {
 
                 unsafe {
                     for i in 0..game().players.len() {
-                        let player = game().players[i];
+                        let player = g.players[i];
                         if player.state != PlayerState::Ready {
                             continue;
                         }
@@ -339,8 +342,8 @@ impl CObjectTrait for MO_PirhanaPlant {
                     (if self.iDirection != 1 { iy + 7 } else { iy + ih - 23 }) as i16,
                 );
                 let angle = self.get_fireball_angle();
-                game().objectcontainer[1].add(Ptr::new_box(OMO_StraightPathHazard::new(
-                    Ptr::from_mut(&mut game().rm.spr_hazard_fireball[if self.fPreview { 1 } else { 0 }]),
+                g.objectcontainer[1].add(Ptr::new_box(OMO_StraightPathHazard::new(
+                    Ptr::from_mut(&mut g.rm.spr_hazard_fireball[if self.fPreview { 1 } else { 0 }]),
                     pos,
                     angle,
                     3.0f32,
@@ -359,7 +362,8 @@ impl CObjectTrait for MO_PirhanaPlant {
         }
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if self.state > 0 {
             unsafe {
                 let rect = &g_rPirhanaRects[self.iType as usize][self.iDirection as usize][self.iFrame as usize];
@@ -367,19 +371,19 @@ impl CObjectTrait for MO_PirhanaPlant {
                 let (ih, iw) = (self.ih as i32, self.iw as i32);
                 let (ch, cw) = (self.collisionHeight as i32, self.collisionWidth as i32);
                 if self.iDirection == 0 {
-                    game().rm.spr_hazard_pirhanaplant[0].draw_src(ix, iy, &SDL_Rect { x: rect.x, y: rect.y, w: 32, h: ch });
+                    gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &SDL_Rect { x: rect.x, y: rect.y, w: 32, h: ch });
                 } else if self.iDirection == 1 {
-                    game().rm.spr_hazard_pirhanaplant[0].draw_src(ix, iy, &SDL_Rect { x: rect.x, y: rect.y + ih - ch, w: 32, h: ch });
+                    gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &SDL_Rect { x: rect.x, y: rect.y + ih - ch, w: 32, h: ch });
                 } else if self.iDirection == 2 {
-                    game().rm.spr_hazard_pirhanaplant[0].draw_src(ix, iy, &SDL_Rect { x: rect.x, y: rect.y, w: cw, h: 32 });
+                    gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &SDL_Rect { x: rect.x, y: rect.y, w: cw, h: 32 });
                 } else {
-                    game().rm.spr_hazard_pirhanaplant[0].draw_src(ix, iy, &SDL_Rect { x: rect.x + iw - cw, y: rect.y, w: cw, h: 32 });
+                    gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &SDL_Rect { x: rect.x + iw - cw, y: rect.y, w: cw, h: 32 });
                 }
             }
         }
     }
 
-    fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         if self.state == 0 {
             return false;
         }
@@ -387,20 +391,20 @@ impl CObjectTrait for MO_PirhanaPlant {
         let fHitPlayerTop = self.fOldY + self.collisionHeight as f32 <= player.fOldY && self.iy as i32 + self.collisionHeight as i32 >= player.iy as i32;
 
         if player.is_invincible() || player.tanookisuit.is_statue() || (player.kuriboshoe.is_on() && !fHitPlayerTop) {
-            self.kill_plant();
+            self.kill_plant(g);
         } else if !player.is_shielded() && !player.shyguy {
-            return player.kill_player_map_hazard(false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
+            return player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
         }
 
         false
     }
 
-    fn collide_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) {
+    fn collide_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) {
         if self.state == 0 {
             return;
         }
 
-        removeifprojectile(object, true, false);
+        removeifprojectile(g, object, true, false);
 
         let r#type = object.get_moving_object_type();
 
@@ -424,12 +428,12 @@ impl CObjectTrait for MO_PirhanaPlant {
             }
 
             if r#type == movingobject_shell || r#type == movingobject_throwblock {
-                object.check_and_die();
+                object.check_and_die(g);
             } else if r#type == movingobject_attackzone || r#type == movingobject_throwbox {
-                object.die();
+                object.die(g);
             }
 
-            self.kill_plant();
+            self.kill_plant(g);
         }
     }
 }

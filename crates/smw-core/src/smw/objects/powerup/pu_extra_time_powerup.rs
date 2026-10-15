@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_ExtraTimePowerup.cpp
 
+use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::CObjectTrait;
@@ -35,17 +36,18 @@ impl CObjectTrait for PU_ExtraTimePowerup {
     fn as_io_moving_object(&mut self) -> Option<&mut dyn IO_MovingObjectTrait> {
         Some(self)
     }
-    fn draw(&mut self) {
-        mo_powerup_draw(self)
+    fn draw(&mut self, g: &mut Game) {
+        mo_powerup_draw(g, self)
     }
-    fn update(&mut self) {
-        mo_powerup_update(self)
+    fn update(&mut self, g: &mut Game) {
+        mo_powerup_update(g, self)
     }
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         unsafe {
             if self.state > 0 {
-                if game().game_values.gamemode.gamemode == game_mode_timelimit || game().game_values.gamemode.gamemode == game_mode_star {
-                    let mut gamemode = game().game_values.gamemode;
+                if g.game_values.gamemode.gamemode == game_mode_timelimit || g.game_values.gamemode.gamemode == game_mode_star {
+                    let mut gamemode = g.game_values.gamemode;
                     let timelimitmode: &mut CGM_TimeLimit = if gamemode.as_any().is::<CGM_Star>() {
                         gamemode.as_any().downcast_mut::<CGM_Star>().unwrap()
                     } else {
@@ -55,7 +57,7 @@ impl CObjectTrait for PU_ExtraTimePowerup {
                     timelimitmode.addtime(goal / 5);
                 }
 
-                if_sound_on_play(&mut game().rm.sfx_collectpowerup);
+                if_sound_on_play(g, &mut gp.rm.sfx_collectpowerup);
                 self.dead = true;
             }
         }

@@ -3,6 +3,7 @@
 //! The C++ unions that alias `keys[NUM_KEYS]` with named members (`menu_up`, `game_jump`, ...)
 //! become a plain `keys` array plus same-named accessor methods (`game_jump()` / `game_jump_mut()`).
 
+use crate::game::Game;
 use smw_platform::{Input, InputEvent, MouseEvent};
 use crate::common::global_constants::MAX_PLAYERS;
 use crate::globals::*;
@@ -221,7 +222,7 @@ impl CPlayerInput {
     //configured keys were pressed.  If they were, then turn on
     //key flags to be used by game logic
     //iGameState == 0 for in game and 1 for menu
-    pub fn update_input(&mut self, input: &Input, iGameState: i16) {
+    pub fn update_input(&mut self, g: &mut Game, input: &Input, iGameState: i16) {
         #[cfg(not(target_os = "emscripten"))]
         crate::smw::pad::log_event(2, &smw_sdl2::input::to_sdl(input));
         let event = &input.event;
@@ -273,11 +274,11 @@ impl CPlayerInput {
                 //Allow keyboard input from player 1 at all times (even when he is configured to use joystick)
                 // Not in upstream: unless another player now has those keys (see assign_inputs).
                 if iPlayer == -1 {
-                    let keyboard = &mut game().game_values.inputConfiguration[0][0] as *mut CInputPlayerControl;
+                    let keyboard = &mut g.game_values.inputConfiguration[0][0] as *mut CInputPlayerControl;
                     if iGameState == 1 && self.inputControls[0].iDevice != DEVICE_KEYBOARD && !self.inputControls.iter().any(|c| c.as_ptr() == keyboard) {
-                        inputControl = &game().game_values.inputConfiguration[0][0].inputGameControls[1];
+                        inputControl = &g.game_values.inputConfiguration[0][0].inputGameControls[1];
                         outputControl = &mut self.outputControls[0];
-                        iDeviceID = game().game_values.inputConfiguration[0][0].iDevice;
+                        iDeviceID = g.game_values.inputConfiguration[0][0].iDevice;
                     } else {
                         continue;
                     }
@@ -297,7 +298,7 @@ impl CPlayerInput {
                 // game_values.playercontrol[-1] is read for the keyboard fallback player in C++ only
                 // when iGameState == 0, which the iPlayer == -1 branch excludes.
                 let ignore_cpu = |iKey: usize| -> bool {
-                    iGameState == 0 && game().game_values.playercontrol[iPlayer as usize] != 1 && iKey < 6
+                    iGameState == 0 && g.game_values.playercontrol[iPlayer as usize] != 1 && iKey < 6
                 };
 
                 if iDeviceID == DEVICE_KEYBOARD {

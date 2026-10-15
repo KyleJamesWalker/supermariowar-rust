@@ -394,7 +394,7 @@ fn save_mode(mode: Mode) {
 /// After `init_joysticks`, which `touch_first` depends on.
 pub fn init() {
     unsafe {
-        let pads = crate::common::global::joystickcount > 0;
+        let pads = crate::game::game().joystickcount > 0;
         let live = std::env::var_os("SMW_TOUCH").is_some() && !crate::smw::harness::replaying();
         st().debug = std::env::var_os("SMW_DEBUG_INPUT").is_some();
         st().session_on = live || crate::smw::harness::replay_touch();

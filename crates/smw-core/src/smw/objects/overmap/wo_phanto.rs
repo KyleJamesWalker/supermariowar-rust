@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_Phanto.cpp
 
+use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_mode::game_mode_chase;
 use crate::common::game_values::if_sound_on_play;
@@ -52,7 +53,7 @@ impl OMO_Phanto {
         self.set_yi(yi as i16);
     }
 
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s, dVelX: f32, dVelY: f32, r#type: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, dVelX: f32, dVelY: f32, r#type: i16) -> Self {
         let mut this = OMO_Phanto {
             io_over_map_object: IO_OverMapObject::new(nspr, pos, 1, 0, 30, 32, 1, 0, ((r#type as i32) << 5) as i16, 0, 32, 32),
             iType: r#type,
@@ -67,9 +68,9 @@ impl OMO_Phanto {
         this.vely = dVelY;
 
         unsafe {
-            this.dMaxSpeedY = game().game_values.gamemodesettings.chase.phantospeed as f32 / 2.0f32;
+            this.dMaxSpeedY = g.game_values.gamemodesettings.chase.phantospeed as f32 / 2.0f32;
             this.dMaxSpeedX = this.dMaxSpeedY + 1.0f32;
-            this.dSpeedRatio = game().game_values.gamemodesettings.chase.phantospeed as f32 / 6.0f32;
+            this.dSpeedRatio = g.game_values.gamemodesettings.chase.phantospeed as f32 / 6.0f32;
         }
 
         this.dReactionSpeed = 0.2f32;
@@ -84,11 +85,11 @@ impl OMO_Phanto {
 impl CObjectTrait for OMO_Phanto {
     crate::impl_cobject_plumbing!();
 
-    fn draw(&mut self) {
-        io_over_map_object_draw(self);
+    fn draw(&mut self, g: &mut Game) {
+        io_over_map_object_draw(g, self);
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         let x = self.fx + self.velx;
         self.set_xf(x);
         let y = self.fy + self.vely;
@@ -103,18 +104,18 @@ impl CObjectTrait for OMO_Phanto {
         }
 
         self.iSpeedTimer += 1;
-        if self.iSpeedTimer > 62 && !net_random::object_event(Ev::Wander, &net_random::wander_args(self.iNetworkID, self.fx, self.fy, 0.0)) {
+        if self.iSpeedTimer > 62 && !net_random::object_event(g, Ev::Wander, &net_random::wander_args(self.iNetworkID, self.fx, self.fy, 0.0)) {
             self.change_speed();
         }
 
         unsafe {
             // Chase player or move off screen if there is no player holding the key
-            if game().game_values.gamemode.gamemode == game_mode_chase {
-                let chasemode: &mut CGM_Chase = game().game_values.gamemode.get().as_any().downcast_mut::<CGM_Chase>().unwrap();
+            if g.game_values.gamemode.gamemode == game_mode_chase {
+                let chasemode: &mut CGM_Chase = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Chase>().unwrap();
 
                 let player: Ptr<CPlayer> = chasemode.get_key_holder();
 
-                if !game().game_values.gamemode.gameover && !player.is_null() {
+                if !g.game_values.gamemode.gameover && !player.is_null() {
                     // Chase the player
                     let mut fWrap = false;
                     if (player.ix as i32 - self.ix as i32).abs() > 320 {
@@ -170,7 +171,7 @@ impl CObjectTrait for OMO_Phanto {
                         self.velx = 0.0f32;
 
                         // Randomly position phanto off screen
-                        if !net_random::object_event(Ev::PhantoReturn, &[self.iNetworkID]) {
+                        if !net_random::object_event(g, Ev::PhantoReturn, &[self.iNetworkID]) {
                             self.return_offscreen();
                         }
                     }
@@ -179,7 +180,8 @@ impl CObjectTrait for OMO_Phanto {
         }
     }
 
-    fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         if self.iy as i32 <= -(self.ih as i32) || self.iy as i32 >= App::screenHeight {
             return false;
         }
@@ -188,18 +190,18 @@ impl CObjectTrait for OMO_Phanto {
             // If the player is holding the key, kill him
             if !player.is_invincible() && !player.is_shielded() {
                 if self.iType == 2 {
-                    player.kill_player_map_hazard(false, KillStyle::Phanto, false, -1);
+                    player.kill_player_map_hazard(g, false, KillStyle::Phanto, false, -1);
                     return true;
-                } else if game().game_values.gamemode.gamemode == game_mode_chase {
-                    let chasemode: &mut CGM_Chase = game().game_values.gamemode.get().as_any().downcast_mut::<CGM_Chase>().unwrap();
+                } else if g.game_values.gamemode.gamemode == game_mode_chase {
+                    let chasemode: &mut CGM_Chase = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Chase>().unwrap();
                     let keyholder: Ptr<CPlayer> = chasemode.get_key_holder();
 
                     if keyholder == player {
-                        player.kill_player_map_hazard(false, KillStyle::Phanto, false, -1);
+                        player.kill_player_map_hazard(g, false, KillStyle::Phanto, false, -1);
 
-                        if !game().game_values.gamemode.gameover && self.iType == 1 {
-                            player.score().adjust_score(-10);
-                            if_sound_on_play(&mut game().rm.sfx_stun);
+                        if !g.game_values.gamemode.gameover && self.iType == 1 {
+                            player.score().adjust_score(g, -10);
+                            if_sound_on_play(g, &mut gp.rm.sfx_stun);
                         }
 
                         return true;

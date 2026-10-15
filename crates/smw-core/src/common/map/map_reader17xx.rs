@@ -1,5 +1,6 @@
 //! Port of src/common/map/MapReader17xx.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::file_io::BinaryFile;
 use crate::common::game_values::default_powerup_setting;
@@ -26,8 +27,8 @@ impl MapReader {
         }
     }
 
-    pub(super) fn read_tiles_1700(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) {
-        let iClassicTilesetID: i16 = unsafe { game().g_tilesetmanager.classic_tileset_index() as i16 };
+    pub(super) fn read_tiles_1700(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile) {
+        let iClassicTilesetID: i16 = unsafe { g.g_tilesetmanager.classic_tileset_index() as i16 };
 
         for j in 0..MAPHEIGHT as usize {
             for i in 0..MAPWIDTH as usize {
@@ -171,7 +172,7 @@ impl MapReader {
         true
     }
 
-    pub(super) fn read_platforms_1700(&mut self, map: &mut CMap, mapfile: &mut BinaryFile, fPreview: bool) {
+    pub(super) fn read_platforms_1700(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile, fPreview: bool) {
         map.clear_platforms();
 
         let iNumPlatforms: usize = mapfile.read_i32() as i16 as isize as usize;
@@ -181,7 +182,7 @@ impl MapReader {
             let iWidth: i16 = mapfile.read_i32() as i16;
             let iHeight: i16 = mapfile.read_i32() as i16;
 
-            let (tiles, types) = self.read_platform_tiles_1700(map, mapfile, iWidth, iHeight);
+            let (tiles, types) = self.read_platform_tiles_1700(g, map, mapfile, iWidth, iHeight);
 
             let iDrawLayer: i16 = 2;
 
@@ -191,13 +192,13 @@ impl MapReader {
                 continue;
             };
 
-            let platform = MovingPlatform::new(tiles, types, iWidth, iHeight, iDrawLayer, path, fPreview);
+            let platform = MovingPlatform::new(g, tiles, types, iWidth, iHeight, iDrawLayer, path, fPreview);
             map.platforms.push(platform);
             map.platformdrawlayer[iDrawLayer as usize].push(platform);
         }
     }
 
-    fn read_platform_tiles_1700(&mut self, _map: &mut CMap, mapfile: &mut BinaryFile, iWidth: i16, iHeight: i16) -> (Vec<TilesetTile>, Vec<TileType>) {
+    fn read_platform_tiles_1700(&mut self, g: &mut Game, _map: &mut CMap, mapfile: &mut BinaryFile, iWidth: i16, iHeight: i16) -> (Vec<TilesetTile>, Vec<TileType>) {
         let n = (iWidth as i32 * iHeight as i32).max(0) as usize;
         let mut tiles = Vec::with_capacity(n);
         let mut types = Vec::with_capacity(n);
@@ -217,11 +218,11 @@ impl MapReader {
                     r#type = TileType::NonSolid;
                 } else {
                     unsafe {
-                        tile.iID = game().g_tilesetmanager.classic_tileset_index() as i16;
+                        tile.iID = g.g_tilesetmanager.classic_tileset_index() as i16;
                         tile.iCol = (iTile as i32 % TILESETWIDTH) as i16;
                         tile.iRow = (iTile as i32 / TILESETWIDTH) as i16;
 
-                        r#type = game().g_tilesetmanager.classic_tileset().tile_type(tile.iCol as isize as usize, tile.iRow as isize as usize);
+                        r#type = g.g_tilesetmanager.classic_tileset().tile_type(tile.iCol as isize as usize, tile.iRow as isize as usize);
                     }
                 }
 
@@ -278,7 +279,7 @@ impl MapReader {
 
         map.clear_platforms();
 
-        self.read_tiles(map, mapfile);
+        self.read_tiles(game().get(), map, mapfile);
         self.read_background(map, mapfile);
 
         if self.patch_version >= 1 {

@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/Star.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::{EC_GravText, EC_SingleAnimation};
 use crate::common::game_mode::*;
 use crate::common::game_values::if_sound_on_play;
@@ -55,12 +56,12 @@ impl CGM_Star {
         self.iCurrentModeType
     }
 
-    fn setup_mode(&mut self) {
+    fn setup_mode(&mut self, g: &mut Game) {
         unsafe {
             //Clean up old stars
             for iStar in 0..3usize {
                 if !self.starItem[iStar].is_null() {
-                    MO_CarriedObjectTrait::drop(&mut *self.starItem[iStar]);
+                    MO_CarriedObjectTrait::drop(&mut *self.starItem[iStar], g);
                     self.starItem[iStar].dead = true;
                     self.starItem[iStar] = Ptr::null();
                 }
@@ -72,32 +73,32 @@ impl CGM_Star {
             if self.iCurrentModeType == StarStyle::Multi {
                 let mut rankedPlayers: [Ptr<CPlayer>; 4] = [Ptr::null(); 4];
                 let fReverseScoring = self.fReverseScoring;
-                let iNumPlayers: i16 = self.get_score_ranked_player_list(&mut rankedPlayers, fReverseScoring);
+                let iNumPlayers: i16 = self.get_score_ranked_player_list(g, &mut rankedPlayers, fReverseScoring);
 
                 let mut iStar: i16 = 0;
                 while (iStar as i32) < iNumPlayers as i32 - 1 {
                     self.starPlayer[iStar as usize] = rankedPlayers[iStar as usize];
 
-                    self.starItem[iStar as usize] = Ptr::new_box(CO_Star::new(Ptr::from_mut(&mut game().rm.spr_star), 1, iStar));
+                    self.starItem[iStar as usize] = Ptr::new_box(CO_Star::new(Ptr::from_mut(&mut g.rm.spr_star), 1, iStar));
                     self.starItem[iStar as usize].set_player_color(self.starPlayer[iStar as usize].get_color_id());
-                    game().objectcontainer[1].add(self.starItem[iStar as usize]);
+                    g.objectcontainer[1].add(self.starItem[iStar as usize]);
                     iStar += 1;
                 }
             } else {
                 //otherwise, add just a single star
                 let fGetHighest = !self.fReverseScoring && self.iCurrentModeType == StarStyle::Ztar;
-                self.starPlayer[0] = self.get_highest_score_player(fGetHighest);
+                self.starPlayer[0] = self.get_highest_score_player(g, fGetHighest);
 
-                self.starItem[0] = Ptr::new_box(CO_Star::new(Ptr::from_mut(&mut game().rm.spr_star), if self.iCurrentModeType == StarStyle::Ztar { 0 } else { 1 }, 0));
-                game().objectcontainer[1].add(self.starItem[0]);
+                self.starItem[0] = Ptr::new_box(CO_Star::new(Ptr::from_mut(&mut g.rm.spr_star), if self.iCurrentModeType == StarStyle::Ztar { 0 } else { 1 }, 0));
+                g.objectcontainer[1].add(self.starItem[0]);
             }
         }
     }
 
-    pub fn isplayerstar(&mut self, player: Ptr<CPlayer>) -> bool {
+    pub fn isplayerstar(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         unsafe {
             let mut iPlayer: i16 = 0;
-            while (iPlayer as usize) < game().players.len().wrapping_sub(1) {
+            while (iPlayer as usize) < g.players.len().wrapping_sub(1) {
                 if self.starPlayer[iPlayer as usize] == player {
                     return true;
                 }
@@ -108,14 +109,15 @@ impl CGM_Star {
         false
     }
 
-    pub fn swapplayer(&mut self, id: i16, player: Ptr<CPlayer>) -> Ptr<CPlayer> {
+    pub fn swapplayer(&mut self, g: &mut Game, id: i16, player: Ptr<CPlayer>) -> Ptr<CPlayer> {
+        let mut gp = g.ptr();
         unsafe {
             let mut oldstar: Ptr<CPlayer> = Ptr::null();
             if !self.starPlayer[id as usize].is_null() {
                 oldstar = self.starPlayer[id as usize];
-                oldstar.shield().turn_on();
-                game().eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
+                oldstar.shield().turn_on(g);
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
                     (oldstar.center_x() as i32 - 16) as i16,
                     (oldstar.center_y() as i32 - 16) as i16,
                     3,
@@ -132,16 +134,16 @@ impl CGM_Star {
 
             if self.starItem[id as usize].get_type() == 1 {
                 let text = if self.iCurrentModeType == StarStyle::Multi { "Star Get!" } else { "Shine Get!" };
-                game().eyecandy[2].emplace(EC_GravText::new(
-                    Ptr::from_mut(&mut game().rm.game_font_large),
+                g.eyecandy[2].emplace(EC_GravText::new(
+                    Ptr::from_mut(&mut g.rm.game_font_large),
                     player.center_x(),
                     player.bottom_y(),
                     text.to_string(),
                     (-(VELJUMP as f64) * 1.5) as f32,
                 ));
             } else {
-                game().eyecandy[2].emplace(EC_GravText::new(
-                    Ptr::from_mut(&mut game().rm.game_font_large),
+                g.eyecandy[2].emplace(EC_GravText::new(
+                    Ptr::from_mut(&mut g.rm.game_font_large),
                     player.center_x(),
                     player.bottom_y(),
                     "Ztarred!".to_string(),
@@ -149,30 +151,30 @@ impl CGM_Star {
                 ));
             }
 
-            game().eyecandy[2].emplace(EC_SingleAnimation::new(
-                Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
                 (player.center_x() as i32 - 16) as i16,
                 (player.center_y() as i32 - 16) as i16,
                 3,
                 8,
             ));
-            if_sound_on_play(&mut game().rm.sfx_transform);
+            if_sound_on_play(g, &mut gp.rm.sfx_transform);
 
             oldstar
         }
     }
 
-    fn rebalance_multi_stars(&mut self) {
+    fn rebalance_multi_stars(&mut self, g: &mut Game) {
         let mut rankedPlayers: [Ptr<CPlayer>; 4] = [Ptr::null(); 4];
         let fReverseScoring = self.fReverseScoring;
-        let iNumPlayers: i16 = self.get_score_ranked_player_list(&mut rankedPlayers, fReverseScoring);
+        let iNumPlayers: i16 = self.get_score_ranked_player_list(g, &mut rankedPlayers, fReverseScoring);
 
         let mut iStar: i16 = 0;
         while (iStar as i32) < iNumPlayers as i32 - 1 {
             self.starPlayer[iStar as usize] = rankedPlayers[iStar as usize];
             let iColor = self.starPlayer[iStar as usize].get_color_id();
             self.starItem[iStar as usize].set_player_color(iColor);
-            self.starItem[iStar as usize].place_star();
+            self.starItem[iStar as usize].place_star(g);
             iStar += 1;
         }
     }
@@ -181,27 +183,27 @@ impl CGM_Star {
 impl CGameModeTrait for CGM_Star {
     crate::impl_cgamemode_plumbing!();
 
-    fn init(&mut self) {
-        cgm_star_init(self)
+    fn init(&mut self, g: &mut Game) {
+        cgm_star_init(g, self)
     }
-    fn think(&mut self) {
-        cgm_star_think(self)
+    fn think(&mut self, g: &mut Game) {
+        cgm_star_think(g, self)
     }
-    fn draw_foreground(&mut self) {
+    fn draw_foreground(&mut self, g: &mut Game) {
         if self.fDisplayTimer {
-            self.gameClock.draw();
+            self.gameClock.draw(g);
         }
     }
-    fn playerkilledplayer(&mut self, _inflictor: Ptr<CPlayer>, _other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, _inflictor: Ptr<CPlayer>, _other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
         PlayerKillType::Normal
     }
-    fn playerkilledself(&mut self, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
         cgamemode_playerkilledself(self, player, style)
     }
-    fn playerextraguy(&mut self, mut player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iType: i16) {
         if !self.gameover {
             if iType == 5 {
-                player.score().adjust_score(if self.fReverseScoring { -1 } else { 1 });
+                player.score().adjust_score(g, if self.fReverseScoring { -1 } else { 1 });
             } else {
                 self.gameClock.add_time((iType as i32 * 10) as i16);
             }
@@ -209,25 +211,26 @@ impl CGameModeTrait for CGM_Star {
     }
 }
 
-fn star_time() -> i16 {
+fn star_time(g: &mut Game) -> i16 {
     unsafe {
-        if game().game_values.gamemodesettings.star.time < 1 {
+        if g.game_values.gamemodesettings.star.time < 1 {
             30
         } else {
-            game().game_values.gamemodesettings.star.time
+            g.game_values.gamemodesettings.star.time
         }
     }
 }
 
-pub fn cgm_star_init(this: &mut CGM_Star) {
-    cgm_timelimit_init(&mut this.cgm_time_limit);
+pub fn cgm_star_init(g: &mut Game, this: &mut CGM_Star) {
+        let mut gp = g.ptr();
+    cgm_timelimit_init(g, &mut this.cgm_time_limit);
 
     this.fDisplayTimer = true;
 
-    this.gameClock.init(star_time(), true);
+    this.gameClock.init(g, star_time(gp.get()), true);
 
     unsafe {
-        this.iCurrentModeType = game().game_values.gamemodesettings.star.shine;
+        this.iCurrentModeType = g.game_values.gamemodesettings.star.shine;
         if this.iCurrentModeType == StarStyle::Random {
             this.iCurrentModeType = StarStyle::from_u8(RANDOM_INT(3) as u8);
         }
@@ -237,9 +240,9 @@ pub fn cgm_star_init(this: &mut CGM_Star) {
         //Set initial scores
         for iScore in 0..game().score_cnt {
             if this.fReverseScoring {
-                game().score[iScore as usize].set_score(0);
+                g.score[iScore as usize].set_score(0);
             } else {
-                game().score[iScore as usize].set_score(this.goal);
+                g.score[iScore as usize].set_score(this.goal);
             }
         }
     }
@@ -249,7 +252,7 @@ pub fn cgm_star_init(this: &mut CGM_Star) {
         this.starPlayer[iStar] = Ptr::null();
     }
 
-    this.setup_mode();
+    this.setup_mode(g);
 }
 
 fn star_needs_reassign(this: &CGM_Star) -> bool {
@@ -262,87 +265,88 @@ fn star_needs_reassign(this: &CGM_Star) -> bool {
     }
 }
 
-fn reassign(this: &mut CGM_Star) {
+fn reassign(g: &mut Game, this: &mut CGM_Star) {
     unsafe {
         if this.iCurrentModeType == StarStyle::Multi {
             let mut iStar1: usize = 0;
-            while iStar1 + 1 < game().players.len() {
+            while iStar1 + 1 < g.players.len() {
                 //If we're missing a star player, then reassign them all
                 if this.starPlayer[iStar1].is_null() {
-                    this.rebalance_multi_stars();
+                    this.rebalance_multi_stars(g);
                     break;
                 }
                 iStar1 += 1;
             }
         } else if this.starPlayer[0].is_null() {
-            let fGetHighest = !this.fReverseScoring && game().game_values.gamemodesettings.star.shine == StarStyle::Ztar;
-            this.starPlayer[0] = this.get_highest_score_player(fGetHighest);
-            this.starItem[0].place_star();
+            let fGetHighest = !this.fReverseScoring && g.game_values.gamemodesettings.star.shine == StarStyle::Ztar;
+            this.starPlayer[0] = this.get_highest_score_player(g, fGetHighest);
+            this.starItem[0].place_star(g);
         }
     }
 }
 
-fn time_out(this: &mut CGM_Star) {
+fn time_out(g: &mut Game, this: &mut CGM_Star) {
+        let mut gp = g.ptr();
     unsafe {
-        this.gameClock.set_time(star_time());
-        if_sound_on_play(&mut game().rm.sfx_thunder);
+        this.gameClock.set_time(star_time(g));
+        if_sound_on_play(g, &mut gp.rm.sfx_thunder);
 
         if this.iCurrentModeType == StarStyle::Ztar {
-            if game().score[this.starPlayer[0].get_team_id() as usize].score > 1 || this.fReverseScoring {
-                this.starPlayer[0].kill_player_map_hazard(true, KillStyle::Environment, false, -1);
+            if g.score[this.starPlayer[0].get_team_id() as usize].score > 1 || this.fReverseScoring {
+                this.starPlayer[0].kill_player_map_hazard(g, true, KillStyle::Environment, false, -1);
             }
 
             if this.fReverseScoring {
-                this.starPlayer[0].score().adjust_score(1);
+                this.starPlayer[0].score().adjust_score(g, 1);
             } else {
-                this.starPlayer[0].score().adjust_score(-1);
+                this.starPlayer[0].score().adjust_score(g, -1);
 
                 if this.starPlayer[0].score().score <= 0 {
-                    this.fDisplayTimer = !remove_team(this.starPlayer[0].get_team_id());
+                    this.fDisplayTimer = !remove_team(g, this.starPlayer[0].get_team_id());
                     this.starPlayer[0] = Ptr::null();
                 }
             }
 
             let fGetHighest = !this.fReverseScoring;
-            this.starPlayer[0] = this.get_highest_score_player(fGetHighest);
-            this.starItem[0].place_star();
+            this.starPlayer[0] = this.get_highest_score_player(g, fGetHighest);
+            this.starItem[0].place_star(g);
         } else if this.iCurrentModeType == StarStyle::Shine {
             for i in 0..game().players.len() {
-                let mut player = game().players[i];
+                let mut player = g.players[i];
                 if this.starPlayer[0].get_team_id() == player.get_team_id() {
                     continue;
                 }
 
                 //Let the cleanup function remove the player on the last kill
-                if game().score[player.get_team_id() as usize].score > 1 || this.fReverseScoring {
-                    player.kill_player_map_hazard(true, KillStyle::Environment, false, -1);
+                if g.score[player.get_team_id() as usize].score > 1 || this.fReverseScoring {
+                    player.kill_player_map_hazard(g, true, KillStyle::Environment, false, -1);
                 }
             }
 
             if this.fReverseScoring {
-                this.starPlayer[0].score().adjust_score(1);
+                this.starPlayer[0].score().adjust_score(g, 1);
             } else {
                 for iTeam in 0..game().score_cnt {
                     if this.starPlayer[0].get_team_id() == iTeam {
                         continue;
                     }
 
-                    game().score[iTeam as usize].adjust_score(-1);
+                    gp.score[iTeam as usize].adjust_score(g, -1);
 
-                    if game().score[iTeam as usize].score <= 0 {
-                        this.fDisplayTimer = !remove_team(iTeam);
+                    if g.score[iTeam as usize].score <= 0 {
+                        this.fDisplayTimer = !remove_team(g, iTeam);
                     }
                 }
             }
 
-            this.starPlayer[0] = this.get_highest_score_player(false);
-            this.starItem[0].place_star();
+            this.starPlayer[0] = this.get_highest_score_player(g, false);
+            this.starItem[0].place_star(g);
         } else if this.iCurrentModeType == StarStyle::Multi {
             for iPlayer in 0..game().players.len() {
                 let mut fFound = false;
                 let mut iStar: usize = 0;
-                while iStar + 1 < game().players.len() {
-                    if this.starPlayer[iStar] == game().players[iPlayer] {
+                while iStar + 1 < g.players.len() {
+                    if this.starPlayer[iStar] == g.players[iPlayer] {
                         fFound = true;
                         break;
                     }
@@ -353,30 +357,30 @@ fn time_out(this: &mut CGM_Star) {
                     continue;
                 }
 
-                let mut p = game().players[iPlayer];
-                if game().score[p.get_team_id() as usize].score > 1 || this.fReverseScoring {
-                    p.kill_player_map_hazard(true, KillStyle::Environment, false, -1);
+                let mut p = g.players[iPlayer];
+                if g.score[p.get_team_id() as usize].score > 1 || this.fReverseScoring {
+                    p.kill_player_map_hazard(g, true, KillStyle::Environment, false, -1);
                 }
 
                 let mut fNeedRebalance = true;
-                let mut p = game().players[iPlayer];
+                let mut p = g.players[iPlayer];
                 if this.fReverseScoring {
-                    p.score().adjust_score(1);
+                    p.score().adjust_score(g, 1);
                 } else {
-                    p.score().adjust_score(-1);
+                    p.score().adjust_score(g, -1);
 
                     if p.score().score <= 0 {
-                        this.fDisplayTimer = !remove_team(p.get_team_id());
+                        this.fDisplayTimer = !remove_team(g, p.get_team_id());
 
-                        if game().game_values.gamemodesettings.star.shine != StarStyle::Random {
-                            this.setup_mode();
+                        if g.game_values.gamemodesettings.star.shine != StarStyle::Random {
+                            this.setup_mode(g);
                             fNeedRebalance = false;
                         }
                     }
                 }
 
-                if game().game_values.gamemodesettings.star.shine != StarStyle::Random && fNeedRebalance {
-                    this.rebalance_multi_stars();
+                if g.game_values.gamemodesettings.star.shine != StarStyle::Random && fNeedRebalance {
+                    this.rebalance_multi_stars(g);
                 }
 
                 break;
@@ -392,11 +396,11 @@ fn time_out(this: &mut CGM_Star) {
                         continue;
                     }
 
-                    countscore = (countscore as i32 + game().score[k as usize].score as i32) as i16;
+                    countscore = (countscore as i32 + g.score[k as usize].score as i32) as i16;
                 }
 
                 if countscore <= 1 {
-                    this.playwarningsound();
+                    this.playwarningsound(g);
                     break;
                 }
 
@@ -405,9 +409,9 @@ fn time_out(this: &mut CGM_Star) {
         }
 
         //If random game, then choose a new game type
-        if game().game_values.gamemodesettings.star.shine == StarStyle::Random && this.fDisplayTimer {
+        if g.game_values.gamemodesettings.star.shine == StarStyle::Random && this.fDisplayTimer {
             this.iCurrentModeType = StarStyle::from_u8(RANDOM_INT(3) as u8);
-            this.setup_mode();
+            this.setup_mode(g);
         }
     }
 }
@@ -416,18 +420,18 @@ fn star_mode() -> Option<&'static mut CGM_Star> {
     unsafe { game().game_values.gamemode.get().as_any().downcast_mut::<CGM_Star>() }
 }
 
-pub fn net_reassign() {
+pub fn net_reassign(g: &mut Game) {
     if let Some(this) = star_mode() {
         if star_needs_reassign(this) {
-            reassign(this);
+            reassign(g, this);
         }
     }
 }
 
-pub fn net_timeout() {
+pub fn net_timeout(g: &mut Game) {
     if let Some(this) = star_mode() {
         if !star_needs_reassign(this) {
-            time_out(this);
+            time_out(g, this);
         }
     }
 }
@@ -450,27 +454,28 @@ pub fn harness_record() -> Option<String> {
     })
 }
 
-pub fn cgm_star_think(this: &mut CGM_Star) {
+pub fn cgm_star_think(g: &mut Game, this: &mut CGM_Star) {
+        let mut gp = g.ptr();
     if this.gameover {
-        this.displayplayertext();
+        this.displayplayertext(g);
         return;
     }
 
     unsafe {
         //Make sure there is a star player(s)
-        if star_needs_reassign(this) && !net_random::event(Ev::StarReassign, &[]) {
-            reassign(this);
+        if star_needs_reassign(this) && !net_random::event(g, Ev::StarReassign, &[]) {
+            reassign(g, this);
         }
 
         //Count down the game time
         let iTime: i16 = this.gameClock.run_clock();
         if iTime <= 5 && iTime > 0 {
-            if_sound_on_play(&mut game().rm.sfx_starwarning);
+            if_sound_on_play(g, &mut gp.rm.sfx_starwarning);
         }
 
         //If the game time ran out, somebody needs to die and scores changed
-        if iTime == 0 && !net_random::event(Ev::StarTimeout, &[]) {
-            time_out(this);
+        if iTime == 0 && !net_random::event(g, Ev::StarTimeout, &[]) {
+            time_out(g, this);
         }
     }
 }

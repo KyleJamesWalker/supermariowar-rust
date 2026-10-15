@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_SecretPowerup.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::EC_Snow;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
@@ -34,12 +35,12 @@ impl PU_SecretPowerup {
             sparkleanimationtimer: 0,
             sparkledrawframe: 0,
         };
-        o.place();
+        o.place(game().get());
         o
     }
 
-    pub fn place(&mut self) {
-        if crate::smw::net_random::place_event(self.iNetworkID, 0) {
+    pub fn place(&mut self, g: &mut Game) {
+        if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
             return;
         }
 
@@ -49,7 +50,7 @@ impl PU_SecretPowerup {
         let collisionHeight = self.collisionHeight;
         let mut iAttempts: i16 = 10;
         unsafe {
-            while !game().g_map.findspawnpoint(5, &mut ix, &mut iy, collisionWidth, collisionHeight, false) && {
+            while !g.g_map.findspawnpoint(5, &mut ix, &mut iy, collisionWidth, collisionHeight, false) && {
                 let a = iAttempts;
                 iAttempts -= 1;
                 a > 0
@@ -69,8 +70,8 @@ impl CObjectTrait for PU_SecretPowerup {
         Some(self)
     }
 
-    fn update(&mut self) {
-        mo_powerup_update(self);
+    fn update(&mut self, g: &mut Game) {
+        mo_powerup_update(g, self);
 
         self.sparkleanimationtimer += 1;
         if self.sparkleanimationtimer >= 4 {
@@ -82,12 +83,13 @@ impl CObjectTrait for PU_SecretPowerup {
         }
     }
 
-    fn draw(&mut self) {
-        mo_powerup_draw(self);
+    fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        mo_powerup_draw(g, self);
 
         // Draw sparkles
         unsafe {
-            game().rm.spr_shinesparkle.draw_src(
+            gp.rm.spr_shinesparkle.draw_src(g, 
                 self.ix as i32 - self.collisionOffsetX as i32,
                 self.iy as i32 - self.collisionOffsetY as i32,
                 &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
@@ -95,26 +97,27 @@ impl CObjectTrait for PU_SecretPowerup {
         }
     }
 
-    fn collide_player(&mut self, _player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, _player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         unsafe {
             if self.itemtype == 0 {
-                game().game_values.windaffectsplayers = true;
+                g.game_values.windaffectsplayers = true;
 
                 for _i in 0..15i16 {
                     let x = RANDOM_INT(App::screenWidth) as f32;
                     let y = RANDOM_INT(App::screenHeight) as f32;
                     let t = (RANDOM_INT(4) + 1) as i16;
-                    game().eyecandy[2].emplace(EC_Snow::new(Ptr::from_mut(&mut game().rm.spr_snow), x, y, t));
+                    g.eyecandy[2].emplace(EC_Snow::new(Ptr::from_mut(&mut g.rm.spr_snow), x, y, t));
                 }
             } else if self.itemtype == 1 {
-                game().game_values.spinscreen = true;
+                g.game_values.spinscreen = true;
             } else if self.itemtype == 2 {
-                game().game_values.reversewalk = true;
+                g.game_values.reversewalk = true;
             } else if self.itemtype == 3 {
-                game().game_values.spotlights = true;
+                g.game_values.spotlights = true;
             }
 
-            if_sound_on_play(&mut game().rm.sfx_pickup);
+            if_sound_on_play(g, &mut gp.rm.sfx_pickup);
         }
 
         self.dead = true;

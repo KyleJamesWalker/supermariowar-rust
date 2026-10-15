@@ -1,5 +1,7 @@
 //! Port of src/smw/ObjectContainer.cpp
 
+use crate::game::Game;
+use crate::game::game;
 use crate::common::moving_object_types::MovingObjectType;
 use crate::common::object_base::{CObjectTrait, ObjectType};
 use crate::globals::{Aliased, Ptr};
@@ -64,21 +66,21 @@ impl CObjectContainer {
     }
 
     /// The C++ range-for captures `end()` once: objects added during the loop wait for the next frame.
-    pub fn update(&self) {
+    pub fn update(&self, g: &mut Game) {
         let this = self as *const CObjectContainer;
         let n = self.m_list.len();
         for i in 0..n {
             let mut obj = unsafe { (&(*this).m_list)[i] };
-            obj.update();
+            obj.update(g);
         }
     }
 
-    pub fn draw(&self) {
+    pub fn draw(&self, g: &mut Game) {
         let this = self as *const CObjectContainer;
         let n = self.m_list.len();
         for i in 0..n {
             let mut obj = unsafe { (&(*this).m_list)[i] };
-            obj.draw();
+            obj.draw(g);
         }
     }
 

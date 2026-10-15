@@ -1,5 +1,6 @@
 //! Port of src/common/TilesetManager.cpp
 
+use crate::game::game;
 use crate::common::file_io::BinaryFile;
 use crate::common::gfx::gfx_sprite::{gfxSprite, ImageLoader};
 use crate::common::global_constants::*;
@@ -254,7 +255,7 @@ impl CTilesetManager {
         let mut m_tilesets: Vec<Box<CTileset>> = Vec::new();
         let mut found_tileset_names: HashSet<String> = HashSet::new();
 
-        let mut dir = SubdirsIterator::new(convert_path_pack("gfx/packs/tilesets", gfxPack) + "/");
+        let mut dir = SubdirsIterator::new(convert_path_pack(game().get(), "gfx/packs/tilesets", gfxPack) + "/");
         while let Some(path) = dir.next() {
             let tileset = Box::new(CTileset::new(path));
             found_tileset_names.insert(tileset.name().to_string());
@@ -263,7 +264,7 @@ impl CTilesetManager {
 
         //Add tilesets from the Classic pack to fill the gaps
         if path_filename(gfxPack) != "Classic" {
-            dir = SubdirsIterator::new(convert_path("gfx/packs/Classic/tilesets/"));
+            dir = SubdirsIterator::new(convert_path(game().get(), "gfx/packs/Classic/tilesets/"));
             while let Some(path) = dir.next() {
                 let name = path.file_name().map(|f| f.to_string_lossy().into_owned()).unwrap_or_default();
                 if !found_tileset_names.contains(&name) {

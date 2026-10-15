@@ -1,5 +1,6 @@
 //! Port of src/smw/player_components/PlayerKuriboShoe.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::ClipEdge;
@@ -54,14 +55,15 @@ impl PlayerKuriboShoe {
         self.r#type = newtype;
     }
 
-    pub fn update(&mut self, player: &mut CPlayer, keymask: u8) {
-        self.update_getting_out_of_the_shoe(player, keymask); //Free player from the kuribo shoe
+    pub fn update(&mut self, g: &mut Game, player: &mut CPlayer, keymask: u8) {
+        self.update_getting_out_of_the_shoe(g, player, keymask); //Free player from the kuribo shoe
         self.update_super_stomp(player);
         self.update_animation();
     }
 
     // Free player from the kuribo shoe
-    fn update_getting_out_of_the_shoe(&mut self, player: &mut CPlayer, keymask: u8) {
+    fn update_getting_out_of_the_shoe(&mut self, g: &mut Game, player: &mut CPlayer, keymask: u8) {
+        let mut gp = g.ptr();
         unsafe {
             if self.is_on() && player.isready() && !player.frozen {
                 if self.exitIndex > 0 {
@@ -81,14 +83,14 @@ impl PlayerKuriboShoe {
 
                 if self.exitIndex == 4 && self.exitTimer < 32 {
                     let shoe = Ptr::new_box(CO_KuriboShoe::new(
-                        Ptr::from_mut(&mut game().rm.spr_kuriboshoe),
+                        Ptr::from_mut(&mut g.rm.spr_kuriboshoe),
                         Vec2s::new((player.ix as i32 - PWOFFSET) as i16, (player.iy as i32 - PHOFFSET - 2) as i16),
                         self.r#type == STICKY,
                     ));
-                    io_moving_object_collision_detection_checksides(shoe.get());
-                    game().objectcontainer[1].add(shoe);
-                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
+                    io_moving_object_collision_detection_checksides(g, shoe.get());
+                    g.objectcontainer[1].add(shoe);
+                    g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                        Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
                         (player.center_x() as i32 - 16) as i16,
                         (player.center_y() as i32 - 16) as i16,
                         3,
@@ -97,7 +99,7 @@ impl PlayerKuriboShoe {
 
                     self.exitIndex = 0;
                     self.exitTimer = 0;
-                    if_sound_on_play(&mut game().rm.sfx_transform);
+                    if_sound_on_play(g, &mut gp.rm.sfx_transform);
                     self.r#type = NONE;
 
                     player.superstomp.reset();
@@ -128,7 +130,8 @@ impl PlayerKuriboShoe {
         }
     }
 
-    pub fn draw(&mut self, player: &mut CPlayer) {
+    pub fn draw(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         unsafe {
             if self.r#type > 0 {
                 let x = player.left_x() as i32 - PWOFFSET;
@@ -141,9 +144,9 @@ impl PlayerKuriboShoe {
                 };
                 if player.iswarping() {
                     let edge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);
-                    game().rm.spr_kuriboshoe.draw_clip(x, y, &src, edge, player.get_warp_plane() as i32);
+                    gp.rm.spr_kuriboshoe.draw_clip(g, x, y, &src, edge, player.get_warp_plane() as i32);
                 } else {
-                    game().rm.spr_kuriboshoe.draw_src(x, y, &src);
+                    gp.rm.spr_kuriboshoe.draw_src(g, x, y, &src);
                 }
             }
         }

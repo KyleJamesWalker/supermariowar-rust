@@ -4,6 +4,7 @@
 //! `GSMenu` refers to the current one as `Ptr<UI_Menu>`. Controls are `new`ed by the menus, which keep
 //! raw pointers to them; the menu owns and deletes them, like the C++ `unique_ptr` vector.
 
+use crate::game::Game;
 use crate::common::eyecandy::CEyecandyContainer;
 use crate::common::input::{CPlayerInput, DEVICE_KEYBOARD};
 use crate::common::ui::menu_code::*;
@@ -89,7 +90,7 @@ impl UI_Menu {
     /// Sets the initially focused element on opening/resetting the menu.
     pub fn set_initial_focus(&mut self, control: ControlPtr) {
         self.m_initialFocus = control;
-        self.reset_menu();
+        self.reset_menu(game().get());
     }
     /// The initially focused element on opening/resetting the menu.
     pub fn initial_focus(&self) -> ControlPtr {
@@ -104,9 +105,9 @@ impl UI_Menu {
         self.cancelCode = code;
     }
 
-    pub fn reset_menu(&mut self) {
+    pub fn reset_menu(&mut self, g: &mut Game) {
         if !self.m_currentFocus.is_null() {
-            self.m_currentFocus.modify(false);
+            self.m_currentFocus.modify(g, false);
             self.m_currentFocus.select(false);
         }
 
@@ -119,31 +120,31 @@ impl UI_Menu {
         self.eyeCandy.clean();
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, g: &mut Game) {
         for i in 0..self.controls.len() {
-            self.controls[i].update();
+            self.controls[i].update(g);
         }
 
         self.eyeCandy.clean_dead_objects();
         self.eyeCandy.update();
     }
 
-    pub fn draw(&mut self) {
+    pub fn draw(&mut self, g: &mut Game) {
         for i in 0..self.controls.len() {
-            self.controls[i].draw();
+            self.controls[i].draw(g);
         }
 
         self.eyeCandy.draw();
 
         if self.fModifyingItem && !self.m_currentFocus.is_null() {
-            self.m_currentFocus.draw_overlay();
+            self.m_currentFocus.draw_overlay(g);
         }
     }
 
-    pub fn send_input(&mut self, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+    pub fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         unsafe {
             if self.fModifyingItem {
-                let ret = self.m_currentFocus.send_input(playerInput);
+                let ret = self.m_currentFocus.send_input(g, playerInput);
 
                 if MENU_CODE_UNSELECT_ITEM == ret {
                     self.fModifyingItem = false;
@@ -162,8 +163,8 @@ impl UI_Menu {
                 // Only allow the controlling team to control the menu (if there is one)
                 if self.iControllingTeam != -1 {
                     // Pay attention to other player's exit button pushes so we can exit when AI is controlling
-                    if game().game_values.playercontrol[iPlayer as usize] != 1
-                        || (self.iControllingTeam != lookup_team_id(iPlayer) && (!self.fAllowExitButton || !out.menu_cancel().fPressed))
+                    if g.game_values.playercontrol[iPlayer as usize] != 1
+                        || (self.iControllingTeam != lookup_team_id(g, iPlayer) && (!self.fAllowExitButton || !out.menu_cancel().fPressed))
                     {
                         continue;
                     }
@@ -171,9 +172,9 @@ impl UI_Menu {
                 // Only let player 1 on the keyboard control the menu unless there is another controlling team
                 // Not in upstream: the first keyboard player may too, when joysticks took the players before it.
                 else if iPlayer != 0
-                    && !game().game_values.playerInput.inputControls[iPlayer as usize].is_null()
-                    && game().game_values.playerInput.inputControls[iPlayer as usize].iDevice == DEVICE_KEYBOARD
-                    && (0..iPlayer as usize).any(|p| game().game_values.playerInput.inputControls[p].is_null() || game().game_values.playerInput.inputControls[p].iDevice == DEVICE_KEYBOARD)
+                    && !g.game_values.playerInput.inputControls[iPlayer as usize].is_null()
+                    && g.game_values.playerInput.inputControls[iPlayer as usize].iDevice == DEVICE_KEYBOARD
+                    && (0..iPlayer as usize).any(|p| g.game_values.playerInput.inputControls[p].is_null() || g.game_values.playerInput.inputControls[p].iDevice == DEVICE_KEYBOARD)
                 {
                     continue;
                 }
@@ -198,8 +199,8 @@ impl UI_Menu {
                     let mut ret = MENU_CODE_NONE;
 
                     if !self.m_currentFocus.is_null() {
-                        crate::common::ui::mi_text_field::note_opener(playerInput.iPressedKey != 0);
-                        ret = self.m_currentFocus.modify(true);
+                        crate::common::ui::mi_text_field::note_opener(g, playerInput.iPressedKey != 0);
+                        ret = self.m_currentFocus.modify(g, true);
 
                         if MENU_CODE_MODIFY_ACCEPTED == ret {
                             self.fModifyingItem = true;
@@ -249,9 +250,9 @@ impl UI_Menu {
         self.m_savedCurrent = self.m_currentFocus;
     }
 
-    pub fn restore_current(&mut self) {
+    pub fn restore_current(&mut self, g: &mut Game) {
         if !self.m_currentFocus.is_null() {
-            self.m_currentFocus.modify(false);
+            self.m_currentFocus.modify(g, false);
             self.m_currentFocus.select(false);
         }
 
@@ -271,14 +272,14 @@ impl UI_Menu {
         self.fAllowExitButton = allowExit;
     }
 
-    pub fn mouse_click(&mut self, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
+    pub fn mouse_click(&mut self, g: &mut Game, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
         // Loop through all controls to see if one was clicked on
         let mut pFound: ControlPtr = Ptr::null();
         let mut code = MENU_CODE_NONE;
         for i in 0..self.controls.len() {
             let mut control = self.controls[i];
             if control.ctl().is_visible() {
-                code = control.mouse_click(iMouseX, iMouseY);
+                code = control.mouse_click(g, iMouseX, iMouseY);
                 if code != MENU_CODE_NONE {
                     pFound = control;
                     break;
@@ -287,11 +288,11 @@ impl UI_Menu {
         }
 
         if !pFound.is_null() {
-            crate::common::ui::mi_text_field::note_opener(false);
+            crate::common::ui::mi_text_field::note_opener(g, false);
             // If we clicked the same control we have selected
             if pFound != self.m_currentFocus {
                 if self.fModifyingItem {
-                    self.m_currentFocus.modify(false);
+                    self.m_currentFocus.modify(g, false);
                     self.fModifyingItem = false;
                 }
 
@@ -300,15 +301,15 @@ impl UI_Menu {
                 self.fModifyingItem = self.m_currentFocus.select(true);
 
                 if !self.fModifyingItem {
-                    self.fModifyingItem = self.m_currentFocus.modify(true) == MENU_CODE_MODIFY_ACCEPTED;
+                    self.fModifyingItem = self.m_currentFocus.modify(g, true) == MENU_CODE_MODIFY_ACCEPTED;
                 }
             } else if !self.fModifyingItem {
-                self.fModifyingItem = self.m_currentFocus.modify(true) == MENU_CODE_MODIFY_ACCEPTED;
+                self.fModifyingItem = self.m_currentFocus.modify(g, true) == MENU_CODE_MODIFY_ACCEPTED;
             }
         } else {
             // If nothing was clicked, then stop modifying the current control
             if self.fModifyingItem {
-                self.m_currentFocus.modify(false);
+                self.m_currentFocus.modify(g, false);
                 self.fModifyingItem = false;
             }
         }

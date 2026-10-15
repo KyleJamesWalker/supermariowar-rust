@@ -1,5 +1,6 @@
 //! Port of src/smw/menu/WorldMenu.cpp
 
+use crate::game::Game;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
 use crate::common::ui::mi_image::MI_Image;
@@ -25,23 +26,23 @@ pub struct UI_WorldMenu {
 crate::impl_base!(UI_WorldMenu => ui_menu: UI_Menu);
 
 impl UI_WorldMenu {
-    pub fn new() -> Box<Self> {
+    pub fn new(g: &mut Game) -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let spr_selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
+            let spr_selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
 
             this.miWorld = Ptr::new_box(MI_World::new());
             this.miWorld.set_auto_modify(true);
 
-            this.miWorldStop = Ptr::new_box(MI_TourStop::new(70, 45, true));
+            this.miWorldStop = Ptr::new_box(MI_TourStop::new(g, 70, 45, true));
             this.miWorldStop.set_visible(false);
 
             // Exit tour dialog box
-            this.miWorldExitDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut game().rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
+            this.miWorldExitDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
             this.miWorldExitDialogExitTourText = Ptr::new_box(MI_HeaderText::new("Exit World", 320, 205));
 
-            this.miWorldExitDialogYesButton = Ptr::new_box(MI_Button::new(spr_selectfield, 235, 250, "Yes", 80, TextAlign::CENTER));
-            this.miWorldExitDialogNoButton = Ptr::new_box(MI_Button::new(spr_selectfield, 325, 250, "No", 80, TextAlign::CENTER));
+            this.miWorldExitDialogYesButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 235, 250, "Yes", 80, TextAlign::CENTER));
+            this.miWorldExitDialogNoButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 325, 250, "No", 80, TextAlign::CENTER));
         }
 
         this.miWorldExitDialogYesButton.set_code(MENU_CODE_EXIT_WORLD_YES);
@@ -74,9 +75,9 @@ impl UI_WorldMenu {
         this
     }
 
-    pub fn open_stage_start(&mut self) {
+    pub fn open_stage_start(&mut self, g: &mut Game) {
         unsafe {
-            self.miWorldStop.refresh(game().game_values.tourstopcurrent as i16);
+            self.miWorldStop.refresh(g, g.game_values.tourstopcurrent as i16);
         }
         self.miWorldStop.set_visible(true);
 
@@ -86,7 +87,7 @@ impl UI_WorldMenu {
         self.set_initial_focus(focus);
         self.set_cancel_code(MENU_CODE_WORLD_STAGE_NO_START);
 
-        self.reset_menu();
+        self.reset_menu(g);
     }
 
     pub fn close_stage_start(&mut self) {
@@ -96,7 +97,7 @@ impl UI_WorldMenu {
         self.set_initial_focus(focus);
         self.set_cancel_code(MENU_CODE_BACK_TEAM_SELECT_MENU);
 
-        self.restore_current();
+        self.restore_current(game().get());
     }
 
     pub fn open_exit_dialog(&mut self) {
@@ -110,7 +111,7 @@ impl UI_WorldMenu {
         let focus = ctl_ptr(self.miWorldExitDialogNoButton);
         self.set_initial_focus(focus);
         self.set_cancel_code(MENU_CODE_NONE);
-        self.reset_menu();
+        self.reset_menu(game().get());
     }
 
     pub fn close_exit_dialog(&mut self) {
@@ -123,6 +124,6 @@ impl UI_WorldMenu {
         self.set_initial_focus(focus);
         self.set_cancel_code(MENU_CODE_BACK_TEAM_SELECT_MENU);
 
-        self.restore_current();
+        self.restore_current(game().get());
     }
 }

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_Coin.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
@@ -61,19 +62,19 @@ impl MO_Coin {
 
         o.timer = 0;
         if placecoin {
-            o.place_coin();
+            o.place_coin(game().get());
         }
 
         if o.iType == 0 {
             o.fObjectCollidesWithMap = false;
         } else {
-            io_moving_object_collision_detection_checksides(&mut o);
+            io_moving_object_collision_detection_checksides(game().get(), &mut o);
         }
         o
     }
 
-    pub fn place_coin(&mut self) {
-        if crate::smw::net_random::place_event(self.iNetworkID, 0) {
+    pub fn place_coin(&mut self, g: &mut Game) {
+        if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
             return;
         }
 
@@ -83,8 +84,8 @@ impl MO_Coin {
         let mut y: i16 = 0;
         let mut iAttempts: i16 = 32;
         unsafe {
-            while (!game().g_map.findspawnpoint(5, &mut x, &mut y, self.collisionWidth, self.collisionHeight, false)
-                || game().objectcontainer[1].get_closest_moving_object(x, y, movingobject_coin) < 150.0f32)
+            while (!g.g_map.findspawnpoint(5, &mut x, &mut y, self.collisionWidth, self.collisionHeight, false)
+                || g.objectcontainer[1].get_closest_moving_object(x, y, movingobject_coin) < 150.0f32)
                 && {
                     let a = iAttempts;
                     iAttempts -= 1;
@@ -104,29 +105,30 @@ impl CObjectTrait for MO_Coin {
         Some(self)
     }
 
-    fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         unsafe {
-            if self.iUncollectableTime > 0 || (self.iType == 1 && (!game().game_values.gamemodesettings.greed.owncoins && self.iTeam == player.get_team_id())) {
+            if self.iUncollectableTime > 0 || (self.iType == 1 && (!g.game_values.gamemodesettings.greed.owncoins && self.iTeam == player.get_team_id())) {
                 return false;
             }
 
-            if !game().game_values.gamemode.gameover {
+            if !g.game_values.gamemode.gameover {
                 if self.iType == 2 {
                     player.score().subscore[0] += 1;
                 } else {
-                    player.score().adjust_score(1);
+                    player.score().adjust_score(g, 1);
                 }
 
-                game().game_values.gamemode.check_winner(player);
+                gp.game_values.gamemode.check_winner(g, player);
             }
 
-            game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_coinsparkle), self.ix, self.iy, 7, 4));
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_coinsparkle), self.ix, self.iy, 7, 4));
 
-            if_sound_on_play(&mut game().rm.sfx_coin);
+            if_sound_on_play(g, &mut gp.rm.sfx_coin);
         }
 
         if self.iType == 0 {
-            self.place_coin();
+            self.place_coin(g);
         } else {
             self.dead = true;
         }
@@ -134,7 +136,7 @@ impl CObjectTrait for MO_Coin {
         false
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         if self.iType != 1 {
             self.animate();
 
@@ -149,32 +151,33 @@ impl CObjectTrait for MO_Coin {
 
             self.timer += 1;
             if self.timer > 1000 {
-                self.place_coin();
+                self.place_coin(g);
             }
         }
 
         if self.iType != 0 {
             self.applyfriction();
-            io_moving_object_update(self);
+            io_moving_object_update(g, self);
 
             self.iUncollectableTime -= 1;
 
             unsafe {
-                if self.iType == 1 && (self.iUncollectableTime as i32) < -(game().game_values.gamemodesettings.greed.coinlife as i32) {
-                    game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
+                if self.iType == 1 && (self.iUncollectableTime as i32) < -(g.game_values.gamemodesettings.greed.coinlife as i32) {
+                    g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
                     self.dead = true;
                 }
             }
         }
     }
 
-    fn draw(&mut self) {
-        io_moving_object_draw(self);
+    fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        io_moving_object_draw(g, self);
 
         // Draw sparkles
         if self.iType != 1 {
             unsafe {
-                game().rm.spr_shinesparkle.draw_src(
+                gp.rm.spr_shinesparkle.draw_src(g, 
                     self.ix as i32 - self.collisionOffsetX as i32,
                     self.iy as i32 - self.collisionOffsetY as i32,
                     &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },

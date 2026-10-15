@@ -1,5 +1,6 @@
 //! Port of src/smw/player.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::{EC_Corpse, EC_Door, EC_FallingObject, EC_GravText, EC_SingleAnimation, Spotlight};
 use crate::common::eyecandy_styles::{AwardStyle, SpawnStyle};
 use crate::common::game::App;
@@ -258,9 +259,9 @@ fn b(v: i32) -> bool {
 }
 
 impl CScore {
-    pub fn adjust_score(&mut self, iValue: i16) {
+    pub fn adjust_score(&mut self, g: &mut Game, iValue: i16) {
         unsafe {
-            if game().game_values.gamemode.gameover || crate::smw::net_outcomes::score_locked() {
+            if g.game_values.gamemode.gameover || crate::smw::net_outcomes::score_locked(g) {
                 return;
             }
         }
@@ -275,9 +276,9 @@ impl CScore {
     }
 }
 
-pub fn get_player_from_global_id(iGlobalID: i16) -> Ptr<CPlayer> {
+pub fn get_player_from_global_id(g: &mut Game, iGlobalID: i16) -> Ptr<CPlayer> {
     unsafe {
-        for &player in game().players.iter() {
+        for &player in g.players.iter() {
             if player.globalID == iGlobalID {
                 return player;
             }
@@ -287,44 +288,45 @@ pub fn get_player_from_global_id(iGlobalID: i16) -> Ptr<CPlayer> {
     Ptr::null()
 }
 
-pub fn should_update_sprite() -> bool {
+pub fn should_update_sprite(g: &mut Game) -> bool {
     unsafe {
-        if game().netplay.active {
+        if g.netplay.active {
             return true;
         }
     }
 
-    unsafe { !game().game_values.flags.pausegame && !game().game_values.flags.exitinggame && !game().game_values.flags.swapplayers }
+    unsafe { !g.game_values.flags.pausegame && !g.game_values.flags.exitinggame && !g.game_values.flags.swapplayers }
 }
 
-pub fn player_killed_player(iKiller: i16, killed: Ptr<CPlayer>, deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
+pub fn player_killed_player(g: &mut Game, iKiller: i16, killed: Ptr<CPlayer>, deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
     let args = [0, iKiller as i32, killed.globalID as i32, deathstyle as i32, style as i32, fForce as i32, fKillCarriedItem as i32, -1];
-    if let Some(result) = crate::smw::net_outcomes::kill(&args) {
+    if let Some(result) = crate::smw::net_outcomes::kill(g, &args) {
         return result;
     }
-    player_killed_player_now(iKiller, killed, deathstyle, style, fForce, fKillCarriedItem)
+    player_killed_player_now(g, iKiller, killed, deathstyle, style, fForce, fKillCarriedItem)
 }
 
-pub fn player_killed_player_now(iKiller: i16, mut killed: Ptr<CPlayer>, deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
+pub fn player_killed_player_now(g: &mut Game, iKiller: i16, mut killed: Ptr<CPlayer>, deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
+        let mut gp = g.ptr();
     unsafe {
-        let mut killer = get_player_from_global_id(iKiller);
+        let mut killer = get_player_from_global_id(g, iKiller);
 
         if !killer.is_null() && killer.globalID != killed.globalID {
-            killer.killed_player(killed, deathstyle, style, fForce, fKillCarriedItem)
+            killer.killed_player(g, killed, deathstyle, style, fForce, fKillCarriedItem)
         } else {
-            killed.death_awards();
+            killed.death_awards(g);
 
-            let iKillType = game().game_values.gamemode.get().playerkilledself(killed, style);
+            let iKillType = g.game_values.gamemode.get().playerkilledself(g, killed, style);
 
             if PlayerKillType::Normal == iKillType || (fForce && PlayerKillType::NonKill == iKillType) {
-                killed.die(PlayerDeathStyle::Jump, false, fKillCarriedItem);
+                killed.die(g, PlayerDeathStyle::Jump, false, fKillCarriedItem);
             }
 
             if PlayerKillType::NonKill != iKillType {
                 if deathstyle == PlayerDeathStyle::Shatter {
-                    if_sound_on_play(&mut game().rm.sfx_breakblock);
+                    if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
                 } else {
-                    if_sound_on_play(&mut game().rm.sfx_deathsound);
+                    if_sound_on_play(g, &mut gp.rm.sfx_deathsound);
                 }
             }
 
@@ -346,7 +348,7 @@ fn gamemode_as<T: 'static>() -> Option<&'static mut T> {
 impl CPlayer {
     /// C++ `new CPlayer(...)`; the object must not move because the constructor hands out `this`.
     #[allow(clippy::too_many_arguments)]
-    pub fn new(
+    pub fn new(g: &mut Game, 
         iGlobalID: i16,
         iLocalID: i16,
         iTeamID: i16,
@@ -414,29 +416,29 @@ impl CPlayer {
         }
 
         unsafe {
-            if game().netplay.active {
-                if this.globalID == game().netplay.remotePlayerNumber as i16 {
-                    this.playerKeys = Ptr::from_mut(&mut game().game_values.playerInput.outputControls[0]);
+            if g.netplay.active {
+                if this.globalID == g.netplay.remotePlayerNumber as i16 {
+                    this.playerKeys = Ptr::from_mut(&mut g.game_values.playerInput.outputControls[0]);
                     println!("[net] Player {} reads local input.", this.globalID);
                 } else {
-                    this.playerKeys = Ptr::from_mut(&mut game().netplay.netPlayerInput.outputControls[this.globalID as usize]);
+                    this.playerKeys = Ptr::from_mut(&mut g.netplay.netPlayerInput.outputControls[this.globalID as usize]);
                     println!("[net] Player {} reads network input.", this.globalID);
                 }
             } else {
-                this.playerKeys = Ptr::from_mut(&mut game().game_values.playerInput.outputControls[this.globalID as usize]);
+                this.playerKeys = Ptr::from_mut(&mut g.game_values.playerInput.outputControls[this.globalID as usize]);
             }
 
-            this.playerDevice = game().game_values.playerInput.inputControls[this.globalID as usize].iDevice;
+            this.playerDevice = g.game_values.playerInput.inputControls[this.globalID as usize].iDevice;
             this.sprites = nsprites;
 
             //Do this so we have a valid x,y to say the player is so other items that init with the player will get valid positions
             //The actual choosing of a spawning position happens later
-            this.find_spawn_point();
+            this.find_spawn_point(g);
 
-            this.setup_new_player();
+            this.setup_new_player(g);
             *this.respawncounter.get() = 0;
 
-            game().game_values.unlocksecret1part1[this.globalID as usize] = false;
+            g.game_values.unlocksecret1part1[this.globalID as usize] = false;
         }
 
         this
@@ -538,8 +540,8 @@ impl CPlayer {
         self.fAcceptingItem && self.tanookisuit.not_statue() && !self.kuriboshoe.is_on()
     }
 
-    pub fn set_stored_powerup_type(&mut self, iPowerup: PowerupType) {
-        self.set_stored_powerup(iPowerup as i16);
+    pub fn set_stored_powerup_type(&mut self, g: &mut Game, iPowerup: PowerupType) {
+        self.set_stored_powerup(g, iPowerup as i16);
     }
 
     pub fn decrease_projectiles_count(&mut self) {
@@ -580,7 +582,7 @@ impl CPlayer {
         unsafe { std::mem::transmute::<i32, ClipEdge>((self.state as i16 % 4) as i32) }
     }
 
-    pub fn update_frozen_status(&mut self, keymask: i32) {
+    pub fn update_frozen_status(&mut self, g: &mut Game, keymask: i32) {
         if self.frozen {
             // `~(sprite_state & 0x1)` is never zero, so the left key always thaws.
             if b(keymask & 4) || (b(self.sprite_state as i32 & 0x1) && b(keymask & 8)) {
@@ -593,10 +595,10 @@ impl CPlayer {
                 self.frozen = false;
 
                 //Shield the player after becoming unfrozen to protect against being frozen again
-                self.shield.turn_on();
+                self.shield.turn_on(g);
                 unsafe {
-                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
+                    g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                        Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
                         (self.ix as i32 + HALFPW - 16) as i16,
                         (self.iy as i32 + HALFPH - 16) as i16,
                         3,
@@ -607,7 +609,7 @@ impl CPlayer {
         }
     }
 
-    pub fn accelerate(&mut self, direction: f32) {
+    pub fn accelerate(&mut self, g: &mut Game, direction: f32) {
         // direction is
         //  1 on moving right
         // -1 on moving left
@@ -628,7 +630,7 @@ impl CPlayer {
                     None => false,
                 };
 
-                if (game().game_values.flags.slowdownon != -1 && game().game_values.flags.slowdownon != self.teamID) || self.jail.is_active() {
+                if (g.game_values.flags.slowdownon != -1 && g.game_values.flags.slowdownon != self.teamID) || self.jail.is_active() {
                     maxVel = VELSLOWMOVING;
                 } else if self.keys().game_turbo().fDown {
                     maxVel = VELTURBOMOVING + if isTagged { TAGGEDBOOST } else { 0.0 };
@@ -651,7 +653,7 @@ impl CPlayer {
                     } else {
                         //only allow the player to jump in the air from kuribo's shoe if we aren't bouncing on a note block
                         if self.superjumptimer <= 0 {
-                            self.jump(direction as i16, 1.0, true);
+                            self.jump(g, direction as i16, 1.0, true);
 
                             self.superjumptype = 3;
                             self.superjumptimer = 16;
@@ -660,11 +662,11 @@ impl CPlayer {
                 }
                 // If the player suddently moved to the other direction, play skid sound
                 else if if direction > 0.0 { self.velx < 0.0 } else { self.velx > 0.0 } {
-                    game().game_values.flags.playskidsound = true;
+                    g.game_values.flags.playskidsound = true;
                 }
 
                 //If rain candy is turned on
-                if (b(game().g_map.eyecandy[0] as i32 & 32) || b(game().g_map.eyecandy[1] as i32 & 32) || b(game().g_map.eyecandy[2] as i32 & 32))
+                if (b(g.g_map.eyecandy[0] as i32 & 32) || b(g.g_map.eyecandy[1] as i32 & 32) || b(g.g_map.eyecandy[2] as i32 & 32))
                     && self.velx.abs() > VELMOVINGADD
                     && {
                         self.rainsteptimer += 1;
@@ -672,8 +674,8 @@ impl CPlayer {
                     }
                 {
                     self.rainsteptimer = 0;
-                    game().eyecandy[1].emplace(EC_SingleAnimation::new_rect(
-                        Ptr::from_mut(&mut game().rm.spr_frictionsmoke),
+                    g.eyecandy[1].emplace(EC_SingleAnimation::new_rect(
+                        Ptr::from_mut(&mut g.rm.spr_frictionsmoke),
                         self.ix,
                         (self.iy as i32 + PH - 14) as i16,
                         5,
@@ -688,12 +690,12 @@ impl CPlayer {
         }
     }
 
-    pub fn accelerate_right(&mut self) {
-        self.accelerate(1.0);
+    pub fn accelerate_right(&mut self, g: &mut Game) {
+        self.accelerate(g, 1.0);
     }
 
-    pub fn accelerate_left(&mut self) {
-        self.accelerate(-1.0);
+    pub fn accelerate_left(&mut self, g: &mut Game) {
+        self.accelerate(g, -1.0);
     }
 
     pub fn decrease_velocity(&mut self) {
@@ -768,7 +770,7 @@ impl CPlayer {
         self.diedas = r#type;
     }
 
-    pub fn update_waiting_for_respawn(&mut self) {
+    pub fn update_waiting_for_respawn(&mut self, g: &mut Game) {
         debug_assert!(self.state == PlayerState::Waiting);
 
         unsafe {
@@ -784,33 +786,33 @@ impl CPlayer {
             if *self.respawncounter.get() <= 0 {
                 *self.respawncounter.get() = 0;
 
-                if !net_random::event(Ev::Respawn, &[self.globalID as i32]) {
-                    self.net_respawn();
+                if !net_random::event(g, Ev::Respawn, &[self.globalID as i32]) {
+                    self.net_respawn(g);
                 }
             }
         }
     }
 
-    pub fn net_respawn(&mut self) {
+    pub fn net_respawn(&mut self, g: &mut Game) {
         unsafe {
-            if self.find_spawn_point() {
+            if self.find_spawn_point(g) {
                 //Make sure spawn point isn't inside a tile
                 let this = self.this();
-                self.collisions.checksides(this.get());
+                self.collisions.checksides(g, this.get());
 
                 self.state = PlayerState::Spawning;
 
-                if game().game_values.spawnstyle == SpawnStyle::Instant {
-                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
+                if g.game_values.spawnstyle == SpawnStyle::Instant {
+                    g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                        Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
                         (self.ix as i32 + HALFPW - 16) as i16,
                         (self.iy as i32 + HALFPH - 16) as i16,
                         3,
                         8,
                     ));
-                } else if game().game_values.spawnstyle == SpawnStyle::Door {
-                    game().eyecandy[0].emplace(EC_Door::new(
-                        Ptr::from_mut(&mut game().rm.spr_spawndoor),
+                } else if g.game_values.spawnstyle == SpawnStyle::Door {
+                    g.eyecandy[0].emplace(EC_Door::new(
+                        Ptr::from_mut(&mut g.rm.spr_spawndoor),
                         Ptr::from_mut(&mut self.sprites.get()[self.sprite_state as usize]),
                         (self.ix as i32 + HALFPW - 16) as i16,
                         (self.iy as i32 + HALFPH - 16) as i16,
@@ -823,14 +825,15 @@ impl CPlayer {
         }
     }
 
-    pub fn net_podobo_rain(&mut self) {
+    pub fn net_podobo_rain(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             let numPodobos = (RANDOM_INT(6) + 10) as i16;
             for _iPodobo in 0..numPodobos {
                 let x = RANDOM_INT((App::screenWidth as f32 * 0.95f32) as i32) as i16;
                 let vy = -((RANDOM_INT(9) as f32) / 2.0f32) - 9.0f32;
-                game().objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(
-                    Ptr::from_mut(&mut game().rm.spr_podobo),
+                g.objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(
+                    Ptr::from_mut(&mut g.rm.spr_podobo),
                     Vec2s::new(x, App::screenHeight as i16),
                     vy,
                     self.globalID,
@@ -839,14 +842,15 @@ impl CPlayer {
                     false,
                 )));
             }
-            if_sound_on_play(&mut game().rm.sfx_thunder);
+            if_sound_on_play(g, &mut gp.rm.sfx_thunder);
         }
     }
 
-    pub fn net_throw_boomerang(&mut self, ix: i32, iy: i32, facingRight: bool) {
+    pub fn net_throw_boomerang(&mut self, g: &mut Game, ix: i32, iy: i32, facingRight: bool) {
+        let mut gp = g.ptr();
         unsafe {
-            game().objectcontainer[2].add(Ptr::new_box(MO_Boomerang::new(
-                Ptr::from_mut(&mut game().rm.spr_boomerang),
+            gp.get().objectcontainer[2].add(Ptr::new_box(MO_Boomerang::new(g, 
+                Ptr::from_mut(&mut gp.get().rm.spr_boomerang),
                 Vec2s::new(ix as i16, (iy + HALFPH - 16) as i16),
                 4,
                 facingRight,
@@ -857,18 +861,19 @@ impl CPlayer {
             )));
             self.projectiles += 1;
 
-            if game().game_values.boomeranglimit > 0 {
-                self.decrease_projectile_limit();
+            if g.game_values.boomeranglimit > 0 {
+                self.decrease_projectile_limit(g);
             }
         }
     }
 
-    pub fn net_throw_bomb(&mut self, ix: i32, iy: i32, facingRight: bool) {
+    pub fn net_throw_bomb(&mut self, g: &mut Game, ix: i32, iy: i32, facingRight: bool) {
+        let mut gp = g.ptr();
         let this = self.this();
         unsafe {
             let ttl = (RANDOM_INT(120) + 120) as i16;
             let mut bomb = Ptr::new_box(CO_Bomb::new(
-                Ptr::from_mut(&mut game().rm.spr_bomb),
+                Ptr::from_mut(&mut g.rm.spr_bomb),
                 Vec2s::new((ix + HALFPW - 14) as i16, (iy - 8) as i16),
                 Vec2f::new(if facingRight { 3.0 } else { -3.0 }, -3.0),
                 4,
@@ -880,18 +885,18 @@ impl CPlayer {
 
             if self.accept_item(bomb.get().as_carried_ptr()) {
                 bomb.owner = this;
-                bomb.get().move_to_owner();
+                bomb.get().move_to_owner(g);
             }
 
-            game().objectcontainer[1].add(bomb);
+            g.objectcontainer[1].add(bomb);
             self.projectiles += 1;
 
             self.hammertimer = 90;
 
-            if_sound_on_play(&mut game().rm.sfx_fireball);
+            if_sound_on_play(g, &mut gp.rm.sfx_fireball);
 
-            if game().game_values.bombslimit > 0 {
-                self.decrease_projectile_limit();
+            if g.game_values.bombslimit > 0 {
+                self.decrease_projectile_limit(g);
             }
         }
     }
@@ -900,16 +905,16 @@ impl CPlayer {
         matches!(self.state, PlayerState::EnteringWarpUp | PlayerState::EnteringWarpRight | PlayerState::EnteringWarpDown | PlayerState::EnteringWarpLeft)
     }
 
-    pub fn net_choose_warp_exit(&mut self) {
+    pub fn net_choose_warp_exit(&mut self, g: &mut Game) {
         let this = self.this();
-        self.warpstatus.choose_warp_exit(this.get());
+        self.warpstatus.choose_warp_exit(g, this.get());
     }
 
-    pub fn update_respawning(&mut self) {
+    pub fn update_respawning(&mut self, g: &mut Game) {
         debug_assert!(self.isspawning());
 
         unsafe {
-            match game().game_values.spawnstyle {
+            match g.game_values.spawnstyle {
                 SpawnStyle::Instant => {
                     self.state = PlayerState::Ready;
                 }
@@ -932,10 +937,10 @@ impl CPlayer {
                         let iColorIdOffset = ((self.colorID as i32) << 5) as i16;
 
                         for iSwirl in 0..4usize {
-                            game().eyecandy[2].emplace(EC_SingleAnimation::new_rect(
-                                Ptr::from_mut(&mut game().rm.spr_spawnsmoke),
-                                (ixoffset as i32 + game().g_iSwirlSpawnLocations[iSwirl][0][swirlindex] as i32) as i16,
-                                (iyoffset as i32 + game().g_iSwirlSpawnLocations[iSwirl][1][swirlindex] as i32) as i16,
+                            g.eyecandy[2].emplace(EC_SingleAnimation::new_rect(
+                                Ptr::from_mut(&mut g.rm.spr_spawnsmoke),
+                                (ixoffset as i32 + g.g_iSwirlSpawnLocations[iSwirl][0][swirlindex] as i32) as i16,
+                                (iyoffset as i32 + g.g_iSwirlSpawnLocations[iSwirl][1][swirlindex] as i32) as i16,
                                 4,
                                 4,
                                 0,
@@ -950,127 +955,128 @@ impl CPlayer {
         }
     }
 
-    pub fn trigger_powerup(&mut self) {
+    pub fn trigger_powerup(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let this = self.this();
         unsafe {
             match self.powerupused.unwrap() {
                 PowerupType::PoisonMushroom => {}
                 PowerupType::ExtraLife1 => {
-                    game().game_values.gamemode.get().playerextraguy(this, 1);
-                    if_sound_on_play(&mut game().rm.sfx_extraguysound);
+                    g.game_values.gamemode.get().playerextraguy(g, this, 1);
+                    if_sound_on_play(g, &mut gp.rm.sfx_extraguysound);
                 }
                 PowerupType::ExtraLife2 => {
-                    game().game_values.gamemode.get().playerextraguy(this, 2);
-                    if_sound_on_play(&mut game().rm.sfx_extraguysound);
+                    g.game_values.gamemode.get().playerextraguy(g, this, 2);
+                    if_sound_on_play(g, &mut gp.rm.sfx_extraguysound);
                 }
                 PowerupType::ExtraLife3 => {
-                    game().game_values.gamemode.get().playerextraguy(this, 3);
-                    if_sound_on_play(&mut game().rm.sfx_extraguysound);
+                    g.game_values.gamemode.get().playerextraguy(g, this, 3);
+                    if_sound_on_play(g, &mut gp.rm.sfx_extraguysound);
                 }
                 PowerupType::ExtraLife5 => {
-                    game().game_values.gamemode.get().playerextraguy(this, 5);
-                    if_sound_on_play(&mut game().rm.sfx_extraguysound);
+                    g.game_values.gamemode.get().playerextraguy(g, this, 5);
+                    if_sound_on_play(g, &mut gp.rm.sfx_extraguysound);
                 }
                 PowerupType::Fire => {
                     self.powerup = -1;
-                    self.set_powerup(1);
+                    self.set_powerup(g, 1);
                 }
                 PowerupType::Star => {
-                    self.invincibility.turn_on(this.get());
+                    self.invincibility.turn_on(g, this.get());
                 }
                 PowerupType::Clock => {
-                    self.turnslowdownon();
-                    self.outofarena.reset();
+                    self.turnslowdownon(g);
+                    self.outofarena.reset(g);
                 }
                 PowerupType::Bobomb => {
                     self.powerup = -1;
                     self.bobomb = false;
-                    self.set_powerup(0);
+                    self.set_powerup(g, 0);
                 }
                 PowerupType::Pow => {
-                    if_sound_on_play(&mut game().rm.sfx_thunder);
-                    game().game_values.flags.screenshaketimer = 20;
-                    game().game_values.flags.screenshakeplayerid = self.globalID;
-                    game().game_values.flags.screenshaketeamid = self.teamID;
-                    game().game_values.flags.screenshakekillinair = false;
-                    game().game_values.flags.screenshakekillscount = 0;
+                    if_sound_on_play(g, &mut gp.rm.sfx_thunder);
+                    g.game_values.flags.screenshaketimer = 20;
+                    g.game_values.flags.screenshakeplayerid = self.globalID;
+                    g.game_values.flags.screenshaketeamid = self.teamID;
+                    g.game_values.flags.screenshakekillinair = false;
+                    g.game_values.flags.screenshakekillscount = 0;
                 }
                 PowerupType::BulletBill => {
-                    game().game_values.bulletbilltimer[self.globalID as usize] = 400;
-                    game().game_values.bulletbillspawntimer[self.globalID as usize] = 0;
+                    g.game_values.bulletbilltimer[self.globalID as usize] = 400;
+                    g.game_values.bulletbillspawntimer[self.globalID as usize] = 0;
                 }
                 PowerupType::Hammer => {
                     self.powerup = -1;
-                    self.set_powerup(2);
+                    self.set_powerup(g, 2);
                 }
                 PowerupType::ShellGreen => {
-                    let mut shell = Ptr::new_box(CO_Shell::new(ShellType::Green, Vec2s::zero(), true, true, true, false));
-                    if game().objectcontainer[1].add(shell) {
-                        shell.used_as_stored_powerup(this);
+                    let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Green, Vec2s::zero(), true, true, true, false));
+                    if g.objectcontainer[1].add(shell) {
+                        shell.used_as_stored_powerup(g, this);
                     }
                 }
                 PowerupType::ShellRed => {
-                    let mut shell = Ptr::new_box(CO_Shell::new(ShellType::Red, Vec2s::zero(), false, true, true, false));
-                    if game().objectcontainer[1].add(shell) {
-                        shell.used_as_stored_powerup(this);
+                    let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Red, Vec2s::zero(), false, true, true, false));
+                    if g.objectcontainer[1].add(shell) {
+                        shell.used_as_stored_powerup(g, this);
                     }
                 }
                 PowerupType::ShellSpiny => {
-                    let mut shell = Ptr::new_box(CO_Shell::new(ShellType::Spiny, Vec2s::zero(), false, false, true, true));
-                    if game().objectcontainer[1].add(shell) {
-                        shell.used_as_stored_powerup(this);
+                    let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Spiny, Vec2s::zero(), false, false, true, true));
+                    if g.objectcontainer[1].add(shell) {
+                        shell.used_as_stored_powerup(g, this);
                     }
                 }
                 PowerupType::ShellBuzzy => {
-                    let mut shell = Ptr::new_box(CO_Shell::new(ShellType::Buzzy, Vec2s::zero(), false, true, false, false));
-                    if game().objectcontainer[1].add(shell) {
-                        shell.used_as_stored_powerup(this);
+                    let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Buzzy, Vec2s::zero(), false, true, false, false));
+                    if g.objectcontainer[1].add(shell) {
+                        shell.used_as_stored_powerup(g, this);
                     }
                 }
                 PowerupType::Mod => {
-                    if_sound_on_play(&mut game().rm.sfx_thunder);
-                    game().game_values.flags.screenshaketimer = 20;
-                    game().game_values.flags.screenshakeplayerid = self.globalID;
-                    game().game_values.flags.screenshaketeamid = self.teamID;
-                    game().game_values.flags.screenshakekillinair = true;
+                    if_sound_on_play(g, &mut gp.rm.sfx_thunder);
+                    g.game_values.flags.screenshaketimer = 20;
+                    g.game_values.flags.screenshakeplayerid = self.globalID;
+                    g.game_values.flags.screenshaketeamid = self.teamID;
+                    g.game_values.flags.screenshakekillinair = true;
                 }
                 PowerupType::Feather => {
                     self.powerup = -1;
-                    self.set_powerup(3);
+                    self.set_powerup(g, 3);
                 }
                 PowerupType::MysteryMushroom => {
-                    swap_players(self.localID);
+                    swap_players(g, self.localID);
                 }
                 PowerupType::Boomerang => {
                     self.powerup = -1;
-                    self.set_powerup(4);
+                    self.set_powerup(g, 4);
                 }
                 PowerupType::Tanooki => {
-                    self.tanookisuit.on_pickup();
+                    self.tanookisuit.on_pickup(g);
                 }
                 PowerupType::IceWand => {
                     self.powerup = -1;
-                    self.set_powerup(5);
+                    self.set_powerup(g, 5);
                 }
                 PowerupType::Podobo => {
-                    if !net_random::event(Ev::PodoboRain, &[self.globalID as i32]) {
-                        self.net_podobo_rain();
+                    if !net_random::event(g, Ev::PodoboRain, &[self.globalID as i32]) {
+                        self.net_podobo_rain(g);
                     }
                 }
                 PowerupType::Bomb => {
                     self.powerup = -1;
-                    self.set_powerup(6);
+                    self.set_powerup(g, 6);
                 }
                 PowerupType::Leaf => {
                     self.powerup = -1;
-                    self.set_powerup(7);
+                    self.set_powerup(g, 7);
                 }
                 PowerupType::PWings => {
                     self.powerup = -1;
-                    self.set_powerup(8);
+                    self.set_powerup(g, 8);
                 }
                 PowerupType::JailKey => {
-                    self.jail.escape(this.get());
+                    self.jail.escape(g, this.get());
                 }
             }
         }
@@ -1078,33 +1084,33 @@ impl CPlayer {
         self.powerupused = None;
     }
 
-    pub fn update_use_powerup(&mut self) {
+    pub fn update_use_powerup(&mut self, g: &mut Game) {
         debug_assert!(self.powerupused.is_some());
 
         unsafe {
-            self.powerupradius -= game().game_values.storedpowerupdelay as f32 / 2.0f32;
+            self.powerupradius -= g.game_values.storedpowerupdelay as f32 / 2.0f32;
         }
         self.powerupangle += 0.05f32;
 
-        if unsafe { game().netplay.active } && self.net_waitingForPowerupTrigger {
+        if unsafe { g.netplay.active } && self.net_waitingForPowerupTrigger {
             return;
         }
 
         if self.powerupradius < 0.0 {
-            self.trigger_powerup();
+            self.trigger_powerup(g);
         }
     }
 
-    pub fn get_player_palette(&self) -> PlayerPalette {
+    pub fn get_player_palette(&self, g: &mut Game) -> PlayerPalette {
         unsafe {
             if self.is_invincible() {
                 return self.invincibility.get_player_palette();
             }
             let this = Ptr::from_raw(self as *const CPlayer as *mut CPlayer);
-            if game().game_values.gamemode.gamemode == game_mode_star {
+            if g.game_values.gamemode.gamemode == game_mode_star {
                 let starmode = gamemode_as::<CGM_Star>().unwrap();
                 let starmodetype = starmode.getcurrentmodetype();
-                if starmodetype != StarStyle::Multi && starmode.isplayerstar(this) {
+                if starmodetype != StarStyle::Multi && starmode.isplayerstar(g, this) {
                     return if starmodetype == StarStyle::Ztar { gfx_palette::ztarred } else { gfx_palette::got_shine };
                 }
             }
@@ -1123,7 +1129,8 @@ impl CPlayer {
         }
     }
 
-    pub fn try_falling_through_platform(&mut self, movement_direction: i16) {
+    pub fn try_falling_through_platform(&mut self, g: &mut Game, movement_direction: i16) {
+        let mut gp = g.ptr();
         unsafe {
             //only if on the ground and the jump key was released somewhen after it was pressed the last time
             let mut fFellThrough = false;
@@ -1145,8 +1152,8 @@ impl CPlayer {
                     (self.right_x() as i32 / TILESIZE) as i16
                 };
 
-                let mut lefttile = game().g_map.map(left_tile_x as i32, under_tile_y as i32);
-                let mut righttile = game().g_map.map(right_tile_x as i32, under_tile_y as i32);
+                let mut lefttile = g.g_map.map(left_tile_x as i32, under_tile_y as i32);
+                let mut righttile = g.g_map.map(right_tile_x as i32, under_tile_y as i32);
 
                 if (b(lefttile & tile_flag_solid_on_top) && (b(righttile & tile_flag_solid_on_top) || righttile == tile_flag_nonsolid || righttile == tile_flag_gap))
                     || (b(righttile & tile_flag_solid_on_top) && (b(lefttile & tile_flag_solid_on_top) || lefttile == tile_flag_nonsolid || lefttile == tile_flag_gap))
@@ -1171,31 +1178,32 @@ impl CPlayer {
                 self.lockfall = true;
                 self.fallthrough = true;
             } else {
-                self.jump(movement_direction, 1.0, false);
-                if_sound_on_play(&mut game().rm.sfx_jump);
+                self.jump(g, movement_direction, 1.0, false);
+                if_sound_on_play(g, &mut gp.rm.sfx_jump);
             }
 
             self.lockjump = true;
         }
     }
 
-    pub fn try_super_jumping(&mut self, movement_direction: i16) {
+    pub fn try_super_jumping(&mut self, g: &mut Game, movement_direction: i16) {
+        let mut gp = g.ptr();
         debug_assert!(self.superjumptype > 0);
 
         unsafe {
             if self.superjumptype == 3 {
                 //Kuribo's Shoe Jump
-                self.jump(movement_direction, 1.0, false);
-                if_sound_on_play(&mut game().rm.sfx_jump);
+                self.jump(g, movement_direction, 1.0, false);
+                if_sound_on_play(g, &mut gp.rm.sfx_jump);
             }
             if self.superjumptype == 2 {
                 self.vely = -VELSUPERJUMP;
                 self.inair = true;
-                if_sound_on_play(&mut game().rm.sfx_superspring);
+                if_sound_on_play(g, &mut gp.rm.sfx_superspring);
             } else if self.superjumptype == 1 {
                 self.vely = -VELTURBOJUMP;
                 self.inair = true;
-                if_sound_on_play(&mut game().rm.sfx_springjump);
+                if_sound_on_play(g, &mut gp.rm.sfx_springjump);
             }
         }
 
@@ -1203,32 +1211,33 @@ impl CPlayer {
         self.lockjump = true;
     }
 
-    pub fn try_cape_double_jump(&mut self, movement_direction: i16) {
+    pub fn try_cape_double_jump(&mut self, g: &mut Game, movement_direction: i16) {
+        let mut gp = g.ptr();
         debug_assert!(self.powerup == 3);
         if self.kuriboshoe.is_on() {
             return;
         }
 
         unsafe {
-            if self.extrajumps < game().game_values.featherjumps {
-                if game().game_values.featherlimit == 0 || self.projectilelimit > 0 {
-                    if self.extrajumps < game().game_values.featherjumps {
-                        self.jump(movement_direction, 0.8, false);
-                        if_sound_on_play(&mut game().rm.sfx_capejump);
+            if self.extrajumps < g.game_values.featherjumps {
+                if g.game_values.featherlimit == 0 || self.projectilelimit > 0 {
+                    if self.extrajumps < g.game_values.featherjumps {
+                        self.jump(g, movement_direction, 0.8, false);
+                        if_sound_on_play(g, &mut gp.rm.sfx_capejump);
                         self.lockjump = true;
                     }
 
                     self.extrajumps += 1;
                 }
 
-                if game().game_values.featherlimit > 0 {
-                    self.decrease_projectile_limit();
+                if g.game_values.featherlimit > 0 {
+                    self.decrease_projectile_limit(g);
                 }
             }
         }
     }
 
-    pub fn try_start_flying(&mut self) {
+    pub fn try_start_flying(&mut self, g: &mut Game) {
         debug_assert!(self.powerup == 8);
         if self.kuriboshoe.is_on() || self.flying || self.extrajumps != 0 {
             return;
@@ -1236,14 +1245,14 @@ impl CPlayer {
 
         self.flying = true;
         unsafe {
-            game().game_values.flags.playflyingsound = true;
+            g.game_values.flags.playflyingsound = true;
         }
 
         self.lockjump = true;
         self.extrajumps += 1;
     }
 
-    pub fn try_shaking_tail(&mut self) {
+    pub fn try_shaking_tail(&mut self, g: &mut Game) {
         if self.kuriboshoe.is_on() || self.spin.is_spin_in_progress() {
             return;
         }
@@ -1251,26 +1260,27 @@ impl CPlayer {
         unsafe {
             let mut isGlidingChicken = false;
             if let Some(gmChicken) = gamemode_as::<CGM_Chicken>() {
-                isGlidingChicken = gmChicken.chicken() == Ptr::from_mut(self) && game().game_values.gamemodesettings.chicken.glide && self.powerup == -1;
+                isGlidingChicken = gmChicken.chicken() == Ptr::from_mut(self) && g.game_values.gamemodesettings.chicken.glide && self.powerup == -1;
             }
 
             if self.powerup == 7 || isGlidingChicken {
-                if game().game_values.leaflimit == 0 || self.projectilelimit > 0 {
+                if g.game_values.leaflimit == 0 || self.projectilelimit > 0 {
                     let this = self.this();
-                    self.tail.shake(this.get());
+                    self.tail.shake(g, this.get());
                 }
             }
         }
     }
 
-    pub fn try_releasing_powerup(&mut self) {
+    pub fn try_releasing_powerup(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
-            if self.tanookisuit.is_statue() || game().game_values.gamemode.gamemode == game_mode_bonus {
+            if self.tanookisuit.is_statue() || g.game_values.gamemode.gamemode == game_mode_bonus {
                 return;
             }
 
             // Don't allow usage of the poison powerup, it sticks with you and don't allow shyguys to use powerups
-            if game().game_values.gamepowerups[self.globalID as usize] <= 0 || self.shyguy {
+            if g.game_values.gamepowerups[self.globalID as usize] <= 0 || self.shyguy {
                 return;
             }
 
@@ -1279,36 +1289,36 @@ impl CPlayer {
                 return;
             }
 
-            self.powerupused = Some(PowerupType::from_u8(game().game_values.gamepowerups[self.globalID as usize] as u8));
-            game().game_values.gamepowerups[self.globalID as usize] = -1;
+            self.powerupused = Some(PowerupType::from_u8(g.game_values.gamepowerups[self.globalID as usize] as u8));
+            g.game_values.gamepowerups[self.globalID as usize] = -1;
 
             self.powerupradius = 100.0;
-            if game().netplay.active {
+            if g.netplay.active {
                 self.powerupangle = 0.0;
             } else {
                 self.powerupangle = RANDOM_INT(1000) as f32 * 0.00628f32;
             }
 
-            if_sound_on_play(&mut game().rm.sfx_storedpowerupsound);
+            if_sound_on_play(g, &mut gp.rm.sfx_storedpowerupsound);
 
             // only the locally controlled player should be able to send requests
-            if game().netplay.active && self.globalID == game().netplay.remotePlayerNumber as i16 {
-                if game().netplay.theHostIsMe {
+            if g.netplay.active && self.globalID == g.netplay.remotePlayerNumber as i16 {
+                if g.netplay.theHostIsMe {
                     // this happens when the game host player triggers a powerup
-                    game().netplay.client.local_gamehost.send_powerup_start_by_gh();
+                    gp.netplay.client.local_gamehost.send_powerup_start_by_gh(g);
 
                     // otherwise, when a remote client presses the trigger button,
                     // it sends a powerup trigger request, so we don't have to handle
                     // this on the host side here
                 } else {
                     self.net_waitingForPowerupTrigger = true;
-                    game().netplay.client.send_powerup_request();
+                    g.netplay.client.send_powerup_request();
                 }
             }
         }
     }
 
-    pub fn use_special_powerup(&mut self) {
+    pub fn use_special_powerup(&mut self, g: &mut Game) {
         self.fAcceptingItem = self.carriedItem.is_null();
 
         unsafe {
@@ -1317,33 +1327,33 @@ impl CPlayer {
                     //If we're a bob-omb, explode
                     self.action = PlayerAction::Bobomb;
                 } else if self.powerup == 1 && self.projectiles < 2 {
-                    if game().game_values.fireballlimit == 0 || self.projectilelimit > 0 {
+                    if g.game_values.fireballlimit == 0 || self.projectilelimit > 0 {
                         self.action = PlayerAction::Fireball;
                     }
                 } else if self.powerup == 2 && self.projectiles < 2 && self.hammertimer == 0 {
-                    if game().game_values.hammerlimit == 0 || self.projectilelimit > 0 {
+                    if g.game_values.hammerlimit == 0 || self.projectilelimit > 0 {
                         self.action = PlayerAction::Hammer;
                     }
                 } else if self.powerup == 3 && !self.spin.is_spin_in_progress() && !self.kuriboshoe.is_on() {
-                    if game().game_values.featherlimit == 0 || self.projectilelimit > 0 {
+                    if g.game_values.featherlimit == 0 || self.projectilelimit > 0 {
                         self.action = PlayerAction::SpinCape;
                     }
                 } else if self.powerup == 4 && self.projectiles < 1 {
                     //only allow one boomerang
-                    if game().game_values.boomeranglimit == 0 || self.projectilelimit > 0 {
+                    if g.game_values.boomeranglimit == 0 || self.projectilelimit > 0 {
                         self.action = PlayerAction::Boomerang;
                     }
                 } else if self.powerup == 5 && self.projectiles < 1 {
-                    if game().game_values.wandlimit == 0 || self.projectilelimit > 0 {
+                    if g.game_values.wandlimit == 0 || self.projectilelimit > 0 {
                         self.action = PlayerAction::Iceblast;
                     }
                 } else if self.powerup == 6 && self.projectiles < 2 && self.hammertimer == 0 {
-                    if game().game_values.bombslimit == 0 || self.projectilelimit > 0 {
+                    if g.game_values.bombslimit == 0 || self.projectilelimit > 0 {
                         self.action = PlayerAction::Bomb;
                     }
                 } else if self.powerup == 7 && !self.spin.is_spin_in_progress() && !self.kuriboshoe.is_on() {
                     //Racoon tail spin
-                    if game().game_values.leaflimit == 0 || self.projectilelimit > 0 {
+                    if g.game_values.leaflimit == 0 || self.projectilelimit > 0 {
                         self.action = PlayerAction::SpinTail;
                     }
                 }
@@ -1353,31 +1363,31 @@ impl CPlayer {
         }
     }
 
-    pub fn release_carried_item(&mut self) {
+    pub fn release_carried_item(&mut self, g: &mut Game) {
         self.lockfire = false;
         self.fAcceptingItem = false;
 
         if !self.carriedItem.is_null() {
             let item = self.carriedItem.get();
             if self.keys().game_down().fDown {
-                MO_CarriedObjectTrait::drop(item);
+                MO_CarriedObjectTrait::drop(item, g);
             } else {
                 //Make sure the owner of the object we are kicking is this player
                 item.owner = Ptr::from_mut(self);
 
                 //Make sure the shell/block is out in front of player before kicking it
                 if item.get_moving_object_type() == movingobject_shell || item.get_moving_object_type() == movingobject_throwblock {
-                    item.move_to_owner();
+                    item.move_to_owner(g);
                 }
 
-                item.kick();
+                item.kick(g);
             }
 
             self.carriedItem = Ptr::null();
         }
     }
 
-    pub fn update_flying_status(&mut self) {
+    pub fn update_flying_status(&mut self, g: &mut Game) {
         if self.flying {
             //If they player was frozen while flying, cause them to stop flying
             //or if they have been flying for a while, stop them flying
@@ -1388,8 +1398,8 @@ impl CPlayer {
                 self.flyingtimer = 0;
                 self.flying = false;
 
-                if unsafe { game().game_values.pwingslimit } > 0 {
-                    self.decrease_projectile_limit();
+                if unsafe { g.game_values.pwingslimit } > 0 {
+                    self.decrease_projectile_limit(g);
                 }
             } else {
                 //otherwise allow them to rise and swoop while flying
@@ -1403,7 +1413,7 @@ impl CPlayer {
         }
     }
 
-    pub fn enable_free_fall(&mut self) {
+    pub fn enable_free_fall(&mut self, g: &mut Game) {
         self.lockjump = false; //the jump key is not pressed: the player may jump again if he is on the ground
 
         if self.vely < -VELSTOPJUMP {
@@ -1414,8 +1424,8 @@ impl CPlayer {
             self.flying = false;
             self.flyingtimer = 0;
 
-            if unsafe { game().game_values.pwingslimit } > 0 {
-                self.decrease_projectile_limit();
+            if unsafe { g.game_values.pwingslimit } > 0 {
+                self.decrease_projectile_limit(g);
             }
         }
     }
@@ -1469,17 +1479,17 @@ impl CPlayer {
                 self.suicidetimer.reset();
             }
 
-            self.secretcode.update(this.get(), keymask as u8);
-            self.kuriboshoe.update(this.get(), keymask as u8);
-            self.cardcollection.update(this.get(), keymask as u8);
-            self.tanookisuit.update(this.get());
-            self.superstomp.update_on_ground_hit(this.get());
+            self.secretcode.update(game().get(), this.get(), keymask as u8);
+            self.kuriboshoe.update(game().get(), this.get(), keymask as u8);
+            self.cardcollection.update(game().get(), this.get(), keymask as u8);
+            self.tanookisuit.update(game().get(), this.get());
+            self.superstomp.update_on_ground_hit(game().get(), this.get());
 
             if self.hammertimer > 0 {
                 self.hammertimer -= 1;
             }
 
-            self.spin.update(this.get());
+            self.spin.update(game().get(), this.get());
 
             if self.throw_star > 0 {
                 self.throw_star -= 1;
@@ -1493,26 +1503,26 @@ impl CPlayer {
                 }
             }
 
-            self.iSrcOffsetX = (32 * self.get_player_palette()) as i16;
+            self.iSrcOffsetX = (32 * self.get_player_palette(game().get())) as i16;
 
             if !self.isready() {
                 if self.state == PlayerState::Waiting {
-                    self.update_waiting_for_respawn();
+                    self.update_waiting_for_respawn(game().get());
                     return;
                 }
 
                 if self.isspawning() {
-                    self.update_respawning();
+                    self.update_respawning(game().get());
                 } else if self.iswarping() {
                     self.warpstatus.update(this.get());
                 }
             } else if self.powerupused.is_some() {
-                self.update_use_powerup();
+                self.update_use_powerup(game().get());
             }
 
             self.invincibility.update(this.get()); // Animate invincibility
 
-            self.update_frozen_status(keymask);
+            self.update_frozen_status(game().get(), keymask);
 
             //if player is warping or spawning don't pay attention to controls
             if self.isready() {
@@ -1547,22 +1557,22 @@ impl CPlayer {
                     if self.keys().game_jump().fDown {
                         if !self.lockjump && self.tanookisuit.not_statue() && !self.superstomp.is_stomping() {
                             if !self.inair && self.superjumptimer == 0 {
-                                self.try_falling_through_platform(movement_direction);
+                                self.try_falling_through_platform(game().get(), movement_direction);
                             } else if self.superjumptimer > 0 {
-                                self.try_super_jumping(movement_direction);
+                                self.try_super_jumping(game().get(), movement_direction);
                             } else if self.powerup == 3 {
-                                self.try_cape_double_jump(movement_direction);
+                                self.try_cape_double_jump(game().get(), movement_direction);
                             } else if self.powerup == 8 {
                                 //Start pwings flight
-                                self.try_start_flying();
+                                self.try_start_flying(game().get());
                             }
                             //This must come last or gliding chickens can't use powerups before this statement
                             else {
-                                self.try_shaking_tail();
+                                self.try_shaking_tail(game().get());
                             }
                         }
                     } else {
-                        self.enable_free_fall();
+                        self.enable_free_fall(game().get());
                     }
 
                     if self.keys().game_down().fDown {
@@ -1576,25 +1586,25 @@ impl CPlayer {
 
                     //POWERUP RELEASE
                     if self.keys().game_powerup().fDown {
-                        self.try_releasing_powerup();
+                        self.try_releasing_powerup(game().get());
                     }
 
                     self.fPressedAcceptItem = self.keys().game_turbo().fPressed;
 
                     //Projectiles
                     if self.keys().game_turbo().fDown {
-                        self.use_special_powerup();
+                        self.use_special_powerup(game().get());
                     } else {
-                        self.release_carried_item();
+                        self.release_carried_item(game().get());
                     }
                 }
 
-                self.update_flying_status();
+                self.update_flying_status(game().get());
 
                 if movement_direction == 1 {
-                    self.accelerate_right();
+                    self.accelerate_right(game().get());
                 } else if movement_direction == -1 {
-                    self.accelerate_left();
+                    self.accelerate_left(game().get());
                 } else {
                     self.decrease_velocity();
                 }
@@ -1614,7 +1624,7 @@ impl CPlayer {
                     self.velx = cap_side_velocity(self.velx + windx);
                 }
 
-                self.collision_detection_map();
+                self.collision_detection_map(game().get());
 
                 //If the player died or entered a warp, don't reset his velocity
                 if game().game_values.windaffectsplayers && self.state == PlayerState::Ready {
@@ -1625,40 +1635,41 @@ impl CPlayer {
             //Player can be killed by map so only do this code if he is still living
             if self.isready() {
                 //Deal with terminal burnup velocity
-                self.burnup.update(this.get());
+                self.burnup.update(game().get(), this.get());
                 if self.isdead() {
                     return;
                 }
 
                 //Kill the player if he is standing still for too long
-                self.suicidetimer.update(this.get());
+                self.suicidetimer.update(game().get(), this.get());
                 if self.isdead() {
                     return;
                 }
 
                 //Deal with out of arena timer
-                self.outofarena.update(this.get());
+                self.outofarena.update(game().get(), this.get());
                 if self.isdead() {
                     return;
                 }
 
                 //Deal with release from jail timer
-                self.jail.update(this.get());
+                self.jail.update(game().get(), this.get());
             }
 
-            self.update_sprite();
+            self.update_sprite(game().get());
         }
     }
 
-    pub fn commit_action(&mut self) {
+    pub fn commit_action(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let this = self.this();
         unsafe {
             let ix = self.ix as i32;
             let iy = self.iy as i32;
             if PlayerAction::Bobomb == self.action {
                 self.bobomb = false;
-                game().objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
-                    Ptr::from_mut(&mut game().rm.spr_explosion),
+                g.objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
+                    Ptr::from_mut(&mut g.rm.spr_explosion),
                     Vec2s::new((ix + HALFPW - 96) as i16, (iy + HALFPH - 64) as i16),
                     2,
                     4,
@@ -1666,30 +1677,30 @@ impl CPlayer {
                     self.teamID,
                     KillStyle::Bobomb,
                 )));
-                if_sound_on_play(&mut game().rm.sfx_bobombsound);
+                if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
             } else if PlayerAction::Fireball == self.action {
-                game().objectcontainer[0].add(Ptr::new_box(MO_Fireball::new(
-                    Ptr::from_mut(&mut game().rm.spr_fireball),
+                gp.get().objectcontainer[0].add(Ptr::new_box(MO_Fireball::new(g, 
+                    Ptr::from_mut(&mut gp.get().rm.spr_fireball),
                     Vec2s::new((ix + 6) as i16, iy as i16),
                     4,
-                    self.is_facing_right(),
+                    self.is_facing_right(gp.get()),
                     5,
                     self.globalID,
                     self.teamID,
                     self.colorID,
                 )));
-                if_sound_on_play(&mut game().rm.sfx_fireball);
+                if_sound_on_play(g, &mut gp.rm.sfx_fireball);
 
                 self.projectiles += 1;
 
-                if game().game_values.fireballlimit > 0 {
-                    self.decrease_projectile_limit();
+                if g.game_values.fireballlimit > 0 {
+                    self.decrease_projectile_limit(g);
                 }
             } else if PlayerAction::Hammer == self.action {
-                let vx = if game().game_values.reversewalk { -self.velx } else { self.velx };
-                if self.is_facing_right() {
-                    game().objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(
-                        Ptr::from_mut(&mut game().rm.spr_hammer),
+                let vx = if g.game_values.reversewalk { -self.velx } else { self.velx };
+                if self.is_facing_right(g) {
+                    gp.get().objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(g, 
+                        Ptr::from_mut(&mut gp.get().rm.spr_hammer),
                         Vec2s::new((ix + 8) as i16, iy as i16),
                         6,
                         Vec2f::new(vx + 2.0f32, -HAMMERTHROW),
@@ -1700,8 +1711,8 @@ impl CPlayer {
                         false,
                     )));
                 } else {
-                    game().objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(
-                        Ptr::from_mut(&mut game().rm.spr_hammer),
+                    gp.get().objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(g, 
+                        Ptr::from_mut(&mut gp.get().rm.spr_hammer),
                         Vec2s::new((ix - 14) as i16, iy as i16),
                         6,
                         Vec2f::new(vx - 2.0f32, -HAMMERTHROW),
@@ -1714,21 +1725,21 @@ impl CPlayer {
                 }
                 self.projectiles += 1;
 
-                self.hammertimer = game().game_values.hammerdelay;
-                if_sound_on_play(&mut game().rm.sfx_fireball);
+                self.hammertimer = g.game_values.hammerdelay;
+                if_sound_on_play(g, &mut gp.rm.sfx_fireball);
 
-                if game().game_values.hammerlimit > 0 {
-                    self.decrease_projectile_limit();
+                if g.game_values.hammerlimit > 0 {
+                    self.decrease_projectile_limit(g);
                 }
             } else if PlayerAction::Boomerang == self.action {
-                let args = [self.globalID as i32, ix, iy, self.is_facing_right() as i32];
-                if game().game_values.boomerangstyle != BoomerangStyle::Random || !net_random::event(Ev::Boomerang, &args) {
-                    self.net_throw_boomerang(ix, iy, self.is_facing_right());
+                let args = [self.globalID as i32, ix, iy, self.is_facing_right(g) as i32];
+                if g.game_values.boomerangstyle != BoomerangStyle::Random || !net_random::event(g, Ev::Boomerang, &args) {
+                    self.net_throw_boomerang(g, ix, iy, self.is_facing_right(gp.get()));
                 }
             } else if PlayerAction::Iceblast == self.action {
-                if self.is_facing_right() {
-                    game().objectcontainer[2].add(Ptr::new_box(MO_IceBlast::new(
-                        Ptr::from_mut(&mut game().rm.spr_iceblast),
+                if self.is_facing_right(g) {
+                    g.objectcontainer[2].add(Ptr::new_box(MO_IceBlast::new(
+                        Ptr::from_mut(&mut g.rm.spr_iceblast),
                         Vec2s::new((ix + HALFPW - 2) as i16, (iy + HALFPH - 16) as i16),
                         5.0,
                         self.globalID,
@@ -1736,8 +1747,8 @@ impl CPlayer {
                         self.colorID,
                     )));
                 } else {
-                    game().objectcontainer[2].add(Ptr::new_box(MO_IceBlast::new(
-                        Ptr::from_mut(&mut game().rm.spr_iceblast),
+                    g.objectcontainer[2].add(Ptr::new_box(MO_IceBlast::new(
+                        Ptr::from_mut(&mut g.rm.spr_iceblast),
                         Vec2s::new((ix + HALFPW - 30) as i16, (iy + HALFPH - 16) as i16),
                         -5.0,
                         self.globalID,
@@ -1748,38 +1759,38 @@ impl CPlayer {
 
                 self.projectiles += 1;
 
-                if_sound_on_play(&mut game().rm.sfx_wand);
+                if_sound_on_play(g, &mut gp.rm.sfx_wand);
 
-                if game().game_values.wandlimit > 0 {
-                    self.decrease_projectile_limit();
+                if g.game_values.wandlimit > 0 {
+                    self.decrease_projectile_limit(g);
                 }
             } else if PlayerAction::Bomb == self.action {
-                if !net_random::event(Ev::Bomb, &[self.globalID as i32, ix, iy, self.is_facing_right() as i32]) {
-                    self.net_throw_bomb(ix, iy, self.is_facing_right());
+                if !net_random::event(g, Ev::Bomb, &[self.globalID as i32, ix, iy, self.is_facing_right(gp.get()) as i32]) {
+                    self.net_throw_bomb(g, ix, iy, self.is_facing_right(gp.get()));
                 }
             } else if PlayerAction::SpinCape == self.action {
-                self.cape.spin(this.get());
+                self.cape.spin(g, this.get());
             } else if PlayerAction::SpinTail == self.action {
-                self.tail.spin(this.get());
+                self.tail.spin(g, this.get());
             }
 
             if self.action == PlayerAction::Fireball {
-                game().game_values.unlocksecret3part1[self.globalID as usize] += 1;
-                check_secret(2);
+                g.game_values.unlocksecret3part1[self.globalID as usize] += 1;
+                check_secret(g, 2);
             } else if self.action != PlayerAction::None {
-                game().game_values.unlocksecret3part1[self.globalID as usize] = 0;
+                g.game_values.unlocksecret3part1[self.globalID as usize] = 0;
             }
         }
 
         self.action = PlayerAction::None;
     }
 
-    pub fn update_sprite(&mut self) {
+    pub fn update_sprite(&mut self, g: &mut Game) {
         unsafe {
-            let iReverseSprite: i32 = if game().game_values.reversewalk { 1 } else { 0 };
+            let iReverseSprite: i32 = if g.game_values.reversewalk { 1 } else { 0 };
 
             //Use correct sprite (and animate)
-            if should_update_sprite() {
+            if should_update_sprite(g) {
                 //if player is warping from below, set them in the air
                 if self.iswarping() {
                     if self.state == PlayerState::LeavingWarpDown || self.state == PlayerState::EnteringWarpUp {
@@ -1791,7 +1802,7 @@ impl CPlayer {
 
                 //lockjump is true when we are in the air (even if we fell of an edge)
                 if self.spin.is_spin_in_progress() {
-                    self.sprite_state = self.spin.to_sprite_id();
+                    self.sprite_state = self.spin.to_sprite_id(g);
                 } else if self.state == PlayerState::Spawning {
                     if self.sprite_state & 0x1 == 0 {
                         self.sprite_state = (PGFX_JUMPING_R + iReverseSprite) as u8;
@@ -1802,7 +1813,7 @@ impl CPlayer {
                     self.frictionslidetimer = 0;
                     self.rainsteptimer = 0;
 
-                    if self.is_facing_right() {
+                    if self.is_facing_right(g) {
                         self.sprite_state = PGFX_JUMPING_R as u8;
                     } else {
                         self.sprite_state = PGFX_JUMPING_L as u8;
@@ -1814,8 +1825,8 @@ impl CPlayer {
                         self.frictionslidetimer += 1;
                         if self.frictionslidetimer > 3 {
                             self.frictionslidetimer = 0;
-                            game().eyecandy[1].emplace(EC_SingleAnimation::new_rect(
-                                Ptr::from_mut(&mut game().rm.spr_frictionsmoke),
+                            g.eyecandy[1].emplace(EC_SingleAnimation::new_rect(
+                                Ptr::from_mut(&mut g.rm.spr_frictionsmoke),
                                 self.ix,
                                 (self.iy as i32 + PH - 12) as i16,
                                 4,
@@ -1831,7 +1842,7 @@ impl CPlayer {
                     } else {
                         self.sprswitch -= 1;
                         if self.sprswitch < 1 {
-                            if game().game_values.reversewalk {
+                            if g.game_values.reversewalk {
                                 if self.sprite_state as i32 == PGFX_STANDING_L {
                                     self.sprite_state = PGFX_RUNNING_L as u8;
                                 } else {
@@ -1846,7 +1857,7 @@ impl CPlayer {
                             self.sprswitch = 4;
                         } else {
                             //If animation timer hasn't fired, make sure we're facing the correct direction
-                            if game().game_values.reversewalk {
+                            if g.game_values.reversewalk {
                                 if self.sprite_state & 0x1 == 0 {
                                     self.sprite_state = PGFX_STANDING_L as u8;
                                 }
@@ -1862,8 +1873,8 @@ impl CPlayer {
                         self.frictionslidetimer += 1;
                         if self.frictionslidetimer > 3 {
                             self.frictionslidetimer = 0;
-                            game().eyecandy[1].emplace(EC_SingleAnimation::new_rect(
-                                Ptr::from_mut(&mut game().rm.spr_frictionsmoke),
+                            g.eyecandy[1].emplace(EC_SingleAnimation::new_rect(
+                                Ptr::from_mut(&mut g.rm.spr_frictionsmoke),
                                 (self.ix as i32 + PW - 16) as i16,
                                 (self.iy as i32 + PH - 12) as i16,
                                 4,
@@ -1879,7 +1890,7 @@ impl CPlayer {
                     } else {
                         self.sprswitch -= 1;
                         if self.sprswitch < 1 {
-                            if game().game_values.reversewalk {
+                            if g.game_values.reversewalk {
                                 if self.sprite_state as i32 == PGFX_STANDING_R {
                                     self.sprite_state = PGFX_RUNNING_R as u8;
                                 } else {
@@ -1894,7 +1905,7 @@ impl CPlayer {
                             self.sprswitch = 4;
                         } else {
                             //If animation timer hasn't fired, make sure we're facing the correct direction
-                            if game().game_values.reversewalk {
+                            if g.game_values.reversewalk {
                                 if self.sprite_state & 0x1 != 0 {
                                     self.sprite_state = PGFX_STANDING_R as u8;
                                 }
@@ -1915,7 +1926,7 @@ impl CPlayer {
                         self.sprite_state = PGFX_STANDING_R as u8;
                     }
                 }
-            } else if game().game_values.flags.swapplayers {
+            } else if g.game_values.flags.swapplayers {
                 let mut iSpriteDirection: i32 = 0;
 
                 if self.fNewSwapX < self.fOldSwapX {
@@ -1936,11 +1947,11 @@ impl CPlayer {
         }
     }
 
-    pub fn jump(&mut self, iMove: i16, jumpModifier: f32, fKuriboBounce: bool) {
+    pub fn jump(&mut self, g: &mut Game, iMove: i16, jumpModifier: f32, fKuriboBounce: bool) {
         unsafe {
             if fKuriboBounce {
                 self.vely = -VELKURIBOBOUNCE;
-            } else if (game().game_values.flags.slowdownon != -1 && game().game_values.flags.slowdownon != self.teamID) || self.jail.is_active() {
+            } else if (g.game_values.flags.slowdownon != -1 && g.game_values.flags.slowdownon != self.teamID) || self.jail.is_active() {
                 self.vely = -VELSLOWJUMP * jumpModifier;
             } else if self.velx.abs() > VELMOVING && iMove != 0 && self.keys().game_turbo().fDown {
                 self.vely = -VELTURBOJUMP * jumpModifier;
@@ -1962,9 +1973,9 @@ impl CPlayer {
         self.pPlayerAI.as_mut().unwrap().think(keys);
     }
 
-    pub fn die(&mut self, deathStyle: PlayerDeathStyle, fTeamRemoved: bool, fKillCarriedItem: bool) {
+    pub fn die(&mut self, g: &mut Game, deathStyle: PlayerDeathStyle, fTeamRemoved: bool, fKillCarriedItem: bool) {
         if !fTeamRemoved {
-            crate::smw::net_outcomes::note_death(self.globalID, deathStyle as i32, false);
+            crate::smw::net_outcomes::note_death(g, self.globalID, deathStyle as i32, false);
         }
         unsafe {
             let ix = self.ix as i32;
@@ -1983,24 +1994,24 @@ impl CPlayer {
 
                 //If the player was a bobomb or chicken, make sure their death sprite matches
                 if self.diedas == 1 || isChicken {
-                    corpseSprite = Ptr::from_mut(&mut game().rm.spr_chocobo[self.colorID as usize][iDeathSprite]);
+                    corpseSprite = Ptr::from_mut(&mut g.rm.spr_chocobo[self.colorID as usize][iDeathSprite]);
                 } else if self.diedas == 2 || self.bobomb {
-                    corpseSprite = Ptr::from_mut(&mut game().rm.spr_bobomb[self.colorID as usize][iDeathSprite]);
+                    corpseSprite = Ptr::from_mut(&mut g.rm.spr_bobomb[self.colorID as usize][iDeathSprite]);
                 } else if self.diedas == 3 || self.shyguy {
-                    corpseSprite = Ptr::from_mut(&mut game().rm.spr_shyguy[self.colorID as usize][iDeathSprite]);
+                    corpseSprite = Ptr::from_mut(&mut g.rm.spr_shyguy[self.colorID as usize][iDeathSprite]);
                 }
 
                 //Add eyecandy for the dead player
                 if deathStyle == PlayerDeathStyle::Shatter || self.frozen {
-                    let ice = Ptr::from_mut(&mut game().rm.spr_brokeniceblock);
-                    game().eyecandy[2].emplace(EC_FallingObject::new(ice, (ix + HALFPW - 16) as i16, (iy + HALFPH - 16) as i16, -1.5, -7.0, 4, 2, 0, 0, 16, 16));
-                    game().eyecandy[2].emplace(EC_FallingObject::new(ice, (ix + HALFPW) as i16, (iy + HALFPH - 16) as i16, 1.5, -7.0, 4, 2, 0, 0, 16, 16));
-                    game().eyecandy[2].emplace(EC_FallingObject::new(ice, (ix + HALFPW - 16) as i16, (iy + HALFPH) as i16, -1.5, -4.0, 4, 2, 0, 0, 16, 16));
-                    game().eyecandy[2].emplace(EC_FallingObject::new(ice, (ix + HALFPW) as i16, (iy + HALFPH) as i16, 1.5, -4.0, 4, 2, 0, 0, 16, 16));
+                    let ice = Ptr::from_mut(&mut g.rm.spr_brokeniceblock);
+                    g.eyecandy[2].emplace(EC_FallingObject::new(ice, (ix + HALFPW - 16) as i16, (iy + HALFPH - 16) as i16, -1.5, -7.0, 4, 2, 0, 0, 16, 16));
+                    g.eyecandy[2].emplace(EC_FallingObject::new(ice, (ix + HALFPW) as i16, (iy + HALFPH - 16) as i16, 1.5, -7.0, 4, 2, 0, 0, 16, 16));
+                    g.eyecandy[2].emplace(EC_FallingObject::new(ice, (ix + HALFPW - 16) as i16, (iy + HALFPH) as i16, -1.5, -4.0, 4, 2, 0, 0, 16, 16));
+                    g.eyecandy[2].emplace(EC_FallingObject::new(ice, (ix + HALFPW) as i16, (iy + HALFPH) as i16, 1.5, -4.0, 4, 2, 0, 0, 16, 16));
 
-                    game().game_values.unlocksecret2part2 += 1;
+                    g.game_values.unlocksecret2part2 += 1;
                 } else if deathStyle == PlayerDeathStyle::Jump {
-                    game().eyecandy[2].emplace(EC_FallingObject::new(
+                    g.eyecandy[2].emplace(EC_FallingObject::new(
                         corpseSprite,
                         (ix + HALFPW - 16) as i16,
                         (iy + PH - 32) as i16,
@@ -2014,16 +2025,16 @@ impl CPlayer {
                         32,
                     ));
                 } else if deathStyle == PlayerDeathStyle::Squish {
-                    game().eyecandy[1].emplace(EC_Corpse::new(corpseSprite, (ix - PWOFFSET) as f32, (iy + PH - 32) as f32, self.iSrcOffsetX));
+                    g.eyecandy[1].emplace(EC_Corpse::new(corpseSprite, (ix - PWOFFSET) as f32, (iy + PH - 32) as f32, self.iSrcOffsetX));
                 }
             }
 
             //Drop any item the dead player was carrying
             if !self.carriedItem.is_null() {
                 if fKillCarriedItem {
-                    self.carriedItem.get().kill_object_map_hazard(-1);
+                    self.carriedItem.get().kill_object_map_hazard(g, -1);
                 } else {
-                    MO_CarriedObjectTrait::drop(self.carriedItem.get());
+                    MO_CarriedObjectTrait::drop(self.carriedItem.get(), g);
                 }
 
                 self.carriedItem = Ptr::null();
@@ -2032,37 +2043,37 @@ impl CPlayer {
             //Drop a shoe item if the player died in one
             if self.kuriboshoe.is_on() {
                 let shoe = Ptr::new_box(CO_KuriboShoe::new(
-                    Ptr::from_mut(&mut game().rm.spr_kuriboshoe),
+                    Ptr::from_mut(&mut g.rm.spr_kuriboshoe),
                     Vec2s::new((ix - PWOFFSET) as i16, (iy - PHOFFSET) as i16),
                     self.kuriboshoe.get_type() == STICKY,
                 ));
-                io_moving_object_collision_detection_checksides(shoe.get());
+                io_moving_object_collision_detection_checksides(g, shoe.get());
 
-                game().objectcontainer[1].add(shoe);
+                g.objectcontainer[1].add(shoe);
             }
 
             //If the game mode didn't say to remove the team from the game, then respawn the player
             if !fTeamRemoved {
-                if game().game_values.screencrunch && !game().game_values.spinscreen {
-                    game().y_shake = (game().y_shake as i32 + CRUNCHAMOUNT) as i16;
+                if g.game_values.screencrunch && !g.game_values.spinscreen {
+                    g.y_shake = (g.y_shake as i32 + CRUNCHAMOUNT) as i16;
                 }
 
-                if game().y_shake as i32 > CRUNCHMAX {
-                    game().y_shake = CRUNCHMAX as i16;
+                if g.y_shake as i32 > CRUNCHMAX {
+                    g.y_shake = CRUNCHMAX as i16;
                 }
 
-                self.setup_new_player();
+                self.setup_new_player(g);
             }
         }
     }
 
     // Called by CO_KuriboShoe
-    pub fn set_kuribo_shoe(&mut self, r#type: KuriboShoeType) {
+    pub fn set_kuribo_shoe(&mut self, g: &mut Game, r#type: KuriboShoeType) {
         debug_assert!(r#type > 0);
         self.kuriboshoe.set_type(r#type);
 
         if !self.carriedItem.is_null() && !self.carriedItem.is_carried_by_kuribo_shoe() {
-            MO_CarriedObjectTrait::drop(self.carriedItem.get());
+            MO_CarriedObjectTrait::drop(self.carriedItem.get(), g);
             self.carriedItem = Ptr::null();
         }
 
@@ -2070,7 +2081,7 @@ impl CPlayer {
         self.clear_powerup_states();
     }
 
-    pub fn setup_new_player(&mut self) {
+    pub fn setup_new_player(&mut self, g: &mut Game) {
         unsafe {
             self.pScoreboardSprite = self.sprites;
             self.action = PlayerAction::None;
@@ -2078,7 +2089,7 @@ impl CPlayer {
             self.velx = 0.0;
             self.oldvelx = self.velx;
 
-            if game().game_values.spawnstyle == SpawnStyle::Door {
+            if g.game_values.spawnstyle == SpawnStyle::Door {
                 self.vely = 0.0;
             } else {
                 self.vely = -(VELJUMP / 2.0); //make the player jump up on respawn
@@ -2115,21 +2126,21 @@ impl CPlayer {
 
             self.spawntimer = 0;
             self.waittimer = 0;
-            *self.respawncounter.get() = game().game_values.respawn;
+            *self.respawncounter.get() = g.game_values.respawn;
             self.state = PlayerState::Waiting;
 
             self.fallthrough = false;
             self.diedas = 0;
             self.iSrcOffsetX = 0;
 
-            self.outofarena.reset();
+            self.outofarena.reset(g);
 
             self.platform = Ptr::null();
             self.iHorizontalPlatformCollision = -1;
             self.iVerticalPlatformCollision = -1;
             self.iPlatformCollisionPlayerId = -1;
 
-            self.shield.reset();
+            self.shield.reset(g);
             self.kuriboshoe.reset();
             self.secretcode.reset();
             self.cardcollection.reset();
@@ -2138,8 +2149,8 @@ impl CPlayer {
 
             self.throw_star = 0;
 
-            game().game_values.unlocksecret3part1[self.globalID as usize] = 0;
-            game().game_values.unlocksecret3part2[self.globalID as usize] = 0;
+            g.game_values.unlocksecret3part1[self.globalID as usize] = 0;
+            g.game_values.unlocksecret3part2[self.globalID as usize] = 0;
         }
     }
 
@@ -2152,9 +2163,9 @@ impl CPlayer {
         self.powerupused = None;
     }
 
-    pub fn find_spawn_point(&mut self) -> bool {
+    pub fn find_spawn_point(&mut self, g: &mut Game) -> bool {
         unsafe {
-            let fRet = game().g_map.findspawnpoint(self.teamID + 1, &mut self.ix, &mut self.iy, PW as i16, PH as i16, false);
+            let fRet = g.g_map.findspawnpoint(self.teamID + 1, &mut self.ix, &mut self.iy, PW as i16, PH as i16, false);
 
             self.fx = self.ix as f32;
             self.fy = self.iy as f32;
@@ -2163,12 +2174,12 @@ impl CPlayer {
         }
     }
 
-    pub fn spawn_text(&mut self, szText: &str) {
+    pub fn spawn_text(&mut self, g: &mut Game, szText: &str) {
         self.spawntext += 1;
         if self.spawntext >= 20 {
             unsafe {
-                game().eyecandy[2].emplace(EC_GravText::new(
-                    Ptr::from_mut(&mut game().rm.game_font_large),
+                g.eyecandy[2].emplace(EC_GravText::new(
+                    Ptr::from_mut(&mut g.rm.game_font_large),
                     (self.ix as i32 + HALFPW) as i16,
                     self.iy,
                     szText.to_string(),
@@ -2192,30 +2203,31 @@ impl CPlayer {
         }
     }
 
-    pub fn add_killer_award(&mut self, killed: Ptr<CPlayer>, style: KillStyle) {
+    pub fn add_killer_award(&mut self, g: &mut Game, killed: Ptr<CPlayer>, style: KillStyle) {
         let this = self.this();
-        self.awardeffects.add_killer_award(this.get(), killed, style);
+        self.awardeffects.add_killer_award(g, this.get(), killed, style);
     }
 
-    pub fn death_awards(&mut self) {
+    pub fn death_awards(&mut self, g: &mut Game) {
         let this = self.this();
-        self.awardeffects.add_death_award(this.get());
+        self.awardeffects.add_death_award(g, this.get());
     }
 
-    pub fn add_kills_in_row_in_air_award(&mut self) {
+    pub fn add_kills_in_row_in_air_award(&mut self, g: &mut Game) {
         let this = self.this();
-        self.awardeffects.add_kills_in_row_in_air_award(this.get());
+        self.awardeffects.add_kills_in_row_in_air_award(g, this.get());
     }
 
-    pub fn killed_player(&mut self, killed: Ptr<CPlayer>, deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
+    pub fn killed_player(&mut self, g: &mut Game, killed: Ptr<CPlayer>, deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
         let args = [1, self.globalID as i32, killed.globalID as i32, deathstyle as i32, style as i32, fForce as i32, fKillCarriedItem as i32, -1];
-        if let Some(result) = crate::smw::net_outcomes::kill(&args) {
+        if let Some(result) = crate::smw::net_outcomes::kill(g, &args) {
             return result;
         }
-        self.killed_player_now(killed, deathstyle, style, fForce, fKillCarriedItem)
+        self.killed_player_now(g, killed, deathstyle, style, fForce, fKillCarriedItem)
     }
 
-    pub fn killed_player_now(&mut self, mut killed: Ptr<CPlayer>, mut deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
+    pub fn killed_player_now(&mut self, g: &mut Game, mut killed: Ptr<CPlayer>, mut deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
+        let mut gp = g.ptr();
         let mut killer = self.this();
 
         unsafe {
@@ -2226,7 +2238,7 @@ impl CPlayer {
 
             if let Some(gmChicken) = gamemode_as::<CGM_Chicken>() {
                 if gmChicken.chicken() == killer && style != KillStyle::Pow {
-                    if_sound_on_play(&mut game().rm.sfx_chicken);
+                    if_sound_on_play(g, &mut gp.rm.sfx_chicken);
                 }
             }
 
@@ -2235,40 +2247,41 @@ impl CPlayer {
             }
 
             if killer.teamID != killed.teamID {
-                killer.add_killer_award(killed, style);
+                killer.add_killer_award(g, killed, style);
             }
 
-            if game().game_values.awardstyle != AwardStyle::None {
-                killed.death_awards();
+            if g.game_values.awardstyle != AwardStyle::None {
+                killed.death_awards(g);
             }
 
             //now kill the player (don't call this function earlier because we need the old position, etc.
-            let iKillType = game().game_values.gamemode.get().playerkilledplayer(killer, killed, style);
+            let iKillType = g.game_values.gamemode.get().playerkilledplayer(g, killer, killed, style);
 
             if PlayerKillType::NonKill != iKillType || fForce {
                 if killed.bobomb {
                     killed.diedas = 2;
-                    killer.set_powerup(0);
+                    killer.set_powerup(g, 0);
                 }
 
                 if deathstyle == PlayerDeathStyle::Jump {
-                    if_sound_on_play(&mut game().rm.sfx_deathsound);
+                    if_sound_on_play(g, &mut gp.rm.sfx_deathsound);
                 } else if deathstyle == PlayerDeathStyle::Squish {
-                    if_sound_on_play(&mut game().rm.sfx_mip);
+                    if_sound_on_play(g, &mut gp.rm.sfx_mip);
                 } else if deathstyle == PlayerDeathStyle::Shatter {
-                    if_sound_on_play(&mut game().rm.sfx_breakblock);
+                    if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
                 }
             }
 
             if PlayerKillType::Normal == iKillType || (fForce && PlayerKillType::NonKill == iKillType) {
-                killed.die(deathstyle, false, fKillCarriedItem);
+                killed.die(g, deathstyle, false, fKillCarriedItem);
             }
 
             iKillType
         }
     }
 
-    pub fn transfer_tag(&mut self, mut o2: Ptr<CPlayer>) {
+    pub fn transfer_tag(&mut self, g: &mut Game, mut o2: Ptr<CPlayer>) {
+        let mut gp = g.ptr();
         let mut o1 = self.this();
 
         unsafe {
@@ -2284,41 +2297,41 @@ impl CPlayer {
             let mut tagged = Ptr::null();
             if gmTag.tagged() == o1 && !o2.is_shielded() && !o2.is_invincible() {
                 gmTag.set_tagged(o2);
-                o1.shield.turn_on();
+                o1.shield.turn_on(g);
                 tagged = gmTag.tagged();
             } else if gmTag.tagged() == o2 && !o1.is_shielded() && !o1.is_invincible() {
                 gmTag.set_tagged(o1);
-                o2.shield.turn_on();
+                o2.shield.turn_on(g);
                 tagged = gmTag.tagged();
             }
 
             if !tagged.is_null() {
                 let t: Ptr<CPlayer> = tagged;
-                game().eyecandy[2].emplace(EC_GravText::new(
-                    Ptr::from_mut(&mut game().rm.game_font_large),
+                g.eyecandy[2].emplace(EC_GravText::new(
+                    Ptr::from_mut(&mut g.rm.game_font_large),
                     (t.ix as i32 + HALFPW) as i16,
                     (t.iy as i32 + PH) as i16,
                     "Tagged!".to_string(),
                     (-(VELJUMP as f64) * 1.5) as f32,
                 ));
-                game().eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
                     (t.ix as i32 + HALFPW - 16) as i16,
                     (t.iy as i32 + HALFPH - 16) as i16,
                     3,
                     8,
                 ));
-                if_sound_on_play(&mut game().rm.sfx_transform);
+                if_sound_on_play(g, &mut gp.rm.sfx_transform);
             }
         }
     }
 
-    pub fn transfer_shy_guy(&mut self, o2: Ptr<CPlayer>) {
+    pub fn transfer_shy_guy(&mut self, g: &mut Game, o2: Ptr<CPlayer>) {
         let o1 = self.this();
 
         unsafe {
             //Don't shyguy tag if this isn't shyguy tag mode or if tag transfers is set to kills only
-            if game().game_values.gamemode.gamemode != game_mode_shyguytag || game().game_values.gamemodesettings.shyguytag.tagtransfer == 1 {
+            if g.game_values.gamemode.gamemode != game_mode_shyguytag || g.game_values.gamemodesettings.shyguytag.tagtransfer == 1 {
                 return;
             }
 
@@ -2329,14 +2342,15 @@ impl CPlayer {
             let sgt = gamemode_as::<CGM_ShyGuyTag>().unwrap();
 
             if o1.shyguy && !o2.shyguy && !o2.is_shielded() && !o2.is_invincible() {
-                sgt.set_shy_guy(o2.get_team_id());
+                sgt.set_shy_guy(g, o2.get_team_id());
             } else if o2.shyguy && !o1.shyguy && !o1.is_shielded() && !o1.is_invincible() {
-                sgt.set_shy_guy(o1.get_team_id());
+                sgt.set_shy_guy(g, o1.get_team_id());
             }
         }
     }
 
-    pub fn bounce_assist_player(&mut self, o2: Ptr<CPlayer>) {
+    pub fn bounce_assist_player(&mut self, g: &mut Game, o2: Ptr<CPlayer>) {
+        let mut gp = g.ptr();
         let mut o1 = self.this();
 
         if o1.state == PlayerState::Ready
@@ -2345,23 +2359,24 @@ impl CPlayer {
             && o1.keys().game_jump().fDown
         {
             o1.set_yi((o2.iy as i32 - PH) as i16); //set new position to top of other player
-            o1.get().collisions.checktop(o1.get());
+            o1.get().collisions.checktop(g, o1.get());
             o1.platform = Ptr::null();
             o1.vely = -VELSUPERJUMP;
 
             o1.superstomp.reset();
 
             unsafe {
-                if_sound_on_play(&mut game().rm.sfx_superspring);
+                if_sound_on_play(g, &mut gp.rm.sfx_superspring);
             }
         }
     }
 
-    pub fn draw_spotlight(&mut self) {
+    pub fn draw_spotlight(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
-            if game().game_values.spotlights && self.state != PlayerState::Dead {
+            if g.game_values.spotlights && self.state != PlayerState::Dead {
                 if self.sSpotlight.is_null() {
-                    self.sSpotlight = game().spotlightManager.add_spotlight((self.ix as i32 + HALFPW) as i16, (self.iy as i32 + HALFPH) as i16, 7);
+                    self.sSpotlight = gp.spotlightManager.add_spotlight(g, (self.ix as i32 + HALFPW) as i16, (self.iy as i32 + HALFPH) as i16, 7);
                 }
 
                 if !self.sSpotlight.is_null() {
@@ -2371,7 +2386,8 @@ impl CPlayer {
         }
     }
 
-    pub fn draw_powerup_ring(&mut self) {
+    pub fn draw_powerup_ring(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if let Some(used) = self.powerupused {
             let numeyecandy: i16 = 8;
             let addangle: f32 = TWO_PI / numeyecandy as f32;
@@ -2386,30 +2402,32 @@ impl CPlayer {
                 let src = SDL_Rect { x: used as i32 * 16, y: 0, w: 16, h: 16 };
                 unsafe {
                     if self.iswarping() {
-                        game().rm.spr_storedpowerupsmall.draw_clip(powerupX as i32, powerupY as i32, &src, self.clip_edge(), self.get_warp_plane() as i32);
+                        gp.rm.spr_storedpowerupsmall.draw_clip(g, powerupX as i32, powerupY as i32, &src, self.clip_edge(), self.get_warp_plane() as i32);
                     } else {
-                        game().rm.spr_storedpowerupsmall.draw_src(powerupX as i32, powerupY as i32, &src);
+                        gp.rm.spr_storedpowerupsmall.draw_src(g, powerupX as i32, powerupY as i32, &src);
                     }
                 }
             }
         }
     }
 
-    pub fn draw_winner_crown(&mut self) {
+    pub fn draw_winner_crown(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
-            if game().game_values.showwinningcrown && game().g_iWinningPlayer == self.teamID {
-                let x = self.ix as i32 + HALFPW - if self.is_facing_right() { 4 } else { 10 };
+            if g.game_values.showwinningcrown && g.g_iWinningPlayer == self.teamID {
+                let x = self.ix as i32 + HALFPW - if self.is_facing_right(g) { 4 } else { 10 };
                 let y = self.iy as i32 - 10 - if self.kuriboshoe.is_on() { 16 } else { 0 };
                 if self.iswarping() {
-                    game().rm.spr_crown.draw_clip(x, y, &SDL_Rect { x: 0, y: 0, w: 14, h: 14 }, self.clip_edge(), self.get_warp_plane() as i32);
+                    gp.rm.spr_crown.draw_clip(g, x, y, &SDL_Rect { x: 0, y: 0, w: 14, h: 14 }, self.clip_edge(), self.get_warp_plane() as i32);
                 } else {
-                    game().rm.spr_crown.draw(x, y);
+                    gp.rm.spr_crown.draw(g, x, y);
                 }
             }
         }
     }
 
-    pub fn draw(&mut self) {
+    pub fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let this = self.this();
 
         //Don't draw a player that is waiting to respawn
@@ -2417,7 +2435,7 @@ impl CPlayer {
             return;
         }
 
-        self.draw_spotlight();
+        self.draw_spotlight(g);
 
         if self.state == PlayerState::Spawning {
             return;
@@ -2439,19 +2457,19 @@ impl CPlayer {
             if self.tanookisuit.is_statue() {
                 //Make sure the scoreboard still accurately represents the player
                 if self.bobomb {
-                    self.pScoreboardSprite = Ptr::from_mut(&mut game().rm.spr_bobomb[colorID]);
+                    self.pScoreboardSprite = Ptr::from_mut(&mut g.rm.spr_bobomb[colorID]);
                 } else if chicken == this {
-                    self.pScoreboardSprite = Ptr::from_mut(&mut game().rm.spr_chocobo[colorID]);
+                    self.pScoreboardSprite = Ptr::from_mut(&mut g.rm.spr_chocobo[colorID]);
                 } else if self.shyguy {
-                    self.pScoreboardSprite = Ptr::from_mut(&mut game().rm.spr_shyguy[colorID]);
+                    self.pScoreboardSprite = Ptr::from_mut(&mut g.rm.spr_shyguy[colorID]);
                 }
 
-                self.tanookisuit.draw_statue(this.get());
+                self.tanookisuit.draw_statue(g, this.get());
 
                 return;
             } else if self.bobomb {
                 //draw him as bob-omb
-                self.pScoreboardSprite = Ptr::from_mut(&mut game().rm.spr_bobomb[colorID]);
+                self.pScoreboardSprite = Ptr::from_mut(&mut g.rm.spr_bobomb[colorID]);
 
                 //Add smoke to the top of the bomb
                 if {
@@ -2461,8 +2479,8 @@ impl CPlayer {
                     && self.state == PlayerState::Ready
                 {
                     self.bobombsmoketimer = 0;
-                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut game().rm.spr_bobombsmoke),
+                    g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                        Ptr::from_mut(&mut g.rm.spr_bobombsmoke),
                         (ix + HALFPH - 8) as i16,
                         (iy - PHOFFSET - 8) as i16,
                         4,
@@ -2471,32 +2489,32 @@ impl CPlayer {
                 }
             } else if chicken == this {
                 //draw him as chicken
-                self.pScoreboardSprite = Ptr::from_mut(&mut game().rm.spr_chocobo[colorID]);
+                self.pScoreboardSprite = Ptr::from_mut(&mut g.rm.spr_chocobo[colorID]);
             } else if self.shyguy {
                 //draw him as chicken
-                self.pScoreboardSprite = Ptr::from_mut(&mut game().rm.spr_shyguy[colorID]);
-                game().rm.spr_ownedtags.draw_src(ix - PWOFFSET - 8, iy - PHOFFSET - 8, &SDL_Rect { x: self.ownerColorOffsetX as i32, y: 0, w: 48, h: 48 });
+                self.pScoreboardSprite = Ptr::from_mut(&mut g.rm.spr_shyguy[colorID]);
+                gp.rm.spr_ownedtags.draw_src(g, ix - PWOFFSET - 8, iy - PHOFFSET - 8, &SDL_Rect { x: self.ownerColorOffsetX as i32, y: 0, w: 48, h: 48 });
             }
 
             if self.ownerPlayerID > -1 {
                 let src = SDL_Rect { x: self.ownerColorOffsetX as i32, y: 0, w: 48, h: 48 };
                 if self.iswarping() {
-                    game().rm.spr_ownedtags.draw_clip(ix - PWOFFSET - 8, iy - PHOFFSET - 8, &src, self.clip_edge(), self.get_warp_plane() as i32);
+                    gp.rm.spr_ownedtags.draw_clip(g, ix - PWOFFSET - 8, iy - PHOFFSET - 8, &src, self.clip_edge(), self.get_warp_plane() as i32);
                 } else {
-                    game().rm.spr_ownedtags.draw_src(ix - PWOFFSET - 8, iy - PHOFFSET - 8, &src);
+                    gp.rm.spr_ownedtags.draw_src(g, ix - PWOFFSET - 8, iy - PHOFFSET - 8, &src);
                 }
             }
 
             //Don't allow cape, tail, wings to be used with shoe
             if !self.kuriboshoe.is_on() {
                 if self.powerup == 3 {
-                    self.cape.draw(this.get());
+                    self.cape.draw(g, this.get());
                 } else if self.powerup == 8 {
-                    self.wings.draw(this.get());
+                    self.wings.draw(g, this.get());
                 }
                 //This has to come last otherwise chickens with glide option won't be able to use cape or wings
-                else if self.powerup == 7 || (self.powerup == -1 && chicken == this && game().game_values.gamemodesettings.chicken.glide) {
-                    self.tail.draw(this.get());
+                else if self.powerup == 7 || (self.powerup == -1 && chicken == this && g.game_values.gamemodesettings.chicken.glide) {
+                    self.tail.draw(g, this.get());
                 }
             }
 
@@ -2511,17 +2529,17 @@ impl CPlayer {
                 let spr = &self.pScoreboardSprite.get()[self.sprite_state as usize];
                 let src = SDL_Rect { x: self.iSrcOffsetX as i32, y: 0, w: 32, h: 32 };
                 if self.iswarping() {
-                    spr.draw_clip(ix - PWOFFSET, iy - PHOFFSET - iPlayerKuriboOffsetY, &src, self.clip_edge(), self.get_warp_plane() as i32);
+                    spr.draw_clip(g, ix - PWOFFSET, iy - PHOFFSET - iPlayerKuriboOffsetY, &src, self.clip_edge(), self.get_warp_plane() as i32);
                 } else {
-                    spr.draw_src(ix - PWOFFSET, iy - PHOFFSET - iPlayerKuriboOffsetY, &src);
+                    spr.draw_src(g, ix - PWOFFSET, iy - PHOFFSET - iPlayerKuriboOffsetY, &src);
                 }
             }
 
             //Draw Kuribo's Shoe
-            self.kuriboshoe.draw(this.get());
+            self.kuriboshoe.draw(g, this.get());
 
             //Draw the crown on the player
-            self.draw_winner_crown();
+            self.draw_winner_crown(g);
 
             if self.state < PlayerState::Ready {
                 return;
@@ -2530,64 +2548,64 @@ impl CPlayer {
             if self.frozen {
                 let src = SDL_Rect { x: 0, y: 0, w: 32, h: 32 };
                 if self.iswarping() {
-                    game().rm.spr_iceblock.draw_clip(ix - PWOFFSET, iy - PHOFFSET, &src, self.clip_edge(), self.get_warp_plane() as i32);
+                    gp.rm.spr_iceblock.draw_clip(g, ix - PWOFFSET, iy - PHOFFSET, &src, self.clip_edge(), self.get_warp_plane() as i32);
                 } else {
-                    game().rm.spr_iceblock.draw_src(ix - PWOFFSET, iy - PHOFFSET, &src);
+                    gp.rm.spr_iceblock.draw_src(g, ix - PWOFFSET, iy - PHOFFSET, &src);
                 }
             }
 
-            self.jail.draw(this.get());
-            self.suicidetimer.draw(this.get());
+            self.jail.draw(g, this.get());
+            self.suicidetimer.draw(g, this.get());
 
             //Draw the Ring awards
-            if game().game_values.awardstyle == AwardStyle::Halo && self.killsinrow as i32 >= MINAWARDSNEEDED {
-                self.awardeffects.draw_ring_award(this.get());
+            if g.game_values.awardstyle == AwardStyle::Halo && self.killsinrow as i32 >= MINAWARDSNEEDED {
+                self.awardeffects.draw_ring_award(g, this.get());
             }
 
             //Draw the powerup ring when a powerup is being used
-            self.draw_powerup_ring();
+            self.draw_powerup_ring(g);
         }
     }
 
-    pub fn draw_out_of_screen_indicators(&mut self) {
+    pub fn draw_out_of_screen_indicators(&mut self, g: &mut Game) {
         let this = self.this();
-        self.outofarena.draw(this.get());
+        self.outofarena.draw(g, this.get());
     }
 
-    pub fn updateswap(&mut self) {
+    pub fn updateswap(&mut self, g: &mut Game) {
         if self.state != PlayerState::Ready {
             return;
         }
 
         unsafe {
-            if game().game_values.swapstyle == 1 {
-                self.set_xf(if game().game_values.flags.swapplayersblink { self.fOldSwapX } else { self.fNewSwapX });
-                self.set_yf(if game().game_values.flags.swapplayersblink { self.fOldSwapY } else { self.fNewSwapY });
+            if g.game_values.swapstyle == 1 {
+                self.set_xf(if g.game_values.flags.swapplayersblink { self.fOldSwapX } else { self.fNewSwapX });
+                self.set_yf(if g.game_values.flags.swapplayersblink { self.fOldSwapY } else { self.fNewSwapY });
             } else {
-                self.set_xf(((self.fNewSwapX - self.fOldSwapX) * game().game_values.flags.swapplayersposition) + self.fOldSwapX);
-                self.set_yf(((self.fNewSwapY - self.fOldSwapY) * game().game_values.flags.swapplayersposition) + self.fOldSwapY);
+                self.set_xf(((self.fNewSwapX - self.fOldSwapX) * g.game_values.flags.swapplayersposition) + self.fOldSwapX);
+                self.set_yf(((self.fNewSwapY - self.fOldSwapY) * g.game_values.flags.swapplayersposition) + self.fOldSwapY);
             }
         }
 
         if !self.carriedItem.is_null() {
-            self.carriedItem.get().move_to_owner();
+            self.carriedItem.get().move_to_owner(g);
         }
     }
 
-    pub fn drawswap(&mut self) {
+    pub fn drawswap(&mut self, g: &mut Game) {
         if self.state != PlayerState::Ready {
-            self.draw();
+            self.draw(g);
             return;
         }
 
-        if unsafe { game().game_values.swapstyle } != 1 {
-            self.update_sprite();
+        if unsafe { g.game_values.swapstyle } != 1 {
+            self.update_sprite(g);
         }
 
-        self.draw();
+        self.draw(g);
 
         if !self.carriedItem.is_null() {
-            self.carriedItem.get().draw();
+            self.carriedItem.get().draw(g);
         }
     }
 
@@ -2641,7 +2659,7 @@ impl CPlayer {
         false
     }
 
-    pub fn mapcolldet_move_horizontally(&mut self, direction: i16) {
+    pub fn mapcolldet_move_horizontally(&mut self, g: &mut Game, direction: i16) {
         debug_assert!(direction == 1 || direction == 3);
         let counter_direction: i16 = if direction == 1 { 3 } else { 1 };
         let this = self.this();
@@ -2674,11 +2692,11 @@ impl CPlayer {
                 tx -= 20;
             }
 
-            let topblock = game().g_map.block(tx, ty);
-            let bottomblock = game().g_map.block(tx, ty2);
+            let topblock = g.g_map.block(tx, ty);
+            let bottomblock = g.g_map.block(tx, ty2);
 
-            let toptile = game().g_map.map(tx as i32, ty as i32);
-            let bottomtile = game().g_map.map(tx as i32, ty2 as i32);
+            let toptile = g.g_map.map(tx as i32, ty as i32);
+            let bottomtile = g.g_map.map(tx as i32, ty2 as i32);
 
             let deathTileBehind: bool;
             let superDeathTileBehind: bool;
@@ -2704,15 +2722,15 @@ impl CPlayer {
             let fBottomBlockSolid = !bottomblock.is_null() && !bottomblock.get().is_transparent() && !bottomblock.get().is_hidden();
 
             //first check to see if player hit a warp
-            if isMoveKeyDown && !self.frozen && game().g_map.checkforwarp(tx, ty, ty2, direction) {
+            if isMoveKeyDown && !self.frozen && g.g_map.checkforwarp(tx, ty, ty2, direction) {
                 if direction == 1 {
                     self.set_xf((((tx as i32) << 5) + TILESIZE) as f32 + 0.2f32); // move to the edge of the tile
                 } else {
                     self.set_xf((((tx as i32) << 5) - PW) as f32 - 0.2f32); // move to the edge of the tile (tile on the right -> mind the player width)
                 }
 
-                let warp = Ptr::from_mut(game().g_map.warp(tx, ty2));
-                self.warpstatus.enter_warp(this.get(), warp);
+                let warp = Ptr::from_mut(g.g_map.warp(tx, ty2));
+                self.warpstatus.enter_warp(g, this.get(), warp);
 
                 if (self.iy as i32 - PHOFFSET) < ((ty as i32) << 5) {
                     self.set_yi((((ty as i32) << 5) + PHOFFSET) as i16);
@@ -2721,33 +2739,33 @@ impl CPlayer {
                 }
             } else if fTopBlockSolid || fBottomBlockSolid {
                 if self.iHorizontalPlatformCollision == direction {
-                    self.kill_player_map_hazard(true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
+                    self.kill_player_map_hazard(g, true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
                     return;
                 }
 
-                if game().netplay.active && game().netplay.theHostIsMe {
-                    game().netplay.client.local_gamehost.prepare_map_collision_event(self);
+                if g.netplay.active && g.netplay.theHostIsMe {
+                    g.netplay.client.local_gamehost.prepare_map_collision_event(self);
                 }
 
                 let mut collisionresult = true;
 
                 if fTopBlockSolid {
                     // collide with top block
-                    collisionresult &= topblock.get().collide_player_dir(this, counter_direction, if game().netplay.active { game().netplay.theHostIsMe || game().netplay.allowMapCollisionEvent } else { true });
+                    collisionresult &= topblock.get().collide_player_dir(this, counter_direction, if g.netplay.active { g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent } else { true });
                     self.flipsidesifneeded();
                 }
 
                 if fBottomBlockSolid {
                     // then bottom
-                    collisionresult &= bottomblock.get().collide_player_dir(this, counter_direction, if game().netplay.active { game().netplay.theHostIsMe || game().netplay.allowMapCollisionEvent } else { true });
+                    collisionresult &= bottomblock.get().collide_player_dir(this, counter_direction, if g.netplay.active { g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent } else { true });
                     self.flipsidesifneeded();
                 }
 
-                if game().netplay.active && game().netplay.theHostIsMe && collisionresult {
-                    game().netplay.client.local_gamehost.send_map_collision_event();
+                if g.netplay.active && g.netplay.theHostIsMe && collisionresult {
+                    g.netplay.client.local_gamehost.send_map_collision_event();
                 }
             } else if superDeathTileBehind || (deathTileBehind && !self.is_invincible() && !self.is_shielded() && !self.shyguy) {
-                if PlayerKillType::NonKill != self.kill_player_map_hazard(superDeathTileBehind, KillStyle::Environment, false, -1) {
+                if PlayerKillType::NonKill != self.kill_player_map_hazard(g, superDeathTileBehind, KillStyle::Environment, false, -1) {
                     return;
                 }
             }
@@ -2755,7 +2773,7 @@ impl CPlayer {
             else if b(toptile & tile_flag_solid) || b(bottomtile & tile_flag_solid) {
                 //collide with solid, ice, and death and all sides death
                 if self.iHorizontalPlatformCollision == direction {
-                    self.kill_player_map_hazard(true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
+                    self.kill_player_map_hazard(g, true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
                     return;
                 }
 
@@ -2780,7 +2798,7 @@ impl CPlayer {
         }
     }
 
-    pub fn mapcolldet_move_upward(&mut self, txl: i16, txc: i16, txr: i16, alignedBlockX: i16, unAlignedBlockX: i16, unAlignedBlockFX: f32) {
+    pub fn mapcolldet_move_upward(&mut self, g: &mut Game, txl: i16, txc: i16, txr: i16, alignedBlockX: i16, unAlignedBlockX: i16, unAlignedBlockFX: f32) {
         let this = self.this();
 
         unsafe {
@@ -2789,14 +2807,14 @@ impl CPlayer {
 
             let ty = (self.fPrecalculatedY as i16 as i32 / TILESIZE) as i16;
 
-            let leftblock = game().g_map.block(txl, ty);
-            let centerblock = game().g_map.block(txc, ty);
-            let rightblock = game().g_map.block(txr, ty);
+            let leftblock = g.g_map.block(txl, ty);
+            let centerblock = g.g_map.block(txc, ty);
+            let rightblock = g.g_map.block(txr, ty);
 
-            if self.keys().game_jump().fDown && !self.frozen && game().g_map.checkforwarp(alignedBlockX, unAlignedBlockX, ty, 2) {
+            if self.keys().game_jump().fDown && !self.frozen && g.g_map.checkforwarp(alignedBlockX, unAlignedBlockX, ty, 2) {
                 self.set_yf((((ty as i32) << 5) + TILESIZE) as f32 + 0.2f32);
-                let warp = Ptr::from_mut(game().g_map.warp(unAlignedBlockX, ty));
-                self.warpstatus.enter_warp(this.get(), warp);
+                let warp = Ptr::from_mut(g.g_map.warp(unAlignedBlockX, ty));
+                self.warpstatus.enter_warp(g, this.get(), warp);
 
                 if (self.ix as i32 - PWOFFSET) < ((txl as i32) << 5) + 1 {
                     self.set_xi((((txl as i32) << 5) + PHOFFSET + 1) as i16);
@@ -2808,17 +2826,17 @@ impl CPlayer {
             }
 
             if !centerblock.is_null() && !centerblock.get().is_transparent() {
-                if game().netplay.active && game().netplay.theHostIsMe {
-                    game().netplay.client.local_gamehost.prepare_map_collision_event(self);
+                if g.netplay.active && g.netplay.theHostIsMe {
+                    g.netplay.client.local_gamehost.prepare_map_collision_event(self);
                 }
 
-                if !centerblock.get().collide_player_dir(this, 0, if game().netplay.active { game().netplay.theHostIsMe || game().netplay.allowMapCollisionEvent } else { true }) {
+                if !centerblock.get().collide_player_dir(this, 0, if g.netplay.active { g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent } else { true }) {
                     if self.iVerticalPlatformCollision == 2 && !centerblock.get().is_hidden() {
-                        self.kill_player_map_hazard(true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
+                        self.kill_player_map_hazard(g, true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
                     }
 
-                    if game().netplay.active && game().netplay.theHostIsMe {
-                        game().netplay.client.local_gamehost.send_map_collision_event();
+                    if g.netplay.active && g.netplay.theHostIsMe {
+                        g.netplay.client.local_gamehost.send_map_collision_event();
                     }
 
                     return;
@@ -2833,7 +2851,7 @@ impl CPlayer {
             //the player will then shift over and fully hit the super death on bottom and die even if shielded
             //or invincible.
 
-            let alignedTileType = game().g_map.map(alignedBlockX as i32, ty as i32);
+            let alignedTileType = g.g_map.map(alignedBlockX as i32, ty as i32);
             if b(alignedTileType & tile_flag_solid)
                 && !b(alignedTileType & tile_flag_super_or_player_death_bottom)
                 && (!b(alignedTileType & tile_flag_death_on_bottom) || self.is_invincible() || self.is_shielded() || self.shyguy)
@@ -2846,7 +2864,7 @@ impl CPlayer {
                 }
 
                 if self.iVerticalPlatformCollision == 2 {
-                    self.kill_player_map_hazard(true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
+                    self.kill_player_map_hazard(g, true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
                 }
 
                 return;
@@ -2856,17 +2874,17 @@ impl CPlayer {
                 //then left
                 let useBehavior = alignedBlockX == txl || rightblock.is_null() || rightblock.get().is_transparent() || rightblock.get().is_hidden();
 
-                if game().netplay.active && game().netplay.theHostIsMe {
-                    game().netplay.client.local_gamehost.prepare_map_collision_event(self);
+                if g.netplay.active && g.netplay.theHostIsMe {
+                    g.netplay.client.local_gamehost.prepare_map_collision_event(self);
                 }
 
-                if !leftblock.get().collide_player_dir(this, 0, if game().netplay.active { (game().netplay.theHostIsMe || game().netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior }) {
+                if !leftblock.get().collide_player_dir(this, 0, if g.netplay.active { (g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior }) {
                     if self.iVerticalPlatformCollision == 2 && !leftblock.get().is_hidden() {
-                        self.kill_player_map_hazard(true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
+                        self.kill_player_map_hazard(g, true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
                     }
 
-                    if game().netplay.active && game().netplay.theHostIsMe {
-                        game().netplay.client.local_gamehost.send_map_collision_event();
+                    if g.netplay.active && g.netplay.theHostIsMe {
+                        g.netplay.client.local_gamehost.send_map_collision_event();
                     }
 
                     return;
@@ -2877,17 +2895,17 @@ impl CPlayer {
                 //then right
                 let useBehavior = alignedBlockX == txr || leftblock.is_null() || leftblock.get().is_transparent() || leftblock.get().is_hidden();
 
-                if game().netplay.active && game().netplay.theHostIsMe {
-                    game().netplay.client.local_gamehost.prepare_map_collision_event(self);
+                if g.netplay.active && g.netplay.theHostIsMe {
+                    g.netplay.client.local_gamehost.prepare_map_collision_event(self);
                 }
 
-                if !rightblock.get().collide_player_dir(this, 0, if game().netplay.active { (game().netplay.theHostIsMe || game().netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior }) {
+                if !rightblock.get().collide_player_dir(this, 0, if g.netplay.active { (g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior }) {
                     if self.iVerticalPlatformCollision == 2 && !rightblock.get().is_hidden() {
-                        self.kill_player_map_hazard(true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
+                        self.kill_player_map_hazard(g, true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
                     }
 
-                    if game().netplay.active && game().netplay.theHostIsMe {
-                        game().netplay.client.local_gamehost.send_map_collision_event();
+                    if g.netplay.active && g.netplay.theHostIsMe {
+                        g.netplay.client.local_gamehost.send_map_collision_event();
                     }
 
                     return;
@@ -2896,7 +2914,7 @@ impl CPlayer {
 
             //Player squeezed around the block, ice or death on top
             //or if the player is invincible and hits death or death on bottom
-            let unalignedTileType = game().g_map.map(unAlignedBlockX as i32, ty as i32);
+            let unalignedTileType = g.g_map.map(unAlignedBlockX as i32, ty as i32);
             if b(unalignedTileType & tile_flag_solid)
                 && !b(unalignedTileType & tile_flag_super_or_player_death_bottom)
                 && (!b(unalignedTileType & tile_flag_death_on_bottom) || self.is_invincible() || self.is_shielded() || self.shyguy)
@@ -2911,7 +2929,7 @@ impl CPlayer {
                     || (b(alignedTileType & tile_flag_super_or_player_death_bottom) && !b(unalignedTileType & tile_flag_solid))
                     || (b(alignedTileType & tile_flag_solid) && !b(unalignedTileType & tile_flag_super_or_player_death_bottom));
 
-                if PlayerKillType::NonKill != self.kill_player_map_hazard(fRespawnPlayer, KillStyle::Environment, false, -1) {
+                if PlayerKillType::NonKill != self.kill_player_map_hazard(g, fRespawnPlayer, KillStyle::Environment, false, -1) {
                     return;
                 }
             } else {
@@ -2926,17 +2944,17 @@ impl CPlayer {
         }
     }
 
-    pub fn mapcolldet_move_downward(&mut self, txl: i16, _txc: i16, txr: i16, alignedBlockX: i16, unAlignedBlockX: i16, _unAlignedBlockFX: f32) {
+    pub fn mapcolldet_move_downward(&mut self, g: &mut Game, txl: i16, _txc: i16, txr: i16, alignedBlockX: i16, unAlignedBlockX: i16, _unAlignedBlockFX: f32) {
         let this = self.this();
 
         unsafe {
             // moving down / on ground
             let ty = ((self.fPrecalculatedY as i16 as i32 + PH) / TILESIZE) as i16;
 
-            if self.keys().game_down().fDown && !self.frozen && game().g_map.checkforwarp(txl, txr, ty, 0) {
+            if self.keys().game_down().fDown && !self.frozen && g.g_map.checkforwarp(txl, txr, ty, 0) {
                 self.set_yf((((ty as i32) << 5) - PH) as f32 - 0.2f32);
-                let warp = Ptr::from_mut(game().g_map.warp(txr, ty));
-                self.warpstatus.enter_warp(this.get(), warp);
+                let warp = Ptr::from_mut(g.g_map.warp(txr, ty));
+                self.warpstatus.enter_warp(g, this.get(), warp);
 
                 self.fallthrough = false;
                 self.platform = Ptr::null();
@@ -2950,25 +2968,25 @@ impl CPlayer {
                 return;
             }
 
-            let leftblock = game().g_map.block(txl, ty);
-            let rightblock = game().g_map.block(txr, ty);
+            let leftblock = g.g_map.block(txl, ty);
+            let rightblock = g.g_map.block(txr, ty);
 
             let fLeftBlockSolid = !leftblock.is_null() && !leftblock.get().is_transparent() && !leftblock.get().is_hidden();
             let fRightBlockSolid = !rightblock.is_null() && !rightblock.get().is_transparent() && !rightblock.get().is_hidden();
 
             if fLeftBlockSolid || fRightBlockSolid {
                 let mut collisionresult = true;
-                if game().netplay.active && game().netplay.theHostIsMe {
-                    game().netplay.client.local_gamehost.prepare_map_collision_event(self);
+                if g.netplay.active && g.netplay.theHostIsMe {
+                    g.netplay.client.local_gamehost.prepare_map_collision_event(self);
                 }
 
                 if fLeftBlockSolid {
                     //collide with left block
                     let useBehavior = alignedBlockX == txl || rightblock.is_null() || rightblock.get().is_transparent() || rightblock.get().is_hidden();
-                    collisionresult &= leftblock.get().collide_player_dir(this, 2, if game().netplay.active { (game().netplay.theHostIsMe || game().netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior });
+                    collisionresult &= leftblock.get().collide_player_dir(this, 2, if g.netplay.active { (g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior });
 
-                    if game().netplay.active && game().netplay.theHostIsMe && collisionresult {
-                        game().netplay.client.local_gamehost.send_map_collision_event();
+                    if g.netplay.active && g.netplay.theHostIsMe && collisionresult {
+                        g.netplay.client.local_gamehost.send_map_collision_event();
                     }
 
                     //If player was bumped and killed then return
@@ -2980,10 +2998,10 @@ impl CPlayer {
                 if fRightBlockSolid {
                     //then right
                     let useBehavior = alignedBlockX == txr || leftblock.is_null() || leftblock.get().is_transparent() || leftblock.get().is_hidden();
-                    collisionresult &= rightblock.get().collide_player_dir(this, 2, if game().netplay.active { (game().netplay.theHostIsMe || game().netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior });
+                    collisionresult &= rightblock.get().collide_player_dir(this, 2, if g.netplay.active { (g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior });
 
-                    if game().netplay.active && game().netplay.theHostIsMe && collisionresult {
-                        game().netplay.client.local_gamehost.send_map_collision_event();
+                    if g.netplay.active && g.netplay.theHostIsMe && collisionresult {
+                        g.netplay.client.local_gamehost.send_map_collision_event();
                     }
 
                     //If player was bumped and killed then return
@@ -2997,15 +3015,15 @@ impl CPlayer {
                     self.onice = false;
 
                     if self.iVerticalPlatformCollision == 0 {
-                        self.kill_player_map_hazard(true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
+                        self.kill_player_map_hazard(g, true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
                     }
 
                     return;
                 }
             }
 
-            let lefttile = game().g_map.map(txl as i32, ty as i32);
-            let righttile = game().g_map.map(txr as i32, ty as i32);
+            let lefttile = g.g_map.map(txl as i32, ty as i32);
+            let righttile = g.g_map.map(txr as i32, ty as i32);
 
             let fGapSupport = (self.velx >= VELTURBOMOVING || self.velx <= -VELTURBOMOVING) && (lefttile == tile_flag_gap || righttile == tile_flag_gap);
 
@@ -3031,10 +3049,10 @@ impl CPlayer {
                     self.vely = GRAVITATION;
 
                     if self.platform.is_null() {
-                        let alignedtile = game().g_map.map(alignedBlockX as i32, ty as i32);
+                        let alignedtile = g.g_map.map(alignedBlockX as i32, ty as i32);
 
                         if b(alignedtile & tile_flag_ice)
-                            || ((alignedtile == tile_flag_nonsolid || alignedtile == tile_flag_gap) && b(game().g_map.map(unAlignedBlockX as i32, ty as i32) & tile_flag_ice))
+                            || ((alignedtile == tile_flag_nonsolid || alignedtile == tile_flag_gap) && b(g.g_map.map(unAlignedBlockX as i32, ty as i32) & tile_flag_ice))
                         {
                             self.onice = true;
                         } else {
@@ -3056,7 +3074,7 @@ impl CPlayer {
                 self.platform = Ptr::null();
 
                 if self.iVerticalPlatformCollision == 0 {
-                    self.kill_player_map_hazard(true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
+                    self.kill_player_map_hazard(g, true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
                 }
 
                 return;
@@ -3077,10 +3095,10 @@ impl CPlayer {
                 self.vely = GRAVITATION; //1 so we test against the ground again int the next frame (0 would test against the ground in the next+1 frame)
 
                 if self.platform.is_null() {
-                    let alignedtile = game().g_map.map(alignedBlockX as i32, ty as i32);
+                    let alignedtile = g.g_map.map(alignedBlockX as i32, ty as i32);
 
                     if b(alignedtile & tile_flag_ice)
-                        || ((alignedtile == tile_flag_nonsolid || alignedtile == tile_flag_gap) && b(game().g_map.map(unAlignedBlockX as i32, ty as i32) & tile_flag_ice))
+                        || ((alignedtile == tile_flag_nonsolid || alignedtile == tile_flag_gap) && b(g.g_map.map(unAlignedBlockX as i32, ty as i32) & tile_flag_ice))
                     {
                         self.onice = true;
                     } else {
@@ -3095,11 +3113,11 @@ impl CPlayer {
                 self.platform = Ptr::null();
 
                 if self.iVerticalPlatformCollision == 0 {
-                    self.kill_player_map_hazard(true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
+                    self.kill_player_map_hazard(g, true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
                     return;
                 }
             } else if fDeathTileUnderPlayer || fSuperDeathTileUnderPlayer {
-                if PlayerKillType::NonKill != self.kill_player_map_hazard(fSuperDeathTileUnderPlayer, KillStyle::Environment, false, -1) {
+                if PlayerKillType::NonKill != self.kill_player_map_hazard(g, fSuperDeathTileUnderPlayer, KillStyle::Environment, false, -1) {
                     return;
                 }
             } else {
@@ -3119,7 +3137,7 @@ impl CPlayer {
         }
     }
 
-    pub fn collision_detection_map(&mut self) {
+    pub fn collision_detection_map(&mut self, g: &mut Game) {
         let this = self.this();
 
         self.set_xf(self.fx + self.velx);
@@ -3139,7 +3157,7 @@ impl CPlayer {
         self.iPlatformCollisionPlayerId = -1;
 
         unsafe {
-            game().g_map.moving_platform_collision_player(this);
+            g.g_map.moving_platform_collision_player(this);
         }
 
         if self.state != PlayerState::Ready {
@@ -3157,9 +3175,9 @@ impl CPlayer {
         //-----------------------------------------------------------------
         if self.fy + PH as f32 >= 0.0 {
             if self.velx + fPlatformVelX > 0.01 || self.iHorizontalPlatformCollision == 3 {
-                self.mapcolldet_move_horizontally(3);
+                self.mapcolldet_move_horizontally(g, 3);
             } else if self.velx + fPlatformVelX < -0.01 || self.iHorizontalPlatformCollision == 1 {
-                self.mapcolldet_move_horizontally(1);
+                self.mapcolldet_move_horizontally(g, 1);
             }
 
             if self.isdead() {
@@ -3217,10 +3235,10 @@ impl CPlayer {
 
         if fMovingUp < -0.01 {
             //moving up
-            self.mapcolldet_move_upward(txl, txc, txr, alignedBlockX, unAlignedBlockX, unAlignedBlockFX);
+            self.mapcolldet_move_upward(g, txl, txc, txr, alignedBlockX, unAlignedBlockX, unAlignedBlockFX);
         } else {
             //moving down / on ground
-            self.mapcolldet_move_downward(txl, txc, txr, alignedBlockX, unAlignedBlockX, unAlignedBlockFX);
+            self.mapcolldet_move_downward(g, txl, txc, txr, alignedBlockX, unAlignedBlockX, unAlignedBlockFX);
         }
 
         if self.platform.is_null() {
@@ -3233,18 +3251,19 @@ impl CPlayer {
     }
 
     //iPlayerIdCredit is passed in if this platform was triggered by another player and crushed this player (e.g. donut block)
-    pub fn kill_player_map_hazard(&mut self, fForce: bool, style: KillStyle, fKillCarriedItem: bool, iPlayerIdCredit: i16) -> PlayerKillType {
+    pub fn kill_player_map_hazard(&mut self, g: &mut Game, fForce: bool, style: KillStyle, fKillCarriedItem: bool, iPlayerIdCredit: i16) -> PlayerKillType {
         let args = [2, self.globalID as i32, -1, 0, style as i32, fForce as i32, fKillCarriedItem as i32, iPlayerIdCredit as i32];
-        if let Some(result) = crate::smw::net_outcomes::kill(&args) {
+        if let Some(result) = crate::smw::net_outcomes::kill(g, &args) {
             return result;
         }
-        self.kill_player_map_hazard_now(fForce, style, fKillCarriedItem, iPlayerIdCredit)
+        self.kill_player_map_hazard_now(g, fForce, style, fKillCarriedItem, iPlayerIdCredit)
     }
 
-    pub fn kill_player_map_hazard_now(&mut self, fForce: bool, style: KillStyle, fKillCarriedItem: bool, iPlayerIdCredit: i16) -> PlayerKillType {
+    pub fn kill_player_map_hazard_now(&mut self, g: &mut Game, fForce: bool, style: KillStyle, fKillCarriedItem: bool, iPlayerIdCredit: i16) -> PlayerKillType {
+        let mut gp = g.ptr();
         let this = self.this();
         if iPlayerIdCredit >= 0 || self.iSuicideCreditPlayerID >= 0 {
-            player_killed_player(
+            player_killed_player(g, 
                 if iPlayerIdCredit >= 0 { iPlayerIdCredit } else { self.iSuicideCreditPlayerID },
                 this,
                 PlayerDeathStyle::Jump,
@@ -3253,15 +3272,15 @@ impl CPlayer {
                 fKillCarriedItem,
             )
         } else {
-            self.death_awards();
+            self.death_awards(g);
 
             unsafe {
-                let iKillType = game().game_values.gamemode.get().playerkilledself(this, style);
+                let iKillType = g.game_values.gamemode.get().playerkilledself(g, this, style);
                 if PlayerKillType::Normal == iKillType || (PlayerKillType::NonKill == iKillType && fForce) {
-                    self.die(PlayerDeathStyle::Jump, false, fKillCarriedItem);
+                    self.die(g, PlayerDeathStyle::Jump, false, fKillCarriedItem);
                 }
 
-                if_sound_on_play(&mut game().rm.sfx_deathsound);
+                if_sound_on_play(g, &mut gp.rm.sfx_deathsound);
 
                 iKillType
             }
@@ -3269,15 +3288,15 @@ impl CPlayer {
     }
 
     /// `collidesWith(CPlayer*)`
-    pub fn collides_with_player(&mut self, other: Ptr<CPlayer>) {
+    pub fn collides_with_player(&mut self, g: &mut Game, other: Ptr<CPlayer>) {
         let this = self.this();
-        self.collisions.handle_p2p(this, other);
+        self.collisions.handle_p2p(g, this, other);
     }
 
     /// `collidesWith(CObject*)`
     pub fn collides_with_object(&mut self, object: Ptr<dyn CObjectTrait>) -> bool {
         let this = self.this();
-        self.collisions.handle_p2o(this, object)
+        self.collisions.handle_p2o(game().get(), this, object)
     }
 
     pub fn flipsidesifneeded(&mut self) {
@@ -3292,19 +3311,19 @@ impl CPlayer {
         }
     }
 
-    pub fn makeinvincible(&mut self) {
+    pub fn makeinvincible(&mut self, g: &mut Game) {
         let this = self.this();
-        self.invincibility.turn_on(this.get());
+        self.invincibility.turn_on(g, this.get());
     }
 
-    pub fn makefrozen(&mut self, iTime: i16) {
+    pub fn makefrozen(&mut self, g: &mut Game, iTime: i16) {
         if !self.frozen {
             self.frozen = true;
             self.frozentimer = iTime;
 
             unsafe {
-                game().eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
                     (self.ix as i32 + HALFPW - 16) as i16,
                     (self.iy as i32 + HALFPH - 16) as i16,
                     3,
@@ -3314,20 +3333,20 @@ impl CPlayer {
         }
     }
 
-    pub fn turnslowdownon(&mut self) {
+    pub fn turnslowdownon(&mut self, g: &mut Game) {
         unsafe {
-            game().game_values.flags.slowdownon = self.teamID;
-            game().game_values.flags.slowdowncounter = 0;
+            g.game_values.flags.slowdownon = self.teamID;
+            g.game_values.flags.slowdowncounter = 0;
         }
     }
 
     //Returns true if player facing right, false if left
-    pub fn is_facing_right(&self) -> bool {
+    pub fn is_facing_right(&self, g: &mut Game) -> bool {
         unsafe {
-            let fLeft = game().game_values.reversewalk;
+            let fLeft = g.game_values.reversewalk;
             let fRight = !fLeft;
 
-            if game().game_values.flags.swapplayers && game().game_values.swapstyle == 0 {
+            if g.game_values.flags.swapplayers && g.game_values.swapstyle == 0 {
                 if self.fNewSwapX < self.fOldSwapX {
                     return fLeft;
                 } else {
@@ -3375,20 +3394,21 @@ impl CPlayer {
         false
     }
 
-    pub fn set_powerup(&mut self, iPowerup: i16) {
+    pub fn set_powerup(&mut self, g: &mut Game, iPowerup: i16) {
+        let mut gp = g.ptr();
         unsafe {
             if self.shyguy {
-                if_sound_on_play(&mut game().rm.sfx_stun);
+                if_sound_on_play(g, &mut gp.rm.sfx_stun);
                 return;
             }
 
             if iPowerup == 0 {
                 if self.bobomb {
-                    self.set_stored_powerup_type(PowerupType::Bobomb);
+                    self.set_stored_powerup_type(g, PowerupType::Bobomb);
                 } else {
-                    if_sound_on_play(&mut game().rm.sfx_transform);
-                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut game().rm.spr_poof),
+                    if_sound_on_play(g, &mut gp.rm.sfx_transform);
+                    g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                        Ptr::from_mut(&mut g.rm.spr_poof),
                         (self.ix as i32 + HALFPW - 24) as i16,
                         (self.iy as i32 + HALFPH - 24) as i16,
                         4,
@@ -3398,26 +3418,26 @@ impl CPlayer {
                 }
             } else if iPowerup == 9 {
                 if self.tanookisuit.is_on() {
-                    self.set_stored_powerup_type(PowerupType::Tanooki);
+                    self.set_stored_powerup_type(g, PowerupType::Tanooki);
                 } else {
-                    self.tanookisuit.on_pickup();
+                    self.tanookisuit.on_pickup(g);
                 }
             } else if iPowerup >= 10 {
                 if iPowerup == 10 {
-                    self.set_stored_powerup_type(PowerupType::Pow);
+                    self.set_stored_powerup_type(g, PowerupType::Pow);
                 } else if iPowerup == 11 {
-                    self.set_stored_powerup_type(PowerupType::Mod);
+                    self.set_stored_powerup_type(g, PowerupType::Mod);
                 } else if iPowerup == 12 {
-                    self.set_stored_powerup_type(PowerupType::BulletBill);
+                    self.set_stored_powerup_type(g, PowerupType::BulletBill);
                 } else if iPowerup == 13 {
-                    self.set_stored_powerup_type(PowerupType::Podobo);
+                    self.set_stored_powerup_type(g, PowerupType::Podobo);
                 } else if iPowerup >= 14 {
-                    self.set_stored_powerup(iPowerup - 2); //Storing shells
+                    self.set_stored_powerup(g, iPowerup - 2); //Storing shells
                 }
             } else {
                 if iPowerup == 3 || iPowerup == 7 || iPowerup == 8 {
-                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
+                    g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                        Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
                         (self.ix as i32 + HALFPW - 16) as i16,
                         (self.iy as i32 + HALFPH - 16) as i16,
                         3,
@@ -3427,30 +3447,30 @@ impl CPlayer {
 
                 if self.powerup != iPowerup {
                     if iPowerup == 3 {
-                        if_sound_on_play(&mut game().rm.sfx_collectfeather);
+                        if_sound_on_play(g, &mut gp.rm.sfx_collectfeather);
                     } else {
-                        if_sound_on_play(&mut game().rm.sfx_collectpowerup);
+                        if_sound_on_play(g, &mut gp.rm.sfx_collectpowerup);
                     }
                 }
 
                 self.clear_powerup_states();
 
                 if self.powerup == 1 {
-                    self.set_stored_powerup_type(PowerupType::Fire);
+                    self.set_stored_powerup_type(g, PowerupType::Fire);
                 } else if self.powerup == 2 {
-                    self.set_stored_powerup_type(PowerupType::Hammer);
+                    self.set_stored_powerup_type(g, PowerupType::Hammer);
                 } else if self.powerup == 3 {
-                    self.set_stored_powerup_type(PowerupType::Feather);
+                    self.set_stored_powerup_type(g, PowerupType::Feather);
                 } else if self.powerup == 4 {
-                    self.set_stored_powerup_type(PowerupType::Boomerang);
+                    self.set_stored_powerup_type(g, PowerupType::Boomerang);
                 } else if self.powerup == 5 {
-                    self.set_stored_powerup_type(PowerupType::IceWand);
+                    self.set_stored_powerup_type(g, PowerupType::IceWand);
                 } else if self.powerup == 6 {
-                    self.set_stored_powerup_type(PowerupType::Bomb);
+                    self.set_stored_powerup_type(g, PowerupType::Bomb);
                 } else if self.powerup == 7 {
-                    self.set_stored_powerup_type(PowerupType::Leaf);
+                    self.set_stored_powerup_type(g, PowerupType::Leaf);
                 } else if self.powerup == 8 {
-                    self.set_stored_powerup_type(PowerupType::PWings);
+                    self.set_stored_powerup_type(g, PowerupType::PWings);
                 }
 
                 self.powerup = iPowerup;
@@ -3459,36 +3479,36 @@ impl CPlayer {
                 self.flying = false;
 
                 if self.powerup == 1 {
-                    if game().game_values.fireballlimit > 0 {
-                        self.projectilelimit = game().game_values.fireballlimit;
+                    if g.game_values.fireballlimit > 0 {
+                        self.projectilelimit = g.game_values.fireballlimit;
                     }
                 } else if self.powerup == 2 {
-                    if game().game_values.hammerlimit > 0 {
-                        self.projectilelimit = game().game_values.hammerlimit;
+                    if g.game_values.hammerlimit > 0 {
+                        self.projectilelimit = g.game_values.hammerlimit;
                     }
                 } else if self.powerup == 3 {
-                    if game().game_values.featherlimit > 0 {
-                        self.projectilelimit = game().game_values.featherlimit;
+                    if g.game_values.featherlimit > 0 {
+                        self.projectilelimit = g.game_values.featherlimit;
                     }
                 } else if self.powerup == 4 {
-                    if game().game_values.boomeranglimit > 0 {
-                        self.projectilelimit = game().game_values.boomeranglimit;
+                    if g.game_values.boomeranglimit > 0 {
+                        self.projectilelimit = g.game_values.boomeranglimit;
                     }
                 } else if self.powerup == 5 {
-                    if game().game_values.wandlimit > 0 {
-                        self.projectilelimit = game().game_values.wandlimit;
+                    if g.game_values.wandlimit > 0 {
+                        self.projectilelimit = g.game_values.wandlimit;
                     }
                 } else if self.powerup == 6 {
-                    if game().game_values.bombslimit > 0 {
-                        self.projectilelimit = game().game_values.bombslimit;
+                    if g.game_values.bombslimit > 0 {
+                        self.projectilelimit = g.game_values.bombslimit;
                     }
                 } else if self.powerup == 7 {
-                    if game().game_values.leaflimit > 0 {
-                        self.projectilelimit = game().game_values.leaflimit;
+                    if g.game_values.leaflimit > 0 {
+                        self.projectilelimit = g.game_values.leaflimit;
                     }
                 } else if self.powerup == 8 {
-                    if game().game_values.pwingslimit > 0 {
-                        self.projectilelimit = game().game_values.pwingslimit;
+                    if g.game_values.pwingslimit > 0 {
+                        self.projectilelimit = g.game_values.pwingslimit;
                     }
                 }
             }
@@ -3500,16 +3520,17 @@ impl CPlayer {
         }
     }
 
-    pub fn set_stored_powerup(&mut self, iPowerup: i16) {
+    pub fn set_stored_powerup(&mut self, g: &mut Game, iPowerup: i16) {
+        let mut gp = g.ptr();
         unsafe {
             //If the player as the poison mushroom or the game is over, don't store the powerup
-            if game().game_values.gamepowerups[self.globalID as usize] == PowerupType::PoisonMushroom as i16 || game().game_values.gamemode.gameover {
-                if_sound_on_play(&mut game().rm.sfx_stun);
+            if g.game_values.gamepowerups[self.globalID as usize] == PowerupType::PoisonMushroom as i16 || g.game_values.gamemode.gameover {
+                if_sound_on_play(g, &mut gp.rm.sfx_stun);
                 return;
             }
 
-            game().game_values.gamepowerups[self.globalID as usize] = iPowerup;
-            if_sound_on_play(&mut game().rm.sfx_storepowerup);
+            g.game_values.gamepowerups[self.globalID as usize] = iPowerup;
+            if_sound_on_play(g, &mut gp.rm.sfx_storepowerup);
         }
     }
 
@@ -3522,13 +3543,14 @@ impl CPlayer {
         self.flyingtimer = 0;
     }
 
-    pub fn decrease_projectile_limit(&mut self) {
+    pub fn decrease_projectile_limit(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         self.projectilelimit -= 1;
         if self.projectilelimit <= 0 {
             self.projectilelimit = 0;
             self.powerup = -1;
             unsafe {
-                if_sound_on_play(&mut game().rm.sfx_powerdown);
+                if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
             }
         }
     }

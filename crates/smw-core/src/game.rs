@@ -12,7 +12,9 @@ use crate::common::resource_manager::CResourceManager;
 use crate::common::tileset_manager::CTilesetManager;
 use crate::common::editor_harness::EditorHarness;
 use crate::common::game_values::CGameValues;
-use crate::globals::{Global, Ptr};
+use crate::common::gfx::gfx_sdl::GraphicsSDL;
+use crate::common::gfx::gfx_palette::gfxPalette;
+use crate::globals::{Aliased, Global, Ptr};
 use crate::leveleditor::leveleditor::LevelEditorState;
 use crate::smw::gamemodes::{bonus_house::CGM_Bonus, mini_boss::CGM_Boss_MiniGame, mini_boxes::CGM_Boxes_MiniGame, mini_pipe::CGM_Pipe_MiniGame};
 use crate::smw::fps_limiter::FPSLimiter;
@@ -36,6 +38,7 @@ use crate::smw::world::WorldMap;
 use crate::worldeditor::worldeditor::WorldEditorState;
 
 pub struct Game {
+    pub _alias: Aliased,
     pub game_values: Global<CGameValues>,
     /// Must be created before `maplist`, whose constructor reads it.
     pub filterslist: Ptr<FiltersList>,
@@ -110,11 +113,30 @@ pub struct Game {
     pub pad: PadState,
     #[cfg(not(target_os = "emscripten"))]
     pub touch: TouchState,
+    pub services: Option<smw_platform::Services>,
+    pub gfx: Global<GraphicsSDL>,
+    pub gfx_palette: Global<gfxPalette>,
+    pub RootDataDirectory: String,
+    pub SMW_Root_Data_Dir: String,
+    pub are_paths_initialized: bool,
+    pub joysticks: *mut *mut sdl2::sys::SDL_Joystick,
+    pub joystickcount: i16,
+    #[cfg(target_os = "emscripten")]
+    pub relay: crate::smw::platform::network::websocket::network_layer_websocket::Relay,
+    #[cfg(target_os = "emscripten")]
+    pub recv_buffer: [u8; smw_netplay::common_netplay::relay_frame::MAX_MESSAGE_LEN],
 }
 
 impl Game {
+    /// A copyable handle to this game, for reaching a field while `self` is also passed on.
+    #[inline(always)]
+    pub fn ptr(&mut self) -> Ptr<Game> {
+        Ptr::from_mut(self)
+    }
+
     pub const fn new() -> Self {
         Game {
+            _alias: Aliased::new(),
             game_values: Global::uninit(),
             filterslist: Ptr::null(),
             maplist: Ptr::null(),
@@ -181,6 +203,18 @@ impl Game {
             pad: PadState::new(),
             #[cfg(not(target_os = "emscripten"))]
             touch: TouchState::new(),
+            services: None,
+            gfx: Global::uninit(),
+            gfx_palette: Global::uninit(),
+            RootDataDirectory: String::new(),
+            SMW_Root_Data_Dir: String::new(),
+            are_paths_initialized: false,
+            joysticks: std::ptr::null_mut(),
+            joystickcount: 0,
+            #[cfg(target_os = "emscripten")]
+            relay: crate::smw::platform::network::websocket::network_layer_websocket::Relay::new(),
+            #[cfg(target_os = "emscripten")]
+            recv_buffer: [0; smw_netplay::common_netplay::relay_frame::MAX_MESSAGE_LEN],
         }
     }
 }

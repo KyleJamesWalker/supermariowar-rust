@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_Thwomp.cpp
 
+use crate::game::Game;
 use crate::common::game::App;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::vec2::Vec2s;
@@ -33,11 +34,11 @@ impl OMO_Thwomp {
 impl CObjectTrait for OMO_Thwomp {
     crate::impl_cobject_plumbing!();
 
-    fn draw(&mut self) {
-        io_over_map_object_draw(self);
+    fn draw(&mut self, g: &mut Game) {
+        io_over_map_object_draw(g, self);
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         io_over_map_object_update(self);
 
         if self.iy as i32 > App::screenHeight - 1 {
@@ -45,10 +46,10 @@ impl CObjectTrait for OMO_Thwomp {
         }
     }
 
-    fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         unsafe {
-            if !player.is_invincible() && !player.is_shielded() && (player.score().score > 0 || game().game_values.gamemode.goal == -1) {
-                return player.kill_player_map_hazard(false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
+            if !player.is_invincible() && !player.is_shielded() && (player.score().score > 0 || g.game_values.gamemode.goal == -1) {
+                return player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
             }
         }
 

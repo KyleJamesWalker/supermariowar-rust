@@ -1,5 +1,6 @@
 //! Port of src/common/gfx/gfxSDL.cpp
 
+use crate::game::Game;
 use crate::common::path::convert_path;
 use crate::globals::*;
 use sdl2::sys::image::{IMG_Init, IMG_InitFlags_IMG_INIT_PNG, IMG_Linked_Version, IMG_Quit, IMG_SavePNG};
@@ -82,7 +83,7 @@ impl GraphicsSDL {
         Self::default()
     }
 
-    pub fn init(&mut self, fullscreen: bool) -> bool {
+    pub fn init(&mut self, g: &mut Game, fullscreen: bool) -> bool {
         unsafe {
             init_sdl();
 
@@ -96,7 +97,7 @@ impl GraphicsSDL {
                 (*(*self.sdl_screen_surface).format).BitsPerPixel
             );
 
-            game().screen = self.sdl_screen_surface;
+            g.screen = self.sdl_screen_surface;
         }
         true
     }
@@ -126,10 +127,10 @@ impl GraphicsSDL {
         services().video.set_fullscreen(fullscreen);
     }
 
-    pub fn take_screenshot(&self) {
+    pub fn take_screenshot(&self, g: &mut Game) {
         // NOTE: %F and %T don't work on Windows
         let path_format = "screenshots/%Y-%m-%d_%H%M%S.png";
-        let path = convert_path(&strftime_local(path_format));
+        let path = convert_path(g, &strftime_local(path_format));
 
         let cpath = CString::new(path.as_bytes()).unwrap();
         unsafe {

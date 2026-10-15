@@ -1,5 +1,6 @@
 //! Port of src/smw/main.cpp
 
+use crate::game::Game;
 use crate::common::cmd_args as cmd;
 use crate::common::file_list::*;
 use crate::common::game::{ensure_settings_dir, App};
@@ -58,9 +59,9 @@ extern "C" {
     fn emscripten_run_script_int(script: *const std::ffi::c_char) -> i32;
 }
 
-pub fn gameloop() {
+pub fn gameloop(g: &mut Game) {
     unsafe {
-        SplashScreenState::instance().init();
+        SplashScreenState::instance().init(g);
         GameStateManager::instance().currentState = Ptr::from_mut(SplashScreenState::instance() as &mut dyn GameState);
         if let Some(segment) = harness::segment_state() {
             GameStateManager::instance().currentState = Ptr::from_box(Box::new(segment) as Box<dyn GameState>);
@@ -70,7 +71,7 @@ pub fn gameloop() {
         emscripten_set_main_loop(gameloop_frame_web, 0, 1);
 
         #[cfg(not(target_os = "emscripten"))]
-        while game().game_values.appstate != crate::common::game_values::AppState::Quit {
+        while g.game_values.appstate != crate::common::game_values::AppState::Quit {
             gameloop_frame();
         }
     }
@@ -88,7 +89,7 @@ unsafe extern "C-unwind" fn gameloop_frame_web() {
     let frame_ms = game().game_values.framelimiter as f64;
     if harness::no_limit() || frame_ms <= 0.0 {
         gameloop_frame();
-        web_quit_if_done();
+        web_quit_if_done(game().get());
         return;
     }
 
@@ -100,10 +101,10 @@ unsafe extern "C-unwind" fn gameloop_frame_web() {
 
     let mut frames = 0;
     while ml.web_accumulated >= frame_ms && frames < MAX_CATCH_UP_FRAMES && game().game_values.appstate != crate::common::game_values::AppState::Quit {
-        assign_hotplugged();
-        harness::frame_start();
-        GameStateManager::instance().currentState.get().update();
-        harness::frame_end();
+        assign_hotplugged(game().get());
+        harness::frame_start(game().get());
+        GameStateManager::instance().currentState.get().update(game().get());
+        harness::frame_end(game().get());
 
         ml.web_accumulated -= frame_ms;
         frames += 1;
@@ -113,16 +114,16 @@ unsafe extern "C-unwind" fn gameloop_frame_web() {
     }
 
     if frames > 0 {
-        gfx_flipscreen();
+        gfx_flipscreen(game().get());
     }
-    web_quit_if_done();
+    web_quit_if_done(game().get());
 }
 
 /// The browser main loop never returns, so when the game quits (the end of a watched replay) stop
 /// the loop, close the harness, and let the page offer what to do next (web/shell.html).
 #[cfg(target_os = "emscripten")]
-unsafe fn web_quit_if_done() {
-    if game().game_values.appstate != crate::common::game_values::AppState::Quit {
+unsafe fn web_quit_if_done(g: &mut Game) {
+    if g.game_values.appstate != crate::common::game_values::AppState::Quit {
         return;
     }
     emscripten_cancel_main_loop();
@@ -139,84 +140,85 @@ unsafe extern "C-unwind" fn gameloop_frame() {
     phase(1);
     FPSLimiter::instance().frame_start();
 
-    assign_hotplugged();
+    assign_hotplugged(game().get());
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::touch::flush();
-    harness::frame_start();
+    harness::frame_start(game().get());
     phase(5);
-    GameStateManager::instance().currentState.get().update();
+    GameStateManager::instance().currentState.get().update(game().get());
     phase(6);
-    harness::frame_end();
+    harness::frame_end(game().get());
 
     phase(1);
-    FPSLimiter::instance().before_flip();
+    FPSLimiter::instance().before_flip(game().get());
     phase(7);
-    gfx_flipscreen();
+    gfx_flipscreen(game().get());
     phase(1);
-    FPSLimiter::instance().after_flip();
+    FPSLimiter::instance().after_flip(game().get());
 }
 
-pub fn create_globals() {
+pub fn create_globals(g: &mut Game) {
+        let mut gp = g.ptr();
     unsafe {
         // this instance will contain the other relevant objects
-        game().rm = Ptr::new_box(CResourceManager::new());
+        g.rm = Ptr::new_box(CResourceManager::new());
 
-        game().g_map = Ptr::from_box(CMap::new());
-        game().filterslist = Ptr::new_box(FiltersList::new());
-        game().maplist = Ptr::new_box(MapList::new(false));
+        g.g_map = Ptr::from_box(CMap::new());
+        g.filterslist = Ptr::new_box(FiltersList::new());
+        g.maplist = Ptr::new_box(MapList::new(false));
 
         //TODO: add proper test via size
-        if game().maplist.is_empty() {
+        if g.maplist.is_empty() {
             std::panic::panic_any("Empty map directory!".to_string());
         }
 
-        game().skinlist = Ptr::new_box(SkinList::new());
-        game().musiclist = Ptr::new_box(MusicList::new());
-        game().worldmusiclist = Ptr::new_box(WorldMusicList::new());
-        game().soundpacklist = Ptr::new_box(SoundsList::new());
-        game().announcerlist = Ptr::new_box(AnnouncerList::new());
-        game().tourlist = Ptr::new_box(TourList::new());
-        game().worldlist = Ptr::new_box(WorldList::new());
+        g.skinlist = Ptr::new_box(SkinList::new());
+        g.musiclist = Ptr::new_box(MusicList::new());
+        g.worldmusiclist = Ptr::new_box(WorldMusicList::new());
+        g.soundpacklist = Ptr::new_box(SoundsList::new());
+        g.announcerlist = Ptr::new_box(AnnouncerList::new());
+        g.tourlist = Ptr::new_box(TourList::new());
+        g.worldlist = Ptr::new_box(WorldList::new());
 
-        game().menugraphicspacklist = Ptr::new_box(GraphicsList::new());
-        game().worldgraphicspacklist = Ptr::new_box(GraphicsList::new());
-        game().gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
+        g.menugraphicspacklist = Ptr::new_box(GraphicsList::new());
+        g.worldgraphicspacklist = Ptr::new_box(GraphicsList::new());
+        g.gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
 
-        game().announcerlist.set_current_index(0);
-        game().musiclist.set_current(0);
-        game().worldmusiclist.set_current(0);
-        game().menugraphicspacklist.set_current_index(0);
-        game().worldgraphicspacklist.set_current_index(0);
-        game().gamegraphicspacklist.set_current_index(0);
-        game().soundpacklist.set_current_index(0);
+        g.announcerlist.set_current_index(0);
+        g.musiclist.set_current(0);
+        g.worldmusiclist.set_current(0);
+        g.menugraphicspacklist.set_current_index(0);
+        g.worldgraphicspacklist.set_current_index(0);
+        g.gamegraphicspacklist.set_current_index(0);
+        g.soundpacklist.set_current_index(0);
 
-        game().players.reserve(4);
+        g.players.reserve(4);
 
-        update_music_with_overrides(&mut game().musiclist, &mut game().worldmusiclist);
+        update_music_with_overrides(g, &mut gp.get().musiclist, &mut gp.get().worldmusiclist);
     }
 }
 
-pub fn init_joysticks() {
+pub fn init_joysticks(g: &mut Game) {
     unsafe {
         // Not in upstream: a browser replay opens no pads, so a connected one cannot act in it.
         if let Some(count) = harness::replay_joysticks() {
-            joystickcount = count;
-            joysticks = Box::leak(vec![null_mut::<SDL_Joystick>(); count.max(0) as usize].into_boxed_slice()).as_mut_ptr();
+            g.joystickcount = count;
+            g.joysticks = Box::leak(vec![null_mut::<SDL_Joystick>(); count.max(0) as usize].into_boxed_slice()).as_mut_ptr();
             SDL_JoystickEventState(SDL_ENABLE as i32);
             return;
         }
 
         SDL_InitSubSystem(SDL_INIT_JOYSTICK);
-        joystickcount = SDL_NumJoysticks() as i16;
-        joysticks = Box::leak(vec![null_mut::<SDL_Joystick>(); joystickcount.max(0) as usize].into_boxed_slice()).as_mut_ptr();
+        g.joystickcount = SDL_NumJoysticks() as i16;
+        g.joysticks = Box::leak(vec![null_mut::<SDL_Joystick>(); g.joystickcount.max(0) as usize].into_boxed_slice()).as_mut_ptr();
 
-        for i in 0..joystickcount as usize {
-            *joysticks.add(i) = SDL_JoystickOpen(i as i32);
+        for i in 0..game().joystickcount as usize {
+            *g.joysticks.add(i) = SDL_JoystickOpen(i as i32);
         }
 
         SDL_JoystickEventState(SDL_ENABLE as i32);
         #[cfg(not(target_os = "emscripten"))]
-        crate::smw::pad::init(!harness::replaying() && std::env::var_os("SMW_PAD_TRANSLATE").is_some());
+        crate::smw::pad::init(g, !harness::replaying() && std::env::var_os("SMW_PAD_TRANSLATE").is_some());
         #[cfg(not(target_os = "emscripten"))]
         crate::smw::touch::init();
     }
@@ -231,13 +233,14 @@ pub fn init_joysticks() {
 /// without pads puts them back, so only launches after a pad session differ from upstream.
 /// With Android's touch controls (`touch::session`) the touch keys take player 1 or the slot after the pads,
 /// the keyboard sets get no other player, and the rest are bots, also when no pad is connected.
-fn assign_inputs() {
+fn assign_inputs(g: &mut Game) {
+        let mut gp = g.ptr();
     unsafe {
         let marker = get_home_directory() + PAD_PLAYERS_FILE;
         #[cfg(not(target_os = "emscripten"))]
-        let mut pads = crate::smw::pad::player_pads();
+        let mut pads = crate::smw::pad::player_pads(g);
         #[cfg(target_os = "emscripten")]
-        let mut pads: Vec<usize> = (0..joystickcount.max(0) as usize).filter(|k| !game().main_loop.web_removed.contains(k)).collect();
+        let mut pads: Vec<usize> = (0..game().joystickcount.max(0) as usize).filter(|k| !g.main_loop.web_removed.contains(k)).collect();
         pads.retain(|&k| k < MAX_PLAYERS as usize);
         let touch_session = touch_session();
         if pads.is_empty() && !touch_session {
@@ -245,17 +248,17 @@ fn assign_inputs() {
                 let saved: Vec<i16> = text.split_whitespace().filter_map(|v| v.parse().ok()).collect();
                 if saved.len() == MAX_PLAYERS as usize {
                     for p in 0..MAX_PLAYERS as usize {
-                        game().game_values.playerInput.inputControls[p] = Ptr::from_mut(&mut game().game_values.inputConfiguration[p][0]);
-                        game().game_values.playercontrol[p] = saved[p];
+                        g.game_values.playerInput.inputControls[p] = Ptr::from_mut(&mut g.game_values.inputConfiguration[p][0]);
+                        g.game_values.playercontrol[p] = saved[p];
                     }
-                    game().game_values.write_config();
+                    gp.game_values.write_config(g);
                 }
                 let _ = std::fs::remove_file(&marker);
             }
             return;
         }
         if !touch_session && !std::path::Path::new(&marker).exists() {
-            let saved: Vec<String> = game().game_values.playercontrol.iter().map(|c| c.to_string()).collect();
+            let saved: Vec<String> = g.game_values.playercontrol.iter().map(|c| c.to_string()).collect();
             let _ = std::fs::write(&marker, saved.join(" ") + "\n");
         }
 
@@ -277,44 +280,45 @@ fn assign_inputs() {
         for p in 0..MAX_PLAYERS as usize {
             let control = match order.get(p) {
                 Some(&(true, k)) => {
-                    game().game_values.inputConfiguration[k][1].iDevice = k as i16;
-                    &mut game().game_values.inputConfiguration[k][1]
+                    g.game_values.inputConfiguration[k][1].iDevice = k as i16;
+                    &mut g.game_values.inputConfiguration[k][1]
                 }
-                Some(&(false, q)) => &mut game().game_values.inputConfiguration[q][0],
+                Some(&(false, q)) => &mut g.game_values.inputConfiguration[q][0],
                 None => {
-                    game().game_values.playerInput.inputControls[p] = Ptr::from_mut(&mut game().game_values.inputConfiguration[p][0]);
-                    if !keyboard && game().game_values.playercontrol[p] == 1 {
-                        game().game_values.playercontrol[p] = 2;
+                    g.game_values.playerInput.inputControls[p] = Ptr::from_mut(&mut g.game_values.inputConfiguration[p][0]);
+                    if !keyboard && g.game_values.playercontrol[p] == 1 {
+                        g.game_values.playercontrol[p] = 2;
                     }
                     continue;
                 }
             };
-            game().game_values.playerInput.inputControls[p] = Ptr::from_mut(control);
-            game().game_values.playercontrol[p] = 1;
+            g.game_values.playerInput.inputControls[p] = Ptr::from_mut(control);
+            g.game_values.playercontrol[p] = 1;
         }
     }
 }
 
 /// Not in upstream: a pad connected after launch (`pad::hotplug`, or a replay's `jadd` line) gets a player as at
 /// launch, once no match is on.
-fn assign_hotplugged() {
+fn assign_hotplugged(g: &mut Game) {
+        let mut gp = g.ptr();
     unsafe {
-        let pending = &mut game().get().main_loop.hotplug_pending;
+        let pending = &mut gp.main_loop.hotplug_pending;
         for (index, added) in harness::replay_device_changes() {
             #[cfg(not(target_os = "emscripten"))]
-            crate::smw::pad::replay_device(index, added);
+            crate::smw::pad::replay_device(g, index, added);
             #[cfg(target_os = "emscripten")]
-            web_replay_device(index, added);
+            web_replay_device(g, index, added);
             *pending |= added;
         }
         #[cfg(not(target_os = "emscripten"))]
-        if crate::smw::pad::hotplug() {
+        if crate::smw::pad::hotplug(g) {
             *pending = true;
         }
         let playing = GameStateManager::instance().currentState.addr() == crate::smw::gs_gameplay::GameplayState::instance() as *mut _ as usize;
         if *pending && !playing {
             *pending = false;
-            assign_inputs();
+            assign_inputs(g);
         }
     }
 }
@@ -346,14 +350,14 @@ impl MainLoopState {
 }
 
 #[cfg(target_os = "emscripten")]
-unsafe fn web_replay_device(index: usize, added: bool) {
-    let web_removed = &mut game().get().main_loop.web_removed;
+unsafe fn web_replay_device(g: &mut Game, index: usize, added: bool) {
+    let web_removed = &mut g.main_loop.web_removed;
     web_removed.retain(|&i| i != index);
     if !added {
         web_removed.push(index);
-    } else if index >= joystickcount.max(0) as usize {
-        joystickcount = index as i16 + 1;
-        joysticks = Box::leak(vec![null_mut::<SDL_Joystick>(); index + 1].into_boxed_slice()).as_mut_ptr();
+    } else if index >= g.joystickcount.max(0) as usize {
+        g.joystickcount = index as i16 + 1;
+        g.joysticks = Box::leak(vec![null_mut::<SDL_Joystick>(); index + 1].into_boxed_slice()).as_mut_ptr();
     }
 }
 
@@ -382,64 +386,64 @@ fn new_mode<T: CGameModeTrait + 'static>(mode: T) -> Ptr<dyn CGameModeTrait> {
     Ptr::from_raw(Ptr::new_box(mode).as_ptr() as *mut dyn CGameModeTrait)
 }
 
-pub fn create_gamemodes() {
+pub fn create_gamemodes(g: &mut Game) {
     unsafe {
         //set game modes
-        game().gamemodes[0] = new_mode(CGM_Classic::new());
-        game().gamemodes[1] = new_mode(CGM_Frag::new());
-        game().gamemodes[2] = new_mode(CGM_TimeLimit::new());
-        game().gamemodes[3] = new_mode(CGM_Jail::new());
-        game().gamemodes[4] = new_mode(CGM_Coins::new());
-        game().gamemodes[5] = new_mode(CGM_Stomp::new());
-        game().gamemodes[6] = new_mode(CGM_Eggs::new());
-        game().gamemodes[7] = new_mode(CGM_CaptureTheFlag::new());
-        game().gamemodes[8] = new_mode(CGM_Chicken::new());
-        game().gamemodes[9] = new_mode(CGM_Tag::new());
-        game().gamemodes[10] = new_mode(CGM_Star::new());
-        game().gamemodes[11] = new_mode(CGM_Domination::new());
-        game().gamemodes[12] = new_mode(CGM_KingOfTheHill::new());
-        game().gamemodes[13] = new_mode(CGM_Race::new());
-        game().gamemodes[14] = new_mode(CGM_Owned::new());
-        game().gamemodes[15] = new_mode(CGM_Frenzy::new());
-        game().gamemodes[16] = new_mode(CGM_Survival::new());
-        game().gamemodes[17] = new_mode(CGM_Greed::new());
-        game().gamemodes[18] = new_mode(CGM_Health::new());
-        game().gamemodes[19] = new_mode(CGM_Collection::new());
-        game().gamemodes[20] = new_mode(CGM_Chase::new());
-        game().gamemodes[21] = new_mode(CGM_ShyGuyTag::new());
+        g.gamemodes[0] = new_mode(CGM_Classic::new());
+        g.gamemodes[1] = new_mode(CGM_Frag::new());
+        g.gamemodes[2] = new_mode(CGM_TimeLimit::new());
+        g.gamemodes[3] = new_mode(CGM_Jail::new());
+        g.gamemodes[4] = new_mode(CGM_Coins::new());
+        g.gamemodes[5] = new_mode(CGM_Stomp::new());
+        g.gamemodes[6] = new_mode(CGM_Eggs::new());
+        g.gamemodes[7] = new_mode(CGM_CaptureTheFlag::new());
+        g.gamemodes[8] = new_mode(CGM_Chicken::new());
+        g.gamemodes[9] = new_mode(CGM_Tag::new());
+        g.gamemodes[10] = new_mode(CGM_Star::new());
+        g.gamemodes[11] = new_mode(CGM_Domination::new());
+        g.gamemodes[12] = new_mode(CGM_KingOfTheHill::new());
+        g.gamemodes[13] = new_mode(CGM_Race::new());
+        g.gamemodes[14] = new_mode(CGM_Owned::new());
+        g.gamemodes[15] = new_mode(CGM_Frenzy::new());
+        g.gamemodes[16] = new_mode(CGM_Survival::new());
+        g.gamemodes[17] = new_mode(CGM_Greed::new());
+        g.gamemodes[18] = new_mode(CGM_Health::new());
+        g.gamemodes[19] = new_mode(CGM_Collection::new());
+        g.gamemodes[20] = new_mode(CGM_Chase::new());
+        g.gamemodes[21] = new_mode(CGM_ShyGuyTag::new());
 
-        game().currentgamemode = 0;
-        game().game_values.gamemode = game().gamemodes[game().currentgamemode as usize];
+        g.currentgamemode = 0;
+        g.game_values.gamemode = g.gamemodes[g.currentgamemode as usize];
 
         //Special modes
-        game().bonushousemode = Ptr::new_box(CGM_Bonus::new());
-        game().pipegamemode = Ptr::new_box(CGM_Pipe_MiniGame::new());
-        game().bossgamemode = Ptr::new_box(CGM_Boss_MiniGame::new());
-        game().boxesgamemode = Ptr::new_box(CGM_Boxes_MiniGame::new());
+        g.bonushousemode = Ptr::new_box(CGM_Bonus::new());
+        g.pipegamemode = Ptr::new_box(CGM_Pipe_MiniGame::new());
+        g.bossgamemode = Ptr::new_box(CGM_Boss_MiniGame::new());
+        g.boxesgamemode = Ptr::new_box(CGM_Boxes_MiniGame::new());
     }
 }
 
-pub fn init_spawnlocations() {
+pub fn init_spawnlocations(g: &mut Game) {
     unsafe {
         //Calculate the swirl spawn effect locations
         let mut spawnradius: f32 = 100.0;
         let mut spawnangle: f32 = 0.0;
 
         for i in 0..25usize {
-            game().g_iSwirlSpawnLocations[0][0][i] = (spawnradius * cosf(spawnangle)) as i16;
-            game().g_iSwirlSpawnLocations[0][1][i] = (spawnradius * sinf(spawnangle)) as i16;
+            g.g_iSwirlSpawnLocations[0][0][i] = (spawnradius * cosf(spawnangle)) as i16;
+            g.g_iSwirlSpawnLocations[0][1][i] = (spawnradius * sinf(spawnangle)) as i16;
 
             let mut angle = spawnangle + HALF_PI;
-            game().g_iSwirlSpawnLocations[1][0][i] = (spawnradius * cosf(angle)) as i16;
-            game().g_iSwirlSpawnLocations[1][1][i] = (spawnradius * sinf(angle)) as i16;
+            g.g_iSwirlSpawnLocations[1][0][i] = (spawnradius * cosf(angle)) as i16;
+            g.g_iSwirlSpawnLocations[1][1][i] = (spawnradius * sinf(angle)) as i16;
 
             angle = spawnangle + PI;
-            game().g_iSwirlSpawnLocations[2][0][i] = (spawnradius * cosf(angle)) as i16;
-            game().g_iSwirlSpawnLocations[2][1][i] = (spawnradius * sinf(angle)) as i16;
+            g.g_iSwirlSpawnLocations[2][0][i] = (spawnradius * cosf(angle)) as i16;
+            g.g_iSwirlSpawnLocations[2][1][i] = (spawnradius * sinf(angle)) as i16;
 
             angle = spawnangle + THREE_HALF_PI;
-            game().g_iSwirlSpawnLocations[3][0][i] = (spawnradius * cosf(angle)) as i16;
-            game().g_iSwirlSpawnLocations[3][1][i] = (spawnradius * sinf(angle)) as i16;
+            g.g_iSwirlSpawnLocations[3][0][i] = (spawnradius * cosf(angle)) as i16;
+            g.g_iSwirlSpawnLocations[3][1][i] = (spawnradius * sinf(angle)) as i16;
 
             spawnradius -= 4.0;
             spawnangle += 0.1;
@@ -457,7 +461,8 @@ pub fn main() {
 }
 
 pub fn run(argv: Vec<String>) {
-    crate::globals::init_globals();
+    let g = game().get();
+    crate::globals::init_globals(g);
 
     let cmd = cmd::parse_args(&argv);
     if !cmd.success {
@@ -471,7 +476,7 @@ pub fn run(argv: Vec<String>) {
         cmd::show_windows_console();
     }
     if !cmd.data_root.is_empty() {
-        unsafe { RootDataDirectory = cmd.data_root.clone() };
+        unsafe { g.RootDataDirectory = cmd.data_root.clone() };
     }
     if !cmd.replay.is_empty() {
         harness::prepare_watch(&cmd.replay, cmd.replay_speed, cmd.segment);
@@ -486,75 +491,76 @@ pub fn run(argv: Vec<String>) {
             .or_else(|| payload.downcast_ref::<&str>().map(|s| s.to_string()))
             .unwrap_or_default();
         harness::finish();
-        gfx_show_catched_error(&what);
+        gfx_show_catched_error(g, &what);
         std::process::exit(1);
     }
 }
 
 pub fn main_game() {
+    let g = game().get();
     unsafe {
         println!("-------------------------------------------------------------------------------");
         println!(" {} {} {}", TITLESTRING, GIT_REVISION, GIT_DATE);
         println!("-------------------------------------------------------------------------------");
         println!("\n---------------- startup ----------------");
 
-        harness::init();
+        harness::init(g);
 
         ensure_settings_dir();
-        create_globals();
+        create_globals(g);
 
-        gfx_init(App::screenWidth, App::screenHeight, false); //initialize the graphics (SDL)
-        game().blitdest = game().screen;
+        gfx_init(g, App::screenWidth, App::screenHeight, false); //initialize the graphics (SDL)
+        g.blitdest = g.screen;
 
         sfx_init(); //init the sound system
-        net_init(); //init the networking
+        net_init(g); //init the networking
 
-        init_joysticks();
+        init_joysticks(g);
 
         //currently this only sets the title, not the icon.
         //setting the icon isn't implemented in sdl ->  i'll ask on the mailing list
         let title = format!("{} {} {}", TITLESTRING, GIT_REVISION, GIT_DATE);
-        gfx_settitle(&title);
+        gfx_settitle(g, &title);
 
         println!("\n---------------- loading ----------------");
 
         for iScore in 0..4 {
-            game().score[iScore] = Ptr::new_box(CScore::new(iScore as i16));
+            g.score[iScore] = Ptr::new_box(CScore::new(iScore as i16));
         }
 
-        CGameValues::init(&mut game().game_values);
+        CGameValues::init(&mut game().game_values, g);
 
-        create_gamemodes();
+        create_gamemodes(g);
 
-        game().game_values.read_binary_config();
-        assign_inputs();
+        game().game_values.read_binary_config(g);
+        assign_inputs(g);
 
         //Assign the powerup weights to the selected preset
         for iPowerup in 0..NUM_POWERUPS as usize {
-            game().game_values.powerupweights[iPowerup] = game().game_values.allPowerupPresets[game().game_values.poweruppreset as usize][iPowerup];
+            g.game_values.powerupweights[iPowerup] = g.game_values.allPowerupPresets[g.game_values.poweruppreset as usize][iPowerup];
         }
 
-        if game().game_values.fullscreen {
-            crate::common::gfx::gfx_changefullscreen(true);
-            game().blitdest = game().screen;
+        if g.game_values.fullscreen {
+            crate::common::gfx::gfx_changefullscreen(g, true);
+            g.blitdest = g.screen;
         }
 
-        init_spawnlocations();
+        init_spawnlocations(g);
 
         //Load the gfx color palette
-        let pack = game().gamegraphicspacklist.current_path().to_string_lossy().into_owned();
-        let png = std::panic::catch_unwind(|| gfx_loadpalette(Path::new(&convert_path_pack("gfx/packs/palette.png", &pack))));
+        let pack = g.gamegraphicspacklist.current_path().to_string_lossy().into_owned();
+        let png = std::panic::catch_unwind(|| gfx_loadpalette(game().get(), Path::new(&convert_path_pack(game().get(), "gfx/packs/palette.png", &pack))));
         if let Err(payload) = png {
             let Some(err) = payload.downcast_ref::<String>() else { std::panic::resume_unwind(payload) };
             println!("\nwarning: {} -> falling back to BMP", err);
-            gfx_loadpalette(Path::new(&convert_path_pack("gfx/packs/palette.bmp", &pack)));
+            gfx_loadpalette(g, Path::new(&convert_path_pack(game().get(), "gfx/packs/palette.bmp", &pack)));
         }
 
         srand(harness::libc_seed(time(null_mut()) as u32));
 
         //**********************************************************
 
-        gameloop(); // all the game logic happens here
+        gameloop(g); // all the game logic happens here
 
         //**********************************************************
 
@@ -563,19 +569,19 @@ pub fn main_game() {
         harness::finish();
 
         for i in 0..GAMEMODE_LAST as usize {
-            game().gamemodes[i].delete();
+            g.gamemodes[i].delete();
         }
 
         sfx_close();
         gfx_close();
-        net_close();
+        net_close(g);
 
         //Delete player skins
         for k in 0..MAX_PLAYERS as usize {
-            game().score[k].delete();
+            g.score[k].delete();
         }
 
         // release all resources
-        game().rm.delete();
+        g.rm.delete();
     }
 }

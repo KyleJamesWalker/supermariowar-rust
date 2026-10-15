@@ -4,6 +4,7 @@
 //! other game globals the shared code links against; the port reuses the crate's (smw::main,
 //! smw::gs_gameplay) and only defines the editor's own state here.
 
+use crate::game::Game;
 use crate::common::cmd_args as cmd;
 use crate::common::editor_harness;
 use crate::common::file_io::BinaryFile;
@@ -342,7 +343,7 @@ const SDL_BUTTON_LMASK: u32 = 1 << (SDL_BUTTON_LEFT - 1);
 const SDL_BUTTON_RMASK: u32 = 1 << (SDL_BUTTON_RIGHT - 1);
 
 /// The end-of-frame wait every editor loop does; the reference harness `#define`s `SDL_Delay` to this.
-fn frame_wait(framestart: i32) {
+fn frame_wait(g: &mut Game, framestart: i32) {
     let mut delay: i32 = WAITTIME - (crate::services::ticks() as i32 - framestart);
     if delay < 0 {
         delay = 0;
@@ -350,7 +351,7 @@ fn frame_wait(framestart: i32) {
         delay = WAITTIME;
     }
 
-    editor_harness::frame_delay(delay as u32);
+    editor_harness::frame_delay(g, delay as u32);
 }
 
 fn tile(iCol: i16, iRow: i16) -> &'static mut WorldMapTile {
@@ -362,6 +363,7 @@ fn sprite(s: &mut gfxSprite) -> Ptr<gfxSprite> {
 }
 
 fn dump_editor_state(out: &mut dyn Write) {
+    let g = game().get();
     unsafe {
         let _ = writeln!(
             out,
@@ -374,18 +376,19 @@ fn dump_editor_state(out: &mut dyn Write) {
             ed().draw_offset_row,
             ed().iWorldWidth,
             ed().iWorldHeight,
-            game().game_values.tourstops.len(),
+            g.game_values.tourstops.len(),
             ed().vehiclelist.len(),
             ed().warplist.len(),
-            game().worldlist.current_path().file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default()
+            g.worldlist.current_path().file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default()
         );
     }
 }
 
 //main main main
 pub fn main() {
+    let g = game().get();
     cmd::attach_parent_console();
-    crate::globals::init_globals();
+    crate::globals::init_globals(g);
 
     let argv: Vec<String> = std::env::args().collect();
     let cmd = cmd::parse_args(&argv);
@@ -403,7 +406,7 @@ pub fn main() {
 
     unsafe {
         if !cmd.data_root.is_empty() {
-            RootDataDirectory = cmd.data_root.clone();
+            g.RootDataDirectory = cmd.data_root.clone();
         }
     }
 
@@ -415,17 +418,18 @@ pub fn main() {
             .cloned()
             .or_else(|| payload.downcast_ref::<&str>().map(|s| s.to_string()))
             .unwrap_or_default();
-        gfx_show_catched_error(&what);
+        gfx_show_catched_error(g, &what);
         std::process::exit(1);
     }
 }
 
 pub fn inner_main() {
+    let g = game().get();
     unsafe {
         ensure_settings_dir();
 
         /* This must occur before any data files are loaded */
-        initialize_paths();
+        initialize_paths(g);
 
         let mut done: bool;
 
@@ -447,151 +451,151 @@ pub fn inner_main() {
             }
         }
 
-        gfx_init(640, 480, ed().g_fFullScreen);
-        game().blitdest = game().screen;
+        gfx_init(g, 640, 480, ed().g_fFullScreen);
+        g.blitdest = g.screen;
         editor_harness::init();
         editor_harness::set_dumper(dump_editor_state);
 
-        game().rm = Ptr::new_box(CResourceManager::new());
+        g.rm = Ptr::new_box(CResourceManager::new());
 
-        game().g_map = Ptr::from_box(CMap::new());
-        game().g_tilesetmanager = Ptr::new_box(CTilesetManager::new(&convert_path("gfx/Classic/tilesets")));
-        game().filterslist = Ptr::new_box(FiltersList::new());
-        game().maplist = Ptr::new_box(MapList::new(true));
-        game().menugraphicspacklist = Ptr::new_box(GraphicsList::new());
-        game().gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
-        game().worldlist = Ptr::new_box(WorldList::new());
+        g.g_map = Ptr::from_box(CMap::new());
+        g.g_tilesetmanager = Ptr::new_box(CTilesetManager::new(&convert_path(g, "gfx/Classic/tilesets")));
+        g.filterslist = Ptr::new_box(FiltersList::new());
+        g.maplist = Ptr::new_box(MapList::new(true));
+        g.menugraphicspacklist = Ptr::new_box(GraphicsList::new());
+        g.gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
+        g.worldlist = Ptr::new_box(WorldList::new());
 
-        game().game_values.sound = false;
-        game().game_values.music = false;
+        g.game_values.sound = false;
+        g.game_values.music = false;
 
         let title = format!("{} {}", TITLESTRING, MAPTITLESTRING);
-        gfx_settitle(&title);
+        gfx_settitle(g, &title);
 
-        game().game_values.toplayer = true;
+        g.game_values.toplayer = true;
 
         println!("\n---------------- loading graphics ----------------");
 
         ed().spr_warps.init([
-            ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_warp.png")).create(),
-            ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_warp_preview.png")).create(),
-            ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_warp_thumbnail.png")).create(),
+            ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp.png")).create(),
+            ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp_preview.png")).create(),
+            ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp_thumbnail.png")).create(),
         ]);
 
-        ed().spr_path.init(ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_world_path.png")).create());
+        ed().spr_path.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_world_path.png")).create());
 
-        game().rm.spr_selectedtile = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_selectedtile.png")).with_color_key(colors::BLACK).with_alpha(128).create();
+        g.rm.spr_selectedtile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_selectedtile.png")).with_color_key(colors::BLACK).with_alpha(128).create();
 
-        ed().spr_dialog.init(ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_dialog.png")).with_alpha(255).create());
-        ed().menu_shade.init(ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_shade.png")).with_alpha(128).create());
-        ed().spr_largedialog.init(ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_platform.png")).with_alpha(255).create());
+        ed().spr_dialog.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_dialog.png")).with_alpha(255).create());
+        ed().menu_shade.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_shade.png")).with_alpha(128).create());
+        ed().spr_largedialog.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_platform.png")).with_alpha(255).create());
 
-        game().rm.menu_font_small = gfxFont::from_path(&convert_path("gfx/packs/Classic/fonts/font_small.png"));
-        game().rm.menu_font_large = gfxFont::from_path(&convert_path("gfx/packs/Classic/fonts/font_large.png"));
+        game().rm.menu_font_small = gfxFont::from_path(g, &convert_path(game().get(), "gfx/packs/Classic/fonts/font_small.png"));
+        game().rm.menu_font_large = gfxFont::from_path(g, &convert_path(game().get(), "gfx/packs/Classic/fonts/font_large.png"));
 
         println!("\n---------------- load world ----------------");
 
-        game().rm.spr_worldbackground[0] = ImageLoader::new(convert_path("gfx/packs/Classic/world/world_background.png")).create();
-        game().rm.spr_worldbackground[1] = ImageLoader::new(convert_path("gfx/packs/Classic/world/preview/world_background.png")).create();
-        game().rm.spr_worldbackground[2] = ImageLoader::new(convert_path("gfx/packs/Classic/world/thumbnail/world_background.png")).create();
+        g.rm.spr_worldbackground[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_background.png")).create();
+        g.rm.spr_worldbackground[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/preview/world_background.png")).create();
+        g.rm.spr_worldbackground[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/thumbnail/world_background.png")).create();
 
-        game().rm.spr_worldforeground[0] = ImageLoader::new(convert_path("gfx/packs/Classic/world/world_foreground.png")).create();
-        game().rm.spr_worldforeground[1] = ImageLoader::new(convert_path("gfx/packs/Classic/world/preview/world_foreground.png")).create();
-        game().rm.spr_worldforeground[2] = ImageLoader::new(convert_path("gfx/packs/Classic/world/thumbnail/world_foreground.png")).create();
+        g.rm.spr_worldforeground[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_foreground.png")).create();
+        g.rm.spr_worldforeground[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/preview/world_foreground.png")).create();
+        g.rm.spr_worldforeground[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/thumbnail/world_foreground.png")).create();
 
-        game().rm.spr_worldforegroundspecial[0] = ImageLoader::new(convert_path("gfx/packs/Classic/world/world_foreground_special.png")).create();
-        game().rm.spr_worldforegroundspecial[1] = ImageLoader::new(convert_path("gfx/packs/Classic/world/preview/world_foreground_special.png")).create();
-        game().rm.spr_worldforegroundspecial[2] = ImageLoader::new(convert_path("gfx/packs/Classic/world/thumbnail/world_foreground_special.png")).create();
+        g.rm.spr_worldforegroundspecial[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_foreground_special.png")).create();
+        g.rm.spr_worldforegroundspecial[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/preview/world_foreground_special.png")).create();
+        g.rm.spr_worldforegroundspecial[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/thumbnail/world_foreground_special.png")).create();
 
-        game().rm.spr_worldpaths[0] = ImageLoader::new(convert_path("gfx/packs/Classic/world/world_paths.png")).create();
-        game().rm.spr_worldpaths[1] = ImageLoader::new(convert_path("gfx/packs/Classic/world/preview/world_paths.png")).create();
-        game().rm.spr_worldpaths[2] = ImageLoader::new(convert_path("gfx/packs/Classic/world/thumbnail/world_paths.png")).create();
+        g.rm.spr_worldpaths[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_paths.png")).create();
+        g.rm.spr_worldpaths[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/preview/world_paths.png")).create();
+        g.rm.spr_worldpaths[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/thumbnail/world_paths.png")).create();
 
-        game().rm.spr_worldvehicle[0] = ImageLoader::new(convert_path("gfx/packs/Classic/world/world_vehicles.png")).create();
-        game().rm.spr_worldvehicle[1] = ImageLoader::new(convert_path("gfx/packs/Classic/world/preview/world_vehicles.png")).create();
-        game().rm.spr_worldvehicle[2] = ImageLoader::new(convert_path("gfx/packs/Classic/world/thumbnail/world_vehicles.png")).create();
+        g.rm.spr_worldvehicle[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_vehicles.png")).create();
+        g.rm.spr_worldvehicle[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/preview/world_vehicles.png")).create();
+        g.rm.spr_worldvehicle[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/thumbnail/world_vehicles.png")).create();
 
-        game().rm.spr_worlditems = ImageLoader::new(convert_path("gfx/packs/Classic/world/world_powerups.png")).create();
-        game().rm.spr_worlditempopup = ImageLoader::new(convert_path("gfx/packs/Classic/world/world_item_popup.png")).create();
+        g.rm.spr_worlditems = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_powerups.png")).create();
+        g.rm.spr_worlditempopup = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_item_popup.png")).create();
 
-        game().rm.spr_storedpowerupsmall = ImageLoader::new(convert_path("gfx/packs/Classic/powerups/small.png")).create();
-        game().rm.spr_worlditemssmall = ImageLoader::new(convert_path("gfx/packs/Classic/world/world_powerupssmall.png")).create();
-        game().rm.spr_worlditemsplace = ImageLoader::new(convert_path("gfx/packs/Classic/world/world_bonusplace.png")).create();
+        g.rm.spr_storedpowerupsmall = ImageLoader::new(convert_path(g, "gfx/packs/Classic/powerups/small.png")).create();
+        g.rm.spr_worlditemssmall = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_powerupssmall.png")).create();
+        g.rm.spr_worlditemsplace = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_bonusplace.png")).create();
 
-        game().rm.menu_dialog = ImageLoader::new(convert_path("gfx/packs/Classic/menu/menu_dialog.png")).create();
+        g.rm.menu_dialog = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_dialog.png")).create();
 
         //Mode Options Menu Gfx
-        game().rm.menu_egg = ImageLoader::new(convert_path("gfx/packs/Classic/modeobjects/menu_egg.png")).create();
-        game().rm.menu_stomp = ImageLoader::new(convert_path("gfx/packs/Classic/modeobjects/menu_stomp.png")).create();
-        game().rm.menu_survival = ImageLoader::new(convert_path("gfx/packs/Classic/modeobjects/menu_survival.png")).create();
-        game().rm.spr_phanto = ImageLoader::new(convert_path("gfx/packs/Classic/modeobjects/phanto.png")).create();
-        game().rm.menu_plain_field = ImageLoader::new(convert_path("gfx/leveleditor/menu_plain_field.png")).create();
-        game().rm.menu_slider_bar = ImageLoader::new(convert_path("gfx/packs/Classic/menu/menu_slider_bar.png")).create();
-        game().rm.spr_selectfield = ImageLoader::new(convert_path("gfx/leveleditor/menu_selectfield.png")).create();
-        game().rm.menu_verticalarrows = ImageLoader::new(convert_path("gfx/packs/Classic/menu/menu_vertical_arrows.png")).create();
-        game().rm.spr_storedpoweruplarge = ImageLoader::new(convert_path("gfx/packs/Classic/powerups/large.png")).create();
+        g.rm.menu_egg = ImageLoader::new(convert_path(g, "gfx/packs/Classic/modeobjects/menu_egg.png")).create();
+        g.rm.menu_stomp = ImageLoader::new(convert_path(g, "gfx/packs/Classic/modeobjects/menu_stomp.png")).create();
+        g.rm.menu_survival = ImageLoader::new(convert_path(g, "gfx/packs/Classic/modeobjects/menu_survival.png")).create();
+        g.rm.spr_phanto = ImageLoader::new(convert_path(g, "gfx/packs/Classic/modeobjects/phanto.png")).create();
+        g.rm.menu_plain_field = ImageLoader::new(convert_path(g, "gfx/leveleditor/menu_plain_field.png")).create();
+        g.rm.menu_slider_bar = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_slider_bar.png")).create();
+        g.rm.spr_selectfield = ImageLoader::new(convert_path(g, "gfx/leveleditor/menu_selectfield.png")).create();
+        g.rm.menu_verticalarrows = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_vertical_arrows.png")).create();
+        g.rm.spr_storedpoweruplarge = ImageLoader::new(convert_path(g, "gfx/packs/Classic/powerups/large.png")).create();
 
-        game().rm.menu_mode_small = ImageLoader::new(convert_path("gfx/packs/Classic/menu/menu_mode_small.png")).create();
-        game().rm.menu_mode_large = ImageLoader::new(convert_path("gfx/packs/Classic/menu/menu_mode_large.png")).create();
+        g.rm.menu_mode_small = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_mode_small.png")).create();
+        g.rm.menu_mode_large = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_mode_large.png")).create();
 
-        ed().spr_vehicleicons.init(ImageLoader::new(convert_path("gfx/leveleditor/vehicle_icons.png")).create());
+        ed().spr_vehicleicons.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/vehicle_icons.png")).create());
 
-        game().rm.spr_thumbnail_warps[0] = ImageLoader::new(convert_path("gfx/packs/Classic/menu/menu_warp_preview.png")).create();
-        game().rm.spr_thumbnail_warps[1] = ImageLoader::new(convert_path("gfx/packs/Classic/menu/menu_warp_thumbnail.png")).create();
+        g.rm.spr_thumbnail_warps[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_warp_preview.png")).create();
+        g.rm.spr_thumbnail_warps[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_warp_thumbnail.png")).create();
 
-        game().rm.spr_thumbnail_mapitems[0] = ImageLoader::new(convert_path("gfx/packs/Classic/menu/menu_mapitems_preview.png")).create();
-        game().rm.spr_thumbnail_mapitems[1] = ImageLoader::new(convert_path("gfx/packs/Classic/menu/menu_mapitems_thumbnail.png")).create();
+        g.rm.spr_thumbnail_mapitems[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_mapitems_preview.png")).create();
+        g.rm.spr_thumbnail_mapitems[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_mapitems_thumbnail.png")).create();
 
-        game().rm.spr_tileanimation[1] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/tile_animation_preview.png")).create();
-        game().rm.spr_tileanimation[2] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/tile_animation_thumbnail.png")).create();
+        g.rm.spr_tileanimation[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/tile_animation_preview.png")).create();
+        g.rm.spr_tileanimation[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/tile_animation_thumbnail.png")).create();
 
-        game().rm.spr_blocks[1] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/blocks_preview.png")).create();
-        game().rm.spr_blocks[2] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/blocks_thumbnail.png")).create();
+        g.rm.spr_blocks[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/blocks_preview.png")).create();
+        g.rm.spr_blocks[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/blocks_thumbnail.png")).create();
 
-        game().rm.spr_unknowntile[1] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/unknown_tile_preview.png")).create();
-        game().rm.spr_unknowntile[2] = ImageLoader::new(convert_path("gfx/packs/Classic/tilesets/unknown_tile_thumbnail.png")).create();
+        g.rm.spr_unknowntile[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/unknown_tile_preview.png")).create();
+        g.rm.spr_unknowntile[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/unknown_tile_thumbnail.png")).create();
 
-        game().rm.spr_hazard_fireball[1] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/fireball_preview.png")).create();
-        game().rm.spr_hazard_fireball[2] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/fireball_thumbnail.png")).create();
+        g.rm.spr_hazard_fireball[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/fireball_preview.png")).create();
+        g.rm.spr_hazard_fireball[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/fireball_thumbnail.png")).create();
 
-        game().rm.spr_hazard_rotodisc[1] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/rotodisc_preview.png")).create();
-        game().rm.spr_hazard_rotodisc[2] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/rotodisc_thumbnail.png")).create();
+        g.rm.spr_hazard_rotodisc[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/rotodisc_preview.png")).create();
+        g.rm.spr_hazard_rotodisc[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/rotodisc_thumbnail.png")).create();
 
-        game().rm.spr_hazard_bulletbill[1] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/bulletbill_preview.png")).create();
-        game().rm.spr_hazard_bulletbill[2] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/bulletbill_thumbnail.png")).create();
+        g.rm.spr_hazard_bulletbill[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/bulletbill_preview.png")).create();
+        g.rm.spr_hazard_bulletbill[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/bulletbill_thumbnail.png")).create();
 
-        game().rm.spr_hazard_flame[1] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/flame_preview.png")).create();
-        game().rm.spr_hazard_flame[2] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/flame_thumbnail.png")).create();
+        g.rm.spr_hazard_flame[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/flame_preview.png")).create();
+        g.rm.spr_hazard_flame[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/flame_thumbnail.png")).create();
 
-        game().rm.spr_hazard_pirhanaplant[1] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/pirhanaplant_preview.png")).create();
-        game().rm.spr_hazard_pirhanaplant[2] = ImageLoader::new(convert_path("gfx/packs/Classic/hazards/pirhanaplant_thumbnail.png")).create();
+        g.rm.spr_hazard_pirhanaplant[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/pirhanaplant_preview.png")).create();
+        g.rm.spr_hazard_pirhanaplant[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/pirhanaplant_thumbnail.png")).create();
 
-        game().rm.load_menu_graphics();
+        game().rm.load_menu_graphics(g);
 
-        ed().sMapSurface = SDL_CreateRGBSurface((*game().screen).flags, 768, 608, (*(*game().screen).format).BitsPerPixel as i32, 0, 0, 0, 0);
+        ed().sMapSurface = SDL_CreateRGBSurface((*g.screen).flags, 768, 608, (*(*g.screen).format).BitsPerPixel as i32, 0, 0, 0, 0);
 
         let fs = ed().findstring.clone();
-        game().worldlist.find(&fs);
-        game().game_values.worldindex = game().worldlist.current_index() as i16;
-        loadcurrentworld();
+        g.worldlist.find(&fs);
+        g.game_values.worldindex = g.worldlist.current_index() as i16;
+        loadcurrentworld(g);
         ed().findstring.clear(); //clear out the find string so that pressing "f" will give you the find dialog
 
         if saved_row >= 0 && saved_row <= ed().iWorldHeight as i32 - 15 && saved_col >= 0 && saved_col <= ed().iWorldWidth as i32 - 20 {
             ed().draw_offset_row = saved_row;
             ed().draw_offset_col = saved_col;
-            updateworldsurface();
+            updateworldsurface(g);
         }
 
         //Setup input for menus
-        game().game_values.inputConfiguration[0][0].iDevice = DEVICE_KEYBOARD;
+        g.game_values.inputConfiguration[0][0].iDevice = DEVICE_KEYBOARD;
         for iInputState in 0..2usize {
             //for game/menu
             for iKey in 0..NUM_KEYS as usize {
-                game().game_values.inputConfiguration[0][0].inputGameControls[iInputState].keys[iKey] = controlkeys[0][iInputState][0][iKey];
+                g.game_values.inputConfiguration[0][0].inputGameControls[iInputState].keys[iKey] = controlkeys[0][iInputState][0][iKey];
             }
         }
 
-        game().game_values.playerInput.inputControls[0] = Ptr::from_mut(&mut game().game_values.inputConfiguration[0][0]);
+        g.game_values.playerInput.inputControls[0] = Ptr::from_mut(&mut g.game_values.inputConfiguration[0][0]);
 
         ed().stagemodes = vec![StageMode { options: vec![StageModeOption::default(); GAMEMODE_NUM_OPTIONS - 1], ..Default::default() }; GAMEMODE_LAST as usize];
 
@@ -626,10 +630,10 @@ pub fn inner_main() {
         ed().mCurrentMenu = ed().mStageSettingsMenu.as_ptr();
 
         //Name
-        ed().miNameField = Ptr::new_box(MI_TextField::new(sprite(&mut game().rm.spr_selectfield), 70, 20, "Name", 500, 120));
+        ed().miNameField = Ptr::new_box(MI_TextField::new(sprite(&mut g.rm.spr_selectfield), 70, 20, "Name", 500, 120));
         ed().miNameField.set_disallowed_chars(",");
 
-        ed().miModeField = Ptr::new_box(MI_ImageSelectField::new(sprite(&mut game().rm.spr_selectfield), sprite(&mut game().rm.menu_mode_small), 70, 60, "Mode", 500, 120, 16, 16));
+        ed().miModeField = Ptr::new_box(MI_ImageSelectField::new(sprite(&mut g.rm.spr_selectfield), sprite(&mut g.rm.menu_mode_small), 70, 60, "Mode", 500, 120, 16, 16));
         //miModeField->SetData(game_values.tourstops[0]->iMode, NULL, NULL);
         //miModeField->SetKey(0);
         ed().miModeField.set_item_changed_code(MENU_CODE_MODE_CHANGED);
@@ -637,7 +641,7 @@ pub fn inner_main() {
         for iGameMode in 0..GAMEMODE_LAST as usize {
             ed().miModeField.add(ed().stagemodes[iGameMode].szName.clone(), iGameMode as i16);
 
-            ed().miGoalField[iGameMode] = Ptr::new_box(MI_SelectField::<i16>::new(sprite(&mut game().rm.spr_selectfield), 70, 100, ed().stagemodes[iGameMode].szGoal.clone(), 352, 120));
+            ed().miGoalField[iGameMode] = Ptr::new_box(MI_SelectField::<i16>::new(sprite(&mut g.rm.spr_selectfield), 70, 100, ed().stagemodes[iGameMode].szGoal.clone(), 352, 120));
             ed().miGoalField[iGameMode].set_visible(iGameMode == 0);
 
             for iGameModeOption in 0..(GAMEMODE_NUM_OPTIONS - 1) {
@@ -655,7 +659,7 @@ pub fn inner_main() {
         ed().miModeField.add("Boxes Minigame", 27);
 
         //Create goal field for pipe game
-        ed().miSpecialGoalField[0] = Ptr::new_box(MI_SelectField::<i16>::new(sprite(&mut game().rm.spr_selectfield), 70, 100, "Points", 352, 120));
+        ed().miSpecialGoalField[0] = Ptr::new_box(MI_SelectField::<i16>::new(sprite(&mut g.rm.spr_selectfield), 70, 100, "Points", 352, 120));
         ed().miSpecialGoalField[0].set_visible(false);
 
         for iGameModeOption in 0..(GAMEMODE_NUM_OPTIONS as i16 - 1) {
@@ -664,7 +668,7 @@ pub fn inner_main() {
         }
 
         //Create goal field for boss game
-        ed().miSpecialGoalField[1] = Ptr::new_box(MI_SelectField::<i16>::new(sprite(&mut game().rm.spr_selectfield), 70, 100, "Lives", 352, 120));
+        ed().miSpecialGoalField[1] = Ptr::new_box(MI_SelectField::<i16>::new(sprite(&mut g.rm.spr_selectfield), 70, 100, "Lives", 352, 120));
         ed().miSpecialGoalField[1].set_visible(false);
 
         for iGameLives in 1..=30i16 {
@@ -672,7 +676,7 @@ pub fn inner_main() {
         }
 
         //Create goal field for boxes game
-        ed().miSpecialGoalField[2] = Ptr::new_box(MI_SelectField::<i16>::new(sprite(&mut game().rm.spr_selectfield), 70, 100, "Lives", 352, 120));
+        ed().miSpecialGoalField[2] = Ptr::new_box(MI_SelectField::<i16>::new(sprite(&mut g.rm.spr_selectfield), 70, 100, "Lives", 352, 120));
         ed().miSpecialGoalField[2].set_visible(false);
 
         for iGameLives in 1..=30i16 {
@@ -680,40 +684,40 @@ pub fn inner_main() {
         }
 
         //Mode Settings Button
-        ed().miModeSettingsButton = Ptr::new_box(MI_Button::new_left(sprite(&mut game().rm.spr_selectfield), 430, 100, "Settings", 140));
+        ed().miModeSettingsButton = Ptr::new_box(MI_Button::new_left(g, sprite(&mut game().rm.spr_selectfield), 430, 100, "Settings", 140));
         ed().miModeSettingsButton.set_code(MENU_CODE_TO_MODE_SETTINGS_MENU);
 
         //Points Field
-        ed().miPointsField = Ptr::new_box(MI_SelectField::<i16>::new(sprite(&mut game().rm.spr_selectfield), 70, 140, "Points", 245, 120));
+        ed().miPointsField = Ptr::new_box(MI_SelectField::<i16>::new(sprite(&mut g.rm.spr_selectfield), 70, 140, "Points", 245, 120));
         for iPoints in 0..=20i16 {
             ed().miPointsField.add(format!("{}", iPoints), iPoints);
         }
 
         //Final Stage Field
-        ed().miFinalStageField = Ptr::new_box(MI_SelectField::<bool>::new(sprite(&mut game().rm.spr_selectfield), 325, 140, "End Stage", 245, 120));
+        ed().miFinalStageField = Ptr::new_box(MI_SelectField::<bool>::new(sprite(&mut g.rm.spr_selectfield), 325, 140, "End Stage", 245, 120));
         ed().miFinalStageField.add("No", false);
         ed().miFinalStageField.add("Yes", true);
         ed().miFinalStageField.set_auto_advance(true);
 
         //Map Select Field
-        ed().miMapField = Ptr::new_box(MI_MapField::new(sprite(&mut game().rm.spr_selectfield), 70, 180, "Map", 500, 120, true));
+        ed().miMapField = Ptr::new_box(MI_MapField::new(sprite(&mut g.rm.spr_selectfield), 70, 180, "Map", 500, 120, true));
 
         //Bonus Item Picker Menu Button
-        ed().miBonusItemsButton = Ptr::new_box(MI_Button::new_left(sprite(&mut game().rm.spr_selectfield), 430, 220, "Bonuses", 140));
+        ed().miBonusItemsButton = Ptr::new_box(MI_Button::new_left(g, sprite(&mut game().rm.spr_selectfield), 430, 220, "Bonuses", 140));
         ed().miBonusItemsButton.set_code(MENU_CODE_TO_BONUS_PICKER_MENU);
 
         //Bonus Type
-        ed().miBonusType = Ptr::new_box(MI_SelectField::<i16>::new(sprite(&mut game().rm.spr_selectfield), 70, 100, "Type", 500, 120));
+        ed().miBonusType = Ptr::new_box(MI_SelectField::<i16>::new(sprite(&mut g.rm.spr_selectfield), 70, 100, "Type", 500, 120));
         ed().miBonusType.add("Fixed", false as i16);
         ed().miBonusType.add("Random", true as i16);
         ed().miBonusType.set_auto_advance(true);
 
         //Bonus House Text * 5
-        ed().miBonusTextField[0] = Ptr::new_box(MI_TextField::new(sprite(&mut game().rm.spr_selectfield), 70, 140, "Text", 500, 120));
-        ed().miBonusTextField[1] = Ptr::new_box(MI_TextField::new(sprite(&mut game().rm.spr_selectfield), 70, 180, "Text", 500, 120));
-        ed().miBonusTextField[2] = Ptr::new_box(MI_TextField::new(sprite(&mut game().rm.spr_selectfield), 70, 220, "Text", 500, 120));
-        ed().miBonusTextField[3] = Ptr::new_box(MI_TextField::new(sprite(&mut game().rm.spr_selectfield), 70, 260, "Text", 500, 120));
-        ed().miBonusTextField[4] = Ptr::new_box(MI_TextField::new(sprite(&mut game().rm.spr_selectfield), 70, 300, "Text", 500, 120));
+        ed().miBonusTextField[0] = Ptr::new_box(MI_TextField::new(sprite(&mut g.rm.spr_selectfield), 70, 140, "Text", 500, 120));
+        ed().miBonusTextField[1] = Ptr::new_box(MI_TextField::new(sprite(&mut g.rm.spr_selectfield), 70, 180, "Text", 500, 120));
+        ed().miBonusTextField[2] = Ptr::new_box(MI_TextField::new(sprite(&mut g.rm.spr_selectfield), 70, 220, "Text", 500, 120));
+        ed().miBonusTextField[3] = Ptr::new_box(MI_TextField::new(sprite(&mut g.rm.spr_selectfield), 70, 260, "Text", 500, 120));
+        ed().miBonusTextField[4] = Ptr::new_box(MI_TextField::new(sprite(&mut g.rm.spr_selectfield), 70, 300, "Text", 500, 120));
 
         ed().miBonusTextField[0].set_disallowed_chars(",|");
         ed().miBonusTextField[1].set_disallowed_chars(",|");
@@ -722,15 +726,15 @@ pub fn inner_main() {
         ed().miBonusTextField[4].set_disallowed_chars(",|");
 
         //Delete Stage Button
-        ed().miDeleteStageButton = Ptr::new_box(MI_Button::new_left(sprite(&mut game().rm.spr_selectfield), 430, 440, "Delete", 140));
+        ed().miDeleteStageButton = Ptr::new_box(MI_Button::new_left(g, sprite(&mut game().rm.spr_selectfield), 430, 440, "Delete", 140));
         ed().miDeleteStageButton.set_code(MENU_CODE_DELETE_STAGE_BUTTON);
 
         //Are You Sure Dialog for Delete Stage
         ed().miDeleteStageDialogImage = Ptr::new_box(MI_Image::new(ed().spr_dialog.as_ptr(), 224, 176, 0, 0, 192, 128, 1, 1, 0));
         ed().miDeleteStageDialogAreYouText = Ptr::new_box(MI_HeaderText::new("Are You", 320, 195));
         ed().miDeleteStageDialogSureText = Ptr::new_box(MI_HeaderText::new("Sure?", 320, 220));
-        ed().miDeleteStageDialogYesButton = Ptr::new_box(MI_Button::new(sprite(&mut game().rm.spr_selectfield), 235, 250, "Yes", 80, TextAlign::CENTER));
-        ed().miDeleteStageDialogNoButton = Ptr::new_box(MI_Button::new(sprite(&mut game().rm.spr_selectfield), 325, 250, "No", 80, TextAlign::CENTER));
+        ed().miDeleteStageDialogYesButton = Ptr::new_box(MI_Button::new(g, sprite(&mut game().rm.spr_selectfield), 235, 250, "Yes", 80, TextAlign::CENTER));
+        ed().miDeleteStageDialogNoButton = Ptr::new_box(MI_Button::new(g, sprite(&mut game().rm.spr_selectfield), 325, 250, "No", 80, TextAlign::CENTER));
 
         ed().miDeleteStageDialogYesButton.set_code(MENU_CODE_DELETE_STAGE_YES);
         ed().miDeleteStageDialogNoButton.set_code(MENU_CODE_DELETE_STAGE_NO);
@@ -808,7 +812,7 @@ pub fn inner_main() {
 
         ed().mBonusItemPicker.set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
-        ed().mModeOptionsMenu = Ptr::from_box(UI_ModeOptionsMenu::new());
+        ed().mModeOptionsMenu = Ptr::from_box(UI_ModeOptionsMenu::new(g));
 
         ed().g_wvVehicleStamp.init(WorldVehicle::new());
         ed().g_wvVehicleStamp.iDrawSprite = 0;
@@ -822,7 +826,7 @@ pub fn inner_main() {
         ed().g_wvVehicleStamp.iBoundary = 0;
 
         //Create Vehicle Menu
-        ed().miVehicleSpriteField = Ptr::new_box(MI_ImageSelectField::new(sprite(&mut game().rm.spr_selectfield), ed().spr_vehicleicons.as_ptr(), 70, 80, "Sprite", 500, 150, 16, 16));
+        ed().miVehicleSpriteField = Ptr::new_box(MI_ImageSelectField::new(sprite(&mut g.rm.spr_selectfield), ed().spr_vehicleicons.as_ptr(), 70, 80, "Sprite", 500, 150, 16, 16));
         ed().miVehicleSpriteField.add("Hammer Brother", 0);
         ed().miVehicleSpriteField.add("Boomerang Brother", 1);
         ed().miVehicleSpriteField.add("Fire Brother", 2);
@@ -835,10 +839,10 @@ pub fn inner_main() {
         ed().miVehicleSpriteField.set_output_ptr(&mut ed().g_wvVehicleStamp.iDrawSprite as *mut i16);
         ed().miVehicleSpriteField.set_current_value(ed().g_wvVehicleStamp.iDrawSprite);
 
-        ed().miVehicleStageField = Ptr::new_box(MI_ImageSelectField::new(sprite(&mut game().rm.spr_selectfield), sprite(&mut game().rm.menu_mode_small), 70, 120, "Stage", 500, 150, 16, 16));
+        ed().miVehicleStageField = Ptr::new_box(MI_ImageSelectField::new(sprite(&mut g.rm.spr_selectfield), sprite(&mut g.rm.menu_mode_small), 70, 120, "Stage", 500, 150, 16, 16));
         ed().miVehicleStageField.set_output_ptr(&mut ed().g_wvVehicleStamp.iActionId as *mut i16);
 
-        ed().miVehicleMinMovesField = Ptr::new_box(MI_SelectField::<i16>::new(sprite(&mut game().rm.spr_selectfield), 70, 160, "Min Moves", 500, 150));
+        ed().miVehicleMinMovesField = Ptr::new_box(MI_SelectField::<i16>::new(sprite(&mut g.rm.spr_selectfield), 70, 160, "Min Moves", 500, 150));
 
         for iMinMoves in 0..=100i16 {
             ed().miVehicleMinMovesField.add(format!("{}", iMinMoves), iMinMoves);
@@ -850,7 +854,7 @@ pub fn inner_main() {
         ed().miVehicleMinMovesField.allow_wrap(false);
         ed().miVehicleMinMovesField.allow_fast_scroll(true);
 
-        ed().miVehicleMaxMovesField = Ptr::new_box(MI_SelectField::<i16>::new(sprite(&mut game().rm.spr_selectfield), 70, 200, "Max Moves", 500, 150));
+        ed().miVehicleMaxMovesField = Ptr::new_box(MI_SelectField::<i16>::new(sprite(&mut g.rm.spr_selectfield), 70, 200, "Max Moves", 500, 150));
 
         for iMaxMoves in 0..=100i16 {
             ed().miVehicleMaxMovesField.add(format!("{}", iMaxMoves), iMaxMoves);
@@ -862,21 +866,21 @@ pub fn inner_main() {
         ed().miVehicleMaxMovesField.allow_wrap(false);
         ed().miVehicleMaxMovesField.allow_fast_scroll(true);
 
-        ed().miVehiclePacesField = Ptr::new_box(MI_SelectField::<bool>::new(sprite(&mut game().rm.spr_selectfield), 70, 240, "Paces", 500, 150));
+        ed().miVehiclePacesField = Ptr::new_box(MI_SelectField::<bool>::new(sprite(&mut g.rm.spr_selectfield), 70, 240, "Paces", 500, 150));
         ed().miVehiclePacesField.add("No", false);
         ed().miVehiclePacesField.add("Yes", true);
         ed().miVehiclePacesField.set_output_ptr(&mut ed().g_wvVehicleStamp.fSpritePaces as *mut bool);
         ed().miVehiclePacesField.set_current_value(if ed().g_wvVehicleStamp.fSpritePaces { 1 } else { 0 } != 0);
         ed().miVehiclePacesField.set_auto_advance(true);
 
-        ed().miVehicleDirectionField = Ptr::new_box(MI_SelectField::<i16>::new(sprite(&mut game().rm.spr_selectfield), 70, 280, "Direction", 500, 150));
+        ed().miVehicleDirectionField = Ptr::new_box(MI_SelectField::<i16>::new(sprite(&mut g.rm.spr_selectfield), 70, 280, "Direction", 500, 150));
         ed().miVehicleDirectionField.add("Left", false as i16);
         ed().miVehicleDirectionField.add("Right", true as i16);
         ed().miVehicleDirectionField.set_output_ptr(&mut ed().g_wvVehicleStamp.iDrawDirection as *mut i16);
         ed().miVehicleDirectionField.set_current_value(ed().g_wvVehicleStamp.iDrawDirection);
         ed().miVehicleDirectionField.set_auto_advance(true);
 
-        ed().miVehicleBoundaryField = Ptr::new_box(MI_SelectField::<i16>::new(sprite(&mut game().rm.spr_selectfield), 70, 320, "Boundary", 500, 150));
+        ed().miVehicleBoundaryField = Ptr::new_box(MI_SelectField::<i16>::new(sprite(&mut g.rm.spr_selectfield), 70, 320, "Boundary", 500, 150));
         ed().miVehicleBoundaryField.add("No Boundary", 0);
 
         for iBoundary in 1..=100i16 {
@@ -887,10 +891,10 @@ pub fn inner_main() {
         ed().miVehicleBoundaryField.set_current_value(ed().g_wvVehicleStamp.iBoundary);
         ed().miVehicleBoundaryField.allow_fast_scroll(true);
 
-        ed().miVehicleCreateButton = Ptr::new_box(MI_Button::new(sprite(&mut game().rm.spr_selectfield), 430, 360, "OK", 140, TextAlign::CENTER));
+        ed().miVehicleCreateButton = Ptr::new_box(MI_Button::new(g, sprite(&mut game().rm.spr_selectfield), 430, 360, "OK", 140, TextAlign::CENTER));
         ed().miVehicleCreateButton.set_code(MENU_CODE_CREATE_VEHICLE);
 
-        ed().miTitleText = Ptr::new_box(MI_Text::new("Clicking on the map will add the vehicle configured below", 320, 50, 640, true, TextAlign::CENTER));
+        ed().miTitleText = Ptr::new_box(MI_Text::new(g, "Clicking on the map will add the vehicle configured below", 320, 50, 640, true, TextAlign::CENTER));
 
         ed().mVehicleMenu.add_non_control(ctl_ptr(ed().miTitleText));
 
@@ -912,28 +916,28 @@ pub fn inner_main() {
         done = false;
         while !done {
             match ed().state {
-                EDITOR_EDIT => ed().state = editor_edit(),
-                EDITOR_WATER => ed().state = editor_water(),
-                EDITOR_BACKGROUND => ed().state = editor_background(),
-                EDITOR_STAGEFOREGROUND => ed().state = editor_stageforeground(),
-                EDITOR_STRUCTUREFOREGROUND => ed().state = editor_structureforeground(),
-                EDITOR_BRIDGES => ed().state = editor_bridges(),
-                EDITOR_VEHICLES => ed().state = editor_vehicles(),
-                EDITOR_PATH => ed().state = editor_path(),
-                EDITOR_PATHSPRITE => ed().state = editor_pathsprite(),
-                EDITOR_WARP => ed().state = editor_warp(),
-                EDITOR_START_ITEMS => ed().state = editor_start_items(),
-                EDITOR_BOUNDARY => ed().state = editor_boundary(),
-                EDITOR_TYPE => ed().state = editor_type(),
-                EDITOR_STAGE => ed().state = editor_stage(),
+                EDITOR_EDIT => ed().state = editor_edit(g),
+                EDITOR_WATER => ed().state = editor_water(g),
+                EDITOR_BACKGROUND => ed().state = editor_background(g),
+                EDITOR_STAGEFOREGROUND => ed().state = editor_stageforeground(g),
+                EDITOR_STRUCTUREFOREGROUND => ed().state = editor_structureforeground(g),
+                EDITOR_BRIDGES => ed().state = editor_bridges(g),
+                EDITOR_VEHICLES => ed().state = editor_vehicles(g),
+                EDITOR_PATH => ed().state = editor_path(g),
+                EDITOR_PATHSPRITE => ed().state = editor_pathsprite(g),
+                EDITOR_WARP => ed().state = editor_warp(g),
+                EDITOR_START_ITEMS => ed().state = editor_start_items(g),
+                EDITOR_BOUNDARY => ed().state = editor_boundary(g),
+                EDITOR_TYPE => ed().state = editor_type(g),
+                EDITOR_STAGE => ed().state = editor_stage(g),
                 EDITOR_QUIT => done = true,
-                DISPLAY_HELP => ed().state = display_help(),
-                SAVE_AS => ed().state = save_as(),
-                FIND => ed().state = find(),
-                CLEAR_WORLD => ed().state = clear_world(),
-                NEW_WORLD => ed().state = new_world(),
-                RESIZE_WORLD => ed().state = resize_world(),
-                SAVE => ed().state = savecurrentworld(),
+                DISPLAY_HELP => ed().state = display_help(g),
+                SAVE_AS => ed().state = save_as(g),
+                FIND => ed().state = find(g),
+                CLEAR_WORLD => ed().state = clear_world(g),
+                NEW_WORLD => ed().state = new_world(g),
+                RESIZE_WORLD => ed().state = resize_world(g),
+                SAVE => ed().state = savecurrentworld(g),
                 _ => println!(" PANIC: WEIRD GAMESTATE: {}", ed().state),
             }
         }
@@ -942,9 +946,9 @@ pub fn inner_main() {
 
         println!("\n---------------- save world ----------------");
 
-        WriteVehiclesIntoWorld();
-        WriteWarpsIntoWorld();
-        game().g_worldmap.save(&convert_path("worlds/ZZworldeditor.txt"));
+        WriteVehiclesIntoWorld(g);
+        WriteWarpsIntoWorld(g);
+        game().g_worldmap.save(g, &convert_path(game().get(), "worlds/ZZworldeditor.txt"));
 
         {
             let options_path = get_home_directory() + "worldeditor.bin";
@@ -953,7 +957,7 @@ pub fn inner_main() {
                 editor_settings.write_i32(ed().draw_offset_col);
                 editor_settings.write_i32(ed().draw_offset_row);
                 editor_settings.write_bool(ed().g_fFullScreen);
-                editor_settings.write_string_long(&game().worldlist.current_path().to_string_lossy());
+                editor_settings.write_string_long(&g.worldlist.current_path().to_string_lossy());
             }
         }
 
@@ -963,7 +967,7 @@ pub fn inner_main() {
 }
 
 /// Painting with the left button (`SDL_MOUSEBUTTONDOWN` and `SDL_MOUSEMOTION` repeat the same block in C++).
-fn paint_left(iCol: i16, iRow: i16, fromMotion: bool) {
+fn paint_left(g: &mut Game, iCol: i16, iRow: i16, fromMotion: bool) {
     unsafe {
         if ed().edit_mode == 0 {
             //selected background
@@ -981,14 +985,14 @@ fn paint_left(iCol: i16, iRow: i16, fromMotion: bool) {
                 }
 
                 if fNeedUpdate {
-                    updateworldsurface();
+                    updateworldsurface(g);
                 }
             }
         } else if ed().edit_mode == 1 {
             //selected foreground
             if tile(iCol, iRow).iForegroundSprite as i32 != ed().set_tile {
                 tile(iCol, iRow).iForegroundSprite = ed().set_tile as i16;
-                updateworldsurface();
+                updateworldsurface(g);
 
                 if !fromMotion && ed().set_tile >= WORLD_BRIDGE_SPRITE_OFFSET as i32 && ed().set_tile <= WORLD_BRIDGE_SPRITE_OFFSET as i32 + 3 {
                     tile(iCol, iRow).iConnectionType = (ed().set_tile - WORLD_BRIDGE_SPRITE_OFFSET as i32 + 12) as i16;
@@ -1008,7 +1012,7 @@ fn paint_left(iCol: i16, iRow: i16, fromMotion: bool) {
                 if tile(iCol, iRow).iForegroundSprite as i32 != ed().set_tile + WORLD_START_SPRITE_OFFSET as i32 {
                     tile(iCol, iRow).iType = 1;
                     tile(iCol, iRow).iForegroundSprite = (ed().set_tile + WORLD_START_SPRITE_OFFSET as i32) as i16;
-                    updateworldsurface();
+                    updateworldsurface(g);
                 }
             } else if ed().set_tile <= 5 {
                 //doors
@@ -1019,7 +1023,7 @@ fn paint_left(iCol: i16, iRow: i16, fromMotion: bool) {
                     }
 
                     tile(iCol, iRow).iType = ed().set_tile as i16;
-                    updateworldsurface();
+                    updateworldsurface(g);
                 }
             }
         } else if ed().edit_mode == 4 {
@@ -1045,7 +1049,7 @@ fn paint_left(iCol: i16, iRow: i16, fromMotion: bool) {
             }
 
             if fNeedUpdate {
-                updateworldsurface();
+                updateworldsurface(g);
             }
         } else if ed().edit_mode == 5 {
             //selected vehicle
@@ -1057,7 +1061,7 @@ fn paint_left(iCol: i16, iRow: i16, fromMotion: bool) {
             //water
             if tile(iCol, iRow).iBackgroundWater as i32 != ed().set_tile {
                 tile(iCol, iRow).iBackgroundWater = ed().set_tile as i16;
-                updateworldsurface();
+                updateworldsurface(g);
             }
         } else if ed().edit_mode == 8 {
             //boundary
@@ -1068,7 +1072,7 @@ fn paint_left(iCol: i16, iRow: i16, fromMotion: bool) {
             //if the stage was placed on a start tile
             if tile(iCol, iRow).iType == 1 {
                 tile(iCol, iRow).iForegroundSprite = 0;
-                updateworldsurface();
+                updateworldsurface(g);
             }
 
             tile(iCol, iRow).iType = ed().set_tile as i16;
@@ -1077,7 +1081,7 @@ fn paint_left(iCol: i16, iRow: i16, fromMotion: bool) {
 }
 
 /// Erasing with the right button; returns the new `iStageDisplay` when C++ resets it.
-fn paint_right(iCol: i16, iRow: i16, fromMotion: bool, iStageDisplay: &mut i16) {
+fn paint_right(g: &mut Game, iCol: i16, iRow: i16, fromMotion: bool, iStageDisplay: &mut i16) {
     unsafe {
         if ed().edit_mode == 0 {
             if tile(iCol, iRow).iBackgroundSprite != 0 || ed().fAutoPaint {
@@ -1095,13 +1099,13 @@ fn paint_right(iCol: i16, iRow: i16, fromMotion: bool, iStageDisplay: &mut i16) 
                 }
 
                 if fNeedUpdate {
-                    updateworldsurface();
+                    updateworldsurface(g);
                 }
             }
         } else if ed().edit_mode == 1 {
             if tile(iCol, iRow).iForegroundSprite != 0 {
                 tile(iCol, iRow).iForegroundSprite = 0;
-                updateworldsurface();
+                updateworldsurface(g);
             }
         } else if ed().edit_mode == 2 {
             tile(iCol, iRow).iConnectionType = 0;
@@ -1113,10 +1117,10 @@ fn paint_right(iCol: i16, iRow: i16, fromMotion: bool, iStageDisplay: &mut i16) 
             //selected start/door
             if tile(iCol, iRow).iType == 1 {
                 tile(iCol, iRow).iForegroundSprite = 0;
-                updateworldsurface();
+                updateworldsurface(g);
             } else if tile(iCol, iRow).iType <= 5 {
                 tile(iCol, iRow).iType = 0;
-                updateworldsurface();
+                updateworldsurface(g);
             }
 
             tile(iCol, iRow).iType = 0;
@@ -1141,7 +1145,7 @@ fn paint_right(iCol: i16, iRow: i16, fromMotion: bool, iStageDisplay: &mut i16) 
             }
 
             if fNeedUpdate {
-                updateworldsurface();
+                updateworldsurface(g);
             }
         } else if ed().edit_mode == 5 {
             //vehicles
@@ -1154,7 +1158,7 @@ fn paint_right(iCol: i16, iRow: i16, fromMotion: bool, iStageDisplay: &mut i16) 
             //water
             if tile(iCol, iRow).iBackgroundWater != 0 {
                 tile(iCol, iRow).iBackgroundWater = 0;
-                updateworldsurface();
+                updateworldsurface(g);
             }
         } else if ed().edit_mode == 8 {
             //boundary
@@ -1189,7 +1193,8 @@ fn copy_vehicle_into_stamp(vehicle: &WorldVehicle) {
     }
 }
 
-pub fn editor_edit() -> i32 {
+pub fn editor_edit(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         let mut done = false;
         ed().g_musiccategorydisplaytimer = 0;
@@ -1249,13 +1254,13 @@ pub fn editor_edit() -> i32 {
                             if ed().event.key_mod() & (SDL_Keymod::KMOD_LALT as u16 | SDL_Keymod::KMOD_RALT as u16) != 0 {
                                 if key_sym() == SDLK_RETURN as i32 {
                                     ed().g_fFullScreen = !ed().g_fFullScreen;
-                                    gfx_changefullscreen(ed().g_fFullScreen);
-                                    game().blitdest = game().screen;
+                                    gfx_changefullscreen(g, ed().g_fFullScreen);
+                                    g.blitdest = g.screen;
                                 }
                             }
 
                             if key_sym() == SDLK_INSERT as i32 {
-                                takescreenshot();
+                                takescreenshot(g);
                             }
 
                             if key_sym() == SDLK_1 as i32 {
@@ -1339,7 +1344,7 @@ pub fn editor_edit() -> i32 {
 
                             if key_sym() == SDLK_r as i32 {
                                 if ed().g_musiccategorydisplaytimer > 0 {
-                                    game().g_worldmap.iMusicCategory.post_increment();
+                                    g.g_worldmap.iMusicCategory.post_increment();
                                 }
 
                                 ed().g_musiccategorydisplaytimer = 90;
@@ -1358,7 +1363,7 @@ pub fn editor_edit() -> i32 {
                                     return FIND;
                                 }
 
-                                findcurrentstring();
+                                findcurrentstring(g);
                             }
 
                             if key_sym() == SDLK_DELETE as i32 && (check_key(keystate, SDLK_LCTRL as i32) || check_key(keystate, SDLK_RCTRL as i32)) {
@@ -1380,7 +1385,7 @@ pub fn editor_edit() -> i32 {
                             if key_sym() == SDLK_UP as i32 {
                                 if ed().draw_offset_row > 0 {
                                     ed().draw_offset_row -= 1;
-                                    updateworldsurface();
+                                    updateworldsurface(g);
 
                                     view_repeat_direction = 0;
                                     view_repeat_timer = 30;
@@ -1390,7 +1395,7 @@ pub fn editor_edit() -> i32 {
                             } else if key_sym() == SDLK_DOWN as i32 {
                                 if ed().draw_offset_row < ed().iWorldHeight as i32 - 15 {
                                     ed().draw_offset_row += 1;
-                                    updateworldsurface();
+                                    updateworldsurface(g);
 
                                     view_repeat_direction = 1;
                                     view_repeat_timer = 30;
@@ -1400,7 +1405,7 @@ pub fn editor_edit() -> i32 {
                             } else if key_sym() == SDLK_LEFT as i32 {
                                 if ed().draw_offset_col > 0 {
                                     ed().draw_offset_col -= 1;
-                                    updateworldsurface();
+                                    updateworldsurface(g);
 
                                     view_repeat_direction = 2;
                                     view_repeat_timer = 30;
@@ -1410,7 +1415,7 @@ pub fn editor_edit() -> i32 {
                             } else if key_sym() == SDLK_RIGHT as i32 {
                                 if ed().draw_offset_col < ed().iWorldWidth as i32 - 20 {
                                     ed().draw_offset_col += 1;
-                                    updateworldsurface();
+                                    updateworldsurface(g);
 
                                     view_repeat_direction = 3;
                                     view_repeat_timer = 30;
@@ -1420,27 +1425,27 @@ pub fn editor_edit() -> i32 {
                             }
 
                             if key_sym() == SDLK_PAGEUP as i32 {
-                                game().game_values.worldindex -= 1;
-                                if game().game_values.worldindex < 0 {
-                                    game().game_values.worldindex = game().worldlist.count() as i16 - 1;
+                                g.game_values.worldindex -= 1;
+                                if g.game_values.worldindex < 0 {
+                                    g.game_values.worldindex = g.worldlist.count() as i16 - 1;
                                 }
 
-                                game().worldlist.prev();
+                                g.worldlist.prev();
 
-                                loadcurrentworld();
+                                loadcurrentworld(g);
 
                                 ed().iOldStageId = -1;
                             }
 
                             if key_sym() == SDLK_PAGEDOWN as i32 {
-                                game().game_values.worldindex += 1;
-                                if game().game_values.worldindex as usize >= game().worldlist.count() {
-                                    game().game_values.worldindex = 0;
+                                g.game_values.worldindex += 1;
+                                if g.game_values.worldindex as usize >= g.worldlist.count() {
+                                    g.game_values.worldindex = 0;
                                 }
 
-                                game().worldlist.next();
+                                g.worldlist.next();
 
-                                loadcurrentworld();
+                                loadcurrentworld(g);
 
                                 ed().iOldStageId = -1;
                             }
@@ -1461,9 +1466,9 @@ pub fn editor_edit() -> i32 {
 
                             if iButtonX >= 0 && iButtonY >= 0 && (iButtonX as i32) < ed().iWorldWidth as i32 * TILESIZE && (iButtonY as i32) < ed().iWorldHeight as i32 * TILESIZE {
                                 if ed().event.button_button() == BUTTON_LEFT && !ed().ignoreclick {
-                                    paint_left(iCol, iRow, false);
+                                    paint_left(g, iCol, iRow, false);
                                 } else if ed().event.button_button() == BUTTON_RIGHT {
-                                    paint_right(iCol, iRow, false, &mut iStageDisplay);
+                                    paint_right(g, iCol, iRow, false, &mut iStageDisplay);
                                 }
                             }
                         }
@@ -1477,9 +1482,9 @@ pub fn editor_edit() -> i32 {
 
                             if iButtonX >= 0 && iButtonY >= 0 && (iButtonX as i32) < ed().iWorldWidth as i32 * TILESIZE && (iButtonY as i32) < ed().iWorldHeight as i32 * TILESIZE {
                                 if ed().event.motion_state() == SDL_BUTTON_LMASK && !ed().ignoreclick {
-                                    paint_left(iCol, iRow, true);
+                                    paint_left(g, iCol, iRow, true);
                                 } else if ed().event.motion_state() == SDL_BUTTON_RMASK {
-                                    paint_right(iCol, iRow, true, &mut iStageDisplay);
+                                    paint_right(g, iCol, iRow, true, &mut iStageDisplay);
                                 }
                             }
 
@@ -1522,32 +1527,32 @@ pub fn editor_edit() -> i32 {
 
                         if view_repeat_direction == 0 && ed().draw_offset_row > 0 {
                             ed().draw_offset_row -= 1;
-                            updateworldsurface();
+                            updateworldsurface(g);
                         } else if view_repeat_direction == 1 && ed().draw_offset_row < ed().iWorldHeight as i32 - 15 {
                             ed().draw_offset_row += 1;
-                            updateworldsurface();
+                            updateworldsurface(g);
                         } else if view_repeat_direction == 2 && ed().draw_offset_col > 0 {
                             ed().draw_offset_col -= 1;
-                            updateworldsurface();
+                            updateworldsurface(g);
                         } else if view_repeat_direction == 3 && ed().draw_offset_col < ed().iWorldWidth as i32 - 20 {
                             ed().draw_offset_col += 1;
-                            updateworldsurface();
+                            updateworldsurface(g);
                         }
                     }
                 }
             }
 
-            drawmap(false, TILESIZE as i16);
+            drawmap(g, false, TILESIZE as i16);
 
             //Ask if you are sure you want to exit
             if fExiting {
-                ed().spr_dialog.draw_src(224, 176, &r(0, 0, 192, 128));
-                game().rm.menu_font_large.draw_centered(320, 195, "Exit");
-                game().rm.menu_font_large.draw_centered(320, 220, "Are You Sure?");
-                game().rm.menu_font_large.draw_centered(282, 254, "Yes");
-                game().rm.menu_font_large.draw_centered(356, 254, "No");
+                ed().spr_dialog.draw_src(g, 224, 176, &r(0, 0, 192, 128));
+                g.rm.menu_font_large.draw_centered(320, 195, "Exit");
+                g.rm.menu_font_large.draw_centered(320, 220, "Are You Sure?");
+                g.rm.menu_font_large.draw_centered(282, 254, "Yes");
+                g.rm.menu_font_large.draw_centered(356, 254, "No");
 
-                ed().spr_dialog.draw_src(if fSelectedYes { 250 } else { 326 }, 250, &r(192, 0, 64, 32));
+                ed().spr_dialog.draw_src(g, if fSelectedYes { 250 } else { 326 }, 250, &r(192, 0, 64, 32));
             } else {
                 //Draw Paths
                 if ed().edit_mode == 2 {
@@ -1558,7 +1563,7 @@ pub fn editor_edit() -> i32 {
                             let iConnection: i16 = tile(iCol, iRow).iConnectionType;
 
                             if iConnection > 0 {
-                                ed().spr_path.draw_src(
+                                ed().spr_path.draw_src(g, 
                                     (iCol as i32 - ed().draw_offset_col) * TILESIZE + ed().draw_offset_x,
                                     (iRow as i32 - ed().draw_offset_row) * TILESIZE + ed().draw_offset_y,
                                     &r((iConnection as i32 - 1) << 5, 0, TILESIZE, TILESIZE),
@@ -1578,19 +1583,19 @@ pub fn editor_edit() -> i32 {
                             ix = ((warp.posA.x as i32 - ed().draw_offset_col) * TILESIZE + ed().draw_offset_x) as i16;
                             iy = ((warp.posA.y as i32 - ed().draw_offset_row) * TILESIZE + ed().draw_offset_y) as i16;
 
-                            ed().spr_warps[0].draw_src(ix as i32, iy as i32, &r((warp.id as i32) << 5, 0, 32, 32));
+                            ed().spr_warps[0].draw_src(g, ix as i32, iy as i32, &r((warp.id as i32) << 5, 0, 32, 32));
                         }
 
                         if warp.posB.x >= 0 {
                             ix = ((warp.posB.x as i32 - ed().draw_offset_col) * TILESIZE + ed().draw_offset_x) as i16;
                             iy = ((warp.posB.y as i32 - ed().draw_offset_row) * TILESIZE + ed().draw_offset_y) as i16;
 
-                            ed().spr_warps[0].draw_src(ix as i32, iy as i32, &r((warp.id as i32) << 5, 0, 32, 32));
+                            ed().spr_warps[0].draw_src(g, ix as i32, iy as i32, &r((warp.id as i32) << 5, 0, 32, 32));
                         }
                     }
                 } else if ed().edit_mode == 8 {
                     //draw boundaries
-                    let color = SDL_MapRGB((*game().blitdest).format, 255, 0, 255);
+                    let color = SDL_MapRGB((*g.blitdest).format, 255, 0, 255);
                     let mut iRow = ed().draw_offset_row as i16;
                     while (iRow as i32) < ed().draw_offset_row + 15 && iRow < ed().iWorldHeight {
                         let mut iCol = ed().draw_offset_col as i16;
@@ -1601,9 +1606,9 @@ pub fn editor_edit() -> i32 {
                                 let ix: i16 = ((iCol as i32 - ed().draw_offset_col) * TILESIZE + ed().draw_offset_x) as i16;
                                 let iy: i16 = ((iRow as i32 - ed().draw_offset_row) * TILESIZE + ed().draw_offset_y) as i16;
                                 let mut rr = r(ix as i32, iy as i32, 32, 32);
-                                crate::common::gfx::blit::fill_rect(game().blitdest, &mut rr, color);
+                                crate::common::gfx::blit::fill_rect(g.blitdest, &mut rr, color);
 
-                                game().rm.spr_worldforegroundspecial[0].draw_src(ix as i32, iy as i32, &r(((iBoundary % 10) as i32) << 5, ((iBoundary / 10) as i32) << 5, 32, 32));
+                                gp.rm.spr_worldforegroundspecial[0].draw_src(g, ix as i32, iy as i32, &r(((iBoundary % 10) as i32) << 5, ((iBoundary / 10) as i32) << 5, 32, 32));
                             }
                             iCol += 1;
                         }
@@ -1611,7 +1616,7 @@ pub fn editor_edit() -> i32 {
                     }
                 } else if ed().edit_mode == 9 {
                     //draw stages
-                    let color = SDL_MapRGB((*game().blitdest).format, 0, 0, 255);
+                    let color = SDL_MapRGB((*g.blitdest).format, 0, 0, 255);
                     let mut iRow = ed().draw_offset_row as i16;
                     while (iRow as i32) < ed().draw_offset_row + 15 && iRow < ed().iWorldHeight {
                         let mut iCol = ed().draw_offset_col as i16;
@@ -1622,9 +1627,9 @@ pub fn editor_edit() -> i32 {
                                 let ix: i16 = ((iCol as i32 - ed().draw_offset_col) * TILESIZE + ed().draw_offset_x) as i16;
                                 let iy: i16 = ((iRow as i32 - ed().draw_offset_row) * TILESIZE + ed().draw_offset_y) as i16;
                                 let mut rr = r(ix as i32, iy as i32, 32, 32);
-                                crate::common::gfx::blit::fill_rect(game().blitdest, &mut rr, color);
+                                crate::common::gfx::blit::fill_rect(g.blitdest, &mut rr, color);
 
-                                game().rm.spr_worldforegroundspecial[0].draw_src(ix as i32, iy as i32, &r(((iType % 10) as i32) << 5, ((iType / 10) as i32) << 5, 32, 32));
+                                gp.rm.spr_worldforegroundspecial[0].draw_src(g, ix as i32, iy as i32, &r(((iType % 10) as i32) << 5, ((iType / 10) as i32) << 5, 32, 32));
                             }
                             iCol += 1;
                         }
@@ -1632,83 +1637,83 @@ pub fn editor_edit() -> i32 {
                     }
 
                     if iStageDisplay >= 0 && ed().g_fShowStagePreviews {
-                        DisplayStageDetails(false, iStageDisplay, ed().mouse_x as i16, ed().mouse_y as i16);
+                        DisplayStageDetails(g, false, iStageDisplay, ed().mouse_x as i16, ed().mouse_y as i16);
                     }
                 }
 
                 if ed().edit_mode == 5 || ed().edit_mode == 8 {
                     //draw vehicles
-                    let color = SDL_MapRGB((*game().blitdest).format, 0, 0, 128);
+                    let color = SDL_MapRGB((*g.blitdest).format, 0, 0, 128);
                     for vehicle in ed().vehiclelist.iter() {
                         let ix: i16 = ((vehicle.currentTile.x as i32 - ed().draw_offset_col) * TILESIZE + ed().draw_offset_x) as i16;
                         let iy: i16 = ((vehicle.currentTile.y as i32 - ed().draw_offset_row) * TILESIZE + ed().draw_offset_y) as i16;
 
                         let mut rr = r(ix as i32, iy as i32, 32, 32);
-                        crate::common::gfx::blit::fill_rect(game().blitdest, &mut rr, color);
+                        crate::common::gfx::blit::fill_rect(g.blitdest, &mut rr, color);
 
-                        game().rm.spr_worldvehicle[0].draw_src(ix as i32, iy as i32, &r((vehicle.iDrawDirection as i32) << 5, (vehicle.iDrawSprite as i32) << 5, 32, 32));
+                        gp.rm.spr_worldvehicle[0].draw_src(g, ix as i32, iy as i32, &r((vehicle.iDrawDirection as i32) << 5, (vehicle.iDrawSprite as i32) << 5, 32, 32));
 
                         if ed().edit_mode == 5 {
-                            game().rm.spr_worldforegroundspecial[0].draw_src(ix as i32, iy as i32, &r(((vehicle.iActionId % 10) as i32) << 5, ((vehicle.iActionId / 10) as i32) << 5, 32, 32));
+                            gp.rm.spr_worldforegroundspecial[0].draw_src(g, ix as i32, iy as i32, &r(((vehicle.iActionId % 10) as i32) << 5, ((vehicle.iActionId / 10) as i32) << 5, 32, 32));
                         }
 
                         if ed().edit_mode == 8 {
                             let iBoundary: i16 = vehicle.iBoundary - 1;
                             if iBoundary == -1 {
-                                game().rm.spr_worldforegroundspecial[0].draw_src(ix as i32, iy as i32, &r(288, 288, 32, 32));
+                                gp.rm.spr_worldforegroundspecial[0].draw_src(g, ix as i32, iy as i32, &r(288, 288, 32, 32));
                             } else {
-                                game().rm.spr_worldforegroundspecial[0].draw_src(ix as i32, iy as i32, &r(((iBoundary % 10) as i32) << 5, ((iBoundary / 10) as i32) << 5, 32, 32));
+                                gp.rm.spr_worldforegroundspecial[0].draw_src(g, ix as i32, iy as i32, &r(((iBoundary % 10) as i32) << 5, ((iBoundary / 10) as i32) << 5, 32, 32));
                             }
                         }
                     }
 
                     if ed().edit_mode == 5 {
                         if iStageDisplay >= 0 {
-                            DisplayStageDetails(false, iStageDisplay, ed().mouse_x as i16, ed().mouse_y as i16);
+                            DisplayStageDetails(g, false, iStageDisplay, ed().mouse_x as i16, ed().mouse_y as i16);
                         }
                     }
                 }
 
-                game().rm.menu_font_small.draw(0, 0, szEditModes[ed().edit_mode as usize]);
+                g.rm.menu_font_small.draw(0, 0, szEditModes[ed().edit_mode as usize]);
 
                 if ed().fAutoPaint {
-                    game().rm.menu_font_small.draw(0, 16, "Auto Paint");
+                    g.rm.menu_font_small.draw(0, 16, "Auto Paint");
                 }
 
-                game().rm.menu_font_small.draw_right_justified(640, 0, &game().worldlist.current_path().to_string_lossy());
+                g.rm.menu_font_small.draw_right_justified(640, 0, &g.worldlist.current_path().to_string_lossy());
 
                 ed().g_musiccategorydisplaytimer -= 1;
                 if ed().g_musiccategorydisplaytimer > 0 {
-                    ed().spr_dialog.draw_src(224, 176, &r(0, 0, 192, 128));
-                    game().rm.menu_font_small.draw_centered(320, 195, "Music Category");
-                    game().rm.menu_font_large.draw_centered(320, 220, &crate::common::file_list::world_music_category_to_string(game().g_worldmap.iMusicCategory));
+                    ed().spr_dialog.draw_src(g, 224, 176, &r(0, 0, 192, 128));
+                    g.rm.menu_font_small.draw_centered(320, 195, "Music Category");
+                    g.rm.menu_font_large.draw_centered(320, 220, &crate::common::file_list::world_music_category_to_string(g.g_worldmap.iMusicCategory));
 
-                    game().rm.menu_font_small.draw_centered(320, 255, "Press 'R' Again");
-                    game().rm.menu_font_small.draw_centered(320, 270, "To Change");
+                    g.rm.menu_font_small.draw_centered(320, 255, "Press 'R' Again");
+                    g.rm.menu_font_small.draw_centered(320, 270, "To Change");
                 }
 
-                DrawMessage();
+                DrawMessage(g);
             }
 
-            gfx_flipscreen();
+            gfx_flipscreen(g);
 
-            frame_wait(framestart);
+            frame_wait(g, framestart);
         }
 
         EDITOR_QUIT
     }
 }
 
-pub fn DrawMessage() {
+pub fn DrawMessage(g: &mut Game) {
     unsafe {
         if ed().g_messagedisplaytimer > 0 {
             ed().g_messagedisplaytimer -= 1;
 
-            ed().spr_dialog.draw_src(224, 176, &r(0, 0, 192, 128));
-            game().rm.menu_font_large.draw_centered(320, 195, &ed().g_szMessageTitle);
-            game().rm.menu_font_large.draw_centered(320, 220, &ed().g_szMessageLine[0]);
-            game().rm.menu_font_large.draw_centered(320, 240, &ed().g_szMessageLine[1]);
-            game().rm.menu_font_large.draw_centered(320, 260, &ed().g_szMessageLine[2]);
+            ed().spr_dialog.draw_src(g, 224, 176, &r(0, 0, 192, 128));
+            g.rm.menu_font_large.draw_centered(320, 195, &ed().g_szMessageTitle);
+            g.rm.menu_font_large.draw_centered(320, 220, &ed().g_szMessageLine[0]);
+            g.rm.menu_font_large.draw_centered(320, 240, &ed().g_szMessageLine[1]);
+            g.rm.menu_font_large.draw_centered(320, 260, &ed().g_szMessageLine[2]);
         }
     }
 }
@@ -1750,13 +1755,13 @@ pub fn ForegroundTileValuesChanged(iCol: i16, iRow: i16, iOldTiles: &[i16; 9]) -
     }
 }
 
-pub fn ReadVehiclesIntoEditor() {
+pub fn ReadVehiclesIntoEditor(g: &mut Game) {
     unsafe {
         for v in ed().vehiclelist.drain(..) {
             v.delete();
         }
 
-        for vehicle in game().g_worldmap.vehicles.iter() {
+        for vehicle in g.g_worldmap.vehicles.iter() {
             let mut vehiclecopy = WorldVehicle::new();
 
             vehiclecopy.iDrawSprite = vehicle.iDrawSprite;
@@ -1774,13 +1779,13 @@ pub fn ReadVehiclesIntoEditor() {
     }
 }
 
-pub fn WriteVehiclesIntoWorld() {
+pub fn WriteVehiclesIntoWorld(g: &mut Game) {
     unsafe {
         //Cleanup old vehicles
-        game().g_worldmap.vehicles.clear();
+        g.g_worldmap.vehicles.clear();
 
         //Insert new vehicles
-        game().g_worldmap.vehicles.reserve(ed().vehiclelist.len());
+        g.g_worldmap.vehicles.reserve(ed().vehiclelist.len());
 
         for vehicle in ed().vehiclelist.iter() {
             let mut vehiclecopy = WorldVehicle::new();
@@ -1793,7 +1798,7 @@ pub fn WriteVehiclesIntoWorld() {
             vehiclecopy.fSpritePaces = vehicle.fSpritePaces;
             vehiclecopy.iDrawDirection = vehicle.iDrawDirection;
             vehiclecopy.iBoundary = vehicle.iBoundary;
-            game().g_worldmap.vehicles.push(vehiclecopy);
+            g.g_worldmap.vehicles.push(vehiclecopy);
         }
     }
 }
@@ -1840,28 +1845,28 @@ pub fn RemoveVehicleFromTile(iCol: i16, iRow: i16) {
     }
 }
 
-pub fn ReadWarpsIntoEditor() {
+pub fn ReadWarpsIntoEditor(g: &mut Game) {
     unsafe {
         for w in ed().warplist.drain(..) {
             w.delete();
         }
 
-        for warp in game().g_worldmap.warps.iter() {
+        for warp in g.g_worldmap.warps.iter() {
             ed().warplist.push(Ptr::new_box(warp.clone()));
         }
     }
 }
 
-pub fn WriteWarpsIntoWorld() {
+pub fn WriteWarpsIntoWorld(g: &mut Game) {
     unsafe {
         //Cleanup old vehicles
-        game().g_worldmap.warps.clear();
+        g.g_worldmap.warps.clear();
 
         //Insert new vehicles
-        game().g_worldmap.warps.reserve(ed().warplist.len());
+        g.g_worldmap.warps.reserve(ed().warplist.len());
 
         for warp in ed().warplist.iter() {
-            game().g_worldmap.warps.push((**warp).clone());
+            g.g_worldmap.warps.push((**warp).clone());
         }
     }
 }
@@ -2257,23 +2262,24 @@ pub fn AutoSetTile(iCol: i16, iRow: i16) -> bool {
     }
 }
 
-pub fn updateworldsurface() {
+pub fn updateworldsurface(g: &mut Game) {
+        let mut gp = g.ptr();
     unsafe {
-        game().g_worldmap.draw_map_to_surface(-1, true, ed().sMapSurface, ed().draw_offset_col as i16, ed().draw_offset_row as i16, 0);
+        gp.g_worldmap.draw_map_to_surface(g, -1, true, ed().sMapSurface, ed().draw_offset_col as i16, ed().draw_offset_row as i16, 0);
     }
 }
 
-pub fn drawmap(_fScreenshot: bool, _iBlockSize: i16) {
+pub fn drawmap(g: &mut Game, _fScreenshot: bool, _iBlockSize: i16) {
     unsafe {
         if ed().fNeedBlackBackground {
-            crate::common::gfx::blit::fill_rect(game().screen, null(), 0x0);
+            crate::common::gfx::blit::fill_rect(g.screen, null(), 0x0);
         }
 
-        crate::common::gfx::blit::upper_blit(ed().sMapSurface, &ed().rectSrcSurface, game().blitdest, &mut ed().rectDstSurface);
+        crate::common::gfx::blit::upper_blit(ed().sMapSurface, &ed().rectSrcSurface, g.blitdest, &mut ed().rectDstSurface);
     }
 }
 
-pub fn editor_warp() -> i32 {
+pub fn editor_warp(g: &mut Game) -> i32 {
     unsafe {
         let mut done = false;
 
@@ -2314,17 +2320,17 @@ pub fn editor_warp() -> i32 {
                 }
             }
 
-            drawmap(false, TILESIZE as i16);
-            ed().menu_shade.draw(0, 0);
+            drawmap(g, false, TILESIZE as i16);
+            ed().menu_shade.draw(g, 0, 0);
 
-            ed().spr_warps[0].draw_src(0, 0, &r(0, 0, 320, 32));
+            ed().spr_warps[0].draw_src(g, 0, 0, &r(0, 0, 320, 32));
 
-            game().rm.menu_font_small.draw_right_justified(640, 0, &game().worldlist.current_path().to_string_lossy());
+            g.rm.menu_font_small.draw_right_justified(640, 0, &g.worldlist.current_path().to_string_lossy());
 
-            DrawMessage();
-            gfx_flipscreen();
+            DrawMessage(g);
+            gfx_flipscreen(g);
 
-            frame_wait(framestart);
+            frame_wait(g, framestart);
         }
 
         EDITOR_QUIT
@@ -2335,7 +2341,8 @@ fn point_in(x: i16, y: i16, rect: &SDL_Rect) -> bool {
     x as i32 >= rect.x && (x as i32) < rect.w + rect.x && y as i32 >= rect.y && (y as i32) < rect.h + rect.y
 }
 
-pub fn editor_start_items() -> i32 {
+pub fn editor_start_items(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         let mut done = false;
 
@@ -2389,27 +2396,27 @@ pub fn editor_start_items() -> i32 {
                         let iButtonY: i16 = bound_to_window_h(ed().event.button_y()) as i16;
 
                         if ed().event.button_button() == BUTTON_LEFT || ed().event.button_button() == BUTTON_RIGHT {
-                            if game().g_worldmap.iNumInitialBonuses < 32 {
+                            if g.g_worldmap.iNumInitialBonuses < 32 {
                                 for iItem in 0..(NUM_POWERUPS + NUM_WORLD_POWERUPS) as usize {
                                     if point_in(iButtonX, iButtonY, &rStartItemDst[iItem]) {
-                                        let n = game().g_worldmap.iNumInitialBonuses as usize;
-                                        game().g_worldmap.iInitialBonuses[n] = iItem as i16;
-                                        game().g_worldmap.iNumInitialBonuses += 1;
+                                        let n = g.g_worldmap.iNumInitialBonuses as usize;
+                                        g.g_worldmap.iInitialBonuses[n] = iItem as i16;
+                                        g.g_worldmap.iNumInitialBonuses += 1;
                                         break;
                                     }
                                 }
                             }
 
                             let mut iRemoveItem: i16 = 0;
-                            while iRemoveItem < game().g_worldmap.iNumInitialBonuses {
+                            while iRemoveItem < g.g_worldmap.iNumInitialBonuses {
                                 if point_in(iButtonX, iButtonY, &rPickedItemDst[iRemoveItem as usize]) {
                                     let mut iAdjust = iRemoveItem;
-                                    while iAdjust < game().g_worldmap.iNumInitialBonuses - 1 {
-                                        game().g_worldmap.iInitialBonuses[iAdjust as usize] = game().g_worldmap.iInitialBonuses[iAdjust as usize + 1];
+                                    while iAdjust < g.g_worldmap.iNumInitialBonuses - 1 {
+                                        g.g_worldmap.iInitialBonuses[iAdjust as usize] = g.g_worldmap.iInitialBonuses[iAdjust as usize + 1];
                                         iAdjust += 1;
                                     }
 
-                                    game().g_worldmap.iNumInitialBonuses -= 1;
+                                    g.g_worldmap.iNumInitialBonuses -= 1;
 
                                     break;
                                 }
@@ -2422,44 +2429,45 @@ pub fn editor_start_items() -> i32 {
                 }
             }
 
-            drawmap(false, TILESIZE as i16);
-            ed().menu_shade.draw(0, 0);
+            drawmap(g, false, TILESIZE as i16);
+            ed().menu_shade.draw(g, 0, 0);
 
             for iItem in 0..NUM_POWERUPS as usize {
-                game().rm.spr_storedpoweruplarge.draw_src(rStartItemDst[iItem].x, rStartItemDst[iItem].y, &r((iItem as i32) << 5, 0, 32, 32));
+                gp.rm.spr_storedpoweruplarge.draw_src(g, rStartItemDst[iItem].x, rStartItemDst[iItem].y, &r((iItem as i32) << 5, 0, 32, 32));
             }
 
             for iWorldItem in 0..NUM_WORLD_POWERUPS as usize {
-                game().rm.spr_worlditems.draw_src(rStartItemDst[iWorldItem + NUM_POWERUPS as usize].x, rStartItemDst[iWorldItem + NUM_POWERUPS as usize].y, &r((iWorldItem as i32) << 5, 0, 32, 32));
+                gp.rm.spr_worlditems.draw_src(g, rStartItemDst[iWorldItem + NUM_POWERUPS as usize].x, rStartItemDst[iWorldItem + NUM_POWERUPS as usize].y, &r((iWorldItem as i32) << 5, 0, 32, 32));
             }
 
             for iPopup in 0..4i32 {
-                game().rm.spr_worlditempopup.draw_src(0, 416 - (iPopup << 6), &r(0, 0, 320, 64));
-                game().rm.spr_worlditempopup.draw_src(320, 416 - (iPopup << 6), &r(192, 0, 320, 64));
+                gp.rm.spr_worlditempopup.draw_src(g, 0, 416 - (iPopup << 6), &r(0, 0, 320, 64));
+                gp.rm.spr_worlditempopup.draw_src(g, 320, 416 - (iPopup << 6), &r(192, 0, 320, 64));
             }
 
             for iPickedItem in 0..game().g_worldmap.iNumInitialBonuses as usize {
-                let iPowerup: i16 = game().g_worldmap.iInitialBonuses[iPickedItem];
+                let iPowerup: i16 = g.g_worldmap.iInitialBonuses[iPickedItem];
                 if iPowerup as i32 >= NUM_POWERUPS {
-                    game().rm.spr_worlditems.draw_src(rPickedItemDst[iPickedItem].x, rPickedItemDst[iPickedItem].y, &r((iPowerup as i32 - NUM_POWERUPS) << 5, 0, 32, 32));
+                    gp.rm.spr_worlditems.draw_src(g, rPickedItemDst[iPickedItem].x, rPickedItemDst[iPickedItem].y, &r((iPowerup as i32 - NUM_POWERUPS) << 5, 0, 32, 32));
                 } else {
-                    game().rm.spr_storedpoweruplarge.draw_src(rPickedItemDst[iPickedItem].x, rPickedItemDst[iPickedItem].y, &r((iPowerup as i32) << 5, 0, 32, 32));
+                    gp.rm.spr_storedpoweruplarge.draw_src(g, rPickedItemDst[iPickedItem].x, rPickedItemDst[iPickedItem].y, &r((iPowerup as i32) << 5, 0, 32, 32));
                 }
             }
 
-            game().rm.menu_font_small.draw_right_justified(640, 0, &game().worldlist.current_path().to_string_lossy());
+            g.rm.menu_font_small.draw_right_justified(640, 0, &g.worldlist.current_path().to_string_lossy());
 
-            DrawMessage();
-            gfx_flipscreen();
+            DrawMessage(g);
+            gfx_flipscreen(g);
 
-            frame_wait(framestart);
+            frame_wait(g, framestart);
         }
 
         EDITOR_QUIT
     }
 }
 
-pub fn editor_boundary() -> i32 {
+pub fn editor_boundary(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         let mut done = false;
 
@@ -2500,28 +2508,29 @@ pub fn editor_boundary() -> i32 {
                 }
             }
 
-            drawmap(false, TILESIZE as i16);
-            ed().menu_shade.draw(0, 0);
+            drawmap(g, false, TILESIZE as i16);
+            ed().menu_shade.draw(g, 0, 0);
 
-            let color = SDL_MapRGB((*game().blitdest).format, 255, 0, 255);
+            let color = SDL_MapRGB((*g.blitdest).format, 255, 0, 255);
             let mut rr = r(0, 0, 320, 320);
-            crate::common::gfx::blit::fill_rect(game().blitdest, &mut rr, color);
+            crate::common::gfx::blit::fill_rect(g.blitdest, &mut rr, color);
 
-            game().rm.spr_worldforegroundspecial[0].draw_src(0, 0, &r(0, 0, 320, 320));
+            gp.rm.spr_worldforegroundspecial[0].draw_src(g, 0, 0, &r(0, 0, 320, 320));
 
-            game().rm.menu_font_small.draw_right_justified(640, 0, &game().worldlist.current_path().to_string_lossy());
+            g.rm.menu_font_small.draw_right_justified(640, 0, &g.worldlist.current_path().to_string_lossy());
 
-            DrawMessage();
-            gfx_flipscreen();
+            DrawMessage(g);
+            gfx_flipscreen(g);
 
-            frame_wait(framestart);
+            frame_wait(g, framestart);
         }
 
         EDITOR_QUIT
     }
 }
 
-pub fn editor_type() -> i32 {
+pub fn editor_type(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         let mut done = false;
 
@@ -2563,27 +2572,28 @@ pub fn editor_type() -> i32 {
                 }
             }
 
-            drawmap(false, TILESIZE as i16);
-            ed().menu_shade.draw(0, 0);
+            drawmap(g, false, TILESIZE as i16);
+            ed().menu_shade.draw(g, 0, 0);
 
-            game().rm.spr_worldforegroundspecial[0].draw_src(0, 0, &r(320, 128, 64, 32));
-            game().rm.spr_worldforegroundspecial[0].draw_src(64, 0, &r(320, 192, 128, 32));
+            gp.rm.spr_worldforegroundspecial[0].draw_src(g, 0, 0, &r(320, 128, 64, 32));
+            gp.rm.spr_worldforegroundspecial[0].draw_src(g, 64, 0, &r(320, 192, 128, 32));
 
-            game().rm.spr_worldforegroundspecial[0].draw_src(64, 0, &r(448, 64, 128, 32));
+            gp.rm.spr_worldforegroundspecial[0].draw_src(g, 64, 0, &r(448, 64, 128, 32));
 
-            game().rm.menu_font_small.draw_right_justified(640, 0, &game().worldlist.current_path().to_string_lossy());
+            g.rm.menu_font_small.draw_right_justified(640, 0, &g.worldlist.current_path().to_string_lossy());
 
-            DrawMessage();
-            gfx_flipscreen();
+            DrawMessage(g);
+            gfx_flipscreen(g);
 
-            frame_wait(framestart);
+            frame_wait(g, framestart);
         }
 
         EDITOR_QUIT
     }
 }
 
-pub fn editor_water() -> i32 {
+pub fn editor_water(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         let mut done = false;
 
@@ -2623,23 +2633,24 @@ pub fn editor_water() -> i32 {
                 }
             }
 
-            crate::common::gfx::blit::fill_rect(game().screen, null(), 0x0);
+            crate::common::gfx::blit::fill_rect(g.screen, null(), 0x0);
 
             for iWater in 0..3i32 {
-                game().rm.spr_worldbackground[0].draw_src(iWater << 5, 0, &r(512 + (iWater << 7), 0, 32, 32));
+                gp.rm.spr_worldbackground[0].draw_src(g, iWater << 5, 0, &r(512 + (iWater << 7), 0, 32, 32));
             }
 
-            DrawMessage();
-            gfx_flipscreen();
+            DrawMessage(g);
+            gfx_flipscreen(g);
 
-            frame_wait(framestart);
+            frame_wait(g, framestart);
         }
 
         EDITOR_QUIT
     }
 }
 
-pub fn editor_background() -> i32 {
+pub fn editor_background(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         let mut done = false;
         let mut iPage: i16 = 0;
@@ -2707,21 +2718,22 @@ pub fn editor_background() -> i32 {
                 }
             }
 
-            crate::common::gfx::blit::fill_rect(game().screen, null(), 0x0);
+            crate::common::gfx::blit::fill_rect(g.screen, null(), 0x0);
 
-            game().rm.spr_worldbackground[0].draw_src(0, 0, &r(iPage as i32 * 640, 32, 640, 480));
+            gp.rm.spr_worldbackground[0].draw_src(g, 0, 0, &r(iPage as i32 * 640, 32, 640, 480));
 
-            DrawMessage();
-            gfx_flipscreen();
+            DrawMessage(g);
+            gfx_flipscreen(g);
 
-            frame_wait(framestart);
+            frame_wait(g, framestart);
         }
 
         EDITOR_QUIT
     }
 }
 
-pub fn editor_stageforeground() -> i32 {
+pub fn editor_stageforeground(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         let mut done = false;
         let mut iForegroundScreen: i16 = 0;
@@ -2768,27 +2780,28 @@ pub fn editor_stageforeground() -> i32 {
                 }
             }
 
-            crate::common::gfx::blit::fill_rect(game().screen, null(), 0x0);
+            crate::common::gfx::blit::fill_rect(g.screen, null(), 0x0);
 
             for iRow in 0..10i32 {
                 for iCol in 0..10i32 {
-                    game().rm.spr_worldforegroundspecial[0].draw_src(iCol << 5, iRow << 5, &r(384, (iForegroundScreen as i32) << 5, 32, 32));
+                    gp.rm.spr_worldforegroundspecial[0].draw_src(g, iCol << 5, iRow << 5, &r(384, (iForegroundScreen as i32) << 5, 32, 32));
                 }
             }
 
-            game().rm.spr_worldforegroundspecial[0].draw_src(0, 0, &r(0, 0, 320, 320));
+            gp.rm.spr_worldforegroundspecial[0].draw_src(g, 0, 0, &r(0, 0, 320, 320));
 
-            DrawMessage();
-            gfx_flipscreen();
+            DrawMessage(g);
+            gfx_flipscreen(g);
 
-            frame_wait(framestart);
+            frame_wait(g, framestart);
         }
 
         EDITOR_QUIT
     }
 }
 
-pub fn editor_bridges() -> i32 {
+pub fn editor_bridges(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         let mut done = false;
 
@@ -2828,21 +2841,22 @@ pub fn editor_bridges() -> i32 {
                 }
             }
 
-            crate::common::gfx::blit::fill_rect(game().screen, null(), 0x0);
+            crate::common::gfx::blit::fill_rect(g.screen, null(), 0x0);
 
-            game().rm.spr_worldforegroundspecial[0].draw_src(0, 0, &r(320, 224, 128, 32));
+            gp.rm.spr_worldforegroundspecial[0].draw_src(g, 0, 0, &r(320, 224, 128, 32));
 
-            DrawMessage();
-            gfx_flipscreen();
+            DrawMessage(g);
+            gfx_flipscreen(g);
 
-            frame_wait(framestart);
+            frame_wait(g, framestart);
         }
 
         EDITOR_QUIT
     }
 }
 
-pub fn editor_structureforeground() -> i32 {
+pub fn editor_structureforeground(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         let mut done = false;
 
@@ -2888,22 +2902,23 @@ pub fn editor_structureforeground() -> i32 {
                 }
             }
 
-            crate::common::gfx::blit::fill_rect(game().screen, null(), 0x0);
+            crate::common::gfx::blit::fill_rect(g.screen, null(), 0x0);
 
-            game().rm.spr_worldforeground[0].draw_src(0, 0, &r(0, 0, 416, 480));
-            game().rm.spr_worldforeground[0].draw_src(416, 0, &r(512, 0, 32, 480));
+            gp.rm.spr_worldforeground[0].draw_src(g, 0, 0, &r(0, 0, 416, 480));
+            gp.rm.spr_worldforeground[0].draw_src(g, 416, 0, &r(512, 0, 32, 480));
 
-            DrawMessage();
-            gfx_flipscreen();
+            DrawMessage(g);
+            gfx_flipscreen(g);
 
-            frame_wait(framestart);
+            frame_wait(g, framestart);
         }
 
         EDITOR_QUIT
     }
 }
 
-pub fn editor_pathsprite() -> i32 {
+pub fn editor_pathsprite(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         let mut done = false;
 
@@ -2943,16 +2958,16 @@ pub fn editor_pathsprite() -> i32 {
                 }
             }
 
-            crate::common::gfx::blit::fill_rect(game().screen, null(), 0x0);
+            crate::common::gfx::blit::fill_rect(g.screen, null(), 0x0);
 
             for iPath in 0..8i32 {
-                game().rm.spr_worldpaths[0].draw_src(iPath << 5, 0, &r((iPath % 4) * 160, (iPath / 4) * 320, 32, 192));
+                gp.rm.spr_worldpaths[0].draw_src(g, iPath << 5, 0, &r((iPath % 4) * 160, (iPath / 4) * 320, 32, 192));
             }
 
-            DrawMessage();
-            gfx_flipscreen();
+            DrawMessage(g);
+            gfx_flipscreen(g);
 
-            frame_wait(framestart);
+            frame_wait(g, framestart);
         }
 
         EDITOR_QUIT
@@ -2962,22 +2977,23 @@ pub fn editor_pathsprite() -> i32 {
 //Display stages over vehicles
 //allow setting of stages on vehicles
 
-pub fn editor_vehicles() -> i32 {
+pub fn editor_vehicles(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
-        if game().g_worldmap.iNumStages <= 0 {
+        if g.g_worldmap.iNumStages <= 0 {
             SetDisplayMessage(120, "No Stages", "You need to create", "stages before you", "can create vehicles");
             return EDITOR_EDIT;
         }
 
         ed().mCurrentMenu = ed().mVehicleMenu.as_ptr();
-        ed().mCurrentMenu.reset_menu();
+        ed().mCurrentMenu.reset_menu(g);
 
         let done = false;
 
         ed().miVehicleStageField.clear();
 
         for iStage in 0..game().g_worldmap.iNumStages {
-            let ts = game().game_values.tourstops[iStage as usize];
+            let ts = g.game_values.tourstops[iStage as usize];
             let szStageName = format!("({}) {}", iStage + 1, ts.szName);
 
             let item = ed().miVehicleStageField.add(szStageName, iStage);
@@ -2989,7 +3005,7 @@ pub fn editor_vehicles() -> i32 {
         while !done {
             let framestart = crate::services::ticks() as i32;
 
-            game().game_values.playerInput.clear_pressed_keys(1);
+            g.game_values.playerInput.clear_pressed_keys(1);
 
             let mut code: MenuCodeEnum = MENU_CODE_NONE;
 
@@ -2998,7 +3014,7 @@ pub fn editor_vehicles() -> i32 {
                 match event_type() {
                     T_QUIT => {
                         ed().edit_mode = 5;
-                        game().game_values.playerInput.reset_keys();
+                        g.game_values.playerInput.reset_keys();
                         return EDITOR_EDIT;
                     }
 
@@ -3006,7 +3022,7 @@ pub fn editor_vehicles() -> i32 {
                         if key_sym() == SDLK_v as i32 {
                             if !ed().mCurrentMenu.is_modifying() {
                                 ed().edit_mode = 5;
-                                game().game_values.playerInput.reset_keys();
+                                g.game_values.playerInput.reset_keys();
                                 return EDITOR_EDIT;
                             }
                         }
@@ -3017,23 +3033,23 @@ pub fn editor_vehicles() -> i32 {
                         let iButtonY: i16 = bound_to_window_h(ed().event.button_y()) as i16;
 
                         if ed().event.button_button() == BUTTON_LEFT {
-                            code = ed().mCurrentMenu.mouse_click(iButtonX, iButtonY);
+                            code = ed().mCurrentMenu.mouse_click(g, iButtonX, iButtonY);
                         }
                     }
 
                     _ => {}
                 }
 
-                game().game_values.playerInput.update_input(ed().event.input(), 1);
+                gp.game_values.playerInput.update_input(g, ed().event.input(), 1);
             }
 
             if MENU_CODE_NONE == code {
-                code = ed().mCurrentMenu.send_input(Ptr::from_mut(&mut game().game_values.playerInput));
+                code = ed().mCurrentMenu.send_input(g, Ptr::from_mut(&mut gp.game_values.playerInput));
             }
 
             if MENU_CODE_EXIT_APPLICATION == code {
                 ed().edit_mode = 5;
-                game().game_values.playerInput.reset_keys();
+                g.game_values.playerInput.reset_keys();
                 return EDITOR_EDIT;
             } else if MENU_CODE_VEHICLE_MIN_MOVES_CHANGED == code {
                 let iMaxMoves: i16 = ed().miVehicleMaxMovesField.current_value();
@@ -3048,29 +3064,29 @@ pub fn editor_vehicles() -> i32 {
             } else if MENU_CODE_CREATE_VEHICLE == code {
                 ed().edit_mode = 5;
                 ed().ignoreclick = true;
-                game().game_values.playerInput.reset_keys();
+                g.game_values.playerInput.reset_keys();
                 return EDITOR_EDIT;
             }
 
-            drawmap(false, TILESIZE as i16);
-            ed().menu_shade.draw(0, 0);
+            drawmap(g, false, TILESIZE as i16);
+            ed().menu_shade.draw(g, 0, 0);
 
-            ed().mCurrentMenu.update();
-            ed().mCurrentMenu.draw();
+            ed().mCurrentMenu.update(g);
+            ed().mCurrentMenu.draw(g);
 
-            game().rm.menu_font_small.draw_right_justified(640, 0, &game().worldlist.current_path().to_string_lossy());
+            g.rm.menu_font_small.draw_right_justified(640, 0, &g.worldlist.current_path().to_string_lossy());
 
-            DrawMessage();
-            gfx_flipscreen();
+            DrawMessage(g);
+            gfx_flipscreen(g);
 
-            frame_wait(framestart);
+            frame_wait(g, framestart);
         }
 
         EDITOR_QUIT
     }
 }
 
-pub fn editor_path() -> i32 {
+pub fn editor_path(g: &mut Game) -> i32 {
     unsafe {
         let mut done = false;
 
@@ -3108,22 +3124,23 @@ pub fn editor_path() -> i32 {
                 }
             }
 
-            crate::common::gfx::blit::fill_rect(game().screen, null(), 0x0);
-            ed().spr_path.draw_src(0, 0, &r(0, 0, 480, 32));
+            crate::common::gfx::blit::fill_rect(g.screen, null(), 0x0);
+            ed().spr_path.draw_src(g, 0, 0, &r(0, 0, 480, 32));
 
-            DrawMessage();
-            gfx_flipscreen();
+            DrawMessage(g);
+            gfx_flipscreen(g);
 
-            frame_wait(framestart);
+            frame_wait(g, framestart);
         }
 
         EDITOR_QUIT
     }
 }
 
-pub fn DisplayStageDetails(fForce: bool, iStageId: i16, mut iMouseX: i16, mut iMouseY: i16) {
+pub fn DisplayStageDetails(g: &mut Game, fForce: bool, iStageId: i16, mut iMouseX: i16, mut iMouseY: i16) {
+        let mut gp = g.ptr();
     unsafe {
-        let ts = game().game_values.tourstops[iStageId as usize];
+        let ts = g.game_values.tourstops[iStageId as usize];
 
         //If we're pointing to a new stage or no stage at all
         if iStageId != ed().iOldStageId || fForce {
@@ -3132,13 +3149,13 @@ pub fn DisplayStageDetails(fForce: bool, iStageId: i16, mut iMouseX: i16, mut iM
             } else if !ts.pszMapFile.is_empty() {
                 ed().sMapThumbnail = gfxSprite::new();
 
-                if game().maplist.findexact(&ts.pszMapFile, false) {
-                    let file = game().maplist.current_filename().to_string();
-                    game().g_map.load_map(&file, read_type_preview);
-                    ed().sMapThumbnail = game().g_map.create_thumbnail_surface(true);
+                if g.maplist.findexact(&ts.pszMapFile, false) {
+                    let file = g.maplist.current_filename().to_string();
+                    g.g_map.load_map(&file, read_type_preview);
+                    ed().sMapThumbnail = gp.g_map.create_thumbnail_surface(g, true);
                 } else {
                     //otherwise show a unknown map icon
-                    ed().sMapThumbnail = ImageLoader::new(convert_path("gfx/leveleditor/leveleditor_mapnotfound.png")).without_color_key().create();
+                    ed().sMapThumbnail = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_mapnotfound.png")).without_color_key().create();
                 }
             }
         }
@@ -3163,10 +3180,10 @@ pub fn DisplayStageDetails(fForce: bool, iStageId: i16, mut iMouseX: i16, mut iM
             }
 
             let (x, y) = (iMouseX as i32, iMouseY as i32);
-            ed().spr_largedialog.draw_src(x, y, &r(0, 0, 116, 116));
-            ed().spr_largedialog.draw_src(x + 116, y, &r(140, 0, 116, 116));
-            ed().spr_largedialog.draw_src(x, y + 116, &r(0, 108, 116, 116));
-            ed().spr_largedialog.draw_src(x + 116, y + 116, &r(140, 108, 116, 116));
+            ed().spr_largedialog.draw_src(g, x, y, &r(0, 0, 116, 116));
+            ed().spr_largedialog.draw_src(g, x + 116, y, &r(140, 0, 116, 116));
+            ed().spr_largedialog.draw_src(g, x, y + 116, &r(0, 108, 116, 116));
+            ed().spr_largedialog.draw_src(g, x + 116, y + 116, &r(140, 108, 116, 116));
         } else if iMode == 24 {
             //Make sure we're displaying it on the screen
             if iMouseY > 392 {
@@ -3174,48 +3191,48 @@ pub fn DisplayStageDetails(fForce: bool, iStageId: i16, mut iMouseX: i16, mut iM
             }
 
             let (x, y) = (iMouseX as i32, iMouseY as i32);
-            ed().spr_largedialog.draw_src(x, y, &r(0, 0, 116, 44));
-            ed().spr_largedialog.draw_src(x + 116, y, &r(140, 0, 116, 44));
-            ed().spr_largedialog.draw_src(x, y + 44, &r(0, 180, 116, 44));
-            ed().spr_largedialog.draw_src(x + 116, y + 44, &r(140, 180, 116, 44));
+            ed().spr_largedialog.draw_src(g, x, y, &r(0, 0, 116, 44));
+            ed().spr_largedialog.draw_src(g, x + 116, y, &r(140, 0, 116, 44));
+            ed().spr_largedialog.draw_src(g, x, y + 44, &r(0, 180, 116, 44));
+            ed().spr_largedialog.draw_src(g, x + 116, y + 44, &r(140, 180, 116, 44));
         }
 
         let (x, y) = (iMouseX as i32, iMouseY as i32);
 
-        game().rm.menu_mode_large.draw_src(x + 16, y + 16, &r((iMode as i32) << 5, 0, 32, 32));
+        gp.rm.menu_mode_large.draw_src(g, x + 16, y + 16, &r((iMode as i32) << 5, 0, 32, 32));
 
-        game().rm.menu_font_small.draw_chop_right(x + 52, y + 16, 164, &ts.szName);
+        g.rm.menu_font_small.draw_chop_right(x + 52, y + 16, 164, &ts.szName);
 
         if iMode != 24 {
             let szPrint = format!("Goal: {}", ts.iGoal);
-            game().rm.menu_font_small.draw_chop_right(x + 52, y + 34, 164, &szPrint);
+            g.rm.menu_font_small.draw_chop_right(x + 52, y + 34, 164, &szPrint);
 
             let szPrint = format!("Points: {}", ts.iPoints);
-            game().rm.menu_font_small.draw_chop_right(x + 16, y + 176, 100, &szPrint);
+            g.rm.menu_font_small.draw_chop_right(x + 16, y + 176, 100, &szPrint);
 
             let szPrint = format!("End: {}", if ts.fEndStage { "Yes" } else { "No" });
-            game().rm.menu_font_small.draw_chop_right(x + 126, y + 176, 80, &szPrint);
+            g.rm.menu_font_small.draw_chop_right(x + 126, y + 176, 80, &szPrint);
 
             for iBonus in 0..ts.iNumBonuses as i32 {
                 let wsb = &ts.wsbBonuses[iBonus as usize];
-                game().rm.spr_worlditemsplace.draw_src(x + iBonus * 20 + 16, y + 194, &r(wsb.iWinnerPlace as i32 * 20, 0, 20, 20));
+                gp.rm.spr_worlditemsplace.draw_src(g, x + iBonus * 20 + 16, y + 194, &r(wsb.iWinnerPlace as i32 * 20, 0, 20, 20));
 
                 let iBonusIcon: i32 = wsb.iBonus as i32;
-                let spr_icon: &gfxSprite = if iBonusIcon < NUM_POWERUPS { &game().rm.spr_storedpowerupsmall } else { &game().rm.spr_worlditemssmall };
+                let spr_icon: &gfxSprite = if iBonusIcon < NUM_POWERUPS { &gp.rm.spr_storedpowerupsmall } else { &gp.rm.spr_worlditemssmall };
                 let src = (if iBonusIcon < NUM_POWERUPS { iBonusIcon } else { iBonusIcon - NUM_POWERUPS }) << 4;
-                spr_icon.draw_src(x + iBonus * 20 + 18, y + 196, &r(src, 0, 16, 16));
+                spr_icon.draw_src(g, x + iBonus * 20 + 18, y + 196, &r(src, 0, 16, 16));
             }
 
             if !ed().sMapThumbnail.get_surface().is_null() {
                 let rSrc = r(0, 0, 160, 120);
                 let rDst = r(x + 16, y + 52, 160, 120);
-                ed().sMapThumbnail.draw_src_to(&rSrc, game().blitdest, &rDst);
+                ed().sMapThumbnail.draw_src_to(&rSrc, g.blitdest, &rDst);
             }
         } else {
             let szPrint = format!("Sort: {}", if ts.iBonusType == 0 { "Fixed" } else { "Random" });
-            game().rm.menu_font_small.draw_chop_right(x + 52, y + 34, 164, &szPrint);
+            g.rm.menu_font_small.draw_chop_right(x + 52, y + 34, 164, &szPrint);
 
-            let rm = game().rm;
+            let rm = g.rm;
             for iBonus in 0..ts.iNumBonuses as i32 {
                 let iBonusIcon: i32 = ts.wsbBonuses[iBonus as usize].iBonus as i32;
                 let spr_icon: &gfxSprite;
@@ -3240,7 +3257,7 @@ pub fn DisplayStageDetails(fForce: bool, iStageId: i16, mut iMouseX: i16, mut iM
                     iSrcY = 32;
                 }
 
-                spr_icon.draw_src(x + iBonus * 20 + 18, y + 52, &r(iSrcX, iSrcY, 16, 16));
+                spr_icon.draw_src(g, x + iBonus * 20 + 18, y + 52, &r(iSrcX, iSrcY, 16, 16));
             }
         }
     }
@@ -3353,9 +3370,9 @@ pub fn AdjustBonuses(mut ts: Ptr<TourStop>) {
     }
 }
 
-pub fn SaveStage(iEditStage: i16) {
+pub fn SaveStage(g: &mut Game, iEditStage: i16) {
     unsafe {
-        let mut ts = game().game_values.tourstops[iEditStage as usize];
+        let mut ts = g.game_values.tourstops[iEditStage as usize];
 
         if ts.iMode >= 25 && ts.iMode <= 27 {
             ts.iMode += 975;
@@ -3363,39 +3380,39 @@ pub fn SaveStage(iEditStage: i16) {
 
         //Set the number of game mode settings to the maximum so we write them all out
         ts.fUseSettings = true;
-        ts.iNumUsedSettings = serialize_gms(ts.iMode, &game().game_values.gamemodemenusettings).len() as i16;
+        ts.iNumUsedSettings = serialize_gms(ts.iMode, &g.game_values.gamemodemenusettings).len() as i16;
 
         //Copy the working values back into the structure that will be saved
-        ts.gmsSettings = game().game_values.gamemodemenusettings.clone();
+        ts.gmsSettings = g.game_values.gamemodemenusettings.clone();
     }
 }
 
-pub fn EditStage(iEditStage: i16) {
+pub fn EditStage(g: &mut Game, iEditStage: i16) {
     unsafe {
-        let mut ts = game().game_values.tourstops[iEditStage as usize];
+        let mut ts = g.game_values.tourstops[iEditStage as usize];
 
-        game().game_values.gamemodemenusettings = ts.gmsSettings.clone();
+        g.game_values.gamemodemenusettings = ts.gmsSettings.clone();
 
         //Set fields to write data to the selected stage
         ed().miModeField.set_output_ptr(&mut ts.iMode as *mut i16);
-        ed().miNameField.set_data(&mut ts.szName, 128);
+        ed().miNameField.set_data(g, &mut ts.szName, 128);
 
         ed().miPointsField.set_output_ptr(&mut ts.iPoints as *mut i16);
         ed().miFinalStageField.set_output_ptr(&mut ts.fEndStage as *mut bool);
 
         if ts.pszMapFile.is_empty() {
-            ts.pszMapFile = game().maplist.current_shortmapname().to_string();
+            ts.pszMapFile = g.maplist.current_shortmapname().to_string();
         }
 
         let mapfile = ts.pszMapFile.clone();
-        ed().miMapField.set_map(&mapfile, false);
+        ed().miMapField.set_map(g, &mapfile, false);
 
         ed().miBonusType.set_output_ptr(&mut ts.iBonusType as *mut i16);
-        ed().miBonusTextField[0].set_data(&mut ts.szBonusText[0], 128);
-        ed().miBonusTextField[1].set_data(&mut ts.szBonusText[1], 128);
-        ed().miBonusTextField[2].set_data(&mut ts.szBonusText[2], 128);
-        ed().miBonusTextField[3].set_data(&mut ts.szBonusText[3], 128);
-        ed().miBonusTextField[4].set_data(&mut ts.szBonusText[4], 128);
+        ed().miBonusTextField[0].set_data(g, &mut ts.szBonusText[0], 128);
+        ed().miBonusTextField[1].set_data(g, &mut ts.szBonusText[1], 128);
+        ed().miBonusTextField[2].set_data(g, &mut ts.szBonusText[2], 128);
+        ed().miBonusTextField[3].set_data(g, &mut ts.szBonusText[3], 128);
+        ed().miBonusTextField[4].set_data(g, &mut ts.szBonusText[4], 128);
 
         ts.iBonusTextLines = 5;
 
@@ -3494,7 +3511,7 @@ pub fn EnableStageMenu(fEnable: bool) {
     }
 }
 
-pub fn NewStage(iEditStage: &mut i16) {
+pub fn NewStage(g: &mut Game, iEditStage: &mut i16) {
     unsafe {
         let mut ts = Ptr::new_box(TourStop::default());
 
@@ -3506,7 +3523,7 @@ pub fn NewStage(iEditStage: &mut i16) {
         ts.szBonusText[3].clear();
         ts.szBonusText[4].clear();
 
-        ts.pszMapFile = game().maplist.current_shortmapname().to_string();
+        ts.pszMapFile = g.maplist.current_shortmapname().to_string();
         ts.iMode = 0;
 
         ts.fUseSettings = true;
@@ -3518,25 +3535,26 @@ pub fn NewStage(iEditStage: &mut i16) {
         ts.iBonusType = 0;
         ts.iNumBonuses = 0;
 
-        ts.szName = format!("Tour Stop {}", game().game_values.tourstops.len() + 1);
+        ts.szName = format!("Tour Stop {}", g.game_values.tourstops.len() + 1);
 
         ts.fEndStage = false;
 
         //Copy in default values first
-        ts.gmsSettings = game().game_values.gamemodemenusettings.clone();
+        ts.gmsSettings = g.game_values.gamemodemenusettings.clone();
 
-        game().game_values.tourstops.push(ts);
-        game().g_worldmap.iNumStages += 1;
+        g.game_values.tourstops.push(ts);
+        g.g_worldmap.iNumStages += 1;
 
-        *iEditStage = (game().game_values.tourstops.len() - 1) as i16;
-        EditStage(*iEditStage);
+        *iEditStage = (g.game_values.tourstops.len() - 1) as i16;
+        EditStage(g, *iEditStage);
     }
 }
 
-pub fn editor_stage() -> i32 {
+pub fn editor_stage(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         ed().mCurrentMenu = ed().mStageSettingsMenu.as_ptr();
-        ed().mCurrentMenu.reset_menu();
+        ed().mCurrentMenu.reset_menu(g);
 
         let mut done = false;
         let mut iStageDisplay: i16 = -1;
@@ -3581,7 +3599,7 @@ pub fn editor_stage() -> i32 {
             let framestart = crate::services::ticks() as i32;
 
             //Reset the keys that were down the last frame
-            game().game_values.playerInput.clear_pressed_keys(1);
+            g.game_values.playerInput.clear_pressed_keys(1);
 
             let mut code: MenuCodeEnum = MENU_CODE_NONE;
 
@@ -3594,11 +3612,11 @@ pub fn editor_stage() -> i32 {
 
                     T_KEYDOWN => {
                         if iEditStage == -1 && key_sym() == SDLK_n as i32 {
-                            NewStage(&mut iEditStage);
+                            NewStage(g, &mut iEditStage);
                         } else if (key_sym() == SDLK_ESCAPE as i32 || key_sym() == SDLK_e as i32) && iEditStage == -1 {
-                            if game().g_worldmap.iNumStages == 0 {
+                            if g.g_worldmap.iNumStages == 0 {
                                 ed().edit_mode = 1;
-                            } else if ed().set_tile < 6 || ed().set_tile >= game().g_worldmap.iNumStages as i32 + 6 {
+                            } else if ed().set_tile < 6 || ed().set_tile >= g.g_worldmap.iNumStages as i32 + 6 {
                                 ed().set_tile = 6;
                                 ed().edit_mode = 9;
                             } else {
@@ -3607,15 +3625,15 @@ pub fn editor_stage() -> i32 {
 
                             return EDITOR_EDIT;
                         } else if ed().mCurrentMenu == ed().mBonusItemPicker.as_ptr() && key_sym() >= SDLK_1 as i32 && key_sym() <= SDLK_4 as i32 {
-                            let ts = game().game_values.tourstops[iEditStage as usize];
+                            let ts = g.game_values.tourstops[iEditStage as usize];
                             if ts.iStageType == 0 {
                                 let iPlace: i16 = (key_sym() - SDLK_1 as i32 + 1) as i16;
 
                                 TestAndSetBonusItem(ts, iPlace, ed().mouse_x as i16, ed().mouse_y as i16);
                             }
-                        } else if (key_sym() == SDLK_PAGEUP as i32 && iEditStage > 0) || (key_sym() == SDLK_PAGEDOWN as i32 && iEditStage < game().g_worldmap.iNumStages - 1) {
+                        } else if (key_sym() == SDLK_PAGEUP as i32 && iEditStage > 0) || (key_sym() == SDLK_PAGEDOWN as i32 && iEditStage < g.g_worldmap.iNumStages - 1) {
                             if iEditStage != -1 && ed().mCurrentMenu == ed().mStageSettingsMenu.as_ptr() {
-                                SaveStage(iEditStage);
+                                SaveStage(g, iEditStage);
 
                                 if key_sym() == SDLK_PAGEUP as i32 {
                                     iEditStage -= 1;
@@ -3623,8 +3641,8 @@ pub fn editor_stage() -> i32 {
                                     iEditStage += 1;
                                 }
 
-                                EditStage(iEditStage);
-                                ed().mCurrentMenu.reset_menu();
+                                EditStage(g, iEditStage);
+                                ed().mCurrentMenu.reset_menu(g);
 
                                 code = MENU_CODE_MODE_CHANGED;
 
@@ -3642,7 +3660,7 @@ pub fn editor_stage() -> i32 {
                         if ed().event.button_button() == BUTTON_LEFT {
                             //Stages
                             if iEditStage == -1 {
-                                if iTileX >= 0 && (iTileX as i32) < game().g_worldmap.iNumStages as i32 - (iTileY as i32 * 20) && iTileY >= 0 && iTileY <= (game().g_worldmap.iNumStages - 1) / 20 {
+                                if iTileX >= 0 && (iTileX as i32) < g.g_worldmap.iNumStages as i32 - (iTileY as i32 * 20) && iTileY >= 0 && iTileY <= (g.g_worldmap.iNumStages - 1) / 20 {
                                     ed().set_tile = iTileX as i32 + (iTileY as i32 * 20) + 6;
 
                                     ed().edit_mode = 9; //change to edit mode using warps
@@ -3654,10 +3672,10 @@ pub fn editor_stage() -> i32 {
                                 }
                                 //New stage button
                                 else if iButtonX >= 256 && iButtonX < 384 && iButtonY >= 420 && iButtonY < 452 {
-                                    NewStage(&mut iEditStage);
+                                    NewStage(g, &mut iEditStage);
                                 }
                             } else if ed().mCurrentMenu == ed().mBonusItemPicker.as_ptr() {
-                                let mut ts = game().game_values.tourstops[iEditStage as usize];
+                                let mut ts = g.game_values.tourstops[iEditStage as usize];
 
                                 //See if we clicked an item and add it if we did
                                 TestAndSetBonusItem(ts, 0, iButtonX, iButtonY);
@@ -3684,13 +3702,13 @@ pub fn editor_stage() -> i32 {
                                     iRemoveItem += 1;
                                 }
                             } else {
-                                code = ed().mCurrentMenu.mouse_click(iButtonX, iButtonY);
+                                code = ed().mCurrentMenu.mouse_click(g, iButtonX, iButtonY);
                             }
                         } else if ed().event.button_button() == BUTTON_RIGHT {
                             if iEditStage == -1 {
-                                if iTileX >= 0 && (iTileX as i32) < game().g_worldmap.iNumStages as i32 - (iTileY as i32 * 20) && iTileY >= 0 && iTileY <= (game().g_worldmap.iNumStages - 1) / 20 {
+                                if iTileX >= 0 && (iTileX as i32) < g.g_worldmap.iNumStages as i32 - (iTileY as i32 * 20) && iTileY >= 0 && iTileY <= (g.g_worldmap.iNumStages - 1) / 20 {
                                     iEditStage = iTileX + (iTileY * 20);
-                                    EditStage(iEditStage);
+                                    EditStage(g, iEditStage);
 
                                     code = MENU_CODE_MODE_CHANGED;
 
@@ -3708,7 +3726,7 @@ pub fn editor_stage() -> i32 {
                             let iMouseX: i16 = (bound_to_window_w(ed().event.button_x()) / TILESIZE) as i16;
                             let iMouseY: i16 = (bound_to_window_h(ed().event.button_y()) / TILESIZE) as i16;
 
-                            if iMouseX >= 0 && (iMouseX as i32) < game().g_worldmap.iNumStages as i32 - (iMouseY as i32 * 20) && iMouseY >= 0 && iMouseY <= (game().g_worldmap.iNumStages - 1) / 20 {
+                            if iMouseX >= 0 && (iMouseX as i32) < g.g_worldmap.iNumStages as i32 - (iMouseY as i32 * 20) && iMouseY >= 0 && iMouseY <= (g.g_worldmap.iNumStages - 1) / 20 {
                                 iStageDisplay = iMouseX + (iMouseY * 20);
                             }
                         }
@@ -3717,17 +3735,17 @@ pub fn editor_stage() -> i32 {
                     _ => {}
                 }
 
-                game().game_values.playerInput.update_input(ed().event.input(), 1);
+                gp.game_values.playerInput.update_input(g, ed().event.input(), 1);
             }
 
             if iEditStage >= 0 {
                 if MENU_CODE_NONE == code {
-                    code = ed().mCurrentMenu.send_input(Ptr::from_mut(&mut game().game_values.playerInput));
+                    code = ed().mCurrentMenu.send_input(g, Ptr::from_mut(&mut gp.game_values.playerInput));
                 }
 
                 if MENU_CODE_EXIT_APPLICATION == code {
                     //Save the current stage
-                    SaveStage(iEditStage);
+                    SaveStage(g, iEditStage);
 
                     iEditStage = -1;
                 } else if MENU_CODE_MODE_CHANGED == code {
@@ -3751,7 +3769,7 @@ pub fn editor_stage() -> i32 {
 
                     ed().miBonusItemsButton.set_position(430, if iMode != 24 { 220 } else { 340 });
 
-                    let mut ts = game().game_values.tourstops[iEditStage as usize];
+                    let mut ts = g.game_values.tourstops[iEditStage as usize];
 
                     if iMode >= 0 && (iMode as i32) < GAMEMODE_LAST {
                         ed().miModeSettingsButton.set_visible(iMode as i32 != game_mode_owned);
@@ -3791,7 +3809,7 @@ pub fn editor_stage() -> i32 {
                     for iGameMode in 0..GAMEMODE_LAST as usize {
                         if ed().miGoalField[iGameMode].is_visible() {
                             ed().mCurrentMenu = ed().mModeOptionsMenu.get_options_menu(iGameMode as i16);
-                            ed().mCurrentMenu.reset_menu();
+                            ed().mCurrentMenu.reset_menu(g);
                             fModeFound = true;
                             break;
                         }
@@ -3801,7 +3819,7 @@ pub fn editor_stage() -> i32 {
                     if !fModeFound {
                         if ed().miSpecialGoalField[1].is_visible() {
                             ed().mCurrentMenu = ed().mModeOptionsMenu.get_boss_options_menu();
-                            ed().mCurrentMenu.reset_menu();
+                            ed().mCurrentMenu.reset_menu(g);
                         }
                     }
                 } else if MENU_CODE_HEALTH_MODE_START_LIFE_CHANGED == code {
@@ -3810,14 +3828,14 @@ pub fn editor_stage() -> i32 {
                     ed().mModeOptionsMenu.health_mode_max_life_changed();
                 } else if MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS == code {
                     ed().mCurrentMenu = ed().mStageSettingsMenu.as_ptr();
-                    ed().mCurrentMenu.reset_menu();
+                    ed().mCurrentMenu.reset_menu(g);
                 } else if MENU_CODE_MAP_CHANGED == code {
-                    let mut ts = game().game_values.tourstops[iEditStage as usize];
-                    ts.pszMapFile = game().maplist.current_shortmapname().to_string();
+                    let mut ts = g.game_values.tourstops[iEditStage as usize];
+                    ts.pszMapFile = g.maplist.current_shortmapname().to_string();
                     fForceStageDisplay = true;
                 } else if MENU_CODE_TO_BONUS_PICKER_MENU == code {
                     ed().mCurrentMenu = ed().mBonusItemPicker.as_ptr();
-                    ed().mCurrentMenu.reset_menu();
+                    ed().mCurrentMenu.reset_menu(g);
                 } else if MENU_CODE_DELETE_STAGE_BUTTON == code {
                     ed().miDeleteStageDialogImage.set_visible(true);
                     ed().miDeleteStageDialogAreYouText.set_visible(true);
@@ -3831,7 +3849,7 @@ pub fn editor_stage() -> i32 {
 
                     ed().mStageSettingsMenu.set_initial_focus(ctl_ptr(ed().miDeleteStageDialogNoButton));
                     ed().mStageSettingsMenu.set_cancel_code(MENU_CODE_DELETE_STAGE_NO);
-                    ed().mStageSettingsMenu.reset_menu();
+                    ed().mStageSettingsMenu.reset_menu(g);
                 } else if MENU_CODE_DELETE_STAGE_YES == code || MENU_CODE_DELETE_STAGE_NO == code {
                     ed().miDeleteStageDialogImage.set_visible(false);
                     ed().miDeleteStageDialogAreYouText.set_visible(false);
@@ -3841,7 +3859,7 @@ pub fn editor_stage() -> i32 {
 
                     ed().mStageSettingsMenu.set_initial_focus(ctl_ptr(ed().miNameField));
                     ed().mStageSettingsMenu.set_cancel_code(MENU_CODE_EXIT_APPLICATION);
-                    ed().mStageSettingsMenu.restore_current();
+                    ed().mStageSettingsMenu.restore_current(g);
 
                     //Yes was selected to delete this stage
                     if MENU_CODE_DELETE_STAGE_YES == code {
@@ -3873,12 +3891,12 @@ pub fn editor_stage() -> i32 {
 
                         //Remove stage from tourstops vector
                         let mut iIndex: i16 = 0;
-                        while (iIndex as usize) < game().game_values.tourstops.len() {
+                        while (iIndex as usize) < g.game_values.tourstops.len() {
                             if iIndex == iEditStage {
-                                game().game_values.tourstops[iIndex as usize].delete();
+                                g.game_values.tourstops[iIndex as usize].delete();
 
-                                game().game_values.tourstops.remove(iIndex as usize);
-                                game().g_worldmap.iNumStages -= 1;
+                                g.game_values.tourstops.remove(iIndex as usize);
+                                g.g_worldmap.iNumStages -= 1;
 
                                 break;
                             }
@@ -3888,17 +3906,17 @@ pub fn editor_stage() -> i32 {
 
                         iEditStage = -1;
                         ed().mCurrentMenu = ed().mStageSettingsMenu.as_ptr();
-                        ed().mCurrentMenu.reset_menu();
+                        ed().mCurrentMenu.reset_menu(g);
                     }
 
                     EnableStageMenu(true);
                 }
             }
 
-            drawmap(false, TILESIZE as i16);
-            ed().menu_shade.draw(0, 0);
+            drawmap(g, false, TILESIZE as i16);
+            ed().menu_shade.draw(g, 0, 0);
 
-            let color = SDL_MapRGB((*game().blitdest).format, 0, 0, 255);
+            let color = SDL_MapRGB((*g.blitdest).format, 0, 0, 255);
 
             if iEditStage == -1 {
                 for iStage in 0..game().g_worldmap.iNumStages as i32 {
@@ -3906,57 +3924,57 @@ pub fn editor_stage() -> i32 {
                     let iy: i16 = ((iStage / 20) << 5) as i16;
 
                     let mut rr = r(ix as i32, iy as i32, 32, 32);
-                    crate::common::gfx::blit::fill_rect(game().blitdest, &mut rr, color);
+                    crate::common::gfx::blit::fill_rect(g.blitdest, &mut rr, color);
 
-                    game().rm.spr_worldforegroundspecial[0].draw_src(ix as i32, iy as i32, &r((iStage % 10) << 5, (iStage / 10) << 5, 32, 32));
+                    gp.rm.spr_worldforegroundspecial[0].draw_src(g, ix as i32, iy as i32, &r((iStage % 10) << 5, (iStage / 10) << 5, 32, 32));
                 }
 
                 if iStageDisplay >= 0 {
-                    DisplayStageDetails(fForceStageDisplay, iStageDisplay, ed().mouse_x as i16, ed().mouse_y as i16);
+                    DisplayStageDetails(g, fForceStageDisplay, iStageDisplay, ed().mouse_x as i16, ed().mouse_y as i16);
                     fForceStageDisplay = false;
                 }
 
                 //Display New button
-                game().rm.spr_selectfield.draw_src(256, 420, &r(0, 0, 64, 32));
-                game().rm.spr_selectfield.draw_src(320, 420, &r(448, 0, 64, 32));
+                gp.rm.spr_selectfield.draw_src(g, 256, 420, &r(0, 0, 64, 32));
+                gp.rm.spr_selectfield.draw_src(g, 320, 420, &r(448, 0, 64, 32));
 
-                game().rm.menu_font_large.draw_centered(320, 425, "New Stage");
+                g.rm.menu_font_large.draw_centered(320, 425, "New Stage");
 
-                game().rm.menu_font_small.draw(0, 480 - game().rm.menu_font_small.get_height(), "[LMB] Select Stage, [RMB] Edit Stage, [n] New Stage");
+                g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "[LMB] Select Stage, [RMB] Edit Stage, [n] New Stage");
             } else {
-                ed().mCurrentMenu.update();
-                ed().mCurrentMenu.draw();
+                ed().mCurrentMenu.update(g);
+                ed().mCurrentMenu.draw(g);
 
                 if ed().mCurrentMenu != ed().mBonusItemPicker.as_ptr() {
                     let ix: i16 = 20;
                     let iy: i16 = 20;
 
                     let mut rr = r(ix as i32, iy as i32, 32, 32);
-                    crate::common::gfx::blit::fill_rect(game().blitdest, &mut rr, color);
+                    crate::common::gfx::blit::fill_rect(g.blitdest, &mut rr, color);
 
-                    game().rm.spr_worldforegroundspecial[0].draw_src(ix as i32, iy as i32, &r(((iEditStage % 10) as i32) << 5, ((iEditStage / 10) as i32) << 5, 32, 32));
+                    gp.rm.spr_worldforegroundspecial[0].draw_src(g, ix as i32, iy as i32, &r(((iEditStage % 10) as i32) << 5, ((iEditStage / 10) as i32) << 5, 32, 32));
                 }
             }
 
             if ed().mCurrentMenu == ed().mBonusItemPicker.as_ptr() {
-                let ts = game().game_values.tourstops[iEditStage as usize];
+                let ts = g.game_values.tourstops[iEditStage as usize];
 
                 //Game powerups
                 for iItem in 0..NUM_POWERUPS as usize {
-                    game().rm.spr_storedpoweruplarge.draw_src(ed().rItemDst[iItem].x, ed().rItemDst[iItem].y, &r((iItem as i32) << 5, 0, 32, 32));
+                    gp.rm.spr_storedpoweruplarge.draw_src(g, ed().rItemDst[iItem].x, ed().rItemDst[iItem].y, &r((iItem as i32) << 5, 0, 32, 32));
                 }
 
                 //World Powerups
                 for iWorldItem in 0..NUM_WORLD_POWERUPS as usize {
                     let d = ed().rItemDst[iWorldItem + NUM_POWERUPS as usize];
-                    game().rm.spr_worlditems.draw_src(d.x, d.y, &r((iWorldItem as i32) << 5, 0, 32, 32));
+                    gp.rm.spr_worlditems.draw_src(g, d.x, d.y, &r((iWorldItem as i32) << 5, 0, 32, 32));
                 }
 
                 //Score Bonuses
                 if ts.iStageType == 1 {
                     for iScoreBonus in 0..NUM_WORLD_SCORE_BONUSES {
                         let d = ed().rItemDst[(iScoreBonus + NUM_POWERUPS + NUM_WORLD_POWERUPS) as usize];
-                        game().rm.spr_worlditems.draw_src(
+                        gp.rm.spr_worlditems.draw_src(g, 
                             d.x,
                             d.y,
                             &r(if iScoreBonus < 10 { iScoreBonus << 5 } else { (iScoreBonus - 10) << 5 }, if iScoreBonus < 10 { 32 } else { 64 }, 32, 32),
@@ -3965,8 +3983,8 @@ pub fn editor_stage() -> i32 {
                 }
 
                 //Draw background container
-                game().rm.spr_worlditempopup.draw_src(0, 344, &r(0, 0, 320, 64));
-                game().rm.spr_worlditempopup.draw_src(320, 344, &r(192, 0, 320, 64));
+                gp.rm.spr_worlditempopup.draw_src(g, 0, 344, &r(0, 0, 320, 64));
+                gp.rm.spr_worlditempopup.draw_src(g, 320, 344, &r(192, 0, 320, 64));
 
                 let rects: &[SDL_Rect] = if ts.iStageType == 1 { &rHouseBonusDst } else { &rStageBonusDst };
 
@@ -3976,51 +3994,51 @@ pub fn editor_stage() -> i32 {
 
                     //Draw place behind bonus
                     if ts.iStageType == 0 {
-                        game().rm.spr_worlditempopup.draw_src(rects[iPickedItem].x - 8, rects[iPickedItem].y - 8, &r(iPlace * 48, 256, 48, 48));
+                        gp.rm.spr_worlditempopup.draw_src(g, rects[iPickedItem].x - 8, rects[iPickedItem].y - 8, &r(iPlace * 48, 256, 48, 48));
                     }
 
                     if iBonus >= NUM_POWERUPS + NUM_WORLD_POWERUPS {
                         let iBonusIndex: i32 = iBonus - NUM_POWERUPS - NUM_WORLD_POWERUPS;
-                        game().rm.spr_worlditems.draw_src(
+                        gp.rm.spr_worlditems.draw_src(g, 
                             rects[iPickedItem].x,
                             rects[iPickedItem].y,
                             &r(if iBonusIndex < 10 { iBonusIndex << 5 } else { (iBonusIndex - 10) << 5 }, if iBonusIndex < 10 { 32 } else { 64 }, 32, 32),
                         );
                     } else if iBonus >= NUM_POWERUPS {
-                        game().rm.spr_worlditems.draw_src(rects[iPickedItem].x, rects[iPickedItem].y, &r((iBonus - NUM_POWERUPS) << 5, 0, 32, 32));
+                        gp.rm.spr_worlditems.draw_src(g, rects[iPickedItem].x, rects[iPickedItem].y, &r((iBonus - NUM_POWERUPS) << 5, 0, 32, 32));
                     } else {
-                        game().rm.spr_storedpoweruplarge.draw_src(rects[iPickedItem].x, rects[iPickedItem].y, &r(iBonus << 5, 0, 32, 32));
+                        gp.rm.spr_storedpoweruplarge.draw_src(g, rects[iPickedItem].x, rects[iPickedItem].y, &r(iBonus << 5, 0, 32, 32));
                     }
                 }
 
                 if ts.iStageType == 0 {
-                    game().rm.menu_font_small.draw(0, 480 - game().rm.menu_font_small.get_height(), "[1-4] Select Items, [LMB] Remove Items");
+                    g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "[1-4] Select Items, [LMB] Remove Items");
                 } else {
-                    game().rm.menu_font_small.draw(0, 480 - game().rm.menu_font_small.get_height(), "[LMB] Select Items, [LMB] Remove Items");
+                    g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "[LMB] Select Items, [LMB] Remove Items");
                 }
             }
 
-            game().rm.menu_font_small.draw_right_justified(640, 0, &game().worldlist.current_path().to_string_lossy());
+            g.rm.menu_font_small.draw_right_justified(640, 0, &g.worldlist.current_path().to_string_lossy());
 
-            DrawMessage();
-            gfx_flipscreen();
+            DrawMessage(g);
+            gfx_flipscreen(g);
 
-            frame_wait(framestart);
+            frame_wait(g, framestart);
         }
 
         EDITOR_QUIT
     }
 }
 
-pub fn display_help() -> i32 {
+pub fn display_help(g: &mut Game) -> i32 {
     unsafe {
-        drawmap(false, TILESIZE as i16);
-        ed().menu_shade.draw(0, 0);
-        game().rm.menu_font_large.draw_centered(320, 15, "Help");
+        drawmap(g, false, TILESIZE as i16);
+        ed().menu_shade.draw(g, 0, 0);
+        g.rm.menu_font_large.draw_centered(320, 15, "Help");
 
         let mut offsety: i32 = 55;
         let mut offsetx: i32 = 30;
-        let lh = game().rm.menu_font_small.get_height();
+        let lh = g.rm.menu_font_small.get_height();
         let lines_left: [&str; 15] = [
             "[1] - Water Mode",
             "[2] - Land Mode",
@@ -4038,58 +4056,58 @@ pub fn display_help() -> i32 {
             "[e] - Edit Stages",
             "",
         ];
-        game().rm.menu_font_small.draw(offsetx, offsety, "Modes:");
+        g.rm.menu_font_small.draw(offsetx, offsety, "Modes:");
         offsety += lh + 2;
         for (i, line) in lines_left.iter().take(14).enumerate() {
-            game().rm.menu_font_small.draw(offsetx, offsety, line);
+            g.rm.menu_font_small.draw(offsetx, offsety, line);
             offsety += lh + if i == 13 { 20 } else { 2 };
         }
 
-        game().rm.menu_font_small.draw(offsetx, offsety, "File:");
+        g.rm.menu_font_small.draw(offsetx, offsety, "File:");
         offsety += lh + 2;
-        game().rm.menu_font_small.draw(offsetx, offsety, "[n] - New World");
+        g.rm.menu_font_small.draw(offsetx, offsety, "[n] - New World");
         offsety += lh + 2;
-        game().rm.menu_font_small.draw(offsetx, offsety, "[s] - Save World");
+        g.rm.menu_font_small.draw(offsetx, offsety, "[s] - Save World");
         offsety += lh + 2;
-        game().rm.menu_font_small.draw(offsetx, offsety, "[shift] + [s] - Save As");
+        g.rm.menu_font_small.draw(offsetx, offsety, "[shift] + [s] - Save As");
         offsety += lh + 2;
-        game().rm.menu_font_small.draw(offsetx, offsety, "[f] - Find World");
+        g.rm.menu_font_small.draw(offsetx, offsety, "[f] - Find World");
         offsety += lh + 2;
-        game().rm.menu_font_small.draw(offsetx, offsety, "[shift] + [f] - New Search");
+        g.rm.menu_font_small.draw(offsetx, offsety, "[shift] + [f] - New Search");
         offsety += lh + 2;
-        game().rm.menu_font_small.draw(offsetx, offsety, "[pageup] - Go To Previous World");
+        g.rm.menu_font_small.draw(offsetx, offsety, "[pageup] - Go To Previous World");
         offsety += lh + 2;
-        game().rm.menu_font_small.draw(offsetx, offsety, "[pagedown] - Go To Next World");
+        g.rm.menu_font_small.draw(offsetx, offsety, "[pagedown] - Go To Next World");
 
         offsetx = 300;
         offsety = 55;
 
-        game().rm.menu_font_small.draw(offsetx, offsety, "Place Tiles:");
+        g.rm.menu_font_small.draw(offsetx, offsety, "Place Tiles:");
         offsety += lh + 2;
-        game().rm.menu_font_small.draw(offsetx, offsety, "[Left Mouse Button] - Place Item");
+        g.rm.menu_font_small.draw(offsetx, offsety, "[Left Mouse Button] - Place Item");
         offsety += lh + 2;
-        game().rm.menu_font_small.draw(offsetx, offsety, "[Right Mouse Button] - Remove Item");
+        g.rm.menu_font_small.draw(offsetx, offsety, "[Right Mouse Button] - Remove Item");
         offsety += lh + 20;
 
-        game().rm.menu_font_small.draw(offsetx, offsety, "Miscellaneous:");
+        g.rm.menu_font_small.draw(offsetx, offsety, "Miscellaneous:");
         offsety += lh + 2;
-        game().rm.menu_font_small.draw(offsetx, offsety, "[r] - Change Music Category");
+        g.rm.menu_font_small.draw(offsetx, offsety, "[r] - Change Music Category");
         offsety += lh + 2;
-        game().rm.menu_font_small.draw(offsetx, offsety, "[Arrow Keys] - Navigate World");
+        g.rm.menu_font_small.draw(offsetx, offsety, "[Arrow Keys] - Navigate World");
         offsety += lh + 2;
-        game().rm.menu_font_small.draw(offsetx, offsety, "[a] - Automatic Path/Land");
+        g.rm.menu_font_small.draw(offsetx, offsety, "[a] - Automatic Path/Land");
         offsety += lh + 2;
-        game().rm.menu_font_small.draw(offsetx, offsety, "[k] - Resize World");
+        g.rm.menu_font_small.draw(offsetx, offsety, "[k] - Resize World");
         offsety += lh + 2;
-        game().rm.menu_font_small.draw(offsetx, offsety, "[ctrl] + [delete] - Clear All");
+        g.rm.menu_font_small.draw(offsetx, offsety, "[ctrl] + [delete] - Clear All");
         offsety += lh + 2;
-        game().rm.menu_font_small.draw(offsetx, offsety, "[insert] - Screenshot");
+        g.rm.menu_font_small.draw(offsetx, offsety, "[insert] - Screenshot");
         offsety += lh + 2;
-        game().rm.menu_font_small.draw(offsetx, offsety, "[alt] + [enter] - Full Screen/Window");
+        g.rm.menu_font_small.draw(offsetx, offsety, "[alt] + [enter] - Full Screen/Window");
         offsety += lh + 2;
-        game().rm.menu_font_small.draw(offsetx, offsety, "[space] - Toggle Stage Previews");
+        g.rm.menu_font_small.draw(offsetx, offsety, "[space] - Toggle Stage Previews");
 
-        gfx_flipscreen();
+        gfx_flipscreen(g);
 
         loop {
             let framestart = crate::services::ticks() as i32;
@@ -4103,51 +4121,51 @@ pub fn display_help() -> i32 {
                 }
             }
 
-            frame_wait(framestart);
+            frame_wait(g, framestart);
         }
     }
 }
 
-pub fn save_as() -> i32 {
+pub fn save_as(g: &mut Game) -> i32 {
     unsafe {
         let mut fileName = String::new();
         let mut mapLocation = String::from("worlds/");
 
-        if dialog("Save As", "Enter name:", &mut fileName, 64) {
+        if dialog(g, "Save As", "Enter name:", &mut fileName, 64) {
             fileName.push_str(".txt");
             mapLocation.push_str(&fileName);
-            game().worldlist.add(mapLocation.into());
-            game().worldlist.find(&fileName);
-            game().game_values.worldindex = game().worldlist.current_index() as i16;
-            savecurrentworld();
-            loadcurrentworld();
+            g.worldlist.add(mapLocation.into());
+            g.worldlist.find(&fileName);
+            g.game_values.worldindex = g.worldlist.current_index() as i16;
+            savecurrentworld(g);
+            loadcurrentworld(g);
         }
 
         0
     }
 }
 
-fn draw_dialog(title: &str, instructions: &str, input: Option<&str>) {
+fn draw_dialog(g: &mut Game, title: &str, instructions: &str, input: Option<&str>) {
     unsafe {
-        drawmap(false, TILESIZE as i16);
-        ed().menu_shade.draw(0, 0);
-        ed().spr_dialog.draw_src(224, 176, &r(0, 0, 192, 128));
-        game().rm.menu_font_large.draw_centered(320, 200, title);
-        game().rm.menu_font_small.draw(240, 235, instructions);
+        drawmap(g, false, TILESIZE as i16);
+        ed().menu_shade.draw(g, 0, 0);
+        ed().spr_dialog.draw_src(g, 224, 176, &r(0, 0, 192, 128));
+        g.rm.menu_font_large.draw_centered(320, 200, title);
+        g.rm.menu_font_small.draw(240, 235, instructions);
         if let Some(input) = input {
-            game().rm.menu_font_small.draw(240, 255, input);
+            g.rm.menu_font_small.draw(240, 255, input);
         }
-        game().rm.menu_font_small.draw_right_justified(640, 0, &game().worldlist.current_path().to_string_lossy());
-        gfx_flipscreen();
+        g.rm.menu_font_small.draw_right_justified(640, 0, &g.worldlist.current_path().to_string_lossy());
+        gfx_flipscreen(g);
     }
 }
 
 /// `char* input` of capacity `inputsize`: the caller's buffer keeps whatever was typed.
-pub fn dialog(title: &str, instructions: &str, input: &mut String, inputsize: i32) -> bool {
+pub fn dialog(g: &mut Game, title: &str, instructions: &str, input: &mut String, inputsize: i32) -> bool {
     unsafe {
         let mut currentChar: u32 = 0;
 
-        draw_dialog(title, instructions, None);
+        draw_dialog(g, title, instructions, None);
 
         loop {
             let framestart = crate::services::ticks() as i32;
@@ -4167,7 +4185,7 @@ pub fn dialog(title: &str, instructions: &str, input: &mut String, inputsize: i3
                             if currentChar > 0 {
                                 input.truncate(currentChar as usize - 1);
 
-                                draw_dialog(title, instructions, Some(input));
+                                draw_dialog(g, title, instructions, Some(input));
 
                                 currentChar -= 1;
                             }
@@ -4213,7 +4231,7 @@ pub fn dialog(title: &str, instructions: &str, input: &mut String, inputsize: i3
                                 input.push(key as char);
                                 currentChar += 1;
 
-                                draw_dialog(title, instructions, Some(input));
+                                draw_dialog(g, title, instructions, Some(input));
                             }
                         }
                     }
@@ -4222,23 +4240,23 @@ pub fn dialog(title: &str, instructions: &str, input: &mut String, inputsize: i3
                 }
             }
 
-            frame_wait(framestart);
+            frame_wait(g, framestart);
         }
     }
 }
 
-pub fn find() -> i32 {
+pub fn find(g: &mut Game) -> i32 {
     unsafe {
         let mut fileName = String::new();
         //char mapLocation[FILEBUFSIZE] = "maps/";
 
-        if dialog("Find Map", "Enter name:", &mut fileName, 64) {
+        if dialog(g, "Find Map", "Enter name:", &mut fileName, 64) {
             ed().findstring = fileName.clone();
 
             let fs = ed().findstring.clone();
-            if game().worldlist.find(&fs) {
-                game().game_values.worldindex = game().worldlist.current_index() as i16;
-                loadcurrentworld();
+            if g.worldlist.find(&fs) {
+                g.game_values.worldindex = g.worldlist.current_index() as i16;
+                loadcurrentworld(g);
             }
         }
 
@@ -4246,23 +4264,23 @@ pub fn find() -> i32 {
     }
 }
 
-pub fn clear_world() -> i32 {
+pub fn clear_world(g: &mut Game) -> i32 {
     unsafe {
-        game().g_worldmap.clear();
-        updateworldsurface();
+        g.g_worldmap.clear();
+        updateworldsurface(g);
 
         println!("World Cleared");
         0
     }
 }
 
-pub fn loadcurrentworld() {
+pub fn loadcurrentworld(g: &mut Game) {
     unsafe {
-        game().game_values.worldindex = game().worldlist.current_index() as i16;
-        let path = game().worldlist.at(game().game_values.worldindex as usize).to_string_lossy().into_owned();
-        *game().g_worldmap = WorldMap::new_path(&path, TILESIZE as i16);
-        ReadVehiclesIntoEditor();
-        ReadWarpsIntoEditor();
+        g.game_values.worldindex = g.worldlist.current_index() as i16;
+        let path = g.worldlist.at(g.game_values.worldindex as usize).to_string_lossy().into_owned();
+        *g.g_worldmap = WorldMap::new_path(g, &path, TILESIZE as i16);
+        ReadVehiclesIntoEditor(g);
+        ReadWarpsIntoEditor(g);
 
         ed().draw_offset_col = 0;
         ed().draw_offset_row = 0;
@@ -4271,7 +4289,7 @@ pub fn loadcurrentworld() {
         ed().rectSrcSurface.y = 0;
         ed().fNeedBlackBackground = false;
 
-        game().g_worldmap.get_world_size(&mut ed().iWorldWidth, &mut ed().iWorldHeight);
+        g.g_worldmap.get_world_size(&mut ed().iWorldWidth, &mut ed().iWorldHeight);
 
         if ed().iWorldWidth >= 20 {
             ed().rectSrcSurface.w = 640;
@@ -4294,18 +4312,19 @@ pub fn loadcurrentworld() {
         ed().rectDstSurface.x = ed().draw_offset_x;
         ed().rectDstSurface.y = ed().draw_offset_y;
 
-        updateworldsurface();
+        updateworldsurface(g);
     }
 }
 
-pub fn savecurrentworld() -> i32 {
+pub fn savecurrentworld(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         SetDisplayMessage(60, "Saved", "Your world has", "been saved.", "");
 
-        WriteVehiclesIntoWorld();
-        WriteWarpsIntoWorld();
-        let path = game().worldlist.at(game().game_values.worldindex as usize).to_string_lossy().into_owned();
-        game().g_worldmap.save(&path);
+        WriteVehiclesIntoWorld(g);
+        WriteWarpsIntoWorld(g);
+        let path = g.worldlist.at(g.game_values.worldindex as usize).to_string_lossy().into_owned();
+        gp.g_worldmap.save(g, &path);
         0
     }
 }
@@ -4320,13 +4339,13 @@ pub fn SetDisplayMessage(iTime: i16, szTitle: &str, szLine1: &str, szLine2: &str
     }
 }
 
-pub fn findcurrentstring() -> i32 {
+pub fn findcurrentstring(g: &mut Game) -> i32 {
     unsafe {
         if !ed().findstring.is_empty() {
             let fs = ed().findstring.clone();
-            if game().worldlist.find(&fs) {
-                game().game_values.worldindex = game().worldlist.current_index() as i16;
-                loadcurrentworld();
+            if g.worldlist.find(&fs) {
+                g.game_values.worldindex = g.worldlist.current_index() as i16;
+                loadcurrentworld(g);
             }
         }
 
@@ -4370,14 +4389,15 @@ fn delete_all_vehicles_and_warps(fVehicles: bool) {
     }
 }
 
-pub fn new_world() -> i32 {
+pub fn new_world(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         let mut fileName = String::new();
         let mut worldLocation = String::from("worlds/");
         let mut szWidth = String::new();
         let mut szHeight = String::new();
 
-        if dialog("New World", "Enter name:", &mut fileName, 64) && dialog("New World", "Width:", &mut szWidth, 4) && dialog("New World", "Height:", &mut szHeight, 4) {
+        if dialog(g, "New World", "Enter name:", &mut fileName, 64) && dialog(g, "New World", "Width:", &mut szWidth, 4) && dialog(g, "New World", "Height:", &mut szHeight, 4) {
             let mut iWidth: i16 = atoi(&szWidth) as i16;
             let mut iHeight: i16 = atoi(&szHeight) as i16;
 
@@ -4391,26 +4411,26 @@ pub fn new_world() -> i32 {
 
             delete_all_vehicles_and_warps(true);
 
-            *game().g_worldmap = WorldMap::new(iWidth, iHeight);
+            *g.g_worldmap = WorldMap::new(iWidth, iHeight);
             fileName.push_str(".txt");
             worldLocation.push_str(&fileName);
-            game().worldlist.add(convert_path(&worldLocation).into());
-            game().worldlist.find(&fileName);
-            game().game_values.worldindex = game().worldlist.current_index() as i16;
-            savecurrentworld();
-            loadcurrentworld();
+            gp.worldlist.add(convert_path(g, &worldLocation).into());
+            g.worldlist.find(&fileName);
+            g.game_values.worldindex = g.worldlist.current_index() as i16;
+            savecurrentworld(g);
+            loadcurrentworld(g);
         }
 
         0
     }
 }
 
-pub fn resize_world() -> i32 {
+pub fn resize_world(g: &mut Game) -> i32 {
     unsafe {
         let mut szWidth = String::new();
         let mut szHeight = String::new();
 
-        if dialog("Resize World", "Width:", &mut szWidth, 4) && dialog("Resize World", "Height:", &mut szHeight, 4) {
+        if dialog(g, "Resize World", "Width:", &mut szWidth, 4) && dialog(g, "Resize World", "Height:", &mut szHeight, 4) {
             let mut iWidth: i16 = atoi(&szWidth) as i16;
             let mut iHeight: i16 = atoi(&szHeight) as i16;
 
@@ -4436,10 +4456,10 @@ pub fn resize_world() -> i32 {
 
             delete_all_vehicles_and_warps(false);
 
-            game().g_worldmap.resize(iWidth, iHeight);
+            g.g_worldmap.resize(iWidth, iHeight);
 
-            savecurrentworld();
-            loadcurrentworld();
+            savecurrentworld(g);
+            loadcurrentworld(g);
         }
 
         0
@@ -4447,31 +4467,32 @@ pub fn resize_world() -> i32 {
 }
 
 //take screenshots in full and thumbnail sizes
-pub fn takescreenshot() {
+pub fn takescreenshot(g: &mut Game) {
+        let mut gp = g.ptr();
     unsafe {
         let iTileSizes: [i16; 3] = [32, 16, 8];
 
         for iScreenshotSize in 0..3usize {
             let iTileSize: i16 = iTileSizes[iScreenshotSize];
-            let path = game().worldlist.at(game().game_values.worldindex as usize).to_string_lossy().into_owned();
-            *game().g_worldmap = WorldMap::new_path(&path, iTileSize);
+            let path = g.worldlist.at(g.game_values.worldindex as usize).to_string_lossy().into_owned();
+            *g.g_worldmap = WorldMap::new_path(g, &path, iTileSize);
 
             let mut w: i16 = 0;
             let mut h: i16 = 0;
-            game().g_worldmap.get_world_size(&mut w, &mut h);
+            g.g_worldmap.get_world_size(&mut w, &mut h);
 
             //Draw most of the world to screenshot
-            let sScreenshot = SDL_CreateRGBSurface((*game().screen).flags, iTileSize as i32 * w as i32, iTileSize as i32 * h as i32, (*(*game().screen).format).BitsPerPixel as i32, 0, 0, 0, 0);
-            game().blitdest = sScreenshot;
+            let sScreenshot = SDL_CreateRGBSurface((*g.screen).flags, iTileSize as i32 * w as i32, iTileSize as i32 * h as i32, (*(*g.screen).format).BitsPerPixel as i32, 0, 0, 0, 0);
+            g.blitdest = sScreenshot;
 
-            game().g_worldmap.draw_map_to_surface_full(sScreenshot);
+            gp.g_worldmap.draw_map_to_surface_full(g, sScreenshot);
 
             //Draw vehicles to screenshot
             for vehicle in ed().vehiclelist.iter() {
                 let ix: i16 = vehicle.currentTile.x * iTileSize;
                 let iy: i16 = vehicle.currentTile.y * iTileSize;
 
-                game().rm.spr_worldvehicle[iScreenshotSize].draw_src(
+                gp.rm.spr_worldvehicle[iScreenshotSize].draw_src(g, 
                     ix as i32,
                     iy as i32,
                     &r(vehicle.iDrawDirection as i32 * iTileSize as i32, vehicle.iDrawSprite as i32 * iTileSize as i32, iTileSize as i32, iTileSize as i32),
@@ -4481,7 +4502,7 @@ pub fn takescreenshot() {
             //Draw warps to screenshot
             for warp in ed().warplist.iter() {
                 if warp.posA.x >= 0 {
-                    ed().spr_warps[iScreenshotSize].draw_src(
+                    ed().spr_warps[iScreenshotSize].draw_src(g, 
                         warp.posA.x as i32 * iTileSize as i32,
                         warp.posA.y as i32 * iTileSize as i32,
                         &r(warp.id as i32 * iTileSize as i32, 0, iTileSize as i32, iTileSize as i32),
@@ -4489,7 +4510,7 @@ pub fn takescreenshot() {
                 }
 
                 if warp.posB.x >= 0 {
-                    ed().spr_warps[iScreenshotSize].draw_src(
+                    ed().spr_warps[iScreenshotSize].draw_src(g, 
                         warp.posB.x as i32 * iTileSize as i32,
                         warp.posB.y as i32 * iTileSize as i32,
                         &r(warp.id as i32 * iTileSize as i32, 0, iTileSize as i32, iTileSize as i32),
@@ -4499,7 +4520,7 @@ pub fn takescreenshot() {
 
             //Save the screenshot with the same name as the map file
             let mut szSaveFile = String::from("worlds/screenshots/");
-            szSaveFile += &get_name_from_file_name(&game().worldlist.current_path().to_string_lossy(), false);
+            szSaveFile += &get_name_from_file_name(&g.worldlist.current_path().to_string_lossy(), false);
 
             if iTileSize as i32 == PREVIEWTILESIZE {
                 szSaveFile += "_preview";
@@ -4508,14 +4529,14 @@ pub fn takescreenshot() {
             }
 
             szSaveFile += ".png";
-            let c = CString::new(convert_path(&szSaveFile)).unwrap();
+            let c = CString::new(convert_path(g, &szSaveFile)).unwrap();
             IMG_SavePNG(sScreenshot, c.as_ptr());
 
             SDL_FreeSurface(sScreenshot);
         }
 
-        let path = game().worldlist.at(game().game_values.worldindex as usize).to_string_lossy().into_owned();
-        *game().g_worldmap = WorldMap::new_path(&path, iTileSizes[0]);
-        game().blitdest = game().screen;
+        let path = g.worldlist.at(g.game_values.worldindex as usize).to_string_lossy().into_owned();
+        *g.g_worldmap = WorldMap::new_path(g, &path, iTileSizes[0]);
+        g.blitdest = g.screen;
     }
 }

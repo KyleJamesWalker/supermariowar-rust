@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/Chase.cpp
 
+use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_mode::{game_mode_chase, CGameMode, CGameModeTrait};
 use crate::common::global_constants::CRUNCHMAX;
@@ -50,30 +51,31 @@ impl CGameModeTrait for CGM_Chase {
         self
     }
 
-    fn init(&mut self) {
-        gm::cgamemode_init(self);
+    fn init(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        gm::cgamemode_init(g, self);
 
         unsafe {
             //Add phantos based on settings
             for iPhanto in 0..3i16 {
                 let mut iNumPhantos: i16 = 0;
-                while iNumPhantos < game().game_values.gamemodesettings.chase.phantoquantity[iPhanto as usize] {
+                while iNumPhantos < g.game_values.gamemodesettings.chase.phantoquantity[iPhanto as usize] {
                     let x = RANDOM_INT(App::screenWidth);
                     let y = if RANDOM_BOOL() { -32 - CRUNCHMAX } else { App::screenHeight };
-                    game().objectcontainer[1].add(Ptr::new_box(OMO_Phanto::new(Ptr::from_mut(&mut game().rm.spr_phanto), Vec2s::new(x as i16, y as i16), 0.0f32, 0.0f32, iPhanto)));
+                    gp.get().objectcontainer[1].add(Ptr::new_box(OMO_Phanto::new(g, Ptr::from_mut(&mut gp.get().rm.spr_phanto), Vec2s::new(x as i16, y as i16), 0.0f32, 0.0f32, iPhanto)));
                     iNumPhantos += 1;
                 }
             }
 
             //Add a key
-            self.key = Ptr::new_box(CO_PhantoKey::new(Ptr::from_mut(&mut game().rm.spr_phantokey)));
-            game().objectcontainer[1].add(self.key);
+            self.key = Ptr::new_box(CO_PhantoKey::new(Ptr::from_mut(&mut g.rm.spr_phantokey)));
+            g.objectcontainer[1].add(self.key);
         }
     }
 
-    fn think(&mut self) {
+    fn think(&mut self, g: &mut Game) {
         if self.gameover {
-            self.displayplayertext();
+            self.displayplayertext(g);
             return;
         }
 
@@ -82,34 +84,34 @@ impl CGameModeTrait for CGM_Chase {
             if keyholder.isready() && !keyholder.is_tanooki_statue() {
                 unsafe {
                     self.counter += 1;
-                    if self.counter >= game().game_values.pointspeed {
+                    if self.counter >= g.game_values.pointspeed {
                         self.counter = 0;
-                        keyholder.score().adjust_score(1);
-                        self.check_winner(keyholder);
+                        keyholder.score().adjust_score(g, 1);
+                        self.check_winner(g, keyholder);
                     }
                 }
             }
         }
     }
 
-    fn playerkilledplayer(&mut self, _player: Ptr<CPlayer>, _other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, _player: Ptr<CPlayer>, _other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
         PlayerKillType::Normal
     }
 
-    fn playerkilledself(&mut self, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
         gm::cgamemode_playerkilledself(self, player, style);
 
         PlayerKillType::Normal
     }
 
-    fn playerextraguy(&mut self, mut player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iType: i16) {
         if !self.gameover {
-            player.score().adjust_score((5 * iType as i32) as i16);
-            self.check_winner(player);
+            player.score().adjust_score(g, (5 * iType as i32) as i16);
+            self.check_winner(g, player);
         }
     }
 
-    fn check_winner(&mut self, mut player: Ptr<CPlayer>) -> PlayerKillType {
+    fn check_winner(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> PlayerKillType {
         if self.goal == -1 {
             return PlayerKillType::Normal;
         }
@@ -119,13 +121,13 @@ impl CGameModeTrait for CGM_Chase {
             self.winningteam = player.get_team_id();
             self.gameover = true;
 
-            setup_score_board(false);
-            show_score_board();
-            remove_players_but_team(self.winningteam);
+            setup_score_board(g, false);
+            show_score_board(g);
+            remove_players_but_team(g, self.winningteam);
 
             return PlayerKillType::Removed;
         } else if player.score().score as f64 >= self.goal as f64 * 0.8 && !self.playedwarningsound {
-            self.playwarningsound();
+            self.playwarningsound(g);
         }
 
         PlayerKillType::Normal

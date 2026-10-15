@@ -4,6 +4,7 @@
 //! no-op unless the corresponding SMW_* environment variable is set; docs/EDITOR_REPLAY.md is
 //! the byte-level spec.
 
+use crate::game::Game;
 use crate::common::random_number_generator::{RandomNumberGenerator, RandomNumberGeneratorType};
 use crate::globals::*;
 use sdl2::sys::{
@@ -56,6 +57,7 @@ pub struct EditorHarness {
     mod_: u16,
     mouseX: i32,
     mouseY: i32,
+    keys: [u8; sdl2::sys::SDL_Scancode::SDL_NUM_SCANCODES as usize],
 }
 
 impl EditorHarness {
@@ -75,6 +77,7 @@ impl EditorHarness {
             mod_: 0,
             mouseX: 0,
             mouseY: 0,
+            keys: [0; sdl2::sys::SDL_Scancode::SDL_NUM_SCANCODES as usize],
         }
     }
 }
@@ -82,8 +85,6 @@ impl EditorHarness {
 fn h() -> &'static mut EditorHarness {
     &mut crate::game::game().get().editor_harness
 }
-
-static mut keys: [u8; sdl2::sys::SDL_Scancode::SDL_NUM_SCANCODES as usize] = [0; sdl2::sys::SDL_Scancode::SDL_NUM_SCANCODES as usize];
 
 fn env(name: &str) -> Option<String> {
     std::env::var(name).ok().filter(|v| !v.is_empty())
@@ -254,7 +255,7 @@ fn push_event(ev: &ScriptEvent) {
                 event.key.keysym.sym = key;
                 event.key.keysym.scancode = SDL_GetScancodeFromKey(key);
                 event.key.keysym.mod_ = h().mod_;
-                keys[event.key.keysym.scancode as usize] = ev.down as u8;
+                h().keys[event.key.keysym.scancode as usize] = ev.down as u8;
             }
             EventKind::MouseButton => {
                 if ev.down {
@@ -361,7 +362,7 @@ pub fn no_limit() -> bool {
 
 /// Ends one editor frame: dump, screenshot, advance, push the next frame's scripted events,
 /// then sleep `delay` ms unless SMW_NOLIMIT is set. The C++ editors `#define SDL_Delay` to this.
-pub fn frame_delay(delay: u32) {
+pub fn frame_delay(g: &mut Game, delay: u32) {
     unsafe {
         if h().active {
             if h().maxFrames < 0 || (h().frame as i64) < h().maxFrames {
@@ -380,7 +381,7 @@ pub fn frame_delay(delay: u32) {
                     let path = format!("{}/frame_{}.bmp", h().shotDir, h().frame);
                     let cpath = CString::new(path.as_bytes()).unwrap();
                     let rw = SDL_RWFromFile(cpath.as_ptr(), b"wb\0".as_ptr() as *const _);
-                    if SDL_SaveBMP_RW(game().screen, rw, 1) != 0 {
+                    if SDL_SaveBMP_RW(g.screen, rw, 1) != 0 {
                         eprintln!("[editorharness] cannot save {}: {}", path, CStr::from_ptr(SDL_GetError()).to_string_lossy());
                     }
                 }
@@ -410,7 +411,7 @@ pub fn frame_delay(delay: u32) {
 pub fn keyboard_state() -> *const u8 {
     unsafe {
         if h().active {
-            keys.as_ptr()
+            h().keys.as_ptr()
         } else {
             sdl2::sys::SDL_GetKeyboardState(std::ptr::null_mut())
         }

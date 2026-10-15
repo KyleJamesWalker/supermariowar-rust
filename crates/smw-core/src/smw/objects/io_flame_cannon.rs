@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/IO_FlameCannon.cpp
 
+use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_drawpreview;
 use crate::common::map::g_rFlameRects;
@@ -31,7 +32,7 @@ impl IO_FlameCannon {
         let mut this = IO_FlameCannon { cobject: CObject::new(Ptr::null(), pos), iFreq: freq, iTimer: 0, iCycle: 0, iFrame: 0, iDirection: direction };
         this.objectType = object_flamecannon;
 
-        this.set_new_timer();
+        this.set_new_timer(game().get());
 
         this.iw = g_rFlameRects[direction as usize][0].w as i16;
         this.ih = g_rFlameRects[direction as usize][0].h as i16;
@@ -50,12 +51,13 @@ impl IO_FlameCannon {
     }
 
     // For preview
-    pub fn draw_offset(&mut self, iOffsetX: i16, iOffsetY: i16) {
+    pub fn draw_offset(&mut self, g: &mut Game, iOffsetX: i16, iOffsetY: i16) {
+        let mut gp = g.ptr();
         if self.state > 0 {
             let rect = &g_rFlameRects[self.iDirection as usize][self.iFrame as usize];
             unsafe {
-                gfx_drawpreview(
-                    &game().rm.spr_hazard_flame[1],
+                gfx_drawpreview(g, 
+                    &gp.rm.spr_hazard_flame[1],
                     (((self.ix as i32) >> 1) + iOffsetX as i32) as i16,
                     (((self.iy as i32) >> 1) + iOffsetY as i32) as i16,
                     (rect.x >> 1) as i16,
@@ -70,9 +72,9 @@ impl IO_FlameCannon {
         }
     }
 
-    pub fn set_new_timer(&mut self) {
-        if crate::smw::net_random::object_event(crate::smw::net_random::Ev::HazardTimer, &[self.iNetworkID]) {
-            if crate::smw::net_random::awaiting_host() {
+    pub fn set_new_timer(&mut self, g: &mut Game) {
+        if crate::smw::net_random::object_event(g, crate::smw::net_random::Ev::HazardTimer, &[self.iNetworkID]) {
+            if crate::smw::net_random::awaiting_host(g) {
                 self.iTimer = i16::MAX;
             }
             return;
@@ -84,7 +86,8 @@ impl IO_FlameCannon {
 impl CObjectTrait for IO_FlameCannon {
     crate::impl_cobject_plumbing!();
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if self.state == 0 {
             // No flame, waiting
             self.iTimer -= 1;
@@ -95,7 +98,7 @@ impl CObjectTrait for IO_FlameCannon {
 
                 self.state = 1;
                 unsafe {
-                    if_sound_on_play(&mut game().rm.sfx_flamecannon);
+                    if_sound_on_play(g, &mut gp.rm.sfx_flamecannon);
                 }
             }
         } else if self.state == 1 || self.state == 3 {
@@ -117,7 +120,7 @@ impl CObjectTrait for IO_FlameCannon {
                             self.state = 2;
                         } else {
                             self.state = 0;
-                            self.set_new_timer();
+                            self.set_new_timer(g);
                         }
                     }
                 }
@@ -143,18 +146,19 @@ impl CObjectTrait for IO_FlameCannon {
         }
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if self.state > 0 {
             let rect = &g_rFlameRects[self.iDirection as usize][self.iFrame as usize];
             unsafe {
-                game().rm.spr_hazard_flame[0].draw_src(self.ix as i32, self.iy as i32, rect);
+                gp.rm.spr_hazard_flame[0].draw_src(g, self.ix as i32, self.iy as i32, rect);
             }
         }
     }
 
-    fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         if self.state == 2 && !player.is_invincible() && !player.is_shielded() && !player.shyguy {
-            return player.kill_player_map_hazard(false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
+            return player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
         }
 
         false

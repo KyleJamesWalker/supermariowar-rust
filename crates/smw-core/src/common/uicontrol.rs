@@ -4,6 +4,7 @@
 //! embeds its base as the first field (`impl_base!`) and implements the trait, returning the embedded
 //! `UI_Control` from `ctl()`/`ctl_mut()`. Controls are referenced as `Ptr<dyn UI_ControlTrait>`.
 
+use crate::game::Game;
 use crate::common::input::CPlayerInput;
 use crate::common::math::vec2::Vec2s;
 use crate::common::ui::menu_code::*;
@@ -125,25 +126,25 @@ pub trait UI_ControlTrait {
     fn ctl_mut(&mut self) -> &mut UI_Control;
 
     /// Updates animations or other events every frame
-    fn update(&mut self) {}
+    fn update(&mut self, g: &mut Game) {}
 
     /// Draws every frame
-    fn draw(&mut self) {}
+    fn draw(&mut self, g: &mut Game) {}
 
     /// Not in upstream: drawn after the whole menu while this control is being modified.
-    fn draw_overlay(&mut self) {}
+    fn draw_overlay(&mut self, g: &mut Game) {}
 
     /// Sends player input to control on every frame
-    fn send_input(&mut self, _playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+    fn send_input(&mut self, g: &mut Game, _playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         MENU_CODE_NONE
     }
 
     /// Called when user selects this control to change it's value
-    fn modify(&mut self, modify: bool) -> MenuCodeEnum {
+    fn modify(&mut self, g: &mut Game, modify: bool) -> MenuCodeEnum {
         ui_control_modify(self, modify)
     }
 
-    fn mouse_click(&mut self, _iMouseX: i16, _iMouseY: i16) -> MenuCodeEnum {
+    fn mouse_click(&mut self, g: &mut Game, _iMouseX: i16, _iMouseY: i16) -> MenuCodeEnum {
         MENU_CODE_NONE
     }
 
@@ -158,7 +159,7 @@ pub trait UI_ControlTrait {
         self.ctl_mut().fSelected = select;
 
         if self.ctl().fSelected && self.ctl().fAutoModify {
-            self.modify(true);
+            self.modify(game().get(), true);
         }
 
         self.ctl().fModifying

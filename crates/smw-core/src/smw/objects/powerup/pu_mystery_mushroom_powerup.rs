@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_MysteryMushroomPowerup.cpp
 
+use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::CObjectTrait;
@@ -39,26 +40,27 @@ impl CObjectTrait for PU_MysteryMushroomPowerup {
     fn as_io_moving_object(&mut self) -> Option<&mut dyn IO_MovingObjectTrait> {
         Some(self)
     }
-    fn draw(&mut self) {
-        mo_powerup_draw(self)
+    fn draw(&mut self, g: &mut Game) {
+        mo_powerup_draw(g, self)
     }
-    fn update(&mut self) {
-        mo_powerup_update(self)
+    fn update(&mut self, g: &mut Game) {
+        mo_powerup_update(g, self)
     }
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         unsafe {
             if self.state > 0 {
                 self.dead = true;
 
-                if !swap_players(player.localID) {
-                    game().eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
+                if !swap_players(g, player.localID) {
+                    g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                        Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
                         (player.ix as i32 + (HALFPW) - 16) as i16,
                         (player.iy as i32 + (HALFPH) - 16) as i16,
                         3,
                         8,
                     ));
-                    if_sound_on_play(&mut game().rm.sfx_spit);
+                    if_sound_on_play(g, &mut gp.rm.sfx_spit);
                 }
             }
         }

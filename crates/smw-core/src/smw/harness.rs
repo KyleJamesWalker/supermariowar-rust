@@ -3,6 +3,7 @@
 //! Deterministic replay/dump harness. Every entry point is a no-op unless the corresponding
 //! SMW_* environment variable is set; docs/REPLAY.md is the byte-level spec.
 
+use crate::game::Game;
 use crate::common::game_values::AppState;
 use crate::common::global_constants::WAITTIME;
 use crate::common::random_number_generator::{RandomNumberGenerator, RandomNumberGeneratorType};
@@ -80,6 +81,15 @@ pub struct Harness {
     speed: f32,
     rec: Option<Recorder>,
     segment: Option<Segment>,
+    spawn_events: Vec<String>,
+    /// The keyboard as the replayed key events left it; pushed events do not update SDL's own state.
+    replay_keys: [u8; sdl2::sys::SDL_Scancode::SDL_NUM_SCANCODES as usize],
+    watch_home: Option<std::path::PathBuf>,
+    /// Bit d set: open joystick d is a standard-mapping pad. SDL opens the connected pads in page order.
+    #[cfg(target_os = "emscripten")]
+    web_standard: i32,
+    #[cfg(target_os = "emscripten")]
+    web_hats: [i32; 8],
 }
 
 /// A segment replay (SMW_SEGMENT, `--segment`, or a clip's `#@ segment=`): one match of the replay,
@@ -115,6 +125,13 @@ impl Harness {
             speed: 1.0,
             rec: None,
             segment: None,
+            spawn_events: Vec::new(),
+            replay_keys: [0; sdl2::sys::SDL_Scancode::SDL_NUM_SCANCODES as usize],
+            watch_home: None,
+            #[cfg(target_os = "emscripten")]
+            web_standard: 0,
+            #[cfg(target_os = "emscripten")]
+            web_hats: [0; 8],
         }
     }
 }
@@ -352,16 +369,12 @@ fn state_name() -> &'static str {
     "other"
 }
 
-static mut spawn_events: Vec<String> = Vec::new();
-
-/// The keyboard as the replayed key events left it; pushed events do not update SDL's own state.
-static mut replay_keys: [u8; sdl2::sys::SDL_Scancode::SDL_NUM_SCANCODES as usize] = [0; sdl2::sys::SDL_Scancode::SDL_NUM_SCANCODES as usize];
 
 fn note_replay_key(event: &SDL_Event) {
     unsafe {
         let t = event.type_;
         if t == SDL_EventType::SDL_KEYDOWN as u32 || t == SDL_EventType::SDL_KEYUP as u32 {
-            replay_keys[event.key.keysym.scancode as usize] = (t == SDL_EventType::SDL_KEYDOWN as u32) as u8;
+            h().replay_keys[event.key.keysym.scancode as usize] = (t == SDL_EventType::SDL_KEYDOWN as u32) as u8;
         }
     }
 }
@@ -371,7 +384,7 @@ fn note_replay_key(event: &SDL_Event) {
 pub fn keyboard_state() -> *const u8 {
     unsafe {
         if h().replay {
-            (&raw const replay_keys).cast()
+            (&raw const h().replay_keys).cast()
         } else {
             sdl2::sys::SDL_GetKeyboardState(std::ptr::null_mut())
         }
@@ -382,7 +395,7 @@ pub fn keyboard_state() -> *const u8 {
 pub fn note_net(line: String) {
     unsafe {
         if crate::game::game().netplay.active && h().dump.is_some() {
-            spawn_events.push(format!("C {}", line));
+            h().spawn_events.push(format!("C {}", line));
         }
     }
 }
@@ -391,7 +404,7 @@ pub fn note_powerup_spawn(iType: i16, x: i16, y: i16) {
     note_net(format!("powerup type={} x={} y={}", iType, x, y));
 }
 
-fn dump_frame(out: &mut impl Write) -> std::io::Result<()> {
+fn dump_frame(g: &mut Game, out: &mut impl Write) -> std::io::Result<()> {
     let state = state_name();
     writeln!(out, "F {} {}", unsafe { h().frame }, state)?;
 
@@ -399,17 +412,17 @@ fn dump_frame(out: &mut impl Write) -> std::io::Result<()> {
         let menu = MenuState::instance();
         writeln!(out, "M {} focus={} modifying={}", menu.harness_menu_name(), menu.harness_focus_index(), menu.harness_modifying() as i32)?;
     } else if state == "gameplay" {
-        GameplayState::instance().harness_dump(out)?;
+        GameplayState::instance().harness_dump(g, out)?;
     }
 
-    for line in unsafe { game().sfx.sfx_events.iter().chain(spawn_events.iter()) } {
+    for line in unsafe { g.sfx.sfx_events.iter().chain(h().spawn_events.iter()) } {
         writeln!(out, "{}", line)?;
     }
 
     writeln!(out, "R calls={} last={}", RandomNumberGenerator::call_count(), RandomNumberGenerator::last_value())
 }
 
-pub fn init() {
+pub fn init(g: &mut Game) {
     unsafe {
         // A normal launch records the session (seeded, so it can be replayed); replays never record.
         let record = env("SMW_REPLAY").is_none() && env("SMW_NO_RECORD").is_none();
@@ -420,9 +433,9 @@ pub fn init() {
             RandomNumberGenerator::generator().reseed(h().seed);
             srand(h().seed);
             RandomNumberGenerator::reset_call_count();
-            game().sfx.sfx_ticks = virtual_ticks;
-            game().sfx.sfx_ignore_channel_failure = true;
-            game().sfx.sfx_log_events = true;
+            g.sfx.sfx_ticks = virtual_ticks;
+            g.sfx.sfx_ignore_channel_failure = true;
+            g.sfx.sfx_log_events = true;
         }
 
         h().noLimit = env("SMW_NOLIMIT").is_some();
@@ -445,12 +458,12 @@ pub fn init() {
                 h().devices.clear();
             }
             let from = if h().segment.is_some() { h().frame + 1 } else { 0 };
-            crate::smw::network::net_record::load(&read_recording(&replay).unwrap_or_default(), from);
+            crate::smw::network::net_record::load(g, &read_recording(&replay).unwrap_or_default(), from);
         }
 
         h().audible = record || env("SMW_AUDIBLE").is_some();
         // Unseeded runs (SMW_NO_RECORD) are live play, so they are audible too.
-        game().sfx.sfx_audible = h().audible || !h().seeded;
+        g.sfx.sfx_audible = h().audible || !h().seeded;
         if let Some(speed) = env("SMW_REPLAY_SPEED").and_then(|v| v.parse::<f32>().ok()).filter(|v| *v > 0.0) {
             h().speed = speed;
         }
@@ -588,7 +601,7 @@ pub fn forced_map() -> Option<&'static str> {
     }
 }
 
-pub fn frame_start() {
+pub fn frame_start(g: &mut Game) {
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::debug_frame(unsafe { h().frame });
     #[cfg(not(target_os = "emscripten"))]
@@ -596,7 +609,7 @@ pub fn frame_start() {
     sfx::sfx_virtual_advance();
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::phase(3);
-    record_frame_start(unsafe { h().frame });
+    record_frame_start(g, unsafe { h().frame });
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::phase(4);
 
@@ -635,36 +648,36 @@ pub fn wait_event(event: &mut SDL_Event) {
     }
 }
 
-pub fn frame_end() {
+pub fn frame_end(g: &mut Game) {
     unsafe {
         if let Some(mut out) = h().dump.take() {
-            let _ = dump_frame(&mut out);
+            let _ = dump_frame(g, &mut out);
             let _ = out.flush();
             h().dump = Some(out);
         }
-        game().sfx.sfx_events.clear();
-        spawn_events.clear();
-        record_markers(h().frame);
+        g.sfx.sfx_events.clear();
+        h().spawn_events.clear();
+        record_markers(g, h().frame);
 
         let f = h().frame;
         let periodic = h().shotEvery > 0 && f >= h().shotFrom && f <= h().shotTo && (f - h().shotFrom) % h().shotEvery == 0;
         if periodic {
             if let Some(out) = h().shotStream.as_mut() {
-                if crate::common::gfx::gfx_write_screen_raw(out).and_then(|_| out.flush()).is_err() {
+                if crate::common::gfx::gfx_write_screen_raw(g, out).and_then(|_| out.flush()).is_err() {
                     fail(format!("cannot write shot stream at frame {}", f));
                 }
             }
         }
         if h().shotFrames.contains(&f) || (periodic && h().shotStream.is_none()) {
             let path = format!("{}/frame_{}.bmp", h().shotDir, h().frame);
-            if !crate::common::gfx::gfx_save_screen_bmp(&path) {
+            if !crate::common::gfx::gfx_save_screen_bmp(g, &path) {
                 eprintln!("[harness] cannot save {}", path);
             }
         }
 
         h().frame += 1;
         if h().maxFrames >= 0 && h().frame as i64 >= h().maxFrames {
-            game().game_values.appstate = AppState::Quit;
+            g.game_values.appstate = AppState::Quit;
             h().dump = None;
         }
     }
@@ -916,8 +929,8 @@ fn to_replay_event(raw: &SDL_Event, frame: u32) -> Option<ReplayEvent> {
 /// The game addresses a joystick by its open index; SDL events carry the instance id.
 fn device_index(which: i32) -> Option<i32> {
     unsafe {
-        let js = crate::common::global::joysticks;
-        for i in 0..crate::common::global::joystickcount.max(0) as usize {
+        let js = crate::game::game().joysticks;
+        for i in 0..crate::game::game().joystickcount.max(0) as usize {
             let j = *js.add(i);
             if !j.is_null() && SDL_JoystickInstanceID(j) == which {
                 return Some(i as i32);
@@ -974,8 +987,8 @@ fn push_live_script(r: &mut Recorder, frame: u32) {
 
 fn sdl_instance(device: i32) -> i32 {
     unsafe {
-        let js = crate::common::global::joysticks;
-        if device >= 0 && device < crate::common::global::joystickcount as i32 {
+        let js = crate::game::game().joysticks;
+        if device >= 0 && device < crate::game::game().joystickcount as i32 {
             let j = *js.add(device as usize);
             if !j.is_null() {
                 return SDL_JoystickInstanceID(j);
@@ -1003,24 +1016,21 @@ mod web_dpad {
         fn emscripten_run_script_int(script: *const std::ffi::c_char) -> i32;
     }
 
-    /// Bit d set: open joystick d is a standard-mapping pad. SDL opens the connected pads in page order.
-    static mut standard: i32 = 0;
-    static mut hats: [i32; 8] = [0; 8];
 
     pub fn init() {
         unsafe {
-            standard = emscripten_run_script_int(
+            super::h().web_standard = emscripten_run_script_int(
                 c"(navigator.getGamepads ? Array.prototype.filter.call(navigator.getGamepads(), Boolean) : []).reduce((m, p, i) => p.mapping === 'standard' ? m | (1 << i) : m, 0)".as_ptr(),
             );
         }
     }
 
     pub fn hat_for(ev: &ReplayEvent) -> Option<ReplayEvent> {
-        if ev.kind != EventKind::JoyButton || !(12..=15).contains(&ev.index) || unsafe { standard } & (1 << ev.device) == 0 {
+        if ev.kind != EventKind::JoyButton || !(12..=15).contains(&ev.index) || unsafe { super::h().web_standard } & (1 << ev.device) == 0 {
             return None;
         }
         let bit = [SDL_HAT_UP, SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT][(ev.index - 12) as usize] as i32;
-        let hat = unsafe { &mut hats[ev.device as usize] };
+        let hat = unsafe { &mut super::h().web_hats[ev.device as usize] };
         if ev.value != 0 {
             *hat |= bit;
         } else {
@@ -1032,10 +1042,10 @@ mod web_dpad {
 
 /// Frame start while recording: every joystick open at frame 0 gets a centred-hat line so a replay
 /// attaches the same number of joysticks; then held input becomes replay lines pushed in order.
-fn record_frame_start(frame: u32) {
+fn record_frame_start(g: &mut Game, frame: u32) {
     let Some(r) = rec().filter(|r| r.live) else { return };
     if frame == 0 {
-        for d in 0..unsafe { crate::common::global::joystickcount }.min(8) as i32 {
+        for d in 0..unsafe { crate::game::game().joystickcount }.min(8) as i32 {
             let ev = ReplayEvent { frame: 0, kind: EventKind::JoyHat, down: false, keyName: String::new(), device: d, index: 0, value: 0 };
             record_event(r, &ev);
         }
@@ -1065,7 +1075,7 @@ fn record_frame_start(frame: u32) {
     if r.quit {
         // The recording ends before this frame; frames= excludes it.
         r.quitFrame.get_or_insert(frame);
-        unsafe { game().game_values.appstate = AppState::Quit };
+        unsafe { g.game_values.appstate = AppState::Quit };
     }
 }
 
@@ -1100,8 +1110,6 @@ fn record_wait_event(event: &mut SDL_Event) {
     }
 }
 
-static mut watch_home: Option<std::path::PathBuf> = None;
-
 /// About three seconds at the default 16 ms frame time.
 const UNFINISHED_TAIL_FRAMES: u32 = 188;
 
@@ -1109,7 +1117,7 @@ const UNFINISHED_TAIL_FRAMES: u32 = 188;
 /// Safe to call more than once.
 pub fn finish() {
     unsafe {
-        if let Some(home) = watch_home.take() {
+        if let Some(home) = h().watch_home.take() {
             let _ = std::fs::remove_dir_all(home);
         }
         if let Some(mut r) = h().rec.take() {
@@ -1154,7 +1162,7 @@ pub fn prepare_watch(file: &str, speed: Option<f32>, segment: Option<u32>) {
         }
     }
     std::env::set_var(if cfg!(windows) { "USERPROFILE" } else { "HOME" }, &home);
-    unsafe { watch_home = Some(home) };
+    unsafe { h().watch_home = Some(home) };
     std::env::set_var("SMW_REPLAY", &path);
     std::env::set_var("SMW_SEED", directive("seed").unwrap_or_else(|| "1".to_string()));
     // A session that ended without finish() (killed, or a browser tab closed) has no frames= line:
@@ -1189,8 +1197,8 @@ fn copy_replay_event(ev: &ReplayEvent) {
     }
 }
 
-pub fn note_match_map(path: &str) {
-    crate::smw::checkpoint::note_match_map(path);
+pub fn note_match_map(g: &mut Game, path: &str) {
+    crate::smw::checkpoint::note_match_map(g, path);
 }
 
 /// Called where a match starts (`MenuState::enter_gameplay`): the next marker opens a new match.
@@ -1199,7 +1207,7 @@ pub fn match_checkpoint() {
     r.matches += 1;
     r.checkpoint = Some(match crate::smw::checkpoint::unsupported_reason() {
         Some(reason) => format!("#@ checkpoint match={} frame={} unsupported={}", r.matches, unsafe { h().frame }, reason),
-        None => format!("#@ checkpoint match={} frame={} z64={}", r.matches, unsafe { h().frame }, base64_encode(&deflate(&crate::smw::checkpoint::capture()))),
+        None => format!("#@ checkpoint match={} frame={} z64={}", r.matches, unsafe { h().frame }, base64_encode(&deflate(&crate::smw::checkpoint::capture(game().get())))),
     });
 }
 
@@ -1215,7 +1223,7 @@ fn marker_state() -> &'static str {
 
 /// Frame end while recording: a `#@ mark` line when the state changed this frame, and when a match
 /// started, its checkpoint.
-fn record_markers(frame: u32) {
+fn record_markers(g: &mut Game, frame: u32) {
     let Some(r) = rec() else { return };
     let state = marker_state();
     if state == r.state {
@@ -1225,7 +1233,7 @@ fn record_markers(frame: u32) {
     r.state = state.to_string();
     let mut line = format!("#@ mark frame={} state={}", frame, state);
     if state == "gameplay" && !was_match {
-        line += &format!(" match={} {}", r.matches, crate::smw::checkpoint::start_fields());
+        line += &format!(" match={} {}", r.matches, crate::smw::checkpoint::start_fields(g));
         let checkpoint = r.checkpoint.take();
         let _ = writeln!(r.out, "{}", line);
         if let Some(checkpoint) = checkpoint {
@@ -1235,7 +1243,7 @@ fn record_markers(frame: u32) {
         return;
     }
     if state == "scoreboard" || was_match {
-        line += &format!(" match={} {}", r.matches, crate::smw::checkpoint::result_fields());
+        line += &format!(" match={} {}", r.matches, crate::smw::checkpoint::result_fields(g));
     }
     let _ = writeln!(r.out, "{}", line);
 }

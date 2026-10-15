@@ -1,5 +1,6 @@
 //! Port of src/common/movingplatform.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::game::App;
@@ -84,7 +85,7 @@ pub struct MovingPlatform {
 
 impl MovingPlatform {
     /// C++ `new MovingPlatform(...)`.
-    pub fn new(
+    pub fn new(g: &mut Game, 
         tiledata: Vec<TilesetTile>,
         tiletypes: Vec<TileType>,
         w: i16,
@@ -147,7 +148,7 @@ impl MovingPlatform {
 
         unsafe {
             for iSurface in 0..2 {
-                this.sprites[iSurface] = gfxSprite::blank(w as u32 * iTileSize as u32, h as u32 * iTileSize as u32);
+                this.sprites[iSurface] = gfxSprite::blank(g, w as u32 * iTileSize as u32, h as u32 * iTileSize as u32);
                 this.sprites[iSurface].set_wrap(640);
 
                 let s = this.sprites[iSurface].get_surface();
@@ -168,18 +169,18 @@ impl MovingPlatform {
                         }
 
                         if tile.iID >= 0 {
-                            game().g_tilesetmanager.draw(this.sprites[iSurface].get_surface(), tile.iID, iTileSizeIndex, tile.iCol, tile.iRow, iCol, iRow);
+                            g.g_tilesetmanager.draw(this.sprites[iSurface].get_surface(), tile.iID, iTileSizeIndex, tile.iCol, tile.iRow, iCol, iRow);
                         } else if tile.iID as i32 == TILESETANIMATED {
-                            game().rm.spr_tileanimation[iTileSizeIndex as usize].draw_src_to(
-                                &*game().g_tilesetmanager.rect(iTileSizeIndex, tile.iCol * 4, tile.iRow),
+                            g.rm.spr_tileanimation[iTileSizeIndex as usize].draw_src_to(
+                                &*g.g_tilesetmanager.rect(iTileSizeIndex, tile.iCol * 4, tile.iRow),
                                 this.sprites[iSurface].get_surface(),
-                                &*game().g_tilesetmanager.rect(iTileSizeIndex, iCol, iRow),
+                                &*g.g_tilesetmanager.rect(iTileSizeIndex, iCol, iRow),
                             );
                         } else if tile.iID as i32 == TILESETUNKNOWN {
-                            game().rm.spr_unknowntile[iTileSizeIndex as usize].draw_src_to(
-                                &*game().g_tilesetmanager.rect(iTileSizeIndex, 0, 0),
+                            g.rm.spr_unknowntile[iTileSizeIndex as usize].draw_src_to(
+                                &*g.g_tilesetmanager.rect(iTileSizeIndex, 0, 0),
                                 this.sprites[iSurface].get_surface(),
-                                &*game().g_tilesetmanager.rect(iTileSizeIndex, iCol, iRow),
+                                &*g.g_tilesetmanager.rect(iTileSizeIndex, iCol, iRow),
                             );
                         }
                     }
@@ -249,20 +250,20 @@ impl MovingPlatform {
         self.iPlayerId = playerId;
     }
 
-    pub fn draw(&mut self) {
+    pub fn draw(&mut self, g: &mut Game) {
         unsafe {
-            self.rDstRect.x = self.ix as i32 - self.iHalfWidth as i32 + game().x_shake as i32;
-            self.rDstRect.y = self.iy as i32 - self.iHalfHeight as i32 + game().y_shake as i32;
+            self.rDstRect.x = self.ix as i32 - self.iHalfWidth as i32 + g.x_shake as i32;
+            self.rDstRect.y = self.iy as i32 - self.iHalfHeight as i32 + g.y_shake as i32;
             self.rDstRect.w = self.iWidth as i32;
             self.rDstRect.h = self.iHeight as i32;
 
-            self.sprites[(1 - game().g_iCurrentDrawIndex) as usize].draw_src_to(&self.rSrcRect, game().blitdest, &self.rDstRect);
+            self.sprites[(1 - g.g_iCurrentDrawIndex) as usize].draw_src_to(&self.rSrcRect, g.blitdest, &self.rDstRect);
         }
     }
 
     /// `draw(short iOffsetX, short iOffsetY)`: path drawing for the map preview.
-    pub fn draw_offset(&mut self, iOffsetX: i16, iOffsetY: i16) {
-        gfx_drawpreview(
+    pub fn draw_offset(&mut self, g: &mut Game, iOffsetX: i16, iOffsetY: i16) {
+        gfx_drawpreview(g, 
             &self.sprites[0],
             (self.ix as i32 - self.iHalfWidth as i32 + iOffsetX as i32) as i16,
             (self.iy as i32 - self.iHalfHeight as i32 + iOffsetY as i32) as i16,
@@ -309,7 +310,7 @@ impl MovingPlatform {
     }
 
     /// `collide(CPlayer*)`
-    pub fn collide_player(&mut self, mut player: Ptr<CPlayer>) {
+    pub fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) {
         let this = Ptr::from_mut(self);
         let fx = self.fx;
         let fy = self.fy;
@@ -388,17 +389,17 @@ impl MovingPlatform {
                         || ((t1 & tile_flag_solid) == 0 && (t2 & tile_flag_super_or_player_death_left) != 0);
 
                     if player.iHorizontalPlatformCollision == 3 {
-                        player.kill_player_map_hazard(true, KillStyle::Environment, true, iPlayerId);
+                        player.kill_player_map_hazard(g, true, KillStyle::Environment, true, iPlayerId);
                         return;
                     } else if fSuperDeathTileToLeft || (fDeathTileToLeft && !player.is_invincible() && !player.is_shielded() && !player.shyguy) {
-                        if PlayerKillType::NonKill != player.kill_player_map_hazard(fSuperDeathTileToLeft, KillStyle::Environment, false, iPlayerId) {
+                        if PlayerKillType::NonKill != player.kill_player_map_hazard(g, fSuperDeathTileToLeft, KillStyle::Environment, false, iPlayerId) {
                             return;
                         }
                     } else {
                         player.set_xf((((tx as i32) << 5) - PW) as f32 - 0.2 + fx - iHalfWidth);
                         player.flipsidesifneeded();
 
-                        self.check_map_collision_right(player);
+                        self.check_map_collision_right(g, player);
 
                         if self.fOldVelX < 0.0 {
                             player.fOldX = fx + 10.0;
@@ -449,17 +450,17 @@ impl MovingPlatform {
                         || ((t1 & tile_flag_solid) == 0 && (t2 & tile_flag_super_or_player_death_right) != 0);
 
                     if player.iHorizontalPlatformCollision == 1 {
-                        player.kill_player_map_hazard(true, KillStyle::Environment, true, iPlayerId);
+                        player.kill_player_map_hazard(g, true, KillStyle::Environment, true, iPlayerId);
                         return;
                     } else if fSuperDeathTileToRight || (fDeathTileToRight && !player.is_invincible() && !player.is_shielded() && !player.shyguy) {
-                        if PlayerKillType::NonKill != player.kill_player_map_hazard(fSuperDeathTileToRight, KillStyle::Environment, false, iPlayerId) {
+                        if PlayerKillType::NonKill != player.kill_player_map_hazard(g, fSuperDeathTileToRight, KillStyle::Environment, false, iPlayerId) {
                             return;
                         }
                     } else {
                         player.set_xf((((tx as i32) << 5) + TILESIZE) as f32 + 0.2 + fx - iHalfWidth);
                         player.flipsidesifneeded();
 
-                        self.check_map_collision_left(player);
+                        self.check_map_collision_left(g, player);
 
                         if self.fOldVelX < 0.0 {
                             player.fOldX = fx + 10.0;
@@ -536,7 +537,7 @@ impl MovingPlatform {
                     && (!fDeathTileOverPlayer || player.is_invincible() || player.is_shielded() || player.shyguy)
                 {
                     if player.iVerticalPlatformCollision == 2 {
-                        player.kill_player_map_hazard(true, KillStyle::Environment, true, iPlayerId);
+                        player.kill_player_map_hazard(g, true, KillStyle::Environment, true, iPlayerId);
                         return;
                     } else {
                         player.fPrecalculatedY = (((ty as i32) << 5) + TILESIZE) as f32 + 0.2 + fy - iHalfHeight;
@@ -556,7 +557,7 @@ impl MovingPlatform {
 
                     return;
                 } else if (t1 & tile_flag_player_or_death_on_bottom) != 0 || (t2 & tile_flag_player_or_death_on_bottom) != 0 {
-                    if PlayerKillType::NonKill != player.kill_player_map_hazard(true, KillStyle::Environment, false, iPlayerId) {
+                    if PlayerKillType::NonKill != player.kill_player_map_hazard(g, true, KillStyle::Environment, false, iPlayerId) {
                         return;
                     }
                 }
@@ -589,7 +590,7 @@ impl MovingPlatform {
                         player.inair = true;
                         player.platform = Ptr::null();
                     } else if player.iVerticalPlatformCollision == 0 {
-                        player.kill_player_map_hazard(true, KillStyle::Environment, true, iPlayerId);
+                        player.kill_player_map_hazard(g, true, KillStyle::Environment, true, iPlayerId);
                         return;
                     } else {
                         player.platform = this;
@@ -624,7 +625,7 @@ impl MovingPlatform {
                     && (!fDeathTileUnderPlayer || player.is_invincible() || player.is_shielded() || player.kuriboshoe.is_on() || player.shyguy)
                 {
                     if player.iVerticalPlatformCollision == 0 {
-                        player.kill_player_map_hazard(true, KillStyle::Environment, true, iPlayerId);
+                        player.kill_player_map_hazard(g, true, KillStyle::Environment, true, iPlayerId);
                         return;
                     } else {
                         player.platform = this;
@@ -652,7 +653,7 @@ impl MovingPlatform {
                         return;
                     }
                 } else if fDeathTileUnderPlayer || fSuperDeathTileUnderPlayer {
-                    if PlayerKillType::NonKill != player.kill_player_map_hazard(fSuperDeathTileUnderPlayer, KillStyle::Environment, false, iPlayerId) {
+                    if PlayerKillType::NonKill != player.kill_player_map_hazard(g, fSuperDeathTileUnderPlayer, KillStyle::Environment, false, iPlayerId) {
                         return;
                     }
                 } else if player.platform == this {
@@ -662,7 +663,7 @@ impl MovingPlatform {
         }
     }
 
-    fn check_map_collision_right(&mut self, mut player: Ptr<CPlayer>) {
+    fn check_map_collision_right(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) {
         unsafe {
             if player.fy + (PH as f32) < 0.0 {
                 return;
@@ -676,10 +677,10 @@ impl MovingPlatform {
 
             let iTestBackgroundY: i16 = (((player.fy as i16) as i32 + PH) / TILESIZE) as i16;
 
-            let mut topblock = game().g_map.block(iTestBackgroundX, iTestBackgroundY);
+            let mut topblock = g.g_map.block(iTestBackgroundX, iTestBackgroundY);
 
             if (!topblock.is_null() && !topblock.is_transparent() && !topblock.is_hidden())
-                || (game().g_map.map(iTestBackgroundX as i32, iTestBackgroundY as i32) & tile_flag_solid) != 0
+                || (g.g_map.map(iTestBackgroundX as i32, iTestBackgroundY as i32) & tile_flag_solid) != 0
             {
                 player.set_xf((((iTestBackgroundX as i32) << 5) - PW) as f32 - 0.2);
                 player.flipsidesifneeded();
@@ -692,10 +693,10 @@ impl MovingPlatform {
 
             let iTestBackgroundY2: i16 = tile_of(player.fy);
 
-            let mut bottomblock = game().g_map.block(iTestBackgroundX, iTestBackgroundY2);
+            let mut bottomblock = g.g_map.block(iTestBackgroundX, iTestBackgroundY2);
 
             if (!bottomblock.is_null() && !bottomblock.is_transparent() && !bottomblock.is_hidden())
-                || (game().g_map.map(iTestBackgroundX as i32, iTestBackgroundY2 as i32) & tile_flag_solid) != 0
+                || (g.g_map.map(iTestBackgroundX as i32, iTestBackgroundY2 as i32) & tile_flag_solid) != 0
             {
                 player.set_xf((((iTestBackgroundX as i32) << 5) - PW) as f32 - 0.2);
                 player.flipsidesifneeded();
@@ -703,7 +704,7 @@ impl MovingPlatform {
         }
     }
 
-    fn check_map_collision_left(&mut self, mut player: Ptr<CPlayer>) {
+    fn check_map_collision_left(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) {
         unsafe {
             if player.fy + (PH as f32) < 0.0 {
                 return;
@@ -712,10 +713,10 @@ impl MovingPlatform {
             let iTestBackgroundX: i16 = tile_of(player.fx);
             let iTestBackgroundY: i16 = (((player.fy as i16) as i32 + PH) / TILESIZE) as i16;
 
-            let mut topblock = game().g_map.block(iTestBackgroundX, iTestBackgroundY);
+            let mut topblock = g.g_map.block(iTestBackgroundX, iTestBackgroundY);
 
             if (!topblock.is_null() && !topblock.is_transparent() && !topblock.is_hidden())
-                || (game().g_map.map(iTestBackgroundX as i32, iTestBackgroundY as i32) & tile_flag_solid) != 0
+                || (g.g_map.map(iTestBackgroundX as i32, iTestBackgroundY as i32) & tile_flag_solid) != 0
             {
                 player.set_xf((((iTestBackgroundX as i32) << 5) + TILESIZE) as f32 + 0.2);
                 player.flipsidesifneeded();
@@ -728,10 +729,10 @@ impl MovingPlatform {
 
             let iTestBackgroundY2: i16 = tile_of(player.fy);
 
-            let mut bottomblock = game().g_map.block(iTestBackgroundX, iTestBackgroundY2);
+            let mut bottomblock = g.g_map.block(iTestBackgroundX, iTestBackgroundY2);
 
             if (!bottomblock.is_null() && !bottomblock.is_transparent() && !bottomblock.is_hidden())
-                || (game().g_map.map(iTestBackgroundX as i32, iTestBackgroundY2 as i32) & tile_flag_solid) != 0
+                || (g.g_map.map(iTestBackgroundX as i32, iTestBackgroundY2 as i32) & tile_flag_solid) != 0
             {
                 player.set_xf((((iTestBackgroundX as i32) << 5) + TILESIZE) as f32 + 0.2);
                 player.flipsidesifneeded();
@@ -1027,7 +1028,7 @@ impl MovingPlatform {
     }
 
     /// `collide(IO_MovingObject*)`
-    pub fn collide_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) {
+    pub fn collide_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) {
         let this = Ptr::from_mut(self);
         let fx = self.fx;
         let fy = self.fy;
@@ -1100,7 +1101,7 @@ impl MovingPlatform {
 
                 if (t1 & tile_flag_solid) != 0 || (t2 & tile_flag_solid) != 0 {
                     if object.iHorizontalPlatformCollision == 3 {
-                        object.kill_object_map_hazard(-1);
+                        object.kill_object_map_hazard(g, -1);
                         return;
                     } else {
                         let cwi = object.collisionWidth as i32;
@@ -1117,13 +1118,13 @@ impl MovingPlatform {
                         };
 
                         unsafe {
-                            let mut topblock = game().g_map.block(iTestBackgroundX, iTestBackgroundY);
-                            let mut bottomblock = game().g_map.block(iTestBackgroundX, iTestBackgroundY2);
+                            let mut topblock = g.g_map.block(iTestBackgroundX, iTestBackgroundY);
+                            let mut bottomblock = g.g_map.block(iTestBackgroundX, iTestBackgroundY2);
 
                             if (!topblock.is_null() && !topblock.is_transparent() && !topblock.is_hidden())
                                 || (!bottomblock.is_null() && !bottomblock.is_transparent() && !bottomblock.is_hidden())
-                                || (game().g_map.map(iTestBackgroundX as i32, iTestBackgroundY as i32) & tile_flag_solid) != 0
-                                || (game().g_map.map(iTestBackgroundX as i32, iTestBackgroundY2 as i32) & tile_flag_solid) != 0
+                                || (g.g_map.map(iTestBackgroundX as i32, iTestBackgroundY as i32) & tile_flag_solid) != 0
+                                || (g.g_map.map(iTestBackgroundX as i32, iTestBackgroundY2 as i32) & tile_flag_solid) != 0
                             {
                                 let cwi = object.collisionWidth as i32;
                                 object.set_xf((((iTestBackgroundX as i32) << 5) - cwi) as f32 - 0.2);
@@ -1143,9 +1144,9 @@ impl MovingPlatform {
                             object.velx = -object.velx;
                         }
 
-                        removeifprojectile(object, true, true);
+                        removeifprojectile(g, object, true, true);
 
-                        object.side_bounce(true);
+                        object.side_bounce(g, true);
                     }
                 }
             }
@@ -1174,7 +1175,7 @@ impl MovingPlatform {
 
                 if (t1 & tile_flag_solid) != 0 || (t2 & tile_flag_solid) != 0 {
                     if object.iHorizontalPlatformCollision == 1 {
-                        object.kill_object_map_hazard(-1);
+                        object.kill_object_map_hazard(g, -1);
                         return;
                     } else {
                         object.set_xf((((tx as i32) << 5) + TILESIZE) as f32 + 0.2 + fx - iHalfWidth);
@@ -1185,13 +1186,13 @@ impl MovingPlatform {
                         let iTestBackgroundX: i16 = tile_of(object.fx);
 
                         unsafe {
-                            let mut topblock = game().g_map.block(iTestBackgroundX, iTestBackgroundY);
-                            let mut bottomblock = game().g_map.block(iTestBackgroundX, iTestBackgroundY2);
+                            let mut topblock = g.g_map.block(iTestBackgroundX, iTestBackgroundY);
+                            let mut bottomblock = g.g_map.block(iTestBackgroundX, iTestBackgroundY2);
 
                             if (!topblock.is_null() && !topblock.is_transparent() && !topblock.is_hidden())
                                 || (!bottomblock.is_null() && !bottomblock.is_transparent() && !bottomblock.is_hidden())
-                                || (game().g_map.map(iTestBackgroundX as i32, iTestBackgroundY as i32) & tile_flag_solid) != 0
-                                || (game().g_map.map(iTestBackgroundX as i32, iTestBackgroundY2 as i32) & tile_flag_solid) != 0
+                                || (g.g_map.map(iTestBackgroundX as i32, iTestBackgroundY as i32) & tile_flag_solid) != 0
+                                || (g.g_map.map(iTestBackgroundX as i32, iTestBackgroundY2 as i32) & tile_flag_solid) != 0
                             {
                                 object.set_xf((((iTestBackgroundX as i32) << 5) + TILESIZE) as f32 + 0.2);
                                 object.flipsidesifneeded();
@@ -1210,9 +1211,9 @@ impl MovingPlatform {
                             object.velx = -object.velx;
                         }
 
-                        removeifprojectile(object, true, true);
+                        removeifprojectile(g, object, true, true);
 
-                        object.side_bounce(false);
+                        object.side_bounce(g, false);
                     }
                 }
             }
@@ -1263,7 +1264,7 @@ impl MovingPlatform {
 
                 if (t1 & tile_flag_solid) != 0 || (t2 & tile_flag_solid) != 0 {
                     if object.iVerticalPlatformCollision == 2 {
-                        object.kill_object_map_hazard(-1);
+                        object.kill_object_map_hazard(g, -1);
                         return;
                     } else {
                         object.fPrecalculatedY = (((ty as i32) << 5) + TILESIZE) as f32 + 0.2 + fy - iHalfHeight;
@@ -1304,7 +1305,7 @@ impl MovingPlatform {
                     && object.fOldY + object.collisionHeight as f32 <= ((ty as i32) << 5) as f32 + self.fOldY - iHalfHeight
                 {
                     if object.iVerticalPlatformCollision == 0 {
-                        object.kill_object_map_hazard(-1);
+                        object.kill_object_map_hazard(g, -1);
                         return;
                     } else {
                         if object.bounce >= 0.0 {
@@ -1316,7 +1317,7 @@ impl MovingPlatform {
                         let chi = object.collisionHeight as i32;
                         object.fPrecalculatedY = (((ty as i32) << 5) - chi) as f32 - 0.2 + fy - iHalfHeight;
                         object.fOldY = object.fPrecalculatedY - self.fVelY;
-                        object.vely = object.bottom_bounce();
+                        object.vely = object.bottom_bounce(g);
                         object.inair = false;
                         object.onice = false;
                     }
@@ -1331,7 +1332,7 @@ impl MovingPlatform {
 
                 if ((t1 & tile_flag_solid) != 0 || (t2 & tile_flag_solid) != 0) && !fSuperDeathTileUnderObject {
                     if object.iVerticalPlatformCollision == 0 {
-                        object.kill_object_map_hazard(-1);
+                        object.kill_object_map_hazard(g, -1);
                         return;
                     } else {
                         if object.bounce >= 0.0 {
@@ -1343,7 +1344,7 @@ impl MovingPlatform {
                         let chi = object.collisionHeight as i32;
                         object.fPrecalculatedY = (((ty as i32) << 5) - chi) as f32 - 0.2 + fy - iHalfHeight;
                         object.fOldY = object.fPrecalculatedY - self.fVelY;
-                        object.vely = object.bottom_bounce();
+                        object.vely = object.bottom_bounce(g);
                         object.inair = false;
 
                         if ((t1 & tile_flag_ice) != 0 && ((t2 & tile_flag_ice) != 0 || t2 == tile_flag_nonsolid || t2 == tile_flag_gap))
@@ -1357,7 +1358,7 @@ impl MovingPlatform {
                         return;
                     }
                 } else if fSuperDeathTileUnderObject {
-                    object.kill_object_map_hazard(-1);
+                    object.kill_object_map_hazard(g, -1);
                     return;
                 } else if object.platform == this {
                     object.platform = Ptr::null();

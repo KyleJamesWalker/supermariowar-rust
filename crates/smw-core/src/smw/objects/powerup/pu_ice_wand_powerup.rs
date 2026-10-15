@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_IceWandPowerup.cpp
 
+use crate::game::Game;
 use crate::common::game::App;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::vec2::Vec2s;
@@ -41,8 +42,8 @@ impl CObjectTrait for PU_IceWandPowerup {
         Some(self)
     }
 
-    fn update(&mut self) {
-        mo_powerup_update(self);
+    fn update(&mut self, g: &mut Game) {
+        mo_powerup_update(g, self);
 
         self.sparkleanimationtimer += 1;
         if self.sparkleanimationtimer >= 4 {
@@ -54,13 +55,14 @@ impl CObjectTrait for PU_IceWandPowerup {
         }
     }
 
-    fn draw(&mut self) {
-        mo_powerup_draw(self);
+    fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        mo_powerup_draw(g, self);
 
         // Draw sparkles
         if self.state == 1 {
             unsafe {
-                game().rm.spr_shinesparkle.draw_src(
+                gp.rm.spr_shinesparkle.draw_src(g, 
                     self.ix as i32 - self.collisionOffsetX as i32,
                     self.iy as i32 - self.collisionOffsetY as i32,
                     &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
@@ -69,10 +71,10 @@ impl CObjectTrait for PU_IceWandPowerup {
         }
     }
 
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         let mut player = player;
         if self.state > 0 {
-            player.set_powerup(5);
+            player.set_powerup(g, 5);
             self.dead = true;
         }
 

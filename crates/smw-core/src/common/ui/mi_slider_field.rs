@@ -1,5 +1,6 @@
 //! Port of src/common/ui/MI_SliderField.cpp
 
+use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::input::CPlayerInput;
 use crate::common::ui::menu_code::*;
@@ -41,11 +42,11 @@ impl MI_SliderField {
 impl UI_ControlTrait for MI_SliderField {
     crate::impl_ctl!();
 
-    fn update(&mut self) {
-        self.mi_select_field.update_impl();
+    fn update(&mut self, g: &mut Game) {
+        self.mi_select_field.update_impl(g);
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         if !self.m_visible {
             return;
         }
@@ -58,14 +59,14 @@ impl UI_ControlTrait for MI_SliderField {
         let selY = (if self.fSelected { 32 } else { 0 }) + self.m_adjustmentY as i32;
 
         unsafe {
-            self.m_spr.draw_src(x, y, &SDL_Rect { x: 0, y: selY, w: indent - 16, h: 32 });
-            self.m_spr.draw_src(x + indent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
-            self.m_spr.draw_src(x + indent + 16, y, &SDL_Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
+            self.m_spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: selY, w: indent - 16, h: 32 });
+            self.m_spr.draw_src(g, x + indent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
+            self.m_spr.draw_src(g, x + indent + 16, y, &SDL_Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
 
-            game().rm.menu_font_large.draw_chop_right(x + 16, y + 5, indent - 8, &self.m_name);
+            g.rm.menu_font_large.draw_chop_right(x + 16, y + 5, indent - 8, &self.m_name);
 
             if !self.m_items.is_empty() {
-                game().rm.menu_font_large.draw_chop_right(x + indent2 + 16, y + 5, width - indent2 - 24, &self.current_item().name);
+                g.rm.menu_font_large.draw_chop_right(x + indent2 + 16, y + 5, width - indent2 - 24, &self.current_item().name);
             }
         }
 
@@ -74,9 +75,9 @@ impl UI_ControlTrait for MI_SliderField {
 
         for index in 0..self.m_items.len() {
             if index < self.m_items.len().wrapping_sub(1) {
-                self.m_sprSlider.draw_src(x + indent + iSpot as i32 + 16, y + 10, &SDL_Rect { x: 0, y: 0, w: iSpacing as i32, h: 13 });
+                self.m_sprSlider.draw_src(g, x + indent + iSpot as i32 + 16, y + 10, &SDL_Rect { x: 0, y: 0, w: iSpacing as i32, h: 13 });
             } else {
-                self.m_sprSlider.draw_src(x + indent + iSpot as i32 + 16, y + 10, &SDL_Rect { x: 164, y: 0, w: 4, h: 13 });
+                self.m_sprSlider.draw_src(g, x + indent + iSpot as i32 + 16, y + 10, &SDL_Rect { x: 164, y: 0, w: 4, h: 13 });
             }
 
             iSpot = iSpot.wrapping_add(iSpacing);
@@ -84,16 +85,16 @@ impl UI_ControlTrait for MI_SliderField {
 
         // size_t arithmetic in C++, truncated to int at the call
         let knobX = (x + indent).wrapping_add((self.m_index as i32).wrapping_mul(iSpacing as i32)).wrapping_add(14);
-        self.m_sprSlider.draw_src(knobX, y + 8, &SDL_Rect { x: 168, y: 0, w: 8, h: 16 });
+        self.m_sprSlider.draw_src(g, knobX, y + 8, &SDL_Rect { x: 168, y: 0, w: 8, h: 16 });
 
         let drawLeft = self.m_index > 0;
         if self.m_wraps || drawLeft {
-            self.miModifyImageLeft.draw();
+            self.miModifyImageLeft.draw(g);
         }
 
         let drawRight = (self.m_index + 1) < self.m_items.len();
         if self.m_wraps || drawRight {
-            self.miModifyImageRight.draw();
+            self.miModifyImageRight.draw(g);
         }
     }
 
@@ -101,11 +102,11 @@ impl UI_ControlTrait for MI_SliderField {
         self.mi_select_field.refresh_impl();
     }
 
-    fn modify(&mut self, modify: bool) -> MenuCodeEnum {
+    fn modify(&mut self, g: &mut Game, modify: bool) -> MenuCodeEnum {
         self.mi_select_field.modify_impl(modify)
     }
 
-    fn send_input(&mut self, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+    fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         for iPlayer in 0..4usize {
             if playerInput.outputControls[iPlayer].menu_scrollfast().fPressed {
                 if self.m_index == 0 {
@@ -121,7 +122,7 @@ impl UI_ControlTrait for MI_SliderField {
         self.mi_select_field.send_input_impl(playerInput)
     }
 
-    fn mouse_click(&mut self, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
+    fn mouse_click(&mut self, g: &mut Game, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
         self.mi_select_field.mouse_click_impl(iMouseX, iMouseY)
     }
 }

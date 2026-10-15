@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/SwitchBlock.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::*;
@@ -34,14 +35,14 @@ impl B_SwitchBlock {
         b
     }
 
-    pub fn flip_state(&mut self, playerID: i16) {
+    pub fn flip_state(&mut self, g: &mut Game, playerID: i16) {
         self.state = (1 - self.state as i32) as i16;
         unsafe {
-            game().g_map.update_tile_gap(self.col, self.row);
+            g.g_map.update_tile_gap(self.col, self.row);
         }
 
         if self.state == 0 {
-            io_block_kill_players_and_objects_inside_block(self, playerID);
+            io_block_kill_players_and_objects_inside_block(g, self, playerID);
         }
     }
 }
@@ -52,16 +53,16 @@ impl CObjectTrait for B_SwitchBlock {
         Some(self)
     }
 
-    fn draw(&mut self) {
-        self.spr.draw_src(
+    fn draw(&mut self, g: &mut Game) {
+        self.spr.draw_src(g, 
             self.ix as i32,
             self.iy as i32,
             &SDL_Rect { x: self.iSrcX as i32, y: if self.state == 0 { 64 } else { 96 }, w: self.iw as i32, h: self.ih as i32 },
         );
     }
 
-    fn update(&mut self) {
-        io_block_update(self);
+    fn update(&mut self, g: &mut Game) {
+        io_block_update(g, self);
     }
 }
 
@@ -79,13 +80,13 @@ impl IO_BlockTrait for B_SwitchBlock {
         let ih = self.ih as i32;
 
         if player.fOldY + PH as f32 <= iposy as f32 && direction == 2 {
-            return self.hittop_player(player, useBehavior);
+            return self.hittop_player(game().get(), player, useBehavior);
         } else if player.fOldY >= (iposy + ih) as f32 && direction == 0 {
-            return self.hitbottom_player(player, useBehavior);
+            return self.hitbottom_player(game().get(), player, useBehavior);
         } else if player.fOldX + PW as f32 <= iposx as f32 && direction == 1 {
-            return self.hitleft_player(player, useBehavior);
+            return self.hitleft_player(game().get(), player, useBehavior);
         } else if player.fOldX >= (iposx + iw) as f32 && direction == 3 {
-            return self.hitright_player(player, useBehavior);
+            return self.hitright_player(game().get(), player, useBehavior);
         }
 
         true
@@ -95,19 +96,19 @@ impl IO_BlockTrait for B_SwitchBlock {
         self.state != 0
     }
 
-    fn hittop_player(&mut self, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hittop_player(&mut self, g: &mut Game, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         io_block_hittop_player(self, player, useBehavior);
         false
     }
 
-    fn hitbottom_player(&mut self, mut player: Ptr<CPlayer>, _useBehavior: bool) -> bool {
+    fn hitbottom_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, _useBehavior: bool) -> bool {
         player.vely = cap_falling_velocity(-player.vely * BOUNCESTRENGTH);
         player.set_yf((self.iposy as i32 + self.ih as i32) as f32 + 0.2f32);
         self.vely = -VELBLOCKBOUNCE;
         false
     }
 
-    fn hitright_player(&mut self, mut player: Ptr<CPlayer>, _useBehavior: bool) -> bool {
+    fn hitright_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, _useBehavior: bool) -> bool {
         player.set_xf((self.iposx as i32 + self.iw as i32) as f32 + 0.2f32);
         player.fOldX = player.fx;
 
@@ -122,7 +123,7 @@ impl IO_BlockTrait for B_SwitchBlock {
         false
     }
 
-    fn hitleft_player(&mut self, mut player: Ptr<CPlayer>, _useBehavior: bool) -> bool {
+    fn hitleft_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, _useBehavior: bool) -> bool {
         player.set_xf((self.iposx as i32 - PW) as f32 - 0.2f32);
         player.fOldX = player.fx;
 
@@ -137,18 +138,18 @@ impl IO_BlockTrait for B_SwitchBlock {
         false
     }
 
-    fn hittop_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+    fn hittop_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         if self.state == 0 {
             let ch = object.collisionHeight;
             object.set_yf((self.iposy as i32 - ch as i32) as f32 - 0.2f32);
             object.fOldY = object.fy;
-            object.vely = object.bottom_bounce();
+            object.vely = object.bottom_bounce(g);
         }
 
         true
     }
 
-    fn hitbottom_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+    fn hitbottom_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         if self.state == 0 {
             object.set_yf((self.iposy as i32 + self.ih as i32) as f32 + 0.2f32);
             object.vely = -object.vely;
@@ -157,7 +158,7 @@ impl IO_BlockTrait for B_SwitchBlock {
         true
     }
 
-    fn hitright_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+    fn hitright_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         if self.state == 0 {
             object.set_xf((self.iposx as i32 + self.iw as i32) as f32 + 0.2f32);
 
@@ -169,7 +170,7 @@ impl IO_BlockTrait for B_SwitchBlock {
         true
     }
 
-    fn hitleft_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+    fn hitleft_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         if self.state == 0 {
             let cw = object.collisionWidth;
             object.set_xf((self.iposx as i32 - cw as i32) as f32 - 0.2f32);

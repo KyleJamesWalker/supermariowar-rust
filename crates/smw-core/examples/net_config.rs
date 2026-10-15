@@ -8,10 +8,10 @@ use smw::game::game;
 use smw::smw::network::net_config_manager::NetConfigManager;
 
 fn main() {
-    smw::globals::init_globals();
+    smw::globals::init_globals(game().get());
     unsafe {
         game().netplay.myPlayerName = "Player".to_string();
     }
-    NetConfigManager.load();
-    NetConfigManager.save();
+    NetConfigManager.load(game().get());
+    NetConfigManager.save(game().get());
 }

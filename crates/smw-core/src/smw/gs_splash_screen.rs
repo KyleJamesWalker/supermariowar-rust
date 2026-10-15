@@ -1,5 +1,6 @@
 //! Port of src/smw/GSSplashScreen.cpp
 
+use crate::game::Game;
 use smw_platform::InputEvent;
 use crate::common::game::App;
 use crate::common::game_values::{if_sound_on_play, AppState};
@@ -44,25 +45,27 @@ impl SplashScreenState {
 }
 
 impl GameState for SplashScreenState {
-    fn on_leave_state(&mut self) {
+    fn on_leave_state(&mut self, g: &mut Game) {
         self.menu_credits.delete();
     }
 
-    fn init(&mut self) -> bool {
+    fn init(&mut self, g: &mut Game) -> bool {
+        let mut gp = g.ptr();
         unsafe {
-            game().rm.load_start_graphics();
+            gp.rm.load_start_graphics(g);
 
             self.menu_credits = Ptr::new_box(gfxSprite::new());
             *self.menu_credits =
-                ImageLoader::new(convert_path_pack("gfx/packs/menu/splash_credits.png", &game().menugraphicspacklist.current_path().to_string_lossy())).create();
+                ImageLoader::new(convert_path_pack(g, "gfx/packs/menu/splash_credits.png", &gp.menugraphicspacklist.current_path().to_string_lossy())).create();
         }
 
         true
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
-            game().game_values.playerInput.clear_pressed_keys(1);
+            g.game_values.playerInput.clear_pressed_keys(1);
 
             // TODO: move this out of this method maybe
 
@@ -70,78 +73,78 @@ impl GameState for SplashScreenState {
             while let Some(input) = smw_sdl2::events::poll_input() {
                 tapped |= input.event.tap().is_some();
                 if input.event == InputEvent::Quit {
-                    game().game_values.appstate = AppState::Quit;
+                    g.game_values.appstate = AppState::Quit;
                     return;
                 } else if let InputEvent::Key { key, mods, down: true, .. } = input.event {
                     let alt = (mods as u32) & (SDL_Keymod::KMOD_LALT as u32 | SDL_Keymod::KMOD_RALT as u32) != 0;
                     if key.0 == SDL_KeyCode::SDLK_RETURN as i32 {
                         if alt {
-                            game().game_values.fullscreen = !game().game_values.fullscreen;
-                            gfx_changefullscreen(game().game_values.fullscreen);
-                            game().blitdest = game().screen;
+                            g.game_values.fullscreen = !g.game_values.fullscreen;
+                            gfx_changefullscreen(g, g.game_values.fullscreen);
+                            g.blitdest = g.screen;
                         }
                     } else if key.0 == SDL_KeyCode::SDLK_F4 as i32 {
                         if alt {
-                            game().game_values.appstate = AppState::Quit;
+                            g.game_values.appstate = AppState::Quit;
                             return;
                         }
                     } else if key.0 == SDL_KeyCode::SDLK_INSERT as i32 {
-                        crate::common::gfx::gfx_take_screenshot();
+                        crate::common::gfx::gfx_take_screenshot(g);
                     }
                 }
 
-                game().game_values.playerInput.update_input(&input, 1);
+                gp.game_values.playerInput.update_input(g, &input, 1);
             }
 
             // Not in upstream: a press before load_game_data() would open the menus without their graphics.
             if self.state == 8 {
                 for iPlayer in 0..4usize {
-                    let out = &game().game_values.playerInput.outputControls[iPlayer];
+                    let out = &g.game_values.playerInput.outputControls[iPlayer];
                     if tapped || out.menu_select().fPressed || out.menu_cancel().fPressed || out.menu_random().fPressed {
-                        game().blitdest = game().rm.menu_backdrop.get_surface();
-                        game().rm.menu_shade.setalpha(App::menuTransparency as u8);
-                        game().rm.menu_shade.draw(0, 0);
-                        game().blitdest = game().screen;
+                        g.blitdest = g.rm.menu_backdrop.get_surface();
+                        g.rm.menu_shade.setalpha(App::menuTransparency as u8);
+                        gp.rm.menu_shade.draw(g, 0, 0);
+                        g.blitdest = g.screen;
 
-                        game().eyecandy[2].clean();
+                        g.eyecandy[2].clean();
 
-                        game().game_values.playerInput.reset_keys();
-                        game().game_values.appstate = AppState::Menu;
+                        g.game_values.playerInput.reset_keys();
+                        g.game_values.appstate = AppState::Menu;
 
-                        MenuState::instance().init();
-                        GameplayState::instance().init();
-                        GameStateManager::instance().change_state_to(Ptr::from_mut(MenuState::instance() as &mut dyn GameState));
+                        MenuState::instance().init(g);
+                        GameplayState::instance().init(g);
+                        GameStateManager::instance().change_state_to(g, Ptr::from_mut(MenuState::instance() as &mut dyn GameState));
                         return;
                     }
                 }
             }
 
-            crate::common::gfx::blit::fill_rect(game().screen, std::ptr::null(), 0x0);
+            crate::common::gfx::blit::fill_rect(g.screen, std::ptr::null(), 0x0);
 
             if self.state == 6 || self.state == 7 || self.state == 8 {
-                game().rm.menu_backdrop.setalpha(self.alpha as u8);
-                game().rm.menu_backdrop.draw(0, 0);
+                g.rm.menu_backdrop.setalpha(self.alpha as u8);
+                gp.rm.menu_backdrop.draw(g, 0, 0);
 
-                game().rm.menu_smw.setalpha(self.alpha as u8);
-                game().rm.menu_smw.draw(App::screenWidth / 2 - ((game().rm.menu_smw.get_width() as i16 >> 1) as i32), 30); //smw logo
+                g.rm.menu_smw.setalpha(self.alpha as u8);
+                gp.rm.menu_smw.draw(g, App::screenWidth / 2 - ((gp.rm.menu_smw.get_width() as i16 >> 1) as i32), 30); //smw logo
 
-                game().rm.menu_version.setalpha(self.alpha as u8);
-                game().rm.menu_version.draw(628 - game().rm.menu_version.get_width(), 10); //smw logo
+                g.rm.menu_version.setalpha(self.alpha as u8);
+                gp.rm.menu_version.draw(g, 628 - gp.rm.menu_version.get_width(), 10); //smw logo
 
-                game().rm.menu_font_large.set_alpha(self.alpha as u8);
+                g.rm.menu_font_large.set_alpha(self.alpha as u8);
 
                 self.menu_credits.setalpha(self.alpha as u8);
-                self.menu_credits.draw(227, 200);
+                self.menu_credits.draw(g, 227, 200);
             }
 
             if self.state == 7 {
-                game().rm.menu_font_large.draw_centered(App::screenWidth / 2, (App::screenHeight as f32 * 0.875f32) as i32, "Loading...");
+                g.rm.menu_font_large.draw_centered(App::screenWidth / 2, (App::screenHeight as f32 * 0.875f32) as i32, "Loading...");
             } else if self.state == 8 {
-                game().rm.menu_font_large.draw_centered(App::screenWidth / 2, (App::screenHeight as f32 * 0.875f32) as i32, "Press Any Key To Continue");
+                g.rm.menu_font_large.draw_centered(App::screenWidth / 2, (App::screenHeight as f32 * 0.875f32) as i32, "Press Any Key To Continue");
 
-                game().eyecandy[2].clean_dead_objects();
-                game().eyecandy[2].update();
-                game().eyecandy[2].draw();
+                g.eyecandy[2].clean_dead_objects();
+                g.eyecandy[2].update();
+                g.eyecandy[2].draw();
             }
 
             // Only start loading after we displayed something, in the 2nd frame
@@ -151,9 +154,9 @@ impl GameState for SplashScreenState {
             }
 
             if self.state == 7 {
-                load_game_data();
+                load_game_data(g);
 
-                if_sound_on_play(&mut game().rm.sfx_coin);
+                if_sound_on_play(g, &mut gp.rm.sfx_coin);
 
                 self.state += 1;
             }
@@ -162,23 +165,24 @@ impl GameState for SplashScreenState {
 }
 
 /// The splash screen's second-frame load; a segment replay (smw/checkpoint.rs) runs it before restoring a match.
-pub fn load_game_data() {
+pub fn load_game_data(g: &mut Game) {
+        let mut gp = g.ptr();
     unsafe {
         // load initial coin sound
-        game().rm.backgroundmusic[2] = sfxMusic::from_file(game().musiclist.music(1)).unwrap_or_else(|e| std::panic::panic_any(e));
+        g.rm.backgroundmusic[2] = sfxMusic::from_file(g.musiclist.music(1)).unwrap_or_else(|e| std::panic::panic_any(e));
 
-        game().rm.load_all_graphics();
-        game().rm.load_game_sounds();
+        gp.rm.load_all_graphics(g);
+        gp.rm.load_game_sounds(g);
 
-        if !game().game_values.soundcapable {
-            game().game_values.sound = false;
-            game().game_values.music = false;
-            game().game_values.soundvolume = 0;
-            game().game_values.musicvolume = 0;
+        if !g.game_values.soundcapable {
+            g.game_values.sound = false;
+            g.game_values.music = false;
+            g.game_values.soundvolume = 0;
+            g.game_values.musicvolume = 0;
         }
 
         //Read the map filter lists
-        game().maplist.read_filters();
-        game().maplist.apply_filters(&game().game_values.pfFilters.clone());
+        gp.maplist.read_filters(g);
+        gp.get().maplist.apply_filters(g, &gp.get().game_values.pfFilters.clone());
     }
 }

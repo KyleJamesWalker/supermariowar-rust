@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/PowerupBlock.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::game_mode::*;
 use crate::common::game_values::if_sound_on_play;
@@ -45,7 +46,7 @@ impl_base!(B_PowerupBlock => io_block: IO_Block);
 
 impl B_PowerupBlock {
     /// `piSettings` must hold at least `NUM_POWERUPS` entries (`objdata.iSettings`).
-    pub fn new(nspr1: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, aniSpeed: i16, fHidden: bool, piSettings: &[i16]) -> Self {
+    pub fn new(g: &mut Game, nspr1: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, aniSpeed: i16, fHidden: bool, piSettings: &[i16]) -> Self {
         let mut b = B_PowerupBlock {
             io_block: IO_Block::new(nspr1, pos),
             iCountWeight: 0,
@@ -75,22 +76,22 @@ impl B_PowerupBlock {
 
         unsafe {
             let n = NUM_POWERUPS as usize;
-            if piSettings[0] == -1 || game().game_values.overridepowerupsettings == 1 {
+            if piSettings[0] == -1 || g.game_values.overridepowerupsettings == 1 {
                 //Game Only
                 for iSetting in 0..n {
-                    b.settings[iSetting] = game().game_values.powerupweights[iSetting];
+                    b.settings[iSetting] = g.game_values.powerupweights[iSetting];
                 }
-            } else if game().game_values.overridepowerupsettings == 0 {
+            } else if g.game_values.overridepowerupsettings == 0 {
                 //Map Only
                 for iSetting in 0..n {
                     b.settings[iSetting] = piSettings[iSetting];
                 }
-            } else if game().game_values.overridepowerupsettings == 2 {
+            } else if g.game_values.overridepowerupsettings == 2 {
                 //Average
                 for iSetting in 0..n {
-                    b.settings[iSetting] = (piSettings[iSetting] as i32 + game().game_values.powerupweights[iSetting] as i32) as i16;
+                    b.settings[iSetting] = (piSettings[iSetting] as i32 + g.game_values.powerupweights[iSetting] as i32) as i16;
                 }
-            } else if game().game_values.overridepowerupsettings == 3 {
+            } else if g.game_values.overridepowerupsettings == 3 {
                 //Weighted
                 let mut dMapWeightCount: f32 = 0.0;
                 for iPowerup in 0..n {
@@ -99,11 +100,11 @@ impl B_PowerupBlock {
 
                 let mut dGameWeightCount: f32 = 0.0;
                 for iPowerup in 0..n {
-                    dGameWeightCount += game().game_values.powerupweights[iPowerup] as f32;
+                    dGameWeightCount += g.game_values.powerupweights[iPowerup] as f32;
                 }
 
                 for iSetting in 0..n {
-                    let dWeight: f32 = (piSettings[iSetting] as f32 / dMapWeightCount + game().game_values.powerupweights[iSetting] as f32 / dGameWeightCount) * 100.0f32;
+                    let dWeight: f32 = (piSettings[iSetting] as f32 / dMapWeightCount + g.game_values.powerupweights[iSetting] as f32 / dGameWeightCount) * 100.0f32;
 
                     //Cap lowest value at 1
                     if dWeight < 1.0f32 && dWeight > 0.0f32 {
@@ -146,10 +147,10 @@ macro_rules! impl_powerup_block_plumbing {
     };
 }
 
-pub fn b_powerup_block_draw<T: B_PowerupBlockTrait + ?Sized>(this: &mut T) {
+pub fn b_powerup_block_draw<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let b = this.pb();
     if !b.hidden {
-        b.spr.draw_src(
+        b.spr.draw_src(g, 
             b.ix as i32,
             b.iy as i32,
             &SDL_Rect { x: b.drawFrame as i32, y: if b.state == 0 { 0 } else { b.ih as i32 }, w: b.iw as i32, h: b.ih as i32 },
@@ -157,8 +158,9 @@ pub fn b_powerup_block_draw<T: B_PowerupBlockTrait + ?Sized>(this: &mut T) {
     }
 }
 
-pub fn b_powerup_block_update<T: B_PowerupBlockTrait + ?Sized>(this: &mut T) {
-    io_block_update(this);
+pub fn b_powerup_block_update<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T) {
+        let mut gp = g.ptr();
+    io_block_update(g, this);
 
     unsafe {
         if this.pb().state > 0 {
@@ -188,16 +190,16 @@ pub fn b_powerup_block_update<T: B_PowerupBlockTrait + ?Sized>(this: &mut T) {
 
                 let (col, row) = (this.pb().col, this.pb().row);
                 let args = [col as i32, row as i32, side as i32, pos.x as i32, pos.y as i32];
-                if !net_random::event(Ev::Block, &args) {
-                    b_powerup_block_release(this, pos, side);
+                if !net_random::event(g, Ev::Block, &args) {
+                    b_powerup_block_release(g, this, pos, side);
                 }
 
-                if_sound_on_play(&mut game().rm.sfx_sprout);
+                if_sound_on_play(g, &mut gp.rm.sfx_sprout);
             } else if state == 3 {
-                if game().game_values.itemrespawntime > 0 && {
+                if g.game_values.itemrespawntime > 0 && {
                     let b = this.pb_mut();
                     b.timer += 1;
-                    b.timer >= game().game_values.itemrespawntime
+                    b.timer >= g.game_values.itemrespawntime
                 } {
                     this.reset();
                 }
@@ -217,10 +219,10 @@ pub fn b_powerup_block_update<T: B_PowerupBlockTrait + ?Sized>(this: &mut T) {
     }
 }
 
-fn b_powerup_block_release<T: B_PowerupBlockTrait + ?Sized>(this: &mut T, pos: Vec2s, side: bool) {
+fn b_powerup_block_release<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, pos: Vec2s, side: bool) {
     unsafe {
-        let gm = game().game_values.gamemode.gamemode;
-        let gs = &game().game_values.gamemodesettings;
+        let gm = g.game_values.gamemode.gamemode;
+        let gs = &g.game_values.gamemodesettings;
         let iType = if gm == game_mode_health && RANDOM_INT(100) < gs.health.percentextralife as i32 {
             HEALTH_POWERUP as i16
         } else if (gm == game_mode_timelimit && RANDOM_INT(100) < gs.time.percentextratime as i32)
@@ -237,37 +239,37 @@ fn b_powerup_block_release<T: B_PowerupBlockTrait + ?Sized>(this: &mut T, pos: V
             this.select_powerup()
         };
 
-        createpowerup(iType, pos, side, true);
+        createpowerup(g, iType, pos, side, true);
     }
 }
 
 /// `net_random::Ev::Block`: the block at `col`, `row` releases its powerup at the game host's spot and side.
-pub fn net_release(col: i16, row: i16, pos: Vec2s, side: bool) {
+pub fn net_release(g: &mut Game, col: i16, row: i16, pos: Vec2s, side: bool) {
     unsafe {
         if col < 0 || row < 0 || col as i32 >= MAPWIDTH || row as i32 >= MAPHEIGHT {
             return;
         }
-        let mut block = game().g_map.blockdata[col as usize][row as usize];
+        let mut block = g.g_map.blockdata[col as usize][row as usize];
         if block.is_null() {
             return;
         }
         let any = block.as_any();
         if let Some(b) = any.downcast_mut::<B_PowerupBlock>() {
-            b_powerup_block_release(b, pos, side);
+            b_powerup_block_release(g, b, pos, side);
         } else if let Some(b) = any.downcast_mut::<crate::smw::objects::blocks::view_block::B_ViewBlock>() {
-            b_powerup_block_release(b, pos, side);
+            b_powerup_block_release(g, b, pos, side);
         }
     }
 }
 
 /// Whether a joiner can release the game host's powerup now: not while its own copy of the block still bounces.
 /// A block it never saw hit turns used.
-pub fn net_block_ready(col: i16, row: i16) -> bool {
+pub fn net_block_ready(g: &mut Game, col: i16, row: i16) -> bool {
     unsafe {
         if col < 0 || row < 0 || col as i32 >= MAPWIDTH || row as i32 >= MAPHEIGHT {
             return true;
         }
-        let mut block = game().g_map.blockdata[col as usize][row as usize];
+        let mut block = g.g_map.blockdata[col as usize][row as usize];
         if block.is_null() {
             return true;
         }
@@ -277,7 +279,7 @@ pub fn net_block_ready(col: i16, row: i16) -> bool {
             0 => {
                 b.state = 3;
                 b.hidden = false;
-                game().g_map.update_tile_gap(col, row);
+                g.g_map.update_tile_gap(col, row);
                 true
             }
             _ => true,
@@ -291,20 +293,20 @@ pub fn b_powerup_block_reset<T: B_PowerupBlockTrait + ?Sized>(this: &mut T) {
     b.state = 0;
 }
 
-pub fn b_powerup_block_collide_player_dir<T: B_PowerupBlockTrait + ?Sized>(this: &mut T, player: Ptr<CPlayer>, direction: i16, useBehavior: bool) -> bool {
+pub fn b_powerup_block_collide_player_dir<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, player: Ptr<CPlayer>, direction: i16, useBehavior: bool) -> bool {
     if this.pb().hidden {
         let b = this.pb();
         if player.fOldY >= (b.iposy as i32 + b.ih as i32) as f32 && direction == 0 {
-            return this.hitbottom_player(player, useBehavior);
+            return this.hitbottom_player(g, player, useBehavior);
         }
 
         return true;
     }
 
-    io_block_collide_player_dir(this, player, direction, useBehavior)
+    io_block_collide_player_dir(g, this, player, direction, useBehavior)
 }
 
-pub fn b_powerup_block_hittop_player<T: B_PowerupBlockTrait + ?Sized>(this: &mut T, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+pub fn b_powerup_block_hittop_player<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
     io_block_hittop_player(this, player, useBehavior);
 
     unsafe {
@@ -313,9 +315,9 @@ pub fn b_powerup_block_hittop_player<T: B_PowerupBlockTrait + ?Sized>(this: &mut
             let (iBumpPlayerID, iBumpTeamID) = (this.pb().iBumpPlayerID, this.pb().iBumpTeamID);
             if iBumpPlayerID >= 0
                 && !player.is_invincible_on_bottom()
-                && (player.teamID != iBumpTeamID || game().game_values.teamcollision == TeamCollisionStyle::On)
+                && (player.teamID != iBumpTeamID || g.game_values.teamcollision == TeamCollisionStyle::On)
             {
-                iKillType = player_killed_player(iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
+                iKillType = player_killed_player(g, iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
             }
 
             if PlayerKillType::NonKill == iKillType {
@@ -338,7 +340,8 @@ pub fn b_powerup_block_hittop_player<T: B_PowerupBlockTrait + ?Sized>(this: &mut
     false
 }
 
-pub fn b_powerup_block_hitbottom_player<T: B_PowerupBlockTrait + ?Sized>(this: &mut T, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+pub fn b_powerup_block_hitbottom_player<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+        let mut gp = g.ptr();
     if useBehavior {
         unsafe {
             //Player bounces off
@@ -350,14 +353,14 @@ pub fn b_powerup_block_hitbottom_player<T: B_PowerupBlockTrait + ?Sized>(this: &
 
             if this.pb().hidden {
                 this.pb_mut().hidden = false;
-                io_block_kill_players_and_objects_inside_block(this, player.globalID);
+                io_block_kill_players_and_objects_inside_block(g, this, player.globalID);
             }
 
             let (col, row) = (this.pb().col, this.pb().row);
-            game().g_map.update_tile_gap(col, row);
+            g.g_map.update_tile_gap(col, row);
 
             if this.pb().state == 0 {
-                if_sound_on_play(&mut game().rm.sfx_bump);
+                if_sound_on_play(g, &mut gp.rm.sfx_bump);
 
                 let b = this.pb_mut();
                 b.iBumpPlayerID = player.globalID;
@@ -378,10 +381,11 @@ pub fn b_powerup_block_collide_object_dir<T: B_PowerupBlockTrait + ?Sized>(this:
         return true;
     }
 
-    io_block_collide_object_dir(this, object, direction)
+    io_block_collide_object_dir(game().get(), this, object, direction)
 }
 
-pub fn b_powerup_block_hittop_object<T: B_PowerupBlockTrait + ?Sized>(this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+pub fn b_powerup_block_hittop_object<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+        let mut gp = g.ptr();
     let iposy = this.pb().iposy;
     let ch = object.collisionHeight;
     object.set_yf((iposy as i32 - ch as i32) as f32 - 0.2f32);
@@ -391,7 +395,7 @@ pub fn b_powerup_block_hittop_object<T: B_PowerupBlockTrait + ?Sized>(this: &mut
     if r#type == movingobject_throwbox && object.as_any().downcast_mut::<CO_ThrowBox>().unwrap().has_kill_velocity() {
         if this.pb().state == 0 {
             unsafe {
-                if_sound_on_play(&mut game().rm.sfx_bump);
+                if_sound_on_play(g, &mut gp.rm.sfx_bump);
             }
 
             let b = this.pb_mut();
@@ -401,18 +405,19 @@ pub fn b_powerup_block_hittop_object<T: B_PowerupBlockTrait + ?Sized>(this: &mut
             b.side = false;
         }
 
-        object.vely = object.bottom_bounce();
+        object.vely = object.bottom_bounce(g);
     } else if this.pb().state == 1 && object.bounce == GRAVITATION {
-        io_block_bounce_moving_object(this, object);
+        io_block_bounce_moving_object(g, this, object);
         return false;
     } else {
-        object.vely = object.bottom_bounce();
+        object.vely = object.bottom_bounce(g);
     }
 
     true
 }
 
-pub fn b_powerup_block_hitright_object<T: B_PowerupBlockTrait + ?Sized>(this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+pub fn b_powerup_block_hitright_object<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+        let mut gp = g.ptr();
     //Object bounces off
     {
         let b = this.pb();
@@ -439,7 +444,7 @@ pub fn b_powerup_block_hitright_object<T: B_PowerupBlockTrait + ?Sized>(this: &m
 
         if this.pb().state == 0 {
             unsafe {
-                if_sound_on_play(&mut game().rm.sfx_bump);
+                if_sound_on_play(g, &mut gp.rm.sfx_bump);
             }
 
             let b = this.pb_mut();
@@ -455,7 +460,8 @@ pub fn b_powerup_block_hitright_object<T: B_PowerupBlockTrait + ?Sized>(this: &m
     false
 }
 
-pub fn b_powerup_block_hitleft_object<T: B_PowerupBlockTrait + ?Sized>(this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+pub fn b_powerup_block_hitleft_object<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+        let mut gp = g.ptr();
     //Object bounces off
     let iposx = this.pb().iposx;
     let cw = object.collisionWidth;
@@ -481,7 +487,7 @@ pub fn b_powerup_block_hitleft_object<T: B_PowerupBlockTrait + ?Sized>(this: &mu
 
         if this.pb().state == 0 {
             unsafe {
-                if_sound_on_play(&mut game().rm.sfx_bump);
+                if_sound_on_play(g, &mut gp.rm.sfx_bump);
             }
 
             let b = this.pb_mut();
@@ -497,10 +503,11 @@ pub fn b_powerup_block_hitleft_object<T: B_PowerupBlockTrait + ?Sized>(this: &mu
     false
 }
 
-pub fn b_powerup_block_trigger_behavior<T: B_PowerupBlockTrait + ?Sized>(this: &mut T) {
+pub fn b_powerup_block_trigger_behavior<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T) {
+        let mut gp = g.ptr();
     if this.pb().state == 0 {
         unsafe {
-            if_sound_on_play(&mut game().rm.sfx_bump);
+            if_sound_on_play(g, &mut gp.rm.sfx_bump);
         }
 
         let b = this.pb_mut();
@@ -538,7 +545,7 @@ macro_rules! impl_powerup_block_io_block_overrides {
             $crate::smw::objects::blocks::powerup_block::b_powerup_block_reset(self)
         }
         fn collide_player_dir(&mut self, player: $crate::globals::Ptr<$crate::smw::player::CPlayer>, direction: i16, useBehavior: bool) -> bool {
-            $crate::smw::objects::blocks::powerup_block::b_powerup_block_collide_player_dir(self, player, direction, useBehavior)
+            $crate::smw::objects::blocks::powerup_block::b_powerup_block_collide_player_dir(game().get(), self, player, direction, useBehavior)
         }
         fn collide_object_dir(
             &mut self,
@@ -547,23 +554,29 @@ macro_rules! impl_powerup_block_io_block_overrides {
         ) -> bool {
             $crate::smw::objects::blocks::powerup_block::b_powerup_block_collide_object_dir(self, object, direction)
         }
-        fn hittop_player(&mut self, player: $crate::globals::Ptr<$crate::smw::player::CPlayer>, useBehavior: bool) -> bool {
-            $crate::smw::objects::blocks::powerup_block::b_powerup_block_hittop_player(self, player, useBehavior)
+        fn hittop_player(&mut self, g: &mut Game, player: $crate::globals::Ptr<$crate::smw::player::CPlayer>, useBehavior: bool) -> bool {
+        let mut gp = g.ptr();
+            $crate::smw::objects::blocks::powerup_block::b_powerup_block_hittop_player(gp.get(), self, player, useBehavior)
         }
-        fn hitbottom_player(&mut self, player: $crate::globals::Ptr<$crate::smw::player::CPlayer>, useBehavior: bool) -> bool {
-            $crate::smw::objects::blocks::powerup_block::b_powerup_block_hitbottom_player(self, player, useBehavior)
+        fn hitbottom_player(&mut self, g: &mut Game, player: $crate::globals::Ptr<$crate::smw::player::CPlayer>, useBehavior: bool) -> bool {
+        let mut gp = g.ptr();
+            $crate::smw::objects::blocks::powerup_block::b_powerup_block_hitbottom_player(gp.get(), self, player, useBehavior)
         }
-        fn hittop_object(&mut self, object: $crate::globals::Ptr<dyn $crate::smw::objects::moving::moving_object::IO_MovingObjectTrait>) -> bool {
-            $crate::smw::objects::blocks::powerup_block::b_powerup_block_hittop_object(self, object)
+        fn hittop_object(&mut self, g: &mut Game, object: $crate::globals::Ptr<dyn $crate::smw::objects::moving::moving_object::IO_MovingObjectTrait>) -> bool {
+        let mut gp = g.ptr();
+            $crate::smw::objects::blocks::powerup_block::b_powerup_block_hittop_object(gp.get(), self, object)
         }
-        fn hitright_object(&mut self, object: $crate::globals::Ptr<dyn $crate::smw::objects::moving::moving_object::IO_MovingObjectTrait>) -> bool {
-            $crate::smw::objects::blocks::powerup_block::b_powerup_block_hitright_object(self, object)
+        fn hitright_object(&mut self, g: &mut Game, object: $crate::globals::Ptr<dyn $crate::smw::objects::moving::moving_object::IO_MovingObjectTrait>) -> bool {
+        let mut gp = g.ptr();
+            $crate::smw::objects::blocks::powerup_block::b_powerup_block_hitright_object(gp.get(), self, object)
         }
-        fn hitleft_object(&mut self, object: $crate::globals::Ptr<dyn $crate::smw::objects::moving::moving_object::IO_MovingObjectTrait>) -> bool {
-            $crate::smw::objects::blocks::powerup_block::b_powerup_block_hitleft_object(self, object)
+        fn hitleft_object(&mut self, g: &mut Game, object: $crate::globals::Ptr<dyn $crate::smw::objects::moving::moving_object::IO_MovingObjectTrait>) -> bool {
+        let mut gp = g.ptr();
+            $crate::smw::objects::blocks::powerup_block::b_powerup_block_hitleft_object(gp.get(), self, object)
         }
-        fn trigger_behavior(&mut self) {
-            $crate::smw::objects::blocks::powerup_block::b_powerup_block_trigger_behavior(self)
+        fn trigger_behavior(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+            $crate::smw::objects::blocks::powerup_block::b_powerup_block_trigger_behavior(gp.get(), self)
         }
     };
 }
@@ -573,11 +586,11 @@ impl CObjectTrait for B_PowerupBlock {
     fn as_io_block(&mut self) -> Option<&mut dyn IO_BlockTrait> {
         Some(self)
     }
-    fn draw(&mut self) {
-        b_powerup_block_draw(self)
+    fn draw(&mut self, g: &mut Game) {
+        b_powerup_block_draw(g, self)
     }
-    fn update(&mut self) {
-        b_powerup_block_update(self)
+    fn update(&mut self, g: &mut Game) {
+        b_powerup_block_update(g, self)
     }
 }
 

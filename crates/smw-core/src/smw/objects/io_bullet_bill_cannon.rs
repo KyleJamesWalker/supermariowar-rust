@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/IO_BulletBillCannon.cpp
 
+use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::{object_bulletbillcannon, CObject, CObjectTrait};
@@ -38,35 +39,36 @@ impl IO_BulletBillCannon {
 impl CObjectTrait for IO_BulletBillCannon {
     crate::impl_cobject_plumbing!();
 
-    fn draw(&mut self) {}
+    fn draw(&mut self, g: &mut Game) {}
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         self.m_timer -= 1;
-        if self.m_timer <= 0 && !crate::smw::net_random::object_event(crate::smw::net_random::Ev::HazardTimer, &[self.iNetworkID]) {
-            self.fire();
+        if self.m_timer <= 0 && !crate::smw::net_random::object_event(g, crate::smw::net_random::Ev::HazardTimer, &[self.iNetworkID]) {
+            self.fire(g);
         }
     }
 
-    fn collide_player(&mut self, _player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, _player: Ptr<CPlayer>) -> bool {
         false
     }
 }
 
 impl IO_BulletBillCannon {
-    pub fn fire(&mut self) {
+    pub fn fire(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         self.set_new_timer();
 
         let pos = Vec2s::new((self.ix as i32 + if self.m_vel < 0.0f32 { 32 } else { -32 }) as i16, self.iy);
         unsafe {
-            game().objectcontainer[1].add(Ptr::new_box(MO_BulletBill::new(
-                Ptr::from_mut(&mut game().rm.spr_hazard_bulletbill[if self.m_preview { 1 } else { 0 }]),
-                Ptr::from_mut(&mut game().rm.spr_hazard_bulletbilldead),
+            gp.get().objectcontainer[1].add(Ptr::new_box(MO_BulletBill::new(g, 
+                Ptr::from_mut(&mut gp.get().rm.spr_hazard_bulletbill[if self.m_preview { 1 } else { 0 }]),
+                Ptr::from_mut(&mut gp.get().rm.spr_hazard_bulletbilldead),
                 pos,
                 self.m_vel,
                 0,
                 true,
             )));
-            if_sound_on_play(&mut game().rm.sfx_bulletbillsound);
+            if_sound_on_play(g, &mut gp.rm.sfx_bulletbillsound);
         }
     }
 }

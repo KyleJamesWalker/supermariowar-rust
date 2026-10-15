@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/Eggs.cpp
 
+use crate::game::Game;
 use crate::common::game_mode::*;
 use crate::common::moving_object_types::movingobject_egg;
 use crate::common::player_kill_styles::KillStyle;
@@ -33,8 +34,8 @@ impl CGM_Eggs {
 impl CGameModeTrait for CGM_Eggs {
     crate::impl_cgamemode_plumbing!();
 
-    fn init(&mut self) {
-        cgamemode_init(self);
+    fn init(&mut self, g: &mut Game) {
+        cgamemode_init(g, self);
 
         //Verify that at least 1 matching yoshi and egg exist
         let mut fEgg: [bool; 4] = [false, false, false, false];
@@ -48,7 +49,7 @@ impl CGameModeTrait for CGM_Eggs {
                     }
 
                     fEgg[iEggs as usize] = true;
-                    game().objectcontainer[1].add(Ptr::new_box(CO_Egg::new(Ptr::from_mut(&mut game().rm.spr_egg), iEggs)));
+                    g.objectcontainer[1].add(Ptr::new_box(CO_Egg::new(Ptr::from_mut(&mut g.rm.spr_egg), iEggs)));
                 }
             }
 
@@ -62,40 +63,40 @@ impl CGameModeTrait for CGM_Eggs {
                         fAtLeastOneMatch = true;
                     }
 
-                    game().objectcontainer[1].add(Ptr::new_box(MO_Yoshi::new(Ptr::from_mut(&mut game().rm.spr_yoshi), iYoshis)));
+                    g.objectcontainer[1].add(Ptr::new_box(MO_Yoshi::new(Ptr::from_mut(&mut g.rm.spr_yoshi), iYoshis)));
                 }
             }
 
             if !fAtLeastOneMatch {
-                game().objectcontainer[1].add(Ptr::new_box(CO_Egg::new(Ptr::from_mut(&mut game().rm.spr_egg), 1)));
-                game().objectcontainer[1].add(Ptr::new_box(MO_Yoshi::new(Ptr::from_mut(&mut game().rm.spr_yoshi), 1)));
+                g.objectcontainer[1].add(Ptr::new_box(CO_Egg::new(Ptr::from_mut(&mut g.rm.spr_egg), 1)));
+                g.objectcontainer[1].add(Ptr::new_box(MO_Yoshi::new(Ptr::from_mut(&mut g.rm.spr_yoshi), 1)));
             }
         }
     }
 
-    fn playerkilledplayer(&mut self, _inflictor: Ptr<CPlayer>, _other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, _inflictor: Ptr<CPlayer>, _other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
         PlayerKillType::Normal
     }
 
-    fn playerkilledself(&mut self, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
         cgamemode_playerkilledself(self, player, style);
 
         let mut item = player.carriedItem;
         if !item.is_null() && item.get_moving_object_type() == movingobject_egg {
-            item.as_any().downcast_mut::<CO_Egg>().expect("carried egg").place_egg();
+            item.as_any().downcast_mut::<CO_Egg>().expect("carried egg").place_egg(g);
         }
 
         PlayerKillType::Normal
     }
 
-    fn playerextraguy(&mut self, mut player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iType: i16) {
         if !self.gameover {
-            player.score().adjust_score(iType);
-            self.check_winner(player);
+            player.score().adjust_score(g, iType);
+            self.check_winner(g, player);
         }
     }
 
-    fn check_winner(&mut self, mut player: Ptr<CPlayer>) -> PlayerKillType {
+    fn check_winner(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> PlayerKillType {
         if self.goal > -1 {
             if player.score().score >= self.goal {
                 player.score().set_score(self.goal);
@@ -103,11 +104,11 @@ impl CGameModeTrait for CGM_Eggs {
                 self.winningteam = player.get_team_id();
                 self.gameover = true;
 
-                remove_players_but_team(self.winningteam);
-                setup_score_board(false);
-                show_score_board();
+                remove_players_but_team(g, self.winningteam);
+                setup_score_board(g, false);
+                show_score_board(g);
             } else if player.score().score as i32 >= self.goal as i32 - 2 && !self.playedwarningsound {
-                self.playwarningsound();
+                self.playwarningsound(g);
             }
         }
 

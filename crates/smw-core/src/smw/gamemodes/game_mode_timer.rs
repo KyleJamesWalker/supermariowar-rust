@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/GameModeTimer.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy_styles::ScoreboardStyle;
 use crate::common::global_constants::WAITTIME;
 use crate::globals::*;
@@ -28,7 +29,7 @@ impl GameTimerDisplay {
         GameTimerDisplay { iFramesPerSecond: (1000 / WAITTIME) as i16, ..Default::default() }
     }
 
-    pub fn init(&mut self, iTime: i16, fCountDown: bool) {
+    pub fn init(&mut self, g: &mut Game, iTime: i16, fCountDown: bool) {
         self.timeleft = iTime;
         self.countdown = fCountDown;
 
@@ -36,7 +37,7 @@ impl GameTimerDisplay {
         self.framesleft_persecond = self.iFramesPerSecond;
 
         unsafe {
-            if game().game_values.scoreboardstyle == ScoreboardStyle::Top {
+            if g.game_values.scoreboardstyle == ScoreboardStyle::Top {
                 self.iScoreOffsetX = 5;
             } else {
                 self.iScoreOffsetX = 291;
@@ -68,16 +69,17 @@ impl GameTimerDisplay {
         -1
     }
 
-    pub fn draw(&mut self) {
+    pub fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
-            game().rm.spr_timershade.draw(self.iScoreOffsetX as i32, 5);
-            game().rm.spr_scoretext.draw_src(self.iDigitRightDstX as i32, 13, &SDL_Rect { x: self.iDigitRightSrcX as i32, y: 0, w: 16, h: 16 });
+            gp.rm.spr_timershade.draw(g, self.iScoreOffsetX as i32, 5);
+            gp.rm.spr_scoretext.draw_src(g, self.iDigitRightDstX as i32, 13, &SDL_Rect { x: self.iDigitRightSrcX as i32, y: 0, w: 16, h: 16 });
 
             if self.iDigitLeftSrcX > 0 {
-                game().rm.spr_scoretext.draw_src(self.iDigitMiddleDstX as i32, 13, &SDL_Rect { x: self.iDigitMiddleSrcX as i32, y: 0, w: 16, h: 16 });
-                game().rm.spr_scoretext.draw_src(self.iDigitLeftDstX as i32, 13, &SDL_Rect { x: self.iDigitLeftSrcX as i32, y: 0, w: 16, h: 16 });
+                gp.rm.spr_scoretext.draw_src(g, self.iDigitMiddleDstX as i32, 13, &SDL_Rect { x: self.iDigitMiddleSrcX as i32, y: 0, w: 16, h: 16 });
+                gp.rm.spr_scoretext.draw_src(g, self.iDigitLeftDstX as i32, 13, &SDL_Rect { x: self.iDigitLeftSrcX as i32, y: 0, w: 16, h: 16 });
             } else if self.iDigitMiddleSrcX > 0 {
-                game().rm.spr_scoretext.draw_src(self.iDigitMiddleDstX as i32, 13, &SDL_Rect { x: self.iDigitMiddleSrcX as i32, y: 0, w: 16, h: 16 });
+                gp.rm.spr_scoretext.draw_src(g, self.iDigitMiddleDstX as i32, 13, &SDL_Rect { x: self.iDigitMiddleSrcX as i32, y: 0, w: 16, h: 16 });
             }
         }
     }

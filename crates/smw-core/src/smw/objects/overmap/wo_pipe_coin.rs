@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_PipeCoin.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
@@ -30,7 +31,7 @@ pub struct OMO_PipeCoin {
 impl_base!(OMO_PipeCoin => io_over_map_object: IO_OverMapObject);
 
 impl OMO_PipeCoin {
-    pub fn new(nspr: Ptr<gfxSprite>, vel: Vec2f, pos: Vec2s, teamid: i16, colorid: i16, uncollectabletime: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, vel: Vec2f, pos: Vec2s, teamid: i16, colorid: i16, uncollectabletime: i16) -> Self {
         let mut this = OMO_PipeCoin {
             io_over_map_object: IO_OverMapObject::new(nspr, pos, 4, 8, 30, 30, 1, 1, 0, ((colorid as i32) << 5) as i16, 32, 32),
             iTeamID: teamid,
@@ -45,7 +46,7 @@ impl OMO_PipeCoin {
         this.velx = vel.x;
 
         unsafe {
-            if game().pipegamemode.is_slowdown() {
+            if g.pipegamemode.is_slowdown() {
                 this.vely = vel.y / 2.0f32;
             } else {
                 this.vely = vel.y;
@@ -68,7 +69,7 @@ impl OMO_PipeCoin {
 impl CObjectTrait for OMO_PipeCoin {
     crate::impl_cobject_plumbing!();
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         let x = self.fx + self.velx;
         self.set_xf(x);
         let y = self.fy + self.vely;
@@ -83,7 +84,7 @@ impl CObjectTrait for OMO_PipeCoin {
         }
 
         unsafe {
-            if game().pipegamemode.is_slowdown() {
+            if g.pipegamemode.is_slowdown() {
                 self.vely += GRAVITATION / 1.5f32;
             } else {
                 self.vely += GRAVITATION;
@@ -104,7 +105,8 @@ impl CObjectTrait for OMO_PipeCoin {
         }
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let x = self.ix as i32 - self.collisionOffsetX as i32;
         let y = self.iy as i32 - self.collisionOffsetY as i32;
         let srcRect = SDL_Rect { x: self.drawframe as i32, y: self.animationOffsetY as i32, w: self.iw as i32, h: self.ih as i32 };
@@ -112,50 +114,51 @@ impl CObjectTrait for OMO_PipeCoin {
 
         unsafe {
             if self.iUncollectableTime > 0 {
-                self.spr.draw_clip(x, y, &srcRect, ClipEdge::Bottom, 256);
+                self.spr.draw_clip(g, x, y, &srcRect, ClipEdge::Bottom, 256);
 
                 // Draw sparkles
                 if self.iTeamID == -1 {
-                    game().rm.spr_shinesparkle.draw_clip(x, y, &sparkleRect, ClipEdge::Bottom, 256);
+                    gp.rm.spr_shinesparkle.draw_clip(g, x, y, &sparkleRect, ClipEdge::Bottom, 256);
                 }
             } else {
-                self.spr.draw_src(x, y, &srcRect);
+                self.spr.draw_src(g, x, y, &srcRect);
 
                 // Draw sparkles
                 if self.iTeamID == -1 {
-                    game().rm.spr_shinesparkle.draw_src(x, y, &sparkleRect);
+                    gp.rm.spr_shinesparkle.draw_src(g, x, y, &sparkleRect);
                 }
             }
         }
     }
 
-    fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         if self.iUncollectableTime > 0 {
             return false;
         }
 
         unsafe {
-            if !game().game_values.gamemode.gameover {
+            if !g.game_values.gamemode.gameover {
                 if self.iTeamID != -1 {
                     if player.teamID == self.iTeamID {
-                        player.score().adjust_score(1);
-                        if_sound_on_play(&mut game().rm.sfx_coin);
+                        player.score().adjust_score(g, 1);
+                        if_sound_on_play(g, &mut gp.rm.sfx_coin);
                     }
                 } else if self.iColorID == 2 {
-                    player.score().adjust_score(1);
-                    if_sound_on_play(&mut game().rm.sfx_coin);
+                    player.score().adjust_score(g, 1);
+                    if_sound_on_play(g, &mut gp.rm.sfx_coin);
                 } else if self.iColorID == 0 {
-                    player.score().adjust_score(-1);
-                    if_sound_on_play(&mut game().rm.sfx_stun);
+                    player.score().adjust_score(g, -1);
+                    if_sound_on_play(g, &mut gp.rm.sfx_stun);
                 } else if self.iColorID == 1 {
-                    player.score().adjust_score(5);
-                    if_sound_on_play(&mut game().rm.sfx_extraguysound);
+                    player.score().adjust_score(g, 5);
+                    if_sound_on_play(g, &mut gp.rm.sfx_extraguysound);
                 }
 
-                game().game_values.gamemode.check_winner(player);
+                gp.game_values.gamemode.check_winner(g, player);
             }
 
-            game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_coinsparkle), self.ix, self.iy, 7, 4));
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_coinsparkle), self.ix, self.iy, 7, 4));
         }
 
         self.dead = true;

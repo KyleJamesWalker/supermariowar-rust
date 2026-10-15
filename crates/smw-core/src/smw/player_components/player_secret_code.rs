@@ -1,5 +1,6 @@
 //! Port of src/smw/player_components/PlayerSecretCode.cpp
 
+use crate::game::Game;
 use crate::globals::*;
 use crate::smw::objectgame::check_secret;
 use crate::smw::player::CPlayer;
@@ -26,7 +27,7 @@ impl PlayerSecretCode {
         self.index = 0;
     }
 
-    pub fn update(&mut self, player: &mut CPlayer, keymask: u8) {
+    pub fn update(&mut self, g: &mut Game, player: &mut CPlayer, keymask: u8) {
         if !player.isready() {
             return;
         }
@@ -49,7 +50,7 @@ impl PlayerSecretCode {
         if self.index == 18 && self.timer < SECRET_CODE_TIME_MAX {
             self.index = 0;
             self.timer = 0;
-            check_secret(3);
+            check_secret(g, 3);
         }
     }
 }

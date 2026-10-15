@@ -1,5 +1,6 @@
 //! Port of src/smw/network/NetConfigManager.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::path::get_home_directory;
 use crate::common_netplay::protocol_definitions::{NET_MAX_PLAYER_NAME_LENGTH, NET_MAX_ROOM_NAME_LENGTH};
@@ -70,7 +71,7 @@ fn load_file() -> Option<toml::Table> {
     }
 }
 
-fn read_playername(config: &toml::Table) {
+fn read_playername(g: &mut Game, config: &toml::Table) {
     let result = (|| -> Result<(), String> {
         let Some(config_playername) = config.get("player_name") else {
             return Ok(());
@@ -88,7 +89,7 @@ fn read_playername(config: &toml::Table) {
             return Err(format!("player name must be less than {} letters", NET_MAX_PLAYER_NAME_LENGTH));
         }
 
-        unsafe { game().netplay.myPlayerName = net_player_name.to_string() };
+        unsafe { g.netplay.myPlayerName = net_player_name.to_string() };
         Ok(())
     })();
 
@@ -97,17 +98,17 @@ fn read_playername(config: &toml::Table) {
     }
 }
 
-fn read_roomname(config: &toml::Table) {
+fn read_roomname(g: &mut Game, config: &toml::Table) {
     let Some(room_name) = config.get("room_name").and_then(|v| v.as_str()) else {
         return;
     };
 
     if (3..NET_MAX_ROOM_NAME_LENGTH).contains(&room_name.len()) {
-        unsafe { game().netplay.newroom_name = room_name.to_string() };
+        unsafe { g.netplay.newroom_name = room_name.to_string() };
     }
 }
 
-fn read_servers(config: &toml::Table) {
+fn read_servers(g: &mut Game, config: &toml::Table) {
     let result = (|| -> Result<(), String> {
         let Some(config_servers) = config.get("servers") else {
             return Ok(());
@@ -128,7 +129,7 @@ fn read_servers(config: &toml::Table) {
                 continue;
             }
 
-            unsafe { game().netplay.savedServers.push(ServerAddress { hostname: address_str.to_string() }) };
+            unsafe { g.netplay.savedServers.push(ServerAddress { hostname: address_str.to_string() }) };
         }
         Ok(())
     })();
@@ -142,17 +143,17 @@ fn read_servers(config: &toml::Table) {
 pub struct NetConfigManager;
 
 impl NetConfigManager {
-    pub fn save(&mut self) {
+    pub fn save(&mut self, g: &mut Game) {
         unsafe {
-            debug_assert!(!game().netplay.myPlayerName.is_empty());
+            debug_assert!(!g.netplay.myPlayerName.is_empty());
 
             // Remove `(none)`
-            if game().netplay.savedServers.len() == 1 && game().netplay.savedServers[0].hostname == "(none)" {
-                game().netplay.savedServers.clear();
+            if g.netplay.savedServers.len() == 1 && g.netplay.savedServers[0].hostname == "(none)" {
+                g.netplay.savedServers.clear();
             }
 
-            let servers: Vec<String> = game().netplay.savedServers.iter().map(|s| s.hostname.clone()).collect();
-            let content = format_config(&game().netplay.myPlayerName, &game().netplay.newroom_name, &servers);
+            let servers: Vec<String> = g.netplay.savedServers.iter().map(|s| s.hostname.clone()).collect();
+            let content = format_config(&g.netplay.myPlayerName, &g.netplay.newroom_name, &servers);
 
             if std::fs::write(get_home_directory() + CONFIG_FILENAME, content).is_err() {
                 println!("[net][error] Could not save network settings");
@@ -160,14 +161,14 @@ impl NetConfigManager {
         }
     }
 
-    pub fn load(&mut self) {
+    pub fn load(&mut self, g: &mut Game) {
         let Some(config) = load_file() else {
             return;
         };
 
-        read_playername(&config);
-        read_roomname(&config);
-        read_servers(&config);
+        read_playername(g, &config);
+        read_roomname(g, &config);
+        read_servers(g, &config);
     }
 }
 

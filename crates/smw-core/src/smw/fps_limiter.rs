@@ -1,5 +1,6 @@
 //! Port of src/smw/FPSLimiter.cpp
 
+use crate::game::Game;
 use crate::globals::*;
 use crate::smw::harness;
 
@@ -25,9 +26,9 @@ impl FPSLimiter {
     #[cfg(target_os = "emscripten")]
     pub fn frame_start(&mut self) {}
     #[cfg(target_os = "emscripten")]
-    pub fn before_flip(&mut self) {}
+    pub fn before_flip(&mut self, _g: &mut Game) {}
     #[cfg(target_os = "emscripten")]
-    pub fn after_flip(&mut self) {}
+    pub fn after_flip(&mut self, _g: &mut Game) {}
 
     #[cfg(not(target_os = "emscripten"))]
     pub fn frame_start(&mut self) {
@@ -35,7 +36,7 @@ impl FPSLimiter {
     }
 
     #[cfg(not(target_os = "emscripten"))]
-    pub fn before_flip(&mut self) {
+    pub fn before_flip(&mut self, g: &mut Game) {
         unsafe {
             self.ticks = crate::services::ticks().wrapping_sub(self.framestart);
             if self.ticks == 0 {
@@ -43,8 +44,8 @@ impl FPSLimiter {
             }
 
             // `#if !_DEBUG`: the reference build is Release.
-            if game().game_values.showfps {
-                let potentialFps = 1000.0f32 / (if game().game_values.framelimiter == 0 { 1 } else { game().game_values.framelimiter }) as f32;
+            if g.game_values.showfps {
+                let potentialFps = 1000.0f32 / (if g.game_values.framelimiter == 0 { 1 } else { g.game_values.framelimiter }) as f32;
                 // TODO(resource_manager): rm->menu_font_large.drawf(0, 480 - rm->menu_font_large.getHeight(),
                 //     "Actual:%.1f/%.1f, Flip:%.1f, Potential:%.1f", realfps, potentialFps, flipfps, 1000.0f / (float)ticks);
             }
@@ -52,7 +53,7 @@ impl FPSLimiter {
     }
 
     #[cfg(not(target_os = "emscripten"))]
-    pub fn after_flip(&mut self) {
+    pub fn after_flip(&mut self, g: &mut Game) {
         unsafe {
             self.flipfps = 1000.0f32 / self.ticks as f32;
 
@@ -61,7 +62,7 @@ impl FPSLimiter {
             }
 
             //Sleep for time just under what we need
-            let framelimiter = if harness::speed() == 1.0 { game().game_values.framelimiter as i32 } else { (game().game_values.framelimiter as f32 / harness::speed()) as i32 };
+            let framelimiter = if harness::speed() == 1.0 { g.game_values.framelimiter as i32 } else { (g.game_values.framelimiter as f32 / harness::speed()) as i32 };
             let mut delay: i16 = (framelimiter as u32).wrapping_sub(crate::services::ticks()).wrapping_add(self.framestart).wrapping_sub(2) as i16;
 
             if delay > 0 {

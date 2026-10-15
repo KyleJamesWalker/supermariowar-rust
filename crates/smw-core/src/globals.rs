@@ -1,4 +1,5 @@
 //! Global-state infrastructure (see docs/ARCHITECTURE.md) and re-exports of every C++ global.
+use crate::game::Game;
 
 pub use smw_globals::{Aliased, Global, Ptr};
 
@@ -6,10 +7,10 @@ pub use crate::common::global::*;
 pub use crate::game::game;
 
 /// Runs the constructors of C++ globals that have static storage, in C++ definition order.
-pub fn init_globals() {
-    crate::common::global::init_globals();
-    crate::smw::world::init_globals();
-    crate::smw::net::init_globals();
+pub fn init_globals(g: &mut Game) {
+    crate::common::global::init_globals(g);
+    crate::smw::world::init_globals(g);
+    crate::smw::net::init_globals(g);
 }
 
 #[cfg(test)]

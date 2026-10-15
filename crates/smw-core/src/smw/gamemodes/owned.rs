@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/Owned.cpp
 
+use crate::game::Game;
 use crate::common::game_mode::{game_mode_owned, CGameMode, CGameModeTrait};
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
@@ -40,37 +41,38 @@ impl CGameModeTrait for CGM_Owned {
         self
     }
 
-    fn think(&mut self) {
+    fn think(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if self.gameover {
-            self.displayplayertext();
+            self.displayplayertext(g);
         } else {
             unsafe {
                 self.counter += 1;
-                if self.counter >= game().game_values.pointspeed {
+                if self.counter >= g.game_values.pointspeed {
                     self.counter = 0;
 
                     let mut i = 0;
-                    while i < game().players.len() {
+                    while i < g.players.len() {
                         let mut k = 0;
-                        while k < game().players.len() {
-                            if i != k && game().players[k].ownerPlayerID == game().players[i].get_global_id() {
-                                game().players[i].score().adjust_score(1);
+                        while k < g.players.len() {
+                            if i != k && g.players[k].ownerPlayerID == g.players[i].get_global_id() {
+                                gp.players[i].score().adjust_score(g, 1);
                             }
                             k += 1;
                         }
 
                         if self.goal > -1 {
-                            if game().players[i].score().score >= self.goal {
-                                game().players[i].score().set_score(self.goal);
+                            if g.players[i].score().score >= self.goal {
+                                g.players[i].score().set_score(self.goal);
 
-                                self.winningteam = game().players[i].get_team_id();
+                                self.winningteam = g.players[i].get_team_id();
                                 self.gameover = true;
 
-                                remove_players_but_team(self.winningteam);
-                                setup_score_board(false);
-                                show_score_board();
-                            } else if game().players[i].score().score as f64 >= self.goal as f64 * 0.8 && !self.playedwarningsound {
-                                self.playwarningsound();
+                                remove_players_but_team(g, self.winningteam);
+                                setup_score_board(g, false);
+                                show_score_board(g);
+                            } else if g.players[i].score().score as f64 >= self.goal as f64 * 0.8 && !self.playedwarningsound {
+                                self.playwarningsound(g);
                             }
                         }
                         i += 1;
@@ -80,16 +82,16 @@ impl CGameModeTrait for CGM_Owned {
         }
     }
 
-    fn playerkilledplayer(&mut self, mut inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, mut inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
         if !self.gameover {
             //Give a bonus to the killer if he already owned this player
             if other.ownerPlayerID == inflictor.get_global_id() {
-                inflictor.score().adjust_score(5);
+                inflictor.score().adjust_score(g, 5);
             }
 
             //Release all players owned by the killed player
             unsafe {
-                for &player in game().players.iter() {
+                for &player in g.players.iter() {
                     let mut player = player;
                     if player.ownerPlayerID == other.get_global_id() {
                         player.ownerPlayerID = -1;
@@ -103,17 +105,17 @@ impl CGameModeTrait for CGM_Owned {
                 other.ownerColorOffsetX = (inflictor.get_color_id() as i32 * 48) as i16;
             }
 
-            return self.check_winner(inflictor);
+            return self.check_winner(g, inflictor);
         }
 
         PlayerKillType::Normal
     }
 
-    fn playerkilledself(&mut self, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
         gm::cgamemode_playerkilledself(self, player, style);
 
         unsafe {
-            for &other in game().players.iter() {
+            for &other in g.players.iter() {
                 let mut other = other;
                 if other.ownerPlayerID == player.get_global_id() {
                     other.ownerPlayerID = -1;
@@ -124,14 +126,14 @@ impl CGameModeTrait for CGM_Owned {
         PlayerKillType::Normal
     }
 
-    fn playerextraguy(&mut self, mut player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iType: i16) {
         if !self.gameover {
-            player.score().adjust_score((10 * iType as i32) as i16);
-            self.check_winner(player);
+            player.score().adjust_score(g, (10 * iType as i32) as i16);
+            self.check_winner(g, player);
         }
     }
 
-    fn check_winner(&mut self, mut player: Ptr<CPlayer>) -> PlayerKillType {
+    fn check_winner(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> PlayerKillType {
         if self.goal == -1 {
             return PlayerKillType::Normal;
         }
@@ -141,12 +143,12 @@ impl CGameModeTrait for CGM_Owned {
             self.winningteam = player.get_team_id();
             self.gameover = true;
 
-            setup_score_board(false);
-            show_score_board();
-            remove_players_but_team(self.winningteam);
+            setup_score_board(g, false);
+            show_score_board(g);
+            remove_players_but_team(g, self.winningteam);
             return PlayerKillType::Removed;
         } else if player.score().score as f64 >= self.goal as f64 * 0.8 && !self.playedwarningsound {
-            self.playwarningsound();
+            self.playwarningsound(g);
         }
 
         PlayerKillType::Normal

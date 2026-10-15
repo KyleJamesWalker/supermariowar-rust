@@ -1,5 +1,6 @@
 //! Port of src/common/ui/MI_MapField.cpp
 
+use crate::game::Game;
 use crate::common::game::App;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::input::CPlayerInput;
@@ -12,9 +13,9 @@ use sdl2::sys::SDL_KeyCode::*;
 use sdl2::sys::SDL_Rect;
 
 /// `maplist->GetCurrent()->second.iIndex`
-fn current_map_index() -> i16 {
+fn current_map_index(g: &mut Game) -> i16 {
     unsafe {
-        game().maplist.node_at(game().maplist.get_current()).iIndex
+        g.maplist.node_at(g.maplist.get_current()).iIndex
     }
 }
 
@@ -69,24 +70,24 @@ impl MI_MapField {
         this
     }
 
-    pub fn choose_random_map(&mut self) -> MenuCodeEnum {
-        let iOldIndex = current_map_index();
-        unsafe { game().maplist.random(true) };
+    pub fn choose_random_map(&mut self, g: &mut Game) -> MenuCodeEnum {
+        let iOldIndex = current_map_index(g);
+        unsafe { g.maplist.random(true) };
 
-        if iOldIndex != current_map_index() {
-            self.load_current_map();
+        if iOldIndex != current_map_index(g) {
+            self.load_current_map(g);
             return MENU_CODE_MAP_CHANGED;
         }
 
         MENU_CODE_NONE
     }
 
-    pub fn move_prev(&mut self, fScrollFast: bool) -> bool {
-        self.move_(false, fScrollFast)
+    pub fn move_prev(&mut self, g: &mut Game, fScrollFast: bool) -> bool {
+        self.move_(g, false, fScrollFast)
     }
 
-    pub fn move_next(&mut self, fScrollFast: bool) -> bool {
-        self.move_(true, fScrollFast)
+    pub fn move_next(&mut self, g: &mut Game, fScrollFast: bool) -> bool {
+        self.move_(g, true, fScrollFast)
     }
 
     pub fn set_dimensions(&mut self, width: i16, indent: i16) {
@@ -103,25 +104,25 @@ impl MI_MapField {
         }
     }
 
-    fn move_(&mut self, fNext: bool, fScrollFast: bool) -> bool {
+    fn move_(&mut self, g: &mut Game, fNext: bool, fScrollFast: bool) -> bool {
         let mut numadvance: i32 = 1;
         if fScrollFast {
             numadvance = 10;
         }
 
-        let iOldIndex = current_map_index();
+        let iOldIndex = current_map_index(g);
         for _ in 0..numadvance {
             unsafe {
                 if fNext {
-                    game().maplist.next(true);
+                    g.maplist.next(true);
                 } else {
-                    game().maplist.prev(true);
+                    g.maplist.prev(true);
                 }
             }
         }
 
-        if iOldIndex != current_map_index() {
-            self.load_current_map();
+        if iOldIndex != current_map_index(g) {
+            self.load_current_map(g);
             return true;
         }
 
@@ -132,7 +133,7 @@ impl MI_MapField {
 impl UI_ControlTrait for MI_MapField {
     crate::impl_ctl!();
 
-    fn modify(&mut self, modify: bool) -> MenuCodeEnum {
+    fn modify(&mut self, g: &mut Game, modify: bool) -> MenuCodeEnum {
         if self.fDisable {
             return MENU_CODE_UNSELECT_ITEM;
         }
@@ -144,13 +145,13 @@ impl UI_ControlTrait for MI_MapField {
         MENU_CODE_MODIFY_ACCEPTED
     }
 
-    fn send_input(&mut self, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+    fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         let iPressedKey: i16 = playerInput.iPressedKey as i16;
 
         for iPlayer in 0..4usize {
             let out = playerInput.outputControls[iPlayer];
             if out.menu_right().fPressed || out.menu_down().fPressed {
-                if self.move_next(out.menu_scrollfast().fDown) {
+                if self.move_next(g, out.menu_scrollfast().fDown) {
                     return MENU_CODE_MAP_CHANGED;
                 }
 
@@ -158,7 +159,7 @@ impl UI_ControlTrait for MI_MapField {
             }
 
             if out.menu_left().fPressed || out.menu_up().fPressed {
-                if self.move_prev(out.menu_scrollfast().fDown) {
+                if self.move_prev(g, out.menu_scrollfast().fDown) {
                     return MENU_CODE_MAP_CHANGED;
                 }
 
@@ -166,7 +167,7 @@ impl UI_ControlTrait for MI_MapField {
             }
 
             if out.menu_random().fPressed {
-                return self.choose_random_map();
+                return self.choose_random_map(g);
             }
 
             if out.menu_select().fPressed || out.menu_cancel().fPressed {
@@ -184,20 +185,20 @@ impl UI_ControlTrait for MI_MapField {
                     || key == SDLK_MINUS as i32
                     || key == SDLK_EQUALS as i32
                 {
-                    let iOldIndex = current_map_index();
+                    let iOldIndex = current_map_index(g);
 
                     //maplist->startswith((char)playerInput->iPressedKey);
 
                     self.sSearchString.push(iPressedKey as u8 as char);
                     self.iSearchStringTimer = 10;
 
-                    if unsafe { !game().maplist.startswith(&self.sSearchString) } {
+                    if unsafe { !g.maplist.startswith(&self.sSearchString) } {
                         self.sSearchString = String::new();
                         self.iSearchStringTimer = 0;
                     }
 
-                    if iOldIndex != current_map_index() {
-                        self.load_current_map();
+                    if iOldIndex != current_map_index(g) {
+                        self.load_current_map(g);
                         return MENU_CODE_MAP_CHANGED;
                     }
 
@@ -209,7 +210,7 @@ impl UI_ControlTrait for MI_MapField {
         MENU_CODE_NONE
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         //Empty out the search string after a certain time
         if self.iSearchStringTimer > 0 {
             self.iSearchStringTimer -= 1;
@@ -235,13 +236,13 @@ impl UI_ControlTrait for MI_MapField {
         }
 
         //Update hazards
-        self.mi_map_preview.update_impl();
+        self.mi_map_preview.update_impl(g);
 
-        self.miModifyImageRight.update();
-        self.miModifyImageLeft.update();
+        self.miModifyImageRight.update(g);
+        self.miModifyImageLeft.update(g);
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         if !self.m_visible {
             return;
         }
@@ -254,23 +255,23 @@ impl UI_ControlTrait for MI_MapField {
 
         unsafe {
             //Draw the select field background
-            self.spr.draw_src(x, y, &SDL_Rect { x: 0, y: selY, w: indent - 16, h: 32 });
-            self.spr.draw_src(x + indent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
-            self.spr.draw_src(x + indent + 16, y, &SDL_Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
+            self.spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: selY, w: indent - 16, h: 32 });
+            self.spr.draw_src(g, x + indent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
+            self.spr.draw_src(g, x + indent + 16, y, &SDL_Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
 
-            game().rm.menu_font_large.draw_chop_right(x + 16, y + 5, indent - 8, &self.szName);
-            game().rm.menu_font_large.draw_chop_right(x + indent + 8, y + 5, width - indent - 24, &self.szMapName);
+            g.rm.menu_font_large.draw_chop_right(x + 16, y + 5, indent - 8, &self.szName);
+            g.rm.menu_font_large.draw_chop_right(x + indent + 8, y + 5, width - indent - 24, &self.szMapName);
         }
 
-        self.mi_map_preview.draw_impl();
+        self.mi_map_preview.draw_impl(g);
 
-        self.miModifyImageLeft.draw();
-        self.miModifyImageRight.draw();
+        self.miModifyImageLeft.draw(g);
+        self.miModifyImageRight.draw(g);
 
         //rm->menu_font_large.draw(rectDst.x, rectDst.y, sSearchString.c_str());
     }
 
-    fn mouse_click(&mut self, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
+    fn mouse_click(&mut self, g: &mut Game, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
         if self.fDisable {
             return MENU_CODE_NONE;
         }
@@ -282,13 +283,13 @@ impl UI_ControlTrait for MI_MapField {
             let (mut x, mut y, mut w, mut h) = (0i16, 0i16, 0i16, 0i16);
             self.miModifyImageLeft.get_position_and_size(&mut x, &mut y, &mut w, &mut h);
 
-            if mx >= x as i32 && mx < x as i32 + w as i32 && my >= y as i32 && my < y as i32 + h as i32 && self.move_prev(false) {
+            if mx >= x as i32 && mx < x as i32 + w as i32 && my >= y as i32 && my < y as i32 + h as i32 && self.move_prev(g, false) {
                 return MENU_CODE_MAP_CHANGED;
             }
 
             self.miModifyImageRight.get_position_and_size(&mut x, &mut y, &mut w, &mut h);
 
-            if mx >= x as i32 && mx < x as i32 + w as i32 && my >= y as i32 && my < y as i32 + h as i32 && self.move_next(false) {
+            if mx >= x as i32 && mx < x as i32 + w as i32 && my >= y as i32 && my < y as i32 + h as i32 && self.move_next(g, false) {
                 return MENU_CODE_MAP_CHANGED;
             }
         }

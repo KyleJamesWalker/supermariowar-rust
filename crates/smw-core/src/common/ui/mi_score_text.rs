@@ -1,5 +1,6 @@
 //! Port of src/common/ui/MI_ScoreText.cpp
 
+use crate::game::Game;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 use sdl2::sys::SDL_Rect;
@@ -58,20 +59,21 @@ impl MI_ScoreText {
 impl UI_ControlTrait for MI_ScoreText {
     crate::impl_ctl!();
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if !self.m_visible {
             return;
         }
 
         let y = self.m_pos.y as i32;
         unsafe {
-            game().rm.spr_scoretext.draw_src(self.iDigitRightDstX as i32, y, &SDL_Rect { x: self.iDigitRightSrcX as i32, y: 0, w: 16, h: 16 });
+            gp.rm.spr_scoretext.draw_src(g, self.iDigitRightDstX as i32, y, &SDL_Rect { x: self.iDigitRightSrcX as i32, y: 0, w: 16, h: 16 });
 
             if self.iDigitLeftSrcX > 0 {
-                game().rm.spr_scoretext.draw_src(self.iDigitMiddleDstX as i32, y, &SDL_Rect { x: self.iDigitMiddleSrcX as i32, y: 0, w: 16, h: 16 });
-                game().rm.spr_scoretext.draw_src(self.iDigitLeftDstX as i32, y, &SDL_Rect { x: self.iDigitLeftSrcX as i32, y: 0, w: 16, h: 16 });
+                gp.rm.spr_scoretext.draw_src(g, self.iDigitMiddleDstX as i32, y, &SDL_Rect { x: self.iDigitMiddleSrcX as i32, y: 0, w: 16, h: 16 });
+                gp.rm.spr_scoretext.draw_src(g, self.iDigitLeftDstX as i32, y, &SDL_Rect { x: self.iDigitLeftSrcX as i32, y: 0, w: 16, h: 16 });
             } else if self.iDigitMiddleSrcX > 0 {
-                game().rm.spr_scoretext.draw_src(self.iDigitMiddleDstX as i32, y, &SDL_Rect { x: self.iDigitMiddleSrcX as i32, y: 0, w: 16, h: 16 });
+                gp.rm.spr_scoretext.draw_src(g, self.iDigitMiddleDstX as i32, y, &SDL_Rect { x: self.iDigitMiddleSrcX as i32, y: 0, w: 16, h: 16 });
             }
         }
     }

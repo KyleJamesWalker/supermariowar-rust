@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_CollectionCard.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
@@ -60,10 +61,10 @@ impl MO_CollectionCard {
         o.vely = vel.y;
 
         if iType == 0 {
-            o.place_card();
+            o.place_card(game().get());
             o.fObjectCollidesWithMap = false;
         } else {
-            io_moving_object_collision_detection_checksides(&mut o);
+            io_moving_object_collision_detection_checksides(game().get(), &mut o);
             o.animationOffsetY = ((o.value as i32 + 1) << 5) as i16;
         }
         o
@@ -76,8 +77,8 @@ impl MO_CollectionCard {
         self.value
     }
 
-    pub fn place_card(&mut self) {
-        if crate::smw::net_random::place_event(self.iNetworkID, 0) {
+    pub fn place_card(&mut self, g: &mut Game) {
+        if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
             return;
         }
 
@@ -87,8 +88,8 @@ impl MO_CollectionCard {
         let mut y: i16 = 0;
         let mut iAttempts: i16 = 32;
         unsafe {
-            while (!game().g_map.findspawnpoint(5, &mut x, &mut y, self.collisionWidth, self.collisionHeight, false)
-                || game().objectcontainer[1].get_closest_moving_object(x, y, movingobject_collectioncard) <= 150.0f32)
+            while (!g.g_map.findspawnpoint(5, &mut x, &mut y, self.collisionWidth, self.collisionHeight, false)
+                || g.objectcontainer[1].get_closest_moving_object(x, y, movingobject_collectioncard) <= 150.0f32)
                 && {
                     let a = iAttempts;
                     iAttempts -= 1;
@@ -111,14 +112,15 @@ impl CObjectTrait for MO_CollectionCard {
         Some(self)
     }
 
-    fn collide_player(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         // If it is not collectable, return
         if (self.r#type == 1 && self.uncollectabletime > 0) || self.state != 1 {
             return false;
         }
 
         unsafe {
-            if_sound_on_play(&mut game().rm.sfx_areatag);
+            if_sound_on_play(g, &mut gp.rm.sfx_areatag);
         }
 
         let value = self.value as i32;
@@ -150,7 +152,7 @@ impl CObjectTrait for MO_CollectionCard {
         false
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         if self.r#type == 1 || self.state < 3 {
             self.animate();
         }
@@ -164,7 +166,7 @@ impl CObjectTrait for MO_CollectionCard {
             if self.timer > 200 {
                 self.dead = true;
                 unsafe {
-                    game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
+                    g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
                 }
             }
         }
@@ -181,28 +183,29 @@ impl CObjectTrait for MO_CollectionCard {
         if self.r#type == 0 {
             self.timer += 1;
             if self.timer > 1500 {
-                self.place_card();
+                self.place_card(g);
             }
         } else {
             self.applyfriction();
-            io_moving_object_update(self);
+            io_moving_object_update(g, self);
 
             self.uncollectabletime -= 1;
             unsafe {
-                if (self.uncollectabletime as i32) < -(game().game_values.gamemodesettings.collection.cardlife as i32) {
-                    game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
+                if (self.uncollectabletime as i32) < -(g.game_values.gamemodesettings.collection.cardlife as i32) {
+                    g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
                     self.dead = true;
                 }
             }
         }
     }
 
-    fn draw(&mut self) {
-        io_moving_object_draw(self);
+    fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        io_moving_object_draw(g, self);
 
         // Draw sparkles
         unsafe {
-            game().rm.spr_shinesparkle.draw_src(
+            gp.rm.spr_shinesparkle.draw_src(g, 
                 self.ix as i32 - self.collisionOffsetX as i32,
                 self.iy as i32 - self.collisionOffsetY as i32,
                 &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },

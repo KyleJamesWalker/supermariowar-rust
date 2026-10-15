@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/FlipBlock.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::eyecandy::EC_FallingObject;
 use crate::common::game_values::if_sound_on_play;
@@ -59,20 +60,21 @@ impl B_FlipBlock {
         b
     }
 
-    fn explode(&mut self) {
+    fn explode(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
-            let spr = Ptr::from_mut(&mut game().rm.spr_brokenflipblock);
+            let spr = Ptr::from_mut(&mut g.rm.spr_brokenflipblock);
             let (ix, iy) = (self.ix, self.iy);
-            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy, -2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
-            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy, 2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
-            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
-            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy, -2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy, 2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
 
-            if_sound_on_play(&mut game().rm.sfx_breakblock);
+            if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
         }
     }
 
-    fn object_hit_side(&mut self, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+    fn object_hit_side(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         let mut object = object;
         let r#type = object.get_moving_object_type();
         if r#type == movingobject_shell || r#type == movingobject_throwblock || r#type == movingobject_throwbox {
@@ -87,7 +89,7 @@ impl B_FlipBlock {
             }
 
             self.state = 2;
-            self.explode();
+            self.explode(g);
         } else if r#type == movingobject_attackzone {
             self.iBumpPlayerID = object.iPlayerID;
             self.iBumpTeamID = object.iTeamID;
@@ -95,14 +97,14 @@ impl B_FlipBlock {
             if self.hidden {
                 self.hidden = false;
                 let iBumpPlayerID = self.iBumpPlayerID;
-                io_block_kill_players_and_objects_inside_block(self, iBumpPlayerID);
+                io_block_kill_players_and_objects_inside_block(g, self, iBumpPlayerID);
             }
 
             unsafe {
-                game().g_map.update_tile_gap(self.col, self.row);
+                g.g_map.update_tile_gap(self.col, self.row);
             }
 
-            self.trigger_behavior();
+            self.trigger_behavior(g);
             return false;
         }
 
@@ -116,13 +118,13 @@ impl CObjectTrait for B_FlipBlock {
         Some(self)
     }
 
-    fn draw(&mut self) {
+    fn draw(&mut self, g: &mut Game) {
         if self.hidden {
             return;
         }
 
         if self.state == 0 || self.state == 1 {
-            self.spr.draw_src(
+            self.spr.draw_src(g, 
                 self.ix as i32,
                 self.iy as i32,
                 &SDL_Rect { x: self.frame as i32, y: 0, w: self.iw as i32, h: self.ih as i32 },
@@ -130,8 +132,8 @@ impl CObjectTrait for B_FlipBlock {
         }
     }
 
-    fn update(&mut self) {
-        io_block_update(self);
+    fn update(&mut self, g: &mut Game) {
+        io_block_update(g, self);
 
         if self.state == 1 {
             self.counter += 1;
@@ -148,11 +150,11 @@ impl CObjectTrait for B_FlipBlock {
             if self.timer >= 240 {
                 self.reset();
                 unsafe {
-                    game().g_map.update_tile_gap(self.col, self.row);
+                    g.g_map.update_tile_gap(self.col, self.row);
                 }
 
                 let iBumpPlayerID = self.iBumpPlayerID;
-                io_block_kill_players_and_objects_inside_block(self, iBumpPlayerID);
+                io_block_kill_players_and_objects_inside_block(g, self, iBumpPlayerID);
                 self.iBumpPlayerID = -1;
             }
         } else if self.state == 2 {
@@ -160,8 +162,8 @@ impl CObjectTrait for B_FlipBlock {
         } else if self.state == 3 {
             self.dead = true;
             unsafe {
-                game().g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
-                game().g_map.update_tile_gap(self.col, self.row);
+                g.g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
+                g.g_map.update_tile_gap(self.col, self.row);
             }
         }
     }
@@ -185,20 +187,20 @@ impl IO_BlockTrait for B_FlipBlock {
 
         if self.hidden {
             if player.fOldY >= (iposy + ih) as f32 && direction == 0 {
-                return self.hitbottom_player(player, useBehavior);
+                return self.hitbottom_player(game().get(), player, useBehavior);
             }
 
             return true;
         }
 
         if (player.fOldY + PH as f32 <= iposy as f32 || self.state > 1) && direction == 2 {
-            return self.hittop_player(player, useBehavior);
+            return self.hittop_player(game().get(), player, useBehavior);
         } else if (player.fOldY >= (iposy + ih) as f32 || self.state > 1) && direction == 0 {
-            return self.hitbottom_player(player, useBehavior);
+            return self.hitbottom_player(game().get(), player, useBehavior);
         } else if (player.fOldX + PW as f32 <= iposx as f32 || self.state > 1) && direction == 1 {
-            return self.hitleft_player(player, useBehavior);
+            return self.hitleft_player(game().get(), player, useBehavior);
         } else if (player.fOldX >= (iposx + iw) as f32 || self.state > 1) && direction == 3 {
-            return self.hitright_player(player, useBehavior);
+            return self.hitright_player(game().get(), player, useBehavior);
         }
 
         true
@@ -208,7 +210,7 @@ impl IO_BlockTrait for B_FlipBlock {
         self.state == 1
     }
 
-    fn hittop_player(&mut self, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hittop_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         if self.state == 2 || self.state == 3 {
             io_block_hittop_player(self, player, useBehavior);
 
@@ -219,7 +221,7 @@ impl IO_BlockTrait for B_FlipBlock {
 
             if player.is_super_stomping() {
                 self.state = 2;
-                self.explode();
+                self.explode(g);
                 return true;
             }
 
@@ -229,7 +231,7 @@ impl IO_BlockTrait for B_FlipBlock {
         true
     }
 
-    fn hitbottom_player(&mut self, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitbottom_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         if useBehavior && self.state == 0 {
             player.vely = cap_falling_velocity(-player.vely * BOUNCESTRENGTH);
             player.set_yf((self.iposy as i32 + self.ih as i32) as f32 + 0.2f32);
@@ -240,21 +242,21 @@ impl IO_BlockTrait for B_FlipBlock {
             if self.hidden {
                 self.hidden = false;
                 let iBumpPlayerID = self.iBumpPlayerID;
-                io_block_kill_players_and_objects_inside_block(self, iBumpPlayerID);
+                io_block_kill_players_and_objects_inside_block(g, self, iBumpPlayerID);
             }
 
             unsafe {
-                game().g_map.update_tile_gap(self.col, self.row);
+                g.g_map.update_tile_gap(self.col, self.row);
             }
 
-            self.trigger_behavior();
+            self.trigger_behavior(g);
             return false;
         }
 
         true
     }
 
-    fn hitright_player(&mut self, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitright_player(&mut self, g: &mut Game, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         if useBehavior && self.state == 0 {
             io_block_hitright_player(self, player, useBehavior);
         }
@@ -262,7 +264,7 @@ impl IO_BlockTrait for B_FlipBlock {
         true
     }
 
-    fn hitleft_player(&mut self, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitleft_player(&mut self, g: &mut Game, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         if useBehavior && self.state == 0 {
             io_block_hitleft_player(self, player, useBehavior);
         }
@@ -275,21 +277,21 @@ impl IO_BlockTrait for B_FlipBlock {
             return true;
         }
 
-        io_block_collide_object_dir(self, object, direction)
+        io_block_collide_object_dir(game().get(), self, object, direction)
     }
 
-    fn hittop_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+    fn hittop_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         if self.state == 0 {
             let ch = object.collisionHeight;
             object.set_yf((self.iposy as i32 - ch as i32) as f32 - 0.2f32);
             object.fOldY = object.fy;
-            object.vely = object.bottom_bounce();
+            object.vely = object.bottom_bounce(g);
         }
 
         true
     }
 
-    fn hitbottom_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+    fn hitbottom_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         if self.state == 0 {
             object.set_yf((self.iposy as i32 + self.ih as i32) as f32 + 0.2f32);
             object.vely = -object.vely;
@@ -298,7 +300,7 @@ impl IO_BlockTrait for B_FlipBlock {
         true
     }
 
-    fn hitright_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+    fn hitright_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         if self.state == 0 {
             object.set_xf((self.iposx as i32 + self.iw as i32) as f32 + 0.2f32);
             object.fOldX = object.fx;
@@ -307,13 +309,13 @@ impl IO_BlockTrait for B_FlipBlock {
                 object.velx = -object.velx;
             }
 
-            return self.object_hit_side(object);
+            return self.object_hit_side(g, object);
         }
 
         true
     }
 
-    fn hitleft_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+    fn hitleft_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         if self.state == 0 {
             let cw = object.collisionWidth;
             object.set_xf((self.iposx as i32 - cw as i32) as f32 - 0.2f32);
@@ -323,19 +325,19 @@ impl IO_BlockTrait for B_FlipBlock {
                 object.velx = -object.velx;
             }
 
-            return self.object_hit_side(object);
+            return self.object_hit_side(g, object);
         }
 
         true
     }
 
-    fn trigger_behavior(&mut self) {
+    fn trigger_behavior(&mut self, g: &mut Game) {
         if self.state == 0 {
             self.state = 1;
             self.frame = self.iw;
 
             unsafe {
-                game().g_map.update_tile_gap(self.col, self.row);
+                g.g_map.update_tile_gap(self.col, self.row);
             }
         }
     }

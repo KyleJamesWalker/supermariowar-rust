@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_PoisonPowerup.cpp
 
+use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::CObjectTrait;
@@ -40,13 +41,13 @@ impl CObjectTrait for PU_PoisonPowerup {
     fn as_io_moving_object(&mut self) -> Option<&mut dyn IO_MovingObjectTrait> {
         Some(self)
     }
-    fn draw(&mut self) {
-        mo_powerup_draw(self)
+    fn draw(&mut self, g: &mut Game) {
+        mo_powerup_draw(g, self)
     }
-    fn update(&mut self) {
-        mo_powerup_update(self)
+    fn update(&mut self, g: &mut Game) {
+        mo_powerup_update(g, self)
     }
-    fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         let mut player = player;
         if self.state > 0 {
             if player.is_invincible() || player.shyguy {
@@ -60,7 +61,7 @@ impl CObjectTrait for PU_PoisonPowerup {
 
             self.dead = true;
 
-            return player.kill_player_map_hazard(false, KillStyle::PoisonMushroom, false, -1) != PlayerKillType::NonKill;
+            return player.kill_player_map_hazard(g, false, KillStyle::PoisonMushroom, false, -1) != PlayerKillType::NonKill;
         }
 
         false

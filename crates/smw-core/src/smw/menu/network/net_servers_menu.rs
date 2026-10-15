@@ -1,4 +1,5 @@
 //! Port of src/smw/menu/network/NetServersMenu.cpp
+use crate::game::Game;
 use crate::game::game;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
@@ -35,13 +36,14 @@ pub struct UI_NetServersMenu {
 crate::impl_base!(UI_NetServersMenu => ui_menu: UI_Menu);
 
 impl UI_NetServersMenu {
-    pub fn new() -> Box<Self> {
+    pub fn new(g: &mut Game) -> Box<Self> {
+        let mut gp = g.ptr();
         let mut this = Box::<Self>::default();
         unsafe {
-            let selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
-            let plain = Ptr::from_mut(&mut game().rm.menu_plain_field);
+            let selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
+            let plain = Ptr::from_mut(&mut g.rm.menu_plain_field);
 
-            this.miNetServersBackButton = Ptr::new_box(MI_Button::new(selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miNetServersBackButton = Ptr::new_box(MI_Button::new(g, selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
             this.miNetServersBackButton.set_code(MENU_CODE_TO_MAIN_MENU);
 
             this.miNetServersLeftHeaderBar = Ptr::new_box(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0));
@@ -60,32 +62,32 @@ impl UI_NetServersMenu {
             ));
             this.miNetServersScroll.set_auto_modify(true);
             this.miNetServersScroll.set_visible(false);
-            this.miNetServersScroll.remote_index(&mut game().netplay.selectedServerIndex);
+            this.miNetServersScroll.remote_index(&mut g.netplay.selectedServerIndex);
 
             this.miNetServersNicknameField = Ptr::new_box(MI_TextField::new(plain, 70, 120, "Your name", 640 - 2 * 70, 150));
-            this.miNetServersNicknameField.set_data(&mut game().netplay.myPlayerName, NET_MAX_PLAYER_NAME_LENGTH as i16);
+            this.miNetServersNicknameField.set_data(g, &mut gp.netplay.myPlayerName, NET_MAX_PLAYER_NAME_LENGTH as i16);
 
             for iServer in 0..game().netplay.savedServers.len() {
-                let host = game().netplay.savedServers[iServer].hostname.clone();
+                let host = g.netplay.savedServers[iServer].hostname.clone();
                 this.miNetServersScroll.add(&host, "");
             }
 
-            this.miNetServersSelectButton = Ptr::new_box(MI_Button::new_left(selectfield, 70, 200, "Selected Server", 640 - 2 * 70));
+            this.miNetServersSelectButton = Ptr::new_box(MI_Button::new_left(g, selectfield, 70, 200, "Selected Server", 640 - 2 * 70));
             this.miNetServersSelectButton.set_code(MENU_CODE_TO_NET_SERVERLIST);
-            if !game().netplay.savedServers.is_empty() {
-                let host = game().netplay.savedServers[game().netplay.selectedServerIndex as usize].hostname.clone();
-                this.miNetServersSelectedHostText = Ptr::new_box(MI_Text::new(host, 640 - 90, 205, 0, true, TextAlign::RIGHT));
+            if !g.netplay.savedServers.is_empty() {
+                let host = g.netplay.savedServers[g.netplay.selectedServerIndex as usize].hostname.clone();
+                this.miNetServersSelectedHostText = Ptr::new_box(MI_Text::new(g, host, 640 - 90, 205, 0, true, TextAlign::RIGHT));
             } else {
-                this.miNetServersSelectedHostText = Ptr::new_box(MI_Text::new("(none)", 640 - 90, 205, 0, true, TextAlign::RIGHT));
+                this.miNetServersSelectedHostText = Ptr::new_box(MI_Text::new(g, "(none)", 640 - 90, 205, 0, true, TextAlign::RIGHT));
             }
 
-            this.miNetServersConnectButton = Ptr::new_box(MI_Button::new(selectfield, 70, 240, "Connect", 640 - 2 * 70, TextAlign::CENTER));
+            this.miNetServersConnectButton = Ptr::new_box(MI_Button::new(g, selectfield, 70, 240, "Connect", 640 - 2 * 70, TextAlign::CENTER));
             this.miNetServersConnectButton.set_code(MENU_CODE_NET_CONNECT_IN_PROGRESS);
 
-            this.miNetServersAddRemoveButton = Ptr::new_box(MI_Button::new(selectfield, 70, 280, "Add / Remove Server", 640 - 2 * 70, TextAlign::CENTER));
+            this.miNetServersAddRemoveButton = Ptr::new_box(MI_Button::new(g, selectfield, 70, 280, "Add / Remove Server", 640 - 2 * 70, TextAlign::CENTER));
             this.miNetServersAddRemoveButton.set_code(MENU_CODE_TO_NET_ADDREMOVE_SERVER_MENU);
 
-            this.miNetServersConnectingDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut game().rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
+            this.miNetServersConnectingDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
             this.miNetServersConnectingDialogText = Ptr::new_box(MI_HeaderText::new("Connecting...", 640 / 2, 240 - 12));
 
             this.miNetServersConnectingDialogImage.set_visible(false);
@@ -125,25 +127,25 @@ impl UI_NetServersMenu {
         this
     }
 
-    pub fn refresh(&mut self) {
+    pub fn refresh(&mut self, g: &mut Game) {
         unsafe {
-            if !game().netplay.savedServers.is_empty() {
-                let nethostname = game().netplay.savedServers[game().netplay.selectedServerIndex as usize].hostname.clone();
+            if !g.netplay.savedServers.is_empty() {
+                let nethostname = g.netplay.savedServers[g.netplay.selectedServerIndex as usize].hostname.clone();
                 self.miNetServersSelectedHostText.set_text(nethostname);
             }
         }
     }
 
-    pub fn refresh_scroll(&mut self) {
+    pub fn refresh_scroll(&mut self, g: &mut Game) {
         unsafe {
             self.miNetServersScroll.clear();
             for iServer in 0..game().netplay.savedServers.len() {
-                let host = game().netplay.savedServers[iServer].hostname.clone();
+                let host = g.netplay.savedServers[iServer].hostname.clone();
                 self.miNetServersScroll.add(&host, "");
             }
 
-            if !game().netplay.savedServers.is_empty() {
-                let host = game().netplay.savedServers[game().netplay.selectedServerIndex as usize].hostname.clone();
+            if !g.netplay.savedServers.is_empty() {
+                let host = g.netplay.savedServers[g.netplay.selectedServerIndex as usize].hostname.clone();
                 self.miNetServersSelectedHostText.set_text(host);
             } else {
                 self.miNetServersSelectedHostText.set_text("(none)");
@@ -151,16 +153,17 @@ impl UI_NetServersMenu {
         }
     }
 
-    pub fn connect_in_progress(&mut self) {
+    pub fn connect_in_progress(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
-            if game().netplay.savedServers.is_empty() {
+            if g.netplay.savedServers.is_empty() {
                 return;
             }
 
-            game().netplay.client.send_connect_request_to_selected_server();
-            game().netplay.operationInProgress = true;
+            gp.netplay.client.send_connect_request_to_selected_server(g);
+            g.netplay.operationInProgress = true;
         }
-        net_save_server_list();
+        net_save_server_list(g);
 
         self.miNetServersConnectingDialogImage.set_visible(true);
         self.miNetServersConnectingDialogText.set_visible(true);
@@ -169,18 +172,18 @@ impl UI_NetServersMenu {
         let t = ctl_ptr(self.miNetServersConnectingDialogText);
         self.set_initial_focus(t);
         self.set_cancel_code(MENU_CODE_NET_CONNECT_ABORT);
-        self.reset_menu();
+        self.reset_menu(g);
     }
 
-    pub fn open_server_list(&mut self) {
-        unsafe { game().netplay.connectSuccessful = false };
+    pub fn open_server_list(&mut self, g: &mut Game) {
+        unsafe { g.netplay.connectSuccessful = false };
         self.miNetServersScroll.set_visible(true);
         self.remember_current();
 
         let s = ctl_ptr(self.miNetServersScroll);
         self.set_initial_focus(s);
         self.set_cancel_code(MENU_CODE_NONE);
-        self.reset_menu();
+        self.reset_menu(g);
     }
 
     pub fn restore(&mut self) {
@@ -191,6 +194,6 @@ impl UI_NetServersMenu {
         let s = ctl_ptr(self.miNetServersSelectButton);
         self.set_initial_focus(s);
         self.set_cancel_code(MENU_CODE_TO_MAIN_MENU);
-        self.restore_current();
+        self.restore_current(game().get());
     }
 }
