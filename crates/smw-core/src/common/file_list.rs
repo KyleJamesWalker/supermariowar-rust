@@ -312,9 +312,9 @@ pub struct SkinList {
 }
 
 impl SkinList {
-    pub fn new() -> Self {
+    pub fn new(g: &mut Game) -> Self {
         let mut m_skins = Vec::new();
-        let mut dir = FilesIterator::new(convert_path(game().get(), "gfx/skins/"), vec![".bmp".to_string(), ".png".to_string()]);
+        let mut dir = FilesIterator::new(convert_path(g, "gfx/skins/"), vec![".bmp".to_string(), ".png".to_string()]);
         while let Some(path) = dir.next() {
             m_skins.push(SkinListNode { name: strip_creator_and_ext(&filename_string(&path)), path });
         }
@@ -638,9 +638,9 @@ pub struct MusicList {
 }
 
 impl MusicList {
-    pub fn new() -> Self {
+    pub fn new(g: &mut Game) -> Self {
         let mut m_entries = Vec::new();
-        let mut dir = SubdirsIterator::new(convert_path(game().get(), "music/game/"));
+        let mut dir = SubdirsIterator::new(convert_path(g, "music/game/"));
         while let Some(path) = dir.next() {
             if let Some(pack) = MusicPack::load(&path) {
                 m_entries.push(pack);
@@ -876,9 +876,9 @@ pub struct WorldMusicList {
 }
 
 impl WorldMusicList {
-    pub fn new() -> Self {
+    pub fn new(g: &mut Game) -> Self {
         let mut m_entries = Vec::new();
-        let mut dir = SubdirsIterator::new(convert_path(game().get(), "music/world/"));
+        let mut dir = SubdirsIterator::new(convert_path(g, "music/world/"));
         while let Some(path) = dir.next() {
             if let Some(pack) = WorldMusicPack::load(&path) {
                 m_entries.push(pack);
@@ -963,13 +963,13 @@ mod tests {
         let filters = FiltersList::new();
         assert!(filters.count() >= 1);
 
-        let skins = SkinList::new();
+        let skins = SkinList::new(game().get());
         assert!(skins.count() >= 1);
         assert!((1..skins.count()).all(|i| skins.at(i - 1).name <= skins.at(i).name));
 
-        let mut music = MusicList::new();
+        let mut music = MusicList::new(game().get());
         assert!(!music.current_name().is_empty());
-        let mut worldmusic = WorldMusicList::new();
+        let mut worldmusic = WorldMusicList::new(game().get());
         assert!(worldmusic.count() >= 1);
         update_music_with_overrides(game().get(), &mut music, &mut worldmusic);
         assert!(music.music(0).exists());

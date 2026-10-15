@@ -39,8 +39,8 @@ impl SplashScreenState {
         }
     }
 
-    pub fn instance() -> &'static mut SplashScreenState {
-        game().get().ss.get_or_insert_with(SplashScreenState::new)
+    pub fn instance(g: &mut Game) -> &'static mut SplashScreenState {
+        g.ptr().get().ss.get_or_insert_with(SplashScreenState::new)
     }
 }
 
@@ -56,13 +56,15 @@ impl GameState for SplashScreenState {
 
             self.menu_credits = Ptr::new_box(gfxSprite::new());
             *self.menu_credits =
-                ImageLoader::new(convert_path_pack(g, "gfx/packs/menu/splash_credits.png", &gp.menugraphicspacklist.current_path().to_string_lossy())).create();
+                ImageLoader::new(convert_path_pack(g, "gfx/packs/menu/splash_credits.png", &gp.menugraphicspacklist.current_path().to_string_lossy())).create(g);
         }
 
         true
     }
 
     fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        let mut gp = g.ptr();
         let mut gp = g.ptr();
         unsafe {
             g.game_values.playerInput.clear_pressed_keys(1);
@@ -111,9 +113,9 @@ impl GameState for SplashScreenState {
                         g.game_values.playerInput.reset_keys();
                         g.game_values.appstate = AppState::Menu;
 
-                        MenuState::instance().init(g);
-                        GameplayState::instance().init(g);
-                        GameStateManager::instance().change_state_to(g, Ptr::from_mut(MenuState::instance() as &mut dyn GameState));
+                        MenuState::instance(g).init(g);
+                        GameplayState::instance(g).init(g);
+                        GameStateManager::instance(g).change_state_to(gp.get(), Ptr::from_mut(MenuState::instance(gp.get()) as &mut dyn GameState));
                         return;
                     }
                 }
@@ -143,8 +145,8 @@ impl GameState for SplashScreenState {
                 g.rm.menu_font_large.draw_centered(App::screenWidth / 2, (App::screenHeight as f32 * 0.875f32) as i32, "Press Any Key To Continue");
 
                 g.eyecandy[2].clean_dead_objects();
-                g.eyecandy[2].update();
-                g.eyecandy[2].draw();
+                gp.eyecandy[2].update(g);
+                gp.eyecandy[2].draw(g);
             }
 
             // Only start loading after we displayed something, in the 2nd frame

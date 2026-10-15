@@ -270,6 +270,7 @@ pub fn restore(g: &mut Game, bytes: Vec<u8>) -> Result<(), String> {
 /// Saves or restores every part of the checkpoint, in the order a restore must apply them.
 fn walk(g: &mut Game, s: &mut Snap, online: bool) {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
     unsafe {
         let gv = &mut *gp.get().game_values;
         if online {
@@ -405,7 +406,7 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
             s.io(&mut sc.iDigitLeft);
         }
         s.io(&mut g.score_cnt);
-        GameplayState::instance().checkpoint(s);
+        GameplayState::instance(g).checkpoint(s);
 
         // The map and the music the menu chose. A net game's joiner plays the host's map from its settings directory.
         let mut map = portable_path(&g.match_map);
@@ -429,7 +430,7 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
             for k in 0..4 {
                 if gv.playercontrol[k] > 0 {
                     gp.get().rm.spr_player[k] = match crate::smw::net::net_skin_path(g, k) {
-                        Some(path) => g.rm.load_full_skin_path(Path::new(&path), k as i16),
+                        Some(path) => gp.rm.load_full_skin_path(g, Path::new(&path), k as i16),
                         None => gp.get().rm.load_full_skin(g, gv.skinids[k], gv.colorids[k]),
                     };
                 }
@@ -612,8 +613,8 @@ impl GameState for SegmentState {
             g.eyecandy[2].clean();
             g.game_values.playerInput.reset_keys();
             g.game_values.appstate = AppState::Menu;
-            MenuState::instance().init(g);
-            GameplayState::instance().init(g);
+            MenuState::instance(g).init(g);
+            GameplayState::instance(g).init(g);
         }
         if let Err(e) = restore(g, std::mem::take(&mut self.checkpoint)) {
             eprintln!("[harness] {}", e);

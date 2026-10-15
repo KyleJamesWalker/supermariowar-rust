@@ -151,6 +151,7 @@ impl UI_ControlTrait for MI_NetworkListScroll {
 
     fn draw(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
         if !self.m_visible {
             return;
         }
@@ -180,7 +181,7 @@ impl UI_ControlTrait for MI_NetworkListScroll {
                 );
 
                 let item = &self.items[(self.iOffset + iLine) as usize];
-                g.rm.menu_font_large.draw_chop_right(x + 28, y + 5 + iLine as i32 * 32 + 32, w - 104, &item.sLeft);
+                gp.rm.menu_font_large.draw_chop_right(g, x + 28, y + 5 + iLine as i32 * 32 + 32, w - 104, &item.sLeft);
                 g.rm.menu_font_large.draw_right_justified(x + 28 + w - 64, y + 5 + iLine as i32 * 32 + 32, &item.sRight);
                 iLine += 1;
             }

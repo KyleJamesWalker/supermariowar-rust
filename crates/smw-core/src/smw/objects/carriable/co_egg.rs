@@ -40,7 +40,7 @@ pub struct CO_Egg {
 impl_base!(CO_Egg => mo_carried_object: MO_CarriedObject);
 
 impl CO_Egg {
-    pub fn new(nspr: Ptr<gfxSprite>, iColor: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, iColor: i16) -> Self {
         let mut o = CO_Egg {
             mo_carried_object: MO_CarriedObject::new_anim(nspr, Vec2s::zero(), 2, 16, 28, 30, 2, 1, 0, ((iColor as i32) << 5) as i16, 32, 32),
             relocatetimer: 0,
@@ -78,7 +78,7 @@ impl CO_Egg {
 
         o.fCarriedByKuriboShoe = true;
 
-        o.place_egg(game().get());
+        o.place_egg(g);
         o
     }
 

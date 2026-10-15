@@ -98,9 +98,9 @@ impl EC_StillImage {
         this
     }
 
-    pub fn draw(&self) {
+    pub fn draw(&self, g: &mut Game) {
         if !self.dead {
-            spr(self.spr).draw_part(game().get(), self.ix as i32, self.iy as i32, self.iSrcX as i32, self.iSrcY as i32, self.iw as i32, self.ih as i32);
+            spr(self.spr).draw_part(g, self.ix as i32, self.iy as i32, self.iSrcX as i32, self.iSrcY as i32, self.iw as i32, self.ih as i32);
         }
     }
 }
@@ -181,9 +181,10 @@ impl EC_Animated {
         self.animate();
     }
 
-    pub fn draw(&self, _g: &mut Game) {
+    pub fn draw(&self, g: &mut Game) {
+        let mut gp = g.ptr();
         if !self.dead {
-            spr(self.spr).draw_part(game().get(), 
+            spr(self.spr).draw_part(gp.get(), 
                 self.ix as i32,
                 self.iy as i32,
                 self.iAnimationFrame as i32,
@@ -237,8 +238,9 @@ impl EC_OscillatingAnimation {
         self.animate();
     }
 
-    pub fn draw(&self, _g: &mut Game) {
-        self.ec_animated.draw(game().get());
+    pub fn draw(&self, g: &mut Game) {
+        let mut gp = g.ptr();
+        self.ec_animated.draw(gp.get());
     }
 }
 impl_eyecandy!(EC_OscillatingAnimation);
@@ -272,7 +274,7 @@ impl EC_Cloud {
     }
 
     pub fn draw(&self, _g: &mut Game) {
-        self.ec_still_image.draw();
+        self.ec_still_image.draw(game().get());
     }
 }
 impl_eyecandy!(EC_Cloud);
@@ -313,8 +315,9 @@ impl EC_Ghost {
         self.iy = self.dy as i16;
     }
 
-    pub fn draw(&self, _g: &mut Game) {
-        self.ec_animated.draw(game().get());
+    pub fn draw(&self, g: &mut Game) {
+        let mut gp = g.ptr();
+        self.ec_animated.draw(gp.get());
     }
 }
 impl_eyecandy!(EC_Ghost);
@@ -396,8 +399,9 @@ impl EC_Leaf {
         self.iAnimationTimer = RANDOM_INT(16) as i16;
     }
 
-    pub fn draw(&self, _g: &mut Game) {
-        self.ec_oscillating_animation.draw(game().get());
+    pub fn draw(&self, g: &mut Game) {
+        let mut gp = g.ptr();
+        self.ec_oscillating_animation.draw(gp.get());
     }
 }
 impl_eyecandy!(EC_Leaf);
@@ -455,7 +459,7 @@ impl EC_Snow {
     }
 
     pub fn draw(&self, _g: &mut Game) {
-        self.ec_still_image.draw();
+        self.ec_still_image.draw(game().get());
     }
 }
 impl_eyecandy!(EC_Snow);
@@ -516,7 +520,7 @@ impl EC_Rain {
     }
 
     pub fn draw(&self, _g: &mut Game) {
-        self.ec_still_image.draw();
+        self.ec_still_image.draw(game().get());
     }
 }
 impl_eyecandy!(EC_Rain);
@@ -580,8 +584,9 @@ impl EC_Bubble {
         self.iAnimationFrame = (RANDOM_INT(4) << 4) as i16;
     }
 
-    pub fn draw(&self, _g: &mut Game) {
-        self.ec_oscillating_animation.draw(game().get());
+    pub fn draw(&self, g: &mut Game) {
+        let mut gp = g.ptr();
+        self.ec_oscillating_animation.draw(gp.get());
     }
 }
 impl_eyecandy!(EC_Bubble);
@@ -703,7 +708,7 @@ impl EC_Corpse {
     }
 
     pub fn draw(&self, _g: &mut Game) {
-        self.ec_still_image.draw();
+        self.ec_still_image.draw(game().get());
     }
 }
 impl_eyecandy!(EC_Corpse);
@@ -741,12 +746,12 @@ impl EC_GravText {
     }
 
     pub fn draw(&self, _g: &mut Game) {
-        self.font.draw(self.x as i16 as i32, self.y as i16 as i32, &self.text);
+        self.font.draw(game().get(), self.x as i16 as i32, self.y as i16 as i32, &self.text);
 
         if self.x < 0.0 {
-            self.font.draw(self.x as i16 as i32 + screenWidth, self.y as i16 as i32, &self.text);
+            self.font.draw(game().get(), self.x as i16 as i32 + screenWidth, self.y as i16 as i32, &self.text);
         } else if self.x + self.w as f32 > (screenWidth - 1) as f32 {
-            self.font.draw(self.x as i16 as i32 - screenWidth, self.y as i16 as i32, &self.text);
+            self.font.draw(game().get(), self.x as i16 as i32 - screenWidth, self.y as i16 as i32, &self.text);
         }
     }
 }
@@ -844,7 +849,7 @@ impl EC_Announcement {
             }
         }
 
-        self.font.draw(self.ix as i32 + self.iFontOffsetX as i32, self.iFontY as i32, &self.text);
+        self.font.draw(g, self.ix as i32 + self.iFontOffsetX as i32, self.iFontY as i32, &self.text);
 
         if !self.sprite.is_null() {
             self.sprite.draw_part(g, self.ix as i32 + 16, self.iy as i32 + 16, (self.iIcon as i32) << 5, 0, 32, 32);
@@ -905,8 +910,9 @@ impl EC_FallingObject {
         self.vely += GRAVITATION;
     }
 
-    pub fn draw(&self, _g: &mut Game) {
-        self.ec_animated.draw(game().get());
+    pub fn draw(&self, g: &mut Game) {
+        let mut gp = g.ptr();
+        self.ec_animated.draw(gp.get());
     }
 }
 impl_eyecandy!(EC_FallingObject);
@@ -938,8 +944,9 @@ impl EC_SingleAnimation {
         }
     }
 
-    pub fn draw(&self, _g: &mut Game) {
-        self.ec_animated.draw(game().get());
+    pub fn draw(&self, g: &mut Game) {
+        let mut gp = g.ptr();
+        self.ec_animated.draw(gp.get());
     }
 }
 impl_eyecandy!(EC_SingleAnimation);
@@ -976,8 +983,9 @@ impl EC_LoopingAnimation {
         }
     }
 
-    pub fn draw(&self, _g: &mut Game) {
-        self.ec_animated.draw(game().get());
+    pub fn draw(&self, g: &mut Game) {
+        let mut gp = g.ptr();
+        self.ec_animated.draw(gp.get());
     }
 }
 impl_eyecandy!(EC_LoopingAnimation);
@@ -1040,8 +1048,9 @@ impl EC_ExplodingAward {
         }
     }
 
-    pub fn draw(&self, _g: &mut Game) {
-        spr(self.spr).draw_part(game().get(), self.x as i16 as i32, self.y as i16 as i32, self.id as i32, 0, self.w as i32, self.h as i32);
+    pub fn draw(&self, g: &mut Game) {
+        let mut gp = g.ptr();
+        spr(self.spr).draw_part(gp.get(), self.x as i16 as i32, self.y as i16 as i32, self.id as i32, 0, self.w as i32, self.h as i32);
     }
 }
 impl_eyecandy!(EC_ExplodingAward);
@@ -1137,11 +1146,12 @@ impl EC_SwirlingAward {
         }
     }
 
-    pub fn draw(&self, _g: &mut Game) {
+    pub fn draw(&self, g: &mut Game) {
+        let mut gp = g.ptr();
         let awardx = (self.x as i32 + (self.radius * cosf(self.angle)) as i16 as i32) as i16;
         let awardy = (self.y as i32 + (self.radius * sinf(self.angle)) as i16 as i32) as i16;
 
-        spr(self.spr).draw_part(game().get(), awardx as i32, awardy as i32, self.iAnimationFrame as i32, self.iSrcY as i32, self.w as i32, self.h as i32);
+        spr(self.spr).draw_part(gp.get(), awardx as i32, awardy as i32, self.iAnimationFrame as i32, self.iSrcY as i32, self.w as i32, self.h as i32);
     }
 }
 impl_eyecandy!(EC_SwirlingAward);
@@ -1238,8 +1248,9 @@ impl EC_RocketAward {
         }
     }
 
-    pub fn draw(&self, _g: &mut Game) {
-        spr(self.spr).draw_part(game().get(), 
+    pub fn draw(&self, g: &mut Game) {
+        let mut gp = g.ptr();
+        spr(self.spr).draw_part(gp.get(), 
             self.x as i16 as i32,
             self.y as i16 as i32,
             self.iAnimationFrame as i32,
@@ -1315,8 +1326,9 @@ impl EC_FloatingObject {
         }
     }
 
-    pub fn draw(&self, _g: &mut Game) {
-        spr(self.spr).draw_part(game().get(), self.x as i16 as i32, self.y as i16 as i32, self.srcx as i32, self.srcy as i32, self.w as i32, self.h as i32);
+    pub fn draw(&self, g: &mut Game) {
+        let mut gp = g.ptr();
+        spr(self.spr).draw_part(gp.get(), self.x as i16 as i32, self.y as i16 as i32, self.srcx as i32, self.srcy as i32, self.w as i32, self.h as i32);
     }
 }
 impl_eyecandy!(EC_FloatingObject);
@@ -1445,8 +1457,9 @@ impl EC_SoulsAward {
         }
     }
 
-    pub fn draw(&self, _g: &mut Game) {
-        spr(self.spawnspr).draw_part(game().get(), 
+    pub fn draw(&self, g: &mut Game) {
+        let mut gp = g.ptr();
+        spr(self.spawnspr).draw_part(gp.get(), 
             self.x as i32 - 16,
             self.y as i32 - 16,
             self.frame as i32 * self.w as i32,
@@ -1540,12 +1553,13 @@ impl EC_Door {
         }
     }
 
-    pub fn draw(&self, _g: &mut Game) {
+    pub fn draw(&self, g: &mut Game) {
+        let mut gp = g.ptr();
         let (x, y, iw, ih, offsety) = (self.x as i32, self.y as i32, self.iw as i32, self.ih as i32, self.offsety as i32);
-        spr(self.spr).draw_part(game().get(), x, y + offsety, 0, self.colorOffset as i32, iw, ih - offsety);
+        spr(self.spr).draw_part(gp.get(), x, y + offsety, 0, self.colorOffset as i32, iw, ih - offsety);
 
         if self.state == 1 {
-            spr(self.mariospr).draw_part(game().get(), 
+            spr(self.mariospr).draw_part(gp.get(), 
                 x + 16 - HALFPW - PWOFFSET,
                 y + 16 - HALFPH - PHOFFSET + offsety,
                 self.offsetx as i32,
@@ -1555,7 +1569,7 @@ impl EC_Door {
             );
         }
 
-        spr(self.spr).draw_part(game().get(), x, y + offsety, self.frame as i32 * iw, self.colorOffset as i32, iw, ih - offsety);
+        spr(self.spr).draw_part(gp.get(), x, y + offsety, self.frame as i32 * iw, self.colorOffset as i32, iw, ih - offsety);
     }
 }
 impl_eyecandy!(EC_Door);
@@ -1650,18 +1664,18 @@ impl CEyecandyContainer {
     }
 
     /// Like the C++ range-for, elements emplaced into this container during the loop are not visited.
-    pub fn update(&mut self) {
+    pub fn update(&mut self, g: &mut Game) {
         let this: *mut CEyecandyContainer = self;
         let n = self.eyecandies.len();
         for i in 0..n {
             let ec: *mut dyn CEyecandyTrait = unsafe { &mut *(&mut (*this).eyecandies)[i] };
-            unsafe { (*ec).update(game().get()) };
+            unsafe { (*ec).update(g) };
         }
     }
 
-    pub fn draw(&self) {
+    pub fn draw(&self, g: &mut Game) {
         for ec in &self.eyecandies {
-            ec.draw(game().get());
+            ec.draw(g);
         }
     }
 

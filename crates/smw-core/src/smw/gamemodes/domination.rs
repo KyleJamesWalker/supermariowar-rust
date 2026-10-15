@@ -56,6 +56,7 @@ impl CGM_Domination {
 }
 
 pub fn cgm_domination_init<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T) {
+        let mut gp = g.ptr();
     gm::cgamemode_init(g, this);
 
     unsafe {
@@ -73,7 +74,7 @@ pub fn cgm_domination_init<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut 
         }
 
         for _k in 0..iNumAreas {
-            g.objectcontainer[0].add(Ptr::new_box(OMO_Area::new(Ptr::from_mut(&mut g.rm.spr_areas), iNumAreas)));
+            gp.get().objectcontainer[0].add(Ptr::new_box(OMO_Area::new(g, Ptr::from_mut(&mut gp.get().rm.spr_areas), iNumAreas)));
         }
     }
 }
@@ -106,7 +107,7 @@ pub fn cgm_domination_playerextraguy<T: CGameModeTrait + ?Sized>(g: &mut Game, t
 pub fn cgm_domination_check_winner<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: Ptr<CPlayer>) -> PlayerKillType {
     if this.gm().goal > -1 {
         if player.score().score >= this.gm().goal {
-            player.score().set_score(this.gm().goal);
+            player.score().set_score(g, this.gm().goal);
             this.gm_mut().winningteam = player.get_team_id();
             this.gm_mut().gameover = true;
 

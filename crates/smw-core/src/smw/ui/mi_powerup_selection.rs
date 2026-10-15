@@ -143,8 +143,8 @@ impl MI_PowerupSelection {
 
             //Are You Sure dialog box
             this.miDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
-            this.miDialogAreYouText = Ptr::new_box(MI_HeaderText::new("Are You", 320, 195));
-            this.miDialogSureText = Ptr::new_box(MI_HeaderText::new("Sure?", 320, 220));
+            this.miDialogAreYouText = Ptr::new_box(MI_HeaderText::new(g, "Are You", 320, 195));
+            this.miDialogSureText = Ptr::new_box(MI_HeaderText::new(g, "Sure?", 320, 220));
             this.miDialogYesButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 235, 250, "Yes", 80, TextAlign::CENTER));
             this.miDialogNoButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 325, 250, "No", 80, TextAlign::CENTER));
 
@@ -205,7 +205,7 @@ impl MI_PowerupSelection {
             this.mMenu.add_non_control(ctl_ptr(this.miUpArrow));
             this.mMenu.add_non_control(ctl_ptr(this.miDownArrow));
 
-            this.mMenu.set_initial_focus(ctl_ptr(this.miOverride));
+            this.mMenu.set_initial_focus(g, ctl_ptr(this.miOverride));
             this.mMenu.set_cancel_code(MENU_CODE_BACK_TO_OPTIONS_MENU);
         }
 
@@ -323,7 +323,7 @@ impl UI_ControlTrait for MI_PowerupSelection {
 
                 self.mMenu.remember_current();
 
-                self.mMenu.set_initial_focus(ctl_ptr(self.miDialogNoButton));
+                self.mMenu.set_initial_focus(g, ctl_ptr(self.miDialogNoButton));
                 self.mMenu.set_cancel_code(MENU_CODE_POWERUP_RESET_NO);
                 self.mMenu.reset_menu(g);
 
@@ -339,7 +339,7 @@ impl UI_ControlTrait for MI_PowerupSelection {
                 self.miDialogYesButton.set_visible(false);
                 self.miDialogNoButton.set_visible(false);
 
-                self.mMenu.set_initial_focus(ctl_ptr(self.miOverride));
+                self.mMenu.set_initial_focus(g, ctl_ptr(self.miOverride));
                 self.mMenu.set_cancel_code(MENU_CODE_BACK_TO_OPTIONS_MENU);
 
                 self.mMenu.restore_current(g);

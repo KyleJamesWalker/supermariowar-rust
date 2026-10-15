@@ -1,5 +1,6 @@
 //! Port of src/common/TilesetManager.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::file_io::BinaryFile;
 use crate::common::gfx::gfx_sprite::{gfxSprite, ImageLoader};
@@ -59,7 +60,7 @@ fn read_tile_type_file(path: &Path) -> Vec<TileType> {
 }
 
 fn load_image_or_downscale(path: &Path, largeRes: &gfxSprite) -> gfxSprite {
-    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| ImageLoader::new(path).create())) {
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| ImageLoader::new(path).create(game().get()))) {
         Ok(sprite) => sprite,
         Err(err) => {
             let msg = err.downcast_ref::<String>().cloned().unwrap_or_default();
@@ -135,7 +136,7 @@ impl CTileset {
 
         self.m_tiletypes = read_tile_type_file(&self.m_tileset_dir.join("tileset.tls"));
 
-        self.m_sprite_large = ImageLoader::new(self.m_tileset_dir.join("large.png")).create();
+        self.m_sprite_large = ImageLoader::new(self.m_tileset_dir.join("large.png")).create(game().get());
         self.m_sprite_medium = load_image_or_downscale(&self.m_tileset_dir.join("medium.png"), &self.m_sprite_large);
         self.m_sprite_small = load_image_or_downscale(&self.m_tileset_dir.join("small.png"), &self.m_sprite_medium);
 
@@ -251,11 +252,11 @@ pub struct CTilesetManager {
 }
 
 impl CTilesetManager {
-    pub fn new(gfxPack: &str) -> Self {
+    pub fn new(g: &mut Game, gfxPack: &str) -> Self {
         let mut m_tilesets: Vec<Box<CTileset>> = Vec::new();
         let mut found_tileset_names: HashSet<String> = HashSet::new();
 
-        let mut dir = SubdirsIterator::new(convert_path_pack(game().get(), "gfx/packs/tilesets", gfxPack) + "/");
+        let mut dir = SubdirsIterator::new(convert_path_pack(g, "gfx/packs/tilesets", gfxPack) + "/");
         while let Some(path) = dir.next() {
             let tileset = Box::new(CTileset::new(path));
             found_tileset_names.insert(tileset.name().to_string());
@@ -264,7 +265,7 @@ impl CTilesetManager {
 
         //Add tilesets from the Classic pack to fill the gaps
         if path_filename(gfxPack) != "Classic" {
-            dir = SubdirsIterator::new(convert_path(game().get(), "gfx/packs/Classic/tilesets/"));
+            dir = SubdirsIterator::new(convert_path(g, "gfx/packs/Classic/tilesets/"));
             while let Some(path) = dir.next() {
                 let name = path.file_name().map(|f| f.to_string_lossy().into_owned()).unwrap_or_default();
                 if !found_tileset_names.contains(&name) {

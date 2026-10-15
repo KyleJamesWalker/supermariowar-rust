@@ -50,10 +50,10 @@ pub struct MI_MapPreview {
 crate::impl_base!(MI_MapPreview => ui_control: UI_Control);
 
 impl MI_MapPreview {
-    pub fn new(nspr: Ptr<gfxSprite>, x: i16, y: i16, width: i16, indent: i16) -> Self {
-        let surfaceMapBackground = gfxSprite::blank(game().get(), (App::screenWidth / 2) as u32, (App::screenHeight / 2) as u32);
-        let surfaceMapBlockLayer = gfxSprite::blank(game().get(), (App::screenWidth / 2) as u32, (App::screenHeight / 2) as u32);
-        let surfaceMapForeground = gfxSprite::blank(game().get(), (App::screenWidth / 2) as u32, (App::screenHeight / 2) as u32);
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, x: i16, y: i16, width: i16, indent: i16) -> Self {
+        let surfaceMapBackground = gfxSprite::blank(g, (App::screenWidth / 2) as u32, (App::screenHeight / 2) as u32);
+        let surfaceMapBlockLayer = gfxSprite::blank(g, (App::screenWidth / 2) as u32, (App::screenHeight / 2) as u32);
+        let surfaceMapForeground = gfxSprite::blank(g, (App::screenWidth / 2) as u32, (App::screenHeight / 2) as u32);
 
         let mut this = MI_MapPreview {
             ui_control: UI_Control::new(x, y),
@@ -67,7 +67,7 @@ impl MI_MapPreview {
             szMapName: String::new(),
             iSlideListOut: 0,
         };
-        this.load_current_map(game().get());
+        this.load_current_map(g);
 
         this.rectDst.x = x as i32 + 16;
         this.rectDst.y = y as i32 + 44;
@@ -94,6 +94,7 @@ impl MI_MapPreview {
 
     pub fn draw_impl(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
         if !self.m_visible {
             return;
         }
@@ -113,11 +114,11 @@ impl MI_MapPreview {
 
             self.surfaceMapBackground.draw_to(g.blitdest, &self.rectDst);
 
-            g.g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 0);
+            gp.g_map.draw_platforms_offset(g, self.rectDst.x as i16, self.rectDst.y as i16, 0);
 
             self.surfaceMapBlockLayer.draw_to(g.blitdest, &self.rectDst);
 
-            g.g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 1);
+            gp.g_map.draw_platforms_offset(g, self.rectDst.x as i16, self.rectDst.y as i16, 1);
 
             //Draw map hazards
             let (ox, oy) = (self.rectDst.x as i16, self.rectDst.y as i16);
@@ -137,14 +138,14 @@ impl MI_MapPreview {
                 }
             }
 
-            g.g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 2);
+            gp.g_map.draw_platforms_offset(g, self.rectDst.x as i16, self.rectDst.y as i16, 2);
 
             if g.game_values.toplayer {
                 self.surfaceMapForeground.draw_to(g.blitdest, &self.rectDst);
             }
 
-            g.g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 3);
-            g.g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 4);
+            gp.g_map.draw_platforms_offset(g, self.rectDst.x as i16, self.rectDst.y as i16, 3);
+            gp.g_map.draw_platforms_offset(g, self.rectDst.x as i16, self.rectDst.y as i16, 4);
         }
     }
 

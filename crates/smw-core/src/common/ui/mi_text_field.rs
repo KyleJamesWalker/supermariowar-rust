@@ -251,7 +251,7 @@ impl MI_TextField {
                 return MENU_CODE_NONE;
             }
             if out.menu_select().fPressed {
-                return self.osk_press();
+                return self.osk_press(g);
             }
             if out.menu_cancel().fPressed {
                 return if self.iNumChars > 0 { self.backspace(g) } else { self.finish() };
@@ -264,19 +264,19 @@ impl MI_TextField {
         OSK_BOTTOM.iter().rposition(|&(start, _, _)| self.iOskCol >= start).unwrap_or(0)
     }
 
-    fn osk_press(&mut self) -> MenuCodeEnum {
+    fn osk_press(&mut self, g: &mut Game) -> MenuCodeEnum {
         if self.iOskRow < OSK_ROWS - 1 {
             let rows = if self.fOskShift { OSK_SHIFTED } else { OSK_KEYS };
             self.fOskShift = false;
-            return self.insert_char(game().get(), rows[self.iOskRow as usize][self.iOskCol as usize]);
+            return self.insert_char(g, rows[self.iOskRow as usize][self.iOskCol as usize]);
         }
         match self.osk_bottom_key() {
             0 => {
                 self.fOskShift = !self.fOskShift;
                 MENU_CODE_NONE
             }
-            1 => self.insert_char(game().get(), b' '),
-            2 => self.backspace(game().get()),
+            1 => self.insert_char(g, b' '),
+            2 => self.backspace(g),
             _ => self.finish(),
         }
     }
@@ -481,6 +481,7 @@ impl UI_ControlTrait for MI_TextField {
     }
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if !self.m_visible {
             return;
         }
@@ -496,13 +497,13 @@ impl UI_ControlTrait for MI_TextField {
             self.spr.draw_src(g, x + indent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
             self.spr.draw_src(g, x + indent + 16, y, &SDL_Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
 
-            g.rm.menu_font_large.draw_chop_right(x + 16, y + 5, indent - 8, &self.szName);
+            gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 5, indent - 8, &self.szName);
 
             if !self.szOutValue.is_null() {
                 if self.iStringWidth <= self.iAllowedWidth || !self.fModifying {
-                    g.rm.menu_font_large.draw_chop_right(x + indent + 8, y + 5, self.iAllowedWidth as i32, &*self.szOutValue);
+                    gp.rm.menu_font_large.draw_chop_right(g, x + indent + 8, y + 5, self.iAllowedWidth as i32, &*self.szOutValue);
                 } else {
-                    g.rm.menu_font_large.draw_chop_left(x + width - 16, y + 5, self.iAllowedWidth as i32, &self.szTempValue);
+                    gp.rm.menu_font_large.draw_chop_left(g, x + width - 16, y + 5, self.iAllowedWidth as i32, &self.szTempValue);
                 }
             }
         }
@@ -550,13 +551,13 @@ impl UI_ControlTrait for MI_TextField {
         MENU_CODE_NONE
     }
 
-    fn refresh(&mut self) {
+    fn refresh(&mut self, g: &mut Game) {
         //Look at destination string and update control based on that value
         if self.szOutValue.is_null() {
             return;
         }
 
         let p = self.szOutValue;
-        self.set_data(game().get(), unsafe { &mut *p }, self.iMaxChars);
+        self.set_data(g, unsafe { &mut *p }, self.iMaxChars);
     }
 }

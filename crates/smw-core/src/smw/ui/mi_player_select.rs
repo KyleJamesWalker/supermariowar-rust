@@ -176,6 +176,7 @@ impl UI_ControlTrait for MI_PlayerSelect {
     }
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if !self.m_visible {
             return;
         }
@@ -190,7 +191,7 @@ impl UI_ControlTrait for MI_PlayerSelect {
             self.spr.draw_src(g, x + iIndent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 192 } else { 128 }, w: 32, h: 64 });
             self.spr.draw_src(g, x + iIndent + 16, y, &SDL_Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 64 } else { 0 }, w: iWidth - iIndent - 16, h: 64 });
 
-            g.rm.menu_font_large.draw_chop_right(x + 16, y + 20, iIndent - 8, &self.szName);
+            gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 20, iIndent - 8, &self.szName);
 
             self.miModifyImage.draw(g);
 

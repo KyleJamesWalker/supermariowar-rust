@@ -11,6 +11,7 @@ use crate::smw::objects::moving::mo_pirhana_plant::MO_PirhanaPlant;
 use crate::smw::objects::overmap::wo_orbit_hazard::OMO_OrbitHazard;
 
 pub fn load_map_hazards(g: &mut Game, fPreview: bool) {
+        let mut gp = g.ptr();
     unsafe {
         //Make sure we don't have any objects created before we create them from the map settings
         g.noncolcontainer.clean();
@@ -74,9 +75,9 @@ pub fn load_map_hazards(g: &mut Game, fPreview: bool) {
             } else if hazard.itype == 2 {
                 g.noncolcontainer.add(Ptr::new_box(IO_BulletBillCannon::new(pos, hazard.iparam[0], hazard.dparam[0], fPreview)));
             } else if hazard.itype == 3 {
-                g.objectcontainer[1].add(Ptr::new_box(IO_FlameCannon::new(pos, hazard.iparam[0], hazard.iparam[1])));
+                gp.objectcontainer[1].add(Ptr::new_box(IO_FlameCannon::new(g, pos, hazard.iparam[0], hazard.iparam[1])));
             } else if hazard.itype >= 4 && hazard.itype <= 7 {
-                g.objectcontainer[1].add(Ptr::new_box(MO_PirhanaPlant::new(pos, hazard.itype - 4, hazard.iparam[0], hazard.iparam[1], fPreview)));
+                gp.objectcontainer[1].add(Ptr::new_box(MO_PirhanaPlant::new(g, pos, hazard.itype - 4, hazard.iparam[0], hazard.iparam[1], fPreview)));
             }
         }
     }

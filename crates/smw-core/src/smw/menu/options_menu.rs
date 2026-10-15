@@ -89,11 +89,11 @@ impl UI_OptionsMenu {
 
             this.miOptionsMenuLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miOptionsMenuRightHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miOptionsMenuHeaderText = Ptr::new_box(MI_HeaderText::new("Options Menu", 320, 5));
+            this.miOptionsMenuHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Options Menu", 320, 5));
 
             this.miGenerateThumbsDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
-            this.miGenerateThumbsDialogAreYouText = Ptr::new_box(MI_HeaderText::new("Are You", 320, 195));
-            this.miGenerateThumbsDialogSureText = Ptr::new_box(MI_HeaderText::new("Sure?", 320, 220));
+            this.miGenerateThumbsDialogAreYouText = Ptr::new_box(MI_HeaderText::new(g, "Are You", 320, 195));
+            this.miGenerateThumbsDialogSureText = Ptr::new_box(MI_HeaderText::new(g, "Sure?", 320, 220));
             this.miGenerateThumbsDialogYesButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 235, 250, "Yes", 80, TextAlign::CENTER));
             this.miGenerateThumbsDialogNoButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 325, 250, "No", 80, TextAlign::CENTER));
         }
@@ -152,7 +152,7 @@ impl UI_OptionsMenu {
         this.add_control(yes, null, null, null, no);
         this.add_control(no, null, null, yes, null);
 
-        this.set_initial_focus(gameplay);
+        this.set_initial_focus(g, gameplay);
         this.set_cancel_code(MENU_CODE_TO_MAIN_MENU);
         this
     }
@@ -167,11 +167,11 @@ impl UI_OptionsMenu {
         self.remember_current();
 
         let focus = ctl_ptr(self.miGenerateThumbsDialogNoButton);
-        self.set_initial_focus(focus);
+        self.set_initial_focus(game().get(), focus);
         self.set_cancel_code(MENU_CODE_GENERATE_THUMBS_RESET_NO);
     }
 
-    pub fn hide_thumbnails_popup(&mut self) {
+    pub fn hide_thumbnails_popup(&mut self, g: &mut Game) {
         self.miGenerateThumbsDialogImage.set_visible(false);
         self.miGenerateThumbsDialogAreYouText.set_visible(false);
         self.miGenerateThumbsDialogSureText.set_visible(false);
@@ -179,9 +179,9 @@ impl UI_OptionsMenu {
         self.miGenerateThumbsDialogNoButton.set_visible(false);
 
         let focus = ctl_ptr(self.miGameplayOptionsMenuButton);
-        self.set_initial_focus(focus);
+        self.set_initial_focus(g, focus);
         self.set_cancel_code(MENU_CODE_TO_MAIN_MENU);
 
-        self.restore_current(game().get());
+        self.restore_current(g);
     }
 }

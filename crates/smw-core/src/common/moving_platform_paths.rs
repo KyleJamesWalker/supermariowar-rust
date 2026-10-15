@@ -91,8 +91,8 @@ pub trait MovingPlatformPathTrait: Any {
     /// C++ `typeId()`; renamed because `Any::type_id` takes the name.
     fn path_type_id(&self) -> PlatformPathType;
     fn r#move(&mut self, r#type: i16) -> bool;
-    fn reset(&mut self) {
-        moving_platform_path_reset(game().get(), self)
+    fn reset(&mut self, g: &mut Game) {
+        moving_platform_path_reset(g, self)
     }
 }
 
@@ -236,7 +236,7 @@ impl MovingPlatformPathTrait for StraightPath {
         false
     }
 
-    fn reset(&mut self) {
+    fn reset(&mut self, g: &mut Game) {
         for t in 0..2 {
             self.m_currentStep[t] = 0;
             self.base.m_currentPos[t] = self.base.m_startPos;
@@ -244,7 +244,7 @@ impl MovingPlatformPathTrait for StraightPath {
             self.set_velocity(t);
         }
 
-        moving_platform_path_reset(game().get(), self);
+        moving_platform_path_reset(g, self);
     }
 }
 
@@ -345,12 +345,12 @@ impl MovingPlatformPathTrait for StraightPathContinuous {
         false
     }
 
-    fn reset(&mut self) {
+    fn reset(&mut self, g: &mut Game) {
         for t in 0..2 {
             self.base.m_currentPos[t] = self.base.m_startPos;
         }
 
-        moving_platform_path_reset(game().get(), self);
+        moving_platform_path_reset(g, self);
     }
 }
 
@@ -429,13 +429,13 @@ impl MovingPlatformPathTrait for EllipsePath {
         false
     }
 
-    fn reset(&mut self) {
+    fn reset(&mut self, g: &mut Game) {
         for t in 0..2 {
             self.m_angle[t] = self.m_startAngle;
             self.set_position(t as i16);
         }
 
-        moving_platform_path_reset(game().get(), self);
+        moving_platform_path_reset(g, self);
     }
 }
 
@@ -484,7 +484,7 @@ impl MovingPlatformPathTrait for FallingPath {
         false
     }
 
-    fn reset(&mut self) {
+    fn reset(&mut self, g: &mut Game) {
         for t in 0..2 {
             self.base.m_currentPos[t] = self.base.m_startPos;
         }

@@ -18,8 +18,8 @@ impl FPSLimiter {
         FPSLimiter { _alias: Aliased::new(), framestart: 0, ticks: 0, realfps: 0.0, flipfps: 0.0 }
     }
 
-    pub fn instance() -> &'static mut FPSLimiter {
-        &mut game().get().fps_limiter
+    pub fn instance(g: &mut Game) -> &'static mut FPSLimiter {
+        &mut g.ptr().get().fps_limiter
     }
 
     // the browser limits the frame rate

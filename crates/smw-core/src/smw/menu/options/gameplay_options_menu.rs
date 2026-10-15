@@ -164,7 +164,7 @@ impl UI_GameplayOptionsMenu {
 
             this.miGameplayOptionsMenuLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miGameplayOptionsMenuRightHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miGameplayOptionsMenuHeaderText = Ptr::new_box(MI_HeaderText::new("Gameplay Options Menu", 320, 5));
+            this.miGameplayOptionsMenuHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Gameplay Options Menu", 320, 5));
         }
 
         let respawn = ctl_ptr(this.miRespawnField);
@@ -200,7 +200,7 @@ impl UI_GameplayOptionsMenu {
         let c = ctl_ptr(this.miGameplayOptionsMenuHeaderText);
         this.add_non_control(c);
 
-        this.set_initial_focus(respawn);
+        this.set_initial_focus(g, respawn);
         this.set_cancel_code(MENU_CODE_BACK_TO_OPTIONS_MENU);
         this
     }

@@ -50,7 +50,7 @@ impl_base!(MO_WalkingEnemy => io_moving_object: IO_MovingObject);
 
 impl MO_WalkingEnemy {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(
+    pub fn new(g: &mut Game, 
         nspr: Ptr<gfxSprite>,
         iNumSpr: i16,
         aniSpeed: i16,
@@ -129,7 +129,7 @@ impl MO_WalkingEnemy {
         o.fFallOffLedges = fallOffLedges;
 
         // Virtual call during construction: always MO_WalkingEnemy::place
-        mo_walking_enemy_place(game().get(), &mut o);
+        mo_walking_enemy_place(g, &mut o);
         o
     }
 
@@ -334,13 +334,13 @@ pub fn mo_walking_enemy_collide_player<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut
     false
 }
 
-pub fn mo_walking_enemy_hitother<T: MO_WalkingEnemyTrait + ?Sized>(_this: &mut T, player: Ptr<CPlayer>) -> bool {
+pub fn mo_walking_enemy_hitother<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, _this: &mut T, player: Ptr<CPlayer>) -> bool {
     let mut player = player;
     if player.is_shielded() {
         return false;
     }
 
-    player.kill_player_map_hazard(game().get(), false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill
+    player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill
 }
 
 pub fn mo_walking_enemy_collide_object<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, this: &mut T, object: Ptr<dyn IO_MovingObjectTrait>) {
@@ -399,7 +399,7 @@ pub fn mo_walking_enemy_collide_object<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut
                     if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
 
                     if r#type == movingobject_attackzone {
-                        this.die_and_drop_shell(true, false);
+                        this.die_and_drop_shell(g, true, false);
                     } else {
                         this.die(g);
                     }
@@ -485,19 +485,19 @@ pub trait MO_WalkingEnemyTrait: IO_MovingObjectTrait {
 
     fn hittop_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool;
     fn hitother(&mut self, player: Ptr<CPlayer>) -> bool {
-        mo_walking_enemy_hitother(self, player)
+        mo_walking_enemy_hitother(game().get(), self, player)
     }
 
     fn shatter_die(&mut self, g: &mut Game) {
         mo_walking_enemy_shatter_die(g, self)
     }
-    fn die_and_drop_shell(&mut self, fBounce: bool, fFlip: bool) {
+    fn die_and_drop_shell(&mut self, g: &mut Game, fBounce: bool, fFlip: bool) {
         if self.we().frozen {
-            self.shatter_die(game().get());
+            self.shatter_die(g);
             return;
         }
         self.we_mut().dead = true;
-        self.drop_shell(game().get(), fBounce, fFlip);
+        self.drop_shell(g, fBounce, fFlip);
     }
     fn drop_shell(&mut self, g: &mut Game, _fBounce: bool, _fFlip: bool) {}
 }

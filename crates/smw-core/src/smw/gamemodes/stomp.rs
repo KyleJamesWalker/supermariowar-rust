@@ -155,7 +155,7 @@ impl CGameModeTrait for CGM_Stomp {
         }
 
         if player.score().score >= self.goal {
-            player.score().set_score(self.goal);
+            player.score().set_score(g, self.goal);
             self.winningteam = player.get_team_id();
             self.gameover = true;
 

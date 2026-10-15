@@ -35,6 +35,7 @@ impl CGameModeTrait for CGM_Eggs {
     crate::impl_cgamemode_plumbing!();
 
     fn init(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         cgamemode_init(g, self);
 
         //Verify that at least 1 matching yoshi and egg exist
@@ -49,7 +50,7 @@ impl CGameModeTrait for CGM_Eggs {
                     }
 
                     fEgg[iEggs as usize] = true;
-                    g.objectcontainer[1].add(Ptr::new_box(CO_Egg::new(Ptr::from_mut(&mut g.rm.spr_egg), iEggs)));
+                    gp.get().objectcontainer[1].add(Ptr::new_box(CO_Egg::new(g, Ptr::from_mut(&mut gp.get().rm.spr_egg), iEggs)));
                 }
             }
 
@@ -63,13 +64,13 @@ impl CGameModeTrait for CGM_Eggs {
                         fAtLeastOneMatch = true;
                     }
 
-                    g.objectcontainer[1].add(Ptr::new_box(MO_Yoshi::new(Ptr::from_mut(&mut g.rm.spr_yoshi), iYoshis)));
+                    gp.get().objectcontainer[1].add(Ptr::new_box(MO_Yoshi::new(g, Ptr::from_mut(&mut gp.get().rm.spr_yoshi), iYoshis)));
                 }
             }
 
             if !fAtLeastOneMatch {
-                g.objectcontainer[1].add(Ptr::new_box(CO_Egg::new(Ptr::from_mut(&mut g.rm.spr_egg), 1)));
-                g.objectcontainer[1].add(Ptr::new_box(MO_Yoshi::new(Ptr::from_mut(&mut g.rm.spr_yoshi), 1)));
+                gp.get().objectcontainer[1].add(Ptr::new_box(CO_Egg::new(g, Ptr::from_mut(&mut gp.get().rm.spr_egg), 1)));
+                gp.get().objectcontainer[1].add(Ptr::new_box(MO_Yoshi::new(g, Ptr::from_mut(&mut gp.get().rm.spr_yoshi), 1)));
             }
         }
     }
@@ -99,7 +100,7 @@ impl CGameModeTrait for CGM_Eggs {
     fn check_winner(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> PlayerKillType {
         if self.goal > -1 {
             if player.score().score >= self.goal {
-                player.score().set_score(self.goal);
+                player.score().set_score(g, self.goal);
 
                 self.winningteam = player.get_team_id();
                 self.gameover = true;

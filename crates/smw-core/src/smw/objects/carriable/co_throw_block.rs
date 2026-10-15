@@ -116,7 +116,7 @@ impl CO_ThrowBlock {
         false
     }
 
-    pub fn hit_other(&mut self, player: Ptr<CPlayer>) -> bool {
+    pub fn hit_other(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         if self.state == 1 {
             // Moving
             let mut flipx: i16 = 0;
@@ -133,14 +133,14 @@ impl CO_ThrowBlock {
                 || (px > self.ix as i32 + (self.iw as i32 >> 1) && self.velx > 0.0)
                 || (px <= self.ix as i32 - (self.iw as i32 >> 1) && self.velx < 0.0)
             {
-                return self.kill_player(game().get(), player);
+                return self.kill_player(g, player);
             }
         } else if self.state == 2 {
             // Holding
             if player != self.owner {
                 self.iPlayerID = self.owner.globalID;
                 self.iTeamID = self.owner.teamID;
-                return self.kill_player(game().get(), player);
+                return self.kill_player(g, player);
             }
         }
 
@@ -210,7 +210,7 @@ impl CObjectTrait for CO_ThrowBlock {
         if player.fOldY + PH as f32 <= self.iy as f32 && player.iy as i32 + PH >= self.iy as i32 {
             self.hit_top(g, player)
         } else {
-            self.hit_other(player)
+            self.hit_other(g, player)
         }
     }
 

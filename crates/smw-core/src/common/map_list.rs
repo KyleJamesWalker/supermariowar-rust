@@ -83,8 +83,8 @@ impl MapMultimap {
     }
 }
 
-fn add_maps_from(dirpath: &str, container: &mut MapMultimap) {
-    add_maps_from_with(game().get(), dirpath, |key, node| {
+fn add_maps_from(g: &mut Game, dirpath: &str, container: &mut MapMultimap) {
+    add_maps_from_with(g, dirpath, |key, node| {
         container.emplace(key, node);
     });
 }
@@ -122,21 +122,22 @@ pub struct MapList {
 }
 
 impl MapList {
-    pub fn new(fWorldEditor: bool) -> Self {
+    pub fn new(g: &mut Game, fWorldEditor: bool) -> Self {
+        let mut gp = g.ptr();
         let mut maps = MapMultimap::default();
-        add_maps_from(&convert_path(game().get(), "maps/"), &mut maps);
+        add_maps_from(g, &convert_path(gp.get(), "maps/"), &mut maps);
 
         if fWorldEditor {
-            add_maps_from(&convert_path(game().get(), "maps/tour/"), &mut maps);
+            add_maps_from(g, &convert_path(gp.get(), "maps/tour/"), &mut maps);
 
-            let mut worldeditormapdirs = SimpleDirectoryList::new(convert_path(game().get(), "worlds/"));
+            let mut worldeditormapdirs = SimpleDirectoryList::new(convert_path(g, "worlds/"));
             for _iDir in 0..worldeditormapdirs.count() {
                 let szName = worldeditormapdirs.current_path().to_string_lossy().into_owned() + "/";
-                add_maps_from(&szName, &mut maps);
+                add_maps_from(g, &szName, &mut maps);
                 worldeditormapdirs.next();
             }
 
-            add_maps_from(&convert_path(game().get(), "maps/special/"), &mut maps);
+            add_maps_from(g, &convert_path(gp.get(), "maps/special/"), &mut maps);
         }
 
         if maps.is_empty() {
@@ -153,16 +154,16 @@ impl MapList {
         let n = maps.len();
         let mut worldmaps = MapMultimap::default();
 
-        add_maps_from(&convert_path(game().get(), "maps/tour/"), &mut worldmaps);
+        add_maps_from(g, &convert_path(gp.get(), "maps/tour/"), &mut worldmaps);
 
-        let mut worldmapdirs = SimpleDirectoryList::new(convert_path(game().get(), "worlds/"));
+        let mut worldmapdirs = SimpleDirectoryList::new(convert_path(g, "worlds/"));
         for _iDir in 0..worldmapdirs.count() {
             let szName = worldmapdirs.current_path().to_string_lossy().into_owned() + "/";
-            add_maps_from(&szName, &mut worldmaps);
+            add_maps_from(g, &szName, &mut worldmaps);
             worldmapdirs.next();
         }
 
-        add_maps_from(&convert_path(game().get(), "maps/special/"), &mut worldmaps);
+        add_maps_from(g, &convert_path(gp.get(), "maps/special/"), &mut worldmaps);
 
         MapList {
             maps,

@@ -33,7 +33,7 @@ impl UI_TourStopMenu {
 
             // Exit tour dialog box
             this.miTourStopExitDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
-            this.miTourStopExitDialogExitTourText = Ptr::new_box(MI_HeaderText::new("Exit Tour", 320, 205));
+            this.miTourStopExitDialogExitTourText = Ptr::new_box(MI_HeaderText::new(g, "Exit Tour", 320, 205));
 
             this.miTourStopExitDialogYesButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 235, 250, "Yes", 80, TextAlign::CENTER));
             this.miTourStopExitDialogNoButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 325, 250, "No", 80, TextAlign::CENTER));
@@ -61,12 +61,12 @@ impl UI_TourStopMenu {
         this.add_control(yes, Ptr::null(), Ptr::null(), Ptr::null(), no);
         this.add_control(no, Ptr::null(), Ptr::null(), yes, Ptr::null());
 
-        this.set_initial_focus(stop);
+        this.set_initial_focus(g, stop);
         this.set_cancel_code(MENU_CODE_BACK_TEAM_SELECT_MENU);
         this
     }
 
-    pub fn open_exit_dialog(&mut self) {
+    pub fn open_exit_dialog(&mut self, g: &mut Game) {
         self.miTourStopExitDialogImage.set_visible(true);
         self.miTourStopExitDialogExitTourText.set_visible(true);
         self.miTourStopExitDialogYesButton.set_visible(true);
@@ -75,21 +75,21 @@ impl UI_TourStopMenu {
         self.remember_current();
 
         let focus = ctl_ptr(self.miTourStopExitDialogNoButton);
-        self.set_initial_focus(focus);
+        self.set_initial_focus(g, focus);
         self.set_cancel_code(MENU_CODE_NONE);
-        self.reset_menu(game().get());
+        self.reset_menu(g);
     }
 
-    pub fn close_exit_dialog(&mut self) {
+    pub fn close_exit_dialog(&mut self, g: &mut Game) {
         self.miTourStopExitDialogImage.set_visible(false);
         self.miTourStopExitDialogExitTourText.set_visible(false);
         self.miTourStopExitDialogYesButton.set_visible(false);
         self.miTourStopExitDialogNoButton.set_visible(false);
 
         let focus = ctl_ptr(self.miTourStop);
-        self.set_initial_focus(focus);
+        self.set_initial_focus(g, focus);
         self.set_cancel_code(MENU_CODE_BACK_TEAM_SELECT_MENU);
 
-        self.restore_current(game().get());
+        self.restore_current(g);
     }
 }

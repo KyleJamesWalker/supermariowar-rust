@@ -88,9 +88,9 @@ impl UI_Menu {
     }
 
     /// Sets the initially focused element on opening/resetting the menu.
-    pub fn set_initial_focus(&mut self, control: ControlPtr) {
+    pub fn set_initial_focus(&mut self, g: &mut Game, control: ControlPtr) {
         self.m_initialFocus = control;
-        self.reset_menu(game().get());
+        self.reset_menu(g);
     }
     /// The initially focused element on opening/resetting the menu.
     pub fn initial_focus(&self) -> ControlPtr {
@@ -108,13 +108,13 @@ impl UI_Menu {
     pub fn reset_menu(&mut self, g: &mut Game) {
         if !self.m_currentFocus.is_null() {
             self.m_currentFocus.modify(g, false);
-            self.m_currentFocus.select(false);
+            self.m_currentFocus.select(g, false);
         }
 
         self.m_currentFocus = self.m_initialFocus;
 
         if !self.m_currentFocus.is_null() {
-            self.fModifyingItem = self.m_currentFocus.select(true);
+            self.fModifyingItem = self.m_currentFocus.select(g, true);
         }
 
         self.eyeCandy.clean();
@@ -126,7 +126,7 @@ impl UI_Menu {
         }
 
         self.eyeCandy.clean_dead_objects();
-        self.eyeCandy.update();
+        self.eyeCandy.update(g);
     }
 
     pub fn draw(&mut self, g: &mut Game) {
@@ -134,7 +134,7 @@ impl UI_Menu {
             self.controls[i].draw(g);
         }
 
-        self.eyeCandy.draw();
+        self.eyeCandy.draw(g);
 
         if self.fModifyingItem && !self.m_currentFocus.is_null() {
             self.m_currentFocus.draw_overlay(g);
@@ -237,9 +237,9 @@ impl UI_Menu {
         }
 
         if !neighbor.is_null() {
-            self.m_currentFocus.select(false);
+            self.m_currentFocus.select(game().get(), false);
             self.m_currentFocus = neighbor;
-            self.fModifyingItem = self.m_currentFocus.select(true);
+            self.fModifyingItem = self.m_currentFocus.select(game().get(), true);
             return nav_dir2menu_code(iDirection);
         }
 
@@ -253,13 +253,13 @@ impl UI_Menu {
     pub fn restore_current(&mut self, g: &mut Game) {
         if !self.m_currentFocus.is_null() {
             self.m_currentFocus.modify(g, false);
-            self.m_currentFocus.select(false);
+            self.m_currentFocus.select(g, false);
         }
 
         self.m_currentFocus = self.m_savedCurrent;
 
         if !self.m_currentFocus.is_null() {
-            self.fModifyingItem = self.m_currentFocus.select(true);
+            self.fModifyingItem = self.m_currentFocus.select(g, true);
         }
 
         self.eyeCandy.clean();
@@ -296,9 +296,9 @@ impl UI_Menu {
                     self.fModifyingItem = false;
                 }
 
-                self.m_currentFocus.select(false);
+                self.m_currentFocus.select(g, false);
                 self.m_currentFocus = pFound;
-                self.fModifyingItem = self.m_currentFocus.select(true);
+                self.fModifyingItem = self.m_currentFocus.select(g, true);
 
                 if !self.fModifyingItem {
                     self.fModifyingItem = self.m_currentFocus.modify(g, true) == MENU_CODE_MODIFY_ACCEPTED;
@@ -323,7 +323,7 @@ impl UI_Menu {
 
     pub fn refresh(&mut self) {
         for i in 0..self.controls.len() {
-            self.controls[i].refresh();
+            self.controls[i].refresh(game().get());
         }
     }
 

@@ -459,9 +459,9 @@ pub fn inner_main() {
         g.rm = Ptr::new_box(CResourceManager::new());
 
         g.g_map = Ptr::from_box(CMap::new());
-        g.g_tilesetmanager = Ptr::new_box(CTilesetManager::new(&convert_path(g, "gfx/Classic/tilesets")));
+        game().g_tilesetmanager = Ptr::new_box(CTilesetManager::new(g, &convert_path(game().get(), "gfx/Classic/tilesets")));
         g.filterslist = Ptr::new_box(FiltersList::new());
-        g.maplist = Ptr::new_box(MapList::new(true));
+        g.maplist = Ptr::new_box(MapList::new(g, true));
         g.menugraphicspacklist = Ptr::new_box(GraphicsList::new());
         g.gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
         g.worldlist = Ptr::new_box(WorldList::new());
@@ -477,98 +477,98 @@ pub fn inner_main() {
         println!("\n---------------- loading graphics ----------------");
 
         ed().spr_warps.init([
-            ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp.png")).create(),
-            ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp_preview.png")).create(),
-            ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp_thumbnail.png")).create(),
+            ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp.png")).create(g),
+            ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp_preview.png")).create(g),
+            ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp_thumbnail.png")).create(g),
         ]);
 
-        ed().spr_path.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_world_path.png")).create());
+        ed().spr_path.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_world_path.png")).create(g));
 
-        g.rm.spr_selectedtile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_selectedtile.png")).with_color_key(colors::BLACK).with_alpha(128).create();
+        g.rm.spr_selectedtile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_selectedtile.png")).with_color_key(colors::BLACK).with_alpha(128).create(g);
 
-        ed().spr_dialog.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_dialog.png")).with_alpha(255).create());
-        ed().menu_shade.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_shade.png")).with_alpha(128).create());
-        ed().spr_largedialog.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_platform.png")).with_alpha(255).create());
+        ed().spr_dialog.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_dialog.png")).with_alpha(255).create(g));
+        ed().menu_shade.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_shade.png")).with_alpha(128).create(g));
+        ed().spr_largedialog.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_platform.png")).with_alpha(255).create(g));
 
         game().rm.menu_font_small = gfxFont::from_path(g, &convert_path(game().get(), "gfx/packs/Classic/fonts/font_small.png"));
         game().rm.menu_font_large = gfxFont::from_path(g, &convert_path(game().get(), "gfx/packs/Classic/fonts/font_large.png"));
 
         println!("\n---------------- load world ----------------");
 
-        g.rm.spr_worldbackground[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_background.png")).create();
-        g.rm.spr_worldbackground[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/preview/world_background.png")).create();
-        g.rm.spr_worldbackground[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/thumbnail/world_background.png")).create();
+        g.rm.spr_worldbackground[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_background.png")).create(g);
+        g.rm.spr_worldbackground[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/preview/world_background.png")).create(g);
+        g.rm.spr_worldbackground[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/thumbnail/world_background.png")).create(g);
 
-        g.rm.spr_worldforeground[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_foreground.png")).create();
-        g.rm.spr_worldforeground[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/preview/world_foreground.png")).create();
-        g.rm.spr_worldforeground[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/thumbnail/world_foreground.png")).create();
+        g.rm.spr_worldforeground[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_foreground.png")).create(g);
+        g.rm.spr_worldforeground[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/preview/world_foreground.png")).create(g);
+        g.rm.spr_worldforeground[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/thumbnail/world_foreground.png")).create(g);
 
-        g.rm.spr_worldforegroundspecial[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_foreground_special.png")).create();
-        g.rm.spr_worldforegroundspecial[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/preview/world_foreground_special.png")).create();
-        g.rm.spr_worldforegroundspecial[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/thumbnail/world_foreground_special.png")).create();
+        g.rm.spr_worldforegroundspecial[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_foreground_special.png")).create(g);
+        g.rm.spr_worldforegroundspecial[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/preview/world_foreground_special.png")).create(g);
+        g.rm.spr_worldforegroundspecial[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/thumbnail/world_foreground_special.png")).create(g);
 
-        g.rm.spr_worldpaths[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_paths.png")).create();
-        g.rm.spr_worldpaths[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/preview/world_paths.png")).create();
-        g.rm.spr_worldpaths[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/thumbnail/world_paths.png")).create();
+        g.rm.spr_worldpaths[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_paths.png")).create(g);
+        g.rm.spr_worldpaths[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/preview/world_paths.png")).create(g);
+        g.rm.spr_worldpaths[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/thumbnail/world_paths.png")).create(g);
 
-        g.rm.spr_worldvehicle[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_vehicles.png")).create();
-        g.rm.spr_worldvehicle[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/preview/world_vehicles.png")).create();
-        g.rm.spr_worldvehicle[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/thumbnail/world_vehicles.png")).create();
+        g.rm.spr_worldvehicle[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_vehicles.png")).create(g);
+        g.rm.spr_worldvehicle[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/preview/world_vehicles.png")).create(g);
+        g.rm.spr_worldvehicle[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/thumbnail/world_vehicles.png")).create(g);
 
-        g.rm.spr_worlditems = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_powerups.png")).create();
-        g.rm.spr_worlditempopup = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_item_popup.png")).create();
+        g.rm.spr_worlditems = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_powerups.png")).create(g);
+        g.rm.spr_worlditempopup = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_item_popup.png")).create(g);
 
-        g.rm.spr_storedpowerupsmall = ImageLoader::new(convert_path(g, "gfx/packs/Classic/powerups/small.png")).create();
-        g.rm.spr_worlditemssmall = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_powerupssmall.png")).create();
-        g.rm.spr_worlditemsplace = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_bonusplace.png")).create();
+        g.rm.spr_storedpowerupsmall = ImageLoader::new(convert_path(g, "gfx/packs/Classic/powerups/small.png")).create(g);
+        g.rm.spr_worlditemssmall = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_powerupssmall.png")).create(g);
+        g.rm.spr_worlditemsplace = ImageLoader::new(convert_path(g, "gfx/packs/Classic/world/world_bonusplace.png")).create(g);
 
-        g.rm.menu_dialog = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_dialog.png")).create();
+        g.rm.menu_dialog = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_dialog.png")).create(g);
 
         //Mode Options Menu Gfx
-        g.rm.menu_egg = ImageLoader::new(convert_path(g, "gfx/packs/Classic/modeobjects/menu_egg.png")).create();
-        g.rm.menu_stomp = ImageLoader::new(convert_path(g, "gfx/packs/Classic/modeobjects/menu_stomp.png")).create();
-        g.rm.menu_survival = ImageLoader::new(convert_path(g, "gfx/packs/Classic/modeobjects/menu_survival.png")).create();
-        g.rm.spr_phanto = ImageLoader::new(convert_path(g, "gfx/packs/Classic/modeobjects/phanto.png")).create();
-        g.rm.menu_plain_field = ImageLoader::new(convert_path(g, "gfx/leveleditor/menu_plain_field.png")).create();
-        g.rm.menu_slider_bar = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_slider_bar.png")).create();
-        g.rm.spr_selectfield = ImageLoader::new(convert_path(g, "gfx/leveleditor/menu_selectfield.png")).create();
-        g.rm.menu_verticalarrows = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_vertical_arrows.png")).create();
-        g.rm.spr_storedpoweruplarge = ImageLoader::new(convert_path(g, "gfx/packs/Classic/powerups/large.png")).create();
+        g.rm.menu_egg = ImageLoader::new(convert_path(g, "gfx/packs/Classic/modeobjects/menu_egg.png")).create(g);
+        g.rm.menu_stomp = ImageLoader::new(convert_path(g, "gfx/packs/Classic/modeobjects/menu_stomp.png")).create(g);
+        g.rm.menu_survival = ImageLoader::new(convert_path(g, "gfx/packs/Classic/modeobjects/menu_survival.png")).create(g);
+        g.rm.spr_phanto = ImageLoader::new(convert_path(g, "gfx/packs/Classic/modeobjects/phanto.png")).create(g);
+        g.rm.menu_plain_field = ImageLoader::new(convert_path(g, "gfx/leveleditor/menu_plain_field.png")).create(g);
+        g.rm.menu_slider_bar = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_slider_bar.png")).create(g);
+        g.rm.spr_selectfield = ImageLoader::new(convert_path(g, "gfx/leveleditor/menu_selectfield.png")).create(g);
+        g.rm.menu_verticalarrows = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_vertical_arrows.png")).create(g);
+        g.rm.spr_storedpoweruplarge = ImageLoader::new(convert_path(g, "gfx/packs/Classic/powerups/large.png")).create(g);
 
-        g.rm.menu_mode_small = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_mode_small.png")).create();
-        g.rm.menu_mode_large = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_mode_large.png")).create();
+        g.rm.menu_mode_small = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_mode_small.png")).create(g);
+        g.rm.menu_mode_large = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_mode_large.png")).create(g);
 
-        ed().spr_vehicleicons.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/vehicle_icons.png")).create());
+        ed().spr_vehicleicons.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/vehicle_icons.png")).create(g));
 
-        g.rm.spr_thumbnail_warps[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_warp_preview.png")).create();
-        g.rm.spr_thumbnail_warps[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_warp_thumbnail.png")).create();
+        g.rm.spr_thumbnail_warps[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_warp_preview.png")).create(g);
+        g.rm.spr_thumbnail_warps[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_warp_thumbnail.png")).create(g);
 
-        g.rm.spr_thumbnail_mapitems[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_mapitems_preview.png")).create();
-        g.rm.spr_thumbnail_mapitems[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_mapitems_thumbnail.png")).create();
+        g.rm.spr_thumbnail_mapitems[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_mapitems_preview.png")).create(g);
+        g.rm.spr_thumbnail_mapitems[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/menu/menu_mapitems_thumbnail.png")).create(g);
 
-        g.rm.spr_tileanimation[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/tile_animation_preview.png")).create();
-        g.rm.spr_tileanimation[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/tile_animation_thumbnail.png")).create();
+        g.rm.spr_tileanimation[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/tile_animation_preview.png")).create(g);
+        g.rm.spr_tileanimation[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/tile_animation_thumbnail.png")).create(g);
 
-        g.rm.spr_blocks[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/blocks_preview.png")).create();
-        g.rm.spr_blocks[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/blocks_thumbnail.png")).create();
+        g.rm.spr_blocks[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/blocks_preview.png")).create(g);
+        g.rm.spr_blocks[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/blocks_thumbnail.png")).create(g);
 
-        g.rm.spr_unknowntile[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/unknown_tile_preview.png")).create();
-        g.rm.spr_unknowntile[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/unknown_tile_thumbnail.png")).create();
+        g.rm.spr_unknowntile[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/unknown_tile_preview.png")).create(g);
+        g.rm.spr_unknowntile[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/unknown_tile_thumbnail.png")).create(g);
 
-        g.rm.spr_hazard_fireball[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/fireball_preview.png")).create();
-        g.rm.spr_hazard_fireball[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/fireball_thumbnail.png")).create();
+        g.rm.spr_hazard_fireball[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/fireball_preview.png")).create(g);
+        g.rm.spr_hazard_fireball[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/fireball_thumbnail.png")).create(g);
 
-        g.rm.spr_hazard_rotodisc[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/rotodisc_preview.png")).create();
-        g.rm.spr_hazard_rotodisc[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/rotodisc_thumbnail.png")).create();
+        g.rm.spr_hazard_rotodisc[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/rotodisc_preview.png")).create(g);
+        g.rm.spr_hazard_rotodisc[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/rotodisc_thumbnail.png")).create(g);
 
-        g.rm.spr_hazard_bulletbill[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/bulletbill_preview.png")).create();
-        g.rm.spr_hazard_bulletbill[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/bulletbill_thumbnail.png")).create();
+        g.rm.spr_hazard_bulletbill[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/bulletbill_preview.png")).create(g);
+        g.rm.spr_hazard_bulletbill[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/bulletbill_thumbnail.png")).create(g);
 
-        g.rm.spr_hazard_flame[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/flame_preview.png")).create();
-        g.rm.spr_hazard_flame[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/flame_thumbnail.png")).create();
+        g.rm.spr_hazard_flame[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/flame_preview.png")).create(g);
+        g.rm.spr_hazard_flame[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/flame_thumbnail.png")).create(g);
 
-        g.rm.spr_hazard_pirhanaplant[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/pirhanaplant_preview.png")).create();
-        g.rm.spr_hazard_pirhanaplant[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/pirhanaplant_thumbnail.png")).create();
+        g.rm.spr_hazard_pirhanaplant[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/pirhanaplant_preview.png")).create(g);
+        g.rm.spr_hazard_pirhanaplant[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/pirhanaplant_thumbnail.png")).create(g);
 
         game().rm.load_menu_graphics(g);
 
@@ -731,8 +731,8 @@ pub fn inner_main() {
 
         //Are You Sure Dialog for Delete Stage
         ed().miDeleteStageDialogImage = Ptr::new_box(MI_Image::new(ed().spr_dialog.as_ptr(), 224, 176, 0, 0, 192, 128, 1, 1, 0));
-        ed().miDeleteStageDialogAreYouText = Ptr::new_box(MI_HeaderText::new("Are You", 320, 195));
-        ed().miDeleteStageDialogSureText = Ptr::new_box(MI_HeaderText::new("Sure?", 320, 220));
+        ed().miDeleteStageDialogAreYouText = Ptr::new_box(MI_HeaderText::new(g, "Are You", 320, 195));
+        ed().miDeleteStageDialogSureText = Ptr::new_box(MI_HeaderText::new(g, "Sure?", 320, 220));
         ed().miDeleteStageDialogYesButton = Ptr::new_box(MI_Button::new(g, sprite(&mut game().rm.spr_selectfield), 235, 250, "Yes", 80, TextAlign::CENTER));
         ed().miDeleteStageDialogNoButton = Ptr::new_box(MI_Button::new(g, sprite(&mut game().rm.spr_selectfield), 325, 250, "No", 80, TextAlign::CENTER));
 
@@ -807,7 +807,7 @@ pub fn inner_main() {
         ed().mStageSettingsMenu.add_control(ctl_ptr(ed().miDeleteStageDialogYesButton), null, null, null, ctl_ptr(ed().miDeleteStageDialogNoButton));
         ed().mStageSettingsMenu.add_control(ctl_ptr(ed().miDeleteStageDialogNoButton), null, null, ctl_ptr(ed().miDeleteStageDialogYesButton), null);
 
-        ed().mStageSettingsMenu.set_initial_focus(ctl_ptr(ed().miNameField));
+        ed().mStageSettingsMenu.set_initial_focus(g, ctl_ptr(ed().miNameField));
         ed().mStageSettingsMenu.set_cancel_code(MENU_CODE_EXIT_APPLICATION);
 
         ed().mBonusItemPicker.set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
@@ -907,7 +907,7 @@ pub fn inner_main() {
         ed().mVehicleMenu.add_control(ctl_ptr(ed().miVehicleBoundaryField), ctl_ptr(ed().miVehicleDirectionField), ctl_ptr(ed().miVehicleCreateButton), null, null);
         ed().mVehicleMenu.add_control(ctl_ptr(ed().miVehicleCreateButton), ctl_ptr(ed().miVehicleBoundaryField), ctl_ptr(ed().miVehicleSpriteField), null, null);
 
-        ed().mVehicleMenu.set_initial_focus(ctl_ptr(ed().miVehicleSpriteField));
+        ed().mVehicleMenu.set_initial_focus(g, ctl_ptr(ed().miVehicleSpriteField));
         ed().mVehicleMenu.set_cancel_code(MENU_CODE_EXIT_APPLICATION);
 
         println!("\n---------------- ready, steady, go! ----------------");
@@ -1194,6 +1194,7 @@ fn copy_vehicle_into_stamp(vehicle: &WorldVehicle) {
 }
 
 pub fn editor_edit(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
         let mut gp = g.ptr();
     unsafe {
         let mut done = false;
@@ -1674,10 +1675,10 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                     }
                 }
 
-                g.rm.menu_font_small.draw(0, 0, szEditModes[ed().edit_mode as usize]);
+                gp.rm.menu_font_small.draw(g, 0, 0, szEditModes[ed().edit_mode as usize]);
 
                 if ed().fAutoPaint {
-                    g.rm.menu_font_small.draw(0, 16, "Auto Paint");
+                    gp.rm.menu_font_small.draw(g, 0, 16, "Auto Paint");
                 }
 
                 g.rm.menu_font_small.draw_right_justified(640, 0, &g.worldlist.current_path().to_string_lossy());
@@ -3139,6 +3140,7 @@ pub fn editor_path(g: &mut Game) -> i32 {
 
 pub fn DisplayStageDetails(g: &mut Game, fForce: bool, iStageId: i16, mut iMouseX: i16, mut iMouseY: i16) {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
     unsafe {
         let ts = g.game_values.tourstops[iStageId as usize];
 
@@ -3155,7 +3157,7 @@ pub fn DisplayStageDetails(g: &mut Game, fForce: bool, iStageId: i16, mut iMouse
                     ed().sMapThumbnail = gp.g_map.create_thumbnail_surface(g, true);
                 } else {
                     //otherwise show a unknown map icon
-                    ed().sMapThumbnail = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_mapnotfound.png")).without_color_key().create();
+                    ed().sMapThumbnail = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_mapnotfound.png")).without_color_key().create(g);
                 }
             }
         }
@@ -3201,17 +3203,17 @@ pub fn DisplayStageDetails(g: &mut Game, fForce: bool, iStageId: i16, mut iMouse
 
         gp.rm.menu_mode_large.draw_src(g, x + 16, y + 16, &r((iMode as i32) << 5, 0, 32, 32));
 
-        g.rm.menu_font_small.draw_chop_right(x + 52, y + 16, 164, &ts.szName);
+        gp.rm.menu_font_small.draw_chop_right(g, x + 52, y + 16, 164, &ts.szName);
 
         if iMode != 24 {
             let szPrint = format!("Goal: {}", ts.iGoal);
-            g.rm.menu_font_small.draw_chop_right(x + 52, y + 34, 164, &szPrint);
+            gp.rm.menu_font_small.draw_chop_right(g, x + 52, y + 34, 164, &szPrint);
 
             let szPrint = format!("Points: {}", ts.iPoints);
-            g.rm.menu_font_small.draw_chop_right(x + 16, y + 176, 100, &szPrint);
+            gp.rm.menu_font_small.draw_chop_right(g, x + 16, y + 176, 100, &szPrint);
 
             let szPrint = format!("End: {}", if ts.fEndStage { "Yes" } else { "No" });
-            g.rm.menu_font_small.draw_chop_right(x + 126, y + 176, 80, &szPrint);
+            gp.rm.menu_font_small.draw_chop_right(g, x + 126, y + 176, 80, &szPrint);
 
             for iBonus in 0..ts.iNumBonuses as i32 {
                 let wsb = &ts.wsbBonuses[iBonus as usize];
@@ -3230,7 +3232,7 @@ pub fn DisplayStageDetails(g: &mut Game, fForce: bool, iStageId: i16, mut iMouse
             }
         } else {
             let szPrint = format!("Sort: {}", if ts.iBonusType == 0 { "Fixed" } else { "Random" });
-            g.rm.menu_font_small.draw_chop_right(x + 52, y + 34, 164, &szPrint);
+            gp.rm.menu_font_small.draw_chop_right(g, x + 52, y + 34, 164, &szPrint);
 
             let rm = g.rm;
             for iBonus in 0..ts.iNumBonuses as i32 {
@@ -3552,6 +3554,7 @@ pub fn NewStage(g: &mut Game, iEditStage: &mut i16) {
 
 pub fn editor_stage(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
     unsafe {
         ed().mCurrentMenu = ed().mStageSettingsMenu.as_ptr();
         ed().mCurrentMenu.reset_menu(g);
@@ -3847,7 +3850,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
 
                     ed().mStageSettingsMenu.remember_current();
 
-                    ed().mStageSettingsMenu.set_initial_focus(ctl_ptr(ed().miDeleteStageDialogNoButton));
+                    ed().mStageSettingsMenu.set_initial_focus(g, ctl_ptr(ed().miDeleteStageDialogNoButton));
                     ed().mStageSettingsMenu.set_cancel_code(MENU_CODE_DELETE_STAGE_NO);
                     ed().mStageSettingsMenu.reset_menu(g);
                 } else if MENU_CODE_DELETE_STAGE_YES == code || MENU_CODE_DELETE_STAGE_NO == code {
@@ -3857,7 +3860,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                     ed().miDeleteStageDialogYesButton.set_visible(false);
                     ed().miDeleteStageDialogNoButton.set_visible(false);
 
-                    ed().mStageSettingsMenu.set_initial_focus(ctl_ptr(ed().miNameField));
+                    ed().mStageSettingsMenu.set_initial_focus(g, ctl_ptr(ed().miNameField));
                     ed().mStageSettingsMenu.set_cancel_code(MENU_CODE_EXIT_APPLICATION);
                     ed().mStageSettingsMenu.restore_current(g);
 
@@ -3940,7 +3943,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
 
                 g.rm.menu_font_large.draw_centered(320, 425, "New Stage");
 
-                g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "[LMB] Select Stage, [RMB] Edit Stage, [n] New Stage");
+                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[LMB] Select Stage, [RMB] Edit Stage, [n] New Stage");
             } else {
                 ed().mCurrentMenu.update(g);
                 ed().mCurrentMenu.draw(g);
@@ -4012,9 +4015,9 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                 }
 
                 if ts.iStageType == 0 {
-                    g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "[1-4] Select Items, [LMB] Remove Items");
+                    gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[1-4] Select Items, [LMB] Remove Items");
                 } else {
-                    g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "[LMB] Select Items, [LMB] Remove Items");
+                    gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[LMB] Select Items, [LMB] Remove Items");
                 }
             }
 
@@ -4031,6 +4034,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
 }
 
 pub fn display_help(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     unsafe {
         drawmap(g, false, TILESIZE as i16);
         ed().menu_shade.draw(g, 0, 0);
@@ -4056,56 +4060,56 @@ pub fn display_help(g: &mut Game) -> i32 {
             "[e] - Edit Stages",
             "",
         ];
-        g.rm.menu_font_small.draw(offsetx, offsety, "Modes:");
+        gp.rm.menu_font_small.draw(g, offsetx, offsety, "Modes:");
         offsety += lh + 2;
         for (i, line) in lines_left.iter().take(14).enumerate() {
-            g.rm.menu_font_small.draw(offsetx, offsety, line);
+            gp.rm.menu_font_small.draw(g, offsetx, offsety, line);
             offsety += lh + if i == 13 { 20 } else { 2 };
         }
 
-        g.rm.menu_font_small.draw(offsetx, offsety, "File:");
+        gp.rm.menu_font_small.draw(g, offsetx, offsety, "File:");
         offsety += lh + 2;
-        g.rm.menu_font_small.draw(offsetx, offsety, "[n] - New World");
+        gp.rm.menu_font_small.draw(g, offsetx, offsety, "[n] - New World");
         offsety += lh + 2;
-        g.rm.menu_font_small.draw(offsetx, offsety, "[s] - Save World");
+        gp.rm.menu_font_small.draw(g, offsetx, offsety, "[s] - Save World");
         offsety += lh + 2;
-        g.rm.menu_font_small.draw(offsetx, offsety, "[shift] + [s] - Save As");
+        gp.rm.menu_font_small.draw(g, offsetx, offsety, "[shift] + [s] - Save As");
         offsety += lh + 2;
-        g.rm.menu_font_small.draw(offsetx, offsety, "[f] - Find World");
+        gp.rm.menu_font_small.draw(g, offsetx, offsety, "[f] - Find World");
         offsety += lh + 2;
-        g.rm.menu_font_small.draw(offsetx, offsety, "[shift] + [f] - New Search");
+        gp.rm.menu_font_small.draw(g, offsetx, offsety, "[shift] + [f] - New Search");
         offsety += lh + 2;
-        g.rm.menu_font_small.draw(offsetx, offsety, "[pageup] - Go To Previous World");
+        gp.rm.menu_font_small.draw(g, offsetx, offsety, "[pageup] - Go To Previous World");
         offsety += lh + 2;
-        g.rm.menu_font_small.draw(offsetx, offsety, "[pagedown] - Go To Next World");
+        gp.rm.menu_font_small.draw(g, offsetx, offsety, "[pagedown] - Go To Next World");
 
         offsetx = 300;
         offsety = 55;
 
-        g.rm.menu_font_small.draw(offsetx, offsety, "Place Tiles:");
+        gp.rm.menu_font_small.draw(g, offsetx, offsety, "Place Tiles:");
         offsety += lh + 2;
-        g.rm.menu_font_small.draw(offsetx, offsety, "[Left Mouse Button] - Place Item");
+        gp.rm.menu_font_small.draw(g, offsetx, offsety, "[Left Mouse Button] - Place Item");
         offsety += lh + 2;
-        g.rm.menu_font_small.draw(offsetx, offsety, "[Right Mouse Button] - Remove Item");
+        gp.rm.menu_font_small.draw(g, offsetx, offsety, "[Right Mouse Button] - Remove Item");
         offsety += lh + 20;
 
-        g.rm.menu_font_small.draw(offsetx, offsety, "Miscellaneous:");
+        gp.rm.menu_font_small.draw(g, offsetx, offsety, "Miscellaneous:");
         offsety += lh + 2;
-        g.rm.menu_font_small.draw(offsetx, offsety, "[r] - Change Music Category");
+        gp.rm.menu_font_small.draw(g, offsetx, offsety, "[r] - Change Music Category");
         offsety += lh + 2;
-        g.rm.menu_font_small.draw(offsetx, offsety, "[Arrow Keys] - Navigate World");
+        gp.rm.menu_font_small.draw(g, offsetx, offsety, "[Arrow Keys] - Navigate World");
         offsety += lh + 2;
-        g.rm.menu_font_small.draw(offsetx, offsety, "[a] - Automatic Path/Land");
+        gp.rm.menu_font_small.draw(g, offsetx, offsety, "[a] - Automatic Path/Land");
         offsety += lh + 2;
-        g.rm.menu_font_small.draw(offsetx, offsety, "[k] - Resize World");
+        gp.rm.menu_font_small.draw(g, offsetx, offsety, "[k] - Resize World");
         offsety += lh + 2;
-        g.rm.menu_font_small.draw(offsetx, offsety, "[ctrl] + [delete] - Clear All");
+        gp.rm.menu_font_small.draw(g, offsetx, offsety, "[ctrl] + [delete] - Clear All");
         offsety += lh + 2;
-        g.rm.menu_font_small.draw(offsetx, offsety, "[insert] - Screenshot");
+        gp.rm.menu_font_small.draw(g, offsetx, offsety, "[insert] - Screenshot");
         offsety += lh + 2;
-        g.rm.menu_font_small.draw(offsetx, offsety, "[alt] + [enter] - Full Screen/Window");
+        gp.rm.menu_font_small.draw(g, offsetx, offsety, "[alt] + [enter] - Full Screen/Window");
         offsety += lh + 2;
-        g.rm.menu_font_small.draw(offsetx, offsety, "[space] - Toggle Stage Previews");
+        gp.rm.menu_font_small.draw(g, offsetx, offsety, "[space] - Toggle Stage Previews");
 
         gfx_flipscreen(g);
 
@@ -4146,14 +4150,15 @@ pub fn save_as(g: &mut Game) -> i32 {
 }
 
 fn draw_dialog(g: &mut Game, title: &str, instructions: &str, input: Option<&str>) {
+        let mut gp = g.ptr();
     unsafe {
         drawmap(g, false, TILESIZE as i16);
         ed().menu_shade.draw(g, 0, 0);
         ed().spr_dialog.draw_src(g, 224, 176, &r(0, 0, 192, 128));
         g.rm.menu_font_large.draw_centered(320, 200, title);
-        g.rm.menu_font_small.draw(240, 235, instructions);
+        gp.rm.menu_font_small.draw(g, 240, 235, instructions);
         if let Some(input) = input {
-            g.rm.menu_font_small.draw(240, 255, input);
+            gp.rm.menu_font_small.draw(g, 240, 255, input);
         }
         g.rm.menu_font_small.draw_right_justified(640, 0, &g.worldlist.current_path().to_string_lossy());
         gfx_flipscreen(g);
@@ -4411,7 +4416,7 @@ pub fn new_world(g: &mut Game) -> i32 {
 
             delete_all_vehicles_and_warps(true);
 
-            *g.g_worldmap = WorldMap::new(iWidth, iHeight);
+            *g.g_worldmap = WorldMap::new(g, iWidth, iHeight);
             fileName.push_str(".txt");
             worldLocation.push_str(&fileName);
             gp.worldlist.add(convert_path(g, &worldLocation).into());

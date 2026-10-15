@@ -80,7 +80,7 @@ impl IO_MovingObject {
         iAnimationWidth: i16,
     ) -> Self {
         let mut o = IO_MovingObject {
-            cobject: CObject::new(nspr, pos),
+            cobject: CObject::new(game().get(), nspr, pos),
             iPlayerID: 0,
             iTeamID: 0,
             fOldX: 0.0,
@@ -348,7 +348,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                             return;
                         }
 
-                        topblock.get().collide_object_dir(o, 1);
+                        topblock.get().collide_object_dir(g, o, 1);
                         o.flipsidesifneeded();
                         removeifprojectile(g, o, true, true);
 
@@ -364,7 +364,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                             return;
                         }
 
-                        bottomblock.get().collide_object_dir(o, 1);
+                        bottomblock.get().collide_object_dir(g, o, 1);
                         o.flipsidesifneeded();
                         removeifprojectile(g, o, true, true);
 
@@ -414,7 +414,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                             return;
                         }
 
-                        topblock.get().collide_object_dir(o, 3);
+                        topblock.get().collide_object_dir(g, o, 3);
                         o.flipsidesifneeded();
                         removeifprojectile(g, o, true, true);
 
@@ -430,7 +430,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                             return;
                         }
 
-                        bottomblock.get().collide_object_dir(o, 3);
+                        bottomblock.get().collide_object_dir(g, o, 3);
                         o.flipsidesifneeded();
                         removeifprojectile(g, o, true, true);
 
@@ -486,7 +486,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                     o.kill_object_map_hazard(g, -1);
                 }
 
-                leftblock.get().collide_object_dir(o, 0);
+                leftblock.get().collide_object_dir(g, o, 0);
                 return;
             }
 
@@ -496,7 +496,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                     o.kill_object_map_hazard(g, -1);
                 }
 
-                rightblock.get().collide_object_dir(o, 0);
+                rightblock.get().collide_object_dir(g, o, 0);
                 return;
             }
 
@@ -536,7 +536,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                 let mut processOtherBlock = true;
                 if fLeftBlockSolid {
                     // collide with left block
-                    processOtherBlock = leftblock.get().collide_object_dir(o, 2);
+                    processOtherBlock = leftblock.get().collide_object_dir(g, o, 2);
 
                     if o.platform.is_null() {
                         o.inair = false;
@@ -546,7 +546,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
 
                 if processOtherBlock && fRightBlockSolid {
                     // then right
-                    rightblock.get().collide_object_dir(o, 2);
+                    rightblock.get().collide_object_dir(g, o, 2);
 
                     if o.platform.is_null() {
                         o.inair = false;

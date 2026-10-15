@@ -30,7 +30,7 @@ impl_base!(MO_Spiny => mo_walking_enemy: MO_WalkingEnemy);
 impl MO_Spiny {
     pub fn new(nspr: Ptr<gfxSprite>, moveToRight: bool) -> Self {
         let mut o = MO_Spiny {
-            mo_walking_enemy: MO_WalkingEnemy::new(nspr, 2, 8, 30, 20, 1, 11, 0, if moveToRight { 0 } else { 32 }, 32, 32, moveToRight, true, false, true),
+            mo_walking_enemy: MO_WalkingEnemy::new(game().get(), nspr, 2, 8, 30, 20, 1, 11, 0, if moveToRight { 0 } else { 32 }, 32, 32, moveToRight, true, false, true),
         };
         o.movingObjectType = movingobject_spiny;
         o.iSpawnIconOffset = 176;

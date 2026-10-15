@@ -28,11 +28,11 @@ pub struct IO_FlameCannon {
 impl_base!(IO_FlameCannon => cobject: CObject);
 
 impl IO_FlameCannon {
-    pub fn new(pos: Vec2s, freq: i16, direction: i16) -> Self {
-        let mut this = IO_FlameCannon { cobject: CObject::new(Ptr::null(), pos), iFreq: freq, iTimer: 0, iCycle: 0, iFrame: 0, iDirection: direction };
+    pub fn new(g: &mut Game, pos: Vec2s, freq: i16, direction: i16) -> Self {
+        let mut this = IO_FlameCannon { cobject: CObject::new(g, Ptr::null(), pos), iFreq: freq, iTimer: 0, iCycle: 0, iFrame: 0, iDirection: direction };
         this.objectType = object_flamecannon;
 
-        this.set_new_timer(game().get());
+        this.set_new_timer(g);
 
         this.iw = g_rFlameRects[direction as usize][0].w as i16;
         this.ih = g_rFlameRects[direction as usize][0].h as i16;

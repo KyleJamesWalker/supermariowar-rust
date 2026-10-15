@@ -74,7 +74,7 @@ impl UI_ProjectileLimitsMenu {
 
             this.miProjectilesLimitsMenuLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miProjectilesLimitsMenuRightHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miProjectilesLimitsMenuHeaderText = Ptr::new_box(MI_HeaderText::new("Weapon Use Limits Menu", 320, 5));
+            this.miProjectilesLimitsMenuHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Weapon Use Limits Menu", 320, 5));
         }
 
         let fireball = ctl_ptr(this.miFireballLimitField);
@@ -108,7 +108,7 @@ impl UI_ProjectileLimitsMenu {
         let c = ctl_ptr(this.miProjectilesLimitsMenuHeaderText);
         this.add_non_control(c);
 
-        this.set_initial_focus(fireball);
+        this.set_initial_focus(g, fireball);
         this.set_cancel_code(MENU_CODE_BACK_TO_OPTIONS_MENU);
         this
     }

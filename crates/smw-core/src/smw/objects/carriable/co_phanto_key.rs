@@ -28,7 +28,7 @@ pub struct CO_PhantoKey {
 impl_base!(CO_PhantoKey => mo_carried_object: MO_CarriedObject);
 
 impl CO_PhantoKey {
-    pub fn new(nspr: Ptr<gfxSprite>) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>) -> Self {
         let mut o = CO_PhantoKey {
             mo_carried_object: MO_CarriedObject::new_anim(nspr, Vec2s::zero(), 1, 0, 30, 30, 1, 1, 0, 0, 32, 32),
             relocatetimer: 0,
@@ -48,7 +48,7 @@ impl CO_PhantoKey {
 
         o.fCarriedByKuriboShoe = true;
 
-        o.place_key(game().get());
+        o.place_key(g);
         o
     }
 

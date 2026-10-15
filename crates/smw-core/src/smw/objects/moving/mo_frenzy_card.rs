@@ -31,7 +31,7 @@ pub struct MO_FrenzyCard {
 impl_base!(MO_FrenzyCard => io_moving_object: IO_MovingObject);
 
 impl MO_FrenzyCard {
-    pub fn new(nspr: Ptr<gfxSprite>, iType: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, iType: i16) -> Self {
         let mut o = MO_FrenzyCard {
             io_moving_object: IO_MovingObject::new(nspr, Vec2s::zero(), 12, 8, -1, -1, -1, -1, 0, (iType as i32 * 32) as i16, 32, 32),
             timer: 0,
@@ -51,7 +51,7 @@ impl MO_FrenzyCard {
         o.sparkleanimationtimer = 0;
         o.sparkledrawframe = 0;
 
-        o.place_card(game().get());
+        o.place_card(g);
 
         o.fObjectCollidesWithMap = false;
         o

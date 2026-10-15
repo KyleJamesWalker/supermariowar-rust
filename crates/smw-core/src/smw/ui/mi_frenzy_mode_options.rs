@@ -167,7 +167,7 @@ impl MI_FrenzyModeOptions {
 
             this.mMenu.add_control(back, sliders[NF - 1], null, sliders[NF - 1], null);
 
-            this.mMenu.set_initial_focus(ctl_ptr(this.miQuantityField));
+            this.mMenu.set_initial_focus(g, ctl_ptr(this.miQuantityField));
             this.mMenu.set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
         }
 
@@ -330,7 +330,7 @@ impl UI_ControlTrait for MI_FrenzyModeOptions {
         ret
     }
 
-    fn refresh(&mut self) {
+    fn refresh(&mut self, g: &mut Game) {
         self.mMenu.refresh();
     }
 }

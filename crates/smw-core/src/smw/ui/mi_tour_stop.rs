@@ -92,7 +92,7 @@ impl MI_TourStop {
 
             let mut miStartButton = Box::new(MI_Button::new(g, Ptr::from_mut(&mut gp.rm.spr_selectfield), 70, 45, "Start", 500, TextAlign::LEFT));
             miStartButton.set_code(MENU_CODE_TOUR_STOP_CONTINUE);
-            miStartButton.select(true);
+            miStartButton.select(g, true);
 
             let mut miMapField = Box::new(MI_MapField::new(spr_disabled, 70, 165, "Map", 500, 120, false));
             miMapField.disable(true);
@@ -103,7 +103,7 @@ impl MI_TourStop {
 
             let miTourStopLeftHeaderBar = Box::new(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
             let miTourStopMenuRightHeaderBar = Box::new(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            let miTourStopMenuHeaderText = Box::new(MI_HeaderText::new("Tour Stop", 320, 5));
+            let miTourStopMenuHeaderText = Box::new(MI_HeaderText::new(g, "Tour Stop", 320, 5));
 
             MI_TourStop {
                 ui_control: UI_Control::new(x, y),

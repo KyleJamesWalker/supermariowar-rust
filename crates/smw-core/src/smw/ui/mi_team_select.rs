@@ -319,6 +319,7 @@ impl UI_ControlTrait for MI_TeamSelect {
 
     fn draw(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
         if !self.m_visible {
             return;
         }
@@ -367,7 +368,7 @@ impl UI_ControlTrait for MI_TeamSelect {
                     gp.rm.spr_menu_boxed_numbers.draw_src(g, iTeam * 160 + 32, 388, &SDL_Rect { x: iTeam * 16, y: gp.game_values.colorids[t] as i32 * 16, w: 16, h: 16 });
                     let skinlist = g.skinlist;
                     let name: &str = if g.game_values.randomskin[t] { "Random" } else { &skinlist.at(g.game_values.skinids[t] as usize).name };
-                    g.rm.menu_font_small.draw_chop_right(iTeam * 160 + 52, 404 - g.rm.menu_font_small.get_height(), 80, name);
+                    gp.rm.menu_font_small.draw_chop_right(g, iTeam * 160 + 52, 404 - gp.rm.menu_font_small.get_height(), 80, name);
 
                     let srcy = if !self.fReady[t] {
                         0

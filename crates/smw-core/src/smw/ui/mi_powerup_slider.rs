@@ -41,8 +41,8 @@ impl UI_ControlTrait for MI_PowerupSlider {
     fn update(&mut self, g: &mut Game) {
         self.mi_slider_field.update(g);
     }
-    fn refresh(&mut self) {
-        self.mi_slider_field.refresh();
+    fn refresh(&mut self, g: &mut Game) {
+        self.mi_slider_field.refresh(g);
     }
     fn modify(&mut self, g: &mut Game, modify: bool) -> MenuCodeEnum {
         self.mi_slider_field.modify(g, modify)

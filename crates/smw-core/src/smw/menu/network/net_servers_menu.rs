@@ -48,7 +48,7 @@ impl UI_NetServersMenu {
 
             this.miNetServersLeftHeaderBar = Ptr::new_box(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miNetServersRightHeaderBar = Ptr::new_box(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miNetServersHeaderText = Ptr::new_box(MI_HeaderText::new("Multiplayer Servers Menu", 320, 5));
+            this.miNetServersHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Multiplayer Servers Menu", 320, 5));
 
             this.miNetServersScroll = Ptr::new_box(MI_NetworkListScroll::new(
                 plain,
@@ -88,7 +88,7 @@ impl UI_NetServersMenu {
             this.miNetServersAddRemoveButton.set_code(MENU_CODE_TO_NET_ADDREMOVE_SERVER_MENU);
 
             this.miNetServersConnectingDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
-            this.miNetServersConnectingDialogText = Ptr::new_box(MI_HeaderText::new("Connecting...", 640 / 2, 240 - 12));
+            this.miNetServersConnectingDialogText = Ptr::new_box(MI_HeaderText::new(g, "Connecting...", 640 / 2, 240 - 12));
 
             this.miNetServersConnectingDialogImage.set_visible(false);
             this.miNetServersConnectingDialogText.set_visible(false);
@@ -122,7 +122,7 @@ impl UI_NetServersMenu {
         let scroll = ctl_ptr(this.miNetServersScroll);
         this.add_control(scroll, null, null, null, null);
 
-        this.set_initial_focus(select);
+        this.set_initial_focus(g, select);
         this.set_cancel_code(MENU_CODE_TO_MAIN_MENU);
         this
     }
@@ -170,7 +170,7 @@ impl UI_NetServersMenu {
         self.remember_current();
 
         let t = ctl_ptr(self.miNetServersConnectingDialogText);
-        self.set_initial_focus(t);
+        self.set_initial_focus(g, t);
         self.set_cancel_code(MENU_CODE_NET_CONNECT_ABORT);
         self.reset_menu(g);
     }
@@ -181,19 +181,19 @@ impl UI_NetServersMenu {
         self.remember_current();
 
         let s = ctl_ptr(self.miNetServersScroll);
-        self.set_initial_focus(s);
+        self.set_initial_focus(g, s);
         self.set_cancel_code(MENU_CODE_NONE);
         self.reset_menu(g);
     }
 
-    pub fn restore(&mut self) {
+    pub fn restore(&mut self, g: &mut Game) {
         self.miNetServersScroll.set_visible(false);
         self.miNetServersConnectingDialogImage.set_visible(false);
         self.miNetServersConnectingDialogText.set_visible(false);
 
         let s = ctl_ptr(self.miNetServersSelectButton);
-        self.set_initial_focus(s);
+        self.set_initial_focus(g, s);
         self.set_cancel_code(MENU_CODE_TO_MAIN_MENU);
-        self.restore_current(game().get());
+        self.restore_current(g);
     }
 }

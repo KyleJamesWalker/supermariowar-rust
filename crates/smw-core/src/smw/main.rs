@@ -61,10 +61,10 @@ extern "C" {
 
 pub fn gameloop(g: &mut Game) {
     unsafe {
-        SplashScreenState::instance().init(g);
-        GameStateManager::instance().currentState = Ptr::from_mut(SplashScreenState::instance() as &mut dyn GameState);
+        SplashScreenState::instance(g).init(g);
+        GameStateManager::instance(g).currentState = Ptr::from_mut(SplashScreenState::instance(g) as &mut dyn GameState);
         if let Some(segment) = harness::segment_state() {
-            GameStateManager::instance().currentState = Ptr::from_box(Box::new(segment) as Box<dyn GameState>);
+            GameStateManager::instance(g).currentState = Ptr::from_box(Box::new(segment) as Box<dyn GameState>);
         }
 
         #[cfg(target_os = "emscripten")]
@@ -103,7 +103,7 @@ unsafe extern "C-unwind" fn gameloop_frame_web() {
     while ml.web_accumulated >= frame_ms && frames < MAX_CATCH_UP_FRAMES && game().game_values.appstate != crate::common::game_values::AppState::Quit {
         assign_hotplugged(game().get());
         harness::frame_start(game().get());
-        GameStateManager::instance().currentState.get().update(game().get());
+        GameStateManager::instance(game().get()).currentState.get().update(game().get());
         harness::frame_end(game().get());
 
         ml.web_accumulated -= frame_ms;
@@ -138,23 +138,23 @@ unsafe extern "C-unwind" fn gameloop_frame() {
     fn phase(_: usize) {}
 
     phase(1);
-    FPSLimiter::instance().frame_start();
+    FPSLimiter::instance(game().get()).frame_start();
 
     assign_hotplugged(game().get());
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::touch::flush();
     harness::frame_start(game().get());
     phase(5);
-    GameStateManager::instance().currentState.get().update(game().get());
+    GameStateManager::instance(game().get()).currentState.get().update(game().get());
     phase(6);
     harness::frame_end(game().get());
 
     phase(1);
-    FPSLimiter::instance().before_flip(game().get());
+    FPSLimiter::instance(game().get()).before_flip(game().get());
     phase(7);
     gfx_flipscreen(game().get());
     phase(1);
-    FPSLimiter::instance().after_flip(game().get());
+    FPSLimiter::instance(game().get()).after_flip(game().get());
 }
 
 pub fn create_globals(g: &mut Game) {
@@ -165,16 +165,16 @@ pub fn create_globals(g: &mut Game) {
 
         g.g_map = Ptr::from_box(CMap::new());
         g.filterslist = Ptr::new_box(FiltersList::new());
-        g.maplist = Ptr::new_box(MapList::new(false));
+        g.maplist = Ptr::new_box(MapList::new(g, false));
 
         //TODO: add proper test via size
         if g.maplist.is_empty() {
             std::panic::panic_any("Empty map directory!".to_string());
         }
 
-        g.skinlist = Ptr::new_box(SkinList::new());
-        g.musiclist = Ptr::new_box(MusicList::new());
-        g.worldmusiclist = Ptr::new_box(WorldMusicList::new());
+        g.skinlist = Ptr::new_box(SkinList::new(g));
+        g.musiclist = Ptr::new_box(MusicList::new(g));
+        g.worldmusiclist = Ptr::new_box(WorldMusicList::new(g));
         g.soundpacklist = Ptr::new_box(SoundsList::new());
         g.announcerlist = Ptr::new_box(AnnouncerList::new());
         g.tourlist = Ptr::new_box(TourList::new());
@@ -315,7 +315,7 @@ fn assign_hotplugged(g: &mut Game) {
         if crate::smw::pad::hotplug(g) {
             *pending = true;
         }
-        let playing = GameStateManager::instance().currentState.addr() == crate::smw::gs_gameplay::GameplayState::instance() as *mut _ as usize;
+        let playing = GameStateManager::instance(g).currentState.addr() == crate::smw::gs_gameplay::GameplayState::instance(g) as *mut _ as usize;
         if *pending && !playing {
             *pending = false;
             assign_inputs(g);

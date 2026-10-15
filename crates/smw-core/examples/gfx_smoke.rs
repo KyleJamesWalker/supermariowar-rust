@@ -26,13 +26,13 @@ fn main() {
     let pack = format!("{}/gfx/packs/Classic", data);
     assert!(gfx_loadpalette(game().get(), Path::new(&format!("{}/palette.png", pack))));
 
-    let backdrop = ImageLoader::new(format!("{}/menu/menu_background.png", pack)).without_color_key().create();
-    let smw_logo = ImageLoader::new(format!("{}/menu/menu_smw.png", pack)).create();
-    let shade = ImageLoader::new(format!("{}/menu/menu_shade.png", pack)).with_alpha(72).without_color_key().create();
-    let ghost = ImageLoader::new(format!("{}/eyecandy/ghost.png", pack)).with_alpha(128).with_wrapping(640).create();
+    let backdrop = ImageLoader::new(format!("{}/menu/menu_background.png", pack)).without_color_key().create(game().get());
+    let smw_logo = ImageLoader::new(format!("{}/menu/menu_smw.png", pack)).create(game().get());
+    let shade = ImageLoader::new(format!("{}/menu/menu_shade.png", pack)).with_alpha(72).without_color_key().create(game().get());
+    let ghost = ImageLoader::new(format!("{}/eyecandy/ghost.png", pack)).with_alpha(128).with_wrapping(640).create(game().get());
     let overlay = ImageLoader::new(format!("{}/eyecandy/overlayholes.png", pack))
         .with_color_key(smw::common::gfx::color::RGB { r: 0, g: 255, b: 0 })
-        .create();
+        .create(game().get());
 
     let mut font_large = gfxFont::from_path(game().get(), &format!("{}/menu/menu_font_large.png", pack));
     let font_small = gfxFont::from_path(game().get(), &format!("{}/fonts/font_small.png", pack));
@@ -55,19 +55,19 @@ fn main() {
     skin[0].draw_stretch(&SDL_Rect { x: 0, y: 0, w: 32, h: 32 }, unsafe { game().blitdest }, &SDL_Rect { x: 500, y: 380, w: 64, h: 64 });
     gfx_drawpreview(game().get(), &skin[2], 620, 300, 0, 0, 32, 32, &SDL_Rect { x: 0, y: 0, w: 640, h: 480 }, true, None);
 
-    font_large.draw(10, 150, "Super Mario War: 0123456789");
+    font_large.draw(game().get(), 10, 150, "Super Mario War: 0123456789");
     font_small.draw_centered(320, 180, "centered small text ~!@#$%^&*()");
     font_large.draw_right_justified(630, 210, "right justified");
-    font_small.draw_chop_right(10, 250, 120, "chopped right text that is long");
-    font_small.draw_chop_left(630, 250, 120, "chopped left text that is long");
-    font_small.draw_chop_centered(320, 270, 100, "chop centered text that is long");
+    font_small.draw_chop_right(game().get(), 10, 250, 120, "chopped right text that is long");
+    font_small.draw_chop_left(game().get(), 630, 250, 120, "chopped left text that is long");
+    font_small.draw_chop_centered(game().get(), 320, 270, 100, "chop centered text that is long");
     font_large.set_alpha(128);
-    font_large.draw(10, 300, "translucent");
+    font_large.draw(game().get(), 10, 300, "translucent");
     unsafe {
         game().x_shake = 3;
         game().y_shake = -2;
     }
-    font_small.draw(10, 330, "shaken");
+    font_small.draw(game().get(), 10, 330, "shaken");
     smw_logo.draw_part(game().get(), 300, 330, 0, 0, 40, 20);
 
     assert!(gfx_save_screen_bmp(game().get(), &out));

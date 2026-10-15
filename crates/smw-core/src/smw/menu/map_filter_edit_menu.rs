@@ -23,7 +23,7 @@ impl UI_MapFilterEditMenu {
 
         let b = ctl_ptr(this.miMapBrowser);
         this.add_control(b, Ptr::null(), Ptr::null(), Ptr::null(), Ptr::null());
-        this.set_initial_focus(b);
+        this.set_initial_focus(game().get(), b);
         this.set_cancel_code(MENU_CODE_MAP_BROWSER_EXIT);
         this
     }

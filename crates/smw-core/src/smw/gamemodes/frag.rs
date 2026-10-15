@@ -105,7 +105,7 @@ pub fn cgm_frag_check_winner<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mu
     let this = this.gm_mut();
     if this.goal > -1 {
         if player.score().score >= this.goal {
-            player.score().set_score(this.goal);
+            player.score().set_score(g, this.goal);
             this.winningteam = player.get_team_id();
             this.gameover = true;
 

@@ -257,7 +257,7 @@ pub fn cgm_jail_playerextraguy(g: &mut Game, this: &mut CGM_Jail, mut player: Pt
         }
 
         if player.score().score >= this.goal {
-            player.score().set_score(this.goal);
+            player.score().set_score(g, this.goal);
             this.winningteam = player.get_team_id();
             this.gameover = true;
 

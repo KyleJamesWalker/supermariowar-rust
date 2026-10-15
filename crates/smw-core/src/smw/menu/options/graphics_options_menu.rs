@@ -93,7 +93,7 @@ impl UI_GraphicsOptionsMenu {
 
             this.miGraphicsOptionsMenuLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miGraphicsOptionsMenuRightHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miGraphicsOptionsMenuHeaderText = Ptr::new_box(MI_HeaderText::new("Graphics Options Menu", 320, 5));
+            this.miGraphicsOptionsMenuHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Graphics Options Menu", 320, 5));
         }
 
         let toplayer = ctl_ptr(this.miTopLayerField);
@@ -122,7 +122,7 @@ impl UI_GraphicsOptionsMenu {
         let c = ctl_ptr(this.miGraphicsOptionsMenuHeaderText);
         this.add_non_control(c);
 
-        this.set_initial_focus(toplayer);
+        this.set_initial_focus(g, toplayer);
         this.set_cancel_code(MENU_CODE_BACK_TO_OPTIONS_MENU);
         this
     }

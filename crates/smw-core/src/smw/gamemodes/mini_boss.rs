@@ -41,6 +41,7 @@ impl CGM_Boss_MiniGame {
     }
 
     pub fn set_winner(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         self.winningteam = player.get_team_id();
         self.gameover = true;
 
@@ -52,7 +53,7 @@ impl CGM_Boss_MiniGame {
                     continue;
                 }
 
-                g.score[iScore as usize].set_score(0);
+                gp.score[iScore as usize].set_score(g, 0);
             }
 
             setup_score_board(g, false);
@@ -94,6 +95,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
 
     fn init(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
         gm::cgamemode_init(g, self);
 
         self.fReverseScoring = false;
@@ -103,7 +105,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
 
         unsafe {
             for iScore in 0..game().score_cnt as usize {
-                g.score[iScore].set_score(self.goal);
+                gp.score[iScore].set_score(g, self.goal);
             }
 
             let platformY: i16 = if self.iBossType == Boss::Hammer {
@@ -118,6 +120,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
     }
 
     fn think(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let mut gp = g.ptr();
         unsafe {
             if !self.gameover && g.players.len() == 0 {
@@ -160,7 +163,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
                         self.poweruptimer = (RANDOM_INT(80) + 60) as i16;
 
                         if g.objectcontainer[1].count_types(object_frenzycard) < g.players.len() {
-                            g.objectcontainer[1].add(Ptr::new_box(MO_FrenzyCard::new(Ptr::from_mut(&mut g.rm.spr_frenzycards), 0)));
+                            gp.get().objectcontainer[1].add(Ptr::new_box(MO_FrenzyCard::new(g, Ptr::from_mut(&mut gp.get().rm.spr_frenzycards), 0)));
                         }
                     }
                 }

@@ -211,7 +211,7 @@ pub fn gameplay_frame(g: &mut Game) {
                 }
             }
             for (pkg, _) in std::mem::take(&mut random_state().g_pending) {
-                deliver(pkg);
+                deliver(g, pkg);
             }
         }
     }
@@ -315,13 +315,13 @@ pub fn receive(g: &mut Game, data: &[u8]) {
             return;
         }
     }
-    deliver(pkg);
+    deliver(g, pkg);
 }
 
-fn deliver(pkg: RandomEvent) {
+fn deliver(g: &mut Game, pkg: RandomEvent) {
     let ev = Ev::from_u8(pkg.kind).unwrap();
-    if ready(game().get(), ev, &pkg.args) {
-        replay(game().get(), &pkg);
+    if ready(g, ev, &pkg.args) {
+        replay(g, &pkg);
     } else {
         unsafe { random_state().g_pending.push((pkg, random_state().g_frame)) };
     }
@@ -527,7 +527,7 @@ fn run(g: &mut Game, ev: Ev, args: &[i32]) {
         Ev::ThrowBoxItem => obj::carriable::co_throw_box::net_release_item(g, args),
         Ev::StarTimeout => gm::star::net_timeout(g),
         Ev::StarReassign => gm::star::net_reassign(g),
-        Ev::TagReassign => gm::tag::net_reassign(),
+        Ev::TagReassign => gm::tag::net_reassign(g),
         Ev::Bomb => {
             let mut p = player(g, args);
             if !p.is_null() {

@@ -36,9 +36,9 @@ impl UI_ControlTrait for MI_Text {
 
         let (x, y) = (self.m_pos.x as i32, self.m_pos.y as i32);
         if self.m_align == TextAlign::LEFT && self.iw == 0 {
-            self.font.draw(x, y, &self.szText);
+            self.font.draw(g, x, y, &self.szText);
         } else if self.m_align == TextAlign::LEFT {
-            self.font.draw_chop_right(x, y, self.iw as i32, &self.szText);
+            self.font.draw_chop_right(g, x, y, self.iw as i32, &self.szText);
         } else if self.m_align == TextAlign::CENTER {
             self.font.draw_centered(x, y, &self.szText);
         } else if self.m_align == TextAlign::RIGHT {
@@ -51,7 +51,7 @@ impl UI_ControlTrait for MI_Text {
 pub struct MI_HeaderText;
 
 impl MI_HeaderText {
-    pub fn new(text: impl Into<String>, x: i16, y: i16) -> MI_Text {
-        MI_Text::new(game().get(), text, x, y, 0, true, TextAlign::CENTER)
+    pub fn new(g: &mut Game, text: impl Into<String>, x: i16, y: i16) -> MI_Text {
+        MI_Text::new(g, text, x, y, 0, true, TextAlign::CENTER)
     }
 }

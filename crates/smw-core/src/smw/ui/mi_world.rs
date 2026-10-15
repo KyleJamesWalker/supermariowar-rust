@@ -101,12 +101,12 @@ unsafe fn teamids_flat(g: &mut Game, iTeam: i16, iMember: i16) -> i16 {
 
 impl Default for MI_World {
     fn default() -> Self {
-        Self::new()
+        Self::new(game().get())
     }
 }
 
 impl MI_World {
-    pub fn new() -> Self {
+    pub fn new(g: &mut Game) -> Self {
         MI_World {
             ui_control: UI_Control::new(0, 0),
             iState: 0,
@@ -120,7 +120,7 @@ impl MI_World {
             iPopupFlag: [false; 4],
             iItemCol: [0; 4],
             iItemPage: [0; 4],
-            map_sprites: [gfxSprite::blank(game().get(), 768, 608), gfxSprite::blank(game().get(), 768, 608)],
+            map_sprites: [gfxSprite::blank(g, 768, 608), gfxSprite::blank(g, 768, 608)],
             rectSrcSurface: SDL_Rect { x: 0, y: 0, w: 768, h: 608 },
             rectDstSurface: SDL_Rect { x: 0, y: 0, w: App::screenWidth, h: App::screenHeight },
             iCurrentSurfaceIndex: 0,

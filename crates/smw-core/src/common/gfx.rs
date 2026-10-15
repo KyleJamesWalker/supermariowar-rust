@@ -256,8 +256,8 @@ pub fn gfx_write_screen_raw(g: &mut Game, out: &mut impl std::io::Write) -> std:
     }
 }
 
-fn load_skin(path: &Path) -> Result<gfxSprite, String> {
-    let skin = ImageLoader::new(path).without_color_key().without_optimization().try_create(game().get())?;
+fn load_skin(g: &mut Game, path: &Path) -> Result<gfxSprite, String> {
+    let skin = ImageLoader::new(path).without_color_key().without_optimization().try_create(g)?;
 
     if !valid_skin_surface(&skin) {
         return Err(format!("Invalid skin file: {} has incorrect dimensions", path.display()));
@@ -268,7 +268,7 @@ fn load_skin(path: &Path) -> Result<gfxSprite, String> {
 
 /// Returns `Err` where the C++ throws a `std::string`.
 pub fn gfx_loadmenuskin(g: &mut Game, path: &Path, colorScheme: i16, fLoadBothDirections: bool) -> Result<SpriteStrip, String> {
-    let skin = load_skin(path)?;
+    let skin = load_skin(g, path)?;
 
     let mut strip = new_sprite_strip();
 
@@ -289,7 +289,7 @@ pub fn gfx_loadmenuskin(g: &mut Game, path: &Path, colorScheme: i16, fLoadBothDi
 
 /// Returns `Err` where the C++ throws a `std::string`.
 pub fn gfx_loadfullskin(g: &mut Game, path: &Path, colorScheme: i16) -> Result<SpriteStrip, String> {
-    let skin = load_skin(path)?;
+    let skin = load_skin(g, path)?;
 
     let mut strip = new_sprite_strip();
 

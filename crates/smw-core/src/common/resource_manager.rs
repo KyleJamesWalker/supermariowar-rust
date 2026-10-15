@@ -365,10 +365,10 @@ impl CResourceManager {
 
     pub fn load_menu_skin(&mut self, g: &mut Game, playerID: i16, skinID: i16, colorID: i16, fLoadBothDirections: bool) -> bool {
         let path = unsafe { g.skinlist.at(skinID as usize).path.clone() };
-        self.load_menu_skin_path(playerID, &path, colorID, fLoadBothDirections)
+        self.load_menu_skin_path(g, playerID, &path, colorID, fLoadBothDirections)
     }
 
-    pub fn load_menu_skin_path(&mut self, playerID: i16, path: &Path, colorID: i16, fLoadBothDirections: bool) -> bool {
+    pub fn load_menu_skin_path(&mut self, g: &mut Game, playerID: i16, path: &Path, colorID: i16, fLoadBothDirections: bool) -> bool {
         let p = playerID as usize;
         let new_info = LoadedSpriteInfo { path: path.to_path_buf(), colorScheme: colorID };
         // GSMenu's LoadFullSkin replaces spr_player without updating this cache, as in C++.
@@ -381,7 +381,7 @@ impl CResourceManager {
             }
         }
 
-        match gfx_loadmenuskin(game().get(), path, colorID, fLoadBothDirections) {
+        match gfx_loadmenuskin(g, path, colorID, fLoadBothDirections) {
             Ok(strip) => {
                 self.spr_player[p] = strip;
                 self.loaded_player_sprites[p] = new_info;
@@ -395,8 +395,8 @@ impl CResourceManager {
     }
 
     /// Panics where the C++ throws (the C++ callers do not catch).
-    pub fn load_full_skin_path(&self, path: &Path, colorID: i16) -> SpriteStrip {
-        gfx_loadfullskin(game().get(), path, colorID).unwrap_or_else(|what| panic!("{}", what))
+    pub fn load_full_skin_path(&self, g: &mut Game, path: &Path, colorID: i16) -> SpriteStrip {
+        gfx_loadfullskin(g, path, colorID).unwrap_or_else(|what| panic!("{}", what))
     }
 
     pub fn load_full_skin(&self, g: &mut Game, skinID: i16, colorID: i16) -> SpriteStrip {
@@ -426,222 +426,222 @@ impl CResourceManager {
 
         //Just load menu skins for now (just standing right sprite)
         for k in 0..MAX_PLAYERS as i16 {
-            self.spr_shyguy[k as usize] = self.load_full_skin_path(Path::new(&shyguyPath), k);
-            self.spr_chocobo[k as usize] = self.load_full_skin_path(Path::new(&chickenPath), k);
-            self.spr_bobomb[k as usize] = self.load_full_skin_path(Path::new(&bobombPath), k);
+            self.spr_shyguy[k as usize] = self.load_full_skin_path(g, Path::new(&shyguyPath), k);
+            self.spr_chocobo[k as usize] = self.load_full_skin_path(g, Path::new(&chickenPath), k);
+            self.spr_bobomb[k as usize] = self.load_full_skin_path(g, Path::new(&bobombPath), k);
         }
 
-        self.menu_survival = builder("gfx/packs/modeobjects/menu_survival.png").create();
-        self.menu_stomp = builder("gfx/packs/modeobjects/menu_stomp.png").create();
-        self.menu_egg = builder("gfx/packs/modeobjects/menu_egg.png").create();
+        self.menu_survival = builder("gfx/packs/modeobjects/menu_survival.png").create(g);
+        self.menu_stomp = builder("gfx/packs/modeobjects/menu_stomp.png").create(g);
+        self.menu_egg = builder("gfx/packs/modeobjects/menu_egg.png").create(g);
 
-        self.spr_clouds = builder("gfx/packs/eyecandy/cloud.png").with_alpha(255).with_wrapping(640).create();
-        self.spr_ghosts = builder("gfx/packs/eyecandy/ghost.png").with_alpha(128).with_wrapping(640).create();
-        self.spr_fish = builder("gfx/packs/eyecandy/fish.png").with_alpha(128).with_wrapping(640).create();
-        self.spr_leaves = builder("gfx/packs/eyecandy/leaves.png").with_wrapping(640).create();
-        self.spr_snow = builder("gfx/packs/eyecandy/snow.png").with_wrapping(640).create();
-        self.spr_rain = builder("gfx/packs/eyecandy/rain.png").with_wrapping(640).create();
+        self.spr_clouds = builder("gfx/packs/eyecandy/cloud.png").with_alpha(255).with_wrapping(640).create(g);
+        self.spr_ghosts = builder("gfx/packs/eyecandy/ghost.png").with_alpha(128).with_wrapping(640).create(g);
+        self.spr_fish = builder("gfx/packs/eyecandy/fish.png").with_alpha(128).with_wrapping(640).create(g);
+        self.spr_leaves = builder("gfx/packs/eyecandy/leaves.png").with_wrapping(640).create(g);
+        self.spr_snow = builder("gfx/packs/eyecandy/snow.png").with_wrapping(640).create(g);
+        self.spr_rain = builder("gfx/packs/eyecandy/rain.png").with_wrapping(640).create(g);
 
-        self.spr_noteblock = builder("gfx/packs/blocks/noteblock.png").create();
-        self.spr_breakableblock = builder("gfx/packs/blocks/breakableblock.png").create();
-        self.spr_powerupblock = builder("gfx/packs/blocks/powerupblock.png").create();
-        self.spr_donutblock = builder("gfx/packs/blocks/donutblock.png").create();
-        self.spr_flipblock = builder("gfx/packs/blocks/flipblock.png").create();
-        self.spr_bounceblock = builder("gfx/packs/blocks/bounceblock.png").create();
-        self.spr_throwblock = builder("gfx/packs/blocks/throwblock.png").create();
-        self.spr_switchblocks = builder("gfx/packs/blocks/switchblock.png").create();
-        self.spr_viewblock = builder("gfx/packs/blocks/viewblock.png").create();
-        self.spr_weaponbreakableblock = builder("gfx/packs/blocks/weaponbreakableblock.png").create();
+        self.spr_noteblock = builder("gfx/packs/blocks/noteblock.png").create(g);
+        self.spr_breakableblock = builder("gfx/packs/blocks/breakableblock.png").create(g);
+        self.spr_powerupblock = builder("gfx/packs/blocks/powerupblock.png").create(g);
+        self.spr_donutblock = builder("gfx/packs/blocks/donutblock.png").create(g);
+        self.spr_flipblock = builder("gfx/packs/blocks/flipblock.png").create(g);
+        self.spr_bounceblock = builder("gfx/packs/blocks/bounceblock.png").create(g);
+        self.spr_throwblock = builder("gfx/packs/blocks/throwblock.png").create(g);
+        self.spr_switchblocks = builder("gfx/packs/blocks/switchblock.png").create(g);
+        self.spr_viewblock = builder("gfx/packs/blocks/viewblock.png").create(g);
+        self.spr_weaponbreakableblock = builder("gfx/packs/blocks/weaponbreakableblock.png").create(g);
 
-        self.spr_spring = builder("gfx/packs/powerups/spring.png").with_wrapping(640).create();
-        self.spr_spike = builder("gfx/packs/powerups/spike.png").with_wrapping(640).create();
-        self.spr_kuriboshoe = builder("gfx/packs/powerups/kuriboshoe.png").with_wrapping(640).create();
-        self.spr_throwbox = builder("gfx/packs/powerups/throwbox.png").with_wrapping(640).create();
+        self.spr_spring = builder("gfx/packs/powerups/spring.png").with_wrapping(640).create(g);
+        self.spr_spike = builder("gfx/packs/powerups/spike.png").with_wrapping(640).create(g);
+        self.spr_kuriboshoe = builder("gfx/packs/powerups/kuriboshoe.png").with_wrapping(640).create(g);
+        self.spr_throwbox = builder("gfx/packs/powerups/throwbox.png").with_wrapping(640).create(g);
 
-        self.spr_tileanimation[0] = builder("gfx/packs/tilesets/tile_animation.png").create();
-        self.spr_tileanimation[1] = builder("gfx/packs/tilesets/tile_animation_preview.png").create();
-        self.spr_tileanimation[2] = builder("gfx/packs/tilesets/tile_animation_thumbnail.png").create();
+        self.spr_tileanimation[0] = builder("gfx/packs/tilesets/tile_animation.png").create(g);
+        self.spr_tileanimation[1] = builder("gfx/packs/tilesets/tile_animation_preview.png").create(g);
+        self.spr_tileanimation[2] = builder("gfx/packs/tilesets/tile_animation_thumbnail.png").create(g);
 
-        self.spr_blocks[0] = builder("gfx/packs/tilesets/blocks.png").create();
-        self.spr_blocks[1] = builder("gfx/packs/tilesets/blocks_preview.png").create();
-        self.spr_blocks[2] = builder("gfx/packs/tilesets/blocks_thumbnail.png").create();
+        self.spr_blocks[0] = builder("gfx/packs/tilesets/blocks.png").create(g);
+        self.spr_blocks[1] = builder("gfx/packs/tilesets/blocks_preview.png").create(g);
+        self.spr_blocks[2] = builder("gfx/packs/tilesets/blocks_thumbnail.png").create(g);
 
-        self.spr_unknowntile[0] = builder("gfx/packs/tilesets/unknown_tile.png").create();
-        self.spr_unknowntile[1] = builder("gfx/packs/tilesets/unknown_tile_preview.png").create();
-        self.spr_unknowntile[2] = builder("gfx/packs/tilesets/unknown_tile_thumbnail.png").create();
+        self.spr_unknowntile[0] = builder("gfx/packs/tilesets/unknown_tile.png").create(g);
+        self.spr_unknowntile[1] = builder("gfx/packs/tilesets/unknown_tile_preview.png").create(g);
+        self.spr_unknowntile[2] = builder("gfx/packs/tilesets/unknown_tile_thumbnail.png").create(g);
 
-        self.spr_brokenyellowblock = builder("gfx/packs/eyecandy/brokenyellowblock.png").with_wrapping(640).create();
-        self.spr_brokenflipblock = builder("gfx/packs/eyecandy/brokenflipblock.png").with_wrapping(640).create();
-        self.spr_brokenblueblock = builder("gfx/packs/eyecandy/brokenblueblock.png").with_wrapping(640).create();
-        self.spr_brokengrayblock = builder("gfx/packs/eyecandy/brokengrayblock.png").with_wrapping(640).create();
+        self.spr_brokenyellowblock = builder("gfx/packs/eyecandy/brokenyellowblock.png").with_wrapping(640).create(g);
+        self.spr_brokenflipblock = builder("gfx/packs/eyecandy/brokenflipblock.png").with_wrapping(640).create(g);
+        self.spr_brokenblueblock = builder("gfx/packs/eyecandy/brokenblueblock.png").with_wrapping(640).create(g);
+        self.spr_brokengrayblock = builder("gfx/packs/eyecandy/brokengrayblock.png").with_wrapping(640).create(g);
 
-        self.spr_brokeniceblock = builder("gfx/packs/eyecandy/icecube.png").with_wrapping(640).create();
-        self.spr_iceblock = builder("gfx/packs/eyecandy/iceblock.png").with_wrapping(640).create();
+        self.spr_brokeniceblock = builder("gfx/packs/eyecandy/icecube.png").with_wrapping(640).create(g);
+        self.spr_iceblock = builder("gfx/packs/eyecandy/iceblock.png").with_wrapping(640).create(g);
 
-        self.spr_tanooki = builder("gfx/packs/powerups/tanooki.png").with_wrapping(640).create();
-        self.spr_statue = builder("gfx/packs/projectiles/statue.png").with_wrapping(640).create();
-        self.spr_starpowerup = builder("gfx/packs/powerups/starpowerup.png").with_wrapping(640).create();
-        self.spr_1uppowerup = builder("gfx/packs/powerups/1uppowerup.png").with_wrapping(640).create();
-        self.spr_2uppowerup = builder("gfx/packs/powerups/2uppowerup.png").with_wrapping(640).create();
-        self.spr_3uppowerup = builder("gfx/packs/powerups/3uppowerup.png").with_wrapping(640).create();
-        self.spr_5uppowerup = builder("gfx/packs/powerups/5uppowerup.png").with_wrapping(640).create();
-        self.spr_firepowerup = builder("gfx/packs/powerups/fireflower.png").with_wrapping(640).create();
-        self.spr_hammerpowerup = builder("gfx/packs/powerups/hammerpowerup.png").with_wrapping(640).create();
-        self.spr_icewandpowerup = builder("gfx/packs/powerups/icewandpowerup.png").with_wrapping(640).create();
-        self.spr_podobopowerup = builder("gfx/packs/powerups/podobopowerup.png").with_wrapping(640).create();
-        self.spr_poisonpowerup = builder("gfx/packs/powerups/poisonpowerup.png").with_wrapping(640).create();
-        self.spr_mysterymushroompowerup = builder("gfx/packs/powerups/mysterymushroom.png").with_wrapping(640).create();
-        self.spr_boomerangpowerup = builder("gfx/packs/powerups/boomerangpowerup.png").with_wrapping(640).create();
-        self.spr_clockpowerup = builder("gfx/packs/powerups/clockpowerup.png").with_wrapping(640).create();
-        self.spr_bobombpowerup = builder("gfx/packs/powerups/bobombpowerup.png").with_wrapping(640).create();
-        self.spr_powpowerup = builder("gfx/packs/powerups/powpowerup.png").with_wrapping(640).create();
-        self.spr_modpowerup = builder("gfx/packs/powerups/modpowerup.png").with_wrapping(640).create();
-        self.spr_bulletbillpowerup = builder("gfx/packs/powerups/bulletbillpowerup.png").with_wrapping(640).create();
-        self.spr_featherpowerup = builder("gfx/packs/powerups/featherpowerup.png").with_wrapping(640).create();
-        self.spr_leafpowerup = builder("gfx/packs/powerups/leafpowerup.png").with_wrapping(640).create();
-        self.spr_bombpowerup = builder("gfx/packs/powerups/bombpowerup.png").with_wrapping(640).create();
-        self.spr_pwingspowerup = builder("gfx/packs/powerups/pwings.png").with_wrapping(640).create();
+        self.spr_tanooki = builder("gfx/packs/powerups/tanooki.png").with_wrapping(640).create(g);
+        self.spr_statue = builder("gfx/packs/projectiles/statue.png").with_wrapping(640).create(g);
+        self.spr_starpowerup = builder("gfx/packs/powerups/starpowerup.png").with_wrapping(640).create(g);
+        self.spr_1uppowerup = builder("gfx/packs/powerups/1uppowerup.png").with_wrapping(640).create(g);
+        self.spr_2uppowerup = builder("gfx/packs/powerups/2uppowerup.png").with_wrapping(640).create(g);
+        self.spr_3uppowerup = builder("gfx/packs/powerups/3uppowerup.png").with_wrapping(640).create(g);
+        self.spr_5uppowerup = builder("gfx/packs/powerups/5uppowerup.png").with_wrapping(640).create(g);
+        self.spr_firepowerup = builder("gfx/packs/powerups/fireflower.png").with_wrapping(640).create(g);
+        self.spr_hammerpowerup = builder("gfx/packs/powerups/hammerpowerup.png").with_wrapping(640).create(g);
+        self.spr_icewandpowerup = builder("gfx/packs/powerups/icewandpowerup.png").with_wrapping(640).create(g);
+        self.spr_podobopowerup = builder("gfx/packs/powerups/podobopowerup.png").with_wrapping(640).create(g);
+        self.spr_poisonpowerup = builder("gfx/packs/powerups/poisonpowerup.png").with_wrapping(640).create(g);
+        self.spr_mysterymushroompowerup = builder("gfx/packs/powerups/mysterymushroom.png").with_wrapping(640).create(g);
+        self.spr_boomerangpowerup = builder("gfx/packs/powerups/boomerangpowerup.png").with_wrapping(640).create(g);
+        self.spr_clockpowerup = builder("gfx/packs/powerups/clockpowerup.png").with_wrapping(640).create(g);
+        self.spr_bobombpowerup = builder("gfx/packs/powerups/bobombpowerup.png").with_wrapping(640).create(g);
+        self.spr_powpowerup = builder("gfx/packs/powerups/powpowerup.png").with_wrapping(640).create(g);
+        self.spr_modpowerup = builder("gfx/packs/powerups/modpowerup.png").with_wrapping(640).create(g);
+        self.spr_bulletbillpowerup = builder("gfx/packs/powerups/bulletbillpowerup.png").with_wrapping(640).create(g);
+        self.spr_featherpowerup = builder("gfx/packs/powerups/featherpowerup.png").with_wrapping(640).create(g);
+        self.spr_leafpowerup = builder("gfx/packs/powerups/leafpowerup.png").with_wrapping(640).create(g);
+        self.spr_bombpowerup = builder("gfx/packs/powerups/bombpowerup.png").with_wrapping(640).create(g);
+        self.spr_pwingspowerup = builder("gfx/packs/powerups/pwings.png").with_wrapping(640).create(g);
 
-        self.spr_extraheartpowerup = builder("gfx/packs/powerups/heartpowerup.png").with_wrapping(640).create();
-        self.spr_extratimepowerup = builder("gfx/packs/powerups/extratimepowerup.png").with_wrapping(640).create();
-        self.spr_jailkeypowerup = builder("gfx/packs/powerups/jailkeypowerup.png").with_wrapping(640).create();
+        self.spr_extraheartpowerup = builder("gfx/packs/powerups/heartpowerup.png").with_wrapping(640).create(g);
+        self.spr_extratimepowerup = builder("gfx/packs/powerups/extratimepowerup.png").with_wrapping(640).create(g);
+        self.spr_jailkeypowerup = builder("gfx/packs/powerups/jailkeypowerup.png").with_wrapping(640).create(g);
 
-        self.spr_secret1 = builder("gfx/packs/powerups/secret1.png").with_wrapping(640).create();
-        self.spr_secret2 = builder("gfx/packs/powerups/secret2.png").with_wrapping(640).create();
-        self.spr_secret3 = builder("gfx/packs/powerups/secret3.png").with_wrapping(640).create();
-        self.spr_secret4 = builder("gfx/packs/powerups/secret4.png").with_wrapping(640).create();
+        self.spr_secret1 = builder("gfx/packs/powerups/secret1.png").with_wrapping(640).create(g);
+        self.spr_secret2 = builder("gfx/packs/powerups/secret2.png").with_wrapping(640).create(g);
+        self.spr_secret3 = builder("gfx/packs/powerups/secret3.png").with_wrapping(640).create(g);
+        self.spr_secret4 = builder("gfx/packs/powerups/secret4.png").with_wrapping(640).create(g);
 
-        self.spr_shade[0] = builder("gfx/packs/eyecandy/shade1.png").with_alpha(64).create();
-        self.spr_shade[1] = builder("gfx/packs/eyecandy/shade2.png").with_alpha(64).create();
-        self.spr_shade[2] = builder("gfx/packs/eyecandy/shade3.png").with_alpha(64).create();
-        self.spr_scorehearts = builder("gfx/packs/menu/score_hearts.png").create();
-        self.spr_scorecards = builder("gfx/packs/menu/score_cards.png").create();
-        self.spr_scorecoins = builder("gfx/packs/menu/score_coins.png").create();
+        self.spr_shade[0] = builder("gfx/packs/eyecandy/shade1.png").with_alpha(64).create(g);
+        self.spr_shade[1] = builder("gfx/packs/eyecandy/shade2.png").with_alpha(64).create(g);
+        self.spr_shade[2] = builder("gfx/packs/eyecandy/shade3.png").with_alpha(64).create(g);
+        self.spr_scorehearts = builder("gfx/packs/menu/score_hearts.png").create(g);
+        self.spr_scorecards = builder("gfx/packs/menu/score_cards.png").create(g);
+        self.spr_scorecoins = builder("gfx/packs/menu/score_coins.png").create(g);
 
-        self.spr_timershade = builder("gfx/packs/eyecandy/timershade.png").with_alpha(64).create();
-        self.spr_scoretext = builder("gfx/packs/fonts/score.png").create();
-        self.spr_racetext = builder("gfx/packs/fonts/race.png").create();
+        self.spr_timershade = builder("gfx/packs/eyecandy/timershade.png").with_alpha(64).create(g);
+        self.spr_scoretext = builder("gfx/packs/fonts/score.png").create(g);
+        self.spr_racetext = builder("gfx/packs/fonts/race.png").create(g);
 
-        self.spr_crown = builder("gfx/packs/eyecandy/crown.png").with_wrapping(640).create();
-        self.spr_cape = builder("gfx/packs/eyecandy/cape.png").with_wrapping(640).create();
-        self.spr_tail = builder("gfx/packs/eyecandy/tail.png").with_wrapping(640).create();
-        self.spr_wings = builder("gfx/packs/eyecandy/wings.png").with_wrapping(640).create();
+        self.spr_crown = builder("gfx/packs/eyecandy/crown.png").with_wrapping(640).create(g);
+        self.spr_cape = builder("gfx/packs/eyecandy/cape.png").with_wrapping(640).create(g);
+        self.spr_tail = builder("gfx/packs/eyecandy/tail.png").with_wrapping(640).create(g);
+        self.spr_wings = builder("gfx/packs/eyecandy/wings.png").with_wrapping(640).create(g);
 
-        self.spr_warplock = builder("gfx/packs/eyecandy/warplock.png").create();
-        self.spr_coinsparkle = builder("gfx/packs/eyecandy/coinsparks.png").with_wrapping(640).create();
-        self.spr_shinesparkle = builder("gfx/packs/eyecandy/shinesparks.png").with_wrapping(640).create();
-        self.spr_shellbounce = builder("gfx/packs/eyecandy/shellbounce.png").with_wrapping(640).create();
-        self.spr_superstomp = builder("gfx/packs/eyecandy/supersmash.png").with_wrapping(640).create();
+        self.spr_warplock = builder("gfx/packs/eyecandy/warplock.png").create(g);
+        self.spr_coinsparkle = builder("gfx/packs/eyecandy/coinsparks.png").with_wrapping(640).create(g);
+        self.spr_shinesparkle = builder("gfx/packs/eyecandy/shinesparks.png").with_wrapping(640).create(g);
+        self.spr_shellbounce = builder("gfx/packs/eyecandy/shellbounce.png").with_wrapping(640).create(g);
+        self.spr_superstomp = builder("gfx/packs/eyecandy/supersmash.png").with_wrapping(640).create(g);
 
-        self.spr_egg = builder("gfx/packs/modeobjects/egg.png").with_wrapping(640).create();
-        self.spr_eggnumbers = builder("gfx/packs/modeobjects/eggnumbers.png").with_wrapping(640).create();
-        self.spr_star = builder("gfx/packs/modeobjects/star.png").with_wrapping(640).create();
-        self.spr_flags = builder("gfx/packs/modeobjects/flags.png").with_wrapping(640).create();
-        self.spr_frenzycards = builder("gfx/packs/modeobjects/frenzycards.png").with_wrapping(640).create();
-        self.spr_collectcards = builder("gfx/packs/modeobjects/collectcards.png").with_wrapping(640).create();
+        self.spr_egg = builder("gfx/packs/modeobjects/egg.png").with_wrapping(640).create(g);
+        self.spr_eggnumbers = builder("gfx/packs/modeobjects/eggnumbers.png").with_wrapping(640).create(g);
+        self.spr_star = builder("gfx/packs/modeobjects/star.png").with_wrapping(640).create(g);
+        self.spr_flags = builder("gfx/packs/modeobjects/flags.png").with_wrapping(640).create(g);
+        self.spr_frenzycards = builder("gfx/packs/modeobjects/frenzycards.png").with_wrapping(640).create(g);
+        self.spr_collectcards = builder("gfx/packs/modeobjects/collectcards.png").with_wrapping(640).create(g);
 
-        self.spr_yoshi = builder("gfx/packs/modeobjects/yoshi.png").with_wrapping(640).create();
-        self.spr_coin = builder("gfx/packs/modeobjects/coin.png").with_wrapping(640).create();
-        self.spr_thwomp = builder("gfx/packs/modeobjects/thwomp.png").with_wrapping(640).create();
-        self.spr_podobo = builder("gfx/packs/modeobjects/podobo.png").create();
-        self.spr_bowserfire = builder("gfx/packs/modeobjects/bowserfire.png").create();
-        self.spr_areas = builder("gfx/packs/modeobjects/areas.png").create();
-        self.spr_kingofthehillarea = builder("gfx/packs/modeobjects/kingofthehill.png").with_alpha(128).create();
-        self.spr_jail = builder("gfx/packs/modeobjects/jail.png").with_alpha(160).with_wrapping(640).create();
-        self.spr_goomba = builder("gfx/packs/modeobjects/goomba.png").with_wrapping(640).create();
-        self.spr_goombadead = builder("gfx/packs/eyecandy/goombadead.png").with_wrapping(640).create();
-        self.spr_goombadeadflying = builder("gfx/packs/eyecandy/goombadeadflying.png").with_wrapping(640).create();
-        self.spr_koopa = builder("gfx/packs/modeobjects/koopa.png").with_wrapping(640).create();
-        self.spr_buzzybeetle = builder("gfx/packs/modeobjects/buzzybeetle.png").with_wrapping(640).create();
-        self.spr_spiny = builder("gfx/packs/modeobjects/spiny.png").with_wrapping(640).create();
-        self.spr_paragoomba = builder("gfx/packs/modeobjects/paragoomba.png").with_wrapping(640).create();
-        self.spr_parakoopa = builder("gfx/packs/modeobjects/parakoopa.png").with_wrapping(640).create();
-        self.spr_redparakoopa = builder("gfx/packs/modeobjects/redparakoopa.png").with_wrapping(640).create();
-        self.spr_redkoopa = builder("gfx/packs/modeobjects/redkoopa.png").with_wrapping(640).create();
-        self.spr_cheepcheep = builder("gfx/packs/modeobjects/cheepcheep.png").with_wrapping(640).create();
-        self.spr_cheepcheepdead = builder("gfx/packs/eyecandy/cheepcheepdead.png").with_wrapping(640).create();
+        self.spr_yoshi = builder("gfx/packs/modeobjects/yoshi.png").with_wrapping(640).create(g);
+        self.spr_coin = builder("gfx/packs/modeobjects/coin.png").with_wrapping(640).create(g);
+        self.spr_thwomp = builder("gfx/packs/modeobjects/thwomp.png").with_wrapping(640).create(g);
+        self.spr_podobo = builder("gfx/packs/modeobjects/podobo.png").create(g);
+        self.spr_bowserfire = builder("gfx/packs/modeobjects/bowserfire.png").create(g);
+        self.spr_areas = builder("gfx/packs/modeobjects/areas.png").create(g);
+        self.spr_kingofthehillarea = builder("gfx/packs/modeobjects/kingofthehill.png").with_alpha(128).create(g);
+        self.spr_jail = builder("gfx/packs/modeobjects/jail.png").with_alpha(160).with_wrapping(640).create(g);
+        self.spr_goomba = builder("gfx/packs/modeobjects/goomba.png").with_wrapping(640).create(g);
+        self.spr_goombadead = builder("gfx/packs/eyecandy/goombadead.png").with_wrapping(640).create(g);
+        self.spr_goombadeadflying = builder("gfx/packs/eyecandy/goombadeadflying.png").with_wrapping(640).create(g);
+        self.spr_koopa = builder("gfx/packs/modeobjects/koopa.png").with_wrapping(640).create(g);
+        self.spr_buzzybeetle = builder("gfx/packs/modeobjects/buzzybeetle.png").with_wrapping(640).create(g);
+        self.spr_spiny = builder("gfx/packs/modeobjects/spiny.png").with_wrapping(640).create(g);
+        self.spr_paragoomba = builder("gfx/packs/modeobjects/paragoomba.png").with_wrapping(640).create(g);
+        self.spr_parakoopa = builder("gfx/packs/modeobjects/parakoopa.png").with_wrapping(640).create(g);
+        self.spr_redparakoopa = builder("gfx/packs/modeobjects/redparakoopa.png").with_wrapping(640).create(g);
+        self.spr_redkoopa = builder("gfx/packs/modeobjects/redkoopa.png").with_wrapping(640).create(g);
+        self.spr_cheepcheep = builder("gfx/packs/modeobjects/cheepcheep.png").with_wrapping(640).create(g);
+        self.spr_cheepcheepdead = builder("gfx/packs/eyecandy/cheepcheepdead.png").with_wrapping(640).create(g);
 
-        self.spr_sledgebrothers = builder("gfx/packs/modeobjects/sledgebrothers.png").with_wrapping(640).create();
-        self.spr_sledgebrothersdead = builder("gfx/packs/eyecandy/sledgebrothersdead.png").with_wrapping(640).create();
+        self.spr_sledgebrothers = builder("gfx/packs/modeobjects/sledgebrothers.png").with_wrapping(640).create(g);
+        self.spr_sledgebrothersdead = builder("gfx/packs/eyecandy/sledgebrothersdead.png").with_wrapping(640).create(g);
 
-        self.spr_bulletbill = builder("gfx/packs/projectiles/bulletbill.png").create();
-        self.spr_bulletbilldead = builder("gfx/packs/eyecandy/bulletbilldead.png").create();
-        self.spr_chicken = builder("gfx/packs/modeobjects/chicken.png").with_alpha(160).with_wrapping(640).create();
-        self.spr_racegoal = builder("gfx/packs/modeobjects/racegoal.png").create();
-        self.spr_pipegamebonus = builder("gfx/packs/modeobjects/pipeminigamebonuses.png").with_wrapping(640).create();
+        self.spr_bulletbill = builder("gfx/packs/projectiles/bulletbill.png").create(g);
+        self.spr_bulletbilldead = builder("gfx/packs/eyecandy/bulletbilldead.png").create(g);
+        self.spr_chicken = builder("gfx/packs/modeobjects/chicken.png").with_alpha(160).with_wrapping(640).create(g);
+        self.spr_racegoal = builder("gfx/packs/modeobjects/racegoal.png").create(g);
+        self.spr_pipegamebonus = builder("gfx/packs/modeobjects/pipeminigamebonuses.png").with_wrapping(640).create(g);
 
-        self.spr_phanto = builder("gfx/packs/modeobjects/phanto.png").with_wrapping(640).create();
-        self.spr_phantokey = builder("gfx/packs/modeobjects/key.png").with_wrapping(640).create();
+        self.spr_phanto = builder("gfx/packs/modeobjects/phanto.png").with_wrapping(640).create(g);
+        self.spr_phantokey = builder("gfx/packs/modeobjects/key.png").with_wrapping(640).create(g);
 
-        self.spr_bonuschest = builder("gfx/packs/modeobjects/bonuschest.png").with_wrapping(640).create();
-        self.spr_teleportstar = builder("gfx/packs/eyecandy/teleportstar.png").create();
+        self.spr_bonuschest = builder("gfx/packs/modeobjects/bonuschest.png").with_wrapping(640).create(g);
+        self.spr_teleportstar = builder("gfx/packs/eyecandy/teleportstar.png").create(g);
 
-        self.spr_fireball = builder("gfx/packs/projectiles/fireball.png").with_wrapping(640).create();
-        self.spr_hammer = builder("gfx/packs/projectiles/hammer.png").with_wrapping(640).create();
-        self.spr_iceblast = builder("gfx/packs/projectiles/wandblast.png").with_wrapping(640).create();
-        self.spr_boomerang = builder("gfx/packs/projectiles/boomerang.png").with_wrapping(640).create();
-        self.spr_shell = builder("gfx/packs/projectiles/shell.png").with_wrapping(640).create();
-        self.spr_shelldead = builder("gfx/packs/eyecandy/shelldead.png").with_wrapping(640).create();
-        self.spr_blueblock = builder("gfx/packs/projectiles/throwblock.png").with_wrapping(640).create();
-        self.spr_bomb = builder("gfx/packs/projectiles/bomb.png").with_wrapping(640).create();
+        self.spr_fireball = builder("gfx/packs/projectiles/fireball.png").with_wrapping(640).create(g);
+        self.spr_hammer = builder("gfx/packs/projectiles/hammer.png").with_wrapping(640).create(g);
+        self.spr_iceblast = builder("gfx/packs/projectiles/wandblast.png").with_wrapping(640).create(g);
+        self.spr_boomerang = builder("gfx/packs/projectiles/boomerang.png").with_wrapping(640).create(g);
+        self.spr_shell = builder("gfx/packs/projectiles/shell.png").with_wrapping(640).create(g);
+        self.spr_shelldead = builder("gfx/packs/eyecandy/shelldead.png").with_wrapping(640).create(g);
+        self.spr_blueblock = builder("gfx/packs/projectiles/throwblock.png").with_wrapping(640).create(g);
+        self.spr_bomb = builder("gfx/packs/projectiles/bomb.png").with_wrapping(640).create(g);
 
-        self.spr_superfireball = builder("gfx/packs/modeobjects/superfire.png").with_wrapping(640).create();
-        self.spr_sledgehammer = builder("gfx/packs/modeobjects/sledgehammer.png").with_wrapping(640).create();
+        self.spr_superfireball = builder("gfx/packs/modeobjects/superfire.png").with_wrapping(640).create(g);
+        self.spr_sledgehammer = builder("gfx/packs/modeobjects/sledgehammer.png").with_wrapping(640).create(g);
 
-        self.spr_hazard_fireball[0] = builder("gfx/packs/hazards/fireball.png").with_wrapping(640).create();
-        self.spr_hazard_fireball[1] = builder("gfx/packs/hazards/fireball_preview.png").with_wrapping(640).create();
-        self.spr_hazard_fireball[2] = builder("gfx/packs/hazards/fireball_thumbnail.png").with_wrapping(640).create();
+        self.spr_hazard_fireball[0] = builder("gfx/packs/hazards/fireball.png").with_wrapping(640).create(g);
+        self.spr_hazard_fireball[1] = builder("gfx/packs/hazards/fireball_preview.png").with_wrapping(640).create(g);
+        self.spr_hazard_fireball[2] = builder("gfx/packs/hazards/fireball_thumbnail.png").with_wrapping(640).create(g);
 
-        self.spr_hazard_rotodisc[0] = builder("gfx/packs/hazards/rotodisc.png").with_wrapping(640).create();
-        self.spr_hazard_rotodisc[1] = builder("gfx/packs/hazards/rotodisc_preview.png").with_wrapping(640).create();
-        self.spr_hazard_rotodisc[2] = builder("gfx/packs/hazards/rotodisc_thumbnail.png").with_wrapping(640).create();
+        self.spr_hazard_rotodisc[0] = builder("gfx/packs/hazards/rotodisc.png").with_wrapping(640).create(g);
+        self.spr_hazard_rotodisc[1] = builder("gfx/packs/hazards/rotodisc_preview.png").with_wrapping(640).create(g);
+        self.spr_hazard_rotodisc[2] = builder("gfx/packs/hazards/rotodisc_thumbnail.png").with_wrapping(640).create(g);
 
-        self.spr_hazard_bulletbill[0] = builder("gfx/packs/hazards/bulletbill.png").create();
-        self.spr_hazard_bulletbill[1] = builder("gfx/packs/hazards/bulletbill_preview.png").create();
-        self.spr_hazard_bulletbill[2] = builder("gfx/packs/hazards/bulletbill_thumbnail.png").create();
+        self.spr_hazard_bulletbill[0] = builder("gfx/packs/hazards/bulletbill.png").create(g);
+        self.spr_hazard_bulletbill[1] = builder("gfx/packs/hazards/bulletbill_preview.png").create(g);
+        self.spr_hazard_bulletbill[2] = builder("gfx/packs/hazards/bulletbill_thumbnail.png").create(g);
 
-        self.spr_hazard_flame[0] = builder("gfx/packs/hazards/flame.png").with_wrapping(640).create();
-        self.spr_hazard_flame[1] = builder("gfx/packs/hazards/flame_preview.png").with_wrapping(640).create();
-        self.spr_hazard_flame[2] = builder("gfx/packs/hazards/flame_thumbnail.png").with_wrapping(640).create();
+        self.spr_hazard_flame[0] = builder("gfx/packs/hazards/flame.png").with_wrapping(640).create(g);
+        self.spr_hazard_flame[1] = builder("gfx/packs/hazards/flame_preview.png").with_wrapping(640).create(g);
+        self.spr_hazard_flame[2] = builder("gfx/packs/hazards/flame_thumbnail.png").with_wrapping(640).create(g);
 
-        self.spr_hazard_pirhanaplant[0] = builder("gfx/packs/hazards/pirhanaplant.png").with_wrapping(640).create();
-        self.spr_hazard_pirhanaplant[1] = builder("gfx/packs/hazards/pirhanaplant_preview.png").with_wrapping(640).create();
-        self.spr_hazard_pirhanaplant[2] = builder("gfx/packs/hazards/pirhanaplant_thumbnail.png").with_wrapping(640).create();
+        self.spr_hazard_pirhanaplant[0] = builder("gfx/packs/hazards/pirhanaplant.png").with_wrapping(640).create(g);
+        self.spr_hazard_pirhanaplant[1] = builder("gfx/packs/hazards/pirhanaplant_preview.png").with_wrapping(640).create(g);
+        self.spr_hazard_pirhanaplant[2] = builder("gfx/packs/hazards/pirhanaplant_thumbnail.png").with_wrapping(640).create(g);
 
-        self.spr_hazard_bulletbilldead = builder("gfx/packs/hazards/bulletbilldead.png").create();
+        self.spr_hazard_bulletbilldead = builder("gfx/packs/hazards/bulletbilldead.png").create(g);
 
-        self.spr_fireballexplosion = builder("gfx/packs/eyecandy/fireballexplosion.png").with_alpha(160).with_wrapping(640).create();
-        self.spr_frictionsmoke = builder("gfx/packs/eyecandy/frictionsmoke.png").with_alpha(160).with_wrapping(640).create();
-        self.spr_bobombsmoke = builder("gfx/packs/eyecandy/bobombsmoke.png").with_alpha(160).with_wrapping(640).create();
-        self.spr_explosion = builder("gfx/packs/eyecandy/explosion.png").with_wrapping(640).create();
-        self.spr_burnup = builder("gfx/packs/eyecandy/burnup.png").with_alpha(192).with_wrapping(640).create();
-        self.spr_fireworks = builder("gfx/packs/eyecandy/fireworks.png").with_wrapping(640).create();
-        self.spr_poof = builder("gfx/packs/eyecandy/poof.png").with_wrapping(640).create();
+        self.spr_fireballexplosion = builder("gfx/packs/eyecandy/fireballexplosion.png").with_alpha(160).with_wrapping(640).create(g);
+        self.spr_frictionsmoke = builder("gfx/packs/eyecandy/frictionsmoke.png").with_alpha(160).with_wrapping(640).create(g);
+        self.spr_bobombsmoke = builder("gfx/packs/eyecandy/bobombsmoke.png").with_alpha(160).with_wrapping(640).create(g);
+        self.spr_explosion = builder("gfx/packs/eyecandy/explosion.png").with_wrapping(640).create(g);
+        self.spr_burnup = builder("gfx/packs/eyecandy/burnup.png").with_alpha(192).with_wrapping(640).create(g);
+        self.spr_fireworks = builder("gfx/packs/eyecandy/fireworks.png").with_wrapping(640).create(g);
+        self.spr_poof = builder("gfx/packs/eyecandy/poof.png").with_wrapping(640).create(g);
 
-        self.spr_spawnsmoke = builder("gfx/packs/eyecandy/spawnsmoke.png").with_alpha(128).with_wrapping(640).create();
-        self.spr_spawndoor = builder("gfx/packs/eyecandy/spawndoor.png").with_wrapping(640).create();
+        self.spr_spawnsmoke = builder("gfx/packs/eyecandy/spawnsmoke.png").with_alpha(128).with_wrapping(640).create(g);
+        self.spr_spawndoor = builder("gfx/packs/eyecandy/spawndoor.png").with_wrapping(640).create(g);
 
-        self.spr_bonus = builder("gfx/packs/eyecandy/bonus.png").with_wrapping(640).create();
-        self.spr_extralife = builder("gfx/packs/eyecandy/extralife.png").with_wrapping(640).create();
+        self.spr_bonus = builder("gfx/packs/eyecandy/bonus.png").with_wrapping(640).create(g);
+        self.spr_extralife = builder("gfx/packs/eyecandy/extralife.png").with_wrapping(640).create(g);
 
-        self.spr_windmeter = builder("gfx/packs/eyecandy/wind_meter.png").with_alpha(192).with_wrapping(640).create();
-        self.spr_overlayhole = builder("gfx/packs/eyecandy/overlayholes.png").with_color_key(RGB { r: 0, g: 255, b: 0 }).with_wrapping(640).create();
+        self.spr_windmeter = builder("gfx/packs/eyecandy/wind_meter.png").with_alpha(192).with_wrapping(640).create(g);
+        self.spr_overlayhole = builder("gfx/packs/eyecandy/overlayholes.png").with_color_key(RGB { r: 0, g: 255, b: 0 }).with_wrapping(640).create(g);
 
-        self.spr_award = builder("gfx/packs/awards/killsinrow.png").with_alpha(128).with_wrapping(640).create();
-        self.spr_awardsolid = builder("gfx/packs/awards/killsinrow.png").with_wrapping(640).create();
-        self.spr_awardsouls = builder("gfx/packs/awards/souls.png").with_wrapping(640).create();
-        self.spr_awardsoulspawn = builder("gfx/packs/awards/soulspawn.png").with_wrapping(640).create();
+        self.spr_award = builder("gfx/packs/awards/killsinrow.png").with_alpha(128).with_wrapping(640).create(g);
+        self.spr_awardsolid = builder("gfx/packs/awards/killsinrow.png").with_wrapping(640).create(g);
+        self.spr_awardsouls = builder("gfx/packs/awards/souls.png").with_wrapping(640).create(g);
+        self.spr_awardsoulspawn = builder("gfx/packs/awards/soulspawn.png").with_wrapping(640).create(g);
 
-        self.spr_awardkillsinrow = builder("gfx/packs/awards/killsinrownumbers.png").with_wrapping(640).create();
+        self.spr_awardkillsinrow = builder("gfx/packs/awards/killsinrownumbers.png").with_wrapping(640).create(g);
 
-        self.spr_flagbases = builder("gfx/packs/modeobjects/flagbases.png").with_alpha(160).with_wrapping(640).create();
-        self.spr_ownedtags = builder("gfx/packs/modeobjects/ownedtags.png").with_alpha(160).with_wrapping(640).create();
+        self.spr_flagbases = builder("gfx/packs/modeobjects/flagbases.png").with_alpha(160).with_wrapping(640).create(g);
+        self.spr_ownedtags = builder("gfx/packs/modeobjects/ownedtags.png").with_alpha(160).with_wrapping(640).create(g);
 
-        self.spr_storedpowerupsmall = builder("gfx/packs/powerups/small.png").with_wrapping(640).create();
-        self.spr_storedpoweruplarge = builder("gfx/packs/powerups/large.png").create();
-        self.spr_powerupselector = builder("gfx/packs/awards/award.png").create();
+        self.spr_storedpowerupsmall = builder("gfx/packs/powerups/small.png").with_wrapping(640).create(g);
+        self.spr_storedpoweruplarge = builder("gfx/packs/powerups/large.png").create(g);
+        self.spr_powerupselector = builder("gfx/packs/awards/award.png").create(g);
 
-        self.spr_abovearrows = builder("gfx/packs/eyecandy/abovearrows.png").with_wrapping(640).create();
+        self.spr_abovearrows = builder("gfx/packs/eyecandy/abovearrows.png").with_wrapping(640).create(g);
     }
 
     pub fn load_menu_graphics(&mut self, g: &mut Game) {
@@ -649,44 +649,44 @@ impl CResourceManager {
         let graphicspack = unsafe { g.menugraphicspacklist.current_path().to_string_lossy().into_owned() };
         let builder = |relpath: &str| ImageLoader::new(convert_path_pack(gp.get(), relpath, &graphicspack));
 
-        self.menu_shade = builder("gfx/packs/menu/menu_shade.png").with_alpha(App::menuTransparency as u8).without_color_key().create();
+        self.menu_shade = builder("gfx/packs/menu/menu_shade.png").with_alpha(App::menuTransparency as u8).without_color_key().create(g);
 
-        self.spr_scoreboard = builder("gfx/packs/menu/scoreboard.png").create();
-        self.menu_slider_bar = builder("gfx/packs/menu/menu_slider_bar.png").create();
-        self.menu_plain_field = builder("gfx/packs/menu/menu_plain_field.png").create();
-        self.menu_player_select = builder("gfx/packs/menu/menu_player_select.png").create();
-        self.menu_dialog = builder("gfx/packs/menu/menu_dialog.png").create();
-        self.menu_map_filter = builder("gfx/packs/menu/menu_map_filter.png").create();
-        self.menu_match_select = builder("gfx/packs/menu/menu_match_select.png").create();
+        self.spr_scoreboard = builder("gfx/packs/menu/scoreboard.png").create(g);
+        self.menu_slider_bar = builder("gfx/packs/menu/menu_slider_bar.png").create(g);
+        self.menu_plain_field = builder("gfx/packs/menu/menu_plain_field.png").create(g);
+        self.menu_player_select = builder("gfx/packs/menu/menu_player_select.png").create(g);
+        self.menu_dialog = builder("gfx/packs/menu/menu_dialog.png").create(g);
+        self.menu_map_filter = builder("gfx/packs/menu/menu_map_filter.png").create(g);
+        self.menu_match_select = builder("gfx/packs/menu/menu_match_select.png").create(g);
 
-        self.menu_verticalarrows = builder("gfx/packs/menu/menu_vertical_arrows.png").create();
+        self.menu_verticalarrows = builder("gfx/packs/menu/menu_vertical_arrows.png").create(g);
 
-        self.menu_mode_small = builder("gfx/packs/menu/menu_mode_small.png").create();
-        self.menu_mode_large = builder("gfx/packs/menu/menu_mode_large.png").create();
+        self.menu_mode_small = builder("gfx/packs/menu/menu_mode_small.png").create(g);
+        self.menu_mode_large = builder("gfx/packs/menu/menu_mode_large.png").create(g);
 
-        self.spr_dialog = builder("gfx/packs/menu/dialog.png").create();
-        self.spr_dialogbutton = builder("gfx/packs/menu/dialog_button.png").create();
-        self.spr_tournament_background = builder("gfx/packs/menu/tournament_background.png").create();
-        self.spr_tournament_powerup_splash = builder("gfx/packs/menu/tournament_powerup_splash.png").create();
-        self.spr_player_select_background = builder("gfx/packs/menu/player_select_background.png").create();
-        self.spr_player_select_ready = builder("gfx/packs/menu/player_select_ready.png").create();
+        self.spr_dialog = builder("gfx/packs/menu/dialog.png").create(g);
+        self.spr_dialogbutton = builder("gfx/packs/menu/dialog_button.png").create(g);
+        self.spr_tournament_background = builder("gfx/packs/menu/tournament_background.png").create(g);
+        self.spr_tournament_powerup_splash = builder("gfx/packs/menu/tournament_powerup_splash.png").create(g);
+        self.spr_player_select_background = builder("gfx/packs/menu/player_select_background.png").create(g);
+        self.spr_player_select_ready = builder("gfx/packs/menu/player_select_ready.png").create(g);
         //spr_ipfield = builder("gfx/packs/menu/menu_ipfield.png").create();
-        self.spr_selectfield = builder("gfx/packs/menu/menu_selectfield.png").create();
-        self.spr_selectfielddisabled = builder("gfx/packs/menu/menu_selectfield_disabled.png").create();
-        self.spr_map_filter_icons = builder("gfx/packs/menu/menu_map_flags.png").create();
-        self.spr_tour_markers = builder("gfx/packs/menu/tour_markers.png").create();
-        self.spr_menu_boxed_numbers = builder("gfx/packs/menu/menu_boxed_numbers.png").create();
-        self.spr_countdown_numbers = builder("gfx/packs/menu/game_countdown_numbers.png").create();
-        self.spr_thumbnail_warps[0] = builder("gfx/packs/menu/menu_warp_preview.png").create();
-        self.spr_thumbnail_warps[1] = builder("gfx/packs/menu/menu_warp_thumbnail.png").create();
-        self.spr_thumbnail_mapitems[0] = builder("gfx/packs/menu/menu_mapitems_preview.png").create();
-        self.spr_thumbnail_mapitems[1] = builder("gfx/packs/menu/menu_mapitems_thumbnail.png").create();
+        self.spr_selectfield = builder("gfx/packs/menu/menu_selectfield.png").create(g);
+        self.spr_selectfielddisabled = builder("gfx/packs/menu/menu_selectfield_disabled.png").create(g);
+        self.spr_map_filter_icons = builder("gfx/packs/menu/menu_map_flags.png").create(g);
+        self.spr_tour_markers = builder("gfx/packs/menu/tour_markers.png").create(g);
+        self.spr_menu_boxed_numbers = builder("gfx/packs/menu/menu_boxed_numbers.png").create(g);
+        self.spr_countdown_numbers = builder("gfx/packs/menu/game_countdown_numbers.png").create(g);
+        self.spr_thumbnail_warps[0] = builder("gfx/packs/menu/menu_warp_preview.png").create(g);
+        self.spr_thumbnail_warps[1] = builder("gfx/packs/menu/menu_warp_thumbnail.png").create(g);
+        self.spr_thumbnail_mapitems[0] = builder("gfx/packs/menu/menu_mapitems_preview.png").create(g);
+        self.spr_thumbnail_mapitems[1] = builder("gfx/packs/menu/menu_mapitems_thumbnail.png").create(g);
 
-        self.spr_announcementicons = builder("gfx/packs/menu/menu_announcement_icons.png").create();
+        self.spr_announcementicons = builder("gfx/packs/menu/menu_announcement_icons.png").create(g);
 
-        self.spr_platformstarttile = builder("gfx/leveleditor/leveleditor_platformstarttile.png").with_alpha(64).with_wrapping(640).create();
-        self.spr_platformendtile = builder("gfx/leveleditor/leveleditor_selectedtile.png").with_alpha(64).with_wrapping(640).create();
-        self.spr_platformpath = builder("gfx/leveleditor/leveleditor_platform_path.png").with_alpha(128).with_wrapping(640).create();
+        self.spr_platformstarttile = builder("gfx/leveleditor/leveleditor_platformstarttile.png").with_alpha(64).with_wrapping(640).create(g);
+        self.spr_platformendtile = builder("gfx/leveleditor/leveleditor_selectedtile.png").with_alpha(64).with_wrapping(640).create(g);
+        self.spr_platformpath = builder("gfx/leveleditor/leveleditor_platform_path.png").with_alpha(128).with_wrapping(640).create(g);
     }
 
     pub fn load_world_graphics(&mut self, g: &mut Game) {
@@ -694,33 +694,33 @@ impl CResourceManager {
         let graphicspack = unsafe { g.worldgraphicspacklist.current_path().to_string_lossy().into_owned() };
         let builder = |relpath: &str| ImageLoader::new(convert_path_pack(gp.get(), relpath, &graphicspack));
 
-        self.spr_worldbackground[0] = builder("gfx/packs/world/world_background.png").create();
-        self.spr_worldbackground[1] = builder("gfx/packs/world/preview/world_background.png").create();
+        self.spr_worldbackground[0] = builder("gfx/packs/world/world_background.png").create(g);
+        self.spr_worldbackground[1] = builder("gfx/packs/world/preview/world_background.png").create(g);
 
-        self.spr_worldforeground[0] = builder("gfx/packs/world/world_foreground.png").create();
-        self.spr_worldforeground[1] = builder("gfx/packs/world/preview/world_foreground.png").create();
+        self.spr_worldforeground[0] = builder("gfx/packs/world/world_foreground.png").create(g);
+        self.spr_worldforeground[1] = builder("gfx/packs/world/preview/world_foreground.png").create(g);
 
-        self.spr_worldforegroundspecial[0] = builder("gfx/packs/world/world_foreground_special.png").create();
-        self.spr_worldforegroundspecial[1] = builder("gfx/packs/world/preview/world_foreground_special.png").create();
+        self.spr_worldforegroundspecial[0] = builder("gfx/packs/world/world_foreground_special.png").create(g);
+        self.spr_worldforegroundspecial[1] = builder("gfx/packs/world/preview/world_foreground_special.png").create(g);
 
-        self.spr_worldpaths[0] = builder("gfx/packs/world/world_paths.png").create();
-        self.spr_worldpaths[1] = builder("gfx/packs/world/preview/world_paths.png").create();
+        self.spr_worldpaths[0] = builder("gfx/packs/world/world_paths.png").create(g);
+        self.spr_worldpaths[1] = builder("gfx/packs/world/preview/world_paths.png").create(g);
 
-        self.spr_worldvehicle[0] = builder("gfx/packs/world/world_vehicles.png").create();
-        self.spr_worldvehicle[1] = builder("gfx/packs/world/preview/world_vehicles.png").create();
+        self.spr_worldvehicle[0] = builder("gfx/packs/world/world_vehicles.png").create(g);
+        self.spr_worldvehicle[1] = builder("gfx/packs/world/preview/world_vehicles.png").create(g);
 
-        self.spr_worlditems = builder("gfx/packs/world/world_powerups.png").create();
-        self.spr_worlditempopup = builder("gfx/packs/world/world_item_popup.png").create();
-        self.spr_worlditemssmall = builder("gfx/packs/world/world_powerupssmall.png").create();
-        self.spr_worlditemsplace = builder("gfx/packs/world/world_bonusplace.png").create();
-        self.spr_worldbonushouse = builder("gfx/packs/world/world_bonushouse.png").create();
+        self.spr_worlditems = builder("gfx/packs/world/world_powerups.png").create(g);
+        self.spr_worlditempopup = builder("gfx/packs/world/world_item_popup.png").create(g);
+        self.spr_worlditemssmall = builder("gfx/packs/world/world_powerupssmall.png").create(g);
+        self.spr_worlditemsplace = builder("gfx/packs/world/world_bonusplace.png").create(g);
+        self.spr_worldbonushouse = builder("gfx/packs/world/world_bonushouse.png").create(g);
     }
 
     pub fn load_game_graphics(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let graphicspack = unsafe { g.gamegraphicspacklist.current_path().to_string_lossy().into_owned() };
 
-        unsafe { g.g_tilesetmanager = Ptr::new_box(crate::common::tileset_manager::CTilesetManager::new(&graphicspack)) };
+        unsafe { g.g_tilesetmanager = Ptr::new_box(crate::common::tileset_manager::CTilesetManager::new(g, &graphicspack)) };
 
         self.game_font_small = gfxFont::from_path(g, &convert_path_pack(gp.get(), "gfx/packs/fonts/font_small.png", &graphicspack));
         self.game_font_large = gfxFont::from_path(g, &convert_path_pack(gp.get(), "gfx/packs/fonts/font_large.png", &graphicspack));
@@ -737,9 +737,9 @@ impl CResourceManager {
         self.menu_font_large = gfxFont::from_path(g, &convert_path_pack(gp.get(), "gfx/packs/menu/menu_font_large.png", &graphicspack));
 
         //load basic stuff
-        self.menu_backdrop = builder("gfx/packs/menu/menu_background.png").without_color_key().create();
-        self.menu_smw = builder("gfx/packs/menu/menu_smw.png").create();
-        self.menu_version = builder("gfx/packs/menu/menu_version.png").create();
+        self.menu_backdrop = builder("gfx/packs/menu/menu_background.png").without_color_key().create(g);
+        self.menu_smw = builder("gfx/packs/menu/menu_smw.png").create(g);
+        self.menu_version = builder("gfx/packs/menu/menu_version.png").create(g);
     }
 
     pub fn load_all_graphics(&mut self, g: &mut Game) {
@@ -751,12 +751,12 @@ impl CResourceManager {
         self.load_world_graphics(g);
         self.load_game_graphics(g);
 
-        self.spr_backmap[0] = builder("gfx/packs/backgrounds/Land_Classic.png").without_color_key().create();
-        self.spr_backmap[1] = builder("gfx/packs/backgrounds/Land_Classic.png").without_color_key().create();
-        self.spr_frontmap[0] = builder("gfx/packs/backgrounds/Land_Classic.png").without_color_key().create();
-        self.spr_frontmap[1] = builder("gfx/packs/backgrounds/Land_Classic.png").without_color_key().create();
+        self.spr_backmap[0] = builder("gfx/packs/backgrounds/Land_Classic.png").without_color_key().create(g);
+        self.spr_backmap[1] = builder("gfx/packs/backgrounds/Land_Classic.png").without_color_key().create(g);
+        self.spr_frontmap[0] = builder("gfx/packs/backgrounds/Land_Classic.png").without_color_key().create(g);
+        self.spr_frontmap[1] = builder("gfx/packs/backgrounds/Land_Classic.png").without_color_key().create(g);
 
-        self.spr_overlay = builder("gfx/packs/menu/menu_shade.png").create();
+        self.spr_overlay = builder("gfx/packs/menu/menu_shade.png").create(g);
     }
 
     /// Panics where the C++ throws on a missing sound (the C++ callers do not catch).

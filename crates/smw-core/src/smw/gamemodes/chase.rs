@@ -53,6 +53,7 @@ impl CGameModeTrait for CGM_Chase {
 
     fn init(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
         gm::cgamemode_init(g, self);
 
         unsafe {
@@ -68,7 +69,7 @@ impl CGameModeTrait for CGM_Chase {
             }
 
             //Add a key
-            self.key = Ptr::new_box(CO_PhantoKey::new(Ptr::from_mut(&mut g.rm.spr_phantokey)));
+            self.key = Ptr::new_box(CO_PhantoKey::new(g, Ptr::from_mut(&mut gp.rm.spr_phantokey)));
             g.objectcontainer[1].add(self.key);
         }
     }
@@ -117,7 +118,7 @@ impl CGameModeTrait for CGM_Chase {
         }
 
         if player.score().score >= self.goal {
-            player.score().set_score(self.goal);
+            player.score().set_score(g, self.goal);
             self.winningteam = player.get_team_id();
             self.gameover = true;
 

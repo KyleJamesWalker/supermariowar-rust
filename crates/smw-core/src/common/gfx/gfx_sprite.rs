@@ -316,8 +316,8 @@ impl ImageLoader {
         self
     }
 
-    pub fn create(&self) -> gfxSprite {
-        gfxSprite::from_surface(load_image(game().get(), &self.m_path, self.m_optimize, self.m_color_key, self.m_alpha), self.m_wrap_x)
+    pub fn create(&self, g: &mut Game) -> gfxSprite {
+        gfxSprite::from_surface(load_image(g, &self.m_path, self.m_optimize, self.m_color_key, self.m_alpha), self.m_wrap_x)
     }
 
     /// `create()` for callers that catch the `std::string` the C++ throws on a load failure.

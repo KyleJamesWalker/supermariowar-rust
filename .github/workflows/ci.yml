@@ -200,7 +200,7 @@ jobs:
           exit $status
 
       - name: C++ goldens
-        if: always() && steps.game.outcome != 'skipped'
+        if: ${{ !cancelled() && steps.game.outcome != 'skipped' }}
         env:
           GOLDEN_ROOT: ${{ runner.temp }}/cpp-goldens
           SMW_DATA_DIR: ${{ github.workspace }}/data
@@ -222,7 +222,7 @@ jobs:
           du -sh "$GOLDEN_ROOT"/*
 
       - name: Game parity vs the C++ built here
-        if: always() && steps.game.outcome != 'skipped'
+        if: ${{ !cancelled() && steps.game.outcome != 'skipped' }}
         env:
           SMW_NO_BUILD: '1'
           GOLDEN_ROOT: ${{ runner.temp }}/cpp-goldens
@@ -246,7 +246,7 @@ jobs:
           exit $status
 
       - name: Editor parity
-        if: always() && steps.game.outcome != 'skipped'
+        if: ${{ !cancelled() && steps.game.outcome != 'skipped' }}
         env:
           PARITY_OUT: ${{ runner.temp }}/parity/editor
         run: |
@@ -264,7 +264,7 @@ jobs:
           exit $status
 
       - name: Editor parity vs the C++ built here
-        if: always() && steps.game.outcome != 'skipped'
+        if: ${{ !cancelled() && steps.game.outcome != 'skipped' }}
         env:
           GOLDEN_ROOT: ${{ runner.temp }}/cpp-goldens
           PARITY_OUT: ${{ runner.temp }}/parity/editor-cpp
@@ -285,7 +285,7 @@ jobs:
           exit $status
 
       - name: Segment check
-        if: always() && steps.game.outcome != 'skipped'
+        if: ${{ !cancelled() && steps.game.outcome != 'skipped' }}
         env:
           SMW_NO_BUILD: '1'
         run: |
@@ -296,7 +296,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: SDL fallbacks
-        if: always() && steps.game.outcome != 'skipped'
+        if: ${{ !cancelled() && steps.game.outcome != 'skipped' }}
         run: |
           tools/blit_fallbacks.sh "$RUNNER_TEMP/parity/game" "$RUNNER_TEMP/parity/editor" > fallbacks.txt && { cat fallbacks.txt; exit 0; }
           { echo "### SDL fallbacks"; echo '```'; cat fallbacks.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
@@ -305,11 +305,11 @@ jobs:
           exit 1
 
       - name: Determinism manifest
-        if: always() && steps.game.outcome != 'skipped'
+        if: ${{ !cancelled() && steps.game.outcome != 'skipped' }}
         run: python3 tools/determinism.py manifest parity-${{ matrix.os }} game "$RUNNER_TEMP/parity/game" editor "$RUNNER_TEMP/parity/editor" > "$RUNNER_TEMP/determinism-parity-${{ matrix.os }}.txt"
 
       - uses: actions/upload-artifact@v7
-        if: always() && steps.game.outcome != 'skipped'
+        if: ${{ !cancelled() && steps.game.outcome != 'skipped' }}
         with:
           name: determinism-parity-${{ matrix.os }}
           path: ${{ runner.temp }}/determinism-parity-${{ matrix.os }}.txt
@@ -384,7 +384,7 @@ jobs:
           exit $status
 
       - name: SDL fallbacks
-        if: always()
+        if: ${{ !cancelled() }}
         run: |
           tools/blit_fallbacks.sh "$RUNNER_TEMP/parity/sweep" > fallbacks.txt && { cat fallbacks.txt; exit 0; }
           { echo "### SDL fallbacks"; echo '```'; cat fallbacks.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
@@ -393,11 +393,11 @@ jobs:
           exit 1
 
       - name: Determinism manifest
-        if: always()
+        if: ${{ !cancelled() }}
         run: python3 tools/determinism.py manifest sweep-${{ matrix.os }} sweep "$RUNNER_TEMP/parity/sweep" > "$RUNNER_TEMP/determinism-sweep-${{ matrix.os }}.txt"
 
       - uses: actions/upload-artifact@v7
-        if: always()
+        if: ${{ !cancelled() }}
         with:
           name: determinism-sweep-${{ matrix.os }}
           path: ${{ runner.temp }}/determinism-sweep-${{ matrix.os }}.txt
@@ -457,7 +457,7 @@ jobs:
           exit $status
 
       - name: Editor parity
-        if: always() && steps.game.outcome != 'skipped'
+        if: ${{ !cancelled() && steps.game.outcome != 'skipped' }}
         env:
           PARITY_OUT: ${{ runner.temp }}/parity/editor
         run: |
@@ -475,7 +475,7 @@ jobs:
           exit $status
 
       - name: Sweep parity
-        if: always() && steps.game.outcome != 'skipped'
+        if: ${{ !cancelled() && steps.game.outcome != 'skipped' }}
         env:
           SMW_NO_BUILD: '1'
           PARITY_OUT: ${{ runner.temp }}/parity/sweep
@@ -495,7 +495,7 @@ jobs:
           exit $status
 
       - name: SDL fallbacks
-        if: always() && steps.game.outcome != 'skipped'
+        if: ${{ !cancelled() && steps.game.outcome != 'skipped' }}
         run: |
           tools/blit_fallbacks.sh "$RUNNER_TEMP/parity/game" "$RUNNER_TEMP/parity/editor" "$RUNNER_TEMP/parity/sweep" > fallbacks.txt && { cat fallbacks.txt; exit 0; }
           { echo "### SDL fallbacks"; echo '```'; cat fallbacks.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
@@ -504,11 +504,11 @@ jobs:
           exit 1
 
       - name: Determinism manifest
-        if: always()
+        if: ${{ !cancelled() }}
         run: python3 tools/determinism.py manifest parity-windows game "$RUNNER_TEMP/parity/game" editor "$RUNNER_TEMP/parity/editor" sweep "$RUNNER_TEMP/parity/sweep" > "$RUNNER_TEMP/determinism-parity-windows.txt"
 
       - uses: actions/upload-artifact@v7
-        if: always()
+        if: ${{ !cancelled() }}
         with:
           name: determinism-parity-windows
           path: ${{ runner.temp }}/determinism-parity-windows.txt
@@ -619,11 +619,11 @@ jobs:
         run: ${{ matrix.run }}
 
       - name: Determinism manifest
-        if: always() && matrix.replays
+        if: ${{ !cancelled() && matrix.replays }}
         run: python3 tools/determinism.py manifest web game "$RUNNER_TEMP/web-replays" > "$RUNNER_TEMP/determinism-web.txt"
 
       - uses: actions/upload-artifact@v7
-        if: always() && matrix.replays
+        if: ${{ !cancelled() && matrix.replays }}
         with:
           name: determinism-web
           path: ${{ runner.temp }}/determinism-web.txt
@@ -640,7 +640,7 @@ jobs:
   determinism:
     name: determinism (report-only)
     needs: [parity, sweep, parity-windows, web]
-    if: always()
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7

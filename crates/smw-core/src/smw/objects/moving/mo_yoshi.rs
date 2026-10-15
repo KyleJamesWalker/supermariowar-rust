@@ -28,7 +28,7 @@ pub struct MO_Yoshi {
 impl_base!(MO_Yoshi => io_moving_object: IO_MovingObject);
 
 impl MO_Yoshi {
-    pub fn new(nspr: Ptr<gfxSprite>, iColor: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, iColor: i16) -> Self {
         let mut o = MO_Yoshi {
             io_moving_object: IO_MovingObject::new(nspr, Vec2s::zero(), 2, 8, 52, 56, 0, 0, 0, (iColor as i32 * 56) as i16, 56, 52),
             timer: 0,
@@ -41,7 +41,7 @@ impl MO_Yoshi {
 
         o.color = iColor;
 
-        o.place_yoshi(game().get());
+        o.place_yoshi(g);
 
         o.fObjectCollidesWithMap = false;
         o

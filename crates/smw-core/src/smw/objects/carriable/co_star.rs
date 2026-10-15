@@ -32,7 +32,7 @@ pub struct CO_Star {
 impl_base!(CO_Star => mo_carried_object: MO_CarriedObject);
 
 impl CO_Star {
-    pub fn new(nspr: Ptr<gfxSprite>, r#type: i16, id: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, r#type: i16, id: i16) -> Self {
         let mut o = CO_Star {
             mo_carried_object: MO_CarriedObject::new(nspr, Vec2s::zero(), 8, 8, 30, 30, 1, 1),
             timer: 0,
@@ -62,7 +62,7 @@ impl CO_Star {
 
         o.fCarriedByKuriboShoe = true;
 
-        o.place_star(game().get());
+        o.place_star(g);
 
         o.iOwnerRightOffset = 14;
         o.iOwnerLeftOffset = -22;

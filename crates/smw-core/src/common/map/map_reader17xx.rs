@@ -270,7 +270,7 @@ impl MapReader {
         None
     }
 
-    pub(super) fn load_1700(&mut self, map: &mut CMap, mapfile: &mut BinaryFile, readtype: ReadType) -> bool {
+    pub(super) fn load_1700(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile, readtype: ReadType) -> bool {
         self.read_autofilters(map, mapfile);
 
         if readtype == read_type_summary {
@@ -279,7 +279,7 @@ impl MapReader {
 
         map.clear_platforms();
 
-        self.read_tiles(game().get(), map, mapfile);
+        self.read_tiles(g, map, mapfile);
         self.read_background(map, mapfile);
 
         if self.patch_version >= 1 {
@@ -289,7 +289,7 @@ impl MapReader {
         }
 
         if self.patch_version >= 2 {
-            self.read_platforms(map, mapfile, readtype == read_type_preview);
+            self.read_platforms(g, map, mapfile, readtype == read_type_preview);
         }
 
         self.read_eyecandy(map, mapfile);
@@ -307,7 +307,7 @@ impl MapReader {
         }
 
         if self.patch_version <= 1 {
-            self.read_platforms(map, mapfile, readtype == read_type_preview);
+            self.read_platforms(g, map, mapfile, readtype == read_type_preview);
         }
 
         if self.patch_version == 0 {

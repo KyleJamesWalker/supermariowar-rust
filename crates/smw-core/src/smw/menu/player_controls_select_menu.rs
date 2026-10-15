@@ -53,7 +53,7 @@ impl UI_PlayerControlsSelectMenu {
 
             this.miPlayerControlsLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miPlayerControlsMenuRightHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miPlayerControlsMenuHeaderText = Ptr::new_box(MI_HeaderText::new("Player Controls Menu", 320, 5));
+            this.miPlayerControlsMenuHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Player Controls Menu", 320, 5));
         }
 
         let p1 = ctl_ptr(this.miPlayer1ControlsButton);
@@ -73,7 +73,7 @@ impl UI_PlayerControlsSelectMenu {
         this.add_non_control(r);
         this.add_non_control(h);
 
-        this.set_initial_focus(p1);
+        this.set_initial_focus(g, p1);
         this.set_cancel_code(MENU_CODE_TO_MAIN_MENU);
         this
     }

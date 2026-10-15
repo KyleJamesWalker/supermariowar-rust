@@ -300,6 +300,7 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
     }
 
     pub fn draw_impl(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if !self.m_visible {
             return;
         }
@@ -322,12 +323,12 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
             }
 
             if self.m_indent > 0 {
-                g.rm.menu_font_large.draw_chop_right(x + 16, y + 5, indent - 8, &self.m_name);
+                gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 5, indent - 8, &self.m_name);
             }
 
             if !self.m_items.is_empty() {
                 let indent = if self.m_indent > 0 { indent } else { 8 };
-                g.rm.menu_font_large.draw_chop_right(x + indent + 8, y + 5, width - indent - 24, &self.current_item().name);
+                gp.rm.menu_font_large.draw_chop_right(g, x + indent + 8, y + 5, width - indent - 24, &self.current_item().name);
             }
         }
 
@@ -462,7 +463,7 @@ impl<T: Copy + PartialEq + 'static> UI_ControlTrait for MI_SelectField<T> {
     fn draw(&mut self, g: &mut Game) {
         self.draw_impl(g);
     }
-    fn refresh(&mut self) {
+    fn refresh(&mut self, g: &mut Game) {
         self.refresh_impl();
     }
     fn modify(&mut self, g: &mut Game, modify: bool) -> MenuCodeEnum {

@@ -57,6 +57,7 @@ impl CGM_Star {
     }
 
     fn setup_mode(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             //Clean up old stars
             for iStar in 0..3usize {
@@ -79,7 +80,7 @@ impl CGM_Star {
                 while (iStar as i32) < iNumPlayers as i32 - 1 {
                     self.starPlayer[iStar as usize] = rankedPlayers[iStar as usize];
 
-                    self.starItem[iStar as usize] = Ptr::new_box(CO_Star::new(Ptr::from_mut(&mut g.rm.spr_star), 1, iStar));
+                    self.starItem[iStar as usize] = Ptr::new_box(CO_Star::new(g, Ptr::from_mut(&mut gp.rm.spr_star), 1, iStar));
                     self.starItem[iStar as usize].set_player_color(self.starPlayer[iStar as usize].get_color_id());
                     g.objectcontainer[1].add(self.starItem[iStar as usize]);
                     iStar += 1;
@@ -89,7 +90,7 @@ impl CGM_Star {
                 let fGetHighest = !self.fReverseScoring && self.iCurrentModeType == StarStyle::Ztar;
                 self.starPlayer[0] = self.get_highest_score_player(g, fGetHighest);
 
-                self.starItem[0] = Ptr::new_box(CO_Star::new(Ptr::from_mut(&mut g.rm.spr_star), if self.iCurrentModeType == StarStyle::Ztar { 0 } else { 1 }, 0));
+                self.starItem[0] = Ptr::new_box(CO_Star::new(g, Ptr::from_mut(&mut gp.rm.spr_star), if self.iCurrentModeType == StarStyle::Ztar { 0 } else { 1 }, 0));
                 g.objectcontainer[1].add(self.starItem[0]);
             }
         }
@@ -223,6 +224,7 @@ fn star_time(g: &mut Game) -> i16 {
 
 pub fn cgm_star_init(g: &mut Game, this: &mut CGM_Star) {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
     cgm_timelimit_init(g, &mut this.cgm_time_limit);
 
     this.fDisplayTimer = true;
@@ -240,9 +242,9 @@ pub fn cgm_star_init(g: &mut Game, this: &mut CGM_Star) {
         //Set initial scores
         for iScore in 0..game().score_cnt {
             if this.fReverseScoring {
-                g.score[iScore as usize].set_score(0);
+                gp.score[iScore as usize].set_score(g, 0);
             } else {
-                g.score[iScore as usize].set_score(this.goal);
+                gp.score[iScore as usize].set_score(g, this.goal);
             }
         }
     }

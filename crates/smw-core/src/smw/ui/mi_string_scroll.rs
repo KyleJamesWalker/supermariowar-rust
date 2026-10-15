@@ -20,7 +20,8 @@ impl StringScrollElement {
     }
 
     pub fn draw(&self, g: &mut Game, x: i32, y: i32, max_w: u32) {
-        unsafe { g.rm.menu_font_large.draw_chop_right(x + 28, y + 5, max_w as i32, &self.str) };
+        let mut gp = g.ptr();
+        unsafe { gp.rm.menu_font_large.draw_chop_right(g, x + 28, y + 5, max_w as i32, &self.str) };
     }
 }
 

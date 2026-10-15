@@ -174,7 +174,7 @@ impl CGameModeTrait for CGM_Pipe_MiniGame {
     fn check_winner(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> PlayerKillType {
         if self.goal > -1 {
             if player.score().score >= self.goal {
-                player.score().set_score(self.goal);
+                player.score().set_score(g, self.goal);
 
                 self.winningteam = player.get_team_id();
                 self.gameover = true;

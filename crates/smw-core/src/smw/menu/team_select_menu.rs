@@ -33,7 +33,7 @@ impl UI_TeamSelectMenu {
 
             this.miTeamSelectLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miTeamSelectRightHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miTeamSelectHeaderText = Ptr::new_box(MI_HeaderText::new("Team and Character Selection", 320, 5));
+            this.miTeamSelectHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Team and Character Selection", 320, 5));
         }
 
         let ts = ctl_ptr(this.miTeamSelect);
@@ -44,7 +44,7 @@ impl UI_TeamSelectMenu {
         this.add_non_control(r);
         this.add_non_control(h);
 
-        this.set_initial_focus(ts);
+        this.set_initial_focus(g, ts);
         this.set_cancel_code(MENU_CODE_BACK_TO_MATCH_SELECTION_MENU);
         this
     }

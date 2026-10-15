@@ -89,12 +89,12 @@ impl MO_CheepCheep {
         false
     }
 
-    pub fn hitother(&mut self, mut player: Ptr<CPlayer>) -> bool {
+    pub fn hitother(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         if player.is_shielded() {
             return false;
         }
 
-        player.kill_player_map_hazard(game().get(), false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill
+        player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill
     }
 
     pub fn shatter_die(&mut self, g: &mut Game) {
@@ -175,7 +175,7 @@ impl CObjectTrait for MO_CheepCheep {
                 if player.fOldY + PH as f32 <= self.fOldY && player.iy as i32 + PH >= self.iy as i32 {
                     return self.hittop(g, player);
                 } else {
-                    return self.hitother(player);
+                    return self.hitother(g, player);
                 }
             }
         }

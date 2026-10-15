@@ -69,7 +69,7 @@ impl CObjectTrait for B_SwitchBlock {
 impl IO_BlockTrait for B_SwitchBlock {
     crate::impl_io_block_plumbing!();
 
-    fn collide_player_dir(&mut self, player: Ptr<CPlayer>, direction: i16, useBehavior: bool) -> bool {
+    fn collide_player_dir(&mut self, g: &mut Game, player: Ptr<CPlayer>, direction: i16, useBehavior: bool) -> bool {
         if self.state != 0 || !useBehavior {
             return true;
         }
@@ -80,13 +80,13 @@ impl IO_BlockTrait for B_SwitchBlock {
         let ih = self.ih as i32;
 
         if player.fOldY + PH as f32 <= iposy as f32 && direction == 2 {
-            return self.hittop_player(game().get(), player, useBehavior);
+            return self.hittop_player(g, player, useBehavior);
         } else if player.fOldY >= (iposy + ih) as f32 && direction == 0 {
-            return self.hitbottom_player(game().get(), player, useBehavior);
+            return self.hitbottom_player(g, player, useBehavior);
         } else if player.fOldX + PW as f32 <= iposx as f32 && direction == 1 {
-            return self.hitleft_player(game().get(), player, useBehavior);
+            return self.hitleft_player(g, player, useBehavior);
         } else if player.fOldX >= (iposx + iw) as f32 && direction == 3 {
-            return self.hitright_player(game().get(), player, useBehavior);
+            return self.hitright_player(g, player, useBehavior);
         }
 
         true

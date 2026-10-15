@@ -516,10 +516,10 @@ pub fn inner_main() {
         g.blitdest = g.screen;
 
         g.rm = Ptr::new_box(CResourceManager::new());
-        g.g_tilesetmanager = Ptr::new_box(CTilesetManager::new(&convert_path(g, "gfx/Classic/tilesets")));
+        game().g_tilesetmanager = Ptr::new_box(CTilesetManager::new(g, &convert_path(game().get(), "gfx/Classic/tilesets")));
         g.g_map = Ptr::from_box(CMap::new());
         g.filterslist = Ptr::new_box(crate::common::file_list::FiltersList::new());
-        g.maplist = Ptr::new_box(MapList::new(false));
+        g.maplist = Ptr::new_box(MapList::new(g, false));
         ed().backgroundlist = Ptr::new_box(BackgroundList::new());
 
         //Add all of the maps that are world only so we can edit them
@@ -529,77 +529,77 @@ pub fn inner_main() {
 
         println!("\n---------------- loading graphics ----------------");
 
-        g.rm.spr_tiletypes = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_tile_types.png")).without_color_key().create();
-        g.rm.spr_transparenttiles = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_transparent_tiles.png")).with_alpha(160).create();
+        g.rm.spr_tiletypes = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_tile_types.png")).without_color_key().create(g);
+        g.rm.spr_transparenttiles = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_transparent_tiles.png")).with_alpha(160).create(g);
 
-        g.rm.spr_backgroundlevel = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_background_levels.png")).create();
-        g.rm.spr_tilesetlevel = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_tileset_levels.png")).create();
+        g.rm.spr_backgroundlevel = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_background_levels.png")).create(g);
+        g.rm.spr_tilesetlevel = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_tileset_levels.png")).create(g);
 
-        g.rm.spr_eyecandy = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_eyecandy.png")).create();
+        g.rm.spr_eyecandy = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_eyecandy.png")).create(g);
 
-        ed().s_platform.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_platform.png")).create());
-        ed().s_platformpathbuttons.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_pathtype_buttons.png")).create());
-        ed().s_maphazardbuttons.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_maphazard_buttons.png")).create());
+        ed().s_platform.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_platform.png")).create(g));
+        ed().s_platformpathbuttons.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_pathtype_buttons.png")).create(g));
+        ed().s_maphazardbuttons.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_maphazard_buttons.png")).create(g));
 
-        g.rm.spr_warps[0] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp.png")).create();
-        g.rm.spr_warps[1] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp_preview.png")).create();
-        g.rm.spr_warps[2] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp_thumbnail.png")).create();
+        g.rm.spr_warps[0] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp.png")).create(g);
+        g.rm.spr_warps[1] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp_preview.png")).create(g);
+        g.rm.spr_warps[2] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp_thumbnail.png")).create(g);
 
-        g.rm.spr_platformpath = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_platform_path.png")).with_alpha(128).create();
+        g.rm.spr_platformpath = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_platform_path.png")).with_alpha(128).create(g);
 
-        g.rm.spr_selectedtile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_selectedtile.png")).with_color_key(colors::BLACK).with_alpha(128).create();
-        g.rm.spr_nospawntile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_nospawntile.png")).with_color_key(colors::BLACK).with_alpha(128).create();
-        g.rm.spr_noitemspawntile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_noitemspawntile.png")).with_color_key(colors::BLACK).with_alpha(128).create();
-        g.rm.spr_platformstarttile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_platformstarttile.png")).with_color_key(colors::BLACK).with_alpha(64).with_wrapping(640).create();
-        g.rm.spr_platformendtile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_selectedtile.png")).with_color_key(colors::BLACK).with_alpha(64).with_wrapping(640).create();
+        g.rm.spr_selectedtile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_selectedtile.png")).with_color_key(colors::BLACK).with_alpha(128).create(g);
+        g.rm.spr_nospawntile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_nospawntile.png")).with_color_key(colors::BLACK).with_alpha(128).create(g);
+        g.rm.spr_noitemspawntile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_noitemspawntile.png")).with_color_key(colors::BLACK).with_alpha(128).create(g);
+        g.rm.spr_platformstarttile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_platformstarttile.png")).with_color_key(colors::BLACK).with_alpha(64).with_wrapping(640).create(g);
+        g.rm.spr_platformendtile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_selectedtile.png")).with_color_key(colors::BLACK).with_alpha(64).with_wrapping(640).create(g);
 
-        g.rm.spr_mapitems[0] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_mapitems.png")).create();
-        g.rm.spr_mapitems[1] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_mapitems_preview.png")).create();
-        g.rm.spr_mapitems[2] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_mapitems_thumbnail.png")).create();
+        g.rm.spr_mapitems[0] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_mapitems.png")).create(g);
+        g.rm.spr_mapitems[1] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_mapitems_preview.png")).create(g);
+        g.rm.spr_mapitems[2] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_mapitems_thumbnail.png")).create(g);
 
-        g.rm.spr_dialog = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_dialog.png")).with_alpha(255).create();
-        g.rm.menu_shade = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_shade.png")).with_alpha(128).create();
+        g.rm.spr_dialog = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_dialog.png")).with_alpha(255).create(g);
+        g.rm.menu_shade = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_shade.png")).with_alpha(128).create(g);
 
-        g.rm.spr_tileanimation[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/tile_animation.png")).create();
-        g.rm.spr_tileanimation[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/tile_animation_preview.png")).create();
-        g.rm.spr_tileanimation[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/tile_animation_thumbnail.png")).create();
+        g.rm.spr_tileanimation[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/tile_animation.png")).create(g);
+        g.rm.spr_tileanimation[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/tile_animation_preview.png")).create(g);
+        g.rm.spr_tileanimation[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/tile_animation_thumbnail.png")).create(g);
 
-        g.rm.spr_blocks[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/blocks.png")).create();
-        g.rm.spr_blocks[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/blocks_preview.png")).create();
-        g.rm.spr_blocks[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/blocks_thumbnail.png")).create();
+        g.rm.spr_blocks[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/blocks.png")).create(g);
+        g.rm.spr_blocks[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/blocks_preview.png")).create(g);
+        g.rm.spr_blocks[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/blocks_thumbnail.png")).create(g);
 
-        g.rm.spr_unknowntile[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/unknown_tile.png")).create();
-        g.rm.spr_unknowntile[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/unknown_tile_preview.png")).create();
-        g.rm.spr_unknowntile[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/unknown_tile_thumbnail.png")).create();
+        g.rm.spr_unknowntile[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/unknown_tile.png")).create(g);
+        g.rm.spr_unknowntile[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/unknown_tile_preview.png")).create(g);
+        g.rm.spr_unknowntile[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/unknown_tile_thumbnail.png")).create(g);
 
-        g.rm.spr_powerups = ImageLoader::new(convert_path(g, "gfx/packs/Classic/powerups/large.png")).create();
-        g.rm.spr_powerupselector = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_powerup_selector.png")).with_alpha(128).create();
-        g.rm.spr_hidden_marker = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_hidden_marker.png")).create();
+        g.rm.spr_powerups = ImageLoader::new(convert_path(g, "gfx/packs/Classic/powerups/large.png")).create(g);
+        g.rm.spr_powerupselector = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_powerup_selector.png")).with_alpha(128).create(g);
+        g.rm.spr_hidden_marker = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_hidden_marker.png")).create(g);
 
-        g.rm.spr_flagbases = ImageLoader::new(convert_path(g, "gfx/packs/Classic/modeobjects/flagbases.png")).create();
-        g.rm.spr_racegoals = ImageLoader::new(convert_path(g, "gfx/packs/Classic/modeobjects/racegoal.png")).create();
+        g.rm.spr_flagbases = ImageLoader::new(convert_path(g, "gfx/packs/Classic/modeobjects/flagbases.png")).create(g);
+        g.rm.spr_racegoals = ImageLoader::new(convert_path(g, "gfx/packs/Classic/modeobjects/racegoal.png")).create(g);
 
-        g.rm.spr_hazard_fireball[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/fireball.png")).create();
-        g.rm.spr_hazard_fireball[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/fireball_preview.png")).create();
-        g.rm.spr_hazard_fireball[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/fireball_thumbnail.png")).create();
+        g.rm.spr_hazard_fireball[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/fireball.png")).create(g);
+        g.rm.spr_hazard_fireball[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/fireball_preview.png")).create(g);
+        g.rm.spr_hazard_fireball[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/fireball_thumbnail.png")).create(g);
 
-        g.rm.spr_hazard_rotodisc[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/rotodisc.png")).create();
-        g.rm.spr_hazard_rotodisc[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/rotodisc_preview.png")).create();
-        g.rm.spr_hazard_rotodisc[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/rotodisc_thumbnail.png")).create();
+        g.rm.spr_hazard_rotodisc[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/rotodisc.png")).create(g);
+        g.rm.spr_hazard_rotodisc[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/rotodisc_preview.png")).create(g);
+        g.rm.spr_hazard_rotodisc[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/rotodisc_thumbnail.png")).create(g);
 
-        g.rm.spr_hazard_bulletbill[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/bulletbill.png")).create();
-        g.rm.spr_hazard_bulletbill[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/bulletbill_preview.png")).create();
-        g.rm.spr_hazard_bulletbill[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/bulletbill_thumbnail.png")).create();
+        g.rm.spr_hazard_bulletbill[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/bulletbill.png")).create(g);
+        g.rm.spr_hazard_bulletbill[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/bulletbill_preview.png")).create(g);
+        g.rm.spr_hazard_bulletbill[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/bulletbill_thumbnail.png")).create(g);
 
-        g.rm.spr_hazard_flame[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/flame.png")).create();
-        g.rm.spr_hazard_flame[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/flame_preview.png")).create();
-        g.rm.spr_hazard_flame[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/flame_thumbnail.png")).create();
+        g.rm.spr_hazard_flame[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/flame.png")).create(g);
+        g.rm.spr_hazard_flame[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/flame_preview.png")).create(g);
+        g.rm.spr_hazard_flame[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/flame_thumbnail.png")).create(g);
 
-        g.rm.spr_hazard_pirhanaplant[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/pirhanaplant.png")).create();
-        g.rm.spr_hazard_pirhanaplant[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/pirhanaplant_preview.png")).create();
-        g.rm.spr_hazard_pirhanaplant[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/pirhanaplant_thumbnail.png")).create();
+        g.rm.spr_hazard_pirhanaplant[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/pirhanaplant.png")).create(g);
+        g.rm.spr_hazard_pirhanaplant[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/pirhanaplant_preview.png")).create(g);
+        g.rm.spr_hazard_pirhanaplant[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/pirhanaplant_thumbnail.png")).create(g);
 
-        g.rm.spr_number_icons = ImageLoader::new(convert_path(g, "gfx/packs/Classic/awards/killsinrownumbers.png")).create();
+        g.rm.spr_number_icons = ImageLoader::new(convert_path(g, "gfx/packs/Classic/awards/killsinrownumbers.png")).create(g);
 
         for i in 0..3usize {
             g.rm.spr_hazard_fireball[i].set_wrap((640 >> i) as i16);
@@ -659,7 +659,7 @@ pub fn inner_main() {
         println!("entering level editor loop...");
         done = false;
         while !done {
-            FPSLimiter::instance().frame_start();
+            FPSLimiter::instance(g).frame_start();
 
             match ed().state {
                 EDITOR_EDIT => {
@@ -688,9 +688,9 @@ pub fn inner_main() {
             }
 
             editor_harness::frame_delay(g, 0);
-            FPSLimiter::instance().before_flip(g);
+            FPSLimiter::instance(g).before_flip(g);
             gfx_flipscreen(g);
-            FPSLimiter::instance().after_flip(g);
+            FPSLimiter::instance(g).after_flip(g);
         }
 
         println!("\n---------------- save map ----------------");
@@ -805,6 +805,7 @@ unsafe fn paint_block(g: &mut Game, iClickX: i16, iClickY: i16) {
 }
 
 pub fn editor_edit(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
         let mut gp = g.ptr();
     init_editor_edit();
 
@@ -935,7 +936,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                         if key == k(SDLK_g) {
                             ed().backgroundlist.next();
 
-                            g.rm.spr_background = ImageLoader::new(ed().backgroundlist.current_path()).without_color_key().create();
+                            g.rm.spr_background = ImageLoader::new(ed().backgroundlist.current_path()).without_color_key().create(g);
                             g.g_map.szBackgroundFile = get_filename_from_path(&ed().backgroundlist.current_path().to_string_lossy());
 
                             if !check_key(keystate, SDLK_LSHIFT) && !check_key(keystate, SDLK_RSHIFT) {
@@ -1333,7 +1334,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
             gp.rm.spr_dialog.draw_src(g, if ed().fSelectedYes { 250 } else { 326 }, 250, &rect(192, 0, 64, 32));
         } else {
             if ed().edit_mode == 0 {
-                g.rm.menu_font_small.draw(0, 0, "Block Mode");
+                gp.rm.menu_font_small.draw(g, 0, 0, "Block Mode");
             } else if ed().edit_mode == 1 || ed().edit_mode == 8 {
                 let mut modestring = String::new();
 
@@ -1357,11 +1358,11 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                     modestring.push_str(" Only");
                 }
 
-                g.rm.menu_font_small.draw(0, 0, &modestring);
+                gp.rm.menu_font_small.draw(g, 0, 0, &modestring);
 
                 draw_layer_indicator(g);
             } else if ed().edit_mode == 2 {
-                g.rm.menu_font_small.draw(0, 0, "Warp Mode");
+                gp.rm.menu_font_small.draw(g, 0, 0, "Warp Mode");
             } else if ed().edit_mode == 3 {
                 for kk in 0..MAPHEIGHT {
                     for j in 0..MAPWIDTH {
@@ -1388,9 +1389,9 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                 }
 
                 if ed().move_replace {
-                    g.rm.menu_font_small.draw(0, 0, "Move Mode - Replace");
+                    gp.rm.menu_font_small.draw(g, 0, 0, "Move Mode - Replace");
                 } else {
-                    g.rm.menu_font_small.draw(0, 0, "Move Mode - Merge");
+                    gp.rm.menu_font_small.draw(g, 0, 0, "Move Mode - Merge");
                 }
 
                 draw_layer_indicator(g);
@@ -1409,8 +1410,8 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                     }
                 }
 
-                g.rm.menu_font_small.draw(0, 480 - (g.rm.menu_font_small.get_height() << 1), "No Player Spawn: [x] Global, [1-4] Team Spawn Zone");
-                g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "[a] All, [n] None, [i] Invert");
+                gp.rm.menu_font_small.draw(g, 0, 480 - (gp.rm.menu_font_small.get_height() << 1), "No Player Spawn: [x] Global, [1-4] Team Spawn Zone");
+                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[a] All, [n] None, [i] Invert");
             } else if ed().edit_mode == 5 {
                 for kk in 0..MH {
                     for j in 0..MW {
@@ -1420,7 +1421,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                     }
                 }
 
-                g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "No Item Spawn");
+                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "No Item Spawn");
             } else if ed().edit_mode == 6 {
                 for kk in 0..MH {
                     for j in 0..MW {
@@ -1434,10 +1435,10 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                     }
                 }
 
-                g.rm.menu_font_small.draw(0, 0, "Tile Type Mode");
-                g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "Press [Delete] To Clear All Tile Types");
+                gp.rm.menu_font_small.draw(g, 0, 0, "Tile Type Mode");
+                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Press [Delete] To Clear All Tile Types");
             } else if ed().edit_mode == 7 {
-                g.rm.menu_font_small.draw(0, 0, "Map Item Mode");
+                gp.rm.menu_font_small.draw(g, 0, 0, "Map Item Mode");
             }
 
             g.rm.menu_font_small.draw_right_justified(640, 0, g.maplist.current_filename());
@@ -1881,6 +1882,7 @@ const szLayerNames: [&str; 3] = ["Back Layer", "Mid Layer", "Top Layer"];
 
 pub fn editor_eyecandy(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
     unsafe {
         //handle messages
         while poll_event(&mut ed().event) != 0 {
@@ -1955,7 +1957,7 @@ pub fn editor_eyecandy(g: &mut Game) -> i32 {
             g.rm.menu_font_small.draw_centered(320, kk as i32 * 65 + 62, szEyecandyNames[kk as usize]);
         }
 
-        g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "Eyecandy: [e] Exit, [LMB] Choose Eyecandy");
+        gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Eyecandy: [e] Exit, [LMB] Choose Eyecandy");
 
         draw_message(g);
         EDITOR_EYECANDY
@@ -1994,11 +1996,12 @@ pub fn init_editor_properties(g: &mut Game, iBlockCol: i16, iBlockRow: i16) {
 
 pub fn editor_properties(g: &mut Game, iBlockCol: i16, iBlockRow: i16) -> i32 {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
     init_editor_properties(g, iBlockCol, iBlockRow);
     unsafe {
         let (bc, br) = (iBlockCol as usize, iBlockRow as usize);
         loop {
-            FPSLimiter::instance().frame_start();
+            FPSLimiter::instance(g).frame_start();
             //handle messages
             while poll_event(&mut ed().event) != 0 {
                 let ty = ed().event.type_();
@@ -2124,11 +2127,11 @@ pub fn editor_properties(g: &mut Game, iBlockCol: i16, iBlockRow: i16) -> i32 {
 
                 iHiddenCheckboxY = 365;
 
-                g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height() * 3, "Block Property Mode");
-                g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height() * 2, "[~, 0-9] Set Value [LMB] Increase [RMB] Decrease [D] Default");
-                g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "[Shift] + [0-9 or D] Set All To Value");
+                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 3, "Block Property Mode");
+                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 2, "[~, 0-9] Set Value [LMB] Increase [RMB] Decrease [D] Default");
+                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[Shift] + [0-9 or D] Set All To Value");
             } else if ed().iBlockType == 4 || ed().iBlockType == 5 || ed().iBlockType == 17 || ed().iBlockType == 18 || ed().iBlockType == 3 {
-                g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "Block Property Mode");
+                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Block Property Mode");
                 iHiddenCheckboxY = 214;
             }
 
@@ -2164,9 +2167,9 @@ pub fn editor_properties(g: &mut Game, iBlockCol: i16, iBlockRow: i16) -> i32 {
 
             draw_message(g);
             editor_harness::frame_delay(g, 0);
-            FPSLimiter::instance().before_flip(g);
+            FPSLimiter::instance(g).before_flip(g);
             gfx_flipscreen(g);
-            FPSLimiter::instance().after_flip(g);
+            FPSLimiter::instance(g).after_flip(g);
         }
     }
 }
@@ -2293,17 +2296,18 @@ fn platform_edit_or_animated_or_tiletype() -> bool {
 
 /// The nested `while (editor_x() == EDITOR_X)` loops the platform editor runs for tiles, animation and tile types.
 unsafe fn run_nested_editor(g: &mut Game, f: fn() -> i32, stay: i32) {
-    FPSLimiter::instance().frame_start();
+    FPSLimiter::instance(g).frame_start();
     while f() == stay {
         editor_harness::frame_delay(g, 0);
-        FPSLimiter::instance().before_flip(g);
+        FPSLimiter::instance(g).before_flip(g);
         gfx_flipscreen(g);
-        FPSLimiter::instance().after_flip(g);
-        FPSLimiter::instance().frame_start();
+        FPSLimiter::instance(g).after_flip(g);
+        FPSLimiter::instance(g).frame_start();
     }
 }
 
 pub fn editor_platforms(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
         let mut gp = g.ptr();
     init_editor_platforms(g);
 
@@ -2719,7 +2723,7 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
 
             g.rm.menu_font_small.draw_centered(320, ed().r.y + 18, "Platforms");
 
-            g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "Platform Mode: [esc] Exit  [c] Check Paths, [1-8] Select, [n] New");
+            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Platform Mode: [esc] Exit  [c] Check Paths, [1-8] Select, [n] New");
             g.rm.menu_font_small.draw_right_justified(640, 0, g.maplist.current_filename());
 
             for iPlatform in 0..ed().g_iNumPlatforms as usize {
@@ -2754,14 +2758,14 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
                 let s2 = ed().rTypeButton[iType][2];
                 ed().s_platformpathbuttons.draw_src_to(&s2, g.screen, &ed().rTypeButton[iType][3]);
 
-                g.rm.menu_font_large.draw(ed().rTypeButton[iType][1].x + 36, ed().rTypeButton[iType][1].y + 6, szPathNames[iType]);
+                gp.rm.menu_font_large.draw(g, ed().rTypeButton[iType][1].x + 36, ed().rTypeButton[iType][1].y + 6, szPathNames[iType]);
             }
 
-            g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "Path Type");
+            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Path Type");
         } else if platform_edit_or_animated_or_tiletype() {
-            g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height() * 3, "Edit Platform");
-            g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height() * 2, "[esc] Exit  [t] Tiles  [a] Animation [l] Types [del] Delete  [p] Path");
-            g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "[+/-] Velocity  [y] Draw Layer");
+            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 3, "Edit Platform");
+            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 2, "[esc] Exit  [t] Tiles  [a] Animation [l] Types [del] Delete  [p] Path");
+            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[+/-] Velocity  [y] Draw Layer");
             draw_platform_unfinished(g, ed().iEditPlatform, PLATFORM_EDIT_STATE_TILETYPE == ed().iPlatformEditState);
 
             if ed().g_Platforms[ep].iPathType == PlatformPathType::Ellipse {
@@ -2776,7 +2780,7 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
                 ed().s_platform.draw_src_to(&rMarker[0], g.screen, &d);
 
                 g.rm.menu_font_small.draw_right_justified(198, 10, "Counter");
-                g.rm.menu_font_small.draw(442, 10, "Clockwise");
+                gp.rm.menu_font_small.draw(g, 442, 10, "Clockwise");
             } else {
                 let iVelMarkerX: i16 = (220 + (ed().g_Platforms[ep].iVelocity as i32 - 1) * 12) as i16;
 
@@ -2789,7 +2793,7 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
                 ed().s_platform.draw_src_to(&rMarker[0], g.screen, &d);
 
                 g.rm.menu_font_small.draw_right_justified(234, 10, "Slow");
-                g.rm.menu_font_small.draw(406, 10, "Fast");
+                gp.rm.menu_font_small.draw(g, 406, 10, "Fast");
             }
 
             gp.rm.spr_number_icons.draw_src(g, 619, 5, &rect((ed().g_Platforms[ep].iDrawLayer as i32) << 4, 48, 16, 16));
@@ -2815,16 +2819,16 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
             );
 
             if platform.iPathType == PlatformPathType::Straight {
-                g.rm.menu_font_small.draw(0, 480 - (g.rm.menu_font_small.get_height() << 1), "Edit Path");
-                g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "[esc] Exit  [LMB] Set Start Point  [RMB] Set End Point [t] Path Type");
+                gp.rm.menu_font_small.draw(g, 0, 480 - (gp.rm.menu_font_small.get_height() << 1), "Edit Path");
+                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[esc] Exit  [LMB] Set Start Point  [RMB] Set End Point [t] Path Type");
             } else if platform.iPathType == PlatformPathType::StraightContinuous {
-                g.rm.menu_font_small.draw(0, 480 - (g.rm.menu_font_small.get_height() << 1), "Edit Path: [esc] Exit  [LMB] Set Start Point  [RMB] Set Angle");
-                g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "[SHIFT + LMB] Location Snap [SHIFT + RMB] Angle Snap [t] Path Type");
+                gp.rm.menu_font_small.draw(g, 0, 480 - (gp.rm.menu_font_small.get_height() << 1), "Edit Path: [esc] Exit  [LMB] Set Start Point  [RMB] Set Angle");
+                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[SHIFT + LMB] Location Snap [SHIFT + RMB] Angle Snap [t] Path Type");
             } else if platform.iPathType == PlatformPathType::Ellipse {
-                g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height() * 4, "Edit Path: [esc] Exit  [LMB] Set Center [SHIFT + LMB] Center Snap");
-                g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height() * 3, "[X + LMB] Set X Radius [SHIFT + X + LMB] X Radius Snap");
-                g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height() * 2, "[Z + LMB] Set Y Radius [SHIFT + Z + LMB] Y Radius Snap");
-                g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "[C + LMB] Set Circular Radius [SHIFT + C + LMB] Circular Radius Snap [t] Path Type");
+                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 4, "Edit Path: [esc] Exit  [LMB] Set Center [SHIFT + LMB] Center Snap");
+                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 3, "[X + LMB] Set X Radius [SHIFT + X + LMB] X Radius Snap");
+                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 2, "[Z + LMB] Set Y Radius [SHIFT + Z + LMB] Y Radius Snap");
+                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[C + LMB] Set Circular Radius [SHIFT + C + LMB] Circular Radius Snap [t] Path Type");
             }
         } else if PLATFORM_EDIT_STATE_TEST == ed().iPlatformEditState {
             g.g_map.update_platforms();
@@ -2832,7 +2836,7 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
             //Platforms are drawn inside drawmap(...)
             drawmap(g, false, TILESIZE as i16, true);
 
-            g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "Check Paths: [esc] Exit");
+            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Check Paths: [esc] Exit");
         }
 
         draw_message(g);
@@ -3075,6 +3079,7 @@ pub fn init_editor_maphazards() {
 }
 
 pub fn editor_maphazards(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
         let mut gp = g.ptr();
     init_editor_maphazards();
 
@@ -3333,7 +3338,7 @@ pub fn editor_maphazards(g: &mut Game) -> i32 {
             let s = ed().rBackground[0];
             ed().s_platform.draw_src_to(&s, g.screen, &ed().rBackground[1]);
 
-            g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "Map Hazard Mode: [esc] Exit");
+            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Map Hazard Mode: [esc] Exit");
 
             for iMapHazard in 0..game().g_map.maphazards.len() {
                 let s = ed().rIconRects[iMapHazard][0];
@@ -3354,38 +3359,38 @@ pub fn editor_maphazards(g: &mut Game) -> i32 {
                 let s2 = ed().rTypeButton[iType][2];
                 ed().s_maphazardbuttons.draw_src_to(&s2, g.screen, &ed().rTypeButton[iType][3]);
 
-                g.rm.menu_font_large.draw(ed().rTypeButton[iType][1].x + 36, ed().rTypeButton[iType][1].y + 6, szHazardNames[iType]);
+                gp.rm.menu_font_large.draw(g, ed().rTypeButton[iType][1].x + 36, ed().rTypeButton[iType][1].y + 6, szHazardNames[iType]);
             }
 
-            g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "Choose Hazard Type");
+            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Choose Hazard Type");
         } else if MAPHAZARD_EDIT_STATE_LOCATION == ed().iEditState {
             let hazard = g.g_map.maphazards[ed().iEditMapHazard as usize];
             draw_map_hazard(g, &hazard, 0, true, g.blitdest);
             draw_map_hazard_controls(g, &hazard);
 
-            g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "Location: [esc] Exit, [p] Properties, [LMB] Set Location");
+            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Location: [esc] Exit, [p] Properties, [LMB] Set Location");
         } else if MAPHAZARD_EDIT_STATE_PROPERTIES == ed().iEditState {
             let hazard = g.g_map.maphazards[ed().iEditMapHazard as usize];
             draw_map_hazard(g, &hazard, 0, true, g.blitdest);
             draw_map_hazard_controls(g, &hazard);
 
             if hazard.itype == 0 || hazard.itype == 1 {
-                g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height() * 3, "Properties");
-                g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height() * 2, "[esc] Exit, [l] Location, [+/-] Velocity, [LMB] Angle and Radius");
+                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 3, "Properties");
+                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 2, "[esc] Exit, [l] Location, [+/-] Velocity, [LMB] Angle and Radius");
 
                 if hazard.itype == 1 {
-                    g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "[Shift + LMB] Snap To Angle, [1-9] Number of Rotodiscs");
+                    gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[Shift + LMB] Snap To Angle, [1-9] Number of Rotodiscs");
                 } else {
-                    g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "[Shift + LMB] Snap To Angle");
+                    gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[Shift + LMB] Snap To Angle");
                 }
             } else if hazard.itype == 2 {
-                g.rm.menu_font_small.draw(0, 480 - (g.rm.menu_font_small.get_height() << 1), "Properties: [esc] Exit, [l] Location, [d] Direction");
-                g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "[-/+] Velocity, [[/]] or [</>] Frequency");
+                gp.rm.menu_font_small.draw(g, 0, 480 - (gp.rm.menu_font_small.get_height() << 1), "Properties: [esc] Exit, [l] Location, [d] Direction");
+                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[-/+] Velocity, [[/]] or [</>] Frequency");
             } else if hazard.itype >= 3 && hazard.itype <= 7 {
-                g.rm.menu_font_small.draw(0, 480 - (g.rm.menu_font_small.get_height() << 1), "Properties: [esc] Exit, [l] Location");
-                g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "[[/]] or [</>] Frequency, [d] direction");
+                gp.rm.menu_font_small.draw(g, 0, 480 - (gp.rm.menu_font_small.get_height() << 1), "Properties: [esc] Exit, [l] Location");
+                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[[/]] or [</>] Frequency, [d] direction");
             } else {
-                g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "Properties: [esc] Exit, [l] Location");
+                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Properties: [esc] Exit, [l] Location");
             }
         }
 
@@ -3414,6 +3419,7 @@ pub fn new_map_hazard(g: &mut Game) -> i16 {
 }
 
 pub fn draw_map_hazard_controls(g: &mut Game, hazard: &MapHazard) {
+        let mut gp = g.ptr();
     unsafe {
         if hazard.itype == 0 || hazard.itype == 1 || hazard.itype == 2 {
             let iVelMarkerX: i16 = if hazard.itype == 2 {
@@ -3432,10 +3438,10 @@ pub fn draw_map_hazard_controls(g: &mut Game, hazard: &MapHazard) {
 
             if hazard.itype == 2 {
                 g.rm.menu_font_small.draw_right_justified(190, 420, "Left");
-                g.rm.menu_font_small.draw(450, 420, "Right");
+                gp.rm.menu_font_small.draw(g, 450, 420, "Right");
             } else {
                 g.rm.menu_font_small.draw_right_justified(190, 420, "Counter Clockwise");
-                g.rm.menu_font_small.draw(450, 420, "Clockwise");
+                gp.rm.menu_font_small.draw(g, 450, 420, "Clockwise");
             }
         }
 
@@ -3452,7 +3458,7 @@ pub fn draw_map_hazard_controls(g: &mut Game, hazard: &MapHazard) {
             ed().s_platform.draw_src_to(&rMarker[0], g.screen, &d);
 
             g.rm.menu_font_small.draw_right_justified(190, 390, "More Frequent");
-            g.rm.menu_font_small.draw(388, 390, "Less Frequent");
+            gp.rm.menu_font_small.draw(g, 388, 390, "Less Frequent");
         }
     }
 }
@@ -3687,7 +3693,7 @@ pub fn editor_tiles() -> i32 {
         ed().r = rect(0, 0, 640, 480);
 
         crate::common::gfx::blit::upper_blit(g.g_tilesetmanager.tileset(ed().set_tile_tileset as usize).surface(0), &rectSrc, g.screen, &mut ed().r);
-        g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), ed().tileset.name());
+        game().rm.menu_font_small.draw(g, 0, 480 - game().rm.menu_font_small.get_height(), ed().tileset.name());
 
         let mut i = ed().view_tileset_x;
         while i < ed().view_tileset_x + 20 && i < ed().tileset.width() as i32 {
@@ -3847,6 +3853,7 @@ pub fn init_editor_modeitems() {
 
 pub fn editor_modeitems(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
     init_editor_modeitems();
 
     unsafe {
@@ -3963,7 +3970,7 @@ pub fn editor_modeitems(g: &mut Game) -> i32 {
                 }
             }
 
-            g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "Set Race Goal Locations - Press [2] for Flag Bases");
+            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Set Race Goal Locations - Press [2] for Flag Bases");
         } else if ed().modeitemmode == 1 {
             if g.g_map.iNumFlagBases == 0 {
                 g.rm.menu_font_large.draw_centered(320, 200, "Flag bases are set to random.");
@@ -3975,7 +3982,7 @@ pub fn editor_modeitems(g: &mut Game) -> i32 {
                 }
             }
 
-            g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "Set Flag Base Locations - Press [1] for Race Goals");
+            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Set Flag Base Locations - Press [1] for Race Goals");
         }
 
         g.rm.menu_font_small.draw_right_justified(640, 0, g.maplist.current_filename());
@@ -4058,6 +4065,7 @@ unsafe fn free_background_surfaces() {
 }
 
 pub fn editor_backgrounds(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
     init_editor_backgrounds(g);
 
     unsafe {
@@ -4102,7 +4110,7 @@ pub fn editor_backgrounds(g: &mut Game) -> i32 {
                             if ed().event.button_x() >= d.x && ed().event.button_x() < d.x + d.w && ed().event.button_y() >= d.y && ed().event.button_y() < d.y + d.h {
                                 ed().backgroundlist.set_current_index((ed().iPage as i32 * 16 + iBackground) as usize);
 
-                                g.rm.spr_background = ImageLoader::new(ed().backgroundlist.current_path()).without_color_key().create();
+                                g.rm.spr_background = ImageLoader::new(ed().backgroundlist.current_path()).without_color_key().create(g);
                                 g.g_map.szBackgroundFile = get_filename_from_path(&ed().backgroundlist.current_path().to_string_lossy());
 
                                 if ed().event.button_button() == BUTTON_LEFT {
@@ -4137,14 +4145,14 @@ pub fn editor_backgrounds(g: &mut Game) -> i32 {
             ed().sBackgrounds[iBackground as usize].draw_src_to(&s, g.screen, &ed().rDst[iBackground as usize]);
         }
 
-        g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height() * 2, "[Page Up] next page, [Page Down] previous page");
-        g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "[LMB] choose background with music category, [RMB] choose just background");
+        gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 2, "[Page Up] next page, [Page Down] previous page");
+        gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[LMB] choose background with music category, [RMB] choose just background");
 
         let iID = ed().mouse_x / 160 + ed().mouse_y / 120 * 4 + ed().iPage as i32 * 16;
 
         if (iID as i64) < ed().backgroundlist.count() as i64 {
             let name = ed().backgroundlist.at(iID as usize).to_string_lossy().into_owned();
-            g.rm.menu_font_small.draw(0, 0, &name);
+            gp.rm.menu_font_small.draw(g, 0, 0, &name);
         }
 
         draw_message(g);
@@ -4317,7 +4325,7 @@ pub fn editor_animation() -> i32 {
 
         g.rm.menu_font_small.draw_right_justified(640, 0, g.maplist.current_filename());
 
-        g.rm.menu_font_small.draw(0, 480 - g.rm.menu_font_small.get_height(), "Use Arrow Keys To Scroll");
+        game().rm.menu_font_small.draw(g, 0, 480 - game().rm.menu_font_small.get_height(), "Use Arrow Keys To Scroll");
 
         draw_message(g);
         EDITOR_ANIMATION
@@ -4339,7 +4347,7 @@ pub fn load_background_page(iPage_: i16) {
                 return;
             }
 
-            let temp = ImageLoader::new(path).without_color_key().create();
+            let temp = ImageLoader::new(path).without_color_key().create(game().get());
 
             crate::common::gfx::blit::fill_rect(ed().sBackgrounds[iIndex as usize].get_surface(), null(), 0x0);
 
@@ -4355,6 +4363,7 @@ pub fn load_background_page(iPage_: i16) {
 
 pub fn display_help(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
     unsafe {
         drawmap(g, false, TILESIZE as i16, false);
         gp.rm.menu_shade.draw(g, 0, 0);
@@ -4363,7 +4372,7 @@ pub fn display_help(g: &mut Game) -> i32 {
         let mut offsety = 10;
         let mut offsetx = 20;
         let mut line = |text: &str, gap: i32, offsety: &mut i32, offsetx: i32| {
-            g.rm.menu_font_small.draw(offsetx, *offsety, text);
+            gp.rm.menu_font_small.draw(g, offsetx, *offsety, text);
             *offsety += fh + gap;
         };
 
@@ -4425,7 +4434,7 @@ pub fn display_help(g: &mut Game) -> i32 {
         line("[p] - Path", 2, &mut offsety, offsetx);
         line("[+/-] - Change Speed", 2, &mut offsety, offsetx);
         line("[delete] - Delete", 2, &mut offsety, offsetx);
-        g.rm.menu_font_small.draw(offsetx, offsety, "[alt] + [enter] - Full Screen/Window");
+        gp.rm.menu_font_small.draw(g, offsetx, offsety, "[alt] + [enter] - Full Screen/Window");
 
         //handle messages
         while poll_event(&mut ed().event) != 0 {
@@ -4462,13 +4471,14 @@ pub fn save_as(g: &mut Game) -> i32 {
 
 unsafe fn draw_dialog(g: &mut Game, title: &str, instructions: &str, input: Option<&str>) {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
     drawmap(g, false, TILESIZE as i16, false);
     gp.rm.menu_shade.draw(g, 0, 0);
     gp.rm.spr_dialog.draw_src(g, 224, 176, &rect(0, 0, 192, 128));
     g.rm.menu_font_large.draw_centered(320, 200, title);
-    g.rm.menu_font_small.draw(240, 235, instructions);
+    gp.rm.menu_font_small.draw(g, 240, 235, instructions);
     if let Some(input) = input {
-        g.rm.menu_font_small.draw(240, 255, input);
+        gp.rm.menu_font_small.draw(g, 240, 255, input);
     }
     g.rm.menu_font_small.draw_right_justified(640, 0, g.maplist.current_filename());
     gfx_flipscreen(g);
@@ -4614,7 +4624,7 @@ pub fn loadcurrentmap(g: &mut Game) {
             ed().backgroundlist.set_current_path(Path::new("gfx/packs/Classic/backgrounds/Land_Classic.png"));
         }
 
-        g.rm.spr_background = ImageLoader::new(&path).without_color_key().create();
+        g.rm.spr_background = ImageLoader::new(&path).without_color_key().create(g);
 
         ed().g_iNumPlatforms = g.g_map.platforms.len() as i16;
 

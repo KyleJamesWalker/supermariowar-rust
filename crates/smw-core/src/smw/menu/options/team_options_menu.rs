@@ -65,7 +65,7 @@ impl UI_TeamOptionsMenu {
 
             this.miTeamOptionsMenuLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miTeamOptionsMenuRightHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miTeamOptionsMenuHeaderText = Ptr::new_box(MI_HeaderText::new("Team Options Menu", 320, 5));
+            this.miTeamOptionsMenuHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Team Options Menu", 320, 5));
         }
 
         let kills = ctl_ptr(this.miTeamKillsField);
@@ -86,7 +86,7 @@ impl UI_TeamOptionsMenu {
         let c = ctl_ptr(this.miTeamOptionsMenuHeaderText);
         this.add_non_control(c);
 
-        this.set_initial_focus(kills);
+        this.set_initial_focus(g, kills);
         this.set_cancel_code(MENU_CODE_BACK_TO_OPTIONS_MENU);
         this
     }

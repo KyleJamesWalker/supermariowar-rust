@@ -139,19 +139,19 @@ impl CObjectTrait for MO_SpinAttack {
 
                 let mut fHitBlock = false;
                 if !topleftblock.is_null() && !topleftblock.is_transparent() && !topleftblock.is_hidden() {
-                    fHitBlock = topleftblock.collide_object_dir(self.as_mo_ptr(), 3);
+                    fHitBlock = topleftblock.collide_object_dir(g, self.as_mo_ptr(), 3);
                 }
 
                 if !fHitBlock && !toprightblock.is_null() && !toprightblock.is_transparent() && !toprightblock.is_hidden() {
-                    fHitBlock = toprightblock.collide_object_dir(self.as_mo_ptr(), 1);
+                    fHitBlock = toprightblock.collide_object_dir(g, self.as_mo_ptr(), 1);
                 }
 
                 if !fHitBlock && !bottomleftblock.is_null() && !bottomleftblock.is_transparent() && !bottomleftblock.is_hidden() {
-                    fHitBlock = bottomleftblock.collide_object_dir(self.as_mo_ptr(), 3);
+                    fHitBlock = bottomleftblock.collide_object_dir(g, self.as_mo_ptr(), 3);
                 }
 
                 if !fHitBlock && !bottomrightblock.is_null() && !bottomrightblock.is_transparent() && !bottomrightblock.is_hidden() {
-                    fHitBlock = bottomrightblock.collide_object_dir(self.as_mo_ptr(), 1);
+                    fHitBlock = bottomrightblock.collide_object_dir(g, self.as_mo_ptr(), 1);
                 }
 
                 if fHitBlock {

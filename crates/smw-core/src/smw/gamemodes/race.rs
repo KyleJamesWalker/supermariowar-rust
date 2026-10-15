@@ -63,6 +63,7 @@ impl CGM_Race {
 
     pub fn set_next_goal(&mut self, g: &mut Game, teamID: i16) {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
         unsafe {
             self.nextGoal[teamID as usize] += 1;
             if self.nextGoal[teamID as usize] >= self.quantity {
@@ -78,7 +79,7 @@ impl CGM_Race {
                     }
 
                     if g.score[teamID as usize].score >= self.goal {
-                        g.score[teamID as usize].set_score(self.goal);
+                        gp.score[teamID as usize].set_score(g, self.goal);
                         self.winningteam = teamID;
                         self.gameover = true;
 
@@ -170,7 +171,7 @@ impl CGameModeTrait for CGM_Race {
             }
 
             if player.score().score >= self.goal {
-                player.score().set_score(self.goal);
+                player.score().set_score(g, self.goal);
                 self.winningteam = player.get_team_id();
                 self.gameover = true;
 

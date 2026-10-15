@@ -1,5 +1,6 @@
 //! Port of src/common/Score.h
 
+use crate::game::Game;
 use crate::game::game;
 use crate::globals::Aliased;
 /// `CScore::AdjustScore` is defined in smw/player.cpp, so its port lives in `smw::player`.
@@ -27,8 +28,8 @@ impl CScore {
         CScore { place: iPlace, displayorder: iPlace, ..Default::default() }
     }
 
-    pub fn set_score(&mut self, iValue: i16) {
-        if crate::smw::net_outcomes::score_locked(game().get()) {
+    pub fn set_score(&mut self, g: &mut Game, iValue: i16) {
+        if crate::smw::net_outcomes::score_locked(g) {
             return;
         }
         self.score = iValue;

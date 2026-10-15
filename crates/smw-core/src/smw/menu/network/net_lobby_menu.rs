@@ -67,14 +67,14 @@ impl UI_NetLobbyMenu {
             g.netplay.client.set_room_list_ui_control(this.miNetLobbyScroll);
 
             this.miNetLobbyJoiningDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
-            this.miNetLobbyJoiningDialogText = Ptr::new_box(MI_HeaderText::new("Joining...", 320, 240 - 12));
+            this.miNetLobbyJoiningDialogText = Ptr::new_box(MI_HeaderText::new(g, "Joining...", 320, 240 - 12));
 
             this.miNetLobbyJoiningDialogImage.set_visible(false);
             this.miNetLobbyJoiningDialogText.set_visible(false);
 
             this.miNetLobbyLeftHeaderBar = Ptr::new_box(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miNetLobbyRightHeaderBar = Ptr::new_box(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miNetLobbyHeaderText = Ptr::new_box(MI_HeaderText::new("Multiplayer Lobby Menu", 320, 5));
+            this.miNetLobbyHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Multiplayer Lobby Menu", 320, 5));
         }
 
         let scroll = ctl_ptr(this.miNetLobbyScroll);
@@ -99,7 +99,7 @@ impl UI_NetLobbyMenu {
         this.add_non_control(r);
         this.add_non_control(h);
 
-        this.set_initial_focus(newroom);
+        this.set_initial_focus(g, newroom);
         this.set_cancel_code(MENU_CODE_TO_NET_SERVERS_MENU);
         this
     }
@@ -115,7 +115,7 @@ impl UI_NetLobbyMenu {
         self.miNetLobbyJoiningDialogText.set_visible(true);
 
         let t = ctl_ptr(self.miNetLobbyJoiningDialogText);
-        self.set_initial_focus(t);
+        self.set_initial_focus(g, t);
         self.set_cancel_code(MENU_CODE_NET_JOIN_ROOM_ABORT);
         self.reset_menu(g);
     }
@@ -130,7 +130,7 @@ impl UI_NetLobbyMenu {
         self.miNetLobbyJoiningDialogText.set_visible(false);
 
         let b = ctl_ptr(self.miNetLobbyNewRoomButton);
-        self.set_initial_focus(b);
+        self.set_initial_focus(game().get(), b);
         self.set_cancel_code(MENU_CODE_TO_NET_SERVERS_MENU);
     }
 }

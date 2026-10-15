@@ -34,6 +34,7 @@ impl CGameModeTrait for CGM_Coins {
     crate::impl_cgamemode_plumbing!();
 
     fn init(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         cgamemode_init(g, self);
 
         unsafe {
@@ -42,7 +43,7 @@ impl CGameModeTrait for CGM_Coins {
             }
 
             for _iCoin in 0..game().game_values.gamemodesettings.coins.quantity {
-                g.objectcontainer[1].add(Ptr::new_box(MO_Coin::new(Ptr::from_mut(&mut g.rm.spr_coin), Vec2f::zero(), Vec2s::zero(), 2, 0, 0, 0, true)));
+                gp.get().objectcontainer[1].add(Ptr::new_box(MO_Coin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), Vec2f::zero(), Vec2s::zero(), 2, 0, 0, 0, true)));
             }
         }
     }
@@ -85,7 +86,7 @@ impl CGameModeTrait for CGM_Coins {
     fn check_winner(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> PlayerKillType {
         if !self.gameover && self.goal > -1 {
             if player.score().score >= self.goal {
-                player.score().set_score(self.goal);
+                player.score().set_score(g, self.goal);
                 self.winningteam = player.get_team_id();
                 self.gameover = true;
 

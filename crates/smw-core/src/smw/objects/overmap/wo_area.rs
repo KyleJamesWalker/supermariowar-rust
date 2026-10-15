@@ -32,7 +32,7 @@ pub struct OMO_Area {
 impl_base!(OMO_Area => io_over_map_object: IO_OverMapObject);
 
 impl OMO_Area {
-    pub fn new(nspr: Ptr<gfxSprite>, iNumAreas: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, iNumAreas: i16) -> Self {
         let mut this = OMO_Area {
             io_over_map_object: IO_OverMapObject::new(nspr, Vec2s::new(1280, 960), 5, 0, -1, -1, -1, -1, -1, -1, -1, -1),
             numareas: iNumAreas,
@@ -50,7 +50,7 @@ impl OMO_Area {
 
         this.objectType = object_area;
 
-        this.place_area(game().get());
+        this.place_area(g);
         this
     }
 

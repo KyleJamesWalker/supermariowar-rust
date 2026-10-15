@@ -105,6 +105,7 @@ impl UI_ControlTrait for MI_Button {
     }
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if !self.m_visible {
             return;
         }
@@ -125,7 +126,7 @@ impl UI_ControlTrait for MI_Button {
 
             match self.m_text_align {
                 TextAlign::LEFT => {
-                    g.rm.menu_font_large.draw_chop_right(x + 16 + (if iImageW > 0 { iImageW + 2 } else { 0 }), y + 5, iWidth - 32, &self.szName);
+                    gp.rm.menu_font_large.draw_chop_right(g, x + 16 + (if iImageW > 0 { iImageW + 2 } else { 0 }), y + 5, iWidth - 32, &self.szName);
                     if !self.sprImage.is_null() {
                         self.sprImage.draw_src(g, x + 16, y + 16 - (iImageH >> 1), &srcRect);
                     }

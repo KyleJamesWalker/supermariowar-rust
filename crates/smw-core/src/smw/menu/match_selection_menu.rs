@@ -105,10 +105,10 @@ impl UI_MatchSelectionMenu {
 
             this.miMatchSelectionMenuLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miMatchSelectionMenuRightHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miMatchSelectionMenuHeaderText = Ptr::new_box(MI_HeaderText::new("Match Type Menu", 320, 5));
+            this.miMatchSelectionMenuHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Match Type Menu", 320, 5));
 
             this.miMatchSelectionDisplayImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_match_select), 160, 80, 0, 0, 320, 240, 1, 1, 0));
-            this.miWorldPreviewDisplay = Ptr::new_box(MI_WorldPreviewDisplay::new(160, 80, 20, 15));
+            this.miWorldPreviewDisplay = Ptr::new_box(MI_WorldPreviewDisplay::new(g, 160, 80, 20, 15));
             this.miWorldPreviewDisplay.set_visible(false);
         }
 
@@ -139,7 +139,7 @@ impl UI_MatchSelectionMenu {
         this.add_control(minigame, world, start, null, null);
         this.add_control(start, minigame, matchf, null, null);
 
-        this.set_initial_focus(start);
+        this.set_initial_focus(g, start);
         this.set_cancel_code(MENU_CODE_TO_MAIN_MENU);
         this
     }

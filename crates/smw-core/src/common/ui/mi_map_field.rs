@@ -39,7 +39,7 @@ crate::impl_base!(MI_MapField => mi_map_preview: MI_MapPreview);
 impl MI_MapField {
     #[allow(clippy::too_many_arguments)]
     pub fn new(nspr: Ptr<gfxSprite>, x: i16, y: i16, name: impl Into<String>, width: i16, indent: i16, showtags: bool) -> Self {
-        let mi_map_preview = MI_MapPreview::new(nspr, x, y, width, indent);
+        let mi_map_preview = MI_MapPreview::new(game().get(), nspr, x, y, width, indent);
         let (px, py, iWidth) = (mi_map_preview.m_pos.x, mi_map_preview.m_pos.y, mi_map_preview.iWidth);
 
         let mut miModifyImageLeft = Box::new(MI_Image::new(nspr, px + indent - 26, py + 4, 32, 64, 26, 24, 4, 1, 8));
@@ -243,6 +243,7 @@ impl UI_ControlTrait for MI_MapField {
     }
 
     fn draw(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if !self.m_visible {
             return;
         }
@@ -259,8 +260,8 @@ impl UI_ControlTrait for MI_MapField {
             self.spr.draw_src(g, x + indent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
             self.spr.draw_src(g, x + indent + 16, y, &SDL_Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
 
-            g.rm.menu_font_large.draw_chop_right(x + 16, y + 5, indent - 8, &self.szName);
-            g.rm.menu_font_large.draw_chop_right(x + indent + 8, y + 5, width - indent - 24, &self.szMapName);
+            gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 5, indent - 8, &self.szName);
+            gp.rm.menu_font_large.draw_chop_right(g, x + indent + 8, y + 5, width - indent - 24, &self.szMapName);
         }
 
         self.mi_map_preview.draw_impl(g);

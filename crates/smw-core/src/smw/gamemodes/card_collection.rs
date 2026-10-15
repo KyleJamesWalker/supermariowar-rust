@@ -45,6 +45,7 @@ impl CGM_Collection {
     }
 
     fn drop_card(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, pos: Vec2s) {
+        let mut gp = g.ptr();
         {
             let speed: f32 = 7.0f32 + RANDOM_INT(9) as f32 / 2.0f32;
             let angle: f32 = -(RANDOM_INT(314) as f32) / 100.0f32;
@@ -60,13 +61,14 @@ impl CGM_Collection {
             player.score().subscore[1] &= iCardMaskInverted;
 
             unsafe {
-                g.objectcontainer[1].add(Ptr::new_box(MO_CollectionCard::new(Ptr::from_mut(&mut g.rm.spr_collectcards), 1, iValue, 30, vel, pos)));
+                gp.get().objectcontainer[1].add(Ptr::new_box(MO_CollectionCard::new(g, Ptr::from_mut(&mut gp.get().rm.spr_collectcards), 1, iValue, 30, vel, pos)));
             }
         }
     }
 }
 
 fn spawn_card(g: &mut Game) {
+        let mut gp = g.ptr();
     unsafe {
         let iRandom: i16 = RANDOM_INT(5) as i16;
         let mut iRandomCard: i16 = 0;
@@ -76,7 +78,7 @@ fn spawn_card(g: &mut Game) {
             iRandomCard = 1;
         }
 
-        g.objectcontainer[1].add(Ptr::new_box(MO_CollectionCard::new(Ptr::from_mut(&mut g.rm.spr_collectcards), 0, iRandomCard, 0, Vec2f::zero(), Vec2s::zero())));
+        gp.get().objectcontainer[1].add(Ptr::new_box(MO_CollectionCard::new(g, Ptr::from_mut(&mut gp.get().rm.spr_collectcards), 0, iRandomCard, 0, Vec2f::zero(), Vec2s::zero())));
     }
 }
 
@@ -200,7 +202,7 @@ impl CGameModeTrait for CGM_Collection {
     fn check_winner(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> PlayerKillType {
         if self.goal > -1 {
             if player.score().score >= self.goal {
-                player.score().set_score(self.goal);
+                player.score().set_score(g, self.goal);
                 self.winningteam = player.get_team_id();
                 self.gameover = true;
 

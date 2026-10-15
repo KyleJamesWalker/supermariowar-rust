@@ -28,7 +28,8 @@ pub const WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET: i16 = 900;
 
 /// Static-storage constructor of `WorldMap g_worldmap(0, 0);` (needs `game_values` constructed first).
 pub fn init_globals(g: &mut Game) {
-    unsafe { g.g_worldmap.init(WorldMap::new(0, 0)) };
+        let mut gp = g.ptr();
+    unsafe { gp.g_worldmap.init(WorldMap::new(g, 0, 0)) };
 }
 
 fn pop_next<'a>(list: &mut VecDeque<&'a str>) -> &'a str {
@@ -589,13 +590,13 @@ impl WorldMap {
         }
     }
 
-    pub fn new(w: i16, h: i16) -> Self {
+    pub fn new(g: &mut Game, w: i16, h: i16) -> Self {
         let mut this = Self::blank();
         this.iWidth = w;
         this.iHeight = h;
         this.tiles = Grid::new(w as usize, h as usize);
 
-        reset_tour_stops(game().get()); // FIXME
+        reset_tour_stops(g); // FIXME
         this
     }
 

@@ -45,7 +45,7 @@ fn main() {
         game().rm = Ptr::new_box(CResourceManager::new());
         game().g_map = Ptr::from_box(CMap::new());
         game().filterslist = Ptr::new_box(FiltersList::new());
-        game().skinlist = Ptr::new_box(SkinList::new());
+        game().skinlist = Ptr::new_box(SkinList::new(game().get()));
         game().menugraphicspacklist = Ptr::new_box(GraphicsList::new());
         game().worldgraphicspacklist = Ptr::new_box(GraphicsList::new());
         game().gamegraphicspacklist = Ptr::new_box(GraphicsList::new());

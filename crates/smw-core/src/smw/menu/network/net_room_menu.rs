@@ -46,6 +46,8 @@ crate::impl_base!(UI_NetRoomMenu => ui_menu: UI_Menu);
 impl UI_NetRoomMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
+        let mut gp = g.ptr();
         let mut this = Box::<Self>::default();
         unsafe {
             let selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
@@ -57,7 +59,7 @@ impl UI_NetRoomMenu {
             this.miNetRoomStartButton.set_code(MENU_CODE_TO_NET_ROOM_START_IN_PROGRESS);
 
             this.miNetRoomMessages = Ptr::new_box(MI_ChatMessageBox::new(20, 350, 640 - 2 * 26, 1));
-            this.miNetRoomMapPreview = Ptr::new_box(MI_MapPreview::new(selectfield, 264, 2, 400, 120));
+            this.miNetRoomMapPreview = Ptr::new_box(MI_MapPreview::new(g, selectfield, 264, 2, 400, 120));
 
             this.miNetRoomMessageField = Ptr::new_box(MI_TextField::new(plain, 26, 432, "Say", 464 - 36, 60));
             this.miNetRoomMessageField.set_data(g, &mut gp.netplay.mychatmessage, NET_MAX_CHAT_MSG_LENGTH as i16);
@@ -100,7 +102,7 @@ impl UI_NetRoomMenu {
 
         unsafe {
             this.miNetRoomStartingDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
-            this.miNetRoomStartingDialogText = Ptr::new_box(MI_HeaderText::new("Starting...", 320, 240 - 40));
+            this.miNetRoomStartingDialogText = Ptr::new_box(MI_HeaderText::new(g, "Starting...", 320, 240 - 40));
         }
 
         this.miNetRoomStartingDialogImage.set_visible(false);
@@ -114,7 +116,7 @@ impl UI_NetRoomMenu {
             let plain = Ptr::from_mut(&mut g.rm.menu_plain_field);
             this.miNetRoomLeftHeaderBar = Ptr::new_box(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miNetRoomRightHeaderBar = Ptr::new_box(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miNetRoomHeaderText = Ptr::new_box(MI_HeaderText::new("Multiplayer Room Menu", 320, 5));
+            this.miNetRoomHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Multiplayer Room Menu", 320, 5));
         }
 
         let (l, r, h) = (ctl_ptr(this.miNetRoomLeftHeaderBar), ctl_ptr(this.miNetRoomRightHeaderBar), ctl_ptr(this.miNetRoomHeaderText));
@@ -122,12 +124,13 @@ impl UI_NetRoomMenu {
         this.add_non_control(r);
         this.add_non_control(h);
 
-        this.set_initial_focus(field);
+        this.set_initial_focus(g, field);
         this.set_cancel_code(MENU_CODE_TO_NET_LOBBY_MENU);
         this
     }
 
     pub fn refresh(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let mut gp = g.ptr();
         unsafe {
             let name = g.netplay.currentRoom.name.clone();
@@ -147,7 +150,7 @@ impl UI_NetRoomMenu {
                     gp.get().rm.load_menu_skin(g, p, gp.get().game_values.skinids[0], p, false);
                 } else if file_exists(&path) {
                     println!("  player {} -> {}", p, path);
-                    if !g.rm.load_menu_skin_path(p, Path::new(&path), p, false) {
+                    if !gp.rm.load_menu_skin_path(g, p, Path::new(&path), p, false) {
                         gp.get().rm.load_menu_skin(g, p, gp.get().game_values.skinids[p as usize], p, false);
                     }
                 } else {
@@ -178,7 +181,7 @@ impl UI_NetRoomMenu {
                 self.remember_current();
 
                 let t = ctl_ptr(self.miNetRoomStartingDialogText);
-                self.set_initial_focus(t);
+                self.set_initial_focus(g, t);
                 self.set_cancel_code(MENU_CODE_TO_NET_ROOM_MENU);
                 self.reset_menu(g);
             }
@@ -190,7 +193,7 @@ impl UI_NetRoomMenu {
         self.miNetRoomStartingDialogText.set_visible(false);
 
         let f = ctl_ptr(self.miNetRoomMessageField);
-        self.set_initial_focus(f);
+        self.set_initial_focus(game().get(), f);
         self.set_cancel_code(MENU_CODE_TO_NET_LOBBY_MENU);
     }
 
