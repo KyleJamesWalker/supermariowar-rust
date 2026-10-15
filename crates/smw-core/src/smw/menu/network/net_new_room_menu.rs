@@ -9,6 +9,7 @@ use crate::common::uicontrol::{ctl_ptr, TextAlign};
 use crate::common::uimenu::UI_Menu;
 use crate::common_netplay::protocol_definitions::{NET_MAX_ROOM_NAME_LENGTH, NET_MAX_ROOM_PASSWORD_LENGTH};
 use crate::globals::Ptr;
+use crate::smw::net::net_save_server_list;
 
 #[derive(Default)]
 pub struct UI_NetNewRoomMenu {
@@ -93,6 +94,7 @@ impl UI_NetNewRoomMenu {
             if game().netplay.newroom_name.len() > 2 {
                 game().netplay.client.send_create_room_message();
                 game().netplay.operationInProgress = true;
+                net_save_server_list();
 
                 self.miNetNewRoomCreatingDialogImage.set_visible(true);
                 self.miNetNewRoomCreatingDialogText.set_visible(true);

@@ -96,7 +96,7 @@ const padScript = () => {
     hat('up');
     button(0);
     f += 10;
-    for (let i = 0; i < 'Player'.length; i++) button(1);
+    for (let i = 0; i < PLAYER.length; i++) button(1);
     type(PLAYER);
     hat('down');
     hat('down');
@@ -108,6 +108,7 @@ const padScript = () => {
     f += 20;
     button(0);
     f += 10;
+    for (let i = 0; i < ROOM.length; i++) button(1);
     type(PAD_ROOM);
     hat('down');
     hat('down');
@@ -421,6 +422,9 @@ try {
     const created = relayLog.split('\n').find((l) => l.includes('New room by')) ?? '';
     console.log(`     relay: ${created.trim()}`);
     check(created.includes(`[${PLAYER}@`) && created.includes(`name: ${ROOM};`), 'the relay lists the room with the typed room and player names');
+
+    // The shell saves settings to IndexedDB every 5 s; save now so the pad session starts with the room name.
+    await evaluate(`new Promise((ok) => Module.FS.syncfs(false, (err) => ok(!err)))`);
 
     const rec = await recording();
     writeFileSync(join(out, 'recording.txt'), rec);
