@@ -600,7 +600,7 @@ jobs:
   web:
     needs: build-web
     runs-on: ubuntu-24.04
-    timeout-minutes: 105
+    timeout-minutes: 115
     env:
       SDL_RENDER_DRIVER: software
       CHROME: /usr/bin/google-chrome
@@ -645,8 +645,8 @@ jobs:
       - name: Web netplay test
         if: always()
         env:
-          NET_GAMES: net_game net_game_blocks net_game_stomp net_game_coins net_game_classic net_game_frenzy net_game_stompkill
-        run: timeout 50m node tools/web_netplay_test.mjs "$RUNNER_TEMP/web-netplay"
+          NET_GAMES: net_game net_game_blocks net_game_stomp net_game_coins net_game_classic net_game_frenzy net_game_stompkill net_game_stompkill_powerup
+        run: timeout 60m node tools/web_netplay_test.mjs "$RUNNER_TEMP/web-netplay"
 
       - name: Web replays
         if: always()
