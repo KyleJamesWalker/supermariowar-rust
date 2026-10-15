@@ -300,7 +300,7 @@ pub fn draw_match_preview() {
         if !gm.szGoalName.is_empty() {
             lines.push(if gm.goal < 0 { format!("{}: Unlimited", gm.szGoalName) } else { format!("{}: {}", gm.szGoalName, gm.goal) });
         }
-        lines.extend(crate::smw::gs_menu::describe_net_game_mode_settings());
+        lines.extend(crate::smw::gs_menu::describe_net_game_mode_settings(game().get()));
         if !game().netplay.match_map_name.is_empty() {
             lines.push(format!("Map: {}", game().netplay.match_map_name));
         }
@@ -1339,9 +1339,9 @@ impl NetGameHost {
 
         RandomNumberGenerator::generator().reseed(net_record::value_u32("time", || crate::smw::harness::net_seed().unwrap_or(unsafe { libc_time() } as u32)));
         if unsafe { game().netplay.randomize_settings } {
-            crate::smw::gs_menu::roll_net_game_mode_settings();
+            crate::smw::gs_menu::roll_net_game_mode_settings(game().get());
         } else {
-            crate::smw::gs_gameplay::set_game_mode_settings_from_menu();
+            crate::smw::gs_gameplay::set_game_mode_settings_from_menu(game().get());
         }
         let settings = game_mode_settings_package();
         let map_name = unsafe {

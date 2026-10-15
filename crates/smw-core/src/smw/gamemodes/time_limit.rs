@@ -85,7 +85,7 @@ pub fn cgm_timelimit_think(this: &mut CGM_TimeLimit) {
             remove_players_but_highest_scoring();
             this.gameover = true;
 
-            count_alive_teams(Some(&mut this.cgame_mode.winningteam));
+            count_alive_teams(game().get(), Some(&mut this.cgame_mode.winningteam));
         }
     }
 }

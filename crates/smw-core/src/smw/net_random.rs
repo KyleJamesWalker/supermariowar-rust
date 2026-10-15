@@ -515,11 +515,11 @@ fn run(ev: Ev, args: &[i32]) {
                 p.net_podobo_rain();
             }
         }
-        Ev::Pow => crate::smw::gs_gameplay::net_pow_kills(args),
+        Ev::Pow => crate::smw::gs_gameplay::net_pow_kills(game().get(), args),
         Ev::MysterySwap => {
-            crate::smw::gs_gameplay::net_mystery_swap(args[0] as i16);
+            crate::smw::gs_gameplay::net_mystery_swap(game().get(), args[0] as i16);
         }
-        Ev::BulletBills => crate::smw::gs_gameplay::net_bullet_bill(args[0] as usize),
+        Ev::BulletBills => crate::smw::gs_gameplay::net_bullet_bill(game().get(), args[0] as usize),
         Ev::ShellDeath => obj::carriable::co_shell::net_shell_death(find_object(args[0]), args[1]),
         Ev::Secret => crate::smw::objectgame::net_check_secret(args[0] as i16),
         Ev::ThrowBoxItem => obj::carriable::co_throw_box::net_release_item(args),

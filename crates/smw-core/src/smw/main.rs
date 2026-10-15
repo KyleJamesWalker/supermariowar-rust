@@ -102,7 +102,7 @@ unsafe extern "C-unwind" fn gameloop_frame_web() {
     while ml.web_accumulated >= frame_ms && frames < MAX_CATCH_UP_FRAMES && game().game_values.appstate != crate::common::game_values::AppState::Quit {
         assign_hotplugged();
         harness::frame_start();
-        GameStateManager::instance().currentState.get().update();
+        GameStateManager::instance().currentState.get().update(game().get());
         harness::frame_end();
 
         ml.web_accumulated -= frame_ms;
@@ -144,7 +144,7 @@ unsafe extern "C-unwind" fn gameloop_frame() {
     crate::smw::touch::flush();
     harness::frame_start();
     phase(5);
-    GameStateManager::instance().currentState.get().update();
+    GameStateManager::instance().currentState.get().update(game().get());
     phase(6);
     harness::frame_end();
 

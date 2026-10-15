@@ -1039,7 +1039,7 @@ impl CPlayer {
                     self.set_powerup(3);
                 }
                 PowerupType::MysteryMushroom => {
-                    swap_players(self.localID);
+                    swap_players(game().get(), self.localID);
                 }
                 PowerupType::Boomerang => {
                     self.powerup = -1;

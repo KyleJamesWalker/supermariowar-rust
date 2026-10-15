@@ -5,6 +5,7 @@
 //! replay loads the game data, `restore`s the checkpoint and enters gameplay where the menu would have,
 //! so its dump from that frame on equals the full replay's.
 
+use crate::game::Game;
 use crate::common::game_values::AppState;
 use crate::common::gameplay_styles::StarStyle;
 use crate::common::version::GAME_VERSION;
@@ -262,7 +263,7 @@ pub fn restore(bytes: Vec<u8>) -> Result<(), String> {
     if s.damaged || s.pos != s.buf.len() {
         return Err("checkpoint is damaged".to_string());
     }
-    enter_gameplay_tail();
+    enter_gameplay_tail(game().get());
     Ok(())
 }
 
@@ -603,12 +604,12 @@ pub struct SegmentState {
 }
 
 impl GameState for SegmentState {
-    fn update(&mut self) {
+    fn update(&mut self, g: &mut Game) {
         unsafe {
-            crate::smw::gs_splash_screen::load_game_data();
-            game().eyecandy[2].clean();
-            game().game_values.playerInput.reset_keys();
-            game().game_values.appstate = AppState::Menu;
+            crate::smw::gs_splash_screen::load_game_data(g);
+            g.eyecandy[2].clean();
+            g.game_values.playerInput.reset_keys();
+            g.game_values.appstate = AppState::Menu;
             MenuState::instance().init();
             GameplayState::instance().init();
         }

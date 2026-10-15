@@ -411,7 +411,7 @@ fn dump_frame(out: &mut impl Write) -> std::io::Result<()> {
         let menu = MenuState::instance();
         writeln!(out, "M {} focus={} modifying={}", menu.harness_menu_name(), menu.harness_focus_index(), menu.harness_modifying() as i32)?;
     } else if state == "gameplay" {
-        GameplayState::instance().harness_dump(out)?;
+        GameplayState::instance().harness_dump(game().get(), out)?;
     }
 
     for line in unsafe { game().sfx.sfx_events.iter().chain(h().spawn_events.iter()) } {

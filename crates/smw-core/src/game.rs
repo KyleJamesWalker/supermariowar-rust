@@ -14,7 +14,7 @@ use crate::common::editor_harness::EditorHarness;
 use crate::common::game_values::CGameValues;
 use crate::common::gfx::gfx_sdl::GraphicsSDL;
 use crate::common::gfx::gfx_palette::gfxPalette;
-use crate::globals::{Global, Ptr};
+use crate::globals::{Aliased, Global, Ptr};
 use crate::leveleditor::leveleditor::LevelEditorState;
 use crate::smw::gamemodes::{bonus_house::CGM_Bonus, mini_boss::CGM_Boss_MiniGame, mini_boxes::CGM_Boxes_MiniGame, mini_pipe::CGM_Pipe_MiniGame};
 use crate::smw::fps_limiter::FPSLimiter;
@@ -38,6 +38,7 @@ use crate::smw::world::WorldMap;
 use crate::worldeditor::worldeditor::WorldEditorState;
 
 pub struct Game {
+    pub _alias: Aliased,
     pub game_values: Global<CGameValues>,
     /// Must be created before `maplist`, whose constructor reads it.
     pub filterslist: Ptr<FiltersList>,
@@ -129,6 +130,7 @@ pub struct Game {
 impl Game {
     pub const fn new() -> Self {
         Game {
+            _alias: Aliased::new(),
             game_values: Global::uninit(),
             filterslist: Ptr::null(),
             maplist: Ptr::null(),

@@ -50,7 +50,7 @@ impl CObjectTrait for PU_MysteryMushroomPowerup {
             if self.state > 0 {
                 self.dead = true;
 
-                if !swap_players(player.localID) {
+                if !swap_players(game().get(), player.localID) {
                     game().eyecandy[2].emplace(EC_SingleAnimation::new(
                         Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                         (player.ix as i32 + (HALFPW) - 16) as i16,

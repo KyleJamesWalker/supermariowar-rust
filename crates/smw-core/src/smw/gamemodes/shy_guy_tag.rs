@@ -243,7 +243,7 @@ impl CGameModeTrait for CGM_ShyGuyTag {
             remove_players_but_highest_scoring();
             self.gameover = true;
 
-            count_alive_teams(Some(&mut self.cgame_mode.winningteam));
+            count_alive_teams(game().get(), Some(&mut self.cgame_mode.winningteam));
         } else if !self.playedwarningsound && self.goal != -1 && player.score().score as f64 >= self.goal as f64 * 0.8 {
             self.playwarningsound();
         }
