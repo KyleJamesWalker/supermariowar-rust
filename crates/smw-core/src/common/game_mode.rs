@@ -1,5 +1,6 @@
 //! Port of src/common/GameMode.h
 
+use crate::game::game;
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
 use crate::globals::{Aliased, Ptr};
@@ -86,10 +87,10 @@ pub trait CGameModeTrait: Any {
     fn as_any(&mut self) -> &mut dyn Any;
 
     fn init(&mut self) {
-        gm::cgamemode_init(self)
+        gm::cgamemode_init(game().get(), self)
     }
     fn think(&mut self) {
-        gm::cgamemode_think(self)
+        gm::cgamemode_think(game().get(), self)
     }
     fn draw_background(&mut self) {}
     fn draw_foreground(&mut self) {}

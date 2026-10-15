@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/Tag.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::{EC_GravText, EC_SingleAnimation};
 use crate::common::game_mode::*;
 use crate::common::game_values::if_sound_on_play;
@@ -22,7 +23,7 @@ pub struct CGM_Tag {
 impl_base!(CGM_Tag => cgame_mode: CGameMode);
 
 /// The `j`/`k` loop shared by `think` and `playerkilledself`.
-unsafe fn tag_warning_needed(goal: i16) -> bool {
+unsafe fn tag_warning_needed(g: &mut Game, goal: i16) -> bool {
     let mut countscore: i16 = 0;
     let mut playwarning = false;
     for j in 0..game().score_cnt {
@@ -31,7 +32,7 @@ unsafe fn tag_warning_needed(goal: i16) -> bool {
                 continue;
             }
 
-            countscore = (countscore as i32 + game().score[k as usize].score as i32) as i16;
+            countscore = (countscore as i32 + g.score[k as usize].score as i32) as i16;
         }
 
         if countscore as f64 <= goal as f64 * 0.2 {
@@ -53,7 +54,7 @@ unsafe fn tag_warning_needed(goal: i16) -> bool {
 impl CGM_Tag {
     fn reassign(&mut self) {
         let fGetHighest = !self.fReverseScoring;
-        self.m_tagged = self.get_highest_score_player(fGetHighest);
+        self.m_tagged = self.get_highest_score_player(game().get(), fGetHighest);
     }
 
     pub fn new() -> Self {
@@ -78,7 +79,7 @@ impl CGameModeTrait for CGM_Tag {
     crate::impl_cgamemode_plumbing!();
 
     fn init(&mut self) {
-        cgamemode_init(self);
+        cgamemode_init(game().get(), self);
         self.fReverseScoring = self.goal == -1;
 
         unsafe {
@@ -96,9 +97,9 @@ impl CGameModeTrait for CGM_Tag {
 
     fn think(&mut self) {
         if self.gameover {
-            self.displayplayertext();
+            self.displayplayertext(game().get());
         } else {
-            if self.m_tagged.is_null() && !net_random::event(Ev::TagReassign, &[]) {
+            if self.m_tagged.is_null() && !net_random::event(game().get(), Ev::TagReassign, &[]) {
                 self.reassign();
             }
             if self.m_tagged.is_null() {
@@ -113,9 +114,9 @@ impl CGameModeTrait for CGM_Tag {
                         self.counter = 0;
 
                         if self.fReverseScoring {
-                            tagged.score().adjust_score(1);
+                            tagged.score().adjust_score(game().get(), 1);
                         } else {
-                            tagged.score().adjust_score(-1);
+                            tagged.score().adjust_score(game().get(), -1);
                         }
                     }
                 }
@@ -125,10 +126,10 @@ impl CGameModeTrait for CGM_Tag {
                 return;
             }
 
-            let playwarning = unsafe { tag_warning_needed(self.goal) };
+            let playwarning = unsafe { tag_warning_needed(game().get(), self.goal) };
 
             if playwarning && !self.playedwarningsound {
-                self.playwarningsound();
+                self.playwarningsound(game().get());
             }
 
             let mut tagged = self.m_tagged;
@@ -143,7 +144,7 @@ impl CGameModeTrait for CGM_Tag {
         unsafe {
             if inflictor == self.m_tagged {
                 self.m_tagged = other;
-                inflictor.shield().reset();
+                inflictor.shield().reset(game().get());
                 game().eyecandy[2].emplace(EC_GravText::new(
                     Ptr::from_mut(&mut game().rm.game_font_large),
                     other.center_x(),
@@ -158,15 +159,15 @@ impl CGameModeTrait for CGM_Tag {
                     3,
                     8,
                 ));
-                if_sound_on_play(&mut game().rm.sfx_transform);
+                if_sound_on_play(game().get(), &mut game().rm.sfx_transform);
             }
 
             if !self.gameover {
                 if self.fReverseScoring {
-                    other.score().adjust_score(5);
+                    other.score().adjust_score(game().get(), 5);
                     return PlayerKillType::Normal;
                 } else {
-                    other.score().adjust_score(-5);
+                    other.score().adjust_score(game().get(), -5);
                 }
 
                 let mut countscore: i16 = 0;
@@ -179,7 +180,7 @@ impl CGameModeTrait for CGM_Tag {
                 }
 
                 if countscore as f64 <= self.goal as f64 * 0.2 && !self.playedwarningsound {
-                    self.playwarningsound();
+                    self.playwarningsound(game().get());
                 }
 
                 if other.score().score <= 0 {
@@ -199,16 +200,16 @@ impl CGameModeTrait for CGM_Tag {
 
         if !self.gameover {
             if self.fReverseScoring {
-                player.score().adjust_score(5);
+                player.score().adjust_score(game().get(), 5);
                 return PlayerKillType::Normal;
             } else {
-                player.score().adjust_score(-5);
+                player.score().adjust_score(game().get(), -5);
             }
 
-            let playwarning = unsafe { tag_warning_needed(self.goal) };
+            let playwarning = unsafe { tag_warning_needed(game().get(), self.goal) };
 
             if playwarning && !self.playedwarningsound {
-                self.playwarningsound();
+                self.playwarningsound(game().get());
             }
 
             if player.score().score <= 0 {
@@ -224,9 +225,9 @@ impl CGameModeTrait for CGM_Tag {
     fn playerextraguy(&mut self, mut player: Ptr<CPlayer>, iType: i16) {
         if !self.gameover {
             if self.fReverseScoring {
-                player.score().adjust_score((-10 * iType as i32) as i16);
+                player.score().adjust_score(game().get(), (-10 * iType as i32) as i16);
             } else {
-                player.score().adjust_score((10 * iType as i32) as i16);
+                player.score().adjust_score(game().get(), (10 * iType as i32) as i16);
             }
         }
     }

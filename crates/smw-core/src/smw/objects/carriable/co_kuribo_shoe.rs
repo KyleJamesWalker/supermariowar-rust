@@ -85,7 +85,7 @@ impl CO_SpringTrait for CO_KuriboShoe {
             self.dead = true;
             player.set_kuribo_shoe(if self.fSticky { STICKY } else { NORMAL });
             unsafe {
-                if_sound_on_play(&mut game().rm.sfx_transform);
+                if_sound_on_play(game().get(), &mut game().rm.sfx_transform);
                 game().eyecandy[2].emplace(EC_SingleAnimation::new(
                     Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
                     (player.ix as i32 + HALFPW - 16) as i16,

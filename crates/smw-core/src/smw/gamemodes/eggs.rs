@@ -34,7 +34,7 @@ impl CGameModeTrait for CGM_Eggs {
     crate::impl_cgamemode_plumbing!();
 
     fn init(&mut self) {
-        cgamemode_init(self);
+        cgamemode_init(game().get(), self);
 
         //Verify that at least 1 matching yoshi and egg exist
         let mut fEgg: [bool; 4] = [false, false, false, false];
@@ -82,7 +82,7 @@ impl CGameModeTrait for CGM_Eggs {
 
         let mut item = player.carriedItem;
         if !item.is_null() && item.get_moving_object_type() == movingobject_egg {
-            item.as_any().downcast_mut::<CO_Egg>().expect("carried egg").place_egg();
+            item.as_any().downcast_mut::<CO_Egg>().expect("carried egg").place_egg(game().get());
         }
 
         PlayerKillType::Normal
@@ -90,7 +90,7 @@ impl CGameModeTrait for CGM_Eggs {
 
     fn playerextraguy(&mut self, mut player: Ptr<CPlayer>, iType: i16) {
         if !self.gameover {
-            player.score().adjust_score(iType);
+            player.score().adjust_score(game().get(), iType);
             self.check_winner(player);
         }
     }
@@ -107,7 +107,7 @@ impl CGameModeTrait for CGM_Eggs {
                 setup_score_board(false);
                 show_score_board();
             } else if player.score().score as i32 >= self.goal as i32 - 2 && !self.playedwarningsound {
-                self.playwarningsound();
+                self.playwarningsound(game().get());
             }
         }
 

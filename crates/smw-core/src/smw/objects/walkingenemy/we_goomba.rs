@@ -59,11 +59,11 @@ impl CObjectTrait for MO_Goomba {
             unsafe {
                 let x = self.ix as i32 - self.collisionOffsetX as i32 + self.iw as i32 - 32;
                 let y = self.iy as i32 - self.collisionOffsetY as i32 + self.ih as i32 - 32;
-                game().rm.spr_goomba.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
-                game().rm.spr_iceblock.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
+                game().rm.spr_goomba.draw_src(game().get(), x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
+                game().rm.spr_iceblock.draw_src(game().get(), x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
             }
         } else {
-            mo_walking_enemy_draw(self);
+            mo_walking_enemy_draw(game().get(), self);
         }
     }
 
@@ -74,15 +74,15 @@ impl CObjectTrait for MO_Goomba {
             self.animationOffsetY = 0;
         }
 
-        mo_walking_enemy_update(self);
+        mo_walking_enemy_update(game().get(), self);
     }
 
     fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
-        mo_walking_enemy_collide_player(self, player)
+        mo_walking_enemy_collide_player(game().get(), self, player)
     }
 
     fn collide_object(&mut self, object: Ptr<dyn IO_MovingObjectTrait>) {
-        mo_walking_enemy_collide_object(self, object)
+        mo_walking_enemy_collide_object(game().get(), self, object)
     }
 }
 
@@ -114,11 +114,11 @@ impl MO_WalkingEnemyTrait for MO_Goomba {
             player.set_yi((self.iy as i32 - PH - 1) as i16);
             player.bouncejump();
             let p = player;
-            player.collisions.checktop(p.get());
+            player.collisions.checktop(game().get(), p.get());
             player.platform = Ptr::null();
 
             if game().game_values.gamemode.gamemode == game_mode_stomp && !game().game_values.gamemode.gameover {
-                player.score().adjust_score(1);
+                player.score().adjust_score(game().get(), 1);
             }
 
             if self.fBouncing {
@@ -154,7 +154,7 @@ impl MO_WalkingEnemyTrait for MO_Goomba {
                 ));
             }
 
-            if_sound_on_play(&mut game().rm.sfx_mip);
+            if_sound_on_play(game().get(), &mut game().rm.sfx_mip);
         }
 
         false

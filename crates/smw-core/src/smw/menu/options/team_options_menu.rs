@@ -1,5 +1,6 @@
 //! Port of src/smw/menu/options/TeamOptionsMenu.cpp
 
+use crate::game::Game;
 use crate::common::gameplay_styles::{TeamCollisionStyle, TournamentControlStyle};
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
@@ -31,19 +32,19 @@ pub struct UI_TeamOptionsMenu {
 crate::impl_base!(UI_TeamOptionsMenu => ui_menu: UI_Menu);
 
 impl UI_TeamOptionsMenu {
-    pub fn new() -> Box<Self> {
+    pub fn new(g: &mut Game) -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let spr = Ptr::from_mut(&mut game().rm.spr_selectfield);
-            let menu_plain_field = Ptr::from_mut(&mut game().rm.menu_plain_field);
+            let spr = Ptr::from_mut(&mut g.rm.spr_selectfield);
+            let menu_plain_field = Ptr::from_mut(&mut g.rm.menu_plain_field);
 
             this.miTeamKillsField = select_field(spr, 70, 180, "Player Collision", 500, 220,
                 &[("Off", TeamCollisionStyle::Off), ("Assist", TeamCollisionStyle::Assist), ("On", TeamCollisionStyle::On)],
-                &mut game().game_values.teamcollision);
+                &mut g.game_values.teamcollision);
 
             this.miTeamColorsField = select_field(spr, 70, 220, "Colors", 500, 220,
                 &[("Individual", false), ("Team", true)],
-                &mut game().game_values.teamcolors);
+                &mut g.game_values.teamcolors);
             this.miTeamColorsField.set_auto_advance(true);
 
             this.miTournamentControlField = select_field(spr, 70, 260, "Tournament Control", 500, 220,
@@ -57,9 +58,9 @@ impl UI_TeamOptionsMenu {
                     ("Random Loser", TournamentControlStyle::RandomLoser),
                     ("Round Robin", TournamentControlStyle::RoundRobin),
                 ],
-                &mut game().game_values.tournamentcontrolstyle);
+                &mut g.game_values.tournamentcontrolstyle);
 
-            this.miTeamOptionsMenuBackButton = Ptr::new_box(MI_Button::new(spr, 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miTeamOptionsMenuBackButton = Ptr::new_box(MI_Button::new(g, spr, 544, 432, "Back", 80, TextAlign::CENTER));
             this.miTeamOptionsMenuBackButton.set_code(MENU_CODE_BACK_TO_OPTIONS_MENU);
 
             this.miTeamOptionsMenuLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));

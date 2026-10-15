@@ -42,7 +42,7 @@ impl CObjectTrait for PU_BulletBillPowerup {
         let mut player = player;
         if self.state > 0 {
             self.dead = true;
-            player.set_stored_powerup(PowerupType::BulletBill as i16);
+            player.set_stored_powerup(game().get(), PowerupType::BulletBill as i16);
         }
 
         false

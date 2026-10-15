@@ -1,4 +1,5 @@
 //! Port of src/smw/menu/network/NetLobbyMenu.cpp
+use crate::game::Game;
 use crate::game::game;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
@@ -31,22 +32,22 @@ pub struct UI_NetLobbyMenu {
 crate::impl_base!(UI_NetLobbyMenu => ui_menu: UI_Menu);
 
 impl UI_NetLobbyMenu {
-    pub fn new() -> Box<Self> {
+    pub fn new(g: &mut Game) -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
-            let plain = Ptr::from_mut(&mut game().rm.menu_plain_field);
+            let selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
+            let plain = Ptr::from_mut(&mut g.rm.menu_plain_field);
 
-            this.miNetLobbyNewRoomButton = Ptr::new_box(MI_Button::new(selectfield, 320 + 20, 80, "New room", 320 - 30, TextAlign::CENTER));
+            this.miNetLobbyNewRoomButton = Ptr::new_box(MI_Button::new(g, selectfield, 320 + 20, 80, "New room", 320 - 30, TextAlign::CENTER));
             this.miNetLobbyNewRoomButton.set_code(MENU_CODE_TO_NET_NEW_ROOM_LEVEL_SELECT_MENU);
 
             this.miNetLobbyFilterField = Ptr::new_box(MI_TextField::new(plain, 320 + 20, 160, "Search", 320 - 30, 90));
-            this.miNetLobbyFilterField.set_data(&mut game().netplay.roomFilter, NET_MAX_ROOM_NAME_LENGTH as i16);
+            this.miNetLobbyFilterField.set_data(&mut g.netplay.roomFilter, NET_MAX_ROOM_NAME_LENGTH as i16);
 
-            this.miNetLobbyRefreshButton = Ptr::new_box(MI_Button::new(selectfield, 320 + 20, 200, "Refresh", 320 - 30, TextAlign::CENTER));
+            this.miNetLobbyRefreshButton = Ptr::new_box(MI_Button::new(g, selectfield, 320 + 20, 200, "Refresh", 320 - 30, TextAlign::CENTER));
             this.miNetLobbyRefreshButton.set_code(MENU_CODE_TO_NET_LOBBY_MENU);
 
-            this.miNetLobbyBackButton = Ptr::new_box(MI_Button::new(selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miNetLobbyBackButton = Ptr::new_box(MI_Button::new(g, selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
             this.miNetLobbyBackButton.set_code(MENU_CODE_TO_NET_SERVERS_MENU);
 
             this.miNetLobbyScroll = Ptr::new_box(MI_NetworkListScroll::new(
@@ -59,12 +60,12 @@ impl UI_NetLobbyMenu {
                 MENU_CODE_NET_JOIN_ROOM_IN_PROGRESS,
                 MENU_CODE_TO_NET_SERVERS_MENU,
             ));
-            this.miNetLobbyScroll.remote_index(&mut game().netplay.selectedRoomIndex);
+            this.miNetLobbyScroll.remote_index(&mut g.netplay.selectedRoomIndex);
             this.miNetLobbyScroll.set_auto_modify(true);
 
-            game().netplay.client.set_room_list_ui_control(this.miNetLobbyScroll);
+            g.netplay.client.set_room_list_ui_control(this.miNetLobbyScroll);
 
-            this.miNetLobbyJoiningDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut game().rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
+            this.miNetLobbyJoiningDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
             this.miNetLobbyJoiningDialogText = Ptr::new_box(MI_HeaderText::new("Joining...", 320, 240 - 12));
 
             this.miNetLobbyJoiningDialogImage.set_visible(false);
@@ -102,10 +103,10 @@ impl UI_NetLobbyMenu {
         this
     }
 
-    pub fn join_in_progress(&mut self) {
+    pub fn join_in_progress(&mut self, g: &mut Game) {
         unsafe {
-            game().netplay.client.send_join_room_message();
-            game().netplay.operationInProgress = true;
+            game().netplay.client.send_join_room_message(g);
+            g.netplay.operationInProgress = true;
         }
 
         self.miNetLobbyJoiningDialogImage.set_visible(true);
@@ -117,8 +118,8 @@ impl UI_NetLobbyMenu {
         self.reset_menu();
     }
 
-    pub fn abort_join(&mut self) {
-        unsafe { game().netplay.operationInProgress = false };
+    pub fn abort_join(&mut self, g: &mut Game) {
+        unsafe { g.netplay.operationInProgress = false };
         self.restore();
     }
 

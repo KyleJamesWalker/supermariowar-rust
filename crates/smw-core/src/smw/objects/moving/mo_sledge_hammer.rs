@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_SledgeHammer.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
@@ -68,12 +69,12 @@ impl MO_SledgeHammer {
         o
     }
 
-    pub fn explode(&mut self) {
+    pub fn explode(&mut self, g: &mut Game) {
         unsafe {
             if self.fSuper {
                 let pos = Vec2s::new((self.ix as i32 + (self.iw as i32 >> 2) - 96) as i16, (self.iy as i32 + (self.ih as i32 >> 2) - 64) as i16);
-                game().objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(Ptr::from_mut(&mut game().rm.spr_explosion), pos, 2, 4, -1, -1, KillStyle::Hammer)));
-                if_sound_on_play(&mut game().rm.sfx_bobombsound);
+                g.objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(Ptr::from_mut(&mut g.rm.spr_explosion), pos, 2, 4, -1, -1, KillStyle::Hammer)));
+                if_sound_on_play(g, &mut game().rm.sfx_bobombsound);
             } else {
                 let iCenterX: i16 = (self.ix as i32 + (self.iw as i32 >> 1) - 14) as i16;
                 let iCenterY: i16 = (self.iy as i32 + (self.ih as i32 >> 1) - 14) as i16;
@@ -84,7 +85,7 @@ impl MO_SledgeHammer {
                     let dVel: f32 = RANDOM_INT(5) as f32 / 2.0f32 + 3.0f32;
                     let dVelX: f32 = dVel * cosf(dAngle);
                     let dVelY: f32 = dVel * sinf(dAngle);
-                    game().objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(
+                    game().objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(g, 
                         Ptr::from_mut(&mut game().rm.spr_hammer),
                         Vec2s::new(iCenterX, iCenterY),
                         6,
@@ -97,11 +98,11 @@ impl MO_SledgeHammer {
                     )));
                 }
 
-                let mut player: Ptr<CPlayer> = get_player_from_global_id(self.playerID);
+                let mut player: Ptr<CPlayer> = get_player_from_global_id(g, self.playerID);
 
                 player.increase_projectiles_count(3);
 
-                if_sound_on_play(&mut game().rm.sfx_cannon);
+                if_sound_on_play(g, &mut game().rm.sfx_cannon);
             }
         }
     }
@@ -158,7 +159,7 @@ impl CObjectTrait for MO_SledgeHammer {
                 let x = (self.ix as i32 + (self.iw as i32 >> 1) - 16) as i16;
                 let y = (self.iy as i32 + (self.ih as i32 >> 1) - 16) as i16;
                 game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_fireballexplosion), x, y, 3, 4));
-                if_sound_on_play(&mut game().rm.sfx_hit);
+                if_sound_on_play(game().get(), &mut game().rm.sfx_hit);
             }
 
             if !player.is_invincible() && !player.shyguy {
@@ -170,7 +171,7 @@ impl CObjectTrait for MO_SledgeHammer {
     }
 
     fn draw(&mut self) {
-        self.spr.draw_src(
+        self.spr.draw_src(game().get(), 
             self.ix as i32 - self.collisionOffsetX as i32,
             self.iy as i32 - self.collisionOffsetY as i32,
             &SDL_Rect { x: self.drawframe as i32, y: self.colorOffset as i32, w: self.iw as i32, h: self.ih as i32 },

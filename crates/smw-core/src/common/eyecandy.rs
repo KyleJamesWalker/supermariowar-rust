@@ -3,6 +3,7 @@
 //! Every class in the hierarchy below `EC_Animated` is a leaf, so `animate()` (virtual in C++)
 //! is resolved statically: each `update()` calls the `animate` of its own class.
 
+use crate::game::Game;
 use crate::common::game::App;
 use crate::common::gfx::gfx_font::gfxFont;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -981,9 +982,9 @@ impl EC_LoopingAnimation {
 impl_eyecandy!(EC_LoopingAnimation);
 
 /// `eyecandy[2].emplace<EC_SingleAnimation>(&rm->spr_fireballexplosion, x, y, 3, 8)`
-unsafe fn emplace_fireball_explosion(x: i16, y: i16) {
-    let spr = Ptr::from_mut(&mut game().rm.spr_fireballexplosion);
-    game().eyecandy[2].emplace(EC_SingleAnimation::new(spr, x, y, 3, 8));
+unsafe fn emplace_fireball_explosion(g: &mut Game, x: i16, y: i16) {
+    let spr = Ptr::from_mut(&mut g.rm.spr_fireballexplosion);
+    g.eyecandy[2].emplace(EC_SingleAnimation::new(spr, x, y, 3, 8));
 }
 
 //------------------------------------------------------------------------------
@@ -1030,7 +1031,7 @@ impl EC_ExplodingAward {
         if self.timer > self.ttl {
             self.dead = true;
             unsafe {
-                emplace_fireball_explosion(
+                emplace_fireball_explosion(game().get(), 
                     (self.x as i16 as i32 + (self.w as i32 >> 1) - 16) as i16,
                     (self.y as i16 as i32 + (self.h as i32 >> 1) - 16) as i16,
                 )
@@ -1117,7 +1118,7 @@ impl EC_SwirlingAward {
         if self.timer > self.ttl {
             let awardx = (self.x as i32 + (self.radius * cosf(self.angle)) as i16 as i32 + (self.w as i32 >> 1) - 16) as i16;
             let awardy = (self.y as i32 + (self.radius * sinf(self.angle)) as i16 as i32 + (self.h as i32 >> 1) - 16) as i16;
-            unsafe { emplace_fireball_explosion(awardx, awardy) };
+            unsafe { emplace_fireball_explosion(game().get(), awardx, awardy) };
 
             self.dead = true;
         }
@@ -1215,7 +1216,7 @@ impl EC_RocketAward {
         self.timer += 1;
         if self.timer > self.ttl {
             unsafe {
-                emplace_fireball_explosion(
+                emplace_fireball_explosion(game().get(), 
                     (self.x as i16 as i32 + (self.w as i32 >> 1) - 16) as i16,
                     (self.y as i16 as i32 + (self.h as i32 >> 1) - 16) as i16,
                 )
@@ -1304,7 +1305,7 @@ impl EC_FloatingObject {
         self.timer += 1;
         if self.timer > self.ttl {
             unsafe {
-                emplace_fireball_explosion(
+                emplace_fireball_explosion(game().get(), 
                     (self.x as i16 as i32 + (self.w as i32 >> 1) - 16) as i16,
                     (self.y as i16 as i32 + (self.h as i32 >> 1) - 16) as i16,
                 )
@@ -1616,8 +1617,8 @@ impl EC_SuperStompExplosion {
         }
 
         let f = self.iAnimationFrame as usize;
-        spr(self.spr).draw_src(rectSuperStompLeftDst[f].x + self.ix as i32, rectSuperStompLeftDst[f].y + self.iy as i32, &rectSuperStompLeftSrc[f]);
-        spr(self.spr).draw_src(rectSuperStompRightDst[f].x + self.ix as i32, rectSuperStompRightDst[f].y + self.iy as i32, &rectSuperStompRightSrc[f]);
+        spr(self.spr).draw_src(game().get(), rectSuperStompLeftDst[f].x + self.ix as i32, rectSuperStompLeftDst[f].y + self.iy as i32, &rectSuperStompLeftSrc[f]);
+        spr(self.spr).draw_src(game().get(), rectSuperStompRightDst[f].x + self.ix as i32, rectSuperStompRightDst[f].y + self.iy as i32, &rectSuperStompRightSrc[f]);
     }
 }
 impl_eyecandy!(EC_SuperStompExplosion);
@@ -1797,9 +1798,9 @@ impl SpotlightManager {
         Self::default()
     }
 
-    pub fn add_spotlight(&mut self, ix: i16, iy: i16, iSize: i16) -> Ptr<Spotlight> {
+    pub fn add_spotlight(&mut self, g: &mut Game, ix: i16, iy: i16, iSize: i16) -> Ptr<Spotlight> {
         unsafe {
-            if !game().game_values.spotlights {
+            if !g.game_values.spotlights {
                 return Ptr::null();
             }
         }
@@ -1809,10 +1810,10 @@ impl SpotlightManager {
         s
     }
 
-    pub fn draw_spotlights(&mut self) {
+    pub fn draw_spotlights(&mut self, g: &mut Game) {
         unsafe {
             // Clear the overlay surface again with black
-            crate::common::gfx::blit::fill_rect(game().rm.spr_overlay.get_surface(), null(), 0x0);
+            crate::common::gfx::blit::fill_rect(g.rm.spr_overlay.get_surface(), null(), 0x0);
         }
 
         let mut i = 0;
@@ -1830,7 +1831,7 @@ impl SpotlightManager {
         }
 
         // Draw the overlay
-        unsafe { game().rm.spr_overlay.draw(0, 0) };
+        unsafe { game().rm.spr_overlay.draw(g, 0, 0) };
     }
 
     pub fn clear_spotlights(&mut self) {

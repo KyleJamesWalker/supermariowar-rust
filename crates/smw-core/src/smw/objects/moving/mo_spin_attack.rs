@@ -56,7 +56,7 @@ impl CObjectTrait for MO_SpinAttack {
             return false;
         }
 
-        mo_attack_zone_collide_player(self, player)
+        mo_attack_zone_collide_player(game().get(), self, player)
     }
 
     /*
@@ -79,7 +79,7 @@ impl CObjectTrait for MO_SpinAttack {
         }
 
         unsafe {
-            let owner = get_player_from_global_id(self.iPlayerID);
+            let owner = get_player_from_global_id(game().get(), self.iPlayerID);
 
             if !owner.is_null() {
                 // Move to the owner
@@ -175,10 +175,10 @@ impl CObjectTrait for MO_SpinAttack {
                     let shell = object.as_any().downcast_mut::<CO_Shell>().unwrap();
 
                     if shell.frozen {
-                        shell.shatter_die();
+                        shell.shatter_die(game().get());
                     } else {
                         shell.flip();
-                        if_sound_on_play(&mut game().rm.sfx_kicksound);
+                        if_sound_on_play(game().get(), &mut game().rm.sfx_kicksound);
                     }
 
                     self.die();
@@ -186,20 +186,20 @@ impl CObjectTrait for MO_SpinAttack {
                     let block = object.as_any().downcast_mut::<CO_ThrowBlock>().unwrap();
 
                     if block.frozen {
-                        block.shatter_die();
+                        block.shatter_die(game().get());
                     } else if block.owner.is_null() || block.owner.globalID != self.iPlayerID {
                         block.die();
-                        if_sound_on_play(&mut game().rm.sfx_kicksound);
+                        if_sound_on_play(game().get(), &mut game().rm.sfx_kicksound);
                         self.die();
                     }
                 } else if r#type == movingobject_throwbox {
                     let r#box = object.as_any().downcast_mut::<CO_ThrowBox>().unwrap();
 
                     if r#box.frozen {
-                        r#box.shatter_die();
+                        r#box.shatter_die(game().get());
                     } else if r#box.owner.is_null() || r#box.owner.globalID != self.iPlayerID {
                         r#box.die();
-                        if_sound_on_play(&mut game().rm.sfx_kicksound);
+                        if_sound_on_play(game().get(), &mut game().rm.sfx_kicksound);
                         self.die();
                     }
                 }

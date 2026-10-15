@@ -53,7 +53,7 @@ impl CObjectTrait for PU_StarPowerup {
             if !player.is_invincible() && !player.shyguy {
                 player.makeinvincible();
             } else {
-                player.set_stored_powerup(PowerupType::Star as i16);
+                player.set_stored_powerup(game().get(), PowerupType::Star as i16);
             }
         }
 

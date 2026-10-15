@@ -1,5 +1,6 @@
 //! Port of src/smw/player_components/PlayerWarpStatus.cpp
 
+use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gameplay_styles::{ShieldStyle, WarpLockStyle};
 use crate::common::global_constants::*;
@@ -26,8 +27,8 @@ impl PlayerWarpStatus {
         self.warpcounter = self.warpcounter.wrapping_add(1);
         if self.warpcounter > iGoal {
             self.warpcounter = iGoal;
-            if !crate::smw::net_random::event(crate::smw::net_random::Ev::WarpExit, &[player.globalID as i32]) {
-                self.choose_warp_exit(player);
+            if !crate::smw::net_random::event(game().get(), crate::smw::net_random::Ev::WarpExit, &[player.globalID as i32]) {
+                self.choose_warp_exit(game().get(), player);
             }
         }
     }
@@ -93,7 +94,7 @@ impl PlayerWarpStatus {
         debug_assert!(self.warpcounter >= 0);
     }
 
-    pub fn enter_warp(&mut self, player: &mut CPlayer, warp: Ptr<Warp>) {
+    pub fn enter_warp(&mut self, g: &mut Game, player: &mut CPlayer, warp: Ptr<Warp>) {
         debug_assert!(warp.direction != WARP_UNDEFINED);
 
         match warp.direction {
@@ -131,28 +132,28 @@ impl PlayerWarpStatus {
         self.warpid = warp.id;
 
         unsafe {
-            if game().game_values.warplocktime > 0 {
-                match game().game_values.warplockstyle {
+            if g.game_values.warplocktime > 0 {
+                match g.game_values.warplockstyle {
                     WarpLockStyle::EntranceOnly | WarpLockStyle::EntranceAndExit => {
-                        game().g_map.warpexits[warp.id as usize].locktimer = game().game_values.warplocktime;
+                        g.g_map.warpexits[warp.id as usize].locktimer = g.game_values.warplocktime;
                     }
                     WarpLockStyle::EntireConnection => {
-                        game().g_map.lockconnection(self.warpconnection as i32);
+                        g.g_map.lockconnection(self.warpconnection as i32);
                     }
                     WarpLockStyle::AllWarps => {
-                        game().g_map.lockconnection(-1);
+                        g.g_map.lockconnection(-1);
                     }
                     _ => {}
                 }
             }
 
-            if_sound_on_play(&mut game().rm.sfx_pipe);
+            if_sound_on_play(g, &mut game().rm.sfx_pipe);
         }
     }
 
-    pub fn choose_warp_exit(&mut self, player: &mut CPlayer) {
+    pub fn choose_warp_exit(&mut self, g: &mut Game, player: &mut CPlayer) {
         unsafe {
-            let mut exit: Ptr<WarpExit> = game().g_map.get_random_warp_exit(self.warpconnection as i32, self.warpid as i32);
+            let mut exit: Ptr<WarpExit> = g.g_map.get_random_warp_exit(self.warpconnection as i32, self.warpid as i32);
             debug_assert!(!exit.is_null());
             player.set_xi(exit.x);
             player.set_yi(exit.y);
@@ -179,7 +180,7 @@ impl PlayerWarpStatus {
                     self.warpplane = ((exit.warpy as i32) << 5) as i16;
 
                     if iRow as i32 - 1 >= 0 {
-                        block = game().g_map.block(iCol, (iRow as i32 - 1) as i16);
+                        block = g.g_map.block(iCol, (iRow as i32 - 1) as i16);
 
                         if !block.is_null() && !block.is_transparent() && !block.is_hidden() {
                             block.trigger_behavior();
@@ -197,7 +198,7 @@ impl PlayerWarpStatus {
                         iCol = (iCol as i32 - 20) as i16;
                     }
 
-                    block = game().g_map.block((iCol as i32 + 1) as i16, iRow);
+                    block = g.g_map.block((iCol as i32 + 1) as i16, iRow);
 
                     if !block.is_null() && !block.is_transparent() && !block.is_hidden() {
                         block.trigger_behavior();
@@ -212,7 +213,7 @@ impl PlayerWarpStatus {
                     self.warpplane = (((exit.warpy as i32) << 5) + TILESIZE) as i16;
 
                     if (iRow as i32 + 1) < 15 {
-                        block = game().g_map.block(iCol, (iRow as i32 + 1) as i16);
+                        block = g.g_map.block(iCol, (iRow as i32 + 1) as i16);
 
                         if !block.is_null() && !block.is_transparent() && !block.is_hidden() {
                             block.trigger_behavior();
@@ -230,7 +231,7 @@ impl PlayerWarpStatus {
                         iCol = (iCol as i32 + 20) as i16;
                     }
 
-                    block = game().g_map.block((iCol as i32 - 1) as i16, iRow);
+                    block = g.g_map.block((iCol as i32 - 1) as i16, iRow);
 
                     if !block.is_null() && !block.is_transparent() && !block.is_hidden() {
                         block.trigger_behavior();
@@ -242,17 +243,17 @@ impl PlayerWarpStatus {
             }
 
             //Make player shielded when exiting the warp (if that option is turned on)
-            if game().game_values.shieldstyle != ShieldStyle::NoShield {
-                if !player.is_shielded() || (player.shield.time_left() as i32) < game().game_values.shieldtime as i32 {
-                    player.shield.reset();
+            if g.game_values.shieldstyle != ShieldStyle::NoShield {
+                if !player.is_shielded() || (player.shield.time_left() as i32) < g.game_values.shieldtime as i32 {
+                    player.shield.reset(g);
                 }
             }
 
             //Lock the warp (if that option is turned on)
-            if game().game_values.warplocktime > 0 {
-                if game().game_values.warplockstyle == WarpLockStyle::ExitOnly || game().game_values.warplockstyle == WarpLockStyle::EntranceAndExit {
+            if g.game_values.warplocktime > 0 {
+                if g.game_values.warplockstyle == WarpLockStyle::ExitOnly || g.game_values.warplockstyle == WarpLockStyle::EntranceAndExit {
                     //Lock the warp exit
-                    exit.locktimer = game().game_values.warplocktime;
+                    exit.locktimer = g.game_values.warplocktime;
                 }
             }
         }

@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/Frag.cpp
 
+use crate::game::Game;
 use crate::common::game_mode::*;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gameplay_styles::{DeathStyle, ScoringStyle};
@@ -32,10 +33,10 @@ impl CGameModeTrait for CGM_Frag {
     crate::impl_cgamemode_plumbing!();
 
     fn playerkilledplayer(&mut self, inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
-        cgm_frag_playerkilledplayer(self, inflictor, other, style)
+        cgm_frag_playerkilledplayer(game().get(), self, inflictor, other, style)
     }
     fn playerkilledself(&mut self, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
-        cgm_frag_playerkilledself(self, player, style)
+        cgm_frag_playerkilledself(game().get(), self, player, style)
     }
     fn playerextraguy(&mut self, player: Ptr<CPlayer>, iType: i16) {
         cgm_frag_playerextraguy(self, player, iType)
@@ -45,27 +46,27 @@ impl CGameModeTrait for CGM_Frag {
     }
 }
 
-pub fn cgm_frag_playerkilledplayer<T: CGameModeTrait + ?Sized>(this: &mut T, mut inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+pub fn cgm_frag_playerkilledplayer<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, mut inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
     if this.gm().gameover {
         return PlayerKillType::Normal;
     }
 
     unsafe {
         //Don't score if "sumo" style scoring is turned on
-        if game().game_values.gamemode.gamemode != game_mode_frag || game().game_values.gamemodesettings.frag.scoring == ScoringStyle::AllKills || style == KillStyle::Push {
+        if g.game_values.gamemode.gamemode != game_mode_frag || g.game_values.gamemodesettings.frag.scoring == ScoringStyle::AllKills || style == KillStyle::Push {
             //Penalize killing your team mates
             if inflictor.get_team_id() == other.get_team_id() {
-                inflictor.score().adjust_score(-1);
+                inflictor.score().adjust_score(g, -1);
             } else {
-                inflictor.score().adjust_score(1);
+                inflictor.score().adjust_score(g, 1);
             }
         }
 
         let iRet = this.check_winner(inflictor);
 
-        if game().game_values.gamemode.gamemode == game_mode_frag && game().game_values.gamemodesettings.frag.style == DeathStyle::Shield {
-            if_sound_on_play(&mut game().rm.sfx_powerdown);
-            other.shield().reset();
+        if g.game_values.gamemode.gamemode == game_mode_frag && g.game_values.gamemodesettings.frag.style == DeathStyle::Shield {
+            if_sound_on_play(g, &mut game().rm.sfx_powerdown);
+            other.shield().reset(g);
             return PlayerKillType::NonKill;
         }
 
@@ -73,16 +74,16 @@ pub fn cgm_frag_playerkilledplayer<T: CGameModeTrait + ?Sized>(this: &mut T, mut
     }
 }
 
-pub fn cgm_frag_playerkilledself<T: CGameModeTrait + ?Sized>(this: &mut T, mut player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+pub fn cgm_frag_playerkilledself<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
     cgamemode_playerkilledself(this, player, style);
 
     if !this.gm().gameover {
-        player.score().adjust_score(-1);
+        player.score().adjust_score(g, -1);
 
         unsafe {
-            if game().game_values.gamemode.gamemode == game_mode_frag && game().game_values.gamemodesettings.frag.style == DeathStyle::Shield {
-                if_sound_on_play(&mut game().rm.sfx_powerdown);
-                player.shield().reset();
+            if g.game_values.gamemode.gamemode == game_mode_frag && g.game_values.gamemodesettings.frag.style == DeathStyle::Shield {
+                if_sound_on_play(g, &mut game().rm.sfx_powerdown);
+                player.shield().reset(g);
                 return PlayerKillType::NonKill;
             }
         }
@@ -93,7 +94,7 @@ pub fn cgm_frag_playerkilledself<T: CGameModeTrait + ?Sized>(this: &mut T, mut p
 
 pub fn cgm_frag_playerextraguy<T: CGameModeTrait + ?Sized>(this: &mut T, mut player: Ptr<CPlayer>, iType: i16) {
     if !this.gm().gameover {
-        player.score().adjust_score(iType);
+        player.score().adjust_score(game().get(), iType);
         this.check_winner(player);
     }
 }
@@ -112,7 +113,7 @@ pub fn cgm_frag_check_winner<T: CGameModeTrait + ?Sized>(this: &mut T, mut playe
 
             return PlayerKillType::Removed;
         } else if player.score().score as i32 >= this.goal as i32 - 2 && !this.playedwarningsound {
-            this.playwarningsound();
+            this.playwarningsound(game().get());
         }
     }
 

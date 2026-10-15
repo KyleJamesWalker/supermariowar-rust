@@ -1,5 +1,6 @@
 //! Port of src/common/ui/MI_Button.cpp
 
+use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::input::CPlayerInput;
 use crate::common::ui::menu_code::*;
@@ -35,9 +36,9 @@ pub struct MI_Button {
 crate::impl_base!(MI_Button => ui_control: UI_Control);
 
 impl MI_Button {
-    pub fn new(nspr: Ptr<gfxSprite>, x: i16, y: i16, name: impl Into<String>, width: i16, align: TextAlign) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, x: i16, y: i16, name: impl Into<String>, width: i16, align: TextAlign) -> Self {
         let szName: String = name.into();
-        let iTextW = unsafe { game().rm.menu_font_large.get_width(&szName) } as i16;
+        let iTextW = unsafe { g.rm.menu_font_large.get_width(&szName) } as i16;
         MI_Button {
             ui_control: UI_Control::new(x, y),
             spr: nspr,
@@ -60,12 +61,12 @@ impl MI_Button {
 
     /// `new MI_Button(spr, x, y, name, width)` with the default `TextAlign::LEFT`.
     pub fn new_left(nspr: Ptr<gfxSprite>, x: i16, y: i16, name: impl Into<String>, width: i16) -> Self {
-        Self::new(nspr, x, y, name, width, TextAlign::LEFT)
+        Self::new(game().get(), nspr, x, y, name, width, TextAlign::LEFT)
     }
 
-    pub fn set_name(&mut self, name: impl Into<String>) {
+    pub fn set_name(&mut self, g: &mut Game, name: impl Into<String>) {
         self.szName = name.into();
-        self.iTextW = unsafe { game().rm.menu_font_large.get_width(&self.szName) } as i16;
+        self.iTextW = unsafe { g.rm.menu_font_large.get_width(&self.szName) } as i16;
     }
 
     pub fn set_code(&mut self, code: MenuCodeEnum) {
@@ -117,8 +118,8 @@ impl UI_ControlTrait for MI_Button {
         let selY = (if self.fSelected { 32 } else { 0 }) + self.iAdjustmentY as i32;
 
         unsafe {
-            self.spr.draw_src(x, y, &SDL_Rect { x: 0, y: selY, w: iHalfWidth, h: 32 });
-            self.spr.draw_src(x + iHalfWidth, y, &SDL_Rect { x: 512 - iWidth + iHalfWidth, y: selY, w: iWidth - iHalfWidth, h: 32 });
+            self.spr.draw_src(game().get(), x, y, &SDL_Rect { x: 0, y: selY, w: iHalfWidth, h: 32 });
+            self.spr.draw_src(game().get(), x + iHalfWidth, y, &SDL_Rect { x: 512 - iWidth + iHalfWidth, y: selY, w: iWidth - iHalfWidth, h: 32 });
 
             let srcRect = SDL_Rect { x: self.iImageSrcX as i32, y: self.iImageSrcY as i32, w: iImageW, h: iImageH };
 
@@ -126,19 +127,19 @@ impl UI_ControlTrait for MI_Button {
                 TextAlign::LEFT => {
                     game().rm.menu_font_large.draw_chop_right(x + 16 + (if iImageW > 0 { iImageW + 2 } else { 0 }), y + 5, iWidth - 32, &self.szName);
                     if !self.sprImage.is_null() {
-                        self.sprImage.draw_src(x + 16, y + 16 - (iImageH >> 1), &srcRect);
+                        self.sprImage.draw_src(game().get(), x + 16, y + 16 - (iImageH >> 1), &srcRect);
                     }
                 }
                 TextAlign::CENTER => {
                     game().rm.menu_font_large.draw_centered(x + ((iWidth + (if iImageW > 0 { iImageW + 2 } else { 0 })) >> 1), y + 5, &self.szName);
                     if !self.sprImage.is_null() {
-                        self.sprImage.draw_src(x + (iWidth >> 1) - ((self.iTextW as i32 + iImageW) >> 1) - 1, y + 16 - (iImageH >> 1), &srcRect);
+                        self.sprImage.draw_src(game().get(), x + (iWidth >> 1) - ((self.iTextW as i32 + iImageW) >> 1) - 1, y + 16 - (iImageH >> 1), &srcRect);
                     }
                 }
                 TextAlign::RIGHT => {
                     game().rm.menu_font_large.draw_right_justified(x + iWidth - 16, y + 5, &self.szName);
                     if !self.sprImage.is_null() {
-                        self.sprImage.draw_src(x + iWidth - 18 - self.iTextW as i32 - iImageW, y + 16 - (iImageH >> 1), &srcRect);
+                        self.sprImage.draw_src(game().get(), x + iWidth - 18 - self.iTextW as i32 - iImageW, y + 16 - (iImageH >> 1), &srcRect);
                     }
                 }
             }

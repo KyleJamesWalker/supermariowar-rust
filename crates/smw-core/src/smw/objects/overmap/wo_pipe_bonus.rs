@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_PipeBonus.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game::App;
 use crate::common::gfx::gfx_sprite::{gfxSprite, ClipEdge};
@@ -27,7 +28,7 @@ pub struct OMO_PipeBonus {
 impl_base!(OMO_PipeBonus => io_over_map_object: IO_OverMapObject);
 
 impl OMO_PipeBonus {
-    pub fn new(nspr: Ptr<gfxSprite>, vel: Vec2f, pos: Vec2s, r#type: i16, duration: i16, uncollectabletime: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, vel: Vec2f, pos: Vec2s, r#type: i16, duration: i16, uncollectabletime: i16) -> Self {
         let mut this = OMO_PipeBonus {
             io_over_map_object: IO_OverMapObject::new(nspr, pos, 4, 8, 30, 30, 1, 1, 0, ((r#type as i32) << 5) as i16, 32, 32),
             iType: r#type,
@@ -40,7 +41,7 @@ impl OMO_PipeBonus {
         this.velx = vel.x;
 
         unsafe {
-            if game().pipegamemode.is_slowdown() {
+            if g.pipegamemode.is_slowdown() {
                 this.vely = vel.y / 1.5f32;
             } else {
                 this.vely = vel.y;
@@ -84,9 +85,9 @@ impl CObjectTrait for OMO_PipeBonus {
         let x = self.ix as i32 - self.collisionOffsetX as i32;
         let y = self.iy as i32 - self.collisionOffsetY as i32;
         if self.iUncollectableTime > 0 {
-            self.spr.draw_clip(x, y, &srcRect, ClipEdge::Bottom, 256);
+            self.spr.draw_clip(game().get(), x, y, &srcRect, ClipEdge::Bottom, 256);
         } else {
-            self.spr.draw_src(x, y, &srcRect);
+            self.spr.draw_src(game().get(), x, y, &srcRect);
         }
     }
 
@@ -115,7 +116,7 @@ impl CObjectTrait for OMO_PipeBonus {
 
                 return false;
             } else if !game().game_values.gamemode.gameover {
-                game().pipegamemode.set_bonus((self.iType as i32 + 1) as i16, self.iDuration, player.get_team_id());
+                game().pipegamemode.set_bonus(game().get(), (self.iType as i32 + 1) as i16, self.iDuration, player.get_team_id());
             }
         }
 

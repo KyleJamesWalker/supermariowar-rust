@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_Hammer.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::Spotlight;
 use crate::common::game::App;
 use crate::common::gameplay_styles::TeamCollisionStyle;
@@ -33,7 +34,7 @@ impl_base!(MO_Hammer => io_moving_object: IO_MovingObject);
 
 impl MO_Hammer {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, vel: Vec2f, aniSpeed: i16, iGlobalID: i16, teamID: i16, iColorID: i16, superHammer: bool) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, vel: Vec2f, aniSpeed: i16, iGlobalID: i16, teamID: i16, iColorID: i16, superHammer: bool) -> Self {
         let iCollisionWidth = (nspr.get_width() as i16 as i32 / iNumSpr as i32) as i16;
         let iCollisionHeight = ((nspr.get_height() as i16 as i32) >> 2) as i16;
         let mut o = MO_Hammer {
@@ -56,7 +57,7 @@ impl MO_Hammer {
 
         o.velx = vel.x;
         o.vely = vel.y;
-        o.ttl = unsafe { game().game_values.hammerttl };
+        o.ttl = unsafe { g.game_values.hammerttl };
 
         o.fSuper = superHammer;
 
@@ -122,12 +123,12 @@ impl CObjectTrait for MO_Hammer {
                 }
                 || (self.fSuper && (self.iy as i32) < -(self.ih as i32))
             {
-                removeifprojectile(self.as_mo_ptr(), false, true);
+                removeifprojectile(game().get(), self.as_mo_ptr(), false, true);
             } else if game().game_values.spotlights {
                 let sx = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
                 let sy = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
                 if self.sSpotlight.is_null() {
-                    self.sSpotlight = game().spotlightManager.add_spotlight(sx, sy, 3);
+                    self.sSpotlight = game().spotlightManager.add_spotlight(game().get(), sx, sy, 3);
                 }
 
                 if !self.sSpotlight.is_null() {
@@ -144,8 +145,8 @@ impl CObjectTrait for MO_Hammer {
                 }
                 if let Some(weaponbreakableblock) = block.as_any().downcast_mut::<B_WeaponBreakableBlock>() {
                     if weaponbreakableblock.r#type() == WeaponDamageType::Hammer {
-                        weaponbreakableblock.trigger_behavior_player(self.iPlayerID, self.iTeamID);
-                        removeifprojectile(self.as_mo_ptr(), false, false);
+                        weaponbreakableblock.trigger_behavior_player(game().get(), self.iPlayerID, self.iTeamID);
+                        removeifprojectile(game().get(), self.as_mo_ptr(), false, false);
                         return;
                     }
                 }
@@ -157,7 +158,7 @@ impl CObjectTrait for MO_Hammer {
         unsafe {
             if self.iPlayerID != player.globalID && (game().game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID) {
                 if !player.is_shielded() {
-                    removeifprojectile(self.as_mo_ptr(), false, false);
+                    removeifprojectile(game().get(), self.as_mo_ptr(), false, false);
 
                     if !player.is_invincible() && !player.shyguy {
                         // Find the player that shot this hammer so we can attribute a kill
@@ -172,7 +173,7 @@ impl CObjectTrait for MO_Hammer {
     }
 
     fn draw(&mut self) {
-        self.spr.draw_src(
+        self.spr.draw_src(game().get(), 
             self.ix as i32 - self.collisionOffsetX as i32,
             self.iy as i32 - self.collisionOffsetY as i32,
             &SDL_Rect { x: self.drawframe as i32, y: self.colorOffset as i32, w: self.iw as i32, h: self.ih as i32 },

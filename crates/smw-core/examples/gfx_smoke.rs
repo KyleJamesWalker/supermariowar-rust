@@ -20,11 +20,11 @@ fn main() {
         game().RootDataDirectory = data.clone();
     }
 
-    gfx_init(640, 480, false);
+    gfx_init(game().get(), 640, 480, false);
     unsafe { game().blitdest = game().screen };
 
     let pack = format!("{}/gfx/packs/Classic", data);
-    assert!(gfx_loadpalette(Path::new(&format!("{}/palette.png", pack))));
+    assert!(gfx_loadpalette(game().get(), Path::new(&format!("{}/palette.png", pack))));
 
     let backdrop = ImageLoader::new(format!("{}/menu/menu_background.png", pack)).without_color_key().create();
     let smw_logo = ImageLoader::new(format!("{}/menu/menu_smw.png", pack)).create();
@@ -34,14 +34,14 @@ fn main() {
         .with_color_key(smw::common::gfx::color::RGB { r: 0, g: 255, b: 0 })
         .create();
 
-    let mut font_large = gfxFont::from_path(&format!("{}/menu/menu_font_large.png", pack));
-    let font_small = gfxFont::from_path(&format!("{}/fonts/font_small.png", pack));
+    let mut font_large = gfxFont::from_path(game().get(), &format!("{}/menu/menu_font_large.png", pack));
+    let font_small = gfxFont::from_path(game().get(), &format!("{}/fonts/font_small.png", pack));
 
     let skin = gfx_loadfullskin(Path::new(&format!("{}/gfx/skins/0smw.png", data)), 1).unwrap();
     let menuskin = gfx_loadmenuskin(Path::new(&format!("{}/gfx/skins/0smw.png", data)), 2, true).unwrap();
 
-    backdrop.draw(0, 0);
-    smw_logo.draw(70, 30);
+    backdrop.draw(game().get(), 0, 0);
+    smw_logo.draw(game().get(), 70, 30);
     shade.draw_part(100, 200, 0, 0, 200, 100);
     ghost.draw_part(620, 300, 0, 0, 32, 32);
     overlay.draw_part(400, 350, 0, 0, 64, 64);
@@ -51,9 +51,9 @@ fn main() {
     }
     menuskin[0].draw_part(380, 400, 0, 0, 32, 32);
     menuskin[3].draw_part(414, 400, 96, 0, 32, 32);
-    skin[0].draw_clip(450, 400, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 }, ClipEdge::Left, 460);
+    skin[0].draw_clip(game().get(), 450, 400, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 }, ClipEdge::Left, 460);
     skin[0].draw_stretch(&SDL_Rect { x: 0, y: 0, w: 32, h: 32 }, unsafe { game().blitdest }, &SDL_Rect { x: 500, y: 380, w: 64, h: 64 });
-    gfx_drawpreview(&skin[2], 620, 300, 0, 0, 32, 32, &SDL_Rect { x: 0, y: 0, w: 640, h: 480 }, true, None);
+    gfx_drawpreview(game().get(), &skin[2], 620, 300, 0, 0, 32, 32, &SDL_Rect { x: 0, y: 0, w: 640, h: 480 }, true, None);
 
     font_large.draw(10, 150, "Super Mario War: 0123456789");
     font_small.draw_centered(320, 180, "centered small text ~!@#$%^&*()");
@@ -70,6 +70,6 @@ fn main() {
     font_small.draw(10, 330, "shaken");
     smw_logo.draw_part(300, 330, 0, 0, 40, 20);
 
-    assert!(gfx_save_screen_bmp(&out));
+    assert!(gfx_save_screen_bmp(game().get(), &out));
     println!("wrote {}", out);
 }

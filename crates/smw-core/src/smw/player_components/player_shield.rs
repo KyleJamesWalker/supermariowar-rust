@@ -1,5 +1,6 @@
 //! Port of src/smw/player_components/PlayerShield.cpp
 
+use crate::game::Game;
 use crate::common::game_mode::game_mode_survival;
 use crate::common::gameplay_styles::ShieldStyle;
 use crate::globals::*;
@@ -22,25 +23,25 @@ impl PlayerShield {
         Self::default()
     }
 
-    pub fn reset(&mut self) {
+    pub fn reset(&mut self, g: &mut Game) {
         self.abort();
 
         unsafe {
-            if game().game_values.gamemode.getgamemode() == game_mode_survival {
-                if game().game_values.gamemodesettings.survival.shield {
-                    self.timer = game().game_values.shieldtime;
-                    self.r#type = game().game_values.shieldstyle as PlayerShieldType;
+            if g.game_values.gamemode.getgamemode() == game_mode_survival {
+                if g.game_values.gamemodesettings.survival.shield {
+                    self.timer = g.game_values.shieldtime;
+                    self.r#type = g.game_values.shieldstyle as PlayerShieldType;
                 }
-            } else if game().game_values.shieldstyle != ShieldStyle::NoShield {
-                self.timer = game().game_values.shieldtime;
-                self.r#type = game().game_values.shieldstyle as PlayerShieldType;
+            } else if g.game_values.shieldstyle != ShieldStyle::NoShield {
+                self.timer = g.game_values.shieldtime;
+                self.r#type = g.game_values.shieldstyle as PlayerShieldType;
             }
         }
     }
 
-    pub fn turn_on(&mut self) {
+    pub fn turn_on(&mut self, g: &mut Game) {
         unsafe {
-            self.r#type = if game().game_values.shieldstyle != ShieldStyle::NoShield { game().game_values.shieldstyle as PlayerShieldType } else { SOFT };
+            self.r#type = if g.game_values.shieldstyle != ShieldStyle::NoShield { g.game_values.shieldstyle as PlayerShieldType } else { SOFT };
         }
         self.timer = 60;
     }

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/ThrowBlock.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::eyecandy::EC_FallingObject;
 use crate::common::game_values::if_sound_on_play;
@@ -51,18 +52,18 @@ impl B_ThrowBlock {
         b
     }
 
-    pub fn give_block_to_player(&mut self, mut player: Ptr<CPlayer>) {
+    pub fn give_block_to_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) {
         unsafe {
-            let mut block = Ptr::new_box(CO_ThrowBlock::new(Ptr::from_mut(&mut game().rm.spr_blueblock), Vec2s::new(self.ix, self.iy), self.iType));
+            let mut block = Ptr::new_box(CO_ThrowBlock::new(Ptr::from_mut(&mut g.rm.spr_blueblock), Vec2s::new(self.ix, self.iy), self.iType));
             let item: Ptr<dyn MO_CarriedObjectTrait> = Ptr::from_mut(block.get() as &mut dyn MO_CarriedObjectTrait);
             if player.accept_item(item) {
                 self.dead = true;
-                game().g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
-                game().g_map.update_tile_gap(self.col, self.row);
+                g.g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
+                g.g_map.update_tile_gap(self.col, self.row);
 
                 block.owner = player;
                 block.iPlayerID = player.globalID;
-                game().objectcontainer[1].add(block);
+                g.objectcontainer[1].add(block);
             } else {
                 block.delete();
             }
@@ -77,7 +78,7 @@ impl CObjectTrait for B_ThrowBlock {
     }
 
     fn draw(&mut self) {
-        self.spr.draw_src(
+        self.spr.draw_src(game().get(), 
             self.ix as i32,
             self.iy as i32,
             &SDL_Rect { x: self.drawFrame as i32, y: (self.iType as i16 * 32) as i32, w: self.iw as i32, h: self.ih as i32 },
@@ -111,7 +112,7 @@ impl IO_BlockTrait for B_ThrowBlock {
             player.vely = GRAVITATION;
 
             if player.pressed_accept_item_key() && player.is_accepting_item() {
-                self.give_block_to_player(player);
+                self.give_block_to_player(game().get(), player);
                 return true;
             } else {
                 return false;
@@ -135,7 +136,7 @@ impl IO_BlockTrait for B_ThrowBlock {
             }
 
             if player.is_accepting_item() {
-                self.give_block_to_player(player);
+                self.give_block_to_player(game().get(), player);
                 return true;
             } else {
                 return false;
@@ -159,7 +160,7 @@ impl IO_BlockTrait for B_ThrowBlock {
             }
 
             if player.is_accepting_item() {
-                self.give_block_to_player(player);
+                self.give_block_to_player(game().get(), player);
                 return true;
             } else {
                 return false;
@@ -183,7 +184,7 @@ impl IO_BlockTrait for B_ThrowBlock {
             game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -1.5f32, -4.0f32, 6, 2, 0, srcY, 16, 16));
             game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 1.5f32, -4.0f32, 6, 2, 0, srcY, 16, 16));
 
-            if_sound_on_play(&mut game().rm.sfx_breakblock);
+            if_sound_on_play(game().get(), &mut game().rm.sfx_breakblock);
         }
     }
 }

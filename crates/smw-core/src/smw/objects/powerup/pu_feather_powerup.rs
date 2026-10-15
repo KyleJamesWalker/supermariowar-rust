@@ -63,11 +63,11 @@ pub fn pu_feather_powerup_draw<T: PU_FeatherPowerupTrait + ?Sized>(this: &mut T)
     let x = o.ix as i32 - o.collisionOffsetX as i32;
     let y = o.iy as i32 - o.collisionOffsetY as i32;
     if o.state == 0 {
-        o.spr.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: o.iw as i32, h: (o.ih as f32 - o.fy + o.desty) as i16 as i32 });
+        o.spr.draw_src(game().get(), x, y, &SDL_Rect { x: 0, y: 0, w: o.iw as i32, h: (o.ih as f32 - o.fy + o.desty) as i16 as i32 });
     } else if o.state == 1 {
-        o.spr.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: o.iw as i32, h: o.ih as i32 });
+        o.spr.draw_src(game().get(), x, y, &SDL_Rect { x: 0, y: 0, w: o.iw as i32, h: o.ih as i32 });
     } else {
-        o.spr.draw_src(x, y, &SDL_Rect { x: if o.fFloatDirectionRight { 0 } else { 32 }, y: 0, w: o.iw as i32, h: o.ih as i32 });
+        o.spr.draw_src(game().get(), x, y, &SDL_Rect { x: if o.fFloatDirectionRight { 0 } else { 32 }, y: 0, w: o.iw as i32, h: o.ih as i32 });
     }
 }
 
@@ -127,7 +127,7 @@ pub fn pu_feather_powerup_collide_player<T: PU_FeatherPowerupTrait + ?Sized>(thi
     let mut player = player;
     let o = this.fp_mut();
     if o.state > 0 {
-        player.set_powerup(3);
+        player.set_powerup(game().get(), 3);
         o.dead = true;
     }
 

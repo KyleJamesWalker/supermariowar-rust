@@ -1,5 +1,6 @@
 //! Port of src/common/ObjectBase.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::*;
@@ -76,10 +77,10 @@ pub struct CObject {
     pub _alias: Aliased,
 }
 
-pub fn set_network_id_context(context: u32) {
+pub fn set_network_id_context(g: &mut Game, context: u32) {
     unsafe {
-        game().g_networkIDContext = context;
-        game().g_networkIDCount = 0;
+        g.g_networkIDContext = context;
+        g.g_networkIDCount = 0;
     }
 }
 
@@ -89,13 +90,13 @@ pub fn network_id_state() -> (&'static mut u32, &'static mut u32) {
     (&mut g.g_networkIDContext, &mut g.g_networkIDCount)
 }
 
-fn next_network_id() -> i32 {
+fn next_network_id(g: &mut Game) -> i32 {
     unsafe {
-        if game().g_networkIDContext == 0 {
+        if g.g_networkIDContext == 0 {
             return 0;
         }
-        game().g_networkIDCount += 1;
-        (game().g_networkIDContext << 16 | (game().g_networkIDCount & 0xFFFF)) as i32
+        g.g_networkIDCount += 1;
+        (g.g_networkIDContext << 16 | (g.g_networkIDCount & 0xFFFF)) as i32
     }
 }
 
@@ -118,7 +119,7 @@ impl CObject {
             spr: nspr1,
             state: 0,
             dead: false,
-            iNetworkID: next_network_id(),
+            iNetworkID: next_network_id(game().get()),
             _alias: Aliased::new(),
         };
 

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/IO_BulletBillCannon.cpp
 
+use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::{object_bulletbillcannon, CObject, CObjectTrait};
@@ -43,7 +44,7 @@ impl CObjectTrait for IO_BulletBillCannon {
     fn update(&mut self) {
         self.m_timer -= 1;
         if self.m_timer <= 0 && !crate::smw::net_random::object_event(crate::smw::net_random::Ev::HazardTimer, &[self.iNetworkID]) {
-            self.fire();
+            self.fire(game().get());
         }
     }
 
@@ -53,12 +54,12 @@ impl CObjectTrait for IO_BulletBillCannon {
 }
 
 impl IO_BulletBillCannon {
-    pub fn fire(&mut self) {
+    pub fn fire(&mut self, g: &mut Game) {
         self.set_new_timer();
 
         let pos = Vec2s::new((self.ix as i32 + if self.m_vel < 0.0f32 { 32 } else { -32 }) as i16, self.iy);
         unsafe {
-            game().objectcontainer[1].add(Ptr::new_box(MO_BulletBill::new(
+            game().objectcontainer[1].add(Ptr::new_box(MO_BulletBill::new(g, 
                 Ptr::from_mut(&mut game().rm.spr_hazard_bulletbill[if self.m_preview { 1 } else { 0 }]),
                 Ptr::from_mut(&mut game().rm.spr_hazard_bulletbilldead),
                 pos,
@@ -66,7 +67,7 @@ impl IO_BulletBillCannon {
                 0,
                 true,
             )));
-            if_sound_on_play(&mut game().rm.sfx_bulletbillsound);
+            if_sound_on_play(g, &mut game().rm.sfx_bulletbillsound);
         }
     }
 }

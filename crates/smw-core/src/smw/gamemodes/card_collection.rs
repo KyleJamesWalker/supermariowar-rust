@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/CardCollection.cpp
 
+use crate::game::Game;
 use crate::common::game_mode::{game_mode_collection, CGameMode, CGameModeTrait};
 use crate::common::math::trig::{cosf, sinf};
 use crate::common::math::vec2::{Vec2f, Vec2s};
@@ -37,13 +38,13 @@ impl CGM_Collection {
     pub fn release_card(&mut self, mut player: Ptr<CPlayer>) {
         if player.score().subscore[0] > 0 {
             let pos = Vec2s::new((player.center_x() as i32 - 16) as i16, (player.center_y() as i32 - 16) as i16);
-            if !net_random::event(Ev::ReleaseCard, &[player.globalID as i32, pos.x as i32, pos.y as i32]) {
-                self.drop_card(player, pos);
+            if !net_random::event(game().get(), Ev::ReleaseCard, &[player.globalID as i32, pos.x as i32, pos.y as i32]) {
+                self.drop_card(game().get(), player, pos);
             }
         }
     }
 
-    fn drop_card(&mut self, mut player: Ptr<CPlayer>, pos: Vec2s) {
+    fn drop_card(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, pos: Vec2s) {
         {
             let speed: f32 = 7.0f32 + RANDOM_INT(9) as f32 / 2.0f32;
             let angle: f32 = -(RANDOM_INT(314) as f32) / 100.0f32;
@@ -59,13 +60,13 @@ impl CGM_Collection {
             player.score().subscore[1] &= iCardMaskInverted;
 
             unsafe {
-                game().objectcontainer[1].add(Ptr::new_box(MO_CollectionCard::new(Ptr::from_mut(&mut game().rm.spr_collectcards), 1, iValue, 30, vel, pos)));
+                g.objectcontainer[1].add(Ptr::new_box(MO_CollectionCard::new(Ptr::from_mut(&mut g.rm.spr_collectcards), 1, iValue, 30, vel, pos)));
             }
         }
     }
 }
 
-fn spawn_card() {
+fn spawn_card(g: &mut Game) {
     unsafe {
         let iRandom: i16 = RANDOM_INT(5) as i16;
         let mut iRandomCard: i16 = 0;
@@ -75,19 +76,19 @@ fn spawn_card() {
             iRandomCard = 1;
         }
 
-        game().objectcontainer[1].add(Ptr::new_box(MO_CollectionCard::new(Ptr::from_mut(&mut game().rm.spr_collectcards), 0, iRandomCard, 0, Vec2f::zero(), Vec2s::zero())));
+        g.objectcontainer[1].add(Ptr::new_box(MO_CollectionCard::new(Ptr::from_mut(&mut g.rm.spr_collectcards), 0, iRandomCard, 0, Vec2f::zero(), Vec2s::zero())));
     }
 }
 
 pub fn net_spawn_card() {
-    spawn_card();
+    spawn_card(game().get());
 }
 
-pub fn net_release_card(mut player: Ptr<CPlayer>, x: i16, y: i16) {
+pub fn net_release_card(g: &mut Game, mut player: Ptr<CPlayer>, x: i16, y: i16) {
     unsafe {
-        if let Some(this) = game().game_values.gamemode.get().as_any().downcast_mut::<CGM_Collection>() {
+        if let Some(this) = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Collection>() {
             if !player.is_null() && player.score().subscore[0] > 0 {
-                this.drop_card(player, Vec2s::new(x, y));
+                this.drop_card(g, player, Vec2s::new(x, y));
             }
         }
     }
@@ -105,7 +106,7 @@ impl CGameModeTrait for CGM_Collection {
     }
 
     fn init(&mut self) {
-        gm::cgamemode_init(self);
+        gm::cgamemode_init(game().get(), self);
         self.timer = 0;
 
         //Zero out the number of cards teams have
@@ -129,13 +130,13 @@ impl CGameModeTrait for CGM_Collection {
                     iPowerupQuantity = game().players.len().wrapping_add(iPowerupQuantity as usize).wrapping_sub(7) as i16;
                 }
 
-                if game().objectcontainer[1].count_moving_types(movingobject_collectioncard) < iPowerupQuantity as usize && !net_random::event(Ev::CollectionCard, &[]) {
-                    spawn_card();
+                if game().objectcontainer[1].count_moving_types(movingobject_collectioncard) < iPowerupQuantity as usize && !net_random::event(game().get(), Ev::CollectionCard, &[]) {
+                    spawn_card(game().get());
                 }
             }
 
             if self.gameover {
-                self.displayplayertext();
+                self.displayplayertext(game().get());
                 return;
             }
 
@@ -157,7 +158,7 @@ impl CGameModeTrait for CGM_Collection {
                             iPoints = 5;
                         }
 
-                        game().score[iScore].adjust_score(iPoints);
+                        game().score[iScore].adjust_score(game().get(), iPoints);
 
                         game().score[iScore].subscore[0] = 0;
                         game().score[iScore].subscore[1] = 0;
@@ -190,7 +191,7 @@ impl CGameModeTrait for CGM_Collection {
 
     fn playerextraguy(&mut self, mut player: Ptr<CPlayer>, iType: i16) {
         if !self.gameover {
-            player.score().adjust_score(iType);
+            player.score().adjust_score(game().get(), iType);
             self.check_winner(player);
         }
     }
@@ -214,7 +215,7 @@ impl CGameModeTrait for CGM_Collection {
                     }
                 }
             } else if player.score().score as f64 >= self.goal as f64 * 0.8 && !self.playedwarningsound {
-                self.playwarningsound();
+                self.playwarningsound(game().get());
             }
         }
 

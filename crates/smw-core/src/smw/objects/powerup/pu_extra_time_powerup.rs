@@ -55,7 +55,7 @@ impl CObjectTrait for PU_ExtraTimePowerup {
                     timelimitmode.addtime(goal / 5);
                 }
 
-                if_sound_on_play(&mut game().rm.sfx_collectpowerup);
+                if_sound_on_play(game().get(), &mut game().rm.sfx_collectpowerup);
                 self.dead = true;
             }
         }

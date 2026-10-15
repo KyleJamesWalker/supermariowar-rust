@@ -1,5 +1,6 @@
 //! Port of src/common/ResourceManager.cpp
 
+use crate::game::Game;
 use crate::common::gfx::color::RGB;
 use crate::common::gfx::gfx_font::gfxFont;
 use crate::common::gfx::gfx_sprite::{gfxSprite, ImageLoader};
@@ -362,8 +363,8 @@ impl CResourceManager {
         sounds
     }
 
-    pub fn load_menu_skin(&mut self, playerID: i16, skinID: i16, colorID: i16, fLoadBothDirections: bool) -> bool {
-        let path = unsafe { game().skinlist.at(skinID as usize).path.clone() };
+    pub fn load_menu_skin(&mut self, g: &mut Game, playerID: i16, skinID: i16, colorID: i16, fLoadBothDirections: bool) -> bool {
+        let path = unsafe { g.skinlist.at(skinID as usize).path.clone() };
         self.load_menu_skin_path(playerID, &path, colorID, fLoadBothDirections)
     }
 
@@ -398,13 +399,13 @@ impl CResourceManager {
         gfx_loadfullskin(path, colorID).unwrap_or_else(|what| panic!("{}", what))
     }
 
-    pub fn load_full_skin(&self, skinID: i16, colorID: i16) -> SpriteStrip {
-        let path = unsafe { game().skinlist.at(skinID as usize).path.clone() };
+    pub fn load_full_skin(&self, g: &mut Game, skinID: i16, colorID: i16) -> SpriteStrip {
+        let path = unsafe { g.skinlist.at(skinID as usize).path.clone() };
         gfx_loadfullskin(&path, colorID).unwrap_or_else(|what| panic!("{}", what))
     }
 
-    fn load_all_sprites(&mut self) {
-        let graphicspack = unsafe { game().gamegraphicspacklist.current_path().to_string_lossy().into_owned() };
+    fn load_all_sprites(&mut self, g: &mut Game) {
+        let graphicspack = unsafe { g.gamegraphicspacklist.current_path().to_string_lossy().into_owned() };
         let builder = |relpath: &str| ImageLoader::new(convert_path_pack(relpath, &graphicspack));
 
         let mut shyguyPath = convert_path_pack("gfx/packs/modeskins/shyguy.png", &graphicspack);
@@ -642,8 +643,8 @@ impl CResourceManager {
         self.spr_abovearrows = builder("gfx/packs/eyecandy/abovearrows.png").with_wrapping(640).create();
     }
 
-    pub fn load_menu_graphics(&mut self) {
-        let graphicspack = unsafe { game().menugraphicspacklist.current_path().to_string_lossy().into_owned() };
+    pub fn load_menu_graphics(&mut self, g: &mut Game) {
+        let graphicspack = unsafe { g.menugraphicspacklist.current_path().to_string_lossy().into_owned() };
         let builder = |relpath: &str| ImageLoader::new(convert_path_pack(relpath, &graphicspack));
 
         self.menu_shade = builder("gfx/packs/menu/menu_shade.png").with_alpha(App::menuTransparency as u8).without_color_key().create();
@@ -686,8 +687,8 @@ impl CResourceManager {
         self.spr_platformpath = builder("gfx/leveleditor/leveleditor_platform_path.png").with_alpha(128).with_wrapping(640).create();
     }
 
-    pub fn load_world_graphics(&mut self) {
-        let graphicspack = unsafe { game().worldgraphicspacklist.current_path().to_string_lossy().into_owned() };
+    pub fn load_world_graphics(&mut self, g: &mut Game) {
+        let graphicspack = unsafe { g.worldgraphicspacklist.current_path().to_string_lossy().into_owned() };
         let builder = |relpath: &str| ImageLoader::new(convert_path_pack(relpath, &graphicspack));
 
         self.spr_worldbackground[0] = builder("gfx/packs/world/world_background.png").create();
@@ -712,23 +713,23 @@ impl CResourceManager {
         self.spr_worldbonushouse = builder("gfx/packs/world/world_bonushouse.png").create();
     }
 
-    pub fn load_game_graphics(&mut self) {
-        let graphicspack = unsafe { game().gamegraphicspacklist.current_path().to_string_lossy().into_owned() };
+    pub fn load_game_graphics(&mut self, g: &mut Game) {
+        let graphicspack = unsafe { g.gamegraphicspacklist.current_path().to_string_lossy().into_owned() };
 
-        unsafe { game().g_tilesetmanager = Ptr::new_box(crate::common::tileset_manager::CTilesetManager::new(&graphicspack)) };
+        unsafe { g.g_tilesetmanager = Ptr::new_box(crate::common::tileset_manager::CTilesetManager::new(&graphicspack)) };
 
-        self.game_font_small = gfxFont::from_path(&convert_path_pack("gfx/packs/fonts/font_small.png", &graphicspack));
-        self.game_font_large = gfxFont::from_path(&convert_path_pack("gfx/packs/fonts/font_large.png", &graphicspack));
+        self.game_font_small = gfxFont::from_path(g, &convert_path_pack("gfx/packs/fonts/font_small.png", &graphicspack));
+        self.game_font_large = gfxFont::from_path(g, &convert_path_pack("gfx/packs/fonts/font_large.png", &graphicspack));
 
-        self.load_all_sprites();
+        self.load_all_sprites(g);
     }
 
-    pub fn load_start_graphics(&mut self) {
-        let graphicspack = unsafe { game().menugraphicspacklist.current_path().to_string_lossy().into_owned() };
+    pub fn load_start_graphics(&mut self, g: &mut Game) {
+        let graphicspack = unsafe { g.menugraphicspacklist.current_path().to_string_lossy().into_owned() };
         let builder = |relpath: &str| ImageLoader::new(convert_path_pack(relpath, &graphicspack));
 
-        self.menu_font_small = gfxFont::from_path(&convert_path_pack("gfx/packs/menu/menu_font_small.png", &graphicspack));
-        self.menu_font_large = gfxFont::from_path(&convert_path_pack("gfx/packs/menu/menu_font_large.png", &graphicspack));
+        self.menu_font_small = gfxFont::from_path(g, &convert_path_pack("gfx/packs/menu/menu_font_small.png", &graphicspack));
+        self.menu_font_large = gfxFont::from_path(g, &convert_path_pack("gfx/packs/menu/menu_font_large.png", &graphicspack));
 
         //load basic stuff
         self.menu_backdrop = builder("gfx/packs/menu/menu_background.png").without_color_key().create();
@@ -736,13 +737,13 @@ impl CResourceManager {
         self.menu_version = builder("gfx/packs/menu/menu_version.png").create();
     }
 
-    pub fn load_all_graphics(&mut self) {
-        let graphicspack = unsafe { game().gamegraphicspacklist.current_path().to_string_lossy().into_owned() };
+    pub fn load_all_graphics(&mut self, g: &mut Game) {
+        let graphicspack = unsafe { g.gamegraphicspacklist.current_path().to_string_lossy().into_owned() };
         let builder = |relpath: &str| ImageLoader::new(convert_path_pack(relpath, &graphicspack));
 
-        self.load_menu_graphics();
-        self.load_world_graphics();
-        self.load_game_graphics();
+        self.load_menu_graphics(g);
+        self.load_world_graphics(g);
+        self.load_game_graphics(g);
 
         self.spr_backmap[0] = builder("gfx/packs/backgrounds/Land_Classic.png").without_color_key().create();
         self.spr_backmap[1] = builder("gfx/packs/backgrounds/Land_Classic.png").without_color_key().create();
@@ -753,14 +754,14 @@ impl CResourceManager {
     }
 
     /// Panics where the C++ throws on a missing sound (the C++ callers do not catch).
-    pub fn load_game_sounds(&mut self) -> bool {
-        unsafe { game().game_values.soundcapable = false };
+    pub fn load_game_sounds(&mut self, g: &mut Game) -> bool {
+        unsafe { g.game_values.soundcapable = false };
 
         if !sfx_can_play_audio() {
             return false;
         }
 
-        let soundpack = unsafe { game().soundpacklist.current_path().to_string_lossy().into_owned() };
+        let soundpack = unsafe { g.soundpacklist.current_path().to_string_lossy().into_owned() };
         let open = |relpath: &str| {
             sfxSound::from_file(Path::new(&convert_path_pack(relpath, &soundpack))).unwrap_or_else(|what| panic!("{}", what))
         };
@@ -816,7 +817,7 @@ impl CResourceManager {
         self.sfx_gameover = open("sfx/packs/gameover.wav");
         self.sfx_pickup = open("sfx/packs/pickup.wav");
 
-        unsafe { game().game_values.soundcapable = true };
+        unsafe { g.game_values.soundcapable = true };
         true
     }
 }

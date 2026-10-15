@@ -50,7 +50,7 @@ impl CObjectTrait for OMO_BowserFire {
         io_over_map_object_update(self);
 
         if (self.velx < 0.0 && (self.ix as i32) < -(self.iw as i32)) || (self.velx > 0.0 && self.ix as i32 > App::screenWidth) {
-            let mut player: Ptr<CPlayer> = get_player_from_global_id(self.iPlayerID);
+            let mut player: Ptr<CPlayer> = get_player_from_global_id(game().get(), self.iPlayerID);
 
             if !player.is_null() {
                 player.decrease_projectiles_count();
@@ -61,7 +61,7 @@ impl CObjectTrait for OMO_BowserFire {
     }
 
     fn draw(&mut self) {
-        self.spr.draw_src(
+        self.spr.draw_src(game().get(), 
             self.ix as i32,
             self.iy as i32,
             &SDL_Rect { x: self.drawframe as i32, y: (if self.velx > 0.0f32 { 32 } else { 0 }) + self.iColorOffsetY as i32, w: self.iw as i32, h: self.ih as i32 },

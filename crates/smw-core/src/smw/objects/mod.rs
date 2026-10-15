@@ -10,6 +10,7 @@ pub mod overmap;
 pub mod powerup;
 pub mod walkingenemy;
 
+use crate::game::game;
 use crate::common::object_base::CObjectTrait;
 use crate::globals::Ptr;
 use crate::smw::net_random::arg_f32;
@@ -21,27 +22,27 @@ pub fn net_place(mut obj: Ptr<dyn CObjectTrait>, extra: i32) {
     }
     let any = obj.as_any();
     if let Some(o) = any.downcast_mut::<moving::mo_coin::MO_Coin>() {
-        o.place_coin();
+        o.place_coin(game().get());
     } else if let Some(o) = any.downcast_mut::<moving::mo_collection_card::MO_CollectionCard>() {
-        o.place_card();
+        o.place_card(game().get());
     } else if let Some(o) = any.downcast_mut::<moving::mo_frenzy_card::MO_FrenzyCard>() {
-        o.place_card();
+        o.place_card(game().get());
     } else if let Some(o) = any.downcast_mut::<moving::mo_yoshi::MO_Yoshi>() {
-        o.place_yoshi();
+        o.place_yoshi(game().get());
     } else if let Some(o) = any.downcast_mut::<overmap::wo_area::OMO_Area>() {
-        o.place_area();
+        o.place_area(game().get());
     } else if let Some(o) = any.downcast_mut::<overmap::wo_king_of_the_hill_zone::OMO_KingOfTheHillZone>() {
-        o.place_area();
+        o.place_area(game().get());
     } else if let Some(o) = any.downcast_mut::<carriable::co_egg::CO_Egg>() {
-        o.place_egg();
+        o.place_egg(game().get());
     } else if let Some(o) = any.downcast_mut::<carriable::co_flag::CO_Flag>() {
-        o.place_flag();
+        o.place_flag(game().get());
     } else if let Some(o) = any.downcast_mut::<moving::mo_flag_base::MO_FlagBase>() {
-        o.place_flag_base(extra != 0);
+        o.place_flag_base(game().get(), extra != 0);
     } else if let Some(o) = any.downcast_mut::<carriable::co_phanto_key::CO_PhantoKey>() {
-        o.place_key();
+        o.place_key(game().get());
     } else if let Some(o) = any.downcast_mut::<powerup::pu_secret_powerup::PU_SecretPowerup>() {
-        o.place();
+        o.place(game().get());
     }
 }
 
@@ -80,7 +81,7 @@ pub fn net_hazard_timer(mut obj: Ptr<dyn CObjectTrait>) {
     } else if let Some(o) = any.downcast_mut::<moving::mo_pirhana_plant::MO_PirhanaPlant>() {
         o.set_new_timer();
     } else if let Some(o) = any.downcast_mut::<io_bullet_bill_cannon::IO_BulletBillCannon>() {
-        o.fire();
+        o.fire(game().get());
     }
 }
 

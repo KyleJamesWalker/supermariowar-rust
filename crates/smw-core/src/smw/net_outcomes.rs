@@ -8,6 +8,7 @@
 //! The harness dump records every death, every change of the team scores and the end of the game as `C`
 //! records (docs/REPLAY.md), so net_game_compare.py can tell whether the clients agree on them.
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
@@ -56,9 +57,9 @@ pub fn begin_game() {
     }
 }
 
-pub fn note_death(player: i16, style: i32, removed: bool) {
+pub fn note_death(g: &mut Game, player: i16, style: i32, removed: bool) {
     unsafe {
-        if game().netplay.active {
+        if g.netplay.active {
             harness::note_net(format!("death p={} style={} removed={}", player, style, removed as i32));
         }
     }
@@ -66,14 +67,14 @@ pub fn note_death(player: i16, style: i32, removed: bool) {
 
 /// While true, score changes outside the game host's events are ignored.
 pub fn score_locked() -> bool {
-    unsafe { net_random::host_decides() && net_random::in_game() && !net_random::in_event() && !outcome_state().g_applying }
+    unsafe { net_random::host_decides(game().get()) && net_random::in_game() && !net_random::in_event() && !outcome_state().g_applying }
 }
 
 /// A joiner keeps the game host's game over and winner, whatever its own mode logic concluded.
-pub fn frame_start() {
+pub fn frame_start(g: &mut Game) {
     unsafe {
-        if net_random::host_decides() && !game().game_values.gamemode.is_null() {
-            let mut gm = game().game_values.gamemode;
+        if net_random::host_decides(g) && !g.game_values.gamemode.is_null() {
+            let mut gm = g.game_values.gamemode;
             gm.gameover = outcome_state().g_hostGameOver;
             gm.winningteam = outcome_state().g_hostWinner;
         }
@@ -81,45 +82,45 @@ pub fn frame_start() {
 }
 
 /// End of a gameplay frame: the host sends changed scores; every client but a deciding host's joiner records them.
-pub fn sample() {
+pub fn sample(g: &mut Game) {
     unsafe {
-        if !game().netplay.active || game().game_values.gamemode.is_null() {
+        if !g.netplay.active || g.game_values.gamemode.is_null() {
             return;
         }
-        if game().netplay.theHostIsMe && net_random::in_game() {
-            let snapshot = snapshot();
+        if g.netplay.theHostIsMe && net_random::in_game() {
+            let snapshot = snapshot(g);
             if snapshot != outcome_state().g_lastSent {
                 outcome_state().g_lastSent = snapshot.clone();
-                net_random::event(Ev::Scores, &snapshot);
+                net_random::event(g, Ev::Scores, &snapshot);
             }
         }
-        if !net_random::host_decides() {
-            record();
+        if !net_random::host_decides(g) {
+            record(g);
         }
     }
 }
 
-fn snapshot() -> Vec<i32> {
+fn snapshot(g: &mut Game) -> Vec<i32> {
     unsafe {
-        let gm = game().game_values.gamemode;
+        let gm = g.game_values.gamemode;
         let mut v = vec![gm.gameover as i32, gm.winningteam as i32];
         for t in 0..game().score_cnt as usize {
-            v.push(game().score[t].score as i32);
-            v.extend(game().score[t].subscore.iter().map(|s| *s as i32));
+            v.push(g.score[t].score as i32);
+            v.extend(g.score[t].subscore.iter().map(|s| *s as i32));
         }
         v
     }
 }
 
-fn record() {
+fn record(g: &mut Game) {
     unsafe {
-        let scores: Vec<i16> = (0..game().score_cnt as usize).map(|t| game().score[t].score).collect();
+        let scores: Vec<i16> = (0..game().score_cnt as usize).map(|t| g.score[t].score).collect();
         if scores != outcome_state().g_lastScores {
             let text: Vec<String> = scores.iter().map(|s| s.to_string()).collect();
             harness::note_net(format!("scores {}", text.join(",")));
             outcome_state().g_lastScores = scores;
         }
-        let gm = game().game_values.gamemode;
+        let gm = g.game_values.gamemode;
         if gm.gameover && !outcome_state().g_lastGameOver {
             harness::note_net(format!("gameover winner={}", gm.winningteam));
         }
@@ -128,36 +129,36 @@ fn record() {
 }
 
 /// `Ev::Scores`.
-pub fn net_apply_scores(args: &[i32]) {
+pub fn net_apply_scores(g: &mut Game, args: &[i32]) {
     unsafe {
         outcome_state().g_hostGameOver = args[0] != 0;
         outcome_state().g_hostWinner = args[1] as i16;
-        if game().netplay.theHostIsMe {
+        if g.netplay.theHostIsMe {
             return;
         }
         outcome_state().g_applying = true;
-        for (t, v) in args[2..].chunks(4).enumerate().take(game().score_cnt as usize) {
-            game().score[t].set_score(v[0] as i16);
+        for (t, v) in args[2..].chunks(4).enumerate().take(g.score_cnt as usize) {
+            g.score[t].set_score(v[0] as i16);
             for (i, s) in v[1..].iter().enumerate() {
-                game().score[t].subscore[i] = *s as i16;
+                g.score[t].subscore[i] = *s as i16;
             }
         }
         outcome_state().g_applying = false;
-        let mut gm = game().game_values.gamemode;
+        let mut gm = g.game_values.gamemode;
         gm.gameover = outcome_state().g_hostGameOver;
         gm.winningteam = outcome_state().g_hostWinner;
-        record();
+        record(g);
     }
 }
 
 /// The three ways a player gets killed: `player_killed_player`, `CPlayer::killed_player` and
 /// `CPlayer::kill_player_map_hazard`. `None` means the caller kills as usual; a joiner whose game host decides
 /// gets `NonKill` and waits for the host's kill.
-pub fn kill(args: &[i32]) -> Option<PlayerKillType> {
-    if !net_random::event(Ev::Kill, args) {
+pub fn kill(g: &mut Game, args: &[i32]) -> Option<PlayerKillType> {
+    if !net_random::event(g, Ev::Kill, args) {
         return None;
     }
-    unsafe { Some(if game().netplay.theHostIsMe { outcome_state().g_killResult } else { PlayerKillType::NonKill }) }
+    unsafe { Some(if g.netplay.theHostIsMe { outcome_state().g_killResult } else { PlayerKillType::NonKill }) }
 }
 
 pub fn kill_result() -> PlayerKillType {
@@ -172,15 +173,15 @@ pub fn kill_had_effect() -> bool {
 pub fn net_kill(args: &[i32]) {
     unsafe {
         outcome_state().g_killResult = PlayerKillType::None;
-        let first = get_player_from_global_id(args[1] as i16);
-        let killed = get_player_from_global_id(args[2] as i16);
+        let first = get_player_from_global_id(game().get(), args[1] as i16);
+        let killed = get_player_from_global_id(game().get(), args[2] as i16);
         let deathstyle = death_style(args[3]);
         let style = kill_style(args[4]);
         let (fForce, fKillCarriedItem) = (args[5] != 0, args[6] != 0);
         outcome_state().g_killResult = match args[0] {
-            0 if !killed.is_null() => player_killed_player_now(args[1] as i16, killed, deathstyle, style, fForce, fKillCarriedItem),
-            1 if !first.is_null() && !killed.is_null() => first.get().killed_player_now(killed, deathstyle, style, fForce, fKillCarriedItem),
-            2 if !first.is_null() => first.get().kill_player_map_hazard_now(fForce, style, fKillCarriedItem, args[7] as i16),
+            0 if !killed.is_null() => player_killed_player_now(game().get(), args[1] as i16, killed, deathstyle, style, fForce, fKillCarriedItem),
+            1 if !first.is_null() && !killed.is_null() => first.get().killed_player_now(game().get(), killed, deathstyle, style, fForce, fKillCarriedItem),
+            2 if !first.is_null() => first.get().kill_player_map_hazard_now(game().get(), fForce, style, fKillCarriedItem, args[7] as i16),
             _ => PlayerKillType::None,
         };
 
@@ -188,15 +189,15 @@ pub fn net_kill(args: &[i32]) {
         let hostKilled = args.get(8).is_some_and(|&r| r == PlayerKillType::Normal as i32 || r == PlayerKillType::Removed as i32);
         let mut victim = if args[0] == 2 { first } else { killed };
         if hostKilled && !victim.is_null() && (victim.state == PlayerState::Ready || victim.state == PlayerState::Spawning) {
-            victim.die(deathstyle, false, fKillCarriedItem);
+            victim.die(game().get(), deathstyle, false, fKillCarriedItem);
         }
     }
 }
 
 pub fn kill_outcome(args: &[i32]) -> String {
-    let mut p = get_player_from_global_id(args[2] as i16);
+    let mut p = get_player_from_global_id(game().get(), args[2] as i16);
     if p.is_null() {
-        p = get_player_from_global_id(args[1] as i16);
+        p = get_player_from_global_id(game().get(), args[1] as i16);
     }
     unsafe {
         let result = outcome_state().g_killResult as i32;
@@ -209,16 +210,16 @@ pub fn kill_outcome(args: &[i32]) -> String {
 }
 
 /// `remove_team`: `None` means the caller removes the team as usual.
-pub fn remove_team_event(teamid: i16) -> Option<bool> {
-    if !net_random::event(Ev::RemoveTeam, &[teamid as i32]) {
+pub fn remove_team_event(g: &mut Game, teamid: i16) -> Option<bool> {
+    if !net_random::event(g, Ev::RemoveTeam, &[teamid as i32]) {
         return None;
     }
     unsafe {
-        if game().netplay.theHostIsMe {
+        if g.netplay.theHostIsMe {
             Some(outcome_state().g_removeResult)
         } else {
-            let removed = game().score[teamid as usize].order > -1;
-            Some(game().game_values.flags.teamdeadcounter as i32 + if removed { 0 } else { 1 } == game().score_cnt as i32 - 1)
+            let removed = g.score[teamid as usize].order > -1;
+            Some(g.game_values.flags.teamdeadcounter as i32 + if removed { 0 } else { 1 } == g.score_cnt as i32 - 1)
         }
     }
 }
@@ -226,7 +227,7 @@ pub fn remove_team_event(teamid: i16) -> Option<bool> {
 pub fn net_remove_team(teamid: i16) {
     unsafe {
         if (0..game().score_cnt).contains(&teamid) {
-            outcome_state().g_removeResult = crate::smw::gamemodes::game_mode::remove_team_now(teamid);
+            outcome_state().g_removeResult = crate::smw::gamemodes::game_mode::remove_team_now(game().get(), teamid);
         }
     }
 }

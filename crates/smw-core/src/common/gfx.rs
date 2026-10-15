@@ -9,6 +9,7 @@ pub mod gfx_sprite;
 pub mod soft_image;
 pub mod soft_surface;
 
+use crate::game::Game;
 use crate::common::gfx::color::{colors, RGB};
 use crate::common::gfx::gfx_palette::{gfxPalette, PlayerPalette};
 use crate::common::gfx::gfx_sdl::GraphicsSDL;
@@ -28,10 +29,10 @@ pub fn new_sprite_strip() -> SpriteStrip {
 }
 
 /// Constructors of the globals defined in gfx.cpp, in definition order.
-pub fn init_globals() {
+pub fn init_globals(g: &mut Game) {
     unsafe {
-        game().gfx.init(GraphicsSDL::new());
-        game().gfx_palette.init(gfxPalette::new());
+        g.gfx.init(GraphicsSDL::new());
+        g.gfx_palette.init(gfxPalette::new());
     }
 }
 
@@ -113,12 +114,12 @@ fn must_lock(surf: *mut SDL_Surface) -> bool {
 }
 
 /// Makes team-colored skin surface frame from a loaded sprite strip.
-fn create_skin_surface(source: &gfxSprite, sourceFrame: usize, team: usize, allStates: bool, mirrored: bool) -> gfxSprite {
+fn create_skin_surface(g: &mut Game, source: &gfxSprite, sourceFrame: usize, team: usize, allStates: bool, mirrored: bool) -> gfxSprite {
     unsafe {
         //Take the loaded skin and colorize it for each state (normal, 3 frames of invincibility, shielded, tagged, ztarred, got shine, frozen)
         let outFrameCount: usize = if allStates { gfx_palette::COUNT as usize } else { 1 };
 
-        let out = gfxSprite::blank(32 * outFrameCount as u32, 32);
+        let out = gfxSprite::blank(g, 32 * outFrameCount as u32, 32);
 
         if must_lock(out.get_surface()) {
             SDL_LockSurface(out.get_surface());
@@ -136,7 +137,7 @@ fn create_skin_surface(source: &gfxSprite, sourceFrame: usize, team: usize, allS
 
                 let pixelColor = get_rgb(source.get_surface(), startX + srcX, y);
 
-                if let Some(sheet) = game().gfx_palette.color_sheets().get(&pixelColor) {
+                if let Some(sheet) = g.gfx_palette.color_sheets().get(&pixelColor) {
                     for outFrame in 0..outFrameCount {
                         let paletteColor = sheet.replacement_for(team, outFrame as PlayerPalette);
                         set_rgb(out.get_surface(), outFrame as i32 * 32 + dstX, y, &paletteColor);
@@ -178,23 +179,23 @@ pub fn get_rgb(surf: *mut SDL_Surface, x: i32, y: i32) -> RGB {
     }
 }
 
-pub fn gfx_init(w: i32, h: i32, fullscreen: bool) -> bool {
-    unsafe { (*game().gfx).init(fullscreen) }
+pub fn gfx_init(g: &mut Game, w: i32, h: i32, fullscreen: bool) -> bool {
+    unsafe { (*game().gfx).init(g, fullscreen) }
 }
 
-pub fn gfx_changefullscreen(fullscreen: bool) {
-    unsafe { game().gfx.change_full_screen(fullscreen) }
+pub fn gfx_changefullscreen(g: &mut Game, fullscreen: bool) {
+    unsafe { g.gfx.change_full_screen(fullscreen) }
 }
 
-pub fn gfx_flipscreen() {
-    unsafe { game().gfx.flip_screen() }
+pub fn gfx_flipscreen(g: &mut Game) {
+    unsafe { g.gfx.flip_screen() }
 }
 
-pub fn gfx_settitle(title: &str) {
-    unsafe { game().gfx.set_title(title) }
+pub fn gfx_settitle(g: &mut Game, title: &str) {
+    unsafe { g.gfx.set_title(title) }
 }
 
-pub fn gfx_show_catched_error(error: &str) {
+pub fn gfx_show_catched_error(g: &mut Game, error: &str) {
     let mut message = String::from(
         "It seems the game has unexpectedly crashed. If you could tell us\n\
          what happened exactly, we might be able to fix this bug. Consider\n\
@@ -207,36 +208,36 @@ pub fn gfx_show_catched_error(error: &str) {
         message += error;
     }
     eprintln!("\n{}", message);
-    unsafe { game().gfx.show_error_box(&message) }
+    unsafe { g.gfx.show_error_box(&message) }
 }
 
-pub fn gfx_take_screenshot() {
-    unsafe { game().gfx.take_screenshot() }
+pub fn gfx_take_screenshot(g: &mut Game) {
+    unsafe { g.gfx.take_screenshot() }
 }
 
 pub fn gfx_close() {}
 
-pub fn gfx_loadpalette(palette_path: &Path) -> bool {
-    unsafe { game().gfx_palette.load(palette_path) }
+pub fn gfx_loadpalette(g: &mut Game, palette_path: &Path) -> bool {
+    unsafe { g.gfx_palette.load(palette_path) }
 }
 
 /// Not in the C++: writes `screen` as a BMP for the differential replay harness.
-pub fn gfx_save_screen_bmp(path: &str) -> bool {
+pub fn gfx_save_screen_bmp(g: &mut Game, path: &str) -> bool {
     let cpath = CString::new(path).unwrap();
     unsafe {
         let rw = SDL_RWFromFile(cpath.as_ptr(), b"wb\0".as_ptr() as *const _);
-        !rw.is_null() && SDL_SaveBMP_RW(game().screen, rw, 1) == 0
+        !rw.is_null() && SDL_SaveBMP_RW(g.screen, rw, 1) == 0
     }
 }
 
 /// Appends the screen's 640x480 pixels to `out` as raw ARGB8888 (BGRA bytes on little-endian).
-pub fn gfx_write_screen_raw(out: &mut impl std::io::Write) -> std::io::Result<()> {
+pub fn gfx_write_screen_raw(g: &mut Game, out: &mut impl std::io::Write) -> std::io::Result<()> {
     unsafe {
         let argb = SDL_PixelFormatEnum::SDL_PIXELFORMAT_ARGB8888 as u32;
-        let surface = if (*(*game().screen).format).format == argb {
-            game().screen
+        let surface = if (*(*g.screen).format).format == argb {
+            g.screen
         } else {
-            SDL_ConvertSurfaceFormat(game().screen, argb, 0)
+            SDL_ConvertSurfaceFormat(g.screen, argb, 0)
         };
         if surface.is_null() {
             return Err(std::io::Error::other("cannot convert the screen surface"));
@@ -246,7 +247,7 @@ pub fn gfx_write_screen_raw(out: &mut impl std::io::Write) -> std::io::Result<()
         let pixels = std::slice::from_raw_parts((*surface).pixels as *const u8, pitch * rows);
         let result = (0..rows).try_for_each(|y| out.write_all(&pixels[y * pitch..y * pitch + w]));
         SDL_UnlockSurface(surface);
-        if surface != game().screen {
+        if surface != g.screen {
             SDL_FreeSurface(surface);
         }
         result
@@ -270,13 +271,13 @@ pub fn gfx_loadmenuskin(path: &Path, colorScheme: i16, fLoadBothDirections: bool
     let mut strip = new_sprite_strip();
 
     for i in 0..2usize {
-        let skinSurface = create_skin_surface(&skin, i, colorScheme as usize, true, false);
+        let skinSurface = create_skin_surface(game().get(), &skin, i, colorScheme as usize, true, false);
         strip[i * 2] = skinSurface;
     }
 
     if fLoadBothDirections {
         for i in 0..2usize {
-            let skinSurface = create_skin_surface(&skin, i, colorScheme as usize, true, true);
+            let skinSurface = create_skin_surface(game().get(), &skin, i, colorScheme as usize, true, true);
             strip[i * 2 + 1] = skinSurface;
         }
     }
@@ -292,17 +293,17 @@ pub fn gfx_loadfullskin(path: &Path, colorScheme: i16) -> Result<SpriteStrip, St
 
     for k in 0..4usize {
         for j in 0..2usize {
-            let skinSurface = create_skin_surface(&skin, k, colorScheme as usize, true, j != 0);
+            let skinSurface = create_skin_surface(game().get(), &skin, k, colorScheme as usize, true, j != 0);
             strip[(k * 2) + j] = skinSurface;
         }
     }
 
     //Dead Flying Sprite
-    let skinSurface = create_skin_surface(&skin, 4, colorScheme as usize, true, false);
+    let skinSurface = create_skin_surface(game().get(), &skin, 4, colorScheme as usize, true, false);
     strip[8] = skinSurface;
 
     //Dead Stomped Sprite
-    let skinSurface = create_skin_surface(&skin, 5, colorScheme as usize, true, false);
+    let skinSurface = create_skin_surface(game().get(), &skin, 5, colorScheme as usize, true, false);
     strip[9] = skinSurface;
 
     Ok(strip)
@@ -346,7 +347,7 @@ pub fn gfx_cliprect(srcRect: &mut SDL_Rect, dstRect: &mut SDL_Rect, clipArea: &S
 
 /// Clips a source and destination area pair, so that the destination area doesn't go past
 /// a certain threshold in a given direction. Returns true if the destination area is fully hidden.
-pub fn gfx_adjusthiddenrects(src: &mut SDL_Rect, dst: &mut SDL_Rect, edge: ClipEdge, threshold: i32) -> bool {
+pub fn gfx_adjusthiddenrects(g: &mut Game, src: &mut SDL_Rect, dst: &mut SDL_Rect, edge: ClipEdge, threshold: i32) -> bool {
     unsafe {
         match edge {
             ClipEdge::Top => {
@@ -358,7 +359,7 @@ pub fn gfx_adjusthiddenrects(src: &mut SDL_Rect, dst: &mut SDL_Rect, edge: ClipE
                     let diff = threshold - dst.y;
                     src.y += diff;
                     src.h -= diff;
-                    dst.y = threshold + game().y_shake as i32;
+                    dst.y = threshold + g.y_shake as i32;
                     dst.h = src.h;
                 }
             }
@@ -391,7 +392,7 @@ pub fn gfx_adjusthiddenrects(src: &mut SDL_Rect, dst: &mut SDL_Rect, edge: ClipE
                     let diff = threshold - dst.x;
                     src.x += diff;
                     src.w -= diff;
-                    dst.x = threshold + game().x_shake as i32;
+                    dst.x = threshold + g.x_shake as i32;
                     dst.w = src.w;
                 }
             }
@@ -401,7 +402,7 @@ pub fn gfx_adjusthiddenrects(src: &mut SDL_Rect, dst: &mut SDL_Rect, edge: ClipE
     false
 }
 
-pub fn gfx_drawpreview(
+pub fn gfx_drawpreview(g: &mut Game, 
     sprite: &gfxSprite,
     dstX: i16,
     dstY: i16,
@@ -421,13 +422,13 @@ pub fn gfx_drawpreview(
         gfx_cliprect(&mut rSrcRect, &mut rDstRect, clipRect);
 
         if let Some((edge, threshold)) = clip {
-            if gfx_adjusthiddenrects(&mut rSrcRect, &mut rDstRect, edge, threshold) {
+            if gfx_adjusthiddenrects(g, &mut rSrcRect, &mut rDstRect, edge, threshold) {
                 return;
             }
         }
 
         // Blit onto the screen surface
-        sprite.draw_src_to(&rSrcRect, game().blitdest, &rDstRect);
+        sprite.draw_src_to(&rSrcRect, g.blitdest, &rDstRect);
 
         if wrap {
             //Deal with wrapping over sides of screen
@@ -454,25 +455,25 @@ pub fn gfx_drawpreview(
                 gfx_cliprect(&mut rSrcRect, &mut rDstRect, clipRect);
 
                 if let Some((edge, threshold)) = clip {
-                    if gfx_adjusthiddenrects(&mut rSrcRect, &mut rDstRect, edge, threshold) {
+                    if gfx_adjusthiddenrects(g, &mut rSrcRect, &mut rDstRect, edge, threshold) {
                         return;
                     }
                 }
 
-                sprite.draw_src_to(&rSrcRect, game().blitdest, &rDstRect);
+                sprite.draw_src_to(&rSrcRect, g.blitdest, &rDstRect);
             }
         }
     }
 }
 
-pub fn gfx_setjoystickteamcolor(joystick: *mut SDL_Joystick, team: i16, mut brightness: f32) {
+pub fn gfx_setjoystickteamcolor(g: &mut Game, joystick: *mut SDL_Joystick, team: i16, mut brightness: f32) {
     if team < 0 {
         // A non-playing user has no team
         return;
     }
     brightness = 0f32.max(1f32.min(brightness));
     unsafe {
-        if let Some(color) = game().gfx_palette.replacement_for(RGB { r: 0x80, g: 0x00, b: 0x00 }, team as usize, gfx_palette::normal) {
+        if let Some(color) = g.gfx_palette.replacement_for(RGB { r: 0x80, g: 0x00, b: 0x00 }, team as usize, gfx_palette::normal) {
             SDL_JoystickSetLED(
                 joystick,
                 (brightness * color.r as f32) as u8,

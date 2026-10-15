@@ -33,7 +33,7 @@ impl CGameModeTrait for CGM_Coins {
     crate::impl_cgamemode_plumbing!();
 
     fn init(&mut self) {
-        cgamemode_init(self);
+        cgamemode_init(game().get(), self);
 
         unsafe {
             if game().game_values.gamemodesettings.coins.quantity < 1 {
@@ -53,7 +53,7 @@ impl CGameModeTrait for CGM_Coins {
 
         unsafe {
             if game().game_values.gamemodesettings.coins.penalty {
-                other.score().adjust_score(-1);
+                other.score().adjust_score(game().get(), -1);
             }
         }
 
@@ -67,7 +67,7 @@ impl CGameModeTrait for CGM_Coins {
 
         unsafe {
             if game().game_values.gamemodesettings.coins.penalty {
-                player.score().adjust_score(-1);
+                player.score().adjust_score(game().get(), -1);
             }
         }
 
@@ -76,7 +76,7 @@ impl CGameModeTrait for CGM_Coins {
 
     fn playerextraguy(&mut self, mut player: Ptr<CPlayer>, iType: i16) {
         if !self.gameover {
-            player.score().adjust_score(((iType as i32) << 1) as i16);
+            player.score().adjust_score(game().get(), ((iType as i32) << 1) as i16);
             self.check_winner(player);
         }
     }
@@ -92,7 +92,7 @@ impl CGameModeTrait for CGM_Coins {
                 setup_score_board(false);
                 show_score_board();
             } else if player.score().score as i32 >= self.goal as i32 - 5 && !self.playedwarningsound {
-                self.playwarningsound();
+                self.playwarningsound(game().get());
             }
         }
 

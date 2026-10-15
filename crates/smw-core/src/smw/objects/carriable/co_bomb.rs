@@ -108,7 +108,7 @@ impl CObjectTrait for CO_Bomb {
             self.fOldX = self.fx;
             self.fOldY = self.fy;
 
-            io_moving_object_collision_detection_map(self);
+            io_moving_object_collision_detection_map(game().get(), self);
         }
 
         self.animate();
@@ -118,7 +118,7 @@ impl CObjectTrait for CO_Bomb {
                 let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
                 let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
                 if self.sSpotlight.is_null() {
-                    self.sSpotlight = game().spotlightManager.add_spotlight(x, y, 3);
+                    self.sSpotlight = game().spotlightManager.add_spotlight(game().get(), x, y, 3);
                 }
 
                 if !self.sSpotlight.is_null() {
@@ -134,9 +134,9 @@ impl CObjectTrait for CO_Bomb {
         let src = SDL_Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32, w: self.iw as i32, h: self.ih as i32 };
         if !self.owner.is_null() && self.owner.iswarping() {
             let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32) };
-            self.spr.draw_clip(x, y, &src, edge, self.owner.get_warp_plane() as i32);
+            self.spr.draw_clip(game().get(), x, y, &src, edge, self.owner.get_warp_plane() as i32);
         } else {
-            self.spr.draw_src(x, y, &src);
+            self.spr.draw_src(game().get(), x, y, &src);
         }
     }
 }
@@ -153,7 +153,7 @@ impl IO_MovingObjectTrait for CO_Bomb {
             self.owner = Ptr::null();
         }
 
-        let mut player = get_player_from_global_id(self.iPlayerID);
+        let mut player = get_player_from_global_id(game().get(), self.iPlayerID);
 
         if !player.is_null() {
             player.decrease_projectiles_count();
@@ -170,7 +170,7 @@ impl IO_MovingObjectTrait for CO_Bomb {
                 self.iTeamID,
                 KillStyle::Bomb,
             )));
-            if_sound_on_play(&mut game().rm.sfx_bobombsound);
+            if_sound_on_play(game().get(), &mut game().rm.sfx_bobombsound);
         }
     }
 }

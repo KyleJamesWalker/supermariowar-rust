@@ -361,7 +361,7 @@ fn spr(s: &mut gfxSprite) -> Ptr<gfxSprite> {
 }
 
 fn draw_rect(sprite: &gfxSprite, x: i32, y: i32, sx: i32, sy: i32, w: i32, h: i32) {
-    sprite.draw_src(x, y, &SDL_Rect { x: sx, y: sy, w, h });
+    sprite.draw_src(game().get(), x, y, &SDL_Rect { x: sx, y: sy, w, h });
 }
 
 /// `static_cast<MusicCategory>(id)`.
@@ -397,13 +397,13 @@ impl GameplayState {
                         }
 
                         let localID = g.players.len() as i16;
-                        g.players.push(CPlayer::new(
+                        game().players.push(CPlayer::new(g, 
                             iPlayer,
                             localID,
                             teamid,
                             subteamid,
                             g.game_values.colorids[p],
-                            Ptr::from_mut(&mut g.rm.spr_player[p]),
+                            Ptr::from_mut(&mut game().rm.spr_player[p]),
                             g.score[teamid as usize],
                             Ptr::from_mut(&mut self.respawnCount[p]),
                             ai.map(|a| a as Box<dyn crate::smw::ai::CPlayerAITrait>),
@@ -701,9 +701,9 @@ impl GameplayState {
                     fCheckForGameOver = true;
 
                     let globalID = g.players[i].globalID as usize;
-                    crate::smw::net_outcomes::note_death(globalID as i16, PlayerDeathStyle::Jump as i32, true);
+                    crate::smw::net_outcomes::note_death(g, globalID as i16, PlayerDeathStyle::Jump as i32, true);
                     if self.respawnCount[globalID] <= 0 {
-                        g.players[i].die(PlayerDeathStyle::Jump, true, false);
+                        game().players[i].die(g, PlayerDeathStyle::Jump, true, false);
                     }
 
                     self.respawnCount[globalID] = 0;
@@ -809,7 +809,7 @@ pub fn animate_during_countdown(g: &mut Game) {
         g.eyecandy[1].update();
         g.eyecandy[2].update();
 
-        g.g_map.update();
+        game().g_map.update(g);
     }
 }
 
@@ -865,7 +865,7 @@ pub fn shake_screen(g: &mut Game) {
         let mut iNumKillPlayers: i16 = 0;
         let mut pKillPlayers: [Ptr<CPlayer>; 4] = [Ptr::null(); 4];
 
-        let mut killer1 = get_player_from_global_id(g.game_values.flags.screenshakeplayerid);
+        let mut killer1 = get_player_from_global_id(g, g.game_values.flags.screenshakeplayerid);
 
         for i in 0..game().players.len() {
             let player = g.players[i];
@@ -899,7 +899,7 @@ pub fn shake_screen(g: &mut Game) {
         //Randomize the order in which the players are killed
         if iNumKillPlayers > 0 {
             let ids: Vec<i32> = pKillPlayers[..iNumKillPlayers as usize].iter().map(|p| p.globalID as i32).collect();
-            if !net_random::event(Ev::Pow, &ids) {
+            if !net_random::event(g, Ev::Pow, &ids) {
                 net_pow_kills(g, &ids);
             }
         }
@@ -915,14 +915,14 @@ pub fn shake_screen(g: &mut Game) {
                 if (r#type == movingobject_goomba || r#type == movingobject_koopa || r#type == movingobject_buzzybeetle || r#type == movingobject_spiny)
                     && g.game_values.flags.screenshakekillinair == movingobject.inair
                 {
-                    let mut killer = get_player_from_global_id(g.game_values.flags.screenshakeplayerid);
+                    let mut killer = get_player_from_global_id(g, g.game_values.flags.screenshakeplayerid);
 
                     if !killer.is_null() {
                         if !g.game_values.gamemode.gameover {
-                            killer.score.adjust_score(1);
+                            killer.score.adjust_score(g, 1);
                         }
 
-                        if_sound_on_play(&mut g.rm.sfx_kicksound);
+                        if_sound_on_play(g, &mut game().rm.sfx_kicksound);
                         movingobject.as_walking_enemy().unwrap().die_and_drop_shell(true, true);
 
                         g.game_values.flags.screenshakekillscount += 1;
@@ -960,7 +960,7 @@ pub fn shake_screen(g: &mut Game) {
                         }
                     } else if t == movingobject_pirhanaplant {
                         let plant: &mut MO_PirhanaPlant = movingobject.as_any().downcast_mut::<MO_PirhanaPlant>().unwrap();
-                        plant.kill_plant();
+                        plant.kill_plant(g);
                     } else if t == movingobject_bulletbill {
                         movingobject.die();
                     }
@@ -972,7 +972,7 @@ pub fn shake_screen(g: &mut Game) {
         if g.game_values.flags.screenshakekillscount > 1 && g.game_values.awardstyle != AwardStyle::None {
             g.game_values.flags.screenshakekillscount = 0;
 
-            let mut killer2 = get_player_from_global_id(g.game_values.flags.screenshakeplayerid);
+            let mut killer2 = get_player_from_global_id(g, g.game_values.flags.screenshakeplayerid);
 
             if !killer2.is_null() {
                 killer2.add_kills_in_row_in_air_award();
@@ -1203,7 +1203,7 @@ impl GameplayState {
                     let teamcount = g.game_values.teamcounts[i];
                     let gm = g.game_values.gamemode.gamemode;
                     if gm == game_mode_health || gm == game_mode_collection || gm == game_mode_boxes_minigame {
-                        g.rm.spr_shade[(teamcount - 1) as usize].draw(s.x as i32, s.y as i32);
+                        game().rm.spr_shade[(teamcount - 1) as usize].draw(g, s.x as i32, s.y as i32);
                     } else {
                         draw_rect(&g.rm.spr_shade[(teamcount - 1) as usize], s.x as i32, s.y as i32, 0, 0, 256, 41);
                     }
@@ -1250,7 +1250,7 @@ impl GameplayState {
                             }
 
                             //Search for player state to display
-                            let player = get_player_from_global_id(globalID);
+                            let player = get_player_from_global_id(g, globalID);
 
                             if !player.is_null() && !g.game_values.gamemode.gameover {
                                 let iScoreOffsetX: i16 = (s.x as i32 + Self::scoreoffsets[k] as i32) as i16;
@@ -1291,7 +1291,7 @@ impl GameplayState {
 
                             //give crown to player(s) with most kills
                             if g.g_iWinningPlayer as i32 == i as i32 {
-                                game().rm.spr_crown.draw(s.x as i32 + Self::scoreoffsets[k] as i32 + 12, s.y as i32 - 4);
+                                game().rm.spr_crown.draw(g, s.x as i32 + Self::scoreoffsets[k] as i32 + 12, s.y as i32 - 4);
                             }
                         }
 
@@ -1384,7 +1384,7 @@ impl GameplayState {
     fn draw_screen_fade(&mut self, g: &mut Game) {
         unsafe {
             if g.game_values.screenfadespeed != 0 {
-                g.g_map.update();
+                game().g_map.update(g);
                 g.game_values.screenfade = (g.game_values.screenfade as i32 + g.game_values.screenfadespeed as i32) as i16;
 
                 if g.game_values.screenfade <= 0 {
@@ -1420,7 +1420,7 @@ impl GameplayState {
 
             if g.game_values.screenfade > 0 {
                 g.rm.menu_shade.setalpha(g.game_values.screenfade as u8);
-                g.rm.menu_shade.draw(0, 0);
+                game().rm.menu_shade.draw(g, 0, 0);
             }
         }
     }
@@ -1451,7 +1451,7 @@ impl GameplayState {
             if g.game_values.flags.swapplayers {
                 for i in 0..game().players.len() {
                     let mut player = g.players[i];
-                    player.drawswap();
+                    player.drawswap(g);
 
                     let storedpowerupid = g.game_values.gamepowerups[player.get_global_id() as usize];
 
@@ -1475,7 +1475,7 @@ impl GameplayState {
 
                 if g.game_values.swapstyle == 0 {
                     if !g.rm.sfx_skid.is_playing() {
-                        if_sound_on_play(&mut g.rm.sfx_skid);
+                        if_sound_on_play(g, &mut game().rm.sfx_skid);
                     }
                 }
 
@@ -1495,7 +1495,7 @@ impl GameplayState {
                         g.rm.sfx_skid.stop();
                     }
 
-                    if_sound_on_play(&mut g.rm.sfx_transform);
+                    if_sound_on_play(g, &mut game().rm.sfx_transform);
 
                     if g.game_values.swapstyle == 1 {
                         for i in 0..game().players.len() {
@@ -1516,7 +1516,7 @@ impl GameplayState {
 
     fn draw_back_layer(&mut self, g: &mut Game) {
         unsafe {
-            g.rm.spr_backmap[g.g_iCurrentDrawIndex as usize].draw(0, 0);
+            game().rm.spr_backmap[game().g_iCurrentDrawIndex as usize].draw(g, 0, 0);
 
             //draw back eyecandy behind players
             g.g_map.draw_platforms(0);
@@ -1537,7 +1537,7 @@ impl GameplayState {
             if !g.game_values.flags.swapplayers {
                 for i in 0..game().players.len() {
                     let mut player = g.players[i];
-                    player.draw();
+                    player.draw(g);
                 }
             }
 
@@ -1552,10 +1552,10 @@ impl GameplayState {
             g.g_map.draw_platforms(2);
 
             if g.game_values.toplayer {
-                g.g_map.drawfrontlayer();
+                game().g_map.drawfrontlayer(g);
             }
 
-            g.g_map.draw_warp_locks();
+            game().g_map.draw_warp_locks(g);
 
             g.g_map.draw_platforms(3);
 
@@ -1591,7 +1591,7 @@ impl GameplayState {
             if self.iCountDownState > 0 && g.game_values.screenfade == 0 {
                 let idx = (28 - self.iCountDownState) as usize;
                 let rects: &[SDL_Rect; 2] = &iCountDownNumbers[iCountDownRectGroup[idx] as usize][iCountDownRectSize[idx] as usize];
-                g.rm.spr_countdown_numbers.draw_src(rects[1].x, rects[1].y, &rects[0]);
+                game().rm.spr_countdown_numbers.draw_src(g, rects[1].x, rects[1].y, &rects[0]);
             }
         }
     }
@@ -1599,7 +1599,7 @@ impl GameplayState {
     fn draw_spotlights(&mut self, g: &mut Game) {
         unsafe {
             if g.game_values.spotlights {
-                g.spotlightManager.draw_spotlights();
+                game().spotlightManager.draw_spotlights(g);
             }
         }
     }
@@ -1633,7 +1633,7 @@ impl GameplayState {
 pub fn draw_exit_pause_dialog(g: &mut Game) {
     unsafe {
         if g.game_values.flags.pausegame {
-            g.rm.spr_dialog.draw(224, 176);
+            game().rm.spr_dialog.draw(g, 224, 176);
             g.rm.menu_font_large.draw_centered(App::screenWidth / 2, 194, "Pause");
 
             let iMode = get_mode_icon_index_from_mode(g.game_values.gamemode.gamemode as i16);
@@ -1654,7 +1654,7 @@ pub fn draw_exit_pause_dialog(g: &mut Game) {
         if g.game_values.flags.exitinggame {
             let sw = App::screenWidth as f32;
             let sh = App::screenHeight as f32;
-            g.rm.spr_dialog.draw((sw * 0.35f32) as i32, (sh * 0.37f32) as i32);
+            game().rm.spr_dialog.draw(g, (sw * 0.35f32) as i32, (sh * 0.37f32) as i32);
             g.rm.menu_font_large.draw_centered((sw * 0.5f32) as i32, (sh * 0.46f32 - (g.rm.menu_font_large.get_height() >> 1) as f32) as i32, "Exit Game");
 
             draw_rect(&g.rm.spr_dialogbutton, (sw * 0.37f32) as i32, (sh * 0.52f32) as i32, 0, if g.game_values.flags.exityes { 34 } else { 0 }, 80, 34);
@@ -1881,7 +1881,7 @@ pub fn spawn_map_block(g: &mut Game, typeId: i16, drawPos: Vec2s, objdata: &MapB
         let wbb = || spr(&mut game().rm.spr_weaponbreakableblock);
         match typeId as i32 {
             MapBlock_BrickYellow => new_block(B_BreakableBlock::new(spr(&mut g.rm.spr_breakableblock), drawPos, 4, 10)),
-            MapBlock_Powerup => new_block(B_PowerupBlock::new(spr(&mut g.rm.spr_powerupblock), drawPos, 4, 10, objdata.fHidden, &objdata.iSettings)),
+            MapBlock_Powerup => new_block(B_PowerupBlock::new(g, spr(&mut game().rm.spr_powerupblock), drawPos, 4, 10, objdata.fHidden, &objdata.iSettings)),
             MapBlock_Donut => new_block(B_DonutBlock::new(spr(&mut g.rm.spr_donutblock), drawPos)),
             MapBlock_Flip => new_block(B_FlipBlock::new(spr(&mut g.rm.spr_flipblock), drawPos, objdata.fHidden)),
             MapBlock_Bounce => new_block(B_BounceBlock::new(spr(&mut g.rm.spr_bounceblock), drawPos, objdata.fHidden)),
@@ -1917,7 +1917,7 @@ pub fn spawn_map_block(g: &mut Game, typeId: i16, drawPos: Vec2s, objdata: &MapB
 
 pub fn load_map_objects(g: &mut Game, fPreview: bool) {
     unsafe {
-        crate::smw::objecthazard::load_map_hazards(fPreview);
+        crate::smw::objecthazard::load_map_hazards(g, fPreview);
 
         //Clear all the previous switch settings
         for iSwitch in 0..8usize {
@@ -2119,7 +2119,7 @@ pub fn update_exit_pause_dialog(g: &mut Game, iCountDownState: i16) -> bool {
 
                         if g.game_values.flags.pausegame {
                             g.rm.menu_shade.setalpha(App::menuTransparency as u8);
-                            g.rm.menu_shade.draw(0, 0);
+                            game().rm.menu_shade.draw(g, 0, 0);
 
                             //Stop the pwings sound if it is on
                             if g.rm.sfx_flyingsound.is_playing() {
@@ -2127,7 +2127,7 @@ pub fn update_exit_pause_dialog(g: &mut Game, iCountDownState: i16) -> bool {
                             }
                         }
 
-                        if_sound_on_play(&mut g.rm.sfx_pause);
+                        if_sound_on_play(g, &mut game().rm.sfx_pause);
                     }
                 }
 
@@ -2143,7 +2143,7 @@ pub fn update_exit_pause_dialog(g: &mut Game, iCountDownState: i16) -> bool {
                         return true;
                     } else if !g.game_values.flags.pausegame && !g.game_values.flags.exitinggame {
                         g.rm.menu_shade.setalpha(App::menuTransparency as u8);
-                        g.rm.menu_shade.draw(0, 0);
+                        game().rm.menu_shade.draw(g, 0, 0);
                         g.game_values.flags.exitinggame = true;
 
                         //Reset the keys each time we switch from menu to game and back
@@ -2202,7 +2202,7 @@ pub fn update_bullet_bill_powerup(g: &mut Game) {
                 g.game_values.bulletbilltimer[p] -= 1;
 
                 g.game_values.bulletbillspawntimer[p] -= 1;
-                if g.game_values.bulletbillspawntimer[p] <= 0 && !net_random::event(Ev::BulletBills, &[p as i32]) {
+                if g.game_values.bulletbillspawntimer[p] <= 0 && !net_random::event(g, Ev::BulletBills, &[p as i32]) {
                     net_bullet_bill(g, p);
                 }
             }
@@ -2216,15 +2216,15 @@ pub fn net_bullet_bill(g: &mut Game, p: usize) {
         let speed: f32 = ((RANDOM_INT(21) + 20) as f32) / 10.0f32;
         let posy = RANDOM_INT(448) as i16;
         let vel = if RANDOM_INT(2) != 0 { speed } else { -speed };
-        g.objectcontainer[2].add(Ptr::new_box(MO_BulletBill::new(
-            spr(&mut g.rm.spr_bulletbill),
-            spr(&mut g.rm.spr_bulletbilldead),
+        game().objectcontainer[2].add(Ptr::new_box(MO_BulletBill::new(g, 
+            spr(&mut game().rm.spr_bulletbill),
+            spr(&mut game().rm.spr_bulletbilldead),
             Vec2s::new(0, posy),
             vel,
             p as i16,
             false,
         )));
-        if_sound_on_play(&mut g.rm.sfx_bulletbillsound);
+        if_sound_on_play(g, &mut game().rm.sfx_bulletbillsound);
     }
 }
 
@@ -2272,7 +2272,7 @@ pub fn play_sfx(g: &mut Game) {
         //Play sound for skidding players
         if g.game_values.flags.playskidsound {
             if !g.rm.sfx_skid.is_playing() {
-                if_sound_on_play(&mut g.rm.sfx_skid);
+                if_sound_on_play(g, &mut game().rm.sfx_skid);
             }
         } else if g.rm.sfx_skid.is_playing() {
             g.rm.sfx_skid.stop();
@@ -2281,7 +2281,7 @@ pub fn play_sfx(g: &mut Game) {
         //Play sound for players using PWings
         if g.game_values.flags.playflyingsound {
             if !g.rm.sfx_flyingsound.is_playing() {
-                if_sound_on_play(&mut g.rm.sfx_flyingsound);
+                if_sound_on_play(g, &mut game().rm.sfx_flyingsound);
             }
         } else if g.rm.sfx_flyingsound.is_playing() {
             g.rm.sfx_flyingsound.stop();
@@ -2294,7 +2294,7 @@ pub fn play_music(g: &mut Game) {
         //Make sure music and sound effects keep playing
         if g.game_values.flags.slowdownon != -1 {
             if !g.rm.sfx_slowdownmusic.is_playing() {
-                if_sound_on_play(&mut g.rm.sfx_slowdownmusic);
+                if_sound_on_play(g, &mut game().rm.sfx_slowdownmusic);
             }
         } else if g.rm.sfx_slowdownmusic.is_playing() {
             g.rm.sfx_slowdownmusic.stop();
@@ -2302,7 +2302,7 @@ pub fn play_music(g: &mut Game) {
 
         if g.game_values.flags.playinvinciblesound && g.game_values.musicvolume > 0 {
             if !g.rm.sfx_invinciblemusic.is_playing() && !g.rm.sfx_timewarning.is_playing() && !g.rm.backgroundmusic[0].is_playing() {
-                if_sound_on_play(&mut g.rm.sfx_invinciblemusic);
+                if_sound_on_play(g, &mut game().rm.sfx_invinciblemusic);
             }
         } else if g.rm.sfx_invinciblemusic.is_playing() {
             g.rm.sfx_invinciblemusic.stop();
@@ -2357,7 +2357,7 @@ impl GameplayState {
                             return;
                         } else if sym == SDL_KeyCode::SDLK_RETURN as i32 {
                             g.game_values.fullscreen = !g.game_values.fullscreen;
-                            gfx_changefullscreen(g.game_values.fullscreen);
+                            gfx_changefullscreen(g, g.game_values.fullscreen);
                             g.blitdest = g.screen;
 
                             // Not fed to the input, or the Return would also pause the game.
@@ -2371,14 +2371,14 @@ impl GameplayState {
                     } else if sym == SDL_KeyCode::SDLK_TAB as i32 {
                         play_next_music_track(g);
                     } else if sym == SDL_KeyCode::SDLK_INSERT as i32 {
-                        gfx_take_screenshot();
+                        gfx_take_screenshot(g);
                     }
                 }
 
                 //Feed the player control structures with input data
                 //Use menu controls when exit game dialog is up
                 let menu_controls = if g.game_values.flags.exitinggame { 1 } else { 0 };
-                g.game_values.playerInput.update_input(&input, menu_controls);
+                game().game_values.playerInput.update_input(g, &input, menu_controls);
             }
         }
     }
@@ -2408,7 +2408,7 @@ impl GameplayState {
             // React to network events
             // The host receives remote input
             g.netplay.gamestate_changed = false;
-            g.netplay.client.update();
+            game().netplay.client.update(g);
 
             let percent_new: f32 = 1.0f32.min(g.netplay.frames_since_last_gamestate as f32 / NET_GAMESTATE_FRAMES_TO_SEND as f32);
             let percent_old: f32 = 1.0 - percent_new;
@@ -2496,7 +2496,7 @@ impl GameplayState {
             // Consume the next input from the remote input buffer
             g.netplay.netPlayerInput.clear_game_action_keys();
             if g.netplay.theHostIsMe {
-                g.netplay.client.local_gamehost.confirm_current_inputs();
+                game().netplay.client.local_gamehost.confirm_current_inputs(g);
             }
             for p in 0..game().players.len() {
                 if let Some(front) = g.netplay.remote_input_buffer[p].pop_front() {
@@ -2513,8 +2513,8 @@ pub fn network_send_local_input(g: &mut Game) {
             return;
         }
 
-        g.netplay.client.store_local_input();
-        g.netplay.client.send_local_input();
+        game().netplay.client.store_local_input(g);
+        game().netplay.client.send_local_input(g);
     }
 }
 
@@ -2523,7 +2523,7 @@ pub fn network_broadcast_game_state(g: &mut Game) {
     unsafe {
         if g.netplay.active && g.netplay.theHostIsMe {
             g.netplay.client.local_gamehost.send_current_game_state_if_needed();
-            g.netplay.client.local_gamehost.update();
+            game().netplay.client.local_gamehost.update(g);
         }
     }
 }
@@ -2580,7 +2580,7 @@ pub fn update_playerswap(g: &mut Game) {
         if g.game_values.flags.swapplayers {
             for i in 0..game().players.len() {
                 let mut player = g.players[i];
-                player.updateswap();
+                player.updateswap(g);
             }
         }
     }
@@ -2644,7 +2644,7 @@ impl GameplayState {
             //that the player might have picked up)
             for i in 0..game().players.len() {
                 let mut player = g.players[i];
-                player.commit_action();
+                player.commit_action(g);
             }
 
             clean_dead_non_player_objects(g);
@@ -2664,7 +2664,7 @@ impl GameplayState {
                 }
             }
 
-            g.g_map.update();
+            game().g_map.update(g);
 
             update_screen_shake(g);
 
@@ -2694,11 +2694,11 @@ impl GameState for GameplayState {
 
     fn update(&mut self, g: &mut Game) {
         unsafe {
-            if crate::smw::net::waiting_to_start() {
-                crate::smw::net::draw_match_preview();
+            if crate::smw::net::waiting_to_start(g) {
+                crate::smw::net::draw_match_preview(g);
                 return;
             }
-            net_random::gameplay_frame();
+            net_random::gameplay_frame(g);
             self.read_network(g);
 
             if !g.netplay.active {
@@ -2714,7 +2714,7 @@ impl GameState for GameplayState {
 
             if update_exit_pause_dialog(g, self.iCountDownState) {
                 if g.netplay.active {
-                    g.netplay.client.send_leave_game_message();
+                    game().netplay.client.send_leave_game_message(g);
                 }
                 GameStateManager::instance().change_state_to(g, Ptr::from_mut(MenuState::instance() as &mut dyn GameState));
                 return;
@@ -2732,7 +2732,7 @@ impl GameState for GameplayState {
                     }
                 }
                 update_playerswap(g);
-                crate::smw::net_outcomes::sample();
+                crate::smw::net_outcomes::sample(g);
                 network_broadcast_game_state(g);
 
                 if g.game_values.screenfade == 255 {
@@ -2811,7 +2811,7 @@ pub fn coldec_obj2obj(o1: Ptr<dyn CObjectTrait>, o2: Ptr<dyn CObjectTrait>) -> b
 
 pub fn swap_players(g: &mut Game, iUsingPlayerID: i16) -> bool {
     let ready = unsafe { g.players.iter().filter(|p| p.isready()).count() };
-    if ready > 1 && net_random::event(Ev::MysterySwap, &[iUsingPlayerID as i32]) {
+    if ready > 1 && net_random::event(g, Ev::MysterySwap, &[iUsingPlayerID as i32]) {
         return true;
     }
     net_mystery_swap(g, iUsingPlayerID)
@@ -2875,7 +2875,7 @@ pub fn net_mystery_swap(g: &mut Game, iUsingPlayerID: i16) -> bool {
 
             spots[iNewSpot as usize].fUsed = true;
             let newPlayer = g.players[iNewSpot as usize];
-            spots[iPlayer].set_player(newPlayer, g.game_values.gamepowerups[newPlayer.get_global_id() as usize]);
+            spots[iPlayer].set_player(g, newPlayer, g.game_values.gamepowerups[newPlayer.get_global_id() as usize]);
 
             //Give credit for deaths to the player that used the mystery mushroom
             if iUsingPlayerID == iNewSpot {

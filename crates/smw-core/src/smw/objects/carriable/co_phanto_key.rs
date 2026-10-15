@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_PhantoKey.cpp
 
+use crate::game::Game;
 use crate::common::game::App;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::*;
@@ -47,11 +48,11 @@ impl CO_PhantoKey {
 
         o.fCarriedByKuriboShoe = true;
 
-        o.place_key();
+        o.place_key(game().get());
         o
     }
 
-    pub fn place_key(&mut self) {
+    pub fn place_key(&mut self, g: &mut Game) {
         if crate::smw::net_random::place_event(self.iNetworkID, 0) {
             return;
         }
@@ -62,7 +63,7 @@ impl CO_PhantoKey {
         let mut y: i16 = 0;
         let mut iAttempts: i16 = 10;
         let (w, h) = (self.collisionWidth, self.collisionHeight);
-        while !unsafe { game().g_map.findspawnpoint(5, &mut x, &mut y, w, h, false) } && {
+        while !unsafe { g.g_map.findspawnpoint(5, &mut x, &mut y, w, h, false) } && {
             let t = iAttempts;
             iAttempts -= 1;
             t > 0
@@ -104,7 +105,7 @@ impl CObjectTrait for CO_PhantoKey {
             self.relocatetimer += 1;
             self.relocatetimer > 1000
         } {
-            self.place_key();
+            self.place_key(game().get());
         } else {
             self.applyfriction();
 
@@ -112,7 +113,7 @@ impl CObjectTrait for CO_PhantoKey {
             self.fOldX = self.fx;
             self.fOldY = self.fy;
 
-            io_moving_object_collision_detection_map(self);
+            io_moving_object_collision_detection_map(game().get(), self);
         }
 
         self.sparkleanimationtimer += 1;
@@ -129,7 +130,7 @@ impl CObjectTrait for CO_PhantoKey {
         mo_carried_object_draw(self);
 
         unsafe {
-            game().rm.spr_shinesparkle.draw_src(
+            game().rm.spr_shinesparkle.draw_src(game().get(), 
                 self.ix as i32 - self.collisionOffsetX as i32,
                 self.iy as i32 - self.collisionOffsetY as i32,
                 &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },

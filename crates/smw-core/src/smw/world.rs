@@ -1,5 +1,6 @@
 //! Port of src/smw/world.cpp
 
+use crate::game::Game;
 use crate::common::file_io::throw_runtime_error;
 use crate::common::file_list::WorldMusicCategory;
 use crate::common::game_values::if_sound_on_play;
@@ -26,8 +27,8 @@ pub const WORLD_FOREGROUND_SPRITE_OFFSET: i16 = 700;
 pub const WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET: i16 = 900;
 
 /// Static-storage constructor of `WorldMap g_worldmap(0, 0);` (needs `game_values` constructed first).
-pub fn init_globals() {
-    unsafe { game().g_worldmap.init(WorldMap::new(0, 0)) };
+pub fn init_globals(g: &mut Game) {
+    unsafe { g.g_worldmap.init(WorldMap::new(0, 0)) };
 }
 
 fn pop_next<'a>(list: &mut VecDeque<&'a str>) -> &'a str {
@@ -278,9 +279,9 @@ impl WorldPlayer {
         this
     }
 
-    pub fn draw(&self, iMapOffsetX: i16, iMapOffsetY: i16) {
+    pub fn draw(&self, g: &mut Game, iMapOffsetX: i16, iMapOffsetY: i16) {
         unsafe {
-            game().rm.spr_player[self.iDrawSprite as usize][(self.iAnimationFrame + self.iDrawDirection) as usize].draw_src(
+            game().rm.spr_player[self.iDrawSprite as usize][(self.iAnimationFrame + self.iDrawDirection) as usize].draw_src(g, 
                 self.pos.x as i32 + iMapOffsetX as i32,
                 self.pos.y as i32 + iMapOffsetY as i32,
                 &SDL_Rect { x: 0, y: 0, w: 32, h: 32 },
@@ -288,13 +289,13 @@ impl WorldPlayer {
         }
     }
 
-    pub fn set_sprite(&mut self, iPlayer: i16) {
+    pub fn set_sprite(&mut self, g: &mut Game, iPlayer: i16) {
         unsafe {
             let p = iPlayer as usize;
-            while !game().rm.load_menu_skin(iPlayer, game().game_values.skinids[p], game().game_values.colorids[p], true) {
-                game().game_values.skinids[p] += 1;
-                if game().game_values.skinids[p] as usize >= game().skinlist.count() {
-                    game().game_values.skinids[p] = 0;
+            while !game().rm.load_menu_skin(g, iPlayer, game().game_values.skinids[p], game().game_values.colorids[p], true) {
+                g.game_values.skinids[p] += 1;
+                if g.game_values.skinids[p] as usize >= g.skinlist.count() {
+                    g.game_values.skinids[p] = 0;
                 }
             }
         }
@@ -391,23 +392,23 @@ impl WorldVehicle {
             self.iPaceTimer = 0;
         }
 
-        self.set_next_dest();
+        self.set_next_dest(game().get());
     }
 
-    fn set_next_dest(&mut self) {
+    fn set_next_dest(&mut self, g: &mut Game) {
         if self.iState != 0 || self.iMaxMoves == 0 {
             return;
         }
 
         unsafe {
             let currentTile = self.currentTile;
-            let tile: WorldMapTile = *game().g_worldmap.tiles.at(currentTile.x as usize, currentTile.y as usize);
-            let iPlayerCurrentTile = game().g_worldmap.get_player_current_tile();
+            let tile: WorldMapTile = *g.g_worldmap.tiles.at(currentTile.x as usize, currentTile.y as usize);
+            let iPlayerCurrentTile = g.g_worldmap.get_player_current_tile();
 
             let n = self.iNumMoves;
             self.iNumMoves -= 1;
             if n <= 0 {
-                if tile.iType == 0 && iPlayerCurrentTile != currentTile && game().g_worldmap.num_vehicles_in_tile(currentTile) <= 1 {
+                if tile.iType == 0 && iPlayerCurrentTile != currentTile && g.g_worldmap.num_vehicles_in_tile(currentTile) <= 1 {
                     return;
                 }
             }
@@ -426,13 +427,13 @@ impl WorldVehicle {
             for iDirection in 0..4i16 {
                 let mut fIsDoor = false;
                 if iDirection == 0 {
-                    fIsDoor = game().g_worldmap.is_door(cx, cy - 1) || (iBoundary != 0 && game().g_worldmap.get_vehicle_boundary(cx, cy - 1) == iBoundary);
+                    fIsDoor = g.g_worldmap.is_door(cx, cy - 1) || (iBoundary != 0 && g.g_worldmap.get_vehicle_boundary(cx, cy - 1) == iBoundary);
                 } else if iDirection == 1 {
-                    fIsDoor = game().g_worldmap.is_door(cx, cy + 1) || (iBoundary != 0 && game().g_worldmap.get_vehicle_boundary(cx, cy + 1) == iBoundary);
+                    fIsDoor = g.g_worldmap.is_door(cx, cy + 1) || (iBoundary != 0 && g.g_worldmap.get_vehicle_boundary(cx, cy + 1) == iBoundary);
                 } else if iDirection == 2 {
-                    fIsDoor = game().g_worldmap.is_door(cx - 1, cy) || (iBoundary != 0 && game().g_worldmap.get_vehicle_boundary(cx - 1, cy) == iBoundary);
+                    fIsDoor = g.g_worldmap.is_door(cx - 1, cy) || (iBoundary != 0 && g.g_worldmap.get_vehicle_boundary(cx - 1, cy) == iBoundary);
                 } else if iDirection == 3 {
-                    fIsDoor = game().g_worldmap.is_door(cx + 1, cy) || (iBoundary != 0 && game().g_worldmap.get_vehicle_boundary(cx + 1, cy) == iBoundary);
+                    fIsDoor = g.g_worldmap.is_door(cx + 1, cy) || (iBoundary != 0 && g.g_worldmap.get_vehicle_boundary(cx + 1, cy) == iBoundary);
                 }
 
                 if tile.fConnection[iDirection as usize] && !fIsDoor {
@@ -448,15 +449,15 @@ impl WorldVehicle {
         }
     }
 
-    pub fn update(&mut self) -> bool {
+    pub fn update(&mut self, g: &mut Game) -> bool {
         let fMoveDone = self.world_moving_object.update();
 
         if fMoveDone {
-            if self.currentTile == unsafe { game().g_worldmap.get_player_current_tile() } {
+            if self.currentTile == unsafe { g.g_worldmap.get_player_current_tile() } {
                 return true;
             }
 
-            self.set_next_dest();
+            self.set_next_dest(g);
         }
 
         //If we're done moving, start pacing in place
@@ -482,15 +483,15 @@ impl WorldVehicle {
         false
     }
 
-    pub fn draw(&self, iWorldOffsetX: i16, iWorldOffsetY: i16, fVehiclesSleeping: bool) {
+    pub fn draw(&self, g: &mut Game, iWorldOffsetX: i16, iWorldOffsetY: i16, fVehiclesSleeping: bool) {
         unsafe {
             let ts = self.iTileSize as i32;
             if fVehiclesSleeping {
                 let rDst = SDL_Rect { x: self.pos.x as i32 + iWorldOffsetX as i32, y: self.pos.y as i32 + iWorldOffsetY as i32, w: ts, h: ts };
-                game().rm.spr_worldvehicle[self.iTileSheet as usize].draw_src_to(&self.srcRects[4], game().blitdest, &rDst);
+                g.rm.spr_worldvehicle[self.iTileSheet as usize].draw_src_to(&self.srcRects[4], g.blitdest, &rDst);
             } else {
                 let rDst = SDL_Rect { x: self.pos.x as i32 + iWorldOffsetX as i32 + self.iPaceOffset as i32, y: self.pos.y as i32 + iWorldOffsetY as i32, w: ts, h: ts };
-                game().rm.spr_worldvehicle[self.iTileSheet as usize].draw_src_to(&self.srcRects[(self.iDrawDirection + self.iAnimationFrame) as usize], game().blitdest, &rDst);
+                g.rm.spr_worldvehicle[self.iTileSheet as usize].draw_src_to(&self.srcRects[(self.iDrawDirection + self.iAnimationFrame) as usize], g.blitdest, &rDst);
             }
         }
     }
@@ -592,11 +593,11 @@ impl WorldMap {
         this.iHeight = h;
         this.tiles = Grid::new(w as usize, h as usize);
 
-        reset_tour_stops(); // FIXME
+        reset_tour_stops(game().get()); // FIXME
         this
     }
 
-    pub fn new_path(path: &str, tilesize: i16) -> Self {
+    pub fn new_path(g: &mut Game, path: &str, tilesize: i16) -> Self {
         let mut this = Self::blank();
         this.reset_draw_cycle();
 
@@ -624,7 +625,7 @@ impl WorldMap {
             lines.pop();
         }
 
-        reset_tour_stops();
+        reset_tour_stops(g);
 
         let mut iReadType: i16 = 0;
         let mut version = Version::default();
@@ -829,14 +830,14 @@ impl WorldMap {
                     iReadType = if this.iNumStages == 0 { 12 } else { 11 };
                 } else if iReadType == 11 {
                     //stage details
-                    let ts = Ptr::new_box(parse_tour_stop_line(raw, &version, true));
+                    let ts = Ptr::new_box(parse_tour_stop_line(g, raw, &version, true));
 
-                    game().game_values.tourstops.push(ts);
+                    g.game_values.tourstops.push(ts);
 
                     iCurrentStage += 1;
                     if iCurrentStage >= this.iNumStages {
                         //Scan stage IDs and make sure we have a stage for each one
-                        let iMaxStage: i16 = (game().game_values.tourstops.len() + 5) as i16;
+                        let iMaxStage: i16 = (g.game_values.tourstops.len() + 5) as i16;
                         let mut invalid = false;
                         'scan: for iRow in 0..this.iHeight {
                             for iCol in 0..this.iWidth {
@@ -1023,7 +1024,7 @@ impl WorldMap {
     }
 
     //Saves world to file
-    pub fn save(&self, szPath: &str) -> bool {
+    pub fn save(&self, g: &mut Game, szPath: &str) -> bool {
         use std::fmt::Write as _;
 
         if std::fs::File::create(szPath).is_err() {
@@ -1075,10 +1076,10 @@ impl WorldMap {
         file += "#Stage Type 1,Bonus House Name,Sequential/Random Order,Display Text,Powerup List(Max 5)\n";
 
         unsafe {
-            let _ = writeln!(file, "{}", game().game_values.tourstops.len() as i32);
+            let _ = writeln!(file, "{}", g.game_values.tourstops.len() as i32);
 
             for iStage in 0..game().game_values.tourstops.len() {
-                let line = write_tour_stop_line(&game().game_values.tourstops[iStage], true);
+                let line = write_tour_stop_line(&g.game_values.tourstops[iStage], true);
                 file += &line;
             }
         }
@@ -1204,7 +1205,7 @@ impl WorldMap {
         self.tiles = newTiles;
     }
 
-    pub fn update(&mut self, fPlayerVehicleCollision: &mut bool) -> bool {
+    pub fn update(&mut self, g: &mut Game, fPlayerVehicleCollision: &mut bool) -> bool {
         let mut fPlayMovingVehicleSound = false;
 
         let fPlayerDoneMove = self.player.update();
@@ -1216,7 +1217,7 @@ impl WorldMap {
             }
 
             let vehicle: *mut WorldVehicle = &mut self.vehicles[i];
-            *fPlayerVehicleCollision |= unsafe { (*vehicle).update() };
+            *fPlayerVehicleCollision |= unsafe { (*vehicle).update(g) };
 
             if self.vehicles[i].iState > 0 {
                 fPlayMovingVehicleSound = true;
@@ -1224,8 +1225,8 @@ impl WorldMap {
         }
 
         unsafe {
-            if fPlayMovingVehicleSound && !game().rm.sfx_boomerang.is_playing() {
-                if_sound_on_play(&mut game().rm.sfx_boomerang);
+            if fPlayMovingVehicleSound && !g.rm.sfx_boomerang.is_playing() {
+                if_sound_on_play(g, &mut game().rm.sfx_boomerang);
             }
         }
 
@@ -1238,23 +1239,23 @@ impl WorldMap {
                 continue;
             }
 
-            vehicle.draw(iMapOffsetX, iMapOffsetY, fVehiclesSleeping);
+            vehicle.draw(game().get(), iMapOffsetX, iMapOffsetY, fVehiclesSleeping);
         }
 
         if fDrawPlayer {
-            self.player.draw(iMapOffsetX, iMapOffsetY);
+            self.player.draw(game().get(), iMapOffsetX, iMapOffsetY);
         }
     }
 
     pub fn update_tile(&mut self, surface: *mut SDL_Surface, iCol: i16, iRow: i16, iMapDrawOffsetCol: i16, iMapDrawOffsetRow: i16, iAnimationFrame: i16) {
-        self.draw_tile_to_surface(surface, iCol, iRow, iMapDrawOffsetCol, iMapDrawOffsetRow, true, iAnimationFrame, 0);
+        self.draw_tile_to_surface(game().get(), surface, iCol, iRow, iMapDrawOffsetCol, iMapDrawOffsetRow, true, iAnimationFrame, 0);
     }
 
     /// `DrawMapToSurface(SDL_Surface*)`: the whole map in one pass.
     pub fn draw_map_to_surface_full(&self, surface: *mut SDL_Surface) {
         for iRow in 0..self.iHeight {
             for iCol in 0..self.iWidth {
-                self.draw_tile_to_surface(surface, iCol, iRow, 0, 0, true, 0, 0);
+                self.draw_tile_to_surface(game().get(), surface, iCol, iRow, 0, 0, true, 0, 0);
             }
         }
     }
@@ -1280,7 +1281,7 @@ impl WorldMap {
         while iRow < iRowEnd {
             let mut iCol = self.iLastDrawCol;
             while iCol < iColEnd {
-                self.draw_tile_to_surface(surface, iCol, iRow, iMapDrawOffsetCol, iMapDrawOffsetRow, fFullRefresh, iAnimationFrame, iLayer);
+                self.draw_tile_to_surface(game().get(), surface, iCol, iRow, iMapDrawOffsetCol, iMapDrawOffsetRow, fFullRefresh, iAnimationFrame, iLayer);
 
                 if iCycleIndex >= 0 && iCycleIndex != 7 && iCycleIndex != 15 && {
                     iCounter += 1;
@@ -1303,7 +1304,7 @@ impl WorldMap {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn draw_tile_to_surface(&self, surface: *mut SDL_Surface, iCol: i16, iRow: i16, iMapDrawOffsetCol: i16, iMapDrawOffsetRow: i16, fFullRefresh: bool, iAnimationFrame: i16, iLayer: i16) {
+    fn draw_tile_to_surface(&self, g: &mut Game, surface: *mut SDL_Surface, iCol: i16, iRow: i16, iMapDrawOffsetCol: i16, iMapDrawOffsetRow: i16, fFullRefresh: bool, iAnimationFrame: i16, iLayer: i16) {
         let tile = self.tiles.at((iCol as i32 + iMapDrawOffsetCol as i32) as usize, (iRow as i32 + iMapDrawOffsetRow as i32) as usize);
 
         if !tile.fAnimated && !fFullRefresh {
@@ -1329,7 +1330,7 @@ impl WorldMap {
         unsafe {
             //The solid background tile is not animated, but all the rest are
             if iLayer != 2 {
-                let bg = &game().rm.spr_worldbackground[sheet];
+                let bg = &g.rm.spr_worldbackground[sheet];
                 if iBackgroundSprite == 1 {
                     let rSrc = SDL_Rect { x: ts + iBackgroundStyleOffset, y: ts, w: ts, h: ts };
                     bg.draw_src_to(&rSrc, surface, &r);
@@ -1357,12 +1358,12 @@ impl WorldMap {
             }
 
             if iLayer != 1 {
-                let special = &game().rm.spr_worldforegroundspecial[sheet];
+                let special = &g.rm.spr_worldforegroundspecial[sheet];
                 if tile.iCompleted >= 0 {
                     let rSrc = SDL_Rect { x: (tile.iCompleted as i32 + 10) << shift, y: 5 << shift, w: ts, h: ts };
                     special.draw_src_to(&rSrc, surface, &r);
                 } else if iForegroundSprite >= 0 && iForegroundSprite < WORLD_FOREGROUND_STAGE_OFFSET {
-                    let paths = &game().rm.spr_worldpaths[sheet];
+                    let paths = &g.rm.spr_worldpaths[sheet];
                     let iPathStyle = iForegroundSprite / WORLD_PATH_SPRITE_SET_SIZE;
                     let iPathOffsetX = ((iPathStyle as i32 % 4) * (5 << shift)) as i16 as i32;
                     let iPathOffsetY = ((iPathStyle as i32 >> 2) * (10 << shift)) as i16 as i32;
@@ -1403,11 +1404,11 @@ impl WorldMap {
                 } else if iForegroundSprite >= WORLD_FOREGROUND_SPRITE_OFFSET && iForegroundSprite <= WORLD_FOREGROUND_SPRITE_OFFSET + 179 {
                     let iSprite = (iForegroundSprite - WORLD_FOREGROUND_SPRITE_OFFSET) as i32;
                     let rSrc = SDL_Rect { x: (iSprite % 12) << shift, y: (iSprite / 12) << shift, w: ts, h: ts };
-                    game().rm.spr_worldforeground[sheet].draw_src_to(&rSrc, surface, &r);
+                    g.rm.spr_worldforeground[sheet].draw_src_to(&rSrc, surface, &r);
                 } else if iForegroundSprite >= WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET && iForegroundSprite <= WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET + 29 {
                     let iSprite = (iForegroundSprite - WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET) as i32;
                     let rSrc = SDL_Rect { x: (if iSprite >= 15 { 16 << shift } else { 12 << shift }) + iAnimationFrame, y: (iSprite % 15) << shift, w: ts, h: ts };
-                    game().rm.spr_worldforeground[sheet].draw_src_to(&rSrc, surface, &r);
+                    g.rm.spr_worldforeground[sheet].draw_src_to(&rSrc, surface, &r);
                 }
 
                 //Draw doors
@@ -1439,7 +1440,7 @@ impl WorldMap {
     }
 
     pub fn set_player_sprite(&mut self, iPlayerSprite: i16) {
-        self.player.set_sprite(iPlayerSprite);
+        self.player.set_sprite(game().get(), iPlayerSprite);
     }
 
     pub fn set_player_position(&mut self, iPlayerCol: i16, iPlayerRow: i16) {
@@ -1493,8 +1494,8 @@ impl WorldMap {
         self.vehicles.iter().filter(|vehicle| vehicle.fEnabled && vehicle.currentTile == iTile).count()
     }
 
-    pub fn get_vehicle_stage_score(&self, iVehicleIndex: i16) -> i16 {
-        unsafe { game().game_values.tourstops[self.vehicles[iVehicleIndex as usize].iActionId as usize].iPoints }
+    pub fn get_vehicle_stage_score(&self, g: &mut Game, iVehicleIndex: i16) -> i16 {
+        unsafe { g.game_values.tourstops[self.vehicles[iVehicleIndex as usize].iActionId as usize].iPoints }
     }
 
     pub fn get_warp_in_player_tile(&self, iWarpCol: &mut i16, iWarpRow: &mut i16) -> bool {
@@ -1762,13 +1763,13 @@ impl WorldMap {
         -1
     }
 
-    pub fn set_initial_powerups(&self) {
+    pub fn set_initial_powerups(&self, g: &mut Game) {
         unsafe {
             for iTeam in 0..4usize {
-                game().game_values.worldpowerupcount[iTeam] = self.iNumInitialBonuses;
+                g.game_values.worldpowerupcount[iTeam] = self.iNumInitialBonuses;
 
                 for iItem in 0..self.iNumInitialBonuses as usize {
-                    game().game_values.worldpowerups[iTeam][iItem] = self.iInitialBonuses[iItem];
+                    g.game_values.worldpowerups[iTeam][iItem] = self.iInitialBonuses[iItem];
                 }
             }
         }

@@ -49,7 +49,7 @@ impl PlayerSecretCode {
         if self.index == 18 && self.timer < SECRET_CODE_TIME_MAX {
             self.index = 0;
             self.timer = 0;
-            check_secret(3);
+            check_secret(game().get(), 3);
         }
     }
 }

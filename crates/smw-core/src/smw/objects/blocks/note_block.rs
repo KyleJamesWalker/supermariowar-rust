@@ -80,7 +80,7 @@ impl CObjectTrait for B_NoteBlock {
             return;
         }
 
-        self.spr.draw_src(
+        self.spr.draw_src(game().get(), 
             self.ix as i32,
             self.iy as i32,
             &SDL_Rect { x: self.drawFrame as i32, y: self.iTypeOffsetY as i32, w: self.iw as i32, h: self.ih as i32 },
@@ -88,7 +88,7 @@ impl CObjectTrait for B_NoteBlock {
     }
 
     fn update(&mut self) {
-        io_block_update(self);
+        io_block_update(game().get(), self);
 
         if self.state > 0 {
             let fx = self.fx + self.velx;
@@ -160,10 +160,10 @@ impl IO_BlockTrait for B_NoteBlock {
             }
 
             unsafe {
-                if_sound_on_play(&mut game().rm.sfx_bump);
+                if_sound_on_play(game().get(), &mut game().rm.sfx_bump);
 
                 game().game_values.unlocksecret3part2[player.globalID as usize] += 2;
-                check_secret(2);
+                check_secret(game().get(), 2);
             }
         }
 
@@ -183,13 +183,13 @@ impl IO_BlockTrait for B_NoteBlock {
                 self.state = 3;
 
                 unsafe {
-                    if_sound_on_play(&mut game().rm.sfx_bump);
+                    if_sound_on_play(game().get(), &mut game().rm.sfx_bump);
                 }
             }
 
             if self.hidden {
                 self.hidden = false;
-                io_block_kill_players_and_objects_inside_block(self, player.globalID);
+                io_block_kill_players_and_objects_inside_block(game().get(), self, player.globalID);
             }
 
             unsafe {
@@ -213,7 +213,7 @@ impl IO_BlockTrait for B_NoteBlock {
             }
 
             unsafe {
-                if_sound_on_play(&mut game().rm.sfx_bump);
+                if_sound_on_play(game().get(), &mut game().rm.sfx_bump);
             }
         }
 
@@ -233,7 +233,7 @@ impl IO_BlockTrait for B_NoteBlock {
             }
 
             unsafe {
-                if_sound_on_play(&mut game().rm.sfx_bump);
+                if_sound_on_play(game().get(), &mut game().rm.sfx_bump);
             }
         }
 
@@ -254,7 +254,7 @@ impl IO_BlockTrait for B_NoteBlock {
         object.fOldY = object.fy;
 
         if self.state == 3 && object.bounce == GRAVITATION {
-            io_block_bounce_moving_object(self, object);
+            io_block_bounce_moving_object(game().get(), self, object);
             return false;
         } else {
             object.vely = object.bottom_bounce();

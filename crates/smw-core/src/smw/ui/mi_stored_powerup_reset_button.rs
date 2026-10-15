@@ -15,7 +15,7 @@ crate::impl_base!(MI_StoredPowerupResetButton => mi_button: MI_Button);
 
 impl MI_StoredPowerupResetButton {
     pub fn new(nspr: Ptr<gfxSprite>, x: i16, y: i16, name: impl Into<String>, width: i16, align: TextAlign) -> Self {
-        MI_StoredPowerupResetButton { mi_button: MI_Button::new(nspr, x, y, name, width, align) }
+        MI_StoredPowerupResetButton { mi_button: MI_Button::new(game().get(), nspr, x, y, name, width, align) }
     }
 }
 
@@ -45,8 +45,8 @@ impl UI_ControlTrait for MI_StoredPowerupResetButton {
 
         unsafe {
             for iPowerup in 0..4i32 {
-                game().rm.spr_selectfield.draw_src(x + iWidth - 142 + iPowerup * 30, y + 4, &SDL_Rect { x: 188, y: 88, w: 24, h: 24 });
-                game().rm.spr_storedpowerupsmall.draw_src(
+                game().rm.spr_selectfield.draw_src(game().get(), x + iWidth - 142 + iPowerup * 30, y + 4, &SDL_Rect { x: 188, y: 88, w: 24, h: 24 });
+                game().rm.spr_storedpowerupsmall.draw_src(game().get(), 
                     x + iWidth - 138 + iPowerup * 30,
                     y + 8,
                     &SDL_Rect { x: game().game_values.storedpowerups[iPowerup as usize] as i32 * 16, y: 0, w: 16, h: 16 },

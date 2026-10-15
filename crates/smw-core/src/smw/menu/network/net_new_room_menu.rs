@@ -1,4 +1,5 @@
 //! Port of src/smw/menu/network/NetNewRoomMenu.cpp
+use crate::game::Game;
 use crate::game::game;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
@@ -30,22 +31,22 @@ pub struct UI_NetNewRoomMenu {
 crate::impl_base!(UI_NetNewRoomMenu => ui_menu: UI_Menu);
 
 impl UI_NetNewRoomMenu {
-    pub fn new() -> Box<Self> {
+    pub fn new(g: &mut Game) -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
-            let plain = Ptr::from_mut(&mut game().rm.menu_plain_field);
+            let selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
+            let plain = Ptr::from_mut(&mut g.rm.menu_plain_field);
 
             this.miNetNewRoomNameField = Ptr::new_box(MI_TextField::new(plain, 70, 160, "Room name", 640 - 2 * 70, 230));
-            this.miNetNewRoomNameField.set_data(&mut game().netplay.newroom_name, NET_MAX_ROOM_NAME_LENGTH as i16);
+            this.miNetNewRoomNameField.set_data(&mut g.netplay.newroom_name, NET_MAX_ROOM_NAME_LENGTH as i16);
 
             this.miNetNewRoomPasswordField = Ptr::new_box(MI_TextField::new(plain, 70, 200, "Password (optional)", 640 - 2 * 70, 230));
-            this.miNetNewRoomPasswordField.set_data(&mut game().netplay.newroom_password, NET_MAX_ROOM_PASSWORD_LENGTH as i16);
+            this.miNetNewRoomPasswordField.set_data(&mut g.netplay.newroom_password, NET_MAX_ROOM_PASSWORD_LENGTH as i16);
 
-            this.miNetNewRoomCreateButton = Ptr::new_box(MI_Button::new(selectfield, 70, 240, "Create!", 640 - 2 * 70, TextAlign::CENTER));
+            this.miNetNewRoomCreateButton = Ptr::new_box(MI_Button::new(g, selectfield, 70, 240, "Create!", 640 - 2 * 70, TextAlign::CENTER));
             this.miNetNewRoomCreateButton.set_code(MENU_CODE_TO_NET_NEW_ROOM_CREATE_IN_PROGRESS);
 
-            this.miNetNewRoomBackButton = Ptr::new_box(MI_Button::new(selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miNetNewRoomBackButton = Ptr::new_box(MI_Button::new(g, selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
             this.miNetNewRoomBackButton.set_code(MENU_CODE_TO_NET_NEW_ROOM_LEVEL_SELECT_MENU);
         }
 
@@ -61,7 +62,7 @@ impl UI_NetNewRoomMenu {
         this.add_control(back, create, name, null, null);
 
         unsafe {
-            this.miNetNewRoomCreatingDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut game().rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
+            this.miNetNewRoomCreatingDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
             this.miNetNewRoomCreatingDialogText = Ptr::new_box(MI_HeaderText::new("Creating...", 320, 240 - 12));
         }
 
@@ -73,7 +74,7 @@ impl UI_NetNewRoomMenu {
         this.add_non_control(dt);
 
         unsafe {
-            let plain = Ptr::from_mut(&mut game().rm.menu_plain_field);
+            let plain = Ptr::from_mut(&mut g.rm.menu_plain_field);
             this.miNetNewRoomLeftHeaderBar = Ptr::new_box(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miNetNewRoomRightHeaderBar = Ptr::new_box(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0));
             this.miNetNewRoomHeaderText = Ptr::new_box(MI_HeaderText::new("New Room Settings Menu", 320, 5));
@@ -89,11 +90,11 @@ impl UI_NetNewRoomMenu {
         this
     }
 
-    pub fn create_in_progress(&mut self) {
+    pub fn create_in_progress(&mut self, g: &mut Game) {
         unsafe {
-            if game().netplay.newroom_name.len() > 2 {
-                game().netplay.client.send_create_room_message();
-                game().netplay.operationInProgress = true;
+            if g.netplay.newroom_name.len() > 2 {
+                game().netplay.client.send_create_room_message(g);
+                g.netplay.operationInProgress = true;
                 net_save_server_list();
 
                 self.miNetNewRoomCreatingDialogImage.set_visible(true);
@@ -110,8 +111,8 @@ impl UI_NetNewRoomMenu {
         }
     }
 
-    pub fn abort_create(&mut self) {
-        unsafe { game().netplay.operationInProgress = false };
+    pub fn abort_create(&mut self, g: &mut Game) {
+        unsafe { g.netplay.operationInProgress = false };
         self.restore();
     }
 

@@ -40,9 +40,9 @@ impl CGameModeTrait for CGM_KingOfTheHill {
     }
 
     fn init(&mut self) {
-        gm::cgamemode_init(self);
+        gm::cgamemode_init(game().get(), self);
         unsafe {
-            game().objectcontainer[2].add(Ptr::new_box(OMO_KingOfTheHillZone::new(Ptr::from_mut(&mut game().rm.spr_kingofthehillarea))));
+            game().objectcontainer[2].add(Ptr::new_box(OMO_KingOfTheHillZone::new(game().get(), Ptr::from_mut(&mut game().rm.spr_kingofthehillarea))));
         }
     }
 
@@ -56,7 +56,7 @@ impl CGameModeTrait for CGM_KingOfTheHill {
 
     fn playerextraguy(&mut self, mut player: Ptr<CPlayer>, iType: i16) {
         if !self.gameover {
-            player.score().adjust_score((5 * iType as i32) as i16);
+            player.score().adjust_score(game().get(), (5 * iType as i32) as i16);
             self.check_winner(player);
         }
     }

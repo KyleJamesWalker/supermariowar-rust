@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_CheepCheep.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::{EC_FallingObject, EC_SingleAnimation};
 use crate::common::game::App;
 use crate::common::game_mode::game_mode_stomp;
@@ -65,21 +66,21 @@ impl MO_CheepCheep {
         o
     }
 
-    pub fn hittop(&mut self, player: Ptr<CPlayer>) -> bool {
+    pub fn hittop(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         unsafe {
             let mut p = player;
             p.set_yi((self.iy as i32 - PH - 1) as i16);
             p.bouncejump();
-            p.get().collisions.checktop(player.get());
+            p.get().collisions.checktop(g, player.get());
             p.platform = Ptr::null();
 
             p.add_killer_award(Ptr::null(), KillStyle::CheepCheep);
 
-            if game().game_values.gamemode.gamemode == game_mode_stomp && !game().game_values.gamemode.gameover {
-                p.score().adjust_score(1);
+            if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
+                p.score().adjust_score(g, 1);
             }
 
-            if_sound_on_play(&mut game().rm.sfx_mip);
+            if_sound_on_play(g, &mut game().rm.sfx_mip);
         }
 
         self.die();
@@ -95,20 +96,20 @@ impl MO_CheepCheep {
         player.kill_player_map_hazard(false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill
     }
 
-    pub fn shatter_die(&mut self) {
+    pub fn shatter_die(&mut self, g: &mut Game) {
         unsafe {
-            if_sound_on_play(&mut game().rm.sfx_breakblock);
+            if_sound_on_play(g, &mut game().rm.sfx_breakblock);
             self.dead = true;
 
             let iBrokenIceX: i16 = (self.ix as i32 - self.collisionOffsetX as i32) as i16;
             let iBrokenIceY: i16 = (self.iy as i32 - self.collisionOffsetY as i32) as i16;
-            let spr = Ptr::from_mut(&mut game().rm.spr_brokeniceblock);
-            game().eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, iBrokenIceY, -1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
-            game().eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, iBrokenIceY, 1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
-            game().eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, (iBrokenIceY as i32 + 16) as i16, -1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
-            game().eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, (iBrokenIceY as i32 + 16) as i16, 1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
+            let spr = Ptr::from_mut(&mut g.rm.spr_brokeniceblock);
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, iBrokenIceY, -1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, iBrokenIceY, 1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, (iBrokenIceY as i32 + 16) as i16, -1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, (iBrokenIceY as i32 + 16) as i16, 1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
 
-            game().game_values.unlocksecret2part2 += 1;
+            g.game_values.unlocksecret2part2 += 1;
         }
     }
 }
@@ -142,11 +143,11 @@ impl CObjectTrait for MO_CheepCheep {
     fn draw(&mut self) {
         let x = self.ix as i32 - self.collisionOffsetX as i32;
         let y = self.iy as i32 - self.collisionOffsetY as i32;
-        self.spr.draw_src(x, y, &SDL_Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32, w: self.iw as i32, h: self.ih as i32 });
+        self.spr.draw_src(game().get(), x, y, &SDL_Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32, w: self.iw as i32, h: self.ih as i32 });
 
         if self.frozen {
             unsafe {
-                game().rm.spr_iceblock.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
+                game().rm.spr_iceblock.draw_src(game().get(), x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
             }
         }
     }
@@ -157,18 +158,18 @@ impl CObjectTrait for MO_CheepCheep {
                 player.add_killer_award(Ptr::null(), KillStyle::CheepCheep);
 
                 if game().game_values.gamemode.gamemode == game_mode_stomp && !game().game_values.gamemode.gameover {
-                    player.score().adjust_score(1);
+                    player.score().adjust_score(game().get(), 1);
                 }
 
                 if self.frozen {
-                    self.shatter_die();
+                    self.shatter_die(game().get());
                 } else {
-                    if_sound_on_play(&mut game().rm.sfx_kicksound);
+                    if_sound_on_play(game().get(), &mut game().rm.sfx_kicksound);
                     self.die();
                 }
             } else {
                 if player.fOldY + PH as f32 <= self.fOldY && player.iy as i32 + PH >= self.iy as i32 {
-                    return self.hittop(player);
+                    return self.hittop(game().get(), player);
                 } else {
                     return self.hitother(player);
                 }
@@ -181,7 +182,7 @@ impl CObjectTrait for MO_CheepCheep {
     fn collide_object(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) {
         unsafe {
             if !object.is_dead() {
-                removeifprojectile(object, false, false);
+                removeifprojectile(game().get(), object, false, false);
 
                 let r#type: MovingObjectType = object.get_moving_object_type();
 
@@ -208,22 +209,22 @@ impl CObjectTrait for MO_CheepCheep {
 
                     if game().game_values.gamemode.gamemode == game_mode_stomp && !game().game_values.gamemode.gameover {
                         // Find the player that shot this projectile so we can attribute a kill
-                        let mut killer = get_player_from_global_id(object.iPlayerID);
+                        let mut killer = get_player_from_global_id(game().get(), object.iPlayerID);
 
                         if !killer.is_null() {
                             killer.add_killer_award(Ptr::null(), KillStyle::CheepCheep);
-                            killer.score().adjust_score(1);
+                            killer.score().adjust_score(game().get(), 1);
 
                             if r#type == movingobject_shell {
-                                object.as_any().downcast_mut::<CO_Shell>().unwrap().add_moving_kill(killer);
+                                object.as_any().downcast_mut::<CO_Shell>().unwrap().add_moving_kill(game().get(), killer);
                             }
                         }
                     }
 
                     if self.frozen {
-                        self.shatter_die();
+                        self.shatter_die(game().get());
                     } else {
-                        if_sound_on_play(&mut game().rm.sfx_kicksound);
+                        if_sound_on_play(game().get(), &mut game().rm.sfx_kicksound);
                         self.die();
                     }
 
@@ -254,7 +255,7 @@ impl IO_MovingObjectTrait for MO_CheepCheep {
 
     fn die(&mut self) {
         if self.frozen {
-            self.shatter_die();
+            self.shatter_die(game().get());
             return;
         }
 

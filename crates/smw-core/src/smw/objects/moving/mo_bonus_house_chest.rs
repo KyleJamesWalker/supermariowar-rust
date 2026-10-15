@@ -85,11 +85,11 @@ impl CObjectTrait for MO_BonusHouseChest {
         let ih = self.ih as i32;
 
         if self.state < 2 {
-            self.spr.draw_src(ix, iy, &SDL_Rect { x: 0, y: 0, w: iw, h: ih });
+            self.spr.draw_src(game().get(), ix, iy, &SDL_Rect { x: 0, y: 0, w: iw, h: ih });
         }
 
         if self.state >= 2 {
-            self.spr.draw_src(ix, iy, &SDL_Rect { x: 128, y: 0, w: iw, h: ih });
+            self.spr.draw_src(game().get(), ix, iy, &SDL_Rect { x: 128, y: 0, w: iw, h: ih });
         }
 
         if self.state == 2 {
@@ -100,19 +100,19 @@ impl CObjectTrait for MO_BonusHouseChest {
                     let iBonus: i16 = (bonusitem - NUM_POWERUPS - NUM_WORLD_POWERUPS) as i16;
                     let iBonusX: i16 = ((iBonus as i32 % 10) << 5) as i16;
                     let iBonusY: i16 = (((iBonus as i32 / 10) << 5) + 32) as i16;
-                    game().rm.spr_worlditems.draw_src(ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: iBonusX as i32, y: iBonusY as i32, w: 32, h: 32 });
+                    game().rm.spr_worlditems.draw_src(game().get(), ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: iBonusX as i32, y: iBonusY as i32, w: 32, h: 32 });
                 } else if bonusitem >= NUM_POWERUPS {
                     // World Item
-                    game().rm.spr_worlditems.draw_src(ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: (bonusitem - NUM_POWERUPS) << 5, y: 0, w: 32, h: 32 });
+                    game().rm.spr_worlditems.draw_src(game().get(), ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: (bonusitem - NUM_POWERUPS) << 5, y: 0, w: 32, h: 32 });
                 } else {
                     // Normal Powerup
-                    game().rm.spr_storedpoweruplarge.draw_src(ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: bonusitem << 5, y: 0, w: 32, h: 32 });
+                    game().rm.spr_storedpoweruplarge.draw_src(game().get(), ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: bonusitem << 5, y: 0, w: 32, h: 32 });
                 }
             }
         }
 
         if self.state >= 2 {
-            self.spr.draw_src(ix, iy, &SDL_Rect { x: 64, y: 0, w: iw, h: ih });
+            self.spr.draw_src(game().get(), ix, iy, &SDL_Rect { x: 64, y: 0, w: iw, h: ih });
         }
     }
 
@@ -143,7 +143,7 @@ impl CObjectTrait for MO_BonusHouseChest {
                     }
                 }
 
-                if_sound_on_play(&mut game().rm.sfx_treasurechest);
+                if_sound_on_play(game().get(), &mut game().rm.sfx_treasurechest);
                 self.state = 2;
 
                 self.drawbonusitemy = (self.iy as i32 + 32) as i16;

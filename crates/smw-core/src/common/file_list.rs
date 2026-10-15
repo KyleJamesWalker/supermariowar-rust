@@ -1,5 +1,6 @@
 //! Port of src/common/FileList.cpp
 
+use crate::game::game;
 use crate::globals::Aliased;
 use crate::common::file_io::cstr_bytes_to_string;
 use crate::common::linfunc::tokenize;
@@ -45,7 +46,7 @@ pub fn update_music_with_overrides(musiclist: &mut MusicList, worldmusiclist: &m
         Worlds,
     }
 
-    let Some(lines) = read_lines(Path::new(&convert_path("music/Overrides.txt"))) else {
+    let Some(lines) = read_lines(Path::new(&convert_path(game().get(), "music/Overrides.txt"))) else {
         return;
     };
 
@@ -84,7 +85,7 @@ pub fn update_music_with_overrides(musiclist: &mut MusicList, worldmusiclist: &m
             let mut ovr = MapMusicOverride { mapname: tokens.remove(0).to_string(), songs: Vec::new() };
 
             for token in tokens {
-                let path = PathBuf::from(convert_path(token));
+                let path = PathBuf::from(convert_path(game().get(), token));
                 if path.exists() {
                     ovr.songs.push(path);
                 }
@@ -96,7 +97,7 @@ pub fn update_music_with_overrides(musiclist: &mut MusicList, worldmusiclist: &m
             let worldname = tokens.remove(0).to_string();
 
             // C++ reads front() of an empty list here (UB) when the line has no comma.
-            let path = PathBuf::from(convert_path(tokens.first().copied().unwrap_or("")));
+            let path = PathBuf::from(convert_path(game().get(), tokens.first().copied().unwrap_or("")));
             if path.exists() {
                 worldmusicoverrides.push(WorldMusicOverride { worldname, song: path });
             }
@@ -282,18 +283,18 @@ macro_rules! file_list_subclass {
     };
 }
 
-file_list_subclass!(AnnouncerList, SimpleFileList, simple_file_list, SimpleFileList::new(convert_path("sfx/announcer/"), ".txt", false));
-file_list_subclass!(GraphicsList, SimpleDirectoryList, simple_directory_list, SimpleDirectoryList::new(convert_path("gfx/packs/")));
-file_list_subclass!(SoundsList, SimpleDirectoryList, simple_directory_list, SimpleDirectoryList::new(convert_path("sfx/packs/")));
-file_list_subclass!(TourList, SimpleFileList, simple_file_list, SimpleFileList::new(convert_path("tours/"), ".txt", false));
-file_list_subclass!(WorldList, SimpleFileList, simple_file_list, SimpleFileList::new(convert_path("worlds/"), ".txt", true));
+file_list_subclass!(AnnouncerList, SimpleFileList, simple_file_list, SimpleFileList::new(convert_path(game().get(), "sfx/announcer/"), ".txt", false));
+file_list_subclass!(GraphicsList, SimpleDirectoryList, simple_directory_list, SimpleDirectoryList::new(convert_path(game().get(), "gfx/packs/")));
+file_list_subclass!(SoundsList, SimpleDirectoryList, simple_directory_list, SimpleDirectoryList::new(convert_path(game().get(), "sfx/packs/")));
+file_list_subclass!(TourList, SimpleFileList, simple_file_list, SimpleFileList::new(convert_path(game().get(), "tours/"), ".txt", false));
+file_list_subclass!(WorldList, SimpleFileList, simple_file_list, SimpleFileList::new(convert_path(game().get(), "worlds/"), ".txt", true));
 file_list_subclass!(
     BackgroundList,
     SimpleFileList,
     simple_file_list,
-    SimpleFileList::new(convert_path("gfx/packs/Classic/backgrounds/"), ".png", false)
+    SimpleFileList::new(convert_path(game().get(), "gfx/packs/Classic/backgrounds/"), ".png", false)
 );
-file_list_subclass!(FiltersList, SimpleFileList, simple_file_list, SimpleFileList::new(convert_path("filters/"), ".txt", false));
+file_list_subclass!(FiltersList, SimpleFileList, simple_file_list, SimpleFileList::new(convert_path(game().get(), "filters/"), ".txt", false));
 
 ///////////// SkinList ///////////////
 
@@ -312,7 +313,7 @@ pub struct SkinList {
 impl SkinList {
     pub fn new() -> Self {
         let mut m_skins = Vec::new();
-        let mut dir = FilesIterator::new(convert_path("gfx/skins/"), vec![".bmp".to_string(), ".png".to_string()]);
+        let mut dir = FilesIterator::new(convert_path(game().get(), "gfx/skins/"), vec![".bmp".to_string(), ".png".to_string()]);
         while let Some(path) = dir.next() {
             m_skins.push(SkinListNode { name: strip_creator_and_ext(&filename_string(&path)), path });
         }
@@ -638,7 +639,7 @@ pub struct MusicList {
 impl MusicList {
     pub fn new() -> Self {
         let mut m_entries = Vec::new();
-        let mut dir = SubdirsIterator::new(convert_path("music/game/"));
+        let mut dir = SubdirsIterator::new(convert_path(game().get(), "music/game/"));
         while let Some(path) = dir.next() {
             if let Some(pack) = MusicPack::load(&path) {
                 m_entries.push(pack);
@@ -876,7 +877,7 @@ pub struct WorldMusicList {
 impl WorldMusicList {
     pub fn new() -> Self {
         let mut m_entries = Vec::new();
-        let mut dir = SubdirsIterator::new(convert_path("music/world/"));
+        let mut dir = SubdirsIterator::new(convert_path(game().get(), "music/world/"));
         while let Some(path) = dir.next() {
             if let Some(pack) = WorldMusicPack::load(&path) {
                 m_entries.push(pack);

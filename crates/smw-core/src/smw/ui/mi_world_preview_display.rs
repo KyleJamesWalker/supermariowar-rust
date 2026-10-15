@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_WorldPreviewDisplay.cpp
 
+use crate::game::Game;
 use crate::common::global_constants::PREVIEWTILESIZE;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
@@ -46,7 +47,7 @@ impl MI_WorldPreviewDisplay {
     pub fn new(x: i16, y: i16, cols: i16, rows: i16) -> Self {
         let mut this = MI_WorldPreviewDisplay {
             ui_control: UI_Control::new(x, y),
-            map_sprite: gfxSprite::blank(384, 304),
+            map_sprite: gfxSprite::blank(game().get(), 384, 304),
             iCols: cols,
             iRows: rows,
             iMapOffsetX: 0,
@@ -65,11 +66,11 @@ impl MI_WorldPreviewDisplay {
             iScrollSpeed: 0,
             iScrollSpeedTimer: 0,
         };
-        this.init();
+        this.init(game().get());
         this
     }
 
-    fn init(&mut self) {
+    fn init(&mut self, g: &mut Game) {
         self.iMapOffsetX = 0;
         self.iMapOffsetY = 0;
 
@@ -84,7 +85,7 @@ impl MI_WorldPreviewDisplay {
         self.iAnimationTimer = 0;
         self.iAnimationFrame = 0;
 
-        let (iWidth, iHeight): (i16, i16) = unsafe { (game().g_worldmap.iWidth, game().g_worldmap.iHeight) };
+        let (iWidth, iHeight): (i16, i16) = unsafe { (g.g_worldmap.iWidth, g.g_worldmap.iHeight) };
 
         if iWidth > 20 {
             self.rectSrcSurface.w = 320;
@@ -120,31 +121,31 @@ impl MI_WorldPreviewDisplay {
         }
     }
 
-    pub fn set_world(&mut self) {
+    pub fn set_world(&mut self, g: &mut Game) {
         let (mut w, mut h): (i16, i16) = (0, 0);
         unsafe {
-            game().g_worldmap.init(WorldMap::new_path(&game().worldlist.at(game().game_values.worldindex as usize).to_string_lossy(), PREVIEWTILESIZE as i16));
-            game().g_worldmap.get_world_size(&mut w, &mut h);
+            game().g_worldmap.init(WorldMap::new_path(g, &game().worldlist.at(game().game_values.worldindex as usize).to_string_lossy(), PREVIEWTILESIZE as i16));
+            g.g_worldmap.get_world_size(&mut w, &mut h);
         }
 
         self.iScrollCols = if w > 20 { w - 20 } else { 0 };
         self.iScrollRows = if h > 15 { h - 15 } else { 0 };
 
-        self.init();
+        self.init(g);
 
-        self.update_map_surface(true);
+        self.update_map_surface(g, true);
     }
 
-    fn update_map_surface(&mut self, fFullRefresh: bool) {
+    fn update_map_surface(&mut self, g: &mut Game, fFullRefresh: bool) {
         unsafe {
-            game().g_worldmap.draw_map_to_surface(-1, fFullRefresh, self.map_sprite.get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
+            g.g_worldmap.draw_map_to_surface(-1, fFullRefresh, self.map_sprite.get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
         }
 
         unsafe {
-            let olddest = game().blitdest;
-            game().blitdest = self.map_sprite.get_surface();
-            game().g_worldmap.draw(self.iMapGlobalOffsetX, self.iMapGlobalOffsetY, false, false);
-            game().blitdest = olddest;
+            let olddest = g.blitdest;
+            g.blitdest = self.map_sprite.get_surface();
+            g.g_worldmap.draw(self.iMapGlobalOffsetX, self.iMapGlobalOffsetY, false, false);
+            g.blitdest = olddest;
         }
     }
 }
@@ -279,7 +280,7 @@ impl UI_ControlTrait for MI_WorldPreviewDisplay {
         }
 
         if fNeedMapSurfaceUpdate {
-            self.update_map_surface(fNeedFullRefresh);
+            self.update_map_surface(game().get(), fNeedFullRefresh);
         }
     }
 

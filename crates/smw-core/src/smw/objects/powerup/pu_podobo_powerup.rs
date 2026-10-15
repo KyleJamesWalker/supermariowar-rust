@@ -42,7 +42,7 @@ impl CObjectTrait for PU_PodoboPowerup {
         let mut player = player;
         if self.state > 0 {
             self.dead = true;
-            player.set_stored_powerup(PowerupType::Podobo as i16);
+            player.set_stored_powerup(game().get(), PowerupType::Podobo as i16);
         }
 
         false

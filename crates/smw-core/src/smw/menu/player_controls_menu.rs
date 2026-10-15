@@ -1,5 +1,6 @@
 //! Port of src/smw/menu/PlayerControlsMenu.cpp
 
+use crate::game::Game;
 use crate::common::ui::menu_code::*;
 use crate::common::uicontrol::ctl_ptr;
 use crate::common::uimenu::UI_Menu;
@@ -19,11 +20,11 @@ pub struct UI_PlayerControlsMenu {
 crate::impl_base!(UI_PlayerControlsMenu => ui_menu: UI_Menu);
 
 impl UI_PlayerControlsMenu {
-    pub fn new() -> Box<Self> {
+    pub fn new(g: &mut Game) -> Box<Self> {
         let mut this = Box::<Self>::default();
 
         unsafe {
-            this.miInputContainer = Ptr::new_box(MI_InputControlContainer::new(Ptr::from_mut(&mut game().rm.menu_plain_field), 94, 10, 0));
+            this.miInputContainer = Ptr::new_box(MI_InputControlContainer::new(g, Ptr::from_mut(&mut game().rm.menu_plain_field), 94, 10, 0));
         }
         this.miInputContainer.set_auto_modify(true);
 
@@ -35,6 +36,6 @@ impl UI_PlayerControlsMenu {
     }
 
     pub fn set_player(&mut self, playerID: i16) {
-        self.miInputContainer.set_player(playerID);
+        self.miInputContainer.set_player(game().get(), playerID);
     }
 }

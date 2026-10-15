@@ -86,9 +86,9 @@ impl CObjectTrait for MO_Podobo {
             h: self.ih as i32,
         };
         if self.fIsSpawned && self.vely < 0.0f32 {
-            self.spr.draw_clip(self.ix as i32, self.iy as i32, &srcRect, ClipEdge::Bottom, self.iHiddenPlane as i32);
+            self.spr.draw_clip(game().get(), self.ix as i32, self.iy as i32, &srcRect, ClipEdge::Bottom, self.iHiddenPlane as i32);
         } else {
-            self.spr.draw_src(self.ix as i32, self.iy as i32, &srcRect);
+            self.spr.draw_src(game().get(), self.ix as i32, self.iy as i32, &srcRect);
         }
     }
 
@@ -125,7 +125,7 @@ impl CObjectTrait for MO_Podobo {
             // ((CO_Shell*)object)->Die() / ((CO_ThrowBlock*)object)->Die() / ((MO_BulletBill*)object)->Die() are all virtual calls
             object.die();
 
-            unsafe { if_sound_on_play(&mut game().rm.sfx_kicksound) };
+            unsafe { if_sound_on_play(game().get(), &mut game().rm.sfx_kicksound) };
         }
     }
 }

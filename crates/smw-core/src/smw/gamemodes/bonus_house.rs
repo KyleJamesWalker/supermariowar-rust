@@ -45,7 +45,7 @@ impl CGameModeTrait for CGM_Bonus {
     }
 
     fn init(&mut self) {
-        gm::cgamemode_init(self);
+        gm::cgamemode_init(game().get(), self);
 
         unsafe {
             //Unlock the chests
@@ -104,16 +104,16 @@ impl CGameModeTrait for CGM_Bonus {
     fn draw_background(&mut self) {
         unsafe {
             //Draw Toad
-            game().rm.spr_worldbonushouse.draw_src(544, 256, &SDL_Rect { x: if game().players[0].left_x() > 544 { 224 } else { 192 }, y: 0, w: 32, h: 64 });
+            game().rm.spr_worldbonushouse.draw_src(game().get(), 544, 256, &SDL_Rect { x: if game().players[0].left_x() > 544 { 224 } else { 192 }, y: 0, w: 32, h: 64 });
 
             //Draw Bonus House Title
-            game().rm.menu_plain_field.draw_src(0, 0, &SDL_Rect { x: 0, y: 0, w: App::screenWidth / 2, h: 32 });
-            game().rm.menu_plain_field.draw_src(App::screenWidth / 2, 0, &SDL_Rect { x: 192, y: 0, w: App::screenWidth / 2, h: 32 });
+            game().rm.menu_plain_field.draw_src(game().get(), 0, 0, &SDL_Rect { x: 0, y: 0, w: App::screenWidth / 2, h: 32 });
+            game().rm.menu_plain_field.draw_src(game().get(), App::screenWidth / 2, 0, &SDL_Rect { x: 192, y: 0, w: App::screenWidth / 2, h: 32 });
             game().rm.game_font_large.draw_centered(App::screenWidth / 2, 5, &self.tsTourStop.szName);
 
             //Draw Bonus House Text
             if self.tsTourStop.iBonusTextLines > 0 {
-                game().rm.spr_worldbonushouse.draw_src(128, 128, &SDL_Rect { x: 0, y: 64, w: 384, h: 128 });
+                game().rm.spr_worldbonushouse.draw_src(game().get(), 128, 128, &SDL_Rect { x: 0, y: 64, w: 384, h: 128 });
 
                 for iTextLine in 0..self.tsTourStop.iBonusTextLines {
                     game().rm.game_font_large.draw_chop_centered(App::screenWidth / 2, 132 + 24 * iTextLine as i32, 372, &self.tsTourStop.szBonusText[iTextLine as usize]);

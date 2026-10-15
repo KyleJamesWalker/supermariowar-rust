@@ -1,5 +1,6 @@
 //! Port of src/smw/menu/options/ProjectileOptionsMenu.cpp
 
+use crate::game::Game;
 use crate::common::gameplay_styles::BoomerangStyle;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
@@ -77,17 +78,17 @@ pub struct UI_ProjectileOptionsMenu {
 crate::impl_base!(UI_ProjectileOptionsMenu => ui_menu: UI_Menu);
 
 impl UI_ProjectileOptionsMenu {
-    pub fn new() -> Box<Self> {
+    pub fn new(g: &mut Game) -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let spr = Ptr::from_mut(&mut game().rm.spr_selectfield);
-            let menu_plain_field = Ptr::from_mut(&mut game().rm.menu_plain_field);
+            let spr = Ptr::from_mut(&mut g.rm.spr_selectfield);
+            let menu_plain_field = Ptr::from_mut(&mut g.rm.menu_plain_field);
 
-            this.miFireballLifeField = select_field(spr, 10, 80, "Life", 305, 120, LIFE_1_TO_10, &mut game().game_values.fireballttl);
+            this.miFireballLifeField = select_field(spr, 10, 80, "Life", 305, 120, LIFE_1_TO_10, &mut g.game_values.fireballttl);
 
             this.miFeatherJumpsField = select_field(spr, 10, 150, "Jumps", 305, 120,
                 &[("1", 1), ("2", 2), ("3", 3), ("4", 4), ("5", 5)],
-                &mut game().game_values.featherjumps);
+                &mut g.game_values.featherjumps);
 
             this.miBoomerangStyleField = select_field(spr, 10, 220, "Style", 305, 120,
                 &[
@@ -96,9 +97,9 @@ impl UI_ProjectileOptionsMenu {
                     ("Zelda", BoomerangStyle::Zelda),
                     ("Random", BoomerangStyle::Random),
                 ],
-                &mut game().game_values.boomerangstyle);
+                &mut g.game_values.boomerangstyle);
 
-            this.miBoomerangLifeField = select_field(spr, 10, 260, "Life", 305, 120, LIFE_1_TO_10, &mut game().game_values.boomeranglife);
+            this.miBoomerangLifeField = select_field(spr, 10, 260, "Life", 305, 120, LIFE_1_TO_10, &mut g.game_values.boomeranglife);
 
             this.miHammerLifeField = select_field(spr, 325, 80, "Life", 305, 120,
                 &[
@@ -112,7 +113,7 @@ impl UI_ProjectileOptionsMenu {
                     ("1.1 Seconds", 68),
                     ("1.2 Seconds", 74),
                 ],
-                &mut game().game_values.hammerttl);
+                &mut g.game_values.hammerttl);
 
             this.miHammerDelayField = select_field(spr, 325, 120, "Delay", 305, 120,
                 &[
@@ -128,14 +129,14 @@ impl UI_ProjectileOptionsMenu {
                     ("0.9 Seconds", 55),
                     ("1.0 Seconds", 62),
                 ],
-                &mut game().game_values.hammerdelay);
+                &mut g.game_values.hammerdelay);
 
             this.miHammerOneKillField = select_field(spr, 325, 160, "Power", 305, 120,
                 &[("One Kill", true), ("Multiple Kills", false)],
-                &mut game().game_values.hammerpower);
+                &mut g.game_values.hammerpower);
             this.miHammerOneKillField.set_auto_advance(true);
 
-            this.miShellLifeField = select_field(spr, 10, 330, "Life", 305, 120, LIFE_UNLIMITED_TO_30, &mut game().game_values.shellttl);
+            this.miShellLifeField = select_field(spr, 10, 330, "Life", 305, 120, LIFE_UNLIMITED_TO_30, &mut g.game_values.shellttl);
 
             this.miWandFreezeTimeField = select_field(spr, 10, 400, "Freeze", 305, 120,
                 &[
@@ -154,26 +155,26 @@ impl UI_ProjectileOptionsMenu {
                     ("18 Seconds", 1116),
                     ("20 Seconds", 1240),
                 ],
-                &mut game().game_values.wandfreezetime);
+                &mut g.game_values.wandfreezetime);
 
-            this.miBlueBlockLifeField = select_field(spr, 325, 230, "Blue Life", 305, 120, LIFE_UNLIMITED_TO_30, &mut game().game_values.blueblockttl);
-            this.miGrayBlockLifeField = select_field(spr, 325, 270, "Gray Life", 305, 120, LIFE_UNLIMITED_TO_30, &mut game().game_values.grayblockttl);
-            this.miRedBlockLifeField = select_field(spr, 325, 310, "Red Life", 305, 120, LIFE_UNLIMITED_TO_30, &mut game().game_values.redblockttl);
+            this.miBlueBlockLifeField = select_field(spr, 325, 230, "Blue Life", 305, 120, LIFE_UNLIMITED_TO_30, &mut g.game_values.blueblockttl);
+            this.miGrayBlockLifeField = select_field(spr, 325, 270, "Gray Life", 305, 120, LIFE_UNLIMITED_TO_30, &mut g.game_values.grayblockttl);
+            this.miRedBlockLifeField = select_field(spr, 325, 310, "Red Life", 305, 120, LIFE_UNLIMITED_TO_30, &mut g.game_values.redblockttl);
 
-            this.miProjectileOptionsMenuBackButton = Ptr::new_box(MI_Button::new(spr, 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miProjectileOptionsMenuBackButton = Ptr::new_box(MI_Button::new(g, spr, 544, 432, "Back", 80, TextAlign::CENTER));
             this.miProjectileOptionsMenuBackButton.set_code(MENU_CODE_BACK_TO_OPTIONS_MENU);
 
             this.miProjectileOptionsMenuLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
             this.miProjectileOptionsMenuRightHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
             this.miProjectileOptionsMenuHeaderText = Ptr::new_box(MI_HeaderText::new("Projectile & Weapon Options Menu", 320, 5));
 
-            this.miFireballText = Ptr::new_box(MI_Text::new("Fireball", 10, 50, 0, true, TextAlign::LEFT));
-            this.miFeatherText = Ptr::new_box(MI_Text::new("Feather", 10, 120, 0, true, TextAlign::LEFT));
-            this.miBoomerangText = Ptr::new_box(MI_Text::new("Boomerang", 10, 190, 0, true, TextAlign::LEFT));
-            this.miHammerText = Ptr::new_box(MI_Text::new("Hammer", 325, 50, 0, true, TextAlign::LEFT));
-            this.miShellText = Ptr::new_box(MI_Text::new("Shell", 10, 300, 0, true, TextAlign::LEFT));
-            this.miWandText = Ptr::new_box(MI_Text::new("Wand", 10, 370, 0, true, TextAlign::LEFT));
-            this.miBlueBlockText = Ptr::new_box(MI_Text::new("Throwable Blocks", 325, 200, 0, true, TextAlign::LEFT));
+            this.miFireballText = Ptr::new_box(MI_Text::new(g, "Fireball", 10, 50, 0, true, TextAlign::LEFT));
+            this.miFeatherText = Ptr::new_box(MI_Text::new(g, "Feather", 10, 120, 0, true, TextAlign::LEFT));
+            this.miBoomerangText = Ptr::new_box(MI_Text::new(g, "Boomerang", 10, 190, 0, true, TextAlign::LEFT));
+            this.miHammerText = Ptr::new_box(MI_Text::new(g, "Hammer", 325, 50, 0, true, TextAlign::LEFT));
+            this.miShellText = Ptr::new_box(MI_Text::new(g, "Shell", 10, 300, 0, true, TextAlign::LEFT));
+            this.miWandText = Ptr::new_box(MI_Text::new(g, "Wand", 10, 370, 0, true, TextAlign::LEFT));
+            this.miBlueBlockText = Ptr::new_box(MI_Text::new(g, "Throwable Blocks", 325, 200, 0, true, TextAlign::LEFT));
         }
 
         let fireball = ctl_ptr(this.miFireballLifeField);

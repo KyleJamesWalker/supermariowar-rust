@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_FrenzyCard.cpp
 
+use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_mode::game_mode_frenzy;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -50,13 +51,13 @@ impl MO_FrenzyCard {
         o.sparkleanimationtimer = 0;
         o.sparkledrawframe = 0;
 
-        o.place_card();
+        o.place_card(game().get());
 
         o.fObjectCollidesWithMap = false;
         o
     }
 
-    pub fn place_card(&mut self) {
+    pub fn place_card(&mut self, g: &mut Game) {
         if crate::smw::net_random::place_event(self.iNetworkID, 0) {
             return;
         }
@@ -68,7 +69,7 @@ impl MO_FrenzyCard {
             let mut y: i16 = 0;
             let mut iAttempts: i16 = 32;
             let (cw, ch) = (self.collisionWidth, self.collisionHeight);
-            while (!game().g_map.findspawnpoint(5, &mut x, &mut y, cw, ch, false) || game().objectcontainer[1].get_closest_object(x, y, object_frenzycard) <= 150.0f32) && {
+            while (!g.g_map.findspawnpoint(5, &mut x, &mut y, cw, ch, false) || g.objectcontainer[1].get_closest_object(x, y, object_frenzycard) <= 150.0f32) && {
                 let a = iAttempts;
                 iAttempts -= 1;
                 a > 0
@@ -93,32 +94,32 @@ impl CObjectTrait for MO_FrenzyCard {
         unsafe {
             let r#type = self.r#type;
             if r#type < 14 || r#type > 17 || game().game_values.gamemodesettings.frenzy.storedshells {
-                player.set_powerup(r#type);
+                player.set_powerup(game().get(), r#type);
                 if game().game_values.gamemode.gamemode == game_mode_frenzy {
                     game().game_values.gamemode.get().as_any().downcast_mut::<CGM_Frenzy>().unwrap().set_frenzy_owner(player);
                 }
             } else {
                 match r#type {
                     14 => {
-                        let mut shell = Ptr::new_box(CO_Shell::new(ShellType::Green, Vec2s::zero(), true, true, true, false));
+                        let mut shell = Ptr::new_box(CO_Shell::new(game().get(), ShellType::Green, Vec2s::zero(), true, true, true, false));
                         if game().objectcontainer[1].add(shell) {
                             shell.used_as_stored_powerup(player);
                         }
                     }
                     15 => {
-                        let mut shell = Ptr::new_box(CO_Shell::new(ShellType::Red, Vec2s::zero(), false, true, true, false));
+                        let mut shell = Ptr::new_box(CO_Shell::new(game().get(), ShellType::Red, Vec2s::zero(), false, true, true, false));
                         if game().objectcontainer[1].add(shell) {
                             shell.used_as_stored_powerup(player);
                         }
                     }
                     16 => {
-                        let mut shell = Ptr::new_box(CO_Shell::new(ShellType::Spiny, Vec2s::zero(), false, false, true, true));
+                        let mut shell = Ptr::new_box(CO_Shell::new(game().get(), ShellType::Spiny, Vec2s::zero(), false, false, true, true));
                         if game().objectcontainer[1].add(shell) {
                             shell.used_as_stored_powerup(player);
                         }
                     }
                     17 => {
-                        let mut shell = Ptr::new_box(CO_Shell::new(ShellType::Buzzy, Vec2s::zero(), false, true, false, false));
+                        let mut shell = Ptr::new_box(CO_Shell::new(game().get(), ShellType::Buzzy, Vec2s::zero(), false, true, false, false));
                         if game().objectcontainer[1].add(shell) {
                             shell.used_as_stored_powerup(player);
                         }
@@ -146,7 +147,7 @@ impl CObjectTrait for MO_FrenzyCard {
 
         self.timer += 1;
         if self.timer > 1500 {
-            self.place_card();
+            self.place_card(game().get());
         }
     }
 
@@ -155,7 +156,7 @@ impl CObjectTrait for MO_FrenzyCard {
 
         // Draw sparkles
         unsafe {
-            game().rm.spr_shinesparkle.draw_src(
+            game().rm.spr_shinesparkle.draw_src(game().get(), 
                 self.ix as i32 - self.collisionOffsetX as i32,
                 self.iy as i32 - self.collisionOffsetY as i32,
                 &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },

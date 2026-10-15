@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/FlipBlock.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::eyecandy::EC_FallingObject;
 use crate::common::game_values::if_sound_on_play;
@@ -59,20 +60,20 @@ impl B_FlipBlock {
         b
     }
 
-    fn explode(&mut self) {
+    fn explode(&mut self, g: &mut Game) {
         unsafe {
-            let spr = Ptr::from_mut(&mut game().rm.spr_brokenflipblock);
+            let spr = Ptr::from_mut(&mut g.rm.spr_brokenflipblock);
             let (ix, iy) = (self.ix, self.iy);
-            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy, -2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
-            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy, 2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
-            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
-            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy, -2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy, 2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
 
-            if_sound_on_play(&mut game().rm.sfx_breakblock);
+            if_sound_on_play(g, &mut game().rm.sfx_breakblock);
         }
     }
 
-    fn object_hit_side(&mut self, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
+    fn object_hit_side(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         let mut object = object;
         let r#type = object.get_moving_object_type();
         if r#type == movingobject_shell || r#type == movingobject_throwblock || r#type == movingobject_throwbox {
@@ -87,7 +88,7 @@ impl B_FlipBlock {
             }
 
             self.state = 2;
-            self.explode();
+            self.explode(g);
         } else if r#type == movingobject_attackzone {
             self.iBumpPlayerID = object.iPlayerID;
             self.iBumpTeamID = object.iTeamID;
@@ -95,11 +96,11 @@ impl B_FlipBlock {
             if self.hidden {
                 self.hidden = false;
                 let iBumpPlayerID = self.iBumpPlayerID;
-                io_block_kill_players_and_objects_inside_block(self, iBumpPlayerID);
+                io_block_kill_players_and_objects_inside_block(g, self, iBumpPlayerID);
             }
 
             unsafe {
-                game().g_map.update_tile_gap(self.col, self.row);
+                g.g_map.update_tile_gap(self.col, self.row);
             }
 
             self.trigger_behavior();
@@ -122,7 +123,7 @@ impl CObjectTrait for B_FlipBlock {
         }
 
         if self.state == 0 || self.state == 1 {
-            self.spr.draw_src(
+            self.spr.draw_src(game().get(), 
                 self.ix as i32,
                 self.iy as i32,
                 &SDL_Rect { x: self.frame as i32, y: 0, w: self.iw as i32, h: self.ih as i32 },
@@ -131,7 +132,7 @@ impl CObjectTrait for B_FlipBlock {
     }
 
     fn update(&mut self) {
-        io_block_update(self);
+        io_block_update(game().get(), self);
 
         if self.state == 1 {
             self.counter += 1;
@@ -152,7 +153,7 @@ impl CObjectTrait for B_FlipBlock {
                 }
 
                 let iBumpPlayerID = self.iBumpPlayerID;
-                io_block_kill_players_and_objects_inside_block(self, iBumpPlayerID);
+                io_block_kill_players_and_objects_inside_block(game().get(), self, iBumpPlayerID);
                 self.iBumpPlayerID = -1;
             }
         } else if self.state == 2 {
@@ -219,7 +220,7 @@ impl IO_BlockTrait for B_FlipBlock {
 
             if player.is_super_stomping() {
                 self.state = 2;
-                self.explode();
+                self.explode(game().get());
                 return true;
             }
 
@@ -240,7 +241,7 @@ impl IO_BlockTrait for B_FlipBlock {
             if self.hidden {
                 self.hidden = false;
                 let iBumpPlayerID = self.iBumpPlayerID;
-                io_block_kill_players_and_objects_inside_block(self, iBumpPlayerID);
+                io_block_kill_players_and_objects_inside_block(game().get(), self, iBumpPlayerID);
             }
 
             unsafe {
@@ -307,7 +308,7 @@ impl IO_BlockTrait for B_FlipBlock {
                 object.velx = -object.velx;
             }
 
-            return self.object_hit_side(object);
+            return self.object_hit_side(game().get(), object);
         }
 
         true
@@ -323,7 +324,7 @@ impl IO_BlockTrait for B_FlipBlock {
                 object.velx = -object.velx;
             }
 
-            return self.object_hit_side(object);
+            return self.object_hit_side(game().get(), object);
         }
 
         true

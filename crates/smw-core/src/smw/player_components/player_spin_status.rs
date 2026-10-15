@@ -1,5 +1,6 @@
 //! Port of src/smw/player_components/PlayerSpinStatus.cpp
 
+use crate::game::Game;
 use crate::common::global_constants::*;
 use crate::globals::*;
 use crate::smw::player::CPlayer;
@@ -38,7 +39,7 @@ impl PlayerSpinStatus {
         self.state = 0;
     }
 
-    pub fn update(&mut self, player: &mut CPlayer) {
+    pub fn update(&mut self, g: &mut Game, player: &mut CPlayer) {
         if self.is_spin_in_progress() {
             self.timer = self.timer.wrapping_add(1);
             if self.timer > 3 {
@@ -47,17 +48,17 @@ impl PlayerSpinStatus {
                 if self.state == 6 || self.state == 12 {
                     self.state = 0;
 
-                    if player.powerup == 3 && unsafe { game().game_values.featherlimit } > 0 {
-                        player.decrease_projectile_limit();
+                    if player.powerup == 3 && unsafe { g.game_values.featherlimit } > 0 {
+                        player.decrease_projectile_limit(g);
                     }
                 }
             }
         }
     }
 
-    pub fn spin(&mut self, player: &mut CPlayer) {
-        let reversewalk = unsafe { game().game_values.reversewalk };
-        self.state = if player.is_facing_right() {
+    pub fn spin(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let reversewalk = unsafe { g.game_values.reversewalk };
+        self.state = if player.is_facing_right(g) {
             if reversewalk { 7 } else { 1 }
         } else if reversewalk {
             1
@@ -79,9 +80,9 @@ impl PlayerSpinStatus {
         false
     }
 
-    pub fn to_sprite_id(&mut self) -> u8 {
+    pub fn to_sprite_id(&mut self, g: &mut Game) -> u8 {
         let s = spinStateToSprite[self.state as usize];
-        if unsafe { game().game_values.reversewalk } {
+        if unsafe { g.game_values.reversewalk } {
             if s & 0x1 != 0 { (s as i32 - 1) as u8 } else { (s as i32 + 1) as u8 }
         } else {
             s

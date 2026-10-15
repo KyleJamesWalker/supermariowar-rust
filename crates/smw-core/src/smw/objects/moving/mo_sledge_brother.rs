@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_SledgeBrother.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::EC_FallingObject;
 use crate::common::game::App;
 use crate::common::game_mode::game_mode_boss_minigame;
@@ -120,7 +121,7 @@ pub struct MO_SledgeBrother {
 impl_base!(MO_SledgeBrother => io_moving_object: IO_MovingObject);
 
 impl MO_SledgeBrother {
-    pub fn new(nspr: Ptr<gfxSprite>, platformY: i16, r#type: Boss) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, platformY: i16, r#type: Boss) -> Self {
         let mut o = MO_SledgeBrother {
             io_moving_object: IO_MovingObject::new(nspr, Vec2s::zero(), 8, 0, 32, 56, 8, 8, -1, -1, -1, -1),
             iType: 0,
@@ -172,7 +173,7 @@ impl MO_SledgeBrother {
 
         o.wait_timer = 0;
 
-        o.hit_points = unsafe { game().game_values.gamemodesettings.boss.hitpoints };
+        o.hit_points = unsafe { g.game_values.gamemodesettings.boss.hitpoints };
         o.face_right = false;
 
         o.vely = 0.0f32;
@@ -207,13 +208,13 @@ impl MO_SledgeBrother {
         player.kill_player_map_hazard(false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill
     }
 
-    pub fn damage(&mut self, playerID: i16) {
+    pub fn damage(&mut self, g: &mut Game, playerID: i16) {
         if self.hit_timer != 0 || playerID == -1 {
             return;
         }
 
         // Find the player that shot this projectile so we can attribute a kill
-        let killer: Ptr<CPlayer> = get_player_from_global_id(playerID);
+        let killer: Ptr<CPlayer> = get_player_from_global_id(g, playerID);
 
         if !killer.is_null() {
             self.hit_points -= 1;
@@ -221,13 +222,13 @@ impl MO_SledgeBrother {
                 self.die();
 
                 unsafe {
-                    if game().game_values.gamemode.gamemode == game_mode_boss_minigame {
-                        game().game_values.gamemode.get().as_any().downcast_mut::<CGM_Boss_MiniGame>().unwrap().set_winner(killer);
+                    if g.game_values.gamemode.gamemode == game_mode_boss_minigame {
+                        g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Boss_MiniGame>().unwrap().set_winner(g, killer);
                     }
                 }
             } else {
                 self.hit_timer = 60;
-                unsafe { if_sound_on_play(&mut game().rm.sfx_stun) };
+                unsafe { if_sound_on_play(g, &mut game().rm.sfx_stun) };
             }
         }
     }
@@ -241,12 +242,12 @@ impl MO_SledgeBrother {
         }
     }
 
-    fn randomaction(&mut self) {
+    fn randomaction(&mut self, g: &mut Game) {
         unsafe {
             let randaction: i32 = RANDOM_INT(100);
 
             let t = self.iType as usize;
-            let d = game().game_values.gamemodesettings.boss.difficulty as usize;
+            let d = g.game_values.gamemodesettings.boss.difficulty as usize;
             let need = &g_iSledgeBrotherNeedAction[t][d];
             let actions = &g_iSledgeBrotherActions[t][d];
             let max = &g_iSledgeBrotherMaxAction[t][d];
@@ -256,13 +257,13 @@ impl MO_SledgeBrother {
             if self.need_action[0] > need[0] {
                 self.jump();
             } else if self.need_action[1] > need[1] {
-                self.throwprojectile();
+                self.throwprojectile(g);
             } else if self.need_action[2] > need[2] {
-                self.turn();
+                self.turn(g);
             } else if self.need_action[3] > need[3] {
                 self.wait(waittime[0], waittime[1]);
             } else if self.need_action[4] > need[4] {
-                self.taunt();
+                self.taunt(g);
             } else if self.need_action[5] > need[5] {
                 self.r#move();
             }
@@ -270,13 +271,13 @@ impl MO_SledgeBrother {
             else if (last_action != 0 || last_action_count < max[0]) && randaction < actions[0] as i32 {
                 self.jump();
             } else if (last_action != 1 || last_action_count < max[1]) && randaction < actions[1] as i32 {
-                self.throwprojectile();
+                self.throwprojectile(g);
             } else if (last_action != 2 || last_action_count < max[2]) && randaction < actions[2] as i32 {
-                self.turn();
+                self.turn(g);
             } else if (last_action != 2 || last_action_count < max[3]) && randaction < actions[3] as i32 {
                 self.wait(waittime[0], waittime[1]);
             } else if (last_action != 2 || last_action_count < max[4]) && randaction < actions[4] as i32 {
-                self.taunt();
+                self.taunt(g);
             } else {
                 self.r#move();
             }
@@ -312,7 +313,7 @@ impl MO_SledgeBrother {
         self.need_action[5] = 0;
     }
 
-    fn throwprojectile(&mut self) {
+    fn throwprojectile(&mut self, g: &mut Game) {
         self.set_last_action(1);
 
         self.throwing_timer = 20;
@@ -324,8 +325,8 @@ impl MO_SledgeBrother {
             if self.iType == 0 {
                 let fHammerVelX: f32 = (RANDOM_INT(9) + 2) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 6.0f32 };
                 let pos = Vec2s::new(((if self.face_right { ix + 32 } else { ix }) - self.collisionOffsetX as i32) as i16, self.iy);
-                game().objectcontainer[2].add(Ptr::new_box(MO_SledgeHammer::new(
-                    Ptr::from_mut(&mut game().rm.spr_sledgehammer),
+                g.objectcontainer[2].add(Ptr::new_box(MO_SledgeHammer::new(
+                    Ptr::from_mut(&mut g.rm.spr_sledgehammer),
                     pos,
                     8,
                     Vec2f::new(fHammerVelX, -HAMMERTHROW),
@@ -340,8 +341,8 @@ impl MO_SledgeBrother {
                 let fBombVelY: f32 = -(RANDOM_INT(13) as f32) / 2.0f32 - 6.0f32;
                 let pos = Vec2s::new((if self.face_right { ix + iw - 32 } else { ix - 20 }) as i16, iy as i16);
                 let timetolive = (RANDOM_INT(60) + 120) as i16;
-                game().objectcontainer[2].add(Ptr::new_box(CO_Bomb::new(
-                    Ptr::from_mut(&mut game().rm.spr_bomb),
+                g.objectcontainer[2].add(Ptr::new_box(CO_Bomb::new(
+                    Ptr::from_mut(&mut g.rm.spr_bomb),
                     pos,
                     Vec2f::new(fBombVelX, fBombVelY),
                     4,
@@ -354,8 +355,8 @@ impl MO_SledgeBrother {
                 let fFireVelX: f32 = (RANDOM_INT(9) + 6) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 10.0f32 };
                 let fFireVelY: f32 = RANDOM_INT(17) as f32 / 2.0f32 - 4.0f32;
                 let pos = Vec2s::new((if self.face_right { ix + iw - 32 } else { ix - 16 }) as i16, iy as i16);
-                game().objectcontainer[2].add(Ptr::new_box(MO_SuperFireball::new(
-                    Ptr::from_mut(&mut game().rm.spr_superfireball),
+                g.objectcontainer[2].add(Ptr::new_box(MO_SuperFireball::new(
+                    Ptr::from_mut(&mut g.rm.spr_superfireball),
                     pos,
                     4,
                     Vec2f::new(fFireVelX, fFireVelY),
@@ -370,10 +371,10 @@ impl MO_SledgeBrother {
         self.need_action[1] = 0;
     }
 
-    fn taunt(&mut self) {
+    fn taunt(&mut self, g: &mut Game) {
         self.set_last_action(2);
 
-        unsafe { game().rm.sfx_boomerang.play_loop(3) };
+        unsafe { g.rm.sfx_boomerang.play_loop(3) };
         self.taunt_timer = 60;
         self.iActionState = 5;
 
@@ -381,14 +382,14 @@ impl MO_SledgeBrother {
 
         // If this is a bomb brother, push bombs away when taunting
         if self.iType == 1 {
-            unsafe { push_bombs(&game().objectcontainer[2], (self.ix as i32 + 32) as i16, (self.iy as i32 + 32) as i16) };
+            unsafe { push_bombs(&g.objectcontainer[2], (self.ix as i32 + 32) as i16, (self.iy as i32 + 32) as i16) };
         }
     }
 
-    fn turn(&mut self) {
+    fn turn(&mut self, g: &mut Game) {
         self.face_right = !self.face_right;
         unsafe {
-            let waittime = g_iSledgeBrotherWaitTime[self.iType as usize][game().game_values.gamemodesettings.boss.difficulty as usize];
+            let waittime = g_iSledgeBrotherWaitTime[self.iType as usize][g.game_values.gamemodesettings.boss.difficulty as usize];
             self.wait(waittime[0] >> 1, waittime[1] >> 1);
         }
 
@@ -421,7 +422,7 @@ impl CObjectTrait for MO_SledgeBrother {
     }
 
     fn draw(&mut self) {
-        self.spr.draw_src(
+        self.spr.draw_src(game().get(), 
             self.ix as i32 - self.collisionOffsetX as i32,
             self.iy as i32 - self.collisionOffsetY as i32,
             &SDL_Rect {
@@ -435,7 +436,7 @@ impl CObjectTrait for MO_SledgeBrother {
         if self.hit_timer != 0 {
             for iHeart in 0..self.hit_points {
                 unsafe {
-                    game().rm.spr_scorehearts.draw_src(
+                    game().rm.spr_scorehearts.draw_src(game().get(), 
                         self.ix as i32 - self.collisionOffsetX as i32 + iHeart as i32 * 8,
                         self.iy as i32 - self.collisionOffsetY as i32 - 18,
                         &SDL_Rect { x: 0, y: 0, w: 16, h: 16 },
@@ -449,7 +450,7 @@ impl CObjectTrait for MO_SledgeBrother {
         unsafe {
             if self.iActionState == 0 {
                 if self.hit_timer <= 0 {
-                    self.randomaction();
+                    self.randomaction(game().get());
                 }
             } else if self.iActionState == 1 {
                 self.wait_timer -= 1;
@@ -466,7 +467,7 @@ impl CObjectTrait for MO_SledgeBrother {
 
                     if self.iType == 0 {
                         // Shake screen and kill players
-                        if_sound_on_play(&mut game().rm.sfx_thunder);
+                        if_sound_on_play(game().get(), &mut game().rm.sfx_thunder);
                         game().game_values.flags.screenshaketimer = 20;
                         game().game_values.flags.screenshakeplayerid = -1;
                         game().game_values.flags.screenshaketeamid = -1;
@@ -474,7 +475,7 @@ impl CObjectTrait for MO_SledgeBrother {
                         game().game_values.flags.screenshakekillscount = 0;
                     } else if self.iType == 1 {
                         // Spawn thwomps
-                        if_sound_on_play(&mut game().rm.sfx_thunder);
+                        if_sound_on_play(game().get(), &mut game().rm.sfx_thunder);
 
                         let numThwomps: i16 = (RANDOM_INT(5) + 6) as i16;
 
@@ -485,7 +486,7 @@ impl CObjectTrait for MO_SledgeBrother {
                         }
                     } else if self.iType == 2 {
                         // Spawn lots of podobos
-                        if_sound_on_play(&mut game().rm.sfx_thunder);
+                        if_sound_on_play(game().get(), &mut game().rm.sfx_thunder);
 
                         let numPodobos: i16 = (RANDOM_INT(5) + 8) as i16;
 
@@ -608,11 +609,11 @@ impl CObjectTrait for MO_SledgeBrother {
 
         if player.is_invincible() {
             unsafe {
-                if_sound_on_play(&mut game().rm.sfx_kicksound);
+                if_sound_on_play(game().get(), &mut game().rm.sfx_kicksound);
                 self.die();
 
                 if game().game_values.gamemode.gamemode == game_mode_boss_minigame {
-                    game().game_values.gamemode.get().as_any().downcast_mut::<CGM_Boss_MiniGame>().unwrap().set_winner(player);
+                    game().game_values.gamemode.get().as_any().downcast_mut::<CGM_Boss_MiniGame>().unwrap().set_winner(game().get(), player);
                 }
             }
         } else {
@@ -636,7 +637,7 @@ impl CObjectTrait for MO_SledgeBrother {
             }
         }
 
-        removeifprojectile(object, false, false);
+        removeifprojectile(game().get(), object, false, false);
 
         // These types of attacks damage the boss
         let fDamageWeapon =
@@ -662,14 +663,14 @@ impl CObjectTrait for MO_SledgeBrother {
 
             if fDamageWeapon {
                 let iPlayerID = object.iPlayerID;
-                self.damage(iPlayerID);
+                self.damage(game().get(), iPlayerID);
 
                 if r#type == movingobject_shell || r#type == movingobject_throwblock || r#type == movingobject_throwbox || r#type == movingobject_attackzone {
-                    unsafe { if_sound_on_play(&mut game().rm.sfx_kicksound) };
+                    unsafe { if_sound_on_play(game().get(), &mut game().rm.sfx_kicksound) };
                     object.die();
                 }
             } else {
-                unsafe { if_sound_on_play(&mut game().rm.sfx_hit) };
+                unsafe { if_sound_on_play(game().get(), &mut game().rm.sfx_hit) };
 
                 if r#type == movingobject_attackzone || r#type == movingobject_bulletbill {
                     object.die();

@@ -60,7 +60,7 @@ impl CObjectTrait for PU_IceWandPowerup {
         // Draw sparkles
         if self.state == 1 {
             unsafe {
-                game().rm.spr_shinesparkle.draw_src(
+                game().rm.spr_shinesparkle.draw_src(game().get(), 
                     self.ix as i32 - self.collisionOffsetX as i32,
                     self.iy as i32 - self.collisionOffsetY as i32,
                     &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
@@ -72,7 +72,7 @@ impl CObjectTrait for PU_IceWandPowerup {
     fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
         let mut player = player;
         if self.state > 0 {
-            player.set_powerup(5);
+            player.set_powerup(game().get(), 5);
             self.dead = true;
         }
 

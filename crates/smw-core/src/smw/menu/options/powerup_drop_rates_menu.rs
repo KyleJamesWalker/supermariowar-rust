@@ -1,5 +1,6 @@
 //! Port of src/smw/menu/options/PowerupDropRatesMenu.cpp
 
+use crate::game::Game;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_image::MI_Image;
 use crate::common::ui::mi_text::{MI_HeaderText, MI_Text};
@@ -28,12 +29,12 @@ pub struct UI_PowerupDropRatesMenu {
 crate::impl_base!(UI_PowerupDropRatesMenu => ui_menu: UI_Menu);
 
 impl UI_PowerupDropRatesMenu {
-    pub fn new() -> Box<Self> {
+    pub fn new(g: &mut Game) -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let menu_plain_field = Ptr::from_mut(&mut game().rm.menu_plain_field);
+            let menu_plain_field = Ptr::from_mut(&mut g.rm.menu_plain_field);
 
-            this.miPowerupSelection = Ptr::new_box(MI_PowerupSelection::new(50, 44, 640, 8));
+            this.miPowerupSelection = Ptr::new_box(MI_PowerupSelection::new(g, 50, 44, 640, 8));
             this.miPowerupSelection.set_auto_modify(true);
 
             this.miPowerupSelectionLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));

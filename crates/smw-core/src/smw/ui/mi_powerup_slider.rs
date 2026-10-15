@@ -64,17 +64,17 @@ impl UI_ControlTrait for MI_PowerupSlider {
         let halfWidth = self.m_halfWidth as i32;
         let selY = (if self.fSelected { 32 } else { 0 }) + self.m_adjustmentY as i32;
 
-        self.m_spr.draw_src(x + 38, y, &SDL_Rect { x: 0, y: selY, w: halfWidth, h: 32 });
-        self.m_spr.draw_src(x + 38 + halfWidth, y, &SDL_Rect { x: 550 - width + halfWidth, y: selY, w: width - halfWidth - 38, h: 32 });
+        self.m_spr.draw_src(game().get(), x + 38, y, &SDL_Rect { x: 0, y: selY, w: halfWidth, h: 32 });
+        self.m_spr.draw_src(game().get(), x + 38 + halfWidth, y, &SDL_Rect { x: 550 - width + halfWidth, y: selY, w: width - halfWidth - 38, h: 32 });
 
         let iSpacing: i16 = ((width - 100) / ((self.m_items.len() as i16) as i32 - 1)) as i16;
         let mut iSpot: i16 = 0;
 
         for index in 0..self.m_items.len() as u32 {
             if index < (self.m_items.len() as u32).wrapping_sub(1) {
-                self.m_sprSlider.draw_src(x + iSpot as i32 + 56, y + 10, &SDL_Rect { x: 0, y: 0, w: iSpacing as i32, h: 13 });
+                self.m_sprSlider.draw_src(game().get(), x + iSpot as i32 + 56, y + 10, &SDL_Rect { x: 0, y: 0, w: iSpacing as i32, h: 13 });
             } else {
-                self.m_sprSlider.draw_src(x + iSpot as i32 + 56, y + 10, &SDL_Rect { x: 164, y: 0, w: 4, h: 13 });
+                self.m_sprSlider.draw_src(game().get(), x + iSpot as i32 + 56, y + 10, &SDL_Rect { x: 164, y: 0, w: 4, h: 13 });
             }
 
             iSpot = iSpot.wrapping_add(iSpacing);
@@ -82,9 +82,9 @@ impl UI_ControlTrait for MI_PowerupSlider {
 
         // size_t arithmetic in C++, truncated to int at the call
         let knobX = x.wrapping_add((self.m_index as i32).wrapping_mul(iSpacing as i32)).wrapping_add(54);
-        self.m_sprSlider.draw_src(knobX, y + 8, &SDL_Rect { x: 168, y: 0, w: 8, h: 16 });
-        self.m_sprSlider.draw_src(x + width - 34, y + 8, &SDL_Rect { x: self.m_index as i32 * 16, y: 16, w: 16, h: 16 });
-        self.m_sprPowerup.draw_src(x, y, &SDL_Rect { x: self.m_powerupIndex as i32 * 32, y: 0, w: 32, h: 32 });
+        self.m_sprSlider.draw_src(game().get(), knobX, y + 8, &SDL_Rect { x: 168, y: 0, w: 8, h: 16 });
+        self.m_sprSlider.draw_src(game().get(), x + width - 34, y + 8, &SDL_Rect { x: self.m_index as i32 * 16, y: 16, w: 16, h: 16 });
+        self.m_sprPowerup.draw_src(game().get(), x, y, &SDL_Rect { x: self.m_powerupIndex as i32 * 32, y: 0, w: 32, h: 32 });
 
         let drawLeft = self.m_index > 0;
         if self.m_wraps || drawLeft {

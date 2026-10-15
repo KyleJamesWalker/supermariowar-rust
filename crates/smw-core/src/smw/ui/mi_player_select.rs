@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_PlayerSelect.cpp
 
+use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::input::CPlayerInput;
 use crate::common::ui::menu_code::*;
@@ -58,22 +59,22 @@ impl MI_PlayerSelect {
 }
 
 /// Steps a player through none, human and CPU, keeping at least two players in the game.
-fn next_control(sel: usize) {
-    game().game_values.playercontrol[sel] += 1;
-    if game().game_values.playercontrol[sel] > 2 {
-        game().game_values.playercontrol[sel] = 0;
+fn next_control(g: &mut Game, sel: usize) {
+    g.game_values.playercontrol[sel] += 1;
+    if g.game_values.playercontrol[sel] > 2 {
+        g.game_values.playercontrol[sel] = 0;
     }
 
-    if game().game_values.playercontrol[sel] == 0 {
+    if g.game_values.playercontrol[sel] == 0 {
         let mut iCountPlayers = 0;
         for iPlayer in 0..4usize {
-            if game().game_values.playercontrol[iPlayer] > 0 {
+            if g.game_values.playercontrol[iPlayer] > 0 {
                 iCountPlayers += 1;
             }
         }
 
         if iCountPlayers < 2 {
-            game().game_values.playercontrol[sel] = 1;
+            g.game_values.playercontrol[sel] = 1;
         }
     }
 }
@@ -131,7 +132,7 @@ impl UI_ControlTrait for MI_PlayerSelect {
                 }
 
                 if out.menu_down().fPressed {
-                    next_control(sel);
+                    next_control(game().get(), sel);
                 }
 
                 if out.menu_select().fPressed || out.menu_cancel().fPressed {
@@ -162,7 +163,7 @@ impl UI_ControlTrait for MI_PlayerSelect {
             if mx >= px && mx < px + 34 && my >= y + 16 && my < y + 48 {
                 self.iSelectedPlayer = iPlayer as i16;
                 self.set_image_position();
-                next_control(iPlayer);
+                next_control(game().get(), iPlayer);
                 break;
             }
         }
@@ -185,16 +186,16 @@ impl UI_ControlTrait for MI_PlayerSelect {
         let iWidth = self.iWidth as i32;
 
         unsafe {
-            self.spr.draw_src(x, y, &SDL_Rect { x: 0, y: if self.fSelected { 64 } else { 0 }, w: iIndent - 16, h: 64 });
-            self.spr.draw_src(x + iIndent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 192 } else { 128 }, w: 32, h: 64 });
-            self.spr.draw_src(x + iIndent + 16, y, &SDL_Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 64 } else { 0 }, w: iWidth - iIndent - 16, h: 64 });
+            self.spr.draw_src(game().get(), x, y, &SDL_Rect { x: 0, y: if self.fSelected { 64 } else { 0 }, w: iIndent - 16, h: 64 });
+            self.spr.draw_src(game().get(), x + iIndent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 192 } else { 128 }, w: 32, h: 64 });
+            self.spr.draw_src(game().get(), x + iIndent + 16, y, &SDL_Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 64 } else { 0 }, w: iWidth - iIndent - 16, h: 64 });
 
             game().rm.menu_font_large.draw_chop_right(x + 16, y + 20, iIndent - 8, &self.szName);
 
             self.miModifyImage.draw();
 
             for iPlayer in 0..4usize {
-                self.spr.draw_src(
+                self.spr.draw_src(game().get(), 
                     x + self.iPlayerPosition[iPlayer] as i32,
                     y + 16,
                     &SDL_Rect { x: game().game_values.playercontrol[iPlayer] as i32 * 34 + 32, y: 206, w: 34, h: 32 },

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_RaceGoal.cpp
 
+use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_mode::game_mode_race;
 use crate::common::game_values::if_sound_on_play;
@@ -40,7 +41,7 @@ pub struct OMO_RaceGoal {
 impl_base!(OMO_RaceGoal => io_over_map_object: IO_OverMapObject);
 
 impl OMO_RaceGoal {
-    pub fn new(nspr: Ptr<gfxSprite>, id: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, id: i16) -> Self {
         let mut this = OMO_RaceGoal {
             io_over_map_object: IO_OverMapObject::new(nspr, Vec2s::zero(), 2, 8, -1, -1, -1, -1, -1, -1, -1, -1),
             goalID: id,
@@ -74,11 +75,11 @@ impl OMO_RaceGoal {
         this.velx = sinf(this.angle);
         this.vely = cosf(this.angle);
 
-        this.place_race_goal();
+        this.place_race_goal(g);
 
         unsafe {
-            this.speed = game().game_values.gamemodesettings.race.speed as f32 / 4.0f32;
-            this.quantity = game().game_values.gamemodesettings.race.quantity;
+            this.speed = g.game_values.gamemodesettings.race.speed as f32 / 4.0f32;
+            this.quantity = g.game_values.gamemodesettings.race.quantity;
         }
         this.isfinishline = this.goalID as i32 == this.quantity as i32 - 1;
         this
@@ -89,14 +90,14 @@ impl OMO_RaceGoal {
         self.anglechangetimer = (RANDOM_INT(50) + 100) as i16;
     }
 
-    pub fn place_race_goal(&mut self) {
+    pub fn place_race_goal(&mut self, g: &mut Game) {
         let mut x: i16 = 0;
         let mut y: i16 = 0;
 
         unsafe {
-            if self.goalID < game().g_map.iNumRaceGoals {
-                x = game().g_map.racegoallocations[self.goalID as usize].x;
-                y = game().g_map.racegoallocations[self.goalID as usize].y;
+            if self.goalID < g.g_map.iNumRaceGoals {
+                x = g.g_map.racegoallocations[self.goalID as usize].x;
+                y = g.g_map.racegoallocations[self.goalID as usize].y;
             } else {
                 let mut tries: i16 = 0;
                 loop {
@@ -108,7 +109,7 @@ impl OMO_RaceGoal {
                     x = RANDOM_INT(App::screenWidth - self.collisionWidth as i32) as i16;
                     y = RANDOM_INT(App::screenHeight - self.collisionHeight as i32) as i16;
 
-                    if !(game().objectcontainer[2].get_closest_object(x, y, object_race_goal) <= 250.0f32 - (self.quantity as f32 * 25.0f32)) {
+                    if !(g.objectcontainer[2].get_closest_object(x, y, object_race_goal) <= 250.0f32 - (self.quantity as f32 * 25.0f32)) {
                         break;
                     }
                 }
@@ -141,19 +142,19 @@ impl CObjectTrait for OMO_RaceGoal {
 
         unsafe {
             if self.isfinishline {
-                self.spr.draw_src(x, y, &SDL_Rect { x: self.drawframe as i32, y: 54, w: self.iw as i32, h: self.ih as i32 });
+                self.spr.draw_src(game().get(), x, y, &SDL_Rect { x: self.drawframe as i32, y: 54, w: self.iw as i32, h: self.ih as i32 });
             } else {
-                self.spr.draw_src(x, y, &SDL_Rect { x: self.drawframe as i32, y: 0, w: self.iw as i32, h: self.ih as i32 });
+                self.spr.draw_src(game().get(), x, y, &SDL_Rect { x: self.drawframe as i32, y: 0, w: self.iw as i32, h: self.ih as i32 });
 
                 for k in 0..game().score_cnt {
                     if self.tagged[k as usize] > -1 {
                         let fp = &flagpositions[(game().score_cnt - 2) as usize][k as usize];
-                        game().rm.spr_bonus.draw_src(x + fp[0] as i32, y + fp[1] as i32, &SDL_Rect { x: 0, y: self.tagged[k as usize] as i32 * 16, w: 16, h: 16 });
+                        game().rm.spr_bonus.draw_src(game().get(), x + fp[0] as i32, y + fp[1] as i32, &SDL_Rect { x: 0, y: self.tagged[k as usize] as i32 * 16, w: 16, h: 16 });
                     }
                 }
             }
 
-            game().rm.spr_racetext.draw_src(x + 26, y, &SDL_Rect { x: (self.goalID as i32 + 1) * 16, y: 0, w: 16, h: 16 });
+            game().rm.spr_racetext.draw_src(game().get(), x + 26, y, &SDL_Rect { x: (self.goalID as i32 + 1) * 16, y: 0, w: 16, h: 16 });
         }
     }
 
@@ -211,14 +212,14 @@ impl CObjectTrait for OMO_RaceGoal {
                     self.tagged[player.teamID as usize] = player.colorID;
 
                     if self.isfinishline {
-                        if_sound_on_play(&mut game().rm.sfx_racesound);
+                        if_sound_on_play(game().get(), &mut game().rm.sfx_racesound);
                     } else {
-                        if_sound_on_play(&mut game().rm.sfx_areatag);
+                        if_sound_on_play(game().get(), &mut game().rm.sfx_areatag);
                     }
                 }
 
                 if gamemode.get_next_goal(player.teamID) == self.goalID {
-                    gamemode.set_next_goal(player.teamID);
+                    gamemode.set_next_goal(game().get(), player.teamID);
                 }
             }
         }

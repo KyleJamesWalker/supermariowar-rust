@@ -4,6 +4,7 @@
 //! no-op unless the corresponding SMW_* environment variable is set; docs/EDITOR_REPLAY.md is
 //! the byte-level spec.
 
+use crate::game::Game;
 use crate::common::random_number_generator::{RandomNumberGenerator, RandomNumberGeneratorType};
 use crate::globals::*;
 use sdl2::sys::{
@@ -361,7 +362,7 @@ pub fn no_limit() -> bool {
 
 /// Ends one editor frame: dump, screenshot, advance, push the next frame's scripted events,
 /// then sleep `delay` ms unless SMW_NOLIMIT is set. The C++ editors `#define SDL_Delay` to this.
-pub fn frame_delay(delay: u32) {
+pub fn frame_delay(g: &mut Game, delay: u32) {
     unsafe {
         if h().active {
             if h().maxFrames < 0 || (h().frame as i64) < h().maxFrames {
@@ -380,7 +381,7 @@ pub fn frame_delay(delay: u32) {
                     let path = format!("{}/frame_{}.bmp", h().shotDir, h().frame);
                     let cpath = CString::new(path.as_bytes()).unwrap();
                     let rw = SDL_RWFromFile(cpath.as_ptr(), b"wb\0".as_ptr() as *const _);
-                    if SDL_SaveBMP_RW(game().screen, rw, 1) != 0 {
+                    if SDL_SaveBMP_RW(g.screen, rw, 1) != 0 {
                         eprintln!("[editorharness] cannot save {}: {}", path, CStr::from_ptr(SDL_GetError()).to_string_lossy());
                     }
                 }

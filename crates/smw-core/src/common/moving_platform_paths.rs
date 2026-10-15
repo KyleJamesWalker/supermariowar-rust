@@ -1,5 +1,6 @@
 //! Port of src/common/MovingPlatformPaths.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::eyecandy_styles::SpawnStyle;
 use crate::common::game::App;
@@ -91,7 +92,7 @@ pub trait MovingPlatformPathTrait: Any {
     fn path_type_id(&self) -> PlatformPathType;
     fn r#move(&mut self, r#type: i16) -> bool;
     fn reset(&mut self) {
-        moving_platform_path_reset(self)
+        moving_platform_path_reset(game().get(), self)
     }
 }
 
@@ -108,13 +109,13 @@ impl std::ops::DerefMut for dyn MovingPlatformPathTrait {
     }
 }
 
-pub fn moving_platform_path_reset<T: MovingPlatformPathTrait + ?Sized>(this: &mut T) {
+pub fn moving_platform_path_reset<T: MovingPlatformPathTrait + ?Sized>(g: &mut Game, this: &mut T) {
     unsafe {
-        if game().game_values.spawnstyle == SpawnStyle::Door {
+        if g.game_values.spawnstyle == SpawnStyle::Door {
             for _ in 0..36 {
                 this.r#move(1);
             }
-        } else if game().game_values.spawnstyle == SpawnStyle::Swirl {
+        } else if g.game_values.spawnstyle == SpawnStyle::Swirl {
             for _ in 0..50 {
                 this.r#move(1);
             }
@@ -243,7 +244,7 @@ impl MovingPlatformPathTrait for StraightPath {
             self.set_velocity(t);
         }
 
-        moving_platform_path_reset(self);
+        moving_platform_path_reset(game().get(), self);
     }
 }
 
@@ -349,7 +350,7 @@ impl MovingPlatformPathTrait for StraightPathContinuous {
             self.base.m_currentPos[t] = self.base.m_startPos;
         }
 
-        moving_platform_path_reset(self);
+        moving_platform_path_reset(game().get(), self);
     }
 }
 
@@ -434,7 +435,7 @@ impl MovingPlatformPathTrait for EllipsePath {
             self.set_position(t as i16);
         }
 
-        moving_platform_path_reset(self);
+        moving_platform_path_reset(game().get(), self);
     }
 }
 

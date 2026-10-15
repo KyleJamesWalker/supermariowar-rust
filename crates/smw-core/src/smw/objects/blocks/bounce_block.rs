@@ -45,7 +45,7 @@ impl CObjectTrait for B_BounceBlock {
     }
 
     fn update(&mut self) {
-        io_block_update(self);
+        io_block_update(game().get(), self);
 
         if self.state > 0 {
             let fy = self.fy + self.vely;
@@ -122,7 +122,7 @@ impl IO_BlockTrait for B_BounceBlock {
             if self.hidden {
                 self.hidden = false;
                 let iBumpPlayerID = self.iBumpPlayerID;
-                io_block_kill_players_and_objects_inside_block(self, iBumpPlayerID);
+                io_block_kill_players_and_objects_inside_block(game().get(), self, iBumpPlayerID);
             }
 
             unsafe {
@@ -147,7 +147,7 @@ impl IO_BlockTrait for B_BounceBlock {
         object.fOldY = object.fy;
 
         if self.state == 1 && object.bounce == GRAVITATION {
-            io_block_bounce_moving_object(self, object);
+            io_block_bounce_moving_object(game().get(), self, object);
             return false;
         } else {
             object.vely = object.bottom_bounce();
@@ -161,7 +161,7 @@ impl IO_BlockTrait for B_BounceBlock {
             self.vely = -VELBLOCKBOUNCE;
             self.state = 1;
             unsafe {
-                if_sound_on_play(&mut game().rm.sfx_bump);
+                if_sound_on_play(game().get(), &mut game().rm.sfx_bump);
             }
         }
     }

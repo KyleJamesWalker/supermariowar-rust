@@ -26,7 +26,7 @@ impl_base!(B_ViewBlock => b_powerup_block: B_PowerupBlock);
 impl B_ViewBlock {
     pub fn new(nspr1: Ptr<gfxSprite>, pos: Vec2s, fHidden: bool, piSettings: &[i16]) -> Self {
         let mut b = B_ViewBlock {
-            b_powerup_block: B_PowerupBlock::new(nspr1, pos, 1, 32000, fHidden, piSettings),
+            b_powerup_block: B_PowerupBlock::new(game().get(), nspr1, pos, 1, 32000, fHidden, piSettings),
             poweruptimer: 0,
             powerupindex: 0,
             fNoPowerupsSelected: false,
@@ -79,7 +79,7 @@ impl CObjectTrait for B_ViewBlock {
         //Draw powerup behind block
         if self.state == 0 && !self.fNoPowerupsSelected {
             unsafe {
-                game().rm.spr_storedpoweruplarge.draw_src(
+                game().rm.spr_storedpoweruplarge.draw_src(game().get(), 
                     self.ix as i32,
                     self.iy as i32,
                     &SDL_Rect { x: self.powerupindex as i32 * 32, y: 0, w: 32, h: 32 },
@@ -91,7 +91,7 @@ impl CObjectTrait for B_ViewBlock {
     }
 
     fn update(&mut self) {
-        b_powerup_block_update(self);
+        b_powerup_block_update(game().get(), self);
 
         if self.state == 0 && !self.fNoPowerupsSelected {
             self.poweruptimer += 1;

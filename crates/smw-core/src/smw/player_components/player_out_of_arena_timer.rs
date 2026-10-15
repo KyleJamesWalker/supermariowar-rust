@@ -1,5 +1,6 @@
 //! Port of src/smw/player_components/PlayerOutOfArenaTimer.cpp
 
+use crate::game::Game;
 use crate::common::global_constants::PWOFFSET;
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
@@ -18,18 +19,18 @@ impl PlayerOutOfArenaTimer {
         Self::default()
     }
 
-    pub fn reset(&mut self) {
+    pub fn reset(&mut self, g: &mut Game) {
         unsafe {
             self.timer = 0;
-            self.displaytimer = (game().game_values.outofboundstime as i32 - 1) as i16;
+            self.displaytimer = (g.game_values.outofboundstime as i32 - 1) as i16;
         }
     }
 
-    pub fn update(&mut self, player: &mut CPlayer) {
+    pub fn update(&mut self, g: &mut Game, player: &mut CPlayer) {
         unsafe {
             if player.iy < 0 {
                 if (player.bottom_y() < -1 || (player.bottom_y() <= 1 && player.vely <= 0.8f32))
-                    && game().game_values.outofboundstime > 0
+                    && g.game_values.outofboundstime > 0
                     && !player.is_invincible()
                 {
                     self.timer += 1;
@@ -47,7 +48,7 @@ impl PlayerOutOfArenaTimer {
         }
     }
 
-    pub fn draw(&mut self, player: &mut CPlayer) {
+    pub fn draw(&mut self, g: &mut Game, player: &mut CPlayer) {
         unsafe {
             if !player.isready() {
                 return;
@@ -55,15 +56,15 @@ impl PlayerOutOfArenaTimer {
 
             if player.top_y() < 0 {
                 if player.bottom_y() < -1 || (player.bottom_y() <= 0 && player.vely <= 1.0f32) {
-                    game().rm.spr_abovearrows.draw_src(
+                    game().rm.spr_abovearrows.draw_src(g, 
                         player.left_x() as i32 - PWOFFSET,
                         0,
                         &SDL_Rect { x: player.get_color_id() as i32 * 32, y: 0, w: 32, h: 26 },
                     );
 
                     //This displays the out of arena timer before the player is killed
-                    if game().game_values.outofboundstime > 0 && self.displaytimer >= 0 {
-                        game().rm.spr_awardkillsinrow.draw_src(
+                    if g.game_values.outofboundstime > 0 && self.displaytimer >= 0 {
+                        game().rm.spr_awardkillsinrow.draw_src(g, 
                             player.left_x() as i32 - PWOFFSET + 8,
                             18,
                             &SDL_Rect { x: (self.displaytimer as i32) << 4, y: (player.get_color_id() as i32) << 4, w: 16, h: 16 },

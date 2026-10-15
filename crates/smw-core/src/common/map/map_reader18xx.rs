@@ -1,5 +1,6 @@
 //! Port of src/common/map/MapReader18xx.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::file_io::BinaryFile;
 use crate::common::global_constants::*;
@@ -23,7 +24,7 @@ impl MapReader {
         }
     }
 
-    fn read_tileset(&mut self, mapfile: &mut BinaryFile) {
+    fn read_tileset(&mut self, g: &mut Game, mapfile: &mut BinaryFile) {
         let iNumTilesets: i16 = mapfile.read_i32() as i16;
 
         let mut translation: Vec<TilesetTranslation> = Vec::with_capacity(iNumTilesets.max(0) as usize);
@@ -49,13 +50,13 @@ impl MapReader {
         unsafe {
             for t in &translation {
                 let iID = t.iID as usize;
-                translationid[iID] = game().g_tilesetmanager.index_from_name(&t.szName) as i16;
+                translationid[iID] = g.g_tilesetmanager.index_from_name(&t.szName) as i16;
 
                 if translationid[iID] as i32 == TILESETUNKNOWN {
                     tilesetwidths[iID] = 1;
                     tilesetheights[iID] = 1;
                 } else {
-                    let ts = game().g_tilesetmanager.tileset(translationid[iID] as isize as usize);
+                    let ts = g.g_tilesetmanager.tileset(translationid[iID] as isize as usize);
                     tilesetwidths[iID] = ts.width();
                     tilesetheights[iID] = ts.height();
                 }
@@ -266,7 +267,7 @@ impl MapReader {
                 continue;
             };
 
-            let platform = MovingPlatform::new(tiles, types, iWidth, iHeight, iDrawLayer, path, fPreview);
+            let platform = MovingPlatform::new(game().get(), tiles, types, iWidth, iHeight, iDrawLayer, path, fPreview);
             map.platforms.push(platform);
             map.platformdrawlayer[iDrawLayer as usize].push(platform);
         }
@@ -318,7 +319,7 @@ impl MapReader {
 
         map.clear_platforms();
 
-        self.read_tileset(mapfile);
+        self.read_tileset(game().get(), mapfile);
 
         self.read_tiles(map, mapfile);
         self.read_background(map, mapfile);

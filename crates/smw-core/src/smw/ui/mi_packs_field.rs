@@ -32,7 +32,7 @@ impl UI_ControlTrait for MI_PacksField {
         self.update_impl();
     }
     fn draw(&mut self) {
-        self.draw_impl();
+        self.draw_impl(game().get());
     }
 
     fn send_input(&mut self, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {

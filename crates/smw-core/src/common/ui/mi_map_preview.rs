@@ -1,5 +1,6 @@
 //! Port of src/common/ui/MI_MapPreview.cpp
 
+use crate::game::Game;
 use crate::common::game::App;
 use crate::common::map::read_type_preview;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -50,9 +51,9 @@ crate::impl_base!(MI_MapPreview => ui_control: UI_Control);
 
 impl MI_MapPreview {
     pub fn new(nspr: Ptr<gfxSprite>, x: i16, y: i16, width: i16, indent: i16) -> Self {
-        let surfaceMapBackground = gfxSprite::blank((App::screenWidth / 2) as u32, (App::screenHeight / 2) as u32);
-        let surfaceMapBlockLayer = gfxSprite::blank((App::screenWidth / 2) as u32, (App::screenHeight / 2) as u32);
-        let surfaceMapForeground = gfxSprite::blank((App::screenWidth / 2) as u32, (App::screenHeight / 2) as u32);
+        let surfaceMapBackground = gfxSprite::blank(game().get(), (App::screenWidth / 2) as u32, (App::screenHeight / 2) as u32);
+        let surfaceMapBlockLayer = gfxSprite::blank(game().get(), (App::screenWidth / 2) as u32, (App::screenHeight / 2) as u32);
+        let surfaceMapForeground = gfxSprite::blank(game().get(), (App::screenWidth / 2) as u32, (App::screenHeight / 2) as u32);
 
         let mut this = MI_MapPreview {
             ui_control: UI_Control::new(x, y),
@@ -66,7 +67,7 @@ impl MI_MapPreview {
             szMapName: String::new(),
             iSlideListOut: 0,
         };
-        this.load_current_map();
+        this.load_current_map(game().get());
 
         this.rectDst.x = x as i32 + 16;
         this.rectDst.y = y as i32 + 44;
@@ -78,19 +79,19 @@ impl MI_MapPreview {
         this
     }
 
-    pub fn update_impl(&mut self) {
+    pub fn update_impl(&mut self, g: &mut Game) {
         //Update hazards
         unsafe {
-            game().noncolcontainer.update();
+            g.noncolcontainer.update();
 
-            game().objectcontainer[1].update();
-            game().objectcontainer[1].clean_dead_objects();
+            g.objectcontainer[1].update();
+            g.objectcontainer[1].clean_dead_objects();
 
-            game().g_map.update_platforms();
+            g.g_map.update_platforms();
         }
     }
 
-    pub fn draw_impl(&mut self) {
+    pub fn draw_impl(&mut self, g: &mut Game) {
         if !self.m_visible {
             return;
         }
@@ -101,89 +102,89 @@ impl MI_MapPreview {
 
         unsafe {
             //Draw the background for the map preview
-            game().rm.menu_dialog.draw_src(bx, y + 30, &SDL_Rect { x: 0, y: 0, w: 336, h: 254 });
-            game().rm.menu_dialog.draw_src(bx + 336, y + 30, &SDL_Rect { x: 496, y: 0, w: 16, h: 254 });
-            game().rm.menu_dialog.draw_src(bx, y + 284, &SDL_Rect { x: 0, y: 464, w: 336, h: 16 });
-            game().rm.menu_dialog.draw_src(bx + 336, y + 284, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+            game().rm.menu_dialog.draw_src(g, bx, y + 30, &SDL_Rect { x: 0, y: 0, w: 336, h: 254 });
+            game().rm.menu_dialog.draw_src(g, bx + 336, y + 30, &SDL_Rect { x: 496, y: 0, w: 16, h: 254 });
+            game().rm.menu_dialog.draw_src(g, bx, y + 284, &SDL_Rect { x: 0, y: 464, w: 336, h: 16 });
+            game().rm.menu_dialog.draw_src(g, bx + 336, y + 284, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
 
             self.rectDst.x = bx + 16;
 
-            self.surfaceMapBackground.draw_to(game().blitdest, &self.rectDst);
+            self.surfaceMapBackground.draw_to(g.blitdest, &self.rectDst);
 
-            game().g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 0);
+            g.g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 0);
 
-            self.surfaceMapBlockLayer.draw_to(game().blitdest, &self.rectDst);
+            self.surfaceMapBlockLayer.draw_to(g.blitdest, &self.rectDst);
 
-            game().g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 1);
+            g.g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 1);
 
             //Draw map hazards
             let (ox, oy) = (self.rectDst.x as i16, self.rectDst.y as i16);
             for i in 0..game().objectcontainer[1].list().len() {
-                let mut obj = game().objectcontainer[1].list()[i];
+                let mut obj = g.objectcontainer[1].list()[i];
                 let any = obj.as_any();
                 if let Some(hazard) = any.downcast_mut::<OMO_OrbitHazard>() {
                     io_over_map_object_draw_offset(hazard, ox, oy);
                 } else if let Some(hazard) = any.downcast_mut::<OMO_StraightPathHazard>() {
                     io_over_map_object_draw_offset(hazard, ox, oy);
                 } else if let Some(hazard) = any.downcast_mut::<IO_FlameCannon>() {
-                    hazard.draw_offset(ox, oy);
+                    hazard.draw_offset(g, ox, oy);
                 } else if let Some(hazard) = any.downcast_mut::<MO_BulletBill>() {
                     hazard.draw_offset(ox, oy);
                 } else if let Some(hazard) = any.downcast_mut::<MO_PirhanaPlant>() {
-                    hazard.draw_offset(ox, oy);
+                    hazard.draw_offset(g, ox, oy);
                 }
             }
 
-            game().g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 2);
+            g.g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 2);
 
-            if game().game_values.toplayer {
-                self.surfaceMapForeground.draw_to(game().blitdest, &self.rectDst);
+            if g.game_values.toplayer {
+                self.surfaceMapForeground.draw_to(g.blitdest, &self.rectDst);
             }
 
-            game().g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 3);
-            game().g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 4);
+            g.g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 3);
+            g.g_map.draw_platforms_offset(self.rectDst.x as i16, self.rectDst.y as i16, 4);
         }
     }
 
-    pub fn load_current_map(&mut self) {
+    pub fn load_current_map(&mut self, g: &mut Game) {
         let szMapPath = unsafe {
-            self.szMapName = copy_map_name(game().maplist.current_shortmapname());
-            game().maplist.current_filename().to_string()
+            self.szMapName = copy_map_name(g.maplist.current_shortmapname());
+            g.maplist.current_filename().to_string()
         };
 
-        self.load_map(&szMapPath);
+        self.load_map(g, &szMapPath);
     }
 
-    pub fn load_map(&mut self, szMapPath: &str) {
+    pub fn load_map(&mut self, g: &mut Game, szMapPath: &str) {
         unsafe {
-            game().g_map.load_map(szMapPath, read_type_preview);
+            g.g_map.load_map(szMapPath, read_type_preview);
             small_delay(); //Sleeps to help the music from skipping
 
-            load_current_map_background();
+            load_current_map_background(g);
             small_delay();
 
-            game().g_map.pre_draw_preview_background_spr(&game().rm.spr_background, self.surfaceMapBackground.get_surface(), false);
+            g.g_map.pre_draw_preview_background_spr(&g.rm.spr_background, self.surfaceMapBackground.get_surface(), false);
             small_delay();
 
-            game().g_map.pre_draw_preview_blocks(self.surfaceMapBlockLayer.get_surface(), false);
+            g.g_map.pre_draw_preview_blocks(self.surfaceMapBlockLayer.get_surface(), false);
             small_delay();
 
-            game().g_map.pre_draw_preview_map_items(self.surfaceMapBackground.get_surface(), false);
+            game().g_map.pre_draw_preview_map_items(g, self.surfaceMapBackground.get_surface(), false);
             small_delay();
 
-            game().g_map.pre_draw_preview_foreground(self.surfaceMapForeground.get_surface(), false);
+            game().g_map.pre_draw_preview_foreground(g, self.surfaceMapForeground.get_surface(), false);
             small_delay();
 
-            game().g_map.pre_draw_preview_warps(if game().game_values.toplayer { self.surfaceMapForeground.get_surface() } else { self.surfaceMapBackground.get_surface() }, false);
+            game().g_map.pre_draw_preview_warps(g, if game().game_values.toplayer { self.surfaceMapForeground.get_surface() } else { self.surfaceMapBackground.get_surface() }, false);
             small_delay();
 
-            load_map_hazards(true);
+            load_map_hazards(g, true);
         }
     }
 
-    pub fn set_map(&mut self, paramSzMapName: &str, fWorld: bool) -> bool {
-        let fFound = unsafe { game().maplist.findexact(paramSzMapName, fWorld) };
-        self.load_current_map();
+    pub fn set_map(&mut self, g: &mut Game, paramSzMapName: &str, fWorld: bool) -> bool {
+        let fFound = unsafe { g.maplist.findexact(paramSzMapName, fWorld) };
+        self.load_current_map(g);
 
         fFound
     }
@@ -191,15 +192,15 @@ impl MI_MapPreview {
     pub fn set_special_map(&mut self, mapName: &str, szMapPath: &str) {
         self.szMapName = copy_map_name(mapName);
 
-        self.load_map(szMapPath);
+        self.load_map(game().get(), szMapPath);
     }
 
     pub fn get_map_name(&self) -> &str {
         &self.szMapName
     }
 
-    pub fn get_map_file_path(&self) -> String {
-        unsafe { game().maplist.current_filename().to_string() }
+    pub fn get_map_file_path(&self, g: &mut Game) -> String {
+        unsafe { g.maplist.current_filename().to_string() }
     }
 
     pub fn set_dimensions(&mut self, width: i16, indent: i16) {
@@ -212,10 +213,10 @@ impl UI_ControlTrait for MI_MapPreview {
     crate::impl_ctl!();
 
     fn update(&mut self) {
-        self.update_impl();
+        self.update_impl(game().get());
     }
 
     fn draw(&mut self) {
-        self.draw_impl();
+        self.draw_impl(game().get());
     }
 }

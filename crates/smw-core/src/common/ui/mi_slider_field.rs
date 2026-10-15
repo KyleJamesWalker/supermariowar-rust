@@ -58,9 +58,9 @@ impl UI_ControlTrait for MI_SliderField {
         let selY = (if self.fSelected { 32 } else { 0 }) + self.m_adjustmentY as i32;
 
         unsafe {
-            self.m_spr.draw_src(x, y, &SDL_Rect { x: 0, y: selY, w: indent - 16, h: 32 });
-            self.m_spr.draw_src(x + indent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
-            self.m_spr.draw_src(x + indent + 16, y, &SDL_Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
+            self.m_spr.draw_src(game().get(), x, y, &SDL_Rect { x: 0, y: selY, w: indent - 16, h: 32 });
+            self.m_spr.draw_src(game().get(), x + indent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
+            self.m_spr.draw_src(game().get(), x + indent + 16, y, &SDL_Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
 
             game().rm.menu_font_large.draw_chop_right(x + 16, y + 5, indent - 8, &self.m_name);
 
@@ -74,9 +74,9 @@ impl UI_ControlTrait for MI_SliderField {
 
         for index in 0..self.m_items.len() {
             if index < self.m_items.len().wrapping_sub(1) {
-                self.m_sprSlider.draw_src(x + indent + iSpot as i32 + 16, y + 10, &SDL_Rect { x: 0, y: 0, w: iSpacing as i32, h: 13 });
+                self.m_sprSlider.draw_src(game().get(), x + indent + iSpot as i32 + 16, y + 10, &SDL_Rect { x: 0, y: 0, w: iSpacing as i32, h: 13 });
             } else {
-                self.m_sprSlider.draw_src(x + indent + iSpot as i32 + 16, y + 10, &SDL_Rect { x: 164, y: 0, w: 4, h: 13 });
+                self.m_sprSlider.draw_src(game().get(), x + indent + iSpot as i32 + 16, y + 10, &SDL_Rect { x: 164, y: 0, w: 4, h: 13 });
             }
 
             iSpot = iSpot.wrapping_add(iSpacing);
@@ -84,7 +84,7 @@ impl UI_ControlTrait for MI_SliderField {
 
         // size_t arithmetic in C++, truncated to int at the call
         let knobX = (x + indent).wrapping_add((self.m_index as i32).wrapping_mul(iSpacing as i32)).wrapping_add(14);
-        self.m_sprSlider.draw_src(knobX, y + 8, &SDL_Rect { x: 168, y: 0, w: 8, h: 16 });
+        self.m_sprSlider.draw_src(game().get(), knobX, y + 8, &SDL_Rect { x: 168, y: 0, w: 8, h: 16 });
 
         let drawLeft = self.m_index > 0;
         if self.m_wraps || drawLeft {

@@ -50,7 +50,7 @@ impl CObjectTrait for PU_ExtraGuyPowerup {
         unsafe {
             if self.state > 0 {
                 game().game_values.gamemode.playerextraguy(player, self.iType);
-                if_sound_on_play(&mut game().rm.sfx_extraguysound);
+                if_sound_on_play(game().get(), &mut game().rm.sfx_extraguysound);
 
                 let iSrcY = ((if self.iType == 5 { 3 } else { self.iType as i32 - 1 }) * 16) as i16;
                 game().eyecandy[2].emplace(EC_FloatingObject::new(

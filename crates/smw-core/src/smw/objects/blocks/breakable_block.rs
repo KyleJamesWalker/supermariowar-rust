@@ -63,7 +63,7 @@ impl CObjectTrait for B_BreakableBlock {
 
     fn draw(&mut self) {
         if self.state == 0 {
-            self.spr.draw_src(
+            self.spr.draw_src(game().get(), 
                 self.ix as i32,
                 self.iy as i32,
                 &SDL_Rect { x: self.drawFrame as i32, y: 0, w: self.iw as i32, h: self.ih as i32 },
@@ -163,7 +163,7 @@ impl IO_BlockTrait for B_BreakableBlock {
         }
 
         if (self.state == 1 || self.state == 2) && object.bounce == GRAVITATION {
-            io_block_bounce_moving_object(self, object);
+            io_block_bounce_moving_object(game().get(), self, object);
             return false;
         } else {
             object.vely = object.bottom_bounce();
@@ -230,11 +230,11 @@ impl IO_BlockTrait for B_BreakableBlock {
                 game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
 
                 self.state = 1;
-                if_sound_on_play(&mut game().rm.sfx_breakblock);
+                if_sound_on_play(game().get(), &mut game().rm.sfx_breakblock);
             }
 
             game().game_values.unlocksecret1part2 += 1;
-            check_secret(0);
+            check_secret(game().get(), 0);
         }
     }
 }

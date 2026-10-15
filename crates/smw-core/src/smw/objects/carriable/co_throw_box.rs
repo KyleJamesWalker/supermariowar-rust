@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_ThrowBox.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::{EC_FallingObject, EC_SingleAnimation, Spotlight};
 use crate::common::gfx::gfx_sprite::{gfxSprite, ClipEdge};
 use crate::common::game_values::if_sound_on_play;
@@ -83,28 +84,28 @@ impl CO_ThrowBox {
         true
     }
 
-    pub fn shatter_die(&mut self) {
+    pub fn shatter_die(&mut self, g: &mut Game) {
         if self.dead {
             return;
         }
 
         unsafe {
-            let spr = Ptr::from_mut(&mut game().rm.spr_brokeniceblock);
+            let spr = Ptr::from_mut(&mut g.rm.spr_brokeniceblock);
             let (ix, iy) = (self.ix as i32, self.iy as i32);
-            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, iy as i16, -1.5, -7.0, 4, 2, 0, 0, 16, 16));
-            game().eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, iy as i16, 1.5, -7.0, 4, 2, 0, 0, 16, 16));
-            game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, (iy + 16) as i16, -1.5, -4.0, 4, 2, 0, 0, 16, 16));
-            game().eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, (iy + 16) as i16, 1.5, -4.0, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, iy as i16, -1.5, -7.0, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, iy as i16, 1.5, -7.0, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, (iy + 16) as i16, -1.5, -4.0, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, (iy + 16) as i16, 1.5, -4.0, 4, 2, 0, 0, 16, 16));
 
-            game().game_values.unlocksecret2part2 += 1;
+            g.game_values.unlocksecret2part2 += 1;
         }
 
-        self.die_helper();
+        self.die_helper(g);
     }
 
-    fn die_helper(&mut self) {
+    fn die_helper(&mut self, g: &mut Game) {
         self.dead = true;
-        unsafe { if_sound_on_play(&mut game().rm.sfx_breakblock) };
+        unsafe { if_sound_on_play(g, &mut game().rm.sfx_breakblock) };
 
         if !self.owner.is_null() {
             self.owner.carriedItem = Ptr::null();
@@ -114,8 +115,8 @@ impl CO_ThrowBox {
         // Check to see if we should spawn an item here
         if self.iItem as i32 != NO_POWERUP {
             let args = [self.iNetworkID, self.iItem as i32, self.ix as i32, self.iy as i32, (self.velx < 0.0) as i32];
-            if !crate::smw::net_random::event(crate::smw::net_random::Ev::ThrowBoxItem, &args) {
-                createpowerup(self.iItem, Vec2s::new(self.ix, self.iy), self.velx < 0.0, false);
+            if !crate::smw::net_random::event(g, crate::smw::net_random::Ev::ThrowBoxItem, &args) {
+                createpowerup(g, self.iItem, Vec2s::new(self.ix, self.iy), self.velx < 0.0, false);
             }
         }
     }
@@ -127,7 +128,7 @@ impl CO_ThrowBox {
 
 /// `net_random::Ev::ThrowBoxItem`: the box may already be gone, so the item and spot come with the event.
 pub fn net_release_item(args: &[i32]) {
-    createpowerup(args[1] as i16, Vec2s::new(args[2] as i16, args[3] as i16), args[4] != 0, false);
+    createpowerup(game().get(), args[1] as i16, Vec2s::new(args[2] as i16, args[3] as i16), args[4] != 0, false);
 }
 
 impl CObjectTrait for CO_ThrowBox {
@@ -141,7 +142,7 @@ impl CObjectTrait for CO_ThrowBox {
         // Kill the player if it is moving
 
         if self.frozen {
-            self.shatter_die();
+            self.shatter_die(game().get());
             return false;
         }
 
@@ -177,7 +178,7 @@ impl CObjectTrait for CO_ThrowBox {
             return;
         }
 
-        removeifprojectile(object, false, false);
+        removeifprojectile(game().get(), object, false, false);
 
         let r#type = object.get_moving_object_type();
 
@@ -243,7 +244,7 @@ impl CObjectTrait for CO_ThrowBox {
             self.inair = true;
         } else {
             self.applyfriction();
-            io_moving_object_collision_detection_map(self);
+            io_moving_object_collision_detection_map(game().get(), self);
         }
 
         self.animate();
@@ -253,7 +254,7 @@ impl CObjectTrait for CO_ThrowBox {
                 let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
                 let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
                 if self.sSpotlight.is_null() {
-                    self.sSpotlight = game().spotlightManager.add_spotlight(x, y, 3);
+                    self.sSpotlight = game().spotlightManager.add_spotlight(game().get(), x, y, 3);
                 }
 
                 if !self.sSpotlight.is_null() {
@@ -269,13 +270,13 @@ impl CObjectTrait for CO_ThrowBox {
         let src = SDL_Rect { x: self.drawframe as i32, y: 0, w: self.iw as i32, h: self.ih as i32 };
         if !self.owner.is_null() && self.owner.iswarping() {
             let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32) };
-            self.spr.draw_clip(x, y, &src, edge, self.owner.get_warp_plane() as i32);
+            self.spr.draw_clip(game().get(), x, y, &src, edge, self.owner.get_warp_plane() as i32);
         } else {
-            self.spr.draw_src(x, y, &src);
+            self.spr.draw_src(game().get(), x, y, &src);
         }
 
         if self.frozen {
-            unsafe { game().rm.spr_iceblock.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 }) };
+            unsafe { game().rm.spr_iceblock.draw_src(game().get(), x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 }) };
         }
     }
 }
@@ -288,7 +289,7 @@ impl IO_MovingObjectTrait for CO_ThrowBox {
 
     fn die(&mut self) {
         if self.frozen {
-            self.shatter_die();
+            self.shatter_die(game().get());
             return;
         }
 
@@ -305,7 +306,7 @@ impl IO_MovingObjectTrait for CO_ThrowBox {
             game().eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, (iy + 16) as i16, 2.2, -5.5, 4, 2, 0, 0, 16, 16));
         }
 
-        self.die_helper();
+        self.die_helper(game().get());
     }
 
     fn side_bounce(&mut self, _fRightSide: bool) {
@@ -315,7 +316,7 @@ impl IO_MovingObjectTrait for CO_ThrowBox {
 
         if self.has_kill_velocity() {
             if self.frozen {
-                self.shatter_die();
+                self.shatter_die(game().get());
             } else {
                 self.die();
             }
@@ -329,7 +330,7 @@ impl IO_MovingObjectTrait for CO_ThrowBox {
 
         if self.has_kill_velocity() {
             if self.frozen {
-                self.shatter_die();
+                self.shatter_die(game().get());
             } else {
                 self.die();
             }
@@ -348,7 +349,7 @@ impl MO_CarriedObjectTrait for CO_ThrowBox {
             self.iTeamID = self.owner.teamID;
         }
 
-        if io_moving_object_collision_detection_checksides(self) {
+        if io_moving_object_collision_detection_checksides(game().get(), self) {
             self.die();
         } else {
             mo_carried_object_drop(self);
@@ -361,10 +362,10 @@ impl MO_CarriedObjectTrait for CO_ThrowBox {
             self.iTeamID = self.owner.teamID;
         }
 
-        if io_moving_object_collision_detection_checksides(self) {
+        if io_moving_object_collision_detection_checksides(game().get(), self) {
             self.die();
         } else {
-            mo_carried_object_kick(self);
+            mo_carried_object_kick(game().get(), self);
         }
     }
 }

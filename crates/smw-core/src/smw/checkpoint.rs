@@ -214,15 +214,15 @@ pub fn local_path(path: &str) -> String {
     }
 }
 
-pub fn note_match_map(path: &str) {
-    unsafe { game().match_map = data_relative(path) };
+pub fn note_match_map(g: &mut Game, path: &str) {
+    unsafe { g.match_map = data_relative(path) };
 }
 
 fn data_path(name: &str) -> String {
     if name.is_empty() || name.starts_with('/') {
         name.to_string()
     } else {
-        convert_path(name)
+        convert_path(game().get(), name)
     }
 }
 
@@ -244,12 +244,12 @@ pub fn capture() -> Vec<u8> {
     let mut s = Snap::saver();
     s.put(MAGIC);
     s.put(&[if online { ONLINE_VERSION } else { VERSION }]);
-    walk(&mut s, online);
+    walk(game().get(), &mut s, online);
     s.buf
 }
 
 /// Restores a checkpoint after `load_game_data` and the menu's init, then starts the match.
-pub fn restore(bytes: Vec<u8>) -> Result<(), String> {
+pub fn restore(g: &mut Game, bytes: Vec<u8>) -> Result<(), String> {
     if bytes.len() < 5 || &bytes[..4] != MAGIC {
         return Err("not a checkpoint".to_string());
     }
@@ -259,20 +259,20 @@ pub fn restore(bytes: Vec<u8>) -> Result<(), String> {
     let online = bytes[4] == ONLINE_VERSION;
     let mut s = Snap::loader(bytes);
     s.pos = 5;
-    walk(&mut s, online);
+    walk(g, &mut s, online);
     if s.damaged || s.pos != s.buf.len() {
         return Err("checkpoint is damaged".to_string());
     }
-    enter_gameplay_tail(game().get());
+    enter_gameplay_tail(g);
     Ok(())
 }
 
 /// Saves or restores every part of the checkpoint, in the order a restore must apply them.
-fn walk(s: &mut Snap, online: bool) {
+fn walk(g: &mut Game, s: &mut Snap, online: bool) {
     unsafe {
         let gv = &mut *game().game_values;
         if online {
-            crate::smw::net::checkpoint(s);
+            crate::smw::net::checkpoint(g, s);
         }
 
         // Settings, as options.bin and controls.sdl2.bin would hold them now.
@@ -356,23 +356,23 @@ fn walk(s: &mut Snap, online: bool) {
 
         
         use crate::common::game_mode::*;
-        s.io(&mut game().currentgamemode);
+        s.io(&mut g.currentgamemode);
         let mut mode = gv.gamemode.gamemode;
         s.io(&mut mode);
-        let mut boss = game().bossgamemode.get_boss_type();
+        let mut boss = g.bossgamemode.get_boss_type();
         s.io(&mut boss);
-        s.io(&mut game().bonushousemode.goal);
-        s.io(&mut game().pipegamemode.goal);
-        s.io(&mut game().bossgamemode.goal);
-        s.io(&mut game().boxesgamemode.goal);
+        s.io(&mut g.bonushousemode.goal);
+        s.io(&mut g.pipegamemode.goal);
+        s.io(&mut g.bossgamemode.goal);
+        s.io(&mut g.boxesgamemode.goal);
         if s.load {
-            game().bossgamemode.set_boss_type(boss);
+            g.bossgamemode.set_boss_type(boss);
             gv.gamemode = match mode {
-                game_mode_bonus => Ptr::from_raw(game().bonushousemode.as_ptr() as *mut dyn CGameModeTrait),
-                game_mode_pipe_minigame => Ptr::from_raw(game().pipegamemode.as_ptr() as *mut dyn CGameModeTrait),
-                game_mode_boss_minigame => Ptr::from_raw(game().bossgamemode.as_ptr() as *mut dyn CGameModeTrait),
-                game_mode_boxes_minigame => Ptr::from_raw(game().boxesgamemode.as_ptr() as *mut dyn CGameModeTrait),
-                m => game().gamemodes[(m as usize).min(GAMEMODE_LAST as usize - 1)],
+                game_mode_bonus => Ptr::from_raw(g.bonushousemode.as_ptr() as *mut dyn CGameModeTrait),
+                game_mode_pipe_minigame => Ptr::from_raw(g.pipegamemode.as_ptr() as *mut dyn CGameModeTrait),
+                game_mode_boss_minigame => Ptr::from_raw(g.bossgamemode.as_ptr() as *mut dyn CGameModeTrait),
+                game_mode_boxes_minigame => Ptr::from_raw(g.boxesgamemode.as_ptr() as *mut dyn CGameModeTrait),
+                m => g.gamemodes[(m as usize).min(GAMEMODE_LAST as usize - 1)],
             };
         }
 
@@ -382,12 +382,12 @@ fn walk(s: &mut Snap, online: bool) {
         if s.load {
             gv.tourstops.clear();
             for line in stops.iter() {
-                gv.tourstops.push(Ptr::new_box(parse_tour_stop_line(line.as_bytes(), &GAME_VERSION, world)));
+                gv.tourstops.push(Ptr::new_box(parse_tour_stop_line(g, line.as_bytes(), &GAME_VERSION, world)));
             }
         }
 
         for k in 0..4 {
-            let mut sc = game().score[k];
+            let mut sc = g.score[k];
             s.io(&mut sc.score);
             s.io(&mut sc.subscore);
             s.io(&mut sc.x);
@@ -403,22 +403,22 @@ fn walk(s: &mut Snap, online: bool) {
             s.io(&mut sc.iDigitMiddle);
             s.io(&mut sc.iDigitLeft);
         }
-        s.io(&mut game().score_cnt);
+        s.io(&mut g.score_cnt);
         GameplayState::instance().checkpoint(s);
 
         // The map and the music the menu chose. A net game's joiner plays the host's map from its settings directory.
-        let mut map = portable_path(&game().match_map);
-        let mut map_index = game().maplist.get_current();
+        let mut map = portable_path(&g.match_map);
+        let mut map_index = g.maplist.get_current();
         s.io(&mut map);
         s.io(&mut map_index);
         map = local_path(&map);
         if s.load {
-            game().maplist.set_current(map_index);
-            game().g_map.load_map(&data_path(&map), crate::common::map::read_type_full);
-            note_match_map(&map);
-            crate::common::global::load_current_map_background();
+            g.maplist.set_current(map_index);
+            g.g_map.load_map(&data_path(&map), crate::common::map::read_type_full);
+            note_match_map(g, &map);
+            crate::common::global::load_current_map_background(g);
         }
-        let mut musiclist = game().musiclist;
+        let mut musiclist = g.musiclist;
         let (song, song_index) = musiclist.song_state_mut();
         let mut song_name = data_relative(&song.to_string_lossy());
         s.io(&mut song_name);
@@ -427,15 +427,15 @@ fn walk(s: &mut Snap, online: bool) {
             *song = data_path(&song_name).into();
             for k in 0..4 {
                 if gv.playercontrol[k] > 0 {
-                    game().rm.spr_player[k] = match crate::smw::net::net_skin_path(k) {
-                        Some(path) => game().rm.load_full_skin_path(Path::new(&path), k as i16),
-                        None => game().rm.load_full_skin(gv.skinids[k], gv.colorids[k]),
+                    game().rm.spr_player[k] = match crate::smw::net::net_skin_path(g, k) {
+                        Some(path) => g.rm.load_full_skin_path(Path::new(&path), k as i16),
+                        None => game().rm.load_full_skin(g, gv.skinids[k], gv.colorids[k]),
                     };
                 }
             }
         }
 
-        let tracks: Vec<*mut sfxMusic> = game().rm.backgroundmusic.iter_mut().map(|t| t as *mut sfxMusic).collect();
+        let tracks: Vec<*mut sfxMusic> = g.rm.backgroundmusic.iter_mut().map(|t| t as *mut sfxMusic).collect();
         for &t in tracks.iter() {
             let mut name = (*t).name().to_string();
             let mut paused = (*t).paused();
@@ -448,7 +448,7 @@ fn walk(s: &mut Snap, online: bool) {
                 (*t).set_paused(paused);
             }
         }
-        let sounds = game().rm.sounds();
+        let sounds = g.rm.sounds();
         for &snd in sounds.iter() {
             let mut name = (*snd).name().to_string();
             let (mut channels, mut last_start) = (*snd).state();
@@ -496,7 +496,7 @@ fn walk(s: &mut Snap, online: bool) {
         }
 
         // Sound commands of this frame so far, which belong to its dump block.
-        s.io(&mut game().sfx.sfx_events);
+        s.io(&mut g.sfx.sfx_events);
     }
 }
 
@@ -515,9 +515,9 @@ fn slug(text: &str) -> String {
 }
 
 /// The fields of a match's start marker: what was played, where, by whom.
-pub fn start_fields() -> String {
+pub fn start_fields(g: &mut Game) -> String {
     unsafe {
-        let gv = &mut *game().game_values;
+        let gv = &mut *g.game_values;
         let mut f: Vec<String> = Vec::new();
         f.push(kv("type", match gv.matchtype {
             MatchType::SingleGame => "single",
@@ -539,7 +539,7 @@ pub fn start_fields() -> String {
             }));
         }
         f.push(kv("goal", &gm.goal.to_string()));
-        let map = game().match_map.clone();
+        let map = g.match_map.clone();
         let short = Path::new(&map).file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
         let short = short.split_once('_').map(|(_, rest)| rest.to_string()).unwrap_or(short);
         f.push(kv("map", &short));
@@ -551,8 +551,8 @@ pub fn start_fields() -> String {
                 f.push(kv("wins_needed", &gv.tournamentgames.to_string()));
             }
             MatchType::Tour | MatchType::World => {
-                let name = if gv.matchtype == MatchType::World { game().g_worldmap.get_world_name().to_string() } else {
-                    game().tourlist.current_path().file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default()
+                let name = if gv.matchtype == MatchType::World { g.g_worldmap.get_world_name().to_string() } else {
+                    g.tourlist.current_path().file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default()
                 };
                 f.push(kv(if gv.matchtype == MatchType::World { "world" } else { "tour" }, &name));
                 f.push(kv("stop", &format!("{}/{}", gv.tourstopcurrent + 1, gv.tourstops.len())));
@@ -577,7 +577,7 @@ pub fn start_fields() -> String {
                     format!("keys{}", set + 1)
                 }
             };
-            let skin = game().skinlist.at(gv.skinids[p].max(0) as usize).name.clone();
+            let skin = g.skinlist.at(gv.skinids[p].max(0) as usize).name.clone();
             f.push(kv(&format!("p{}", p + 1), &format!("{},team{},{}", who, lookup_team_id(p as i16) + 1, skin)));
         }
         f.join(" ")
@@ -585,10 +585,10 @@ pub fn start_fields() -> String {
 }
 
 /// The result fields of a match's later markers.
-pub fn result_fields() -> String {
+pub fn result_fields(g: &mut Game) -> String {
     unsafe {
-        let gm = game().game_values.gamemode;
-        let scores: Vec<String> = (0..game().score_cnt.max(0) as usize).map(|k| game().score[k].score.to_string()).collect();
+        let gm = g.game_values.gamemode;
+        let scores: Vec<String> = (0..game().score_cnt.max(0) as usize).map(|k| g.score[k].score.to_string()).collect();
         let mut f = vec![kv("scores", &scores.join(","))];
         if gm.gameover {
             f.push(kv("winner", &if gm.winningteam >= 0 { format!("team{}", gm.winningteam + 1) } else { "tie".to_string() }));
@@ -613,7 +613,7 @@ impl GameState for SegmentState {
             MenuState::instance().init();
             GameplayState::instance().init();
         }
-        if let Err(e) = restore(std::mem::take(&mut self.checkpoint)) {
+        if let Err(e) = restore(g, std::mem::take(&mut self.checkpoint)) {
             eprintln!("[harness] {}", e);
             std::process::exit(2);
         }

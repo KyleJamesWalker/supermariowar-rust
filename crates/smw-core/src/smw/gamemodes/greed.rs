@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/Greed.cpp
 
+use crate::game::Game;
 use crate::common::game_mode::*;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::math::trig::{cosf, sinf};
@@ -55,21 +56,21 @@ pub struct CGM_Greed {
 impl_base!(CGM_Greed => cgm_classic: CGM_Classic);
 
 //Greed - steal other players coins - if you have 0 coins, you're removed from the game!
-fn drop_coins(player: Ptr<CPlayer>, iDamage: i16, pos: Vec2s) {
+fn drop_coins(g: &mut Game, player: Ptr<CPlayer>, iDamage: i16, pos: Vec2s) {
     unsafe {
         for _k in 0..iDamage {
             let speed: f32 = 7.0f32 + (RANDOM_INT(9) as f32) / 2.0f32;
             let angle: f32 = -(RANDOM_INT(314) as f32) / 100.0f32;
             let vel: Vec2f = Vec2f::new(speed * cosf(angle), speed * sinf(angle));
 
-            game().objectcontainer[1].add(Ptr::new_box(MO_Coin::new(Ptr::from_mut(&mut game().rm.spr_coin), vel, pos, player.get_color_id(), player.get_team_id(), 1, 30, false)));
+            g.objectcontainer[1].add(Ptr::new_box(MO_Coin::new(Ptr::from_mut(&mut g.rm.spr_coin), vel, pos, player.get_color_id(), player.get_team_id(), 1, 30, false)));
         }
     }
 }
 
 pub fn net_drop_coins(player: Ptr<CPlayer>, iDamage: i16, x: i16, y: i16) {
     if !player.is_null() {
-        drop_coins(player, iDamage, Vec2s::new(x, y));
+        drop_coins(game().get(), player, iDamage, Vec2s::new(x, y));
     }
 }
 
@@ -83,26 +84,26 @@ impl CGM_Greed {
         this
     }
 
-    pub fn release_coins(&mut self, mut player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    pub fn release_coins(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
         unsafe {
-            if_sound_on_play(&mut game().rm.sfx_cannon);
+            if_sound_on_play(g, &mut game().rm.sfx_cannon);
 
-            player.shield().turn_on();
+            player.shield().turn_on(g);
 
-            let mut iDamage: i16 = (kill_style_damage(style) as i32 * game().game_values.gamemodesettings.greed.multiplier as i32 / 2) as i16;
+            let mut iDamage: i16 = (kill_style_damage(style) as i32 * g.game_values.gamemodesettings.greed.multiplier as i32 / 2) as i16;
 
             if self.goal != -1 {
                 if player.score().score < iDamage {
                     iDamage = player.score().score;
                 }
 
-                player.score().adjust_score(-iDamage);
+                player.score().adjust_score(g, -iDamage);
             }
 
             let pos: Vec2s = Vec2s::new((player.center_x() as i32 - 16) as i16, (player.center_y() as i32 - 16) as i16);
 
-            if !net_random::event(Ev::GreedCoins, &[player.globalID as i32, iDamage as i32, pos.x as i32, pos.y as i32]) {
-                drop_coins(player, iDamage, pos);
+            if !net_random::event(g, Ev::GreedCoins, &[player.globalID as i32, iDamage as i32, pos.x as i32, pos.y as i32]) {
+                drop_coins(g, player, iDamage, pos);
             }
 
             //Play warning sound if game is almost over
@@ -115,7 +116,7 @@ impl CGM_Greed {
                             continue;
                         }
 
-                        countscore = (countscore as i32 + game().score[k as usize].score as i32) as i16;
+                        countscore = (countscore as i32 + g.score[k as usize].score as i32) as i16;
                     }
 
                     if countscore <= 10 {
@@ -125,7 +126,7 @@ impl CGM_Greed {
                 }
 
                 if playwarning {
-                    self.playwarningsound();
+                    self.playwarningsound(g);
                 }
             }
 
@@ -143,7 +144,7 @@ impl CGameModeTrait for CGM_Greed {
     crate::impl_cgamemode_plumbing!();
 
     fn init(&mut self) {
-        cgamemode_init(self);
+        cgamemode_init(game().get(), self);
 
         let iGoal: i16 = if self.goal == -1 { 0 } else { self.goal };
 
@@ -160,7 +161,7 @@ impl CGameModeTrait for CGM_Greed {
         }
 
         //create coins around player
-        self.release_coins(other, style)
+        self.release_coins(game().get(), other, style)
     }
 
     fn playerkilledself(&mut self, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
@@ -169,12 +170,12 @@ impl CGameModeTrait for CGM_Greed {
         }
 
         //create coins around player
-        self.release_coins(player, style)
+        self.release_coins(game().get(), player, style)
     }
 
     fn playerextraguy(&mut self, mut player: Ptr<CPlayer>, iType: i16) {
         if !self.gameover {
-            player.score().adjust_score((iType as i32 * 5) as i16);
+            player.score().adjust_score(game().get(), (iType as i32 * 5) as i16);
         }
     }
 }

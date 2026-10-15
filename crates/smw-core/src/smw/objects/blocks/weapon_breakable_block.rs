@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/WeaponBreakableBlock.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::eyecandy::EC_FallingObject;
 use crate::common::game_values::if_sound_on_play;
@@ -61,18 +62,18 @@ impl B_WeaponBreakableBlock {
         self.iType
     }
 
-    pub fn trigger_behavior_player(&mut self, iPlayerID: i16, iTeamID: i16) {
+    pub fn trigger_behavior_player(&mut self, g: &mut Game, iPlayerID: i16, iTeamID: i16) {
         if self.state == 0 {
             unsafe {
-                let spr = Ptr::from_mut(&mut game().rm.spr_brokengrayblock);
+                let spr = Ptr::from_mut(&mut g.rm.spr_brokengrayblock);
                 let (ix, iy) = (self.ix, self.iy);
-                game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy, -2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
-                game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy, 2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
-                game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
-                game().eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
+                g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy, -2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
+                g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy, 2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
+                g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
+                g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
 
                 self.state = 1;
-                if_sound_on_play(&mut game().rm.sfx_breakblock);
+                if_sound_on_play(g, &mut game().rm.sfx_breakblock);
             }
 
             self.iBumpPlayerID = iPlayerID;
@@ -95,12 +96,12 @@ impl B_WeaponBreakableBlock {
                 iTeamID = object.iTeamID;
             }
 
-            self.trigger_behavior_player(iPlayerID, iTeamID);
+            self.trigger_behavior_player(game().get(), iPlayerID, iTeamID);
             return false;
         } else if self.iType == WeaponDamageType::Fireball && r#type == movingobject_fireball {
             let (iPlayerID, iTeamID) = (object.iPlayerID, object.iTeamID);
-            self.trigger_behavior_player(iPlayerID, iTeamID);
-            removeifprojectile(object, false, true);
+            self.trigger_behavior_player(game().get(), iPlayerID, iTeamID);
+            removeifprojectile(game().get(), object, false, true);
             return false;
         } else if r#type == movingobject_attackzone {
             let any = object.as_any();
@@ -112,7 +113,7 @@ impl B_WeaponBreakableBlock {
 
             if (iStyle == KillStyle::Leaf && self.iType == WeaponDamageType::Leaf) || (iStyle == KillStyle::Feather && self.iType == WeaponDamageType::Feather) {
                 let (iPlayerID, iTeamID) = (object.iPlayerID, object.iTeamID);
-                self.trigger_behavior_player(iPlayerID, iTeamID);
+                self.trigger_behavior_player(game().get(), iPlayerID, iTeamID);
                 object.die();
                 return false;
             }
@@ -130,7 +131,7 @@ impl CObjectTrait for B_WeaponBreakableBlock {
 
     fn draw(&mut self) {
         if self.state == 0 {
-            self.spr.draw_src(
+            self.spr.draw_src(game().get(), 
                 self.ix as i32,
                 self.iy as i32,
                 &SDL_Rect { x: self.iDrawOffsetX as i32, y: 0, w: self.iw as i32, h: self.ih as i32 },
@@ -178,10 +179,10 @@ impl IO_BlockTrait for B_WeaponBreakableBlock {
 
                 //Save this for when we create a super stomp destroyable block
                 if self.iType == WeaponDamageType::KuriboShoe && player.is_super_stomping() && self.state == 0 {
-                    self.trigger_behavior_player(player.globalID, player.teamID);
+                    self.trigger_behavior_player(game().get(), player.globalID, player.teamID);
                     return false;
                 } else if self.iType == WeaponDamageType::Star && player.is_invincible() {
-                    self.trigger_behavior_player(player.globalID, player.teamID);
+                    self.trigger_behavior_player(game().get(), player.globalID, player.teamID);
                     return false;
                 }
             }
@@ -203,7 +204,7 @@ impl IO_BlockTrait for B_WeaponBreakableBlock {
             }
 
             if fTriggerBlock {
-                self.trigger_behavior_player(player.globalID, player.teamID);
+                self.trigger_behavior_player(game().get(), player.globalID, player.teamID);
             }
 
             return io_block_hitbottom_player(self, player, useBehavior);
@@ -215,7 +216,7 @@ impl IO_BlockTrait for B_WeaponBreakableBlock {
     fn hitleft_player(&mut self, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         if useBehavior && self.state == 0 {
             if self.iType == WeaponDamageType::Star && player.is_invincible() {
-                self.trigger_behavior_player(player.globalID, player.teamID);
+                self.trigger_behavior_player(game().get(), player.globalID, player.teamID);
             }
 
             return io_block_hitleft_player(self, player, useBehavior);
@@ -227,7 +228,7 @@ impl IO_BlockTrait for B_WeaponBreakableBlock {
     fn hitright_player(&mut self, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         if useBehavior && self.state == 0 {
             if self.iType == WeaponDamageType::Star && player.is_invincible() {
-                self.trigger_behavior_player(player.globalID, player.teamID);
+                self.trigger_behavior_player(game().get(), player.globalID, player.teamID);
             }
 
             return io_block_hitright_player(self, player, useBehavior);
@@ -240,7 +241,7 @@ impl IO_BlockTrait for B_WeaponBreakableBlock {
         io_block_hittop_object(self, object);
 
         if (self.state == 1 || self.state == 2) && object.bounce == GRAVITATION {
-            io_block_bounce_moving_object(self, object);
+            io_block_bounce_moving_object(game().get(), self, object);
             return false;
         }
 
@@ -252,8 +253,8 @@ impl IO_BlockTrait for B_WeaponBreakableBlock {
 
         if self.iType == WeaponDamageType::Fireball && r#type == movingobject_fireball {
             let (iPlayerID, iTeamID) = (object.iPlayerID, object.iTeamID);
-            self.trigger_behavior_player(iPlayerID, iTeamID);
-            removeifprojectile(object, false, true);
+            self.trigger_behavior_player(game().get(), iPlayerID, iTeamID);
+            removeifprojectile(game().get(), object, false, true);
             return false;
         }
 
@@ -271,8 +272,8 @@ impl IO_BlockTrait for B_WeaponBreakableBlock {
 
         if self.iType == WeaponDamageType::Fireball && r#type == movingobject_fireball {
             let (iPlayerID, iTeamID) = (object.iPlayerID, object.iTeamID);
-            self.trigger_behavior_player(iPlayerID, iTeamID);
-            removeifprojectile(object, false, true);
+            self.trigger_behavior_player(game().get(), iPlayerID, iTeamID);
+            removeifprojectile(game().get(), object, false, true);
             return false;
         }
 

@@ -1,5 +1,6 @@
 //! Port of src/smw/objecthazard.cpp
 
+use crate::game::Game;
 use crate::common::global_constants::*;
 use crate::common::math::vec2::Vec2s;
 use crate::globals::*;
@@ -9,25 +10,25 @@ use crate::smw::objects::io_flame_cannon::IO_FlameCannon;
 use crate::smw::objects::moving::mo_pirhana_plant::MO_PirhanaPlant;
 use crate::smw::objects::overmap::wo_orbit_hazard::OMO_OrbitHazard;
 
-pub fn load_map_hazards(fPreview: bool) {
+pub fn load_map_hazards(g: &mut Game, fPreview: bool) {
     unsafe {
         //Make sure we don't have any objects created before we create them from the map settings
-        game().noncolcontainer.clean();
-        game().objectcontainer[0].clean();
-        game().objectcontainer[1].clean();
-        game().objectcontainer[2].clean();
+        g.noncolcontainer.clean();
+        g.objectcontainer[0].clean();
+        g.objectcontainer[1].clean();
+        g.objectcontainer[2].clean();
 
         let iPreview: usize = if fPreview { 1 } else { 0 };
 
         //Create objects for all the map hazards
         for i in 0..game().g_map.maphazards.len() {
-            let hazard = game().g_map.maphazards[i].clone();
+            let hazard = g.g_map.maphazards[i].clone();
             let pos = Vec2s::new((hazard.ix as i32 * 16) as i16, (hazard.iy as i32 * 16) as i16);
 
             if hazard.itype == 0 {
                 for iFireball in 0..hazard.iparam[0] {
-                    game().objectcontainer[1].add(Ptr::new_box(OMO_OrbitHazard::new(
-                        Ptr::from_mut(&mut game().rm.spr_hazard_fireball[iPreview]),
+                    g.objectcontainer[1].add(Ptr::new_box(OMO_OrbitHazard::new(
+                        Ptr::from_mut(&mut g.rm.spr_hazard_fireball[iPreview]),
                         pos + Vec2s::new(16, 16),
                         (iFireball as i32 * 24) as f32,
                         hazard.dparam[0],
@@ -52,8 +53,8 @@ pub fn load_map_hazards(fPreview: bool) {
                         dAngle -= TWO_PI;
                     }
 
-                    game().objectcontainer[1].add(Ptr::new_box(OMO_OrbitHazard::new(
-                        Ptr::from_mut(&mut game().rm.spr_hazard_rotodisc[iPreview]),
+                    g.objectcontainer[1].add(Ptr::new_box(OMO_OrbitHazard::new(
+                        Ptr::from_mut(&mut g.rm.spr_hazard_rotodisc[iPreview]),
                         pos + Vec2s::new(16, 16),
                         hazard.dparam[2],
                         hazard.dparam[0],
@@ -71,11 +72,11 @@ pub fn load_map_hazards(fPreview: bool) {
                     )));
                 }
             } else if hazard.itype == 2 {
-                game().noncolcontainer.add(Ptr::new_box(IO_BulletBillCannon::new(pos, hazard.iparam[0], hazard.dparam[0], fPreview)));
+                g.noncolcontainer.add(Ptr::new_box(IO_BulletBillCannon::new(pos, hazard.iparam[0], hazard.dparam[0], fPreview)));
             } else if hazard.itype == 3 {
-                game().objectcontainer[1].add(Ptr::new_box(IO_FlameCannon::new(pos, hazard.iparam[0], hazard.iparam[1])));
+                g.objectcontainer[1].add(Ptr::new_box(IO_FlameCannon::new(pos, hazard.iparam[0], hazard.iparam[1])));
             } else if hazard.itype >= 4 && hazard.itype <= 7 {
-                game().objectcontainer[1].add(Ptr::new_box(MO_PirhanaPlant::new(pos, hazard.itype - 4, hazard.iparam[0], hazard.iparam[1], fPreview)));
+                g.objectcontainer[1].add(Ptr::new_box(MO_PirhanaPlant::new(pos, hazard.itype - 4, hazard.iparam[0], hazard.iparam[1], fPreview)));
             }
         }
     }

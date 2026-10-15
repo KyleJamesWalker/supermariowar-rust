@@ -1,5 +1,6 @@
 //! Port of src/smw/menu/TeamSelectMenu.cpp
 
+use crate::game::Game;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_image::MI_Image;
 use crate::common::ui::mi_text::{MI_HeaderText, MI_Text};
@@ -21,12 +22,12 @@ pub struct UI_TeamSelectMenu {
 crate::impl_base!(UI_TeamSelectMenu => ui_menu: UI_Menu);
 
 impl UI_TeamSelectMenu {
-    pub fn new() -> Box<Self> {
+    pub fn new(g: &mut Game) -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let menu_plain_field = Ptr::from_mut(&mut game().rm.menu_plain_field);
+            let menu_plain_field = Ptr::from_mut(&mut g.rm.menu_plain_field);
 
-            this.miTeamSelect = Ptr::new_box(MI_TeamSelect::new(Ptr::from_mut(&mut game().rm.spr_player_select_background), 112, 96));
+            this.miTeamSelect = Ptr::new_box(MI_TeamSelect::new(g, Ptr::from_mut(&mut game().rm.spr_player_select_background), 112, 96));
             this.miTeamSelect.set_auto_modify(true);
 
             this.miTeamSelectLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
@@ -48,11 +49,11 @@ impl UI_TeamSelectMenu {
     }
 
     pub fn reset_team_select(&mut self) {
-        self.miTeamSelect.reset();
+        self.miTeamSelect.reset(game().get());
     }
 
     pub fn get_team_count(&self) -> i16 {
         let mut ts = self.miTeamSelect;
-        ts.organize_teams()
+        ts.organize_teams(game().get())
     }
 }

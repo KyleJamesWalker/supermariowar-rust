@@ -99,7 +99,7 @@ impl CObjectTrait for MO_SuperFireball {
             self.ttl -= 1;
             self.ttl <= 0
         } {
-            removeifprojectile(self.as_mo_ptr(), false, true);
+            removeifprojectile(game().get(), self.as_mo_ptr(), false, true);
         }
     }
 
@@ -114,7 +114,7 @@ impl CObjectTrait for MO_SuperFireball {
                     3,
                     4,
                 ));
-                if_sound_on_play(&mut game().rm.sfx_hit);
+                if_sound_on_play(game().get(), &mut game().rm.sfx_hit);
 
                 if !player.is_invincible() && !player.shyguy {
                     return player.kill_player_map_hazard(false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
@@ -126,7 +126,7 @@ impl CObjectTrait for MO_SuperFireball {
     }
 
     fn draw(&mut self) {
-        self.spr.draw_src(
+        self.spr.draw_src(game().get(), 
             self.ix as i32 - self.collisionOffsetX as i32,
             self.iy as i32 - self.collisionOffsetY as i32,
             &SDL_Rect { x: self.drawframe as i32, y: self.colorOffset as i32 + self.directionOffset as i32, w: self.iw as i32, h: self.ih as i32 },

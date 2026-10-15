@@ -1,5 +1,6 @@
 //! Port of src/common/gfx/gfxSprite.cpp
 
+use crate::game::Game;
 use crate::common::gfx::color::{colors, RGB};
 use crate::common::gfx::{blit, gfx_adjusthiddenrects, rle_enabled, soft_image};
 use crate::common::util::sdl_helpers::SdlSurfacePtr;
@@ -32,7 +33,7 @@ fn throw(msg: String) -> ! {
     panic!("{}", msg)
 }
 
-fn try_load_image(path: &Path, optimize: bool, color_key: Option<RGB>, alpha: Option<u8>) -> Result<SdlSurfacePtr, String> {
+fn try_load_image(g: &mut Game, path: &Path, optimize: bool, color_key: Option<RGB>, alpha: Option<u8>) -> Result<SdlSurfacePtr, String> {
     let path_str = path.to_string_lossy().into_owned();
 
     let mut out = String::from("loading sprite");
@@ -66,7 +67,7 @@ fn try_load_image(path: &Path, optimize: bool, color_key: Option<RGB>, alpha: Op
                 }
             }
 
-            SdlSurfacePtr::new(SDL_ConvertSurface(raw.get(), (*game().screen).format, 0))
+            SdlSurfacePtr::new(SDL_ConvertSurface(raw.get(), (*g.screen).format, 0))
         };
         if img.is_null() {
             return Err(format!("Couldn't convert {} to the display's pixel format: {}", path_str, sdl_error()));
@@ -91,7 +92,7 @@ fn try_load_image(path: &Path, optimize: bool, color_key: Option<RGB>, alpha: Op
 }
 
 fn load_image(path: &Path, optimize: bool, color_key: Option<RGB>, alpha: Option<u8>) -> SdlSurfacePtr {
-    try_load_image(path, optimize, color_key, alpha).unwrap_or_else(|what| throw(what))
+    try_load_image(game().get(), path, optimize, color_key, alpha).unwrap_or_else(|what| throw(what))
 }
 
 
@@ -119,9 +120,9 @@ impl gfxSprite {
     }
 
     /// `gfxSprite::blank(w, h)`: a screen-format surface with blending off.
-    pub fn blank(w: u32, h: u32) -> Self {
+    pub fn blank(g: &mut Game, w: u32, h: u32) -> Self {
         unsafe {
-            let sf = (*game().screen).format;
+            let sf = (*g.screen).format;
             let surf = SdlSurfacePtr::new(SDL_CreateRGBSurfaceWithFormat(0x0, w as i32, h as i32, (*sf).BitsPerPixel as i32, (*sf).format));
             if surf.is_null() {
                 throw(format!("Couldn't create blank surface: {}", sdl_error()));
@@ -175,34 +176,34 @@ impl gfxSprite {
     }
 
     /// Draw the whole sprite at the given coordinate.
-    pub fn draw(&self, x: i32, y: i32) {
-        unsafe { self.blit(null(), game().blitdest, x + game().x_shake as i32, y + game().y_shake as i32) };
+    pub fn draw(&self, g: &mut Game, x: i32, y: i32) {
+        unsafe { self.blit(null(), g.blitdest, x + g.x_shake as i32, y + g.y_shake as i32) };
     }
 
     /// Draw part of the sprite at the given coordinate.
-    pub fn draw_src(&self, x: i32, y: i32, srcRect: &SDL_Rect) {
-        unsafe { self.blit(srcRect, game().blitdest, x + game().x_shake as i32, y + game().y_shake as i32) };
+    pub fn draw_src(&self, g: &mut Game, x: i32, y: i32, srcRect: &SDL_Rect) {
+        unsafe { self.blit(srcRect, g.blitdest, x + g.x_shake as i32, y + g.y_shake as i32) };
     }
 
     /// `draw(x, y, srcx, srcy, w, h)` convenience used all over the C++ via `SDL_Rect{...}` temporaries.
     pub fn draw_part(&self, x: i32, y: i32, srcx: i32, srcy: i32, w: i32, h: i32) {
-        self.draw_src(x, y, &SDL_Rect { x: srcx, y: srcy, w, h });
+        self.draw_src(game().get(), x, y, &SDL_Rect { x: srcx, y: srcy, w, h });
     }
 
     /// Draw part of the sprite at the given coordinate, clipped along a given direction.
-    pub fn draw_clip(&self, x: i32, y: i32, srcRect: &SDL_Rect, clipEdge: ClipEdge, clipTreshold: i32) {
+    pub fn draw_clip(&self, g: &mut Game, x: i32, y: i32, srcRect: &SDL_Rect, clipEdge: ClipEdge, clipTreshold: i32) {
         debug_assert!(!self.m_picture.is_null());
 
         unsafe {
-            let dstRect = SDL_Rect { x: x + game().x_shake as i32, y: y + game().y_shake as i32, w: srcRect.w, h: srcRect.h };
+            let dstRect = SDL_Rect { x: x + g.x_shake as i32, y: y + g.y_shake as i32, w: srcRect.w, h: srcRect.h };
             let mut adjustedSrcRect = *srcRect;
             let mut adjustedDstRect = dstRect;
 
-            if gfx_adjusthiddenrects(&mut adjustedSrcRect, &mut adjustedDstRect, clipEdge, clipTreshold) {
+            if gfx_adjusthiddenrects(g, &mut adjustedSrcRect, &mut adjustedDstRect, clipEdge, clipTreshold) {
                 return;
             }
 
-            blit_surface(self.m_picture.get(), &adjustedSrcRect, game().blitdest, &mut adjustedDstRect);
+            blit_surface(self.m_picture.get(), &adjustedSrcRect, g.blitdest, &mut adjustedDstRect);
 
             if let Some(wrap_x) = self.m_wrap_x {
                 if x + srcRect.w >= wrap_x {
@@ -210,21 +211,21 @@ impl gfxSprite {
                     adjustedDstRect = dstRect;
                     adjustedDstRect.x -= wrap_x;
 
-                    if gfx_adjusthiddenrects(&mut adjustedSrcRect, &mut adjustedDstRect, clipEdge, clipTreshold) {
+                    if gfx_adjusthiddenrects(g, &mut adjustedSrcRect, &mut adjustedDstRect, clipEdge, clipTreshold) {
                         return;
                     }
 
-                    blit_surface(self.m_picture.get(), &adjustedSrcRect, game().blitdest, &mut adjustedDstRect);
+                    blit_surface(self.m_picture.get(), &adjustedSrcRect, g.blitdest, &mut adjustedDstRect);
                 } else if x < 0 {
                     adjustedSrcRect = *srcRect;
                     adjustedDstRect = dstRect;
                     adjustedDstRect.x += wrap_x;
 
-                    if gfx_adjusthiddenrects(&mut adjustedSrcRect, &mut adjustedDstRect, clipEdge, clipTreshold) {
+                    if gfx_adjusthiddenrects(g, &mut adjustedSrcRect, &mut adjustedDstRect, clipEdge, clipTreshold) {
                         return;
                     }
 
-                    blit_surface(self.m_picture.get(), &adjustedSrcRect, game().blitdest, &mut adjustedDstRect);
+                    blit_surface(self.m_picture.get(), &adjustedSrcRect, g.blitdest, &mut adjustedDstRect);
                 }
             }
         }
@@ -321,6 +322,6 @@ impl ImageLoader {
 
     /// `create()` for callers that catch the `std::string` the C++ throws on a load failure.
     pub fn try_create(&self) -> Result<gfxSprite, String> {
-        Ok(gfxSprite::from_surface(try_load_image(&self.m_path, self.m_optimize, self.m_color_key, self.m_alpha)?, self.m_wrap_x))
+        Ok(gfxSprite::from_surface(try_load_image(game().get(), &self.m_path, self.m_optimize, self.m_color_key, self.m_alpha)?, self.m_wrap_x))
     }
 }

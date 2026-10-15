@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_Phanto.cpp
 
+use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_mode::game_mode_chase;
 use crate::common::game_values::if_sound_on_play;
@@ -52,7 +53,7 @@ impl OMO_Phanto {
         self.set_yi(yi as i16);
     }
 
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s, dVelX: f32, dVelY: f32, r#type: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, dVelX: f32, dVelY: f32, r#type: i16) -> Self {
         let mut this = OMO_Phanto {
             io_over_map_object: IO_OverMapObject::new(nspr, pos, 1, 0, 30, 32, 1, 0, ((r#type as i32) << 5) as i16, 0, 32, 32),
             iType: r#type,
@@ -67,9 +68,9 @@ impl OMO_Phanto {
         this.vely = dVelY;
 
         unsafe {
-            this.dMaxSpeedY = game().game_values.gamemodesettings.chase.phantospeed as f32 / 2.0f32;
+            this.dMaxSpeedY = g.game_values.gamemodesettings.chase.phantospeed as f32 / 2.0f32;
             this.dMaxSpeedX = this.dMaxSpeedY + 1.0f32;
-            this.dSpeedRatio = game().game_values.gamemodesettings.chase.phantospeed as f32 / 6.0f32;
+            this.dSpeedRatio = g.game_values.gamemodesettings.chase.phantospeed as f32 / 6.0f32;
         }
 
         this.dReactionSpeed = 0.2f32;
@@ -198,8 +199,8 @@ impl CObjectTrait for OMO_Phanto {
                         player.kill_player_map_hazard(false, KillStyle::Phanto, false, -1);
 
                         if !game().game_values.gamemode.gameover && self.iType == 1 {
-                            player.score().adjust_score(-10);
-                            if_sound_on_play(&mut game().rm.sfx_stun);
+                            player.score().adjust_score(game().get(), -10);
+                            if_sound_on_play(game().get(), &mut game().rm.sfx_stun);
                         }
 
                         return true;

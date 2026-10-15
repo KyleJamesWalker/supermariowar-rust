@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_Spring.cpp
 
+use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::{gfxSprite, ClipEdge};
 use crate::common::global_constants::*;
@@ -57,7 +58,7 @@ pub fn co_spring_collide_player<T: CO_SpringTrait + ?Sized>(this: &mut T, player
     false
 }
 
-pub fn co_spring_hittop<T: CO_SpringTrait + ?Sized>(this: &mut T, player: Ptr<CPlayer>) {
+pub fn co_spring_hittop<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T, player: Ptr<CPlayer>) {
     let mut player = player;
     let (iy, fSuper) = {
         let o = this.spring_mut();
@@ -68,7 +69,7 @@ pub fn co_spring_hittop<T: CO_SpringTrait + ?Sized>(this: &mut T, player: Ptr<CP
 
     player.set_yi((iy as i32 - PH - 1) as i16);
     let p = player.get();
-    player.collisions.checktop(p);
+    player.collisions.checktop(g, p);
     player.platform = Ptr::null();
     player.inair = false;
     player.fallthrough = false;
@@ -79,7 +80,7 @@ pub fn co_spring_hittop<T: CO_SpringTrait + ?Sized>(this: &mut T, player: Ptr<CP
     player.superjumptype = if fSuper { 2 } else { 1 };
     player.vely = -VELNOTEBLOCKREPEL;
 
-    unsafe { if_sound_on_play(&mut game().rm.sfx_bump) };
+    unsafe { if_sound_on_play(g, &mut game().rm.sfx_bump) };
 }
 
 pub fn co_spring_hitother<T: CO_SpringTrait + ?Sized>(this: &mut T, player: Ptr<CPlayer>) {
@@ -105,7 +106,7 @@ pub fn co_spring_update<T: CO_SpringTrait + ?Sized>(this: &mut T) {
             o.fOldY = o.fy;
         }
 
-        io_moving_object_collision_detection_map(this);
+        io_moving_object_collision_detection_map(game().get(), this);
     }
 
     let o = this.spring_mut();
@@ -131,22 +132,22 @@ pub fn co_spring_draw<T: CO_SpringTrait + ?Sized>(this: &mut T) {
         let src = SDL_Rect { x: o.animationOffsetX as i32, y: o.iOffsetY as i32, w: 32, h: 32 };
         if o.owner.iswarping() {
             let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(o.owner.get_warp_state() as i32) };
-            o.spr.draw_clip(x, y, &src, edge, o.owner.get_warp_plane() as i32);
+            o.spr.draw_clip(game().get(), x, y, &src, edge, o.owner.get_warp_plane() as i32);
         } else {
-            o.spr.draw_src(x, y, &src);
+            o.spr.draw_src(game().get(), x, y, &src);
         }
     } else {
-        o.spr.draw_src(x, y, &SDL_Rect { x: o.animationOffsetX as i32 + o.drawframe as i32, y: o.iOffsetY as i32, w: 32, h: 32 });
+        o.spr.draw_src(game().get(), x, y, &SDL_Rect { x: o.animationOffsetX as i32 + o.drawframe as i32, y: o.iOffsetY as i32, w: 32, h: 32 });
     }
 }
 
-pub fn co_spring_place<T: CO_SpringTrait + ?Sized>(this: &mut T) {
+pub fn co_spring_place<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T) {
     {
         let o = this.spring_mut();
         let mut iAttempts: i16 = 10;
         let (mut ix, mut iy) = (o.ix, o.iy);
         let (w, h) = (o.collisionWidth, o.collisionHeight);
-        while !unsafe { game().g_map.findspawnpoint(5, &mut ix, &mut iy, w, h, false) } && {
+        while !unsafe { g.g_map.findspawnpoint(5, &mut ix, &mut iy, w, h, false) } && {
             let t = iAttempts;
             iAttempts -= 1;
             t > 0
@@ -166,11 +167,11 @@ pub trait CO_SpringTrait: MO_CarriedObjectTrait {
     fn spring_mut(&mut self) -> &mut CO_Spring;
 
     fn hittop(&mut self, player: Ptr<CPlayer>) {
-        co_spring_hittop(self, player)
+        co_spring_hittop(game().get(), self, player)
     }
 
     fn place(&mut self) {
-        co_spring_place(self)
+        co_spring_place(game().get(), self)
     }
 }
 

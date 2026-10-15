@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MovingObject.cpp
 
+use crate::game::Game;
 use crate::common::game::App;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::*;
@@ -216,7 +217,7 @@ impl IO_MovingObject {
 
 pub fn io_moving_object_draw<T: IO_MovingObjectTrait + ?Sized>(this: &mut T) {
     let o = this.mo();
-    o.spr.draw_src(
+    o.spr.draw_src(game().get(), 
         (o.ix - o.collisionOffsetX) as i32,
         (o.iy - o.collisionOffsetY) as i32,
         &SDL_Rect { x: o.drawframe as i32, y: o.animationOffsetY as i32, w: o.iw as i32, h: o.ih as i32 },
@@ -230,7 +231,7 @@ pub fn io_moving_object_update<T: IO_MovingObjectTrait + ?Sized>(this: &mut T) {
         o.fOldY = o.fy;
     }
 
-    io_moving_object_collision_detection_map(this);
+    io_moving_object_collision_detection_map(game().get(), this);
 
     this.animate();
 }
@@ -255,7 +256,7 @@ pub fn io_moving_object_collide_player<T: IO_MovingObjectTrait + ?Sized>(this: &
 }
 
 // TODO / FIXME: The collision code is almost the same as in CPlayer
-pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized>(this: &mut T) {
+pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let mut o = this.as_mo_ptr();
     unsafe {
         let x = o.fx + o.velx;
@@ -289,7 +290,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
         o.iHorizontalPlatformCollision = -1;
         o.iVerticalPlatformCollision = -1;
 
-        game().g_map.moving_platform_collision_object(o);
+        g.g_map.moving_platform_collision_object(o);
 
         o.fy = fTempY;
 
@@ -332,8 +333,8 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                     tx = (((o.fx as i16) as i32 + o.collisionWidth as i32) / TILESIZE) as i16;
                 }
 
-                let topblock = game().g_map.block(tx, ty);
-                let bottomblock = game().g_map.block(tx, ty2);
+                let topblock = g.g_map.block(tx, ty);
+                let bottomblock = g.g_map.block(tx, ty2);
 
                 let fTopBlockSolid = !topblock.is_null() && !topblock.get().is_transparent() && !topblock.get().is_hidden();
                 let fBottomBlockSolid = !bottomblock.is_null() && !bottomblock.get().is_transparent() && !bottomblock.get().is_hidden();
@@ -348,7 +349,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
 
                         topblock.get().collide_object_dir(o, 1);
                         o.flipsidesifneeded();
-                        removeifprojectile(o, true, true);
+                        removeifprojectile(g, o, true, true);
 
                         processOtherBlock = false;
 
@@ -364,11 +365,11 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
 
                         bottomblock.get().collide_object_dir(o, 1);
                         o.flipsidesifneeded();
-                        removeifprojectile(o, true, true);
+                        removeifprojectile(g, o, true, true);
 
                         o.side_bounce(true);
                     }
-                } else if (game().g_map.map(tx as i32, ty as i32) & tile_flag_solid) != 0 || (game().g_map.map(tx as i32, ty2 as i32) & tile_flag_solid) != 0 {
+                } else if (g.g_map.map(tx as i32, ty as i32) & tile_flag_solid) != 0 || (g.g_map.map(tx as i32, ty2 as i32) & tile_flag_solid) != 0 {
                     // collision on the right side.
 
                     if o.iHorizontalPlatformCollision == 3 {
@@ -385,7 +386,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                     }
 
                     o.flipsidesifneeded();
-                    removeifprojectile(o, true, true);
+                    removeifprojectile(g, o, true, true);
 
                     o.side_bounce(true);
                 }
@@ -398,8 +399,8 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                     tx = 0;
                 }
 
-                let topblock = game().g_map.block(tx, ty);
-                let bottomblock = game().g_map.block(tx, ty2);
+                let topblock = g.g_map.block(tx, ty);
+                let bottomblock = g.g_map.block(tx, ty2);
 
                 let fTopBlockSolid = !topblock.is_null() && !topblock.get().is_transparent() && !topblock.get().is_hidden();
                 let fBottomBlockSolid = !bottomblock.is_null() && !bottomblock.get().is_transparent() && !bottomblock.get().is_hidden();
@@ -414,7 +415,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
 
                         topblock.get().collide_object_dir(o, 3);
                         o.flipsidesifneeded();
-                        removeifprojectile(o, true, true);
+                        removeifprojectile(g, o, true, true);
 
                         processOtherBlock = false;
 
@@ -430,11 +431,11 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
 
                         bottomblock.get().collide_object_dir(o, 3);
                         o.flipsidesifneeded();
-                        removeifprojectile(o, true, true);
+                        removeifprojectile(g, o, true, true);
 
                         o.side_bounce(false);
                     }
-                } else if (game().g_map.map(tx as i32, ty as i32) & tile_flag_solid) != 0 || (game().g_map.map(tx as i32, ty2 as i32) & tile_flag_solid) != 0 {
+                } else if (g.g_map.map(tx as i32, ty as i32) & tile_flag_solid) != 0 || (g.g_map.map(tx as i32, ty2 as i32) & tile_flag_solid) != 0 {
                     if o.iHorizontalPlatformCollision == 1 {
                         o.kill_object_map_hazard(-1);
                         return;
@@ -449,7 +450,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                     }
 
                     o.flipsidesifneeded();
-                    removeifprojectile(o, true, true);
+                    removeifprojectile(g, o, true, true);
 
                     o.side_bounce(false);
                 }
@@ -475,8 +476,8 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
         if fMovingUp < -0.01 {
             ty = ((o.fPrecalculatedY as i16) as i32 / TILESIZE) as i16;
 
-            let leftblock = game().g_map.block(txl, ty);
-            let rightblock = game().g_map.block(txr, ty);
+            let leftblock = g.g_map.block(txl, ty);
+            let rightblock = g.g_map.block(txr, ty);
 
             if !leftblock.is_null() && !leftblock.get().is_transparent() && !leftblock.get().is_hidden() {
                 // then left
@@ -498,7 +499,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                 return;
             }
 
-            if (game().g_map.map(txl as i32, ty as i32) & tile_flag_solid) != 0 || (game().g_map.map(txr as i32, ty as i32) & tile_flag_solid) != 0 {
+            if (g.g_map.map(txl as i32, ty as i32) & tile_flag_solid) != 0 || (g.g_map.map(txr as i32, ty as i32) & tile_flag_solid) != 0 {
                 if o.iVerticalPlatformCollision == 2 {
                     o.kill_object_map_hazard(-1);
                 }
@@ -524,8 +525,8 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
             // moving down / on ground
             ty = (((o.fPrecalculatedY as i16) as i32 + o.collisionHeight as i32) / TILESIZE) as i16;
 
-            let leftblock = game().g_map.block(txl, ty);
-            let rightblock = game().g_map.block(txr, ty);
+            let leftblock = g.g_map.block(txl, ty);
+            let rightblock = g.g_map.block(txr, ty);
 
             let fLeftBlockSolid = !leftblock.is_null() && !leftblock.get().is_transparent() && !leftblock.get().is_hidden();
             let fRightBlockSolid = !rightblock.is_null() && !rightblock.get().is_transparent() && !rightblock.get().is_hidden();
@@ -559,8 +560,8 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                 return;
             }
 
-            let leftTile: i32 = game().g_map.map(txl as i32, ty as i32);
-            let rightTile: i32 = game().g_map.map(txr as i32, ty as i32);
+            let leftTile: i32 = g.g_map.map(txl as i32, ty as i32);
+            let rightTile: i32 = g.g_map.map(txr as i32, ty as i32);
 
             if (leftTile & tile_flag_solid_on_top) != 0 || (rightTile & tile_flag_solid_on_top) != 0 {
                 if (o.fOldY + o.collisionHeight as f32) / (TILESIZE as f32) < ty as f32 {
@@ -637,7 +638,7 @@ fn block_is_solid(block: Ptr<dyn IO_BlockTrait>) -> bool {
 }
 
 // This method checks the object against the map and moves it outside of any tiles or blocks it might be inside of
-pub fn io_moving_object_collision_detection_checksides<T: IO_MovingObjectTrait + ?Sized>(this: &mut T) -> bool {
+pub fn io_moving_object_collision_detection_checksides<T: IO_MovingObjectTrait + ?Sized>(g: &mut Game, this: &mut T) -> bool {
     let mut o = this.as_mo_ptr();
     unsafe {
         // First figure out where the corners of this object are touching
@@ -659,13 +660,13 @@ pub fn io_moving_object_collision_detection_checksides<T: IO_MovingObjectTrait +
         if o.iy >= 0 {
             if (ty as i32) < MAPHEIGHT {
                 if txl >= 0 && (txl as i32) < MAPWIDTH {
-                    if block_is_solid(game().g_map.block(txl, ty)) || (game().g_map.map(txl as i32, ty as i32) & tile_flag_solid) > 0 {
+                    if block_is_solid(g.g_map.block(txl, ty)) || (g.g_map.map(txl as i32, ty as i32) & tile_flag_solid) > 0 {
                         iCase |= 0x01;
                     }
                 }
 
                 if txr >= 0 && (txr as i32) < MAPWIDTH {
-                    if block_is_solid(game().g_map.block(txr, ty)) || (game().g_map.map(txr as i32, ty as i32) & tile_flag_solid) > 0 {
+                    if block_is_solid(g.g_map.block(txr, ty)) || (g.g_map.map(txr as i32, ty as i32) & tile_flag_solid) > 0 {
                         iCase |= 0x02;
                     }
                 }
@@ -675,13 +676,13 @@ pub fn io_moving_object_collision_detection_checksides<T: IO_MovingObjectTrait +
         if (o.iy as i32 + o.collisionHeight as i32) as f32 >= 0.0 {
             if (ty2 as i32) < MAPHEIGHT {
                 if txl >= 0 && (txl as i32) < MAPWIDTH {
-                    if block_is_solid(game().g_map.block(txl, ty2)) || (game().g_map.map(txl as i32, ty2 as i32) & tile_flag_solid) > 0 {
+                    if block_is_solid(g.g_map.block(txl, ty2)) || (g.g_map.map(txl as i32, ty2 as i32) & tile_flag_solid) > 0 {
                         iCase |= 0x04;
                     }
                 }
 
                 if txr >= 0 && (txr as i32) < MAPWIDTH {
-                    if block_is_solid(game().g_map.block(txr, ty2)) || (game().g_map.map(txr as i32, ty2 as i32) & tile_flag_solid) > 0 {
+                    if block_is_solid(g.g_map.block(txr, ty2)) || (g.g_map.map(txr as i32, ty2 as i32) & tile_flag_solid) > 0 {
                         iCase |= 0x08;
                     }
                 }
@@ -853,7 +854,7 @@ pub fn io_moving_object_collision_detection_checksides<T: IO_MovingObjectTrait +
         o.fPrecalculatedY = o.fy;
 
         // Check moving platforms and make sure this object is not inside one
-        fRet |= game().g_map.moving_platform_check_sides(o);
+        fRet |= g.g_map.moving_platform_check_sides(o);
 
         fRet
     }
@@ -862,7 +863,7 @@ pub fn io_moving_object_collision_detection_checksides<T: IO_MovingObjectTrait +
 // This method probably needs to be rewritten so that it just calls into the object being killed
 // And let it handle not dying and placing itself somewhere else if necessary
 /// `KillObjectMapHazard(short playerID = -1)`
-pub fn io_moving_object_kill_object_map_hazard<T: IO_MovingObjectTrait + ?Sized>(this: &mut T, playerID: i16) {
+pub fn io_moving_object_kill_object_map_hazard<T: IO_MovingObjectTrait + ?Sized>(g: &mut Game, this: &mut T, playerID: i16) {
     unsafe {
         if this.mo().dead {
             return;
@@ -879,8 +880,8 @@ pub fn io_moving_object_kill_object_map_hazard<T: IO_MovingObjectTrait + ?Sized>
         {
             let o = this.mo_mut();
             o.dead = true;
-            game().eyecandy[2].emplace(EC_SingleAnimation::new(
-                Ptr::from_mut(&mut game().rm.spr_fireballexplosion),
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
                 (o.ix as i32 + (o.iw as i32 >> 1) - 16) as i16,
                 (o.iy as i32 + (o.ih as i32 >> 1) - 16) as i16,
                 3,
@@ -889,57 +890,57 @@ pub fn io_moving_object_kill_object_map_hazard<T: IO_MovingObjectTrait + ?Sized>
         }
 
         if movingObjectType == movingobject_fireball {
-            let mut player = get_player_from_global_id(this.mo().iPlayerID);
+            let mut player = get_player_from_global_id(g, this.mo().iPlayerID);
             if !player.is_null() {
                 player.decrease_projectiles_count();
             }
 
-            if_sound_on_play(&mut game().rm.sfx_hit);
+            if_sound_on_play(g, &mut game().rm.sfx_hit);
         } else if movingObjectType == movingobject_egg {
             this.mo_mut().dead = false;
-            this.as_any().downcast_mut::<CO_Egg>().unwrap().place_egg();
-            if_sound_on_play(&mut game().rm.sfx_transform);
+            this.as_any().downcast_mut::<CO_Egg>().unwrap().place_egg(g);
+            if_sound_on_play(g, &mut game().rm.sfx_transform);
         } else if movingObjectType == movingobject_star {
             this.mo_mut().dead = false;
-            this.as_any().downcast_mut::<CO_Star>().unwrap().place_star();
-            if_sound_on_play(&mut game().rm.sfx_transform);
+            this.as_any().downcast_mut::<CO_Star>().unwrap().place_star(g);
+            if_sound_on_play(g, &mut game().rm.sfx_transform);
         } else if movingObjectType == movingobject_flag {
             this.mo_mut().dead = false;
-            this.as_any().downcast_mut::<CO_Flag>().unwrap().place_flag();
-            if_sound_on_play(&mut game().rm.sfx_transform);
+            this.as_any().downcast_mut::<CO_Flag>().unwrap().place_flag(g);
+            if_sound_on_play(g, &mut game().rm.sfx_transform);
         } else if movingObjectType == movingobject_bomb {
-            let mut player = get_player_from_global_id(this.mo().iPlayerID);
+            let mut player = get_player_from_global_id(g, this.mo().iPlayerID);
             if !player.is_null() {
                 player.decrease_projectiles_count();
             }
 
-            if_sound_on_play(&mut game().rm.sfx_hit);
+            if_sound_on_play(g, &mut game().rm.sfx_hit);
         } else if movingObjectType == movingobject_phantokey {
             this.mo_mut().dead = false;
-            this.as_any().downcast_mut::<CO_PhantoKey>().unwrap().place_key();
-            if_sound_on_play(&mut game().rm.sfx_transform);
-        } else if game_mode_boxes_minigame == game().game_values.gamemode.gamemode && movingObjectType == movingobject_coin {
+            this.as_any().downcast_mut::<CO_PhantoKey>().unwrap().place_key(g);
+            if_sound_on_play(g, &mut game().rm.sfx_transform);
+        } else if game_mode_boxes_minigame == g.game_values.gamemode.gamemode && movingObjectType == movingobject_coin {
             this.mo_mut().dead = false;
-            this.as_any().downcast_mut::<MO_Coin>().unwrap().place_coin();
-            if_sound_on_play(&mut game().rm.sfx_transform);
-        } else if game().game_values.gamemode.gamemode == game_mode_stomp
+            this.as_any().downcast_mut::<MO_Coin>().unwrap().place_coin(g);
+            if_sound_on_play(g, &mut game().rm.sfx_transform);
+        } else if g.game_values.gamemode.gamemode == game_mode_stomp
             && (movingObjectType == movingobject_goomba
                 || movingObjectType == movingobject_koopa
                 || movingObjectType == movingobject_spiny
                 || movingObjectType == movingobject_buzzybeetle
                 || movingObjectType == movingobject_cheepcheep)
         {
-            if !game().game_values.gamemode.gameover {
-                let mut player = get_player_from_global_id(playerID);
+            if !g.game_values.gamemode.gameover {
+                let mut player = get_player_from_global_id(g, playerID);
 
                 if !player.is_null() {
-                    player.score.adjust_score(1);
+                    player.score.adjust_score(g, 1);
                 }
             }
 
-            if_sound_on_play(&mut game().rm.sfx_hit);
+            if_sound_on_play(g, &mut game().rm.sfx_hit);
         } else {
-            if_sound_on_play(&mut game().rm.sfx_hit);
+            if_sound_on_play(g, &mut game().rm.sfx_hit);
         }
     }
 }
@@ -968,7 +969,7 @@ pub trait IO_MovingObjectTrait: CObjectTrait {
 
     /// Non-virtual in C++; on the trait so it can dispatch to `die()` / downcasts.
     fn kill_object_map_hazard(&mut self, playerID: i16) {
-        io_moving_object_kill_object_map_hazard(self, playerID)
+        io_moving_object_kill_object_map_hazard(game().get(), self, playerID)
     }
 
     /// `static_cast` / `dynamic_cast` hooks for the intermediate bases.

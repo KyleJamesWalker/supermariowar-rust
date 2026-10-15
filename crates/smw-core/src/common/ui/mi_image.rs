@@ -204,7 +204,7 @@ impl UI_ControlTrait for MI_Image {
             };
             self.spr.draw_stretch(&src, unsafe { game().blitdest }, &dst);
         } else {
-            self.spr.draw_src(self.m_pos.x as i32 + iXOffset as i32, self.m_pos.y as i32 + iYOffset as i32, &src);
+            self.spr.draw_src(game().get(), self.m_pos.x as i32 + iXOffset as i32, self.m_pos.y as i32 + iYOffset as i32, &src);
         }
     }
 }

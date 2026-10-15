@@ -1,5 +1,6 @@
 //! Port of src/smw/player_components/PlayerSuperStomp.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::EC_SuperStompExplosion;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::global_constants::*;
@@ -34,7 +35,7 @@ impl PlayerSuperStomp {
         self.superstomp_lock = false;
     }
 
-    pub fn update_on_ground_hit(&mut self, player: &mut CPlayer) {
+    pub fn update_on_ground_hit(&mut self, g: &mut Game, player: &mut CPlayer) {
         if player.inair {
             return;
         }
@@ -51,11 +52,11 @@ impl PlayerSuperStomp {
         //super stomp attack zone, play the sound and show the stomp gfx
         if self.is_stomping {
             unsafe {
-                game().eyecandy[2].emplace(EC_SuperStompExplosion::new(Ptr::from_mut(&mut game().rm.spr_superstomp), player.center_x(), player.bottom_y(), 4));
-                if_sound_on_play(&mut game().rm.sfx_bobombsound);
+                g.eyecandy[2].emplace(EC_SuperStompExplosion::new(Ptr::from_mut(&mut g.rm.spr_superstomp), player.center_x(), player.bottom_y(), 4));
+                if_sound_on_play(g, &mut game().rm.sfx_bobombsound);
                 self.is_stomping = false;
 
-                game().objectcontainer[1].add(Ptr::new_box(MO_AttackZone::new(
+                g.objectcontainer[1].add(Ptr::new_box(MO_AttackZone::new(
                     player.get_global_id(),
                     player.get_team_id(),
                     Vec2s::new((player.left_x() as i32 - 32) as i16, (player.top_y() as i32 + 10) as i16),
@@ -64,7 +65,7 @@ impl PlayerSuperStomp {
                     KillStyle::KuriboShoe,
                     false,
                 )));
-                game().objectcontainer[1].add(Ptr::new_box(MO_AttackZone::new(
+                g.objectcontainer[1].add(Ptr::new_box(MO_AttackZone::new(
                     player.get_global_id(),
                     player.get_team_id(),
                     Vec2s::new(player.right_x(), (player.top_y() as i32 + 10) as i16),

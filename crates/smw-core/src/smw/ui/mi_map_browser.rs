@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_MapBrowser.cpp
 
+use crate::game::Game;
 use crate::common::game::App;
 use crate::common::gfx::gfx_sprite::{gfxSprite, ImageLoader};
 use crate::common::input::CPlayerInput;
@@ -62,20 +63,20 @@ impl MI_MapBrowser {
         }
     }
 
-    pub fn reset(&mut self, type_: i16) {
+    pub fn reset(&mut self, g: &mut Game, type_: i16) {
         self.iType = type_;
 
         unsafe {
             if self.iType == 0 {
-                self.iSelectedIndex = game().maplist.node_at(game().maplist.get_current()).iIndex;
+                self.iSelectedIndex = g.maplist.node_at(g.maplist.get_current()).iIndex;
 
                 self.iFilterTagAnimationTimer = 0;
                 self.iFilterTagAnimationFrame = 72;
 
-                self.iMapCount = game().maplist.count() as i16;
+                self.iMapCount = g.maplist.count() as i16;
             } else {
-                self.iSelectedIndex = game().maplist.node_at(game().maplist.get_current()).iFilteredIndex;
-                self.iMapCount = game().maplist.filtered_count() as i16;
+                self.iSelectedIndex = g.maplist.node_at(g.maplist.get_current()).iFilteredIndex;
+                self.iMapCount = g.maplist.filtered_count() as i16;
             }
         }
 
@@ -83,10 +84,10 @@ impl MI_MapBrowser {
         self.iSelectedCol = self.iSelectedIndex % 3;
         self.iPage = self.iSelectedIndex / 9;
 
-        self.load_page(self.iPage, self.iType == 1);
+        self.load_page(g, self.iPage, self.iType == 1);
     }
 
-    fn load_page(&mut self, page: i16, fUseFilters: bool) {
+    fn load_page(&mut self, g: &mut Game, page: i16, fUseFilters: bool) {
         unsafe {
             for iMap in 0..9i16 {
                 let iIndex: i16 = (iMap as i32 + page as i32 * 9) as i16;
@@ -95,36 +96,36 @@ impl MI_MapBrowser {
                     return;
                 }
 
-                let itr = game().maplist.get_iterator_at(iIndex as u16, fUseFilters);
+                let itr = g.maplist.get_iterator_at(iIndex as u16, fUseFilters);
 
                 //See if we already have a thumbnail saved for this map
 
                 let mut szThumbnail = String::from("maps/cache/");
-                szThumbnail += &get_name_from_file_name(&game().maplist.node_at(itr).filename, false);
+                szThumbnail += &get_name_from_file_name(&g.maplist.node_at(itr).filename, false);
                 szThumbnail += ".png";
 
-                let sConvertedPath = convert_path(&szThumbnail);
+                let sConvertedPath = convert_path(g, &szThumbnail);
 
                 if !file_exists(&sConvertedPath) {
-                    let filename = game().maplist.node_at(itr).filename.clone();
-                    game().g_map.load_map(&filename, read_type_preview);
+                    let filename = g.maplist.node_at(itr).filename.clone();
+                    g.g_map.load_map(&filename, read_type_preview);
                     small_delay(); //Sleeps to help the music from skipping
-                    game().g_map.save_thumbnail(&sConvertedPath, false);
+                    g.g_map.save_thumbnail(&sConvertedPath, false);
                     small_delay();
                 }
 
                 let m = iMap as usize;
                 self.mapSurfaces[m] = ImageLoader::new(&sConvertedPath).without_color_key().create();
 
-                self.mapNames[m] = game().maplist.key_at(itr).to_string();
+                self.mapNames[m] = g.maplist.key_at(itr).to_string();
                 self.mapListItr[m] = itr;
             }
         }
     }
 
     /// `mapListNodes[i]->pfFilters[game_values.selectedmapfilter]`
-    fn node_filter(&self, i: usize) -> bool {
-        unsafe { game().maplist.node_at(self.mapListItr[i]).pfFilters[game().game_values.selectedmapfilter as usize] }
+    fn node_filter(&self, g: &mut Game, i: usize) -> bool {
+        unsafe { g.maplist.node_at(self.mapListItr[i]).pfFilters[g.game_values.selectedmapfilter as usize] }
     }
 }
 
@@ -173,8 +174,8 @@ impl UI_ControlTrait for MI_MapBrowser {
                         let i = (iRow * 3 + iCol) as usize;
                         self.mapSurfaces[i].draw_src_to(&rSrc, game().blitdest, &rDst);
 
-                        if self.iType == 0 && self.node_filter(i) {
-                            game().rm.menu_map_filter.draw_src(rDst.x, rDst.y, &filterSrc);
+                        if self.iType == 0 && self.node_filter(game().get(), i) {
+                            game().rm.menu_map_filter.draw_src(game().get(), rDst.x, rDst.y, &filterSrc);
                         }
 
                         game().rm.menu_font_large.draw_chop_right(rDst.x, rDst.y + 120, 165, &self.mapNames[i]);
@@ -186,16 +187,16 @@ impl UI_ControlTrait for MI_MapBrowser {
             rDst.y = self.iSelectedRow as i32 * 150 + 30;
             rDst.x = self.iSelectedCol as i32 * 200 + 40;
 
-            game().rm.menu_dialog.draw_src(rDst.x - 16, rDst.y - 16, &SDL_Rect { x: 0, y: 0, w: 176, h: 148 });
-            game().rm.menu_dialog.draw_src(rDst.x + 160, rDst.y - 16, &SDL_Rect { x: 496, y: 0, w: 16, h: 148 });
-            game().rm.menu_dialog.draw_src(rDst.x - 16, rDst.y + 132, &SDL_Rect { x: 0, y: 464, w: 176, h: 16 });
-            game().rm.menu_dialog.draw_src(rDst.x + 160, rDst.y + 132, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+            game().rm.menu_dialog.draw_src(game().get(), rDst.x - 16, rDst.y - 16, &SDL_Rect { x: 0, y: 0, w: 176, h: 148 });
+            game().rm.menu_dialog.draw_src(game().get(), rDst.x + 160, rDst.y - 16, &SDL_Rect { x: 496, y: 0, w: 16, h: 148 });
+            game().rm.menu_dialog.draw_src(game().get(), rDst.x - 16, rDst.y + 132, &SDL_Rect { x: 0, y: 464, w: 176, h: 16 });
+            game().rm.menu_dialog.draw_src(game().get(), rDst.x + 160, rDst.y + 132, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
 
             let sel = (self.iSelectedRow * 3 + self.iSelectedCol) as usize;
             self.mapSurfaces[sel].draw_src_to(&rSrc, game().blitdest, &rDst);
 
-            if self.iType == 0 && self.node_filter(sel) {
-                game().rm.menu_map_filter.draw_src(rDst.x, rDst.y, &filterSrc);
+            if self.iType == 0 && self.node_filter(game().get(), sel) {
+                game().rm.menu_map_filter.draw_src(game().get(), rDst.x, rDst.y, &filterSrc);
             }
 
             game().rm.menu_font_large.draw_chop_right(rDst.x, rDst.y + 120, 165, &self.mapNames[sel]);
@@ -238,7 +239,7 @@ impl UI_ControlTrait for MI_MapBrowser {
                     self.iPage = self.iSelectedIndex / 9;
 
                     if iOldPage != self.iPage {
-                        self.load_page(self.iPage, self.iType == 1);
+                        self.load_page(game().get(), self.iPage, self.iType == 1);
                     }
 
                     return MENU_CODE_NONE;
@@ -263,7 +264,7 @@ impl UI_ControlTrait for MI_MapBrowser {
                     self.iPage = self.iSelectedIndex / 9;
 
                     if iOldPage != self.iPage {
-                        self.load_page(self.iPage, self.iType == 1);
+                        self.load_page(game().get(), self.iPage, self.iType == 1);
                     }
 
                     return MENU_CODE_NONE;
@@ -286,7 +287,7 @@ impl UI_ControlTrait for MI_MapBrowser {
                         if self.iSelectedRow < 0 {
                             self.iSelectedRow = 2;
                             self.iPage -= 1;
-                            self.load_page(self.iPage, self.iType == 1);
+                            self.load_page(game().get(), self.iPage, self.iType == 1);
                         }
                     }
 
@@ -310,7 +311,7 @@ impl UI_ControlTrait for MI_MapBrowser {
                         if self.iSelectedRow > 2 {
                             self.iSelectedRow = 0;
                             self.iPage += 1;
-                            self.load_page(self.iPage, self.iType == 1);
+                            self.load_page(game().get(), self.iPage, self.iType == 1);
                         }
                     }
 

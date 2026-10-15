@@ -1,5 +1,6 @@
 //! Port of src/smw/player_components/PlayerSuicideTimer.cpp
 
+use crate::game::Game;
 use crate::common::global_constants::*;
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
@@ -25,18 +26,18 @@ impl PlayerSuicideTimer {
         self.displaytimer = 2;
     }
 
-    pub fn update(&mut self, player: &mut CPlayer) {
+    pub fn update(&mut self, g: &mut Game, player: &mut CPlayer) {
         unsafe {
-            if game().game_values.gamemode.gameover || game().game_values.singleplayermode >= 0 {
+            if g.game_values.gamemode.gameover || g.game_values.singleplayermode >= 0 {
                 self.reset();
             }
 
             if !player.is_invincible()
                 && !player.is_frozen()
-                && game().game_values.suicidetime > 0
+                && g.game_values.suicidetime > 0
                 && {
                     self.timer = self.timer.wrapping_add(1);
-                    self.timer > game().game_values.suicidetime
+                    self.timer > g.game_values.suicidetime
                 }
             {
                 self.counttimer = self.counttimer.wrapping_add(1);
@@ -52,10 +53,10 @@ impl PlayerSuicideTimer {
         }
     }
 
-    pub fn draw(&mut self, player: &mut CPlayer) {
+    pub fn draw(&mut self, g: &mut Game, player: &mut CPlayer) {
         unsafe {
-            if self.timer > game().game_values.suicidetime {
-                game().rm.spr_awardkillsinrow.draw_src(
+            if self.timer > g.game_values.suicidetime {
+                game().rm.spr_awardkillsinrow.draw_src(g, 
                     player.left_x() as i32 - PWOFFSET + 8,
                     player.top_y() as i32 - PHOFFSET + 8,
                     &SDL_Rect { x: (self.displaytimer as i32) << 4, y: (player.get_color_id() as i32) << 4, w: 16, h: 16 },

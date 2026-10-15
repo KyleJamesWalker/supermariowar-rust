@@ -1,5 +1,6 @@
 //! Port of src/smw/ai.cpp
 
+use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_mode::*;
 use crate::common::global_constants::*;
@@ -126,10 +127,10 @@ pub trait CPlayerAITrait {
         self.ai().pPlayer = player;
     }
     fn init(&mut self) {
-        cplayer_ai_init(self.ai())
+        cplayer_ai_init(game().get(), self.ai())
     }
     fn think(&mut self, playerKeys: Ptr<COutputControl>) {
-        cplayer_ai_think(self.ai(), playerKeys)
+        cplayer_ai_think(game().get(), self.ai(), playerKeys)
     }
 }
 
@@ -180,9 +181,9 @@ fn static_cast<T: Any>(obj: Ptr<dyn CObjectTrait>) -> Ptr<T> {
 }
 
 /// `dynamic_cast<T*>(game_values.gamemode)`
-fn dynamic_cast_gamemode<T: Any>() -> Ptr<T> {
+fn dynamic_cast_gamemode<T: Any>(g: &mut Game) -> Ptr<T> {
     unsafe {
-        let gm = game().game_values.gamemode;
+        let gm = g.game_values.gamemode;
         if gm.is_null() {
             return Ptr::null();
         }
@@ -195,7 +196,7 @@ fn dynamic_cast_gamemode<T: Any>() -> Ptr<T> {
 
 /// `(T*)game_values.gamemode`
 fn static_cast_gamemode<T: Any>() -> Ptr<T> {
-    let p = dynamic_cast_gamemode::<T>();
+    let p = dynamic_cast_gamemode::<T>(game().get());
     if p.is_null() {
         panic!("ai: bad static_cast of gamemode to {}", std::any::type_name::<T>());
     }
@@ -223,23 +224,23 @@ fn in_map(x: i32, y: i32) -> bool {
 }
 
 /// One byte of the C++ CMap object at `off`, for the members between mapdata and blockdata.
-unsafe fn cmap_byte(off: i32) -> u8 {
+unsafe fn cmap_byte(g: &mut Game, off: i32) -> u8 {
     let cells = MAPWIDTH * MAPHEIGHT;
     if (CMAP_OFF_MAPDATA..CMAP_OFF_MAPDATA + cells * MAPLAYERS * 6).contains(&off) {
         let rel = off - CMAP_OFF_MAPDATA;
         let e = rel / 6;
-        let t = &game().g_map.mapdata[(e / (MAPHEIGHT * MAPLAYERS)) as usize][((e / MAPLAYERS) % MAPHEIGHT) as usize][(e % MAPLAYERS) as usize];
+        let t = &g.g_map.mapdata[(e / (MAPHEIGHT * MAPLAYERS)) as usize][((e / MAPLAYERS) % MAPHEIGHT) as usize][(e % MAPLAYERS) as usize];
         let v = [t.iID, t.iCol, t.iRow][((rel % 6) / 2) as usize];
         return v.to_le_bytes()[(rel % 2) as usize];
     }
     if (CMAP_OFF_MAPDATATOP..CMAP_OFF_MAPDATATOP + cells).contains(&off) {
         let e = off - CMAP_OFF_MAPDATATOP;
-        return game().g_map.mapdatatop[(e / MAPHEIGHT) as usize][(e % MAPHEIGHT) as usize].0;
+        return g.g_map.mapdatatop[(e / MAPHEIGHT) as usize][(e % MAPHEIGHT) as usize].0;
     }
     if (CMAP_OFF_OBJECTDATA..CMAP_OFF_OBJECTDATA + cells * CMAP_SIZEOF_MAPBLOCK).contains(&off) {
         let rel = off - CMAP_OFF_OBJECTDATA;
         let e = rel / CMAP_SIZEOF_MAPBLOCK;
-        let b = &game().g_map.objectdata[(e / MAPHEIGHT) as usize][(e % MAPHEIGHT) as usize];
+        let b = &g.g_map.objectdata[(e / MAPHEIGHT) as usize][(e % MAPHEIGHT) as usize];
         let r = rel % CMAP_SIZEOF_MAPBLOCK;
         return match r {
             0..=1 => b.iType.to_le_bytes()[r as usize],
@@ -250,12 +251,12 @@ unsafe fn cmap_byte(off: i32) -> u8 {
     }
     if (CMAP_OFF_NOSPAWN..CMAP_OFF_NOSPAWN + NUMSPAWNAREATYPES * cells).contains(&off) {
         let rel = off - CMAP_OFF_NOSPAWN;
-        return game().g_map.nospawn[(rel / cells) as usize][((rel % cells) / MAPHEIGHT) as usize][(rel % MAPHEIGHT) as usize] as u8;
+        return g.g_map.nospawn[(rel / cells) as usize][((rel % cells) / MAPHEIGHT) as usize][(rel % MAPHEIGHT) as usize] as u8;
     }
     if (CMAP_OFF_WARPDATA..CMAP_OFF_NUMWARPEXITS).contains(&off) {
         let rel = off - CMAP_OFF_WARPDATA;
         let e = rel / 8;
-        let w = &game().g_map.warpdata[(e / MAPHEIGHT) as usize][(e % MAPHEIGHT) as usize];
+        let w = &g.g_map.warpdata[(e / MAPHEIGHT) as usize][(e % MAPHEIGHT) as usize];
         let r = (rel % 8) as usize;
         return match r {
             0..=3 => (w.direction as i32).to_le_bytes()[r],
@@ -265,11 +266,11 @@ unsafe fn cmap_byte(off: i32) -> u8 {
     }
     if (CMAP_OFF_NUMWARPEXITS..CMAP_OFF_WARPEXITS).contains(&off) {
         let r = (off - CMAP_OFF_NUMWARPEXITS) as usize;
-        return if r < 2 { game().g_map.numwarpexits.to_le_bytes()[r] } else { 0 };
+        return if r < 2 { g.g_map.numwarpexits.to_le_bytes()[r] } else { 0 };
     }
     if (CMAP_OFF_WARPEXITS..CMAP_OFF_WARPLOCKTIMER).contains(&off) {
         let rel = off - CMAP_OFF_WARPEXITS;
-        let x = &game().g_map.warpexits[(rel / CMAP_SIZEOF_WARPEXIT) as usize];
+        let x = &g.g_map.warpexits[(rel / CMAP_SIZEOF_WARPEXIT) as usize];
         let r = (rel % CMAP_SIZEOF_WARPEXIT) as usize;
         if r < 4 {
             return (x.direction as i32).to_le_bytes()[r];
@@ -279,43 +280,43 @@ unsafe fn cmap_byte(off: i32) -> u8 {
     }
     if (CMAP_OFF_WARPLOCKTIMER..CMAP_OFF_WARPLOCKED).contains(&off) {
         let rel = (off - CMAP_OFF_WARPLOCKTIMER) as usize;
-        return game().g_map.warplocktimer[rel / 2].to_le_bytes()[rel % 2];
+        return g.g_map.warplocktimer[rel / 2].to_le_bytes()[rel % 2];
     }
     if (CMAP_OFF_WARPLOCKED..CMAP_OFF_MAXCONNECTION).contains(&off) {
-        return game().g_map.warplocked[(off - CMAP_OFF_WARPLOCKED) as usize] as u8;
+        return g.g_map.warplocked[(off - CMAP_OFF_WARPLOCKED) as usize] as u8;
     }
     panic!("ai: C++ out-of-bounds CMap read at offset {} is not modelled", off);
 }
 
 unsafe fn cmap_i16(off: i32) -> i16 {
-    i16::from_le_bytes([cmap_byte(off), cmap_byte(off + 1)])
+    i16::from_le_bytes([cmap_byte(game().get(), off), cmap_byte(game().get(), off + 1)])
 }
 
 unsafe fn cmap_i32(off: i32) -> i32 {
-    i32::from_le_bytes([cmap_byte(off), cmap_byte(off + 1), cmap_byte(off + 2), cmap_byte(off + 3)])
+    i32::from_le_bytes([cmap_byte(game().get(), off), cmap_byte(game().get(), off + 1), cmap_byte(game().get(), off + 2), cmap_byte(game().get(), off + 3)])
 }
 
 /// `g_map->map(x, y)`, including the C++ out-of-bounds reads.
-unsafe fn ai_map(x: i32, y: i32) -> i32 {
+unsafe fn ai_map(g: &mut Game, x: i32, y: i32) -> i32 {
     if in_map(x, y) {
-        return game().g_map.map(x, y);
+        return g.g_map.map(x, y);
     }
-    tile_to_flags(TileType(cmap_byte(CMAP_OFF_MAPDATATOP + x * MAPHEIGHT + y))) as i32
+    tile_to_flags(TileType(cmap_byte(g, CMAP_OFF_MAPDATATOP + x * MAPHEIGHT + y))) as i32
 }
 
 /// `g_map->block(x, y) != NULL`, including the C++ out-of-bounds reads.
-unsafe fn ai_block_nonnull(x: i16, y: i16) -> bool {
+unsafe fn ai_block_nonnull(g: &mut Game, x: i16, y: i16) -> bool {
     if in_map(x as i32, y as i32) {
-        return !game().g_map.block(x, y).is_null();
+        return !g.g_map.block(x, y).is_null();
     }
     let off = CMAP_OFF_BLOCKDATA + (x as i32 * MAPHEIGHT + y as i32) * 8;
-    (0..8).any(|i| cmap_byte(off + i) != 0)
+    (0..8).any(|i| cmap_byte(g, off + i) != 0)
 }
 
 /// `&warpdata[x][y]` as (direction, connection, id), including the C++ out-of-bounds reads.
-unsafe fn ai_warp(x: i16, y: i16) -> (i32, i16, i16) {
+unsafe fn ai_warp(g: &mut Game, x: i16, y: i16) -> (i32, i16, i16) {
     if in_map(x as i32, y as i32) {
-        let w = &game().g_map.warpdata[x as usize][y as usize];
+        let w = &g.g_map.warpdata[x as usize][y as usize];
         return (w.direction as i32, w.connection, w.id);
     }
     let off = CMAP_OFF_WARPDATA + (x as i32 * MAPHEIGHT + y as i32) * 8;
@@ -323,21 +324,21 @@ unsafe fn ai_warp(x: i16, y: i16) -> (i32, i16, i16) {
 }
 
 /// `g_map->checkforwarp(x1, x2, y, 2)`, including the C++ out-of-bounds reads.
-unsafe fn ai_checkforwarp_up(x1: i16, x2: i16, y: i16) -> bool {
+unsafe fn ai_checkforwarp_up(g: &mut Game, x1: i16, x2: i16, y: i16) -> bool {
     if in_map(x1 as i32, y as i32) && in_map(x2 as i32, y as i32) {
-        return game().g_map.checkforwarp(x1, x2, y, 2);
+        return g.g_map.checkforwarp(x1, x2, y, 2);
     }
-    let w1 = ai_warp(x1, y);
-    let w2 = ai_warp(x2, y);
+    let w1 = ai_warp(g, x1, y);
+    let w2 = ai_warp(g, x2, y);
     if !(w1.0 == w2.0 && w1.2 == w2.2 && w1.0 == 2) {
         return false;
     }
-    let locked = if (0..10).contains(&w1.1) { game().g_map.warplocked[w1.1 as usize] as u8 } else { cmap_byte(CMAP_OFF_WARPLOCKED + w1.1 as i32) };
+    let locked = if (0..10).contains(&w1.1) { g.g_map.warplocked[w1.1 as usize] as u8 } else { cmap_byte(g, CMAP_OFF_WARPLOCKED + w1.1 as i32) };
     if locked != 0 {
         return false;
     }
     let locktimer = if (0..32).contains(&w1.2) {
-        game().g_map.warpexits[w1.2 as usize].locktimer
+        g.g_map.warpexits[w1.2 as usize].locktimer
     } else {
         cmap_i16(CMAP_OFF_WARPEXITS + w1.2 as i32 * CMAP_SIZEOF_WARPEXIT + 22)
     };
@@ -412,7 +413,7 @@ impl CPlayerAI {
         self.pPlayer = player;
     }
 
-    pub fn get_nearest_objects(&mut self) {
+    pub fn get_nearest_objects(&mut self, g: &mut Game) {
         unsafe {
             self.nearestObjects.reset();
 
@@ -422,9 +423,9 @@ impl CPlayerAI {
             let fInvincible = pPlayer.is_invincible() || pPlayer.is_shielded() || pPlayer.shyguy;
             let iTeamID: i16 = pPlayer.teamID;
 
-            let n = game().objectcontainer[1].list().len();
+            let n = g.objectcontainer[1].list().len();
             for i in 0..n {
-                let mut obj = game().objectcontainer[1].list()[i];
+                let mut obj = g.objectcontainer[1].list()[i];
                 if self.attentionObjects.contains_key(&obj.network_id()) {
                     //DistanceToObject(object, &nearestObjects.threat, &nearestObjects.threatdistance, &nearestObjects.threatwrap);
                     continue;
@@ -513,7 +514,7 @@ impl CPlayerAI {
                             let mut starmode = static_cast_gamemode::<CGM_Star>();
                             let mut star = static_cast::<CO_Star>(obj);
 
-                            if star.get_type() == 1 || starmode.isplayerstar(pPlayer) {
+                            if star.get_type() == 1 || starmode.isplayerstar(g, pPlayer) {
                                 nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
                             } else {
                                 nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
@@ -626,9 +627,9 @@ impl CPlayerAI {
                 }
             }
 
-            let n = game().objectcontainer[0].list().len();
+            let n = g.objectcontainer[0].list().len();
             for i in 0..n {
-                let mut obj = game().objectcontainer[0].list()[i];
+                let mut obj = g.objectcontainer[0].list()[i];
                 if self.attentionObjects.contains_key(&obj.network_id()) {
                     //DistanceToObject(object, &nearestObjects.threat, &nearestObjects.threatdistance, &nearestObjects.threatwrap);
                     continue;
@@ -694,9 +695,9 @@ impl CPlayerAI {
                 }
             }
 
-            let n = game().objectcontainer[2].list().len();
+            let n = g.objectcontainer[2].list().len();
             for i in 0..n {
-                let mut obj = game().objectcontainer[2].list()[i];
+                let mut obj = g.objectcontainer[2].list()[i];
                 if self.attentionObjects.contains_key(&obj.network_id()) {
                     //DistanceToObject(object, &nearestObjects.threat, &nearestObjects.threatdistance, &nearestObjects.threatwrap);
                     continue;
@@ -766,7 +767,7 @@ impl CPlayerAI {
                         nearest!(self.distance_to_object_center(obj, threat, threatdistance, threatwrap));
                     }
                     object_race_goal => {
-                        if game().game_values.gamemode.gamemode != game_mode_race {
+                        if g.game_values.gamemode.gamemode != game_mode_race {
                             continue;
                         }
 
@@ -785,33 +786,33 @@ impl CPlayerAI {
                 }
             }
 
-            let gmChicken = dynamic_cast_gamemode::<CGM_Chicken>();
+            let gmChicken = dynamic_cast_gamemode::<CGM_Chicken>(g);
 
             //Figure out where the other players are
             for iPlayer in 0..game().players.len() {
-                if iPlayer == pPlayer.localID as usize || game().players[iPlayer].state != PlayerState::Ready {
+                if iPlayer == pPlayer.localID as usize || g.players[iPlayer].state != PlayerState::Ready {
                     continue;
                 }
 
                 //Find players in jail on own team to tag
-                if game().game_values.gamemode.gamemode == game_mode_jail {
-                    if game().players[iPlayer].jail.is_active() && game().players[iPlayer].teamID == iTeamID {
-                        nearest!(self.distance_to_player(game().players[iPlayer], teammate, teammatedistance, teammatewrap));
+                if g.game_values.gamemode.gamemode == game_mode_jail {
+                    if g.players[iPlayer].jail.is_active() && g.players[iPlayer].teamID == iTeamID {
+                        nearest!(self.distance_to_player(g.players[iPlayer], teammate, teammatedistance, teammatewrap));
                     }
                 }
 
-                if game().players[iPlayer].teamID == iTeamID || game().players[iPlayer].state != PlayerState::Ready {
+                if g.players[iPlayer].teamID == iTeamID || g.players[iPlayer].state != PlayerState::Ready {
                     continue;
                 }
 
                 //If there is a chicken, only focus on stomping him
                 if !gmChicken.is_null() && !gmChicken.chicken().is_null() {
-                    if gmChicken.chicken().teamID != iTeamID && gmChicken.chicken() != game().players[iPlayer] {
+                    if gmChicken.chicken().teamID != iTeamID && gmChicken.chicken() != g.players[iPlayer] {
                         continue;
                     }
                 }
 
-                nearest!(self.distance_to_player(game().players[iPlayer], player, playerdistance, playerwrap));
+                nearest!(self.distance_to_player(g.players[iPlayer], player, playerdistance, playerwrap));
             }
         }
     }
@@ -894,16 +895,16 @@ impl CPlayerAI {
 }
 
 //Setup AI so that it can ignore or pay attention to some objects
-pub fn cplayer_ai_init(this: &mut CPlayerAI) {
+pub fn cplayer_ai_init(g: &mut Game, this: &mut CPlayerAI) {
     unsafe {
         //Scan yoshi's egg mode objects to make sure that we ignore eggs without matching yoshis
-        if game().game_values.gamemode.gamemode == game_mode_eggs {
+        if g.game_values.gamemode.gamemode == game_mode_eggs {
             let mut fYoshi: [bool; 4] = [false, false, false, false];
 
             //Scan Yoshis to see which ones are present
-            let n = game().objectcontainer[1].list().len();
+            let n = g.objectcontainer[1].list().len();
             for i in 0..n {
-                let obj = game().objectcontainer[1].list()[i];
+                let obj = g.objectcontainer[1].list()[i];
                 let mut yoshi = dynamic_cast::<MO_Yoshi>(obj);
                 if !yoshi.is_null() {
                     fYoshi[yoshi.get_color() as usize] = true;
@@ -911,9 +912,9 @@ pub fn cplayer_ai_init(this: &mut CPlayerAI) {
             }
 
             //Now scan eggs and ignore any egg that doesn't have a yoshi
-            let n = game().objectcontainer[1].list().len();
+            let n = g.objectcontainer[1].list().len();
             for i in 0..n {
-                let obj = game().objectcontainer[1].list()[i];
+                let obj = g.objectcontainer[1].list()[i];
                 let mut egg = dynamic_cast::<CO_Egg>(obj);
                 if !egg.is_null() {
                     if !fYoshi[egg.get_color() as usize] {
@@ -931,7 +932,7 @@ pub fn cplayer_ai_init(this: &mut CPlayerAI) {
     }
 }
 
-pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
+pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
     let mut playerKeys = playerKeys;
     let mut pPlayer = this.pPlayer;
 
@@ -943,7 +944,7 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
         playerKeys.game_right_mut().fDown = false;
 
         //A percentage of the time the cpu will do nothing based on the difficulty level
-        if RandomNumberGenerator::generator().get_boolean_threshold(100, iDecisionPercentage[game().game_values.cpudifficulty as usize] as i32)
+        if RandomNumberGenerator::generator().get_boolean_threshold(100, iDecisionPercentage[g.game_values.cpudifficulty as usize] as i32)
             && pPlayer.isready()
         {
             return;
@@ -958,15 +959,15 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
             return;
         }
 
-        let mut gmChicken = dynamic_cast_gamemode::<CGM_Chicken>();
-        let mut gmTag = dynamic_cast_gamemode::<CGM_Tag>();
+        let mut gmChicken = dynamic_cast_gamemode::<CGM_Chicken>(g);
+        let mut gmTag = dynamic_cast_gamemode::<CGM_Tag>(g);
 
         /***************************************************
          * 1. Figure out what objects are nearest to us
          ***************************************************/
-        this.get_nearest_objects();
+        this.get_nearest_objects(g);
 
-        let iTenSeconds: i16 = (15 * iDecisionPercentage[game().game_values.cpudifficulty as usize] as i32 / 10) as i16;
+        let iTenSeconds: i16 = (15 * iDecisionPercentage[g.game_values.cpudifficulty as usize] as i32 / 10) as i16;
 
         //If there is a goal, then make sure we aren't paying attention to it for too long
         if !this.nearestObjects.goal.is_null() {
@@ -1006,7 +1007,7 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
             this.attentionObjects.remove(td);
         }
 
-        let iStoredPowerup: i16 = game().game_values.gamepowerups[pPlayer.globalID as usize];
+        let iStoredPowerup: i16 = g.game_values.gamepowerups[pPlayer.globalID as usize];
         let mut carriedItem = pPlayer.carriedItem;
         let carriedObj = carried_as_object(carriedItem);
         let ix: i16 = pPlayer.ix;
@@ -1096,7 +1097,7 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
                 let piy = player.iy as i32;
 
                 //Move player relative to opponent when we are playing star mode and we are holding a star
-                if game().game_values.gamemode.gamemode == game_mode_star {
+                if g.game_values.gamemode.gamemode == game_mode_star {
                     if !carriedItem.is_null() && carriedItem.get_moving_object_type() == movingobject_star {
                         if static_cast::<CO_Star>(carriedObj).get_type() == 1 {
                             *moveAway = true;
@@ -1106,7 +1107,7 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
                             //If player is close
                             if piy <= iy32 && piy > iy32 - 60 && pix - ix32 < 90 && pix - ix32 > -90 {
                                 //And we are facing toward that player, throw the star
-                                if (pix > ix32 && pPlayer.is_facing_right()) || ((pix < ix32) && !pPlayer.is_facing_right()) {
+                                if (pix > ix32 && pPlayer.is_facing_right(g)) || ((pix < ix32) && !pPlayer.is_facing_right(g)) {
                                     pPlayer.throw_star = 30;
                                     playerKeys.game_turbo_mut().fDown = false;
                                 }
@@ -1124,7 +1125,7 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
                         //If player is close
                         if piy > iy32 - 10 && piy < iy32 + 30 && (pix - ix32).abs() < 150 {
                             //And we are facing toward that player, throw the projectile
-                            if (pix > ix32 && pPlayer.is_facing_right()) || ((pix < ix32) && !pPlayer.is_facing_right()) {
+                            if (pix > ix32 && pPlayer.is_facing_right(g)) || ((pix < ix32) && !pPlayer.is_facing_right(g)) {
                                 playerKeys.game_turbo_mut().fDown = false;
                             }
                         }
@@ -1337,16 +1338,16 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
 
         //"Star Mode" specific stuff
         //Drop the star if we're not it
-        if game().game_values.gamemode.gamemode == game_mode_star {
+        if g.game_values.gamemode.gamemode == game_mode_star {
             let mut starmode = static_cast_gamemode::<CGM_Star>();
 
             if !carriedItem.is_null()
                 && carriedItem.get_moving_object_type() == movingobject_star
                 && static_cast::<CO_Star>(carriedObj).get_type() == 0
-                && !starmode.isplayerstar(pPlayer)
+                && !starmode.isplayerstar(g, pPlayer)
             {
                 playerKeys.game_turbo_mut().fDown = false;
-            } else if starmode.isplayerstar(pPlayer) && pPlayer.throw_star == 0 {
+            } else if starmode.isplayerstar(g, pPlayer) && pPlayer.throw_star == 0 {
                 playerKeys.game_turbo_mut().fDown = true;
             }
         }
@@ -1356,7 +1357,7 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
             let no = &this.nearestObjects;
 
             //"Phanto Mode" specific stuff
-            if game().game_values.gamemode.gamemode == game_mode_chase {
+            if g.game_values.gamemode.gamemode == game_mode_chase {
                 //Ignore the key if a phanto is really close
                 if !no.threat.is_null()
                     && no.threat.get().get_object_type() == object_phanto
@@ -1369,12 +1370,12 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
                     let carriedID = carriedItem.network_id();
                     if let Some(ao) = this.attentionObjects.get_mut(&carriedID) {
                         ao.iType = 1;
-                        ao.iTimer = iDecisionPercentage[game().game_values.cpudifficulty as usize] / 3;
+                        ao.iTimer = iDecisionPercentage[g.game_values.cpudifficulty as usize] / 3;
                     } else {
                         let ao = Box::new(AttentionObject {
                             iID: carriedID,
                             iType: 1,
-                            iTimer: iDecisionPercentage[game().game_values.cpudifficulty as usize] / 3,
+                            iTimer: iDecisionPercentage[g.game_values.cpudifficulty as usize] / 3,
                         });
                         this.attentionObjects.insert(ao.iID, ao);
                     }
@@ -1419,8 +1420,8 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
         //short depth = -1;
         // `break 'ExitDeathCheck` is the C++ `goto ExitDeathCheck`.
         'ExitDeathCheck: while (iDeathY as i32) < MAPHEIGHT {
-            let ttLeftTile: i32 = ai_map(iDeathX1 as i32, iDeathY as i32);
-            let ttRightTile: i32 = ai_map(iDeathX2 as i32, iDeathY as i32);
+            let ttLeftTile: i32 = ai_map(g, iDeathX1 as i32, iDeathY as i32);
+            let ttRightTile: i32 = ai_map(g, iDeathX2 as i32, iDeathY as i32);
 
             let fDeathTileUnderPlayer1 = ((ttLeftTile & tile_flag_death_on_top) != 0 && (ttRightTile & tile_flag_death_on_top) != 0)
                 || ((ttLeftTile & tile_flag_death_on_top) != 0 && (ttRightTile & tile_flag_solid) == 0)
@@ -1434,10 +1435,10 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
                 break 'ExitDeathCheck;
             } else if (ttLeftTile & tile_flag_solid) != 0
                 || (ttLeftTile & tile_flag_solid_on_top) != 0
-                || ai_block_nonnull(iDeathX1, iDeathY)
+                || ai_block_nonnull(g, iDeathX1, iDeathY)
                 || (ttRightTile & tile_flag_solid) != 0
                 || (ttRightTile & tile_flag_solid_on_top) != 0
-                || ai_block_nonnull(iDeathX2, iDeathY)
+                || ai_block_nonnull(g, iDeathX2, iDeathY)
             {
                 this.iFallDanger = 0;
                 break 'ExitDeathCheck;
@@ -1445,10 +1446,10 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
 
             //Look through all platforms and see if we are hitting solid or death tiles in them
             let mut iPlatform: i16 = 0;
-            while (iPlatform as usize) < game().g_map.platforms.len() {
-                let lefttile: i32 = game().g_map.platforms[iPlatform as usize].get_tile_type_from_coord(ix, ((iDeathY as i32) << 5) as i16);
+            while (iPlatform as usize) < g.g_map.platforms.len() {
+                let lefttile: i32 = g.g_map.platforms[iPlatform as usize].get_tile_type_from_coord(ix, ((iDeathY as i32) << 5) as i16);
                 let righttile: i32 =
-                    game().g_map.platforms[iPlatform as usize].get_tile_type_from_coord((ix32 + PW) as i16, ((iDeathY as i32) << 5) as i16);
+                    g.g_map.platforms[iPlatform as usize].get_tile_type_from_coord((ix32 + PW) as i16, ((iDeathY as i32) << 5) as i16);
 
                 let fDeathTileUnderPlayer2 = ((lefttile & tile_flag_death_on_top) != 0 && (righttile & tile_flag_death_on_top) != 0)
                     || ((lefttile & tile_flag_death_on_top) != 0 && (righttile & tile_flag_solid) == 0)
@@ -1502,12 +1503,12 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
 
         let mut heightlimit: i16 = 3;
         while iDeathY >= 0 && heightlimit > 0 {
-            let ttLeftTile: i32 = ai_map(iDeathX1 as i32, iDeathY as i32);
-            let ttRightTile: i32 = ai_map(iDeathX2 as i32, iDeathY as i32);
+            let ttLeftTile: i32 = ai_map(g, iDeathX1 as i32, iDeathY as i32);
+            let ttRightTile: i32 = ai_map(g, iDeathX2 as i32, iDeathY as i32);
 
             if heightlimit == 2
                 && ((ttLeftTile & tile_flag_solid) != 0 || (ttRightTile & tile_flag_solid) != 0)
-                && !ai_checkforwarp_up(iDeathX1, iDeathX2, iDeathY)
+                && !ai_checkforwarp_up(g, iDeathX1, iDeathX2, iDeathY)
             {
                 //Avoid jumping wildly in 1 tile high gaps
                 playerKeys.game_jump_mut().fDown = false;
@@ -1515,8 +1516,8 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
 
             if ((ttLeftTile & tile_flag_solid) != 0 && (ttLeftTile & tile_flag_death_on_bottom) == 0)
                 || ((ttRightTile & tile_flag_solid) != 0 && (ttRightTile & tile_flag_death_on_bottom) == 0)
-                || ai_block_nonnull(iDeathX1, iDeathY)
-                || ai_block_nonnull(iDeathX2, iDeathY)
+                || ai_block_nonnull(g, iDeathX1, iDeathY)
+                || ai_block_nonnull(g, iDeathX2, iDeathY)
             {
                 break;
             } else if (ttLeftTile & tile_flag_death_on_bottom) != 0 || (ttRightTile & tile_flag_death_on_bottom) != 0 {
@@ -1563,10 +1564,10 @@ pub fn cplayer_ai_think(this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
                     PowerupType::MysteryMushroom => {
                         //See if another player has a powerup
                         for iPlayer in 0..game().players.len() {
-                            if iPlayer == pPlayer.localID as usize || game().players[iPlayer].teamID == iTeamID {
+                            if iPlayer == pPlayer.localID as usize || g.players[iPlayer].teamID == iTeamID {
                                 continue;
                             }
-                            if game().game_values.gamepowerups[game().players[iPlayer].globalID as usize] > 0 {
+                            if g.game_values.gamepowerups[g.players[iPlayer].globalID as usize] > 0 {
                                 return true;
                             }
                         }

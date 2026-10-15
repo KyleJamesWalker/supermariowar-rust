@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/MiniBoxes.cpp
 
+use crate::game::Game;
 use crate::common::game_mode::{game_mode_boxes_minigame, CGameMode, CGameModeTrait};
 use crate::common::game_values::if_sound_on_play;
 use crate::common::math::trig::{cosf, sinf};
@@ -40,7 +41,7 @@ impl CGM_Boxes_MiniGame {
         this
     }
 
-    fn release_coin(&mut self, mut player: Ptr<CPlayer>) {
+    fn release_coin(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) {
         if player.score().subscore[0] > 0 {
             player.score().subscore[0] -= 1;
 
@@ -51,16 +52,16 @@ impl CGM_Boxes_MiniGame {
             let vel = Vec2f::new(speed * cosf(angle), speed * sinf(angle));
 
             unsafe {
-                if_sound_on_play(&mut game().rm.sfx_coin);
+                if_sound_on_play(g, &mut game().rm.sfx_coin);
 
-                game().objectcontainer[1].add(Ptr::new_box(MO_Coin::new(Ptr::from_mut(&mut game().rm.spr_coin), vel, pos, 2, -1, 2, 30, false)));
+                g.objectcontainer[1].add(Ptr::new_box(MO_Coin::new(Ptr::from_mut(&mut g.rm.spr_coin), vel, pos, 2, -1, 2, 30, false)));
             }
         }
     }
 
     fn release_all_coins_from_team(&mut self, mut player: Ptr<CPlayer>) {
         while player.score().subscore[0] > 0 {
-            self.release_coin(player);
+            self.release_coin(game().get(), player);
         }
     }
 }
@@ -77,7 +78,7 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
     }
 
     fn init(&mut self) {
-        gm::cgamemode_init(self);
+        gm::cgamemode_init(game().get(), self);
 
         self.fReverseScoring = false;
 
@@ -91,7 +92,7 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
 
     fn think(&mut self) {
         if self.gameover {
-            self.displayplayertext();
+            self.displayplayertext(game().get());
         }
     }
 
@@ -100,9 +101,9 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
             return PlayerKillType::Normal;
         }
 
-        self.release_coin(other);
+        self.release_coin(game().get(), other);
 
-        other.score().adjust_score(-1);
+        other.score().adjust_score(game().get(), -1);
 
         if !self.playedwarningsound {
             let mut countscore: i16 = 0;
@@ -117,7 +118,7 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
             }
 
             if countscore <= 2 {
-                self.playwarningsound();
+                self.playwarningsound(game().get());
             }
         }
 
@@ -135,9 +136,9 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
             return PlayerKillType::Normal;
         }
 
-        self.release_coin(player);
+        self.release_coin(game().get(), player);
 
-        player.score().adjust_score(-1);
+        player.score().adjust_score(game().get(), -1);
 
         if !self.playedwarningsound {
             let mut countscore: i16 = 0;
@@ -162,7 +163,7 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
             }
 
             if playwarning {
-                self.playwarningsound();
+                self.playwarningsound(game().get());
             }
         }
 
@@ -180,7 +181,7 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
             return;
         }
 
-        player.score().adjust_score(iType);
+        player.score().adjust_score(game().get(), iType);
     }
 
     fn check_winner(&mut self, mut player: Ptr<CPlayer>) -> PlayerKillType {
@@ -194,7 +195,7 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
             setup_score_board(false);
             show_score_board();
         } else if player.score().subscore[0] >= 4 && !self.playedwarningsound {
-            self.playwarningsound();
+            self.playwarningsound(game().get());
         }
 
         PlayerKillType::Normal

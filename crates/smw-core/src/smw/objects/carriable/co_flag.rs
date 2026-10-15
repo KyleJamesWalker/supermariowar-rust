@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_Flag.cpp
 
+use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::{gfxSprite, ClipEdge};
 use crate::common::global_constants::*;
@@ -62,7 +63,7 @@ impl CO_Flag {
 
         o.fCarriedByKuriboShoe = true;
 
-        o.place_flag();
+        o.place_flag(game().get());
         o
     }
 
@@ -73,7 +74,7 @@ impl CO_Flag {
         self.teamID
     }
 
-    pub fn place_flag(&mut self) {
+    pub fn place_flag(&mut self, g: &mut Game) {
         if crate::smw::net_random::place_event(self.iNetworkID, 0) {
             return;
         }
@@ -85,7 +86,7 @@ impl CO_Flag {
             let mut iAttempts: i16 = 10;
             let (mut ix, mut iy) = (self.ix, self.iy);
             let (w, h) = (self.collisionWidth, self.collisionHeight);
-            while !unsafe { game().g_map.findspawnpoint(5, &mut ix, &mut iy, w, h, false) } && {
+            while !unsafe { g.g_map.findspawnpoint(5, &mut ix, &mut iy, w, h, false) } && {
                 let t = iAttempts;
                 iAttempts -= 1;
                 t > 0
@@ -126,8 +127,8 @@ impl CObjectTrait for CO_Flag {
         let mut player = player;
         if self.owner.is_null() && player.isready() && (!self.fInBase || self.teamID != player.teamID) {
             if unsafe { game().game_values.gamemodesettings.flag.touchreturn } && self.teamID == player.teamID {
-                self.place_flag();
-                unsafe { if_sound_on_play(&mut game().rm.sfx_areatag) };
+                self.place_flag(game().get());
+                unsafe { if_sound_on_play(game().get(), &mut game().rm.sfx_areatag) };
             } else if player.accept_item(self.as_carried_ptr()) {
                 self.owner = player;
                 self.owner_throw = player;
@@ -161,7 +162,7 @@ impl CObjectTrait for CO_Flag {
             self.timer > autoreturn
         } {
             self.timer = 0;
-            self.place_flag();
+            self.place_flag(game().get());
             self.owner_throw = Ptr::null();
         } else {
             if !self.owner_throw.is_null() && {
@@ -178,7 +179,7 @@ impl CObjectTrait for CO_Flag {
             self.fOldX = self.fx;
             self.fOldY = self.fy;
 
-            io_moving_object_collision_detection_map(self);
+            io_moving_object_collision_detection_map(game().get(), self);
         }
 
         self.animate();
@@ -209,12 +210,12 @@ impl CObjectTrait for CO_Flag {
 
             if self.owner.iswarping() {
                 let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32) };
-                self.spr.draw_clip(x, y, &srcRect, edge, self.owner.get_warp_plane() as i32);
+                self.spr.draw_clip(game().get(), x, y, &srcRect, edge, self.owner.get_warp_plane() as i32);
             } else {
-                self.spr.draw_src(x, y, &srcRect);
+                self.spr.draw_src(game().get(), x, y, &srcRect);
             }
         } else {
-            self.spr.draw_src(x, y, &srcRect);
+            self.spr.draw_src(game().get(), x, y, &srcRect);
         }
     }
 }
@@ -233,7 +234,7 @@ impl MO_CarriedObjectTrait for CO_Flag {
         mo_carried_object_move_to_owner(self);
 
         if !self.owner.is_null() {
-            self.fLastFlagDirection = self.owner.is_facing_right();
+            self.fLastFlagDirection = self.owner.is_facing_right(game().get());
         }
     }
 

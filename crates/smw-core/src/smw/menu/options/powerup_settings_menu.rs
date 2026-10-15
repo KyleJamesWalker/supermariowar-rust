@@ -1,5 +1,6 @@
 //! Port of src/smw/menu/options/PowerupSettingsMenu.cpp
 
+use crate::game::Game;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
 use crate::common::ui::mi_image::MI_Image;
@@ -51,37 +52,37 @@ pub struct UI_PowerupSettingsMenu {
 crate::impl_base!(UI_PowerupSettingsMenu => ui_menu: UI_Menu);
 
 impl UI_PowerupSettingsMenu {
-    pub fn new() -> Box<Self> {
+    pub fn new(g: &mut Game) -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let spr_selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
-            let menu_plain_field = Ptr::from_mut(&mut game().rm.menu_plain_field);
+            let spr_selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
+            let menu_plain_field = Ptr::from_mut(&mut g.rm.menu_plain_field);
 
             this.miStoredPowerupDelayField = select_field(spr_selectfield, 70, 100, "Item Use Speed", 500, 220,
                 &[("Very Slow", 2), ("Slow", 3), ("Moderate", 4), ("Fast", 5), ("Very Fast", 6)],
-                &mut game().game_values.storedpowerupdelay);
+                &mut g.game_values.storedpowerupdelay);
 
-            this.miItemRespawnField = select_field(spr_selectfield, 70, 140, "Item Spawn", 500, 220, RESPAWN_TIMES, &mut game().game_values.itemrespawntime);
+            this.miItemRespawnField = select_field(spr_selectfield, 70, 140, "Item Spawn", 500, 220, RESPAWN_TIMES, &mut g.game_values.itemrespawntime);
 
-            this.miHiddenBlockRespawnField = select_field(spr_selectfield, 70, 180, "Hidden Block Hide", 500, 220, RESPAWN_TIMES, &mut game().game_values.hiddenblockrespawn);
+            this.miHiddenBlockRespawnField = select_field(spr_selectfield, 70, 180, "Hidden Block Hide", 500, 220, RESPAWN_TIMES, &mut g.game_values.hiddenblockrespawn);
 
             this.miSwapStyleField = select_field(spr_selectfield, 70, 220, "Swap Style", 500, 220,
                 &[("Walk", 0), ("Blink", 1), ("Instant", 2)],
-                &mut game().game_values.swapstyle);
+                &mut g.game_values.swapstyle);
 
             this.miBonusWheelField = select_field(spr_selectfield, 70, 260, "Bonus Wheel", 500, 220,
                 &[("Off", 0), ("Tournament Win", 1), ("Every Game", 2)],
-                &mut game().game_values.bonuswheel);
+                &mut g.game_values.bonuswheel);
 
             this.miKeepPowerupField = select_field(spr_selectfield, 70, 300, "Bonus Item", 500, 220,
                 &[("Until Next Spin", false), ("Keep Always", true)],
-                &mut game().game_values.keeppowerup);
+                &mut g.game_values.keeppowerup);
             this.miKeepPowerupField.set_auto_advance(true);
 
             this.miStoredPowerupResetButton = Ptr::new_box(MI_StoredPowerupResetButton::new(spr_selectfield, 70, 340, "Reset Stored Items", 500, TextAlign::LEFT));
             this.miStoredPowerupResetButton.set_code(MENU_CODE_RESET_STORED_POWERUPS);
 
-            this.miPowerupSettingsMenuBackButton = Ptr::new_box(MI_Button::new(spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miPowerupSettingsMenuBackButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
             this.miPowerupSettingsMenuBackButton.set_code(MENU_CODE_BACK_TO_OPTIONS_MENU);
 
             this.miPowerupSettingsMenuLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));

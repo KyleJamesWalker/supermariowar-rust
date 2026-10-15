@@ -65,13 +65,13 @@ impl UI_ControlTrait for MI_ScoreText {
 
         let y = self.m_pos.y as i32;
         unsafe {
-            game().rm.spr_scoretext.draw_src(self.iDigitRightDstX as i32, y, &SDL_Rect { x: self.iDigitRightSrcX as i32, y: 0, w: 16, h: 16 });
+            game().rm.spr_scoretext.draw_src(game().get(), self.iDigitRightDstX as i32, y, &SDL_Rect { x: self.iDigitRightSrcX as i32, y: 0, w: 16, h: 16 });
 
             if self.iDigitLeftSrcX > 0 {
-                game().rm.spr_scoretext.draw_src(self.iDigitMiddleDstX as i32, y, &SDL_Rect { x: self.iDigitMiddleSrcX as i32, y: 0, w: 16, h: 16 });
-                game().rm.spr_scoretext.draw_src(self.iDigitLeftDstX as i32, y, &SDL_Rect { x: self.iDigitLeftSrcX as i32, y: 0, w: 16, h: 16 });
+                game().rm.spr_scoretext.draw_src(game().get(), self.iDigitMiddleDstX as i32, y, &SDL_Rect { x: self.iDigitMiddleSrcX as i32, y: 0, w: 16, h: 16 });
+                game().rm.spr_scoretext.draw_src(game().get(), self.iDigitLeftDstX as i32, y, &SDL_Rect { x: self.iDigitLeftSrcX as i32, y: 0, w: 16, h: 16 });
             } else if self.iDigitMiddleSrcX > 0 {
-                game().rm.spr_scoretext.draw_src(self.iDigitMiddleDstX as i32, y, &SDL_Rect { x: self.iDigitMiddleSrcX as i32, y: 0, w: 16, h: 16 });
+                game().rm.spr_scoretext.draw_src(game().get(), self.iDigitMiddleDstX as i32, y, &SDL_Rect { x: self.iDigitMiddleSrcX as i32, y: 0, w: 16, h: 16 });
             }
         }
     }

@@ -60,13 +60,13 @@ impl CGameModeTrait for CGM_Chicken {
 
     //called once when the game is started
     fn init(&mut self) {
-        cgamemode_init(self);
+        cgamemode_init(game().get(), self);
         self.clear_chicken();
     }
 
     fn think(&mut self) {
         if self.gameover {
-            self.displayplayertext();
+            self.displayplayertext(game().get());
             return;
         }
 
@@ -83,7 +83,7 @@ impl CGameModeTrait for CGM_Chicken {
                     self.counter += 1;
                     if self.counter >= game().game_values.pointspeed {
                         self.counter = 0;
-                        chicken.score().adjust_score(1);
+                        chicken.score().adjust_score(game().get(), 1);
                         self.check_winner(chicken);
                     }
                 }
@@ -97,7 +97,7 @@ impl CGameModeTrait for CGM_Chicken {
             if game().game_values.gamemodesettings.chicken.usetarget && !self.gameover && !self.m_chicken.is_null() {
                 let chicken = self.m_chicken;
                 if chicken.iswarping() {
-                    game().rm.spr_chicken.draw_clip(
+                    game().rm.spr_chicken.draw_clip(game().get(), 
                         chicken.left_x() as i32 - PWOFFSET - 16,
                         chicken.top_y() as i32 - PHOFFSET - 16,
                         &SDL_Rect { x: 0, y: 0, w: 64, h: 64 },
@@ -105,7 +105,7 @@ impl CGameModeTrait for CGM_Chicken {
                         chicken.get_warp_plane() as i32,
                     );
                 } else if chicken.isready() {
-                    game().rm.spr_chicken.draw(chicken.center_x() as i32 - 32, chicken.center_y() as i32 - 32);
+                    game().rm.spr_chicken.draw(game().get(), chicken.center_x() as i32 - 32, chicken.center_y() as i32 - 32);
                 }
             }
         }
@@ -130,14 +130,14 @@ impl CGameModeTrait for CGM_Chicken {
                     4,
                     5,
                 ));
-                if_sound_on_play(&mut game().rm.sfx_transform);
+                if_sound_on_play(game().get(), &mut game().rm.sfx_transform);
 
                 if other == self.m_chicken {
                     other.set_corpse_type(1); //flag to use chicken corpse sprite
                 }
             } else if inflictor == self.m_chicken {
                 if !self.gameover {
-                    inflictor.score().adjust_score(5);
+                    inflictor.score().adjust_score(game().get(), 5);
                     return self.check_winner(inflictor);
                 }
             }
@@ -162,7 +162,7 @@ impl CGameModeTrait for CGM_Chicken {
 
     fn playerextraguy(&mut self, mut player: Ptr<CPlayer>, iType: i16) {
         if !self.gameover {
-            player.score().adjust_score((10 * iType as i32) as i16);
+            player.score().adjust_score(game().get(), (10 * iType as i32) as i16);
             self.check_winner(player);
         }
     }
@@ -182,7 +182,7 @@ impl CGameModeTrait for CGM_Chicken {
             remove_players_but_team(self.winningteam);
             return PlayerKillType::Removed;
         } else if player.score().score as f64 >= self.goal as f64 * 0.8 && !self.playedwarningsound {
-            self.playwarningsound();
+            self.playwarningsound(game().get());
         }
 
         PlayerKillType::Normal

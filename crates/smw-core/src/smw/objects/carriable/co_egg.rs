@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_Egg.cpp
 
+use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::{gfxSprite, ClipEdge};
@@ -77,7 +78,7 @@ impl CO_Egg {
 
         o.fCarriedByKuriboShoe = true;
 
-        o.place_egg();
+        o.place_egg(game().get());
         o
     }
 
@@ -85,15 +86,15 @@ impl CO_Egg {
         self.color
     }
 
-    pub fn place_egg(&mut self) {
+    pub fn place_egg(&mut self, g: &mut Game) {
         if crate::smw::net_random::place_event(self.iNetworkID, 0) {
             return;
         }
 
         self.relocatetimer = 0;
         unsafe {
-            if game().game_values.gamemodesettings.egg.explode > 0 {
-                self.explosiondrawframe = game().game_values.gamemodesettings.egg.explode - 1;
+            if g.game_values.gamemodesettings.egg.explode > 0 {
+                self.explosiondrawframe = g.game_values.gamemodesettings.egg.explode - 1;
                 self.explosiondrawtimer = 62;
 
                 if self.explosiondrawframe < 5 {
@@ -109,7 +110,7 @@ impl CO_Egg {
             let mut y: i16 = 0;
             let mut iAttempts: i16 = 32;
             let (w, h) = (self.collisionWidth, self.collisionHeight);
-            while (!game().g_map.findspawnpoint(5, &mut x, &mut y, w, h, false) || game().objectcontainer[1].get_closest_moving_object(x, y, movingobject_yoshi) < 250.0) && {
+            while (!g.g_map.findspawnpoint(5, &mut x, &mut y, w, h, false) || g.objectcontainer[1].get_closest_moving_object(x, y, movingobject_yoshi) < 250.0) && {
                 let t = iAttempts;
                 iAttempts -= 1;
                 t > 0
@@ -157,7 +158,7 @@ impl CObjectTrait for CO_Egg {
             self.relocatetimer += 1;
             self.relocatetimer > 1500
         } {
-            self.place_egg();
+            self.place_egg(game().get());
             self.owner_throw = Ptr::null();
         } else {
             if !self.owner_throw.is_null() && {
@@ -174,7 +175,7 @@ impl CObjectTrait for CO_Egg {
             self.fOldX = self.fx;
             self.fOldY = self.fy;
 
-            io_moving_object_collision_detection_map(self);
+            io_moving_object_collision_detection_map(game().get(), self);
         }
 
         self.sparkleanimationtimer += 1;
@@ -203,9 +204,9 @@ impl CObjectTrait for CO_Egg {
                             -1,
                             KillStyle::Bomb,
                         )));
-                        self.place_egg();
+                        self.place_egg(game().get());
 
-                        if_sound_on_play(&mut game().rm.sfx_bobombsound);
+                        if_sound_on_play(game().get(), &mut game().rm.sfx_bobombsound);
                     } else if self.explosiondrawframe < 5 {
                         self.animationspeed = self.egganimationrates[self.explosiondrawframe as usize];
                     } else {
@@ -229,9 +230,9 @@ impl CObjectTrait for CO_Egg {
                 let src = SDL_Rect { x: (self.explosiondrawframe as i32) << 5, y: (self.color as i32) << 5, w: 32, h: 32 };
                 if !self.owner.is_null() && self.owner.iswarping() {
                     let edge: ClipEdge = std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32);
-                    game().rm.spr_eggnumbers.draw_clip(x, y, &src, edge, self.owner.get_warp_plane() as i32);
+                    game().rm.spr_eggnumbers.draw_clip(game().get(), x, y, &src, edge, self.owner.get_warp_plane() as i32);
                 } else {
-                    game().rm.spr_eggnumbers.draw_src(x, y, &src);
+                    game().rm.spr_eggnumbers.draw_src(game().get(), x, y, &src);
                 }
             }
         }

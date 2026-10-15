@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/MysteryMushroomTempPlayer.cpp
 
+use crate::game::Game;
 use crate::common::movingplatform::MovingPlatform;
 use crate::globals::*;
 use crate::smw::gs_gameplay::scorepowerupoffsets;
@@ -58,7 +59,7 @@ impl MysteryMushroomTempPlayer {
         }
     }
 
-    pub fn set_player(&mut self, mut player: Ptr<CPlayer>, iPowerup: i16) {
+    pub fn set_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iPowerup: i16) {
         self.fx = player.fx;
         self.fy = player.fy;
 
@@ -88,7 +89,7 @@ impl MysteryMushroomTempPlayer {
         self.gamepowerup = iPowerup;
 
         unsafe {
-            let offset = scorepowerupoffsets[(game().game_values.teamcounts[player.teamID as usize] - 1) as usize][player.subTeamID as usize];
+            let offset = scorepowerupoffsets[(g.game_values.teamcounts[player.teamID as usize] - 1) as usize][player.subTeamID as usize];
             self.iOldPowerupX = (player.score().x as i32 + offset as i32) as i16;
             self.iOldPowerupY = (player.score().y as i32 + 25) as i16;
         }

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/OverMapObject.cpp
 
+use crate::game::game;
 use crate::common::gfx::gfx_drawpreview;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::vec2::Vec2s;
@@ -102,7 +103,7 @@ impl IO_OverMapObject {
 
 pub fn io_over_map_object_draw<T: IO_OverMapObjectTrait + ?Sized>(this: &mut T) {
     let o = this.omo();
-    o.spr.draw_src(
+    o.spr.draw_src(game().get(), 
         (o.ix - o.collisionOffsetX) as i32,
         (o.iy - o.collisionOffsetY) as i32,
         &SDL_Rect { x: o.drawframe as i32, y: o.animationOffsetY as i32, w: o.iw as i32, h: o.ih as i32 },
@@ -111,7 +112,7 @@ pub fn io_over_map_object_draw<T: IO_OverMapObjectTrait + ?Sized>(this: &mut T) 
 
 pub fn io_over_map_object_draw_offset<T: IO_OverMapObjectTrait + ?Sized>(this: &mut T, iOffsetX: i16, iOffsetY: i16) {
     let o = this.omo();
-    gfx_drawpreview(
+    gfx_drawpreview(game().get(), 
         &*o.spr,
         (((o.ix - o.collisionOffsetX) as i32 >> 1) + iOffsetX as i32) as i16,
         (((o.iy - o.collisionOffsetY) as i32 >> 1) + iOffsetY as i32) as i16,

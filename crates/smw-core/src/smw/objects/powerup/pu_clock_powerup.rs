@@ -41,7 +41,7 @@ impl CObjectTrait for PU_ClockPowerup {
     fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
         let mut player = player;
         if self.state > 0 {
-            player.set_stored_powerup(PowerupType::Clock as i16);
+            player.set_stored_powerup(game().get(), PowerupType::Clock as i16);
             self.dead = true;
         }
 

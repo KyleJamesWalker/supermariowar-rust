@@ -1,6 +1,7 @@
 //! Not in the C++: the browser's network layer. Each ENet connection becomes a virtual connection to
 //! `smw_relay`, all of them over one WebSocket (web/relay_socket.js, docs/RELAY.md).
 
+use crate::game::Game;
 use crate::common_netplay::network_interface::{NetPeer, NetworkEventHandler};
 use crate::common_netplay::protocol_definitions::NET_GAMEHOST_PORT;
 use crate::common_netplay::relay_frame::{self as frame, *};
@@ -161,7 +162,7 @@ impl Relay {
         self.outbox.clear();
     }
 
-    fn pump(&mut self) {
+    fn pump(&mut self, g: &mut Game) {
         let state = unsafe { smw_ws_state() };
         if state == WS_OPEN {
             for message in std::mem::take(&mut self.outbox) {
@@ -170,12 +171,12 @@ impl Relay {
         }
 
         loop {
-            let len = unsafe { smw_ws_recv(game().recv_buffer.as_mut_ptr(), MAX_MESSAGE_LEN) };
+            let len = unsafe { smw_ws_recv(g.recv_buffer.as_mut_ptr(), MAX_MESSAGE_LEN) };
             if len == -1 {
                 break;
             }
             if len >= 0 {
-                let message = unsafe { game().recv_buffer[..len as usize].to_vec() };
+                let message = unsafe { g.recv_buffer[..len as usize].to_vec() };
                 self.dispatch(&message);
             }
         }
@@ -228,13 +229,13 @@ impl Relay {
     }
 }
 
-fn listen(side: Side, handler: &mut dyn NetworkEventHandler) {
+fn listen(g: &mut Game, side: Side, handler: &mut dyn NetworkEventHandler) {
     unsafe {
         // NetClient polls its game host first: a player's INCOMING must wait for the lobby's CLIENTS_INFO before it.
         if side == Side::Client {
-            game().relay.pump();
+            game().relay.pump(g);
         }
-        while let Some(event) = game().relay.events(side).pop_front() {
+        while let Some(event) = g.relay.events(side).pop_front() {
             match event {
                 Event::Connect(peer) => handler.on_connect(Box::new(peer)),
                 Event::Receive(mut peer, data) => handler.on_receive(&mut peer, &data),
@@ -337,7 +338,7 @@ impl NetworkLayer for NetworkLayerWebSocket {
     }
 
     fn client_listen(&mut self, handler: &mut dyn NetworkEventHandler) {
-        listen(Side::Client, handler);
+        listen(game().get(), Side::Client, handler);
     }
 
     fn client_shutdown(&mut self) {
@@ -362,7 +363,7 @@ impl NetworkLayer for NetworkLayerWebSocket {
     }
 
     fn gamehost_listen(&mut self, handler: &mut dyn NetworkEventHandler) {
-        listen(Side::GameHost, handler);
+        listen(game().get(), Side::GameHost, handler);
     }
 
     fn gamehost_shutdown(&mut self) {

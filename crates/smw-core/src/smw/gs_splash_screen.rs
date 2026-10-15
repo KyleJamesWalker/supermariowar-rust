@@ -51,7 +51,7 @@ impl GameState for SplashScreenState {
 
     fn init(&mut self) -> bool {
         unsafe {
-            game().rm.load_start_graphics();
+            game().rm.load_start_graphics(game().get());
 
             self.menu_credits = Ptr::new_box(gfxSprite::new());
             *self.menu_credits =
@@ -78,7 +78,7 @@ impl GameState for SplashScreenState {
                     if key.0 == SDL_KeyCode::SDLK_RETURN as i32 {
                         if alt {
                             g.game_values.fullscreen = !g.game_values.fullscreen;
-                            gfx_changefullscreen(g.game_values.fullscreen);
+                            gfx_changefullscreen(g, g.game_values.fullscreen);
                             g.blitdest = g.screen;
                         }
                     } else if key.0 == SDL_KeyCode::SDLK_F4 as i32 {
@@ -87,11 +87,11 @@ impl GameState for SplashScreenState {
                             return;
                         }
                     } else if key.0 == SDL_KeyCode::SDLK_INSERT as i32 {
-                        crate::common::gfx::gfx_take_screenshot();
+                        crate::common::gfx::gfx_take_screenshot(g);
                     }
                 }
 
-                g.game_values.playerInput.update_input(&input, 1);
+                game().game_values.playerInput.update_input(g, &input, 1);
             }
 
             // Not in upstream: a press before load_game_data() would open the menus without their graphics.
@@ -101,7 +101,7 @@ impl GameState for SplashScreenState {
                     if tapped || out.menu_select().fPressed || out.menu_cancel().fPressed || out.menu_random().fPressed {
                         g.blitdest = g.rm.menu_backdrop.get_surface();
                         g.rm.menu_shade.setalpha(App::menuTransparency as u8);
-                        g.rm.menu_shade.draw(0, 0);
+                        game().rm.menu_shade.draw(g, 0, 0);
                         g.blitdest = g.screen;
 
                         g.eyecandy[2].clean();
@@ -121,18 +121,18 @@ impl GameState for SplashScreenState {
 
             if self.state == 6 || self.state == 7 || self.state == 8 {
                 g.rm.menu_backdrop.setalpha(self.alpha as u8);
-                g.rm.menu_backdrop.draw(0, 0);
+                game().rm.menu_backdrop.draw(g, 0, 0);
 
                 g.rm.menu_smw.setalpha(self.alpha as u8);
-                g.rm.menu_smw.draw(App::screenWidth / 2 - ((g.rm.menu_smw.get_width() as i16 >> 1) as i32), 30); //smw logo
+                game().rm.menu_smw.draw(g, App::screenWidth / 2 - ((game().rm.menu_smw.get_width() as i16 >> 1) as i32), 30); //smw logo
 
                 g.rm.menu_version.setalpha(self.alpha as u8);
-                g.rm.menu_version.draw(628 - g.rm.menu_version.get_width(), 10); //smw logo
+                game().rm.menu_version.draw(g, 628 - game().rm.menu_version.get_width(), 10); //smw logo
 
                 g.rm.menu_font_large.set_alpha(self.alpha as u8);
 
                 self.menu_credits.setalpha(self.alpha as u8);
-                self.menu_credits.draw(227, 200);
+                self.menu_credits.draw(g, 227, 200);
             }
 
             if self.state == 7 {
@@ -154,7 +154,7 @@ impl GameState for SplashScreenState {
             if self.state == 7 {
                 load_game_data(g);
 
-                if_sound_on_play(&mut g.rm.sfx_coin);
+                if_sound_on_play(g, &mut game().rm.sfx_coin);
 
                 self.state += 1;
             }
@@ -168,8 +168,8 @@ pub fn load_game_data(g: &mut Game) {
         // load initial coin sound
         g.rm.backgroundmusic[2] = sfxMusic::from_file(g.musiclist.music(1)).unwrap_or_else(|e| std::panic::panic_any(e));
 
-        g.rm.load_all_graphics();
-        g.rm.load_game_sounds();
+        game().rm.load_all_graphics(g);
+        game().rm.load_game_sounds(g);
 
         if !g.game_values.soundcapable {
             g.game_values.sound = false;
@@ -179,7 +179,7 @@ pub fn load_game_data(g: &mut Game) {
         }
 
         //Read the map filter lists
-        g.maplist.read_filters();
-        g.maplist.apply_filters(&g.game_values.pfFilters.clone());
+        game().maplist.read_filters(g);
+        game().maplist.apply_filters(g, &game().game_values.pfFilters.clone());
     }
 }

@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_StringScroll.cpp
 
+use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::input::CPlayerInput;
 use crate::common::ui::menu_code::*;
@@ -18,8 +19,8 @@ impl StringScrollElement {
         StringScrollElement { _alias: Aliased::new(), str: text.to_string() }
     }
 
-    pub fn draw(&self, x: i32, y: i32, max_w: u32) {
-        unsafe { game().rm.menu_font_large.draw_chop_right(x + 28, y + 5, max_w as i32, &self.str) };
+    pub fn draw(&self, g: &mut Game, x: i32, y: i32, max_w: u32) {
+        unsafe { g.rm.menu_font_large.draw_chop_right(x + 28, y + 5, max_w as i32, &self.str) };
     }
 }
 
@@ -218,10 +219,10 @@ impl UI_ControlTrait for MI_StringScroll {
         let iNumLines = self.iNumLines as i32;
 
         unsafe {
-            game().rm.menu_dialog.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: iWidth - 16, h: iNumLines * 32 + 32 });
-            game().rm.menu_dialog.draw_src(x + iWidth - 16, y, &SDL_Rect { x: 496, y: 0, w: 16, h: iNumLines * 32 + 32 });
-            game().rm.menu_dialog.draw_src(x, y + iNumLines * 32 + 32, &SDL_Rect { x: 0, y: 464, w: iWidth - 16, h: 16 });
-            game().rm.menu_dialog.draw_src(x + iWidth - 16, y + iNumLines * 32 + 32, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+            game().rm.menu_dialog.draw_src(game().get(), x, y, &SDL_Rect { x: 0, y: 0, w: iWidth - 16, h: iNumLines * 32 + 32 });
+            game().rm.menu_dialog.draw_src(game().get(), x + iWidth - 16, y, &SDL_Rect { x: 496, y: 0, w: 16, h: iNumLines * 32 + 32 });
+            game().rm.menu_dialog.draw_src(game().get(), x, y + iNumLines * 32 + 32, &SDL_Rect { x: 0, y: 464, w: iWidth - 16, h: 16 });
+            game().rm.menu_dialog.draw_src(game().get(), x + iWidth - 16, y + iNumLines * 32 + 32, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
 
             game().rm.menu_font_large.draw_centered(x + (iWidth >> 1), y + 5, &self.sTitle);
 
@@ -232,10 +233,10 @@ impl UI_ControlTrait for MI_StringScroll {
                 let iHalfLineWidth: i16 = iLineWidth >> 1;
                 let (lw, hlw, l) = (iLineWidth as i32, iHalfLineWidth as i32, iLine as i32);
                 let selY = if self.iSelectedLine == iLine { 32 } else { 0 };
-                self.spr.draw_src(x + 16, y + 32 + l * 32, &SDL_Rect { x: 0, y: selY, w: hlw, h: 32 });
-                self.spr.draw_src(x + 16 + hlw, y + 32 + l * 32, &SDL_Rect { x: 512 - lw + hlw, y: selY, w: lw - hlw, h: 32 });
+                self.spr.draw_src(game().get(), x + 16, y + 32 + l * 32, &SDL_Rect { x: 0, y: selY, w: hlw, h: 32 });
+                self.spr.draw_src(game().get(), x + 16 + hlw, y + 32 + l * 32, &SDL_Rect { x: 512 - lw + hlw, y: selY, w: lw - hlw, h: 32 });
 
-                self.items[(self.iOffset as i32 + l) as usize].draw(x, 32 + y + l * 32, (iWidth - 104) as u32);
+                self.items[(self.iOffset as i32 + l) as usize].draw(game().get(), x, 32 + y + l * 32, (iWidth - 104) as u32);
                 iLine += 1;
             }
         }

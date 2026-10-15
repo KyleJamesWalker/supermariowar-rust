@@ -7,9 +7,9 @@ pub use crate::game::game;
 
 /// Runs the constructors of C++ globals that have static storage, in C++ definition order.
 pub fn init_globals() {
-    crate::common::global::init_globals();
-    crate::smw::world::init_globals();
-    crate::smw::net::init_globals();
+    crate::common::global::init_globals(game().get());
+    crate::smw::world::init_globals(game().get());
+    crate::smw::net::init_globals(game().get());
 }
 
 #[cfg(test)]

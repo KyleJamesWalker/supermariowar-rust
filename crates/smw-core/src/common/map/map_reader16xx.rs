@@ -1,5 +1,6 @@
 //! Port of src/common/map/MapReader16xx.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::file_io::BinaryFile;
 use crate::common::game_values::default_powerup_setting;
@@ -23,7 +24,7 @@ const g_iTileConversion: [i16; 300] = [
 ];
 
 impl MapReader {
-    pub(super) fn read_tiles_1600(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) {
+    pub(super) fn read_tiles_1600(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile) {
         unsafe {
             for j in 0..MAPHEIGHT as usize {
                 for i in 0..MAPWIDTH as usize {
@@ -36,7 +37,7 @@ impl MapReader {
                             let iTileID = g_iTileConversion[iTile as isize as usize];
 
                             let tile = &mut map.mapdata[i][j][k];
-                            tile.iID = game().g_tilesetmanager.classic_tileset_index() as i16;
+                            tile.iID = g.g_tilesetmanager.classic_tileset_index() as i16;
                             tile.iCol = iTileID % 32;
                             tile.iRow = iTileID / 32;
                         }
@@ -46,7 +47,7 @@ impl MapReader {
 
                     for k in (0..MAPLAYERS as usize).rev() {
                         let tile = map.mapdata[i][j][k];
-                        let r#type = game().g_tilesetmanager.classic_tileset().tile_type(tile.iCol as isize as usize, tile.iRow as isize as usize);
+                        let r#type = g.g_tilesetmanager.classic_tileset().tile_type(tile.iCol as isize as usize, tile.iRow as isize as usize);
                         if r#type != TileType::NonSolid {
                             map.mapdatatop[i][j] = r#type;
                             break;

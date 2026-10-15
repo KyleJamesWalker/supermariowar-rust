@@ -58,7 +58,7 @@ impl CObjectTrait for PU_MysteryMushroomPowerup {
                         3,
                         8,
                     ));
-                    if_sound_on_play(&mut game().rm.sfx_spit);
+                    if_sound_on_play(game().get(), &mut game().rm.sfx_spit);
                 }
             }
         }

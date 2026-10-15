@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/MiniPipe.cpp
 
+use crate::game::Game;
 use crate::common::game_mode::{game_mode_pipe_minigame, CGameMode, CGameModeTrait};
 use crate::common::game_values::if_sound_on_play;
 use crate::common::math::vec2::{Vec2f, Vec2s};
@@ -38,7 +39,7 @@ impl CGM_Pipe_MiniGame {
         this
     }
 
-    pub fn set_bonus(&mut self, iType: i16, iTimer: i16, iTeamID: i16) {
+    pub fn set_bonus(&mut self, g: &mut Game, iType: i16, iTimer: i16, iTeamID: i16) {
         self.iBonusType = iType;
 
         //This is the random bonus
@@ -55,9 +56,9 @@ impl CGM_Pipe_MiniGame {
 
         unsafe {
             if self.iBonusType == 3 {
-                if_sound_on_play(&mut game().rm.sfx_powerdown);
+                if_sound_on_play(g, &mut game().rm.sfx_powerdown);
             } else {
-                if_sound_on_play(&mut game().rm.sfx_collectpowerup);
+                if_sound_on_play(g, &mut game().rm.sfx_collectpowerup);
             }
         }
     }
@@ -79,7 +80,7 @@ impl CGameModeTrait for CGM_Pipe_MiniGame {
     }
 
     fn init(&mut self) {
-        gm::cgamemode_init(self);
+        gm::cgamemode_init(game().get(), self);
 
         self.fReverseScoring = false;
 
@@ -91,7 +92,7 @@ impl CGameModeTrait for CGM_Pipe_MiniGame {
 
     fn think(&mut self) {
         if self.gameover {
-            self.displayplayertext();
+            self.displayplayertext(game().get());
             return;
         }
 
@@ -113,14 +114,14 @@ impl CGameModeTrait for CGM_Pipe_MiniGame {
                     let iRandPowerup: i16 = RANDOM_INT(50) as i16;
                     if self.iBonusType == 0 && iRandPowerup < 5 {
                         //bonuses
-                        game().objectcontainer[1].add(Ptr::new_box(OMO_PipeBonus::new(Ptr::from_mut(&mut game().rm.spr_pipegamebonus), vel, pos, iRandPowerup, 620, 15)));
+                        game().objectcontainer[1].add(Ptr::new_box(OMO_PipeBonus::new(game().get(), Ptr::from_mut(&mut game().rm.spr_pipegamebonus), vel, pos, iRandPowerup, 620, 15)));
                     } else if iRandPowerup < 10 {
                         //fireballs
-                        game().objectcontainer[1].add(Ptr::new_box(OMO_PipeBonus::new(Ptr::from_mut(&mut game().rm.spr_pipegamebonus), vel, pos, 5, 0, 15)));
+                        game().objectcontainer[1].add(Ptr::new_box(OMO_PipeBonus::new(game().get(), Ptr::from_mut(&mut game().rm.spr_pipegamebonus), vel, pos, 5, 0, 15)));
                     } else {
                         //coins
                         let iRandCoin: i16 = RANDOM_INT(20) as i16;
-                        game().objectcontainer[1].add(Ptr::new_box(OMO_PipeCoin::new(Ptr::from_mut(&mut game().rm.spr_coin), vel, pos, -1, if iRandCoin < 16 { 2 } else if iRandCoin < 19 { 0 } else { 1 }, 15)));
+                        game().objectcontainer[1].add(Ptr::new_box(OMO_PipeCoin::new(game().get(), Ptr::from_mut(&mut game().rm.spr_coin), vel, pos, -1, if iRandCoin < 16 { 2 } else if iRandCoin < 19 { 0 } else { 1 }, 15)));
                     }
                 } else if self.iBonusType == 1 {
                     self.iNextItemTimer = (RANDOM_INT(10) + 10) as i16;
@@ -134,10 +135,10 @@ impl CGameModeTrait for CGM_Pipe_MiniGame {
 
                     let iRandPlayer: i16 = game().game_values.teamids[iRandTeam as usize][RANDOM_INT(game().game_values.teamcounts[iRandTeam as usize] as i32) as usize];
 
-                    game().objectcontainer[1].add(Ptr::new_box(OMO_PipeCoin::new(Ptr::from_mut(&mut game().rm.spr_coin), vel, pos, iRandTeam, game().game_values.colorids[iRandPlayer as usize], 15)));
+                    game().objectcontainer[1].add(Ptr::new_box(OMO_PipeCoin::new(game().get(), Ptr::from_mut(&mut game().rm.spr_coin), vel, pos, iRandTeam, game().game_values.colorids[iRandPlayer as usize], 15)));
                 } else if self.iBonusType == 3 {
                     self.iNextItemTimer = (RANDOM_INT(5) + 10) as i16;
-                    game().objectcontainer[1].add(Ptr::new_box(OMO_PipeCoin::new(Ptr::from_mut(&mut game().rm.spr_coin), vel, pos, -1, 0, 15)));
+                    game().objectcontainer[1].add(Ptr::new_box(OMO_PipeCoin::new(game().get(), Ptr::from_mut(&mut game().rm.spr_coin), vel, pos, -1, 0, 15)));
                 }
             }
         }
@@ -163,7 +164,7 @@ impl CGameModeTrait for CGM_Pipe_MiniGame {
 
     fn playerextraguy(&mut self, mut player: Ptr<CPlayer>, iType: i16) {
         if !self.gameover {
-            player.score().adjust_score(iType);
+            player.score().adjust_score(game().get(), iType);
             self.check_winner(player);
         }
     }
@@ -180,7 +181,7 @@ impl CGameModeTrait for CGM_Pipe_MiniGame {
                 setup_score_board(false);
                 show_score_board();
             } else if player.score().score as i32 >= self.goal as i32 - 5 && !self.playedwarningsound {
-                self.playwarningsound();
+                self.playwarningsound(game().get());
             }
         }
 

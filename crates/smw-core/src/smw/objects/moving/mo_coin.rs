@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_Coin.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
@@ -61,18 +62,18 @@ impl MO_Coin {
 
         o.timer = 0;
         if placecoin {
-            o.place_coin();
+            o.place_coin(game().get());
         }
 
         if o.iType == 0 {
             o.fObjectCollidesWithMap = false;
         } else {
-            io_moving_object_collision_detection_checksides(&mut o);
+            io_moving_object_collision_detection_checksides(game().get(), &mut o);
         }
         o
     }
 
-    pub fn place_coin(&mut self) {
+    pub fn place_coin(&mut self, g: &mut Game) {
         if crate::smw::net_random::place_event(self.iNetworkID, 0) {
             return;
         }
@@ -83,8 +84,8 @@ impl MO_Coin {
         let mut y: i16 = 0;
         let mut iAttempts: i16 = 32;
         unsafe {
-            while (!game().g_map.findspawnpoint(5, &mut x, &mut y, self.collisionWidth, self.collisionHeight, false)
-                || game().objectcontainer[1].get_closest_moving_object(x, y, movingobject_coin) < 150.0f32)
+            while (!g.g_map.findspawnpoint(5, &mut x, &mut y, self.collisionWidth, self.collisionHeight, false)
+                || g.objectcontainer[1].get_closest_moving_object(x, y, movingobject_coin) < 150.0f32)
                 && {
                     let a = iAttempts;
                     iAttempts -= 1;
@@ -114,7 +115,7 @@ impl CObjectTrait for MO_Coin {
                 if self.iType == 2 {
                     player.score().subscore[0] += 1;
                 } else {
-                    player.score().adjust_score(1);
+                    player.score().adjust_score(game().get(), 1);
                 }
 
                 game().game_values.gamemode.check_winner(player);
@@ -122,11 +123,11 @@ impl CObjectTrait for MO_Coin {
 
             game().eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut game().rm.spr_coinsparkle), self.ix, self.iy, 7, 4));
 
-            if_sound_on_play(&mut game().rm.sfx_coin);
+            if_sound_on_play(game().get(), &mut game().rm.sfx_coin);
         }
 
         if self.iType == 0 {
-            self.place_coin();
+            self.place_coin(game().get());
         } else {
             self.dead = true;
         }
@@ -149,7 +150,7 @@ impl CObjectTrait for MO_Coin {
 
             self.timer += 1;
             if self.timer > 1000 {
-                self.place_coin();
+                self.place_coin(game().get());
             }
         }
 
@@ -174,7 +175,7 @@ impl CObjectTrait for MO_Coin {
         // Draw sparkles
         if self.iType != 1 {
             unsafe {
-                game().rm.spr_shinesparkle.draw_src(
+                game().rm.spr_shinesparkle.draw_src(game().get(), 
                     self.ix as i32 - self.collisionOffsetX as i32,
                     self.iy as i32 - self.collisionOffsetY as i32,
                     &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },

@@ -1,5 +1,6 @@
 //! Port of src/smw/player_components/PlayerCardCollection.cpp
 
+use crate::game::Game;
 use crate::common::game_mode::game_mode_collection;
 use crate::globals::*;
 use crate::smw::gamemodes::card_collection::CGM_Collection;
@@ -22,9 +23,9 @@ impl PlayerCardCollection {
         self.index = 0;
     }
 
-    pub fn update(&mut self, player: &mut CPlayer, keymask: u8) {
+    pub fn update(&mut self, g: &mut Game, player: &mut CPlayer, keymask: u8) {
         unsafe {
-            if game().game_values.gamemode.gamemode == game_mode_collection {
+            if g.game_values.gamemode.gamemode == game_mode_collection {
                 if self.index > 0 {
                     self.timer += 1;
                     if self.timer >= 32 {
@@ -44,7 +45,7 @@ impl PlayerCardCollection {
                     self.timer = 0;
                     self.index = 0;
 
-                    game().game_values.gamemode.get().as_any().downcast_mut::<CGM_Collection>().unwrap().release_card(Ptr::from_mut(player));
+                    g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Collection>().unwrap().release_card(Ptr::from_mut(player));
                 }
             }
         }

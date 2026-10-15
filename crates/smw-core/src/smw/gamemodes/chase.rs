@@ -51,7 +51,7 @@ impl CGameModeTrait for CGM_Chase {
     }
 
     fn init(&mut self) {
-        gm::cgamemode_init(self);
+        gm::cgamemode_init(game().get(), self);
 
         unsafe {
             //Add phantos based on settings
@@ -60,7 +60,7 @@ impl CGameModeTrait for CGM_Chase {
                 while iNumPhantos < game().game_values.gamemodesettings.chase.phantoquantity[iPhanto as usize] {
                     let x = RANDOM_INT(App::screenWidth);
                     let y = if RANDOM_BOOL() { -32 - CRUNCHMAX } else { App::screenHeight };
-                    game().objectcontainer[1].add(Ptr::new_box(OMO_Phanto::new(Ptr::from_mut(&mut game().rm.spr_phanto), Vec2s::new(x as i16, y as i16), 0.0f32, 0.0f32, iPhanto)));
+                    game().objectcontainer[1].add(Ptr::new_box(OMO_Phanto::new(game().get(), Ptr::from_mut(&mut game().rm.spr_phanto), Vec2s::new(x as i16, y as i16), 0.0f32, 0.0f32, iPhanto)));
                     iNumPhantos += 1;
                 }
             }
@@ -73,7 +73,7 @@ impl CGameModeTrait for CGM_Chase {
 
     fn think(&mut self) {
         if self.gameover {
-            self.displayplayertext();
+            self.displayplayertext(game().get());
             return;
         }
 
@@ -84,7 +84,7 @@ impl CGameModeTrait for CGM_Chase {
                     self.counter += 1;
                     if self.counter >= game().game_values.pointspeed {
                         self.counter = 0;
-                        keyholder.score().adjust_score(1);
+                        keyholder.score().adjust_score(game().get(), 1);
                         self.check_winner(keyholder);
                     }
                 }
@@ -104,7 +104,7 @@ impl CGameModeTrait for CGM_Chase {
 
     fn playerextraguy(&mut self, mut player: Ptr<CPlayer>, iType: i16) {
         if !self.gameover {
-            player.score().adjust_score((5 * iType as i32) as i16);
+            player.score().adjust_score(game().get(), (5 * iType as i32) as i16);
             self.check_winner(player);
         }
     }
@@ -125,7 +125,7 @@ impl CGameModeTrait for CGM_Chase {
 
             return PlayerKillType::Removed;
         } else if player.score().score as f64 >= self.goal as f64 * 0.8 && !self.playedwarningsound {
-            self.playwarningsound();
+            self.playwarningsound(game().get());
         }
 
         PlayerKillType::Normal

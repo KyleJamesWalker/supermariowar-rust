@@ -31,7 +31,7 @@ impl CGameModeTrait for CGM_Health {
     crate::impl_cgamemode_plumbing!();
 
     fn init(&mut self) {
-        cgm_classic_init(&mut self.cgm_classic);
+        cgm_classic_init(game().get(), &mut self.cgm_classic);
 
         unsafe {
             for iScore in 0..game().score_cnt {
@@ -55,7 +55,7 @@ impl CGameModeTrait for CGM_Health {
 
         if other.score().subscore[0] <= 0 {
             other.score().subscore[0] = 0;
-            let iRet = cgm_classic_playerkilledplayer(&mut self.cgm_classic, inflictor, other, style);
+            let iRet = cgm_classic_playerkilledplayer(game().get(), &mut self.cgm_classic, inflictor, other, style);
 
             if iRet == PlayerKillType::Normal {
                 other.score().subscore[0] = other.score().subscore[1];
@@ -64,9 +64,9 @@ impl CGameModeTrait for CGM_Health {
             return iRet;
         } else {
             unsafe {
-                if_sound_on_play(&mut game().rm.sfx_powerdown);
+                if_sound_on_play(game().get(), &mut game().rm.sfx_powerdown);
             }
-            other.shield().reset();
+            other.shield().reset(game().get());
         }
 
         PlayerKillType::NonKill
@@ -85,7 +85,7 @@ impl CGameModeTrait for CGM_Health {
 
         if player.score().subscore[0] <= 0 {
             player.score().subscore[0] = 0;
-            let iRet = cgm_classic_playerkilledself(&mut self.cgm_classic, player, style);
+            let iRet = cgm_classic_playerkilledself(game().get(), &mut self.cgm_classic, player, style);
 
             if iRet == PlayerKillType::Normal {
                 player.score().subscore[0] = player.score().subscore[1];
@@ -94,9 +94,9 @@ impl CGameModeTrait for CGM_Health {
             return iRet;
         } else {
             unsafe {
-                if_sound_on_play(&mut game().rm.sfx_powerdown);
+                if_sound_on_play(game().get(), &mut game().rm.sfx_powerdown);
             }
-            player.shield().reset();
+            player.shield().reset(game().get());
         }
 
         PlayerKillType::NonKill

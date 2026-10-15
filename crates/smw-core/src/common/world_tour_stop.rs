@@ -1,5 +1,6 @@
 //! Port of src/common/WorldTourStop.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::game_mode::*;
 use crate::common::game_mode_settings::*;
@@ -112,7 +113,7 @@ impl Strtok {
 }
 
 /// `ParseTourStopLine(char* buffer, ...)`; `buffer` is the line as read by `fgets`, without the NUL.
-pub fn parse_tour_stop_line(buffer: &[u8], version: &Version, fIsWorld: bool) -> TourStop {
+pub fn parse_tour_stop_line(g: &mut Game, buffer: &[u8], version: &Version, fIsWorld: bool) -> TourStop {
     let mut st = Strtok::new(buffer);
     let mut ts = TourStop { fUseSettings: false, iNumUsedSettings: 0, ..Default::default() };
 
@@ -150,21 +151,21 @@ pub fn parse_tour_stop_line(buffer: &[u8], version: &Version, fIsWorld: bool) ->
             if *version <= v(1, 8, 0, 2) && isMinigame {
                 ts.pszMapFile = UNKNOWN_MAP_NAME.to_string();
             } else {
-                game().maplist.save_current();
+                g.maplist.save_current();
 
-                let fMapFound = game().maplist.findexact(&szMap, true);
+                let fMapFound = g.maplist.findexact(&szMap, true);
                 if !fMapFound {
                     if isMinigame {
                         ts.pszMapFile = UNKNOWN_MAP_NAME.to_string();
                     } else {
-                        game().maplist.random(false);
-                        ts.pszMapFile = game().maplist.current_shortmapname().to_string();
+                        g.maplist.random(false);
+                        ts.pszMapFile = g.maplist.current_shortmapname().to_string();
                     }
                 } else {
-                    ts.pszMapFile = game().maplist.current_shortmapname().to_string();
+                    ts.pszMapFile = g.maplist.current_shortmapname().to_string();
                 }
 
-                game().maplist.resume_current();
+                g.maplist.resume_current();
             }
         }
 
@@ -186,7 +187,7 @@ pub fn parse_tour_stop_line(buffer: &[u8], version: &Version, fIsWorld: bool) ->
         if ts.iGoal <= 0 {
             if (ts.iMode as i32) < GAMEMODE_LAST {
                 let idx = RANDOM_INT(GAMEMODE_NUM_OPTIONS as i32 - 1) as usize;
-                ts.iGoal = unsafe { game().gamemodes[ts.iMode as usize].get_options()[idx].iValue };
+                ts.iGoal = unsafe { g.gamemodes[ts.iMode as usize].get_options()[idx].iValue };
             } else {
                 ts.iGoal = 50;
             }
@@ -255,12 +256,12 @@ pub fn parse_tour_stop_line(buffer: &[u8], version: &Version, fIsWorld: bool) ->
 
             ts.szName = match pszTemp {
                 Some(p) => st.cstr(p),
-                None => format!("Tour Stop {}", unsafe { game().game_values.tourstops.len() } + 1),
+                None => format!("Tour Stop {}", unsafe { g.game_values.tourstops.len() } + 1),
             };
         } else {
             ts.iPoints = 1;
             ts.iBonusType = 0;
-            ts.szName = format!("Tour Stop {}", unsafe { game().game_values.tourstops.len() } + 1);
+            ts.szName = format!("Tour Stop {}", unsafe { g.game_values.tourstops.len() } + 1);
         }
 
         if *version >= v(1, 8, 0, 0) {
@@ -273,10 +274,10 @@ pub fn parse_tour_stop_line(buffer: &[u8], version: &Version, fIsWorld: bool) ->
                 };
             }
 
-            ts.gmsSettings = unsafe { game().game_values.gamemodemenusettings.clone() };
+            ts.gmsSettings = unsafe { g.game_values.gamemodemenusettings.clone() };
 
             let mut gms = ts.gmsSettings.clone();
-            let usedSettings = deserialize_gms(&mut st, ts.iMode, &mut gms, unsafe { &game().game_values.gamemodesettings });
+            let usedSettings = deserialize_gms(&mut st, ts.iMode, &mut gms, unsafe { &g.game_values.gamemodesettings });
             ts.gmsSettings = gms;
             ts.iNumUsedSettings = usedSettings.iter().filter(|&&b| b).count() as i16;
             ts.fUseSettings = !usedSettings.is_empty();
@@ -284,7 +285,7 @@ pub fn parse_tour_stop_line(buffer: &[u8], version: &Version, fIsWorld: bool) ->
     } else if ts.iStageType == 1 {
         ts.szName = match pszTemp {
             Some(p) => st.cstr(p),
-            None => format!("Bonus House {}", unsafe { game().game_values.tourstops.len() } + 1),
+            None => format!("Bonus House {}", unsafe { g.game_values.tourstops.len() } + 1),
         };
 
         pszTemp = st.tok(b",\n");
@@ -431,12 +432,12 @@ pub fn write_tour_stop_line(ts: &TourStop, fIsWorld: bool) -> String {
     out
 }
 
-pub fn reset_tour_stops() {
+pub fn reset_tour_stops(g: &mut Game) {
     unsafe {
-        game().game_values.tourstopcurrent = 0;
+        g.game_values.tourstopcurrent = 0;
 
-        if !game().game_values.tourstops.is_empty() {
-            game().game_values.tourstops.clear();
+        if !g.game_values.tourstops.is_empty() {
+            g.game_values.tourstops.clear();
         }
     }
 }

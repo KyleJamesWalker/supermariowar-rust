@@ -1,5 +1,6 @@
 //! Port of src/smw/menu/PlayerControlsSelectMenu.cpp
 
+use crate::game::Game;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
 use crate::common::ui::mi_image::MI_Image;
@@ -29,25 +30,25 @@ pub struct UI_PlayerControlsSelectMenu {
 crate::impl_base!(UI_PlayerControlsSelectMenu => ui_menu: UI_Menu);
 
 impl UI_PlayerControlsSelectMenu {
-    pub fn new() -> Box<Self> {
+    pub fn new(g: &mut Game) -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let spr_selectfield = Ptr::from_mut(&mut game().rm.spr_selectfield);
-            let menu_plain_field = Ptr::from_mut(&mut game().rm.menu_plain_field);
+            let spr_selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
+            let menu_plain_field = Ptr::from_mut(&mut g.rm.menu_plain_field);
 
-            this.miPlayer1ControlsButton = Ptr::new_box(MI_Button::new(spr_selectfield, 120, 140, "Player 1", 400, TextAlign::CENTER));
+            this.miPlayer1ControlsButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 120, 140, "Player 1", 400, TextAlign::CENTER));
             this.miPlayer1ControlsButton.set_code(MENU_CODE_TO_PLAYER_1_CONTROLS);
 
-            this.miPlayer2ControlsButton = Ptr::new_box(MI_Button::new(spr_selectfield, 120, 180, "Player 2", 400, TextAlign::CENTER));
+            this.miPlayer2ControlsButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 120, 180, "Player 2", 400, TextAlign::CENTER));
             this.miPlayer2ControlsButton.set_code(MENU_CODE_TO_PLAYER_2_CONTROLS);
 
-            this.miPlayer3ControlsButton = Ptr::new_box(MI_Button::new(spr_selectfield, 120, 220, "Player 3", 400, TextAlign::CENTER));
+            this.miPlayer3ControlsButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 120, 220, "Player 3", 400, TextAlign::CENTER));
             this.miPlayer3ControlsButton.set_code(MENU_CODE_TO_PLAYER_3_CONTROLS);
 
-            this.miPlayer4ControlsButton = Ptr::new_box(MI_Button::new(spr_selectfield, 120, 260, "Player 4", 400, TextAlign::CENTER));
+            this.miPlayer4ControlsButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 120, 260, "Player 4", 400, TextAlign::CENTER));
             this.miPlayer4ControlsButton.set_code(MENU_CODE_TO_PLAYER_4_CONTROLS);
 
-            this.miPlayerControlsBackButton = Ptr::new_box(MI_Button::new(spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
+            this.miPlayerControlsBackButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
             this.miPlayerControlsBackButton.set_code(MENU_CODE_TO_MAIN_MENU);
 
             this.miPlayerControlsLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));

@@ -94,7 +94,7 @@ impl CObjectTrait for MO_Explosion {
                         if !block.is_null() {
                             if let Some(weaponbreakableblock) = block.as_any().downcast_mut::<B_WeaponBreakableBlock>() {
                                 if weaponbreakableblock.r#type() == WeaponDamageType::Bomb {
-                                    weaponbreakableblock.trigger_behavior_player(self.iPlayerID, self.iTeamID);
+                                    weaponbreakableblock.trigger_behavior_player(game().get(), self.iPlayerID, self.iTeamID);
                                 }
                             }
                         }

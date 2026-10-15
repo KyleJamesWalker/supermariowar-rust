@@ -35,7 +35,7 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
     crate::impl_cgamemode_plumbing!();
 
     fn init(&mut self) {
-        cgamemode_init(self);
+        cgamemode_init(game().get(), self);
 
         let mut fTeamUsed: [bool; 4] = [false, false, false, false];
 
@@ -47,7 +47,7 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
                     fTeamUsed[iTeamID as usize] = true;
 
                     let iColorID: i16 = player.get_color_id();
-                    let base: Ptr<MO_FlagBase> = Ptr::new_box(MO_FlagBase::new(Ptr::from_mut(&mut game().rm.spr_flagbases), iTeamID, iColorID));
+                    let base: Ptr<MO_FlagBase> = Ptr::new_box(MO_FlagBase::new(game().get(), Ptr::from_mut(&mut game().rm.spr_flagbases), iTeamID, iColorID));
                     game().objectcontainer[0].add(base);
 
                     if !game().game_values.gamemodesettings.flag.centerflag {
@@ -73,9 +73,9 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
 
         let mut item = player.carriedItem;
         if !item.is_null() && item.get_moving_object_type() == movingobject_flag {
-            item.as_any().downcast_mut::<CO_Flag>().expect("carried flag").place_flag();
+            item.as_any().downcast_mut::<CO_Flag>().expect("carried flag").place_flag(game().get());
             unsafe {
-                if_sound_on_play(&mut game().rm.sfx_transform);
+                if_sound_on_play(game().get(), &mut game().rm.sfx_transform);
             }
         }
 
@@ -87,7 +87,7 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
             return;
         }
 
-        player.score().adjust_score(iType);
+        player.score().adjust_score(game().get(), iType);
         self.check_winner(player);
     }
 
@@ -102,7 +102,7 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
                 setup_score_board(false);
                 show_score_board();
             } else if player.score().score as i32 >= self.goal as i32 - 2 && !self.playedwarningsound {
-                self.playwarningsound();
+                self.playwarningsound(game().get());
             }
         }
 

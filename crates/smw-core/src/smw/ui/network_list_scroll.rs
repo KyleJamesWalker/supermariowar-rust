@@ -157,10 +157,10 @@ impl UI_ControlTrait for MI_NetworkListScroll {
             let (x, y) = (self.m_pos.x as i32, self.m_pos.y as i32);
             let w = self.iWidth as i32;
             let n = self.iNumLines as i32;
-            game().rm.menu_dialog.draw_src(x, y, &SDL_Rect { x: 0, y: 0, w: w - 16, h: n * 32 + 32 });
-            game().rm.menu_dialog.draw_src(x + w - 16, y, &SDL_Rect { x: 496, y: 0, w: 16, h: n * 32 + 32 });
-            game().rm.menu_dialog.draw_src(x, y + n * 32 + 32, &SDL_Rect { x: 0, y: 464, w: w - 16, h: 16 });
-            game().rm.menu_dialog.draw_src(x + w - 16, y + n * 32 + 32, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+            game().rm.menu_dialog.draw_src(game().get(), x, y, &SDL_Rect { x: 0, y: 0, w: w - 16, h: n * 32 + 32 });
+            game().rm.menu_dialog.draw_src(game().get(), x + w - 16, y, &SDL_Rect { x: 496, y: 0, w: 16, h: n * 32 + 32 });
+            game().rm.menu_dialog.draw_src(game().get(), x, y + n * 32 + 32, &SDL_Rect { x: 0, y: 464, w: w - 16, h: 16 });
+            game().rm.menu_dialog.draw_src(game().get(), x + w - 16, y + n * 32 + 32, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
 
             game().rm.menu_font_large.draw_centered(x + (w >> 1), y + 5, &self.sTitle);
 
@@ -170,8 +170,8 @@ impl UI_ControlTrait for MI_NetworkListScroll {
                 let iLineWidth: i16 = self.iWidth - 32;
                 let sel = if self.iSelectedLine == iLine { 32 } else { 0 };
                 let ly = y + 32 + iLine as i32 * 32;
-                self.spr.draw_src(x + 16, ly, &SDL_Rect { x: 0, y: sel, w: iHalfLineWidth as i32, h: 32 });
-                self.spr.draw_src(
+                self.spr.draw_src(game().get(), x + 16, ly, &SDL_Rect { x: 0, y: sel, w: iHalfLineWidth as i32, h: 32 });
+                self.spr.draw_src(game().get(), 
                     x + 16 + iHalfLineWidth as i32,
                     ly,
                     &SDL_Rect { x: 512 - iLineWidth as i32 + iHalfLineWidth as i32, y: sel, w: (iLineWidth - iHalfLineWidth) as i32, h: 32 },

@@ -1,5 +1,6 @@
 //! Port of src/common/MapList.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::file_list::SimpleDirectoryList;
 use crate::common::file_io::throw_runtime_error;
@@ -27,8 +28,8 @@ pub struct MapListNode {
 }
 
 impl MapListNode {
-    pub fn new(fullName: String) -> Self {
-        let count = unsafe { game().filterslist.count() };
+    pub fn new(g: &mut Game, fullName: String) -> Self {
+        let count = unsafe { g.filterslist.count() };
         MapListNode {
             pfFilters: vec![false; NUM_AUTO_FILTERS as usize + count],
             filename: fullName,
@@ -91,7 +92,7 @@ fn add_maps_from(dirpath: &str, container: &mut MapMultimap) {
 fn add_maps_from_with(dirpath: &str, mut emplace: impl FnMut(String, MapListNode)) {
     let mut dir = FilesIterator::new(dirpath.to_string(), vec![".map".to_string()]);
     while let Some(path) = dir.next() {
-        let node = MapListNode::new(path.to_string_lossy().into_owned());
+        let node = MapListNode::new(game().get(), path.to_string_lossy().into_owned());
         let fname = path.file_name().map(|f| f.to_string_lossy().into_owned()).unwrap_or_default();
         emplace(strip_creator_and_ext(&fname), node);
     }
@@ -123,19 +124,19 @@ pub struct MapList {
 impl MapList {
     pub fn new(fWorldEditor: bool) -> Self {
         let mut maps = MapMultimap::default();
-        add_maps_from(&convert_path("maps/"), &mut maps);
+        add_maps_from(&convert_path(game().get(), "maps/"), &mut maps);
 
         if fWorldEditor {
-            add_maps_from(&convert_path("maps/tour/"), &mut maps);
+            add_maps_from(&convert_path(game().get(), "maps/tour/"), &mut maps);
 
-            let mut worldeditormapdirs = SimpleDirectoryList::new(convert_path("worlds/"));
+            let mut worldeditormapdirs = SimpleDirectoryList::new(convert_path(game().get(), "worlds/"));
             for _iDir in 0..worldeditormapdirs.count() {
                 let szName = worldeditormapdirs.current_path().to_string_lossy().into_owned() + "/";
                 add_maps_from(&szName, &mut maps);
                 worldeditormapdirs.next();
             }
 
-            add_maps_from(&convert_path("maps/special/"), &mut maps);
+            add_maps_from(&convert_path(game().get(), "maps/special/"), &mut maps);
         }
 
         if maps.is_empty() {
@@ -152,16 +153,16 @@ impl MapList {
         let n = maps.len();
         let mut worldmaps = MapMultimap::default();
 
-        add_maps_from(&convert_path("maps/tour/"), &mut worldmaps);
+        add_maps_from(&convert_path(game().get(), "maps/tour/"), &mut worldmaps);
 
-        let mut worldmapdirs = SimpleDirectoryList::new(convert_path("worlds/"));
+        let mut worldmapdirs = SimpleDirectoryList::new(convert_path(game().get(), "worlds/"));
         for _iDir in 0..worldmapdirs.count() {
             let szName = worldmapdirs.current_path().to_string_lossy().into_owned() + "/";
             add_maps_from(&szName, &mut worldmaps);
             worldmapdirs.next();
         }
 
-        add_maps_from(&convert_path("maps/special/"), &mut worldmaps);
+        add_maps_from(&convert_path(game().get(), "maps/special/"), &mut worldmaps);
 
         MapList {
             maps,
@@ -177,7 +178,7 @@ impl MapList {
     }
 
     pub fn add_world_maps(&mut self) {
-        let mut worldmapdirs = SimpleDirectoryList::new(convert_path("worlds/"));
+        let mut worldmapdirs = SimpleDirectoryList::new(convert_path(game().get(), "worlds/"));
         for _iDir in 0..worldmapdirs.count() {
             let szName = worldmapdirs.current_path().to_string_lossy().into_owned() + "/";
             add_maps_from_with(&szName, |key, node| self.emplace_map(key, node));
@@ -186,8 +187,8 @@ impl MapList {
     }
 
     pub fn add(&mut self, name: &str) {
-        let fullName = convert_path("maps/") + name;
-        let node = MapListNode::new(fullName);
+        let fullName = convert_path(game().get(), "maps/") + name;
+        let node = MapListNode::new(game().get(), fullName);
         self.emplace_map(strip_creator_and_ext(name), node);
     }
 
@@ -459,13 +460,13 @@ impl MapList {
         self.maps.len()
     }
 
-    pub fn write_filters(&mut self) {
+    pub fn write_filters(&mut self, g: &mut Game) {
         unsafe {
-            if game().game_values.fNeedWriteFilters {
-                game().game_values.fNeedWriteFilters = false;
+            if g.game_values.fNeedWriteFilters {
+                g.game_values.fNeedWriteFilters = false;
 
                 for iFilter in 0..game().filterslist.count() {
-                    let path = game().filterslist.at(iFilter).clone();
+                    let path = g.filterslist.at(iFilter).clone();
                     let Ok(mut fp) = std::fs::File::create(&path) else {
                         continue;
                     };
@@ -475,7 +476,7 @@ impl MapList {
                     out += &format!("{}.{}.{}.{}\n\n", GAME_VERSION.major, GAME_VERSION.minor, GAME_VERSION.patch, GAME_VERSION.build);
 
                     out += "#Icon\n";
-                    out += &format!("{}\n\n", game().game_values.piFilterIcons[iFilter + NUM_AUTO_FILTERS as usize]);
+                    out += &format!("{}\n\n", g.game_values.piFilterIcons[iFilter + NUM_AUTO_FILTERS as usize]);
 
                     out += "#Maps\n";
 
@@ -498,11 +499,11 @@ impl MapList {
         }
     }
 
-    pub fn read_filters(&mut self) {
+    pub fn read_filters(&mut self, g: &mut Game) {
         unsafe {
             self.current = 0;
 
-            if let Ok(f) = std::fs::File::open(convert_path("maps/cache/mapsummary.txt")) {
+            if let Ok(f) = std::fs::File::open(convert_path(g, "maps/cache/mapsummary.txt")) {
                 for line in fgets_lines(f) {
                     let mut toks = strtok(&line, b",\n");
                     let Some(pszMapName) = toks.next() else { continue };
@@ -538,8 +539,8 @@ impl MapList {
             while self.current != self.maps.len() {
                 if !self.maps.node(self.current).fReadFromCache {
                     let filename = self.maps.node(self.current).filename.clone();
-                    game().g_map.load_map(&filename, read_type_summary);
-                    let af = game().g_map.fAutoFilter;
+                    g.g_map.load_map(&filename, read_type_summary);
+                    let af = g.g_map.fAutoFilter;
                     let mln = self.maps.node_mut(self.current);
                     mln.pfFilters[..af.len()].copy_from_slice(&af);
                 }
@@ -549,7 +550,7 @@ impl MapList {
 
             self.current = 0;
             for iFilter in 0..game().filterslist.count() {
-                let Ok(f) = std::fs::File::open(game().filterslist.at(iFilter)) else {
+                let Ok(f) = std::fs::File::open(g.filterslist.at(iFilter)) else {
                     continue;
                 };
 
@@ -564,7 +565,7 @@ impl MapList {
                         iReadState = 1;
                         continue;
                     } else if iReadState == 1 {
-                        game().game_values.piFilterIcons[iFilter + NUM_AUTO_FILTERS as usize] = atoi(&buffer) as i16;
+                        g.game_values.piFilterIcons[iFilter + NUM_AUTO_FILTERS as usize] = atoi(&buffer) as i16;
                         iReadState = 2;
                         continue;
                     } else {
@@ -582,19 +583,19 @@ impl MapList {
         }
     }
 
-    pub fn reload_map_auto_filters(&mut self) {
+    pub fn reload_map_auto_filters(&mut self, g: &mut Game) {
         unsafe {
             for itr in 0..self.maps.len() {
                 let filename = self.maps.node(itr).filename.clone();
-                game().g_map.load_map(&filename, read_type_summary);
-                let af = game().g_map.fAutoFilter;
+                g.g_map.load_map(&filename, read_type_summary);
+                let af = g.g_map.fAutoFilter;
                 self.maps.node_mut(itr).pfFilters[..af.len()].copy_from_slice(&af);
             }
         }
     }
 
     pub fn write_map_summary_cache(&mut self) {
-        let path = convert_path("maps/cache/mapsummary.txt");
+        let path = convert_path(game().get(), "maps/cache/mapsummary.txt");
         let Ok(mut fp) = std::fs::File::create(&path) else {
             return;
         };
@@ -619,7 +620,7 @@ impl MapList {
         }
     }
 
-    pub fn apply_filters(&mut self, pfFilters: &[bool]) {
+    pub fn apply_filters(&mut self, g: &mut Game, pfFilters: &[bool]) {
         self.iFilteredMapCount = 0;
         let mut iTotalCount: i16 = 0;
         for itr in 0..self.maps.len() {
@@ -644,7 +645,7 @@ impl MapList {
         }
 
         unsafe {
-            game().game_values.fFiltersOn = pfFilters.contains(&true);
+            g.game_values.fFiltersOn = pfFilters.contains(&true);
         }
         self.find_filtered_map();
     }

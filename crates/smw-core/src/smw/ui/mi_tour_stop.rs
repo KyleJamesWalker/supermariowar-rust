@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_TourStop.cpp
 
+use crate::game::Game;
 use crate::common::game_mode::*;
 use crate::common::global_constants::NUM_POWERUPS;
 use crate::common::match_types::Boss;
@@ -40,10 +41,10 @@ crate::impl_base!(MI_TourStop => ui_control: UI_Control);
 
 impl MI_TourStop {
     //Call with x = 70 and y == 80
-    pub fn new(x: i16, y: i16, fWorld: bool) -> Self {
+    pub fn new(g: &mut Game, x: i16, y: i16, fWorld: bool) -> Self {
         unsafe {
             let fIsWorld = fWorld;
-            let spr_disabled = Ptr::from_mut(&mut game().rm.spr_selectfielddisabled);
+            let spr_disabled = Ptr::from_mut(&mut g.rm.spr_selectfielddisabled);
 
             let mut miModeField;
             let mut miGoalField;
@@ -54,7 +55,7 @@ impl MI_TourStop {
             let mut miBonusBackground: [Option<Box<MI_Image>>; 10] = Default::default();
 
             if fIsWorld {
-                miModeField = Box::new(MI_ImageSelectField::new(spr_disabled, Ptr::from_mut(&mut game().rm.menu_mode_small), 70, 85, "Mode", 305, 90, 16, 16));
+                miModeField = Box::new(MI_ImageSelectField::new(spr_disabled, Ptr::from_mut(&mut g.rm.menu_mode_small), 70, 85, "Mode", 305, 90, 16, 16));
                 miGoalField = Box::new(MI_SelectField::<i16>::new(spr_disabled, 380, 85, "Goal", 190, 90));
                 miPointsField = Box::new(MI_SelectField::<i16>::new(spr_disabled, 380, 125, "Score", 190, 90));
 
@@ -62,17 +63,17 @@ impl MI_TourStop {
                 bonus.disable(true);
                 miBonusField = Some(bonus);
 
-                let mut img0 = Box::new(MI_Image::new(Ptr::from_mut(&mut game().rm.spr_worlditemsplace), 54, 201, 0, 20, 80, 248, 1, 1, 0));
+                let mut img0 = Box::new(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_worlditemsplace), 54, 201, 0, 20, 80, 248, 1, 1, 0));
                 img0.set_visible(false);
                 miEndStageImage[0] = Some(img0);
 
-                let mut img1 = Box::new(MI_Image::new(Ptr::from_mut(&mut game().rm.spr_worlditemsplace), 506, 201, 0, 20, 80, 248, 1, 1, 0));
+                let mut img1 = Box::new(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_worlditemsplace), 506, 201, 0, 20, 80, 248, 1, 1, 0));
                 img1.set_visible(false);
                 miEndStageImage[1] = Some(img1);
 
                 for iBonus in 0..10i16 {
-                    let mut icon = Box::new(MI_Image::new(Ptr::from_mut(&mut game().rm.spr_worlditemssmall), 170 + iBonus * 20, 133, 0, 0, 16, 16, 1, 1, 0));
-                    let mut background = Box::new(MI_Image::new(Ptr::from_mut(&mut game().rm.spr_worlditemsplace), 168 + iBonus * 20, 131, 0, 0, 20, 20, 1, 1, 0));
+                    let mut icon = Box::new(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_worlditemssmall), 170 + iBonus * 20, 133, 0, 0, 16, 16, 1, 1, 0));
+                    let mut background = Box::new(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_worlditemsplace), 168 + iBonus * 20, 131, 0, 0, 20, 20, 1, 1, 0));
 
                     icon.set_visible(false);
                     background.set_visible(false);
@@ -81,14 +82,14 @@ impl MI_TourStop {
                     miBonusBackground[iBonus as usize] = Some(background);
                 }
             } else {
-                miModeField = Box::new(MI_ImageSelectField::new(spr_disabled, Ptr::from_mut(&mut game().rm.menu_mode_small), 70, 85, "Mode", 500, 120, 16, 16));
+                miModeField = Box::new(MI_ImageSelectField::new(spr_disabled, Ptr::from_mut(&mut g.rm.menu_mode_small), 70, 85, "Mode", 500, 120, 16, 16));
                 miGoalField = Box::new(MI_SelectField::<i16>::new(spr_disabled, 70, 125, "Goal", 246, 120));
                 miPointsField = Box::new(MI_SelectField::<i16>::new(spr_disabled, 70 + 254, 125, "Score", 246, 120));
 
                 miBonusField = None;
             }
 
-            let mut miStartButton = Box::new(MI_Button::new(Ptr::from_mut(&mut game().rm.spr_selectfield), 70, 45, "Start", 500, TextAlign::LEFT));
+            let mut miStartButton = Box::new(MI_Button::new(g, Ptr::from_mut(&mut game().rm.spr_selectfield), 70, 45, "Start", 500, TextAlign::LEFT));
             miStartButton.set_code(MENU_CODE_TOUR_STOP_CONTINUE);
             miStartButton.select(true);
 
@@ -99,8 +100,8 @@ impl MI_TourStop {
             miGoalField.disable(true);
             miPointsField.disable(true);
 
-            let miTourStopLeftHeaderBar = Box::new(MI_Image::new(Ptr::from_mut(&mut game().rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
-            let miTourStopMenuRightHeaderBar = Box::new(MI_Image::new(Ptr::from_mut(&mut game().rm.menu_plain_field), 320, 0, 192, 0, 320, 32, 1, 1, 0));
+            let miTourStopLeftHeaderBar = Box::new(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
+            let miTourStopMenuRightHeaderBar = Box::new(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 320, 0, 192, 0, 320, 32, 1, 1, 0));
             let miTourStopMenuHeaderText = Box::new(MI_HeaderText::new("Tour Stop", 320, 5));
 
             MI_TourStop {
@@ -123,9 +124,9 @@ impl MI_TourStop {
     }
 
     /// `MI_TourStop::Refresh(short iTourStop)`; hides the `UI_Control::Refresh()` virtual like the C++ overload.
-    pub fn refresh(&mut self, iTourStop: i16) {
+    pub fn refresh(&mut self, g: &mut Game, iTourStop: i16) {
         unsafe {
-            let tourstop: Ptr<TourStop> = game().game_values.tourstops[iTourStop as usize];
+            let tourstop: Ptr<TourStop> = g.game_values.tourstops[iTourStop as usize];
 
             if tourstop.iStageType == 0 {
                 self.miModeField.clear();
@@ -133,17 +134,17 @@ impl MI_TourStop {
                 let gamemode: Ptr<dyn CGameModeTrait>;
                 let tourstopicon: i16;
                 if tourstop.iMode as i32 == game_mode_pipe_minigame {
-                    gamemode = Ptr::from_raw(game().pipegamemode.as_ptr() as *mut dyn CGameModeTrait);
+                    gamemode = Ptr::from_raw(g.pipegamemode.as_ptr() as *mut dyn CGameModeTrait);
                     tourstopicon = 25;
                 } else if tourstop.iMode as i32 == game_mode_boss_minigame {
-                    game().bossgamemode.set_boss_type(tourstop.gmsSettings.boss.bosstype);
-                    gamemode = Ptr::from_raw(game().bossgamemode.as_ptr() as *mut dyn CGameModeTrait);
+                    g.bossgamemode.set_boss_type(tourstop.gmsSettings.boss.bosstype);
+                    gamemode = Ptr::from_raw(g.bossgamemode.as_ptr() as *mut dyn CGameModeTrait);
                     tourstopicon = 26;
                 } else if tourstop.iMode as i32 == game_mode_boxes_minigame {
-                    gamemode = Ptr::from_raw(game().boxesgamemode.as_ptr() as *mut dyn CGameModeTrait);
+                    gamemode = Ptr::from_raw(g.boxesgamemode.as_ptr() as *mut dyn CGameModeTrait);
                     tourstopicon = 27;
                 } else {
-                    gamemode = game().gamemodes[tourstop.iMode as usize];
+                    gamemode = g.gamemodes[tourstop.iMode as usize];
                     tourstopicon = tourstop.iMode;
                 }
 
@@ -162,13 +163,13 @@ impl MI_TourStop {
                 self.miPointsField.add_random(szTemp, 0, false);
 
                 if tourstop.iMode as i32 == game_mode_pipe_minigame {
-                    let fFound = self.miMapField.set_map(&tourstop.pszMapFile, true);
+                    let fFound = self.miMapField.set_map(g, &tourstop.pszMapFile, true);
 
                     if !fFound {
                         self.miMapField.set_special_map("Pipe Minigame", "maps/special/two52_special_pipe_minigame.map");
                     }
                 } else if tourstop.iMode as i32 == game_mode_boss_minigame {
-                    let fFound = self.miMapField.set_map(&tourstop.pszMapFile, true);
+                    let fFound = self.miMapField.set_map(g, &tourstop.pszMapFile, true);
 
                     if !fFound {
                         match tourstop.gmsSettings.boss.bosstype {
@@ -184,13 +185,13 @@ impl MI_TourStop {
                         }
                     }
                 } else if tourstop.iMode as i32 == game_mode_boxes_minigame {
-                    let fFound = self.miMapField.set_map(&tourstop.pszMapFile, true);
+                    let fFound = self.miMapField.set_map(g, &tourstop.pszMapFile, true);
 
                     if !fFound {
                         self.miMapField.set_special_map("Boxes Minigame", "maps/special/two52_special_boxes_minigame.map");
                     }
                 } else {
-                    self.miMapField.set_map(&tourstop.pszMapFile, true);
+                    self.miMapField.set_map(g, &tourstop.pszMapFile, true);
                 }
 
                 self.miTourStopMenuHeaderText.set_text(tourstop.szName.clone());
@@ -207,9 +208,9 @@ impl MI_TourStop {
                         if fShowBonus {
                             let iBonusIcon = tourstop.wsbBonuses[iBonus as usize].iBonus;
                             icon.set_image_source(if (iBonusIcon as i32) < NUM_POWERUPS {
-                                Ptr::from_mut(&mut game().rm.spr_storedpowerupsmall)
+                                Ptr::from_mut(&mut g.rm.spr_storedpowerupsmall)
                             } else {
-                                Ptr::from_mut(&mut game().rm.spr_worlditemssmall)
+                                Ptr::from_mut(&mut g.rm.spr_worlditemssmall)
                             });
                             icon.set_image(
                                 ((if (iBonusIcon as i32) < NUM_POWERUPS { iBonusIcon as i32 } else { iBonusIcon as i32 - NUM_POWERUPS }) << 4) as i16,

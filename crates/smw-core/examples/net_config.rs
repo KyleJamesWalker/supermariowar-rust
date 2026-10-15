@@ -13,5 +13,5 @@ fn main() {
         game().netplay.myPlayerName = "Player".to_string();
     }
     NetConfigManager.load();
-    NetConfigManager.save();
+    NetConfigManager.save(game().get());
 }

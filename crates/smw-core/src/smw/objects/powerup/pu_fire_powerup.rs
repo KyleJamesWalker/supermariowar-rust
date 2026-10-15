@@ -40,7 +40,7 @@ impl CObjectTrait for PU_FirePowerup {
     fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
         let mut player = player;
         if self.state > 0 {
-            player.set_powerup(1);
+            player.set_powerup(game().get(), 1);
             self.dead = true;
         }
 

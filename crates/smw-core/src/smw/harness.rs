@@ -3,6 +3,7 @@
 //! Deterministic replay/dump harness. Every entry point is a no-op unless the corresponding
 //! SMW_* environment variable is set; docs/REPLAY.md is the byte-level spec.
 
+use crate::game::Game;
 use crate::common::game_values::AppState;
 use crate::common::global_constants::WAITTIME;
 use crate::common::random_number_generator::{RandomNumberGenerator, RandomNumberGeneratorType};
@@ -403,7 +404,7 @@ pub fn note_powerup_spawn(iType: i16, x: i16, y: i16) {
     note_net(format!("powerup type={} x={} y={}", iType, x, y));
 }
 
-fn dump_frame(out: &mut impl Write) -> std::io::Result<()> {
+fn dump_frame(g: &mut Game, out: &mut impl Write) -> std::io::Result<()> {
     let state = state_name();
     writeln!(out, "F {} {}", unsafe { h().frame }, state)?;
 
@@ -411,17 +412,17 @@ fn dump_frame(out: &mut impl Write) -> std::io::Result<()> {
         let menu = MenuState::instance();
         writeln!(out, "M {} focus={} modifying={}", menu.harness_menu_name(), menu.harness_focus_index(), menu.harness_modifying() as i32)?;
     } else if state == "gameplay" {
-        GameplayState::instance().harness_dump(game().get(), out)?;
+        GameplayState::instance().harness_dump(g, out)?;
     }
 
-    for line in unsafe { game().sfx.sfx_events.iter().chain(h().spawn_events.iter()) } {
+    for line in unsafe { g.sfx.sfx_events.iter().chain(h().spawn_events.iter()) } {
         writeln!(out, "{}", line)?;
     }
 
     writeln!(out, "R calls={} last={}", RandomNumberGenerator::call_count(), RandomNumberGenerator::last_value())
 }
 
-pub fn init() {
+pub fn init(g: &mut Game) {
     unsafe {
         // A normal launch records the session (seeded, so it can be replayed); replays never record.
         let record = env("SMW_REPLAY").is_none() && env("SMW_NO_RECORD").is_none();
@@ -432,9 +433,9 @@ pub fn init() {
             RandomNumberGenerator::generator().reseed(h().seed);
             srand(h().seed);
             RandomNumberGenerator::reset_call_count();
-            game().sfx.sfx_ticks = virtual_ticks;
-            game().sfx.sfx_ignore_channel_failure = true;
-            game().sfx.sfx_log_events = true;
+            g.sfx.sfx_ticks = virtual_ticks;
+            g.sfx.sfx_ignore_channel_failure = true;
+            g.sfx.sfx_log_events = true;
         }
 
         h().noLimit = env("SMW_NOLIMIT").is_some();
@@ -457,12 +458,12 @@ pub fn init() {
                 h().devices.clear();
             }
             let from = if h().segment.is_some() { h().frame + 1 } else { 0 };
-            crate::smw::network::net_record::load(&read_recording(&replay).unwrap_or_default(), from);
+            crate::smw::network::net_record::load(g, &read_recording(&replay).unwrap_or_default(), from);
         }
 
         h().audible = record || env("SMW_AUDIBLE").is_some();
         // Unseeded runs (SMW_NO_RECORD) are live play, so they are audible too.
-        game().sfx.sfx_audible = h().audible || !h().seeded;
+        g.sfx.sfx_audible = h().audible || !h().seeded;
         if let Some(speed) = env("SMW_REPLAY_SPEED").and_then(|v| v.parse::<f32>().ok()).filter(|v| *v > 0.0) {
             h().speed = speed;
         }
@@ -608,7 +609,7 @@ pub fn frame_start() {
     sfx::sfx_virtual_advance();
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::phase(3);
-    record_frame_start(unsafe { h().frame });
+    record_frame_start(game().get(), unsafe { h().frame });
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::phase(4);
 
@@ -647,14 +648,14 @@ pub fn wait_event(event: &mut SDL_Event) {
     }
 }
 
-pub fn frame_end() {
+pub fn frame_end(g: &mut Game) {
     unsafe {
         if let Some(mut out) = h().dump.take() {
-            let _ = dump_frame(&mut out);
+            let _ = dump_frame(g, &mut out);
             let _ = out.flush();
             h().dump = Some(out);
         }
-        game().sfx.sfx_events.clear();
+        g.sfx.sfx_events.clear();
         h().spawn_events.clear();
         record_markers(h().frame);
 
@@ -662,21 +663,21 @@ pub fn frame_end() {
         let periodic = h().shotEvery > 0 && f >= h().shotFrom && f <= h().shotTo && (f - h().shotFrom) % h().shotEvery == 0;
         if periodic {
             if let Some(out) = h().shotStream.as_mut() {
-                if crate::common::gfx::gfx_write_screen_raw(out).and_then(|_| out.flush()).is_err() {
+                if crate::common::gfx::gfx_write_screen_raw(g, out).and_then(|_| out.flush()).is_err() {
                     fail(format!("cannot write shot stream at frame {}", f));
                 }
             }
         }
         if h().shotFrames.contains(&f) || (periodic && h().shotStream.is_none()) {
             let path = format!("{}/frame_{}.bmp", h().shotDir, h().frame);
-            if !crate::common::gfx::gfx_save_screen_bmp(&path) {
+            if !crate::common::gfx::gfx_save_screen_bmp(g, &path) {
                 eprintln!("[harness] cannot save {}", path);
             }
         }
 
         h().frame += 1;
         if h().maxFrames >= 0 && h().frame as i64 >= h().maxFrames {
-            game().game_values.appstate = AppState::Quit;
+            g.game_values.appstate = AppState::Quit;
             h().dump = None;
         }
     }
@@ -1041,7 +1042,7 @@ mod web_dpad {
 
 /// Frame start while recording: every joystick open at frame 0 gets a centred-hat line so a replay
 /// attaches the same number of joysticks; then held input becomes replay lines pushed in order.
-fn record_frame_start(frame: u32) {
+fn record_frame_start(g: &mut Game, frame: u32) {
     let Some(r) = rec().filter(|r| r.live) else { return };
     if frame == 0 {
         for d in 0..unsafe { crate::game::game().joystickcount }.min(8) as i32 {
@@ -1074,7 +1075,7 @@ fn record_frame_start(frame: u32) {
     if r.quit {
         // The recording ends before this frame; frames= excludes it.
         r.quitFrame.get_or_insert(frame);
-        unsafe { game().game_values.appstate = AppState::Quit };
+        unsafe { g.game_values.appstate = AppState::Quit };
     }
 }
 
@@ -1197,7 +1198,7 @@ fn copy_replay_event(ev: &ReplayEvent) {
 }
 
 pub fn note_match_map(path: &str) {
-    crate::smw::checkpoint::note_match_map(path);
+    crate::smw::checkpoint::note_match_map(game().get(), path);
 }
 
 /// Called where a match starts (`MenuState::enter_gameplay`): the next marker opens a new match.
@@ -1232,7 +1233,7 @@ fn record_markers(frame: u32) {
     r.state = state.to_string();
     let mut line = format!("#@ mark frame={} state={}", frame, state);
     if state == "gameplay" && !was_match {
-        line += &format!(" match={} {}", r.matches, crate::smw::checkpoint::start_fields());
+        line += &format!(" match={} {}", r.matches, crate::smw::checkpoint::start_fields(game().get()));
         let checkpoint = r.checkpoint.take();
         let _ = writeln!(r.out, "{}", line);
         if let Some(checkpoint) = checkpoint {
@@ -1242,7 +1243,7 @@ fn record_markers(frame: u32) {
         return;
     }
     if state == "scoreboard" || was_match {
-        line += &format!(" match={} {}", r.matches, crate::smw::checkpoint::result_fields());
+        line += &format!(" match={} {}", r.matches, crate::smw::checkpoint::result_fields(game().get()));
     }
     let _ = writeln!(r.out, "{}", line);
 }

@@ -68,9 +68,9 @@ impl UI_ControlTrait for MI_ImageSelectField {
         let selY = if self.fSelected { 32 } else { 0 };
 
         unsafe {
-            self.m_spr.draw_src(x, y, &SDL_Rect { x: 0, y: selY, w: indent - 16, h: 32 });
-            self.m_spr.draw_src(x + indent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
-            self.m_spr.draw_src(x + indent + 16, y, &SDL_Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
+            self.m_spr.draw_src(game().get(), x, y, &SDL_Rect { x: 0, y: selY, w: indent - 16, h: 32 });
+            self.m_spr.draw_src(game().get(), x + indent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
+            self.m_spr.draw_src(game().get(), x + indent + 16, y, &SDL_Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
 
             game().rm.menu_font_large.draw_chop_right(x + 16, y + 5, indent - 8, &self.m_name);
 
@@ -81,7 +81,7 @@ impl UI_ControlTrait for MI_ImageSelectField {
 
         let item = self.current_item();
         let srcIndex = (if item.iconOverride >= 0 { item.iconOverride } else { item.value }) as i32;
-        self.spr_image.draw_src(
+        self.spr_image.draw_src(game().get(), 
             x + indent + 8,
             y + 16 - (self.iImageHeight as i32 >> 1),
             &SDL_Rect { x: srcIndex * self.iImageWidth as i32, y: 0, w: self.iImageWidth as i32, h: self.iImageHeight as i32 },

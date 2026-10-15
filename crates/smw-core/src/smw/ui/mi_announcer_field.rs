@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_AnnouncerField.cpp
 
+use crate::game::Game;
 use crate::common::file_list::SimpleFileList;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::input::CPlayerInput;
@@ -102,7 +103,7 @@ impl MI_AnnouncerField {
         self.miModifyImageLeft.update();
     }
 
-    pub fn draw_impl(&mut self) {
+    pub fn draw_impl(&mut self, g: &mut Game) {
         if !self.m_visible {
             return;
         }
@@ -114,12 +115,12 @@ impl MI_AnnouncerField {
 
         unsafe {
             //Draw the select field background
-            self.spr.draw_src(x, y, &SDL_Rect { x: 0, y: if self.fSelected { 32 } else { 0 }, w: iIndent - 16, h: 32 });
-            self.spr.draw_src(x + iIndent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
-            self.spr.draw_src(x + iIndent + 16, y, &SDL_Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 32 } else { 0 }, w: iWidth - iIndent - 16, h: 32 });
+            self.spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: if self.fSelected { 32 } else { 0 }, w: iIndent - 16, h: 32 });
+            self.spr.draw_src(g, x + iIndent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
+            self.spr.draw_src(g, x + iIndent + 16, y, &SDL_Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 32 } else { 0 }, w: iWidth - iIndent - 16, h: 32 });
 
-            game().rm.menu_font_large.draw_chop_right(x + 16, y + 5, iIndent - 8, &self.szName);
-            game().rm.menu_font_large.draw_chop_right(x + iIndent + 8, y + 5, iWidth - iIndent - 24, &self.szFieldName);
+            g.rm.menu_font_large.draw_chop_right(x + 16, y + 5, iIndent - 8, &self.szName);
+            g.rm.menu_font_large.draw_chop_right(x + iIndent + 8, y + 5, iWidth - iIndent - 24, &self.szFieldName);
         }
 
         self.miModifyImageLeft.draw();
@@ -137,7 +138,7 @@ impl UI_ControlTrait for MI_AnnouncerField {
         self.update_impl();
     }
     fn draw(&mut self) {
-        self.draw_impl();
+        self.draw_impl(game().get());
     }
     fn send_input(&mut self, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         self.send_input_impl(playerInput)

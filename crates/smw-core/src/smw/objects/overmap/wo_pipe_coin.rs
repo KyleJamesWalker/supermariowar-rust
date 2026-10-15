@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_PipeCoin.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
@@ -30,7 +31,7 @@ pub struct OMO_PipeCoin {
 impl_base!(OMO_PipeCoin => io_over_map_object: IO_OverMapObject);
 
 impl OMO_PipeCoin {
-    pub fn new(nspr: Ptr<gfxSprite>, vel: Vec2f, pos: Vec2s, teamid: i16, colorid: i16, uncollectabletime: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, vel: Vec2f, pos: Vec2s, teamid: i16, colorid: i16, uncollectabletime: i16) -> Self {
         let mut this = OMO_PipeCoin {
             io_over_map_object: IO_OverMapObject::new(nspr, pos, 4, 8, 30, 30, 1, 1, 0, ((colorid as i32) << 5) as i16, 32, 32),
             iTeamID: teamid,
@@ -45,7 +46,7 @@ impl OMO_PipeCoin {
         this.velx = vel.x;
 
         unsafe {
-            if game().pipegamemode.is_slowdown() {
+            if g.pipegamemode.is_slowdown() {
                 this.vely = vel.y / 2.0f32;
             } else {
                 this.vely = vel.y;
@@ -112,18 +113,18 @@ impl CObjectTrait for OMO_PipeCoin {
 
         unsafe {
             if self.iUncollectableTime > 0 {
-                self.spr.draw_clip(x, y, &srcRect, ClipEdge::Bottom, 256);
+                self.spr.draw_clip(game().get(), x, y, &srcRect, ClipEdge::Bottom, 256);
 
                 // Draw sparkles
                 if self.iTeamID == -1 {
-                    game().rm.spr_shinesparkle.draw_clip(x, y, &sparkleRect, ClipEdge::Bottom, 256);
+                    game().rm.spr_shinesparkle.draw_clip(game().get(), x, y, &sparkleRect, ClipEdge::Bottom, 256);
                 }
             } else {
-                self.spr.draw_src(x, y, &srcRect);
+                self.spr.draw_src(game().get(), x, y, &srcRect);
 
                 // Draw sparkles
                 if self.iTeamID == -1 {
-                    game().rm.spr_shinesparkle.draw_src(x, y, &sparkleRect);
+                    game().rm.spr_shinesparkle.draw_src(game().get(), x, y, &sparkleRect);
                 }
             }
         }
@@ -138,18 +139,18 @@ impl CObjectTrait for OMO_PipeCoin {
             if !game().game_values.gamemode.gameover {
                 if self.iTeamID != -1 {
                     if player.teamID == self.iTeamID {
-                        player.score().adjust_score(1);
-                        if_sound_on_play(&mut game().rm.sfx_coin);
+                        player.score().adjust_score(game().get(), 1);
+                        if_sound_on_play(game().get(), &mut game().rm.sfx_coin);
                     }
                 } else if self.iColorID == 2 {
-                    player.score().adjust_score(1);
-                    if_sound_on_play(&mut game().rm.sfx_coin);
+                    player.score().adjust_score(game().get(), 1);
+                    if_sound_on_play(game().get(), &mut game().rm.sfx_coin);
                 } else if self.iColorID == 0 {
-                    player.score().adjust_score(-1);
-                    if_sound_on_play(&mut game().rm.sfx_stun);
+                    player.score().adjust_score(game().get(), -1);
+                    if_sound_on_play(game().get(), &mut game().rm.sfx_stun);
                 } else if self.iColorID == 1 {
-                    player.score().adjust_score(5);
-                    if_sound_on_play(&mut game().rm.sfx_extraguysound);
+                    player.score().adjust_score(game().get(), 5);
+                    if_sound_on_play(game().get(), &mut game().rm.sfx_extraguysound);
                 }
 
                 game().game_values.gamemode.check_winner(player);

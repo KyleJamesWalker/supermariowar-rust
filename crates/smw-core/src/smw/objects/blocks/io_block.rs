@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/IO_Block.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
@@ -53,23 +54,23 @@ pub fn io_block_new(nspr: Ptr<gfxSprite>, pos: Vec2s) -> IO_Block {
 
 pub fn io_block_draw<T: IO_BlockTrait + ?Sized>(this: &mut T) {
     let b = this.block();
-    b.spr.draw(b.ix as i32, b.iy as i32);
+    b.spr.draw(game().get(), b.ix as i32, b.iy as i32);
 }
 
-pub fn io_block_update<T: IO_BlockTrait + ?Sized>(this: &mut T) {
+pub fn io_block_update<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T) {
     unsafe {
         let b = this.block_mut();
         if b.ishiddentype && !b.hidden {
-            if game().game_values.hiddenblockrespawn > 0 && {
+            if g.game_values.hiddenblockrespawn > 0 && {
                 b.iHiddenTimer += 1;
-                b.iHiddenTimer > game().game_values.hiddenblockrespawn
+                b.iHiddenTimer > g.game_values.hiddenblockrespawn
             } {
                 b.iHiddenTimer = 0;
                 b.hidden = true;
                 this.reset();
 
                 let b = this.block();
-                game().g_map.update_tile_gap(b.col, b.row);
+                g.g_map.update_tile_gap(b.col, b.row);
             }
         }
     }
@@ -205,11 +206,11 @@ pub fn io_block_hitleft_object<T: IO_BlockTrait + ?Sized>(this: &mut T, mut obje
     true
 }
 
-pub fn io_block_bounce_moving_object<T: IO_BlockTrait + ?Sized>(this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) {
+pub fn io_block_bounce_moving_object<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) {
     unsafe {
         let r#type = object.get_moving_object_type();
         if r#type == movingobject_goomba || r#type == movingobject_koopa || r#type == movingobject_buzzybeetle || r#type == movingobject_spiny {
-            if_sound_on_play(&mut game().rm.sfx_kicksound);
+            if_sound_on_play(g, &mut game().rm.sfx_kicksound);
 
             let enemy = object.as_walking_enemy().unwrap();
             let style = enemy.we().get_kill_style();
@@ -217,12 +218,12 @@ pub fn io_block_bounce_moving_object<T: IO_BlockTrait + ?Sized>(this: &mut T, mu
             enemy.die_and_drop_shell(true, true);
 
             let iBumpPlayerID = this.block().iBumpPlayerID;
-            if !game().game_values.gamemode.gameover && iBumpPlayerID >= 0 {
-                let mut player = get_player_from_global_id(iBumpPlayerID);
+            if !g.game_values.gamemode.gameover && iBumpPlayerID >= 0 {
+                let mut player = get_player_from_global_id(g, iBumpPlayerID);
 
                 if !player.is_null() {
                     player.add_killer_award(Ptr::null(), style);
-                    player.score.adjust_score(1);
+                    player.score.adjust_score(g, 1);
                 }
             }
         } else if r#type == movingobject_shell {
@@ -238,14 +239,14 @@ pub fn io_block_bounce_moving_object<T: IO_BlockTrait + ?Sized>(this: &mut T, mu
     }
 }
 
-pub fn io_block_kill_players_and_objects_inside_block<T: IO_BlockTrait + ?Sized>(this: &mut T, playerID: i16) {
+pub fn io_block_kill_players_and_objects_inside_block<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T, playerID: i16) {
     unsafe {
         let iposx = this.block().iposx;
         let iposy = this.block().iposy;
 
         //Loop through players
         for i in 0..game().players.len() {
-            let mut player = game().players[i];
+            let mut player = g.players[i];
             if !player.isready() {
                 continue;
             }
@@ -268,9 +269,9 @@ pub fn io_block_kill_players_and_objects_inside_block<T: IO_BlockTrait + ?Sized>
 
         //Loop through objects
         for iLayer in 0..3usize {
-            let count = game().objectcontainer[iLayer].list().len();
+            let count = g.objectcontainer[iLayer].list().len();
             for i in 0..count {
-                let mut obj: Ptr<dyn CObjectTrait> = game().objectcontainer[iLayer].list()[i];
+                let mut obj: Ptr<dyn CObjectTrait> = g.objectcontainer[iLayer].list()[i];
                 let movingobject: &mut dyn IO_MovingObjectTrait = match obj.as_io_moving_object() {
                     Some(m) => m,
                     None => continue,

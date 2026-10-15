@@ -44,7 +44,7 @@ impl CObjectTrait for MO_BuzzyBeetle {
     }
 
     fn draw(&mut self) {
-        mo_walking_enemy_draw(self);
+        mo_walking_enemy_draw(game().get(), self);
     }
 
     fn update(&mut self) {
@@ -54,15 +54,15 @@ impl CObjectTrait for MO_BuzzyBeetle {
             self.animationOffsetY = 0;
         }
 
-        mo_walking_enemy_update(self);
+        mo_walking_enemy_update(game().get(), self);
     }
 
     fn collide_player(&mut self, player: Ptr<CPlayer>) -> bool {
-        mo_walking_enemy_collide_player(self, player)
+        mo_walking_enemy_collide_player(game().get(), self, player)
     }
 
     fn collide_object(&mut self, object: Ptr<dyn IO_MovingObjectTrait>) {
-        mo_walking_enemy_collide_object(self, object)
+        mo_walking_enemy_collide_object(game().get(), self, object)
     }
 }
 
@@ -94,17 +94,17 @@ impl MO_WalkingEnemyTrait for MO_BuzzyBeetle {
             player.set_yi((self.iy as i32 - PH - 1) as i16);
             player.bouncejump();
             let p = player;
-            player.collisions.checktop(p.get());
+            player.collisions.checktop(game().get(), p.get());
             player.platform = Ptr::null();
             self.dead = true;
 
             player.add_killer_award(Ptr::null(), KillStyle::BuzzyBeetle);
 
             if game().game_values.gamemode.gamemode == game_mode_stomp && !game().game_values.gamemode.gameover {
-                player.score().adjust_score(1);
+                player.score().adjust_score(game().get(), 1);
             }
 
-            if_sound_on_play(&mut game().rm.sfx_mip);
+            if_sound_on_play(game().get(), &mut game().rm.sfx_mip);
         }
 
         self.drop_shell(false, false);
@@ -114,7 +114,7 @@ impl MO_WalkingEnemyTrait for MO_BuzzyBeetle {
 
     fn drop_shell(&mut self, fBounce: bool, fFlip: bool) {
         // Give the shell a state 2 so it is already spawned but sitting
-        let mut shell = Ptr::new_box(CO_Shell::new(ShellType::Buzzy, Vec2s::new((self.ix as i32 - 1) as i16, self.iy), false, true, false, false));
+        let mut shell = Ptr::new_box(CO_Shell::new(game().get(), ShellType::Buzzy, Vec2s::new((self.ix as i32 - 1) as i16, self.iy), false, true, false, false));
         shell.nospawn(self.iy, fBounce);
 
         if fFlip {

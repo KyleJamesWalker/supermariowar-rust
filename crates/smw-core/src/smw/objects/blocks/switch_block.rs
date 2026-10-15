@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/SwitchBlock.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::*;
@@ -34,14 +35,14 @@ impl B_SwitchBlock {
         b
     }
 
-    pub fn flip_state(&mut self, playerID: i16) {
+    pub fn flip_state(&mut self, g: &mut Game, playerID: i16) {
         self.state = (1 - self.state as i32) as i16;
         unsafe {
-            game().g_map.update_tile_gap(self.col, self.row);
+            g.g_map.update_tile_gap(self.col, self.row);
         }
 
         if self.state == 0 {
-            io_block_kill_players_and_objects_inside_block(self, playerID);
+            io_block_kill_players_and_objects_inside_block(g, self, playerID);
         }
     }
 }
@@ -53,7 +54,7 @@ impl CObjectTrait for B_SwitchBlock {
     }
 
     fn draw(&mut self) {
-        self.spr.draw_src(
+        self.spr.draw_src(game().get(), 
             self.ix as i32,
             self.iy as i32,
             &SDL_Rect { x: self.iSrcX as i32, y: if self.state == 0 { 64 } else { 96 }, w: self.iw as i32, h: self.ih as i32 },
@@ -61,7 +62,7 @@ impl CObjectTrait for B_SwitchBlock {
     }
 
     fn update(&mut self) {
-        io_block_update(self);
+        io_block_update(game().get(), self);
     }
 }
 

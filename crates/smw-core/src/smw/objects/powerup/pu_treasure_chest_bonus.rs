@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_TreasureChestBonus.cpp
 
+use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
@@ -32,7 +33,7 @@ impl_base!(PU_TreasureChestBonus => mo_powerup: MO_Powerup);
 
 impl PU_TreasureChestBonus {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(nspr: Ptr<gfxSprite>, iNumSpr: i16, aniSpeed: i16, iCollisionWidth: i16, iCollisionHeight: i16, iCollisionOffsetX: i16, iCollisionOffsetY: i16, iBonusItem: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, iNumSpr: i16, aniSpeed: i16, iCollisionWidth: i16, iCollisionHeight: i16, iCollisionOffsetX: i16, iCollisionOffsetY: i16, iBonusItem: i16) -> Self {
         let mut o = PU_TreasureChestBonus {
             mo_powerup: MO_Powerup::new(nspr, Vec2s::zero(), iNumSpr, aniSpeed, iCollisionWidth, iCollisionHeight, iCollisionOffsetX, iCollisionOffsetY),
             bonusitem: iBonusItem,
@@ -53,7 +54,7 @@ impl PU_TreasureChestBonus {
         let collisionHeight = o.collisionHeight;
         let mut iAttempts: i16 = 10;
         unsafe {
-            while !game().g_map.findspawnpoint(5, &mut ix, &mut iy, collisionWidth, collisionHeight, false) && {
+            while !g.g_map.findspawnpoint(5, &mut ix, &mut iy, collisionWidth, collisionHeight, false) && {
                 let a = iAttempts;
                 iAttempts -= 1;
                 a > 0
@@ -109,7 +110,7 @@ impl CObjectTrait for PU_TreasureChestBonus {
 
             // Draw sparkles
             unsafe {
-                game().rm.spr_shinesparkle.draw_src(
+                game().rm.spr_shinesparkle.draw_src(game().get(), 
                     self.ix as i32 - self.collisionOffsetX as i32,
                     self.iy as i32 - self.collisionOffsetY as i32,
                     &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
@@ -118,13 +119,13 @@ impl CObjectTrait for PU_TreasureChestBonus {
         } else {
             unsafe {
                 if self.bonusitem as i32 >= NUM_POWERUPS {
-                    game().rm.spr_worlditems.draw_src(
+                    game().rm.spr_worlditems.draw_src(game().get(), 
                         self.drawbonusitemx as i32,
                         self.drawbonusitemy as i32,
                         &SDL_Rect { x: (self.bonusitem as i32 - NUM_POWERUPS) << 5, y: 0, w: 32, h: 32 },
                     );
                 } else {
-                    game().rm.spr_storedpoweruplarge.draw_src(
+                    game().rm.spr_storedpoweruplarge.draw_src(game().get(), 
                         self.drawbonusitemx as i32,
                         self.drawbonusitemy as i32,
                         &SDL_Rect { x: (self.bonusitem as i32) << 5, y: 0, w: 32, h: 32 },
@@ -137,7 +138,7 @@ impl CObjectTrait for PU_TreasureChestBonus {
     fn collide_player(&mut self, _player: Ptr<CPlayer>) -> bool {
         if self.state == 1 {
             unsafe {
-                if_sound_on_play(&mut game().rm.sfx_treasurechest);
+                if_sound_on_play(game().get(), &mut game().rm.sfx_treasurechest);
                 // if (game_values.worldpowerupcount[player->teamID] < 32)
                 //     game_values.worldpowerups[player->teamID][game_values.worldpowerupcount[player->teamID]++] = bonusitem;
                 // else
