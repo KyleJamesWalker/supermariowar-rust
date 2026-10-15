@@ -659,7 +659,7 @@ pub fn inner_main() {
         println!("entering level editor loop...");
         done = false;
         while !done {
-            FPSLimiter::instance().frame_start();
+            FPSLimiter::instance(g).frame_start();
 
             match ed().state {
                 EDITOR_EDIT => {
@@ -688,9 +688,9 @@ pub fn inner_main() {
             }
 
             editor_harness::frame_delay(g, 0);
-            FPSLimiter::instance().before_flip(g);
+            FPSLimiter::instance(g).before_flip(g);
             gfx_flipscreen(g);
-            FPSLimiter::instance().after_flip(g);
+            FPSLimiter::instance(g).after_flip(g);
         }
 
         println!("\n---------------- save map ----------------");
@@ -2001,7 +2001,7 @@ pub fn editor_properties(g: &mut Game, iBlockCol: i16, iBlockRow: i16) -> i32 {
     unsafe {
         let (bc, br) = (iBlockCol as usize, iBlockRow as usize);
         loop {
-            FPSLimiter::instance().frame_start();
+            FPSLimiter::instance(g).frame_start();
             //handle messages
             while poll_event(&mut ed().event) != 0 {
                 let ty = ed().event.type_();
@@ -2167,9 +2167,9 @@ pub fn editor_properties(g: &mut Game, iBlockCol: i16, iBlockRow: i16) -> i32 {
 
             draw_message(g);
             editor_harness::frame_delay(g, 0);
-            FPSLimiter::instance().before_flip(g);
+            FPSLimiter::instance(g).before_flip(g);
             gfx_flipscreen(g);
-            FPSLimiter::instance().after_flip(g);
+            FPSLimiter::instance(g).after_flip(g);
         }
     }
 }
@@ -2296,13 +2296,13 @@ fn platform_edit_or_animated_or_tiletype() -> bool {
 
 /// The nested `while (editor_x() == EDITOR_X)` loops the platform editor runs for tiles, animation and tile types.
 unsafe fn run_nested_editor(g: &mut Game, f: fn() -> i32, stay: i32) {
-    FPSLimiter::instance().frame_start();
+    FPSLimiter::instance(g).frame_start();
     while f() == stay {
         editor_harness::frame_delay(g, 0);
-        FPSLimiter::instance().before_flip(g);
+        FPSLimiter::instance(g).before_flip(g);
         gfx_flipscreen(g);
-        FPSLimiter::instance().after_flip(g);
-        FPSLimiter::instance().frame_start();
+        FPSLimiter::instance(g).after_flip(g);
+        FPSLimiter::instance(g).frame_start();
     }
 }
 

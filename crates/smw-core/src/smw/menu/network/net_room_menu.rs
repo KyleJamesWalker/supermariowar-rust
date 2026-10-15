@@ -47,6 +47,7 @@ impl UI_NetRoomMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
         let mut gp = g.ptr();
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
         let mut this = Box::<Self>::default();
         unsafe {
             let selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);

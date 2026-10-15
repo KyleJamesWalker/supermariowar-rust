@@ -140,12 +140,12 @@ impl GameplayState {
         s
     }
 
-    pub fn instance() -> &'static mut GameplayState {
+    pub fn instance(g: &mut Game) -> &'static mut GameplayState {
         // Safety net until globals::init_globals calls gs_gameplay::init_globals.
-        if !game().spotlightManager.is_initialized() {
-            init_globals(game().get());
+        if !g.spotlightManager.is_initialized() {
+            init_globals(g);
         }
-        game().get().gps.get_or_insert_with(GameplayState::new)
+        g.ptr().get().gps.get_or_insert_with(GameplayState::new)
     }
 
     /// Not in the C++: the fields a replay checkpoint (smw/checkpoint.rs) saves and restores.
@@ -2575,11 +2575,12 @@ pub fn start_gameplay(g: &mut Game) {
 }
 
 pub fn end_gameplay(g: &mut Game) {
+        let mut gp = g.ptr();
     unsafe {
         clean_up(g);
         g.game_values.appstate = AppState::Menu;
         g.game_values.screenfadespeed = -8;
-        GameStateManager::instance().change_state_to(g, Ptr::from_mut(MenuState::instance() as &mut dyn GameState));
+        GameStateManager::instance(g).change_state_to(gp.get(), Ptr::from_mut(MenuState::instance(gp.get()) as &mut dyn GameState));
     }
 }
 
@@ -2727,6 +2728,7 @@ impl GameState for GameplayState {
 
     fn update(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
         unsafe {
             if crate::smw::net::waiting_to_start(g) {
                 crate::smw::net::draw_match_preview(g);
@@ -2750,7 +2752,7 @@ impl GameState for GameplayState {
                 if g.netplay.active {
                     gp.netplay.client.send_leave_game_message(g);
                 }
-                GameStateManager::instance().change_state_to(g, Ptr::from_mut(MenuState::instance() as &mut dyn GameState));
+                GameStateManager::instance(g).change_state_to(gp.get(), Ptr::from_mut(MenuState::instance(gp.get()) as &mut dyn GameState));
                 return;
             }
 

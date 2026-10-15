@@ -39,8 +39,8 @@ impl SplashScreenState {
         }
     }
 
-    pub fn instance() -> &'static mut SplashScreenState {
-        game().get().ss.get_or_insert_with(SplashScreenState::new)
+    pub fn instance(g: &mut Game) -> &'static mut SplashScreenState {
+        g.ptr().get().ss.get_or_insert_with(SplashScreenState::new)
     }
 }
 
@@ -63,6 +63,7 @@ impl GameState for SplashScreenState {
     }
 
     fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let mut gp = g.ptr();
         let mut gp = g.ptr();
         unsafe {
@@ -112,9 +113,9 @@ impl GameState for SplashScreenState {
                         g.game_values.playerInput.reset_keys();
                         g.game_values.appstate = AppState::Menu;
 
-                        MenuState::instance().init(g);
-                        GameplayState::instance().init(g);
-                        GameStateManager::instance().change_state_to(g, Ptr::from_mut(MenuState::instance() as &mut dyn GameState));
+                        MenuState::instance(g).init(g);
+                        GameplayState::instance(g).init(g);
+                        GameStateManager::instance(g).change_state_to(gp.get(), Ptr::from_mut(MenuState::instance(gp.get()) as &mut dyn GameState));
                         return;
                     }
                 }

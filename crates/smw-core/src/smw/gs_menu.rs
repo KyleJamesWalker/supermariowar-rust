@@ -185,8 +185,8 @@ impl MenuState {
         }
     }
 
-    pub fn instance() -> &'static mut MenuState {
-        game().get().ms.get_or_insert_with(MenuState::new)
+    pub fn instance(g: &mut Game) -> &'static mut MenuState {
+        g.ptr().get().ms.get_or_insert_with(MenuState::new)
     }
 
     pub fn harness_menu_name(&self) -> &'static str {
@@ -929,6 +929,7 @@ fn load_match_map(g: &mut Game, path: &str) {
 /// (smw/checkpoint.rs) restores the state up to that point and starts the match here.
 pub fn enter_gameplay_tail(g: &mut Game) {
         let mut gp = g.ptr();
+        let mut gp = g.ptr();
     unsafe {
         g.game_values.appstate = AppState::Game;
         println!("  GS_GAME");
@@ -942,13 +943,14 @@ pub fn enter_gameplay_tail(g: &mut Game) {
         gp.g_map.setup_animated_tiles(g);
         crate::smw::gs_gameplay::load_map_objects(g, false);
 
-        GameStateManager::instance().change_state_to(g, Ptr::from_mut(GameplayState::instance() as &mut dyn GameState));
+        GameStateManager::instance(g).change_state_to(gp.get(), Ptr::from_mut(GameplayState::instance(gp.get()) as &mut dyn GameState));
     }
 }
 
 impl MenuState {
     /// Handles one `MenuCodeEnum` from `mCurrentMenu->SendInput`. Returns true where C++ `return`s from `update`.
     fn handle_menu_code(&mut self, g: &mut Game, mut code: MenuCodeEnum, fGenerateMapThumbs: &mut bool) -> bool {
+        let mut gp = g.ptr();
         let mut gp = g.ptr();
         let mut gp = g.ptr();
         unsafe {

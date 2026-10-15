@@ -406,7 +406,7 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
             s.io(&mut sc.iDigitLeft);
         }
         s.io(&mut g.score_cnt);
-        GameplayState::instance().checkpoint(s);
+        GameplayState::instance(g).checkpoint(s);
 
         // The map and the music the menu chose. A net game's joiner plays the host's map from its settings directory.
         let mut map = portable_path(&g.match_map);
@@ -613,8 +613,8 @@ impl GameState for SegmentState {
             g.eyecandy[2].clean();
             g.game_values.playerInput.reset_keys();
             g.game_values.appstate = AppState::Menu;
-            MenuState::instance().init(g);
-            GameplayState::instance().init(g);
+            MenuState::instance(g).init(g);
+            GameplayState::instance(g).init(g);
         }
         if let Err(e) = restore(g, std::mem::take(&mut self.checkpoint)) {
             eprintln!("[harness] {}", e);

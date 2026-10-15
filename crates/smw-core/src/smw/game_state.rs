@@ -31,7 +31,7 @@ impl GameStateManager {
         self.currentState.get().on_enter_state(g);
     }
 
-    pub fn instance() -> &'static mut GameStateManager {
-        &mut game().get().gsm
+    pub fn instance(g: &mut Game) -> &'static mut GameStateManager {
+        &mut g.ptr().get().gsm
     }
 }

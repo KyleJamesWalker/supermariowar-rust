@@ -356,14 +356,14 @@ fn fill_event(ev: &ReplayEvent, event: &mut SDL_Event) {
 }
 
 fn state_name() -> &'static str {
-    let current = GameStateManager::instance().currentState;
-    if current.addr() == SplashScreenState::instance() as *mut SplashScreenState as usize {
+    let current = GameStateManager::instance(game().get()).currentState;
+    if current.addr() == SplashScreenState::instance(game().get()) as *mut SplashScreenState as usize {
         return "splash";
     }
-    if current.addr() == MenuState::instance() as *mut MenuState as usize {
+    if current.addr() == MenuState::instance(game().get()) as *mut MenuState as usize {
         return "menu";
     }
-    if current.addr() == GameplayState::instance() as *mut GameplayState as usize {
+    if current.addr() == GameplayState::instance(game().get()) as *mut GameplayState as usize {
         return "gameplay";
     }
     "other"
@@ -409,10 +409,10 @@ fn dump_frame(g: &mut Game, out: &mut impl Write) -> std::io::Result<()> {
     writeln!(out, "F {} {}", unsafe { h().frame }, state)?;
 
     if state == "menu" {
-        let menu = MenuState::instance();
+        let menu = MenuState::instance(g);
         writeln!(out, "M {} focus={} modifying={}", menu.harness_menu_name(), menu.harness_focus_index(), menu.harness_modifying() as i32)?;
     } else if state == "gameplay" {
-        GameplayState::instance().harness_dump(g, out)?;
+        GameplayState::instance(g).harness_dump(g, out)?;
     }
 
     for line in unsafe { g.sfx.sfx_events.iter().chain(h().spawn_events.iter()) } {
@@ -1215,7 +1215,7 @@ pub fn match_checkpoint(g: &mut Game) {
 /// the game is over) or `other`.
 fn marker_state() -> &'static str {
     match state_name() {
-        "menu" if MenuState::instance().harness_menu_name() == "world" => "worldmap",
+        "menu" if MenuState::instance(game().get()).harness_menu_name() == "world" => "worldmap",
         "gameplay" if unsafe { game().game_values.gamemode.gameover } => "scoreboard",
         name => name,
     }
