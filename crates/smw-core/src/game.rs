@@ -14,10 +14,12 @@ use crate::common::game_values::CGameValues;
 use crate::globals::{Global, Ptr};
 use crate::leveleditor::leveleditor::LevelEditorState;
 use crate::smw::gamemodes::{bonus_house::CGM_Bonus, mini_boss::CGM_Boss_MiniGame, mini_boxes::CGM_Boxes_MiniGame, mini_pipe::CGM_Pipe_MiniGame};
+use crate::smw::fps_limiter::FPSLimiter;
 use crate::smw::game_state::GameStateManager;
 use crate::smw::gs_gameplay::GameplayState;
 use crate::smw::gs_menu::MenuState;
 use crate::smw::gs_splash_screen::SplashScreenState;
+use crate::smw::main::MainLoopState;
 use crate::smw::net::{NetworkHandler, Networking};
 use crate::smw::network::net_record::NetRecordState;
 use crate::smw::net_outcomes::NetOutcomesState;
@@ -94,6 +96,8 @@ pub struct Game {
     pub screen: *mut sdl2::sys::SDL_Surface,
     /// The destination surface for all drawing; swapped from `screen` to another surface at times.
     pub blitdest: *mut sdl2::sys::SDL_Surface,
+    pub fps_limiter: FPSLimiter,
+    pub main_loop: MainLoopState,
 }
 
 impl Game {
@@ -157,6 +161,8 @@ impl Game {
             net_record: NetRecordState::new(),
             screen: std::ptr::null_mut(),
             blitdest: std::ptr::null_mut(),
+            fps_limiter: FPSLimiter::new(),
+            main_loop: MainLoopState::new(),
         }
     }
 }
