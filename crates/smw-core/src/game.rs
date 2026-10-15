@@ -12,6 +12,7 @@ use crate::common::resource_manager::CResourceManager;
 use crate::common::tileset_manager::CTilesetManager;
 use crate::common::game_values::CGameValues;
 use crate::globals::{Global, Ptr};
+use crate::leveleditor::leveleditor::LevelEditorState;
 use crate::smw::gamemodes::{bonus_house::CGM_Bonus, mini_boss::CGM_Boss_MiniGame, mini_boxes::CGM_Boxes_MiniGame, mini_pipe::CGM_Pipe_MiniGame};
 use crate::smw::net::{NetworkHandler, Networking};
 use crate::smw::net_outcomes::NetOutcomesState;
@@ -74,6 +75,7 @@ pub struct Game {
     /// Whether the menu press that opened a text field came from a keyboard key; set by `UI_Menu`.
     pub text_field_opened_by_key: bool,
     pub g_worldmap: Global<WorldMap>,
+    pub level_editor: LevelEditorState,
 }
 
 impl Game {
@@ -126,6 +128,7 @@ impl Game {
             match_map: String::new(),
             text_field_opened_by_key: false,
             g_worldmap: Global::uninit(),
+            level_editor: LevelEditorState::new(),
         }
     }
 }
