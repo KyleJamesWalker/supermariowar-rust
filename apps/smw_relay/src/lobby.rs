@@ -104,9 +104,9 @@ impl NetworkLayer for RelayNetworkLayer {
         loop {
             let event = self.io.borrow_mut().events.pop_front();
             match event {
-                Some(LobbyEvent::Connect(peer)) => server.on_connect(Box::new(peer)),
-                Some(LobbyEvent::Receive(mut peer, data)) => server.on_receive(&mut peer, &data),
-                Some(LobbyEvent::Disconnect(mut peer)) => server.on_disconnect(&mut peer),
+                Some(LobbyEvent::Connect(peer)) => server.on_connect(&mut (), Box::new(peer)),
+                Some(LobbyEvent::Receive(mut peer, data)) => server.on_receive(&mut (), &mut peer, &data),
+                Some(LobbyEvent::Disconnect(mut peer)) => server.on_disconnect(&mut (), &mut peer),
                 None => break,
             }
         }

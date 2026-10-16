@@ -27,9 +27,9 @@ pub struct MO_Explosion {
 impl_base!(MO_Explosion => io_moving_object: IO_MovingObject);
 
 impl MO_Explosion {
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, aniSpeed: i16, playerid: i16, teamid: i16, style: KillStyle) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, aniSpeed: i16, playerid: i16, teamid: i16, style: KillStyle) -> Self {
         let mut o = MO_Explosion {
-            io_moving_object: IO_MovingObject::new(nspr, pos, iNumSpr, aniSpeed, -1, -1, -1, -1, -1, -1, -1, -1),
+            io_moving_object: IO_MovingObject::new(g, nspr, pos, iNumSpr, aniSpeed, -1, -1, -1, -1, -1, -1, -1, -1),
             timer: 0,
             iStyle: KillStyle::Stomp,
         };

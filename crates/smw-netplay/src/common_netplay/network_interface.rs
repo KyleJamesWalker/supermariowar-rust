@@ -33,8 +33,9 @@ impl PartialEq for dyn NetPeer {
 }
 
 /// `class NetworkEventHandler`. `on_connect` takes ownership of the C++ `new`ed peer.
-pub trait NetworkEventHandler {
-    fn on_connect(&mut self, peer: Box<dyn NetPeer>);
-    fn on_receive(&mut self, peer: &mut dyn NetPeer, data: &[u8]);
-    fn on_disconnect(&mut self, client: &mut dyn NetPeer);
+/// `ctx` is the state the handler works on besides its own: the game for a player, nothing for a server.
+pub trait NetworkEventHandler<C: ?Sized = ()> {
+    fn on_connect(&mut self, ctx: &mut C, peer: Box<dyn NetPeer>);
+    fn on_receive(&mut self, ctx: &mut C, peer: &mut dyn NetPeer, data: &[u8]);
+    fn on_disconnect(&mut self, ctx: &mut C, client: &mut dyn NetPeer);
 }

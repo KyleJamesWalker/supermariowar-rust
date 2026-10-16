@@ -32,8 +32,8 @@ pub struct IO_Block {
 impl_base!(IO_Block => cobject: CObject);
 
 impl IO_Block {
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s) -> Self {
-        crate::smw::objects::blocks::io_block::io_block_new(nspr, pos)
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s) -> Self {
+        crate::smw::objects::blocks::io_block::io_block_new(g, nspr, pos)
     }
 }
 

@@ -59,7 +59,7 @@ fn main() {
         game().rm.load_all_graphics(game().get());
 
         for (n, file) in args[3..].iter().enumerate() {
-            game().g_map.load_map(file, read_type_full);
+            game().g_map.load_map(game().get(), file, read_type_full);
             load_current_map_background(game().get());
             let rmp = game().rm;
             game().g_map.predrawbackground(game().get(), &rmp.spr_background, &rmp.spr_backmap[0]);
@@ -73,7 +73,7 @@ fn main() {
             save_bmp(game().screen, &format!("{}/{}_f0.bmp", outdir, n));
 
             for _ in 0..40 {
-                game().g_map.update_platforms();
+                game().g_map.update_platforms(game().get());
                 game().g_map.update(game().get());
             }
             game().g_map.lockconnection(0);

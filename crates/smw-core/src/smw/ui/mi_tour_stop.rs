@@ -94,7 +94,7 @@ impl MI_TourStop {
             miStartButton.set_code(MENU_CODE_TOUR_STOP_CONTINUE);
             miStartButton.select(g, true);
 
-            let mut miMapField = Box::new(MI_MapField::new(spr_disabled, 70, 165, "Map", 500, 120, false));
+            let mut miMapField = Box::new(MI_MapField::new(g, spr_disabled, 70, 165, "Map", 500, 120, false));
             miMapField.disable(true);
 
             miModeField.disable(true);

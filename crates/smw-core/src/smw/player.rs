@@ -444,10 +444,10 @@ impl CPlayer {
         this
     }
 
-    pub fn init(&mut self) {
+    pub fn init(&mut self, g: &mut Game) {
         println!("CPlayer::init()");
         if let Some(ai) = self.pPlayerAI.as_mut() {
-            ai.init();
+            ai.init(g);
         }
     }
 
@@ -827,13 +827,15 @@ impl CPlayer {
 
     pub fn net_podobo_rain(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
+        let mut rm = g.rm;
         unsafe {
             let numPodobos = (RANDOM_INT(6) + 10) as i16;
             for _iPodobo in 0..numPodobos {
                 let x = RANDOM_INT((App::screenWidth as f32 * 0.95f32) as i32) as i16;
                 let vy = -((RANDOM_INT(9) as f32) / 2.0f32) - 9.0f32;
-                g.objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(
-                    Ptr::from_mut(&mut g.rm.spr_podobo),
+                gp.objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(
+                    g,
+                    Ptr::from_mut(&mut rm.spr_podobo),
                     Vec2s::new(x, App::screenHeight as i16),
                     vy,
                     self.globalID,
@@ -849,7 +851,8 @@ impl CPlayer {
     pub fn net_throw_boomerang(&mut self, g: &mut Game, ix: i32, iy: i32, facingRight: bool) {
         let mut gp = g.ptr();
         unsafe {
-            gp.get().objectcontainer[2].add(Ptr::new_box(MO_Boomerang::new(g, 
+            gp.get().objectcontainer[2].add(Ptr::new_box(MO_Boomerang::new(
+                g,
                 Ptr::from_mut(&mut gp.get().rm.spr_boomerang),
                 Vec2s::new(ix as i16, (iy + HALFPH - 16) as i16),
                 4,
@@ -869,11 +872,13 @@ impl CPlayer {
 
     pub fn net_throw_bomb(&mut self, g: &mut Game, ix: i32, iy: i32, facingRight: bool) {
         let mut gp = g.ptr();
+        let mut rm = g.rm;
         let this = self.this();
         unsafe {
             let ttl = (RANDOM_INT(120) + 120) as i16;
             let mut bomb = Ptr::new_box(CO_Bomb::new(
-                Ptr::from_mut(&mut g.rm.spr_bomb),
+                g,
+                Ptr::from_mut(&mut rm.spr_bomb),
                 Vec2s::new((ix + HALFPW - 14) as i16, (iy - 8) as i16),
                 Vec2f::new(if facingRight { 3.0 } else { -3.0 }, -3.0),
                 4,
@@ -1430,15 +1435,16 @@ impl CPlayer {
         }
     }
 
-    pub fn r#move(&mut self) {
+    pub fn r#move(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let this = self.this();
         unsafe {
             //Call the AI if cpu controlled
             if self.state == PlayerState::Ready {
                 if self.pPlayerAI.is_some() {
                     //Calculate movement every 4th frame (speed up optimization)
-                    if game().game_values.cputurn == self.globalID {
-                        self.cpu_think();
+                    if gp.game_values.cputurn == self.globalID {
+                        self.cpu_think(g);
 
                         if self.keys().game_jump().fDown || self.keys().game_left().fDown || self.keys().game_right().fDown {
                             self.suicidetimer.reset();
@@ -1452,11 +1458,11 @@ impl CPlayer {
             }
 
             if self.is_invincible() {
-                game().game_values.flags.playinvinciblesound = true;
+                gp.game_values.flags.playinvinciblesound = true;
             }
 
             if self.flying {
-                game().game_values.flags.playflyingsound = true;
+                gp.game_values.flags.playflyingsound = true;
             }
 
             let k = self.keys();
@@ -1479,17 +1485,17 @@ impl CPlayer {
                 self.suicidetimer.reset();
             }
 
-            self.secretcode.update(game().get(), this.get(), keymask as u8);
-            self.kuriboshoe.update(game().get(), this.get(), keymask as u8);
-            self.cardcollection.update(game().get(), this.get(), keymask as u8);
-            self.tanookisuit.update(game().get(), this.get());
-            self.superstomp.update_on_ground_hit(game().get(), this.get());
+            self.secretcode.update(gp.get(), this.get(), keymask as u8);
+            self.kuriboshoe.update(gp.get(), this.get(), keymask as u8);
+            self.cardcollection.update(gp.get(), this.get(), keymask as u8);
+            self.tanookisuit.update(gp.get(), this.get());
+            self.superstomp.update_on_ground_hit(gp.get(), this.get());
 
             if self.hammertimer > 0 {
                 self.hammertimer -= 1;
             }
 
-            self.spin.update(game().get(), this.get());
+            self.spin.update(gp.get(), this.get());
 
             if self.throw_star > 0 {
                 self.throw_star -= 1;
@@ -1503,26 +1509,26 @@ impl CPlayer {
                 }
             }
 
-            self.iSrcOffsetX = (32 * self.get_player_palette(game().get())) as i16;
+            self.iSrcOffsetX = (32 * self.get_player_palette(gp.get())) as i16;
 
             if !self.isready() {
                 if self.state == PlayerState::Waiting {
-                    self.update_waiting_for_respawn(game().get());
+                    self.update_waiting_for_respawn(gp.get());
                     return;
                 }
 
                 if self.isspawning() {
-                    self.update_respawning(game().get());
+                    self.update_respawning(gp.get());
                 } else if self.iswarping() {
-                    self.warpstatus.update(game().get(), this.get());
+                    self.warpstatus.update(gp.get(), this.get());
                 }
             } else if self.powerupused.is_some() {
-                self.update_use_powerup(game().get());
+                self.update_use_powerup(gp.get());
             }
 
             self.invincibility.update(this.get()); // Animate invincibility
 
-            self.update_frozen_status(game().get(), keymask);
+            self.update_frozen_status(gp.get(), keymask);
 
             //if player is warping or spawning don't pay attention to controls
             if self.isready() {
@@ -1557,22 +1563,22 @@ impl CPlayer {
                     if self.keys().game_jump().fDown {
                         if !self.lockjump && self.tanookisuit.not_statue() && !self.superstomp.is_stomping() {
                             if !self.inair && self.superjumptimer == 0 {
-                                self.try_falling_through_platform(game().get(), movement_direction);
+                                self.try_falling_through_platform(gp.get(), movement_direction);
                             } else if self.superjumptimer > 0 {
-                                self.try_super_jumping(game().get(), movement_direction);
+                                self.try_super_jumping(gp.get(), movement_direction);
                             } else if self.powerup == 3 {
-                                self.try_cape_double_jump(game().get(), movement_direction);
+                                self.try_cape_double_jump(gp.get(), movement_direction);
                             } else if self.powerup == 8 {
                                 //Start pwings flight
-                                self.try_start_flying(game().get());
+                                self.try_start_flying(gp.get());
                             }
                             //This must come last or gliding chickens can't use powerups before this statement
                             else {
-                                self.try_shaking_tail(game().get());
+                                self.try_shaking_tail(gp.get());
                             }
                         }
                     } else {
-                        self.enable_free_fall(game().get());
+                        self.enable_free_fall(gp.get());
                     }
 
                     if self.keys().game_down().fDown {
@@ -1586,48 +1592,48 @@ impl CPlayer {
 
                     //POWERUP RELEASE
                     if self.keys().game_powerup().fDown {
-                        self.try_releasing_powerup(game().get());
+                        self.try_releasing_powerup(gp.get());
                     }
 
                     self.fPressedAcceptItem = self.keys().game_turbo().fPressed;
 
                     //Projectiles
                     if self.keys().game_turbo().fDown {
-                        self.use_special_powerup(game().get());
+                        self.use_special_powerup(gp.get());
                     } else {
-                        self.release_carried_item(game().get());
+                        self.release_carried_item(gp.get());
                     }
                 }
 
-                self.update_flying_status(game().get());
+                self.update_flying_status(gp.get());
 
                 if movement_direction == 1 {
-                    self.accelerate_right(game().get());
+                    self.accelerate_right(gp.get());
                 } else if movement_direction == -1 {
-                    self.accelerate_left(game().get());
+                    self.accelerate_left(gp.get());
                 } else {
                     self.decrease_velocity();
                 }
 
                 if !self.inair {
-                    if game().game_values.unlocksecret3part2[self.globalID as usize] > 0 {
-                        game().game_values.unlocksecret3part2[self.globalID as usize] -= 1;
+                    if gp.game_values.unlocksecret3part2[self.globalID as usize] > 0 {
+                        gp.game_values.unlocksecret3part2[self.globalID as usize] -= 1;
                     }
                 }
 
                 self.fOldX = self.fx;
                 self.fOldY = self.fy;
 
-                if game().game_values.windaffectsplayers {
+                if gp.game_values.windaffectsplayers {
                     self.oldvelx = self.velx;
-                    let windx: f32 = game().game_values.flags.gamewindx / if self.kuriboshoe.is_on() { 3.0f32 } else { 1.5f32 };
+                    let windx: f32 = gp.game_values.flags.gamewindx / if self.kuriboshoe.is_on() { 3.0f32 } else { 1.5f32 };
                     self.velx = cap_side_velocity(self.velx + windx);
                 }
 
-                self.collision_detection_map(game().get());
+                self.collision_detection_map(gp.get());
 
                 //If the player died or entered a warp, don't reset his velocity
-                if game().game_values.windaffectsplayers && self.state == PlayerState::Ready {
+                if gp.game_values.windaffectsplayers && self.state == PlayerState::Ready {
                     self.velx = self.oldvelx;
                 }
             }
@@ -1635,41 +1641,43 @@ impl CPlayer {
             //Player can be killed by map so only do this code if he is still living
             if self.isready() {
                 //Deal with terminal burnup velocity
-                self.burnup.update(game().get(), this.get());
+                self.burnup.update(gp.get(), this.get());
                 if self.isdead() {
                     return;
                 }
 
                 //Kill the player if he is standing still for too long
-                self.suicidetimer.update(game().get(), this.get());
+                self.suicidetimer.update(gp.get(), this.get());
                 if self.isdead() {
                     return;
                 }
 
                 //Deal with out of arena timer
-                self.outofarena.update(game().get(), this.get());
+                self.outofarena.update(gp.get(), this.get());
                 if self.isdead() {
                     return;
                 }
 
                 //Deal with release from jail timer
-                self.jail.update(game().get(), this.get());
+                self.jail.update(gp.get(), this.get());
             }
 
-            self.update_sprite(game().get());
+            self.update_sprite(gp.get());
         }
     }
 
     pub fn commit_action(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
+        let mut rm = g.rm;
         let this = self.this();
         unsafe {
             let ix = self.ix as i32;
             let iy = self.iy as i32;
             if PlayerAction::Bobomb == self.action {
                 self.bobomb = false;
-                g.objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
-                    Ptr::from_mut(&mut g.rm.spr_explosion),
+                gp.objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
+                    g,
+                    Ptr::from_mut(&mut rm.spr_explosion),
                     Vec2s::new((ix + HALFPW - 96) as i16, (iy + HALFPH - 64) as i16),
                     2,
                     4,
@@ -1679,7 +1687,8 @@ impl CPlayer {
                 )));
                 if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
             } else if PlayerAction::Fireball == self.action {
-                gp.get().objectcontainer[0].add(Ptr::new_box(MO_Fireball::new(g, 
+                gp.get().objectcontainer[0].add(Ptr::new_box(MO_Fireball::new(
+                    g,
                     Ptr::from_mut(&mut gp.get().rm.spr_fireball),
                     Vec2s::new((ix + 6) as i16, iy as i16),
                     4,
@@ -1699,7 +1708,8 @@ impl CPlayer {
             } else if PlayerAction::Hammer == self.action {
                 let vx = if g.game_values.reversewalk { -self.velx } else { self.velx };
                 if self.is_facing_right(g) {
-                    gp.get().objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(g, 
+                    gp.get().objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(
+                        g,
                         Ptr::from_mut(&mut gp.get().rm.spr_hammer),
                         Vec2s::new((ix + 8) as i16, iy as i16),
                         6,
@@ -1711,7 +1721,8 @@ impl CPlayer {
                         false,
                     )));
                 } else {
-                    gp.get().objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(g, 
+                    gp.get().objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(
+                        g,
                         Ptr::from_mut(&mut gp.get().rm.spr_hammer),
                         Vec2s::new((ix - 14) as i16, iy as i16),
                         6,
@@ -1738,8 +1749,9 @@ impl CPlayer {
                 }
             } else if PlayerAction::Iceblast == self.action {
                 if self.is_facing_right(g) {
-                    g.objectcontainer[2].add(Ptr::new_box(MO_IceBlast::new(
-                        Ptr::from_mut(&mut g.rm.spr_iceblast),
+                    gp.objectcontainer[2].add(Ptr::new_box(MO_IceBlast::new(
+                        g,
+                        Ptr::from_mut(&mut rm.spr_iceblast),
                         Vec2s::new((ix + HALFPW - 2) as i16, (iy + HALFPH - 16) as i16),
                         5.0,
                         self.globalID,
@@ -1747,8 +1759,9 @@ impl CPlayer {
                         self.colorID,
                     )));
                 } else {
-                    g.objectcontainer[2].add(Ptr::new_box(MO_IceBlast::new(
-                        Ptr::from_mut(&mut g.rm.spr_iceblast),
+                    gp.objectcontainer[2].add(Ptr::new_box(MO_IceBlast::new(
+                        g,
+                        Ptr::from_mut(&mut rm.spr_iceblast),
                         Vec2s::new((ix + HALFPW - 30) as i16, (iy + HALFPH - 16) as i16),
                         -5.0,
                         self.globalID,
@@ -1968,12 +1981,13 @@ impl CPlayer {
         }
     }
 
-    pub fn cpu_think(&mut self) {
+    pub fn cpu_think(&mut self, g: &mut Game) {
         let keys = self.playerKeys;
-        self.pPlayerAI.as_mut().unwrap().think(keys);
+        self.pPlayerAI.as_mut().unwrap().think(g, keys);
     }
 
     pub fn die(&mut self, g: &mut Game, deathStyle: PlayerDeathStyle, fTeamRemoved: bool, fKillCarriedItem: bool) {
+        let mut rm = g.rm;
         if !fTeamRemoved {
             crate::smw::net_outcomes::note_death(g, self.globalID, deathStyle as i32, false);
         }
@@ -2043,7 +2057,8 @@ impl CPlayer {
             //Drop a shoe item if the player died in one
             if self.kuriboshoe.is_on() {
                 let shoe = Ptr::new_box(CO_KuriboShoe::new(
-                    Ptr::from_mut(&mut g.rm.spr_kuriboshoe),
+                    g,
+                    Ptr::from_mut(&mut rm.spr_kuriboshoe),
                     Vec2s::new((ix - PWOFFSET) as i16, (iy - PHOFFSET) as i16),
                     self.kuriboshoe.get_type() == STICKY,
                 ));
@@ -3264,7 +3279,8 @@ impl CPlayer {
         let mut gp = g.ptr();
         let this = self.this();
         if iPlayerIdCredit >= 0 || self.iSuicideCreditPlayerID >= 0 {
-            player_killed_player(g, 
+            player_killed_player(
+                g,
                 if iPlayerIdCredit >= 0 { iPlayerIdCredit } else { self.iSuicideCreditPlayerID },
                 this,
                 PlayerDeathStyle::Jump,

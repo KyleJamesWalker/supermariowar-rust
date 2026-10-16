@@ -90,7 +90,7 @@ pub trait MovingPlatformPathTrait: Any {
 
     /// C++ `typeId()`; renamed because `Any::type_id` takes the name.
     fn path_type_id(&self) -> PlatformPathType;
-    fn r#move(&mut self, r#type: i16) -> bool;
+    fn r#move(&mut self, g: &mut Game, r#type: i16) -> bool;
     fn reset(&mut self, g: &mut Game) {
         moving_platform_path_reset(g, self)
     }
@@ -113,11 +113,11 @@ pub fn moving_platform_path_reset<T: MovingPlatformPathTrait + ?Sized>(g: &mut G
     unsafe {
         if g.game_values.spawnstyle == SpawnStyle::Door {
             for _ in 0..36 {
-                this.r#move(1);
+                this.r#move(g, 1);
             }
         } else if g.game_values.spawnstyle == SpawnStyle::Swirl {
             for _ in 0..50 {
-                this.r#move(1);
+                this.r#move(g, 1);
             }
         }
     }
@@ -220,7 +220,7 @@ impl MovingPlatformPathTrait for StraightPath {
         PlatformPathType::Straight
     }
 
-    fn r#move(&mut self, r#type: i16) -> bool {
+    fn r#move(&mut self, g: &mut Game, r#type: i16) -> bool {
         let t = r#type as usize;
         let v = self.base.m_velocity[t];
         self.base.m_currentPos[t] += v;
@@ -321,7 +321,7 @@ impl MovingPlatformPathTrait for StraightPathContinuous {
         PlatformPathType::StraightContinuous
     }
 
-    fn r#move(&mut self, r#type: i16) -> bool {
+    fn r#move(&mut self, g: &mut Game, r#type: i16) -> bool {
         let t = r#type as usize;
         let v = self.base.m_velocity[t];
         self.base.m_currentPos[t] += v;
@@ -406,7 +406,7 @@ impl MovingPlatformPathTrait for EllipsePath {
         PlatformPathType::Ellipse
     }
 
-    fn r#move(&mut self, r#type: i16) -> bool {
+    fn r#move(&mut self, g: &mut Game, r#type: i16) -> bool {
         let t = r#type as usize;
         let oldPos = self.base.m_currentPos[t];
 
@@ -461,14 +461,15 @@ impl MovingPlatformPathTrait for FallingPath {
         PlatformPathType::Falling
     }
 
-    fn r#move(&mut self, r#type: i16) -> bool {
+    fn r#move(&mut self, g: &mut Game, r#type: i16) -> bool {
+        let mut gp = g.ptr();
         let t = r#type as usize;
         self.base.m_velocity[t].y = cap_falling_velocity(self.base.m_velocity[t].y + GRAVITATION);
 
         let mut platform = self.base.m_platform;
         if platform.fy - platform.iHalfHeight as f32 >= App::screenHeight as f32 {
             unsafe {
-                for player in game().players.iter_mut() {
+                for player in gp.players.iter_mut() {
                     if player.platform == platform {
                         player.platform = Ptr::null();
                         player.vely = self.base.m_velocity[t].y;

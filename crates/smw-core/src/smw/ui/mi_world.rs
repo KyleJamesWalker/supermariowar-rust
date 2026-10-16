@@ -318,16 +318,17 @@ impl MI_World {
     }
 
     fn advance_turn(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             if self.iSleepTurns > 0 {
                 self.iSleepTurns -= 1;
                 if self.iSleepTurns <= 0 {
-                    g.rm.backgroundmusic[5] = sfxMusic::from_file(g.worldmusiclist.current_music(g.g_worldmap.get_music_category(), g.g_worldmap.get_world_name()))
+                    g.rm.backgroundmusic[5] = sfxMusic::from_file(g, gp.worldmusiclist.current_music(g.g_worldmap.get_music_category(), g.g_worldmap.get_world_name()))
                         .unwrap_or_else(|e| std::panic::panic_any(e));
-                    g.rm.backgroundmusic[5].play(false, false);
+                    gp.rm.backgroundmusic[5].play(g, false, false);
                 }
             } else {
-                g.g_worldmap.move_vehicles();
+                gp.g_worldmap.move_vehicles(g);
             }
 
             g.g_worldmap.move_bridges();
@@ -343,7 +344,8 @@ impl MI_World {
         let mut gp = g.ptr();
         if iCycleIndex >= 0 && iCycleIndex <= 15 {
             unsafe {
-                gp.g_worldmap.draw_map_to_surface(g, 
+                gp.g_worldmap.draw_map_to_surface(
+                    g,
                     iCycleIndex,
                     self.iDrawFullRefresh > 0,
                     self.map_sprites[(1 - self.iCurrentSurfaceIndex) as usize].get_surface(),
@@ -488,8 +490,8 @@ impl MI_World {
                 fUsedItem = true;
                 if_sound_on_play(g, &mut gp.rm.sfx_collectpowerup);
 
-                g.rm.backgroundmusic[5] = sfxMusic::from_file(g.worldmusiclist.current_music(WorldMusicCategory::Sleep, "")).unwrap_or_else(|e| std::panic::panic_any(e));
-                g.rm.backgroundmusic[5].play(false, false);
+                g.rm.backgroundmusic[5] = sfxMusic::from_file(g, gp.worldmusiclist.current_music(WorldMusicCategory::Sleep, "")).unwrap_or_else(|e| std::panic::panic_any(e));
+                gp.rm.backgroundmusic[5].play(g, false, false);
             } else if p == NUM_POWERUPS + 1 {
                 //Cloud (allows player to skip stages)
                 if !self.fUsingCloud && self.iState == -1 {
@@ -916,13 +918,15 @@ impl UI_ControlTrait for MI_World {
                     for iMemberStore in 0..game().game_values.teamcounts[iTeamStore] {
                         let iPlayerId = g.game_values.teamids[iTeamStore][iMemberStore as usize] as usize;
 
-                        gp.rm.spr_worlditempopup.draw_src(g, 
+                        gp.rm.spr_worlditempopup.draw_src(
+                            g,
                             iStoredPowerupBoxX as i32,
                             self.iStoredItemPopupDrawY as i32,
                             &SDL_Rect { x: gp.game_values.colorids[iPlayerId] as i32 * 48, y: 256, w: 48, h: 48 },
                         );
 
-                        gp.rm.spr_storedpoweruplarge.draw_src(g, 
+                        gp.rm.spr_storedpoweruplarge.draw_src(
+                            g,
                             iStoredPowerupBoxX as i32 + 8,
                             self.iStoredItemPopupDrawY as i32 + 8,
                             &SDL_Rect { x: (gp.game_values.storedpowerups[iPlayerId] as i32) << 5, y: 0, w: 32, h: 32 },

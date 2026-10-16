@@ -24,8 +24,9 @@ pub struct IO_BulletBillCannon {
 impl_base!(IO_BulletBillCannon => cobject: CObject);
 
 impl IO_BulletBillCannon {
-    pub fn new(pos: Vec2s, freq: i16, vel: f32, preview: bool) -> Self {
-        let mut this = IO_BulletBillCannon { cobject: CObject::new(game().get(), Ptr::null(), pos), m_freq: freq, m_timer: 0, m_vel: vel, m_preview: preview };
+    pub fn new(g: &mut Game, pos: Vec2s, freq: i16, vel: f32, preview: bool) -> Self {
+        let mut gp = g.ptr();
+        let mut this = IO_BulletBillCannon { cobject: CObject::new(gp.get(), Ptr::null(), pos), m_freq: freq, m_timer: 0, m_vel: vel, m_preview: preview };
         this.objectType = object_bulletbillcannon;
         this.set_new_timer();
         this
@@ -60,7 +61,8 @@ impl IO_BulletBillCannon {
 
         let pos = Vec2s::new((self.ix as i32 + if self.m_vel < 0.0f32 { 32 } else { -32 }) as i16, self.iy);
         unsafe {
-            gp.get().objectcontainer[1].add(Ptr::new_box(MO_BulletBill::new(g, 
+            gp.get().objectcontainer[1].add(Ptr::new_box(MO_BulletBill::new(
+                g,
                 Ptr::from_mut(&mut gp.get().rm.spr_hazard_bulletbill[if self.m_preview { 1 } else { 0 }]),
                 Ptr::from_mut(&mut gp.get().rm.spr_hazard_bulletbilldead),
                 pos,

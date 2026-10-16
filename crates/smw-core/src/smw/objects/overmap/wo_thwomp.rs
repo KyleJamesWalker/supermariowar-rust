@@ -21,9 +21,9 @@ pub struct OMO_Thwomp {
 impl_base!(OMO_Thwomp => io_over_map_object: IO_OverMapObject);
 
 impl OMO_Thwomp {
-    pub fn new(nspr: Ptr<gfxSprite>, x: i16, nspeed: f32) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, x: i16, nspeed: f32) -> Self {
         let mut this = OMO_Thwomp {
-            io_over_map_object: IO_OverMapObject::new(nspr, Vec2s::new(x, -nspr.get_height() as i16), 1, 0, -1, -1, -1, -1, -1, -1, -1, -1),
+            io_over_map_object: IO_OverMapObject::new(g, nspr, Vec2s::new(x, -nspr.get_height() as i16), 1, 0, -1, -1, -1, -1, -1, -1, -1, -1),
         };
         this.objectType = object_thwomp;
         this.vely = nspeed;

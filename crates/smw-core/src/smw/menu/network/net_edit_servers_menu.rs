@@ -173,13 +173,14 @@ impl UI_NetEditServersMenu {
         self.reload_scroll(g);
     }
 
-    pub fn on_press_add(&mut self) {
+    pub fn on_press_add(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         self.remember_current();
         self.currentState = MenuState::ADD;
 
         self.show_dialog();
         let f = ctl_ptr(self.miDialogTextField);
-        self.set_initial_focus(game().get(), f);
+        self.set_initial_focus(gp.get(), f);
         self.set_cancel_code(MENU_CODE_TO_NET_ADDREMOVE_SERVER_MENU);
     }
 

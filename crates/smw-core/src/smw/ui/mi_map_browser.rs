@@ -109,7 +109,7 @@ impl MI_MapBrowser {
 
                 if !file_exists(&sConvertedPath) {
                     let filename = g.maplist.node_at(itr).filename.clone();
-                    g.g_map.load_map(&filename, read_type_preview);
+                    gp.g_map.load_map(g, &filename, read_type_preview);
                     small_delay(); //Sleeps to help the music from skipping
                     gp.g_map.save_thumbnail(g, &sConvertedPath, false);
                     small_delay();

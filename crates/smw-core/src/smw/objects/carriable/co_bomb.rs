@@ -31,9 +31,9 @@ impl_base!(CO_Bomb => mo_carried_object: MO_CarriedObject);
 
 impl CO_Bomb {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s, vel: Vec2f, aniSpeed: i16, iGlobalID: i16, teamID: i16, iColorID: i16, timetolive: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, vel: Vec2f, aniSpeed: i16, iGlobalID: i16, teamID: i16, iColorID: i16, timetolive: i16) -> Self {
         let mut o = CO_Bomb {
-            mo_carried_object: MO_CarriedObject::new(nspr, pos, 5, aniSpeed, 24, 24, 4, 13),
+            mo_carried_object: MO_CarriedObject::new(g, nspr, pos, 5, aniSpeed, 24, 24, 4, 13),
             iColorOffsetY: 0,
             ttl: 0,
             sSpotlight: Ptr::null(),
@@ -151,6 +151,7 @@ impl IO_MovingObjectTrait for CO_Bomb {
 
     fn die(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
+        let mut rm = g.rm;
         if !self.owner.is_null() {
             self.owner.carriedItem = Ptr::null();
             self.owner = Ptr::null();
@@ -164,8 +165,9 @@ impl IO_MovingObjectTrait for CO_Bomb {
 
         self.dead = true;
         unsafe {
-            g.objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
-                Ptr::from_mut(&mut g.rm.spr_explosion),
+            gp.objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
+                g,
+                Ptr::from_mut(&mut rm.spr_explosion),
                 Vec2s::new((self.ix as i32 + (self.iw as i32 >> 2) - 96) as i16, (self.iy as i32 + (self.ih as i32 >> 2) - 64) as i16),
                 2,
                 4,

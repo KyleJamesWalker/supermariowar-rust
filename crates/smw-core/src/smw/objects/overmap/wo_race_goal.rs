@@ -43,7 +43,7 @@ impl_base!(OMO_RaceGoal => io_over_map_object: IO_OverMapObject);
 impl OMO_RaceGoal {
     pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, id: i16) -> Self {
         let mut this = OMO_RaceGoal {
-            io_over_map_object: IO_OverMapObject::new(nspr, Vec2s::zero(), 2, 8, -1, -1, -1, -1, -1, -1, -1, -1),
+            io_over_map_object: IO_OverMapObject::new(g, nspr, Vec2s::zero(), 2, 8, -1, -1, -1, -1, -1, -1, -1, -1),
             goalID: id,
             tagged: [0; 4],
             angle: 0.0,

@@ -60,11 +60,11 @@ impl CGM_Boss_MiniGame {
             show_score_board(g);
 
             if g.game_values.music {
-                g.rm.sfx_invinciblemusic.stop();
-                g.rm.sfx_timewarning.stop();
-                g.rm.sfx_slowdownmusic.stop();
+                gp.rm.sfx_invinciblemusic.stop(g);
+                gp.rm.sfx_timewarning.stop(g);
+                gp.rm.sfx_slowdownmusic.stop(g);
 
-                g.rm.backgroundmusic[1].play(true, false);
+                gp.rm.backgroundmusic[1].play(g, true, false);
             }
         }
 
@@ -121,18 +121,19 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
 
     fn think(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
+        let mut rm = g.rm;
         let mut gp = g.ptr();
         unsafe {
             if !self.gameover && g.players.len() == 0 {
                 self.gameover = true;
 
                 if g.game_values.music {
-                    g.rm.sfx_invinciblemusic.stop();
-                    g.rm.sfx_timewarning.stop();
-                    g.rm.sfx_slowdownmusic.stop();
+                    gp.rm.sfx_invinciblemusic.stop(g);
+                    gp.rm.sfx_timewarning.stop(g);
+                    gp.rm.sfx_slowdownmusic.stop(g);
                     if_sound_on_play(g, &mut gp.rm.sfx_gameover);
 
-                    g.rm.backgroundmusic[1].stop();
+                    gp.rm.backgroundmusic[1].stop(g);
                 }
             }
 
@@ -143,7 +144,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
                     //Randomly spawn koopas
                     self.enemytimer -= 1;
                     if self.enemytimer <= 0 {
-                        g.objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(Ptr::from_mut(&mut g.rm.spr_koopa), RANDOM_BOOL(), false, false, true)));
+                        gp.objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(g, Ptr::from_mut(&mut rm.spr_koopa), RANDOM_BOOL(), false, false, true)));
                         self.enemytimer = (RANDOM_INT(120) as i16 as i32 + 120) as i16; //Spawn koopas slowly
                     }
                 } else if self.iBossType == Boss::Bomb {
@@ -154,7 +155,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
                         let x = RANDOM_INT((App::screenWidth as f32 * 0.95f32) as i32) as i16;
                         let pos = Vec2s::new(x, App::screenHeight as i16);
                         let nspeed: f32 = -((RANDOM_INT(9) as f32) / 2.0f32) - 9.0f32;
-                        g.objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(Ptr::from_mut(&mut g.rm.spr_podobo), pos, nspeed, -1, -1, -1, false)));
+                        gp.objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(g, Ptr::from_mut(&mut rm.spr_podobo), pos, nspeed, -1, -1, -1, false)));
                         self.enemytimer = (RANDOM_INT(80) + 60) as i16;
                     }
 
@@ -172,15 +173,16 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
     }
 
     fn draw_foreground(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if self.gameover {
             if self.winningteam == -1 {
                 unsafe {
-                    g.rm.game_font_large.draw_centered(App::screenWidth / 2, 96, "You Failed To Defeat");
+                    gp.rm.game_font_large.draw_centered(g, App::screenWidth / 2, 96, "You Failed To Defeat");
 
                     match self.iBossType {
-                        Boss::Hammer => g.rm.game_font_large.draw_centered(App::screenWidth / 2, 118, "The Mighty Sledge Brother"),
-                        Boss::Bomb => g.rm.game_font_large.draw_centered(App::screenWidth / 2, 118, "The Mighty Bomb Brother"),
-                        Boss::Fire => g.rm.game_font_large.draw_centered(App::screenWidth / 2, 118, "The Mighty Flame Brother"),
+                        Boss::Hammer => gp.rm.game_font_large.draw_centered(g, App::screenWidth / 2, 118, "The Mighty Sledge Brother"),
+                        Boss::Bomb => gp.rm.game_font_large.draw_centered(g, App::screenWidth / 2, 118, "The Mighty Bomb Brother"),
+                        Boss::Fire => gp.rm.game_font_large.draw_centered(g, App::screenWidth / 2, 118, "The Mighty Flame Brother"),
                     }
                 }
             }

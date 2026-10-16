@@ -300,7 +300,7 @@ impl MI_TextField {
             let srcY = if selected { 32 } else { 0 };
             spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: srcY, w: w - 8, h: 32 });
             spr.draw_src(g, x + w - 8, y, &SDL_Rect { x: 504, y: srcY, w: 8, h: 32 });
-            unsafe { g.rm.menu_font_large.draw_centered(x + w / 2, y + 5, label) };
+            unsafe { gp.rm.menu_font_large.draw_centered(g, x + w / 2, y + 5, label) };
         };
         let rows = if self.fOskShift { OSK_SHIFTED } else { OSK_KEYS };
         for row in 0..OSK_ROWS - 1 {

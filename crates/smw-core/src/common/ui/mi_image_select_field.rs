@@ -83,7 +83,8 @@ impl UI_ControlTrait for MI_ImageSelectField {
 
         let item = self.current_item();
         let srcIndex = (if item.iconOverride >= 0 { item.iconOverride } else { item.value }) as i32;
-        self.spr_image.draw_src(g, 
+        self.spr_image.draw_src(
+            g,
             x + indent + 8,
             y + 16 - (self.iImageHeight as i32 >> 1),
             &SDL_Rect { x: srcIndex * self.iImageWidth as i32, y: 0, w: self.iImageWidth as i32, h: self.iImageHeight as i32 },

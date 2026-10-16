@@ -177,7 +177,7 @@ pub fn net_init(g: &mut Game) -> bool {
         g.netplay.mychatmessage.clear();
         g.netplay.allowMapCollisionEvent = false;
 
-        if !g.networkHandler.deref_handler().init() {
+        if !net_layer(g).init(g) {
             return false;
         }
 
@@ -200,7 +200,7 @@ pub fn net_close(g: &mut Game) {
     unsafe {
         gp.netplay.client.cleanup(g);
 
-        g.networkHandler.deref_handler().cleanup();
+        net_layer(g).cleanup(g);
     }
 }
 
@@ -275,14 +275,9 @@ pub fn net_end_session(g: &mut Game) {
     }
 }
 
-trait HandlerAccess {
-    fn deref_handler(&mut self) -> &mut NetworkHandler;
-}
-
-impl HandlerAccess for Global<NetworkHandler> {
-    fn deref_handler(&mut self) -> &mut NetworkHandler {
-        self
-    }
+/// The network layer, borrowed apart from `g` so `g` can be passed to it.
+fn net_layer<'a>(g: &mut Game) -> &'a mut NetworkHandler {
+    g.networkHandler.as_ptr().get()
 }
 
 /// How long the host waits for its joiners to load, and a joiner for the host's go, before playing anyway.
@@ -310,11 +305,11 @@ pub fn draw_match_preview(g: &mut Game) {
         if !g.netplay.match_map_name.is_empty() {
             lines.push(format!("Map: {}", g.netplay.match_map_name));
         }
-        g.rm.menu_font_large.draw_centered(320, 116, "Match Settings");
+        gp.rm.menu_font_large.draw_centered(g, 320, 116, "Match Settings");
         for (i, line) in lines.iter().enumerate() {
             gp.rm.menu_font_large.draw_chop_centered(g, 320, 160 + 30 * i as i32, 320, line);
         }
-        g.rm.menu_font_small.draw_centered(320, 340, if g.netplay.match_randomized { "Randomized by the host" } else { "Chosen by the host" });
+        gp.rm.menu_font_small.draw_centered(g, 320, 340, if g.netplay.match_randomized { "Randomized by the host" } else { "Chosen by the host" });
     }
 }
 
@@ -331,7 +326,7 @@ pub fn waiting_to_start(g: &mut Game) -> bool {
             g.netplay.start_waited_since = now.max(1);
             if !g.netplay.theHostIsMe {
                 let peer = g.netplay.client.foreign_gamehost;
-                g.netplay.client.send_to(peer, MessageHeader::new(NET_P2G_LOADED).as_bytes(), false);
+                g.netplay.client.send_to(peer, MessageHeader::new(NET_P2G_LOADED).as_bytes());
             }
         }
         gp.netplay.client.update(g);
@@ -415,13 +410,13 @@ impl NetClient {
 
     pub fn start(&mut self, g: &mut Game) -> bool {
         let mut gp = g.ptr();
-        net_record::value_bool(g, "client_restart", || unsafe { gp.networkHandler.deref_handler().client_restart() })
+        net_record::value_bool(g, "client_restart", || net_layer(gp.get()).client_restart(gp.get()))
     }
 
     pub fn update(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         self.local_gamehost.update(g);
-        net_record::listen(g, Side::Client, self, |handler| unsafe { gp.networkHandler.deref_handler().client_listen(handler) });
+        net_record::listen(g, Side::Client, self, |g, handler| net_layer(g).client_listen(g, handler));
     }
 
     pub fn stop(&mut self, g: &mut Game) {
@@ -441,7 +436,7 @@ impl NetClient {
         }
 
         if !net_record::replaying(g) {
-            unsafe { g.networkHandler.deref_handler().client_shutdown() };
+            net_layer(g).client_shutdown(g);
         }
     }
 
@@ -812,7 +807,7 @@ impl NetClient {
             g.netplay.start_waited_since = 0;
             g.netplay.gamestate_received = false;
         }
-        crate::smw::net_random::begin_setup();
+        crate::smw::net_random::begin_setup(g);
 
         unsafe {
             g.netplay.player_disconnected = [false; 4];
@@ -825,7 +820,7 @@ impl NetClient {
                 self.set_as_last_sent_message(NET_P2G_SYNC_OK);
             } else {
                 let respond_pkg = gpkgs::SyncOK::new();
-                self.send_message_to_game_host_reliable(respond_pkg.as_bytes());
+                self.send_message_to_game_host(respond_pkg.as_bytes());
             }
         }
     }
@@ -849,7 +844,7 @@ impl NetClient {
 
                 self.set_as_last_received_message(pkg.header.packageType);
             } else {
-                self.send_message_to_game_host_reliable(pkg.as_bytes());
+                self.send_message_to_game_host(pkg.as_bytes());
             }
 
             g.netplay.gameRunning = false;
@@ -879,7 +874,7 @@ impl NetClient {
 
     pub fn send_powerup_request(&mut self) {
         let pkg = gpkgs::RequestPowerup::new();
-        self.send_message_to_game_host_reliable(pkg.as_bytes());
+        self.send_message_to_game_host(pkg.as_bytes());
     }
 
     pub fn handle_powerup_start(&mut self, g: &mut Game, data: &[u8]) {
@@ -993,7 +988,7 @@ impl NetClient {
         unsafe {
             g.netplay.previous_playerdata = g.netplay.latest_playerdata.clone();
 
-            for p in 0..game().players.len() as u8 {
+            for p in 0..g.players.len() as u8 {
                 let d = &mut g.netplay.latest_playerdata.player[p as usize];
                 pkg.get_player_coord(p, &mut d.x, &mut d.y);
                 pkg.get_player_vel(p, &mut d.xvel, &mut d.yvel);
@@ -1017,7 +1012,7 @@ impl NetClient {
         let mut gp = g.ptr();
         unsafe {
             g.netplay.connectSuccessful = false;
-            net_record::value_bool(g, "connect_lobby", || gp.networkHandler.deref_handler().connect_to_lobby_server(hostname, port))
+            net_record::value_bool(g, "connect_lobby", || net_layer(gp.get()).connect_to_lobby_server(gp.get(), hostname, port))
         }
     }
 
@@ -1025,17 +1020,13 @@ impl NetClient {
         let mut gp = g.ptr();
         unsafe {
             g.netplay.connectSuccessful = false;
-            net_record::value_bool(g, "connect_game_host", || gp.networkHandler.deref_handler().connect_to_foreign_game_host(hostname, port))
+            net_record::value_bool(g, "connect_game_host", || net_layer(gp.get()).connect_to_foreign_game_host(gp.get(), hostname, port))
         }
     }
 
-    /// The C++ swaps the channels: `reliable` sends unreliably and vice versa.
-    fn send_to(&mut self, mut peer: Ptr<dyn NetPeer>, data: &[u8], reliable: bool) -> bool {
-        if reliable {
-            if !peer.send(data) {
-                return false;
-            }
-        } else if !peer.send_reliable(data) {
+    /// Every client message goes reliably: a lost lobby request or start handshake leaves the client waiting forever.
+    fn send_to(&mut self, mut peer: Ptr<dyn NetPeer>, data: &[u8]) -> bool {
+        if !peer.send_reliable(data) {
             return false;
         }
 
@@ -1045,17 +1036,12 @@ impl NetClient {
 
     fn send_message_to_lobby_server(&mut self, data: &[u8]) -> bool {
         let peer = self.foreign_lobbyserver;
-        self.send_to(peer, data, true)
+        self.send_to(peer, data)
     }
 
     fn send_message_to_game_host(&mut self, data: &[u8]) -> bool {
         let peer = self.foreign_gamehost;
-        self.send_to(peer, data, false)
-    }
-
-    fn send_message_to_game_host_reliable(&mut self, data: &[u8]) -> bool {
-        let peer = self.foreign_gamehost;
-        self.send_to(peer, data, true)
+        self.send_to(peer, data)
     }
 
     pub fn set_as_last_sent_message(&mut self, packageType: u8) {
@@ -1069,14 +1055,14 @@ impl NetClient {
     }
 }
 
-impl NetworkEventHandler for NetClient {
-    fn on_connect(&mut self, newPeer: Box<dyn NetPeer>) {
+impl NetworkEventHandler<Game> for NetClient {
+    fn on_connect(&mut self, g: &mut Game, newPeer: Box<dyn NetPeer>) {
         let mut newPeer = Ptr::from_box(newPeer);
 
         if self.foreign_lobbyserver.is_null() {
             self.foreign_lobbyserver = newPeer;
 
-            let message = pkgs::ClientConnection::with(unsafe { &game().netplay.myPlayerName });
+            let message = pkgs::ClientConnection::with(unsafe { &g.netplay.myPlayerName });
             self.send_message_to_lobby_server(message.as_bytes());
         } else if self.foreign_gamehost.is_null() {
             self.foreign_gamehost = newPeer;
@@ -1085,10 +1071,11 @@ impl NetworkEventHandler for NetClient {
         }
     }
 
-    fn on_disconnect(&mut self, client: &mut dyn NetPeer) {
+    fn on_disconnect(&mut self, g: &mut Game, client: &mut dyn NetPeer) {
         if !self.foreign_gamehost.is_null() && client.same_peer(&*self.foreign_gamehost) {
             println!("[net] Disconnected from game host.");
-            unsafe { game().netplay.player_disconnected[game().netplay.remotePlayerNumber as usize] = true };
+            let remote = g.netplay.remotePlayerNumber as usize;
+            g.netplay.player_disconnected[remote] = true;
             return;
         }
 
@@ -1100,7 +1087,7 @@ impl NetworkEventHandler for NetClient {
         println!("[net] Client {} disconnected", client.address_as_string());
     }
 
-    fn on_receive(&mut self, client: &mut dyn NetPeer, data: &[u8]) {
+    fn on_receive(&mut self, g: &mut Game, client: &mut dyn NetPeer, data: &[u8]) {
         if data.len() < 3 {
             return;
         }
@@ -1124,82 +1111,82 @@ impl NetworkEventHandler for NetClient {
                 NET_RESPONSE_CONNECT_OK => {
                     // Not in the C++: the Servers menu moves on only if the skin goes out no earlier than this receive.
                     self.set_as_last_received_message(packageType);
-                    game().netplay.connectSuccessful = true;
-                    self.send_skin_change(game().get());
+                    g.netplay.connectSuccessful = true;
+                    self.send_skin_change(g);
                     return;
                 }
 
                 NET_RESPONSE_CONNECT_DENIED => {
                     println!("Not implemented: NET_RESPONSE_CONNECT_DENIED");
-                    game().netplay.connectSuccessful = false;
+                    g.netplay.connectSuccessful = false;
                 }
 
                 NET_RESPONSE_CONNECT_SERVERFULL => {
                     println!("Not implemented: NET_RESPONSE_CONNECT_SERVERFULL");
-                    game().netplay.connectSuccessful = false;
+                    g.netplay.connectSuccessful = false;
                 }
 
                 NET_RESPONSE_CONNECT_NAMETAKEN => {
                     println!("Not implemented: NET_RESPONSE_CONNECT_NAMETAKEN");
-                    game().netplay.connectSuccessful = false;
+                    g.netplay.connectSuccessful = false;
                 }
 
-                NET_RESPONSE_ROOM_LIST_ENTRY => self.handle_new_room_list_entry(game().get(), data),
+                NET_RESPONSE_ROOM_LIST_ENTRY => self.handle_new_room_list_entry(g, data),
 
                 NET_RESPONSE_NO_ROOMS => println!("Not implemented: [net] There are no rooms currently on the server."),
 
                 NET_RESPONSE_JOIN_OK => {
                     println!("Not implemented: [net] Joined to room.");
-                    game().netplay.joinSuccessful = true;
-                    game().netplay.theHostIsMe = false;
+                    g.netplay.joinSuccessful = true;
+                    g.netplay.theHostIsMe = false;
                 }
 
                 NET_RESPONSE_ROOM_FULL => {
                     println!("Not implemented: [net] The room is full");
-                    game().netplay.joinSuccessful = false;
+                    g.netplay.joinSuccessful = false;
                 }
 
-                NET_NOTICE_ROOM_CHANGE => self.handle_room_changed_message(game().get(), data),
+                NET_NOTICE_ROOM_CHANGE => self.handle_room_changed_message(g, data),
 
-                NET_NOTICE_MAP_CHANGE => self.handle_map_change_message(game().get(), data),
+                NET_NOTICE_MAP_CHANGE => self.handle_map_change_message(g, data),
 
-                NET_NOTICE_SKIN_CHANGE => self.handle_skin_change_message(game().get(), data),
+                NET_NOTICE_SKIN_CHANGE => self.handle_skin_change_message(g, data),
 
-                NET_NOTICE_GAMEMODESETTINGS => self.handle_game_mode_settings_change_message(game().get(), data),
+                NET_NOTICE_GAMEMODESETTINGS => self.handle_game_mode_settings_change_message(g, data),
 
-                NET_NOTICE_ROOM_CHAT_MSG => self.handle_room_chat_message(game().get(), data),
+                NET_NOTICE_ROOM_CHAT_MSG => self.handle_room_chat_message(g, data),
 
-                NET_RESPONSE_CREATE_OK => self.handle_room_created_message(game().get(), data),
+                NET_RESPONSE_CREATE_OK => self.handle_room_created_message(g, data),
 
                 NET_RESPONSE_CREATE_ERROR => println!("Not implemented: NET_RESPONSE_CREATE_ERROR"),
 
-                NET_L2P_GAMEHOST_INFO => self.handle_room_start_message(game().get(), client, data),
+                NET_L2P_GAMEHOST_INFO => self.handle_room_start_message(g, client, data),
 
-                NET_L2G_CLIENTS_INFO => self.handle_expected_clients_message(game().get(), client, data),
+                NET_L2G_CLIENTS_INFO => self.handle_expected_clients_message(g, client, data),
 
-                NET_G2P_SYNC => self.handle_start_sync_message(game().get(), data),
+                NET_G2P_SYNC => self.handle_start_sync_message(g, data),
 
-                NET_G2E_GAME_START => self.handle_game_start_message(game().get()),
+                NET_G2E_GAME_START => self.handle_game_start_message(g),
 
-                NET_G2P_REMOTE_KEYS => self.handle_remote_input(game().get(), data),
+                NET_G2P_REMOTE_KEYS => self.handle_remote_input(g, data),
 
-                NET_G2P_GAME_STATE => self.handle_remote_game_state(game().get(), data),
+                NET_G2P_GAME_STATE => self.handle_remote_game_state(g, data),
 
-                NET_G2P_START_POWERUP => self.handle_powerup_start(game().get(), data),
+                NET_G2P_START_POWERUP => self.handle_powerup_start(g, data),
 
-                NET_G2P_TRIGGER_MAPCOLL => self.handle_map_collision(game().get(), data),
+                NET_G2P_TRIGGER_MAPCOLL => self.handle_map_collision(g, data),
 
-                NET_G2P_TRIGGER_P2PCOLL => self.handle_p2p_collision(game().get(), data),
+                NET_G2P_TRIGGER_P2PCOLL => self.handle_p2p_collision(g, data),
 
 
-                NET_G2P_GO => game().netplay.start_waiting = false,
+                NET_G2P_GO => g.netplay.start_waiting = false,
 
                 NET_G2P_MATCH_MAP if data.len() > 3 => {
-                    game().netplay.match_randomized = data[3] != 0;
-                    game().netplay.match_map_name = String::from_utf8_lossy(&data[4..]).into_owned();
+                    g.netplay.match_randomized = data[3] != 0;
+                    g.netplay.match_map_name = String::from_utf8_lossy(&data[4..]).into_owned();
                 }
 
-                NET_G2P_RANDOM_EVENT => crate::smw::net_random::receive(game().get(), data),
+                NET_G2P_RANDOM_EVENT => crate::smw::net_random::receive(g, data),
 
                 _ => {
                     print!("Unknown: ");
@@ -1299,7 +1286,7 @@ impl NetGameHost {
 
         self.foreign_lobbyserver = lobbyserver;
 
-        if !net_record::value_bool(g, "gamehost_restart", || unsafe { gp.networkHandler.deref_handler().gamehost_restart() }) {
+        if !net_record::value_bool(g, "gamehost_restart", || net_layer(gp.get()).gamehost_restart(gp.get())) {
             return false;
         }
 
@@ -1311,7 +1298,7 @@ impl NetGameHost {
     pub fn update(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         if self.active {
-            net_record::listen(g, Side::Host, self, |handler| unsafe { gp.networkHandler.deref_handler().gamehost_listen(handler) });
+            net_record::listen(g, Side::Host, self, |g, handler| net_layer(g).gamehost_listen(g, handler));
         }
     }
 
@@ -1333,7 +1320,7 @@ impl NetGameHost {
         }
 
         if !net_record::replaying(g) {
-            unsafe { g.networkHandler.deref_handler().gamehost_shutdown() };
+            net_layer(g).gamehost_shutdown(g);
         }
         self.active = false;
         println!("[net] GameHost stopped.");
@@ -1413,7 +1400,7 @@ impl NetGameHost {
         for c in 0..self.expected_client_count as usize {
             let (h, p) = (self.expected_clients[c].host, self.expected_clients[c].port);
             if !net_record::replaying(g) {
-                unsafe { g.networkHandler.deref_handler().nat_punch(h, p) };
+                net_layer(g).nat_punch(g, h, p);
             }
         }
     }
@@ -1482,7 +1469,7 @@ impl NetGameHost {
         let mut pkg = gpkgs::GameState::new();
 
         unsafe {
-            for p in 0..game().players.len() as u8 {
+            for p in 0..g.players.len() as u8 {
                 let pl = g.players[p as usize];
                 pkg.set_player_coord(p, pl.fx, pl.fy);
                 pkg.set_player_vel(p, pl.velx, pl.vely);
@@ -1627,8 +1614,8 @@ impl NetGameHost {
     }
 }
 
-impl NetworkEventHandler for NetGameHost {
-    fn on_connect(&mut self, new_player: Box<dyn NetPeer>) {
+impl NetworkEventHandler<Game> for NetGameHost {
+    fn on_connect(&mut self, g: &mut Game, new_player: Box<dyn NetPeer>) {
         let mut new_player = Ptr::from_box(new_player);
 
         if self.next_free_client_slot >= 3 {
@@ -1660,21 +1647,21 @@ impl NetworkEventHandler for NetGameHost {
         println!("{}/{} player connected.", self.next_free_client_slot, self.expected_client_count);
 
         if self.next_free_client_slot == self.expected_client_count {
-            self.send_sync_messages(game().get());
+            self.send_sync_messages(g);
         }
     }
 
-    fn on_disconnect(&mut self, player: &mut dyn NetPeer) {
+    fn on_disconnect(&mut self, g: &mut Game, player: &mut dyn NetPeer) {
         println!("[net] Client {} disconnected", player.address_as_string());
         for c in 0..self.expected_client_count as usize {
             if !self.clients[c].is_null() && self.clients[c].same_peer(player) {
-                unsafe { game().netplay.player_disconnected[c + 1] = true };
+                unsafe { g.netplay.player_disconnected[c + 1] = true };
                 return;
             }
         }
     }
 
-    fn on_receive(&mut self, player: &mut dyn NetPeer, data: &[u8]) {
+    fn on_receive(&mut self, g: &mut Game, player: &mut dyn NetPeer, data: &[u8]) {
         if data.len() < 3 {
             return;
         }
@@ -1688,7 +1675,7 @@ impl NetworkEventHandler for NetGameHost {
         }
 
         match packageType {
-            NET_P2G_SYNC_OK => self.handle_sync_ok_message(game().get(), player, data),
+            NET_P2G_SYNC_OK => self.handle_sync_ok_message(g, player, data),
             NET_P2G_LOADED => {
                 for c in 0..self.expected_client_count as usize {
                     if !self.clients[c].is_null() && player.same_peer(&*self.clients[c]) {
@@ -1696,8 +1683,8 @@ impl NetworkEventHandler for NetGameHost {
                     }
                 }
             }
-            NET_P2G_LOCAL_KEYS => self.handle_remote_input(game().get(), player, data),
-            NET_P2G_REQ_POWERUP => self.handle_powerup_request(game().get(), player, data),
+            NET_P2G_LOCAL_KEYS => self.handle_remote_input(g, player, data),
+            NET_P2G_REQ_POWERUP => self.handle_powerup_request(g, player, data),
             _ => {
                 print!("GH Unknown: ");
                 for b in data {
@@ -2047,5 +2034,5 @@ pub fn checkpoint(g: &mut Game, s: &mut Snap) {
         s.io(&mut g.last_processed_input_id);
     }
     crate::smw::net_random::checkpoint(s);
-    crate::smw::net_outcomes::checkpoint(s);
+    crate::smw::net_outcomes::checkpoint(g, s);
 }

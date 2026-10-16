@@ -27,8 +27,7 @@ impl_base!(OMO_StraightPathHazard => io_over_map_object: IO_OverMapObject);
 
 impl OMO_StraightPathHazard {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        nspr: Ptr<gfxSprite>,
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>,
         pos: Vec2s,
         angle: f32,
         vel: f32,
@@ -45,6 +44,7 @@ impl OMO_StraightPathHazard {
     ) -> Self {
         let mut this = OMO_StraightPathHazard {
             io_over_map_object: IO_OverMapObject::new(
+                g,
                 nspr,
                 pos,
                 iNumSpr,

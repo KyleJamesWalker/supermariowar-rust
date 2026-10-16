@@ -25,6 +25,7 @@ const g_iTileConversion: [i16; 300] = [
 
 impl MapReader {
     pub(super) fn read_tiles_1600(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile) {
+        let mut gp = g.ptr();
         unsafe {
             for j in 0..MAPHEIGHT as usize {
                 for i in 0..MAPWIDTH as usize {
@@ -47,7 +48,7 @@ impl MapReader {
 
                     for k in (0..MAPLAYERS as usize).rev() {
                         let tile = map.mapdata[i][j][k];
-                        let r#type = g.g_tilesetmanager.classic_tileset().tile_type(tile.iCol as isize as usize, tile.iRow as isize as usize);
+                        let r#type = gp.g_tilesetmanager.classic_tileset(g).tile_type(tile.iCol as isize as usize, tile.iRow as isize as usize);
                         if r#type != TileType::NonSolid {
                             map.mapdatatop[i][j] = r#type;
                             break;
@@ -217,8 +218,9 @@ impl MapReader {
         true
     }
 
-    pub(super) fn load_1610(&mut self, map: &mut CMap, mapfile: &mut BinaryFile, readtype: ReadType) -> bool {
-        if !self.load_1600(game().get(), map, mapfile, readtype) {
+    pub(super) fn load_1610(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile, readtype: ReadType) -> bool {
+        let mut gp = g.ptr();
+        if !self.load_1600(gp.get(), map, mapfile, readtype) {
             return false;
         }
 

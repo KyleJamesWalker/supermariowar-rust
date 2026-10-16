@@ -71,7 +71,7 @@ impl MapReader {
         match self.kind {
             R1500 => self.load_1500(g, map, mapfile, readtype),
             R1600 | R160A => self.load_1600(g, map, mapfile, readtype),
-            R1610 => self.load_1610(map, mapfile, readtype),
+            R1610 => self.load_1610(g, map, mapfile, readtype),
             R1700 | R1701 | R1702 => self.load_1700(g, map, mapfile, readtype),
             R1800 | R1801 | R1802 => self.load_1800(g, map, mapfile, readtype),
         }

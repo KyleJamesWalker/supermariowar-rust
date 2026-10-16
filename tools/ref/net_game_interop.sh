@@ -5,7 +5,8 @@
 # match of it must replay from its checkpoint (segment_check.py).
 # Usage: net_game_interop.sh
 # Env: SMW_RUST_BIN (smw), SMW_RUST_SERVER (smw_server), SMW_RUST_DATA,
-#      NET_GAMES (scenario directories beside this script; default: every net_game*).
+#      NET_GAMES (scenario directories beside this script; default: every net_game*),
+#      NET_GAME_WORK (where the logs go; default: a temporary directory).
 # A scenario's host.txt may name a map from net_maps/ (`#@ map=<name>`; each client gets an APFS clone of its data
 # tree with the map added), a host sync seed (`#@ net_seed=<n>`, so the game spawns alike every run) and extra
 # net_game_compare.py arguments (`#@ compare=...`).
@@ -17,7 +18,8 @@ RUST_DATA=${SMW_RUST_DATA:-$PORT/data}
 if [ -z "$SMW_RUST_BIN" ] || [ -z "$SMW_RUST_SERVER" ]; then
   cargo build --release --quiet --locked --manifest-path "$PORT/Cargo.toml" --bin smw --bin smw_server || exit 2
 fi
-WORK=$(mktemp -d)
+WORK=${NET_GAME_WORK:-$(mktemp -d)}
+mkdir -p "$WORK"
 games=(${NET_GAMES:-net_game net_game_blocks net_game_frenzy net_game_stomp net_game_coins net_game_classic net_game_stompkill net_game_stompkill_powerup})
 
 param() { sed -n "s/^#@ $1=//p" "$HERE/$2/host.txt"; }
@@ -65,7 +67,13 @@ for game in "${games[@]}"; do
   wait $jpid; jst=$?
   kill $spid 2>/dev/null; wait $spid 2>/dev/null
   echo "== $game: host exit $hst, join exit $jst"
-  python3 "$HERE/net_game_compare.py" --spawns $(param compare "$game") "$dir/host.dump" "$dir/join.dump" || fail=1
+  if ! python3 "$HERE/net_game_compare.py" --spawns $(param compare "$game") "$dir/host.dump" "$dir/join.dump"; then
+    fail=1
+    echo "  -- server.log"; sed 's/^/    /' "$dir/server.log"
+    for role in host join; do
+      echo "  -- $role.log (net lines)"; grep -E '\[net\]|room|Room|error|panic' "$dir/$role.log" | sed 's/^/    /'
+    done
+  fi
   [ $hst -eq 0 ] && [ $jst -eq 0 ] || fail=1
   for role in host join; do
     data=$hdata name=Host; [ $role = join ] && data=$jdata name=Join

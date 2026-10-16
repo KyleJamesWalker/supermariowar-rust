@@ -239,6 +239,7 @@ impl PlayerAwardEffects {
     }
 
     pub fn add_killer_award(&mut self, g: &mut Game, killer: &mut CPlayer, killed: Ptr<CPlayer>, style: KillStyle) {
+        let mut gp = g.ptr();
         unsafe {
             killer.killsinrow += 1;
 
@@ -256,13 +257,13 @@ impl PlayerAwardEffects {
             //Play announcer
             let mut fSoundPlayed = false;
             if killer.killsinrowinair > 1 {
-                if g.rm.sfx_announcer[9].play() {
+                if gp.rm.sfx_announcer[9].play(g) {
                     fSoundPlayed = true;
                 }
             }
 
             if !killed.is_null() && killed.killsinrow >= 2 && !fSoundPlayed {
-                if g.rm.sfx_announcer[10].play() {
+                if gp.rm.sfx_announcer[10].play(g) {
                     fSoundPlayed = true;
                 }
             }
@@ -276,7 +277,7 @@ impl PlayerAwardEffects {
                 };
 
                 if !fSoundPlayed {
-                    if g.rm.sfx_announcer[awardIndex as usize].play() {
+                    if gp.rm.sfx_announcer[awardIndex as usize].play(g) {
                         fSoundPlayed = true;
                     }
                 }

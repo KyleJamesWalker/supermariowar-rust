@@ -122,15 +122,16 @@ impl UI_NetLobbyMenu {
 
     pub fn abort_join(&mut self, g: &mut Game) {
         unsafe { g.netplay.operationInProgress = false };
-        self.restore();
+        self.restore(g);
     }
 
-    pub fn restore(&mut self) {
+    pub fn restore(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         self.miNetLobbyJoiningDialogImage.set_visible(false);
         self.miNetLobbyJoiningDialogText.set_visible(false);
 
         let b = ctl_ptr(self.miNetLobbyNewRoomButton);
-        self.set_initial_focus(game().get(), b);
+        self.set_initial_focus(gp.get(), b);
         self.set_cancel_code(MENU_CODE_TO_NET_SERVERS_MENU);
     }
 }

@@ -769,8 +769,8 @@ impl CResourceManager {
         }
 
         let soundpack = unsafe { g.soundpacklist.current_path().to_string_lossy().into_owned() };
-        let open = |relpath: &str| {
-            sfxSound::from_file(Path::new(&convert_path_pack(gp.get(), relpath, &soundpack))).unwrap_or_else(|what| panic!("{}", what))
+        let mut open = |relpath: &str| {
+            sfxSound::from_file(g, Path::new(&convert_path_pack(gp.get(), relpath, &soundpack))).unwrap_or_else(|what| panic!("{}", what))
         };
 
         self.sfx_mip = open("sfx/packs/mip.wav");

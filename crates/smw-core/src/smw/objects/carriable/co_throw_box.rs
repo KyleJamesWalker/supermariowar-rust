@@ -34,9 +34,9 @@ pub struct CO_ThrowBox {
 impl_base!(CO_ThrowBox => mo_carried_object: MO_CarriedObject);
 
 impl CO_ThrowBox {
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s, item: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, item: i16) -> Self {
         let mut o = CO_ThrowBox {
-            mo_carried_object: MO_CarriedObject::new(nspr, pos, 4, 8, 30, 30, 1, 1),
+            mo_carried_object: MO_CarriedObject::new(g, nspr, pos, 4, 8, 30, 30, 1, 1),
             iItem: 0,
             frozen: false,
             frozentimer: 0,

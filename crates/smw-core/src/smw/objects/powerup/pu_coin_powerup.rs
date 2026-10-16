@@ -38,9 +38,9 @@ pub struct PU_CoinPowerup {
 impl_base!(PU_CoinPowerup => mo_powerup: MO_Powerup);
 
 impl PU_CoinPowerup {
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s, color: CoinColor, value: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, color: CoinColor, value: i16) -> Self {
         let mut o = PU_CoinPowerup {
-            mo_powerup: MO_Powerup::new(nspr, pos, 4, 8, 30, 30, 1, 1),
+            mo_powerup: MO_Powerup::new(g, nspr, pos, 4, 8, 30, 30, 1, 1),
             iColorOffsetY: (color as i32 * 32) as i16,
             iValue: value,
             sparkleanimationtimer: 0,

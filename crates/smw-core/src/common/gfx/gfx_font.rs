@@ -164,8 +164,9 @@ impl gfxFont {
         }
     }
 
-    pub fn draw_centered(&self, x: i32, y: i32, text: &str) {
-        self.draw(game().get(), x - self.get_width(text) / 2, y, text);
+    pub fn draw_centered(&self, g: &mut Game, x: i32, y: i32, text: &str) {
+        let mut gp = g.ptr();
+        self.draw(gp.get(), x - self.get_width(text) / 2, y, text);
     }
 
     pub fn draw_chop_centered(&self, g: &mut Game, x: i32, y: i32, mut width: i32, text: &str) {
@@ -173,8 +174,9 @@ impl gfxFont {
         self.draw_range(g, x - self.get_width(text) / 2, y, text, x - width, x + width);
     }
 
-    pub fn draw_right_justified(&self, x: i32, y: i32, text: &str) {
-        self.draw(game().get(), x - self.get_width(text), y, text);
+    pub fn draw_right_justified(&self, g: &mut Game, x: i32, y: i32, text: &str) {
+        let mut gp = g.ptr();
+        self.draw(gp.get(), x - self.get_width(text), y, text);
     }
 
     pub fn draw_chop_right(&self, g: &mut Game, x: i32, y: i32, width: i32, text: &str) {

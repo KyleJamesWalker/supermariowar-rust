@@ -102,7 +102,7 @@ impl UI_GameSettingsMenu {
             this.miModeSettingsButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 430, 125, "Settings", 140, TextAlign::LEFT));
             this.miModeSettingsButton.set_code(MENU_CODE_TO_MODE_SETTINGS_MENU);
 
-            this.miMapField = Ptr::new_box(MI_MapField::new(spr_selectfield, 70, 165, "Map", 500, 120, true));
+            this.miMapField = Ptr::new_box(MI_MapField::new(g, spr_selectfield, 70, 165, "Map", 500, 120, true));
 
             this.miMapFiltersButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 430, 205, "Filters", 140, TextAlign::LEFT));
             this.miMapFiltersButton.set_code(MENU_CODE_TO_MAP_FILTERS);

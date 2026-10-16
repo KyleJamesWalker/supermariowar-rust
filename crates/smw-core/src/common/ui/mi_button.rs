@@ -31,7 +31,7 @@ pub struct MI_Button {
     pub iAdjustmentY: i16,
     pub iHalfWidth: i16,
 
-    pub onPressFn: Box<dyn FnMut()>,
+    pub onPressFn: Box<dyn FnMut(&mut Game)>,
 }
 crate::impl_base!(MI_Button => ui_control: UI_Control);
 
@@ -55,7 +55,7 @@ impl MI_Button {
             iTextW,
             iAdjustmentY: if width > 256 { 0 } else { 128 },
             iHalfWidth: width / 2,
-            onPressFn: Box::new(|| {}), // do nothing
+            onPressFn: Box::new(|_| {}), // do nothing
         }
     }
 
@@ -81,7 +81,7 @@ impl MI_Button {
         self.iImageH = h;
     }
 
-    pub fn set_on_press(&mut self, func: Box<dyn FnMut()>) {
+    pub fn set_on_press(&mut self, func: Box<dyn FnMut(&mut Game)>) {
         self.onPressFn = func;
     }
 }
@@ -94,13 +94,13 @@ impl UI_ControlTrait for MI_Button {
             return MENU_CODE_UNSELECT_ITEM;
         }
 
-        (self.onPressFn)();
+        (self.onPressFn)(g);
         self.menuCode
     }
 
     fn send_input(&mut self, g: &mut Game, _playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         //If input is being sent, that means the button is selected i.e. clicked
-        (self.onPressFn)();
+        (self.onPressFn)(g);
         self.menuCode
     }
 
@@ -132,13 +132,13 @@ impl UI_ControlTrait for MI_Button {
                     }
                 }
                 TextAlign::CENTER => {
-                    g.rm.menu_font_large.draw_centered(x + ((iWidth + (if iImageW > 0 { iImageW + 2 } else { 0 })) >> 1), y + 5, &self.szName);
+                    gp.rm.menu_font_large.draw_centered(g, x + ((iWidth + (if iImageW > 0 { iImageW + 2 } else { 0 })) >> 1), y + 5, &self.szName);
                     if !self.sprImage.is_null() {
                         self.sprImage.draw_src(g, x + (iWidth >> 1) - ((self.iTextW as i32 + iImageW) >> 1) - 1, y + 16 - (iImageH >> 1), &srcRect);
                     }
                 }
                 TextAlign::RIGHT => {
-                    g.rm.menu_font_large.draw_right_justified(x + iWidth - 16, y + 5, &self.szName);
+                    gp.rm.menu_font_large.draw_right_justified(g, x + iWidth - 16, y + 5, &self.szName);
                     if !self.sprImage.is_null() {
                         self.sprImage.draw_src(g, x + iWidth - 18 - self.iTextW as i32 - iImageW, y + 16 - (iImageH >> 1), &srcRect);
                     }

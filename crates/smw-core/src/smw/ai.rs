@@ -126,11 +126,13 @@ pub trait CPlayerAITrait {
     fn set_player(&mut self, player: Ptr<CPlayer>) {
         self.ai().pPlayer = player;
     }
-    fn init(&mut self) {
-        cplayer_ai_init(game().get(), self.ai())
+    fn init(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        cplayer_ai_init(gp.get(), self.ai())
     }
-    fn think(&mut self, playerKeys: Ptr<COutputControl>) {
-        cplayer_ai_think(game().get(), self.ai(), playerKeys)
+    fn think(&mut self, g: &mut Game, playerKeys: Ptr<COutputControl>) {
+        let mut gp = g.ptr();
+        cplayer_ai_think(gp.get(), self.ai(), playerKeys)
     }
 }
 
@@ -1610,7 +1612,7 @@ impl CPlayerAITrait for CSimpleAI {
 
     //This simple ai makes the player jump every so often
     //The jump is to the maximum jump height, then the game_jump.fDown is released
-    fn think(&mut self, playerKeys: Ptr<COutputControl>) {
+    fn think(&mut self, g: &mut Game, playerKeys: Ptr<COutputControl>) {
         let mut playerKeys = playerKeys;
         let pPlayer = self.pPlayer;
 

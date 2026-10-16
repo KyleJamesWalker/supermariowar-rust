@@ -30,9 +30,9 @@ pub struct MO_Podobo {
 impl_base!(MO_Podobo => io_moving_object: IO_MovingObject);
 
 impl MO_Podobo {
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s, dVelY: f32, playerid: i16, teamid: i16, colorid: i16, isSpawned: bool) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, dVelY: f32, playerid: i16, teamid: i16, colorid: i16, isSpawned: bool) -> Self {
         let mut o = MO_Podobo {
-            io_moving_object: IO_MovingObject::new(nspr, pos, 4, 6, -1, -1, -1, -1, -1, -1, -1, -1),
+            io_moving_object: IO_MovingObject::new(g, nspr, pos, 4, 6, -1, -1, -1, -1, -1, -1, -1, -1),
             iColorOffsetY: 0,
             fIsSpawned: false,
             iHiddenPlane: 0,

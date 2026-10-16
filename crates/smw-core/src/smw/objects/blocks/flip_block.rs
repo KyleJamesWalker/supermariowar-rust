@@ -45,8 +45,8 @@ pub struct B_FlipBlock {
 impl_base!(B_FlipBlock => io_block: IO_Block);
 
 impl B_FlipBlock {
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s, fHidden: bool) -> Self {
-        let mut b = B_FlipBlock { io_block: IO_Block::new(nspr, pos), counter: 0, frame: 0, timer: 0, animationWidth: 0 };
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, fHidden: bool) -> Self {
+        let mut b = B_FlipBlock { io_block: IO_Block::new(g, nspr, pos), counter: 0, frame: 0, timer: 0, animationWidth: 0 };
         b.iw = (b.spr.get_width() as i16) >> 2;
         b.collisionWidth = b.iw;
 
@@ -124,7 +124,8 @@ impl CObjectTrait for B_FlipBlock {
         }
 
         if self.state == 0 || self.state == 1 {
-            self.spr.draw_src(g, 
+            self.spr.draw_src(
+                g,
                 self.ix as i32,
                 self.iy as i32,
                 &SDL_Rect { x: self.frame as i32, y: 0, w: self.iw as i32, h: self.ih as i32 },

@@ -214,7 +214,7 @@ const DEFAULT_POWERUP_PRESETS: [[i16; NUM_POWERUPS as usize]; NUM_POWERUP_PRESET
 pub fn if_sound_on_play(g: &mut Game, sfx: &mut sfxSound) {
     unsafe {
         if g.game_values.sound {
-            sfx.play();
+            sfx.play(g);
         }
     }
 }
@@ -729,6 +729,7 @@ impl CGameConfig {
     }
 
     fn read_options(&mut self, g: &mut Game, options: &mut BinaryFile) -> bool {
+        let mut gp = g.ptr();
         unsafe {
             let version = Version {
                 major: options.read_i32() as u8,
@@ -810,7 +811,7 @@ impl CGameConfig {
             self.fullscreen = options.read_bool();
 
             for iGameMode in 0..GAMEMODE_LAST as usize {
-                crate::game::game().gamemodes[iGameMode].goal = options.read_i16();
+                gp.gamemodes[iGameMode].goal = options.read_i16();
             }
 
             let mut gms = [0u8; GAMEMODESETTINGS_RAW_SIZE];
@@ -847,8 +848,8 @@ impl CGameConfig {
             g.worldgraphicspacklist.set_current_index(options.read_u8() as usize);
             g.gamegraphicspacklist.set_current_index(options.read_u8() as usize);
 
-            sfx_setmusicvolume(self.musicvolume as i32);
-            sfx_setsoundvolume(self.soundvolume as i32);
+            sfx_setmusicvolume(g, self.musicvolume as i32);
+            sfx_setsoundvolume(g, self.soundvolume as i32);
             true
         }
     }
@@ -878,6 +879,7 @@ impl CGameConfig {
     }
 
     fn write_options(&self, g: &mut Game, options: &mut BinaryFile) {
+        let mut gp = g.ptr();
         unsafe {
             options.write_i32(GAME_VERSION.major as i32);
             options.write_i32(GAME_VERSION.minor as i32);
@@ -954,7 +956,7 @@ impl CGameConfig {
             options.write_bool(self.fullscreen);
 
             for k in 0..GAMEMODE_LAST as usize {
-                options.write_i16(crate::game::game().gamemodes[k].goal);
+                options.write_i16(gp.gamemodes[k].goal);
             }
 
             options.write_raw(&self.gamemodemenusettings.to_raw_bytes());

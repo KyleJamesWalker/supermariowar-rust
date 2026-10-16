@@ -180,19 +180,19 @@ impl UI_Menu {
                 }
 
                 if out.menu_up().fPressed {
-                    return self.move_next_control(MenuNavDirection::Up);
+                    return self.move_next_control(g, MenuNavDirection::Up);
                 }
 
                 if out.menu_down().fPressed {
-                    return self.move_next_control(MenuNavDirection::Down);
+                    return self.move_next_control(g, MenuNavDirection::Down);
                 }
 
                 if out.menu_left().fPressed {
-                    return self.move_next_control(MenuNavDirection::Left);
+                    return self.move_next_control(g, MenuNavDirection::Left);
                 }
 
                 if out.menu_right().fPressed {
-                    return self.move_next_control(MenuNavDirection::Right);
+                    return self.move_next_control(g, MenuNavDirection::Right);
                 }
 
                 if out.menu_select().fPressed {
@@ -225,7 +225,8 @@ impl UI_Menu {
         }
     }
 
-    pub fn move_next_control(&mut self, iDirection: MenuNavDirection) -> MenuCodeEnum {
+    pub fn move_next_control(&mut self, g: &mut Game, iDirection: MenuNavDirection) -> MenuCodeEnum {
+        let mut gp = g.ptr();
         if self.m_currentFocus.is_null() {
             return MENU_CODE_NONE;
         }
@@ -237,9 +238,9 @@ impl UI_Menu {
         }
 
         if !neighbor.is_null() {
-            self.m_currentFocus.select(game().get(), false);
+            self.m_currentFocus.select(gp.get(), false);
             self.m_currentFocus = neighbor;
-            self.fModifyingItem = self.m_currentFocus.select(game().get(), true);
+            self.fModifyingItem = self.m_currentFocus.select(gp.get(), true);
             return nav_dir2menu_code(iDirection);
         }
 
@@ -321,9 +322,10 @@ impl UI_Menu {
         self.fModifyingItem
     }
 
-    pub fn refresh(&mut self) {
+    pub fn refresh(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         for i in 0..self.controls.len() {
-            self.controls[i].refresh(game().get());
+            self.controls[i].refresh(gp.get());
         }
     }
 

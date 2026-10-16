@@ -39,7 +39,7 @@ impl MO_FlagBase {
     pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, iTeamID: i16, iColorID: i16) -> Self {
         let mut o = MO_FlagBase {
             // use 1280 and 960 so when placing base, it doesn't interfere (look in getClosestObject())
-            io_moving_object: IO_MovingObject::new(nspr, Vec2s::new(1280, 960), 5, 0, -1, -1, -1, -1, -1, -1, -1, -1),
+            io_moving_object: IO_MovingObject::new(g, nspr, Vec2s::new(1280, 960), 5, 0, -1, -1, -1, -1, -1, -1, -1, -1),
             teamID: 0,
             iGraphicOffsetX: 0,
             angle: 0.0,
@@ -167,7 +167,8 @@ impl CObjectTrait for MO_FlagBase {
     }
 
     fn draw(&mut self, g: &mut Game) {
-        self.spr.draw_src(g, 
+        self.spr.draw_src(
+            g,
             self.ix as i32 - 8,
             self.iy as i32 - 8,
             &SDL_Rect { x: self.iGraphicOffsetX as i32, y: 0, w: 48, h: 48 },

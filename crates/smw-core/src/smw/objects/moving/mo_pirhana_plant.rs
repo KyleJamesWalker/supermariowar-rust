@@ -44,7 +44,7 @@ impl_base!(MO_PirhanaPlant => io_moving_object: IO_MovingObject);
 impl MO_PirhanaPlant {
     pub fn new(g: &mut Game, pos: Vec2s, r#type: i16, freq: i16, direction: i16, preview: bool) -> Self {
         let mut o = MO_PirhanaPlant {
-            io_moving_object: IO_MovingObject::new(Ptr::null(), pos, 1, 0, -1, -1, -1, -1, -1, -1, -1, -1),
+            io_moving_object: IO_MovingObject::new(g, Ptr::null(), pos, 1, 0, -1, -1, -1, -1, -1, -1, -1, -1),
             iType: 0,
             iDirection: 0,
             iFreq: 0,
@@ -218,6 +218,8 @@ impl CObjectTrait for MO_PirhanaPlant {
     }
 
     fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        let mut rm = g.rm;
         // Needed for collisions with player and kuribo's shoe to know
         // if the plant hit the player from the top or not
         self.fOldY = self.iy as f32;
@@ -342,8 +344,9 @@ impl CObjectTrait for MO_PirhanaPlant {
                     (if self.iDirection != 1 { iy + 7 } else { iy + ih - 23 }) as i16,
                 );
                 let angle = self.get_fireball_angle();
-                g.objectcontainer[1].add(Ptr::new_box(OMO_StraightPathHazard::new(
-                    Ptr::from_mut(&mut g.rm.spr_hazard_fireball[if self.fPreview { 1 } else { 0 }]),
+                gp.objectcontainer[1].add(Ptr::new_box(OMO_StraightPathHazard::new(
+                    g,
+                    Ptr::from_mut(&mut rm.spr_hazard_fireball[if self.fPreview { 1 } else { 0 }]),
                     pos,
                     angle,
                     3.0f32,

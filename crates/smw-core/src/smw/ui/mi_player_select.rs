@@ -196,7 +196,8 @@ impl UI_ControlTrait for MI_PlayerSelect {
             self.miModifyImage.draw(g);
 
             for iPlayer in 0..4usize {
-                self.spr.draw_src(g, 
+                self.spr.draw_src(
+                    g,
                     x + self.iPlayerPosition[iPlayer] as i32,
                     y + 16,
                     &SDL_Rect { x: g.game_values.playercontrol[iPlayer] as i32 * 34 + 32, y: 206, w: 34, h: 32 },

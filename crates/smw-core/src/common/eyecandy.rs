@@ -273,8 +273,9 @@ impl EC_Cloud {
         self.ix = self.dx as i16;
     }
 
-    pub fn draw(&self, _g: &mut Game) {
-        self.ec_still_image.draw(game().get());
+    pub fn draw(&self, g: &mut Game) {
+        let mut gp = g.ptr();
+        self.ec_still_image.draw(gp.get());
     }
 }
 impl_eyecandy!(EC_Cloud);
@@ -458,8 +459,9 @@ impl EC_Snow {
         self.iy = self.dy as i16;
     }
 
-    pub fn draw(&self, _g: &mut Game) {
-        self.ec_still_image.draw(game().get());
+    pub fn draw(&self, g: &mut Game) {
+        let mut gp = g.ptr();
+        self.ec_still_image.draw(gp.get());
     }
 }
 impl_eyecandy!(EC_Snow);
@@ -519,8 +521,9 @@ impl EC_Rain {
         self.iSrcX = (RANDOM_INT(8) * 10) as i16;
     }
 
-    pub fn draw(&self, _g: &mut Game) {
-        self.ec_still_image.draw(game().get());
+    pub fn draw(&self, g: &mut Game) {
+        let mut gp = g.ptr();
+        self.ec_still_image.draw(gp.get());
     }
 }
 impl_eyecandy!(EC_Rain);
@@ -707,8 +710,9 @@ impl EC_Corpse {
         }
     }
 
-    pub fn draw(&self, _g: &mut Game) {
-        self.ec_still_image.draw(game().get());
+    pub fn draw(&self, g: &mut Game) {
+        let mut gp = g.ptr();
+        self.ec_still_image.draw(gp.get());
     }
 }
 impl_eyecandy!(EC_Corpse);
@@ -745,13 +749,14 @@ impl EC_GravText {
         }
     }
 
-    pub fn draw(&self, _g: &mut Game) {
-        self.font.draw(game().get(), self.x as i16 as i32, self.y as i16 as i32, &self.text);
+    pub fn draw(&self, g: &mut Game) {
+        let mut gp = g.ptr();
+        self.font.draw(gp.get(), self.x as i16 as i32, self.y as i16 as i32, &self.text);
 
         if self.x < 0.0 {
-            self.font.draw(game().get(), self.x as i16 as i32 + screenWidth, self.y as i16 as i32, &self.text);
+            self.font.draw(gp.get(), self.x as i16 as i32 + screenWidth, self.y as i16 as i32, &self.text);
         } else if self.x + self.w as f32 > (screenWidth - 1) as f32 {
-            self.font.draw(game().get(), self.x as i16 as i32 - screenWidth, self.y as i16 as i32, &self.text);
+            self.font.draw(gp.get(), self.x as i16 as i32 - screenWidth, self.y as i16 as i32, &self.text);
         }
     }
 }
@@ -838,7 +843,8 @@ impl EC_Announcement {
         let mut gp = g.ptr();
         unsafe {
             for iRect in 0..4 {
-                gp.rm.menu_dialog.draw_part(g, 
+                gp.rm.menu_dialog.draw_part(
+                    g,
                     self.rDstRect[iRect].x,
                     self.rDstRect[iRect].y,
                     self.rSrcRect[iRect].x,
@@ -1040,7 +1046,8 @@ impl EC_ExplodingAward {
         if self.timer > self.ttl {
             self.dead = true;
             unsafe {
-                emplace_fireball_explosion(g, 
+                emplace_fireball_explosion(
+                    g,
                     (self.x as i16 as i32 + (self.w as i32 >> 1) - 16) as i16,
                     (self.y as i16 as i32 + (self.h as i32 >> 1) - 16) as i16,
                 )
@@ -1227,7 +1234,8 @@ impl EC_RocketAward {
         self.timer += 1;
         if self.timer > self.ttl {
             unsafe {
-                emplace_fireball_explosion(g, 
+                emplace_fireball_explosion(
+                    g,
                     (self.x as i16 as i32 + (self.w as i32 >> 1) - 16) as i16,
                     (self.y as i16 as i32 + (self.h as i32 >> 1) - 16) as i16,
                 )
@@ -1317,7 +1325,8 @@ impl EC_FloatingObject {
         self.timer += 1;
         if self.timer > self.ttl {
             unsafe {
-                emplace_fireball_explosion(g, 
+                emplace_fireball_explosion(
+                    g,
                     (self.x as i16 as i32 + (self.w as i32 >> 1) - 16) as i16,
                     (self.y as i16 as i32 + (self.h as i32 >> 1) - 16) as i16,
                 )

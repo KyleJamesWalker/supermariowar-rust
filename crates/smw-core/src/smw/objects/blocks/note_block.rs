@@ -42,9 +42,9 @@ pub struct B_NoteBlock {
 impl_base!(B_NoteBlock => io_block: IO_Block);
 
 impl B_NoteBlock {
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, aniSpeed: i16, r#type: NoteBlockType, fHidden: bool) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, aniSpeed: i16, r#type: NoteBlockType, fHidden: bool) -> Self {
         let mut b = B_NoteBlock {
-            io_block: IO_Block::new(nspr, pos),
+            io_block: IO_Block::new(g, nspr, pos),
             iNumSprites: 0,
             animationSpeed: 0,
             drawFrame: 0,
@@ -81,7 +81,8 @@ impl CObjectTrait for B_NoteBlock {
             return;
         }
 
-        self.spr.draw_src(g, 
+        self.spr.draw_src(
+            g,
             self.ix as i32,
             self.iy as i32,
             &SDL_Rect { x: self.drawFrame as i32, y: self.iTypeOffsetY as i32, w: self.iw as i32, h: self.ih as i32 },

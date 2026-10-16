@@ -16,8 +16,9 @@ use crate::smw::objects::carriable::co_shell::CO_Shell;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::player::{get_player_from_global_id, CPlayer};
 
-pub fn io_block_new(nspr: Ptr<gfxSprite>, pos: Vec2s) -> IO_Block {
-    let cobject = CObject::new(game().get(), nspr, pos);
+pub fn io_block_new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s) -> IO_Block {
+    let mut gp = g.ptr();
+    let cobject = CObject::new(gp.get(), nspr, pos);
     let mut b = IO_Block {
         iBumpPlayerID: 0,
         iBumpTeamID: 0,

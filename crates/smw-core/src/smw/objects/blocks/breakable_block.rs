@@ -37,9 +37,9 @@ pub struct B_BreakableBlock {
 impl_base!(B_BreakableBlock => io_block: IO_Block);
 
 impl B_BreakableBlock {
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, aniSpeed: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, aniSpeed: i16) -> Self {
         let mut b = B_BreakableBlock {
-            io_block: IO_Block::new(nspr, pos),
+            io_block: IO_Block::new(g, nspr, pos),
             iNumSprites: 0,
             animationSpeed: 0,
             drawFrame: 0,
@@ -64,7 +64,8 @@ impl CObjectTrait for B_BreakableBlock {
 
     fn draw(&mut self, g: &mut Game) {
         if self.state == 0 {
-            self.spr.draw_src(g, 
+            self.spr.draw_src(
+                g,
                 self.ix as i32,
                 self.iy as i32,
                 &SDL_Rect { x: self.drawFrame as i32, y: 0, w: self.iw as i32, h: self.ih as i32 },

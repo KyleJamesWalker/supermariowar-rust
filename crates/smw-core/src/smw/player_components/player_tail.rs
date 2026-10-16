@@ -40,7 +40,7 @@ impl PlayerTail {
     pub fn shake(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut gp = g.ptr();
         unsafe {
-            g.rm.sfx_tailspin.stop();
+            gp.rm.sfx_tailspin.stop(g);
             if_sound_on_play(g, &mut gp.rm.sfx_tailspin);
         }
         player.lockjump = true;
@@ -64,11 +64,13 @@ impl PlayerTail {
         player.spin.spin(g, pp.get());
 
         unsafe {
+            let facing_right = player.is_facing_right(g);
             gp.objectcontainer[1].add(Ptr::new_box(MO_SpinAttack::new(
+                g,
                 player.get_global_id(),
                 player.get_team_id(),
                 KillStyle::Leaf,
-                player.is_facing_right(g),
+                facing_right,
                 13,
             )));
         }

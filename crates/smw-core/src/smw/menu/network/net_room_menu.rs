@@ -1,7 +1,6 @@
 //! Port of src/smw/menu/network/NetRoomMenu.cpp
 
 use crate::game::Game;
-use crate::game::game;
 
 use crate::common::path::{file_exists, get_home_directory};
 use crate::common::ui::menu_code::*;
@@ -79,11 +78,15 @@ impl UI_NetRoomMenu {
             let name = ctl_ptr(this.miNetRoomPlayerName[p as usize]);
             this.add_non_control(name);
 
-            this.miSkinSelector[p as usize] = Ptr::new_box(MI_NetRoomTeamSelect::new(g, 
+            this.miSkinSelector[p as usize] = Ptr::new_box(MI_NetRoomTeamSelect::new(
+                g,
                 16,
                 72 + p * 60,
                 p,
-                Box::new(|| unsafe { game().get().netplay.client.send_skin_change(game().get()) }),
+                Box::new(|g: &mut Game| {
+                    let mut gp = g.ptr();
+                    gp.netplay.client.send_skin_change(g)
+                }),
             ));
             let sel = ctl_ptr(this.miSkinSelector[p as usize]);
             this.add_control(sel, field, start, null, null);
@@ -188,12 +191,13 @@ impl UI_NetRoomMenu {
         }
     }
 
-    pub fn restore(&mut self) {
+    pub fn restore(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         self.miNetRoomStartingDialogImage.set_visible(false);
         self.miNetRoomStartingDialogText.set_visible(false);
 
         let f = ctl_ptr(self.miNetRoomMessageField);
-        self.set_initial_focus(game().get(), f);
+        self.set_initial_focus(gp.get(), f);
         self.set_cancel_code(MENU_CODE_TO_NET_LOBBY_MENU);
     }
 

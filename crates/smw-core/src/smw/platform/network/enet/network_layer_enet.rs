@@ -3,6 +3,7 @@
 use crate::common_netplay::network_interface::NetworkEventHandler;
 use crate::common_netplay::platform_enet::net_peer_enet::NetPeerENet;
 use crate::common_netplay::protocol_definitions::NET_GAMEHOST_PORT;
+use crate::game::Game;
 use crate::globals::Aliased;
 use crate::smw::network::network_layer::NetworkLayer;
 use enet_sys::*;
@@ -57,8 +58,32 @@ impl NetworkLayerENet {
         true
     }
 
+    fn close(&mut self) {
+        self.close_gamehost();
+        self.close_client();
+        unsafe { enet_deinitialize() };
+    }
+
+    fn close_client(&mut self) {
+        if self.local_client.is_null() {
+            return;
+        }
+
+        unsafe { enet_host_destroy(self.local_client) };
+        self.local_client = null_mut();
+    }
+
+    fn close_gamehost(&mut self) {
+        if self.local_gamehost.is_null() {
+            return;
+        }
+
+        unsafe { enet_host_destroy(self.local_gamehost) };
+        self.local_gamehost = null_mut();
+    }
+
     /// Not in upstream: a host that failed to open (no socket permission on Android) is null, and ENet dereferences it.
-    fn listen(host: *mut ENetHost, last_host_event: &mut ENetEvent, listener: &mut dyn NetworkEventHandler) {
+    fn listen(g: &mut Game, host: *mut ENetHost, last_host_event: &mut ENetEvent, listener: &mut dyn NetworkEventHandler<Game>) {
         if host.is_null() {
             return;
         }
@@ -67,18 +92,18 @@ impl NetworkLayerENet {
                 match last_host_event.type_ {
                     _ENetEventType_ENET_EVENT_TYPE_CONNECT => {
                         let peer = Box::new(NetPeerENet::new(last_host_event.peer));
-                        listener.on_connect(peer);
+                        listener.on_connect(g, peer);
                     }
                     _ENetEventType_ENET_EVENT_TYPE_RECEIVE => {
                         let mut peer = NetPeerENet::new(last_host_event.peer);
                         let packet = last_host_event.packet;
                         let data = std::slice::from_raw_parts((*packet).data, (*packet).dataLength);
-                        listener.on_receive(&mut peer, data);
+                        listener.on_receive(g, &mut peer, data);
                         enet_packet_destroy(packet);
                     }
                     _ENetEventType_ENET_EVENT_TYPE_DISCONNECT => {
                         let mut peer = NetPeerENet::new(last_host_event.peer);
-                        listener.on_disconnect(&mut peer);
+                        listener.on_disconnect(g, &mut peer);
                     }
                     _ => {}
                 }
@@ -88,7 +113,7 @@ impl NetworkLayerENet {
 }
 
 impl NetworkLayer for NetworkLayerENet {
-    fn init(&mut self) -> bool {
+    fn init(&mut self, _g: &mut Game) -> bool {
         unsafe {
             if enet_initialize() != 0 {
                 eprintln!("[error][net] Could not initialize network system.");
@@ -101,8 +126,8 @@ impl NetworkLayer for NetworkLayerENet {
         true
     }
 
-    fn client_restart(&mut self) -> bool {
-        self.client_shutdown();
+    fn client_restart(&mut self, _g: &mut Game) -> bool {
+        self.close_client();
 
         self.local_client = unsafe { enet_host_create(std::ptr::null(), 2, 2, 0, 0) };
         if self.local_client.is_null() {
@@ -112,8 +137,8 @@ impl NetworkLayer for NetworkLayerENet {
         true
     }
 
-    fn gamehost_restart(&mut self) -> bool {
-        self.gamehost_shutdown();
+    fn gamehost_restart(&mut self, _g: &mut Game) -> bool {
+        self.close_gamehost();
 
         unsafe {
             let mut local_gamehost_address: ENetAddress = std::mem::zeroed();
@@ -129,15 +154,15 @@ impl NetworkLayer for NetworkLayerENet {
         true
     }
 
-    fn connect_to_lobby_server(&mut self, hostname: &str, port: u16) -> bool {
+    fn connect_to_lobby_server(&mut self, _g: &mut Game, hostname: &str, port: u16) -> bool {
         self.open_connection(hostname, port)
     }
 
-    fn connect_to_foreign_game_host(&mut self, hostname: &str, port: u16) -> bool {
+    fn connect_to_foreign_game_host(&mut self, _g: &mut Game, hostname: &str, port: u16) -> bool {
         self.open_connection(hostname, port)
     }
 
-    fn nat_punch(&mut self, host: u32, port: u16) -> bool {
+    fn nat_punch(&mut self, _g: &mut Game, host: u32, port: u16) -> bool {
         if self.local_gamehost.is_null() {
             return false;
         }
@@ -154,41 +179,29 @@ impl NetworkLayer for NetworkLayerENet {
         true
     }
 
-    fn client_listen(&mut self, client: &mut dyn NetworkEventHandler) {
-        Self::listen(self.local_client, &mut self.last_client_event, client);
+    fn client_listen(&mut self, g: &mut Game, client: &mut dyn NetworkEventHandler<Game>) {
+        Self::listen(g, self.local_client, &mut self.last_client_event, client);
     }
 
-    fn gamehost_listen(&mut self, gamehost: &mut dyn NetworkEventHandler) {
-        Self::listen(self.local_gamehost, &mut self.last_gamehost_event, gamehost);
+    fn gamehost_listen(&mut self, g: &mut Game, gamehost: &mut dyn NetworkEventHandler<Game>) {
+        Self::listen(g, self.local_gamehost, &mut self.last_gamehost_event, gamehost);
     }
 
-    fn cleanup(&mut self) {
-        self.gamehost_shutdown();
-        self.client_shutdown();
-        unsafe { enet_deinitialize() };
+    fn cleanup(&mut self, _g: &mut Game) {
+        self.close();
     }
 
-    fn client_shutdown(&mut self) {
-        if self.local_client.is_null() {
-            return;
-        }
-
-        unsafe { enet_host_destroy(self.local_client) };
-        self.local_client = null_mut();
+    fn client_shutdown(&mut self, _g: &mut Game) {
+        self.close_client();
     }
 
-    fn gamehost_shutdown(&mut self) {
-        if self.local_gamehost.is_null() {
-            return;
-        }
-
-        unsafe { enet_host_destroy(self.local_gamehost) };
-        self.local_gamehost = null_mut();
+    fn gamehost_shutdown(&mut self, _g: &mut Game) {
+        self.close_gamehost();
     }
 }
 
 impl Drop for NetworkLayerENet {
     fn drop(&mut self) {
-        self.cleanup();
+        self.close();
     }
 }

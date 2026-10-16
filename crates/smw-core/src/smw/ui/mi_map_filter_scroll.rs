@@ -206,7 +206,7 @@ impl UI_ControlTrait for MI_MapFilterScroll {
             gp.rm.menu_dialog.draw_src(g, x, y + iNumLines * 32 + 32, &SDL_Rect { x: 0, y: 464, w: iWidth - 16, h: 16 });
             gp.rm.menu_dialog.draw_src(g, x + iWidth - 16, y + iNumLines * 32 + 32, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
 
-            g.rm.menu_font_large.draw_centered(x + (iWidth >> 1), y + 5, "Map Filters");
+            gp.rm.menu_font_large.draw_centered(g, x + (iWidth >> 1), y + 5, "Map Filters");
 
             //Draw each filter field
             let mut iLine: i16 = 0;
@@ -218,7 +218,8 @@ impl UI_ControlTrait for MI_MapFilterScroll {
                     let iLineWidth = (iWidth - 64) as i16 as i32;
 
                     self.spr.draw_src(g, x + 16, y + 32 + l * 32, &SDL_Rect { x: 0, y: if lineSel { 32 } else { 0 }, w: iHalfLineWidth, h: 32 });
-                    self.spr.draw_src(g, 
+                    self.spr.draw_src(
+                        g,
                         x + 16 + iHalfLineWidth,
                         y + 32 + l * 32,
                         &SDL_Rect { x: 512 - iLineWidth + iHalfLineWidth, y: if lineSel { 32 } else { 0 }, w: iLineWidth - iHalfLineWidth, h: 32 },
@@ -230,7 +231,8 @@ impl UI_ControlTrait for MI_MapFilterScroll {
                     let iHalfLineWidth = ((iWidth - 32) as i16 >> 1) as i32;
                     let iLineWidth = (iWidth - 32) as i16 as i32;
                     self.spr.draw_src(g, x + 16, y + 32 + l * 32, &SDL_Rect { x: 0, y: if lineSel { 32 } else { 0 }, w: iHalfLineWidth, h: 32 });
-                    self.spr.draw_src(g, 
+                    self.spr.draw_src(
+                        g,
                         x + 16 + iHalfLineWidth,
                         y + 32 + l * 32,
                         &SDL_Rect { x: 512 - iLineWidth + iHalfLineWidth, y: if lineSel { 32 } else { 0 }, w: iLineWidth - iHalfLineWidth, h: 32 },

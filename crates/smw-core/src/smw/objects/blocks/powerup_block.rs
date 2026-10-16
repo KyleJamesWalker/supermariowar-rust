@@ -48,7 +48,7 @@ impl B_PowerupBlock {
     /// `piSettings` must hold at least `NUM_POWERUPS` entries (`objdata.iSettings`).
     pub fn new(g: &mut Game, nspr1: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, aniSpeed: i16, fHidden: bool, piSettings: &[i16]) -> Self {
         let mut b = B_PowerupBlock {
-            io_block: IO_Block::new(nspr1, pos),
+            io_block: IO_Block::new(g, nspr1, pos),
             iCountWeight: 0,
             timer: 0,
             side: false,
@@ -150,7 +150,8 @@ macro_rules! impl_powerup_block_plumbing {
 pub fn b_powerup_block_draw<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let b = this.pb();
     if !b.hidden {
-        b.spr.draw_src(g, 
+        b.spr.draw_src(
+            g,
             b.ix as i32,
             b.iy as i32,
             &SDL_Rect { x: b.drawFrame as i32, y: if b.state == 0 { 0 } else { b.ih as i32 }, w: b.iw as i32, h: b.ih as i32 },

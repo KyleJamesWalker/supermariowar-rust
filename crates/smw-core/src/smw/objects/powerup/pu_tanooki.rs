@@ -21,7 +21,8 @@ impl_base!(PU_Tanooki => mo_powerup: MO_Powerup);
 impl PU_Tanooki {
     #[allow(clippy::too_many_arguments)]
     pub fn new(g: &mut Game, pos: Vec2s) -> Self {
-        unsafe { PU_Tanooki { mo_powerup: MO_Powerup::new(Ptr::from_mut(&mut g.rm.spr_tanooki), pos, 1, 0, 30, 30, 1, 1) } }
+        let mut rm = g.rm;
+        unsafe { PU_Tanooki { mo_powerup: MO_Powerup::new(g, Ptr::from_mut(&mut rm.spr_tanooki), pos, 1, 0, 30, 30, 1, 1) } }
     }
 }
 

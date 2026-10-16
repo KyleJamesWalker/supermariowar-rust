@@ -157,7 +157,8 @@ impl UI_OptionsMenu {
         this
     }
 
-    pub fn show_thumbnails_popup(&mut self) {
+    pub fn show_thumbnails_popup(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         self.miGenerateThumbsDialogImage.set_visible(true);
         self.miGenerateThumbsDialogAreYouText.set_visible(true);
         self.miGenerateThumbsDialogSureText.set_visible(true);
@@ -167,7 +168,7 @@ impl UI_OptionsMenu {
         self.remember_current();
 
         let focus = ctl_ptr(self.miGenerateThumbsDialogNoButton);
-        self.set_initial_focus(game().get(), focus);
+        self.set_initial_focus(gp.get(), focus);
         self.set_cancel_code(MENU_CODE_GENERATE_THUMBS_RESET_NO);
     }
 

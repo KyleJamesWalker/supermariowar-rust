@@ -30,9 +30,9 @@ pub struct MO_SpinAttack {
 impl_base!(MO_SpinAttack => mo_attack_zone: MO_AttackZone);
 
 impl MO_SpinAttack {
-    pub fn new(playerId: i16, teamId: i16, style: KillStyle, direction: bool, offsety: i16) -> Self {
+    pub fn new(g: &mut Game, playerId: i16, teamId: i16, style: KillStyle, direction: bool, offsety: i16) -> Self {
         let mut o = MO_SpinAttack {
-            mo_attack_zone: MO_AttackZone::new(playerId, teamId, Vec2s::zero(), Vec2s::new(24, 12), 16, style, true),
+            mo_attack_zone: MO_AttackZone::new(g, playerId, teamId, Vec2s::zero(), Vec2s::new(24, 12), 16, style, true),
             fDirection: false,
             iOffsetY: 0,
         };

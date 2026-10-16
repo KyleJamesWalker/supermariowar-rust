@@ -930,15 +930,18 @@ mod tests {
     use super::*;
     use crate::globals::game;
 
-    fn set_data_root() {
+    fn set_data_root(g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
-            game().RootDataDirectory = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data").to_string();
+            gp.RootDataDirectory = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data").to_string();
         }
     }
 
     #[test]
     fn lists_load_from_data_dir() {
-        set_data_root();
+        let g = game().get();
+        let mut gp = g.ptr();
+        set_data_root(g);
 
         let gfx = GraphicsList::new();
         assert!(gfx.count() >= 1);
@@ -963,15 +966,15 @@ mod tests {
         let filters = FiltersList::new();
         assert!(filters.count() >= 1);
 
-        let skins = SkinList::new(game().get());
+        let skins = SkinList::new(gp.get());
         assert!(skins.count() >= 1);
         assert!((1..skins.count()).all(|i| skins.at(i - 1).name <= skins.at(i).name));
 
-        let mut music = MusicList::new(game().get());
+        let mut music = MusicList::new(gp.get());
         assert!(!music.current_name().is_empty());
-        let mut worldmusic = WorldMusicList::new(game().get());
+        let mut worldmusic = WorldMusicList::new(gp.get());
         assert!(worldmusic.count() >= 1);
-        update_music_with_overrides(game().get(), &mut music, &mut worldmusic);
+        update_music_with_overrides(gp.get(), &mut music, &mut worldmusic);
         assert!(music.music(0).exists());
         assert!(worldmusic.current_music(WorldMusicCategory::Grass, "nonexistent").exists());
     }

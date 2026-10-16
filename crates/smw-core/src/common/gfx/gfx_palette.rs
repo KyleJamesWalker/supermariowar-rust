@@ -1,5 +1,6 @@
 //! Port of src/common/gfx/gfxPalette.cpp
 
+use crate::game::Game;
 use crate::game::game;
 use crate::globals::Aliased;
 use crate::common::gfx::color::RGB;
@@ -59,10 +60,11 @@ impl gfxPalette {
         self.m_colorsheets.get(&keyColor).map(|sheet| sheet.replacement_for(teamIndex, playerState))
     }
 
-    pub fn load(&mut self, path: &Path) -> bool {
+    pub fn load(&mut self, g: &mut Game, path: &Path) -> bool {
+        let mut gp = g.ptr();
         self.m_colorsheets.clear();
 
-        let sprite = ImageLoader::new(path).without_color_key().without_optimization().create(game().get());
+        let sprite = ImageLoader::new(path).without_color_key().without_optimization().create(gp.get());
 
         unsafe {
             let surf = sprite.get_surface();

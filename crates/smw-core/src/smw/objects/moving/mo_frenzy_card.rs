@@ -33,7 +33,7 @@ impl_base!(MO_FrenzyCard => io_moving_object: IO_MovingObject);
 impl MO_FrenzyCard {
     pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, iType: i16) -> Self {
         let mut o = MO_FrenzyCard {
-            io_moving_object: IO_MovingObject::new(nspr, Vec2s::zero(), 12, 8, -1, -1, -1, -1, 0, (iType as i32 * 32) as i16, 32, 32),
+            io_moving_object: IO_MovingObject::new(g, nspr, Vec2s::zero(), 12, 8, -1, -1, -1, -1, 0, (iType as i32 * 32) as i16, 32, 32),
             timer: 0,
             r#type: 0,
             sparkleanimationtimer: 0,
@@ -157,7 +157,8 @@ impl CObjectTrait for MO_FrenzyCard {
 
         // Draw sparkles
         unsafe {
-            gp.rm.spr_shinesparkle.draw_src(g, 
+            gp.rm.spr_shinesparkle.draw_src(
+                g,
                 self.ix as i32 - self.collisionOffsetX as i32,
                 self.iy as i32 - self.collisionOffsetY as i32,
                 &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },

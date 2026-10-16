@@ -30,7 +30,7 @@ impl_base!(OMO_PipeBonus => io_over_map_object: IO_OverMapObject);
 impl OMO_PipeBonus {
     pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, vel: Vec2f, pos: Vec2s, r#type: i16, duration: i16, uncollectabletime: i16) -> Self {
         let mut this = OMO_PipeBonus {
-            io_over_map_object: IO_OverMapObject::new(nspr, pos, 4, 8, 30, 30, 1, 1, 0, ((r#type as i32) << 5) as i16, 32, 32),
+            io_over_map_object: IO_OverMapObject::new(g, nspr, pos, 4, 8, 30, 30, 1, 1, 0, ((r#type as i32) << 5) as i16, 32, 32),
             iType: r#type,
             iDuration: duration,
             iUncollectableTime: 0,

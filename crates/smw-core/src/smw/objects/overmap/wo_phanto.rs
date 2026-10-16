@@ -55,7 +55,7 @@ impl OMO_Phanto {
 
     pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, dVelX: f32, dVelY: f32, r#type: i16) -> Self {
         let mut this = OMO_Phanto {
-            io_over_map_object: IO_OverMapObject::new(nspr, pos, 1, 0, 30, 32, 1, 0, ((r#type as i32) << 5) as i16, 0, 32, 32),
+            io_over_map_object: IO_OverMapObject::new(g, nspr, pos, 1, 0, 30, 32, 1, 0, ((r#type as i32) << 5) as i16, 0, 32, 32),
             iType: r#type,
             dMaxSpeedX: 0.0,
             dMaxSpeedY: 0.0,

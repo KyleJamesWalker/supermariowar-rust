@@ -46,11 +46,13 @@ impl PlayerCape {
 
             Ptr::from_mut(&mut player.spin).get().spin(g, player);
 
+            let facing_right = player.is_facing_right(g);
             gp.objectcontainer[1].add(Ptr::new_box(MO_SpinAttack::new(
+                g,
                 player.get_global_id(),
                 player.get_team_id(),
                 KillStyle::Feather,
-                player.is_facing_right(g),
+                facing_right,
                 24,
             )));
         }

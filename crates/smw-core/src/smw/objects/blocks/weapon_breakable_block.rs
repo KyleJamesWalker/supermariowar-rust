@@ -51,8 +51,8 @@ pub struct B_WeaponBreakableBlock {
 impl_base!(B_WeaponBreakableBlock => io_block: IO_Block);
 
 impl B_WeaponBreakableBlock {
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s, r#type: WeaponDamageType) -> Self {
-        let mut b = B_WeaponBreakableBlock { io_block: IO_Block::new(nspr, pos), iType: r#type, iDrawOffsetX: (r#type as i16) * 32 };
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, r#type: WeaponDamageType) -> Self {
+        let mut b = B_WeaponBreakableBlock { io_block: IO_Block::new(g, nspr, pos), iType: r#type, iDrawOffsetX: (r#type as i16) * 32 };
         b.iw = TILESIZE as i16;
         b.ih = TILESIZE as i16;
         b
@@ -132,7 +132,8 @@ impl CObjectTrait for B_WeaponBreakableBlock {
 
     fn draw(&mut self, g: &mut Game) {
         if self.state == 0 {
-            self.spr.draw_src(g, 
+            self.spr.draw_src(
+                g,
                 self.ix as i32,
                 self.iy as i32,
                 &SDL_Rect { x: self.iDrawOffsetX as i32, y: 0, w: self.iw as i32, h: self.ih as i32 },

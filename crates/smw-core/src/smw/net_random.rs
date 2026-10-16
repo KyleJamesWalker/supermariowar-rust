@@ -179,7 +179,7 @@ const FALLBACK_FRAMES: u32 = 90;
 const PENDING_FRAMES: u32 = 180;
 
 /// From the net game's sync until its first gameplay frame the clients draw in step and number objects alike.
-pub fn begin_setup() {
+pub fn begin_setup(g: &mut Game) {
     unsafe {
         random_state().g_inSetup = true;
         random_state().g_inGame = false;
@@ -188,7 +188,7 @@ pub fn begin_setup() {
         random_state().g_pending.clear();
         random_state().g_waits.clear();
     }
-    crate::smw::net_outcomes::begin_game();
+    crate::smw::net_outcomes::begin_game(g);
 }
 
 /// Called at the start of every gameplay frame.
@@ -241,17 +241,17 @@ pub fn event(g: &mut Game, ev: Ev, args: &[i32]) -> bool {
             let line = run_logged(g, ev, args);
             let draws = RandomNumberGenerator::stop_tape();
             set_network_id_context(g, 0);
-            if ev == Ev::Kill && !crate::smw::net_outcomes::kill_had_effect() {
+            if ev == Ev::Kill && !crate::smw::net_outcomes::kill_had_effect(g) {
                 return true;
             }
-            harness::note_net(line);
+            harness::note_net(g, line);
             let mut args = args.to_vec();
             if ev == Ev::Place {
                 // Placements also test the spots against other objects, which a joiner may have elsewhere.
                 let o = find_object(g, args[0]);
                 args.extend([o.ix as i32, o.iy as i32]);
             } else if ev == Ev::Kill {
-                args.push(crate::smw::net_outcomes::kill_result() as i32);
+                args.push(crate::smw::net_outcomes::kill_result(g) as i32);
             } else if matches!(ev, Ev::FrenzyCard | Ev::CollectionCard) {
                 // A new card keeps away from the other cards, which a joiner may have elsewhere or not at all.
                 let card = find_object(g, (context as i32) << 16 | 1);
@@ -353,7 +353,8 @@ fn replay(g: &mut Game, pkg: &RandomEvent) {
     }
     set_network_id_context(g, pkg.context as u32);
     RandomNumberGenerator::start_playback(pkg.draws.clone());
-    harness::note_net(run_logged(g, ev, &pkg.args));
+    let line = run_logged(g, ev, &pkg.args);
+    harness::note_net(g, line);
     let left = RandomNumberGenerator::stop_tape();
     set_network_id_context(g, 0);
     if !left.is_empty() {

@@ -42,7 +42,7 @@ impl_base!(CO_Egg => mo_carried_object: MO_CarriedObject);
 impl CO_Egg {
     pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, iColor: i16) -> Self {
         let mut o = CO_Egg {
-            mo_carried_object: MO_CarriedObject::new_anim(nspr, Vec2s::zero(), 2, 16, 28, 30, 2, 1, 0, ((iColor as i32) << 5) as i16, 32, 32),
+            mo_carried_object: MO_CarriedObject::new_anim(g, nspr, Vec2s::zero(), 2, 16, 28, 30, 2, 1, 0, ((iColor as i32) << 5) as i16, 32, 32),
             relocatetimer: 0,
             explosiondrawframe: 0,
             explosiondrawtimer: 0,
@@ -151,6 +151,7 @@ impl CObjectTrait for CO_Egg {
 
     fn update(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
+        let mut rm = g.rm;
         if !self.owner.is_null() {
             self.move_to_owner(g);
             self.relocatetimer = 0;
@@ -196,8 +197,9 @@ impl CObjectTrait for CO_Egg {
                     self.explosiondrawtimer = 62;
                     self.explosiondrawframe -= 1;
                     if self.explosiondrawframe < 0 {
-                        g.objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
-                            Ptr::from_mut(&mut g.rm.spr_explosion),
+                        gp.objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
+                            g,
+                            Ptr::from_mut(&mut rm.spr_explosion),
                             Vec2s::new((self.ix as i32 + (self.iw as i32 >> 1) - 96) as i16, (self.iy as i32 + (self.ih as i32 >> 1) - 64) as i16),
                             2,
                             4,

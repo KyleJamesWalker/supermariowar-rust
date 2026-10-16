@@ -354,16 +354,17 @@ fn frame_wait(g: &mut Game, framestart: i32) {
     editor_harness::frame_delay(g, delay as u32);
 }
 
-fn tile(iCol: i16, iRow: i16) -> &'static mut WorldMapTile {
-    unsafe { game().get().g_worldmap.tiles.at_mut(iCol as usize, iRow as usize) }
+fn tile(g: &mut Game, iCol: i16, iRow: i16) -> &'static mut WorldMapTile {
+    let mut gp = g.ptr();
+    unsafe { gp.get().g_worldmap.tiles.at_mut(iCol as usize, iRow as usize) }
 }
 
 fn sprite(s: &mut gfxSprite) -> Ptr<gfxSprite> {
     Ptr::from_mut(s)
 }
 
-fn dump_editor_state(out: &mut dyn Write) {
-    let g = game().get();
+fn dump_editor_state(g: &mut Game, out: &mut dyn Write) {
+    let mut gp = g.ptr();
     unsafe {
         let _ = writeln!(
             out,
@@ -457,6 +458,7 @@ pub fn inner_main() {
         editor_harness::set_dumper(dump_editor_state);
 
         g.rm = Ptr::new_box(CResourceManager::new());
+        let mut rm = g.rm;
 
         g.g_map = Ptr::from_box(CMap::new());
         game().g_tilesetmanager = Ptr::new_box(CTilesetManager::new(g, &convert_path(game().get(), "gfx/Classic/tilesets")));
@@ -700,7 +702,7 @@ pub fn inner_main() {
         ed().miFinalStageField.set_auto_advance(true);
 
         //Map Select Field
-        ed().miMapField = Ptr::new_box(MI_MapField::new(sprite(&mut g.rm.spr_selectfield), 70, 180, "Map", 500, 120, true));
+        ed().miMapField = Ptr::new_box(MI_MapField::new(g, sprite(&mut rm.spr_selectfield), 70, 180, "Map", 500, 120, true));
 
         //Bonus Item Picker Menu Button
         ed().miBonusItemsButton = Ptr::new_box(MI_Button::new_left(g, sprite(&mut game().rm.spr_selectfield), 430, 220, "Bonuses", 140));
@@ -971,17 +973,17 @@ fn paint_left(g: &mut Game, iCol: i16, iRow: i16, fromMotion: bool) {
     unsafe {
         if ed().edit_mode == 0 {
             //selected background
-            if tile(iCol, iRow).iBackgroundSprite as i32 != ed().set_tile || ed().fAutoPaint {
+            if tile(g, iCol, iRow).iBackgroundSprite as i32 != ed().set_tile || ed().fAutoPaint {
                 let mut fNeedUpdate = false;
-                if tile(iCol, iRow).iBackgroundSprite as i32 != ed().set_tile {
-                    tile(iCol, iRow).iBackgroundSprite = ed().set_tile as i16;
+                if tile(g, iCol, iRow).iBackgroundSprite as i32 != ed().set_tile {
+                    tile(g, iCol, iRow).iBackgroundSprite = ed().set_tile as i16;
                     fNeedUpdate = true;
                 }
 
-                fNeedUpdate |= UpdateForeground(iCol, iRow);
+                fNeedUpdate |= UpdateForeground(g, iCol, iRow);
 
                 if (ed().set_tile % WORLD_BACKGROUND_SPRITE_SET_SIZE as i32) < 2 && ed().fAutoPaint {
-                    fNeedUpdate |= UpdateCoastline(iCol, iRow);
+                    fNeedUpdate |= UpdateCoastline(g, iCol, iRow);
                 }
 
                 if fNeedUpdate {
@@ -990,60 +992,60 @@ fn paint_left(g: &mut Game, iCol: i16, iRow: i16, fromMotion: bool) {
             }
         } else if ed().edit_mode == 1 {
             //selected foreground
-            if tile(iCol, iRow).iForegroundSprite as i32 != ed().set_tile {
-                tile(iCol, iRow).iForegroundSprite = ed().set_tile as i16;
+            if tile(g, iCol, iRow).iForegroundSprite as i32 != ed().set_tile {
+                tile(g, iCol, iRow).iForegroundSprite = ed().set_tile as i16;
                 updateworldsurface(g);
 
                 if !fromMotion && ed().set_tile >= WORLD_BRIDGE_SPRITE_OFFSET as i32 && ed().set_tile <= WORLD_BRIDGE_SPRITE_OFFSET as i32 + 3 {
-                    tile(iCol, iRow).iConnectionType = (ed().set_tile - WORLD_BRIDGE_SPRITE_OFFSET as i32 + 12) as i16;
+                    tile(g, iCol, iRow).iConnectionType = (ed().set_tile - WORLD_BRIDGE_SPRITE_OFFSET as i32 + 12) as i16;
                 }
             }
         } else if ed().edit_mode == 2 {
             //selected connection
-            tile(iCol, iRow).iConnectionType = ed().set_tile as i16;
+            tile(g, iCol, iRow).iConnectionType = ed().set_tile as i16;
 
             if ed().fAutoPaint {
-                UpdatePath(iCol, iRow);
+                UpdatePath(g, iCol, iRow);
             }
         } else if ed().edit_mode == 3 {
             //selected type
             //start tiles
             if ed().set_tile <= 1 {
-                if tile(iCol, iRow).iForegroundSprite as i32 != ed().set_tile + WORLD_START_SPRITE_OFFSET as i32 {
-                    tile(iCol, iRow).iType = 1;
-                    tile(iCol, iRow).iForegroundSprite = (ed().set_tile + WORLD_START_SPRITE_OFFSET as i32) as i16;
+                if tile(g, iCol, iRow).iForegroundSprite as i32 != ed().set_tile + WORLD_START_SPRITE_OFFSET as i32 {
+                    tile(g, iCol, iRow).iType = 1;
+                    tile(g, iCol, iRow).iForegroundSprite = (ed().set_tile + WORLD_START_SPRITE_OFFSET as i32) as i16;
                     updateworldsurface(g);
                 }
             } else if ed().set_tile <= 5 {
                 //doors
-                if tile(iCol, iRow).iType as i32 != ed().set_tile {
+                if tile(g, iCol, iRow).iType as i32 != ed().set_tile {
                     //if the door was placed on a start tile
-                    if tile(iCol, iRow).iType == 1 {
-                        tile(iCol, iRow).iForegroundSprite = 0;
+                    if tile(g, iCol, iRow).iType == 1 {
+                        tile(g, iCol, iRow).iForegroundSprite = 0;
                     }
 
-                    tile(iCol, iRow).iType = ed().set_tile as i16;
+                    tile(g, iCol, iRow).iType = ed().set_tile as i16;
                     updateworldsurface(g);
                 }
             }
         } else if ed().edit_mode == 4 {
             //selected path sprite
-            let iAdjustedTile = AdjustForeground(ed().set_tile as i16, iCol, iRow);
+            let iAdjustedTile = AdjustForeground(g, ed().set_tile as i16, iCol, iRow);
             let mut fNeedUpdate = false;
 
-            if !ed().fAutoPaint && tile(iCol, iRow).iForegroundSprite != iAdjustedTile {
-                tile(iCol, iRow).iForegroundSprite = iAdjustedTile;
+            if !ed().fAutoPaint && tile(g, iCol, iRow).iForegroundSprite != iAdjustedTile {
+                tile(g, iCol, iRow).iForegroundSprite = iAdjustedTile;
                 fNeedUpdate = true;
             }
 
             //Detect if there was a change so we can repaint the screen
             if ed().fAutoPaint {
                 let mut iOldTiles = [0i16; 9];
-                GetForegroundTileValues(iCol, iRow, &mut iOldTiles);
-                tile(iCol, iRow).iForegroundSprite = iAdjustedTile;
-                UpdatePathSprite(iCol, iRow);
+                GetForegroundTileValues(g, iCol, iRow, &mut iOldTiles);
+                tile(g, iCol, iRow).iForegroundSprite = iAdjustedTile;
+                UpdatePathSprite(g, iCol, iRow);
 
-                if ForegroundTileValuesChanged(iCol, iRow, &iOldTiles) {
+                if ForegroundTileValuesChanged(g, iCol, iRow, &iOldTiles) {
                     fNeedUpdate = true;
                 }
             }
@@ -1059,23 +1061,23 @@ fn paint_left(g: &mut Game, iCol: i16, iRow: i16, fromMotion: bool) {
             AddWarpToTile(iCol, iRow, ed().set_tile as i16);
         } else if ed().edit_mode == 7 {
             //water
-            if tile(iCol, iRow).iBackgroundWater as i32 != ed().set_tile {
-                tile(iCol, iRow).iBackgroundWater = ed().set_tile as i16;
+            if tile(g, iCol, iRow).iBackgroundWater as i32 != ed().set_tile {
+                tile(g, iCol, iRow).iBackgroundWater = ed().set_tile as i16;
                 updateworldsurface(g);
             }
         } else if ed().edit_mode == 8 {
             //boundary
             if !fromMotion {
-                tile(iCol, iRow).iVehicleBoundary = ed().set_tile as i16;
+                tile(g, iCol, iRow).iVehicleBoundary = ed().set_tile as i16;
             }
         } else if ed().edit_mode == 9 {
             //if the stage was placed on a start tile
-            if tile(iCol, iRow).iType == 1 {
-                tile(iCol, iRow).iForegroundSprite = 0;
+            if tile(g, iCol, iRow).iType == 1 {
+                tile(g, iCol, iRow).iForegroundSprite = 0;
                 updateworldsurface(g);
             }
 
-            tile(iCol, iRow).iType = ed().set_tile as i16;
+            tile(g, iCol, iRow).iType = ed().set_tile as i16;
         }
     }
 }
@@ -1084,18 +1086,18 @@ fn paint_left(g: &mut Game, iCol: i16, iRow: i16, fromMotion: bool) {
 fn paint_right(g: &mut Game, iCol: i16, iRow: i16, fromMotion: bool, iStageDisplay: &mut i16) {
     unsafe {
         if ed().edit_mode == 0 {
-            if tile(iCol, iRow).iBackgroundSprite != 0 || ed().fAutoPaint {
+            if tile(g, iCol, iRow).iBackgroundSprite != 0 || ed().fAutoPaint {
                 let mut fNeedUpdate = false;
 
-                if tile(iCol, iRow).iBackgroundSprite != 0 {
-                    tile(iCol, iRow).iBackgroundSprite = 0;
+                if tile(g, iCol, iRow).iBackgroundSprite != 0 {
+                    tile(g, iCol, iRow).iBackgroundSprite = 0;
                     fNeedUpdate = true;
                 }
 
-                fNeedUpdate |= UpdateForeground(iCol, iRow);
+                fNeedUpdate |= UpdateForeground(g, iCol, iRow);
 
                 if ed().fAutoPaint {
-                    fNeedUpdate |= UpdateCoastline(iCol, iRow);
+                    fNeedUpdate |= UpdateCoastline(g, iCol, iRow);
                 }
 
                 if fNeedUpdate {
@@ -1103,43 +1105,43 @@ fn paint_right(g: &mut Game, iCol: i16, iRow: i16, fromMotion: bool, iStageDispl
                 }
             }
         } else if ed().edit_mode == 1 {
-            if tile(iCol, iRow).iForegroundSprite != 0 {
-                tile(iCol, iRow).iForegroundSprite = 0;
+            if tile(g, iCol, iRow).iForegroundSprite != 0 {
+                tile(g, iCol, iRow).iForegroundSprite = 0;
                 updateworldsurface(g);
             }
         } else if ed().edit_mode == 2 {
-            tile(iCol, iRow).iConnectionType = 0;
+            tile(g, iCol, iRow).iConnectionType = 0;
 
             if ed().fAutoPaint {
-                UpdatePath(iCol, iRow);
+                UpdatePath(g, iCol, iRow);
             }
         } else if ed().edit_mode == 3 {
             //selected start/door
-            if tile(iCol, iRow).iType == 1 {
-                tile(iCol, iRow).iForegroundSprite = 0;
+            if tile(g, iCol, iRow).iType == 1 {
+                tile(g, iCol, iRow).iForegroundSprite = 0;
                 updateworldsurface(g);
-            } else if tile(iCol, iRow).iType <= 5 {
-                tile(iCol, iRow).iType = 0;
+            } else if tile(g, iCol, iRow).iType <= 5 {
+                tile(g, iCol, iRow).iType = 0;
                 updateworldsurface(g);
             }
 
-            tile(iCol, iRow).iType = 0;
+            tile(g, iCol, iRow).iType = 0;
         } else if ed().edit_mode == 4 {
             let mut fNeedUpdate = false;
 
-            if !ed().fAutoPaint && tile(iCol, iRow).iForegroundSprite != 0 {
-                tile(iCol, iRow).iForegroundSprite = 0;
+            if !ed().fAutoPaint && tile(g, iCol, iRow).iForegroundSprite != 0 {
+                tile(g, iCol, iRow).iForegroundSprite = 0;
                 fNeedUpdate = true;
             }
 
             //Detect if there was a change so we can repaint the screen
             if ed().fAutoPaint {
                 let mut iOldTiles = [0i16; 9];
-                GetForegroundTileValues(iCol, iRow, &mut iOldTiles);
-                tile(iCol, iRow).iForegroundSprite = 0;
-                UpdatePathSprite(iCol, iRow);
+                GetForegroundTileValues(g, iCol, iRow, &mut iOldTiles);
+                tile(g, iCol, iRow).iForegroundSprite = 0;
+                UpdatePathSprite(g, iCol, iRow);
 
-                if ForegroundTileValuesChanged(iCol, iRow, &iOldTiles) {
+                if ForegroundTileValuesChanged(g, iCol, iRow, &iOldTiles) {
                     fNeedUpdate = true;
                 }
             }
@@ -1156,18 +1158,18 @@ fn paint_right(g: &mut Game, iCol: i16, iRow: i16, fromMotion: bool, iStageDispl
             RemoveWarpFromTile(iCol, iRow);
         } else if ed().edit_mode == 7 {
             //water
-            if tile(iCol, iRow).iBackgroundWater != 0 {
-                tile(iCol, iRow).iBackgroundWater = 0;
+            if tile(g, iCol, iRow).iBackgroundWater != 0 {
+                tile(g, iCol, iRow).iBackgroundWater = 0;
                 updateworldsurface(g);
             }
         } else if ed().edit_mode == 8 {
             //boundary
             if !fromMotion {
-                tile(iCol, iRow).iVehicleBoundary = 0;
+                tile(g, iCol, iRow).iVehicleBoundary = 0;
             }
         } else if ed().edit_mode == 9 {
             //stage
-            tile(iCol, iRow).iType = 0;
+            tile(g, iCol, iRow).iType = 0;
             *iStageDisplay = -1;
         }
     }
@@ -1502,7 +1504,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                             } else if ed().edit_mode == 9 {
                                 iStageDisplay = -1;
                                 if iCol >= 0 && iRow >= 0 && iCol < ed().iWorldWidth && iRow < ed().iWorldHeight {
-                                    let iType: i16 = tile(iCol, iRow).iType - 6;
+                                    let iType: i16 = tile(g, iCol, iRow).iType - 6;
                                     if iType >= 0 {
                                         iStageDisplay = iType;
                                     }
@@ -1548,10 +1550,10 @@ pub fn editor_edit(g: &mut Game) -> i32 {
             //Ask if you are sure you want to exit
             if fExiting {
                 ed().spr_dialog.draw_src(g, 224, 176, &r(0, 0, 192, 128));
-                g.rm.menu_font_large.draw_centered(320, 195, "Exit");
-                g.rm.menu_font_large.draw_centered(320, 220, "Are You Sure?");
-                g.rm.menu_font_large.draw_centered(282, 254, "Yes");
-                g.rm.menu_font_large.draw_centered(356, 254, "No");
+                gp.rm.menu_font_large.draw_centered(g, 320, 195, "Exit");
+                gp.rm.menu_font_large.draw_centered(g, 320, 220, "Are You Sure?");
+                gp.rm.menu_font_large.draw_centered(g, 282, 254, "Yes");
+                gp.rm.menu_font_large.draw_centered(g, 356, 254, "No");
 
                 ed().spr_dialog.draw_src(g, if fSelectedYes { 250 } else { 326 }, 250, &r(192, 0, 64, 32));
             } else {
@@ -1561,10 +1563,11 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                     while (iRow as i32) < ed().draw_offset_row + 15 && iRow < ed().iWorldHeight {
                         let mut iCol = ed().draw_offset_col as i16;
                         while iCol as i32 <= ed().draw_offset_col + 20 && iCol < ed().iWorldWidth {
-                            let iConnection: i16 = tile(iCol, iRow).iConnectionType;
+                            let iConnection: i16 = tile(g, iCol, iRow).iConnectionType;
 
                             if iConnection > 0 {
-                                ed().spr_path.draw_src(g, 
+                                ed().spr_path.draw_src(
+                                    g,
                                     (iCol as i32 - ed().draw_offset_col) * TILESIZE + ed().draw_offset_x,
                                     (iRow as i32 - ed().draw_offset_row) * TILESIZE + ed().draw_offset_y,
                                     &r((iConnection as i32 - 1) << 5, 0, TILESIZE, TILESIZE),
@@ -1601,7 +1604,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                     while (iRow as i32) < ed().draw_offset_row + 15 && iRow < ed().iWorldHeight {
                         let mut iCol = ed().draw_offset_col as i16;
                         while iCol as i32 <= ed().draw_offset_col + 20 && iCol < ed().iWorldWidth {
-                            let iBoundary: i16 = tile(iCol, iRow).iVehicleBoundary - 1;
+                            let iBoundary: i16 = tile(g, iCol, iRow).iVehicleBoundary - 1;
 
                             if iBoundary >= 0 {
                                 let ix: i16 = ((iCol as i32 - ed().draw_offset_col) * TILESIZE + ed().draw_offset_x) as i16;
@@ -1622,7 +1625,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                     while (iRow as i32) < ed().draw_offset_row + 15 && iRow < ed().iWorldHeight {
                         let mut iCol = ed().draw_offset_col as i16;
                         while iCol as i32 <= ed().draw_offset_col + 20 && iCol < ed().iWorldWidth {
-                            let iType: i16 = tile(iCol, iRow).iType - 6;
+                            let iType: i16 = tile(g, iCol, iRow).iType - 6;
 
                             if iType >= 0 {
                                 let ix: i16 = ((iCol as i32 - ed().draw_offset_col) * TILESIZE + ed().draw_offset_x) as i16;
@@ -1681,16 +1684,16 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                     gp.rm.menu_font_small.draw(g, 0, 16, "Auto Paint");
                 }
 
-                g.rm.menu_font_small.draw_right_justified(640, 0, &g.worldlist.current_path().to_string_lossy());
+                gp.rm.menu_font_small.draw_right_justified(g, 640, 0, &gp.worldlist.current_path().to_string_lossy());
 
                 ed().g_musiccategorydisplaytimer -= 1;
                 if ed().g_musiccategorydisplaytimer > 0 {
                     ed().spr_dialog.draw_src(g, 224, 176, &r(0, 0, 192, 128));
-                    g.rm.menu_font_small.draw_centered(320, 195, "Music Category");
-                    g.rm.menu_font_large.draw_centered(320, 220, &crate::common::file_list::world_music_category_to_string(g.g_worldmap.iMusicCategory));
+                    gp.rm.menu_font_small.draw_centered(g, 320, 195, "Music Category");
+                    gp.rm.menu_font_large.draw_centered(g, 320, 220, &crate::common::file_list::world_music_category_to_string(g.g_worldmap.iMusicCategory));
 
-                    g.rm.menu_font_small.draw_centered(320, 255, "Press 'R' Again");
-                    g.rm.menu_font_small.draw_centered(320, 270, "To Change");
+                    gp.rm.menu_font_small.draw_centered(g, 320, 255, "Press 'R' Again");
+                    gp.rm.menu_font_small.draw_centered(g, 320, 270, "To Change");
                 }
 
                 DrawMessage(g);
@@ -1706,26 +1709,27 @@ pub fn editor_edit(g: &mut Game) -> i32 {
 }
 
 pub fn DrawMessage(g: &mut Game) {
+    let mut gp = g.ptr();
     unsafe {
         if ed().g_messagedisplaytimer > 0 {
             ed().g_messagedisplaytimer -= 1;
 
             ed().spr_dialog.draw_src(g, 224, 176, &r(0, 0, 192, 128));
-            g.rm.menu_font_large.draw_centered(320, 195, &ed().g_szMessageTitle);
-            g.rm.menu_font_large.draw_centered(320, 220, &ed().g_szMessageLine[0]);
-            g.rm.menu_font_large.draw_centered(320, 240, &ed().g_szMessageLine[1]);
-            g.rm.menu_font_large.draw_centered(320, 260, &ed().g_szMessageLine[2]);
+            gp.rm.menu_font_large.draw_centered(g, 320, 195, &ed().g_szMessageTitle);
+            gp.rm.menu_font_large.draw_centered(g, 320, 220, &ed().g_szMessageLine[0]);
+            gp.rm.menu_font_large.draw_centered(g, 320, 240, &ed().g_szMessageLine[1]);
+            gp.rm.menu_font_large.draw_centered(g, 320, 260, &ed().g_szMessageLine[2]);
         }
     }
 }
 
-pub fn GetForegroundTileValues(iCol: i16, iRow: i16, iOldTiles: &mut [i16; 9]) {
+pub fn GetForegroundTileValues(g: &mut Game, iCol: i16, iRow: i16, iOldTiles: &mut [i16; 9]) {
     unsafe {
         let mut iIndex: i16 = 0;
         for iAutoRow in (iRow - 1)..=(iRow + 1) {
             for iAutoCol in (iCol - 1)..=(iCol + 1) {
                 if iAutoRow >= 0 && iAutoRow < ed().iWorldHeight && iAutoCol >= 0 && iAutoCol < ed().iWorldWidth {
-                    iOldTiles[iIndex as usize] = tile(iAutoCol, iAutoRow).iForegroundSprite;
+                    iOldTiles[iIndex as usize] = tile(g, iAutoCol, iAutoRow).iForegroundSprite;
                     iIndex += 1;
                 }
             }
@@ -1737,7 +1741,7 @@ pub fn GetForegroundTileValues(iCol: i16, iRow: i16, iOldTiles: &mut [i16; 9]) {
     }
 }
 
-pub fn ForegroundTileValuesChanged(iCol: i16, iRow: i16, iOldTiles: &[i16; 9]) -> bool {
+pub fn ForegroundTileValuesChanged(g: &mut Game, iCol: i16, iRow: i16, iOldTiles: &[i16; 9]) -> bool {
     unsafe {
         let mut iIndex: usize = 0;
         for iAutoRow in (iRow - 1)..=(iRow + 1) {
@@ -1745,7 +1749,7 @@ pub fn ForegroundTileValuesChanged(iCol: i16, iRow: i16, iOldTiles: &[i16; 9]) -
                 if iAutoRow >= 0 && iAutoRow < ed().iWorldHeight && iAutoCol >= 0 && iAutoCol < ed().iWorldWidth {
                     let old = iOldTiles[iIndex];
                     iIndex += 1;
-                    if tile(iAutoCol, iAutoRow).iForegroundSprite != old {
+                    if tile(g, iAutoCol, iAutoRow).iForegroundSprite != old {
                         return true;
                     }
                 }
@@ -1925,26 +1929,26 @@ pub fn RemoveWarpFromTile(iCol: i16, iRow: i16) {
     }
 }
 
-pub fn UpdatePathSprite(iCol: i16, iRow: i16) {
+pub fn UpdatePathSprite(g: &mut Game, iCol: i16, iRow: i16) {
     unsafe {
         for iAutoRow in (iRow - 1)..=(iRow + 1) {
             for iAutoCol in (iCol - 1)..=(iCol + 1) {
                 if iAutoRow >= 0 && iAutoRow < ed().iWorldHeight && iAutoCol >= 0 && iAutoCol < ed().iWorldWidth {
-                    AutoSetPathSprite(iAutoCol, iAutoRow);
+                    AutoSetPathSprite(g, iAutoCol, iAutoRow);
                 }
             }
         }
     }
 }
 
-pub fn AutoSetPathSprite(iCol: i16, iRow: i16) {
+pub fn AutoSetPathSprite(g: &mut Game, iCol: i16, iRow: i16) {
     unsafe {
         let iPathTypes: [i16; 16] = [6, 4, 3, 5, 6, 4, 1, 5, 6, 2, 3, 5, 6, 4, 3, 5];
 
         let mut iPath: i16 = 0;
         let mut iNeighborIndex: i16 = 0;
 
-        let mut iForegroundSprite: i16 = tile(iCol, iRow).iForegroundSprite;
+        let mut iForegroundSprite: i16 = tile(g, iCol, iRow).iForegroundSprite;
         let iForegroundStyle: i16 = iForegroundSprite / WORLD_PATH_SPRITE_SET_SIZE;
 
         if iForegroundSprite == 0 || iForegroundSprite >= WORLD_FOREGROUND_STAGE_OFFSET {
@@ -1959,7 +1963,7 @@ pub fn AutoSetPathSprite(iCol: i16, iRow: i16) {
 
                 if (iAutoCol == iCol && iAutoRow != iRow) || (iAutoCol != iCol && iAutoRow == iRow) {
                     if iAutoRow >= 0 && iAutoRow < ed().iWorldHeight && iAutoCol >= 0 && iAutoCol < ed().iWorldWidth {
-                        iForegroundSprite = tile(iAutoCol, iAutoRow).iForegroundSprite;
+                        iForegroundSprite = tile(g, iAutoCol, iAutoRow).iForegroundSprite;
 
                         if (iForegroundSprite >= WORLD_BRIDGE_SPRITE_OFFSET && iForegroundSprite <= WORLD_BRIDGE_SPRITE_OFFSET + 3)
                             || (iForegroundSprite >= WORLD_FOREGROUND_STAGE_OFFSET && iForegroundSprite <= WORLD_FOREGROUND_STAGE_OFFSET + 399)
@@ -1981,17 +1985,17 @@ pub fn AutoSetPathSprite(iCol: i16, iRow: i16) {
         }
 
         //#1 == -  2 == |  3 == -o  4 == !  5 == -`  6 == o
-        tile(iCol, iRow).iForegroundSprite = AdjustForeground(iPathTypes[iPath as usize] + iForegroundStyle * WORLD_PATH_SPRITE_SET_SIZE, iCol, iRow);
+        tile(g, iCol, iRow).iForegroundSprite = AdjustForeground(g, iPathTypes[iPath as usize] + iForegroundStyle * WORLD_PATH_SPRITE_SET_SIZE, iCol, iRow);
     }
 }
 
 //Convert foreground sprite to match the background sprite
-pub fn AdjustForeground(mut iSprite: i16, iCol: i16, iRow: i16) -> i16 {
+pub fn AdjustForeground(g: &mut Game, mut iSprite: i16, iCol: i16, iRow: i16) -> i16 {
     if iSprite >= WORLD_FOREGROUND_STAGE_OFFSET {
         return iSprite;
     }
 
-    let iBackgroundSprite: i16 = tile(iCol, iRow).iBackgroundSprite % WORLD_BACKGROUND_SPRITE_SET_SIZE;
+    let iBackgroundSprite: i16 = tile(g, iCol, iRow).iBackgroundSprite % WORLD_BACKGROUND_SPRITE_SET_SIZE;
 
     let iPathStyle: i16 = iSprite / WORLD_PATH_SPRITE_SET_SIZE;
     iSprite %= WORLD_PATH_SPRITE_SET_SIZE;
@@ -2029,26 +2033,26 @@ pub fn AdjustForeground(mut iSprite: i16, iCol: i16, iRow: i16) -> i16 {
     iSprite + iPathStyle * WORLD_PATH_SPRITE_SET_SIZE
 }
 
-pub fn UpdatePath(iCol: i16, iRow: i16) {
+pub fn UpdatePath(g: &mut Game, iCol: i16, iRow: i16) {
     unsafe {
         for iAutoRow in (iRow - 1)..=(iRow + 1) {
             for iAutoCol in (iCol - 1)..=(iCol + 1) {
                 if iAutoRow >= 0 && iAutoRow < ed().iWorldHeight && iAutoCol >= 0 && iAutoCol < ed().iWorldWidth {
-                    AutoSetPath(iAutoCol, iAutoRow);
+                    AutoSetPath(g, iAutoCol, iAutoRow);
                 }
             }
         }
     }
 }
 
-pub fn AutoSetPath(iCol: i16, iRow: i16) {
+pub fn AutoSetPath(g: &mut Game, iCol: i16, iRow: i16) {
     unsafe {
         let iPathTypes: [i16; 16] = [11, 1, 2, 3, 2, 4, 2, 8, 1, 1, 6, 7, 5, 9, 10, 11];
 
         let mut iPath: i16 = 0;
         let mut iNeighborIndex: i16 = 0;
 
-        if tile(iCol, iRow).iConnectionType == 0 {
+        if tile(g, iCol, iRow).iConnectionType == 0 {
             return;
         }
 
@@ -2060,7 +2064,7 @@ pub fn AutoSetPath(iCol: i16, iRow: i16) {
 
                 if (iAutoCol == iCol && iAutoRow != iRow) || (iAutoCol != iCol && iAutoRow == iRow) {
                     if iAutoRow >= 0 && iAutoRow < ed().iWorldHeight && iAutoCol >= 0 && iAutoCol < ed().iWorldWidth {
-                        if tile(iAutoCol, iAutoRow).iConnectionType > 0 {
+                        if tile(g, iAutoCol, iAutoRow).iConnectionType > 0 {
                             iPath += 1 << iNeighborIndex;
                         }
                     }
@@ -2074,7 +2078,7 @@ pub fn AutoSetPath(iCol: i16, iRow: i16) {
         //#7 == -|  8 == -`-  9 == |-  10 == -,-  11 == +
 
         let mut iPathType: i16 = iPathTypes[iPath as usize];
-        let iForegroundSprite: i16 = tile(iCol, iRow).iForegroundSprite;
+        let iForegroundSprite: i16 = tile(g, iCol, iRow).iForegroundSprite;
 
         if iPathType == 2 && iForegroundSprite >= WORLD_BRIDGE_SPRITE_OFFSET && iForegroundSprite <= WORLD_BRIDGE_SPRITE_OFFSET + 1 {
             iPathType = iForegroundSprite - WORLD_BRIDGE_SPRITE_OFFSET + 12;
@@ -2082,22 +2086,23 @@ pub fn AutoSetPath(iCol: i16, iRow: i16) {
             iPathType = iForegroundSprite - WORLD_BRIDGE_SPRITE_OFFSET + 12;
         }
 
-        tile(iCol, iRow).iConnectionType = iPathType;
+        tile(g, iCol, iRow).iConnectionType = iPathType;
     }
 }
 
-pub fn UpdateForeground(iCol: i16, iRow: i16) -> bool {
-    let iNewForeground: i16 = AdjustForeground(tile(iCol, iRow).iForegroundSprite, iCol, iRow);
+pub fn UpdateForeground(g: &mut Game, iCol: i16, iRow: i16) -> bool {
+    let iForeground = tile(g, iCol, iRow).iForegroundSprite;
+    let iNewForeground: i16 = AdjustForeground(g, iForeground, iCol, iRow);
 
-    if tile(iCol, iRow).iForegroundSprite != iNewForeground {
-        tile(iCol, iRow).iForegroundSprite = iNewForeground;
+    if tile(g, iCol, iRow).iForegroundSprite != iNewForeground {
+        tile(g, iCol, iRow).iForegroundSprite = iNewForeground;
         return true;
     }
 
     false
 }
 
-pub fn UpdateCoastline(iCol: i16, iRow: i16) -> bool {
+pub fn UpdateCoastline(g: &mut Game, iCol: i16, iRow: i16) -> bool {
     unsafe {
         let iStartCol: i16 = if iCol == 0 { 0 } else { iCol - 1 };
         let iEndCol: i16 = if iCol == ed().iWorldWidth - 1 { ed().iWorldWidth - 1 } else { iCol + 1 };
@@ -2108,8 +2113,8 @@ pub fn UpdateCoastline(iCol: i16, iRow: i16) -> bool {
         let mut fRet = false;
         for iAutoRow in iStartRow..=iEndRow {
             for iAutoCol in iStartCol..=iEndCol {
-                fRet |= AutoSetTile(iAutoCol, iAutoRow);
-                fRet |= UpdateForeground(iAutoCol, iAutoRow);
+                fRet |= AutoSetTile(g, iAutoCol, iAutoRow);
+                fRet |= UpdateForeground(g, iAutoCol, iAutoRow);
             }
         }
 
@@ -2117,10 +2122,10 @@ pub fn UpdateCoastline(iCol: i16, iRow: i16) -> bool {
     }
 }
 
-pub fn AutoSetTile(iCol: i16, iRow: i16) -> bool {
+pub fn AutoSetTile(g: &mut Game, iCol: i16, iRow: i16) -> bool {
     unsafe {
         //Don't need to do anything if this tile is solid
-        if tile(iCol, iRow).iBackgroundSprite % WORLD_BACKGROUND_SPRITE_SET_SIZE == 1 {
+        if tile(g, iCol, iRow).iBackgroundSprite % WORLD_BACKGROUND_SPRITE_SET_SIZE == 1 {
             return false;
         }
 
@@ -2136,7 +2141,7 @@ pub fn AutoSetTile(iCol: i16, iRow: i16) -> bool {
                 }
 
                 if iAutoRow >= 0 && iAutoRow < ed().iWorldHeight && iAutoCol >= 0 && iAutoCol < ed().iWorldWidth {
-                    let iBackgroundSprite: i16 = tile(iAutoCol, iAutoRow).iBackgroundSprite;
+                    let iBackgroundSprite: i16 = tile(g, iAutoCol, iAutoRow).iBackgroundSprite;
 
                     if iBackgroundSprite % WORLD_BACKGROUND_SPRITE_SET_SIZE == 1 {
                         iTile[iNeighborIndex] = true;
@@ -2254,8 +2259,8 @@ pub fn AutoSetTile(iCol: i16, iRow: i16) -> bool {
             iTileStyleOffset + 0
         };
 
-        if tile(iCol, iRow).iBackgroundSprite != iNewTile {
-            tile(iCol, iRow).iBackgroundSprite = iNewTile;
+        if tile(g, iCol, iRow).iBackgroundSprite != iNewTile {
+            tile(g, iCol, iRow).iBackgroundSprite = iNewTile;
             return true;
         }
 
@@ -2281,6 +2286,7 @@ pub fn drawmap(g: &mut Game, _fScreenshot: bool, _iBlockSize: i16) {
 }
 
 pub fn editor_warp(g: &mut Game) -> i32 {
+    let mut gp = g.ptr();
     unsafe {
         let mut done = false;
 
@@ -2326,7 +2332,7 @@ pub fn editor_warp(g: &mut Game) -> i32 {
 
             ed().spr_warps[0].draw_src(g, 0, 0, &r(0, 0, 320, 32));
 
-            g.rm.menu_font_small.draw_right_justified(640, 0, &g.worldlist.current_path().to_string_lossy());
+            gp.rm.menu_font_small.draw_right_justified(g, 640, 0, &gp.worldlist.current_path().to_string_lossy());
 
             DrawMessage(g);
             gfx_flipscreen(g);
@@ -2455,7 +2461,7 @@ pub fn editor_start_items(g: &mut Game) -> i32 {
                 }
             }
 
-            g.rm.menu_font_small.draw_right_justified(640, 0, &g.worldlist.current_path().to_string_lossy());
+            gp.rm.menu_font_small.draw_right_justified(g, 640, 0, &gp.worldlist.current_path().to_string_lossy());
 
             DrawMessage(g);
             gfx_flipscreen(g);
@@ -2518,7 +2524,7 @@ pub fn editor_boundary(g: &mut Game) -> i32 {
 
             gp.rm.spr_worldforegroundspecial[0].draw_src(g, 0, 0, &r(0, 0, 320, 320));
 
-            g.rm.menu_font_small.draw_right_justified(640, 0, &g.worldlist.current_path().to_string_lossy());
+            gp.rm.menu_font_small.draw_right_justified(g, 640, 0, &gp.worldlist.current_path().to_string_lossy());
 
             DrawMessage(g);
             gfx_flipscreen(g);
@@ -2581,7 +2587,7 @@ pub fn editor_type(g: &mut Game) -> i32 {
 
             gp.rm.spr_worldforegroundspecial[0].draw_src(g, 64, 0, &r(448, 64, 128, 32));
 
-            g.rm.menu_font_small.draw_right_justified(640, 0, &g.worldlist.current_path().to_string_lossy());
+            gp.rm.menu_font_small.draw_right_justified(g, 640, 0, &gp.worldlist.current_path().to_string_lossy());
 
             DrawMessage(g);
             gfx_flipscreen(g);
@@ -3075,7 +3081,7 @@ pub fn editor_vehicles(g: &mut Game) -> i32 {
             ed().mCurrentMenu.update(g);
             ed().mCurrentMenu.draw(g);
 
-            g.rm.menu_font_small.draw_right_justified(640, 0, &g.worldlist.current_path().to_string_lossy());
+            gp.rm.menu_font_small.draw_right_justified(g, 640, 0, &gp.worldlist.current_path().to_string_lossy());
 
             DrawMessage(g);
             gfx_flipscreen(g);
@@ -3153,7 +3159,7 @@ pub fn DisplayStageDetails(g: &mut Game, fForce: bool, iStageId: i16, mut iMouse
 
                 if g.maplist.findexact(&ts.pszMapFile, false) {
                     let file = g.maplist.current_filename().to_string();
-                    g.g_map.load_map(&file, read_type_preview);
+                    gp.g_map.load_map(g, &file, read_type_preview);
                     ed().sMapThumbnail = gp.g_map.create_thumbnail_surface(g, true);
                 } else {
                     //otherwise show a unknown map icon
@@ -3649,7 +3655,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
 
                                 code = MENU_CODE_MODE_CHANGED;
 
-                                ed().mModeOptionsMenu.refresh();
+                                ed().mModeOptionsMenu.refresh(g);
                             }
                         }
                     }
@@ -3715,7 +3721,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
 
                                     code = MENU_CODE_MODE_CHANGED;
 
-                                    ed().mModeOptionsMenu.refresh();
+                                    ed().mModeOptionsMenu.refresh(g);
                                 }
                             }
                         }
@@ -3870,10 +3876,10 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                         //and decrement stage numbers greater than this stage
                         for iRow in 0..ed().iWorldHeight {
                             for iCol in 0..ed().iWorldWidth {
-                                if tile(iCol, iRow).iType == iEditStage + 6 {
-                                    tile(iCol, iRow).iType = 0;
-                                } else if tile(iCol, iRow).iType > iEditStage + 6 {
-                                    tile(iCol, iRow).iType -= 1;
+                                if tile(g, iCol, iRow).iType == iEditStage + 6 {
+                                    tile(g, iCol, iRow).iType = 0;
+                                } else if tile(g, iCol, iRow).iType > iEditStage + 6 {
+                                    tile(g, iCol, iRow).iType -= 1;
                                 }
                             }
                         }
@@ -3941,7 +3947,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                 gp.rm.spr_selectfield.draw_src(g, 256, 420, &r(0, 0, 64, 32));
                 gp.rm.spr_selectfield.draw_src(g, 320, 420, &r(448, 0, 64, 32));
 
-                g.rm.menu_font_large.draw_centered(320, 425, "New Stage");
+                gp.rm.menu_font_large.draw_centered(g, 320, 425, "New Stage");
 
                 gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[LMB] Select Stage, [RMB] Edit Stage, [n] New Stage");
             } else {
@@ -3977,7 +3983,8 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                 if ts.iStageType == 1 {
                     for iScoreBonus in 0..NUM_WORLD_SCORE_BONUSES {
                         let d = ed().rItemDst[(iScoreBonus + NUM_POWERUPS + NUM_WORLD_POWERUPS) as usize];
-                        gp.rm.spr_worlditems.draw_src(g, 
+                        gp.rm.spr_worlditems.draw_src(
+                            g,
                             d.x,
                             d.y,
                             &r(if iScoreBonus < 10 { iScoreBonus << 5 } else { (iScoreBonus - 10) << 5 }, if iScoreBonus < 10 { 32 } else { 64 }, 32, 32),
@@ -4002,7 +4009,8 @@ pub fn editor_stage(g: &mut Game) -> i32 {
 
                     if iBonus >= NUM_POWERUPS + NUM_WORLD_POWERUPS {
                         let iBonusIndex: i32 = iBonus - NUM_POWERUPS - NUM_WORLD_POWERUPS;
-                        gp.rm.spr_worlditems.draw_src(g, 
+                        gp.rm.spr_worlditems.draw_src(
+                            g,
                             rects[iPickedItem].x,
                             rects[iPickedItem].y,
                             &r(if iBonusIndex < 10 { iBonusIndex << 5 } else { (iBonusIndex - 10) << 5 }, if iBonusIndex < 10 { 32 } else { 64 }, 32, 32),
@@ -4021,7 +4029,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                 }
             }
 
-            g.rm.menu_font_small.draw_right_justified(640, 0, &g.worldlist.current_path().to_string_lossy());
+            gp.rm.menu_font_small.draw_right_justified(g, 640, 0, &gp.worldlist.current_path().to_string_lossy());
 
             DrawMessage(g);
             gfx_flipscreen(g);
@@ -4038,7 +4046,7 @@ pub fn display_help(g: &mut Game) -> i32 {
     unsafe {
         drawmap(g, false, TILESIZE as i16);
         ed().menu_shade.draw(g, 0, 0);
-        g.rm.menu_font_large.draw_centered(320, 15, "Help");
+        gp.rm.menu_font_large.draw_centered(g, 320, 15, "Help");
 
         let mut offsety: i32 = 55;
         let mut offsetx: i32 = 30;
@@ -4155,12 +4163,12 @@ fn draw_dialog(g: &mut Game, title: &str, instructions: &str, input: Option<&str
         drawmap(g, false, TILESIZE as i16);
         ed().menu_shade.draw(g, 0, 0);
         ed().spr_dialog.draw_src(g, 224, 176, &r(0, 0, 192, 128));
-        g.rm.menu_font_large.draw_centered(320, 200, title);
+        gp.rm.menu_font_large.draw_centered(g, 320, 200, title);
         gp.rm.menu_font_small.draw(g, 240, 235, instructions);
         if let Some(input) = input {
             gp.rm.menu_font_small.draw(g, 240, 255, input);
         }
-        g.rm.menu_font_small.draw_right_justified(640, 0, &g.worldlist.current_path().to_string_lossy());
+        gp.rm.menu_font_small.draw_right_justified(g, 640, 0, &gp.worldlist.current_path().to_string_lossy());
         gfx_flipscreen(g);
     }
 }
@@ -4497,7 +4505,8 @@ pub fn takescreenshot(g: &mut Game) {
                 let ix: i16 = vehicle.currentTile.x * iTileSize;
                 let iy: i16 = vehicle.currentTile.y * iTileSize;
 
-                gp.rm.spr_worldvehicle[iScreenshotSize].draw_src(g, 
+                gp.rm.spr_worldvehicle[iScreenshotSize].draw_src(
+                    g,
                     ix as i32,
                     iy as i32,
                     &r(vehicle.iDrawDirection as i32 * iTileSize as i32, vehicle.iDrawSprite as i32 * iTileSize as i32, iTileSize as i32, iTileSize as i32),
@@ -4507,7 +4516,8 @@ pub fn takescreenshot(g: &mut Game) {
             //Draw warps to screenshot
             for warp in ed().warplist.iter() {
                 if warp.posA.x >= 0 {
-                    ed().spr_warps[iScreenshotSize].draw_src(g, 
+                    ed().spr_warps[iScreenshotSize].draw_src(
+                        g,
                         warp.posA.x as i32 * iTileSize as i32,
                         warp.posA.y as i32 * iTileSize as i32,
                         &r(warp.id as i32 * iTileSize as i32, 0, iTileSize as i32, iTileSize as i32),
@@ -4515,7 +4525,8 @@ pub fn takescreenshot(g: &mut Game) {
                 }
 
                 if warp.posB.x >= 0 {
-                    ed().spr_warps[iScreenshotSize].draw_src(g, 
+                    ed().spr_warps[iScreenshotSize].draw_src(
+                        g,
                         warp.posB.x as i32 * iTileSize as i32,
                         warp.posB.y as i32 * iTileSize as i32,
                         &r(warp.id as i32 * iTileSize as i32, 0, iTileSize as i32, iTileSize as i32),

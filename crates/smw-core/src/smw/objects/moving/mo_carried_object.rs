@@ -34,8 +34,7 @@ impl_base!(MO_CarriedObject => io_moving_object: IO_MovingObject);
 impl MO_CarriedObject {
     /// The 8-argument constructor.
     #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        nspr: Ptr<gfxSprite>,
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>,
         pos: Vec2s,
         iNumSpr: i16,
         aniSpeed: i16,
@@ -44,13 +43,12 @@ impl MO_CarriedObject {
         iCollisionOffsetX: i16,
         iCollisionOffsetY: i16,
     ) -> Self {
-        Self::new_anim(nspr, pos, iNumSpr, aniSpeed, iCollisionWidth, iCollisionHeight, iCollisionOffsetX, iCollisionOffsetY, -1, -1, -1, -1)
+        Self::new_anim(g, nspr, pos, iNumSpr, aniSpeed, iCollisionWidth, iCollisionHeight, iCollisionOffsetX, iCollisionOffsetY, -1, -1, -1, -1)
     }
 
     /// The 12-argument constructor.
     #[allow(clippy::too_many_arguments)]
-    pub fn new_anim(
-        nspr: Ptr<gfxSprite>,
+    pub fn new_anim(g: &mut Game, nspr: Ptr<gfxSprite>,
         pos: Vec2s,
         iNumSpr: i16,
         aniSpeed: i16,
@@ -65,6 +63,7 @@ impl MO_CarriedObject {
     ) -> Self {
         let mut o = MO_CarriedObject {
             io_moving_object: IO_MovingObject::new(
+                g,
                 nspr,
                 pos,
                 iNumSpr,

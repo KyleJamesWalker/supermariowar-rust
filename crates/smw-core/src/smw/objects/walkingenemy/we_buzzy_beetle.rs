@@ -27,9 +27,10 @@ pub struct MO_BuzzyBeetle {
 impl_base!(MO_BuzzyBeetle => mo_walking_enemy: MO_WalkingEnemy);
 
 impl MO_BuzzyBeetle {
-    pub fn new(nspr: Ptr<gfxSprite>, moveToRight: bool) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, moveToRight: bool) -> Self {
+        let mut gp = g.ptr();
         let mut o = MO_BuzzyBeetle {
-            mo_walking_enemy: MO_WalkingEnemy::new(game().get(), nspr, 2, 8, 30, 20, 1, 11, 0, if moveToRight { 0 } else { 32 }, 32, 32, moveToRight, false, false, true),
+            mo_walking_enemy: MO_WalkingEnemy::new(gp.get(), nspr, 2, 8, 30, 20, 1, 11, 0, if moveToRight { 0 } else { 32 }, 32, 32, moveToRight, false, false, true),
         };
         o.movingObjectType = movingobject_buzzybeetle;
         o.iSpawnIconOffset = 160;

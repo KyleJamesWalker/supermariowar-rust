@@ -26,8 +26,8 @@ pub struct CO_Spring {
 impl_base!(CO_Spring => mo_carried_object: MO_CarriedObject);
 
 impl CO_Spring {
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s, fsuper: bool) -> Self {
-        let mut o = CO_Spring { mo_carried_object: MO_CarriedObject::new(nspr, pos, 4, 4, 30, 31, 1, 0), fSuper: false, iOffsetY: 0 };
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, fsuper: bool) -> Self {
+        let mut o = CO_Spring { mo_carried_object: MO_CarriedObject::new(g, nspr, pos, 4, 4, 30, 31, 1, 0), fSuper: false, iOffsetY: 0 };
 
         o.fSuper = fsuper;
         o.iOffsetY = if o.fSuper { 32 } else { 0 };

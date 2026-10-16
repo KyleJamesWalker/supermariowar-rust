@@ -31,9 +31,9 @@ pub struct B_ThrowBlock {
 impl_base!(B_ThrowBlock => io_block: IO_Block);
 
 impl B_ThrowBlock {
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, aniSpeed: i16, r#type: ThrowBlockType) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, aniSpeed: i16, r#type: ThrowBlockType) -> Self {
         let mut b = B_ThrowBlock {
-            io_block: IO_Block::new(nspr, pos),
+            io_block: IO_Block::new(g, nspr, pos),
             iNumSprites: 0,
             animationSpeed: 0,
             drawFrame: 0,
@@ -53,8 +53,9 @@ impl B_ThrowBlock {
     }
 
     pub fn give_block_to_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) {
+        let mut rm = g.rm;
         unsafe {
-            let mut block = Ptr::new_box(CO_ThrowBlock::new(Ptr::from_mut(&mut g.rm.spr_blueblock), Vec2s::new(self.ix, self.iy), self.iType));
+            let mut block = Ptr::new_box(CO_ThrowBlock::new(g, Ptr::from_mut(&mut rm.spr_blueblock), Vec2s::new(self.ix, self.iy), self.iType));
             let item: Ptr<dyn MO_CarriedObjectTrait> = Ptr::from_mut(block.get() as &mut dyn MO_CarriedObjectTrait);
             if player.accept_item(item) {
                 self.dead = true;
@@ -78,7 +79,8 @@ impl CObjectTrait for B_ThrowBlock {
     }
 
     fn draw(&mut self, g: &mut Game) {
-        self.spr.draw_src(g, 
+        self.spr.draw_src(
+            g,
             self.ix as i32,
             self.iy as i32,
             &SDL_Rect { x: self.drawFrame as i32, y: (self.iType as i16 * 32) as i32, w: self.iw as i32, h: self.ih as i32 },

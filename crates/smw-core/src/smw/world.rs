@@ -283,7 +283,8 @@ impl WorldPlayer {
     pub fn draw(&self, g: &mut Game, iMapOffsetX: i16, iMapOffsetY: i16) {
         let mut gp = g.ptr();
         unsafe {
-            gp.rm.spr_player[self.iDrawSprite as usize][(self.iAnimationFrame + self.iDrawDirection) as usize].draw_src(g, 
+            gp.rm.spr_player[self.iDrawSprite as usize][(self.iAnimationFrame + self.iDrawDirection) as usize].draw_src(
+                g,
                 self.pos.x as i32 + iMapOffsetX as i32,
                 self.pos.y as i32 + iMapOffsetY as i32,
                 &SDL_Rect { x: 0, y: 0, w: 32, h: 32 },
@@ -387,7 +388,8 @@ impl WorldVehicle {
         self.iBoundary = boundary;
     }
 
-    pub fn r#move(&mut self) {
+    pub fn r#move(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         self.iNumMoves = (RANDOM_INT(self.iMaxMoves as i32 - self.iMinMoves as i32 + 1) + self.iMinMoves as i32) as i16;
 
         if self.iNumMoves > 0 {
@@ -395,7 +397,7 @@ impl WorldVehicle {
             self.iPaceTimer = 0;
         }
 
-        self.set_next_dest(game().get());
+        self.set_next_dest(gp.get());
     }
 
     fn set_next_dest(&mut self, g: &mut Game) {
@@ -1481,11 +1483,11 @@ impl WorldMap {
         -1
     }
 
-    pub fn move_vehicles(&mut self) {
+    pub fn move_vehicles(&mut self, g: &mut Game) {
         for i in 0..self.vehicles.len() {
             if self.vehicles[i].fEnabled {
                 let vehicle: *mut WorldVehicle = &mut self.vehicles[i];
-                unsafe { (*vehicle).r#move() };
+                unsafe { (*vehicle).r#move(g) };
             }
         }
     }

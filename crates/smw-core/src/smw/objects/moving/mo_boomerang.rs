@@ -41,6 +41,7 @@ impl MO_Boomerang {
     pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, moveToRight: bool, aniSpeed: i16, iGlobalID: i16, teamID: i16, iColorID: i16) -> Self {
         let mut o = MO_Boomerang {
             io_moving_object: IO_MovingObject::new(
+                g,
                 nspr,
                 pos,
                 iNumSpr,
@@ -111,9 +112,10 @@ impl MO_Boomerang {
 
     // Call to kill boomerang when it is not caught by player
     fn forcedead(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             removeifprojectile(g, self.as_mo_ptr(), false, true);
-            g.rm.sfx_boomerang.stop();
+            gp.rm.sfx_boomerang.stop(g);
 
             if g.game_values.boomeranglimit == 0 {
                 return;
@@ -369,7 +371,8 @@ impl CObjectTrait for MO_Boomerang {
 
             if g.game_values.spotlights {
                 if self.sSpotlight.is_null() {
-                    self.sSpotlight = gp.spotlightManager.add_spotlight(g, 
+                    self.sSpotlight = gp.spotlightManager.add_spotlight(
+                        g,
                         (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16,
                         (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16,
                         3,
@@ -406,7 +409,8 @@ impl CObjectTrait for MO_Boomerang {
     }
 
     fn draw(&mut self, g: &mut Game) {
-        self.spr.draw_src(g, 
+        self.spr.draw_src(
+            g,
             self.ix as i32 - self.collisionOffsetX as i32,
             self.iy as i32 - self.collisionOffsetY as i32,
             &SDL_Rect {

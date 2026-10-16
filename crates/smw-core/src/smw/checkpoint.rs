@@ -227,9 +227,10 @@ fn data_path(g: &mut Game, name: &str) -> String {
 }
 
 /// Matches a checkpoint cannot start: a World's bonus house, which no replay covers yet.
-pub fn unsupported_reason() -> Option<&'static str> {
+pub fn unsupported_reason(g: &mut Game) -> Option<&'static str> {
+    let mut gp = g.ptr();
     unsafe {
-        let g = game();
+        let g = gp;
         let stop = g.game_values.tourstops.get(g.game_values.tourstopcurrent);
         if g.game_values.matchtype == MatchType::World && stop.is_some_and(|s| s.iStageType == 1) {
             return Some("bonus_house");
@@ -240,7 +241,8 @@ pub fn unsupported_reason() -> Option<&'static str> {
 
 /// The checkpoint at the current point of `MenuState::enter_gameplay`.
 pub fn capture(g: &mut Game) -> Vec<u8> {
-    let online = unsafe { crate::game::game().netplay.active };
+    let mut gp = g.ptr();
+    let online = unsafe { gp.netplay.active };
     let mut s = Snap::saver();
     s.put(MAGIC);
     s.put(&[if online { ONLINE_VERSION } else { VERSION }]);
@@ -416,7 +418,8 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
         map = local_path(&map);
         if s.load {
             g.maplist.set_current(map_index);
-            gp.get().g_map.load_map(&data_path(g, &map), crate::common::map::read_type_full);
+            let path = data_path(g, &map);
+            gp.g_map.load_map(g, &path, crate::common::map::read_type_full);
             note_match_map(g, &map);
             crate::common::global::load_current_map_background(g);
         }
@@ -445,7 +448,7 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
             s.io(&mut paused);
             if s.load {
                 if (*t).name() != name {
-                    *t = if name.is_empty() { sfxMusic::new() } else { sfxMusic::from_file(Path::new(&data_path(g, &name))).unwrap_or_else(|e| std::panic::panic_any(e)) };
+                    *t = if name.is_empty() { sfxMusic::new() } else { sfxMusic::from_file(gp.get(), Path::new(&data_path(g, &name))).unwrap_or_else(|e| std::panic::panic_any(e)) };
                 }
                 (*t).set_paused(paused);
             }
@@ -459,7 +462,7 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
             s.io(&mut last_start);
             if s.load {
                 if (*snd).name() != name {
-                    *snd = if name.is_empty() { sfxSound::new() } else { sfxSound::from_file(Path::new(&data_path(g, &name))).unwrap_or_else(|e| std::panic::panic_any(e)) };
+                    *snd = if name.is_empty() { sfxSound::new() } else { sfxSound::from_file(gp.get(), Path::new(&data_path(g, &name))).unwrap_or_else(|e| std::panic::panic_any(e)) };
                 }
                 (*snd).set_state(channels, last_start);
             }
@@ -467,7 +470,7 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
 
         // The virtual mixer, with sounds and tracks as indices into the lists above.
         let index_of = |list: &[*mut sfxSound], p: *mut sfxSound| list.iter().position(|&x| x == p).map(|i| i as i32).unwrap_or(-1);
-        let (channels, music, mut resume) = mixer::save(&sounds, &tracks);
+        let (channels, music, mut resume) = mixer::save(g, &sounds, &tracks);
         let mut slots: Vec<(i32, i32, bool, u32)> = channels.iter().map(|c| (index_of(&sounds, c.sound), index_of(&sounds, c.owner), c.forever, c.end)).collect();
         let mut track = tracks.iter().position(|&t| t == music.track).map(|i| i as i32).unwrap_or(-1);
         let (mut forever, mut paused, mut end, mut remaining) = (music.forever, music.paused, music.end, music.remaining);
@@ -482,7 +485,7 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
             let at = |i: i32| if i >= 0 && (i as usize) < sounds.len() { sounds[i as usize] } else { std::ptr::null_mut() };
             let channels: Vec<mixer::Channel> = slots.iter().map(|&(sound, owner, forever, end)| mixer::Channel { sound: at(sound), owner: at(owner), forever, end }).collect();
             let track = if track >= 0 && (track as usize) < tracks.len() { tracks[track as usize] } else { std::ptr::null_mut() };
-            mixer::restore(&channels, &mixer::Music { track, forever, paused, end, remaining }, resume);
+            mixer::restore(g, &channels, &mixer::Music { track, forever, paused, end, remaining }, resume);
         }
 
         let rng = crate::common::random_number_generator::RandomNumberGenerator::generator();

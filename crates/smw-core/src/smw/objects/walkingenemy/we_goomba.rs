@@ -25,9 +25,10 @@ pub struct MO_Goomba {
 impl_base!(MO_Goomba => mo_walking_enemy: MO_WalkingEnemy);
 
 impl MO_Goomba {
-    pub fn new(nspr: Ptr<gfxSprite>, moveToRight: bool, fBouncing: bool) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, moveToRight: bool, fBouncing: bool) -> Self {
+        let mut gp = g.ptr();
         let mut o = MO_Goomba {
-            mo_walking_enemy: MO_WalkingEnemy::new(game().get(), nspr, 2, 8, 30, 20, 1, 11, 0, if moveToRight { 0 } else { 32 }, 32, 32, moveToRight, true, fBouncing, true),
+            mo_walking_enemy: MO_WalkingEnemy::new(gp.get(), nspr, 2, 8, 30, 20, 1, 11, 0, if moveToRight { 0 } else { 32 }, 32, 32, moveToRight, true, fBouncing, true),
         };
         o.movingObjectType = movingobject_goomba;
         o.iSpawnIconOffset = 64;

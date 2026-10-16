@@ -123,7 +123,7 @@ impl_base!(MO_SledgeBrother => io_moving_object: IO_MovingObject);
 impl MO_SledgeBrother {
     pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, platformY: i16, r#type: Boss) -> Self {
         let mut o = MO_SledgeBrother {
-            io_moving_object: IO_MovingObject::new(nspr, Vec2s::zero(), 8, 0, 32, 56, 8, 8, -1, -1, -1, -1),
+            io_moving_object: IO_MovingObject::new(g, nspr, Vec2s::zero(), 8, 0, 32, 56, 8, 8, -1, -1, -1, -1),
             iType: 0,
             iActionState: 0,
             iDestLocationX: [0; 5],
@@ -315,6 +315,8 @@ impl MO_SledgeBrother {
     }
 
     fn throwprojectile(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        let mut rm = g.rm;
         self.set_last_action(1);
 
         self.throwing_timer = 20;
@@ -326,8 +328,9 @@ impl MO_SledgeBrother {
             if self.iType == 0 {
                 let fHammerVelX: f32 = (RANDOM_INT(9) + 2) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 6.0f32 };
                 let pos = Vec2s::new(((if self.face_right { ix + 32 } else { ix }) - self.collisionOffsetX as i32) as i16, self.iy);
-                g.objectcontainer[2].add(Ptr::new_box(MO_SledgeHammer::new(
-                    Ptr::from_mut(&mut g.rm.spr_sledgehammer),
+                gp.objectcontainer[2].add(Ptr::new_box(MO_SledgeHammer::new(
+                    g,
+                    Ptr::from_mut(&mut rm.spr_sledgehammer),
                     pos,
                     8,
                     Vec2f::new(fHammerVelX, -HAMMERTHROW),
@@ -342,8 +345,9 @@ impl MO_SledgeBrother {
                 let fBombVelY: f32 = -(RANDOM_INT(13) as f32) / 2.0f32 - 6.0f32;
                 let pos = Vec2s::new((if self.face_right { ix + iw - 32 } else { ix - 20 }) as i16, iy as i16);
                 let timetolive = (RANDOM_INT(60) + 120) as i16;
-                g.objectcontainer[2].add(Ptr::new_box(CO_Bomb::new(
-                    Ptr::from_mut(&mut g.rm.spr_bomb),
+                gp.objectcontainer[2].add(Ptr::new_box(CO_Bomb::new(
+                    g,
+                    Ptr::from_mut(&mut rm.spr_bomb),
                     pos,
                     Vec2f::new(fBombVelX, fBombVelY),
                     4,
@@ -356,8 +360,9 @@ impl MO_SledgeBrother {
                 let fFireVelX: f32 = (RANDOM_INT(9) + 6) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 10.0f32 };
                 let fFireVelY: f32 = RANDOM_INT(17) as f32 / 2.0f32 - 4.0f32;
                 let pos = Vec2s::new((if self.face_right { ix + iw - 32 } else { ix - 16 }) as i16, iy as i16);
-                g.objectcontainer[2].add(Ptr::new_box(MO_SuperFireball::new(
-                    Ptr::from_mut(&mut g.rm.spr_superfireball),
+                gp.objectcontainer[2].add(Ptr::new_box(MO_SuperFireball::new(
+                    g,
+                    Ptr::from_mut(&mut rm.spr_superfireball),
                     pos,
                     4,
                     Vec2f::new(fFireVelX, fFireVelY),
@@ -373,9 +378,10 @@ impl MO_SledgeBrother {
     }
 
     fn taunt(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         self.set_last_action(2);
 
-        unsafe { g.rm.sfx_boomerang.play_loop(3) };
+        unsafe { gp.rm.sfx_boomerang.play_loop(g, 3) };
         self.taunt_timer = 60;
         self.iActionState = 5;
 
@@ -424,7 +430,8 @@ impl CObjectTrait for MO_SledgeBrother {
 
     fn draw(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        self.spr.draw_src(g, 
+        self.spr.draw_src(
+            g,
             self.ix as i32 - self.collisionOffsetX as i32,
             self.iy as i32 - self.collisionOffsetY as i32,
             &SDL_Rect {
@@ -438,7 +445,8 @@ impl CObjectTrait for MO_SledgeBrother {
         if self.hit_timer != 0 {
             for iHeart in 0..self.hit_points {
                 unsafe {
-                    gp.rm.spr_scorehearts.draw_src(g, 
+                    gp.rm.spr_scorehearts.draw_src(
+                        g,
                         self.ix as i32 - self.collisionOffsetX as i32 + iHeart as i32 * 8,
                         self.iy as i32 - self.collisionOffsetY as i32 - 18,
                         &SDL_Rect { x: 0, y: 0, w: 16, h: 16 },
@@ -450,6 +458,7 @@ impl CObjectTrait for MO_SledgeBrother {
 
     fn update(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
+        let mut rm = g.rm;
         unsafe {
             if self.iActionState == 0 {
                 if self.hit_timer <= 0 {
@@ -485,7 +494,7 @@ impl CObjectTrait for MO_SledgeBrother {
                         for _iThwomp in 0..numThwomps {
                             let x = RANDOM_INT(591) as i16;
                             let nspeed = 2.0f32 + RANDOM_INT(20) as f32 / 10.0f32;
-                            g.objectcontainer[2].add(Ptr::new_box(OMO_Thwomp::new(Ptr::from_mut(&mut g.rm.spr_thwomp), x, nspeed)));
+                            gp.objectcontainer[2].add(Ptr::new_box(OMO_Thwomp::new(g, Ptr::from_mut(&mut rm.spr_thwomp), x, nspeed)));
                         }
                     } else if self.iType == 2 {
                         // Spawn lots of podobos
@@ -496,8 +505,9 @@ impl CObjectTrait for MO_SledgeBrother {
                         for _iPodobo in 0..numPodobos {
                             let x = RANDOM_INT(608) as i16;
                             let dVelY = -(RANDOM_INT(9) as f32 / 2.0f32) - 9.0f32;
-                            g.objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(
-                                Ptr::from_mut(&mut g.rm.spr_podobo),
+                            gp.objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(
+                                g,
+                                Ptr::from_mut(&mut rm.spr_podobo),
                                 Vec2s::new(x, App::screenHeight as i16),
                                 dVelY,
                                 -1,

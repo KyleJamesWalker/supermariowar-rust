@@ -71,8 +71,9 @@ impl_base!(CO_Shell => mo_carried_object: MO_CarriedObject);
 
 impl CO_Shell {
     pub fn new(g: &mut Game, r#type: ShellType, pos: Vec2s, dieOnMovingPlayerCollision: bool, dieOnHoldingPlayerCollision: bool, dieOnFire: bool, killBouncePlayer: bool) -> Self {
+        let mut rm = g.rm;
         let mut o = CO_Shell {
-            mo_carried_object: MO_CarriedObject::new_anim(unsafe { Ptr::from_mut(&mut g.rm.spr_shell) }, pos, 4, 4, 30, 20, 1, 11, 0, (r#type as i32 * 32) as i16, 32, 32),
+            mo_carried_object: MO_CarriedObject::new_anim(g, unsafe { Ptr::from_mut(&mut rm.spr_shell) }, pos, 4, 4, 30, 20, 1, 11, 0, (r#type as i32 * 32) as i16, 32, 32),
             iShellType: r#type,
             iIgnoreBounceTimer: 0,
             iDestY: 0,

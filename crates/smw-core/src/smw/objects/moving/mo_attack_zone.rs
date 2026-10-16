@@ -30,9 +30,9 @@ pub struct MO_AttackZone {
 impl_base!(MO_AttackZone => io_moving_object: IO_MovingObject);
 
 impl MO_AttackZone {
-    pub fn new(playerId: i16, teamId: i16, pos: Vec2s, size: Vec2s, time: i16, style: KillStyle, dieoncollision: bool) -> Self {
+    pub fn new(g: &mut Game, playerId: i16, teamId: i16, pos: Vec2s, size: Vec2s, time: i16, style: KillStyle, dieoncollision: bool) -> Self {
         let mut o = MO_AttackZone {
-            io_moving_object: IO_MovingObject::new(Ptr::null(), pos, 1, 0, size.x, size.y, 0, 0, -1, -1, -1, -1),
+            io_moving_object: IO_MovingObject::new(g, Ptr::null(), pos, 1, 0, size.x, size.y, 0, 0, -1, -1, -1, -1),
             fDieOnCollision: false,
             iTimer: 0,
             iStyle: KillStyle::Stomp,

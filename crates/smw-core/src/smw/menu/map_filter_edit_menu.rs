@@ -1,5 +1,6 @@
 //! Port of src/smw/menu/MapFilterEditMenu.cpp
 
+use crate::game::Game;
 use crate::common::ui::menu_code::*;
 use crate::common::uicontrol::ctl_ptr;
 use crate::common::uimenu::UI_Menu;
@@ -15,7 +16,8 @@ pub struct UI_MapFilterEditMenu {
 crate::impl_base!(UI_MapFilterEditMenu => ui_menu: UI_Menu);
 
 impl UI_MapFilterEditMenu {
-    pub fn new() -> Box<Self> {
+    pub fn new(g: &mut Game) -> Box<Self> {
+        let mut gp = g.ptr();
         let mut this = Box::<Self>::default();
 
         this.miMapBrowser = Ptr::new_box(MI_MapBrowser::new());
@@ -23,7 +25,7 @@ impl UI_MapFilterEditMenu {
 
         let b = ctl_ptr(this.miMapBrowser);
         this.add_control(b, Ptr::null(), Ptr::null(), Ptr::null(), Ptr::null());
-        this.set_initial_focus(game().get(), b);
+        this.set_initial_focus(gp.get(), b);
         this.set_cancel_code(MENU_CODE_MAP_BROWSER_EXIT);
         this
     }

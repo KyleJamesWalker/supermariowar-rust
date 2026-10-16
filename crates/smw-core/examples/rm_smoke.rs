@@ -22,7 +22,7 @@ fn main() {
 
         gfx_init(game().get(), 640, 480, false);
         game().blitdest = game().screen;
-        sfx_init();
+        sfx_init(game().get());
 
         game().rm = Ptr::new_box(CResourceManager::new());
         game().skinlist = Ptr::new_box(SkinList::new(game().get()));

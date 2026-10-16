@@ -140,9 +140,9 @@ impl GameState for SplashScreenState {
             }
 
             if self.state == 7 {
-                g.rm.menu_font_large.draw_centered(App::screenWidth / 2, (App::screenHeight as f32 * 0.875f32) as i32, "Loading...");
+                gp.rm.menu_font_large.draw_centered(g, App::screenWidth / 2, (App::screenHeight as f32 * 0.875f32) as i32, "Loading...");
             } else if self.state == 8 {
-                g.rm.menu_font_large.draw_centered(App::screenWidth / 2, (App::screenHeight as f32 * 0.875f32) as i32, "Press Any Key To Continue");
+                gp.rm.menu_font_large.draw_centered(g, App::screenWidth / 2, (App::screenHeight as f32 * 0.875f32) as i32, "Press Any Key To Continue");
 
                 g.eyecandy[2].clean_dead_objects();
                 gp.eyecandy[2].update(g);
@@ -171,7 +171,7 @@ pub fn load_game_data(g: &mut Game) {
         let mut gp = g.ptr();
     unsafe {
         // load initial coin sound
-        g.rm.backgroundmusic[2] = sfxMusic::from_file(g.musiclist.music(1)).unwrap_or_else(|e| std::panic::panic_any(e));
+        g.rm.backgroundmusic[2] = sfxMusic::from_file(g, gp.musiclist.music(1)).unwrap_or_else(|e| std::panic::panic_any(e));
 
         gp.rm.load_all_graphics(g);
         gp.rm.load_game_sounds(g);

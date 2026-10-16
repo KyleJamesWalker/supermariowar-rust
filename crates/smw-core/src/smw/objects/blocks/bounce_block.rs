@@ -23,8 +23,8 @@ pub struct B_BounceBlock {
 impl_base!(B_BounceBlock => io_block: IO_Block);
 
 impl B_BounceBlock {
-    pub fn new(nspr1: Ptr<gfxSprite>, pos: Vec2s, fHidden: bool) -> Self {
-        let mut b = B_BounceBlock { io_block: IO_Block::new(nspr1, pos) };
+    pub fn new(g: &mut Game, nspr1: Ptr<gfxSprite>, pos: Vec2s, fHidden: bool) -> Self {
+        let mut b = B_BounceBlock { io_block: IO_Block::new(g, nspr1, pos) };
         b.hidden = fHidden;
         b.ishiddentype = fHidden;
         b

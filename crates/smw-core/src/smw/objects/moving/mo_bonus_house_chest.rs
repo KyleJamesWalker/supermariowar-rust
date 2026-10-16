@@ -27,9 +27,9 @@ pub struct MO_BonusHouseChest {
 impl_base!(MO_BonusHouseChest => io_moving_object: IO_MovingObject);
 
 impl MO_BonusHouseChest {
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s, iBonusItem: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, iBonusItem: i16) -> Self {
         let mut o = MO_BonusHouseChest {
-            io_moving_object: IO_MovingObject::new(nspr, pos, 1, 0, 64, 64, 0, 0, -1, -1, -1, -1),
+            io_moving_object: IO_MovingObject::new(g, nspr, pos, 1, 0, 64, 64, 0, 0, -1, -1, -1, -1),
             bonusitem: 0,
             drawbonusitemy: 0,
             drawbonusitemtimer: 0,

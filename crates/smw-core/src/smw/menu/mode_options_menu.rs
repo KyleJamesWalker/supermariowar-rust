@@ -1764,11 +1764,11 @@ impl UI_ModeOptionsMenu {
         }
     }
 
-    pub fn refresh(&mut self) {
+    pub fn refresh(&mut self, g: &mut Game) {
         for iMode in 0..GAMEMODE_LAST as i16 {
-            self.mModeSettingsMenu[iMode as usize].refresh();
+            self.mModeSettingsMenu[iMode as usize].refresh(g);
         }
 
-        self.mBossSettingsMenu.refresh();
+        self.mBossSettingsMenu.refresh(g);
     }
 }
