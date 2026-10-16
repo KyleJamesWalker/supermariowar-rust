@@ -1,7 +1,6 @@
 //! Port of src/smw/menu/network/NetRoomMenu.cpp
 
 use crate::game::Game;
-use crate::game::game;
 
 use crate::common::path::{file_exists, get_home_directory};
 use crate::common::ui::menu_code::*;
@@ -84,7 +83,10 @@ impl UI_NetRoomMenu {
                 16,
                 72 + p * 60,
                 p,
-                Box::new(|| unsafe { game().get().netplay.client.send_skin_change(game().get()) }),
+                Box::new(|g: &mut Game| {
+                    let mut gp = g.ptr();
+                    gp.netplay.client.send_skin_change(g)
+                }),
             ));
             let sel = ctl_ptr(this.miSkinSelector[p as usize]);
             this.add_control(sel, field, start, null, null);

@@ -27,12 +27,12 @@ pub struct MI_NetRoomTeamSelect {
     miModifyImage: Box<MI_Image>,
     miHoverImage: Box<MI_Image>,
 
-    onChangeAccepted: Box<dyn FnMut()>,
+    onChangeAccepted: Box<dyn FnMut(&mut Game)>,
 }
 crate::impl_base!(MI_NetRoomTeamSelect => ui_control: UI_Control);
 
 impl MI_NetRoomTeamSelect {
-    pub fn new(g: &mut Game, x: i16, y: i16, player_id: i16, on_change_accepted: Box<dyn FnMut()>) -> Self {
+    pub fn new(g: &mut Game, x: i16, y: i16, player_id: i16, on_change_accepted: Box<dyn FnMut(&mut Game)>) -> Self {
         unsafe {
             let sel = Ptr::from_mut(&mut g.rm.menu_player_select);
             let mut miHoverImage = Box::new(MI_Image::new(sel, x - 6, y - 6, 32 + 18, 128 + 18, 44, 44, 1, 1, 1));
@@ -122,7 +122,7 @@ impl UI_ControlTrait for MI_NetRoomTeamSelect {
 
     fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         if playerInput.outputControls[0].menu_select().fPressed || playerInput.outputControls[0].menu_cancel().fPressed {
-            (self.onChangeAccepted)();
+            (self.onChangeAccepted)(g);
             self.fModifying = false;
             return MENU_CODE_UNSELECT_ITEM;
         }

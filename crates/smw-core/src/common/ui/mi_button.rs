@@ -31,7 +31,7 @@ pub struct MI_Button {
     pub iAdjustmentY: i16,
     pub iHalfWidth: i16,
 
-    pub onPressFn: Box<dyn FnMut()>,
+    pub onPressFn: Box<dyn FnMut(&mut Game)>,
 }
 crate::impl_base!(MI_Button => ui_control: UI_Control);
 
@@ -55,7 +55,7 @@ impl MI_Button {
             iTextW,
             iAdjustmentY: if width > 256 { 0 } else { 128 },
             iHalfWidth: width / 2,
-            onPressFn: Box::new(|| {}), // do nothing
+            onPressFn: Box::new(|_| {}), // do nothing
         }
     }
 
@@ -81,7 +81,7 @@ impl MI_Button {
         self.iImageH = h;
     }
 
-    pub fn set_on_press(&mut self, func: Box<dyn FnMut()>) {
+    pub fn set_on_press(&mut self, func: Box<dyn FnMut(&mut Game)>) {
         self.onPressFn = func;
     }
 }
@@ -94,13 +94,13 @@ impl UI_ControlTrait for MI_Button {
             return MENU_CODE_UNSELECT_ITEM;
         }
 
-        (self.onPressFn)();
+        (self.onPressFn)(g);
         self.menuCode
     }
 
     fn send_input(&mut self, g: &mut Game, _playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         //If input is being sent, that means the button is selected i.e. clicked
-        (self.onPressFn)();
+        (self.onPressFn)(g);
         self.menuCode
     }
 
