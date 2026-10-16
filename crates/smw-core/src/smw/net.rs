@@ -326,7 +326,7 @@ pub fn waiting_to_start(g: &mut Game) -> bool {
             g.netplay.start_waited_since = now.max(1);
             if !g.netplay.theHostIsMe {
                 let peer = g.netplay.client.foreign_gamehost;
-                g.netplay.client.send_to(peer, MessageHeader::new(NET_P2G_LOADED).as_bytes(), false);
+                g.netplay.client.send_to(peer, MessageHeader::new(NET_P2G_LOADED).as_bytes());
             }
         }
         gp.netplay.client.update(g);
@@ -820,7 +820,7 @@ impl NetClient {
                 self.set_as_last_sent_message(NET_P2G_SYNC_OK);
             } else {
                 let respond_pkg = gpkgs::SyncOK::new();
-                self.send_message_to_game_host_reliable(respond_pkg.as_bytes());
+                self.send_message_to_game_host(respond_pkg.as_bytes());
             }
         }
     }
@@ -844,7 +844,7 @@ impl NetClient {
 
                 self.set_as_last_received_message(pkg.header.packageType);
             } else {
-                self.send_message_to_game_host_reliable(pkg.as_bytes());
+                self.send_message_to_game_host(pkg.as_bytes());
             }
 
             g.netplay.gameRunning = false;
@@ -874,7 +874,7 @@ impl NetClient {
 
     pub fn send_powerup_request(&mut self) {
         let pkg = gpkgs::RequestPowerup::new();
-        self.send_message_to_game_host_reliable(pkg.as_bytes());
+        self.send_message_to_game_host(pkg.as_bytes());
     }
 
     pub fn handle_powerup_start(&mut self, g: &mut Game, data: &[u8]) {
@@ -1024,13 +1024,9 @@ impl NetClient {
         }
     }
 
-    /// The C++ swaps the channels: `reliable` sends unreliably and vice versa.
-    fn send_to(&mut self, mut peer: Ptr<dyn NetPeer>, data: &[u8], reliable: bool) -> bool {
-        if reliable {
-            if !peer.send(data) {
-                return false;
-            }
-        } else if !peer.send_reliable(data) {
+    /// Every client message goes reliably: a lost lobby request or start handshake leaves the client waiting forever.
+    fn send_to(&mut self, mut peer: Ptr<dyn NetPeer>, data: &[u8]) -> bool {
+        if !peer.send_reliable(data) {
             return false;
         }
 
@@ -1040,17 +1036,12 @@ impl NetClient {
 
     fn send_message_to_lobby_server(&mut self, data: &[u8]) -> bool {
         let peer = self.foreign_lobbyserver;
-        self.send_to(peer, data, true)
+        self.send_to(peer, data)
     }
 
     fn send_message_to_game_host(&mut self, data: &[u8]) -> bool {
         let peer = self.foreign_gamehost;
-        self.send_to(peer, data, false)
-    }
-
-    fn send_message_to_game_host_reliable(&mut self, data: &[u8]) -> bool {
-        let peer = self.foreign_gamehost;
-        self.send_to(peer, data, true)
+        self.send_to(peer, data)
     }
 
     pub fn set_as_last_sent_message(&mut self, packageType: u8) {
