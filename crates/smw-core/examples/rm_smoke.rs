@@ -9,7 +9,6 @@ use smw::common::gfx::{gfx_init, gfx_loadpalette};
 use smw::common::path::convert_path_pack;
 use smw::common::resource_manager::CResourceManager;
 use smw::common::sfx::sfx_init;
-use smw::common::tileset_manager::CTilesetManager;
 use smw::globals::*;
 use std::path::Path;
 

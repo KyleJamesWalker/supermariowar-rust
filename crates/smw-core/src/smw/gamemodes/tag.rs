@@ -23,7 +23,7 @@ pub struct CGM_Tag {
 impl_base!(CGM_Tag => cgame_mode: CGameMode);
 
 /// The `j`/`k` loop shared by `think` and `playerkilledself`.
-unsafe fn tag_warning_needed(g: &mut Game, goal: i16) -> bool {
+fn tag_warning_needed(g: &mut Game, goal: i16) -> bool {
     let mut countscore: i16 = 0;
     let mut playwarning = false;
     for j in 0..g.score_cnt {
@@ -123,7 +123,7 @@ impl CGameModeTrait for CGM_Tag {
                 return;
             }
 
-            let playwarning = unsafe { tag_warning_needed(g, self.goal) };
+            let playwarning = tag_warning_needed(g, self.goal);
 
             if playwarning && !self.playedwarningsound {
                 self.playwarningsound(g);
@@ -202,7 +202,7 @@ impl CGameModeTrait for CGM_Tag {
                 player.score().adjust_score(g, -5);
             }
 
-            let playwarning = unsafe { tag_warning_needed(g, self.goal) };
+            let playwarning = tag_warning_needed(g, self.goal);
 
             if playwarning && !self.playedwarningsound {
                 self.playwarningsound(g);

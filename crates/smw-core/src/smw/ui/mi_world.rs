@@ -90,7 +90,7 @@ pub struct MI_World {
 crate::impl_base!(MI_World => ui_control: UI_Control);
 
 /// `game_values.teamids[iTeam][iMember]` read as the flat C++ array, where a member index of 3 runs into the next row.
-unsafe fn teamids_flat(g: &mut Game, iTeam: i16, iMember: i16) -> i16 {
+fn teamids_flat(g: &mut Game, iTeam: i16, iMember: i16) -> i16 {
     let idx = iTeam as usize * 3 + iMember as usize;
     if idx < 12 {
         g.game_values.teamids[idx / 3][idx % 3]
@@ -625,7 +625,7 @@ impl MI_World {
 
     /// The movement test shared by the four directions of `SendInput`.
     #[allow(clippy::too_many_arguments)]
-    unsafe fn can_move(&self, g: &mut Game, tile: &WorldMapTile, iDirection: usize, iBridgeType: i16, iDoorCol: i16, iDoorRow: i16, iReturnDir: i16, fVehicleInTile: bool) -> bool {
+    fn can_move(&self, g: &mut Game, tile: &WorldMapTile, iDirection: usize, iBridgeType: i16, iDoorCol: i16, iDoorRow: i16, iReturnDir: i16, fVehicleInTile: bool) -> bool {
         (tile.fConnection[iDirection] || tile.iConnectionType == iBridgeType)
             && !g.g_worldmap.is_door(iDoorCol, iDoorRow)
             && (((tile.iCompleted >= -1 || (tile.iType >= 6 && g.game_values.tourstops[(tile.iType - 6) as usize].iStageType == 1)) && (!fVehicleInTile || self.iSleepTurns > 0))
@@ -944,337 +944,335 @@ impl UI_ControlTrait for MI_World {
     //Also, there is a problem if you put a key into a stage but someone exits before it is collected
     fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         let mut gp = g.ptr();
-        unsafe {
-            //Don't allow any input while vehicles are moving
-            if g.g_worldmap.is_vehicle_moving() {
-                return MENU_CODE_NONE;
+        //Don't allow any input while vehicles are moving
+        if g.g_worldmap.is_vehicle_moving() {
+            return MENU_CODE_NONE;
+        }
+
+        //If the player and a vehicle collided, force the start of that level
+        if self.fForceStageStart {
+            self.iState = -1;
+
+            for iTeam in 0..4 {
+                self.iNumPopups = 0;
+                self.iStateTransition[iTeam] = 0;
+                self.iItemPopupDrawY[iTeam] = 0;
+                self.iPopupFlag[iTeam] = false;
             }
 
-            //If the player and a vehicle collided, force the start of that level
-            if self.fForceStageStart {
-                self.iState = -1;
+            self.fForceStageStart = false;
+            return MENU_CODE_TOUR_STOP_CONTINUE_FORCED;
+        }
 
-                for iTeam in 0..4 {
-                    self.iNumPopups = 0;
-                    self.iStateTransition[iTeam] = 0;
-                    self.iItemPopupDrawY[iTeam] = 0;
-                    self.iPopupFlag[iTeam] = false;
+        let mut iPlayerState = g.g_worldmap.get_player_state();
+
+        //Handle AI movement
+        let mut fNeedAiControl = false;
+        if self.iState == -1 && iPlayerState == 0 && self.iNumPopups == 0 && !self.fNoInterestingMoves {
+            fNeedAiControl = true;
+            let ct = self.iControllingTeam as usize;
+            for iTeamMember in 0..g.game_values.teamcounts[ct] {
+                if g.game_values.playercontrol[g.game_values.teamids[ct][iTeamMember as usize] as usize] == 1 {
+                    fNeedAiControl = false;
+                    break;
                 }
-
-                self.fForceStageStart = false;
-                return MENU_CODE_TOUR_STOP_CONTINUE_FORCED;
             }
 
-            let mut iPlayerState = g.g_worldmap.get_player_state();
+            if fNeedAiControl {
+                if self.iPressSelectTimer == 0 {
+                    let iPlayerCurrentTile = g.g_worldmap.get_player_current_tile();
+                    let iNextMove = g.g_worldmap.get_next_interesting_move(iPlayerCurrentTile.x, iPlayerCurrentTile.y);
 
-            //Handle AI movement
-            let mut fNeedAiControl = false;
-            if self.iState == -1 && iPlayerState == 0 && self.iNumPopups == 0 && !self.fNoInterestingMoves {
-                fNeedAiControl = true;
-                let ct = self.iControllingTeam as usize;
-                for iTeamMember in 0..g.game_values.teamcounts[ct] {
-                    if g.game_values.playercontrol[g.game_values.teamids[ct][iTeamMember as usize] as usize] == 1 {
-                        fNeedAiControl = false;
-                        break;
+                    //Clear out all input from cpu controlled team
+                    let mut playerKeys: Ptr<COutputControl>;
+                    let mut iTeamMember: i16 = 0;
+                    while iTeamMember < g.game_values.teamcounts[ct] {
+                        playerKeys = Ptr::from_mut(&mut gp.get().game_values.playerInput.outputControls[gp.get().game_values.teamids[ct][iTeamMember as usize] as usize]);
+
+                        playerKeys.menu_up_mut().fPressed = false;
+                        playerKeys.menu_down_mut().fPressed = false;
+                        playerKeys.menu_left_mut().fPressed = false;
+                        playerKeys.menu_right_mut().fPressed = false;
+                        playerKeys.menu_select_mut().fPressed = false;
+                        playerKeys.menu_random_mut().fPressed = false;
+
+                        if self.iControllingTeam != 0 {
+                            playerKeys.menu_cancel_mut().fPressed = false;
+                        }
+
+                        iTeamMember += 1;
                     }
-                }
 
-                if fNeedAiControl {
-                    if self.iPressSelectTimer == 0 {
-                        let iPlayerCurrentTile = g.g_worldmap.get_player_current_tile();
-                        let iNextMove = g.g_worldmap.get_next_interesting_move(iPlayerCurrentTile.x, iPlayerCurrentTile.y);
+                    playerKeys = Ptr::from_mut(&mut gp.get().game_values.playerInput.outputControls[gp.get().game_values.teamids[ct][0] as usize]);
 
-                        //Clear out all input from cpu controlled team
-                        let mut playerKeys: Ptr<COutputControl>;
-                        let mut iTeamMember: i16 = 0;
-                        while iTeamMember < g.game_values.teamcounts[ct] {
-                            playerKeys = Ptr::from_mut(&mut gp.get().game_values.playerInput.outputControls[gp.get().game_values.teamids[ct][iTeamMember as usize] as usize]);
+                    //If there are no AI moves to make
+                    if iNextMove == -1 {
+                        let mut fUsedItem = false;
 
-                            playerKeys.menu_up_mut().fPressed = false;
-                            playerKeys.menu_down_mut().fPressed = false;
-                            playerKeys.menu_left_mut().fPressed = false;
-                            playerKeys.menu_right_mut().fPressed = false;
-                            playerKeys.menu_select_mut().fPressed = false;
-                            playerKeys.menu_random_mut().fPressed = false;
+                        //See if we are touching a door
+                        let mut fDoor: [bool; 4] = [false, false, false, false];
+                        g.g_worldmap.is_touching_door(iPlayerCurrentTile.x, iPlayerCurrentTile.y, &mut fDoor);
 
-                            if self.iControllingTeam != 0 {
-                                playerKeys.menu_cancel_mut().fPressed = false;
-                            }
+                        //See if we can use a key to keep going
+                        let mut iPowerup: i16 = 0;
+                        while iPowerup < g.game_values.worldpowerupcount[self.iControllingTeam as usize] {
+                            let iType = g.game_values.worldpowerups[self.iControllingTeam as usize][iPowerup as usize] as i32;
 
-                            iTeamMember += 1;
-                        }
-
-                        playerKeys = Ptr::from_mut(&mut gp.get().game_values.playerInput.outputControls[gp.get().game_values.teamids[ct][0] as usize]);
-
-                        //If there are no AI moves to make
-                        if iNextMove == -1 {
-                            let mut fUsedItem = false;
-
-                            //See if we are touching a door
-                            let mut fDoor: [bool; 4] = [false, false, false, false];
-                            g.g_worldmap.is_touching_door(iPlayerCurrentTile.x, iPlayerCurrentTile.y, &mut fDoor);
-
-                            //See if we can use a key to keep going
-                            let mut iPowerup: i16 = 0;
-                            while iPowerup < g.game_values.worldpowerupcount[self.iControllingTeam as usize] {
-                                let iType = g.game_values.worldpowerups[self.iControllingTeam as usize][iPowerup as usize] as i32;
-
-                                if iType >= NUM_POWERUPS + 5 && iType <= NUM_POWERUPS + 8 {
-                                    //Door Keys
-                                    let iKeyType = iType - NUM_POWERUPS - 5;
-                                    if fDoor[iKeyType as usize] {
-                                        // iTeamMember is the member count left by the loop above, as in the C++.
-                                        let iPlayer = teamids_flat(g, self.iControllingTeam, iTeamMember);
-                                        fUsedItem = self.use_powerup(g, iPlayer, self.iControllingTeam, iPowerup, false);
-                                    }
+                            if iType >= NUM_POWERUPS + 5 && iType <= NUM_POWERUPS + 8 {
+                                //Door Keys
+                                let iKeyType = iType - NUM_POWERUPS - 5;
+                                if fDoor[iKeyType as usize] {
+                                    // iTeamMember is the member count left by the loop above, as in the C++.
+                                    let iPlayer = teamids_flat(g, self.iControllingTeam, iTeamMember);
+                                    fUsedItem = self.use_powerup(g, iPlayer, self.iControllingTeam, iPowerup, false);
                                 }
-                                iPowerup += 1;
                             }
+                            iPowerup += 1;
+                        }
 
-                            //if not, flag that there are no moves to make
-                            self.fNoInterestingMoves = !fUsedItem;
-                        }
-                        if iNextMove == 0 {
-                            playerKeys.menu_up_mut().fPressed = true;
-                        } else if iNextMove == 1 {
-                            playerKeys.menu_down_mut().fPressed = true;
-                        } else if iNextMove == 2 {
-                            playerKeys.menu_left_mut().fPressed = true;
-                        } else if iNextMove == 3 {
-                            playerKeys.menu_right_mut().fPressed = true;
-                        } else if iNextMove == 4 {
-                            self.pressSelectKeys = playerKeys;
-                            self.iPressSelectTimer = 60;
-                        }
-                    } else {
-                        self.iPressSelectTimer -= 1;
-                        if self.iPressSelectTimer <= 0 {
-                            self.iPressSelectTimer = 0;
-                            let mut keys = self.pressSelectKeys;
-                            keys.menu_select_mut().fPressed = true;
-                        }
+                        //if not, flag that there are no moves to make
+                        self.fNoInterestingMoves = !fUsedItem;
+                    }
+                    if iNextMove == 0 {
+                        playerKeys.menu_up_mut().fPressed = true;
+                    } else if iNextMove == 1 {
+                        playerKeys.menu_down_mut().fPressed = true;
+                    } else if iNextMove == 2 {
+                        playerKeys.menu_left_mut().fPressed = true;
+                    } else if iNextMove == 3 {
+                        playerKeys.menu_right_mut().fPressed = true;
+                    } else if iNextMove == 4 {
+                        self.pressSelectKeys = playerKeys;
+                        self.iPressSelectTimer = 60;
                     }
                 } else {
-                    self.iPressSelectTimer = 0;
+                    self.iPressSelectTimer -= 1;
+                    if self.iPressSelectTimer <= 0 {
+                        self.iPressSelectTimer = 0;
+                        let mut keys = self.pressSelectKeys;
+                        keys.menu_select_mut().fPressed = true;
+                    }
                 }
+            } else {
+                self.iPressSelectTimer = 0;
             }
+        }
 
-            for iPlayer in 0..4i16 {
-                let p = iPlayer as usize;
-                let playerKeys: Ptr<COutputControl> = Ptr::from_mut(&mut g.game_values.playerInput.outputControls[p]);
+        for iPlayer in 0..4i16 {
+            let p = iPlayer as usize;
+            let playerKeys: Ptr<COutputControl> = Ptr::from_mut(&mut g.game_values.playerInput.outputControls[p]);
 
-                let iPlayerCurrentTile = g.g_worldmap.get_player_current_tile();
+            let iPlayerCurrentTile = g.g_worldmap.get_player_current_tile();
 
-                let iTeamId = lookup_team_id(g, iPlayer);
+            let iTeamId = lookup_team_id(g, iPlayer);
 
-                if self.iState == -1 && self.iNumPopups == 0 && !self.iPopupFlag[0] && !self.iPopupFlag[1] && !self.iPopupFlag[2] && !self.iPopupFlag[3] {
-                    if self.iControllingTeam == lookup_team_id(g, iPlayer) && iPlayerState == 0 && g.game_values.playercontrol[p] > 0 {
-                        //if this player is player or cpu
+            if self.iState == -1 && self.iNumPopups == 0 && !self.iPopupFlag[0] && !self.iPopupFlag[1] && !self.iPopupFlag[2] && !self.iPopupFlag[3] {
+                if self.iControllingTeam == lookup_team_id(g, iPlayer) && iPlayerState == 0 && g.game_values.playercontrol[p] > 0 {
+                    //if this player is player or cpu
+                    let tile: WorldMapTile = *g.g_worldmap.tiles.at(iPlayerCurrentTile.x as usize, iPlayerCurrentTile.y as usize);
+
+                    let mut iTemp: i16 = 0; //Just a temp value so we can call the GetVehicleInPlayerTile method
+                    let fVehicleInTile = g.g_worldmap.get_vehicle_in_player_tile(&mut iTemp) >= 0;
+                    let (cx, cy) = (iPlayerCurrentTile.x, iPlayerCurrentTile.y);
+
+                    if playerKeys.menu_up().fPressed || playerKeys.menu_up().fDown {
+                        //Make sure there is a path connection and that there is no stage or vehicle blocking the way
+                        if self.can_move(g, &tile, 0, 14, cx, cy - 1, 0, fVehicleInTile) {
+                            if self.fUsingCloud && (tile.iCompleted == -2 || fVehicleInTile) && self.iReturnDirection != 0 {
+                                self.use_cloud(g, false);
+                            }
+
+                            g.g_worldmap.move_player(0);
+                            iPlayerState = g.g_worldmap.get_player_state();
+
+                            self.iReturnDirection = 1;
+
+                            if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
+
+                            //Start draw cycle over
+                            self.restart_draw_cycle_if_needed(g);
+                        } else if playerKeys.menu_up().fPressed {
+                            if_sound_on_play(g, &mut gp.rm.sfx_hit);
+                        }
+                    } else if playerKeys.menu_down().fPressed || playerKeys.menu_down().fDown {
+                        if self.can_move(g, &tile, 1, 14, cx, cy + 1, 1, fVehicleInTile) {
+                            if self.fUsingCloud && (tile.iCompleted == -2 || fVehicleInTile) && self.iReturnDirection != 1 {
+                                self.use_cloud(g, false);
+                            }
+
+                            g.g_worldmap.move_player(1);
+                            iPlayerState = g.g_worldmap.get_player_state();
+
+                            self.iReturnDirection = 0;
+
+                            //Start draw cycle over
+                            self.restart_draw_cycle_if_needed(g);
+
+                            if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
+                        } else if playerKeys.menu_down().fPressed {
+                            if_sound_on_play(g, &mut gp.rm.sfx_hit);
+                        }
+                    } else if playerKeys.menu_left().fPressed || playerKeys.menu_left().fDown {
+                        if self.can_move(g, &tile, 2, 12, cx - 1, cy, 2, fVehicleInTile) {
+                            if self.fUsingCloud && (tile.iCompleted == -2 || fVehicleInTile) && self.iReturnDirection != 2 {
+                                self.use_cloud(g, false);
+                            }
+
+                            g.g_worldmap.move_player(2);
+                            iPlayerState = g.g_worldmap.get_player_state();
+
+                            self.iReturnDirection = 3;
+
+                            //Start draw cycle over
+                            self.restart_draw_cycle_if_needed(g);
+
+                            if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
+                        } else {
+                            g.g_worldmap.face_player(1);
+
+                            if playerKeys.menu_left().fPressed {
+                                if_sound_on_play(g, &mut gp.rm.sfx_hit);
+                            }
+                        }
+                    } else if playerKeys.menu_right().fPressed || playerKeys.menu_right().fDown {
+                        if self.can_move(g, &tile, 3, 12, cx + 1, cy, 3, fVehicleInTile) {
+                            if self.fUsingCloud && (tile.iCompleted == -2 || fVehicleInTile) && self.iReturnDirection != 3 {
+                                self.use_cloud(g, false);
+                            }
+
+                            g.g_worldmap.move_player(3);
+                            iPlayerState = g.g_worldmap.get_player_state();
+
+                            self.iReturnDirection = 2;
+
+                            //Start draw cycle over
+                            self.restart_draw_cycle_if_needed(g);
+
+                            if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
+                        } else {
+                            g.g_worldmap.face_player(0);
+
+                            if playerKeys.menu_right().fPressed {
+                                if_sound_on_play(g, &mut gp.rm.sfx_hit);
+                            }
+                        }
+                    } else if playerInput.outputControls[p].menu_select().fPressed {
+                        //Lookup current tile and see if it is a type of tile you can interact with
+                        //If there is a vehicle on this tile, then load it's stage
+                        let iStage = g.g_worldmap.get_vehicle_in_player_tile(&mut self.iVehicleId);
+                        if iStage >= 0 && iStage < g.g_worldmap.iNumStages {
+                            return self.init_game(g, iStage, iPlayer, fNeedAiControl);
+                        }
+
+                        //if it is a stage, then load the stage
                         let tile: WorldMapTile = *g.g_worldmap.tiles.at(iPlayerCurrentTile.x as usize, iPlayerCurrentTile.y as usize);
 
-                        let mut iTemp: i16 = 0; //Just a temp value so we can call the GetVehicleInPlayerTile method
-                        let fVehicleInTile = g.g_worldmap.get_vehicle_in_player_tile(&mut iTemp) >= 0;
-                        let (cx, cy) = (iPlayerCurrentTile.x, iPlayerCurrentTile.y);
-
-                        if playerKeys.menu_up().fPressed || playerKeys.menu_up().fDown {
-                            //Make sure there is a path connection and that there is no stage or vehicle blocking the way
-                            if self.can_move(g, &tile, 0, 14, cx, cy - 1, 0, fVehicleInTile) {
-                                if self.fUsingCloud && (tile.iCompleted == -2 || fVehicleInTile) && self.iReturnDirection != 0 {
-                                    self.use_cloud(g, false);
-                                }
-
-                                g.g_worldmap.move_player(0);
-                                iPlayerState = g.g_worldmap.get_player_state();
-
-                                self.iReturnDirection = 1;
-
-                                if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
-
-                                //Start draw cycle over
-                                self.restart_draw_cycle_if_needed(g);
-                            } else if playerKeys.menu_up().fPressed {
-                                if_sound_on_play(g, &mut gp.rm.sfx_hit);
-                            }
-                        } else if playerKeys.menu_down().fPressed || playerKeys.menu_down().fDown {
-                            if self.can_move(g, &tile, 1, 14, cx, cy + 1, 1, fVehicleInTile) {
-                                if self.fUsingCloud && (tile.iCompleted == -2 || fVehicleInTile) && self.iReturnDirection != 1 {
-                                    self.use_cloud(g, false);
-                                }
-
-                                g.g_worldmap.move_player(1);
-                                iPlayerState = g.g_worldmap.get_player_state();
-
-                                self.iReturnDirection = 0;
-
-                                //Start draw cycle over
-                                self.restart_draw_cycle_if_needed(g);
-
-                                if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
-                            } else if playerKeys.menu_down().fPressed {
-                                if_sound_on_play(g, &mut gp.rm.sfx_hit);
-                            }
-                        } else if playerKeys.menu_left().fPressed || playerKeys.menu_left().fDown {
-                            if self.can_move(g, &tile, 2, 12, cx - 1, cy, 2, fVehicleInTile) {
-                                if self.fUsingCloud && (tile.iCompleted == -2 || fVehicleInTile) && self.iReturnDirection != 2 {
-                                    self.use_cloud(g, false);
-                                }
-
-                                g.g_worldmap.move_player(2);
-                                iPlayerState = g.g_worldmap.get_player_state();
-
-                                self.iReturnDirection = 3;
-
-                                //Start draw cycle over
-                                self.restart_draw_cycle_if_needed(g);
-
-                                if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
-                            } else {
-                                g.g_worldmap.face_player(1);
-
-                                if playerKeys.menu_left().fPressed {
-                                    if_sound_on_play(g, &mut gp.rm.sfx_hit);
-                                }
-                            }
-                        } else if playerKeys.menu_right().fPressed || playerKeys.menu_right().fDown {
-                            if self.can_move(g, &tile, 3, 12, cx + 1, cy, 3, fVehicleInTile) {
-                                if self.fUsingCloud && (tile.iCompleted == -2 || fVehicleInTile) && self.iReturnDirection != 3 {
-                                    self.use_cloud(g, false);
-                                }
-
-                                g.g_worldmap.move_player(3);
-                                iPlayerState = g.g_worldmap.get_player_state();
-
-                                self.iReturnDirection = 2;
-
-                                //Start draw cycle over
-                                self.restart_draw_cycle_if_needed(g);
-
-                                if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
-                            } else {
-                                g.g_worldmap.face_player(0);
-
-                                if playerKeys.menu_right().fPressed {
-                                    if_sound_on_play(g, &mut gp.rm.sfx_hit);
-                                }
-                            }
-                        } else if playerInput.outputControls[p].menu_select().fPressed {
-                            //Lookup current tile and see if it is a type of tile you can interact with
-                            //If there is a vehicle on this tile, then load it's stage
-                            let iStage = g.g_worldmap.get_vehicle_in_player_tile(&mut self.iVehicleId);
-                            if iStage >= 0 && iStage < g.g_worldmap.iNumStages {
-                                return self.init_game(g, iStage, iPlayer, fNeedAiControl);
-                            }
-
-                            //if it is a stage, then load the stage
-                            let tile: WorldMapTile = *g.g_worldmap.tiles.at(iPlayerCurrentTile.x as usize, iPlayerCurrentTile.y as usize);
-
-                            let iType = tile.iType - 6;
-                            if iType >= 0 && iType < g.g_worldmap.iNumStages && tile.iCompleted == -2 {
-                                return self.init_game(g, iType, iPlayer, fNeedAiControl);
-                            }
-
-                            if g.g_worldmap.get_warp_in_player_tile(&mut self.iWarpCol, &mut self.iWarpRow) {
-                                self.iState = 4;
-                                self.iScreenfade = 0;
-                                self.iScreenfadeRate = 8;
-
-                                if_sound_on_play(g, &mut gp.rm.sfx_pipe);
-                            }
+                        let iType = tile.iType - 6;
+                        if iType >= 0 && iType < g.g_worldmap.iNumStages && tile.iCompleted == -2 {
+                            return self.init_game(g, iType, iPlayer, fNeedAiControl);
                         }
-                    }
-                } else if self.state_transition(iTeamId) == 3 {
-                    //not transitioning to or from the item popup menu
-                    let t = iTeamId as usize;
-                    if playerKeys.menu_up().fPressed {
-                        if self.iItemPage[t] > 0 {
-                            self.iItemPage[t] -= 1;
-                            self.iItemCol[t] = 0;
-                            if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
-                        } else {
-                            if_sound_on_play(g, &mut gp.rm.sfx_hit);
-                        }
-                    } else if playerKeys.menu_down().fPressed {
-                        if self.iItemPage[t] < 3 && (self.iItemPage[t] as i32 + 1) * 8 < g.game_values.worldpowerupcount[t] as i32 {
-                            self.iItemPage[t] += 1;
-                            self.iItemCol[t] = 0;
-                            if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
-                        } else {
-                            if_sound_on_play(g, &mut gp.rm.sfx_hit);
-                        }
-                    } else if playerKeys.menu_left().fPressed {
-                        if self.iItemCol[t] > 0 {
-                            self.iItemCol[t] -= 1;
-                            if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
-                        } else if self.iItemCol[t] == 0 && self.iItemPage[t] > 0 {
-                            self.iItemCol[t] = 7;
-                            self.iItemPage[t] -= 1;
-                            if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
-                        } else {
-                            if_sound_on_play(g, &mut gp.rm.sfx_hit);
-                        }
-                    } else if playerKeys.menu_right().fPressed {
-                        if (self.iItemPage[t] as i32 * 8 + self.iItemCol[t] as i32 + 1) < g.game_values.worldpowerupcount[t] as i32 {
-                            if self.iItemCol[t] < 7 {
-                                self.iItemCol[t] += 1;
-                                if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
-                            } else if self.iItemCol[t] == 7 && self.iItemPage[t] < 3 {
-                                self.iItemCol[t] = 0;
-                                self.iItemPage[t] += 1;
-                                if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
-                            } else {
-                                if_sound_on_play(g, &mut gp.rm.sfx_hit);
-                            }
-                        }
-                    } else if playerKeys.menu_select().fPressed {
-                        if g.game_values.worldpowerupcount[t] > 0 {
-                            let iIndex = self.iItemPage[t] * 8 + self.iItemCol[t];
-                            self.use_powerup(g, iPlayer, iTeamId, iIndex, true);
+
+                        if g.g_worldmap.get_warp_in_player_tile(&mut self.iWarpCol, &mut self.iWarpRow) {
+                            self.iState = 4;
+                            self.iScreenfade = 0;
+                            self.iScreenfadeRate = 8;
+
+                            if_sound_on_play(g, &mut gp.rm.sfx_pipe);
                         }
                     }
                 }
-
-                if self.iState == -1 && (self.state_transition(iTeamId) == 0 || self.state_transition(iTeamId) == 3) {
-                    let t = iTeamId as usize;
-                    if playerKeys.menu_cancel().fPressed {
-                        if DEVICE_KEYBOARD != playerInput.inputControls[p].iDevice || iPlayer == 0 {
-                            self.fModifying = false;
-                            return MENU_CODE_BACK_TEAM_SELECT_MENU;
+            } else if self.state_transition(iTeamId) == 3 {
+                //not transitioning to or from the item popup menu
+                let t = iTeamId as usize;
+                if playerKeys.menu_up().fPressed {
+                    if self.iItemPage[t] > 0 {
+                        self.iItemPage[t] -= 1;
+                        self.iItemCol[t] = 0;
+                        if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
+                    } else {
+                        if_sound_on_play(g, &mut gp.rm.sfx_hit);
+                    }
+                } else if playerKeys.menu_down().fPressed {
+                    if self.iItemPage[t] < 3 && (self.iItemPage[t] as i32 + 1) * 8 < g.game_values.worldpowerupcount[t] as i32 {
+                        self.iItemPage[t] += 1;
+                        self.iItemCol[t] = 0;
+                        if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
+                    } else {
+                        if_sound_on_play(g, &mut gp.rm.sfx_hit);
+                    }
+                } else if playerKeys.menu_left().fPressed {
+                    if self.iItemCol[t] > 0 {
+                        self.iItemCol[t] -= 1;
+                        if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
+                    } else if self.iItemCol[t] == 0 && self.iItemPage[t] > 0 {
+                        self.iItemCol[t] = 7;
+                        self.iItemPage[t] -= 1;
+                        if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
+                    } else {
+                        if_sound_on_play(g, &mut gp.rm.sfx_hit);
+                    }
+                } else if playerKeys.menu_right().fPressed {
+                    if (self.iItemPage[t] as i32 * 8 + self.iItemCol[t] as i32 + 1) < g.game_values.worldpowerupcount[t] as i32 {
+                        if self.iItemCol[t] < 7 {
+                            self.iItemCol[t] += 1;
+                            if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
+                        } else if self.iItemCol[t] == 7 && self.iItemPage[t] < 3 {
+                            self.iItemCol[t] = 0;
+                            self.iItemPage[t] += 1;
+                            if_sound_on_play(g, &mut gp.rm.sfx_worldmove);
+                        } else {
+                            if_sound_on_play(g, &mut gp.rm.sfx_hit);
                         }
                     }
-
-                    if (g.game_values.playercontrol[p] == 1 || self.fNoInterestingMoves)
-                        && (self.iPopupFlag[t]
-                            || playerKeys.menu_random().fPressed
-                            || (iPlayer != 0 && playerInput.inputControls[p].iDevice == DEVICE_KEYBOARD && playerKeys.menu_cancel().fPressed))
-                    {
-                        self.iPopupFlag[t] = true;
-
-                        if iPlayerState == 0 && self.iStateTransition[t] == 0 {
-                            self.iPopupFlag[t] = false;
-
-                            self.iPopupOrder[self.iNumPopups as usize] = iTeamId;
-                            self.iPopupOffsets[t] = self.iNumPopups << 6;
-                            self.iNumPopups += 1;
-                            self.iPopupOffsetsCurrent[t] = self.iPopupOffsets[t];
-
-                            self.iStateTransition[t] = 1;
-
-                            self.iItemPage[t] = 0;
-                            self.iItemCol[t] = 0;
-
-                            if_sound_on_play(g, &mut gp.rm.sfx_inventory);
-                        } else if self.iStateTransition[t] == 3 {
-                            self.iPopupFlag[t] = false;
-
-                            self.iStateTransition[t] = 2;
-                            if_sound_on_play(g, &mut gp.rm.sfx_inventory);
-                        }
+                } else if playerKeys.menu_select().fPressed {
+                    if g.game_values.worldpowerupcount[t] > 0 {
+                        let iIndex = self.iItemPage[t] * 8 + self.iItemCol[t];
+                        self.use_powerup(g, iPlayer, iTeamId, iIndex, true);
                     }
                 }
             }
 
-            MENU_CODE_NONE
+            if self.iState == -1 && (self.state_transition(iTeamId) == 0 || self.state_transition(iTeamId) == 3) {
+                let t = iTeamId as usize;
+                if playerKeys.menu_cancel().fPressed {
+                    if DEVICE_KEYBOARD != playerInput.inputControls[p].iDevice || iPlayer == 0 {
+                        self.fModifying = false;
+                        return MENU_CODE_BACK_TEAM_SELECT_MENU;
+                    }
+                }
+
+                if (g.game_values.playercontrol[p] == 1 || self.fNoInterestingMoves)
+                    && (self.iPopupFlag[t]
+                        || playerKeys.menu_random().fPressed
+                        || (iPlayer != 0 && playerInput.inputControls[p].iDevice == DEVICE_KEYBOARD && playerKeys.menu_cancel().fPressed))
+                {
+                    self.iPopupFlag[t] = true;
+
+                    if iPlayerState == 0 && self.iStateTransition[t] == 0 {
+                        self.iPopupFlag[t] = false;
+
+                        self.iPopupOrder[self.iNumPopups as usize] = iTeamId;
+                        self.iPopupOffsets[t] = self.iNumPopups << 6;
+                        self.iNumPopups += 1;
+                        self.iPopupOffsetsCurrent[t] = self.iPopupOffsets[t];
+
+                        self.iStateTransition[t] = 1;
+
+                        self.iItemPage[t] = 0;
+                        self.iItemCol[t] = 0;
+
+                        if_sound_on_play(g, &mut gp.rm.sfx_inventory);
+                    } else if self.iStateTransition[t] == 3 {
+                        self.iPopupFlag[t] = false;
+
+                        self.iStateTransition[t] = 2;
+                        if_sound_on_play(g, &mut gp.rm.sfx_inventory);
+                    }
+                }
+            }
         }
+
+        MENU_CODE_NONE
     }
 
     fn modify(&mut self, g: &mut Game, modify: bool) -> MenuCodeEnum {

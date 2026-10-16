@@ -995,7 +995,7 @@ impl EC_LoopingAnimation {
 impl_eyecandy!(EC_LoopingAnimation);
 
 /// `eyecandy[2].emplace<EC_SingleAnimation>(&rm->spr_fireballexplosion, x, y, 3, 8)`
-unsafe fn emplace_fireball_explosion(g: &mut Game, x: i16, y: i16) {
+fn emplace_fireball_explosion(g: &mut Game, x: i16, y: i16) {
     let spr = Ptr::from_mut(&mut g.rm.spr_fireballexplosion);
     g.eyecandy[2].emplace(EC_SingleAnimation::new(spr, x, y, 3, 8));
 }
@@ -1043,7 +1043,7 @@ impl EC_ExplodingAward {
         self.timer += 1;
         if self.timer > self.ttl {
             self.dead = true;
-            unsafe {
+            {
                 emplace_fireball_explosion(
                     g,
                     (self.x as i16 as i32 + (self.w as i32 >> 1) - 16) as i16,
@@ -1133,7 +1133,7 @@ impl EC_SwirlingAward {
         if self.timer > self.ttl {
             let awardx = (self.x as i32 + (self.radius * cosf(self.angle)) as i16 as i32 + (self.w as i32 >> 1) - 16) as i16;
             let awardy = (self.y as i32 + (self.radius * sinf(self.angle)) as i16 as i32 + (self.h as i32 >> 1) - 16) as i16;
-            unsafe { emplace_fireball_explosion(g, awardx, awardy) };
+            emplace_fireball_explosion(g, awardx, awardy);
 
             self.dead = true;
         }
@@ -1231,7 +1231,7 @@ impl EC_RocketAward {
 
         self.timer += 1;
         if self.timer > self.ttl {
-            unsafe {
+            {
                 emplace_fireball_explosion(
                     g,
                     (self.x as i16 as i32 + (self.w as i32 >> 1) - 16) as i16,
@@ -1322,7 +1322,7 @@ impl EC_FloatingObject {
 
         self.timer += 1;
         if self.timer > self.ttl {
-            unsafe {
+            {
                 emplace_fireball_explosion(
                     g,
                     (self.x as i16 as i32 + (self.w as i32 >> 1) - 16) as i16,

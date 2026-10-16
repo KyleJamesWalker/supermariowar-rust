@@ -10,7 +10,6 @@ use smw::common::game_values::CGameValues;
 use smw::common::gfx::gfx_init;
 use smw::common::input::COutputControl;
 use smw::common::resource_manager::CResourceManager;
-use smw::common::tileset_manager::CTilesetManager;
 use smw::globals::*;
 use smw::smw::main::create_gamemodes;
 use smw::common_netplay::protocol_definitions::{NET_NOTICE_SKIN_CHANGE, NET_RESPONSE_CONNECT_OK};

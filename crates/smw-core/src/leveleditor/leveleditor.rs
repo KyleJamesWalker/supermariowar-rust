@@ -769,7 +769,7 @@ pub fn init_editor_edit(g: &mut Game) {
 }
 
 /// The block-painting branch shared by the button-down and motion handlers of `editor_edit`.
-unsafe fn paint_block(g: &mut Game, iClickX: i16, iClickY: i16) {
+fn paint_block(g: &mut Game, iClickX: i16, iClickY: i16) {
     let mut gp = g.ptr();
     let b = &mut g.g_map.objectdata[iClickX as usize][iClickY as usize];
     b.iType = ed(gp.get()).set_block as i16;
@@ -1441,7 +1441,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
     }
 }
 
-unsafe fn draw_layer_indicator(g: &mut Game) {
+fn draw_layer_indicator(g: &mut Game) {
         let mut gp = g.ptr();
     if ed(gp.get()).view_only_layer {
         gp.rm.spr_backgroundlevel.draw_src(g, 2, 18 + (3 - ed(gp.get()).selected_layer) * 18, &rect(ed(gp.get()).selected_layer * 16, (3 - ed(gp.get()).selected_layer) * 18, 16, 16));
@@ -1451,7 +1451,7 @@ unsafe fn draw_layer_indicator(g: &mut Game) {
 }
 
 /// `strncmp(name, szBackgroundFile, strlen(name))` over the music category names.
-unsafe fn set_music_category_from_background(g: &mut Game) {
+fn set_music_category_from_background(g: &mut Game) {
     for iCategory in 0..MAXMUSICCATEGORY as i16 {
         if g.g_map.szBackgroundFile.as_bytes().starts_with(g_szMusicCategoryNames[iCategory as usize].as_bytes()) {
             g.g_map.musicCategoryID = iCategory;
@@ -1460,7 +1460,7 @@ unsafe fn set_music_category_from_background(g: &mut Game) {
     }
 }
 
-unsafe fn paint_animated_tiles(g: &mut Game, iClickX: i16, iClickY: i16) {
+fn paint_animated_tiles(g: &mut Game, iClickX: i16, iClickY: i16) {
     let mut gp = g.ptr();
     for i in 0..ed(g).set_tile_cols as i16 {
         let iLocalX = (iClickX as i32 + i as i32) as i16;
@@ -1486,7 +1486,7 @@ unsafe fn paint_animated_tiles(g: &mut Game, iClickX: i16, iClickY: i16) {
 }
 
 /// The right-button handlers of `editor_edit`; only the button-down one removes map items.
-unsafe fn erase_at(g: &mut Game, iClickX: i16, iClickY: i16, fButtonDown: bool) {
+fn erase_at(g: &mut Game, iClickX: i16, iClickY: i16, fButtonDown: bool) {
     let mut gp = g.ptr();
     let (x, y) = (iClickX as usize, iClickY as usize);
     if ed(gp.get()).edit_mode == 0 {
@@ -2261,7 +2261,7 @@ fn platform_edit_or_animated_or_tiletype(g: &mut Game) -> bool {
 }
 
 /// The nested `while (editor_x() == EDITOR_X)` loops the platform editor runs for tiles, animation and tile types.
-unsafe fn run_nested_editor(g: &mut Game, f: fn(&mut Game) -> i32, stay: i32) {
+fn run_nested_editor(g: &mut Game, f: fn(&mut Game) -> i32, stay: i32) {
     FPSLimiter::instance(g).frame_start(g);
     while f(g) == stay {
         editor_harness::frame_delay(g, 0);
@@ -2276,382 +2276,314 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     init_editor_platforms(g);
 
-    unsafe {
-        //handle messages
-        while poll_event(g, &mut ed(gp.get()).event) != 0 {
-            let ty = ed(gp.get()).event.type_();
-            let mut fall = false;
+    //handle messages
+    while poll_event(g, &mut ed(gp.get()).event) != 0 {
+        let ty = ed(gp.get()).event.type_();
+        let mut fall = false;
 
-            if ty == SDL_QUIT_EV {
-                return EDITOR_QUIT;
-            }
+        if ty == SDL_QUIT_EV {
+            return EDITOR_QUIT;
+        }
 
-            if ty == SDL_KEYDOWN_EV {
-                let sym = ed(gp.get()).event.key_sym();
-                let ep = ed(gp.get()).iEditPlatform as usize;
-                if sym == SDLK_s {
-                    savecurrentmap(g);
-                } else if sym >= SDLK_1 && sym <= SDLK_9 {
-                    if PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState && sym - SDLK_1 < ed(gp.get()).g_iNumPlatforms as i32 {
-                        ed(gp.get()).iEditPlatform = (sym - SDLK_1) as i16;
+        if ty == SDL_KEYDOWN_EV {
+            let sym = ed(gp.get()).event.key_sym();
+            let ep = ed(gp.get()).iEditPlatform as usize;
+            if sym == SDLK_s {
+                savecurrentmap(g);
+            } else if sym >= SDLK_1 && sym <= SDLK_9 {
+                if PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState && sym - SDLK_1 < ed(gp.get()).g_iNumPlatforms as i32 {
+                    ed(gp.get()).iEditPlatform = (sym - SDLK_1) as i16;
+                    ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_EDIT;
+                } else if (PLATFORM_EDIT_STATE_PATH_TYPE == ed(gp.get()).iPlatformEditState || PLATFORM_EDIT_STATE_CHANGE_PATH_TYPE == ed(gp.get()).iPlatformEditState)
+                    && sym >= SDLK_1
+                    && sym <= SDLK_3
+                {
+                    ed(gp.get()).g_Platforms[ep].iPathType = path_type_from((sym - SDLK_1) as u8);
+
+                    if PLATFORM_EDIT_STATE_PATH_TYPE == ed(gp.get()).iPlatformEditState {
                         ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_EDIT;
-                    } else if (PLATFORM_EDIT_STATE_PATH_TYPE == ed(gp.get()).iPlatformEditState || PLATFORM_EDIT_STATE_CHANGE_PATH_TYPE == ed(gp.get()).iPlatformEditState)
-                        && sym >= SDLK_1
-                        && sym <= SDLK_3
-                    {
-                        ed(gp.get()).g_Platforms[ep].iPathType = path_type_from((sym - SDLK_1) as u8);
+                        set_platform_to_defaults(g, ed(gp.get()).iEditPlatform);
+                    } else {
+                        ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_PATH;
+                    }
+                } else if PLATFORM_EDIT_STATE_MOVE == ed(gp.get()).iPlatformEditState && sym - SDLK_1 < ed(gp.get()).g_iNumPlatforms as i32 {
+                    if ed(gp.get()).iPlatformSwitchState == 1 {
+                        switch_platforms(g, ed(gp.get()).iPlatformSwitchIndex, (sym - SDLK_1) as i16);
 
-                        if PLATFORM_EDIT_STATE_PATH_TYPE == ed(gp.get()).iPlatformEditState {
-                            ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_EDIT;
-                            set_platform_to_defaults(g, ed(gp.get()).iEditPlatform);
-                        } else {
-                            ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_PATH;
+                        ed(gp.get()).iPlatformPreview = -1;
+
+                        ed(gp.get()).iPlatformSwitchState = 0;
+                        ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_SELECT;
+                    } else {
+                        ed(gp.get()).iPlatformSwitchState = 1;
+                        ed(gp.get()).iPlatformSwitchIndex = (sym - SDLK_1) as i16;
+                    }
+                }
+            } else if sym == SDLK_n {
+                if PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState && (ed(gp.get()).g_iNumPlatforms as i32) < MAX_PLATFORMS {
+                    ed(gp.get()).iEditPlatform = ed(gp.get()).g_iNumPlatforms;
+                    ed(gp.get()).g_iNumPlatforms += 1;
+                    editor_platforms_update_layout(g);
+                    ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_PATH_TYPE;
+                }
+            } else if sym == SDLK_m {
+                if PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState {
+                    ed(gp.get()).iPlatformPreview = -1;
+                    ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_MOVE;
+                    ed(gp.get()).iPlatformSwitchState = 0;
+                }
+            } else if sym == SDLK_t {
+                if platform_edit_or_animated_or_tiletype(g) {
+                    run_nested_editor(g, editor_tiles, EDITOR_TILES);
+                    ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_EDIT;
+                } else if PLATFORM_EDIT_STATE_PATH == ed(gp.get()).iPlatformEditState {
+                    ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_CHANGE_PATH_TYPE;
+                }
+            } else if sym == SDLK_a {
+                if platform_edit_or_animated_or_tiletype(g) {
+                    run_nested_editor(g, editor_animation, EDITOR_ANIMATION);
+                    ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_ANIMATED;
+                }
+            } else if sym == SDLK_l {
+                if platform_edit_or_animated_or_tiletype(g) {
+                    run_nested_editor(g, editor_tiletype, EDITOR_TILETYPE);
+                    ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_TILETYPE;
+                }
+            } else if sym == SDLK_y {
+                //Change the draw layer
+                if platform_edit_or_animated_or_tiletype(g) {
+                    ed(gp.get()).g_Platforms[ep].iDrawLayer += 1;
+                    if ed(gp.get()).g_Platforms[ep].iDrawLayer > 4 {
+                        ed(gp.get()).g_Platforms[ep].iDrawLayer = 0;
+                    }
+                }
+            } else if sym == SDLK_c {
+                if PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState {
+                    ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_TEST;
+                    insert_platforms_into_map(g);
+                    gp.g_map.reset_platforms(g);
+                }
+            } else if sym == SDLK_DELETE {
+                if platform_edit_or_animated_or_tiletype(g) {
+                    //Copy platforms into empty spot
+                    let mut iPlatform = ed(gp.get()).iEditPlatform as usize;
+                    while (iPlatform as i32) < ed(gp.get()).g_iNumPlatforms as i32 - 1 {
+                        for iCol in 0..MW {
+                            for iRow in 0..MH {
+                                ed(gp.get()).g_Platforms[iPlatform].tiles[iCol * MH + iRow] = ed(gp.get()).g_Platforms[iPlatform + 1].tiles[iCol * MH + iRow];
+                                ed(gp.get()).g_Platforms[iPlatform].types[iCol * MH + iRow] = ed(gp.get()).g_Platforms[iPlatform + 1].types[iCol * MH + iRow];
+                            }
                         }
-                    } else if PLATFORM_EDIT_STATE_MOVE == ed(gp.get()).iPlatformEditState && sym - SDLK_1 < ed(gp.get()).g_iNumPlatforms as i32 {
-                        if ed(gp.get()).iPlatformSwitchState == 1 {
-                            switch_platforms(g, ed(gp.get()).iPlatformSwitchIndex, (sym - SDLK_1) as i16);
 
-                            ed(gp.get()).iPlatformPreview = -1;
+                        ed(gp.get()).g_Platforms[iPlatform].iPathType = ed(gp.get()).g_Platforms[iPlatform + 1].iPathType;
 
-                            ed(gp.get()).iPlatformSwitchState = 0;
-                            ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_SELECT;
-                        } else {
-                            ed(gp.get()).iPlatformSwitchState = 1;
-                            ed(gp.get()).iPlatformSwitchIndex = (sym - SDLK_1) as i16;
+                        ed(gp.get()).g_Platforms[iPlatform].iVelocity = ed(gp.get()).g_Platforms[iPlatform + 1].iVelocity;
+                        ed(gp.get()).g_Platforms[iPlatform].iStartX = ed(gp.get()).g_Platforms[iPlatform + 1].iStartX;
+                        ed(gp.get()).g_Platforms[iPlatform].iStartY = ed(gp.get()).g_Platforms[iPlatform + 1].iStartY;
+                        ed(gp.get()).g_Platforms[iPlatform].iEndX = ed(gp.get()).g_Platforms[iPlatform + 1].iEndX;
+                        ed(gp.get()).g_Platforms[iPlatform].iEndY = ed(gp.get()).g_Platforms[iPlatform + 1].iEndY;
+
+                        ed(gp.get()).g_Platforms[iPlatform].fAngle = ed(gp.get()).g_Platforms[iPlatform + 1].fAngle;
+                        ed(gp.get()).g_Platforms[iPlatform].fRadiusX = ed(gp.get()).g_Platforms[iPlatform + 1].fRadiusX;
+                        ed(gp.get()).g_Platforms[iPlatform].fRadiusY = ed(gp.get()).g_Platforms[iPlatform + 1].fRadiusY;
+
+                        ed(gp.get()).g_Platforms[iPlatform].iDrawLayer = ed(gp.get()).g_Platforms[iPlatform + 1].iDrawLayer;
+                        iPlatform += 1;
+                    }
+
+                    ed(gp.get()).g_iNumPlatforms -= 1;
+                    ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_SELECT;
+                }
+            } else if sym == SDLK_ESCAPE {
+                if PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState {
+                    ed(gp.get()).editor_platforms_initialized = false;
+                    return EDITOR_EDIT;
+                } else if PLATFORM_EDIT_STATE_EDIT == ed(gp.get()).iPlatformEditState
+                    || PLATFORM_EDIT_STATE_ANIMATED == ed(gp.get()).iPlatformEditState
+                    || PLATFORM_EDIT_STATE_MOVE == ed(gp.get()).iPlatformEditState
+                    || PLATFORM_EDIT_STATE_TEST == ed(gp.get()).iPlatformEditState
+                {
+                    ed(gp.get()).iPlatformPreview = -1;
+                    ed(gp.get()).g_Platforms[ep].update_preview(g);
+                    ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_SELECT;
+                    //Fix menu offset
+                    editor_platforms_update_layout(g);
+                } else if PLATFORM_EDIT_STATE_PATH == ed(gp.get()).iPlatformEditState || PLATFORM_EDIT_STATE_TILETYPE == ed(gp.get()).iPlatformEditState {
+                    ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_EDIT;
+                }
+            } else if sym == SDLK_KP_MINUS || sym == SDLK_MINUS {
+                if platform_edit_or_animated_or_tiletype(g) {
+                    let p = &mut ed(gp.get()).g_Platforms[ep];
+                    if p.iPathType == PlatformPathType::Ellipse {
+                        if p.iVelocity > -10 {
+                            p.iVelocity -= 1;
+                        }
+
+                        if p.iVelocity == 0 {
+                            p.iVelocity -= 1;
+                        }
+                    } else if p.iVelocity > 2 {
+                        p.iVelocity -= 1;
+                    }
+                }
+            } else if sym == SDLK_KP_PLUS || sym == SDLK_EQUALS {
+                if platform_edit_or_animated_or_tiletype(g) {
+                    let p = &mut ed(gp.get()).g_Platforms[ep];
+                    if p.iPathType == PlatformPathType::Ellipse {
+                        if p.iVelocity < 10 {
+                            p.iVelocity += 1;
+                        }
+
+                        if p.iVelocity == 0 {
+                            p.iVelocity += 1;
+                        }
+                    } else if (p.iVelocity as i32) < MAX_PLATFORM_VELOCITY {
+                        p.iVelocity += 1;
+                    }
+                }
+            } else if sym == SDLK_p {
+                if platform_edit_or_animated_or_tiletype(g) {
+                    ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_PATH;
+                    calculate_platform_dims(g, ed(gp.get()).iEditPlatform, &mut ed(gp.get()).iPlatformLeft, &mut ed(gp.get()).iPlatformTop, &mut ed(gp.get()).iPlatformWidth, &mut ed(gp.get()).iPlatformHeight);
+                    insert_platforms_into_map(g);
+                }
+            }
+        } else if ty == SDL_MOUSEBUTTONDOWN_EV {
+            let ep = ed(gp.get()).iEditPlatform as usize;
+            if ed(gp.get()).event.button_button() == BUTTON_LEFT && !ed(gp.get()).ignoreclick {
+                if PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState || PLATFORM_EDIT_STATE_MOVE == ed(gp.get()).iPlatformEditState {
+                    //check clicks on existing platforms
+                    for iPlatform in 0..ed(g).g_iNumPlatforms as i32 {
+                        let ic = ed(gp.get()).g_Platforms[iPlatform as usize].rIcon[1];
+                        if ed(gp.get()).event.button_x() >= ic.x && ed(gp.get()).event.button_x() < ic.x + ic.w && ed(gp.get()).event.button_y() >= ic.y && ed(gp.get()).event.button_y() < ic.y + ic.h {
+                            if PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState {
+                                ed(gp.get()).iEditPlatform = iPlatform as i16;
+                                ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_EDIT;
+                                ed(gp.get()).ignoreclick = true;
+                            } else if PLATFORM_EDIT_STATE_MOVE == ed(gp.get()).iPlatformEditState {
+                                if ed(gp.get()).iPlatformSwitchState == 1 {
+                                    switch_platforms(g, ed(gp.get()).iPlatformSwitchIndex, iPlatform as i16);
+
+                                    ed(gp.get()).iPlatformPreview = -1;
+
+                                    ed(gp.get()).iPlatformSwitchState = 0;
+                                    ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_SELECT;
+                                } else {
+                                    ed(gp.get()).iPlatformSwitchState = 1;
+                                    ed(gp.get()).iPlatformSwitchIndex = iPlatform as i16;
+                                }
+                            }
                         }
                     }
-                } else if sym == SDLK_n {
-                    if PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState && (ed(gp.get()).g_iNumPlatforms as i32) < MAX_PLATFORMS {
+
+                    if PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState
+                        && (ed(gp.get()).g_iNumPlatforms as i32) < MAX_PLATFORMS
+                        && ed(gp.get()).event.button_x() >= ed(gp.get()).rNewButton[1].x
+                        && ed(gp.get()).event.button_x() < ed(gp.get()).rNewButton[1].x + ed(gp.get()).rNewButton[1].w
+                        && ed(gp.get()).event.button_y() >= ed(gp.get()).rNewButton[1].y
+                        && ed(gp.get()).event.button_y() < ed(gp.get()).rNewButton[1].y + ed(gp.get()).rNewButton[1].h
+                    {
+                        //Create a new platform then edit it
+
                         ed(gp.get()).iEditPlatform = ed(gp.get()).g_iNumPlatforms;
                         ed(gp.get()).g_iNumPlatforms += 1;
                         editor_platforms_update_layout(g);
                         ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_PATH_TYPE;
+                        ed(gp.get()).ignoreclick = true;
                     }
-                } else if sym == SDLK_m {
-                    if PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState {
-                        ed(gp.get()).iPlatformPreview = -1;
-                        ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_MOVE;
-                        ed(gp.get()).iPlatformSwitchState = 0;
-                    }
-                } else if sym == SDLK_t {
-                    if platform_edit_or_animated_or_tiletype(g) {
-                        run_nested_editor(g, editor_tiles, EDITOR_TILES);
-                        ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_EDIT;
-                    } else if PLATFORM_EDIT_STATE_PATH == ed(gp.get()).iPlatformEditState {
-                        ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_CHANGE_PATH_TYPE;
-                    }
-                } else if sym == SDLK_a {
-                    if platform_edit_or_animated_or_tiletype(g) {
-                        run_nested_editor(g, editor_animation, EDITOR_ANIMATION);
-                        ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_ANIMATED;
-                    }
-                } else if sym == SDLK_l {
-                    if platform_edit_or_animated_or_tiletype(g) {
-                        run_nested_editor(g, editor_tiletype, EDITOR_TILETYPE);
-                        ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_TILETYPE;
-                    }
-                } else if sym == SDLK_y {
-                    //Change the draw layer
-                    if platform_edit_or_animated_or_tiletype(g) {
-                        ed(gp.get()).g_Platforms[ep].iDrawLayer += 1;
-                        if ed(gp.get()).g_Platforms[ep].iDrawLayer > 4 {
-                            ed(gp.get()).g_Platforms[ep].iDrawLayer = 0;
-                        }
-                    }
-                } else if sym == SDLK_c {
-                    if PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState {
-                        ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_TEST;
-                        insert_platforms_into_map(g);
-                        gp.g_map.reset_platforms(g);
-                    }
-                } else if sym == SDLK_DELETE {
-                    if platform_edit_or_animated_or_tiletype(g) {
-                        //Copy platforms into empty spot
-                        let mut iPlatform = ed(gp.get()).iEditPlatform as usize;
-                        while (iPlatform as i32) < ed(gp.get()).g_iNumPlatforms as i32 - 1 {
-                            for iCol in 0..MW {
-                                for iRow in 0..MH {
-                                    ed(gp.get()).g_Platforms[iPlatform].tiles[iCol * MH + iRow] = ed(gp.get()).g_Platforms[iPlatform + 1].tiles[iCol * MH + iRow];
-                                    ed(gp.get()).g_Platforms[iPlatform].types[iCol * MH + iRow] = ed(gp.get()).g_Platforms[iPlatform + 1].types[iCol * MH + iRow];
-                                }
-                            }
+                } else if PLATFORM_EDIT_STATE_PATH_TYPE == ed(gp.get()).iPlatformEditState || PLATFORM_EDIT_STATE_CHANGE_PATH_TYPE == ed(gp.get()).iPlatformEditState {
+                    if !ed(gp.get()).ignoreclick {
+                        let iClickX = ed(gp.get()).event.button_x() as i16 as i32;
+                        let iClickY = ed(gp.get()).event.button_y() as i16 as i32;
 
-                            ed(gp.get()).g_Platforms[iPlatform].iPathType = ed(gp.get()).g_Platforms[iPlatform + 1].iPathType;
+                        for iType in 0..3usize {
+                            let tb = ed(gp.get()).rTypeButton[iType][1];
+                            if iClickX >= tb.x && iClickX < tb.x + tb.w && iClickY >= tb.y && iClickY < tb.y + tb.h {
+                                ed(gp.get()).ignoreclick = true;
 
-                            ed(gp.get()).g_Platforms[iPlatform].iVelocity = ed(gp.get()).g_Platforms[iPlatform + 1].iVelocity;
-                            ed(gp.get()).g_Platforms[iPlatform].iStartX = ed(gp.get()).g_Platforms[iPlatform + 1].iStartX;
-                            ed(gp.get()).g_Platforms[iPlatform].iStartY = ed(gp.get()).g_Platforms[iPlatform + 1].iStartY;
-                            ed(gp.get()).g_Platforms[iPlatform].iEndX = ed(gp.get()).g_Platforms[iPlatform + 1].iEndX;
-                            ed(gp.get()).g_Platforms[iPlatform].iEndY = ed(gp.get()).g_Platforms[iPlatform + 1].iEndY;
+                                ed(gp.get()).g_Platforms[ep].iPathType = path_type_from(iType as u8);
 
-                            ed(gp.get()).g_Platforms[iPlatform].fAngle = ed(gp.get()).g_Platforms[iPlatform + 1].fAngle;
-                            ed(gp.get()).g_Platforms[iPlatform].fRadiusX = ed(gp.get()).g_Platforms[iPlatform + 1].fRadiusX;
-                            ed(gp.get()).g_Platforms[iPlatform].fRadiusY = ed(gp.get()).g_Platforms[iPlatform + 1].fRadiusY;
-
-                            ed(gp.get()).g_Platforms[iPlatform].iDrawLayer = ed(gp.get()).g_Platforms[iPlatform + 1].iDrawLayer;
-                            iPlatform += 1;
-                        }
-
-                        ed(gp.get()).g_iNumPlatforms -= 1;
-                        ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_SELECT;
-                    }
-                } else if sym == SDLK_ESCAPE {
-                    if PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState {
-                        ed(gp.get()).editor_platforms_initialized = false;
-                        return EDITOR_EDIT;
-                    } else if PLATFORM_EDIT_STATE_EDIT == ed(gp.get()).iPlatformEditState
-                        || PLATFORM_EDIT_STATE_ANIMATED == ed(gp.get()).iPlatformEditState
-                        || PLATFORM_EDIT_STATE_MOVE == ed(gp.get()).iPlatformEditState
-                        || PLATFORM_EDIT_STATE_TEST == ed(gp.get()).iPlatformEditState
-                    {
-                        ed(gp.get()).iPlatformPreview = -1;
-                        ed(gp.get()).g_Platforms[ep].update_preview(g);
-                        ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_SELECT;
-                        //Fix menu offset
-                        editor_platforms_update_layout(g);
-                    } else if PLATFORM_EDIT_STATE_PATH == ed(gp.get()).iPlatformEditState || PLATFORM_EDIT_STATE_TILETYPE == ed(gp.get()).iPlatformEditState {
-                        ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_EDIT;
-                    }
-                } else if sym == SDLK_KP_MINUS || sym == SDLK_MINUS {
-                    if platform_edit_or_animated_or_tiletype(g) {
-                        let p = &mut ed(gp.get()).g_Platforms[ep];
-                        if p.iPathType == PlatformPathType::Ellipse {
-                            if p.iVelocity > -10 {
-                                p.iVelocity -= 1;
-                            }
-
-                            if p.iVelocity == 0 {
-                                p.iVelocity -= 1;
-                            }
-                        } else if p.iVelocity > 2 {
-                            p.iVelocity -= 1;
-                        }
-                    }
-                } else if sym == SDLK_KP_PLUS || sym == SDLK_EQUALS {
-                    if platform_edit_or_animated_or_tiletype(g) {
-                        let p = &mut ed(gp.get()).g_Platforms[ep];
-                        if p.iPathType == PlatformPathType::Ellipse {
-                            if p.iVelocity < 10 {
-                                p.iVelocity += 1;
-                            }
-
-                            if p.iVelocity == 0 {
-                                p.iVelocity += 1;
-                            }
-                        } else if (p.iVelocity as i32) < MAX_PLATFORM_VELOCITY {
-                            p.iVelocity += 1;
-                        }
-                    }
-                } else if sym == SDLK_p {
-                    if platform_edit_or_animated_or_tiletype(g) {
-                        ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_PATH;
-                        calculate_platform_dims(g, ed(gp.get()).iEditPlatform, &mut ed(gp.get()).iPlatformLeft, &mut ed(gp.get()).iPlatformTop, &mut ed(gp.get()).iPlatformWidth, &mut ed(gp.get()).iPlatformHeight);
-                        insert_platforms_into_map(g);
-                    }
-                }
-            } else if ty == SDL_MOUSEBUTTONDOWN_EV {
-                let ep = ed(gp.get()).iEditPlatform as usize;
-                if ed(gp.get()).event.button_button() == BUTTON_LEFT && !ed(gp.get()).ignoreclick {
-                    if PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState || PLATFORM_EDIT_STATE_MOVE == ed(gp.get()).iPlatformEditState {
-                        //check clicks on existing platforms
-                        for iPlatform in 0..ed(g).g_iNumPlatforms as i32 {
-                            let ic = ed(gp.get()).g_Platforms[iPlatform as usize].rIcon[1];
-                            if ed(gp.get()).event.button_x() >= ic.x && ed(gp.get()).event.button_x() < ic.x + ic.w && ed(gp.get()).event.button_y() >= ic.y && ed(gp.get()).event.button_y() < ic.y + ic.h {
-                                if PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState {
-                                    ed(gp.get()).iEditPlatform = iPlatform as i16;
+                                if PLATFORM_EDIT_STATE_PATH_TYPE == ed(gp.get()).iPlatformEditState {
                                     ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_EDIT;
-                                    ed(gp.get()).ignoreclick = true;
-                                } else if PLATFORM_EDIT_STATE_MOVE == ed(gp.get()).iPlatformEditState {
-                                    if ed(gp.get()).iPlatformSwitchState == 1 {
-                                        switch_platforms(g, ed(gp.get()).iPlatformSwitchIndex, iPlatform as i16);
-
-                                        ed(gp.get()).iPlatformPreview = -1;
-
-                                        ed(gp.get()).iPlatformSwitchState = 0;
-                                        ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_SELECT;
-                                    } else {
-                                        ed(gp.get()).iPlatformSwitchState = 1;
-                                        ed(gp.get()).iPlatformSwitchIndex = iPlatform as i16;
-                                    }
+                                    set_platform_to_defaults(g, ed(gp.get()).iEditPlatform);
+                                } else {
+                                    ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_PATH;
                                 }
-                            }
-                        }
 
-                        if PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState
-                            && (ed(gp.get()).g_iNumPlatforms as i32) < MAX_PLATFORMS
-                            && ed(gp.get()).event.button_x() >= ed(gp.get()).rNewButton[1].x
-                            && ed(gp.get()).event.button_x() < ed(gp.get()).rNewButton[1].x + ed(gp.get()).rNewButton[1].w
-                            && ed(gp.get()).event.button_y() >= ed(gp.get()).rNewButton[1].y
-                            && ed(gp.get()).event.button_y() < ed(gp.get()).rNewButton[1].y + ed(gp.get()).rNewButton[1].h
-                        {
-                            //Create a new platform then edit it
-
-                            ed(gp.get()).iEditPlatform = ed(gp.get()).g_iNumPlatforms;
-                            ed(gp.get()).g_iNumPlatforms += 1;
-                            editor_platforms_update_layout(g);
-                            ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_PATH_TYPE;
-                            ed(gp.get()).ignoreclick = true;
-                        }
-                    } else if PLATFORM_EDIT_STATE_PATH_TYPE == ed(gp.get()).iPlatformEditState || PLATFORM_EDIT_STATE_CHANGE_PATH_TYPE == ed(gp.get()).iPlatformEditState {
-                        if !ed(gp.get()).ignoreclick {
-                            let iClickX = ed(gp.get()).event.button_x() as i16 as i32;
-                            let iClickY = ed(gp.get()).event.button_y() as i16 as i32;
-
-                            for iType in 0..3usize {
-                                let tb = ed(gp.get()).rTypeButton[iType][1];
-                                if iClickX >= tb.x && iClickX < tb.x + tb.w && iClickY >= tb.y && iClickY < tb.y + tb.h {
-                                    ed(gp.get()).ignoreclick = true;
-
-                                    ed(gp.get()).g_Platforms[ep].iPathType = path_type_from(iType as u8);
-
-                                    if PLATFORM_EDIT_STATE_PATH_TYPE == ed(gp.get()).iPlatformEditState {
-                                        ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_EDIT;
-                                        set_platform_to_defaults(g, ed(gp.get()).iEditPlatform);
-                                    } else {
-                                        ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_PATH;
-                                    }
-
-                                    break;
-                                }
-                            }
-                        }
-                    } else if PLATFORM_EDIT_STATE_EDIT == ed(gp.get()).iPlatformEditState {
-                        if !ed(gp.get()).ignoreclick {
-                            let ix = (ed(gp.get()).event.button_x() / TILESIZE) as i16;
-                            let iy = (ed(gp.get()).event.button_y() / TILESIZE) as i16;
-
-                            for i in 0..ed(g).set_tile_cols as i16 {
-                                for j in 0..ed(g).set_tile_rows as i16 {
-                                    let (cx, cy) = (ix as i32 + i as i32, iy as i32 + j as i32);
-                                    if cx >= 0 && cx < MAPWIDTH && cy >= 0 && cy < MAPHEIGHT {
-                                        let idx = (cx * MAPHEIGHT + cy) as usize;
-                                        let tile = &mut ed(gp.get()).g_Platforms[ep].tiles[idx];
-                                        set_tileset_tile(tile, ed(gp.get()).set_tile_tileset as i16, (ed(gp.get()).set_tile_start_x + i as i32) as i16, (ed(gp.get()).set_tile_start_y + j as i32) as i16);
-                                        let t = *tile;
-                                        ed(gp.get()).g_Platforms[ep].types[idx] = gp.g_tilesetmanager.tileset(g, t.iID as usize).tile_type(t.iCol as usize, t.iRow as usize);
-                                    }
-                                }
-                            }
-                        }
-                    } else if PLATFORM_EDIT_STATE_ANIMATED == ed(gp.get()).iPlatformEditState {
-                        //animated tiles
-                        if !ed(gp.get()).ignoreclick {
-                            let ix = (ed(gp.get()).event.button_x() / TILESIZE) as i16;
-                            let iy = (ed(gp.get()).event.button_y() / TILESIZE) as i16;
-
-                            for i in 0..ed(g).set_tile_cols as i16 {
-                                for j in 0..ed(g).set_tile_rows as i16 {
-                                    let (cx, cy) = (ix as i32 + i as i32, iy as i32 + j as i32);
-                                    if cx >= 0 && cx < MAPWIDTH && cy >= 0 && cy < MAPHEIGHT {
-                                        let idx = (cx * MAPHEIGHT + cy) as usize;
-                                        let tile = &mut ed(gp.get()).g_Platforms[ep].tiles[idx];
-                                        set_tileset_tile(tile, TILESETANIMATED as i16, (ed(gp.get()).set_tile_start_y + j as i32) as i16, (ed(gp.get()).set_tile_start_x + i as i32) as i16);
-                                        let t = *tile;
-                                        ed(gp.get()).g_Platforms[ep].types[idx] = ed(gp.get()).animatedtiletypes[(t.iRow as i32 + ((t.iCol as i32) << 5)) as usize];
-                                    }
-                                }
-                            }
-                        }
-                    } else if PLATFORM_EDIT_STATE_TILETYPE == ed(gp.get()).iPlatformEditState {
-                        if !ed(gp.get()).ignoreclick {
-                            let ix = ed(gp.get()).event.button_x() / TILESIZE;
-                            let iy = ed(gp.get()).event.button_y() / TILESIZE;
-
-                            ed(gp.get()).g_Platforms[ep].types[(ix * MAPHEIGHT + iy) as usize] = ed(gp.get()).set_tiletype;
-                        }
-                    } else if PLATFORM_EDIT_STATE_PATH == ed(gp.get()).iPlatformEditState {
-                        let keystate = get_keyboard_state(g);
-                        if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Ellipse && (check_key(gp.get(), keystate, SDLK_z) || check_key(gp.get(), keystate, SDLK_x) || check_key(gp.get(), keystate, SDLK_c)) {
-                            update_platform_path_radius(g, 
-                                ed(gp.get()).iEditPlatform,
-                                ed(gp.get()).event.button_x() as i16,
-                                ed(gp.get()).event.button_y() as i16,
-                                check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT),
-                                check_key(gp.get(), keystate, SDLK_z),
-                                check_key(gp.get(), keystate, SDLK_c),
-                            );
-                        } else {
-                            update_platform_path_start(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT));
-                        }
-                    }
-                } else {
-                    if ed(gp.get()).event.button_button() == BUTTON_RIGHT {
-                        let ix = ed(gp.get()).event.button_x() / TILESIZE;
-                        let iy = ed(gp.get()).event.button_y() / TILESIZE;
-
-                        if PLATFORM_EDIT_STATE_EDIT == ed(gp.get()).iPlatformEditState || PLATFORM_EDIT_STATE_ANIMATED == ed(gp.get()).iPlatformEditState {
-                            clear_tileset_tile(&mut ed(gp.get()).g_Platforms[ep].tiles[(ix * MAPHEIGHT + iy) as usize]);
-                            ed(gp.get()).g_Platforms[ep].types[(ix * MAPHEIGHT + iy) as usize] = TileType::NonSolid;
-                        } else if PLATFORM_EDIT_STATE_TILETYPE == ed(gp.get()).iPlatformEditState {
-                            ed(gp.get()).g_Platforms[ep].types[(ix * MAPHEIGHT + iy) as usize] = TileType::NonSolid;
-                        } else if PLATFORM_EDIT_STATE_PATH == ed(gp.get()).iPlatformEditState {
-                            let keystate = get_keyboard_state(g);
-                            if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Straight {
-                                update_platform_path_end(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT));
-                            } else if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::StraightContinuous || ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Ellipse {
-                                update_platform_path_angle(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT));
+                                break;
                             }
                         }
                     }
-                    fall = true;
-                }
-            }
+                } else if PLATFORM_EDIT_STATE_EDIT == ed(gp.get()).iPlatformEditState {
+                    if !ed(gp.get()).ignoreclick {
+                        let ix = (ed(gp.get()).event.button_x() / TILESIZE) as i16;
+                        let iy = (ed(gp.get()).event.button_y() / TILESIZE) as i16;
 
-            if fall || ty == SDL_MOUSEMOTION_EV {
-                let ep = ed(gp.get()).iEditPlatform as usize;
-                bound_mouse_motion_coords(g);
-                let ix = (bound_to_window_w(ed(gp.get()).event.motion_x()) / TILESIZE) as i16;
-                let iy = (bound_to_window_h(ed(gp.get()).event.motion_y()) / TILESIZE) as i16;
-
-                if PLATFORM_EDIT_STATE_EDIT == ed(gp.get()).iPlatformEditState || PLATFORM_EDIT_STATE_ANIMATED == ed(gp.get()).iPlatformEditState {
-                    if ed(gp.get()).event.motion_state() == sdl_button(SDL_BUTTON_LEFT) && !ed(gp.get()).ignoreclick {
                         for i in 0..ed(g).set_tile_cols as i16 {
                             for j in 0..ed(g).set_tile_rows as i16 {
                                 let (cx, cy) = (ix as i32 + i as i32, iy as i32 + j as i32);
                                 if cx >= 0 && cx < MAPWIDTH && cy >= 0 && cy < MAPHEIGHT {
                                     let idx = (cx * MAPHEIGHT + cy) as usize;
                                     let tile = &mut ed(gp.get()).g_Platforms[ep].tiles[idx];
-
-                                    if PLATFORM_EDIT_STATE_EDIT == ed(gp.get()).iPlatformEditState {
-                                        set_tileset_tile(tile, ed(gp.get()).set_tile_tileset as i16, (ed(gp.get()).set_tile_start_x + i as i32) as i16, (ed(gp.get()).set_tile_start_y + j as i32) as i16);
-                                        let t = *tile;
-                                        ed(gp.get()).g_Platforms[ep].types[idx] = gp.g_tilesetmanager.tileset(g, t.iID as usize).tile_type(t.iCol as usize, t.iRow as usize);
-                                    } else {
-                                        set_tileset_tile(tile, TILESETANIMATED as i16, (ed(gp.get()).set_tile_start_y + j as i32) as i16, (ed(gp.get()).set_tile_start_x + i as i32) as i16);
-                                        let t = *tile;
-                                        ed(gp.get()).g_Platforms[ep].types[idx] = ed(gp.get()).animatedtiletypes[(t.iRow as i32 + ((t.iCol as i32) << 5)) as usize];
-                                    }
+                                    set_tileset_tile(tile, ed(gp.get()).set_tile_tileset as i16, (ed(gp.get()).set_tile_start_x + i as i32) as i16, (ed(gp.get()).set_tile_start_y + j as i32) as i16);
+                                    let t = *tile;
+                                    ed(gp.get()).g_Platforms[ep].types[idx] = gp.g_tilesetmanager.tileset(g, t.iID as usize).tile_type(t.iCol as usize, t.iRow as usize);
                                 }
                             }
                         }
-                    } else if ed(gp.get()).event.motion_state() == sdl_button(SDL_BUTTON_RIGHT) {
-                        let idx = (ix as i32 * MAPHEIGHT + iy as i32) as usize;
-                        clear_tileset_tile(&mut ed(gp.get()).g_Platforms[ep].tiles[idx]);
-                        ed(gp.get()).g_Platforms[ep].types[idx] = TileType::NonSolid;
+                    }
+                } else if PLATFORM_EDIT_STATE_ANIMATED == ed(gp.get()).iPlatformEditState {
+                    //animated tiles
+                    if !ed(gp.get()).ignoreclick {
+                        let ix = (ed(gp.get()).event.button_x() / TILESIZE) as i16;
+                        let iy = (ed(gp.get()).event.button_y() / TILESIZE) as i16;
+
+                        for i in 0..ed(g).set_tile_cols as i16 {
+                            for j in 0..ed(g).set_tile_rows as i16 {
+                                let (cx, cy) = (ix as i32 + i as i32, iy as i32 + j as i32);
+                                if cx >= 0 && cx < MAPWIDTH && cy >= 0 && cy < MAPHEIGHT {
+                                    let idx = (cx * MAPHEIGHT + cy) as usize;
+                                    let tile = &mut ed(gp.get()).g_Platforms[ep].tiles[idx];
+                                    set_tileset_tile(tile, TILESETANIMATED as i16, (ed(gp.get()).set_tile_start_y + j as i32) as i16, (ed(gp.get()).set_tile_start_x + i as i32) as i16);
+                                    let t = *tile;
+                                    ed(gp.get()).g_Platforms[ep].types[idx] = ed(gp.get()).animatedtiletypes[(t.iRow as i32 + ((t.iCol as i32) << 5)) as usize];
+                                }
+                            }
+                        }
                     }
                 } else if PLATFORM_EDIT_STATE_TILETYPE == ed(gp.get()).iPlatformEditState {
-                    let idx = (ix as i32 * MAPHEIGHT + iy as i32) as usize;
-                    if ed(gp.get()).event.motion_state() == sdl_button(SDL_BUTTON_LEFT) && !ed(gp.get()).ignoreclick {
-                        ed(gp.get()).g_Platforms[ep].types[idx] = ed(gp.get()).set_tiletype;
-                    } else if ed(gp.get()).event.motion_state() == sdl_button(SDL_BUTTON_RIGHT) {
-                        ed(gp.get()).g_Platforms[ep].types[idx] = TileType::NonSolid;
+                    if !ed(gp.get()).ignoreclick {
+                        let ix = ed(gp.get()).event.button_x() / TILESIZE;
+                        let iy = ed(gp.get()).event.button_y() / TILESIZE;
+
+                        ed(gp.get()).g_Platforms[ep].types[(ix * MAPHEIGHT + iy) as usize] = ed(gp.get()).set_tiletype;
                     }
                 } else if PLATFORM_EDIT_STATE_PATH == ed(gp.get()).iPlatformEditState {
-                    if ed(gp.get()).event.motion_state() == sdl_button(SDL_BUTTON_LEFT) {
-                        let keystate = get_keyboard_state(g);
-                        if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Ellipse && (check_key(gp.get(), keystate, SDLK_z) || check_key(gp.get(), keystate, SDLK_x) || check_key(gp.get(), keystate, SDLK_c)) {
-                            update_platform_path_radius(g, 
-                                ed(gp.get()).iEditPlatform,
-                                ed(gp.get()).event.button_x() as i16,
-                                ed(gp.get()).event.button_y() as i16,
-                                check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT),
-                                check_key(gp.get(), keystate, SDLK_z),
-                                check_key(gp.get(), keystate, SDLK_c),
-                            );
-                        } else {
-                            update_platform_path_start(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT));
-                        }
-                    } else if ed(gp.get()).event.motion_state() == sdl_button(SDL_BUTTON_RIGHT) {
+                    let keystate = get_keyboard_state(g);
+                    if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Ellipse && (check_key(gp.get(), keystate, SDLK_z) || check_key(gp.get(), keystate, SDLK_x) || check_key(gp.get(), keystate, SDLK_c)) {
+                        update_platform_path_radius(g, 
+                            ed(gp.get()).iEditPlatform,
+                            ed(gp.get()).event.button_x() as i16,
+                            ed(gp.get()).event.button_y() as i16,
+                            check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT),
+                            check_key(gp.get(), keystate, SDLK_z),
+                            check_key(gp.get(), keystate, SDLK_c),
+                        );
+                    } else {
+                        update_platform_path_start(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT));
+                    }
+                }
+            } else {
+                if ed(gp.get()).event.button_button() == BUTTON_RIGHT {
+                    let ix = ed(gp.get()).event.button_x() / TILESIZE;
+                    let iy = ed(gp.get()).event.button_y() / TILESIZE;
+
+                    if PLATFORM_EDIT_STATE_EDIT == ed(gp.get()).iPlatformEditState || PLATFORM_EDIT_STATE_ANIMATED == ed(gp.get()).iPlatformEditState {
+                        clear_tileset_tile(&mut ed(gp.get()).g_Platforms[ep].tiles[(ix * MAPHEIGHT + iy) as usize]);
+                        ed(gp.get()).g_Platforms[ep].types[(ix * MAPHEIGHT + iy) as usize] = TileType::NonSolid;
+                    } else if PLATFORM_EDIT_STATE_TILETYPE == ed(gp.get()).iPlatformEditState {
+                        ed(gp.get()).g_Platforms[ep].types[(ix * MAPHEIGHT + iy) as usize] = TileType::NonSolid;
+                    } else if PLATFORM_EDIT_STATE_PATH == ed(gp.get()).iPlatformEditState {
                         let keystate = get_keyboard_state(g);
                         if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Straight {
                             update_platform_path_end(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT));
@@ -2660,154 +2592,220 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
                         }
                     }
                 }
-                //Display platform preview
-                else if PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState || PLATFORM_EDIT_STATE_MOVE == ed(gp.get()).iPlatformEditState {
-                    ed(gp.get()).iPlatformPreview = -1;
-                    for iPlatform in 0..ed(g).g_iNumPlatforms as i32 {
-                        let ic = ed(gp.get()).g_Platforms[iPlatform as usize].rIcon[1];
-                        if ed(gp.get()).event.button_x() >= ic.x && ed(gp.get()).event.button_x() < ic.x + ic.w && ed(gp.get()).event.button_y() >= ic.y && ed(gp.get()).event.button_y() < ic.y + ic.h {
-                            ed(gp.get()).iPlatformPreview = iPlatform as i16;
+                fall = true;
+            }
+        }
+
+        if fall || ty == SDL_MOUSEMOTION_EV {
+            let ep = ed(gp.get()).iEditPlatform as usize;
+            bound_mouse_motion_coords(g);
+            let ix = (bound_to_window_w(ed(gp.get()).event.motion_x()) / TILESIZE) as i16;
+            let iy = (bound_to_window_h(ed(gp.get()).event.motion_y()) / TILESIZE) as i16;
+
+            if PLATFORM_EDIT_STATE_EDIT == ed(gp.get()).iPlatformEditState || PLATFORM_EDIT_STATE_ANIMATED == ed(gp.get()).iPlatformEditState {
+                if ed(gp.get()).event.motion_state() == sdl_button(SDL_BUTTON_LEFT) && !ed(gp.get()).ignoreclick {
+                    for i in 0..ed(g).set_tile_cols as i16 {
+                        for j in 0..ed(g).set_tile_rows as i16 {
+                            let (cx, cy) = (ix as i32 + i as i32, iy as i32 + j as i32);
+                            if cx >= 0 && cx < MAPWIDTH && cy >= 0 && cy < MAPHEIGHT {
+                                let idx = (cx * MAPHEIGHT + cy) as usize;
+                                let tile = &mut ed(gp.get()).g_Platforms[ep].tiles[idx];
+
+                                if PLATFORM_EDIT_STATE_EDIT == ed(gp.get()).iPlatformEditState {
+                                    set_tileset_tile(tile, ed(gp.get()).set_tile_tileset as i16, (ed(gp.get()).set_tile_start_x + i as i32) as i16, (ed(gp.get()).set_tile_start_y + j as i32) as i16);
+                                    let t = *tile;
+                                    ed(gp.get()).g_Platforms[ep].types[idx] = gp.g_tilesetmanager.tileset(g, t.iID as usize).tile_type(t.iCol as usize, t.iRow as usize);
+                                } else {
+                                    set_tileset_tile(tile, TILESETANIMATED as i16, (ed(gp.get()).set_tile_start_y + j as i32) as i16, (ed(gp.get()).set_tile_start_x + i as i32) as i16);
+                                    let t = *tile;
+                                    ed(gp.get()).g_Platforms[ep].types[idx] = ed(gp.get()).animatedtiletypes[(t.iRow as i32 + ((t.iCol as i32) << 5)) as usize];
+                                }
+                            }
                         }
                     }
+                } else if ed(gp.get()).event.motion_state() == sdl_button(SDL_BUTTON_RIGHT) {
+                    let idx = (ix as i32 * MAPHEIGHT + iy as i32) as usize;
+                    clear_tileset_tile(&mut ed(gp.get()).g_Platforms[ep].tiles[idx]);
+                    ed(gp.get()).g_Platforms[ep].types[idx] = TileType::NonSolid;
                 }
-            } else if ty == SDL_MOUSEBUTTONUP_EV {
-                if ed(gp.get()).event.button_button() == BUTTON_LEFT {
-                    ed(gp.get()).ignoreclick = false;
+            } else if PLATFORM_EDIT_STATE_TILETYPE == ed(gp.get()).iPlatformEditState {
+                let idx = (ix as i32 * MAPHEIGHT + iy as i32) as usize;
+                if ed(gp.get()).event.motion_state() == sdl_button(SDL_BUTTON_LEFT) && !ed(gp.get()).ignoreclick {
+                    ed(gp.get()).g_Platforms[ep].types[idx] = ed(gp.get()).set_tiletype;
+                } else if ed(gp.get()).event.motion_state() == sdl_button(SDL_BUTTON_RIGHT) {
+                    ed(gp.get()).g_Platforms[ep].types[idx] = TileType::NonSolid;
                 }
-            }
-        }
-
-        if PLATFORM_EDIT_STATE_TEST != ed(gp.get()).iPlatformEditState {
-            drawmap(g, false, TILESIZE as i16, false);
-            gp.rm.menu_shade.draw(g, 0, 0);
-        }
-
-        let ep = ed(gp.get()).iEditPlatform as usize;
-        if PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState || PLATFORM_EDIT_STATE_MOVE == ed(gp.get()).iPlatformEditState {
-            editor_platforms_draw_background(g);
-
-            gp.rm.menu_font_small.draw_centered(g, 320, ed(gp.get()).r.y + 18, "Platforms");
-
-            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Platform Mode: [esc] Exit  [c] Check Paths, [1-8] Select, [n] New");
-            gp.rm.menu_font_small.draw_right_justified(g, 640, 0, gp.maplist.current_filename());
-
-            for iPlatform in 0..ed(g).g_iNumPlatforms as usize {
-                let p = &mut ed(gp.get()).g_Platforms[iPlatform];
-                let src = p.rIcon[0];
-                ed(gp.get()).s_platform.draw_src_to(&src, g.screen, &p.rIcon[1]);
-            }
-
-            if (ed(gp.get()).g_iNumPlatforms as i32) < MAX_PLATFORMS && PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState {
-                let src = ed(gp.get()).rNewButton[0];
-                ed(gp.get()).s_platform.draw_src_to(&src, g.screen, &ed(gp.get()).rNewButton[1]);
-            }
-
-            if PLATFORM_EDIT_STATE_MOVE == ed(gp.get()).iPlatformEditState {
-                if ed(gp.get()).iPlatformSwitchState == 0 {
-                    gp.rm.menu_font_small.draw_centered(g, 320, 280, "Select First");
-                    gp.rm.menu_font_small.draw_centered(g, 320, 300, "Platform To Switch");
-                } else {
-                    gp.rm.menu_font_small.draw_centered(g, 320, 280, "Select Second");
-                    gp.rm.menu_font_small.draw_centered(g, 320, 300, "Platform To Switch");
+            } else if PLATFORM_EDIT_STATE_PATH == ed(gp.get()).iPlatformEditState {
+                if ed(gp.get()).event.motion_state() == sdl_button(SDL_BUTTON_LEFT) {
+                    let keystate = get_keyboard_state(g);
+                    if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Ellipse && (check_key(gp.get(), keystate, SDLK_z) || check_key(gp.get(), keystate, SDLK_x) || check_key(gp.get(), keystate, SDLK_c)) {
+                        update_platform_path_radius(g, 
+                            ed(gp.get()).iEditPlatform,
+                            ed(gp.get()).event.button_x() as i16,
+                            ed(gp.get()).event.button_y() as i16,
+                            check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT),
+                            check_key(gp.get(), keystate, SDLK_z),
+                            check_key(gp.get(), keystate, SDLK_c),
+                        );
+                    } else {
+                        update_platform_path_start(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT));
+                    }
+                } else if ed(gp.get()).event.motion_state() == sdl_button(SDL_BUTTON_RIGHT) {
+                    let keystate = get_keyboard_state(g);
+                    if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Straight {
+                        update_platform_path_end(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT));
+                    } else if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::StraightContinuous || ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Ellipse {
+                        update_platform_path_angle(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT));
+                    }
                 }
             }
-
-            if ed(gp.get()).iPlatformPreview >= 0 {
-                display_platform_preview(g, ed(gp.get()).iPlatformPreview, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16);
+            //Display platform preview
+            else if PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState || PLATFORM_EDIT_STATE_MOVE == ed(gp.get()).iPlatformEditState {
+                ed(gp.get()).iPlatformPreview = -1;
+                for iPlatform in 0..ed(g).g_iNumPlatforms as i32 {
+                    let ic = ed(gp.get()).g_Platforms[iPlatform as usize].rIcon[1];
+                    if ed(gp.get()).event.button_x() >= ic.x && ed(gp.get()).event.button_x() < ic.x + ic.w && ed(gp.get()).event.button_y() >= ic.y && ed(gp.get()).event.button_y() < ic.y + ic.h {
+                        ed(gp.get()).iPlatformPreview = iPlatform as i16;
+                    }
+                }
             }
-        } else if PLATFORM_EDIT_STATE_PATH_TYPE == ed(gp.get()).iPlatformEditState || PLATFORM_EDIT_STATE_CHANGE_PATH_TYPE == ed(gp.get()).iPlatformEditState {
-            //Draw path options
-            for iType in 0..3usize {
-                let s0 = ed(gp.get()).rTypeButton[iType][0];
-                ed(gp.get()).s_platformpathbuttons.draw_src_to(&s0, g.screen, &ed(gp.get()).rTypeButton[iType][1]);
-                let s2 = ed(gp.get()).rTypeButton[iType][2];
-                ed(gp.get()).s_platformpathbuttons.draw_src_to(&s2, g.screen, &ed(gp.get()).rTypeButton[iType][3]);
-
-                gp.rm.menu_font_large.draw(g, ed(gp.get()).rTypeButton[iType][1].x + 36, ed(gp.get()).rTypeButton[iType][1].y + 6, szPathNames[iType]);
+        } else if ty == SDL_MOUSEBUTTONUP_EV {
+            if ed(gp.get()).event.button_button() == BUTTON_LEFT {
+                ed(gp.get()).ignoreclick = false;
             }
-
-            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Path Type");
-        } else if platform_edit_or_animated_or_tiletype(g) {
-            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 3, "Edit Platform");
-            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 2, "[esc] Exit  [t] Tiles  [a] Animation [l] Types [del] Delete  [p] Path");
-            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[+/-] Velocity  [y] Draw Layer");
-            draw_platform_unfinished(g, ed(gp.get()).iEditPlatform, PLATFORM_EDIT_STATE_TILETYPE == ed(gp.get()).iPlatformEditState);
-
-            if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Ellipse {
-                let iVelMarkerX: i16 = (198 + (ed(gp.get()).g_Platforms[ep].iVelocity as i32 + 10) * 12) as i16;
-
-                let rVel = [rect(0, 400, 244, 17), rect(198, 10, 244, 17)];
-                let mut d = rVel[1];
-                ed(gp.get()).s_platform.draw_src_to(&rVel[0], g.screen, &d);
-
-                let rMarker = [rect(244, 400, 8, 18), rect(iVelMarkerX as i32, 10, 8, 18)];
-                let mut d = rMarker[1];
-                ed(gp.get()).s_platform.draw_src_to(&rMarker[0], g.screen, &d);
-
-                gp.rm.menu_font_small.draw_right_justified(g, 198, 10, "Counter");
-                gp.rm.menu_font_small.draw(g, 442, 10, "Clockwise");
-            } else {
-                let iVelMarkerX: i16 = (220 + (ed(gp.get()).g_Platforms[ep].iVelocity as i32 - 1) * 12) as i16;
-
-                let rVel = [rect(12, 384, 172, 13), rect(234, 10, 172, 13)];
-                let mut d = rVel[1];
-                ed(gp.get()).s_platform.draw_src_to(&rVel[0], g.screen, &d);
-
-                let rMarker = [rect(184, 384, 8, 16), rect(iVelMarkerX as i32, 8, 8, 16)];
-                let mut d = rMarker[1];
-                ed(gp.get()).s_platform.draw_src_to(&rMarker[0], g.screen, &d);
-
-                gp.rm.menu_font_small.draw_right_justified(g, 234, 10, "Slow");
-                gp.rm.menu_font_small.draw(g, 406, 10, "Fast");
-            }
-
-            gp.rm.spr_number_icons.draw_src(g, 619, 5, &rect((ed(gp.get()).g_Platforms[ep].iDrawLayer as i32) << 4, 48, 16, 16));
-        } else if PLATFORM_EDIT_STATE_PATH == ed(gp.get()).iPlatformEditState {
-            let platform = &ed(gp.get()).g_Platforms[ep];
-            let tiledata = g.g_map.platforms[ep].iTileData.clone();
-            draw_platform(
-                g,
-                platform.iPathType,
-                &tiledata,
-                platform.iStartX,
-                platform.iStartY,
-                platform.iEndX,
-                platform.iEndY,
-                platform.fAngle,
-                platform.fRadiusX,
-                platform.fRadiusY,
-                0,
-                ed(gp.get()).iPlatformWidth,
-                ed(gp.get()).iPlatformHeight,
-                false,
-                true,
-                g.blitdest,
-            );
-
-            if platform.iPathType == PlatformPathType::Straight {
-                gp.rm.menu_font_small.draw(g, 0, 480 - (gp.rm.menu_font_small.get_height() << 1), "Edit Path");
-                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[esc] Exit  [LMB] Set Start Point  [RMB] Set End Point [t] Path Type");
-            } else if platform.iPathType == PlatformPathType::StraightContinuous {
-                gp.rm.menu_font_small.draw(g, 0, 480 - (gp.rm.menu_font_small.get_height() << 1), "Edit Path: [esc] Exit  [LMB] Set Start Point  [RMB] Set Angle");
-                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[SHIFT + LMB] Location Snap [SHIFT + RMB] Angle Snap [t] Path Type");
-            } else if platform.iPathType == PlatformPathType::Ellipse {
-                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 4, "Edit Path: [esc] Exit  [LMB] Set Center [SHIFT + LMB] Center Snap");
-                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 3, "[X + LMB] Set X Radius [SHIFT + X + LMB] X Radius Snap");
-                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 2, "[Z + LMB] Set Y Radius [SHIFT + Z + LMB] Y Radius Snap");
-                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[C + LMB] Set Circular Radius [SHIFT + C + LMB] Circular Radius Snap [t] Path Type");
-            }
-        } else if PLATFORM_EDIT_STATE_TEST == ed(gp.get()).iPlatformEditState {
-            gp.g_map.update_platforms(g);
-
-            //Platforms are drawn inside drawmap(...)
-            drawmap(g, false, TILESIZE as i16, true);
-
-            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Check Paths: [esc] Exit");
         }
-
-        draw_message(g);
-        EDITOR_PLATFORM
     }
+
+    if PLATFORM_EDIT_STATE_TEST != ed(gp.get()).iPlatformEditState {
+        drawmap(g, false, TILESIZE as i16, false);
+        gp.rm.menu_shade.draw(g, 0, 0);
+    }
+
+    let ep = ed(gp.get()).iEditPlatform as usize;
+    if PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState || PLATFORM_EDIT_STATE_MOVE == ed(gp.get()).iPlatformEditState {
+        editor_platforms_draw_background(g);
+
+        gp.rm.menu_font_small.draw_centered(g, 320, ed(gp.get()).r.y + 18, "Platforms");
+
+        gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Platform Mode: [esc] Exit  [c] Check Paths, [1-8] Select, [n] New");
+        gp.rm.menu_font_small.draw_right_justified(g, 640, 0, gp.maplist.current_filename());
+
+        for iPlatform in 0..ed(g).g_iNumPlatforms as usize {
+            let p = &mut ed(gp.get()).g_Platforms[iPlatform];
+            let src = p.rIcon[0];
+            ed(gp.get()).s_platform.draw_src_to(&src, g.screen, &p.rIcon[1]);
+        }
+
+        if (ed(gp.get()).g_iNumPlatforms as i32) < MAX_PLATFORMS && PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState {
+            let src = ed(gp.get()).rNewButton[0];
+            ed(gp.get()).s_platform.draw_src_to(&src, g.screen, &ed(gp.get()).rNewButton[1]);
+        }
+
+        if PLATFORM_EDIT_STATE_MOVE == ed(gp.get()).iPlatformEditState {
+            if ed(gp.get()).iPlatformSwitchState == 0 {
+                gp.rm.menu_font_small.draw_centered(g, 320, 280, "Select First");
+                gp.rm.menu_font_small.draw_centered(g, 320, 300, "Platform To Switch");
+            } else {
+                gp.rm.menu_font_small.draw_centered(g, 320, 280, "Select Second");
+                gp.rm.menu_font_small.draw_centered(g, 320, 300, "Platform To Switch");
+            }
+        }
+
+        if ed(gp.get()).iPlatformPreview >= 0 {
+            display_platform_preview(g, ed(gp.get()).iPlatformPreview, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16);
+        }
+    } else if PLATFORM_EDIT_STATE_PATH_TYPE == ed(gp.get()).iPlatformEditState || PLATFORM_EDIT_STATE_CHANGE_PATH_TYPE == ed(gp.get()).iPlatformEditState {
+        //Draw path options
+        for iType in 0..3usize {
+            let s0 = ed(gp.get()).rTypeButton[iType][0];
+            ed(gp.get()).s_platformpathbuttons.draw_src_to(&s0, g.screen, &ed(gp.get()).rTypeButton[iType][1]);
+            let s2 = ed(gp.get()).rTypeButton[iType][2];
+            ed(gp.get()).s_platformpathbuttons.draw_src_to(&s2, g.screen, &ed(gp.get()).rTypeButton[iType][3]);
+
+            gp.rm.menu_font_large.draw(g, ed(gp.get()).rTypeButton[iType][1].x + 36, ed(gp.get()).rTypeButton[iType][1].y + 6, szPathNames[iType]);
+        }
+
+        gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Path Type");
+    } else if platform_edit_or_animated_or_tiletype(g) {
+        gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 3, "Edit Platform");
+        gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 2, "[esc] Exit  [t] Tiles  [a] Animation [l] Types [del] Delete  [p] Path");
+        gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[+/-] Velocity  [y] Draw Layer");
+        draw_platform_unfinished(g, ed(gp.get()).iEditPlatform, PLATFORM_EDIT_STATE_TILETYPE == ed(gp.get()).iPlatformEditState);
+
+        if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Ellipse {
+            let iVelMarkerX: i16 = (198 + (ed(gp.get()).g_Platforms[ep].iVelocity as i32 + 10) * 12) as i16;
+
+            let rVel = [rect(0, 400, 244, 17), rect(198, 10, 244, 17)];
+            let mut d = rVel[1];
+            ed(gp.get()).s_platform.draw_src_to(&rVel[0], g.screen, &d);
+
+            let rMarker = [rect(244, 400, 8, 18), rect(iVelMarkerX as i32, 10, 8, 18)];
+            let mut d = rMarker[1];
+            ed(gp.get()).s_platform.draw_src_to(&rMarker[0], g.screen, &d);
+
+            gp.rm.menu_font_small.draw_right_justified(g, 198, 10, "Counter");
+            gp.rm.menu_font_small.draw(g, 442, 10, "Clockwise");
+        } else {
+            let iVelMarkerX: i16 = (220 + (ed(gp.get()).g_Platforms[ep].iVelocity as i32 - 1) * 12) as i16;
+
+            let rVel = [rect(12, 384, 172, 13), rect(234, 10, 172, 13)];
+            let mut d = rVel[1];
+            ed(gp.get()).s_platform.draw_src_to(&rVel[0], g.screen, &d);
+
+            let rMarker = [rect(184, 384, 8, 16), rect(iVelMarkerX as i32, 8, 8, 16)];
+            let mut d = rMarker[1];
+            ed(gp.get()).s_platform.draw_src_to(&rMarker[0], g.screen, &d);
+
+            gp.rm.menu_font_small.draw_right_justified(g, 234, 10, "Slow");
+            gp.rm.menu_font_small.draw(g, 406, 10, "Fast");
+        }
+
+        gp.rm.spr_number_icons.draw_src(g, 619, 5, &rect((ed(gp.get()).g_Platforms[ep].iDrawLayer as i32) << 4, 48, 16, 16));
+    } else if PLATFORM_EDIT_STATE_PATH == ed(gp.get()).iPlatformEditState {
+        let platform = &ed(gp.get()).g_Platforms[ep];
+        let tiledata = g.g_map.platforms[ep].iTileData.clone();
+        draw_platform(
+            g,
+            platform.iPathType,
+            &tiledata,
+            platform.iStartX,
+            platform.iStartY,
+            platform.iEndX,
+            platform.iEndY,
+            platform.fAngle,
+            platform.fRadiusX,
+            platform.fRadiusY,
+            0,
+            ed(gp.get()).iPlatformWidth,
+            ed(gp.get()).iPlatformHeight,
+            false,
+            true,
+            g.blitdest,
+        );
+
+        if platform.iPathType == PlatformPathType::Straight {
+            gp.rm.menu_font_small.draw(g, 0, 480 - (gp.rm.menu_font_small.get_height() << 1), "Edit Path");
+            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[esc] Exit  [LMB] Set Start Point  [RMB] Set End Point [t] Path Type");
+        } else if platform.iPathType == PlatformPathType::StraightContinuous {
+            gp.rm.menu_font_small.draw(g, 0, 480 - (gp.rm.menu_font_small.get_height() << 1), "Edit Path: [esc] Exit  [LMB] Set Start Point  [RMB] Set Angle");
+            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[SHIFT + LMB] Location Snap [SHIFT + RMB] Angle Snap [t] Path Type");
+        } else if platform.iPathType == PlatformPathType::Ellipse {
+            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 4, "Edit Path: [esc] Exit  [LMB] Set Center [SHIFT + LMB] Center Snap");
+            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 3, "[X + LMB] Set X Radius [SHIFT + X + LMB] X Radius Snap");
+            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 2, "[Z + LMB] Set Y Radius [SHIFT + Z + LMB] Y Radius Snap");
+            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[C + LMB] Set Circular Radius [SHIFT + C + LMB] Circular Radius Snap [t] Path Type");
+        }
+    } else if PLATFORM_EDIT_STATE_TEST == ed(gp.get()).iPlatformEditState {
+        gp.g_map.update_platforms(g);
+
+        //Platforms are drawn inside drawmap(...)
+        drawmap(g, false, TILESIZE as i16, true);
+
+        gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Check Paths: [esc] Exit");
+    }
+
+    draw_message(g);
+    EDITOR_PLATFORM
 }
 
 fn path_type_from(v: u8) -> PlatformPathType {
@@ -3999,7 +3997,7 @@ pub fn init_editor_backgrounds(g: &mut Game) {
     ed(gp.get()).editor_backgrounds_initialized = true;
 }
 
-unsafe fn free_background_surfaces(g: &mut Game) {
+fn free_background_surfaces(g: &mut Game) {
     let mut gp = g.ptr();
     for iSurface in 0..16usize {
         ed(gp.get()).sBackgrounds[iSurface] = gfxSprite::new();
@@ -4406,7 +4404,7 @@ pub fn save_as(g: &mut Game) -> i32 {
     0
 }
 
-unsafe fn draw_dialog(g: &mut Game, title: &str, instructions: &str, input: Option<&str>) {
+fn draw_dialog(g: &mut Game, title: &str, instructions: &str, input: Option<&str>) {
         let mut gp = g.ptr();
     drawmap(g, false, TILESIZE as i16, false);
     gp.rm.menu_shade.draw(g, 0, 0);
@@ -4422,87 +4420,85 @@ unsafe fn draw_dialog(g: &mut Game, title: &str, instructions: &str, input: Opti
 
 pub fn dialog(g: &mut Game, title: &str, instructions: &str, input: &mut String, inputsize: i32) -> bool {
     let mut gp = g.ptr();
-    unsafe {
-        let mut currentChar: u32 = 0;
+    let mut currentChar: u32 = 0;
 
-        draw_dialog(g, title, instructions, None);
+    draw_dialog(g, title, instructions, None);
 
-        loop {
-            let framestart = crate::services::ticks(gp.get()) as i32;
+    loop {
+        let framestart = crate::services::ticks(gp.get()) as i32;
 
-            //handle messages
-            while poll_event(g, &mut ed(gp.get()).event) != 0 {
-                match ed(gp.get()).event.type_() {
-                    SDL_QUIT_EV => return false,
+        //handle messages
+        while poll_event(g, &mut ed(gp.get()).event) != 0 {
+            match ed(gp.get()).event.type_() {
+                SDL_QUIT_EV => return false,
 
-                    SDL_KEYDOWN_EV => {
-                        let sym = ed(gp.get()).event.key_sym();
-                        if sym == SDLK_KP_ENTER || sym == SDLK_RETURN {
-                            return true;
-                        } else if sym == SDLK_ESCAPE {
-                            return false;
-                        } else if sym == SDLK_BACKSPACE {
-                            if currentChar > 0 {
-                                input.truncate((currentChar - 1) as usize);
-
-                                draw_dialog(g, title, instructions, Some(input));
-
-                                currentChar -= 1;
-                            }
-                        } else if ((48..=57).contains(&sym) || sym == 45 || sym == 32 || sym == 61 || (95..=122).contains(&sym)) && currentChar < (inputsize as u32) - 1 {
-                            //insert character into fileName and onScreenText and increment current char
-                            let mut key: u8 = sym as u8;
-
-                            let keystate = get_keyboard_state(g);
-                            if check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT) {
-                                if sym == 45 {
-                                    key = 95;
-                                } else if (95..=122).contains(&sym) {
-                                    key = key.wrapping_sub(32); //Capitalize
-                                } else if sym == 48 {
-                                    key = 41;
-                                } else if sym == 49 {
-                                    key = 33;
-                                } else if sym == 50 {
-                                    key = 64;
-                                } else if sym == 51 {
-                                    key = 35;
-                                } else if sym == 52 {
-                                    key = 36;
-                                } else if sym == 53 {
-                                    key = 37;
-                                } else if sym == 54 {
-                                    key = 94;
-                                } else if sym == 55 {
-                                    key = 38;
-                                } else if sym == 57 {
-                                    key = 40;
-                                } else if sym == 61 {
-                                    key = 43;
-                                }
-                            }
-
-                            input.truncate(currentChar as usize);
-                            input.push(key as char);
-                            currentChar += 1;
+                SDL_KEYDOWN_EV => {
+                    let sym = ed(gp.get()).event.key_sym();
+                    if sym == SDLK_KP_ENTER || sym == SDLK_RETURN {
+                        return true;
+                    } else if sym == SDLK_ESCAPE {
+                        return false;
+                    } else if sym == SDLK_BACKSPACE {
+                        if currentChar > 0 {
+                            input.truncate((currentChar - 1) as usize);
 
                             draw_dialog(g, title, instructions, Some(input));
+
+                            currentChar -= 1;
                         }
+                    } else if ((48..=57).contains(&sym) || sym == 45 || sym == 32 || sym == 61 || (95..=122).contains(&sym)) && currentChar < (inputsize as u32) - 1 {
+                        //insert character into fileName and onScreenText and increment current char
+                        let mut key: u8 = sym as u8;
+
+                        let keystate = get_keyboard_state(g);
+                        if check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT) {
+                            if sym == 45 {
+                                key = 95;
+                            } else if (95..=122).contains(&sym) {
+                                key = key.wrapping_sub(32); //Capitalize
+                            } else if sym == 48 {
+                                key = 41;
+                            } else if sym == 49 {
+                                key = 33;
+                            } else if sym == 50 {
+                                key = 64;
+                            } else if sym == 51 {
+                                key = 35;
+                            } else if sym == 52 {
+                                key = 36;
+                            } else if sym == 53 {
+                                key = 37;
+                            } else if sym == 54 {
+                                key = 94;
+                            } else if sym == 55 {
+                                key = 38;
+                            } else if sym == 57 {
+                                key = 40;
+                            } else if sym == 61 {
+                                key = 43;
+                            }
+                        }
+
+                        input.truncate(currentChar as usize);
+                        input.push(key as char);
+                        currentChar += 1;
+
+                        draw_dialog(g, title, instructions, Some(input));
                     }
-
-                    _ => {}
                 }
-            }
 
-            let mut delay = WAITTIME - (crate::services::ticks(gp.get()) as i32 - framestart);
-            if delay < 0 {
-                delay = 0;
-            } else if delay > WAITTIME {
-                delay = WAITTIME;
+                _ => {}
             }
-
-            editor_harness::frame_delay(g, delay as u32);
         }
+
+        let mut delay = WAITTIME - (crate::services::ticks(gp.get()) as i32 - framestart);
+        if delay < 0 {
+            delay = 0;
+        } else if delay > WAITTIME {
+            delay = WAITTIME;
+        }
+
+        editor_harness::frame_delay(g, delay as u32);
     }
 }
 

@@ -455,10 +455,9 @@ impl MenuState {
     }
 
     fn exit(&mut self, g: &mut Game) {
-        #[cfg(target_os = "emscripten")]
-        return;
-
-        self.quit(g);
+        if !cfg!(target_os = "emscripten") {
+            self.quit(g);
+        }
     }
 
     /// Not in upstream: `exit` without its web early return. The main menu's Exit button uses it, so the web build

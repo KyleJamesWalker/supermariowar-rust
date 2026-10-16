@@ -224,7 +224,7 @@ fn in_map(x: i32, y: i32) -> bool {
 }
 
 /// One byte of the C++ CMap object at `off`, for the members between mapdata and blockdata.
-unsafe fn cmap_byte(g: &mut Game, off: i32) -> u8 {
+fn cmap_byte(g: &mut Game, off: i32) -> u8 {
     let cells = MAPWIDTH * MAPHEIGHT;
     if (CMAP_OFF_MAPDATA..CMAP_OFF_MAPDATA + cells * MAPLAYERS * 6).contains(&off) {
         let rel = off - CMAP_OFF_MAPDATA;

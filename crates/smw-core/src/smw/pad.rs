@@ -455,7 +455,7 @@ unsafe fn translate_hat(p: &mut Pad, event: &mut SDL_Event) -> bool {
     bound && set_dpad(p, event, h.timestamp, h.which, dpad)
 }
 
-unsafe fn set_dpad(p: &mut Pad, event: &mut SDL_Event, timestamp: u32, which: i32, dpad: u8) -> bool {
+fn set_dpad(p: &mut Pad, event: &mut SDL_Event, timestamp: u32, which: i32, dpad: u8) -> bool {
     if dpad == p.dpad {
         return false;
     }

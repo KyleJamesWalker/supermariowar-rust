@@ -56,7 +56,7 @@ impl MI_NetRoomTeamSelect {
     }
 
     /// `do { step } while (!rm->LoadMenuSkin(...))`
-    unsafe fn cycle_skin(&mut self, g: &mut Game, step: impl Fn(&mut i16)) {
+    fn cycle_skin(&mut self, g: &mut Game, step: impl Fn(&mut i16)) {
         let mut gp = g.ptr();
         let p = self.owner_player as usize;
         loop {
@@ -124,83 +124,81 @@ impl UI_ControlTrait for MI_NetRoomTeamSelect {
             return MENU_CODE_UNSELECT_ITEM;
         }
 
-        unsafe {
-            let playerKeys = g.game_values.playerInput.outputControls[0];
-            let count = g.skinlist.count() as i16;
+        let playerKeys = g.game_values.playerInput.outputControls[0];
+        let count = g.skinlist.count() as i16;
 
-            if !g.game_values.randomskin[0] {
-                if playerKeys.menu_up().fPressed {
-                    let down = playerKeys.menu_down().fDown;
-                    self.cycle_skin(g, |id| {
-                        if down {
-                            *id = RANDOM_INT(gp.get(), count as i32) as i16;
-                        } else {
+        if !g.game_values.randomskin[0] {
+            if playerKeys.menu_up().fPressed {
+                let down = playerKeys.menu_down().fDown;
+                self.cycle_skin(g, |id| {
+                    if down {
+                        *id = RANDOM_INT(gp.get(), count as i32) as i16;
+                    } else {
+                        *id -= 1;
+                        if *id < 0 {
+                            *id = count - 1;
+                        }
+                    }
+                });
+            } else if playerKeys.menu_up().fDown {
+                if self.iFastScroll == 0 {
+                    self.iFastScrollTimer += 1;
+                    if self.iFastScrollTimer > 40 {
+                        self.iFastScroll = 1;
+                    }
+                } else {
+                    self.iFastScrollTimer += 1;
+                    if self.iFastScrollTimer > 5 {
+                        self.cycle_skin(g, |id| {
                             *id -= 1;
                             if *id < 0 {
                                 *id = count - 1;
                             }
-                        }
-                    });
-                } else if playerKeys.menu_up().fDown {
-                    if self.iFastScroll == 0 {
-                        self.iFastScrollTimer += 1;
-                        if self.iFastScrollTimer > 40 {
-                            self.iFastScroll = 1;
-                        }
-                    } else {
-                        self.iFastScrollTimer += 1;
-                        if self.iFastScrollTimer > 5 {
-                            self.cycle_skin(g, |id| {
-                                *id -= 1;
-                                if *id < 0 {
-                                    *id = count - 1;
-                                }
-                            });
-                            self.iFastScrollTimer = 0;
-                        }
+                        });
+                        self.iFastScrollTimer = 0;
                     }
                 }
+            }
 
-                if playerKeys.menu_down().fPressed {
-                    let up = playerKeys.menu_up().fDown;
-                    self.cycle_skin(g, |id| {
-                        if up {
-                            *id = RANDOM_INT(gp.get(), count as i32) as i16;
-                        } else {
+            if playerKeys.menu_down().fPressed {
+                let up = playerKeys.menu_up().fDown;
+                self.cycle_skin(g, |id| {
+                    if up {
+                        *id = RANDOM_INT(gp.get(), count as i32) as i16;
+                    } else {
+                        *id += 1;
+                        if *id as i32 >= count as i32 {
+                            *id = 0;
+                        }
+                    }
+                });
+            } else if playerKeys.menu_down().fDown {
+                if self.iFastScroll == 0 {
+                    self.iFastScrollTimer += 1;
+                    if self.iFastScrollTimer > 40 {
+                        self.iFastScroll = 1;
+                    }
+                } else {
+                    self.iFastScrollTimer += 1;
+                    if self.iFastScrollTimer > 5 {
+                        self.cycle_skin(g, |id| {
                             *id += 1;
                             if *id as i32 >= count as i32 {
                                 *id = 0;
                             }
-                        }
-                    });
-                } else if playerKeys.menu_down().fDown {
-                    if self.iFastScroll == 0 {
-                        self.iFastScrollTimer += 1;
-                        if self.iFastScrollTimer > 40 {
-                            self.iFastScroll = 1;
-                        }
-                    } else {
-                        self.iFastScrollTimer += 1;
-                        if self.iFastScrollTimer > 5 {
-                            self.cycle_skin(g, |id| {
-                                *id += 1;
-                                if *id as i32 >= count as i32 {
-                                    *id = 0;
-                                }
-                            });
-                            self.iFastScrollTimer = 0;
-                        }
+                        });
+                        self.iFastScrollTimer = 0;
                     }
                 }
+            }
 
-                if (!playerKeys.menu_up().fDown && !playerKeys.menu_down().fDown) || (playerKeys.menu_up().fDown && playerKeys.menu_down().fDown) {
-                    self.iFastScroll = 0;
-                    self.iFastScrollTimer = 0;
-                }
-            } else {
+            if (!playerKeys.menu_up().fDown && !playerKeys.menu_down().fDown) || (playerKeys.menu_up().fDown && playerKeys.menu_down().fDown) {
                 self.iFastScroll = 0;
                 self.iFastScrollTimer = 0;
             }
+        } else {
+            self.iFastScroll = 0;
+            self.iFastScrollTimer = 0;
         }
 
         MENU_CODE_NONE

@@ -99,7 +99,7 @@ pub fn data_relative(path: &str) -> String {
     path.to_string()
 }
 
-unsafe fn mix_play_channel(g: &mut Game, chunk: Option<SoundId>, duration_ms: u32, loops: i32) -> i32 {
+fn mix_play_channel(g: &mut Game, chunk: Option<SoundId>, duration_ms: u32, loops: i32) -> i32 {
     let mut gp = g.ptr();
     let Some(id) = chunk else {
         // Mix_PlayChannel rejects NULL chunks
@@ -122,7 +122,7 @@ unsafe fn mix_play_channel(g: &mut Game, chunk: Option<SoundId>, duration_ms: u3
     -1
 }
 
-unsafe fn mix_halt_channel(g: &mut Game, channel: i32) {
+fn mix_halt_channel(g: &mut Game, channel: i32) {
     let mut gp = g.ptr();
     if sfx_state(g).sfx_audible {
         services(gp.get()).audio.halt(if channel < 0 { None } else { Some(channel as u8) });
@@ -199,7 +199,7 @@ pub fn sfx_close(g: &mut Game) {
 
 pub fn sfx_stopallsounds(g: &mut Game) {
     log_event(g, "S haltall".to_string());
-    unsafe { mix_halt_channel(g, -1) };
+    mix_halt_channel(g, -1);
 }
 
 pub fn sfx_setmusicvolume(g: &mut Game, volume: i32) {
@@ -273,31 +273,29 @@ impl sfxSound {
 
     pub fn play(&mut self, g: &mut Game) -> bool {
         let mut gp = g.ptr();
-        unsafe {
-            let current_time: u32 = (sfx_state(g).sfx_ticks)(gp.get());
-            if (current_time as usize).wrapping_sub(self.m_last_start_time) < 40 {
-                log_event(g, format!("S skip {}", self.m_name));
-                return false;
-            }
-
-            let channel = mix_play_channel(g, self.m_sfx.0, self.m_duration_ms, 0);
-            log_event(g, format!("S play {} ch={}", self.m_name, channel));
-            if channel < 0 {
-                if sfx_state(g).sfx_ignore_channel_failure {
-                    self.m_last_start_time = current_time as usize;
-                }
-                return sfx_state(g).sfx_ignore_channel_failure;
-            }
-
-            self.m_last_start_time = current_time as usize;
-            self.m_channels |= 1 << channel;
-            sfx_state(g).s_channels[channel as usize] = self as *mut sfxSound;
+        let current_time: u32 = (sfx_state(g).sfx_ticks)(gp.get());
+        if (current_time as usize).wrapping_sub(self.m_last_start_time) < 40 {
+            log_event(g, format!("S skip {}", self.m_name));
+            return false;
         }
+
+        let channel = mix_play_channel(g, self.m_sfx.0, self.m_duration_ms, 0);
+        log_event(g, format!("S play {} ch={}", self.m_name, channel));
+        if channel < 0 {
+            if sfx_state(g).sfx_ignore_channel_failure {
+                self.m_last_start_time = current_time as usize;
+            }
+            return sfx_state(g).sfx_ignore_channel_failure;
+        }
+
+        self.m_last_start_time = current_time as usize;
+        self.m_channels |= 1 << channel;
+        sfx_state(g).s_channels[channel as usize] = self as *mut sfxSound;
         true
     }
 
     pub fn play_loop(&mut self, g: &mut Game, loops: i32) {
-        let channel = unsafe { mix_play_channel(g, self.m_sfx.0, self.m_duration_ms, loops) };
+        let channel = mix_play_channel(g, self.m_sfx.0, self.m_duration_ms, loops);
         log_event(g, format!("S loop {} loops={} ch={}", self.m_name, loops, channel));
         if channel < 0 {
             return;
@@ -310,7 +308,7 @@ impl sfxSound {
         log_event(g, format!("S stop {}", self.m_name));
         for i in 0..Self::k_channels {
             if self.m_channels & (1 << i) != 0 {
-                unsafe { mix_halt_channel(g, i as i32) };
+                mix_halt_channel(g, i as i32);
             }
         }
     }

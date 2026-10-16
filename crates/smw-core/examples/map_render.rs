@@ -9,7 +9,6 @@ use smw::common::gfx::gfx_init;
 use smw::common::global::load_current_map_background;
 use smw::common::map::{read_type_full, CMap};
 use smw::common::resource_manager::CResourceManager;
-use smw::common::tileset_manager::CTilesetManager;
 use smw::globals::*;
 
 fn save_bmp(s: *mut Surface, path: &str) {

@@ -25,7 +25,7 @@ pub struct MI_PlaylistField {
 crate::impl_base!(MI_PlaylistField => ui_control: UI_Control);
 
 /// The music switch shared by every scroll direction.
-unsafe fn restart_menu_music(g: &mut Game) {
+fn restart_menu_music(g: &mut Game) {
     let mut gp = g.ptr();
     gp.rm.backgroundmusic[2].stop(g);
     g.rm.backgroundmusic[2] = sfxMusic::from_file(g, gp.musiclist.music(1)).unwrap_or_else(|e| std::panic::panic_any(e));
@@ -62,35 +62,33 @@ impl UI_ControlTrait for MI_PlaylistField {
 
     fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         let mut gp = g.ptr();
-        unsafe {
-            for iPlayer in 0..4usize {
-                let out = &playerInput.outputControls[iPlayer];
-                if out.menu_right().fPressed || out.menu_down().fPressed {
-                    g.musiclist.next();
-                    restart_menu_music(g);
-                    return MENU_CODE_NONE;
-                }
+        for iPlayer in 0..4usize {
+            let out = &playerInput.outputControls[iPlayer];
+            if out.menu_right().fPressed || out.menu_down().fPressed {
+                g.musiclist.next();
+                restart_menu_music(g);
+                return MENU_CODE_NONE;
+            }
 
-                if out.menu_left().fPressed || out.menu_up().fPressed {
-                    g.musiclist.prev();
-                    restart_menu_music(g);
-                    return MENU_CODE_NONE;
-                }
+            if out.menu_left().fPressed || out.menu_up().fPressed {
+                g.musiclist.prev();
+                restart_menu_music(g);
+                return MENU_CODE_NONE;
+            }
 
-                if out.menu_random().fPressed {
-                    gp.musiclist.random(g);
-                    restart_menu_music(g);
-                    return MENU_CODE_NONE;
-                }
+            if out.menu_random().fPressed {
+                gp.musiclist.random(g);
+                restart_menu_music(g);
+                return MENU_CODE_NONE;
+            }
 
-                if out.menu_select().fPressed || out.menu_cancel().fPressed {
-                    self.miModifyImageLeft.set_visible(false);
-                    self.miModifyImageRight.set_visible(false);
+            if out.menu_select().fPressed || out.menu_cancel().fPressed {
+                self.miModifyImageLeft.set_visible(false);
+                self.miModifyImageRight.set_visible(false);
 
-                    self.fModifying = false;
+                self.fModifying = false;
 
-                    return MENU_CODE_UNSELECT_ITEM;
-                }
+                return MENU_CODE_UNSELECT_ITEM;
             }
         }
 
