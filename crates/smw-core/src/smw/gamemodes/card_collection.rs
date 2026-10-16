@@ -47,8 +47,8 @@ impl CGM_Collection {
     fn drop_card(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, pos: Vec2s) {
         let mut gp = g.ptr();
         {
-            let speed: f32 = 7.0f32 + RANDOM_INT(9) as f32 / 2.0f32;
-            let angle: f32 = -(RANDOM_INT(314) as f32) / 100.0f32;
+            let speed: f32 = 7.0f32 + RANDOM_INT(gp.get(), 9) as f32 / 2.0f32;
+            let angle: f32 = -(RANDOM_INT(gp.get(), 314) as f32) / 100.0f32;
             let vel = Vec2f::new(speed * cosf(angle), speed * sinf(angle));
 
             player.score().subscore[0] -= 1;
@@ -71,7 +71,7 @@ impl CGM_Collection {
 fn spawn_card(g: &mut Game) {
         let mut gp = g.ptr();
     unsafe {
-        let iRandom: i16 = RANDOM_INT(5) as i16;
+        let iRandom: i16 = RANDOM_INT(gp.get(), 5) as i16;
         let mut iRandomCard: i16 = 0;
         if iRandom == 4 {
             iRandomCard = 2;

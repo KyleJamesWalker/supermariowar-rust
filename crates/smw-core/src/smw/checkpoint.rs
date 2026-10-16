@@ -488,16 +488,16 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
             mixer::restore(g, &channels, &mixer::Music { track, forever, paused, end, remaining }, resume);
         }
 
-        let rng = crate::common::random_number_generator::RandomNumberGenerator::generator();
+        let rng = crate::common::random_number_generator::RandomNumberGenerator::generator(gp.get());
         let (state, index) = rng.state_mut();
         s.io(state);
         s.io(index);
-        let mut calls = RandomNumberGenerator::call_count();
-        let mut last = RandomNumberGenerator::last_value();
+        let mut calls = RandomNumberGenerator::call_count(gp.get());
+        let mut last = RandomNumberGenerator::last_value(gp.get());
         s.io(&mut calls);
         s.io(&mut last);
         if s.load {
-            RandomNumberGenerator::set_counters(calls, last);
+            RandomNumberGenerator::set_counters(gp.get(), calls, last);
         }
 
         // Sound commands of this frame so far, which belong to its dump block.

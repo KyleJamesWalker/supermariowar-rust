@@ -317,9 +317,9 @@ pub fn init(g: &mut Game) {
     unsafe {
         if let Some(seed) = env("SMW_SEED") {
             let value = strtoul0(&seed);
-            RandomNumberGenerator::generator().reseed(value);
+            RandomNumberGenerator::generator(gp.get()).reseed(value);
             srand(value);
-            RandomNumberGenerator::reset_call_count();
+            RandomNumberGenerator::reset_call_count(gp.get());
         }
 
         h(gp.get()).noLimit = env("SMW_NOLIMIT").is_some();
@@ -379,7 +379,7 @@ pub fn frame_delay(g: &mut Game, delay: u32) {
                     if let Some(dumper) = h(gp.get()).dumper {
                         dumper(g, &mut block);
                     }
-                    let _ = writeln!(block, "R calls={} last={}", RandomNumberGenerator::call_count(), RandomNumberGenerator::last_value());
+                    let _ = writeln!(block, "R calls={} last={}", RandomNumberGenerator::call_count(gp.get()), RandomNumberGenerator::last_value(gp.get()));
                     let _ = dump.write_all(&block);
                     let _ = dump.flush();
                 }

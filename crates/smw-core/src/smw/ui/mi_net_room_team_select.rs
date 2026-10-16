@@ -121,6 +121,7 @@ impl UI_ControlTrait for MI_NetRoomTeamSelect {
     }
 
     fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+        let mut gp = g.ptr();
         if playerInput.outputControls[0].menu_select().fPressed || playerInput.outputControls[0].menu_cancel().fPressed {
             (self.onChangeAccepted)(g);
             self.fModifying = false;
@@ -136,7 +137,7 @@ impl UI_ControlTrait for MI_NetRoomTeamSelect {
                     let down = playerKeys.menu_down().fDown;
                     self.cycle_skin(g, |id| {
                         if down {
-                            *id = RANDOM_INT(count as i32) as i16;
+                            *id = RANDOM_INT(gp.get(), count as i32) as i16;
                         } else {
                             *id -= 1;
                             if *id < 0 {
@@ -168,7 +169,7 @@ impl UI_ControlTrait for MI_NetRoomTeamSelect {
                     let up = playerKeys.menu_up().fDown;
                     self.cycle_skin(g, |id| {
                         if up {
-                            *id = RANDOM_INT(count as i32) as i16;
+                            *id = RANDOM_INT(gp.get(), count as i32) as i16;
                         } else {
                             *id += 1;
                             if *id as i32 >= count as i32 {

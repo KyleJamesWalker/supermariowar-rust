@@ -347,7 +347,8 @@ pub fn waiting_to_start(g: &mut Game) -> bool {
 
 /// Not in the C++: every client draws in step from the start of the match, whatever its menus drew since the sync.
 pub fn reseed_for_match(g: &mut Game) {
-    RandomNumberGenerator::generator().reseed(unsafe { g.netplay.common_random_seed });
+    let mut gp = g.ptr();
+    RandomNumberGenerator::generator(gp.get()).reseed(unsafe { g.netplay.common_random_seed });
 }
 
 /// `NET_NOTICE_GAMEMODESETTINGS` with the current game mode's settings.
@@ -797,10 +798,11 @@ impl NetClient {
     }
 
     pub fn handle_start_sync_message(&mut self, g: &mut Game, data: &[u8]) {
+        let mut gp = g.ptr();
         let pkg = pkgs::StartSync::from_bytes(data);
 
         println!("reseed: {}", pkg.commonRandomSeed as i32);
-        RandomNumberGenerator::generator().reseed(pkg.commonRandomSeed);
+        RandomNumberGenerator::generator(gp.get()).reseed(pkg.commonRandomSeed);
         unsafe {
             g.netplay.common_random_seed = pkg.commonRandomSeed;
             g.netplay.start_waiting = true;
@@ -1340,7 +1342,7 @@ impl NetGameHost {
         let mut gp = g.ptr();
         println!("[net] Prepare launching the game...");
 
-        RandomNumberGenerator::generator().reseed(net_record::value_u32(g, "time", || crate::smw::harness::net_seed().unwrap_or(unsafe { libc_time() } as u32)));
+        RandomNumberGenerator::generator(gp.get()).reseed(net_record::value_u32(g, "time", || crate::smw::harness::net_seed().unwrap_or(unsafe { libc_time() } as u32)));
         if unsafe { g.netplay.randomize_settings } {
             crate::smw::gs_menu::roll_net_game_mode_settings(g);
         } else {
@@ -1356,7 +1358,7 @@ impl NetGameHost {
         let mut map_pkg = MessageHeader::new(NET_G2P_MATCH_MAP).as_bytes().to_vec();
         map_pkg.push(unsafe { g.netplay.randomize_settings } as u8);
         map_pkg.extend_from_slice(map_name.as_bytes());
-        let pkg = pkgs::StartSync::new(RANDOM_INT(32767) as u32);
+        let pkg = pkgs::StartSync::new(RANDOM_INT(gp.get(), 32767) as u32);
         for c in 0..3 {
             self.expected_clients[c].loaded = false;
         }

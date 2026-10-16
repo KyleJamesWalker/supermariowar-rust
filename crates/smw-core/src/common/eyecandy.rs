@@ -336,7 +336,7 @@ pub struct EC_Leaf {
 impl_base!(EC_Leaf => ec_oscillating_animation: EC_OscillatingAnimation);
 
 impl EC_Leaf {
-    pub fn new(nspr: Ptr<gfxSprite>, nx: f32, ny: f32) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, nx: f32, ny: f32) -> Self {
         let mut this = EC_Leaf {
             ec_oscillating_animation: EC_OscillatingAnimation::new(nspr, nx as i16, ny as i16, 0, 0, 16, 16, 16, 4),
             dx: nx,
@@ -346,11 +346,12 @@ impl EC_Leaf {
         };
 
         // Create random drag for each leaf to give the effect some variance
-        this.next_leaf();
+        this.next_leaf(g);
         this
     }
 
     pub fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         self.ec_oscillating_animation.animate();
 
         unsafe {
@@ -366,22 +367,23 @@ impl EC_Leaf {
 
         if self.vely > 0.0f32 && self.iy as i32 >= screenHeight {
             self.dy = -16.0f32;
-            self.dx = RANDOM_INT(screenWidth) as f32;
+            self.dx = RANDOM_INT(gp.get(), screenWidth) as f32;
 
-            self.next_leaf();
+            self.next_leaf(g);
         } else if self.vely < 0.0f32 && self.iy < -16 {
             self.dy = screenHeight as f32;
-            self.dx = RANDOM_INT(screenWidth) as f32;
+            self.dx = RANDOM_INT(gp.get(), screenWidth) as f32;
 
-            self.next_leaf();
+            self.next_leaf(g);
         }
 
         self.ix = self.dx as i16;
         self.iy = self.dy as i16;
     }
 
-    fn next_leaf(&mut self) {
-        let iRand = RANDOM_INT(20) as i16;
+    fn next_leaf(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        let iRand = RANDOM_INT(gp.get(), 20) as i16;
         if iRand < 12 {
             self.iAnimationY = 0;
         } else if iRand < 15 {
@@ -392,12 +394,12 @@ impl EC_Leaf {
             self.iAnimationY = 48;
         }
 
-        self.velx = RANDOM_INT(9) as f32 / 4.0f32;
-        self.vely = RANDOM_INT(9) as f32 / 4.0f32 + 1.0f32;
+        self.velx = RANDOM_INT(gp.get(), 9) as f32 / 4.0f32;
+        self.vely = RANDOM_INT(gp.get(), 9) as f32 / 4.0f32 + 1.0f32;
 
-        self.fForward = RANDOM_BOOL();
-        self.iAnimationFrame = ((RANDOM_INT(3) + if self.fForward { 0 } else { 1 }) * self.iAnimationW as i32) as i16;
-        self.iAnimationTimer = RANDOM_INT(16) as i16;
+        self.fForward = RANDOM_BOOL(gp.get());
+        self.iAnimationFrame = ((RANDOM_INT(gp.get(), 3) + if self.fForward { 0 } else { 1 }) * self.iAnimationW as i32) as i16;
+        self.iAnimationTimer = RANDOM_INT(gp.get(), 16) as i16;
     }
 
     pub fn draw(&self, g: &mut Game) {
@@ -420,8 +422,9 @@ pub struct EC_Snow {
 impl_base!(EC_Snow => ec_still_image: EC_StillImage);
 
 impl EC_Snow {
-    pub fn new(nspr: Ptr<gfxSprite>, nx: f32, ny: f32, r#type: i16) -> Self {
-        let srcx = ((RANDOM_BOOL() as i32) << 4) as i16;
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, nx: f32, ny: f32, r#type: i16) -> Self {
+        let mut gp = g.ptr();
+        let srcx = ((RANDOM_BOOL(gp.get()) as i32) << 4) as i16;
         let mut this = EC_Snow {
             ec_still_image: EC_StillImage::new(nspr, nx as i16, ny as i16, srcx, ((r#type as i32) << 4) as i16, 16, 16),
             dx: nx,
@@ -430,12 +433,13 @@ impl EC_Snow {
             vely: 0.0,
         };
 
-        this.velx = RANDOM_INT(9) as f32 / 4.0f32;
-        this.vely = RANDOM_INT(9) as f32 / 4.0f32 + 1.0f32;
+        this.velx = RANDOM_INT(gp.get(), 9) as f32 / 4.0f32;
+        this.vely = RANDOM_INT(gp.get(), 9) as f32 / 4.0f32 + 1.0f32;
         this
     }
 
     pub fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             self.dx += self.velx + g.game_values.flags.gamewindx;
             self.dy += self.vely + g.game_values.flags.gamewindy;
@@ -449,10 +453,10 @@ impl EC_Snow {
 
         if self.vely > 0.0f32 && self.iy as i32 >= screenHeight {
             self.dy = -16.0f32;
-            self.dx = RANDOM_INT(screenWidth) as f32;
+            self.dx = RANDOM_INT(gp.get(), screenWidth) as f32;
         } else if self.vely < 0.0f32 && self.iy < -16 {
             self.dy = screenHeight as f32;
-            self.dx = RANDOM_INT(screenWidth) as f32;
+            self.dx = RANDOM_INT(gp.get(), screenWidth) as f32;
         }
 
         self.ix = self.dx as i16;
@@ -479,7 +483,7 @@ pub struct EC_Rain {
 impl_base!(EC_Rain => ec_still_image: EC_StillImage);
 
 impl EC_Rain {
-    pub fn new(nspr: Ptr<gfxSprite>, nx: f32, ny: f32) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, nx: f32, ny: f32) -> Self {
         let mut this = EC_Rain {
             ec_still_image: EC_StillImage::new(nspr, nx as i16, ny as i16, 0, 16, 10, 10),
             dx: 0.0,
@@ -487,13 +491,13 @@ impl EC_Rain {
             velx: 0.0,
             vely: 0.0,
         };
-        this.next_rain_drop();
+        this.next_rain_drop(g);
         this.dx = nx;
         this.dy = ny;
         this
     }
 
-    pub fn update(&mut self, _g: &mut Game) {
+    pub fn update(&mut self, g: &mut Game) {
         self.dx += self.velx;
         self.dy += self.vely;
 
@@ -504,21 +508,22 @@ impl EC_Rain {
 
         // If rain is off bottom edge, change the rain gfx and start it from the top
         if self.iy as i32 >= screenHeight {
-            self.next_rain_drop();
+            self.next_rain_drop(g);
         }
 
         self.ix = self.dx as i16;
         self.iy = self.dy as i16;
     }
 
-    fn next_rain_drop(&mut self) {
-        self.velx = -5.0f32 + RANDOM_INT(5) as f32 / 4.0f32;
-        self.vely = 4.0f32 + RANDOM_INT(5) as f32 / 4.0f32;
+    fn next_rain_drop(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        self.velx = -5.0f32 + RANDOM_INT(gp.get(), 5) as f32 / 4.0f32;
+        self.vely = 4.0f32 + RANDOM_INT(gp.get(), 5) as f32 / 4.0f32;
 
         self.dy = -16.0f32;
-        self.dx = RANDOM_INT(screenWidth) as f32;
+        self.dx = RANDOM_INT(gp.get(), screenWidth) as f32;
 
-        self.iSrcX = (RANDOM_INT(8) * 10) as i16;
+        self.iSrcX = (RANDOM_INT(gp.get(), 8) * 10) as i16;
     }
 
     pub fn draw(&self, g: &mut Game) {
@@ -541,7 +546,7 @@ pub struct EC_Bubble {
 impl_base!(EC_Bubble => ec_oscillating_animation: EC_OscillatingAnimation);
 
 impl EC_Bubble {
-    pub fn new(nspr: Ptr<gfxSprite>, nx: f32, ny: f32) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, nx: f32, ny: f32) -> Self {
         let mut this = EC_Bubble {
             ec_oscillating_animation: EC_OscillatingAnimation::new(nspr, nx as i16, ny as i16, 0, 0, 16, 8, 4, 4),
             dx: 0.0,
@@ -549,13 +554,13 @@ impl EC_Bubble {
             velx: 0.0,
             vely: 0.0,
         };
-        this.next_bubble();
+        this.next_bubble(g);
         this.dx = nx;
         this.dy = ny;
         this
     }
 
-    pub fn update(&mut self, _g: &mut Game) {
+    pub fn update(&mut self, g: &mut Game) {
         self.ec_oscillating_animation.animate();
 
         self.dx += self.velx;
@@ -570,21 +575,22 @@ impl EC_Bubble {
 
         // If bubble is off top edge, move it back to the bottom to start again
         if (self.iy as i32 + self.iAnimationH as i32) < 0 {
-            self.next_bubble();
+            self.next_bubble(g);
         }
 
         self.ix = self.dx as i16;
         self.iy = self.dy as i16;
     }
 
-    fn next_bubble(&mut self) {
-        self.velx = -1.0f32 + RANDOM_INT(9) as f32 / 4.0f32;
-        self.vely = -4.0f32 + RANDOM_INT(9) as f32 / 4.0f32;
+    fn next_bubble(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        self.velx = -1.0f32 + RANDOM_INT(gp.get(), 9) as f32 / 4.0f32;
+        self.vely = -4.0f32 + RANDOM_INT(gp.get(), 9) as f32 / 4.0f32;
 
         self.dy = screenHeight as f32;
-        self.dx = RANDOM_INT(screenWidth) as f32;
+        self.dx = RANDOM_INT(gp.get(), screenWidth) as f32;
 
-        self.iAnimationFrame = (RANDOM_INT(4) << 4) as i16;
+        self.iAnimationFrame = (RANDOM_INT(gp.get(), 4) << 4) as i16;
     }
 
     pub fn draw(&self, g: &mut Game) {
@@ -1414,6 +1420,7 @@ impl EC_SoulsAward {
     }
 
     pub fn update(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if !self.endmode && {
             self.timer += 1;
             self.timer as f32 > self.speed
@@ -1423,7 +1430,7 @@ impl EC_SoulsAward {
             let addangle = QUARTER_PI / 20.0f32;
             let startangle = -HALF_PI;
 
-            let angle = (RANDOM_INT(21) - 10) as f32 * addangle + startangle;
+            let angle = (RANDOM_INT(gp.get(), 21) - 10) as f32 * addangle + startangle;
             let velx = self.speed * cosf(angle);
             let vely = self.speed * sinf(angle);
 

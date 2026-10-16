@@ -428,7 +428,7 @@ fn dump_frame(g: &mut Game, out: &mut impl Write) -> std::io::Result<()> {
         writeln!(out, "{}", line)?;
     }
 
-    writeln!(out, "R calls={} last={}", RandomNumberGenerator::call_count(), RandomNumberGenerator::last_value())
+    writeln!(out, "R calls={} last={}", RandomNumberGenerator::call_count(gp.get()), RandomNumberGenerator::last_value(gp.get()))
 }
 
 pub fn init(g: &mut Game) {
@@ -440,9 +440,9 @@ pub fn init(g: &mut Game) {
         if let Some(seed) = seed_text {
             h(gp.get()).seeded = true;
             h(gp.get()).seed = strtoul0(&seed);
-            RandomNumberGenerator::generator().reseed(h(gp.get()).seed);
+            RandomNumberGenerator::generator(gp.get()).reseed(h(gp.get()).seed);
             srand(h(gp.get()).seed);
-            RandomNumberGenerator::reset_call_count();
+            RandomNumberGenerator::reset_call_count(gp.get());
             g.sfx.sfx_ticks = virtual_ticks;
             g.sfx.sfx_ignore_channel_failure = true;
             g.sfx.sfx_log_events = true;

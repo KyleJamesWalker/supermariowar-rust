@@ -243,7 +243,7 @@ impl MI_World {
         unsafe {
             self.iControllingTeam = iWinningTeam;
             let ct = self.iControllingTeam as usize;
-            let r = RANDOM_INT(g.game_values.teamcounts[ct] as i32);
+            let r = RANDOM_INT(gp.get(), g.game_values.teamcounts[ct] as i32);
             self.iControllingPlayerId = g.game_values.teamids[ct][r as usize];
             gp.g_worldmap.set_player_sprite(g, self.iControllingPlayerId);
 
@@ -486,7 +486,7 @@ impl MI_World {
                 fUsedItem = true;
             } else if p == NUM_POWERUPS {
                 //Music Box (put vehicles to sleep)
-                self.iSleepTurns = (RANDOM_INT(4) + 2) as i16;
+                self.iSleepTurns = (RANDOM_INT(gp.get(), 4) + 2) as i16;
                 fUsedItem = true;
                 if_sound_on_play(g, &mut gp.rm.sfx_collectpowerup);
 

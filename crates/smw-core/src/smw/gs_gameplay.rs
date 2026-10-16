@@ -472,6 +472,8 @@ impl GameplayState {
     }
 
     fn init_eye_candy(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        let mut rm = g.rm;
         unsafe {
             for iEyeCandyLayer in 0..3usize {
                 //Clouds
@@ -482,13 +484,13 @@ impl GameplayState {
                         let w: i16;
                         let h: i16;
 
-                        if RANDOM_BOOL() {
-                            velx = ((RANDOM_INT(51) - 25) as i16) as f32 / 10.0f32; //big clouds: -3 - +3 pixel/frame
+                        if RANDOM_BOOL(gp.get()) {
+                            velx = ((RANDOM_INT(gp.get(), 51) - 25) as i16) as f32 / 10.0f32; //big clouds: -3 - +3 pixel/frame
                             srcy = 0;
                             w = 60;
                             h = 28;
                         } else {
-                            velx = ((RANDOM_INT(41) - 20) as i16) as f32 / 10.0f32; //small clouds: -2 - +2 pixel/frame
+                            velx = ((RANDOM_INT(gp.get(), 41) - 20) as i16) as f32 / 10.0f32; //small clouds: -2 - +2 pixel/frame
                             srcy = 28;
                             w = 28;
                             h = 12;
@@ -497,8 +499,8 @@ impl GameplayState {
                         velx = if velx < 0.5f32 && velx > -0.5f32 { 1.0f32 } else { velx }; //no static clouds please
 
                         //add cloud to eyecandy array
-                        let x = RANDOM_INT(App::screenWidth) as f32;
-                        let y = RANDOM_INT(100) as f32;
+                        let x = RANDOM_INT(gp.get(), App::screenWidth) as f32;
+                        let y = RANDOM_INT(gp.get(), 100) as f32;
                         g.eyecandy[iEyeCandyLayer].emplace(EC_Cloud::new(spr(&mut g.rm.spr_clouds), x, y, velx, 0, srcy, w, h));
                     }
                 }
@@ -506,14 +508,14 @@ impl GameplayState {
                 //Ghosts
                 if g.g_map.eyecandy[iEyeCandyLayer] & 2 != 0 {
                     for _i in 0..8 {
-                        let iGhostSrcY: i16 = (((RANDOM_INT(3) as i16) as i32) << 5) as i16; //ghost type
-                        let mut velx: f32 = ((RANDOM_INT(51) - 25) as i16) as f32 / 10.0f32; //big clouds: -3 - +3 pixel/frame
+                        let iGhostSrcY: i16 = (((RANDOM_INT(gp.get(), 3) as i16) as i32) << 5) as i16; //ghost type
+                        let mut velx: f32 = ((RANDOM_INT(gp.get(), 51) - 25) as i16) as f32 / 10.0f32; //big clouds: -3 - +3 pixel/frame
 
-                        velx = if velx < 0.5f32 && velx > -0.5f32 { if RANDOM_INT(1) != 0 { 1.0f32 } else { -1.0f32 } } else { velx }; //no static clouds please
+                        velx = if velx < 0.5f32 && velx > -0.5f32 { if RANDOM_INT(gp.get(), 1) != 0 { 1.0f32 } else { -1.0f32 } } else { velx }; //no static clouds please
 
                         //add cloud to eyecandy array
-                        let x = RANDOM_INT(App::screenWidth) as f32;
-                        let y = RANDOM_INT(100) as f32;
+                        let x = RANDOM_INT(gp.get(), App::screenWidth) as f32;
+                        let y = RANDOM_INT(gp.get(), 100) as f32;
                         g.eyecandy[iEyeCandyLayer].emplace(EC_Ghost::new(
                             spr(&mut g.rm.spr_ghosts),
                             x,
@@ -532,18 +534,18 @@ impl GameplayState {
                 //Leaves
                 if g.g_map.eyecandy[iEyeCandyLayer] & 4 != 0 {
                     for _i in 0..15 {
-                        let x = RANDOM_INT(App::screenWidth) as f32;
-                        let y = RANDOM_INT(App::screenHeight) as f32;
-                        g.eyecandy[iEyeCandyLayer].emplace(EC_Leaf::new(spr(&mut g.rm.spr_leaves), x, y));
+                        let x = RANDOM_INT(gp.get(), App::screenWidth) as f32;
+                        let y = RANDOM_INT(gp.get(), App::screenHeight) as f32;
+                        gp.eyecandy[iEyeCandyLayer].emplace(EC_Leaf::new(g, spr(&mut rm.spr_leaves), x, y));
                     }
                 }
 
                 //Snow
                 if g.g_map.eyecandy[iEyeCandyLayer] & 8 != 0 {
                     for _i in 0..15 {
-                        let x = RANDOM_INT(App::screenWidth) as f32;
-                        let y = RANDOM_INT(App::screenHeight) as f32;
-                        g.eyecandy[iEyeCandyLayer].emplace(EC_Snow::new(spr(&mut g.rm.spr_snow), x, y, 0));
+                        let x = RANDOM_INT(gp.get(), App::screenWidth) as f32;
+                        let y = RANDOM_INT(gp.get(), App::screenHeight) as f32;
+                        gp.eyecandy[iEyeCandyLayer].emplace(EC_Snow::new(g, spr(&mut rm.spr_snow), x, y, 0));
                     }
                 }
 
@@ -553,7 +555,7 @@ impl GameplayState {
                     [[0, 0, 64, 44], [0, 44, 64, 44], [0, 44, 48, 44], [32, 32, 16, 12], [32, 44, 16, 12], [32, 16, 16, 28], [32, 0, 32, 28], [32, 44, 32, 28]];
                 if g.g_map.eyecandy[iEyeCandyLayer] & 16 != 0 {
                     for i in 0..8i16 {
-                        let mut velx: f32 = ((RANDOM_INT(41) - 20) as i16) as f32 / 10.0f32;
+                        let mut velx: f32 = ((RANDOM_INT(gp.get(), 41) - 20) as i16) as f32 / 10.0f32;
                         velx = if velx < 0.5f32 && velx > -0.5f32 { 1.0f32 } else { velx }; //Keep fish from moving too slowly
 
                         let mut srcx = iFishSettings[0][0];
@@ -561,7 +563,7 @@ impl GameplayState {
                         let mut w = iFishSettings[0][2];
                         let mut h = iFishSettings[0][3];
 
-                        let iRandomFish = RANDOM_INT(100) as i16;
+                        let iRandomFish = RANDOM_INT(gp.get(), 100) as i16;
 
                         let mut iFishWeightCount: i16 = 0;
                         for iFish in 0..8usize {
@@ -578,8 +580,8 @@ impl GameplayState {
 
                         //add cloud to eyecandy array
                         let iPossibleY: i16 = ((App::screenHeight - h as i32) / 10) as i16;
-                        let dDestY: f32 = (RANDOM_INT(iPossibleY as i32) + iPossibleY as i32 * i as i32) as f32;
-                        let x = RANDOM_INT(App::screenWidth) as f32;
+                        let dDestY: f32 = (RANDOM_INT(gp.get(), iPossibleY as i32) + iPossibleY as i32 * i as i32) as f32;
+                        let x = RANDOM_INT(gp.get(), App::screenWidth) as f32;
                         g.eyecandy[iEyeCandyLayer].emplace(EC_Cloud::new(
                             spr(&mut g.rm.spr_fish),
                             x,
@@ -596,18 +598,18 @@ impl GameplayState {
                 //Rain
                 if g.g_map.eyecandy[iEyeCandyLayer] & 32 != 0 {
                     for _i in 0..20 {
-                        let x = RANDOM_INT(App::screenWidth) as f32;
-                        let y = RANDOM_INT(App::screenHeight) as f32;
-                        g.eyecandy[iEyeCandyLayer].emplace(EC_Rain::new(spr(&mut g.rm.spr_rain), x, y));
+                        let x = RANDOM_INT(gp.get(), App::screenWidth) as f32;
+                        let y = RANDOM_INT(gp.get(), App::screenHeight) as f32;
+                        gp.eyecandy[iEyeCandyLayer].emplace(EC_Rain::new(g, spr(&mut rm.spr_rain), x, y));
                     }
                 }
 
                 //Bubbles
                 if g.g_map.eyecandy[iEyeCandyLayer] & 64 != 0 {
                     for _i in 0..10 {
-                        let x = RANDOM_INT(App::screenWidth) as f32;
-                        let y = RANDOM_INT(App::screenHeight) as f32;
-                        g.eyecandy[iEyeCandyLayer].emplace(EC_Bubble::new(spr(&mut g.rm.spr_rain), x, y));
+                        let x = RANDOM_INT(gp.get(), App::screenWidth) as f32;
+                        let y = RANDOM_INT(gp.get(), App::screenHeight) as f32;
+                        gp.eyecandy[iEyeCandyLayer].emplace(EC_Bubble::new(g, spr(&mut rm.spr_rain), x, y));
                     }
                 }
             }
@@ -637,8 +639,8 @@ impl GameplayState {
             self.init_eye_candy(g);
 
             self.iWindTimer = 0;
-            self.dNextWind = (RANDOM_INT(41) - 20) as f32 / 4.0f32;
-            g.game_values.flags.gamewindx = ((RANDOM_INT(41)) - 20) as f32 / 4.0f32;
+            self.dNextWind = (RANDOM_INT(gp.get(), 41) - 20) as f32 / 4.0f32;
+            g.game_values.flags.gamewindx = ((RANDOM_INT(gp.get(), 41)) - 20) as f32 / 4.0f32;
 
             //Initialize players after game init has finished
             for i in 0..game().players.len() {
@@ -759,6 +761,7 @@ impl GameplayState {
 }
 
 pub fn check_wind_event(g: &mut Game, iWindTimer: &mut i16, dNextWind: &mut f32) {
+    let mut gp = g.ptr();
     unsafe {
         if *iWindTimer <= 0 {
             //Then trigger next wind event
@@ -766,19 +769,19 @@ pub fn check_wind_event(g: &mut Game, iWindTimer: &mut i16, dNextWind: &mut f32)
                 g.game_values.flags.gamewindx += 0.02f32;
 
                 if g.game_values.flags.gamewindx >= *dNextWind {
-                    *iWindTimer = ((RANDOM_INT(60)) + 30) as i16;
+                    *iWindTimer = ((RANDOM_INT(gp.get(), 60)) + 30) as i16;
                 }
             } else if g.game_values.flags.gamewindx >= *dNextWind {
                 g.game_values.flags.gamewindx -= 0.02f32;
 
                 if g.game_values.flags.gamewindx <= *dNextWind {
-                    *iWindTimer = ((RANDOM_INT(60)) + 30) as i16;
+                    *iWindTimer = ((RANDOM_INT(gp.get(), 60)) + 30) as i16;
                 }
             }
         } else {
             *iWindTimer -= 1;
             if *iWindTimer <= 0 {
-                *dNextWind = ((RANDOM_INT(41)) - 20) as f32 / 4.0f32;
+                *dNextWind = ((RANDOM_INT(gp.get(), 41)) - 20) as f32 / 4.0f32;
             }
         }
     }
@@ -821,13 +824,14 @@ pub fn animate_during_countdown(g: &mut Game) {
 }
 
 pub fn net_pow_kills(g: &mut Game, ids: &[i32]) {
+    let mut gp = g.ptr();
     unsafe {
         let pKillPlayers: Vec<Ptr<CPlayer>> = ids.iter().filter_map(|&id| g.players.iter().copied().find(|p| p.globalID as i32 == id)).collect();
         let iNumKillPlayers = pKillPlayers.len() as i16;
         if iNumKillPlayers == 0 {
             return;
         }
-        let mut iRandPlayer = RANDOM_INT(iNumKillPlayers as i32) as i16;
+        let mut iRandPlayer = RANDOM_INT(gp.get(), iNumKillPlayers as i32) as i16;
         for _iPlayer in 0..iNumKillPlayers {
             player_killed_player(
                 g,
@@ -2012,7 +2016,7 @@ pub fn load_map_objects(g: &mut Game, fPreview: bool) {
             //Randomly choose boxes to put 5 coins in
             let mut iItem: i16 = 0;
             while iItem < 5 && iItem < iThrowBoxCount {
-                let mut iBoxIndex = RANDOM_INT(iThrowBoxCount as i32) as i16;
+                let mut iBoxIndex = RANDOM_INT(gp.get(), iThrowBoxCount as i32) as i16;
 
                 while boxes[iBoxIndex as usize] {
                     iBoxIndex += 1;
@@ -2066,20 +2070,20 @@ pub fn load_map_objects(g: &mut Game, fPreview: bool) {
                         if fBoxHasCoin.as_ref().unwrap()[iAddThrowBoxIndex as usize] {
                             iItem = MINIGAME_COIN as i16;
                         }
-                    } else if gm == game_mode_health && (RANDOM_INT(100) as i16) < gms.health.percentextralife {
+                    } else if gm == game_mode_health && (RANDOM_INT(gp.get(), 100) as i16) < gms.health.percentextralife {
                         iItem = HEALTH_POWERUP as i16;
-                    } else if (gm == game_mode_timelimit && (RANDOM_INT(100) as i16) < gms.time.percentextratime)
-                        || (gm == game_mode_star && (RANDOM_INT(100) as i16) < gms.star.percentextratime)
+                    } else if (gm == game_mode_timelimit && (RANDOM_INT(gp.get(), 100) as i16) < gms.time.percentextratime)
+                        || (gm == game_mode_star && (RANDOM_INT(gp.get(), 100) as i16) < gms.star.percentextratime)
                     {
                         iItem = TIME_POWERUP as i16;
-                    } else if (gm == game_mode_coins && (RANDOM_INT(100) as i16) < gms.coins.percentextracoin)
-                        || (gm == game_mode_greed && (RANDOM_INT(100) as i16) < gms.greed.percentextracoin)
+                    } else if (gm == game_mode_coins && (RANDOM_INT(gp.get(), 100) as i16) < gms.coins.percentextracoin)
+                        || (gm == game_mode_greed && (RANDOM_INT(gp.get(), 100) as i16) < gms.greed.percentextracoin)
                     {
                         iItem = COIN_POWERUP as i16;
-                    } else if gm == game_mode_jail && (RANDOM_INT(100) as i16) < gms.jail.percentkey {
+                    } else if gm == game_mode_jail && (RANDOM_INT(gp.get(), 100) as i16) < gms.jail.percentkey {
                         iItem = JAIL_KEY_POWERUP as i16;
-                    } else if iCountWeight > 0 && (RANDOM_INT(100)) < 40 {
-                        let iRandPowerup: i32 = RANDOM_INT(iCountWeight as i32) + 1;
+                    } else if iCountWeight > 0 && (RANDOM_INT(gp.get(), 100)) < 40 {
+                        let iRandPowerup: i32 = RANDOM_INT(gp.get(), iCountWeight as i32) + 1;
                         iItem = 0;
 
                         let mut iPowerupWeightCount: i32 = g.game_values.powerupweights[iItem as usize] as i32;
@@ -2258,10 +2262,10 @@ pub fn update_bullet_bill_powerup(g: &mut Game) {
 pub fn net_bullet_bill(g: &mut Game, p: usize) {
         let mut gp = g.ptr();
     unsafe {
-        g.game_values.bulletbillspawntimer[p] = (RANDOM_INT(20) + 25) as i16;
-        let speed: f32 = ((RANDOM_INT(21) + 20) as f32) / 10.0f32;
-        let posy = RANDOM_INT(448) as i16;
-        let vel = if RANDOM_INT(2) != 0 { speed } else { -speed };
+        g.game_values.bulletbillspawntimer[p] = (RANDOM_INT(gp.get(), 20) + 25) as i16;
+        let speed: f32 = ((RANDOM_INT(gp.get(), 21) + 20) as f32) / 10.0f32;
+        let posy = RANDOM_INT(gp.get(), 448) as i16;
+        let vel = if RANDOM_INT(gp.get(), 2) != 0 { speed } else { -speed };
         let obj = Ptr::new_box(MO_BulletBill::new(
             g,
             spr(&mut gp.get().rm.spr_bulletbill),
@@ -2591,7 +2595,7 @@ pub fn start_gameplay(g: &mut Game) {
         g.game_values.appstate = AppState::Game;
 
         if g.game_values.music {
-            g.musiclist.set_random_music(music_category(g.g_map.musicCategoryID), "", "");
+            gp.musiclist.set_random_music(g, music_category(g.g_map.musicCategoryID), "", "");
             let path = g.musiclist.current_music().clone();
             g.rm.backgroundmusic[0] = load_music(g, &path);
             gp.rm.backgroundmusic[0].play(g, g.game_values.playnextmusic, false);
@@ -2913,7 +2917,7 @@ pub fn net_mystery_swap(g: &mut Game, iUsingPlayerID: i16) -> bool {
             }
         }
 
-        let iIncrement = RANDOM_INT(iNumAvailablePlayers as i32 - 1) as i16;
+        let iIncrement = RANDOM_INT(gp.get(), iNumAvailablePlayers as i32 - 1) as i16;
 
         let mut spots: [MysteryMushroomTempPlayer; 4] =
             [MysteryMushroomTempPlayer::new(), MysteryMushroomTempPlayer::new(), MysteryMushroomTempPlayer::new(), MysteryMushroomTempPlayer::new()];

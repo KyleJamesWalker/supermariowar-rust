@@ -389,16 +389,17 @@ impl MapList {
         }
     }
 
-    pub fn random(&mut self, fUseFilters: bool) {
+    pub fn random(&mut self, g: &mut Game, fUseFilters: bool) {
+        let mut gp = g.ptr();
         let iShuffle: i32;
         if fUseFilters {
             if self.iFilteredMapCount < 2 {
                 return;
             }
 
-            iShuffle = RANDOM_INT((self.iFilteredMapCount - 1) as i32);
+            iShuffle = RANDOM_INT(gp.get(), (self.iFilteredMapCount - 1) as i32);
         } else {
-            iShuffle = RANDOM_INT(self.maps.len().wrapping_sub(1) as i32);
+            iShuffle = RANDOM_INT(gp.get(), self.maps.len().wrapping_sub(1) as i32);
         }
 
         for _i in 0..=iShuffle {
@@ -406,8 +407,9 @@ impl MapList {
         }
     }
 
-    pub fn random_filename(&self) -> String {
-        let iRand: i16 = RANDOM_INT(self.maps.len() as i32) as i16;
+    pub fn random_filename(&self, g: &mut Game) -> String {
+        let mut gp = g.ptr();
+        let iRand: i16 = RANDOM_INT(gp.get(), self.maps.len() as i32) as i16;
 
         let rnd = iRand.max(0) as usize;
 

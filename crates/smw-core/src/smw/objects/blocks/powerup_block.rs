@@ -129,8 +129,8 @@ pub trait B_PowerupBlockTrait: IO_BlockTrait {
     fn pb(&self) -> &B_PowerupBlock;
     fn pb_mut(&mut self) -> &mut B_PowerupBlock;
 
-    fn select_powerup(&mut self) -> i16 {
-        b_powerup_block_select_powerup(self)
+    fn select_powerup(&mut self, g: &mut Game) -> i16 {
+        b_powerup_block_select_powerup(g, self)
     }
 }
 
@@ -221,23 +221,24 @@ pub fn b_powerup_block_update<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, thi
 }
 
 fn b_powerup_block_release<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, pos: Vec2s, side: bool) {
+    let mut gp = g.ptr();
     unsafe {
         let gm = g.game_values.gamemode.gamemode;
         let gs = &g.game_values.gamemodesettings;
-        let iType = if gm == game_mode_health && RANDOM_INT(100) < gs.health.percentextralife as i32 {
+        let iType = if gm == game_mode_health && RANDOM_INT(gp.get(), 100) < gs.health.percentextralife as i32 {
             HEALTH_POWERUP as i16
-        } else if (gm == game_mode_timelimit && RANDOM_INT(100) < gs.time.percentextratime as i32)
-            || (gm == game_mode_star && RANDOM_INT(100) < gs.star.percentextratime as i32)
+        } else if (gm == game_mode_timelimit && RANDOM_INT(gp.get(), 100) < gs.time.percentextratime as i32)
+            || (gm == game_mode_star && RANDOM_INT(gp.get(), 100) < gs.star.percentextratime as i32)
         {
             TIME_POWERUP as i16
-        } else if (gm == game_mode_coins && RANDOM_INT(100) < gs.coins.percentextracoin as i32)
-            || (gm == game_mode_greed && RANDOM_INT(100) < gs.greed.percentextracoin as i32)
+        } else if (gm == game_mode_coins && RANDOM_INT(gp.get(), 100) < gs.coins.percentextracoin as i32)
+            || (gm == game_mode_greed && RANDOM_INT(gp.get(), 100) < gs.greed.percentextracoin as i32)
         {
             COIN_POWERUP as i16
-        } else if gm == game_mode_jail && RANDOM_INT(100) < gs.jail.percentkey as i32 {
+        } else if gm == game_mode_jail && RANDOM_INT(gp.get(), 100) < gs.jail.percentkey as i32 {
             JAIL_KEY_POWERUP as i16
         } else {
-            this.select_powerup()
+            this.select_powerup(g)
         };
 
         createpowerup(g, iType, pos, side, true);
@@ -519,13 +520,14 @@ pub fn b_powerup_block_trigger_behavior<T: B_PowerupBlockTrait + ?Sized>(g: &mut
     }
 }
 
-pub fn b_powerup_block_select_powerup<T: B_PowerupBlockTrait + ?Sized>(this: &mut T) -> i16 {
+pub fn b_powerup_block_select_powerup<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T) -> i16 {
+    let mut gp = g.ptr();
     let b = this.pb();
     if b.iCountWeight == 0 {
         return NO_POWERUP as i16;
     }
 
-    let iRandPowerup: i32 = RANDOM_INT(b.iCountWeight as i32) + 1;
+    let iRandPowerup: i32 = RANDOM_INT(gp.get(), b.iCountWeight as i32) + 1;
     let mut iSelectedPowerup: i32 = 0;
 
     let mut iPowerupWeightCount: i32 = b.settings[iSelectedPowerup as usize] as i32;

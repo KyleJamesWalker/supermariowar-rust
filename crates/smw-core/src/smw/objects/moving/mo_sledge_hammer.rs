@@ -84,8 +84,8 @@ impl MO_SledgeHammer {
                 let iColorID: i16 = (self.colorOffset as i32 / 32 - 1) as i16;
 
                 for _iHammer in 0..3 {
-                    let dAngle: f32 = RANDOM_INT(628) as f32 / 100.0f32;
-                    let dVel: f32 = RANDOM_INT(5) as f32 / 2.0f32 + 3.0f32;
+                    let dAngle: f32 = RANDOM_INT(gp.get(), 628) as f32 / 100.0f32;
+                    let dVel: f32 = RANDOM_INT(gp.get(), 5) as f32 / 2.0f32 + 3.0f32;
                     let dVelX: f32 = dVel * cosf(dAngle);
                     let dVelY: f32 = dVel * sinf(dAngle);
                     let obj = Ptr::new_box(MO_Hammer::new(

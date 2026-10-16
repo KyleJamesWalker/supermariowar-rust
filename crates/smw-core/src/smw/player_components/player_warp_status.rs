@@ -153,8 +153,9 @@ impl PlayerWarpStatus {
     }
 
     pub fn choose_warp_exit(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
         unsafe {
-            let mut exit: Ptr<WarpExit> = g.g_map.get_random_warp_exit(self.warpconnection as i32, self.warpid as i32);
+            let mut exit: Ptr<WarpExit> = gp.g_map.get_random_warp_exit(g, self.warpconnection as i32, self.warpid as i32);
             debug_assert!(!exit.is_null());
             player.set_xi(exit.x);
             player.set_yi(exit.y);

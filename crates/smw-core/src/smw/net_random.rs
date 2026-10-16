@@ -233,7 +233,7 @@ pub fn end_game(g: &mut Game) {
 pub fn event(g: &mut Game, ev: Ev, args: &[i32]) -> bool {
     let mut gp = g.ptr();
     unsafe {
-        if !g.netplay.active || !random_state(gp.get()).g_inGame || random_state(gp.get()).g_added.is_some() || RandomNumberGenerator::tape_active() {
+        if !g.netplay.active || !random_state(gp.get()).g_inGame || random_state(gp.get()).g_added.is_some() || RandomNumberGenerator::tape_active(gp.get()) {
             return false;
         }
 
@@ -241,9 +241,9 @@ pub fn event(g: &mut Game, ev: Ev, args: &[i32]) -> bool {
             random_state(gp.get()).g_sent = random_state(gp.get()).g_sent.wrapping_add(1);
             let context = context_of(random_state(gp.get()).g_sent);
             set_network_id_context(g, context as u32);
-            RandomNumberGenerator::start_recording();
+            RandomNumberGenerator::start_recording(gp.get());
             let line = run_logged(g, ev, args);
-            let draws = RandomNumberGenerator::stop_tape();
+            let draws = RandomNumberGenerator::stop_tape(gp.get());
             set_network_id_context(g, 0);
             if ev == Ev::Kill && !crate::smw::net_outcomes::kill_had_effect(g) {
                 return true;
@@ -290,7 +290,7 @@ pub fn in_game(g: &mut Game) -> bool {
 /// Inside an event the host runs or a joiner replays.
 pub fn in_event(g: &mut Game) -> bool {
     let mut gp = g.ptr();
-    unsafe { random_state(gp.get()).g_added.is_some() || RandomNumberGenerator::tape_active() }
+    unsafe { random_state(gp.get()).g_added.is_some() || RandomNumberGenerator::tape_active(gp.get()) }
 }
 
 /// A joiner whose game host decides random outcomes, deaths and scores.
@@ -359,15 +359,16 @@ fn stop_waiting(g: &mut Game, ev: Ev, key: i32) {
 }
 
 fn replay(g: &mut Game, pkg: &RandomEvent) {
+    let mut gp = g.ptr();
     let ev = Ev::from_u8(pkg.kind).unwrap();
     if let Some(&key) = pkg.args.first() {
         stop_waiting(g, ev, key);
     }
     set_network_id_context(g, pkg.context as u32);
-    RandomNumberGenerator::start_playback(pkg.draws.clone());
+    RandomNumberGenerator::start_playback(gp.get(), pkg.draws.clone());
     let line = run_logged(g, ev, &pkg.args);
     harness::note_net(g, line);
-    let left = RandomNumberGenerator::stop_tape();
+    let left = RandomNumberGenerator::stop_tape(gp.get());
     set_network_id_context(g, 0);
     if !left.is_empty() {
         println!("[net] {:?} left {} of the game host's draws unused", ev, left.len());
@@ -513,7 +514,7 @@ fn run(g: &mut Game, ev: Ev, args: &[i32]) {
                 o.set_yi(y as i16);
             }
         }
-        Ev::Wander => obj::net_wander(find_object(g, args[0]), args),
+        Ev::Wander => obj::net_wander(g, find_object(gp.get(), args[0]), args),
         Ev::HazardTimer => obj::net_hazard_timer(g, find_object(gp.get(), args[0])),
         Ev::Respawn => {
             let mut p = player(g, args);
@@ -556,7 +557,7 @@ fn run(g: &mut Game, ev: Ev, args: &[i32]) {
                 p.net_throw_boomerang(g, args[1], args[2], args[3] != 0);
             }
         }
-        Ev::PhantoReturn => obj::overmap::wo_phanto::net_return(find_object(g, args[0])),
+        Ev::PhantoReturn => obj::overmap::wo_phanto::net_return(g, find_object(gp.get(), args[0])),
         Ev::Kill => crate::smw::net_outcomes::net_kill(g, args),
         Ev::RemoveTeam => crate::smw::net_outcomes::net_remove_team(g, args[0] as i16),
         Ev::RemoveButTeam => crate::smw::gamemodes::game_mode::remove_players_but_team_now(g, args[0] as i16),

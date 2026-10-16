@@ -215,12 +215,12 @@ impl MI_FrenzyModeOptions {
 
     pub fn set_random_game_mode_settings(&mut self, g: &mut Game) {
         unsafe {
-            g.game_values.gamemodesettings.frenzy.quantity = self.miQuantityField.random_value();
-            g.game_values.gamemodesettings.frenzy.rate = self.miRateField.random_value();
-            g.game_values.gamemodesettings.frenzy.storedshells = self.miStoredShellsField.random_value();
+            g.game_values.gamemodesettings.frenzy.quantity = self.miQuantityField.random_value(g);
+            g.game_values.gamemodesettings.frenzy.rate = self.miRateField.random_value(g);
+            g.game_values.gamemodesettings.frenzy.storedshells = self.miStoredShellsField.random_value(g);
 
             for iPowerup in 0..NF {
-                g.game_values.gamemodesettings.frenzy.powerupweight[iPowerup] = self.miPowerupSlider[iPowerup].random_value();
+                g.game_values.gamemodesettings.frenzy.powerupweight[iPowerup] = self.miPowerupSlider[iPowerup].random_value(g);
             }
         }
     }

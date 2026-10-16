@@ -829,10 +829,10 @@ impl CPlayer {
         let mut gp = g.ptr();
         let mut rm = g.rm;
         unsafe {
-            let numPodobos = (RANDOM_INT(6) + 10) as i16;
+            let numPodobos = (RANDOM_INT(gp.get(), 6) + 10) as i16;
             for _iPodobo in 0..numPodobos {
-                let x = RANDOM_INT((App::screenWidth as f32 * 0.95f32) as i32) as i16;
-                let vy = -((RANDOM_INT(9) as f32) / 2.0f32) - 9.0f32;
+                let x = RANDOM_INT(gp.get(), (App::screenWidth as f32 * 0.95f32) as i32) as i16;
+                let vy = -((RANDOM_INT(gp.get(), 9) as f32) / 2.0f32) - 9.0f32;
                 let obj = Ptr::new_box(MO_Podobo::new(
                     g,
                     Ptr::from_mut(&mut rm.spr_podobo),
@@ -877,7 +877,7 @@ impl CPlayer {
         let mut rm = g.rm;
         let this = self.this();
         unsafe {
-            let ttl = (RANDOM_INT(120) + 120) as i16;
+            let ttl = (RANDOM_INT(gp.get(), 120) + 120) as i16;
             let mut bomb = Ptr::new_box(CO_Bomb::new(
                 g,
                 Ptr::from_mut(&mut rm.spr_bomb),
@@ -1303,7 +1303,7 @@ impl CPlayer {
             if g.netplay.active {
                 self.powerupangle = 0.0;
             } else {
-                self.powerupangle = RANDOM_INT(1000) as f32 * 0.00628f32;
+                self.powerupangle = RANDOM_INT(gp.get(), 1000) as f32 * 0.00628f32;
             }
 
             if_sound_on_play(g, &mut gp.rm.sfx_storedpowerupsound);
@@ -2188,8 +2188,9 @@ impl CPlayer {
     }
 
     pub fn find_spawn_point(&mut self, g: &mut Game) -> bool {
+        let mut gp = g.ptr();
         unsafe {
-            let fRet = g.g_map.findspawnpoint(self.teamID + 1, &mut self.ix, &mut self.iy, PW as i16, PH as i16, false);
+            let fRet = gp.g_map.findspawnpoint(g, self.teamID + 1, &mut self.ix, &mut self.iy, PW as i16, PH as i16, false);
 
             self.fx = self.ix as f32;
             self.fy = self.iy as f32;

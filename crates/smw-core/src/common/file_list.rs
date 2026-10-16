@@ -214,9 +214,10 @@ impl SimpleFileList {
         }
     }
 
-    pub fn random(&mut self) {
+    pub fn random(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if !self.m_filelist.is_empty() {
-            self.m_index = RANDOM_INT(self.m_filelist.len() as i32) as usize;
+            self.m_index = RANDOM_INT(gp.get(), self.m_filelist.len() as i32) as usize;
         }
     }
 
@@ -563,24 +564,25 @@ impl MusicPack {
         &self.m_all_songs[idx]
     }
 
-    pub fn random_music(&mut self, musicCategory: MusicCategory, mapName: &str, background: &str) -> PathBuf {
+    pub fn random_music(&mut self, g: &mut Game, musicCategory: MusicCategory, mapName: &str, background: &str) -> PathBuf {
+        let mut gp = g.ptr();
         if let Some(list) = self.m_map_overrides.get(mapName) {
             if !list.is_empty() {
-                self.m_currentMusic = RANDOM_INT(list.len() as i32) as usize;
+                self.m_currentMusic = RANDOM_INT(gp.get(), list.len() as i32) as usize;
                 return self.m_all_songs[list[self.m_currentMusic]].clone();
             }
         }
 
         if let Some(list) = self.m_background_overrides.get(background) {
             if !list.is_empty() {
-                self.m_currentMusic = RANDOM_INT(list.len() as i32) as usize;
+                self.m_currentMusic = RANDOM_INT(gp.get(), list.len() as i32) as usize;
                 return self.m_all_songs[list[self.m_currentMusic]].clone();
             }
         }
 
         let list = self.m_category_songs.entry(musicCategory).or_default();
         if !list.is_empty() {
-            self.m_currentMusic = RANDOM_INT(list.len() as i32) as usize;
+            self.m_currentMusic = RANDOM_INT(gp.get(), list.len() as i32) as usize;
             return self.m_all_songs[list[self.m_currentMusic]].clone();
         }
 
@@ -666,8 +668,8 @@ impl MusicList {
         (&mut self.m_currentMusic, &mut self.m_entries[self.m_currentIndex].m_currentMusic)
     }
 
-    pub fn set_random_music(&mut self, category: MusicCategory, mapName: &str, background: &str) {
-        self.m_currentMusic = self.m_entries[self.m_currentIndex].random_music(category, mapName, background);
+    pub fn set_random_music(&mut self, g: &mut Game, category: MusicCategory, mapName: &str, background: &str) {
+        self.m_currentMusic = self.m_entries[self.m_currentIndex].random_music(g, category, mapName, background);
     }
 
     pub fn set_next_music(&mut self, category: MusicCategory, mapName: &str, background: &str) {
@@ -692,8 +694,9 @@ impl MusicList {
         self.m_currentIndex = (if self.m_currentIndex == 0 { self.m_entries.len() } else { self.m_currentIndex }) - 1;
     }
 
-    pub fn random(&mut self) {
-        self.m_currentIndex = RANDOM_INT(self.m_entries.len() as i32) as usize;
+    pub fn random(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        self.m_currentIndex = RANDOM_INT(gp.get(), self.m_entries.len() as i32) as usize;
     }
 
     pub fn update_entries_with_overrides(&mut self, overrides: &[MapMusicOverride]) {
@@ -914,8 +917,9 @@ impl WorldMusicList {
         self.m_currentIndex = (if self.m_currentIndex == 0 { self.m_entries.len() } else { self.m_currentIndex }) - 1;
     }
 
-    pub fn random(&mut self) {
-        self.m_currentIndex = RANDOM_INT(self.m_entries.len() as i32) as usize;
+    pub fn random(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        self.m_currentIndex = RANDOM_INT(gp.get(), self.m_entries.len() as i32) as usize;
     }
 
     pub fn update_entries_with_overrides(&mut self, overrides: &[WorldMusicOverride]) {

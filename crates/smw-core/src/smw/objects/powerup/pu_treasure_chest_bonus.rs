@@ -34,6 +34,7 @@ impl_base!(PU_TreasureChestBonus => mo_powerup: MO_Powerup);
 impl PU_TreasureChestBonus {
     #[allow(clippy::too_many_arguments)]
     pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, iNumSpr: i16, aniSpeed: i16, iCollisionWidth: i16, iCollisionHeight: i16, iCollisionOffsetX: i16, iCollisionOffsetY: i16, iBonusItem: i16) -> Self {
+        let mut gp = g.ptr();
         let mut o = PU_TreasureChestBonus {
             mo_powerup: MO_Powerup::new(g, nspr, Vec2s::zero(), iNumSpr, aniSpeed, iCollisionWidth, iCollisionHeight, iCollisionOffsetX, iCollisionOffsetY),
             bonusitem: iBonusItem,
@@ -54,7 +55,7 @@ impl PU_TreasureChestBonus {
         let collisionHeight = o.collisionHeight;
         let mut iAttempts: i16 = 10;
         unsafe {
-            while !g.g_map.findspawnpoint(5, &mut ix, &mut iy, collisionWidth, collisionHeight, false) && {
+            while !gp.g_map.findspawnpoint(g, 5, &mut ix, &mut iy, collisionWidth, collisionHeight, false) && {
                 let a = iAttempts;
                 iAttempts -= 1;
                 a > 0

@@ -30,7 +30,8 @@ use crate::smw::objects::overmap::wo_thwomp::OMO_Thwomp;
 use crate::smw::player::{get_player_from_global_id, CPlayer};
 use sdl2::sys::SDL_Rect;
 
-fn push_bombs(container: &CObjectContainer, x: i16, y: i16) {
+fn push_bombs(g: &mut Game, container: &CObjectContainer, x: i16, y: i16) {
+    let mut gp = g.ptr();
     let list = container.list();
     for i in 0..list.len() {
         let mut obj = list[i];
@@ -48,8 +49,8 @@ fn push_bombs(container: &CObjectContainer, x: i16, y: i16) {
 
         if dist < 10000 {
             let signX: f32 = if bombx > 0 { 1.0f32 } else { -1.0f32 };
-            bomb.velx += signX * (RANDOM_INT(30) as f32 / 10.0f32 + 4.0f32);
-            bomb.vely -= RANDOM_INT(30) as f32 / 10.0f32 + 6.0f32;
+            bomb.velx += signX * (RANDOM_INT(gp.get(), 30) as f32 / 10.0f32 + 4.0f32);
+            bomb.vely -= RANDOM_INT(gp.get(), 30) as f32 / 10.0f32 + 6.0f32;
         }
     }
 }
@@ -244,8 +245,9 @@ impl MO_SledgeBrother {
     }
 
     fn randomaction(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
-            let randaction: i32 = RANDOM_INT(100);
+            let randaction: i32 = RANDOM_INT(gp.get(), 100);
 
             let t = self.iType as usize;
             let d = g.game_values.gamemodesettings.boss.difficulty as usize;
@@ -262,11 +264,11 @@ impl MO_SledgeBrother {
             } else if self.need_action[2] > need[2] {
                 self.turn(g);
             } else if self.need_action[3] > need[3] {
-                self.wait(waittime[0], waittime[1]);
+                self.wait(g, waittime[0], waittime[1]);
             } else if self.need_action[4] > need[4] {
                 self.taunt(g);
             } else if self.need_action[5] > need[5] {
-                self.r#move();
+                self.r#move(g);
             }
             // then do action based on probability
             else if (last_action != 0 || last_action_count < max[0]) && randaction < actions[0] as i32 {
@@ -276,11 +278,11 @@ impl MO_SledgeBrother {
             } else if (last_action != 2 || last_action_count < max[2]) && randaction < actions[2] as i32 {
                 self.turn(g);
             } else if (last_action != 2 || last_action_count < max[3]) && randaction < actions[3] as i32 {
-                self.wait(waittime[0], waittime[1]);
+                self.wait(g, waittime[0], waittime[1]);
             } else if (last_action != 2 || last_action_count < max[4]) && randaction < actions[4] as i32 {
                 self.taunt(g);
             } else {
-                self.r#move();
+                self.r#move(g);
             }
 
             for iAction in 0..6usize {
@@ -289,13 +291,14 @@ impl MO_SledgeBrother {
         }
     }
 
-    fn r#move(&mut self) {
+    fn r#move(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let moveright = if self.location == 0 {
             true
         } else if self.location == 4 {
             false
         } else {
-            RANDOM_INT(2) == 0
+            RANDOM_INT(gp.get(), 2) == 0
         };
 
         self.set_last_action(3);
@@ -326,7 +329,7 @@ impl MO_SledgeBrother {
         unsafe {
             let (ix, iy, iw) = (self.ix as i32, self.iy as i32, self.iw as i32);
             if self.iType == 0 {
-                let fHammerVelX: f32 = (RANDOM_INT(9) + 2) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 6.0f32 };
+                let fHammerVelX: f32 = (RANDOM_INT(gp.get(), 9) + 2) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 6.0f32 };
                 let pos = Vec2s::new(((if self.face_right { ix + 32 } else { ix }) - self.collisionOffsetX as i32) as i16, self.iy);
                 let obj = Ptr::new_box(MO_SledgeHammer::new(
                     g,
@@ -342,10 +345,10 @@ impl MO_SledgeBrother {
                 ));
                 gp.objectcontainer[2].add(g, obj);
             } else if self.iType == 1 {
-                let fBombVelX: f32 = (RANDOM_INT(5) + 12) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 14.0f32 };
-                let fBombVelY: f32 = -(RANDOM_INT(13) as f32) / 2.0f32 - 6.0f32;
+                let fBombVelX: f32 = (RANDOM_INT(gp.get(), 5) + 12) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 14.0f32 };
+                let fBombVelY: f32 = -(RANDOM_INT(gp.get(), 13) as f32) / 2.0f32 - 6.0f32;
                 let pos = Vec2s::new((if self.face_right { ix + iw - 32 } else { ix - 20 }) as i16, iy as i16);
-                let timetolive = (RANDOM_INT(60) + 120) as i16;
+                let timetolive = (RANDOM_INT(gp.get(), 60) + 120) as i16;
                 let obj = Ptr::new_box(CO_Bomb::new(
                     g,
                     Ptr::from_mut(&mut rm.spr_bomb),
@@ -359,8 +362,8 @@ impl MO_SledgeBrother {
                 ));
                 gp.objectcontainer[2].add(g, obj);
             } else if self.iType == 2 {
-                let fFireVelX: f32 = (RANDOM_INT(9) + 6) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 10.0f32 };
-                let fFireVelY: f32 = RANDOM_INT(17) as f32 / 2.0f32 - 4.0f32;
+                let fFireVelX: f32 = (RANDOM_INT(gp.get(), 9) + 6) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 10.0f32 };
+                let fFireVelY: f32 = RANDOM_INT(gp.get(), 17) as f32 / 2.0f32 - 4.0f32;
                 let pos = Vec2s::new((if self.face_right { ix + iw - 32 } else { ix - 16 }) as i16, iy as i16);
                 let obj = Ptr::new_box(MO_SuperFireball::new(
                     g,
@@ -392,7 +395,7 @@ impl MO_SledgeBrother {
 
         // If this is a bomb brother, push bombs away when taunting
         if self.iType == 1 {
-            unsafe { push_bombs(&g.objectcontainer[2], (self.ix as i32 + 32) as i16, (self.iy as i32 + 32) as i16) };
+            unsafe { push_bombs(g, &gp.objectcontainer[2], (self.ix as i32 + 32) as i16, (self.iy as i32 + 32) as i16) };
         }
     }
 
@@ -400,7 +403,7 @@ impl MO_SledgeBrother {
         self.face_right = !self.face_right;
         unsafe {
             let waittime = g_iSledgeBrotherWaitTime[self.iType as usize][g.game_values.gamemodesettings.boss.difficulty as usize];
-            self.wait(waittime[0] >> 1, waittime[1] >> 1);
+            self.wait(g, waittime[0] >> 1, waittime[1] >> 1);
         }
 
         self.need_action[2] = 0;
@@ -415,10 +418,11 @@ impl MO_SledgeBrother {
         self.need_action[0] = 0;
     }
 
-    fn wait(&mut self, min: i16, max: i16) {
+    fn wait(&mut self, g: &mut Game, min: i16, max: i16) {
+        let mut gp = g.ptr();
         self.set_last_action(2);
 
-        self.wait_timer = RandomNumberGenerator::generator().get_integer_range(min as i32, max as i32) as i16;
+        self.wait_timer = RandomNumberGenerator::generator(gp.get()).get_integer_range(min as i32, max as i32) as i16;
         self.iActionState = 1;
 
         self.need_action[3] = 0;
@@ -492,11 +496,11 @@ impl CObjectTrait for MO_SledgeBrother {
                         // Spawn thwomps
                         if_sound_on_play(g, &mut gp.rm.sfx_thunder);
 
-                        let numThwomps: i16 = (RANDOM_INT(5) + 6) as i16;
+                        let numThwomps: i16 = (RANDOM_INT(gp.get(), 5) + 6) as i16;
 
                         for _iThwomp in 0..numThwomps {
-                            let x = RANDOM_INT(591) as i16;
-                            let nspeed = 2.0f32 + RANDOM_INT(20) as f32 / 10.0f32;
+                            let x = RANDOM_INT(gp.get(), 591) as i16;
+                            let nspeed = 2.0f32 + RANDOM_INT(gp.get(), 20) as f32 / 10.0f32;
                             let obj = Ptr::new_box(OMO_Thwomp::new(g, Ptr::from_mut(&mut rm.spr_thwomp), x, nspeed));
                             gp.objectcontainer[2].add(g, obj);
                         }
@@ -504,11 +508,11 @@ impl CObjectTrait for MO_SledgeBrother {
                         // Spawn lots of podobos
                         if_sound_on_play(g, &mut gp.rm.sfx_thunder);
 
-                        let numPodobos: i16 = (RANDOM_INT(5) + 8) as i16;
+                        let numPodobos: i16 = (RANDOM_INT(gp.get(), 5) + 8) as i16;
 
                         for _iPodobo in 0..numPodobos {
-                            let x = RANDOM_INT(608) as i16;
-                            let dVelY = -(RANDOM_INT(9) as f32 / 2.0f32) - 9.0f32;
+                            let x = RANDOM_INT(gp.get(), 608) as i16;
+                            let dVelY = -(RANDOM_INT(gp.get(), 9) as f32 / 2.0f32) - 9.0f32;
                             let obj = Ptr::new_box(MO_Podobo::new(
                                 g,
                                 Ptr::from_mut(&mut rm.spr_podobo),

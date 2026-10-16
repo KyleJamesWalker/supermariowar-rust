@@ -76,7 +76,7 @@ impl CGameModeTrait for CGM_Bonus {
                 }
 
                 for _iChest in 0..iNumBonuses {
-                    let mut iRandChest: i16 = RANDOM_INT(iNumBonuses as i32) as i16;
+                    let mut iRandChest: i16 = RANDOM_INT(gp.get(), iNumBonuses as i32) as i16;
 
                     while fChestUsed[iRandChest as usize] {
                         iRandChest += 1;

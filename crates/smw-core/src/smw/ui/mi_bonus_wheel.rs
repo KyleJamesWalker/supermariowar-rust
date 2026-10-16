@@ -120,6 +120,7 @@ impl MI_BonusWheel {
     }
 
     pub fn reset(&mut self, g: &mut Game, fTournament: bool) {
+        let mut gp = g.ptr();
         unsafe {
             //Setup the state so that we make powerups appear one by one before the wheel starts spinning
             self.iState = 0;
@@ -139,13 +140,13 @@ impl MI_BonusWheel {
             }
 
             //Always have at least 1 poison mushroom to try to avoid
-            let iPoisonMushroom = RANDOM_INT(NUMBONUSITEMSONWHEEL) as i16;
+            let iPoisonMushroom = RANDOM_INT(gp.get(), NUMBONUSITEMSONWHEEL) as i16;
 
             for iPowerup in 0..NUMBONUSITEMSONWHEEL as i16 {
                 let mut iChoosePowerup: i32 = 0;
 
                 if iCountWeight > 0 && iPoisonMushroom != iPowerup {
-                    let iRandPowerup = RANDOM_INT(iCountWeight as i32 + 1);
+                    let iRandPowerup = RANDOM_INT(gp.get(), iCountWeight as i32 + 1);
                     let mut iPowerupWeightCount: i32 = g.game_values.powerupweights[iChoosePowerup as usize] as i32;
 
                     while iPowerupWeightCount < iRandPowerup {
@@ -194,9 +195,9 @@ impl MI_BonusWheel {
             self.iSelectorAnimationCounter = 0;
 
             //Figure out the initial position and speed of the selector
-            self.dSelectionSpeed = (RANDOM_INT(100) + 200) as f32 * 0.0005f32;
-            self.dSelectionAngle = RANDOM_INT(NUMBONUSITEMSONWHEEL) as f32 * TWO_PI / NUMBONUSITEMSONWHEEL as f32;
-            self.dSelectionSpeedGoal = (RANDOM_INT(100) + 200) as f32 * 0.0005f32;
+            self.dSelectionSpeed = (RANDOM_INT(gp.get(), 100) + 200) as f32 * 0.0005f32;
+            self.dSelectionAngle = RANDOM_INT(gp.get(), NUMBONUSITEMSONWHEEL) as f32 * TWO_PI / NUMBONUSITEMSONWHEEL as f32;
+            self.dSelectionSpeedGoal = (RANDOM_INT(gp.get(), 100) + 200) as f32 * 0.0005f32;
             self.iSelectionSpeedTimer = 0;
 
             for iSector in 0..NB {
@@ -307,7 +308,7 @@ impl UI_ControlTrait for MI_BonusWheel {
                 if self.iSelectionSpeedTimer > 0 {
                     self.iSelectionSpeedTimer -= 1;
                     if self.iSelectionSpeedTimer <= 0 {
-                        self.dSelectionSpeedGoal = (RANDOM_INT(100) + 200) as f32 * 0.0005f32;
+                        self.dSelectionSpeedGoal = (RANDOM_INT(gp.get(), 100) + 200) as f32 * 0.0005f32;
                         self.iSelectionSpeedTimer = 0;
                     }
                 }
@@ -319,14 +320,14 @@ impl UI_ControlTrait for MI_BonusWheel {
 
                     if self.dSelectionSpeed >= self.dSelectionSpeedGoal {
                         self.dSelectionSpeed = self.dSelectionSpeedGoal;
-                        self.iSelectionSpeedTimer = (RANDOM_INT(60) + 30) as i16;
+                        self.iSelectionSpeedTimer = (RANDOM_INT(gp.get(), 60) + 30) as i16;
                     }
                 } else if self.dSelectionSpeed > self.dSelectionSpeedGoal {
                     self.dSelectionSpeed -= 0.0005f32;
 
                     if self.dSelectionSpeed <= self.dSelectionSpeedGoal {
                         self.dSelectionSpeed = self.dSelectionSpeedGoal;
-                        self.iSelectionSpeedTimer = (RANDOM_INT(60) + 30) as i16;
+                        self.iSelectionSpeedTimer = (RANDOM_INT(gp.get(), 60) + 30) as i16;
                     }
                 }
 

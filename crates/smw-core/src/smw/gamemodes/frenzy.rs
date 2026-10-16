@@ -87,7 +87,7 @@ fn spawn_card(g: &mut Game, this: &mut CGM_Frenzy) {
             this.iSelectedPowerup = (NUMFRENZYCARDS - 1) as i16;
         } else {
             //Randomly choose a powerup from the weighted list
-            let iRandPowerup: i32 = RANDOM_INT(this.iItemWeightCount as i32) + 1;
+            let iRandPowerup: i32 = RANDOM_INT(gp.get(), this.iItemWeightCount as i32) + 1;
             this.iSelectedPowerup = 0;
             let mut iWeightCount: i32 = g.game_values.gamemodesettings.frenzy.powerupweight[this.iSelectedPowerup as usize] as i32;
 

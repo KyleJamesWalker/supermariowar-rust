@@ -143,12 +143,13 @@ pub fn co_spring_draw<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T) {
 }
 
 pub fn co_spring_place<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T) {
+    let mut gp = g.ptr();
     {
         let o = this.spring_mut();
         let mut iAttempts: i16 = 10;
         let (mut ix, mut iy) = (o.ix, o.iy);
         let (w, h) = (o.collisionWidth, o.collisionHeight);
-        while !unsafe { g.g_map.findspawnpoint(5, &mut ix, &mut iy, w, h, false) } && {
+        while !unsafe { gp.g_map.findspawnpoint(g, 5, &mut ix, &mut iy, w, h, false) } && {
             let t = iAttempts;
             iAttempts -= 1;
             t > 0

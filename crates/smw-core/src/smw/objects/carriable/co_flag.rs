@@ -75,6 +75,7 @@ impl CO_Flag {
     }
 
     pub fn place_flag(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
             return;
         }
@@ -86,7 +87,7 @@ impl CO_Flag {
             let mut iAttempts: i16 = 10;
             let (mut ix, mut iy) = (self.ix, self.iy);
             let (w, h) = (self.collisionWidth, self.collisionHeight);
-            while !unsafe { g.g_map.findspawnpoint(5, &mut ix, &mut iy, w, h, false) } && {
+            while !unsafe { gp.g_map.findspawnpoint(g, 5, &mut ix, &mut iy, w, h, false) } && {
                 let t = iAttempts;
                 iAttempts -= 1;
                 t > 0

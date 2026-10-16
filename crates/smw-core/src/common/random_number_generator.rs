@@ -1,6 +1,7 @@
 //! Port of src/common/RandomNumberGenerator.cpp
 
-use crate::globals::Aliased;
+use crate::game::Game;
+use crate::globals::{Aliased, Ptr};
 
 extern "C" {
     fn srand(seed: u32);
@@ -15,13 +16,13 @@ const RAND_MAX: i32 = 0x7fffffff;
 const RAND_MAX: i32 = 0x7fff;
 
 #[inline]
-pub fn RANDOM_INT(rMaxInt: i32) -> i32 {
-    RandomNumberGenerator::generator().get_integer(rMaxInt)
+pub fn RANDOM_INT(g: &mut Game, rMaxInt: i32) -> i32 {
+    RandomNumberGenerator::generator(g).get_integer(rMaxInt)
 }
 
 #[inline]
-pub fn RANDOM_BOOL() -> bool {
-    RandomNumberGenerator::generator().get_boolean()
+pub fn RANDOM_BOOL(g: &mut Game) -> bool {
+    RandomNumberGenerator::generator(g).get_boolean()
 }
 
 pub trait RandomNumberGeneratorType {
@@ -74,62 +75,62 @@ impl RngState {
     }
 }
 
-fn rng() -> &'static mut RngState {
-    &mut crate::game::game().get().rng
+fn rng(g: &mut Game) -> &mut RngState {
+    &mut g.rng
 }
 
 impl RandomNumberGenerator {
-    pub fn call_count() -> u64 {
-        unsafe { rng().g_callCount }
+    pub fn call_count(g: &mut Game) -> u64 {
+        unsafe { rng(g).g_callCount }
     }
 
-    pub fn last_value() -> u32 {
-        unsafe { rng().g_lastValue }
+    pub fn last_value(g: &mut Game) -> u32 {
+        unsafe { rng(g).g_lastValue }
     }
 
     /// Not in the C++: a replay checkpoint (smw/checkpoint.rs) restores the counters.
-    pub fn set_counters(calls: u64, last: u32) {
+    pub fn set_counters(g: &mut Game, calls: u64, last: u32) {
         unsafe {
-            rng().g_callCount = calls;
-            rng().g_lastValue = last;
+            rng(g).g_callCount = calls;
+            rng(g).g_lastValue = last;
         }
     }
 
-    pub fn reset_call_count() {
+    pub fn reset_call_count(g: &mut Game) {
         unsafe {
-            rng().g_callCount = 0;
-            rng().g_lastValue = 0;
+            rng(g).g_callCount = 0;
+            rng(g).g_lastValue = 0;
         }
     }
 
-    pub fn tape_active() -> bool {
-        unsafe { !matches!(rng().g_tape, Tape::Off) }
+    pub fn tape_active(g: &mut Game) -> bool {
+        unsafe { !matches!(rng(g).g_tape, Tape::Off) }
     }
 
-    pub fn start_recording() {
-        unsafe { rng().g_tape = Tape::Record(Vec::new()) }
+    pub fn start_recording(g: &mut Game) {
+        unsafe { rng(g).g_tape = Tape::Record(Vec::new()) }
     }
 
-    pub fn start_playback(values: Vec<u32>) {
-        unsafe { rng().g_tape = Tape::Play(values, 0) }
+    pub fn start_playback(g: &mut Game, values: Vec<u32>) {
+        unsafe { rng(g).g_tape = Tape::Play(values, 0) }
     }
 
     /// Ends recording or playback; returns the recorded draws, or the draws playback left unused.
-    pub fn stop_tape() -> Vec<u32> {
-        match unsafe { std::mem::replace(&mut rng().g_tape, Tape::Off) } {
+    pub fn stop_tape(g: &mut Game) -> Vec<u32> {
+        match unsafe { std::mem::replace(&mut rng(g).g_tape, Tape::Off) } {
             Tape::Off => Vec::new(),
             Tape::Record(values) => values,
             Tape::Play(values, next) => values[next.min(values.len())..].to_vec(),
         }
     }
 
-    pub fn generator() -> &'static mut Well512RandomNumberGenerator {
-        unsafe {
-            if rng().grng.is_none() {
-                rng().grng = Some(Well512RandomNumberGenerator::new());
-            }
-            rng().grng.as_mut().unwrap()
+    pub fn generator(g: &mut Game) -> &mut Well512RandomNumberGenerator {
+        let st = rng(g);
+        if st.grng.is_none() {
+            let counters = Ptr::from_mut(&mut *st);
+            st.grng = Some(Well512RandomNumberGenerator::attached(counters));
         }
+        st.grng.as_mut().unwrap()
     }
 }
 
@@ -147,14 +148,20 @@ impl RandomNumberGeneratorType for SystemRandomNumberGenerator {
 pub struct Well512RandomNumberGenerator {
     state: [u32; 16],
     index: u32,
+    /// The game's counters and tape; null for a generator made on its own.
+    counters: Ptr<RngState>,
     _alias: Aliased,
 }
 
 impl Well512RandomNumberGenerator {
     pub fn new() -> Self {
-        let mut r = Well512RandomNumberGenerator { _alias: Aliased::new(), state: [0; 16], index: 0 };
+        let mut r = Well512RandomNumberGenerator { _alias: Aliased::new(), state: [0; 16], index: 0, counters: Ptr::null() };
         r.initialize();
         r
+    }
+
+    fn attached(counters: Ptr<RngState>) -> Self {
+        Well512RandomNumberGenerator { counters, ..Self::new() }
     }
 
     /// Not in the C++: the generator state a replay checkpoint (smw/checkpoint.rs) saves and restores.
@@ -163,8 +170,9 @@ impl Well512RandomNumberGenerator {
     }
 
     fn get_next(&mut self) -> u32 {
-        unsafe {
-            if let Tape::Play(values, next) = &mut rng().g_tape {
+        let mut counters = self.counters;
+        if !counters.is_null() {
+            if let Tape::Play(values, next) = &mut counters.g_tape {
                 if let Some(&v) = values.get(*next) {
                     *next += 1;
                     return v;
@@ -172,8 +180,8 @@ impl Well512RandomNumberGenerator {
             }
         }
         let value = self.draw();
-        unsafe {
-            if let Tape::Record(values) = &mut rng().g_tape {
+        if !counters.is_null() {
+            if let Tape::Record(values) = &mut counters.g_tape {
                 values.push(value);
             }
         }
@@ -181,7 +189,10 @@ impl Well512RandomNumberGenerator {
     }
 
     fn draw(&mut self) -> u32 {
-        unsafe { rng().g_callCount += 1 };
+        let mut counters = self.counters;
+        if !counters.is_null() {
+            counters.g_callCount += 1;
+        }
         let state = &mut self.state;
         let index = self.index as usize;
         let mut a = state[index];
@@ -196,7 +207,9 @@ impl Well512RandomNumberGenerator {
         self.index = index as u32;
         a = state[index];
         state[index] = a ^ b ^ d ^ (a << 2) ^ (b << 18) ^ (c << 28);
-        unsafe { rng().g_lastValue = state[index] };
+        if !counters.is_null() {
+            counters.g_lastValue = state[index];
+        }
         state[index]
     }
 

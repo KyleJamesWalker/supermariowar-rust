@@ -33,6 +33,7 @@ impl_base!(MO_SuperFireball => io_moving_object: IO_MovingObject);
 impl MO_SuperFireball {
     #[allow(clippy::too_many_arguments)]
     pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, vel: Vec2f, aniSpeed: i16, iGlobalID: i16, teamID: i16, iColorID: i16) -> Self {
+        let mut gp = g.ptr();
         let mut o = MO_SuperFireball {
             io_moving_object: IO_MovingObject::new(
                 g,
@@ -66,7 +67,7 @@ impl MO_SuperFireball {
 
         o.velx = vel.x;
         o.vely = vel.y;
-        o.ttl = (RANDOM_INT(30) + 60) as i16;
+        o.ttl = (RANDOM_INT(gp.get(), 30) + 60) as i16;
 
         o.drawframe = 0;
 

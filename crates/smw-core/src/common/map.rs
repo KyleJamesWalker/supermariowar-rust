@@ -2533,7 +2533,8 @@ impl CMap {
         }
     }
 
-    pub fn get_random_warp_exit(&mut self, connection: i32, currentID: i32) -> Ptr<WarpExit> {
+    pub fn get_random_warp_exit(&mut self, g: &mut Game, connection: i32, currentID: i32) -> Ptr<WarpExit> {
+        let mut gp = g.ptr();
         let mut indices = [0i32; MAXWARPS as usize];
         let mut numIndices: i32 = 0;
 
@@ -2554,7 +2555,7 @@ impl CMap {
             return currentWarp;
         }
 
-        Ptr::from_mut(&mut self.warpexits[indices[RANDOM_INT(numIndices) as usize] as usize])
+        Ptr::from_mut(&mut self.warpexits[indices[RANDOM_INT(gp.get(), numIndices) as usize] as usize])
     }
 
     pub fn clear_warp_locks(&mut self) {
@@ -2620,15 +2621,16 @@ impl CMap {
         }
     }
 
-    pub fn findspawnpoint(&mut self, iType: i16, x: &mut i16, y: &mut i16, width: i16, height: i16, tilealigned: bool) -> bool {
+    pub fn findspawnpoint(&mut self, g: &mut Game, iType: i16, x: &mut i16, y: &mut i16, width: i16, height: i16, tilealigned: bool) -> bool {
+        let mut gp = g.ptr();
         let t = iType as usize;
         if self.totalspawnsize[t] <= 0 {
-            *x = RANDOM_INT(App::screenWidth) as i16;
-            *y = RANDOM_INT((App::screenHeight as f32 * 0.87) as i32) as i16;
+            *x = RANDOM_INT(gp.get(), App::screenWidth) as i16;
+            *y = RANDOM_INT(gp.get(), (App::screenHeight as f32 * 0.87) as i32) as i16;
             return true;
         }
 
-        let spawnarea: i32 = RANDOM_INT(self.totalspawnsize[t] as i32);
+        let spawnarea: i32 = RANDOM_INT(gp.get(), self.totalspawnsize[t] as i32);
 
         let mut currentsize: i32 = 0;
         for m in 0..self.numspawnareas[t] as usize {
@@ -2651,11 +2653,11 @@ impl CMap {
                 let mut yoffset: i16 = a.height;
 
                 if xoffset > 0 {
-                    xoffset = RANDOM_INT(xoffset as i32) as i16;
+                    xoffset = RANDOM_INT(gp.get(), xoffset as i32) as i16;
                 }
 
                 if yoffset > 0 {
-                    yoffset = RANDOM_INT(yoffset as i32) as i16;
+                    yoffset = RANDOM_INT(gp.get(), yoffset as i32) as i16;
                 }
 
                 *x = (((xoffset as i32) << 5) + ((a.left as i32) << 5) + (TILESIZE >> 1) - ((width as i32) >> 1)) as i16;
@@ -2665,11 +2667,11 @@ impl CMap {
                 let mut yoffset: i16 = (areaheight as i32 - height as i32 - 2) as i16;
 
                 if xoffset > 0 {
-                    xoffset = (RANDOM_INT(xoffset as i32) as i16 as i32 + 1) as i16;
+                    xoffset = (RANDOM_INT(gp.get(), xoffset as i32) as i16 as i32 + 1) as i16;
                 }
 
                 if yoffset > 0 {
-                    yoffset = (RANDOM_INT(yoffset as i32) as i16 as i32 + 1) as i16;
+                    yoffset = (RANDOM_INT(gp.get(), yoffset as i32) as i16 as i32 + 1) as i16;
                 }
 
                 *x = (xoffset as i32 + ((a.left as i32) << 5)) as i16;
@@ -2979,6 +2981,7 @@ pub(crate) mod tests {
 
     /// Same text as tools/ref/map_list_dump.cpp prints after `---`.
     fn map_list_dump(g: &mut Game) -> String {
+        let mut gp = g.ptr();
         use crate::common::map_list::MapList;
         use crate::common::random_number_generator::{RandomNumberGenerator, RandomNumberGeneratorType};
         unsafe {
@@ -3008,7 +3011,7 @@ pub(crate) mod tests {
                 let _ = writeln!(o, "icon {} {}", i, v);
             }
 
-            RandomNumberGenerator::generator().reseed(42);
+            RandomNumberGenerator::generator(gp.get()).reseed(42);
             for _ in 0..3 {
                 maplist.next(false);
                 cur(&mut o, "next");
@@ -3016,7 +3019,7 @@ pub(crate) mod tests {
             maplist.prev(false);
             cur(&mut o, "prev");
             for _ in 0..5 {
-                maplist.random(false);
+                maplist.random(g, false);
                 cur(&mut o, "random");
             }
             let _ = writeln!(o, "findexact {}", maplist.findexact("death valley", false) as i32);
@@ -3044,14 +3047,14 @@ pub(crate) mod tests {
                 }
                 maplist.prev(true);
                 cur(&mut o, " prev");
-                maplist.random(true);
+                maplist.random(g, true);
                 cur(&mut o, " random");
                 let it = maplist.get_iterator_at(1, true);
                 let _ = writeln!(o, " at1 {}", if it == maplist.end() { "end".to_string() } else { maplist.key_at(it).to_string() });
             }
             maplist.apply_filters(g, &vec![false; nfilters]);
             for _ in 0..5 {
-                let _ = writeln!(o, "randomFilename {}", rel(&maplist.random_filename()));
+                let _ = writeln!(o, "randomFilename {}", rel(&maplist.random_filename(g)));
             }
             o
         }

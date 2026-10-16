@@ -234,7 +234,7 @@ pub fn cgm_star_init(g: &mut Game, this: &mut CGM_Star) {
     unsafe {
         this.iCurrentModeType = g.game_values.gamemodesettings.star.shine;
         if this.iCurrentModeType == StarStyle::Random {
-            this.iCurrentModeType = StarStyle::from_u8(RANDOM_INT(3) as u8);
+            this.iCurrentModeType = StarStyle::from_u8(RANDOM_INT(gp.get(), 3) as u8);
         }
 
         this.fReverseScoring = this.goal == -1;
@@ -412,7 +412,7 @@ fn time_out(g: &mut Game, this: &mut CGM_Star) {
 
         //If random game, then choose a new game type
         if g.game_values.gamemodesettings.star.shine == StarStyle::Random && this.fDisplayTimer {
-            this.iCurrentModeType = StarStyle::from_u8(RANDOM_INT(3) as u8);
+            this.iCurrentModeType = StarStyle::from_u8(RANDOM_INT(gp.get(), 3) as u8);
             this.setup_mode(g);
         }
     }

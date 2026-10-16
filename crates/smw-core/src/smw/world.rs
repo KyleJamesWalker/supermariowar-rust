@@ -390,7 +390,7 @@ impl WorldVehicle {
 
     pub fn r#move(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        self.iNumMoves = (RANDOM_INT(self.iMaxMoves as i32 - self.iMinMoves as i32 + 1) + self.iMinMoves as i32) as i16;
+        self.iNumMoves = (RANDOM_INT(gp.get(), self.iMaxMoves as i32 - self.iMinMoves as i32 + 1) + self.iMinMoves as i32) as i16;
 
         if self.iNumMoves > 0 {
             self.iPaceOffset = 0;
@@ -401,6 +401,7 @@ impl WorldVehicle {
     }
 
     fn set_next_dest(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if self.iState != 0 || self.iMaxMoves == 0 {
             return;
         }
@@ -448,7 +449,7 @@ impl WorldVehicle {
             }
 
             if iNumConnections > 0 {
-                let iConnection = iConnections[RANDOM_INT(iNumConnections as i32) as usize];
+                let iConnection = iConnections[RANDOM_INT(gp.get(), iNumConnections as i32) as usize];
                 self.world_moving_object.r#move(iConnection);
             }
         }

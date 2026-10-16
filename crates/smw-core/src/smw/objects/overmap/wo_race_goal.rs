@@ -42,6 +42,7 @@ impl_base!(OMO_RaceGoal => io_over_map_object: IO_OverMapObject);
 
 impl OMO_RaceGoal {
     pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, id: i16) -> Self {
+        let mut gp = g.ptr();
         let mut this = OMO_RaceGoal {
             io_over_map_object: IO_OverMapObject::new(g, nspr, Vec2s::zero(), 2, 8, -1, -1, -1, -1, -1, -1, -1, -1),
             goalID: id,
@@ -68,9 +69,9 @@ impl OMO_RaceGoal {
             this.tagged[k] = -1;
         }
 
-        this.angle = RANDOM_INT(1000) as f32 * 0.00628f32;
-        this.anglechange = RANDOM_INT(100) as f32 * 0.0002f32;
-        this.anglechangetimer = (RANDOM_INT(50) + 100) as i16;
+        this.angle = RANDOM_INT(gp.get(), 1000) as f32 * 0.00628f32;
+        this.anglechange = RANDOM_INT(gp.get(), 100) as f32 * 0.0002f32;
+        this.anglechangetimer = (RANDOM_INT(gp.get(), 50) + 100) as i16;
 
         this.velx = sinf(this.angle);
         this.vely = cosf(this.angle);
@@ -85,12 +86,14 @@ impl OMO_RaceGoal {
         this
     }
 
-    pub fn change_angle(&mut self) {
-        self.anglechange = (RANDOM_INT(101) - 50) as f32 * 0.0002f32;
-        self.anglechangetimer = (RANDOM_INT(50) + 100) as i16;
+    pub fn change_angle(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        self.anglechange = (RANDOM_INT(gp.get(), 101) - 50) as f32 * 0.0002f32;
+        self.anglechangetimer = (RANDOM_INT(gp.get(), 50) + 100) as i16;
     }
 
     pub fn place_race_goal(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         let mut x: i16 = 0;
         let mut y: i16 = 0;
 
@@ -106,8 +109,8 @@ impl OMO_RaceGoal {
                         break;
                     }
 
-                    x = RANDOM_INT(App::screenWidth - self.collisionWidth as i32) as i16;
-                    y = RANDOM_INT(App::screenHeight - self.collisionHeight as i32) as i16;
+                    x = RANDOM_INT(gp.get(), App::screenWidth - self.collisionWidth as i32) as i16;
+                    y = RANDOM_INT(gp.get(), App::screenHeight - self.collisionHeight as i32) as i16;
 
                     if !(g.objectcontainer[2].get_closest_object(x, y, object_race_goal) <= 250.0f32 - (self.quantity as f32 * 25.0f32)) {
                         break;
@@ -162,7 +165,7 @@ impl CObjectTrait for OMO_RaceGoal {
     fn update(&mut self, g: &mut Game) {
         self.anglechangetimer -= 1;
         if self.anglechangetimer <= 0 && !net_random::object_event(g, Ev::Wander, &net_random::wander_args(self.iNetworkID, self.fx, self.fy, self.angle)) {
-            self.change_angle();
+            self.change_angle(g);
         }
 
         self.angle += self.anglechange;

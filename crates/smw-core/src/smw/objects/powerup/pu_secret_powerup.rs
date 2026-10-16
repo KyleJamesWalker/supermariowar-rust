@@ -40,6 +40,7 @@ impl PU_SecretPowerup {
     }
 
     pub fn place(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
             return;
         }
@@ -50,7 +51,7 @@ impl PU_SecretPowerup {
         let collisionHeight = self.collisionHeight;
         let mut iAttempts: i16 = 10;
         unsafe {
-            while !g.g_map.findspawnpoint(5, &mut ix, &mut iy, collisionWidth, collisionHeight, false) && {
+            while !gp.g_map.findspawnpoint(g, 5, &mut ix, &mut iy, collisionWidth, collisionHeight, false) && {
                 let a = iAttempts;
                 iAttempts -= 1;
                 a > 0
@@ -100,15 +101,16 @@ impl CObjectTrait for PU_SecretPowerup {
 
     fn collide_player(&mut self, g: &mut Game, _player: Ptr<CPlayer>) -> bool {
         let mut gp = g.ptr();
+        let mut rm = g.rm;
         unsafe {
             if self.itemtype == 0 {
                 g.game_values.windaffectsplayers = true;
 
                 for _i in 0..15i16 {
-                    let x = RANDOM_INT(App::screenWidth) as f32;
-                    let y = RANDOM_INT(App::screenHeight) as f32;
-                    let t = (RANDOM_INT(4) + 1) as i16;
-                    g.eyecandy[2].emplace(EC_Snow::new(Ptr::from_mut(&mut g.rm.spr_snow), x, y, t));
+                    let x = RANDOM_INT(gp.get(), App::screenWidth) as f32;
+                    let y = RANDOM_INT(gp.get(), App::screenHeight) as f32;
+                    let t = (RANDOM_INT(gp.get(), 4) + 1) as i16;
+                    gp.eyecandy[2].emplace(EC_Snow::new(g, Ptr::from_mut(&mut rm.spr_snow), x, y, t));
                 }
             } else if self.itemtype == 1 {
                 g.game_values.spinscreen = true;

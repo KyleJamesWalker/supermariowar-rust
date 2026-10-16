@@ -43,6 +43,7 @@ impl_base!(MO_PirhanaPlant => io_moving_object: IO_MovingObject);
 
 impl MO_PirhanaPlant {
     pub fn new(g: &mut Game, pos: Vec2s, r#type: i16, freq: i16, direction: i16, preview: bool) -> Self {
+        let mut gp = g.ptr();
         let mut o = MO_PirhanaPlant {
             io_moving_object: IO_MovingObject::new(g, Ptr::null(), pos, 1, 0, -1, -1, -1, -1, -1, -1, -1, -1),
             iType: 0,
@@ -103,7 +104,7 @@ impl MO_PirhanaPlant {
 
         o.iAnimationTimer = 0;
 
-        o.iActionTimer = RANDOM_INT(8) as i16;
+        o.iActionTimer = RANDOM_INT(gp.get(), 8) as i16;
         o.iFrame = 0;
 
         o.fObjectCollidesWithMap = false;
@@ -165,23 +166,24 @@ impl MO_PirhanaPlant {
     }
 
     pub fn set_new_timer(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if crate::smw::net_random::object_event(g, crate::smw::net_random::Ev::HazardTimer, &[self.iNetworkID]) {
             if crate::smw::net_random::awaiting_host(g) {
                 self.iTimer = i16::MAX;
             }
             return;
         }
-        self.iTimer = (self.iFreq as i32 + RANDOM_INT(self.iFreq as i32)) as i16;
+        self.iTimer = (self.iFreq as i32 + RANDOM_INT(gp.get(), self.iFreq as i32)) as i16;
 
         // Face the green fireball plant in a random direction
         if self.iType == 0 {
             // Only point flower towards directions that make sense
             if (self.ix >> 5) == 19 {
-                self.iFrame = RANDOM_INT(2) as i16;
+                self.iFrame = RANDOM_INT(gp.get(), 2) as i16;
             } else if self.ix == 0 {
-                self.iFrame = (RANDOM_INT(2) + 2) as i16;
+                self.iFrame = (RANDOM_INT(gp.get(), 2) + 2) as i16;
             } else {
-                self.iFrame = RANDOM_INT(4) as i16;
+                self.iFrame = RANDOM_INT(gp.get(), 4) as i16;
             }
         }
     }

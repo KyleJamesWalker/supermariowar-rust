@@ -49,8 +49,8 @@ impl CGM_Boxes_MiniGame {
 
             let pos = Vec2s::new((player.center_x() as i32 - 16) as i16, (player.center_y() as i32 - 16) as i16);
 
-            let speed: f32 = 7.0f32 + RANDOM_INT(9) as f32 / 2.0f32;
-            let angle: f32 = -(RANDOM_INT(314) as f32) / 100.0f32;
+            let speed: f32 = 7.0f32 + RANDOM_INT(gp.get(), 9) as f32 / 2.0f32;
+            let angle: f32 = -(RANDOM_INT(gp.get(), 314) as f32) / 100.0f32;
             let vel = Vec2f::new(speed * cosf(angle), speed * sinf(angle));
 
             unsafe {

@@ -159,8 +159,9 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
         self.current_item().value
     }
     /// Does not change the current item.
-    pub fn random_value(&self) -> T {
-        let idx = self.m_goodRandomIndices[RANDOM_INT(self.m_goodRandomIndices.len() as i32) as usize];
+    pub fn random_value(&self, g: &mut Game) -> T {
+        let mut gp = g.ptr();
+        let idx = self.m_goodRandomIndices[RANDOM_INT(gp.get(), self.m_goodRandomIndices.len() as i32) as usize];
         self.m_items[idx].value
     }
 
@@ -277,7 +278,8 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
         false
     }
 
-    pub fn move_random(&mut self) -> bool {
+    pub fn move_random(&mut self, g: &mut Game) -> bool {
+        let mut gp = g.ptr();
         let mut valid_indices: Vec<usize> = Vec::with_capacity(self.m_items.len());
 
         for idx in 0..self.m_items.len() {
@@ -289,7 +291,7 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
             return false;
         }
 
-        self.m_index = valid_indices[RANDOM_INT(valid_indices.len() as i32) as usize];
+        self.m_index = valid_indices[RANDOM_INT(gp.get(), valid_indices.len() as i32) as usize];
         self.update_output();
         true
     }
@@ -363,7 +365,7 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
         MENU_CODE_MODIFY_ACCEPTED
     }
 
-    pub fn send_input_impl(&mut self, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+    pub fn send_input_impl(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         for iPlayer in 0..4usize {
             let out = playerInput.outputControls[iPlayer];
             let mut iNumMoves: i16 = 1;
@@ -395,7 +397,7 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
                 }
             }
 
-            if out.menu_random().fPressed && self.move_random() {
+            if out.menu_random().fPressed && self.move_random(g) {
                 return self.mcItemChangedCode;
             }
 
@@ -470,7 +472,7 @@ impl<T: Copy + PartialEq + 'static> UI_ControlTrait for MI_SelectField<T> {
         self.modify_impl(modify)
     }
     fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
-        self.send_input_impl(playerInput)
+        self.send_input_impl(g, playerInput)
     }
     fn mouse_click(&mut self, g: &mut Game, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
         self.mouse_click_impl(iMouseX, iMouseY)

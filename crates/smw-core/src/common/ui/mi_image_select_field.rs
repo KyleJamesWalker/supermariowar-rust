@@ -103,7 +103,7 @@ impl UI_ControlTrait for MI_ImageSelectField {
     }
 
     fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
-        self.mi_select_field.send_input_impl(playerInput)
+        self.mi_select_field.send_input_impl(g, playerInput)
     }
 
     fn mouse_click(&mut self, g: &mut Game, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {

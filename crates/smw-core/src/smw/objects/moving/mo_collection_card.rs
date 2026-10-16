@@ -78,6 +78,7 @@ impl MO_CollectionCard {
     }
 
     pub fn place_card(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
             return;
         }
@@ -88,7 +89,7 @@ impl MO_CollectionCard {
         let mut y: i16 = 0;
         let mut iAttempts: i16 = 32;
         unsafe {
-            while (!g.g_map.findspawnpoint(5, &mut x, &mut y, self.collisionWidth, self.collisionHeight, false)
+            while (!gp.g_map.findspawnpoint(g, 5, &mut x, &mut y, self.collisionWidth, self.collisionHeight, false)
                 || g.objectcontainer[1].get_closest_moving_object(x, y, movingobject_collectioncard) <= 150.0f32)
                 && {
                     let a = iAttempts;

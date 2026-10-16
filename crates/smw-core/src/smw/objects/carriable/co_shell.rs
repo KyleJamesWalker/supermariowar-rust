@@ -596,7 +596,8 @@ impl CObjectTrait for CO_Shell {
 
 impl CO_Shell {
     fn maybe_die(&mut self, g: &mut Game) {
-        if RANDOM_INT(5) == 0 {
+        let mut gp = g.ptr();
+        if RANDOM_INT(gp.get(), 5) == 0 {
             self.die(g);
         }
     }

@@ -302,6 +302,7 @@ impl CGameMode {
     }
 
     pub fn get_highest_score_player(&mut self, g: &mut Game, fGetHighest: bool) -> Ptr<CPlayer> {
+        let mut gp = g.ptr();
         unsafe {
             let mut count: i16 = 1;
             let mut tiedplayers: [i16; 4] = [0; 4];
@@ -335,12 +336,13 @@ impl CGameMode {
                 i += 1;
             }
 
-            g.players[tiedplayers[RANDOM_INT(count as i32) as usize] as usize]
+            g.players[tiedplayers[RANDOM_INT(gp.get(), count as i32) as usize] as usize]
         }
     }
 
     //Returns number of players in list
     pub fn get_score_ranked_player_list(&mut self, g: &mut Game, outPlayers: &mut [Ptr<CPlayer>; 4], fGetHighest: bool) -> i16 {
+        let mut gp = g.ptr();
         unsafe {
             let mut iNumPlayersInList: i16 = 0;
 
@@ -364,7 +366,7 @@ impl CGameMode {
                 while (iIndex as i32) < iNumPlayersInList as i32 - 1 {
                     let a = outPlayers[iIndex as usize].score().score;
                     let b = outPlayers[iIndex as usize + 1].score().score;
-                    let swap = (fGetHighest && a < b) || (!fGetHighest && a > b) || (a == b && RANDOM_BOOL() && {
+                    let swap = (fGetHighest && a < b) || (!fGetHighest && a > b) || (a == b && RANDOM_BOOL(gp.get()) && {
                         let r = iRandom < 5;
                         iRandom += 1;
                         r

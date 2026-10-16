@@ -87,6 +87,7 @@ impl CO_Egg {
     }
 
     pub fn place_egg(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
             return;
         }
@@ -110,7 +111,7 @@ impl CO_Egg {
             let mut y: i16 = 0;
             let mut iAttempts: i16 = 32;
             let (w, h) = (self.collisionWidth, self.collisionHeight);
-            while (!g.g_map.findspawnpoint(5, &mut x, &mut y, w, h, false) || g.objectcontainer[1].get_closest_moving_object(x, y, movingobject_yoshi) < 250.0) && {
+            while (!gp.g_map.findspawnpoint(g, 5, &mut x, &mut y, w, h, false) || g.objectcontainer[1].get_closest_moving_object(x, y, movingobject_yoshi) < 250.0) && {
                 let t = iAttempts;
                 iAttempts -= 1;
                 t > 0

@@ -338,7 +338,7 @@ impl MenuState {
                             }
                         }
                     } else if g.game_values.randomskin[k] {
-                        g.game_values.skinids[k] = RANDOM_INT(g.skinlist.count() as i32) as i16;
+                        g.game_values.skinids[k] = RANDOM_INT(gp.get(), g.skinlist.count() as i32) as i16;
                         let skin = gp.rm.load_full_skin(g, gp.game_values.skinids[k], gp.game_values.colorids[k]);
                         g.rm.spr_player[k] = skin;
                     } else {
@@ -541,11 +541,11 @@ impl MenuState {
                 self.start_game(g);
             } else if MatchType::QuickGame == g.game_values.matchtype {
                 println!(" Match type: Quick game");
-                let iRandomMode = RANDOM_INT(GAMEMODE_LAST) as i16;
+                let iRandomMode = RANDOM_INT(gp.get(), GAMEMODE_LAST) as i16;
                 g.game_values.gamemode = g.gamemodes[iRandomMode as usize];
 
                 //Choose a goal from the lower values for a quicker game
-                let iRandOption = (RANDOM_INT(6) + 1) as i16;
+                let iRandOption = (RANDOM_INT(gp.get(), 6) + 1) as i16;
                 let goal = g.game_values.gamemode.get_options()[iRandOption as usize].iValue;
                 g.game_values.gamemode.goal = goal;
 
@@ -569,7 +569,7 @@ impl MenuState {
                     //Set who is controlling the tournament menu
                     if g.game_values.tournamentcontrolstyle == TournamentControlStyle::Random || g.game_values.tournamentcontrolstyle == TournamentControlStyle::RandomLoser {
                         //Random
-                        g.game_values.tournamentcontrolteam = RANDOM_INT(g.score_cnt as i32) as i16;
+                        g.game_values.tournamentcontrolteam = RANDOM_INT(gp.get(), g.score_cnt as i32) as i16;
                     } else if g.game_values.tournamentcontrolstyle == TournamentControlStyle::RoundRobin {
                         //Round robin
                         g.game_values.tournamentcontrolteam = 0;
@@ -608,7 +608,7 @@ impl MenuState {
                         }
 
                         this.mWorldMenu.miWorld.init(g);
-                        let team = RANDOM_INT(g.score_cnt as i32) as i16;
+                        let team = RANDOM_INT(gp.get(), g.score_cnt as i32) as i16;
                         this.mWorldMenu.miWorld.set_controlling_team(g, team);
                     }));
                     if result.is_err() {
@@ -688,6 +688,7 @@ impl MenuState {
 
     /// The tournament-control branch of `MenuState::onEnterState`, run when a tournament game was won.
     fn choose_next_tournament_control_team(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             //Set the next controlling team
             match g.game_values.tournamentcontrolstyle {
@@ -712,7 +713,7 @@ impl MenuState {
                         }
                     }
 
-                    g.game_values.tournamentcontrolteam = iInPlace[RANDOM_INT(iNumInPlace as i32) as usize];
+                    g.game_values.tournamentcontrolteam = iInPlace[RANDOM_INT(gp.get(), iNumInPlace as i32) as usize];
                 }
 
                 TournamentControlStyle::LeadingTeams => {
@@ -731,7 +732,7 @@ impl MenuState {
                         }
                     }
 
-                    g.game_values.tournamentcontrolteam = iInPlace[RANDOM_INT(iNumInPlace as i32) as usize];
+                    g.game_values.tournamentcontrolteam = iInPlace[RANDOM_INT(gp.get(), iNumInPlace as i32) as usize];
                 }
 
                 TournamentControlStyle::TrailingTeams => {
@@ -751,12 +752,12 @@ impl MenuState {
                         }
                     }
 
-                    g.game_values.tournamentcontrolteam = iInPlace[RANDOM_INT(iNumInPlace as i32) as usize];
+                    g.game_values.tournamentcontrolteam = iInPlace[RANDOM_INT(gp.get(), iNumInPlace as i32) as usize];
                 }
 
                 TournamentControlStyle::Random => {
                     //Random
-                    g.game_values.tournamentcontrolteam = RANDOM_INT(g.score_cnt as i32) as i16;
+                    g.game_values.tournamentcontrolteam = RANDOM_INT(gp.get(), g.score_cnt as i32) as i16;
                 }
 
                 TournamentControlStyle::RandomLoser => {
@@ -781,7 +782,7 @@ impl MenuState {
                         iNumInPlace += 1;
                     }
 
-                    g.game_values.tournamentcontrolteam = iInPlace[RANDOM_INT(iNumInPlace as i32) as usize];
+                    g.game_values.tournamentcontrolteam = iInPlace[RANDOM_INT(gp.get(), iNumInPlace as i32) as usize];
                 }
 
                 TournamentControlStyle::RoundRobin => {
@@ -864,7 +865,7 @@ impl MenuState {
                     }
                 } else if g.game_values.matchtype == MatchType::QuickGame {
                     //Load a random map for the quick game
-                    let szMapName = g.maplist.random_filename();
+                    let szMapName = gp.maplist.random_filename(g);
                     load_match_map(g, &szMapName);
                     sShortMapName = strip_path_and_extension(&szMapName);
 
@@ -889,7 +890,7 @@ impl MenuState {
                 if g.game_values.music {
                     let category = MusicCategory::ALL[g.g_map.musicCategoryID as usize];
                     let background = g.g_map.szBackgroundFile.clone();
-                    g.musiclist.set_random_music(category, &sShortMapName, &background);
+                    gp.musiclist.set_random_music(g, category, &sShortMapName, &background);
                     g.rm.backgroundmusic[0] = sfxMusic::from_file(g, gp.musiclist.current_music()).unwrap_or_else(|e| std::panic::panic_any(e));
                     gp.rm.backgroundmusic[0].play(g, g.game_values.playnextmusic, false);
                 }
@@ -1742,7 +1743,7 @@ impl GameState for MenuState {
 
                         self.iTournamentAITimer = 60;
                     } else if self.iTournamentAIStep == 2 {
-                        g.currentgamemode = RANDOM_INT(GAMEMODE_LAST) as i16;
+                        g.currentgamemode = RANDOM_INT(gp.get(), GAMEMODE_LAST) as i16;
                         g.game_values.gamemode = g.gamemodes[g.currentgamemode as usize];
                         self.mGameSettingsMenu.game_mode_changed(g.currentgamemode);
                         g.game_values.gamemode = g.gamemodes[self.mGameSettingsMenu.get_current_game_mode_id() as usize];
@@ -1750,7 +1751,7 @@ impl GameState for MenuState {
                         self.iTournamentAITimer = 60;
                     } else if self.iTournamentAIStep == 3 {
                         //Choose a goal from the lower values for a quicker game
-                        let iRandOption = (RANDOM_INT(6) + 1) as i16;
+                        let iRandOption = (RANDOM_INT(gp.get(), 6) + 1) as i16;
                         let goal = g.game_values.gamemode.get_options()[iRandOption as usize].iValue;
                         g.game_values.gamemode.goal = goal;
 

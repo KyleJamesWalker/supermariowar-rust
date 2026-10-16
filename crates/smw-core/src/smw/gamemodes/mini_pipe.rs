@@ -45,7 +45,7 @@ impl CGM_Pipe_MiniGame {
 
         //This is the random bonus
         if self.iBonusType == 5 {
-            self.iBonusType = (RANDOM_INT(4) + 1) as i16;
+            self.iBonusType = (RANDOM_INT(gp.get(), 4) + 1) as i16;
         }
 
         if self.iBonusType == 4 {
@@ -101,19 +101,19 @@ impl CGameModeTrait for CGM_Pipe_MiniGame {
         unsafe {
             self.iNextItemTimer -= 1;
             if self.iNextItemTimer <= 0 {
-                let velx: f32 = (RANDOM_INT(21) - 10) as f32 / 2.0f32;
-                let vely: f32 = -(RANDOM_INT(11) as f32 / 2.0f32 + 7.0f32);
+                let velx: f32 = (RANDOM_INT(gp.get(), 21) - 10) as f32 / 2.0f32;
+                let vely: f32 = -(RANDOM_INT(gp.get(), 11) as f32 / 2.0f32 + 7.0f32);
                 let vel = Vec2f::new(velx, vely);
                 let pos = Vec2s::new(304, 256);
 
                 if self.iBonusType == 0 || self.iBonusType == 2 || self.iBonusType == 4 {
                     if self.iBonusType == 2 {
-                        self.iNextItemTimer = (RANDOM_INT(10) + 10) as i16;
+                        self.iNextItemTimer = (RANDOM_INT(gp.get(), 10) + 10) as i16;
                     } else {
-                        self.iNextItemTimer = (RANDOM_INT(20) + 25) as i16;
+                        self.iNextItemTimer = (RANDOM_INT(gp.get(), 20) + 25) as i16;
                     }
 
-                    let iRandPowerup: i16 = RANDOM_INT(50) as i16;
+                    let iRandPowerup: i16 = RANDOM_INT(gp.get(), 50) as i16;
                     if self.iBonusType == 0 && iRandPowerup < 5 {
                         //bonuses
                         let obj = Ptr::new_box(OMO_PipeBonus::new(g, Ptr::from_mut(&mut gp.get().rm.spr_pipegamebonus), vel, pos, iRandPowerup, 620, 15));
@@ -124,26 +124,26 @@ impl CGameModeTrait for CGM_Pipe_MiniGame {
                         gp.get().objectcontainer[1].add(g, obj);
                     } else {
                         //coins
-                        let iRandCoin: i16 = RANDOM_INT(20) as i16;
+                        let iRandCoin: i16 = RANDOM_INT(gp.get(), 20) as i16;
                         let obj = Ptr::new_box(OMO_PipeCoin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), vel, pos, -1, if iRandCoin < 16 { 2 } else if iRandCoin < 19 { 0 } else { 1 }, 15));
                         gp.get().objectcontainer[1].add(g, obj);
                     }
                 } else if self.iBonusType == 1 {
-                    self.iNextItemTimer = (RANDOM_INT(10) + 10) as i16;
+                    self.iNextItemTimer = (RANDOM_INT(gp.get(), 10) + 10) as i16;
 
-                    let mut iRandTeam: i16 = RANDOM_INT(g.score_cnt as i32 + 2) as i16;
+                    let mut iRandTeam: i16 = RANDOM_INT(gp.get(), g.score_cnt as i32 + 2) as i16;
 
                     //Give an advantage to the team that got the item
                     if iRandTeam >= g.score_cnt {
                         iRandTeam = self.iBonusTeam;
                     }
 
-                    let iRandPlayer: i16 = g.game_values.teamids[iRandTeam as usize][RANDOM_INT(g.game_values.teamcounts[iRandTeam as usize] as i32) as usize];
+                    let iRandPlayer: i16 = g.game_values.teamids[iRandTeam as usize][RANDOM_INT(gp.get(), g.game_values.teamcounts[iRandTeam as usize] as i32) as usize];
 
                     let obj = Ptr::new_box(OMO_PipeCoin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), vel, pos, iRandTeam, gp.get().game_values.colorids[iRandPlayer as usize], 15));
                     gp.get().objectcontainer[1].add(g, obj);
                 } else if self.iBonusType == 3 {
-                    self.iNextItemTimer = (RANDOM_INT(5) + 10) as i16;
+                    self.iNextItemTimer = (RANDOM_INT(gp.get(), 5) + 10) as i16;
                     let obj = Ptr::new_box(OMO_PipeCoin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), vel, pos, -1, 0, 15));
                     gp.get().objectcontainer[1].add(g, obj);
                 }
