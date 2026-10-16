@@ -85,27 +85,27 @@ pub fn info(peer: &dyn NetPeer) -> PeerInfo {
 
 /// A listener's handler while recording: each event is logged, then passed on unchanged.
 pub struct Recording<'a> {
-    pub inner: &'a mut dyn NetworkEventHandler,
+    pub inner: &'a mut dyn NetworkEventHandler<Game>,
     pub side: Side,
     pub frame: u32,
     pub poll: u32,
     pub log: &'a mut Vec<NetEvent>,
 }
 
-impl NetworkEventHandler for Recording<'_> {
-    fn on_connect(&mut self, peer: Box<dyn NetPeer>) {
+impl NetworkEventHandler<Game> for Recording<'_> {
+    fn on_connect(&mut self, g: &mut Game, peer: Box<dyn NetPeer>) {
         self.log.push(NetEvent { frame: self.frame, poll: self.poll, side: self.side, peer: info(&*peer), kind: Kind::Connect });
-        self.inner.on_connect(peer);
+        self.inner.on_connect(g, peer);
     }
 
-    fn on_receive(&mut self, peer: &mut dyn NetPeer, data: &[u8]) {
+    fn on_receive(&mut self, g: &mut Game, peer: &mut dyn NetPeer, data: &[u8]) {
         self.log.push(NetEvent { frame: self.frame, poll: self.poll, side: self.side, peer: info(peer), kind: Kind::Receive(data.to_vec()) });
-        self.inner.on_receive(peer, data);
+        self.inner.on_receive(g, peer, data);
     }
 
-    fn on_disconnect(&mut self, client: &mut dyn NetPeer) {
+    fn on_disconnect(&mut self, g: &mut Game, client: &mut dyn NetPeer) {
         self.log.push(NetEvent { frame: self.frame, poll: self.poll, side: self.side, peer: info(client), kind: Kind::Disconnect });
-        self.inner.on_disconnect(client);
+        self.inner.on_disconnect(g, client);
     }
 }
 
@@ -148,14 +148,14 @@ impl NetPeer for ReplayPeer {
 }
 
 /// Plays a recording's events to the listener of `side` at its `poll` in `frame`, in recorded order.
-pub fn deliver(events: &[NetEvent], next: &mut usize, side: Side, frame: u32, poll: u32, handler: &mut dyn NetworkEventHandler) {
+pub fn deliver<C: ?Sized>(events: &[NetEvent], next: &mut usize, side: Side, frame: u32, poll: u32, ctx: &mut C, handler: &mut dyn NetworkEventHandler<C>) {
     while let Some(ev) = events.get(*next).filter(|e| e.frame == frame && e.side == side && e.poll == poll) {
         *next += 1;
         let mut peer = ReplayPeer(ev.peer.clone());
         match &ev.kind {
-            Kind::Connect => handler.on_connect(Box::new(peer)),
-            Kind::Receive(data) => handler.on_receive(&mut peer, data),
-            Kind::Disconnect => handler.on_disconnect(&mut peer),
+            Kind::Connect => handler.on_connect(ctx, Box::new(peer)),
+            Kind::Receive(data) => handler.on_receive(ctx, &mut peer, data),
+            Kind::Disconnect => handler.on_disconnect(ctx, &mut peer),
         }
     }
 }
@@ -223,21 +223,25 @@ pub fn replaying(g: &mut Game) -> bool {
 }
 
 /// A listener's poll: in a replay, the events recorded for this frame and side; otherwise `live`'s, recorded.
-pub fn listen(g: &mut Game, side: Side, handler: &mut dyn NetworkEventHandler, live: impl FnOnce(&mut dyn NetworkEventHandler)) {
+pub fn listen(
+    g: &mut Game,
+    side: Side,
+    handler: &mut dyn NetworkEventHandler<Game>,
+    live: impl FnOnce(&mut Game, &mut dyn NetworkEventHandler<Game>),
+) {
     let frame = harness::frame();
     let poll = next_poll(g, side, frame);
     let mut log = Vec::new();
-    if let Some(r) = g.net_record.replay.as_mut() {
-        // Taken out while delivering: a handler may read a recorded value.
-        let events = std::mem::take(&mut r.events);
-        let mut next = r.next;
-        deliver(&events, &mut next, side, frame, poll, &mut Recording { inner: handler, side, frame, poll, log: &mut log });
+    let mut recording = Recording { inner: handler, side, frame, poll, log: &mut log };
+    // Taken out while delivering: a handler may read a recorded value.
+    if let Some((events, mut next)) = g.net_record.replay.as_mut().map(|r| (std::mem::take(&mut r.events), r.next)) {
+        deliver(&events, &mut next, side, frame, poll, g, &mut recording);
         if let Some(r) = g.net_record.replay.as_mut() {
             r.events = events;
             r.next = next;
         }
     } else {
-        live(&mut Recording { inner: handler, side, frame, poll, log: &mut log });
+        live(g, &mut recording);
     }
     for ev in &log {
         harness::record_line(&ev.line());
@@ -291,13 +295,13 @@ mod tests {
     struct Log(Vec<String>);
 
     impl NetworkEventHandler for Log {
-        fn on_connect(&mut self, peer: Box<dyn NetPeer>) {
+        fn on_connect(&mut self, _: &mut (), peer: Box<dyn NetPeer>) {
             self.0.push(format!("connect {}", peer.address_as_string()));
         }
-        fn on_receive(&mut self, peer: &mut dyn NetPeer, data: &[u8]) {
+        fn on_receive(&mut self, _: &mut (), peer: &mut dyn NetPeer, data: &[u8]) {
             self.0.push(format!("recv {} {:?}", peer.get_player_id(), data));
         }
-        fn on_disconnect(&mut self, _: &mut dyn NetPeer) {
+        fn on_disconnect(&mut self, _: &mut (), _: &mut dyn NetPeer) {
             self.0.push("disconnect".to_string());
         }
     }
@@ -315,11 +319,11 @@ mod tests {
         ];
         let mut log = Log(Vec::new());
         let mut next = 0;
-        deliver(&events, &mut next, Side::Client, 5, 0, &mut log);
+        deliver(&events, &mut next, Side::Client, 5, 0, &mut (), &mut log);
         assert_eq!(log.0, ["connect 10.0.0.1:12522", "recv 2 [1]"]);
-        deliver(&events, &mut next, Side::Client, 5, 1, &mut log);
-        deliver(&events, &mut next, Side::Client, 6, 0, &mut log);
-        deliver(&events, &mut next, Side::Host, 6, 0, &mut log);
+        deliver(&events, &mut next, Side::Client, 5, 1, &mut (), &mut log);
+        deliver(&events, &mut next, Side::Client, 6, 0, &mut (), &mut log);
+        deliver(&events, &mut next, Side::Host, 6, 0, &mut (), &mut log);
         assert_eq!(next, 5);
         assert_eq!(log.0[2..], ["recv 2 [3]".to_string(), "recv 2 [2]".to_string(), "disconnect".to_string()]);
     }

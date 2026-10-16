@@ -70,20 +70,20 @@ impl NetworkLayer for NetworkLayerENet {
                 match self.last_event.type_ {
                     _ENetEventType_ENET_EVENT_TYPE_CONNECT => {
                         let newClient = Box::new(NetPeerENet::new(self.last_event.peer));
-                        server.on_connect(newClient);
+                        server.on_connect(&mut (), newClient);
                     }
 
                     _ENetEventType_ENET_EVENT_TYPE_RECEIVE => {
                         let mut client = NetPeerENet::new(self.last_event.peer);
                         let packet = self.last_event.packet;
                         let data = std::slice::from_raw_parts((*packet).data, (*packet).dataLength);
-                        server.on_receive(&mut client, data);
+                        server.on_receive(&mut (), &mut client, data);
                         enet_packet_destroy(packet);
                     }
 
                     _ENetEventType_ENET_EVENT_TYPE_DISCONNECT => {
                         let mut client = NetPeerENet::new(self.last_event.peer);
-                        server.on_disconnect(&mut client);
+                        server.on_disconnect(&mut (), &mut client);
                     }
 
                     _ => {}

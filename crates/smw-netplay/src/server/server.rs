@@ -431,7 +431,7 @@ impl Drop for SMWServer {
 }
 
 impl NetworkEventHandler for SMWServer {
-    fn on_connect(&mut self, new_client: Box<dyn NetPeer>) {
+    fn on_connect(&mut self, _: &mut (), new_client: Box<dyn NetPeer>) {
         println!("Connect event [{}].", new_client.get_player_id());
 
         // Is there a player already with this address+port?
@@ -452,7 +452,7 @@ impl NetworkEventHandler for SMWServer {
         }
     }
 
-    fn on_disconnect(&mut self, client: &mut dyn NetPeer) {
+    fn on_disconnect(&mut self, _: &mut (), client: &mut dyn NetPeer) {
         println!("Disconnect event [{}].", client.get_player_id());
         let playerID = client.get_player_id();
         if self.players.contains_key(&playerID) {
@@ -465,7 +465,7 @@ impl NetworkEventHandler for SMWServer {
         }
     }
 
-    fn on_receive(&mut self, client: &mut dyn NetPeer, data: &[u8]) {
+    fn on_receive(&mut self, _: &mut (), client: &mut dyn NetPeer, data: &[u8]) {
         if data.len() < 3 {
             return;
         }
