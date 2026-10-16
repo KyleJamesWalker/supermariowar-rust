@@ -85,8 +85,7 @@ pub fn set_network_id_context(g: &mut Game, context: u32) {
 }
 
 /// The ID context and the count of objects made in it, for checkpoints.
-pub fn network_id_state() -> (&'static mut u32, &'static mut u32) {
-    let g = game().get();
+pub fn network_id_state(g: &mut Game) -> (&mut u32, &mut u32) {
     (&mut g.g_networkIDContext, &mut g.g_networkIDCount)
 }
 

@@ -625,7 +625,7 @@ pub fn checkpoint(g: &mut Game, s: &mut crate::smw::checkpoint::Snap) {
             random_state(gp.get()).g_pending = pending.iter().filter_map(|(bytes, at)| Some((RandomEvent::from_bytes(bytes)?, *at))).collect();
             random_state(gp.get()).g_waits = waits.iter().filter_map(|&(ev, key, n)| Some((Ev::from_u8(ev)?, key, n))).collect();
         }
-        let (context, count) = crate::common::object_base::network_id_state();
+        let (context, count) = crate::common::object_base::network_id_state(g);
         s.io(context);
         s.io(count);
     }
