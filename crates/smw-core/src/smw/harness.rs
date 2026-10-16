@@ -608,7 +608,7 @@ pub fn frame_start(g: &mut Game) {
     crate::smw::pad::debug_frame(unsafe { h().frame });
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::phase(2);
-    sfx::sfx_virtual_advance();
+    sfx::sfx_virtual_advance(g);
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::phase(3);
     record_frame_start(g, unsafe { h().frame });

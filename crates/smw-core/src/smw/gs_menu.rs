@@ -379,7 +379,7 @@ impl MenuState {
 
                     //If it is not "[none]", then add this announcer sound
                     if szBuffer != "[none]" {
-                        let sound = sfxSound::from_file(Path::new(&convert_path(g, &szBuffer))).unwrap_or_else(|e| std::panic::panic_any(e));
+                        let sound = sfxSound::from_file(gp.get(), Path::new(&convert_path(g, &szBuffer))).unwrap_or_else(|e| std::panic::panic_any(e));
                         g.rm.sfx_announcer[announcerIndex as usize] = sound;
                     }
 
@@ -390,13 +390,13 @@ impl MenuState {
             //Load soundtrack music if changed
             if g.game_values.loadedmusic as i64 != g.musiclist.current_index() as i64 {
                 g.game_values.loadedmusic = g.musiclist.current_index() as i16;
-                g.rm.backgroundmusic[1] = sfxMusic::from_file(g.musiclist.music(0)).unwrap_or_else(|e| std::panic::panic_any(e)); //Stage Clear
-                g.rm.backgroundmusic[3] = sfxMusic::from_file(g.musiclist.music(2)).unwrap_or_else(|e| std::panic::panic_any(e)); //Tournament Menu
-                g.rm.backgroundmusic[4] = sfxMusic::from_file(g.musiclist.music(3)).unwrap_or_else(|e| std::panic::panic_any(e)); //Tournament Over
+                g.rm.backgroundmusic[1] = sfxMusic::from_file(g, gp.musiclist.music(0)).unwrap_or_else(|e| std::panic::panic_any(e)); //Stage Clear
+                g.rm.backgroundmusic[3] = sfxMusic::from_file(g, gp.musiclist.music(2)).unwrap_or_else(|e| std::panic::panic_any(e)); //Tournament Menu
+                g.rm.backgroundmusic[4] = sfxMusic::from_file(g, gp.musiclist.music(3)).unwrap_or_else(|e| std::panic::panic_any(e)); //Tournament Over
             }
 
-            g.rm.backgroundmusic[2].stop();
-            g.rm.sfx_announcer[11].play();
+            gp.rm.backgroundmusic[2].stop(g);
+            gp.rm.sfx_announcer[11].play(g);
 
             g.game_values.screenfade = 8;
             g.game_values.screenfadespeed = 8;
@@ -480,14 +480,15 @@ impl MenuState {
     }
 
     fn reset_tournament_back_to_main_menu(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             self.mCurrentMenu = menu(self.mMainMenu);
             self.mCurrentMenu.reset_menu(g);
 
             if g.game_values.matchtype != MatchType::SingleGame && g.game_values.matchtype != MatchType::QuickGame && g.game_values.matchtype != MatchType::MiniGame && g.game_values.matchtype != MatchType::NetGame {
                 if self.fNeedMenuMusicReset {
-                    g.rm.backgroundmusic[3].stop();
-                    g.rm.backgroundmusic[2].play(false, false);
+                    gp.rm.backgroundmusic[3].stop(g);
+                    gp.rm.backgroundmusic[2].play(g, false, false);
                     self.fNeedMenuMusicReset = false;
                 }
             }
@@ -663,7 +664,7 @@ impl MenuState {
                         g.game_values.appstate = AppState::StartWorld;
 
                         //Play enter world sound
-                        g.rm.sfx_enterstage.play();
+                        gp.rm.sfx_enterstage.play(g);
                     }
 
                     //Setup items on next menu
@@ -818,8 +819,8 @@ impl MenuState {
                 crate::common::global::load_current_map_background(g);
 
                 if g.game_values.music {
-                    g.rm.backgroundmusic[0] = sfxMusic::from_file(g.worldmusiclist.current_music(WorldMusicCategory::Bonus, "")).unwrap_or_else(|e| std::panic::panic_any(e));
-                    g.rm.backgroundmusic[0].play(false, false);
+                    g.rm.backgroundmusic[0] = sfxMusic::from_file(g, gp.worldmusiclist.current_music(WorldMusicCategory::Bonus, "")).unwrap_or_else(|e| std::panic::panic_any(e));
+                    gp.rm.backgroundmusic[0].play(g, false, false);
                 }
             } else {
                 let mut sShortMapName = String::new();
@@ -889,8 +890,8 @@ impl MenuState {
                     let category = MusicCategory::ALL[g.g_map.musicCategoryID as usize];
                     let background = g.g_map.szBackgroundFile.clone();
                     g.musiclist.set_random_music(category, &sShortMapName, &background);
-                    g.rm.backgroundmusic[0] = sfxMusic::from_file(g.musiclist.current_music()).unwrap_or_else(|e| std::panic::panic_any(e));
-                    g.rm.backgroundmusic[0].play(g.game_values.playnextmusic, false);
+                    g.rm.backgroundmusic[0] = sfxMusic::from_file(g, gp.musiclist.current_music()).unwrap_or_else(|e| std::panic::panic_any(e));
+                    gp.rm.backgroundmusic[0].play(g, g.game_values.playnextmusic, false);
                 }
             }
 
@@ -1113,15 +1114,15 @@ impl MenuState {
                 }
             } else if MENU_CODE_SOUND_VOLUME_CHANGED == code {
                 g.game_values.sound = g.game_values.soundvolume > 0;
-                sfx_setsoundvolume(g.game_values.soundvolume as i32);
+                sfx_setsoundvolume(g, g.game_values.soundvolume as i32);
                 if_sound_on_play(g, &mut gp.rm.sfx_coin);
             } else if MENU_CODE_MUSIC_VOLUME_CHANGED == code {
-                sfx_setmusicvolume(g.game_values.musicvolume as i32);
+                sfx_setmusicvolume(g, g.game_values.musicvolume as i32);
 
                 if g.game_values.musicvolume == 0 {
-                    g.rm.backgroundmusic[2].stop();
+                    gp.rm.backgroundmusic[2].stop(g);
                 } else if g.game_values.musicvolume > 0 && !g.game_values.music {
-                    g.rm.backgroundmusic[2].play(false, false);
+                    gp.rm.backgroundmusic[2].play(g, false, false);
                 }
 
                 g.game_values.music = g.game_values.musicvolume > 0;
@@ -1643,11 +1644,11 @@ impl GameState for MenuState {
 
             if g.game_values.music && g.game_values.tournamentwinner < 0 {
                 if matchtype == MatchType::SingleGame || matchtype == MatchType::QuickGame || matchtype == MatchType::MiniGame || matchtype == MatchType::NetGame {
-                    g.rm.backgroundmusic[2].play(false, false);
+                    gp.rm.backgroundmusic[2].play(g, false, false);
                 } else if matchtype == MatchType::World {
-                    g.rm.backgroundmusic[5].play(false, false);
+                    gp.rm.backgroundmusic[5].play(g, false, false);
                 } else {
-                    g.rm.backgroundmusic[3].play(false, false);
+                    gp.rm.backgroundmusic[3].play(g, false, false);
                 }
             }
 
@@ -1840,10 +1841,10 @@ impl GameState for MenuState {
                     self.mCurrentMenu = menu(self.mWorldMenu);
                     self.mCurrentMenu.reset_menu(g);
 
-                    g.rm.backgroundmusic[2].stop();
+                    gp.rm.backgroundmusic[2].stop(g);
                     let worldMusic = g.worldmusiclist.current_music(g.g_worldmap.get_music_category(), g.g_worldmap.get_world_name()).clone();
-                    g.rm.backgroundmusic[5] = sfxMusic::from_file(&worldMusic).unwrap_or_else(|e| std::panic::panic_any(e));
-                    g.rm.backgroundmusic[5].play(false, false);
+                    g.rm.backgroundmusic[5] = sfxMusic::from_file(g, &worldMusic).unwrap_or_else(|e| std::panic::panic_any(e));
+                    gp.rm.backgroundmusic[5].play(g, false, false);
                     self.fNeedMenuMusicReset = true;
 
                     self.mWorldMenu.miWorld.display_team_control_announcement(g);
@@ -1862,7 +1863,7 @@ impl GameState for MenuState {
             }
 
             if fGenerateMapThumbs {
-                g.rm.backgroundmusic[2].toggle_pause();
+                gp.rm.backgroundmusic[2].toggle_pause(g);
 
                 //Reload map auto filters from live map files (don't use the cache)
                 gp.maplist.reload_map_auto_filters(g);
@@ -1883,7 +1884,7 @@ impl GameState for MenuState {
                     itr += 1;
                 }
 
-                g.rm.backgroundmusic[2].toggle_pause();
+                gp.rm.backgroundmusic[2].toggle_pause(g);
             }
         }
     }

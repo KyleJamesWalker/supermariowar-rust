@@ -378,9 +378,10 @@ impl MO_SledgeBrother {
     }
 
     fn taunt(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         self.set_last_action(2);
 
-        unsafe { g.rm.sfx_boomerang.play_loop(3) };
+        unsafe { gp.rm.sfx_boomerang.play_loop(g, 3) };
         self.taunt_timer = 60;
         self.iActionState = 5;
 

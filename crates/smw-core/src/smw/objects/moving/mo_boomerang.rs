@@ -112,9 +112,10 @@ impl MO_Boomerang {
 
     // Call to kill boomerang when it is not caught by player
     fn forcedead(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             removeifprojectile(g, self.as_mo_ptr(), false, true);
-            g.rm.sfx_boomerang.stop();
+            gp.rm.sfx_boomerang.stop(g);
 
             if g.game_values.boomeranglimit == 0 {
                 return;

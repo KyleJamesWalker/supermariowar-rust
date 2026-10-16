@@ -158,6 +158,7 @@ pub fn show_score_board(g: &mut Game) {
 }
 
 pub fn show_score_board_now(g: &mut Game) {
+    let mut gp = g.ptr();
     unsafe {
         g.game_values.flags.showscoreboard = true;
 
@@ -176,11 +177,11 @@ pub fn show_score_board_now(g: &mut Game) {
         }
 
         if g.game_values.music {
-            g.rm.sfx_invinciblemusic.stop();
-            g.rm.sfx_timewarning.stop();
-            g.rm.sfx_slowdownmusic.stop();
+            gp.rm.sfx_invinciblemusic.stop(g);
+            gp.rm.sfx_timewarning.stop(g);
+            gp.rm.sfx_slowdownmusic.stop(g);
 
-            g.rm.backgroundmusic[1].play(true, false);
+            gp.rm.backgroundmusic[1].play(g, true, false);
         }
     }
 }
@@ -194,6 +195,7 @@ pub fn remove_team(g: &mut Game, teamid: i16) -> bool {
 }
 
 pub fn remove_team_now(g: &mut Game, teamid: i16) -> bool {
+    let mut gp = g.ptr();
     unsafe {
         //If we have already removed this team then return
         if g.score[teamid as usize].order > -1 {
@@ -226,7 +228,7 @@ pub fn remove_team_now(g: &mut Game, teamid: i16) -> bool {
                 90,
                 200,
             ));
-            g.rm.sfx_announcer[(iAnnouncementColor as i32 + 16) as usize].play();
+            gp.rm.sfx_announcer[(iAnnouncementColor as i32 + 16) as usize].play(g);
         }
 
         g.game_values.flags.teamdeadcounter as i32 == g.score_cnt as i32 - 1
@@ -273,10 +275,10 @@ impl CGameMode {
 
         self.playedwarningsound = true;
         unsafe {
-            g.rm.sfx_invinciblemusic.stop();
+            gp.rm.sfx_invinciblemusic.stop(g);
 
             if g.game_values.music && g.game_values.sound {
-                g.rm.backgroundmusic[0].stop();
+                gp.rm.backgroundmusic[0].stop(g);
             }
 
             if_sound_on_play(g, &mut gp.rm.sfx_timewarning);

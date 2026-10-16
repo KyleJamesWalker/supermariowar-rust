@@ -512,7 +512,7 @@ pub fn main_game() {
         gfx_init(g, App::screenWidth, App::screenHeight, false); //initialize the graphics (SDL)
         g.blitdest = g.screen;
 
-        sfx_init(); //init the sound system
+        sfx_init(g); //init the sound system
         net_init(g); //init the networking
 
         init_joysticks(g);

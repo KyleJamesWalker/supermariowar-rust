@@ -40,7 +40,7 @@ impl PlayerTail {
     pub fn shake(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut gp = g.ptr();
         unsafe {
-            g.rm.sfx_tailspin.stop();
+            gp.rm.sfx_tailspin.stop(g);
             if_sound_on_play(g, &mut gp.rm.sfx_tailspin);
         }
         player.lockjump = true;

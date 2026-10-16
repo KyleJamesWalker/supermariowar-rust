@@ -60,11 +60,11 @@ impl CGM_Boss_MiniGame {
             show_score_board(g);
 
             if g.game_values.music {
-                g.rm.sfx_invinciblemusic.stop();
-                g.rm.sfx_timewarning.stop();
-                g.rm.sfx_slowdownmusic.stop();
+                gp.rm.sfx_invinciblemusic.stop(g);
+                gp.rm.sfx_timewarning.stop(g);
+                gp.rm.sfx_slowdownmusic.stop(g);
 
-                g.rm.backgroundmusic[1].play(true, false);
+                gp.rm.backgroundmusic[1].play(g, true, false);
             }
         }
 
@@ -128,12 +128,12 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
                 self.gameover = true;
 
                 if g.game_values.music {
-                    g.rm.sfx_invinciblemusic.stop();
-                    g.rm.sfx_timewarning.stop();
-                    g.rm.sfx_slowdownmusic.stop();
+                    gp.rm.sfx_invinciblemusic.stop(g);
+                    gp.rm.sfx_timewarning.stop(g);
+                    gp.rm.sfx_slowdownmusic.stop(g);
                     if_sound_on_play(g, &mut gp.rm.sfx_gameover);
 
-                    g.rm.backgroundmusic[1].stop();
+                    gp.rm.backgroundmusic[1].stop(g);
                 }
             }
 

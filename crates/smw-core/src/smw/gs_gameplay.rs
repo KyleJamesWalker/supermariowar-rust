@@ -329,6 +329,7 @@ pub fn lookup_team_id(g: &mut Game, id: i16) -> i16 {
 }
 
 pub fn musicfinished(g: &mut Game) {
+    let mut gp = g.ptr();
     unsafe {
         if !g.game_values.music {
             return;
@@ -339,7 +340,7 @@ pub fn musicfinished(g: &mut Game) {
         }
 
         if g.sfx.fResumeMusic {
-            g.rm.backgroundmusic[3].play(false, false);
+            gp.rm.backgroundmusic[3].play(g, false, false);
         }
     }
 }
@@ -370,8 +371,8 @@ fn music_category(id: i16) -> MusicCategory {
 }
 
 /// `sfxMusic(path)`, which throws on failure.
-fn load_music(path: &std::path::Path) -> sfxMusic {
-    sfxMusic::from_file(path).unwrap_or_else(|e| std::panic::panic_any(e))
+fn load_music(g: &mut Game, path: &std::path::Path) -> sfxMusic {
+    sfxMusic::from_file(g, path).unwrap_or_else(|e| std::panic::panic_any(e))
 }
 
 impl GameplayState {
@@ -1506,7 +1507,7 @@ impl GameplayState {
                     g.game_values.screenfade = 0;
 
                     if g.game_values.swapstyle == 0 {
-                        g.rm.sfx_skid.stop();
+                        gp.rm.sfx_skid.stop(g);
                     }
 
                     if_sound_on_play(g, &mut gp.rm.sfx_transform);
@@ -1723,6 +1724,7 @@ pub fn is_exit_allowed(g: &mut Game) -> bool {
 }
 
 pub fn update_score_board(g: &mut Game) {
+    let mut gp = g.ptr();
     unsafe {
         if g.game_values.matchtype == MatchType::World {
             //If no one won, then nothing on the world map has changed
@@ -1733,7 +1735,7 @@ pub fn update_score_board(g: &mut Game) {
             //If this was the last stage, signal that the world is over
             if g.game_values.tourstops[g.game_values.tourstopcurrent].fEndStage {
                 g.game_values.tournamentwinner = 1;
-                g.rm.backgroundmusic[4].play(true, true);
+                gp.rm.backgroundmusic[4].play(g, true, true);
             }
 
             //Add up all the winnings so far and determine overall place in the standings
@@ -1832,7 +1834,7 @@ pub fn update_score_board(g: &mut Game) {
                 }
 
                 g.game_values.tournamentwinner = iWinningTeam;
-                g.rm.backgroundmusic[4].play(true, true);
+                gp.rm.backgroundmusic[4].play(g, true, true);
             }
         } else if g.game_values.matchtype == MatchType::Tournament {
             let mut maxScore: i16 = -1; //Max score for game
@@ -1858,7 +1860,7 @@ pub fn update_score_board(g: &mut Game) {
                     g.game_values.tournamentwinner = maxTeam;
 
                     if g.game_values.music {
-                        g.rm.backgroundmusic[4].play(true, true);
+                        gp.rm.backgroundmusic[4].play(g, true, true);
                     }
                 }
             }
@@ -2120,9 +2122,9 @@ pub fn clean_up(g: &mut Game) {
         gp.g_map.reset_platforms(g);
 
         //Stop all game sounds
-        sfx_stopallsounds();
-        g.rm.sfx_invinciblemusic.stop();
-        g.rm.sfx_slowdownmusic.stop();
+        sfx_stopallsounds(g);
+        gp.rm.sfx_invinciblemusic.stop(g);
+        gp.rm.sfx_slowdownmusic.stop(g);
 
         g.x_shake = 0;
         g.y_shake = 0;
@@ -2158,7 +2160,7 @@ pub fn update_exit_pause_dialog(g: &mut Game, iCountDownState: i16) -> bool {
 
                             //Stop the pwings sound if it is on
                             if g.rm.sfx_flyingsound.is_playing() {
-                                g.rm.sfx_flyingsound.stop();
+                                gp.rm.sfx_flyingsound.stop(g);
                             }
                         }
 
@@ -2313,7 +2315,7 @@ pub fn play_sfx(g: &mut Game) {
                 if_sound_on_play(g, &mut gp.rm.sfx_skid);
             }
         } else if g.rm.sfx_skid.is_playing() {
-            g.rm.sfx_skid.stop();
+            gp.rm.sfx_skid.stop(g);
         }
 
         //Play sound for players using PWings
@@ -2322,7 +2324,7 @@ pub fn play_sfx(g: &mut Game) {
                 if_sound_on_play(g, &mut gp.rm.sfx_flyingsound);
             }
         } else if g.rm.sfx_flyingsound.is_playing() {
-            g.rm.sfx_flyingsound.stop();
+            gp.rm.sfx_flyingsound.stop(g);
         }
     }
 }
@@ -2336,43 +2338,44 @@ pub fn play_music(g: &mut Game) {
                 if_sound_on_play(g, &mut gp.rm.sfx_slowdownmusic);
             }
         } else if g.rm.sfx_slowdownmusic.is_playing() {
-            g.rm.sfx_slowdownmusic.stop();
+            gp.rm.sfx_slowdownmusic.stop(g);
         }
 
         if g.game_values.flags.playinvinciblesound && g.game_values.musicvolume > 0 {
-            if !g.rm.sfx_invinciblemusic.is_playing() && !g.rm.sfx_timewarning.is_playing() && !g.rm.backgroundmusic[0].is_playing() {
+            if !g.rm.sfx_invinciblemusic.is_playing() && !g.rm.sfx_timewarning.is_playing() && !gp.rm.backgroundmusic[0].is_playing(g) {
                 if_sound_on_play(g, &mut gp.rm.sfx_invinciblemusic);
             }
         } else if g.rm.sfx_invinciblemusic.is_playing() {
-            g.rm.sfx_invinciblemusic.stop();
+            gp.rm.sfx_invinciblemusic.stop(g);
         }
 
         //If no background music is playing, then play some
-        if !g.rm.backgroundmusic[0].is_playing() && !g.rm.sfx_invinciblemusic.is_playing() && !g.rm.sfx_timewarning.is_playing() && !g.game_values.gamemode.gameover {
+        if !gp.rm.backgroundmusic[0].is_playing(g) && !g.rm.sfx_invinciblemusic.is_playing() && !g.rm.sfx_timewarning.is_playing() && !g.game_values.gamemode.gameover {
             if g.game_values.playnextmusic {
                 let mapname = g.maplist.current_shortmapname().to_string();
                 g.musiclist.set_next_music(music_category(g.g_map.musicCategoryID), &mapname, &g.g_map.szBackgroundFile);
                 let path = g.musiclist.current_music().clone();
-                g.rm.backgroundmusic[0] = load_music(&path);
+                g.rm.backgroundmusic[0] = load_music(g, &path);
             }
 
-            g.rm.backgroundmusic[0].play(g.game_values.playnextmusic, false);
+            gp.rm.backgroundmusic[0].play(g, g.game_values.playnextmusic, false);
         }
     }
 }
 
 pub fn play_next_music_track(g: &mut Game) {
+    let mut gp = g.ptr();
     unsafe {
         if g.game_values.gamemode.gameover || g.game_values.flags.playinvinciblesound || g.rm.sfx_timewarning.is_playing() {
             return;
         }
 
-        g.rm.backgroundmusic[0].stop();
+        gp.rm.backgroundmusic[0].stop(g);
         let mapname = g.maplist.current_shortmapname().to_string();
         g.musiclist.set_next_music(music_category(g.g_map.musicCategoryID), &mapname, &g.g_map.szBackgroundFile);
         let path = g.musiclist.current_music().clone();
-        g.rm.backgroundmusic[0] = load_music(&path);
-        g.rm.backgroundmusic[0].play(g.game_values.playnextmusic, false);
+        g.rm.backgroundmusic[0] = load_music(g, &path);
+        gp.rm.backgroundmusic[0].play(g, g.game_values.playnextmusic, false);
     }
 }
 
@@ -2572,6 +2575,7 @@ pub fn network_broadcast_game_state(g: &mut Game) {
 }
 
 pub fn start_gameplay(g: &mut Game) {
+    let mut gp = g.ptr();
     unsafe {
         clean_up(g);
         set_game_mode_settings_from_menu(g);
@@ -2580,8 +2584,8 @@ pub fn start_gameplay(g: &mut Game) {
         if g.game_values.music {
             g.musiclist.set_random_music(music_category(g.g_map.musicCategoryID), "", "");
             let path = g.musiclist.current_music().clone();
-            g.rm.backgroundmusic[0] = load_music(&path);
-            g.rm.backgroundmusic[0].play(g.game_values.playnextmusic, false);
+            g.rm.backgroundmusic[0] = load_music(g, &path);
+            gp.rm.backgroundmusic[0].play(g, g.game_values.playnextmusic, false);
         }
     }
 }
@@ -2598,6 +2602,7 @@ pub fn end_gameplay(g: &mut Game) {
 
 impl GameplayState {
     fn update_countdown_timer(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             //Count down start timer before each game
             if self.iCountDownState > 0 {
@@ -2610,7 +2615,7 @@ impl GameplayState {
 
                         let countDownAnnounce = iCountDownAnnounce[(28 - self.iCountDownState) as usize];
                         if countDownAnnounce >= 0 {
-                            g.rm.sfx_announcer[countDownAnnounce as usize].play();
+                            gp.rm.sfx_announcer[countDownAnnounce as usize].play(g);
                         }
                     }
                 }

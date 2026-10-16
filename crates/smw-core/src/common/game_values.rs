@@ -214,7 +214,7 @@ const DEFAULT_POWERUP_PRESETS: [[i16; NUM_POWERUPS as usize]; NUM_POWERUP_PRESET
 pub fn if_sound_on_play(g: &mut Game, sfx: &mut sfxSound) {
     unsafe {
         if g.game_values.sound {
-            sfx.play();
+            sfx.play(g);
         }
     }
 }
@@ -848,8 +848,8 @@ impl CGameConfig {
             g.worldgraphicspacklist.set_current_index(options.read_u8() as usize);
             g.gamegraphicspacklist.set_current_index(options.read_u8() as usize);
 
-            sfx_setmusicvolume(self.musicvolume as i32);
-            sfx_setsoundvolume(self.soundvolume as i32);
+            sfx_setmusicvolume(g, self.musicvolume as i32);
+            sfx_setsoundvolume(g, self.soundvolume as i32);
             true
         }
     }

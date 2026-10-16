@@ -807,7 +807,7 @@ impl NetClient {
             g.netplay.start_waited_since = 0;
             g.netplay.gamestate_received = false;
         }
-        crate::smw::net_random::begin_setup();
+        crate::smw::net_random::begin_setup(g);
 
         unsafe {
             g.netplay.player_disconnected = [false; 4];
@@ -2043,5 +2043,5 @@ pub fn checkpoint(g: &mut Game, s: &mut Snap) {
         s.io(&mut g.last_processed_input_id);
     }
     crate::smw::net_random::checkpoint(s);
-    crate::smw::net_outcomes::checkpoint(s);
+    crate::smw::net_outcomes::checkpoint(g, s);
 }
