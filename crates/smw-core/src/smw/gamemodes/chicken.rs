@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/Chicken.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::{EC_GravText, EC_SingleAnimation};
 use crate::common::game_mode::*;
@@ -12,7 +13,6 @@ use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::*;
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 //capture the chicken
 pub struct CGM_Chicken {
@@ -103,7 +103,7 @@ impl CGameModeTrait for CGM_Chicken {
                         g,
                         chicken.left_x() as i32 - PWOFFSET - 16,
                         chicken.top_y() as i32 - PHOFFSET - 16,
-                        &SDL_Rect { x: 0, y: 0, w: 64, h: 64 },
+                        &Rect { x: 0, y: 0, w: 64, h: 64 },
                         clip_edge_from(chicken.get_warp_state()),
                         chicken.get_warp_plane() as i32,
                     );

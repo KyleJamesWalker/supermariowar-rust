@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_Bomb.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::Spotlight;
 use crate::common::game_values::if_sound_on_play;
@@ -14,7 +15,6 @@ use crate::smw::objects::moving::mo_carried_object::{MO_CarriedObject, MO_Carrie
 use crate::smw::objects::moving::mo_explosion::MO_Explosion;
 use crate::smw::objects::moving::moving_object::{io_moving_object_collision_detection_map, IO_MovingObjectTrait};
 use crate::smw::player::{get_player_from_global_id, CPlayer};
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class bomb
@@ -133,7 +133,7 @@ impl CObjectTrait for CO_Bomb {
     fn draw(&mut self, g: &mut Game) {
         let x = self.ix as i32 - self.collisionOffsetX as i32;
         let y = self.iy as i32 - self.collisionOffsetY as i32;
-        let src = SDL_Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32, w: self.iw as i32, h: self.ih as i32 };
+        let src = Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32, w: self.iw as i32, h: self.ih as i32 };
         if !self.owner.is_null() && self.owner.iswarping() {
             let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32) };
             self.spr.draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);

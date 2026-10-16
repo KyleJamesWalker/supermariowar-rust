@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_BulletBill.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_FallingObject;
 use crate::common::game::App;
@@ -20,7 +21,6 @@ use crate::smw::objects::carriable::co_throw_box::CO_ThrowBox;
 use crate::smw::objects::moving::mo_explosion::MO_Explosion;
 use crate::smw::objects::moving::moving_object::{IO_MovingObject, IO_MovingObjectTrait};
 use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class bulletbill
@@ -107,7 +107,7 @@ impl MO_BulletBill {
     // For preview drawing
     pub fn draw_offset(&mut self, g: &mut Game, iOffsetX: i16, iOffsetY: i16) {
         let surface = &*self.spr;
-        let clipRect = SDL_Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: 320, h: 240 };
+        let clipRect = Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: 320, h: 240 };
         let dstX = ((self.ix as i32 >> 1) + iOffsetX as i32) as i16;
         let dstY = ((self.iy as i32 >> 1) + iOffsetY as i32) as i16;
         let srcX = (self.drawframe as i32 >> 1) as i16;
@@ -182,7 +182,7 @@ impl CObjectTrait for MO_BulletBill {
     }
 
     fn draw(&mut self, g: &mut Game) {
-        let src = SDL_Rect {
+        let src = Rect {
             x: self.drawframe as i32,
             y: self.iColorOffsetY as i32 + self.iDirectionOffsetY as i32,
             w: self.iw as i32,

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_ThrowBlock.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::{EC_FallingObject, EC_SingleAnimation, Spotlight};
 use crate::common::game::App;
@@ -17,7 +18,6 @@ use crate::smw::objects::moving::mo_carried_object::{MO_CarriedObject, MO_Carrie
 use crate::smw::objects::moving::moving_object::{io_moving_object_collision_detection_checksides, io_moving_object_collision_detection_map, IO_MovingObjectTrait};
 use crate::smw::objects::throw_block_type::ThrowBlockType;
 use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class throwable block projectile
@@ -325,7 +325,7 @@ impl CObjectTrait for CO_ThrowBlock {
         let srcY: i32 = self.iType as i32 * 32;
         let x = self.ix as i32 - self.collisionOffsetX as i32;
         let y = self.iy as i32 - self.collisionOffsetY as i32;
-        let src = SDL_Rect { x: self.drawframe as i32, y: srcY, w: self.iw as i32, h: self.ih as i32 };
+        let src = Rect { x: self.drawframe as i32, y: srcY, w: self.iw as i32, h: self.ih as i32 };
         if !self.owner.is_null() && self.owner.iswarping() {
             let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32) };
             self.spr.draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);
@@ -335,7 +335,7 @@ impl CObjectTrait for CO_ThrowBlock {
 
         unsafe {
             if self.frozen {
-                gp.rm.spr_iceblock.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
+                gp.rm.spr_iceblock.draw_src(g, x, y, &Rect { x: 0, y: 0, w: 32, h: 32 });
             } else if self.fSmoking {
                 g.eyecandy[0].emplace(EC_SingleAnimation::new(
                     Ptr::from_mut(&mut g.rm.spr_burnup),

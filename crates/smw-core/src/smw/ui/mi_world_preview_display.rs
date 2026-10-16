@@ -1,12 +1,13 @@
 //! Port of src/smw/ui/MI_WorldPreviewDisplay.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::global_constants::PREVIEWTILESIZE;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 use crate::smw::world::WorldMap;
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use sdl2::sys::{SDL_Rect, SDL_Surface};
+use sdl2::sys::SDL_Surface;
 
 const PTS: i16 = PREVIEWTILESIZE as i16;
 
@@ -33,15 +34,15 @@ pub struct MI_WorldPreviewDisplay {
     iScrollCols: i16,
     iScrollRows: i16,
 
-    rectSrcSurface: SDL_Rect,
-    rectDstSurface: SDL_Rect,
+    rectSrcSurface: Rect,
+    rectDstSurface: Rect,
 
     iScrollSpeed: i16,
     iScrollSpeedTimer: i16,
 }
 crate::impl_base!(MI_WorldPreviewDisplay => ui_control: UI_Control);
 
-const ZERO_RECT: SDL_Rect = SDL_Rect { x: 0, y: 0, w: 0, h: 0 };
+const ZERO_RECT: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
 
 impl MI_WorldPreviewDisplay {
     pub fn new(g: &mut Game, x: i16, y: i16, cols: i16, rows: i16) -> Self {

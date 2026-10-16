@@ -1,5 +1,6 @@
 //! Port of src/smw/player_components/PlayerKuriboShoe.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game_values::if_sound_on_play;
@@ -10,7 +11,6 @@ use crate::globals::*;
 use crate::smw::objects::carriable::co_kuribo_shoe::CO_KuriboShoe;
 use crate::smw::objects::moving::moving_object::io_moving_object_collision_detection_checksides;
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 pub type KuriboShoeType = i32;
 pub const NONE: KuriboShoeType = 0;
@@ -138,7 +138,7 @@ impl PlayerKuriboShoe {
             if self.r#type > 0 {
                 let x = player.left_x() as i32 - PWOFFSET;
                 let y = player.top_y() as i32 - PHOFFSET;
-                let src = SDL_Rect {
+                let src = Rect {
                     x: self.animationFrame as i32 + (if self.r#type == STICKY { 64 } else { 0 }),
                     y: if (player.sprite_state & 0x1) == 0 { 0 } else { 32 },
                     w: 32,

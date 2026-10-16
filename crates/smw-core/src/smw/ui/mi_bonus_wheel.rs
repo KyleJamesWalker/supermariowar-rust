@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_BonusWheel.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
@@ -11,7 +12,6 @@ use crate::common::ui::mi_button::MI_Button;
 use crate::common::ui::mi_image::MI_Image;
 use crate::common::uicontrol::{TextAlign, UI_Control, UI_ControlTrait};
 use crate::globals::*;
-use sdl2::sys::SDL_Rect;
 
 pub const NUMBONUSITEMSONWHEEL: i32 = 10;
 const NB: usize = NUMBONUSITEMSONWHEEL as usize;
@@ -391,7 +391,7 @@ impl UI_ControlTrait for MI_BonusWheel {
             let iSelectorY = (y + 190 + (110.0f32 * sinf(self.dSelectionAngle)) as i16 as i32) as i16;
 
             if self.iState > 0 {
-                gp.rm.spr_powerupselector.draw_src(g, iSelectorX as i32, iSelectorY as i32, &SDL_Rect { x: self.iSelectorAnimation as i32 * 64, y: 0, w: 64, h: 64 });
+                gp.rm.spr_powerupselector.draw_src(g, iSelectorX as i32, iSelectorY as i32, &Rect { x: self.iSelectorAnimation as i32 * 64, y: 0, w: 64, h: 64 });
             }
 
             for iImage in 0..NB {

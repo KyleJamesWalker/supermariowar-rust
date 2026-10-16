@@ -1,5 +1,6 @@
 //! Port of src/common/movingplatform.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::game::App;
@@ -64,8 +65,8 @@ pub struct MovingPlatform {
 
     pub sprites: [gfxSprite; 2],
 
-    pub rSrcRect: SDL_Rect,
-    pub rDstRect: SDL_Rect,
+    pub rSrcRect: Rect,
+    pub rDstRect: Rect,
 
     pub fForwardDirection: bool,
     pub fStartDirection: bool,
@@ -129,8 +130,8 @@ impl MovingPlatform {
             iSteps: 0,
             iOnStep: 0,
             sprites: [gfxSprite::new(), gfxSprite::new()],
-            rSrcRect: SDL_Rect { x: 0, y: 0, w: 0, h: 0 },
-            rDstRect: SDL_Rect { x: 0, y: 0, w: 0, h: 0 },
+            rSrcRect: Rect { x: 0, y: 0, w: 0, h: 0 },
+            rDstRect: Rect { x: 0, y: 0, w: 0, h: 0 },
             fForwardDirection: false,
             fStartDirection: false,
             iDrawLayer: drawlayer,
@@ -218,7 +219,7 @@ impl MovingPlatform {
     //Draw a custom sprite on a tile of the platform, instead of a tileset tile
     pub fn paint_sprite_at(&mut self, spr: &gfxSprite, col: usize, row: usize) {
         let iTileSize: i16 = self.iWidth / self.iTileWidth;
-        let dstPos = SDL_Rect { x: col as i32 * iTileSize as i32, y: row as i32 * iTileSize as i32, w: 0, h: 0 };
+        let dstPos = Rect { x: col as i32 * iTileSize as i32, y: row as i32 * iTileSize as i32, w: 0, h: 0 };
 
         for layer in &self.sprites {
             spr.draw_to(layer.get_surface(), &dstPos);
@@ -272,7 +273,7 @@ impl MovingPlatform {
             0,
             self.iWidth,
             self.iHeight,
-            &SDL_Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: App::screenWidth / 2, h: App::screenHeight / 2 },
+            &Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: App::screenWidth / 2, h: App::screenHeight / 2 },
             true,
             Option::None,
         );

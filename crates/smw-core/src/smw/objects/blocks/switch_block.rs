@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/SwitchBlock.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::*;
@@ -12,7 +13,6 @@ use crate::smw::objects::blocks::io_block::*;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::objects::switch_color::SwitchColor;
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 pub struct B_SwitchBlock {
     pub io_block: IO_Block,
@@ -57,7 +57,7 @@ impl CObjectTrait for B_SwitchBlock {
             g,
             self.ix as i32,
             self.iy as i32,
-            &SDL_Rect { x: self.iSrcX as i32, y: if self.state == 0 { 64 } else { 96 }, w: self.iw as i32, h: self.ih as i32 },
+            &Rect { x: self.iSrcX as i32, y: if self.state == 0 { 64 } else { 96 }, w: self.iw as i32, h: self.ih as i32 },
         );
     }
 

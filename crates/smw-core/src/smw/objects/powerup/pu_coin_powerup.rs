@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_CoinPowerup.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_mode::{game_mode_coins, game_mode_greed};
@@ -12,7 +13,6 @@ use crate::impl_base;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::objects::powerup::powerup::{mo_powerup_update, MO_Powerup, MO_PowerupTrait};
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -80,11 +80,11 @@ impl CObjectTrait for PU_CoinPowerup {
             let y = self.iy as i32 - self.collisionOffsetY as i32;
             if self.state == 0 {
                 let iHeight = (32.0f32 - self.fy + self.desty) as i16;
-                self.spr.draw_src(g, x, y, &SDL_Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32, w: 32, h: iHeight as i32 });
-                gp.rm.spr_shinesparkle.draw_src(g, x, y, &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: iHeight as i32 });
+                self.spr.draw_src(g, x, y, &Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32, w: 32, h: iHeight as i32 });
+                gp.rm.spr_shinesparkle.draw_src(g, x, y, &Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: iHeight as i32 });
             } else {
-                self.spr.draw_src(g, x, y, &SDL_Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32, w: 32, h: 32 });
-                gp.rm.spr_shinesparkle.draw_src(g, x, y, &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 });
+                self.spr.draw_src(g, x, y, &Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32, w: 32, h: 32 });
+                gp.rm.spr_shinesparkle.draw_src(g, x, y, &Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 });
             }
         }
     }

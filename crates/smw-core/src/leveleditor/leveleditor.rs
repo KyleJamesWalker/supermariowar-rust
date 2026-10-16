@@ -1,5 +1,6 @@
 //! Port of src/leveleditor/leveleditor.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::cmd_args as cmd;
 use crate::common::editor_harness;
@@ -31,11 +32,7 @@ use sdl2::sys::image::IMG_SavePNG;
 use crate::common::editor_event::EditorEvent;
 use crate::common::util::sdl_helpers::poll_event;
 use sdl2::sys::SDL_KeyCode::*;
-use sdl2::sys::{
-    SDL_EventType, SDL_FillRect, SDL_GetError, SDL_GetScancodeFromKey, SDL_KeyCode,
-    SDL_Keycode, SDL_MapRGB, SDL_Rect, SDL_SetColorKey, SDL_Surface, SDL_UpperBlit, SDL_bool, SDL_Keymod,
-    SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT,
-};
+use sdl2::sys::{SDL_EventType, SDL_FillRect, SDL_GetError, SDL_GetScancodeFromKey, SDL_KeyCode, SDL_Keycode, SDL_MapRGB, SDL_SetColorKey, SDL_Surface, SDL_UpperBlit, SDL_bool, SDL_Keymod, SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT};
 use std::ffi::{CStr, CString};
 use std::io::Write;
 use std::path::Path;
@@ -184,11 +181,11 @@ pub struct LevelEditorState {
     pub fExiting: bool,
     pub fSelectedYes: bool,
     pub editor_edit_initialized: bool,
-    pub r: SDL_Rect,
+    pub r: Rect,
     pub iBlockType: i16,
     pub editor_properties_initialized: bool,
-    pub rNewButton: [SDL_Rect; 2],
-    pub rTypeButton: [[SDL_Rect; 4]; 8],
+    pub rNewButton: [Rect; 2],
+    pub rTypeButton: [[Rect; 4]; 8],
     pub iPlatformEditState: i16,
     pub iPlatformSwitchState: i16,
     pub iPlatformSwitchIndex: i16,
@@ -201,8 +198,8 @@ pub struct LevelEditorState {
     pub editor_platforms_initialized: bool,
     pub iEditState: i16,
     pub iEditMapHazard: i16,
-    pub rBackground: [SDL_Rect; 2],
-    pub rIconRects: [[SDL_Rect; 2]; MAXMAPHAZARDS as usize],
+    pub rBackground: [Rect; 2],
+    pub rIconRects: [[Rect; 2]; MAXMAPHAZARDS as usize],
     pub editor_maphazards_initialized: bool,
     pub tileset: Ptr<CTileset>,
     pub view_tileset_repeat_direction: i16,
@@ -215,8 +212,8 @@ pub struct LevelEditorState {
     pub editor_modeitems_initialized: bool,
     pub iPage: i16,
     pub sBackgrounds: Global<[gfxSprite; 16]>,
-    pub rSrc: SDL_Rect,
-    pub rDst: [SDL_Rect; 16],
+    pub rSrc: Rect,
+    pub rDst: [Rect; 16],
     pub editor_backgrounds_initialized: bool,
     pub editor_animation_initialized: bool,
 }
@@ -284,11 +281,11 @@ impl LevelEditorState {
             fExiting: false,
             fSelectedYes: false,
             editor_edit_initialized: false,
-            r: SDL_Rect { x: 0, y: 0, w: 0, h: 0 },
+            r: Rect { x: 0, y: 0, w: 0, h: 0 },
             iBlockType: 0,
             editor_properties_initialized: false,
-            rNewButton: [SDL_Rect { x: 0, y: 0, w: 0, h: 0 }; 2],
-            rTypeButton: [[SDL_Rect { x: 0, y: 0, w: 0, h: 0 }; 4]; 8],
+            rNewButton: [Rect { x: 0, y: 0, w: 0, h: 0 }; 2],
+            rTypeButton: [[Rect { x: 0, y: 0, w: 0, h: 0 }; 4]; 8],
             iPlatformEditState: PLATFORM_EDIT_STATE_SELECT,
             iPlatformSwitchState: 0,
             iPlatformSwitchIndex: 0,
@@ -301,8 +298,8 @@ impl LevelEditorState {
             editor_platforms_initialized: false,
             iEditState: MAPHAZARD_EDIT_STATE_SELECT,
             iEditMapHazard: 0,
-            rBackground: [SDL_Rect { x: 0, y: 0, w: 0, h: 0 }; 2],
-            rIconRects: [[SDL_Rect { x: 0, y: 0, w: 0, h: 0 }; 2]; MAXMAPHAZARDS as usize],
+            rBackground: [Rect { x: 0, y: 0, w: 0, h: 0 }; 2],
+            rIconRects: [[Rect { x: 0, y: 0, w: 0, h: 0 }; 2]; MAXMAPHAZARDS as usize],
             editor_maphazards_initialized: false,
             tileset: Ptr::null(),
             view_tileset_repeat_direction: -1,
@@ -315,8 +312,8 @@ impl LevelEditorState {
             editor_modeitems_initialized: false,
             iPage: 0,
             sBackgrounds: Global::uninit(),
-            rSrc: SDL_Rect { x: 0, y: 0, w: 160, h: 120 },
-            rDst: [SDL_Rect { x: 0, y: 0, w: 0, h: 0 }; 16],
+            rSrc: Rect { x: 0, y: 0, w: 160, h: 120 },
+            rDst: [Rect { x: 0, y: 0, w: 0, h: 0 }; 16],
             editor_backgrounds_initialized: false,
             editor_animation_initialized: false,
         }
@@ -360,7 +357,7 @@ pub struct MapPlatform {
 
     pub iDrawLayer: i16,
 
-    pub rIcon: [SDL_Rect; 2],
+    pub rIcon: [Rect; 2],
     pub preview: gfxSprite,
     pub _alias: Aliased,
 }
@@ -380,7 +377,7 @@ impl MapPlatform {
             fRadiusX: 0.0,
             fRadiusY: 0.0,
             iDrawLayer: 0,
-            rIcon: [SDL_Rect { x: 0, y: 0, w: 0, h: 0 }; 2],
+            rIcon: [Rect { x: 0, y: 0, w: 0, h: 0 }; 2],
             preview: gfxSprite::new(),
         }
     }
@@ -399,7 +396,7 @@ impl MapPlatform {
                 for iPlatformY in 0..MAPHEIGHT as i16 {
                     let tile = self.tiles[iPlatformX as usize * MH + iPlatformY as usize];
 
-                    let mut bltrect = SDL_Rect { x: (iPlatformX as i32) << 3, y: (iPlatformY as i32) << 3, w: THUMBTILESIZE, h: THUMBTILESIZE };
+                    let mut bltrect = Rect { x: (iPlatformX as i32) << 3, y: (iPlatformY as i32) << 3, w: THUMBTILESIZE, h: THUMBTILESIZE };
                     if tile.iID >= 0 {
                         let src = g.g_tilesetmanager.rect(2, tile.iCol, tile.iRow);
                         crate::common::gfx::blit::upper_blit(gp.g_tilesetmanager.tileset(g, tile.iID as usize).surface(2), src, self.preview.get_surface(), &mut bltrect);
@@ -445,8 +442,8 @@ fn sdl_error() -> String {
     unsafe { CStr::from_ptr(SDL_GetError()).to_string_lossy().into_owned() }
 }
 
-fn rect(x: i32, y: i32, w: i32, h: i32) -> SDL_Rect {
-    SDL_Rect { x, y, w, h }
+fn rect(x: i32, y: i32, w: i32, h: i32) -> Rect {
+    Rect { x, y, w, h }
 }
 
 //main main main
@@ -2245,7 +2242,7 @@ pub fn init_editor_platforms(g: &mut Game) {
     }
 }
 
-pub fn editor_platforms_draw_background_section(g: &mut Game, src_area: &SDL_Rect, dst_area: &SDL_Rect) {
+pub fn editor_platforms_draw_background_section(g: &mut Game, src_area: &Rect, dst_area: &Rect) {
     let mut gp = g.ptr();
     let mut offset_y = 0;
     while offset_y < dst_area.h {

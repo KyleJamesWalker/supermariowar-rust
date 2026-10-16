@@ -1,12 +1,12 @@
 //! Port of src/common/ui/MI_Button.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::input::CPlayerInput;
 use crate::common::ui::menu_code::*;
 use crate::common::uicontrol::{TextAlign, UI_Control, UI_ControlTrait};
 use crate::globals::*;
-use sdl2::sys::SDL_Rect;
 
 pub struct MI_Button {
     pub ui_control: UI_Control,
@@ -119,10 +119,10 @@ impl UI_ControlTrait for MI_Button {
         let selY = (if self.fSelected { 32 } else { 0 }) + self.iAdjustmentY as i32;
 
         unsafe {
-            self.spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: selY, w: iHalfWidth, h: 32 });
-            self.spr.draw_src(g, x + iHalfWidth, y, &SDL_Rect { x: 512 - iWidth + iHalfWidth, y: selY, w: iWidth - iHalfWidth, h: 32 });
+            self.spr.draw_src(g, x, y, &Rect { x: 0, y: selY, w: iHalfWidth, h: 32 });
+            self.spr.draw_src(g, x + iHalfWidth, y, &Rect { x: 512 - iWidth + iHalfWidth, y: selY, w: iWidth - iHalfWidth, h: 32 });
 
-            let srcRect = SDL_Rect { x: self.iImageSrcX as i32, y: self.iImageSrcY as i32, w: iImageW, h: iImageH };
+            let srcRect = Rect { x: self.iImageSrcX as i32, y: self.iImageSrcY as i32, w: iImageW, h: iImageH };
 
             match self.m_text_align {
                 TextAlign::LEFT => {

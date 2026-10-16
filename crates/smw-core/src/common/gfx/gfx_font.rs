@@ -3,16 +3,14 @@
 //! `std::string_view` text is taken as bytes; `char` is signed on the reference platforms, so
 //! bytes >= 0x80 are below `ASCII_FIRST_PRINTABLE` and advance like a space.
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::{blit, get_raw_pixel, rle_enabled, soft_image};
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::util::sdl_helpers::SdlSurfacePtr;
 use crate::globals::*;
 use sdl2::sys::image::IMG_Load;
-use sdl2::sys::{
-    SDL_BlendMode, SDL_ConvertSurface, SDL_GetError, SDL_LockSurface, SDL_MapRGB, SDL_Rect, SDL_SetColorKey,
-    SDL_SetSurfaceAlphaMod, SDL_SetSurfaceBlendMode, SDL_SetSurfaceRLE, SDL_UnlockSurface,
-};
+use sdl2::sys::{SDL_BlendMode, SDL_ConvertSurface, SDL_GetError, SDL_LockSurface, SDL_MapRGB, SDL_SetColorKey, SDL_SetSurfaceAlphaMod, SDL_SetSurfaceBlendMode, SDL_SetSurfaceRLE, SDL_UnlockSurface};
 use std::ffi::{CStr, CString};
 use std::io::Write;
 use std::path::Path;
@@ -150,7 +148,7 @@ impl gfxFont {
                 continue;
             }
 
-            let src = SDL_Rect {
+            let src = Rect {
                 x: self.m_glyph_areas[idx].x,
                 y: 1,
                 w: self.m_glyph_areas[idx].w,

@@ -4,6 +4,7 @@
 //! other game globals the shared code links against; the port reuses the crate's (smw::main,
 //! smw::gs_gameplay) and only defines the editor's own state here.
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::cmd_args as cmd;
 use crate::common::editor_harness;
@@ -43,10 +44,7 @@ use sdl2::sys::image::{IMG_Load, IMG_SavePNG};
 use crate::common::editor_event::EditorEvent;
 use crate::common::util::sdl_helpers::poll_event;
 use sdl2::sys::SDL_KeyCode::*;
-use sdl2::sys::{
-    SDL_CreateRGBSurface, SDL_EventType, SDL_FillRect, SDL_FreeSurface, SDL_GetKeyboardState, SDL_GetScancodeFromKey, SDL_Keycode, SDL_Keymod,
-    SDL_MapRGB, SDL_Rect, SDL_Surface, SDL_UpperBlit, SDL_BUTTON_LEFT, SDL_BUTTON_RIGHT,
-};
+use sdl2::sys::{SDL_CreateRGBSurface, SDL_EventType, SDL_FillRect, SDL_FreeSurface, SDL_GetKeyboardState, SDL_GetScancodeFromKey, SDL_Keycode, SDL_Keymod, SDL_MapRGB, SDL_Surface, SDL_UpperBlit, SDL_BUTTON_LEFT, SDL_BUTTON_RIGHT};
 use std::ffi::CString;
 use std::io::Write;
 use std::path::Path;
@@ -93,8 +91,8 @@ const szEditModes: [&str; 10] = [
 /// The editor's state, a part of `Game`.
 pub struct WorldEditorState {
     pub sMapSurface: *mut SDL_Surface,
-    pub rectSrcSurface: SDL_Rect,
-    pub rectDstSurface: SDL_Rect,
+    pub rectSrcSurface: Rect,
+    pub rectDstSurface: Rect,
     pub fNeedBlackBackground: bool,
     pub iWorldWidth: i16,
     pub iWorldHeight: i16,
@@ -167,7 +165,7 @@ pub struct WorldEditorState {
     pub sMapThumbnail: gfxSprite,
     pub iOldStageId: i16,
     pub stagemodes: Vec<StageMode>,
-    pub rItemDst: [SDL_Rect; NUM_WORLD_ITEMS as usize],
+    pub rItemDst: [Rect; NUM_WORLD_ITEMS as usize],
     pub iLastStageType: i16,
 }
 
@@ -175,8 +173,8 @@ impl WorldEditorState {
     pub const fn new() -> Self {
         WorldEditorState {
             sMapSurface: null_mut(),
-            rectSrcSurface: SDL_Rect { x: 0, y: 0, w: 768, h: 608 },
-            rectDstSurface: SDL_Rect { x: 0, y: 0, w: 640, h: 480 },
+            rectSrcSurface: Rect { x: 0, y: 0, w: 768, h: 608 },
+            rectDstSurface: Rect { x: 0, y: 0, w: 640, h: 480 },
             fNeedBlackBackground: false,
             iWorldWidth: 0,
             iWorldHeight: 0,
@@ -244,7 +242,7 @@ impl WorldEditorState {
             sMapThumbnail: gfxSprite::new(),
             iOldStageId: -1,
             stagemodes: Vec::new(),
-            rItemDst: [SDL_Rect { x: 0, y: 0, w: 0, h: 0 }; NUM_WORLD_ITEMS as usize],
+            rItemDst: [Rect { x: 0, y: 0, w: 0, h: 0 }; NUM_WORLD_ITEMS as usize],
             iLastStageType: 0,
         }
     }
@@ -320,8 +318,8 @@ pub fn set_stage_mode(g: &mut Game, iIndex: i16, szModeName: &str, szGoalName: &
     }
 }
 
-fn r(x: i32, y: i32, w: i32, h: i32) -> SDL_Rect {
-    SDL_Rect { x, y, w, h }
+fn r(x: i32, y: i32, w: i32, h: i32) -> Rect {
+    Rect { x, y, w, h }
 }
 
 fn key_sym(g: &mut Game) -> i32 {
@@ -2369,7 +2367,7 @@ pub fn editor_warp(g: &mut Game) -> i32 {
     }
 }
 
-fn point_in(x: i16, y: i16, rect: &SDL_Rect) -> bool {
+fn point_in(x: i16, y: i16, rect: &Rect) -> bool {
     x as i32 >= rect.x && (x as i32) < rect.w + rect.x && y as i32 >= rect.y && (y as i32) < rect.h + rect.y
 }
 
@@ -3720,7 +3718,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                                 //See if we clicked an already added item and remove it
                                 let mut iRemoveItem: i16 = 0;
                                 while iRemoveItem < ts.iNumBonuses {
-                                    let rects: &[SDL_Rect] = if ts.iStageType == 1 { &rHouseBonusDst } else { &rStageBonusDst };
+                                    let rects: &[Rect] = if ts.iStageType == 1 { &rHouseBonusDst } else { &rStageBonusDst };
 
                                     if point_in(iButtonX, iButtonY, &rects[iRemoveItem as usize]) {
                                         let mut iAdjust = iRemoveItem;
@@ -4024,7 +4022,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                 gp.rm.spr_worlditempopup.draw_src(g, 0, 344, &r(0, 0, 320, 64));
                 gp.rm.spr_worlditempopup.draw_src(g, 320, 344, &r(192, 0, 320, 64));
 
-                let rects: &[SDL_Rect] = if ts.iStageType == 1 { &rHouseBonusDst } else { &rStageBonusDst };
+                let rects: &[Rect] = if ts.iStageType == 1 { &rHouseBonusDst } else { &rStageBonusDst };
 
                 for iPickedItem in 0..ts.iNumBonuses as usize {
                     let iBonus: i32 = ts.wsbBonuses[iPickedItem].iBonus as i32;

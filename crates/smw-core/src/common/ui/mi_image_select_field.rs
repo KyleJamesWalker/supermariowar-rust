@@ -1,5 +1,6 @@
 //! Port of src/common/ui/MI_ImageSelectField.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::input::CPlayerInput;
@@ -7,7 +8,6 @@ use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_select_field::MI_SelectField;
 use crate::common::uicontrol::UI_ControlTrait;
 use crate::globals::*;
-use sdl2::sys::SDL_Rect;
 
 pub struct MI_ImageSelectField {
     pub mi_select_field: MI_SelectField<i16>,
@@ -70,9 +70,9 @@ impl UI_ControlTrait for MI_ImageSelectField {
         let selY = if self.fSelected { 32 } else { 0 };
 
         unsafe {
-            self.m_spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: selY, w: indent - 16, h: 32 });
-            self.m_spr.draw_src(g, x + indent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
-            self.m_spr.draw_src(g, x + indent + 16, y, &SDL_Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
+            self.m_spr.draw_src(g, x, y, &Rect { x: 0, y: selY, w: indent - 16, h: 32 });
+            self.m_spr.draw_src(g, x + indent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
+            self.m_spr.draw_src(g, x + indent + 16, y, &Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
 
             gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 5, indent - 8, &self.m_name);
 
@@ -87,7 +87,7 @@ impl UI_ControlTrait for MI_ImageSelectField {
             g,
             x + indent + 8,
             y + 16 - (self.iImageHeight as i32 >> 1),
-            &SDL_Rect { x: srcIndex * self.iImageWidth as i32, y: 0, w: self.iImageWidth as i32, h: self.iImageHeight as i32 },
+            &Rect { x: srcIndex * self.iImageWidth as i32, y: 0, w: self.iImageWidth as i32, h: self.iImageHeight as i32 },
         );
 
         self.miModifyImageRight.draw(g);

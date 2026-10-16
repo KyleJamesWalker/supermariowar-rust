@@ -1,5 +1,6 @@
 //! Port of src/smw/player.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::{EC_Corpse, EC_Door, EC_FallingObject, EC_GravText, EC_SingleAnimation, Spotlight};
 use crate::common::eyecandy_styles::{AwardStyle, SpawnStyle};
@@ -61,7 +62,6 @@ use crate::smw::player_components::player_tail::PlayerTail;
 use crate::smw::player_components::player_tanooki_suit::PlayerTanookiSuit;
 use crate::smw::player_components::player_warp_status::PlayerWarpStatus;
 use crate::smw::player_components::player_wings::PlayerWings;
-use sdl2::sys::SDL_Rect;
 
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
@@ -2425,7 +2425,7 @@ impl CPlayer {
 
                 displayangle += addangle;
 
-                let src = SDL_Rect { x: used as i32 * 16, y: 0, w: 16, h: 16 };
+                let src = Rect { x: used as i32 * 16, y: 0, w: 16, h: 16 };
                 unsafe {
                     if self.iswarping() {
                         gp.rm.spr_storedpowerupsmall.draw_clip(g, powerupX as i32, powerupY as i32, &src, self.clip_edge(), self.get_warp_plane() as i32);
@@ -2444,7 +2444,7 @@ impl CPlayer {
                 let x = self.ix as i32 + HALFPW - if self.is_facing_right(g) { 4 } else { 10 };
                 let y = self.iy as i32 - 10 - if self.kuriboshoe.is_on() { 16 } else { 0 };
                 if self.iswarping() {
-                    gp.rm.spr_crown.draw_clip(g, x, y, &SDL_Rect { x: 0, y: 0, w: 14, h: 14 }, self.clip_edge(), self.get_warp_plane() as i32);
+                    gp.rm.spr_crown.draw_clip(g, x, y, &Rect { x: 0, y: 0, w: 14, h: 14 }, self.clip_edge(), self.get_warp_plane() as i32);
                 } else {
                     gp.rm.spr_crown.draw(g, x, y);
                 }
@@ -2519,11 +2519,11 @@ impl CPlayer {
             } else if self.shyguy {
                 //draw him as chicken
                 self.pScoreboardSprite = Ptr::from_mut(&mut g.rm.spr_shyguy[colorID]);
-                gp.rm.spr_ownedtags.draw_src(g, ix - PWOFFSET - 8, iy - PHOFFSET - 8, &SDL_Rect { x: self.ownerColorOffsetX as i32, y: 0, w: 48, h: 48 });
+                gp.rm.spr_ownedtags.draw_src(g, ix - PWOFFSET - 8, iy - PHOFFSET - 8, &Rect { x: self.ownerColorOffsetX as i32, y: 0, w: 48, h: 48 });
             }
 
             if self.ownerPlayerID > -1 {
-                let src = SDL_Rect { x: self.ownerColorOffsetX as i32, y: 0, w: 48, h: 48 };
+                let src = Rect { x: self.ownerColorOffsetX as i32, y: 0, w: 48, h: 48 };
                 if self.iswarping() {
                     gp.rm.spr_ownedtags.draw_clip(g, ix - PWOFFSET - 8, iy - PHOFFSET - 8, &src, self.clip_edge(), self.get_warp_plane() as i32);
                 } else {
@@ -2553,7 +2553,7 @@ impl CPlayer {
             //Don't draw the player if he is frozen in a shoe
             if !self.frozen || !self.kuriboshoe.is_on() {
                 let spr = &self.pScoreboardSprite.get()[self.sprite_state as usize];
-                let src = SDL_Rect { x: self.iSrcOffsetX as i32, y: 0, w: 32, h: 32 };
+                let src = Rect { x: self.iSrcOffsetX as i32, y: 0, w: 32, h: 32 };
                 if self.iswarping() {
                     spr.draw_clip(g, ix - PWOFFSET, iy - PHOFFSET - iPlayerKuriboOffsetY, &src, self.clip_edge(), self.get_warp_plane() as i32);
                 } else {
@@ -2572,7 +2572,7 @@ impl CPlayer {
             }
 
             if self.frozen {
-                let src = SDL_Rect { x: 0, y: 0, w: 32, h: 32 };
+                let src = Rect { x: 0, y: 0, w: 32, h: 32 };
                 if self.iswarping() {
                     gp.rm.spr_iceblock.draw_clip(g, ix - PWOFFSET, iy - PHOFFSET, &src, self.clip_edge(), self.get_warp_plane() as i32);
                 } else {

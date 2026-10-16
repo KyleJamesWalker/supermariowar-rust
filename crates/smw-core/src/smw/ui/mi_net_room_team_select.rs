@@ -1,6 +1,7 @@
 //! Port of src/smw/ui/MI_NetRoomTeamSelect.cpp
 
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::input::CPlayerInput;
 use crate::common::random_number_generator::RANDOM_INT;
@@ -8,7 +9,6 @@ use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_image::MI_Image;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
-use sdl2::sys::SDL_Rect;
 
 pub struct MI_NetRoomTeamSelect {
     pub ui_control: UI_Control,
@@ -116,7 +116,7 @@ impl UI_ControlTrait for MI_NetRoomTeamSelect {
         unsafe {
             let p = self.owner_player as usize;
             let frame = if self.fSelected { self.iAnimationFrame as usize } else { 0 };
-            gp.rm.spr_player[p][frame].draw_src(g, self.x as i32, self.y as i32, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
+            gp.rm.spr_player[p][frame].draw_src(g, self.x as i32, self.y as i32, &Rect { x: 0, y: 0, w: 32, h: 32 });
         }
     }
 

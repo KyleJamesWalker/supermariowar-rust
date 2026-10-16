@@ -2,8 +2,7 @@
 //! Mirrors tools/gfx_smoke/gfx_smoke.cpp, which does the same with the C++ originals.
 //!
 //! SDL_VIDEODRIVER=dummy cargo run --example gfx_smoke -- <data dir> <out.bmp>
-
-use sdl2::sys::SDL_Rect;
+use smw::common::gfx::soft_surface::Rect;
 use smw::common::gfx::gfx_font::gfxFont;
 use smw::common::gfx::gfx_sprite::{ClipEdge, ImageLoader};
 use smw::common::gfx::*;
@@ -53,9 +52,9 @@ fn main() {
     }
     menuskin[0].draw_part(gp.get(), 380, 400, 0, 0, 32, 32);
     menuskin[3].draw_part(gp.get(), 414, 400, 96, 0, 32, 32);
-    skin[0].draw_clip(gp.get(), 450, 400, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 }, ClipEdge::Left, 460);
-    skin[0].draw_stretch(&SDL_Rect { x: 0, y: 0, w: 32, h: 32 }, unsafe { gp.blitdest }, &SDL_Rect { x: 500, y: 380, w: 64, h: 64 });
-    gfx_drawpreview(gp.get(), &skin[2], 620, 300, 0, 0, 32, 32, &SDL_Rect { x: 0, y: 0, w: 640, h: 480 }, true, None);
+    skin[0].draw_clip(gp.get(), 450, 400, &Rect { x: 0, y: 0, w: 32, h: 32 }, ClipEdge::Left, 460);
+    skin[0].draw_stretch(&Rect { x: 0, y: 0, w: 32, h: 32 }, unsafe { gp.blitdest }, &Rect { x: 500, y: 380, w: 64, h: 64 });
+    gfx_drawpreview(gp.get(), &skin[2], 620, 300, 0, 0, 32, 32, &Rect { x: 0, y: 0, w: 640, h: 480 }, true, None);
 
     font_large.draw(gp.get(), 10, 150, "Super Mario War: 0123456789");
     font_small.draw_centered(gp.get(), 320, 180, "centered small text ~!@#$%^&*()");

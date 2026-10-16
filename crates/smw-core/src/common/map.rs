@@ -7,6 +7,7 @@ pub mod map_reader17xx;
 pub mod map_reader18xx;
 pub mod map_reader_constants;
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::file_io::BinaryFile;
 use crate::common::game::App;
@@ -126,14 +127,14 @@ pub struct TilesetTile {
     pub iRow: i16,
 }
 
-const ZERO_RECT: SDL_Rect = SDL_Rect { x: 0, y: 0, w: 0, h: 0 };
+const ZERO_RECT: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
 
 pub struct AnimatedTile {
     pub id: i16,
     pub layers: [TilesetTile; 4],
-    pub rSrc: [[SDL_Rect; 4]; 4],
-    pub rAnimationSrc: [[SDL_Rect; 4]; 2],
-    pub rDest: SDL_Rect,
+    pub rSrc: [[Rect; 4]; 4],
+    pub rAnimationSrc: [[Rect; 4]; 2],
+    pub rDest: Rect,
     pub fBackgroundAnimated: bool,
     pub fForegroundAnimated: bool,
     pub pPlatform: Ptr<MovingPlatform>,
@@ -168,12 +169,12 @@ impl Default for MapBlock {
     }
 }
 
-const fn r(x: i32, y: i32, w: i32, h: i32) -> SDL_Rect {
-    SDL_Rect { x, y, w, h }
+const fn r(x: i32, y: i32, w: i32, h: i32) -> Rect {
+    Rect { x, y, w, h }
 }
 
 //[Direction][Frame]
-pub static g_rFlameRects: [[SDL_Rect; 4]; 4] = [
+pub static g_rFlameRects: [[Rect; 4]; 4] = [
     [r(0, 0, 96, 32), r(0, 32, 96, 32), r(0, 64, 96, 32), r(0, 96, 96, 32)],
     [r(96, 0, 96, 32), r(96, 32, 96, 32), r(96, 64, 96, 32), r(96, 96, 96, 32)],
     [r(0, 128, 32, 96), r(32, 128, 32, 96), r(64, 128, 32, 96), r(96, 128, 32, 96)],
@@ -181,7 +182,7 @@ pub static g_rFlameRects: [[SDL_Rect; 4]; 4] = [
 ];
 
 //[Type][Direction][Frame]
-pub static g_rPirhanaRects: [[[SDL_Rect; 4]; 4]; 4] = [
+pub static g_rPirhanaRects: [[[Rect; 4]; 4]; 4] = [
     [
         [r(0, 0, 32, 48), r(32, 0, 32, 48), r(64, 0, 32, 48), r(96, 0, 32, 48)],
         [r(128, 0, 32, 48), r(160, 0, 32, 48), r(192, 0, 32, 48), r(224, 0, 32, 48)],
@@ -247,7 +248,7 @@ fn get_screen_height(iSize: i32) -> i32 {
 }
 
 #[inline]
-unsafe fn blit(src: *mut SDL_Surface, srcrect: *const SDL_Rect, dst: *mut SDL_Surface, dstrect: *mut SDL_Rect) -> i32 {
+unsafe fn blit(src: *mut SDL_Surface, srcrect: *const Rect, dst: *mut SDL_Surface, dstrect: *mut Rect) -> i32 {
     crate::common::gfx::blit::upper_blit(src, srcrect, dst, dstrect)
 }
 
@@ -260,11 +261,11 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
         let dot = iPlatformPathDotSize[s] as i32;
         let ts = iTileSize as i32;
 
-        let rDotSrc = SDL_Rect { x: iPlatformPathDotOffset[s] as i32 + 22, y: 0, w: dot, h: dot };
+        let rDotSrc = Rect { x: iPlatformPathDotOffset[s] as i32 + 22, y: 0, w: dot, h: dot };
         let mut rDotDst = ZERO_RECT;
-        let rPathSrc = SDL_Rect { x: iStandardOffset[s] as i32, y: 12, w: ts, h: ts };
+        let rPathSrc = Rect { x: iStandardOffset[s] as i32, y: 12, w: ts, h: ts };
 
-        let mut rPathDst = SDL_Rect {
+        let mut rPathDst = Rect {
             x: (hazard.ix as i32) << (iSizeShift - 1),
             y: (hazard.iy as i32) << (iSizeShift - 1),
             w: ts,
@@ -285,7 +286,7 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
                 rDotDst.w = dot;
                 rDotDst.h = dot;
 
-                gp.rm.spr_platformpath.draw_src(g, rDotDst.x, rDotDst.y, &SDL_Rect { x: rDotSrc.x, y: rDotSrc.y, w: rDotDst.w, h: rDotDst.h });
+                gp.rm.spr_platformpath.draw_src(g, rDotDst.x, rDotDst.y, &Rect { x: rDotSrc.x, y: rDotSrc.y, w: rDotDst.w, h: rDotDst.h });
                 dAngle += TWO_PI / iNumDots as f32;
             }
 
@@ -300,7 +301,7 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
                     + (ts >> 1)
                     - (fb >> 1)) as i16;
 
-                gp.rm.spr_hazard_fireball[s].draw_src(g, x as i32, y as i32, &SDL_Rect { x: 0, y: 0, w: fb, h: fb });
+                gp.rm.spr_hazard_fireball[s].draw_src(g, x as i32, y as i32, &Rect { x: 0, y: 0, w: fb, h: fb });
             }
         } else if hazard.itype == 1 {
             let iNumDots: i16 = 16;
@@ -312,7 +313,7 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
                 rDotDst.w = dot;
                 rDotDst.h = dot;
 
-                gp.rm.spr_platformpath.draw_src(g, rDotDst.x, rDotDst.y, &SDL_Rect { x: rDotSrc.x, y: rDotSrc.y, w: rDotDst.w, h: rDotDst.h });
+                gp.rm.spr_platformpath.draw_src(g, rDotDst.x, rDotDst.y, &Rect { x: rDotSrc.x, y: rDotSrc.y, w: rDotDst.w, h: rDotDst.h });
                 dAngle += TWO_PI / iNumDots as f32;
             }
 
@@ -323,7 +324,7 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
                 let x: i16 = (rPathDst.x + (dRadius * cosf(dAngle)) as i16 as i32) as i16;
                 let y: i16 = (rPathDst.y + (dRadius * sinf(dAngle)) as i16 as i32) as i16;
 
-                gp.rm.spr_hazard_rotodisc[s].draw_src(g, x as i32, y as i32, &SDL_Rect { x: 0, y: 0, w: ts, h: ts });
+                gp.rm.spr_hazard_rotodisc[s].draw_src(g, x as i32, y as i32, &Rect { x: 0, y: 0, w: ts, h: ts });
 
                 dAngle += dSector;
             }
@@ -332,7 +333,7 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
                 g,
                 rPathDst.x,
                 rPathDst.y,
-                &SDL_Rect { x: 0, y: if hazard.dparam[0] < 0.0 { 0 } else { ts }, w: ts, h: ts },
+                &Rect { x: 0, y: if hazard.dparam[0] < 0.0 { 0 } else { ts }, w: ts, h: ts },
             );
 
             let mut iBulletPathX: i16 = (rPathDst.x - dot) as i16;
@@ -342,7 +343,7 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
 
             let iBulletPathSpacing: i16 = (hazard.dparam[0] * dBulletBillFrequency[s]) as i16;
             while iBulletPathX >= 0 && (iBulletPathX as i32) < get_screen_width(iSize as i32) {
-                rDotDst = SDL_Rect { x: iBulletPathX as i32, y: rPathDst.y + ((ts - dot) >> 1), w: dot, h: dot };
+                rDotDst = Rect { x: iBulletPathX as i32, y: rPathDst.y + ((ts - dot) >> 1), w: dot, h: dot };
                 g.rm.spr_platformpath.draw_src_to(&rDotSrc, dst, &rDotDst);
 
                 iBulletPathX = (iBulletPathX as i32
@@ -365,7 +366,7 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
                 g,
                 rPathDst.x + iOffsetX as i32,
                 rPathDst.y + iOffsetY as i32,
-                &SDL_Rect { x: rect.x >> iSize, y: rect.y >> iSize, w: rect.w >> iSize, h: rect.h >> iSize },
+                &Rect { x: rect.x >> iSize, y: rect.y >> iSize, w: rect.w >> iSize, h: rect.h >> iSize },
             );
         } else if hazard.itype >= 4 && hazard.itype <= 7 {
             let rect = &g_rPirhanaRects[(hazard.itype - 4) as usize][hazard.iparam[1] as usize][0];
@@ -390,13 +391,13 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
                 g,
                 rPathDst.x + iOffsetX as i32,
                 rPathDst.y + iOffsetY as i32,
-                &SDL_Rect { x: rect.x >> iSize, y: rect.y >> iSize, w: rect.w >> iSize, h: rect.h >> iSize },
+                &Rect { x: rect.x >> iSize, y: rect.y >> iSize, w: rect.w >> iSize, h: rect.h >> iSize },
             );
         }
     }
 }
 
-unsafe fn blit_platform_tile(g: &mut Game, tile: &TilesetTile, iSize: i16, bltrect: &mut SDL_Rect, dst: *mut SDL_Surface) {
+unsafe fn blit_platform_tile(g: &mut Game, tile: &TilesetTile, iSize: i16, bltrect: &mut Rect, dst: *mut SDL_Surface) {
     let mut gp = g.ptr();
     if tile.iID >= 0 {
         blit(
@@ -465,7 +466,7 @@ pub fn draw_platform(g: &mut Game,
                         iDstY = iStartY as i32 + ((iPlatformY as i32) << iSizeShift) - (ph << (iSizeShift - 1));
                     }
 
-                    let mut bltrect = SDL_Rect { x: iDstX, y: iDstY, w: iTileSize, h: iTileSize };
+                    let mut bltrect = Rect { x: iDstX, y: iDstY, w: iTileSize, h: iTileSize };
                     blit_platform_tile(g, tile, iSize, &mut bltrect, dst);
 
                     let mut fNeedWrap = false;
@@ -489,8 +490,8 @@ pub fn draw_platform(g: &mut Game,
             }
         }
 
-        let rPathSrc = SDL_Rect { x: iPlatformPathDotOffset[s] as i32, y: 0, w: dot, h: dot };
-        let mut rPathDst: SDL_Rect;
+        let rPathSrc = Rect { x: iPlatformPathDotOffset[s] as i32, y: 0, w: dot, h: dot };
+        let mut rPathDst: Rect;
 
         let mut draw_tile_marks = |spr: &gfxSprite, x0: i32, y0: i32| {
             for iCol in 0..iPlatformWidth {
@@ -500,7 +501,7 @@ pub fn draw_platform(g: &mut Game,
                             g,
                             x0 + ((iCol as i32) << iSizeShift),
                             y0 + ((iRow as i32) << iSizeShift),
-                            &SDL_Rect { x: 0, y: 0, w: iTileSize, h: iTileSize },
+                            &Rect { x: 0, y: 0, w: iTileSize, h: iTileSize },
                         );
                     }
                 }
@@ -526,7 +527,7 @@ pub fn draw_platform(g: &mut Game,
             let mut dY: f32 = iStartY as f32 - (dot >> 1) as f32;
 
             for _iSpot in 0..(iNumSpots as i32 + 1) {
-                rPathDst = SDL_Rect { x: dX as i16 as i32, y: dY as i16 as i32, w: dot, h: dot };
+                rPathDst = Rect { x: dX as i16 as i32, y: dY as i16 as i32, w: dot, h: dot };
                 g.rm.spr_platformpath.draw_src_to(&rPathSrc, dst, &rPathDst);
 
                 dX += dIncrementX;
@@ -544,7 +545,7 @@ pub fn draw_platform(g: &mut Game,
             let mut dY: f32 = iStartY as f32 - (dot >> 1) as f32;
 
             for _iSpot in 0..50 {
-                rPathDst = SDL_Rect { x: dX as i16 as i32, y: dY as i16 as i32, w: dot, h: dot };
+                rPathDst = Rect { x: dX as i16 as i32, y: dY as i16 as i32, w: dot, h: dot };
                 g.rm.spr_platformpath.draw_src_to(&rPathSrc, dst, &rPathDst);
 
                 let mut iWrapX: i16 = dX as i16;
@@ -567,7 +568,7 @@ pub fn draw_platform(g: &mut Game,
                 }
 
                 if fNeedWrap {
-                    rPathDst = SDL_Rect { x: iWrapX as i32, y: iWrapY as i32, w: dot, h: dot };
+                    rPathDst = Rect { x: iWrapX as i32, y: iWrapY as i32, w: dot, h: dot };
                     g.rm.spr_platformpath.draw_src_to(&rPathSrc, dst, &rPathDst);
                 }
 
@@ -587,14 +588,14 @@ pub fn draw_platform(g: &mut Game,
                 let iX: i16 = ((fRadiusX * cosf(fAngle)) as i16 as i32 - (dot >> 1) + iStartX as i32) as i16;
                 let iY: i16 = ((fRadiusY * sinf(fAngle)) as i16 as i32 - (dot >> 1) + iStartY as i32) as i16;
 
-                rPathDst = SDL_Rect { x: iX as i32, y: iY as i32, w: dot, h: dot };
+                rPathDst = Rect { x: iX as i32, y: iY as i32, w: dot, h: dot };
                 g.rm.spr_platformpath.draw_src_to(&rPathSrc, dst, &rPathDst);
 
                 if iX as i32 + dot >= get_screen_width(iSize as i32) {
-                    rPathDst = SDL_Rect { x: iX as i32 - get_screen_width(iSize as i32), y: iY as i32, w: dot, h: dot };
+                    rPathDst = Rect { x: iX as i32 - get_screen_width(iSize as i32), y: iY as i32, w: dot, h: dot };
                     g.rm.spr_platformpath.draw_src_to(&rPathSrc, dst, &rPathDst);
                 } else if iX < 0 {
-                    rPathDst = SDL_Rect { x: iX as i32 + get_screen_width(iSize as i32), y: iY as i32, w: dot, h: dot };
+                    rPathDst = Rect { x: iX as i32 + get_screen_width(iSize as i32), y: iY as i32, w: dot, h: dot };
                     g.rm.spr_platformpath.draw_src_to(&rPathSrc, dst, &rPathDst);
                 }
 
@@ -652,10 +653,10 @@ pub struct CMap {
     pub warplocked: [bool; 10],
     pub maxConnection: i16,
 
-    pub tilebltrect: SDL_Rect,
-    pub bltrect: SDL_Rect,
+    pub tilebltrect: Rect,
+    pub bltrect: Rect,
 
-    pub drawareas: [SDL_Rect; MAXDRAWAREAS as usize],
+    pub drawareas: [Rect; MAXDRAWAREAS as usize],
     pub numdrawareas: i16,
 
     pub iSwitches: [i16; 4],
@@ -1608,8 +1609,8 @@ impl CMap {
 
             {
                 let sBackground = ImageLoader::new(path).without_color_key().create(g);
-                let srcRectBackground = SDL_Rect { x: 0, y: 0, w: App::screenWidth, h: App::screenHeight };
-                let dstRectBackground = SDL_Rect { x: 0, y: 0, w: 160, h: 120 };
+                let srcRectBackground = Rect { x: 0, y: 0, w: App::screenWidth, h: App::screenHeight };
+                let dstRectBackground = Rect { x: 0, y: 0, w: 160, h: 120 };
                 sBackground.draw_stretch(&srcRectBackground, sThumbnail.get_surface(), &dstRectBackground);
             }
 
@@ -1856,10 +1857,10 @@ impl CMap {
 
                                 if layerTile.iID >= 0 {
                                     animatedtile.rSrc[iLayer][0] =
-                                        SDL_Rect { x: (layerTile.iCol as i32) << 5, y: (layerTile.iRow as i32) << 5, w: TILESIZE, h: TILESIZE };
+                                        Rect { x: (layerTile.iCol as i32) << 5, y: (layerTile.iRow as i32) << 5, w: TILESIZE, h: TILESIZE };
                                 } else if layerTile.iID as i32 == TILESETANIMATED {
                                     for iRect in 0..4i32 {
-                                        animatedtile.rSrc[iLayer][iRect as usize] = SDL_Rect {
+                                        animatedtile.rSrc[iLayer][iRect as usize] = Rect {
                                             x: (iRect + ((layerTile.iCol as i32) << 2)) << 5,
                                             y: (layerTile.iRow as i32) << 5,
                                             w: TILESIZE,
@@ -1877,7 +1878,7 @@ impl CMap {
                                 }
                             }
 
-                            animatedtile.rDest = SDL_Rect { x: self.bltrect.x, y: self.bltrect.y, w: TILESIZE, h: TILESIZE };
+                            animatedtile.rDest = Rect { x: self.bltrect.x, y: self.bltrect.y, w: TILESIZE, h: TILESIZE };
                             self.animatedtiles.push(animatedtile);
                         }
                     } else if tile.iID as i32 == TILESETUNKNOWN {
@@ -1918,10 +1919,10 @@ impl CMap {
 
                         for iRect in 0..4i32 {
                             animatedtile.rSrc[0][iRect as usize] =
-                                SDL_Rect { x: (iRect + ((tile.iCol as i32) << 2)) << 5, y: (tile.iRow as i32) << 5, w: TILESIZE, h: TILESIZE };
+                                Rect { x: (iRect + ((tile.iCol as i32) << 2)) << 5, y: (tile.iRow as i32) << 5, w: TILESIZE, h: TILESIZE };
                         }
 
-                        animatedtile.rDest = SDL_Rect { x: iDestX as i32, y: iDestY as i32, w: TILESIZE, h: TILESIZE };
+                        animatedtile.rDest = Rect { x: iDestX as i32, y: iDestY as i32, w: TILESIZE, h: TILESIZE };
                         self.animatedtiles.push(animatedtile);
                     }
 
@@ -2029,8 +2030,8 @@ impl CMap {
 
                     if wWarp.connection != -1 {
                         let ts = iTileSize as i32;
-                        let rSrc = SDL_Rect { x: wWarp.connection as i32 * ts, y: wWarp.direction * ts, w: ts, h: ts };
-                        let mut rDst = SDL_Rect { x: i as i32 * ts, y: j as i32 * ts, w: ts, h: ts };
+                        let rSrc = Rect { x: wWarp.connection as i32 * ts, y: wWarp.direction * ts, w: ts, h: ts };
+                        let mut rDst = Rect { x: i as i32 * ts, y: j as i32 * ts, w: ts, h: ts };
 
                         g.rm.spr_thumbnail_warps[iScreenshotSize].draw_src_to(&rSrc, targetSurface, &rDst);
                     }
@@ -2050,8 +2051,8 @@ impl CMap {
 
         unsafe {
             for item in &self.mapitems {
-                let rSrc = SDL_Rect { x: item.itype as i32 * iTileSize, y: 0, w: iTileSize, h: iTileSize };
-                let mut rDst = SDL_Rect { x: item.ix as i32 * iTileSize, y: item.iy as i32 * iTileSize, w: iTileSize, h: iTileSize };
+                let rSrc = Rect { x: item.itype as i32 * iTileSize, y: 0, w: iTileSize, h: iTileSize };
+                let mut rDst = Rect { x: item.ix as i32 * iTileSize, y: item.iy as i32 * iTileSize, w: iTileSize, h: iTileSize };
 
                 g.rm.spr_thumbnail_mapitems[iScreenshotSize].draw_src_to(&rSrc, targetSurface, &rDst);
             }
@@ -2076,9 +2077,9 @@ impl CMap {
 
     /// `preDrawPreviewBackground(gfxSprite*, SDL_Surface*, bool)`
     pub fn pre_draw_preview_background_spr(&mut self, g: &mut Game, background: &gfxSprite, targetSurface: *mut SDL_Surface, fThumbnail: bool) {
-        let srcrect = SDL_Rect { x: 0, y: 0, w: App::screenWidth, h: App::screenHeight };
+        let srcrect = Rect { x: 0, y: 0, w: App::screenWidth, h: App::screenHeight };
 
-        let mut dstrect = SDL_Rect { x: 0, y: 0, w: 0, h: 0 };
+        let mut dstrect = Rect { x: 0, y: 0, w: 0, h: 0 };
 
         if fThumbnail {
             dstrect.w = 160;
@@ -2169,8 +2170,8 @@ impl CMap {
             iBlockSize = THUMBTILESIZE;
         }
 
-        let mut rectDst = SDL_Rect { x: 0, y: 0, w: iBlockSize, h: iBlockSize };
-        let mut rectSrc = SDL_Rect { x: 0, y: 0, w: iBlockSize, h: iBlockSize };
+        let mut rectDst = Rect { x: 0, y: 0, w: iBlockSize, h: iBlockSize };
+        let mut rectSrc = Rect { x: 0, y: 0, w: iBlockSize, h: iBlockSize };
 
         unsafe {
             rectDst.x = 0;
@@ -2221,7 +2222,7 @@ impl CMap {
     }
 
     pub fn predrawbackground(&mut self, g: &mut Game, background: &gfxSprite, mapspr: &gfxSprite) {
-        let mut r = SDL_Rect { x: 0, y: 0, w: App::screenWidth, h: App::screenHeight };
+        let mut r = Rect { x: 0, y: 0, w: App::screenWidth, h: App::screenHeight };
 
         unsafe {
             background.draw_to(mapspr.get_surface(), &r);
@@ -2284,10 +2285,10 @@ impl CMap {
 
                 let mut fSrcSurfaceFull = false;
 
-                let mut rDst = SDL_Rect { x: 0, y: 0, w: 32, h: 32 };
+                let mut rDst = Rect { x: 0, y: 0, w: 32, h: 32 };
                 while iter != lim && !fSrcSurfaceFull {
                     let tile = &mut *self.animatedtiles[iter];
-                    let rSrc: *const SDL_Rect = &tile.rDest;
+                    let rSrc: *const Rect = &tile.rDest;
 
                     if tile.fBackgroundAnimated {
                         for sTileAnimationFrame in 0..4usize {

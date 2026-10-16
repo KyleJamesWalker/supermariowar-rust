@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_BowserFire.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::gameplay_styles::TeamCollisionStyle;
@@ -12,7 +13,6 @@ use crate::globals::*;
 use crate::impl_base;
 use crate::smw::objects::overmap::over_map_object::{io_over_map_object_update, IO_OverMapObject, IO_OverMapObjectTrait};
 use crate::smw::player::{get_player_from_global_id, player_killed_player, CPlayer, PlayerDeathStyle};
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class Bowser Fire (for survival mode)
@@ -66,7 +66,7 @@ impl CObjectTrait for OMO_BowserFire {
             g,
             self.ix as i32,
             self.iy as i32,
-            &SDL_Rect { x: self.drawframe as i32, y: (if self.velx > 0.0f32 { 32 } else { 0 }) + self.iColorOffsetY as i32, w: self.iw as i32, h: self.ih as i32 },
+            &Rect { x: self.drawframe as i32, y: (if self.velx > 0.0f32 { 32 } else { 0 }) + self.iColorOffsetY as i32, w: self.iw as i32, h: self.ih as i32 },
         );
     }
 

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/PowerupBlock.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game_mode::*;
 use crate::common::game_values::if_sound_on_play;
@@ -21,7 +22,6 @@ use crate::smw::objects::blocks::io_block::*;
 use crate::smw::objects::carriable::co_throw_box::CO_ThrowBox;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class powerup block
@@ -153,7 +153,7 @@ pub fn b_powerup_block_draw<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this:
             g,
             b.ix as i32,
             b.iy as i32,
-            &SDL_Rect { x: b.drawFrame as i32, y: if b.state == 0 { 0 } else { b.ih as i32 }, w: b.iw as i32, h: b.ih as i32 },
+            &Rect { x: b.drawFrame as i32, y: if b.state == 0 { 0 } else { b.ih as i32 }, w: b.iw as i32, h: b.ih as i32 },
         );
     }
 }

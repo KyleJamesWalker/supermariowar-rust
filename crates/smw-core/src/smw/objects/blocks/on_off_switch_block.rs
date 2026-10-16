@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/OnOffSwitchBlock.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gameplay_styles::TeamCollisionStyle;
@@ -19,7 +20,6 @@ use crate::smw::objects::carriable::co_throw_box::CO_ThrowBox;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::objects::switch_color::SwitchColor;
 use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
-use sdl2::sys::SDL_Rect;
 
 pub struct B_OnOffSwitchBlock {
     pub io_block: IO_Block,
@@ -110,7 +110,7 @@ impl CObjectTrait for B_OnOffSwitchBlock {
             g,
             self.ix as i32,
             self.iy as i32,
-            &SDL_Rect { x: self.iSrcX as i32, y: if self.state == 0 { 0 } else { 32 }, w: self.iw as i32, h: self.ih as i32 },
+            &Rect { x: self.iSrcX as i32, y: if self.state == 0 { 0 } else { 32 }, w: self.iw as i32, h: self.ih as i32 },
         );
     }
 }

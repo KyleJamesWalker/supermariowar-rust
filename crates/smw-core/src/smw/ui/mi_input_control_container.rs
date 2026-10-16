@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_InputControlContainer.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use smw_platform::{InputEvent, MouseEvent};
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -13,7 +14,7 @@ use crate::common::uicontrol::{ctl_ptr, TextAlign, UI_Control, UI_ControlTrait};
 use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::harness;
-use sdl2::sys::{SDL_Event, SDL_EventType, SDL_GetKeyName, SDL_JoystickName, SDL_JoystickNameForIndex, SDL_Keycode, SDL_Rect, SDL_KeyCode, SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP, SDL_PRESSED};
+use sdl2::sys::{SDL_Event, SDL_EventType, SDL_GetKeyName, SDL_JoystickName, SDL_JoystickNameForIndex, SDL_Keycode, SDL_KeyCode, SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP, SDL_PRESSED};
 use std::ffi::CStr;
 
 const GameInputNames: [&str; NUM_KEYS] = ["Left", "Right", "Jump", "Down", "Turbo", "Use Item", "Pause", "Exit"];
@@ -275,9 +276,9 @@ impl UI_ControlTrait for MI_InputControlField {
         let iWidth = self.iWidth as i32;
 
         unsafe {
-            self.spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: if self.fSelected { 32 } else { 0 }, w: iIndent - 16, h: 32 });
-            self.spr.draw_src(g, x + iIndent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
-            self.spr.draw_src(g, x + iIndent + 16, y, &SDL_Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 32 } else { 0 }, w: iWidth - iIndent - 16, h: 32 });
+            self.spr.draw_src(g, x, y, &Rect { x: 0, y: if self.fSelected { 32 } else { 0 }, w: iIndent - 16, h: 32 });
+            self.spr.draw_src(g, x + iIndent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
+            self.spr.draw_src(g, x + iIndent + 16, y, &Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 32 } else { 0 }, w: iWidth - iIndent - 16, h: 32 });
 
             gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 5, iIndent - 8, &self.szName);
 

@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_MapBrowser.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::gfx::gfx_sprite::{gfxSprite, ImageLoader};
@@ -10,7 +11,6 @@ use crate::common::ui::menu_code::*;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 use crate::smw::gs_gameplay::lookup_team_id;
-use sdl2::sys::SDL_Rect;
 
 #[cfg(not(target_os = "emscripten"))]
 fn small_delay(g: &mut Game) {
@@ -39,8 +39,8 @@ pub struct MI_MapBrowser {
     iType: i16,
     iMapCount: i16,
 
-    srcRectBackground: SDL_Rect,
-    dstRectBackground: SDL_Rect,
+    srcRectBackground: Rect,
+    dstRectBackground: Rect,
 }
 crate::impl_base!(MI_MapBrowser => ui_control: UI_Control);
 
@@ -59,8 +59,8 @@ impl MI_MapBrowser {
             iFilterTagAnimationFrame: 0,
             iType: 0,
             iMapCount: 0,
-            srcRectBackground: SDL_Rect { x: 0, y: 0, w: App::screenWidth, h: App::screenHeight },
-            dstRectBackground: SDL_Rect { x: 0, y: 0, w: 160, h: 120 },
+            srcRectBackground: Rect { x: 0, y: 0, w: App::screenWidth, h: App::screenHeight },
+            dstRectBackground: Rect { x: 0, y: 0, w: 160, h: 120 },
         }
     }
 
@@ -158,9 +158,9 @@ impl UI_ControlTrait for MI_MapBrowser {
             return;
         }
 
-        let rSrc = SDL_Rect { x: 0, y: 0, w: 160, h: 120 };
-        let mut rDst = SDL_Rect { x: 0, y: 0, w: 160, h: 120 };
-        let filterSrc = SDL_Rect { x: self.iFilterTagAnimationFrame as i32, y: 24, w: 24, h: 24 };
+        let rSrc = Rect { x: 0, y: 0, w: 160, h: 120 };
+        let mut rDst = Rect { x: 0, y: 0, w: 160, h: 120 };
+        let filterSrc = Rect { x: self.iFilterTagAnimationFrame as i32, y: 24, w: 24, h: 24 };
 
         unsafe {
             for iRow in 0..3i16 {
@@ -190,10 +190,10 @@ impl UI_ControlTrait for MI_MapBrowser {
             rDst.y = self.iSelectedRow as i32 * 150 + 30;
             rDst.x = self.iSelectedCol as i32 * 200 + 40;
 
-            gp.rm.menu_dialog.draw_src(g, rDst.x - 16, rDst.y - 16, &SDL_Rect { x: 0, y: 0, w: 176, h: 148 });
-            gp.rm.menu_dialog.draw_src(g, rDst.x + 160, rDst.y - 16, &SDL_Rect { x: 496, y: 0, w: 16, h: 148 });
-            gp.rm.menu_dialog.draw_src(g, rDst.x - 16, rDst.y + 132, &SDL_Rect { x: 0, y: 464, w: 176, h: 16 });
-            gp.rm.menu_dialog.draw_src(g, rDst.x + 160, rDst.y + 132, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+            gp.rm.menu_dialog.draw_src(g, rDst.x - 16, rDst.y - 16, &Rect { x: 0, y: 0, w: 176, h: 148 });
+            gp.rm.menu_dialog.draw_src(g, rDst.x + 160, rDst.y - 16, &Rect { x: 496, y: 0, w: 16, h: 148 });
+            gp.rm.menu_dialog.draw_src(g, rDst.x - 16, rDst.y + 132, &Rect { x: 0, y: 464, w: 176, h: 16 });
+            gp.rm.menu_dialog.draw_src(g, rDst.x + 160, rDst.y + 132, &Rect { x: 496, y: 464, w: 16, h: 16 });
 
             let sel = (self.iSelectedRow * 3 + self.iSelectedCol) as usize;
             self.mapSurfaces[sel].draw_src_to(&rSrc, g.blitdest, &rDst);

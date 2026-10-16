@@ -1,6 +1,7 @@
 //! Software ARGB8888 surfaces and the SDL3 blit paths the game uses.
 
-/// `SDL_Rect`.
+/// `SDL_Rect`, with its layout, so a pointer to one can go to the SDL calls that remain.
+#[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Rect {
     pub x: i32,

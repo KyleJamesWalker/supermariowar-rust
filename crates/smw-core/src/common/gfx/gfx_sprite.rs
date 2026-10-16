@@ -1,15 +1,13 @@
 //! Port of src/common/gfx/gfxSprite.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::color::{colors, RGB};
 use crate::common::gfx::{blit, gfx_adjusthiddenrects, rle_enabled, soft_image};
 use crate::common::util::sdl_helpers::SdlSurfacePtr;
 use crate::globals::*;
 use sdl2::sys::image::IMG_Load;
-use sdl2::sys::{
-    SDL_BlendMode, SDL_ConvertSurface, SDL_CreateRGBSurfaceWithFormat, SDL_GetError, SDL_MapRGB, SDL_Rect, SDL_SetColorKey,
-    SDL_SetSurfaceAlphaMod, SDL_SetSurfaceBlendMode, SDL_SetSurfaceRLE, SDL_Surface,
-};
+use sdl2::sys::{SDL_BlendMode, SDL_ConvertSurface, SDL_CreateRGBSurfaceWithFormat, SDL_GetError, SDL_MapRGB, SDL_SetColorKey, SDL_SetSurfaceAlphaMod, SDL_SetSurfaceBlendMode, SDL_SetSurfaceRLE, SDL_Surface};
 use std::ffi::{CStr, CString};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -96,7 +94,7 @@ fn load_image(g: &mut Game, path: &Path, optimize: bool, color_key: Option<RGB>,
 }
 
 
-unsafe fn blit_surface(src: *mut SDL_Surface, srcArea: *const SDL_Rect, dst: *mut SDL_Surface, dstArea: *mut SDL_Rect) {
+unsafe fn blit_surface(src: *mut SDL_Surface, srcArea: *const Rect, dst: *mut SDL_Surface, dstArea: *mut Rect) {
     if crate::common::gfx::blit::upper_blit(src, srcArea, dst, dstArea) < 0 {
         eprintln!("SDL_BlitSurface error: {}", sdl_error());
     }
@@ -141,34 +139,34 @@ impl gfxSprite {
         self.blit(null(), dst, dstX, dstY);
     }
 
-    /// `draw(SDL_Surface* dst, const SDL_Rect& dstRect)`: the whole sprite onto `dst`, no camera shake.
-    pub fn draw_to(&self, dst: *mut SDL_Surface, dstRect: &SDL_Rect) {
+    /// `draw(SDL_Surface* dst, const Rect& dstRect)`: the whole sprite onto `dst`, no camera shake.
+    pub fn draw_to(&self, dst: *mut SDL_Surface, dstRect: &Rect) {
         self.blit(null(), dst, dstRect.x, dstRect.y);
     }
 
-    /// `draw(const SDL_Rect& srcRect, SDL_Surface* dst, Vec2i dstPos)`: part of the sprite onto `dst`.
-    pub fn draw_src_to_pos(&self, srcRect: &SDL_Rect, dst: *mut SDL_Surface, dstX: i32, dstY: i32) {
+    /// `draw(const Rect& srcRect, SDL_Surface* dst, Vec2i dstPos)`: part of the sprite onto `dst`.
+    pub fn draw_src_to_pos(&self, srcRect: &Rect, dst: *mut SDL_Surface, dstX: i32, dstY: i32) {
         self.blit(srcRect, dst, dstX, dstY);
     }
 
-    /// `draw(const SDL_Rect& srcRect, SDL_Surface* dst, const SDL_Rect& dstRect)`: part of the sprite onto `dst`.
-    pub fn draw_src_to(&self, srcRect: &SDL_Rect, dst: *mut SDL_Surface, dstRect: &SDL_Rect) {
+    /// `draw(const Rect& srcRect, SDL_Surface* dst, const Rect& dstRect)`: part of the sprite onto `dst`.
+    pub fn draw_src_to(&self, srcRect: &Rect, dst: *mut SDL_Surface, dstRect: &Rect) {
         self.blit(srcRect, dst, dstRect.x, dstRect.y);
     }
 
-    fn blit(&self, srcRect: *const SDL_Rect, dst: *mut SDL_Surface, dstPosX: i32, dstPosY: i32) {
+    fn blit(&self, srcRect: *const Rect, dst: *mut SDL_Surface, dstPosX: i32, dstPosY: i32) {
         debug_assert!(!self.m_picture.is_null());
 
         unsafe {
-            let mut dstRect = SDL_Rect { x: dstPosX, y: dstPosY, w: 0, h: 0 };
+            let mut dstRect = Rect { x: dstPosX, y: dstPosY, w: 0, h: 0 };
             blit_surface(self.m_picture.get(), srcRect, dst, &mut dstRect);
 
             if let Some(wrap_x) = self.m_wrap_x {
                 if dstRect.x + self.get_width() >= wrap_x {
-                    dstRect = SDL_Rect { x: dstPosX - wrap_x, y: dstPosY, w: 0, h: 0 }; // SDL2 modifies the dst rect
+                    dstRect = Rect { x: dstPosX - wrap_x, y: dstPosY, w: 0, h: 0 }; // SDL2 modifies the dst rect
                     blit_surface(self.m_picture.get(), srcRect, dst, &mut dstRect);
                 } else if dstRect.x < 0 {
-                    dstRect = SDL_Rect { x: dstPosX + wrap_x, y: dstPosY, w: 0, h: 0 }; // SDL2 modifies the dst rect
+                    dstRect = Rect { x: dstPosX + wrap_x, y: dstPosY, w: 0, h: 0 }; // SDL2 modifies the dst rect
                     blit_surface(self.m_picture.get(), srcRect, dst, &mut dstRect);
                 }
             }
@@ -181,21 +179,21 @@ impl gfxSprite {
     }
 
     /// Draw part of the sprite at the given coordinate.
-    pub fn draw_src(&self, g: &mut Game, x: i32, y: i32, srcRect: &SDL_Rect) {
+    pub fn draw_src(&self, g: &mut Game, x: i32, y: i32, srcRect: &Rect) {
         unsafe { self.blit(srcRect, g.blitdest, x + g.x_shake as i32, y + g.y_shake as i32) };
     }
 
-    /// `draw(x, y, srcx, srcy, w, h)` convenience used all over the C++ via `SDL_Rect{...}` temporaries.
+    /// `draw(x, y, srcx, srcy, w, h)` convenience used all over the C++ via `Rect{...}` temporaries.
     pub fn draw_part(&self, g: &mut Game, x: i32, y: i32, srcx: i32, srcy: i32, w: i32, h: i32) {
-        self.draw_src(g, x, y, &SDL_Rect { x: srcx, y: srcy, w, h });
+        self.draw_src(g, x, y, &Rect { x: srcx, y: srcy, w, h });
     }
 
     /// Draw part of the sprite at the given coordinate, clipped along a given direction.
-    pub fn draw_clip(&self, g: &mut Game, x: i32, y: i32, srcRect: &SDL_Rect, clipEdge: ClipEdge, clipTreshold: i32) {
+    pub fn draw_clip(&self, g: &mut Game, x: i32, y: i32, srcRect: &Rect, clipEdge: ClipEdge, clipTreshold: i32) {
         debug_assert!(!self.m_picture.is_null());
 
         unsafe {
-            let dstRect = SDL_Rect { x: x + g.x_shake as i32, y: y + g.y_shake as i32, w: srcRect.w, h: srcRect.h };
+            let dstRect = Rect { x: x + g.x_shake as i32, y: y + g.y_shake as i32, w: srcRect.w, h: srcRect.h };
             let mut adjustedSrcRect = *srcRect;
             let mut adjustedDstRect = dstRect;
 
@@ -232,7 +230,7 @@ impl gfxSprite {
     }
 
     /// Draw a part of the sprite scaled to a destination area.
-    pub fn draw_stretch(&self, srcRect: &SDL_Rect, dst: *mut SDL_Surface, dstRect: &SDL_Rect) {
+    pub fn draw_stretch(&self, srcRect: &Rect, dst: *mut SDL_Surface, dstRect: &Rect) {
         debug_assert!(!self.m_picture.is_null());
 
         let mut dstRect_w = *dstRect;

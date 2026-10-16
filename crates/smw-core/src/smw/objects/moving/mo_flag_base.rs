@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_FlagBase.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
@@ -15,7 +16,6 @@ use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::carriable::co_flag::CO_Flag;
 use crate::smw::objects::moving::moving_object::{IO_MovingObject, IO_MovingObjectTrait};
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class flag base (for CTF mode)
@@ -174,7 +174,7 @@ impl CObjectTrait for MO_FlagBase {
             g,
             self.ix as i32 - 8,
             self.iy as i32 - 8,
-            &SDL_Rect { x: self.iGraphicOffsetX as i32, y: 0, w: 48, h: 48 },
+            &Rect { x: self.iGraphicOffsetX as i32, y: 0, w: 48, h: 48 },
         );
     }
 

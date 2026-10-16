@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_SpinAttack.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
@@ -65,7 +66,7 @@ impl CObjectTrait for MO_SpinAttack {
     {
             if (iTimer <= 11 && !dead)
             {
-                    SDL_Rect r = {ix, iy, collisionWidth, collisionHeight};
+                    Rect r = {ix, iy, collisionWidth, collisionHeight};
                     crate::common::gfx::blit::fill_rect(blitdest, &r, 0xff00);
             }
     }

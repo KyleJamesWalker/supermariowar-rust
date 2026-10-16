@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_FeatherPowerup.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -12,7 +13,6 @@ use crate::globals::*;
 use crate::impl_base;
 use crate::smw::objects::moving::moving_object::{IO_MovingObject, IO_MovingObjectTrait};
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 use std::ops::{Deref, DerefMut};
 
 //------------------------------------------------------------------------------
@@ -64,11 +64,11 @@ pub fn pu_feather_powerup_draw<T: PU_FeatherPowerupTrait + ?Sized>(g: &mut Game,
     let x = o.ix as i32 - o.collisionOffsetX as i32;
     let y = o.iy as i32 - o.collisionOffsetY as i32;
     if o.state == 0 {
-        o.spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: o.iw as i32, h: (o.ih as f32 - o.fy + o.desty) as i16 as i32 });
+        o.spr.draw_src(g, x, y, &Rect { x: 0, y: 0, w: o.iw as i32, h: (o.ih as f32 - o.fy + o.desty) as i16 as i32 });
     } else if o.state == 1 {
-        o.spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: o.iw as i32, h: o.ih as i32 });
+        o.spr.draw_src(g, x, y, &Rect { x: 0, y: 0, w: o.iw as i32, h: o.ih as i32 });
     } else {
-        o.spr.draw_src(g, x, y, &SDL_Rect { x: if o.fFloatDirectionRight { 0 } else { 32 }, y: 0, w: o.iw as i32, h: o.ih as i32 });
+        o.spr.draw_src(g, x, y, &Rect { x: if o.fFloatDirectionRight { 0 } else { 32 }, y: 0, w: o.iw as i32, h: o.ih as i32 });
     }
 }
 

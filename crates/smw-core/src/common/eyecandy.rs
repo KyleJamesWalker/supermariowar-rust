@@ -3,6 +3,7 @@
 //! Every class in the hierarchy below `EC_Animated` is a leaf, so `animate()` (virtual in C++)
 //! is resolved statically: each `update()` calls the `animate` of its own class.
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::gfx::gfx_font::gfxFont;
@@ -14,7 +15,7 @@ use crate::common::random_number_generator::{RANDOM_BOOL, RANDOM_INT};
 use crate::common::tile_types::TileType;
 use crate::globals::*;
 use crate::impl_base;
-use sdl2::sys::{SDL_FillRect, SDL_Rect};
+use sdl2::sys::SDL_FillRect;
 use std::ptr::null;
 
 const screenWidth: i32 = App::screenWidth;
@@ -787,14 +788,14 @@ pub struct EC_Announcement {
     iFontY: i16,
     iFontOffsetX: i16,
 
-    rSrcRect: [SDL_Rect; 4],
-    rDstRect: [SDL_Rect; 4],
+    rSrcRect: [Rect; 4],
+    rDstRect: [Rect; 4],
 }
 impl_base!(EC_Announcement => c_eyecandy: CEyecandy);
 
 impl EC_Announcement {
     pub fn new(nfont: Ptr<gfxFont>, nsprite: Ptr<gfxSprite>, ntext: String, icon: i16, time: i16, y: i16) -> Self {
-        let zero = SDL_Rect { x: 0, y: 0, w: 0, h: 0 };
+        let zero = Rect { x: 0, y: 0, w: 0, h: 0 };
         let mut this = EC_Announcement {
             c_eyecandy: CEyecandy::default(),
             font: nfont,
@@ -821,15 +822,15 @@ impl EC_Announcement {
         this.ix = (screenWidth / 2 - iHalfWidth as i32) as i16;
 
         let (ix, iy, hw) = (this.ix as i32, this.iy as i32, iHalfWidth as i32);
-        this.rDstRect[0] = SDL_Rect { x: ix, y: iy, w: hw, h: 32 };
-        this.rDstRect[1] = SDL_Rect { x: ix + hw, y: iy, w: hw, h: 32 };
-        this.rDstRect[2] = SDL_Rect { x: ix, y: iy + 32, w: hw, h: 32 };
-        this.rDstRect[3] = SDL_Rect { x: ix + hw, y: iy + 32, w: hw, h: 32 };
+        this.rDstRect[0] = Rect { x: ix, y: iy, w: hw, h: 32 };
+        this.rDstRect[1] = Rect { x: ix + hw, y: iy, w: hw, h: 32 };
+        this.rDstRect[2] = Rect { x: ix, y: iy + 32, w: hw, h: 32 };
+        this.rDstRect[3] = Rect { x: ix + hw, y: iy + 32, w: hw, h: 32 };
 
-        this.rSrcRect[0] = SDL_Rect { x: 0, y: 0, w: hw, h: 32 };
-        this.rSrcRect[1] = SDL_Rect { x: (screenWidth as f32 * 0.8f32 - hw as f32) as i32, y: 0, w: hw, h: 32 };
-        this.rSrcRect[2] = SDL_Rect { x: 0, y: (screenHeight as f32 * 0.93f32) as i32, w: hw, h: 32 };
-        this.rSrcRect[3] = SDL_Rect {
+        this.rSrcRect[0] = Rect { x: 0, y: 0, w: hw, h: 32 };
+        this.rSrcRect[1] = Rect { x: (screenWidth as f32 * 0.8f32 - hw as f32) as i32, y: 0, w: hw, h: 32 };
+        this.rSrcRect[2] = Rect { x: 0, y: (screenHeight as f32 * 0.93f32) as i32, w: hw, h: 32 };
+        this.rSrcRect[3] = Rect {
             x: (screenWidth as f32 * 0.8f32 - hw as f32) as i32,
             y: (screenHeight as f32 * 0.93f32) as i32,
             w: hw,
@@ -1604,15 +1605,15 @@ pub struct EC_SuperStompExplosion {
 }
 impl_base!(EC_SuperStompExplosion => c_eyecandy: CEyecandy);
 
-const fn r(x: i32, y: i32, w: i32, h: i32) -> SDL_Rect {
-    SDL_Rect { x, y, w, h }
+const fn r(x: i32, y: i32, w: i32, h: i32) -> Rect {
+    Rect { x, y, w, h }
 }
 
-static rectSuperStompLeftSrc: [SDL_Rect; 8] =
+static rectSuperStompLeftSrc: [Rect; 8] =
     [r(0, 0, 48, 40), r(0, 40, 54, 42), r(0, 82, 48, 58), r(0, 140, 42, 70), r(0, 210, 44, 78), r(108, 0, 44, 82), r(96, 82, 42, 76), r(88, 158, 34, 74)];
-static rectSuperStompRightSrc: [SDL_Rect; 8] =
+static rectSuperStompRightSrc: [Rect; 8] =
     [r(48, 0, 48, 40), r(54, 40, 54, 42), r(48, 82, 48, 58), r(42, 140, 42, 70), r(44, 210, 44, 78), r(152, 0, 44, 82), r(138, 82, 42, 76), r(122, 158, 34, 74)];
-static rectSuperStompLeftDst: [SDL_Rect; 8] = [
+static rectSuperStompLeftDst: [Rect; 8] = [
     r(-48, -40, 48, 40),
     r(-56, -42, 54, 42),
     r(-66, -58, 48, 58),
@@ -1622,7 +1623,7 @@ static rectSuperStompLeftDst: [SDL_Rect; 8] = [
     r(-74, -76, 42, 76),
     r(-70, -74, 34, 74),
 ];
-static rectSuperStompRightDst: [SDL_Rect; 8] =
+static rectSuperStompRightDst: [Rect; 8] =
     [r(0, -40, 48, 40), r(2, -42, 54, 42), r(18, -58, 48, 58), r(26, -70, 42, 70), r(28, -78, 44, 78), r(30, -82, 44, 82), r(32, -76, 42, 76), r(36, -74, 34, 74)];
 
 impl EC_SuperStompExplosion {
@@ -1720,7 +1721,7 @@ pub struct Spotlight {
 
     iHalfWidth: i16,
     iWidth: i16,
-    rSrc: SDL_Rect,
+    rSrc: Rect,
     pub _alias: Aliased,
 }
 
@@ -1738,7 +1739,7 @@ impl Spotlight {
             iSize: 0,
             iWidth,
             iHalfWidth: iSpotlightValues[0][1],
-            rSrc: SDL_Rect { x: iSpotlightValues[0][2] as i32, y: iSpotlightValues[0][3] as i32, w: iWidth as i32, h: iWidth as i32 },
+            rSrc: Rect { x: iSpotlightValues[0][2] as i32, y: iSpotlightValues[0][3] as i32, w: iWidth as i32, h: iWidth as i32 },
             _alias: Aliased::new(),
         }
     }
@@ -1800,14 +1801,14 @@ impl Spotlight {
     pub fn draw(&mut self, g: &mut Game) {
         unsafe {
             let (ix, iy, hw, w) = (self.ix as i32, self.iy as i32, self.iHalfWidth as i32, self.iWidth as i32);
-            let rDst = SDL_Rect { x: ix - hw, y: iy - hw, w, h: w };
+            let rDst = Rect { x: ix - hw, y: iy - hw, w, h: w };
             g.rm.spr_overlayhole.draw_src_to(&self.rSrc, g.rm.spr_overlay.get_surface(), &rDst);
 
             if ix - hw < 0 {
-                let rDstWrap = SDL_Rect { x: ix - hw + screenWidth, y: iy - hw, w, h: w };
+                let rDstWrap = Rect { x: ix - hw + screenWidth, y: iy - hw, w, h: w };
                 g.rm.spr_overlayhole.draw_src_to(&self.rSrc, g.rm.spr_overlay.get_surface(), &rDstWrap);
             } else if ix + hw >= screenWidth {
-                let rDstWrap = SDL_Rect { x: ix - hw - screenWidth, y: iy - hw, w, h: w };
+                let rDstWrap = Rect { x: ix - hw - screenWidth, y: iy - hw, w, h: w };
                 g.rm.spr_overlayhole.draw_src_to(&self.rSrc, g.rm.spr_overlay.get_surface(), &rDstWrap);
             }
         }

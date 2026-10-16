@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_CheepCheep.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::{EC_FallingObject, EC_SingleAnimation};
 use crate::common::game::App;
@@ -20,7 +21,6 @@ use crate::smw::objects::carriable::co_shell::CO_Shell;
 use crate::smw::objects::carriable::co_throw_box::CO_ThrowBox;
 use crate::smw::objects::moving::moving_object::{IO_MovingObject, IO_MovingObjectTrait};
 use crate::smw::player::{get_player_from_global_id, CPlayer};
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class cheep cheep
@@ -147,11 +147,11 @@ impl CObjectTrait for MO_CheepCheep {
         let mut gp = g.ptr();
         let x = self.ix as i32 - self.collisionOffsetX as i32;
         let y = self.iy as i32 - self.collisionOffsetY as i32;
-        self.spr.draw_src(g, x, y, &SDL_Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32, w: self.iw as i32, h: self.ih as i32 });
+        self.spr.draw_src(g, x, y, &Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32, w: self.iw as i32, h: self.ih as i32 });
 
         if self.frozen {
             unsafe {
-                gp.rm.spr_iceblock.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
+                gp.rm.spr_iceblock.draw_src(g, x, y, &Rect { x: 0, y: 0, w: 32, h: 32 });
             }
         }
     }

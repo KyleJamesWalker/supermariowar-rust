@@ -9,6 +9,7 @@ pub mod gfx_sprite;
 pub mod soft_image;
 pub mod soft_surface;
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::color::{colors, RGB};
 use crate::common::gfx::gfx_palette::{gfxPalette, PlayerPalette};
@@ -316,7 +317,7 @@ pub fn gfx_loadfullskin(g: &mut Game, path: &Path, colorScheme: i16) -> Result<S
     Ok(strip)
 }
 
-pub fn gfx_cliprect(srcRect: &mut SDL_Rect, dstRect: &mut SDL_Rect, clipArea: &SDL_Rect) {
+pub fn gfx_cliprect(srcRect: &mut Rect, dstRect: &mut Rect, clipArea: &Rect) {
     if dstRect.x >= clipArea.x + clipArea.w
         || dstRect.x + dstRect.w < clipArea.x
         || dstRect.y >= clipArea.y + clipArea.h
@@ -354,7 +355,7 @@ pub fn gfx_cliprect(srcRect: &mut SDL_Rect, dstRect: &mut SDL_Rect, clipArea: &S
 
 /// Clips a source and destination area pair, so that the destination area doesn't go past
 /// a certain threshold in a given direction. Returns true if the destination area is fully hidden.
-pub fn gfx_adjusthiddenrects(g: &mut Game, src: &mut SDL_Rect, dst: &mut SDL_Rect, edge: ClipEdge, threshold: i32) -> bool {
+pub fn gfx_adjusthiddenrects(g: &mut Game, src: &mut Rect, dst: &mut Rect, edge: ClipEdge, threshold: i32) -> bool {
     unsafe {
         match edge {
             ClipEdge::Top => {
@@ -417,14 +418,14 @@ pub fn gfx_drawpreview(g: &mut Game,
     srcY: i16,
     iw: i16,
     ih: i16,
-    clipRect: &SDL_Rect,
+    clipRect: &Rect,
     wrap: bool,
     clip: Option<(ClipEdge, i32)>,
 ) {
     unsafe {
         //need to set source rect before each blit so it can be clipped correctly
-        let mut rSrcRect = SDL_Rect { x: srcX as i32, y: srcY as i32, w: iw as i32, h: ih as i32 };
-        let mut rDstRect = SDL_Rect { x: dstX as i32, y: dstY as i32, w: iw as i32, h: ih as i32 };
+        let mut rSrcRect = Rect { x: srcX as i32, y: srcY as i32, w: iw as i32, h: ih as i32 };
+        let mut rDstRect = Rect { x: dstX as i32, y: dstY as i32, w: iw as i32, h: ih as i32 };
 
         gfx_cliprect(&mut rSrcRect, &mut rDstRect, clipRect);
 

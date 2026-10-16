@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_KingOfTheHillZone.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::{MAPHEIGHT, MAPWIDTH, TILESIZE};
@@ -11,7 +12,6 @@ use crate::globals::*;
 use crate::impl_base;
 use crate::smw::objects::overmap::over_map_object::{IO_OverMapObject, IO_OverMapObjectTrait};
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 const iKingOfTheHillZoneLimits: [[i16; 4]; 4] = [[0, 0, 1, 2], [0, 1, 2, 4], [0, 2, 4, 7], [0, 2, 5, 12]];
 
@@ -238,12 +238,12 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
                             g,
                             iColX as i32 + 8,
                             iRowX as i32 + 8,
-                            &SDL_Rect { x: (self.multiplier as i32 - 1) << 4, y: (self.colorID as i32) << 4, w: 16, h: 16 },
+                            &Rect { x: (self.multiplier as i32 - 1) << 4, y: (self.colorID as i32) << 4, w: 16, h: 16 },
                         );
                     }
                 }
 
-                self.spr.draw_src(g, iColX as i32, iRowX as i32, &SDL_Rect { x: iXPiece as i32 + self.frame as i32, y: iYPiece as i32, w: TILESIZE, h: TILESIZE });
+                self.spr.draw_src(g, iColX as i32, iRowX as i32, &Rect { x: iXPiece as i32 + self.frame as i32, y: iYPiece as i32, w: TILESIZE, h: TILESIZE });
             }
         }
     }

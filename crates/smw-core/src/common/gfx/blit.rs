@@ -123,35 +123,35 @@ unsafe fn blit_state(src: *mut SDL_Surface) -> Option<BlitState> {
 }
 
 /// `SDL_UpperBlit`.
-pub unsafe fn upper_blit(src: *mut SDL_Surface, src_rect: *const SDL_Rect, dst: *mut SDL_Surface, dst_rect: *mut SDL_Rect) -> i32 {
+pub unsafe fn upper_blit(src: *mut SDL_Surface, src_rect: *const Rect, dst: *mut SDL_Surface, dst_rect: *mut Rect) -> i32 {
     if src == dst {
         fallback(Fallback::SameSurface, src, dst);
-        return SDL_UpperBlit(src, src_rect, dst, dst_rect);
+        return SDL_UpperBlit(src, src_rect.cast(), dst, dst_rect.cast());
     }
     let (Some(src_alpha), Some(dst_alpha)) = (layout(src), layout(dst)) else {
         fallback(Fallback::Format, src, dst);
-        return SDL_UpperBlit(src, src_rect, dst, dst_rect);
+        return SDL_UpperBlit(src, src_rect.cast(), dst, dst_rect.cast());
     };
     let Some(state) = blit_state(src).filter(|s| soft_surface::blit_supported(s, src_alpha, dst_alpha)) else {
         fallback(Fallback::State, src, dst);
-        return SDL_UpperBlit(src, src_rect, dst, dst_rect);
+        return SDL_UpperBlit(src, src_rect.cast(), dst, dst_rect.cast());
     };
-    let sr = src_rect.as_ref().map(|r| Rect::new(r.x, r.y, r.w, r.h));
-    let mut dr = dst_rect.as_ref().map(|r| Rect::new(r.x, r.y, r.w, r.h));
+    let sr = src_rect.as_ref().copied();
+    let mut dr = dst_rect.as_ref().copied();
     soft_surface::blit(&pixels(src, src_alpha), &state, sr.as_ref(), &mut pixels_mut(dst, dst_alpha), dr.as_mut());
     if let (Some(out), Some(r)) = (dst_rect.as_mut(), dr) {
-        *out = SDL_Rect { x: r.x, y: r.y, w: r.w, h: r.h };
+        *out = r;
     }
     0
 }
 
 /// `SDL_FillRect`.
-pub unsafe fn fill_rect(dst: *mut SDL_Surface, rect: *const SDL_Rect, color: u32) -> i32 {
+pub unsafe fn fill_rect(dst: *mut SDL_Surface, rect: *const Rect, color: u32) -> i32 {
     let Some(alpha) = layout(dst) else {
         fallback(Fallback::Fill, std::ptr::null_mut(), dst);
-        return SDL_FillRect(dst, rect, color);
+        return SDL_FillRect(dst, rect.cast(), color);
     };
-    let r = rect.as_ref().map(|r| Rect::new(r.x, r.y, r.w, r.h));
+    let r = rect.as_ref().copied();
     soft_surface::fill_rect(&mut pixels_mut(dst, alpha), r.as_ref(), color);
     0
 }
@@ -180,19 +180,19 @@ pub unsafe fn to_sdl_surface(s: &soft_surface::Surface) -> *mut SDL_Surface {
 }
 
 /// `SDL_UpperBlitScaled`.
-pub unsafe fn upper_blit_scaled(src: *mut SDL_Surface, src_rect: *const SDL_Rect, dst: *mut SDL_Surface, dst_rect: *mut SDL_Rect) -> i32 {
+pub unsafe fn upper_blit_scaled(src: *mut SDL_Surface, src_rect: *const Rect, dst: *mut SDL_Surface, dst_rect: *mut Rect) -> i32 {
     if let (true, Some(true), Some(true)) = (src != dst, layout(src), layout(dst)) {
         if let Some(state) = blit_state(src) {
-            let sr = src_rect.as_ref().map(|r| Rect::new(r.x, r.y, r.w, r.h));
-            let mut dr = dst_rect.as_ref().map(|r| Rect::new(r.x, r.y, r.w, r.h));
+            let sr = src_rect.as_ref().copied();
+            let mut dr = dst_rect.as_ref().copied();
             if soft_surface::blit_scaled(&pixels(src, true), &state, sr.as_ref(), &mut pixels_mut(dst, true), dr.as_mut()) {
                 if let (Some(out), Some(r)) = (dst_rect.as_mut(), dr) {
-                    *out = SDL_Rect { x: r.x, y: r.y, w: r.w, h: r.h };
+                    *out = r;
                 }
                 return 0;
             }
         }
     }
     fallback(Fallback::Scaled, src, dst);
-    SDL_UpperBlitScaled(src, src_rect, dst, dst_rect)
+    SDL_UpperBlitScaled(src, src_rect.cast(), dst, dst_rect.cast())
 }

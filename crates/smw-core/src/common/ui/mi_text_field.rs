@@ -1,5 +1,6 @@
 //! Port of src/common/ui/MI_TextField.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::input::{CPlayerInput, DEVICE_KEYBOARD};
@@ -8,7 +9,7 @@ use crate::common::ui::mi_image::MI_Image;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 use sdl2::sys::SDL_KeyCode::*;
-use sdl2::sys::{SDL_Keycode, SDL_Rect, SDL_Scancode};
+use sdl2::sys::{SDL_Keycode, SDL_Scancode};
 
 const NUMBER_KEY_MAP: [i16; 10] = [41, 33, 64, 35, 36, 37, 94, 38, 42, 40];
 
@@ -288,18 +289,18 @@ impl MI_TextField {
         // The dialog image is 512 wide, so the panel is its left and right halves.
         let half = OSK_W / 2;
         unsafe {
-            gp.rm.menu_dialog.draw_src(g, OSK_X, top, &SDL_Rect { x: 0, y: 0, w: half, h: OSK_H - 16 });
-            gp.rm.menu_dialog.draw_src(g, OSK_X + half, top, &SDL_Rect { x: 512 - half, y: 0, w: half, h: OSK_H - 16 });
-            gp.rm.menu_dialog.draw_src(g, OSK_X, top + OSK_H - 16, &SDL_Rect { x: 0, y: 464, w: half, h: 16 });
-            gp.rm.menu_dialog.draw_src(g, OSK_X + half, top + OSK_H - 16, &SDL_Rect { x: 512 - half, y: 464, w: half, h: 16 });
+            gp.rm.menu_dialog.draw_src(g, OSK_X, top, &Rect { x: 0, y: 0, w: half, h: OSK_H - 16 });
+            gp.rm.menu_dialog.draw_src(g, OSK_X + half, top, &Rect { x: 512 - half, y: 0, w: half, h: OSK_H - 16 });
+            gp.rm.menu_dialog.draw_src(g, OSK_X, top + OSK_H - 16, &Rect { x: 0, y: 464, w: half, h: 16 });
+            gp.rm.menu_dialog.draw_src(g, OSK_X + half, top + OSK_H - 16, &Rect { x: 512 - half, y: 464, w: half, h: 16 });
         }
         let mut key = |spr: &Ptr<gfxSprite>, col: i16, row: i16, span: i16, selected: bool, label: &str| {
             let x = OSK_X + 16 + col as i32 * OSK_CELL;
             let y = top + 12 + row as i32 * OSK_ROW_H;
             let w = span as i32 * OSK_CELL - 4;
             let srcY = if selected { 32 } else { 0 };
-            spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: srcY, w: w - 8, h: 32 });
-            spr.draw_src(g, x + w - 8, y, &SDL_Rect { x: 504, y: srcY, w: 8, h: 32 });
+            spr.draw_src(g, x, y, &Rect { x: 0, y: srcY, w: w - 8, h: 32 });
+            spr.draw_src(g, x + w - 8, y, &Rect { x: 504, y: srcY, w: 8, h: 32 });
             unsafe { gp.rm.menu_font_large.draw_centered(g, x + w / 2, y + 5, label) };
         };
         let rows = if self.fOskShift { OSK_SHIFTED } else { OSK_KEYS };
@@ -493,9 +494,9 @@ impl UI_ControlTrait for MI_TextField {
         let selY = (if self.fSelected { 32 } else { 0 }) + self.iAdjustmentY as i32;
 
         unsafe {
-            self.spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: selY, w: indent - 16, h: 32 });
-            self.spr.draw_src(g, x + indent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
-            self.spr.draw_src(g, x + indent + 16, y, &SDL_Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
+            self.spr.draw_src(g, x, y, &Rect { x: 0, y: selY, w: indent - 16, h: 32 });
+            self.spr.draw_src(g, x + indent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
+            self.spr.draw_src(g, x + indent + 16, y, &Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
 
             gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 5, indent - 8, &self.szName);
 

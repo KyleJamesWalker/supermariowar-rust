@@ -1,5 +1,6 @@
 //! Port of src/common/ui/MI_MapField.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -10,7 +11,6 @@ use crate::common::ui::mi_map_preview::MI_MapPreview;
 use crate::common::uicontrol::UI_ControlTrait;
 use crate::globals::*;
 use sdl2::sys::SDL_KeyCode::*;
-use sdl2::sys::SDL_Rect;
 
 /// `maplist->GetCurrent()->second.iIndex`
 fn current_map_index(g: &mut Game) -> i16 {
@@ -258,9 +258,9 @@ impl UI_ControlTrait for MI_MapField {
 
         unsafe {
             //Draw the select field background
-            self.spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: selY, w: indent - 16, h: 32 });
-            self.spr.draw_src(g, x + indent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
-            self.spr.draw_src(g, x + indent + 16, y, &SDL_Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
+            self.spr.draw_src(g, x, y, &Rect { x: 0, y: selY, w: indent - 16, h: 32 });
+            self.spr.draw_src(g, x + indent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
+            self.spr.draw_src(g, x + indent + 16, y, &Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
 
             gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 5, indent - 8, &self.szName);
             gp.rm.menu_font_large.draw_chop_right(g, x + indent + 8, y + 5, width - indent - 24, &self.szMapName);

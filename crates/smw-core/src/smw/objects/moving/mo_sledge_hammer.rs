@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_SledgeHammer.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game::App;
@@ -20,7 +21,6 @@ use crate::smw::objects::moving::mo_explosion::MO_Explosion;
 use crate::smw::objects::moving::mo_hammer::MO_Hammer;
 use crate::smw::objects::moving::moving_object::{IO_MovingObject, IO_MovingObjectTrait};
 use crate::smw::player::{get_player_from_global_id, CPlayer};
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class sledge hammer
@@ -181,7 +181,7 @@ impl CObjectTrait for MO_SledgeHammer {
             g,
             self.ix as i32 - self.collisionOffsetX as i32,
             self.iy as i32 - self.collisionOffsetY as i32,
-            &SDL_Rect { x: self.drawframe as i32, y: self.colorOffset as i32, w: self.iw as i32, h: self.ih as i32 },
+            &Rect { x: self.drawframe as i32, y: self.colorOffset as i32, w: self.iw as i32, h: self.ih as i32 },
         );
     }
 }

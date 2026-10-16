@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_PipeCoin.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game::App;
@@ -12,7 +13,6 @@ use crate::globals::*;
 use crate::impl_base;
 use crate::smw::objects::overmap::over_map_object::{IO_OverMapObject, IO_OverMapObjectTrait};
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class pipe coin (for coin pipe minigame)
@@ -109,8 +109,8 @@ impl CObjectTrait for OMO_PipeCoin {
         let mut gp = g.ptr();
         let x = self.ix as i32 - self.collisionOffsetX as i32;
         let y = self.iy as i32 - self.collisionOffsetY as i32;
-        let srcRect = SDL_Rect { x: self.drawframe as i32, y: self.animationOffsetY as i32, w: self.iw as i32, h: self.ih as i32 };
-        let sparkleRect = SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 };
+        let srcRect = Rect { x: self.drawframe as i32, y: self.animationOffsetY as i32, w: self.iw as i32, h: self.ih as i32 };
+        let sparkleRect = Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 };
 
         unsafe {
             if self.iUncollectableTime > 0 {

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/OverMapObject.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_drawpreview;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -7,7 +8,6 @@ use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::{object_overmap, CObject, CObjectTrait};
 use crate::globals::Ptr;
 use crate::impl_base;
-use sdl2::sys::SDL_Rect;
 use std::ops::{Deref, DerefMut};
 
 //------------------------------------------------------------------------------
@@ -107,7 +107,7 @@ pub fn io_over_map_object_draw<T: IO_OverMapObjectTrait + ?Sized>(g: &mut Game, 
         g,
         (o.ix - o.collisionOffsetX) as i32,
         (o.iy - o.collisionOffsetY) as i32,
-        &SDL_Rect { x: o.drawframe as i32, y: o.animationOffsetY as i32, w: o.iw as i32, h: o.ih as i32 },
+        &Rect { x: o.drawframe as i32, y: o.animationOffsetY as i32, w: o.iw as i32, h: o.ih as i32 },
     );
 }
 
@@ -122,7 +122,7 @@ pub fn io_over_map_object_draw_offset<T: IO_OverMapObjectTrait + ?Sized>(g: &mut
         o.animationOffsetY >> 1,
         o.iw >> 1,
         o.ih >> 1,
-        &SDL_Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: 320, h: 240 },
+        &Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: 320, h: 240 },
         true,
         None,
     );

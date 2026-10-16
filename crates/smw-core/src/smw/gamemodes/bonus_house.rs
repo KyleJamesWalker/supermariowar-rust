@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/BonusHouse.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_mode::{game_mode_bonus, CGameMode, CGameModeTrait};
@@ -14,7 +15,6 @@ use crate::impl_base;
 use crate::smw::gamemodes::game_mode as gm;
 use crate::smw::objects::moving::mo_bonus_house_chest::MO_BonusHouseChest;
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 use std::any::Any;
 
 //Bonus Mode (not really a game mode, but involves using the map so we need a mode to play)
@@ -109,16 +109,16 @@ impl CGameModeTrait for CGM_Bonus {
         let mut gp = g.ptr();
         unsafe {
             //Draw Toad
-            gp.rm.spr_worldbonushouse.draw_src(g, 544, 256, &SDL_Rect { x: if gp.players[0].left_x() > 544 { 224 } else { 192 }, y: 0, w: 32, h: 64 });
+            gp.rm.spr_worldbonushouse.draw_src(g, 544, 256, &Rect { x: if gp.players[0].left_x() > 544 { 224 } else { 192 }, y: 0, w: 32, h: 64 });
 
             //Draw Bonus House Title
-            gp.rm.menu_plain_field.draw_src(g, 0, 0, &SDL_Rect { x: 0, y: 0, w: App::screenWidth / 2, h: 32 });
-            gp.rm.menu_plain_field.draw_src(g, App::screenWidth / 2, 0, &SDL_Rect { x: 192, y: 0, w: App::screenWidth / 2, h: 32 });
+            gp.rm.menu_plain_field.draw_src(g, 0, 0, &Rect { x: 0, y: 0, w: App::screenWidth / 2, h: 32 });
+            gp.rm.menu_plain_field.draw_src(g, App::screenWidth / 2, 0, &Rect { x: 192, y: 0, w: App::screenWidth / 2, h: 32 });
             gp.rm.game_font_large.draw_centered(g, App::screenWidth / 2, 5, &self.tsTourStop.szName);
 
             //Draw Bonus House Text
             if self.tsTourStop.iBonusTextLines > 0 {
-                gp.rm.spr_worldbonushouse.draw_src(g, 128, 128, &SDL_Rect { x: 0, y: 64, w: 384, h: 128 });
+                gp.rm.spr_worldbonushouse.draw_src(g, 128, 128, &Rect { x: 0, y: 64, w: 384, h: 128 });
 
                 for iTextLine in 0..self.tsTourStop.iBonusTextLines {
                     gp.rm.game_font_large.draw_chop_centered(g, App::screenWidth / 2, 132 + 24 * iTextLine as i32, 372, &self.tsTourStop.szBonusText[iTextLine as usize]);

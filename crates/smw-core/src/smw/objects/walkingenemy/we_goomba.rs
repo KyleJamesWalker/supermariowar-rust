@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/walkingenemy/WE_Goomba.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::{EC_Corpse, EC_FallingObject};
 use crate::common::game_mode::game_mode_stomp;
@@ -14,7 +15,6 @@ use crate::impl_base;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::objects::walkingenemy::walking_enemy::*;
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class goomba
@@ -62,8 +62,8 @@ impl CObjectTrait for MO_Goomba {
             unsafe {
                 let x = self.ix as i32 - self.collisionOffsetX as i32 + self.iw as i32 - 32;
                 let y = self.iy as i32 - self.collisionOffsetY as i32 + self.ih as i32 - 32;
-                gp.rm.spr_goomba.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
-                gp.rm.spr_iceblock.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
+                gp.rm.spr_goomba.draw_src(g, x, y, &Rect { x: 0, y: 0, w: 32, h: 32 });
+                gp.rm.spr_iceblock.draw_src(g, x, y, &Rect { x: 0, y: 0, w: 32, h: 32 });
             }
         } else {
             mo_walking_enemy_draw(g, self);

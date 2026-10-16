@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_Podobo.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
@@ -14,7 +15,6 @@ use crate::impl_base;
 use crate::smw::objects::moving::mo_bullet_bill::MO_BulletBill;
 use crate::smw::objects::moving::moving_object::{IO_MovingObject, IO_MovingObjectTrait};
 use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class podobo (for survival mode)
@@ -80,7 +80,7 @@ impl CObjectTrait for MO_Podobo {
     }
 
     fn draw(&mut self, g: &mut Game) {
-        let srcRect = SDL_Rect {
+        let srcRect = Rect {
             x: self.drawframe as i32,
             y: self.iColorOffsetY as i32 + if self.vely > 0.0f32 { 32 } else { 0 },
             w: self.iw as i32,

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_CollectionCard.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game::App;
@@ -15,7 +16,6 @@ use crate::smw::objects::moving::moving_object::{
     io_moving_object_collision_detection_checksides, io_moving_object_draw, io_moving_object_update, IO_MovingObject, IO_MovingObjectTrait,
 };
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class collection card (for card collection mode)
@@ -210,7 +210,7 @@ impl CObjectTrait for MO_CollectionCard {
                 g,
                 self.ix as i32 - self.collisionOffsetX as i32,
                 self.iy as i32 - self.collisionOffsetY as i32,
-                &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
+                &Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
             );
         }
     }

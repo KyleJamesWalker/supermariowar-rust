@@ -1,5 +1,6 @@
 //! Port of src/smw/player_components/PlayerJail.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game_values::if_sound_on_play;
@@ -8,7 +9,6 @@ use crate::common::gfx::gfx_sprite::ClipEdge;
 use crate::common::global_constants::{PHOFFSET, PWOFFSET};
 use crate::globals::*;
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 #[derive(Default)]
 pub struct PlayerJail {
@@ -114,7 +114,7 @@ impl PlayerJail {
             if self.is_active() {
                 let x = player.left_x() as i32 - PWOFFSET - 6;
                 let y = player.top_y() as i32 - PHOFFSET - 6;
-                let src = SDL_Rect { x: (self.color as i32 + 1) * 44, y: 0, w: 44, h: 44 };
+                let src = Rect { x: (self.color as i32 + 1) * 44, y: 0, w: 44, h: 44 };
                 if player.iswarping() {
                     let edge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);
                     gp.rm.spr_jail.draw_clip(g, x, y, &src, edge, player.get_warp_plane() as i32);

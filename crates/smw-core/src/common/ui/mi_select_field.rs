@@ -3,6 +3,7 @@
 //! The C++ class template becomes a generic struct. Its virtual bodies are inherent `*_impl` methods so
 //! subclasses (MI_ImageSelectField, MI_SliderField, ...) can call `MI_SelectField<T>::Draw()` and friends.
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::input::CPlayerInput;
@@ -11,7 +12,6 @@ use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_image::MI_Image;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
-use sdl2::sys::SDL_Rect;
 
 #[derive(Clone, Debug)]
 pub struct SF_ListItem<T: Copy> {
@@ -316,12 +316,12 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
         unsafe {
             if self.m_indent == 0 {
                 let iHalfWidth = (self.m_width / 2) as i32;
-                self.m_spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: selY, w: iHalfWidth, h: 32 });
-                self.m_spr.draw_src(g, x + iHalfWidth, y, &SDL_Rect { x: 512 - iHalfWidth, y: selY, w: width - iHalfWidth, h: 32 });
+                self.m_spr.draw_src(g, x, y, &Rect { x: 0, y: selY, w: iHalfWidth, h: 32 });
+                self.m_spr.draw_src(g, x + iHalfWidth, y, &Rect { x: 512 - iHalfWidth, y: selY, w: width - iHalfWidth, h: 32 });
             } else {
-                self.m_spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: selY, w: indent - 16, h: 32 });
-                self.m_spr.draw_src(g, x + indent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
-                self.m_spr.draw_src(g, x + indent + 16, y, &SDL_Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
+                self.m_spr.draw_src(g, x, y, &Rect { x: 0, y: selY, w: indent - 16, h: 32 });
+                self.m_spr.draw_src(g, x + indent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
+                self.m_spr.draw_src(g, x + indent + 16, y, &Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
             }
 
             if self.m_indent > 0 {

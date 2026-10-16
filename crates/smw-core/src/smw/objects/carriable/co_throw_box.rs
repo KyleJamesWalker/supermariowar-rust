@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_ThrowBox.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::{EC_FallingObject, EC_SingleAnimation, Spotlight};
 use crate::common::gfx::gfx_sprite::{gfxSprite, ClipEdge};
@@ -15,7 +16,6 @@ use crate::smw::objectgame::{createpowerup, removeifprojectile};
 use crate::smw::objects::moving::mo_carried_object::{mo_carried_object_drop, mo_carried_object_kick, MO_CarriedObject, MO_CarriedObjectTrait};
 use crate::smw::objects::moving::moving_object::{io_moving_object_collision_detection_checksides, io_moving_object_collision_detection_map, IO_MovingObjectTrait};
 use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class throwable box - can be used as a shield, thrown at a player, or holds items
@@ -270,7 +270,7 @@ impl CObjectTrait for CO_ThrowBox {
         let mut gp = g.ptr();
         let x = self.ix as i32 - self.collisionOffsetX as i32;
         let y = self.iy as i32 - self.collisionOffsetY as i32;
-        let src = SDL_Rect { x: self.drawframe as i32, y: 0, w: self.iw as i32, h: self.ih as i32 };
+        let src = Rect { x: self.drawframe as i32, y: 0, w: self.iw as i32, h: self.ih as i32 };
         if !self.owner.is_null() && self.owner.iswarping() {
             let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32) };
             self.spr.draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);
@@ -279,7 +279,7 @@ impl CObjectTrait for CO_ThrowBox {
         }
 
         if self.frozen {
-            unsafe { gp.rm.spr_iceblock.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 }) };
+            unsafe { gp.rm.spr_iceblock.draw_src(g, x, y, &Rect { x: 0, y: 0, w: 32, h: 32 }) };
         }
     }
 }

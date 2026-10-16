@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_MapFilterScroll.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::NUM_AUTO_FILTERS;
@@ -8,7 +9,6 @@ use crate::common::ui::menu_code::*;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 use crate::smw::gs_gameplay::lookup_team_id;
-use sdl2::sys::SDL_Rect;
 
 #[derive(Clone, Debug, Default)]
 pub struct MFS_ListItem {
@@ -200,10 +200,10 @@ impl UI_ControlTrait for MI_MapFilterScroll {
 
         unsafe {
             //Draw the background for the map preview
-            gp.rm.menu_dialog.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: iWidth - 16, h: iNumLines * 32 + 32 });
-            gp.rm.menu_dialog.draw_src(g, x + iWidth - 16, y, &SDL_Rect { x: 496, y: 0, w: 16, h: iNumLines * 32 + 32 });
-            gp.rm.menu_dialog.draw_src(g, x, y + iNumLines * 32 + 32, &SDL_Rect { x: 0, y: 464, w: iWidth - 16, h: 16 });
-            gp.rm.menu_dialog.draw_src(g, x + iWidth - 16, y + iNumLines * 32 + 32, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+            gp.rm.menu_dialog.draw_src(g, x, y, &Rect { x: 0, y: 0, w: iWidth - 16, h: iNumLines * 32 + 32 });
+            gp.rm.menu_dialog.draw_src(g, x + iWidth - 16, y, &Rect { x: 496, y: 0, w: 16, h: iNumLines * 32 + 32 });
+            gp.rm.menu_dialog.draw_src(g, x, y + iNumLines * 32 + 32, &Rect { x: 0, y: 464, w: iWidth - 16, h: 16 });
+            gp.rm.menu_dialog.draw_src(g, x + iWidth - 16, y + iNumLines * 32 + 32, &Rect { x: 496, y: 464, w: 16, h: 16 });
 
             gp.rm.menu_font_large.draw_centered(g, x + (iWidth >> 1), y + 5, "Map Filters");
 
@@ -216,36 +216,36 @@ impl UI_ControlTrait for MI_MapFilterScroll {
                     let iHalfLineWidth = ((iWidth - 64) as i16 >> 1) as i32;
                     let iLineWidth = (iWidth - 64) as i16 as i32;
 
-                    self.spr.draw_src(g, x + 16, y + 32 + l * 32, &SDL_Rect { x: 0, y: if lineSel { 32 } else { 0 }, w: iHalfLineWidth, h: 32 });
+                    self.spr.draw_src(g, x + 16, y + 32 + l * 32, &Rect { x: 0, y: if lineSel { 32 } else { 0 }, w: iHalfLineWidth, h: 32 });
                     self.spr.draw_src(
                         g,
                         x + 16 + iHalfLineWidth,
                         y + 32 + l * 32,
-                        &SDL_Rect { x: 512 - iLineWidth + iHalfLineWidth, y: if lineSel { 32 } else { 0 }, w: iLineWidth - iHalfLineWidth, h: 32 },
+                        &Rect { x: 512 - iLineWidth + iHalfLineWidth, y: if lineSel { 32 } else { 0 }, w: iLineWidth - iHalfLineWidth, h: 32 },
                     );
 
                     let colSel = self.iSelectedLine == iLine && self.iSelectedColumn == 1;
-                    gp.rm.menu_map_filter.draw_src(g, x + iWidth - 48, y + 32 + l * 32, &SDL_Rect { x: 48, y: if colSel { 32 } else { 0 }, w: 32, h: 32 });
+                    gp.rm.menu_map_filter.draw_src(g, x + iWidth - 48, y + 32 + l * 32, &Rect { x: 48, y: if colSel { 32 } else { 0 }, w: 32, h: 32 });
                 } else {
                     let iHalfLineWidth = ((iWidth - 32) as i16 >> 1) as i32;
                     let iLineWidth = (iWidth - 32) as i16 as i32;
-                    self.spr.draw_src(g, x + 16, y + 32 + l * 32, &SDL_Rect { x: 0, y: if lineSel { 32 } else { 0 }, w: iHalfLineWidth, h: 32 });
+                    self.spr.draw_src(g, x + 16, y + 32 + l * 32, &Rect { x: 0, y: if lineSel { 32 } else { 0 }, w: iHalfLineWidth, h: 32 });
                     self.spr.draw_src(
                         g,
                         x + 16 + iHalfLineWidth,
                         y + 32 + l * 32,
-                        &SDL_Rect { x: 512 - iLineWidth + iHalfLineWidth, y: if lineSel { 32 } else { 0 }, w: iLineWidth - iHalfLineWidth, h: 32 },
+                        &Rect { x: 512 - iLineWidth + iHalfLineWidth, y: if lineSel { 32 } else { 0 }, w: iLineWidth - iHalfLineWidth, h: 32 },
                     );
                 }
 
                 let item = &self.items[(self.iOffset as i32 + l) as usize];
                 if item.fSelected {
-                    gp.rm.menu_map_filter.draw_src(g, x + 24, y + 32 + l * 32 + 4, &SDL_Rect { x: 24, y: 0, w: 24, h: 24 });
+                    gp.rm.menu_map_filter.draw_src(g, x + 24, y + 32 + l * 32 + 4, &Rect { x: 24, y: 0, w: 24, h: 24 });
                 }
 
                 gp.rm.menu_font_large.draw_chop_right(g, x + 52, y + 5 + l * 32 + 32, iWidth - 104, &item.sName);
                 let icon = item.iIcon as i32;
-                gp.rm.spr_map_filter_icons.draw_src(g, x + 28, y + 32 + l * 32 + 8, &SDL_Rect { x: icon % 10 * 16, y: icon / 10 * 16, w: 16, h: 16 });
+                gp.rm.spr_map_filter_icons.draw_src(g, x + 28, y + 32 + l * 32 + 8, &Rect { x: icon % 10 * 16, y: icon / 10 * 16, w: 16, h: 16 });
                 iLine += 1;
             }
         }

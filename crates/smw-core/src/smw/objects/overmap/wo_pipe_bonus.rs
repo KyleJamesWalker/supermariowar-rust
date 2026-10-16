@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_PipeBonus.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game::App;
@@ -13,7 +14,6 @@ use crate::globals::*;
 use crate::impl_base;
 use crate::smw::objects::overmap::over_map_object::{io_over_map_object_update, IO_OverMapObject, IO_OverMapObjectTrait};
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class pipe powerup (for coin pipe minigame)
@@ -81,7 +81,7 @@ impl CObjectTrait for OMO_PipeBonus {
     }
 
     fn draw(&mut self, g: &mut Game) {
-        let srcRect = SDL_Rect { x: self.drawframe as i32, y: self.animationOffsetY as i32, w: self.iw as i32, h: self.ih as i32 };
+        let srcRect = Rect { x: self.drawframe as i32, y: self.animationOffsetY as i32, w: self.iw as i32, h: self.ih as i32 };
         let x = self.ix as i32 - self.collisionOffsetX as i32;
         let y = self.iy as i32 - self.collisionOffsetY as i32;
         if self.iUncollectableTime > 0 {

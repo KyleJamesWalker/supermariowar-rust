@@ -1,11 +1,11 @@
 //! Port of src/smw/player_components/PlayerSuicideTimer.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::global_constants::*;
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 #[derive(Default)]
 pub struct PlayerSuicideTimer {
@@ -61,7 +61,7 @@ impl PlayerSuicideTimer {
                     g,
                     player.left_x() as i32 - PWOFFSET + 8,
                     player.top_y() as i32 - PHOFFSET + 8,
-                    &SDL_Rect { x: (self.displaytimer as i32) << 4, y: (player.get_color_id() as i32) << 4, w: 16, h: 16 },
+                    &Rect { x: (self.displaytimer as i32) << 4, y: (player.get_color_id() as i32) << 4, w: 16, h: 16 },
                 );
             }
         }

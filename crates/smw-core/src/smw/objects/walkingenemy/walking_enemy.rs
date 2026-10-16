@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/walkingenemy/WalkingEnemy.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::{EC_FallingObject, EC_SingleAnimation};
 use crate::common::game::App;
@@ -21,7 +22,6 @@ use crate::smw::objects::carriable::co_shell::CO_Shell;
 use crate::smw::objects::carriable::co_throw_box::CO_ThrowBox;
 use crate::smw::objects::moving::moving_object::{io_moving_object_draw, io_moving_object_update, IO_MovingObject, IO_MovingObjectTrait};
 use crate::smw::player::{get_player_from_global_id, CPlayer};
-use sdl2::sys::SDL_Rect;
 use std::ops::{Deref, DerefMut};
 
 //------------------------------------------------------------------------------
@@ -155,7 +155,7 @@ pub fn mo_walking_enemy_draw<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, thi
             displayangle += addangle;
 
             unsafe {
-                gp.rm.spr_awardsouls.draw_src(g, spawnX as i32, spawnY as i32, &SDL_Rect { x: o.iSpawnIconOffset as i32, y: 0, w: 16, h: 16 });
+                gp.rm.spr_awardsouls.draw_src(g, spawnX as i32, spawnY as i32, &Rect { x: o.iSpawnIconOffset as i32, y: 0, w: 16, h: 16 });
             }
         }
     } else {
@@ -168,7 +168,7 @@ pub fn mo_walking_enemy_draw<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, thi
                     g,
                     o.ix as i32 - o.collisionOffsetX as i32 + o.iw as i32 - 32,
                     o.iy as i32 - o.collisionOffsetY as i32 + o.ih as i32 - 32,
-                    &SDL_Rect { x: 0, y: 0, w: 32, h: 32 },
+                    &Rect { x: 0, y: 0, w: 32, h: 32 },
                 );
             }
         }

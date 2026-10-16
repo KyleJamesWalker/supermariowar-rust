@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_BonusHouseChest.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game_values::if_sound_on_play;
@@ -12,7 +13,6 @@ use crate::globals::*;
 use crate::impl_base;
 use crate::smw::objects::moving::moving_object::{IO_MovingObject, IO_MovingObjectTrait};
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class treasure chest powerup
@@ -87,11 +87,11 @@ impl CObjectTrait for MO_BonusHouseChest {
         let ih = self.ih as i32;
 
         if self.state < 2 {
-            self.spr.draw_src(g, ix, iy, &SDL_Rect { x: 0, y: 0, w: iw, h: ih });
+            self.spr.draw_src(g, ix, iy, &Rect { x: 0, y: 0, w: iw, h: ih });
         }
 
         if self.state >= 2 {
-            self.spr.draw_src(g, ix, iy, &SDL_Rect { x: 128, y: 0, w: iw, h: ih });
+            self.spr.draw_src(g, ix, iy, &Rect { x: 128, y: 0, w: iw, h: ih });
         }
 
         if self.state == 2 {
@@ -102,19 +102,19 @@ impl CObjectTrait for MO_BonusHouseChest {
                     let iBonus: i16 = (bonusitem - NUM_POWERUPS - NUM_WORLD_POWERUPS) as i16;
                     let iBonusX: i16 = ((iBonus as i32 % 10) << 5) as i16;
                     let iBonusY: i16 = (((iBonus as i32 / 10) << 5) + 32) as i16;
-                    gp.rm.spr_worlditems.draw_src(g, ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: iBonusX as i32, y: iBonusY as i32, w: 32, h: 32 });
+                    gp.rm.spr_worlditems.draw_src(g, ix + 16, self.drawbonusitemy as i32, &Rect { x: iBonusX as i32, y: iBonusY as i32, w: 32, h: 32 });
                 } else if bonusitem >= NUM_POWERUPS {
                     // World Item
-                    gp.rm.spr_worlditems.draw_src(g, ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: (bonusitem - NUM_POWERUPS) << 5, y: 0, w: 32, h: 32 });
+                    gp.rm.spr_worlditems.draw_src(g, ix + 16, self.drawbonusitemy as i32, &Rect { x: (bonusitem - NUM_POWERUPS) << 5, y: 0, w: 32, h: 32 });
                 } else {
                     // Normal Powerup
-                    gp.rm.spr_storedpoweruplarge.draw_src(g, ix + 16, self.drawbonusitemy as i32, &SDL_Rect { x: bonusitem << 5, y: 0, w: 32, h: 32 });
+                    gp.rm.spr_storedpoweruplarge.draw_src(g, ix + 16, self.drawbonusitemy as i32, &Rect { x: bonusitem << 5, y: 0, w: 32, h: 32 });
                 }
             }
         }
 
         if self.state >= 2 {
-            self.spr.draw_src(g, ix, iy, &SDL_Rect { x: 64, y: 0, w: iw, h: ih });
+            self.spr.draw_src(g, ix, iy, &Rect { x: 64, y: 0, w: iw, h: ih });
         }
     }
 

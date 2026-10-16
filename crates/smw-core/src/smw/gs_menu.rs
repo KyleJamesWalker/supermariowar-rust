@@ -1,5 +1,6 @@
 //! Port of src/smw/GSMenu.cpp (reference build: original + tools/cpp-harness.patch).
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use smw_platform::{Input, InputEvent};
 use crate::common::file_list::{MusicCategory, WorldMusicCategory};
@@ -58,7 +59,7 @@ use crate::smw::menu::network::net_servers_menu::UI_NetServersMenu;
 use crate::common::path::get_home_directory;
 use crate::common_netplay::protocol_definitions::*;
 use crate::smw::net::{net_end_session, net_start_session};
-use sdl2::sys::{SDL_Event, SDL_EventType, SDL_FillRect, SDL_KeyCode, SDL_Keymod, SDL_MapRGB, SDL_Rect};
+use sdl2::sys::{SDL_Event, SDL_EventType, SDL_FillRect, SDL_KeyCode, SDL_Keymod, SDL_MapRGB};
 use std::ops::DerefMut;
 use std::path::Path;
 
@@ -84,8 +85,8 @@ fn assign<T>(slot: &mut Ptr<T>, value: Box<T>) {
     old.delete();
 }
 
-fn rect(x: i32, y: i32, w: i32, h: i32) -> SDL_Rect {
-    SDL_Rect { x, y, w, h }
+fn rect(x: i32, y: i32, w: i32, h: i32) -> Rect {
+    Rect { x, y, w, h }
 }
 
 pub struct MenuState {

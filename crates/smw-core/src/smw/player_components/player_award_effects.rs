@@ -1,5 +1,6 @@
 //! Port of src/smw/player_components/PlayerAwardEffects.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::{EC_ExplodingAward, EC_FallingObject, EC_GravText, EC_RocketAward, EC_SoulsAward, EC_SwirlingAward};
 use crate::common::eyecandy_styles::AwardStyle;
@@ -11,7 +12,6 @@ use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
 use crate::smw::objectgame::check_secret;
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 struct STextAward {
     name: &'static str,
@@ -63,7 +63,7 @@ impl PlayerAwardEffects {
                 let awardx: i16 = (xoffset as i32 + (30.0f32 * cosf(angle)) as i16 as i32) as i16;
                 let awardy: i16 = (yoffset as i32 + (30.0f32 * sinf(angle)) as i16 as i32) as i16;
 
-                let src = SDL_Rect { x: self.awards[k as usize] as i32 * 16, y: 0, w: 16, h: 16 };
+                let src = Rect { x: self.awards[k as usize] as i32 * 16, y: 0, w: 16, h: 16 };
                 if player.iswarping() {
                     let edge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);
                     gp.rm.spr_award.draw_clip(g, awardx as i32, awardy as i32, &src, edge, player.get_warp_plane() as i32);
