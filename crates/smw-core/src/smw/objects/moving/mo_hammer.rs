@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_Hammer.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -154,12 +155,12 @@ impl CObjectTrait for MO_Hammer {
         }
     }
 
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
-        if self.iPlayerID != player.globalID && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID) {
-            if !player.is_shielded() {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
+        if self.iPlayerID != g.player(player).globalID && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != g.player(player).teamID) {
+            if !g.player(player).is_shielded() {
                 removeifprojectile(g, self.as_mo_ptr(), false, false);
 
-                if !player.is_invincible() && !player.shyguy {
+                if !g.player(player).is_invincible() && !g.player(player).shyguy {
                     // Find the player that shot this hammer so we can attribute a kill
                     player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Hammer, false, false);
                     return true;

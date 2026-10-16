@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/IO_FlameCannon.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -154,9 +155,9 @@ impl CObjectTrait for IO_FlameCannon {
         }
     }
 
-    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
-        if self.state == 2 && !player.is_invincible() && !player.is_shielded() && !player.shyguy {
-            return player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
+    fn collide_player(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
+        if self.state == 2 && !g.player(player).is_invincible() && !g.player(player).is_shielded() && !g.player(player).shyguy {
+            return g.player(player).kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
         }
 
         false

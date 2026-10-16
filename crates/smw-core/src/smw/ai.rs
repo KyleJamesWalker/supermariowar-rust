@@ -1,5 +1,7 @@
 //! Port of src/smw/ai.cpp
 
+use crate::smw::object_container::ObjectId;
+use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_mode::*;
@@ -42,12 +44,12 @@ use std::any::Any;
 use std::collections::BTreeMap;
 
 pub struct NearestObjects {
-    pub player: Ptr<CPlayer>,
-    pub teammate: Ptr<CPlayer>,
+    pub player: PlayerId,
+    pub teammate: PlayerId,
 
-    pub goal: Ptr<dyn CObjectTrait>,
-    pub stomp: Ptr<dyn CObjectTrait>,
-    pub threat: Ptr<dyn CObjectTrait>,
+    pub goal: ObjectId,
+    pub stomp: ObjectId,
+    pub threat: ObjectId,
 
     pub playerdistance: i32,
     pub teammatedistance: i32,
@@ -65,11 +67,11 @@ pub struct NearestObjects {
 impl NearestObjects {
     pub fn new() -> Self {
         let mut n = NearestObjects {
-            player: Ptr::null(),
-            teammate: Ptr::null(),
-            goal: Ptr::null(),
-            stomp: Ptr::null(),
-            threat: Ptr::null(),
+            player: PlayerId::NONE,
+            teammate: PlayerId::NONE,
+            goal: ObjectId::NONE,
+            stomp: ObjectId::NONE,
+            threat: ObjectId::NONE,
             playerdistance: 0,
             teammatedistance: 0,
             goaldistance: 0,
@@ -86,11 +88,11 @@ impl NearestObjects {
     }
 
     pub fn reset(&mut self) {
-        self.player = Ptr::null();
-        self.goal = Ptr::null();
-        self.stomp = Ptr::null();
-        self.teammate = Ptr::null();
-        self.threat = Ptr::null();
+        self.player = PlayerId::NONE;
+        self.goal = ObjectId::NONE;
+        self.stomp = ObjectId::NONE;
+        self.teammate = PlayerId::NONE;
+        self.threat = ObjectId::NONE;
 
         self.playerdistance = App::screenWidth * 1000;
         self.goaldistance = App::screenWidth * 1000;
@@ -123,7 +125,7 @@ pub struct AttentionObject {
 pub trait CPlayerAITrait {
     fn ai(&mut self) -> &mut CPlayerAI;
 
-    fn set_player(&mut self, player: Ptr<CPlayer>) {
+    fn set_player(&mut self, player: PlayerId) {
         self.ai().pPlayer = player;
     }
     fn init(&mut self, g: &mut Game) {
@@ -137,7 +139,7 @@ pub trait CPlayerAITrait {
 }
 
 pub struct CPlayerAI {
-    pub pPlayer: Ptr<CPlayer>,
+    pub pPlayer: PlayerId,
 
     pub iFallDanger: i16,
     pub nearestObjects: NearestObjects,
@@ -394,12 +396,16 @@ macro_rules! nearest {
         let no: *mut NearestObjects = &mut $self.nearestObjects;
         unsafe { $self.$method($obj, &mut (*no).$target, &mut (*no).$dist, &mut (*no).$wrap) }
     }};
+    ($self:ident . $method:ident ($g:ident, $obj:expr, $target:ident, $dist:ident, $wrap:ident)) => {{
+        let no: *mut NearestObjects = &mut $self.nearestObjects;
+        unsafe { $self.$method($g, $obj, &mut (*no).$target, &mut (*no).$dist, &mut (*no).$wrap) }
+    }};
 }
 
 impl CPlayerAI {
     pub fn new() -> Self {
         CPlayerAI {
-            pPlayer: Ptr::null(),
+            pPlayer: PlayerId::NONE,
             // Uninitialized in the C++ constructor; heap memory from `new` reads as 0 in practice.
             iFallDanger: 0,
             nearestObjects: NearestObjects::new(),
@@ -409,7 +415,7 @@ impl CPlayerAI {
         }
     }
 
-    pub fn set_player(&mut self, player: Ptr<CPlayer>) {
+    pub fn set_player(&mut self, player: PlayerId) {
         self.pPlayer = player;
     }
 
@@ -417,10 +423,10 @@ impl CPlayerAI {
         self.nearestObjects.reset();
 
         let pPlayer = self.pPlayer;
-        let carriedItem = pPlayer.carriedItem;
+        let carriedItem = g.player(pPlayer).carriedItem;
         let carriedObj = carried_as_object(carriedItem);
-        let fInvincible = pPlayer.is_invincible() || pPlayer.is_shielded() || pPlayer.shyguy;
-        let iTeamID: i16 = pPlayer.teamID;
+        let fInvincible = g.player(pPlayer).is_invincible() || g.player(pPlayer).is_shielded() || g.player(pPlayer).shyguy;
+        let iTeamID: i16 = g.player(pPlayer).teamID;
 
         let n = g.objectcontainer[1].list().len();
         for i in 0..n {
@@ -448,11 +454,11 @@ impl CPlayerAI {
                                 continue;
                             }
 
-                            nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                            nearest!(self.distance_to_object(g, obj, threat, threatdistance, threatwrap));
                         } else if !carriedItem.is_null() {
                             continue;
                         } else {
-                            nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                            nearest!(self.distance_to_object(g, obj, goal, goaldistance, goalwrap));
                         }
                     } else if movingobject_throwblock == movingtype
                         || (movingobject_throwbox == movingtype && static_cast::<CO_ThrowBox>(obj).has_kill_velocity())
@@ -461,11 +467,11 @@ impl CPlayerAI {
                             continue;
                         }
 
-                        nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                        nearest!(self.distance_to_object(g, obj, threat, threatdistance, threatwrap));
                     } else if movingobject_pirhanaplant == movingtype {
                         // MO_PirhanaPlant has no own `state`; this is CObject::state.
                         if obj.state > 0 {
-                            nearest!(self.distance_to_object_center(obj, threat, threatdistance, threatwrap));
+                            nearest!(self.distance_to_object_center(g, obj, threat, threatdistance, threatwrap));
                         }
                     } else if movingobject_flag == movingtype {
                         let mut flag = static_cast::<CO_Flag>(obj);
@@ -478,7 +484,7 @@ impl CPlayerAI {
                             continue;
                         }
 
-                        nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                        nearest!(self.distance_to_object(g, obj, goal, goaldistance, goalwrap));
                     } else if movingobject_yoshi == movingtype {
                         let mut yoshi = static_cast::<MO_Yoshi>(obj);
 
@@ -492,19 +498,19 @@ impl CPlayerAI {
                             continue;
                         }
 
-                        nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                        nearest!(self.distance_to_object(g, obj, goal, goaldistance, goalwrap));
                     } else if movingobject_egg == movingtype {
                         if !carriedItem.is_null() && carriedItem.get_moving_object_type() == movingobject_egg {
                             continue;
                         }
 
-                        nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                        nearest!(self.distance_to_object(g, obj, goal, goaldistance, goalwrap));
                     } else if movingobject_throwbox == movingtype {
                         if !carriedItem.is_null() {
                             continue;
                         }
 
-                        nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                        nearest!(self.distance_to_object(g, obj, goal, goaldistance, goalwrap));
                     } else if movingobject_star == movingtype {
                         if !carriedItem.is_null() && carriedItem.get_moving_object_type() == movingobject_star {
                             continue;
@@ -514,15 +520,15 @@ impl CPlayerAI {
                         let mut star = static_cast::<CO_Star>(obj);
 
                         if star.get_type() == 1 || starmode.isplayerstar(g, pPlayer) {
-                            nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                            nearest!(self.distance_to_object(g, obj, goal, goaldistance, goalwrap));
                         } else {
-                            nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                            nearest!(self.distance_to_object(g, obj, threat, threatdistance, threatwrap));
                         }
                     } else if movingobject_coin == movingtype || movingobject_phantokey == movingtype {
-                        nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                        nearest!(self.distance_to_object(g, obj, goal, goaldistance, goalwrap));
                     } else if movingobject_collectioncard == movingtype {
-                        let iNumHeldCards: i32 = pPlayer.score.subscore[0] as i32;
-                        let iHeldCards: i32 = pPlayer.score.subscore[1] as i32;
+                        let iNumHeldCards: i32 = g.player(pPlayer).score.subscore[0] as i32;
+                        let iHeldCards: i32 = g.player(pPlayer).score.subscore[1] as i32;
 
                         // C++ `break` out of the switch ends this object's iteration: `continue` here.
                         if iNumHeldCards == 3 {
@@ -530,13 +536,13 @@ impl CPlayerAI {
 
                             //If bot is holding all of the same type of card, then ignore all other cards
                             if iThreeHeldCards == 42 || iThreeHeldCards == 21 || iThreeHeldCards == 0 {
-                                nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                                nearest!(self.distance_to_object(g, obj, threat, threatdistance, threatwrap));
                                 continue;
                             }
 
                             let iTwoHeldCards = iHeldCards & 15;
                             if iTwoHeldCards == 10 || iTwoHeldCards == 5 || iTwoHeldCards == 0 {
-                                nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                                nearest!(self.distance_to_object(g, obj, goal, goaldistance, goalwrap));
                                 continue;
                             }
                         } else {
@@ -552,7 +558,7 @@ impl CPlayerAI {
                                             || (iTwoHeldCards == 5 && iCardValue != 1)
                                             || (iTwoHeldCards == 0 && iCardValue != 0))
                                     {
-                                        nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                                        nearest!(self.distance_to_object(g, obj, threat, threatdistance, threatwrap));
                                         continue;
                                     }
                                 }
@@ -560,32 +566,32 @@ impl CPlayerAI {
                                 let iHeldCard = iHeldCards & 3;
                                 let iCardValue: i32 = card.get_value() as i32;
                                 if card.get_type() == 1 || iHeldCard != iCardValue {
-                                    nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                                    nearest!(self.distance_to_object(g, obj, threat, threatdistance, threatwrap));
                                     continue;
                                 }
                             }
                         }
 
                         if iNumHeldCards == 3 {
-                            nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                            nearest!(self.distance_to_object(g, obj, threat, threatdistance, threatwrap));
                         } else {
-                            nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                            nearest!(self.distance_to_object(g, obj, goal, goaldistance, goalwrap));
                         }
                     }
                 }
                 object_frenzycard => {
-                    nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                    nearest!(self.distance_to_object(g, obj, goal, goaldistance, goalwrap));
                 }
 
                 object_pipe_coin => {
                     let mut coin = static_cast::<OMO_PipeCoin>(obj);
 
                     if coin.get_color() != 0 {
-                        if coin.get_team() == -1 || coin.get_team() == pPlayer.teamID {
-                            nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                        if coin.get_team() == -1 || coin.get_team() == g.player(pPlayer).teamID {
+                            nearest!(self.distance_to_object(g, obj, goal, goaldistance, goalwrap));
                         }
                     } else {
-                        nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                        nearest!(self.distance_to_object(g, obj, threat, threatdistance, threatwrap));
                     }
                 }
 
@@ -593,14 +599,14 @@ impl CPlayerAI {
                     let mut bonus = static_cast::<OMO_PipeBonus>(obj);
 
                     if bonus.get_type() != 5 {
-                        nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                        nearest!(self.distance_to_object(g, obj, goal, goaldistance, goalwrap));
                     } else {
-                        nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                        nearest!(self.distance_to_object(g, obj, threat, threatdistance, threatwrap));
                     }
                 }
 
                 object_pathhazard | object_orbithazard => {
-                    nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                    nearest!(self.distance_to_object(g, obj, threat, threatdistance, threatwrap));
                 }
 
                 object_phanto => {
@@ -609,19 +615,19 @@ impl CPlayerAI {
                     if phanto.get_type() == 2
                         || (!carriedItem.is_null() && carriedItem.get_moving_object_type() == movingobject_phantokey)
                     {
-                        nearest!(self.distance_to_object_center(obj, threat, threatdistance, threatwrap));
+                        nearest!(self.distance_to_object_center(g, obj, threat, threatdistance, threatwrap));
                     }
                 }
 
                 object_flamecannon => {
                     // IO_FlameCannon has no own `state`; this is CObject::state.
                     if obj.state > 0 {
-                        nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                        nearest!(self.distance_to_object(g, obj, threat, threatdistance, threatwrap));
                     }
                 }
 
                 _ => {
-                    nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                    nearest!(self.distance_to_object(g, obj, goal, goaldistance, goalwrap));
                 }
             }
         }
@@ -645,7 +651,7 @@ impl CPlayerAI {
                     }
 
                     if movingobject_powerup == movingtype {
-                        nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                        nearest!(self.distance_to_object(g, obj, goal, goaldistance, goalwrap));
                     } else if (movingobject_fireball == movingtype && static_cast::<MO_Fireball>(obj).iTeamID != iTeamID)
                         || movingobject_poisonpowerup == movingtype
                     {
@@ -653,13 +659,13 @@ impl CPlayerAI {
                             continue;
                         }
 
-                        nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                        nearest!(self.distance_to_object(g, obj, threat, threatdistance, threatwrap));
                     } else if (movingobject_goomba == movingtype || movingobject_koopa == movingtype) && obj.get_state() == 1 {
-                        nearest!(self.distance_to_object(obj, stomp, stompdistance, stompwrap));
+                        nearest!(self.distance_to_object(g, obj, stomp, stompdistance, stompwrap));
                     } else if movingobject_sledgebrother == movingtype {
-                        nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                        nearest!(self.distance_to_object(g, obj, threat, threatdistance, threatwrap));
                     } else if movingobject_treasurechest == movingtype {
-                        nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                        nearest!(self.distance_to_object(g, obj, goal, goaldistance, goalwrap));
                     } else if movingobject_flagbase == movingtype {
                         let mut flagbase = static_cast::<MO_FlagBase>(obj);
 
@@ -670,26 +676,26 @@ impl CPlayerAI {
                             continue;
                         }
 
-                        nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                        nearest!(self.distance_to_object(g, obj, goal, goaldistance, goalwrap));
                     } else {
                         continue;
                     }
                 }
 
                 object_area => {
-                    if static_cast::<OMO_Area>(obj).get_color_id() == pPlayer.colorID {
+                    if static_cast::<OMO_Area>(obj).get_color_id() == g.player(pPlayer).colorID {
                         continue;
                     }
 
-                    nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                    nearest!(self.distance_to_object(g, obj, goal, goaldistance, goalwrap));
                 }
 
                 object_kingofthehill_area => {
-                    nearest!(self.distance_to_object_center(obj, goal, goaldistance, goalwrap));
+                    nearest!(self.distance_to_object_center(g, obj, goal, goaldistance, goalwrap));
                 }
 
                 _ => {
-                    nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                    nearest!(self.distance_to_object(g, obj, goal, goaldistance, goalwrap));
                 }
             }
         }
@@ -713,49 +719,49 @@ impl CPlayerAI {
                     }
 
                     if movingobject_cheepcheep == movingtype {
-                        nearest!(self.distance_to_object(obj, stomp, stompdistance, stompwrap));
+                        nearest!(self.distance_to_object(g, obj, stomp, stompdistance, stompwrap));
                     } else if movingobject_bulletbill == movingtype {
                         if fInvincible {
                             continue;
                         }
 
-                        nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                        nearest!(self.distance_to_object(g, obj, threat, threatdistance, threatwrap));
                     } else if movingobject_hammer == movingtype && static_cast::<MO_Hammer>(obj).iTeamID != iTeamID {
                         if fInvincible {
                             continue;
                         }
 
-                        nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                        nearest!(self.distance_to_object(g, obj, threat, threatdistance, threatwrap));
                     } else if movingobject_iceblast == movingtype && static_cast::<MO_IceBlast>(obj).iTeamID != iTeamID {
                         if fInvincible {
                             continue;
                         }
 
-                        nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                        nearest!(self.distance_to_object(g, obj, threat, threatdistance, threatwrap));
                     } else if movingobject_boomerang == movingtype && static_cast::<MO_Boomerang>(obj).iTeamID != iTeamID {
                         if fInvincible {
                             continue;
                         }
 
-                        nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                        nearest!(self.distance_to_object(g, obj, threat, threatdistance, threatwrap));
                     } else if movingobject_bomb == movingtype && static_cast::<CO_Bomb>(obj).iTeamID != iTeamID {
                         if fInvincible {
                             continue;
                         }
 
-                        nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                        nearest!(self.distance_to_object(g, obj, threat, threatdistance, threatwrap));
                     } else if movingobject_podobo == movingtype && static_cast::<MO_Podobo>(obj).iTeamID != iTeamID {
                         if fInvincible {
                             continue;
                         }
 
-                        nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                        nearest!(self.distance_to_object(g, obj, threat, threatdistance, threatwrap));
                     } else if movingobject_explosion == movingtype && static_cast::<MO_Explosion>(obj).iTeamID != iTeamID {
                         if fInvincible {
                             continue;
                         }
 
-                        nearest!(self.distance_to_object_center(obj, threat, threatdistance, threatwrap));
+                        nearest!(self.distance_to_object_center(g, obj, threat, threatdistance, threatwrap));
                     }
                 }
                 object_thwomp | object_bowserfire => {
@@ -763,7 +769,7 @@ impl CPlayerAI {
                         continue;
                     }
 
-                    nearest!(self.distance_to_object_center(obj, threat, threatdistance, threatwrap));
+                    nearest!(self.distance_to_object_center(g, obj, threat, threatdistance, threatwrap));
                 }
                 object_race_goal => {
                     if g.game_values.gamemode.gamemode != game_mode_race {
@@ -776,11 +782,11 @@ impl CPlayerAI {
                         continue;
                     }
 
-                    nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                    nearest!(self.distance_to_object(g, obj, goal, goaldistance, goalwrap));
                 }
 
                 _ => {
-                    nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                    nearest!(self.distance_to_object(g, obj, goal, goaldistance, goalwrap));
                 }
             }
         }
@@ -789,38 +795,38 @@ impl CPlayerAI {
 
         //Figure out where the other players are
         for iPlayer in 0..g.players.len() {
-            if iPlayer == pPlayer.localID as usize || g.players[iPlayer].state != PlayerState::Ready {
+            if iPlayer == g.player(pPlayer).localID as usize || g.player(g.players[iPlayer]).state != PlayerState::Ready {
                 continue;
             }
 
             //Find players in jail on own team to tag
             if g.game_values.gamemode.gamemode == game_mode_jail {
-                if g.players[iPlayer].jail.is_active() && g.players[iPlayer].teamID == iTeamID {
-                    nearest!(self.distance_to_player(g.players[iPlayer], teammate, teammatedistance, teammatewrap));
+                if g.player(g.players[iPlayer]).jail.is_active() && g.player(g.players[iPlayer]).teamID == iTeamID {
+                    nearest!(self.distance_to_player(g, g.players[iPlayer], teammate, teammatedistance, teammatewrap));
                 }
             }
 
-            if g.players[iPlayer].teamID == iTeamID || g.players[iPlayer].state != PlayerState::Ready {
+            if g.player(g.players[iPlayer]).teamID == iTeamID || g.player(g.players[iPlayer]).state != PlayerState::Ready {
                 continue;
             }
 
             //If there is a chicken, only focus on stomping him
-            if !gmChicken.is_null() && !gmChicken.chicken().is_null() {
-                if gmChicken.chicken().teamID != iTeamID && gmChicken.chicken() != g.players[iPlayer] {
+            if !gmChicken.is_null() && !gmChicken.chicken().is_none() {
+                if g.player(gmChicken.chicken()).teamID != iTeamID && gmChicken.chicken() != g.players[iPlayer] {
                     continue;
                 }
             }
 
-            nearest!(self.distance_to_player(g.players[iPlayer], player, playerdistance, playerwrap));
+            nearest!(self.distance_to_player(g, g.players[iPlayer], player, playerdistance, playerwrap));
         }
     }
 
-    pub fn distance_to_object(&self, object: Ptr<dyn CObjectTrait>, target: &mut Ptr<dyn CObjectTrait>, nearest: &mut i32, wrap: &mut bool) {
+    pub fn distance_to_object(&self, g: &Game, object: Ptr<dyn CObjectTrait>, target: &mut ObjectId, nearest: &mut i32, wrap: &mut bool) {
         let pPlayer = self.pPlayer;
 
         //Calculate normal screen
-        let mut tx: i16 = (object.x() - pPlayer.ix as i32) as i16;
-        let ty: i16 = (object.y() - pPlayer.iy as i32) as i16;
+        let mut tx: i16 = (object.x() - g.player(pPlayer).ix as i32) as i16;
+        let ty: i16 = (object.y() - g.player(pPlayer).iy as i32) as i16;
         let mut fScreenWrap = false;
 
         //See if it is a shorter distance wrapping around the screen
@@ -835,18 +841,18 @@ impl CPlayerAI {
         let distance_player_pow2: i32 = tx as i32 * tx as i32 + ty as i32 * ty as i32; // a^2 = b^2 + c^2 :)
 
         if distance_player_pow2 < *nearest {
-            *target = object;
+            *target = object.id;
             *nearest = distance_player_pow2;
             *wrap = fScreenWrap;
         }
     }
 
-    pub fn distance_to_object_center(&self, object: Ptr<dyn CObjectTrait>, target: &mut Ptr<dyn CObjectTrait>, nearest: &mut i32, wrap: &mut bool) {
+    pub fn distance_to_object_center(&self, g: &Game, object: Ptr<dyn CObjectTrait>, target: &mut ObjectId, nearest: &mut i32, wrap: &mut bool) {
         let pPlayer = self.pPlayer;
 
         //Calculate normal screen
-        let mut tx: i16 = (object.x() + (object.collision_rect_w() as i32 / 2) - pPlayer.ix as i32 - HALFPW) as i16;
-        let ty: i16 = (object.y() + (object.collision_rect_h() as i32 / 2) - pPlayer.iy as i32 - HALFPH) as i16;
+        let mut tx: i16 = (object.x() + (object.collision_rect_w() as i32 / 2) - g.player(pPlayer).ix as i32 - HALFPW) as i16;
+        let ty: i16 = (object.y() + (object.collision_rect_h() as i32 / 2) - g.player(pPlayer).iy as i32 - HALFPH) as i16;
         let mut fScreenWrap = false;
 
         if tx as i32 > App::screenWidth / 2 {
@@ -860,18 +866,18 @@ impl CPlayerAI {
         let distance_player_pow2: i32 = tx as i32 * tx as i32 + ty as i32 * ty as i32;
 
         if distance_player_pow2 < *nearest {
-            *target = object;
+            *target = object.id;
             *nearest = distance_player_pow2;
             *wrap = fScreenWrap;
         }
     }
 
-    pub fn distance_to_player(&self, player: Ptr<CPlayer>, target: &mut Ptr<CPlayer>, nearest: &mut i32, wrap: &mut bool) {
+    pub fn distance_to_player(&self, g: &Game, player: PlayerId, target: &mut PlayerId, nearest: &mut i32, wrap: &mut bool) {
         let pPlayer = self.pPlayer;
 
         //Calculate normal screen
-        let mut tx: i16 = (player.ix as i32 - pPlayer.ix as i32) as i16;
-        let ty: i16 = (player.iy as i32 - pPlayer.iy as i32) as i16;
+        let mut tx: i16 = (g.player(player).ix as i32 - g.player(pPlayer).ix as i32) as i16;
+        let ty: i16 = (g.player(player).iy as i32 - g.player(pPlayer).iy as i32) as i16;
         let mut fScreenWrap = false;
 
         if tx as i32 > App::screenWidth / 2 {
@@ -942,7 +948,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
 
         //A percentage of the time the cpu will do nothing based on the difficulty level
         if RandomNumberGenerator::generator(gp.get()).get_boolean_threshold(100, iDecisionPercentage[g.game_values.cpudifficulty as usize] as i32)
-            && pPlayer.isready()
+            && g.player(pPlayer).isready()
         {
             return;
         }
@@ -952,7 +958,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
         playerKeys.game_turbo_mut().fDown = false;
         playerKeys.game_powerup_mut().fDown = false;
 
-        if pPlayer.isdead() || pPlayer.isspawning() {
+        if g.player(pPlayer).isdead() || g.player(pPlayer).isspawning() {
             return;
         }
 
@@ -967,8 +973,8 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
         let iTenSeconds: i16 = (15 * iDecisionPercentage[g.game_values.cpudifficulty as usize] as i32 / 10) as i16;
 
         //If there is a goal, then make sure we aren't paying attention to it for too long
-        if !this.nearestObjects.goal.is_null() {
-            if this.currentAttentionObject.iID == this.nearestObjects.goal.network_id() {
+        if !this.nearestObjects.goal.is_none() {
+            if this.currentAttentionObject.iID == ai_target(g, this.nearestObjects.goal).network_id() {
                 //If we have been paying attention to this goal for too long, then start ignoring it
                 this.currentAttentionObject.iTimer = this.currentAttentionObject.iTimer.wrapping_add(1);
                 if this.currentAttentionObject.iTimer > iTenSeconds {
@@ -981,7 +987,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                     this.attentionObjects.insert(ao.iID, ao);
                 }
             } else {
-                this.currentAttentionObject.iID = this.nearestObjects.goal.network_id();
+                this.currentAttentionObject.iID = ai_target(g, this.nearestObjects.goal).network_id();
                 this.currentAttentionObject.iTimer = 0;
             }
         } else {
@@ -1004,12 +1010,12 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
             this.attentionObjects.remove(td);
         }
 
-        let iStoredPowerup: i16 = g.game_values.gamepowerups[pPlayer.globalID as usize];
-        let mut carriedItem = pPlayer.carriedItem;
+        let iStoredPowerup: i16 = g.game_values.gamepowerups[g.player(pPlayer).globalID as usize];
+        let mut carriedItem = g.player(pPlayer).carriedItem;
         let carriedObj = carried_as_object(carriedItem);
-        let ix: i16 = pPlayer.ix;
-        let iy: i16 = pPlayer.iy;
-        let iTeamID: i16 = pPlayer.teamID;
+        let ix: i16 = g.player(pPlayer).ix;
+        let iy: i16 = g.player(pPlayer).iy;
+        let iTeamID: i16 = g.player(pPlayer).teamID;
 
         let ix32 = ix as i32;
         let iy32 = iy as i32;
@@ -1020,19 +1026,19 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
 
         let actionType: i16;
         let no = &this.nearestObjects;
-        if !no.threat.is_null() && no.threatdistance < 14400 && !pPlayer.is_invincible() {
+        if !no.threat.is_none() && no.threatdistance < 14400 && !g.player(pPlayer).is_invincible() {
             actionType = 2;
-        } else if !no.stomp.is_null() && no.stompdistance < 14400 {
+        } else if !no.stomp.is_none() && no.stompdistance < 14400 {
             actionType = 4;
-        } else if !no.goal.is_null() && !no.teammate.is_null() {
+        } else if !no.goal.is_none() && !no.teammate.is_none() {
             if no.goaldistance < no.teammatedistance {
                 actionType = 1;
             } else {
                 actionType = 3;
             }
-        } else if !no.teammate.is_null() {
+        } else if !no.teammate.is_none() {
             actionType = 3;
-        } else if !no.goal.is_null() {
+        } else if !no.goal.is_none() {
             if no.playerdistance < 8100 {
                 actionType = 0;
             } else {
@@ -1046,20 +1052,20 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
          * 3. Deal with closest item
          ***************************************************/
         //return if no players, goals, or threats available
-        if ((actionType != 0) || !no.player.is_null())
-            && (actionType != 1 || !no.goal.is_null())
-            && ((actionType != 2) || !no.threat.is_null())
-            && ((actionType != 3) || !no.teammate.is_null())
-            && ((actionType != 4) || !no.stomp.is_null())
+        if ((actionType != 0) || !no.player.is_none())
+            && (actionType != 1 || !no.goal.is_none())
+            && ((actionType != 2) || !no.threat.is_none())
+            && ((actionType != 3) || !no.teammate.is_none())
+            && ((actionType != 4) || !no.stomp.is_none())
             && (this.iFallDanger == 0)
         {
             //Use turbo
-            if pPlayer.bobomb {
+            if g.player(pPlayer).bobomb {
                 if no.playerdistance <= 4096 || no.stompdistance <= 4096 || no.threatdistance <= 4096 {
                     playerKeys.game_turbo_mut().fDown = true;
                 }
             } else {
-                if pPlayer.powerup == -1 || !RandomNumberGenerator::generator(gp.get()).get_boolean_scale(20) {
+                if g.player(pPlayer).powerup == -1 || !RandomNumberGenerator::generator(gp.get()).get_boolean_scale(20) {
                     playerKeys.game_turbo_mut().fDown = true;
                 }
 
@@ -1082,7 +1088,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                 let moveToward: *mut bool;
                 let moveAway: *mut bool;
 
-                if (player.ix > ix && no.playerwrap) || (player.ix < ix && !no.playerwrap) {
+                if (g.player(player).ix > ix && no.playerwrap) || (g.player(player).ix < ix && !no.playerwrap) {
                     moveToward = &mut playerKeys.game_left_mut().fDown;
                     moveAway = &mut playerKeys.game_right_mut().fDown;
                 } else {
@@ -1090,8 +1096,8 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                     moveAway = &mut playerKeys.game_left_mut().fDown;
                 }
 
-                let pix = player.ix as i32;
-                let piy = player.iy as i32;
+                let pix = g.player(player).ix as i32;
+                let piy = g.player(player).iy as i32;
 
                 //Move player relative to opponent when we are playing star mode and we are holding a star
                 if g.game_values.gamemode.gamemode == game_mode_star {
@@ -1104,8 +1110,8 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                             //If player is close
                             if piy <= iy32 && piy > iy32 - 60 && pix - ix32 < 90 && pix - ix32 > -90 {
                                 //And we are facing toward that player, throw the star
-                                if (pix > ix32 && pPlayer.is_facing_right(g)) || ((pix < ix32) && !pPlayer.is_facing_right(g)) {
-                                    pPlayer.throw_star = 30;
+                                if (pix > ix32 && g.player(pPlayer).is_facing_right(g)) || ((pix < ix32) && !g.player(pPlayer).is_facing_right(g)) {
+                                    g.player(pPlayer).throw_star = 30;
                                     playerKeys.game_turbo_mut().fDown = false;
                                 }
                             }
@@ -1122,20 +1128,20 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                         //If player is close
                         if piy > iy32 - 10 && piy < iy32 + 30 && (pix - ix32).abs() < 150 {
                             //And we are facing toward that player, throw the projectile
-                            if (pix > ix32 && pPlayer.is_facing_right(g)) || ((pix < ix32) && !pPlayer.is_facing_right(g)) {
+                            if (pix > ix32 && g.player(pPlayer).is_facing_right(g)) || ((pix < ix32) && !g.player(pPlayer).is_facing_right(g)) {
                                 playerKeys.game_turbo_mut().fDown = false;
                             }
                         }
                     }
                 } else if (!gmTag.is_null() && gmTag.tagged() == player)
-                    || player.is_invincible()
-                    || player.shyguy
+                    || g.player(player).is_invincible()
+                    || g.player(player).shyguy
                     || (!gmChicken.is_null() && gmChicken.chicken() == pPlayer)
                 {
                     *moveAway = true;
-                } else if pPlayer.is_invincible() || pPlayer.shyguy || pPlayer.bobomb || (!gmTag.is_null() && gmTag.tagged() == pPlayer) {
+                } else if g.player(pPlayer).is_invincible() || g.player(pPlayer).shyguy || g.player(pPlayer).bobomb || (!gmTag.is_null() && gmTag.tagged() == pPlayer) {
                     *moveToward = true;
-                } else if piy >= iy32 && !player.is_invincible() && !player.bobomb {
+                } else if piy >= iy32 && !g.player(player).is_invincible() && !g.player(player).bobomb {
                     *moveToward = true;
                 } else {
                     if no.playerdistance < 8100 {
@@ -1157,25 +1163,25 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                     pix - ix32 > -45 && RANDOM_BOOL(gp.get())
                 {
                     //or if player is high
-                    if !pPlayer.inair {
+                    if !g.player(pPlayer).inair {
                         playerKeys.game_down_mut().fDown = true;
                     }
 
-                    if !pPlayer.superstomp.is_in_super_stomp_state() {
+                    if !g.player(pPlayer).superstomp.is_in_super_stomp_state() {
                         //If the player has the tanooki or shoe, then try to super stomp on them
-                        if pPlayer.tanookisuit.is_on() || pPlayer.kuriboshoe.is_on() {
+                        if g.player(pPlayer).tanookisuit.is_on() || g.player(pPlayer).kuriboshoe.is_on() {
                             playerKeys.game_down_mut().fDown = true;
                             playerKeys.game_jump_mut().fPressed = true;
-                            if pPlayer.tanookisuit.is_on() {
+                            if g.player(pPlayer).tanookisuit.is_on() {
                                 playerKeys.game_turbo_mut().fPressed = true;
-                                pPlayer.lockfire = false;
+                                g.player(pPlayer).lockfire = false;
                             }
                         }
                     }
                 }
             } else if actionType == 1 {
                 //Go for goal
-                let mut goal = no.goal;
+                let mut goal = ai_target(g, no.goal);
 
                 if (goal.x() > ix32 && no.goalwrap) || (goal.x() < ix32 && !no.goalwrap) {
                     playerKeys.game_left_mut().fDown = true;
@@ -1186,14 +1192,14 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                 if goal.y() <= iy32 && goal.x() - ix32 < 45 && goal.x() - ix32 > -45 {
                     playerKeys.game_jump_mut().fDown = true;
                 } else if goal.y() > iy32 && goal.x() - ix32 < 45 && goal.x() - ix32 > -45 {
-                    if !pPlayer.inair {
+                    if !g.player(pPlayer).inair {
                         playerKeys.game_down_mut().fDown = true;
                     }
                 }
 
                 if !dynamic_cast::<CO_Egg>(goal).is_null() {
                     playerKeys.game_turbo_mut().fDown = true;
-                } else if !dynamic_cast::<CO_Star>(goal).is_null() && pPlayer.throw_star == 0 {
+                } else if !dynamic_cast::<CO_Star>(goal).is_null() && g.player(pPlayer).throw_star == 0 {
                     playerKeys.game_turbo_mut().fDown = true;
                 } else if !dynamic_cast::<CO_Flag>(goal).is_null() {
                     playerKeys.game_turbo_mut().fDown = true;
@@ -1228,7 +1234,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                 }
             } else if actionType == 2 {
                 //Evade Threat
-                let threat = no.threat;
+                let threat = ai_target(g, no.threat);
 
                 //If threat, always use turbo
                 playerKeys.game_turbo_mut().fDown = true;
@@ -1240,7 +1246,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                 }
 
                 if threat.y() <= iy32 && threat.x() - ix32 < 60 && threat.x() - ix32 > -60 {
-                    if !pPlayer.inair {
+                    if !g.player(pPlayer).inair {
                         playerKeys.game_down_mut().fDown = true;
                     }
                 } else if threat.y() > iy32 && threat.x() - ix32 < 60 && threat.x() - ix32 > -60 {
@@ -1249,8 +1255,8 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
             } else if actionType == 3 {
                 //Tag teammate
                 let teammate = no.teammate;
-                let tix = teammate.ix as i32;
-                let tiy = teammate.iy as i32;
+                let tix = g.player(teammate).ix as i32;
+                let tiy = g.player(teammate).iy as i32;
 
                 if (tix > ix32 && no.teammatewrap) || (tix < ix32 && !no.teammatewrap) {
                     playerKeys.game_left_mut().fDown = true;
@@ -1261,13 +1267,13 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                 if tiy <= iy32 && tix - ix32 < 45 && tix - ix32 > -45 {
                     playerKeys.game_jump_mut().fDown = true;
                 } else if tiy > iy32 && tix - ix32 < 45 && tix - ix32 > -45 {
-                    if !pPlayer.inair {
+                    if !g.player(pPlayer).inair {
                         playerKeys.game_down_mut().fDown = true;
                     }
                 }
             } else if actionType == 4 {
                 //Stomp something (goomba, koopa, cheepcheep)
-                let stomp = no.stomp;
+                let stomp = ai_target(g, no.stomp);
                 let moveToward: *mut bool;
                 let moveAway: *mut bool;
 
@@ -1280,8 +1286,8 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                 }
 
                 if stomp.y() > iy32 + PH
-                    || pPlayer.shyguy
-                    || pPlayer.is_invincible()
+                    || g.player(pPlayer).shyguy
+                    || g.player(pPlayer).is_invincible()
                     || (!carriedItem.is_null()
                         && (carriedItem.get_moving_object_type() == movingobject_shell
                             || carriedItem.get_moving_object_type() == movingobject_throwblock))
@@ -1299,18 +1305,18 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                 if stomp.y() <= iy32 + PH && no.stompdistance < 2025 {
                     playerKeys.game_jump_mut().fDown = true;
                 } else if stomp.y() > iy32 + PH && no.stompdistance < 2025 {
-                    if !pPlayer.inair {
+                    if !g.player(pPlayer).inair {
                         playerKeys.game_down_mut().fDown = true;
                     }
 
-                    if !pPlayer.superstomp.is_in_super_stomp_state() {
+                    if !g.player(pPlayer).superstomp.is_in_super_stomp_state() {
                         //If the player has the tanooki or shoe, then try to super stomp on them
-                        if pPlayer.tanookisuit.is_on() || pPlayer.kuriboshoe.is_on() {
+                        if g.player(pPlayer).tanookisuit.is_on() || g.player(pPlayer).kuriboshoe.is_on() {
                             playerKeys.game_down_mut().fDown = true;
                             playerKeys.game_jump_mut().fPressed = true;
-                            if pPlayer.tanookisuit.is_on() {
+                            if g.player(pPlayer).tanookisuit.is_on() {
                                 playerKeys.game_turbo_mut().fPressed = true;
-                                pPlayer.lockfire = false;
+                                g.player(pPlayer).lockfire = false;
                             }
                         }
                     }
@@ -1319,17 +1325,17 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
         }
 
         //Jump if trying to move left/right and x velocity is zero
-        if (playerKeys.game_left().fDown || playerKeys.game_right().fDown) && pPlayer.velx == 0.0f32 {
+        if (playerKeys.game_left().fDown || playerKeys.game_right().fDown) && g.player(pPlayer).velx == 0.0f32 {
             playerKeys.game_jump_mut().fDown = true;
         }
 
         //Pick up throwable blocks from below
-        if playerKeys.game_turbo().fDown && carriedItem.is_null() && !pPlayer.inair {
+        if playerKeys.game_turbo().fDown && carriedItem.is_null() && !g.player(pPlayer).inair {
             playerKeys.game_turbo_mut().fPressed = true;
         }
 
         //Stay inside tanooki statue
-        if pPlayer.tanookisuit.is_on() && pPlayer.tanookisuit.is_statue() {
+        if g.player(pPlayer).tanookisuit.is_on() && g.player(pPlayer).tanookisuit.is_statue() {
             playerKeys.game_down_mut().fDown = true;
         }
 
@@ -1344,7 +1350,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                 && !starmode.isplayerstar(g, pPlayer)
             {
                 playerKeys.game_turbo_mut().fDown = false;
-            } else if starmode.isplayerstar(g, pPlayer) && pPlayer.throw_star == 0 {
+            } else if starmode.isplayerstar(g, pPlayer) && g.player(pPlayer).throw_star == 0 {
                 playerKeys.game_turbo_mut().fDown = true;
             }
         }
@@ -1356,10 +1362,10 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
             //"Phanto Mode" specific stuff
             if g.game_values.gamemode.gamemode == game_mode_chase {
                 //Ignore the key if a phanto is really close
-                if !no.threat.is_null()
-                    && no.threat.get().get_object_type() == object_phanto
+                if !no.threat.is_none()
+                    && ai_target(g, no.threat).get_object_type() == object_phanto
                     && no.threatdistance < 4096
-                    && !pPlayer.is_invincible()
+                    && !g.player(pPlayer).is_invincible()
                 {
                     playerKeys.game_turbo_mut().fDown = false;
 
@@ -1386,7 +1392,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
             //Drop live bombs if they are not yours
             let bomb = dynamic_cast::<CO_Bomb>(carriedObj);
             if !bomb.is_null() {
-                if bomb.iTeamID != pPlayer.teamID {
+                if bomb.iTeamID != g.player(pPlayer).teamID {
                     playerKeys.game_turbo_mut().fDown = false;
                 }
             } else if carriedobjecttype == movingobject_carried || carriedobjecttype == movingobject_throwbox {
@@ -1550,21 +1556,21 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                     | PowerupType::IceWand
                     | PowerupType::Bomb
                     | PowerupType::Leaf
-                    | PowerupType::PWings => return pPlayer.powerup == -1,
-                    PowerupType::Star => return !pPlayer.is_invincible(),
-                    PowerupType::Bobomb => return !pPlayer.bobomb,
+                    | PowerupType::PWings => return g.player(pPlayer).powerup == -1,
+                    PowerupType::Star => return !g.player(pPlayer).is_invincible(),
+                    PowerupType::Bobomb => return !g.player(pPlayer).bobomb,
                     PowerupType::ShellGreen | PowerupType::ShellRed | PowerupType::ShellSpiny | PowerupType::ShellBuzzy => {
                         return carriedItem.is_null()
                     }
-                    PowerupType::Tanooki => return !pPlayer.tanookisuit.is_on(),
-                    PowerupType::JailKey => return pPlayer.jail.is_active(),
+                    PowerupType::Tanooki => return !g.player(pPlayer).tanookisuit.is_on(),
+                    PowerupType::JailKey => return g.player(pPlayer).jail.is_active(),
                     PowerupType::MysteryMushroom => {
                         //See if another player has a powerup
                         for iPlayer in 0..g.players.len() {
-                            if iPlayer == pPlayer.localID as usize || g.players[iPlayer].teamID == iTeamID {
+                            if iPlayer == g.player(pPlayer).localID as usize || g.player(g.players[iPlayer]).teamID == iTeamID {
                                 continue;
                             }
-                            if g.game_values.gamepowerups[g.players[iPlayer].globalID as usize] > 0 {
+                            if g.game_values.gamepowerups[g.player(g.players[iPlayer]).globalID as usize] > 0 {
                                 return true;
                             }
                         }
@@ -1619,13 +1625,13 @@ impl CPlayerAITrait for CSimpleAI {
         playerKeys.game_turbo_mut().fDown = false;
         playerKeys.game_powerup_mut().fDown = false;
 
-        if pPlayer.isdead() || pPlayer.isspawning() {
+        if g.player(pPlayer).isdead() || g.player(pPlayer).isspawning() {
             return;
         }
 
         //Hold down jump until player starts moving down again, then release jump button
-        if pPlayer.inair {
-            if pPlayer.vely > 0.0f32 {
+        if g.player(pPlayer).inair {
+            if g.player(pPlayer).vely > 0.0f32 {
                 playerKeys.game_jump_mut().fDown = false;
             } else {
                 playerKeys.game_jump_mut().fDown = true;
@@ -1639,4 +1645,9 @@ impl CPlayerAITrait for CSimpleAI {
             }
         }
     }
+}
+
+/// A target this think found; dead objects stay in their container until `clean_dead_objects`.
+fn ai_target(g: &Game, id: ObjectId) -> Ptr<dyn CObjectTrait> {
+    g.object(id).unwrap_or_else(|| panic!("no AI target {:?}", id))
 }

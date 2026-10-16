@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_ExtraHeartPowerup.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -41,17 +42,17 @@ impl CObjectTrait for PU_ExtraHeartPowerup {
     fn update(&mut self, g: &mut Game) {
         mo_powerup_update(g, self)
     }
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut gp = g.ptr();
         let mut player = player;
         if self.state > 0 {
             if g.game_values.gamemode.gamemode == game_mode_health {
-                if player.score().subscore[1] < g.game_values.gamemodesettings.health.maxlife {
-                    player.score().subscore[1] += 1;
+                if g.player(player).score().subscore[1] < g.game_values.gamemodesettings.health.maxlife {
+                    g.player(player).score().subscore[1] += 1;
                 }
 
-                if player.score().subscore[0] < g.game_values.gamemodesettings.health.maxlife {
-                    player.score().subscore[0] += 1;
+                if g.player(player).score().subscore[0] < g.game_values.gamemodesettings.health.maxlife {
+                    g.player(player).score().subscore[0] += 1;
                 }
             }
 

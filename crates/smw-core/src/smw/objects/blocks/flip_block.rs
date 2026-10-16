@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/FlipBlock.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -172,27 +173,27 @@ impl IO_BlockTrait for B_FlipBlock {
         self.state = 0;
     }
 
-    fn collide_player_dir(&mut self, g: &mut Game, player: Ptr<CPlayer>, direction: i16, useBehavior: bool) -> bool {
+    fn collide_player_dir(&mut self, g: &mut Game, player: PlayerId, direction: i16, useBehavior: bool) -> bool {
         let iposx = self.iposx as i32;
         let iposy = self.iposy as i32;
         let iw = self.iw as i32;
         let ih = self.ih as i32;
 
         if self.hidden {
-            if player.fOldY >= (iposy + ih) as f32 && direction == 0 {
+            if g.player(player).fOldY >= (iposy + ih) as f32 && direction == 0 {
                 return self.hitbottom_player(g, player, useBehavior);
             }
 
             return true;
         }
 
-        if (player.fOldY + PH as f32 <= iposy as f32 || self.state > 1) && direction == 2 {
+        if (g.player(player).fOldY + PH as f32 <= iposy as f32 || self.state > 1) && direction == 2 {
             return self.hittop_player(g, player, useBehavior);
-        } else if (player.fOldY >= (iposy + ih) as f32 || self.state > 1) && direction == 0 {
+        } else if (g.player(player).fOldY >= (iposy + ih) as f32 || self.state > 1) && direction == 0 {
             return self.hitbottom_player(g, player, useBehavior);
-        } else if (player.fOldX + PW as f32 <= iposx as f32 || self.state > 1) && direction == 1 {
+        } else if (g.player(player).fOldX + PW as f32 <= iposx as f32 || self.state > 1) && direction == 1 {
             return self.hitleft_player(g, player, useBehavior);
-        } else if (player.fOldX >= (iposx + iw) as f32 || self.state > 1) && direction == 3 {
+        } else if (g.player(player).fOldX >= (iposx + iw) as f32 || self.state > 1) && direction == 3 {
             return self.hitright_player(g, player, useBehavior);
         }
 
@@ -203,16 +204,16 @@ impl IO_BlockTrait for B_FlipBlock {
         self.state == 1
     }
 
-    fn hittop_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hittop_player(&mut self, g: &mut Game, mut player: PlayerId, useBehavior: bool) -> bool {
         if self.state == 2 || self.state == 3 {
-            io_block_hittop_player(self, player, useBehavior);
+            io_block_hittop_player(g, self, player, useBehavior);
 
-            player.vely = -VELNOTEBLOCKREPEL;
+            g.player(player).vely = -VELNOTEBLOCKREPEL;
             return false;
         } else if self.state == 0 {
-            io_block_hittop_player(self, player, useBehavior);
+            io_block_hittop_player(g, self, player, useBehavior);
 
-            if player.is_super_stomping() {
+            if g.player(player).is_super_stomping() {
                 self.state = 2;
                 self.explode(g);
                 return true;
@@ -224,13 +225,13 @@ impl IO_BlockTrait for B_FlipBlock {
         true
     }
 
-    fn hitbottom_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitbottom_player(&mut self, g: &mut Game, mut player: PlayerId, useBehavior: bool) -> bool {
         if useBehavior && self.state == 0 {
-            player.vely = cap_falling_velocity(-player.vely * BOUNCESTRENGTH);
-            player.set_yf((self.iposy as i32 + self.ih as i32) as f32 + 0.2f32);
+            g.player(player).vely = cap_falling_velocity(-g.player(player).vely * BOUNCESTRENGTH);
+            g.player(player).set_yf((self.iposy as i32 + self.ih as i32) as f32 + 0.2f32);
 
-            self.iBumpPlayerID = player.globalID;
-            self.iBumpTeamID = player.teamID;
+            self.iBumpPlayerID = g.player(player).globalID;
+            self.iBumpTeamID = g.player(player).teamID;
 
             if self.hidden {
                 self.hidden = false;
@@ -247,17 +248,17 @@ impl IO_BlockTrait for B_FlipBlock {
         true
     }
 
-    fn hitright_player(&mut self, g: &mut Game, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitright_player(&mut self, g: &mut Game, player: PlayerId, useBehavior: bool) -> bool {
         if useBehavior && self.state == 0 {
-            io_block_hitright_player(self, player, useBehavior);
+            io_block_hitright_player(g, self, player, useBehavior);
         }
 
         true
     }
 
-    fn hitleft_player(&mut self, g: &mut Game, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitleft_player(&mut self, g: &mut Game, player: PlayerId, useBehavior: bool) -> bool {
         if useBehavior && self.state == 0 {
-            io_block_hitleft_player(self, player, useBehavior);
+            io_block_hitleft_player(g, self, player, useBehavior);
         }
 
         true

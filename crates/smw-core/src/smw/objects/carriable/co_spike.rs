@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_Spike.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -45,7 +46,7 @@ impl CObjectTrait for CO_Spike {
     fn draw(&mut self, g: &mut Game) {
         co_spring_draw(g, self)
     }
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         co_spring_collide_player(g, self, player)
     }
 }
@@ -69,10 +70,10 @@ impl CO_SpringTrait for CO_Spike {
         self
     }
 
-    fn hittop(&mut self, g: &mut Game, player: Ptr<CPlayer>) {
+    fn hittop(&mut self, g: &mut Game, player: PlayerId) {
         let mut player = player;
-        if player.isready() && !player.is_shielded() && !player.is_invincible() && !player.kuriboshoe.is_on() && !player.shyguy {
-            player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1);
+        if g.player(player).isready() && !g.player(player).is_shielded() && !g.player(player).is_invincible() && !g.player(player).kuriboshoe.is_on() && !g.player(player).shyguy {
+            g.player(player).kill_player_map_hazard(g, false, KillStyle::Environment, false, -1);
         }
     }
 }

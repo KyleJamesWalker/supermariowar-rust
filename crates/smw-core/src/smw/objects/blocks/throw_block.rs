@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/ThrowBlock.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -52,18 +53,18 @@ impl B_ThrowBlock {
         b
     }
 
-    pub fn give_block_to_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) {
+    pub fn give_block_to_player(&mut self, g: &mut Game, mut player: PlayerId) {
         let mut gp = g.ptr();
         let mut rm = g.rm;
         let mut block = Ptr::new_box(CO_ThrowBlock::new(g, rm.spr_blueblock, Vec2s::new(self.ix, self.iy), self.iType));
         let item: Ptr<dyn MO_CarriedObjectTrait> = Ptr::from_mut(block.get() as &mut dyn MO_CarriedObjectTrait);
-        if player.accept_item(item) {
+        if g.player(player).accept_item(item) {
             self.dead = true;
             g.g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
             g.g_map.update_tile_gap(self.col, self.row);
 
             block.owner = player;
-            block.iPlayerID = player.globalID;
+            block.iPlayerID = g.player(player).globalID;
             gp.objectcontainer[1].add(g, block);
         } else {
             block.delete();
@@ -102,17 +103,17 @@ impl CObjectTrait for B_ThrowBlock {
 impl IO_BlockTrait for B_ThrowBlock {
     crate::impl_io_block_plumbing!();
 
-    fn hittop_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hittop_player(&mut self, g: &mut Game, mut player: PlayerId, useBehavior: bool) -> bool {
         if useBehavior {
-            player.set_yf((self.iposy as i32 - PH) as f32 - 0.2f32);
-            player.fOldY = player.fy;
-            player.inair = false;
-            player.fallthrough = false;
-            player.killsinrowinair = 0;
-            player.extrajumps = 0;
-            player.vely = GRAVITATION;
+            g.player(player).set_yf((self.iposy as i32 - PH) as f32 - 0.2f32);
+            g.player(player).fOldY = g.player(player).fy;
+            g.player(player).inair = false;
+            g.player(player).fallthrough = false;
+            g.player(player).killsinrowinair = 0;
+            g.player(player).extrajumps = 0;
+            g.player(player).vely = GRAVITATION;
 
-            if player.pressed_accept_item_key() && player.is_accepting_item() {
+            if g.player(player).pressed_accept_item_key() && g.player(player).is_accepting_item() {
                 self.give_block_to_player(g, player);
                 return true;
             } else {
@@ -123,20 +124,20 @@ impl IO_BlockTrait for B_ThrowBlock {
         false
     }
 
-    fn hitright_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitright_player(&mut self, g: &mut Game, mut player: PlayerId, useBehavior: bool) -> bool {
         if useBehavior {
-            player.set_xf((self.iposx as i32 + self.iw as i32) as f32 + 0.2f32);
-            player.fOldX = player.fx;
+            g.player(player).set_xf((self.iposx as i32 + self.iw as i32) as f32 + 0.2f32);
+            g.player(player).fOldX = g.player(player).fx;
 
-            if player.velx < 0.0f32 {
-                player.velx = 0.0f32;
+            if g.player(player).velx < 0.0f32 {
+                g.player(player).velx = 0.0f32;
             }
 
-            if player.oldvelx < 0.0f32 {
-                player.oldvelx = 0.0f32;
+            if g.player(player).oldvelx < 0.0f32 {
+                g.player(player).oldvelx = 0.0f32;
             }
 
-            if player.is_accepting_item() {
+            if g.player(player).is_accepting_item() {
                 self.give_block_to_player(g, player);
                 return true;
             } else {
@@ -147,20 +148,20 @@ impl IO_BlockTrait for B_ThrowBlock {
         true
     }
 
-    fn hitleft_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitleft_player(&mut self, g: &mut Game, mut player: PlayerId, useBehavior: bool) -> bool {
         if useBehavior {
-            player.set_xf((self.iposx as i32 - PW) as f32 - 0.2f32);
-            player.fOldX = player.fx;
+            g.player(player).set_xf((self.iposx as i32 - PW) as f32 - 0.2f32);
+            g.player(player).fOldX = g.player(player).fx;
 
-            if player.velx > 0.0f32 {
-                player.velx = 0.0f32;
+            if g.player(player).velx > 0.0f32 {
+                g.player(player).velx = 0.0f32;
             }
 
-            if player.oldvelx > 0.0f32 {
-                player.oldvelx = 0.0f32;
+            if g.player(player).oldvelx > 0.0f32 {
+                g.player(player).oldvelx = 0.0f32;
             }
 
-            if player.is_accepting_item() {
+            if g.player(player).is_accepting_item() {
                 self.give_block_to_player(g, player);
                 return true;
             } else {

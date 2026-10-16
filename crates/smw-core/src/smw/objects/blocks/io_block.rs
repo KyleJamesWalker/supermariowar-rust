@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/IO_Block.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::game::App;
@@ -79,7 +80,7 @@ pub fn io_block_reset<T: IO_BlockTrait + ?Sized>(this: &mut T) {
     this.block_mut().state = 0;
 }
 
-pub fn io_block_collide_player_dir<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T, player: Ptr<CPlayer>, direction: i16, useBehavior: bool) -> bool {
+pub fn io_block_collide_player_dir<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T, player: PlayerId, direction: i16, useBehavior: bool) -> bool {
     if direction == 2 {
         this.hittop_player(g, player, useBehavior)
     } else if direction == 0 {
@@ -91,60 +92,60 @@ pub fn io_block_collide_player_dir<T: IO_BlockTrait + ?Sized>(g: &mut Game, this
     }
 }
 
-pub fn io_block_hittop_player<T: IO_BlockTrait + ?Sized>(this: &mut T, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+pub fn io_block_hittop_player<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: PlayerId, useBehavior: bool) -> bool {
     if useBehavior {
         let iposy = this.block().iposy;
-        player.set_yf((iposy as i32 - PH) as f32 - 0.2);
-        player.inair = false;
-        player.fallthrough = false;
-        player.killsinrowinair = 0;
-        player.extrajumps = 0;
-        player.vely = GRAVITATION;
+        g.player(player).set_yf((iposy as i32 - PH) as f32 - 0.2);
+        g.player(player).inair = false;
+        g.player(player).fallthrough = false;
+        g.player(player).killsinrowinair = 0;
+        g.player(player).extrajumps = 0;
+        g.player(player).vely = GRAVITATION;
     }
 
     false
 }
 
-pub fn io_block_hitbottom_player<T: IO_BlockTrait + ?Sized>(this: &mut T, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+pub fn io_block_hitbottom_player<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: PlayerId, useBehavior: bool) -> bool {
     if useBehavior {
-        player.vely = cap_falling_velocity(-player.vely * BOUNCESTRENGTH);
+        g.player(player).vely = cap_falling_velocity(-g.player(player).vely * BOUNCESTRENGTH);
         let b = this.block();
-        player.set_yf((b.iposy as i32 + b.ih as i32) as f32 + 0.2);
+        g.player(player).set_yf((b.iposy as i32 + b.ih as i32) as f32 + 0.2);
     }
 
     false
 }
 
-pub fn io_block_hitright_player<T: IO_BlockTrait + ?Sized>(this: &mut T, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+pub fn io_block_hitright_player<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: PlayerId, useBehavior: bool) -> bool {
     if useBehavior {
         let b = this.block();
-        player.set_xf((b.iposx as i32 + b.iw as i32) as f32 + 0.2);
-        player.fOldX = player.fx;
+        g.player(player).set_xf((b.iposx as i32 + b.iw as i32) as f32 + 0.2);
+        g.player(player).fOldX = g.player(player).fx;
 
-        if player.velx < 0.0 {
-            player.velx = 0.0;
+        if g.player(player).velx < 0.0 {
+            g.player(player).velx = 0.0;
         }
 
-        if player.oldvelx < 0.0 {
-            player.oldvelx = 0.0;
+        if g.player(player).oldvelx < 0.0 {
+            g.player(player).oldvelx = 0.0;
         }
     }
 
     false
 }
 
-pub fn io_block_hitleft_player<T: IO_BlockTrait + ?Sized>(this: &mut T, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+pub fn io_block_hitleft_player<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: PlayerId, useBehavior: bool) -> bool {
     if useBehavior {
         let b = this.block();
-        player.set_xf((b.iposx as i32 - PW) as f32 - 0.2);
-        player.fOldX = player.fx;
+        g.player(player).set_xf((b.iposx as i32 - PW) as f32 - 0.2);
+        g.player(player).fOldX = g.player(player).fx;
 
-        if player.velx > 0.0 {
-            player.velx = 0.0;
+        if g.player(player).velx > 0.0 {
+            g.player(player).velx = 0.0;
         }
 
-        if player.oldvelx > 0.0 {
-            player.oldvelx = 0.0;
+        if g.player(player).oldvelx > 0.0 {
+            g.player(player).oldvelx = 0.0;
         }
     }
 
@@ -220,9 +221,9 @@ pub fn io_block_bounce_moving_object<T: IO_BlockTrait + ?Sized>(g: &mut Game, th
         if !g.game_values.gamemode.gameover && iBumpPlayerID >= 0 {
             let mut player = get_player_from_global_id(g, iBumpPlayerID);
 
-            if !player.is_null() {
-                player.add_killer_award(g, Ptr::null(), style);
-                player.score.adjust_score(g, 1);
+            if !player.is_none() {
+                g.player(player).add_killer_award(g, PlayerId::NONE, style);
+                g.player(player).score.adjust_score(g, 1);
             }
         }
     } else if r#type == movingobject_shell {
@@ -244,23 +245,23 @@ pub fn io_block_kill_players_and_objects_inside_block<T: IO_BlockTrait + ?Sized>
     //Loop through players
     for i in 0..g.players.len() {
         let mut player = g.players[i];
-        if !player.isready() {
+        if !g.player(player).isready() {
             continue;
         }
 
         let mut iSwapSides: i16 = 0;
-        if player.fOldX >= (iposx as i32 + TILESIZE) as f32 {
+        if g.player(player).fOldX >= (iposx as i32 + TILESIZE) as f32 {
             iSwapSides = -App::screenWidth as i16;
         }
 
-        if player.fOldX + PW as f32 + iSwapSides as f32 >= iposx as f32
-            && player.fOldX + (iSwapSides as f32) < (iposx as i32 + TILESIZE) as f32
-            && player.fOldY + PH as f32 >= iposy as f32
-            && player.fOldY < (iposy as i32 + TILESIZE) as f32
+        if g.player(player).fOldX + PW as f32 + iSwapSides as f32 >= iposx as f32
+            && g.player(player).fOldX + (iSwapSides as f32) < (iposx as i32 + TILESIZE) as f32
+            && g.player(player).fOldY + PH as f32 >= iposy as f32
+            && g.player(player).fOldY < (iposy as i32 + TILESIZE) as f32
         {
-            player.iSuicideCreditPlayerID = playerID;
-            player.iSuicideCreditTimer = 1;
-            player.kill_player_map_hazard(g, true, KillStyle::Environment, true, -1);
+            g.player(player).iSuicideCreditPlayerID = playerID;
+            g.player(player).iSuicideCreditTimer = 1;
+            g.player(player).kill_player_map_hazard(g, true, KillStyle::Environment, true, -1);
         }
     }
 

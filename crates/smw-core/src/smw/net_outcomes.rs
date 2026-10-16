@@ -165,30 +165,30 @@ pub fn net_kill(g: &mut Game, args: &[i32]) {
     let style = kill_style(args[4]);
     let (fForce, fKillCarriedItem) = (args[5] != 0, args[6] != 0);
     outcome_state(g).g_killResult = match args[0] {
-        0 if !killed.is_null() => player_killed_player_now(g, args[1] as i16, killed, deathstyle, style, fForce, fKillCarriedItem),
-        1 if !first.is_null() && !killed.is_null() => first.get().killed_player_now(g, killed, deathstyle, style, fForce, fKillCarriedItem),
-        2 if !first.is_null() => first.get().kill_player_map_hazard_now(g, fForce, style, fKillCarriedItem, args[7] as i16),
+        0 if !killed.is_none() => player_killed_player_now(g, args[1] as i16, killed, deathstyle, style, fForce, fKillCarriedItem),
+        1 if !first.is_none() && !killed.is_none() => g.player(first).killed_player_now(g, killed, deathstyle, style, fForce, fKillCarriedItem),
+        2 if !first.is_none() => g.player(first).kill_player_map_hazard_now(g, fForce, style, fKillCarriedItem, args[7] as i16),
         _ => PlayerKillType::None,
     };
 
     // A joiner whose copy of the victim was still spawning or protected dies as the host's did.
     let hostKilled = args.get(8).is_some_and(|&r| r == PlayerKillType::Normal as i32 || r == PlayerKillType::Removed as i32);
     let mut victim = if args[0] == 2 { first } else { killed };
-    if hostKilled && !victim.is_null() && (victim.state == PlayerState::Ready || victim.state == PlayerState::Spawning) {
-        victim.die(g, deathstyle, false, fKillCarriedItem);
+    if hostKilled && !victim.is_none() && (g.player(victim).state == PlayerState::Ready || g.player(victim).state == PlayerState::Spawning) {
+        g.player(victim).die(g, deathstyle, false, fKillCarriedItem);
     }
 }
 
 pub fn kill_outcome(g: &mut Game, args: &[i32]) -> String {
     let mut p = get_player_from_global_id(g, args[2] as i16);
-    if p.is_null() {
+    if p.is_none() {
         p = get_player_from_global_id(g, args[1] as i16);
     }
     let result = outcome_state(g).g_killResult as i32;
-    if p.is_null() {
+    if p.is_none() {
         format!("r{}", result)
     } else {
-        format!("r{} p{} s{}", result, p.globalID, p.state as i32)
+        format!("r{} p{} s{}", result, g.player(p).globalID, g.player(p).state as i32)
     }
 }
 

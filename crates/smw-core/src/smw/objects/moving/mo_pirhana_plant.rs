@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_PirhanaPlant.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -290,13 +291,13 @@ impl CObjectTrait for MO_PirhanaPlant {
 
                 for i in 0..g.players.len() {
                     let player = g.players[i];
-                    if player.state != PlayerState::Ready {
+                    if g.player(player).state != PlayerState::Ready {
                         continue;
                     }
 
                     // Calculate normal screen distance
-                    let tx: i16 = (iPlantX as i32 - player.ix as i32 - PW) as i16;
-                    let ty: i16 = (iPlantY as i32 - player.iy as i32 - PH) as i16;
+                    let tx: i16 = (iPlantX as i32 - g.player(player).ix as i32 - PW) as i16;
+                    let ty: i16 = (iPlantY as i32 - g.player(player).iy as i32 - PH) as i16;
 
                     let distance_player_pow2: i32 = tx as i32 * tx as i32 + ty as i32 * ty as i32;
 
@@ -380,17 +381,17 @@ impl CObjectTrait for MO_PirhanaPlant {
         }
     }
 
-    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
         if self.state == 0 {
             return false;
         }
 
-        let fHitPlayerTop = self.fOldY + self.collisionHeight as f32 <= player.fOldY && self.iy as i32 + self.collisionHeight as i32 >= player.iy as i32;
+        let fHitPlayerTop = self.fOldY + self.collisionHeight as f32 <= g.player(player).fOldY && self.iy as i32 + self.collisionHeight as i32 >= g.player(player).iy as i32;
 
-        if player.is_invincible() || player.tanookisuit.is_statue() || (player.kuriboshoe.is_on() && !fHitPlayerTop) {
+        if g.player(player).is_invincible() || g.player(player).tanookisuit.is_statue() || (g.player(player).kuriboshoe.is_on() && !fHitPlayerTop) {
             self.kill_plant(g);
-        } else if !player.is_shielded() && !player.shyguy {
-            return player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
+        } else if !g.player(player).is_shielded() && !g.player(player).shyguy {
+            return g.player(player).kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
         }
 
         false

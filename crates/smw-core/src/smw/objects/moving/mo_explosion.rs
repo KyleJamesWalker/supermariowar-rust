@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_Explosion.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::game::App;
@@ -58,12 +59,12 @@ impl CObjectTrait for MO_Explosion {
         io_moving_object_draw(g, self)
     }
 
-    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
-        if player.globalID != self.iPlayerID
-            && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID)
-            && !player.is_invincible()
-            && !player.is_shielded()
-            && !player.shyguy
+    fn collide_player(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
+        if g.player(player).globalID != self.iPlayerID
+            && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != g.player(player).teamID)
+            && !g.player(player).is_invincible()
+            && !g.player(player).is_shielded()
+            && !g.player(player).shyguy
         {
             // Find the player that made this explosion so we can attribute a kill
             player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, self.iStyle, false, false);

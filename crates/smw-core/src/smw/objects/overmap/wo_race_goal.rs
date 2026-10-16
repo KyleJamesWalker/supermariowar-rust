@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_RaceGoal.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -202,13 +203,13 @@ impl CObjectTrait for OMO_RaceGoal {
         }
     }
 
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut gp = g.ptr();
-        if g.game_values.gamemode.getgamemode() == game_mode_race && player.tanookisuit.not_statue() {
+        if g.game_values.gamemode.getgamemode() == game_mode_race && g.player(player).tanookisuit.not_statue() {
             let gamemode: &mut CGM_Race = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Race>().unwrap();
 
-            if self.tagged[player.teamID as usize] != player.colorID && gamemode.get_next_goal(player.teamID) >= self.goalID {
-                self.tagged[player.teamID as usize] = player.colorID;
+            if self.tagged[g.player(player).teamID as usize] != g.player(player).colorID && gamemode.get_next_goal(g.player(player).teamID) >= self.goalID {
+                self.tagged[g.player(player).teamID as usize] = g.player(player).colorID;
 
                 if self.isfinishline {
                     if_sound_on_play(g, &mut gp.rm.sfx_racesound);
@@ -217,8 +218,8 @@ impl CObjectTrait for OMO_RaceGoal {
                 }
             }
 
-            if gamemode.get_next_goal(player.teamID) == self.goalID {
-                gamemode.set_next_goal(g, player.teamID);
+            if gamemode.get_next_goal(g.player(player).teamID) == self.goalID {
+                gamemode.set_next_goal(g, g.player(player).teamID);
             }
         }
         false

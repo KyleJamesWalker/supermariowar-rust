@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/GameMode.cpp
 
+use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::eyecandy::EC_Announcement;
 use crate::common::game_mode::*;
@@ -39,8 +40,8 @@ pub fn remove_players_but_team(g: &mut Game, teamid: i16) {
 pub fn remove_players_but_team_now(g: &mut Game, teamid: i16) {
     for i in 0..g.players.len() {
         let mut player = g.players[i];
-        if player.get_team_id() != teamid {
-            player.state = PlayerState::Dead;
+        if g.player(player).get_team_id() != teamid {
+            g.player(player).state = PlayerState::Dead;
         }
     }
 }
@@ -64,8 +65,8 @@ pub fn remove_players_but_highest_scoring_now(g: &mut Game) {
     //Remove all players that don't have that max score
     for i in 0..g.players.len() {
         let mut player = g.players[i];
-        if player.score().score < iMaxScore {
-            player.state = PlayerState::Dead;
+        if g.player(player).score().score < iMaxScore {
+            g.player(player).state = PlayerState::Dead;
         }
     }
 }
@@ -198,12 +199,12 @@ pub fn remove_team_now(g: &mut Game, teamid: i16) -> bool {
     let mut iAnnouncementColor: i16 = -1;
     for i in 0..g.players.len() {
         let mut player = g.players[i];
-        if player.get_team_id() == teamid {
+        if g.player(player).get_team_id() == teamid {
             if iAnnouncementColor == -1 {
-                iAnnouncementColor = player.get_color_id();
+                iAnnouncementColor = g.player(player).get_color_id();
             }
 
-            player.state = PlayerState::Dead;
+            g.player(player).state = PlayerState::Dead;
         }
     }
 
@@ -249,8 +250,8 @@ impl CGameMode {
         if self.winningteam > -1 {
             for i in 0..g.players.len() {
                 let mut player = g.players[i];
-                if player.get_team_id() == self.winningteam {
-                    player.spawn_text(g, "Winner!");
+                if g.player(player).get_team_id() == self.winningteam {
+                    g.player(player).spawn_text(g, "Winner!");
                 }
             }
         }
@@ -287,7 +288,7 @@ impl CGameMode {
         }
     }
 
-    pub fn get_highest_score_player(&mut self, g: &mut Game, fGetHighest: bool) -> Ptr<CPlayer> {
+    pub fn get_highest_score_player(&mut self, g: &mut Game, fGetHighest: bool) -> PlayerId {
         let mut gp = g.ptr();
         let mut count: i16 = 1;
         let mut tiedplayers: [i16; 4] = [0; 4];
@@ -296,7 +297,7 @@ impl CGameMode {
         //Find the first non-dead player and use them for the first player to compare to
         let mut j: usize = 0;
         while j < g.players.len() {
-            if !g.players[j].isdead() {
+            if !g.player(g.players[j]).isdead() {
                 count = 1;
                 tiedplayers[0] = j as i16;
                 break;
@@ -307,9 +308,9 @@ impl CGameMode {
         //Loop through all players, comparing scores to find the highest/lowest
         let mut i = j + 1;
         while i < g.players.len() {
-            if !g.players[i].isdead() {
-                let si = g.players[i].score().score;
-                let s0 = g.players[tiedplayers[0] as usize].score().score;
+            if !g.player(g.players[i]).isdead() {
+                let si = g.player(g.players[i]).score().score;
+                let s0 = g.player(g.players[tiedplayers[0] as usize]).score().score;
                 if (!fGetHighest && si < s0) || (fGetHighest && si > s0) {
                     count = 1;
                     tiedplayers[0] = i as i16;
@@ -325,13 +326,13 @@ impl CGameMode {
     }
 
     //Returns number of players in list
-    pub fn get_score_ranked_player_list(&mut self, g: &mut Game, outPlayers: &mut [Ptr<CPlayer>; 4], fGetHighest: bool) -> i16 {
+    pub fn get_score_ranked_player_list(&mut self, g: &mut Game, outPlayers: &mut [PlayerId; 4], fGetHighest: bool) -> i16 {
         let mut gp = g.ptr();
         let mut iNumPlayersInList: i16 = 0;
 
         for i in 0..g.players.len() {
             let player = g.players[i];
-            if player.isdead() {
+            if g.player(player).isdead() {
                 continue;
             }
 
@@ -347,8 +348,8 @@ impl CGameMode {
             let mut iRandom: i16 = 0;
             let mut iIndex: i16 = 0;
             while (iIndex as i32) < iNumPlayersInList as i32 - 1 {
-                let a = outPlayers[iIndex as usize].score().score;
-                let b = outPlayers[iIndex as usize + 1].score().score;
+                let a = g.player(outPlayers[iIndex as usize]).score().score;
+                let b = g.player(outPlayers[iIndex as usize + 1]).score().score;
                 let swap = (fGetHighest && a < b) || (!fGetHighest && a > b) || (a == b && RANDOM_BOOL(gp.get()) && {
                     let r = iRandom < 5;
                     iRandom += 1;
@@ -409,7 +410,7 @@ pub fn cgamemode_think<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T) {
     if g.netplay.active {
         for k in 0..g.players.len() {
             if g.netplay.player_disconnected[k] {
-                gp.players[k].spawn_text(g, "Disconnected!");
+                g.player(gp.players[k]).spawn_text(g, "Disconnected!");
             }
         }
     }
@@ -419,29 +420,29 @@ pub fn cgamemode_think<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T) {
     }
 }
 
-pub fn cgamemode_playerkilledplayer<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, mut inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+pub fn cgamemode_playerkilledplayer<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, mut inflictor: PlayerId, other: PlayerId, _style: KillStyle) -> PlayerKillType {
     //Penalize killing your team mates
     if !this.gm().gameover {
-        if inflictor.get_team_id() == other.get_team_id() {
-            inflictor.score().adjust_score(g, -1);
+        if g.player(inflictor).get_team_id() == g.player(other).get_team_id() {
+            g.player(inflictor).score().adjust_score(g, -1);
         } else {
-            inflictor.score().adjust_score(g, 1);
+            g.player(inflictor).score().adjust_score(g, 1);
         }
     }
 
     PlayerKillType::Normal
 }
 
-pub fn cgamemode_playerkilledself<T: CGameModeTrait + ?Sized>(_this: &mut T, mut player: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
-    if player.is_bobomb() {
-        player.set_corpse_type(2); //flag to use bobomb corpse sprite
+pub fn cgamemode_playerkilledself<T: CGameModeTrait + ?Sized>(g: &mut Game, _this: &mut T, mut player: PlayerId, _style: KillStyle) -> PlayerKillType {
+    if g.player(player).is_bobomb() {
+        g.player(player).set_corpse_type(2); //flag to use bobomb corpse sprite
     }
 
     PlayerKillType::Normal
 }
 
-pub fn cgamemode_playerextraguy<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: Ptr<CPlayer>, iType: i16) {
+pub fn cgamemode_playerextraguy<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: PlayerId, iType: i16) {
     if !this.gm().gameover {
-        player.score().adjust_score(g, iType);
+        g.player(player).score().adjust_score(g, iType);
     }
 }

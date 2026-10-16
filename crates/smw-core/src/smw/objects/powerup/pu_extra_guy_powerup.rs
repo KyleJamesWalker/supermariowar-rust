@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_ExtraGuyPowerup.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -48,7 +49,7 @@ impl CObjectTrait for PU_ExtraGuyPowerup {
     fn update(&mut self, g: &mut Game) {
         mo_powerup_update(g, self)
     }
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut gp = g.ptr();
         if self.state > 0 {
             gp.game_values.gamemode.playerextraguy(g, player, self.iType);
@@ -57,12 +58,12 @@ impl CObjectTrait for PU_ExtraGuyPowerup {
             let iSrcY = ((if self.iType == 5 { 3 } else { self.iType as i32 - 1 }) * 16) as i16;
             g.eyecandy[2].emplace(EC_FloatingObject::new(
                 g.rm.spr_extralife,
-                (player.ix as i32 + HALFPW - 19) as i16,
-                (player.iy as i32 - 16) as i16,
+                (g.player(player).ix as i32 + HALFPW - 19) as i16,
+                (g.player(player).iy as i32 - 16) as i16,
                 0.0f32,
                 -1.5f32,
                 62,
-                (player.colorID as i32 * 38) as i16,
+                (g.player(player).colorID as i32 * 38) as i16,
                 iSrcY,
                 38,
                 16,

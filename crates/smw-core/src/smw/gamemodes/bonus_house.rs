@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/BonusHouse.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
@@ -106,7 +107,7 @@ impl CGameModeTrait for CGM_Bonus {
     fn draw_background(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         //Draw Toad
-        gp.rm.sprite(gp.rm.spr_worldbonushouse).draw_src(g, 544, 256, &Rect { x: if gp.players[0].left_x() > 544 { 224 } else { 192 }, y: 0, w: 32, h: 64 });
+        gp.rm.sprite(gp.rm.spr_worldbonushouse).draw_src(g, 544, 256, &Rect { x: if g.player(gp.players[0]).left_x() > 544 { 224 } else { 192 }, y: 0, w: 32, h: 64 });
 
         //Draw Bonus House Title
         gp.rm.sprite(gp.rm.menu_plain_field).draw_src(g, 0, 0, &Rect { x: 0, y: 0, w: App::screenWidth / 2, h: 32 });
@@ -126,14 +127,14 @@ impl CGameModeTrait for CGM_Bonus {
     //Override so it doesn't display winner text after you choose a powerup
     fn think(&mut self, g: &mut Game) {}
 
-    fn playerkilledplayer(&mut self, g: &mut Game, _inflictor: Ptr<CPlayer>, _other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, _inflictor: PlayerId, _other: PlayerId, _style: KillStyle) -> PlayerKillType {
         PlayerKillType::None
     }
-    fn playerkilledself(&mut self, g: &mut Game, _player: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, _player: PlayerId, _style: KillStyle) -> PlayerKillType {
         PlayerKillType::None
     }
 
-    fn playerextraguy(&mut self, g: &mut Game, _player: Ptr<CPlayer>, _iType: i16) {}
+    fn playerextraguy(&mut self, g: &mut Game, _player: PlayerId, _iType: i16) {}
 
     fn has_stored_powerups(&mut self) -> bool {
         false

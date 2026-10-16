@@ -1,4 +1,5 @@
 //! Port of src/common/IO_Block.h
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -49,7 +50,7 @@ pub trait IO_BlockTrait: CObjectTrait {
         crate::smw::objects::blocks::io_block::io_block_reset(self)
     }
 
-    fn collide_player_dir(&mut self, g: &mut Game, player: Ptr<CPlayer>, direction: i16, useBehavior: bool) -> bool {
+    fn collide_player_dir(&mut self, g: &mut Game, player: PlayerId, direction: i16, useBehavior: bool) -> bool {
         crate::smw::objects::blocks::io_block::io_block_collide_player_dir(g, self, player, direction, useBehavior)
     }
     fn collide_object_dir(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>, direction: i16) -> bool {
@@ -63,17 +64,17 @@ pub trait IO_BlockTrait: CObjectTrait {
         self.block().hidden
     }
 
-    fn hittop_player(&mut self, g: &mut Game, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
-        crate::smw::objects::blocks::io_block::io_block_hittop_player(self, player, useBehavior)
+    fn hittop_player(&mut self, g: &mut Game, player: PlayerId, useBehavior: bool) -> bool {
+        crate::smw::objects::blocks::io_block::io_block_hittop_player(g, self, player, useBehavior)
     }
-    fn hitbottom_player(&mut self, g: &mut Game, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
-        crate::smw::objects::blocks::io_block::io_block_hitbottom_player(self, player, useBehavior)
+    fn hitbottom_player(&mut self, g: &mut Game, player: PlayerId, useBehavior: bool) -> bool {
+        crate::smw::objects::blocks::io_block::io_block_hitbottom_player(g, self, player, useBehavior)
     }
-    fn hitright_player(&mut self, g: &mut Game, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
-        crate::smw::objects::blocks::io_block::io_block_hitright_player(self, player, useBehavior)
+    fn hitright_player(&mut self, g: &mut Game, player: PlayerId, useBehavior: bool) -> bool {
+        crate::smw::objects::blocks::io_block::io_block_hitright_player(g, self, player, useBehavior)
     }
-    fn hitleft_player(&mut self, g: &mut Game, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
-        crate::smw::objects::blocks::io_block::io_block_hitleft_player(self, player, useBehavior)
+    fn hitleft_player(&mut self, g: &mut Game, player: PlayerId, useBehavior: bool) -> bool {
+        crate::smw::objects::blocks::io_block::io_block_hitleft_player(g, self, player, useBehavior)
     }
 
     fn hittop_object(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {

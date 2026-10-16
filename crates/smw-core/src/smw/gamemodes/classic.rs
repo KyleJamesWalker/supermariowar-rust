@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/Classic.cpp
 
+use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::game_mode::*;
 use crate::common::game_values::if_sound_on_play;
@@ -36,13 +37,13 @@ impl CGameModeTrait for CGM_Classic {
     fn init(&mut self, g: &mut Game) {
         cgm_classic_init(g, self)
     }
-    fn playerkilledplayer(&mut self, g: &mut Game, inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, inflictor: PlayerId, other: PlayerId, style: KillStyle) -> PlayerKillType {
         cgm_classic_playerkilledplayer(g, self, inflictor, other, style)
     }
-    fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, player: PlayerId, style: KillStyle) -> PlayerKillType {
         cgm_classic_playerkilledself(g, self, player, style)
     }
-    fn playerextraguy(&mut self, g: &mut Game, player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, player: PlayerId, iType: i16) {
         cgm_classic_playerextraguy(g, self, player, iType)
     }
 }
@@ -62,7 +63,7 @@ pub fn cgm_classic_init(g: &mut Game, this: &mut CGM_Classic) {
     }
 }
 
-pub fn cgm_classic_playerkilledplayer(g: &mut Game, this: &mut CGM_Classic, mut inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+pub fn cgm_classic_playerkilledplayer(g: &mut Game, this: &mut CGM_Classic, mut inflictor: PlayerId, mut other: PlayerId, style: KillStyle) -> PlayerKillType {
         let mut gp = g.ptr();
     if this.gameover {
         return PlayerKillType::Normal;
@@ -71,14 +72,14 @@ pub fn cgm_classic_playerkilledplayer(g: &mut Game, this: &mut CGM_Classic, mut 
     //If we are playing classic "sumo" mode, then only score hazard kills
     if g.game_values.gamemode.gamemode != game_mode_classic || g.game_values.gamemodesettings.classic.scoring == ScoringStyle::AllKills || style == KillStyle::Push {
         if this.fReverseScoring {
-            other.score().adjust_score(g, 1);
+            g.player(other).score().adjust_score(g, 1);
         } else {
-            other.score().adjust_score(g, -1);
+            g.player(other).score().adjust_score(g, -1);
 
             if !this.playedwarningsound {
                 let mut countscore: i16 = 0;
                 for k in 0..g.score_cnt {
-                    if Ptr::from_mut(inflictor.score()) == g.score[k as usize] {
+                    if Ptr::from_mut(g.player(inflictor).score()) == g.score[k as usize] {
                         continue;
                     }
 
@@ -90,8 +91,8 @@ pub fn cgm_classic_playerkilledplayer(g: &mut Game, this: &mut CGM_Classic, mut 
                 }
             }
 
-            if other.score().score <= 0 {
-                remove_team(g, other.get_team_id());
+            if g.player(other).score().score <= 0 {
+                remove_team(g, g.player(other).get_team_id());
                 return PlayerKillType::Removed;
             }
         }
@@ -99,22 +100,22 @@ pub fn cgm_classic_playerkilledplayer(g: &mut Game, this: &mut CGM_Classic, mut 
 
     if g.game_values.gamemode.gamemode == game_mode_classic && g.game_values.gamemodesettings.classic.style == DeathStyle::Shield {
         if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
-        other.shield().reset(g);
+        g.player(other).shield().reset(g);
         return PlayerKillType::NonKill;
     }
 
     PlayerKillType::Normal
 }
 
-pub fn cgm_classic_playerkilledself(g: &mut Game, this: &mut CGM_Classic, mut player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+pub fn cgm_classic_playerkilledself(g: &mut Game, this: &mut CGM_Classic, mut player: PlayerId, style: KillStyle) -> PlayerKillType {
         let mut gp = g.ptr();
-    cgamemode_playerkilledself(this, player, style);
+    cgamemode_playerkilledself(g, this, player, style);
 
     if !this.gameover {
         if this.fReverseScoring {
-            player.score().adjust_score(g, 1);
+            g.player(player).score().adjust_score(g, 1);
         } else {
-            player.score().adjust_score(g, -1);
+            g.player(player).score().adjust_score(g, -1);
 
             if !this.playedwarningsound {
                 let mut countscore: i16 = 0;
@@ -141,15 +142,15 @@ pub fn cgm_classic_playerkilledself(g: &mut Game, this: &mut CGM_Classic, mut pl
                 }
             }
 
-            if player.score().score <= 0 {
-                remove_team(g, player.get_team_id());
+            if g.player(player).score().score <= 0 {
+                remove_team(g, g.player(player).get_team_id());
                 return PlayerKillType::Removed;
             }
         }
 
         if g.game_values.gamemode.gamemode == game_mode_classic && g.game_values.gamemodesettings.classic.style == DeathStyle::Shield {
             if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
-            player.shield().reset(g);
+            g.player(player).shield().reset(g);
             return PlayerKillType::NonKill;
         }
     }
@@ -157,12 +158,12 @@ pub fn cgm_classic_playerkilledself(g: &mut Game, this: &mut CGM_Classic, mut pl
     PlayerKillType::Normal
 }
 
-pub fn cgm_classic_playerextraguy(g: &mut Game, this: &mut CGM_Classic, mut player: Ptr<CPlayer>, iType: i16) {
+pub fn cgm_classic_playerextraguy(g: &mut Game, this: &mut CGM_Classic, mut player: PlayerId, iType: i16) {
     if !this.gameover {
         if this.fReverseScoring {
-            player.score().adjust_score(g, -iType);
+            g.player(player).score().adjust_score(g, -iType);
         } else {
-            player.score().adjust_score(g, iType);
+            g.player(player).score().adjust_score(g, iType);
         }
     }
 }

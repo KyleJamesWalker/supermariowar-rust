@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/Survival.cpp
 
+use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_mode::*;
@@ -132,13 +133,13 @@ impl CGameModeTrait for CGM_Survival {
         }
     }
 
-    fn playerkilledplayer(&mut self, g: &mut Game, inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, inflictor: PlayerId, other: PlayerId, style: KillStyle) -> PlayerKillType {
         cgm_classic_playerkilledplayer(g, &mut self.cgm_classic, inflictor, other, style)
     }
-    fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, player: PlayerId, style: KillStyle) -> PlayerKillType {
         cgm_classic_playerkilledself(g, &mut self.cgm_classic, player, style)
     }
-    fn playerextraguy(&mut self, g: &mut Game, player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, player: PlayerId, iType: i16) {
         cgm_classic_playerextraguy(g, &mut self.cgm_classic, player, iType)
     }
 }

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/walkingenemy/WalkingEnemy.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -297,19 +298,19 @@ pub fn mo_walking_enemy_update<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, t
     }
 }
 
-pub fn mo_walking_enemy_collide_player<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, this: &mut T, player: Ptr<CPlayer>) -> bool {
+pub fn mo_walking_enemy_collide_player<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, this: &mut T, player: PlayerId) -> bool {
         let mut gp = g.ptr();
     let mut player = player;
     if this.we().state == 0 {
         return false;
     }
 
-    if player.is_invincible() || this.we().frozen {
+    if g.player(player).is_invincible() || this.we().frozen {
         let killStyle = this.we().killStyle;
-        player.add_killer_award(g, Ptr::null(), killStyle);
+        g.player(player).add_killer_award(g, PlayerId::NONE, killStyle);
 
         if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
-            player.score().adjust_score(g, 1);
+            g.player(player).score().adjust_score(g, 1);
         }
 
         if this.we().frozen {
@@ -320,7 +321,7 @@ pub fn mo_walking_enemy_collide_player<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut
         }
     } else {
         let o = this.we();
-        if player.fOldY + PH as f32 <= o.fOldY && player.iy as i32 + PH >= o.iy as i32 {
+        if g.player(player).fOldY + PH as f32 <= o.fOldY && g.player(player).iy as i32 + PH >= o.iy as i32 {
             return this.hittop_player(g, player);
         } else {
             return this.hitother(g, player);
@@ -330,13 +331,13 @@ pub fn mo_walking_enemy_collide_player<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut
     false
 }
 
-pub fn mo_walking_enemy_hitother<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, _this: &mut T, player: Ptr<CPlayer>) -> bool {
+pub fn mo_walking_enemy_hitother<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, _this: &mut T, player: PlayerId) -> bool {
     let mut player = player;
-    if player.is_shielded() {
+    if g.player(player).is_shielded() {
         return false;
     }
 
-    player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill
+    g.player(player).kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill
 }
 
 pub fn mo_walking_enemy_collide_object<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, this: &mut T, object: Ptr<dyn IO_MovingObjectTrait>) {
@@ -375,12 +376,12 @@ pub fn mo_walking_enemy_collide_object<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut
 
             if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
                 // Find the player that shot this fireball so we can attribute a kill
-                let mut killer: Ptr<CPlayer> = get_player_from_global_id(g, object.iPlayerID);
+                let mut killer: PlayerId = get_player_from_global_id(g, object.iPlayerID);
 
-                if !killer.is_null() {
+                if !killer.is_none() {
                     let killStyle = this.we().killStyle;
-                    killer.add_killer_award(g, Ptr::null(), killStyle);
-                    killer.score().adjust_score(g, 1);
+                    g.player(killer).add_killer_award(g, PlayerId::NONE, killStyle);
+                    g.player(killer).score().adjust_score(g, 1);
 
                     if r#type == movingobject_shell {
                         object.as_any().downcast_mut::<CO_Shell>().unwrap().add_moving_kill(g, killer);
@@ -474,8 +475,8 @@ pub trait MO_WalkingEnemyTrait: IO_MovingObjectTrait {
         mo_walking_enemy_place(g, self.we_mut())
     }
 
-    fn hittop_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool;
-    fn hitother(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn hittop_player(&mut self, g: &mut Game, player: PlayerId) -> bool;
+    fn hitother(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut gp = g.ptr();
         mo_walking_enemy_hitother(gp.get(), self, player)
     }

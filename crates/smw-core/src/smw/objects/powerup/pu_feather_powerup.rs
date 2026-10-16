@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_FeatherPowerup.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -125,11 +126,11 @@ pub fn pu_feather_powerup_update<T: PU_FeatherPowerupTrait + ?Sized>(this: &mut 
     }
 }
 
-pub fn pu_feather_powerup_collide_player<T: PU_FeatherPowerupTrait + ?Sized>(g: &mut Game, this: &mut T, player: Ptr<CPlayer>) -> bool {
+pub fn pu_feather_powerup_collide_player<T: PU_FeatherPowerupTrait + ?Sized>(g: &mut Game, this: &mut T, player: PlayerId) -> bool {
     let mut player = player;
     let o = this.fp_mut();
     if o.state > 0 {
-        player.set_powerup(g, 3);
+        g.player(player).set_powerup(g, 3);
         o.dead = true;
     }
 
@@ -182,7 +183,7 @@ impl CObjectTrait for PU_FeatherPowerup {
     fn update(&mut self, g: &mut Game) {
         pu_feather_powerup_update(self)
     }
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         pu_feather_powerup_collide_player(g, self, player)
     }
 }

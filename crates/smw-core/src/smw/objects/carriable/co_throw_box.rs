@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_ThrowBox.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -68,13 +69,13 @@ impl CO_ThrowBox {
         o
     }
 
-    pub fn kill_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
-        if player.is_invincible() || player.shyguy {
+    pub fn kill_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
+        if g.player(player).is_invincible() || g.player(player).shyguy {
             self.die(g);
             return false;
         }
 
-        if player.is_shielded() {
+        if g.player(player).is_shielded() {
             return false;
         }
 
@@ -107,9 +108,9 @@ impl CO_ThrowBox {
         self.dead = true;
         if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
 
-        if !self.owner.is_null() {
-            self.owner.carriedItem = Ptr::null();
-            self.owner = Ptr::null();
+        if !self.owner.is_none() {
+            g.player(self.owner).carriedItem = Ptr::null();
+            self.owner = PlayerId::NONE;
         }
 
         // Check to see if we should spawn an item here
@@ -137,7 +138,7 @@ impl CObjectTrait for CO_ThrowBox {
         Some(self)
     }
 
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut player = player;
         // Kill the player if it is moving
 
@@ -146,7 +147,7 @@ impl CObjectTrait for CO_ThrowBox {
             return false;
         }
 
-        if self.has_kill_velocity() && player.globalID != self.iPlayerID {
+        if self.has_kill_velocity() && g.player(player).globalID != self.iPlayerID {
             return self.kill_player(g, player);
         }
 
@@ -163,8 +164,8 @@ impl CObjectTrait for CO_ThrowBox {
         }*/
 
         // Otherwise allow them to pick this box up
-        if self.owner.is_null() && player.isready() {
-            if player.accept_item(self.as_carried_ptr()) {
+        if self.owner.is_none() && g.player(player).isready() {
+            if g.player(player).accept_item(self.as_carried_ptr()) {
                 self.owner = player;
             }
         }
@@ -236,7 +237,7 @@ impl CObjectTrait for CO_ThrowBox {
         self.fOldX = self.fx;
         self.fOldY = self.fy;
 
-        if !self.owner.is_null() {
+        if !self.owner.is_none() {
             self.move_to_owner(g);
             self.inair = true;
         } else {
@@ -264,9 +265,9 @@ impl CObjectTrait for CO_ThrowBox {
         let x = self.ix as i32 - self.collisionOffsetX as i32;
         let y = self.iy as i32 - self.collisionOffsetY as i32;
         let src = Rect { x: self.drawframe as i32, y: 0, w: self.iw as i32, h: self.ih as i32 };
-        if !self.owner.is_null() && self.owner.iswarping() {
-            let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32) };
-            g.rm.sprite(self.spr).draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);
+        if !self.owner.is_none() && g.player(self.owner).iswarping() {
+            let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(g.player(self.owner).get_warp_state() as i32) };
+            g.rm.sprite(self.spr).draw_clip(g, x, y, &src, edge, g.player(self.owner).get_warp_plane() as i32);
         } else {
             g.rm.sprite(self.spr).draw_src(g, x, y, &src);
         }
@@ -338,9 +339,9 @@ impl MO_CarriedObjectTrait for CO_ThrowBox {
     crate::impl_carried_object_plumbing!();
 
     fn drop(&mut self, g: &mut Game) {
-        if !self.owner.is_null() {
-            self.iPlayerID = self.owner.globalID;
-            self.iTeamID = self.owner.teamID;
+        if !self.owner.is_none() {
+            self.iPlayerID = g.player(self.owner).globalID;
+            self.iTeamID = g.player(self.owner).teamID;
         }
 
         if io_moving_object_collision_detection_checksides(g, self) {
@@ -351,9 +352,9 @@ impl MO_CarriedObjectTrait for CO_ThrowBox {
     }
 
     fn kick(&mut self, g: &mut Game) {
-        if !self.owner.is_null() {
-            self.iPlayerID = self.owner.globalID;
-            self.iTeamID = self.owner.teamID;
+        if !self.owner.is_none() {
+            self.iPlayerID = g.player(self.owner).globalID;
+            self.iTeamID = g.player(self.owner).teamID;
         }
 
         if io_moving_object_collision_detection_checksides(g, self) {

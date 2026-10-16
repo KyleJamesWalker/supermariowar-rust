@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/Tag.cpp
 
+use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::eyecandy::{EC_GravText, EC_SingleAnimation};
 use crate::common::game_mode::*;
@@ -17,7 +18,7 @@ use crate::smw::player::CPlayer;
 pub struct CGM_Tag {
     pub cgame_mode: CGameMode,
 
-    pub m_tagged: Ptr<CPlayer>,    /// Frames toward the next point; never reset between games, like the C++ function-local static.
+    pub m_tagged: PlayerId,    /// Frames toward the next point; never reset between games, like the C++ function-local static.
     counter: i16,
 }
 impl_base!(CGM_Tag => cgame_mode: CGameMode);
@@ -58,7 +59,7 @@ impl CGM_Tag {
     }
 
     pub fn new() -> Self {
-        let mut this = CGM_Tag { cgame_mode: CGameMode::new(), m_tagged: Ptr::null(), counter: 0 };
+        let mut this = CGM_Tag { cgame_mode: CGameMode::new(), m_tagged: PlayerId::NONE, counter: 0 };
         this.goal = 200;
         this.gamemode = game_mode_tag;
 
@@ -66,11 +67,11 @@ impl CGM_Tag {
         this
     }
 
-    pub fn tagged(&self) -> Ptr<CPlayer> {
+    pub fn tagged(&self) -> PlayerId {
         self.m_tagged
     }
 
-    pub fn set_tagged(&mut self, player: Ptr<CPlayer>) {
+    pub fn set_tagged(&mut self, player: PlayerId) {
         self.m_tagged = player;
     }
 }
@@ -91,30 +92,30 @@ impl CGameModeTrait for CGM_Tag {
             }
         }
 
-        self.set_tagged(Ptr::null());
+        self.set_tagged(PlayerId::NONE);
     }
 
     fn think(&mut self, g: &mut Game) {
         if self.gameover {
             self.displayplayertext(g);
         } else {
-            if self.m_tagged.is_null() && !net_random::event(g, Ev::TagReassign, &[]) {
+            if self.m_tagged.is_none() && !net_random::event(g, Ev::TagReassign, &[]) {
                 self.reassign(g);
             }
-            if self.m_tagged.is_null() {
+            if self.m_tagged.is_none() {
                 return;
             }
 
             let mut tagged = self.m_tagged;
-            if tagged.isready() {
+            if g.player(tagged).isready() {
                 self.counter += 1;
                 if self.counter >= g.game_values.pointspeed {
                     self.counter = 0;
 
                     if self.fReverseScoring {
-                        tagged.score().adjust_score(g, 1);
+                        g.player(tagged).score().adjust_score(g, 1);
                     } else {
-                        tagged.score().adjust_score(g, -1);
+                        g.player(tagged).score().adjust_score(g, -1);
                     }
                 }
             }
@@ -130,29 +131,29 @@ impl CGameModeTrait for CGM_Tag {
             }
 
             let mut tagged = self.m_tagged;
-            if tagged.score().score <= 0 {
-                remove_team(g, tagged.get_team_id());
-                self.m_tagged = Ptr::null();
+            if g.player(tagged).score().score <= 0 {
+                remove_team(g, g.player(tagged).get_team_id());
+                self.m_tagged = PlayerId::NONE;
             }
         }
     }
 
-    fn playerkilledplayer(&mut self, g: &mut Game, mut inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, mut inflictor: PlayerId, mut other: PlayerId, _style: KillStyle) -> PlayerKillType {
         let mut gp = g.ptr();
         if inflictor == self.m_tagged {
             self.m_tagged = other;
-            inflictor.shield().reset(g);
+            g.player(inflictor).shield().reset(g);
             g.eyecandy[2].emplace(EC_GravText::new(
                 Ptr::from_mut(&mut g.rm.game_font_large),
-                other.center_x(),
-                other.bottom_y(),
+                g.player(other).center_x(),
+                g.player(other).bottom_y(),
                 "Tagged!".to_string(),
                 (-(VELJUMP as f64) * 1.5) as f32,
             ));
             g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
                 g.rm.spr_fireballexplosion,
-                (other.center_x() as i32 - 16) as i16,
-                (other.center_y() as i32 - 16) as i16,
+                (g.player(other).center_x() as i32 - 16) as i16,
+                (g.player(other).center_y() as i32 - 16) as i16,
                 3,
                 8,
             ));
@@ -161,15 +162,15 @@ impl CGameModeTrait for CGM_Tag {
 
         if !self.gameover {
             if self.fReverseScoring {
-                other.score().adjust_score(g, 5);
+                g.player(other).score().adjust_score(g, 5);
                 return PlayerKillType::Normal;
             } else {
-                other.score().adjust_score(g, -5);
+                g.player(other).score().adjust_score(g, -5);
             }
 
             let mut countscore: i16 = 0;
             for k in 0..g.score_cnt {
-                if Ptr::from_mut(inflictor.score()) == g.score[k as usize] {
+                if Ptr::from_mut(g.player(inflictor).score()) == g.score[k as usize] {
                     continue;
                 }
 
@@ -180,10 +181,10 @@ impl CGameModeTrait for CGM_Tag {
                 self.playwarningsound(g);
             }
 
-            if other.score().score <= 0 {
-                other.score().set_score(g, 0);
+            if g.player(other).score().score <= 0 {
+                g.player(other).score().set_score(g, 0);
 
-                remove_team(g, other.get_team_id());
+                remove_team(g, g.player(other).get_team_id());
                 return PlayerKillType::Removed;
             }
         }
@@ -191,15 +192,15 @@ impl CGameModeTrait for CGM_Tag {
         PlayerKillType::Normal
     }
 
-    fn playerkilledself(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
-        cgamemode_playerkilledself(self, player, style);
+    fn playerkilledself(&mut self, g: &mut Game, mut player: PlayerId, style: KillStyle) -> PlayerKillType {
+        cgamemode_playerkilledself(g, self, player, style);
 
         if !self.gameover {
             if self.fReverseScoring {
-                player.score().adjust_score(g, 5);
+                g.player(player).score().adjust_score(g, 5);
                 return PlayerKillType::Normal;
             } else {
-                player.score().adjust_score(g, -5);
+                g.player(player).score().adjust_score(g, -5);
             }
 
             let playwarning = tag_warning_needed(g, self.goal);
@@ -208,9 +209,9 @@ impl CGameModeTrait for CGM_Tag {
                 self.playwarningsound(g);
             }
 
-            if player.score().score <= 0 {
-                player.score().set_score(g, 0);
-                remove_team(g, player.get_team_id());
+            if g.player(player).score().score <= 0 {
+                g.player(player).score().set_score(g, 0);
+                remove_team(g, g.player(player).get_team_id());
                 return PlayerKillType::Removed;
             }
         }
@@ -218,12 +219,12 @@ impl CGameModeTrait for CGM_Tag {
         PlayerKillType::Normal
     }
 
-    fn playerextraguy(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, mut player: PlayerId, iType: i16) {
         if !self.gameover {
             if self.fReverseScoring {
-                player.score().adjust_score(g, (-10 * iType as i32) as i16);
+                g.player(player).score().adjust_score(g, (-10 * iType as i32) as i16);
             } else {
-                player.score().adjust_score(g, (10 * iType as i32) as i16);
+                g.player(player).score().adjust_score(g, (10 * iType as i32) as i16);
             }
         }
     }
@@ -236,7 +237,7 @@ fn tag_mode(g: &mut Game) -> Option<&'static mut CGM_Tag> {
 
 pub fn net_reassign(g: &mut Game) {
     if let Some(this) = tag_mode(g) {
-        if this.m_tagged.is_null() {
+        if this.m_tagged.is_none() {
             this.reassign(g);
         }
     }
@@ -244,7 +245,7 @@ pub fn net_reassign(g: &mut Game) {
 
 pub fn net_state(g: &mut Game) -> String {
     match tag_mode(g) {
-        Some(this) if !this.m_tagged.is_null() => format!("tagged{}", this.m_tagged.globalID),
+        Some(this) if !this.m_tagged.is_none() => format!("tagged{}", g.player(this.m_tagged).globalID),
         _ => "tagged-".to_string(),
     }
 }

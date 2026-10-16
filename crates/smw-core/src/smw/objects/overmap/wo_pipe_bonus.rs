@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_PipeBonus.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -88,7 +89,7 @@ impl CObjectTrait for OMO_PipeBonus {
         }
     }
 
-    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
         let mut gp = g.ptr();
         if self.iUncollectableTime > 0 {
             return false;
@@ -96,7 +97,7 @@ impl CObjectTrait for OMO_PipeBonus {
 
         // fireball
         if self.iType == 5 {
-            if !player.is_shielded() {
+            if !g.player(player).is_shielded() {
                 self.dead = true;
                 g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
                     g.rm.spr_fireballexplosion,
@@ -106,14 +107,14 @@ impl CObjectTrait for OMO_PipeBonus {
                     8,
                 ));
 
-                if !player.is_invincible() {
-                    return player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
+                if !g.player(player).is_invincible() {
+                    return g.player(player).kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
                 }
             }
 
             return false;
         } else if !g.game_values.gamemode.gameover {
-            gp.pipegamemode.set_bonus(g, (self.iType as i32 + 1) as i16, self.iDuration, player.get_team_id());
+            gp.pipegamemode.set_bonus(g, (self.iType as i32 + 1) as i16, self.iDuration, g.player(player).get_team_id());
         }
 
         self.dead = true;

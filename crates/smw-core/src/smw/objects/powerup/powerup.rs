@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/Powerup.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -81,7 +82,7 @@ pub fn mo_powerup_update<T: MO_PowerupTrait + ?Sized>(g: &mut Game, this: &mut T
     this.animate();
 }
 
-pub fn mo_powerup_collide_player<T: MO_PowerupTrait + ?Sized>(this: &mut T, _player: Ptr<CPlayer>) -> bool {
+pub fn mo_powerup_collide_player<T: MO_PowerupTrait + ?Sized>(this: &mut T, _player: PlayerId) -> bool {
     let o = this.pu_mut();
     if o.state > 0 {
         o.dead = true;

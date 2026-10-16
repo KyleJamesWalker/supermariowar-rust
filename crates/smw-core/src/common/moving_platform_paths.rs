@@ -466,9 +466,9 @@ impl MovingPlatformPathTrait for FallingPath {
         let mut platform = self.base.m_platform;
         if platform.fy - platform.iHalfHeight as f32 >= App::screenHeight as f32 {
             for player in gp.players.iter_mut() {
-                if player.platform == platform {
-                    player.platform = Ptr::null();
-                    player.vely = self.base.m_velocity[t].y;
+                if g.player(*player).platform == platform {
+                    g.player(*player).platform = Ptr::null();
+                    g.player(*player).vely = self.base.m_velocity[t].y;
                 }
             }
 

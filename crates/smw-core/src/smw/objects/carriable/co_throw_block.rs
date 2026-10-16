@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_ThrowBlock.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -90,9 +91,9 @@ impl CO_ThrowBlock {
         o
     }
 
-    pub fn hit_top(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    pub fn hit_top(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut player = player;
-        if player.is_invincible() || player.shyguy {
+        if g.player(player).is_invincible() || g.player(player).shyguy {
             self.die(g);
         } else if self.state == 1 {
             // moving
@@ -100,37 +101,37 @@ impl CO_ThrowBlock {
         } else if self.state == 2 {
             // Holding
             if player != self.owner {
-                if !self.owner.is_null() {
-                    self.owner.carriedItem = Ptr::null();
+                if !self.owner.is_none() {
+                    g.player(self.owner).carriedItem = Ptr::null();
                 }
 
                 self.kick(g);
 
-                player.set_yi((self.iy as i32 - PH - 1) as i16);
-                player.bouncejump();
-                let p = player.get();
-                player.collisions.checktop(g, p);
-                player.platform = Ptr::null();
+                g.player(player).set_yi((self.iy as i32 - PH - 1) as i16);
+                g.player(player).bouncejump();
+                let p = g.player(player);
+                g.player(player).collisions.checktop(g, p);
+                g.player(player).platform = Ptr::null();
             }
         }
 
         false
     }
 
-    pub fn hit_other(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    pub fn hit_other(&mut self, g: &mut Game, player: PlayerId) -> bool {
         if self.state == 1 {
             // Moving
             let mut flipx: i16 = 0;
 
-            if (player.ix as i32 + PW) < 320 && self.ix > 320 {
+            if (g.player(player).ix as i32 + PW) < 320 && self.ix > 320 {
                 flipx = App::screenWidth as i16;
-            } else if (self.ix as i32 + self.iw as i32) < 320 && player.ix > 320 {
+            } else if (self.ix as i32 + self.iw as i32) < 320 && g.player(player).ix > 320 {
                 flipx = -(App::screenWidth as i16);
             }
 
-            let px = player.ix as i32 + flipx as i32;
+            let px = g.player(player).ix as i32 + flipx as i32;
             if self.iNoOwnerKillTime == 0
-                || player.globalID != self.iPlayerID
+                || g.player(player).globalID != self.iPlayerID
                 || (px > self.ix as i32 + (self.iw as i32 >> 1) && self.velx > 0.0)
                 || (px <= self.ix as i32 - (self.iw as i32 >> 1) && self.velx < 0.0)
             {
@@ -139,8 +140,8 @@ impl CO_ThrowBlock {
         } else if self.state == 2 {
             // Holding
             if player != self.owner {
-                self.iPlayerID = self.owner.globalID;
-                self.iTeamID = self.owner.teamID;
+                self.iPlayerID = g.player(self.owner).globalID;
+                self.iTeamID = g.player(self.owner).teamID;
                 return self.kill_player(g, player);
             }
         }
@@ -148,13 +149,13 @@ impl CO_ThrowBlock {
         false
     }
 
-    pub fn kill_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
-        if player.is_invincible() || player.shyguy {
+    pub fn kill_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
+        if g.player(player).is_invincible() || g.player(player).shyguy {
             self.die(g);
             return false;
         }
 
-        if player.is_shielded() {
+        if g.player(player).is_shielded() {
             return false;
         }
 
@@ -187,9 +188,9 @@ impl CO_ThrowBlock {
         self.dead = true;
         if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
 
-        if !self.owner.is_null() {
-            self.owner.carriedItem = Ptr::null();
-            self.owner = Ptr::null();
+        if !self.owner.is_none() {
+            g.player(self.owner).carriedItem = Ptr::null();
+            self.owner = PlayerId::NONE;
         }
     }
 }
@@ -200,13 +201,13 @@ impl CObjectTrait for CO_ThrowBlock {
         Some(self)
     }
 
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         if self.frozen {
             self.shatter_die(g);
             return false;
         }
 
-        if player.fOldY + PH as f32 <= self.iy as f32 && player.iy as i32 + PH >= self.iy as i32 {
+        if g.player(player).fOldY + PH as f32 <= self.iy as f32 && g.player(player).iy as i32 + PH >= self.iy as i32 {
             self.hit_top(g, player)
         } else {
             self.hit_other(g, player)
@@ -276,15 +277,15 @@ impl CObjectTrait for CO_ThrowBlock {
             g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, g.rm.spr_fireballexplosion, self.ix, self.iy, 3, 8));
             self.dead = true;
 
-            if !self.owner.is_null() {
-                self.owner.carriedItem = Ptr::null();
-                self.owner = Ptr::null();
+            if !self.owner.is_none() {
+                g.player(self.owner).carriedItem = Ptr::null();
+                self.owner = PlayerId::NONE;
             }
 
             return;
         }
 
-        if !self.owner.is_null() {
+        if !self.owner.is_none() {
             self.move_to_owner(g);
             self.inair = true;
         } else {
@@ -319,9 +320,9 @@ impl CObjectTrait for CO_ThrowBlock {
         let x = self.ix as i32 - self.collisionOffsetX as i32;
         let y = self.iy as i32 - self.collisionOffsetY as i32;
         let src = Rect { x: self.drawframe as i32, y: srcY, w: self.iw as i32, h: self.ih as i32 };
-        if !self.owner.is_null() && self.owner.iswarping() {
-            let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32) };
-            g.rm.sprite(self.spr).draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);
+        if !self.owner.is_none() && g.player(self.owner).iswarping() {
+            let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(g.player(self.owner).get_warp_state() as i32) };
+            g.rm.sprite(self.spr).draw_clip(g, x, y, &src, edge, g.player(self.owner).get_warp_plane() as i32);
         } else {
             g.rm.sprite(self.spr).draw_src(g, x, y, &src);
         }
@@ -415,8 +416,8 @@ impl MO_CarriedObjectTrait for CO_ThrowBlock {
         self.iDeathTime = 0;
 
         let mut fVel: f32;
-        let fPlayerBonusVel: f32 = self.owner.velx / 2.0;
-        if self.owner.is_facing_right(g) {
+        let fPlayerBonusVel: f32 = g.player(self.owner).velx / 2.0;
+        if g.player(self.owner).is_facing_right(g) {
             fVel = 6.5;
             if fPlayerBonusVel > 0.0 {
                 fVel += fPlayerBonusVel;
@@ -437,10 +438,10 @@ impl MO_CarriedObjectTrait for CO_ThrowBlock {
         self.velx = fVel;
         self.vely = 0.0;
 
-        self.iPlayerID = self.owner.globalID;
-        self.iTeamID = self.owner.teamID;
+        self.iPlayerID = g.player(self.owner).globalID;
+        self.iTeamID = g.player(self.owner).teamID;
 
-        self.owner = Ptr::null();
+        self.owner = PlayerId::NONE;
         self.iNoOwnerKillTime = 30;
 
         self.state = 1;

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_SpinAttack.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
@@ -53,7 +54,7 @@ impl CObjectTrait for MO_SpinAttack {
         Some(self)
     }
 
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         if self.iTimer > 11 {
             return false;
         }
@@ -82,11 +83,11 @@ impl CObjectTrait for MO_SpinAttack {
 
         let owner = get_player_from_global_id(g, self.iPlayerID);
 
-        if !owner.is_null() {
+        if !owner.is_none() {
             // Move to the owner
-            let xi = (owner.ix as i32 - PWOFFSET + if self.fDirection { 24 } else { -16 }) as i16;
+            let xi = (g.player(owner).ix as i32 - PWOFFSET + if self.fDirection { 24 } else { -16 }) as i16;
             self.set_xi(xi);
-            let yi = (owner.iy as i32 + PH - self.iOffsetY as i32) as i16;
+            let yi = (g.player(owner).iy as i32 + PH - self.iOffsetY as i32) as i16;
             self.set_yi(yi);
 
             if self.iTimer < 5 || self.iy as i32 + (self.collisionHeight as i32) < 0 {
@@ -187,7 +188,7 @@ impl CObjectTrait for MO_SpinAttack {
 
                 if block.frozen {
                     block.shatter_die(g);
-                } else if block.owner.is_null() || block.owner.globalID != self.iPlayerID {
+                } else if block.owner.is_none() || g.player(block.owner).globalID != self.iPlayerID {
                     block.die(g);
                     if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
                     self.die(g);
@@ -197,7 +198,7 @@ impl CObjectTrait for MO_SpinAttack {
 
                 if r#box.frozen {
                     r#box.shatter_die(g);
-                } else if r#box.owner.is_null() || r#box.owner.globalID != self.iPlayerID {
+                } else if r#box.owner.is_none() || g.player(r#box.owner).globalID != self.iPlayerID {
                     r#box.die(g);
                     if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
                     self.die(g);

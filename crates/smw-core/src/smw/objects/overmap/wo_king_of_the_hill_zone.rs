@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_KingOfTheHillZone.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -22,7 +23,7 @@ const iKingOfTheHillZoneLimits: [[i16; 4]; 4] = [[0, 0, 1, 2], [0, 1, 2, 4], [0,
 pub struct OMO_KingOfTheHillZone {
     pub io_over_map_object: IO_OverMapObject,
 
-    pub playersTouching: [Ptr<CPlayer>; 4],
+    pub playersTouching: [PlayerId; 4],
     pub playersTouchingCount: [i16; 4],
     pub totalTouchingPlayers: i16,
 
@@ -43,7 +44,7 @@ impl OMO_KingOfTheHillZone {
     pub fn new(g: &mut Game, nspr: SpriteId) -> Self {
         let mut this = OMO_KingOfTheHillZone {
             io_over_map_object: IO_OverMapObject::new(g, nspr, Vec2s::zero(), 5, 0, -1, -1, -1, -1, -1, -1, -1, -1),
-            playersTouching: [Ptr::null(); 4],
+            playersTouching: [PlayerId::NONE; 4],
             playersTouchingCount: [0; 4],
             totalTouchingPlayers: 0,
             iPlayerID: -1,
@@ -71,7 +72,7 @@ impl OMO_KingOfTheHillZone {
         this.state = 1;
 
         for iPlayer in 0..4usize {
-            this.playersTouching[iPlayer] = Ptr::null();
+            this.playersTouching[iPlayer] = PlayerId::NONE;
             this.playersTouchingCount[iPlayer] = 0;
         }
 
@@ -257,8 +258,8 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
 
         if ((iMax as i32) << 1) > self.totalTouchingPlayers as i32 {
             // If the max touching player team is greater than the rest of the touching players
-            self.colorID = self.playersTouching[iMaxTeam as usize].get_color_id();
-            self.iPlayerID = self.playersTouching[iMaxTeam as usize].localID;
+            self.colorID = g.player(self.playersTouching[iMaxTeam as usize]).get_color_id();
+            self.iPlayerID = g.player(self.playersTouching[iMaxTeam as usize]).localID;
             self.frame = (((self.colorID as i32 + 1) << 5) * 3) as i16;
         } else {
             self.colorID = -1;
@@ -272,7 +273,7 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
 
             if self.scoretimer >= g.game_values.pointspeed {
                 self.scoretimer = 0;
-                gp.players[self.iPlayerID as usize].score().adjust_score(g, self.multiplier);
+                g.player(gp.players[self.iPlayerID as usize]).score().adjust_score(g, self.multiplier);
                 gp.get().game_values.gamemode.check_winner(g, gp.get().players[self.iPlayerID as usize]);
 
                 if g.game_values.gamemodesettings.kingofthehill.maxmultiplier > 1 && {
@@ -300,16 +301,16 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
         }
 
         for iPlayer in 0..4usize {
-            self.playersTouching[iPlayer] = Ptr::null();
+            self.playersTouching[iPlayer] = PlayerId::NONE;
             self.playersTouchingCount[iPlayer] = 0;
         }
 
         self.totalTouchingPlayers = 0;
     }
 
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
-        if !player.is_tanooki_statue() {
-            let team = player.get_team_id() as usize;
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
+        if !g.player(player).is_tanooki_statue() {
+            let team = g.player(player).get_team_id() as usize;
             self.playersTouching[team] = player;
             self.playersTouchingCount[team] += 1;
             self.totalTouchingPlayers += 1;

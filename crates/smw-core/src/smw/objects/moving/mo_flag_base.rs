@@ -1,5 +1,7 @@
 //! Port of src/smw/objects/moving/MO_FlagBase.cpp
 
+use crate::smw::object_container::ObjectId;
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -30,7 +32,7 @@ pub struct MO_FlagBase {
     pub anglechange: f32,
     pub anglechangetimer: i16,
     pub speed: f32,
-    pub homeflag: Ptr<CO_Flag>,
+    pub homeflag: ObjectId,
 
     pub timer: i16,
 }
@@ -48,7 +50,7 @@ impl MO_FlagBase {
             anglechange: 0.0,
             anglechangetimer: 0,
             speed: 0.0,
-            homeflag: Ptr::null(),
+            homeflag: ObjectId::NONE,
             timer: 0,
         };
 
@@ -70,7 +72,7 @@ impl MO_FlagBase {
         o.velx = sinf(o.angle);
         o.vely = cosf(o.angle);
 
-        o.homeflag = Ptr::null();
+        o.homeflag = ObjectId::NONE;
 
         o.place_flag_base(g, true);
 
@@ -112,15 +114,15 @@ impl MO_FlagBase {
         self.set_yi(y);
     }
 
-    pub fn score_flag(&mut self, g: &mut Game, mut flag: Ptr<CO_Flag>, mut player: Ptr<CPlayer>) {
+    pub fn score_flag(&mut self, g: &mut Game, mut flag: Ptr<CO_Flag>, mut player: PlayerId) {
         let mut gp = g.ptr();
         if flag.teamID == self.teamID {
             flag.place_flag(g);
             if_sound_on_play(g, &mut gp.rm.sfx_areatag);
-        } else if !g.game_values.gamemodesettings.flag.homescore || !self.homeflag.is_null() || g.game_values.gamemodesettings.flag.centerflag {
+        } else if !g.game_values.gamemodesettings.flag.homescore || !self.homeflag.is_none() || g.game_values.gamemodesettings.flag.centerflag {
             flag.place_flag(g);
             if !g.game_values.gamemode.gameover {
-                player.score().adjust_score(g, 1);
+                g.player(player).score().adjust_score(g, 1);
                 gp.game_values.gamemode.check_winner(g, player);
             }
 
@@ -141,7 +143,7 @@ impl MO_FlagBase {
         self.anglechangetimer = (RANDOM_INT(gp.get(), 50) + 100) as i16;
     }
 
-    pub fn set_flag(&mut self, flag: Ptr<CO_Flag>) {
+    pub fn set_flag(&mut self, flag: ObjectId) {
         self.homeflag = flag;
     }
 
@@ -156,9 +158,9 @@ impl CObjectTrait for MO_FlagBase {
         Some(self)
     }
 
-    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
-        if self.teamID == player.teamID && !player.carriedItem.is_null() && player.carriedItem.get_moving_object_type() == movingobject_flag {
-            let flag: Ptr<CO_Flag> = Ptr::from_mut(player.carriedItem.as_any().downcast_mut::<CO_Flag>().unwrap());
+    fn collide_player(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
+        if self.teamID == g.player(player).teamID && !g.player(player).carriedItem.is_null() && g.player(player).carriedItem.get_moving_object_type() == movingobject_flag {
+            let flag: Ptr<CO_Flag> = Ptr::from_mut(g.player(player).carriedItem.as_any().downcast_mut::<CO_Flag>().unwrap());
             self.score_flag(g, flag, player);
             self.timer = 0;
         }
@@ -235,8 +237,8 @@ impl CObjectTrait for MO_FlagBase {
             let flag: Ptr<CO_Flag> = Ptr::from_mut(object.as_any().downcast_mut::<CO_Flag>().unwrap());
             let player = flag.owner_throw;
 
-            if !player.is_null() {
-                if self.teamID == player.teamID {
+            if !player.is_none() {
+                if self.teamID == g.player(player).teamID {
                     self.score_flag(g, flag, player);
                 }
             }

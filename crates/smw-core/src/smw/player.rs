@@ -1,5 +1,6 @@
 //! Port of src/smw/player.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -110,6 +111,7 @@ pub enum PlayerDeathStyle {
 /// All C++ members are `pub` so friend classes and components reach them by their C++ names.
 #[derive(Default)]
 pub struct CPlayer {
+    pub id: PlayerId,
     pub shyguy: bool,
 
     pub globalID: i16,
@@ -275,14 +277,14 @@ impl CScore {
     }
 }
 
-pub fn get_player_from_global_id(g: &mut Game, iGlobalID: i16) -> Ptr<CPlayer> {
+pub fn get_player_from_global_id(g: &mut Game, iGlobalID: i16) -> PlayerId {
     for &player in g.players.iter() {
-        if player.globalID == iGlobalID {
+        if g.player(player).globalID == iGlobalID {
             return player;
         }
     }
 
-    Ptr::null()
+    PlayerId::NONE
 }
 
 pub fn should_update_sprite(g: &mut Game) -> bool {
@@ -293,27 +295,27 @@ pub fn should_update_sprite(g: &mut Game) -> bool {
     !g.game_values.flags.pausegame && !g.game_values.flags.exitinggame && !g.game_values.flags.swapplayers
 }
 
-pub fn player_killed_player(g: &mut Game, iKiller: i16, killed: Ptr<CPlayer>, deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
-    let args = [0, iKiller as i32, killed.globalID as i32, deathstyle as i32, style as i32, fForce as i32, fKillCarriedItem as i32, -1];
+pub fn player_killed_player(g: &mut Game, iKiller: i16, killed: PlayerId, deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
+    let args = [0, iKiller as i32, g.player(killed).globalID as i32, deathstyle as i32, style as i32, fForce as i32, fKillCarriedItem as i32, -1];
     if let Some(result) = crate::smw::net_outcomes::kill(g, &args) {
         return result;
     }
     player_killed_player_now(g, iKiller, killed, deathstyle, style, fForce, fKillCarriedItem)
 }
 
-pub fn player_killed_player_now(g: &mut Game, iKiller: i16, mut killed: Ptr<CPlayer>, deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
+pub fn player_killed_player_now(g: &mut Game, iKiller: i16, mut killed: PlayerId, deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
         let mut gp = g.ptr();
     let mut killer = get_player_from_global_id(g, iKiller);
 
-    if !killer.is_null() && killer.globalID != killed.globalID {
-        killer.killed_player(g, killed, deathstyle, style, fForce, fKillCarriedItem)
+    if !killer.is_none() && g.player(killer).globalID != g.player(killed).globalID {
+        g.player(killer).killed_player(g, killed, deathstyle, style, fForce, fKillCarriedItem)
     } else {
-        killed.death_awards(g);
+        g.player(killed).death_awards(g);
 
         let iKillType = g.game_values.gamemode.get().playerkilledself(g, killed, style);
 
         if PlayerKillType::Normal == iKillType || (fForce && PlayerKillType::NonKill == iKillType) {
-            killed.die(g, PlayerDeathStyle::Jump, false, fKillCarriedItem);
+            g.player(killed).die(g, PlayerDeathStyle::Jump, false, fKillCarriedItem);
         }
 
         if PlayerKillType::NonKill != iKillType {
@@ -350,8 +352,9 @@ impl CPlayer {
         nscore: Ptr<CScore>,
         sRespawnCounter: Ptr<i16>,
         ai: Option<Box<dyn CPlayerAITrait>>,
-    ) -> Ptr<CPlayer> {
-        let mut this = Ptr::new_box(CPlayer {
+    ) -> PlayerId {
+        let id = g.players.insert(Box::new(CPlayer {
+            id: PlayerId::NONE,
             shyguy: false,
             globalID: iGlobalID,
             teamID: iTeamID,
@@ -399,12 +402,13 @@ impl CPlayer {
             warpstatus: PlayerWarpStatus::new(),
             jail: PlayerJail::new(),
             ..Default::default()
-        });
+        }));
+        let this = g.player(id);
+        this.id = id;
 
         //AI stuff
-        let thisPtr = this;
-        if let Some(ai) = this.get().pPlayerAI.as_mut() {
-            ai.set_player(thisPtr);
+        if let Some(ai) = this.pPlayerAI.as_mut() {
+            ai.set_player(id);
         }
 
         if g.netplay.active {
@@ -431,7 +435,7 @@ impl CPlayer {
 
         g.game_values.unlocksecret1part1[this.globalID as usize] = false;
 
-        this
+        id
     }
 
     pub fn init(&mut self, g: &mut Game) {
@@ -560,8 +564,8 @@ impl CPlayer {
         self.fy = self.iy as f32;
     }
 
-    pub fn this(&mut self) -> Ptr<CPlayer> {
-        Ptr::from_mut(self)
+    pub fn this(&mut self) -> PlayerId {
+        self.id
     }
 
     pub fn keys(&self) -> &mut COutputControl {
@@ -613,7 +617,7 @@ impl CPlayer {
         if !self.frozen {
             let gmTag = gamemode_as::<CGM_Tag>(g);
             let isTagged = match &gmTag {
-                Some(t) => t.tagged() == Ptr::from_mut(self),
+                Some(t) => t.tagged() == self.id,
                 None => false,
             };
 
@@ -781,7 +785,7 @@ impl CPlayer {
         if self.find_spawn_point(g) {
             //Make sure spawn point isn't inside a tile
             let this = self.this();
-            self.collisions.checksides(g, this.get());
+            self.collisions.checksides(g, g.player(this));
 
             self.state = PlayerState::Spawning;
 
@@ -890,7 +894,7 @@ impl CPlayer {
 
     pub fn net_choose_warp_exit(&mut self, g: &mut Game) {
         let this = self.this();
-        self.warpstatus.choose_warp_exit(g, this.get());
+        self.warpstatus.choose_warp_exit(g, g.player(this));
     }
 
     pub fn update_respawning(&mut self, g: &mut Game) {
@@ -962,7 +966,7 @@ impl CPlayer {
                 self.set_powerup(g, 1);
             }
             PowerupType::Star => {
-                self.invincibility.turn_on(g, this.get());
+                self.invincibility.turn_on(g, g.player(this));
             }
             PowerupType::Clock => {
                 self.turnslowdownon(g);
@@ -1056,7 +1060,7 @@ impl CPlayer {
                 self.set_powerup(g, 8);
             }
             PowerupType::JailKey => {
-                self.jail.escape(g, this.get());
+                self.jail.escape(g, g.player(this));
             }
         }
 
@@ -1082,7 +1086,7 @@ impl CPlayer {
         if self.is_invincible() {
             return self.invincibility.get_player_palette();
         }
-        let this = Ptr::from_raw(self as *const CPlayer as *mut CPlayer);
+        let this = self.id;
         if g.game_values.gamemode.gamemode == game_mode_star {
             let starmode = gamemode_as::<CGM_Star>(g).unwrap();
             let starmodetype = starmode.getcurrentmodetype();
@@ -1138,7 +1142,7 @@ impl CPlayer {
             if !fFellThrough && !self.platform.is_null() {
                 self.fPrecalculatedY += self.platform.fOldVelY;
                 let this = self.this();
-                self.platform.get().get_tile_types_from_player(this, &mut lefttile, &mut righttile);
+                self.platform.get().get_tile_types_from_player(g, this, &mut lefttile, &mut righttile);
 
                 if (b(lefttile & tile_flag_solid_on_top) && (b(righttile & tile_flag_solid_on_top) || righttile == tile_flag_nonsolid || righttile == tile_flag_gap))
                     || (b(righttile & tile_flag_solid_on_top) && (b(lefttile & tile_flag_solid_on_top) || lefttile == tile_flag_nonsolid || lefttile == tile_flag_gap))
@@ -1226,13 +1230,13 @@ impl CPlayer {
 
         let mut isGlidingChicken = false;
         if let Some(gmChicken) = gamemode_as::<CGM_Chicken>(g) {
-            isGlidingChicken = gmChicken.chicken() == Ptr::from_mut(self) && g.game_values.gamemodesettings.chicken.glide && self.powerup == -1;
+            isGlidingChicken = gmChicken.chicken() == self.id && g.game_values.gamemodesettings.chicken.glide && self.powerup == -1;
         }
 
         if self.powerup == 7 || isGlidingChicken {
             if g.game_values.leaflimit == 0 || self.projectilelimit > 0 {
                 let this = self.this();
-                self.tail.shake(g, this.get());
+                self.tail.shake(g, g.player(this));
             }
         }
     }
@@ -1334,7 +1338,7 @@ impl CPlayer {
                 MO_CarriedObjectTrait::drop(item, g);
             } else {
                 //Make sure the owner of the object we are kicking is this player
-                item.owner = Ptr::from_mut(self);
+                item.owner = self.id;
 
                 //Make sure the shell/block is out in front of player before kicking it
                 if item.get_moving_object_type() == movingobject_shell || item.get_moving_object_type() == movingobject_throwblock {
@@ -1440,17 +1444,17 @@ impl CPlayer {
             self.suicidetimer.reset();
         }
 
-        self.secretcode.update(gp.get(), this.get(), keymask as u8);
-        self.kuriboshoe.update(gp.get(), this.get(), keymask as u8);
-        self.cardcollection.update(gp.get(), this.get(), keymask as u8);
-        self.tanookisuit.update(gp.get(), this.get());
-        self.superstomp.update_on_ground_hit(gp.get(), this.get());
+        self.secretcode.update(gp.get(), g.player(this), keymask as u8);
+        self.kuriboshoe.update(gp.get(), g.player(this), keymask as u8);
+        self.cardcollection.update(gp.get(), g.player(this), keymask as u8);
+        self.tanookisuit.update(gp.get(), g.player(this));
+        self.superstomp.update_on_ground_hit(gp.get(), g.player(this));
 
         if self.hammertimer > 0 {
             self.hammertimer -= 1;
         }
 
-        self.spin.update(gp.get(), this.get());
+        self.spin.update(gp.get(), g.player(this));
 
         if self.throw_star > 0 {
             self.throw_star -= 1;
@@ -1475,23 +1479,23 @@ impl CPlayer {
             if self.isspawning() {
                 self.update_respawning(gp.get());
             } else if self.iswarping() {
-                self.warpstatus.update(gp.get(), this.get());
+                self.warpstatus.update(gp.get(), g.player(this));
             }
         } else if self.powerupused.is_some() {
             self.update_use_powerup(gp.get());
         }
 
-        self.invincibility.update(this.get()); // Animate invincibility
+        self.invincibility.update(g.player(this)); // Animate invincibility
 
         self.update_frozen_status(gp.get(), keymask);
 
         //if player is warping or spawning don't pay attention to controls
         if self.isready() {
             //Super stomp
-            self.superstomp.update(this.get());
+            self.superstomp.update(g.player(this));
 
             //If player is shaking tail, slow decent
-            self.tail.slow_descent(this.get());
+            self.tail.slow_descent(g.player(this));
 
             self.shield.update();
 
@@ -1596,25 +1600,25 @@ impl CPlayer {
         //Player can be killed by map so only do this code if he is still living
         if self.isready() {
             //Deal with terminal burnup velocity
-            self.burnup.update(gp.get(), this.get());
+            self.burnup.update(gp.get(), g.player(this));
             if self.isdead() {
                 return;
             }
 
             //Kill the player if he is standing still for too long
-            self.suicidetimer.update(gp.get(), this.get());
+            self.suicidetimer.update(gp.get(), g.player(this));
             if self.isdead() {
                 return;
             }
 
             //Deal with out of arena timer
-            self.outofarena.update(gp.get(), this.get());
+            self.outofarena.update(gp.get(), g.player(this));
             if self.isdead() {
                 return;
             }
 
             //Deal with release from jail timer
-            self.jail.update(gp.get(), this.get());
+            self.jail.update(gp.get(), g.player(this));
         }
 
         self.update_sprite(gp.get());
@@ -1741,9 +1745,9 @@ impl CPlayer {
                 self.net_throw_bomb(g, ix, iy, self.is_facing_right(gp.get()));
             }
         } else if PlayerAction::SpinCape == self.action {
-            self.cape.spin(g, this.get());
+            self.cape.spin(g, g.player(this));
         } else if PlayerAction::SpinTail == self.action {
-            self.tail.spin(g, this.get());
+            self.tail.spin(g, g.player(this));
         }
 
         if self.action == PlayerAction::Fireball {
@@ -1956,7 +1960,7 @@ impl CPlayer {
 
             let mut corpseSprite: SpriteId = self.sprites[iDeathSprite];
             let isChicken = match gamemode_as::<CGM_Chicken>(g) {
-                Some(gmChicken) => gmChicken.chicken() == Ptr::from_mut(self),
+                Some(gmChicken) => gmChicken.chicken() == self.id,
                 None => false,
             };
 
@@ -2166,35 +2170,35 @@ impl CPlayer {
         }
     }
 
-    pub fn add_killer_award(&mut self, g: &mut Game, killed: Ptr<CPlayer>, style: KillStyle) {
+    pub fn add_killer_award(&mut self, g: &mut Game, killed: PlayerId, style: KillStyle) {
         let this = self.this();
-        self.awardeffects.add_killer_award(g, this.get(), killed, style);
+        self.awardeffects.add_killer_award(g, g.player(this), killed, style);
     }
 
     pub fn death_awards(&mut self, g: &mut Game) {
         let this = self.this();
-        self.awardeffects.add_death_award(g, this.get());
+        self.awardeffects.add_death_award(g, g.player(this));
     }
 
     pub fn add_kills_in_row_in_air_award(&mut self, g: &mut Game) {
         let this = self.this();
-        self.awardeffects.add_kills_in_row_in_air_award(g, this.get());
+        self.awardeffects.add_kills_in_row_in_air_award(g, g.player(this));
     }
 
-    pub fn killed_player(&mut self, g: &mut Game, killed: Ptr<CPlayer>, deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
-        let args = [1, self.globalID as i32, killed.globalID as i32, deathstyle as i32, style as i32, fForce as i32, fKillCarriedItem as i32, -1];
+    pub fn killed_player(&mut self, g: &mut Game, killed: PlayerId, deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
+        let args = [1, self.globalID as i32, g.player(killed).globalID as i32, deathstyle as i32, style as i32, fForce as i32, fKillCarriedItem as i32, -1];
         if let Some(result) = crate::smw::net_outcomes::kill(g, &args) {
             return result;
         }
         self.killed_player_now(g, killed, deathstyle, style, fForce, fKillCarriedItem)
     }
 
-    pub fn killed_player_now(&mut self, g: &mut Game, mut killed: Ptr<CPlayer>, mut deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
+    pub fn killed_player_now(&mut self, g: &mut Game, mut killed: PlayerId, mut deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
         let mut gp = g.ptr();
         let mut killer = self.this();
 
         //If this player is already dead, then don't kill him again
-        if killed.state != PlayerState::Ready {
+        if g.player(killed).state != PlayerState::Ready {
             return PlayerKillType::None;
         }
 
@@ -2204,25 +2208,25 @@ impl CPlayer {
             }
         }
 
-        if killed.frozen {
+        if g.player(killed).frozen {
             deathstyle = PlayerDeathStyle::Shatter;
         }
 
-        if killer.teamID != killed.teamID {
-            killer.add_killer_award(g, killed, style);
+        if g.player(killer).teamID != g.player(killed).teamID {
+            g.player(killer).add_killer_award(g, killed, style);
         }
 
         if g.game_values.awardstyle != AwardStyle::None {
-            killed.death_awards(g);
+            g.player(killed).death_awards(g);
         }
 
         //now kill the player (don't call this function earlier because we need the old position, etc.
         let iKillType = g.game_values.gamemode.get().playerkilledplayer(g, killer, killed, style);
 
         if PlayerKillType::NonKill != iKillType || fForce {
-            if killed.bobomb {
-                killed.diedas = 2;
-                killer.set_powerup(g, 0);
+            if g.player(killed).bobomb {
+                g.player(killed).diedas = 2;
+                g.player(killer).set_powerup(g, 0);
             }
 
             if deathstyle == PlayerDeathStyle::Jump {
@@ -2235,13 +2239,13 @@ impl CPlayer {
         }
 
         if PlayerKillType::Normal == iKillType || (fForce && PlayerKillType::NonKill == iKillType) {
-            killed.die(g, deathstyle, false, fKillCarriedItem);
+            g.player(killed).die(g, deathstyle, false, fKillCarriedItem);
         }
 
         iKillType
     }
 
-    pub fn transfer_tag(&mut self, g: &mut Game, mut o2: Ptr<CPlayer>) {
+    pub fn transfer_tag(&mut self, g: &mut Game, mut o2: PlayerId) {
         let mut gp = g.ptr();
         let mut o1 = self.this();
 
@@ -2250,34 +2254,34 @@ impl CPlayer {
             None => return,
         };
 
-        if !o1.isready() || !o2.isready() {
+        if !g.player(o1).isready() || !g.player(o2).isready() {
             return;
         }
 
-        let mut tagged = Ptr::null();
-        if gmTag.tagged() == o1 && !o2.is_shielded() && !o2.is_invincible() {
+        let mut tagged = PlayerId::NONE;
+        if gmTag.tagged() == o1 && !g.player(o2).is_shielded() && !g.player(o2).is_invincible() {
             gmTag.set_tagged(o2);
-            o1.shield.turn_on(g);
+            g.player(o1).shield.turn_on(g);
             tagged = gmTag.tagged();
-        } else if gmTag.tagged() == o2 && !o1.is_shielded() && !o1.is_invincible() {
+        } else if gmTag.tagged() == o2 && !g.player(o1).is_shielded() && !g.player(o1).is_invincible() {
             gmTag.set_tagged(o1);
-            o2.shield.turn_on(g);
+            g.player(o2).shield.turn_on(g);
             tagged = gmTag.tagged();
         }
 
-        if !tagged.is_null() {
-            let t: Ptr<CPlayer> = tagged;
+        if !tagged.is_none() {
+            let t: PlayerId = tagged;
             g.eyecandy[2].emplace(EC_GravText::new(
                 Ptr::from_mut(&mut g.rm.game_font_large),
-                (t.ix as i32 + HALFPW) as i16,
-                (t.iy as i32 + PH) as i16,
+                (g.player(t).ix as i32 + HALFPW) as i16,
+                (g.player(t).iy as i32 + PH) as i16,
                 "Tagged!".to_string(),
                 (-(VELJUMP as f64) * 1.5) as f32,
             ));
             g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
                 g.rm.spr_fireballexplosion,
-                (t.ix as i32 + HALFPW - 16) as i16,
-                (t.iy as i32 + HALFPH - 16) as i16,
+                (g.player(t).ix as i32 + HALFPW - 16) as i16,
+                (g.player(t).iy as i32 + HALFPH - 16) as i16,
                 3,
                 8,
             ));
@@ -2285,7 +2289,7 @@ impl CPlayer {
         }
     }
 
-    pub fn transfer_shy_guy(&mut self, g: &mut Game, o2: Ptr<CPlayer>) {
+    pub fn transfer_shy_guy(&mut self, g: &mut Game, o2: PlayerId) {
         let o1 = self.this();
 
         //Don't shyguy tag if this isn't shyguy tag mode or if tag transfers is set to kills only
@@ -2293,34 +2297,34 @@ impl CPlayer {
             return;
         }
 
-        if !o1.isready() || !o2.isready() {
+        if !g.player(o1).isready() || !g.player(o2).isready() {
             return;
         }
 
         let sgt = gamemode_as::<CGM_ShyGuyTag>(g).unwrap();
 
-        if o1.shyguy && !o2.shyguy && !o2.is_shielded() && !o2.is_invincible() {
-            sgt.set_shy_guy(g, o2.get_team_id());
-        } else if o2.shyguy && !o1.shyguy && !o1.is_shielded() && !o1.is_invincible() {
-            sgt.set_shy_guy(g, o1.get_team_id());
+        if g.player(o1).shyguy && !g.player(o2).shyguy && !g.player(o2).is_shielded() && !g.player(o2).is_invincible() {
+            sgt.set_shy_guy(g, g.player(o2).get_team_id());
+        } else if g.player(o2).shyguy && !g.player(o1).shyguy && !g.player(o1).is_shielded() && !g.player(o1).is_invincible() {
+            sgt.set_shy_guy(g, g.player(o1).get_team_id());
         }
     }
 
-    pub fn bounce_assist_player(&mut self, g: &mut Game, o2: Ptr<CPlayer>) {
+    pub fn bounce_assist_player(&mut self, g: &mut Game, o2: PlayerId) {
         let mut gp = g.ptr();
         let mut o1 = self.this();
 
-        if o1.state == PlayerState::Ready
-            && o1.fOldY + PH as f32 <= o2.fOldY
-            && o1.iy as i32 + PH >= o2.iy as i32
-            && o1.keys().game_jump().fDown
+        if g.player(o1).state == PlayerState::Ready
+            && g.player(o1).fOldY + PH as f32 <= g.player(o2).fOldY
+            && g.player(o1).iy as i32 + PH >= g.player(o2).iy as i32
+            && g.player(o1).keys().game_jump().fDown
         {
-            o1.set_yi((o2.iy as i32 - PH) as i16); //set new position to top of other player
-            o1.get().collisions.checktop(g, o1.get());
-            o1.platform = Ptr::null();
-            o1.vely = -VELSUPERJUMP;
+            g.player(o1).set_yi((g.player(o2).iy as i32 - PH) as i16); //set new position to top of other player
+            g.player(o1).collisions.checktop(g, g.player(o1));
+            g.player(o1).platform = Ptr::null();
+            g.player(o1).vely = -VELSUPERJUMP;
 
-            o1.superstomp.reset();
+            g.player(o1).superstomp.reset();
 
             if_sound_on_play(g, &mut gp.rm.sfx_superspring);
         }
@@ -2393,7 +2397,7 @@ impl CPlayer {
         //Draw player
         self.pScoreboardSprite = self.sprites;
 
-        let mut chicken: Ptr<CPlayer> = Ptr::null();
+        let mut chicken: PlayerId = PlayerId::NONE;
         if let Some(gmChicken) = gamemode_as::<CGM_Chicken>(g) {
             chicken = gmChicken.chicken();
         }
@@ -2412,7 +2416,7 @@ impl CPlayer {
                 self.pScoreboardSprite = g.rm.spr_shyguy[colorID];
             }
 
-            self.tanookisuit.draw_statue(g, this.get());
+            self.tanookisuit.draw_statue(g, g.player(this));
 
             return;
         } else if self.bobomb {
@@ -2456,13 +2460,13 @@ impl CPlayer {
         //Don't allow cape, tail, wings to be used with shoe
         if !self.kuriboshoe.is_on() {
             if self.powerup == 3 {
-                self.cape.draw(g, this.get());
+                self.cape.draw(g, g.player(this));
             } else if self.powerup == 8 {
-                self.wings.draw(g, this.get());
+                self.wings.draw(g, g.player(this));
             }
             //This has to come last otherwise chickens with glide option won't be able to use cape or wings
             else if self.powerup == 7 || (self.powerup == -1 && chicken == this && g.game_values.gamemodesettings.chicken.glide) {
-                self.tail.draw(g, this.get());
+                self.tail.draw(g, g.player(this));
             }
         }
 
@@ -2484,7 +2488,7 @@ impl CPlayer {
         }
 
         //Draw Kuribo's Shoe
-        self.kuriboshoe.draw(g, this.get());
+        self.kuriboshoe.draw(g, g.player(this));
 
         //Draw the crown on the player
         self.draw_winner_crown(g);
@@ -2502,12 +2506,12 @@ impl CPlayer {
             }
         }
 
-        self.jail.draw(g, this.get());
-        self.suicidetimer.draw(g, this.get());
+        self.jail.draw(g, g.player(this));
+        self.suicidetimer.draw(g, g.player(this));
 
         //Draw the Ring awards
         if g.game_values.awardstyle == AwardStyle::Halo && self.killsinrow as i32 >= MINAWARDSNEEDED {
-            self.awardeffects.draw_ring_award(g, this.get());
+            self.awardeffects.draw_ring_award(g, g.player(this));
         }
 
         //Draw the powerup ring when a powerup is being used
@@ -2516,7 +2520,7 @@ impl CPlayer {
 
     pub fn draw_out_of_screen_indicators(&mut self, g: &mut Game) {
         let this = self.this();
-        self.outofarena.draw(g, this.get());
+        self.outofarena.draw(g, g.player(this));
     }
 
     pub fn updateswap(&mut self, g: &mut Game) {
@@ -2675,7 +2679,7 @@ impl CPlayer {
             }
 
             let warp = Ptr::from_mut(g.g_map.warp(tx, ty2));
-            self.warpstatus.enter_warp(g, this.get(), warp);
+            self.warpstatus.enter_warp(g, g.player(this), warp);
 
             if (self.iy as i32 - PHOFFSET) < ((ty as i32) << 5) {
                 self.set_yi((((ty as i32) << 5) + PHOFFSET) as i16);
@@ -2758,7 +2762,7 @@ impl CPlayer {
         if self.keys().game_jump().fDown && !self.frozen && g.g_map.checkforwarp(alignedBlockX, unAlignedBlockX, ty, 2) {
             self.set_yf((((ty as i32) << 5) + TILESIZE) as f32 + 0.2f32);
             let warp = Ptr::from_mut(g.g_map.warp(unAlignedBlockX, ty));
-            self.warpstatus.enter_warp(g, this.get(), warp);
+            self.warpstatus.enter_warp(g, g.player(this), warp);
 
             if (self.ix as i32 - PWOFFSET) < ((txl as i32) << 5) + 1 {
                 self.set_xi((((txl as i32) << 5) + PHOFFSET + 1) as i16);
@@ -2897,7 +2901,7 @@ impl CPlayer {
         if self.keys().game_down().fDown && !self.frozen && g.g_map.checkforwarp(txl, txr, ty, 0) {
             self.set_yf((((ty as i32) << 5) - PH) as f32 - 0.2f32);
             let warp = Ptr::from_mut(g.g_map.warp(txr, ty));
-            self.warpstatus.enter_warp(g, this.get(), warp);
+            self.warpstatus.enter_warp(g, g.player(this), warp);
 
             self.fallthrough = false;
             self.platform = Ptr::null();
@@ -3228,7 +3232,7 @@ impl CPlayer {
     }
 
     /// `collidesWith(CPlayer*)`
-    pub fn collides_with_player(&mut self, g: &mut Game, other: Ptr<CPlayer>) {
+    pub fn collides_with_player(&mut self, g: &mut Game, other: PlayerId) {
         let this = self.this();
         self.collisions.handle_p2p(g, this, other);
     }
@@ -3253,7 +3257,7 @@ impl CPlayer {
 
     pub fn makeinvincible(&mut self, g: &mut Game) {
         let this = self.this();
-        self.invincibility.turn_on(g, this.get());
+        self.invincibility.turn_on(g, g.player(this));
     }
 
     pub fn makefrozen(&mut self, g: &mut Game, iTime: i16) {
@@ -3317,7 +3321,7 @@ impl CPlayer {
             self.action = PlayerAction::None;
 
             self.carriedItem = item;
-            item.owner = Ptr::from_mut(self);
+            item.owner = self.id;
             self.carriedItem.velx = 0.0;
             self.carriedItem.vely = 0.0;
 

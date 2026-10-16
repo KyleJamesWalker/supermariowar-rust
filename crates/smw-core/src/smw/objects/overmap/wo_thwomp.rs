@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_Thwomp.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::game::App;
@@ -47,9 +48,9 @@ impl CObjectTrait for OMO_Thwomp {
         }
     }
 
-    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
-        if !player.is_invincible() && !player.is_shielded() && (player.score().score > 0 || g.game_values.gamemode.goal == -1) {
-            return player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
+    fn collide_player(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
+        if !g.player(player).is_invincible() && !g.player(player).is_shielded() && (g.player(player).score().score > 0 || g.game_values.gamemode.goal == -1) {
+            return g.player(player).kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
         }
 
         false

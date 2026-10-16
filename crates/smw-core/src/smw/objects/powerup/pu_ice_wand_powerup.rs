@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_IceWandPowerup.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -71,10 +72,10 @@ impl CObjectTrait for PU_IceWandPowerup {
         }
     }
 
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut player = player;
         if self.state > 0 {
-            player.set_powerup(g, 5);
+            g.player(player).set_powerup(g, 5);
             self.dead = true;
         }
 

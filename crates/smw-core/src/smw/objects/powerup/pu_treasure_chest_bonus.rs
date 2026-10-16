@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_TreasureChestBonus.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -133,7 +134,7 @@ impl CObjectTrait for PU_TreasureChestBonus {
         }
     }
 
-    fn collide_player(&mut self, g: &mut Game, _player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, _player: PlayerId) -> bool {
         let mut gp = g.ptr();
         if self.state == 1 {
             if_sound_on_play(g, &mut gp.rm.sfx_treasurechest);

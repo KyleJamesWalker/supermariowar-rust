@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_Bomb.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -70,20 +71,20 @@ impl CObjectTrait for CO_Bomb {
         Some(self)
     }
 
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut player = player;
-        if self.state == 1 && self.owner.is_null() {
+        if self.state == 1 && self.owner.is_none() {
             let item = self.as_carried_ptr();
-            if player.accept_item(item) {
+            if g.player(player).accept_item(item) {
                 self.owner = player;
 
                 self.velx = 0.0;
                 self.vely = 0.0;
 
                 if self.iPlayerID == -1 {
-                    self.iPlayerID = self.owner.globalID;
-                    self.iTeamID = self.owner.teamID;
-                    self.iColorOffsetY = ((self.owner.colorID as i32 + 1) * 38) as i16;
+                    self.iPlayerID = g.player(self.owner).globalID;
+                    self.iTeamID = g.player(self.owner).teamID;
+                    self.iColorOffsetY = ((g.player(self.owner).colorID as i32 + 1) * 38) as i16;
                 }
             }
         }
@@ -102,7 +103,7 @@ impl CObjectTrait for CO_Bomb {
             return;
         }
 
-        if !self.owner.is_null() {
+        if !self.owner.is_none() {
             self.move_to_owner(g);
         } else {
             self.applyfriction();
@@ -133,9 +134,9 @@ impl CObjectTrait for CO_Bomb {
         let x = self.ix as i32 - self.collisionOffsetX as i32;
         let y = self.iy as i32 - self.collisionOffsetY as i32;
         let src = Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32, w: self.iw as i32, h: self.ih as i32 };
-        if !self.owner.is_null() && self.owner.iswarping() {
-            let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32) };
-            g.rm.sprite(self.spr).draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);
+        if !self.owner.is_none() && g.player(self.owner).iswarping() {
+            let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(g.player(self.owner).get_warp_state() as i32) };
+            g.rm.sprite(self.spr).draw_clip(g, x, y, &src, edge, g.player(self.owner).get_warp_plane() as i32);
         } else {
             g.rm.sprite(self.spr).draw_src(g, x, y, &src);
         }
@@ -151,15 +152,15 @@ impl IO_MovingObjectTrait for CO_Bomb {
     fn die(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let mut rm = g.rm;
-        if !self.owner.is_null() {
-            self.owner.carriedItem = Ptr::null();
-            self.owner = Ptr::null();
+        if !self.owner.is_none() {
+            g.player(self.owner).carriedItem = Ptr::null();
+            self.owner = PlayerId::NONE;
         }
 
         let mut player = get_player_from_global_id(g, self.iPlayerID);
 
-        if !player.is_null() {
-            player.decrease_projectiles_count();
+        if !player.is_none() {
+            g.player(player).decrease_projectiles_count();
         }
 
         self.dead = true;

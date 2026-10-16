@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/TimeLimit.cpp
 
+use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::game_mode::*;
 use crate::common::game_values::if_sound_on_play;
@@ -50,10 +51,10 @@ impl CGameModeTrait for CGM_TimeLimit {
     fn draw_foreground(&mut self, g: &mut Game) {
         cgm_timelimit_draw_foreground(g, self)
     }
-    fn playerkilledplayer(&mut self, g: &mut Game, inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, inflictor: PlayerId, other: PlayerId, style: KillStyle) -> PlayerKillType {
         cgm_timelimit_playerkilledplayer(g, self, inflictor, other, style)
     }
-    fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, player: PlayerId, style: KillStyle) -> PlayerKillType {
         cgm_timelimit_playerkilledself(g, self, player, style)
     }
 }
@@ -91,21 +92,21 @@ pub fn cgm_timelimit_think(g: &mut Game, this: &mut CGM_TimeLimit) {
     }
 }
 
-pub fn cgm_timelimit_playerkilledplayer(g: &mut Game, this: &mut CGM_TimeLimit, mut inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+pub fn cgm_timelimit_playerkilledplayer(g: &mut Game, this: &mut CGM_TimeLimit, mut inflictor: PlayerId, mut other: PlayerId, style: KillStyle) -> PlayerKillType {
         let mut gp = g.ptr();
     if !this.gameover {
         if g.game_values.gamemode.gamemode != game_mode_timelimit || g.game_values.gamemodesettings.time.scoring == ScoringStyle::AllKills || style == KillStyle::Push {
             //Penalize killing your team mates
-            if inflictor.get_team_id() == other.get_team_id() {
-                inflictor.score().adjust_score(g, -1);
+            if g.player(inflictor).get_team_id() == g.player(other).get_team_id() {
+                g.player(inflictor).score().adjust_score(g, -1);
             } else {
-                inflictor.score().adjust_score(g, 1);
+                g.player(inflictor).score().adjust_score(g, 1);
             }
         }
 
         if g.game_values.gamemode.gamemode == game_mode_timelimit && g.game_values.gamemodesettings.time.style == DeathStyle::Shield {
             if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
-            other.shield().reset(g);
+            g.player(other).shield().reset(g);
             return PlayerKillType::NonKill;
         }
     }
@@ -113,11 +114,11 @@ pub fn cgm_timelimit_playerkilledplayer(g: &mut Game, this: &mut CGM_TimeLimit, 
     PlayerKillType::Normal
 }
 
-pub fn cgm_timelimit_playerkilledself(g: &mut Game, this: &mut CGM_TimeLimit, mut player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
-    cgamemode_playerkilledself(this, player, style);
+pub fn cgm_timelimit_playerkilledself(g: &mut Game, this: &mut CGM_TimeLimit, mut player: PlayerId, style: KillStyle) -> PlayerKillType {
+    cgamemode_playerkilledself(g, this, player, style);
 
-    if player.score().score > 0 && !this.gameover {
-        player.score().adjust_score(g, -1);
+    if g.player(player).score().score > 0 && !this.gameover {
+        g.player(player).score().adjust_score(g, -1);
     }
 
     PlayerKillType::Normal

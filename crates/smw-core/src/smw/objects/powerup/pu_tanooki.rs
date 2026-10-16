@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_Tanooki.cpp
 
+use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::vec2::Vec2s;
@@ -37,10 +38,10 @@ impl CObjectTrait for PU_Tanooki {
     fn update(&mut self, g: &mut Game) {
         mo_powerup_update(g, self)
     }
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut player = player;
         if self.state > 0 {
-            player.set_powerup(g, 9);
+            g.player(player).set_powerup(g, 9);
             self.dead = true;
         }
 

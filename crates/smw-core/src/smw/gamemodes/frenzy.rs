@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/Frenzy.cpp
 
+use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::game_mode::*;
 use crate::common::global_constants::NUMFRENZYCARDS;
@@ -23,7 +24,7 @@ pub struct CGM_Frenzy {
     pub timer: i16,
     pub iSelectedPowerup: i16,
     pub iItemWeightCount: i16,
-    pub m_frenzyowner: Ptr<CPlayer>,
+    pub m_frenzyowner: PlayerId,
 }
 impl_base!(CGM_Frenzy => cgm_frag: CGM_Frag);
 
@@ -31,13 +32,13 @@ impl_base!(CGM_Frenzy => cgm_frag: CGM_Frag);
 //Frag limit death match, but powerup cards appear randomly
 impl CGM_Frenzy {
     pub fn new() -> Self {
-        let mut this = CGM_Frenzy { cgm_frag: CGM_Frag::new(), timer: 0, iSelectedPowerup: 0, iItemWeightCount: 0, m_frenzyowner: Ptr::null() };
+        let mut this = CGM_Frenzy { cgm_frag: CGM_Frag::new(), timer: 0, iSelectedPowerup: 0, iItemWeightCount: 0, m_frenzyowner: PlayerId::NONE };
         this.gamemode = game_mode_frenzy;
         this.szModeName = "Frenzy".to_string();
         this
     }
 
-    pub fn set_frenzy_owner(&mut self, player: Ptr<CPlayer>) {
+    pub fn set_frenzy_owner(&mut self, player: PlayerId) {
         self.m_frenzyowner = player;
     }
 }
@@ -51,16 +52,16 @@ impl CGameModeTrait for CGM_Frenzy {
     fn think(&mut self, g: &mut Game) {
         cgm_frenzy_think(g, self)
     }
-    fn playerkilledplayer(&mut self, g: &mut Game, inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, inflictor: PlayerId, other: PlayerId, style: KillStyle) -> PlayerKillType {
         cgm_frag_playerkilledplayer(g, self, inflictor, other, style)
     }
-    fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, player: PlayerId, style: KillStyle) -> PlayerKillType {
         cgm_frag_playerkilledself(g, self, player, style)
     }
-    fn playerextraguy(&mut self, g: &mut Game, player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, player: PlayerId, iType: i16) {
         cgm_frag_playerextraguy(g, self, player, iType)
     }
-    fn check_winner(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> PlayerKillType {
+    fn check_winner(&mut self, g: &mut Game, player: PlayerId) -> PlayerKillType {
         cgm_frag_check_winner(g, self, player)
     }
 }
@@ -74,7 +75,7 @@ pub fn cgm_frenzy_init(g: &mut Game, this: &mut CGM_Frenzy) {
         this.iItemWeightCount += g.game_values.gamemodesettings.frenzy.powerupweight[iPowerup];
     }
 
-    this.set_frenzy_owner(Ptr::null());
+    this.set_frenzy_owner(PlayerId::NONE);
 }
 
 fn spawn_card(g: &mut Game, this: &mut CGM_Frenzy) {
@@ -115,7 +116,7 @@ pub fn cgm_frenzy_think(g: &mut Game, this: &mut CGM_Frenzy) {
             this.timer >= g.game_values.gamemodesettings.frenzy.rate
         } else {
             false
-        } || (iPowerupQuantity == 0 && this.m_frenzyowner.is_null());
+        } || (iPowerupQuantity == 0 && this.m_frenzyowner.is_none());
 
         if fSpawn {
             this.timer = 0;
@@ -133,27 +134,27 @@ pub fn cgm_frenzy_think(g: &mut Game, this: &mut CGM_Frenzy) {
         }
     }
 
-    if !this.m_frenzyowner.is_null() {
+    if !this.m_frenzyowner.is_none() {
         let owner = this.m_frenzyowner;
         if 0 == this.iSelectedPowerup {
-            if !owner.is_bobomb() {
-                this.m_frenzyowner = Ptr::null();
+            if !g.player(owner).is_bobomb() {
+                this.m_frenzyowner = PlayerId::NONE;
             }
         } else if 5 > this.iSelectedPowerup {
-            if owner.powerup != this.iSelectedPowerup {
-                this.m_frenzyowner = Ptr::null();
+            if g.player(owner).powerup != this.iSelectedPowerup {
+                this.m_frenzyowner = PlayerId::NONE;
             }
         } else if 5 == this.iSelectedPowerup {
-            if g.game_values.gamepowerups[owner.get_global_id() as usize] != PowerupType::Pow as i16 {
-                this.m_frenzyowner = Ptr::null();
+            if g.game_values.gamepowerups[g.player(owner).get_global_id() as usize] != PowerupType::Pow as i16 {
+                this.m_frenzyowner = PlayerId::NONE;
             }
         } else if 6 == this.iSelectedPowerup {
-            if g.game_values.gamepowerups[owner.get_global_id() as usize] != PowerupType::Mod as i16 {
-                this.m_frenzyowner = Ptr::null();
+            if g.game_values.gamepowerups[g.player(owner).get_global_id() as usize] != PowerupType::Mod as i16 {
+                this.m_frenzyowner = PlayerId::NONE;
             }
         } else if 7 == this.iSelectedPowerup {
-            if g.game_values.gamepowerups[owner.get_global_id() as usize] != PowerupType::BulletBill as i16 {
-                this.m_frenzyowner = Ptr::null();
+            if g.game_values.gamepowerups[g.player(owner).get_global_id() as usize] != PowerupType::BulletBill as i16 {
+                this.m_frenzyowner = PlayerId::NONE;
             }
         }
     }

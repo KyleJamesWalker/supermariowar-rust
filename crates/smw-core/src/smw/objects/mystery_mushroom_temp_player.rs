@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/MysteryMushroomTempPlayer.cpp
 
+use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::movingplatform::MovingPlatform;
 use crate::globals::*;
@@ -59,28 +60,28 @@ impl MysteryMushroomTempPlayer {
         }
     }
 
-    pub fn set_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iPowerup: i16) {
-        self.fx = player.fx;
-        self.fy = player.fy;
+    pub fn set_player(&mut self, g: &mut Game, mut player: PlayerId, iPowerup: i16) {
+        self.fx = g.player(player).fx;
+        self.fy = g.player(player).fy;
 
-        self.fOldX = player.fOldX;
-        self.fOldY = player.fOldY;
+        self.fOldX = g.player(player).fOldX;
+        self.fOldY = g.player(player).fOldY;
 
-        self.velx = player.velx;
-        self.vely = player.vely;
+        self.velx = g.player(player).velx;
+        self.vely = g.player(player).vely;
 
         // bobomb = player->bobomb;
         // powerup = player->powerup;
 
-        self.burnupstarttimer = player.burnup.starttimer;
-        self.burnuptimer = player.burnup.timer;
+        self.burnupstarttimer = g.player(player).burnup.starttimer;
+        self.burnuptimer = g.player(player).burnup.timer;
 
-        self.inair = player.inair;
-        self.onice = player.onice;
+        self.inair = g.player(player).inair;
+        self.onice = g.player(player).onice;
         // invincible = player->invincible;
         // invincibletimer = player->invincibletimer;
 
-        self.platform = player.platform;
+        self.platform = g.player(player).platform;
         // iCapeFrameX = player->iCapeFrameX;
         // iCapeFrameY = player->iCapeFrameY;
         // iCapeTimer = player->iCapeTimer;
@@ -88,36 +89,36 @@ impl MysteryMushroomTempPlayer {
 
         self.gamepowerup = iPowerup;
 
-        let offset = scorepowerupoffsets[(g.game_values.teamcounts[player.teamID as usize] - 1) as usize][player.subTeamID as usize];
-        self.iOldPowerupX = (player.score().x as i32 + offset as i32) as i16;
-        self.iOldPowerupY = (player.score().y as i32 + 25) as i16;
+        let offset = scorepowerupoffsets[(g.game_values.teamcounts[g.player(player).teamID as usize] - 1) as usize][g.player(player).subTeamID as usize];
+        self.iOldPowerupX = (g.player(player).score().x as i32 + offset as i32) as i16;
+        self.iOldPowerupY = (g.player(player).score().y as i32 + 25) as i16;
     }
 
-    pub fn get_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iPowerup: &mut i16) {
-        player.fNewSwapX = self.fx;
-        player.fNewSwapY = self.fy;
+    pub fn get_player(&mut self, g: &mut Game, mut player: PlayerId, iPowerup: &mut i16) {
+        g.player(player).fNewSwapX = self.fx;
+        g.player(player).fNewSwapY = self.fy;
 
-        player.iOldPowerupX = self.iOldPowerupX;
-        player.iOldPowerupY = self.iOldPowerupY;
+        g.player(player).iOldPowerupX = self.iOldPowerupX;
+        g.player(player).iOldPowerupY = self.iOldPowerupY;
 
-        player.fOldX = self.fOldX;
-        player.fOldY = self.fOldY;
+        g.player(player).fOldX = self.fOldX;
+        g.player(player).fOldY = self.fOldY;
 
-        player.velx = self.velx;
-        player.vely = self.vely;
+        g.player(player).velx = self.velx;
+        g.player(player).vely = self.vely;
 
         // player->bobomb = bobomb;
         // player->powerup = powerup;
 
-        player.burnup.starttimer = self.burnupstarttimer;
-        player.burnup.timer = self.burnuptimer;
+        g.player(player).burnup.starttimer = self.burnupstarttimer;
+        g.player(player).burnup.timer = self.burnuptimer;
 
-        player.inair = self.inair;
-        player.onice = self.onice;
+        g.player(player).inair = self.inair;
+        g.player(player).onice = self.onice;
         // player->invincible = invincible;
         // player->invincibletimer = invincibletimer;
 
-        player.platform = self.platform;
+        g.player(player).platform = self.platform;
         // player->iCapeFrameX = iCapeFrameX;
         // player->iCapeFrameY	= iCapeFrameY;
         // player->iCapeTimer = iCapeTimer;
@@ -125,8 +126,8 @@ impl MysteryMushroomTempPlayer {
 
         *iPowerup = self.gamepowerup;
 
-        if !player.carriedItem.is_null() {
-            player.carriedItem.move_to_owner(g);
+        if !g.player(player).carriedItem.is_null() {
+            g.player(player).carriedItem.move_to_owner(g);
         }
     }
 }

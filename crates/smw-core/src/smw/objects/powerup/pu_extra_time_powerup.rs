@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_ExtraTimePowerup.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -43,7 +44,7 @@ impl CObjectTrait for PU_ExtraTimePowerup {
     fn update(&mut self, g: &mut Game) {
         mo_powerup_update(g, self)
     }
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut gp = g.ptr();
         if self.state > 0 {
             if g.game_values.gamemode.gamemode == game_mode_timelimit || g.game_values.gamemode.gamemode == game_mode_star {

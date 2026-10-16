@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_IceBlast.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::eyecandy::Spotlight;
@@ -102,10 +103,10 @@ impl CObjectTrait for MO_IceBlast {
         }
     }
 
-    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
-        if self.iPlayerID != player.globalID && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID) {
-            if !player.is_shielded() && !player.is_invincible() && !player.shyguy {
-                player.makefrozen(g, g.game_values.wandfreezetime);
+    fn collide_player(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
+        if self.iPlayerID != g.player(player).globalID && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != g.player(player).teamID) {
+            if !g.player(player).is_shielded() && !g.player(player).is_invincible() && !g.player(player).shyguy {
+                g.player(player).makefrozen(g, g.game_values.wandfreezetime);
                 removeifprojectile(g, self.as_mo_ptr(), false, true);
             }
         }

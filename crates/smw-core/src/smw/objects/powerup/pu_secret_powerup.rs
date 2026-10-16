@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_SecretPowerup.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -96,7 +97,7 @@ impl CObjectTrait for PU_SecretPowerup {
         );
     }
 
-    fn collide_player(&mut self, g: &mut Game, _player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, _player: PlayerId) -> bool {
         let mut gp = g.ptr();
         let mut rm = g.rm;
         if self.itemtype == 0 {

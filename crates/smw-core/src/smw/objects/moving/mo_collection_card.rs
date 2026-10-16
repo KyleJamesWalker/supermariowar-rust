@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_CollectionCard.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -112,7 +113,7 @@ impl CObjectTrait for MO_CollectionCard {
         Some(self)
     }
 
-    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
         let mut gp = g.ptr();
         // If it is not collectable, return
         if (self.r#type == 1 && self.uncollectabletime > 0) || self.state != 1 {
@@ -124,16 +125,16 @@ impl CObjectTrait for MO_CollectionCard {
         let value = self.value as i32;
 
         // Add this card to the team's score
-        if player.score().subscore[0] < 3 {
-            let shift = (player.score().subscore[0] as i32) << 1;
-            player.score().subscore[1] = (player.score().subscore[1] as i32 | (value << shift)) as i16;
-            player.score().subscore[0] += 1;
+        if g.player(player).score().subscore[0] < 3 {
+            let shift = (g.player(player).score().subscore[0] as i32) << 1;
+            g.player(player).score().subscore[1] = (g.player(player).score().subscore[1] as i32 | (value << shift)) as i16;
+            g.player(player).score().subscore[0] += 1;
         } else {
-            player.score().subscore[1] = (player.score().subscore[1] as i32 & !48) as i16; // Clear previous card in 3rd slot
-            player.score().subscore[1] = (player.score().subscore[1] as i32 | (value << 4)) as i16; // Set card to newly collected one in 3rd slot
+            g.player(player).score().subscore[1] = (g.player(player).score().subscore[1] as i32 & !48) as i16; // Clear previous card in 3rd slot
+            g.player(player).score().subscore[1] = (g.player(player).score().subscore[1] as i32 | (value << 4)) as i16; // Set card to newly collected one in 3rd slot
         }
 
-        player.score().subscore[2] = 0;
+        g.player(player).score().subscore[2] = 0;
 
         if self.r#type == 1 {
             self.dead = true;

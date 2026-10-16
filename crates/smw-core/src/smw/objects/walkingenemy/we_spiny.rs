@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/walkingenemy/WE_Spiny.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::eyecandy::EC_FallingObject;
@@ -61,7 +62,7 @@ impl CObjectTrait for MO_Spiny {
         mo_walking_enemy_update(g, self);
     }
 
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         mo_walking_enemy_collide_player(g, self, player)
     }
 
@@ -90,27 +91,27 @@ impl IO_MovingObjectTrait for MO_Spiny {
 impl MO_WalkingEnemyTrait for MO_Spiny {
     crate::impl_walking_enemy_plumbing!();
 
-    fn hittop_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn hittop_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut gp = g.ptr();
         let mut player = player;
         // Kill player here
-        if player.isready() && !player.is_shielded() && !player.is_invincible() && !player.kuriboshoe.is_on() {
-            return player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
+        if g.player(player).isready() && !g.player(player).is_shielded() && !g.player(player).is_invincible() && !g.player(player).kuriboshoe.is_on() {
+            return g.player(player).kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
         }
 
-        if player.kuriboshoe.is_on() {
-            player.set_yi((self.iy as i32 - PH - 1) as i16);
-            player.bouncejump();
+        if g.player(player).kuriboshoe.is_on() {
+            g.player(player).set_yi((self.iy as i32 - PH - 1) as i16);
+            g.player(player).bouncejump();
             let p = player;
-            player.collisions.checktop(g, p.get());
-            player.platform = Ptr::null();
+            g.player(player).collisions.checktop(g, g.player(p));
+            g.player(player).platform = Ptr::null();
 
             self.dead = true;
 
-            player.add_killer_award(g, Ptr::null(), KillStyle::Spiny);
+            g.player(player).add_killer_award(g, PlayerId::NONE, KillStyle::Spiny);
 
             if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
-                player.score().adjust_score(g, 1);
+                g.player(player).score().adjust_score(g, 1);
             }
 
             self.drop_shell(g, false, false);

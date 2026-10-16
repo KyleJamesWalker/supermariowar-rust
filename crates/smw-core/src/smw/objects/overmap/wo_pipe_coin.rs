@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_PipeCoin.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -126,7 +127,7 @@ impl CObjectTrait for OMO_PipeCoin {
         }
     }
 
-    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
         let mut gp = g.ptr();
         if self.iUncollectableTime > 0 {
             return false;
@@ -134,18 +135,18 @@ impl CObjectTrait for OMO_PipeCoin {
 
         if !g.game_values.gamemode.gameover {
             if self.iTeamID != -1 {
-                if player.teamID == self.iTeamID {
-                    player.score().adjust_score(g, 1);
+                if g.player(player).teamID == self.iTeamID {
+                    g.player(player).score().adjust_score(g, 1);
                     if_sound_on_play(g, &mut gp.rm.sfx_coin);
                 }
             } else if self.iColorID == 2 {
-                player.score().adjust_score(g, 1);
+                g.player(player).score().adjust_score(g, 1);
                 if_sound_on_play(g, &mut gp.rm.sfx_coin);
             } else if self.iColorID == 0 {
-                player.score().adjust_score(g, -1);
+                g.player(player).score().adjust_score(g, -1);
                 if_sound_on_play(g, &mut gp.rm.sfx_stun);
             } else if self.iColorID == 1 {
-                player.score().adjust_score(g, 5);
+                g.player(player).score().adjust_score(g, 5);
                 if_sound_on_play(g, &mut gp.rm.sfx_extraguysound);
             }
 

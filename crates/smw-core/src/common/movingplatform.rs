@@ -1,5 +1,6 @@
 //! Port of src/common/movingplatform.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -303,7 +304,7 @@ impl MovingPlatform {
     }
 
     /// `collide(CPlayer*)`
-    pub fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) {
+    pub fn collide_player(&mut self, g: &mut Game, mut player: PlayerId) {
         let this = Ptr::from_mut(self);
         let fx = self.fx;
         let fy = self.fy;
@@ -313,10 +314,10 @@ impl MovingPlatform {
         let iHeight = self.iHeight as f32;
         let iPlayerId = self.iPlayerId;
 
-        let mut coldec = self.coldec_player(player);
+        let mut coldec = self.coldec_player(g, player);
         if coldec == collision_none {
-            if player.platform == this {
-                player.platform = Ptr::null();
+            if g.player(player).platform == this {
+                g.player(player).platform = Ptr::null();
             }
             return;
         }
@@ -325,37 +326,37 @@ impl MovingPlatform {
             return;
         }
 
-        let mut fColVelX = player.velx - self.fOldVelX;
-        let mut fColVelY = player.vely - self.fOldVelY;
+        let mut fColVelX = g.player(player).velx - self.fOldVelX;
+        let mut fColVelY = g.player(player).vely - self.fOldVelY;
 
-        if !player.platform.is_null() {
-            fColVelY += player.platform.fOldVelY - GRAVITATION;
+        if !g.player(player).platform.is_null() {
+            fColVelY += g.player(player).platform.fOldVelY - GRAVITATION;
 
-            if player.velx < -0.6 || player.velx > 0.6 {
-                fColVelX += player.platform.fOldVelX;
+            if g.player(player).velx < -0.6 || g.player(player).velx > 0.6 {
+                fColVelX += g.player(player).platform.fOldVelX;
             }
-        } else if !player.inair {
+        } else if !g.player(player).inair {
             fColVelY -= GRAVITATION;
         }
 
         let fRelativeY1: f32;
         let fRelativeY2: f32;
 
-        if player.platform != this {
-            fRelativeY1 = player.fy - self.fOldY + iHalfHeight;
-            fRelativeY2 = player.fy + PH as f32 - self.fOldY + iHalfHeight;
+        if g.player(player).platform != this {
+            fRelativeY1 = g.player(player).fy - self.fOldY + iHalfHeight;
+            fRelativeY2 = g.player(player).fy + PH as f32 - self.fOldY + iHalfHeight;
         } else {
-            fRelativeY1 = player.fy - fy + iHalfHeight;
-            fRelativeY2 = player.fy + PH as f32 - fy + iHalfHeight;
+            fRelativeY1 = g.player(player).fy - fy + iHalfHeight;
+            fRelativeY2 = g.player(player).fy + PH as f32 - fy + iHalfHeight;
         }
 
-        if fColVelX > 0.01 || player.iHorizontalPlatformCollision == 3 {
+        if fColVelX > 0.01 || g.player(player).iHorizontalPlatformCollision == 3 {
             let fRelativeX: f32 = if coldec == collision_normal {
-                player.fx + PW as f32 - fx + iHalfWidth
+                g.player(player).fx + PW as f32 - fx + iHalfWidth
             } else if coldec == collision_overlap_left {
-                player.fx + PW as f32 - fx + iHalfWidth - SW
+                g.player(player).fx + PW as f32 - fx + iHalfWidth - SW
             } else {
-                player.fx + PW as f32 - fx + iHalfWidth + SW
+                g.player(player).fx + PW as f32 - fx + iHalfWidth + SW
             };
 
             if fRelativeX >= 0.0 && fRelativeX < iWidth {
@@ -381,41 +382,41 @@ impl MovingPlatform {
                         || ((t1 & tile_flag_super_or_player_death_left) != 0 && (t2 & tile_flag_solid) == 0)
                         || ((t1 & tile_flag_solid) == 0 && (t2 & tile_flag_super_or_player_death_left) != 0);
 
-                    if player.iHorizontalPlatformCollision == 3 {
-                        player.kill_player_map_hazard(g, true, KillStyle::Environment, true, iPlayerId);
+                    if g.player(player).iHorizontalPlatformCollision == 3 {
+                        g.player(player).kill_player_map_hazard(g, true, KillStyle::Environment, true, iPlayerId);
                         return;
-                    } else if fSuperDeathTileToLeft || (fDeathTileToLeft && !player.is_invincible() && !player.is_shielded() && !player.shyguy) {
-                        if PlayerKillType::NonKill != player.kill_player_map_hazard(g, fSuperDeathTileToLeft, KillStyle::Environment, false, iPlayerId) {
+                    } else if fSuperDeathTileToLeft || (fDeathTileToLeft && !g.player(player).is_invincible() && !g.player(player).is_shielded() && !g.player(player).shyguy) {
+                        if PlayerKillType::NonKill != g.player(player).kill_player_map_hazard(g, fSuperDeathTileToLeft, KillStyle::Environment, false, iPlayerId) {
                             return;
                         }
                     } else {
-                        player.set_xf((((tx as i32) << 5) - PW) as f32 - 0.2 + fx - iHalfWidth);
-                        player.flipsidesifneeded();
+                        g.player(player).set_xf((((tx as i32) << 5) - PW) as f32 - 0.2 + fx - iHalfWidth);
+                        g.player(player).flipsidesifneeded();
 
                         self.check_map_collision_right(g, player);
 
                         if self.fOldVelX < 0.0 {
-                            player.fOldX = fx + 10.0;
+                            g.player(player).fOldX = fx + 10.0;
                         } else {
-                            player.fOldX = fx - 10.0;
+                            g.player(player).fOldX = fx - 10.0;
                         }
 
-                        player.iHorizontalPlatformCollision = 1;
-                        player.iPlatformCollisionPlayerId = iPlayerId;
+                        g.player(player).iHorizontalPlatformCollision = 1;
+                        g.player(player).iPlatformCollisionPlayerId = iPlayerId;
 
-                        if player.velx > 0.0 {
-                            player.velx = 0.0;
+                        if g.player(player).velx > 0.0 {
+                            g.player(player).velx = 0.0;
                         }
                     }
                 }
             }
-        } else if fColVelX < -0.01 || player.iHorizontalPlatformCollision == 1 {
+        } else if fColVelX < -0.01 || g.player(player).iHorizontalPlatformCollision == 1 {
             let fRelativeX: f32 = if coldec == collision_normal {
-                player.fx - fx + iHalfWidth
+                g.player(player).fx - fx + iHalfWidth
             } else if coldec == collision_overlap_left {
-                player.fx - fx + iHalfWidth - SW
+                g.player(player).fx - fx + iHalfWidth - SW
             } else {
-                player.fx - fx + iHalfWidth + SW
+                g.player(player).fx - fx + iHalfWidth + SW
             };
 
             if fRelativeX >= 0.0 && fRelativeX < iWidth {
@@ -442,30 +443,30 @@ impl MovingPlatform {
                         || ((t1 & tile_flag_super_or_player_death_right) != 0 && (t2 & tile_flag_solid) == 0)
                         || ((t1 & tile_flag_solid) == 0 && (t2 & tile_flag_super_or_player_death_right) != 0);
 
-                    if player.iHorizontalPlatformCollision == 1 {
-                        player.kill_player_map_hazard(g, true, KillStyle::Environment, true, iPlayerId);
+                    if g.player(player).iHorizontalPlatformCollision == 1 {
+                        g.player(player).kill_player_map_hazard(g, true, KillStyle::Environment, true, iPlayerId);
                         return;
-                    } else if fSuperDeathTileToRight || (fDeathTileToRight && !player.is_invincible() && !player.is_shielded() && !player.shyguy) {
-                        if PlayerKillType::NonKill != player.kill_player_map_hazard(g, fSuperDeathTileToRight, KillStyle::Environment, false, iPlayerId) {
+                    } else if fSuperDeathTileToRight || (fDeathTileToRight && !g.player(player).is_invincible() && !g.player(player).is_shielded() && !g.player(player).shyguy) {
+                        if PlayerKillType::NonKill != g.player(player).kill_player_map_hazard(g, fSuperDeathTileToRight, KillStyle::Environment, false, iPlayerId) {
                             return;
                         }
                     } else {
-                        player.set_xf((((tx as i32) << 5) + TILESIZE) as f32 + 0.2 + fx - iHalfWidth);
-                        player.flipsidesifneeded();
+                        g.player(player).set_xf((((tx as i32) << 5) + TILESIZE) as f32 + 0.2 + fx - iHalfWidth);
+                        g.player(player).flipsidesifneeded();
 
                         self.check_map_collision_left(g, player);
 
                         if self.fOldVelX < 0.0 {
-                            player.fOldX = fx + 10.0;
+                            g.player(player).fOldX = fx + 10.0;
                         } else {
-                            player.fOldX = fx - 10.0;
+                            g.player(player).fOldX = fx - 10.0;
                         }
 
-                        player.iHorizontalPlatformCollision = 3;
-                        player.iPlatformCollisionPlayerId = iPlayerId;
+                        g.player(player).iHorizontalPlatformCollision = 3;
+                        g.player(player).iPlatformCollisionPlayerId = iPlayerId;
 
-                        if player.velx < 0.0 {
-                            player.velx = 0.0;
+                        if g.player(player).velx < 0.0 {
+                            g.player(player).velx = 0.0;
                         }
                     }
                 }
@@ -475,29 +476,29 @@ impl MovingPlatform {
         let fRelativeX1: f32;
         let fRelativeX2: f32;
 
-        coldec = self.coldec_player(player);
+        coldec = self.coldec_player(g, player);
         if coldec == collision_none {
-            if player.platform == this {
-                player.platform = Ptr::null();
+            if g.player(player).platform == this {
+                g.player(player).platform = Ptr::null();
             }
 
             return;
         } else if coldec == collision_normal {
-            fRelativeX1 = player.fx - fx + iHalfWidth;
-            fRelativeX2 = player.fx + PW as f32 - fx + iHalfWidth;
+            fRelativeX1 = g.player(player).fx - fx + iHalfWidth;
+            fRelativeX2 = g.player(player).fx + PW as f32 - fx + iHalfWidth;
         } else if coldec == collision_overlap_left {
-            fRelativeX1 = player.fx - fx + iHalfWidth - SW;
-            fRelativeX2 = player.fx + PW as f32 - fx + iHalfWidth - SW;
+            fRelativeX1 = g.player(player).fx - fx + iHalfWidth - SW;
+            fRelativeX2 = g.player(player).fx + PW as f32 - fx + iHalfWidth - SW;
         } else {
-            fRelativeX1 = player.fx - fx + iHalfWidth + SW;
-            fRelativeX2 = player.fx + PW as f32 - fx + iHalfWidth + SW;
+            fRelativeX1 = g.player(player).fx - fx + iHalfWidth + SW;
+            fRelativeX2 = g.player(player).fx + PW as f32 - fx + iHalfWidth + SW;
         }
 
         if fColVelY < 0.0 {
-            let fRelativeY: f32 = if player.inair || player.platform == this {
-                player.fPrecalculatedY - fy + iHalfHeight
+            let fRelativeY: f32 = if g.player(player).inair || g.player(player).platform == this {
+                g.player(player).fPrecalculatedY - fy + iHalfHeight
             } else {
-                player.fy - fy + iHalfHeight
+                g.player(player).fy - fy + iHalfHeight
             };
 
             if fRelativeY >= 0.0 && fRelativeY < iHeight {
@@ -527,36 +528,36 @@ impl MovingPlatform {
 
                 if fSolidTileOverPlayer
                     && !fSuperDeathTileOverPlayer
-                    && (!fDeathTileOverPlayer || player.is_invincible() || player.is_shielded() || player.shyguy)
+                    && (!fDeathTileOverPlayer || g.player(player).is_invincible() || g.player(player).is_shielded() || g.player(player).shyguy)
                 {
-                    if player.iVerticalPlatformCollision == 2 {
-                        player.kill_player_map_hazard(g, true, KillStyle::Environment, true, iPlayerId);
+                    if g.player(player).iVerticalPlatformCollision == 2 {
+                        g.player(player).kill_player_map_hazard(g, true, KillStyle::Environment, true, iPlayerId);
                         return;
                     } else {
-                        player.fPrecalculatedY = (((ty as i32) << 5) + TILESIZE) as f32 + 0.2 + fy - iHalfHeight;
-                        player.fOldY = player.fPrecalculatedY - self.fVelY - GRAVITATION;
+                        g.player(player).fPrecalculatedY = (((ty as i32) << 5) + TILESIZE) as f32 + 0.2 + fy - iHalfHeight;
+                        g.player(player).fOldY = g.player(player).fPrecalculatedY - self.fVelY - GRAVITATION;
 
-                        if player.vely < 0.0 && self.fVelY > 0.0 {
-                            player.fPrecalculatedY += self.fVelY;
+                        if g.player(player).vely < 0.0 && self.fVelY > 0.0 {
+                            g.player(player).fPrecalculatedY += self.fVelY;
                         }
 
-                        if player.vely < 0.0 {
-                            player.vely = cap_falling_velocity(-player.vely * BOUNCESTRENGTH + self.fVelY);
+                        if g.player(player).vely < 0.0 {
+                            g.player(player).vely = cap_falling_velocity(-g.player(player).vely * BOUNCESTRENGTH + self.fVelY);
                         }
 
-                        player.iVerticalPlatformCollision = 0;
-                        player.iPlatformCollisionPlayerId = iPlayerId;
+                        g.player(player).iVerticalPlatformCollision = 0;
+                        g.player(player).iPlatformCollisionPlayerId = iPlayerId;
                     }
 
                     return;
                 } else if (t1 & tile_flag_player_or_death_on_bottom) != 0 || (t2 & tile_flag_player_or_death_on_bottom) != 0 {
-                    if PlayerKillType::NonKill != player.kill_player_map_hazard(g, true, KillStyle::Environment, false, iPlayerId) {
+                    if PlayerKillType::NonKill != g.player(player).kill_player_map_hazard(g, true, KillStyle::Environment, false, iPlayerId) {
                         return;
                     }
                 }
             }
         } else {
-            let fRelativeY = player.fPrecalculatedY + PH as f32 - fy + iHalfHeight;
+            let fRelativeY = g.player(player).fPrecalculatedY + PH as f32 - fy + iHalfHeight;
 
             if fRelativeY >= 0.0 && fRelativeY < iHeight {
                 let ty = tile_of(fRelativeY);
@@ -575,31 +576,31 @@ impl MovingPlatform {
                 let fSolidTileUnderPlayer = (t1 & tile_flag_solid) != 0 || (t2 & tile_flag_solid) != 0;
 
                 if ((t1 & tile_flag_solid_on_top) != 0 || (t2 & tile_flag_solid_on_top) != 0)
-                    && player.fOldY + PH as f32 <= ((ty as i32) << 5) as f32 + self.fOldY - iHalfHeight
+                    && g.player(player).fOldY + PH as f32 <= ((ty as i32) << 5) as f32 + self.fOldY - iHalfHeight
                 {
-                    if player.fallthrough && !fSolidTileUnderPlayer {
-                        player.fPrecalculatedY =
+                    if g.player(player).fallthrough && !fSolidTileUnderPlayer {
+                        g.player(player).fPrecalculatedY =
                             (((ty as i32) << 5) - PH) as f32 + (if self.fVelY > 0.0 { self.fVelY } else { 0.0 }) + 0.2 + fy - iHalfHeight;
-                        player.inair = true;
-                        player.platform = Ptr::null();
-                    } else if player.iVerticalPlatformCollision == 0 {
-                        player.kill_player_map_hazard(g, true, KillStyle::Environment, true, iPlayerId);
+                        g.player(player).inair = true;
+                        g.player(player).platform = Ptr::null();
+                    } else if g.player(player).iVerticalPlatformCollision == 0 {
+                        g.player(player).kill_player_map_hazard(g, true, KillStyle::Environment, true, iPlayerId);
                         return;
                     } else {
-                        player.platform = this;
-                        player.iVerticalPlatformCollision = 2;
-                        player.iPlatformCollisionPlayerId = iPlayerId;
+                        g.player(player).platform = this;
+                        g.player(player).iVerticalPlatformCollision = 2;
+                        g.player(player).iPlatformCollisionPlayerId = iPlayerId;
 
-                        player.fPrecalculatedY = (((ty as i32) << 5) - PH) as f32 - 0.2 + fy - iHalfHeight;
-                        player.vely = GRAVITATION;
-                        player.inair = false;
-                        player.killsinrowinair = 0;
-                        player.extrajumps = 0;
+                        g.player(player).fPrecalculatedY = (((ty as i32) << 5) - PH) as f32 - 0.2 + fy - iHalfHeight;
+                        g.player(player).vely = GRAVITATION;
+                        g.player(player).inair = false;
+                        g.player(player).killsinrowinair = 0;
+                        g.player(player).extrajumps = 0;
                     }
 
-                    player.fOldY = player.fPrecalculatedY - self.fVelY;
-                    player.fallthrough = false;
-                    player.onice = false;
+                    g.player(player).fOldY = g.player(player).fPrecalculatedY - self.fVelY;
+                    g.player(player).fallthrough = false;
+                    g.player(player).onice = false;
 
                     return;
                 }
@@ -615,117 +616,117 @@ impl MovingPlatform {
 
                 if fSolidTileUnderPlayer
                     && !fSuperDeathTileUnderPlayer
-                    && (!fDeathTileUnderPlayer || player.is_invincible() || player.is_shielded() || player.kuriboshoe.is_on() || player.shyguy)
+                    && (!fDeathTileUnderPlayer || g.player(player).is_invincible() || g.player(player).is_shielded() || g.player(player).kuriboshoe.is_on() || g.player(player).shyguy)
                 {
-                    if player.iVerticalPlatformCollision == 0 {
-                        player.kill_player_map_hazard(g, true, KillStyle::Environment, true, iPlayerId);
+                    if g.player(player).iVerticalPlatformCollision == 0 {
+                        g.player(player).kill_player_map_hazard(g, true, KillStyle::Environment, true, iPlayerId);
                         return;
                     } else {
-                        player.platform = this;
-                        player.iVerticalPlatformCollision = 2;
-                        player.iPlatformCollisionPlayerId = iPlayerId;
+                        g.player(player).platform = this;
+                        g.player(player).iVerticalPlatformCollision = 2;
+                        g.player(player).iPlatformCollisionPlayerId = iPlayerId;
 
-                        player.fPrecalculatedY = (((ty as i32) << 5) - PH) as f32 - 0.2 + fy - iHalfHeight;
-                        player.fOldY = player.fPrecalculatedY - self.fVelY;
+                        g.player(player).fPrecalculatedY = (((ty as i32) << 5) - PH) as f32 - 0.2 + fy - iHalfHeight;
+                        g.player(player).fOldY = g.player(player).fPrecalculatedY - self.fVelY;
 
-                        player.vely = GRAVITATION;
-                        player.inair = false;
-                        player.killsinrowinair = 0;
-                        player.extrajumps = 0;
+                        g.player(player).vely = GRAVITATION;
+                        g.player(player).inair = false;
+                        g.player(player).killsinrowinair = 0;
+                        g.player(player).extrajumps = 0;
 
                         if ((t1 & tile_flag_ice) != 0 && ((t2 & tile_flag_ice) != 0 || t2 == tile_flag_nonsolid || t2 == tile_flag_gap))
                             || ((t2 & tile_flag_ice) != 0 && ((t1 & tile_flag_ice) != 0 || t1 == tile_flag_nonsolid || t1 == tile_flag_gap))
                         {
-                            player.onice = true;
+                            g.player(player).onice = true;
                         } else {
-                            player.onice = false;
+                            g.player(player).onice = false;
                         }
 
-                        player.fallthrough = false;
+                        g.player(player).fallthrough = false;
 
                         return;
                     }
                 } else if fDeathTileUnderPlayer || fSuperDeathTileUnderPlayer {
-                    if PlayerKillType::NonKill != player.kill_player_map_hazard(g, fSuperDeathTileUnderPlayer, KillStyle::Environment, false, iPlayerId) {
+                    if PlayerKillType::NonKill != g.player(player).kill_player_map_hazard(g, fSuperDeathTileUnderPlayer, KillStyle::Environment, false, iPlayerId) {
                         return;
                     }
-                } else if player.platform == this {
-                    player.platform = Ptr::null();
+                } else if g.player(player).platform == this {
+                    g.player(player).platform = Ptr::null();
                 }
             }
         }
     }
 
-    fn check_map_collision_right(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) {
-        if player.fy + (PH as f32) < 0.0 {
+    fn check_map_collision_right(&mut self, g: &mut Game, mut player: PlayerId) {
+        if g.player(player).fy + (PH as f32) < 0.0 {
             return;
         }
 
-        let iTestBackgroundX: i16 = if player.fx + PW as f32 >= SW {
-            (((player.fx as i16) as i32 + PW - App::screenWidth) / TILESIZE) as i16
+        let iTestBackgroundX: i16 = if g.player(player).fx + PW as f32 >= SW {
+            (((g.player(player).fx as i16) as i32 + PW - App::screenWidth) / TILESIZE) as i16
         } else {
-            (((player.fx as i16) as i32 + PW) / TILESIZE) as i16
+            (((g.player(player).fx as i16) as i32 + PW) / TILESIZE) as i16
         };
 
-        let iTestBackgroundY: i16 = (((player.fy as i16) as i32 + PH) / TILESIZE) as i16;
+        let iTestBackgroundY: i16 = (((g.player(player).fy as i16) as i32 + PH) / TILESIZE) as i16;
 
         let mut topblock = g.g_map.block(iTestBackgroundX, iTestBackgroundY);
 
         if (!topblock.is_null() && !topblock.is_transparent() && !topblock.is_hidden())
             || (g.g_map.map(iTestBackgroundX as i32, iTestBackgroundY as i32) & tile_flag_solid) != 0
         {
-            player.set_xf((((iTestBackgroundX as i32) << 5) - PW) as f32 - 0.2);
-            player.flipsidesifneeded();
+            g.player(player).set_xf((((iTestBackgroundX as i32) << 5) - PW) as f32 - 0.2);
+            g.player(player).flipsidesifneeded();
             return;
         }
 
-        if player.fy < 0.0 {
+        if g.player(player).fy < 0.0 {
             return;
         }
 
-        let iTestBackgroundY2: i16 = tile_of(player.fy);
+        let iTestBackgroundY2: i16 = tile_of(g.player(player).fy);
 
         let mut bottomblock = g.g_map.block(iTestBackgroundX, iTestBackgroundY2);
 
         if (!bottomblock.is_null() && !bottomblock.is_transparent() && !bottomblock.is_hidden())
             || (g.g_map.map(iTestBackgroundX as i32, iTestBackgroundY2 as i32) & tile_flag_solid) != 0
         {
-            player.set_xf((((iTestBackgroundX as i32) << 5) - PW) as f32 - 0.2);
-            player.flipsidesifneeded();
+            g.player(player).set_xf((((iTestBackgroundX as i32) << 5) - PW) as f32 - 0.2);
+            g.player(player).flipsidesifneeded();
         }
     }
 
-    fn check_map_collision_left(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) {
-        if player.fy + (PH as f32) < 0.0 {
+    fn check_map_collision_left(&mut self, g: &mut Game, mut player: PlayerId) {
+        if g.player(player).fy + (PH as f32) < 0.0 {
             return;
         }
 
-        let iTestBackgroundX: i16 = tile_of(player.fx);
-        let iTestBackgroundY: i16 = (((player.fy as i16) as i32 + PH) / TILESIZE) as i16;
+        let iTestBackgroundX: i16 = tile_of(g.player(player).fx);
+        let iTestBackgroundY: i16 = (((g.player(player).fy as i16) as i32 + PH) / TILESIZE) as i16;
 
         let mut topblock = g.g_map.block(iTestBackgroundX, iTestBackgroundY);
 
         if (!topblock.is_null() && !topblock.is_transparent() && !topblock.is_hidden())
             || (g.g_map.map(iTestBackgroundX as i32, iTestBackgroundY as i32) & tile_flag_solid) != 0
         {
-            player.set_xf((((iTestBackgroundX as i32) << 5) + TILESIZE) as f32 + 0.2);
-            player.flipsidesifneeded();
+            g.player(player).set_xf((((iTestBackgroundX as i32) << 5) + TILESIZE) as f32 + 0.2);
+            g.player(player).flipsidesifneeded();
             return;
         }
 
-        if player.fy < 0.0 {
+        if g.player(player).fy < 0.0 {
             return;
         }
 
-        let iTestBackgroundY2: i16 = tile_of(player.fy);
+        let iTestBackgroundY2: i16 = tile_of(g.player(player).fy);
 
         let mut bottomblock = g.g_map.block(iTestBackgroundX, iTestBackgroundY2);
 
         if (!bottomblock.is_null() && !bottomblock.is_transparent() && !bottomblock.is_hidden())
             || (g.g_map.map(iTestBackgroundX as i32, iTestBackgroundY2 as i32) & tile_flag_solid) != 0
         {
-            player.set_xf((((iTestBackgroundX as i32) << 5) + TILESIZE) as f32 + 0.2);
-            player.flipsidesifneeded();
+            g.player(player).set_xf((((iTestBackgroundX as i32) << 5) + TILESIZE) as f32 + 0.2);
+            g.player(player).flipsidesifneeded();
         }
     }
 
@@ -938,7 +939,7 @@ impl MovingPlatform {
         true
     }
 
-    fn coldec_player(&self, player: Ptr<CPlayer>) -> CollisionStyle {
+    fn coldec_player(&self, g: &Game, player: PlayerId) -> CollisionStyle {
         let fx = self.fx;
         let fy = self.fy;
         let hw = self.iHalfWidth as f32;
@@ -946,30 +947,30 @@ impl MovingPlatform {
         let pw = PW as f32;
         let ph = PH as f32;
 
-        if player.fx + pw < fx - hw {
-            if player.fx + SW >= fx + hw || player.fx + pw + SW < fx - hw || player.fPrecalculatedY >= fy + hh || player.fPrecalculatedY + ph < fy - hh {
+        if g.player(player).fx + pw < fx - hw {
+            if g.player(player).fx + SW >= fx + hw || g.player(player).fx + pw + SW < fx - hw || g.player(player).fPrecalculatedY >= fy + hh || g.player(player).fPrecalculatedY + ph < fy - hh {
                 collision_none
             } else {
                 collision_overlap_right
             }
-        } else if fx + hw < player.fx {
-            if player.fx >= fx + hw + SW || player.fx + pw < fx - hw + SW || player.fPrecalculatedY >= fy + hh || player.fPrecalculatedY + ph < fy - hh {
+        } else if fx + hw < g.player(player).fx {
+            if g.player(player).fx >= fx + hw + SW || g.player(player).fx + pw < fx - hw + SW || g.player(player).fPrecalculatedY >= fy + hh || g.player(player).fPrecalculatedY + ph < fy - hh {
                 collision_none
             } else {
                 collision_overlap_left
             }
-        } else if player.fx >= fx + hw || fx - hw > player.fx + pw || player.fPrecalculatedY >= fy + hh || fy - hh > player.fPrecalculatedY + ph {
+        } else if g.player(player).fx >= fx + hw || fx - hw > g.player(player).fx + pw || g.player(player).fPrecalculatedY >= fy + hh || fy - hh > g.player(player).fPrecalculatedY + ph {
             collision_none
         } else {
             collision_normal
         }
     }
 
-    pub fn get_tile_types_from_player(&self, player: Ptr<CPlayer>, lefttile: &mut i32, righttile: &mut i32) {
+    pub fn get_tile_types_from_player(&self, g: &Game, player: PlayerId, lefttile: &mut i32, righttile: &mut i32) {
         *lefttile = tile_flag_nonsolid;
         *righttile = tile_flag_nonsolid;
 
-        let fRelativeY = player.fPrecalculatedY + PH as f32 - self.fy + self.iHalfHeight as f32;
+        let fRelativeY = g.player(player).fPrecalculatedY + PH as f32 - self.fy + self.iHalfHeight as f32;
 
         if fRelativeY < 0.0 || fRelativeY >= self.iHeight as f32 {
             return;
@@ -977,12 +978,12 @@ impl MovingPlatform {
 
         let ty = tile_of(fRelativeY);
 
-        let fRelativeX1 = player.fx - self.fx + self.iHalfWidth as f32;
+        let fRelativeX1 = g.player(player).fx - self.fx + self.iHalfWidth as f32;
 
-        let fRelativeX2 = if player.fx + PW as f32 > SW {
-            player.fx + PW as f32 - SW - self.fx + self.iHalfWidth as f32
+        let fRelativeX2 = if g.player(player).fx + PW as f32 > SW {
+            g.player(player).fx + PW as f32 - SW - self.fx + self.iHalfWidth as f32
         } else {
-            player.fx + PW as f32 - self.fx + self.iHalfWidth as f32
+            g.player(player).fx + PW as f32 - self.fx + self.iHalfWidth as f32
         };
 
         if fRelativeX1 >= 0.0 && fRelativeX1 < self.iWidth as f32 {

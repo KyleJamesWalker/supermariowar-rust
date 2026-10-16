@@ -1,5 +1,7 @@
 //! Port of src/common/ObjectBase.cpp
 
+use crate::smw::object_container::ObjectId;
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -73,6 +75,8 @@ pub struct CObject {
     pub dead: bool,
 
     pub iNetworkID: i32,
+    /// Set when a container takes the object.
+    pub id: ObjectId,
 
     pub _alias: Aliased,
 }
@@ -115,6 +119,7 @@ impl CObject {
             state: 0,
             dead: false,
             iNetworkID: next_network_id(g),
+            id: ObjectId::NONE,
             _alias: Aliased::new(),
         };
 
@@ -233,7 +238,7 @@ pub trait CObjectTrait: Any {
 
     fn draw(&mut self, g: &mut Game) {}
     fn update(&mut self, g: &mut Game);
-    fn collide_player(&mut self, g: &mut Game, _player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, _player: PlayerId) -> bool {
         false
     }
     fn collide_object(&mut self, g: &mut Game, _object: Ptr<dyn IO_MovingObjectTrait>) {}
