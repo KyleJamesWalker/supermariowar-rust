@@ -1,5 +1,6 @@
 //! Port of src/smw/ai.cpp
 
+use crate::smw::object_container::ObjectId;
 use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::game::App;
@@ -46,9 +47,9 @@ pub struct NearestObjects {
     pub player: PlayerId,
     pub teammate: PlayerId,
 
-    pub goal: Ptr<dyn CObjectTrait>,
-    pub stomp: Ptr<dyn CObjectTrait>,
-    pub threat: Ptr<dyn CObjectTrait>,
+    pub goal: ObjectId,
+    pub stomp: ObjectId,
+    pub threat: ObjectId,
 
     pub playerdistance: i32,
     pub teammatedistance: i32,
@@ -68,9 +69,9 @@ impl NearestObjects {
         let mut n = NearestObjects {
             player: PlayerId::NONE,
             teammate: PlayerId::NONE,
-            goal: Ptr::null(),
-            stomp: Ptr::null(),
-            threat: Ptr::null(),
+            goal: ObjectId::NONE,
+            stomp: ObjectId::NONE,
+            threat: ObjectId::NONE,
             playerdistance: 0,
             teammatedistance: 0,
             goaldistance: 0,
@@ -88,10 +89,10 @@ impl NearestObjects {
 
     pub fn reset(&mut self) {
         self.player = PlayerId::NONE;
-        self.goal = Ptr::null();
-        self.stomp = Ptr::null();
+        self.goal = ObjectId::NONE;
+        self.stomp = ObjectId::NONE;
         self.teammate = PlayerId::NONE;
-        self.threat = Ptr::null();
+        self.threat = ObjectId::NONE;
 
         self.playerdistance = App::screenWidth * 1000;
         self.goaldistance = App::screenWidth * 1000;
@@ -820,7 +821,7 @@ impl CPlayerAI {
         }
     }
 
-    pub fn distance_to_object(&self, g: &Game, object: Ptr<dyn CObjectTrait>, target: &mut Ptr<dyn CObjectTrait>, nearest: &mut i32, wrap: &mut bool) {
+    pub fn distance_to_object(&self, g: &Game, object: Ptr<dyn CObjectTrait>, target: &mut ObjectId, nearest: &mut i32, wrap: &mut bool) {
         let pPlayer = self.pPlayer;
 
         //Calculate normal screen
@@ -840,13 +841,13 @@ impl CPlayerAI {
         let distance_player_pow2: i32 = tx as i32 * tx as i32 + ty as i32 * ty as i32; // a^2 = b^2 + c^2 :)
 
         if distance_player_pow2 < *nearest {
-            *target = object;
+            *target = object.id;
             *nearest = distance_player_pow2;
             *wrap = fScreenWrap;
         }
     }
 
-    pub fn distance_to_object_center(&self, g: &Game, object: Ptr<dyn CObjectTrait>, target: &mut Ptr<dyn CObjectTrait>, nearest: &mut i32, wrap: &mut bool) {
+    pub fn distance_to_object_center(&self, g: &Game, object: Ptr<dyn CObjectTrait>, target: &mut ObjectId, nearest: &mut i32, wrap: &mut bool) {
         let pPlayer = self.pPlayer;
 
         //Calculate normal screen
@@ -865,7 +866,7 @@ impl CPlayerAI {
         let distance_player_pow2: i32 = tx as i32 * tx as i32 + ty as i32 * ty as i32;
 
         if distance_player_pow2 < *nearest {
-            *target = object;
+            *target = object.id;
             *nearest = distance_player_pow2;
             *wrap = fScreenWrap;
         }
@@ -972,8 +973,8 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
         let iTenSeconds: i16 = (15 * iDecisionPercentage[g.game_values.cpudifficulty as usize] as i32 / 10) as i16;
 
         //If there is a goal, then make sure we aren't paying attention to it for too long
-        if !this.nearestObjects.goal.is_null() {
-            if this.currentAttentionObject.iID == this.nearestObjects.goal.network_id() {
+        if !this.nearestObjects.goal.is_none() {
+            if this.currentAttentionObject.iID == ai_target(g, this.nearestObjects.goal).network_id() {
                 //If we have been paying attention to this goal for too long, then start ignoring it
                 this.currentAttentionObject.iTimer = this.currentAttentionObject.iTimer.wrapping_add(1);
                 if this.currentAttentionObject.iTimer > iTenSeconds {
@@ -986,7 +987,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                     this.attentionObjects.insert(ao.iID, ao);
                 }
             } else {
-                this.currentAttentionObject.iID = this.nearestObjects.goal.network_id();
+                this.currentAttentionObject.iID = ai_target(g, this.nearestObjects.goal).network_id();
                 this.currentAttentionObject.iTimer = 0;
             }
         } else {
@@ -1025,11 +1026,11 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
 
         let actionType: i16;
         let no = &this.nearestObjects;
-        if !no.threat.is_null() && no.threatdistance < 14400 && !g.player(pPlayer).is_invincible() {
+        if !no.threat.is_none() && no.threatdistance < 14400 && !g.player(pPlayer).is_invincible() {
             actionType = 2;
-        } else if !no.stomp.is_null() && no.stompdistance < 14400 {
+        } else if !no.stomp.is_none() && no.stompdistance < 14400 {
             actionType = 4;
-        } else if !no.goal.is_null() && !no.teammate.is_none() {
+        } else if !no.goal.is_none() && !no.teammate.is_none() {
             if no.goaldistance < no.teammatedistance {
                 actionType = 1;
             } else {
@@ -1037,7 +1038,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
             }
         } else if !no.teammate.is_none() {
             actionType = 3;
-        } else if !no.goal.is_null() {
+        } else if !no.goal.is_none() {
             if no.playerdistance < 8100 {
                 actionType = 0;
             } else {
@@ -1052,10 +1053,10 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
          ***************************************************/
         //return if no players, goals, or threats available
         if ((actionType != 0) || !no.player.is_none())
-            && (actionType != 1 || !no.goal.is_null())
-            && ((actionType != 2) || !no.threat.is_null())
+            && (actionType != 1 || !no.goal.is_none())
+            && ((actionType != 2) || !no.threat.is_none())
             && ((actionType != 3) || !no.teammate.is_none())
-            && ((actionType != 4) || !no.stomp.is_null())
+            && ((actionType != 4) || !no.stomp.is_none())
             && (this.iFallDanger == 0)
         {
             //Use turbo
@@ -1180,7 +1181,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                 }
             } else if actionType == 1 {
                 //Go for goal
-                let mut goal = no.goal;
+                let mut goal = ai_target(g, no.goal);
 
                 if (goal.x() > ix32 && no.goalwrap) || (goal.x() < ix32 && !no.goalwrap) {
                     playerKeys.game_left_mut().fDown = true;
@@ -1233,7 +1234,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                 }
             } else if actionType == 2 {
                 //Evade Threat
-                let threat = no.threat;
+                let threat = ai_target(g, no.threat);
 
                 //If threat, always use turbo
                 playerKeys.game_turbo_mut().fDown = true;
@@ -1272,7 +1273,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                 }
             } else if actionType == 4 {
                 //Stomp something (goomba, koopa, cheepcheep)
-                let stomp = no.stomp;
+                let stomp = ai_target(g, no.stomp);
                 let moveToward: *mut bool;
                 let moveAway: *mut bool;
 
@@ -1361,8 +1362,8 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
             //"Phanto Mode" specific stuff
             if g.game_values.gamemode.gamemode == game_mode_chase {
                 //Ignore the key if a phanto is really close
-                if !no.threat.is_null()
-                    && no.threat.get().get_object_type() == object_phanto
+                if !no.threat.is_none()
+                    && ai_target(g, no.threat).get_object_type() == object_phanto
                     && no.threatdistance < 4096
                     && !g.player(pPlayer).is_invincible()
                 {
@@ -1644,4 +1645,9 @@ impl CPlayerAITrait for CSimpleAI {
             }
         }
     }
+}
+
+/// A target this think found; dead objects stay in their container until `clean_dead_objects`.
+fn ai_target(g: &Game, id: ObjectId) -> Ptr<dyn CObjectTrait> {
+    g.object(id).unwrap_or_else(|| panic!("no AI target {:?}", id))
 }

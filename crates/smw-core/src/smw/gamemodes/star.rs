@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/Star.cpp
 
+use crate::smw::object_container::ObjectId;
 use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::eyecandy::{EC_GravText, EC_SingleAnimation};
@@ -26,7 +27,7 @@ use crate::smw::player::CPlayer;
 pub struct CGM_Star {
     pub cgm_time_limit: CGM_TimeLimit,
 
-    pub starItem: [Ptr<CO_Star>; 3],
+    pub starItem: [ObjectId; 3],
     pub starPlayer: [PlayerId; 3],
     pub iCurrentModeType: StarStyle,
     pub fDisplayTimer: bool,
@@ -37,7 +38,7 @@ impl CGM_Star {
     pub fn new() -> Self {
         let mut this = CGM_Star {
             cgm_time_limit: CGM_TimeLimit::new(),
-            starItem: [Ptr::null(); 3],
+            starItem: [ObjectId::NONE; 3],
             starPlayer: [PlayerId::NONE; 3],
             iCurrentModeType: StarStyle::Ztar,
             fDisplayTimer: false,
@@ -61,10 +62,12 @@ impl CGM_Star {
         let mut gp = g.ptr();
         //Clean up old stars
         for iStar in 0..3usize {
-            if !self.starItem[iStar].is_null() {
-                MO_CarriedObjectTrait::drop(&mut *self.starItem[iStar], g);
-                self.starItem[iStar].dead = true;
-                self.starItem[iStar] = Ptr::null();
+            if !self.starItem[iStar].is_none() {
+                if let Some(star) = g.object_as::<CO_Star>(self.starItem[iStar]) {
+                    MO_CarriedObjectTrait::drop(star, g);
+                    star.dead = true;
+                }
+                self.starItem[iStar] = ObjectId::NONE;
             }
 
             self.starPlayer[iStar] = PlayerId::NONE;
@@ -80,9 +83,9 @@ impl CGM_Star {
             while (iStar as i32) < iNumPlayers as i32 - 1 {
                 self.starPlayer[iStar as usize] = rankedPlayers[iStar as usize];
 
-                self.starItem[iStar as usize] = Ptr::new_box(CO_Star::new(g, gp.rm.spr_star, 1, iStar));
-                self.starItem[iStar as usize].set_player_color(g.player(self.starPlayer[iStar as usize]).get_color_id());
-                gp.objectcontainer[1].add(g, self.starItem[iStar as usize]);
+                let mut star = Ptr::new_box(CO_Star::new(g, gp.rm.spr_star, 1, iStar));
+                star.set_player_color(g.player(self.starPlayer[iStar as usize]).get_color_id());
+                self.starItem[iStar as usize] = gp.objectcontainer[1].add_id(g, star);
                 iStar += 1;
             }
         } else {
@@ -90,8 +93,8 @@ impl CGM_Star {
             let fGetHighest = !self.fReverseScoring && self.iCurrentModeType == StarStyle::Ztar;
             self.starPlayer[0] = self.get_highest_score_player(g, fGetHighest);
 
-            self.starItem[0] = Ptr::new_box(CO_Star::new(g, gp.rm.spr_star, if self.iCurrentModeType == StarStyle::Ztar { 0 } else { 1 }, 0));
-            gp.objectcontainer[1].add(g, self.starItem[0]);
+            let star = Ptr::new_box(CO_Star::new(g, gp.rm.spr_star, if self.iCurrentModeType == StarStyle::Ztar { 0 } else { 1 }, 0));
+            self.starItem[0] = gp.objectcontainer[1].add_id(g, star);
         }
     }
 
@@ -126,10 +129,10 @@ impl CGM_Star {
 
         if self.iCurrentModeType == StarStyle::Multi {
             let iColor = g.player(self.starPlayer[id as usize]).get_color_id();
-            self.starItem[id as usize].set_player_color(iColor);
+            star_item(g, self.starItem[id as usize]).set_player_color(iColor);
         }
 
-        if self.starItem[id as usize].get_type() == 1 {
+        if star_item(g, self.starItem[id as usize]).get_type() == 1 {
             let text = if self.iCurrentModeType == StarStyle::Multi { "Star Get!" } else { "Shine Get!" };
             g.eyecandy[2].emplace(EC_GravText::new(
                 Ptr::from_mut(&mut g.rm.game_font_large),
@@ -169,8 +172,8 @@ impl CGM_Star {
         while (iStar as i32) < iNumPlayers as i32 - 1 {
             self.starPlayer[iStar as usize] = rankedPlayers[iStar as usize];
             let iColor = g.player(self.starPlayer[iStar as usize]).get_color_id();
-            self.starItem[iStar as usize].set_player_color(iColor);
-            self.starItem[iStar as usize].place_star(g);
+            star_item(g, self.starItem[iStar as usize]).set_player_color(iColor);
+            star_item(g, self.starItem[iStar as usize]).place_star(g);
             iStar += 1;
         }
     }
@@ -240,7 +243,7 @@ pub fn cgm_star_init(g: &mut Game, this: &mut CGM_Star) {
     }
 
     for iStar in 0..3usize {
-        this.starItem[iStar] = Ptr::null();
+        this.starItem[iStar] = ObjectId::NONE;
         this.starPlayer[iStar] = PlayerId::NONE;
     }
 
@@ -270,7 +273,7 @@ fn reassign(g: &mut Game, this: &mut CGM_Star) {
     } else if this.starPlayer[0].is_none() {
         let fGetHighest = !this.fReverseScoring && g.game_values.gamemodesettings.star.shine == StarStyle::Ztar;
         this.starPlayer[0] = this.get_highest_score_player(g, fGetHighest);
-        this.starItem[0].place_star(g);
+        star_item(g, this.starItem[0]).place_star(g);
     }
 }
 
@@ -297,7 +300,7 @@ fn time_out(g: &mut Game, this: &mut CGM_Star) {
 
         let fGetHighest = !this.fReverseScoring;
         this.starPlayer[0] = this.get_highest_score_player(g, fGetHighest);
-        this.starItem[0].place_star(g);
+        star_item(g, this.starItem[0]).place_star(g);
     } else if this.iCurrentModeType == StarStyle::Shine {
         for i in 0..g.players.len() {
             let mut player = g.players[i];
@@ -328,7 +331,7 @@ fn time_out(g: &mut Game, this: &mut CGM_Star) {
         }
 
         this.starPlayer[0] = this.get_highest_score_player(g, false);
-        this.starItem[0].place_star(g);
+        star_item(g, this.starItem[0]).place_star(g);
     } else if this.iCurrentModeType == StarStyle::Multi {
         for iPlayer in 0..g.players.len() {
             let mut fFound = false;
@@ -464,4 +467,9 @@ pub fn cgm_star_think(g: &mut Game, this: &mut CGM_Star) {
     if iTime == 0 && !net_random::event(g, Ev::StarTimeout, &[]) {
         time_out(g, this);
     }
+}
+
+/// Stars live from `setup_mode` to the next one.
+fn star_item(g: &Game, id: ObjectId) -> &'static mut CO_Star {
+    g.object_as::<CO_Star>(id).unwrap_or_else(|| panic!("no star {:?}", id))
 }

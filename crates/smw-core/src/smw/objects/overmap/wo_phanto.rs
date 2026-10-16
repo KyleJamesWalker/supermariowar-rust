@@ -114,7 +114,7 @@ impl CObjectTrait for OMO_Phanto {
         if g.game_values.gamemode.gamemode == game_mode_chase {
             let chasemode: &mut CGM_Chase = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Chase>().unwrap();
 
-            let player: PlayerId = chasemode.get_key_holder();
+            let player: PlayerId = chasemode.get_key_holder(g, );
 
             if !g.game_values.gamemode.gameover && !player.is_none() {
                 // Chase the player
@@ -193,7 +193,7 @@ impl CObjectTrait for OMO_Phanto {
                 return true;
             } else if g.game_values.gamemode.gamemode == game_mode_chase {
                 let chasemode: &mut CGM_Chase = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Chase>().unwrap();
-                let keyholder: PlayerId = chasemode.get_key_holder();
+                let keyholder: PlayerId = chasemode.get_key_holder(g, );
 
                 if keyholder == player {
                     g.player(player).kill_player_map_hazard(g, false, KillStyle::Phanto, false, -1);

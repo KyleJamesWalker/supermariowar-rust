@@ -7,22 +7,78 @@ use crate::globals::{Aliased, Ptr};
 
 pub const MAXOBJECTS: usize = 300;
 
+/// An object in one of `Game`'s containers. A handle to a deleted object finds nothing.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub struct ObjectId {
+    container: u8,
+    slot: u16,
+    generation: u32,
+}
+
+impl ObjectId {
+    /// No object: what a null object pointer was in the C++.
+    pub const NONE: ObjectId = ObjectId { container: u8::MAX, slot: 0, generation: 0 };
+
+    pub fn is_none(self) -> bool {
+        self == Self::NONE
+    }
+
+    pub fn container(self) -> u8 {
+        self.container
+    }
+}
+
+impl Default for ObjectId {
+    fn default() -> Self {
+        Self::NONE
+    }
+}
+
 /// `std::vector<std::unique_ptr<CObject>>` with `reserve(MAXOBJECTS)`; the container owns each
 /// object and deletes it in `clean` / `clean_dead_objects`.
 pub struct CObjectContainer {
     m_list: Vec<Ptr<dyn CObjectTrait>>,
+    /// The container's number in its objects' `ObjectId`s.
+    index: u8,
+    /// Each object by its `CObject::id` slot. A freed slot's generation moves on.
+    slots: Vec<Option<Ptr<dyn CObjectTrait>>>,
+    generations: Vec<u32>,
     pub _alias: Aliased,
 }
 
-impl Default for CObjectContainer {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl CObjectContainer {
-    pub const fn new() -> Self {
-        CObjectContainer { m_list: Vec::new(), _alias: Aliased::new() }
+    pub const fn new(index: u8) -> Self {
+        CObjectContainer { m_list: Vec::new(), index, slots: Vec::new(), generations: Vec::new(), _alias: Aliased::new() }
+    }
+
+    pub fn get(&self, id: ObjectId) -> Option<Ptr<dyn CObjectTrait>> {
+        let slot = id.slot as usize;
+        if id.container != self.index || slot >= self.slots.len() || self.generations[slot] != id.generation {
+            return None;
+        }
+        self.slots[slot]
+    }
+
+    fn assign(&mut self, mut obj: Ptr<dyn CObjectTrait>) {
+        let slot = match self.slots.iter().position(Option::is_none) {
+            Some(slot) => slot,
+            None => {
+                self.slots.push(None);
+                self.generations.push(0);
+                self.slots.len() - 1
+            }
+        };
+        self.slots[slot] = Some(obj);
+        obj.id = ObjectId { container: self.index, slot: slot as u16, generation: self.generations[slot] };
+    }
+
+    fn release(&mut self, obj: Ptr<dyn CObjectTrait>) {
+        let slot = obj.id.slot as usize;
+        if self.get(obj.id).is_some() {
+            self.slots[slot] = None;
+            self.generations[slot] = self.generations[slot].wrapping_add(1);
+        }
+        obj.delete();
     }
 
     /// libc++ `reserve(300)` gives exactly 300 and `add` never grows past it.
@@ -32,7 +88,7 @@ impl CObjectContainer {
 
     pub fn clean(&mut self) {
         for obj in std::mem::take(&mut self.m_list) {
-            obj.delete();
+            self.release(obj);
         }
     }
 
@@ -40,7 +96,7 @@ impl CObjectContainer {
         let mut kept: Vec<Ptr<dyn CObjectTrait>> = Vec::with_capacity(self.m_list.len());
         for obj in std::mem::take(&mut self.m_list) {
             if obj.is_dead() {
-                obj.delete();
+                self.release(obj);
             } else {
                 kept.push(obj);
             }
@@ -53,6 +109,12 @@ impl CObjectContainer {
         self.add_dyn(g, Ptr::from_raw(ptr.as_ptr() as *mut dyn CObjectTrait))
     }
 
+    /// `add`, returning the object's handle, or `ObjectId::NONE` when the container was full.
+    pub fn add_id<T: CObjectTrait>(&mut self, g: &mut Game, ptr: Ptr<T>) -> ObjectId {
+        let obj = Ptr::from_raw(ptr.as_ptr() as *mut dyn CObjectTrait);
+        if self.add_dyn(g, obj) { obj.id } else { ObjectId::NONE }
+    }
+
     pub fn add_dyn(&mut self, g: &mut Game, ptr: Ptr<dyn CObjectTrait>) -> bool {
         if self.m_list.len() + 1 >= self.capacity() {
             //printf("eyecandy list full!\n");
@@ -60,6 +122,7 @@ impl CObjectContainer {
             return false;
         }
         crate::smw::net_random::note_added(g, ptr);
+        self.assign(ptr);
         self.m_list.push(ptr);
         true
     }

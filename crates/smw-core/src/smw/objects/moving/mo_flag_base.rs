@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_FlagBase.cpp
 
+use crate::smw::object_container::ObjectId;
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
@@ -31,7 +32,7 @@ pub struct MO_FlagBase {
     pub anglechange: f32,
     pub anglechangetimer: i16,
     pub speed: f32,
-    pub homeflag: Ptr<CO_Flag>,
+    pub homeflag: ObjectId,
 
     pub timer: i16,
 }
@@ -49,7 +50,7 @@ impl MO_FlagBase {
             anglechange: 0.0,
             anglechangetimer: 0,
             speed: 0.0,
-            homeflag: Ptr::null(),
+            homeflag: ObjectId::NONE,
             timer: 0,
         };
 
@@ -71,7 +72,7 @@ impl MO_FlagBase {
         o.velx = sinf(o.angle);
         o.vely = cosf(o.angle);
 
-        o.homeflag = Ptr::null();
+        o.homeflag = ObjectId::NONE;
 
         o.place_flag_base(g, true);
 
@@ -118,7 +119,7 @@ impl MO_FlagBase {
         if flag.teamID == self.teamID {
             flag.place_flag(g);
             if_sound_on_play(g, &mut gp.rm.sfx_areatag);
-        } else if !g.game_values.gamemodesettings.flag.homescore || !self.homeflag.is_null() || g.game_values.gamemodesettings.flag.centerflag {
+        } else if !g.game_values.gamemodesettings.flag.homescore || !self.homeflag.is_none() || g.game_values.gamemodesettings.flag.centerflag {
             flag.place_flag(g);
             if !g.game_values.gamemode.gameover {
                 g.player(player).score().adjust_score(g, 1);
@@ -142,7 +143,7 @@ impl MO_FlagBase {
         self.anglechangetimer = (RANDOM_INT(gp.get(), 50) + 100) as i16;
     }
 
-    pub fn set_flag(&mut self, flag: Ptr<CO_Flag>) {
+    pub fn set_flag(&mut self, flag: ObjectId) {
         self.homeflag = flag;
     }
 

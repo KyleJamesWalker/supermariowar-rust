@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/Chase.cpp
 
+use crate::smw::object_container::ObjectId;
 use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::game::App;
@@ -21,14 +22,14 @@ use std::any::Any;
 pub struct CGM_Chase {
     pub cgame_mode: CGameMode,
 
-    key: Ptr<CO_PhantoKey>,    /// Frames toward the next point; never reset between games, like the C++ function-local static.
+    key: ObjectId,    /// Frames toward the next point; never reset between games, like the C++ function-local static.
     counter: i16,
 }
 impl_base!(CGM_Chase => cgame_mode: CGameMode);
 
 impl CGM_Chase {
     pub fn new() -> Self {
-        let mut this = CGM_Chase { cgame_mode: CGameMode::new(), key: Ptr::null(), counter: 0 };
+        let mut this = CGM_Chase { cgame_mode: CGameMode::new(), key: ObjectId::NONE, counter: 0 };
         this.goal = 200;
         this.gamemode = game_mode_chase;
 
@@ -36,8 +37,8 @@ impl CGM_Chase {
         this
     }
 
-    pub fn get_key_holder(&mut self) -> PlayerId {
-        self.key.owner
+    pub fn get_key_holder(&mut self, g: &Game) -> PlayerId {
+        g.object_as::<CO_PhantoKey>(self.key).map_or(PlayerId::NONE, |key| key.owner)
     }
 }
 
@@ -69,8 +70,8 @@ impl CGameModeTrait for CGM_Chase {
         }
 
         //Add a key
-        self.key = Ptr::new_box(CO_PhantoKey::new(g, gp.rm.spr_phantokey));
-        gp.objectcontainer[1].add(g, self.key);
+        let key = Ptr::new_box(CO_PhantoKey::new(g, gp.rm.spr_phantokey));
+        self.key = gp.objectcontainer[1].add_id(g, key);
     }
 
     fn think(&mut self, g: &mut Game) {
@@ -79,7 +80,7 @@ impl CGameModeTrait for CGM_Chase {
             return;
         }
 
-        let mut keyholder: PlayerId = self.key.owner;
+        let mut keyholder: PlayerId = self.get_key_holder(g);
         if !keyholder.is_none() {
             if g.player(keyholder).isready() && !g.player(keyholder).is_tanooki_statue() {
                 self.counter += 1;

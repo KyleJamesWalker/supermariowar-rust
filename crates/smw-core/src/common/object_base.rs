@@ -1,5 +1,6 @@
 //! Port of src/common/ObjectBase.cpp
 
+use crate::smw::object_container::ObjectId;
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
@@ -74,6 +75,8 @@ pub struct CObject {
     pub dead: bool,
 
     pub iNetworkID: i32,
+    /// Set when a container takes the object.
+    pub id: ObjectId,
 
     pub _alias: Aliased,
 }
@@ -116,6 +119,7 @@ impl CObject {
             state: 0,
             dead: false,
             iNetworkID: next_network_id(g),
+            id: ObjectId::NONE,
             _alias: Aliased::new(),
         };
 

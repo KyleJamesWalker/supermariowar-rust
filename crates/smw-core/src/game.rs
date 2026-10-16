@@ -1,6 +1,7 @@
 //! The game's state as one value (docs/ARCHITECTURE_V2.md, Step 2: globals into a `Game` struct).
 
 use crate::common::gfx::soft_surface::Surface;
+use crate::smw::object_container::ObjectId;
 use crate::common::eyecandy::{CEyecandyContainer, SpotlightManager};
 use crate::common::game_mode::{CGameModeTrait, GAMEMODE_LAST};
 use crate::common::file_list::{AnnouncerList, FiltersList, GraphicsList, MusicList, SkinList, SoundsList, TourList, WorldList, WorldMusicList};
@@ -139,6 +140,20 @@ pub struct Game {
 }
 
 impl Game {
+    pub fn object(&self, id: ObjectId) -> Option<Ptr<dyn crate::common::object_base::CObjectTrait>> {
+        match id.container() {
+            3 => self.noncolcontainer.get(id),
+            c => self.objectcontainer.get(c as usize)?.get(id),
+        }
+    }
+
+    /// The object `id` names, if it is still alive and a `T`.
+    pub fn object_as<T: 'static>(&self, id: ObjectId) -> Option<&'static mut T> {
+        let mut obj = self.object(id)?;
+        let typed: *mut T = obj.get().as_any().downcast_mut::<T>()?;
+        Some(unsafe { &mut *typed })
+    }
+
     /// The backend joystick open as device `index`, or null.
     pub fn joystick(&self, index: usize) -> *mut sdl2::sys::SDL_Joystick {
         match self.devices.get(index) {
@@ -172,8 +187,8 @@ impl Game {
             rm: Ptr::null(),
             g_map: Ptr::null(),
             g_tilesetmanager: Ptr::null(),
-            noncolcontainer: CObjectContainer::new(),
-            objectcontainer: [CObjectContainer::new(), CObjectContainer::new(), CObjectContainer::new()],
+            noncolcontainer: CObjectContainer::new(3),
+            objectcontainer: [CObjectContainer::new(0), CObjectContainer::new(1), CObjectContainer::new(2)],
             eyecandy: [CEyecandyContainer::new(), CEyecandyContainer::new(), CEyecandyContainer::new()],
             players: crate::smw::players::Players::new(),
             score: [Ptr::null(); 4],

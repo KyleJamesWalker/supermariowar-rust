@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/CaptureTheFlag.cpp
 
+use crate::smw::object_container::ObjectId;
 use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::game_mode::*;
@@ -50,17 +51,22 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
 
                 let iColorID: i16 = g.player(player).get_color_id();
                 let base: Ptr<MO_FlagBase> = Ptr::new_box(MO_FlagBase::new(g, gp.rm.spr_flagbases, iTeamID, iColorID));
-                gp.objectcontainer[0].add(g, base);
+                let base = if gp.objectcontainer[0].add(g, base) { base.id } else { ObjectId::NONE };
 
                 if !g.game_values.gamemodesettings.flag.centerflag {
                     let flag: Ptr<CO_Flag> = CO_Flag::new(g, gp.rm.spr_flags, base, iTeamID, iColorID);
-                    gp.objectcontainer[1].add(g, flag);
+                    // The constructor's place_flag runs before the flag has an id.
+                    if gp.objectcontainer[1].add(g, flag) {
+                        if let Some(b) = g.object_as::<MO_FlagBase>(base) {
+                            b.set_flag(flag.id);
+                        }
+                    }
                 }
             }
         }
 
         if g.game_values.gamemodesettings.flag.centerflag {
-            let centerflag: Ptr<CO_Flag> = CO_Flag::new(g, gp.rm.spr_flags, Ptr::null(), -1, -1);
+            let centerflag: Ptr<CO_Flag> = CO_Flag::new(g, gp.rm.spr_flags, ObjectId::NONE, -1, -1);
             gp.objectcontainer[1].add(g, centerflag);
         }
     }

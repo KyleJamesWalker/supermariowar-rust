@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_Flag.cpp
 
+use crate::smw::object_container::ObjectId;
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
@@ -24,7 +25,7 @@ pub struct CO_Flag {
     pub mo_carried_object: MO_CarriedObject,
 
     pub timer: i16,
-    pub flagbase: Ptr<MO_FlagBase>,
+    pub flagbase: ObjectId,
     pub teamID: i16,
     pub fLastFlagDirection: bool,
     pub fInBase: bool,
@@ -36,11 +37,11 @@ impl_base!(CO_Flag => mo_carried_object: MO_CarriedObject);
 
 impl CO_Flag {
     /// Returns the heap object: the constructor hands `this` to `flagbase->setFlag`, so it must not move afterwards.
-    pub fn new(g: &mut Game, nspr: SpriteId, base: Ptr<MO_FlagBase>, iTeamID: i16, iColorID: i16) -> Ptr<CO_Flag> {
+    pub fn new(g: &mut Game, nspr: SpriteId, base: ObjectId, iTeamID: i16, iColorID: i16) -> Ptr<CO_Flag> {
         let mut o = Ptr::new_box(CO_Flag {
             mo_carried_object: MO_CarriedObject::new_anim(g, nspr, Vec2s::zero(), 4, 8, 30, 30, 1, 1, 0, ((iColorID as i32) << 6) as i16, 32, 32),
             timer: 0,
-            flagbase: Ptr::null(),
+            flagbase: ObjectId::NONE,
             teamID: 0,
             fLastFlagDirection: false,
             fInBase: false,
@@ -102,15 +103,14 @@ impl CO_Flag {
             self.velx = 0.0;
             self.vely = 0.0;
             self.fLastFlagDirection = false;
-        } else if !self.flagbase.is_null() {
+        } else if let Some(base) = g.object_as::<MO_FlagBase>(self.flagbase) {
             MO_CarriedObjectTrait::drop(self, g);
             self.fInBase = true;
-            let (bx, by) = (self.flagbase.ix, self.flagbase.iy);
+            let (bx, by) = (base.ix, base.iy);
             self.set_xi(bx);
             self.set_yi(by);
             self.fLastFlagDirection = false;
-            let this = Ptr::from_mut(self);
-            self.flagbase.set_flag(this);
+            base.set_flag(self.id);
         }
 
         self.owner_throw = PlayerId::NONE;
@@ -137,8 +137,8 @@ impl CObjectTrait for CO_Flag {
                 self.owner = player;
                 self.owner_throw = player;
 
-                if !self.flagbase.is_null() {
-                    self.flagbase.set_flag(Ptr::null());
+                if let Some(base) = g.object_as::<MO_FlagBase>(self.flagbase) {
+                    base.set_flag(ObjectId::NONE);
                 }
             }
         }
@@ -154,8 +154,8 @@ impl CObjectTrait for CO_Flag {
             self.fInBase = false;
             self.owner_throw = self.owner;
         } else if self.fInBase {
-            if !self.flagbase.is_null() {
-                let (bx, by) = (self.flagbase.fx, self.flagbase.fy);
+            if let Some(base) = g.object_as::<MO_FlagBase>(self.flagbase) {
+                let (bx, by) = (base.fx, base.fy);
                 self.set_xf(bx);
                 self.set_yf(by);
             }
