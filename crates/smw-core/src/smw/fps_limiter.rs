@@ -24,21 +24,23 @@ impl FPSLimiter {
 
     // the browser limits the frame rate
     #[cfg(target_os = "emscripten")]
-    pub fn frame_start(&mut self) {}
+    pub fn frame_start(&mut self, _g: &mut Game) {}
     #[cfg(target_os = "emscripten")]
     pub fn before_flip(&mut self, _g: &mut Game) {}
     #[cfg(target_os = "emscripten")]
     pub fn after_flip(&mut self, _g: &mut Game) {}
 
     #[cfg(not(target_os = "emscripten"))]
-    pub fn frame_start(&mut self) {
-        self.framestart = crate::services::ticks();
+    pub fn frame_start(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        self.framestart = crate::services::ticks(gp.get());
     }
 
     #[cfg(not(target_os = "emscripten"))]
     pub fn before_flip(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
-            self.ticks = crate::services::ticks().wrapping_sub(self.framestart);
+            self.ticks = crate::services::ticks(gp.get()).wrapping_sub(self.framestart);
             if self.ticks == 0 {
                 self.ticks = 1;
             }
@@ -54,6 +56,7 @@ impl FPSLimiter {
 
     #[cfg(not(target_os = "emscripten"))]
     pub fn after_flip(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             self.flipfps = 1000.0f32 / self.ticks as f32;
 
@@ -63,22 +66,22 @@ impl FPSLimiter {
 
             //Sleep for time just under what we need
             let framelimiter = if harness::speed(g) == 1.0 { g.game_values.framelimiter as i32 } else { (g.game_values.framelimiter as f32 / harness::speed(g)) as i32 };
-            let mut delay: i16 = (framelimiter as u32).wrapping_sub(crate::services::ticks()).wrapping_add(self.framestart).wrapping_sub(2) as i16;
+            let mut delay: i16 = (framelimiter as u32).wrapping_sub(crate::services::ticks(gp.get())).wrapping_add(self.framestart).wrapping_sub(2) as i16;
 
             if delay > 0 {
                 if delay as i32 > framelimiter {
                     delay = framelimiter as i16;
                 }
 
-                crate::services::delay(delay as u32);
+                crate::services::delay(gp.get(), delay as u32);
             }
 
             //Fine tune wait here
-            while crate::services::ticks().wrapping_sub(self.framestart) < (framelimiter as u16) as u32 {
-                crate::services::delay(0); //keep framerate constant at 1000/game_values.framelimiter fps
+            while crate::services::ticks(gp.get()).wrapping_sub(self.framestart) < (framelimiter as u16) as u32 {
+                crate::services::delay(gp.get(), 0); //keep framerate constant at 1000/game_values.framelimiter fps
             }
 
-            self.ticks = crate::services::ticks().wrapping_sub(self.framestart);
+            self.ticks = crate::services::ticks(gp.get()).wrapping_sub(self.framestart);
             if self.ticks == 0 {
                 self.ticks = framelimiter as u32;
             }

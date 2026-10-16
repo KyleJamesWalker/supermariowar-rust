@@ -218,11 +218,12 @@ pub static iStandardOffset: [i16; 3] = [0, 32, 48];
 pub static dBulletBillFrequency: [f32; 3] = [10.0, 5.0, 2.5];
 
 #[cfg(not(target_os = "emscripten"))]
-fn small_delay() {
-    crate::services::delay(10);
+fn small_delay(g: &mut Game) {
+    let mut gp = g.ptr();
+    crate::services::delay(gp.get(), 10);
 }
 #[cfg(target_os = "emscripten")]
-fn small_delay() {}
+fn small_delay(_g: &mut Game) {}
 
 fn sdl_error() -> String {
     unsafe { CStr::from_ptr(SDL_GetError()).to_string_lossy().into_owned() }
@@ -2060,17 +2061,17 @@ impl CMap {
 
     pub fn pre_draw_preview_background(&mut self, g: &mut Game, targetSurface: *mut SDL_Surface, fThumbnail: bool) {
         self.draw_preview(g, targetSurface, 0, fThumbnail);
-        small_delay();
+        small_delay(g);
 
         self.draw_preview(g, targetSurface, 1, fThumbnail);
-        small_delay();
+        small_delay(g);
 
         if unsafe { !g.game_values.toplayer } {
             self.draw_preview(g, targetSurface, 2, fThumbnail);
-            small_delay();
+            small_delay(g);
 
             self.draw_preview(g, targetSurface, 3, fThumbnail);
-            small_delay();
+            small_delay(g);
         }
     }
 
@@ -2090,7 +2091,7 @@ impl CMap {
 
         background.draw_stretch(&srcrect, targetSurface, &dstrect);
 
-        small_delay();
+        small_delay(g);
         self.pre_draw_preview_background(g, targetSurface, fThumbnail);
     }
 
@@ -2100,7 +2101,7 @@ impl CMap {
                 crate::common::gfx::blit::fill_rect(targetSurface, null(), SDL_MapRGB((*targetSurface).format, 255, 0, 255));
                 SDL_SetColorKey(targetSurface, SDL_bool::SDL_TRUE as i32, SDL_MapRGB((*targetSurface).format, 255, 0, 255));
             }
-            small_delay();
+            small_delay(g);
         }
 
         self.draw_preview_blocks(g, targetSurface, fThumbnail);
@@ -2112,7 +2113,7 @@ impl CMap {
                 crate::common::gfx::blit::fill_rect(targetSurface, null(), SDL_MapRGB((*targetSurface).format, 255, 0, 255));
                 SDL_SetColorKey(targetSurface, SDL_bool::SDL_TRUE as i32, SDL_MapRGB((*targetSurface).format, 255, 0, 255));
             }
-            small_delay();
+            small_delay(g);
         }
 
         if unsafe { !g.game_values.toplayer } {
@@ -2120,7 +2121,7 @@ impl CMap {
         }
 
         self.draw_preview(g, targetSurface, 2, fThumbnail);
-        small_delay();
+        small_delay(g);
         self.draw_preview(g, targetSurface, 3, fThumbnail);
     }
 

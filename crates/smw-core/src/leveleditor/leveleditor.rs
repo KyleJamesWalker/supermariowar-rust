@@ -492,7 +492,7 @@ pub fn main() {
 pub fn inner_main() {
     let g = game().get();
     unsafe {
-        ensure_settings_dir();
+        ensure_settings_dir(g);
 
         /* This must occur before any data files are loaded */
         initialize_paths(g);
@@ -505,7 +505,7 @@ pub fn inner_main() {
         println!("\n---------------- startup ----------------");
 
         {
-            let options_path = get_home_directory() + "leveleditor.bin";
+            let options_path = get_home_directory(g) + "leveleditor.bin";
             let mut editor_settings = BinaryFile::new(&options_path, "rb");
             if editor_settings.is_open() {
                 ed().g_fFullScreen = editor_settings.read_bool();
@@ -660,7 +660,7 @@ pub fn inner_main() {
         println!("entering level editor loop...");
         done = false;
         while !done {
-            FPSLimiter::instance(g).frame_start();
+            FPSLimiter::instance(g).frame_start(g);
 
             match ed().state {
                 EDITOR_EDIT => {
@@ -699,7 +699,7 @@ pub fn inner_main() {
         save_map(g, &convert_path(game().get(), "maps/ZZleveleditor.map"));
 
         {
-            let options_path = get_home_directory() + "leveleditor.bin";
+            let options_path = get_home_directory(g) + "leveleditor.bin";
             let mut editor_settings = BinaryFile::new(&options_path, "wb");
             if editor_settings.is_open() {
                 editor_settings.write_bool(ed().g_fFullScreen);
@@ -2005,7 +2005,7 @@ pub fn editor_properties(g: &mut Game, iBlockCol: i16, iBlockRow: i16) -> i32 {
     unsafe {
         let (bc, br) = (iBlockCol as usize, iBlockRow as usize);
         loop {
-            FPSLimiter::instance(g).frame_start();
+            FPSLimiter::instance(g).frame_start(g);
             //handle messages
             while poll_event(&mut ed().event) != 0 {
                 let ty = ed().event.type_();
@@ -2300,13 +2300,13 @@ fn platform_edit_or_animated_or_tiletype() -> bool {
 
 /// The nested `while (editor_x() == EDITOR_X)` loops the platform editor runs for tiles, animation and tile types.
 unsafe fn run_nested_editor(g: &mut Game, f: fn(&mut Game) -> i32, stay: i32) {
-    FPSLimiter::instance(g).frame_start();
+    FPSLimiter::instance(g).frame_start(g);
     while f(g) == stay {
         editor_harness::frame_delay(g, 0);
         FPSLimiter::instance(g).before_flip(g);
         gfx_flipscreen(g);
         FPSLimiter::instance(g).after_flip(g);
-        FPSLimiter::instance(g).frame_start();
+        FPSLimiter::instance(g).frame_start(g);
     }
 }
 
@@ -4492,13 +4492,14 @@ unsafe fn draw_dialog(g: &mut Game, title: &str, instructions: &str, input: Opti
 }
 
 pub fn dialog(g: &mut Game, title: &str, instructions: &str, input: &mut String, inputsize: i32) -> bool {
+    let mut gp = g.ptr();
     unsafe {
         let mut currentChar: u32 = 0;
 
         draw_dialog(g, title, instructions, None);
 
         loop {
-            let framestart = crate::services::ticks() as i32;
+            let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
             while poll_event(&mut ed().event) != 0 {
@@ -4564,7 +4565,7 @@ pub fn dialog(g: &mut Game, title: &str, instructions: &str, input: &mut String,
                 }
             }
 
-            let mut delay = WAITTIME - (crate::services::ticks() as i32 - framestart);
+            let mut delay = WAITTIME - (crate::services::ticks(gp.get()) as i32 - framestart);
             if delay < 0 {
                 delay = 0;
             } else if delay > WAITTIME {

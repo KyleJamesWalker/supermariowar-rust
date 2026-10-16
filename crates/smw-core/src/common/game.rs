@@ -1,5 +1,6 @@
 //! Port of src/common/Game.cpp
 
+use crate::game::Game;
 use crate::common::path::get_home_directory;
 use std::ffi::CString;
 #[cfg(unix)]
@@ -13,8 +14,8 @@ impl App {
     pub const menuTransparency: i32 = 72;
 }
 
-pub fn ensure_settings_dir() {
-    let smwHome = get_home_directory();
+pub fn ensure_settings_dir(g: &mut Game) {
+    let smwHome = get_home_directory(g);
 
     match std::fs::metadata(&smwHome) {
         Err(_) => {

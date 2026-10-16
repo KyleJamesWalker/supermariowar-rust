@@ -409,7 +409,7 @@ pub fn frame_delay(g: &mut Game, delay: u32) {
         }
 
         if !h(gp.get()).noLimit {
-            crate::services::delay(delay);
+            crate::services::delay(gp.get(), delay);
         }
     }
 }

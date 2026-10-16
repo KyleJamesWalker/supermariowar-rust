@@ -140,7 +140,7 @@ unsafe extern "C-unwind" fn gameloop_frame() {
     fn phase(_: usize) {}
 
     phase(1);
-    FPSLimiter::instance(game().get()).frame_start();
+    FPSLimiter::instance(game().get()).frame_start(g);
 
     assign_hotplugged(game().get());
     #[cfg(not(target_os = "emscripten"))]
@@ -241,7 +241,7 @@ pub fn init_joysticks(g: &mut Game) {
 fn assign_inputs(g: &mut Game) {
         let mut gp = g.ptr();
     unsafe {
-        let marker = get_home_directory() + PAD_PLAYERS_FILE;
+        let marker = get_home_directory(g) + PAD_PLAYERS_FILE;
         #[cfg(not(target_os = "emscripten"))]
         let mut pads = crate::smw::pad::player_pads(g);
         #[cfg(target_os = "emscripten")]
@@ -511,7 +511,7 @@ pub fn main_game() {
 
         harness::init(g);
 
-        ensure_settings_dir();
+        ensure_settings_dir(g);
         create_globals(g);
 
         gfx_init(g, App::screenWidth, App::screenHeight, false); //initialize the graphics (SDL)
@@ -577,7 +577,7 @@ pub fn main_game() {
             g.gamemodes[i].delete();
         }
 
-        sfx_close();
+        sfx_close(g);
         gfx_close();
         net_close(g);
 

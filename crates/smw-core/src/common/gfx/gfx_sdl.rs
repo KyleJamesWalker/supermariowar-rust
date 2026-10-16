@@ -84,10 +84,11 @@ impl GraphicsSDL {
     }
 
     pub fn init(&mut self, g: &mut Game, fullscreen: bool) -> bool {
+        let mut gp = g.ptr();
         unsafe {
             init_sdl();
 
-            services().video.open(fullscreen);
+            services(gp.get()).video.open(fullscreen);
             self.sdl_screen_surface = create_screen_surface();
 
             println!(
@@ -102,15 +103,18 @@ impl GraphicsSDL {
         true
     }
 
-    pub fn show_error_box(&self, message: &str) {
-        services().video.show_error(message);
+    pub fn show_error_box(&self, g: &mut Game, message: &str) {
+        let mut gp = g.ptr();
+        services(gp.get()).video.show_error(message);
     }
 
-    pub fn set_title(&self, title: &str) {
-        services().video.set_title(title);
+    pub fn set_title(&self, g: &mut Game, title: &str) {
+        let mut gp = g.ptr();
+        services(gp.get()).video.set_title(title);
     }
 
     pub fn flip_screen(&self, g: &mut Game) {
+        let mut gp = g.ptr();
         let pixels = unsafe {
             let s = &*self.sdl_screen_surface;
             debug_assert_eq!(s.pitch, GFX_SCREEN_W * 4);
@@ -120,11 +124,12 @@ impl GraphicsSDL {
         let overlay = crate::smw::touch::overlay(g);
         #[cfg(target_os = "emscripten")]
         let overlay: Option<smw_platform::Overlay> = Option::None;
-        services().video.present(Frame { pixels }, overlay.as_ref());
+        services(gp.get()).video.present(Frame { pixels }, overlay.as_ref());
     }
 
-    pub fn change_full_screen(&self, fullscreen: bool) {
-        services().video.set_fullscreen(fullscreen);
+    pub fn change_full_screen(&self, g: &mut Game, fullscreen: bool) {
+        let mut gp = g.ptr();
+        services(gp.get()).video.set_fullscreen(fullscreen);
     }
 
     pub fn take_screenshot(&self, g: &mut Game) {

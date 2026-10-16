@@ -49,6 +49,8 @@ fn bits(c: &COutputControl) -> String {
 }
 
 fn main() {
+    let g = game().get();
+    let mut gp = g.ptr();
     let args: Vec<String> = std::env::args().collect();
     let role = args[1].clone();
     let data = args[2].clone();
@@ -56,13 +58,13 @@ fn main() {
     let name = args.get(4).cloned().unwrap_or_else(|| if role == "host" { "RustHost".into() } else { "RustJoin".into() });
     let is_host = role == "host";
     if role == "connect" {
-        smw::services::services().clock = Box::new(TickingClock(Cell::new(0)));
+        smw::services::services(gp.get()).clock = Box::new(TickingClock(Cell::new(0)));
     }
 
     smw::globals::init_globals(game().get());
     unsafe {
         game().RootDataDirectory = data.clone();
-        ensure_settings_dir();
+        ensure_settings_dir(g);
         gfx_init(game().get(), 640, 480, false);
         game().blitdest = game().screen;
         game().rm = Ptr::new_box(CResourceManager::new());

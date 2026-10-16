@@ -344,7 +344,8 @@ const SDL_BUTTON_RMASK: u32 = 1 << (SDL_BUTTON_RIGHT - 1);
 
 /// The end-of-frame wait every editor loop does; the reference harness `#define`s `SDL_Delay` to this.
 fn frame_wait(g: &mut Game, framestart: i32) {
-    let mut delay: i32 = WAITTIME - (crate::services::ticks() as i32 - framestart);
+    let mut gp = g.ptr();
+    let mut delay: i32 = WAITTIME - (crate::services::ticks(gp.get()) as i32 - framestart);
     if delay < 0 {
         delay = 0;
     } else if delay > WAITTIME {
@@ -427,7 +428,7 @@ pub fn main() {
 pub fn inner_main() {
     let g = game().get();
     unsafe {
-        ensure_settings_dir();
+        ensure_settings_dir(g);
 
         /* This must occur before any data files are loaded */
         initialize_paths(g);
@@ -442,7 +443,7 @@ pub fn inner_main() {
         let mut saved_col: i32 = 0;
         let mut saved_row: i32 = 0;
         {
-            let options_path = get_home_directory() + "worldeditor.bin";
+            let options_path = get_home_directory(g) + "worldeditor.bin";
             let mut editor_settings = BinaryFile::new(&options_path, "rb");
             if editor_settings.is_open() {
                 saved_col = editor_settings.read_i32();
@@ -953,7 +954,7 @@ pub fn inner_main() {
         game().g_worldmap.save(g, &convert_path(game().get(), "worlds/ZZworldeditor.txt"));
 
         {
-            let options_path = get_home_directory() + "worldeditor.bin";
+            let options_path = get_home_directory(g) + "worldeditor.bin";
             let mut editor_settings = BinaryFile::new(&options_path, "wb");
             if editor_settings.is_open() {
                 editor_settings.write_i32(ed().draw_offset_col);
@@ -1211,7 +1212,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
         let mut iStageDisplay: i16 = -1;
 
         while !done {
-            let framestart = crate::services::ticks() as i32;
+            let framestart = crate::services::ticks(gp.get()) as i32;
 
             if fExiting {
                 //handle messages
@@ -2291,7 +2292,7 @@ pub fn editor_warp(g: &mut Game) -> i32 {
         let mut done = false;
 
         while !done {
-            let framestart = crate::services::ticks() as i32;
+            let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
             while poll_event(&mut ed().event) != 0 {
@@ -2385,7 +2386,7 @@ pub fn editor_start_items(g: &mut Game) -> i32 {
         }
 
         while !done {
-            let framestart = crate::services::ticks() as i32;
+            let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
             while poll_event(&mut ed().event) != 0 {
@@ -2479,7 +2480,7 @@ pub fn editor_boundary(g: &mut Game) -> i32 {
         let mut done = false;
 
         while !done {
-            let framestart = crate::services::ticks() as i32;
+            let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
             while poll_event(&mut ed().event) != 0 {
@@ -2542,7 +2543,7 @@ pub fn editor_type(g: &mut Game) -> i32 {
         let mut done = false;
 
         while !done {
-            let framestart = crate::services::ticks() as i32;
+            let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
             while poll_event(&mut ed().event) != 0 {
@@ -2605,7 +2606,7 @@ pub fn editor_water(g: &mut Game) -> i32 {
         let mut done = false;
 
         while !done {
-            let framestart = crate::services::ticks() as i32;
+            let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
             while poll_event(&mut ed().event) != 0 {
@@ -2663,7 +2664,7 @@ pub fn editor_background(g: &mut Game) -> i32 {
         let mut iPage: i16 = 0;
 
         while !done {
-            let framestart = crate::services::ticks() as i32;
+            let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
             while poll_event(&mut ed().event) != 0 {
@@ -2746,7 +2747,7 @@ pub fn editor_stageforeground(g: &mut Game) -> i32 {
         let mut iForegroundScreen: i16 = 0;
 
         while !done {
-            let framestart = crate::services::ticks() as i32;
+            let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
             while poll_event(&mut ed().event) != 0 {
@@ -2813,7 +2814,7 @@ pub fn editor_bridges(g: &mut Game) -> i32 {
         let mut done = false;
 
         while !done {
-            let framestart = crate::services::ticks() as i32;
+            let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
             while poll_event(&mut ed().event) != 0 {
@@ -2868,7 +2869,7 @@ pub fn editor_structureforeground(g: &mut Game) -> i32 {
         let mut done = false;
 
         while !done {
-            let framestart = crate::services::ticks() as i32;
+            let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
             while poll_event(&mut ed().event) != 0 {
@@ -2930,7 +2931,7 @@ pub fn editor_pathsprite(g: &mut Game) -> i32 {
         let mut done = false;
 
         while !done {
-            let framestart = crate::services::ticks() as i32;
+            let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
             while poll_event(&mut ed().event) != 0 {
@@ -3010,7 +3011,7 @@ pub fn editor_vehicles(g: &mut Game) -> i32 {
         ed().miVehicleStageField.set_current_value(ed().g_wvVehicleStamp.iActionId);
 
         while !done {
-            let framestart = crate::services::ticks() as i32;
+            let framestart = crate::services::ticks(gp.get()) as i32;
 
             g.game_values.playerInput.clear_pressed_keys(1);
 
@@ -3094,11 +3095,12 @@ pub fn editor_vehicles(g: &mut Game) -> i32 {
 }
 
 pub fn editor_path(g: &mut Game) -> i32 {
+    let mut gp = g.ptr();
     unsafe {
         let mut done = false;
 
         while !done {
-            let framestart = crate::services::ticks() as i32;
+            let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
             while poll_event(&mut ed().event) != 0 {
@@ -3605,7 +3607,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
         }
 
         while !done {
-            let framestart = crate::services::ticks() as i32;
+            let framestart = crate::services::ticks(gp.get()) as i32;
 
             //Reset the keys that were down the last frame
             g.game_values.playerInput.clear_pressed_keys(1);
@@ -4122,7 +4124,7 @@ pub fn display_help(g: &mut Game) -> i32 {
         gfx_flipscreen(g);
 
         loop {
-            let framestart = crate::services::ticks() as i32;
+            let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
             while poll_event(&mut ed().event) != 0 {
@@ -4175,13 +4177,14 @@ fn draw_dialog(g: &mut Game, title: &str, instructions: &str, input: Option<&str
 
 /// `char* input` of capacity `inputsize`: the caller's buffer keeps whatever was typed.
 pub fn dialog(g: &mut Game, title: &str, instructions: &str, input: &mut String, inputsize: i32) -> bool {
+    let mut gp = g.ptr();
     unsafe {
         let mut currentChar: u32 = 0;
 
         draw_dialog(g, title, instructions, None);
 
         loop {
-            let framestart = crate::services::ticks() as i32;
+            let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
             while poll_event(&mut ed().event) != 0 {

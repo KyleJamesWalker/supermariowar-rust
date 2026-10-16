@@ -665,7 +665,7 @@ impl NetClient {
         println!("[net] Map arrived (C:{} unC:{})", compressed_size, full_size);
 
         unsafe {
-            g.netplay.mapfilepath = get_home_directory() + "net_last.map";
+            g.netplay.mapfilepath = get_home_directory(g) + "net_last.map";
             let path = g.netplay.mapfilepath.clone();
             if !FileCompressor::decompress(&data[3..], &path) {
                 return;
@@ -737,7 +737,7 @@ impl NetClient {
 
         println!("[net] Skin arrived (from: {}, C:{} unC:{})", playerID, compressed_size, full_size);
 
-        let path = format!("{}net_skin{}.bmp", get_home_directory(), playerID);
+        let path = format!("{}net_skin{}.bmp", get_home_directory(g), playerID);
         if !FileCompressor::decompress(&data[4..], &path) {
             return;
         }
@@ -1949,14 +1949,15 @@ pub fn net_skin_path(g: &mut Game, player: usize) -> Option<String> {
             return None;
         }
     }
-    let path = format!("{}net_skin{}.bmp", get_home_directory(), player);
+    let path = format!("{}net_skin{}.bmp", get_home_directory(g), player);
     Path::new(&path).exists().then_some(path)
 }
 
 /// An online match's checkpoint (smw/checkpoint.rs): the net session, its peers and the files the host sent.
 pub fn checkpoint(g: &mut Game, s: &mut Snap) {
+    let mut gp = g.ptr();
     unsafe {
-        let home = get_home_directory();
+        let home = get_home_directory(g);
         let mut files: Vec<(String, Vec<u8>)> = Vec::new();
         if !s.loading() {
             let mut names = Vec::new();
@@ -1979,7 +1980,7 @@ pub fn checkpoint(g: &mut Game, s: &mut Snap) {
             }
         }
 
-        let n = &mut *g.netplay;
+        let n = &mut *gp.netplay;
         s.io(&mut n.active);
         s.io(&mut n.connectSuccessful);
         s.io(&mut n.joinSuccessful);
@@ -1988,9 +1989,9 @@ pub fn checkpoint(g: &mut Game, s: &mut Snap) {
         s.io(&mut n.operationInProgress);
         s.io(&mut n.myPlayerName);
         s.io(&mut n.currentRoom);
-        let mut map = portable_path(&n.mapfilepath);
+        let mut map = portable_path(g, &n.mapfilepath);
         s.io(&mut map);
-        n.mapfilepath = local_path(&map);
+        n.mapfilepath = local_path(g, &map);
         s.io(&mut n.theHostIsMe);
         s.io(&mut n.remotePlayerNumber);
         s.io(&mut n.hostPlayerNumber);

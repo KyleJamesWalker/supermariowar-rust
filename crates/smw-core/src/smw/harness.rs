@@ -177,8 +177,7 @@ fn strtol10(s: &str) -> i64 {
     }
 }
 
-extern "C" fn virtual_ticks() -> u32 {
-    let g = crate::game::game().get();
+fn virtual_ticks(g: &mut Game) -> u32 {
     unsafe { 1000u32.wrapping_add(h(g).frame.wrapping_mul(WAITTIME as u32)) }
 }
 
@@ -584,9 +583,9 @@ pub fn frame(g: &mut Game) -> u32 {
 pub fn net_ticks(g: &mut Game) -> u32 {
     let mut gp = g.ptr();
     if unsafe { h(gp.get()).seeded } {
-        virtual_ticks()
+        virtual_ticks(g)
     } else {
-        crate::services::ticks()
+        crate::services::ticks(gp.get())
     }
 }
 
@@ -815,7 +814,7 @@ fn prune_recordings(dir: &str) {
 /// `to` is SMW_RECORD_TO: a replay's own events, markers and checkpoints go to that file instead.
 fn start_recording(g: &mut Game, seed: u32, to: Option<String>) {
     let mut gp = g.ptr();
-    let dir = crate::common::path::get_home_directory() + "replays/";
+    let dir = crate::common::path::get_home_directory(g) + "replays/";
     let stamp = utc_timestamp();
     let live = to.is_none();
     let path = if let Some(path) = to {
@@ -838,7 +837,7 @@ fn start_recording(g: &mut Game, seed: u32, to: Option<String>) {
         return;
     };
     let mut out = BufWriter::new(file);
-    let home = crate::common::path::get_home_directory();
+    let home = crate::common::path::get_home_directory(g);
     let _ = writeln!(out, "# Super Mario War session recorded {} UTC (Rust port).", stamp.replace('_', " "));
     let _ = writeln!(out, "#@ seed={}", seed);
     let _ = writeln!(out, "#@ netrec=1");
@@ -1134,7 +1133,7 @@ fn record_wait_event(g: &mut Game, event: &mut SDL_Event) {
             unsafe { *event = std::mem::zeroed() };
             return;
         }
-        crate::services::delay(5);
+        crate::services::delay(gp.get(), 5);
     }
 }
 

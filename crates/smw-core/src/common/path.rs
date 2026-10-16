@@ -5,12 +5,14 @@ use crate::globals::game;
 use std::path::Path;
 
 
-pub fn get_home_directory() -> String {
-    crate::services::services().storage.settings_dir().to_string_lossy().into_owned()
+pub fn get_home_directory(g: &mut Game) -> String {
+    let mut gp = g.ptr();
+    crate::services::services(gp.get()).storage.settings_dir().to_string_lossy().into_owned()
 }
 
-pub fn get_root_directory() -> String {
-    crate::services::services().storage.root_dir().to_string_lossy().into_owned()
+pub fn get_root_directory(g: &mut Game) -> String {
+    let mut gp = g.ptr();
+    crate::services::services(gp.get()).storage.root_dir().to_string_lossy().into_owned()
 }
 
 pub fn file_exists(path: &str) -> bool {

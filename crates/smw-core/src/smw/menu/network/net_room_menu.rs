@@ -147,7 +147,7 @@ impl UI_NetRoomMenu {
                 let pname = g.netplay.currentRoom.playerNames[p as usize].clone();
                 self.miNetRoomPlayerName[p as usize].set_text(pname);
 
-                let path = format!("{}net_skin{}.bmp", get_home_directory(), p);
+                let path = format!("{}net_skin{}.bmp", get_home_directory(g), p);
                 if p == g.netplay.remotePlayerNumber as i16 {
                     println!("  player {} -> local", p);
                     gp.get().rm.load_menu_skin(g, p, gp.get().game_values.skinids[0], p, false);

@@ -324,7 +324,7 @@ impl MenuState {
                             let skin = gp.rm.load_full_skin(g, gp.game_values.skinids[k], gp.game_values.colorids[k]);
                             g.rm.spr_player[k] = skin;
                         } else {
-                            let path = format!("{}net_skin{}.bmp", get_home_directory(), k);
+                            let path = format!("{}net_skin{}.bmp", get_home_directory(g), k);
                             println!("  player {} -> {}", k, path);
 
                             let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| gp.rm.load_full_skin_path(g, Path::new(&path), k as i16)));
