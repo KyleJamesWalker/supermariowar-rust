@@ -50,17 +50,17 @@ impl CObjectContainer {
     }
 
     /// `add(new T(...))`: takes ownership of a `Ptr::new_box` object.
-    pub fn add<T: CObjectTrait>(&mut self, ptr: Ptr<T>) -> bool {
-        self.add_dyn(Ptr::from_raw(ptr.as_ptr() as *mut dyn CObjectTrait))
+    pub fn add<T: CObjectTrait>(&mut self, g: &mut Game, ptr: Ptr<T>) -> bool {
+        self.add_dyn(g, Ptr::from_raw(ptr.as_ptr() as *mut dyn CObjectTrait))
     }
 
-    pub fn add_dyn(&mut self, ptr: Ptr<dyn CObjectTrait>) -> bool {
+    pub fn add_dyn(&mut self, g: &mut Game, ptr: Ptr<dyn CObjectTrait>) -> bool {
         if self.m_list.len() + 1 >= self.capacity() {
             //printf("eyecandy list full!\n");
             ptr.delete(); // otherwise memory leak!
             return false;
         }
-        crate::smw::net_random::note_added(ptr);
+        crate::smw::net_random::note_added(g, ptr);
         self.m_list.push(ptr);
         true
     }

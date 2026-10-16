@@ -67,6 +67,7 @@ impl MO_WalkingEnemy {
         bouncing: bool,
         fallOffLedges: bool,
     ) -> Self {
+        let mut gp = g.ptr();
         let mut o = MO_WalkingEnemy {
             io_moving_object: IO_MovingObject::new(
                 g,
@@ -113,7 +114,7 @@ impl MO_WalkingEnemy {
         }
 
         o.spawnradius = 100.0f32;
-        o.spawnangle = RANDOM_INT(1000) as f32 * 0.00628f32;
+        o.spawnangle = RANDOM_INT(gp.get(), 1000) as f32 * 0.00628f32;
         o.inair = true;
 
         o.iSpawnIconOffset = 0;
@@ -436,13 +437,14 @@ pub fn mo_walking_enemy_collide_object<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut
 }
 
 pub fn mo_walking_enemy_place(g: &mut Game, this: &mut MO_WalkingEnemy) {
+    let mut gp = g.ptr();
     let mut ix = this.ix;
     let mut iy = this.iy;
     let collisionWidth = this.collisionWidth;
     let collisionHeight = this.collisionHeight;
     let mut iAttempts: i16 = 10;
     unsafe {
-        while !g.g_map.findspawnpoint(5, &mut ix, &mut iy, collisionWidth, collisionHeight, false) && {
+        while !gp.g_map.findspawnpoint(g, 5, &mut ix, &mut iy, collisionWidth, collisionHeight, false) && {
             let a = iAttempts;
             iAttempts -= 1;
             a > 0

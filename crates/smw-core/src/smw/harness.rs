@@ -136,8 +136,8 @@ impl Harness {
     }
 }
 
-fn h() -> &'static mut Harness {
-    &mut crate::game::game().get().harness
+fn h(g: &mut Game) -> &mut Harness {
+    &mut g.harness
 }
 
 fn env(name: &str) -> Option<String> {
@@ -177,8 +177,8 @@ fn strtol10(s: &str) -> i64 {
     }
 }
 
-extern "C" fn virtual_ticks() -> u32 {
-    unsafe { 1000u32.wrapping_add(h().frame.wrapping_mul(WAITTIME as u32)) }
+fn virtual_ticks(g: &mut Game) -> u32 {
+    unsafe { 1000u32.wrapping_add(h(g).frame.wrapping_mul(WAITTIME as u32)) }
 }
 
 /// A recording's text: plain, or gzipped (.smwrp, .txt.gz).
@@ -186,7 +186,8 @@ pub fn read_recording(path: impl AsRef<std::path::Path>) -> Option<String> {
     String::from_utf8(read_maybe_gzip(path).ok()?).ok()
 }
 
-fn load_events(path: &str) -> Vec<ReplayEvent> {
+fn load_events(g: &mut Game, path: &str) -> Vec<ReplayEvent> {
+    let mut gp = g.ptr();
     let text = read_recording(path).unwrap_or_else(|| fail(format!("cannot open replay {}", path)));
     let mut events: Vec<ReplayEvent> = Vec::new();
     let events = &mut events;
@@ -198,7 +199,7 @@ fn load_events(path: &str) -> Vec<ReplayEvent> {
         let line = raw.strip_suffix('\r').unwrap_or(raw);
         let trimmed = line.trim_start_matches([' ', '\t']);
         if let Some(value) = trimmed.strip_prefix("#@ touch=") {
-            unsafe { h().touch = value.trim() == "1" };
+            unsafe { h(gp.get()).touch = value.trim() == "1" };
         }
         if trimmed.is_empty() || trimmed.starts_with('#') {
             continue;
@@ -230,7 +231,7 @@ fn load_events(path: &str) -> Vec<ReplayEvent> {
             let Some(device) = device else { fail(format!("{}:{}: expected '<frame> {} <dev>'", path, lineno, dir)) };
             added_later[device as usize].get_or_insert(dir == "jadd");
             unsafe {
-                h().devices.push((frame, device, dir == "jadd"));
+                h(gp.get()).devices.push((frame, device, dir == "jadd"));
             }
             continue;
         }
@@ -285,16 +286,16 @@ fn load_events(path: &str) -> Vec<ReplayEvent> {
         events.push(ev);
     }
     unsafe {
-        h().joysticks = (0..8).filter(|&d| added_later[d as usize] == Some(false)).map(|d| d + 1).max().unwrap_or(0);
+        h(gp.get()).joysticks = (0..8).filter(|&d| added_later[d as usize] == Some(false)).map(|d| d + 1).max().unwrap_or(0);
     }
     std::mem::take(events)
 }
 
 #[cfg(not(target_os = "emscripten"))]
-fn attach_joysticks() {
+fn attach_joysticks(g: &mut Game) {
     unsafe {
         SDL_InitSubSystem(SDL_INIT_JOYSTICK);
-        for i in 0..h().joysticks {
+        for i in 0..h(g).joysticks {
             if attach_virtual() != i {
                 fail(format!("cannot attach virtual joystick {}: {}", i, CStr::from_ptr(SDL_GetError()).to_string_lossy()));
             }
@@ -309,25 +310,27 @@ pub fn attach_virtual() -> i32 {
 }
 
 /// Not in the C++. A replay's `jadd`/`jremove` lines for this frame: (device, connected).
-pub fn replay_device_changes() -> Vec<(usize, bool)> {
+pub fn replay_device_changes(g: &mut Game) -> Vec<(usize, bool)> {
+    let mut gp = g.ptr();
     let mut changes = Vec::new();
     unsafe {
-        while h().nextDevice < h().devices.len() && h().devices[h().nextDevice].0 <= h().frame {
-            let (frame, device, added) = h().devices[h().nextDevice];
-            if frame == h().frame {
+        while h(gp.get()).nextDevice < h(gp.get()).devices.len() && h(gp.get()).devices[h(gp.get()).nextDevice].0 <= h(gp.get()).frame {
+            let (frame, device, added) = h(gp.get()).devices[h(gp.get()).nextDevice];
+            if frame == h(gp.get()).frame {
                 changes.push((device as usize, added));
             }
-            h().nextDevice += 1;
+            h(gp.get()).nextDevice += 1;
         }
     }
     changes
 }
 
 /// Not in the C++. While recording, a `jadd`/`jremove` line for a pad connected or disconnected before this frame.
-pub fn record_device(index: usize, added: bool) {
-    let Some(r) = rec().filter(|r| r.live) else { return };
+pub fn record_device(g: &mut Game, index: usize, added: bool) {
+    let mut gp = g.ptr();
+    let Some(r) = rec(g).filter(|r| r.live) else { return };
     if index < 8 {
-        let _ = writeln!(r.out, "{} {} {}", unsafe { h().frame }, if added { "jadd" } else { "jremove" }, index);
+        let _ = writeln!(r.out, "{} {} {}", unsafe { h(gp.get()).frame }, if added { "jadd" } else { "jremove" }, index);
     }
 }
 
@@ -371,21 +374,23 @@ fn state_name(g: &mut Game) -> &'static str {
 }
 
 
-fn note_replay_key(event: &SDL_Event) {
+fn note_replay_key(g: &mut Game, event: &SDL_Event) {
+    let mut gp = g.ptr();
     unsafe {
         let t = event.type_;
         if t == SDL_EventType::SDL_KEYDOWN as u32 || t == SDL_EventType::SDL_KEYUP as u32 {
-            h().replay_keys[event.key.keysym.scancode as usize] = (t == SDL_EventType::SDL_KEYDOWN as u32) as u8;
+            h(gp.get()).replay_keys[event.key.keysym.scancode as usize] = (t == SDL_EventType::SDL_KEYDOWN as u32) as u8;
         }
     }
 }
 
 /// `SDL_GetKeyboardState(NULL)` for the game; while replaying, the replayed keys, so Shift held while typing
 /// in a text field replays as it was recorded.
-pub fn keyboard_state() -> *const u8 {
+pub fn keyboard_state(g: &mut Game) -> *const u8 {
+    let mut gp = g.ptr();
     unsafe {
-        if h().replay {
-            (&raw const h().replay_keys).cast()
+        if h(gp.get()).replay {
+            (&raw const h(gp.get()).replay_keys).cast()
         } else {
             sdl2::sys::SDL_GetKeyboardState(std::ptr::null_mut())
         }
@@ -396,8 +401,8 @@ pub fn keyboard_state() -> *const u8 {
 pub fn note_net(g: &mut Game, line: String) {
     let mut gp = g.ptr();
     unsafe {
-        if gp.netplay.active && h().dump.is_some() {
-            h().spawn_events.push(format!("C {}", line));
+        if gp.netplay.active && h(gp.get()).dump.is_some() {
+            h(gp.get()).spawn_events.push(format!("C {}", line));
         }
     }
 }
@@ -407,8 +412,9 @@ pub fn note_powerup_spawn(g: &mut Game, iType: i16, x: i16, y: i16) {
 }
 
 fn dump_frame(g: &mut Game, out: &mut impl Write) -> std::io::Result<()> {
+    let mut gp = g.ptr();
     let state = state_name(g);
-    writeln!(out, "F {} {}", unsafe { h().frame }, state)?;
+    writeln!(out, "F {} {}", unsafe { h(gp.get()).frame }, state)?;
 
     if state == "menu" {
         let menu = MenuState::instance(g);
@@ -417,67 +423,68 @@ fn dump_frame(g: &mut Game, out: &mut impl Write) -> std::io::Result<()> {
         GameplayState::instance(g).harness_dump(g, out)?;
     }
 
-    for line in unsafe { g.sfx.sfx_events.iter().chain(h().spawn_events.iter()) } {
+    for line in unsafe { gp.sfx.sfx_events.iter().chain(h(gp.get()).spawn_events.iter()) } {
         writeln!(out, "{}", line)?;
     }
 
-    writeln!(out, "R calls={} last={}", RandomNumberGenerator::call_count(), RandomNumberGenerator::last_value())
+    writeln!(out, "R calls={} last={}", RandomNumberGenerator::call_count(gp.get()), RandomNumberGenerator::last_value(gp.get()))
 }
 
 pub fn init(g: &mut Game) {
+    let mut gp = g.ptr();
     unsafe {
         // A normal launch records the session (seeded, so it can be replayed); replays never record.
         let record = env("SMW_REPLAY").is_none() && env("SMW_NO_RECORD").is_none();
         let seed_text = env("SMW_SEED").or_else(|| if record { Some(random_seed().to_string()) } else { None });
         if let Some(seed) = seed_text {
-            h().seeded = true;
-            h().seed = strtoul0(&seed);
-            RandomNumberGenerator::generator().reseed(h().seed);
-            srand(h().seed);
-            RandomNumberGenerator::reset_call_count();
+            h(gp.get()).seeded = true;
+            h(gp.get()).seed = strtoul0(&seed);
+            RandomNumberGenerator::generator(gp.get()).reseed(h(gp.get()).seed);
+            srand(h(gp.get()).seed);
+            RandomNumberGenerator::reset_call_count(gp.get());
             g.sfx.sfx_ticks = virtual_ticks;
             g.sfx.sfx_ignore_channel_failure = true;
             g.sfx.sfx_log_events = true;
         }
 
-        h().noLimit = env("SMW_NOLIMIT").is_some();
+        h(gp.get()).noLimit = env("SMW_NOLIMIT").is_some();
 
         if let Some(map) = env("SMW_MAP") {
-            h().map = map;
+            h(gp.get()).map = map;
         }
 
         if let Some(frames) = env("SMW_FRAMES") {
-            h().maxFrames = strtol10(&frames);
+            h(gp.get()).maxFrames = strtol10(&frames);
         }
 
         if let Some(replay) = env("SMW_REPLAY") {
-            h().events = load_events(&replay);
-            h().replay = true;
-            load_segment(&replay);
+            h(gp.get()).events = load_events(g, &replay);
+            h(gp.get()).replay = true;
+            load_segment(g, &replay);
             // A segment starts mid-session with every joystick the replay uses.
-            if h().segment.is_some() {
-                h().joysticks = h().joysticks.max(h().devices.iter().map(|&(_, d, _)| d + 1).max().unwrap_or(0));
-                h().devices.clear();
+            if h(gp.get()).segment.is_some() {
+                h(gp.get()).joysticks = h(gp.get()).joysticks.max(h(gp.get()).devices.iter().map(|&(_, d, _)| d + 1).max().unwrap_or(0));
+                h(gp.get()).devices.clear();
             }
-            let from = if h().segment.is_some() { h().frame + 1 } else { 0 };
+            let from = if h(gp.get()).segment.is_some() { h(gp.get()).frame + 1 } else { 0 };
             crate::smw::network::net_record::load(g, &read_recording(&replay).unwrap_or_default(), from);
         }
 
-        h().audible = record || env("SMW_AUDIBLE").is_some();
+        h(gp.get()).audible = record || env("SMW_AUDIBLE").is_some();
         // Unseeded runs (SMW_NO_RECORD) are live play, so they are audible too.
-        g.sfx.sfx_audible = h().audible || !h().seeded;
+        g.sfx.sfx_audible = h(gp.get()).audible || !h(gp.get()).seeded;
         if let Some(speed) = env("SMW_REPLAY_SPEED").and_then(|v| v.parse::<f32>().ok()).filter(|v| *v > 0.0) {
-            h().speed = speed;
+            h(gp.get()).speed = speed;
         }
         if record {
-            start_recording(h().seed, None);
-        } else if let Some(path) = env("SMW_RECORD_TO").filter(|_| h().replay && h().segment.is_none()) {
-            start_recording(h().seed, Some(path));
+            start_recording(g, h(gp.get()).seed, None);
+        } else if let Some(path) = env("SMW_RECORD_TO").filter(|_| h(gp.get()).replay && h(gp.get()).segment.is_none()) {
+            start_recording(g, h(gp.get()).seed, Some(path));
         }
 
         // Not in upstream: a connected pad must not join a replay's joysticks.
         #[cfg(not(target_os = "emscripten"))]
-        if h().replay {
+        if h(gp.get()).replay {
             for hint in [c"SDL_JOYSTICK_HIDAPI", c"SDL_JOYSTICK_MFI", c"SDL_JOYSTICK_IOKIT"] {
                 SDL_SetHint(hint.as_ptr(), c"0".as_ptr());
             }
@@ -485,8 +492,8 @@ pub fn init(g: &mut Game) {
 
         // The browser's SDL has no virtual joysticks; there init_joysticks takes the count from replay_joysticks.
         #[cfg(not(target_os = "emscripten"))]
-        if h().joysticks > 0 {
-            attach_joysticks();
+        if h(gp.get()).joysticks > 0 {
+            attach_joysticks(g);
         }
 
         if let Some(dump) = env("SMW_DUMP") {
@@ -495,25 +502,25 @@ pub fn init(g: &mut Game) {
                 .append(true)
                 .open(&dump)
                 .unwrap_or_else(|_| fail(format!("cannot open dump {}", dump)));
-            h().dump = Some(BufWriter::new(file));
+            h(gp.get()).dump = Some(BufWriter::new(file));
         }
 
         if let Some(shots) = env("SMW_SHOT_FRAMES") {
             for item in shots.split(',').filter(|s| !s.is_empty()) {
-                h().shotFrames.insert(strtol10(item) as u32);
+                h(gp.get()).shotFrames.insert(strtol10(item) as u32);
             }
         }
-        h().shotDir = env("SMW_SHOT_DIR").unwrap_or_else(|| ".".to_string());
+        h(gp.get()).shotDir = env("SMW_SHOT_DIR").unwrap_or_else(|| ".".to_string());
         if let Some(range) = env("SMW_SHOT_RANGE") {
             let (from, to) = range.split_once('-').unwrap_or((&range, ""));
-            h().shotFrom = strtol10(from) as u32;
+            h(gp.get()).shotFrom = strtol10(from) as u32;
             if !to.is_empty() {
-                h().shotTo = strtol10(to) as u32;
+                h(gp.get()).shotTo = strtol10(to) as u32;
             }
-            h().shotEvery = 1;
+            h(gp.get()).shotEvery = 1;
         }
         if let Some(every) = env("SMW_SHOT_EVERY") {
-            h().shotEvery = strtol10(&every).max(1) as u32;
+            h(gp.get()).shotEvery = strtol10(&every).max(1) as u32;
         }
         if let Some(stream) = env("SMW_SHOT_STREAM") {
             let file = std::fs::OpenOptions::new()
@@ -521,15 +528,16 @@ pub fn init(g: &mut Game) {
                 .append(true)
                 .open(&stream)
                 .unwrap_or_else(|_| fail(format!("cannot open shot stream {}", stream)));
-            h().shotStream = Some(BufWriter::with_capacity(640 * 480 * 4, file));
+            h(gp.get()).shotStream = Some(BufWriter::with_capacity(640 * 480 * 4, file));
         }
     }
 }
 
-pub fn libc_seed(fallback: u32) -> u32 {
+pub fn libc_seed(g: &mut Game, fallback: u32) -> u32 {
+    let mut gp = g.ptr();
     unsafe {
-        if h().seeded {
-            h().seed
+        if h(gp.get()).seeded {
+            h(gp.get()).seed
         } else {
             fallback
         }
@@ -538,48 +546,52 @@ pub fn libc_seed(fallback: u32) -> u32 {
 
 /// Not in upstream: in a browser replay, the number of joysticks the replay uses. They exist only as
 /// the device index its events carry (`which`), which is what the game compares with its bindings.
-pub fn replay_joysticks() -> Option<i16> {
+pub fn replay_joysticks(g: &mut Game) -> Option<i16> {
     #[cfg(target_os = "emscripten")]
     unsafe {
-        if h().replay {
-            return Some(h().joysticks as i16);
+        if h(g).replay {
+            return Some(h(g).joysticks as i16);
         }
     }
     None
 }
 
 /// Marks the recording as made with Android's touch controls on, before its first frame.
-pub fn record_touch() {
-    if let Some(r) = rec().filter(|r| r.live) {
+pub fn record_touch(g: &mut Game) {
+    if let Some(r) = rec(g).filter(|r| r.live) {
         let _ = writeln!(r.out, "#@ touch=1");
     }
 }
 
 /// Whether the replay was recorded with Android's touch controls on (`touch::touch_first`).
-pub fn replay_touch() -> bool {
-    unsafe { h().replay && h().touch }
+pub fn replay_touch(g: &mut Game) -> bool {
+    let mut gp = g.ptr();
+    unsafe { h(gp.get()).replay && h(gp.get()).touch }
 }
 
-pub fn replaying() -> bool {
-    unsafe { h().replay }
+pub fn replaying(g: &mut Game) -> bool {
+    let mut gp = g.ptr();
+    unsafe { h(gp.get()).replay }
 }
 
-pub fn frame() -> u32 {
-    unsafe { h().frame }
+pub fn frame(g: &mut Game) -> u32 {
+    let mut gp = g.ptr();
+    unsafe { h(gp.get()).frame }
 }
 
 /// The clock net code decides by: frame-based in seeded runs, so a replay reads the recorded session's times.
-pub fn net_ticks() -> u32 {
-    if unsafe { h().seeded } {
-        virtual_ticks()
+pub fn net_ticks(g: &mut Game) -> u32 {
+    let mut gp = g.ptr();
+    if unsafe { h(gp.get()).seeded } {
+        virtual_ticks(g)
     } else {
-        crate::services::ticks()
+        crate::services::ticks(gp.get())
     }
 }
 
 /// A `#@` line for the recording, if one is being made.
-pub fn record_line(line: &str) {
-    if let Some(r) = rec() {
+pub fn record_line(g: &mut Game, line: &str) {
+    if let Some(r) = rec(g) {
         let _ = writeln!(r.out, "{}", line);
     }
 }
@@ -589,98 +601,103 @@ pub fn net_seed() -> Option<u32> {
     env("SMW_NET_SEED").and_then(|s| s.parse().ok())
 }
 
-pub fn no_limit() -> bool {
-    unsafe { h().noLimit }
+pub fn no_limit(g: &mut Game) -> bool {
+    let mut gp = g.ptr();
+    unsafe { h(gp.get()).noLimit }
 }
 
-pub fn forced_map() -> Option<&'static str> {
+pub fn forced_map(g: &mut Game) -> Option<&'static str> {
+    let mut gp = g.ptr();
     unsafe {
-        if h().map.is_empty() {
+        if h(gp.get()).map.is_empty() {
             None
         } else {
-            Some(h().map.as_str())
+            Some(h(gp.get()).map.as_str())
         }
     }
 }
 
 pub fn frame_start(g: &mut Game) {
+    let mut gp = g.ptr();
     #[cfg(not(target_os = "emscripten"))]
-    crate::smw::pad::debug_frame(unsafe { h().frame });
+    crate::smw::pad::debug_frame(g, unsafe { h(gp.get()).frame });
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::phase(2);
     sfx::sfx_virtual_advance(g);
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::phase(3);
-    record_frame_start(g, unsafe { h().frame });
+    record_frame_start(g, unsafe { h(gp.get()).frame });
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::phase(4);
 
     unsafe {
-        while h().nextEvent < h().events.len() && h().events[h().nextEvent].frame <= h().frame {
-            if h().events[h().nextEvent].frame == h().frame {
+        while h(gp.get()).nextEvent < h(gp.get()).events.len() && h(gp.get()).events[h(gp.get()).nextEvent].frame <= h(gp.get()).frame {
+            if h(gp.get()).events[h(gp.get()).nextEvent].frame == h(gp.get()).frame {
                 let mut event: SDL_Event = std::mem::zeroed();
-                fill_event(&h().events[h().nextEvent], &mut event);
-                note_replay_key(&event);
+                fill_event(&h(gp.get()).events[h(gp.get()).nextEvent], &mut event);
+                note_replay_key(g, &event);
                 smw_sdl2::events::push(&mut event);
-                copy_replay_event(&h().events[h().nextEvent]);
+                copy_replay_event(g, &h(gp.get()).events[h(gp.get()).nextEvent]);
             }
-            h().nextEvent += 1;
+            h(gp.get()).nextEvent += 1;
         }
     }
 }
 
 /// Blocking waits take the next replay event immediately instead of waiting for input.
 pub fn wait_event(g: &mut Game, event: &mut SDL_Event) {
+    let mut gp = g.ptr();
     unsafe {
-        if h().rec.as_ref().is_some_and(|r| r.live) {
+        if h(gp.get()).rec.as_ref().is_some_and(|r| r.live) {
             record_wait_event(g, event);
             return;
         }
-        if !h().replay {
+        if !h(gp.get()).replay {
             smw_sdl2::events::wait(event);
             return;
         }
-        if h().nextEvent >= h().events.len() {
-            fail(format!("blocking wait at frame {} but the replay has no events left", h().frame));
+        if h(gp.get()).nextEvent >= h(gp.get()).events.len() {
+            fail(format!("blocking wait at frame {} but the replay has no events left", h(gp.get()).frame));
         }
-        fill_event(&h().events[h().nextEvent], event);
-        note_replay_key(event);
-        copy_replay_event(&h().events[h().nextEvent]);
-        h().nextEvent += 1;
+        fill_event(&h(gp.get()).events[h(gp.get()).nextEvent], event);
+        note_replay_key(g, event);
+        copy_replay_event(g, &h(gp.get()).events[h(gp.get()).nextEvent]);
+        h(gp.get()).nextEvent += 1;
     }
 }
 
 pub fn frame_end(g: &mut Game) {
+    let mut gp = g.ptr();
     unsafe {
-        if let Some(mut out) = h().dump.take() {
+        if let Some(mut out) = h(gp.get()).dump.take() {
             let _ = dump_frame(g, &mut out);
             let _ = out.flush();
-            h().dump = Some(out);
+            h(gp.get()).dump = Some(out);
         }
         g.sfx.sfx_events.clear();
-        h().spawn_events.clear();
-        record_markers(g, h().frame);
+        h(gp.get()).spawn_events.clear();
+        record_markers(g, h(gp.get()).frame);
 
-        let f = h().frame;
-        let periodic = h().shotEvery > 0 && f >= h().shotFrom && f <= h().shotTo && (f - h().shotFrom) % h().shotEvery == 0;
+        let f = h(gp.get()).frame;
+        let periodic = h(gp.get()).shotEvery > 0 && f >= h(gp.get()).shotFrom && f <= h(gp.get()).shotTo && (f - h(gp.get()).shotFrom) % h(gp.get()).shotEvery == 0;
         if periodic {
-            if let Some(out) = h().shotStream.as_mut() {
+            if let Some(out) = h(gp.get()).shotStream.as_mut() {
                 if crate::common::gfx::gfx_write_screen_raw(g, out).and_then(|_| out.flush()).is_err() {
                     fail(format!("cannot write shot stream at frame {}", f));
                 }
             }
         }
-        if h().shotFrames.contains(&f) || (periodic && h().shotStream.is_none()) {
-            let path = format!("{}/frame_{}.bmp", h().shotDir, h().frame);
+        if h(gp.get()).shotFrames.contains(&f) || (periodic && h(gp.get()).shotStream.is_none()) {
+            let path = format!("{}/frame_{}.bmp", h(gp.get()).shotDir, h(gp.get()).frame);
             if !crate::common::gfx::gfx_save_screen_bmp(g, &path) {
                 eprintln!("[harness] cannot save {}", path);
             }
         }
 
-        h().frame += 1;
-        if h().maxFrames >= 0 && h().frame as i64 >= h().maxFrames {
+        h(gp.get()).frame += 1;
+        if h(gp.get()).maxFrames >= 0 && h(gp.get()).frame as i64 >= h(gp.get()).maxFrames {
             g.game_values.appstate = AppState::Quit;
-            h().dump = None;
+            h(gp.get()).dump = None;
         }
     }
 }
@@ -715,8 +732,9 @@ struct Recorder {
     checkpoint: Option<String>,
 }
 
-fn rec() -> Option<&'static mut Recorder> {
-    unsafe { h().rec.as_mut() }
+fn rec(g: &mut Game) -> Option<&'static mut Recorder> {
+    let mut gp = g.ptr();
+    unsafe { h(gp.get()).rec.as_mut() }
 }
 
 const BASE64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -794,8 +812,9 @@ fn prune_recordings(dir: &str) {
 
 /// Opens the recording and writes its header. Called from `init` before the settings files are read.
 /// `to` is SMW_RECORD_TO: a replay's own events, markers and checkpoints go to that file instead.
-fn start_recording(seed: u32, to: Option<String>) {
-    let dir = crate::common::path::get_home_directory() + "replays/";
+fn start_recording(g: &mut Game, seed: u32, to: Option<String>) {
+    let mut gp = g.ptr();
+    let dir = crate::common::path::get_home_directory(g) + "replays/";
     let stamp = utc_timestamp();
     let live = to.is_none();
     let path = if let Some(path) = to {
@@ -818,7 +837,7 @@ fn start_recording(seed: u32, to: Option<String>) {
         return;
     };
     let mut out = BufWriter::new(file);
-    let home = crate::common::path::get_home_directory();
+    let home = crate::common::path::get_home_directory(g);
     let _ = writeln!(out, "# Super Mario War session recorded {} UTC (Rust port).", stamp.replace('_', " "));
     let _ = writeln!(out, "#@ seed={}", seed);
     let _ = writeln!(out, "#@ netrec=1");
@@ -827,15 +846,15 @@ fn start_recording(seed: u32, to: Option<String>) {
             let _ = writeln!(out, "#@ {}={}", key, base64_encode(&bytes));
         }
     }
-    if let Some(map) = forced_map() {
+    if let Some(map) = forced_map(g) {
         let _ = writeln!(out, "#@ map={}", map);
     }
     let _ = out.flush();
     println!("[harness] recording to {}", path);
 
-    let script = if live { env("SMW_LIVE_SCRIPT").map(|p| load_events(&p)).unwrap_or_default() } else { Vec::new() };
+    let script = if live { env("SMW_LIVE_SCRIPT").map(|p| load_events(g, &p)).unwrap_or_default() } else { Vec::new() };
     unsafe {
-        h().rec = Some(Recorder {
+        h(gp.get()).rec = Some(Recorder {
             out,
             path,
             pending: Vec::new(),
@@ -849,7 +868,7 @@ fn start_recording(seed: u32, to: Option<String>) {
             checkpoint: None,
         });
         if live {
-            smw_sdl2::events::set_filter(Some(record_filter), std::ptr::null_mut());
+            smw_sdl2::events::set_filter(Some(record_filter), g as *mut Game as *mut std::ffi::c_void);
         }
     }
     if live {
@@ -872,13 +891,14 @@ fn is_input_event(t: u32) -> bool {
 /// While recording, every input event SDL queues is held back here; the frame start (or a blocking
 /// wait) turns the held events into replay lines and pushes those, so the game only ever sees input
 /// in the exact form a replay of the recording will produce.
-unsafe extern "C" fn record_filter(_userdata: *mut std::ffi::c_void, event: *mut SDL_Event) -> i32 {
-    let Some(r) = rec() else { return 1 };
+unsafe extern "C" fn record_filter(userdata: *mut std::ffi::c_void, event: *mut SDL_Event) -> i32 {
+    let g = &mut *(userdata as *mut Game);
+    let Some(r) = rec(g) else { return 1 };
     if INJECTING.load(Ordering::Relaxed) || !is_input_event((*event).type_) {
         return 1;
     }
     #[cfg(not(target_os = "emscripten"))]
-    if !crate::smw::pad::translate(&mut *event) {
+    if !crate::smw::pad::translate(g, &mut *event) {
         return 0;
     }
     if (*event).type_ == SDL_EventType::SDL_MOUSEBUTTONUP as u32 {
@@ -933,7 +953,7 @@ fn device_index(g: &mut Game, which: i32) -> Option<i32> {
     let mut gp = g.ptr();
     unsafe {
         let js = gp.joysticks;
-        for i in 0..crate::game::game().joystickcount.max(0) as usize {
+        for i in 0..gp.joystickcount.max(0) as usize {
             let j = *js.add(i);
             if !j.is_null() && SDL_JoystickInstanceID(j) == which {
                 return Some(i as i32);
@@ -1014,6 +1034,7 @@ fn record_event(r: &mut Recorder, ev: &ReplayEvent) {
 #[cfg(target_os = "emscripten")]
 mod web_dpad {
     use super::{EventKind, ReplayEvent};
+    use crate::game::Game;
     use sdl2::sys::{SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP};
 
     extern "C" {
@@ -1021,20 +1042,20 @@ mod web_dpad {
     }
 
 
-    pub fn init() {
+    pub fn init(g: &mut Game) {
         unsafe {
-            super::h().web_standard = emscripten_run_script_int(
+            super::h(g).web_standard = emscripten_run_script_int(
                 c"(navigator.getGamepads ? Array.prototype.filter.call(navigator.getGamepads(), Boolean) : []).reduce((m, p, i) => p.mapping === 'standard' ? m | (1 << i) : m, 0)".as_ptr(),
             );
         }
     }
 
-    pub fn hat_for(ev: &ReplayEvent) -> Option<ReplayEvent> {
-        if ev.kind != EventKind::JoyButton || !(12..=15).contains(&ev.index) || unsafe { super::h().web_standard } & (1 << ev.device) == 0 {
+    pub fn hat_for(g: &mut Game, ev: &ReplayEvent) -> Option<ReplayEvent> {
+        if ev.kind != EventKind::JoyButton || !(12..=15).contains(&ev.index) || unsafe { super::h(g).web_standard } & (1 << ev.device) == 0 {
             return None;
         }
         let bit = [SDL_HAT_UP, SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT][(ev.index - 12) as usize] as i32;
-        let hat = unsafe { &mut super::h().web_hats[ev.device as usize] };
+        let hat = unsafe { &mut super::h(g).web_hats[ev.device as usize] };
         if ev.value != 0 {
             *hat |= bit;
         } else {
@@ -1048,14 +1069,14 @@ mod web_dpad {
 /// attaches the same number of joysticks; then held input becomes replay lines pushed in order.
 fn record_frame_start(g: &mut Game, frame: u32) {
     let mut gp = g.ptr();
-    let Some(r) = rec().filter(|r| r.live) else { return };
+    let Some(r) = rec(g).filter(|r| r.live) else { return };
     if frame == 0 {
         for d in 0..unsafe { gp.joystickcount }.min(8) as i32 {
             let ev = ReplayEvent { frame: 0, kind: EventKind::JoyHat, down: false, keyName: String::new(), device: d, index: 0, value: 0 };
             record_event(r, &ev);
         }
         #[cfg(target_os = "emscripten")]
-        web_dpad::init();
+        web_dpad::init(g);
     }
     // A browser tab can close at any moment without finish(), and muOS kills apps; keep the file current.
     if frame % 60 == 0 {
@@ -1071,7 +1092,7 @@ fn record_frame_start(g: &mut Game, frame: u32) {
         }
         if let Some(ev) = to_replay_event(g, raw, frame) {
             #[cfg(target_os = "emscripten")]
-            if let Some(hat) = web_dpad::hat_for(&ev) {
+            if let Some(hat) = web_dpad::hat_for(g, &ev) {
                 record_event(r, &hat);
             }
             record_event(r, &ev);
@@ -1087,11 +1108,12 @@ fn record_frame_start(g: &mut Game, frame: u32) {
 /// A blocking wait while recording returns the next held input event, written with the next frame
 /// number so the replay's frame start leaves it for the replay's own blocking wait.
 fn record_wait_event(g: &mut Game, event: &mut SDL_Event) {
+    let mut gp = g.ptr();
     loop {
         #[cfg(not(target_os = "emscripten"))]
-        crate::smw::touch::flush();
-        let Some(r) = rec() else { return };
-        push_live_script(g, r, unsafe { h().frame } + 1);
+        crate::smw::touch::flush(g);
+        let Some(r) = rec(g) else { return };
+        push_live_script(g, r, unsafe { h(gp.get()).frame } + 1);
         smw_sdl2::events::pump();
         while !r.pending.is_empty() {
             let raw = r.pending.remove(0);
@@ -1100,7 +1122,7 @@ fn record_wait_event(g: &mut Game, event: &mut SDL_Event) {
                 r.pending.insert(0, raw);
                 break;
             }
-            if let Some(ev) = to_replay_event(g, &raw, unsafe { h().frame } + 1) {
+            if let Some(ev) = to_replay_event(g, &raw, unsafe { h(gp.get()).frame } + 1) {
                 let _ = writeln!(r.out, "{}", line_for(&ev));
                 fill_event(&ev, event);
                 return;
@@ -1111,7 +1133,7 @@ fn record_wait_event(g: &mut Game, event: &mut SDL_Event) {
             unsafe { *event = std::mem::zeroed() };
             return;
         }
-        crate::services::delay(5);
+        crate::services::delay(gp.get(), 5);
     }
 }
 
@@ -1120,16 +1142,17 @@ const UNFINISHED_TAIL_FRAMES: u32 = 188;
 
 /// Writes `#@ frames=` and closes the recording, or removes a watch session's throwaway HOME.
 /// Safe to call more than once.
-pub fn finish() {
+pub fn finish(g: &mut Game) {
+    let mut gp = g.ptr();
     unsafe {
-        if let Some(home) = h().watch_home.take() {
+        if let Some(home) = h(gp.get()).watch_home.take() {
             let _ = std::fs::remove_dir_all(home);
         }
-        if let Some(mut r) = h().rec.take() {
+        if let Some(mut r) = h(gp.get()).rec.take() {
             if r.live {
                 smw_sdl2::events::set_filter(None, std::ptr::null_mut());
             }
-            let frames = r.quitFrame.unwrap_or(h().frame);
+            let frames = r.quitFrame.unwrap_or(h(gp.get()).frame);
             let _ = writeln!(r.out, "#@ frames={}", frames);
             let _ = r.out.flush();
             println!("[harness] recorded {} frames to {}", frames, r.path);
@@ -1138,18 +1161,21 @@ pub fn finish() {
 }
 
 /// Real SDL_mixer output on top of the virtual mixer (recorded sessions and --replay watching).
-pub fn audible() -> bool {
-    unsafe { h().audible }
+pub fn audible(g: &mut Game) -> bool {
+    let mut gp = g.ptr();
+    unsafe { h(gp.get()).audible }
 }
 
 /// Playback speed multiplier for watching a recording (SMW_REPLAY_SPEED); 1 otherwise.
-pub fn speed() -> f32 {
-    unsafe { h().speed }
+pub fn speed(g: &mut Game) -> f32 {
+    let mut gp = g.ptr();
+    unsafe { h(gp.get()).speed }
 }
 
 /// `--replay <file>`: watch a recording in a normal window at normal speed with sound. The settings
 /// embedded in the recording go into a throwaway HOME so the user's own settings stay untouched.
-pub fn prepare_watch(file: &str, speed: Option<f32>, segment: Option<u32>) {
+pub fn prepare_watch(g: &mut Game, file: &str, speed: Option<f32>, segment: Option<u32>) {
+    let mut gp = g.ptr();
     let path = std::fs::canonicalize(file).unwrap_or_else(|_| fail(format!("cannot open replay {}", file)));
     let text = read_recording(&path).unwrap_or_else(|| fail(format!("cannot read replay {}", path.display())));
     let directive = |key: &str| {
@@ -1167,7 +1193,7 @@ pub fn prepare_watch(file: &str, speed: Option<f32>, segment: Option<u32>) {
         }
     }
     std::env::set_var(if cfg!(windows) { "USERPROFILE" } else { "HOME" }, &home);
-    unsafe { h().watch_home = Some(home) };
+    unsafe { h(gp.get()).watch_home = Some(home) };
     std::env::set_var("SMW_REPLAY", &path);
     std::env::set_var("SMW_SEED", directive("seed").unwrap_or_else(|| "1".to_string()));
     // A session that ended without finish() (killed, or a browser tab closed) has no frames= line:
@@ -1196,8 +1222,8 @@ pub fn prepare_watch(file: &str, speed: Option<f32>, segment: Option<u32>) {
 //------------------------------------------------------------------------------------------------
 
 /// A replay's event, written to its SMW_RECORD_TO recording as it is pushed.
-fn copy_replay_event(ev: &ReplayEvent) {
-    if let Some(r) = rec().filter(|r| !r.live) {
+fn copy_replay_event(g: &mut Game, ev: &ReplayEvent) {
+    if let Some(r) = rec(g).filter(|r| !r.live) {
         let _ = writeln!(r.out, "{}", line_for(ev));
     }
 }
@@ -1208,11 +1234,12 @@ pub fn note_match_map(g: &mut Game, path: &str) {
 
 /// Called where a match starts (`MenuState::enter_gameplay`): the next marker opens a new match.
 pub fn match_checkpoint(g: &mut Game) {
-    let Some(r) = rec() else { return };
+    let mut gp = g.ptr();
+    let Some(r) = rec(g) else { return };
     r.matches += 1;
     r.checkpoint = Some(match crate::smw::checkpoint::unsupported_reason(g) {
-        Some(reason) => format!("#@ checkpoint match={} frame={} unsupported={}", r.matches, unsafe { h().frame }, reason),
-        None => format!("#@ checkpoint match={} frame={} z64={}", r.matches, unsafe { h().frame }, base64_encode(&deflate(&crate::smw::checkpoint::capture(g)))),
+        Some(reason) => format!("#@ checkpoint match={} frame={} unsupported={}", r.matches, unsafe { h(gp.get()).frame }, reason),
+        None => format!("#@ checkpoint match={} frame={} z64={}", r.matches, unsafe { h(gp.get()).frame }, base64_encode(&deflate(&crate::smw::checkpoint::capture(g)))),
     });
 }
 
@@ -1230,7 +1257,7 @@ fn marker_state(g: &mut Game) -> &'static str {
 /// Frame end while recording: a `#@ mark` line when the state changed this frame, and when a match
 /// started, its checkpoint.
 fn record_markers(g: &mut Game, frame: u32) {
-    let Some(r) = rec() else { return };
+    let Some(r) = rec(g) else { return };
     let state = marker_state(g);
     if state == r.state {
         return;
@@ -1286,7 +1313,8 @@ fn directive_fields(line: &str) -> Vec<(String, String)> {
 
 /// Segment mode: SMW_SEGMENT=<k>, or `#@ segment=<k>` in the replay (a clip). Finds checkpoint k,
 /// starts the frame counter at its frame and ends the replay where the match left gameplay.
-fn load_segment(path: &str) {
+fn load_segment(g: &mut Game, path: &str) {
+    let mut gp = g.ptr();
     let text = read_recording(path).unwrap_or_default();
     let directives: Vec<Vec<(String, String)>> = text.lines().filter_map(|l| l.strip_prefix("#@ ")).map(directive_fields).collect();
     let field = |d: &[(String, String)], key: &str| d.iter().find(|(k, _)| k == key).map(|(_, v)| v.clone());
@@ -1308,15 +1336,15 @@ fn load_segment(path: &str) {
         .find(|(f, state)| *f > start && state != "gameplay" && state != "scoreboard")
         .map(|(f, _)| f);
     unsafe {
-        h().frame = start;
+        h(gp.get()).frame = start;
         if let Some(end) = end {
-            h().maxFrames = if h().maxFrames >= 0 { h().maxFrames.min(end as i64) } else { end as i64 };
+            h(gp.get()).maxFrames = if h(gp.get()).maxFrames >= 0 { h(gp.get()).maxFrames.min(end as i64) } else { end as i64 };
         }
         // The menu consumed this frame's input before the checkpoint.
-        while h().nextEvent < h().events.len() && h().events[h().nextEvent].frame <= start {
-            h().nextEvent += 1;
+        while h(gp.get()).nextEvent < h(gp.get()).events.len() && h(gp.get()).events[h(gp.get()).nextEvent].frame <= start {
+            h(gp.get()).nextEvent += 1;
         }
-        h().segment = Some(Segment { checkpoint: bytes });
+        h(gp.get()).segment = Some(Segment { checkpoint: bytes });
     }
 }
 
@@ -1338,8 +1366,9 @@ fn checkpoint_bytes(d: &[(String, String)]) -> Result<Vec<u8>, String> {
 }
 
 /// The state a segment replay starts in, if this is one.
-pub fn segment_state() -> Option<crate::smw::checkpoint::SegmentState> {
-    unsafe { h().segment.as_mut().map(|s| crate::smw::checkpoint::SegmentState { checkpoint: std::mem::take(&mut s.checkpoint), _alias: Aliased::new() }) }
+pub fn segment_state(g: &mut Game) -> Option<crate::smw::checkpoint::SegmentState> {
+    let mut gp = g.ptr();
+    unsafe { h(gp.get()).segment.as_mut().map(|s| crate::smw::checkpoint::SegmentState { checkpoint: std::mem::take(&mut s.checkpoint), _alias: Aliased::new() }) }
 }
 
 #[cfg(test)]

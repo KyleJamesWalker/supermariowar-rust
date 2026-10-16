@@ -64,7 +64,7 @@ impl MI_AnnouncerField {
         MENU_CODE_MODIFY_ACCEPTED
     }
 
-    pub fn send_input_impl(&mut self, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+    pub fn send_input_impl(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         for iPlayer in 0..4usize {
             let out = &playerInput.outputControls[iPlayer];
             if out.menu_right().fPressed || out.menu_down().fPressed {
@@ -80,7 +80,7 @@ impl MI_AnnouncerField {
             }
 
             if out.menu_random().fPressed {
-                self.list.random();
+                self.list.random(g);
                 self.update_name();
                 return MENU_CODE_NONE;
             }
@@ -142,6 +142,6 @@ impl UI_ControlTrait for MI_AnnouncerField {
         self.draw_impl(g);
     }
     fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
-        self.send_input_impl(playerInput)
+        self.send_input_impl(g, playerInput)
     }
 }

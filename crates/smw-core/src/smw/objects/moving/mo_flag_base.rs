@@ -37,6 +37,7 @@ impl_base!(MO_FlagBase => io_moving_object: IO_MovingObject);
 
 impl MO_FlagBase {
     pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, iTeamID: i16, iColorID: i16) -> Self {
+        let mut gp = g.ptr();
         let mut o = MO_FlagBase {
             // use 1280 and 960 so when placing base, it doesn't interfere (look in getClosestObject())
             io_moving_object: IO_MovingObject::new(g, nspr, Vec2s::new(1280, 960), 5, 0, -1, -1, -1, -1, -1, -1, -1, -1),
@@ -61,9 +62,9 @@ impl MO_FlagBase {
         o.teamID = iTeamID;
         o.iGraphicOffsetX = (iColorID as i32 * 48) as i16;
 
-        o.angle = RANDOM_INT(1000) as f32 * 0.00628f32;
-        o.anglechange = RANDOM_INT(100) as f32 * 0.0002f32;
-        o.anglechangetimer = (RANDOM_INT(50) + 100) as i16;
+        o.angle = RANDOM_INT(gp.get(), 1000) as f32 * 0.00628f32;
+        o.anglechange = RANDOM_INT(gp.get(), 100) as f32 * 0.0002f32;
+        o.anglechangetimer = (RANDOM_INT(gp.get(), 50) + 100) as i16;
 
         o.velx = sinf(o.angle);
         o.vely = cosf(o.angle);
@@ -81,6 +82,7 @@ impl MO_FlagBase {
     }
 
     pub fn place_flag_base(&mut self, g: &mut Game, fInit: bool) {
+        let mut gp = g.ptr();
         if crate::smw::net_random::place_event(g, self.iNetworkID, fInit as i32) {
             return;
         }
@@ -96,7 +98,7 @@ impl MO_FlagBase {
             } else {
                 let mut iAttempts: i16 = 32;
                 let (cw, ch) = (self.collisionWidth, self.collisionHeight);
-                while (!g.g_map.findspawnpoint(5, &mut x, &mut y, cw, ch, false)
+                while (!gp.g_map.findspawnpoint(g, 5, &mut x, &mut y, cw, ch, false)
                     || g.objectcontainer[1].get_closest_moving_object(x, y, movingobject_flagbase) < 200.0f32)
                     && {
                         let a = iAttempts;
@@ -136,9 +138,10 @@ impl MO_FlagBase {
         }
     }
 
-    pub fn change_angle(&mut self) {
-        self.anglechange = (RANDOM_INT(101) - 50) as f32 * 0.0002f32;
-        self.anglechangetimer = (RANDOM_INT(50) + 100) as i16;
+    pub fn change_angle(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        self.anglechange = (RANDOM_INT(gp.get(), 101) - 50) as f32 * 0.0002f32;
+        self.anglechangetimer = (RANDOM_INT(gp.get(), 50) + 100) as i16;
     }
 
     pub fn set_flag(&mut self, flag: Ptr<CO_Flag>) {
@@ -180,7 +183,7 @@ impl CObjectTrait for MO_FlagBase {
             if g.game_values.gamemodesettings.flag.speed > 0 {
                 self.anglechangetimer -= 1;
                 if self.anglechangetimer <= 0 && !net_random::object_event(g, Ev::Wander, &net_random::wander_args(self.iNetworkID, self.fx, self.fy, self.angle)) {
-                    self.change_angle();
+                    self.change_angle(g);
                 }
 
                 self.angle += self.anglechange;

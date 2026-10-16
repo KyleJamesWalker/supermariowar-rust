@@ -39,6 +39,7 @@ impl_base!(MO_Boomerang => io_moving_object: IO_MovingObject);
 impl MO_Boomerang {
     #[allow(clippy::too_many_arguments)]
     pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, moveToRight: bool, aniSpeed: i16, iGlobalID: i16, teamID: i16, iColorID: i16) -> Self {
+        let mut gp = g.ptr();
         let mut o = MO_Boomerang {
             io_moving_object: IO_MovingObject::new(
                 g,
@@ -98,7 +99,7 @@ impl MO_Boomerang {
 
         unsafe {
             if g.game_values.boomerangstyle == BoomerangStyle::Random {
-                o.iStyle = BoomerangStyle::from_u8(RANDOM_INT(3) as u8);
+                o.iStyle = BoomerangStyle::from_u8(RANDOM_INT(gp.get(), 3) as u8);
             } else {
                 o.iStyle = g.game_values.boomerangstyle;
             }
@@ -149,7 +150,7 @@ impl CObjectTrait for MO_Boomerang {
             self.animate();
 
             // Detection collision with boomerang breakable blocks
-            let blocks = self.get_collision_blocks();
+            let blocks = self.get_collision_blocks(g);
             for iBlock in 0..4usize {
                 let mut block = blocks[iBlock];
                 if block.is_null() {

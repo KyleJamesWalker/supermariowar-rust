@@ -1615,31 +1615,31 @@ impl UI_ModeOptionsMenu {
             let iMode = iMode as GameModeType;
             if iMode == game_mode_classic {
                 // classic
-                g.game_values.gamemodesettings.classic.style = self.miClassicModeStyleField.random_value();
-                g.game_values.gamemodesettings.classic.scoring = self.miClassicModeScoringField.random_value();
+                g.game_values.gamemodesettings.classic.style = self.miClassicModeStyleField.random_value(g);
+                g.game_values.gamemodesettings.classic.scoring = self.miClassicModeScoringField.random_value(g);
             } else if iMode == game_mode_frag {
                 // frag
-                g.game_values.gamemodesettings.frag.style = self.miFragModeStyleField.random_value();
-                g.game_values.gamemodesettings.frag.scoring = self.miFragModeScoringField.random_value();
+                g.game_values.gamemodesettings.frag.style = self.miFragModeStyleField.random_value(g);
+                g.game_values.gamemodesettings.frag.scoring = self.miFragModeScoringField.random_value(g);
             } else if iMode == game_mode_timelimit {
                 // time
-                g.game_values.gamemodesettings.time.style = self.miTimeLimitModeStyleField.random_value();
-                g.game_values.gamemodesettings.time.scoring = self.miTimeLimitModeScoringField.random_value();
+                g.game_values.gamemodesettings.time.style = self.miTimeLimitModeStyleField.random_value(g);
+                g.game_values.gamemodesettings.time.scoring = self.miTimeLimitModeScoringField.random_value(g);
                 g.game_values.gamemodesettings.time.percentextratime = self.miTimeLimitModePercentExtraTime.current_value();
             } else if iMode == game_mode_jail {
                 // jail
-                g.game_values.gamemodesettings.jail.style = self.miJailModeStyleField.random_value();
-                g.game_values.gamemodesettings.jail.timetofree = self.miJailModeTimeFreeField.random_value();
-                g.game_values.gamemodesettings.jail.tagfree = self.miJailModeTagFreeField.random_value();
+                g.game_values.gamemodesettings.jail.style = self.miJailModeStyleField.random_value(g);
+                g.game_values.gamemodesettings.jail.timetofree = self.miJailModeTimeFreeField.random_value(g);
+                g.game_values.gamemodesettings.jail.tagfree = self.miJailModeTagFreeField.random_value(g);
                 g.game_values.gamemodesettings.jail.percentkey = self.miJailModeJailKeyField.current_value();
             } else if iMode == game_mode_coins {
                 // coins
-                g.game_values.gamemodesettings.coins.penalty = self.miCoinModePenaltyField.random_value();
-                g.game_values.gamemodesettings.coins.quantity = self.miCoinModeQuantityField.random_value();
+                g.game_values.gamemodesettings.coins.penalty = self.miCoinModePenaltyField.random_value(g);
+                g.game_values.gamemodesettings.coins.quantity = self.miCoinModeQuantityField.random_value(g);
                 g.game_values.gamemodesettings.coins.percentextracoin = self.miCoinModePercentExtraCoin.current_value();
             } else if iMode == game_mode_stomp {
                 // stomp
-                g.game_values.gamemodesettings.stomp.rate = self.miStompModeRateField.random_value();
+                g.game_values.gamemodesettings.stomp.rate = self.miStompModeRateField.random_value(g);
 
                 for iEnemy in 0..NUMSTOMPENEMIES as usize {
                     g.game_values.gamemodesettings.stomp.enemyweight[iEnemy] = self.miStompModeEnemySlider[iEnemy].current_value();
@@ -1654,91 +1654,91 @@ impl UI_ModeOptionsMenu {
                     g.game_values.gamemodesettings.egg.yoshis[iYoshi] = self.miEggModeYoshiQuantityField[iYoshi].current_value();
                 }
 
-                g.game_values.gamemodesettings.egg.explode = self.miEggModeExplosionTimeField.random_value();
+                g.game_values.gamemodesettings.egg.explode = self.miEggModeExplosionTimeField.random_value(g);
             } else if iMode == game_mode_ctf {
                 // capture the flag
                 g.game_values.gamemodesettings.flag.speed = self.miFlagModeSpeedField.current_value();
-                g.game_values.gamemodesettings.flag.touchreturn = self.miFlagModeTouchReturnField.random_value();
-                g.game_values.gamemodesettings.flag.pointmove = self.miFlagModePointMoveField.random_value();
-                g.game_values.gamemodesettings.flag.autoreturn = self.miFlagModeAutoReturnField.random_value();
-                g.game_values.gamemodesettings.flag.homescore = self.miFlagModeHomeScoreField.random_value();
-                g.game_values.gamemodesettings.flag.centerflag = self.miFlagModeCenterFlagField.random_value();
+                g.game_values.gamemodesettings.flag.touchreturn = self.miFlagModeTouchReturnField.random_value(g);
+                g.game_values.gamemodesettings.flag.pointmove = self.miFlagModePointMoveField.random_value(g);
+                g.game_values.gamemodesettings.flag.autoreturn = self.miFlagModeAutoReturnField.random_value(g);
+                g.game_values.gamemodesettings.flag.homescore = self.miFlagModeHomeScoreField.random_value(g);
+                g.game_values.gamemodesettings.flag.centerflag = self.miFlagModeCenterFlagField.random_value(g);
             } else if iMode == game_mode_chicken {
                 // chicken
-                g.game_values.gamemodesettings.chicken.usetarget = self.miChickenModeShowTargetField.random_value();
-                g.game_values.gamemodesettings.chicken.glide = self.miChickenModeGlideField.random_value();
+                g.game_values.gamemodesettings.chicken.usetarget = self.miChickenModeShowTargetField.random_value(g);
+                g.game_values.gamemodesettings.chicken.glide = self.miChickenModeGlideField.random_value(g);
             } else if iMode == game_mode_tag {
                 // tag
-                g.game_values.gamemodesettings.tag.tagontouch = self.miTagModeTagOnTouchField.random_value();
+                g.game_values.gamemodesettings.tag.tagontouch = self.miTagModeTagOnTouchField.random_value(g);
             } else if iMode == game_mode_star {
                 // star
-                g.game_values.gamemodesettings.star.time = self.miStarModeTimeField.random_value();
-                g.game_values.gamemodesettings.star.shine = self.miStarModeShineField.random_value();
+                g.game_values.gamemodesettings.star.time = self.miStarModeTimeField.random_value(g);
+                g.game_values.gamemodesettings.star.shine = self.miStarModeShineField.random_value(g);
                 g.game_values.gamemodesettings.star.percentextratime = self.miStarModePercentExtraTime.current_value();
             } else if iMode == game_mode_domination {
                 // domination
-                g.game_values.gamemodesettings.domination.quantity = self.miDominationModeQuantityField.random_value();
-                g.game_values.gamemodesettings.domination.loseondeath = self.miDominationModeLoseOnDeathField.random_value();
-                g.game_values.gamemodesettings.domination.relocateondeath = self.miDominationModeRelocateOnDeathField.random_value();
-                g.game_values.gamemodesettings.domination.stealondeath = self.miDominationModeStealOnDeathField.random_value();
-                g.game_values.gamemodesettings.domination.relocationfrequency = self.miDominationModeRelocateFrequencyField.random_value();
+                g.game_values.gamemodesettings.domination.quantity = self.miDominationModeQuantityField.random_value(g);
+                g.game_values.gamemodesettings.domination.loseondeath = self.miDominationModeLoseOnDeathField.random_value(g);
+                g.game_values.gamemodesettings.domination.relocateondeath = self.miDominationModeRelocateOnDeathField.random_value(g);
+                g.game_values.gamemodesettings.domination.stealondeath = self.miDominationModeStealOnDeathField.random_value(g);
+                g.game_values.gamemodesettings.domination.relocationfrequency = self.miDominationModeRelocateFrequencyField.random_value(g);
             } else if iMode == game_mode_koth {
                 // king of the hill
-                g.game_values.gamemodesettings.kingofthehill.areasize = self.miKingOfTheHillModeSizeField.random_value();
-                g.game_values.gamemodesettings.kingofthehill.relocationfrequency = self.miKingOfTheHillModeRelocateFrequencyField.random_value();
-                g.game_values.gamemodesettings.kingofthehill.maxmultiplier = self.miKingOfTheHillModeMultiplierField.random_value();
+                g.game_values.gamemodesettings.kingofthehill.areasize = self.miKingOfTheHillModeSizeField.random_value(g);
+                g.game_values.gamemodesettings.kingofthehill.relocationfrequency = self.miKingOfTheHillModeRelocateFrequencyField.random_value(g);
+                g.game_values.gamemodesettings.kingofthehill.maxmultiplier = self.miKingOfTheHillModeMultiplierField.random_value(g);
             } else if iMode == game_mode_race {
                 // race
-                g.game_values.gamemodesettings.race.quantity = self.miRaceModeQuantityField.random_value();
-                g.game_values.gamemodesettings.race.speed = self.miRaceModeSpeedField.random_value();
-                g.game_values.gamemodesettings.race.penalty = self.miRaceModePenaltyField.random_value();
+                g.game_values.gamemodesettings.race.quantity = self.miRaceModeQuantityField.random_value(g);
+                g.game_values.gamemodesettings.race.speed = self.miRaceModeSpeedField.random_value(g);
+                g.game_values.gamemodesettings.race.penalty = self.miRaceModePenaltyField.random_value(g);
             } else if iMode == game_mode_frenzy {
                 // frenzy
                 self.miFrenzyModeOptions.set_random_game_mode_settings(g);
             } else if iMode == game_mode_survival {
                 // survival
-                g.game_values.gamemodesettings.survival.density = self.miSurvivalModeDensityField.random_value();
-                g.game_values.gamemodesettings.survival.speed = self.miSurvivalModeSpeedField.random_value();
-                g.game_values.gamemodesettings.survival.shield = self.miSurvivalModeShieldField.random_value();
+                g.game_values.gamemodesettings.survival.density = self.miSurvivalModeDensityField.random_value(g);
+                g.game_values.gamemodesettings.survival.speed = self.miSurvivalModeSpeedField.random_value(g);
+                g.game_values.gamemodesettings.survival.shield = self.miSurvivalModeShieldField.random_value(g);
 
                 for iEnemy in 0..NUMSURVIVALENEMIES as usize {
                     g.game_values.gamemodesettings.survival.enemyweight[iEnemy] = self.miSurvivalModeEnemySlider[iEnemy].current_value();
                 }
             } else if iMode == game_mode_greed {
                 // greed
-                g.game_values.gamemodesettings.greed.coinlife = self.miGreedModeCoinLife.random_value();
-                g.game_values.gamemodesettings.greed.owncoins = self.miGreedModeOwnCoins.random_value();
-                g.game_values.gamemodesettings.greed.multiplier = self.miGreedModeMultiplier.random_value();
+                g.game_values.gamemodesettings.greed.coinlife = self.miGreedModeCoinLife.random_value(g);
+                g.game_values.gamemodesettings.greed.owncoins = self.miGreedModeOwnCoins.random_value(g);
+                g.game_values.gamemodesettings.greed.multiplier = self.miGreedModeMultiplier.random_value(g);
                 g.game_values.gamemodesettings.greed.percentextracoin = self.miGreedModePercentExtraCoin.current_value();
             } else if iMode == game_mode_health {
                 // health
-                g.game_values.gamemodesettings.health.startlife = self.miHealthModeStartLife.random_value();
-                g.game_values.gamemodesettings.health.maxlife = self.miHealthModeMaxLife.random_value();
+                g.game_values.gamemodesettings.health.startlife = self.miHealthModeStartLife.random_value(g);
+                g.game_values.gamemodesettings.health.maxlife = self.miHealthModeMaxLife.random_value(g);
                 g.game_values.gamemodesettings.health.percentextralife = self.miHealthModePercentExtraLife.current_value();
             } else if iMode == game_mode_collection {
                 // card collection
-                g.game_values.gamemodesettings.collection.quantity = self.miCollectionModeQuantityField.random_value();
-                g.game_values.gamemodesettings.collection.rate = self.miCollectionModeRateField.random_value();
-                g.game_values.gamemodesettings.collection.banktime = self.miCollectionModeBankTimeField.random_value();
-                g.game_values.gamemodesettings.collection.cardlife = self.miCollectionModeCardLifeField.random_value();
+                g.game_values.gamemodesettings.collection.quantity = self.miCollectionModeQuantityField.random_value(g);
+                g.game_values.gamemodesettings.collection.rate = self.miCollectionModeRateField.random_value(g);
+                g.game_values.gamemodesettings.collection.banktime = self.miCollectionModeBankTimeField.random_value(g);
+                g.game_values.gamemodesettings.collection.cardlife = self.miCollectionModeCardLifeField.random_value(g);
             } else if iMode == game_mode_chase {
                 // chase (phanto)
-                g.game_values.gamemodesettings.chase.phantospeed = self.miChaseModeSpeedField.random_value();
+                g.game_values.gamemodesettings.chase.phantospeed = self.miChaseModeSpeedField.random_value(g);
 
                 for iPhanto in 0..3 {
                     g.game_values.gamemodesettings.chase.phantoquantity[iPhanto] = self.miChaseModeQuantitySlider[iPhanto].current_value();
                 }
             } else if iMode == game_mode_shyguytag {
                 // shyguy tag
-                g.game_values.gamemodesettings.shyguytag.tagonsuicide = self.miShyGuyTagModeTagOnSuicideField.random_value();
-                g.game_values.gamemodesettings.shyguytag.tagtransfer = self.miShyGuyTagModeTagOnStompField.random_value();
+                g.game_values.gamemodesettings.shyguytag.tagonsuicide = self.miShyGuyTagModeTagOnSuicideField.random_value(g);
+                g.game_values.gamemodesettings.shyguytag.tagtransfer = self.miShyGuyTagModeTagOnStompField.random_value(g);
                 // freetime reads the tag transfer field, as in C++.
-                g.game_values.gamemodesettings.shyguytag.freetime = self.miShyGuyTagModeTagOnStompField.random_value();
+                g.game_values.gamemodesettings.shyguytag.freetime = self.miShyGuyTagModeTagOnStompField.random_value(g);
             } else if iMode == game_mode_boss_minigame {
                 // boss
-                g.game_values.gamemodesettings.boss.bosstype = self.miBossModeTypeField.random_value();
-                g.game_values.gamemodesettings.boss.difficulty = self.miBossModeDifficultyField.random_value();
-                g.game_values.gamemodesettings.boss.hitpoints = self.miBossModeHitPointsField.random_value();
+                g.game_values.gamemodesettings.boss.bosstype = self.miBossModeTypeField.random_value(g);
+                g.game_values.gamemodesettings.boss.difficulty = self.miBossModeDifficultyField.random_value(g);
+                g.game_values.gamemodesettings.boss.hitpoints = self.miBossModeHitPointsField.random_value(g);
             }
         }
     }

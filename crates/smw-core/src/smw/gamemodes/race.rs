@@ -63,7 +63,6 @@ impl CGM_Race {
 
     pub fn set_next_goal(&mut self, g: &mut Game, teamID: i16) {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
         unsafe {
             self.nextGoal[teamID as usize] += 1;
             if self.nextGoal[teamID as usize] >= self.quantity {
@@ -140,7 +139,8 @@ impl CGameModeTrait for CGM_Race {
             }
 
             for iRaceGoal in 0..self.quantity {
-                gp.get().objectcontainer[2].add(Ptr::new_box(OMO_RaceGoal::new(g, Ptr::from_mut(&mut gp.get().rm.spr_racegoal), iRaceGoal)));
+                let obj = Ptr::new_box(OMO_RaceGoal::new(g, Ptr::from_mut(&mut gp.get().rm.spr_racegoal), iRaceGoal));
+                gp.get().objectcontainer[2].add(g, obj);
             }
         }
 

@@ -37,13 +37,12 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
 
     fn init(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
         cgamemode_init(g, self);
 
         let mut fTeamUsed: [bool; 4] = [false, false, false, false];
 
         unsafe {
-            for i in 0..game().players.len() {
+            for i in 0..g.players.len() {
                 let player = g.players[i];
                 let iTeamID: i16 = player.get_team_id();
                 if !fTeamUsed[iTeamID as usize] {
@@ -51,18 +50,18 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
 
                     let iColorID: i16 = player.get_color_id();
                     let base: Ptr<MO_FlagBase> = Ptr::new_box(MO_FlagBase::new(g, Ptr::from_mut(&mut gp.rm.spr_flagbases), iTeamID, iColorID));
-                    g.objectcontainer[0].add(base);
+                    gp.objectcontainer[0].add(g, base);
 
                     if !g.game_values.gamemodesettings.flag.centerflag {
                         let flag: Ptr<CO_Flag> = CO_Flag::new(g, Ptr::from_mut(&mut gp.rm.spr_flags), base, iTeamID, iColorID);
-                        g.objectcontainer[1].add(flag);
+                        gp.objectcontainer[1].add(g, flag);
                     }
                 }
             }
 
             if g.game_values.gamemodesettings.flag.centerflag {
                 let centerflag: Ptr<CO_Flag> = CO_Flag::new(g, Ptr::from_mut(&mut gp.rm.spr_flags), Ptr::null(), -1, -1);
-                g.objectcontainer[1].add(centerflag);
+                gp.objectcontainer[1].add(g, centerflag);
             }
         }
     }

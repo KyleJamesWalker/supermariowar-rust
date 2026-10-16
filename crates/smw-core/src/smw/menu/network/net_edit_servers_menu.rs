@@ -137,7 +137,7 @@ impl UI_NetEditServersMenu {
     fn reload_scroll(&mut self, g: &mut Game) {
         self.miServerScroll.clear_items();
         unsafe {
-            for iServer in 0..game().netplay.savedServers.len() {
+            for iServer in 0..g.netplay.savedServers.len() {
                 let host = g.netplay.savedServers[iServer].hostname.clone();
                 self.miServerScroll.add(&host);
             }

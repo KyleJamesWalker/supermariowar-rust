@@ -81,6 +81,7 @@ impl OMO_KingOfTheHillZone {
     }
 
     pub fn place_area(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
             return;
         }
@@ -100,8 +101,8 @@ impl OMO_KingOfTheHillZone {
 
         unsafe {
             for iLoop in 0..64i16 {
-                x = RANDOM_INT(MAPWIDTH - size as i32 + 1) as i16;
-                y = RANDOM_INT(MAPHEIGHT - size as i32) as i16;
+                x = RANDOM_INT(gp.get(), MAPWIDTH - size as i32 + 1) as i16;
+                y = RANDOM_INT(gp.get(), MAPHEIGHT - size as i32) as i16;
 
                 // First move the zone down so it is sitting on atleast 1 solid tile
                 let mut iFindY: i16 = (y as i32 + size as i32) as i16;

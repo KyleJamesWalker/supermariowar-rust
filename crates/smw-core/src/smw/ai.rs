@@ -791,7 +791,7 @@ impl CPlayerAI {
             let gmChicken = dynamic_cast_gamemode::<CGM_Chicken>(g);
 
             //Figure out where the other players are
-            for iPlayer in 0..game().players.len() {
+            for iPlayer in 0..g.players.len() {
                 if iPlayer == pPlayer.localID as usize || g.players[iPlayer].state != PlayerState::Ready {
                     continue;
                 }
@@ -935,6 +935,7 @@ pub fn cplayer_ai_init(g: &mut Game, this: &mut CPlayerAI) {
 }
 
 pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
+    let mut gp = g.ptr();
     let mut playerKeys = playerKeys;
     let mut pPlayer = this.pPlayer;
 
@@ -946,7 +947,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
         playerKeys.game_right_mut().fDown = false;
 
         //A percentage of the time the cpu will do nothing based on the difficulty level
-        if RandomNumberGenerator::generator().get_boolean_threshold(100, iDecisionPercentage[g.game_values.cpudifficulty as usize] as i32)
+        if RandomNumberGenerator::generator(gp.get()).get_boolean_threshold(100, iDecisionPercentage[g.game_values.cpudifficulty as usize] as i32)
             && pPlayer.isready()
         {
             return;
@@ -1064,7 +1065,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                     playerKeys.game_turbo_mut().fDown = true;
                 }
             } else {
-                if pPlayer.powerup == -1 || !RandomNumberGenerator::generator().get_boolean_scale(20) {
+                if pPlayer.powerup == -1 || !RandomNumberGenerator::generator(gp.get()).get_boolean_scale(20) {
                     playerKeys.game_turbo_mut().fDown = true;
                 }
 
@@ -1159,7 +1160,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                     playerKeys.game_jump_mut().fDown = true;
                 } else if piy > iy32 &&			//try to down jump if player is below us
                     pix - ix32 < 45 &&
-                    pix - ix32 > -45 && RANDOM_BOOL()
+                    pix - ix32 > -45 && RANDOM_BOOL(gp.get())
                 {
                     //or if player is high
                     if !pPlayer.inair {
@@ -1565,7 +1566,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                     PowerupType::JailKey => return pPlayer.jail.is_active(),
                     PowerupType::MysteryMushroom => {
                         //See if another player has a powerup
-                        for iPlayer in 0..game().players.len() {
+                        for iPlayer in 0..g.players.len() {
                             if iPlayer == pPlayer.localID as usize || g.players[iPlayer].teamID == iTeamID {
                                 continue;
                             }
@@ -1613,6 +1614,7 @@ impl CPlayerAITrait for CSimpleAI {
     //This simple ai makes the player jump every so often
     //The jump is to the maximum jump height, then the game_jump.fDown is released
     fn think(&mut self, g: &mut Game, playerKeys: Ptr<COutputControl>) {
+        let mut gp = g.ptr();
         let mut playerKeys = playerKeys;
         let pPlayer = self.pPlayer;
 
@@ -1636,7 +1638,7 @@ impl CPlayerAITrait for CSimpleAI {
             }
         } else {
             //Try to jump 1 out of 50 chances when on ground
-            if RandomNumberGenerator::generator().get_boolean_scale(50) {
+            if RandomNumberGenerator::generator(gp.get()).get_boolean_scale(50) {
                 playerKeys.game_jump_mut().fDown = true;
             } else {
                 playerKeys.game_jump_mut().fDown = false;

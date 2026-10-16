@@ -247,7 +247,7 @@ pub fn io_block_kill_players_and_objects_inside_block<T: IO_BlockTrait + ?Sized>
         let iposy = this.block().iposy;
 
         //Loop through players
-        for i in 0..game().players.len() {
+        for i in 0..g.players.len() {
             let mut player = g.players[i];
             if !player.isready() {
                 continue;

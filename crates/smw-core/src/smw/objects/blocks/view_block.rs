@@ -26,6 +26,7 @@ impl_base!(B_ViewBlock => b_powerup_block: B_PowerupBlock);
 
 impl B_ViewBlock {
     pub fn new(g: &mut Game, nspr1: Ptr<gfxSprite>, pos: Vec2s, fHidden: bool, piSettings: &[i16]) -> Self {
+        let mut gp = g.ptr();
         let mut b = B_ViewBlock {
             b_powerup_block: B_PowerupBlock::new(g, nspr1, pos, 1, 32000, fHidden, piSettings),
             poweruptimer: 0,
@@ -35,7 +36,7 @@ impl B_ViewBlock {
         };
 
         b.poweruptimer = 0;
-        b.powerupindex = RANDOM_INT(NUM_POWERUPS) as i16;
+        b.powerupindex = RANDOM_INT(gp.get(), NUM_POWERUPS) as i16;
 
         b.iw = 32;
         b.ih = 32;
@@ -46,16 +47,17 @@ impl B_ViewBlock {
         }
 
         b.fNoPowerupsSelected = b.iCountWeight == 0;
-        b.get_next_powerup();
+        b.get_next_powerup(g);
         b
     }
 
-    fn get_next_powerup(&mut self) {
+    fn get_next_powerup(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if self.fNoPowerupsSelected {
             return;
         }
 
-        let iRandPowerup: i32 = RANDOM_INT(self.iCountWeight as i32) + 1;
+        let iRandPowerup: i32 = RANDOM_INT(gp.get(), self.iCountWeight as i32) + 1;
         self.powerupindex = 0;
         let mut iPowerupWeightCount: i32 = self.settings[self.powerupindex as usize] as i32;
 
@@ -100,7 +102,7 @@ impl CObjectTrait for B_ViewBlock {
             self.poweruptimer += 1;
             if self.poweruptimer as i32 > self.settings[self.powerupindex as usize] as i32 * 10 {
                 self.poweruptimer = 0;
-                self.get_next_powerup();
+                self.get_next_powerup(g);
             }
         }
     }
@@ -114,7 +116,7 @@ impl IO_BlockTrait for B_ViewBlock {
 impl B_PowerupBlockTrait for B_ViewBlock {
     crate::impl_powerup_block_plumbing!();
 
-    fn select_powerup(&mut self) -> i16 {
+    fn select_powerup(&mut self, g: &mut Game) -> i16 {
         if self.fNoPowerupsSelected {
             return NO_POWERUP as i16;
         }

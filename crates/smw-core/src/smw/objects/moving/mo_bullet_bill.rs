@@ -264,7 +264,7 @@ impl CObjectTrait for MO_BulletBill {
                 let iCenterX: i16 = (((ix + iOffsetX as i32 - bix) >> 1) + (bix + (bulletbill.iw as i32 >> 1))) as i16;
                 let iCenterY: i16 = (((iy - biy) >> 1) + (biy + (bulletbill.ih as i32 >> 1))) as i16;
 
-                gp.objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
+                let obj = Ptr::new_box(MO_Explosion::new(
                     g,
                     Ptr::from_mut(&mut rm.spr_explosion),
                     Vec2s::new((iCenterX as i32 - 96) as i16, (iCenterY as i32 - 64) as i16),
@@ -273,7 +273,8 @@ impl CObjectTrait for MO_BulletBill {
                     -1,
                     -1,
                     KillStyle::BulletBill,
-                )));
+                ));
+                gp.objectcontainer[2].add(g, obj);
                 if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
             } else if r#type == movingobject_shell
                 || r#type == movingobject_throwblock

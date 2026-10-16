@@ -43,6 +43,7 @@ impl_base!(MO_PirhanaPlant => io_moving_object: IO_MovingObject);
 
 impl MO_PirhanaPlant {
     pub fn new(g: &mut Game, pos: Vec2s, r#type: i16, freq: i16, direction: i16, preview: bool) -> Self {
+        let mut gp = g.ptr();
         let mut o = MO_PirhanaPlant {
             io_moving_object: IO_MovingObject::new(g, Ptr::null(), pos, 1, 0, -1, -1, -1, -1, -1, -1, -1, -1),
             iType: 0,
@@ -103,7 +104,7 @@ impl MO_PirhanaPlant {
 
         o.iAnimationTimer = 0;
 
-        o.iActionTimer = RANDOM_INT(8) as i16;
+        o.iActionTimer = RANDOM_INT(gp.get(), 8) as i16;
         o.iFrame = 0;
 
         o.fObjectCollidesWithMap = false;
@@ -165,23 +166,24 @@ impl MO_PirhanaPlant {
     }
 
     pub fn set_new_timer(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if crate::smw::net_random::object_event(g, crate::smw::net_random::Ev::HazardTimer, &[self.iNetworkID]) {
             if crate::smw::net_random::awaiting_host(g) {
                 self.iTimer = i16::MAX;
             }
             return;
         }
-        self.iTimer = (self.iFreq as i32 + RANDOM_INT(self.iFreq as i32)) as i16;
+        self.iTimer = (self.iFreq as i32 + RANDOM_INT(gp.get(), self.iFreq as i32)) as i16;
 
         // Face the green fireball plant in a random direction
         if self.iType == 0 {
             // Only point flower towards directions that make sense
             if (self.ix >> 5) == 19 {
-                self.iFrame = RANDOM_INT(2) as i16;
+                self.iFrame = RANDOM_INT(gp.get(), 2) as i16;
             } else if self.ix == 0 {
-                self.iFrame = (RANDOM_INT(2) + 2) as i16;
+                self.iFrame = (RANDOM_INT(gp.get(), 2) + 2) as i16;
             } else {
-                self.iFrame = RANDOM_INT(4) as i16;
+                self.iFrame = RANDOM_INT(gp.get(), 4) as i16;
             }
         }
     }
@@ -290,7 +292,7 @@ impl CObjectTrait for MO_PirhanaPlant {
                 let iPlantY: i16 = (self.iy as i32 + if self.iDirection == 0 { 16 } else { self.ih as i32 - 16 }) as i16;
 
                 unsafe {
-                    for i in 0..game().players.len() {
+                    for i in 0..g.players.len() {
                         let player = g.players[i];
                         if player.state != PlayerState::Ready {
                             continue;
@@ -344,7 +346,7 @@ impl CObjectTrait for MO_PirhanaPlant {
                     (if self.iDirection != 1 { iy + 7 } else { iy + ih - 23 }) as i16,
                 );
                 let angle = self.get_fireball_angle();
-                gp.objectcontainer[1].add(Ptr::new_box(OMO_StraightPathHazard::new(
+                let obj = Ptr::new_box(OMO_StraightPathHazard::new(
                     g,
                     Ptr::from_mut(&mut rm.spr_hazard_fireball[if self.fPreview { 1 } else { 0 }]),
                     pos,
@@ -360,7 +362,8 @@ impl CObjectTrait for MO_PirhanaPlant {
                     if self.iFrame <= 1 { 18 } else { 0 },
                     18,
                     18,
-                )));
+                ));
+                gp.objectcontainer[1].add(g, obj);
             }
         }
     }

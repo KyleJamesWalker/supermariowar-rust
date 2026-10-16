@@ -48,6 +48,7 @@ impl MO_Yoshi {
     }
 
     pub fn place_yoshi(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
             return;
         }
@@ -56,8 +57,8 @@ impl MO_Yoshi {
             self.timer = 0;
 
             for _tries in 0..64 {
-                self.ix = RANDOM_INT(App::screenWidth - self.iw as i32) as i16;
-                self.iy = RANDOM_INT(App::screenHeight - self.ih as i32 - TILESIZE) as i16; // don't spawn too low
+                self.ix = RANDOM_INT(gp.get(), App::screenWidth - self.iw as i32) as i16;
+                self.iy = RANDOM_INT(gp.get(), App::screenHeight - self.ih as i32 - TILESIZE) as i16; // don't spawn too low
 
                 let (ix, iy, iw, ih) = (self.ix as i32, self.iy as i32, self.iw as i32, self.ih as i32);
                 let ixl: i16 = (ix / TILESIZE) as i16;

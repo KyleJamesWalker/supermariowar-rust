@@ -72,8 +72,9 @@ impl MI_MapField {
     }
 
     pub fn choose_random_map(&mut self, g: &mut Game) -> MenuCodeEnum {
+        let mut gp = g.ptr();
         let iOldIndex = current_map_index(g);
-        unsafe { g.maplist.random(true) };
+        unsafe { gp.maplist.random(g, true) };
 
         if iOldIndex != current_map_index(g) {
             self.load_current_map(g);

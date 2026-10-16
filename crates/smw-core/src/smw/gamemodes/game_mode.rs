@@ -38,7 +38,7 @@ pub fn remove_players_but_team(g: &mut Game, teamid: i16) {
 
 pub fn remove_players_but_team_now(g: &mut Game, teamid: i16) {
     unsafe {
-        for i in 0..game().players.len() {
+        for i in 0..g.players.len() {
             let mut player = g.players[i];
             if player.get_team_id() != teamid {
                 player.state = PlayerState::Dead;
@@ -58,14 +58,14 @@ pub fn remove_players_but_highest_scoring_now(g: &mut Game) {
         let mut iMaxScore: i16 = -1;
 
         //Figure out what the maximum score is
-        for iScore in 0..game().score_cnt {
+        for iScore in 0..g.score_cnt {
             if g.score[iScore as usize].score > iMaxScore {
                 iMaxScore = g.score[iScore as usize].score;
             }
         }
 
         //Remove all players that don't have that max score
-        for i in 0..game().players.len() {
+        for i in 0..g.players.len() {
             let mut player = g.players[i];
             if player.score().score < iMaxScore {
                 player.state = PlayerState::Dead;
@@ -87,11 +87,11 @@ pub fn setup_score_board_now(g: &mut Game, fOrderMatters: bool) {
 
         let mut oldmax: i16;
         let mut max: i16 = -1;
-        for i in 0..game().score_cnt {
+        for i in 0..g.score_cnt {
             oldmax = max;
             max = -1;
 
-            for j in 0..game().score_cnt {
+            for j in 0..g.score_cnt {
                 if !doneWithScore[j as usize] {
                     let sj = g.score[j as usize];
                     //The boxes minigame doesn't use "score" it uses "subscore[0]" to determine the winner
@@ -142,7 +142,8 @@ pub fn setup_score_board_now(g: &mut Game, fOrderMatters: bool) {
             for iBonus in 0..iNumBonuses {
                 if tourStop.wsbBonuses[iBonus as usize].iWinnerPlace == 0 {
                     let iBonusType: i16 = tourStop.wsbBonuses[iBonus as usize].iBonus;
-                    gp.get().objectcontainer[0].add(Ptr::new_box(PU_TreasureChestBonus::new(g, Ptr::from_mut(&mut gp.get().rm.spr_bonuschest), 1, 0, 30, 30, 1, 1, iBonusType)));
+                    let obj = Ptr::new_box(PU_TreasureChestBonus::new(g, Ptr::from_mut(&mut gp.get().rm.spr_bonuschest), 1, 0, 30, 30, 1, 1, iBonusType));
+                    gp.get().objectcontainer[0].add(g, obj);
                     g.game_values.flags.noexittimer = 0;
                     g.game_values.flags.noexit = false;
                 }
@@ -170,7 +171,7 @@ pub fn show_score_board_now(g: &mut Game) {
             iScoreboardElementHeight = 63;
         }
 
-        for i in 0..game().score_cnt {
+        for i in 0..g.score_cnt {
             let mut s = g.score[i as usize];
             s.destx = (309 - 34 * g.game_values.teamcounts[i as usize] as i32) as i16;
             s.desty = (s.displayorder as i32 * iScoreboardElementHeight as i32 + 140) as i16;
@@ -204,7 +205,7 @@ pub fn remove_team_now(g: &mut Game, teamid: i16) -> bool {
 
         //kill all players on the dead team
         let mut iAnnouncementColor: i16 = -1;
-        for i in 0..game().players.len() {
+        for i in 0..g.players.len() {
             let mut player = g.players[i];
             if player.get_team_id() == teamid {
                 if iAnnouncementColor == -1 {
@@ -257,7 +258,7 @@ impl CGameMode {
     pub fn displayplayertext(&mut self, g: &mut Game) {
         if self.winningteam > -1 {
             unsafe {
-                for i in 0..game().players.len() {
+                for i in 0..g.players.len() {
                     let mut player = g.players[i];
                     if player.get_team_id() == self.winningteam {
                         player.spawn_text(g, "Winner!");
@@ -301,6 +302,7 @@ impl CGameMode {
     }
 
     pub fn get_highest_score_player(&mut self, g: &mut Game, fGetHighest: bool) -> Ptr<CPlayer> {
+        let mut gp = g.ptr();
         unsafe {
             let mut count: i16 = 1;
             let mut tiedplayers: [i16; 4] = [0; 4];
@@ -334,16 +336,17 @@ impl CGameMode {
                 i += 1;
             }
 
-            g.players[tiedplayers[RANDOM_INT(count as i32) as usize] as usize]
+            g.players[tiedplayers[RANDOM_INT(gp.get(), count as i32) as usize] as usize]
         }
     }
 
     //Returns number of players in list
     pub fn get_score_ranked_player_list(&mut self, g: &mut Game, outPlayers: &mut [Ptr<CPlayer>; 4], fGetHighest: bool) -> i16 {
+        let mut gp = g.ptr();
         unsafe {
             let mut iNumPlayersInList: i16 = 0;
 
-            for i in 0..game().players.len() {
+            for i in 0..g.players.len() {
                 let player = g.players[i];
                 if player.isdead() {
                     continue;
@@ -363,7 +366,7 @@ impl CGameMode {
                 while (iIndex as i32) < iNumPlayersInList as i32 - 1 {
                     let a = outPlayers[iIndex as usize].score().score;
                     let b = outPlayers[iIndex as usize + 1].score().score;
-                    let swap = (fGetHighest && a < b) || (!fGetHighest && a > b) || (a == b && RANDOM_BOOL() && {
+                    let swap = (fGetHighest && a < b) || (!fGetHighest && a > b) || (a == b && RANDOM_BOOL(gp.get()) && {
                         let r = iRandom < 5;
                         iRandom += 1;
                         r
@@ -415,7 +418,7 @@ pub fn cgamemode_init<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T) {
     this.playedwarningsound = false;
 
     unsafe {
-        for iScore in 0..game().score_cnt {
+        for iScore in 0..g.score_cnt {
             gp.score[iScore as usize].set_score(g, 0);
         }
     }
@@ -425,7 +428,7 @@ pub fn cgamemode_think<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T) {
         let mut gp = g.ptr();
     unsafe {
         if g.netplay.active {
-            for k in 0..game().players.len() {
+            for k in 0..g.players.len() {
                 if g.netplay.player_disconnected[k] {
                     gp.players[k].spawn_text(g, "Disconnected!");
                 }

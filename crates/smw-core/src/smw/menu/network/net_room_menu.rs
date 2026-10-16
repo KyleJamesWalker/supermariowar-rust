@@ -45,8 +45,6 @@ crate::impl_base!(UI_NetRoomMenu => ui_menu: UI_Menu);
 impl UI_NetRoomMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
-        let mut gp = g.ptr();
         let mut this = Box::<Self>::default();
         unsafe {
             let selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
@@ -134,7 +132,6 @@ impl UI_NetRoomMenu {
 
     pub fn refresh(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
         unsafe {
             let name = g.netplay.currentRoom.name.clone();
             self.miNetRoomHeaderText.set_text(name);
@@ -147,7 +144,7 @@ impl UI_NetRoomMenu {
                 let pname = g.netplay.currentRoom.playerNames[p as usize].clone();
                 self.miNetRoomPlayerName[p as usize].set_text(pname);
 
-                let path = format!("{}net_skin{}.bmp", get_home_directory(), p);
+                let path = format!("{}net_skin{}.bmp", get_home_directory(g), p);
                 if p == g.netplay.remotePlayerNumber as i16 {
                     println!("  player {} -> local", p);
                     gp.get().rm.load_menu_skin(g, p, gp.get().game_values.skinids[0], p, false);
@@ -174,9 +171,10 @@ impl UI_NetRoomMenu {
     }
 
     pub fn start_in_progress(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             if g.netplay.theHostIsMe && g.netplay.currentRoom.player_count() > 1 {
-                g.netplay.client.local_gamehost.send_start_room_message();
+                gp.netplay.client.local_gamehost.send_start_room_message(g);
                 g.netplay.operationInProgress = true;
 
                 self.miNetRoomStartingDialogImage.set_visible(true);

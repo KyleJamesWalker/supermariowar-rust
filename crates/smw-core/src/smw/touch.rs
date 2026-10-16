@@ -2,6 +2,7 @@
 //! web/touch.js they press player 1's default keys, so recordings hold ordinary key input;
 //! a still tap off the controls is a menu tap.
 
+use crate::game::Game;
 use smw_platform::{Input, InputEvent, Overlay, OverlayImage, OverlayQuad, SCREEN_H, SCREEN_W};
 use std::sync::Arc;
 use crate::common::path::get_home_directory;
@@ -296,9 +297,9 @@ impl Controls {
         self.fingers[i].keys = keys;
     }
 
-    fn down(&mut self, id: i64, x: f32, y: f32) {
+    fn down(&mut self, g: &mut Game, id: i64, x: f32, y: f32) {
         self.presses.retain(|p| p.0 != id);
-        self.up(id, x, y);
+        self.up(g, id, x, y);
         let Some(zone) = self.layout.zone(self.mode, x, y) else {
             self.presses.push((id, (x, y)));
             return;
@@ -316,7 +317,7 @@ impl Controls {
         self.set_keys(i, keys);
     }
 
-    fn up(&mut self, id: i64, x: f32, y: f32) {
+    fn up(&mut self, g: &mut Game, id: i64, x: f32, y: f32) {
         if let Some(i) = self.presses.iter().position(|p| p.0 == id) {
             self.presses.remove(i);
             self.taps.extend(self.layout.logical(x, y));
@@ -324,7 +325,7 @@ impl Controls {
         let Some(i) = self.fingers.iter().position(|f| f.id == id) else { return };
         if self.fingers[i].zone == Zone::Toggle && self.layout.toggle.contains(x, y) {
             self.mode = if self.mode == Mode::Dpad { Mode::Stick } else { Mode::Dpad };
-            save_mode(self.mode);
+            save_mode(g, self.mode);
         }
         self.set_keys(i, 0);
         self.fingers.remove(i);
@@ -366,8 +367,8 @@ impl TouchState {
     }
 }
 
-fn st() -> &'static mut TouchState {
-    &mut crate::game::game().get().touch
+fn st(g: &mut Game) -> &mut TouchState {
+    &mut g.touch
 }
 static CUTOUTS: std::sync::Mutex<Vec<Rect>> = std::sync::Mutex::new(Vec::new());
 
@@ -378,51 +379,55 @@ pub fn set_cutouts(boxes: &[[i32; 4]]) {
 }
 const MODE_FILE: &str = "touch_controls.txt";
 
-fn load_mode() -> Mode {
-    match std::fs::read_to_string(get_home_directory() + MODE_FILE) {
+fn load_mode(g: &mut Game) -> Mode {
+    match std::fs::read_to_string(get_home_directory(g) + MODE_FILE) {
         Ok(text) if text.trim() == "stick" => Mode::Stick,
         _ => Mode::Dpad,
     }
 }
 
-fn save_mode(mode: Mode) {
+fn save_mode(g: &mut Game, mode: Mode) {
     if !cfg!(test) {
-        let _ = std::fs::write(get_home_directory() + MODE_FILE, if mode == Mode::Stick { "stick\n" } else { "dpad\n" });
+        let _ = std::fs::write(get_home_directory(g) + MODE_FILE, if mode == Mode::Stick { "stick\n" } else { "dpad\n" });
     }
 }
 
 /// After `init_joysticks`, which `touch_first` depends on.
-pub fn init() {
+pub fn init(g: &mut Game) {
+    let mut gp = g.ptr();
     unsafe {
-        let pads = crate::game::game().joystickcount > 0;
-        let live = std::env::var_os("SMW_TOUCH").is_some() && !crate::smw::harness::replaying();
-        st().debug = std::env::var_os("SMW_DEBUG_INPUT").is_some();
-        st().session_on = live || crate::smw::harness::replay_touch();
-        st().first = st().session_on && !pads;
+        let pads = gp.joystickcount > 0;
+        let live = std::env::var_os("SMW_TOUCH").is_some() && !crate::smw::harness::replaying(g);
+        st(gp.get()).debug = std::env::var_os("SMW_DEBUG_INPUT").is_some();
+        st(gp.get()).session_on = live || crate::smw::harness::replay_touch(g);
+        st(gp.get()).first = st(gp.get()).session_on && !pads;
         if live {
-            crate::smw::harness::record_touch();
-            st().touch = Some(Touch { controls: Controls::new(load_mode(), Layout::default()), visible: !pads, alpha: if pads { 0.0 } else { 1.0 }, cutouts: Vec::new(), images: None, generation: 0 });
+            crate::smw::harness::record_touch(g);
+            st(gp.get()).touch = Some(Touch { controls: Controls::new(load_mode(g), Layout::default()), visible: !pads, alpha: if pads { 0.0 } else { 1.0 }, cutouts: Vec::new(), images: None, generation: 0 });
             println!("[touch] on, {}", if pads { "hidden while a pad is connected" } else { "player 1" });
         }
     }
 }
 
 /// Whether this session has the touch controls, live or in the recording being replayed.
-pub fn session() -> bool {
-    unsafe { st().session_on }
+pub fn session(g: &mut Game) -> bool {
+    let mut gp = g.ptr();
+    unsafe { st(gp.get()).session_on }
 }
 
 /// Whether the touch keys (the right keyboard set) go to player 1 ahead of the pads: touch is on and no pad was
 /// connected at launch. Replays read it from the recording, so it must not depend on anything later.
-pub fn touch_first() -> bool {
-    unsafe { st().first }
+pub fn touch_first(g: &mut Game) -> bool {
+    let mut gp = g.ptr();
+    unsafe { st(gp.get()).first }
 }
 
 /// False: drop the event. Called before the recorder sees the event.
-pub fn filter(event: &SDL_Event) -> bool {
+pub fn filter(g: &mut Game, event: &SDL_Event) -> bool {
+    let mut gp = g.ptr();
     use SDL_EventType::*;
     unsafe {
-        let Some(t) = st().touch.as_mut() else { return true };
+        let Some(t) = st(gp.get()).touch.as_mut() else { return true };
         let ty = event.type_;
         if ty == SDL_FINGERDOWN as u32 || ty == SDL_FINGERMOTION as u32 || ty == SDL_FINGERUP as u32 {
             let l = t.controls.layout;
@@ -431,20 +436,20 @@ pub fn filter(event: &SDL_Event) -> bool {
             }
             let f = event.tfinger;
             let (x, y) = (f.x * l.w, f.y * l.h);
-            if st().debug {
+            if st(gp.get()).debug {
                 println!("[touch] finger {} type {:#x} at {:.0},{:.0} of {}x{}", f.fingerId, ty, x, y, l.w, l.h);
             }
             if ty == SDL_FINGERDOWN as u32 {
                 t.visible = true;
-                t.controls.down(f.fingerId, x, y);
+                t.controls.down(g, f.fingerId, x, y);
             } else if ty == SDL_FINGERMOTION as u32 {
                 t.controls.moved(f.fingerId, x, y);
             } else {
-                t.controls.up(f.fingerId, x, y);
+                t.controls.up(g, f.fingerId, x, y);
             }
             return false;
         }
-        let other_input = (ty == SDL_KEYDOWN as u32 && !st().pushing && event.key.keysym.sym != SDL_KeyCode::SDLK_AC_BACK as i32)
+        let other_input = (ty == SDL_KEYDOWN as u32 && !st(gp.get()).pushing && event.key.keysym.sym != SDL_KeyCode::SDLK_AC_BACK as i32)
             || ty == SDL_JOYBUTTONDOWN as u32
             || (ty == SDL_JOYHATMOTION as u32 && event.jhat.value != 0)
             || (ty == SDL_JOYAXISMOTION as u32 && (event.jaxis.value as i32).abs() > 16384);
@@ -457,13 +462,14 @@ pub fn filter(event: &SDL_Event) -> bool {
 }
 
 /// Pushes the keys the fingers changed. Not from inside an event filter.
-pub fn flush() {
+pub fn flush(g: &mut Game) {
+    let mut gp = g.ptr();
     unsafe {
-        let Some(t) = st().touch.as_mut() else { return };
+        let Some(t) = st(gp.get()).touch.as_mut() else { return };
         if SDL_GetKeyboardFocus().is_null() {
             t.controls.release_all();
         }
-        st().pushing = true;
+        st(gp.get()).pushing = true;
         for (key, down) in std::mem::take(&mut t.controls.queue) {
             let mut event: SDL_Event = std::mem::zeroed();
             event.key.type_ = if down { SDL_EventType::SDL_KEYDOWN } else { SDL_EventType::SDL_KEYUP } as u32;
@@ -472,7 +478,7 @@ pub fn flush() {
             event.key.keysym.scancode = SDL_GetScancodeFromKey(key.sym());
             smw_sdl2::events::push(&mut event);
         }
-        st().pushing = false;
+        st(gp.get()).pushing = false;
         for (x, y) in std::mem::take(&mut t.controls.taps) {
             smw_sdl2::events::push(&mut smw_sdl2::input::to_sdl(&Input { timestamp: 0, event: InputEvent::Tap { x, y } }));
         }
@@ -480,10 +486,11 @@ pub fn flush() {
 }
 
 /// What to draw over the presented frame, outside the game's 640x480 logical viewport.
-pub fn overlay() -> Option<Overlay> {
+pub fn overlay(g: &mut Game) -> Option<Overlay> {
+    let mut gp = g.ptr();
     unsafe {
-        let t = st().touch.as_mut()?;
-        let video = &crate::services::services().video;
+        let t = st(gp.get()).touch.as_mut()?;
+        let video = &crate::services::services(gp.get()).video;
         let (w, h) = video.output_size();
         if w <= 0 || h <= 0 {
             return None;
@@ -803,6 +810,7 @@ mod tests {
 
     #[test]
     fn the_overlay_draws_each_control_once_and_tints_the_held_arm() {
+        let g = crate::game::game().get();
         let l = pixel();
         let mut t = Touch { controls: Controls::new(Mode::Dpad, l), visible: true, alpha: 1.0, cutouts: Vec::new(), images: None, generation: 0 };
         let images = build_images(&l);
@@ -811,7 +819,7 @@ mod tests {
         let idle = quads(&t);
         assert_eq!(idle.iter().map(|q| q.image as usize).collect::<Vec<_>>(), [DPAD_BASE, ARM, ARM + 1, ARM + 2, ARM + 3, DPAD_CENTER, JUMP, RUN, ITEM, BACK, START, TOGGLE_DPAD]);
         assert!(idle.iter().all(|q| q.alpha == 255 && q.color == [255; 3]));
-        t.controls.down(1, l.dpad.x + l.dpad.r * 0.8, l.dpad.y);
+        t.controls.down(g, 1, l.dpad.x + l.dpad.r * 0.8, l.dpad.y);
         let held = quads(&t);
         assert_eq!(held.iter().map(|q| q.color).collect::<Vec<_>>()[1..5], [[255; 3], [255; 3], [255; 3], [255, 204, 51]]);
     }
@@ -833,19 +841,20 @@ mod tests {
 
     #[test]
     fn multi_touch_holds_a_direction_run_and_jump() {
+        let g = crate::game::game().get();
         let l = pixel();
         let mut c = Controls::new(Mode::Dpad, l);
-        c.down(1, l.dpad.x + l.dpad.r * 0.8, l.dpad.y);
-        c.down(2, l.run.x, l.run.y);
-        c.down(3, l.jump.x, l.jump.y);
+        c.down(g, 1, l.dpad.x + l.dpad.r * 0.8, l.dpad.y);
+        c.down(g, 2, l.run.x, l.run.y);
+        c.down(g, 3, l.jump.x, l.jump.y);
         assert_eq!(c.queue, [(R, true), (Key::Run, true), (U, true)]);
         c.queue.clear();
         // Up is already held by jump, so sliding to up-right presses nothing new.
         c.moved(1, l.dpad.x + l.dpad.r * 0.6, l.dpad.y - l.dpad.r * 0.6);
         assert!(c.queue.is_empty());
-        c.up(3, l.jump.x, l.jump.y);
+        c.up(g, 3, l.jump.x, l.jump.y);
         assert!(c.queue.is_empty());
-        c.up(1, 0.0, 0.0);
+        c.up(g, 1, 0.0, 0.0);
         assert_eq!(c.queue, [(R, false), (U, false)]);
         c.queue.clear();
         c.release_all();
@@ -855,10 +864,11 @@ mod tests {
 
     #[test]
     fn floating_stick_spawns_under_the_thumb_and_follows_it() {
+        let g = crate::game::game().get();
         let l = pixel();
         let mut c = Controls::new(Mode::Stick, l);
         let (x, y) = (155.0, 600.0);
-        c.down(7, x, y);
+        c.down(g, 7, x, y);
         assert!(c.queue.is_empty());
         c.moved(7, x + 6.0 * l.dp, y);
         assert!(c.queue.is_empty());
@@ -871,15 +881,16 @@ mod tests {
         c.moved(7, x + 20.0 * l.dp, y);
         assert_eq!(c.queue, [(R, false), (L, true)]);
         c.queue.clear();
-        c.up(7, 0.0, 0.0);
+        c.up(g, 7, 0.0, 0.0);
         assert_eq!(c.queue, [(L, false)]);
     }
 
     #[test]
     fn the_stick_stays_in_the_left_bar() {
+        let g = crate::game::game().get();
         let l = pixel();
         let mut c = Controls::new(Mode::Stick, l);
-        c.down(1, l.view.x - 10.0, 700.0);
+        c.down(g, 1, l.view.x - 10.0, 700.0);
         c.moved(1, l.view.x + 400.0, 700.0);
         let f = c.fingers[0];
         assert!(f.origin.0 + l.stick_base_radius() <= l.view.x + 0.01, "{:?}", f.origin);
@@ -904,23 +915,25 @@ mod tests {
 
     #[test]
     fn stick_mode_leaves_the_keys_and_toggle_alone() {
+        let g = crate::game::game().get();
         let l = pixel();
         let mut c = Controls::new(Mode::Stick, l);
-        c.down(1, l.back.x + 5.0, l.back.y + 5.0);
+        c.down(g, 1, l.back.x + 5.0, l.back.y + 5.0);
         assert_eq!(c.fingers[0].zone, Zone::Keys);
         assert_eq!(c.queue, [(Key::Back, true)]);
-        c.down(2, l.toggle.x + 5.0, l.toggle.y + 5.0);
-        c.up(2, l.toggle.x + 5.0, l.toggle.y + 5.0);
+        c.down(g, 2, l.toggle.x + 5.0, l.toggle.y + 5.0);
+        c.up(g, 2, l.toggle.x + 5.0, l.toggle.y + 5.0);
         assert_eq!(c.mode, Mode::Dpad);
-        c.down(3, l.view.x + 300.0, 500.0);
+        c.down(g, 3, l.view.x + 300.0, 500.0);
         assert_eq!(c.fingers.len(), 1);
     }
 
     #[test]
     fn sliding_between_buttons_presses_both() {
+        let g = crate::game::game().get();
         let l = pixel();
         let mut c = Controls::new(Mode::Dpad, l);
-        c.down(1, l.run.x, (l.run.y + l.item.y) / 2.0);
+        c.down(g, 1, l.run.x, (l.run.y + l.item.y) / 2.0);
         assert_eq!(c.queue, [(Key::Run, true), (Key::Item, true)]);
         c.queue.clear();
         c.moved(1, l.jump.x, l.jump.y);
@@ -929,26 +942,27 @@ mod tests {
 
     #[test]
     fn a_still_finger_off_the_controls_taps_the_picture() {
+        let g = crate::game::game().get();
         let l = pixel();
         let mut c = Controls::new(Mode::Dpad, l);
-        c.down(1, 1122.0, 504.0);
+        c.down(g, 1, 1122.0, 504.0);
         c.moved(1, 1122.0 + 6.0 * l.dp, 504.0);
-        c.up(1, 1122.0 + 6.0 * l.dp, 504.0);
+        c.up(g, 1, 1122.0 + 6.0 * l.dp, 504.0);
         assert_eq!(c.taps, [(328, 240)]);
         c.taps.clear();
-        c.down(2, 1122.0, 504.0);
+        c.down(g, 2, 1122.0, 504.0);
         c.moved(2, 1122.0 + 20.0 * l.dp, 504.0);
         c.moved(2, 1122.0, 504.0);
-        c.up(2, 1122.0, 504.0);
-        c.down(3, l.jump.x, l.jump.y);
-        c.up(3, l.jump.x, l.jump.y);
-        c.down(4, l.view.x + l.view.w + 5.0, 10.0);
-        c.up(4, l.view.x + l.view.w + 5.0, 10.0);
+        c.up(g, 2, 1122.0, 504.0);
+        c.down(g, 3, l.jump.x, l.jump.y);
+        c.up(g, 3, l.jump.x, l.jump.y);
+        c.down(g, 4, l.view.x + l.view.w + 5.0, 10.0);
+        c.up(g, 4, l.view.x + l.view.w + 5.0, 10.0);
         assert!(c.taps.is_empty());
         assert_eq!(c.queue, [(U, true), (U, false)]);
-        c.down(5, 1122.0, 504.0);
+        c.down(g, 5, 1122.0, 504.0);
         c.release_all();
-        c.up(5, 1122.0, 504.0);
+        c.up(g, 5, 1122.0, 504.0);
         assert!(c.taps.is_empty() && c.presses.is_empty());
     }
 

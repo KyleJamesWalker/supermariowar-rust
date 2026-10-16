@@ -189,7 +189,6 @@ impl UI_ControlTrait for MI_MapFilterScroll {
 
     fn draw(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
         if !self.m_visible {
             return;
         }

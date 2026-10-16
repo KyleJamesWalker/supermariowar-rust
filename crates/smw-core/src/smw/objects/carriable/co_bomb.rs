@@ -165,7 +165,7 @@ impl IO_MovingObjectTrait for CO_Bomb {
 
         self.dead = true;
         unsafe {
-            gp.objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
+            let obj = Ptr::new_box(MO_Explosion::new(
                 g,
                 Ptr::from_mut(&mut rm.spr_explosion),
                 Vec2s::new((self.ix as i32 + (self.iw as i32 >> 2) - 96) as i16, (self.iy as i32 + (self.ih as i32 >> 2) - 64) as i16),
@@ -174,7 +174,8 @@ impl IO_MovingObjectTrait for CO_Bomb {
                 self.iPlayerID,
                 self.iTeamID,
                 KillStyle::Bomb,
-            )));
+            ));
+            gp.objectcontainer[2].add(g, obj);
             if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
         }
     }

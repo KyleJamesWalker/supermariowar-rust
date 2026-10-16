@@ -82,8 +82,8 @@ impl EditorHarness {
     }
 }
 
-fn h() -> &'static mut EditorHarness {
-    &mut crate::game::game().get().editor_harness
+fn h(g: &mut Game) -> &mut EditorHarness {
+    &mut g.editor_harness
 }
 
 fn env(name: &str) -> Option<String> {
@@ -138,12 +138,13 @@ fn parse_button(name: &str, path: &str, lineno: usize) -> u8 {
     }
 }
 
-fn load_replay(path: &str) {
+fn load_replay(g: &mut Game, path: &str) {
+    let mut gp = g.ptr();
     let text = crate::smw::harness::read_recording(path).unwrap_or_else(|| {
         eprintln!("[editorharness] cannot open replay {}", path);
         std::process::exit(2);
     });
-    let events = unsafe { &mut h().events };
+    let events = unsafe { &mut h(gp.get()).events };
     for (i, raw) in text.split('\n').enumerate() {
         let lineno = i + 1;
         let line = raw.strip_suffix('\r').unwrap_or(raw);
@@ -230,7 +231,8 @@ fn sdl_button_mask(button: u8) -> u32 {
     1u32 << (button as u32 - 1)
 }
 
-fn push_event(ev: &ScriptEvent) {
+fn push_event(g: &mut Game, ev: &ScriptEvent) {
+    let mut gp = g.ptr();
     unsafe {
         let mut event: SDL_Event = std::mem::zeroed();
 
@@ -245,23 +247,23 @@ fn push_event(ev: &ScriptEvent) {
 
                 let m = modifier_for(key);
                 if ev.down {
-                    h().mod_ |= m;
+                    h(gp.get()).mod_ |= m;
                 } else {
-                    h().mod_ &= !m;
+                    h(gp.get()).mod_ &= !m;
                 }
 
                 event.key.type_ = if ev.down { SDL_EventType::SDL_KEYDOWN as u32 } else { SDL_EventType::SDL_KEYUP as u32 };
                 event.key.state = if ev.down { SDL_PRESSED as u8 } else { SDL_RELEASED as u8 };
                 event.key.keysym.sym = key;
                 event.key.keysym.scancode = SDL_GetScancodeFromKey(key);
-                event.key.keysym.mod_ = h().mod_;
-                h().keys[event.key.keysym.scancode as usize] = ev.down as u8;
+                event.key.keysym.mod_ = h(gp.get()).mod_;
+                h(gp.get()).keys[event.key.keysym.scancode as usize] = ev.down as u8;
             }
             EventKind::MouseButton => {
                 if ev.down {
-                    h().buttons |= sdl_button_mask(ev.button);
+                    h(gp.get()).buttons |= sdl_button_mask(ev.button);
                 } else {
-                    h().buttons &= !sdl_button_mask(ev.button);
+                    h(gp.get()).buttons &= !sdl_button_mask(ev.button);
                 }
 
                 event.button.type_ = if ev.down { SDL_EventType::SDL_MOUSEBUTTONDOWN as u32 } else { SDL_EventType::SDL_MOUSEBUTTONUP as u32 };
@@ -270,18 +272,18 @@ fn push_event(ev: &ScriptEvent) {
                 event.button.clicks = 1;
                 event.button.x = ev.x;
                 event.button.y = ev.y;
-                h().mouseX = ev.x;
-                h().mouseY = ev.y;
+                h(gp.get()).mouseX = ev.x;
+                h(gp.get()).mouseY = ev.y;
             }
             EventKind::MouseMove => {
                 event.motion.type_ = SDL_EventType::SDL_MOUSEMOTION as u32;
-                event.motion.state = h().buttons;
+                event.motion.state = h(gp.get()).buttons;
                 event.motion.x = ev.x;
                 event.motion.y = ev.y;
-                event.motion.xrel = ev.x - h().mouseX;
-                event.motion.yrel = ev.y - h().mouseY;
-                h().mouseX = ev.x;
-                h().mouseY = ev.y;
+                event.motion.xrel = ev.x - h(gp.get()).mouseX;
+                event.motion.yrel = ev.y - h(gp.get()).mouseY;
+                h(gp.get()).mouseX = ev.x;
+                h(gp.get()).mouseY = ev.y;
             }
         }
 
@@ -289,14 +291,15 @@ fn push_event(ev: &ScriptEvent) {
     }
 }
 
-fn push_frame_events() {
+fn push_frame_events(g: &mut Game) {
+    let mut gp = g.ptr();
     unsafe {
-        while h().nextEvent < h().events.len() && h().events[h().nextEvent].frame <= h().frame {
-            if h().events[h().nextEvent].frame == h().frame {
-                let ev: *const ScriptEvent = &h().events[h().nextEvent];
-                push_event(&*ev);
+        while h(gp.get()).nextEvent < h(gp.get()).events.len() && h(gp.get()).events[h(gp.get()).nextEvent].frame <= h(gp.get()).frame {
+            if h(gp.get()).events[h(gp.get()).nextEvent].frame == h(gp.get()).frame {
+                let ev: *const ScriptEvent = &h(gp.get()).events[h(gp.get()).nextEvent];
+                push_event(g, &*ev);
             }
-            h().nextEvent += 1;
+            h(gp.get()).nextEvent += 1;
         }
     }
 }
@@ -309,28 +312,29 @@ fn push_quit() {
     }
 }
 
-pub fn init() {
+pub fn init(g: &mut Game) {
+    let mut gp = g.ptr();
     unsafe {
         if let Some(seed) = env("SMW_SEED") {
             let value = strtoul0(&seed);
-            RandomNumberGenerator::generator().reseed(value);
+            RandomNumberGenerator::generator(gp.get()).reseed(value);
             srand(value);
-            RandomNumberGenerator::reset_call_count();
+            RandomNumberGenerator::reset_call_count(gp.get());
         }
 
-        h().noLimit = env("SMW_NOLIMIT").is_some();
+        h(gp.get()).noLimit = env("SMW_NOLIMIT").is_some();
 
         if let Some(frames) = env("SMW_FRAMES") {
-            h().maxFrames = strtol10(&frames);
+            h(gp.get()).maxFrames = strtol10(&frames);
         }
 
         if let Some(replay) = env("SMW_REPLAY") {
-            load_replay(&replay);
+            load_replay(g, &replay);
         }
 
         if let Some(dump) = env("SMW_DUMP") {
             match std::fs::OpenOptions::new().append(true).create(true).open(&dump) {
-                Ok(f) => h().dump = Some(f),
+                Ok(f) => h(gp.get()).dump = Some(f),
                 Err(_) => {
                     eprintln!("[editorharness] cannot open dump {}", dump);
                     std::process::exit(2);
@@ -341,44 +345,47 @@ pub fn init() {
         if let Some(shots) = env("SMW_SHOT_FRAMES") {
             for item in shots.split(',') {
                 if !item.is_empty() {
-                    h().shotFrames.insert(strtoul0(item));
+                    h(gp.get()).shotFrames.insert(strtoul0(item));
                 }
             }
         }
-        h().shotDir = env("SMW_SHOT_DIR").unwrap_or_else(|| ".".to_string());
+        h(gp.get()).shotDir = env("SMW_SHOT_DIR").unwrap_or_else(|| ".".to_string());
 
-        h().active = true;
-        push_frame_events();
+        h(gp.get()).active = true;
+        push_frame_events(g);
     }
 }
 
-pub fn set_dumper(dumper: Dumper) {
-    unsafe { h().dumper = Some(dumper) };
+pub fn set_dumper(g: &mut Game, dumper: Dumper) {
+    let mut gp = g.ptr();
+    unsafe { h(gp.get()).dumper = Some(dumper) };
 }
 
-pub fn no_limit() -> bool {
-    unsafe { h().noLimit }
+pub fn no_limit(g: &mut Game) -> bool {
+    let mut gp = g.ptr();
+    unsafe { h(gp.get()).noLimit }
 }
 
 /// Ends one editor frame: dump, screenshot, advance, push the next frame's scripted events,
 /// then sleep `delay` ms unless SMW_NOLIMIT is set. The C++ editors `#define SDL_Delay` to this.
 pub fn frame_delay(g: &mut Game, delay: u32) {
+    let mut gp = g.ptr();
     unsafe {
-        if h().active {
-            if h().maxFrames < 0 || (h().frame as i64) < h().maxFrames {
-                if let Some(dump) = h().dump.as_mut() {
+        if h(gp.get()).active {
+            if h(gp.get()).maxFrames < 0 || (h(gp.get()).frame as i64) < h(gp.get()).maxFrames {
+                if let Some(dump) = h(gp.get()).dump.as_mut() {
                     let mut block: Vec<u8> = Vec::new();
-                    let _ = writeln!(block, "F {}", h().frame);
-                    if let Some(dumper) = h().dumper {
+                    let _ = writeln!(block, "F {}", h(gp.get()).frame);
+                    if let Some(dumper) = h(gp.get()).dumper {
                         dumper(g, &mut block);
                     }
-                    let _ = writeln!(block, "R calls={} last={}", RandomNumberGenerator::call_count(), RandomNumberGenerator::last_value());
+                    let _ = writeln!(block, "R calls={} last={}", RandomNumberGenerator::call_count(gp.get()), RandomNumberGenerator::last_value(gp.get()));
                     let _ = dump.write_all(&block);
                     let _ = dump.flush();
                 }
 
-                if h().shotFrames.contains(&h().frame) {
-                    let path = format!("{}/frame_{}.bmp", h().shotDir, h().frame);
+                if h(gp.get()).shotFrames.contains(&h(gp.get()).frame) {
+                    let path = format!("{}/frame_{}.bmp", h(gp.get()).shotDir, h(gp.get()).frame);
                     let cpath = CString::new(path.as_bytes()).unwrap();
                     let rw = SDL_RWFromFile(cpath.as_ptr(), b"wb\0".as_ptr() as *const _);
                     if SDL_SaveBMP_RW(g.screen, rw, 1) != 0 {
@@ -387,31 +394,32 @@ pub fn frame_delay(g: &mut Game, delay: u32) {
                 }
             }
 
-            h().frame += 1;
+            h(gp.get()).frame += 1;
 
-            if h().maxFrames >= 0 && h().frame as i64 >= h().maxFrames {
-                h().dump = None;
-                if h().frame as i64 >= h().maxFrames + QUIT_GRACE_FRAMES as i64 {
+            if h(gp.get()).maxFrames >= 0 && h(gp.get()).frame as i64 >= h(gp.get()).maxFrames {
+                h(gp.get()).dump = None;
+                if h(gp.get()).frame as i64 >= h(gp.get()).maxFrames + QUIT_GRACE_FRAMES as i64 {
                     eprintln!("[editorharness] editor ignored SDL_QUIT for {} frames", QUIT_GRACE_FRAMES);
                     std::process::exit(3);
                 }
                 push_quit();
             } else {
-                push_frame_events();
+                push_frame_events(g);
             }
         }
 
-        if !h().noLimit {
-            crate::services::delay(delay);
+        if !h(gp.get()).noLimit {
+            crate::services::delay(gp.get(), delay);
         }
     }
 }
 
 /// `SDL_GetKeyboardState(NULL)`; while active, the scripted key state, since pushed events do not update SDL's.
-pub fn keyboard_state() -> *const u8 {
+pub fn keyboard_state(g: &mut Game) -> *const u8 {
+    let mut gp = g.ptr();
     unsafe {
-        if h().active {
-            h().keys.as_ptr()
+        if h(gp.get()).active {
+            h(gp.get()).keys.as_ptr()
         } else {
             sdl2::sys::SDL_GetKeyboardState(std::ptr::null_mut())
         }
@@ -419,10 +427,11 @@ pub fn keyboard_state() -> *const u8 {
 }
 
 /// `SDL_GetMouseState(NULL, NULL)`; while active, the scripted button mask.
-pub fn mouse_state() -> u32 {
+pub fn mouse_state(g: &mut Game) -> u32 {
+    let mut gp = g.ptr();
     unsafe {
-        if h().active {
-            h().buttons
+        if h(gp.get()).active {
+            h(gp.get()).buttons
         } else {
             sdl2::sys::SDL_GetMouseState(std::ptr::null_mut(), std::ptr::null_mut())
         }

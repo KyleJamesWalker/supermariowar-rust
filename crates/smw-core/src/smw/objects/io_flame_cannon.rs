@@ -74,13 +74,14 @@ impl IO_FlameCannon {
     }
 
     pub fn set_new_timer(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if crate::smw::net_random::object_event(g, crate::smw::net_random::Ev::HazardTimer, &[self.iNetworkID]) {
             if crate::smw::net_random::awaiting_host(g) {
                 self.iTimer = i16::MAX;
             }
             return;
         }
-        self.iTimer = (self.iFreq as i32 + RANDOM_INT(self.iFreq as i32)) as i16;
+        self.iTimer = (self.iFreq as i32 + RANDOM_INT(gp.get(), self.iFreq as i32)) as i16;
     }
 }
 

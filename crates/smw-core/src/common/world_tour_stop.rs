@@ -114,6 +114,7 @@ impl Strtok {
 
 /// `ParseTourStopLine(char* buffer, ...)`; `buffer` is the line as read by `fgets`, without the NUL.
 pub fn parse_tour_stop_line(g: &mut Game, buffer: &[u8], version: &Version, fIsWorld: bool) -> TourStop {
+    let mut gp = g.ptr();
     let mut st = Strtok::new(buffer);
     let mut ts = TourStop { fUseSettings: false, iNumUsedSettings: 0, ..Default::default() };
 
@@ -158,7 +159,7 @@ pub fn parse_tour_stop_line(g: &mut Game, buffer: &[u8], version: &Version, fIsW
                     if isMinigame {
                         ts.pszMapFile = UNKNOWN_MAP_NAME.to_string();
                     } else {
-                        g.maplist.random(false);
+                        gp.maplist.random(g, false);
                         ts.pszMapFile = g.maplist.current_shortmapname().to_string();
                     }
                 } else {
@@ -174,7 +175,7 @@ pub fn parse_tour_stop_line(g: &mut Game, buffer: &[u8], version: &Version, fIsW
         }
 
         if ts.iMode < 0 || (ts.iMode as i32 >= GAMEMODE_LAST && !isMinigame) {
-            ts.iMode = RANDOM_INT(GAMEMODE_LAST) as i16;
+            ts.iMode = RANDOM_INT(gp.get(), GAMEMODE_LAST) as i16;
         }
 
         pszTemp = st.tok(b",\n");
@@ -186,7 +187,7 @@ pub fn parse_tour_stop_line(g: &mut Game, buffer: &[u8], version: &Version, fIsW
 
         if ts.iGoal <= 0 {
             if (ts.iMode as i32) < GAMEMODE_LAST {
-                let idx = RANDOM_INT(GAMEMODE_NUM_OPTIONS as i32 - 1) as usize;
+                let idx = RANDOM_INT(gp.get(), GAMEMODE_NUM_OPTIONS as i32 - 1) as usize;
                 ts.iGoal = unsafe { g.gamemodes[ts.iMode as usize].get_options()[idx].iValue };
             } else {
                 ts.iGoal = 50;

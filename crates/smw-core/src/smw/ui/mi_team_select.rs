@@ -319,7 +319,6 @@ impl UI_ControlTrait for MI_TeamSelect {
 
     fn draw(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
         if !self.m_visible {
             return;
         }
@@ -423,7 +422,7 @@ impl UI_ControlTrait for MI_TeamSelect {
                         if playerKeys.menu_up().fPressed {
                             loop {
                                 if playerKeys.menu_down().fDown {
-                                    g.game_values.skinids[p] = RANDOM_INT(g.skinlist.count() as i32) as i16;
+                                    g.game_values.skinids[p] = RANDOM_INT(gp.get(), g.skinlist.count() as i32) as i16;
                                 } else {
                                     g.game_values.skinids[p] -= 1;
                                     if g.game_values.skinids[p] < 0 {
@@ -461,7 +460,7 @@ impl UI_ControlTrait for MI_TeamSelect {
                         if playerKeys.menu_down().fPressed {
                             loop {
                                 if playerKeys.menu_up().fDown {
-                                    g.game_values.skinids[p] = RANDOM_INT(g.skinlist.count() as i32) as i16;
+                                    g.game_values.skinids[p] = RANDOM_INT(gp.get(), g.skinlist.count() as i32) as i16;
                                 } else {
                                     g.game_values.skinids[p] += 1;
                                     if g.game_values.skinids[p] as usize >= g.skinlist.count() {
@@ -510,7 +509,7 @@ impl UI_ControlTrait for MI_TeamSelect {
                             g.game_values.randomskin[p] = !g.game_values.randomskin[p];
                         } else if !g.game_values.randomskin[p] {
                             loop {
-                                g.game_values.skinids[p] = RANDOM_INT(g.skinlist.count() as i32) as i16;
+                                g.game_values.skinids[p] = RANDOM_INT(gp.get(), g.skinlist.count() as i32) as i16;
                                 if gp.get().rm.load_menu_skin(g, iPlayer, gp.get().game_values.skinids[p], gp.get().game_values.colorids[p], false) {
                                     break;
                                 }

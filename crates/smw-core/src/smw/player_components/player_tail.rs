@@ -65,14 +65,15 @@ impl PlayerTail {
 
         unsafe {
             let facing_right = player.is_facing_right(g);
-            gp.objectcontainer[1].add(Ptr::new_box(MO_SpinAttack::new(
+            let obj = Ptr::new_box(MO_SpinAttack::new(
                 g,
                 player.get_global_id(),
                 player.get_team_id(),
                 KillStyle::Leaf,
                 facing_right,
                 13,
-            )));
+            ));
+            gp.objectcontainer[1].add(g, obj);
         }
     }
 

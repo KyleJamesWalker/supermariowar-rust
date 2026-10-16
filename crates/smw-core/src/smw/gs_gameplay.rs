@@ -190,7 +190,7 @@ impl GameplayState {
                     p.inair as i32
                 )?;
             }
-            if let Some(line) = crate::smw::gamemodes::star::harness_record() {
+            if let Some(line) = crate::smw::gamemodes::star::harness_record(g) {
                 writeln!(out, "{}", line)?;
             }
 
@@ -296,8 +296,8 @@ pub fn collisionhandler_o2o(g: &mut Game, o1: Ptr<dyn IO_MovingObjectTrait>, mut
 //Must only be called after organizeteams() is called
 pub fn lookup_team_id_sub(g: &mut Game, id: i16, teamID: Option<&mut i16>, subTeamID: Option<&mut i16>) -> i16 {
     unsafe {
-        for i in 0..game().score_cnt {
-            for j in 0..game().game_values.teamcounts[i as usize] {
+        for i in 0..g.score_cnt {
+            for j in 0..g.game_values.teamcounts[i as usize] {
                 if g.game_values.teamids[i as usize][j as usize] == id {
                     if let Some(t) = teamID {
                         *t = i;
@@ -433,12 +433,12 @@ impl GameplayState {
     fn init_score_display_position(&mut self, g: &mut Game) {
         unsafe {
             let mut totalspace: i16 = 0;
-            for i in 0..game().score_cnt as usize {
+            for i in 0..g.score_cnt as usize {
                 totalspace = (totalspace as i32 + 56 + g.game_values.teamcounts[i] as i32 * 34) as i16;
             }
             totalspace = (totalspace as i32 + 20 * (g.score_cnt as i32 - 1)) as i16;
 
-            for i in 0..game().score_cnt as usize {
+            for i in 0..g.score_cnt as usize {
                 let mut s = g.score[i];
                 if g.game_values.scoreboardstyle == ScoreboardStyle::Top || g.game_values.scoreboardstyle == ScoreboardStyle::Bottom {
                     s.x = ((App::screenWidth - totalspace as i32) >> 1) as i16;
@@ -472,6 +472,8 @@ impl GameplayState {
     }
 
     fn init_eye_candy(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        let mut rm = g.rm;
         unsafe {
             for iEyeCandyLayer in 0..3usize {
                 //Clouds
@@ -482,13 +484,13 @@ impl GameplayState {
                         let w: i16;
                         let h: i16;
 
-                        if RANDOM_BOOL() {
-                            velx = ((RANDOM_INT(51) - 25) as i16) as f32 / 10.0f32; //big clouds: -3 - +3 pixel/frame
+                        if RANDOM_BOOL(gp.get()) {
+                            velx = ((RANDOM_INT(gp.get(), 51) - 25) as i16) as f32 / 10.0f32; //big clouds: -3 - +3 pixel/frame
                             srcy = 0;
                             w = 60;
                             h = 28;
                         } else {
-                            velx = ((RANDOM_INT(41) - 20) as i16) as f32 / 10.0f32; //small clouds: -2 - +2 pixel/frame
+                            velx = ((RANDOM_INT(gp.get(), 41) - 20) as i16) as f32 / 10.0f32; //small clouds: -2 - +2 pixel/frame
                             srcy = 28;
                             w = 28;
                             h = 12;
@@ -497,8 +499,8 @@ impl GameplayState {
                         velx = if velx < 0.5f32 && velx > -0.5f32 { 1.0f32 } else { velx }; //no static clouds please
 
                         //add cloud to eyecandy array
-                        let x = RANDOM_INT(App::screenWidth) as f32;
-                        let y = RANDOM_INT(100) as f32;
+                        let x = RANDOM_INT(gp.get(), App::screenWidth) as f32;
+                        let y = RANDOM_INT(gp.get(), 100) as f32;
                         g.eyecandy[iEyeCandyLayer].emplace(EC_Cloud::new(spr(&mut g.rm.spr_clouds), x, y, velx, 0, srcy, w, h));
                     }
                 }
@@ -506,14 +508,14 @@ impl GameplayState {
                 //Ghosts
                 if g.g_map.eyecandy[iEyeCandyLayer] & 2 != 0 {
                     for _i in 0..8 {
-                        let iGhostSrcY: i16 = (((RANDOM_INT(3) as i16) as i32) << 5) as i16; //ghost type
-                        let mut velx: f32 = ((RANDOM_INT(51) - 25) as i16) as f32 / 10.0f32; //big clouds: -3 - +3 pixel/frame
+                        let iGhostSrcY: i16 = (((RANDOM_INT(gp.get(), 3) as i16) as i32) << 5) as i16; //ghost type
+                        let mut velx: f32 = ((RANDOM_INT(gp.get(), 51) - 25) as i16) as f32 / 10.0f32; //big clouds: -3 - +3 pixel/frame
 
-                        velx = if velx < 0.5f32 && velx > -0.5f32 { if RANDOM_INT(1) != 0 { 1.0f32 } else { -1.0f32 } } else { velx }; //no static clouds please
+                        velx = if velx < 0.5f32 && velx > -0.5f32 { if RANDOM_INT(gp.get(), 1) != 0 { 1.0f32 } else { -1.0f32 } } else { velx }; //no static clouds please
 
                         //add cloud to eyecandy array
-                        let x = RANDOM_INT(App::screenWidth) as f32;
-                        let y = RANDOM_INT(100) as f32;
+                        let x = RANDOM_INT(gp.get(), App::screenWidth) as f32;
+                        let y = RANDOM_INT(gp.get(), 100) as f32;
                         g.eyecandy[iEyeCandyLayer].emplace(EC_Ghost::new(
                             spr(&mut g.rm.spr_ghosts),
                             x,
@@ -532,18 +534,18 @@ impl GameplayState {
                 //Leaves
                 if g.g_map.eyecandy[iEyeCandyLayer] & 4 != 0 {
                     for _i in 0..15 {
-                        let x = RANDOM_INT(App::screenWidth) as f32;
-                        let y = RANDOM_INT(App::screenHeight) as f32;
-                        g.eyecandy[iEyeCandyLayer].emplace(EC_Leaf::new(spr(&mut g.rm.spr_leaves), x, y));
+                        let x = RANDOM_INT(gp.get(), App::screenWidth) as f32;
+                        let y = RANDOM_INT(gp.get(), App::screenHeight) as f32;
+                        gp.eyecandy[iEyeCandyLayer].emplace(EC_Leaf::new(g, spr(&mut rm.spr_leaves), x, y));
                     }
                 }
 
                 //Snow
                 if g.g_map.eyecandy[iEyeCandyLayer] & 8 != 0 {
                     for _i in 0..15 {
-                        let x = RANDOM_INT(App::screenWidth) as f32;
-                        let y = RANDOM_INT(App::screenHeight) as f32;
-                        g.eyecandy[iEyeCandyLayer].emplace(EC_Snow::new(spr(&mut g.rm.spr_snow), x, y, 0));
+                        let x = RANDOM_INT(gp.get(), App::screenWidth) as f32;
+                        let y = RANDOM_INT(gp.get(), App::screenHeight) as f32;
+                        gp.eyecandy[iEyeCandyLayer].emplace(EC_Snow::new(g, spr(&mut rm.spr_snow), x, y, 0));
                     }
                 }
 
@@ -553,7 +555,7 @@ impl GameplayState {
                     [[0, 0, 64, 44], [0, 44, 64, 44], [0, 44, 48, 44], [32, 32, 16, 12], [32, 44, 16, 12], [32, 16, 16, 28], [32, 0, 32, 28], [32, 44, 32, 28]];
                 if g.g_map.eyecandy[iEyeCandyLayer] & 16 != 0 {
                     for i in 0..8i16 {
-                        let mut velx: f32 = ((RANDOM_INT(41) - 20) as i16) as f32 / 10.0f32;
+                        let mut velx: f32 = ((RANDOM_INT(gp.get(), 41) - 20) as i16) as f32 / 10.0f32;
                         velx = if velx < 0.5f32 && velx > -0.5f32 { 1.0f32 } else { velx }; //Keep fish from moving too slowly
 
                         let mut srcx = iFishSettings[0][0];
@@ -561,7 +563,7 @@ impl GameplayState {
                         let mut w = iFishSettings[0][2];
                         let mut h = iFishSettings[0][3];
 
-                        let iRandomFish = RANDOM_INT(100) as i16;
+                        let iRandomFish = RANDOM_INT(gp.get(), 100) as i16;
 
                         let mut iFishWeightCount: i16 = 0;
                         for iFish in 0..8usize {
@@ -578,8 +580,8 @@ impl GameplayState {
 
                         //add cloud to eyecandy array
                         let iPossibleY: i16 = ((App::screenHeight - h as i32) / 10) as i16;
-                        let dDestY: f32 = (RANDOM_INT(iPossibleY as i32) + iPossibleY as i32 * i as i32) as f32;
-                        let x = RANDOM_INT(App::screenWidth) as f32;
+                        let dDestY: f32 = (RANDOM_INT(gp.get(), iPossibleY as i32) + iPossibleY as i32 * i as i32) as f32;
+                        let x = RANDOM_INT(gp.get(), App::screenWidth) as f32;
                         g.eyecandy[iEyeCandyLayer].emplace(EC_Cloud::new(
                             spr(&mut g.rm.spr_fish),
                             x,
@@ -596,18 +598,18 @@ impl GameplayState {
                 //Rain
                 if g.g_map.eyecandy[iEyeCandyLayer] & 32 != 0 {
                     for _i in 0..20 {
-                        let x = RANDOM_INT(App::screenWidth) as f32;
-                        let y = RANDOM_INT(App::screenHeight) as f32;
-                        g.eyecandy[iEyeCandyLayer].emplace(EC_Rain::new(spr(&mut g.rm.spr_rain), x, y));
+                        let x = RANDOM_INT(gp.get(), App::screenWidth) as f32;
+                        let y = RANDOM_INT(gp.get(), App::screenHeight) as f32;
+                        gp.eyecandy[iEyeCandyLayer].emplace(EC_Rain::new(g, spr(&mut rm.spr_rain), x, y));
                     }
                 }
 
                 //Bubbles
                 if g.g_map.eyecandy[iEyeCandyLayer] & 64 != 0 {
                     for _i in 0..10 {
-                        let x = RANDOM_INT(App::screenWidth) as f32;
-                        let y = RANDOM_INT(App::screenHeight) as f32;
-                        g.eyecandy[iEyeCandyLayer].emplace(EC_Bubble::new(spr(&mut g.rm.spr_rain), x, y));
+                        let x = RANDOM_INT(gp.get(), App::screenWidth) as f32;
+                        let y = RANDOM_INT(gp.get(), App::screenHeight) as f32;
+                        gp.eyecandy[iEyeCandyLayer].emplace(EC_Bubble::new(g, spr(&mut rm.spr_rain), x, y));
                     }
                 }
             }
@@ -637,11 +639,11 @@ impl GameplayState {
             self.init_eye_candy(g);
 
             self.iWindTimer = 0;
-            self.dNextWind = (RANDOM_INT(41) - 20) as f32 / 4.0f32;
-            g.game_values.flags.gamewindx = ((RANDOM_INT(41)) - 20) as f32 / 4.0f32;
+            self.dNextWind = (RANDOM_INT(gp.get(), 41) - 20) as f32 / 4.0f32;
+            g.game_values.flags.gamewindx = ((RANDOM_INT(gp.get(), 41)) - 20) as f32 / 4.0f32;
 
             //Initialize players after game init has finished
-            for i in 0..game().players.len() {
+            for i in 0..g.players.len() {
                 let mut player = g.players[i];
                 player.init(g);
             }
@@ -759,6 +761,7 @@ impl GameplayState {
 }
 
 pub fn check_wind_event(g: &mut Game, iWindTimer: &mut i16, dNextWind: &mut f32) {
+    let mut gp = g.ptr();
     unsafe {
         if *iWindTimer <= 0 {
             //Then trigger next wind event
@@ -766,19 +769,19 @@ pub fn check_wind_event(g: &mut Game, iWindTimer: &mut i16, dNextWind: &mut f32)
                 g.game_values.flags.gamewindx += 0.02f32;
 
                 if g.game_values.flags.gamewindx >= *dNextWind {
-                    *iWindTimer = ((RANDOM_INT(60)) + 30) as i16;
+                    *iWindTimer = ((RANDOM_INT(gp.get(), 60)) + 30) as i16;
                 }
             } else if g.game_values.flags.gamewindx >= *dNextWind {
                 g.game_values.flags.gamewindx -= 0.02f32;
 
                 if g.game_values.flags.gamewindx <= *dNextWind {
-                    *iWindTimer = ((RANDOM_INT(60)) + 30) as i16;
+                    *iWindTimer = ((RANDOM_INT(gp.get(), 60)) + 30) as i16;
                 }
             }
         } else {
             *iWindTimer -= 1;
             if *iWindTimer <= 0 {
-                *dNextWind = ((RANDOM_INT(41)) - 20) as f32 / 4.0f32;
+                *dNextWind = ((RANDOM_INT(gp.get(), 41)) - 20) as f32 / 4.0f32;
             }
         }
     }
@@ -798,7 +801,6 @@ pub fn clean_dead_non_player_objects(g: &mut Game) {
 }
 
 pub fn animate_during_countdown(g: &mut Game) {
-        let mut gp = g.ptr();
         let mut gp = g.ptr();
     unsafe {
         //Move platforms
@@ -821,13 +823,14 @@ pub fn animate_during_countdown(g: &mut Game) {
 }
 
 pub fn net_pow_kills(g: &mut Game, ids: &[i32]) {
+    let mut gp = g.ptr();
     unsafe {
         let pKillPlayers: Vec<Ptr<CPlayer>> = ids.iter().filter_map(|&id| g.players.iter().copied().find(|p| p.globalID as i32 == id)).collect();
         let iNumKillPlayers = pKillPlayers.len() as i16;
         if iNumKillPlayers == 0 {
             return;
         }
-        let mut iRandPlayer = RANDOM_INT(iNumKillPlayers as i32) as i16;
+        let mut iRandPlayer = RANDOM_INT(gp.get(), iNumKillPlayers as i32) as i16;
         for _iPlayer in 0..iNumKillPlayers {
             player_killed_player(
                 g,
@@ -876,7 +879,7 @@ pub fn shake_screen(g: &mut Game) {
 
         let mut killer1 = get_player_from_global_id(g, g.game_values.flags.screenshakeplayerid);
 
-        for i in 0..game().players.len() {
+        for i in 0..g.players.len() {
             let player = g.players[i];
             //Don't kill the player that triggered the POW/MOd
             if player.globalID == g.game_values.flags.screenshakeplayerid {
@@ -1040,6 +1043,7 @@ impl GameplayState {
 }
 
 pub fn handle_p2p_collisions(g: &mut Game) {
+    let mut gp = g.ptr();
     unsafe {
         //Player to player collisions
         let mut i: usize = 0;
@@ -1054,7 +1058,7 @@ pub fn handle_p2p_collisions(g: &mut Game) {
                     if player2.state > PlayerState::Dead {
                         if coldec_player2player(player1, player2) {
                             if g.netplay.active {
-                                g.netplay.client.local_gamehost.send_p2p_collision_event(&player1, &player2);
+                                gp.netplay.client.local_gamehost.send_p2p_collision_event(g, &player1, &player2);
                             }
 
                             player1.collides_with_player(g, player2);
@@ -1176,7 +1180,7 @@ impl GameplayState {
                     highestScore = 32000;
                 }
 
-                for i in 0..game().score_cnt {
+                for i in 0..g.score_cnt {
                     let mut scoreValue: i32 = g.score[i as usize].score as i32;
                     if g.game_values.gamemode.gamemode == game_mode_boxes_minigame {
                         scoreValue = g.score[i as usize].subscore[0] as i32;
@@ -1208,7 +1212,7 @@ impl GameplayState {
                 }
 
                 //in game scoreboards
-                for i in 0..game().score_cnt as usize {
+                for i in 0..g.score_cnt as usize {
                     let s = g.score[i];
                     let teamcount = g.game_values.teamcounts[i];
                     let gm = g.game_values.gamemode.gamemode;
@@ -1464,7 +1468,7 @@ impl GameplayState {
         let mut gp = g.ptr();
         unsafe {
             if g.game_values.flags.swapplayers {
-                for i in 0..game().players.len() {
+                for i in 0..g.players.len() {
                     let mut player = g.players[i];
                     player.drawswap(g);
 
@@ -1513,7 +1517,7 @@ impl GameplayState {
                     if_sound_on_play(g, &mut gp.rm.sfx_transform);
 
                     if g.game_values.swapstyle == 1 {
-                        for i in 0..game().players.len() {
+                        for i in 0..g.players.len() {
                             let player = g.players[i];
                             g.eyecandy[2].emplace(EC_SingleAnimation::new(
                                 spr(&mut g.rm.spr_fireballexplosion),
@@ -1530,7 +1534,6 @@ impl GameplayState {
     }
 
     fn draw_back_layer(&mut self, g: &mut Game) {
-        let mut gp = g.ptr();
         let mut gp = g.ptr();
         unsafe {
             gp.rm.spr_backmap[gp.g_iCurrentDrawIndex as usize].draw(g, 0, 0);
@@ -1549,12 +1552,11 @@ impl GameplayState {
 
     fn draw_middle_layer(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
         unsafe {
             gp.g_map.draw_platforms(g, 1);
 
             if !g.game_values.flags.swapplayers {
-                for i in 0..game().players.len() {
+                for i in 0..g.players.len() {
                     let mut player = g.players[i];
                     player.draw(g);
                 }
@@ -1567,7 +1569,6 @@ impl GameplayState {
     }
 
     fn draw_front_layer(&mut self, g: &mut Game) {
-        let mut gp = g.ptr();
         let mut gp = g.ptr();
         unsafe {
             gp.g_map.draw_platforms(g, 2);
@@ -1632,7 +1633,7 @@ impl GameplayState {
     fn draw_out_of_screen_indicators(&mut self, g: &mut Game) {
         unsafe {
             //draw arrows for being above the top of the screen
-            for i in 0..game().players.len() {
+            for i in 0..g.players.len() {
                 let mut player = g.players[i];
                 player.draw_out_of_screen_indicators(g);
             }
@@ -1656,7 +1657,6 @@ impl GameplayState {
 }
 
 pub fn draw_exit_pause_dialog(g: &mut Game) {
-        let mut gp = g.ptr();
         let mut gp = g.ptr();
     unsafe {
         if g.game_values.flags.pausegame {
@@ -1739,13 +1739,13 @@ pub fn update_score_board(g: &mut Game) {
             }
 
             //Add up all the winnings so far and determine overall place in the standings
-            for iScore in 0..game().score_cnt as usize {
+            for iScore in 0..g.score_cnt as usize {
                 g.game_values.tournament_scores[iScore].wins = 0;
             }
 
             //Assign the order that players will show up on the scoreboard (ordered by score)
-            for iMyScore in 0..game().score_cnt as usize {
-                for iTheirScore in 0..game().score_cnt as usize {
+            for iMyScore in 0..g.score_cnt as usize {
+                for iTheirScore in 0..g.score_cnt as usize {
                     if g.game_values.tournament_scores[iMyScore].total > g.game_values.tournament_scores[iTheirScore].total {
                         g.game_values.tournament_scores[iTheirScore].wins += 1;
                     }
@@ -1755,7 +1755,7 @@ pub fn update_score_board(g: &mut Game) {
             //Give players the item bonuses that were won
             let tourStop = g.game_values.tourstops[g.game_values.tourstopcurrent];
 
-            for iScore in 0..game().score_cnt as usize {
+            for iScore in 0..g.score_cnt as usize {
                 for iBonus in 0..tourStop.iNumBonuses as usize {
                     if tourStop.wsbBonuses[iBonus].iWinnerPlace == g.score[iScore].place {
                         if g.game_values.worldpowerupcount[iScore] < 32 {
@@ -1786,13 +1786,13 @@ pub fn update_score_board(g: &mut Game) {
             }
 
             //For this game, set the player's place as the type of win
-            for iScore in 0..game().score_cnt as usize {
+            for iScore in 0..g.score_cnt as usize {
                 let cur = g.game_values.tourstopcurrent;
                 g.game_values.tournament_scores[iScore].type_[cur] = g.score[iScore].place;
             }
 
             //Add up all the winnings so far and determine overall place in tour
-            for iScore in 0..game().score_cnt as usize {
+            for iScore in 0..g.score_cnt as usize {
                 g.game_values.tournament_scores[iScore].total = 0;
 
                 let mut iTourStop: usize = 0;
@@ -1806,8 +1806,8 @@ pub fn update_score_board(g: &mut Game) {
                 g.game_values.tournament_scores[iScore].wins = 0;
             }
 
-            for iMyScore in 0..game().score_cnt as usize {
-                for iTheirScore in 0..game().score_cnt as usize {
+            for iMyScore in 0..g.score_cnt as usize {
+                for iTheirScore in 0..g.score_cnt as usize {
                     if g.game_values.tournament_scores[iMyScore].total > g.game_values.tournament_scores[iTheirScore].total {
                         g.game_values.tournament_scores[iTheirScore].wins += 1;
                     }
@@ -1821,7 +1821,7 @@ pub fn update_score_board(g: &mut Game) {
                 let mut iWinningTeam: i16 = -2; //Set winning team to -2 to signify a tie between teams
                 let mut iWinningScore: i16 = 0;
 
-                for iScore in 0..game().score_cnt {
+                for iScore in 0..g.score_cnt {
                     let total = g.game_values.tournament_scores[iScore as usize].total;
                     if total > iWinningScore {
                         //New winner found
@@ -1840,7 +1840,7 @@ pub fn update_score_board(g: &mut Game) {
             let mut maxScore: i16 = -1; //Max score for game
             let mut maxTeam: i16 = -1; //Team ID with the max score -> reset to -1 if two teams tied for win
 
-            for i in 0..game().score_cnt {
+            for i in 0..g.score_cnt {
                 let sc = g.score[i as usize].score;
                 if sc > maxScore {
                     maxScore = sc;
@@ -1970,7 +1970,7 @@ pub fn load_map_objects(g: &mut Game, fPreview: bool) {
                 g.g_map.blockdata[xu][yu] = block;
 
                 if !block.is_null() {
-                    g.noncolcontainer.add_dyn(block.as_object_ptr());
+                    gp.noncolcontainer.add_dyn(g, block.as_object_ptr());
                 }
 
                 match typeId as i32 {
@@ -2011,7 +2011,7 @@ pub fn load_map_objects(g: &mut Game, fPreview: bool) {
             //Randomly choose boxes to put 5 coins in
             let mut iItem: i16 = 0;
             while iItem < 5 && iItem < iThrowBoxCount {
-                let mut iBoxIndex = RANDOM_INT(iThrowBoxCount as i32) as i16;
+                let mut iBoxIndex = RANDOM_INT(gp.get(), iThrowBoxCount as i32) as i16;
 
                 while boxes[iBoxIndex as usize] {
                     iBoxIndex += 1;
@@ -2028,7 +2028,8 @@ pub fn load_map_objects(g: &mut Game, fPreview: bool) {
             //If map has less than 5 boxes, then insert coins into map in random locations
             let iExtraCoinsNeeded: i16 = 5 - iThrowBoxCount;
             for _iExtraCoin in 0..iExtraCoinsNeeded {
-                gp.get().objectcontainer[1].add(Ptr::new_box(MO_Coin::new(g, spr(&mut gp.get().rm.spr_coin), Vec2f::zero(), Vec2s::zero(), 2, -1, 2, 0, true)));
+                let obj = Ptr::new_box(MO_Coin::new(g, spr(&mut gp.get().rm.spr_coin), Vec2f::zero(), Vec2s::zero(), 2, -1, 2, 0, true));
+                gp.get().objectcontainer[1].add(g, obj);
             }
         }
 
@@ -2041,15 +2042,20 @@ pub fn load_map_objects(g: &mut Game, fPreview: bool) {
             let pos = Vec2s::new((item.ix as i32 * 32) as i16, (item.iy as i32 * 32) as i16);
 
             if iType == 0 {
-                gp.objectcontainer[1].add(Ptr::new_box(CO_Spring::new(g, spr(&mut rm.spr_spring), pos, false)));
+                let obj = Ptr::new_box(CO_Spring::new(g, spr(&mut rm.spr_spring), pos, false));
+                gp.objectcontainer[1].add(g, obj);
             } else if iType == 1 {
-                gp.objectcontainer[1].add(Ptr::new_box(CO_Spike::new(g, spr(&mut rm.spr_spike), pos)));
+                let obj = Ptr::new_box(CO_Spike::new(g, spr(&mut rm.spr_spike), pos));
+                gp.objectcontainer[1].add(g, obj);
             } else if iType == 2 {
-                gp.objectcontainer[1].add(Ptr::new_box(CO_KuriboShoe::new(g, spr(&mut rm.spr_kuriboshoe), pos, false)));
+                let obj = Ptr::new_box(CO_KuriboShoe::new(g, spr(&mut rm.spr_kuriboshoe), pos, false));
+                gp.objectcontainer[1].add(g, obj);
             } else if iType == 3 {
-                gp.objectcontainer[1].add(Ptr::new_box(CO_Spring::new(g, spr(&mut rm.spr_spring), pos, true)));
+                let obj = Ptr::new_box(CO_Spring::new(g, spr(&mut rm.spr_spring), pos, true));
+                gp.objectcontainer[1].add(g, obj);
             } else if iType == 4 {
-                gp.objectcontainer[1].add(Ptr::new_box(CO_KuriboShoe::new(g, spr(&mut rm.spr_kuriboshoe), pos, true)));
+                let obj = Ptr::new_box(CO_KuriboShoe::new(g, spr(&mut rm.spr_kuriboshoe), pos, true));
+                gp.objectcontainer[1].add(g, obj);
             } else if iType == 5 {
                 let mut iItem: i16 = NO_POWERUP as i16;
                 if !fPreview {
@@ -2059,20 +2065,20 @@ pub fn load_map_objects(g: &mut Game, fPreview: bool) {
                         if fBoxHasCoin.as_ref().unwrap()[iAddThrowBoxIndex as usize] {
                             iItem = MINIGAME_COIN as i16;
                         }
-                    } else if gm == game_mode_health && (RANDOM_INT(100) as i16) < gms.health.percentextralife {
+                    } else if gm == game_mode_health && (RANDOM_INT(gp.get(), 100) as i16) < gms.health.percentextralife {
                         iItem = HEALTH_POWERUP as i16;
-                    } else if (gm == game_mode_timelimit && (RANDOM_INT(100) as i16) < gms.time.percentextratime)
-                        || (gm == game_mode_star && (RANDOM_INT(100) as i16) < gms.star.percentextratime)
+                    } else if (gm == game_mode_timelimit && (RANDOM_INT(gp.get(), 100) as i16) < gms.time.percentextratime)
+                        || (gm == game_mode_star && (RANDOM_INT(gp.get(), 100) as i16) < gms.star.percentextratime)
                     {
                         iItem = TIME_POWERUP as i16;
-                    } else if (gm == game_mode_coins && (RANDOM_INT(100) as i16) < gms.coins.percentextracoin)
-                        || (gm == game_mode_greed && (RANDOM_INT(100) as i16) < gms.greed.percentextracoin)
+                    } else if (gm == game_mode_coins && (RANDOM_INT(gp.get(), 100) as i16) < gms.coins.percentextracoin)
+                        || (gm == game_mode_greed && (RANDOM_INT(gp.get(), 100) as i16) < gms.greed.percentextracoin)
                     {
                         iItem = COIN_POWERUP as i16;
-                    } else if gm == game_mode_jail && (RANDOM_INT(100) as i16) < gms.jail.percentkey {
+                    } else if gm == game_mode_jail && (RANDOM_INT(gp.get(), 100) as i16) < gms.jail.percentkey {
                         iItem = JAIL_KEY_POWERUP as i16;
-                    } else if iCountWeight > 0 && (RANDOM_INT(100)) < 40 {
-                        let iRandPowerup: i32 = RANDOM_INT(iCountWeight as i32) + 1;
+                    } else if iCountWeight > 0 && (RANDOM_INT(gp.get(), 100)) < 40 {
+                        let iRandPowerup: i32 = RANDOM_INT(gp.get(), iCountWeight as i32) + 1;
                         iItem = 0;
 
                         let mut iPowerupWeightCount: i32 = g.game_values.powerupweights[iItem as usize] as i32;
@@ -2084,7 +2090,8 @@ pub fn load_map_objects(g: &mut Game, fPreview: bool) {
                     }
                 }
 
-                gp.objectcontainer[1].add(Ptr::new_box(CO_ThrowBox::new(g, spr(&mut rm.spr_throwbox), pos, iItem)));
+                let obj = Ptr::new_box(CO_ThrowBox::new(g, spr(&mut rm.spr_throwbox), pos, iItem));
+                gp.objectcontainer[1].add(g, obj);
                 iAddThrowBoxIndex += 1;
             }
         }
@@ -2250,11 +2257,11 @@ pub fn update_bullet_bill_powerup(g: &mut Game) {
 pub fn net_bullet_bill(g: &mut Game, p: usize) {
         let mut gp = g.ptr();
     unsafe {
-        g.game_values.bulletbillspawntimer[p] = (RANDOM_INT(20) + 25) as i16;
-        let speed: f32 = ((RANDOM_INT(21) + 20) as f32) / 10.0f32;
-        let posy = RANDOM_INT(448) as i16;
-        let vel = if RANDOM_INT(2) != 0 { speed } else { -speed };
-        gp.get().objectcontainer[2].add(Ptr::new_box(MO_BulletBill::new(
+        g.game_values.bulletbillspawntimer[p] = (RANDOM_INT(gp.get(), 20) + 25) as i16;
+        let speed: f32 = ((RANDOM_INT(gp.get(), 21) + 20) as f32) / 10.0f32;
+        let posy = RANDOM_INT(gp.get(), 448) as i16;
+        let vel = if RANDOM_INT(gp.get(), 2) != 0 { speed } else { -speed };
+        let obj = Ptr::new_box(MO_BulletBill::new(
             g,
             spr(&mut gp.get().rm.spr_bulletbill),
             spr(&mut gp.get().rm.spr_bulletbilldead),
@@ -2262,7 +2269,8 @@ pub fn net_bullet_bill(g: &mut Game, p: usize) {
             vel,
             p as i16,
             false,
-        )));
+        ));
+        gp.get().objectcontainer[2].add(g, obj);
         if_sound_on_play(g, &mut gp.rm.sfx_bulletbillsound);
     }
 }
@@ -2281,7 +2289,7 @@ pub fn update_scoreboard_animation(g: &mut Game) {
                 g.game_values.flags.scorepercentmove = 1.0f32;
             }
 
-            for i in 0..game().score_cnt as usize {
+            for i in 0..g.score_cnt as usize {
                 let mut s = g.score[i];
                 s.x = ((((s.destx as i32 - s.fromx as i32) as f32 * g.game_values.flags.scorepercentmove) as i16) as i32 + s.fromx as i32) as i16;
                 s.y = ((((s.desty as i32 - s.fromy as i32) as f32 * g.game_values.flags.scorepercentmove) as i16) as i32 + s.fromy as i32) as i16;
@@ -2461,7 +2469,7 @@ impl GameplayState {
             debug_assert!(0.99 < (percent_old + percent_new) as f64 && (percent_old + percent_new) as f64 <= 1.01);
 
             if !g.netplay.theHostIsMe {
-                for p in 0..game().players.len() {
+                for p in 0..g.players.len() {
                     let mut player = g.players[p];
 
                     // if local player
@@ -2542,7 +2550,7 @@ impl GameplayState {
             if g.netplay.theHostIsMe {
                 gp.netplay.client.local_gamehost.confirm_current_inputs(g);
             }
-            for p in 0..game().players.len() {
+            for p in 0..g.players.len() {
                 if let Some(front) = g.netplay.remote_input_buffer[p].pop_front() {
                     g.netplay.netPlayerInput.outputControls[p] = front.1;
                 }
@@ -2582,7 +2590,7 @@ pub fn start_gameplay(g: &mut Game) {
         g.game_values.appstate = AppState::Game;
 
         if g.game_values.music {
-            g.musiclist.set_random_music(music_category(g.g_map.musicCategoryID), "", "");
+            gp.musiclist.set_random_music(g, music_category(g.g_map.musicCategoryID), "", "");
             let path = g.musiclist.current_music().clone();
             g.rm.backgroundmusic[0] = load_music(g, &path);
             gp.rm.backgroundmusic[0].play(g, g.game_values.playnextmusic, false);
@@ -2627,7 +2635,7 @@ impl GameplayState {
 pub fn update_playerswap(g: &mut Game) {
     unsafe {
         if g.game_values.flags.swapplayers {
-            for i in 0..game().players.len() {
+            for i in 0..g.players.len() {
                 let mut player = g.players[i];
                 player.updateswap(g);
             }
@@ -2637,7 +2645,6 @@ pub fn update_playerswap(g: &mut Game) {
 
 impl GameplayState {
     fn update_world(&mut self, g: &mut Game) {
-        let mut gp = g.ptr();
         let mut gp = g.ptr();
         unsafe {
             shake_screen(g);
@@ -2671,7 +2678,7 @@ impl GameplayState {
             g.game_values.flags.playflyingsound = false;
 
             // Move every player before object collisions, so they test against post-map-collision positions.
-            for i in 0..game().players.len() {
+            for i in 0..g.players.len() {
                 let mut player = g.players[i];
                 player.r#move(g);
             }
@@ -2693,7 +2700,7 @@ impl GameplayState {
 
             //Commit all player actions at this point (after we have collided with any objects
             //that the player might have picked up)
-            for i in 0..game().players.len() {
+            for i in 0..g.players.len() {
                 let mut player = g.players[i];
                 player.commit_action(g);
             }
@@ -2745,7 +2752,6 @@ impl GameState for GameplayState {
 
     fn update(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
         unsafe {
             if crate::smw::net::waiting_to_start(g) {
                 crate::smw::net::draw_match_preview(g);
@@ -2758,7 +2764,7 @@ impl GameState for GameplayState {
                 check_wind_event(g, &mut self.iWindTimer, &mut self.dNextWind);
             }
 
-            for iTeam in 0..game().score_cnt as usize {
+            for iTeam in 0..g.score_cnt as usize {
                 self.iScoreTextOffset[iTeam] = (34 * g.game_values.teamcounts[iTeam] as i32 + 1) as i16;
             }
 
@@ -2875,7 +2881,7 @@ pub fn net_mystery_swap(g: &mut Game, iUsingPlayerID: i16) -> bool {
     unsafe {
         //Count available players to switch with
         let mut iNumAvailablePlayers: i16 = 0;
-        for i in 0..game().players.len() {
+        for i in 0..g.players.len() {
             let mut player = g.players[i];
             if player.isready() {
                 iNumAvailablePlayers += 1;
@@ -2904,11 +2910,11 @@ pub fn net_mystery_swap(g: &mut Game, iUsingPlayerID: i16) -> bool {
             }
         }
 
-        let iIncrement = RANDOM_INT(iNumAvailablePlayers as i32 - 1) as i16;
+        let iIncrement = RANDOM_INT(gp.get(), iNumAvailablePlayers as i32 - 1) as i16;
 
         let mut spots: [MysteryMushroomTempPlayer; 4] =
             [MysteryMushroomTempPlayer::new(), MysteryMushroomTempPlayer::new(), MysteryMushroomTempPlayer::new(), MysteryMushroomTempPlayer::new()];
-        for iPlayer in 0..game().players.len() {
+        for iPlayer in 0..g.players.len() {
             let mut player = g.players[iPlayer];
 
             if !player.isready() {
@@ -2938,7 +2944,7 @@ pub fn net_mystery_swap(g: &mut Game, iUsingPlayerID: i16) -> bool {
             }
         }
 
-        for iPlayer in 0..game().players.len() {
+        for iPlayer in 0..g.players.len() {
             let mut player = g.players[iPlayer];
 
             if !player.isready() {

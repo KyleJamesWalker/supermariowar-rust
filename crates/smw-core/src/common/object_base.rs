@@ -85,8 +85,7 @@ pub fn set_network_id_context(g: &mut Game, context: u32) {
 }
 
 /// The ID context and the count of objects made in it, for checkpoints.
-pub fn network_id_state() -> (&'static mut u32, &'static mut u32) {
-    let g = game().get();
+pub fn network_id_state(g: &mut Game) -> (&mut u32, &mut u32) {
     (&mut g.g_networkIDContext, &mut g.g_networkIDCount)
 }
 
@@ -201,7 +200,7 @@ impl CObject {
         }
     }
 
-    pub fn get_collision_blocks(&self) -> [Ptr<dyn IO_BlockTrait>; 4] {
+    pub fn get_collision_blocks(&self, g: &mut Game) -> [Ptr<dyn IO_BlockTrait>; 4] {
         let ix = self.ix as i32;
         let iy = self.iy as i32;
         let iw = self.iw as i32;
@@ -216,14 +215,14 @@ impl CObject {
         unsafe {
             if iy >= 0 && iy < 480 {
                 let yt = (iy / TILESIZE) as i16;
-                blocks[0] = game().g_map.block(xl, yt);
-                blocks[1] = game().g_map.block(xr, yt);
+                blocks[0] = g.g_map.block(xl, yt);
+                blocks[1] = g.g_map.block(xr, yt);
             }
 
             if iy + ih >= 0 && iy + ih < 480 {
                 let yb = ((iy + ih) / TILESIZE) as i16;
-                blocks[2] = game().g_map.block(xl, yb);
-                blocks[3] = game().g_map.block(xr, yb);
+                blocks[2] = g.g_map.block(xl, yb);
+                blocks[3] = g.g_map.block(xr, yb);
             }
         }
 

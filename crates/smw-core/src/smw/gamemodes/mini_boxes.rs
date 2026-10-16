@@ -43,20 +43,20 @@ impl CGM_Boxes_MiniGame {
 
     fn release_coin(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
         if player.score().subscore[0] > 0 {
             player.score().subscore[0] -= 1;
 
             let pos = Vec2s::new((player.center_x() as i32 - 16) as i16, (player.center_y() as i32 - 16) as i16);
 
-            let speed: f32 = 7.0f32 + RANDOM_INT(9) as f32 / 2.0f32;
-            let angle: f32 = -(RANDOM_INT(314) as f32) / 100.0f32;
+            let speed: f32 = 7.0f32 + RANDOM_INT(gp.get(), 9) as f32 / 2.0f32;
+            let angle: f32 = -(RANDOM_INT(gp.get(), 314) as f32) / 100.0f32;
             let vel = Vec2f::new(speed * cosf(angle), speed * sinf(angle));
 
             unsafe {
                 if_sound_on_play(g, &mut gp.rm.sfx_coin);
 
-                gp.get().objectcontainer[1].add(Ptr::new_box(MO_Coin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), vel, pos, 2, -1, 2, 30, false)));
+                let obj = Ptr::new_box(MO_Coin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), vel, pos, 2, -1, 2, 30, false));
+                gp.get().objectcontainer[1].add(g, obj);
             }
         }
     }
@@ -86,7 +86,7 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
         self.fReverseScoring = false;
 
         unsafe {
-            for iScore in 0..game().score_cnt as usize {
+            for iScore in 0..g.score_cnt as usize {
                 gp.score[iScore].set_score(g, self.goal);
                 g.score[iScore].subscore[0] = 0;
             }
@@ -111,7 +111,7 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
         if !self.playedwarningsound {
             let mut countscore: i16 = 0;
             unsafe {
-                for k in 0..game().score_cnt as usize {
+                for k in 0..g.score_cnt as usize {
                     if Ptr::from_mut(inflictor.score()) == g.score[k] {
                         continue;
                     }
@@ -147,8 +147,8 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
             let mut countscore: i16 = 0;
             let mut playwarning = false;
             unsafe {
-                for j in 0..game().score_cnt {
-                    for k in 0..game().score_cnt {
+                for j in 0..g.score_cnt {
+                    for k in 0..g.score_cnt {
                         if j == k {
                             continue;
                         }

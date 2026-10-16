@@ -13,11 +13,12 @@ use crate::smw::gs_gameplay::lookup_team_id;
 use sdl2::sys::SDL_Rect;
 
 #[cfg(not(target_os = "emscripten"))]
-fn small_delay() {
-    crate::services::delay(10);
+fn small_delay(g: &mut Game) {
+    let mut gp = g.ptr();
+    crate::services::delay(gp.get(), 10);
 }
 #[cfg(target_os = "emscripten")]
-fn small_delay() {}
+fn small_delay(_g: &mut Game) {}
 
 pub struct MI_MapBrowser {
     pub ui_control: UI_Control,
@@ -110,9 +111,9 @@ impl MI_MapBrowser {
                 if !file_exists(&sConvertedPath) {
                     let filename = g.maplist.node_at(itr).filename.clone();
                     gp.g_map.load_map(g, &filename, read_type_preview);
-                    small_delay(); //Sleeps to help the music from skipping
+                    small_delay(g); //Sleeps to help the music from skipping
                     gp.g_map.save_thumbnail(g, &sConvertedPath, false);
-                    small_delay();
+                    small_delay(g);
                 }
 
                 let m = iMap as usize;
@@ -152,7 +153,6 @@ impl UI_ControlTrait for MI_MapBrowser {
     }
 
     fn draw(&mut self, g: &mut Game) {
-        let mut gp = g.ptr();
         let mut gp = g.ptr();
         if !self.m_visible {
             return;

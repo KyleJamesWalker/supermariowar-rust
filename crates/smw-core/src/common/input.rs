@@ -224,7 +224,7 @@ impl CPlayerInput {
     //iGameState == 0 for in game and 1 for menu
     pub fn update_input(&mut self, g: &mut Game, input: &Input, iGameState: i16) {
         #[cfg(not(target_os = "emscripten"))]
-        crate::smw::pad::log_event(2, &smw_sdl2::input::to_sdl(input));
+        crate::smw::pad::log_event(g, 2, &smw_sdl2::input::to_sdl(input));
         let event = &input.event;
         use InputEvent as E;
         use MouseEvent as M;

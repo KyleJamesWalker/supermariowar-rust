@@ -47,8 +47,8 @@ impl CGM_Collection {
     fn drop_card(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, pos: Vec2s) {
         let mut gp = g.ptr();
         {
-            let speed: f32 = 7.0f32 + RANDOM_INT(9) as f32 / 2.0f32;
-            let angle: f32 = -(RANDOM_INT(314) as f32) / 100.0f32;
+            let speed: f32 = 7.0f32 + RANDOM_INT(gp.get(), 9) as f32 / 2.0f32;
+            let angle: f32 = -(RANDOM_INT(gp.get(), 314) as f32) / 100.0f32;
             let vel = Vec2f::new(speed * cosf(angle), speed * sinf(angle));
 
             player.score().subscore[0] -= 1;
@@ -61,7 +61,8 @@ impl CGM_Collection {
             player.score().subscore[1] &= iCardMaskInverted;
 
             unsafe {
-                gp.get().objectcontainer[1].add(Ptr::new_box(MO_CollectionCard::new(g, Ptr::from_mut(&mut gp.get().rm.spr_collectcards), 1, iValue, 30, vel, pos)));
+                let obj = Ptr::new_box(MO_CollectionCard::new(g, Ptr::from_mut(&mut gp.get().rm.spr_collectcards), 1, iValue, 30, vel, pos));
+                gp.get().objectcontainer[1].add(g, obj);
             }
         }
     }
@@ -70,7 +71,7 @@ impl CGM_Collection {
 fn spawn_card(g: &mut Game) {
         let mut gp = g.ptr();
     unsafe {
-        let iRandom: i16 = RANDOM_INT(5) as i16;
+        let iRandom: i16 = RANDOM_INT(gp.get(), 5) as i16;
         let mut iRandomCard: i16 = 0;
         if iRandom == 4 {
             iRandomCard = 2;
@@ -78,7 +79,8 @@ fn spawn_card(g: &mut Game) {
             iRandomCard = 1;
         }
 
-        gp.get().objectcontainer[1].add(Ptr::new_box(MO_CollectionCard::new(g, Ptr::from_mut(&mut gp.get().rm.spr_collectcards), 0, iRandomCard, 0, Vec2f::zero(), Vec2s::zero())));
+        let obj = Ptr::new_box(MO_CollectionCard::new(g, Ptr::from_mut(&mut gp.get().rm.spr_collectcards), 0, iRandomCard, 0, Vec2f::zero(), Vec2s::zero()));
+        gp.get().objectcontainer[1].add(g, obj);
     }
 }
 
@@ -113,7 +115,7 @@ impl CGameModeTrait for CGM_Collection {
 
         //Zero out the number of cards teams have
         unsafe {
-            for iScore in 0..game().score_cnt as usize {
+            for iScore in 0..g.score_cnt as usize {
                 g.score[iScore].subscore[0] = 0;
                 g.score[iScore].subscore[1] = 0;
             }
@@ -144,7 +146,7 @@ impl CGameModeTrait for CGM_Collection {
             }
 
             //Check if this team has collected 3 cards
-            for iScore in 0..game().score_cnt as usize {
+            for iScore in 0..g.score_cnt as usize {
                 if g.score[iScore].subscore[0] >= 3 {
                     g.score[iScore].subscore[2] += 1;
                     if g.score[iScore].subscore[2] >= g.game_values.gamemodemenusettings.collection.banktime {
@@ -211,7 +213,7 @@ impl CGameModeTrait for CGM_Collection {
                 remove_players_but_team(g, self.winningteam);
 
                 unsafe {
-                    for iScore in 0..game().score_cnt as usize {
+                    for iScore in 0..g.score_cnt as usize {
                         g.score[iScore].subscore[0] = 0;
                         g.score[iScore].subscore[1] = 0;
                         g.score[iScore].subscore[2] = 0;

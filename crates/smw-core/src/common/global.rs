@@ -3,7 +3,7 @@
 pub fn init_globals(g: &mut Game) {
     unsafe {
         // Upstream's global.cpp reads data from the settings directory on Android.
-        let root = if cfg!(target_os = "android") { crate::common::path::get_home_directory() } else { crate::common::path::get_root_directory() };
+        let root = if cfg!(target_os = "android") { crate::common::path::get_home_directory(g) } else { crate::common::path::get_root_directory(g) };
         g.RootDataDirectory = root + "data";
         g.game_values.init(CGameValues::new());
     }

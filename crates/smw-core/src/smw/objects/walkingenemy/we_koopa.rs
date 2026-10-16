@@ -144,6 +144,7 @@ impl MO_WalkingEnemyTrait for MO_Koopa {
     }
 
     fn drop_shell(&mut self, g: &mut Game, fBounce: bool, fFlip: bool) {
+        let mut gp = g.ptr();
         // Give the shell a state 2 so it is already spawned but sitting
         let pos = Vec2s::new((self.ix as i32 - 1) as i16, (self.iy as i32 + 8) as i16);
         let r#type = if self.fRed { ShellType::Red } else { ShellType::Green };
@@ -156,7 +157,7 @@ impl MO_WalkingEnemyTrait for MO_Koopa {
         }
 
         unsafe {
-            g.objectcontainer[1].add(shell);
+            gp.objectcontainer[1].add(g, shell);
         }
     }
 }

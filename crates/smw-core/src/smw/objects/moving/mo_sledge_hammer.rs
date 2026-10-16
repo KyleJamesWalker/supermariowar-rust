@@ -75,7 +75,8 @@ impl MO_SledgeHammer {
         unsafe {
             if self.fSuper {
                 let pos = Vec2s::new((self.ix as i32 + (self.iw as i32 >> 2) - 96) as i16, (self.iy as i32 + (self.ih as i32 >> 2) - 64) as i16);
-                gp.objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(g, Ptr::from_mut(&mut rm.spr_explosion), pos, 2, 4, -1, -1, KillStyle::Hammer)));
+                let obj = Ptr::new_box(MO_Explosion::new(g, Ptr::from_mut(&mut rm.spr_explosion), pos, 2, 4, -1, -1, KillStyle::Hammer));
+                gp.objectcontainer[2].add(g, obj);
                 if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
             } else {
                 let iCenterX: i16 = (self.ix as i32 + (self.iw as i32 >> 1) - 14) as i16;
@@ -83,11 +84,11 @@ impl MO_SledgeHammer {
                 let iColorID: i16 = (self.colorOffset as i32 / 32 - 1) as i16;
 
                 for _iHammer in 0..3 {
-                    let dAngle: f32 = RANDOM_INT(628) as f32 / 100.0f32;
-                    let dVel: f32 = RANDOM_INT(5) as f32 / 2.0f32 + 3.0f32;
+                    let dAngle: f32 = RANDOM_INT(gp.get(), 628) as f32 / 100.0f32;
+                    let dVel: f32 = RANDOM_INT(gp.get(), 5) as f32 / 2.0f32 + 3.0f32;
                     let dVelX: f32 = dVel * cosf(dAngle);
                     let dVelY: f32 = dVel * sinf(dAngle);
-                    gp.get().objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(
+                    let obj = Ptr::new_box(MO_Hammer::new(
                         g,
                         Ptr::from_mut(&mut gp.get().rm.spr_hammer),
                         Vec2s::new(iCenterX, iCenterY),
@@ -98,7 +99,8 @@ impl MO_SledgeHammer {
                         self.teamID,
                         iColorID,
                         true,
-                    )));
+                    ));
+                    gp.get().objectcontainer[2].add(g, obj);
                 }
 
                 let mut player: Ptr<CPlayer> = get_player_from_global_id(g, self.playerID);

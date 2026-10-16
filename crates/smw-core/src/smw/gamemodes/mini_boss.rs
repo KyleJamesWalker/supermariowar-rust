@@ -48,7 +48,7 @@ impl CGM_Boss_MiniGame {
         remove_players_but_team(g, self.winningteam);
 
         unsafe {
-            for iScore in 0..game().score_cnt {
+            for iScore in 0..g.score_cnt {
                 if self.winningteam == iScore {
                     continue;
                 }
@@ -95,16 +95,15 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
 
     fn init(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
         gm::cgamemode_init(g, self);
 
         self.fReverseScoring = false;
 
-        self.enemytimer = (RANDOM_INT(120) + 120) as i16;
+        self.enemytimer = (RANDOM_INT(gp.get(), 120) + 120) as i16;
         self.poweruptimer = 120;
 
         unsafe {
-            for iScore in 0..game().score_cnt as usize {
+            for iScore in 0..g.score_cnt as usize {
                 gp.score[iScore].set_score(g, self.goal);
             }
 
@@ -115,7 +114,8 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
             } else {
                 (App::screenWidth / 2) as i16
             };
-            gp.get().objectcontainer[0].add(Ptr::new_box(MO_SledgeBrother::new(g, Ptr::from_mut(&mut gp.get().rm.spr_sledgebrothers), platformY, self.iBossType)));
+            let obj = Ptr::new_box(MO_SledgeBrother::new(g, Ptr::from_mut(&mut gp.get().rm.spr_sledgebrothers), platformY, self.iBossType));
+            gp.get().objectcontainer[0].add(g, obj);
         }
     }
 
@@ -144,27 +144,30 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
                     //Randomly spawn koopas
                     self.enemytimer -= 1;
                     if self.enemytimer <= 0 {
-                        gp.objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(g, Ptr::from_mut(&mut rm.spr_koopa), RANDOM_BOOL(), false, false, true)));
-                        self.enemytimer = (RANDOM_INT(120) as i16 as i32 + 120) as i16; //Spawn koopas slowly
+                        let obj = Ptr::new_box(MO_Koopa::new(g, Ptr::from_mut(&mut rm.spr_koopa), RANDOM_BOOL(gp.get()), false, false, true));
+                        gp.objectcontainer[0].add(g, obj);
+                        self.enemytimer = (RANDOM_INT(gp.get(), 120) as i16 as i32 + 120) as i16; //Spawn koopas slowly
                     }
                 } else if self.iBossType == Boss::Bomb {
                 } else if self.iBossType == Boss::Fire {
                     //Only create podobos if the difficulty is moderate or greater
                     self.enemytimer -= 1;
                     if self.enemytimer <= 0 && g.game_values.gamemodesettings.boss.difficulty >= 2 {
-                        let x = RANDOM_INT((App::screenWidth as f32 * 0.95f32) as i32) as i16;
+                        let x = RANDOM_INT(gp.get(), (App::screenWidth as f32 * 0.95f32) as i32) as i16;
                         let pos = Vec2s::new(x, App::screenHeight as i16);
-                        let nspeed: f32 = -((RANDOM_INT(9) as f32) / 2.0f32) - 9.0f32;
-                        gp.objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(g, Ptr::from_mut(&mut rm.spr_podobo), pos, nspeed, -1, -1, -1, false)));
-                        self.enemytimer = (RANDOM_INT(80) + 60) as i16;
+                        let nspeed: f32 = -((RANDOM_INT(gp.get(), 9) as f32) / 2.0f32) - 9.0f32;
+                        let obj = Ptr::new_box(MO_Podobo::new(g, Ptr::from_mut(&mut rm.spr_podobo), pos, nspeed, -1, -1, -1, false));
+                        gp.objectcontainer[2].add(g, obj);
+                        self.enemytimer = (RANDOM_INT(gp.get(), 80) + 60) as i16;
                     }
 
                     self.poweruptimer -= 1;
                     if self.poweruptimer <= 0 {
-                        self.poweruptimer = (RANDOM_INT(80) + 60) as i16;
+                        self.poweruptimer = (RANDOM_INT(gp.get(), 80) + 60) as i16;
 
                         if g.objectcontainer[1].count_types(object_frenzycard) < g.players.len() {
-                            gp.get().objectcontainer[1].add(Ptr::new_box(MO_FrenzyCard::new(g, Ptr::from_mut(&mut gp.get().rm.spr_frenzycards), 0)));
+                            let obj = Ptr::new_box(MO_FrenzyCard::new(g, Ptr::from_mut(&mut gp.get().rm.spr_frenzycards), 0));
+                            gp.get().objectcontainer[1].add(g, obj);
                         }
                     }
                 }
@@ -196,7 +199,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
             if !self.playedwarningsound {
                 let mut countscore: i16 = 0;
                 unsafe {
-                    for k in 0..game().score_cnt as usize {
+                    for k in 0..g.score_cnt as usize {
                         countscore = countscore.wrapping_add(g.score[k].score);
                     }
                 }
@@ -224,7 +227,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
             if !self.playedwarningsound {
                 let mut countscore: i16 = 0;
                 unsafe {
-                    for k in 0..game().score_cnt as usize {
+                    for k in 0..g.score_cnt as usize {
                         countscore = countscore.wrapping_add(g.score[k].score);
                     }
                 }

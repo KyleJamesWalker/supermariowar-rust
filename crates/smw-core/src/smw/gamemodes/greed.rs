@@ -60,11 +60,12 @@ fn drop_coins(g: &mut Game, player: Ptr<CPlayer>, iDamage: i16, pos: Vec2s) {
         let mut gp = g.ptr();
     unsafe {
         for _k in 0..iDamage {
-            let speed: f32 = 7.0f32 + (RANDOM_INT(9) as f32) / 2.0f32;
-            let angle: f32 = -(RANDOM_INT(314) as f32) / 100.0f32;
+            let speed: f32 = 7.0f32 + (RANDOM_INT(gp.get(), 9) as f32) / 2.0f32;
+            let angle: f32 = -(RANDOM_INT(gp.get(), 314) as f32) / 100.0f32;
             let vel: Vec2f = Vec2f::new(speed * cosf(angle), speed * sinf(angle));
 
-            gp.get().objectcontainer[1].add(Ptr::new_box(MO_Coin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), vel, pos, player.get_color_id(), player.get_team_id(), 1, 30, false)));
+            let obj = Ptr::new_box(MO_Coin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), vel, pos, player.get_color_id(), player.get_team_id(), 1, 30, false));
+            gp.get().objectcontainer[1].add(g, obj);
         }
     }
 }
@@ -111,9 +112,9 @@ impl CGM_Greed {
             //Play warning sound if game is almost over
             if self.goal != -1 && !self.playedwarningsound {
                 let mut playwarning = false;
-                for j in 0..game().score_cnt {
+                for j in 0..g.score_cnt {
                     let mut countscore: i16 = 0;
-                    for k in 0..game().score_cnt {
+                    for k in 0..g.score_cnt {
                         if j == k {
                             continue;
                         }
@@ -152,7 +153,7 @@ impl CGameModeTrait for CGM_Greed {
         let iGoal: i16 = if self.goal == -1 { 0 } else { self.goal };
 
         unsafe {
-            for iScore in 0..game().score_cnt {
+            for iScore in 0..g.score_cnt {
                 gp.score[iScore as usize].set_score(g, iGoal);
             }
         }

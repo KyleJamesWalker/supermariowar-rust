@@ -48,7 +48,7 @@ pub fn net_place(g: &mut Game, mut obj: Ptr<dyn CObjectTrait>, extra: i32) {
 }
 
 /// `net_random::Ev::Wander`: takes the game host's position and heading, then turns as the host did.
-pub fn net_wander(mut obj: Ptr<dyn CObjectTrait>, args: &[i32]) {
+pub fn net_wander(g: &mut Game, mut obj: Ptr<dyn CObjectTrait>, args: &[i32]) {
     if obj.is_null() {
         return;
     }
@@ -58,16 +58,16 @@ pub fn net_wander(mut obj: Ptr<dyn CObjectTrait>, args: &[i32]) {
         o.set_xf(fx);
         o.set_yf(fy);
         o.angle = angle;
-        o.change_angle();
+        o.change_angle(g);
     } else if let Some(o) = any.downcast_mut::<overmap::wo_race_goal::OMO_RaceGoal>() {
         o.set_xf(fx);
         o.set_yf(fy);
         o.angle = angle;
-        o.change_angle();
+        o.change_angle(g);
     } else if let Some(o) = any.downcast_mut::<overmap::wo_phanto::OMO_Phanto>() {
         o.set_xf(fx);
         o.set_yf(fy);
-        o.change_speed();
+        o.change_speed(g);
     }
 }
 

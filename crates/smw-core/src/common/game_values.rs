@@ -705,7 +705,7 @@ fn catch_runtime_error<R>(f: impl FnOnce() -> R) -> Option<R> {
 impl CGameConfig {
     pub fn read_binary_config(&mut self, g: &mut Game) {
         let ok = catch_runtime_error(|| {
-            let options_path = get_home_directory() + "options.bin";
+            let options_path = get_home_directory(g) + "options.bin";
             let mut options = BinaryFile::new(&options_path, "rb");
             if !options.is_open() {
                 throw_runtime_error(&format!("Could not open {}", options_path));
@@ -718,7 +718,7 @@ impl CGameConfig {
         }
 
         catch_runtime_error(|| {
-            let controls_path = get_home_directory() + "controls.sdl2.bin";
+            let controls_path = get_home_directory(g) + "controls.sdl2.bin";
             let mut controls = BinaryFile::new(&controls_path, "rb");
             if !controls.is_open() {
                 throw_runtime_error(&format!("Could not open {}", controls_path));
@@ -1018,7 +1018,7 @@ impl CGameConfig {
     pub fn write_config(&self, g: &mut Game) {
         let mut gp = g.ptr();
         let ok = catch_runtime_error(|| {
-            let options_path = get_home_directory() + "options.bin";
+            let options_path = get_home_directory(g) + "options.bin";
             let mut options = BinaryFile::new(&options_path, "wb");
             if !options.is_open() {
                 throw_runtime_error(&format!("Could not open {}", options_path));
@@ -1031,7 +1031,7 @@ impl CGameConfig {
         }
 
         let ok = catch_runtime_error(|| {
-            let controls_path = get_home_directory() + "controls.sdl2.bin";
+            let controls_path = get_home_directory(g) + "controls.sdl2.bin";
             let mut controls = BinaryFile::new(&controls_path, "wb");
             if !controls.is_open() {
                 throw_runtime_error(&format!("Could not open {}", controls_path));

@@ -185,18 +185,22 @@ pub fn gfx_init(g: &mut Game, w: i32, h: i32, fullscreen: bool) -> bool {
 }
 
 pub fn gfx_changefullscreen(g: &mut Game, fullscreen: bool) {
-    unsafe { g.gfx.change_full_screen(fullscreen) }
+    let mut gp = g.ptr();
+    unsafe { gp.gfx.change_full_screen(g, fullscreen) }
 }
 
 pub fn gfx_flipscreen(g: &mut Game) {
-    unsafe { g.gfx.flip_screen() }
+    let mut gp = g.ptr();
+    unsafe { gp.gfx.flip_screen(g) }
 }
 
 pub fn gfx_settitle(g: &mut Game, title: &str) {
-    unsafe { g.gfx.set_title(title) }
+    let mut gp = g.ptr();
+    unsafe { gp.gfx.set_title(g, title) }
 }
 
 pub fn gfx_show_catched_error(g: &mut Game, error: &str) {
+    let mut gp = g.ptr();
     let mut message = String::from(
         "It seems the game has unexpectedly crashed. If you could tell us\n\
          what happened exactly, we might be able to fix this bug. Consider\n\
@@ -209,7 +213,7 @@ pub fn gfx_show_catched_error(g: &mut Game, error: &str) {
         message += error;
     }
     eprintln!("\n{}", message);
-    unsafe { g.gfx.show_error_box(&message) }
+    unsafe { gp.gfx.show_error_box(g, &message) }
 }
 
 pub fn gfx_take_screenshot(g: &mut Game) {

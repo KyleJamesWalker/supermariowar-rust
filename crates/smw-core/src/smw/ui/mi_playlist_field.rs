@@ -61,6 +61,7 @@ impl UI_ControlTrait for MI_PlaylistField {
     }
 
     fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
+        let mut gp = g.ptr();
         unsafe {
             for iPlayer in 0..4usize {
                 let out = &playerInput.outputControls[iPlayer];
@@ -77,7 +78,7 @@ impl UI_ControlTrait for MI_PlaylistField {
                 }
 
                 if out.menu_random().fPressed {
-                    g.musiclist.random();
+                    gp.musiclist.random(g);
                     restart_menu_music(g);
                     return MENU_CODE_NONE;
                 }

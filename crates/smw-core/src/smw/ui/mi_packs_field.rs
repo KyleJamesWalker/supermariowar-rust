@@ -38,7 +38,7 @@ impl UI_ControlTrait for MI_PacksField {
 
     fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         let iLastIndex = self.list.current_index();
-        let code = self.mi_announcer_field.send_input_impl(playerInput);
+        let code = self.mi_announcer_field.send_input_impl(g, playerInput);
 
         if MENU_CODE_UNSELECT_ITEM == code {
             return code;

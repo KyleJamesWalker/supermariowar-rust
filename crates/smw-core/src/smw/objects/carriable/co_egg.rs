@@ -87,6 +87,7 @@ impl CO_Egg {
     }
 
     pub fn place_egg(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
             return;
         }
@@ -110,7 +111,7 @@ impl CO_Egg {
             let mut y: i16 = 0;
             let mut iAttempts: i16 = 32;
             let (w, h) = (self.collisionWidth, self.collisionHeight);
-            while (!g.g_map.findspawnpoint(5, &mut x, &mut y, w, h, false) || g.objectcontainer[1].get_closest_moving_object(x, y, movingobject_yoshi) < 250.0) && {
+            while (!gp.g_map.findspawnpoint(g, 5, &mut x, &mut y, w, h, false) || g.objectcontainer[1].get_closest_moving_object(x, y, movingobject_yoshi) < 250.0) && {
                 let t = iAttempts;
                 iAttempts -= 1;
                 t > 0
@@ -197,7 +198,7 @@ impl CObjectTrait for CO_Egg {
                     self.explosiondrawtimer = 62;
                     self.explosiondrawframe -= 1;
                     if self.explosiondrawframe < 0 {
-                        gp.objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
+                        let obj = Ptr::new_box(MO_Explosion::new(
                             g,
                             Ptr::from_mut(&mut rm.spr_explosion),
                             Vec2s::new((self.ix as i32 + (self.iw as i32 >> 1) - 96) as i16, (self.iy as i32 + (self.ih as i32 >> 1) - 64) as i16),
@@ -206,7 +207,8 @@ impl CObjectTrait for CO_Egg {
                             -1,
                             -1,
                             KillStyle::Bomb,
-                        )));
+                        ));
+                        gp.objectcontainer[2].add(g, obj);
                         self.place_egg(g);
 
                         if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);

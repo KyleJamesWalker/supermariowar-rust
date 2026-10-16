@@ -15,6 +15,7 @@ use crate::common::game_values::CGameValues;
 use crate::common::gfx::gfx_sdl::GraphicsSDL;
 use crate::common::gfx::gfx_palette::gfxPalette;
 use crate::globals::{Aliased, Global, Ptr};
+use std::sync::atomic::{AtomicPtr, Ordering};
 use crate::leveleditor::leveleditor::LevelEditorState;
 use crate::smw::gamemodes::{bonus_house::CGM_Bonus, mini_boss::CGM_Boss_MiniGame, mini_boxes::CGM_Boxes_MiniGame, mini_pipe::CGM_Pipe_MiniGame};
 use crate::smw::fps_limiter::FPSLimiter;
@@ -219,9 +220,30 @@ impl Game {
     }
 }
 
-static mut GAME: Game = Game::new();
+static GAME: AtomicPtr<Game> = AtomicPtr::new(std::ptr::null_mut());
 
-#[inline(always)]
+impl Game {
+    /// The game an entry point runs: on the heap, for the rest of the process, and what game() returns.
+    pub fn create() -> &'static mut Game {
+        let g = Box::leak(Box::new(Game::new()));
+        GAME.store(g, Ordering::Release);
+        g
+    }
+}
+
+/// The running game, for code with no `g`: Drop impls, fn-pointer callbacks and unit tests.
+#[inline]
 pub fn game() -> Ptr<Game> {
-    Ptr::from_raw(unsafe { std::ptr::addr_of_mut!(GAME) })
+    let p = GAME.load(Ordering::Acquire);
+    if !p.is_null() {
+        return Ptr::from_raw(p);
+    }
+    let fresh = Box::into_raw(Box::new(Game::new()));
+    match GAME.compare_exchange(std::ptr::null_mut(), fresh, Ordering::AcqRel, Ordering::Acquire) {
+        Ok(_) => Ptr::from_raw(fresh),
+        Err(existing) => {
+            drop(unsafe { Box::from_raw(fresh) });
+            Ptr::from_raw(existing)
+        }
+    }
 }

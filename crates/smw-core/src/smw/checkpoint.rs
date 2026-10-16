@@ -200,16 +200,16 @@ impl<A: Field, B: Field, C: Field, D: Field> Field for (A, B, C, D) {
 const HOME_PREFIX: &str = "~settings/";
 
 /// A path for a checkpoint: one in the settings directory relative to it.
-pub fn portable_path(path: &str) -> String {
-    match path.strip_prefix(crate::common::path::get_home_directory().as_str()) {
+pub fn portable_path(g: &mut Game, path: &str) -> String {
+    match path.strip_prefix(crate::common::path::get_home_directory(g).as_str()) {
         Some(rest) => format!("{}{}", HOME_PREFIX, rest),
         None => path.to_string(),
     }
 }
 
-pub fn local_path(path: &str) -> String {
+pub fn local_path(g: &mut Game, path: &str) -> String {
     match path.strip_prefix(HOME_PREFIX) {
-        Some(rest) => crate::common::path::get_home_directory() + rest,
+        Some(rest) => crate::common::path::get_home_directory(g) + rest,
         None => path.to_string(),
     }
 }
@@ -271,7 +271,6 @@ pub fn restore(g: &mut Game, bytes: Vec<u8>) -> Result<(), String> {
 
 /// Saves or restores every part of the checkpoint, in the order a restore must apply them.
 fn walk(g: &mut Game, s: &mut Snap, online: bool) {
-        let mut gp = g.ptr();
         let mut gp = g.ptr();
     unsafe {
         let gv = &mut *gp.get().game_values;
@@ -411,11 +410,11 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
         GameplayState::instance(g).checkpoint(s);
 
         // The map and the music the menu chose. A net game's joiner plays the host's map from its settings directory.
-        let mut map = portable_path(&g.match_map);
+        let mut map = portable_path(g, &gp.match_map);
         let mut map_index = g.maplist.get_current();
         s.io(&mut map);
         s.io(&mut map_index);
-        map = local_path(&map);
+        map = local_path(g, &map);
         if s.load {
             g.maplist.set_current(map_index);
             let path = data_path(g, &map);
@@ -488,16 +487,16 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
             mixer::restore(g, &channels, &mixer::Music { track, forever, paused, end, remaining }, resume);
         }
 
-        let rng = crate::common::random_number_generator::RandomNumberGenerator::generator();
+        let rng = crate::common::random_number_generator::RandomNumberGenerator::generator(gp.get());
         let (state, index) = rng.state_mut();
         s.io(state);
         s.io(index);
-        let mut calls = RandomNumberGenerator::call_count();
-        let mut last = RandomNumberGenerator::last_value();
+        let mut calls = RandomNumberGenerator::call_count(gp.get());
+        let mut last = RandomNumberGenerator::last_value(gp.get());
         s.io(&mut calls);
         s.io(&mut last);
         if s.load {
-            RandomNumberGenerator::set_counters(calls, last);
+            RandomNumberGenerator::set_counters(gp.get(), calls, last);
         }
 
         // Sound commands of this frame so far, which belong to its dump block.
@@ -549,7 +548,7 @@ pub fn start_fields(g: &mut Game) -> String {
         let short = Path::new(&map).file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
         let short = short.split_once('_').map(|(_, rest)| rest.to_string()).unwrap_or(short);
         f.push(kv("map", &short));
-        f.push(kv("file", &portable_path(&map)));
+        f.push(kv("file", &portable_path(g, &map)));
         match gv.matchtype {
             MatchType::Tournament => {
                 let played: i16 = gv.tournament_scores.iter().map(|t| t.wins).sum();
@@ -592,9 +591,10 @@ pub fn start_fields(g: &mut Game) -> String {
 
 /// The result fields of a match's later markers.
 pub fn result_fields(g: &mut Game) -> String {
+    let mut gp = g.ptr();
     unsafe {
         let gm = g.game_values.gamemode;
-        let scores: Vec<String> = (0..game().score_cnt.max(0) as usize).map(|k| g.score[k].score.to_string()).collect();
+        let scores: Vec<String> = (0..gp.score_cnt.max(0) as usize).map(|k| g.score[k].score.to_string()).collect();
         let mut f = vec![kv("scores", &scores.join(","))];
         if gm.gameover {
             f.push(kv("winner", &if gm.winningteam >= 0 { format!("team{}", gm.winningteam + 1) } else { "tie".to_string() }));

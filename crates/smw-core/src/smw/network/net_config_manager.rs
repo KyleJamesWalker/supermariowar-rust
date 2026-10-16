@@ -56,8 +56,8 @@ fn format_config(player_name: &str, room_name: &str, servers: &[String]) -> Stri
     format!("servers = {}\nplayer_name = {}\n{}\n", array, toml_basic_string(player_name), room)
 }
 
-fn load_file() -> Option<toml::Table> {
-    let Ok(text) = std::fs::read_to_string(get_home_directory() + CONFIG_FILENAME) else {
+fn load_file(g: &mut Game) -> Option<toml::Table> {
+    let Ok(text) = std::fs::read_to_string(get_home_directory(g) + CONFIG_FILENAME) else {
         println!("[net][warning] Could not open {}, using default values.", CONFIG_FILENAME);
         return None;
     };
@@ -155,14 +155,14 @@ impl NetConfigManager {
             let servers: Vec<String> = g.netplay.savedServers.iter().map(|s| s.hostname.clone()).collect();
             let content = format_config(&g.netplay.myPlayerName, &g.netplay.newroom_name, &servers);
 
-            if std::fs::write(get_home_directory() + CONFIG_FILENAME, content).is_err() {
+            if std::fs::write(get_home_directory(g) + CONFIG_FILENAME, content).is_err() {
                 println!("[net][error] Could not save network settings");
             }
         }
     }
 
     pub fn load(&mut self, g: &mut Game) {
-        let Some(config) = load_file() else {
+        let Some(config) = load_file(g) else {
             return;
         };
 

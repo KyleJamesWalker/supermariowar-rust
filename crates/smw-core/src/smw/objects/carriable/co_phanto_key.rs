@@ -53,6 +53,7 @@ impl CO_PhantoKey {
     }
 
     pub fn place_key(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
             return;
         }
@@ -63,7 +64,7 @@ impl CO_PhantoKey {
         let mut y: i16 = 0;
         let mut iAttempts: i16 = 10;
         let (w, h) = (self.collisionWidth, self.collisionHeight);
-        while !unsafe { g.g_map.findspawnpoint(5, &mut x, &mut y, w, h, false) } && {
+        while !unsafe { gp.g_map.findspawnpoint(g, 5, &mut x, &mut y, w, h, false) } && {
             let t = iAttempts;
             iAttempts -= 1;
             t > 0

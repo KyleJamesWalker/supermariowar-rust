@@ -28,12 +28,13 @@ impl IO_BulletBillCannon {
         let mut gp = g.ptr();
         let mut this = IO_BulletBillCannon { cobject: CObject::new(gp.get(), Ptr::null(), pos), m_freq: freq, m_timer: 0, m_vel: vel, m_preview: preview };
         this.objectType = object_bulletbillcannon;
-        this.set_new_timer();
+        this.set_new_timer(g);
         this
     }
 
-    fn set_new_timer(&mut self) {
-        self.m_timer = (self.m_freq as i32 + RANDOM_INT(self.m_freq as i32)) as i16;
+    fn set_new_timer(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        self.m_timer = (self.m_freq as i32 + RANDOM_INT(gp.get(), self.m_freq as i32)) as i16;
     }
 }
 
@@ -57,11 +58,11 @@ impl CObjectTrait for IO_BulletBillCannon {
 impl IO_BulletBillCannon {
     pub fn fire(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        self.set_new_timer();
+        self.set_new_timer(g);
 
         let pos = Vec2s::new((self.ix as i32 + if self.m_vel < 0.0f32 { 32 } else { -32 }) as i16, self.iy);
         unsafe {
-            gp.get().objectcontainer[1].add(Ptr::new_box(MO_BulletBill::new(
+            let obj = Ptr::new_box(MO_BulletBill::new(
                 g,
                 Ptr::from_mut(&mut gp.get().rm.spr_hazard_bulletbill[if self.m_preview { 1 } else { 0 }]),
                 Ptr::from_mut(&mut gp.get().rm.spr_hazard_bulletbilldead),
@@ -69,7 +70,8 @@ impl IO_BulletBillCannon {
                 self.m_vel,
                 0,
                 true,
-            )));
+            ));
+            gp.get().objectcontainer[1].add(g, obj);
             if_sound_on_play(g, &mut gp.rm.sfx_bulletbillsound);
         }
     }

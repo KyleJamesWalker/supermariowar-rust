@@ -139,7 +139,7 @@ fn spawn_special_powerup(g: &mut Game, r#type: i16, spawnPos: Vec2s) -> Spawned 
             TIME_POWERUP => new_powerup(PU_ExtraTimePowerup::new(g, Ptr::from_mut(&mut rm.spr_extratimepowerup), spawnPos)),
             JAIL_KEY_POWERUP => new_powerup(PU_JailKeyPowerup::new(g, Ptr::from_mut(&mut rm.spr_jailkeypowerup), spawnPos)),
             COIN_POWERUP => {
-                let iRandCoin = RANDOM_INT(9) as i16;
+                let iRandCoin = RANDOM_INT(gp.get(), 9) as i16;
                 let mut color = CoinColor::Yellow;
 
                 if iRandCoin == 8 {
@@ -234,7 +234,7 @@ pub fn createpowerup(g: &mut Game, iType: i16, pos: Vec2s, side: bool, spawn: bo
     let mut rm = g.rm;
     unsafe {
         crate::smw::harness::note_powerup_spawn(g, iType, pos.x, pos.y);
-        crate::smw::net_random::note_powerup(iType);
+        crate::smw::net_random::note_powerup(g, iType);
         let specialPos = pos + Vec2s::new(1, -1);
 
         let mut spawned = Spawned::None;
@@ -248,12 +248,12 @@ pub fn createpowerup(g: &mut Game, iType: i16, pos: Vec2s, side: bool, spawn: bo
         match spawned {
             Spawned::Coin(coin) => {
                 if_sound_on_play(g, &mut gp.rm.sfx_coin);
-                if g.objectcontainer[1].add(coin) {
+                if gp.objectcontainer[1].add(g, coin) {
                     return as_moving(coin);
                 }
             }
             Spawned::Powerup(mut powerup) => {
-                if g.objectcontainer[0].add_dyn(Ptr::from_raw(powerup.as_ptr() as *mut dyn CObjectTrait)) {
+                if gp.objectcontainer[0].add_dyn(g, Ptr::from_raw(powerup.as_ptr() as *mut dyn CObjectTrait)) {
                     if !spawn {
                         powerup.nospawn(pos.y);
                         io_moving_object_collision_detection_checksides(g, powerup.get());
@@ -263,7 +263,7 @@ pub fn createpowerup(g: &mut Game, iType: i16, pos: Vec2s, side: bool, spawn: bo
                 }
             }
             Spawned::Shell(mut shell) => {
-                if g.objectcontainer[1].add(shell) {
+                if gp.objectcontainer[1].add(g, shell) {
                     if !spawn {
                         shell.nospawn(pos.y, true);
                         io_moving_object_collision_detection_checksides(g, shell.get());
@@ -273,7 +273,7 @@ pub fn createpowerup(g: &mut Game, iType: i16, pos: Vec2s, side: bool, spawn: bo
                 }
             }
             Spawned::Feather(mut feather) => {
-                if g.objectcontainer[0].add(feather) {
+                if gp.objectcontainer[0].add(g, feather) {
                     if !spawn {
                         feather.nospawn(pos.y);
                     }
@@ -282,7 +282,7 @@ pub fn createpowerup(g: &mut Game, iType: i16, pos: Vec2s, side: bool, spawn: bo
                 }
             }
             Spawned::Leaf(mut leaf) => {
-                if g.objectcontainer[0].add(leaf) {
+                if gp.objectcontainer[0].add(g, leaf) {
                     if !spawn {
                         leaf.nospawn(pos.y);
                     }
@@ -292,7 +292,7 @@ pub fn createpowerup(g: &mut Game, iType: i16, pos: Vec2s, side: bool, spawn: bo
             }
             Spawned::None => {
                 //If no powerups were selected for this block, then fire out a podobo
-                let dVelY = -(RANDOM_INT(5) as f32 / 2.0) - 6.0;
+                let dVelY = -(RANDOM_INT(gp.get(), 5) as f32 / 2.0) - 6.0;
                 let podobo = Ptr::new_box(MO_Podobo::new(
                     g,
                     Ptr::from_mut(&mut rm.spr_podobo),
@@ -303,7 +303,7 @@ pub fn createpowerup(g: &mut Game, iType: i16, pos: Vec2s, side: bool, spawn: bo
                     -1,
                     true,
                 ));
-                g.objectcontainer[2].add(podobo);
+                gp.objectcontainer[2].add(g, podobo);
                 return as_moving(podobo);
             }
         }
@@ -333,8 +333,8 @@ pub fn check_secret(g: &mut Game, id: i16) {
 pub fn net_check_secret(g: &mut Game, id: i16) {
         let mut gp = g.ptr();
     unsafe {
-        let rx = RANDOM_INT(App::screenWidth) as i16;
-        let ry = RANDOM_INT(App::screenHeight) as i16;
+        let rx = RANDOM_INT(gp.get(), App::screenWidth) as i16;
+        let ry = RANDOM_INT(gp.get(), App::screenHeight) as i16;
         let randomPos = Vec2s::new(rx, ry);
 
         if id == 0 && !g.game_values.unlocksecretunlocked[0] {

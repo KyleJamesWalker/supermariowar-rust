@@ -44,18 +44,19 @@ impl CGameModeTrait for CGM_Eggs {
 
         unsafe {
             for iEggs in 0..4i16 {
-                for iEgg in 0..game().game_values.gamemodesettings.egg.eggs[iEggs as usize] {
+                for iEgg in 0..g.game_values.gamemodesettings.egg.eggs[iEggs as usize] {
                     if iEgg > 9 {
                         break;
                     }
 
                     fEgg[iEggs as usize] = true;
-                    gp.get().objectcontainer[1].add(Ptr::new_box(CO_Egg::new(g, Ptr::from_mut(&mut gp.get().rm.spr_egg), iEggs)));
+                    let obj = Ptr::new_box(CO_Egg::new(g, Ptr::from_mut(&mut gp.get().rm.spr_egg), iEggs));
+                    gp.get().objectcontainer[1].add(g, obj);
                 }
             }
 
             for iYoshis in 0..4i16 {
-                for iYoshi in 0..game().game_values.gamemodesettings.egg.yoshis[iYoshis as usize] {
+                for iYoshi in 0..g.game_values.gamemodesettings.egg.yoshis[iYoshis as usize] {
                     if iYoshi > 9 {
                         break;
                     }
@@ -64,13 +65,16 @@ impl CGameModeTrait for CGM_Eggs {
                         fAtLeastOneMatch = true;
                     }
 
-                    gp.get().objectcontainer[1].add(Ptr::new_box(MO_Yoshi::new(g, Ptr::from_mut(&mut gp.get().rm.spr_yoshi), iYoshis)));
+                    let obj = Ptr::new_box(MO_Yoshi::new(g, Ptr::from_mut(&mut gp.get().rm.spr_yoshi), iYoshis));
+                    gp.get().objectcontainer[1].add(g, obj);
                 }
             }
 
             if !fAtLeastOneMatch {
-                gp.get().objectcontainer[1].add(Ptr::new_box(CO_Egg::new(g, Ptr::from_mut(&mut gp.get().rm.spr_egg), 1)));
-                gp.get().objectcontainer[1].add(Ptr::new_box(MO_Yoshi::new(g, Ptr::from_mut(&mut gp.get().rm.spr_yoshi), 1)));
+                let obj = Ptr::new_box(CO_Egg::new(g, Ptr::from_mut(&mut gp.get().rm.spr_egg), 1));
+                gp.get().objectcontainer[1].add(g, obj);
+                let obj = Ptr::new_box(MO_Yoshi::new(g, Ptr::from_mut(&mut gp.get().rm.spr_yoshi), 1));
+                gp.get().objectcontainer[1].add(g, obj);
             }
         }
     }

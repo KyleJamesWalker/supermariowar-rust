@@ -18,11 +18,12 @@ use crate::smw::objects::overmap::wo_straight_path_hazard::OMO_StraightPathHazar
 use sdl2::sys::SDL_Rect;
 
 #[cfg(not(target_os = "emscripten"))]
-fn small_delay() {
-    crate::services::delay(10);
+fn small_delay(g: &mut Game) {
+    let mut gp = g.ptr();
+    crate::services::delay(gp.get(), 10);
 }
 #[cfg(target_os = "emscripten")]
-fn small_delay() {}
+fn small_delay(_g: &mut Game) {}
 
 /// `strncpy(dst, src, 255); dst[255] = 0;`
 pub(crate) fn copy_map_name(src: &str) -> String {
@@ -94,7 +95,6 @@ impl MI_MapPreview {
 
     pub fn draw_impl(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
         if !self.m_visible {
             return;
         }
@@ -122,7 +122,7 @@ impl MI_MapPreview {
 
             //Draw map hazards
             let (ox, oy) = (self.rectDst.x as i16, self.rectDst.y as i16);
-            for i in 0..game().objectcontainer[1].list().len() {
+            for i in 0..g.objectcontainer[1].list().len() {
                 let mut obj = g.objectcontainer[1].list()[i];
                 let any = obj.as_any();
                 if let Some(hazard) = any.downcast_mut::<OMO_OrbitHazard>() {
@@ -162,25 +162,25 @@ impl MI_MapPreview {
         let mut gp = g.ptr();
         unsafe {
             gp.g_map.load_map(g, szMapPath, read_type_preview);
-            small_delay(); //Sleeps to help the music from skipping
+            small_delay(g); //Sleeps to help the music from skipping
 
             load_current_map_background(g);
-            small_delay();
+            small_delay(g);
 
             gp.get().g_map.pre_draw_preview_background_spr(g, &gp.get().rm.spr_background, self.surfaceMapBackground.get_surface(), false);
-            small_delay();
+            small_delay(g);
 
             gp.g_map.pre_draw_preview_blocks(g, self.surfaceMapBlockLayer.get_surface(), false);
-            small_delay();
+            small_delay(g);
 
             gp.g_map.pre_draw_preview_map_items(g, self.surfaceMapBackground.get_surface(), false);
-            small_delay();
+            small_delay(g);
 
             gp.g_map.pre_draw_preview_foreground(g, self.surfaceMapForeground.get_surface(), false);
-            small_delay();
+            small_delay(g);
 
             gp.get().g_map.pre_draw_preview_warps(g, if gp.get().game_values.toplayer { self.surfaceMapForeground.get_surface() } else { self.surfaceMapBackground.get_surface() }, false);
-            small_delay();
+            small_delay(g);
 
             load_map_hazards(g, true);
         }

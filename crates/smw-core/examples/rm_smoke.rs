@@ -14,39 +14,41 @@ use smw::globals::*;
 use std::path::Path;
 
 fn main() {
-    let data = std::env::args().nth(1).unwrap_or_else(|| concat!(env!("CARGO_MANIFEST_DIR"), "/../../data").to_string());
+    let g = smw::game::Game::create();
 
-    smw::globals::init_globals(game().get());
+    let mut gp = g.ptr();    let data = std::env::args().nth(1).unwrap_or_else(|| concat!(env!("CARGO_MANIFEST_DIR"), "/../../data").to_string());
+
+    smw::globals::init_globals(gp.get());
     unsafe {
-        game().RootDataDirectory = data;
+        gp.RootDataDirectory = data;
 
-        gfx_init(game().get(), 640, 480, false);
-        game().blitdest = game().screen;
-        sfx_init(game().get());
+        gfx_init(gp.get(), 640, 480, false);
+        gp.blitdest = gp.screen;
+        sfx_init(gp.get());
 
-        game().rm = Ptr::new_box(CResourceManager::new());
-        game().skinlist = Ptr::new_box(SkinList::new(game().get()));
-        game().soundpacklist = Ptr::new_box(SoundsList::new());
-        game().menugraphicspacklist = Ptr::new_box(GraphicsList::new());
-        game().worldgraphicspacklist = Ptr::new_box(GraphicsList::new());
-        game().gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
-        game().menugraphicspacklist.set_current_index(0);
-        game().worldgraphicspacklist.set_current_index(0);
-        game().gamegraphicspacklist.set_current_index(0);
-        game().soundpacklist.set_current_index(0);
+        gp.rm = Ptr::new_box(CResourceManager::new());
+        gp.skinlist = Ptr::new_box(SkinList::new(gp.get()));
+        gp.soundpacklist = Ptr::new_box(SoundsList::new(g));
+        gp.menugraphicspacklist = Ptr::new_box(GraphicsList::new(g));
+        gp.worldgraphicspacklist = Ptr::new_box(GraphicsList::new(g));
+        gp.gamegraphicspacklist = Ptr::new_box(GraphicsList::new(g));
+        gp.menugraphicspacklist.set_current_index(0);
+        gp.worldgraphicspacklist.set_current_index(0);
+        gp.gamegraphicspacklist.set_current_index(0);
+        gp.soundpacklist.set_current_index(0);
 
-        let pack = game().gamegraphicspacklist.current_path().to_string_lossy().into_owned();
-        assert!(gfx_loadpalette(game().get(), Path::new(&convert_path_pack(game().get(), "gfx/packs/palette.png", &pack))));
+        let pack = gp.gamegraphicspacklist.current_path().to_string_lossy().into_owned();
+        assert!(gfx_loadpalette(gp.get(), Path::new(&convert_path_pack(gp.get(), "gfx/packs/palette.png", &pack))));
 
-        game().rm.load_start_graphics(game().get());
-        game().rm.load_all_graphics(game().get());
-        let sound = game().rm.load_game_sounds(game().get());
+        gp.get().rm.load_start_graphics(gp.get());
+        gp.get().rm.load_all_graphics(gp.get());
+        let sound = gp.get().rm.load_game_sounds(gp.get());
 
         let mut skins = 0;
-        for k in 0..game().skinlist.count() {
+        for k in 0..gp.skinlist.count() {
             for color in 0..4i16 {
-                let _ = game().rm.load_full_skin(game().get(), k as i16, color);
-                assert!(game().rm.load_menu_skin(game().get(), color, k as i16, color, true), "menu skin {}", k);
+                let _ = gp.get().rm.load_full_skin(gp.get(), k as i16, color);
+                assert!(gp.get().rm.load_menu_skin(gp.get(), color, k as i16, color, true), "menu skin {}", k);
             }
             skins += 1;
         }

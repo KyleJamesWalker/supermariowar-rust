@@ -35,6 +35,7 @@ impl_base!(MO_CheepCheep => io_moving_object: IO_MovingObject);
 
 impl MO_CheepCheep {
     pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>) -> Self {
+        let mut gp = g.ptr();
         let mut o = MO_CheepCheep {
             io_moving_object: IO_MovingObject::new(g, nspr, Vec2s::new(0, App::screenHeight as i16), 2, 8, 30, 28, 1, 3, -1, -1, -1, -1),
             iColorOffsetY: 0,
@@ -42,20 +43,20 @@ impl MO_CheepCheep {
         };
 
         o.ih = 32;
-        o.set_xi(RANDOM_INT(608) as i16);
+        o.set_xi(RANDOM_INT(gp.get(), 608) as i16);
 
         o.velx = 0.0;
         while o.velx == 0.0 {
-            o.velx = (RANDOM_INT(19) - 9) as f32 / 2.0f32;
+            o.velx = (RANDOM_INT(gp.get(), 19) - 9) as f32 / 2.0f32;
         }
 
         // Cheep cheep up velocity is between 9.0 and 13.0 in 0.5 increments
-        o.vely = -(RANDOM_INT(11) as f32 / 2.0f32) - 9.0f32;
+        o.vely = -(RANDOM_INT(gp.get(), 11) as f32 / 2.0f32) - 9.0f32;
 
         o.movingObjectType = movingobject_cheepcheep;
         o.state = 1;
 
-        o.iColorOffsetY = ((RANDOM_INT(3) as i16) as i32 * 64) as i16;
+        o.iColorOffsetY = ((RANDOM_INT(gp.get(), 3) as i16) as i32 * 64) as i16;
 
         if o.velx > 0.0 {
             o.iColorOffsetY += 32;

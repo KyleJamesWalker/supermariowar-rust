@@ -10,8 +10,8 @@ use std::path::Path;
 use std::ptr::null_mut;
 
 
-extern "C" fn sdl_get_ticks() -> u32 {
-    crate::services::ticks()
+fn sdl_get_ticks(g: &mut Game) -> u32 {
+    crate::services::ticks(g)
 }
 
 
@@ -34,7 +34,7 @@ struct VirtualMusic {
 pub struct SfxState {
     pub fResumeMusic: bool,
     // Clock for the sfxSound::play() retrigger throttle; the replay harness swaps it (cpp-harness.patch).
-    pub sfx_ticks: extern "C" fn() -> u32,
+    pub sfx_ticks: fn(&mut Game) -> u32,
     pub sfx_ignore_channel_failure: bool,
     // Not in upstream: a virtual mixer driven by sfx_ticks owns all game-visible sound state in every run, and the
     // audio service plays the same commands as output only (docs/REPLAY.md, "Sound"). Seeded runs log every
@@ -117,9 +117,9 @@ unsafe fn mix_play_channel(g: &mut Game, chunk: Option<SoundId>, duration_ms: u3
         }
         ch.chunk = Some(id);
         ch.forever = loops < 0;
-        ch.end = (sfx_state(gp.get()).sfx_ticks)().wrapping_add(duration_ms.wrapping_mul((loops + 1) as u32));
+        ch.end = (sfx_state(gp.get()).sfx_ticks)(gp.get()).wrapping_add(duration_ms.wrapping_mul((loops + 1) as u32));
         if sfx_state(gp.get()).sfx_audible {
-            services().audio.play(i as u8, id, loops);
+            services(gp.get()).audio.play(i as u8, id, loops);
         }
         return i as i32;
     }
@@ -127,8 +127,9 @@ unsafe fn mix_play_channel(g: &mut Game, chunk: Option<SoundId>, duration_ms: u3
 }
 
 unsafe fn mix_halt_channel(g: &mut Game, channel: i32) {
+    let mut gp = g.ptr();
     if sfx_state(g).sfx_audible {
-        services().audio.halt(if channel < 0 { None } else { Some(channel as u8) });
+        services(gp.get()).audio.halt(if channel < 0 { None } else { Some(channel as u8) });
     }
     for i in 0..sfxSound::k_channels {
         if (channel < 0 || channel == i as i32) && sfx_state(g).v_channels[i].chunk.is_some() {
@@ -139,8 +140,9 @@ unsafe fn mix_halt_channel(g: &mut Game, channel: i32) {
 }
 
 pub fn sfx_virtual_advance(g: &mut Game) {
+    let mut gp = g.ptr();
     unsafe {
-        let now = (sfx_state(g).sfx_ticks)();
+        let now = (sfx_state(g).sfx_ticks)(gp.get());
         for i in 0..sfxSound::k_channels {
             let ch = &mut sfx_state(g).v_channels[i];
             if ch.chunk.is_some() && !ch.forever && now.wrapping_sub(ch.end) as i32 >= 0 {
@@ -165,40 +167,46 @@ pub struct MixMusicPtr(Option<TrackId>);
 
 impl Drop for MixChunkPtr {
     fn drop(&mut self) {
+        let g = crate::game::game().get();
+        let mut gp = g.ptr();
         if let Some(id) = self.0 {
             unsafe {
-                for ch in sfx_state(crate::game::game().get()).v_channels.iter_mut() {
+                for ch in sfx_state(gp.get()).v_channels.iter_mut() {
                     if ch.chunk == Some(id) {
                         ch.chunk = None;
                     }
                 }
             }
-            services().audio.free_sound(id);
+            services(gp.get()).audio.free_sound(id);
         }
     }
 }
 
 impl Drop for MixMusicPtr {
     fn drop(&mut self) {
+        let g = crate::game::game().get();
+        let mut gp = g.ptr();
         if let Some(id) = self.0 {
             unsafe {
-                let sfx = sfx_state(crate::game::game().get());
+                let sfx = sfx_state(gp.get());
                 if sfx.v_music.music == Some(id) {
                     sfx.v_music.music = None;
                 }
             }
-            services().audio.free_track(id);
+            services(gp.get()).audio.free_track(id);
         }
     }
 }
 
 pub fn sfx_init(g: &mut Game) -> bool {
-    unsafe { services().audio.open(sfx_state(g).sfx_audible) };
+    let mut gp = g.ptr();
+    unsafe { services(gp.get()).audio.open(sfx_state(g).sfx_audible) };
     true
 }
 
-pub fn sfx_close() {
-    services().audio.close();
+pub fn sfx_close(g: &mut Game) {
+    let mut gp = g.ptr();
+    services(gp.get()).audio.close();
 }
 
 pub fn sfx_stopallsounds(g: &mut Game) {
@@ -207,23 +215,26 @@ pub fn sfx_stopallsounds(g: &mut Game) {
 }
 
 pub fn sfx_setmusicvolume(g: &mut Game, volume: i32) {
+    let mut gp = g.ptr();
     log_event(g, format!("S musicvolume {}", volume));
-    services().audio.set_music_volume(volume);
+    services(gp.get()).audio.set_music_volume(volume);
 }
 
 pub fn sfx_setsoundvolume(g: &mut Game, volume: i32) {
+    let mut gp = g.ptr();
     log_event(g, format!("S soundvolume {}", volume));
-    services().audio.set_sound_volume(volume);
+    services(gp.get()).audio.set_sound_volume(volume);
 }
 
 #[cfg(target_os = "emscripten")]  // emscripten has sound capabilities
-pub fn sfx_can_play_audio() -> bool {
+pub fn sfx_can_play_audio(_g: &mut Game) -> bool {
     true
 }
 
 #[cfg(not(target_os = "emscripten"))]
-pub fn sfx_can_play_audio() -> bool {
-    services().audio.is_open()
+pub fn sfx_can_play_audio(g: &mut Game) -> bool {
+    let mut gp = g.ptr();
+    services(gp.get()).audio.is_open()
 }
 
 pub struct sfxSound {
@@ -251,13 +262,14 @@ impl sfxSound {
 
     /// Returns `Err` where the C++ throws a `std::string`.
     pub fn from_file(g: &mut Game, path: &Path) -> Result<Self, String> {
+        let mut gp = g.ptr();
         let path_str = path.to_string_lossy().into_owned();
         print!("loading {} ...", path_str);
         let _ = std::io::stdout().flush();
 
         let bytes = std::fs::read(path).map_err(|e| format!("Failed to load {}: {}", path_str, e))?;
         let id = SoundId(new_id(g));
-        let decoded_ms = services().audio.load_sound(id, &bytes).map_err(|e| format!("Failed to load {}: {}", path_str, e))?;
+        let decoded_ms = services(gp.get()).audio.load_sound(id, &bytes).map_err(|e| format!("Failed to load {}: {}", path_str, e))?;
         let name = data_relative(&path_str);
 
         println!(" done");
@@ -272,8 +284,9 @@ impl sfxSound {
     }
 
     pub fn play(&mut self, g: &mut Game) -> bool {
+        let mut gp = g.ptr();
         unsafe {
-            let current_time: u32 = (sfx_state(g).sfx_ticks)();
+            let current_time: u32 = (sfx_state(g).sfx_ticks)(gp.get());
             if (current_time as usize).wrapping_sub(self.m_last_start_time) < 40 {
                 log_event(g, format!("S skip {}", self.m_name));
                 return false;
@@ -351,13 +364,14 @@ impl sfxMusic {
 
     /// Returns `Err` where the C++ throws a `std::string`.
     pub fn from_file(g: &mut Game, path: &Path) -> Result<Self, String> {
+        let mut gp = g.ptr();
         let path_str = path.to_string_lossy().into_owned();
         print!("loading {} ...", path_str);
         let _ = std::io::stdout().flush();
 
         let bytes = std::fs::read(path).map_err(|e| format!("Failed to load {}: {}", path_str, e))?;
         let id = TrackId(new_id(g));
-        let decoded = services().audio.load_track(id, &bytes).map_err(|e| format!("Failed to load {}: {}", path_str, e))?;
+        let decoded = services(gp.get()).audio.load_track(id, &bytes).map_err(|e| format!("Failed to load {}: {}", path_str, e))?;
         let name = data_relative(&path_str);
 
         println!(" done");
@@ -371,16 +385,17 @@ impl sfxMusic {
     }
 
     pub fn play(&mut self, g: &mut Game, fPlayonce: bool, fResume: bool) {
+        let mut gp = g.ptr();
         log_event(g, format!("S music {} once={} resume={}", self.m_name, fPlayonce as i32, fResume as i32));
         unsafe {
             let duration = self.m_duration;
             sfx_state(g).v_music.music = self.m_music.0;
             sfx_state(g).v_music.forever = !fPlayonce || duration <= 0.0;
             sfx_state(g).v_music.paused = false;
-            sfx_state(g).v_music.end = (sfx_state(g).sfx_ticks)().wrapping_add((duration * 1000.0) as u32);
+            sfx_state(g).v_music.end = (sfx_state(g).sfx_ticks)(gp.get()).wrapping_add((duration * 1000.0) as u32);
             if sfx_state(g).sfx_audible {
                 if let Some(id) = self.m_music.0 {
-                    services().audio.play_track(id, fPlayonce);
+                    services(gp.get()).audio.play_track(id, fPlayonce);
                 }
             }
             sfx_state(g).fResumeMusic = fResume;
@@ -388,27 +403,29 @@ impl sfxMusic {
     }
 
     pub fn stop(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         log_event(g, format!("S musicstop {}", self.m_name));
         unsafe {
             sfx_state(g).v_music.music = None;
             if sfx_state(g).sfx_audible {
-                services().audio.stop_track();
+                services(gp.get()).audio.stop_track();
             }
         }
     }
 
     pub fn toggle_pause(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         log_event(g, format!("S musicpause {} paused={}", self.m_name, if self.m_paused { 0 } else { 1 }));
         unsafe {
             if sfx_state(g).sfx_audible {
-                services().audio.pause_track(!self.m_paused);
+                services(gp.get()).audio.pause_track(!self.m_paused);
             }
             if sfx_state(g).v_music.music.is_some() {
                 if self.m_paused && sfx_state(g).v_music.paused {
-                    sfx_state(g).v_music.end = (sfx_state(g).sfx_ticks)().wrapping_add(sfx_state(g).v_music.remaining);
+                    sfx_state(g).v_music.end = (sfx_state(g).sfx_ticks)(gp.get()).wrapping_add(sfx_state(g).v_music.remaining);
                     sfx_state(g).v_music.paused = false;
                 } else if !self.m_paused && !sfx_state(g).v_music.paused {
-                    sfx_state(g).v_music.remaining = sfx_state(g).v_music.end.wrapping_sub((sfx_state(g).sfx_ticks)());
+                    sfx_state(g).v_music.remaining = sfx_state(g).v_music.end.wrapping_sub((sfx_state(g).sfx_ticks)(gp.get()));
                     sfx_state(g).v_music.paused = true;
                 }
             }

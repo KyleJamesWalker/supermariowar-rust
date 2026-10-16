@@ -33,23 +33,25 @@ pub struct OMO_Phanto {
 }
 impl_base!(OMO_Phanto => io_over_map_object: IO_OverMapObject);
 
-pub fn net_return(mut obj: Ptr<dyn crate::common::object_base::CObjectTrait>) {
+pub fn net_return(g: &mut Game, mut obj: Ptr<dyn crate::common::object_base::CObjectTrait>) {
     if !obj.is_null() {
         if let Some(o) = obj.as_any().downcast_mut::<OMO_Phanto>() {
-            o.return_offscreen();
+            o.return_offscreen(g);
         }
     }
 }
 
 impl OMO_Phanto {
-    pub fn change_speed(&mut self) {
+    pub fn change_speed(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         self.iSpeedTimer = 0;
-        self.dReactionSpeed = (0.05f32 + RANDOM_INT(20) as f32 / 100.0f32) * self.dSpeedRatio;
+        self.dReactionSpeed = (0.05f32 + RANDOM_INT(gp.get(), 20) as f32 / 100.0f32) * self.dSpeedRatio;
     }
 
-    pub fn return_offscreen(&mut self) {
-        self.set_xi(RANDOM_INT(App::screenWidth) as i16);
-        let yi = if RANDOM_BOOL() { -(self.ih as i32) - CRUNCHMAX } else { App::screenHeight };
+    pub fn return_offscreen(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        self.set_xi(RANDOM_INT(gp.get(), App::screenWidth) as i16);
+        let yi = if RANDOM_BOOL(gp.get()) { -(self.ih as i32) - CRUNCHMAX } else { App::screenHeight };
         self.set_yi(yi as i16);
     }
 
@@ -105,7 +107,7 @@ impl CObjectTrait for OMO_Phanto {
 
         self.iSpeedTimer += 1;
         if self.iSpeedTimer > 62 && !net_random::object_event(g, Ev::Wander, &net_random::wander_args(self.iNetworkID, self.fx, self.fy, 0.0)) {
-            self.change_speed();
+            self.change_speed(g);
         }
 
         unsafe {
@@ -172,7 +174,7 @@ impl CObjectTrait for OMO_Phanto {
 
                         // Randomly position phanto off screen
                         if !net_random::object_event(g, Ev::PhantoReturn, &[self.iNetworkID]) {
-                            self.return_offscreen();
+                            self.return_offscreen(g);
                         }
                     }
                 }

@@ -764,7 +764,7 @@ impl CResourceManager {
         let mut gp = g.ptr();
         unsafe { g.game_values.soundcapable = false };
 
-        if !sfx_can_play_audio() {
+        if !sfx_can_play_audio(g) {
             return false;
         }
 
