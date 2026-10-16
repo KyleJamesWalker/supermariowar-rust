@@ -15,10 +15,10 @@ tools/replay_video.py ~/Library/Preferences/.smw/replays/<file>.txt --after targ
 tools/replay_clip.py ~/Library/Preferences/.smw/replays/<file>.txt --match 1 -o clip.txt
 tools/replay_video.py clip.txt --after target/release/smw
 
-# Same binary, different settings per side: the sdl2-compat RLE foreground bug
+# The last release against a local build
 tools/replay_video.py tools/replays/cpu_greed.txt --frames 400-1000 --diff \
-    --before target/release/smw --before-env SMW_RLE=1 --label-before "RLE on" \
-    --after target/release/smw --label-after "RLE off"
+    --before v0.0.5 --label-before "v0.0.5" \
+    --after target/release/smw --label-after "local"
 
 # The C++ reference against the port
 tools/replay_video.py tools/replays/start_classic.txt --diff \
@@ -32,7 +32,7 @@ tools/replay_video.py tools/replays/start_classic.txt --diff \
 | `--frames a-b` | Render only game frames `a..=b`; the game stops after `b`. |
 | `--speed x` | Playback speed. At 2 and above it also keeps only every `int(x)`th frame. |
 | `--diff` | Adds a panel with the differing pixels in red over the dimmed after frame, and prints the differing frame ranges. |
-| `--before-env`, `--after-env K=V` | Extra environment for one side, e.g. `SMW_RLE=1`. Repeatable. |
+| `--before-env`, `--after-env K=V` | Extra environment for one side, e.g. `SMW_SEED=2`. Repeatable. |
 | `--before-data`, `--after-data` | Data directory for a binary. Default: the nearest `data/` above the binary, else `$SMW_REF_DIR/data`. |
 | `--label-before`, `--label-after` | Panel labels (default: the rev or binary name and the extra env). |
 | `--scale n` | Nearest-neighbour scale (default 2). |

@@ -8,7 +8,7 @@
 //   WEB_DIR / WEB_PAGE  another web build and its page (default: dist/web, index.html). It must be
 //            linked with -sEXPORTED_RUNTIME_METHODS=ENV,FS.
 //   SMW_SEED / SMW_FRAMES / SMW_MAP / SMW_SHOT_FRAMES override the replay's directives.
-//   SMW_RLE and SMW_SEGMENT are passed through to the game.
+//   SMW_SEGMENT is passed through to the game.
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -46,7 +46,6 @@ const env = {
     SMW_DUMP: '/dump.txt',
     SMW_SHOT_FRAMES: process.env.SMW_SHOT_FRAMES ?? directive('shots'),
     SMW_SHOT_DIR: '/shots',
-    SMW_RLE: process.env.SMW_RLE ?? '',
     SMW_SEGMENT: process.env.SMW_SEGMENT ?? '',
 };
 // The settings files the game reads from $HOME, kept apart from the page's IndexedDB-backed settings directory:

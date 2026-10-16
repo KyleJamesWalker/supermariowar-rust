@@ -47,8 +47,6 @@ The repository is a Cargo workspace with one `Cargo.lock` at the root, and every
 | `smw`, `leveleditor`, `worldeditor`, `smw_server` | `apps/<name>/` | one package per binary |
 | `smw_relay` | `apps/smw_relay/` | the WebSocket lobby and relay for [browser multiplayer](#browser-multiplayer) |
 
-Native builds draw without SDL surface RLE, which on Homebrew's sdl2-compat costs most of the frame time and shows the map foreground's colour key (`docs/sdl2-compat-rle.md`); the web build keeps it. `SMW_RLE=1` or `SMW_RLE=0` overrides at launch.
-
 ## Anbernic (muOS)
 
 Each `v*` release carries `SuperMarioWar-<version>.muxapp`, a one-file install for Anbernic handhelds running muOS: copy it to the SD card's `ARCHIVE/` folder and install it with Applications > Archive Manager. [`device/muos/README.md`](device/muos/README.md) covers installing, controls, where settings, recordings and logs go, troubleshooting and building the package.
