@@ -92,19 +92,30 @@ jobs:
       - name: cargo test
         run: cargo test --locked --workspace --exclude smw_relay ${{ matrix.profile == 'release' && '--release' || '' }}
 
+  net:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - uses: ./.github/actions/setup-native
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo build --release --locked --bin smw --bin smw_server --example net_interop
+
       - name: Lobby connect stress
-        if: matrix.os == 'ubuntu-24.04' && matrix.profile == 'release'
         run: tools/ref/net_connect_stress.sh 20
 
       - name: Net games, recorded and replayed offline
-        if: matrix.os == 'ubuntu-24.04' && matrix.profile == 'release'
         env:
           SDL_RENDER_DRIVER: software
           NET_GAME_WORK: ${{ runner.temp }}/net-games
         run: timeout 20m tools/ref/net_game_interop.sh
 
       - name: Upload net game logs
-        if: failure() && matrix.os == 'ubuntu-24.04' && matrix.profile == 'release'
+        if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: net-game-logs
