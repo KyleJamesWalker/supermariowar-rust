@@ -27,7 +27,6 @@ use crate::common::version::Version;
 use crate::globals::{Aliased, Ptr};
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::player::CPlayer;
-use sdl2::sys::*;
 use std::ffi::{CStr, CString};
 use std::io::Write;
 use std::ptr::{null, null_mut};
@@ -224,10 +223,6 @@ fn small_delay(g: &mut Game) {
 }
 #[cfg(target_os = "emscripten")]
 fn small_delay(_g: &mut Game) {}
-
-fn sdl_error() -> String {
-    unsafe { CStr::from_ptr(SDL_GetError()).to_string_lossy().into_owned() }
-}
 
 fn get_screen_width(iSize: i32) -> i32 {
     match iSize {

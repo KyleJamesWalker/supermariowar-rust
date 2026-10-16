@@ -17,7 +17,6 @@ use crate::globals::{Aliased, Ptr};
 use crate::smw::objectgame::removeifprojectile;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::player::CPlayer;
-use sdl2::sys::*;
 use std::ffi::CStr;
 use std::ptr::{null, null_mut};
 

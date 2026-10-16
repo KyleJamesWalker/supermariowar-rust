@@ -4,47 +4,14 @@ use crate::common::gfx::soft_surface::{alloc_surface, free_surface, Surface};
 use crate::game::Game;
 use crate::common::path::convert_path;
 use crate::globals::*;
-use sdl2::sys::image::{IMG_Init, IMG_InitFlags_IMG_INIT_PNG, IMG_Linked_Version, IMG_Quit};
-use sdl2::sys::*;
-use std::ffi::{CStr, CString};
 use crate::services::services;
 use smw_platform::Frame;
+use std::ffi::CString;
 use std::ptr::null_mut;
 
 pub const GFX_BPP: i32 = 16;
 pub const GFX_SCREEN_W: i32 = 640;
 pub const GFX_SCREEN_H: i32 = 480;
-
-fn sdl_error() -> String {
-    unsafe { CStr::from_ptr(SDL_GetError()).to_string_lossy().into_owned() }
-}
-
-fn throw_error(msg: String) -> ! {
-    panic!("{}", msg)
-}
-
-unsafe fn init_sdl() {
-    if SDL_Init(SDL_INIT_VIDEO) < 0 {
-        throw_error(format!("SDL error: {}", sdl_error()));
-    }
-
-    let mut sdl_version = SDL_version { major: 0, minor: 0, patch: 0 };
-    SDL_GetVersion(&mut sdl_version);
-    println!("[gfx] SDL {}.{}.{} loaded.", sdl_version.major, sdl_version.minor, sdl_version.patch);
-
-    let IMG_FLAGS = IMG_InitFlags_IMG_INIT_PNG as i32;
-    if (IMG_Init(IMG_FLAGS) & IMG_FLAGS) != IMG_FLAGS {
-        throw_error(format!("SDL_image error: {}\n", CStr::from_ptr(SDL_GetError()).to_string_lossy()));
-    }
-
-    let img_version = &*IMG_Linked_Version();
-    println!("[gfx] SDL_image {}.{}.{} loaded.", img_version.major, img_version.minor, img_version.patch);
-}
-
-unsafe fn quit_sdl() {
-    IMG_Quit();
-    SDL_Quit();
-}
 
 fn create_screen_surface() -> *mut Surface {
     alloc_surface(Surface::new(GFX_SCREEN_W, GFX_SCREEN_H))
@@ -67,8 +34,6 @@ impl Drop for GraphicsSDL {
     fn drop(&mut self) {
         unsafe {
             free_surface(self.sdl_screen_surface);
-
-            quit_sdl();
         }
     }
 }
@@ -81,8 +46,6 @@ impl GraphicsSDL {
     pub fn init(&mut self, g: &mut Game, fullscreen: bool) -> bool {
         let mut gp = g.ptr();
         unsafe {
-            init_sdl();
-
             services(gp.get()).video.open(fullscreen);
             self.sdl_screen_surface = create_screen_surface();
 
