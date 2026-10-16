@@ -189,7 +189,8 @@ pub fn gfx_changefullscreen(g: &mut Game, fullscreen: bool) {
 }
 
 pub fn gfx_flipscreen(g: &mut Game) {
-    unsafe { g.gfx.flip_screen() }
+    let mut gp = g.ptr();
+    unsafe { gp.gfx.flip_screen(g) }
 }
 
 pub fn gfx_settitle(g: &mut Game, title: &str) {

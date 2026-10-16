@@ -110,14 +110,14 @@ impl GraphicsSDL {
         services().video.set_title(title);
     }
 
-    pub fn flip_screen(&self) {
+    pub fn flip_screen(&self, g: &mut Game) {
         let pixels = unsafe {
             let s = &*self.sdl_screen_surface;
             debug_assert_eq!(s.pitch, GFX_SCREEN_W * 4);
             std::slice::from_raw_parts(s.pixels as *const u32, (GFX_SCREEN_W * GFX_SCREEN_H) as usize)
         };
         #[cfg(not(target_os = "emscripten"))]
-        let overlay = crate::smw::touch::overlay();
+        let overlay = crate::smw::touch::overlay(g);
         #[cfg(target_os = "emscripten")]
         let overlay: Option<smw_platform::Overlay> = Option::None;
         services().video.present(Frame { pixels }, overlay.as_ref());

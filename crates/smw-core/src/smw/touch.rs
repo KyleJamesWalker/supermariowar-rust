@@ -367,8 +367,8 @@ impl TouchState {
     }
 }
 
-fn st() -> &'static mut TouchState {
-    &mut crate::game::game().get().touch
+fn st(g: &mut Game) -> &mut TouchState {
+    &mut g.touch
 }
 static CUTOUTS: std::sync::Mutex<Vec<Rect>> = std::sync::Mutex::new(Vec::new());
 
@@ -398,33 +398,36 @@ pub fn init(g: &mut Game) {
     unsafe {
         let pads = gp.joystickcount > 0;
         let live = std::env::var_os("SMW_TOUCH").is_some() && !crate::smw::harness::replaying(g);
-        st().debug = std::env::var_os("SMW_DEBUG_INPUT").is_some();
-        st().session_on = live || crate::smw::harness::replay_touch(g);
-        st().first = st().session_on && !pads;
+        st(gp.get()).debug = std::env::var_os("SMW_DEBUG_INPUT").is_some();
+        st(gp.get()).session_on = live || crate::smw::harness::replay_touch(g);
+        st(gp.get()).first = st(gp.get()).session_on && !pads;
         if live {
             crate::smw::harness::record_touch(g);
-            st().touch = Some(Touch { controls: Controls::new(load_mode(), Layout::default()), visible: !pads, alpha: if pads { 0.0 } else { 1.0 }, cutouts: Vec::new(), images: None, generation: 0 });
+            st(gp.get()).touch = Some(Touch { controls: Controls::new(load_mode(), Layout::default()), visible: !pads, alpha: if pads { 0.0 } else { 1.0 }, cutouts: Vec::new(), images: None, generation: 0 });
             println!("[touch] on, {}", if pads { "hidden while a pad is connected" } else { "player 1" });
         }
     }
 }
 
 /// Whether this session has the touch controls, live or in the recording being replayed.
-pub fn session() -> bool {
-    unsafe { st().session_on }
+pub fn session(g: &mut Game) -> bool {
+    let mut gp = g.ptr();
+    unsafe { st(gp.get()).session_on }
 }
 
 /// Whether the touch keys (the right keyboard set) go to player 1 ahead of the pads: touch is on and no pad was
 /// connected at launch. Replays read it from the recording, so it must not depend on anything later.
-pub fn touch_first() -> bool {
-    unsafe { st().first }
+pub fn touch_first(g: &mut Game) -> bool {
+    let mut gp = g.ptr();
+    unsafe { st(gp.get()).first }
 }
 
 /// False: drop the event. Called before the recorder sees the event.
-pub fn filter(event: &SDL_Event) -> bool {
+pub fn filter(g: &mut Game, event: &SDL_Event) -> bool {
+    let mut gp = g.ptr();
     use SDL_EventType::*;
     unsafe {
-        let Some(t) = st().touch.as_mut() else { return true };
+        let Some(t) = st(gp.get()).touch.as_mut() else { return true };
         let ty = event.type_;
         if ty == SDL_FINGERDOWN as u32 || ty == SDL_FINGERMOTION as u32 || ty == SDL_FINGERUP as u32 {
             let l = t.controls.layout;
@@ -433,7 +436,7 @@ pub fn filter(event: &SDL_Event) -> bool {
             }
             let f = event.tfinger;
             let (x, y) = (f.x * l.w, f.y * l.h);
-            if st().debug {
+            if st(gp.get()).debug {
                 println!("[touch] finger {} type {:#x} at {:.0},{:.0} of {}x{}", f.fingerId, ty, x, y, l.w, l.h);
             }
             if ty == SDL_FINGERDOWN as u32 {
@@ -446,7 +449,7 @@ pub fn filter(event: &SDL_Event) -> bool {
             }
             return false;
         }
-        let other_input = (ty == SDL_KEYDOWN as u32 && !st().pushing && event.key.keysym.sym != SDL_KeyCode::SDLK_AC_BACK as i32)
+        let other_input = (ty == SDL_KEYDOWN as u32 && !st(gp.get()).pushing && event.key.keysym.sym != SDL_KeyCode::SDLK_AC_BACK as i32)
             || ty == SDL_JOYBUTTONDOWN as u32
             || (ty == SDL_JOYHATMOTION as u32 && event.jhat.value != 0)
             || (ty == SDL_JOYAXISMOTION as u32 && (event.jaxis.value as i32).abs() > 16384);
@@ -459,13 +462,14 @@ pub fn filter(event: &SDL_Event) -> bool {
 }
 
 /// Pushes the keys the fingers changed. Not from inside an event filter.
-pub fn flush() {
+pub fn flush(g: &mut Game) {
+    let mut gp = g.ptr();
     unsafe {
-        let Some(t) = st().touch.as_mut() else { return };
+        let Some(t) = st(gp.get()).touch.as_mut() else { return };
         if SDL_GetKeyboardFocus().is_null() {
             t.controls.release_all();
         }
-        st().pushing = true;
+        st(gp.get()).pushing = true;
         for (key, down) in std::mem::take(&mut t.controls.queue) {
             let mut event: SDL_Event = std::mem::zeroed();
             event.key.type_ = if down { SDL_EventType::SDL_KEYDOWN } else { SDL_EventType::SDL_KEYUP } as u32;
@@ -474,7 +478,7 @@ pub fn flush() {
             event.key.keysym.scancode = SDL_GetScancodeFromKey(key.sym());
             smw_sdl2::events::push(&mut event);
         }
-        st().pushing = false;
+        st(gp.get()).pushing = false;
         for (x, y) in std::mem::take(&mut t.controls.taps) {
             smw_sdl2::events::push(&mut smw_sdl2::input::to_sdl(&Input { timestamp: 0, event: InputEvent::Tap { x, y } }));
         }
@@ -482,9 +486,10 @@ pub fn flush() {
 }
 
 /// What to draw over the presented frame, outside the game's 640x480 logical viewport.
-pub fn overlay() -> Option<Overlay> {
+pub fn overlay(g: &mut Game) -> Option<Overlay> {
+    let mut gp = g.ptr();
     unsafe {
-        let t = st().touch.as_mut()?;
+        let t = st(gp.get()).touch.as_mut()?;
         let video = &crate::services::services().video;
         let (w, h) = video.output_size();
         if w <= 0 || h <= 0 {

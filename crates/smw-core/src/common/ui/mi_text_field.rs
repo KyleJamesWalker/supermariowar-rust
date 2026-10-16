@@ -30,9 +30,9 @@ pub fn note_opener(g: &mut Game, keyboard: bool) {
     unsafe { g.text_field_opened_by_key = keyboard };
 }
 
-fn touch_session() -> bool {
+fn touch_session(g: &mut Game) -> bool {
     #[cfg(not(target_os = "emscripten"))]
-    return crate::smw::touch::session();
+    return crate::smw::touch::session(g);
     #[cfg(target_os = "emscripten")]
     false
 }
@@ -370,7 +370,7 @@ impl UI_ControlTrait for MI_TextField {
 
         self.miModifyCursor.set_visible(modify);
         self.fModifying = modify;
-        self.fOsk = modify && (touch_session() || unsafe { !g.text_field_opened_by_key });
+        self.fOsk = modify && (touch_session(g) || unsafe { !g.text_field_opened_by_key });
         self.iOskRow = 0;
         self.iOskCol = 0;
         self.fOskShift = false;

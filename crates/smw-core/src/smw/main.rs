@@ -133,6 +133,7 @@ unsafe fn web_quit_if_done(g: &mut Game) {
 }
 
 unsafe extern "C-unwind" fn gameloop_frame() {
+    let g = game().get();
     #[cfg(not(target_os = "emscripten"))]
     use crate::smw::pad::phase;
     #[cfg(target_os = "emscripten")]
@@ -143,7 +144,7 @@ unsafe extern "C-unwind" fn gameloop_frame() {
 
     assign_hotplugged(game().get());
     #[cfg(not(target_os = "emscripten"))]
-    crate::smw::touch::flush();
+    crate::smw::touch::flush(g);
     harness::frame_start(game().get());
     phase(5);
     GameStateManager::instance(game().get()).currentState.get().update(game().get());
@@ -246,7 +247,7 @@ fn assign_inputs(g: &mut Game) {
         #[cfg(target_os = "emscripten")]
         let mut pads: Vec<usize> = (0..game().joystickcount.max(0) as usize).filter(|k| !g.main_loop.web_removed.contains(k)).collect();
         pads.retain(|&k| k < MAX_PLAYERS as usize);
-        let touch_session = touch_session();
+        let touch_session = touch_session(g);
         if pads.is_empty() && !touch_session {
             if let Ok(text) = std::fs::read_to_string(&marker) {
                 let saved: Vec<i16> = text.split_whitespace().filter_map(|v| v.parse().ok()).collect();
@@ -267,7 +268,7 @@ fn assign_inputs(g: &mut Game) {
         }
 
         // (joystick, index): a pad, or a keyboard set (0 right, 1 left).
-        let touch = touch_controls_on();
+        let touch = touch_controls_on(g);
         let mut order: Vec<(bool, usize)> = Vec::new();
         if touch {
             order.push((false, 0));
@@ -365,22 +366,22 @@ unsafe fn web_replay_device(g: &mut Game, index: usize, added: bool) {
     }
 }
 
-fn touch_session() -> bool {
+fn touch_session(g: &mut Game) -> bool {
     #[cfg(not(target_os = "emscripten"))]
-    return crate::smw::touch::session();
+    return crate::smw::touch::session(g);
     #[cfg(target_os = "emscripten")]
     false
 }
 
 /// Whether the touch keys go to player 1 ahead of the pads: the page shows its touch controls (web/touch.js), decided
 /// before Play, or Android's are on with no pad at launch (`touch::touch_first`).
-fn touch_controls_on() -> bool {
+fn touch_controls_on(g: &mut Game) -> bool {
     #[cfg(target_os = "emscripten")]
     unsafe {
         return emscripten_run_script_int(c"document.documentElement.classList.contains('touch') ? 1 : 0".as_ptr()) != 0;
     }
     #[cfg(not(target_os = "emscripten"))]
-    crate::smw::touch::touch_first()
+    crate::smw::touch::touch_first(g)
 }
 
 /// The players' settings (`playercontrol`, one number each) from before pads were assigned.

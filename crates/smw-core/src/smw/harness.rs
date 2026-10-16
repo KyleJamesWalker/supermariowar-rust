@@ -621,7 +621,7 @@ pub fn forced_map(g: &mut Game) -> Option<&'static str> {
 pub fn frame_start(g: &mut Game) {
     let mut gp = g.ptr();
     #[cfg(not(target_os = "emscripten"))]
-    crate::smw::pad::debug_frame(unsafe { h(gp.get()).frame });
+    crate::smw::pad::debug_frame(g, unsafe { h(gp.get()).frame });
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::phase(2);
     sfx::sfx_virtual_advance(g);
@@ -899,7 +899,7 @@ unsafe extern "C" fn record_filter(userdata: *mut std::ffi::c_void, event: *mut 
         return 1;
     }
     #[cfg(not(target_os = "emscripten"))]
-    if !crate::smw::pad::translate(&mut *event) {
+    if !crate::smw::pad::translate(g, &mut *event) {
         return 0;
     }
     if (*event).type_ == SDL_EventType::SDL_MOUSEBUTTONUP as u32 {
@@ -1112,7 +1112,7 @@ fn record_wait_event(g: &mut Game, event: &mut SDL_Event) {
     let mut gp = g.ptr();
     loop {
         #[cfg(not(target_os = "emscripten"))]
-        crate::smw::touch::flush();
+        crate::smw::touch::flush(g);
         let Some(r) = rec(g) else { return };
         push_live_script(g, r, unsafe { h(gp.get()).frame } + 1);
         smw_sdl2::events::pump();

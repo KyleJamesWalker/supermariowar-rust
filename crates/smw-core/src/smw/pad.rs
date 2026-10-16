@@ -95,8 +95,8 @@ impl PadState {
     }
 }
 
-fn st() -> &'static mut PadState {
-    &mut crate::game::game().get().pad
+fn st(g: &mut Game) -> &mut PadState {
+    &mut g.pad
 }
 static HOTPLUG: AtomicBool = AtomicBool::new(false);
 static GENERATION: AtomicU32 = AtomicU32::new(0);
@@ -105,10 +105,11 @@ const MAX_JOYSTICKS: usize = 8;
 
 /// Logs every open joystick; with `translate`, reads the game controllers among them through their mapping.
 pub fn init(g: &mut Game, translate: bool) {
+    let mut gp = g.ptr();
     unsafe {
-        st().translate_on = translate;
-        st().debug_input = std::env::var_os("SMW_DEBUG_INPUT").is_some();
-        if st().debug_input {
+        st(gp.get()).translate_on = translate;
+        st(gp.get()).debug_input = std::env::var_os("SMW_DEBUG_INPUT").is_some();
+        if st(gp.get()).debug_input {
             start_watchdog();
         }
         SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER);
@@ -129,26 +130,27 @@ pub fn init(g: &mut Game, translate: bool) {
         for i in 0..game().joystickcount.max(0) as usize {
             let js = *g.joysticks.add(i);
             if !js.is_null() {
-                st().pads.push(open_pad(i as i32, js, i));
+                st(gp.get()).pads.push(open_pad(g, i as i32, js, i));
             }
         }
 
         // The recorder's filter calls translate itself.
         let mut current: SDL_EventFilter = None;
         let mut userdata = std::ptr::null_mut();
-        if (st().debug_input || translate || st().pads.iter().any(|p| p.controller)) && smw_sdl2::events::get_filter(&mut current, &mut userdata) == SDL_bool::SDL_FALSE {
-            smw_sdl2::events::set_filter(Some(filter), std::ptr::null_mut());
+        if (st(gp.get()).debug_input || translate || st(gp.get()).pads.iter().any(|p| p.controller)) && smw_sdl2::events::get_filter(&mut current, &mut userdata) == SDL_bool::SDL_FALSE {
+            smw_sdl2::events::set_filter(Some(filter), g as *mut Game as *mut std::ffi::c_void);
         }
     }
 }
 
 /// Reads and logs the joystick at `device` (an SDL device index), open as `js`, which the game knows as `index`.
-unsafe fn open_pad(device: i32, js: *mut SDL_Joystick, index: usize) -> Pad {
+unsafe fn open_pad(g: &mut Game, device: i32, js: *mut SDL_Joystick, index: usize) -> Pad {
+    let mut gp = g.ptr();
     let name = c_string(SDL_JoystickNameForIndex(device));
     let mut guid = [0 as std::ffi::c_char; 33];
     SDL_JoystickGetGUIDString(SDL_JoystickGetGUID(js), guid.as_mut_ptr(), guid.len() as i32);
     let guid = CStr::from_ptr(guid.as_ptr()).to_string_lossy().into_owned();
-    if st().translate_on && SDL_IsGameController(device) == SDL_bool::SDL_FALSE {
+    if st(gp.get()).translate_on && SDL_IsGameController(device) == SDL_bool::SDL_FALSE {
         if let Some((_, _, mapping)) = BUILTIN_MAPPINGS.iter().find(|(n, prefix, _)| *n == name && guid.starts_with(prefix)) {
             if let Ok(line) = CString::new(format!("{},{},{}platform:Linux,", guid, name, mapping)) {
                 SDL_GameControllerAddMapping(line.as_ptr());
@@ -161,7 +163,7 @@ unsafe fn open_pad(device: i32, js: *mut SDL_Joystick, index: usize) -> Pad {
         SDL_free(mapping as *mut _);
     }
     let mut pad = Pad { index, instance: SDL_JoystickInstanceID(js), ..Default::default() };
-    if st().translate_on && SDL_IsGameController(device) == SDL_bool::SDL_TRUE {
+    if st(gp.get()).translate_on && SDL_IsGameController(device) == SDL_bool::SDL_TRUE {
         // Closed again at once: SDL's controller watcher would read the hat events translate makes as this
         // controller's own, and dereferences a null hat array for a joystick without hats (Android pads).
         let gc = SDL_GameControllerOpen(device);
@@ -182,7 +184,7 @@ unsafe fn open_pad(device: i32, js: *mut SDL_Joystick, index: usize) -> Pad {
         mapping_text,
         if pad.controller { " (translated)" } else { "" }
     );
-    if pad.controller && st().debug_input {
+    if pad.controller && st(gp.get()).debug_input {
         println!("[pad]   buttons {:?} hats {:?} axes {:?} dpad axes {:?}", pad.buttons, pad.hats, pad.axes, pad.dpad_axes);
     }
     pad
@@ -191,8 +193,9 @@ unsafe fn open_pad(device: i32, js: *mut SDL_Joystick, index: usize) -> Pad {
 /// With `SMW_PAD_TRANSLATE`, opens joysticks connected since the last call and closes removed ones. A new one
 /// takes the first free index, so a pad that reconnects gets its index back. True when one was opened.
 pub fn hotplug(g: &mut Game) -> bool {
+    let mut gp = g.ptr();
     unsafe {
-        if !st().translate_on || !HOTPLUG.swap(false, Ordering::Relaxed) {
+        if !st(gp.get()).translate_on || !HOTPLUG.swap(false, Ordering::Relaxed) {
             return false;
         }
         for index in 0..game().joystickcount.max(0) as usize {
@@ -252,21 +255,23 @@ pub fn replay_device(g: &mut Game, index: usize, added: bool) {
 
 /// Opens SDL device `device` as joystick `index`, which must be an empty slot.
 unsafe fn open(g: &mut Game, device: i32, index: usize) -> bool {
+    let mut gp = g.ptr();
     let js = SDL_JoystickOpen(device);
     if js.is_null() {
         return false;
     }
     *g.joysticks.add(index) = js;
-    st().pads.push(open_pad(device, js, index));
+    st(gp.get()).pads.push(open_pad(g, device, js, index));
     GENERATION.fetch_add(1, Ordering::Relaxed);
     true
 }
 
 unsafe fn close(g: &mut Game, index: usize) {
+    let mut gp = g.ptr();
     println!("[pad] joystick {} removed", index);
     SDL_JoystickClose(*g.joysticks.add(index));
     *g.joysticks.add(index) = std::ptr::null_mut();
-    st().pads.retain(|p| p.index != index);
+    st(gp.get()).pads.retain(|p| p.index != index);
     GENERATION.fetch_add(1, Ordering::Relaxed);
 }
 
@@ -359,47 +364,50 @@ fn apply_binds(pad: &mut Pad, buttons: &[Bind; DPAD_UP + 4], axes: &[Bind; 6]) {
 
 /// The joysticks players get: the translated controllers if there are any, otherwise every open joystick.
 pub fn player_pads(g: &mut Game) -> Vec<usize> {
+    let mut gp = g.ptr();
     unsafe {
         let mut open: Vec<usize> = (0..game().joystickcount.max(0) as usize).filter(|&i| !(*g.joysticks.add(i)).is_null()).collect();
-        if st().pads.iter().any(|p| p.controller) {
-            open.retain(|&i| st().pads.iter().any(|p| p.index == i && p.controller));
+        if st(gp.get()).pads.iter().any(|p| p.controller) {
+            open.retain(|&i| st(gp.get()).pads.iter().any(|p| p.index == i && p.controller));
         }
         open
     }
 }
 
-unsafe extern "C" fn filter(_userdata: *mut std::ffi::c_void, event: *mut SDL_Event) -> i32 {
-    translate(&mut *event) as i32
+unsafe extern "C" fn filter(userdata: *mut std::ffi::c_void, event: *mut SDL_Event) -> i32 {
+    let g = unsafe { &mut *(userdata as *mut Game) };
+    translate(g, &mut *event) as i32
 }
 
 /// Rewrites a controller's raw joystick event in place as the joystick event the game reads. False: drop the event.
-pub fn translate(event: &mut SDL_Event) -> bool {
+pub fn translate(g: &mut Game, event: &mut SDL_Event) -> bool {
+    let mut gp = g.ptr();
     use SDL_EventType::*;
     unsafe {
-        log_event(0, event);
-        if !crate::smw::touch::filter(event) {
+        log_event(g, 0, event);
+        if !crate::smw::touch::filter(g, event) {
             return false;
         }
         let t = event.type_;
         let keep = if t == SDL_CONTROLLERBUTTONDOWN as u32 || t == SDL_CONTROLLERBUTTONUP as u32 || t == SDL_CONTROLLERAXISMOTION as u32 {
-            !st().pads.iter().any(|p| p.controller)
+            !st(gp.get()).pads.iter().any(|p| p.controller)
         } else if t == SDL_JOYBUTTONDOWN as u32 || t == SDL_JOYBUTTONUP as u32 {
-            match pad(event.jbutton.which) {
+            match pad(g, event.jbutton.which) {
                 Some(p) => translate_button(p, event),
                 None => true,
             }
         } else if t == SDL_JOYHATMOTION as u32 {
-            match pad(event.jhat.which) {
+            match pad(g, event.jhat.which) {
                 Some(p) => translate_hat(p, event),
                 None => true,
             }
         } else if t == SDL_JOYAXISMOTION as u32 {
-            match pad(event.jaxis.which) {
+            match pad(g, event.jaxis.which) {
                 Some(p) => translate_axis(p, event),
                 None => true,
             }
         } else if t == SDL_JOYBALLMOTION as u32 {
-            pad(event.jball.which).is_none()
+            pad(g, event.jball.which).is_none()
         } else {
             if t == SDL_JOYDEVICEADDED as u32 || t == SDL_JOYDEVICEREMOVED as u32 {
                 HOTPLUG.store(true, Ordering::Relaxed);
@@ -407,14 +415,15 @@ pub fn translate(event: &mut SDL_Event) -> bool {
             true
         };
         if keep {
-            log_event(1, event);
+            log_event(g, 1, event);
         }
         keep
     }
 }
 
-unsafe fn pad(instance: i32) -> Option<&'static mut Pad> {
-    st().pads.iter_mut().find(|p| p.instance == instance && p.controller)
+unsafe fn pad(g: &mut Game, instance: i32) -> Option<&'static mut Pad> {
+    let mut gp = g.ptr();
+    st(gp.get()).pads.iter_mut().find(|p| p.instance == instance && p.controller)
 }
 
 unsafe fn translate_button(p: &mut Pad, event: &mut SDL_Event) -> bool {
@@ -504,9 +513,10 @@ unsafe fn translate_axis(p: &mut Pad, event: &mut SDL_Event) -> bool {
 }
 
 /// `SMW_DEBUG_INPUT=1`: a heartbeat every 120 frames.
-pub fn debug_frame(frame: u32) {
+pub fn debug_frame(g: &mut Game, frame: u32) {
+    let mut gp = g.ptr();
     FRAME.store(frame, Ordering::Relaxed);
-    if st().debug_input && frame % 120 == 0 {
+    if st(gp.get()).debug_input && frame % 120 == 0 {
         println!("[loop] frame {}", frame);
     }
 }
@@ -549,10 +559,11 @@ fn start_watchdog() {
 }
 
 /// `SMW_DEBUG_INPUT=1`: the first 2000 input events at each stage: 0 as SDL queues them, 1 after translation, 2 as the game reads them.
-pub fn log_event(stage: usize, event: &SDL_Event) {
+pub fn log_event(g: &mut Game, stage: usize, event: &SDL_Event) {
+    let mut gp = g.ptr();
     use SDL_EventType::*;
     unsafe {
-        if !st().debug_input || st().logged[stage] >= 2000 {
+        if !st(gp.get()).debug_input || st(gp.get()).logged[stage] >= 2000 {
             return;
         }
         let t = event.type_;
@@ -575,7 +586,7 @@ pub fn log_event(stage: usize, event: &SDL_Event) {
         } else {
             return;
         };
-        st().logged[stage] += 1;
+        st(gp.get()).logged[stage] += 1;
         println!("[input] {} {}", ["raw", "translated", "game"][stage], detail);
     }
 }
