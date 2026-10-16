@@ -1,5 +1,6 @@
 //! Port of src/common/ui/MI_MapField.cpp
 
+use crate::common::keys::*;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
@@ -10,7 +11,6 @@ use crate::common::ui::mi_image::MI_Image;
 use crate::common::ui::mi_map_preview::MI_MapPreview;
 use crate::common::uicontrol::UI_ControlTrait;
 use crate::globals::*;
-use sdl2::sys::SDL_KeyCode::*;
 
 /// `maplist->GetCurrent()->second.iIndex`
 fn current_map_index(g: &mut Game) -> i16 {
@@ -182,10 +182,10 @@ impl UI_ControlTrait for MI_MapField {
 
             if iPlayer == 0 && iPressedKey > 0 {
                 let key = iPressedKey as i32;
-                if (key >= SDLK_a as i32 && key <= SDLK_z as i32)
-                    || (key >= SDLK_0 as i32 && key <= SDLK_9 as i32)
-                    || key == SDLK_MINUS as i32
-                    || key == SDLK_EQUALS as i32
+                if (key >= SDLK_a && key <= SDLK_z)
+                    || (key >= SDLK_0 && key <= SDLK_9)
+                    || key == SDLK_MINUS
+                    || key == SDLK_EQUALS
                 {
                     let iOldIndex = current_map_index(g);
 

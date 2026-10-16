@@ -3,6 +3,7 @@
 //! Deterministic replay/dump harness. Every entry point is a no-op unless the corresponding
 //! SMW_* environment variable is set; docs/REPLAY.md is the byte-level spec.
 
+use crate::common::keys::*;
 use crate::game::Game;
 use crate::common::game_values::AppState;
 use crate::common::global_constants::WAITTIME;
@@ -14,11 +15,7 @@ use crate::smw::gs_gameplay::GameplayState;
 use crate::smw::gs_menu::MenuState;
 use crate::smw::gs_splash_screen::SplashScreenState;
 use crate::smw::network::file_compressor::{deflate, inflate, read_maybe_gzip};
-use sdl2::sys::{
-    SDL_Event, SDL_EventType, SDL_GetError, SDL_GetKeyFromName, SDL_GetKeyName, SDL_GetScancodeFromKey, SDL_InitSubSystem, SDL_JoystickAttachVirtual,
-    SDL_JoystickInstanceID, SDL_JoystickType, SDL_KeyCode, SDL_Keymod, SDL_SetHint, SDL_INIT_JOYSTICK,
-    SDL_PRESSED, SDL_RELEASED,
-};
+use sdl2::sys::{SDL_Event, SDL_EventType, SDL_GetError, SDL_GetKeyFromName, SDL_GetKeyName, SDL_GetScancodeFromKey, SDL_InitSubSystem, SDL_JoystickAttachVirtual, SDL_JoystickInstanceID, SDL_JoystickType, SDL_SetHint, SDL_INIT_JOYSTICK, SDL_PRESSED, SDL_RELEASED};
 use smw_platform::{Input, InputEvent, Keycode, PadSlot, SCREEN_H, SCREEN_W};
 use std::ffi::CStr;
 use std::collections::BTreeSet;
@@ -341,11 +338,11 @@ fn input_for(ev: &ReplayEvent) -> InputEvent {
         EventKind::Key => unsafe {
             let cname = CString::new(ev.keyName.as_bytes()).unwrap();
             let key = SDL_GetKeyFromName(cname.as_ptr());
-            if key == SDL_KeyCode::SDLK_UNKNOWN as i32 {
+            if key == SDLK_UNKNOWN {
                 fail(format!("unknown SDL key name '{}'", ev.keyName));
             }
             let scancode = SDL_GetScancodeFromKey(key) as i32;
-            InputEvent::Key { key: Keycode(key), scancode, mods: SDL_Keymod::KMOD_NONE as u16, down: ev.down, repeat: false, window: 0 }
+            InputEvent::Key { key: Keycode(key), scancode, mods: KMOD_NONE, down: ev.down, repeat: false, window: 0 }
         },
         EventKind::JoyAxis => InputEvent::PadAxis { pad, axis: ev.index as u8, value: ev.value as i16 },
         EventKind::JoyButton => InputEvent::PadButton { pad, button: ev.index as u8, down: ev.value != 0 },
@@ -992,7 +989,7 @@ fn push_live_script(g: &mut Game, r: &mut Recorder, frame: u32) {
             fill_event(&r.script[r.nextScript], &mut event);
             unsafe {
                 if event.type_ == SDL_EventType::SDL_KEYDOWN as u32 {
-                    event.key.keysym.mod_ = SDL_Keymod::KMOD_NUM as u16;
+                    event.key.keysym.mod_ = KMOD_NUM;
                     event.key.repeat = (r.nextScript % 3 == 2) as u8;
                 } else if event.type_ == SDL_EventType::SDL_JOYAXISMOTION as u32 {
                     event.jaxis.which = sdl_instance(g, event.jaxis.which);

@@ -2,6 +2,7 @@
 //!
 //! `_DEBUG`-only code (autotest, debug hotkeys, autokill) is not ported: the reference build is Release.
 
+use crate::common::keys::*;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use smw_platform::InputEvent;
@@ -67,7 +68,7 @@ use crate::smw::objects::mystery_mushroom_temp_player::MysteryMushroomTempPlayer
 use crate::smw::objects::switch_color::SwitchColor;
 use crate::smw::objects::throw_block_type::ThrowBlockType;
 use crate::smw::player::{get_player_from_global_id, player_killed_player, CPlayer, PlayerDeathStyle, PlayerState};
-use sdl2::sys::{SDL_Event, SDL_EventType, SDL_FillRect, SDL_KeyCode, SDL_Keymod};
+use sdl2::sys::{SDL_Event, SDL_EventType, SDL_FillRect};
 use std::io::Write;
 
 pub const COUNTDOWN_START_INDEX: i16 = 4;
@@ -2402,12 +2403,12 @@ impl GameplayState {
                     return;
                 } else if let InputEvent::Key { key, mods, down: true, .. } = input.event {
                     let sym = key.0;
-                    if (mods as u32) & (SDL_Keymod::KMOD_LALT as u32 | SDL_Keymod::KMOD_RALT as u32) != 0 {
-                        if sym == SDL_KeyCode::SDLK_F4 as i32 {
+                    if (mods as u32) & (KMOD_LALT as u32 | KMOD_RALT as u32) != 0 {
+                        if sym == SDLK_F4 {
                             clean_up(g);
                             g.game_values.appstate = AppState::Quit;
                             return;
-                        } else if sym == SDL_KeyCode::SDLK_RETURN as i32 {
+                        } else if sym == SDLK_RETURN {
                             g.game_values.fullscreen = !g.game_values.fullscreen;
                             gfx_changefullscreen(g, g.game_values.fullscreen);
                             g.blitdest = g.screen;
@@ -2416,13 +2417,13 @@ impl GameplayState {
                             continue;
                         }
                     }
-                    if sym == SDL_KeyCode::SDLK_F1 as i32 {
+                    if sym == SDLK_F1 {
                         g.game_values.showfps = !g.game_values.showfps;
-                    } else if sym == SDL_KeyCode::SDLK_ESCAPE as i32 {
+                    } else if sym == SDLK_ESCAPE {
                         g.game_values.playerInput.outputControls[0].game_cancel_mut().fPressed = true;
-                    } else if sym == SDL_KeyCode::SDLK_TAB as i32 {
+                    } else if sym == SDLK_TAB {
                         play_next_music_track(g);
-                    } else if sym == SDL_KeyCode::SDLK_INSERT as i32 {
+                    } else if sym == SDLK_INSERT {
                         gfx_take_screenshot(g);
                     }
                 }

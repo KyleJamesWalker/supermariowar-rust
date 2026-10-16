@@ -1,5 +1,6 @@
 //! Port of src/smw/GSMenu.cpp (reference build: original + tools/cpp-harness.patch).
 
+use crate::common::keys::*;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use smw_platform::{Input, InputEvent};
@@ -59,7 +60,7 @@ use crate::smw::menu::network::net_servers_menu::UI_NetServersMenu;
 use crate::common::path::get_home_directory;
 use crate::common_netplay::protocol_definitions::*;
 use crate::smw::net::{net_end_session, net_start_session};
-use sdl2::sys::{SDL_Event, SDL_EventType, SDL_FillRect, SDL_KeyCode, SDL_Keymod, SDL_MapRGB};
+use sdl2::sys::{SDL_Event, SDL_EventType, SDL_FillRect, SDL_MapRGB};
 use std::ops::DerefMut;
 use std::path::Path;
 
@@ -1692,18 +1693,18 @@ impl GameState for MenuState {
                     return;
                 } else if let InputEvent::Key { key, mods, down: true, .. } = input.event {
                     let sym = key.0;
-                    if sym == SDL_KeyCode::SDLK_F1 as i32 {
+                    if sym == SDLK_F1 {
                         g.game_values.showfps = !g.game_values.showfps;
                     }
 
-                    if (mods as u32) & (SDL_Keymod::KMOD_LALT as u32 | SDL_Keymod::KMOD_RALT as u32) != 0 {
+                    if (mods as u32) & (KMOD_LALT as u32 | KMOD_RALT as u32) != 0 {
                         //ALT + F4 = close window
-                        if sym == SDL_KeyCode::SDLK_F4 as i32 {
+                        if sym == SDLK_F4 {
                             self.exit(g);
                             return;
                         }
                         //ALT + Enter = fullscreen/windowed toggle
-                        else if sym == SDL_KeyCode::SDLK_RETURN as i32 {
+                        else if sym == SDLK_RETURN {
                             g.game_values.fullscreen = !g.game_values.fullscreen;
                             gfx_changefullscreen(g, g.game_values.fullscreen);
                             g.blitdest = g.screen;
@@ -1712,7 +1713,7 @@ impl GameState for MenuState {
                         }
                     }
 
-                    if sym == SDL_KeyCode::SDLK_INSERT as i32 {
+                    if sym == SDLK_INSERT {
                         gfx_take_screenshot(g);
                     }
                 }

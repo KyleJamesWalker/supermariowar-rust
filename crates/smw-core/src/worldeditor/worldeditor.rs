@@ -4,6 +4,7 @@
 //! other game globals the shared code links against; the port reuses the crate's (smw::main,
 //! smw::gs_gameplay) and only defines the editor's own state here.
 
+use crate::common::keys::*;
 use crate::common::gfx::soft_surface::Surface;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -44,8 +45,7 @@ use crate::smw::world::*;
 use sdl2::sys::image::{IMG_Load, IMG_SavePNG};
 use crate::common::editor_event::EditorEvent;
 use crate::common::util::sdl_helpers::poll_event;
-use sdl2::sys::SDL_KeyCode::*;
-use sdl2::sys::{SDL_CreateRGBSurface, SDL_EventType, SDL_FillRect, SDL_FreeSurface, SDL_GetKeyboardState, SDL_GetScancodeFromKey, SDL_Keycode, SDL_Keymod, SDL_MapRGB, SDL_UpperBlit, SDL_BUTTON_LEFT, SDL_BUTTON_RIGHT};
+use sdl2::sys::{SDL_CreateRGBSurface, SDL_EventType, SDL_FillRect, SDL_FreeSurface, SDL_GetKeyboardState, SDL_GetScancodeFromKey, SDL_MapRGB, SDL_UpperBlit, SDL_BUTTON_LEFT, SDL_BUTTON_RIGHT};
 use std::ffi::CString;
 use std::io::Write;
 use std::path::Path;
@@ -269,7 +269,7 @@ fn bound_mouse_motion_coords(g: &mut Game) {
     }
 }
 
-fn check_key(keystate: *const u8, key: SDL_Keycode) -> bool {
+fn check_key(keystate: *const u8, key: Keycode) -> bool {
     unsafe { *keystate.add(SDL_GetScancodeFromKey(key) as usize) != 0 }
 }
 
@@ -1225,11 +1225,11 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                     if event_type(g) == T_KEYDOWN {
                         let key = key_sym(g);
 
-                        if key == SDLK_LEFT as i32 {
+                        if key == SDLK_LEFT {
                             fSelectedYes = true;
-                        } else if key == SDLK_RIGHT as i32 {
+                        } else if key == SDLK_RIGHT {
                             fSelectedYes = false;
-                        } else if key_sym(g) == SDLK_KP_ENTER as i32 || key_sym(g) == SDLK_RETURN as i32 {
+                        } else if key_sym(g) == SDLK_KP_ENTER || key_sym(g) == SDLK_RETURN {
                             if fSelectedYes {
                                 return EDITOR_QUIT;
                             }
@@ -1248,7 +1248,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
 
                         T_KEYDOWN => {
                             let keystate = SDL_GetKeyboardState(null_mut());
-                            if key_sym(g) == SDLK_ESCAPE as i32 {
+                            if key_sym(g) == SDLK_ESCAPE {
                                 if ed(gp.get()).g_musiccategorydisplaytimer > 0 {
                                     ed(gp.get()).g_musiccategorydisplaytimer = 0;
                                 } else if ed(gp.get()).edit_mode != 0 {
@@ -1260,59 +1260,59 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                                 }
                             }
 
-                            if ed(gp.get()).event.key_mod() & (SDL_Keymod::KMOD_LALT as u16 | SDL_Keymod::KMOD_RALT as u16) != 0 {
-                                if key_sym(g) == SDLK_RETURN as i32 {
+                            if ed(gp.get()).event.key_mod() & (KMOD_LALT | KMOD_RALT) != 0 {
+                                if key_sym(g) == SDLK_RETURN {
                                     ed(gp.get()).g_fFullScreen = !ed(gp.get()).g_fFullScreen;
                                     gfx_changefullscreen(g, ed(gp.get()).g_fFullScreen);
                                     g.blitdest = g.screen;
                                 }
                             }
 
-                            if key_sym(g) == SDLK_INSERT as i32 {
+                            if key_sym(g) == SDLK_INSERT {
                                 takescreenshot(g);
                             }
 
-                            if key_sym(g) == SDLK_1 as i32 {
+                            if key_sym(g) == SDLK_1 {
                                 return EDITOR_WATER;
                             }
 
-                            if key_sym(g) == SDLK_2 as i32 {
+                            if key_sym(g) == SDLK_2 {
                                 return EDITOR_BACKGROUND;
                             }
 
-                            if key_sym(g) == SDLK_3 as i32 {
+                            if key_sym(g) == SDLK_3 {
                                 return EDITOR_STAGEFOREGROUND;
                             }
 
-                            if key_sym(g) == SDLK_4 as i32 {
+                            if key_sym(g) == SDLK_4 {
                                 return EDITOR_PATHSPRITE;
                             }
 
-                            if key_sym(g) == SDLK_5 as i32 {
+                            if key_sym(g) == SDLK_5 {
                                 return EDITOR_STRUCTUREFOREGROUND;
                             }
 
-                            if key_sym(g) == SDLK_6 as i32 {
+                            if key_sym(g) == SDLK_6 {
                                 return EDITOR_BRIDGES;
                             }
 
-                            if key_sym(g) == SDLK_t as i32 {
+                            if key_sym(g) == SDLK_t {
                                 return EDITOR_TYPE;
                             }
 
-                            if key_sym(g) == SDLK_e as i32 {
+                            if key_sym(g) == SDLK_e {
                                 return EDITOR_STAGE;
                             }
 
-                            if key_sym(g) == SDLK_p as i32 {
+                            if key_sym(g) == SDLK_p {
                                 return EDITOR_PATH;
                             }
 
-                            if key_sym(g) == SDLK_v as i32 {
+                            if key_sym(g) == SDLK_v {
                                 return EDITOR_VEHICLES;
                             }
 
-                            if key_sym(g) == SDLK_SPACE as i32 {
+                            if key_sym(g) == SDLK_SPACE {
                                 ed(gp.get()).g_fShowStagePreviews = !ed(gp.get()).g_fShowStagePreviews;
                                 if ed(gp.get()).g_fShowStagePreviews {
                                     SetDisplayMessage(g, 60, "Stage Previews", "Preview popups", "have been", "enabled.");
@@ -1321,7 +1321,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                                 }
                             }
 
-                            if ed(gp.get()).edit_mode == 5 && key_sym(g) == SDLK_c as i32 {
+                            if ed(gp.get()).edit_mode == 5 && key_sym(g) == SDLK_c {
                                 let iButtonX: i16 = (ed(gp.get()).mouse_x - ed(gp.get()).draw_offset_x) as i16;
                                 let iButtonY: i16 = (ed(gp.get()).mouse_y - ed(gp.get()).draw_offset_y) as i16;
                                 let iCol: i16 = (iButtonX as i32 / TILESIZE + ed(gp.get()).draw_offset_col) as i16;
@@ -1335,23 +1335,23 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                                 }
                             }
 
-                            if key_sym(g) == SDLK_w as i32 {
+                            if key_sym(g) == SDLK_w {
                                 return EDITOR_WARP;
                             }
 
-                            if key_sym(g) == SDLK_i as i32 {
+                            if key_sym(g) == SDLK_i {
                                 return EDITOR_START_ITEMS;
                             }
 
-                            if key_sym(g) == SDLK_b as i32 {
+                            if key_sym(g) == SDLK_b {
                                 return EDITOR_BOUNDARY;
                             }
 
-                            if key_sym(g) == SDLK_a as i32 {
+                            if key_sym(g) == SDLK_a {
                                 ed(gp.get()).fAutoPaint = !ed(gp.get()).fAutoPaint;
                             }
 
-                            if key_sym(g) == SDLK_r as i32 {
+                            if key_sym(g) == SDLK_r {
                                 if ed(gp.get()).g_musiccategorydisplaytimer > 0 {
                                     g.g_worldmap.iMusicCategory.post_increment();
                                 }
@@ -1359,39 +1359,39 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                                 ed(gp.get()).g_musiccategorydisplaytimer = 90;
                             }
 
-                            if key_sym(g) == SDLK_s as i32 {
-                                if check_key(keystate, SDLK_LSHIFT as i32) || check_key(keystate, SDLK_RSHIFT as i32) {
+                            if key_sym(g) == SDLK_s {
+                                if check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT) {
                                     return SAVE_AS;
                                 }
 
                                 return SAVE;
                             }
 
-                            if key_sym(g) == SDLK_f as i32 {
-                                if check_key(keystate, SDLK_LSHIFT as i32) || check_key(keystate, SDLK_RSHIFT as i32) || ed(gp.get()).findstring.is_empty() {
+                            if key_sym(g) == SDLK_f {
+                                if check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT) || ed(gp.get()).findstring.is_empty() {
                                     return FIND;
                                 }
 
                                 findcurrentstring(g);
                             }
 
-                            if key_sym(g) == SDLK_DELETE as i32 && (check_key(keystate, SDLK_LCTRL as i32) || check_key(keystate, SDLK_RCTRL as i32)) {
+                            if key_sym(g) == SDLK_DELETE && (check_key(keystate, SDLK_LCTRL) || check_key(keystate, SDLK_RCTRL)) {
                                 return CLEAR_WORLD;
                             }
 
-                            if key_sym(g) == SDLK_n as i32 {
+                            if key_sym(g) == SDLK_n {
                                 return NEW_WORLD;
                             }
 
-                            if key_sym(g) == SDLK_k as i32 {
+                            if key_sym(g) == SDLK_k {
                                 return RESIZE_WORLD;
                             }
 
-                            if key_sym(g) == SDLK_h as i32 || key_sym(g) == SDLK_F1 as i32 {
+                            if key_sym(g) == SDLK_h || key_sym(g) == SDLK_F1 {
                                 return DISPLAY_HELP;
                             }
 
-                            if key_sym(g) == SDLK_UP as i32 {
+                            if key_sym(g) == SDLK_UP {
                                 if ed(gp.get()).draw_offset_row > 0 {
                                     ed(gp.get()).draw_offset_row -= 1;
                                     updateworldsurface(g);
@@ -1401,7 +1401,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
 
                                     iStageDisplay = -1;
                                 }
-                            } else if key_sym(g) == SDLK_DOWN as i32 {
+                            } else if key_sym(g) == SDLK_DOWN {
                                 if ed(gp.get()).draw_offset_row < ed(gp.get()).iWorldHeight as i32 - 15 {
                                     ed(gp.get()).draw_offset_row += 1;
                                     updateworldsurface(g);
@@ -1411,7 +1411,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
 
                                     iStageDisplay = -1;
                                 }
-                            } else if key_sym(g) == SDLK_LEFT as i32 {
+                            } else if key_sym(g) == SDLK_LEFT {
                                 if ed(gp.get()).draw_offset_col > 0 {
                                     ed(gp.get()).draw_offset_col -= 1;
                                     updateworldsurface(g);
@@ -1421,7 +1421,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
 
                                     iStageDisplay = -1;
                                 }
-                            } else if key_sym(g) == SDLK_RIGHT as i32 {
+                            } else if key_sym(g) == SDLK_RIGHT {
                                 if ed(gp.get()).draw_offset_col < ed(gp.get()).iWorldWidth as i32 - 20 {
                                     ed(gp.get()).draw_offset_col += 1;
                                     updateworldsurface(g);
@@ -1433,7 +1433,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                                 }
                             }
 
-                            if key_sym(g) == SDLK_PAGEUP as i32 {
+                            if key_sym(g) == SDLK_PAGEUP {
                                 g.game_values.worldindex -= 1;
                                 if g.game_values.worldindex < 0 {
                                     g.game_values.worldindex = g.worldlist.count() as i16 - 1;
@@ -1446,7 +1446,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                                 ed(gp.get()).iOldStageId = -1;
                             }
 
-                            if key_sym(g) == SDLK_PAGEDOWN as i32 {
+                            if key_sym(g) == SDLK_PAGEDOWN {
                                 g.game_values.worldindex += 1;
                                 if g.game_values.worldindex as usize >= g.worldlist.count() {
                                     g.game_values.worldindex = 0;
@@ -1461,7 +1461,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                         }
 
                         T_KEYUP => {
-                            if key_sym(g) == SDLK_UP as i32 || key_sym(g) == SDLK_DOWN as i32 || key_sym(g) == SDLK_LEFT as i32 || key_sym(g) == SDLK_RIGHT as i32 {
+                            if key_sym(g) == SDLK_UP || key_sym(g) == SDLK_DOWN || key_sym(g) == SDLK_LEFT || key_sym(g) == SDLK_RIGHT {
                                 view_repeat_direction = -1;
                                 view_repeat_timer = 0;
                             }
@@ -2697,8 +2697,8 @@ pub fn editor_background(g: &mut Game) -> i32 {
 
                     T_KEYDOWN => {
                         let key = key_sym(g);
-                        if key >= SDLK_1 as i32 && key <= SDLK_2 as i32 {
-                            iPage = (key - SDLK_1 as i32) as i16;
+                        if key >= SDLK_1 && key <= SDLK_2 {
+                            iPage = (key - SDLK_1) as i16;
                         } else {
                             ed(gp.get()).edit_mode = 0;
                             return EDITOR_EDIT;
@@ -2781,8 +2781,8 @@ pub fn editor_stageforeground(g: &mut Game) -> i32 {
                     T_KEYDOWN => {
                         let key = key_sym(g);
 
-                        if key >= SDLK_1 as i32 && key <= SDLK_4 as i32 {
-                            iForegroundScreen = (key - SDLK_1 as i32) as i16;
+                        if key >= SDLK_1 && key <= SDLK_4 {
+                            iForegroundScreen = (key - SDLK_1) as i16;
                         } else {
                             ed(gp.get()).edit_mode = 1;
                             return EDITOR_EDIT;
@@ -3049,7 +3049,7 @@ pub fn editor_vehicles(g: &mut Game) -> i32 {
                     }
 
                     T_KEYDOWN => {
-                        if key_sym(g) == SDLK_v as i32 {
+                        if key_sym(g) == SDLK_v {
                             if !ed(gp.get()).mCurrentMenu.is_modifying() {
                                 ed(gp.get()).edit_mode = 5;
                                 g.game_values.playerInput.reset_keys();
@@ -3646,9 +3646,9 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                     }
 
                     T_KEYDOWN => {
-                        if iEditStage == -1 && key_sym(g) == SDLK_n as i32 {
+                        if iEditStage == -1 && key_sym(g) == SDLK_n {
                             NewStage(g, &mut iEditStage);
-                        } else if (key_sym(g) == SDLK_ESCAPE as i32 || key_sym(g) == SDLK_e as i32) && iEditStage == -1 {
+                        } else if (key_sym(g) == SDLK_ESCAPE || key_sym(g) == SDLK_e) && iEditStage == -1 {
                             if g.g_worldmap.iNumStages == 0 {
                                 ed(gp.get()).edit_mode = 1;
                             } else if ed(gp.get()).set_tile < 6 || ed(gp.get()).set_tile >= g.g_worldmap.iNumStages as i32 + 6 {
@@ -3659,20 +3659,20 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                             }
 
                             return EDITOR_EDIT;
-                        } else if ed(gp.get()).mCurrentMenu == ed(gp.get()).mBonusItemPicker.as_ptr() && key_sym(g) >= SDLK_1 as i32 && key_sym(g) <= SDLK_4 as i32 {
+                        } else if ed(gp.get()).mCurrentMenu == ed(gp.get()).mBonusItemPicker.as_ptr() && key_sym(g) >= SDLK_1 && key_sym(g) <= SDLK_4 {
                             let ts = g.game_values.tourstops[iEditStage as usize];
                             if ts.iStageType == 0 {
-                                let iPlace: i16 = (key_sym(g) - SDLK_1 as i32 + 1) as i16;
+                                let iPlace: i16 = (key_sym(g) - SDLK_1 + 1) as i16;
 
                                 TestAndSetBonusItem(g, ts, iPlace, ed(gp.get()).mouse_x as i16, ed(gp.get()).mouse_y as i16);
                             }
-                        } else if (key_sym(g) == SDLK_PAGEUP as i32 && iEditStage > 0) || (key_sym(g) == SDLK_PAGEDOWN as i32 && iEditStage < g.g_worldmap.iNumStages - 1) {
+                        } else if (key_sym(g) == SDLK_PAGEUP && iEditStage > 0) || (key_sym(g) == SDLK_PAGEDOWN && iEditStage < g.g_worldmap.iNumStages - 1) {
                             if iEditStage != -1 && ed(gp.get()).mCurrentMenu == ed(gp.get()).mStageSettingsMenu.as_ptr() {
                                 SaveStage(g, iEditStage);
 
-                                if key_sym(g) == SDLK_PAGEUP as i32 {
+                                if key_sym(g) == SDLK_PAGEUP {
                                     iEditStage -= 1;
-                                } else if key_sym(g) == SDLK_PAGEDOWN as i32 {
+                                } else if key_sym(g) == SDLK_PAGEDOWN {
                                     iEditStage += 1;
                                 }
 
@@ -4217,11 +4217,11 @@ pub fn dialog(g: &mut Game, title: &str, instructions: &str, input: &mut String,
 
                     T_KEYDOWN => {
                         let sym = key_sym(g);
-                        if sym == SDLK_KP_ENTER as i32 || sym == SDLK_RETURN as i32 {
+                        if sym == SDLK_KP_ENTER || sym == SDLK_RETURN {
                             return true;
-                        } else if sym == SDLK_ESCAPE as i32 {
+                        } else if sym == SDLK_ESCAPE {
                             return false;
-                        } else if sym == SDLK_BACKSPACE as i32 {
+                        } else if sym == SDLK_BACKSPACE {
                             if currentChar > 0 {
                                 input.truncate(currentChar as usize - 1);
 
@@ -4239,7 +4239,7 @@ pub fn dialog(g: &mut Game, title: &str, instructions: &str, input: &mut String,
                                 let mut key: u8 = sym as u8;
 
                                 let keystate = SDL_GetKeyboardState(null_mut());
-                                if check_key(keystate, SDLK_LSHIFT as i32) || check_key(keystate, SDLK_RSHIFT as i32) {
+                                if check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT) {
                                     if sym == 45 {
                                         key = 95;
                                     } else if sym >= 95 && sym <= 122 {

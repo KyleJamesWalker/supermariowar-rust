@@ -1,5 +1,6 @@
 //! Port of src/common/GameValues.cpp
 
+use crate::common::keys::*;
 use crate::game::Game;
 use crate::common::eyecandy_styles::{AwardStyle, ScoreboardStyle, SpawnStyle};
 use crate::common::file_io::{throw_runtime_error, BinaryFile};
@@ -14,8 +15,7 @@ use crate::common::path::get_home_directory;
 use crate::common::sfx::{sfx_setmusicvolume, sfx_setsoundvolume, sfxSound};
 use crate::common::version::{Version, GAME_VERSION};
 use crate::globals::*;
-use sdl2::sys::SDL_KeyCode::*;
-use sdl2::sys::SDL_Keycode;
+use Keycode;
 
 pub const TITLESTRING: &str = "Super Mario War";
 
@@ -123,25 +123,21 @@ impl Default for GameplayFlags {
     }
 }
 
-const fn k(c: sdl2::sys::SDL_KeyCode) -> SDL_Keycode {
-    c as SDL_Keycode
-}
-
 //[Keyboard/Joystick][Game/Menu][NumPlayers][NumKeys]  left, right, jump, down, turbo, powerup, start, cancel
-pub static controlkeys: [[[[SDL_Keycode; NUM_KEYS]; 4]; 2]; 2] = [
+pub static controlkeys: [[[[Keycode; NUM_KEYS]; 4]; 2]; 2] = [
     [
         [
-            [k(SDLK_LEFT), k(SDLK_RIGHT), k(SDLK_UP), k(SDLK_DOWN), k(SDLK_RCTRL), k(SDLK_RSHIFT), k(SDLK_RETURN), k(SDLK_ESCAPE)],
-            [k(SDLK_a), k(SDLK_d), k(SDLK_w), k(SDLK_s), k(SDLK_e), k(SDLK_q), k(SDLK_UNKNOWN), k(SDLK_UNKNOWN)],
-            [k(SDLK_g), k(SDLK_j), k(SDLK_y), k(SDLK_h), k(SDLK_u), k(SDLK_t), k(SDLK_UNKNOWN), k(SDLK_UNKNOWN)],
-            [k(SDLK_l), k(SDLK_QUOTE), k(SDLK_p), k(SDLK_SEMICOLON), k(SDLK_LEFTBRACKET), k(SDLK_o), k(SDLK_UNKNOWN), k(SDLK_UNKNOWN)],
+            [SDLK_LEFT, SDLK_RIGHT, SDLK_UP, SDLK_DOWN, SDLK_RCTRL, SDLK_RSHIFT, SDLK_RETURN, SDLK_ESCAPE],
+            [SDLK_a, SDLK_d, SDLK_w, SDLK_s, SDLK_e, SDLK_q, SDLK_UNKNOWN, SDLK_UNKNOWN],
+            [SDLK_g, SDLK_j, SDLK_y, SDLK_h, SDLK_u, SDLK_t, SDLK_UNKNOWN, SDLK_UNKNOWN],
+            [SDLK_l, SDLK_QUOTE, SDLK_p, SDLK_SEMICOLON, SDLK_LEFTBRACKET, SDLK_o, SDLK_UNKNOWN, SDLK_UNKNOWN],
         ],
         //up, down, left, right, select, cancel, random, fast scroll
         [
-            [k(SDLK_UP), k(SDLK_DOWN), k(SDLK_LEFT), k(SDLK_RIGHT), k(SDLK_RETURN), k(SDLK_ESCAPE), k(SDLK_SPACE), k(SDLK_LSHIFT)],
-            [k(SDLK_w), k(SDLK_s), k(SDLK_a), k(SDLK_d), k(SDLK_e), k(SDLK_q), k(SDLK_UNKNOWN), k(SDLK_UNKNOWN)],
-            [k(SDLK_y), k(SDLK_h), k(SDLK_g), k(SDLK_j), k(SDLK_u), k(SDLK_t), k(SDLK_UNKNOWN), k(SDLK_UNKNOWN)],
-            [k(SDLK_p), k(SDLK_SEMICOLON), k(SDLK_l), k(SDLK_QUOTE), k(SDLK_LEFTBRACKET), k(SDLK_o), k(SDLK_UNKNOWN), k(SDLK_UNKNOWN)],
+            [SDLK_UP, SDLK_DOWN, SDLK_LEFT, SDLK_RIGHT, SDLK_RETURN, SDLK_ESCAPE, SDLK_SPACE, SDLK_LSHIFT],
+            [SDLK_w, SDLK_s, SDLK_a, SDLK_d, SDLK_e, SDLK_q, SDLK_UNKNOWN, SDLK_UNKNOWN],
+            [SDLK_y, SDLK_h, SDLK_g, SDLK_j, SDLK_u, SDLK_t, SDLK_UNKNOWN, SDLK_UNKNOWN],
+            [SDLK_p, SDLK_SEMICOLON, SDLK_l, SDLK_QUOTE, SDLK_LEFTBRACKET, SDLK_o, SDLK_UNKNOWN, SDLK_UNKNOWN],
         ],
     ],
     //left, right, jump, down, turbo, powerup, start, cancel;
@@ -663,7 +659,7 @@ impl CGameValues {
 }
 
 
-/// `CInputPlayerControl` as clang lays it out: `short iDevice`, 2 bytes padding, `SDL_Keycode keys[2][8]`.
+/// `CInputPlayerControl` as clang lays it out: `short iDevice`, 2 bytes padding, `Keycode keys[2][8]`.
 const CINPUTPLAYERCONTROL_RAW_SIZE: usize = 68;
 
 fn input_control_from_raw(c: &mut CInputPlayerControl, b: &[u8]) {

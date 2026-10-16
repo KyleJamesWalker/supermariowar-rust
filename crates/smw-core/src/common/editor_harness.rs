@@ -4,13 +4,11 @@
 //! no-op unless the corresponding SMW_* environment variable is set; docs/EDITOR_REPLAY.md is
 //! the byte-level spec.
 
+use crate::common::keys::*;
 use crate::game::Game;
 use crate::common::random_number_generator::{RandomNumberGenerator, RandomNumberGeneratorType};
 use crate::globals::*;
-use sdl2::sys::{
-    SDL_Event, SDL_EventType, SDL_GetError, SDL_GetKeyFromName, SDL_GetScancodeFromKey, SDL_KeyCode, SDL_Keymod, SDL_RWFromFile, SDL_SaveBMP_RW,
-    SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT, SDL_PRESSED, SDL_RELEASED,
-};
+use sdl2::sys::{SDL_Event, SDL_EventType, SDL_GetError, SDL_GetKeyFromName, SDL_GetScancodeFromKey, SDL_RWFromFile, SDL_SaveBMP_RW, SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT, SDL_PRESSED, SDL_RELEASED};
 use std::collections::BTreeSet;
 use std::ffi::{CStr, CString};
 use std::fs::File;
@@ -209,20 +207,20 @@ fn load_replay(g: &mut Game, path: &str) {
 }
 
 fn modifier_for(key: i32) -> u16 {
-    let m = if key == SDL_KeyCode::SDLK_LSHIFT as i32 {
-        SDL_Keymod::KMOD_LSHIFT
-    } else if key == SDL_KeyCode::SDLK_RSHIFT as i32 {
-        SDL_Keymod::KMOD_RSHIFT
-    } else if key == SDL_KeyCode::SDLK_LCTRL as i32 {
-        SDL_Keymod::KMOD_LCTRL
-    } else if key == SDL_KeyCode::SDLK_RCTRL as i32 {
-        SDL_Keymod::KMOD_RCTRL
-    } else if key == SDL_KeyCode::SDLK_LALT as i32 {
-        SDL_Keymod::KMOD_LALT
-    } else if key == SDL_KeyCode::SDLK_RALT as i32 {
-        SDL_Keymod::KMOD_RALT
+    let m = if key == SDLK_LSHIFT {
+        KMOD_LSHIFT
+    } else if key == SDLK_RSHIFT {
+        KMOD_RSHIFT
+    } else if key == SDLK_LCTRL {
+        KMOD_LCTRL
+    } else if key == SDLK_RCTRL {
+        KMOD_RCTRL
+    } else if key == SDLK_LALT {
+        KMOD_LALT
+    } else if key == SDLK_RALT {
+        KMOD_RALT
     } else {
-        SDL_Keymod::KMOD_NONE
+        KMOD_NONE
     };
     m as u16
 }
@@ -240,7 +238,7 @@ fn push_event(g: &mut Game, ev: &ScriptEvent) {
             EventKind::Key => {
                 let cname = CString::new(ev.keyName.as_bytes()).unwrap();
                 let key = SDL_GetKeyFromName(cname.as_ptr());
-                if key == SDL_KeyCode::SDLK_UNKNOWN as i32 {
+                if key == SDLK_UNKNOWN {
                     eprintln!("[editorharness] unknown SDL key name '{}'", ev.keyName);
                     std::process::exit(2);
                 }
