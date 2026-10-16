@@ -154,147 +154,141 @@ pub fn mo_walking_enemy_draw<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, thi
 
             displayangle += addangle;
 
-            unsafe {
-                gp.rm.spr_awardsouls.draw_src(g, spawnX as i32, spawnY as i32, &Rect { x: o.iSpawnIconOffset as i32, y: 0, w: 16, h: 16 });
-            }
+            gp.rm.spr_awardsouls.draw_src(g, spawnX as i32, spawnY as i32, &Rect { x: o.iSpawnIconOffset as i32, y: 0, w: 16, h: 16 });
         }
     } else {
         io_moving_object_draw(g, this);
 
         let o = this.we();
         if o.frozen {
-            unsafe {
-                gp.rm.spr_iceblock.draw_src(
-                    g,
-                    o.ix as i32 - o.collisionOffsetX as i32 + o.iw as i32 - 32,
-                    o.iy as i32 - o.collisionOffsetY as i32 + o.ih as i32 - 32,
-                    &Rect { x: 0, y: 0, w: 32, h: 32 },
-                );
-            }
+            gp.rm.spr_iceblock.draw_src(
+                g,
+                o.ix as i32 - o.collisionOffsetX as i32 + o.iw as i32 - 32,
+                o.iy as i32 - o.collisionOffsetY as i32 + o.ih as i32 - 32,
+                &Rect { x: 0, y: 0, w: 32, h: 32 },
+            );
         }
     }
 }
 
 pub fn mo_walking_enemy_update<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, this: &mut T) {
-    unsafe {
-        {
-            let o = this.we_mut();
-            if o.frozen {
-                o.frozentimer -= 1;
-                if o.frozentimer <= 0 {
-                    o.frozentimer = 0;
-                    o.frozen = false;
-
-                    o.velx = o.frozenvelocity;
-                    o.animationspeed = o.frozenanimationspeed;
-
-                    if o.fBouncing {
-                        o.bounce = -VELENEMYBOUNCE;
-                    }
-
-                    g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
-                        (o.ix as i32 - o.collisionOffsetX as i32 + o.iw as i32 - 32) as i16,
-                        (o.iy as i32 - o.collisionOffsetY as i32 + o.ih as i32 - 32) as i16,
-                        3,
-                        8,
-                    ));
-                }
-            }
-        }
-
-        if this.we().state == 0 {
-            let o = this.we_mut();
-            o.spawnradius -= 2.0f32;
-            o.spawnangle += 0.05f32;
-
-            if o.spawnradius < 10.0f32 {
-                o.state = 1;
-            }
-        } else {
-            io_moving_object_update(g, this);
-        }
-
-        // Deal with terminal burnup velocity
-        if this.we().vely >= MAXVELY {
-            this.we_mut().burnuptimer += 1;
-            if this.we().burnuptimer > 20 {
-                if this.we().burnuptimer > 80 {
-                    this.kill_object_map_hazard(g, -1);
-                } else {
-                    let o = this.we();
-                    g.eyecandy[0].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut g.rm.spr_burnup),
-                        (o.ix as i32 + (o.collisionWidth as i32 >> 1) - 16) as i16,
-                        (o.iy as i32 + (o.collisionHeight as i32 >> 1) - 16) as i16,
-                        5,
-                        4,
-                    ));
-                }
-            }
-        } else {
-            this.we_mut().burnuptimer = 0;
-        }
-
-        // If this enemy doesn't fall off of ledges, then take a look at the area in front of them
-        // to determine if they need to turn around
+    {
         let o = this.we_mut();
-        if !o.inair && !o.fFallOffLedges {
-            let mut probeCenterX: i16 = (o.ix as i32 + (o.collisionWidth as i32 >> 1)) as i16;
-            let mut probeFrontX: i16 = (o.ix as i32 + if o.velx > 0.0f32 { o.collisionWidth as i32 + 1 } else { -1 }) as i16;
-            let mut probeY: i16 = (o.iy as i32 + o.collisionHeight as i32 + 5) as i16;
+        if o.frozen {
+            o.frozentimer -= 1;
+            if o.frozentimer <= 0 {
+                o.frozentimer = 0;
+                o.frozen = false;
 
-            if !o.platform.is_null() {
-                let iFrontTileType: i32 = o.platform.get_tile_type_from_coord(probeFrontX, probeY);
-                let iCenterTileType: i32 = o.platform.get_tile_type_from_coord(probeCenterX, probeY);
+                o.velx = o.frozenvelocity;
+                o.animationspeed = o.frozenanimationspeed;
 
-                let fFrontGap = iFrontTileType == tile_flag_nonsolid || iFrontTileType == tile_flag_super_death_top;
-                let fCenterGap = iCenterTileType == tile_flag_nonsolid || iCenterTileType == tile_flag_super_death_top;
-
-                // If there is a hole or the type will kill the enemy, then turn around
-                if fFrontGap && fCenterGap {
-                    o.velx = -o.velx;
+                if o.fBouncing {
+                    o.bounce = -VELENEMYBOUNCE;
                 }
+
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+                    (o.ix as i32 - o.collisionOffsetX as i32 + o.iw as i32 - 32) as i16,
+                    (o.iy as i32 - o.collisionOffsetY as i32 + o.ih as i32 - 32) as i16,
+                    3,
+                    8,
+                ));
+            }
+        }
+    }
+
+    if this.we().state == 0 {
+        let o = this.we_mut();
+        o.spawnradius -= 2.0f32;
+        o.spawnangle += 0.05f32;
+
+        if o.spawnradius < 10.0f32 {
+            o.state = 1;
+        }
+    } else {
+        io_moving_object_update(g, this);
+    }
+
+    // Deal with terminal burnup velocity
+    if this.we().vely >= MAXVELY {
+        this.we_mut().burnuptimer += 1;
+        if this.we().burnuptimer > 20 {
+            if this.we().burnuptimer > 80 {
+                this.kill_object_map_hazard(g, -1);
             } else {
-                if probeFrontX as i32 >= App::screenWidth {
-                    probeFrontX = (probeFrontX as i32 - App::screenWidth) as i16;
-                } else if probeFrontX < 0 {
-                    probeFrontX = (probeFrontX as i32 + App::screenWidth) as i16;
-                }
+                let o = this.we();
+                g.eyecandy[0].emplace(EC_SingleAnimation::new(
+                    Ptr::from_mut(&mut g.rm.spr_burnup),
+                    (o.ix as i32 + (o.collisionWidth as i32 >> 1) - 16) as i16,
+                    (o.iy as i32 + (o.collisionHeight as i32 >> 1) - 16) as i16,
+                    5,
+                    4,
+                ));
+            }
+        }
+    } else {
+        this.we_mut().burnuptimer = 0;
+    }
 
-                if probeCenterX as i32 >= App::screenWidth {
-                    probeCenterX = (probeCenterX as i32 - App::screenWidth) as i16;
-                } else if probeCenterX < 0 {
-                    probeCenterX = (probeCenterX as i32 + App::screenWidth) as i16;
-                }
+    // If this enemy doesn't fall off of ledges, then take a look at the area in front of them
+    // to determine if they need to turn around
+    let o = this.we_mut();
+    if !o.inair && !o.fFallOffLedges {
+        let mut probeCenterX: i16 = (o.ix as i32 + (o.collisionWidth as i32 >> 1)) as i16;
+        let mut probeFrontX: i16 = (o.ix as i32 + if o.velx > 0.0f32 { o.collisionWidth as i32 + 1 } else { -1 }) as i16;
+        let mut probeY: i16 = (o.iy as i32 + o.collisionHeight as i32 + 5) as i16;
 
-                if probeFrontX >= 0
-                    && (probeFrontX as i32) < App::screenWidth
-                    && probeCenterX >= 0
-                    && (probeCenterX as i32) < App::screenWidth
-                    && probeY >= 0
-                    && (probeY as i32) < App::screenHeight
-                {
-                    probeFrontX = (probeFrontX as i32 / TILESIZE) as i16;
-                    probeCenterX = (probeCenterX as i32 / TILESIZE) as i16;
-                    probeY = (probeY as i32 / TILESIZE) as i16;
+        if !o.platform.is_null() {
+            let iFrontTileType: i32 = o.platform.get_tile_type_from_coord(probeFrontX, probeY);
+            let iCenterTileType: i32 = o.platform.get_tile_type_from_coord(probeCenterX, probeY);
 
-                    let mut frontBlock = g.g_map.block(probeFrontX, probeY);
-                    let mut centerBlock = g.g_map.block(probeCenterX, probeY);
+            let fFrontGap = iFrontTileType == tile_flag_nonsolid || iFrontTileType == tile_flag_super_death_top;
+            let fCenterGap = iCenterTileType == tile_flag_nonsolid || iCenterTileType == tile_flag_super_death_top;
 
-                    let fFoundFrontBlock = !frontBlock.is_null() && !frontBlock.is_transparent() && !frontBlock.is_hidden();
-                    let fFoundCenterBlock = !centerBlock.is_null() && !centerBlock.is_transparent() && !centerBlock.is_hidden();
+            // If there is a hole or the type will kill the enemy, then turn around
+            if fFrontGap && fCenterGap {
+                o.velx = -o.velx;
+            }
+        } else {
+            if probeFrontX as i32 >= App::screenWidth {
+                probeFrontX = (probeFrontX as i32 - App::screenWidth) as i16;
+            } else if probeFrontX < 0 {
+                probeFrontX = (probeFrontX as i32 + App::screenWidth) as i16;
+            }
 
-                    if !fFoundFrontBlock && !fFoundCenterBlock {
-                        let frontTile: i32 = g.g_map.map(probeFrontX as i32, probeY as i32);
-                        let centerTile: i32 = g.g_map.map(probeCenterX as i32, probeY as i32);
+            if probeCenterX as i32 >= App::screenWidth {
+                probeCenterX = (probeCenterX as i32 - App::screenWidth) as i16;
+            } else if probeCenterX < 0 {
+                probeCenterX = (probeCenterX as i32 + App::screenWidth) as i16;
+            }
 
-                        let fFrontGap = (frontTile & tile_flag_super_death_top) != 0 || ((frontTile & tile_flag_solid) == 0 && (frontTile & tile_flag_solid_on_top) == 0);
-                        let fCenterGap = (centerTile & tile_flag_super_death_top) != 0 || ((centerTile & tile_flag_solid) == 0 && (centerTile & tile_flag_solid_on_top) == 0);
+            if probeFrontX >= 0
+                && (probeFrontX as i32) < App::screenWidth
+                && probeCenterX >= 0
+                && (probeCenterX as i32) < App::screenWidth
+                && probeY >= 0
+                && (probeY as i32) < App::screenHeight
+            {
+                probeFrontX = (probeFrontX as i32 / TILESIZE) as i16;
+                probeCenterX = (probeCenterX as i32 / TILESIZE) as i16;
+                probeY = (probeY as i32 / TILESIZE) as i16;
 
-                        if fFrontGap && fCenterGap {
-                            o.velx = -o.velx;
-                        }
+                let mut frontBlock = g.g_map.block(probeFrontX, probeY);
+                let mut centerBlock = g.g_map.block(probeCenterX, probeY);
+
+                let fFoundFrontBlock = !frontBlock.is_null() && !frontBlock.is_transparent() && !frontBlock.is_hidden();
+                let fFoundCenterBlock = !centerBlock.is_null() && !centerBlock.is_transparent() && !centerBlock.is_hidden();
+
+                if !fFoundFrontBlock && !fFoundCenterBlock {
+                    let frontTile: i32 = g.g_map.map(probeFrontX as i32, probeY as i32);
+                    let centerTile: i32 = g.g_map.map(probeCenterX as i32, probeY as i32);
+
+                    let fFrontGap = (frontTile & tile_flag_super_death_top) != 0 || ((frontTile & tile_flag_solid) == 0 && (frontTile & tile_flag_solid_on_top) == 0);
+                    let fCenterGap = (centerTile & tile_flag_super_death_top) != 0 || ((centerTile & tile_flag_solid) == 0 && (centerTile & tile_flag_solid_on_top) == 0);
+
+                    if fFrontGap && fCenterGap {
+                        o.velx = -o.velx;
                     }
                 }
             }
@@ -309,28 +303,26 @@ pub fn mo_walking_enemy_collide_player<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut
         return false;
     }
 
-    unsafe {
-        if player.is_invincible() || this.we().frozen {
-            let killStyle = this.we().killStyle;
-            player.add_killer_award(g, Ptr::null(), killStyle);
+    if player.is_invincible() || this.we().frozen {
+        let killStyle = this.we().killStyle;
+        player.add_killer_award(g, Ptr::null(), killStyle);
 
-            if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
-                player.score().adjust_score(g, 1);
-            }
+        if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
+            player.score().adjust_score(g, 1);
+        }
 
-            if this.we().frozen {
-                this.shatter_die(g);
-            } else {
-                if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
-                this.die(g);
-            }
+        if this.we().frozen {
+            this.shatter_die(g);
         } else {
-            let o = this.we();
-            if player.fOldY + PH as f32 <= o.fOldY && player.iy as i32 + PH >= o.iy as i32 {
-                return this.hittop_player(g, player);
-            } else {
-                return this.hitother(g, player);
-            }
+            if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
+            this.die(g);
+        }
+    } else {
+        let o = this.we();
+        if player.fOldY + PH as f32 <= o.fOldY && player.iy as i32 + PH >= o.iy as i32 {
+            return this.hittop_player(g, player);
+        } else {
+            return this.hitother(g, player);
         }
     }
 
@@ -353,85 +345,83 @@ pub fn mo_walking_enemy_collide_object<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut
         return;
     }
 
-    unsafe {
-        if !object.is_dead() {
-            removeifprojectile(g, object, false, false);
+    if !object.is_dead() {
+        removeifprojectile(g, object, false, false);
 
-            let r#type: MovingObjectType = object.get_moving_object_type();
+        let r#type: MovingObjectType = object.get_moving_object_type();
 
-            let fKillOnWeakWeapon = this.we().fKillOnWeakWeapon;
-            let frozen = this.we().frozen;
-            if ((r#type == movingobject_fireball || r#type == movingobject_hammer || r#type == movingobject_boomerang) && (fKillOnWeakWeapon || frozen))
-                || r#type == movingobject_shell
-                || r#type == movingobject_throwblock
-                || r#type == movingobject_throwbox
-                || r#type == movingobject_bulletbill
-                || r#type == movingobject_podobo
-                || r#type == movingobject_attackzone
-                || r#type == movingobject_explosion
-                || r#type == movingobject_sledgehammer
-            {
-                // Don't kill enemies with non-moving shells
-                if r#type == movingobject_shell && object.get_state() == 2 {
-                    return;
-                }
-
-                // Don't kill enemies with slow or non-moving boxes
-                if r#type == movingobject_throwbox && !object.as_any().downcast_mut::<CO_ThrowBox>().unwrap().has_kill_velocity() {
-                    return;
-                }
-
-                if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
-                    // Find the player that shot this fireball so we can attribute a kill
-                    let mut killer: Ptr<CPlayer> = get_player_from_global_id(g, object.iPlayerID);
-
-                    if !killer.is_null() {
-                        let killStyle = this.we().killStyle;
-                        killer.add_killer_award(g, Ptr::null(), killStyle);
-                        killer.score().adjust_score(g, 1);
-
-                        if r#type == movingobject_shell {
-                            object.as_any().downcast_mut::<CO_Shell>().unwrap().add_moving_kill(g, killer);
-                        }
-                    }
-                }
-
-                if this.we().frozen {
-                    this.shatter_die(g);
-                } else {
-                    if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
-
-                    if r#type == movingobject_attackzone {
-                        this.die_and_drop_shell(g, true, false);
-                    } else {
-                        this.die(g);
-                    }
-                }
-
-                if r#type == movingobject_shell || r#type == movingobject_throwblock {
-                    object.check_and_die(g);
-                } else if r#type == movingobject_bulletbill || r#type == movingobject_attackzone || r#type == movingobject_throwbox {
-                    object.die(g);
-                }
-            } else if r#type == movingobject_iceblast {
-                let o = this.we_mut();
-                o.frozenvelocity = o.velx;
-                o.velx = 0.0f32;
-                o.animationspeed = 0;
-
-                o.bounce = GRAVITATION;
-
-                o.frozen = true;
-                o.frozentimer = 300;
-
-                g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
-                    (o.ix as i32 - o.collisionOffsetX as i32 + o.iw as i32 - 32) as i16,
-                    (o.iy as i32 - o.collisionOffsetY as i32 + o.ih as i32 - 32) as i16,
-                    3,
-                    8,
-                ));
+        let fKillOnWeakWeapon = this.we().fKillOnWeakWeapon;
+        let frozen = this.we().frozen;
+        if ((r#type == movingobject_fireball || r#type == movingobject_hammer || r#type == movingobject_boomerang) && (fKillOnWeakWeapon || frozen))
+            || r#type == movingobject_shell
+            || r#type == movingobject_throwblock
+            || r#type == movingobject_throwbox
+            || r#type == movingobject_bulletbill
+            || r#type == movingobject_podobo
+            || r#type == movingobject_attackzone
+            || r#type == movingobject_explosion
+            || r#type == movingobject_sledgehammer
+        {
+            // Don't kill enemies with non-moving shells
+            if r#type == movingobject_shell && object.get_state() == 2 {
+                return;
             }
+
+            // Don't kill enemies with slow or non-moving boxes
+            if r#type == movingobject_throwbox && !object.as_any().downcast_mut::<CO_ThrowBox>().unwrap().has_kill_velocity() {
+                return;
+            }
+
+            if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
+                // Find the player that shot this fireball so we can attribute a kill
+                let mut killer: Ptr<CPlayer> = get_player_from_global_id(g, object.iPlayerID);
+
+                if !killer.is_null() {
+                    let killStyle = this.we().killStyle;
+                    killer.add_killer_award(g, Ptr::null(), killStyle);
+                    killer.score().adjust_score(g, 1);
+
+                    if r#type == movingobject_shell {
+                        object.as_any().downcast_mut::<CO_Shell>().unwrap().add_moving_kill(g, killer);
+                    }
+                }
+            }
+
+            if this.we().frozen {
+                this.shatter_die(g);
+            } else {
+                if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
+
+                if r#type == movingobject_attackzone {
+                    this.die_and_drop_shell(g, true, false);
+                } else {
+                    this.die(g);
+                }
+            }
+
+            if r#type == movingobject_shell || r#type == movingobject_throwblock {
+                object.check_and_die(g);
+            } else if r#type == movingobject_bulletbill || r#type == movingobject_attackzone || r#type == movingobject_throwbox {
+                object.die(g);
+            }
+        } else if r#type == movingobject_iceblast {
+            let o = this.we_mut();
+            o.frozenvelocity = o.velx;
+            o.velx = 0.0f32;
+            o.animationspeed = 0;
+
+            o.bounce = GRAVITATION;
+
+            o.frozen = true;
+            o.frozentimer = 300;
+
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+                (o.ix as i32 - o.collisionOffsetX as i32 + o.iw as i32 - 32) as i16,
+                (o.iy as i32 - o.collisionOffsetY as i32 + o.ih as i32 - 32) as i16,
+                3,
+                8,
+            ));
         }
     }
 }
@@ -443,13 +433,11 @@ pub fn mo_walking_enemy_place(g: &mut Game, this: &mut MO_WalkingEnemy) {
     let collisionWidth = this.collisionWidth;
     let collisionHeight = this.collisionHeight;
     let mut iAttempts: i16 = 10;
-    unsafe {
-        while !gp.g_map.findspawnpoint(g, 5, &mut ix, &mut iy, collisionWidth, collisionHeight, false) && {
-            let a = iAttempts;
-            iAttempts -= 1;
-            a > 0
-        } {}
-    }
+    while !gp.g_map.findspawnpoint(g, 5, &mut ix, &mut iy, collisionWidth, collisionHeight, false) && {
+        let a = iAttempts;
+        iAttempts -= 1;
+        a > 0
+    } {}
     this.ix = ix;
     this.iy = iy;
     this.fx = this.ix as f32;
@@ -458,21 +446,19 @@ pub fn mo_walking_enemy_place(g: &mut Game, this: &mut MO_WalkingEnemy) {
 
 pub fn mo_walking_enemy_shatter_die<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, this: &mut T) {
         let mut gp = g.ptr();
-    unsafe {
-        if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
-        let o = this.we_mut();
-        o.dead = true;
+    if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
+    let o = this.we_mut();
+    o.dead = true;
 
-        let iBrokenIceX: i16 = (o.ix as i32 - o.collisionOffsetX as i32 + o.iw as i32 - 32) as i16;
-        let iBrokenIceY: i16 = (o.iy as i32 - o.collisionOffsetY as i32 + o.ih as i32 - 32) as i16;
-        let spr = Ptr::from_mut(&mut g.rm.spr_brokeniceblock);
-        g.eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, iBrokenIceY, -1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, iBrokenIceY, 1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, (iBrokenIceY as i32 + 16) as i16, -1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, (iBrokenIceY as i32 + 16) as i16, 1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
+    let iBrokenIceX: i16 = (o.ix as i32 - o.collisionOffsetX as i32 + o.iw as i32 - 32) as i16;
+    let iBrokenIceY: i16 = (o.iy as i32 - o.collisionOffsetY as i32 + o.ih as i32 - 32) as i16;
+    let spr = Ptr::from_mut(&mut g.rm.spr_brokeniceblock);
+    g.eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, iBrokenIceY, -1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
+    g.eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, iBrokenIceY, 1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
+    g.eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, (iBrokenIceY as i32 + 16) as i16, -1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
+    g.eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, (iBrokenIceY as i32 + 16) as i16, 1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
 
-        g.game_values.unlocksecret2part2 += 1;
-    }
+    g.game_values.unlocksecret2part2 += 1;
 }
 
 /// Virtual interface added by `MO_WalkingEnemy`. `hittop(CPlayer*)` is `hittop_player` (pure).

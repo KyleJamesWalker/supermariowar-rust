@@ -184,15 +184,13 @@ fn static_cast<T: Any>(obj: Ptr<dyn CObjectTrait>) -> Ptr<T> {
 
 /// `dynamic_cast<T*>(game_values.gamemode)`
 fn dynamic_cast_gamemode<T: Any>(g: &mut Game) -> Ptr<T> {
-    unsafe {
-        let gm = g.game_values.gamemode;
-        if gm.is_null() {
-            return Ptr::null();
-        }
-        match gm.get().as_any().downcast_mut::<T>() {
-            Some(t) => Ptr::from_mut(t),
-            None => Ptr::null(),
-        }
+    let gm = g.game_values.gamemode;
+    if gm.is_null() {
+        return Ptr::null();
+    }
+    match gm.get().as_any().downcast_mut::<T>() {
+        Some(t) => Ptr::from_mut(t),
+        None => Ptr::null(),
     }
 }
 
@@ -416,406 +414,404 @@ impl CPlayerAI {
     }
 
     pub fn get_nearest_objects(&mut self, g: &mut Game) {
-        unsafe {
-            self.nearestObjects.reset();
+        self.nearestObjects.reset();
 
-            let pPlayer = self.pPlayer;
-            let carriedItem = pPlayer.carriedItem;
-            let carriedObj = carried_as_object(carriedItem);
-            let fInvincible = pPlayer.is_invincible() || pPlayer.is_shielded() || pPlayer.shyguy;
-            let iTeamID: i16 = pPlayer.teamID;
+        let pPlayer = self.pPlayer;
+        let carriedItem = pPlayer.carriedItem;
+        let carriedObj = carried_as_object(carriedItem);
+        let fInvincible = pPlayer.is_invincible() || pPlayer.is_shielded() || pPlayer.shyguy;
+        let iTeamID: i16 = pPlayer.teamID;
 
-            let n = g.objectcontainer[1].list().len();
-            for i in 0..n {
-                let mut obj = g.objectcontainer[1].list()[i];
-                if self.attentionObjects.contains_key(&obj.network_id()) {
-                    //DistanceToObject(object, &nearestObjects.threat, &nearestObjects.threatdistance, &nearestObjects.threatwrap);
-                    continue;
-                }
+        let n = g.objectcontainer[1].list().len();
+        for i in 0..n {
+            let mut obj = g.objectcontainer[1].list()[i];
+            if self.attentionObjects.contains_key(&obj.network_id()) {
+                //DistanceToObject(object, &nearestObjects.threat, &nearestObjects.threatdistance, &nearestObjects.threatwrap);
+                continue;
+            }
 
-                let r#type: ObjectType = obj.get_object_type();
+            let r#type: ObjectType = obj.get_object_type();
 
-                match r#type {
-                    object_moving => {
-                        let movingtype = moving_object_type(obj);
+            match r#type {
+                object_moving => {
+                    let movingtype = moving_object_type(obj);
 
-                        if carriedObj == obj {
-                            continue;
-                        }
+                    if carriedObj == obj {
+                        continue;
+                    }
 
-                        if movingobject_shell == movingtype {
-                            let shell = static_cast::<CO_Shell>(obj);
+                    if movingobject_shell == movingtype {
+                        let shell = static_cast::<CO_Shell>(obj);
 
-                            if shell.is_threat() {
-                                if fInvincible {
-                                    continue;
-                                }
-
-                                nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
-                            } else if !carriedItem.is_null() {
-                                continue;
-                            } else {
-                                nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
-                            }
-                        } else if movingobject_throwblock == movingtype
-                            || (movingobject_throwbox == movingtype && static_cast::<CO_ThrowBox>(obj).has_kill_velocity())
-                        {
+                        if shell.is_threat() {
                             if fInvincible {
                                 continue;
                             }
 
                             nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
-                        } else if movingobject_pirhanaplant == movingtype {
-                            // MO_PirhanaPlant has no own `state`; this is CObject::state.
-                            if obj.state > 0 {
-                                nearest!(self.distance_to_object_center(obj, threat, threatdistance, threatwrap));
-                            }
-                        } else if movingobject_flag == movingtype {
-                            let mut flag = static_cast::<CO_Flag>(obj);
-
-                            if flag.get_in_base() && flag.get_team_id() == iTeamID {
-                                continue;
-                            }
-
-                            if !carriedItem.is_null() && carriedItem.get_moving_object_type() == movingobject_flag {
-                                continue;
-                            }
-
+                        } else if !carriedItem.is_null() {
+                            continue;
+                        } else {
                             nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
-                        } else if movingobject_yoshi == movingtype {
-                            let mut yoshi = static_cast::<MO_Yoshi>(obj);
+                        }
+                    } else if movingobject_throwblock == movingtype
+                        || (movingobject_throwbox == movingtype && static_cast::<CO_ThrowBox>(obj).has_kill_velocity())
+                    {
+                        if fInvincible {
+                            continue;
+                        }
 
-                            if carriedItem.is_null() || carriedItem.get_moving_object_type() != movingobject_egg {
-                                continue;
-                            }
+                        nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                    } else if movingobject_pirhanaplant == movingtype {
+                        // MO_PirhanaPlant has no own `state`; this is CObject::state.
+                        if obj.state > 0 {
+                            nearest!(self.distance_to_object_center(obj, threat, threatdistance, threatwrap));
+                        }
+                    } else if movingobject_flag == movingtype {
+                        let mut flag = static_cast::<CO_Flag>(obj);
 
-                            let mut egg = static_cast::<CO_Egg>(carriedObj);
+                        if flag.get_in_base() && flag.get_team_id() == iTeamID {
+                            continue;
+                        }
 
-                            if yoshi.get_color() != egg.get_color() {
-                                continue;
-                            }
+                        if !carriedItem.is_null() && carriedItem.get_moving_object_type() == movingobject_flag {
+                            continue;
+                        }
 
+                        nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                    } else if movingobject_yoshi == movingtype {
+                        let mut yoshi = static_cast::<MO_Yoshi>(obj);
+
+                        if carriedItem.is_null() || carriedItem.get_moving_object_type() != movingobject_egg {
+                            continue;
+                        }
+
+                        let mut egg = static_cast::<CO_Egg>(carriedObj);
+
+                        if yoshi.get_color() != egg.get_color() {
+                            continue;
+                        }
+
+                        nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                    } else if movingobject_egg == movingtype {
+                        if !carriedItem.is_null() && carriedItem.get_moving_object_type() == movingobject_egg {
+                            continue;
+                        }
+
+                        nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                    } else if movingobject_throwbox == movingtype {
+                        if !carriedItem.is_null() {
+                            continue;
+                        }
+
+                        nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                    } else if movingobject_star == movingtype {
+                        if !carriedItem.is_null() && carriedItem.get_moving_object_type() == movingobject_star {
+                            continue;
+                        }
+
+                        let mut starmode = static_cast_gamemode::<CGM_Star>(g);
+                        let mut star = static_cast::<CO_Star>(obj);
+
+                        if star.get_type() == 1 || starmode.isplayerstar(g, pPlayer) {
                             nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
-                        } else if movingobject_egg == movingtype {
-                            if !carriedItem.is_null() && carriedItem.get_moving_object_type() == movingobject_egg {
-                                continue;
-                            }
+                        } else {
+                            nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                        }
+                    } else if movingobject_coin == movingtype || movingobject_phantokey == movingtype {
+                        nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                    } else if movingobject_collectioncard == movingtype {
+                        let iNumHeldCards: i32 = pPlayer.score.subscore[0] as i32;
+                        let iHeldCards: i32 = pPlayer.score.subscore[1] as i32;
 
-                            nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
-                        } else if movingobject_throwbox == movingtype {
-                            if !carriedItem.is_null() {
-                                continue;
-                            }
+                        // C++ `break` out of the switch ends this object's iteration: `continue` here.
+                        if iNumHeldCards == 3 {
+                            let iThreeHeldCards = iHeldCards & 63;
 
-                            nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
-                        } else if movingobject_star == movingtype {
-                            if !carriedItem.is_null() && carriedItem.get_moving_object_type() == movingobject_star {
-                                continue;
-                            }
-
-                            let mut starmode = static_cast_gamemode::<CGM_Star>(g);
-                            let mut star = static_cast::<CO_Star>(obj);
-
-                            if star.get_type() == 1 || starmode.isplayerstar(g, pPlayer) {
-                                nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
-                            } else {
+                            //If bot is holding all of the same type of card, then ignore all other cards
+                            if iThreeHeldCards == 42 || iThreeHeldCards == 21 || iThreeHeldCards == 0 {
                                 nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                                continue;
                             }
-                        } else if movingobject_coin == movingtype || movingobject_phantokey == movingtype {
-                            nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
-                        } else if movingobject_collectioncard == movingtype {
-                            let iNumHeldCards: i32 = pPlayer.score.subscore[0] as i32;
-                            let iHeldCards: i32 = pPlayer.score.subscore[1] as i32;
 
-                            // C++ `break` out of the switch ends this object's iteration: `continue` here.
-                            if iNumHeldCards == 3 {
-                                let iThreeHeldCards = iHeldCards & 63;
+                            let iTwoHeldCards = iHeldCards & 15;
+                            if iTwoHeldCards == 10 || iTwoHeldCards == 5 || iTwoHeldCards == 0 {
+                                nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                                continue;
+                            }
+                        } else {
+                            let mut card = static_cast::<MO_CollectionCard>(obj);
 
-                                //If bot is holding all of the same type of card, then ignore all other cards
-                                if iThreeHeldCards == 42 || iThreeHeldCards == 21 || iThreeHeldCards == 0 {
-                                    nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
-                                    continue;
-                                }
-
+                            if iNumHeldCards == 2 {
                                 let iTwoHeldCards = iHeldCards & 15;
+
                                 if iTwoHeldCards == 10 || iTwoHeldCards == 5 || iTwoHeldCards == 0 {
-                                    nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
-                                    continue;
-                                }
-                            } else {
-                                let mut card = static_cast::<MO_CollectionCard>(obj);
-
-                                if iNumHeldCards == 2 {
-                                    let iTwoHeldCards = iHeldCards & 15;
-
-                                    if iTwoHeldCards == 10 || iTwoHeldCards == 5 || iTwoHeldCards == 0 {
-                                        let iCardValue: i32 = card.get_value() as i32;
-                                        if card.get_type() == 1
-                                            && ((iTwoHeldCards == 10 && iCardValue != 2)
-                                                || (iTwoHeldCards == 5 && iCardValue != 1)
-                                                || (iTwoHeldCards == 0 && iCardValue != 0))
-                                        {
-                                            nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
-                                            continue;
-                                        }
-                                    }
-                                } else if iNumHeldCards == 1 {
-                                    let iHeldCard = iHeldCards & 3;
                                     let iCardValue: i32 = card.get_value() as i32;
-                                    if card.get_type() == 1 || iHeldCard != iCardValue {
+                                    if card.get_type() == 1
+                                        && ((iTwoHeldCards == 10 && iCardValue != 2)
+                                            || (iTwoHeldCards == 5 && iCardValue != 1)
+                                            || (iTwoHeldCards == 0 && iCardValue != 0))
+                                    {
                                         nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
                                         continue;
                                     }
                                 }
-                            }
-
-                            if iNumHeldCards == 3 {
-                                nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
-                            } else {
-                                nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                            } else if iNumHeldCards == 1 {
+                                let iHeldCard = iHeldCards & 3;
+                                let iCardValue: i32 = card.get_value() as i32;
+                                if card.get_type() == 1 || iHeldCard != iCardValue {
+                                    nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                                    continue;
+                                }
                             }
                         }
-                    }
-                    object_frenzycard => {
-                        nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
-                    }
 
-                    object_pipe_coin => {
-                        let mut coin = static_cast::<OMO_PipeCoin>(obj);
-
-                        if coin.get_color() != 0 {
-                            if coin.get_team() == -1 || coin.get_team() == pPlayer.teamID {
-                                nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
-                            }
-                        } else {
+                        if iNumHeldCards == 3 {
                             nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
-                        }
-                    }
-
-                    object_pipe_bonus => {
-                        let mut bonus = static_cast::<OMO_PipeBonus>(obj);
-
-                        if bonus.get_type() != 5 {
+                        } else {
                             nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
-                        } else {
-                            nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
                         }
                     }
+                }
+                object_frenzycard => {
+                    nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                }
 
-                    object_pathhazard | object_orbithazard => {
+                object_pipe_coin => {
+                    let mut coin = static_cast::<OMO_PipeCoin>(obj);
+
+                    if coin.get_color() != 0 {
+                        if coin.get_team() == -1 || coin.get_team() == pPlayer.teamID {
+                            nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                        }
+                    } else {
                         nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
                     }
+                }
 
-                    object_phanto => {
-                        let mut phanto = static_cast::<OMO_Phanto>(obj);
+                object_pipe_bonus => {
+                    let mut bonus = static_cast::<OMO_PipeBonus>(obj);
 
-                        if phanto.get_type() == 2
-                            || (!carriedItem.is_null() && carriedItem.get_moving_object_type() == movingobject_phantokey)
-                        {
-                            nearest!(self.distance_to_object_center(obj, threat, threatdistance, threatwrap));
-                        }
-                    }
-
-                    object_flamecannon => {
-                        // IO_FlameCannon has no own `state`; this is CObject::state.
-                        if obj.state > 0 {
-                            nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
-                        }
-                    }
-
-                    _ => {
+                    if bonus.get_type() != 5 {
                         nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                    } else {
+                        nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
                     }
+                }
+
+                object_pathhazard | object_orbithazard => {
+                    nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                }
+
+                object_phanto => {
+                    let mut phanto = static_cast::<OMO_Phanto>(obj);
+
+                    if phanto.get_type() == 2
+                        || (!carriedItem.is_null() && carriedItem.get_moving_object_type() == movingobject_phantokey)
+                    {
+                        nearest!(self.distance_to_object_center(obj, threat, threatdistance, threatwrap));
+                    }
+                }
+
+                object_flamecannon => {
+                    // IO_FlameCannon has no own `state`; this is CObject::state.
+                    if obj.state > 0 {
+                        nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                    }
+                }
+
+                _ => {
+                    nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
                 }
             }
+        }
 
-            let n = g.objectcontainer[0].list().len();
-            for i in 0..n {
-                let mut obj = g.objectcontainer[0].list()[i];
-                if self.attentionObjects.contains_key(&obj.network_id()) {
-                    //DistanceToObject(object, &nearestObjects.threat, &nearestObjects.threatdistance, &nearestObjects.threatwrap);
-                    continue;
-                }
-
-                let r#type: ObjectType = obj.get_object_type();
-
-                match r#type {
-                    object_moving => {
-                        let movingtype = moving_object_type(obj);
-
-                        if carriedObj == obj {
-                            continue;
-                        }
-
-                        if movingobject_powerup == movingtype {
-                            nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
-                        } else if (movingobject_fireball == movingtype && static_cast::<MO_Fireball>(obj).iTeamID != iTeamID)
-                            || movingobject_poisonpowerup == movingtype
-                        {
-                            if fInvincible {
-                                continue;
-                            }
-
-                            nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
-                        } else if (movingobject_goomba == movingtype || movingobject_koopa == movingtype) && obj.get_state() == 1 {
-                            nearest!(self.distance_to_object(obj, stomp, stompdistance, stompwrap));
-                        } else if movingobject_sledgebrother == movingtype {
-                            nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
-                        } else if movingobject_treasurechest == movingtype {
-                            nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
-                        } else if movingobject_flagbase == movingtype {
-                            let mut flagbase = static_cast::<MO_FlagBase>(obj);
-
-                            if carriedItem.is_null()
-                                || carriedItem.get_moving_object_type() != movingobject_flag
-                                || flagbase.get_team_id() != iTeamID
-                            {
-                                continue;
-                            }
-
-                            nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
-                        } else {
-                            continue;
-                        }
-                    }
-
-                    object_area => {
-                        if static_cast::<OMO_Area>(obj).get_color_id() == pPlayer.colorID {
-                            continue;
-                        }
-
-                        nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
-                    }
-
-                    object_kingofthehill_area => {
-                        nearest!(self.distance_to_object_center(obj, goal, goaldistance, goalwrap));
-                    }
-
-                    _ => {
-                        nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
-                    }
-                }
+        let n = g.objectcontainer[0].list().len();
+        for i in 0..n {
+            let mut obj = g.objectcontainer[0].list()[i];
+            if self.attentionObjects.contains_key(&obj.network_id()) {
+                //DistanceToObject(object, &nearestObjects.threat, &nearestObjects.threatdistance, &nearestObjects.threatwrap);
+                continue;
             }
 
-            let n = g.objectcontainer[2].list().len();
-            for i in 0..n {
-                let mut obj = g.objectcontainer[2].list()[i];
-                if self.attentionObjects.contains_key(&obj.network_id()) {
-                    //DistanceToObject(object, &nearestObjects.threat, &nearestObjects.threatdistance, &nearestObjects.threatwrap);
-                    continue;
-                }
+            let r#type: ObjectType = obj.get_object_type();
 
-                let r#type: ObjectType = obj.get_object_type();
+            match r#type {
+                object_moving => {
+                    let movingtype = moving_object_type(obj);
 
-                match r#type {
-                    object_moving => {
-                        let movingtype = moving_object_type(obj);
+                    if carriedObj == obj {
+                        continue;
+                    }
 
-                        if carriedObj == obj {
+                    if movingobject_powerup == movingtype {
+                        nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                    } else if (movingobject_fireball == movingtype && static_cast::<MO_Fireball>(obj).iTeamID != iTeamID)
+                        || movingobject_poisonpowerup == movingtype
+                    {
+                        if fInvincible {
                             continue;
                         }
 
-                        if movingobject_cheepcheep == movingtype {
-                            nearest!(self.distance_to_object(obj, stomp, stompdistance, stompwrap));
-                        } else if movingobject_bulletbill == movingtype {
-                            if fInvincible {
-                                continue;
-                            }
+                        nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                    } else if (movingobject_goomba == movingtype || movingobject_koopa == movingtype) && obj.get_state() == 1 {
+                        nearest!(self.distance_to_object(obj, stomp, stompdistance, stompwrap));
+                    } else if movingobject_sledgebrother == movingtype {
+                        nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                    } else if movingobject_treasurechest == movingtype {
+                        nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                    } else if movingobject_flagbase == movingtype {
+                        let mut flagbase = static_cast::<MO_FlagBase>(obj);
 
-                            nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
-                        } else if movingobject_hammer == movingtype && static_cast::<MO_Hammer>(obj).iTeamID != iTeamID {
-                            if fInvincible {
-                                continue;
-                            }
-
-                            nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
-                        } else if movingobject_iceblast == movingtype && static_cast::<MO_IceBlast>(obj).iTeamID != iTeamID {
-                            if fInvincible {
-                                continue;
-                            }
-
-                            nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
-                        } else if movingobject_boomerang == movingtype && static_cast::<MO_Boomerang>(obj).iTeamID != iTeamID {
-                            if fInvincible {
-                                continue;
-                            }
-
-                            nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
-                        } else if movingobject_bomb == movingtype && static_cast::<CO_Bomb>(obj).iTeamID != iTeamID {
-                            if fInvincible {
-                                continue;
-                            }
-
-                            nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
-                        } else if movingobject_podobo == movingtype && static_cast::<MO_Podobo>(obj).iTeamID != iTeamID {
-                            if fInvincible {
-                                continue;
-                            }
-
-                            nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
-                        } else if movingobject_explosion == movingtype && static_cast::<MO_Explosion>(obj).iTeamID != iTeamID {
-                            if fInvincible {
-                                continue;
-                            }
-
-                            nearest!(self.distance_to_object_center(obj, threat, threatdistance, threatwrap));
+                        if carriedItem.is_null()
+                            || carriedItem.get_moving_object_type() != movingobject_flag
+                            || flagbase.get_team_id() != iTeamID
+                        {
+                            continue;
                         }
+
+                        nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                    } else {
+                        continue;
                     }
-                    object_thwomp | object_bowserfire => {
+                }
+
+                object_area => {
+                    if static_cast::<OMO_Area>(obj).get_color_id() == pPlayer.colorID {
+                        continue;
+                    }
+
+                    nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                }
+
+                object_kingofthehill_area => {
+                    nearest!(self.distance_to_object_center(obj, goal, goaldistance, goalwrap));
+                }
+
+                _ => {
+                    nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                }
+            }
+        }
+
+        let n = g.objectcontainer[2].list().len();
+        for i in 0..n {
+            let mut obj = g.objectcontainer[2].list()[i];
+            if self.attentionObjects.contains_key(&obj.network_id()) {
+                //DistanceToObject(object, &nearestObjects.threat, &nearestObjects.threatdistance, &nearestObjects.threatwrap);
+                continue;
+            }
+
+            let r#type: ObjectType = obj.get_object_type();
+
+            match r#type {
+                object_moving => {
+                    let movingtype = moving_object_type(obj);
+
+                    if carriedObj == obj {
+                        continue;
+                    }
+
+                    if movingobject_cheepcheep == movingtype {
+                        nearest!(self.distance_to_object(obj, stomp, stompdistance, stompwrap));
+                    } else if movingobject_bulletbill == movingtype {
+                        if fInvincible {
+                            continue;
+                        }
+
+                        nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                    } else if movingobject_hammer == movingtype && static_cast::<MO_Hammer>(obj).iTeamID != iTeamID {
+                        if fInvincible {
+                            continue;
+                        }
+
+                        nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                    } else if movingobject_iceblast == movingtype && static_cast::<MO_IceBlast>(obj).iTeamID != iTeamID {
+                        if fInvincible {
+                            continue;
+                        }
+
+                        nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                    } else if movingobject_boomerang == movingtype && static_cast::<MO_Boomerang>(obj).iTeamID != iTeamID {
+                        if fInvincible {
+                            continue;
+                        }
+
+                        nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                    } else if movingobject_bomb == movingtype && static_cast::<CO_Bomb>(obj).iTeamID != iTeamID {
+                        if fInvincible {
+                            continue;
+                        }
+
+                        nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                    } else if movingobject_podobo == movingtype && static_cast::<MO_Podobo>(obj).iTeamID != iTeamID {
+                        if fInvincible {
+                            continue;
+                        }
+
+                        nearest!(self.distance_to_object(obj, threat, threatdistance, threatwrap));
+                    } else if movingobject_explosion == movingtype && static_cast::<MO_Explosion>(obj).iTeamID != iTeamID {
                         if fInvincible {
                             continue;
                         }
 
                         nearest!(self.distance_to_object_center(obj, threat, threatdistance, threatwrap));
                     }
-                    object_race_goal => {
-                        if g.game_values.gamemode.gamemode != game_mode_race {
-                            continue;
-                        }
-
-                        let mut racegoal = static_cast::<OMO_RaceGoal>(obj);
-
-                        if racegoal.get_goal_id() != static_cast_gamemode::<CGM_Race>(g).get_next_goal(iTeamID) {
-                            continue;
-                        }
-
-                        nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
-                    }
-
-                    _ => {
-                        nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
-                    }
                 }
-            }
-
-            let gmChicken = dynamic_cast_gamemode::<CGM_Chicken>(g);
-
-            //Figure out where the other players are
-            for iPlayer in 0..g.players.len() {
-                if iPlayer == pPlayer.localID as usize || g.players[iPlayer].state != PlayerState::Ready {
-                    continue;
-                }
-
-                //Find players in jail on own team to tag
-                if g.game_values.gamemode.gamemode == game_mode_jail {
-                    if g.players[iPlayer].jail.is_active() && g.players[iPlayer].teamID == iTeamID {
-                        nearest!(self.distance_to_player(g.players[iPlayer], teammate, teammatedistance, teammatewrap));
-                    }
-                }
-
-                if g.players[iPlayer].teamID == iTeamID || g.players[iPlayer].state != PlayerState::Ready {
-                    continue;
-                }
-
-                //If there is a chicken, only focus on stomping him
-                if !gmChicken.is_null() && !gmChicken.chicken().is_null() {
-                    if gmChicken.chicken().teamID != iTeamID && gmChicken.chicken() != g.players[iPlayer] {
+                object_thwomp | object_bowserfire => {
+                    if fInvincible {
                         continue;
                     }
+
+                    nearest!(self.distance_to_object_center(obj, threat, threatdistance, threatwrap));
+                }
+                object_race_goal => {
+                    if g.game_values.gamemode.gamemode != game_mode_race {
+                        continue;
+                    }
+
+                    let mut racegoal = static_cast::<OMO_RaceGoal>(obj);
+
+                    if racegoal.get_goal_id() != static_cast_gamemode::<CGM_Race>(g).get_next_goal(iTeamID) {
+                        continue;
+                    }
+
+                    nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
                 }
 
-                nearest!(self.distance_to_player(g.players[iPlayer], player, playerdistance, playerwrap));
+                _ => {
+                    nearest!(self.distance_to_object(obj, goal, goaldistance, goalwrap));
+                }
             }
+        }
+
+        let gmChicken = dynamic_cast_gamemode::<CGM_Chicken>(g);
+
+        //Figure out where the other players are
+        for iPlayer in 0..g.players.len() {
+            if iPlayer == pPlayer.localID as usize || g.players[iPlayer].state != PlayerState::Ready {
+                continue;
+            }
+
+            //Find players in jail on own team to tag
+            if g.game_values.gamemode.gamemode == game_mode_jail {
+                if g.players[iPlayer].jail.is_active() && g.players[iPlayer].teamID == iTeamID {
+                    nearest!(self.distance_to_player(g.players[iPlayer], teammate, teammatedistance, teammatewrap));
+                }
+            }
+
+            if g.players[iPlayer].teamID == iTeamID || g.players[iPlayer].state != PlayerState::Ready {
+                continue;
+            }
+
+            //If there is a chicken, only focus on stomping him
+            if !gmChicken.is_null() && !gmChicken.chicken().is_null() {
+                if gmChicken.chicken().teamID != iTeamID && gmChicken.chicken() != g.players[iPlayer] {
+                    continue;
+                }
+            }
+
+            nearest!(self.distance_to_player(g.players[iPlayer], player, playerdistance, playerwrap));
         }
     }
 
@@ -898,36 +894,34 @@ impl CPlayerAI {
 
 //Setup AI so that it can ignore or pay attention to some objects
 pub fn cplayer_ai_init(g: &mut Game, this: &mut CPlayerAI) {
-    unsafe {
-        //Scan yoshi's egg mode objects to make sure that we ignore eggs without matching yoshis
-        if g.game_values.gamemode.gamemode == game_mode_eggs {
-            let mut fYoshi: [bool; 4] = [false, false, false, false];
+    //Scan yoshi's egg mode objects to make sure that we ignore eggs without matching yoshis
+    if g.game_values.gamemode.gamemode == game_mode_eggs {
+        let mut fYoshi: [bool; 4] = [false, false, false, false];
 
-            //Scan Yoshis to see which ones are present
-            let n = g.objectcontainer[1].list().len();
-            for i in 0..n {
-                let obj = g.objectcontainer[1].list()[i];
-                let mut yoshi = dynamic_cast::<MO_Yoshi>(obj);
-                if !yoshi.is_null() {
-                    fYoshi[yoshi.get_color() as usize] = true;
-                }
+        //Scan Yoshis to see which ones are present
+        let n = g.objectcontainer[1].list().len();
+        for i in 0..n {
+            let obj = g.objectcontainer[1].list()[i];
+            let mut yoshi = dynamic_cast::<MO_Yoshi>(obj);
+            if !yoshi.is_null() {
+                fYoshi[yoshi.get_color() as usize] = true;
             }
+        }
 
-            //Now scan eggs and ignore any egg that doesn't have a yoshi
-            let n = g.objectcontainer[1].list().len();
-            for i in 0..n {
-                let obj = g.objectcontainer[1].list()[i];
-                let mut egg = dynamic_cast::<CO_Egg>(obj);
-                if !egg.is_null() {
-                    if !fYoshi[egg.get_color() as usize] {
-                        let ao = Box::new(AttentionObject {
-                            iID: egg.network_id(),
-                            iType: 1,  //Ignore this object
-                            iTimer: 0, //Ignore it forever
-                        });
+        //Now scan eggs and ignore any egg that doesn't have a yoshi
+        let n = g.objectcontainer[1].list().len();
+        for i in 0..n {
+            let obj = g.objectcontainer[1].list()[i];
+            let mut egg = dynamic_cast::<CO_Egg>(obj);
+            if !egg.is_null() {
+                if !fYoshi[egg.get_color() as usize] {
+                    let ao = Box::new(AttentionObject {
+                        iID: egg.network_id(),
+                        iType: 1,  //Ignore this object
+                        iTimer: 0, //Ignore it forever
+                    });
 
-                        this.attentionObjects.insert(ao.iID, ao);
-                    }
+                    this.attentionObjects.insert(ao.iID, ao);
                 }
             }
         }

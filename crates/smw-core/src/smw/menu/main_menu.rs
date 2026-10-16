@@ -35,57 +35,55 @@ crate::impl_base!(UI_MainMenu => ui_menu: UI_Menu);
 impl UI_MainMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
         let mut this = Box::<Self>::default();
-        unsafe {
-            let selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
+        let selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
 
-            this.miSMWTitle = Ptr::new_box(MI_Image::new(
-                Ptr::from_mut(&mut g.rm.menu_smw),
-                (320 - ((g.rm.menu_smw.get_width() as i16) >> 1) as i32) as i16,
-                30,
-                0,
-                0,
-                372,
-                140,
-                1,
-                1,
-                0,
-            ));
-            this.miSMWVersion = Ptr::new_box(MI_Image::new(
-                Ptr::from_mut(&mut g.rm.menu_version),
-                (628 - g.rm.menu_version.get_width()) as i16,
-                10,
-                0,
-                0,
-                g.rm.menu_version.get_width() as i16,
-                g.rm.menu_version.get_height() as i16,
-                1,
-                1,
-                0,
-            ));
-            // miSMWVersionText = new MI_Text("Beta 2", 630, 45, 0, 2, 2);
+        this.miSMWTitle = Ptr::new_box(MI_Image::new(
+            Ptr::from_mut(&mut g.rm.menu_smw),
+            (320 - ((g.rm.menu_smw.get_width() as i16) >> 1) as i32) as i16,
+            30,
+            0,
+            0,
+            372,
+            140,
+            1,
+            1,
+            0,
+        ));
+        this.miSMWVersion = Ptr::new_box(MI_Image::new(
+            Ptr::from_mut(&mut g.rm.menu_version),
+            (628 - g.rm.menu_version.get_width()) as i16,
+            10,
+            0,
+            0,
+            g.rm.menu_version.get_width() as i16,
+            g.rm.menu_version.get_height() as i16,
+            1,
+            1,
+            0,
+        ));
+        // miSMWVersionText = new MI_Text("Beta 2", 630, 45, 0, 2, 2);
 
-            this.miMainStartButton = Ptr::new_box(MI_Button::new(g, selectfield, 120, 210, "Start", 310, TextAlign::LEFT));
-            this.miMainStartButton.set_code(MENU_CODE_TO_MATCH_SELECTION_MENU);
+        this.miMainStartButton = Ptr::new_box(MI_Button::new(g, selectfield, 120, 210, "Start", 310, TextAlign::LEFT));
+        this.miMainStartButton.set_code(MENU_CODE_TO_MATCH_SELECTION_MENU);
 
-            this.miQuickGameButton = Ptr::new_box(MI_Button::new(g, selectfield, 440, 210, "Go!", 80, TextAlign::LEFT));
-            this.miQuickGameButton.set_code(MENU_CODE_QUICK_GAME_START);
+        this.miQuickGameButton = Ptr::new_box(MI_Button::new(g, selectfield, 440, 210, "Go!", 80, TextAlign::LEFT));
+        this.miQuickGameButton.set_code(MENU_CODE_QUICK_GAME_START);
 
-            this.miPlayerSelect = Ptr::new_box(MI_PlayerSelect::new(Ptr::from_mut(&mut g.rm.menu_player_select), 120, 250, "Players", 400, 140));
+        this.miPlayerSelect = Ptr::new_box(MI_PlayerSelect::new(Ptr::from_mut(&mut g.rm.menu_player_select), 120, 250, "Players", 400, 140));
 
-            // Upstream's web build disables Multiplayer, stacks Options over Controls and has no Exit. Here every
-            // build uses the native layout, so replays navigate the same; on the web Exit ends the session.
-            this.miMultiplayerButton = Ptr::new_box(MI_Button::new(g, selectfield, 120, 322, "Multiplayer", 400, TextAlign::LEFT));
-            this.miMultiplayerButton.set_code(MENU_CODE_TO_NET_SERVERS_MENU);
+        // Upstream's web build disables Multiplayer, stacks Options over Controls and has no Exit. Here every
+        // build uses the native layout, so replays navigate the same; on the web Exit ends the session.
+        this.miMultiplayerButton = Ptr::new_box(MI_Button::new(g, selectfield, 120, 322, "Multiplayer", 400, TextAlign::LEFT));
+        this.miMultiplayerButton.set_code(MENU_CODE_TO_NET_SERVERS_MENU);
 
-            this.miOptionsButton = Ptr::new_box(MI_Button::new(g, selectfield, 120, 362, "Options", 200, TextAlign::LEFT));
-            this.miControlsButton = Ptr::new_box(MI_Button::new(g, selectfield, 320, 362, "Controls", 200, TextAlign::LEFT));
+        this.miOptionsButton = Ptr::new_box(MI_Button::new(g, selectfield, 120, 362, "Options", 200, TextAlign::LEFT));
+        this.miControlsButton = Ptr::new_box(MI_Button::new(g, selectfield, 320, 362, "Controls", 200, TextAlign::LEFT));
 
-            this.miOptionsButton.set_code(MENU_CODE_TO_OPTIONS_MENU);
-            this.miControlsButton.set_code(MENU_CODE_TO_CONTROLS_MENU);
+        this.miOptionsButton.set_code(MENU_CODE_TO_OPTIONS_MENU);
+        this.miControlsButton.set_code(MENU_CODE_TO_CONTROLS_MENU);
 
-            this.miExitButton = Ptr::new_box(MI_Button::new(g, selectfield, 120, 402, "Exit", (640.0f32 * 0.625f32) as i16, TextAlign::LEFT));
-            this.miExitButton.set_code(MENU_CODE_EXIT_APPLICATION);
-        }
+        this.miExitButton = Ptr::new_box(MI_Button::new(g, selectfield, 120, 402, "Exit", (640.0f32 * 0.625f32) as i16, TextAlign::LEFT));
+        this.miExitButton.set_code(MENU_CODE_EXIT_APPLICATION);
 
         let start = ctl_ptr(this.miMainStartButton);
         let quick = ctl_ptr(this.miQuickGameButton);

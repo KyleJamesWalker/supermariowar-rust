@@ -39,24 +39,22 @@ impl PlayerCape {
 
     pub fn spin(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut gp = g.ptr();
-        unsafe {
-            if_sound_on_play(g, &mut gp.rm.sfx_tailspin);
+        if_sound_on_play(g, &mut gp.rm.sfx_tailspin);
 
-            self.restart_animation(); //Add one extra frame to sync with spinning player sprite
+        self.restart_animation(); //Add one extra frame to sync with spinning player sprite
 
-            Ptr::from_mut(&mut player.spin).get().spin(g, player);
+        Ptr::from_mut(&mut player.spin).get().spin(g, player);
 
-            let facing_right = player.is_facing_right(g);
-            let obj = Ptr::new_box(MO_SpinAttack::new(
-                g,
-                player.get_global_id(),
-                player.get_team_id(),
-                KillStyle::Feather,
-                facing_right,
-                24,
-            ));
-            gp.objectcontainer[1].add(g, obj);
-        }
+        let facing_right = player.is_facing_right(g);
+        let obj = Ptr::new_box(MO_SpinAttack::new(
+            g,
+            player.get_global_id(),
+            player.get_team_id(),
+            KillStyle::Feather,
+            facing_right,
+            24,
+        ));
+        gp.objectcontainer[1].add(g, obj);
     }
 
     pub fn draw(&mut self, g: &mut Game, player: &mut CPlayer) {

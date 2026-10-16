@@ -65,47 +65,45 @@ impl PlayerKuriboShoe {
     fn update_getting_out_of_the_shoe(&mut self, g: &mut Game, player: &mut CPlayer, keymask: u8) {
         let mut gp = g.ptr();
         let mut rm = g.rm;
-        unsafe {
-            if self.is_on() && player.isready() && !player.frozen {
-                if self.exitIndex > 0 {
-                    self.exitTimer = self.exitTimer.wrapping_add(1);
-                    if self.exitTimer >= 32 {
-                        self.exitIndex = 0;
-                        self.exitTimer = 0;
-                    }
-                }
-
-                if keymask as i32 & kuriboShoe_exitCode[self.exitIndex as usize] as i32 != 0 {
-                    self.exitIndex = self.exitIndex.wrapping_add(1);
-                } else if keymask as i32 & !(kuriboShoe_exitCode[self.exitIndex as usize] as i32) != 0 {
+        if self.is_on() && player.isready() && !player.frozen {
+            if self.exitIndex > 0 {
+                self.exitTimer = self.exitTimer.wrapping_add(1);
+                if self.exitTimer >= 32 {
                     self.exitIndex = 0;
                     self.exitTimer = 0;
                 }
+            }
 
-                if self.exitIndex == 4 && self.exitTimer < 32 {
-                    let shoe = Ptr::new_box(CO_KuriboShoe::new(
-                        g,
-                        Ptr::from_mut(&mut rm.spr_kuriboshoe),
-                        Vec2s::new((player.ix as i32 - PWOFFSET) as i16, (player.iy as i32 - PHOFFSET - 2) as i16),
-                        self.r#type == STICKY,
-                    ));
-                    io_moving_object_collision_detection_checksides(g, shoe.get());
-                    gp.objectcontainer[1].add(g, shoe);
-                    g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
-                        (player.center_x() as i32 - 16) as i16,
-                        (player.center_y() as i32 - 16) as i16,
-                        3,
-                        8,
-                    ));
+            if keymask as i32 & kuriboShoe_exitCode[self.exitIndex as usize] as i32 != 0 {
+                self.exitIndex = self.exitIndex.wrapping_add(1);
+            } else if keymask as i32 & !(kuriboShoe_exitCode[self.exitIndex as usize] as i32) != 0 {
+                self.exitIndex = 0;
+                self.exitTimer = 0;
+            }
 
-                    self.exitIndex = 0;
-                    self.exitTimer = 0;
-                    if_sound_on_play(g, &mut gp.rm.sfx_transform);
-                    self.r#type = NONE;
+            if self.exitIndex == 4 && self.exitTimer < 32 {
+                let shoe = Ptr::new_box(CO_KuriboShoe::new(
+                    g,
+                    Ptr::from_mut(&mut rm.spr_kuriboshoe),
+                    Vec2s::new((player.ix as i32 - PWOFFSET) as i16, (player.iy as i32 - PHOFFSET - 2) as i16),
+                    self.r#type == STICKY,
+                ));
+                io_moving_object_collision_detection_checksides(g, shoe.get());
+                gp.objectcontainer[1].add(g, shoe);
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+                    (player.center_x() as i32 - 16) as i16,
+                    (player.center_y() as i32 - 16) as i16,
+                    3,
+                    8,
+                ));
 
-                    player.superstomp.reset();
-                }
+                self.exitIndex = 0;
+                self.exitTimer = 0;
+                if_sound_on_play(g, &mut gp.rm.sfx_transform);
+                self.r#type = NONE;
+
+                player.superstomp.reset();
             }
         }
     }

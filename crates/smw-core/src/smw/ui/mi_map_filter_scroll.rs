@@ -130,55 +130,53 @@ impl UI_ControlTrait for MI_MapFilterScroll {
     }
 
     fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
-        unsafe {
-            for iPlayer in 0..4i16 {
-                //Only allow the controlling team to control the menu (if there is one)
-                if self.iControllingTeam != -1 && (self.iControllingTeam != lookup_team_id(g, iPlayer) || g.game_values.playercontrol[iPlayer as usize] != 1) {
-                    continue;
+        for iPlayer in 0..4i16 {
+            //Only allow the controlling team to control the menu (if there is one)
+            if self.iControllingTeam != -1 && (self.iControllingTeam != lookup_team_id(g, iPlayer) || g.game_values.playercontrol[iPlayer as usize] != 1) {
+                continue;
+            }
+
+            let out = &playerInput.outputControls[iPlayer as usize];
+            if out.menu_down().fPressed {
+                self.move_next();
+                return MENU_CODE_NONE;
+            }
+
+            if out.menu_up().fPressed {
+                self.move_prev();
+                return MENU_CODE_NONE;
+            }
+
+            if out.menu_left().fPressed {
+                self.iSelectedColumn = 0;
+                return MENU_CODE_NONE;
+            }
+
+            if out.menu_right().fPressed {
+                if self.iIndex as i32 >= NUM_AUTO_FILTERS {
+                    self.iSelectedColumn = 1;
                 }
 
-                let out = &playerInput.outputControls[iPlayer as usize];
-                if out.menu_down().fPressed {
-                    self.move_next();
-                    return MENU_CODE_NONE;
+                return MENU_CODE_NONE;
+            }
+
+            if out.menu_select().fPressed {
+                let idx = self.iIndex as usize;
+                //If the left column is selected, then turn that filter on/off
+                if self.iSelectedColumn == 0 {
+                    self.items[idx].fSelected = !self.items[idx].fSelected;
+                    g.game_values.pfFilters[idx] = !g.game_values.pfFilters[idx];
+                } else {
+                    //otherwise if the right is selected, go into the details of that filter
+                    g.game_values.selectedmapfilter = self.iIndex as i16;
+                    return MENU_CODE_TO_MAP_FILTER_EDIT;
                 }
 
-                if out.menu_up().fPressed {
-                    self.move_prev();
-                    return MENU_CODE_NONE;
-                }
+                return MENU_CODE_NONE;
+            }
 
-                if out.menu_left().fPressed {
-                    self.iSelectedColumn = 0;
-                    return MENU_CODE_NONE;
-                }
-
-                if out.menu_right().fPressed {
-                    if self.iIndex as i32 >= NUM_AUTO_FILTERS {
-                        self.iSelectedColumn = 1;
-                    }
-
-                    return MENU_CODE_NONE;
-                }
-
-                if out.menu_select().fPressed {
-                    let idx = self.iIndex as usize;
-                    //If the left column is selected, then turn that filter on/off
-                    if self.iSelectedColumn == 0 {
-                        self.items[idx].fSelected = !self.items[idx].fSelected;
-                        g.game_values.pfFilters[idx] = !g.game_values.pfFilters[idx];
-                    } else {
-                        //otherwise if the right is selected, go into the details of that filter
-                        g.game_values.selectedmapfilter = self.iIndex as i16;
-                        return MENU_CODE_TO_MAP_FILTER_EDIT;
-                    }
-
-                    return MENU_CODE_NONE;
-                }
-
-                if out.menu_cancel().fPressed {
-                    return MENU_CODE_MAP_FILTER_EXIT;
-                }
+            if out.menu_cancel().fPressed {
+                return MENU_CODE_MAP_FILTER_EXIT;
             }
         }
 
@@ -198,56 +196,54 @@ impl UI_ControlTrait for MI_MapFilterScroll {
         let iWidth = self.iWidth as i32;
         let iNumLines = self.iNumLines as i32;
 
-        unsafe {
-            //Draw the background for the map preview
-            gp.rm.menu_dialog.draw_src(g, x, y, &Rect { x: 0, y: 0, w: iWidth - 16, h: iNumLines * 32 + 32 });
-            gp.rm.menu_dialog.draw_src(g, x + iWidth - 16, y, &Rect { x: 496, y: 0, w: 16, h: iNumLines * 32 + 32 });
-            gp.rm.menu_dialog.draw_src(g, x, y + iNumLines * 32 + 32, &Rect { x: 0, y: 464, w: iWidth - 16, h: 16 });
-            gp.rm.menu_dialog.draw_src(g, x + iWidth - 16, y + iNumLines * 32 + 32, &Rect { x: 496, y: 464, w: 16, h: 16 });
+        //Draw the background for the map preview
+        gp.rm.menu_dialog.draw_src(g, x, y, &Rect { x: 0, y: 0, w: iWidth - 16, h: iNumLines * 32 + 32 });
+        gp.rm.menu_dialog.draw_src(g, x + iWidth - 16, y, &Rect { x: 496, y: 0, w: 16, h: iNumLines * 32 + 32 });
+        gp.rm.menu_dialog.draw_src(g, x, y + iNumLines * 32 + 32, &Rect { x: 0, y: 464, w: iWidth - 16, h: 16 });
+        gp.rm.menu_dialog.draw_src(g, x + iWidth - 16, y + iNumLines * 32 + 32, &Rect { x: 496, y: 464, w: 16, h: 16 });
 
-            gp.rm.menu_font_large.draw_centered(g, x + (iWidth >> 1), y + 5, "Map Filters");
+        gp.rm.menu_font_large.draw_centered(g, x + (iWidth >> 1), y + 5, "Map Filters");
 
-            //Draw each filter field
-            let mut iLine: i16 = 0;
-            while iLine < self.iNumLines && (iLine as u16 as usize) < self.items.len() {
-                let l = iLine as i32;
-                let lineSel = self.iSelectedLine == iLine && self.iSelectedColumn == 0;
-                if self.iOffset as i32 + l >= NUM_AUTO_FILTERS {
-                    let iHalfLineWidth = ((iWidth - 64) as i16 >> 1) as i32;
-                    let iLineWidth = (iWidth - 64) as i16 as i32;
+        //Draw each filter field
+        let mut iLine: i16 = 0;
+        while iLine < self.iNumLines && (iLine as u16 as usize) < self.items.len() {
+            let l = iLine as i32;
+            let lineSel = self.iSelectedLine == iLine && self.iSelectedColumn == 0;
+            if self.iOffset as i32 + l >= NUM_AUTO_FILTERS {
+                let iHalfLineWidth = ((iWidth - 64) as i16 >> 1) as i32;
+                let iLineWidth = (iWidth - 64) as i16 as i32;
 
-                    self.spr.draw_src(g, x + 16, y + 32 + l * 32, &Rect { x: 0, y: if lineSel { 32 } else { 0 }, w: iHalfLineWidth, h: 32 });
-                    self.spr.draw_src(
-                        g,
-                        x + 16 + iHalfLineWidth,
-                        y + 32 + l * 32,
-                        &Rect { x: 512 - iLineWidth + iHalfLineWidth, y: if lineSel { 32 } else { 0 }, w: iLineWidth - iHalfLineWidth, h: 32 },
-                    );
+                self.spr.draw_src(g, x + 16, y + 32 + l * 32, &Rect { x: 0, y: if lineSel { 32 } else { 0 }, w: iHalfLineWidth, h: 32 });
+                self.spr.draw_src(
+                    g,
+                    x + 16 + iHalfLineWidth,
+                    y + 32 + l * 32,
+                    &Rect { x: 512 - iLineWidth + iHalfLineWidth, y: if lineSel { 32 } else { 0 }, w: iLineWidth - iHalfLineWidth, h: 32 },
+                );
 
-                    let colSel = self.iSelectedLine == iLine && self.iSelectedColumn == 1;
-                    gp.rm.menu_map_filter.draw_src(g, x + iWidth - 48, y + 32 + l * 32, &Rect { x: 48, y: if colSel { 32 } else { 0 }, w: 32, h: 32 });
-                } else {
-                    let iHalfLineWidth = ((iWidth - 32) as i16 >> 1) as i32;
-                    let iLineWidth = (iWidth - 32) as i16 as i32;
-                    self.spr.draw_src(g, x + 16, y + 32 + l * 32, &Rect { x: 0, y: if lineSel { 32 } else { 0 }, w: iHalfLineWidth, h: 32 });
-                    self.spr.draw_src(
-                        g,
-                        x + 16 + iHalfLineWidth,
-                        y + 32 + l * 32,
-                        &Rect { x: 512 - iLineWidth + iHalfLineWidth, y: if lineSel { 32 } else { 0 }, w: iLineWidth - iHalfLineWidth, h: 32 },
-                    );
-                }
-
-                let item = &self.items[(self.iOffset as i32 + l) as usize];
-                if item.fSelected {
-                    gp.rm.menu_map_filter.draw_src(g, x + 24, y + 32 + l * 32 + 4, &Rect { x: 24, y: 0, w: 24, h: 24 });
-                }
-
-                gp.rm.menu_font_large.draw_chop_right(g, x + 52, y + 5 + l * 32 + 32, iWidth - 104, &item.sName);
-                let icon = item.iIcon as i32;
-                gp.rm.spr_map_filter_icons.draw_src(g, x + 28, y + 32 + l * 32 + 8, &Rect { x: icon % 10 * 16, y: icon / 10 * 16, w: 16, h: 16 });
-                iLine += 1;
+                let colSel = self.iSelectedLine == iLine && self.iSelectedColumn == 1;
+                gp.rm.menu_map_filter.draw_src(g, x + iWidth - 48, y + 32 + l * 32, &Rect { x: 48, y: if colSel { 32 } else { 0 }, w: 32, h: 32 });
+            } else {
+                let iHalfLineWidth = ((iWidth - 32) as i16 >> 1) as i32;
+                let iLineWidth = (iWidth - 32) as i16 as i32;
+                self.spr.draw_src(g, x + 16, y + 32 + l * 32, &Rect { x: 0, y: if lineSel { 32 } else { 0 }, w: iHalfLineWidth, h: 32 });
+                self.spr.draw_src(
+                    g,
+                    x + 16 + iHalfLineWidth,
+                    y + 32 + l * 32,
+                    &Rect { x: 512 - iLineWidth + iHalfLineWidth, y: if lineSel { 32 } else { 0 }, w: iLineWidth - iHalfLineWidth, h: 32 },
+                );
             }
+
+            let item = &self.items[(self.iOffset as i32 + l) as usize];
+            if item.fSelected {
+                gp.rm.menu_map_filter.draw_src(g, x + 24, y + 32 + l * 32 + 4, &Rect { x: 24, y: 0, w: 24, h: 24 });
+            }
+
+            gp.rm.menu_font_large.draw_chop_right(g, x + 52, y + 5 + l * 32 + 32, iWidth - 104, &item.sName);
+            let icon = item.iIcon as i32;
+            gp.rm.spr_map_filter_icons.draw_src(g, x + 28, y + 32 + l * 32 + 8, &Rect { x: icon % 10 * 16, y: icon / 10 * 16, w: 16, h: 16 });
+            iLine += 1;
         }
     }
 }

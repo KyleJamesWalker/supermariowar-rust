@@ -38,14 +38,12 @@ impl UI_ControlTrait for MI_ChatMessageBox {
 
     fn draw(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        unsafe {
-            let (x, y) = (self.m_pos.x as i32, self.m_pos.y as i32);
-            let w = self.iWidth as i32;
-            let n = self.iNumLines as i32;
-            gp.rm.menu_dialog.draw_src(g, x, y, &Rect { x: 0, y: 0, w: w - 16, h: n * 32 + 32 });
-            gp.rm.menu_dialog.draw_src(g, x + w - 16, y, &Rect { x: 496, y: 0, w: 16, h: n * 32 + 32 });
-            gp.rm.menu_dialog.draw_src(g, x, y + n * 32 + 32, &Rect { x: 0, y: 464, w: w - 16, h: 16 });
-            gp.rm.menu_dialog.draw_src(g, x + w - 16, y + n * 32 + 32, &Rect { x: 496, y: 464, w: 16, h: 16 });
-        }
+        let (x, y) = (self.m_pos.x as i32, self.m_pos.y as i32);
+        let w = self.iWidth as i32;
+        let n = self.iNumLines as i32;
+        gp.rm.menu_dialog.draw_src(g, x, y, &Rect { x: 0, y: 0, w: w - 16, h: n * 32 + 32 });
+        gp.rm.menu_dialog.draw_src(g, x + w - 16, y, &Rect { x: 496, y: 0, w: 16, h: n * 32 + 32 });
+        gp.rm.menu_dialog.draw_src(g, x, y + n * 32 + 32, &Rect { x: 0, y: 464, w: w - 16, h: 16 });
+        gp.rm.menu_dialog.draw_src(g, x + w - 16, y + n * 32 + 32, &Rect { x: 496, y: 464, w: 16, h: 16 });
     }
 }

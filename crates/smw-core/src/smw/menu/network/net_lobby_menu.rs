@@ -34,47 +34,45 @@ impl UI_NetLobbyMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
         let mut gp = g.ptr();
         let mut this = Box::<Self>::default();
-        unsafe {
-            let selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
-            let plain = Ptr::from_mut(&mut g.rm.menu_plain_field);
+        let selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
+        let plain = Ptr::from_mut(&mut g.rm.menu_plain_field);
 
-            this.miNetLobbyNewRoomButton = Ptr::new_box(MI_Button::new(g, selectfield, 320 + 20, 80, "New room", 320 - 30, TextAlign::CENTER));
-            this.miNetLobbyNewRoomButton.set_code(MENU_CODE_TO_NET_NEW_ROOM_LEVEL_SELECT_MENU);
+        this.miNetLobbyNewRoomButton = Ptr::new_box(MI_Button::new(g, selectfield, 320 + 20, 80, "New room", 320 - 30, TextAlign::CENTER));
+        this.miNetLobbyNewRoomButton.set_code(MENU_CODE_TO_NET_NEW_ROOM_LEVEL_SELECT_MENU);
 
-            this.miNetLobbyFilterField = Ptr::new_box(MI_TextField::new(plain, 320 + 20, 160, "Search", 320 - 30, 90));
-            this.miNetLobbyFilterField.set_data(g, &mut gp.netplay.roomFilter, NET_MAX_ROOM_NAME_LENGTH as i16);
+        this.miNetLobbyFilterField = Ptr::new_box(MI_TextField::new(plain, 320 + 20, 160, "Search", 320 - 30, 90));
+        this.miNetLobbyFilterField.set_data(g, &mut gp.netplay.roomFilter, NET_MAX_ROOM_NAME_LENGTH as i16);
 
-            this.miNetLobbyRefreshButton = Ptr::new_box(MI_Button::new(g, selectfield, 320 + 20, 200, "Refresh", 320 - 30, TextAlign::CENTER));
-            this.miNetLobbyRefreshButton.set_code(MENU_CODE_TO_NET_LOBBY_MENU);
+        this.miNetLobbyRefreshButton = Ptr::new_box(MI_Button::new(g, selectfield, 320 + 20, 200, "Refresh", 320 - 30, TextAlign::CENTER));
+        this.miNetLobbyRefreshButton.set_code(MENU_CODE_TO_NET_LOBBY_MENU);
 
-            this.miNetLobbyBackButton = Ptr::new_box(MI_Button::new(g, selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-            this.miNetLobbyBackButton.set_code(MENU_CODE_TO_NET_SERVERS_MENU);
+        this.miNetLobbyBackButton = Ptr::new_box(MI_Button::new(g, selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
+        this.miNetLobbyBackButton.set_code(MENU_CODE_TO_NET_SERVERS_MENU);
 
-            this.miNetLobbyScroll = Ptr::new_box(MI_NetworkListScroll::new(
-                plain,
-                15,
-                40,
-                320,
-                11,
-                "Rooms",
-                MENU_CODE_NET_JOIN_ROOM_IN_PROGRESS,
-                MENU_CODE_TO_NET_SERVERS_MENU,
-            ));
-            this.miNetLobbyScroll.remote_index(&mut g.netplay.selectedRoomIndex);
-            this.miNetLobbyScroll.set_auto_modify(true);
+        this.miNetLobbyScroll = Ptr::new_box(MI_NetworkListScroll::new(
+            plain,
+            15,
+            40,
+            320,
+            11,
+            "Rooms",
+            MENU_CODE_NET_JOIN_ROOM_IN_PROGRESS,
+            MENU_CODE_TO_NET_SERVERS_MENU,
+        ));
+        this.miNetLobbyScroll.remote_index(&mut g.netplay.selectedRoomIndex);
+        this.miNetLobbyScroll.set_auto_modify(true);
 
-            g.netplay.client.set_room_list_ui_control(this.miNetLobbyScroll);
+        g.netplay.client.set_room_list_ui_control(this.miNetLobbyScroll);
 
-            this.miNetLobbyJoiningDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
-            this.miNetLobbyJoiningDialogText = Ptr::new_box(MI_HeaderText::new(g, "Joining...", 320, 240 - 12));
+        this.miNetLobbyJoiningDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
+        this.miNetLobbyJoiningDialogText = Ptr::new_box(MI_HeaderText::new(g, "Joining...", 320, 240 - 12));
 
-            this.miNetLobbyJoiningDialogImage.set_visible(false);
-            this.miNetLobbyJoiningDialogText.set_visible(false);
+        this.miNetLobbyJoiningDialogImage.set_visible(false);
+        this.miNetLobbyJoiningDialogText.set_visible(false);
 
-            this.miNetLobbyLeftHeaderBar = Ptr::new_box(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-            this.miNetLobbyRightHeaderBar = Ptr::new_box(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miNetLobbyHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Multiplayer Lobby Menu", 320, 5));
-        }
+        this.miNetLobbyLeftHeaderBar = Ptr::new_box(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0));
+        this.miNetLobbyRightHeaderBar = Ptr::new_box(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0));
+        this.miNetLobbyHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Multiplayer Lobby Menu", 320, 5));
 
         let scroll = ctl_ptr(this.miNetLobbyScroll);
         let newroom = ctl_ptr(this.miNetLobbyNewRoomButton);
@@ -105,10 +103,8 @@ impl UI_NetLobbyMenu {
 
     pub fn join_in_progress(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        unsafe {
-            gp.netplay.client.send_join_room_message(g);
-            g.netplay.operationInProgress = true;
-        }
+        gp.netplay.client.send_join_room_message(g);
+        g.netplay.operationInProgress = true;
 
         self.miNetLobbyJoiningDialogImage.set_visible(true);
         self.miNetLobbyJoiningDialogText.set_visible(true);
@@ -120,7 +116,7 @@ impl UI_NetLobbyMenu {
     }
 
     pub fn abort_join(&mut self, g: &mut Game) {
-        unsafe { g.netplay.operationInProgress = false };
+        g.netplay.operationInProgress = false;
         self.restore(g);
     }
 

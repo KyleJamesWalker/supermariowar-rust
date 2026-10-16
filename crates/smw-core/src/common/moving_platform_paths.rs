@@ -109,15 +109,13 @@ impl std::ops::DerefMut for dyn MovingPlatformPathTrait {
 }
 
 pub fn moving_platform_path_reset<T: MovingPlatformPathTrait + ?Sized>(g: &mut Game, this: &mut T) {
-    unsafe {
-        if g.game_values.spawnstyle == SpawnStyle::Door {
-            for _ in 0..36 {
-                this.r#move(g, 1);
-            }
-        } else if g.game_values.spawnstyle == SpawnStyle::Swirl {
-            for _ in 0..50 {
-                this.r#move(g, 1);
-            }
+    if g.game_values.spawnstyle == SpawnStyle::Door {
+        for _ in 0..36 {
+            this.r#move(g, 1);
+        }
+    } else if g.game_values.spawnstyle == SpawnStyle::Swirl {
+        for _ in 0..50 {
+            this.r#move(g, 1);
         }
     }
 }
@@ -467,12 +465,10 @@ impl MovingPlatformPathTrait for FallingPath {
 
         let mut platform = self.base.m_platform;
         if platform.fy - platform.iHalfHeight as f32 >= App::screenHeight as f32 {
-            unsafe {
-                for player in gp.players.iter_mut() {
-                    if player.platform == platform {
-                        player.platform = Ptr::null();
-                        player.vely = self.base.m_velocity[t].y;
-                    }
+            for player in gp.players.iter_mut() {
+                if player.platform == platform {
+                    player.platform = Ptr::null();
+                    player.vely = self.base.m_velocity[t].y;
                 }
             }
 

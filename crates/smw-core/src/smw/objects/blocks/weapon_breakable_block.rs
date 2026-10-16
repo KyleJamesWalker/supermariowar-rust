@@ -64,17 +64,15 @@ impl B_WeaponBreakableBlock {
     pub fn trigger_behavior_player(&mut self, g: &mut Game, iPlayerID: i16, iTeamID: i16) {
         let mut gp = g.ptr();
         if self.state == 0 {
-            unsafe {
-                let spr = Ptr::from_mut(&mut g.rm.spr_brokengrayblock);
-                let (ix, iy) = (self.ix, self.iy);
-                g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy, -2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
-                g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy, 2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
-                g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
-                g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
+            let spr = Ptr::from_mut(&mut g.rm.spr_brokengrayblock);
+            let (ix, iy) = (self.ix, self.iy);
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy, -2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy, 2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
 
-                self.state = 1;
-                if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
-            }
+            self.state = 1;
+            if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
 
             self.iBumpPlayerID = iPlayerID;
             self.iBumpTeamID = iTeamID;
@@ -147,10 +145,8 @@ impl CObjectTrait for B_WeaponBreakableBlock {
             } else if self.state == 2 {
                 self.iBumpPlayerID = -1;
                 self.dead = true;
-                unsafe {
-                    g.g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
-                    g.g_map.update_tile_gap(self.col, self.row);
-                }
+                g.g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
+                g.g_map.update_tile_gap(self.col, self.row);
             }
         }
     }
@@ -162,30 +158,28 @@ impl IO_BlockTrait for B_WeaponBreakableBlock {
     fn hittop_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         io_block_hittop_player(self, player, useBehavior);
 
-        unsafe {
-            if self.state == 1 || self.state == 2 {
-                let iKillType = PlayerKillType::NonKill;
-                if self.iBumpPlayerID >= 0
-                    && !player.is_invincible_on_bottom()
-                    && (player.teamID != self.iBumpTeamID || g.game_values.teamcollision == TeamCollisionStyle::On)
-                {
-                    player_killed_player(g, self.iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
-                }
+        if self.state == 1 || self.state == 2 {
+            let iKillType = PlayerKillType::NonKill;
+            if self.iBumpPlayerID >= 0
+                && !player.is_invincible_on_bottom()
+                && (player.teamID != self.iBumpTeamID || g.game_values.teamcollision == TeamCollisionStyle::On)
+            {
+                player_killed_player(g, self.iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
+            }
 
-                if PlayerKillType::NonKill == iKillType {
-                    player.vely = -VELNOTEBLOCKREPEL;
-                }
-            } else if useBehavior {
-                player.vely = GRAVITATION;
+            if PlayerKillType::NonKill == iKillType {
+                player.vely = -VELNOTEBLOCKREPEL;
+            }
+        } else if useBehavior {
+            player.vely = GRAVITATION;
 
-                //Save this for when we create a super stomp destroyable block
-                if self.iType == WeaponDamageType::KuriboShoe && player.is_super_stomping() && self.state == 0 {
-                    self.trigger_behavior_player(g, player.globalID, player.teamID);
-                    return false;
-                } else if self.iType == WeaponDamageType::Star && player.is_invincible() {
-                    self.trigger_behavior_player(g, player.globalID, player.teamID);
-                    return false;
-                }
+            //Save this for when we create a super stomp destroyable block
+            if self.iType == WeaponDamageType::KuriboShoe && player.is_super_stomping() && self.state == 0 {
+                self.trigger_behavior_player(g, player.globalID, player.teamID);
+                return false;
+            } else if self.iType == WeaponDamageType::Star && player.is_invincible() {
+                self.trigger_behavior_player(g, player.globalID, player.teamID);
+                return false;
             }
         }
 

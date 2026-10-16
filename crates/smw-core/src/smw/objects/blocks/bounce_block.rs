@@ -87,22 +87,20 @@ impl IO_BlockTrait for B_BounceBlock {
     fn hittop_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         io_block_hittop_player(self, player, useBehavior);
 
-        unsafe {
-            if self.state == 1 {
-                let mut iKillType = PlayerKillType::NonKill;
-                if self.iBumpPlayerID >= 0
-                    && !player.is_invincible_on_bottom()
-                    && (player.teamID != self.iBumpTeamID || g.game_values.teamcollision == TeamCollisionStyle::On)
-                {
-                    iKillType = player_killed_player(g, self.iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
-                }
-
-                if PlayerKillType::NonKill == iKillType {
-                    player.vely = -VELNOTEBLOCKREPEL;
-                }
-            } else if useBehavior {
-                player.vely = GRAVITATION;
+        if self.state == 1 {
+            let mut iKillType = PlayerKillType::NonKill;
+            if self.iBumpPlayerID >= 0
+                && !player.is_invincible_on_bottom()
+                && (player.teamID != self.iBumpTeamID || g.game_values.teamcollision == TeamCollisionStyle::On)
+            {
+                iKillType = player_killed_player(g, self.iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
             }
+
+            if PlayerKillType::NonKill == iKillType {
+                player.vely = -VELNOTEBLOCKREPEL;
+            }
+        } else if useBehavior {
+            player.vely = GRAVITATION;
         }
 
         false
@@ -125,9 +123,7 @@ impl IO_BlockTrait for B_BounceBlock {
                 io_block_kill_players_and_objects_inside_block(g, self, iBumpPlayerID);
             }
 
-            unsafe {
-                g.g_map.update_tile_gap(self.col, self.row);
-            }
+            g.g_map.update_tile_gap(self.col, self.row);
         }
 
         false
@@ -161,9 +157,7 @@ impl IO_BlockTrait for B_BounceBlock {
         if self.state == 0 {
             self.vely = -VELBLOCKBOUNCE;
             self.state = 1;
-            unsafe {
-                if_sound_on_play(g, &mut gp.rm.sfx_bump);
-            }
+            if_sound_on_play(g, &mut gp.rm.sfx_bump);
         }
     }
 }

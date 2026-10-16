@@ -54,13 +54,11 @@ impl PU_TreasureChestBonus {
         let collisionWidth = o.collisionWidth;
         let collisionHeight = o.collisionHeight;
         let mut iAttempts: i16 = 10;
-        unsafe {
-            while !gp.g_map.findspawnpoint(g, 5, &mut ix, &mut iy, collisionWidth, collisionHeight, false) && {
-                let a = iAttempts;
-                iAttempts -= 1;
-                a > 0
-            } {}
-        }
+        while !gp.g_map.findspawnpoint(g, 5, &mut ix, &mut iy, collisionWidth, collisionHeight, false) && {
+            let a = iAttempts;
+            iAttempts -= 1;
+            a > 0
+        } {}
         o.ix = ix;
         o.iy = iy;
         o.fx = o.ix as f32;
@@ -98,9 +96,7 @@ impl CObjectTrait for PU_TreasureChestBonus {
                 self.state = 4;
             }
         } else if self.state == 4 {
-            unsafe {
-                g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), self.ix, self.drawbonusitemy, 3, 8));
-            }
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), self.ix, self.drawbonusitemy, 3, 8));
             self.dead = true;
         }
     }
@@ -111,31 +107,27 @@ impl CObjectTrait for PU_TreasureChestBonus {
             mo_powerup_draw(g, self);
 
             // Draw sparkles
-            unsafe {
-                gp.rm.spr_shinesparkle.draw_src(
-                    g,
-                    self.ix as i32 - self.collisionOffsetX as i32,
-                    self.iy as i32 - self.collisionOffsetY as i32,
-                    &Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
-                );
-            }
+            gp.rm.spr_shinesparkle.draw_src(
+                g,
+                self.ix as i32 - self.collisionOffsetX as i32,
+                self.iy as i32 - self.collisionOffsetY as i32,
+                &Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
+            );
         } else {
-            unsafe {
-                if self.bonusitem as i32 >= NUM_POWERUPS {
-                    gp.rm.spr_worlditems.draw_src(
-                        g,
-                        self.drawbonusitemx as i32,
-                        self.drawbonusitemy as i32,
-                        &Rect { x: (self.bonusitem as i32 - NUM_POWERUPS) << 5, y: 0, w: 32, h: 32 },
-                    );
-                } else {
-                    gp.rm.spr_storedpoweruplarge.draw_src(
-                        g,
-                        self.drawbonusitemx as i32,
-                        self.drawbonusitemy as i32,
-                        &Rect { x: (self.bonusitem as i32) << 5, y: 0, w: 32, h: 32 },
-                    );
-                }
+            if self.bonusitem as i32 >= NUM_POWERUPS {
+                gp.rm.spr_worlditems.draw_src(
+                    g,
+                    self.drawbonusitemx as i32,
+                    self.drawbonusitemy as i32,
+                    &Rect { x: (self.bonusitem as i32 - NUM_POWERUPS) << 5, y: 0, w: 32, h: 32 },
+                );
+            } else {
+                gp.rm.spr_storedpoweruplarge.draw_src(
+                    g,
+                    self.drawbonusitemx as i32,
+                    self.drawbonusitemy as i32,
+                    &Rect { x: (self.bonusitem as i32) << 5, y: 0, w: 32, h: 32 },
+                );
             }
         }
     }
@@ -143,23 +135,21 @@ impl CObjectTrait for PU_TreasureChestBonus {
     fn collide_player(&mut self, g: &mut Game, _player: Ptr<CPlayer>) -> bool {
         let mut gp = g.ptr();
         if self.state == 1 {
-            unsafe {
-                if_sound_on_play(g, &mut gp.rm.sfx_treasurechest);
-                // if (game_values.worldpowerupcount[player->teamID] < 32)
-                //     game_values.worldpowerups[player->teamID][game_values.worldpowerupcount[player->teamID]++] = bonusitem;
-                // else
-                //	game_values.worldpowerups[player->teamID][31] = bonusitem;
+            if_sound_on_play(g, &mut gp.rm.sfx_treasurechest);
+            // if (game_values.worldpowerupcount[player->teamID] < 32)
+            //     game_values.worldpowerups[player->teamID][game_values.worldpowerupcount[player->teamID]++] = bonusitem;
+            // else
+            //	game_values.worldpowerups[player->teamID][31] = bonusitem;
 
-                self.state = 3;
+            self.state = 3;
 
-                self.drawbonusitemx = self.ix;
-                self.drawbonusitemy = self.iy;
-                self.drawbonusitemtimer = 60;
+            self.drawbonusitemx = self.ix;
+            self.drawbonusitemy = self.iy;
+            self.drawbonusitemtimer = 60;
 
-                g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
 
-                g.game_values.flags.noexit = false;
-            }
+            g.game_values.flags.noexit = false;
         }
 
         false

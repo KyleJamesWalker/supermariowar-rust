@@ -14,9 +14,7 @@ use crate::globals::*;
 
 /// `maplist->GetCurrent()->second.iIndex`
 fn current_map_index(g: &mut Game) -> i16 {
-    unsafe {
-        g.maplist.node_at(g.maplist.get_current()).iIndex
-    }
+    g.maplist.node_at(g.maplist.get_current()).iIndex
 }
 
 pub struct MI_MapField {
@@ -74,7 +72,7 @@ impl MI_MapField {
     pub fn choose_random_map(&mut self, g: &mut Game) -> MenuCodeEnum {
         let mut gp = g.ptr();
         let iOldIndex = current_map_index(g);
-        unsafe { gp.maplist.random(g, true) };
+        gp.maplist.random(g, true);
 
         if iOldIndex != current_map_index(g) {
             self.load_current_map(g);
@@ -114,12 +112,10 @@ impl MI_MapField {
 
         let iOldIndex = current_map_index(g);
         for _ in 0..numadvance {
-            unsafe {
-                if fNext {
-                    g.maplist.next(true);
-                } else {
-                    g.maplist.prev(true);
-                }
+            if fNext {
+                g.maplist.next(true);
+            } else {
+                g.maplist.prev(true);
             }
         }
 
@@ -194,7 +190,7 @@ impl UI_ControlTrait for MI_MapField {
                     self.sSearchString.push(iPressedKey as u8 as char);
                     self.iSearchStringTimer = 10;
 
-                    if unsafe { !g.maplist.startswith(&self.sSearchString) } {
+                    if !g.maplist.startswith(&self.sSearchString) {
                         self.sSearchString = String::new();
                         self.iSearchStringTimer = 0;
                     }
@@ -256,15 +252,13 @@ impl UI_ControlTrait for MI_MapField {
         let indent = self.iIndent as i32;
         let selY = if self.fSelected { 32 } else { 0 };
 
-        unsafe {
-            //Draw the select field background
-            self.spr.draw_src(g, x, y, &Rect { x: 0, y: selY, w: indent - 16, h: 32 });
-            self.spr.draw_src(g, x + indent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
-            self.spr.draw_src(g, x + indent + 16, y, &Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
+        //Draw the select field background
+        self.spr.draw_src(g, x, y, &Rect { x: 0, y: selY, w: indent - 16, h: 32 });
+        self.spr.draw_src(g, x + indent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
+        self.spr.draw_src(g, x + indent + 16, y, &Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
 
-            gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 5, indent - 8, &self.szName);
-            gp.rm.menu_font_large.draw_chop_right(g, x + indent + 8, y + 5, width - indent - 24, &self.szMapName);
-        }
+        gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 5, indent - 8, &self.szName);
+        gp.rm.menu_font_large.draw_chop_right(g, x + indent + 8, y + 5, width - indent - 24, &self.szMapName);
 
         self.mi_map_preview.draw_impl(g);
 

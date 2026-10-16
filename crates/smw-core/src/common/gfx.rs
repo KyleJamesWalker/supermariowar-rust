@@ -29,10 +29,8 @@ pub fn new_sprite_strip() -> SpriteStrip {
 
 /// Constructors of the globals defined in gfx.cpp, in definition order.
 pub fn init_globals(g: &mut Game) {
-    unsafe {
-        g.gfx.init(GraphicsSDL::new());
-        g.gfx_palette.init(gfxPalette::new());
-    }
+    g.gfx.init(GraphicsSDL::new());
+    g.gfx_palette.init(gfxPalette::new());
 }
 
 pub unsafe fn get_raw_pixel(surf: *mut Surface, x: i32, y: i32) -> u32 {
@@ -101,22 +99,22 @@ pub fn get_rgb(surf: *mut Surface, x: i32, y: i32) -> RGB {
 
 pub fn gfx_init(g: &mut Game, w: i32, h: i32, fullscreen: bool) -> bool {
         let mut gp = g.ptr();
-    unsafe { (*gp.gfx).init(g, fullscreen) }
+    (*gp.gfx).init(g, fullscreen)
 }
 
 pub fn gfx_changefullscreen(g: &mut Game, fullscreen: bool) {
     let mut gp = g.ptr();
-    unsafe { gp.gfx.change_full_screen(g, fullscreen) }
+    gp.gfx.change_full_screen(g, fullscreen)
 }
 
 pub fn gfx_flipscreen(g: &mut Game) {
     let mut gp = g.ptr();
-    unsafe { gp.gfx.flip_screen(g) }
+    gp.gfx.flip_screen(g)
 }
 
 pub fn gfx_settitle(g: &mut Game, title: &str) {
     let mut gp = g.ptr();
-    unsafe { gp.gfx.set_title(g, title) }
+    gp.gfx.set_title(g, title)
 }
 
 pub fn gfx_show_catched_error(g: &mut Game, error: &str) {
@@ -133,19 +131,19 @@ pub fn gfx_show_catched_error(g: &mut Game, error: &str) {
         message += error;
     }
     eprintln!("\n{}", message);
-    unsafe { gp.gfx.show_error_box(g, &message) }
+    gp.gfx.show_error_box(g, &message)
 }
 
 pub fn gfx_take_screenshot(g: &mut Game) {
         let mut gp = g.ptr();
-    unsafe { gp.gfx.take_screenshot(g) }
+    gp.gfx.take_screenshot(g)
 }
 
 pub fn gfx_close() {}
 
 pub fn gfx_loadpalette(g: &mut Game, palette_path: &Path) -> bool {
     let mut gp = g.ptr();
-    unsafe { gp.gfx_palette.load(g, palette_path) }
+    gp.gfx_palette.load(g, palette_path)
 }
 
 /// Not in the C++: writes `screen` as a BMP for the differential replay harness.
@@ -254,53 +252,51 @@ pub fn gfx_cliprect(srcRect: &mut Rect, dstRect: &mut Rect, clipArea: &Rect) {
 /// Clips a source and destination area pair, so that the destination area doesn't go past
 /// a certain threshold in a given direction. Returns true if the destination area is fully hidden.
 pub fn gfx_adjusthiddenrects(g: &mut Game, src: &mut Rect, dst: &mut Rect, edge: ClipEdge, threshold: i32) -> bool {
-    unsafe {
-        match edge {
-            ClipEdge::Top => {
-                if threshold < dst.y {
-                    // fully visible
-                } else if dst.y + dst.h <= threshold {
-                    return true;
-                } else {
-                    let diff = threshold - dst.y;
-                    src.y += diff;
-                    src.h -= diff;
-                    dst.y = threshold + g.y_shake as i32;
-                    dst.h = src.h;
-                }
+    match edge {
+        ClipEdge::Top => {
+            if threshold < dst.y {
+                // fully visible
+            } else if dst.y + dst.h <= threshold {
+                return true;
+            } else {
+                let diff = threshold - dst.y;
+                src.y += diff;
+                src.h -= diff;
+                dst.y = threshold + g.y_shake as i32;
+                dst.h = src.h;
             }
-            ClipEdge::Right => {
-                if dst.x + src.w < threshold {
-                    // fully visible
-                } else if threshold <= dst.x {
-                    return true;
-                } else {
-                    src.w = threshold - dst.x;
-                    dst.w = src.w;
-                }
+        }
+        ClipEdge::Right => {
+            if dst.x + src.w < threshold {
+                // fully visible
+            } else if threshold <= dst.x {
+                return true;
+            } else {
+                src.w = threshold - dst.x;
+                dst.w = src.w;
             }
-            ClipEdge::Bottom => {
-                if dst.y + src.h < threshold {
-                    // fully visible
-                } else if threshold <= dst.y {
-                    return true;
-                } else {
-                    src.h = threshold - dst.y;
-                    dst.h = src.h;
-                }
+        }
+        ClipEdge::Bottom => {
+            if dst.y + src.h < threshold {
+                // fully visible
+            } else if threshold <= dst.y {
+                return true;
+            } else {
+                src.h = threshold - dst.y;
+                dst.h = src.h;
             }
-            ClipEdge::Left => {
-                if threshold < dst.x {
-                    // fully visible
-                } else if dst.x + src.w <= threshold {
-                    return true;
-                } else {
-                    let diff = threshold - dst.x;
-                    src.x += diff;
-                    src.w -= diff;
-                    dst.x = threshold + g.x_shake as i32;
-                    dst.w = src.w;
-                }
+        }
+        ClipEdge::Left => {
+            if threshold < dst.x {
+                // fully visible
+            } else if dst.x + src.w <= threshold {
+                return true;
+            } else {
+                let diff = threshold - dst.x;
+                src.x += diff;
+                src.w -= diff;
+                dst.x = threshold + g.x_shake as i32;
+                dst.w = src.w;
             }
         }
     }
@@ -320,54 +316,52 @@ pub fn gfx_drawpreview(g: &mut Game,
     wrap: bool,
     clip: Option<(ClipEdge, i32)>,
 ) {
-    unsafe {
-        //need to set source rect before each blit so it can be clipped correctly
-        let mut rSrcRect = Rect { x: srcX as i32, y: srcY as i32, w: iw as i32, h: ih as i32 };
-        let mut rDstRect = Rect { x: dstX as i32, y: dstY as i32, w: iw as i32, h: ih as i32 };
+    //need to set source rect before each blit so it can be clipped correctly
+    let mut rSrcRect = Rect { x: srcX as i32, y: srcY as i32, w: iw as i32, h: ih as i32 };
+    let mut rDstRect = Rect { x: dstX as i32, y: dstY as i32, w: iw as i32, h: ih as i32 };
 
-        gfx_cliprect(&mut rSrcRect, &mut rDstRect, clipRect);
+    gfx_cliprect(&mut rSrcRect, &mut rDstRect, clipRect);
 
-        if let Some((edge, threshold)) = clip {
-            if gfx_adjusthiddenrects(g, &mut rSrcRect, &mut rDstRect, edge, threshold) {
-                return;
-            }
+    if let Some((edge, threshold)) = clip {
+        if gfx_adjusthiddenrects(g, &mut rSrcRect, &mut rDstRect, edge, threshold) {
+            return;
+        }
+    }
+
+    // Blit onto the screen surface
+    sprite.draw_src_to(&rSrcRect, g.blitdest, &rDstRect);
+
+    if wrap {
+        //Deal with wrapping over sides of screen
+        let mut fBlitSide = false;
+        if (dstX as i32) < clipRect.x {
+            rDstRect.x = dstX as i32 + 320;
+            fBlitSide = true;
+        } else if dstX as i32 + iw as i32 >= clipRect.x + clipRect.w {
+            rDstRect.x = dstX as i32 - 320;
+            fBlitSide = true;
         }
 
-        // Blit onto the screen surface
-        sprite.draw_src_to(&rSrcRect, g.blitdest, &rDstRect);
+        if fBlitSide {
+            //need to set source rect before each blit so it can be clipped correctly
+            rSrcRect.x = srcX as i32;
+            rSrcRect.y = srcY as i32;
+            rSrcRect.w = iw as i32;
+            rSrcRect.h = ih as i32;
 
-        if wrap {
-            //Deal with wrapping over sides of screen
-            let mut fBlitSide = false;
-            if (dstX as i32) < clipRect.x {
-                rDstRect.x = dstX as i32 + 320;
-                fBlitSide = true;
-            } else if dstX as i32 + iw as i32 >= clipRect.x + clipRect.w {
-                rDstRect.x = dstX as i32 - 320;
-                fBlitSide = true;
-            }
+            rDstRect.y = dstY as i32;
+            rDstRect.w = iw as i32;
+            rDstRect.h = ih as i32;
 
-            if fBlitSide {
-                //need to set source rect before each blit so it can be clipped correctly
-                rSrcRect.x = srcX as i32;
-                rSrcRect.y = srcY as i32;
-                rSrcRect.w = iw as i32;
-                rSrcRect.h = ih as i32;
+            gfx_cliprect(&mut rSrcRect, &mut rDstRect, clipRect);
 
-                rDstRect.y = dstY as i32;
-                rDstRect.w = iw as i32;
-                rDstRect.h = ih as i32;
-
-                gfx_cliprect(&mut rSrcRect, &mut rDstRect, clipRect);
-
-                if let Some((edge, threshold)) = clip {
-                    if gfx_adjusthiddenrects(g, &mut rSrcRect, &mut rDstRect, edge, threshold) {
-                        return;
-                    }
+            if let Some((edge, threshold)) = clip {
+                if gfx_adjusthiddenrects(g, &mut rSrcRect, &mut rDstRect, edge, threshold) {
+                    return;
                 }
-
-                sprite.draw_src_to(&rSrcRect, g.blitdest, &rDstRect);
             }
+
+            sprite.draw_src_to(&rSrcRect, g.blitdest, &rDstRect);
         }
     }
 }

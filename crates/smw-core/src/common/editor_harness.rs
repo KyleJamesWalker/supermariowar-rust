@@ -143,7 +143,7 @@ fn load_replay(g: &mut Game, path: &str) {
         eprintln!("[editorharness] cannot open replay {}", path);
         std::process::exit(2);
     });
-    let events = unsafe { &mut h(gp.get()).events };
+    let events = &mut h(gp.get()).events;
     for (i, raw) in text.split('\n').enumerate() {
         let lineno = i + 1;
         let line = raw.strip_suffix('\r').unwrap_or(raw);
@@ -334,12 +334,12 @@ pub fn init(g: &mut Game) {
 
 pub fn set_dumper(g: &mut Game, dumper: Dumper) {
     let mut gp = g.ptr();
-    unsafe { h(gp.get()).dumper = Some(dumper) };
+    h(gp.get()).dumper = Some(dumper);
 }
 
 pub fn no_limit(g: &mut Game) -> bool {
     let mut gp = g.ptr();
-    unsafe { h(gp.get()).noLimit }
+    h(gp.get()).noLimit
 }
 
 /// Ends one editor frame: dump, screenshot, advance, push the next frame's scripted events,
@@ -391,23 +391,19 @@ pub fn frame_delay(g: &mut Game, delay: u32) {
 /// `SDL_GetKeyboardState(NULL)`; while active, the scripted key state, since pushed events do not update SDL's.
 pub fn keyboard_state(g: &mut Game) -> *const u8 {
     let mut gp = g.ptr();
-    unsafe {
-        if h(gp.get()).active {
-            h(gp.get()).keys.as_ptr()
-        } else {
-            crate::services::services(gp.get()).keyboard.state().as_ptr()
-        }
+    if h(gp.get()).active {
+        h(gp.get()).keys.as_ptr()
+    } else {
+        crate::services::services(gp.get()).keyboard.state().as_ptr()
     }
 }
 
 /// `SDL_GetMouseState(NULL, NULL)`; while active, the scripted button mask.
 pub fn mouse_state(g: &mut Game) -> u32 {
     let mut gp = g.ptr();
-    unsafe {
-        if h(gp.get()).active {
-            h(gp.get()).buttons
-        } else {
-            crate::services::services(gp.get()).keyboard.mouse_buttons()
-        }
+    if h(gp.get()).active {
+        h(gp.get()).buttons
+    } else {
+        crate::services::services(gp.get()).keyboard.mouse_buttons()
     }
 }

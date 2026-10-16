@@ -58,17 +58,15 @@ impl CObjectTrait for MO_Explosion {
     }
 
     fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
-        unsafe {
-            if player.globalID != self.iPlayerID
-                && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID)
-                && !player.is_invincible()
-                && !player.is_shielded()
-                && !player.shyguy
-            {
-                // Find the player that made this explosion so we can attribute a kill
-                player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, self.iStyle, false, false);
-                return true;
-            }
+        if player.globalID != self.iPlayerID
+            && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID)
+            && !player.is_invincible()
+            && !player.is_shielded()
+            && !player.shyguy
+        {
+            // Find the player that made this explosion so we can attribute a kill
+            player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, self.iStyle, false, false);
+            return true;
         }
 
         false
@@ -91,7 +89,7 @@ impl CObjectTrait for MO_Explosion {
                 if iTestY >= 0 && (iTestY as i32) < App::screenHeight {
                     let iTestRow: i16 = (iTestY as i32 / TILESIZE) as i16;
                     for _iCol in 0..7i16 {
-                        let mut block = unsafe { g.g_map.block((iTestX as i32 / TILESIZE) as i16, iTestRow) };
+                        let mut block = g.g_map.block((iTestX as i32 / TILESIZE) as i16, iTestRow);
                         if !block.is_null() {
                             if let Some(weaponbreakableblock) = block.as_any().downcast_mut::<B_WeaponBreakableBlock>() {
                                 if weaponbreakableblock.r#type() == WeaponDamageType::Bomb {

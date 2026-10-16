@@ -64,25 +64,23 @@ impl MO_FrenzyCard {
             return;
         }
 
-        unsafe {
-            self.timer = 0;
+        self.timer = 0;
 
-            let mut x: i16 = 0;
-            let mut y: i16 = 0;
-            let mut iAttempts: i16 = 32;
-            let (cw, ch) = (self.collisionWidth, self.collisionHeight);
-            while (!gp.g_map.findspawnpoint(g, 5, &mut x, &mut y, cw, ch, false) || g.objectcontainer[1].get_closest_object(x, y, object_frenzycard) <= 150.0f32) && {
-                let a = iAttempts;
-                iAttempts -= 1;
-                a > 0
-            } {}
-            if let Some((hx, hy)) = crate::smw::net_random::spawn_position(g) {
-                (x, y) = (hx, hy);
-            }
-
-            self.set_xi(x);
-            self.set_yi(y);
+        let mut x: i16 = 0;
+        let mut y: i16 = 0;
+        let mut iAttempts: i16 = 32;
+        let (cw, ch) = (self.collisionWidth, self.collisionHeight);
+        while (!gp.g_map.findspawnpoint(g, 5, &mut x, &mut y, cw, ch, false) || g.objectcontainer[1].get_closest_object(x, y, object_frenzycard) <= 150.0f32) && {
+            let a = iAttempts;
+            iAttempts -= 1;
+            a > 0
+        } {}
+        if let Some((hx, hy)) = crate::smw::net_random::spawn_position(g) {
+            (x, y) = (hx, hy);
         }
+
+        self.set_xi(x);
+        self.set_yi(y);
     }
 }
 
@@ -94,46 +92,44 @@ impl CObjectTrait for MO_FrenzyCard {
 
     fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         let mut gp = g.ptr();
-        unsafe {
-            let r#type = self.r#type;
-            if r#type < 14 || r#type > 17 || g.game_values.gamemodesettings.frenzy.storedshells {
-                player.set_powerup(g, r#type);
-                if g.game_values.gamemode.gamemode == game_mode_frenzy {
-                    g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Frenzy>().unwrap().set_frenzy_owner(player);
-                }
-            } else {
-                match r#type {
-                    14 => {
-                        let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Green, Vec2s::zero(), true, true, true, false));
-                        if gp.objectcontainer[1].add(g, shell) {
-                            shell.used_as_stored_powerup(g, player);
-                        }
-                    }
-                    15 => {
-                        let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Red, Vec2s::zero(), false, true, true, false));
-                        if gp.objectcontainer[1].add(g, shell) {
-                            shell.used_as_stored_powerup(g, player);
-                        }
-                    }
-                    16 => {
-                        let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Spiny, Vec2s::zero(), false, false, true, true));
-                        if gp.objectcontainer[1].add(g, shell) {
-                            shell.used_as_stored_powerup(g, player);
-                        }
-                    }
-                    17 => {
-                        let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Buzzy, Vec2s::zero(), false, true, false, false));
-                        if gp.objectcontainer[1].add(g, shell) {
-                            shell.used_as_stored_powerup(g, player);
-                        }
-                    }
-                    _ => {}
-                }
+        let r#type = self.r#type;
+        if r#type < 14 || r#type > 17 || g.game_values.gamemodesettings.frenzy.storedshells {
+            player.set_powerup(g, r#type);
+            if g.game_values.gamemode.gamemode == game_mode_frenzy {
+                g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Frenzy>().unwrap().set_frenzy_owner(player);
             }
-
-            self.dead = true;
-            false
+        } else {
+            match r#type {
+                14 => {
+                    let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Green, Vec2s::zero(), true, true, true, false));
+                    if gp.objectcontainer[1].add(g, shell) {
+                        shell.used_as_stored_powerup(g, player);
+                    }
+                }
+                15 => {
+                    let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Red, Vec2s::zero(), false, true, true, false));
+                    if gp.objectcontainer[1].add(g, shell) {
+                        shell.used_as_stored_powerup(g, player);
+                    }
+                }
+                16 => {
+                    let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Spiny, Vec2s::zero(), false, false, true, true));
+                    if gp.objectcontainer[1].add(g, shell) {
+                        shell.used_as_stored_powerup(g, player);
+                    }
+                }
+                17 => {
+                    let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Buzzy, Vec2s::zero(), false, true, false, false));
+                    if gp.objectcontainer[1].add(g, shell) {
+                        shell.used_as_stored_powerup(g, player);
+                    }
+                }
+                _ => {}
+            }
         }
+
+        self.dead = true;
+        false
     }
 
     fn update(&mut self, g: &mut Game) {
@@ -159,14 +155,12 @@ impl CObjectTrait for MO_FrenzyCard {
         io_moving_object_draw(g, self);
 
         // Draw sparkles
-        unsafe {
-            gp.rm.spr_shinesparkle.draw_src(
-                g,
-                self.ix as i32 - self.collisionOffsetX as i32,
-                self.iy as i32 - self.collisionOffsetY as i32,
-                &Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
-            );
-        }
+        gp.rm.spr_shinesparkle.draw_src(
+            g,
+            self.ix as i32 - self.collisionOffsetX as i32,
+            self.iy as i32 - self.collisionOffsetY as i32,
+            &Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
+        );
     }
 }
 

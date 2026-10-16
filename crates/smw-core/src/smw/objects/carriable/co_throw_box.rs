@@ -89,16 +89,14 @@ impl CO_ThrowBox {
             return;
         }
 
-        unsafe {
-            let spr = Ptr::from_mut(&mut g.rm.spr_brokeniceblock);
-            let (ix, iy) = (self.ix as i32, self.iy as i32);
-            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, iy as i16, -1.5, -7.0, 4, 2, 0, 0, 16, 16));
-            g.eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, iy as i16, 1.5, -7.0, 4, 2, 0, 0, 16, 16));
-            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, (iy + 16) as i16, -1.5, -4.0, 4, 2, 0, 0, 16, 16));
-            g.eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, (iy + 16) as i16, 1.5, -4.0, 4, 2, 0, 0, 16, 16));
+        let spr = Ptr::from_mut(&mut g.rm.spr_brokeniceblock);
+        let (ix, iy) = (self.ix as i32, self.iy as i32);
+        g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, iy as i16, -1.5, -7.0, 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, iy as i16, 1.5, -7.0, 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, (iy + 16) as i16, -1.5, -4.0, 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, (iy + 16) as i16, 1.5, -4.0, 4, 2, 0, 0, 16, 16));
 
-            g.game_values.unlocksecret2part2 += 1;
-        }
+        g.game_values.unlocksecret2part2 += 1;
 
         self.die_helper(g);
     }
@@ -106,7 +104,7 @@ impl CO_ThrowBox {
     fn die_helper(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         self.dead = true;
-        unsafe { if_sound_on_play(g, &mut gp.rm.sfx_breakblock) };
+        if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
 
         if !self.owner.is_null() {
             self.owner.carriedItem = Ptr::null();
@@ -204,15 +202,13 @@ impl CObjectTrait for CO_ThrowBox {
             self.frozen = true;
             self.frozentimer = 300;
 
-            unsafe {
-                g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
-                    (self.ix as i32 - self.collisionOffsetX as i32) as i16,
-                    (self.iy as i32 - self.collisionOffsetY as i32) as i16,
-                    3,
-                    8,
-                ));
-            }
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+                (self.ix as i32 - self.collisionOffsetX as i32) as i16,
+                (self.iy as i32 - self.collisionOffsetY as i32) as i16,
+                3,
+                8,
+            ));
         }
     }
 
@@ -226,15 +222,13 @@ impl CObjectTrait for CO_ThrowBox {
 
                 self.animationspeed = self.frozenanimationspeed;
 
-                unsafe {
-                    g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
-                        (self.ix as i32 - self.collisionOffsetX as i32) as i16,
-                        (self.iy as i32 - self.collisionOffsetY as i32) as i16,
-                        3,
-                        8,
-                    ));
-                }
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+                    (self.ix as i32 - self.collisionOffsetX as i32) as i16,
+                    (self.iy as i32 - self.collisionOffsetY as i32) as i16,
+                    3,
+                    8,
+                ));
             }
         }
 
@@ -251,17 +245,15 @@ impl CObjectTrait for CO_ThrowBox {
 
         self.animate();
 
-        unsafe {
-            if g.game_values.spotlights && self.has_kill_velocity() {
-                let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
-                let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
-                if self.sSpotlight.is_null() {
-                    self.sSpotlight = gp.spotlightManager.add_spotlight(g, x, y, 3);
-                }
+        if g.game_values.spotlights && self.has_kill_velocity() {
+            let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
+            let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
+            if self.sSpotlight.is_null() {
+                self.sSpotlight = gp.spotlightManager.add_spotlight(g, x, y, 3);
+            }
 
-                if !self.sSpotlight.is_null() {
-                    self.sSpotlight.update_position(x, y);
-                }
+            if !self.sSpotlight.is_null() {
+                self.sSpotlight.update_position(x, y);
             }
         }
     }
@@ -279,7 +271,7 @@ impl CObjectTrait for CO_ThrowBox {
         }
 
         if self.frozen {
-            unsafe { gp.rm.spr_iceblock.draw_src(g, x, y, &Rect { x: 0, y: 0, w: 32, h: 32 }) };
+            gp.rm.spr_iceblock.draw_src(g, x, y, &Rect { x: 0, y: 0, w: 32, h: 32 });
         }
     }
 }
@@ -300,14 +292,12 @@ impl IO_MovingObjectTrait for CO_ThrowBox {
             return;
         }
 
-        unsafe {
-            let spr = Ptr::from_mut(&mut g.rm.spr_brokenyellowblock);
-            let (ix, iy) = (self.ix as i32, self.iy as i32);
-            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, iy as i16, -2.2, -10.0, 4, 2, 0, 0, 16, 16));
-            g.eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, iy as i16, 2.2, -10.0, 4, 2, 0, 0, 16, 16));
-            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, (iy + 16) as i16, -2.2, -5.5, 4, 2, 0, 0, 16, 16));
-            g.eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, (iy + 16) as i16, 2.2, -5.5, 4, 2, 0, 0, 16, 16));
-        }
+        let spr = Ptr::from_mut(&mut g.rm.spr_brokenyellowblock);
+        let (ix, iy) = (self.ix as i32, self.iy as i32);
+        g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, iy as i16, -2.2, -10.0, 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, iy as i16, 2.2, -10.0, 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix as i16, (iy + 16) as i16, -2.2, -5.5, 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(spr, (ix + 16) as i16, (iy + 16) as i16, 2.2, -5.5, 4, 2, 0, 0, 16, 16));
 
         self.die_helper(g);
     }

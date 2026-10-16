@@ -328,10 +328,8 @@ pub fn bound_to_window_h(y: i32) -> i32 {
 
 pub fn bound_mouse_motion_coords(g: &mut Game) {
     let mut gp = g.ptr();
-    unsafe {
-        ed(gp.get()).mouse_x = bound_to_window_w(ed(gp.get()).event.motion_x());
-        ed(gp.get()).mouse_y = bound_to_window_h(ed(gp.get()).event.motion_y());
-    }
+    ed(gp.get()).mouse_x = bound_to_window_w(ed(gp.get()).event.motion_x());
+    ed(gp.get()).mouse_y = bound_to_window_h(ed(gp.get()).event.motion_y());
 }
 
 pub struct MapPlatform {
@@ -445,10 +443,8 @@ pub fn main() {
     let g = Game::create();
     cmd::attach_parent_console();
     crate::globals::init_globals(g);
-    unsafe {
-        ed(g).copiedtiles.init([[EditorMapTile::zeroed(); MH]; MW]);
-        ed(g).g_Platforms.init((0..MAX_PLATFORMS).map(|_| MapPlatform::new()).collect());
-    }
+    ed(g).copiedtiles.init([[EditorMapTile::zeroed(); MH]; MW]);
+    ed(g).g_Platforms.init((0..MAX_PLATFORMS).map(|_| MapPlatform::new()).collect());
 
     let argv: Vec<String> = std::env::args().collect();
     let cmd = cmd::parse_args(&argv);
@@ -465,7 +461,7 @@ pub fn main() {
     }
 
     if !cmd.data_root.is_empty() {
-        unsafe { g.RootDataDirectory = cmd.data_root.clone() };
+        g.RootDataDirectory = cmd.data_root.clone();
     }
 
     // C++ catches `const char*`, `std::string`, `std::exception` and `...` around inner_main().
@@ -484,304 +480,292 @@ pub fn main() {
 
 pub fn inner_main(g: &mut Game) {
     let mut gp = g.ptr();
-    unsafe {
-        ensure_settings_dir(g);
+    ensure_settings_dir(g);
 
-        /* This must occur before any data files are loaded */
-        initialize_paths(g);
+    /* This must occur before any data files are loaded */
+    initialize_paths(g);
 
-        let mut done: bool;
+    let mut done: bool;
 
-        println!("-------------------------------------------------------------------------------");
-        println!(" {} {}", TITLESTRING, MAPTITLESTRING);
-        println!("-------------------------------------------------------------------------------");
-        println!("\n---------------- startup ----------------");
+    println!("-------------------------------------------------------------------------------");
+    println!(" {} {}", TITLESTRING, MAPTITLESTRING);
+    println!("-------------------------------------------------------------------------------");
+    println!("\n---------------- startup ----------------");
 
-        {
-            let options_path = get_home_directory(g) + "leveleditor.bin";
-            let mut editor_settings = BinaryFile::new(&options_path, "rb");
-            if editor_settings.is_open() {
-                ed(gp.get()).g_fFullScreen = editor_settings.read_bool();
-                ed(gp.get()).findstring = editor_settings.read_string_long(FILEBUFSIZE as usize);
-            }
+    {
+        let options_path = get_home_directory(g) + "leveleditor.bin";
+        let mut editor_settings = BinaryFile::new(&options_path, "rb");
+        if editor_settings.is_open() {
+            ed(gp.get()).g_fFullScreen = editor_settings.read_bool();
+            ed(gp.get()).findstring = editor_settings.read_string_long(FILEBUFSIZE as usize);
         }
-
-        gfx_init(g, 640, 480, ed(gp.get()).g_fFullScreen);
-        g.blitdest = g.screen;
-
-        g.rm = Ptr::new_box(CResourceManager::new());
-        gp.g_tilesetmanager = Ptr::new_box(CTilesetManager::new(g, &convert_path(gp.get(), "gfx/Classic/tilesets")));
-        g.g_map = Ptr::from_box(CMap::new());
-        g.filterslist = Ptr::new_box(crate::common::file_list::FiltersList::new(g));
-        g.maplist = Ptr::new_box(MapList::new(g, false));
-        ed(gp.get()).backgroundlist = Ptr::new_box(BackgroundList::new(g));
-
-        //Add all of the maps that are world only so we can edit them
-        gp.maplist.add_world_maps(g);
-        let title = format!("{} {}", TITLESTRING, MAPTITLESTRING);
-        gfx_settitle(g, &title);
-
-        println!("\n---------------- loading graphics ----------------");
-
-        g.rm.spr_tiletypes = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_tile_types.png")).without_color_key().create(g);
-        g.rm.spr_transparenttiles = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_transparent_tiles.png")).with_alpha(160).create(g);
-
-        g.rm.spr_backgroundlevel = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_background_levels.png")).create(g);
-        g.rm.spr_tilesetlevel = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_tileset_levels.png")).create(g);
-
-        g.rm.spr_eyecandy = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_eyecandy.png")).create(g);
-
-        ed(gp.get()).s_platform.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_platform.png")).create(g));
-        ed(gp.get()).s_platformpathbuttons.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_pathtype_buttons.png")).create(g));
-        ed(gp.get()).s_maphazardbuttons.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_maphazard_buttons.png")).create(g));
-
-        g.rm.spr_warps[0] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp.png")).create(g);
-        g.rm.spr_warps[1] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp_preview.png")).create(g);
-        g.rm.spr_warps[2] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp_thumbnail.png")).create(g);
-
-        g.rm.spr_platformpath = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_platform_path.png")).with_alpha(128).create(g);
-
-        g.rm.spr_selectedtile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_selectedtile.png")).with_color_key(colors::BLACK).with_alpha(128).create(g);
-        g.rm.spr_nospawntile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_nospawntile.png")).with_color_key(colors::BLACK).with_alpha(128).create(g);
-        g.rm.spr_noitemspawntile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_noitemspawntile.png")).with_color_key(colors::BLACK).with_alpha(128).create(g);
-        g.rm.spr_platformstarttile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_platformstarttile.png")).with_color_key(colors::BLACK).with_alpha(64).with_wrapping(640).create(g);
-        g.rm.spr_platformendtile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_selectedtile.png")).with_color_key(colors::BLACK).with_alpha(64).with_wrapping(640).create(g);
-
-        g.rm.spr_mapitems[0] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_mapitems.png")).create(g);
-        g.rm.spr_mapitems[1] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_mapitems_preview.png")).create(g);
-        g.rm.spr_mapitems[2] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_mapitems_thumbnail.png")).create(g);
-
-        g.rm.spr_dialog = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_dialog.png")).with_alpha(255).create(g);
-        g.rm.menu_shade = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_shade.png")).with_alpha(128).create(g);
-
-        g.rm.spr_tileanimation[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/tile_animation.png")).create(g);
-        g.rm.spr_tileanimation[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/tile_animation_preview.png")).create(g);
-        g.rm.spr_tileanimation[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/tile_animation_thumbnail.png")).create(g);
-
-        g.rm.spr_blocks[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/blocks.png")).create(g);
-        g.rm.spr_blocks[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/blocks_preview.png")).create(g);
-        g.rm.spr_blocks[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/blocks_thumbnail.png")).create(g);
-
-        g.rm.spr_unknowntile[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/unknown_tile.png")).create(g);
-        g.rm.spr_unknowntile[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/unknown_tile_preview.png")).create(g);
-        g.rm.spr_unknowntile[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/unknown_tile_thumbnail.png")).create(g);
-
-        g.rm.spr_powerups = ImageLoader::new(convert_path(g, "gfx/packs/Classic/powerups/large.png")).create(g);
-        g.rm.spr_powerupselector = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_powerup_selector.png")).with_alpha(128).create(g);
-        g.rm.spr_hidden_marker = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_hidden_marker.png")).create(g);
-
-        g.rm.spr_flagbases = ImageLoader::new(convert_path(g, "gfx/packs/Classic/modeobjects/flagbases.png")).create(g);
-        g.rm.spr_racegoals = ImageLoader::new(convert_path(g, "gfx/packs/Classic/modeobjects/racegoal.png")).create(g);
-
-        g.rm.spr_hazard_fireball[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/fireball.png")).create(g);
-        g.rm.spr_hazard_fireball[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/fireball_preview.png")).create(g);
-        g.rm.spr_hazard_fireball[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/fireball_thumbnail.png")).create(g);
-
-        g.rm.spr_hazard_rotodisc[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/rotodisc.png")).create(g);
-        g.rm.spr_hazard_rotodisc[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/rotodisc_preview.png")).create(g);
-        g.rm.spr_hazard_rotodisc[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/rotodisc_thumbnail.png")).create(g);
-
-        g.rm.spr_hazard_bulletbill[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/bulletbill.png")).create(g);
-        g.rm.spr_hazard_bulletbill[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/bulletbill_preview.png")).create(g);
-        g.rm.spr_hazard_bulletbill[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/bulletbill_thumbnail.png")).create(g);
-
-        g.rm.spr_hazard_flame[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/flame.png")).create(g);
-        g.rm.spr_hazard_flame[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/flame_preview.png")).create(g);
-        g.rm.spr_hazard_flame[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/flame_thumbnail.png")).create(g);
-
-        g.rm.spr_hazard_pirhanaplant[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/pirhanaplant.png")).create(g);
-        g.rm.spr_hazard_pirhanaplant[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/pirhanaplant_preview.png")).create(g);
-        g.rm.spr_hazard_pirhanaplant[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/pirhanaplant_thumbnail.png")).create(g);
-
-        g.rm.spr_number_icons = ImageLoader::new(convert_path(g, "gfx/packs/Classic/awards/killsinrownumbers.png")).create(g);
-
-        for i in 0..3usize {
-            g.rm.spr_hazard_fireball[i].set_wrap((640 >> i) as i16);
-            g.rm.spr_hazard_rotodisc[i].set_wrap((640 >> i) as i16);
-            g.rm.spr_hazard_flame[i].set_wrap((640 >> i) as i16);
-            g.rm.spr_hazard_pirhanaplant[i].set_wrap((640 >> i) as i16);
-        }
-
-
-        gp.rm.menu_font_small = gfxFont::from_path(g, &convert_path(gp.get(), "gfx/packs/Classic/fonts/font_small.png"));
-        gp.rm.menu_font_large = gfxFont::from_path(g, &convert_path(gp.get(), "gfx/packs/Classic/fonts/font_large.png"));
-
-        println!("\n---------------- load map ----------------");
-
-        //Setup Platforms
-        const UI_PLATFORM_START_X: i32 = (640 - UI_PLATFORM_COLS * 32 - (UI_PLATFORM_COLS - 1) * 10/* spacing */) / 2;
-        const UI_PLATFORM_START_Y: i32 = (480 - UI_PLATFORM_ROWS * 32 - (UI_PLATFORM_ROWS - 1) * 10/* spacing */) / 2;
-        for iPlatform in 0..MAX_PLATFORMS as usize {
-            let p = &mut ed(gp.get()).g_Platforms[iPlatform];
-            p.rIcon[0].x = (iPlatform as i32 % 8) * 32;
-            p.rIcon[0].y = (iPlatform as i32 / 8) * 32 + 224;
-            p.rIcon[0].w = 32;
-            p.rIcon[0].h = 32;
-
-            p.rIcon[1].x = (iPlatform as i32 % 8) * 42 + UI_PLATFORM_START_X;
-            p.rIcon[1].y = (iPlatform as i32 / 8) * 42 + UI_PLATFORM_START_Y;
-            p.rIcon[1].w = 32;
-            p.rIcon[1].h = 32;
-
-            for iCol in 0..MW {
-                for iRow in 0..MH {
-                    clear_tileset_tile(&mut p.tiles[iCol * MH + iRow]);
-                    p.types[iCol * MH + iRow] = TileType::NonSolid;
-                }
-            }
-
-            p.iVelocity = 4;
-            p.iDrawLayer = 2; //Default to drawing in the middle layer
-        }
-
-        read_animated_tile_type_file(g, &convert_path(gp.get(), "gfx/packs/Classic/tilesets/tile_animation_tileset.tls"));
-
-        let fs = ed(gp.get()).findstring.clone();
-        g.maplist.find(&fs);
-        loadcurrentmap(g);
-        ed(gp.get()).findstring.clear(); //clear out the find string so that pressing "f" will give you the find dialog
-
-        println!("\n---------------- ready, steady, go! ----------------");
-
-        resetselectedtiles(g);
-
-        crate::common::game_values::CGameValues::init(&mut gp.game_values, g); // Needed for FPSLimiter
-
-        editor_harness::init(g);
-        editor_harness::set_dumper(g, dump_editor_state);
-
-        println!("entering level editor loop...");
-        done = false;
-        while !done {
-            FPSLimiter::instance(g).frame_start(g);
-
-            match ed(gp.get()).state {
-                EDITOR_EDIT => {
-                    ed(gp.get()).move_nodrag = false;
-                    ed(gp.get()).state = editor_edit(g);
-                }
-                EDITOR_TILES => ed(gp.get()).state = editor_tiles(g),
-                EDITOR_BLOCKS => ed(gp.get()).state = editor_blocks(g),
-                EDITOR_MAPITEMS => ed(gp.get()).state = editor_mapitems(g),
-                EDITOR_MODEITEMS => ed(gp.get()).state = editor_modeitems(g),
-                EDITOR_WARP => ed(gp.get()).state = editor_warp(g),
-                EDITOR_EYECANDY => ed(gp.get()).state = editor_eyecandy(g),
-                EDITOR_PLATFORM => ed(gp.get()).state = editor_platforms(g),
-                EDITOR_MAPHAZARDS => ed(gp.get()).state = editor_maphazards(g),
-                EDITOR_TILETYPE => ed(gp.get()).state = editor_tiletype(g),
-                EDITOR_BACKGROUNDS => ed(gp.get()).state = editor_backgrounds(g),
-                EDITOR_ANIMATION => ed(gp.get()).state = editor_animation(g),
-                EDITOR_QUIT => done = true,
-                DISPLAY_HELP => ed(gp.get()).state = display_help(g),
-                SAVE_AS => ed(gp.get()).state = save_as(g),
-                FIND => ed(gp.get()).state = find(g),
-                CLEAR_MAP => ed(gp.get()).state = clear_map(g),
-                NEW_MAP => ed(gp.get()).state = newmap(g),
-                SAVE => ed(gp.get()).state = savecurrentmap(g),
-                _ => println!(" PANIC: WEIRD STATE: {}", ed(gp.get()).state),
-            }
-
-            editor_harness::frame_delay(g, 0);
-            FPSLimiter::instance(g).before_flip(g);
-            gfx_flipscreen(g);
-            FPSLimiter::instance(g).after_flip(g);
-        }
-
-        println!("\n---------------- save map ----------------");
-
-        save_map(g, &convert_path(gp.get(), "maps/ZZleveleditor.map"));
-
-        {
-            let options_path = get_home_directory(g) + "leveleditor.bin";
-            let mut editor_settings = BinaryFile::new(&options_path, "wb");
-            if editor_settings.is_open() {
-                editor_settings.write_bool(ed(gp.get()).g_fFullScreen);
-                let current = g.maplist.current_filename().to_string();
-                editor_settings.write_string_long(&current);
-            }
-        }
-
-        write_animated_tile_type_file(g, &convert_path(gp.get(), "gfx/packs/Classic/tilesets/tile_animation_tileset.tls"));
-        g.g_tilesetmanager.save_tilesets();
-
-        println!("\n---------------- shutdown ----------------");
     }
+
+    gfx_init(g, 640, 480, ed(gp.get()).g_fFullScreen);
+    g.blitdest = g.screen;
+
+    g.rm = Ptr::new_box(CResourceManager::new());
+    gp.g_tilesetmanager = Ptr::new_box(CTilesetManager::new(g, &convert_path(gp.get(), "gfx/Classic/tilesets")));
+    g.g_map = Ptr::from_box(CMap::new());
+    g.filterslist = Ptr::new_box(crate::common::file_list::FiltersList::new(g));
+    g.maplist = Ptr::new_box(MapList::new(g, false));
+    ed(gp.get()).backgroundlist = Ptr::new_box(BackgroundList::new(g));
+
+    //Add all of the maps that are world only so we can edit them
+    gp.maplist.add_world_maps(g);
+    let title = format!("{} {}", TITLESTRING, MAPTITLESTRING);
+    gfx_settitle(g, &title);
+
+    println!("\n---------------- loading graphics ----------------");
+
+    g.rm.spr_tiletypes = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_tile_types.png")).without_color_key().create(g);
+    g.rm.spr_transparenttiles = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_transparent_tiles.png")).with_alpha(160).create(g);
+
+    g.rm.spr_backgroundlevel = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_background_levels.png")).create(g);
+    g.rm.spr_tilesetlevel = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_tileset_levels.png")).create(g);
+
+    g.rm.spr_eyecandy = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_eyecandy.png")).create(g);
+
+    ed(gp.get()).s_platform.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_platform.png")).create(g));
+    ed(gp.get()).s_platformpathbuttons.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_pathtype_buttons.png")).create(g));
+    ed(gp.get()).s_maphazardbuttons.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_maphazard_buttons.png")).create(g));
+
+    g.rm.spr_warps[0] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp.png")).create(g);
+    g.rm.spr_warps[1] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp_preview.png")).create(g);
+    g.rm.spr_warps[2] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp_thumbnail.png")).create(g);
+
+    g.rm.spr_platformpath = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_platform_path.png")).with_alpha(128).create(g);
+
+    g.rm.spr_selectedtile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_selectedtile.png")).with_color_key(colors::BLACK).with_alpha(128).create(g);
+    g.rm.spr_nospawntile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_nospawntile.png")).with_color_key(colors::BLACK).with_alpha(128).create(g);
+    g.rm.spr_noitemspawntile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_noitemspawntile.png")).with_color_key(colors::BLACK).with_alpha(128).create(g);
+    g.rm.spr_platformstarttile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_platformstarttile.png")).with_color_key(colors::BLACK).with_alpha(64).with_wrapping(640).create(g);
+    g.rm.spr_platformendtile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_selectedtile.png")).with_color_key(colors::BLACK).with_alpha(64).with_wrapping(640).create(g);
+
+    g.rm.spr_mapitems[0] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_mapitems.png")).create(g);
+    g.rm.spr_mapitems[1] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_mapitems_preview.png")).create(g);
+    g.rm.spr_mapitems[2] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_mapitems_thumbnail.png")).create(g);
+
+    g.rm.spr_dialog = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_dialog.png")).with_alpha(255).create(g);
+    g.rm.menu_shade = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_shade.png")).with_alpha(128).create(g);
+
+    g.rm.spr_tileanimation[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/tile_animation.png")).create(g);
+    g.rm.spr_tileanimation[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/tile_animation_preview.png")).create(g);
+    g.rm.spr_tileanimation[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/tile_animation_thumbnail.png")).create(g);
+
+    g.rm.spr_blocks[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/blocks.png")).create(g);
+    g.rm.spr_blocks[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/blocks_preview.png")).create(g);
+    g.rm.spr_blocks[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/blocks_thumbnail.png")).create(g);
+
+    g.rm.spr_unknowntile[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/unknown_tile.png")).create(g);
+    g.rm.spr_unknowntile[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/unknown_tile_preview.png")).create(g);
+    g.rm.spr_unknowntile[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/unknown_tile_thumbnail.png")).create(g);
+
+    g.rm.spr_powerups = ImageLoader::new(convert_path(g, "gfx/packs/Classic/powerups/large.png")).create(g);
+    g.rm.spr_powerupselector = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_powerup_selector.png")).with_alpha(128).create(g);
+    g.rm.spr_hidden_marker = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_hidden_marker.png")).create(g);
+
+    g.rm.spr_flagbases = ImageLoader::new(convert_path(g, "gfx/packs/Classic/modeobjects/flagbases.png")).create(g);
+    g.rm.spr_racegoals = ImageLoader::new(convert_path(g, "gfx/packs/Classic/modeobjects/racegoal.png")).create(g);
+
+    g.rm.spr_hazard_fireball[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/fireball.png")).create(g);
+    g.rm.spr_hazard_fireball[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/fireball_preview.png")).create(g);
+    g.rm.spr_hazard_fireball[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/fireball_thumbnail.png")).create(g);
+
+    g.rm.spr_hazard_rotodisc[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/rotodisc.png")).create(g);
+    g.rm.spr_hazard_rotodisc[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/rotodisc_preview.png")).create(g);
+    g.rm.spr_hazard_rotodisc[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/rotodisc_thumbnail.png")).create(g);
+
+    g.rm.spr_hazard_bulletbill[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/bulletbill.png")).create(g);
+    g.rm.spr_hazard_bulletbill[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/bulletbill_preview.png")).create(g);
+    g.rm.spr_hazard_bulletbill[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/bulletbill_thumbnail.png")).create(g);
+
+    g.rm.spr_hazard_flame[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/flame.png")).create(g);
+    g.rm.spr_hazard_flame[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/flame_preview.png")).create(g);
+    g.rm.spr_hazard_flame[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/flame_thumbnail.png")).create(g);
+
+    g.rm.spr_hazard_pirhanaplant[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/pirhanaplant.png")).create(g);
+    g.rm.spr_hazard_pirhanaplant[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/pirhanaplant_preview.png")).create(g);
+    g.rm.spr_hazard_pirhanaplant[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/pirhanaplant_thumbnail.png")).create(g);
+
+    g.rm.spr_number_icons = ImageLoader::new(convert_path(g, "gfx/packs/Classic/awards/killsinrownumbers.png")).create(g);
+
+    for i in 0..3usize {
+        g.rm.spr_hazard_fireball[i].set_wrap((640 >> i) as i16);
+        g.rm.spr_hazard_rotodisc[i].set_wrap((640 >> i) as i16);
+        g.rm.spr_hazard_flame[i].set_wrap((640 >> i) as i16);
+        g.rm.spr_hazard_pirhanaplant[i].set_wrap((640 >> i) as i16);
+    }
+
+
+    gp.rm.menu_font_small = gfxFont::from_path(g, &convert_path(gp.get(), "gfx/packs/Classic/fonts/font_small.png"));
+    gp.rm.menu_font_large = gfxFont::from_path(g, &convert_path(gp.get(), "gfx/packs/Classic/fonts/font_large.png"));
+
+    println!("\n---------------- load map ----------------");
+
+    //Setup Platforms
+    const UI_PLATFORM_START_X: i32 = (640 - UI_PLATFORM_COLS * 32 - (UI_PLATFORM_COLS - 1) * 10/* spacing */) / 2;
+    const UI_PLATFORM_START_Y: i32 = (480 - UI_PLATFORM_ROWS * 32 - (UI_PLATFORM_ROWS - 1) * 10/* spacing */) / 2;
+    for iPlatform in 0..MAX_PLATFORMS as usize {
+        let p = &mut ed(gp.get()).g_Platforms[iPlatform];
+        p.rIcon[0].x = (iPlatform as i32 % 8) * 32;
+        p.rIcon[0].y = (iPlatform as i32 / 8) * 32 + 224;
+        p.rIcon[0].w = 32;
+        p.rIcon[0].h = 32;
+
+        p.rIcon[1].x = (iPlatform as i32 % 8) * 42 + UI_PLATFORM_START_X;
+        p.rIcon[1].y = (iPlatform as i32 / 8) * 42 + UI_PLATFORM_START_Y;
+        p.rIcon[1].w = 32;
+        p.rIcon[1].h = 32;
+
+        for iCol in 0..MW {
+            for iRow in 0..MH {
+                clear_tileset_tile(&mut p.tiles[iCol * MH + iRow]);
+                p.types[iCol * MH + iRow] = TileType::NonSolid;
+            }
+        }
+
+        p.iVelocity = 4;
+        p.iDrawLayer = 2; //Default to drawing in the middle layer
+    }
+
+    read_animated_tile_type_file(g, &convert_path(gp.get(), "gfx/packs/Classic/tilesets/tile_animation_tileset.tls"));
+
+    let fs = ed(gp.get()).findstring.clone();
+    g.maplist.find(&fs);
+    loadcurrentmap(g);
+    ed(gp.get()).findstring.clear(); //clear out the find string so that pressing "f" will give you the find dialog
+
+    println!("\n---------------- ready, steady, go! ----------------");
+
+    resetselectedtiles(g);
+
+    crate::common::game_values::CGameValues::init(&mut gp.game_values, g); // Needed for FPSLimiter
+
+    editor_harness::init(g);
+    editor_harness::set_dumper(g, dump_editor_state);
+
+    println!("entering level editor loop...");
+    done = false;
+    while !done {
+        FPSLimiter::instance(g).frame_start(g);
+
+        match ed(gp.get()).state {
+            EDITOR_EDIT => {
+                ed(gp.get()).move_nodrag = false;
+                ed(gp.get()).state = editor_edit(g);
+            }
+            EDITOR_TILES => ed(gp.get()).state = editor_tiles(g),
+            EDITOR_BLOCKS => ed(gp.get()).state = editor_blocks(g),
+            EDITOR_MAPITEMS => ed(gp.get()).state = editor_mapitems(g),
+            EDITOR_MODEITEMS => ed(gp.get()).state = editor_modeitems(g),
+            EDITOR_WARP => ed(gp.get()).state = editor_warp(g),
+            EDITOR_EYECANDY => ed(gp.get()).state = editor_eyecandy(g),
+            EDITOR_PLATFORM => ed(gp.get()).state = editor_platforms(g),
+            EDITOR_MAPHAZARDS => ed(gp.get()).state = editor_maphazards(g),
+            EDITOR_TILETYPE => ed(gp.get()).state = editor_tiletype(g),
+            EDITOR_BACKGROUNDS => ed(gp.get()).state = editor_backgrounds(g),
+            EDITOR_ANIMATION => ed(gp.get()).state = editor_animation(g),
+            EDITOR_QUIT => done = true,
+            DISPLAY_HELP => ed(gp.get()).state = display_help(g),
+            SAVE_AS => ed(gp.get()).state = save_as(g),
+            FIND => ed(gp.get()).state = find(g),
+            CLEAR_MAP => ed(gp.get()).state = clear_map(g),
+            NEW_MAP => ed(gp.get()).state = newmap(g),
+            SAVE => ed(gp.get()).state = savecurrentmap(g),
+            _ => println!(" PANIC: WEIRD STATE: {}", ed(gp.get()).state),
+        }
+
+        editor_harness::frame_delay(g, 0);
+        FPSLimiter::instance(g).before_flip(g);
+        gfx_flipscreen(g);
+        FPSLimiter::instance(g).after_flip(g);
+    }
+
+    println!("\n---------------- save map ----------------");
+
+    save_map(g, &convert_path(gp.get(), "maps/ZZleveleditor.map"));
+
+    {
+        let options_path = get_home_directory(g) + "leveleditor.bin";
+        let mut editor_settings = BinaryFile::new(&options_path, "wb");
+        if editor_settings.is_open() {
+            editor_settings.write_bool(ed(gp.get()).g_fFullScreen);
+            let current = g.maplist.current_filename().to_string();
+            editor_settings.write_string_long(&current);
+        }
+    }
+
+    write_animated_tile_type_file(g, &convert_path(gp.get(), "gfx/packs/Classic/tilesets/tile_animation_tileset.tls"));
+    g.g_tilesetmanager.save_tilesets();
+
+    println!("\n---------------- shutdown ----------------");
 }
 
 pub fn calculate_tile_type(g: &mut Game, x: i16, y: i16) -> TileType {
     let mut gp = g.ptr();
-    unsafe {
-        let mut r#type = TileType::NonSolid;
-        let mut k: i16 = MAPLAYERS as i16 - 1;
-        while k >= 0 {
-            let tile = g.g_map.mapdata[x as usize][y as usize][k as usize];
+    let mut r#type = TileType::NonSolid;
+    let mut k: i16 = MAPLAYERS as i16 - 1;
+    while k >= 0 {
+        let tile = g.g_map.mapdata[x as usize][y as usize][k as usize];
 
-            let mut iTileType = TileType::NonSolid;
-            if tile.iID >= 0 {
-                iTileType = gp.g_tilesetmanager.tileset(g, tile.iID as usize).tile_type(tile.iCol as usize, tile.iRow as usize);
-            } else if tile.iID as i32 == TILESETANIMATED {
-                iTileType = ed(gp.get()).animatedtiletypes[(tile.iRow as i32 + ((tile.iCol as i32) << 5)) as usize];
-            }
-
-            if iTileType != TileType::NonSolid {
-                r#type = iTileType;
-                break;
-            }
-            k -= 1;
+        let mut iTileType = TileType::NonSolid;
+        if tile.iID >= 0 {
+            iTileType = gp.g_tilesetmanager.tileset(g, tile.iID as usize).tile_type(tile.iCol as usize, tile.iRow as usize);
+        } else if tile.iID as i32 == TILESETANIMATED {
+            iTileType = ed(gp.get()).animatedtiletypes[(tile.iRow as i32 + ((tile.iCol as i32) << 5)) as usize];
         }
 
-        r#type
+        if iTileType != TileType::NonSolid {
+            r#type = iTileType;
+            break;
+        }
+        k -= 1;
     }
+
+    r#type
 }
 
 pub fn update_tile_type(g: &mut Game, x: i16, y: i16) {
-    unsafe {
-        g.g_map.mapdatatop[x as usize][y as usize] = calculate_tile_type(g, x, y);
-    }
+    g.g_map.mapdatatop[x as usize][y as usize] = calculate_tile_type(g, x, y);
 }
 
 pub fn tile_type_is_modified(g: &mut Game, x: i16, y: i16) -> bool {
         let mut gp = g.ptr();
-    unsafe { gp.g_map.mapdatatop[x as usize][y as usize] != calculate_tile_type(g, x, y) }
+    gp.g_map.mapdatatop[x as usize][y as usize] != calculate_tile_type(g, x, y)
 }
 
 pub fn adjust_map_items(g: &mut Game, x: i16, y: i16) {
     const IGNORED_TILES: [TileType; 3] = [TileType::NonSolid, TileType::SolidOnTop, TileType::IceOnTop];
 
-    unsafe {
-        if let Some(it) = g.g_map.mapitems.iter().position(|item: &MapItem| item.ix == x && item.iy == y) {
-            let tiletype = g.g_map.mapdatatop[x as usize][y as usize];
-            let objtype = g.g_map.objectdata[x as usize][y as usize].iType;
+    if let Some(it) = g.g_map.mapitems.iter().position(|item: &MapItem| item.ix == x && item.iy == y) {
+        let tiletype = g.g_map.mapdatatop[x as usize][y as usize];
+        let objtype = g.g_map.objectdata[x as usize][y as usize].iType;
 
-            let tiletypeValid = !IGNORED_TILES.contains(&tiletype);
-            let objtypeValid = objtype != -1;
-            if tiletypeValid || objtypeValid {
-                g.g_map.mapitems.remove(it);
-            }
+        let tiletypeValid = !IGNORED_TILES.contains(&tiletype);
+        let objtypeValid = objtype != -1;
+        if tiletypeValid || objtypeValid {
+            g.g_map.mapitems.remove(it);
         }
     }
 }
 
 /// Removes map items located at the XY position.
 pub fn remove_map_item_at(g: &mut Game, x: i16, y: i16) {
-    unsafe {
-        g.g_map.mapitems.retain(|item: &MapItem| !(item.ix == x && item.iy == y));
-    }
+    g.g_map.mapitems.retain(|item: &MapItem| !(item.ix == x && item.iy == y));
 }
 
 pub fn init_editor_edit(g: &mut Game) {
     let mut gp = g.ptr();
-    unsafe {
-        if ed(gp.get()).editor_edit_initialized {
-            return;
-        }
-
-        ed(gp.get()).fExiting = false;
-        ed(gp.get()).fSelectedYes = false;
-        ed(gp.get()).g_musiccategorydisplaytimer = 0;
-
-        ed(gp.get()).editor_edit_initialized = true;
+    if ed(gp.get()).editor_edit_initialized {
+        return;
     }
+
+    ed(gp.get()).fExiting = false;
+    ed(gp.get()).fSelectedYes = false;
+    ed(gp.get()).g_musiccategorydisplaytimer = 0;
+
+    ed(gp.get()).editor_edit_initialized = true;
 }
 
 /// The block-painting branch shared by the button-down and motion handlers of `editor_edit`.
@@ -1545,45 +1529,39 @@ unsafe fn erase_at(g: &mut Game, iClickX: i16, iClickY: i16, fButtonDown: bool) 
 
 pub fn draw_message(g: &mut Game) {
         let mut gp = g.ptr();
-    unsafe {
-        if ed(gp.get()).g_messagedisplaytimer > 0 {
-            ed(gp.get()).g_messagedisplaytimer -= 1;
+    if ed(gp.get()).g_messagedisplaytimer > 0 {
+        ed(gp.get()).g_messagedisplaytimer -= 1;
 
-            gp.rm.spr_dialog.draw_src(g, 224, 176, &rect(0, 0, 192, 128));
-            gp.rm.menu_font_large.draw_centered(g, 320, 195, &ed(gp.get()).g_szMessageTitle);
-            gp.rm.menu_font_large.draw_centered(g, 320, 220, &ed(gp.get()).g_szMessageLine[0]);
-            gp.rm.menu_font_large.draw_centered(g, 320, 240, &ed(gp.get()).g_szMessageLine[1]);
-            gp.rm.menu_font_large.draw_centered(g, 320, 260, &ed(gp.get()).g_szMessageLine[2]);
-        }
+        gp.rm.spr_dialog.draw_src(g, 224, 176, &rect(0, 0, 192, 128));
+        gp.rm.menu_font_large.draw_centered(g, 320, 195, &ed(gp.get()).g_szMessageTitle);
+        gp.rm.menu_font_large.draw_centered(g, 320, 220, &ed(gp.get()).g_szMessageLine[0]);
+        gp.rm.menu_font_large.draw_centered(g, 320, 240, &ed(gp.get()).g_szMessageLine[1]);
+        gp.rm.menu_font_large.draw_centered(g, 320, 260, &ed(gp.get()).g_szMessageLine[2]);
     }
 }
 
 pub fn set_no_spawn(g: &mut Game, nospawnmode: i16, col: i16, row: i16, value: bool) {
-    unsafe {
-        if !value && nospawnmode > 0 && g.g_map.nospawn[0][col as usize][row as usize] {
-            return;
-        }
+    if !value && nospawnmode > 0 && g.g_map.nospawn[0][col as usize][row as usize] {
+        return;
+    }
 
-        g.g_map.nospawn[nospawnmode as usize][col as usize][row as usize] = value;
+    g.g_map.nospawn[nospawnmode as usize][col as usize][row as usize] = value;
 
-        if nospawnmode == 0 {
-            for imode in 1..5usize {
-                g.g_map.nospawn[imode][col as usize][row as usize] = value;
-            }
+    if nospawnmode == 0 {
+        for imode in 1..5usize {
+            g.g_map.nospawn[imode][col as usize][row as usize] = value;
         }
     }
 }
 
 fn in_moved_selection(g: &mut Game, i: i32, j: i32) -> bool {
     let mut gp = g.ptr();
-    unsafe {
-        (ed(gp.get()).move_mode == 1 || ed(gp.get()).move_mode == 3)
-            && i - ed(gp.get()).move_offset_x >= 0
-            && i - ed(gp.get()).move_offset_x < MAPWIDTH
-            && j - ed(gp.get()).move_offset_y >= 0
-            && j - ed(gp.get()).move_offset_y < MAPHEIGHT
-            && ed(gp.get()).selectedtiles[(i - ed(gp.get()).move_offset_x) as usize][(j - ed(gp.get()).move_offset_y) as usize]
-    }
+    (ed(gp.get()).move_mode == 1 || ed(gp.get()).move_mode == 3)
+        && i - ed(gp.get()).move_offset_x >= 0
+        && i - ed(gp.get()).move_offset_x < MAPWIDTH
+        && j - ed(gp.get()).move_offset_y >= 0
+        && j - ed(gp.get()).move_offset_y < MAPHEIGHT
+        && ed(gp.get()).selectedtiles[(i - ed(gp.get()).move_offset_x) as usize][(j - ed(gp.get()).move_offset_y) as usize]
 }
 
 pub fn drawlayer(g: &mut Game, layer: i32, fUseCopied: bool, iBlockSize: i16) {
@@ -1829,51 +1807,49 @@ pub fn drawmap(g: &mut Game, fScreenshot: bool, iBlockSize: i16, fWithPlatforms:
 
 pub fn editor_warp(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
-    unsafe {
-        //handle messages
-        while poll_event(g, &mut ed(gp.get()).event) != 0 {
-            match ed(gp.get()).event.type_() {
-                SDL_QUIT_EV => return EDITOR_QUIT,
+    //handle messages
+    while poll_event(g, &mut ed(gp.get()).event) != 0 {
+        match ed(gp.get()).event.type_() {
+            SDL_QUIT_EV => return EDITOR_QUIT,
 
-                SDL_KEYDOWN_EV => {
+            SDL_KEYDOWN_EV => {
+                ed(gp.get()).edit_mode = 2; //change to edit mode using warps
+                return EDITOR_EDIT;
+            }
+
+            SDL_MOUSEBUTTONDOWN_EV => {
+                if ed(gp.get()).event.button_button() == BUTTON_LEFT {
+                    if ed(gp.get()).event.button_x() / TILESIZE < 10 && ed(gp.get()).event.button_y() / TILESIZE < 4 {
+                        ed(gp.get()).set_direction = ed(gp.get()).event.button_y() / TILESIZE;
+                        ed(gp.get()).set_connection = ed(gp.get()).event.button_x() / TILESIZE;
+                    }
+
                     ed(gp.get()).edit_mode = 2; //change to edit mode using warps
+
+                    //The user must release the mouse button before trying to add a tile
+                    ed(gp.get()).ignoreclick = true;
+
                     return EDITOR_EDIT;
                 }
-
-                SDL_MOUSEBUTTONDOWN_EV => {
-                    if ed(gp.get()).event.button_button() == BUTTON_LEFT {
-                        if ed(gp.get()).event.button_x() / TILESIZE < 10 && ed(gp.get()).event.button_y() / TILESIZE < 4 {
-                            ed(gp.get()).set_direction = ed(gp.get()).event.button_y() / TILESIZE;
-                            ed(gp.get()).set_connection = ed(gp.get()).event.button_x() / TILESIZE;
-                        }
-
-                        ed(gp.get()).edit_mode = 2; //change to edit mode using warps
-
-                        //The user must release the mouse button before trying to add a tile
-                        ed(gp.get()).ignoreclick = true;
-
-                        return EDITOR_EDIT;
-                    }
-                }
-
-                _ => {}
             }
+
+            _ => {}
         }
-
-        drawmap(g, false, TILESIZE as i16, false);
-        gp.rm.menu_shade.draw(g, 0, 0);
-
-        ed(gp.get()).r.x = 0;
-        ed(gp.get()).r.y = 0;
-        ed(gp.get()).r.w = 640;
-        ed(gp.get()).r.h = 480;
-
-        g.rm.spr_warps[0].draw_to(g.screen, &ed(gp.get()).r);
-        gp.rm.menu_font_small.draw_right_justified(g, 640, 0, gp.maplist.current_filename());
-
-        draw_message(g);
-        EDITOR_WARP
     }
+
+    drawmap(g, false, TILESIZE as i16, false);
+    gp.rm.menu_shade.draw(g, 0, 0);
+
+    ed(gp.get()).r.x = 0;
+    ed(gp.get()).r.y = 0;
+    ed(gp.get()).r.w = 640;
+    ed(gp.get()).r.h = 480;
+
+    g.rm.spr_warps[0].draw_to(g.screen, &ed(gp.get()).r);
+    gp.rm.menu_font_small.draw_right_justified(g, 640, 0, gp.maplist.current_filename());
+
+    draw_message(g);
+    EDITOR_WARP
 }
 
 const NUM_EYECANDY: i16 = 7;
@@ -1882,85 +1858,83 @@ const szLayerNames: [&str; 3] = ["Back Layer", "Mid Layer", "Top Layer"];
 
 pub fn editor_eyecandy(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
-    unsafe {
-        //handle messages
-        while poll_event(g, &mut ed(gp.get()).event) != 0 {
-            let ty = ed(gp.get()).event.type_();
-            let mut fall = false;
+    //handle messages
+    while poll_event(g, &mut ed(gp.get()).event) != 0 {
+        let ty = ed(gp.get()).event.type_();
+        let mut fall = false;
 
-            if ty == SDL_QUIT_EV {
-                return EDITOR_QUIT;
+        if ty == SDL_QUIT_EV {
+            return EDITOR_QUIT;
+        }
+
+        if ty == SDL_KEYDOWN_EV {
+            if ed(gp.get()).event.key_sym() == SDLK_ESCAPE || ed(gp.get()).event.key_sym() == SDLK_e {
+                return EDITOR_EDIT;
             }
+            fall = true;
+        }
 
-            if ty == SDL_KEYDOWN_EV {
-                if ed(gp.get()).event.key_sym() == SDLK_ESCAPE || ed(gp.get()).event.key_sym() == SDLK_e {
-                    return EDITOR_EDIT;
-                }
-                fall = true;
-            }
-
-            if fall || ty == SDL_MOUSEBUTTONDOWN_EV {
-                if ed(gp.get()).event.button_button() == BUTTON_LEFT {
-                    let mut ix: i16 = 165;
-                    for iLayer in 0..3usize {
-                        for kk in 0..NUM_EYECANDY {
-                            if ed(gp.get()).event.button_x() >= ix as i32
-                                && ed(gp.get()).event.button_x() < ix as i32 + 90
-                                && ed(gp.get()).event.button_y() >= kk as i32 * 65 + 20
-                                && ed(gp.get()).event.button_y() < kk as i32 * 65 + 72
-                            {
-                                let mask: i16 = 1 << kk;
-                                if g.g_map.eyecandy[iLayer] & mask != 0 {
-                                    g.g_map.eyecandy[iLayer] &= !mask;
-                                } else {
-                                    g.g_map.eyecandy[iLayer] |= mask;
-                                }
+        if fall || ty == SDL_MOUSEBUTTONDOWN_EV {
+            if ed(gp.get()).event.button_button() == BUTTON_LEFT {
+                let mut ix: i16 = 165;
+                for iLayer in 0..3usize {
+                    for kk in 0..NUM_EYECANDY {
+                        if ed(gp.get()).event.button_x() >= ix as i32
+                            && ed(gp.get()).event.button_x() < ix as i32 + 90
+                            && ed(gp.get()).event.button_y() >= kk as i32 * 65 + 20
+                            && ed(gp.get()).event.button_y() < kk as i32 * 65 + 72
+                        {
+                            let mask: i16 = 1 << kk;
+                            if g.g_map.eyecandy[iLayer] & mask != 0 {
+                                g.g_map.eyecandy[iLayer] &= !mask;
+                            } else {
+                                g.g_map.eyecandy[iLayer] |= mask;
                             }
                         }
-
-                        ix += 110;
                     }
-                }
-            } else if ty == SDL_MOUSEMOTION_EV {
-                bound_mouse_motion_coords(g);
-            }
-        }
 
-        drawmap(g, false, TILESIZE as i16, false);
-        gp.rm.menu_shade.draw(g, 0, 0);
-
-        let mut ix: i16 = 165;
-        for iLayer in 0..3usize {
-            for kk in 0..NUM_EYECANDY {
-                let iy: i16 = kk * 65 + 20;
-
-                if ed(gp.get()).mouse_x >= ix as i32 && ed(gp.get()).mouse_x < ix as i32 + 90 && ed(gp.get()).mouse_y >= iy as i32 && ed(gp.get()).mouse_y < iy as i32 + 52 {
-                    gp.rm.spr_powerupselector.draw_src(g, ix as i32, iy as i32, &rect(0, 0, 90, 52));
-                } else {
-                    gp.rm.spr_powerupselector.draw_src(g, ix as i32, iy as i32, &rect(0, 52, 90, 52));
-                }
-
-                gp.rm.spr_eyecandy.draw_src(g, ix as i32 + 10, iy as i32 + 10, &rect((kk as i32) << 5, 0, 32, 32));
-
-                let mask: i16 = 1 << kk;
-                if g.g_map.eyecandy[iLayer] & mask != 0 {
-                    gp.rm.spr_hidden_marker.draw(g, ix as i32 + 57, iy as i32 + 16);
+                    ix += 110;
                 }
             }
-
-            gp.rm.menu_font_small.draw_centered(g, ix as i32 + 45, 10, szLayerNames[iLayer]);
-            ix += 110;
+        } else if ty == SDL_MOUSEMOTION_EV {
+            bound_mouse_motion_coords(g);
         }
-
-        for kk in 0..NUM_EYECANDY {
-            gp.rm.menu_font_small.draw_centered(g, 320, kk as i32 * 65 + 62, szEyecandyNames[kk as usize]);
-        }
-
-        gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Eyecandy: [e] Exit, [LMB] Choose Eyecandy");
-
-        draw_message(g);
-        EDITOR_EYECANDY
     }
+
+    drawmap(g, false, TILESIZE as i16, false);
+    gp.rm.menu_shade.draw(g, 0, 0);
+
+    let mut ix: i16 = 165;
+    for iLayer in 0..3usize {
+        for kk in 0..NUM_EYECANDY {
+            let iy: i16 = kk * 65 + 20;
+
+            if ed(gp.get()).mouse_x >= ix as i32 && ed(gp.get()).mouse_x < ix as i32 + 90 && ed(gp.get()).mouse_y >= iy as i32 && ed(gp.get()).mouse_y < iy as i32 + 52 {
+                gp.rm.spr_powerupselector.draw_src(g, ix as i32, iy as i32, &rect(0, 0, 90, 52));
+            } else {
+                gp.rm.spr_powerupselector.draw_src(g, ix as i32, iy as i32, &rect(0, 52, 90, 52));
+            }
+
+            gp.rm.spr_eyecandy.draw_src(g, ix as i32 + 10, iy as i32 + 10, &rect((kk as i32) << 5, 0, 32, 32));
+
+            let mask: i16 = 1 << kk;
+            if g.g_map.eyecandy[iLayer] & mask != 0 {
+                gp.rm.spr_hidden_marker.draw(g, ix as i32 + 57, iy as i32 + 16);
+            }
+        }
+
+        gp.rm.menu_font_small.draw_centered(g, ix as i32 + 45, 10, szLayerNames[iLayer]);
+        ix += 110;
+    }
+
+    for kk in 0..NUM_EYECANDY {
+        gp.rm.menu_font_small.draw_centered(g, 320, kk as i32 * 65 + 62, szEyecandyNames[kk as usize]);
+    }
+
+    gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Eyecandy: [e] Exit, [LMB] Choose Eyecandy");
+
+    draw_message(g);
+    EDITOR_EYECANDY
 }
 
 /// Returns the index of the block setting under (x, y); C++ returns a pointer into `iSettings`.
@@ -1983,193 +1957,189 @@ pub fn get_block_property(x: i32, y: i32, iSettingIndex: Option<&mut i16>) -> Op
 
 pub fn init_editor_properties(g: &mut Game, iBlockCol: i16, iBlockRow: i16) {
     let mut gp = g.ptr();
-    unsafe {
-        if ed(gp.get()).editor_properties_initialized {
-            return;
-        }
-
-        ed(gp.get()).iBlockType = g.g_map.objectdata[iBlockCol as usize][iBlockRow as usize].iType;
-
-        ed(gp.get()).editor_properties_initialized = true;
+    if ed(gp.get()).editor_properties_initialized {
+        return;
     }
+
+    ed(gp.get()).iBlockType = g.g_map.objectdata[iBlockCol as usize][iBlockRow as usize].iType;
+
+    ed(gp.get()).editor_properties_initialized = true;
 }
 
 pub fn editor_properties(g: &mut Game, iBlockCol: i16, iBlockRow: i16) -> i32 {
         let mut gp = g.ptr();
     init_editor_properties(g, iBlockCol, iBlockRow);
-    unsafe {
-        let (bc, br) = (iBlockCol as usize, iBlockRow as usize);
-        loop {
-            FPSLimiter::instance(g).frame_start(g);
-            //handle messages
-            while poll_event(g, &mut ed(gp.get()).event) != 0 {
-                let ty = ed(gp.get()).event.type_();
-                let mut fall = false;
+    let (bc, br) = (iBlockCol as usize, iBlockRow as usize);
+    loop {
+        FPSLimiter::instance(g).frame_start(g);
+        //handle messages
+        while poll_event(g, &mut ed(gp.get()).event) != 0 {
+            let ty = ed(gp.get()).event.type_();
+            let mut fall = false;
 
-                if ty == SDL_QUIT_EV {
-                    return EDITOR_QUIT;
-                }
+            if ty == SDL_QUIT_EV {
+                return EDITOR_QUIT;
+            }
 
-                if ty == SDL_KEYDOWN_EV {
-                    let sym = ed(gp.get()).event.key_sym();
-                    if sym == SDLK_ESCAPE || sym == SDLK_k {
-                        ed(gp.get()).editor_properties_initialized = false;
-                        return EDITOR_EDIT;
-                    } else if (ed(gp.get()).iBlockType == 1 || ed(gp.get()).iBlockType == 15) && ((sym >= SDLK_0 && sym <= SDLK_9) || sym == SDLK_BACKQUOTE || sym == SDLK_d) {
-                        let mut iSettingIndex: i16 = 0;
-                        let piSetting = get_block_property(ed(gp.get()).mouse_x, ed(gp.get()).mouse_y, Some(&mut iSettingIndex));
+            if ty == SDL_KEYDOWN_EV {
+                let sym = ed(gp.get()).event.key_sym();
+                if sym == SDLK_ESCAPE || sym == SDLK_k {
+                    ed(gp.get()).editor_properties_initialized = false;
+                    return EDITOR_EDIT;
+                } else if (ed(gp.get()).iBlockType == 1 || ed(gp.get()).iBlockType == 15) && ((sym >= SDLK_0 && sym <= SDLK_9) || sym == SDLK_BACKQUOTE || sym == SDLK_d) {
+                    let mut iSettingIndex: i16 = 0;
+                    let piSetting = get_block_property(ed(gp.get()).mouse_x, ed(gp.get()).mouse_y, Some(&mut iSettingIndex));
 
-                        //If shift is held, set all powerups to this setting
-                        let mut iValue: i16 = (sym - SDLK_0) as i16;
+                    //If shift is held, set all powerups to this setting
+                    let mut iValue: i16 = (sym - SDLK_0) as i16;
 
-                        if sym == SDLK_0 {
-                            iValue = 10;
-                        } else if sym == SDLK_BACKQUOTE {
-                            iValue = 0;
-                        } else if sym == SDLK_d {
-                            iValue = default_powerup_setting(0, iSettingIndex as usize);
-                        }
-
-                        let keystate = get_keyboard_state(g);
-                        if check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT) {
-                            for iSetting in 0..NUM_BLOCK_SETTINGS as usize {
-                                if ed(gp.get()).event.key_sym() == SDLK_d {
-                                    iValue = default_powerup_setting(0, iSetting);
-                                }
-
-                                g.g_map.objectdata[bc][br].iSettings[iSetting] = iValue;
-                            }
-                        } else if let Some(s) = piSetting {
-                            g.g_map.objectdata[bc][br].iSettings[s] = iValue;
-                        }
-                    }
-                    fall = true;
-                }
-
-                if fall || ty == SDL_MOUSEBUTTONDOWN_EV {
-                    let mut iHiddenCheckboxY: i16 = 0;
-                    if ed(gp.get()).iBlockType == 1 || ed(gp.get()).iBlockType == 15 {
-                        let mut iSettingIndex: i16 = 0;
-                        let piSetting = get_block_property(ed(gp.get()).event.button_x(), ed(gp.get()).event.button_y(), Some(&mut iSettingIndex));
-
-                        if let Some(s) = piSetting {
-                            let iMouseState = get_mouse_state(g) as u8 as u32;
-                            let setting = &mut g.g_map.objectdata[bc][br].iSettings[s];
-
-                            if (ed(gp.get()).event.button_button() == BUTTON_RIGHT && (iMouseState & SDL_BUTTON_LMASK) != 0)
-                                || (ed(gp.get()).event.button_button() == BUTTON_LEFT && (iMouseState & SDL_BUTTON_RMASK) != 0)
-                            {
-                                *setting = default_powerup_setting(0, iSettingIndex as usize);
-                            } else if ed(gp.get()).event.button_button() == BUTTON_LEFT {
-                                if *setting < 10 {
-                                    *setting += 1;
-                                }
-                            } else if ed(gp.get()).event.button_button() == BUTTON_RIGHT {
-                                if *setting > 0 {
-                                    *setting -= 1;
-                                }
-                            }
-                        }
-
-                        iHiddenCheckboxY = 365;
-                    } else if ed(gp.get()).iBlockType == 4 || ed(gp.get()).iBlockType == 5 || ed(gp.get()).iBlockType == 17 || ed(gp.get()).iBlockType == 18 || ed(gp.get()).iBlockType == 3 {
-                        iHiddenCheckboxY = 214;
+                    if sym == SDLK_0 {
+                        iValue = 10;
+                    } else if sym == SDLK_BACKQUOTE {
+                        iValue = 0;
+                    } else if sym == SDLK_d {
+                        iValue = default_powerup_setting(0, iSettingIndex as usize);
                     }
 
-                    if ed(gp.get()).event.button_x() >= 270 && ed(gp.get()).event.button_x() < 370 && ed(gp.get()).event.button_y() >= iHiddenCheckboxY as i32 && ed(gp.get()).event.button_y() < iHiddenCheckboxY as i32 + 52 {
+                    let keystate = get_keyboard_state(g);
+                    if check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT) {
+                        for iSetting in 0..NUM_BLOCK_SETTINGS as usize {
+                            if ed(gp.get()).event.key_sym() == SDLK_d {
+                                iValue = default_powerup_setting(0, iSetting);
+                            }
+
+                            g.g_map.objectdata[bc][br].iSettings[iSetting] = iValue;
+                        }
+                    } else if let Some(s) = piSetting {
+                        g.g_map.objectdata[bc][br].iSettings[s] = iValue;
+                    }
+                }
+                fall = true;
+            }
+
+            if fall || ty == SDL_MOUSEBUTTONDOWN_EV {
+                let mut iHiddenCheckboxY: i16 = 0;
+                if ed(gp.get()).iBlockType == 1 || ed(gp.get()).iBlockType == 15 {
+                    let mut iSettingIndex: i16 = 0;
+                    let piSetting = get_block_property(ed(gp.get()).event.button_x(), ed(gp.get()).event.button_y(), Some(&mut iSettingIndex));
+
+                    if let Some(s) = piSetting {
+                        let iMouseState = get_mouse_state(g) as u8 as u32;
+                        let setting = &mut g.g_map.objectdata[bc][br].iSettings[s];
+
+                        if (ed(gp.get()).event.button_button() == BUTTON_RIGHT && (iMouseState & SDL_BUTTON_LMASK) != 0)
+                            || (ed(gp.get()).event.button_button() == BUTTON_LEFT && (iMouseState & SDL_BUTTON_RMASK) != 0)
+                        {
+                            *setting = default_powerup_setting(0, iSettingIndex as usize);
+                        } else if ed(gp.get()).event.button_button() == BUTTON_LEFT {
+                            if *setting < 10 {
+                                *setting += 1;
+                            }
+                        } else if ed(gp.get()).event.button_button() == BUTTON_RIGHT {
+                            if *setting > 0 {
+                                *setting -= 1;
+                            }
+                        }
+                    }
+
+                    iHiddenCheckboxY = 365;
+                } else if ed(gp.get()).iBlockType == 4 || ed(gp.get()).iBlockType == 5 || ed(gp.get()).iBlockType == 17 || ed(gp.get()).iBlockType == 18 || ed(gp.get()).iBlockType == 3 {
+                    iHiddenCheckboxY = 214;
+                }
+
+                if ed(gp.get()).event.button_x() >= 270 && ed(gp.get()).event.button_x() < 370 && ed(gp.get()).event.button_y() >= iHiddenCheckboxY as i32 && ed(gp.get()).event.button_y() < iHiddenCheckboxY as i32 + 52 {
+                    if ed(gp.get()).event.button_button() == BUTTON_LEFT {
+                        g.g_map.objectdata[bc][br].fHidden = !g.g_map.objectdata[bc][br].fHidden;
+                    }
+                }
+
+                if ed(gp.get()).iBlockType == 1 || ed(gp.get()).iBlockType == 15 {
+                    if ed(gp.get()).event.button_x() >= 390 && ed(gp.get()).event.button_x() < 490 && ed(gp.get()).event.button_y() >= iHiddenCheckboxY as i32 && ed(gp.get()).event.button_y() < iHiddenCheckboxY as i32 + 52 {
                         if ed(gp.get()).event.button_button() == BUTTON_LEFT {
-                            g.g_map.objectdata[bc][br].fHidden = !g.g_map.objectdata[bc][br].fHidden;
-                        }
-                    }
-
-                    if ed(gp.get()).iBlockType == 1 || ed(gp.get()).iBlockType == 15 {
-                        if ed(gp.get()).event.button_x() >= 390 && ed(gp.get()).event.button_x() < 490 && ed(gp.get()).event.button_y() >= iHiddenCheckboxY as i32 && ed(gp.get()).event.button_y() < iHiddenCheckboxY as i32 + 52 {
-                            if ed(gp.get()).event.button_button() == BUTTON_LEFT {
-                                if g.g_map.objectdata[bc][br].iSettings[0] >= 0 {
-                                    g.g_map.objectdata[bc][br].iSettings[0] = -1;
-                                } else {
-                                    g.g_map.objectdata[bc][br].iSettings[0] = default_powerup_setting(0, 0);
-                                }
+                            if g.g_map.objectdata[bc][br].iSettings[0] >= 0 {
+                                g.g_map.objectdata[bc][br].iSettings[0] = -1;
+                            } else {
+                                g.g_map.objectdata[bc][br].iSettings[0] = default_powerup_setting(0, 0);
                             }
                         }
                     }
-                } else if ty == SDL_MOUSEMOTION_EV {
-                    bound_mouse_motion_coords(g);
                 }
+            } else if ty == SDL_MOUSEMOTION_EV {
+                bound_mouse_motion_coords(g);
             }
-
-            drawmap(g, false, TILESIZE as i16, false);
-            gp.rm.menu_shade.draw(g, 0, 0);
-
-            let mut iHiddenCheckboxY: i16 = 0;
-
-            if ed(gp.get()).iBlockType == 1 || ed(gp.get()).iBlockType == 15 {
-                let fUseGame = g.g_map.objectdata[bc][br].iSettings[0] == -1;
-
-                for iSetting in 0..NUM_BLOCK_SETTINGS as i16 {
-                    let ix: i16 = (iSetting % 6) * 100 + 35;
-                    let iy: i16 = (iSetting / 6) * 62 + 65;
-                    let (ix, iy) = (ix as i32, iy as i32);
-
-                    if ed(gp.get()).mouse_x >= ix - 10 && ed(gp.get()).mouse_x < ix + 80 && ed(gp.get()).mouse_y >= iy - 10 && ed(gp.get()).mouse_y < iy + 42 && !fUseGame {
-                        gp.rm.spr_powerupselector.draw_src(g, ix - 10, iy - 10, &rect(0, 0, 90, 52));
-                    } else {
-                        gp.rm.spr_powerupselector.draw_src(g, ix - 10, iy - 10, &rect(0, 52, 90, 52));
-                    }
-
-                    gp.rm.spr_powerups.draw_src(g, ix, iy, &rect((iSetting as i32) << 5, 0, 32, 32));
-
-                    let szNum = if fUseGame { "X".to_string() } else { format!("{}", g.g_map.objectdata[bc][br].iSettings[iSetting as usize]) };
-
-                    gp.rm.menu_font_large.draw_centered(g, ix + 55, iy + 5, &szNum);
-                }
-
-                iHiddenCheckboxY = 365;
-
-                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 3, "Block Property Mode");
-                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 2, "[~, 0-9] Set Value [LMB] Increase [RMB] Decrease [D] Default");
-                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[Shift] + [0-9 or D] Set All To Value");
-            } else if ed(gp.get()).iBlockType == 4 || ed(gp.get()).iBlockType == 5 || ed(gp.get()).iBlockType == 17 || ed(gp.get()).iBlockType == 18 || ed(gp.get()).iBlockType == 3 {
-                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Block Property Mode");
-                iHiddenCheckboxY = 214;
-            }
-
-            let hy = iHiddenCheckboxY as i32;
-            if ed(gp.get()).mouse_x >= 270 && ed(gp.get()).mouse_x < 370 && ed(gp.get()).mouse_y >= hy && ed(gp.get()).mouse_y < hy + 52 {
-                gp.rm.spr_powerupselector.draw_src(g, 270, hy, &rect(90, 0, 100, 52));
-            } else {
-                gp.rm.spr_powerupselector.draw_src(g, 270, hy, &rect(90, 52, 100, 52));
-            }
-
-            gp.rm.menu_font_large.draw_centered(g, 320, hy + 3, "Hidden");
-
-            if g.g_map.objectdata[bc][br].fHidden {
-                gp.rm.spr_hidden_marker.draw(g, 310, hy + 27);
-            }
-
-            //Display "Use Game" option
-            if ed(gp.get()).iBlockType == 1 || ed(gp.get()).iBlockType == 15 {
-                if ed(gp.get()).mouse_x >= 390 && ed(gp.get()).mouse_x < 490 && ed(gp.get()).mouse_y >= hy && ed(gp.get()).mouse_y < hy + 52 {
-                    gp.rm.spr_powerupselector.draw_src(g, 390, hy, &rect(90, 0, 100, 52));
-                } else {
-                    gp.rm.spr_powerupselector.draw_src(g, 390, hy, &rect(90, 52, 100, 52));
-                }
-
-                gp.rm.menu_font_large.draw_centered(g, 440, hy + 3, "Use Game");
-
-                if g.g_map.objectdata[bc][br].iSettings[0] == -1 {
-                    gp.rm.spr_hidden_marker.draw(g, 430, hy + 27);
-                }
-            }
-
-            gp.rm.menu_font_small.draw_right_justified(g, 640, 0, gp.maplist.current_filename());
-
-            draw_message(g);
-            editor_harness::frame_delay(g, 0);
-            FPSLimiter::instance(g).before_flip(g);
-            gfx_flipscreen(g);
-            FPSLimiter::instance(g).after_flip(g);
         }
+
+        drawmap(g, false, TILESIZE as i16, false);
+        gp.rm.menu_shade.draw(g, 0, 0);
+
+        let mut iHiddenCheckboxY: i16 = 0;
+
+        if ed(gp.get()).iBlockType == 1 || ed(gp.get()).iBlockType == 15 {
+            let fUseGame = g.g_map.objectdata[bc][br].iSettings[0] == -1;
+
+            for iSetting in 0..NUM_BLOCK_SETTINGS as i16 {
+                let ix: i16 = (iSetting % 6) * 100 + 35;
+                let iy: i16 = (iSetting / 6) * 62 + 65;
+                let (ix, iy) = (ix as i32, iy as i32);
+
+                if ed(gp.get()).mouse_x >= ix - 10 && ed(gp.get()).mouse_x < ix + 80 && ed(gp.get()).mouse_y >= iy - 10 && ed(gp.get()).mouse_y < iy + 42 && !fUseGame {
+                    gp.rm.spr_powerupselector.draw_src(g, ix - 10, iy - 10, &rect(0, 0, 90, 52));
+                } else {
+                    gp.rm.spr_powerupselector.draw_src(g, ix - 10, iy - 10, &rect(0, 52, 90, 52));
+                }
+
+                gp.rm.spr_powerups.draw_src(g, ix, iy, &rect((iSetting as i32) << 5, 0, 32, 32));
+
+                let szNum = if fUseGame { "X".to_string() } else { format!("{}", g.g_map.objectdata[bc][br].iSettings[iSetting as usize]) };
+
+                gp.rm.menu_font_large.draw_centered(g, ix + 55, iy + 5, &szNum);
+            }
+
+            iHiddenCheckboxY = 365;
+
+            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 3, "Block Property Mode");
+            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 2, "[~, 0-9] Set Value [LMB] Increase [RMB] Decrease [D] Default");
+            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[Shift] + [0-9 or D] Set All To Value");
+        } else if ed(gp.get()).iBlockType == 4 || ed(gp.get()).iBlockType == 5 || ed(gp.get()).iBlockType == 17 || ed(gp.get()).iBlockType == 18 || ed(gp.get()).iBlockType == 3 {
+            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Block Property Mode");
+            iHiddenCheckboxY = 214;
+        }
+
+        let hy = iHiddenCheckboxY as i32;
+        if ed(gp.get()).mouse_x >= 270 && ed(gp.get()).mouse_x < 370 && ed(gp.get()).mouse_y >= hy && ed(gp.get()).mouse_y < hy + 52 {
+            gp.rm.spr_powerupselector.draw_src(g, 270, hy, &rect(90, 0, 100, 52));
+        } else {
+            gp.rm.spr_powerupselector.draw_src(g, 270, hy, &rect(90, 52, 100, 52));
+        }
+
+        gp.rm.menu_font_large.draw_centered(g, 320, hy + 3, "Hidden");
+
+        if g.g_map.objectdata[bc][br].fHidden {
+            gp.rm.spr_hidden_marker.draw(g, 310, hy + 27);
+        }
+
+        //Display "Use Game" option
+        if ed(gp.get()).iBlockType == 1 || ed(gp.get()).iBlockType == 15 {
+            if ed(gp.get()).mouse_x >= 390 && ed(gp.get()).mouse_x < 490 && ed(gp.get()).mouse_y >= hy && ed(gp.get()).mouse_y < hy + 52 {
+                gp.rm.spr_powerupselector.draw_src(g, 390, hy, &rect(90, 0, 100, 52));
+            } else {
+                gp.rm.spr_powerupselector.draw_src(g, 390, hy, &rect(90, 52, 100, 52));
+            }
+
+            gp.rm.menu_font_large.draw_centered(g, 440, hy + 3, "Use Game");
+
+            if g.g_map.objectdata[bc][br].iSettings[0] == -1 {
+                gp.rm.spr_hidden_marker.draw(g, 430, hy + 27);
+            }
+        }
+
+        gp.rm.menu_font_small.draw_right_justified(g, 640, 0, gp.maplist.current_filename());
+
+        draw_message(g);
+        editor_harness::frame_delay(g, 0);
+        FPSLimiter::instance(g).before_flip(g);
+        gfx_flipscreen(g);
+        FPSLimiter::instance(g).after_flip(g);
     }
 }
 
@@ -2194,45 +2164,41 @@ pub fn editor_platforms_update_layout(g: &mut Game) {
     const grid_area_w: i32 = UI_PLATFORM_COLS * btn_size + (UI_PLATFORM_COLS - 1) * btn_spacing;
     const grid_area_max_h: i32 = UI_PLATFORM_ROWS * btn_size + (UI_PLATFORM_ROWS - 1) * btn_spacing;
 
-    unsafe {
-        let rows = ((ed(gp.get()).g_iNumPlatforms as i32 + 1).min(MAX_PLATFORMS) + UI_PLATFORM_COLS - 1) / UI_PLATFORM_COLS;
-        let grid_area_h = rows * btn_size + (rows - 1) * btn_spacing;
-        let title_area_h = padding + g.rm.menu_font_small.get_height();
-        let newbtn_area_h = padding + if (ed(gp.get()).g_iNumPlatforms as i32) < MAX_PLATFORMS { 24 + ed(gp.get()).rNewButton[0].h } else { 0 };
+    let rows = ((ed(gp.get()).g_iNumPlatforms as i32 + 1).min(MAX_PLATFORMS) + UI_PLATFORM_COLS - 1) / UI_PLATFORM_COLS;
+    let grid_area_h = rows * btn_size + (rows - 1) * btn_spacing;
+    let title_area_h = padding + g.rm.menu_font_small.get_height();
+    let newbtn_area_h = padding + if (ed(gp.get()).g_iNumPlatforms as i32) < MAX_PLATFORMS { 24 + ed(gp.get()).rNewButton[0].h } else { 0 };
 
-        ed(gp.get()).r.w = 2 * padding + grid_area_w;
-        ed(gp.get()).r.h = title_area_h + grid_area_h + newbtn_area_h;
-        ed(gp.get()).r.x = (640 - ed(gp.get()).r.w) / 2;
-        ed(gp.get()).r.y = (480 - grid_area_max_h) / 2 - title_area_h;
+    ed(gp.get()).r.w = 2 * padding + grid_area_w;
+    ed(gp.get()).r.h = title_area_h + grid_area_h + newbtn_area_h;
+    ed(gp.get()).r.x = (640 - ed(gp.get()).r.w) / 2;
+    ed(gp.get()).r.y = (480 - grid_area_max_h) / 2 - title_area_h;
 
-        ed(gp.get()).rNewButton[1].x = ed(gp.get()).r.x + (ed(gp.get()).r.w >> 1) - (ed(gp.get()).rNewButton[0].w >> 1);
-        ed(gp.get()).rNewButton[1].y = ed(gp.get()).r.y + ed(gp.get()).r.h - padding - ed(gp.get()).rNewButton[0].h;
-    }
+    ed(gp.get()).rNewButton[1].x = ed(gp.get()).r.x + (ed(gp.get()).r.w >> 1) - (ed(gp.get()).rNewButton[0].w >> 1);
+    ed(gp.get()).rNewButton[1].y = ed(gp.get()).r.y + ed(gp.get()).r.h - padding - ed(gp.get()).rNewButton[0].h;
 }
 
 pub fn init_editor_platforms(g: &mut Game) {
     let mut gp = g.ptr();
-    unsafe {
-        if ed(gp.get()).editor_platforms_initialized {
-            return;
-        }
-
-        ed(gp.get()).rNewButton[0] = rect(0, 352, 76, 32);
-
-        ed(gp.get()).rNewButton[1].w = ed(gp.get()).rNewButton[0].w;
-        ed(gp.get()).rNewButton[1].h = ed(gp.get()).rNewButton[0].h;
-
-        editor_platforms_update_layout(g);
-
-        for iType in 0..3usize {
-            ed(gp.get()).rTypeButton[iType][0] = rect(0, 0, 192, 32);
-            ed(gp.get()).rTypeButton[iType][1] = rect(320 - (ed(gp.get()).rTypeButton[iType][0].w >> 1), 180 + iType as i32 * 40, 192, 32);
-            ed(gp.get()).rTypeButton[iType][2] = rect(24 * iType as i32, 32, 24, 24);
-            ed(gp.get()).rTypeButton[iType][3] = rect(ed(gp.get()).rTypeButton[iType][1].x + 8, ed(gp.get()).rTypeButton[iType][1].y + 4, 24, 24);
-        }
-
-        ed(gp.get()).editor_platforms_initialized = true;
+    if ed(gp.get()).editor_platforms_initialized {
+        return;
     }
+
+    ed(gp.get()).rNewButton[0] = rect(0, 352, 76, 32);
+
+    ed(gp.get()).rNewButton[1].w = ed(gp.get()).rNewButton[0].w;
+    ed(gp.get()).rNewButton[1].h = ed(gp.get()).rNewButton[0].h;
+
+    editor_platforms_update_layout(g);
+
+    for iType in 0..3usize {
+        ed(gp.get()).rTypeButton[iType][0] = rect(0, 0, 192, 32);
+        ed(gp.get()).rTypeButton[iType][1] = rect(320 - (ed(gp.get()).rTypeButton[iType][0].w >> 1), 180 + iType as i32 * 40, 192, 32);
+        ed(gp.get()).rTypeButton[iType][2] = rect(24 * iType as i32, 32, 24, 24);
+        ed(gp.get()).rTypeButton[iType][3] = rect(ed(gp.get()).rTypeButton[iType][1].x + 8, ed(gp.get()).rTypeButton[iType][1].y + 4, 24, 24);
+    }
+
+    ed(gp.get()).editor_platforms_initialized = true;
 }
 
 pub fn editor_platforms_draw_background_section(g: &mut Game, src_area: &Rect, dst_area: &Rect) {
@@ -2247,7 +2213,7 @@ pub fn editor_platforms_draw_background_section(g: &mut Game, src_area: &Rect, d
 
             let src = rect(src_area.x, src_area.y, w, h);
             let dst = rect(dst_area.x + offset_x, dst_area.y + offset_y, w, h);
-            unsafe { ed(gp.get()).s_platform.draw_src_to(&src, g.screen, &dst) };
+            ed(gp.get()).s_platform.draw_src_to(&src, g.screen, &dst);
 
             offset_x += w;
         }
@@ -2260,42 +2226,38 @@ pub fn editor_platforms_draw_background(g: &mut Game) {
     let mut gp = g.ptr();
     const corner: i32 = 24;
 
-    unsafe {
-        let mut src = rect(0, 0, corner, corner);
-        let mut dst = rect(ed(gp.get()).r.x, ed(gp.get()).r.y, corner, corner);
+    let mut src = rect(0, 0, corner, corner);
+    let mut dst = rect(ed(gp.get()).r.x, ed(gp.get()).r.y, corner, corner);
 
-        const src_w: [i32; 3] = [corner, 256 - 2 * corner, corner];
-        const src_h: [i32; 3] = [corner, 224 - 2 * corner, corner];
+    const src_w: [i32; 3] = [corner, 256 - 2 * corner, corner];
+    const src_h: [i32; 3] = [corner, 224 - 2 * corner, corner];
 
-        let dst_w: [i32; 3] = [corner, ed(gp.get()).r.w - 2 * corner, corner];
-        let dst_h: [i32; 3] = [corner, ed(gp.get()).r.h - 2 * corner, corner];
+    let dst_w: [i32; 3] = [corner, ed(gp.get()).r.w - 2 * corner, corner];
+    let dst_h: [i32; 3] = [corner, ed(gp.get()).r.h - 2 * corner, corner];
 
-        for row in 0..3 {
-            src.x = 0;
-            src.h = src_h[row];
+    for row in 0..3 {
+        src.x = 0;
+        src.h = src_h[row];
 
-            dst.x = ed(gp.get()).r.x;
-            dst.h = dst_h[row];
+        dst.x = ed(gp.get()).r.x;
+        dst.h = dst_h[row];
 
-            for col in 0..3 {
-                src.w = src_w[col];
-                dst.w = dst_w[col];
-                editor_platforms_draw_background_section(g, &src, &dst);
-                src.x += src_w[col];
-                dst.x += dst_w[col];
-            }
-
-            src.y += src.h;
-            dst.y += dst.h;
+        for col in 0..3 {
+            src.w = src_w[col];
+            dst.w = dst_w[col];
+            editor_platforms_draw_background_section(g, &src, &dst);
+            src.x += src_w[col];
+            dst.x += dst_w[col];
         }
+
+        src.y += src.h;
+        dst.y += dst.h;
     }
 }
 
 fn platform_edit_or_animated_or_tiletype(g: &mut Game) -> bool {
     let mut gp = g.ptr();
-    unsafe {
-        PLATFORM_EDIT_STATE_EDIT == ed(gp.get()).iPlatformEditState || PLATFORM_EDIT_STATE_ANIMATED == ed(gp.get()).iPlatformEditState || PLATFORM_EDIT_STATE_TILETYPE == ed(gp.get()).iPlatformEditState
-    }
+    PLATFORM_EDIT_STATE_EDIT == ed(gp.get()).iPlatformEditState || PLATFORM_EDIT_STATE_ANIMATED == ed(gp.get()).iPlatformEditState || PLATFORM_EDIT_STATE_TILETYPE == ed(gp.get()).iPlatformEditState
 }
 
 /// The nested `while (editor_x() == EDITOR_X)` loops the platform editor runs for tiles, animation and tile types.
@@ -2859,26 +2821,22 @@ fn path_type_from(v: u8) -> PlatformPathType {
 
 pub fn display_platform_preview(g: &mut Game, iPlatformId: i16, iMouseX: i16, iMouseY: i16) {
     let mut gp = g.ptr();
-    unsafe {
-        let srcRect = rect(0, 0, 160, 120);
-        let dstRect = rect(iMouseX as i32, iMouseY as i32, 160, 120);
-        ed(gp.get()).g_Platforms[iPlatformId as usize].preview.draw_src_to(&srcRect, g.screen, &dstRect);
-    }
+    let srcRect = rect(0, 0, 160, 120);
+    let dstRect = rect(iMouseX as i32, iMouseY as i32, 160, 120);
+    ed(gp.get()).g_Platforms[iPlatformId as usize].preview.draw_src_to(&srcRect, g.screen, &dstRect);
 }
 
 pub fn switch_platforms(g: &mut Game, iPlatformId1: i16, iPlatformId2: i16) {
     let mut gp = g.ptr();
-    unsafe {
-        let mut tempPlatform = MapPlatform::new();
-        let (a, b) = (iPlatformId1 as usize, iPlatformId2 as usize);
-        copy_platform(&mut tempPlatform, &ed(gp.get()).g_Platforms[a]);
-        let from = Ptr::from_mut(&mut ed(gp.get()).g_Platforms[b]);
-        copy_platform(&mut ed(gp.get()).g_Platforms[a], &from);
-        copy_platform(&mut ed(gp.get()).g_Platforms[b], &tempPlatform);
+    let mut tempPlatform = MapPlatform::new();
+    let (a, b) = (iPlatformId1 as usize, iPlatformId2 as usize);
+    copy_platform(&mut tempPlatform, &ed(gp.get()).g_Platforms[a]);
+    let from = Ptr::from_mut(&mut ed(gp.get()).g_Platforms[b]);
+    copy_platform(&mut ed(gp.get()).g_Platforms[a], &from);
+    copy_platform(&mut ed(gp.get()).g_Platforms[b], &tempPlatform);
 
-        ed(gp.get()).g_Platforms[a].update_preview(g);
-        ed(gp.get()).g_Platforms[b].update_preview(g);
-    }
+    ed(gp.get()).g_Platforms[a].update_preview(g);
+    ed(gp.get()).g_Platforms[b].update_preview(g);
 }
 
 pub fn copy_platform(toPlatform: &mut MapPlatform, fromPlatform: &MapPlatform) {
@@ -2903,33 +2861,29 @@ pub fn copy_platform(toPlatform: &mut MapPlatform, fromPlatform: &MapPlatform) {
 
 pub fn update_platform_path_start(g: &mut Game, iEditPlatform_: i16, mut iClickX: i16, mut iClickY: i16, fSnapToTile: bool) {
     let mut gp = g.ptr();
-    unsafe {
-        if !ed(gp.get()).ignoreclick {
-            if fSnapToTile {
-                //Round off coord to nearest tile
-                iClickX &= !15;
-                iClickY &= !15;
-            }
-
-            ed(gp.get()).g_Platforms[iEditPlatform_ as usize].iStartX = iClickX;
-            ed(gp.get()).g_Platforms[iEditPlatform_ as usize].iStartY = iClickY;
+    if !ed(gp.get()).ignoreclick {
+        if fSnapToTile {
+            //Round off coord to nearest tile
+            iClickX &= !15;
+            iClickY &= !15;
         }
+
+        ed(gp.get()).g_Platforms[iEditPlatform_ as usize].iStartX = iClickX;
+        ed(gp.get()).g_Platforms[iEditPlatform_ as usize].iStartY = iClickY;
     }
 }
 
 pub fn update_platform_path_end(g: &mut Game, iEditPlatform_: i16, mut iClickX: i16, mut iClickY: i16, fSnapToTile: bool) {
     let mut gp = g.ptr();
-    unsafe {
-        if !ed(gp.get()).ignoreclick {
-            if fSnapToTile {
-                //Round off coord to nearest tile
-                iClickX &= !15;
-                iClickY &= !15;
-            }
-
-            ed(gp.get()).g_Platforms[iEditPlatform_ as usize].iEndX = iClickX;
-            ed(gp.get()).g_Platforms[iEditPlatform_ as usize].iEndY = iClickY;
+    if !ed(gp.get()).ignoreclick {
+        if fSnapToTile {
+            //Round off coord to nearest tile
+            iClickX &= !15;
+            iClickY &= !15;
         }
+
+        ed(gp.get()).g_Platforms[iEditPlatform_ as usize].iEndX = iClickX;
+        ed(gp.get()).g_Platforms[iEditPlatform_ as usize].iEndY = iClickY;
     }
 }
 
@@ -2953,61 +2907,57 @@ fn snap_angle(mut fAngle: f32) -> f32 {
 
 pub fn update_platform_path_angle(g: &mut Game, iEditPlatform_: i16, iClickX: i16, iClickY: i16, fSnapToAngle: bool) {
     let mut gp = g.ptr();
-    unsafe {
-        if !ed(gp.get()).ignoreclick {
-            let p = &mut ed(gp.get()).g_Platforms[iEditPlatform_ as usize];
-            let iDiffX: i32 = iClickX as i32 - p.iStartX as i32;
-            let iDiffY: i32 = iClickY as i32 - p.iStartY as i32;
+    if !ed(gp.get()).ignoreclick {
+        let p = &mut ed(gp.get()).g_Platforms[iEditPlatform_ as usize];
+        let iDiffX: i32 = iClickX as i32 - p.iStartX as i32;
+        let iDiffY: i32 = iClickY as i32 - p.iStartY as i32;
 
-            let mut fAngle: f32 = (iDiffY as f32).atan2(iDiffX as f32);
+        let mut fAngle: f32 = (iDiffY as f32).atan2(iDiffX as f32);
 
-            if fAngle < 0.0 {
-                fAngle += TWO_PI;
-            }
-
-            if fSnapToAngle {
-                fAngle = snap_angle(fAngle);
-            }
-
-            p.fAngle = fAngle;
+        if fAngle < 0.0 {
+            fAngle += TWO_PI;
         }
+
+        if fSnapToAngle {
+            fAngle = snap_angle(fAngle);
+        }
+
+        p.fAngle = fAngle;
     }
 }
 
 pub fn update_platform_path_radius(g: &mut Game, iEditPlatform_: i16, iClickX: i16, iClickY: i16, fSnapToRadius: bool, fIsRadiusX: bool, fSetCircle: bool) {
     let mut gp = g.ptr();
-    unsafe {
-        if !ed(gp.get()).ignoreclick {
-            let p = &mut ed(gp.get()).g_Platforms[iEditPlatform_ as usize];
-            if fSetCircle {
-                let iDiffX: i16 = (iClickX as i32 - p.iStartX as i32) as i16;
-                let iDiffY: i16 = (iClickY as i32 - p.iStartY as i32) as i16;
+    if !ed(gp.get()).ignoreclick {
+        let p = &mut ed(gp.get()).g_Platforms[iEditPlatform_ as usize];
+        if fSetCircle {
+            let iDiffX: i16 = (iClickX as i32 - p.iStartX as i32) as i16;
+            let iDiffY: i16 = (iClickY as i32 - p.iStartY as i32) as i16;
 
-                let mut iRadius: i16 = ((iDiffX as i32 * iDiffX as i32 + iDiffY as i32 * iDiffY as i32) as f64).sqrt() as i16;
+            let mut iRadius: i16 = ((iDiffX as i32 * iDiffX as i32 + iDiffY as i32 * iDiffY as i32) as f64).sqrt() as i16;
 
-                if fSnapToRadius {
-                    iRadius &= !15;
-                }
-
-                p.fRadiusX = iRadius as f32;
-                p.fRadiusY = p.fRadiusX;
-            } else if fIsRadiusX {
-                let mut iRadiusX: i16 = (iClickX as i32 - p.iStartX as i32).abs() as i16;
-
-                if fSnapToRadius {
-                    iRadiusX &= !15;
-                }
-
-                p.fRadiusX = iRadiusX as f32;
-            } else {
-                let mut iRadiusY: i16 = (iClickY as i32 - p.iStartY as i32).abs() as i16;
-
-                if fSnapToRadius {
-                    iRadiusY &= !15;
-                }
-
-                p.fRadiusY = iRadiusY as f32;
+            if fSnapToRadius {
+                iRadius &= !15;
             }
+
+            p.fRadiusX = iRadius as f32;
+            p.fRadiusY = p.fRadiusX;
+        } else if fIsRadiusX {
+            let mut iRadiusX: i16 = (iClickX as i32 - p.iStartX as i32).abs() as i16;
+
+            if fSnapToRadius {
+                iRadiusX &= !15;
+            }
+
+            p.fRadiusX = iRadiusX as f32;
+        } else {
+            let mut iRadiusY: i16 = (iClickY as i32 - p.iStartY as i32).abs() as i16;
+
+            if fSnapToRadius {
+                iRadiusY &= !15;
+            }
+
+            p.fRadiusY = iRadiusY as f32;
         }
     }
 }
@@ -3060,416 +3010,408 @@ const szHazardNames: [&str; 8] = ["Fireballs", "Rotodisc", "Bullet Bill", "Flame
 
 pub fn init_editor_maphazards(g: &mut Game) {
     let mut gp = g.ptr();
-    unsafe {
-        if ed(gp.get()).editor_maphazards_initialized {
-            return;
-        }
-
-        ed(gp.get()).rBackground[0] = rect(0, 0, 256, 224);
-        ed(gp.get()).rBackground[1] = rect(320 - (ed(gp.get()).rBackground[0].w >> 1), 240 - (ed(gp.get()).rBackground[0].h >> 1), 256, 224);
-
-        ed(gp.get()).rNewButton[0] = rect(0, 352, 76, 32);
-        ed(gp.get()).rNewButton[1] = rect(ed(gp.get()).rBackground[1].x + (ed(gp.get()).rBackground[1].w >> 1) - (ed(gp.get()).rNewButton[0].w >> 1), ed(gp.get()).rBackground[1].y + ed(gp.get()).rBackground[1].h + 8, 76, 32);
-
-        for iType in 0..8usize {
-            ed(gp.get()).rTypeButton[iType][0] = rect(0, 0, 192, 32);
-            ed(gp.get()).rTypeButton[iType][1] = rect(320 - (ed(gp.get()).rTypeButton[iType][0].w >> 1), 84 + iType as i32 * 40, 192, 32);
-            ed(gp.get()).rTypeButton[iType][2] = rect(24 * iType as i32, 32, 24, 24);
-            ed(gp.get()).rTypeButton[iType][3] = rect(ed(gp.get()).rTypeButton[iType][1].x + 8, ed(gp.get()).rTypeButton[iType][1].y + 4, 24, 24);
-        }
-
-        //Setup Map Hazard Icons
-        for iMapHazard in 0..MAXMAPHAZARDS {
-            let i = iMapHazard as usize;
-            ed(gp.get()).rIconRects[i][0] = rect((iMapHazard % 8) * 32, (iMapHazard / 8) * 32 + 224, 32, 32);
-            ed(gp.get()).rIconRects[i][1] = rect((iMapHazard % 6) * 40 + 204, (iMapHazard / 6) * 40 + ed(gp.get()).rBackground[1].y + 16, 32, 32);
-        }
-
-        ed(gp.get()).editor_maphazards_initialized = true;
+    if ed(gp.get()).editor_maphazards_initialized {
+        return;
     }
+
+    ed(gp.get()).rBackground[0] = rect(0, 0, 256, 224);
+    ed(gp.get()).rBackground[1] = rect(320 - (ed(gp.get()).rBackground[0].w >> 1), 240 - (ed(gp.get()).rBackground[0].h >> 1), 256, 224);
+
+    ed(gp.get()).rNewButton[0] = rect(0, 352, 76, 32);
+    ed(gp.get()).rNewButton[1] = rect(ed(gp.get()).rBackground[1].x + (ed(gp.get()).rBackground[1].w >> 1) - (ed(gp.get()).rNewButton[0].w >> 1), ed(gp.get()).rBackground[1].y + ed(gp.get()).rBackground[1].h + 8, 76, 32);
+
+    for iType in 0..8usize {
+        ed(gp.get()).rTypeButton[iType][0] = rect(0, 0, 192, 32);
+        ed(gp.get()).rTypeButton[iType][1] = rect(320 - (ed(gp.get()).rTypeButton[iType][0].w >> 1), 84 + iType as i32 * 40, 192, 32);
+        ed(gp.get()).rTypeButton[iType][2] = rect(24 * iType as i32, 32, 24, 24);
+        ed(gp.get()).rTypeButton[iType][3] = rect(ed(gp.get()).rTypeButton[iType][1].x + 8, ed(gp.get()).rTypeButton[iType][1].y + 4, 24, 24);
+    }
+
+    //Setup Map Hazard Icons
+    for iMapHazard in 0..MAXMAPHAZARDS {
+        let i = iMapHazard as usize;
+        ed(gp.get()).rIconRects[i][0] = rect((iMapHazard % 8) * 32, (iMapHazard / 8) * 32 + 224, 32, 32);
+        ed(gp.get()).rIconRects[i][1] = rect((iMapHazard % 6) * 40 + 204, (iMapHazard / 6) * 40 + ed(gp.get()).rBackground[1].y + 16, 32, 32);
+    }
+
+    ed(gp.get()).editor_maphazards_initialized = true;
 }
 
 pub fn editor_maphazards(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     init_editor_maphazards(g);
 
-    unsafe {
-        //handle messages
-        while poll_event(g, &mut ed(gp.get()).event) != 0 {
-            let ty = ed(gp.get()).event.type_();
-            let mut fall = false;
+    //handle messages
+    while poll_event(g, &mut ed(gp.get()).event) != 0 {
+        let ty = ed(gp.get()).event.type_();
+        let mut fall = false;
 
-            if ty == SDL_QUIT_EV {
-                return EDITOR_QUIT;
-            }
+        if ty == SDL_QUIT_EV {
+            return EDITOR_QUIT;
+        }
 
-            if ty == SDL_KEYDOWN_EV {
-                let sym = ed(gp.get()).event.key_sym();
-                let eh = ed(gp.get()).iEditMapHazard as usize;
-                if sym == SDLK_s {
-                    savecurrentmap(g);
-                } else if sym == SDLK_l {
-                    if MAPHAZARD_EDIT_STATE_SELECT != ed(gp.get()).iEditState {
-                        ed(gp.get()).iEditState = MAPHAZARD_EDIT_STATE_LOCATION;
-                    }
-                } else if sym == SDLK_p {
-                    if MAPHAZARD_EDIT_STATE_SELECT != ed(gp.get()).iEditState {
+        if ty == SDL_KEYDOWN_EV {
+            let sym = ed(gp.get()).event.key_sym();
+            let eh = ed(gp.get()).iEditMapHazard as usize;
+            if sym == SDLK_s {
+                savecurrentmap(g);
+            } else if sym == SDLK_l {
+                if MAPHAZARD_EDIT_STATE_SELECT != ed(gp.get()).iEditState {
+                    ed(gp.get()).iEditState = MAPHAZARD_EDIT_STATE_LOCATION;
+                }
+            } else if sym == SDLK_p {
+                if MAPHAZARD_EDIT_STATE_SELECT != ed(gp.get()).iEditState {
+                    ed(gp.get()).iEditState = MAPHAZARD_EDIT_STATE_PROPERTIES;
+                }
+            } else if sym >= SDLK_1 && sym <= SDLK_9 {
+                if MAPHAZARD_EDIT_STATE_SELECT == ed(gp.get()).iEditState {
+                    let iHazard = (sym - SDLK_1) as i16;
+                    if iHazard < g.g_map.maphazards.len() as i16 {
+                        ed(gp.get()).iEditMapHazard = iHazard;
                         ed(gp.get()).iEditState = MAPHAZARD_EDIT_STATE_PROPERTIES;
                     }
-                } else if sym >= SDLK_1 && sym <= SDLK_9 {
-                    if MAPHAZARD_EDIT_STATE_SELECT == ed(gp.get()).iEditState {
-                        let iHazard = (sym - SDLK_1) as i16;
-                        if iHazard < g.g_map.maphazards.len() as i16 {
-                            ed(gp.get()).iEditMapHazard = iHazard;
+                } else if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState {
+                    let hazard = &mut g.g_map.maphazards[eh];
+
+                    if hazard.itype == 0 || hazard.itype == 1 {
+                        hazard.iparam[0] = (sym - SDLK_1 + 1) as i16;
+                    }
+                }
+            } else if sym == SDLK_DELETE {
+                if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState || MAPHAZARD_EDIT_STATE_LOCATION == ed(gp.get()).iEditState {
+                    //Copy platforms into empty spot
+                    let mut iMapHazard = ed(gp.get()).iEditMapHazard as usize;
+                    while iMapHazard < g.g_map.maphazards.len().wrapping_sub(1) {
+                        g.g_map.maphazards[iMapHazard].itype = g.g_map.maphazards[iMapHazard + 1].itype;
+                        g.g_map.maphazards[iMapHazard].ix = g.g_map.maphazards[iMapHazard + 1].ix;
+                        g.g_map.maphazards[iMapHazard].iy = g.g_map.maphazards[iMapHazard + 1].iy;
+
+                        for iParam in 0..NUMMAPHAZARDPARAMS as usize {
+                            g.g_map.maphazards[iMapHazard].iparam[iParam] = g.g_map.maphazards[iMapHazard + 1].iparam[iParam];
+                            g.g_map.maphazards[iMapHazard].dparam[iParam] = g.g_map.maphazards[iMapHazard + 1].dparam[iParam];
+                        }
+                        iMapHazard += 1;
+                    }
+
+                    g.g_map.maphazards.pop();
+                    ed(gp.get()).iEditState = MAPHAZARD_EDIT_STATE_SELECT;
+                }
+            } else if sym == SDLK_ESCAPE {
+                if MAPHAZARD_EDIT_STATE_SELECT == ed(gp.get()).iEditState {
+                    ed(gp.get()).editor_maphazards_initialized = false;
+                    return EDITOR_EDIT;
+                } else if MAPHAZARD_EDIT_STATE_LOCATION == ed(gp.get()).iEditState || MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState {
+                    ed(gp.get()).iEditState = MAPHAZARD_EDIT_STATE_SELECT;
+                }
+            } else if sym == SDLK_KP_MINUS || sym == SDLK_MINUS {
+                if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState {
+                    let hazard = &mut g.g_map.maphazards[eh];
+
+                    if hazard.itype == 0 || hazard.itype == 1 {
+                        if hazard.dparam[0] > -0.05f32 {
+                            hazard.dparam[0] -= 0.005f32;
+                        }
+                    } else if hazard.itype == 2 {
+                        if hazard.dparam[0] > -10.0f32 {
+                            hazard.dparam[0] -= 1.0f32;
+                        }
+
+                        if hazard.dparam[0] == 0.0f32 {
+                            hazard.dparam[0] -= 1.0f32;
+                        }
+                    }
+                }
+            } else if sym == SDLK_KP_PLUS || sym == SDLK_EQUALS {
+                if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState {
+                    let hazard = &mut g.g_map.maphazards[eh];
+
+                    if hazard.itype == 0 || hazard.itype == 1 {
+                        if hazard.dparam[0] < 0.05f32 {
+                            hazard.dparam[0] += 0.005f32;
+                        }
+                    } else if hazard.itype == 2 {
+                        if hazard.dparam[0] < 10.0f32 {
+                            hazard.dparam[0] += 1.0f32;
+                        }
+
+                        if hazard.dparam[0] == 0.0f32 {
+                            hazard.dparam[0] += 1.0f32;
+                        }
+                    }
+                }
+            } else if sym == SDLK_COMMA || sym == SDLK_LEFTBRACKET {
+                if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState {
+                    let hazard = &mut g.g_map.maphazards[eh];
+
+                    if hazard.itype >= 2 && hazard.itype <= 7 {
+                        if hazard.iparam[0] > 30 {
+                            hazard.iparam[0] -= 30;
+                        }
+                    }
+                }
+            } else if sym == SDLK_PERIOD || sym == SDLK_RIGHTBRACKET {
+                if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState {
+                    let hazard = &mut g.g_map.maphazards[eh];
+
+                    if hazard.itype >= 2 && hazard.itype <= 7 {
+                        if hazard.iparam[0] < 480 {
+                            hazard.iparam[0] += 30;
+                        }
+                    }
+                }
+            } else if sym == SDLK_d {
+                if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState {
+                    let hazard = &mut g.g_map.maphazards[eh];
+
+                    if hazard.itype >= 3 && hazard.itype <= 7 {
+                        hazard.iparam[1] += 1;
+                        if hazard.iparam[1] > 3 {
+                            hazard.iparam[1] = 0;
+                        }
+                    } else if hazard.itype == 2 {
+                        hazard.dparam[0] = -hazard.dparam[0];
+                    }
+                }
+            } else if sym == SDLK_n {
+                if MAPHAZARD_EDIT_STATE_SELECT == ed(gp.get()).iEditState {
+                    ed(gp.get()).iEditMapHazard = new_map_hazard(g);
+                    ed(gp.get()).iEditState = MAPHAZARD_EDIT_STATE_TYPE;
+                }
+            }
+        } else if ty == SDL_MOUSEBUTTONDOWN_EV {
+            if ed(gp.get()).event.button_button() == BUTTON_LEFT && !ed(gp.get()).ignoreclick {
+                let iClickX = ed(gp.get()).event.button_x() as i16;
+                let iClickY = ed(gp.get()).event.button_y() as i16;
+                let (cx, cy) = (iClickX as i32, iClickY as i32);
+
+                if MAPHAZARD_EDIT_STATE_SELECT == ed(gp.get()).iEditState {
+                    //check clicks on existing platforms
+                    for iMapHazard in 0..g.g_map.maphazards.len() {
+                        let ic = ed(gp.get()).rIconRects[iMapHazard][1];
+                        if cx >= ic.x && cx < ic.x + ic.w && cy >= ic.y && cy < ic.y + ic.h {
+                            ed(gp.get()).iEditMapHazard = iMapHazard as i16;
                             ed(gp.get()).iEditState = MAPHAZARD_EDIT_STATE_PROPERTIES;
-                        }
-                    } else if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState {
-                        let hazard = &mut g.g_map.maphazards[eh];
+                            ed(gp.get()).ignoreclick = true;
 
-                        if hazard.itype == 0 || hazard.itype == 1 {
-                            hazard.iparam[0] = (sym - SDLK_1 + 1) as i16;
+                            break;
                         }
                     }
-                } else if sym == SDLK_DELETE {
-                    if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState || MAPHAZARD_EDIT_STATE_LOCATION == ed(gp.get()).iEditState {
-                        //Copy platforms into empty spot
-                        let mut iMapHazard = ed(gp.get()).iEditMapHazard as usize;
-                        while iMapHazard < g.g_map.maphazards.len().wrapping_sub(1) {
-                            g.g_map.maphazards[iMapHazard].itype = g.g_map.maphazards[iMapHazard + 1].itype;
-                            g.g_map.maphazards[iMapHazard].ix = g.g_map.maphazards[iMapHazard + 1].ix;
-                            g.g_map.maphazards[iMapHazard].iy = g.g_map.maphazards[iMapHazard + 1].iy;
 
-                            for iParam in 0..NUMMAPHAZARDPARAMS as usize {
-                                g.g_map.maphazards[iMapHazard].iparam[iParam] = g.g_map.maphazards[iMapHazard + 1].iparam[iParam];
-                                g.g_map.maphazards[iMapHazard].dparam[iParam] = g.g_map.maphazards[iMapHazard + 1].dparam[iParam];
-                            }
-                            iMapHazard += 1;
-                        }
-
-                        g.g_map.maphazards.pop();
-                        ed(gp.get()).iEditState = MAPHAZARD_EDIT_STATE_SELECT;
-                    }
-                } else if sym == SDLK_ESCAPE {
-                    if MAPHAZARD_EDIT_STATE_SELECT == ed(gp.get()).iEditState {
-                        ed(gp.get()).editor_maphazards_initialized = false;
-                        return EDITOR_EDIT;
-                    } else if MAPHAZARD_EDIT_STATE_LOCATION == ed(gp.get()).iEditState || MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState {
-                        ed(gp.get()).iEditState = MAPHAZARD_EDIT_STATE_SELECT;
-                    }
-                } else if sym == SDLK_KP_MINUS || sym == SDLK_MINUS {
-                    if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState {
-                        let hazard = &mut g.g_map.maphazards[eh];
-
-                        if hazard.itype == 0 || hazard.itype == 1 {
-                            if hazard.dparam[0] > -0.05f32 {
-                                hazard.dparam[0] -= 0.005f32;
-                            }
-                        } else if hazard.itype == 2 {
-                            if hazard.dparam[0] > -10.0f32 {
-                                hazard.dparam[0] -= 1.0f32;
-                            }
-
-                            if hazard.dparam[0] == 0.0f32 {
-                                hazard.dparam[0] -= 1.0f32;
-                            }
-                        }
-                    }
-                } else if sym == SDLK_KP_PLUS || sym == SDLK_EQUALS {
-                    if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState {
-                        let hazard = &mut g.g_map.maphazards[eh];
-
-                        if hazard.itype == 0 || hazard.itype == 1 {
-                            if hazard.dparam[0] < 0.05f32 {
-                                hazard.dparam[0] += 0.005f32;
-                            }
-                        } else if hazard.itype == 2 {
-                            if hazard.dparam[0] < 10.0f32 {
-                                hazard.dparam[0] += 1.0f32;
-                            }
-
-                            if hazard.dparam[0] == 0.0f32 {
-                                hazard.dparam[0] += 1.0f32;
-                            }
-                        }
-                    }
-                } else if sym == SDLK_COMMA || sym == SDLK_LEFTBRACKET {
-                    if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState {
-                        let hazard = &mut g.g_map.maphazards[eh];
-
-                        if hazard.itype >= 2 && hazard.itype <= 7 {
-                            if hazard.iparam[0] > 30 {
-                                hazard.iparam[0] -= 30;
-                            }
-                        }
-                    }
-                } else if sym == SDLK_PERIOD || sym == SDLK_RIGHTBRACKET {
-                    if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState {
-                        let hazard = &mut g.g_map.maphazards[eh];
-
-                        if hazard.itype >= 2 && hazard.itype <= 7 {
-                            if hazard.iparam[0] < 480 {
-                                hazard.iparam[0] += 30;
-                            }
-                        }
-                    }
-                } else if sym == SDLK_d {
-                    if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState {
-                        let hazard = &mut g.g_map.maphazards[eh];
-
-                        if hazard.itype >= 3 && hazard.itype <= 7 {
-                            hazard.iparam[1] += 1;
-                            if hazard.iparam[1] > 3 {
-                                hazard.iparam[1] = 0;
-                            }
-                        } else if hazard.itype == 2 {
-                            hazard.dparam[0] = -hazard.dparam[0];
-                        }
-                    }
-                } else if sym == SDLK_n {
-                    if MAPHAZARD_EDIT_STATE_SELECT == ed(gp.get()).iEditState {
+                    //check click on the new button
+                    if (g.g_map.maphazards.len() as i32) < MAXMAPHAZARDS
+                        && cx >= ed(gp.get()).rNewButton[1].x
+                        && cx < ed(gp.get()).rNewButton[1].x + ed(gp.get()).rNewButton[1].w
+                        && cy >= ed(gp.get()).rNewButton[1].y
+                        && cy < ed(gp.get()).rNewButton[1].y + ed(gp.get()).rNewButton[1].h
+                    {
                         ed(gp.get()).iEditMapHazard = new_map_hazard(g);
                         ed(gp.get()).iEditState = MAPHAZARD_EDIT_STATE_TYPE;
+                        ed(gp.get()).ignoreclick = true;
                     }
-                }
-            } else if ty == SDL_MOUSEBUTTONDOWN_EV {
-                if ed(gp.get()).event.button_button() == BUTTON_LEFT && !ed(gp.get()).ignoreclick {
-                    let iClickX = ed(gp.get()).event.button_x() as i16;
-                    let iClickY = ed(gp.get()).event.button_y() as i16;
-                    let (cx, cy) = (iClickX as i32, iClickY as i32);
-
-                    if MAPHAZARD_EDIT_STATE_SELECT == ed(gp.get()).iEditState {
-                        //check clicks on existing platforms
-                        for iMapHazard in 0..g.g_map.maphazards.len() {
-                            let ic = ed(gp.get()).rIconRects[iMapHazard][1];
-                            if cx >= ic.x && cx < ic.x + ic.w && cy >= ic.y && cy < ic.y + ic.h {
-                                ed(gp.get()).iEditMapHazard = iMapHazard as i16;
-                                ed(gp.get()).iEditState = MAPHAZARD_EDIT_STATE_PROPERTIES;
-                                ed(gp.get()).ignoreclick = true;
-
-                                break;
-                            }
-                        }
-
-                        //check click on the new button
-                        if (g.g_map.maphazards.len() as i32) < MAXMAPHAZARDS
-                            && cx >= ed(gp.get()).rNewButton[1].x
-                            && cx < ed(gp.get()).rNewButton[1].x + ed(gp.get()).rNewButton[1].w
-                            && cy >= ed(gp.get()).rNewButton[1].y
-                            && cy < ed(gp.get()).rNewButton[1].y + ed(gp.get()).rNewButton[1].h
-                        {
-                            ed(gp.get()).iEditMapHazard = new_map_hazard(g);
-                            ed(gp.get()).iEditState = MAPHAZARD_EDIT_STATE_TYPE;
+                } else if MAPHAZARD_EDIT_STATE_TYPE == ed(gp.get()).iEditState && !ed(gp.get()).ignoreclick {
+                    for iType in 0..8usize {
+                        let tb = ed(gp.get()).rTypeButton[iType][1];
+                        if cx >= tb.x && cx < tb.x + tb.w && cy >= tb.y && cy < tb.y + tb.h {
+                            let hazard = &mut g.g_map.maphazards[ed(gp.get()).iEditMapHazard as usize];
+                            hazard.itype = iType as i16;
+                            ed(gp.get()).iEditState = MAPHAZARD_EDIT_STATE_LOCATION;
                             ed(gp.get()).ignoreclick = true;
-                        }
-                    } else if MAPHAZARD_EDIT_STATE_TYPE == ed(gp.get()).iEditState && !ed(gp.get()).ignoreclick {
-                        for iType in 0..8usize {
-                            let tb = ed(gp.get()).rTypeButton[iType][1];
-                            if cx >= tb.x && cx < tb.x + tb.w && cy >= tb.y && cy < tb.y + tb.h {
-                                let hazard = &mut g.g_map.maphazards[ed(gp.get()).iEditMapHazard as usize];
-                                hazard.itype = iType as i16;
-                                ed(gp.get()).iEditState = MAPHAZARD_EDIT_STATE_LOCATION;
-                                ed(gp.get()).ignoreclick = true;
 
-                                //Set some default values for the selected type
-                                if iType == 0 {
-                                    hazard.iparam[0] = 5; //Number of fireballs in string
-                                    hazard.dparam[0] = 0.02f32; //Angular velocity
-                                    hazard.dparam[1] = 0.0f32; //Start Angle
-                                } else if iType == 1 {
-                                    hazard.iparam[0] = 2; //Number of fireballs in string
-                                    hazard.dparam[0] = 0.02f32; //Angular velocity
-                                    hazard.dparam[1] = 0.0f32; //Start Angle
-                                    hazard.dparam[2] = 112.0f32; //Radius
-                                } else if iType == 2 {
-                                    hazard.iparam[0] = 120; //Frequency
-                                    hazard.dparam[0] = 2.0f32; //Velocity
-                                } else if iType == 3 {
-                                    hazard.iparam[0] = 120; //Frequency
-                                    hazard.iparam[1] = 0; //Direction
-                                } else if (4..=7).contains(&iType) {
-                                    hazard.iparam[0] = 300; //Frequency
-                                    hazard.iparam[1] = 0; //Direction
-                                }
-
-                                break;
+                            //Set some default values for the selected type
+                            if iType == 0 {
+                                hazard.iparam[0] = 5; //Number of fireballs in string
+                                hazard.dparam[0] = 0.02f32; //Angular velocity
+                                hazard.dparam[1] = 0.0f32; //Start Angle
+                            } else if iType == 1 {
+                                hazard.iparam[0] = 2; //Number of fireballs in string
+                                hazard.dparam[0] = 0.02f32; //Angular velocity
+                                hazard.dparam[1] = 0.0f32; //Start Angle
+                                hazard.dparam[2] = 112.0f32; //Radius
+                            } else if iType == 2 {
+                                hazard.iparam[0] = 120; //Frequency
+                                hazard.dparam[0] = 2.0f32; //Velocity
+                            } else if iType == 3 {
+                                hazard.iparam[0] = 120; //Frequency
+                                hazard.iparam[1] = 0; //Direction
+                            } else if (4..=7).contains(&iType) {
+                                hazard.iparam[0] = 300; //Frequency
+                                hazard.iparam[1] = 0; //Direction
                             }
-                        }
-                    } else if MAPHAZARD_EDIT_STATE_LOCATION == ed(gp.get()).iEditState && !ed(gp.get()).ignoreclick {
-                        let hazard = &mut g.g_map.maphazards[ed(gp.get()).iEditMapHazard as usize];
-                        hazard.ix = iClickX / 16;
-                        hazard.iy = iClickY / 16;
-                    } else if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState && !ed(gp.get()).ignoreclick {
-                        let hazard = Ptr::from_mut(&mut g.g_map.maphazards[ed(gp.get()).iEditMapHazard as usize]);
-                        let iType = hazard.itype;
-                        if iType == 0 {
-                            //Edit fireball string
-                            adjust_map_hazard_radius(g, hazard.get(), iClickX, iClickY);
-                        } else if iType == 1 {
-                            //rotodisc
-                            adjust_map_hazard_radius(g, hazard.get(), iClickX, iClickY);
+
+                            break;
                         }
                     }
-                } else {
-                    fall = true;
-                }
-            }
-
-            if fall || ty == SDL_MOUSEMOTION_EV {
-                bound_mouse_motion_coords(g);
-                let iClickX = bound_to_window_w(ed(gp.get()).event.motion_x()) as i16;
-                let iClickY = bound_to_window_h(ed(gp.get()).event.motion_y()) as i16;
-
-                if ed(gp.get()).event.motion_state() == sdl_button(SDL_BUTTON_LEFT) && !ed(gp.get()).ignoreclick {
-                    if MAPHAZARD_EDIT_STATE_LOCATION == ed(gp.get()).iEditState && !ed(gp.get()).ignoreclick {
-                        let hazard = &mut g.g_map.maphazards[ed(gp.get()).iEditMapHazard as usize];
-                        hazard.ix = iClickX / 16;
-                        hazard.iy = iClickY / 16;
-                    } else if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState {
-                        let hazard = Ptr::from_mut(&mut g.g_map.maphazards[ed(gp.get()).iEditMapHazard as usize]);
-                        let iType = hazard.itype;
-                        if iType == 0 || iType == 1 {
-                            adjust_map_hazard_radius(g, hazard.get(), iClickX, iClickY);
-                        }
+                } else if MAPHAZARD_EDIT_STATE_LOCATION == ed(gp.get()).iEditState && !ed(gp.get()).ignoreclick {
+                    let hazard = &mut g.g_map.maphazards[ed(gp.get()).iEditMapHazard as usize];
+                    hazard.ix = iClickX / 16;
+                    hazard.iy = iClickY / 16;
+                } else if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState && !ed(gp.get()).ignoreclick {
+                    let hazard = Ptr::from_mut(&mut g.g_map.maphazards[ed(gp.get()).iEditMapHazard as usize]);
+                    let iType = hazard.itype;
+                    if iType == 0 {
+                        //Edit fireball string
+                        adjust_map_hazard_radius(g, hazard.get(), iClickX, iClickY);
+                    } else if iType == 1 {
+                        //rotodisc
+                        adjust_map_hazard_radius(g, hazard.get(), iClickX, iClickY);
                     }
                 }
-            } else if ty == SDL_MOUSEBUTTONUP_EV {
-                if ed(gp.get()).event.button_button() == BUTTON_LEFT {
-                    ed(gp.get()).ignoreclick = false;
-                }
-            }
-        }
-
-        //Draw platform editing
-        drawmap(g, false, TILESIZE as i16, false);
-
-        gp.rm.menu_shade.draw(g, 0, 0);
-
-        if MAPHAZARD_EDIT_STATE_SELECT == ed(gp.get()).iEditState {
-            let s = ed(gp.get()).rBackground[0];
-            ed(gp.get()).s_platform.draw_src_to(&s, g.screen, &ed(gp.get()).rBackground[1]);
-
-            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Map Hazard Mode: [esc] Exit");
-
-            for iMapHazard in 0..g.g_map.maphazards.len() {
-                let s = ed(gp.get()).rIconRects[iMapHazard][0];
-                ed(gp.get()).s_platform.draw_src_to(&s, g.screen, &ed(gp.get()).rIconRects[iMapHazard][1]);
-            }
-
-            if (g.g_map.maphazards.len() as i32) < MAXMAPHAZARDS {
-                let s = ed(gp.get()).rNewButton[0];
-                ed(gp.get()).s_platform.draw_src_to(&s, g.screen, &ed(gp.get()).rNewButton[1]);
-            }
-
-            gp.rm.menu_font_small.draw_centered(g, 320, ed(gp.get()).rBackground[1].y - 18, "Hazards");
-        } else if MAPHAZARD_EDIT_STATE_TYPE == ed(gp.get()).iEditState {
-            //Draw map hazard options
-            for iType in 0..8usize {
-                let s0 = ed(gp.get()).rTypeButton[iType][0];
-                ed(gp.get()).s_maphazardbuttons.draw_src_to(&s0, g.screen, &ed(gp.get()).rTypeButton[iType][1]);
-                let s2 = ed(gp.get()).rTypeButton[iType][2];
-                ed(gp.get()).s_maphazardbuttons.draw_src_to(&s2, g.screen, &ed(gp.get()).rTypeButton[iType][3]);
-
-                gp.rm.menu_font_large.draw(g, ed(gp.get()).rTypeButton[iType][1].x + 36, ed(gp.get()).rTypeButton[iType][1].y + 6, szHazardNames[iType]);
-            }
-
-            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Choose Hazard Type");
-        } else if MAPHAZARD_EDIT_STATE_LOCATION == ed(gp.get()).iEditState {
-            let hazard = g.g_map.maphazards[ed(gp.get()).iEditMapHazard as usize];
-            draw_map_hazard(g, &hazard, 0, true, g.blitdest);
-            draw_map_hazard_controls(g, &hazard);
-
-            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Location: [esc] Exit, [p] Properties, [LMB] Set Location");
-        } else if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState {
-            let hazard = g.g_map.maphazards[ed(gp.get()).iEditMapHazard as usize];
-            draw_map_hazard(g, &hazard, 0, true, g.blitdest);
-            draw_map_hazard_controls(g, &hazard);
-
-            if hazard.itype == 0 || hazard.itype == 1 {
-                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 3, "Properties");
-                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 2, "[esc] Exit, [l] Location, [+/-] Velocity, [LMB] Angle and Radius");
-
-                if hazard.itype == 1 {
-                    gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[Shift + LMB] Snap To Angle, [1-9] Number of Rotodiscs");
-                } else {
-                    gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[Shift + LMB] Snap To Angle");
-                }
-            } else if hazard.itype == 2 {
-                gp.rm.menu_font_small.draw(g, 0, 480 - (gp.rm.menu_font_small.get_height() << 1), "Properties: [esc] Exit, [l] Location, [d] Direction");
-                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[-/+] Velocity, [[/]] or [</>] Frequency");
-            } else if hazard.itype >= 3 && hazard.itype <= 7 {
-                gp.rm.menu_font_small.draw(g, 0, 480 - (gp.rm.menu_font_small.get_height() << 1), "Properties: [esc] Exit, [l] Location");
-                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[[/]] or [</>] Frequency, [d] direction");
             } else {
-                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Properties: [esc] Exit, [l] Location");
+                fall = true;
             }
         }
 
-        gp.rm.menu_font_small.draw_right_justified(g, 640, 0, gp.maplist.current_filename());
+        if fall || ty == SDL_MOUSEMOTION_EV {
+            bound_mouse_motion_coords(g);
+            let iClickX = bound_to_window_w(ed(gp.get()).event.motion_x()) as i16;
+            let iClickY = bound_to_window_h(ed(gp.get()).event.motion_y()) as i16;
 
-        draw_message(g);
-        EDITOR_MAPHAZARDS
+            if ed(gp.get()).event.motion_state() == sdl_button(SDL_BUTTON_LEFT) && !ed(gp.get()).ignoreclick {
+                if MAPHAZARD_EDIT_STATE_LOCATION == ed(gp.get()).iEditState && !ed(gp.get()).ignoreclick {
+                    let hazard = &mut g.g_map.maphazards[ed(gp.get()).iEditMapHazard as usize];
+                    hazard.ix = iClickX / 16;
+                    hazard.iy = iClickY / 16;
+                } else if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState {
+                    let hazard = Ptr::from_mut(&mut g.g_map.maphazards[ed(gp.get()).iEditMapHazard as usize]);
+                    let iType = hazard.itype;
+                    if iType == 0 || iType == 1 {
+                        adjust_map_hazard_radius(g, hazard.get(), iClickX, iClickY);
+                    }
+                }
+            }
+        } else if ty == SDL_MOUSEBUTTONUP_EV {
+            if ed(gp.get()).event.button_button() == BUTTON_LEFT {
+                ed(gp.get()).ignoreclick = false;
+            }
+        }
     }
+
+    //Draw platform editing
+    drawmap(g, false, TILESIZE as i16, false);
+
+    gp.rm.menu_shade.draw(g, 0, 0);
+
+    if MAPHAZARD_EDIT_STATE_SELECT == ed(gp.get()).iEditState {
+        let s = ed(gp.get()).rBackground[0];
+        ed(gp.get()).s_platform.draw_src_to(&s, g.screen, &ed(gp.get()).rBackground[1]);
+
+        gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Map Hazard Mode: [esc] Exit");
+
+        for iMapHazard in 0..g.g_map.maphazards.len() {
+            let s = ed(gp.get()).rIconRects[iMapHazard][0];
+            ed(gp.get()).s_platform.draw_src_to(&s, g.screen, &ed(gp.get()).rIconRects[iMapHazard][1]);
+        }
+
+        if (g.g_map.maphazards.len() as i32) < MAXMAPHAZARDS {
+            let s = ed(gp.get()).rNewButton[0];
+            ed(gp.get()).s_platform.draw_src_to(&s, g.screen, &ed(gp.get()).rNewButton[1]);
+        }
+
+        gp.rm.menu_font_small.draw_centered(g, 320, ed(gp.get()).rBackground[1].y - 18, "Hazards");
+    } else if MAPHAZARD_EDIT_STATE_TYPE == ed(gp.get()).iEditState {
+        //Draw map hazard options
+        for iType in 0..8usize {
+            let s0 = ed(gp.get()).rTypeButton[iType][0];
+            ed(gp.get()).s_maphazardbuttons.draw_src_to(&s0, g.screen, &ed(gp.get()).rTypeButton[iType][1]);
+            let s2 = ed(gp.get()).rTypeButton[iType][2];
+            ed(gp.get()).s_maphazardbuttons.draw_src_to(&s2, g.screen, &ed(gp.get()).rTypeButton[iType][3]);
+
+            gp.rm.menu_font_large.draw(g, ed(gp.get()).rTypeButton[iType][1].x + 36, ed(gp.get()).rTypeButton[iType][1].y + 6, szHazardNames[iType]);
+        }
+
+        gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Choose Hazard Type");
+    } else if MAPHAZARD_EDIT_STATE_LOCATION == ed(gp.get()).iEditState {
+        let hazard = g.g_map.maphazards[ed(gp.get()).iEditMapHazard as usize];
+        draw_map_hazard(g, &hazard, 0, true, g.blitdest);
+        draw_map_hazard_controls(g, &hazard);
+
+        gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Location: [esc] Exit, [p] Properties, [LMB] Set Location");
+    } else if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState {
+        let hazard = g.g_map.maphazards[ed(gp.get()).iEditMapHazard as usize];
+        draw_map_hazard(g, &hazard, 0, true, g.blitdest);
+        draw_map_hazard_controls(g, &hazard);
+
+        if hazard.itype == 0 || hazard.itype == 1 {
+            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 3, "Properties");
+            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height() * 2, "[esc] Exit, [l] Location, [+/-] Velocity, [LMB] Angle and Radius");
+
+            if hazard.itype == 1 {
+                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[Shift + LMB] Snap To Angle, [1-9] Number of Rotodiscs");
+            } else {
+                gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[Shift + LMB] Snap To Angle");
+            }
+        } else if hazard.itype == 2 {
+            gp.rm.menu_font_small.draw(g, 0, 480 - (gp.rm.menu_font_small.get_height() << 1), "Properties: [esc] Exit, [l] Location, [d] Direction");
+            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[-/+] Velocity, [[/]] or [</>] Frequency");
+        } else if hazard.itype >= 3 && hazard.itype <= 7 {
+            gp.rm.menu_font_small.draw(g, 0, 480 - (gp.rm.menu_font_small.get_height() << 1), "Properties: [esc] Exit, [l] Location");
+            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[[/]] or [</>] Frequency, [d] direction");
+        } else {
+            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Properties: [esc] Exit, [l] Location");
+        }
+    }
+
+    gp.rm.menu_font_small.draw_right_justified(g, 640, 0, gp.maplist.current_filename());
+
+    draw_message(g);
+    EDITOR_MAPHAZARDS
 }
 
 pub fn new_map_hazard(g: &mut Game) -> i16 {
-    unsafe {
-        let mut hazard = MapHazard::default();
-        hazard.itype = 0;
-        hazard.ix = 10;
-        hazard.iy = 7;
+    let mut hazard = MapHazard::default();
+    hazard.itype = 0;
+    hazard.ix = 10;
+    hazard.iy = 7;
 
-        for iMapHazard in 0..NUMMAPHAZARDPARAMS as usize {
-            hazard.iparam[iMapHazard] = 0;
-            hazard.dparam[iMapHazard] = 0.0;
-        }
-
-        g.g_map.maphazards.push(hazard);
-        (g.g_map.maphazards.len() - 1) as i16
+    for iMapHazard in 0..NUMMAPHAZARDPARAMS as usize {
+        hazard.iparam[iMapHazard] = 0;
+        hazard.dparam[iMapHazard] = 0.0;
     }
+
+    g.g_map.maphazards.push(hazard);
+    (g.g_map.maphazards.len() - 1) as i16
 }
 
 pub fn draw_map_hazard_controls(g: &mut Game, hazard: &MapHazard) {
         let mut gp = g.ptr();
-    unsafe {
-        if hazard.itype == 0 || hazard.itype == 1 || hazard.itype == 2 {
-            let iVelMarkerX: i16 = if hazard.itype == 2 {
-                ((hazard.dparam[0] + 10.0f32) as i16 as i32 * 12 + 196) as i16
-            } else {
-                (((hazard.dparam[0] + 0.05f32) / 0.005f32) as i16 as i32 * 12 + 196) as i16
-            };
+    if hazard.itype == 0 || hazard.itype == 1 || hazard.itype == 2 {
+        let iVelMarkerX: i16 = if hazard.itype == 2 {
+            ((hazard.dparam[0] + 10.0f32) as i16 as i32 * 12 + 196) as i16
+        } else {
+            (((hazard.dparam[0] + 0.05f32) / 0.005f32) as i16 as i32 * 12 + 196) as i16
+        };
 
-            let rVel = [rect(0, 400, 244, 17), rect(198, 420, 244, 17)];
-            let mut d = rVel[1];
-            ed(gp.get()).s_platform.draw_src_to(&rVel[0], g.screen, &d);
+        let rVel = [rect(0, 400, 244, 17), rect(198, 420, 244, 17)];
+        let mut d = rVel[1];
+        ed(gp.get()).s_platform.draw_src_to(&rVel[0], g.screen, &d);
 
-            let rMarker = [rect(244, 400, 8, 18), rect(iVelMarkerX as i32, 418, 8, 18)];
-            let mut d = rMarker[1];
-            ed(gp.get()).s_platform.draw_src_to(&rMarker[0], g.screen, &d);
+        let rMarker = [rect(244, 400, 8, 18), rect(iVelMarkerX as i32, 418, 8, 18)];
+        let mut d = rMarker[1];
+        ed(gp.get()).s_platform.draw_src_to(&rMarker[0], g.screen, &d);
 
-            if hazard.itype == 2 {
-                gp.rm.menu_font_small.draw_right_justified(g, 190, 420, "Left");
-                gp.rm.menu_font_small.draw(g, 450, 420, "Right");
-            } else {
-                gp.rm.menu_font_small.draw_right_justified(g, 190, 420, "Counter Clockwise");
-                gp.rm.menu_font_small.draw(g, 450, 420, "Clockwise");
-            }
+        if hazard.itype == 2 {
+            gp.rm.menu_font_small.draw_right_justified(g, 190, 420, "Left");
+            gp.rm.menu_font_small.draw(g, 450, 420, "Right");
+        } else {
+            gp.rm.menu_font_small.draw_right_justified(g, 190, 420, "Counter Clockwise");
+            gp.rm.menu_font_small.draw(g, 450, 420, "Clockwise");
         }
+    }
 
-        if hazard.itype >= 2 && hazard.itype <= 7 {
-            // Draw frequency for bullet bill and flame cannon
-            let iFreqMarkerX: i16 = (((hazard.iparam[0] as i32 / 30) - 1) * 12 + 196) as i16;
+    if hazard.itype >= 2 && hazard.itype <= 7 {
+        // Draw frequency for bullet bill and flame cannon
+        let iFreqMarkerX: i16 = (((hazard.iparam[0] as i32 / 30) - 1) * 12 + 196) as i16;
 
-            let rVel = [rect(0, 384, 184, 13), rect(198, 390, 184, 13)];
-            let mut d = rVel[1];
-            ed(gp.get()).s_platform.draw_src_to(&rVel[0], g.screen, &d);
+        let rVel = [rect(0, 384, 184, 13), rect(198, 390, 184, 13)];
+        let mut d = rVel[1];
+        ed(gp.get()).s_platform.draw_src_to(&rVel[0], g.screen, &d);
 
-            let rMarker = [rect(244, 400, 8, 18), rect(iFreqMarkerX as i32, 388, 8, 18)];
-            let mut d = rMarker[1];
-            ed(gp.get()).s_platform.draw_src_to(&rMarker[0], g.screen, &d);
+        let rMarker = [rect(244, 400, 8, 18), rect(iFreqMarkerX as i32, 388, 8, 18)];
+        let mut d = rMarker[1];
+        ed(gp.get()).s_platform.draw_src_to(&rMarker[0], g.screen, &d);
 
-            gp.rm.menu_font_small.draw_right_justified(g, 190, 390, "More Frequent");
-            gp.rm.menu_font_small.draw(g, 388, 390, "Less Frequent");
-        }
+        gp.rm.menu_font_small.draw_right_justified(g, 190, 390, "More Frequent");
+        gp.rm.menu_font_small.draw(g, 388, 390, "Less Frequent");
     }
 }
 
@@ -3516,18 +3458,16 @@ pub fn adjust_map_hazard_radius(g: &mut Game, hazard: &mut MapHazard, iClickX: i
 
 pub fn init_editor_tiles(g: &mut Game) {
     let mut gp = g.ptr();
-    unsafe {
-        if ed(gp.get()).editor_tiles_initialized {
-            return;
-        }
-
-        ed(gp.get()).set_tile_drag = false;
-        ed(gp.get()).view_tileset_repeat_direction = -1;
-        ed(gp.get()).view_tileset_repeat_timer = 0;
-        ed(gp.get()).tileset = gp.get().g_tilesetmanager.tileset(g, ed(gp.get()).set_tile_tileset as usize);
-
-        ed(gp.get()).editor_tiles_initialized = true;
+    if ed(gp.get()).editor_tiles_initialized {
+        return;
     }
+
+    ed(gp.get()).set_tile_drag = false;
+    ed(gp.get()).view_tileset_repeat_direction = -1;
+    ed(gp.get()).view_tileset_repeat_timer = 0;
+    ed(gp.get()).tileset = gp.get().g_tilesetmanager.tileset(g, ed(gp.get()).set_tile_tileset as usize);
+
+    ed(gp.get()).editor_tiles_initialized = true;
 }
 
 pub fn editor_tiles(g: &mut Game) -> i32 {
@@ -3735,340 +3675,328 @@ pub fn editor_tiles(g: &mut Game) -> i32 {
 
 pub fn editor_blocks(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
-    unsafe {
-        //handle messages
-        while poll_event(g, &mut ed(gp.get()).event) != 0 {
-            match ed(gp.get()).event.type_() {
-                SDL_QUIT_EV => return EDITOR_QUIT,
+    //handle messages
+    while poll_event(g, &mut ed(gp.get()).event) != 0 {
+        match ed(gp.get()).event.type_() {
+            SDL_QUIT_EV => return EDITOR_QUIT,
 
-                SDL_KEYDOWN_EV => {
+            SDL_KEYDOWN_EV => {
+                ed(gp.get()).edit_mode = 0;
+                return EDITOR_EDIT;
+            }
+
+            SDL_MOUSEBUTTONDOWN_EV => {
+                if ed(gp.get()).event.button_button() == BUTTON_LEFT {
+                    let set_block_x = (ed(gp.get()).event.button_x() / TILESIZE) as i16;
+                    let set_block_y = (ed(gp.get()).event.button_y() / TILESIZE) as i16;
+
+                    //Set the selected block to one of the interaction blocks
+                    if set_block_y == 0 && set_block_x >= 0 && set_block_x <= 6 {
+                        ed(gp.get()).set_block = set_block_x as i32;
+                    } else if set_block_y == 0 && set_block_x >= 7 && set_block_x <= 11 {
+                        ed(gp.get()).set_block = set_block_x as i32 + 8;
+                    } else if set_block_y >= 1 && set_block_y <= 2 && set_block_x >= 0 && set_block_x <= 3 {
+                        //set the selected block to an on/off switch block
+
+                        ed(gp.get()).set_block = set_block_x as i32 + 7;
+                        g.g_map.iSwitches[set_block_x as usize] = 2 - set_block_y;
+                    } else if set_block_y >= 1 && set_block_y <= 2 && set_block_x >= 4 && set_block_x <= 7 {
+                        //set the selected block to a switch block
+
+                        ed(gp.get()).set_block = set_block_x as i32 + 7;
+                        ed(gp.get()).set_block_switch_on = (set_block_y == 1) as i32;
+                    } else if set_block_y == 3 && set_block_x >= 0 && set_block_x <= 9 {
+                        //set the selected block to a weapon breakable block
+
+                        ed(gp.get()).set_block = set_block_x as i32 + 20;
+                    }
+
                     ed(gp.get()).edit_mode = 0;
+
+                    //The user must release the mouse button before trying to add a tile
+                    ed(gp.get()).ignoreclick = true;
                     return EDITOR_EDIT;
                 }
+            }
 
-                SDL_MOUSEBUTTONDOWN_EV => {
-                    if ed(gp.get()).event.button_button() == BUTTON_LEFT {
-                        let set_block_x = (ed(gp.get()).event.button_x() / TILESIZE) as i16;
-                        let set_block_y = (ed(gp.get()).event.button_y() / TILESIZE) as i16;
+            _ => {}
+        }
+    }
 
-                        //Set the selected block to one of the interaction blocks
-                        if set_block_y == 0 && set_block_x >= 0 && set_block_x <= 6 {
-                            ed(gp.get()).set_block = set_block_x as i32;
-                        } else if set_block_y == 0 && set_block_x >= 7 && set_block_x <= 11 {
-                            ed(gp.get()).set_block = set_block_x as i32 + 8;
-                        } else if set_block_y >= 1 && set_block_y <= 2 && set_block_x >= 0 && set_block_x <= 3 {
-                            //set the selected block to an on/off switch block
+    drawmap(g, false, TILESIZE as i16, false);
+    gp.rm.menu_shade.draw(g, 0, 0);
 
-                            ed(gp.get()).set_block = set_block_x as i32 + 7;
-                            g.g_map.iSwitches[set_block_x as usize] = 2 - set_block_y;
-                        } else if set_block_y >= 1 && set_block_y <= 2 && set_block_x >= 4 && set_block_x <= 7 {
-                            //set the selected block to a switch block
+    g.rm.spr_blocks[0].draw_src_to(&rect(0, 0, 224, 32), g.screen, &rect(0, 0, 224, 32));
+    g.rm.spr_blocks[0].draw_src_to(&rect(224, 0, 128, 64), g.screen, &rect(0, 32, 128, 64));
+    g.rm.spr_blocks[0].draw_src_to(&rect(352, 0, 128, 64), g.screen, &rect(128, 32, 128, 64));
+    g.rm.spr_blocks[0].draw_src_to(&rect(0, 32, 160, 32), g.screen, &rect(224, 0, 160, 32));
+    g.rm.spr_blocks[0].draw_src_to(&rect(0, 64, 320, 32), g.screen, &rect(0, 96, 320, 32));
 
-                            ed(gp.get()).set_block = set_block_x as i32 + 7;
-                            ed(gp.get()).set_block_switch_on = (set_block_y == 1) as i32;
-                        } else if set_block_y == 3 && set_block_x >= 0 && set_block_x <= 9 {
-                            //set the selected block to a weapon breakable block
+    gp.rm.menu_font_small.draw_right_justified(g, 640, 0, gp.maplist.current_filename());
 
-                            ed(gp.get()).set_block = set_block_x as i32 + 20;
-                        }
+    draw_message(g);
+    EDITOR_BLOCKS
+}
 
-                        ed(gp.get()).edit_mode = 0;
+pub fn editor_mapitems(g: &mut Game) -> i32 {
+        let mut gp = g.ptr();
+    //handle messages
+    while poll_event(g, &mut ed(gp.get()).event) != 0 {
+        match ed(gp.get()).event.type_() {
+            SDL_QUIT_EV => return EDITOR_QUIT,
+
+            SDL_KEYDOWN_EV => {
+                ed(gp.get()).edit_mode = 7;
+                return EDITOR_EDIT;
+            }
+
+            SDL_MOUSEBUTTONDOWN_EV => {
+                if ed(gp.get()).event.button_button() == BUTTON_LEFT {
+                    let set_item_x = (ed(gp.get()).event.button_x() / TILESIZE) as i16;
+                    let set_item_y = (ed(gp.get()).event.button_y() / TILESIZE) as i16;
+
+                    //Set the selected block to one of the interaction blocks
+                    if set_item_y == 0 && set_item_x >= 0 && set_item_x <= 5 {
+                        ed(gp.get()).set_mapitem = set_item_x as i32;
+
+                        ed(gp.get()).edit_mode = 7;
 
                         //The user must release the mouse button before trying to add a tile
                         ed(gp.get()).ignoreclick = true;
                         return EDITOR_EDIT;
                     }
                 }
-
-                _ => {}
             }
+
+            _ => {}
         }
-
-        drawmap(g, false, TILESIZE as i16, false);
-        gp.rm.menu_shade.draw(g, 0, 0);
-
-        g.rm.spr_blocks[0].draw_src_to(&rect(0, 0, 224, 32), g.screen, &rect(0, 0, 224, 32));
-        g.rm.spr_blocks[0].draw_src_to(&rect(224, 0, 128, 64), g.screen, &rect(0, 32, 128, 64));
-        g.rm.spr_blocks[0].draw_src_to(&rect(352, 0, 128, 64), g.screen, &rect(128, 32, 128, 64));
-        g.rm.spr_blocks[0].draw_src_to(&rect(0, 32, 160, 32), g.screen, &rect(224, 0, 160, 32));
-        g.rm.spr_blocks[0].draw_src_to(&rect(0, 64, 320, 32), g.screen, &rect(0, 96, 320, 32));
-
-        gp.rm.menu_font_small.draw_right_justified(g, 640, 0, gp.maplist.current_filename());
-
-        draw_message(g);
-        EDITOR_BLOCKS
     }
-}
 
-pub fn editor_mapitems(g: &mut Game) -> i32 {
-        let mut gp = g.ptr();
-    unsafe {
-        //handle messages
-        while poll_event(g, &mut ed(gp.get()).event) != 0 {
-            match ed(gp.get()).event.type_() {
-                SDL_QUIT_EV => return EDITOR_QUIT,
+    drawmap(g, false, TILESIZE as i16, false);
+    gp.rm.menu_shade.draw(g, 0, 0);
 
-                SDL_KEYDOWN_EV => {
-                    ed(gp.get()).edit_mode = 7;
-                    return EDITOR_EDIT;
-                }
+    gp.rm.spr_mapitems[0].draw_src(g, 0, 0, &rect(0, 0, 192, 32));
 
-                SDL_MOUSEBUTTONDOWN_EV => {
-                    if ed(gp.get()).event.button_button() == BUTTON_LEFT {
-                        let set_item_x = (ed(gp.get()).event.button_x() / TILESIZE) as i16;
-                        let set_item_y = (ed(gp.get()).event.button_y() / TILESIZE) as i16;
+    gp.rm.menu_font_small.draw_right_justified(g, 640, 0, gp.maplist.current_filename());
+    gp.rm.menu_font_small.draw_right_justified(g, 0, 480 - g.rm.menu_font_small.get_height(), "Map Items");
 
-                        //Set the selected block to one of the interaction blocks
-                        if set_item_y == 0 && set_item_x >= 0 && set_item_x <= 5 {
-                            ed(gp.get()).set_mapitem = set_item_x as i32;
-
-                            ed(gp.get()).edit_mode = 7;
-
-                            //The user must release the mouse button before trying to add a tile
-                            ed(gp.get()).ignoreclick = true;
-                            return EDITOR_EDIT;
-                        }
-                    }
-                }
-
-                _ => {}
-            }
-        }
-
-        drawmap(g, false, TILESIZE as i16, false);
-        gp.rm.menu_shade.draw(g, 0, 0);
-
-        gp.rm.spr_mapitems[0].draw_src(g, 0, 0, &rect(0, 0, 192, 32));
-
-        gp.rm.menu_font_small.draw_right_justified(g, 640, 0, gp.maplist.current_filename());
-        gp.rm.menu_font_small.draw_right_justified(g, 0, 480 - g.rm.menu_font_small.get_height(), "Map Items");
-
-        draw_message(g);
-        EDITOR_MAPITEMS
-    }
+    draw_message(g);
+    EDITOR_MAPITEMS
 }
 
 pub fn init_editor_modeitems(g: &mut Game) {
     let mut gp = g.ptr();
-    unsafe {
-        if ed(gp.get()).editor_modeitems_initialized {
-            return;
-        }
-
-        ed(gp.get()).modeitemmode = 0;
-        ed(gp.get()).dragmodeitem = -1;
-        ed(gp.get()).dragoffsetx = 0;
-        ed(gp.get()).dragoffsety = 0;
-
-        ed(gp.get()).editor_modeitems_initialized = true;
+    if ed(gp.get()).editor_modeitems_initialized {
+        return;
     }
+
+    ed(gp.get()).modeitemmode = 0;
+    ed(gp.get()).dragmodeitem = -1;
+    ed(gp.get()).dragoffsetx = 0;
+    ed(gp.get()).dragoffsety = 0;
+
+    ed(gp.get()).editor_modeitems_initialized = true;
 }
 
 pub fn editor_modeitems(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     init_editor_modeitems(g);
 
-    unsafe {
-        //handle messages
-        while poll_event(g, &mut ed(gp.get()).event) != 0 {
-            let ty = ed(gp.get()).event.type_();
-            let mut fall = false;
+    //handle messages
+    while poll_event(g, &mut ed(gp.get()).event) != 0 {
+        let ty = ed(gp.get()).event.type_();
+        let mut fall = false;
 
-            if ty == SDL_QUIT_EV {
-                return EDITOR_QUIT;
-            }
+        if ty == SDL_QUIT_EV {
+            return EDITOR_QUIT;
+        }
 
-            if ty == SDL_KEYDOWN_EV {
-                ed(gp.get()).dragmodeitem = -1;
+        if ty == SDL_KEYDOWN_EV {
+            ed(gp.get()).dragmodeitem = -1;
 
-                let sym = ed(gp.get()).event.key_sym();
-                if sym == SDLK_s {
-                    savecurrentmap(g);
-                } else if sym == SDLK_ESCAPE || sym == SDLK_j {
-                    ed(gp.get()).editor_modeitems_initialized = false;
-                    return EDITOR_EDIT;
-                } else if sym >= SDLK_1 && sym <= SDLK_2 {
-                    ed(gp.get()).modeitemmode = (sym - SDLK_1) as i16;
-                } else if sym == SDLK_r {
-                    //Set this mode item set to random
-                    if ed(gp.get()).modeitemmode == 0 {
-                        if g.g_map.iNumRaceGoals == 0 {
-                            g.g_map.iNumRaceGoals = MAXRACEGOALS as i16;
-                        } else {
-                            g.g_map.iNumRaceGoals = 0;
-                        }
-                    } else if ed(gp.get()).modeitemmode == 1 {
-                        if g.g_map.iNumFlagBases == 0 {
-                            g.g_map.iNumFlagBases = 4;
-                        } else {
-                            g.g_map.iNumFlagBases = 0;
-                        }
-                    }
-                }
-                fall = true;
-            }
-
-            if fall || ty == SDL_MOUSEBUTTONDOWN_EV {
-                if ed(gp.get()).event.button_button() == BUTTON_LEFT {
-                    let iMouseX = ed(gp.get()).event.button_x() as i16;
-                    let iMouseY = ed(gp.get()).event.button_y() as i16;
-
-                    ed(gp.get()).dragmodeitem = -1;
-                    if ed(gp.get()).modeitemmode == 0 {
-                        for iGoal in 0..g.g_map.iNumRaceGoals {
-                            let g = g.g_map.racegoallocations[iGoal as usize];
-                            if iMouseX >= g.x && (iMouseX as i32) < g.x as i32 + 36 && iMouseY >= g.y && (iMouseY as i32) < g.y as i32 + 36 {
-                                ed(gp.get()).dragmodeitem = iGoal;
-                                ed(gp.get()).dragoffsetx = iMouseX - g.x;
-                                ed(gp.get()).dragoffsety = iMouseY - g.y;
-                            }
-                        }
-                    } else if ed(gp.get()).modeitemmode == 1 {
-                        for iBase in 0..g.g_map.iNumFlagBases {
-                            let b = g.g_map.flagbaselocations[iBase as usize];
-                            if iMouseX >= b.x && (iMouseX as i32) < b.x as i32 + 32 && iMouseY >= b.y && (iMouseY as i32) < b.y as i32 + 32 {
-                                ed(gp.get()).dragmodeitem = iBase;
-                                ed(gp.get()).dragoffsetx = iMouseX - b.x;
-                                ed(gp.get()).dragoffsety = iMouseY - b.y;
-                            }
-                        }
-                    }
-                }
-            } else if ty == SDL_MOUSEBUTTONUP_EV {
-                if ed(gp.get()).event.button_button() == BUTTON_LEFT {
-                    ed(gp.get()).dragmodeitem = -1;
-                }
-            } else if ty == SDL_MOUSEMOTION_EV {
-                bound_mouse_motion_coords(g);
-                if ed(gp.get()).dragmodeitem >= 0 && ed(gp.get()).event.motion_state() == sdl_button(SDL_BUTTON_LEFT) {
-                    let keystate = get_keyboard_state(g);
-                    let fShiftDown = check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT);
-
-                    let d = ed(gp.get()).dragmodeitem as usize;
-                    let loc = if ed(gp.get()).modeitemmode == 0 {
-                        Some(&mut g.g_map.racegoallocations[d])
-                    } else if ed(gp.get()).modeitemmode == 1 {
-                        Some(&mut g.g_map.flagbaselocations[d])
+            let sym = ed(gp.get()).event.key_sym();
+            if sym == SDLK_s {
+                savecurrentmap(g);
+            } else if sym == SDLK_ESCAPE || sym == SDLK_j {
+                ed(gp.get()).editor_modeitems_initialized = false;
+                return EDITOR_EDIT;
+            } else if sym >= SDLK_1 && sym <= SDLK_2 {
+                ed(gp.get()).modeitemmode = (sym - SDLK_1) as i16;
+            } else if sym == SDLK_r {
+                //Set this mode item set to random
+                if ed(gp.get()).modeitemmode == 0 {
+                    if g.g_map.iNumRaceGoals == 0 {
+                        g.g_map.iNumRaceGoals = MAXRACEGOALS as i16;
                     } else {
-                        None
-                    };
-                    if let Some(loc) = loc {
-                        loc.x = (ed(gp.get()).event.motion_x() - ed(gp.get()).dragoffsetx as i32) as i16;
-                        loc.y = (ed(gp.get()).event.motion_y() - ed(gp.get()).dragoffsety as i32) as i16;
+                        g.g_map.iNumRaceGoals = 0;
+                    }
+                } else if ed(gp.get()).modeitemmode == 1 {
+                    if g.g_map.iNumFlagBases == 0 {
+                        g.g_map.iNumFlagBases = 4;
+                    } else {
+                        g.g_map.iNumFlagBases = 0;
+                    }
+                }
+            }
+            fall = true;
+        }
 
-                        if fShiftDown {
-                            loc.x = ((ed(gp.get()).event.motion_x() >> 5) << 5) as i16;
-                            loc.y = ((ed(gp.get()).event.motion_y() >> 5) << 5) as i16;
+        if fall || ty == SDL_MOUSEBUTTONDOWN_EV {
+            if ed(gp.get()).event.button_button() == BUTTON_LEFT {
+                let iMouseX = ed(gp.get()).event.button_x() as i16;
+                let iMouseY = ed(gp.get()).event.button_y() as i16;
+
+                ed(gp.get()).dragmodeitem = -1;
+                if ed(gp.get()).modeitemmode == 0 {
+                    for iGoal in 0..g.g_map.iNumRaceGoals {
+                        let g = g.g_map.racegoallocations[iGoal as usize];
+                        if iMouseX >= g.x && (iMouseX as i32) < g.x as i32 + 36 && iMouseY >= g.y && (iMouseY as i32) < g.y as i32 + 36 {
+                            ed(gp.get()).dragmodeitem = iGoal;
+                            ed(gp.get()).dragoffsetx = iMouseX - g.x;
+                            ed(gp.get()).dragoffsety = iMouseY - g.y;
+                        }
+                    }
+                } else if ed(gp.get()).modeitemmode == 1 {
+                    for iBase in 0..g.g_map.iNumFlagBases {
+                        let b = g.g_map.flagbaselocations[iBase as usize];
+                        if iMouseX >= b.x && (iMouseX as i32) < b.x as i32 + 32 && iMouseY >= b.y && (iMouseY as i32) < b.y as i32 + 32 {
+                            ed(gp.get()).dragmodeitem = iBase;
+                            ed(gp.get()).dragoffsetx = iMouseX - b.x;
+                            ed(gp.get()).dragoffsety = iMouseY - b.y;
                         }
                     }
                 }
             }
-        }
+        } else if ty == SDL_MOUSEBUTTONUP_EV {
+            if ed(gp.get()).event.button_button() == BUTTON_LEFT {
+                ed(gp.get()).dragmodeitem = -1;
+            }
+        } else if ty == SDL_MOUSEMOTION_EV {
+            bound_mouse_motion_coords(g);
+            if ed(gp.get()).dragmodeitem >= 0 && ed(gp.get()).event.motion_state() == sdl_button(SDL_BUTTON_LEFT) {
+                let keystate = get_keyboard_state(g);
+                let fShiftDown = check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT);
 
-        drawmap(g, false, TILESIZE as i16, false);
-        gp.rm.menu_shade.draw(g, 0, 0);
+                let d = ed(gp.get()).dragmodeitem as usize;
+                let loc = if ed(gp.get()).modeitemmode == 0 {
+                    Some(&mut g.g_map.racegoallocations[d])
+                } else if ed(gp.get()).modeitemmode == 1 {
+                    Some(&mut g.g_map.flagbaselocations[d])
+                } else {
+                    None
+                };
+                if let Some(loc) = loc {
+                    loc.x = (ed(gp.get()).event.motion_x() - ed(gp.get()).dragoffsetx as i32) as i16;
+                    loc.y = (ed(gp.get()).event.motion_y() - ed(gp.get()).dragoffsety as i32) as i16;
 
-        //draw race goals
-        if ed(gp.get()).modeitemmode == 0 {
-            if g.g_map.iNumRaceGoals == 0 {
-                gp.rm.menu_font_large.draw_centered(g, 320, 200, "Race goals are set to random.");
-                gp.rm.menu_font_large.draw_centered(g, 320, 220, "Press 'R' to manually set them.");
-            } else {
-                for iGoal in 0..g.g_map.iNumRaceGoals {
-                    let g = g.g_map.racegoallocations[iGoal as usize];
-                    gp.rm.spr_racegoals.draw_src(gp.get(), g.x as i32 - 16, g.y as i32 - 18, &rect(0, 0, 68, 54));
-                    let szNum = format!("{}", iGoal + 1);
-                    gp.rm.menu_font_large.draw_centered(gp.get(), g.x as i32 + 18, g.y as i32 + 6, &szNum);
+                    if fShiftDown {
+                        loc.x = ((ed(gp.get()).event.motion_x() >> 5) << 5) as i16;
+                        loc.y = ((ed(gp.get()).event.motion_y() >> 5) << 5) as i16;
+                    }
                 }
             }
-
-            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Set Race Goal Locations - Press [2] for Flag Bases");
-        } else if ed(gp.get()).modeitemmode == 1 {
-            if g.g_map.iNumFlagBases == 0 {
-                gp.rm.menu_font_large.draw_centered(g, 320, 200, "Flag bases are set to random.");
-                gp.rm.menu_font_large.draw_centered(g, 320, 220, "Press 'R' to manually set them.");
-            } else {
-                for iBase in 0..g.g_map.iNumFlagBases {
-                    let b = g.g_map.flagbaselocations[iBase as usize];
-                    gp.rm.spr_flagbases.draw_src(g, b.x as i32 - 8, b.y as i32 - 8, &rect(iBase as i32 * 48, 0, 48, 48));
-                }
-            }
-
-            gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Set Flag Base Locations - Press [1] for Race Goals");
         }
-
-        gp.rm.menu_font_small.draw_right_justified(g, 640, 0, gp.maplist.current_filename());
-
-        draw_message(g);
-        EDITOR_MODEITEMS
     }
+
+    drawmap(g, false, TILESIZE as i16, false);
+    gp.rm.menu_shade.draw(g, 0, 0);
+
+    //draw race goals
+    if ed(gp.get()).modeitemmode == 0 {
+        if g.g_map.iNumRaceGoals == 0 {
+            gp.rm.menu_font_large.draw_centered(g, 320, 200, "Race goals are set to random.");
+            gp.rm.menu_font_large.draw_centered(g, 320, 220, "Press 'R' to manually set them.");
+        } else {
+            for iGoal in 0..g.g_map.iNumRaceGoals {
+                let g = g.g_map.racegoallocations[iGoal as usize];
+                gp.rm.spr_racegoals.draw_src(gp.get(), g.x as i32 - 16, g.y as i32 - 18, &rect(0, 0, 68, 54));
+                let szNum = format!("{}", iGoal + 1);
+                gp.rm.menu_font_large.draw_centered(gp.get(), g.x as i32 + 18, g.y as i32 + 6, &szNum);
+            }
+        }
+
+        gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Set Race Goal Locations - Press [2] for Flag Bases");
+    } else if ed(gp.get()).modeitemmode == 1 {
+        if g.g_map.iNumFlagBases == 0 {
+            gp.rm.menu_font_large.draw_centered(g, 320, 200, "Flag bases are set to random.");
+            gp.rm.menu_font_large.draw_centered(g, 320, 220, "Press 'R' to manually set them.");
+        } else {
+            for iBase in 0..g.g_map.iNumFlagBases {
+                let b = g.g_map.flagbaselocations[iBase as usize];
+                gp.rm.spr_flagbases.draw_src(g, b.x as i32 - 8, b.y as i32 - 8, &rect(iBase as i32 * 48, 0, 48, 48));
+            }
+        }
+
+        gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Set Flag Base Locations - Press [1] for Race Goals");
+    }
+
+    gp.rm.menu_font_small.draw_right_justified(g, 640, 0, gp.maplist.current_filename());
+
+    draw_message(g);
+    EDITOR_MODEITEMS
 }
 
 pub fn editor_tiletype(g: &mut Game) -> i32 {
     let mut gp = g.ptr();
-    unsafe {
-        //handle messages
-        while poll_event(g, &mut ed(gp.get()).event) != 0 {
-            match ed(gp.get()).event.type_() {
-                SDL_QUIT_EV => return EDITOR_QUIT,
+    //handle messages
+    while poll_event(g, &mut ed(gp.get()).event) != 0 {
+        match ed(gp.get()).event.type_() {
+            SDL_QUIT_EV => return EDITOR_QUIT,
 
-                SDL_KEYDOWN_EV => {
-                    ed(gp.get()).edit_mode = 6;
-                    return EDITOR_EDIT;
-                }
+            SDL_KEYDOWN_EV => {
+                ed(gp.get()).edit_mode = 6;
+                return EDITOR_EDIT;
+            }
 
-                SDL_MOUSEBUTTONDOWN_EV => {
-                    if ed(gp.get()).event.button_button() == BUTTON_LEFT {
-                        let iCol = (ed(gp.get()).event.button_x() / TILESIZE) as i16;
-                        let iRow = (ed(gp.get()).event.button_y() / TILESIZE) as i16;
+            SDL_MOUSEBUTTONDOWN_EV => {
+                if ed(gp.get()).event.button_button() == BUTTON_LEFT {
+                    let iCol = (ed(gp.get()).event.button_x() / TILESIZE) as i16;
+                    let iRow = (ed(gp.get()).event.button_y() / TILESIZE) as i16;
 
-                        if (iCol as i32) < NUMTILETYPES - 1 && iRow == 0 {
-                            ed(gp.get()).set_tiletype = TileType::from_i32(iCol as i32 + 1);
+                    if (iCol as i32) < NUMTILETYPES - 1 && iRow == 0 {
+                        ed(gp.get()).set_tiletype = TileType::from_i32(iCol as i32 + 1);
 
-                            ed(gp.get()).edit_mode = 6;
-                            ed(gp.get()).ignoreclick = true;
-                            return EDITOR_EDIT;
-                        }
+                        ed(gp.get()).edit_mode = 6;
+                        ed(gp.get()).ignoreclick = true;
+                        return EDITOR_EDIT;
                     }
                 }
-
-                _ => {}
             }
+
+            _ => {}
         }
-
-        drawmap(g, false, TILESIZE as i16, false);
-        gp.rm.menu_shade.draw(g, 0, 0);
-
-        gp.rm.spr_transparenttiles.draw(g, 0, 0);
-
-        gp.rm.menu_font_small.draw_right_justified(g, 640, 0, gp.maplist.current_filename());
-
-        draw_message(g);
-        EDITOR_TILETYPE
     }
+
+    drawmap(g, false, TILESIZE as i16, false);
+    gp.rm.menu_shade.draw(g, 0, 0);
+
+    gp.rm.spr_transparenttiles.draw(g, 0, 0);
+
+    gp.rm.menu_font_small.draw_right_justified(g, 640, 0, gp.maplist.current_filename());
+
+    draw_message(g);
+    EDITOR_TILETYPE
 }
 
 pub fn init_editor_backgrounds(g: &mut Game) {
     let mut gp = g.ptr();
-    unsafe {
-        if ed(gp.get()).editor_backgrounds_initialized {
-            return;
-        }
-
-        ed(gp.get()).iPage = (ed(gp.get()).backgroundlist.current_index() / 16) as i16;
-
-        for iRectY in 0..4i32 {
-            for iRectX in 0..4i32 {
-                ed(gp.get()).rDst[(iRectY * 4 + iRectX) as usize] = rect(iRectX * 160, iRectY * 120, 160, 120);
-            }
-        }
-
-        ed(gp.get()).sBackgrounds.init(std::array::from_fn(|_| gfxSprite::blank(g, 160, 120)));
-
-        load_background_page(g, ed(gp.get()).iPage);
-
-        ed(gp.get()).editor_backgrounds_initialized = true;
+    if ed(gp.get()).editor_backgrounds_initialized {
+        return;
     }
+
+    ed(gp.get()).iPage = (ed(gp.get()).backgroundlist.current_index() / 16) as i16;
+
+    for iRectY in 0..4i32 {
+        for iRectX in 0..4i32 {
+            ed(gp.get()).rDst[(iRectY * 4 + iRectX) as usize] = rect(iRectX * 160, iRectY * 120, 160, 120);
+        }
+    }
+
+    ed(gp.get()).sBackgrounds.init(std::array::from_fn(|_| gfxSprite::blank(g, 160, 120)));
+
+    load_background_page(g, ed(gp.get()).iPage);
+
+    ed(gp.get()).editor_backgrounds_initialized = true;
 }
 
 unsafe fn free_background_surfaces(g: &mut Game) {
@@ -4176,17 +4104,15 @@ pub fn editor_backgrounds(g: &mut Game) -> i32 {
 
 pub fn init_editor_animation(g: &mut Game) {
     let mut gp = g.ptr();
-    unsafe {
-        if ed(gp.get()).editor_animation_initialized {
-            return;
-        }
-
-        ed(gp.get()).set_tile_drag = false;
-        ed(gp.get()).view_tileset_repeat_direction = -1;
-        ed(gp.get()).view_tileset_repeat_timer = 0;
-
-        ed(gp.get()).editor_animation_initialized = true;
+    if ed(gp.get()).editor_animation_initialized {
+        return;
     }
+
+    ed(gp.get()).set_tile_drag = false;
+    ed(gp.get()).view_tileset_repeat_direction = -1;
+    ed(gp.get()).view_tileset_repeat_timer = 0;
+
+    ed(gp.get()).editor_animation_initialized = true;
 }
 
 pub fn editor_animation(g: &mut Game) -> i32 {
@@ -4379,89 +4305,87 @@ pub fn load_background_page(g: &mut Game, iPage_: i16) {
 
 pub fn display_help(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
-    unsafe {
-        drawmap(g, false, TILESIZE as i16, false);
-        gp.rm.menu_shade.draw(g, 0, 0);
+    drawmap(g, false, TILESIZE as i16, false);
+    gp.rm.menu_shade.draw(g, 0, 0);
 
-        let fh = g.rm.menu_font_small.get_height();
-        let mut offsety = 10;
-        let mut offsetx = 20;
-        let mut line = |text: &str, gap: i32, offsety: &mut i32, offsetx: i32| {
-            gp.rm.menu_font_small.draw(g, offsetx, *offsety, text);
-            *offsety += fh + gap;
-        };
+    let fh = g.rm.menu_font_small.get_height();
+    let mut offsety = 10;
+    let mut offsetx = 20;
+    let mut line = |text: &str, gap: i32, offsety: &mut i32, offsetx: i32| {
+        gp.rm.menu_font_small.draw(g, offsetx, *offsety, text);
+        *offsety += fh + gap;
+    };
 
-        line("Modes:", 2, &mut offsety, offsetx);
-        line("[t] - Tile Mode", 2, &mut offsety, offsetx);
-        line("[i] - Block Mode", 2, &mut offsety, offsetx);
-        line("[o] - Map Item Mode", 2, &mut offsety, offsetx);
-        line("[w] - Warp Mode", 2, &mut offsety, offsetx);
-        line("[m] - Move Mode", 2, &mut offsety, offsetx);
-        line("[l] - Tile Type Mode", 2, &mut offsety, offsetx);
-        line("[p] - Platform Mode", 2, &mut offsety, offsetx);
-        line("[x] - No Player Spawn Area", 2, &mut offsety, offsetx);
-        line("[z] - No Item Spawn Area", 2, &mut offsety, offsetx);
-        line("[h] - Hazard Mode", 2, &mut offsety, offsetx);
-        line("[a] - Animated Tile Mode", 2, &mut offsety, offsetx);
-        line("[j] - Race Goals Mode", 2, &mut offsety, offsetx);
-        line("[k] - Block Properties", 12, &mut offsety, offsetx);
+    line("Modes:", 2, &mut offsety, offsetx);
+    line("[t] - Tile Mode", 2, &mut offsety, offsetx);
+    line("[i] - Block Mode", 2, &mut offsety, offsetx);
+    line("[o] - Map Item Mode", 2, &mut offsety, offsetx);
+    line("[w] - Warp Mode", 2, &mut offsety, offsetx);
+    line("[m] - Move Mode", 2, &mut offsety, offsetx);
+    line("[l] - Tile Type Mode", 2, &mut offsety, offsetx);
+    line("[p] - Platform Mode", 2, &mut offsety, offsetx);
+    line("[x] - No Player Spawn Area", 2, &mut offsety, offsetx);
+    line("[z] - No Item Spawn Area", 2, &mut offsety, offsetx);
+    line("[h] - Hazard Mode", 2, &mut offsety, offsetx);
+    line("[a] - Animated Tile Mode", 2, &mut offsety, offsetx);
+    line("[j] - Race Goals Mode", 2, &mut offsety, offsetx);
+    line("[k] - Block Properties", 12, &mut offsety, offsetx);
 
-        line("Layers:", 2, &mut offsety, offsetx);
-        line("[v] - Hide Blocks", 2, &mut offsety, offsetx);
-        line("[y] - Select Active Tile Layer", 2, &mut offsety, offsetx);
-        line("[u] - Hide Inactive Tile Layers", 2, &mut offsety, offsetx);
-        line("[end] - Optimize Layers", 12, &mut offsety, offsetx);
+    line("Layers:", 2, &mut offsety, offsetx);
+    line("[v] - Hide Blocks", 2, &mut offsety, offsetx);
+    line("[y] - Select Active Tile Layer", 2, &mut offsety, offsetx);
+    line("[u] - Hide Inactive Tile Layers", 2, &mut offsety, offsetx);
+    line("[end] - Optimize Layers", 12, &mut offsety, offsetx);
 
-        line("Miscellaneous:", 2, &mut offsety, offsetx);
-        line("[b] - Background Thumbnails", 2, &mut offsety, offsetx);
-        line("[g] - Change Backgrounds", 2, &mut offsety, offsetx);
-        line("[r] - Change Music Category", 2, &mut offsety, offsetx);
-        line("[e] - Change Floating Eyecandy", 2, &mut offsety, offsetx);
-        line("[ctrl] + [delete] - Clear All", 2, &mut offsety, offsetx);
-        line("[insert] - Take Screenshot", 2, &mut offsety, offsetx);
+    line("Miscellaneous:", 2, &mut offsety, offsetx);
+    line("[b] - Background Thumbnails", 2, &mut offsety, offsetx);
+    line("[g] - Change Backgrounds", 2, &mut offsety, offsetx);
+    line("[r] - Change Music Category", 2, &mut offsety, offsetx);
+    line("[e] - Change Floating Eyecandy", 2, &mut offsety, offsetx);
+    line("[ctrl] + [delete] - Clear All", 2, &mut offsety, offsetx);
+    line("[insert] - Take Screenshot", 2, &mut offsety, offsetx);
 
-        offsetx = 305;
-        offsety = 10;
+    offsetx = 305;
+    offsety = 10;
 
-        line("File:", 2, &mut offsety, offsetx);
-        line("[n] - New Map", 2, &mut offsety, offsetx);
-        line("[s] - Save Map", 2, &mut offsety, offsetx);
-        line("[shift] + [s] - Save As", 2, &mut offsety, offsetx);
-        line("[f] - Find Map", 2, &mut offsety, offsetx);
-        line("[shift] + [f] - New Search", 2, &mut offsety, offsetx);
-        line("[pageup] - Go To Previous Map", 2, &mut offsety, offsetx);
-        line("[pagedown] - Go To Next Map", 20, &mut offsety, offsetx);
+    line("File:", 2, &mut offsety, offsetx);
+    line("[n] - New Map", 2, &mut offsety, offsetx);
+    line("[s] - Save Map", 2, &mut offsety, offsetx);
+    line("[shift] + [s] - Save As", 2, &mut offsety, offsetx);
+    line("[f] - Find Map", 2, &mut offsety, offsetx);
+    line("[shift] + [f] - New Search", 2, &mut offsety, offsetx);
+    line("[pageup] - Go To Previous Map", 2, &mut offsety, offsetx);
+    line("[pagedown] - Go To Next Map", 20, &mut offsety, offsetx);
 
-        line("Tile, Warp and Block Modes:", 2, &mut offsety, offsetx);
-        line("[Left Mouse Button] - Place Item", 2, &mut offsety, offsetx);
-        line("[Right Mouse Button] - Remove Item", 20, &mut offsety, offsetx);
+    line("Tile, Warp and Block Modes:", 2, &mut offsety, offsetx);
+    line("[Left Mouse Button] - Place Item", 2, &mut offsety, offsetx);
+    line("[Right Mouse Button] - Remove Item", 20, &mut offsety, offsetx);
 
-        line("Move Mode:", 2, &mut offsety, offsetx);
-        line("[Left Mouse Button] - Select Area", 2, &mut offsety, offsetx);
-        line("[Right Mouse Button] - Unselect Area", 2, &mut offsety, offsetx);
-        line("Select And Drag - Move Selections", 2, &mut offsety, offsetx);
-        line("Hold [shift] - Multiple Selections", 2, &mut offsety, offsetx);
-        line("Hold [ctrl] - Freehand Selections", 2, &mut offsety, offsetx);
-        line("[delete] - Delete Selection", 2, &mut offsety, offsetx);
-        line("[c] - Copy Selection", 20, &mut offsety, offsetx);
+    line("Move Mode:", 2, &mut offsety, offsetx);
+    line("[Left Mouse Button] - Select Area", 2, &mut offsety, offsetx);
+    line("[Right Mouse Button] - Unselect Area", 2, &mut offsety, offsetx);
+    line("Select And Drag - Move Selections", 2, &mut offsety, offsetx);
+    line("Hold [shift] - Multiple Selections", 2, &mut offsety, offsetx);
+    line("Hold [ctrl] - Freehand Selections", 2, &mut offsety, offsetx);
+    line("[delete] - Delete Selection", 2, &mut offsety, offsetx);
+    line("[c] - Copy Selection", 20, &mut offsety, offsetx);
 
-        line("Platforms:", 2, &mut offsety, offsetx);
-        line("[p] - Path", 2, &mut offsety, offsetx);
-        line("[+/-] - Change Speed", 2, &mut offsety, offsetx);
-        line("[delete] - Delete", 2, &mut offsety, offsetx);
-        gp.rm.menu_font_small.draw(g, offsetx, offsety, "[alt] + [enter] - Full Screen/Window");
+    line("Platforms:", 2, &mut offsety, offsetx);
+    line("[p] - Path", 2, &mut offsety, offsetx);
+    line("[+/-] - Change Speed", 2, &mut offsety, offsetx);
+    line("[delete] - Delete", 2, &mut offsety, offsetx);
+    gp.rm.menu_font_small.draw(g, offsetx, offsety, "[alt] + [enter] - Full Screen/Window");
 
-        //handle messages
-        while poll_event(g, &mut ed(gp.get()).event) != 0 {
-            match ed(gp.get()).event.type_() {
-                SDL_QUIT_EV => return 0,
-                SDL_KEYDOWN_EV => return 0,
-                _ => {}
-            }
+    //handle messages
+    while poll_event(g, &mut ed(gp.get()).event) != 0 {
+        match ed(gp.get()).event.type_() {
+            SDL_QUIT_EV => return 0,
+            SDL_KEYDOWN_EV => return 0,
+            _ => {}
         }
-
-        DISPLAY_HELP
     }
+
+    DISPLAY_HELP
 }
 
 pub fn save_as(g: &mut Game) -> i32 {
@@ -4474,10 +4398,8 @@ pub fn save_as(g: &mut Game) -> i32 {
         mapLocation.push_str(".map");
         save_map(g, &convert_path(gp.get(), &mapLocation));
         fileName.push_str(".map");
-        unsafe {
-            gp.maplist.add(g, &fileName);
-            g.maplist.find(&fileName);
-        }
+        gp.maplist.add(g, &fileName);
+        g.maplist.find(&fileName);
         loadcurrentmap(g);
     }
 
@@ -4589,13 +4511,11 @@ pub fn find(g: &mut Game) -> i32 {
     let mut fileName = String::new();
 
     if dialog(g, "Find Map", "Enter name:", &mut fileName, 64) {
-        unsafe {
-            ed(gp.get()).findstring = fileName.clone();
+        ed(gp.get()).findstring = fileName.clone();
 
-            let fs = ed(gp.get()).findstring.clone();
-            if g.maplist.find(&fs) {
-                loadcurrentmap(g);
-            }
+        let fs = ed(gp.get()).findstring.clone();
+        if g.maplist.find(&fs) {
+            loadcurrentmap(g);
         }
     }
 
@@ -4604,10 +4524,8 @@ pub fn find(g: &mut Game) -> i32 {
 
 pub fn clear_map(g: &mut Game) -> i32 {
     let mut gp = g.ptr();
-    unsafe {
-        g.g_map.clear_map();
-        ed(gp.get()).g_iNumPlatforms = 0;
-    }
+    g.g_map.clear_map();
+    ed(gp.get()).g_iNumPlatforms = 0;
 
     println!("Map Cleared");
     0
@@ -4615,170 +4533,162 @@ pub fn clear_map(g: &mut Game) -> i32 {
 
 pub fn loadcurrentmap(g: &mut Game) {
     let mut gp = g.ptr();
-    unsafe {
-        let filename = g.maplist.current_filename().to_string();
-        gp.g_map.load_map(g, &filename, read_type_full);
+    let filename = g.maplist.current_filename().to_string();
+    gp.g_map.load_map(g, &filename, read_type_full);
 
-        if g.g_map.iNumRaceGoals == 0 {
-            for iGoal in 0..MAXRACEGOALS as usize {
-                g.g_map.racegoallocations[iGoal].x = (iGoal as i32 * 80 + 20) as i16;
-                g.g_map.racegoallocations[iGoal].y = 18;
-            }
+    if g.g_map.iNumRaceGoals == 0 {
+        for iGoal in 0..MAXRACEGOALS as usize {
+            g.g_map.racegoallocations[iGoal].x = (iGoal as i32 * 80 + 20) as i16;
+            g.g_map.racegoallocations[iGoal].y = 18;
         }
+    }
 
-        if g.g_map.iNumFlagBases == 0 {
-            for iBase in 0..4usize {
-                g.g_map.flagbaselocations[iBase].x = (iBase as i32 * 80 + 20) as i16;
-                g.g_map.flagbaselocations[iBase].y = 18;
-            }
+    if g.g_map.iNumFlagBases == 0 {
+        for iBase in 0..4usize {
+            g.g_map.flagbaselocations[iBase].x = (iBase as i32 * 80 + 20) as i16;
+            g.g_map.flagbaselocations[iBase].y = 18;
         }
+    }
 
-        let filename = concat("gfx/packs/Classic/backgrounds/", &g.g_map.szBackgroundFile);
-        let mut path = convert_path(g, &filename);
-        ed(gp.get()).backgroundlist.set_current_path(Path::new(&filename));
+    let filename = concat("gfx/packs/Classic/backgrounds/", &g.g_map.szBackgroundFile);
+    let mut path = convert_path(g, &filename);
+    ed(gp.get()).backgroundlist.set_current_path(Path::new(&filename));
 
-        if !file_exists(&path) {
-            path = convert_path(g, "gfx/packs/Classic/backgrounds/Land_Classic.png");
-            ed(gp.get()).backgroundlist.set_current_path(Path::new("gfx/packs/Classic/backgrounds/Land_Classic.png"));
-        }
+    if !file_exists(&path) {
+        path = convert_path(g, "gfx/packs/Classic/backgrounds/Land_Classic.png");
+        ed(gp.get()).backgroundlist.set_current_path(Path::new("gfx/packs/Classic/backgrounds/Land_Classic.png"));
+    }
 
-        g.rm.spr_background = ImageLoader::new(&path).without_color_key().create(g);
+    g.rm.spr_background = ImageLoader::new(&path).without_color_key().create(g);
 
-        ed(gp.get()).g_iNumPlatforms = g.g_map.platforms.len() as i16;
+    ed(gp.get()).g_iNumPlatforms = g.g_map.platforms.len() as i16;
 
-        for iPlatform in 0..ed(g).g_iNumPlatforms as usize {
-            let mp = g.g_map.platforms[iPlatform];
-            for iCol in 0..MW {
-                for iRow in 0..MH {
-                    if (iCol as i16) < mp.iTileWidth && (iRow as i16) < mp.iTileHeight {
-                        ed(gp.get()).g_Platforms[iPlatform].tiles[iCol * MH + iRow] = *mp.tile_at(iCol, iRow);
-                        ed(gp.get()).g_Platforms[iPlatform].types[iCol * MH + iRow] = mp.tile_type_at(iCol, iRow);
-                    } else {
-                        clear_tileset_tile(&mut ed(gp.get()).g_Platforms[iPlatform].tiles[iCol * MH + iRow]);
-                        ed(gp.get()).g_Platforms[iPlatform].types[iCol * MH + iRow] = TileType::NonSolid;
-                    }
+    for iPlatform in 0..ed(g).g_iNumPlatforms as usize {
+        let mp = g.g_map.platforms[iPlatform];
+        for iCol in 0..MW {
+            for iRow in 0..MH {
+                if (iCol as i16) < mp.iTileWidth && (iRow as i16) < mp.iTileHeight {
+                    ed(gp.get()).g_Platforms[iPlatform].tiles[iCol * MH + iRow] = *mp.tile_at(iCol, iRow);
+                    ed(gp.get()).g_Platforms[iPlatform].types[iCol * MH + iRow] = mp.tile_type_at(iCol, iRow);
+                } else {
+                    clear_tileset_tile(&mut ed(gp.get()).g_Platforms[iPlatform].tiles[iCol * MH + iRow]);
+                    ed(gp.get()).g_Platforms[iPlatform].types[iCol * MH + iRow] = TileType::NonSolid;
                 }
             }
-
-            ed(gp.get()).g_Platforms[iPlatform].iDrawLayer = mp.iDrawLayer;
-            ed(gp.get()).g_Platforms[iPlatform].iPathType = mp.pPath.path_type_id();
-
-            let mut mpm = mp;
-            let any = mpm.pPath.as_any();
-            if let Some(path) = any.downcast_ref::<StraightPath>() {
-                ed(gp.get()).g_Platforms[iPlatform].iVelocity = (path.path().speed() * 4.0f32) as i32 as i16;
-                ed(gp.get()).g_Platforms[iPlatform].iStartX = path.start_pos().x as i32 as i16;
-                ed(gp.get()).g_Platforms[iPlatform].iStartY = path.start_pos().y as i32 as i16;
-                ed(gp.get()).g_Platforms[iPlatform].iEndX = path.end_pos().x as i32 as i16;
-                ed(gp.get()).g_Platforms[iPlatform].iEndY = path.end_pos().y as i32 as i16;
-            } else if let Some(path) = any.downcast_ref::<StraightPathContinuous>() {
-                ed(gp.get()).g_Platforms[iPlatform].iVelocity = (path.path().speed() * 4.0f32) as i32 as i16;
-                ed(gp.get()).g_Platforms[iPlatform].iStartX = path.start_pos().x as i32 as i16;
-                ed(gp.get()).g_Platforms[iPlatform].iStartY = path.start_pos().y as i32 as i16;
-                ed(gp.get()).g_Platforms[iPlatform].fAngle = path.angle();
-            } else if let Some(path) = any.downcast_ref::<EllipsePath>() {
-                ed(gp.get()).g_Platforms[iPlatform].iVelocity = (path.path().speed() / 0.0030f32) as i16;
-                ed(gp.get()).g_Platforms[iPlatform].fRadiusX = path.radius().x;
-                ed(gp.get()).g_Platforms[iPlatform].fRadiusY = path.radius().y;
-                ed(gp.get()).g_Platforms[iPlatform].iStartX = path.center_pos().x as i32 as i16;
-                ed(gp.get()).g_Platforms[iPlatform].iStartY = path.center_pos().y as i32 as i16;
-                ed(gp.get()).g_Platforms[iPlatform].fAngle = path.start_angle();
-            }
-
-            ed(gp.get()).g_Platforms[iPlatform].update_preview(g);
         }
+
+        ed(gp.get()).g_Platforms[iPlatform].iDrawLayer = mp.iDrawLayer;
+        ed(gp.get()).g_Platforms[iPlatform].iPathType = mp.pPath.path_type_id();
+
+        let mut mpm = mp;
+        let any = mpm.pPath.as_any();
+        if let Some(path) = any.downcast_ref::<StraightPath>() {
+            ed(gp.get()).g_Platforms[iPlatform].iVelocity = (path.path().speed() * 4.0f32) as i32 as i16;
+            ed(gp.get()).g_Platforms[iPlatform].iStartX = path.start_pos().x as i32 as i16;
+            ed(gp.get()).g_Platforms[iPlatform].iStartY = path.start_pos().y as i32 as i16;
+            ed(gp.get()).g_Platforms[iPlatform].iEndX = path.end_pos().x as i32 as i16;
+            ed(gp.get()).g_Platforms[iPlatform].iEndY = path.end_pos().y as i32 as i16;
+        } else if let Some(path) = any.downcast_ref::<StraightPathContinuous>() {
+            ed(gp.get()).g_Platforms[iPlatform].iVelocity = (path.path().speed() * 4.0f32) as i32 as i16;
+            ed(gp.get()).g_Platforms[iPlatform].iStartX = path.start_pos().x as i32 as i16;
+            ed(gp.get()).g_Platforms[iPlatform].iStartY = path.start_pos().y as i32 as i16;
+            ed(gp.get()).g_Platforms[iPlatform].fAngle = path.angle();
+        } else if let Some(path) = any.downcast_ref::<EllipsePath>() {
+            ed(gp.get()).g_Platforms[iPlatform].iVelocity = (path.path().speed() / 0.0030f32) as i16;
+            ed(gp.get()).g_Platforms[iPlatform].fRadiusX = path.radius().x;
+            ed(gp.get()).g_Platforms[iPlatform].fRadiusY = path.radius().y;
+            ed(gp.get()).g_Platforms[iPlatform].iStartX = path.center_pos().x as i32 as i16;
+            ed(gp.get()).g_Platforms[iPlatform].iStartY = path.center_pos().y as i32 as i16;
+            ed(gp.get()).g_Platforms[iPlatform].fAngle = path.start_angle();
+        }
+
+        ed(gp.get()).g_Platforms[iPlatform].update_preview(g);
     }
 }
 
 pub fn set_platform_to_defaults(g: &mut Game, iPlatform: i16) {
     let mut gp = g.ptr();
-    unsafe {
-        let p = &mut ed(gp.get()).g_Platforms[iPlatform as usize];
-        for iCol in 0..MW {
-            for iRow in 0..MH {
-                clear_tileset_tile(&mut p.tiles[iCol * MH + iRow]);
-                p.types[iCol * MH + iRow] = TileType::NonSolid;
-            }
+    let p = &mut ed(gp.get()).g_Platforms[iPlatform as usize];
+    for iCol in 0..MW {
+        for iRow in 0..MH {
+            clear_tileset_tile(&mut p.tiles[iCol * MH + iRow]);
+            p.types[iCol * MH + iRow] = TileType::NonSolid;
         }
-
-        p.iVelocity = 4;
-        p.iStartX = 320;
-        p.iStartY = 240;
-        p.iEndX = 352;
-        p.iEndY = 240;
-
-        p.fAngle = 0.0f32;
-        p.fRadiusX = 128.0f32;
-        p.fRadiusY = 128.0f32;
-
-        p.iDrawLayer = 2;
     }
+
+    p.iVelocity = 4;
+    p.iStartX = 320;
+    p.iStartY = 240;
+    p.iEndX = 352;
+    p.iEndY = 240;
+
+    p.fAngle = 0.0f32;
+    p.fRadiusX = 128.0f32;
+    p.fRadiusY = 128.0f32;
+
+    p.iDrawLayer = 2;
 }
 
 pub fn savecurrentmap(g: &mut Game) -> i32 {
     let mut gp = g.ptr();
-    unsafe {
-        ed(gp.get()).g_messagedisplaytimer = 60;
-        ed(gp.get()).g_szMessageTitle = "Saved".to_string();
-        ed(gp.get()).g_szMessageLine[0] = "Your map has".to_string();
-        ed(gp.get()).g_szMessageLine[1] = "been saved.".to_string();
-        ed(gp.get()).g_szMessageLine[2] = String::new();
+    ed(gp.get()).g_messagedisplaytimer = 60;
+    ed(gp.get()).g_szMessageTitle = "Saved".to_string();
+    ed(gp.get()).g_szMessageLine[0] = "Your map has".to_string();
+    ed(gp.get()).g_szMessageLine[1] = "been saved.".to_string();
+    ed(gp.get()).g_szMessageLine[2] = String::new();
 
-        let file = g.maplist.current_filename().to_string();
-        save_map(g, &file);
-    }
+    let file = g.maplist.current_filename().to_string();
+    save_map(g, &file);
     0
 }
 
 pub fn insert_platforms_into_map(g: &mut Game) {
         let mut gp = g.ptr();
-    unsafe {
-        //First take the created platforms and move them into the actual map
-        g.g_map.clear_platforms();
+    //First take the created platforms and move them into the actual map
+    g.g_map.clear_platforms();
 
-        g.g_map.platforms.reserve(ed(gp.get()).g_iNumPlatforms as usize);
+    g.g_map.platforms.reserve(ed(gp.get()).g_iNumPlatforms as usize);
 
-        for iPlatform in 0..ed(g).g_iNumPlatforms {
-            let (mut iTop, mut iLeft, mut iWidth, mut iHeight) = (0i16, 0i16, 0i16, 0i16);
-            calculate_platform_dims(g, iPlatform, &mut iLeft, &mut iTop, &mut iWidth, &mut iHeight);
+    for iPlatform in 0..ed(g).g_iNumPlatforms {
+        let (mut iTop, mut iLeft, mut iWidth, mut iHeight) = (0i16, 0i16, 0i16, 0i16);
+        calculate_platform_dims(g, iPlatform, &mut iLeft, &mut iTop, &mut iWidth, &mut iHeight);
 
-            let n = (iWidth as i32 * iHeight as i32) as usize;
-            let mut tiles: Vec<TilesetTile> = vec![TilesetTile::default(); n];
-            let mut types: Vec<TileType> = vec![TileType::NonSolid; n];
+        let n = (iWidth as i32 * iHeight as i32) as usize;
+        let mut tiles: Vec<TilesetTile> = vec![TilesetTile::default(); n];
+        let mut types: Vec<TileType> = vec![TileType::NonSolid; n];
 
-            let p = &ed(gp.get()).g_Platforms[iPlatform as usize];
-            for iCol in 0..iWidth as usize {
-                for iRow in 0..iHeight as usize {
-                    let cellIdx = (iCol + iLeft as usize) * MH + iRow + iTop as usize;
-                    tiles[iCol * iHeight as usize + iRow] = p.tiles[cellIdx];
-                    types[iCol * iHeight as usize + iRow] = p.types[cellIdx];
-                }
+        let p = &ed(gp.get()).g_Platforms[iPlatform as usize];
+        for iCol in 0..iWidth as usize {
+            for iRow in 0..iHeight as usize {
+                let cellIdx = (iCol + iLeft as usize) * MH + iRow + iTop as usize;
+                tiles[iCol * iHeight as usize + iRow] = p.tiles[cellIdx];
+                types[iCol * iHeight as usize + iRow] = p.types[cellIdx];
             }
-
-            let iDrawLayer = p.iDrawLayer;
-
-            let fStartX = p.iStartX as f32;
-            let fStartY = p.iStartY as f32;
-
-            let path: Box<dyn MovingPlatformPathTrait> = if p.iPathType == PlatformPathType::Straight {
-                let fVelocity = p.iVelocity as f32 * 0.26f32;
-                let fEndX = p.iEndX as f32;
-                let fEndY = p.iEndY as f32;
-                Box::new(StraightPath::new(fVelocity, Vec2f::new(fStartX, fStartY), Vec2f::new(fEndX, fEndY), false))
-            } else if p.iPathType == PlatformPathType::StraightContinuous {
-                let fVelocity = p.iVelocity as f32 * 0.26f32;
-                Box::new(StraightPathContinuous::new(fVelocity, Vec2f::new(fStartX, fStartY), p.fAngle, false))
-            } else if p.iPathType == PlatformPathType::Ellipse {
-                let fVelocity = p.iVelocity as f32 * 0.0030f32;
-                let radiusX = p.fRadiusX;
-                let radiusY = p.fRadiusY;
-                Box::new(EllipsePath::new(fVelocity, p.fAngle, Vec2f::new(radiusX, radiusY), Vec2f::new(fStartX, fStartY), false))
-            } else {
-                panic!("MovingPlatform constructed with a NULL path");
-            };
-
-            gp.g_map.add_permanent_platform(MovingPlatform::new(g, tiles, types, iWidth, iHeight, iDrawLayer, path, false));
         }
+
+        let iDrawLayer = p.iDrawLayer;
+
+        let fStartX = p.iStartX as f32;
+        let fStartY = p.iStartY as f32;
+
+        let path: Box<dyn MovingPlatformPathTrait> = if p.iPathType == PlatformPathType::Straight {
+            let fVelocity = p.iVelocity as f32 * 0.26f32;
+            let fEndX = p.iEndX as f32;
+            let fEndY = p.iEndY as f32;
+            Box::new(StraightPath::new(fVelocity, Vec2f::new(fStartX, fStartY), Vec2f::new(fEndX, fEndY), false))
+        } else if p.iPathType == PlatformPathType::StraightContinuous {
+            let fVelocity = p.iVelocity as f32 * 0.26f32;
+            Box::new(StraightPathContinuous::new(fVelocity, Vec2f::new(fStartX, fStartY), p.fAngle, false))
+        } else if p.iPathType == PlatformPathType::Ellipse {
+            let fVelocity = p.iVelocity as f32 * 0.0030f32;
+            let radiusX = p.fRadiusX;
+            let radiusY = p.fRadiusY;
+            Box::new(EllipsePath::new(fVelocity, p.fAngle, Vec2f::new(radiusX, radiusY), Vec2f::new(fStartX, fStartY), false))
+        } else {
+            panic!("MovingPlatform constructed with a NULL path");
+        };
+
+        gp.g_map.add_permanent_platform(MovingPlatform::new(g, tiles, types, iWidth, iHeight, iDrawLayer, path, false));
     }
 }
 
@@ -4787,65 +4697,61 @@ pub fn save_map(g: &mut Game, file: &str) {
     insert_platforms_into_map(g);
 
     //Then save the rest of the map
-    unsafe { gp.g_map.save_map(g, file) };
+    gp.g_map.save_map(g, file);
 }
 
 pub fn calculate_platform_dims(g: &mut Game, iPlatform: i16, ix: &mut i16, iy: &mut i16, iw: &mut i16, ih: &mut i16) {
     let mut gp = g.ptr();
-    unsafe {
-        let mut iTop: i16 = MAPHEIGHT as i16;
-        let mut iRight: i16 = -1;
-        let mut iBottom: i16 = -1;
-        let mut iLeft: i16 = MAPWIDTH as i16;
-        //Calculate the height and width of the platform
-        for iCol in 0..MAPWIDTH as i16 {
-            for iRow in 0..MAPHEIGHT as i16 {
-                if ed(gp.get()).g_Platforms[iPlatform as usize].tiles[iCol as usize * MH + iRow as usize].iID as i32 != TILESETNONE {
-                    if iTop > iRow {
-                        iTop = iRow;
-                    }
+    let mut iTop: i16 = MAPHEIGHT as i16;
+    let mut iRight: i16 = -1;
+    let mut iBottom: i16 = -1;
+    let mut iLeft: i16 = MAPWIDTH as i16;
+    //Calculate the height and width of the platform
+    for iCol in 0..MAPWIDTH as i16 {
+        for iRow in 0..MAPHEIGHT as i16 {
+            if ed(gp.get()).g_Platforms[iPlatform as usize].tiles[iCol as usize * MH + iRow as usize].iID as i32 != TILESETNONE {
+                if iTop > iRow {
+                    iTop = iRow;
+                }
 
-                    if iLeft > iCol {
-                        iLeft = iCol;
-                    }
+                if iLeft > iCol {
+                    iLeft = iCol;
+                }
 
-                    if iBottom < iRow {
-                        iBottom = iRow;
-                    }
+                if iBottom < iRow {
+                    iBottom = iRow;
+                }
 
-                    if iRight < iCol {
-                        iRight = iCol;
-                    }
+                if iRight < iCol {
+                    iRight = iCol;
                 }
             }
         }
-
-        let mut iWidth: i16 = iRight - iLeft + 1;
-        let mut iHeight: i16 = iBottom - iTop + 1;
-
-        if iRight == -1 || iBottom == -1 {
-            iWidth = 1;
-            iHeight = 1;
-            iLeft = 0;
-            iTop = 0;
-        }
-
-        *ix = iLeft;
-        *iy = iTop;
-
-        *iw = iWidth;
-        *ih = iHeight;
     }
+
+    let mut iWidth: i16 = iRight - iLeft + 1;
+    let mut iHeight: i16 = iBottom - iTop + 1;
+
+    if iRight == -1 || iBottom == -1 {
+        iWidth = 1;
+        iHeight = 1;
+        iLeft = 0;
+        iTop = 0;
+    }
+
+    *ix = iLeft;
+    *iy = iTop;
+
+    *iw = iWidth;
+    *ih = iHeight;
 }
 
 pub fn findcurrentstring(g: &mut Game) -> i32 {
     let mut gp = g.ptr();
-    unsafe {
-        if !ed(gp.get()).findstring.is_empty() {
-            let fs = ed(gp.get()).findstring.clone();
-            if g.maplist.find(&fs) {
-                loadcurrentmap(g);
-            }
+    if !ed(gp.get()).findstring.is_empty() {
+        let fs = ed(gp.get()).findstring.clone();
+        if g.maplist.find(&fs) {
+            loadcurrentmap(g);
         }
     }
 
@@ -4858,16 +4764,14 @@ pub fn newmap(g: &mut Game) -> i32 {
     let mut mapLocation = String::from("maps/");
 
     if dialog(g, "New Map", "Enter name:", &mut fileName, 64) {
-        unsafe {
-            g.g_map.clear_map();
-            g.g_map.clear_platforms();
-            mapLocation.push_str(&fileName);
-            mapLocation.push_str(".map");
-            gp.get().g_map.save_map(g, &convert_path(gp.get(), &mapLocation));
-            fileName.push_str(".map");
-            gp.maplist.add(g, &fileName);
-            g.maplist.find(&fileName);
-        }
+        g.g_map.clear_map();
+        g.g_map.clear_platforms();
+        mapLocation.push_str(&fileName);
+        mapLocation.push_str(".map");
+        gp.get().g_map.save_map(g, &convert_path(gp.get(), &mapLocation));
+        fileName.push_str(".map");
+        gp.maplist.add(g, &fileName);
+        g.maplist.find(&fileName);
         loadcurrentmap(g);
     }
 
@@ -4876,37 +4780,31 @@ pub fn newmap(g: &mut Game) -> i32 {
 
 pub fn resetselectedtiles(g: &mut Game) {
     let mut gp = g.ptr();
-    unsafe {
-        for kk in 0..MH {
-            for j in 0..MW {
-                ed(gp.get()).selectedtiles[j][kk] = false;
-            }
+    for kk in 0..MH {
+        for j in 0..MW {
+            ed(gp.get()).selectedtiles[j][kk] = false;
         }
     }
 }
 
 pub fn copymoveselection(g: &mut Game) {
     let mut gp = g.ptr();
-    unsafe {
-        for kk in 0..MH {
-            for j in 0..MW {
-                ed(gp.get()).moveselectedtiles[j][kk] = ed(gp.get()).selectedtiles[j][kk];
-            }
+    for kk in 0..MH {
+        for j in 0..MW {
+            ed(gp.get()).moveselectedtiles[j][kk] = ed(gp.get()).selectedtiles[j][kk];
         }
-
-        ed(gp.get()).copiedlayer = ed(gp.get()).selected_layer;
     }
+
+    ed(gp.get()).copiedlayer = ed(gp.get()).selected_layer;
 }
 
 pub fn pastemoveselection(g: &mut Game, movex: i32, movey: i32) {
     let mut gp = g.ptr();
-    unsafe {
-        for kk in 0..MAPHEIGHT {
-            for j in 0..MAPWIDTH {
-                if ed(gp.get()).moveselectedtiles[j as usize][kk as usize] {
-                    if j + movex >= 0 && j + movex < MAPWIDTH && kk + movey >= 0 && kk + movey < MAPHEIGHT {
-                        ed(gp.get()).selectedtiles[(j + movex) as usize][(kk + movey) as usize] = ed(gp.get()).moveselectedtiles[j as usize][kk as usize];
-                    }
+    for kk in 0..MAPHEIGHT {
+        for j in 0..MAPWIDTH {
+            if ed(gp.get()).moveselectedtiles[j as usize][kk as usize] {
+                if j + movex >= 0 && j + movex < MAPWIDTH && kk + movey >= 0 && kk + movey < MAPHEIGHT {
+                    ed(gp.get()).selectedtiles[(j + movex) as usize][(kk + movey) as usize] = ed(gp.get()).moveselectedtiles[j as usize][kk as usize];
                 }
             }
         }
@@ -4915,79 +4813,75 @@ pub fn pastemoveselection(g: &mut Game, movex: i32, movey: i32) {
 
 pub fn copyselectedtiles(g: &mut Game) -> bool {
     let mut gp = g.ptr();
-    unsafe {
-        //Copy the selected tiles and remove tiles from map
-        let mut ret = false;
-        for kk in 0..MH {
-            for j in 0..MW {
-                if ed(gp.get()).selectedtiles[j][kk] {
-                    ret = true;
-                    let c = &mut ed(gp.get()).copiedtiles[j][kk];
-                    for iLayer in 0..MAPLAYERS as usize {
-                        c.tile[iLayer] = g.g_map.mapdata[j][kk][iLayer];
-                    }
+    //Copy the selected tiles and remove tiles from map
+    let mut ret = false;
+    for kk in 0..MH {
+        for j in 0..MW {
+            if ed(gp.get()).selectedtiles[j][kk] {
+                ret = true;
+                let c = &mut ed(gp.get()).copiedtiles[j][kk];
+                for iLayer in 0..MAPLAYERS as usize {
+                    c.tile[iLayer] = g.g_map.mapdata[j][kk][iLayer];
+                }
 
-                    c.block.iType = g.g_map.objectdata[j][kk].iType;
-                    for iSetting in 0..NUM_BLOCK_SETTINGS as usize {
-                        c.block.iSettings[iSetting] = g.g_map.objectdata[j][kk].iSettings[iSetting];
-                    }
-                    c.block.fHidden = g.g_map.objectdata[j][kk].fHidden;
+                c.block.iType = g.g_map.objectdata[j][kk].iType;
+                for iSetting in 0..NUM_BLOCK_SETTINGS as usize {
+                    c.block.iSettings[iSetting] = g.g_map.objectdata[j][kk].iSettings[iSetting];
+                }
+                c.block.fHidden = g.g_map.objectdata[j][kk].fHidden;
 
-                    c.warp.connection = g.g_map.warpdata[j][kk].connection;
-                    c.warp.direction = g.g_map.warpdata[j][kk].direction;
-                    c.warp.id = g.g_map.warpdata[j][kk].id;
+                c.warp.connection = g.g_map.warpdata[j][kk].connection;
+                c.warp.direction = g.g_map.warpdata[j][kk].direction;
+                c.warp.id = g.g_map.warpdata[j][kk].id;
 
-                    c.tiletype = g.g_map.mapdatatop[j][kk];
+                c.tiletype = g.g_map.mapdatatop[j][kk];
 
-                    for iType in 0..NUMSPAWNAREATYPES as usize {
-                        c.nospawn[iType] = g.g_map.nospawn[iType][j][kk];
-                    }
+                for iType in 0..NUMSPAWNAREATYPES as usize {
+                    c.nospawn[iType] = g.g_map.nospawn[iType][j][kk];
+                }
 
-                    c.item = -1;
-                    for item in g.g_map.mapitems.iter() {
-                        if item.ix as usize == j && item.iy as usize == kk {
-                            c.item = item.itype as i32;
-                            break;
-                        }
+                c.item = -1;
+                for item in g.g_map.mapitems.iter() {
+                    if item.ix as usize == j && item.iy as usize == kk {
+                        c.item = item.itype as i32;
+                        break;
                     }
                 }
             }
         }
-
-        ed(gp.get()).copiedlayer = ed(gp.get()).selected_layer;
-
-        ret
     }
+
+    ed(gp.get()).copiedlayer = ed(gp.get()).selected_layer;
+
+    ret
 }
 
 pub fn clearselectedmaptiles(g: &mut Game) {
     let mut gp = g.ptr();
-    unsafe {
-        for kk in 0..MH {
-            for j in 0..MW {
-                if ed(gp.get()).selectedtiles[j][kk] {
-                    if ed(gp.get()).view_only_layer {
-                        g.g_map.mapdata[j][kk][ed(gp.get()).selected_layer as usize].iID = TILESETNONE as i16;
-                    } else {
-                        for iLayer in 0..MAPLAYERS as usize {
-                            g.g_map.mapdata[j][kk][iLayer].iID = TILESETNONE as i16;
-                        }
-
-                        g.g_map.objectdata[j][kk].iType = -1;
-
-                        g.g_map.warpdata[j][kk].connection = -1;
-                        g.g_map.warpdata[j][kk].direction = WARP_UNDEFINED;
-                        g.g_map.warpdata[j][kk].id = -1;
-
-                        for iType in 0..NUMSPAWNAREATYPES as usize {
-                            g.g_map.nospawn[iType][j][kk] = false;
-                        }
-
-                        remove_map_item_at(g, j as i16, kk as i16);
+    for kk in 0..MH {
+        for j in 0..MW {
+            if ed(gp.get()).selectedtiles[j][kk] {
+                if ed(gp.get()).view_only_layer {
+                    g.g_map.mapdata[j][kk][ed(gp.get()).selected_layer as usize].iID = TILESETNONE as i16;
+                } else {
+                    for iLayer in 0..MAPLAYERS as usize {
+                        g.g_map.mapdata[j][kk][iLayer].iID = TILESETNONE as i16;
                     }
 
-                    update_tile_type(g, j as i16, kk as i16);
+                    g.g_map.objectdata[j][kk].iType = -1;
+
+                    g.g_map.warpdata[j][kk].connection = -1;
+                    g.g_map.warpdata[j][kk].direction = WARP_UNDEFINED;
+                    g.g_map.warpdata[j][kk].id = -1;
+
+                    for iType in 0..NUMSPAWNAREATYPES as usize {
+                        g.g_map.nospawn[iType][j][kk] = false;
+                    }
+
+                    remove_map_item_at(g, j as i16, kk as i16);
                 }
+
+                update_tile_type(g, j as i16, kk as i16);
             }
         }
     }
@@ -4996,10 +4890,8 @@ pub fn clearselectedmaptiles(g: &mut Game) {
 /// `replacetile(short*, short, bool)`
 pub fn replacetile_short(g: &mut Game, iDstTile: &mut i16, iSrcTile: i16, fAllowReplace: bool) {
     let mut gp = g.ptr();
-    unsafe {
-        if ed(gp.get()).move_replace || fAllowReplace {
-            *iDstTile = iSrcTile;
-        }
+    if ed(gp.get()).move_replace || fAllowReplace {
+        *iDstTile = iSrcTile;
     }
 }
 
@@ -5012,12 +4904,10 @@ pub fn copytilesettile(dst: &mut TilesetTile, src: &TilesetTile) {
 /// `replacetile(TilesetTile*, TilesetTile*)`
 pub fn replacetile_tile(g: &mut Game, dstTile: &mut TilesetTile, srcTile: &TilesetTile) {
     let mut gp = g.ptr();
-    unsafe {
-        if ed(gp.get()).move_replace {
-            copytilesettile(dstTile, srcTile);
-        } else if srcTile.iID as i32 != TILESETNONE {
-            copytilesettile(dstTile, srcTile);
-        }
+    if ed(gp.get()).move_replace {
+        copytilesettile(dstTile, srcTile);
+    } else if srcTile.iID as i32 != TILESETNONE {
+        copytilesettile(dstTile, srcTile);
     }
 }
 
@@ -5033,58 +4923,54 @@ pub fn copymapblock(dst: &mut MapBlock, src: &MapBlock) {
 /// `replacetile(MapBlock*, MapBlock*)`
 pub fn replacetile_block(g: &mut Game, dstTile: &mut MapBlock, srcTile: &MapBlock) {
     let mut gp = g.ptr();
-    unsafe {
-        if ed(gp.get()).move_replace {
-            copymapblock(dstTile, srcTile);
-        } else if srcTile.iType != -1 {
-            copymapblock(dstTile, srcTile);
-        }
+    if ed(gp.get()).move_replace {
+        copymapblock(dstTile, srcTile);
+    } else if srcTile.iType != -1 {
+        copymapblock(dstTile, srcTile);
     }
 }
 
 pub fn pasteselectedtiles(g: &mut Game, movex: i32, movey: i32) {
     let mut gp = g.ptr();
-    unsafe {
-        //Paste the tiles into their new location
-        //Removing tiles that hang over the edges of the map
-        for kk in 0..MAPHEIGHT {
-            for j in 0..MAPWIDTH {
-                if ed(gp.get()).selectedtiles[j as usize][kk as usize] {
-                    if j + movex >= 0 && j + movex < MAPWIDTH && kk + movey >= 0 && kk + movey < MAPHEIGHT {
-                        let iNewX = (j + movex) as usize;
-                        let iNewY = (kk + movey) as usize;
-                        let c = ed(gp.get()).copiedtiles[j as usize][kk as usize];
+    //Paste the tiles into their new location
+    //Removing tiles that hang over the edges of the map
+    for kk in 0..MAPHEIGHT {
+        for j in 0..MAPWIDTH {
+            if ed(gp.get()).selectedtiles[j as usize][kk as usize] {
+                if j + movex >= 0 && j + movex < MAPWIDTH && kk + movey >= 0 && kk + movey < MAPHEIGHT {
+                    let iNewX = (j + movex) as usize;
+                    let iNewY = (kk + movey) as usize;
+                    let c = ed(gp.get()).copiedtiles[j as usize][kk as usize];
 
-                        if ed(gp.get()).view_only_layer {
-                            replacetile_tile(g, &mut gp.get().g_map.mapdata[iNewX][iNewY][ed(gp.get()).selected_layer as usize], &c.tile[ed(gp.get()).copiedlayer as usize]);
+                    if ed(gp.get()).view_only_layer {
+                        replacetile_tile(g, &mut gp.get().g_map.mapdata[iNewX][iNewY][ed(gp.get()).selected_layer as usize], &c.tile[ed(gp.get()).copiedlayer as usize]);
+                    } else {
+                        for iLayer in 0..MAPLAYERS as usize {
+                            replacetile_tile(g, &mut gp.g_map.mapdata[iNewX][iNewY][iLayer], &c.tile[iLayer]);
+                        }
+
+                        replacetile_block(g, &mut gp.g_map.objectdata[iNewX][iNewY], &c.block);
+
+                        replacetile_short(g, &mut gp.g_map.warpdata[iNewX][iNewY].connection, c.warp.connection, c.warp.connection != -1);
+                        // The C++ writes the direction through a `short*`; WarpEnterDirection is an int-sized enum.
+                        let mut dir = g.g_map.warpdata[iNewX][iNewY].direction as i16;
+                        replacetile_short(g, &mut dir, c.warp.direction as i16, c.warp.connection != -1);
+                        g.g_map.warpdata[iNewX][iNewY].direction = (g.g_map.warpdata[iNewX][iNewY].direction & !0xFFFF) | (dir as u16 as i32);
+                        replacetile_short(g, &mut gp.g_map.warpdata[iNewX][iNewY].id, c.warp.id, c.warp.connection != -1);
+
+                        if ed(gp.get()).move_replace {
+                            g.g_map.mapdatatop[iNewX][iNewY] = c.tiletype;
                         } else {
-                            for iLayer in 0..MAPLAYERS as usize {
-                                replacetile_tile(g, &mut gp.g_map.mapdata[iNewX][iNewY][iLayer], &c.tile[iLayer]);
-                            }
+                            update_tile_type(g, j as i16, kk as i16);
+                        }
 
-                            replacetile_block(g, &mut gp.g_map.objectdata[iNewX][iNewY], &c.block);
+                        for iType in 0..NUMSPAWNAREATYPES as usize {
+                            g.g_map.nospawn[iType][iNewX][iNewY] = c.nospawn[iType];
+                        }
 
-                            replacetile_short(g, &mut gp.g_map.warpdata[iNewX][iNewY].connection, c.warp.connection, c.warp.connection != -1);
-                            // The C++ writes the direction through a `short*`; WarpEnterDirection is an int-sized enum.
-                            let mut dir = g.g_map.warpdata[iNewX][iNewY].direction as i16;
-                            replacetile_short(g, &mut dir, c.warp.direction as i16, c.warp.connection != -1);
-                            g.g_map.warpdata[iNewX][iNewY].direction = (g.g_map.warpdata[iNewX][iNewY].direction & !0xFFFF) | (dir as u16 as i32);
-                            replacetile_short(g, &mut gp.g_map.warpdata[iNewX][iNewY].id, c.warp.id, c.warp.connection != -1);
-
-                            if ed(gp.get()).move_replace {
-                                g.g_map.mapdatatop[iNewX][iNewY] = c.tiletype;
-                            } else {
-                                update_tile_type(g, j as i16, kk as i16);
-                            }
-
-                            for iType in 0..NUMSPAWNAREATYPES as usize {
-                                g.g_map.nospawn[iType][iNewX][iNewY] = c.nospawn[iType];
-                            }
-
-                            if (g.g_map.mapitems.len() as i32) < MAXMAPITEMS && c.item >= 0 {
-                                let item = MapItem { itype: c.item as MapItemType, ix: iNewX as i16, iy: iNewY as i16 };
-                                g.g_map.mapitems.push(item);
-                            }
+                        if (g.g_map.mapitems.len() as i32) < MAXMAPITEMS && c.item >= 0 {
+                            let item = MapItem { itype: c.item as MapItemType, ix: iNewX as i16, iy: iNewY as i16 };
+                            g.g_map.mapitems.push(item);
                         }
                     }
                 }
@@ -5095,38 +4981,36 @@ pub fn pasteselectedtiles(g: &mut Game, movex: i32, movey: i32) {
 
 pub fn getcenterselection(g: &mut Game, x: &mut i32, y: &mut i32) {
     let mut gp = g.ptr();
-    unsafe {
-        let mut left = -1;
-        let mut top = -1;
-        let mut right = -1;
-        let mut bottom = -1;
+    let mut left = -1;
+    let mut top = -1;
+    let mut right = -1;
+    let mut bottom = -1;
 
-        for kk in 0..MAPHEIGHT {
-            for j in 0..MAPWIDTH {
-                if ed(gp.get()).selectedtiles[j as usize][kk as usize] {
-                    if left == -1 {
-                        left = j;
-                    }
-
-                    if top == -1 {
-                        top = kk;
-                    }
-
-                    right = j;
-                    bottom = kk;
+    for kk in 0..MAPHEIGHT {
+        for j in 0..MAPWIDTH {
+            if ed(gp.get()).selectedtiles[j as usize][kk as usize] {
+                if left == -1 {
+                    left = j;
                 }
+
+                if top == -1 {
+                    top = kk;
+                }
+
+                right = j;
+                bottom = kk;
             }
         }
-
-        if right == -1 {
-            *x = 0;
-            *y = 0;
-            return;
-        }
-
-        *x = ((right - left) >> 1) + left;
-        *y = ((bottom - top) >> 1) + top;
     }
+
+    if right == -1 {
+        *x = 0;
+        *y = 0;
+        return;
+    }
+
+    *x = ((right - left) >> 1) + left;
+    *y = ((bottom - top) >> 1) + top;
 }
 
 //take screenshots in full and thumbnail sizes
@@ -5201,43 +5085,39 @@ pub fn takescreenshot(g: &mut Game) {
 
 pub fn read_animated_tile_type_file(g: &mut Game, szFile: &str) -> bool {
     let mut gp = g.ptr();
-    unsafe {
-        //Detect if the tiletype file already exists, if not create it
-        if file_exists(szFile) {
-            let mut tsf = BinaryFile::new(szFile, "rb");
-            if !tsf.is_open() {
-                println!("ERROR: couldn't open tileset file: {}", szFile);
-                return false;
-            }
-
-            ed(gp.get()).animatedtiletypes = vec![TileType::NonSolid; 256];
-
-            for i in 0..256usize {
-                ed(gp.get()).animatedtiletypes[i] = TileType::from_i32(tsf.read_i32());
-            }
-        } else {
-            ed(gp.get()).animatedtiletypes = vec![TileType::NonSolid; 256];
+    //Detect if the tiletype file already exists, if not create it
+    if file_exists(szFile) {
+        let mut tsf = BinaryFile::new(szFile, "rb");
+        if !tsf.is_open() {
+            println!("ERROR: couldn't open tileset file: {}", szFile);
+            return false;
         }
 
-        true
+        ed(gp.get()).animatedtiletypes = vec![TileType::NonSolid; 256];
+
+        for i in 0..256usize {
+            ed(gp.get()).animatedtiletypes[i] = TileType::from_i32(tsf.read_i32());
+        }
+    } else {
+        ed(gp.get()).animatedtiletypes = vec![TileType::NonSolid; 256];
     }
+
+    true
 }
 
 pub fn write_animated_tile_type_file(g: &mut Game, szFile: &str) -> bool {
     let mut gp = g.ptr();
-    unsafe {
-        let mut tsf = BinaryFile::new(szFile, "wb");
-        if !tsf.is_open() {
-            println!("ERROR: couldn't open tileset file to save tile types: {}", szFile);
-            return false;
-        }
-
-        for i in 0..256usize {
-            tsf.write_i32(ed(gp.get()).animatedtiletypes[i].0 as i32);
-        }
-
-        true
+    let mut tsf = BinaryFile::new(szFile, "wb");
+    if !tsf.is_open() {
+        println!("ERROR: couldn't open tileset file to save tile types: {}", szFile);
+        return false;
     }
+
+    for i in 0..256usize {
+        tsf.write_i32(ed(gp.get()).animatedtiletypes[i].0 as i32);
+    }
+
+    true
 }
 
 /// FNV-1a over 32-bit little-endian values, for the replay dump.
@@ -5261,166 +5141,164 @@ impl Fnv {
 /// Replay-harness `E`/`T`/`X`/`P`/`H` records (docs/EDITOR_REPLAY.md).
 pub fn dump_editor_state(g: &mut Game, out: &mut dyn Write) {
     let mut gp = g.ptr();
-    unsafe {
-        let _ = writeln!(
-            out,
-            "E state={} edit_mode={} layer={} mouse={},{} ignore={} only={} blocks={}",
-            ed(gp.get()).state, ed(gp.get()).edit_mode, ed(gp.get()).selected_layer, ed(gp.get()).mouse_x, ed(gp.get()).mouse_y, ed(gp.get()).ignoreclick as i32, ed(gp.get()).view_only_layer as i32, ed(gp.get()).viewblocks as i32
-        );
-        let _ = writeln!(
-            out,
-            "T tileset={} start={},{} end={},{} size={},{} drag={} view={},{},{} block={},{} tiletype={} settype={} item={} warp={},{} nospawn={}",
-            ed(gp.get()).set_tile_tileset,
-            ed(gp.get()).set_tile_start_x,
-            ed(gp.get()).set_tile_start_y,
-            ed(gp.get()).set_tile_end_x,
-            ed(gp.get()).set_tile_end_y,
-            ed(gp.get()).set_tile_cols,
-            ed(gp.get()).set_tile_rows,
-            ed(gp.get()).set_tile_drag as i32,
-            ed(gp.get()).view_tileset_x,
-            ed(gp.get()).view_tileset_y,
-            ed(gp.get()).view_animated_tileset_x,
-            ed(gp.get()).set_block,
-            ed(gp.get()).set_block_switch_on,
-            ed(gp.get()).set_tiletype.0 as i32,
-            ed(gp.get()).set_type.0 as i32,
-            ed(gp.get()).set_mapitem,
-            ed(gp.get()).set_direction,
-            ed(gp.get()).set_connection,
-            ed(gp.get()).nospawn_mode
-        );
-        let _ = writeln!(
-            out,
-            "X move={} start={},{} offset={},{} drag={},{},{},{} replace={} nodrag={} copied={}",
-            ed(gp.get()).move_mode,
-            ed(gp.get()).move_start_x,
-            ed(gp.get()).move_start_y,
-            ed(gp.get()).move_offset_x,
-            ed(gp.get()).move_offset_y,
-            ed(gp.get()).move_drag_start_x,
-            ed(gp.get()).move_drag_start_y,
-            ed(gp.get()).move_drag_offset_x,
-            ed(gp.get()).move_drag_offset_y,
-            ed(gp.get()).move_replace as i32,
-            ed(gp.get()).move_nodrag as i32,
-            ed(gp.get()).copiedlayer
-        );
-        let _ = writeln!(
-            out,
-            "P count={} edit={} state={} preview={} switch={},{} hazards={} hzstate={} hzedit={} modeitem={},{} msg={} music={}",
-            ed(gp.get()).g_iNumPlatforms,
-            ed(gp.get()).iEditPlatform,
-            ed(gp.get()).iPlatformEditState,
-            ed(gp.get()).iPlatformPreview,
-            ed(gp.get()).iPlatformSwitchState,
-            ed(gp.get()).iPlatformSwitchIndex,
-            g.g_map.maphazards.len(),
-            ed(gp.get()).iEditState,
-            ed(gp.get()).iEditMapHazard,
-            ed(gp.get()).modeitemmode,
-            ed(gp.get()).dragmodeitem,
-            ed(gp.get()).g_messagedisplaytimer,
-            ed(gp.get()).g_musiccategorydisplaytimer
-        );
+    let _ = writeln!(
+        out,
+        "E state={} edit_mode={} layer={} mouse={},{} ignore={} only={} blocks={}",
+        ed(gp.get()).state, ed(gp.get()).edit_mode, ed(gp.get()).selected_layer, ed(gp.get()).mouse_x, ed(gp.get()).mouse_y, ed(gp.get()).ignoreclick as i32, ed(gp.get()).view_only_layer as i32, ed(gp.get()).viewblocks as i32
+    );
+    let _ = writeln!(
+        out,
+        "T tileset={} start={},{} end={},{} size={},{} drag={} view={},{},{} block={},{} tiletype={} settype={} item={} warp={},{} nospawn={}",
+        ed(gp.get()).set_tile_tileset,
+        ed(gp.get()).set_tile_start_x,
+        ed(gp.get()).set_tile_start_y,
+        ed(gp.get()).set_tile_end_x,
+        ed(gp.get()).set_tile_end_y,
+        ed(gp.get()).set_tile_cols,
+        ed(gp.get()).set_tile_rows,
+        ed(gp.get()).set_tile_drag as i32,
+        ed(gp.get()).view_tileset_x,
+        ed(gp.get()).view_tileset_y,
+        ed(gp.get()).view_animated_tileset_x,
+        ed(gp.get()).set_block,
+        ed(gp.get()).set_block_switch_on,
+        ed(gp.get()).set_tiletype.0 as i32,
+        ed(gp.get()).set_type.0 as i32,
+        ed(gp.get()).set_mapitem,
+        ed(gp.get()).set_direction,
+        ed(gp.get()).set_connection,
+        ed(gp.get()).nospawn_mode
+    );
+    let _ = writeln!(
+        out,
+        "X move={} start={},{} offset={},{} drag={},{},{},{} replace={} nodrag={} copied={}",
+        ed(gp.get()).move_mode,
+        ed(gp.get()).move_start_x,
+        ed(gp.get()).move_start_y,
+        ed(gp.get()).move_offset_x,
+        ed(gp.get()).move_offset_y,
+        ed(gp.get()).move_drag_start_x,
+        ed(gp.get()).move_drag_start_y,
+        ed(gp.get()).move_drag_offset_x,
+        ed(gp.get()).move_drag_offset_y,
+        ed(gp.get()).move_replace as i32,
+        ed(gp.get()).move_nodrag as i32,
+        ed(gp.get()).copiedlayer
+    );
+    let _ = writeln!(
+        out,
+        "P count={} edit={} state={} preview={} switch={},{} hazards={} hzstate={} hzedit={} modeitem={},{} msg={} music={}",
+        ed(gp.get()).g_iNumPlatforms,
+        ed(gp.get()).iEditPlatform,
+        ed(gp.get()).iPlatformEditState,
+        ed(gp.get()).iPlatformPreview,
+        ed(gp.get()).iPlatformSwitchState,
+        ed(gp.get()).iPlatformSwitchIndex,
+        g.g_map.maphazards.len(),
+        ed(gp.get()).iEditState,
+        ed(gp.get()).iEditMapHazard,
+        ed(gp.get()).modeitemmode,
+        ed(gp.get()).dragmodeitem,
+        ed(gp.get()).g_messagedisplaytimer,
+        ed(gp.get()).g_musiccategorydisplaytimer
+    );
 
-        let mut hm = Fnv::new();
-        for x in 0..MW {
-            for y in 0..MH {
-                for l in 0..MAPLAYERS as usize {
-                    let t = g.g_map.mapdata[x][y][l];
-                    hm.add(t.iID as i32);
-                    hm.add(t.iCol as i32);
-                    hm.add(t.iRow as i32);
-                }
-                hm.add(g.g_map.mapdatatop[x][y].0 as i32);
-                let b = &g.g_map.objectdata[x][y];
-                hm.add(b.iType as i32);
-                // Only the settings the map format stores: the rest keep stale heap bytes in the C++.
-                let stored = match b.iType {
-                    1 | 15 => b.iSettings.len(),
-                    11..=14 => 1,
-                    _ => 0,
-                };
-                for s in &b.iSettings[..stored] {
-                    hm.add(*s as i32);
-                }
-                hm.add(b.fHidden as i32);
-                let w = g.g_map.warpdata[x][y];
-                hm.add(w.direction as i32);
-                hm.add(w.connection as i32);
-                hm.add(w.id as i32);
-                for t in 0..NUMSPAWNAREATYPES as usize {
-                    hm.add(g.g_map.nospawn[t][x][y] as i32);
-                }
+    let mut hm = Fnv::new();
+    for x in 0..MW {
+        for y in 0..MH {
+            for l in 0..MAPLAYERS as usize {
+                let t = g.g_map.mapdata[x][y][l];
+                hm.add(t.iID as i32);
+                hm.add(t.iCol as i32);
+                hm.add(t.iRow as i32);
+            }
+            hm.add(g.g_map.mapdatatop[x][y].0 as i32);
+            let b = &g.g_map.objectdata[x][y];
+            hm.add(b.iType as i32);
+            // Only the settings the map format stores: the rest keep stale heap bytes in the C++.
+            let stored = match b.iType {
+                1 | 15 => b.iSettings.len(),
+                11..=14 => 1,
+                _ => 0,
+            };
+            for s in &b.iSettings[..stored] {
+                hm.add(*s as i32);
+            }
+            hm.add(b.fHidden as i32);
+            let w = g.g_map.warpdata[x][y];
+            hm.add(w.direction as i32);
+            hm.add(w.connection as i32);
+            hm.add(w.id as i32);
+            for t in 0..NUMSPAWNAREATYPES as usize {
+                hm.add(g.g_map.nospawn[t][x][y] as i32);
             }
         }
-        hm.add(g.g_map.mapitems.len() as i32);
-        for item in g.g_map.mapitems.iter() {
-            hm.add(item.itype as i32);
-            hm.add(item.ix as i32);
-            hm.add(item.iy as i32);
-        }
-        hm.add(g.g_map.maphazards.len() as i32);
-        for hz in g.g_map.maphazards.iter() {
-            hm.add(hz.itype as i32);
-            hm.add(hz.ix as i32);
-            hm.add(hz.iy as i32);
-            for p in 0..NUMMAPHAZARDPARAMS as usize {
-                hm.add(hz.iparam[p] as i32);
-                hm.addf(hz.dparam[p]);
-            }
-        }
-        for l in 0..3usize {
-            hm.add(g.g_map.eyecandy[l] as i32);
-        }
-        hm.add(g.g_map.musicCategoryID as i32);
-        hm.add(g.g_map.iNumRaceGoals as i32);
-        for g in g.g_map.racegoallocations.iter() {
-            hm.add(g.x as i32);
-            hm.add(g.y as i32);
-        }
-        hm.add(g.g_map.iNumFlagBases as i32);
-        for b in g.g_map.flagbaselocations.iter() {
-            hm.add(b.x as i32);
-            hm.add(b.y as i32);
-        }
-        for s in g.g_map.iSwitches.iter() {
-            hm.add(*s as i32);
-        }
-        for c in g.g_map.szBackgroundFile.bytes() {
-            hm.add(c as i32);
-        }
-        hm.add(g.g_map.platforms.len() as i32);
-
-        let mut hp = Fnv::new();
-        for i in 0..ed(g).g_iNumPlatforms.max(0) as usize {
-            let p = &ed(gp.get()).g_Platforms[i];
-            for t in p.tiles.iter() {
-                hp.add(t.iID as i32);
-                hp.add(t.iCol as i32);
-                hp.add(t.iRow as i32);
-            }
-            for t in p.types.iter() {
-                hp.add(t.0 as i32);
-            }
-            hp.add(p.iVelocity as i32);
-            hp.add(p.iStartX as i32);
-            hp.add(p.iStartY as i32);
-            hp.add(p.iEndX as i32);
-            hp.add(p.iEndY as i32);
-            hp.add(p.iPathType as i32);
-            hp.addf(p.fAngle);
-            hp.addf(p.fRadiusX);
-            hp.addf(p.fRadiusY);
-            hp.add(p.iDrawLayer as i32);
-        }
-
-        let mut ha = Fnv::new();
-        for t in ed(gp.get()).animatedtiletypes.iter() {
-            ha.add(t.0 as i32);
-        }
-
-        let _ = writeln!(out, "H map={:08x} plat={:08x} anim={:08x}", hm.0, hp.0, ha.0);
     }
+    hm.add(g.g_map.mapitems.len() as i32);
+    for item in g.g_map.mapitems.iter() {
+        hm.add(item.itype as i32);
+        hm.add(item.ix as i32);
+        hm.add(item.iy as i32);
+    }
+    hm.add(g.g_map.maphazards.len() as i32);
+    for hz in g.g_map.maphazards.iter() {
+        hm.add(hz.itype as i32);
+        hm.add(hz.ix as i32);
+        hm.add(hz.iy as i32);
+        for p in 0..NUMMAPHAZARDPARAMS as usize {
+            hm.add(hz.iparam[p] as i32);
+            hm.addf(hz.dparam[p]);
+        }
+    }
+    for l in 0..3usize {
+        hm.add(g.g_map.eyecandy[l] as i32);
+    }
+    hm.add(g.g_map.musicCategoryID as i32);
+    hm.add(g.g_map.iNumRaceGoals as i32);
+    for g in g.g_map.racegoallocations.iter() {
+        hm.add(g.x as i32);
+        hm.add(g.y as i32);
+    }
+    hm.add(g.g_map.iNumFlagBases as i32);
+    for b in g.g_map.flagbaselocations.iter() {
+        hm.add(b.x as i32);
+        hm.add(b.y as i32);
+    }
+    for s in g.g_map.iSwitches.iter() {
+        hm.add(*s as i32);
+    }
+    for c in g.g_map.szBackgroundFile.bytes() {
+        hm.add(c as i32);
+    }
+    hm.add(g.g_map.platforms.len() as i32);
+
+    let mut hp = Fnv::new();
+    for i in 0..ed(g).g_iNumPlatforms.max(0) as usize {
+        let p = &ed(gp.get()).g_Platforms[i];
+        for t in p.tiles.iter() {
+            hp.add(t.iID as i32);
+            hp.add(t.iCol as i32);
+            hp.add(t.iRow as i32);
+        }
+        for t in p.types.iter() {
+            hp.add(t.0 as i32);
+        }
+        hp.add(p.iVelocity as i32);
+        hp.add(p.iStartX as i32);
+        hp.add(p.iStartY as i32);
+        hp.add(p.iEndX as i32);
+        hp.add(p.iEndY as i32);
+        hp.add(p.iPathType as i32);
+        hp.addf(p.fAngle);
+        hp.addf(p.fRadiusX);
+        hp.addf(p.fRadiusY);
+        hp.add(p.iDrawLayer as i32);
+    }
+
+    let mut ha = Fnv::new();
+    for t in ed(gp.get()).animatedtiletypes.iter() {
+        ha.add(t.0 as i32);
+    }
+
+    let _ = writeln!(out, "H map={:08x} plat={:08x} anim={:08x}", hm.0, hp.0, ha.0);
 }

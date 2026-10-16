@@ -81,43 +81,39 @@ fn rng(g: &mut Game) -> &mut RngState {
 
 impl RandomNumberGenerator {
     pub fn call_count(g: &mut Game) -> u64 {
-        unsafe { rng(g).g_callCount }
+        rng(g).g_callCount
     }
 
     pub fn last_value(g: &mut Game) -> u32 {
-        unsafe { rng(g).g_lastValue }
+        rng(g).g_lastValue
     }
 
     /// Not in the C++: a replay checkpoint (smw/checkpoint.rs) restores the counters.
     pub fn set_counters(g: &mut Game, calls: u64, last: u32) {
-        unsafe {
-            rng(g).g_callCount = calls;
-            rng(g).g_lastValue = last;
-        }
+        rng(g).g_callCount = calls;
+        rng(g).g_lastValue = last;
     }
 
     pub fn reset_call_count(g: &mut Game) {
-        unsafe {
-            rng(g).g_callCount = 0;
-            rng(g).g_lastValue = 0;
-        }
+        rng(g).g_callCount = 0;
+        rng(g).g_lastValue = 0;
     }
 
     pub fn tape_active(g: &mut Game) -> bool {
-        unsafe { !matches!(rng(g).g_tape, Tape::Off) }
+        !matches!(rng(g).g_tape, Tape::Off)
     }
 
     pub fn start_recording(g: &mut Game) {
-        unsafe { rng(g).g_tape = Tape::Record(Vec::new()) }
+        rng(g).g_tape = Tape::Record(Vec::new())
     }
 
     pub fn start_playback(g: &mut Game, values: Vec<u32>) {
-        unsafe { rng(g).g_tape = Tape::Play(values, 0) }
+        rng(g).g_tape = Tape::Play(values, 0)
     }
 
     /// Ends recording or playback; returns the recorded draws, or the draws playback left unused.
     pub fn stop_tape(g: &mut Game) -> Vec<u32> {
-        match unsafe { std::mem::replace(&mut rng(g).g_tape, Tape::Off) } {
+        match std::mem::replace(&mut rng(g).g_tape, Tape::Off) {
             Tape::Off => Vec::new(),
             Tape::Record(values) => values,
             Tape::Play(values, next) => values[next.min(values.len())..].to_vec(),

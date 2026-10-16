@@ -132,131 +132,127 @@ impl PlayerWarpStatus {
         self.warpconnection = warp.connection;
         self.warpid = warp.id;
 
-        unsafe {
-            if g.game_values.warplocktime > 0 {
-                match g.game_values.warplockstyle {
-                    WarpLockStyle::EntranceOnly | WarpLockStyle::EntranceAndExit => {
-                        g.g_map.warpexits[warp.id as usize].locktimer = g.game_values.warplocktime;
-                    }
-                    WarpLockStyle::EntireConnection => {
-                        g.g_map.lockconnection(self.warpconnection as i32);
-                    }
-                    WarpLockStyle::AllWarps => {
-                        g.g_map.lockconnection(-1);
-                    }
-                    _ => {}
+        if g.game_values.warplocktime > 0 {
+            match g.game_values.warplockstyle {
+                WarpLockStyle::EntranceOnly | WarpLockStyle::EntranceAndExit => {
+                    g.g_map.warpexits[warp.id as usize].locktimer = g.game_values.warplocktime;
                 }
+                WarpLockStyle::EntireConnection => {
+                    g.g_map.lockconnection(self.warpconnection as i32);
+                }
+                WarpLockStyle::AllWarps => {
+                    g.g_map.lockconnection(-1);
+                }
+                _ => {}
             }
-
-            if_sound_on_play(g, &mut gp.rm.sfx_pipe);
         }
+
+        if_sound_on_play(g, &mut gp.rm.sfx_pipe);
     }
 
     pub fn choose_warp_exit(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut gp = g.ptr();
-        unsafe {
-            let mut exit: Ptr<WarpExit> = gp.g_map.get_random_warp_exit(g, self.warpconnection as i32, self.warpid as i32);
-            debug_assert!(!exit.is_null());
-            player.set_xi(exit.x);
-            player.set_yi(exit.y);
-            player.fOldX = player.fx;
-            player.fOldY = player.fy;
-            player.oldvelx = player.velx;
+        let mut exit: Ptr<WarpExit> = gp.g_map.get_random_warp_exit(g, self.warpconnection as i32, self.warpid as i32);
+        debug_assert!(!exit.is_null());
+        player.set_xi(exit.x);
+        player.set_yi(exit.y);
+        player.fOldX = player.fx;
+        player.fOldY = player.fy;
+        player.oldvelx = player.velx;
 
-            player.lockjump = false;
-            player.clear_powerup_states();
+        player.lockjump = false;
+        player.clear_powerup_states();
 
-            //Trigger block that we warp into
-            let mut iCol: i16 = (player.left_x() as i32 / TILESIZE) as i16;
-            let iRow: i16 = (player.top_y() as i32 / TILESIZE) as i16;
-            let mut block: Ptr<dyn IO_BlockTrait>;
+        //Trigger block that we warp into
+        let mut iCol: i16 = (player.left_x() as i32 / TILESIZE) as i16;
+        let iRow: i16 = (player.top_y() as i32 / TILESIZE) as i16;
+        let mut block: Ptr<dyn IO_BlockTrait>;
 
-            debug_assert!(exit.direction != WARP_EXIT_UNDEFINED);
+        debug_assert!(exit.direction != WARP_EXIT_UNDEFINED);
 
-            match exit.direction {
-                WARP_EXIT_UP => {
-                    player.state = PlayerState::LeavingWarpUp;
-                    player.velx = 0.0f32;
-                    player.vely = -4.0f32;
-                    self.warpcounter = (PH + PHOFFSET) as i16;
-                    self.warpplane = ((exit.warpy as i32) << 5) as i16;
+        match exit.direction {
+            WARP_EXIT_UP => {
+                player.state = PlayerState::LeavingWarpUp;
+                player.velx = 0.0f32;
+                player.vely = -4.0f32;
+                self.warpcounter = (PH + PHOFFSET) as i16;
+                self.warpplane = ((exit.warpy as i32) << 5) as i16;
 
-                    if iRow as i32 - 1 >= 0 {
-                        block = g.g_map.block(iCol, (iRow as i32 - 1) as i16);
-
-                        if !block.is_null() && !block.is_transparent() && !block.is_hidden() {
-                            block.trigger_behavior(g);
-                        }
-                    }
-                }
-                WARP_EXIT_RIGHT => {
-                    player.state = PlayerState::LeavingWarpRight;
-                    player.velx = 1.0f32;
-                    player.vely = 1.0f32;
-                    self.warpcounter = (PW + PWOFFSET) as i16;
-                    self.warpplane = (((exit.warpx as i32) << 5) + TILESIZE) as i16;
-
-                    if iCol as i32 + 1 >= 20 {
-                        iCol = (iCol as i32 - 20) as i16;
-                    }
-
-                    block = g.g_map.block((iCol as i32 + 1) as i16, iRow);
+                if iRow as i32 - 1 >= 0 {
+                    block = g.g_map.block(iCol, (iRow as i32 - 1) as i16);
 
                     if !block.is_null() && !block.is_transparent() && !block.is_hidden() {
                         block.trigger_behavior(g);
                     }
                 }
-                WARP_EXIT_DOWN => {
-                    player.state = PlayerState::LeavingWarpDown;
-                    player.velx = 0.0f32;
-                    player.vely = 1.1f32;
-                    player.inair = true;
-                    self.warpcounter = (TILESIZE - PHOFFSET) as i16;
-                    self.warpplane = (((exit.warpy as i32) << 5) + TILESIZE) as i16;
+            }
+            WARP_EXIT_RIGHT => {
+                player.state = PlayerState::LeavingWarpRight;
+                player.velx = 1.0f32;
+                player.vely = 1.0f32;
+                self.warpcounter = (PW + PWOFFSET) as i16;
+                self.warpplane = (((exit.warpx as i32) << 5) + TILESIZE) as i16;
 
-                    if (iRow as i32 + 1) < 15 {
-                        block = g.g_map.block(iCol, (iRow as i32 + 1) as i16);
-
-                        if !block.is_null() && !block.is_transparent() && !block.is_hidden() {
-                            block.trigger_behavior(g);
-                        }
-                    }
+                if iCol as i32 + 1 >= 20 {
+                    iCol = (iCol as i32 - 20) as i16;
                 }
-                WARP_EXIT_LEFT => {
-                    player.state = PlayerState::LeavingWarpLeft;
-                    player.velx = -1.0f32;
-                    player.vely = 1.0f32;
-                    self.warpcounter = (PW + PWOFFSET) as i16;
-                    self.warpplane = ((exit.warpx as i32) << 5) as i16;
 
-                    if (iCol as i32 - 1) < 0 {
-                        iCol = (iCol as i32 + 20) as i16;
-                    }
+                block = g.g_map.block((iCol as i32 + 1) as i16, iRow);
 
-                    block = g.g_map.block((iCol as i32 - 1) as i16, iRow);
+                if !block.is_null() && !block.is_transparent() && !block.is_hidden() {
+                    block.trigger_behavior(g);
+                }
+            }
+            WARP_EXIT_DOWN => {
+                player.state = PlayerState::LeavingWarpDown;
+                player.velx = 0.0f32;
+                player.vely = 1.1f32;
+                player.inair = true;
+                self.warpcounter = (TILESIZE - PHOFFSET) as i16;
+                self.warpplane = (((exit.warpy as i32) << 5) + TILESIZE) as i16;
+
+                if (iRow as i32 + 1) < 15 {
+                    block = g.g_map.block(iCol, (iRow as i32 + 1) as i16);
 
                     if !block.is_null() && !block.is_transparent() && !block.is_hidden() {
                         block.trigger_behavior(g);
                     }
                 }
-                _ => {
-                    debug_assert!(false);
+            }
+            WARP_EXIT_LEFT => {
+                player.state = PlayerState::LeavingWarpLeft;
+                player.velx = -1.0f32;
+                player.vely = 1.0f32;
+                self.warpcounter = (PW + PWOFFSET) as i16;
+                self.warpplane = ((exit.warpx as i32) << 5) as i16;
+
+                if (iCol as i32 - 1) < 0 {
+                    iCol = (iCol as i32 + 20) as i16;
+                }
+
+                block = g.g_map.block((iCol as i32 - 1) as i16, iRow);
+
+                if !block.is_null() && !block.is_transparent() && !block.is_hidden() {
+                    block.trigger_behavior(g);
                 }
             }
-
-            //Make player shielded when exiting the warp (if that option is turned on)
-            if g.game_values.shieldstyle != ShieldStyle::NoShield {
-                if !player.is_shielded() || (player.shield.time_left() as i32) < g.game_values.shieldtime as i32 {
-                    player.shield.reset(g);
-                }
+            _ => {
+                debug_assert!(false);
             }
+        }
 
-            //Lock the warp (if that option is turned on)
-            if g.game_values.warplocktime > 0 {
-                if g.game_values.warplockstyle == WarpLockStyle::ExitOnly || g.game_values.warplockstyle == WarpLockStyle::EntranceAndExit {
-                    //Lock the warp exit
-                    exit.locktimer = g.game_values.warplocktime;
-                }
+        //Make player shielded when exiting the warp (if that option is turned on)
+        if g.game_values.shieldstyle != ShieldStyle::NoShield {
+            if !player.is_shielded() || (player.shield.time_left() as i32) < g.game_values.shieldtime as i32 {
+                player.shield.reset(g);
+            }
+        }
+
+        //Lock the warp (if that option is turned on)
+        if g.game_values.warplocktime > 0 {
+            if g.game_values.warplockstyle == WarpLockStyle::ExitOnly || g.game_values.warplockstyle == WarpLockStyle::EntranceAndExit {
+                //Lock the warp exit
+                exit.locktimer = g.game_values.warplocktime;
             }
         }
     }

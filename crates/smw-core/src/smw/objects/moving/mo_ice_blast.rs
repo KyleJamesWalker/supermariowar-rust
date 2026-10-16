@@ -65,55 +65,51 @@ impl CObjectTrait for MO_IceBlast {
 
     fn update(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        unsafe {
-            self.animationtimer += 1;
-            if self.animationtimer == self.animationspeed {
-                self.animationtimer = 0;
+        self.animationtimer += 1;
+        if self.animationtimer == self.animationspeed {
+            self.animationtimer = 0;
 
-                if self.velx > 0.0 {
-                    self.drawframe += self.iw;
-                    if self.drawframe >= self.animationWidth {
-                        self.drawframe = 0;
-                    }
-                } else {
-                    self.drawframe -= self.iw;
-                    if self.drawframe < 0 {
-                        self.drawframe = self.animationWidth - self.iw;
-                    }
+            if self.velx > 0.0 {
+                self.drawframe += self.iw;
+                if self.drawframe >= self.animationWidth {
+                    self.drawframe = 0;
+                }
+            } else {
+                self.drawframe -= self.iw;
+                if self.drawframe < 0 {
+                    self.drawframe = self.animationWidth - self.iw;
                 }
             }
+        }
 
-            let (fx, velx) = (self.fx, self.velx);
-            self.set_xf(fx + velx);
+        let (fx, velx) = (self.fx, self.velx);
+        self.set_xf(fx + velx);
 
-            self.ttl -= 1;
-            if self.ttl <= 0 {
-                removeifprojectile(g, self.as_mo_ptr(), false, true);
-            } else if g.game_values.spotlights {
-                let sx = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
-                let sy = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
-                if self.sSpotlight.is_null() {
-                    self.sSpotlight = gp.spotlightManager.add_spotlight(g, sx, sy, 3);
-                }
+        self.ttl -= 1;
+        if self.ttl <= 0 {
+            removeifprojectile(g, self.as_mo_ptr(), false, true);
+        } else if g.game_values.spotlights {
+            let sx = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
+            let sy = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
+            if self.sSpotlight.is_null() {
+                self.sSpotlight = gp.spotlightManager.add_spotlight(g, sx, sy, 3);
+            }
 
-                if !self.sSpotlight.is_null() {
-                    self.sSpotlight.update_position(sx, sy);
-                }
+            if !self.sSpotlight.is_null() {
+                self.sSpotlight.update_position(sx, sy);
             }
         }
     }
 
     fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
-        unsafe {
-            if self.iPlayerID != player.globalID && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID) {
-                if !player.is_shielded() && !player.is_invincible() && !player.shyguy {
-                    player.makefrozen(g, g.game_values.wandfreezetime);
-                    removeifprojectile(g, self.as_mo_ptr(), false, true);
-                }
+        if self.iPlayerID != player.globalID && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID) {
+            if !player.is_shielded() && !player.is_invincible() && !player.shyguy {
+                player.makefrozen(g, g.game_values.wandfreezetime);
+                removeifprojectile(g, self.as_mo_ptr(), false, true);
             }
-
-            false
         }
+
+        false
     }
 
     fn draw(&mut self, g: &mut Game) {

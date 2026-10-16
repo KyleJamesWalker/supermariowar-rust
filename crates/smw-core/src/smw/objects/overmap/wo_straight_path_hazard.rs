@@ -96,15 +96,13 @@ impl CObjectTrait for OMO_StraightPathHazard {
 
     fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         if !player.is_shielded() {
-            unsafe {
-                g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
-                    (self.ix as i32 + (self.iw as i32 >> 2) - 16) as i16,
-                    (self.iy as i32 + (self.ih as i32 >> 2) - 16) as i16,
-                    3,
-                    8,
-                ));
-            }
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+                (self.ix as i32 + (self.iw as i32 >> 2) - 16) as i16,
+                (self.iy as i32 + (self.ih as i32 >> 2) - 16) as i16,
+                3,
+                8,
+            ));
             self.dead = true;
 
             if !player.is_invincible() && !player.shyguy {

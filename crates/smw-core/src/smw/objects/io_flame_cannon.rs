@@ -56,21 +56,19 @@ impl IO_FlameCannon {
         let mut gp = g.ptr();
         if self.state > 0 {
             let rect = &g_rFlameRects[self.iDirection as usize][self.iFrame as usize];
-            unsafe {
-                gfx_drawpreview(
-                    g,
-                    &gp.rm.spr_hazard_flame[1],
-                    (((self.ix as i32) >> 1) + iOffsetX as i32) as i16,
-                    (((self.iy as i32) >> 1) + iOffsetY as i32) as i16,
-                    (rect.x >> 1) as i16,
-                    (rect.y >> 1) as i16,
-                    (rect.w >> 1) as i16,
-                    (rect.h >> 1) as i16,
-                    &Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: 320, h: 240 },
-                    true,
-                    None,
-                );
-            }
+            gfx_drawpreview(
+                g,
+                &gp.rm.spr_hazard_flame[1],
+                (((self.ix as i32) >> 1) + iOffsetX as i32) as i16,
+                (((self.iy as i32) >> 1) + iOffsetY as i32) as i16,
+                (rect.x >> 1) as i16,
+                (rect.y >> 1) as i16,
+                (rect.w >> 1) as i16,
+                (rect.h >> 1) as i16,
+                &Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: 320, h: 240 },
+                true,
+                None,
+            );
         }
     }
 
@@ -100,9 +98,7 @@ impl CObjectTrait for IO_FlameCannon {
                 self.iFrame = 0;
 
                 self.state = 1;
-                unsafe {
-                    if_sound_on_play(g, &mut gp.rm.sfx_flamecannon);
-                }
+                if_sound_on_play(g, &mut gp.rm.sfx_flamecannon);
             }
         } else if self.state == 1 || self.state == 3 {
             // Start or end of flame but not deadly yet
@@ -153,9 +149,7 @@ impl CObjectTrait for IO_FlameCannon {
         let mut gp = g.ptr();
         if self.state > 0 {
             let rect = &g_rFlameRects[self.iDirection as usize][self.iFrame as usize];
-            unsafe {
-                gp.rm.spr_hazard_flame[0].draw_src(g, self.ix as i32, self.iy as i32, rect);
-            }
+            gp.rm.spr_hazard_flame[0].draw_src(g, self.ix as i32, self.iy as i32, rect);
         }
     }
 

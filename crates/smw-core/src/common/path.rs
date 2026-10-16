@@ -19,32 +19,28 @@ pub fn file_exists(path: &str) -> bool {
 }
 
 pub fn initialize_paths(g: &mut Game) {
-    unsafe {
-        if !g.SMW_Root_Data_Dir.is_empty() {
-            return;
-        }
-        g.SMW_Root_Data_Dir = "./".to_string();
-        println!("Located data folder at: {}", g.SMW_Root_Data_Dir);
+    if !g.SMW_Root_Data_Dir.is_empty() {
+        return;
     }
+    g.SMW_Root_Data_Dir = "./".to_string();
+    println!("Located data folder at: {}", g.SMW_Root_Data_Dir);
 }
 
 
 pub fn convert_path(g: &mut Game, source: &str) -> String {
-    unsafe {
-        if !g.are_paths_initialized {
-            g.SMW_Root_Data_Dir = g.RootDataDirectory.clone();
+    if !g.are_paths_initialized {
+        g.SMW_Root_Data_Dir = g.RootDataDirectory.clone();
 
-            initialize_paths(g);
+        initialize_paths(g);
 
-            let last_slash_pos = g.SMW_Root_Data_Dir.rfind('/');
-            if last_slash_pos != Some(g.SMW_Root_Data_Dir.len().wrapping_sub(1)) {
-                g.SMW_Root_Data_Dir.push('/');
-            }
-
-            g.are_paths_initialized = true;
+        let last_slash_pos = g.SMW_Root_Data_Dir.rfind('/');
+        if last_slash_pos != Some(g.SMW_Root_Data_Dir.len().wrapping_sub(1)) {
+            g.SMW_Root_Data_Dir.push('/');
         }
-        g.SMW_Root_Data_Dir.clone() + source
+
+        g.are_paths_initialized = true;
     }
+    g.SMW_Root_Data_Dir.clone() + source
 }
 
 pub fn convert_path_pack(g: &mut Game, relpath: &str, packdir: &str) -> String {

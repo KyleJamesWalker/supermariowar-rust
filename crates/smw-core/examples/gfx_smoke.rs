@@ -16,12 +16,10 @@ fn main() {
     let out = args.get(2).cloned().unwrap_or_else(|| "gfx_smoke_rust.bmp".to_string());
 
     smw::globals::init_globals(gp.get());
-    unsafe {
-        gp.RootDataDirectory = data.clone();
-    }
+    gp.RootDataDirectory = data.clone();
 
     gfx_init(gp.get(), 640, 480, false);
-    unsafe { gp.blitdest = gp.screen };
+    gp.blitdest = gp.screen;
 
     let pack = format!("{}/gfx/packs/Classic", data);
     assert!(gfx_loadpalette(gp.get(), Path::new(&format!("{}/palette.png", pack))));
@@ -52,7 +50,7 @@ fn main() {
     menuskin[0].draw_part(gp.get(), 380, 400, 0, 0, 32, 32);
     menuskin[3].draw_part(gp.get(), 414, 400, 96, 0, 32, 32);
     skin[0].draw_clip(gp.get(), 450, 400, &Rect { x: 0, y: 0, w: 32, h: 32 }, ClipEdge::Left, 460);
-    skin[0].draw_stretch(&Rect { x: 0, y: 0, w: 32, h: 32 }, unsafe { gp.blitdest }, &Rect { x: 500, y: 380, w: 64, h: 64 });
+    skin[0].draw_stretch(&Rect { x: 0, y: 0, w: 32, h: 32 }, gp.blitdest, &Rect { x: 500, y: 380, w: 64, h: 64 });
     gfx_drawpreview(gp.get(), &skin[2], 620, 300, 0, 0, 32, 32, &Rect { x: 0, y: 0, w: 640, h: 480 }, true, None);
 
     font_large.draw(gp.get(), 10, 150, "Super Mario War: 0123456789");
@@ -63,10 +61,8 @@ fn main() {
     font_small.draw_chop_centered(gp.get(), 320, 270, 100, "chop centered text that is long");
     font_large.set_alpha(128);
     font_large.draw(gp.get(), 10, 300, "translucent");
-    unsafe {
-        gp.x_shake = 3;
-        gp.y_shake = -2;
-    }
+    gp.x_shake = 3;
+    gp.y_shake = -2;
     font_small.draw(gp.get(), 10, 330, "shaken");
     smw_logo.draw_part(gp.get(), 300, 330, 0, 0, 40, 20);
 

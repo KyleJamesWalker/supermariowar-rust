@@ -37,12 +37,10 @@ pub fn remove_players_but_team(g: &mut Game, teamid: i16) {
 }
 
 pub fn remove_players_but_team_now(g: &mut Game, teamid: i16) {
-    unsafe {
-        for i in 0..g.players.len() {
-            let mut player = g.players[i];
-            if player.get_team_id() != teamid {
-                player.state = PlayerState::Dead;
-            }
+    for i in 0..g.players.len() {
+        let mut player = g.players[i];
+        if player.get_team_id() != teamid {
+            player.state = PlayerState::Dead;
         }
     }
 }
@@ -54,22 +52,20 @@ pub fn remove_players_but_highest_scoring(g: &mut Game) {
 }
 
 pub fn remove_players_but_highest_scoring_now(g: &mut Game) {
-    unsafe {
-        let mut iMaxScore: i16 = -1;
+    let mut iMaxScore: i16 = -1;
 
-        //Figure out what the maximum score is
-        for iScore in 0..g.score_cnt {
-            if g.score[iScore as usize].score > iMaxScore {
-                iMaxScore = g.score[iScore as usize].score;
-            }
+    //Figure out what the maximum score is
+    for iScore in 0..g.score_cnt {
+        if g.score[iScore as usize].score > iMaxScore {
+            iMaxScore = g.score[iScore as usize].score;
         }
+    }
 
-        //Remove all players that don't have that max score
-        for i in 0..g.players.len() {
-            let mut player = g.players[i];
-            if player.score().score < iMaxScore {
-                player.state = PlayerState::Dead;
-            }
+    //Remove all players that don't have that max score
+    for i in 0..g.players.len() {
+        let mut player = g.players[i];
+        if player.score().score < iMaxScore {
+            player.state = PlayerState::Dead;
         }
     }
 }
@@ -82,71 +78,69 @@ pub fn setup_score_board(g: &mut Game, fOrderMatters: bool) {
 
 pub fn setup_score_board_now(g: &mut Game, fOrderMatters: bool) {
         let mut gp = g.ptr();
-    unsafe {
-        let mut doneWithScore: [bool; 4] = [false, false, false, false];
+    let mut doneWithScore: [bool; 4] = [false, false, false, false];
 
-        let mut oldmax: i16;
-        let mut max: i16 = -1;
-        for i in 0..g.score_cnt {
-            oldmax = max;
-            max = -1;
+    let mut oldmax: i16;
+    let mut max: i16 = -1;
+    for i in 0..g.score_cnt {
+        oldmax = max;
+        max = -1;
 
-            for j in 0..g.score_cnt {
-                if !doneWithScore[j as usize] {
-                    let sj = g.score[j as usize];
-                    //The boxes minigame doesn't use "score" it uses "subscore[0]" to determine the winner
-                    if g.game_values.gamemode.gamemode == game_mode_boxes_minigame {
-                        if max == -1
-                            || sj.subscore[0] > g.score[max as usize].subscore[0]
-                            || (sj.subscore[0] == g.score[max as usize].subscore[0] && sj.score > g.score[max as usize].score)
-                        {
-                            //or it is tied but they died later in the game
-                            max = j;
-                        }
-                    } else {
-                        //If this player's score is bigger
-                        if max == -1
-                            || sj.score > g.score[max as usize].score
-                            || (sj.score == g.score[max as usize].score && sj.order > g.score[max as usize].order)
-                        {
-                            //or it is tied but they died later in the game
-                            max = j;
-                        }
-                    }
-                }
-            }
-
-            g.score[max as usize].displayorder = i;
-            g.score[max as usize].place = i;
-
-            if !fOrderMatters && i > 0 {
+        for j in 0..g.score_cnt {
+            if !doneWithScore[j as usize] {
+                let sj = g.score[j as usize];
+                //The boxes minigame doesn't use "score" it uses "subscore[0]" to determine the winner
                 if g.game_values.gamemode.gamemode == game_mode_boxes_minigame {
-                    if g.score[oldmax as usize].subscore[0] == g.score[max as usize].subscore[0]
-                        && g.score[oldmax as usize].score == g.score[max as usize].score
+                    if max == -1
+                        || sj.subscore[0] > g.score[max as usize].subscore[0]
+                        || (sj.subscore[0] == g.score[max as usize].subscore[0] && sj.score > g.score[max as usize].score)
                     {
-                        g.score[max as usize].place = g.score[oldmax as usize].place;
+                        //or it is tied but they died later in the game
+                        max = j;
                     }
-                } else if g.score[oldmax as usize].score == g.score[max as usize].score {
-                    g.score[max as usize].place = g.score[oldmax as usize].place;
+                } else {
+                    //If this player's score is bigger
+                    if max == -1
+                        || sj.score > g.score[max as usize].score
+                        || (sj.score == g.score[max as usize].score && sj.order > g.score[max as usize].order)
+                    {
+                        //or it is tied but they died later in the game
+                        max = j;
+                    }
                 }
             }
-
-            doneWithScore[max as usize] = true; //this is the next biggest score - it doesn't belong to the remaining scores from now on
         }
 
-        //Add the treasure chests to the map in world mode if there were any awards for winning this match
-        if g.game_values.matchtype == MatchType::World && g.game_values.gamemode.winningteam > -1 && g.game_values.gamemode.gamemode != game_mode_bonus {
-            let tourStop = g.game_values.tourstops[g.game_values.tourstopcurrent];
-            let iNumBonuses: i16 = tourStop.iNumBonuses;
+        g.score[max as usize].displayorder = i;
+        g.score[max as usize].place = i;
 
-            for iBonus in 0..iNumBonuses {
-                if tourStop.wsbBonuses[iBonus as usize].iWinnerPlace == 0 {
-                    let iBonusType: i16 = tourStop.wsbBonuses[iBonus as usize].iBonus;
-                    let obj = Ptr::new_box(PU_TreasureChestBonus::new(g, Ptr::from_mut(&mut gp.get().rm.spr_bonuschest), 1, 0, 30, 30, 1, 1, iBonusType));
-                    gp.get().objectcontainer[0].add(g, obj);
-                    g.game_values.flags.noexittimer = 0;
-                    g.game_values.flags.noexit = false;
+        if !fOrderMatters && i > 0 {
+            if g.game_values.gamemode.gamemode == game_mode_boxes_minigame {
+                if g.score[oldmax as usize].subscore[0] == g.score[max as usize].subscore[0]
+                    && g.score[oldmax as usize].score == g.score[max as usize].score
+                {
+                    g.score[max as usize].place = g.score[oldmax as usize].place;
                 }
+            } else if g.score[oldmax as usize].score == g.score[max as usize].score {
+                g.score[max as usize].place = g.score[oldmax as usize].place;
+            }
+        }
+
+        doneWithScore[max as usize] = true; //this is the next biggest score - it doesn't belong to the remaining scores from now on
+    }
+
+    //Add the treasure chests to the map in world mode if there were any awards for winning this match
+    if g.game_values.matchtype == MatchType::World && g.game_values.gamemode.winningteam > -1 && g.game_values.gamemode.gamemode != game_mode_bonus {
+        let tourStop = g.game_values.tourstops[g.game_values.tourstopcurrent];
+        let iNumBonuses: i16 = tourStop.iNumBonuses;
+
+        for iBonus in 0..iNumBonuses {
+            if tourStop.wsbBonuses[iBonus as usize].iWinnerPlace == 0 {
+                let iBonusType: i16 = tourStop.wsbBonuses[iBonus as usize].iBonus;
+                let obj = Ptr::new_box(PU_TreasureChestBonus::new(g, Ptr::from_mut(&mut gp.get().rm.spr_bonuschest), 1, 0, 30, 30, 1, 1, iBonusType));
+                gp.get().objectcontainer[0].add(g, obj);
+                g.game_values.flags.noexittimer = 0;
+                g.game_values.flags.noexit = false;
             }
         }
     }
@@ -160,30 +154,28 @@ pub fn show_score_board(g: &mut Game) {
 
 pub fn show_score_board_now(g: &mut Game) {
     let mut gp = g.ptr();
-    unsafe {
-        g.game_values.flags.showscoreboard = true;
+    g.game_values.flags.showscoreboard = true;
 
-        let mut iScoreboardElementHeight: i16 = 45;
-        if g.game_values.gamemode.gamemode == game_mode_health
-            || g.game_values.gamemode.gamemode == game_mode_collection
-            || g.game_values.gamemode.gamemode == game_mode_boxes_minigame
-        {
-            iScoreboardElementHeight = 63;
-        }
+    let mut iScoreboardElementHeight: i16 = 45;
+    if g.game_values.gamemode.gamemode == game_mode_health
+        || g.game_values.gamemode.gamemode == game_mode_collection
+        || g.game_values.gamemode.gamemode == game_mode_boxes_minigame
+    {
+        iScoreboardElementHeight = 63;
+    }
 
-        for i in 0..g.score_cnt {
-            let mut s = g.score[i as usize];
-            s.destx = (309 - 34 * g.game_values.teamcounts[i as usize] as i32) as i16;
-            s.desty = (s.displayorder as i32 * iScoreboardElementHeight as i32 + 140) as i16;
-        }
+    for i in 0..g.score_cnt {
+        let mut s = g.score[i as usize];
+        s.destx = (309 - 34 * g.game_values.teamcounts[i as usize] as i32) as i16;
+        s.desty = (s.displayorder as i32 * iScoreboardElementHeight as i32 + 140) as i16;
+    }
 
-        if g.game_values.music {
-            gp.rm.sfx_invinciblemusic.stop(g);
-            gp.rm.sfx_timewarning.stop(g);
-            gp.rm.sfx_slowdownmusic.stop(g);
+    if g.game_values.music {
+        gp.rm.sfx_invinciblemusic.stop(g);
+        gp.rm.sfx_timewarning.stop(g);
+        gp.rm.sfx_slowdownmusic.stop(g);
 
-            gp.rm.backgroundmusic[1].play(g, true, false);
-        }
+        gp.rm.backgroundmusic[1].play(g, true, false);
     }
 }
 
@@ -197,43 +189,41 @@ pub fn remove_team(g: &mut Game, teamid: i16) -> bool {
 
 pub fn remove_team_now(g: &mut Game, teamid: i16) -> bool {
     let mut gp = g.ptr();
-    unsafe {
-        //If we have already removed this team then return
-        if g.score[teamid as usize].order > -1 {
-            return g.game_values.flags.teamdeadcounter as i32 == g.score_cnt as i32 - 1;
-        }
-
-        //kill all players on the dead team
-        let mut iAnnouncementColor: i16 = -1;
-        for i in 0..g.players.len() {
-            let mut player = g.players[i];
-            if player.get_team_id() == teamid {
-                if iAnnouncementColor == -1 {
-                    iAnnouncementColor = player.get_color_id();
-                }
-
-                player.state = PlayerState::Dead;
-            }
-        }
-
-        g.score[teamid as usize].order = g.game_values.flags.teamdeadcounter;
-        g.game_values.flags.teamdeadcounter += 1;
-
-        //Announce that a team was removed
-        if g.game_values.deadteamnotice && (g.game_values.flags.teamdeadcounter as i32) < g.score_cnt as i32 - 1 {
-            g.eyecandy[2].emplace(EC_Announcement::new(
-                Ptr::from_mut(&mut g.rm.game_font_large),
-                Ptr::from_mut(&mut g.rm.spr_announcementicons),
-                "Team Removed!".to_string(),
-                iAnnouncementColor,
-                90,
-                200,
-            ));
-            gp.rm.sfx_announcer[(iAnnouncementColor as i32 + 16) as usize].play(g);
-        }
-
-        g.game_values.flags.teamdeadcounter as i32 == g.score_cnt as i32 - 1
+    //If we have already removed this team then return
+    if g.score[teamid as usize].order > -1 {
+        return g.game_values.flags.teamdeadcounter as i32 == g.score_cnt as i32 - 1;
     }
+
+    //kill all players on the dead team
+    let mut iAnnouncementColor: i16 = -1;
+    for i in 0..g.players.len() {
+        let mut player = g.players[i];
+        if player.get_team_id() == teamid {
+            if iAnnouncementColor == -1 {
+                iAnnouncementColor = player.get_color_id();
+            }
+
+            player.state = PlayerState::Dead;
+        }
+    }
+
+    g.score[teamid as usize].order = g.game_values.flags.teamdeadcounter;
+    g.game_values.flags.teamdeadcounter += 1;
+
+    //Announce that a team was removed
+    if g.game_values.deadteamnotice && (g.game_values.flags.teamdeadcounter as i32) < g.score_cnt as i32 - 1 {
+        g.eyecandy[2].emplace(EC_Announcement::new(
+            Ptr::from_mut(&mut g.rm.game_font_large),
+            Ptr::from_mut(&mut g.rm.spr_announcementicons),
+            "Team Removed!".to_string(),
+            iAnnouncementColor,
+            90,
+            200,
+        ));
+        gp.rm.sfx_announcer[(iAnnouncementColor as i32 + 16) as usize].play(g);
+    }
+
+    g.game_values.flags.teamdeadcounter as i32 == g.score_cnt as i32 - 1
 }
 
 impl CGameMode {
@@ -257,12 +247,10 @@ impl CGameMode {
 
     pub fn displayplayertext(&mut self, g: &mut Game) {
         if self.winningteam > -1 {
-            unsafe {
-                for i in 0..g.players.len() {
-                    let mut player = g.players[i];
-                    if player.get_team_id() == self.winningteam {
-                        player.spawn_text(g, "Winner!");
-                    }
+            for i in 0..g.players.len() {
+                let mut player = g.players[i];
+                if player.get_team_id() == self.winningteam {
+                    player.spawn_text(g, "Winner!");
                 }
             }
         }
@@ -275,15 +263,13 @@ impl CGameMode {
         }
 
         self.playedwarningsound = true;
-        unsafe {
-            gp.rm.sfx_invinciblemusic.stop(g);
+        gp.rm.sfx_invinciblemusic.stop(g);
 
-            if g.game_values.music && g.game_values.sound {
-                gp.rm.backgroundmusic[0].stop(g);
-            }
-
-            if_sound_on_play(g, &mut gp.rm.sfx_timewarning);
+        if g.game_values.music && g.game_values.sound {
+            gp.rm.backgroundmusic[0].stop(g);
         }
+
+        if_sound_on_play(g, &mut gp.rm.sfx_timewarning);
     }
 
     pub fn setup_mode_strings(&mut self, szMode: &str, szGoal: &str, iGoalSpacing: i16) {
@@ -303,85 +289,81 @@ impl CGameMode {
 
     pub fn get_highest_score_player(&mut self, g: &mut Game, fGetHighest: bool) -> Ptr<CPlayer> {
         let mut gp = g.ptr();
-        unsafe {
-            let mut count: i16 = 1;
-            let mut tiedplayers: [i16; 4] = [0; 4];
-            tiedplayers[0] = 0;
+        let mut count: i16 = 1;
+        let mut tiedplayers: [i16; 4] = [0; 4];
+        tiedplayers[0] = 0;
 
-            //Find the first non-dead player and use them for the first player to compare to
-            let mut j: usize = 0;
-            while j < g.players.len() {
-                if !g.players[j].isdead() {
-                    count = 1;
-                    tiedplayers[0] = j as i16;
-                    break;
-                }
-                j += 1;
+        //Find the first non-dead player and use them for the first player to compare to
+        let mut j: usize = 0;
+        while j < g.players.len() {
+            if !g.players[j].isdead() {
+                count = 1;
+                tiedplayers[0] = j as i16;
+                break;
             }
-
-            //Loop through all players, comparing scores to find the highest/lowest
-            let mut i = j + 1;
-            while i < g.players.len() {
-                if !g.players[i].isdead() {
-                    let si = g.players[i].score().score;
-                    let s0 = g.players[tiedplayers[0] as usize].score().score;
-                    if (!fGetHighest && si < s0) || (fGetHighest && si > s0) {
-                        count = 1;
-                        tiedplayers[0] = i as i16;
-                    } else if si == s0 {
-                        tiedplayers[count as usize] = i as i16;
-                        count += 1;
-                    }
-                }
-                i += 1;
-            }
-
-            g.players[tiedplayers[RANDOM_INT(gp.get(), count as i32) as usize] as usize]
+            j += 1;
         }
+
+        //Loop through all players, comparing scores to find the highest/lowest
+        let mut i = j + 1;
+        while i < g.players.len() {
+            if !g.players[i].isdead() {
+                let si = g.players[i].score().score;
+                let s0 = g.players[tiedplayers[0] as usize].score().score;
+                if (!fGetHighest && si < s0) || (fGetHighest && si > s0) {
+                    count = 1;
+                    tiedplayers[0] = i as i16;
+                } else if si == s0 {
+                    tiedplayers[count as usize] = i as i16;
+                    count += 1;
+                }
+            }
+            i += 1;
+        }
+
+        g.players[tiedplayers[RANDOM_INT(gp.get(), count as i32) as usize] as usize]
     }
 
     //Returns number of players in list
     pub fn get_score_ranked_player_list(&mut self, g: &mut Game, outPlayers: &mut [Ptr<CPlayer>; 4], fGetHighest: bool) -> i16 {
         let mut gp = g.ptr();
-        unsafe {
-            let mut iNumPlayersInList: i16 = 0;
+        let mut iNumPlayersInList: i16 = 0;
 
-            for i in 0..g.players.len() {
-                let player = g.players[i];
-                if player.isdead() {
-                    continue;
-                }
-
-                outPlayers[iNumPlayersInList as usize] = player;
-                iNumPlayersInList += 1;
+        for i in 0..g.players.len() {
+            let player = g.players[i];
+            if player.isdead() {
+                continue;
             }
 
-            //Bubble sort players in to score order
-            let mut fNeedSwap = true;
-
-            while fNeedSwap {
-                fNeedSwap = false;
-                let mut iRandom: i16 = 0;
-                let mut iIndex: i16 = 0;
-                while (iIndex as i32) < iNumPlayersInList as i32 - 1 {
-                    let a = outPlayers[iIndex as usize].score().score;
-                    let b = outPlayers[iIndex as usize + 1].score().score;
-                    let swap = (fGetHighest && a < b) || (!fGetHighest && a > b) || (a == b && RANDOM_BOOL(gp.get()) && {
-                        let r = iRandom < 5;
-                        iRandom += 1;
-                        r
-                    });
-                    if swap {
-                        outPlayers.swap(iIndex as usize, iIndex as usize + 1);
-
-                        fNeedSwap = true;
-                    }
-                    iIndex += 1;
-                }
-            }
-
-            iNumPlayersInList
+            outPlayers[iNumPlayersInList as usize] = player;
+            iNumPlayersInList += 1;
         }
+
+        //Bubble sort players in to score order
+        let mut fNeedSwap = true;
+
+        while fNeedSwap {
+            fNeedSwap = false;
+            let mut iRandom: i16 = 0;
+            let mut iIndex: i16 = 0;
+            while (iIndex as i32) < iNumPlayersInList as i32 - 1 {
+                let a = outPlayers[iIndex as usize].score().score;
+                let b = outPlayers[iIndex as usize + 1].score().score;
+                let swap = (fGetHighest && a < b) || (!fGetHighest && a > b) || (a == b && RANDOM_BOOL(gp.get()) && {
+                    let r = iRandom < 5;
+                    iRandom += 1;
+                    r
+                });
+                if swap {
+                    outPlayers.swap(iIndex as usize, iIndex as usize + 1);
+
+                    fNeedSwap = true;
+                }
+                iIndex += 1;
+            }
+        }
+
+        iNumPlayersInList
     }
 
     pub fn get_closest_goal(&mut self, iGoal: i16) -> i16 {
@@ -417,21 +399,17 @@ pub fn cgamemode_init<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T) {
     this.gameover = false;
     this.playedwarningsound = false;
 
-    unsafe {
-        for iScore in 0..g.score_cnt {
-            gp.score[iScore as usize].set_score(g, 0);
-        }
+    for iScore in 0..g.score_cnt {
+        gp.score[iScore as usize].set_score(g, 0);
     }
 }
 
 pub fn cgamemode_think<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T) {
         let mut gp = g.ptr();
-    unsafe {
-        if g.netplay.active {
-            for k in 0..g.players.len() {
-                if g.netplay.player_disconnected[k] {
-                    gp.players[k].spawn_text(g, "Disconnected!");
-                }
+    if g.netplay.active {
+        for k in 0..g.players.len() {
+            if g.netplay.player_disconnected[k] {
+                gp.players[k].spawn_text(g, "Disconnected!");
             }
         }
     }

@@ -175,7 +175,7 @@ fn strtol10(s: &str) -> i64 {
 }
 
 fn virtual_ticks(g: &mut Game) -> u32 {
-    unsafe { 1000u32.wrapping_add(h(g).frame.wrapping_mul(WAITTIME as u32)) }
+    1000u32.wrapping_add(h(g).frame.wrapping_mul(WAITTIME as u32))
 }
 
 /// A recording's text: plain, or gzipped (.smwrp, .txt.gz).
@@ -196,7 +196,7 @@ fn load_events(g: &mut Game, path: &str) -> Vec<ReplayEvent> {
         let line = raw.strip_suffix('\r').unwrap_or(raw);
         let trimmed = line.trim_start_matches([' ', '\t']);
         if let Some(value) = trimmed.strip_prefix("#@ touch=") {
-            unsafe { h(gp.get()).touch = value.trim() == "1" };
+            h(gp.get()).touch = value.trim() == "1";
         }
         if trimmed.is_empty() || trimmed.starts_with('#') {
             continue;
@@ -227,9 +227,7 @@ fn load_events(g: &mut Game, path: &str) -> Vec<ReplayEvent> {
             };
             let Some(device) = device else { fail(format!("{}:{}: expected '<frame> {} <dev>'", path, lineno, dir)) };
             added_later[device as usize].get_or_insert(dir == "jadd");
-            unsafe {
-                h(gp.get()).devices.push((frame, device, dir == "jadd"));
-            }
+            h(gp.get()).devices.push((frame, device, dir == "jadd"));
             continue;
         }
         if dir == "tap" {
@@ -282,9 +280,7 @@ fn load_events(g: &mut Game, path: &str) -> Vec<ReplayEvent> {
         }
         events.push(ev);
     }
-    unsafe {
-        h(gp.get()).joysticks = (0..8).filter(|&d| added_later[d as usize] == Some(false)).map(|d| d + 1).max().unwrap_or(0);
-    }
+    h(gp.get()).joysticks = (0..8).filter(|&d| added_later[d as usize] == Some(false)).map(|d| d + 1).max().unwrap_or(0);
     std::mem::take(events)
 }
 
@@ -310,14 +306,12 @@ pub fn attach_virtual() -> i32 {
 pub fn replay_device_changes(g: &mut Game) -> Vec<(usize, bool)> {
     let mut gp = g.ptr();
     let mut changes = Vec::new();
-    unsafe {
-        while h(gp.get()).nextDevice < h(gp.get()).devices.len() && h(gp.get()).devices[h(gp.get()).nextDevice].0 <= h(gp.get()).frame {
-            let (frame, device, added) = h(gp.get()).devices[h(gp.get()).nextDevice];
-            if frame == h(gp.get()).frame {
-                changes.push((device as usize, added));
-            }
-            h(gp.get()).nextDevice += 1;
+    while h(gp.get()).nextDevice < h(gp.get()).devices.len() && h(gp.get()).devices[h(gp.get()).nextDevice].0 <= h(gp.get()).frame {
+        let (frame, device, added) = h(gp.get()).devices[h(gp.get()).nextDevice];
+        if frame == h(gp.get()).frame {
+            changes.push((device as usize, added));
         }
+        h(gp.get()).nextDevice += 1;
     }
     changes
 }
@@ -327,7 +321,7 @@ pub fn record_device(g: &mut Game, index: usize, added: bool) {
     let mut gp = g.ptr();
     let Some(r) = rec(g).filter(|r| r.live) else { return };
     if index < 8 {
-        let _ = writeln!(r.out, "{} {} {}", unsafe { h(gp.get()).frame }, if added { "jadd" } else { "jremove" }, index);
+        let _ = writeln!(r.out, "{} {} {}", h(gp.get()).frame, if added { "jadd" } else { "jremove" }, index);
     }
 }
 
@@ -381,22 +375,18 @@ fn note_replay_key(g: &mut Game, input: &Input) {
 /// in a text field replays as it was recorded.
 pub fn keyboard_state(g: &mut Game) -> *const u8 {
     let mut gp = g.ptr();
-    unsafe {
-        if h(gp.get()).replay {
-            (&raw const h(gp.get()).replay_keys).cast()
-        } else {
-            crate::services::services(gp.get()).keyboard.state().as_ptr()
-        }
+    if h(gp.get()).replay {
+        (&raw const h(gp.get()).replay_keys).cast()
+    } else {
+        crate::services::services(gp.get()).keyboard.state().as_ptr()
     }
 }
 
 /// Net games only (not in the C++ harness): a `C` line, compared across clients.
 pub fn note_net(g: &mut Game, line: String) {
     let mut gp = g.ptr();
-    unsafe {
-        if gp.netplay.active && h(gp.get()).dump.is_some() {
-            h(gp.get()).spawn_events.push(format!("C {}", line));
-        }
+    if gp.netplay.active && h(gp.get()).dump.is_some() {
+        h(gp.get()).spawn_events.push(format!("C {}", line));
     }
 }
 
@@ -407,7 +397,7 @@ pub fn note_powerup_spawn(g: &mut Game, iType: i16, x: i16, y: i16) {
 fn dump_frame(g: &mut Game, out: &mut impl Write) -> std::io::Result<()> {
     let mut gp = g.ptr();
     let state = state_name(g);
-    writeln!(out, "F {} {}", unsafe { h(gp.get()).frame }, state)?;
+    writeln!(out, "F {} {}", h(gp.get()).frame, state)?;
 
     if state == "menu" {
         let menu = MenuState::instance(g);
@@ -416,7 +406,7 @@ fn dump_frame(g: &mut Game, out: &mut impl Write) -> std::io::Result<()> {
         GameplayState::instance(g).harness_dump(g, out)?;
     }
 
-    for line in unsafe { gp.sfx.sfx_events.iter().chain(h(gp.get()).spawn_events.iter()) } {
+    for line in gp.sfx.sfx_events.iter().chain(h(gp.get()).spawn_events.iter()) {
         writeln!(out, "{}", line)?;
     }
 
@@ -528,12 +518,10 @@ pub fn init(g: &mut Game) {
 
 pub fn libc_seed(g: &mut Game, fallback: u32) -> u32 {
     let mut gp = g.ptr();
-    unsafe {
-        if h(gp.get()).seeded {
-            h(gp.get()).seed
-        } else {
-            fallback
-        }
+    if h(gp.get()).seeded {
+        h(gp.get()).seed
+    } else {
+        fallback
     }
 }
 
@@ -541,10 +529,8 @@ pub fn libc_seed(g: &mut Game, fallback: u32) -> u32 {
 /// the device index its events carry (`which`), which is what the game compares with its bindings.
 pub fn replay_joysticks(g: &mut Game) -> Option<i16> {
     #[cfg(target_os = "emscripten")]
-    unsafe {
-        if h(g).replay {
-            return Some(h(g).joysticks as i16);
-        }
+    if h(g).replay {
+        return Some(h(g).joysticks as i16);
     }
     None
 }
@@ -559,23 +545,23 @@ pub fn record_touch(g: &mut Game) {
 /// Whether the replay was recorded with Android's touch controls on (`touch::touch_first`).
 pub fn replay_touch(g: &mut Game) -> bool {
     let mut gp = g.ptr();
-    unsafe { h(gp.get()).replay && h(gp.get()).touch }
+    h(gp.get()).replay && h(gp.get()).touch
 }
 
 pub fn replaying(g: &mut Game) -> bool {
     let mut gp = g.ptr();
-    unsafe { h(gp.get()).replay }
+    h(gp.get()).replay
 }
 
 pub fn frame(g: &mut Game) -> u32 {
     let mut gp = g.ptr();
-    unsafe { h(gp.get()).frame }
+    h(gp.get()).frame
 }
 
 /// The clock net code decides by: frame-based in seeded runs, so a replay reads the recorded session's times.
 pub fn net_ticks(g: &mut Game) -> u32 {
     let mut gp = g.ptr();
-    if unsafe { h(gp.get()).seeded } {
+    if h(gp.get()).seeded {
         virtual_ticks(g)
     } else {
         crate::services::ticks(gp.get())
@@ -596,100 +582,92 @@ pub fn net_seed() -> Option<u32> {
 
 pub fn no_limit(g: &mut Game) -> bool {
     let mut gp = g.ptr();
-    unsafe { h(gp.get()).noLimit }
+    h(gp.get()).noLimit
 }
 
 pub fn forced_map(g: &mut Game) -> Option<&'static str> {
     let mut gp = g.ptr();
-    unsafe {
-        if h(gp.get()).map.is_empty() {
-            None
-        } else {
-            Some(h(gp.get()).map.as_str())
-        }
+    if h(gp.get()).map.is_empty() {
+        None
+    } else {
+        Some(h(gp.get()).map.as_str())
     }
 }
 
 pub fn frame_start(g: &mut Game) {
     let mut gp = g.ptr();
     #[cfg(not(target_os = "emscripten"))]
-    crate::smw::pad::debug_frame(g, unsafe { h(gp.get()).frame });
+    crate::smw::pad::debug_frame(g, h(gp.get()).frame);
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::phase(2);
     sfx::sfx_virtual_advance(g);
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::phase(3);
-    record_frame_start(g, unsafe { h(gp.get()).frame });
+    record_frame_start(g, h(gp.get()).frame);
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::phase(4);
 
-    unsafe {
-        while h(gp.get()).nextEvent < h(gp.get()).events.len() && h(gp.get()).events[h(gp.get()).nextEvent].frame <= h(gp.get()).frame {
-            if h(gp.get()).events[h(gp.get()).nextEvent].frame == h(gp.get()).frame {
-                let input = input_of(g, &h(gp.get()).events[h(gp.get()).nextEvent]);
-                note_replay_key(g, &input);
-                crate::services::services(g).events.push(&input);
-                copy_replay_event(g, &h(gp.get()).events[h(gp.get()).nextEvent]);
-            }
-            h(gp.get()).nextEvent += 1;
+    while h(gp.get()).nextEvent < h(gp.get()).events.len() && h(gp.get()).events[h(gp.get()).nextEvent].frame <= h(gp.get()).frame {
+        if h(gp.get()).events[h(gp.get()).nextEvent].frame == h(gp.get()).frame {
+            let input = input_of(g, &h(gp.get()).events[h(gp.get()).nextEvent]);
+            note_replay_key(g, &input);
+            crate::services::services(g).events.push(&input);
+            copy_replay_event(g, &h(gp.get()).events[h(gp.get()).nextEvent]);
         }
+        h(gp.get()).nextEvent += 1;
     }
 }
 
 /// Blocking waits take the next replay event immediately instead of waiting for input.
 pub fn wait_event(g: &mut Game) -> Input {
     let mut gp = g.ptr();
-    unsafe {
-        if h(gp.get()).rec.as_ref().is_some_and(|r| r.live) {
-            return record_wait_event(g);
-        }
-        if !h(gp.get()).replay {
-            return crate::services::services(g).events.wait();
-        }
-        if h(gp.get()).nextEvent >= h(gp.get()).events.len() {
-            fail(format!("blocking wait at frame {} but the replay has no events left", h(gp.get()).frame));
-        }
-        let input = input_of(g, &h(gp.get()).events[h(gp.get()).nextEvent]);
-        note_replay_key(g, &input);
-        copy_replay_event(g, &h(gp.get()).events[h(gp.get()).nextEvent]);
-        h(gp.get()).nextEvent += 1;
-        input
+    if h(gp.get()).rec.as_ref().is_some_and(|r| r.live) {
+        return record_wait_event(g);
     }
+    if !h(gp.get()).replay {
+        return crate::services::services(g).events.wait();
+    }
+    if h(gp.get()).nextEvent >= h(gp.get()).events.len() {
+        fail(format!("blocking wait at frame {} but the replay has no events left", h(gp.get()).frame));
+    }
+    let input = input_of(g, &h(gp.get()).events[h(gp.get()).nextEvent]);
+    note_replay_key(g, &input);
+    copy_replay_event(g, &h(gp.get()).events[h(gp.get()).nextEvent]);
+    h(gp.get()).nextEvent += 1;
+    input
 }
 
 pub fn frame_end(g: &mut Game) {
     let mut gp = g.ptr();
-    unsafe {
-        if let Some(mut out) = h(gp.get()).dump.take() {
-            let _ = dump_frame(g, &mut out);
-            let _ = out.flush();
-            h(gp.get()).dump = Some(out);
-        }
-        g.sfx.sfx_events.clear();
-        h(gp.get()).spawn_events.clear();
-        record_markers(g, h(gp.get()).frame);
+    if let Some(mut out) = h(gp.get()).dump.take() {
+        let _ = dump_frame(g, &mut out);
+        let _ = out.flush();
+        h(gp.get()).dump = Some(out);
+    }
+    g.sfx.sfx_events.clear();
+    h(gp.get()).spawn_events.clear();
+    record_markers(g, h(gp.get()).frame);
 
-        let f = h(gp.get()).frame;
-        let periodic = h(gp.get()).shotEvery > 0 && f >= h(gp.get()).shotFrom && f <= h(gp.get()).shotTo && (f - h(gp.get()).shotFrom) % h(gp.get()).shotEvery == 0;
-        if periodic {
-            if let Some(out) = h(gp.get()).shotStream.as_mut() {
-                if crate::common::gfx::gfx_write_screen_raw(g, out).and_then(|_| out.flush()).is_err() {
-                    fail(format!("cannot write shot stream at frame {}", f));
-                }
+    let f = h(gp.get()).frame;
+    let periodic = h(gp.get()).shotEvery > 0 && f >= h(gp.get()).shotFrom && f <= h(gp.get()).shotTo && (f - h(gp.get()).shotFrom) % h(gp.get()).shotEvery == 0;
+    if periodic {
+        if let Some(out) = h(gp.get()).shotStream.as_mut() {
+            if crate::common::gfx::gfx_write_screen_raw(g, out).and_then(|_| out.flush()).is_err() {
+                fail(format!("cannot write shot stream at frame {}", f));
             }
         }
-        if h(gp.get()).shotFrames.contains(&f) || (periodic && h(gp.get()).shotStream.is_none()) {
-            let path = format!("{}/frame_{}.bmp", h(gp.get()).shotDir, h(gp.get()).frame);
-            if !crate::common::gfx::gfx_save_screen_bmp(g, &path) {
-                eprintln!("[harness] cannot save {}", path);
-            }
+    }
+    if h(gp.get()).shotFrames.contains(&f) || (periodic && h(gp.get()).shotStream.is_none()) {
+        let path = format!("{}/frame_{}.bmp", h(gp.get()).shotDir, h(gp.get()).frame);
+        if !crate::common::gfx::gfx_save_screen_bmp(g, &path) {
+            eprintln!("[harness] cannot save {}", path);
         }
+    }
 
-        h(gp.get()).frame += 1;
-        if h(gp.get()).maxFrames >= 0 && h(gp.get()).frame as i64 >= h(gp.get()).maxFrames {
-            g.game_values.appstate = AppState::Quit;
-            h(gp.get()).dump = None;
-        }
+    h(gp.get()).frame += 1;
+    if h(gp.get()).maxFrames >= 0 && h(gp.get()).frame as i64 >= h(gp.get()).maxFrames {
+        g.game_values.appstate = AppState::Quit;
+        h(gp.get()).dump = None;
     }
 }
 
@@ -725,7 +703,7 @@ struct Recorder {
 
 fn rec(g: &mut Game) -> Option<&'static mut Recorder> {
     let mut gp = g.ptr();
-    unsafe { h(gp.get()).rec.as_mut() }
+    h(gp.get()).rec.as_mut()
 }
 
 const BASE64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -911,7 +889,7 @@ fn to_replay_event(g: &mut Game, raw: &SDL_Event, frame: u32) -> Option<ReplayEv
         return Some(ev);
     }
     let (which, kind, index, value) = match input {
-        InputEvent::Key { key, down, .. } => unsafe {
+        InputEvent::Key { key, down, .. } => {
             let kb = &crate::services::services(gp.get()).keyboard;
             let name = kb.key_name(key.0);
             if name.is_empty() || kb.key_from_name(&name) != key.0 {
@@ -1040,11 +1018,11 @@ mod web_dpad {
     }
 
     pub fn hat_for(g: &mut Game, ev: &ReplayEvent) -> Option<ReplayEvent> {
-        if ev.kind != EventKind::JoyButton || !(12..=15).contains(&ev.index) || unsafe { super::h(g).web_standard } & (1 << ev.device) == 0 {
+        if ev.kind != EventKind::JoyButton || !(12..=15).contains(&ev.index) || super::h(g).web_standard & (1 << ev.device) == 0 {
             return None;
         }
         let bit = [SDL_HAT_UP, SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT][(ev.index - 12) as usize] as i32;
-        let hat = unsafe { &mut super::h(g).web_hats[ev.device as usize] };
+        let hat = &mut super::h(g).web_hats[ev.device as usize];
         if ev.value != 0 {
             *hat |= bit;
         } else {
@@ -1060,7 +1038,7 @@ fn record_frame_start(g: &mut Game, frame: u32) {
     let mut gp = g.ptr();
     let Some(r) = rec(g).filter(|r| r.live) else { return };
     if frame == 0 {
-        for d in 0..unsafe { gp.joystickcount }.min(8) as i32 {
+        for d in 0..gp.joystickcount.min(8) as i32 {
             let ev = ReplayEvent { frame: 0, kind: EventKind::JoyHat, down: false, keyName: String::new(), device: d, index: 0, value: 0 };
             record_event(g, r, &ev);
         }
@@ -1090,7 +1068,7 @@ fn record_frame_start(g: &mut Game, frame: u32) {
     if r.quit {
         // The recording ends before this frame; frames= excludes it.
         r.quitFrame.get_or_insert(frame);
-        unsafe { g.game_values.appstate = AppState::Quit };
+        g.game_values.appstate = AppState::Quit;
     }
 }
 
@@ -1102,7 +1080,7 @@ fn record_wait_event(g: &mut Game) -> Input {
         #[cfg(not(target_os = "emscripten"))]
         crate::smw::touch::flush(g);
         let Some(r) = rec(g) else { return Input { timestamp: 0, event: InputEvent::Other(0) } };
-        push_live_script(g, r, unsafe { h(gp.get()).frame } + 1);
+        push_live_script(g, r, h(gp.get()).frame + 1);
         crate::services::services(gp.get()).events.pump();
         while !r.pending.is_empty() {
             let raw = r.pending.remove(0);
@@ -1111,7 +1089,7 @@ fn record_wait_event(g: &mut Game) -> Input {
                 r.pending.insert(0, raw);
                 break;
             }
-            if let Some(ev) = to_replay_event(g, &raw, unsafe { h(gp.get()).frame } + 1) {
+            if let Some(ev) = to_replay_event(g, &raw, h(gp.get()).frame + 1) {
                 let _ = writeln!(r.out, "{}", line_for(&ev));
                 return input_of(g, &ev);
             }
@@ -1150,13 +1128,13 @@ pub fn finish(g: &mut Game) {
 /// Real SDL_mixer output on top of the virtual mixer (recorded sessions and --replay watching).
 pub fn audible(g: &mut Game) -> bool {
     let mut gp = g.ptr();
-    unsafe { h(gp.get()).audible }
+    h(gp.get()).audible
 }
 
 /// Playback speed multiplier for watching a recording (SMW_REPLAY_SPEED); 1 otherwise.
 pub fn speed(g: &mut Game) -> f32 {
     let mut gp = g.ptr();
-    unsafe { h(gp.get()).speed }
+    h(gp.get()).speed
 }
 
 /// `--replay <file>`: watch a recording in a normal window at normal speed with sound. The settings
@@ -1180,7 +1158,7 @@ pub fn prepare_watch(g: &mut Game, file: &str, speed: Option<f32>, segment: Opti
         }
     }
     std::env::set_var(if cfg!(windows) { "USERPROFILE" } else { "HOME" }, &home);
-    unsafe { h(gp.get()).watch_home = Some(home) };
+    h(gp.get()).watch_home = Some(home);
     std::env::set_var("SMW_REPLAY", &path);
     std::env::set_var("SMW_SEED", directive("seed").unwrap_or_else(|| "1".to_string()));
     // A session that ended without finish() (killed, or a browser tab closed) has no frames= line:
@@ -1225,8 +1203,8 @@ pub fn match_checkpoint(g: &mut Game) {
     let Some(r) = rec(g) else { return };
     r.matches += 1;
     r.checkpoint = Some(match crate::smw::checkpoint::unsupported_reason(g) {
-        Some(reason) => format!("#@ checkpoint match={} frame={} unsupported={}", r.matches, unsafe { h(gp.get()).frame }, reason),
-        None => format!("#@ checkpoint match={} frame={} z64={}", r.matches, unsafe { h(gp.get()).frame }, base64_encode(&deflate(&crate::smw::checkpoint::capture(g)))),
+        Some(reason) => format!("#@ checkpoint match={} frame={} unsupported={}", r.matches, h(gp.get()).frame, reason),
+        None => format!("#@ checkpoint match={} frame={} z64={}", r.matches, h(gp.get()).frame, base64_encode(&deflate(&crate::smw::checkpoint::capture(g)))),
     });
 }
 
@@ -1236,7 +1214,7 @@ fn marker_state(g: &mut Game) -> &'static str {
     let mut gp = g.ptr();
     match state_name(g) {
         "menu" if MenuState::instance(gp.get()).harness_menu_name() == "world" => "worldmap",
-        "gameplay" if unsafe { gp.game_values.gamemode.gameover } => "scoreboard",
+        "gameplay" if gp.game_values.gamemode.gameover => "scoreboard",
         name => name,
     }
 }
@@ -1322,17 +1300,15 @@ fn load_segment(g: &mut Game, path: &str) {
         .filter_map(|d| Some((field(d, "frame")?.parse::<u32>().ok()?, field(d, "state")?)))
         .find(|(f, state)| *f > start && state != "gameplay" && state != "scoreboard")
         .map(|(f, _)| f);
-    unsafe {
-        h(gp.get()).frame = start;
-        if let Some(end) = end {
-            h(gp.get()).maxFrames = if h(gp.get()).maxFrames >= 0 { h(gp.get()).maxFrames.min(end as i64) } else { end as i64 };
-        }
-        // The menu consumed this frame's input before the checkpoint.
-        while h(gp.get()).nextEvent < h(gp.get()).events.len() && h(gp.get()).events[h(gp.get()).nextEvent].frame <= start {
-            h(gp.get()).nextEvent += 1;
-        }
-        h(gp.get()).segment = Some(Segment { checkpoint: bytes });
+    h(gp.get()).frame = start;
+    if let Some(end) = end {
+        h(gp.get()).maxFrames = if h(gp.get()).maxFrames >= 0 { h(gp.get()).maxFrames.min(end as i64) } else { end as i64 };
     }
+    // The menu consumed this frame's input before the checkpoint.
+    while h(gp.get()).nextEvent < h(gp.get()).events.len() && h(gp.get()).events[h(gp.get()).nextEvent].frame <= start {
+        h(gp.get()).nextEvent += 1;
+    }
+    h(gp.get()).segment = Some(Segment { checkpoint: bytes });
 }
 
 /// A checkpoint line's binary: `z64=` (zlib, then base64) or, in older recordings, `b64=` (base64).
@@ -1355,7 +1331,7 @@ fn checkpoint_bytes(d: &[(String, String)]) -> Result<Vec<u8>, String> {
 /// The state a segment replay starts in, if this is one.
 pub fn segment_state(g: &mut Game) -> Option<crate::smw::checkpoint::SegmentState> {
     let mut gp = g.ptr();
-    unsafe { h(gp.get()).segment.as_mut().map(|s| crate::smw::checkpoint::SegmentState { checkpoint: std::mem::take(&mut s.checkpoint), _alias: Aliased::new() }) }
+    h(gp.get()).segment.as_mut().map(|s| crate::smw::checkpoint::SegmentState { checkpoint: std::mem::take(&mut s.checkpoint), _alias: Aliased::new() })
 }
 
 #[cfg(test)]

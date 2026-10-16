@@ -58,20 +58,18 @@ pub fn io_block_draw<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T) {
 }
 
 pub fn io_block_update<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T) {
-    unsafe {
-        let b = this.block_mut();
-        if b.ishiddentype && !b.hidden {
-            if g.game_values.hiddenblockrespawn > 0 && {
-                b.iHiddenTimer += 1;
-                b.iHiddenTimer > g.game_values.hiddenblockrespawn
-            } {
-                b.iHiddenTimer = 0;
-                b.hidden = true;
-                this.reset();
+    let b = this.block_mut();
+    if b.ishiddentype && !b.hidden {
+        if g.game_values.hiddenblockrespawn > 0 && {
+            b.iHiddenTimer += 1;
+            b.iHiddenTimer > g.game_values.hiddenblockrespawn
+        } {
+            b.iHiddenTimer = 0;
+            b.hidden = true;
+            this.reset();
 
-                let b = this.block();
-                g.g_map.update_tile_gap(b.col, b.row);
-            }
+            let b = this.block();
+            g.g_map.update_tile_gap(b.col, b.row);
         }
     }
 }
@@ -208,94 +206,90 @@ pub fn io_block_hitleft_object<T: IO_BlockTrait + ?Sized>(this: &mut T, mut obje
 
 pub fn io_block_bounce_moving_object<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) {
         let mut gp = g.ptr();
-    unsafe {
-        let r#type = object.get_moving_object_type();
-        if r#type == movingobject_goomba || r#type == movingobject_koopa || r#type == movingobject_buzzybeetle || r#type == movingobject_spiny {
-            if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
+    let r#type = object.get_moving_object_type();
+    if r#type == movingobject_goomba || r#type == movingobject_koopa || r#type == movingobject_buzzybeetle || r#type == movingobject_spiny {
+        if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
 
-            let enemy = object.as_walking_enemy().unwrap();
-            let style = enemy.we().get_kill_style();
+        let enemy = object.as_walking_enemy().unwrap();
+        let style = enemy.we().get_kill_style();
 
-            enemy.die_and_drop_shell(g, true, true);
+        enemy.die_and_drop_shell(g, true, true);
 
-            let iBumpPlayerID = this.block().iBumpPlayerID;
-            if !g.game_values.gamemode.gameover && iBumpPlayerID >= 0 {
-                let mut player = get_player_from_global_id(g, iBumpPlayerID);
+        let iBumpPlayerID = this.block().iBumpPlayerID;
+        if !g.game_values.gamemode.gameover && iBumpPlayerID >= 0 {
+            let mut player = get_player_from_global_id(g, iBumpPlayerID);
 
-                if !player.is_null() {
-                    player.add_killer_award(g, Ptr::null(), style);
-                    player.score.adjust_score(g, 1);
-                }
+            if !player.is_null() {
+                player.add_killer_award(g, Ptr::null(), style);
+                player.score.adjust_score(g, 1);
             }
-        } else if r#type == movingobject_shell {
-            let shell = object.as_any().downcast_mut::<CO_Shell>().unwrap();
-            shell.flip(g);
-        } else if r#type == movingobject_throwblock {
-            object.die(g);
-        } else if r#type == movingobject_throwbox {
-            object.die(g);
-        } else {
-            object.vely = -VELNOTEBLOCKREPEL;
         }
+    } else if r#type == movingobject_shell {
+        let shell = object.as_any().downcast_mut::<CO_Shell>().unwrap();
+        shell.flip(g);
+    } else if r#type == movingobject_throwblock {
+        object.die(g);
+    } else if r#type == movingobject_throwbox {
+        object.die(g);
+    } else {
+        object.vely = -VELNOTEBLOCKREPEL;
     }
 }
 
 pub fn io_block_kill_players_and_objects_inside_block<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T, playerID: i16) {
-    unsafe {
-        let iposx = this.block().iposx;
-        let iposy = this.block().iposy;
+    let iposx = this.block().iposx;
+    let iposy = this.block().iposy;
 
-        //Loop through players
-        for i in 0..g.players.len() {
-            let mut player = g.players[i];
-            if !player.isready() {
+    //Loop through players
+    for i in 0..g.players.len() {
+        let mut player = g.players[i];
+        if !player.isready() {
+            continue;
+        }
+
+        let mut iSwapSides: i16 = 0;
+        if player.fOldX >= (iposx as i32 + TILESIZE) as f32 {
+            iSwapSides = -App::screenWidth as i16;
+        }
+
+        if player.fOldX + PW as f32 + iSwapSides as f32 >= iposx as f32
+            && player.fOldX + (iSwapSides as f32) < (iposx as i32 + TILESIZE) as f32
+            && player.fOldY + PH as f32 >= iposy as f32
+            && player.fOldY < (iposy as i32 + TILESIZE) as f32
+        {
+            player.iSuicideCreditPlayerID = playerID;
+            player.iSuicideCreditTimer = 1;
+            player.kill_player_map_hazard(g, true, KillStyle::Environment, true, -1);
+        }
+    }
+
+    //Loop through objects
+    for iLayer in 0..3usize {
+        let count = g.objectcontainer[iLayer].list().len();
+        for i in 0..count {
+            let mut obj: Ptr<dyn CObjectTrait> = g.objectcontainer[iLayer].list()[i];
+            let movingobject: &mut dyn IO_MovingObjectTrait = match obj.as_io_moving_object() {
+                Some(m) => m,
+                None => continue,
+            };
+            if !movingobject.mo().collides_with_map() {
                 continue;
             }
 
+            let fOldX = movingobject.mo().fOldX;
+            let fOldY = movingobject.mo().fOldY;
+
             let mut iSwapSides: i16 = 0;
-            if player.fOldX >= (iposx as i32 + TILESIZE) as f32 {
+            if fOldX >= (iposx as i32 + TILESIZE) as f32 {
                 iSwapSides = -App::screenWidth as i16;
             }
 
-            if player.fOldX + PW as f32 + iSwapSides as f32 >= iposx as f32
-                && player.fOldX + (iSwapSides as f32) < (iposx as i32 + TILESIZE) as f32
-                && player.fOldY + PH as f32 >= iposy as f32
-                && player.fOldY < (iposy as i32 + TILESIZE) as f32
+            if fOldX + PW as f32 + iSwapSides as f32 >= iposx as f32
+                && fOldX + (iSwapSides as f32) < (iposx as i32 + TILESIZE) as f32
+                && fOldY + PH as f32 >= iposy as f32
+                && fOldY < (iposy as i32 + TILESIZE) as f32
             {
-                player.iSuicideCreditPlayerID = playerID;
-                player.iSuicideCreditTimer = 1;
-                player.kill_player_map_hazard(g, true, KillStyle::Environment, true, -1);
-            }
-        }
-
-        //Loop through objects
-        for iLayer in 0..3usize {
-            let count = g.objectcontainer[iLayer].list().len();
-            for i in 0..count {
-                let mut obj: Ptr<dyn CObjectTrait> = g.objectcontainer[iLayer].list()[i];
-                let movingobject: &mut dyn IO_MovingObjectTrait = match obj.as_io_moving_object() {
-                    Some(m) => m,
-                    None => continue,
-                };
-                if !movingobject.mo().collides_with_map() {
-                    continue;
-                }
-
-                let fOldX = movingobject.mo().fOldX;
-                let fOldY = movingobject.mo().fOldY;
-
-                let mut iSwapSides: i16 = 0;
-                if fOldX >= (iposx as i32 + TILESIZE) as f32 {
-                    iSwapSides = -App::screenWidth as i16;
-                }
-
-                if fOldX + PW as f32 + iSwapSides as f32 >= iposx as f32
-                    && fOldX + (iSwapSides as f32) < (iposx as i32 + TILESIZE) as f32
-                    && fOldY + PH as f32 >= iposy as f32
-                    && fOldY < (iposy as i32 + TILESIZE) as f32
-                {
-                    movingobject.kill_object_map_hazard(g, playerID);
-                }
+                movingobject.kill_object_map_hazard(g, playerID);
             }
         }
     }

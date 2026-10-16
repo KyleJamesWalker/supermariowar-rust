@@ -47,19 +47,17 @@ impl MapReader {
         let mut tilesetwidths = vec![0i16; n];
         let mut tilesetheights = vec![0i16; n];
 
-        unsafe {
-            for t in &translation {
-                let iID = t.iID as usize;
-                translationid[iID] = g.g_tilesetmanager.index_from_name(&t.szName) as i16;
+        for t in &translation {
+            let iID = t.iID as usize;
+            translationid[iID] = g.g_tilesetmanager.index_from_name(&t.szName) as i16;
 
-                if translationid[iID] as i32 == TILESETUNKNOWN {
-                    tilesetwidths[iID] = 1;
-                    tilesetheights[iID] = 1;
-                } else {
-                    let ts = gp.g_tilesetmanager.tileset(g, translationid[iID] as isize as usize);
-                    tilesetwidths[iID] = ts.width();
-                    tilesetheights[iID] = ts.height();
-                }
+            if translationid[iID] as i32 == TILESETUNKNOWN {
+                tilesetwidths[iID] = 1;
+                tilesetheights[iID] = 1;
+            } else {
+                let ts = gp.g_tilesetmanager.tileset(g, translationid[iID] as isize as usize);
+                tilesetwidths[iID] = ts.width();
+                tilesetheights[iID] = ts.height();
             }
         }
 

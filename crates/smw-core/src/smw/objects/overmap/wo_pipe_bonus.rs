@@ -40,12 +40,10 @@ impl OMO_PipeBonus {
 
         this.velx = vel.x;
 
-        unsafe {
-            if g.pipegamemode.is_slowdown() {
-                this.vely = vel.y / 1.5f32;
-            } else {
-                this.vely = vel.y;
-            }
+        if g.pipegamemode.is_slowdown() {
+            this.vely = vel.y / 1.5f32;
+        } else {
+            this.vely = vel.y;
         }
 
         this.iUncollectableTime = uncollectabletime;
@@ -67,12 +65,10 @@ impl CObjectTrait for OMO_PipeBonus {
             self.dead = true;
         }
 
-        unsafe {
-            if g.pipegamemode.is_slowdown() {
-                self.vely += GRAVITATION / 2.0f32;
-            } else {
-                self.vely += GRAVITATION;
-            }
+        if g.pipegamemode.is_slowdown() {
+            self.vely += GRAVITATION / 2.0f32;
+        } else {
+            self.vely += GRAVITATION;
         }
 
         if self.iUncollectableTime > 0 {
@@ -97,28 +93,26 @@ impl CObjectTrait for OMO_PipeBonus {
             return false;
         }
 
-        unsafe {
-            // fireball
-            if self.iType == 5 {
-                if !player.is_shielded() {
-                    self.dead = true;
-                    g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
-                        (self.ix as i32 - 1) as i16,
-                        (self.iy as i32 - 1) as i16,
-                        3,
-                        8,
-                    ));
+        // fireball
+        if self.iType == 5 {
+            if !player.is_shielded() {
+                self.dead = true;
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+                    (self.ix as i32 - 1) as i16,
+                    (self.iy as i32 - 1) as i16,
+                    3,
+                    8,
+                ));
 
-                    if !player.is_invincible() {
-                        return player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
-                    }
+                if !player.is_invincible() {
+                    return player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
                 }
-
-                return false;
-            } else if !g.game_values.gamemode.gameover {
-                gp.pipegamemode.set_bonus(g, (self.iType as i32 + 1) as i16, self.iDuration, player.get_team_id());
             }
+
+            return false;
+        } else if !g.game_values.gamemode.gameover {
+            gp.pipegamemode.set_bonus(g, (self.iType as i32 + 1) as i16, self.iDuration, player.get_team_id());
         }
 
         self.dead = true;

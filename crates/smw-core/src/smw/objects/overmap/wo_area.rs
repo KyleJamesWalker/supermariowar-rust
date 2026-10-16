@@ -60,22 +60,20 @@ impl OMO_Area {
             return;
         }
 
-        unsafe {
-            let mut x: i16 = 0;
-            let mut y: i16 = 0;
-            let mut iAttempts: i16 = 32;
-            while (!gp.g_map.findspawnpoint(g, 5, &mut x, &mut y, self.collisionWidth, self.collisionHeight, false)
-                || g.objectcontainer[0].get_closest_object(x, y, object_area) <= (200.0f32 - ((self.numareas as i32 - 3) as f32 * 25.0f32)))
-                && {
-                    let a = iAttempts;
-                    iAttempts -= 1;
-                    a > 0
-                }
-            {}
+        let mut x: i16 = 0;
+        let mut y: i16 = 0;
+        let mut iAttempts: i16 = 32;
+        while (!gp.g_map.findspawnpoint(g, 5, &mut x, &mut y, self.collisionWidth, self.collisionHeight, false)
+            || g.objectcontainer[0].get_closest_object(x, y, object_area) <= (200.0f32 - ((self.numareas as i32 - 3) as f32 * 25.0f32)))
+            && {
+                let a = iAttempts;
+                iAttempts -= 1;
+                a > 0
+            }
+        {}
 
-            self.set_xi(x);
-            self.set_yi(y);
-        }
+        self.set_xi(x);
+        self.set_yi(y);
     }
 
     pub fn reset(&mut self) {
@@ -99,9 +97,7 @@ impl OMO_Area {
             self.colorID = player.colorID;
 
             self.frame = ((self.colorID as i32 + 1) * self.iw as i32) as i16;
-            unsafe {
-                if_sound_on_play(g, &mut gp.rm.sfx_areatag);
-            }
+            if_sound_on_play(g, &mut gp.rm.sfx_areatag);
         }
     }
 }
@@ -115,32 +111,30 @@ impl CObjectTrait for OMO_Area {
 
     fn update(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        unsafe {
-            if !self.touchingPlayer.is_null() {
-                let p = self.touchingPlayer;
-                self.set_owner(g, p);
-            }
-
-            if self.iPlayerID != -1 && !g.game_values.gamemode.gameover {
-                self.scoretimer += 1;
-                if self.scoretimer as i32 >= ((g.game_values.pointspeed as i32) << 1) {
-                    self.scoretimer = 0;
-                    gp.players[self.iPlayerID as usize].score().adjust_score(g, 1);
-                    gp.get().game_values.gamemode.check_winner(g, gp.get().players[self.iPlayerID as usize]);
-                }
-            }
-
-            if g.game_values.gamemodesettings.domination.relocationfrequency > 0 {
-                self.relocatetimer += 1;
-                if self.relocatetimer >= g.game_values.gamemodesettings.domination.relocationfrequency {
-                    self.relocatetimer = 0;
-                    self.place_area(g);
-                }
-            }
-
-            self.totalTouchingPlayers = 0;
-            self.touchingPlayer = Ptr::null();
+        if !self.touchingPlayer.is_null() {
+            let p = self.touchingPlayer;
+            self.set_owner(g, p);
         }
+
+        if self.iPlayerID != -1 && !g.game_values.gamemode.gameover {
+            self.scoretimer += 1;
+            if self.scoretimer as i32 >= ((g.game_values.pointspeed as i32) << 1) {
+                self.scoretimer = 0;
+                gp.players[self.iPlayerID as usize].score().adjust_score(g, 1);
+                gp.get().game_values.gamemode.check_winner(g, gp.get().players[self.iPlayerID as usize]);
+            }
+        }
+
+        if g.game_values.gamemodesettings.domination.relocationfrequency > 0 {
+            self.relocatetimer += 1;
+            if self.relocatetimer >= g.game_values.gamemodesettings.domination.relocationfrequency {
+                self.relocatetimer = 0;
+                self.place_area(g);
+            }
+        }
+
+        self.totalTouchingPlayers = 0;
+        self.touchingPlayer = Ptr::null();
     }
 
     fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {

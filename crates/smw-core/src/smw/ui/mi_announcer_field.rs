@@ -114,15 +114,13 @@ impl MI_AnnouncerField {
         let iIndent = self.iIndent as i32;
         let iWidth = self.iWidth as i32;
 
-        unsafe {
-            //Draw the select field background
-            self.spr.draw_src(g, x, y, &Rect { x: 0, y: if self.fSelected { 32 } else { 0 }, w: iIndent - 16, h: 32 });
-            self.spr.draw_src(g, x + iIndent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
-            self.spr.draw_src(g, x + iIndent + 16, y, &Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 32 } else { 0 }, w: iWidth - iIndent - 16, h: 32 });
+        //Draw the select field background
+        self.spr.draw_src(g, x, y, &Rect { x: 0, y: if self.fSelected { 32 } else { 0 }, w: iIndent - 16, h: 32 });
+        self.spr.draw_src(g, x + iIndent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
+        self.spr.draw_src(g, x + iIndent + 16, y, &Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 32 } else { 0 }, w: iWidth - iIndent - 16, h: 32 });
 
-            gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 5, iIndent - 8, &self.szName);
-            gp.rm.menu_font_large.draw_chop_right(g, x + iIndent + 8, y + 5, iWidth - iIndent - 24, &self.szFieldName);
-        }
+        gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 5, iIndent - 8, &self.szName);
+        gp.rm.menu_font_large.draw_chop_right(g, x + iIndent + 8, y + 5, iWidth - iIndent - 24, &self.szFieldName);
 
         self.miModifyImageLeft.draw(g);
         self.miModifyImageRight.draw(g);

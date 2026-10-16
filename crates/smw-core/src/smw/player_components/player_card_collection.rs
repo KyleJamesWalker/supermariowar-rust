@@ -24,29 +24,27 @@ impl PlayerCardCollection {
     }
 
     pub fn update(&mut self, g: &mut Game, player: &mut CPlayer, keymask: u8) {
-        unsafe {
-            if g.game_values.gamemode.gamemode == game_mode_collection {
-                if self.index > 0 {
-                    self.timer += 1;
-                    if self.timer >= 32 {
-                        self.index = 0;
-                        self.timer = 0;
-                    }
-                }
-
-                if keymask as i32 & 16 != 0 {
-                    self.index += 1;
-                } else if keymask as i32 & !16 != 0 {
+        if g.game_values.gamemode.gamemode == game_mode_collection {
+            if self.index > 0 {
+                self.timer += 1;
+                if self.timer >= 32 {
                     self.index = 0;
                     self.timer = 0;
                 }
+            }
 
-                if self.index == 3 && self.timer < 32 {
-                    self.timer = 0;
-                    self.index = 0;
+            if keymask as i32 & 16 != 0 {
+                self.index += 1;
+            } else if keymask as i32 & !16 != 0 {
+                self.index = 0;
+                self.timer = 0;
+            }
 
-                    g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Collection>().unwrap().release_card(g, Ptr::from_mut(player));
-                }
+            if self.index == 3 && self.timer < 32 {
+                self.timer = 0;
+                self.index = 0;
+
+                g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Collection>().unwrap().release_card(g, Ptr::from_mut(player));
             }
         }
     }

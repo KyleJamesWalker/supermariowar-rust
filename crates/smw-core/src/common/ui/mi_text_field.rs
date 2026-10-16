@@ -28,7 +28,7 @@ const OSK_H: i32 = 16 + OSK_ROWS as i32 * OSK_ROW_H + 12;
 
 /// Not in upstream. `UI_Menu` reports what opened a field: a pad button or a mouse click opens the on-screen keyboard.
 pub fn note_opener(g: &mut Game, keyboard: bool) {
-    unsafe { g.text_field_opened_by_key = keyboard };
+    g.text_field_opened_by_key = keyboard;
 }
 
 fn touch_session(g: &mut Game) -> bool {
@@ -169,7 +169,7 @@ impl MI_TextField {
         // byte-level std::string::resize; the font only reads bytes
         self.szTempValue = unsafe { String::from_utf8_unchecked(bytes) };
 
-        self.iStringWidth = unsafe { g.rm.menu_font_large.get_width(&self.szTempValue) } as i16;
+        self.iStringWidth = g.rm.menu_font_large.get_width(&self.szTempValue) as i16;
         let (px, py) = (self.m_pos.x, self.m_pos.y);
         if self.iStringWidth <= self.iAllowedWidth {
             self.miModifyCursor.set_position(px + self.iIndent + 10 + self.iStringWidth, py + 4);
@@ -223,13 +223,11 @@ impl MI_TextField {
         }
 
         for iPlayer in 0..4usize {
-            unsafe {
-                if iPlayer != 0
-                    && !g.game_values.playerInput.inputControls[iPlayer].is_null()
-                    && g.game_values.playerInput.inputControls[iPlayer].iDevice == DEVICE_KEYBOARD
-                {
-                    continue;
-                }
+            if iPlayer != 0
+                && !g.game_values.playerInput.inputControls[iPlayer].is_null()
+                && g.game_values.playerInput.inputControls[iPlayer].iDevice == DEVICE_KEYBOARD
+            {
+                continue;
             }
             let out = &playerInput.outputControls[iPlayer];
             if out.menu_up().fPressed {
@@ -287,12 +285,10 @@ impl MI_TextField {
         let top = if (self.m_pos.y as i32) < 240 { 480 - OSK_H - 8 } else { 8 };
         // The dialog image is 512 wide, so the panel is its left and right halves.
         let half = OSK_W / 2;
-        unsafe {
-            gp.rm.menu_dialog.draw_src(g, OSK_X, top, &Rect { x: 0, y: 0, w: half, h: OSK_H - 16 });
-            gp.rm.menu_dialog.draw_src(g, OSK_X + half, top, &Rect { x: 512 - half, y: 0, w: half, h: OSK_H - 16 });
-            gp.rm.menu_dialog.draw_src(g, OSK_X, top + OSK_H - 16, &Rect { x: 0, y: 464, w: half, h: 16 });
-            gp.rm.menu_dialog.draw_src(g, OSK_X + half, top + OSK_H - 16, &Rect { x: 512 - half, y: 464, w: half, h: 16 });
-        }
+        gp.rm.menu_dialog.draw_src(g, OSK_X, top, &Rect { x: 0, y: 0, w: half, h: OSK_H - 16 });
+        gp.rm.menu_dialog.draw_src(g, OSK_X + half, top, &Rect { x: 512 - half, y: 0, w: half, h: OSK_H - 16 });
+        gp.rm.menu_dialog.draw_src(g, OSK_X, top + OSK_H - 16, &Rect { x: 0, y: 464, w: half, h: 16 });
+        gp.rm.menu_dialog.draw_src(g, OSK_X + half, top + OSK_H - 16, &Rect { x: 512 - half, y: 464, w: half, h: 16 });
         let mut key = |spr: &Ptr<gfxSprite>, col: i16, row: i16, span: i16, selected: bool, label: &str| {
             let x = OSK_X + 16 + col as i32 * OSK_CELL;
             let y = top + 12 + row as i32 * OSK_ROW_H;
@@ -300,7 +296,7 @@ impl MI_TextField {
             let srcY = if selected { 32 } else { 0 };
             spr.draw_src(g, x, y, &Rect { x: 0, y: srcY, w: w - 8, h: 32 });
             spr.draw_src(g, x + w - 8, y, &Rect { x: 504, y: srcY, w: 8, h: 32 });
-            unsafe { gp.rm.menu_font_large.draw_centered(g, x + w / 2, y + 5, label) };
+            gp.rm.menu_font_large.draw_centered(g, x + w / 2, y + 5, label);
         };
         let rows = if self.fOskShift { OSK_SHIFTED } else { OSK_KEYS };
         for row in 0..OSK_ROWS - 1 {
@@ -370,7 +366,7 @@ impl UI_ControlTrait for MI_TextField {
 
         self.miModifyCursor.set_visible(modify);
         self.fModifying = modify;
-        self.fOsk = modify && (touch_session(g) || unsafe { !g.text_field_opened_by_key });
+        self.fOsk = modify && (touch_session(g) || !g.text_field_opened_by_key);
         self.iOskRow = 0;
         self.iOskCol = 0;
         self.fOskShift = false;
@@ -388,13 +384,11 @@ impl UI_ControlTrait for MI_TextField {
         for iPlayer in 0..4usize {
             // NOTE: copied from UI_Menu::SendInput
             // Only let player 1 on the keyboard control the menu
-            unsafe {
-                if iPlayer != 0
-                    && !g.game_values.playerInput.inputControls[iPlayer].is_null()
-                    && g.game_values.playerInput.inputControls[iPlayer].iDevice == DEVICE_KEYBOARD
-                {
-                    continue;
-                }
+            if iPlayer != 0
+                && !g.game_values.playerInput.inputControls[iPlayer].is_null()
+                && g.game_values.playerInput.inputControls[iPlayer].iDevice == DEVICE_KEYBOARD
+            {
+                continue;
             }
 
             if playerInput.outputControls[iPlayer].menu_select().fPressed || playerInput.outputControls[iPlayer].menu_cancel().fPressed {
@@ -528,7 +522,7 @@ impl UI_ControlTrait for MI_TextField {
             for iChar in 0..self.iNumChars {
                 let szChar = [unsafe { (*self.szOutValue).as_bytes()[iChar as usize] }];
                 let szChar = unsafe { std::str::from_utf8_unchecked(&szChar) };
-                iPixelCount = (iPixelCount as i32 + unsafe { g.rm.menu_font_large.get_width(szChar) }) as i16;
+                iPixelCount = (iPixelCount as i32 + g.rm.menu_font_large.get_width(szChar)) as i16;
 
                 if iPixelCount as i32 >= iMouseX as i32 - (self.m_pos.x as i32 + self.iIndent as i32 + 8) {
                     self.iCursorIndex = iChar;

@@ -27,7 +27,7 @@ impl MapReader {
     }
 
     pub(super) fn read_tiles_1700(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile) {
-        let iClassicTilesetID: i16 = unsafe { g.g_tilesetmanager.classic_tileset_index() as i16 };
+        let iClassicTilesetID: i16 = g.g_tilesetmanager.classic_tileset_index() as i16;
 
         for j in 0..MAPHEIGHT as usize {
             for i in 0..MAPWIDTH as usize {
@@ -217,13 +217,11 @@ impl MapReader {
 
                     r#type = TileType::NonSolid;
                 } else {
-                    unsafe {
-                        tile.iID = g.g_tilesetmanager.classic_tileset_index() as i16;
-                        tile.iCol = (iTile as i32 % TILESETWIDTH) as i16;
-                        tile.iRow = (iTile as i32 / TILESETWIDTH) as i16;
+                    tile.iID = g.g_tilesetmanager.classic_tileset_index() as i16;
+                    tile.iCol = (iTile as i32 % TILESETWIDTH) as i16;
+                    tile.iRow = (iTile as i32 / TILESETWIDTH) as i16;
 
-                        r#type = gp.g_tilesetmanager.classic_tileset(g).tile_type(tile.iCol as isize as usize, tile.iRow as isize as usize);
-                    }
+                    r#type = gp.g_tilesetmanager.classic_tileset(g).tile_type(tile.iCol as isize as usize, tile.iRow as isize as usize);
                 }
 
                 tiles.push(tile);

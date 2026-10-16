@@ -58,15 +58,13 @@ impl_base!(CGM_Greed => cgm_classic: CGM_Classic);
 //Greed - steal other players coins - if you have 0 coins, you're removed from the game!
 fn drop_coins(g: &mut Game, player: Ptr<CPlayer>, iDamage: i16, pos: Vec2s) {
         let mut gp = g.ptr();
-    unsafe {
-        for _k in 0..iDamage {
-            let speed: f32 = 7.0f32 + (RANDOM_INT(gp.get(), 9) as f32) / 2.0f32;
-            let angle: f32 = -(RANDOM_INT(gp.get(), 314) as f32) / 100.0f32;
-            let vel: Vec2f = Vec2f::new(speed * cosf(angle), speed * sinf(angle));
+    for _k in 0..iDamage {
+        let speed: f32 = 7.0f32 + (RANDOM_INT(gp.get(), 9) as f32) / 2.0f32;
+        let angle: f32 = -(RANDOM_INT(gp.get(), 314) as f32) / 100.0f32;
+        let vel: Vec2f = Vec2f::new(speed * cosf(angle), speed * sinf(angle));
 
-            let obj = Ptr::new_box(MO_Coin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), vel, pos, player.get_color_id(), player.get_team_id(), 1, 30, false));
-            gp.get().objectcontainer[1].add(g, obj);
-        }
+        let obj = Ptr::new_box(MO_Coin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), vel, pos, player.get_color_id(), player.get_team_id(), 1, 30, false));
+        gp.get().objectcontainer[1].add(g, obj);
     }
 }
 
@@ -88,58 +86,56 @@ impl CGM_Greed {
 
     pub fn release_coins(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
         let mut gp = g.ptr();
-        unsafe {
-            if_sound_on_play(g, &mut gp.rm.sfx_cannon);
+        if_sound_on_play(g, &mut gp.rm.sfx_cannon);
 
-            player.shield().turn_on(g);
+        player.shield().turn_on(g);
 
-            let mut iDamage: i16 = (kill_style_damage(style) as i32 * g.game_values.gamemodesettings.greed.multiplier as i32 / 2) as i16;
+        let mut iDamage: i16 = (kill_style_damage(style) as i32 * g.game_values.gamemodesettings.greed.multiplier as i32 / 2) as i16;
 
-            if self.goal != -1 {
-                if player.score().score < iDamage {
-                    iDamage = player.score().score;
-                }
-
-                player.score().adjust_score(g, -iDamage);
+        if self.goal != -1 {
+            if player.score().score < iDamage {
+                iDamage = player.score().score;
             }
 
-            let pos: Vec2s = Vec2s::new((player.center_x() as i32 - 16) as i16, (player.center_y() as i32 - 16) as i16);
-
-            if !net_random::event(g, Ev::GreedCoins, &[player.globalID as i32, iDamage as i32, pos.x as i32, pos.y as i32]) {
-                drop_coins(g, player, iDamage, pos);
-            }
-
-            //Play warning sound if game is almost over
-            if self.goal != -1 && !self.playedwarningsound {
-                let mut playwarning = false;
-                for j in 0..g.score_cnt {
-                    let mut countscore: i16 = 0;
-                    for k in 0..g.score_cnt {
-                        if j == k {
-                            continue;
-                        }
-
-                        countscore = (countscore as i32 + g.score[k as usize].score as i32) as i16;
-                    }
-
-                    if countscore <= 10 {
-                        playwarning = true;
-                        break;
-                    }
-                }
-
-                if playwarning {
-                    self.playwarningsound(g);
-                }
-            }
-
-            if self.goal != -1 && player.score().score <= 0 {
-                remove_team(g, player.get_team_id());
-                return PlayerKillType::Removed;
-            }
-
-            PlayerKillType::NonKill
+            player.score().adjust_score(g, -iDamage);
         }
+
+        let pos: Vec2s = Vec2s::new((player.center_x() as i32 - 16) as i16, (player.center_y() as i32 - 16) as i16);
+
+        if !net_random::event(g, Ev::GreedCoins, &[player.globalID as i32, iDamage as i32, pos.x as i32, pos.y as i32]) {
+            drop_coins(g, player, iDamage, pos);
+        }
+
+        //Play warning sound if game is almost over
+        if self.goal != -1 && !self.playedwarningsound {
+            let mut playwarning = false;
+            for j in 0..g.score_cnt {
+                let mut countscore: i16 = 0;
+                for k in 0..g.score_cnt {
+                    if j == k {
+                        continue;
+                    }
+
+                    countscore = (countscore as i32 + g.score[k as usize].score as i32) as i16;
+                }
+
+                if countscore <= 10 {
+                    playwarning = true;
+                    break;
+                }
+            }
+
+            if playwarning {
+                self.playwarningsound(g);
+            }
+        }
+
+        if self.goal != -1 && player.score().score <= 0 {
+            remove_team(g, player.get_team_id());
+            return PlayerKillType::Removed;
+        }
+
+        PlayerKillType::NonKill
     }
 }
 
@@ -152,10 +148,8 @@ impl CGameModeTrait for CGM_Greed {
 
         let iGoal: i16 = if self.goal == -1 { 0 } else { self.goal };
 
-        unsafe {
-            for iScore in 0..g.score_cnt {
-                gp.score[iScore as usize].set_score(g, iGoal);
-            }
+        for iScore in 0..g.score_cnt {
+            gp.score[iScore as usize].set_score(g, iGoal);
         }
     }
 

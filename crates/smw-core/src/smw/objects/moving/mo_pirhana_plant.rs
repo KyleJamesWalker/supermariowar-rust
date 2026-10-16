@@ -115,23 +115,21 @@ impl MO_PirhanaPlant {
     pub fn draw_offset(&mut self, g: &mut Game, iOffsetX: i16, iOffsetY: i16) {
         let mut gp = g.ptr();
         if self.state > 0 {
-            unsafe {
-                let rect = &g_rPirhanaRects[self.iType as usize][self.iDirection as usize][self.iFrame as usize];
-                let surface = &gp.rm.spr_hazard_pirhanaplant[1];
-                let clipRect = Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: 320, h: 240 };
-                let dstX = ((self.ix as i32 >> 1) + iOffsetX as i32) as i16;
-                let dstY = ((self.iy as i32 >> 1) + iOffsetY as i32) as i16;
-                let (ih, iw) = (self.ih as i32, self.iw as i32);
-                let (ch, cw) = (self.collisionHeight as i32, self.collisionWidth as i32);
-                if self.iDirection == 0 {
-                    gfx_drawpreview(g, surface, dstX, dstY, (rect.x >> 1) as i16, (rect.y >> 1) as i16, 16, (ch >> 1) as i16, &clipRect, true, None);
-                } else if self.iDirection == 1 {
-                    gfx_drawpreview(g, surface, dstX, dstY, (rect.x >> 1) as i16, ((rect.y + ih - ch) >> 1) as i16, 16, (ch >> 1) as i16, &clipRect, true, None);
-                } else if self.iDirection == 2 {
-                    gfx_drawpreview(g, surface, dstX, dstY, (rect.x >> 1) as i16, (rect.y >> 1) as i16, (cw >> 1) as i16, 16, &clipRect, true, None);
-                } else {
-                    gfx_drawpreview(g, surface, dstX, dstY, ((rect.x + iw - cw) >> 1) as i16, (rect.y >> 1) as i16, (cw >> 1) as i16, 16, &clipRect, true, None);
-                }
+            let rect = &g_rPirhanaRects[self.iType as usize][self.iDirection as usize][self.iFrame as usize];
+            let surface = &gp.rm.spr_hazard_pirhanaplant[1];
+            let clipRect = Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: 320, h: 240 };
+            let dstX = ((self.ix as i32 >> 1) + iOffsetX as i32) as i16;
+            let dstY = ((self.iy as i32 >> 1) + iOffsetY as i32) as i16;
+            let (ih, iw) = (self.ih as i32, self.iw as i32);
+            let (ch, cw) = (self.collisionHeight as i32, self.collisionWidth as i32);
+            if self.iDirection == 0 {
+                gfx_drawpreview(g, surface, dstX, dstY, (rect.x >> 1) as i16, (rect.y >> 1) as i16, 16, (ch >> 1) as i16, &clipRect, true, None);
+            } else if self.iDirection == 1 {
+                gfx_drawpreview(g, surface, dstX, dstY, (rect.x >> 1) as i16, ((rect.y + ih - ch) >> 1) as i16, 16, (ch >> 1) as i16, &clipRect, true, None);
+            } else if self.iDirection == 2 {
+                gfx_drawpreview(g, surface, dstX, dstY, (rect.x >> 1) as i16, (rect.y >> 1) as i16, (cw >> 1) as i16, 16, &clipRect, true, None);
+            } else {
+                gfx_drawpreview(g, surface, dstX, dstY, ((rect.x + iw - cw) >> 1) as i16, (rect.y >> 1) as i16, (cw >> 1) as i16, 16, &clipRect, true, None);
             }
         }
     }
@@ -145,12 +143,10 @@ impl MO_PirhanaPlant {
         self.set_new_timer(g);
         self.state = 0;
 
-        unsafe {
-            if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
-            let x = (self.ix as i32 + if self.iDirection == 2 { 0 } else { self.collisionWidth as i32 - 32 }) as i16;
-            let y = (self.iy as i32 + if self.iDirection == 0 { 0 } else { self.collisionHeight as i32 - 32 }) as i16;
-            g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), x, y, 3, 4));
-        }
+        if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
+        let x = (self.ix as i32 + if self.iDirection == 2 { 0 } else { self.collisionWidth as i32 - 32 }) as i16;
+        let y = (self.iy as i32 + if self.iDirection == 0 { 0 } else { self.collisionHeight as i32 - 32 }) as i16;
+        g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), x, y, 3, 4));
 
         if self.iDirection == 0 {
             self.iy += self.collisionHeight;
@@ -291,24 +287,22 @@ impl CObjectTrait for MO_PirhanaPlant {
                 let iPlantX: i16 = (self.ix as i32 + 16) as i16;
                 let iPlantY: i16 = (self.iy as i32 + if self.iDirection == 0 { 16 } else { self.ih as i32 - 16 }) as i16;
 
-                unsafe {
-                    for i in 0..g.players.len() {
-                        let player = g.players[i];
-                        if player.state != PlayerState::Ready {
-                            continue;
-                        }
+                for i in 0..g.players.len() {
+                    let player = g.players[i];
+                    if player.state != PlayerState::Ready {
+                        continue;
+                    }
 
-                        // Calculate normal screen distance
-                        let tx: i16 = (iPlantX as i32 - player.ix as i32 - PW) as i16;
-                        let ty: i16 = (iPlantY as i32 - player.iy as i32 - PH) as i16;
+                    // Calculate normal screen distance
+                    let tx: i16 = (iPlantX as i32 - player.ix as i32 - PW) as i16;
+                    let ty: i16 = (iPlantY as i32 - player.iy as i32 - PH) as i16;
 
-                        let distance_player_pow2: i32 = tx as i32 * tx as i32 + ty as i32 * ty as i32;
+                    let distance_player_pow2: i32 = tx as i32 * tx as i32 + ty as i32 * ty as i32;
 
-                        if distance_player_pow2 < distance_to_player {
-                            distance_to_player = distance_player_pow2;
-                            iDiffX = tx;
-                            iDiffY = ty;
-                        }
+                    if distance_player_pow2 < distance_to_player {
+                        distance_to_player = distance_player_pow2;
+                        iDiffX = tx;
+                        iDiffY = ty;
                     }
                 }
 
@@ -339,52 +333,48 @@ impl CObjectTrait for MO_PirhanaPlant {
 
         // Fire a fireball
         if self.iType <= 1 && self.state == 2 && self.iTimer == 30 {
-            unsafe {
-                let (ix, iy, iw, ih) = (self.ix as i32, self.iy as i32, self.iw as i32, self.ih as i32);
-                let pos = Vec2s::new(
-                    (if self.iDirection != 3 { ix + 7 } else { ix + iw - 23 }) as i16,
-                    (if self.iDirection != 1 { iy + 7 } else { iy + ih - 23 }) as i16,
-                );
-                let angle = self.get_fireball_angle();
-                let obj = Ptr::new_box(OMO_StraightPathHazard::new(
-                    g,
-                    Ptr::from_mut(&mut rm.spr_hazard_fireball[if self.fPreview { 1 } else { 0 }]),
-                    pos,
-                    angle,
-                    3.0f32,
-                    4,
-                    8,
-                    18,
-                    18,
-                    0,
-                    0,
-                    0,
-                    if self.iFrame <= 1 { 18 } else { 0 },
-                    18,
-                    18,
-                ));
-                gp.objectcontainer[1].add(g, obj);
-            }
+            let (ix, iy, iw, ih) = (self.ix as i32, self.iy as i32, self.iw as i32, self.ih as i32);
+            let pos = Vec2s::new(
+                (if self.iDirection != 3 { ix + 7 } else { ix + iw - 23 }) as i16,
+                (if self.iDirection != 1 { iy + 7 } else { iy + ih - 23 }) as i16,
+            );
+            let angle = self.get_fireball_angle();
+            let obj = Ptr::new_box(OMO_StraightPathHazard::new(
+                g,
+                Ptr::from_mut(&mut rm.spr_hazard_fireball[if self.fPreview { 1 } else { 0 }]),
+                pos,
+                angle,
+                3.0f32,
+                4,
+                8,
+                18,
+                18,
+                0,
+                0,
+                0,
+                if self.iFrame <= 1 { 18 } else { 0 },
+                18,
+                18,
+            ));
+            gp.objectcontainer[1].add(g, obj);
         }
     }
 
     fn draw(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         if self.state > 0 {
-            unsafe {
-                let rect = &g_rPirhanaRects[self.iType as usize][self.iDirection as usize][self.iFrame as usize];
-                let (ix, iy) = (self.ix as i32, self.iy as i32);
-                let (ih, iw) = (self.ih as i32, self.iw as i32);
-                let (ch, cw) = (self.collisionHeight as i32, self.collisionWidth as i32);
-                if self.iDirection == 0 {
-                    gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &Rect { x: rect.x, y: rect.y, w: 32, h: ch });
-                } else if self.iDirection == 1 {
-                    gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &Rect { x: rect.x, y: rect.y + ih - ch, w: 32, h: ch });
-                } else if self.iDirection == 2 {
-                    gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &Rect { x: rect.x, y: rect.y, w: cw, h: 32 });
-                } else {
-                    gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &Rect { x: rect.x + iw - cw, y: rect.y, w: cw, h: 32 });
-                }
+            let rect = &g_rPirhanaRects[self.iType as usize][self.iDirection as usize][self.iFrame as usize];
+            let (ix, iy) = (self.ix as i32, self.iy as i32);
+            let (ih, iw) = (self.ih as i32, self.iw as i32);
+            let (ch, cw) = (self.collisionHeight as i32, self.collisionWidth as i32);
+            if self.iDirection == 0 {
+                gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &Rect { x: rect.x, y: rect.y, w: 32, h: ch });
+            } else if self.iDirection == 1 {
+                gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &Rect { x: rect.x, y: rect.y + ih - ch, w: 32, h: ch });
+            } else if self.iDirection == 2 {
+                gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &Rect { x: rect.x, y: rect.y, w: cw, h: 32 });
+            } else {
+                gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &Rect { x: rect.x + iw - cw, y: rect.y, w: cw, h: 32 });
             }
         }
     }

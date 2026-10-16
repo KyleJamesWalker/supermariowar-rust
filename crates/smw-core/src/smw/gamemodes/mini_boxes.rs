@@ -52,12 +52,10 @@ impl CGM_Boxes_MiniGame {
             let angle: f32 = -(RANDOM_INT(gp.get(), 314) as f32) / 100.0f32;
             let vel = Vec2f::new(speed * cosf(angle), speed * sinf(angle));
 
-            unsafe {
-                if_sound_on_play(g, &mut gp.rm.sfx_coin);
+            if_sound_on_play(g, &mut gp.rm.sfx_coin);
 
-                let obj = Ptr::new_box(MO_Coin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), vel, pos, 2, -1, 2, 30, false));
-                gp.get().objectcontainer[1].add(g, obj);
-            }
+            let obj = Ptr::new_box(MO_Coin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), vel, pos, 2, -1, 2, 30, false));
+            gp.get().objectcontainer[1].add(g, obj);
         }
     }
 
@@ -85,11 +83,9 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
 
         self.fReverseScoring = false;
 
-        unsafe {
-            for iScore in 0..g.score_cnt as usize {
-                gp.score[iScore].set_score(g, self.goal);
-                g.score[iScore].subscore[0] = 0;
-            }
+        for iScore in 0..g.score_cnt as usize {
+            gp.score[iScore].set_score(g, self.goal);
+            g.score[iScore].subscore[0] = 0;
         }
     }
 
@@ -110,14 +106,12 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
 
         if !self.playedwarningsound {
             let mut countscore: i16 = 0;
-            unsafe {
-                for k in 0..g.score_cnt as usize {
-                    if Ptr::from_mut(inflictor.score()) == g.score[k] {
-                        continue;
-                    }
-
-                    countscore = countscore.wrapping_add(g.score[k].score);
+            for k in 0..g.score_cnt as usize {
+                if Ptr::from_mut(inflictor.score()) == g.score[k] {
+                    continue;
                 }
+
+                countscore = countscore.wrapping_add(g.score[k].score);
             }
 
             if countscore <= 2 {
@@ -146,23 +140,21 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
         if !self.playedwarningsound {
             let mut countscore: i16 = 0;
             let mut playwarning = false;
-            unsafe {
-                for j in 0..g.score_cnt {
-                    for k in 0..g.score_cnt {
-                        if j == k {
-                            continue;
-                        }
-
-                        countscore = countscore.wrapping_add(g.score[k as usize].score);
+            for j in 0..g.score_cnt {
+                for k in 0..g.score_cnt {
+                    if j == k {
+                        continue;
                     }
 
-                    if countscore <= 2 {
-                        playwarning = true;
-                        break;
-                    }
-
-                    countscore = 0;
+                    countscore = countscore.wrapping_add(g.score[k as usize].score);
                 }
+
+                if countscore <= 2 {
+                    playwarning = true;
+                    break;
+                }
+
+                countscore = 0;
             }
 
             if playwarning {

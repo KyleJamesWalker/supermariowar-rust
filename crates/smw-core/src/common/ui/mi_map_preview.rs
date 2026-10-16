@@ -83,14 +83,12 @@ impl MI_MapPreview {
     pub fn update_impl(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         //Update hazards
-        unsafe {
-            gp.noncolcontainer.update(g);
+        gp.noncolcontainer.update(g);
 
-            gp.objectcontainer[1].update(g);
-            g.objectcontainer[1].clean_dead_objects();
+        gp.objectcontainer[1].update(g);
+        g.objectcontainer[1].clean_dead_objects();
 
-            gp.g_map.update_platforms(g);
-        }
+        gp.g_map.update_platforms(g);
     }
 
     pub fn draw_impl(&mut self, g: &mut Game) {
@@ -103,54 +101,52 @@ impl MI_MapPreview {
         let bx = iMapBoxX as i32;
         let y = self.m_pos.y as i32;
 
-        unsafe {
-            //Draw the background for the map preview
-            gp.rm.menu_dialog.draw_src(g, bx, y + 30, &Rect { x: 0, y: 0, w: 336, h: 254 });
-            gp.rm.menu_dialog.draw_src(g, bx + 336, y + 30, &Rect { x: 496, y: 0, w: 16, h: 254 });
-            gp.rm.menu_dialog.draw_src(g, bx, y + 284, &Rect { x: 0, y: 464, w: 336, h: 16 });
-            gp.rm.menu_dialog.draw_src(g, bx + 336, y + 284, &Rect { x: 496, y: 464, w: 16, h: 16 });
+        //Draw the background for the map preview
+        gp.rm.menu_dialog.draw_src(g, bx, y + 30, &Rect { x: 0, y: 0, w: 336, h: 254 });
+        gp.rm.menu_dialog.draw_src(g, bx + 336, y + 30, &Rect { x: 496, y: 0, w: 16, h: 254 });
+        gp.rm.menu_dialog.draw_src(g, bx, y + 284, &Rect { x: 0, y: 464, w: 336, h: 16 });
+        gp.rm.menu_dialog.draw_src(g, bx + 336, y + 284, &Rect { x: 496, y: 464, w: 16, h: 16 });
 
-            self.rectDst.x = bx + 16;
+        self.rectDst.x = bx + 16;
 
-            self.surfaceMapBackground.draw_to(g.blitdest, &self.rectDst);
+        self.surfaceMapBackground.draw_to(g.blitdest, &self.rectDst);
 
-            gp.g_map.draw_platforms_offset(g, self.rectDst.x as i16, self.rectDst.y as i16, 0);
+        gp.g_map.draw_platforms_offset(g, self.rectDst.x as i16, self.rectDst.y as i16, 0);
 
-            self.surfaceMapBlockLayer.draw_to(g.blitdest, &self.rectDst);
+        self.surfaceMapBlockLayer.draw_to(g.blitdest, &self.rectDst);
 
-            gp.g_map.draw_platforms_offset(g, self.rectDst.x as i16, self.rectDst.y as i16, 1);
+        gp.g_map.draw_platforms_offset(g, self.rectDst.x as i16, self.rectDst.y as i16, 1);
 
-            //Draw map hazards
-            let (ox, oy) = (self.rectDst.x as i16, self.rectDst.y as i16);
-            for i in 0..g.objectcontainer[1].list().len() {
-                let mut obj = g.objectcontainer[1].list()[i];
-                let any = obj.as_any();
-                if let Some(hazard) = any.downcast_mut::<OMO_OrbitHazard>() {
-                    io_over_map_object_draw_offset(g, hazard, ox, oy);
-                } else if let Some(hazard) = any.downcast_mut::<OMO_StraightPathHazard>() {
-                    io_over_map_object_draw_offset(g, hazard, ox, oy);
-                } else if let Some(hazard) = any.downcast_mut::<IO_FlameCannon>() {
-                    hazard.draw_offset(g, ox, oy);
-                } else if let Some(hazard) = any.downcast_mut::<MO_BulletBill>() {
-                    hazard.draw_offset(g, ox, oy);
-                } else if let Some(hazard) = any.downcast_mut::<MO_PirhanaPlant>() {
-                    hazard.draw_offset(g, ox, oy);
-                }
+        //Draw map hazards
+        let (ox, oy) = (self.rectDst.x as i16, self.rectDst.y as i16);
+        for i in 0..g.objectcontainer[1].list().len() {
+            let mut obj = g.objectcontainer[1].list()[i];
+            let any = obj.as_any();
+            if let Some(hazard) = any.downcast_mut::<OMO_OrbitHazard>() {
+                io_over_map_object_draw_offset(g, hazard, ox, oy);
+            } else if let Some(hazard) = any.downcast_mut::<OMO_StraightPathHazard>() {
+                io_over_map_object_draw_offset(g, hazard, ox, oy);
+            } else if let Some(hazard) = any.downcast_mut::<IO_FlameCannon>() {
+                hazard.draw_offset(g, ox, oy);
+            } else if let Some(hazard) = any.downcast_mut::<MO_BulletBill>() {
+                hazard.draw_offset(g, ox, oy);
+            } else if let Some(hazard) = any.downcast_mut::<MO_PirhanaPlant>() {
+                hazard.draw_offset(g, ox, oy);
             }
-
-            gp.g_map.draw_platforms_offset(g, self.rectDst.x as i16, self.rectDst.y as i16, 2);
-
-            if g.game_values.toplayer {
-                self.surfaceMapForeground.draw_to(g.blitdest, &self.rectDst);
-            }
-
-            gp.g_map.draw_platforms_offset(g, self.rectDst.x as i16, self.rectDst.y as i16, 3);
-            gp.g_map.draw_platforms_offset(g, self.rectDst.x as i16, self.rectDst.y as i16, 4);
         }
+
+        gp.g_map.draw_platforms_offset(g, self.rectDst.x as i16, self.rectDst.y as i16, 2);
+
+        if g.game_values.toplayer {
+            self.surfaceMapForeground.draw_to(g.blitdest, &self.rectDst);
+        }
+
+        gp.g_map.draw_platforms_offset(g, self.rectDst.x as i16, self.rectDst.y as i16, 3);
+        gp.g_map.draw_platforms_offset(g, self.rectDst.x as i16, self.rectDst.y as i16, 4);
     }
 
     pub fn load_current_map(&mut self, g: &mut Game) {
-        let szMapPath = unsafe {
+        let szMapPath = {
             self.szMapName = copy_map_name(g.maplist.current_shortmapname());
             g.maplist.current_filename().to_string()
         };
@@ -160,34 +156,32 @@ impl MI_MapPreview {
 
     pub fn load_map(&mut self, g: &mut Game, szMapPath: &str) {
         let mut gp = g.ptr();
-        unsafe {
-            gp.g_map.load_map(g, szMapPath, read_type_preview);
-            small_delay(g); //Sleeps to help the music from skipping
+        gp.g_map.load_map(g, szMapPath, read_type_preview);
+        small_delay(g); //Sleeps to help the music from skipping
 
-            load_current_map_background(g);
-            small_delay(g);
+        load_current_map_background(g);
+        small_delay(g);
 
-            gp.get().g_map.pre_draw_preview_background_spr(g, &gp.get().rm.spr_background, self.surfaceMapBackground.get_surface(), false);
-            small_delay(g);
+        gp.get().g_map.pre_draw_preview_background_spr(g, &gp.get().rm.spr_background, self.surfaceMapBackground.get_surface(), false);
+        small_delay(g);
 
-            gp.g_map.pre_draw_preview_blocks(g, self.surfaceMapBlockLayer.get_surface(), false);
-            small_delay(g);
+        gp.g_map.pre_draw_preview_blocks(g, self.surfaceMapBlockLayer.get_surface(), false);
+        small_delay(g);
 
-            gp.g_map.pre_draw_preview_map_items(g, self.surfaceMapBackground.get_surface(), false);
-            small_delay(g);
+        gp.g_map.pre_draw_preview_map_items(g, self.surfaceMapBackground.get_surface(), false);
+        small_delay(g);
 
-            gp.g_map.pre_draw_preview_foreground(g, self.surfaceMapForeground.get_surface(), false);
-            small_delay(g);
+        gp.g_map.pre_draw_preview_foreground(g, self.surfaceMapForeground.get_surface(), false);
+        small_delay(g);
 
-            gp.get().g_map.pre_draw_preview_warps(g, if gp.get().game_values.toplayer { self.surfaceMapForeground.get_surface() } else { self.surfaceMapBackground.get_surface() }, false);
-            small_delay(g);
+        gp.get().g_map.pre_draw_preview_warps(g, if gp.get().game_values.toplayer { self.surfaceMapForeground.get_surface() } else { self.surfaceMapBackground.get_surface() }, false);
+        small_delay(g);
 
-            load_map_hazards(g, true);
-        }
+        load_map_hazards(g, true);
     }
 
     pub fn set_map(&mut self, g: &mut Game, paramSzMapName: &str, fWorld: bool) -> bool {
-        let fFound = unsafe { g.maplist.findexact(paramSzMapName, fWorld) };
+        let fFound = g.maplist.findexact(paramSzMapName, fWorld);
         self.load_current_map(g);
 
         fFound
@@ -204,7 +198,7 @@ impl MI_MapPreview {
     }
 
     pub fn get_map_file_path(&self, g: &mut Game) -> String {
-        unsafe { g.maplist.current_filename().to_string() }
+        g.maplist.current_filename().to_string()
     }
 
     pub fn set_dimensions(&mut self, width: i16, indent: i16) {

@@ -48,20 +48,18 @@ impl CObjectTrait for PU_MysteryMushroomPowerup {
     }
     fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         let mut gp = g.ptr();
-        unsafe {
-            if self.state > 0 {
-                self.dead = true;
+        if self.state > 0 {
+            self.dead = true;
 
-                if !swap_players(g, player.localID) {
-                    g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
-                        (player.ix as i32 + (HALFPW) - 16) as i16,
-                        (player.iy as i32 + (HALFPH) - 16) as i16,
-                        3,
-                        8,
-                    ));
-                    if_sound_on_play(g, &mut gp.rm.sfx_spit);
-                }
+            if !swap_players(g, player.localID) {
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+                    (player.ix as i32 + (HALFPW) - 16) as i16,
+                    (player.iy as i32 + (HALFPH) - 16) as i16,
+                    3,
+                    8,
+                ));
+                if_sound_on_play(g, &mut gp.rm.sfx_spit);
             }
         }
 

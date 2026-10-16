@@ -115,17 +115,15 @@ impl CObjectTrait for CO_Bomb {
 
         self.animate();
 
-        unsafe {
-            if g.game_values.spotlights {
-                let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
-                let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
-                if self.sSpotlight.is_null() {
-                    self.sSpotlight = gp.spotlightManager.add_spotlight(g, x, y, 3);
-                }
+        if g.game_values.spotlights {
+            let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
+            let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
+            if self.sSpotlight.is_null() {
+                self.sSpotlight = gp.spotlightManager.add_spotlight(g, x, y, 3);
+            }
 
-                if !self.sSpotlight.is_null() {
-                    self.sSpotlight.update_position(x, y);
-                }
+            if !self.sSpotlight.is_null() {
+                self.sSpotlight.update_position(x, y);
             }
         }
     }
@@ -164,20 +162,18 @@ impl IO_MovingObjectTrait for CO_Bomb {
         }
 
         self.dead = true;
-        unsafe {
-            let obj = Ptr::new_box(MO_Explosion::new(
-                g,
-                Ptr::from_mut(&mut rm.spr_explosion),
-                Vec2s::new((self.ix as i32 + (self.iw as i32 >> 2) - 96) as i16, (self.iy as i32 + (self.ih as i32 >> 2) - 64) as i16),
-                2,
-                4,
-                self.iPlayerID,
-                self.iTeamID,
-                KillStyle::Bomb,
-            ));
-            gp.objectcontainer[2].add(g, obj);
-            if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
-        }
+        let obj = Ptr::new_box(MO_Explosion::new(
+            g,
+            Ptr::from_mut(&mut rm.spr_explosion),
+            Vec2s::new((self.ix as i32 + (self.iw as i32 >> 2) - 96) as i16, (self.iy as i32 + (self.ih as i32 >> 2) - 64) as i16),
+            2,
+            4,
+            self.iPlayerID,
+            self.iTeamID,
+            KillStyle::Bomb,
+        ));
+        gp.objectcontainer[2].add(g, obj);
+        if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
     }
 }
 

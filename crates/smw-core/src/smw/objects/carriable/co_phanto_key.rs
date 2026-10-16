@@ -64,7 +64,7 @@ impl CO_PhantoKey {
         let mut y: i16 = 0;
         let mut iAttempts: i16 = 10;
         let (w, h) = (self.collisionWidth, self.collisionHeight);
-        while !unsafe { gp.g_map.findspawnpoint(g, 5, &mut x, &mut y, w, h, false) } && {
+        while !gp.g_map.findspawnpoint(g, 5, &mut x, &mut y, w, h, false) && {
             let t = iAttempts;
             iAttempts -= 1;
             t > 0
@@ -131,14 +131,12 @@ impl CObjectTrait for CO_PhantoKey {
         let mut gp = g.ptr();
         mo_carried_object_draw(g, self);
 
-        unsafe {
-            gp.rm.spr_shinesparkle.draw_src(
-                g,
-                self.ix as i32 - self.collisionOffsetX as i32,
-                self.iy as i32 - self.collisionOffsetY as i32,
-                &Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
-            );
-        }
+        gp.rm.spr_shinesparkle.draw_src(
+            g,
+            self.ix as i32 - self.collisionOffsetX as i32,
+            self.iy as i32 - self.collisionOffsetY as i32,
+            &Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
+        );
     }
 }
 

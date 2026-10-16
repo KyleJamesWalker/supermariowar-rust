@@ -174,7 +174,7 @@ impl MO_SledgeBrother {
 
         o.wait_timer = 0;
 
-        o.hit_points = unsafe { g.game_values.gamemodesettings.boss.hitpoints };
+        o.hit_points = g.game_values.gamemodesettings.boss.hitpoints;
         o.face_right = false;
 
         o.vely = 0.0f32;
@@ -223,14 +223,12 @@ impl MO_SledgeBrother {
             if self.hit_points <= 0 {
                 self.die(g);
 
-                unsafe {
-                    if g.game_values.gamemode.gamemode == game_mode_boss_minigame {
-                        g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Boss_MiniGame>().unwrap().set_winner(g, killer);
-                    }
+                if g.game_values.gamemode.gamemode == game_mode_boss_minigame {
+                    g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Boss_MiniGame>().unwrap().set_winner(g, killer);
                 }
             } else {
                 self.hit_timer = 60;
-                unsafe { if_sound_on_play(g, &mut gp.rm.sfx_stun) };
+                if_sound_on_play(g, &mut gp.rm.sfx_stun);
             }
         }
     }
@@ -246,48 +244,46 @@ impl MO_SledgeBrother {
 
     fn randomaction(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        unsafe {
-            let randaction: i32 = RANDOM_INT(gp.get(), 100);
+        let randaction: i32 = RANDOM_INT(gp.get(), 100);
 
-            let t = self.iType as usize;
-            let d = g.game_values.gamemodesettings.boss.difficulty as usize;
-            let need = &g_iSledgeBrotherNeedAction[t][d];
-            let actions = &g_iSledgeBrotherActions[t][d];
-            let max = &g_iSledgeBrotherMaxAction[t][d];
-            let waittime = &g_iSledgeBrotherWaitTime[t][d];
-            let (last_action, last_action_count) = (self.last_action, self.last_action_count);
+        let t = self.iType as usize;
+        let d = g.game_values.gamemodesettings.boss.difficulty as usize;
+        let need = &g_iSledgeBrotherNeedAction[t][d];
+        let actions = &g_iSledgeBrotherActions[t][d];
+        let max = &g_iSledgeBrotherMaxAction[t][d];
+        let waittime = &g_iSledgeBrotherWaitTime[t][d];
+        let (last_action, last_action_count) = (self.last_action, self.last_action_count);
 
-            if self.need_action[0] > need[0] {
-                self.jump();
-            } else if self.need_action[1] > need[1] {
-                self.throwprojectile(g);
-            } else if self.need_action[2] > need[2] {
-                self.turn(g);
-            } else if self.need_action[3] > need[3] {
-                self.wait(g, waittime[0], waittime[1]);
-            } else if self.need_action[4] > need[4] {
-                self.taunt(g);
-            } else if self.need_action[5] > need[5] {
-                self.r#move(g);
-            }
-            // then do action based on probability
-            else if (last_action != 0 || last_action_count < max[0]) && randaction < actions[0] as i32 {
-                self.jump();
-            } else if (last_action != 1 || last_action_count < max[1]) && randaction < actions[1] as i32 {
-                self.throwprojectile(g);
-            } else if (last_action != 2 || last_action_count < max[2]) && randaction < actions[2] as i32 {
-                self.turn(g);
-            } else if (last_action != 2 || last_action_count < max[3]) && randaction < actions[3] as i32 {
-                self.wait(g, waittime[0], waittime[1]);
-            } else if (last_action != 2 || last_action_count < max[4]) && randaction < actions[4] as i32 {
-                self.taunt(g);
-            } else {
-                self.r#move(g);
-            }
+        if self.need_action[0] > need[0] {
+            self.jump();
+        } else if self.need_action[1] > need[1] {
+            self.throwprojectile(g);
+        } else if self.need_action[2] > need[2] {
+            self.turn(g);
+        } else if self.need_action[3] > need[3] {
+            self.wait(g, waittime[0], waittime[1]);
+        } else if self.need_action[4] > need[4] {
+            self.taunt(g);
+        } else if self.need_action[5] > need[5] {
+            self.r#move(g);
+        }
+        // then do action based on probability
+        else if (last_action != 0 || last_action_count < max[0]) && randaction < actions[0] as i32 {
+            self.jump();
+        } else if (last_action != 1 || last_action_count < max[1]) && randaction < actions[1] as i32 {
+            self.throwprojectile(g);
+        } else if (last_action != 2 || last_action_count < max[2]) && randaction < actions[2] as i32 {
+            self.turn(g);
+        } else if (last_action != 2 || last_action_count < max[3]) && randaction < actions[3] as i32 {
+            self.wait(g, waittime[0], waittime[1]);
+        } else if (last_action != 2 || last_action_count < max[4]) && randaction < actions[4] as i32 {
+            self.taunt(g);
+        } else {
+            self.r#move(g);
+        }
 
-            for iAction in 0..6usize {
-                self.need_action[iAction] += 1;
-            }
+        for iAction in 0..6usize {
+            self.need_action[iAction] += 1;
         }
     }
 
@@ -326,58 +322,56 @@ impl MO_SledgeBrother {
         self.iActionState = 3;
         self.arm_offset_x = 96;
 
-        unsafe {
-            let (ix, iy, iw) = (self.ix as i32, self.iy as i32, self.iw as i32);
-            if self.iType == 0 {
-                let fHammerVelX: f32 = (RANDOM_INT(gp.get(), 9) + 2) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 6.0f32 };
-                let pos = Vec2s::new(((if self.face_right { ix + 32 } else { ix }) - self.collisionOffsetX as i32) as i16, self.iy);
-                let obj = Ptr::new_box(MO_SledgeHammer::new(
-                    g,
-                    Ptr::from_mut(&mut rm.spr_sledgehammer),
-                    pos,
-                    8,
-                    Vec2f::new(fHammerVelX, -HAMMERTHROW),
-                    5,
-                    -1,
-                    -1,
-                    -1,
-                    false,
-                ));
-                gp.objectcontainer[2].add(g, obj);
-            } else if self.iType == 1 {
-                let fBombVelX: f32 = (RANDOM_INT(gp.get(), 5) + 12) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 14.0f32 };
-                let fBombVelY: f32 = -(RANDOM_INT(gp.get(), 13) as f32) / 2.0f32 - 6.0f32;
-                let pos = Vec2s::new((if self.face_right { ix + iw - 32 } else { ix - 20 }) as i16, iy as i16);
-                let timetolive = (RANDOM_INT(gp.get(), 60) + 120) as i16;
-                let obj = Ptr::new_box(CO_Bomb::new(
-                    g,
-                    Ptr::from_mut(&mut rm.spr_bomb),
-                    pos,
-                    Vec2f::new(fBombVelX, fBombVelY),
-                    4,
-                    -1,
-                    -1,
-                    -1,
-                    timetolive,
-                ));
-                gp.objectcontainer[2].add(g, obj);
-            } else if self.iType == 2 {
-                let fFireVelX: f32 = (RANDOM_INT(gp.get(), 9) + 6) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 10.0f32 };
-                let fFireVelY: f32 = RANDOM_INT(gp.get(), 17) as f32 / 2.0f32 - 4.0f32;
-                let pos = Vec2s::new((if self.face_right { ix + iw - 32 } else { ix - 16 }) as i16, iy as i16);
-                let obj = Ptr::new_box(MO_SuperFireball::new(
-                    g,
-                    Ptr::from_mut(&mut rm.spr_superfireball),
-                    pos,
-                    4,
-                    Vec2f::new(fFireVelX, fFireVelY),
-                    4,
-                    -1,
-                    -1,
-                    -1,
-                ));
-                gp.objectcontainer[2].add(g, obj);
-            }
+        let (ix, iy, iw) = (self.ix as i32, self.iy as i32, self.iw as i32);
+        if self.iType == 0 {
+            let fHammerVelX: f32 = (RANDOM_INT(gp.get(), 9) + 2) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 6.0f32 };
+            let pos = Vec2s::new(((if self.face_right { ix + 32 } else { ix }) - self.collisionOffsetX as i32) as i16, self.iy);
+            let obj = Ptr::new_box(MO_SledgeHammer::new(
+                g,
+                Ptr::from_mut(&mut rm.spr_sledgehammer),
+                pos,
+                8,
+                Vec2f::new(fHammerVelX, -HAMMERTHROW),
+                5,
+                -1,
+                -1,
+                -1,
+                false,
+            ));
+            gp.objectcontainer[2].add(g, obj);
+        } else if self.iType == 1 {
+            let fBombVelX: f32 = (RANDOM_INT(gp.get(), 5) + 12) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 14.0f32 };
+            let fBombVelY: f32 = -(RANDOM_INT(gp.get(), 13) as f32) / 2.0f32 - 6.0f32;
+            let pos = Vec2s::new((if self.face_right { ix + iw - 32 } else { ix - 20 }) as i16, iy as i16);
+            let timetolive = (RANDOM_INT(gp.get(), 60) + 120) as i16;
+            let obj = Ptr::new_box(CO_Bomb::new(
+                g,
+                Ptr::from_mut(&mut rm.spr_bomb),
+                pos,
+                Vec2f::new(fBombVelX, fBombVelY),
+                4,
+                -1,
+                -1,
+                -1,
+                timetolive,
+            ));
+            gp.objectcontainer[2].add(g, obj);
+        } else if self.iType == 2 {
+            let fFireVelX: f32 = (RANDOM_INT(gp.get(), 9) + 6) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 10.0f32 };
+            let fFireVelY: f32 = RANDOM_INT(gp.get(), 17) as f32 / 2.0f32 - 4.0f32;
+            let pos = Vec2s::new((if self.face_right { ix + iw - 32 } else { ix - 16 }) as i16, iy as i16);
+            let obj = Ptr::new_box(MO_SuperFireball::new(
+                g,
+                Ptr::from_mut(&mut rm.spr_superfireball),
+                pos,
+                4,
+                Vec2f::new(fFireVelX, fFireVelY),
+                4,
+                -1,
+                -1,
+                -1,
+            ));
+            gp.objectcontainer[2].add(g, obj);
         }
 
         self.need_action[1] = 0;
@@ -387,7 +381,7 @@ impl MO_SledgeBrother {
         let mut gp = g.ptr();
         self.set_last_action(2);
 
-        unsafe { gp.rm.sfx_boomerang.play_loop(g, 3) };
+        gp.rm.sfx_boomerang.play_loop(g, 3);
         self.taunt_timer = 60;
         self.iActionState = 5;
 
@@ -395,16 +389,14 @@ impl MO_SledgeBrother {
 
         // If this is a bomb brother, push bombs away when taunting
         if self.iType == 1 {
-            unsafe { push_bombs(g, &gp.objectcontainer[2], (self.ix as i32 + 32) as i16, (self.iy as i32 + 32) as i16) };
+            push_bombs(g, &gp.objectcontainer[2], (self.ix as i32 + 32) as i16, (self.iy as i32 + 32) as i16);
         }
     }
 
     fn turn(&mut self, g: &mut Game) {
         self.face_right = !self.face_right;
-        unsafe {
-            let waittime = g_iSledgeBrotherWaitTime[self.iType as usize][g.game_values.gamemodesettings.boss.difficulty as usize];
-            self.wait(g, waittime[0] >> 1, waittime[1] >> 1);
-        }
+        let waittime = g_iSledgeBrotherWaitTime[self.iType as usize][g.game_values.gamemodesettings.boss.difficulty as usize];
+        self.wait(g, waittime[0] >> 1, waittime[1] >> 1);
 
         self.need_action[2] = 0;
     }
@@ -451,14 +443,12 @@ impl CObjectTrait for MO_SledgeBrother {
 
         if self.hit_timer != 0 {
             for iHeart in 0..self.hit_points {
-                unsafe {
-                    gp.rm.spr_scorehearts.draw_src(
-                        g,
-                        self.ix as i32 - self.collisionOffsetX as i32 + iHeart as i32 * 8,
-                        self.iy as i32 - self.collisionOffsetY as i32 - 18,
-                        &Rect { x: 0, y: 0, w: 16, h: 16 },
-                    );
-                }
+                gp.rm.spr_scorehearts.draw_src(
+                    g,
+                    self.ix as i32 - self.collisionOffsetX as i32 + iHeart as i32 * 8,
+                    self.iy as i32 - self.collisionOffsetY as i32 - 18,
+                    &Rect { x: 0, y: 0, w: 16, h: 16 },
+                );
             }
         }
     }
@@ -466,100 +456,131 @@ impl CObjectTrait for MO_SledgeBrother {
     fn update(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let mut rm = g.rm;
-        unsafe {
-            if self.iActionState == 0 {
-                if self.hit_timer <= 0 {
-                    self.randomaction(g);
-                }
-            } else if self.iActionState == 1 {
-                self.wait_timer -= 1;
-                if self.wait_timer <= 0 {
-                    self.iActionState = 0;
-                }
-            } else if self.iActionState == 2 {
-                let (fy, vely) = (self.fy, self.vely);
-                self.set_yf(fy + vely);
-                self.vely += GRAVITATION;
+        if self.iActionState == 0 {
+            if self.hit_timer <= 0 {
+                self.randomaction(g);
+            }
+        } else if self.iActionState == 1 {
+            self.wait_timer -= 1;
+            if self.wait_timer <= 0 {
+                self.iActionState = 0;
+            }
+        } else if self.iActionState == 2 {
+            let (fy, vely) = (self.fy, self.vely);
+            self.set_yf(fy + vely);
+            self.vely += GRAVITATION;
 
-                if self.iy >= self.iPlatformY {
-                    self.iActionState = 0;
+            if self.iy >= self.iPlatformY {
+                self.iActionState = 0;
 
-                    if self.iType == 0 {
-                        // Shake screen and kill players
-                        if_sound_on_play(g, &mut gp.rm.sfx_thunder);
-                        g.game_values.flags.screenshaketimer = 20;
-                        g.game_values.flags.screenshakeplayerid = -1;
-                        g.game_values.flags.screenshaketeamid = -1;
-                        g.game_values.flags.screenshakekillinair = false;
-                        g.game_values.flags.screenshakekillscount = 0;
-                    } else if self.iType == 1 {
-                        // Spawn thwomps
-                        if_sound_on_play(g, &mut gp.rm.sfx_thunder);
+                if self.iType == 0 {
+                    // Shake screen and kill players
+                    if_sound_on_play(g, &mut gp.rm.sfx_thunder);
+                    g.game_values.flags.screenshaketimer = 20;
+                    g.game_values.flags.screenshakeplayerid = -1;
+                    g.game_values.flags.screenshaketeamid = -1;
+                    g.game_values.flags.screenshakekillinair = false;
+                    g.game_values.flags.screenshakekillscount = 0;
+                } else if self.iType == 1 {
+                    // Spawn thwomps
+                    if_sound_on_play(g, &mut gp.rm.sfx_thunder);
 
-                        let numThwomps: i16 = (RANDOM_INT(gp.get(), 5) + 6) as i16;
+                    let numThwomps: i16 = (RANDOM_INT(gp.get(), 5) + 6) as i16;
 
-                        for _iThwomp in 0..numThwomps {
-                            let x = RANDOM_INT(gp.get(), 591) as i16;
-                            let nspeed = 2.0f32 + RANDOM_INT(gp.get(), 20) as f32 / 10.0f32;
-                            let obj = Ptr::new_box(OMO_Thwomp::new(g, Ptr::from_mut(&mut rm.spr_thwomp), x, nspeed));
-                            gp.objectcontainer[2].add(g, obj);
-                        }
-                    } else if self.iType == 2 {
-                        // Spawn lots of podobos
-                        if_sound_on_play(g, &mut gp.rm.sfx_thunder);
+                    for _iThwomp in 0..numThwomps {
+                        let x = RANDOM_INT(gp.get(), 591) as i16;
+                        let nspeed = 2.0f32 + RANDOM_INT(gp.get(), 20) as f32 / 10.0f32;
+                        let obj = Ptr::new_box(OMO_Thwomp::new(g, Ptr::from_mut(&mut rm.spr_thwomp), x, nspeed));
+                        gp.objectcontainer[2].add(g, obj);
+                    }
+                } else if self.iType == 2 {
+                    // Spawn lots of podobos
+                    if_sound_on_play(g, &mut gp.rm.sfx_thunder);
 
-                        let numPodobos: i16 = (RANDOM_INT(gp.get(), 5) + 8) as i16;
+                    let numPodobos: i16 = (RANDOM_INT(gp.get(), 5) + 8) as i16;
 
-                        for _iPodobo in 0..numPodobos {
-                            let x = RANDOM_INT(gp.get(), 608) as i16;
-                            let dVelY = -(RANDOM_INT(gp.get(), 9) as f32 / 2.0f32) - 9.0f32;
-                            let obj = Ptr::new_box(MO_Podobo::new(
-                                g,
-                                Ptr::from_mut(&mut rm.spr_podobo),
-                                Vec2s::new(x, App::screenHeight as i16),
-                                dVelY,
-                                -1,
-                                -1,
-                                -1,
-                                false,
-                            ));
-                            gp.objectcontainer[2].add(g, obj);
-                        }
+                    for _iPodobo in 0..numPodobos {
+                        let x = RANDOM_INT(gp.get(), 608) as i16;
+                        let dVelY = -(RANDOM_INT(gp.get(), 9) as f32 / 2.0f32) - 9.0f32;
+                        let obj = Ptr::new_box(MO_Podobo::new(
+                            g,
+                            Ptr::from_mut(&mut rm.spr_podobo),
+                            Vec2s::new(x, App::screenHeight as i16),
+                            dVelY,
+                            -1,
+                            -1,
+                            -1,
+                            false,
+                        ));
+                        gp.objectcontainer[2].add(g, obj);
                     }
                 }
-            } else if self.iActionState == 3 {
-                self.throwing_timer -= 1;
-                if self.throwing_timer <= 0 {
+            }
+        } else if self.iActionState == 3 {
+            self.throwing_timer -= 1;
+            if self.throwing_timer <= 0 {
+                self.iActionState = 0;
+                self.throwing_timer = 0;
+                self.arm_offset_x = 0;
+            }
+        } else if self.iActionState == 4 {
+            // move towards destination
+            if self.ix < self.iDestX {
+                self.ix += if g.game_values.gamemodesettings.boss.difficulty >= 3 { 2 } else { 1 };
+
+                if self.ix >= self.iDestX {
+                    self.ix = self.iDestX;
                     self.iActionState = 0;
-                    self.throwing_timer = 0;
-                    self.arm_offset_x = 0;
+                    self.leg_offset_x = 0;
+                    self.leg_movement_timer = 0;
                 }
-            } else if self.iActionState == 4 {
-                // move towards destination
-                if self.ix < self.iDestX {
-                    self.ix += if g.game_values.gamemodesettings.boss.difficulty >= 3 { 2 } else { 1 };
+            } else if self.ix > self.iDestX {
+                self.ix -= if g.game_values.gamemodesettings.boss.difficulty >= 3 { 2 } else { 1 };
 
-                    if self.ix >= self.iDestX {
-                        self.ix = self.iDestX;
-                        self.iActionState = 0;
-                        self.leg_offset_x = 0;
-                        self.leg_movement_timer = 0;
-                    }
-                } else if self.ix > self.iDestX {
-                    self.ix -= if g.game_values.gamemodesettings.boss.difficulty >= 3 { 2 } else { 1 };
+                if self.ix <= self.iDestX {
+                    self.ix = self.iDestX;
+                    self.iActionState = 0;
+                    self.leg_offset_x = 0;
+                    self.leg_movement_timer = 0;
+                }
+            }
 
-                    if self.ix <= self.iDestX {
-                        self.ix = self.iDestX;
-                        self.iActionState = 0;
-                        self.leg_offset_x = 0;
-                        self.leg_movement_timer = 0;
+            if self.iActionState != 0 && {
+                self.leg_movement_timer += 1;
+                self.leg_movement_timer == 8
+            } {
+                self.leg_movement_timer = 0;
+
+                if self.leg_offset_x == 0 {
+                    self.leg_offset_x = 48;
+                } else {
+                    self.leg_offset_x = 0;
+                }
+            }
+        } else if self.iActionState == 5 {
+            // If we are done taunting, reset arm/legs back to normal state
+            self.taunt_timer -= 1;
+            if self.taunt_timer <= 0 {
+                self.iActionState = 0;
+                self.arm_offset_x = 0;
+                self.leg_offset_x = 0;
+                self.arm_movement_timer = 0;
+                self.leg_movement_timer = 0;
+            } else {
+                // otherwise move them around
+                self.arm_movement_timer += 1;
+                if self.arm_movement_timer == 8 {
+                    self.arm_movement_timer = 0;
+
+                    if self.arm_offset_x == 0 {
+                        self.arm_offset_x = 96;
+                    } else {
+                        self.arm_offset_x = 0;
                     }
                 }
 
-                if self.iActionState != 0 && {
-                    self.leg_movement_timer += 1;
-                    self.leg_movement_timer == 8
-                } {
+                self.leg_movement_timer += 1;
+                if self.leg_movement_timer == 6 {
                     self.leg_movement_timer = 0;
 
                     if self.leg_offset_x == 0 {
@@ -568,56 +589,23 @@ impl CObjectTrait for MO_SledgeBrother {
                         self.leg_offset_x = 0;
                     }
                 }
-            } else if self.iActionState == 5 {
-                // If we are done taunting, reset arm/legs back to normal state
-                self.taunt_timer -= 1;
-                if self.taunt_timer <= 0 {
-                    self.iActionState = 0;
-                    self.arm_offset_x = 0;
-                    self.leg_offset_x = 0;
-                    self.arm_movement_timer = 0;
-                    self.leg_movement_timer = 0;
-                } else {
-                    // otherwise move them around
-                    self.arm_movement_timer += 1;
-                    if self.arm_movement_timer == 8 {
-                        self.arm_movement_timer = 0;
-
-                        if self.arm_offset_x == 0 {
-                            self.arm_offset_x = 96;
-                        } else {
-                            self.arm_offset_x = 0;
-                        }
-                    }
-
-                    self.leg_movement_timer += 1;
-                    if self.leg_movement_timer == 6 {
-                        self.leg_movement_timer = 0;
-
-                        if self.leg_offset_x == 0 {
-                            self.leg_offset_x = 48;
-                        } else {
-                            self.leg_offset_x = 0;
-                        }
-                    }
-                }
             }
+        }
 
-            if self.hit_timer > 0 {
-                self.hit_timer -= 1;
-                if self.hit_timer <= 0 {
-                    self.hit_offset_y = (self.iType as i32 * 64) as i16;
-                    self.hit_timer = 0;
-                } else {
-                    self.hit_movement_timer += 1;
-                    if self.hit_movement_timer == 2 {
-                        self.hit_movement_timer = 0;
+        if self.hit_timer > 0 {
+            self.hit_timer -= 1;
+            if self.hit_timer <= 0 {
+                self.hit_offset_y = (self.iType as i32 * 64) as i16;
+                self.hit_timer = 0;
+            } else {
+                self.hit_movement_timer += 1;
+                if self.hit_movement_timer == 2 {
+                    self.hit_movement_timer = 0;
 
-                        self.hit_offset_y += 64;
+                    self.hit_offset_y += 64;
 
-                        if self.hit_offset_y >= 192 {
-                            self.hit_offset_y = 0;
-                        }
+                    if self.hit_offset_y >= 192 {
+                        self.hit_offset_y = 0;
                     }
                 }
             }
@@ -631,13 +619,11 @@ impl CObjectTrait for MO_SledgeBrother {
         }
 
         if player.is_invincible() {
-            unsafe {
-                if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
-                self.die(g);
+            if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
+            self.die(g);
 
-                if g.game_values.gamemode.gamemode == game_mode_boss_minigame {
-                    g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Boss_MiniGame>().unwrap().set_winner(g, player);
-                }
+            if g.game_values.gamemode.gamemode == game_mode_boss_minigame {
+                g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Boss_MiniGame>().unwrap().set_winner(g, player);
             }
         } else {
             return self.hit(g, player);
@@ -690,11 +676,11 @@ impl CObjectTrait for MO_SledgeBrother {
                 self.damage(g, iPlayerID);
 
                 if r#type == movingobject_shell || r#type == movingobject_throwblock || r#type == movingobject_throwbox || r#type == movingobject_attackzone {
-                    unsafe { if_sound_on_play(g, &mut gp.rm.sfx_kicksound) };
+                    if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
                     object.die(g);
                 }
             } else {
-                unsafe { if_sound_on_play(g, &mut gp.rm.sfx_hit) };
+                if_sound_on_play(g, &mut gp.rm.sfx_hit);
 
                 if r#type == movingobject_attackzone || r#type == movingobject_bulletbill {
                     object.die(g);
@@ -709,20 +695,18 @@ impl IO_MovingObjectTrait for MO_SledgeBrother {
 
     fn die(&mut self, g: &mut Game) {
         self.dead = true;
-        unsafe {
-            g.eyecandy[2].emplace(EC_FallingObject::new(
-                Ptr::from_mut(&mut g.rm.spr_sledgebrothersdead),
-                self.ix,
-                self.iy,
-                0.0f32,
-                -VELJUMP / 2.0f32,
-                1,
-                0,
-                0,
-                (self.iType as i32 * 64) as i16,
-                self.iw,
-                self.ih,
-            ));
-        }
+        g.eyecandy[2].emplace(EC_FallingObject::new(
+            Ptr::from_mut(&mut g.rm.spr_sledgebrothersdead),
+            self.ix,
+            self.iy,
+            0.0f32,
+            -VELJUMP / 2.0f32,
+            1,
+            0,
+            0,
+            (self.iType as i32 * 64) as i16,
+            self.iw,
+            self.ih,
+        ));
     }
 }

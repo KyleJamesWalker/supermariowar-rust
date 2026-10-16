@@ -57,18 +57,68 @@ impl PlayerTanookiSuit {
             return;
         }
 
-        unsafe {
-            // If the down key is ever released, manually untransform by releasing the down key
-            if !player.playerKeys.game_down().fDown && self.statue_timer != 0 {
-                // Untransform from statue
-                self.statue_timer = 1;
-            }
-            // Become the tanooki
-            else if self.can_turn_into_statue(player) {
-                // set the amount of time you get to remain in statue form
-                self.statue_timer = 123;
+        // If the down key is ever released, manually untransform by releasing the down key
+        if !player.playerKeys.game_down().fDown && self.statue_timer != 0 {
+            // Untransform from statue
+            self.statue_timer = 1;
+        }
+        // Become the tanooki
+        else if self.can_turn_into_statue(player) {
+            // set the amount of time you get to remain in statue form
+            self.statue_timer = 123;
 
-                // perform tansformation effects
+            // perform tansformation effects
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                Ptr::from_mut(&mut g.rm.spr_poof),
+                (player.center_x() as i32 - 24) as i16,
+                (player.center_y() as i32 - 24) as i16,
+                4,
+                5,
+            ));
+            if_sound_on_play(g, &mut gp.rm.sfx_transform);
+
+            // Neutralize lateral velocity
+            let tv: f32 = 1.6f32;
+            if player.velx > tv {
+                player.velx = tv;
+            } else if player.velx < -tv {
+                player.velx = -tv;
+            }
+
+            // Cause statue to super stomp to ground
+            if player.can_super_stomp() {
+                self.start_super_stomping(player);
+            }
+
+            // Prevent you from shooting
+            player.lockfire = true;
+
+            // Prevent you from falling through solid-on-top blocks
+            player.lockfall = true;
+
+            // Prevent you from becoming the statue twice before touching the ground
+            self.statue_lock = true;
+
+            //If we were flying or spinning when we became the statue, clear those states
+            player.clear_powerup_states();
+        }
+
+        // If not super stomping currently
+        if !player.superstomp.is_stomping() {
+            // Count down the statue timer, which leads to a forced detransformation
+            if self.statue_timer == 1 {
+                // Untransform from statue
+                self.statue_timer = 0;
+
+                // Release invincibility
+                player.shield.set_type(OFF);
+
+                // Slight upward velocity to escape spikes / lava
+                if !player.inair {
+                    player.vely = -8.0 as f32;
+                }
+
+                // perform transformation effects
                 g.eyecandy[2].emplace(EC_SingleAnimation::new(
                     Ptr::from_mut(&mut g.rm.spr_poof),
                     (player.center_x() as i32 - 24) as i16,
@@ -78,86 +128,34 @@ impl PlayerTanookiSuit {
                 ));
                 if_sound_on_play(g, &mut gp.rm.sfx_transform);
 
-                // Neutralize lateral velocity
-                let tv: f32 = 1.6f32;
-                if player.velx > tv {
-                    player.velx = tv;
-                } else if player.velx < -tv {
-                    player.velx = -tv;
+                //Decrease the amount of tanooki uses, if feature is turned on
+                if g.game_values.tanookilimit > 0 || self.statue_uses_left > 0 {
+                    self.statue_uses_left = self.statue_uses_left.wrapping_sub(1);
+                    if self.statue_uses_left == 0 {
+                        self.tanooki_on = false;
+                        self.statue_uses_left = 0;
+                        if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
+                    }
                 }
-
-                // Cause statue to super stomp to ground
-                if player.can_super_stomp() {
-                    self.start_super_stomping(player);
-                }
-
-                // Prevent you from shooting
+            }
+            // Player is a statue
+            else if self.statue_timer > 0 {
+                // Prevent player from shooting while a statue
                 player.lockfire = true;
 
-                // Prevent you from falling through solid-on-top blocks
-                player.lockfall = true;
+                // Prevent player from jumping
+                player.lockjump = true;
 
-                // Prevent you from becoming the statue twice before touching the ground
+                // Don't fall through passable platforms
+                player.fallthrough = false;
+
+                // Decrement statue timer3
+                self.statue_timer -= 1;
+
+                // Become soft shielded (with stomp ability)
+                player.shield.set_type(SOFT_WITH_STOMP);
+
                 self.statue_lock = true;
-
-                //If we were flying or spinning when we became the statue, clear those states
-                player.clear_powerup_states();
-            }
-
-            // If not super stomping currently
-            if !player.superstomp.is_stomping() {
-                // Count down the statue timer, which leads to a forced detransformation
-                if self.statue_timer == 1 {
-                    // Untransform from statue
-                    self.statue_timer = 0;
-
-                    // Release invincibility
-                    player.shield.set_type(OFF);
-
-                    // Slight upward velocity to escape spikes / lava
-                    if !player.inair {
-                        player.vely = -8.0 as f32;
-                    }
-
-                    // perform transformation effects
-                    g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut g.rm.spr_poof),
-                        (player.center_x() as i32 - 24) as i16,
-                        (player.center_y() as i32 - 24) as i16,
-                        4,
-                        5,
-                    ));
-                    if_sound_on_play(g, &mut gp.rm.sfx_transform);
-
-                    //Decrease the amount of tanooki uses, if feature is turned on
-                    if g.game_values.tanookilimit > 0 || self.statue_uses_left > 0 {
-                        self.statue_uses_left = self.statue_uses_left.wrapping_sub(1);
-                        if self.statue_uses_left == 0 {
-                            self.tanooki_on = false;
-                            self.statue_uses_left = 0;
-                            if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
-                        }
-                    }
-                }
-                // Player is a statue
-                else if self.statue_timer > 0 {
-                    // Prevent player from shooting while a statue
-                    player.lockfire = true;
-
-                    // Prevent player from jumping
-                    player.lockjump = true;
-
-                    // Don't fall through passable platforms
-                    player.fallthrough = false;
-
-                    // Decrement statue timer3
-                    self.statue_timer -= 1;
-
-                    // Become soft shielded (with stomp ability)
-                    player.shield.set_type(SOFT_WITH_STOMP);
-
-                    self.statue_lock = true;
-                }
             }
         }
     }
@@ -180,13 +178,11 @@ impl PlayerTanookiSuit {
 
     pub fn on_pickup(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        unsafe {
-            if_sound_on_play(g, &mut gp.rm.sfx_collectpowerup);
-            self.tanooki_on = true;
+        if_sound_on_play(g, &mut gp.rm.sfx_collectpowerup);
+        self.tanooki_on = true;
 
-            if g.game_values.tanookilimit > 0 {
-                self.statue_uses_left = g.game_values.tanookilimit as u16;
-            }
+        if g.game_values.tanookilimit > 0 {
+            self.statue_uses_left = g.game_values.tanookilimit as u16;
         }
     }
 

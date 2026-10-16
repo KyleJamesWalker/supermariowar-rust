@@ -38,7 +38,7 @@ crate::impl_base!(MI_Button => ui_control: UI_Control);
 impl MI_Button {
     pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, x: i16, y: i16, name: impl Into<String>, width: i16, align: TextAlign) -> Self {
         let szName: String = name.into();
-        let iTextW = unsafe { g.rm.menu_font_large.get_width(&szName) } as i16;
+        let iTextW = g.rm.menu_font_large.get_width(&szName) as i16;
         MI_Button {
             ui_control: UI_Control::new(x, y),
             spr: nspr,
@@ -66,7 +66,7 @@ impl MI_Button {
 
     pub fn set_name(&mut self, g: &mut Game, name: impl Into<String>) {
         self.szName = name.into();
-        self.iTextW = unsafe { g.rm.menu_font_large.get_width(&self.szName) } as i16;
+        self.iTextW = g.rm.menu_font_large.get_width(&self.szName) as i16;
     }
 
     pub fn set_code(&mut self, code: MenuCodeEnum) {
@@ -118,30 +118,28 @@ impl UI_ControlTrait for MI_Button {
         let iImageH = self.iImageH as i32;
         let selY = (if self.fSelected { 32 } else { 0 }) + self.iAdjustmentY as i32;
 
-        unsafe {
-            self.spr.draw_src(g, x, y, &Rect { x: 0, y: selY, w: iHalfWidth, h: 32 });
-            self.spr.draw_src(g, x + iHalfWidth, y, &Rect { x: 512 - iWidth + iHalfWidth, y: selY, w: iWidth - iHalfWidth, h: 32 });
+        self.spr.draw_src(g, x, y, &Rect { x: 0, y: selY, w: iHalfWidth, h: 32 });
+        self.spr.draw_src(g, x + iHalfWidth, y, &Rect { x: 512 - iWidth + iHalfWidth, y: selY, w: iWidth - iHalfWidth, h: 32 });
 
-            let srcRect = Rect { x: self.iImageSrcX as i32, y: self.iImageSrcY as i32, w: iImageW, h: iImageH };
+        let srcRect = Rect { x: self.iImageSrcX as i32, y: self.iImageSrcY as i32, w: iImageW, h: iImageH };
 
-            match self.m_text_align {
-                TextAlign::LEFT => {
-                    gp.rm.menu_font_large.draw_chop_right(g, x + 16 + (if iImageW > 0 { iImageW + 2 } else { 0 }), y + 5, iWidth - 32, &self.szName);
-                    if !self.sprImage.is_null() {
-                        self.sprImage.draw_src(g, x + 16, y + 16 - (iImageH >> 1), &srcRect);
-                    }
+        match self.m_text_align {
+            TextAlign::LEFT => {
+                gp.rm.menu_font_large.draw_chop_right(g, x + 16 + (if iImageW > 0 { iImageW + 2 } else { 0 }), y + 5, iWidth - 32, &self.szName);
+                if !self.sprImage.is_null() {
+                    self.sprImage.draw_src(g, x + 16, y + 16 - (iImageH >> 1), &srcRect);
                 }
-                TextAlign::CENTER => {
-                    gp.rm.menu_font_large.draw_centered(g, x + ((iWidth + (if iImageW > 0 { iImageW + 2 } else { 0 })) >> 1), y + 5, &self.szName);
-                    if !self.sprImage.is_null() {
-                        self.sprImage.draw_src(g, x + (iWidth >> 1) - ((self.iTextW as i32 + iImageW) >> 1) - 1, y + 16 - (iImageH >> 1), &srcRect);
-                    }
+            }
+            TextAlign::CENTER => {
+                gp.rm.menu_font_large.draw_centered(g, x + ((iWidth + (if iImageW > 0 { iImageW + 2 } else { 0 })) >> 1), y + 5, &self.szName);
+                if !self.sprImage.is_null() {
+                    self.sprImage.draw_src(g, x + (iWidth >> 1) - ((self.iTextW as i32 + iImageW) >> 1) - 1, y + 16 - (iImageH >> 1), &srcRect);
                 }
-                TextAlign::RIGHT => {
-                    gp.rm.menu_font_large.draw_right_justified(g, x + iWidth - 16, y + 5, &self.szName);
-                    if !self.sprImage.is_null() {
-                        self.sprImage.draw_src(g, x + iWidth - 18 - self.iTextW as i32 - iImageW, y + 16 - (iImageH >> 1), &srcRect);
-                    }
+            }
+            TextAlign::RIGHT => {
+                gp.rm.menu_font_large.draw_right_justified(g, x + iWidth - 16, y + 5, &self.szName);
+                if !self.sprImage.is_null() {
+                    self.sprImage.draw_src(g, x + iWidth - 18 - self.iTextW as i32 - iImageW, y + 16 - (iImageH >> 1), &srcRect);
                 }
             }
         }

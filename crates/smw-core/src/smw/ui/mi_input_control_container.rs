@@ -131,131 +131,129 @@ impl UI_ControlTrait for MI_InputControlField {
 
     fn send_input(&mut self, g: &mut Game, _playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         let mut gp = g.ptr();
-        unsafe {
-            let mut done = false;
+        let mut done = false;
+        #[cfg(target_os = "emscripten")]
+        let mut events = std::mem::take(&mut g.frame_events).into_iter();
+
+        while !done {
+            #[cfg(not(target_os = "emscripten"))]
+            let input = harness::wait_event(g);
             #[cfg(target_os = "emscripten")]
-            let mut events = std::mem::take(&mut g.frame_events).into_iter();
+            let Some(input) = events.next() else {
+                return MENU_CODE_NONE;
+            };
 
-            while !done {
-                #[cfg(not(target_os = "emscripten"))]
-                let input = harness::wait_event(g);
-                #[cfg(target_os = "emscripten")]
-                let Some(input) = events.next() else {
-                    return MENU_CODE_NONE;
-                };
+            gp.game_values.playerInput.update_input(g, &input, 1);
 
-                gp.game_values.playerInput.update_input(g, &input, 1);
+            use InputEvent as E;
+            let ev = &input.event;
+            let key_sym = if let E::Key { key, .. } = *ev { key.0 } else { 0 };
+            let (motion_xrel, motion_yrel) = if let E::Mouse { event: MouseEvent::Motion { xrel, yrel, .. }, .. } = *ev { (xrel, yrel) } else { (0, 0) };
+            let mouse_button = if let E::Mouse { event: MouseEvent::Button { button, .. }, .. } = *ev { button } else { 0 };
+            let jhat_value = if let E::PadHat { value, .. } = *ev { value } else { 0 };
+            let (jaxis_axis, jaxis_value) = if let E::PadAxis { axis, value, .. } = *ev { (axis, value) } else { (0, 0) };
+            let jbutton_button = if let E::PadButton { button, .. } = *ev { button } else { 0 };
 
-                use InputEvent as E;
-                let ev = &input.event;
-                let key_sym = if let E::Key { key, .. } = *ev { key.0 } else { 0 };
-                let (motion_xrel, motion_yrel) = if let E::Mouse { event: MouseEvent::Motion { xrel, yrel, .. }, .. } = *ev { (xrel, yrel) } else { (0, 0) };
-                let mouse_button = if let E::Mouse { event: MouseEvent::Button { button, .. }, .. } = *ev { button } else { 0 };
-                let jhat_value = if let E::PadHat { value, .. } = *ev { value } else { 0 };
-                let (jaxis_axis, jaxis_value) = if let E::PadAxis { axis, value, .. } = *ev { (axis, value) } else { (0, 0) };
-                let jbutton_button = if let E::PadButton { button, .. } = *ev { button } else { 0 };
+            if self.iDevice == DEVICE_KEYBOARD {
+                if matches!(ev, E::Key { down: true, .. }) {
+                    let key: Keycode = key_sym;
 
-                if self.iDevice == DEVICE_KEYBOARD {
-                    if matches!(ev, E::Key { down: true, .. }) {
-                        let key: Keycode = key_sym;
+                    self.set_key_device(g, self.iKey, key, self.iDevice);
+                    done = true;
+                } else if matches!(ev, E::Mouse { event: MouseEvent::Motion { .. }, .. }) {
+                    let xmag = motion_xrel.abs() as i16;
+                    let ymag = motion_yrel.abs() as i16;
 
-                        self.set_key_device(g, self.iKey, key, self.iDevice);
-                        done = true;
-                    } else if matches!(ev, E::Mouse { event: MouseEvent::Motion { .. }, .. }) {
-                        let xmag = motion_xrel.abs() as i16;
-                        let ymag = motion_yrel.abs() as i16;
+                    if (xmag as i32) < MOUSE_X_DEAD_ZONE && (ymag as i32) < MOUSE_Y_DEAD_ZONE {
+                        continue;
+                    }
 
-                        if (xmag as i32) < MOUSE_X_DEAD_ZONE && (ymag as i32) < MOUSE_Y_DEAD_ZONE {
-                            continue;
-                        }
-
-                        let key: Keycode = if xmag > ymag {
-                            if motion_xrel < 0 {
-                                MOUSE_LEFT
-                            } else {
-                                MOUSE_RIGHT
-                            }
-                        } else if motion_yrel < 0 {
-                            MOUSE_UP
+                    let key: Keycode = if xmag > ymag {
+                        if motion_xrel < 0 {
+                            MOUSE_LEFT
                         } else {
-                            MOUSE_DOWN
-                        };
-
-                        if key != KEY_NONE {
-                            self.set_key_device(g, self.iKey, key, self.iDevice);
-                            done = true;
+                            MOUSE_RIGHT
                         }
-                    } else if matches!(ev, E::Mouse { event: MouseEvent::Button { down: true, .. }, .. }) {
-                        let key: Keycode = mouse_button as i32 + MOUSE_BUTTON_START;
-                        self.set_key_device(g, self.iKey, key, self.iDevice);
-                        done = true;
-                    }
-                } else if matches!(ev, E::Key { down: true, .. }) {
-                    if key_sym == SDLK_ESCAPE {
-                        done = true;
-                    }
-                } else if matches!(ev, E::PadHat { .. }) {
-                    let mut key: Keycode = KEY_NONE;
-                    let value = jhat_value as u32;
-
-                    if value & SDL_HAT_UP as u32 != 0 {
-                        key = JOY_HAT_UP;
-                    } else if value & SDL_HAT_DOWN as u32 != 0 {
-                        key = JOY_HAT_DOWN;
-                    } else if value & SDL_HAT_LEFT as u32 != 0 {
-                        key = JOY_HAT_LEFT;
-                    } else if value & SDL_HAT_RIGHT as u32 != 0 {
-                        key = JOY_HAT_RIGHT;
-                    }
+                    } else if motion_yrel < 0 {
+                        MOUSE_UP
+                    } else {
+                        MOUSE_DOWN
+                    };
 
                     if key != KEY_NONE {
                         self.set_key_device(g, self.iKey, key, self.iDevice);
                         done = true;
                     }
-                } else if matches!(ev, E::PadAxis { .. }) {
-                    let mut key: Keycode = KEY_NONE;
-                    let value = jaxis_value as i32;
-
-                    if jaxis_axis == 0 {
-                        if value < -JOYSTICK_DEAD_ZONE {
-                            key = JOY_STICK_1_LEFT;
-                        } else if value > JOYSTICK_DEAD_ZONE {
-                            key = JOY_STICK_1_RIGHT;
-                        }
-                    } else if jaxis_axis == 1 {
-                        if value < -JOYSTICK_DEAD_ZONE {
-                            key = JOY_STICK_1_UP;
-                        } else if value > JOYSTICK_DEAD_ZONE {
-                            key = JOY_STICK_1_DOWN;
-                        }
-                    } else if jaxis_axis == 2 {
-                        if value < -JOYSTICK_DEAD_ZONE {
-                            key = JOY_STICK_2_LEFT;
-                        } else if value > JOYSTICK_DEAD_ZONE {
-                            key = JOY_STICK_2_RIGHT;
-                        }
-                    } else if jaxis_axis == 3 {
-                        if value < -JOYSTICK_DEAD_ZONE {
-                            key = JOY_STICK_2_UP;
-                        } else if value > JOYSTICK_DEAD_ZONE {
-                            key = JOY_STICK_2_DOWN;
-                        }
-                    }
-
-                    if key != KEY_NONE {
-                        self.set_key_device(g, self.iKey, key, self.iDevice);
-                        done = true;
-                    }
-                } else if matches!(ev, E::PadButton { down: true, .. }) {
-                    let key: Keycode = jbutton_button as i32 + JOY_BUTTON_START;
+                } else if matches!(ev, E::Mouse { event: MouseEvent::Button { down: true, .. }, .. }) {
+                    let key: Keycode = mouse_button as i32 + MOUSE_BUTTON_START;
                     self.set_key_device(g, self.iKey, key, self.iDevice);
                     done = true;
                 }
-            }
+            } else if matches!(ev, E::Key { down: true, .. }) {
+                if key_sym == SDLK_ESCAPE {
+                    done = true;
+                }
+            } else if matches!(ev, E::PadHat { .. }) {
+                let mut key: Keycode = KEY_NONE;
+                let value = jhat_value as u32;
 
-            //Need to clear down keys when coming into this (we'll ignore key up events in here)
-            g.game_values.playerInput.reset_keys();
+                if value & SDL_HAT_UP as u32 != 0 {
+                    key = JOY_HAT_UP;
+                } else if value & SDL_HAT_DOWN as u32 != 0 {
+                    key = JOY_HAT_DOWN;
+                } else if value & SDL_HAT_LEFT as u32 != 0 {
+                    key = JOY_HAT_LEFT;
+                } else if value & SDL_HAT_RIGHT as u32 != 0 {
+                    key = JOY_HAT_RIGHT;
+                }
+
+                if key != KEY_NONE {
+                    self.set_key_device(g, self.iKey, key, self.iDevice);
+                    done = true;
+                }
+            } else if matches!(ev, E::PadAxis { .. }) {
+                let mut key: Keycode = KEY_NONE;
+                let value = jaxis_value as i32;
+
+                if jaxis_axis == 0 {
+                    if value < -JOYSTICK_DEAD_ZONE {
+                        key = JOY_STICK_1_LEFT;
+                    } else if value > JOYSTICK_DEAD_ZONE {
+                        key = JOY_STICK_1_RIGHT;
+                    }
+                } else if jaxis_axis == 1 {
+                    if value < -JOYSTICK_DEAD_ZONE {
+                        key = JOY_STICK_1_UP;
+                    } else if value > JOYSTICK_DEAD_ZONE {
+                        key = JOY_STICK_1_DOWN;
+                    }
+                } else if jaxis_axis == 2 {
+                    if value < -JOYSTICK_DEAD_ZONE {
+                        key = JOY_STICK_2_LEFT;
+                    } else if value > JOYSTICK_DEAD_ZONE {
+                        key = JOY_STICK_2_RIGHT;
+                    }
+                } else if jaxis_axis == 3 {
+                    if value < -JOYSTICK_DEAD_ZONE {
+                        key = JOY_STICK_2_UP;
+                    } else if value > JOYSTICK_DEAD_ZONE {
+                        key = JOY_STICK_2_DOWN;
+                    }
+                }
+
+                if key != KEY_NONE {
+                    self.set_key_device(g, self.iKey, key, self.iDevice);
+                    done = true;
+                }
+            } else if matches!(ev, E::PadButton { down: true, .. }) {
+                let key: Keycode = jbutton_button as i32 + JOY_BUTTON_START;
+                self.set_key_device(g, self.iKey, key, self.iDevice);
+                done = true;
+            }
         }
+
+        //Need to clear down keys when coming into this (we'll ignore key up events in here)
+        g.game_values.playerInput.reset_keys();
 
         self.fModifying = false;
         MENU_CODE_UNSELECT_ITEM
@@ -340,7 +338,7 @@ unsafe fn add_joysticks(g: &mut Game, field: &mut MI_SelectField<i16>) {
 }
 
 fn key_ptr(g: &mut Game, iPlayerID: i16, iType: usize, iKey: usize) -> *mut Keycode {
-    unsafe { &mut g.game_values.playerInput.inputControls[iPlayerID as usize].inputGameControls[iType].keys[iKey] as *mut Keycode }
+    &mut g.game_values.playerInput.inputControls[iPlayerID as usize].inputGameControls[iType].keys[iKey] as *mut Keycode
 }
 
 impl MI_InputControlContainer {
@@ -472,90 +470,86 @@ impl MI_InputControlContainer {
     }
 
     pub fn set_player(&mut self, g: &mut Game, playerID: i16) {
-        unsafe {
-            // Not in upstream: list the pads connected since (pad::hotplug).
-            #[cfg(not(target_os = "emscripten"))]
-            if self.devices != crate::smw::pad::generation() {
-                self.devices = crate::smw::pad::generation();
-                self.miDeviceSelectField.clear();
-                self.miDeviceSelectField.add("Keyboard", -1);
-                add_joysticks(g, &mut self.miDeviceSelectField);
-            }
-
-            //Hide input options that other players are using
-            self.miDeviceSelectField.hide_all_items(false);
-
-            for iPlayer in 0..4i16 {
-                if iPlayer == playerID {
-                    continue;
-                }
-
-                let device = g.game_values.playerInput.inputControls[iPlayer as usize].iDevice;
-                if device > -1 {
-                    self.miDeviceSelectField.hide_item(device, true);
-                }
-            }
-
-            self.iPlayerID = playerID;
-            self.iDevice = g.game_values.playerInput.inputControls[self.iPlayerID as usize].iDevice;
-            let iDevice = self.iDevice;
-            self.miDeviceSelectField.set_current_value(iDevice);
-
-            for iKey in 0..NUM_KEYS {
-                let mut f = self.miGameInputControlFields[iKey];
-                f.set_device(iDevice);
-                f.set_type(0);
-                f.set_key_index(iKey as i16);
-                f.set_player_index(self.iPlayerID);
-                f.set_key(key_ptr(g, self.iPlayerID, 0, iKey));
-            }
-
-            for iKey in 0..NUM_KEYS {
-                let mut f = self.miMenuInputControlFields[iKey];
-                f.set_device(iDevice);
-                f.set_type(1);
-                f.set_key_index(iKey as i16);
-                f.set_player_index(self.iPlayerID);
-                f.set_key(key_ptr(g, self.iPlayerID, 1, iKey));
-            }
-
-            self.set_visible_input_fields();
-
-            let szNewTitle = format!("Player {} Controls", self.iPlayerID as i32 + 1);
-            self.miText.set_text(szNewTitle);
-            self.mInputMenu.reset_menu(g);
+        // Not in upstream: list the pads connected since (pad::hotplug).
+        #[cfg(not(target_os = "emscripten"))]
+        if self.devices != crate::smw::pad::generation() {
+            self.devices = crate::smw::pad::generation();
+            self.miDeviceSelectField.clear();
+            self.miDeviceSelectField.add("Keyboard", -1);
+            unsafe { add_joysticks(g, &mut self.miDeviceSelectField) };
         }
+
+        //Hide input options that other players are using
+        self.miDeviceSelectField.hide_all_items(false);
+
+        for iPlayer in 0..4i16 {
+            if iPlayer == playerID {
+                continue;
+            }
+
+            let device = g.game_values.playerInput.inputControls[iPlayer as usize].iDevice;
+            if device > -1 {
+                self.miDeviceSelectField.hide_item(device, true);
+            }
+        }
+
+        self.iPlayerID = playerID;
+        self.iDevice = g.game_values.playerInput.inputControls[self.iPlayerID as usize].iDevice;
+        let iDevice = self.iDevice;
+        self.miDeviceSelectField.set_current_value(iDevice);
+
+        for iKey in 0..NUM_KEYS {
+            let mut f = self.miGameInputControlFields[iKey];
+            f.set_device(iDevice);
+            f.set_type(0);
+            f.set_key_index(iKey as i16);
+            f.set_player_index(self.iPlayerID);
+            f.set_key(key_ptr(g, self.iPlayerID, 0, iKey));
+        }
+
+        for iKey in 0..NUM_KEYS {
+            let mut f = self.miMenuInputControlFields[iKey];
+            f.set_device(iDevice);
+            f.set_type(1);
+            f.set_key_index(iKey as i16);
+            f.set_player_index(self.iPlayerID);
+            f.set_key(key_ptr(g, self.iPlayerID, 1, iKey));
+        }
+
+        self.set_visible_input_fields();
+
+        let szNewTitle = format!("Player {} Controls", self.iPlayerID as i32 + 1);
+        self.miText.set_text(szNewTitle);
+        self.mInputMenu.reset_menu(g);
     }
 
     pub fn update_device_keys(&mut self, g: &mut Game, lDevice: i16) {
-        unsafe {
-            let p = self.iPlayerID as usize;
-            // Not in upstream: a joystick keeps its own bindings, and a keyboard player takes the first
-            // keyboard set no other player has (player p's own unless joysticks moved them, see assign_inputs).
-            let control = if lDevice == DEVICE_KEYBOARD {
-                let mut taken = |q: usize| (0..4).any(|o| o != p && g.game_values.playerInput.inputControls[o].as_ptr() == &mut g.game_values.inputConfiguration[q][0] as *mut CInputPlayerControl);
-                let q = (0..4).find(|&q| !taken(q)).unwrap_or(p);
-                &mut g.game_values.inputConfiguration[q][0]
-            } else {
-                &mut g.game_values.inputConfiguration[lDevice as usize][1]
-            };
-            g.game_values.playerInput.inputControls[p] = Ptr::from_mut(control);
-            g.game_values.playerInput.inputControls[p].iDevice = lDevice;
+        let p = self.iPlayerID as usize;
+        // Not in upstream: a joystick keeps its own bindings, and a keyboard player takes the first
+        // keyboard set no other player has (player p's own unless joysticks moved them, see assign_inputs).
+        let control = if lDevice == DEVICE_KEYBOARD {
+            let mut taken = |q: usize| (0..4).any(|o| o != p && g.game_values.playerInput.inputControls[o].as_ptr() == &mut g.game_values.inputConfiguration[q][0] as *mut CInputPlayerControl);
+            let q = (0..4).find(|&q| !taken(q)).unwrap_or(p);
+            &mut g.game_values.inputConfiguration[q][0]
+        } else {
+            &mut g.game_values.inputConfiguration[lDevice as usize][1]
+        };
+        g.game_values.playerInput.inputControls[p] = Ptr::from_mut(control);
+        g.game_values.playerInput.inputControls[p].iDevice = lDevice;
 
-            for iKey in 0..NUM_KEYS {
-                let mut f = self.miGameInputControlFields[iKey];
-                f.set_device(lDevice);
-                f.set_key(key_ptr(g, self.iPlayerID, 0, iKey));
-            }
-
-            for iKey in 0..NUM_KEYS {
-                let mut f = self.miMenuInputControlFields[iKey];
-                f.set_device(lDevice);
-                f.set_key(key_ptr(g, self.iPlayerID, 1, iKey));
-            }
-
-            self.set_visible_input_fields();
+        for iKey in 0..NUM_KEYS {
+            let mut f = self.miGameInputControlFields[iKey];
+            f.set_device(lDevice);
+            f.set_key(key_ptr(g, self.iPlayerID, 0, iKey));
         }
+
+        for iKey in 0..NUM_KEYS {
+            let mut f = self.miMenuInputControlFields[iKey];
+            f.set_device(lDevice);
+            f.set_key(key_ptr(g, self.iPlayerID, 1, iKey));
+        }
+
+        self.set_visible_input_fields();
     }
 }
 

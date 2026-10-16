@@ -208,10 +208,8 @@ const DEFAULT_POWERUP_PRESETS: [[i16; NUM_POWERUPS as usize]; NUM_POWERUP_PRESET
 ];
 
 pub fn if_sound_on_play(g: &mut Game, sfx: &mut sfxSound) {
-    unsafe {
-        if g.game_values.sound {
-            sfx.play(g);
-        }
+    if g.game_values.sound {
+        sfx.play(g);
     }
 }
 
@@ -593,7 +591,7 @@ impl CGameValues {
         self.poweruppreset = 0;
         self.tournamentcontrolstyle = TournamentControlStyle::All;
 
-        let filtercount = unsafe { g.filterslist.count() };
+        let filtercount = g.filterslist.count();
         self.pfFilters.resize(NUM_AUTO_FILTERS as usize + filtercount, false);
         self.piFilterIcons.resize(NUM_AUTO_FILTERS as usize + filtercount, 0);
         self.fNeedWriteFilters = false;
@@ -726,258 +724,252 @@ impl CGameConfig {
 
     fn read_options(&mut self, g: &mut Game, options: &mut BinaryFile) -> bool {
         let mut gp = g.ptr();
-        unsafe {
-            let version = Version {
-                major: options.read_i32() as u8,
-                minor: options.read_i32() as u8,
-                patch: options.read_i32() as u8,
-                build: options.read_i32() as u8,
-            };
+        let version = Version {
+            major: options.read_i32() as u8,
+            minor: options.read_i32() as u8,
+            patch: options.read_i32() as u8,
+            build: options.read_i32() as u8,
+        };
 
-            if GAME_VERSION != version {
-                println!("Old options.bin detected. Skipped reading it.");
-                return false;
-            }
-
-            self.spawnstyle = SpawnStyle::from_u8(options.read_u8());
-            self.awardstyle = AwardStyle::from_u8(options.read_u8());
-            self.teamcollision = TeamCollisionStyle::from_u8(options.read_u8());
-            self.screencrunch = options.read_u8() != 0;
-            self.toplayer = options.read_u8() != 0;
-            self.scoreboardstyle = ScoreboardStyle::from_u8(options.read_u8());
-            self.teamcolors = options.read_u8() != 0;
-            self.sound = options.read_u8() != 0;
-            self.music = options.read_u8() != 0;
-            self.musicvolume = options.read_u8() as i16;
-            self.soundvolume = options.read_u8() as i16;
-            self.respawn = options.read_u8() as i16;
-            self.outofboundstime = options.read_u8() as i16;
-            self.cpudifficulty = options.read_u8() as i16;
-            self.framelimiter = options.read_u8() as i16;
-            self.bonuswheel = options.read_u8() as i16;
-            self.keeppowerup = options.read_u8() != 0;
-            self.showwinningcrown = options.read_u8() != 0;
-            self.playnextmusic = options.read_u8() != 0;
-            self.pointspeed = options.read_u8() as i16;
-            self.swapstyle = options.read_u8() as i16;
-            self.overridepowerupsettings = options.read_u8() as i16;
-            self.secretsenabled = options.read_u8() != 0;
-            self.startgamecountdown = options.read_u8() != 0;
-            self.deadteamnotice = options.read_u8() != 0;
-            self.tournamentcontrolstyle = TournamentControlStyle::from_u8(options.read_u8());
-            self.startmodedisplay = options.read_u8() != 0;
-
-            self.shieldtime = options.read_i16();
-            self.shieldstyle = ShieldStyle::from_u8(options.read_i16() as u8);
-            self.itemrespawntime = options.read_i16();
-            self.hiddenblockrespawn = options.read_i16();
-            self.fireballttl = options.read_i16();
-            self.fireballlimit = options.read_i16();
-            self.hammerdelay = options.read_i16();
-            self.hammerttl = options.read_i16();
-            self.hammerpower = options.read_i16() != 0;
-            self.hammerlimit = options.read_i16();
-            self.boomerangstyle = BoomerangStyle::from_u8(options.read_i16() as u8);
-            self.boomeranglife = options.read_i16();
-            self.boomeranglimit = options.read_i16();
-            self.featherjumps = options.read_i16();
-            self.featherlimit = options.read_i16();
-            self.leaflimit = options.read_i16();
-            self.pwingslimit = options.read_i16();
-            self.tanookilimit = options.read_i16();
-            self.bombslimit = options.read_i16();
-            self.wandfreezetime = options.read_i16();
-            self.wandlimit = options.read_i16();
-            self.shellttl = options.read_i16();
-            self.blueblockttl = options.read_i16();
-            self.redblockttl = options.read_i16();
-            self.grayblockttl = options.read_i16();
-            self.storedpowerupdelay = options.read_i16();
-            self.warplockstyle = WarpLockStyle::from_u8(options.read_i16() as u8);
-            self.warplocktime = options.read_i16();
-            self.suicidetime = options.read_i16();
-
-            self.poweruppreset = options.read_i16();
-            let mut presets = [0i16; (NUM_POWERUP_PRESETS * NUM_POWERUPS) as usize];
-            options.read_i16_array(&mut presets);
-            for (i, v) in presets.iter().enumerate() {
-                self.allPowerupPresets[i / NUM_POWERUPS as usize][i % NUM_POWERUPS as usize] = *v;
-            }
-
-            self.fullscreen = options.read_bool();
-
-            for iGameMode in 0..GAMEMODE_LAST as usize {
-                gp.gamemodes[iGameMode].goal = options.read_i16();
-            }
-
-            let mut gms = [0u8; GAMEMODESETTINGS_RAW_SIZE];
-            options.read_raw(&mut gms);
-            self.gamemodemenusettings.from_raw_bytes(&gms);
-
-            let mut raw = [0u8; 8];
-            options.read_raw(&mut raw);
-            for i in 0..4 {
-                self.skinids[i] = i16::from_le_bytes([raw[2 * i], raw[2 * i + 1]]);
-            }
-            let mut raw = [0u8; 4];
-            options.read_raw(&mut raw);
-            for i in 0..4 {
-                self.randomskin[i] = raw[i] != 0;
-            }
-            let mut raw = [0u8; 8];
-            options.read_raw(&mut raw);
-            for i in 0..4 {
-                self.playercontrol[i] = i16::from_le_bytes([raw[2 * i], raw[2 * i + 1]]);
-            }
-
-            for iPlayer in 0..MAX_PLAYERS as usize {
-                if self.skinids[iPlayer] as i64 >= g.skinlist.count() as i64 || self.skinids[iPlayer] < 0 {
-                    self.skinids[iPlayer] = 0;
-                }
-            }
-
-            g.announcerlist.set_current_index(options.read_u8() as usize);
-            g.musiclist.set_current(options.read_u8() as usize);
-            g.worldmusiclist.set_current(options.read_u8() as usize);
-            g.soundpacklist.set_current_index(options.read_u8() as usize);
-            g.menugraphicspacklist.set_current_index(options.read_u8() as usize);
-            g.worldgraphicspacklist.set_current_index(options.read_u8() as usize);
-            g.gamegraphicspacklist.set_current_index(options.read_u8() as usize);
-
-            sfx_setmusicvolume(g, self.musicvolume as i32);
-            sfx_setsoundvolume(g, self.soundvolume as i32);
-            true
+        if GAME_VERSION != version {
+            println!("Old options.bin detected. Skipped reading it.");
+            return false;
         }
+
+        self.spawnstyle = SpawnStyle::from_u8(options.read_u8());
+        self.awardstyle = AwardStyle::from_u8(options.read_u8());
+        self.teamcollision = TeamCollisionStyle::from_u8(options.read_u8());
+        self.screencrunch = options.read_u8() != 0;
+        self.toplayer = options.read_u8() != 0;
+        self.scoreboardstyle = ScoreboardStyle::from_u8(options.read_u8());
+        self.teamcolors = options.read_u8() != 0;
+        self.sound = options.read_u8() != 0;
+        self.music = options.read_u8() != 0;
+        self.musicvolume = options.read_u8() as i16;
+        self.soundvolume = options.read_u8() as i16;
+        self.respawn = options.read_u8() as i16;
+        self.outofboundstime = options.read_u8() as i16;
+        self.cpudifficulty = options.read_u8() as i16;
+        self.framelimiter = options.read_u8() as i16;
+        self.bonuswheel = options.read_u8() as i16;
+        self.keeppowerup = options.read_u8() != 0;
+        self.showwinningcrown = options.read_u8() != 0;
+        self.playnextmusic = options.read_u8() != 0;
+        self.pointspeed = options.read_u8() as i16;
+        self.swapstyle = options.read_u8() as i16;
+        self.overridepowerupsettings = options.read_u8() as i16;
+        self.secretsenabled = options.read_u8() != 0;
+        self.startgamecountdown = options.read_u8() != 0;
+        self.deadteamnotice = options.read_u8() != 0;
+        self.tournamentcontrolstyle = TournamentControlStyle::from_u8(options.read_u8());
+        self.startmodedisplay = options.read_u8() != 0;
+
+        self.shieldtime = options.read_i16();
+        self.shieldstyle = ShieldStyle::from_u8(options.read_i16() as u8);
+        self.itemrespawntime = options.read_i16();
+        self.hiddenblockrespawn = options.read_i16();
+        self.fireballttl = options.read_i16();
+        self.fireballlimit = options.read_i16();
+        self.hammerdelay = options.read_i16();
+        self.hammerttl = options.read_i16();
+        self.hammerpower = options.read_i16() != 0;
+        self.hammerlimit = options.read_i16();
+        self.boomerangstyle = BoomerangStyle::from_u8(options.read_i16() as u8);
+        self.boomeranglife = options.read_i16();
+        self.boomeranglimit = options.read_i16();
+        self.featherjumps = options.read_i16();
+        self.featherlimit = options.read_i16();
+        self.leaflimit = options.read_i16();
+        self.pwingslimit = options.read_i16();
+        self.tanookilimit = options.read_i16();
+        self.bombslimit = options.read_i16();
+        self.wandfreezetime = options.read_i16();
+        self.wandlimit = options.read_i16();
+        self.shellttl = options.read_i16();
+        self.blueblockttl = options.read_i16();
+        self.redblockttl = options.read_i16();
+        self.grayblockttl = options.read_i16();
+        self.storedpowerupdelay = options.read_i16();
+        self.warplockstyle = WarpLockStyle::from_u8(options.read_i16() as u8);
+        self.warplocktime = options.read_i16();
+        self.suicidetime = options.read_i16();
+
+        self.poweruppreset = options.read_i16();
+        let mut presets = [0i16; (NUM_POWERUP_PRESETS * NUM_POWERUPS) as usize];
+        options.read_i16_array(&mut presets);
+        for (i, v) in presets.iter().enumerate() {
+            self.allPowerupPresets[i / NUM_POWERUPS as usize][i % NUM_POWERUPS as usize] = *v;
+        }
+
+        self.fullscreen = options.read_bool();
+
+        for iGameMode in 0..GAMEMODE_LAST as usize {
+            gp.gamemodes[iGameMode].goal = options.read_i16();
+        }
+
+        let mut gms = [0u8; GAMEMODESETTINGS_RAW_SIZE];
+        options.read_raw(&mut gms);
+        self.gamemodemenusettings.from_raw_bytes(&gms);
+
+        let mut raw = [0u8; 8];
+        options.read_raw(&mut raw);
+        for i in 0..4 {
+            self.skinids[i] = i16::from_le_bytes([raw[2 * i], raw[2 * i + 1]]);
+        }
+        let mut raw = [0u8; 4];
+        options.read_raw(&mut raw);
+        for i in 0..4 {
+            self.randomskin[i] = raw[i] != 0;
+        }
+        let mut raw = [0u8; 8];
+        options.read_raw(&mut raw);
+        for i in 0..4 {
+            self.playercontrol[i] = i16::from_le_bytes([raw[2 * i], raw[2 * i + 1]]);
+        }
+
+        for iPlayer in 0..MAX_PLAYERS as usize {
+            if self.skinids[iPlayer] as i64 >= g.skinlist.count() as i64 || self.skinids[iPlayer] < 0 {
+                self.skinids[iPlayer] = 0;
+            }
+        }
+
+        g.announcerlist.set_current_index(options.read_u8() as usize);
+        g.musiclist.set_current(options.read_u8() as usize);
+        g.worldmusiclist.set_current(options.read_u8() as usize);
+        g.soundpacklist.set_current_index(options.read_u8() as usize);
+        g.menugraphicspacklist.set_current_index(options.read_u8() as usize);
+        g.worldgraphicspacklist.set_current_index(options.read_u8() as usize);
+        g.gamegraphicspacklist.set_current_index(options.read_u8() as usize);
+
+        sfx_setmusicvolume(g, self.musicvolume as i32);
+        sfx_setsoundvolume(g, self.soundvolume as i32);
+        true
     }
 
     fn read_controls(&mut self, g: &mut Game, controls: &mut BinaryFile) {
-        unsafe {
-            let mut raw = [0u8; CINPUTPLAYERCONTROL_RAW_SIZE * 8];
-            controls.read_raw(&mut raw);
-            for p in 0..4 {
-                for d in 0..2 {
-                    let o = (p * 2 + d) * CINPUTPLAYERCONTROL_RAW_SIZE;
-                    input_control_from_raw(&mut self.inputConfiguration[p][d], &raw[o..o + CINPUTPLAYERCONTROL_RAW_SIZE]);
-                }
+        let mut raw = [0u8; CINPUTPLAYERCONTROL_RAW_SIZE * 8];
+        controls.read_raw(&mut raw);
+        for p in 0..4 {
+            for d in 0..2 {
+                let o = (p * 2 + d) * CINPUTPLAYERCONTROL_RAW_SIZE;
+                input_control_from_raw(&mut self.inputConfiguration[p][d], &raw[o..o + CINPUTPLAYERCONTROL_RAW_SIZE]);
+            }
+        }
+
+        for iPlayer in 0..MAX_PLAYERS as usize {
+            let mut iDevice = controls.read_i16();
+
+            if iDevice >= g.joystickcount {
+                iDevice = DEVICE_KEYBOARD;
             }
 
-            for iPlayer in 0..MAX_PLAYERS as usize {
-                let mut iDevice = controls.read_i16();
-
-                if iDevice >= g.joystickcount {
-                    iDevice = DEVICE_KEYBOARD;
-                }
-
-                self.playerInput.inputControls[iPlayer] =
-                    Ptr::from_mut(&mut self.inputConfiguration[iPlayer][if iDevice == DEVICE_KEYBOARD { 0 } else { 1 }]);
-            }
+            self.playerInput.inputControls[iPlayer] =
+                Ptr::from_mut(&mut self.inputConfiguration[iPlayer][if iDevice == DEVICE_KEYBOARD { 0 } else { 1 }]);
         }
     }
 
     fn write_options(&self, g: &mut Game, options: &mut BinaryFile) {
         let mut gp = g.ptr();
-        unsafe {
-            options.write_i32(GAME_VERSION.major as i32);
-            options.write_i32(GAME_VERSION.minor as i32);
-            options.write_i32(GAME_VERSION.patch as i32);
-            options.write_i32(GAME_VERSION.build as i32);
+        options.write_i32(GAME_VERSION.major as i32);
+        options.write_i32(GAME_VERSION.minor as i32);
+        options.write_i32(GAME_VERSION.patch as i32);
+        options.write_i32(GAME_VERSION.build as i32);
 
-            options.write_u8(self.spawnstyle as u8);
-            options.write_u8(self.awardstyle as u8);
-            options.write_u8(self.teamcollision as u8);
-            options.write_u8(self.screencrunch as u8);
-            options.write_u8(self.toplayer as u8);
-            options.write_u8(self.scoreboardstyle as u8);
-            options.write_u8(self.teamcolors as u8);
-            options.write_u8(self.sound as u8);
-            options.write_u8(self.music as u8);
-            options.write_u8(self.musicvolume as u8);
-            options.write_u8(self.soundvolume as u8);
-            options.write_u8(self.respawn as u8);
-            options.write_u8(self.outofboundstime as u8);
-            options.write_u8(self.cpudifficulty as u8);
-            options.write_u8(self.framelimiter as u8);
-            options.write_u8(self.bonuswheel as u8);
-            options.write_u8(self.keeppowerup as u8);
-            options.write_u8(self.showwinningcrown as u8);
-            options.write_u8(self.playnextmusic as u8);
-            options.write_u8(self.pointspeed as u8);
-            options.write_u8(self.swapstyle as u8);
-            options.write_u8(self.overridepowerupsettings as u8);
-            options.write_u8(self.secretsenabled as u8);
-            options.write_u8(self.startgamecountdown as u8);
-            options.write_u8(self.deadteamnotice as u8);
-            options.write_u8(self.tournamentcontrolstyle as u8);
-            options.write_u8(self.startmodedisplay as u8);
+        options.write_u8(self.spawnstyle as u8);
+        options.write_u8(self.awardstyle as u8);
+        options.write_u8(self.teamcollision as u8);
+        options.write_u8(self.screencrunch as u8);
+        options.write_u8(self.toplayer as u8);
+        options.write_u8(self.scoreboardstyle as u8);
+        options.write_u8(self.teamcolors as u8);
+        options.write_u8(self.sound as u8);
+        options.write_u8(self.music as u8);
+        options.write_u8(self.musicvolume as u8);
+        options.write_u8(self.soundvolume as u8);
+        options.write_u8(self.respawn as u8);
+        options.write_u8(self.outofboundstime as u8);
+        options.write_u8(self.cpudifficulty as u8);
+        options.write_u8(self.framelimiter as u8);
+        options.write_u8(self.bonuswheel as u8);
+        options.write_u8(self.keeppowerup as u8);
+        options.write_u8(self.showwinningcrown as u8);
+        options.write_u8(self.playnextmusic as u8);
+        options.write_u8(self.pointspeed as u8);
+        options.write_u8(self.swapstyle as u8);
+        options.write_u8(self.overridepowerupsettings as u8);
+        options.write_u8(self.secretsenabled as u8);
+        options.write_u8(self.startgamecountdown as u8);
+        options.write_u8(self.deadteamnotice as u8);
+        options.write_u8(self.tournamentcontrolstyle as u8);
+        options.write_u8(self.startmodedisplay as u8);
 
-            options.write_i16(self.shieldtime);
-            options.write_i16(self.shieldstyle as i16);
-            options.write_i16(self.itemrespawntime);
-            options.write_i16(self.hiddenblockrespawn);
-            options.write_i16(self.fireballttl);
-            options.write_i16(self.fireballlimit);
-            options.write_i16(self.hammerdelay);
-            options.write_i16(self.hammerttl);
-            options.write_i16(self.hammerpower as i16);
-            options.write_i16(self.hammerlimit);
-            options.write_i16(self.boomerangstyle as i16);
-            options.write_i16(self.boomeranglife);
-            options.write_i16(self.boomeranglimit);
-            options.write_i16(self.featherjumps);
-            options.write_i16(self.featherlimit);
-            options.write_i16(self.leaflimit);
-            options.write_i16(self.pwingslimit);
-            options.write_i16(self.tanookilimit);
-            options.write_i16(self.bombslimit);
-            options.write_i16(self.wandfreezetime);
-            options.write_i16(self.wandlimit);
-            options.write_i16(self.shellttl);
-            options.write_i16(self.blueblockttl);
-            options.write_i16(self.redblockttl);
-            options.write_i16(self.grayblockttl);
-            options.write_i16(self.storedpowerupdelay);
-            options.write_i16(self.warplockstyle as i16);
-            options.write_i16(self.warplocktime);
-            options.write_i16(self.suicidetime);
+        options.write_i16(self.shieldtime);
+        options.write_i16(self.shieldstyle as i16);
+        options.write_i16(self.itemrespawntime);
+        options.write_i16(self.hiddenblockrespawn);
+        options.write_i16(self.fireballttl);
+        options.write_i16(self.fireballlimit);
+        options.write_i16(self.hammerdelay);
+        options.write_i16(self.hammerttl);
+        options.write_i16(self.hammerpower as i16);
+        options.write_i16(self.hammerlimit);
+        options.write_i16(self.boomerangstyle as i16);
+        options.write_i16(self.boomeranglife);
+        options.write_i16(self.boomeranglimit);
+        options.write_i16(self.featherjumps);
+        options.write_i16(self.featherlimit);
+        options.write_i16(self.leaflimit);
+        options.write_i16(self.pwingslimit);
+        options.write_i16(self.tanookilimit);
+        options.write_i16(self.bombslimit);
+        options.write_i16(self.wandfreezetime);
+        options.write_i16(self.wandlimit);
+        options.write_i16(self.shellttl);
+        options.write_i16(self.blueblockttl);
+        options.write_i16(self.redblockttl);
+        options.write_i16(self.grayblockttl);
+        options.write_i16(self.storedpowerupdelay);
+        options.write_i16(self.warplockstyle as i16);
+        options.write_i16(self.warplocktime);
+        options.write_i16(self.suicidetime);
 
-            options.write_i16(self.poweruppreset);
-            let mut presets = Vec::with_capacity((NUM_POWERUP_PRESETS * NUM_POWERUPS * 2) as usize);
-            for row in self.allPowerupPresets.iter() {
-                for v in row.iter() {
-                    presets.extend_from_slice(&v.to_le_bytes());
-                }
+        options.write_i16(self.poweruppreset);
+        let mut presets = Vec::with_capacity((NUM_POWERUP_PRESETS * NUM_POWERUPS * 2) as usize);
+        for row in self.allPowerupPresets.iter() {
+            for v in row.iter() {
+                presets.extend_from_slice(&v.to_le_bytes());
             }
-            options.write_raw(&presets);
-
-            options.write_bool(self.fullscreen);
-
-            for k in 0..GAMEMODE_LAST as usize {
-                options.write_i16(gp.gamemodes[k].goal);
-            }
-
-            options.write_raw(&self.gamemodemenusettings.to_raw_bytes());
-
-            let mut raw = Vec::new();
-            for v in self.skinids.iter() {
-                raw.extend_from_slice(&v.to_le_bytes());
-            }
-            options.write_raw(&raw);
-            let raw: Vec<u8> = self.randomskin.iter().map(|&b| b as u8).collect();
-            options.write_raw(&raw);
-            let mut raw = Vec::new();
-            for v in self.playercontrol.iter() {
-                raw.extend_from_slice(&v.to_le_bytes());
-            }
-            options.write_raw(&raw);
-
-            options.write_u8(g.announcerlist.current_index() as u8);
-            options.write_u8(g.musiclist.current_index() as u8);
-            options.write_u8(g.worldmusiclist.current_index() as u8);
-            options.write_u8(g.soundpacklist.current_index() as u8);
-            options.write_u8(g.menugraphicspacklist.current_index() as u8);
-            options.write_u8(g.worldgraphicspacklist.current_index() as u8);
-            options.write_u8(g.gamegraphicspacklist.current_index() as u8);
         }
+        options.write_raw(&presets);
+
+        options.write_bool(self.fullscreen);
+
+        for k in 0..GAMEMODE_LAST as usize {
+            options.write_i16(gp.gamemodes[k].goal);
+        }
+
+        options.write_raw(&self.gamemodemenusettings.to_raw_bytes());
+
+        let mut raw = Vec::new();
+        for v in self.skinids.iter() {
+            raw.extend_from_slice(&v.to_le_bytes());
+        }
+        options.write_raw(&raw);
+        let raw: Vec<u8> = self.randomskin.iter().map(|&b| b as u8).collect();
+        options.write_raw(&raw);
+        let mut raw = Vec::new();
+        for v in self.playercontrol.iter() {
+            raw.extend_from_slice(&v.to_le_bytes());
+        }
+        options.write_raw(&raw);
+
+        options.write_u8(g.announcerlist.current_index() as u8);
+        options.write_u8(g.musiclist.current_index() as u8);
+        options.write_u8(g.worldmusiclist.current_index() as u8);
+        options.write_u8(g.soundpacklist.current_index() as u8);
+        options.write_u8(g.menugraphicspacklist.current_index() as u8);
+        options.write_u8(g.worldgraphicspacklist.current_index() as u8);
+        options.write_u8(g.gamegraphicspacklist.current_index() as u8);
     }
 
     fn write_controls(&self, controls: &mut BinaryFile) {
@@ -1039,9 +1031,7 @@ impl CGameConfig {
             return;
         }
 
-        unsafe {
-            gp.maplist.write_filters(g);
-            gp.maplist.write_map_summary_cache(g);
-        }
+        gp.maplist.write_filters(g);
+        gp.maplist.write_map_summary_cache(g);
     }
 }

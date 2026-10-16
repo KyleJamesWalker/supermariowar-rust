@@ -162,43 +162,41 @@ unsafe fn gameloop_frame(g: &mut Game) {
 
 pub fn create_globals(g: &mut Game) {
         let mut gp = g.ptr();
-    unsafe {
-        // this instance will contain the other relevant objects
-        g.rm = Ptr::new_box(CResourceManager::new());
+    // this instance will contain the other relevant objects
+    g.rm = Ptr::new_box(CResourceManager::new());
 
-        g.g_map = Ptr::from_box(CMap::new());
-        g.filterslist = Ptr::new_box(FiltersList::new(g));
-        g.maplist = Ptr::new_box(MapList::new(g, false));
+    g.g_map = Ptr::from_box(CMap::new());
+    g.filterslist = Ptr::new_box(FiltersList::new(g));
+    g.maplist = Ptr::new_box(MapList::new(g, false));
 
-        //TODO: add proper test via size
-        if g.maplist.is_empty() {
-            std::panic::panic_any("Empty map directory!".to_string());
-        }
-
-        g.skinlist = Ptr::new_box(SkinList::new(g));
-        g.musiclist = Ptr::new_box(MusicList::new(g));
-        g.worldmusiclist = Ptr::new_box(WorldMusicList::new(g));
-        g.soundpacklist = Ptr::new_box(SoundsList::new(g));
-        g.announcerlist = Ptr::new_box(AnnouncerList::new(g));
-        g.tourlist = Ptr::new_box(TourList::new(g));
-        g.worldlist = Ptr::new_box(WorldList::new(g));
-
-        g.menugraphicspacklist = Ptr::new_box(GraphicsList::new(g));
-        g.worldgraphicspacklist = Ptr::new_box(GraphicsList::new(g));
-        g.gamegraphicspacklist = Ptr::new_box(GraphicsList::new(g));
-
-        g.announcerlist.set_current_index(0);
-        g.musiclist.set_current(0);
-        g.worldmusiclist.set_current(0);
-        g.menugraphicspacklist.set_current_index(0);
-        g.worldgraphicspacklist.set_current_index(0);
-        g.gamegraphicspacklist.set_current_index(0);
-        g.soundpacklist.set_current_index(0);
-
-        g.players.reserve(4);
-
-        update_music_with_overrides(g, &mut gp.get().musiclist, &mut gp.get().worldmusiclist);
+    //TODO: add proper test via size
+    if g.maplist.is_empty() {
+        std::panic::panic_any("Empty map directory!".to_string());
     }
+
+    g.skinlist = Ptr::new_box(SkinList::new(g));
+    g.musiclist = Ptr::new_box(MusicList::new(g));
+    g.worldmusiclist = Ptr::new_box(WorldMusicList::new(g));
+    g.soundpacklist = Ptr::new_box(SoundsList::new(g));
+    g.announcerlist = Ptr::new_box(AnnouncerList::new(g));
+    g.tourlist = Ptr::new_box(TourList::new(g));
+    g.worldlist = Ptr::new_box(WorldList::new(g));
+
+    g.menugraphicspacklist = Ptr::new_box(GraphicsList::new(g));
+    g.worldgraphicspacklist = Ptr::new_box(GraphicsList::new(g));
+    g.gamegraphicspacklist = Ptr::new_box(GraphicsList::new(g));
+
+    g.announcerlist.set_current_index(0);
+    g.musiclist.set_current(0);
+    g.worldmusiclist.set_current(0);
+    g.menugraphicspacklist.set_current_index(0);
+    g.worldgraphicspacklist.set_current_index(0);
+    g.gamegraphicspacklist.set_current_index(0);
+    g.soundpacklist.set_current_index(0);
+
+    g.players.reserve(4);
+
+    update_music_with_overrides(g, &mut gp.get().musiclist, &mut gp.get().worldmusiclist);
 }
 
 pub fn init_joysticks(g: &mut Game) {
@@ -241,66 +239,64 @@ pub fn init_joysticks(g: &mut Game) {
 /// the keyboard sets get no other player, and the rest are bots, also when no pad is connected.
 fn assign_inputs(g: &mut Game) {
         let mut gp = g.ptr();
-    unsafe {
-        let marker = get_home_directory(g) + PAD_PLAYERS_FILE;
-        #[cfg(not(target_os = "emscripten"))]
-        let mut pads = crate::smw::pad::player_pads(g);
-        #[cfg(target_os = "emscripten")]
-        let mut pads: Vec<usize> = (0..gp.joystickcount.max(0) as usize).filter(|k| !g.main_loop.web_removed.contains(k)).collect();
-        pads.retain(|&k| k < MAX_PLAYERS as usize);
-        let touch_session = touch_session(g);
-        if pads.is_empty() && !touch_session {
-            if let Ok(text) = std::fs::read_to_string(&marker) {
-                let saved: Vec<i16> = text.split_whitespace().filter_map(|v| v.parse().ok()).collect();
-                if saved.len() == MAX_PLAYERS as usize {
-                    for p in 0..MAX_PLAYERS as usize {
-                        g.game_values.playerInput.inputControls[p] = Ptr::from_mut(&mut g.game_values.inputConfiguration[p][0]);
-                        g.game_values.playercontrol[p] = saved[p];
-                    }
-                    gp.game_values.write_config(g);
-                }
-                let _ = std::fs::remove_file(&marker);
-            }
-            return;
-        }
-        if !touch_session && !std::path::Path::new(&marker).exists() {
-            let saved: Vec<String> = g.game_values.playercontrol.iter().map(|c| c.to_string()).collect();
-            let _ = std::fs::write(&marker, saved.join(" ") + "\n");
-        }
-
-        // (joystick, index): a pad, or a keyboard set (0 right, 1 left).
-        let touch = touch_controls_on(g);
-        let mut order: Vec<(bool, usize)> = Vec::new();
-        if touch {
-            order.push((false, 0));
-        }
-        order.extend(pads.iter().map(|&k| (true, k)));
-        let keyboard = std::env::var_os("SMW_NO_KEYBOARD").is_none() && !touch_session;
-        if !touch && (keyboard || touch_session) {
-            order.push((false, 0));
-        }
-        if keyboard {
-            order.push((false, 1));
-        }
-
-        for p in 0..MAX_PLAYERS as usize {
-            let control = match order.get(p) {
-                Some(&(true, k)) => {
-                    g.game_values.inputConfiguration[k][1].iDevice = k as i16;
-                    &mut g.game_values.inputConfiguration[k][1]
-                }
-                Some(&(false, q)) => &mut g.game_values.inputConfiguration[q][0],
-                None => {
+    let marker = get_home_directory(g) + PAD_PLAYERS_FILE;
+    #[cfg(not(target_os = "emscripten"))]
+    let mut pads = crate::smw::pad::player_pads(g);
+    #[cfg(target_os = "emscripten")]
+    let mut pads: Vec<usize> = (0..gp.joystickcount.max(0) as usize).filter(|k| !g.main_loop.web_removed.contains(k)).collect();
+    pads.retain(|&k| k < MAX_PLAYERS as usize);
+    let touch_session = touch_session(g);
+    if pads.is_empty() && !touch_session {
+        if let Ok(text) = std::fs::read_to_string(&marker) {
+            let saved: Vec<i16> = text.split_whitespace().filter_map(|v| v.parse().ok()).collect();
+            if saved.len() == MAX_PLAYERS as usize {
+                for p in 0..MAX_PLAYERS as usize {
                     g.game_values.playerInput.inputControls[p] = Ptr::from_mut(&mut g.game_values.inputConfiguration[p][0]);
-                    if !keyboard && g.game_values.playercontrol[p] == 1 {
-                        g.game_values.playercontrol[p] = 2;
-                    }
-                    continue;
+                    g.game_values.playercontrol[p] = saved[p];
                 }
-            };
-            g.game_values.playerInput.inputControls[p] = Ptr::from_mut(control);
-            g.game_values.playercontrol[p] = 1;
+                gp.game_values.write_config(g);
+            }
+            let _ = std::fs::remove_file(&marker);
         }
+        return;
+    }
+    if !touch_session && !std::path::Path::new(&marker).exists() {
+        let saved: Vec<String> = g.game_values.playercontrol.iter().map(|c| c.to_string()).collect();
+        let _ = std::fs::write(&marker, saved.join(" ") + "\n");
+    }
+
+    // (joystick, index): a pad, or a keyboard set (0 right, 1 left).
+    let touch = touch_controls_on(g);
+    let mut order: Vec<(bool, usize)> = Vec::new();
+    if touch {
+        order.push((false, 0));
+    }
+    order.extend(pads.iter().map(|&k| (true, k)));
+    let keyboard = std::env::var_os("SMW_NO_KEYBOARD").is_none() && !touch_session;
+    if !touch && (keyboard || touch_session) {
+        order.push((false, 0));
+    }
+    if keyboard {
+        order.push((false, 1));
+    }
+
+    for p in 0..MAX_PLAYERS as usize {
+        let control = match order.get(p) {
+            Some(&(true, k)) => {
+                g.game_values.inputConfiguration[k][1].iDevice = k as i16;
+                &mut g.game_values.inputConfiguration[k][1]
+            }
+            Some(&(false, q)) => &mut g.game_values.inputConfiguration[q][0],
+            None => {
+                g.game_values.playerInput.inputControls[p] = Ptr::from_mut(&mut g.game_values.inputConfiguration[p][0]);
+                if !keyboard && g.game_values.playercontrol[p] == 1 {
+                    g.game_values.playercontrol[p] = 2;
+                }
+                continue;
+            }
+        };
+        g.game_values.playerInput.inputControls[p] = Ptr::from_mut(control);
+        g.game_values.playercontrol[p] = 1;
     }
 }
 
@@ -308,24 +304,22 @@ fn assign_inputs(g: &mut Game) {
 /// launch, once no match is on.
 fn assign_hotplugged(g: &mut Game) {
         let mut gp = g.ptr();
-    unsafe {
-        let pending = &mut gp.main_loop.hotplug_pending;
-        for (index, added) in harness::replay_device_changes(g) {
-            #[cfg(not(target_os = "emscripten"))]
-            crate::smw::pad::replay_device(g, index, added);
-            #[cfg(target_os = "emscripten")]
-            web_replay_device(g, index, added);
-            *pending |= added;
-        }
+    let pending = &mut gp.main_loop.hotplug_pending;
+    for (index, added) in harness::replay_device_changes(g) {
         #[cfg(not(target_os = "emscripten"))]
-        if crate::smw::pad::hotplug(g) {
-            *pending = true;
-        }
-        let playing = GameStateManager::instance(g).currentState.addr() == crate::smw::gs_gameplay::GameplayState::instance(g) as *mut _ as usize;
-        if *pending && !playing {
-            *pending = false;
-            assign_inputs(g);
-        }
+        crate::smw::pad::replay_device(g, index, added);
+        #[cfg(target_os = "emscripten")]
+        unsafe { web_replay_device(g, index, added) };
+        *pending |= added;
+    }
+    #[cfg(not(target_os = "emscripten"))]
+    if crate::smw::pad::hotplug(g) {
+        *pending = true;
+    }
+    let playing = GameStateManager::instance(g).currentState.addr() == crate::smw::gs_gameplay::GameplayState::instance(g) as *mut _ as usize;
+    if *pending && !playing {
+        *pending = false;
+        assign_inputs(g);
     }
 }
 
@@ -393,67 +387,63 @@ fn new_mode<T: CGameModeTrait + 'static>(mode: T) -> Ptr<dyn CGameModeTrait> {
 }
 
 pub fn create_gamemodes(g: &mut Game) {
-    unsafe {
-        //set game modes
-        g.gamemodes[0] = new_mode(CGM_Classic::new());
-        g.gamemodes[1] = new_mode(CGM_Frag::new());
-        g.gamemodes[2] = new_mode(CGM_TimeLimit::new());
-        g.gamemodes[3] = new_mode(CGM_Jail::new());
-        g.gamemodes[4] = new_mode(CGM_Coins::new());
-        g.gamemodes[5] = new_mode(CGM_Stomp::new());
-        g.gamemodes[6] = new_mode(CGM_Eggs::new());
-        g.gamemodes[7] = new_mode(CGM_CaptureTheFlag::new());
-        g.gamemodes[8] = new_mode(CGM_Chicken::new());
-        g.gamemodes[9] = new_mode(CGM_Tag::new());
-        g.gamemodes[10] = new_mode(CGM_Star::new());
-        g.gamemodes[11] = new_mode(CGM_Domination::new());
-        g.gamemodes[12] = new_mode(CGM_KingOfTheHill::new());
-        g.gamemodes[13] = new_mode(CGM_Race::new());
-        g.gamemodes[14] = new_mode(CGM_Owned::new());
-        g.gamemodes[15] = new_mode(CGM_Frenzy::new());
-        g.gamemodes[16] = new_mode(CGM_Survival::new());
-        g.gamemodes[17] = new_mode(CGM_Greed::new());
-        g.gamemodes[18] = new_mode(CGM_Health::new());
-        g.gamemodes[19] = new_mode(CGM_Collection::new());
-        g.gamemodes[20] = new_mode(CGM_Chase::new());
-        g.gamemodes[21] = new_mode(CGM_ShyGuyTag::new());
+    //set game modes
+    g.gamemodes[0] = new_mode(CGM_Classic::new());
+    g.gamemodes[1] = new_mode(CGM_Frag::new());
+    g.gamemodes[2] = new_mode(CGM_TimeLimit::new());
+    g.gamemodes[3] = new_mode(CGM_Jail::new());
+    g.gamemodes[4] = new_mode(CGM_Coins::new());
+    g.gamemodes[5] = new_mode(CGM_Stomp::new());
+    g.gamemodes[6] = new_mode(CGM_Eggs::new());
+    g.gamemodes[7] = new_mode(CGM_CaptureTheFlag::new());
+    g.gamemodes[8] = new_mode(CGM_Chicken::new());
+    g.gamemodes[9] = new_mode(CGM_Tag::new());
+    g.gamemodes[10] = new_mode(CGM_Star::new());
+    g.gamemodes[11] = new_mode(CGM_Domination::new());
+    g.gamemodes[12] = new_mode(CGM_KingOfTheHill::new());
+    g.gamemodes[13] = new_mode(CGM_Race::new());
+    g.gamemodes[14] = new_mode(CGM_Owned::new());
+    g.gamemodes[15] = new_mode(CGM_Frenzy::new());
+    g.gamemodes[16] = new_mode(CGM_Survival::new());
+    g.gamemodes[17] = new_mode(CGM_Greed::new());
+    g.gamemodes[18] = new_mode(CGM_Health::new());
+    g.gamemodes[19] = new_mode(CGM_Collection::new());
+    g.gamemodes[20] = new_mode(CGM_Chase::new());
+    g.gamemodes[21] = new_mode(CGM_ShyGuyTag::new());
 
-        g.currentgamemode = 0;
-        g.game_values.gamemode = g.gamemodes[g.currentgamemode as usize];
+    g.currentgamemode = 0;
+    g.game_values.gamemode = g.gamemodes[g.currentgamemode as usize];
 
-        //Special modes
-        g.bonushousemode = Ptr::new_box(CGM_Bonus::new());
-        g.pipegamemode = Ptr::new_box(CGM_Pipe_MiniGame::new());
-        g.bossgamemode = Ptr::new_box(CGM_Boss_MiniGame::new());
-        g.boxesgamemode = Ptr::new_box(CGM_Boxes_MiniGame::new());
-    }
+    //Special modes
+    g.bonushousemode = Ptr::new_box(CGM_Bonus::new());
+    g.pipegamemode = Ptr::new_box(CGM_Pipe_MiniGame::new());
+    g.bossgamemode = Ptr::new_box(CGM_Boss_MiniGame::new());
+    g.boxesgamemode = Ptr::new_box(CGM_Boxes_MiniGame::new());
 }
 
 pub fn init_spawnlocations(g: &mut Game) {
-    unsafe {
-        //Calculate the swirl spawn effect locations
-        let mut spawnradius: f32 = 100.0;
-        let mut spawnangle: f32 = 0.0;
+    //Calculate the swirl spawn effect locations
+    let mut spawnradius: f32 = 100.0;
+    let mut spawnangle: f32 = 0.0;
 
-        for i in 0..25usize {
-            g.g_iSwirlSpawnLocations[0][0][i] = (spawnradius * cosf(spawnangle)) as i16;
-            g.g_iSwirlSpawnLocations[0][1][i] = (spawnradius * sinf(spawnangle)) as i16;
+    for i in 0..25usize {
+        g.g_iSwirlSpawnLocations[0][0][i] = (spawnradius * cosf(spawnangle)) as i16;
+        g.g_iSwirlSpawnLocations[0][1][i] = (spawnradius * sinf(spawnangle)) as i16;
 
-            let mut angle = spawnangle + HALF_PI;
-            g.g_iSwirlSpawnLocations[1][0][i] = (spawnradius * cosf(angle)) as i16;
-            g.g_iSwirlSpawnLocations[1][1][i] = (spawnradius * sinf(angle)) as i16;
+        let mut angle = spawnangle + HALF_PI;
+        g.g_iSwirlSpawnLocations[1][0][i] = (spawnradius * cosf(angle)) as i16;
+        g.g_iSwirlSpawnLocations[1][1][i] = (spawnradius * sinf(angle)) as i16;
 
-            angle = spawnangle + PI;
-            g.g_iSwirlSpawnLocations[2][0][i] = (spawnradius * cosf(angle)) as i16;
-            g.g_iSwirlSpawnLocations[2][1][i] = (spawnradius * sinf(angle)) as i16;
+        angle = spawnangle + PI;
+        g.g_iSwirlSpawnLocations[2][0][i] = (spawnradius * cosf(angle)) as i16;
+        g.g_iSwirlSpawnLocations[2][1][i] = (spawnradius * sinf(angle)) as i16;
 
-            angle = spawnangle + THREE_HALF_PI;
-            g.g_iSwirlSpawnLocations[3][0][i] = (spawnradius * cosf(angle)) as i16;
-            g.g_iSwirlSpawnLocations[3][1][i] = (spawnradius * sinf(angle)) as i16;
+        angle = spawnangle + THREE_HALF_PI;
+        g.g_iSwirlSpawnLocations[3][0][i] = (spawnradius * cosf(angle)) as i16;
+        g.g_iSwirlSpawnLocations[3][1][i] = (spawnradius * sinf(angle)) as i16;
 
-            spawnradius -= 4.0;
-            spawnangle += 0.1;
-        }
+        spawnradius -= 4.0;
+        spawnangle += 0.1;
     }
 }
 
@@ -482,7 +472,7 @@ pub fn run(argv: Vec<String>) {
         cmd::show_windows_console();
     }
     if !cmd.data_root.is_empty() {
-        unsafe { g.RootDataDirectory = cmd.data_root.clone() };
+        g.RootDataDirectory = cmd.data_root.clone();
     }
     if !cmd.replay.is_empty() {
         harness::prepare_watch(g, &cmd.replay, cmd.replay_speed, cmd.segment);

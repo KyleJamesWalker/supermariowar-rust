@@ -41,69 +41,63 @@ impl CGM_Stomp {
     fn spawn_enemy(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let mut rm = g.rm;
-        unsafe {
-            self.reset_spawn_timer(g);
+        self.reset_spawn_timer(g);
 
-            //If all weights were zero, then randomly choose an enemy
-            if self.iEnemyWeightCount == 0 {
-                self.iSelectedEnemy = RANDOM_INT(gp.get(), 9) as i16;
-            } else {
-                //Otherwise randomly choose an enemy from the weighted list
-                let iRandEnemy: i32 = RANDOM_INT(gp.get(), self.iEnemyWeightCount as i32) + 1;
-                self.iSelectedEnemy = 0;
-                let mut iWeightCount: i32 = g.game_values.gamemodesettings.stomp.enemyweight[self.iSelectedEnemy as usize] as i32;
+        //If all weights were zero, then randomly choose an enemy
+        if self.iEnemyWeightCount == 0 {
+            self.iSelectedEnemy = RANDOM_INT(gp.get(), 9) as i16;
+        } else {
+            //Otherwise randomly choose an enemy from the weighted list
+            let iRandEnemy: i32 = RANDOM_INT(gp.get(), self.iEnemyWeightCount as i32) + 1;
+            self.iSelectedEnemy = 0;
+            let mut iWeightCount: i32 = g.game_values.gamemodesettings.stomp.enemyweight[self.iSelectedEnemy as usize] as i32;
 
-                while iWeightCount < iRandEnemy {
-                    self.iSelectedEnemy += 1;
-                    iWeightCount += g.game_values.gamemodesettings.stomp.enemyweight[self.iSelectedEnemy as usize] as i32;
-                }
+            while iWeightCount < iRandEnemy {
+                self.iSelectedEnemy += 1;
+                iWeightCount += g.game_values.gamemodesettings.stomp.enemyweight[self.iSelectedEnemy as usize] as i32;
             }
+        }
 
-            if 0 == self.iSelectedEnemy {
-                let obj = Ptr::new_box(MO_Goomba::new(g, Ptr::from_mut(&mut rm.spr_goomba), RANDOM_BOOL(gp.get()), false));
-                gp.objectcontainer[0].add(g, obj);
-            } else if 1 == self.iSelectedEnemy {
-                let obj = Ptr::new_box(MO_Koopa::new(g, Ptr::from_mut(&mut rm.spr_koopa), RANDOM_BOOL(gp.get()), false, false, true));
-                gp.objectcontainer[0].add(g, obj);
-            } else if 2 == self.iSelectedEnemy {
-                let obj = Ptr::new_box(MO_CheepCheep::new(g, Ptr::from_mut(&mut rm.spr_cheepcheep)));
-                gp.objectcontainer[2].add(g, obj);
-            } else if 3 == self.iSelectedEnemy {
-                let obj = Ptr::new_box(MO_Koopa::new(g, Ptr::from_mut(&mut rm.spr_redkoopa), RANDOM_BOOL(gp.get()), true, false, false));
-                gp.objectcontainer[0].add(g, obj);
-            } else if 4 == self.iSelectedEnemy {
-                let obj = Ptr::new_box(MO_Spiny::new(g, Ptr::from_mut(&mut rm.spr_spiny), RANDOM_BOOL(gp.get())));
-                gp.objectcontainer[0].add(g, obj);
-            } else if 5 == self.iSelectedEnemy {
-                let obj = Ptr::new_box(MO_BuzzyBeetle::new(g, Ptr::from_mut(&mut rm.spr_buzzybeetle), RANDOM_BOOL(gp.get())));
-                gp.objectcontainer[0].add(g, obj);
-            } else if 6 == self.iSelectedEnemy {
-                let obj = Ptr::new_box(MO_Goomba::new(g, Ptr::from_mut(&mut rm.spr_paragoomba), RANDOM_BOOL(gp.get()), true));
-                gp.objectcontainer[0].add(g, obj);
-            } else if 7 == self.iSelectedEnemy {
-                let obj = Ptr::new_box(MO_Koopa::new(g, Ptr::from_mut(&mut rm.spr_parakoopa), RANDOM_BOOL(gp.get()), false, true, true));
-                gp.objectcontainer[0].add(g, obj);
-            } else {
-                let obj = Ptr::new_box(MO_Koopa::new(g, Ptr::from_mut(&mut rm.spr_redparakoopa), RANDOM_BOOL(gp.get()), true, true, true));
-                gp.objectcontainer[0].add(g, obj);
-            }
+        if 0 == self.iSelectedEnemy {
+            let obj = Ptr::new_box(MO_Goomba::new(g, Ptr::from_mut(&mut rm.spr_goomba), RANDOM_BOOL(gp.get()), false));
+            gp.objectcontainer[0].add(g, obj);
+        } else if 1 == self.iSelectedEnemy {
+            let obj = Ptr::new_box(MO_Koopa::new(g, Ptr::from_mut(&mut rm.spr_koopa), RANDOM_BOOL(gp.get()), false, false, true));
+            gp.objectcontainer[0].add(g, obj);
+        } else if 2 == self.iSelectedEnemy {
+            let obj = Ptr::new_box(MO_CheepCheep::new(g, Ptr::from_mut(&mut rm.spr_cheepcheep)));
+            gp.objectcontainer[2].add(g, obj);
+        } else if 3 == self.iSelectedEnemy {
+            let obj = Ptr::new_box(MO_Koopa::new(g, Ptr::from_mut(&mut rm.spr_redkoopa), RANDOM_BOOL(gp.get()), true, false, false));
+            gp.objectcontainer[0].add(g, obj);
+        } else if 4 == self.iSelectedEnemy {
+            let obj = Ptr::new_box(MO_Spiny::new(g, Ptr::from_mut(&mut rm.spr_spiny), RANDOM_BOOL(gp.get())));
+            gp.objectcontainer[0].add(g, obj);
+        } else if 5 == self.iSelectedEnemy {
+            let obj = Ptr::new_box(MO_BuzzyBeetle::new(g, Ptr::from_mut(&mut rm.spr_buzzybeetle), RANDOM_BOOL(gp.get())));
+            gp.objectcontainer[0].add(g, obj);
+        } else if 6 == self.iSelectedEnemy {
+            let obj = Ptr::new_box(MO_Goomba::new(g, Ptr::from_mut(&mut rm.spr_paragoomba), RANDOM_BOOL(gp.get()), true));
+            gp.objectcontainer[0].add(g, obj);
+        } else if 7 == self.iSelectedEnemy {
+            let obj = Ptr::new_box(MO_Koopa::new(g, Ptr::from_mut(&mut rm.spr_parakoopa), RANDOM_BOOL(gp.get()), false, true, true));
+            gp.objectcontainer[0].add(g, obj);
+        } else {
+            let obj = Ptr::new_box(MO_Koopa::new(g, Ptr::from_mut(&mut rm.spr_redparakoopa), RANDOM_BOOL(gp.get()), true, true, true));
+            gp.objectcontainer[0].add(g, obj);
         }
     }
 
     fn reset_spawn_timer(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        unsafe {
-            let rate = g.game_values.gamemodesettings.stomp.rate;
-            self.spawntimer = ((RANDOM_INT(gp.get(), rate as i32) as i16) as i32 + rate as i32) as i16;
-        }
+        let rate = g.game_values.gamemodesettings.stomp.rate;
+        self.spawntimer = ((RANDOM_INT(gp.get(), rate as i32) as i16) as i32 + rate as i32) as i16;
     }
 }
 
 pub fn net_spawn_enemy(g: &mut Game) {
-    unsafe {
-        if let Some(this) = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Stomp>() {
-            this.spawn_enemy(g);
-        }
+    if let Some(this) = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Stomp>() {
+        this.spawn_enemy(g);
     }
 }
 
@@ -115,10 +109,8 @@ impl CGameModeTrait for CGM_Stomp {
         self.reset_spawn_timer(g);
 
         self.iEnemyWeightCount = 0;
-        unsafe {
-            for iEnemy in 0..NUMSTOMPENEMIES as usize {
-                self.iEnemyWeightCount += g.game_values.gamemodesettings.stomp.enemyweight[iEnemy];
-            }
+        for iEnemy in 0..NUMSTOMPENEMIES as usize {
+            self.iEnemyWeightCount += g.game_values.gamemodesettings.stomp.enemyweight[iEnemy];
         }
 
         //if (iEnemyWeightCount == 0)
@@ -126,22 +118,20 @@ impl CGameModeTrait for CGM_Stomp {
     }
 
     fn think(&mut self, g: &mut Game) {
-        unsafe {
-            if self.gameover {
-                self.displayplayertext(g);
-            } else {
-                for i in 0..g.players.len() {
-                    let player = g.players[i];
-                    self.check_winner(g, player);
-                }
+        if self.gameover {
+            self.displayplayertext(g);
+        } else {
+            for i in 0..g.players.len() {
+                let player = g.players[i];
+                self.check_winner(g, player);
             }
+        }
 
-            if !self.gameover {
-                //Randomly spawn enemies
-                self.spawntimer -= 1;
-                if self.spawntimer <= 0 && !net_random::event(g, Ev::StompEnemy, &[]) {
-                    self.spawn_enemy(g);
-                }
+        if !self.gameover {
+            //Randomly spawn enemies
+            self.spawntimer -= 1;
+            if self.spawntimer <= 0 && !net_random::event(g, Ev::StompEnemy, &[]) {
+                self.spawn_enemy(g);
             }
         }
     }

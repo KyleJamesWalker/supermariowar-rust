@@ -28,7 +28,7 @@ pub struct MapListNode {
 
 impl MapListNode {
     pub fn new(g: &mut Game, fullName: String) -> Self {
-        let count = unsafe { g.filterslist.count() };
+        let count = g.filterslist.count();
         MapListNode {
             pfFilters: vec![false; NUM_AUTO_FILTERS as usize + count],
             filename: fullName,
@@ -463,39 +463,37 @@ impl MapList {
     }
 
     pub fn write_filters(&mut self, g: &mut Game) {
-        unsafe {
-            if g.game_values.fNeedWriteFilters {
-                g.game_values.fNeedWriteFilters = false;
+        if g.game_values.fNeedWriteFilters {
+            g.game_values.fNeedWriteFilters = false;
 
-                for iFilter in 0..g.filterslist.count() {
-                    let path = g.filterslist.at(iFilter).clone();
-                    let Ok(mut fp) = std::fs::File::create(&path) else {
-                        continue;
-                    };
+            for iFilter in 0..g.filterslist.count() {
+                let path = g.filterslist.at(iFilter).clone();
+                let Ok(mut fp) = std::fs::File::create(&path) else {
+                    continue;
+                };
 
-                    let mut out = String::new();
-                    out += "#Version\n";
-                    out += &format!("{}.{}.{}.{}\n\n", GAME_VERSION.major, GAME_VERSION.minor, GAME_VERSION.patch, GAME_VERSION.build);
+                let mut out = String::new();
+                out += "#Version\n";
+                out += &format!("{}.{}.{}.{}\n\n", GAME_VERSION.major, GAME_VERSION.minor, GAME_VERSION.patch, GAME_VERSION.build);
 
-                    out += "#Icon\n";
-                    out += &format!("{}\n\n", g.game_values.piFilterIcons[iFilter + NUM_AUTO_FILTERS as usize]);
+                out += "#Icon\n";
+                out += &format!("{}\n\n", g.game_values.piFilterIcons[iFilter + NUM_AUTO_FILTERS as usize]);
 
-                    out += "#Maps\n";
+                out += "#Maps\n";
 
-                    for itr in 0..self.maps.len() {
-                        if self.maps.node(itr).pfFilters[iFilter + NUM_AUTO_FILTERS as usize] {
-                            out += &format!("{}\n", self.maps.key(itr));
-                        }
+                for itr in 0..self.maps.len() {
+                    if self.maps.node(itr).pfFilters[iFilter + NUM_AUTO_FILTERS as usize] {
+                        out += &format!("{}\n", self.maps.key(itr));
                     }
+                }
 
-                    let _ = fp.write_all(out.as_bytes());
-                    drop(fp);
+                let _ = fp.write_all(out.as_bytes());
+                drop(fp);
 
-                    #[cfg(target_os = "macos")]
-                    {
-                        use std::os::unix::fs::PermissionsExt;
-                        let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o774));
-                    }
+                #[cfg(target_os = "macos")]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o774));
                 }
             }
         }
@@ -503,98 +501,94 @@ impl MapList {
 
     pub fn read_filters(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        unsafe {
-            self.current = 0;
+        self.current = 0;
 
-            if let Ok(f) = std::fs::File::open(convert_path(g, "maps/cache/mapsummary.txt")) {
-                for line in fgets_lines(f) {
-                    let mut toks = strtok(&line, b",\n");
-                    let Some(pszMapName) = toks.next() else { continue };
-                    let it = self.maps.find(&pszMapName);
+        if let Ok(f) = std::fs::File::open(convert_path(g, "maps/cache/mapsummary.txt")) {
+            for line in fgets_lines(f) {
+                let mut toks = strtok(&line, b",\n");
+                let Some(pszMapName) = toks.next() else { continue };
+                let it = self.maps.find(&pszMapName);
 
-                    if it != self.maps.len() {
-                        let mut fErrorReading = false;
-                        let mut values = [false; NUM_AUTO_FILTERS as usize];
-                        let mut nread = 0;
-                        for iFilter in 0..NUM_AUTO_FILTERS as usize {
-                            match toks.next() {
-                                Some(psz) => {
-                                    values[iFilter] = psz != "0";
-                                    nread = iFilter + 1;
-                                }
-                                None => {
-                                    fErrorReading = true;
-                                    break;
-                                }
+                if it != self.maps.len() {
+                    let mut fErrorReading = false;
+                    let mut values = [false; NUM_AUTO_FILTERS as usize];
+                    let mut nread = 0;
+                    for iFilter in 0..NUM_AUTO_FILTERS as usize {
+                        match toks.next() {
+                            Some(psz) => {
+                                values[iFilter] = psz != "0";
+                                nread = iFilter + 1;
+                            }
+                            None => {
+                                fErrorReading = true;
+                                break;
                             }
                         }
+                    }
 
-                        let node = self.maps.node_mut(it);
-                        node.pfFilters[..nread].copy_from_slice(&values[..nread]);
+                    let node = self.maps.node_mut(it);
+                    node.pfFilters[..nread].copy_from_slice(&values[..nread]);
 
-                        if !fErrorReading {
-                            node.fReadFromCache = true;
-                        }
+                    if !fErrorReading {
+                        node.fReadFromCache = true;
                     }
                 }
             }
-
-            while self.current != self.maps.len() {
-                if !self.maps.node(self.current).fReadFromCache {
-                    let filename = self.maps.node(self.current).filename.clone();
-                    gp.g_map.load_map(g, &filename, read_type_summary);
-                    let af = g.g_map.fAutoFilter;
-                    let mln = self.maps.node_mut(self.current);
-                    mln.pfFilters[..af.len()].copy_from_slice(&af);
-                }
-
-                self.current += 1;
-            }
-
-            self.current = 0;
-            for iFilter in 0..g.filterslist.count() {
-                let Ok(f) = std::fs::File::open(g.filterslist.at(iFilter)) else {
-                    continue;
-                };
-
-                let mut iReadState: i16 = 0;
-                for buffer in fgets_lines(f) {
-                    let b0 = buffer.as_bytes().first().copied().unwrap_or(0);
-                    if b0 == b'#' || b0 == b'\n' || b0 == b'\r' || b0 == b' ' || b0 == b'\t' {
-                        continue;
-                    }
-
-                    if iReadState == 0 {
-                        iReadState = 1;
-                        continue;
-                    } else if iReadState == 1 {
-                        g.game_values.piFilterIcons[iFilter + NUM_AUTO_FILTERS as usize] = atoi(&buffer) as i16;
-                        iReadState = 2;
-                        continue;
-                    } else {
-                        let pszMap = strtok(&buffer, b"\r\n").next().unwrap_or_default();
-
-                        if self.findexact(&pszMap, false) {
-                            self.maps.node_mut(self.current).pfFilters[iFilter + NUM_AUTO_FILTERS as usize] = true;
-                        }
-                    }
-                }
-            }
-
-            self.current = 0;
-            self.outercurrent = OuterIter::Maps(self.current);
         }
+
+        while self.current != self.maps.len() {
+            if !self.maps.node(self.current).fReadFromCache {
+                let filename = self.maps.node(self.current).filename.clone();
+                gp.g_map.load_map(g, &filename, read_type_summary);
+                let af = g.g_map.fAutoFilter;
+                let mln = self.maps.node_mut(self.current);
+                mln.pfFilters[..af.len()].copy_from_slice(&af);
+            }
+
+            self.current += 1;
+        }
+
+        self.current = 0;
+        for iFilter in 0..g.filterslist.count() {
+            let Ok(f) = std::fs::File::open(g.filterslist.at(iFilter)) else {
+                continue;
+            };
+
+            let mut iReadState: i16 = 0;
+            for buffer in fgets_lines(f) {
+                let b0 = buffer.as_bytes().first().copied().unwrap_or(0);
+                if b0 == b'#' || b0 == b'\n' || b0 == b'\r' || b0 == b' ' || b0 == b'\t' {
+                    continue;
+                }
+
+                if iReadState == 0 {
+                    iReadState = 1;
+                    continue;
+                } else if iReadState == 1 {
+                    g.game_values.piFilterIcons[iFilter + NUM_AUTO_FILTERS as usize] = atoi(&buffer) as i16;
+                    iReadState = 2;
+                    continue;
+                } else {
+                    let pszMap = strtok(&buffer, b"\r\n").next().unwrap_or_default();
+
+                    if self.findexact(&pszMap, false) {
+                        self.maps.node_mut(self.current).pfFilters[iFilter + NUM_AUTO_FILTERS as usize] = true;
+                    }
+                }
+            }
+        }
+
+        self.current = 0;
+        self.outercurrent = OuterIter::Maps(self.current);
     }
 
     pub fn reload_map_auto_filters(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        unsafe {
-            for itr in 0..self.maps.len() {
-                let filename = self.maps.node(itr).filename.clone();
-                gp.g_map.load_map(g, &filename, read_type_summary);
-                let af = g.g_map.fAutoFilter;
-                self.maps.node_mut(itr).pfFilters[..af.len()].copy_from_slice(&af);
-            }
+        for itr in 0..self.maps.len() {
+            let filename = self.maps.node(itr).filename.clone();
+            gp.g_map.load_map(g, &filename, read_type_summary);
+            let af = g.g_map.fAutoFilter;
+            self.maps.node_mut(itr).pfFilters[..af.len()].copy_from_slice(&af);
         }
     }
 
@@ -648,9 +642,7 @@ impl MapList {
             iTotalCount += 1;
         }
 
-        unsafe {
-            g.game_values.fFiltersOn = pfFilters.contains(&true);
-        }
+        g.game_values.fFiltersOn = pfFilters.contains(&true);
         self.find_filtered_map();
     }
 

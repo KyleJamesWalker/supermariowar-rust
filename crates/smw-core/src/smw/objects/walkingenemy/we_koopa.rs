@@ -54,12 +54,10 @@ impl CObjectTrait for MO_Koopa {
         let mut gp = g.ptr();
         // if frozen, just draw shell, not entire koopa
         if self.frozen {
-            unsafe {
-                let x = self.ix as i32 - self.collisionOffsetX as i32 + self.iw as i32 - 32;
-                let y = self.iy as i32 - self.collisionOffsetY as i32 + self.ih as i32 - 32;
-                gp.rm.spr_shell.draw_src(g, x, y, &Rect { x: 0, y: if self.fRed { 32 } else { 0 }, w: 32, h: 32 });
-                gp.rm.spr_iceblock.draw_src(g, x, y, &Rect { x: 0, y: 0, w: 32, h: 32 });
-            }
+            let x = self.ix as i32 - self.collisionOffsetX as i32 + self.iw as i32 - 32;
+            let y = self.iy as i32 - self.collisionOffsetY as i32 + self.ih as i32 - 32;
+            gp.rm.spr_shell.draw_src(g, x, y, &Rect { x: 0, y: if self.fRed { 32 } else { 0 }, w: 32, h: 32 });
+            gp.rm.spr_iceblock.draw_src(g, x, y, &Rect { x: 0, y: 0, w: 32, h: 32 });
         } else {
             mo_walking_enemy_draw(g, self);
         }
@@ -97,9 +95,7 @@ impl IO_MovingObjectTrait for MO_Koopa {
         }
 
         self.dead = true;
-        unsafe {
-            g.eyecandy[2].emplace(EC_FallingObject::new(Ptr::from_mut(&mut g.rm.spr_shelldead), self.ix, self.iy, 0.0f32, -VELJUMP / 2.0f32, 1, 0, if self.fRed { 32 } else { 0 }, 0, 32, 32));
-        }
+        g.eyecandy[2].emplace(EC_FallingObject::new(Ptr::from_mut(&mut g.rm.spr_shelldead), self.ix, self.iy, 0.0f32, -VELJUMP / 2.0f32, 1, 0, if self.fRed { 32 } else { 0 }, 0, 32, 32));
     }
 }
 
@@ -109,36 +105,34 @@ impl MO_WalkingEnemyTrait for MO_Koopa {
     fn hittop_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         let mut gp = g.ptr();
         let mut player = player;
-        unsafe {
-            player.set_yi((self.iy as i32 - PH - 1) as i16);
-            player.bouncejump();
-            let p = player;
-            player.collisions.checktop(g, p.get());
-            player.platform = Ptr::null();
+        player.set_yi((self.iy as i32 - PH - 1) as i16);
+        player.bouncejump();
+        let p = player;
+        player.collisions.checktop(g, p.get());
+        player.platform = Ptr::null();
 
-            if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
-                player.score().adjust_score(g, 1);
-            }
-
-            if self.fBouncing {
-                self.fBouncing = false;
-                self.bounce = GRAVITATION;
-
-                if self.vely < GRAVITATION {
-                    self.vely = GRAVITATION;
-                }
-
-                self.spr = if self.fRed { Ptr::from_mut(&mut g.rm.spr_redkoopa) } else { Ptr::from_mut(&mut g.rm.spr_koopa) };
-            } else {
-                self.dead = true;
-
-                player.add_killer_award(g, Ptr::null(), KillStyle::Koopa);
-
-                self.drop_shell(g, false, false);
-            }
-
-            if_sound_on_play(g, &mut gp.rm.sfx_mip);
+        if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
+            player.score().adjust_score(g, 1);
         }
+
+        if self.fBouncing {
+            self.fBouncing = false;
+            self.bounce = GRAVITATION;
+
+            if self.vely < GRAVITATION {
+                self.vely = GRAVITATION;
+            }
+
+            self.spr = if self.fRed { Ptr::from_mut(&mut g.rm.spr_redkoopa) } else { Ptr::from_mut(&mut g.rm.spr_koopa) };
+        } else {
+            self.dead = true;
+
+            player.add_killer_award(g, Ptr::null(), KillStyle::Koopa);
+
+            self.drop_shell(g, false, false);
+        }
+
+        if_sound_on_play(g, &mut gp.rm.sfx_mip);
 
         false
     }
@@ -156,8 +150,6 @@ impl MO_WalkingEnemyTrait for MO_Koopa {
             shell.flip(g);
         }
 
-        unsafe {
-            gp.objectcontainer[1].add(g, shell);
-        }
+        gp.objectcontainer[1].add(g, shell);
     }
 }

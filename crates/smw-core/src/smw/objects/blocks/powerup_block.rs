@@ -73,44 +73,42 @@ impl B_PowerupBlock {
         b.hidden = fHidden;
         b.ishiddentype = fHidden;
 
-        unsafe {
-            let n = NUM_POWERUPS as usize;
-            if piSettings[0] == -1 || g.game_values.overridepowerupsettings == 1 {
-                //Game Only
-                for iSetting in 0..n {
-                    b.settings[iSetting] = g.game_values.powerupweights[iSetting];
-                }
-            } else if g.game_values.overridepowerupsettings == 0 {
-                //Map Only
-                for iSetting in 0..n {
-                    b.settings[iSetting] = piSettings[iSetting];
-                }
-            } else if g.game_values.overridepowerupsettings == 2 {
-                //Average
-                for iSetting in 0..n {
-                    b.settings[iSetting] = (piSettings[iSetting] as i32 + g.game_values.powerupweights[iSetting] as i32) as i16;
-                }
-            } else if g.game_values.overridepowerupsettings == 3 {
-                //Weighted
-                let mut dMapWeightCount: f32 = 0.0;
-                for iPowerup in 0..n {
-                    dMapWeightCount += piSettings[iPowerup] as f32;
-                }
+        let n = NUM_POWERUPS as usize;
+        if piSettings[0] == -1 || g.game_values.overridepowerupsettings == 1 {
+            //Game Only
+            for iSetting in 0..n {
+                b.settings[iSetting] = g.game_values.powerupweights[iSetting];
+            }
+        } else if g.game_values.overridepowerupsettings == 0 {
+            //Map Only
+            for iSetting in 0..n {
+                b.settings[iSetting] = piSettings[iSetting];
+            }
+        } else if g.game_values.overridepowerupsettings == 2 {
+            //Average
+            for iSetting in 0..n {
+                b.settings[iSetting] = (piSettings[iSetting] as i32 + g.game_values.powerupweights[iSetting] as i32) as i16;
+            }
+        } else if g.game_values.overridepowerupsettings == 3 {
+            //Weighted
+            let mut dMapWeightCount: f32 = 0.0;
+            for iPowerup in 0..n {
+                dMapWeightCount += piSettings[iPowerup] as f32;
+            }
 
-                let mut dGameWeightCount: f32 = 0.0;
-                for iPowerup in 0..n {
-                    dGameWeightCount += g.game_values.powerupweights[iPowerup] as f32;
-                }
+            let mut dGameWeightCount: f32 = 0.0;
+            for iPowerup in 0..n {
+                dGameWeightCount += g.game_values.powerupweights[iPowerup] as f32;
+            }
 
-                for iSetting in 0..n {
-                    let dWeight: f32 = (piSettings[iSetting] as f32 / dMapWeightCount + g.game_values.powerupweights[iSetting] as f32 / dGameWeightCount) * 100.0f32;
+            for iSetting in 0..n {
+                let dWeight: f32 = (piSettings[iSetting] as f32 / dMapWeightCount + g.game_values.powerupweights[iSetting] as f32 / dGameWeightCount) * 100.0f32;
 
-                    //Cap lowest value at 1
-                    if dWeight < 1.0f32 && dWeight > 0.0f32 {
-                        b.settings[iSetting] = 1;
-                    } else {
-                        b.settings[iSetting] = dWeight as i16;
-                    }
+                //Cap lowest value at 1
+                if dWeight < 1.0f32 && dWeight > 0.0f32 {
+                    b.settings[iSetting] = 1;
+                } else {
+                    b.settings[iSetting] = dWeight as i16;
                 }
             }
         }
@@ -162,47 +160,45 @@ pub fn b_powerup_block_update<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, thi
         let mut gp = g.ptr();
     io_block_update(g, this);
 
-    unsafe {
-        if this.pb().state > 0 {
-            {
+    if this.pb().state > 0 {
+        {
+            let b = this.pb_mut();
+            let fy = b.fy + b.vely;
+            b.set_yf(fy);
+        }
+
+        let state = this.pb().state;
+        let dy = (this.pb().fposy - this.pb().fy).abs();
+        if state == 1 && dy > 10.0f32 {
+            let b = this.pb_mut();
+            b.vely = -b.vely;
+            b.state = 2;
+            b.iBumpPlayerID = -1;
+        } else if state == 2 && dy < VELBLOCKBOUNCE {
+            let (pos, side) = {
                 let b = this.pb_mut();
-                let fy = b.fy + b.vely;
-                b.set_yf(fy);
+                b.vely = 0.0f32;
+                b.state = 3;
+                let iposy = b.iposy;
+                b.set_yi(iposy);
+
+                (Vec2s::new(b.ix, b.iy), b.side)
+            };
+
+            let (col, row) = (this.pb().col, this.pb().row);
+            let args = [col as i32, row as i32, side as i32, pos.x as i32, pos.y as i32];
+            if !net_random::event(g, Ev::Block, &args) {
+                b_powerup_block_release(g, this, pos, side);
             }
 
-            let state = this.pb().state;
-            let dy = (this.pb().fposy - this.pb().fy).abs();
-            if state == 1 && dy > 10.0f32 {
+            if_sound_on_play(g, &mut gp.rm.sfx_sprout);
+        } else if state == 3 {
+            if g.game_values.itemrespawntime > 0 && {
                 let b = this.pb_mut();
-                b.vely = -b.vely;
-                b.state = 2;
-                b.iBumpPlayerID = -1;
-            } else if state == 2 && dy < VELBLOCKBOUNCE {
-                let (pos, side) = {
-                    let b = this.pb_mut();
-                    b.vely = 0.0f32;
-                    b.state = 3;
-                    let iposy = b.iposy;
-                    b.set_yi(iposy);
-
-                    (Vec2s::new(b.ix, b.iy), b.side)
-                };
-
-                let (col, row) = (this.pb().col, this.pb().row);
-                let args = [col as i32, row as i32, side as i32, pos.x as i32, pos.y as i32];
-                if !net_random::event(g, Ev::Block, &args) {
-                    b_powerup_block_release(g, this, pos, side);
-                }
-
-                if_sound_on_play(g, &mut gp.rm.sfx_sprout);
-            } else if state == 3 {
-                if g.game_values.itemrespawntime > 0 && {
-                    let b = this.pb_mut();
-                    b.timer += 1;
-                    b.timer >= g.game_values.itemrespawntime
-                } {
-                    this.reset();
-                }
+                b.timer += 1;
+                b.timer >= g.game_values.itemrespawntime
+            } {
+                this.reset();
             }
         }
     }
@@ -221,70 +217,64 @@ pub fn b_powerup_block_update<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, thi
 
 fn b_powerup_block_release<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, pos: Vec2s, side: bool) {
     let mut gp = g.ptr();
-    unsafe {
-        let gm = g.game_values.gamemode.gamemode;
-        let gs = &g.game_values.gamemodesettings;
-        let iType = if gm == game_mode_health && RANDOM_INT(gp.get(), 100) < gs.health.percentextralife as i32 {
-            HEALTH_POWERUP as i16
-        } else if (gm == game_mode_timelimit && RANDOM_INT(gp.get(), 100) < gs.time.percentextratime as i32)
-            || (gm == game_mode_star && RANDOM_INT(gp.get(), 100) < gs.star.percentextratime as i32)
-        {
-            TIME_POWERUP as i16
-        } else if (gm == game_mode_coins && RANDOM_INT(gp.get(), 100) < gs.coins.percentextracoin as i32)
-            || (gm == game_mode_greed && RANDOM_INT(gp.get(), 100) < gs.greed.percentextracoin as i32)
-        {
-            COIN_POWERUP as i16
-        } else if gm == game_mode_jail && RANDOM_INT(gp.get(), 100) < gs.jail.percentkey as i32 {
-            JAIL_KEY_POWERUP as i16
-        } else {
-            this.select_powerup(g)
-        };
+    let gm = g.game_values.gamemode.gamemode;
+    let gs = &g.game_values.gamemodesettings;
+    let iType = if gm == game_mode_health && RANDOM_INT(gp.get(), 100) < gs.health.percentextralife as i32 {
+        HEALTH_POWERUP as i16
+    } else if (gm == game_mode_timelimit && RANDOM_INT(gp.get(), 100) < gs.time.percentextratime as i32)
+        || (gm == game_mode_star && RANDOM_INT(gp.get(), 100) < gs.star.percentextratime as i32)
+    {
+        TIME_POWERUP as i16
+    } else if (gm == game_mode_coins && RANDOM_INT(gp.get(), 100) < gs.coins.percentextracoin as i32)
+        || (gm == game_mode_greed && RANDOM_INT(gp.get(), 100) < gs.greed.percentextracoin as i32)
+    {
+        COIN_POWERUP as i16
+    } else if gm == game_mode_jail && RANDOM_INT(gp.get(), 100) < gs.jail.percentkey as i32 {
+        JAIL_KEY_POWERUP as i16
+    } else {
+        this.select_powerup(g)
+    };
 
-        createpowerup(g, iType, pos, side, true);
-    }
+    createpowerup(g, iType, pos, side, true);
 }
 
 /// `net_random::Ev::Block`: the block at `col`, `row` releases its powerup at the game host's spot and side.
 pub fn net_release(g: &mut Game, col: i16, row: i16, pos: Vec2s, side: bool) {
-    unsafe {
-        if col < 0 || row < 0 || col as i32 >= MAPWIDTH || row as i32 >= MAPHEIGHT {
-            return;
-        }
-        let mut block = g.g_map.blockdata[col as usize][row as usize];
-        if block.is_null() {
-            return;
-        }
-        let any = block.as_any();
-        if let Some(b) = any.downcast_mut::<B_PowerupBlock>() {
-            b_powerup_block_release(g, b, pos, side);
-        } else if let Some(b) = any.downcast_mut::<crate::smw::objects::blocks::view_block::B_ViewBlock>() {
-            b_powerup_block_release(g, b, pos, side);
-        }
+    if col < 0 || row < 0 || col as i32 >= MAPWIDTH || row as i32 >= MAPHEIGHT {
+        return;
+    }
+    let mut block = g.g_map.blockdata[col as usize][row as usize];
+    if block.is_null() {
+        return;
+    }
+    let any = block.as_any();
+    if let Some(b) = any.downcast_mut::<B_PowerupBlock>() {
+        b_powerup_block_release(g, b, pos, side);
+    } else if let Some(b) = any.downcast_mut::<crate::smw::objects::blocks::view_block::B_ViewBlock>() {
+        b_powerup_block_release(g, b, pos, side);
     }
 }
 
 /// Whether a joiner can release the game host's powerup now: not while its own copy of the block still bounces.
 /// A block it never saw hit turns used.
 pub fn net_block_ready(g: &mut Game, col: i16, row: i16) -> bool {
-    unsafe {
-        if col < 0 || row < 0 || col as i32 >= MAPWIDTH || row as i32 >= MAPHEIGHT {
-            return true;
+    if col < 0 || row < 0 || col as i32 >= MAPWIDTH || row as i32 >= MAPHEIGHT {
+        return true;
+    }
+    let mut block = g.g_map.blockdata[col as usize][row as usize];
+    if block.is_null() {
+        return true;
+    }
+    let b = block.block_mut();
+    match b.state {
+        1 | 2 => false,
+        0 => {
+            b.state = 3;
+            b.hidden = false;
+            g.g_map.update_tile_gap(col, row);
+            true
         }
-        let mut block = g.g_map.blockdata[col as usize][row as usize];
-        if block.is_null() {
-            return true;
-        }
-        let b = block.block_mut();
-        match b.state {
-            1 | 2 => false,
-            0 => {
-                b.state = 3;
-                b.hidden = false;
-                g.g_map.update_tile_gap(col, row);
-                true
-            }
-            _ => true,
-        }
+        _ => true,
     }
 }
 
@@ -310,30 +300,28 @@ pub fn b_powerup_block_collide_player_dir<T: B_PowerupBlockTrait + ?Sized>(g: &m
 pub fn b_powerup_block_hittop_player<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
     io_block_hittop_player(this, player, useBehavior);
 
-    unsafe {
-        if this.pb().state == 1 {
-            let mut iKillType = PlayerKillType::NonKill;
-            let (iBumpPlayerID, iBumpTeamID) = (this.pb().iBumpPlayerID, this.pb().iBumpTeamID);
-            if iBumpPlayerID >= 0
-                && !player.is_invincible_on_bottom()
-                && (player.teamID != iBumpTeamID || g.game_values.teamcollision == TeamCollisionStyle::On)
-            {
-                iKillType = player_killed_player(g, iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
-            }
+    if this.pb().state == 1 {
+        let mut iKillType = PlayerKillType::NonKill;
+        let (iBumpPlayerID, iBumpTeamID) = (this.pb().iBumpPlayerID, this.pb().iBumpTeamID);
+        if iBumpPlayerID >= 0
+            && !player.is_invincible_on_bottom()
+            && (player.teamID != iBumpTeamID || g.game_values.teamcollision == TeamCollisionStyle::On)
+        {
+            iKillType = player_killed_player(g, iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
+        }
 
-            if PlayerKillType::NonKill == iKillType {
-                player.vely = -VELNOTEBLOCKREPEL;
-            }
-        } else if useBehavior {
-            player.vely = GRAVITATION;
+        if PlayerKillType::NonKill == iKillType {
+            player.vely = -VELNOTEBLOCKREPEL;
+        }
+    } else if useBehavior {
+        player.vely = GRAVITATION;
 
-            if this.pb().state == 0 {
-                if player.is_super_stomping() {
-                    let b = this.pb_mut();
-                    b.state = 1;
-                    b.vely = -VELBLOCKBOUNCE;
-                    b.side = (player.ix as i32 + HALFPW) < (b.ix as i32 + (b.iw as i32 >> 1));
-                }
+        if this.pb().state == 0 {
+            if player.is_super_stomping() {
+                let b = this.pb_mut();
+                b.state = 1;
+                b.vely = -VELBLOCKBOUNCE;
+                b.side = (player.ix as i32 + HALFPW) < (b.ix as i32 + (b.iw as i32 >> 1));
             }
         }
     }
@@ -344,33 +332,31 @@ pub fn b_powerup_block_hittop_player<T: B_PowerupBlockTrait + ?Sized>(g: &mut Ga
 pub fn b_powerup_block_hitbottom_player<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
         let mut gp = g.ptr();
     if useBehavior {
-        unsafe {
-            //Player bounces off
-            player.vely = cap_falling_velocity(-player.vely * BOUNCESTRENGTH);
-            {
-                let b = this.pb();
-                player.set_yf((b.iposy as i32 + b.ih as i32) as f32 + 0.2f32);
-            }
+        //Player bounces off
+        player.vely = cap_falling_velocity(-player.vely * BOUNCESTRENGTH);
+        {
+            let b = this.pb();
+            player.set_yf((b.iposy as i32 + b.ih as i32) as f32 + 0.2f32);
+        }
 
-            if this.pb().hidden {
-                this.pb_mut().hidden = false;
-                io_block_kill_players_and_objects_inside_block(g, this, player.globalID);
-            }
+        if this.pb().hidden {
+            this.pb_mut().hidden = false;
+            io_block_kill_players_and_objects_inside_block(g, this, player.globalID);
+        }
 
-            let (col, row) = (this.pb().col, this.pb().row);
-            g.g_map.update_tile_gap(col, row);
+        let (col, row) = (this.pb().col, this.pb().row);
+        g.g_map.update_tile_gap(col, row);
 
-            if this.pb().state == 0 {
-                if_sound_on_play(g, &mut gp.rm.sfx_bump);
+        if this.pb().state == 0 {
+            if_sound_on_play(g, &mut gp.rm.sfx_bump);
 
-                let b = this.pb_mut();
-                b.iBumpPlayerID = player.globalID;
-                b.iBumpTeamID = player.teamID;
+            let b = this.pb_mut();
+            b.iBumpPlayerID = player.globalID;
+            b.iBumpTeamID = player.teamID;
 
-                b.vely = -VELBLOCKBOUNCE;
-                b.state = 1;
-                b.side = (player.ix as i32 + HALFPW) < (b.ix as i32 + (b.iw as i32 >> 1));
-            }
+            b.vely = -VELBLOCKBOUNCE;
+            b.state = 1;
+            b.side = (player.ix as i32 + HALFPW) < (b.ix as i32 + (b.iw as i32 >> 1));
         }
     }
 
@@ -395,9 +381,7 @@ pub fn b_powerup_block_hittop_object<T: B_PowerupBlockTrait + ?Sized>(g: &mut Ga
     let r#type = object.get_moving_object_type();
     if r#type == movingobject_throwbox && object.as_any().downcast_mut::<CO_ThrowBox>().unwrap().has_kill_velocity() {
         if this.pb().state == 0 {
-            unsafe {
-                if_sound_on_play(g, &mut gp.rm.sfx_bump);
-            }
+            if_sound_on_play(g, &mut gp.rm.sfx_bump);
 
             let b = this.pb_mut();
             b.iBumpPlayerID = -1;
@@ -444,9 +428,7 @@ pub fn b_powerup_block_hitright_object<T: B_PowerupBlockTrait + ?Sized>(g: &mut 
         }
 
         if this.pb().state == 0 {
-            unsafe {
-                if_sound_on_play(g, &mut gp.rm.sfx_bump);
-            }
+            if_sound_on_play(g, &mut gp.rm.sfx_bump);
 
             let b = this.pb_mut();
             b.iBumpPlayerID = -1;
@@ -487,9 +469,7 @@ pub fn b_powerup_block_hitleft_object<T: B_PowerupBlockTrait + ?Sized>(g: &mut G
         }
 
         if this.pb().state == 0 {
-            unsafe {
-                if_sound_on_play(g, &mut gp.rm.sfx_bump);
-            }
+            if_sound_on_play(g, &mut gp.rm.sfx_bump);
 
             let b = this.pb_mut();
             b.iBumpPlayerID = -1;
@@ -507,9 +487,7 @@ pub fn b_powerup_block_hitleft_object<T: B_PowerupBlockTrait + ?Sized>(g: &mut G
 pub fn b_powerup_block_trigger_behavior<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T) {
         let mut gp = g.ptr();
     if this.pb().state == 0 {
-        unsafe {
-            if_sound_on_play(g, &mut gp.rm.sfx_bump);
-        }
+        if_sound_on_play(g, &mut gp.rm.sfx_bump);
 
         let b = this.pb_mut();
         b.iBumpPlayerID = -1;

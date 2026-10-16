@@ -161,12 +161,10 @@ impl IO_BlockTrait for B_NoteBlock {
                 self.state = 3;
             }
 
-            unsafe {
-                if_sound_on_play(g, &mut gp.rm.sfx_bump);
+            if_sound_on_play(g, &mut gp.rm.sfx_bump);
 
-                g.game_values.unlocksecret3part2[player.globalID as usize] += 2;
-                check_secret(g, 2);
-            }
+            g.game_values.unlocksecret3part2[player.globalID as usize] += 2;
+            check_secret(g, 2);
         }
 
         false
@@ -185,9 +183,7 @@ impl IO_BlockTrait for B_NoteBlock {
                 self.vely = -VELNOTEBLOCKBOUNCE;
                 self.state = 3;
 
-                unsafe {
-                    if_sound_on_play(g, &mut gp.rm.sfx_bump);
-                }
+                if_sound_on_play(g, &mut gp.rm.sfx_bump);
             }
 
             if self.hidden {
@@ -195,9 +191,7 @@ impl IO_BlockTrait for B_NoteBlock {
                 io_block_kill_players_and_objects_inside_block(g, self, player.globalID);
             }
 
-            unsafe {
-                g.g_map.update_tile_gap(self.col, self.row);
-            }
+            g.g_map.update_tile_gap(self.col, self.row);
         }
 
         false
@@ -216,9 +210,7 @@ impl IO_BlockTrait for B_NoteBlock {
                 self.state = 1;
             }
 
-            unsafe {
-                if_sound_on_play(g, &mut gp.rm.sfx_bump);
-            }
+            if_sound_on_play(g, &mut gp.rm.sfx_bump);
         }
 
         false
@@ -237,9 +229,7 @@ impl IO_BlockTrait for B_NoteBlock {
                 self.state = 1;
             }
 
-            unsafe {
-                if_sound_on_play(g, &mut gp.rm.sfx_bump);
-            }
+            if_sound_on_play(g, &mut gp.rm.sfx_bump);
         }
 
         false

@@ -78,24 +78,22 @@ impl CO_Star {
     }
 
     pub fn place_star(&mut self, g: &mut Game) {
-        unsafe {
-            if g.game_values.gamemode.gamemode != game_mode_star {
-                return;
-            }
+        if g.game_values.gamemode.gamemode != game_mode_star {
+            return;
+        }
 
-            let mut starmode: Ptr<CGM_Star> = Ptr::from_mut(g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Star>().unwrap());
+        let mut starmode: Ptr<CGM_Star> = Ptr::from_mut(g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Star>().unwrap());
 
-            self.timer = 0;
+        self.timer = 0;
 
-            let star = starmode.getstarplayer(self.iID);
+        let star = starmode.getstarplayer(self.iID);
 
-            if !star.is_null() {
-                self.set_xf(star.fx + HALFPW as f32 - 16.0);
-                self.set_yf(star.fy + HALFPH as f32 - 17.0);
+        if !star.is_null() {
+            self.set_xf(star.fx + HALFPW as f32 - 16.0);
+            self.set_yf(star.fy + HALFPH as f32 - 17.0);
 
-                self.velx = star.velx;
-                self.vely = star.vely;
-            }
+            self.velx = star.velx;
+            self.vely = star.vely;
         }
 
         MO_CarriedObjectTrait::drop(self, g);
@@ -110,30 +108,28 @@ impl CObjectTrait for CO_Star {
 
     fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         let mut player = player;
-        unsafe {
-            if g.game_values.gamemode.gamemode != game_mode_star {
-                return false;
+        if g.game_values.gamemode.gamemode != game_mode_star {
+            return false;
+        }
+
+        let mut starmode: Ptr<CGM_Star> = Ptr::from_mut(g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Star>().unwrap());
+
+        self.timer = 0;
+        if self.owner.is_null() && player.isready() {
+            if player.throw_star == 0 && player.accept_item(self.as_carried_ptr()) {
+                self.owner = player;
             }
+        }
 
-            let mut starmode: Ptr<CGM_Star> = Ptr::from_mut(g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Star>().unwrap());
+        if (self.iType == 0 && player.is_invincible()) || player.is_shielded() || starmode.isplayerstar(g, player) || g.game_values.gamemode.gameover {
+            return false;
+        }
 
-            self.timer = 0;
-            if self.owner.is_null() && player.isready() {
-                if player.throw_star == 0 && player.accept_item(self.as_carried_ptr()) {
-                    self.owner = player;
-                }
-            }
+        let mut oldstar = starmode.swapplayer(g, self.iID, player);
 
-            if (self.iType == 0 && player.is_invincible()) || player.is_shielded() || starmode.isplayerstar(g, player) || g.game_values.gamemode.gameover {
-                return false;
-            }
-
-            let mut oldstar = starmode.swapplayer(g, self.iID, player);
-
-            if self.owner == oldstar {
-                oldstar.throw_star = 30;
-                self.kick(g);
-            }
+        if self.owner == oldstar {
+            oldstar.throw_star = 30;
+            self.kick(g);
         }
 
         false

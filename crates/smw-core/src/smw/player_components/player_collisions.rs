@@ -56,20 +56,18 @@ impl PlayerCollisions {
             return false;
         }
 
-        unsafe {
-            let leftTile: i32 = g.g_map.map(tile_x_left as i32, tile_y as i32);
-            let rightTile: i32 = g.g_map.map(tile_x_right as i32, tile_y as i32);
-            let leftBlock = g.g_map.block(tile_x_left, tile_y);
-            let rightBlock = g.g_map.block(tile_x_right, tile_y);
+        let leftTile: i32 = g.g_map.map(tile_x_left as i32, tile_y as i32);
+        let rightTile: i32 = g.g_map.map(tile_x_right as i32, tile_y as i32);
+        let leftBlock = g.g_map.block(tile_x_left, tile_y);
+        let rightBlock = g.g_map.block(tile_x_right, tile_y);
 
-            if (leftTile & tile_flag_solid) != 0
-                || (rightTile & tile_flag_solid) != 0
-                || is_solid_block(leftBlock)
-                || is_solid_block(rightBlock)
-            {
-                player.set_yf((((tile_y as i32) << 5) + TILESIZE) as f32 + 0.2f32);
-                return true;
-            }
+        if (leftTile & tile_flag_solid) != 0
+            || (rightTile & tile_flag_solid) != 0
+            || is_solid_block(leftBlock)
+            || is_solid_block(rightBlock)
+        {
+            player.set_yf((((tile_y as i32) << 5) + TILESIZE) as f32 + 0.2f32);
+            return true;
         }
 
         false
@@ -98,21 +96,19 @@ impl PlayerCollisions {
             return false;
         }
 
-        unsafe {
-            let topTile: i32 = g.g_map.map(tile_x as i32, tile_y as i32);
-            let bottomTile: i32 = g.g_map.map(tile_x as i32, tile_y2 as i32);
-            let topBlock = g.g_map.block(tile_x, tile_y);
-            let bottomBlock = g.g_map.block(tile_x, tile_y2);
+        let topTile: i32 = g.g_map.map(tile_x as i32, tile_y as i32);
+        let bottomTile: i32 = g.g_map.map(tile_x as i32, tile_y2 as i32);
+        let topBlock = g.g_map.block(tile_x, tile_y);
+        let bottomBlock = g.g_map.block(tile_x, tile_y2);
 
-            if (topTile & tile_flag_solid) != 0
-                || (bottomTile & tile_flag_solid) != 0
-                || is_solid_block(topBlock)
-                || is_solid_block(bottomBlock)
-            {
-                player.set_xf((((tile_x as i32) << 5) + TILESIZE) as f32 + 0.2f32);
-                player.flipsidesifneeded();
-                return true;
-            }
+        if (topTile & tile_flag_solid) != 0
+            || (bottomTile & tile_flag_solid) != 0
+            || is_solid_block(topBlock)
+            || is_solid_block(bottomBlock)
+        {
+            player.set_xf((((tile_x as i32) << 5) + TILESIZE) as f32 + 0.2f32);
+            player.flipsidesifneeded();
+            return true;
         }
 
         false
@@ -145,21 +141,19 @@ impl PlayerCollisions {
             return false;
         }
 
-        unsafe {
-            let topTile: i32 = g.g_map.map(tile_x as i32, tile_y as i32);
-            let bottomTile: i32 = g.g_map.map(tile_x as i32, tile_y2 as i32);
-            let topBlock = g.g_map.block(tile_x, tile_y);
-            let bottomBlock = g.g_map.block(tile_x, tile_y2);
+        let topTile: i32 = g.g_map.map(tile_x as i32, tile_y as i32);
+        let bottomTile: i32 = g.g_map.map(tile_x as i32, tile_y2 as i32);
+        let topBlock = g.g_map.block(tile_x, tile_y);
+        let bottomBlock = g.g_map.block(tile_x, tile_y2);
 
-            if (topTile & tile_flag_solid) != 0
-                || (bottomTile & tile_flag_solid) != 0
-                || is_solid_block(topBlock)
-                || is_solid_block(bottomBlock)
-            {
-                player.set_xf((((tile_x as i32) << 5) - PW) as f32 - 0.2f32);
-                player.flipsidesifneeded();
-                return true;
-            }
+        if (topTile & tile_flag_solid) != 0
+            || (bottomTile & tile_flag_solid) != 0
+            || is_solid_block(topBlock)
+            || is_solid_block(bottomBlock)
+        {
+            player.set_xf((((tile_x as i32) << 5) - PW) as f32 - 0.2f32);
+            player.flipsidesifneeded();
+            return true;
         }
 
         false
@@ -180,44 +174,42 @@ impl PlayerCollisions {
         let tile_y: i16 = (player.top_y() as i32 >> 5) as i16;
         let tile_y2: i16 = (player.bottom_y() as i32 >> 5) as i16;
 
-        unsafe {
-            if player.top_y() >= 0 {
-                if (tile_y as i32) < MAPHEIGHT {
-                    if tile_x_left >= 0 && (tile_x_left as i32) < MAPWIDTH {
-                        let block = g.g_map.block(tile_x_left, tile_y);
+        if player.top_y() >= 0 {
+            if (tile_y as i32) < MAPHEIGHT {
+                if tile_x_left >= 0 && (tile_x_left as i32) < MAPWIDTH {
+                    let block = g.g_map.block(tile_x_left, tile_y);
 
-                        if is_solid_block(block) || (g.g_map.map(tile_x_left as i32, tile_y as i32) & tile_flag_solid) != 0 {
-                            iCase |= 0x01;
-                        }
+                    if is_solid_block(block) || (g.g_map.map(tile_x_left as i32, tile_y as i32) & tile_flag_solid) != 0 {
+                        iCase |= 0x01;
                     }
+                }
 
-                    if tile_x_right >= 0 && (tile_x_right as i32) < MAPWIDTH {
-                        let block = g.g_map.block(tile_x_right, tile_y);
+                if tile_x_right >= 0 && (tile_x_right as i32) < MAPWIDTH {
+                    let block = g.g_map.block(tile_x_right, tile_y);
 
-                        if is_solid_block(block) || (g.g_map.map(tile_x_right as i32, tile_y as i32) & tile_flag_solid) != 0 {
-                            iCase |= 0x02;
-                        }
+                    if is_solid_block(block) || (g.g_map.map(tile_x_right as i32, tile_y as i32) & tile_flag_solid) != 0 {
+                        iCase |= 0x02;
                     }
                 }
             }
+        }
 
-            // TODO: is this correct?
-            if (player.top_y() as i32 + PW) as f32 >= 0.0f32 {
-                if (tile_y2 as i32) < MAPHEIGHT {
-                    if tile_x_left >= 0 && (tile_x_left as i32) < MAPWIDTH {
-                        let block = g.g_map.block(tile_x_left, tile_y2);
+        // TODO: is this correct?
+        if (player.top_y() as i32 + PW) as f32 >= 0.0f32 {
+            if (tile_y2 as i32) < MAPHEIGHT {
+                if tile_x_left >= 0 && (tile_x_left as i32) < MAPWIDTH {
+                    let block = g.g_map.block(tile_x_left, tile_y2);
 
-                        if is_solid_block(block) || (g.g_map.map(tile_x_left as i32, tile_y2 as i32) & tile_flag_solid) != 0 {
-                            iCase |= 0x04;
-                        }
+                    if is_solid_block(block) || (g.g_map.map(tile_x_left as i32, tile_y2 as i32) & tile_flag_solid) != 0 {
+                        iCase |= 0x04;
                     }
+                }
 
-                    if tile_x_right >= 0 && (tile_x_right as i32) < MAPWIDTH {
-                        let block = g.g_map.block(tile_x_right, tile_y2);
+                if tile_x_right >= 0 && (tile_x_right as i32) < MAPWIDTH {
+                    let block = g.g_map.block(tile_x_right, tile_y2);
 
-                        if is_solid_block(block) || (g.g_map.map(tile_x_right as i32, tile_y2 as i32) & tile_flag_solid) != 0 {
-                            iCase |= 0x08;
-                        }
+                    if is_solid_block(block) || (g.g_map.map(tile_x_right as i32, tile_y2 as i32) & tile_flag_solid) != 0 {
+                        iCase |= 0x08;
                     }
                 }
             }
@@ -407,14 +399,12 @@ impl PlayerCollisions {
 
                 player.killed_player(g, other, PlayerDeathStyle::Squish, style, false, false);
             } else {
-                unsafe {
-                    if g.game_values.gamemode.gamemode == game_mode_tag {
-                        player.transfer_tag(g, other);
-                    }
+                if g.game_values.gamemode.gamemode == game_mode_tag {
+                    player.transfer_tag(g, other);
+                }
 
-                    if g.game_values.gamemode.gamemode == game_mode_shyguytag {
-                        player.transfer_shy_guy(g, other);
-                    }
+                if g.game_values.gamemode.gamemode == game_mode_shyguytag {
+                    player.transfer_shy_guy(g, other);
                 }
 
                 player.iSuicideCreditPlayerID = other.globalID;
@@ -430,127 +420,125 @@ impl PlayerCollisions {
     //handles a collision between two players (is being called if o1, o2 collide)
     pub fn handle_p2p(&mut self, g: &mut Game, mut o1: Ptr<CPlayer>, mut o2: Ptr<CPlayer>) {
         let mut gp = g.ptr();
-        unsafe {
-            //If teams tag each other
-            if o1.teamID == o2.teamID {
-                //Free teammates that are jailed
-                if g.game_values.gamemode.gamemode == game_mode_jail && g.game_values.gamemodesettings.jail.tagfree {
-                    let p1 = o1;
-                    o1.jail.free_by_teammate(g, p1.get());
-                    let p2 = o2;
-                    o2.jail.free_by_teammate(g, p2.get());
-                }
-
-                //Transfer tag if assist is on
-                if (g.game_values.gamemode.gamemode == game_mode_tag && g.game_values.teamcollision == TeamCollisionStyle::Assist)
-                    || g.game_values.gamemodesettings.tag.tagontouch
-                {
-                    o1.transfer_tag(g, o2);
-                }
-
-                //Don't collision detect players on same team if friendly fire is turned off
-                if g.game_values.teamcollision == TeamCollisionStyle::Off {
-                    return;
-                }
-
-                //Team assist is enabled so allow powerup trading and super jumping
-                if g.game_values.teamcollision == TeamCollisionStyle::Assist {
-                    o1.bounce_assist_player(g, o2);
-                    o2.bounce_assist_player(g, o1);
-
-                    //Allow players on team to swap stored items
-                    if o1.playerKeys.game_powerup().fPressed || o2.playerKeys.game_powerup().fPressed {
-                        let iTempPowerup: i16 = g.game_values.gamepowerups[o1.globalID as usize];
-                        g.game_values.gamepowerups[o1.globalID as usize] = g.game_values.gamepowerups[o2.globalID as usize];
-                        g.game_values.gamepowerups[o2.globalID as usize] = iTempPowerup;
-
-                        if_sound_on_play(g, &mut gp.rm.sfx_storepowerup);
-
-                        o1.playerKeys.game_powerup_mut().fPressed = false;
-                        o1.playerKeys.game_powerup_mut().fDown = false;
-                        o2.playerKeys.game_powerup_mut().fPressed = false;
-                        o2.playerKeys.game_powerup_mut().fDown = false;
-                    }
-
-                    return;
-                }
+        //If teams tag each other
+        if o1.teamID == o2.teamID {
+            //Free teammates that are jailed
+            if g.game_values.gamemode.gamemode == game_mode_jail && g.game_values.gamemodesettings.jail.tagfree {
+                let p1 = o1;
+                o1.jail.free_by_teammate(g, p1.get());
+                let p2 = o2;
+                o2.jail.free_by_teammate(g, p2.get());
             }
 
-            //Quit checking collision if either player is soft shielded
-            if o1.shield.get_type() == SOFT || o2.shield.get_type() == SOFT {
-                //Do tag transfer if there is one to do
-                if g.game_values.gamemode.gamemode == game_mode_tag && g.game_values.gamemodesettings.tag.tagontouch {
-                    o1.transfer_tag(g, o2);
-                }
+            //Transfer tag if assist is on
+            if (g.game_values.gamemode.gamemode == game_mode_tag && g.game_values.teamcollision == TeamCollisionStyle::Assist)
+                || g.game_values.gamemodesettings.tag.tagontouch
+            {
+                o1.transfer_tag(g, o2);
+            }
 
-                if g.game_values.gamemode.gamemode == game_mode_shyguytag && g.game_values.gamemodesettings.shyguytag.tagtransfer != 1 {
-                    o1.transfer_shy_guy(g, o2);
+            //Don't collision detect players on same team if friendly fire is turned off
+            if g.game_values.teamcollision == TeamCollisionStyle::Off {
+                return;
+            }
+
+            //Team assist is enabled so allow powerup trading and super jumping
+            if g.game_values.teamcollision == TeamCollisionStyle::Assist {
+                o1.bounce_assist_player(g, o2);
+                o2.bounce_assist_player(g, o1);
+
+                //Allow players on team to swap stored items
+                if o1.playerKeys.game_powerup().fPressed || o2.playerKeys.game_powerup().fPressed {
+                    let iTempPowerup: i16 = g.game_values.gamepowerups[o1.globalID as usize];
+                    g.game_values.gamepowerups[o1.globalID as usize] = g.game_values.gamepowerups[o2.globalID as usize];
+                    g.game_values.gamepowerups[o2.globalID as usize] = iTempPowerup;
+
+                    if_sound_on_play(g, &mut gp.rm.sfx_storepowerup);
+
+                    o1.playerKeys.game_powerup_mut().fPressed = false;
+                    o1.playerKeys.game_powerup_mut().fDown = false;
+                    o2.playerKeys.game_powerup_mut().fPressed = false;
+                    o2.playerKeys.game_powerup_mut().fDown = false;
                 }
 
                 return;
             }
+        }
 
-            //--- 1. kill frozen players ---
-            let mut fFrozenDeath = false;
-            if o1.frozen && !o1.is_shielded() && !o1.is_invincible() {
-                o2.killed_player(g, o1, PlayerDeathStyle::Shatter, KillStyle::IceBlast, true, false);
-                fFrozenDeath = true;
+        //Quit checking collision if either player is soft shielded
+        if o1.shield.get_type() == SOFT || o2.shield.get_type() == SOFT {
+            //Do tag transfer if there is one to do
+            if g.game_values.gamemode.gamemode == game_mode_tag && g.game_values.gamemodesettings.tag.tagontouch {
+                o1.transfer_tag(g, o2);
             }
 
-            if o2.frozen && !o2.is_shielded() && !o2.is_invincible() {
-                o1.killed_player(g, o2, PlayerDeathStyle::Shatter, KillStyle::IceBlast, true, false);
-                fFrozenDeath = true;
+            if g.game_values.gamemode.gamemode == game_mode_shyguytag && g.game_values.gamemodesettings.shyguytag.tagtransfer != 1 {
+                o1.transfer_shy_guy(g, o2);
             }
 
-            if fFrozenDeath {
-                return;
+            return;
+        }
+
+        //--- 1. kill frozen players ---
+        let mut fFrozenDeath = false;
+        if o1.frozen && !o1.is_shielded() && !o1.is_invincible() {
+            o2.killed_player(g, o1, PlayerDeathStyle::Shatter, KillStyle::IceBlast, true, false);
+            fFrozenDeath = true;
+        }
+
+        if o2.frozen && !o2.is_shielded() && !o2.is_invincible() {
+            o1.killed_player(g, o2, PlayerDeathStyle::Shatter, KillStyle::IceBlast, true, false);
+            fFrozenDeath = true;
+        }
+
+        if fFrozenDeath {
+            return;
+        }
+
+        //--- 2. is player invincible? ---
+        if o1.is_invincible() && !o2.is_shielded() && !o2.is_invincible() {
+            o1.killed_player(g, o2, PlayerDeathStyle::Jump, KillStyle::Star, false, false);
+            return;
+        }
+
+        if o2.is_invincible() && !o1.is_shielded() && !o1.is_invincible() {
+            o2.killed_player(g, o1, PlayerDeathStyle::Jump, KillStyle::Star, false, false);
+            return;
+        }
+
+        //If both players are warping, ignore collision
+        if o1.iswarping() && o2.iswarping() {
+            return;
+        }
+
+        //--- 3. stomping other player? ---
+        if (o2.shield.get_type() == OFF || o2.shield.get_type() == HARD) && !o2.is_invincible() && self.is_stomping(g, o1, o2) {
+            return;
+        }
+        if (o1.shield.get_type() == OFF || o1.shield.get_type() == HARD) && !o1.is_invincible() && self.is_stomping(g, o2, o1) {
+            return;
+        }
+
+        //Quit checking collision if either player is hard shielded
+        if o1.shield.get_type() == SOFT_WITH_STOMP || o2.shield.get_type() == SOFT_WITH_STOMP {
+            //Do tag transfer if there is one to do
+            if g.game_values.gamemode.gamemode == game_mode_tag && g.game_values.gamemodesettings.tag.tagontouch {
+                o1.transfer_tag(g, o2);
             }
 
-            //--- 2. is player invincible? ---
-            if o1.is_invincible() && !o2.is_shielded() && !o2.is_invincible() {
-                o1.killed_player(g, o2, PlayerDeathStyle::Jump, KillStyle::Star, false, false);
-                return;
+            if g.game_values.gamemode.gamemode == game_mode_shyguytag && g.game_values.gamemodesettings.shyguytag.tagtransfer != 1 {
+                o1.transfer_shy_guy(g, o2);
             }
 
-            if o2.is_invincible() && !o1.is_shielded() && !o1.is_invincible() {
-                o2.killed_player(g, o1, PlayerDeathStyle::Jump, KillStyle::Star, false, false);
-                return;
-            }
+            return;
+        }
 
-            //If both players are warping, ignore collision
-            if o1.iswarping() && o2.iswarping() {
-                return;
-            }
-
-            //--- 3. stomping other player? ---
-            if (o2.shield.get_type() == OFF || o2.shield.get_type() == HARD) && !o2.is_invincible() && self.is_stomping(g, o1, o2) {
-                return;
-            }
-            if (o1.shield.get_type() == OFF || o1.shield.get_type() == HARD) && !o1.is_invincible() && self.is_stomping(g, o2, o1) {
-                return;
-            }
-
-            //Quit checking collision if either player is hard shielded
-            if o1.shield.get_type() == SOFT_WITH_STOMP || o2.shield.get_type() == SOFT_WITH_STOMP {
-                //Do tag transfer if there is one to do
-                if g.game_values.gamemode.gamemode == game_mode_tag && g.game_values.gamemodesettings.tag.tagontouch {
-                    o1.transfer_tag(g, o2);
-                }
-
-                if g.game_values.gamemode.gamemode == game_mode_shyguytag && g.game_values.gamemodesettings.shyguytag.tagtransfer != 1 {
-                    o1.transfer_shy_guy(g, o2);
-                }
-
-                return;
-            }
-
-            //--- 4. push back (horizontal) ---
-            if o1.ix < o2.ix {
-                //o1 is left -> o1 pushback left, o2 pushback right
-                self.handle_p2p_pushback(g, o1, o2);
-            } else {
-                self.handle_p2p_pushback(g, o2, o1);
-            }
+        //--- 4. push back (horizontal) ---
+        if o1.ix < o2.ix {
+            //o1 is left -> o1 pushback left, o2 pushback right
+            self.handle_p2p_pushback(g, o1, o2);
+        } else {
+            self.handle_p2p_pushback(g, o2, o1);
         }
     }
 
@@ -568,15 +556,13 @@ impl PlayerCollisions {
         let p1 = o1;
         let p2 = o2;
 
-        unsafe {
-            //Transfer tag on touching other players
-            if g.game_values.gamemode.gamemode == game_mode_tag && g.game_values.gamemodesettings.tag.tagontouch {
-                o1.transfer_tag(g, o2);
-            }
+        //Transfer tag on touching other players
+        if g.game_values.gamemode.gamemode == game_mode_tag && g.game_values.gamemodesettings.tag.tagontouch {
+            o1.transfer_tag(g, o2);
+        }
 
-            if g.game_values.gamemode.gamemode == game_mode_shyguytag && g.game_values.gamemodesettings.shyguytag.tagtransfer != 1 {
-                o1.transfer_shy_guy(g, o2);
-            }
+        if g.game_values.gamemode.gamemode == game_mode_shyguytag && g.game_values.gamemodesettings.shyguytag.tagtransfer != 1 {
+            o1.transfer_shy_guy(g, o2);
         }
 
         let mut overlapcollision = false;

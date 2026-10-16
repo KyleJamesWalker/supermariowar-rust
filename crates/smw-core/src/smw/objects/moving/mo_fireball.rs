@@ -72,7 +72,7 @@ impl MO_Fireball {
 
         o.state = 1;
 
-        o.ttl = unsafe { g.game_values.fireballttl };
+        o.ttl = g.game_values.fireballttl;
 
         o.sSpotlight = Ptr::null();
         o
@@ -89,40 +89,36 @@ impl CObjectTrait for MO_Fireball {
         let mut gp = g.ptr();
         io_moving_object_update(g, self);
 
-        unsafe {
-            self.ttl -= 1;
-            if self.ttl <= 0 {
-                removeifprojectile(g, self.as_mo_ptr(), true, true);
-            } else if g.game_values.spotlights {
-                if self.sSpotlight.is_null() {
-                    self.sSpotlight = gp.spotlightManager.add_spotlight(
-                        g,
-                        (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16,
-                        (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16,
-                        3,
-                    );
-                }
+        self.ttl -= 1;
+        if self.ttl <= 0 {
+            removeifprojectile(g, self.as_mo_ptr(), true, true);
+        } else if g.game_values.spotlights {
+            if self.sSpotlight.is_null() {
+                self.sSpotlight = gp.spotlightManager.add_spotlight(
+                    g,
+                    (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16,
+                    (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16,
+                    3,
+                );
+            }
 
-                if !self.sSpotlight.is_null() {
-                    let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
-                    let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
-                    self.sSpotlight.update_position(x, y);
-                }
+            if !self.sSpotlight.is_null() {
+                let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
+                let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
+                self.sSpotlight.update_position(x, y);
             }
         }
     }
 
     fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
-        unsafe {
-            if self.iPlayerID != player.get_global_id() && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.get_team_id()) {
-                if !player.is_shielded() {
-                    removeifprojectile(g, self.as_mo_ptr(), false, false);
+        if self.iPlayerID != player.get_global_id() && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.get_team_id()) {
+            if !player.is_shielded() {
+                removeifprojectile(g, self.as_mo_ptr(), false, false);
 
-                    if !player.is_invincible() && !player.shyguy {
-                        // Find the player that shot this fireball so we can attribute a kill
-                        player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Fireball, false, false);
-                        return true;
-                    }
+                if !player.is_invincible() && !player.shyguy {
+                    // Find the player that shot this fireball so we can attribute a kill
+                    player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Fireball, false, false);
+                    return true;
                 }
             }
         }

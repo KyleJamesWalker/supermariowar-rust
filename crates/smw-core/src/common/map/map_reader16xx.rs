@@ -25,58 +25,56 @@ const g_iTileConversion: [i16; 300] = [
 impl MapReader {
     pub(super) fn read_tiles_1600(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile) {
         let mut gp = g.ptr();
-        unsafe {
-            for j in 0..MAPHEIGHT as usize {
-                for i in 0..MAPWIDTH as usize {
-                    for k in 0..MAPLAYERS as usize {
-                        let iTile: i16 = mapfile.read_i32() as i16;
+        for j in 0..MAPHEIGHT as usize {
+            for i in 0..MAPWIDTH as usize {
+                for k in 0..MAPLAYERS as usize {
+                    let iTile: i16 = mapfile.read_i32() as i16;
 
-                        if iTile == 300 {
-                            map.mapdata[i][j][k].iID = TILESETNONE as i16;
-                        } else {
-                            let iTileID = g_iTileConversion[iTile as isize as usize];
+                    if iTile == 300 {
+                        map.mapdata[i][j][k].iID = TILESETNONE as i16;
+                    } else {
+                        let iTileID = g_iTileConversion[iTile as isize as usize];
 
-                            let tile = &mut map.mapdata[i][j][k];
-                            tile.iID = g.g_tilesetmanager.classic_tileset_index() as i16;
-                            tile.iCol = iTileID % 32;
-                            tile.iRow = iTileID / 32;
-                        }
+                        let tile = &mut map.mapdata[i][j][k];
+                        tile.iID = g.g_tilesetmanager.classic_tileset_index() as i16;
+                        tile.iCol = iTileID % 32;
+                        tile.iRow = iTileID / 32;
                     }
+                }
 
-                    map.mapdatatop[i][j] = TileType::NonSolid;
+                map.mapdatatop[i][j] = TileType::NonSolid;
 
-                    for k in (0..MAPLAYERS as usize).rev() {
-                        let tile = map.mapdata[i][j][k];
-                        let r#type = gp.g_tilesetmanager.classic_tileset(g).tile_type(tile.iCol as isize as usize, tile.iRow as isize as usize);
-                        if r#type != TileType::NonSolid {
-                            map.mapdatatop[i][j] = r#type;
-                            break;
-                        }
+                for k in (0..MAPLAYERS as usize).rev() {
+                    let tile = map.mapdata[i][j][k];
+                    let r#type = gp.g_tilesetmanager.classic_tileset(g).tile_type(tile.iCol as isize as usize, tile.iRow as isize as usize);
+                    if r#type != TileType::NonSolid {
+                        map.mapdatatop[i][j] = r#type;
+                        break;
                     }
+                }
 
-                    map.objectdata[i][j].iType = mapfile.read_i32() as i16;
-                    if map.objectdata[i][j].iType == 6 {
-                        map.objectdata[i][j].iType = -1;
+                map.objectdata[i][j].iType = mapfile.read_i32() as i16;
+                if map.objectdata[i][j].iType == 6 {
+                    map.objectdata[i][j].iType = -1;
+                }
+
+                map.objectdata[i][j].fHidden = false;
+
+                if map.objectdata[i][j].iType == 1 {
+                    for iSetting in 0..NUM_BLOCK_SETTINGS as usize {
+                        map.objectdata[i][j].iSettings[iSetting] = default_powerup_setting(0, iSetting);
                     }
+                }
 
-                    map.objectdata[i][j].fHidden = false;
+                map.warpdata[i][j].direction = mapfile.read_i32() as WarpEnterDirection;
+                map.warpdata[i][j].connection = mapfile.read_i32() as i16;
+                map.warpdata[i][j].id = mapfile.read_i32() as i16;
 
-                    if map.objectdata[i][j].iType == 1 {
-                        for iSetting in 0..NUM_BLOCK_SETTINGS as usize {
-                            map.objectdata[i][j].iSettings[iSetting] = default_powerup_setting(0, iSetting);
-                        }
-                    }
+                if self.parse_nospawn {
+                    map.nospawn[0][i][j] = mapfile.read_i32() != 0;
 
-                    map.warpdata[i][j].direction = mapfile.read_i32() as WarpEnterDirection;
-                    map.warpdata[i][j].connection = mapfile.read_i32() as i16;
-                    map.warpdata[i][j].id = mapfile.read_i32() as i16;
-
-                    if self.parse_nospawn {
-                        map.nospawn[0][i][j] = mapfile.read_i32() != 0;
-
-                        for iType in 1..NUMSPAWNAREATYPES as usize {
-                            map.nospawn[iType][i][j] = map.nospawn[0][i][j];
-                        }
+                    for iType in 1..NUMSPAWNAREATYPES as usize {
+                        map.nospawn[iType][i][j] = map.nospawn[0][i][j];
                     }
                 }
             }

@@ -313,25 +313,23 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
         let indent = self.m_indent as i32;
         let selY = (if self.fSelected { 32 } else { 0 }) + self.m_adjustmentY as i32;
 
-        unsafe {
-            if self.m_indent == 0 {
-                let iHalfWidth = (self.m_width / 2) as i32;
-                self.m_spr.draw_src(g, x, y, &Rect { x: 0, y: selY, w: iHalfWidth, h: 32 });
-                self.m_spr.draw_src(g, x + iHalfWidth, y, &Rect { x: 512 - iHalfWidth, y: selY, w: width - iHalfWidth, h: 32 });
-            } else {
-                self.m_spr.draw_src(g, x, y, &Rect { x: 0, y: selY, w: indent - 16, h: 32 });
-                self.m_spr.draw_src(g, x + indent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
-                self.m_spr.draw_src(g, x + indent + 16, y, &Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
-            }
+        if self.m_indent == 0 {
+            let iHalfWidth = (self.m_width / 2) as i32;
+            self.m_spr.draw_src(g, x, y, &Rect { x: 0, y: selY, w: iHalfWidth, h: 32 });
+            self.m_spr.draw_src(g, x + iHalfWidth, y, &Rect { x: 512 - iHalfWidth, y: selY, w: width - iHalfWidth, h: 32 });
+        } else {
+            self.m_spr.draw_src(g, x, y, &Rect { x: 0, y: selY, w: indent - 16, h: 32 });
+            self.m_spr.draw_src(g, x + indent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
+            self.m_spr.draw_src(g, x + indent + 16, y, &Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
+        }
 
-            if self.m_indent > 0 {
-                gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 5, indent - 8, &self.m_name);
-            }
+        if self.m_indent > 0 {
+            gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 5, indent - 8, &self.m_name);
+        }
 
-            if !self.m_items.is_empty() {
-                let indent = if self.m_indent > 0 { indent } else { 8 };
-                gp.rm.menu_font_large.draw_chop_right(g, x + indent + 8, y + 5, width - indent - 24, &self.current_item().name);
-            }
+        if !self.m_items.is_empty() {
+            let indent = if self.m_indent > 0 { indent } else { 8 };
+            gp.rm.menu_font_large.draw_chop_right(g, x + indent + 8, y + 5, width - indent - 24, &self.current_item().name);
         }
 
         let drawLeft = self.m_index > 0;

@@ -75,35 +75,31 @@ impl CObjectTrait for PU_CoinPowerup {
 
     fn draw(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        unsafe {
-            let x = self.ix as i32 - self.collisionOffsetX as i32;
-            let y = self.iy as i32 - self.collisionOffsetY as i32;
-            if self.state == 0 {
-                let iHeight = (32.0f32 - self.fy + self.desty) as i16;
-                self.spr.draw_src(g, x, y, &Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32, w: 32, h: iHeight as i32 });
-                gp.rm.spr_shinesparkle.draw_src(g, x, y, &Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: iHeight as i32 });
-            } else {
-                self.spr.draw_src(g, x, y, &Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32, w: 32, h: 32 });
-                gp.rm.spr_shinesparkle.draw_src(g, x, y, &Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 });
-            }
+        let x = self.ix as i32 - self.collisionOffsetX as i32;
+        let y = self.iy as i32 - self.collisionOffsetY as i32;
+        if self.state == 0 {
+            let iHeight = (32.0f32 - self.fy + self.desty) as i16;
+            self.spr.draw_src(g, x, y, &Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32, w: 32, h: iHeight as i32 });
+            gp.rm.spr_shinesparkle.draw_src(g, x, y, &Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: iHeight as i32 });
+        } else {
+            self.spr.draw_src(g, x, y, &Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32, w: 32, h: 32 });
+            gp.rm.spr_shinesparkle.draw_src(g, x, y, &Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 });
         }
     }
 
     fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         let mut gp = g.ptr();
         let mut player = player;
-        unsafe {
-            if self.state > 0 {
-                if g.game_values.gamemode.gamemode == game_mode_coins || g.game_values.gamemode.gamemode == game_mode_greed {
-                    if !g.game_values.gamemode.gameover {
-                        player.score().adjust_score(g, self.iValue);
-                        gp.game_values.gamemode.check_winner(g, player);
-                    }
+        if self.state > 0 {
+            if g.game_values.gamemode.gamemode == game_mode_coins || g.game_values.gamemode.gamemode == game_mode_greed {
+                if !g.game_values.gamemode.gameover {
+                    player.score().adjust_score(g, self.iValue);
+                    gp.game_values.gamemode.check_winner(g, player);
                 }
-
-                if_sound_on_play(g, &mut gp.rm.sfx_coin);
-                self.dead = true;
             }
+
+            if_sound_on_play(g, &mut gp.rm.sfx_coin);
+            self.dead = true;
         }
 
         false

@@ -31,16 +31,14 @@ crate::impl_base!(UI_PowerupDropRatesMenu => ui_menu: UI_Menu);
 impl UI_PowerupDropRatesMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
         let mut this = Box::<Self>::default();
-        unsafe {
-            let menu_plain_field = Ptr::from_mut(&mut g.rm.menu_plain_field);
+        let menu_plain_field = Ptr::from_mut(&mut g.rm.menu_plain_field);
 
-            this.miPowerupSelection = Ptr::new_box(MI_PowerupSelection::new(g, 50, 44, 640, 8));
-            this.miPowerupSelection.set_auto_modify(true);
+        this.miPowerupSelection = Ptr::new_box(MI_PowerupSelection::new(g, 50, 44, 640, 8));
+        this.miPowerupSelection.set_auto_modify(true);
 
-            this.miPowerupSelectionLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-            this.miPowerupSelectionMenuRightHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miPowerupSelectionMenuHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Item Selection Menu", 320, 5));
-        }
+        this.miPowerupSelectionLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
+        this.miPowerupSelectionMenuRightHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
+        this.miPowerupSelectionMenuHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Item Selection Menu", 320, 5));
 
         let sel = ctl_ptr(this.miPowerupSelection);
         this.add_control(sel, Ptr::null(), Ptr::null(), Ptr::null(), Ptr::null());

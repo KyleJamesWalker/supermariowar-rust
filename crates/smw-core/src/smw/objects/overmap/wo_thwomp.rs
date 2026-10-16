@@ -47,10 +47,8 @@ impl CObjectTrait for OMO_Thwomp {
     }
 
     fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
-        unsafe {
-            if !player.is_invincible() && !player.is_shielded() && (player.score().score > 0 || g.game_values.gamemode.goal == -1) {
-                return player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
-            }
+        if !player.is_invincible() && !player.is_shielded() && (player.score().score > 0 || g.game_values.gamemode.goal == -1) {
+            return player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
         }
 
         false

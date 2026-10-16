@@ -142,87 +142,85 @@ impl UI_Menu {
     }
 
     pub fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
-        unsafe {
-            if self.fModifyingItem {
-                let ret = self.m_currentFocus.send_input(g, playerInput);
+        if self.fModifyingItem {
+            let ret = self.m_currentFocus.send_input(g, playerInput);
 
-                if MENU_CODE_UNSELECT_ITEM == ret {
-                    self.fModifyingItem = false;
+            if MENU_CODE_UNSELECT_ITEM == ret {
+                self.fModifyingItem = false;
 
-                    /*if (current->IsAutoModify())
-                            return cancelCode;*/
+                /*if (current->IsAutoModify())
+                        return cancelCode;*/
 
-                    return MENU_CODE_NONE;
+                return MENU_CODE_NONE;
+            }
+
+            return ret;
+        }
+
+        for iPlayer in 0..4i16 {
+            let out = &playerInput.outputControls[iPlayer as usize];
+            // Only allow the controlling team to control the menu (if there is one)
+            if self.iControllingTeam != -1 {
+                // Pay attention to other player's exit button pushes so we can exit when AI is controlling
+                if g.game_values.playercontrol[iPlayer as usize] != 1
+                    || (self.iControllingTeam != lookup_team_id(g, iPlayer) && (!self.fAllowExitButton || !out.menu_cancel().fPressed))
+                {
+                    continue;
+                }
+            }
+            // Only let player 1 on the keyboard control the menu unless there is another controlling team
+            // Not in upstream: the first keyboard player may too, when joysticks took the players before it.
+            else if iPlayer != 0
+                && !g.game_values.playerInput.inputControls[iPlayer as usize].is_null()
+                && g.game_values.playerInput.inputControls[iPlayer as usize].iDevice == DEVICE_KEYBOARD
+                && (0..iPlayer as usize).any(|p| g.game_values.playerInput.inputControls[p].is_null() || g.game_values.playerInput.inputControls[p].iDevice == DEVICE_KEYBOARD)
+            {
+                continue;
+            }
+
+            if out.menu_up().fPressed {
+                return self.move_next_control(g, MenuNavDirection::Up);
+            }
+
+            if out.menu_down().fPressed {
+                return self.move_next_control(g, MenuNavDirection::Down);
+            }
+
+            if out.menu_left().fPressed {
+                return self.move_next_control(g, MenuNavDirection::Left);
+            }
+
+            if out.menu_right().fPressed {
+                return self.move_next_control(g, MenuNavDirection::Right);
+            }
+
+            if out.menu_select().fPressed {
+                let mut ret = MENU_CODE_NONE;
+
+                if !self.m_currentFocus.is_null() {
+                    crate::common::ui::mi_text_field::note_opener(g, playerInput.iPressedKey != 0);
+                    ret = self.m_currentFocus.modify(g, true);
+
+                    if MENU_CODE_MODIFY_ACCEPTED == ret {
+                        self.fModifyingItem = true;
+                        return MENU_CODE_NONE;
+                    }
+
+                    if MENU_CODE_UNSELECT_ITEM == ret {
+                        self.fModifyingItem = false;
+                        return MENU_CODE_NONE;
+                    }
                 }
 
                 return ret;
             }
 
-            for iPlayer in 0..4i16 {
-                let out = &playerInput.outputControls[iPlayer as usize];
-                // Only allow the controlling team to control the menu (if there is one)
-                if self.iControllingTeam != -1 {
-                    // Pay attention to other player's exit button pushes so we can exit when AI is controlling
-                    if g.game_values.playercontrol[iPlayer as usize] != 1
-                        || (self.iControllingTeam != lookup_team_id(g, iPlayer) && (!self.fAllowExitButton || !out.menu_cancel().fPressed))
-                    {
-                        continue;
-                    }
-                }
-                // Only let player 1 on the keyboard control the menu unless there is another controlling team
-                // Not in upstream: the first keyboard player may too, when joysticks took the players before it.
-                else if iPlayer != 0
-                    && !g.game_values.playerInput.inputControls[iPlayer as usize].is_null()
-                    && g.game_values.playerInput.inputControls[iPlayer as usize].iDevice == DEVICE_KEYBOARD
-                    && (0..iPlayer as usize).any(|p| g.game_values.playerInput.inputControls[p].is_null() || g.game_values.playerInput.inputControls[p].iDevice == DEVICE_KEYBOARD)
-                {
-                    continue;
-                }
-
-                if out.menu_up().fPressed {
-                    return self.move_next_control(g, MenuNavDirection::Up);
-                }
-
-                if out.menu_down().fPressed {
-                    return self.move_next_control(g, MenuNavDirection::Down);
-                }
-
-                if out.menu_left().fPressed {
-                    return self.move_next_control(g, MenuNavDirection::Left);
-                }
-
-                if out.menu_right().fPressed {
-                    return self.move_next_control(g, MenuNavDirection::Right);
-                }
-
-                if out.menu_select().fPressed {
-                    let mut ret = MENU_CODE_NONE;
-
-                    if !self.m_currentFocus.is_null() {
-                        crate::common::ui::mi_text_field::note_opener(g, playerInput.iPressedKey != 0);
-                        ret = self.m_currentFocus.modify(g, true);
-
-                        if MENU_CODE_MODIFY_ACCEPTED == ret {
-                            self.fModifyingItem = true;
-                            return MENU_CODE_NONE;
-                        }
-
-                        if MENU_CODE_UNSELECT_ITEM == ret {
-                            self.fModifyingItem = false;
-                            return MENU_CODE_NONE;
-                        }
-                    }
-
-                    return ret;
-                }
-
-                if out.menu_cancel().fPressed {
-                    return self.cancelCode;
-                }
+            if out.menu_cancel().fPressed {
+                return self.cancelCode;
             }
-
-            MENU_CODE_NONE
         }
+
+        MENU_CODE_NONE
     }
 
     pub fn move_next_control(&mut self, g: &mut Game, iDirection: MenuNavDirection) -> MenuCodeEnum {

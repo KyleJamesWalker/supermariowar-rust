@@ -25,16 +25,14 @@ impl UI_TeamSelectMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
         let mut gp = g.ptr();
         let mut this = Box::<Self>::default();
-        unsafe {
-            let menu_plain_field = Ptr::from_mut(&mut g.rm.menu_plain_field);
+        let menu_plain_field = Ptr::from_mut(&mut g.rm.menu_plain_field);
 
-            this.miTeamSelect = Ptr::new_box(MI_TeamSelect::new(g, Ptr::from_mut(&mut gp.rm.spr_player_select_background), 112, 96));
-            this.miTeamSelect.set_auto_modify(true);
+        this.miTeamSelect = Ptr::new_box(MI_TeamSelect::new(g, Ptr::from_mut(&mut gp.rm.spr_player_select_background), 112, 96));
+        this.miTeamSelect.set_auto_modify(true);
 
-            this.miTeamSelectLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-            this.miTeamSelectRightHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miTeamSelectHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Team and Character Selection", 320, 5));
-        }
+        this.miTeamSelectLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
+        this.miTeamSelectRightHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
+        this.miTeamSelectHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Team and Character Selection", 320, 5));
 
         let ts = ctl_ptr(this.miTeamSelect);
         this.add_control(ts, Ptr::null(), Ptr::null(), Ptr::null(), Ptr::null());

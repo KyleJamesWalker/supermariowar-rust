@@ -37,44 +37,57 @@ impl PlayerJail {
     }
 
     pub fn lock_in_by(&mut self, g: &mut Game, inflictor: &mut CPlayer) {
-        unsafe {
-            self.timer = g.game_values.gamemodesettings.jail.timetofree;
-            self.owner_teamID = inflictor.teamID as i8;
+        self.timer = g.game_values.gamemodesettings.jail.timetofree;
+        self.owner_teamID = inflictor.teamID as i8;
 
-            if g.game_values.gamemodesettings.jail.style == JailStyle::Owned {
-                self.color = inflictor.colorID as i8;
-            } else {
-                self.color = -1;
-            }
+        if g.game_values.gamemodesettings.jail.style == JailStyle::Owned {
+            self.color = inflictor.colorID as i8;
+        } else {
+            self.color = -1;
         }
     }
 
     pub fn escape(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut gp = g.ptr();
-        unsafe {
-            if self.is_active() {
-                self.timer = 0;
-                self.owner_teamID = -1;
+        if self.is_active() {
+            self.timer = 0;
+            self.owner_teamID = -1;
 
-                g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut g.rm.spr_poof),
-                    (player.center_x() as i32 - 24) as i16,
-                    (player.center_y() as i32 - 24) as i16,
-                    4,
-                    5,
-                ));
-                if_sound_on_play(g, &mut gp.rm.sfx_transform);
-            } else {
-                if_sound_on_play(g, &mut gp.rm.sfx_hit);
-            }
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                Ptr::from_mut(&mut g.rm.spr_poof),
+                (player.center_x() as i32 - 24) as i16,
+                (player.center_y() as i32 - 24) as i16,
+                4,
+                5,
+            ));
+            if_sound_on_play(g, &mut gp.rm.sfx_transform);
+        } else {
+            if_sound_on_play(g, &mut gp.rm.sfx_hit);
         }
     }
 
     pub fn free_by_teammate(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut gp = g.ptr();
-        unsafe {
-            if self.is_active() {
+        if self.is_active() {
+            self.timer = 0;
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+                (player.center_x() as i32 - 16) as i16,
+                (player.center_y() as i32 - 16) as i16,
+                3,
+                8,
+            ));
+            if_sound_on_play(g, &mut gp.rm.sfx_transform);
+        }
+    }
+
+    pub fn update(&mut self, g: &mut Game, player: &mut CPlayer) {
+        let mut gp = g.ptr();
+        if self.is_active() && g.game_values.gamemodesettings.jail.timetofree > 1 {
+            self.timer -= 1;
+            if self.timer <= 0 {
                 self.timer = 0;
+                self.owner_teamID = -1;
                 g.eyecandy[2].emplace(EC_SingleAnimation::new(
                     Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
                     (player.center_x() as i32 - 16) as i16,
@@ -83,27 +96,6 @@ impl PlayerJail {
                     8,
                 ));
                 if_sound_on_play(g, &mut gp.rm.sfx_transform);
-            }
-        }
-    }
-
-    pub fn update(&mut self, g: &mut Game, player: &mut CPlayer) {
-        let mut gp = g.ptr();
-        unsafe {
-            if self.is_active() && g.game_values.gamemodesettings.jail.timetofree > 1 {
-                self.timer -= 1;
-                if self.timer <= 0 {
-                    self.timer = 0;
-                    self.owner_teamID = -1;
-                    g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
-                        (player.center_x() as i32 - 16) as i16,
-                        (player.center_y() as i32 - 16) as i16,
-                        3,
-                        8,
-                    ));
-                    if_sound_on_play(g, &mut gp.rm.sfx_transform);
-                }
             }
         }
     }

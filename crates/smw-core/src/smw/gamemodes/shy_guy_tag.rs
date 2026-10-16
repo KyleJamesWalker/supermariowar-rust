@@ -43,43 +43,17 @@ impl CGM_ShyGuyTag {
 
     pub fn set_shy_guy(&mut self, g: &mut Game, iTeam: i16) {
         let mut gp = g.ptr();
-        unsafe {
-            for &player in g.players.iter() {
-                let mut player = player;
-                if player.get_team_id() == iTeam {
-                    player.shyguy = true;
-                    g.eyecandy[2].emplace(EC_GravText::new(
-                        Ptr::from_mut(&mut g.rm.game_font_large),
-                        player.center_x(),
-                        player.bottom_y(),
-                        "Shyguy!".to_string(),
-                        (-(VELJUMP as f64) * 1.5) as f32,
-                    ));
-                    g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
-                        (player.center_x() as i32 - 16) as i16,
-                        (player.center_y() as i32 - 16) as i16,
-                        3,
-                        8,
-                    ));
-
-                    player.strip_powerups();
-                    player.clear_powerup_states();
-                }
-            }
-
-            if_sound_on_play(g, &mut gp.rm.sfx_transform);
-        }
-    }
-
-    fn free_shy_guys(&mut self, g: &mut Game) {
-        let mut gp = g.ptr();
-        unsafe {
-            if_sound_on_play(g, &mut gp.rm.sfx_thunder);
-
-            for &player in g.players.iter() {
-                let mut player = player;
-                player.shyguy = false;
+        for &player in g.players.iter() {
+            let mut player = player;
+            if player.get_team_id() == iTeam {
+                player.shyguy = true;
+                g.eyecandy[2].emplace(EC_GravText::new(
+                    Ptr::from_mut(&mut g.rm.game_font_large),
+                    player.center_x(),
+                    player.bottom_y(),
+                    "Shyguy!".to_string(),
+                    (-(VELJUMP as f64) * 1.5) as f32,
+                ));
                 g.eyecandy[2].emplace(EC_SingleAnimation::new(
                     Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
                     (player.center_x() as i32 - 16) as i16,
@@ -87,17 +61,37 @@ impl CGM_ShyGuyTag {
                     3,
                     8,
                 ));
+
+                player.strip_powerups();
+                player.clear_powerup_states();
             }
+        }
+
+        if_sound_on_play(g, &mut gp.rm.sfx_transform);
+    }
+
+    fn free_shy_guys(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        if_sound_on_play(g, &mut gp.rm.sfx_thunder);
+
+        for &player in g.players.iter() {
+            let mut player = player;
+            player.shyguy = false;
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+                (player.center_x() as i32 - 16) as i16,
+                (player.center_y() as i32 - 16) as i16,
+                3,
+                8,
+            ));
         }
     }
 
     fn count_shy_guys(&mut self, g: &mut Game) -> i16 {
         let mut shyguycount: i16 = 0;
-        unsafe {
-            for &player in g.players.iter() {
-                if player.shyguy {
-                    shyguycount += 1;
-                }
+        for &player in g.players.iter() {
+            if player.shyguy {
+                shyguycount += 1;
             }
         }
 
@@ -124,15 +118,13 @@ impl CGameModeTrait for CGM_ShyGuyTag {
         self.fRunClock = false;
         self.gameClock.init(g, 0, true);
 
-        unsafe {
-            for iScore in 0..g.score_cnt as usize {
-                gp.score[iScore].set_score(g, 0);
-            }
+        for iScore in 0..g.score_cnt as usize {
+            gp.score[iScore].set_score(g, 0);
+        }
 
-            for &player in g.players.iter() {
-                let mut player = player;
-                player.ownerColorOffsetX = (player.get_color_id() as i32 * 48) as i16;
-            }
+        for &player in g.players.iter() {
+            let mut player = player;
+            player.ownerColorOffsetX = (player.get_color_id() as i32 * 48) as i16;
         }
     }
 
@@ -143,57 +135,55 @@ impl CGameModeTrait for CGM_ShyGuyTag {
             return;
         }
 
-        unsafe {
-            //See how many players are shy guys
-            let shyguycount: i16 = self.count_shy_guys(g);
+        //See how many players are shy guys
+        let shyguycount: i16 = self.count_shy_guys(g);
 
-            //If we are not waiting to clear, check if we need to start waiting
-            if !self.fRunClock {
-                if shyguycount as usize == g.players.len() {
-                    if g.game_values.gamemodesettings.shyguytag.freetime > 0 {
-                        self.fRunClock = true;
-                        self.gameClock.set_time(g.game_values.gamemodesettings.shyguytag.freetime);
-                        if_sound_on_play(g, &mut gp.rm.sfx_starwarning);
-                    } else {
-                        self.free_shy_guys(g);
-                    }
-                }
-            } else {
-                let iTime: i16 = self.gameClock.run_clock();
-
-                if iTime == 0 {
-                    //Clear the shy guys
-                    self.fRunClock = false;
-                    self.free_shy_guys(g);
-                } else if iTime > 0 {
+        //If we are not waiting to clear, check if we need to start waiting
+        if !self.fRunClock {
+            if shyguycount as usize == g.players.len() {
+                if g.game_values.gamemodesettings.shyguytag.freetime > 0 {
+                    self.fRunClock = true;
+                    self.gameClock.set_time(g.game_values.gamemodesettings.shyguytag.freetime);
                     if_sound_on_play(g, &mut gp.rm.sfx_starwarning);
+                } else {
+                    self.free_shy_guys(g);
                 }
             }
+        } else {
+            let iTime: i16 = self.gameClock.run_clock();
 
-            //Award points to non shyguys
-            if shyguycount > 0 {
-                self.scorecounter += 1;
-                if self.scorecounter >= g.game_values.pointspeed {
-                    self.scorecounter = 0;
+            if iTime == 0 {
+                //Clear the shy guys
+                self.fRunClock = false;
+                self.free_shy_guys(g);
+            } else if iTime > 0 {
+                if_sound_on_play(g, &mut gp.rm.sfx_starwarning);
+            }
+        }
 
-                    let mut pCheckWinner: Ptr<CPlayer> = Ptr::null();
-                    let mut fAlreadyScored: [bool; 4] = [false, false, false, false];
-                    for &player in gp.players.iter() {
-                        let mut player = player;
-                        if !player.shyguy {
-                            let iTeam: i16 = player.get_team_id();
-                            if !fAlreadyScored[iTeam as usize] {
-                                fAlreadyScored[iTeam as usize] = true;
-                                player.score().adjust_score(g, shyguycount);
+        //Award points to non shyguys
+        if shyguycount > 0 {
+            self.scorecounter += 1;
+            if self.scorecounter >= g.game_values.pointspeed {
+                self.scorecounter = 0;
 
-                                pCheckWinner = player;
-                            }
+                let mut pCheckWinner: Ptr<CPlayer> = Ptr::null();
+                let mut fAlreadyScored: [bool; 4] = [false, false, false, false];
+                for &player in gp.players.iter() {
+                    let mut player = player;
+                    if !player.shyguy {
+                        let iTeam: i16 = player.get_team_id();
+                        if !fAlreadyScored[iTeam as usize] {
+                            fAlreadyScored[iTeam as usize] = true;
+                            player.score().adjust_score(g, shyguycount);
+
+                            pCheckWinner = player;
                         }
                     }
+                }
 
-                    if !pCheckWinner.is_null() && !self.fReverseScoring {
-                        self.check_winner(g, pCheckWinner);
-                    }
+                if !pCheckWinner.is_null() && !self.fReverseScoring {
+                    self.check_winner(g, pCheckWinner);
                 }
             }
         }
@@ -211,7 +201,7 @@ impl CGameModeTrait for CGM_ShyGuyTag {
             return PlayerKillType::Normal;
         }
 
-        if self.count_shy_guys(g) == 0 || unsafe { g.game_values.gamemodesettings.shyguytag.tagtransfer } != 0 {
+        if self.count_shy_guys(g) == 0 || g.game_values.gamemodesettings.shyguytag.tagtransfer != 0 {
             self.set_shy_guy(g, other.get_team_id());
         }
 
@@ -221,7 +211,7 @@ impl CGameModeTrait for CGM_ShyGuyTag {
     fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
         gm::cgamemode_playerkilledself(self, player, style);
 
-        if !self.gameover && unsafe { g.game_values.gamemodesettings.shyguytag.tagonsuicide } {
+        if !self.gameover && g.game_values.gamemodesettings.shyguytag.tagonsuicide {
             self.set_shy_guy(g, player.get_team_id());
         }
 

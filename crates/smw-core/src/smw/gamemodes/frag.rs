@@ -52,27 +52,25 @@ pub fn cgm_frag_playerkilledplayer<T: CGameModeTrait + ?Sized>(g: &mut Game, thi
         return PlayerKillType::Normal;
     }
 
-    unsafe {
-        //Don't score if "sumo" style scoring is turned on
-        if g.game_values.gamemode.gamemode != game_mode_frag || g.game_values.gamemodesettings.frag.scoring == ScoringStyle::AllKills || style == KillStyle::Push {
-            //Penalize killing your team mates
-            if inflictor.get_team_id() == other.get_team_id() {
-                inflictor.score().adjust_score(g, -1);
-            } else {
-                inflictor.score().adjust_score(g, 1);
-            }
+    //Don't score if "sumo" style scoring is turned on
+    if g.game_values.gamemode.gamemode != game_mode_frag || g.game_values.gamemodesettings.frag.scoring == ScoringStyle::AllKills || style == KillStyle::Push {
+        //Penalize killing your team mates
+        if inflictor.get_team_id() == other.get_team_id() {
+            inflictor.score().adjust_score(g, -1);
+        } else {
+            inflictor.score().adjust_score(g, 1);
         }
-
-        let iRet = this.check_winner(g, inflictor);
-
-        if g.game_values.gamemode.gamemode == game_mode_frag && g.game_values.gamemodesettings.frag.style == DeathStyle::Shield {
-            if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
-            other.shield().reset(g);
-            return PlayerKillType::NonKill;
-        }
-
-        iRet
     }
+
+    let iRet = this.check_winner(g, inflictor);
+
+    if g.game_values.gamemode.gamemode == game_mode_frag && g.game_values.gamemodesettings.frag.style == DeathStyle::Shield {
+        if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
+        other.shield().reset(g);
+        return PlayerKillType::NonKill;
+    }
+
+    iRet
 }
 
 pub fn cgm_frag_playerkilledself<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
@@ -82,12 +80,10 @@ pub fn cgm_frag_playerkilledself<T: CGameModeTrait + ?Sized>(g: &mut Game, this:
     if !this.gm().gameover {
         player.score().adjust_score(g, -1);
 
-        unsafe {
-            if g.game_values.gamemode.gamemode == game_mode_frag && g.game_values.gamemodesettings.frag.style == DeathStyle::Shield {
-                if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
-                player.shield().reset(g);
-                return PlayerKillType::NonKill;
-            }
+        if g.game_values.gamemode.gamemode == game_mode_frag && g.game_values.gamemodesettings.frag.style == DeathStyle::Shield {
+            if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
+            player.shield().reset(g);
+            return PlayerKillType::NonKill;
         }
     }
 

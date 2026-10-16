@@ -72,32 +72,30 @@ pub trait MO_AttackZoneTrait: IO_MovingObjectTrait {
 }
 
 pub fn mo_attack_zone_collide_player<T: MO_AttackZoneTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: Ptr<CPlayer>) -> bool {
-    unsafe {
-        let (dead, iTeamID, iPlayerID, iStyle) = {
-            let z = this.az();
-            (z.dead, z.iTeamID, z.iPlayerID, z.iStyle)
-        };
+    let (dead, iTeamID, iPlayerID, iStyle) = {
+        let z = this.az();
+        (z.dead, z.iTeamID, z.iPlayerID, z.iStyle)
+    };
 
-        if player.is_shielded() || player.is_invincible() || player.shyguy || dead {
-            return false;
-        }
-
-        if g.game_values.teamcollision != TeamCollisionStyle::On && player.teamID == iTeamID {
-            return false;
-        }
-
-        let killer = get_player_from_global_id(g, iPlayerID);
-
-        if !killer.is_null() && killer.globalID == player.globalID {
-            return false;
-        }
-
-        player_killed_player(g, iPlayerID, player, PlayerDeathStyle::Jump, iStyle, false, false);
-
-        this.die(g);
-
-        true
+    if player.is_shielded() || player.is_invincible() || player.shyguy || dead {
+        return false;
     }
+
+    if g.game_values.teamcollision != TeamCollisionStyle::On && player.teamID == iTeamID {
+        return false;
+    }
+
+    let killer = get_player_from_global_id(g, iPlayerID);
+
+    if !killer.is_null() && killer.globalID == player.globalID {
+        return false;
+    }
+
+    player_killed_player(g, iPlayerID, player, PlayerDeathStyle::Jump, iStyle, false, false);
+
+    this.die(g);
+
+    true
 }
 
 /*void MO_AttackZone::draw()
@@ -119,43 +117,41 @@ pub fn mo_attack_zone_update<T: MO_AttackZoneTrait + ?Sized>(this: &mut T) {
 
 pub fn mo_attack_zone_collide_object<T: MO_AttackZoneTrait + ?Sized>(g: &mut Game, this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) {
         let mut gp = g.ptr();
-    unsafe {
-        if this.az().dead {
-            return;
-        }
+    if this.az().dead {
+        return;
+    }
 
-        let iPlayerID = this.az().iPlayerID;
+    let iPlayerID = this.az().iPlayerID;
 
-        let r#type: MovingObjectType = object.get_moving_object_type();
+    let r#type: MovingObjectType = object.get_moving_object_type();
 
-        if r#type == movingobject_shell || r#type == movingobject_throwblock || r#type == movingobject_throwbox {
-            if r#type == movingobject_shell {
-                let shell = object.as_any().downcast_mut::<CO_Shell>().unwrap();
-                if shell.frozen {
-                    shell.shatter_die(g);
-                } else {
-                    shell.die(g);
-                }
-            } else if r#type == movingobject_throwblock {
-                let block = object.as_any().downcast_mut::<CO_ThrowBlock>().unwrap();
-
-                if block.frozen {
-                    block.shatter_die(g);
-                } else if block.owner.is_null() || block.owner.globalID != iPlayerID {
-                    block.die(g);
-                }
-            } else if r#type == movingobject_throwbox {
-                let r#box = object.as_any().downcast_mut::<CO_ThrowBox>().unwrap();
-
-                if r#box.frozen {
-                    r#box.shatter_die(g);
-                } else if r#box.owner.is_null() || r#box.owner.globalID != iPlayerID {
-                    r#box.die(g);
-                }
+    if r#type == movingobject_shell || r#type == movingobject_throwblock || r#type == movingobject_throwbox {
+        if r#type == movingobject_shell {
+            let shell = object.as_any().downcast_mut::<CO_Shell>().unwrap();
+            if shell.frozen {
+                shell.shatter_die(g);
+            } else {
+                shell.die(g);
             }
+        } else if r#type == movingobject_throwblock {
+            let block = object.as_any().downcast_mut::<CO_ThrowBlock>().unwrap();
 
-            if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
+            if block.frozen {
+                block.shatter_die(g);
+            } else if block.owner.is_null() || block.owner.globalID != iPlayerID {
+                block.die(g);
+            }
+        } else if r#type == movingobject_throwbox {
+            let r#box = object.as_any().downcast_mut::<CO_ThrowBox>().unwrap();
+
+            if r#box.frozen {
+                r#box.shatter_die(g);
+            } else if r#box.owner.is_null() || r#box.owner.globalID != iPlayerID {
+                r#box.die(g);
+            }
         }
+
+        if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
     }
 }
 

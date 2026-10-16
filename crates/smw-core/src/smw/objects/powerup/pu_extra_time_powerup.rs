@@ -44,22 +44,20 @@ impl CObjectTrait for PU_ExtraTimePowerup {
     }
     fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         let mut gp = g.ptr();
-        unsafe {
-            if self.state > 0 {
-                if g.game_values.gamemode.gamemode == game_mode_timelimit || g.game_values.gamemode.gamemode == game_mode_star {
-                    let mut gamemode = g.game_values.gamemode;
-                    let timelimitmode: &mut CGM_TimeLimit = if gamemode.as_any().is::<CGM_Star>() {
-                        gamemode.as_any().downcast_mut::<CGM_Star>().unwrap()
-                    } else {
-                        gamemode.as_any().downcast_mut::<CGM_TimeLimit>().unwrap()
-                    };
-                    let goal = timelimitmode.goal;
-                    timelimitmode.addtime(goal / 5);
-                }
-
-                if_sound_on_play(g, &mut gp.rm.sfx_collectpowerup);
-                self.dead = true;
+        if self.state > 0 {
+            if g.game_values.gamemode.gamemode == game_mode_timelimit || g.game_values.gamemode.gamemode == game_mode_star {
+                let mut gamemode = g.game_values.gamemode;
+                let timelimitmode: &mut CGM_TimeLimit = if gamemode.as_any().is::<CGM_Star>() {
+                    gamemode.as_any().downcast_mut::<CGM_Star>().unwrap()
+                } else {
+                    gamemode.as_any().downcast_mut::<CGM_TimeLimit>().unwrap()
+                };
+                let goal = timelimitmode.goal;
+                timelimitmode.addtime(goal / 5);
             }
+
+            if_sound_on_play(g, &mut gp.rm.sfx_collectpowerup);
+            self.dead = true;
         }
 
         false

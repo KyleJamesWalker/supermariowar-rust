@@ -94,21 +94,19 @@ pub fn cgm_timelimit_think(g: &mut Game, this: &mut CGM_TimeLimit) {
 pub fn cgm_timelimit_playerkilledplayer(g: &mut Game, this: &mut CGM_TimeLimit, mut inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
         let mut gp = g.ptr();
     if !this.gameover {
-        unsafe {
-            if g.game_values.gamemode.gamemode != game_mode_timelimit || g.game_values.gamemodesettings.time.scoring == ScoringStyle::AllKills || style == KillStyle::Push {
-                //Penalize killing your team mates
-                if inflictor.get_team_id() == other.get_team_id() {
-                    inflictor.score().adjust_score(g, -1);
-                } else {
-                    inflictor.score().adjust_score(g, 1);
-                }
+        if g.game_values.gamemode.gamemode != game_mode_timelimit || g.game_values.gamemodesettings.time.scoring == ScoringStyle::AllKills || style == KillStyle::Push {
+            //Penalize killing your team mates
+            if inflictor.get_team_id() == other.get_team_id() {
+                inflictor.score().adjust_score(g, -1);
+            } else {
+                inflictor.score().adjust_score(g, 1);
             }
+        }
 
-            if g.game_values.gamemode.gamemode == game_mode_timelimit && g.game_values.gamemodesettings.time.style == DeathStyle::Shield {
-                if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
-                other.shield().reset(g);
-                return PlayerKillType::NonKill;
-            }
+        if g.game_values.gamemode.gamemode == game_mode_timelimit && g.game_values.gamemodesettings.time.style == DeathStyle::Shield {
+            if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
+            other.shield().reset(g);
+            return PlayerKillType::NonKill;
         }
     }
 

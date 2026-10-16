@@ -30,7 +30,7 @@ pub const WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET: i16 = 900;
 /// Static-storage constructor of `WorldMap g_worldmap(0, 0);` (needs `game_values` constructed first).
 pub fn init_globals(g: &mut Game) {
         let mut gp = g.ptr();
-    unsafe { gp.g_worldmap.init(WorldMap::new(g, 0, 0)) };
+    gp.g_worldmap.init(WorldMap::new(g, 0, 0));
 }
 
 fn pop_next<'a>(list: &mut VecDeque<&'a str>) -> &'a str {
@@ -283,25 +283,21 @@ impl WorldPlayer {
 
     pub fn draw(&self, g: &mut Game, iMapOffsetX: i16, iMapOffsetY: i16) {
         let mut gp = g.ptr();
-        unsafe {
-            gp.rm.spr_player[self.iDrawSprite as usize][(self.iAnimationFrame + self.iDrawDirection) as usize].draw_src(
-                g,
-                self.pos.x as i32 + iMapOffsetX as i32,
-                self.pos.y as i32 + iMapOffsetY as i32,
-                &Rect { x: 0, y: 0, w: 32, h: 32 },
-            );
-        }
+        gp.rm.spr_player[self.iDrawSprite as usize][(self.iAnimationFrame + self.iDrawDirection) as usize].draw_src(
+            g,
+            self.pos.x as i32 + iMapOffsetX as i32,
+            self.pos.y as i32 + iMapOffsetY as i32,
+            &Rect { x: 0, y: 0, w: 32, h: 32 },
+        );
     }
 
     pub fn set_sprite(&mut self, g: &mut Game, iPlayer: i16) {
         let mut gp = g.ptr();
-        unsafe {
-            let p = iPlayer as usize;
-            while !gp.get().rm.load_menu_skin(g, iPlayer, gp.get().game_values.skinids[p], gp.get().game_values.colorids[p], true) {
-                g.game_values.skinids[p] += 1;
-                if g.game_values.skinids[p] as usize >= g.skinlist.count() {
-                    g.game_values.skinids[p] = 0;
-                }
+        let p = iPlayer as usize;
+        while !gp.get().rm.load_menu_skin(g, iPlayer, gp.get().game_values.skinids[p], gp.get().game_values.colorids[p], true) {
+            g.game_values.skinids[p] += 1;
+            if g.game_values.skinids[p] as usize >= g.skinlist.count() {
+                g.game_values.skinids[p] = 0;
             }
         }
 
@@ -407,52 +403,50 @@ impl WorldVehicle {
             return;
         }
 
-        unsafe {
-            let currentTile = self.currentTile;
-            let tile: WorldMapTile = *g.g_worldmap.tiles.at(currentTile.x as usize, currentTile.y as usize);
-            let iPlayerCurrentTile = g.g_worldmap.get_player_current_tile();
+        let currentTile = self.currentTile;
+        let tile: WorldMapTile = *g.g_worldmap.tiles.at(currentTile.x as usize, currentTile.y as usize);
+        let iPlayerCurrentTile = g.g_worldmap.get_player_current_tile();
 
-            let n = self.iNumMoves;
-            self.iNumMoves -= 1;
-            if n <= 0 {
-                if tile.iType == 0 && iPlayerCurrentTile != currentTile && g.g_worldmap.num_vehicles_in_tile(currentTile) <= 1 {
-                    return;
-                }
-            }
-
-            //Don't allow vehicle to move forever, cap it at 10 moves over the number attempted
-            if self.iNumMoves <= -10 {
+        let n = self.iNumMoves;
+        self.iNumMoves -= 1;
+        if n <= 0 {
+            if tile.iType == 0 && iPlayerCurrentTile != currentTile && g.g_worldmap.num_vehicles_in_tile(currentTile) <= 1 {
                 return;
             }
+        }
 
-            //Check to see what directions are available to move
-            //Can't move through doors or vehicle boundaries
-            let mut iConnections: [i16; 4] = [0; 4];
-            let mut iNumConnections: i16 = 0;
-            let (cx, cy) = (currentTile.x, currentTile.y);
-            let iBoundary = self.iBoundary;
-            for iDirection in 0..4i16 {
-                let mut fIsDoor = false;
-                if iDirection == 0 {
-                    fIsDoor = g.g_worldmap.is_door(cx, cy - 1) || (iBoundary != 0 && g.g_worldmap.get_vehicle_boundary(cx, cy - 1) == iBoundary);
-                } else if iDirection == 1 {
-                    fIsDoor = g.g_worldmap.is_door(cx, cy + 1) || (iBoundary != 0 && g.g_worldmap.get_vehicle_boundary(cx, cy + 1) == iBoundary);
-                } else if iDirection == 2 {
-                    fIsDoor = g.g_worldmap.is_door(cx - 1, cy) || (iBoundary != 0 && g.g_worldmap.get_vehicle_boundary(cx - 1, cy) == iBoundary);
-                } else if iDirection == 3 {
-                    fIsDoor = g.g_worldmap.is_door(cx + 1, cy) || (iBoundary != 0 && g.g_worldmap.get_vehicle_boundary(cx + 1, cy) == iBoundary);
-                }
+        //Don't allow vehicle to move forever, cap it at 10 moves over the number attempted
+        if self.iNumMoves <= -10 {
+            return;
+        }
 
-                if tile.fConnection[iDirection as usize] && !fIsDoor {
-                    iConnections[iNumConnections as usize] = iDirection;
-                    iNumConnections += 1;
-                }
+        //Check to see what directions are available to move
+        //Can't move through doors or vehicle boundaries
+        let mut iConnections: [i16; 4] = [0; 4];
+        let mut iNumConnections: i16 = 0;
+        let (cx, cy) = (currentTile.x, currentTile.y);
+        let iBoundary = self.iBoundary;
+        for iDirection in 0..4i16 {
+            let mut fIsDoor = false;
+            if iDirection == 0 {
+                fIsDoor = g.g_worldmap.is_door(cx, cy - 1) || (iBoundary != 0 && g.g_worldmap.get_vehicle_boundary(cx, cy - 1) == iBoundary);
+            } else if iDirection == 1 {
+                fIsDoor = g.g_worldmap.is_door(cx, cy + 1) || (iBoundary != 0 && g.g_worldmap.get_vehicle_boundary(cx, cy + 1) == iBoundary);
+            } else if iDirection == 2 {
+                fIsDoor = g.g_worldmap.is_door(cx - 1, cy) || (iBoundary != 0 && g.g_worldmap.get_vehicle_boundary(cx - 1, cy) == iBoundary);
+            } else if iDirection == 3 {
+                fIsDoor = g.g_worldmap.is_door(cx + 1, cy) || (iBoundary != 0 && g.g_worldmap.get_vehicle_boundary(cx + 1, cy) == iBoundary);
             }
 
-            if iNumConnections > 0 {
-                let iConnection = iConnections[RANDOM_INT(gp.get(), iNumConnections as i32) as usize];
-                self.world_moving_object.r#move(iConnection);
+            if tile.fConnection[iDirection as usize] && !fIsDoor {
+                iConnections[iNumConnections as usize] = iDirection;
+                iNumConnections += 1;
             }
+        }
+
+        if iNumConnections > 0 {
+            let iConnection = iConnections[RANDOM_INT(gp.get(), iNumConnections as i32) as usize];
+            self.world_moving_object.r#move(iConnection);
         }
     }
 
@@ -460,7 +454,7 @@ impl WorldVehicle {
         let fMoveDone = self.world_moving_object.update();
 
         if fMoveDone {
-            if self.currentTile == unsafe { g.g_worldmap.get_player_current_tile() } {
+            if self.currentTile == g.g_worldmap.get_player_current_tile() {
                 return true;
             }
 
@@ -491,15 +485,13 @@ impl WorldVehicle {
     }
 
     pub fn draw(&self, g: &mut Game, iWorldOffsetX: i16, iWorldOffsetY: i16, fVehiclesSleeping: bool) {
-        unsafe {
-            let ts = self.iTileSize as i32;
-            if fVehiclesSleeping {
-                let rDst = Rect { x: self.pos.x as i32 + iWorldOffsetX as i32, y: self.pos.y as i32 + iWorldOffsetY as i32, w: ts, h: ts };
-                g.rm.spr_worldvehicle[self.iTileSheet as usize].draw_src_to(&self.srcRects[4], g.blitdest, &rDst);
-            } else {
-                let rDst = Rect { x: self.pos.x as i32 + iWorldOffsetX as i32 + self.iPaceOffset as i32, y: self.pos.y as i32 + iWorldOffsetY as i32, w: ts, h: ts };
-                g.rm.spr_worldvehicle[self.iTileSheet as usize].draw_src_to(&self.srcRects[(self.iDrawDirection + self.iAnimationFrame) as usize], g.blitdest, &rDst);
-            }
+        let ts = self.iTileSize as i32;
+        if fVehiclesSleeping {
+            let rDst = Rect { x: self.pos.x as i32 + iWorldOffsetX as i32, y: self.pos.y as i32 + iWorldOffsetY as i32, w: ts, h: ts };
+            g.rm.spr_worldvehicle[self.iTileSheet as usize].draw_src_to(&self.srcRects[4], g.blitdest, &rDst);
+        } else {
+            let rDst = Rect { x: self.pos.x as i32 + iWorldOffsetX as i32 + self.iPaceOffset as i32, y: self.pos.y as i32 + iWorldOffsetY as i32, w: ts, h: ts };
+            g.rm.spr_worldvehicle[self.iTileSheet as usize].draw_src_to(&self.srcRects[(self.iDrawDirection + self.iAnimationFrame) as usize], g.blitdest, &rDst);
         }
     }
 }
@@ -641,342 +633,340 @@ impl WorldMap {
         let mut iNumWarps: i16 = 0;
         let mut iNumVehicles: i16 = 0;
 
-        unsafe {
-            for raw in lines {
-                if raw.is_empty() {
-                    continue;
+        for raw in lines {
+            if raw.is_empty() {
+                continue;
+            }
+
+            if raw[0] == b'#' || raw[0] == b'\r' || raw[0] == b' ' || raw[0] == b'\t' {
+                continue;
+            }
+
+            let line_owned = String::from_utf8_lossy(raw).into_owned();
+            let line: &str = &line_owned;
+
+            if iReadType == 0 {
+                //Read version number
+                let mut tokens: VecDeque<&str> = tokenize(line, '.', usize::MAX).into();
+                version.major = pop_next_int(&mut tokens) as u8;
+                version.minor = pop_next_int(&mut tokens) as u8;
+                version.patch = pop_next_int(&mut tokens) as u8;
+                version.build = pop_next_int(&mut tokens) as u8;
+                iReadType = 1;
+            } else if iReadType == 1 {
+                //music category
+                this.iMusicCategory = world_music_category_from_int(stoi(line)); // FIXME
+                iReadType = 2;
+            } else if iReadType == 2 {
+                //world width
+                this.iWidth = stoi(line) as i16;
+                iReadType = 3;
+            } else if iReadType == 3 {
+                //world height
+                this.iHeight = stoi(line) as i16;
+                iReadType = 4;
+
+                this.tiles = Grid::new(this.iWidth as usize, this.iHeight as usize);
+
+                let mut iDrawSurfaceTiles: i16 = (this.iWidth as i32 * this.iHeight as i32) as i16;
+
+                if iDrawSurfaceTiles > 456 {
+                    iDrawSurfaceTiles = 456; //19 * 24 = 456 max tiles in world surface
                 }
 
-                if raw[0] == b'#' || raw[0] == b'\r' || raw[0] == b' ' || raw[0] == b'\t' {
-                    continue;
+                this.iTilesPerCycle = iDrawSurfaceTiles / 8;
+            } else if iReadType == 4 {
+                //background water
+                let mut tokens: VecDeque<&str> = tokenize(line, ',', usize::MAX).into();
+                if tokens.len() < this.iWidth as usize {
+                    break;
                 }
 
-                let line_owned = String::from_utf8_lossy(raw).into_owned();
-                let line: &str = &line_owned;
+                for iMapTileReadCol in 0..this.iWidth {
+                    let tile = this.tiles.at_mut(iMapTileReadCol as usize, iMapTileReadRow as usize);
+                    tile.iBackgroundWater = pop_next_int(&mut tokens) as i16;
+                }
 
-                if iReadType == 0 {
-                    //Read version number
-                    let mut tokens: VecDeque<&str> = tokenize(line, '.', usize::MAX).into();
-                    version.major = pop_next_int(&mut tokens) as u8;
-                    version.minor = pop_next_int(&mut tokens) as u8;
-                    version.patch = pop_next_int(&mut tokens) as u8;
-                    version.build = pop_next_int(&mut tokens) as u8;
-                    iReadType = 1;
-                } else if iReadType == 1 {
-                    //music category
-                    this.iMusicCategory = world_music_category_from_int(stoi(line)); // FIXME
-                    iReadType = 2;
-                } else if iReadType == 2 {
-                    //world width
-                    this.iWidth = stoi(line) as i16;
-                    iReadType = 3;
-                } else if iReadType == 3 {
-                    //world height
-                    this.iHeight = stoi(line) as i16;
-                    iReadType = 4;
+                iMapTileReadRow += 1;
+                if iMapTileReadRow == this.iHeight {
+                    iReadType = 5;
+                    iMapTileReadRow = 0;
+                }
+            } else if iReadType == 5 {
+                //background sprites
+                let mut tokens: VecDeque<&str> = tokenize(line, ',', usize::MAX).into();
+                if tokens.len() < this.iWidth as usize {
+                    break;
+                }
 
-                    this.tiles = Grid::new(this.iWidth as usize, this.iHeight as usize);
+                let iWidth = this.iWidth;
+                for iMapTileReadCol in 0..iWidth {
+                    let tile = this.tiles.at_mut(iMapTileReadCol as usize, iMapTileReadRow as usize);
+                    tile.iBackgroundSprite = pop_next_int(&mut tokens) as i16;
+                    tile.fAnimated = (tile.iBackgroundSprite % WORLD_BACKGROUND_SPRITE_SET_SIZE) != 1;
 
-                    let mut iDrawSurfaceTiles: i16 = (this.iWidth as i32 * this.iHeight as i32) as i16;
+                    tile.iID = (iMapTileReadRow as i32 * iWidth as i32 + iMapTileReadCol as i32) as i16;
+                    tile.iCol = iMapTileReadCol;
+                    tile.iRow = iMapTileReadRow;
+                }
 
-                    if iDrawSurfaceTiles > 456 {
-                        iDrawSurfaceTiles = 456; //19 * 24 = 456 max tiles in world surface
+                iMapTileReadRow += 1;
+                if iMapTileReadRow == this.iHeight {
+                    iReadType = 6;
+                    iMapTileReadRow = 0;
+                }
+            } else if iReadType == 6 {
+                //foreground sprites
+                let mut tokens: VecDeque<&str> = tokenize(line, ',', usize::MAX).into();
+                if tokens.len() < this.iWidth as usize {
+                    break;
+                }
+
+                for iMapTileReadCol in 0..this.iWidth {
+                    let tile = this.tiles.at_mut(iMapTileReadCol as usize, iMapTileReadRow as usize);
+                    tile.iForegroundSprite = pop_next_int(&mut tokens) as i16;
+
+                    let iForegroundSprite = tile.iForegroundSprite;
+
+                    //Animated parts of paths
+                    if !tile.fAnimated && iForegroundSprite >= 0 && iForegroundSprite <= 8 * WORLD_PATH_SPRITE_SET_SIZE {
+                        let iForeground = iForegroundSprite % WORLD_PATH_SPRITE_SET_SIZE;
+                        tile.fAnimated = iForeground >= 3 && iForeground <= 10;
                     }
 
-                    this.iTilesPerCycle = iDrawSurfaceTiles / 8;
-                } else if iReadType == 4 {
-                    //background water
-                    let mut tokens: VecDeque<&str> = tokenize(line, ',', usize::MAX).into();
-                    if tokens.len() < this.iWidth as usize {
-                        break;
+                    //Animated 1-100 stages
+                    if !tile.fAnimated {
+                        tile.fAnimated = iForegroundSprite >= WORLD_FOREGROUND_STAGE_OFFSET && iForegroundSprite <= WORLD_FOREGROUND_STAGE_OFFSET + 399;
                     }
 
-                    for iMapTileReadCol in 0..this.iWidth {
-                        let tile = this.tiles.at_mut(iMapTileReadCol as usize, iMapTileReadRow as usize);
-                        tile.iBackgroundWater = pop_next_int(&mut tokens) as i16;
+                    //Animated foreground tiles
+                    if !tile.fAnimated {
+                        tile.fAnimated = iForegroundSprite >= WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET && iForegroundSprite <= WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET + 29;
                     }
+                }
 
-                    iMapTileReadRow += 1;
-                    if iMapTileReadRow == this.iHeight {
-                        iReadType = 5;
-                        iMapTileReadRow = 0;
-                    }
-                } else if iReadType == 5 {
-                    //background sprites
-                    let mut tokens: VecDeque<&str> = tokenize(line, ',', usize::MAX).into();
-                    if tokens.len() < this.iWidth as usize {
-                        break;
-                    }
+                iMapTileReadRow += 1;
+                if iMapTileReadRow == this.iHeight {
+                    iReadType = 7;
+                    iMapTileReadRow = 0;
+                }
+            } else if iReadType == 7 {
+                //path connections
+                let mut tokens: VecDeque<&str> = tokenize(line, ',', usize::MAX).into();
+                if tokens.len() < this.iWidth as usize {
+                    break;
+                }
 
-                    let iWidth = this.iWidth;
-                    for iMapTileReadCol in 0..iWidth {
-                        let tile = this.tiles.at_mut(iMapTileReadCol as usize, iMapTileReadRow as usize);
-                        tile.iBackgroundSprite = pop_next_int(&mut tokens) as i16;
-                        tile.fAnimated = (tile.iBackgroundSprite % WORLD_BACKGROUND_SPRITE_SET_SIZE) != 1;
+                for iMapTileReadCol in 0..this.iWidth {
+                    let tile = this.tiles.at_mut(iMapTileReadCol as usize, iMapTileReadRow as usize);
+                    tile.iConnectionType = pop_next_int(&mut tokens) as i16;
+                }
 
-                        tile.iID = (iMapTileReadRow as i32 * iWidth as i32 + iMapTileReadCol as i32) as i16;
-                        tile.iCol = iMapTileReadCol;
-                        tile.iRow = iMapTileReadRow;
-                    }
+                iMapTileReadRow += 1;
+                if iMapTileReadRow == this.iHeight {
+                    iReadType = 8;
+                    iMapTileReadRow = 0;
 
-                    iMapTileReadRow += 1;
-                    if iMapTileReadRow == this.iHeight {
-                        iReadType = 6;
-                        iMapTileReadRow = 0;
-                    }
-                } else if iReadType == 6 {
-                    //foreground sprites
-                    let mut tokens: VecDeque<&str> = tokenize(line, ',', usize::MAX).into();
-                    if tokens.len() < this.iWidth as usize {
-                        break;
-                    }
-
-                    for iMapTileReadCol in 0..this.iWidth {
-                        let tile = this.tiles.at_mut(iMapTileReadCol as usize, iMapTileReadRow as usize);
-                        tile.iForegroundSprite = pop_next_int(&mut tokens) as i16;
-
-                        let iForegroundSprite = tile.iForegroundSprite;
-
-                        //Animated parts of paths
-                        if !tile.fAnimated && iForegroundSprite >= 0 && iForegroundSprite <= 8 * WORLD_PATH_SPRITE_SET_SIZE {
-                            let iForeground = iForegroundSprite % WORLD_PATH_SPRITE_SET_SIZE;
-                            tile.fAnimated = iForeground >= 3 && iForeground <= 10;
-                        }
-
-                        //Animated 1-100 stages
-                        if !tile.fAnimated {
-                            tile.fAnimated = iForegroundSprite >= WORLD_FOREGROUND_STAGE_OFFSET && iForegroundSprite <= WORLD_FOREGROUND_STAGE_OFFSET + 399;
-                        }
-
-                        //Animated foreground tiles
-                        if !tile.fAnimated {
-                            tile.fAnimated = iForegroundSprite >= WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET && iForegroundSprite <= WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET + 29;
+                    //1 == |  2 == -  3 == -!  4 == L  5 == ,-  6 == -,
+                    //7 == -|  8 == -`-  9 == |-  10 == -,-  11 == +
+                    //12 == horizontal bridge starts open,  13 == horizontal bridge closed
+                    //14 == vertical bridge starts open,  15 == vertical bridge closed
+                    for iRow in 0..this.iHeight {
+                        for iCol in 0..this.iWidth {
+                            this.set_tile_connections(iCol, iRow);
                         }
                     }
+                }
+            } else if iReadType == 8 {
+                //stages
+                let mut tokens: VecDeque<&str> = tokenize(line, ',', usize::MAX).into();
+                if tokens.len() < this.iWidth as usize {
+                    break;
+                }
 
-                    iMapTileReadRow += 1;
-                    if iMapTileReadRow == this.iHeight {
-                        iReadType = 7;
-                        iMapTileReadRow = 0;
+                for iMapTileReadCol in 0..this.iWidth {
+                    let tile = this.tiles.at_mut(iMapTileReadCol as usize, iMapTileReadRow as usize);
+                    tile.iType = pop_next_int(&mut tokens) as i16;
+                    tile.iWarp = -1;
+
+                    let iType = tile.iType;
+                    tile.iCompleted = if iType <= 5 { -1 } else { -2 };
+
+                    if iType == 1 {
+                        this.iStartX = iMapTileReadCol;
+                        this.iStartY = iMapTileReadRow;
+                        let (sx, sy) = (this.iStartX, this.iStartY);
+                        this.player.set_position(sx, sy);
                     }
-                } else if iReadType == 7 {
-                    //path connections
-                    let mut tokens: VecDeque<&str> = tokenize(line, ',', usize::MAX).into();
-                    if tokens.len() < this.iWidth as usize {
-                        break;
-                    }
+                }
 
-                    for iMapTileReadCol in 0..this.iWidth {
-                        let tile = this.tiles.at_mut(iMapTileReadCol as usize, iMapTileReadRow as usize);
-                        tile.iConnectionType = pop_next_int(&mut tokens) as i16;
-                    }
+                iMapTileReadRow += 1;
+                if iMapTileReadRow == this.iHeight {
+                    iReadType = 9;
+                    iMapTileReadRow = 0;
+                }
+            } else if iReadType == 9 {
+                //vehicle boundaries
+                let mut tokens: VecDeque<&str> = tokenize(line, ',', usize::MAX).into();
+                if tokens.len() < this.iWidth as usize {
+                    break;
+                }
 
-                    iMapTileReadRow += 1;
-                    if iMapTileReadRow == this.iHeight {
-                        iReadType = 8;
-                        iMapTileReadRow = 0;
+                for iMapTileReadCol in 0..this.iWidth {
+                    let tile = this.tiles.at_mut(iMapTileReadCol as usize, iMapTileReadRow as usize);
+                    tile.iVehicleBoundary = pop_next_int(&mut tokens) as i16;
+                }
 
-                        //1 == |  2 == -  3 == -!  4 == L  5 == ,-  6 == -,
-                        //7 == -|  8 == -`-  9 == |-  10 == -,-  11 == +
-                        //12 == horizontal bridge starts open,  13 == horizontal bridge closed
-                        //14 == vertical bridge starts open,  15 == vertical bridge closed
-                        for iRow in 0..this.iHeight {
-                            for iCol in 0..this.iWidth {
-                                this.set_tile_connections(iCol, iRow);
+                iMapTileReadRow += 1;
+                if iMapTileReadRow == this.iHeight {
+                    iReadType = 10;
+                }
+            } else if iReadType == 10 {
+                //number of stages
+                this.iNumStages = stoi(line) as i16;
+
+                iReadType = if this.iNumStages == 0 { 12 } else { 11 };
+            } else if iReadType == 11 {
+                //stage details
+                let ts = Ptr::new_box(parse_tour_stop_line(g, raw, &version, true));
+
+                g.game_values.tourstops.push(ts);
+
+                iCurrentStage += 1;
+                if iCurrentStage >= this.iNumStages {
+                    //Scan stage IDs and make sure we have a stage for each one
+                    let iMaxStage: i16 = (g.game_values.tourstops.len() + 5) as i16;
+                    let mut invalid = false;
+                    'scan: for iRow in 0..this.iHeight {
+                        for iCol in 0..this.iWidth {
+                            let iType = this.tiles.at(iCol as usize, iRow as usize).iType;
+                            if iType < 0 || iType > iMaxStage {
+                                invalid = true;
+                                break 'scan;
                             }
                         }
                     }
-                } else if iReadType == 8 {
-                    //stages
-                    let mut tokens: VecDeque<&str> = tokenize(line, ',', usize::MAX).into();
-                    if tokens.len() < this.iWidth as usize {
+                    if invalid {
                         break;
                     }
 
-                    for iMapTileReadCol in 0..this.iWidth {
-                        let tile = this.tiles.at_mut(iMapTileReadCol as usize, iMapTileReadRow as usize);
-                        tile.iType = pop_next_int(&mut tokens) as i16;
-                        tile.iWarp = -1;
-
-                        let iType = tile.iType;
-                        tile.iCompleted = if iType <= 5 { -1 } else { -2 };
-
-                        if iType == 1 {
-                            this.iStartX = iMapTileReadCol;
-                            this.iStartY = iMapTileReadRow;
-                            let (sx, sy) = (this.iStartX, this.iStartY);
-                            this.player.set_position(sx, sy);
-                        }
-                    }
-
-                    iMapTileReadRow += 1;
-                    if iMapTileReadRow == this.iHeight {
-                        iReadType = 9;
-                        iMapTileReadRow = 0;
-                    }
-                } else if iReadType == 9 {
-                    //vehicle boundaries
-                    let mut tokens: VecDeque<&str> = tokenize(line, ',', usize::MAX).into();
-                    if tokens.len() < this.iWidth as usize {
-                        break;
-                    }
-
-                    for iMapTileReadCol in 0..this.iWidth {
-                        let tile = this.tiles.at_mut(iMapTileReadCol as usize, iMapTileReadRow as usize);
-                        tile.iVehicleBoundary = pop_next_int(&mut tokens) as i16;
-                    }
-
-                    iMapTileReadRow += 1;
-                    if iMapTileReadRow == this.iHeight {
-                        iReadType = 10;
-                    }
-                } else if iReadType == 10 {
-                    //number of stages
-                    this.iNumStages = stoi(line) as i16;
-
-                    iReadType = if this.iNumStages == 0 { 12 } else { 11 };
-                } else if iReadType == 11 {
-                    //stage details
-                    let ts = Ptr::new_box(parse_tour_stop_line(g, raw, &version, true));
-
-                    g.game_values.tourstops.push(ts);
-
-                    iCurrentStage += 1;
-                    if iCurrentStage >= this.iNumStages {
-                        //Scan stage IDs and make sure we have a stage for each one
-                        let iMaxStage: i16 = (g.game_values.tourstops.len() + 5) as i16;
-                        let mut invalid = false;
-                        'scan: for iRow in 0..this.iHeight {
-                            for iCol in 0..this.iWidth {
-                                let iType = this.tiles.at(iCol as usize, iRow as usize).iType;
-                                if iType < 0 || iType > iMaxStage {
-                                    invalid = true;
-                                    break 'scan;
-                                }
-                            }
-                        }
-                        if invalid {
-                            break;
-                        }
-
-                        iReadType = 12;
-                    }
-                } else if iReadType == 12 {
-                    //number of warps
-                    iNumWarps = stoi(line) as i16;
-
-                    if iNumWarps < 0 {
-                        iNumWarps = 0;
-                    }
-
-                    if iNumWarps > 0 {
-                        this.warps.reserve(iNumWarps as usize);
-                    }
-
-                    iReadType = if iNumWarps == 0 { 14 } else { 13 };
-                } else if iReadType == 13 {
-                    //warp details
-                    let mut tokens: VecDeque<&str> = tokenize(line, ',', usize::MAX).into();
-
-                    let iCol1 = 0.max(pop_next_int(&mut tokens)) as i16;
-                    let iRow1 = 0.max(pop_next_int(&mut tokens)) as i16;
-                    let iCol2 = 0.max(pop_next_int(&mut tokens)) as i16;
-                    let iRow2 = 0.max(pop_next_int(&mut tokens)) as i16;
-
-                    let warpId = this.warps.len() as i16;
-                    this.warps.push(WorldWarp::new(warpId, Vec2s::new(iCol1, iRow1), Vec2s::new(iCol2, iRow2)));
-
-                    this.tiles.at_mut(iCol1 as usize, iRow1 as usize).iWarp = warpId;
-                    this.tiles.at_mut(iCol2 as usize, iRow2 as usize).iWarp = warpId;
-
-                    if this.warps.len() >= iNumWarps as usize {
-                        iReadType = 14;
-                    }
-                } else if iReadType == 14 {
-                    //number of vehicles
-                    iNumVehicles = stoi(line) as i16;
-
-                    if iNumVehicles < 0 {
-                        iNumVehicles = 0;
-                    }
-
-                    if iNumVehicles > 0 {
-                        this.vehicles.reserve(iNumVehicles as usize);
-                    }
-
-                    iReadType = if iNumVehicles == 0 { 16 } else { 15 };
-                } else if iReadType == 15 {
-                    //vehicles
-                    let mut tokens: VecDeque<&str> = tokenize(line, ',', usize::MAX).into();
-
-                    let iSprite = pop_next_int(&mut tokens) as i16;
-
-                    let mut iStage = pop_next_int(&mut tokens) as i16;
-                    if iStage > this.iNumStages {
-                        iStage = 0;
-                    }
-
-                    let iCol = pop_next_int(&mut tokens) as i16;
-                    let iRow = pop_next_int(&mut tokens) as i16;
-
-                    let iMinMoves = 0.max(pop_next_int(&mut tokens)) as i16;
-                    let iMaxMoves = iMinMoves.max(pop_next_int(&mut tokens) as i16);
-
-                    let fSpritePaces = pop_next_int(&mut tokens) == 1;
-
-                    let mut iInitialDirection = pop_next_int(&mut tokens) as i16;
-                    if iInitialDirection != 0 {
-                        iInitialDirection = 1;
-                    }
-
-                    let iBoundary = pop_next_int(&mut tokens) as i16;
-
-                    this.vehicles.push(WorldVehicle::new());
-                    let iTileSize = this.iTileSize;
-                    this.vehicles.last_mut().unwrap().init(iCol, iRow, iStage, iSprite, iMinMoves, iMaxMoves, fSpritePaces, iInitialDirection, iBoundary, iTileSize);
-
-                    if this.vehicles.len() >= iNumVehicles as usize {
-                        iReadType = 16;
-                    }
-                } else if iReadType == 16 {
-                    //initial bonus items
-                    let mut tokens: VecDeque<&str> = tokenize(line, ',', usize::MAX).into();
-
-                    this.iNumInitialBonuses = 0;
-
-                    while !tokens.is_empty() {
-                        let token = pop_next(&mut tokens);
-                        if token.is_empty() {
-                            break;
-                        }
-
-                        let t0 = token.as_bytes()[0];
-
-                        //0 indicates no initial bonuses
-                        if t0 == b'0' {
-                            break;
-                        }
-
-                        let mut iBonusOffset: i16 = 0;
-                        if t0 == b'w' || t0 == b'W' {
-                            iBonusOffset += NUM_POWERUPS as i16;
-                        }
-
-                        let mut iBonus: i16 = (to_int(token.get(1..).unwrap_or("")) + iBonusOffset as i32) as i16;
-                        if iBonus < 0 || iBonus as i32 >= NUM_POWERUPS + NUM_WORLD_POWERUPS {
-                            iBonus = 0;
-                        }
-
-                        if this.iNumInitialBonuses < 32 {
-                            this.iInitialBonuses[this.iNumInitialBonuses as usize] = iBonus;
-                            this.iNumInitialBonuses += 1;
-                        } else {
-                            this.iInitialBonuses[31] = iBonus;
-                        }
-                    }
-
-                    iReadType = 17;
+                    iReadType = 12;
                 }
+            } else if iReadType == 12 {
+                //number of warps
+                iNumWarps = stoi(line) as i16;
+
+                if iNumWarps < 0 {
+                    iNumWarps = 0;
+                }
+
+                if iNumWarps > 0 {
+                    this.warps.reserve(iNumWarps as usize);
+                }
+
+                iReadType = if iNumWarps == 0 { 14 } else { 13 };
+            } else if iReadType == 13 {
+                //warp details
+                let mut tokens: VecDeque<&str> = tokenize(line, ',', usize::MAX).into();
+
+                let iCol1 = 0.max(pop_next_int(&mut tokens)) as i16;
+                let iRow1 = 0.max(pop_next_int(&mut tokens)) as i16;
+                let iCol2 = 0.max(pop_next_int(&mut tokens)) as i16;
+                let iRow2 = 0.max(pop_next_int(&mut tokens)) as i16;
+
+                let warpId = this.warps.len() as i16;
+                this.warps.push(WorldWarp::new(warpId, Vec2s::new(iCol1, iRow1), Vec2s::new(iCol2, iRow2)));
+
+                this.tiles.at_mut(iCol1 as usize, iRow1 as usize).iWarp = warpId;
+                this.tiles.at_mut(iCol2 as usize, iRow2 as usize).iWarp = warpId;
+
+                if this.warps.len() >= iNumWarps as usize {
+                    iReadType = 14;
+                }
+            } else if iReadType == 14 {
+                //number of vehicles
+                iNumVehicles = stoi(line) as i16;
+
+                if iNumVehicles < 0 {
+                    iNumVehicles = 0;
+                }
+
+                if iNumVehicles > 0 {
+                    this.vehicles.reserve(iNumVehicles as usize);
+                }
+
+                iReadType = if iNumVehicles == 0 { 16 } else { 15 };
+            } else if iReadType == 15 {
+                //vehicles
+                let mut tokens: VecDeque<&str> = tokenize(line, ',', usize::MAX).into();
+
+                let iSprite = pop_next_int(&mut tokens) as i16;
+
+                let mut iStage = pop_next_int(&mut tokens) as i16;
+                if iStage > this.iNumStages {
+                    iStage = 0;
+                }
+
+                let iCol = pop_next_int(&mut tokens) as i16;
+                let iRow = pop_next_int(&mut tokens) as i16;
+
+                let iMinMoves = 0.max(pop_next_int(&mut tokens)) as i16;
+                let iMaxMoves = iMinMoves.max(pop_next_int(&mut tokens) as i16);
+
+                let fSpritePaces = pop_next_int(&mut tokens) == 1;
+
+                let mut iInitialDirection = pop_next_int(&mut tokens) as i16;
+                if iInitialDirection != 0 {
+                    iInitialDirection = 1;
+                }
+
+                let iBoundary = pop_next_int(&mut tokens) as i16;
+
+                this.vehicles.push(WorldVehicle::new());
+                let iTileSize = this.iTileSize;
+                this.vehicles.last_mut().unwrap().init(iCol, iRow, iStage, iSprite, iMinMoves, iMaxMoves, fSpritePaces, iInitialDirection, iBoundary, iTileSize);
+
+                if this.vehicles.len() >= iNumVehicles as usize {
+                    iReadType = 16;
+                }
+            } else if iReadType == 16 {
+                //initial bonus items
+                let mut tokens: VecDeque<&str> = tokenize(line, ',', usize::MAX).into();
+
+                this.iNumInitialBonuses = 0;
+
+                while !tokens.is_empty() {
+                    let token = pop_next(&mut tokens);
+                    if token.is_empty() {
+                        break;
+                    }
+
+                    let t0 = token.as_bytes()[0];
+
+                    //0 indicates no initial bonuses
+                    if t0 == b'0' {
+                        break;
+                    }
+
+                    let mut iBonusOffset: i16 = 0;
+                    if t0 == b'w' || t0 == b'W' {
+                        iBonusOffset += NUM_POWERUPS as i16;
+                    }
+
+                    let mut iBonus: i16 = (to_int(token.get(1..).unwrap_or("")) + iBonusOffset as i32) as i16;
+                    if iBonus < 0 || iBonus as i32 >= NUM_POWERUPS + NUM_WORLD_POWERUPS {
+                        iBonus = 0;
+                    }
+
+                    if this.iNumInitialBonuses < 32 {
+                        this.iInitialBonuses[this.iNumInitialBonuses as usize] = iBonus;
+                        this.iNumInitialBonuses += 1;
+                    } else {
+                        this.iInitialBonuses[31] = iBonus;
+                    }
+                }
+
+                iReadType = 17;
             }
         }
 
@@ -1082,13 +1072,11 @@ impl WorldMap {
         file += "#Stage Type 0,Map,Mode,Goal,Points,Bonus List(Max 10),Name,End World, then mode settings (see sample tour file for details)\n";
         file += "#Stage Type 1,Bonus House Name,Sequential/Random Order,Display Text,Powerup List(Max 5)\n";
 
-        unsafe {
-            let _ = writeln!(file, "{}", g.game_values.tourstops.len() as i32);
+        let _ = writeln!(file, "{}", g.game_values.tourstops.len() as i32);
 
-            for iStage in 0..g.game_values.tourstops.len() {
-                let line = write_tour_stop_line(&g.game_values.tourstops[iStage], true);
-                file += &line;
-            }
+        for iStage in 0..g.game_values.tourstops.len() {
+            let line = write_tour_stop_line(&g.game_values.tourstops[iStage], true);
+            file += &line;
         }
         file += "\n";
 
@@ -1232,10 +1220,8 @@ impl WorldMap {
             }
         }
 
-        unsafe {
-            if fPlayMovingVehicleSound && !g.rm.sfx_boomerang.is_playing() {
-                if_sound_on_play(g, &mut gp.rm.sfx_boomerang);
-            }
+        if fPlayMovingVehicleSound && !g.rm.sfx_boomerang.is_playing() {
+            if_sound_on_play(g, &mut gp.rm.sfx_boomerang);
         }
 
         fPlayerDoneMove
@@ -1335,96 +1321,94 @@ impl WorldMap {
 
         iBackgroundSprite %= WORLD_BACKGROUND_SPRITE_SET_SIZE;
 
-        unsafe {
-            //The solid background tile is not animated, but all the rest are
-            if iLayer != 2 {
-                let bg = &g.rm.spr_worldbackground[sheet];
-                if iBackgroundSprite == 1 {
-                    let rSrc = Rect { x: ts + iBackgroundStyleOffset, y: ts, w: ts, h: ts };
-                    bg.draw_src_to(&rSrc, surface, &r);
-                } else {
-                    let mut rSrc = Rect { x: iAnimationFrame + ((iBackgroundWater as i32) << (2 + shift)), y: 0, w: ts, h: ts };
-                    bg.draw_src_to(&rSrc, surface, &r);
+        //The solid background tile is not animated, but all the rest are
+        if iLayer != 2 {
+            let bg = &g.rm.spr_worldbackground[sheet];
+            if iBackgroundSprite == 1 {
+                let rSrc = Rect { x: ts + iBackgroundStyleOffset, y: ts, w: ts, h: ts };
+                bg.draw_src_to(&rSrc, surface, &r);
+            } else {
+                let mut rSrc = Rect { x: iAnimationFrame + ((iBackgroundWater as i32) << (2 + shift)), y: 0, w: ts, h: ts };
+                bg.draw_src_to(&rSrc, surface, &r);
 
-                    if iBackgroundSprite >= 2 && iBackgroundSprite <= 48 {
-                        let b = iBackgroundSprite as i32;
-                        if iBackgroundSprite >= 45 {
-                            rSrc = Rect { x: (3 << shift) + iBackgroundStyleOffset, y: (b - 44) << shift, w: ts, h: ts };
-                            bg.draw_src_to(&rSrc, surface, &r);
-                        } else if iBackgroundSprite >= 30 {
-                            rSrc = Rect { x: (2 << shift) + iBackgroundStyleOffset, y: (b - 29) << shift, w: ts, h: ts };
-                            bg.draw_src_to(&rSrc, surface, &r);
-                        } else if iBackgroundSprite >= 16 {
-                            rSrc = Rect { x: ts + iBackgroundStyleOffset, y: (b - 14) << shift, w: ts, h: ts };
-                            bg.draw_src_to(&rSrc, surface, &r);
-                        } else {
-                            rSrc = Rect { x: iBackgroundStyleOffset, y: b << shift, w: ts, h: ts };
-                            bg.draw_src_to(&rSrc, surface, &r);
-                        }
+                if iBackgroundSprite >= 2 && iBackgroundSprite <= 48 {
+                    let b = iBackgroundSprite as i32;
+                    if iBackgroundSprite >= 45 {
+                        rSrc = Rect { x: (3 << shift) + iBackgroundStyleOffset, y: (b - 44) << shift, w: ts, h: ts };
+                        bg.draw_src_to(&rSrc, surface, &r);
+                    } else if iBackgroundSprite >= 30 {
+                        rSrc = Rect { x: (2 << shift) + iBackgroundStyleOffset, y: (b - 29) << shift, w: ts, h: ts };
+                        bg.draw_src_to(&rSrc, surface, &r);
+                    } else if iBackgroundSprite >= 16 {
+                        rSrc = Rect { x: ts + iBackgroundStyleOffset, y: (b - 14) << shift, w: ts, h: ts };
+                        bg.draw_src_to(&rSrc, surface, &r);
+                    } else {
+                        rSrc = Rect { x: iBackgroundStyleOffset, y: b << shift, w: ts, h: ts };
+                        bg.draw_src_to(&rSrc, surface, &r);
                     }
                 }
             }
+        }
 
-            if iLayer != 1 {
-                let special = &g.rm.spr_worldforegroundspecial[sheet];
-                if tile.iCompleted >= 0 {
-                    let rSrc = Rect { x: (tile.iCompleted as i32 + 10) << shift, y: 5 << shift, w: ts, h: ts };
-                    special.draw_src_to(&rSrc, surface, &r);
-                } else if iForegroundSprite >= 0 && iForegroundSprite < WORLD_FOREGROUND_STAGE_OFFSET {
-                    let paths = &g.rm.spr_worldpaths[sheet];
-                    let iPathStyle = iForegroundSprite / WORLD_PATH_SPRITE_SET_SIZE;
-                    let iPathOffsetX = ((iPathStyle as i32 % 4) * (5 << shift)) as i16 as i32;
-                    let iPathOffsetY = ((iPathStyle as i32 >> 2) * (10 << shift)) as i16 as i32;
-                    iForegroundSprite %= WORLD_PATH_SPRITE_SET_SIZE;
-                    let f = iForegroundSprite as i32;
+        if iLayer != 1 {
+            let special = &g.rm.spr_worldforegroundspecial[sheet];
+            if tile.iCompleted >= 0 {
+                let rSrc = Rect { x: (tile.iCompleted as i32 + 10) << shift, y: 5 << shift, w: ts, h: ts };
+                special.draw_src_to(&rSrc, surface, &r);
+            } else if iForegroundSprite >= 0 && iForegroundSprite < WORLD_FOREGROUND_STAGE_OFFSET {
+                let paths = &g.rm.spr_worldpaths[sheet];
+                let iPathStyle = iForegroundSprite / WORLD_PATH_SPRITE_SET_SIZE;
+                let iPathOffsetX = ((iPathStyle as i32 % 4) * (5 << shift)) as i16 as i32;
+                let iPathOffsetY = ((iPathStyle as i32 >> 2) * (10 << shift)) as i16 as i32;
+                iForegroundSprite %= WORLD_PATH_SPRITE_SET_SIZE;
+                let f = iForegroundSprite as i32;
 
-                    if iForegroundSprite == 1 || iForegroundSprite == 2 {
-                        //Non-animated straight paths
-                        let rSrc = Rect { x: iPathOffsetX, y: ((f - 1) << shift) + iPathOffsetY, w: ts, h: ts };
-                        paths.draw_src_to(&rSrc, surface, &r);
-                    } else if iForegroundSprite >= 3 && iForegroundSprite <= 10 {
-                        //Animated paths with "coins" in them
-                        let rSrc = Rect { x: iPathOffsetX + iAnimationFrame, y: ((f - 1) << shift) + iPathOffsetY, w: ts, h: ts };
-                        paths.draw_src_to(&rSrc, surface, &r);
-                    } else if iForegroundSprite >= 11 && iForegroundSprite <= 18 {
-                        //Non-animated straight paths over water
-                        let iSpriteX = ((((f - 11) / 2) + 1) << shift) as i16 as i32;
-                        let iSpriteY = (((f - 11) % 2) << shift) as i16 as i32;
+                if iForegroundSprite == 1 || iForegroundSprite == 2 {
+                    //Non-animated straight paths
+                    let rSrc = Rect { x: iPathOffsetX, y: ((f - 1) << shift) + iPathOffsetY, w: ts, h: ts };
+                    paths.draw_src_to(&rSrc, surface, &r);
+                } else if iForegroundSprite >= 3 && iForegroundSprite <= 10 {
+                    //Animated paths with "coins" in them
+                    let rSrc = Rect { x: iPathOffsetX + iAnimationFrame, y: ((f - 1) << shift) + iPathOffsetY, w: ts, h: ts };
+                    paths.draw_src_to(&rSrc, surface, &r);
+                } else if iForegroundSprite >= 11 && iForegroundSprite <= 18 {
+                    //Non-animated straight paths over water
+                    let iSpriteX = ((((f - 11) / 2) + 1) << shift) as i16 as i32;
+                    let iSpriteY = (((f - 11) % 2) << shift) as i16 as i32;
 
-                        let rSrc = Rect { x: iPathOffsetX + iSpriteX, y: iSpriteY + iPathOffsetY, w: ts, h: ts };
-                        paths.draw_src_to(&rSrc, surface, &r);
-                    }
-                } else if iForegroundSprite >= WORLD_FOREGROUND_STAGE_OFFSET && iForegroundSprite <= WORLD_FOREGROUND_STAGE_OFFSET + 399 {
-                    let iTileColor = (iForegroundSprite - WORLD_FOREGROUND_STAGE_OFFSET) / 100;
-                    let mut rSrc = Rect { x: (10 << shift) + iAnimationFrame, y: (iTileColor as i32) << shift, w: ts, h: ts };
-                    special.draw_src_to(&rSrc, surface, &r);
-
-                    let iTileNumber = (iForegroundSprite - WORLD_FOREGROUND_STAGE_OFFSET) % 100;
-                    rSrc.x = ((iTileNumber % 10) as i32) << shift;
-                    rSrc.y = ((iTileNumber / 10) as i32) << shift;
-                    special.draw_src_to(&rSrc, surface, &r);
-                } else if iForegroundSprite >= WORLD_BRIDGE_SPRITE_OFFSET && iForegroundSprite <= WORLD_BRIDGE_SPRITE_OFFSET + 3 {
-                    let rSrc = Rect { x: ((iForegroundSprite - WORLD_BRIDGE_SPRITE_OFFSET + 10) as i32) << shift, y: 7 << shift, w: ts, h: ts };
-                    special.draw_src_to(&rSrc, surface, &r);
-                } else if iForegroundSprite >= WORLD_START_SPRITE_OFFSET && iForegroundSprite <= WORLD_START_SPRITE_OFFSET + 1 {
-                    let rSrc = Rect { x: ((iForegroundSprite - WORLD_START_SPRITE_OFFSET + 10) as i32) << shift, y: 4 << shift, w: ts, h: ts };
-                    special.draw_src_to(&rSrc, surface, &r);
-                } else if iForegroundSprite >= WORLD_FOREGROUND_SPRITE_OFFSET && iForegroundSprite <= WORLD_FOREGROUND_SPRITE_OFFSET + 179 {
-                    let iSprite = (iForegroundSprite - WORLD_FOREGROUND_SPRITE_OFFSET) as i32;
-                    let rSrc = Rect { x: (iSprite % 12) << shift, y: (iSprite / 12) << shift, w: ts, h: ts };
-                    g.rm.spr_worldforeground[sheet].draw_src_to(&rSrc, surface, &r);
-                } else if iForegroundSprite >= WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET && iForegroundSprite <= WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET + 29 {
-                    let iSprite = (iForegroundSprite - WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET) as i32;
-                    let rSrc = Rect { x: (if iSprite >= 15 { 16 << shift } else { 12 << shift }) + iAnimationFrame, y: (iSprite % 15) << shift, w: ts, h: ts };
-                    g.rm.spr_worldforeground[sheet].draw_src_to(&rSrc, surface, &r);
+                    let rSrc = Rect { x: iPathOffsetX + iSpriteX, y: iSpriteY + iPathOffsetY, w: ts, h: ts };
+                    paths.draw_src_to(&rSrc, surface, &r);
                 }
+            } else if iForegroundSprite >= WORLD_FOREGROUND_STAGE_OFFSET && iForegroundSprite <= WORLD_FOREGROUND_STAGE_OFFSET + 399 {
+                let iTileColor = (iForegroundSprite - WORLD_FOREGROUND_STAGE_OFFSET) / 100;
+                let mut rSrc = Rect { x: (10 << shift) + iAnimationFrame, y: (iTileColor as i32) << shift, w: ts, h: ts };
+                special.draw_src_to(&rSrc, surface, &r);
 
-                //Draw doors
-                let iType = tile.iType;
-                if iType >= 2 && iType <= 5 {
-                    let rSrc = Rect { x: (iType as i32 + 8) << shift, y: 6 << shift, w: ts, h: ts };
-                    special.draw_src_to(&rSrc, surface, &r);
-                }
+                let iTileNumber = (iForegroundSprite - WORLD_FOREGROUND_STAGE_OFFSET) % 100;
+                rSrc.x = ((iTileNumber % 10) as i32) << shift;
+                rSrc.y = ((iTileNumber / 10) as i32) << shift;
+                special.draw_src_to(&rSrc, surface, &r);
+            } else if iForegroundSprite >= WORLD_BRIDGE_SPRITE_OFFSET && iForegroundSprite <= WORLD_BRIDGE_SPRITE_OFFSET + 3 {
+                let rSrc = Rect { x: ((iForegroundSprite - WORLD_BRIDGE_SPRITE_OFFSET + 10) as i32) << shift, y: 7 << shift, w: ts, h: ts };
+                special.draw_src_to(&rSrc, surface, &r);
+            } else if iForegroundSprite >= WORLD_START_SPRITE_OFFSET && iForegroundSprite <= WORLD_START_SPRITE_OFFSET + 1 {
+                let rSrc = Rect { x: ((iForegroundSprite - WORLD_START_SPRITE_OFFSET + 10) as i32) << shift, y: 4 << shift, w: ts, h: ts };
+                special.draw_src_to(&rSrc, surface, &r);
+            } else if iForegroundSprite >= WORLD_FOREGROUND_SPRITE_OFFSET && iForegroundSprite <= WORLD_FOREGROUND_SPRITE_OFFSET + 179 {
+                let iSprite = (iForegroundSprite - WORLD_FOREGROUND_SPRITE_OFFSET) as i32;
+                let rSrc = Rect { x: (iSprite % 12) << shift, y: (iSprite / 12) << shift, w: ts, h: ts };
+                g.rm.spr_worldforeground[sheet].draw_src_to(&rSrc, surface, &r);
+            } else if iForegroundSprite >= WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET && iForegroundSprite <= WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET + 29 {
+                let iSprite = (iForegroundSprite - WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET) as i32;
+                let rSrc = Rect { x: (if iSprite >= 15 { 16 << shift } else { 12 << shift }) + iAnimationFrame, y: (iSprite % 15) << shift, w: ts, h: ts };
+                g.rm.spr_worldforeground[sheet].draw_src_to(&rSrc, surface, &r);
+            }
+
+            //Draw doors
+            let iType = tile.iType;
+            if iType >= 2 && iType <= 5 {
+                let rSrc = Rect { x: (iType as i32 + 8) << shift, y: 6 << shift, w: ts, h: ts };
+                special.draw_src_to(&rSrc, surface, &r);
             }
         }
     }
@@ -1503,7 +1487,7 @@ impl WorldMap {
     }
 
     pub fn get_vehicle_stage_score(&self, g: &mut Game, iVehicleIndex: i16) -> i16 {
-        unsafe { g.game_values.tourstops[self.vehicles[iVehicleIndex as usize].iActionId as usize].iPoints }
+        g.game_values.tourstops[self.vehicles[iVehicleIndex as usize].iActionId as usize].iPoints
     }
 
     pub fn get_warp_in_player_tile(&self, iWarpCol: &mut i16, iWarpRow: &mut i16) -> bool {
@@ -1772,13 +1756,11 @@ impl WorldMap {
     }
 
     pub fn set_initial_powerups(&self, g: &mut Game) {
-        unsafe {
-            for iTeam in 0..4usize {
-                g.game_values.worldpowerupcount[iTeam] = self.iNumInitialBonuses;
+        for iTeam in 0..4usize {
+            g.game_values.worldpowerupcount[iTeam] = self.iNumInitialBonuses;
 
-                for iItem in 0..self.iNumInitialBonuses as usize {
-                    g.game_values.worldpowerups[iTeam][iItem] = self.iInitialBonuses[iItem];
-                }
+            for iItem in 0..self.iNumInitialBonuses as usize {
+                g.game_values.worldpowerups[iTeam][iItem] = self.iInitialBonuses[iItem];
             }
         }
     }

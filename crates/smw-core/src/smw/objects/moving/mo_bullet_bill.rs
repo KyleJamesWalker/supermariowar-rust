@@ -93,7 +93,7 @@ impl MO_BulletBill {
             }
 
             o.iPlayerID = playerID;
-            o.iColorID = unsafe { g.game_values.colorids[o.iPlayerID as usize] };
+            o.iColorID = g.game_values.colorids[o.iPlayerID as usize];
             o.iTeamID = lookup_team_id(g, o.iPlayerID);
         }
 
@@ -124,17 +124,15 @@ impl MO_BulletBill {
 
     pub fn hittop(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         let mut gp = g.ptr();
-        unsafe {
-            let mut p = player;
-            p.set_yi((self.iy as i32 - PH - 1) as i16);
-            p.bouncejump();
-            p.get().collisions.checktop(g, player.get());
-            p.platform = Ptr::null();
+        let mut p = player;
+        p.set_yi((self.iy as i32 - PH - 1) as i16);
+        p.bouncejump();
+        p.get().collisions.checktop(g, player.get());
+        p.platform = Ptr::null();
 
-            p.add_killer_award(g, Ptr::null(), KillStyle::BulletBill);
+        p.add_killer_award(g, Ptr::null(), KillStyle::BulletBill);
 
-            if_sound_on_play(g, &mut gp.rm.sfx_mip);
-        }
+        if_sound_on_play(g, &mut gp.rm.sfx_mip);
 
         self.die(g);
 
@@ -142,18 +140,16 @@ impl MO_BulletBill {
     }
 
     pub fn hitother(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
-        unsafe {
-            if player.is_shielded() || player.globalID == self.iPlayerID {
-                return false;
-            }
-
-            if g.game_values.teamcollision != TeamCollisionStyle::On && self.iTeamID == player.teamID {
-                return false;
-            }
-
-            // Find the player that owns this bullet bill so we can attribute a kill
-            player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::BulletBill, false, false);
+        if player.is_shielded() || player.globalID == self.iPlayerID {
+            return false;
         }
+
+        if g.game_values.teamcollision != TeamCollisionStyle::On && self.iTeamID == player.teamID {
+            return false;
+        }
+
+        // Find the player that owns this bullet bill so we can attribute a kill
+        player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::BulletBill, false, false);
 
         true
     }
@@ -214,9 +210,7 @@ impl CObjectTrait for MO_BulletBill {
 
         if player.is_invincible() || player.shyguy {
             player.add_killer_award(g, Ptr::null(), KillStyle::BulletBill);
-            unsafe {
-                if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
-            }
+            if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
 
             self.die(g);
         } else {
@@ -233,72 +227,70 @@ impl CObjectTrait for MO_BulletBill {
     fn collide_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) {
         let mut gp = g.ptr();
         let mut rm = g.rm;
-        unsafe {
-            removeifprojectile(g, object, true, false);
+        removeifprojectile(g, object, true, false);
 
-            let r#type: MovingObjectType = object.get_moving_object_type();
+        let r#type: MovingObjectType = object.get_moving_object_type();
 
-            if r#type == movingobject_bulletbill {
-                let bulletbill = object.as_any().downcast_mut::<MO_BulletBill>().unwrap();
+        if r#type == movingobject_bulletbill {
+            let bulletbill = object.as_any().downcast_mut::<MO_BulletBill>().unwrap();
 
-                // Same team bullet bills don't kill each other
-                if bulletbill.iTeamID == self.iTeamID {
-                    return;
-                }
-
-                bulletbill.dead = true;
-                self.dead = true;
-
-                let ix = self.ix as i32;
-                let iy = self.iy as i32;
-                let bix = bulletbill.ix as i32;
-                let biy = bulletbill.iy as i32;
-
-                let mut iOffsetX: i16 = 0;
-                if ix + (self.iw as i32) < bix {
-                    iOffsetX = App::screenWidth as i16;
-                } else if bix + (bulletbill.iw as i32) < ix {
-                    iOffsetX = -App::screenWidth as i16;
-                }
-
-                let iCenterX: i16 = (((ix + iOffsetX as i32 - bix) >> 1) + (bix + (bulletbill.iw as i32 >> 1))) as i16;
-                let iCenterY: i16 = (((iy - biy) >> 1) + (biy + (bulletbill.ih as i32 >> 1))) as i16;
-
-                let obj = Ptr::new_box(MO_Explosion::new(
-                    g,
-                    Ptr::from_mut(&mut rm.spr_explosion),
-                    Vec2s::new((iCenterX as i32 - 96) as i16, (iCenterY as i32 - 64) as i16),
-                    2,
-                    4,
-                    -1,
-                    -1,
-                    KillStyle::BulletBill,
-                ));
-                gp.objectcontainer[2].add(g, obj);
-                if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
-            } else if r#type == movingobject_shell
-                || r#type == movingobject_throwblock
-                || r#type == movingobject_throwbox
-                || r#type == movingobject_attackzone
-                || r#type == movingobject_explosion
-            {
-                // Don't kill things with shells that are sitting still
-                if r#type == movingobject_shell && object.get_state() == 2 {
-                    return;
-                }
-
-                // Don't kill things with boxesx that aren't moving fast enough
-                if r#type == movingobject_throwbox && !object.as_any().downcast_mut::<CO_ThrowBox>().unwrap().has_kill_velocity() {
-                    return;
-                }
-
-                if r#type != movingobject_explosion {
-                    object.die(g);
-                }
-
-                if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
-                self.die(g);
+            // Same team bullet bills don't kill each other
+            if bulletbill.iTeamID == self.iTeamID {
+                return;
             }
+
+            bulletbill.dead = true;
+            self.dead = true;
+
+            let ix = self.ix as i32;
+            let iy = self.iy as i32;
+            let bix = bulletbill.ix as i32;
+            let biy = bulletbill.iy as i32;
+
+            let mut iOffsetX: i16 = 0;
+            if ix + (self.iw as i32) < bix {
+                iOffsetX = App::screenWidth as i16;
+            } else if bix + (bulletbill.iw as i32) < ix {
+                iOffsetX = -App::screenWidth as i16;
+            }
+
+            let iCenterX: i16 = (((ix + iOffsetX as i32 - bix) >> 1) + (bix + (bulletbill.iw as i32 >> 1))) as i16;
+            let iCenterY: i16 = (((iy - biy) >> 1) + (biy + (bulletbill.ih as i32 >> 1))) as i16;
+
+            let obj = Ptr::new_box(MO_Explosion::new(
+                g,
+                Ptr::from_mut(&mut rm.spr_explosion),
+                Vec2s::new((iCenterX as i32 - 96) as i16, (iCenterY as i32 - 64) as i16),
+                2,
+                4,
+                -1,
+                -1,
+                KillStyle::BulletBill,
+            ));
+            gp.objectcontainer[2].add(g, obj);
+            if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
+        } else if r#type == movingobject_shell
+            || r#type == movingobject_throwblock
+            || r#type == movingobject_throwbox
+            || r#type == movingobject_attackzone
+            || r#type == movingobject_explosion
+        {
+            // Don't kill things with shells that are sitting still
+            if r#type == movingobject_shell && object.get_state() == 2 {
+                return;
+            }
+
+            // Don't kill things with boxesx that aren't moving fast enough
+            if r#type == movingobject_throwbox && !object.as_any().downcast_mut::<CO_ThrowBox>().unwrap().has_kill_velocity() {
+                return;
+            }
+
+            if r#type != movingobject_explosion {
+                object.die(g);
+            }
+
+            if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
+            self.die(g);
         }
     }
 }
@@ -308,20 +300,18 @@ impl IO_MovingObjectTrait for MO_BulletBill {
 
     fn die(&mut self, g: &mut Game) {
         self.dead = true;
-        unsafe {
-            g.eyecandy[2].emplace(EC_FallingObject::new(
-                self.spr_dead,
-                self.ix,
-                self.iy,
-                0.0,
-                -VELJUMP / 2.0f32,
-                1,
-                0,
-                if self.velx > 0.0 { 0 } else { 32 },
-                (self.iColorID as i32 * 32) as i16,
-                32,
-                32,
-            ));
-        }
+        g.eyecandy[2].emplace(EC_FallingObject::new(
+            self.spr_dead,
+            self.ix,
+            self.iy,
+            0.0,
+            -VELJUMP / 2.0f32,
+            1,
+            0,
+            if self.velx > 0.0 { 0 } else { 32 },
+            (self.iColorID as i32 * 32) as i16,
+            32,
+            32,
+        ));
     }
 }
