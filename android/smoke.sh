@@ -37,6 +37,7 @@ for replay in "${replays[@]}"; do
 
     sleep 5
     elapsed=5
+    pid="$(adb shell pidof "$pkg" | tr -d '\r')"
     while [[ -n "$(adb shell pidof "$pkg" | tr -d '\r')" ]]; do
         if ((elapsed >= timeout_s)); then
             echo "still running after ${timeout_s}s"
@@ -47,7 +48,12 @@ for replay in "${replays[@]}"; do
         elapsed=$((elapsed + 5))
     done
 
-    adb logcat -d > "$out/$name/logcat.txt"
+    # Only the game's own lines: logcat holds every process on the device.
+    if [[ -n "$pid" ]]; then
+        adb logcat -d --pid="$pid" > "$out/$name/logcat.txt"
+    else
+        adb logcat -d -s smw SDL > "$out/$name/logcat.txt"
+    fi
     adb exec-out run-as "$pkg" cat "$dir/dump.txt" > "$out/$name/dump.txt"
     adb exec-out run-as "$pkg" tar -C "$dir/shots" -cf - . | tar -xf - -C "$out/$name"
     if grep -E 'FATAL EXCEPTION|Fatal signal' "$out/$name/logcat.txt" || ! grep -q 'Finished main function' "$out/$name/logcat.txt"; then
