@@ -114,6 +114,7 @@ pub struct Game {
     pub pad: PadState,
     #[cfg(not(target_os = "emscripten"))]
     pub touch: TouchState,
+    pub input: crate::smw::input::InputQueue,
     pub services: Option<smw_platform::Services>,
     pub gfx: Global<GraphicsSDL>,
     pub gfx_palette: Global<gfxPalette>,
@@ -204,6 +205,7 @@ impl Game {
             pad: PadState::new(),
             #[cfg(not(target_os = "emscripten"))]
             touch: TouchState::new(),
+            input: crate::smw::input::InputQueue::new(),
             services: None,
             gfx: Global::uninit(),
             gfx_palette: Global::uninit(),

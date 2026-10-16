@@ -4,7 +4,7 @@
 
 use crate::common::keys::*;
 use crate::game::Game;
-use smw_platform::{Input, InputEvent, Overlay, OverlayImage, OverlayQuad, SCREEN_H, SCREEN_W};
+use smw_platform::{Input, InputEvent, Overlay, TouchPhase, OverlayImage, OverlayQuad, SCREEN_H, SCREEN_W};
 use std::sync::Arc;
 use crate::common::path::get_home_directory;
 use sdl2::sys::{SDL_Event, SDL_EventType, SDL_GetKeyboardFocus, SDL_GetScancodeFromKey, SDL_PRESSED, SDL_RELEASED};
@@ -357,13 +357,12 @@ pub struct TouchState {
     touch: Option<Touch>,
     session_on: bool,
     first: bool,
-    pushing: bool,
     debug: bool,
 }
 
 impl TouchState {
     pub const fn new() -> Self {
-        TouchState { touch: None, session_on: false, first: false, pushing: false, debug: false }
+        TouchState { touch: None, session_on: false, first: false, debug: false }
     }
 }
 
@@ -420,61 +419,57 @@ pub fn touch_first(g: &mut Game) -> bool {
     st(gp.get()).first
 }
 
-/// False: drop the event. Called before the recorder sees the event.
-pub fn filter(g: &mut Game, event: &SDL_Event) -> bool {
+/// False: drop the input. `input::poll` calls it on live input before the recorder sees it.
+pub fn filter(g: &mut Game, input: &Input) -> bool {
     let mut gp = g.ptr();
-    use SDL_EventType::*;
-    unsafe {
-        let Some(t) = st(gp.get()).touch.as_mut() else { return true };
-        let ty = event.type_;
-        if ty == SDL_FINGERDOWN as u32 || ty == SDL_FINGERMOTION as u32 || ty == SDL_FINGERUP as u32 {
-            let l = t.controls.layout;
-            if l.w <= 0.0 {
-                return false;
-            }
-            let f = event.tfinger;
-            let (x, y) = (f.x * l.w, f.y * l.h);
-            if st(gp.get()).debug {
-                println!("[touch] finger {} type {:#x} at {:.0},{:.0} of {}x{}", f.fingerId, ty, x, y, l.w, l.h);
-            }
-            if ty == SDL_FINGERDOWN as u32 {
-                t.visible = true;
-                t.controls.down(g, f.fingerId, x, y);
-            } else if ty == SDL_FINGERMOTION as u32 {
-                t.controls.moved(f.fingerId, x, y);
-            } else {
-                t.controls.up(g, f.fingerId, x, y);
-            }
+    let Some(t) = st(gp.get()).touch.as_mut() else { return true };
+    if let InputEvent::Touch { finger, phase, x, y, .. } = input.event {
+        let l = t.controls.layout;
+        if l.w <= 0.0 {
             return false;
         }
-        let other_input = (ty == SDL_KEYDOWN as u32 && !st(gp.get()).pushing && event.key.keysym.sym != SDLK_AC_BACK)
-            || ty == SDL_JOYBUTTONDOWN as u32
-            || (ty == SDL_JOYHATMOTION as u32 && event.jhat.value != 0)
-            || (ty == SDL_JOYAXISMOTION as u32 && (event.jaxis.value as i32).abs() > 16384);
-        if other_input && t.visible {
-            t.visible = false;
-            t.controls.release_all();
+        let (x, y) = (x * l.w, y * l.h);
+        if st(gp.get()).debug {
+            println!("[touch] finger {} {:?} at {:.0},{:.0} of {}x{}", finger, phase, x, y, l.w, l.h);
         }
-        true
+        match phase {
+            TouchPhase::Down => {
+                t.visible = true;
+                t.controls.down(g, finger, x, y);
+            }
+            TouchPhase::Motion => t.controls.moved(finger, x, y),
+            TouchPhase::Up => t.controls.up(g, finger, x, y),
+        }
+        return false;
     }
+    let other_input = match input.event {
+        InputEvent::Key { key, down: true, .. } => key.0 != SDLK_AC_BACK,
+        InputEvent::PadButton { down: true, .. } => true,
+        InputEvent::PadHat { value, .. } => value != 0,
+        InputEvent::PadAxis { value, .. } => (value as i32).abs() > 16384,
+        _ => false,
+    };
+    if other_input && t.visible {
+        t.visible = false;
+        t.controls.release_all();
+    }
+    true
 }
 
-/// Pushes the keys the fingers changed. Not from inside an event filter.
+/// Queues the keys and taps the fingers made.
 pub fn flush(g: &mut Game) {
     let mut gp = g.ptr();
     let Some(t) = st(gp.get()).touch.as_mut() else { return };
     if !crate::services::services(gp.get()).keyboard.has_focus() {
         t.controls.release_all();
     }
-    st(gp.get()).pushing = true;
     for (key, down) in std::mem::take(&mut t.controls.queue) {
         let scancode = crate::services::services(gp.get()).keyboard.scancode_from_key(key.sym());
         let event = InputEvent::Key { key: smw_platform::Keycode(key.sym()), scancode, mods: 0, down, repeat: false, window: 0 };
-        crate::services::services(gp.get()).events.push(&Input { timestamp: 0, event });
+        crate::smw::input::push_touch(gp.get(), Input { timestamp: 0, event });
     }
-    st(gp.get()).pushing = false;
     for (x, y) in std::mem::take(&mut t.controls.taps) {
-        crate::services::services(gp.get()).events.push(&Input { timestamp: 0, event: InputEvent::Tap { x, y } });
+        crate::smw::input::push_touch(gp.get(), Input { timestamp: 0, event: InputEvent::Tap { x, y } });
     }
 }
 

@@ -126,7 +126,6 @@ pub fn init(g: &mut Game, translate: bool) {
             }
         }
 
-        // The recorder's filter calls translate itself.
         let mut current: SDL_EventFilter = None;
         let mut userdata = std::ptr::null_mut();
         if (st(gp.get()).debug_input || translate || st(gp.get()).pads.iter().any(|p| p.controller)) && smw_sdl2::events::get_filter(&mut current, &mut userdata) == SDL_bool::SDL_FALSE {
@@ -372,14 +371,11 @@ unsafe extern "C" fn filter(userdata: *mut std::ffi::c_void, event: *mut SDL_Eve
 }
 
 /// Rewrites a controller's raw joystick event in place as the joystick event the game reads. False: drop the event.
-pub fn translate(g: &mut Game, event: &mut SDL_Event) -> bool {
+fn translate(g: &mut Game, event: &mut SDL_Event) -> bool {
     let mut gp = g.ptr();
     use SDL_EventType::*;
     unsafe {
         log_event(g, 0, event);
-        if !crate::smw::touch::filter(g, event) {
-            return false;
-        }
         let t = event.type_;
         let keep = if t == SDL_CONTROLLERBUTTONDOWN as u32 || t == SDL_CONTROLLERBUTTONUP as u32 || t == SDL_CONTROLLERAXISMOTION as u32 {
             !st(gp.get()).pads.iter().any(|p| p.controller)

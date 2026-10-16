@@ -2306,7 +2306,7 @@ impl GameplayState {
         let menu_controls = if g.game_values.flags.exitinggame { 1 } else { 0 };
         g.game_values.playerInput.clear_pressed_keys(menu_controls);
 
-        while let Some(input) = crate::services::services(gp.get()).events.poll() {
+        while let Some(input) = crate::smw::input::poll(gp.get()) {
             if input.event == InputEvent::Quit {
                 clean_up(g);
                 g.game_values.appstate = AppState::Quit;

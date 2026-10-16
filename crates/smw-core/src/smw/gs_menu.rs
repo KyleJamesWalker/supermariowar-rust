@@ -1647,7 +1647,7 @@ impl GameState for MenuState {
             //handle messages
             #[cfg(target_os = "emscripten")]
             g.frame_events.clear();
-            while let Some(input) = crate::services::services(gp.get()).events.poll() {
+            while let Some(input) = crate::smw::input::poll(gp.get()) {
                 #[cfg(target_os = "emscripten")]
                 g.frame_events.push(input.clone());
                 if input.event == InputEvent::Quit {
