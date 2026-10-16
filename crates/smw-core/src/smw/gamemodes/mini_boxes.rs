@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/MiniBoxes.cpp
 
+use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::game_mode::{game_mode_boxes_minigame, CGameMode, CGameModeTrait};
 use crate::common::game_values::if_sound_on_play;
@@ -41,12 +42,12 @@ impl CGM_Boxes_MiniGame {
         this
     }
 
-    fn release_coin(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) {
+    fn release_coin(&mut self, g: &mut Game, mut player: PlayerId) {
         let mut gp = g.ptr();
-        if player.score().subscore[0] > 0 {
-            player.score().subscore[0] -= 1;
+        if g.player(player).score().subscore[0] > 0 {
+            g.player(player).score().subscore[0] -= 1;
 
-            let pos = Vec2s::new((player.center_x() as i32 - 16) as i16, (player.center_y() as i32 - 16) as i16);
+            let pos = Vec2s::new((g.player(player).center_x() as i32 - 16) as i16, (g.player(player).center_y() as i32 - 16) as i16);
 
             let speed: f32 = 7.0f32 + RANDOM_INT(gp.get(), 9) as f32 / 2.0f32;
             let angle: f32 = -(RANDOM_INT(gp.get(), 314) as f32) / 100.0f32;
@@ -59,8 +60,8 @@ impl CGM_Boxes_MiniGame {
         }
     }
 
-    fn release_all_coins_from_team(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) {
-        while player.score().subscore[0] > 0 {
+    fn release_all_coins_from_team(&mut self, g: &mut Game, mut player: PlayerId) {
+        while g.player(player).score().subscore[0] > 0 {
             self.release_coin(g, player);
         }
     }
@@ -95,19 +96,19 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
         }
     }
 
-    fn playerkilledplayer(&mut self, g: &mut Game, mut inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, mut inflictor: PlayerId, mut other: PlayerId, _style: KillStyle) -> PlayerKillType {
         if self.gameover {
             return PlayerKillType::Normal;
         }
 
         self.release_coin(g, other);
 
-        other.score().adjust_score(g, -1);
+        g.player(other).score().adjust_score(g, -1);
 
         if !self.playedwarningsound {
             let mut countscore: i16 = 0;
             for k in 0..g.score_cnt as usize {
-                if Ptr::from_mut(inflictor.score()) == g.score[k] {
+                if Ptr::from_mut(g.player(inflictor).score()) == g.score[k] {
                     continue;
                 }
 
@@ -119,23 +120,23 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
             }
         }
 
-        if other.score().score <= 0 {
+        if g.player(other).score().score <= 0 {
             self.release_all_coins_from_team(g, other);
-            remove_team(g, other.get_team_id());
+            remove_team(g, g.player(other).get_team_id());
             return PlayerKillType::Removed;
         }
 
         PlayerKillType::Normal
     }
 
-    fn playerkilledself(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, mut player: PlayerId, _style: KillStyle) -> PlayerKillType {
         if self.gameover {
             return PlayerKillType::Normal;
         }
 
         self.release_coin(g, player);
 
-        player.score().adjust_score(g, -1);
+        g.player(player).score().adjust_score(g, -1);
 
         if !self.playedwarningsound {
             let mut countscore: i16 = 0;
@@ -162,34 +163,34 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
             }
         }
 
-        if player.score().score <= 0 {
+        if g.player(player).score().score <= 0 {
             self.release_all_coins_from_team(g, player);
-            remove_team(g, player.get_team_id());
+            remove_team(g, g.player(player).get_team_id());
             return PlayerKillType::Removed;
         }
 
         PlayerKillType::Normal
     }
 
-    fn playerextraguy(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, mut player: PlayerId, iType: i16) {
         if self.gameover {
             return;
         }
 
-        player.score().adjust_score(g, iType);
+        g.player(player).score().adjust_score(g, iType);
     }
 
-    fn check_winner(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> PlayerKillType {
-        if player.score().subscore[0] >= 5 {
-            player.score().subscore[0] = 5;
+    fn check_winner(&mut self, g: &mut Game, mut player: PlayerId) -> PlayerKillType {
+        if g.player(player).score().subscore[0] >= 5 {
+            g.player(player).score().subscore[0] = 5;
 
-            self.winningteam = player.get_team_id();
+            self.winningteam = g.player(player).get_team_id();
             self.gameover = true;
 
             remove_players_but_team(g, self.winningteam);
             setup_score_board(g, false);
             show_score_board(g);
-        } else if player.score().subscore[0] >= 4 && !self.playedwarningsound {
+        } else if g.player(player).score().subscore[0] >= 4 && !self.playedwarningsound {
             self.playwarningsound(g);
         }
 

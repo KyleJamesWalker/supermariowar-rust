@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_BowserFire.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -52,10 +53,10 @@ impl CObjectTrait for OMO_BowserFire {
         io_over_map_object_update(self);
 
         if (self.velx < 0.0 && (self.ix as i32) < -(self.iw as i32)) || (self.velx > 0.0 && self.ix as i32 > App::screenWidth) {
-            let mut player: Ptr<CPlayer> = get_player_from_global_id(g, self.iPlayerID);
+            let mut player: PlayerId = get_player_from_global_id(g, self.iPlayerID);
 
-            if !player.is_null() {
-                player.decrease_projectiles_count();
+            if !player.is_none() {
+                g.player(player).decrease_projectiles_count();
             }
 
             self.dead = true;
@@ -71,17 +72,17 @@ impl CObjectTrait for OMO_BowserFire {
         );
     }
 
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let ix = self.ix as i32;
         let iw = self.iw as i32;
-        let pix = player.ix as i32;
+        let pix = g.player(player).ix as i32;
 
         // if the fire is off the screen, don't wrap it to collide
         if (ix < 0 && self.velx < 0.0f32 && pix > ix + iw && pix + PW < App::screenWidth) || (ix + iw >= App::screenWidth && self.velx > 0.0f32 && pix + PW < ix && pix >= 0) {
             return false;
         }
 
-        if player.globalID != self.iPlayerID && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID) && !player.is_invincible() && !player.is_shielded() {
+        if g.player(player).globalID != self.iPlayerID && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != g.player(player).teamID) && !g.player(player).is_invincible() && !g.player(player).is_shielded() {
             // Find the player that made this explosion so we can attribute a kill
             player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Fireball, false, false);
             return true;

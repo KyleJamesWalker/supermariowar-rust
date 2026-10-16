@@ -1,5 +1,6 @@
 //! Port of src/smw/player_components/PlayerAwardEffects.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::{EC_ExplodingAward, EC_FallingObject, EC_GravText, EC_RocketAward, EC_SoulsAward, EC_SwirlingAward};
@@ -230,7 +231,7 @@ impl PlayerAwardEffects {
         player.killsinrowinair = 0;
     }
 
-    pub fn add_killer_award(&mut self, g: &mut Game, killer: &mut CPlayer, killed: Ptr<CPlayer>, style: KillStyle) {
+    pub fn add_killer_award(&mut self, g: &mut Game, killer: &mut CPlayer, killed: PlayerId, style: KillStyle) {
         let mut gp = g.ptr();
         killer.killsinrow += 1;
 
@@ -253,7 +254,7 @@ impl PlayerAwardEffects {
             }
         }
 
-        if !killed.is_null() && killed.killsinrow >= 2 && !fSoundPlayed {
+        if !killed.is_none() && g.player(killed).killsinrow >= 2 && !fSoundPlayed {
             if gp.rm.sfx_announcer[10].play(g) {
                 fSoundPlayed = true;
             }
@@ -285,8 +286,8 @@ impl PlayerAwardEffects {
             if g.game_values.awardstyle == AwardStyle::Halo {
                 killer.awardeffects.awards[slot] = style as i16;
             } else if g.game_values.awardstyle == AwardStyle::Souls {
-                if !killed.is_null() {
-                    killer.awardeffects.awards[slot] = killed.get_color_id();
+                if !killed.is_none() {
+                    killer.awardeffects.awards[slot] = g.player(killed).get_color_id();
                 } else if style == KillStyle::Goomba {
                     killer.awardeffects.awards[slot] = 4; //soul id for goomba
                 } else if style == KillStyle::BulletBill {
@@ -323,11 +324,11 @@ impl PlayerAwardEffects {
                 }
 
                 //if we stopped the other players run show another award
-                if !killed.is_null() && killed.killsinrow >= 2 {
-                    let a: i16 = if (killed.killsinrow as i32 - 2) >= PAWARD_LAST as i32 {
+                if !killed.is_none() && g.player(killed).killsinrow >= 2 {
+                    let a: i16 = if (g.player(killed).killsinrow as i32 - 2) >= PAWARD_LAST as i32 {
                         PAWARD_LAST - 1
                     } else {
-                        (killed.killsinrow as i32 - 2) as i16
+                        (g.player(killed).killsinrow as i32 - 2) as i16
                     };
                     let text = format!("{} Stopped!", awardtexts[a as usize].name);
 
@@ -336,7 +337,7 @@ impl PlayerAwardEffects {
                     } else {
                         Ptr::from_mut(&mut g.rm.game_font_small)
                     };
-                    g.eyecandy[2].emplace(EC_GravText::new(font, killed.center_x(), killed.bottom_y(), text, -VELJUMP * 1.3f32));
+                    g.eyecandy[2].emplace(EC_GravText::new(font, g.player(killed).center_x(), g.player(killed).bottom_y(), text, -VELJUMP * 1.3f32));
                 }
             }
         }

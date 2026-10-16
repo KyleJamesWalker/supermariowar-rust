@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_SuperFireball.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -107,9 +108,9 @@ impl CObjectTrait for MO_SuperFireball {
         }
     }
 
-    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
         let mut gp = g.ptr();
-        if !player.is_shielded() {
+        if !g.player(player).is_shielded() {
             self.dead = true;
             g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
                 g.rm.spr_fireballexplosion,
@@ -120,8 +121,8 @@ impl CObjectTrait for MO_SuperFireball {
             ));
             if_sound_on_play(g, &mut gp.rm.sfx_hit);
 
-            if !player.is_invincible() && !player.shyguy {
-                return player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
+            if !g.player(player).is_invincible() && !g.player(player).shyguy {
+                return g.player(player).kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
             }
         }
 

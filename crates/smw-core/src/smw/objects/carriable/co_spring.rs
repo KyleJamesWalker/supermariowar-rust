@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_Spring.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -43,23 +44,23 @@ impl CO_Spring {
     }
 }
 
-pub fn co_spring_collide_player<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T, player: Ptr<CPlayer>) -> bool {
+pub fn co_spring_collide_player<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T, player: PlayerId) -> bool {
     let (owner_null, fOldY, iy, state) = {
         let o = this.spring();
-        (o.owner.is_null(), o.fOldY, o.iy, o.state)
+        (o.owner.is_none(), o.fOldY, o.iy, o.state)
     };
     if owner_null {
-        if player.fOldY + PH as f32 <= fOldY && player.iy as i32 + PH >= iy as i32 {
+        if g.player(player).fOldY + PH as f32 <= fOldY && g.player(player).iy as i32 + PH >= iy as i32 {
             this.hittop(g, player);
         } else if state == 1 {
-            co_spring_hitother(this, player);
+            co_spring_hitother(g, this, player);
         }
     }
 
     false
 }
 
-pub fn co_spring_hittop<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T, player: Ptr<CPlayer>) {
+pub fn co_spring_hittop<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T, player: PlayerId) {
         let mut gp = g.ptr();
     let mut player = player;
     let (iy, fSuper) = {
@@ -69,34 +70,34 @@ pub fn co_spring_hittop<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T, 
         (o.iy, o.fSuper)
     };
 
-    player.set_yi((iy as i32 - PH - 1) as i16);
-    let p = player.get();
-    player.collisions.checktop(g, p);
-    player.platform = Ptr::null();
-    player.inair = false;
-    player.fallthrough = false;
-    player.killsinrowinair = 0;
-    player.extrajumps = 0;
+    g.player(player).set_yi((iy as i32 - PH - 1) as i16);
+    let p = g.player(player);
+    g.player(player).collisions.checktop(g, p);
+    g.player(player).platform = Ptr::null();
+    g.player(player).inair = false;
+    g.player(player).fallthrough = false;
+    g.player(player).killsinrowinair = 0;
+    g.player(player).extrajumps = 0;
 
-    player.superjumptimer = 4;
-    player.superjumptype = if fSuper { 2 } else { 1 };
-    player.vely = -VELNOTEBLOCKREPEL;
+    g.player(player).superjumptimer = 4;
+    g.player(player).superjumptype = if fSuper { 2 } else { 1 };
+    g.player(player).vely = -VELNOTEBLOCKREPEL;
 
     if_sound_on_play(g, &mut gp.rm.sfx_bump);
 }
 
-pub fn co_spring_hitother<T: CO_SpringTrait + ?Sized>(this: &mut T, player: Ptr<CPlayer>) {
+pub fn co_spring_hitother<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T, player: PlayerId) {
     let mut player = player;
-    if this.spring().owner.is_null() && player.isready() {
+    if this.spring().owner.is_none() && g.player(player).isready() {
         let item = this.as_carried_ptr();
-        if player.accept_item(item) {
+        if g.player(player).accept_item(item) {
             this.spring_mut().owner = player;
         }
     }
 }
 
 pub fn co_spring_update<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T) {
-    if !this.spring().owner.is_null() {
+    if !this.spring().owner.is_none() {
         this.move_to_owner(g);
     } else {
         {
@@ -130,11 +131,11 @@ pub fn co_spring_draw<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let o = this.spring();
     let x = o.ix as i32 - o.collisionOffsetX as i32;
     let y = o.iy as i32 - o.collisionOffsetY as i32;
-    if !o.owner.is_null() {
+    if !o.owner.is_none() {
         let src = Rect { x: o.animationOffsetX as i32, y: o.iOffsetY as i32, w: 32, h: 32 };
-        if o.owner.iswarping() {
-            let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(o.owner.get_warp_state() as i32) };
-            g.rm.sprite(o.spr).draw_clip(g, x, y, &src, edge, o.owner.get_warp_plane() as i32);
+        if g.player(o.owner).iswarping() {
+            let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(g.player(o.owner).get_warp_state() as i32) };
+            g.rm.sprite(o.spr).draw_clip(g, x, y, &src, edge, g.player(o.owner).get_warp_plane() as i32);
         } else {
             g.rm.sprite(o.spr).draw_src(g, x, y, &src);
         }
@@ -169,7 +170,7 @@ pub trait CO_SpringTrait: MO_CarriedObjectTrait {
     fn spring(&self) -> &CO_Spring;
     fn spring_mut(&mut self) -> &mut CO_Spring;
 
-    fn hittop(&mut self, g: &mut Game, player: Ptr<CPlayer>) {
+    fn hittop(&mut self, g: &mut Game, player: PlayerId) {
         co_spring_hittop(g, self, player)
     }
 
@@ -189,7 +190,7 @@ impl CObjectTrait for CO_Spring {
     fn draw(&mut self, g: &mut Game) {
         co_spring_draw(g, self)
     }
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         co_spring_collide_player(g, self, player)
     }
 }

@@ -369,7 +369,7 @@ fn ready(g: &mut Game, ev: Ev, args: &[i32]) -> bool {
         Ev::Block => crate::smw::objects::blocks::powerup_block::net_block_ready(g, args[0] as i16, args[1] as i16),
         Ev::WarpExit => {
             let p = player(g, args);
-            p.is_null() || p.is_entering_warp()
+            p.is_none() || g.player(p).is_entering_warp()
         }
         _ => true,
     }
@@ -460,9 +460,9 @@ pub fn arg_f32(v: i32) -> f32 {
     f32::from_bits(v as u32)
 }
 
-fn player(g: &mut Game, args: &[i32]) -> Ptr<crate::smw::player::CPlayer> {
+fn player(g: &mut Game, args: &[i32]) -> crate::smw::players::PlayerId {
     let id = args[0];
-    g.players.iter().copied().find(|p| p.globalID as i32 == id).unwrap_or(Ptr::null())
+    g.players.iter().copied().find(|&p| g.player(p).globalID as i32 == id).unwrap_or(crate::smw::players::PlayerId::NONE)
 }
 
 fn run(g: &mut Game, ev: Ev, args: &[i32]) {
@@ -495,20 +495,20 @@ fn run(g: &mut Game, ev: Ev, args: &[i32]) {
         Ev::HazardTimer => obj::net_hazard_timer(g, find_object(gp.get(), args[0])),
         Ev::Respawn => {
             let mut p = player(g, args);
-            if !p.is_null() {
-                p.net_respawn(g);
+            if !p.is_none() {
+                g.player(p).net_respawn(g);
             }
         }
         Ev::WarpExit => {
             let mut p = player(g, args);
-            if !p.is_null() {
-                p.net_choose_warp_exit(g);
+            if !p.is_none() {
+                g.player(p).net_choose_warp_exit(g);
             }
         }
         Ev::PodoboRain => {
             let mut p = player(g, args);
-            if !p.is_null() {
-                p.net_podobo_rain(g);
+            if !p.is_none() {
+                g.player(p).net_podobo_rain(g);
             }
         }
         Ev::Pow => crate::smw::gs_gameplay::net_pow_kills(g, args),
@@ -524,14 +524,14 @@ fn run(g: &mut Game, ev: Ev, args: &[i32]) {
         Ev::TagReassign => gm::tag::net_reassign(g),
         Ev::Bomb => {
             let mut p = player(g, args);
-            if !p.is_null() {
-                p.net_throw_bomb(g, args[1], args[2], args[3] != 0);
+            if !p.is_none() {
+                g.player(p).net_throw_bomb(g, args[1], args[2], args[3] != 0);
             }
         }
         Ev::Boomerang => {
             let mut p = player(g, args);
-            if !p.is_null() {
-                p.net_throw_boomerang(g, args[1], args[2], args[3] != 0);
+            if !p.is_none() {
+                g.player(p).net_throw_boomerang(g, args[1], args[2], args[3] != 0);
             }
         }
         Ev::PhantoReturn => obj::overmap::wo_phanto::net_return(g, find_object(gp.get(), args[0])),
@@ -559,10 +559,10 @@ fn outcome(g: &mut Game, ev: Ev, args: &[i32]) -> Vec<String> {
         }
         Ev::Respawn | Ev::WarpExit => {
             let p = player(g, args);
-            if p.is_null() {
+            if p.is_none() {
                 vec![]
             } else {
-                vec![format!("p{}@{},{} s{}", p.globalID, p.ix, p.iy, p.state as i32)]
+                vec![format!("p{}@{},{} s{}", g.player(p).globalID, g.player(p).ix, g.player(p).iy, g.player(p).state as i32)]
             }
         }
         Ev::HazardTimer => vec![crate::smw::objects::net_hazard_state(find_object(g, args[0]))],

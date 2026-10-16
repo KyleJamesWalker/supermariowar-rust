@@ -203,8 +203,8 @@ pub fn removeifprojectile(g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait
         if fDie || forcedead {
             let mut player = get_player_from_global_id(g, iPlayerID);
 
-            if !player.is_null() {
-                player.decrease_projectiles_count();
+            if !player.is_none() {
+                g.player(player).decrease_projectiles_count();
             }
 
             object.dead = true;

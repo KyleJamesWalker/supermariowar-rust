@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/WeaponBreakableBlock.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -156,30 +157,30 @@ impl CObjectTrait for B_WeaponBreakableBlock {
 impl IO_BlockTrait for B_WeaponBreakableBlock {
     crate::impl_io_block_plumbing!();
 
-    fn hittop_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
-        io_block_hittop_player(self, player, useBehavior);
+    fn hittop_player(&mut self, g: &mut Game, mut player: PlayerId, useBehavior: bool) -> bool {
+        io_block_hittop_player(g, self, player, useBehavior);
 
         if self.state == 1 || self.state == 2 {
             let iKillType = PlayerKillType::NonKill;
             if self.iBumpPlayerID >= 0
-                && !player.is_invincible_on_bottom()
-                && (player.teamID != self.iBumpTeamID || g.game_values.teamcollision == TeamCollisionStyle::On)
+                && !g.player(player).is_invincible_on_bottom()
+                && (g.player(player).teamID != self.iBumpTeamID || g.game_values.teamcollision == TeamCollisionStyle::On)
             {
                 player_killed_player(g, self.iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
             }
 
             if PlayerKillType::NonKill == iKillType {
-                player.vely = -VELNOTEBLOCKREPEL;
+                g.player(player).vely = -VELNOTEBLOCKREPEL;
             }
         } else if useBehavior {
-            player.vely = GRAVITATION;
+            g.player(player).vely = GRAVITATION;
 
             //Save this for when we create a super stomp destroyable block
-            if self.iType == WeaponDamageType::KuriboShoe && player.is_super_stomping() && self.state == 0 {
-                self.trigger_behavior_player(g, player.globalID, player.teamID);
+            if self.iType == WeaponDamageType::KuriboShoe && g.player(player).is_super_stomping() && self.state == 0 {
+                self.trigger_behavior_player(g, g.player(player).globalID, g.player(player).teamID);
                 return false;
-            } else if self.iType == WeaponDamageType::Star && player.is_invincible() {
-                self.trigger_behavior_player(g, player.globalID, player.teamID);
+            } else if self.iType == WeaponDamageType::Star && g.player(player).is_invincible() {
+                self.trigger_behavior_player(g, g.player(player).globalID, g.player(player).teamID);
                 return false;
             }
         }
@@ -187,47 +188,47 @@ impl IO_BlockTrait for B_WeaponBreakableBlock {
         false
     }
 
-    fn hitbottom_player(&mut self, g: &mut Game, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitbottom_player(&mut self, g: &mut Game, player: PlayerId, useBehavior: bool) -> bool {
         if useBehavior && self.state == 0 {
             //If the player has a cape and they used it for a feather destroyable block, then kill it
             let mut fTriggerBlock = false;
-            if self.iType == WeaponDamageType::Feather && player.powerup == 3 && player.extrajumps > 0 {
+            if self.iType == WeaponDamageType::Feather && g.player(player).powerup == 3 && g.player(player).extrajumps > 0 {
                 fTriggerBlock = true;
-            } else if self.iType == WeaponDamageType::PWings && player.powerup == 8 && player.flying {
+            } else if self.iType == WeaponDamageType::PWings && g.player(player).powerup == 8 && g.player(player).flying {
                 fTriggerBlock = true;
-            } else if self.iType == WeaponDamageType::Star && player.is_invincible() {
+            } else if self.iType == WeaponDamageType::Star && g.player(player).is_invincible() {
                 fTriggerBlock = true;
             }
 
             if fTriggerBlock {
-                self.trigger_behavior_player(g, player.globalID, player.teamID);
+                self.trigger_behavior_player(g, g.player(player).globalID, g.player(player).teamID);
             }
 
-            return io_block_hitbottom_player(self, player, useBehavior);
+            return io_block_hitbottom_player(g, self, player, useBehavior);
         }
 
         false
     }
 
-    fn hitleft_player(&mut self, g: &mut Game, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitleft_player(&mut self, g: &mut Game, player: PlayerId, useBehavior: bool) -> bool {
         if useBehavior && self.state == 0 {
-            if self.iType == WeaponDamageType::Star && player.is_invincible() {
-                self.trigger_behavior_player(g, player.globalID, player.teamID);
+            if self.iType == WeaponDamageType::Star && g.player(player).is_invincible() {
+                self.trigger_behavior_player(g, g.player(player).globalID, g.player(player).teamID);
             }
 
-            return io_block_hitleft_player(self, player, useBehavior);
+            return io_block_hitleft_player(g, self, player, useBehavior);
         }
 
         false
     }
 
-    fn hitright_player(&mut self, g: &mut Game, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitright_player(&mut self, g: &mut Game, player: PlayerId, useBehavior: bool) -> bool {
         if useBehavior && self.state == 0 {
-            if self.iType == WeaponDamageType::Star && player.is_invincible() {
-                self.trigger_behavior_player(g, player.globalID, player.teamID);
+            if self.iType == WeaponDamageType::Star && g.player(player).is_invincible() {
+                self.trigger_behavior_player(g, g.player(player).globalID, g.player(player).teamID);
             }
 
-            return io_block_hitright_player(self, player, useBehavior);
+            return io_block_hitright_player(g, self, player, useBehavior);
         }
 
         false

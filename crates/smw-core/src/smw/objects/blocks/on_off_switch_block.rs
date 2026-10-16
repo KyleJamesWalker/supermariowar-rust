@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/OnOffSwitchBlock.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -115,41 +116,41 @@ impl CObjectTrait for B_OnOffSwitchBlock {
 impl IO_BlockTrait for B_OnOffSwitchBlock {
     crate::impl_io_block_plumbing!();
 
-    fn hittop_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
-        io_block_hittop_player(self, player, useBehavior);
+    fn hittop_player(&mut self, g: &mut Game, mut player: PlayerId, useBehavior: bool) -> bool {
+        io_block_hittop_player(g, self, player, useBehavior);
 
         if self.state == 1 || self.state == 4 {
             let mut iKillType = PlayerKillType::NonKill;
             if self.iBumpPlayerID >= 0
-                && !player.is_invincible_on_bottom()
-                && (player.teamID != self.iBumpTeamID || g.game_values.teamcollision == TeamCollisionStyle::On)
+                && !g.player(player).is_invincible_on_bottom()
+                && (g.player(player).teamID != self.iBumpTeamID || g.game_values.teamcollision == TeamCollisionStyle::On)
             {
                 iKillType = player_killed_player(g, self.iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
             }
 
             if PlayerKillType::NonKill == iKillType {
-                player.vely = -VELNOTEBLOCKREPEL;
+                g.player(player).vely = -VELNOTEBLOCKREPEL;
             }
         } else if useBehavior {
-            player.vely = GRAVITATION;
+            g.player(player).vely = GRAVITATION;
 
-            if (self.state == 0 || self.state == 3) && player.is_super_stomping() {
-                self.trigger_behavior_player(g, player.globalID);
+            if (self.state == 0 || self.state == 3) && g.player(player).is_super_stomping() {
+                self.trigger_behavior_player(g, g.player(player).globalID);
             }
         }
 
         false
     }
 
-    fn hitbottom_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitbottom_player(&mut self, g: &mut Game, mut player: PlayerId, useBehavior: bool) -> bool {
         //Player bounces off
         if useBehavior {
-            player.vely = cap_falling_velocity(-player.vely * BOUNCESTRENGTH);
-            player.set_yf((self.iposy as i32 + self.ih as i32) as f32 + 0.2f32);
+            g.player(player).vely = cap_falling_velocity(-g.player(player).vely * BOUNCESTRENGTH);
+            g.player(player).set_yf((self.iposy as i32 + self.ih as i32) as f32 + 0.2f32);
 
             if self.state == 0 || self.state == 3 {
-                self.iBumpPlayerID = player.globalID;
-                self.iBumpTeamID = player.teamID;
+                self.iBumpPlayerID = g.player(player).globalID;
+                self.iBumpTeamID = g.player(player).teamID;
 
                 let iBumpPlayerID = self.iBumpPlayerID;
                 self.trigger_behavior_player(g, iBumpPlayerID);

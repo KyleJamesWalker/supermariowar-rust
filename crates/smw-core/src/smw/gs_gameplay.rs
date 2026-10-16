@@ -2,6 +2,7 @@
 //!
 //! `_DEBUG`-only code (autotest, debug hotkeys, autokill) is not ported: the reference build is Release.
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::keys::*;
 use crate::common::gfx::soft_surface::Rect;
@@ -171,22 +172,22 @@ impl GameplayState {
 
         for player in g.players.iter() {
             let p = *player;
-            let s = if p.score.is_null() { 0 } else { p.score.score as i32 };
+            let s = if g.player(p).score.is_null() { 0 } else { g.player(p).score.score as i32 };
             writeln!(
                 out,
                 "P id={} team={} ix={} iy={} fx={} fy={} velx={} vely={} state={} score={} powerup={} inair={}",
-                p.globalID,
-                p.teamID,
-                p.ix,
-                p.iy,
-                format!("{:.4}", p.fx as f64),
-                format!("{:.4}", p.fy as f64),
-                format!("{:.4}", p.velx as f64),
-                format!("{:.4}", p.vely as f64),
-                p.state as i32,
+                g.player(p).globalID,
+                g.player(p).teamID,
+                g.player(p).ix,
+                g.player(p).iy,
+                format!("{:.4}", g.player(p).fx as f64),
+                format!("{:.4}", g.player(p).fy as f64),
+                format!("{:.4}", g.player(p).velx as f64),
+                format!("{:.4}", g.player(p).vely as f64),
+                g.player(p).state as i32,
                 s,
-                p.powerup,
-                p.inair as i32
+                g.player(p).powerup,
+                g.player(p).inair as i32
             )?;
         }
         if let Some(line) = crate::smw::gamemodes::star::harness_record(g) {
@@ -629,7 +630,7 @@ impl GameplayState {
         //Initialize players after game init has finished
         for i in 0..g.players.len() {
             let mut player = g.players[i];
-            player.init(g);
+            g.player(player).init(g);
         }
     }
 }
@@ -643,8 +644,8 @@ pub fn count_alive_teams(g: &mut Game, lastteam: Option<&mut i16>) -> i16 {
 
     let mut teamalive: [bool; 4] = [false, false, false, false];
     for player in g.players.iter() {
-        if !player.isdead() {
-            teamalive[player.teamID as usize] = true;
+        if !g.player(*player).isdead() {
+            teamalive[g.player(*player).teamID as usize] = true;
         }
     }
 
@@ -684,19 +685,19 @@ impl GameplayState {
         // The index still advances after a removal, so the player shifted into slot i is skipped this frame (as in C++).
         let mut i: usize = 0;
         while i < g.players.len() {
-            if g.players[i].state == PlayerState::Dead {
+            if g.player(g.players[i]).state == PlayerState::Dead {
                 fCheckForGameOver = true;
 
-                let globalID = g.players[i].globalID as usize;
+                let globalID = g.player(g.players[i]).globalID as usize;
                 crate::smw::net_outcomes::note_death(g, globalID as i16, PlayerDeathStyle::Jump as i32, true);
                 if self.respawnCount[globalID] <= 0 {
-                    gp.players[i].die(g, PlayerDeathStyle::Jump, true, false);
+                    g.player(gp.players[i]).die(g, PlayerDeathStyle::Jump, true, false);
                 }
 
                 self.respawnCount[globalID] = 0;
 
                 if !gmTag.is_null() && gmTag.get().tagged() == g.players[i] {
-                    gmTag.get().set_tagged(Ptr::null());
+                    gmTag.get().set_tagged(PlayerId::NONE);
                 }
 
                 if !gmChicken.is_null() && gmChicken.get().chicken() == g.players[i] {
@@ -708,17 +709,18 @@ impl GameplayState {
                     let mut obj = obj;
                     if let Some(flag) = obj.as_any().downcast_mut::<CO_Flag>() {
                         if flag.owner_throw == g.players[i] {
-                            flag.owner_throw = Ptr::null();
+                            flag.owner_throw = PlayerId::NONE;
                         }
                     }
                 }
 
-                g.players[i].delete();
+                let removed = g.players[i];
+                g.players.remove(removed);
 
                 let mut j = i;
                 while j < g.players.len() - 1 {
                     g.players[j] = g.players[j + 1];
-                    g.players[j].localID = j as i16;
+                    g.player(g.players[j]).localID = j as i16;
                     j += 1;
                 }
 
@@ -797,7 +799,7 @@ pub fn animate_during_countdown(g: &mut Game) {
 
 pub fn net_pow_kills(g: &mut Game, ids: &[i32]) {
     let mut gp = g.ptr();
-    let pKillPlayers: Vec<Ptr<CPlayer>> = ids.iter().filter_map(|&id| g.players.iter().copied().find(|p| p.globalID as i32 == id)).collect();
+    let pKillPlayers: Vec<PlayerId> = ids.iter().filter_map(|&id| g.players.iter().copied().find(|p| g.player(*p).globalID as i32 == id)).collect();
     let iNumKillPlayers = pKillPlayers.len() as i16;
     if iNumKillPlayers == 0 {
         return;
@@ -845,33 +847,33 @@ pub fn shake_screen(g: &mut Game) {
 
     //Kill players touching the ground (or in air for MOd blocks)
     let mut iNumKillPlayers: i16 = 0;
-    let mut pKillPlayers: [Ptr<CPlayer>; 4] = [Ptr::null(); 4];
+    let mut pKillPlayers: [PlayerId; 4] = [PlayerId::NONE; 4];
 
     let mut killer1 = get_player_from_global_id(g, g.game_values.flags.screenshakeplayerid);
 
     for i in 0..g.players.len() {
         let player = g.players[i];
         //Don't kill the player that triggered the POW/MOd
-        if player.globalID == g.game_values.flags.screenshakeplayerid {
+        if g.player(player).globalID == g.game_values.flags.screenshakeplayerid {
             continue;
         }
 
         //Don't kill players on his team either (if friendly fire is off)
-        if g.game_values.teamcollision != TeamCollisionStyle::On && g.game_values.flags.screenshaketeamid == player.teamID {
+        if g.game_values.teamcollision != TeamCollisionStyle::On && g.game_values.flags.screenshaketeamid == g.player(player).teamID {
             continue;
         }
 
         //Kill other players
-        if !player.is_invincible_on_bottom() && player.isready() {
-            if g.game_values.flags.screenshakekillinair == player.inair {
+        if !g.player(player).is_invincible_on_bottom() && g.player(player).isready() {
+            if g.game_values.flags.screenshakekillinair == g.player(player).inair {
                 pKillPlayers[iNumKillPlayers as usize] = player;
                 iNumKillPlayers += 1;
 
-                if !killer1.is_null() {
+                if !killer1.is_none() {
                     g.game_values.flags.screenshakekillscount += 1;
 
-                    if killer1.inair {
-                        killer1.killsinrowinair -= 1;
+                    if g.player(killer1).inair {
+                        g.player(killer1).killsinrowinair -= 1;
                     }
                 }
             }
@@ -880,7 +882,7 @@ pub fn shake_screen(g: &mut Game) {
 
     //Randomize the order in which the players are killed
     if iNumKillPlayers > 0 {
-        let ids: Vec<i32> = pKillPlayers[..iNumKillPlayers as usize].iter().map(|p| p.globalID as i32).collect();
+        let ids: Vec<i32> = pKillPlayers[..iNumKillPlayers as usize].iter().map(|p| g.player(*p).globalID as i32).collect();
         if !net_random::event(g, Ev::Pow, &ids) {
             net_pow_kills(g, &ids);
         }
@@ -899,9 +901,9 @@ pub fn shake_screen(g: &mut Game) {
             {
                 let mut killer = get_player_from_global_id(g, g.game_values.flags.screenshakeplayerid);
 
-                if !killer.is_null() {
+                if !killer.is_none() {
                     if !g.game_values.gamemode.gameover {
-                        killer.score.adjust_score(g, 1);
+                        g.player(killer).score.adjust_score(g, 1);
                     }
 
                     if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
@@ -909,8 +911,8 @@ pub fn shake_screen(g: &mut Game) {
 
                     g.game_values.flags.screenshakekillscount += 1;
 
-                    if killer.inair {
-                        killer.killsinrowinair -= 1;
+                    if g.player(killer).inair {
+                        g.player(killer).killsinrowinair -= 1;
                     }
                 }
             }
@@ -927,12 +929,12 @@ pub fn shake_screen(g: &mut Game) {
                 let t = movingobject.get_moving_object_type();
                 if t == movingobject_shell {
                     let shell: &mut CO_Shell = movingobject.as_any().downcast_mut::<CO_Shell>().unwrap();
-                    if shell.frozen || shell.owner.is_null() || shell.owner.inair == g.game_values.flags.screenshakekillinair {
+                    if shell.frozen || shell.owner.is_none() || g.player(shell.owner).inair == g.game_values.flags.screenshakekillinair {
                         shell.flip(g); //also breaks shells if frozen
                     }
                 } else if t == movingobject_throwblock {
                     let throwblock: &mut CO_ThrowBlock = movingobject.as_any().downcast_mut::<CO_ThrowBlock>().unwrap();
-                    if throwblock.frozen || throwblock.owner.is_null() || throwblock.owner.inair == g.game_values.flags.screenshakekillinair {
+                    if throwblock.frozen || throwblock.owner.is_none() || g.player(throwblock.owner).inair == g.game_values.flags.screenshakekillinair {
                         movingobject.die(g);
                     }
                 } else if t == movingobject_throwbox {
@@ -956,8 +958,8 @@ pub fn shake_screen(g: &mut Game) {
 
         let mut killer2 = get_player_from_global_id(g, g.game_values.flags.screenshakeplayerid);
 
-        if !killer2.is_null() {
-            killer2.add_kills_in_row_in_air_award(g);
+        if !killer2.is_none() {
+            g.player(killer2).add_kills_in_row_in_air_award(g);
         }
     }
 }
@@ -1015,22 +1017,22 @@ pub fn handle_p2p_collisions(g: &mut Game) {
     let mut i: usize = 0;
     while i < g.players.len() {
         let mut player1 = g.players[i];
-        assert!(!player1.is_null());
-        if player1.state > PlayerState::Dead {
+        assert!(!player1.is_none());
+        if g.player(player1).state > PlayerState::Dead {
             let mut j = i + 1;
             while j < g.players.len() {
                 let player2 = g.players[j];
-                assert!(!player2.is_null());
-                if player2.state > PlayerState::Dead {
-                    if coldec_player2player(player1, player2) {
+                assert!(!player2.is_none());
+                if g.player(player2).state > PlayerState::Dead {
+                    if coldec_player2player(g, player1, player2) {
                         if g.netplay.active {
-                            gp.netplay.client.local_gamehost.send_p2p_collision_event(g, &player1, &player2);
+                            gp.netplay.client.local_gamehost.send_p2p_collision_event(g, g.player(player1), g.player(player2));
                         }
 
-                        player1.collides_with_player(g, player2);
+                        g.player(player1).collides_with_player(g, player2);
 
                         //if player was killed by another player, continue with next player for collision detection
-                        if player1.state <= PlayerState::Dead {
+                        if g.player(player1).state <= PlayerState::Dead {
                             break;
                         }
                     }
@@ -1047,7 +1049,7 @@ pub fn handle_p2obj_collisions(g: &mut Game) {
     let nPlayers = g.players.len();
     for iPlayer in 0..nPlayers {
         let mut player = g.players[iPlayer];
-        if player.state != PlayerState::Ready {
+        if g.player(player).state != PlayerState::Ready {
             continue;
         }
 
@@ -1057,8 +1059,8 @@ pub fn handle_p2obj_collisions(g: &mut Game) {
             for iObj in 0..n {
                 let obj = g.objectcontainer[iLayer].list()[iObj];
                 if !obj.is_dead() {
-                    if coldec_player2obj(player, obj) {
-                        if player.collides_with_object(g, obj) {
+                    if coldec_player2obj(g, player, obj) {
+                        if g.player(player).collides_with_object(g, obj) {
                             break;
                         }
                     }
@@ -1066,7 +1068,7 @@ pub fn handle_p2obj_collisions(g: &mut Game) {
             }
 
             //if the object killed the player, then continue with the other players
-            if player.state != PlayerState::Ready {
+            if g.player(player).state != PlayerState::Ready {
                 break;
             }
 
@@ -1227,29 +1229,29 @@ impl GameplayState {
                         //Search for player state to display
                         let player = get_player_from_global_id(g, globalID);
 
-                        if !player.is_null() && !g.game_values.gamemode.gameover {
+                        if !player.is_none() && !g.game_values.gamemode.gameover {
                             let iScoreOffsetX: i16 = (s.x as i32 + Self::scoreoffsets[k] as i32) as i16;
                             let iScoreOffsetY: i16 = (s.y as i32 + 2) as i16;
                             let (ox, oy) = (iScoreOffsetX as i32, iScoreOffsetY as i32);
 
-                            if player.ownerPlayerID > -1 {
-                                draw_rect(g, gp.rm.sprite(gp.rm.spr_ownedtags), ox - 8, oy - 8, player.ownerColorOffsetX as i32, 0, 48, 48);
+                            if g.player(player).ownerPlayerID > -1 {
+                                draw_rect(g, gp.rm.sprite(gp.rm.spr_ownedtags), ox - 8, oy - 8, g.player(player).ownerColorOffsetX as i32, 0, 48, 48);
                             }
 
-                            draw_rect(g, gp.rm.sprite(player.get_scoreboard_sprite()[iScoreboardSprite as usize]), ox, oy, player.iSrcOffsetX as i32, 0, 32, 32);
+                            draw_rect(g, gp.rm.sprite(g.player(player).get_scoreboard_sprite()[iScoreboardSprite as usize]), ox, oy, g.player(player).iSrcOffsetX as i32, 0, 32, 32);
 
                             //Display jail if player is jailed
-                            if player.jail.is_active() {
-                                draw_rect(g, &gp.rm.sprite(gp.rm.spr_jail), ox - 6, oy - 6, (player.jail.get_color() as i32 + 1) * 44, 0, 44, 44);
+                            if g.player(player).jail.is_active() {
+                                draw_rect(g, &gp.rm.sprite(gp.rm.spr_jail), ox - 6, oy - 6, (g.player(player).jail.get_color() as i32 + 1) * 44, 0, 44, 44);
                             }
 
                             //Display current powerup if player is using one
-                            if player.powerup > 0 {
-                                draw_rect(g, &gp.rm.sprite(gp.rm.spr_storedpowerupsmall), ox, oy + 16, Self::g_iPowerupToIcon[(player.powerup - 1) as usize] as i32, 0, 16, 16);
+                            if g.player(player).powerup > 0 {
+                                draw_rect(g, &gp.rm.sprite(gp.rm.spr_storedpowerupsmall), ox, oy + 16, Self::g_iPowerupToIcon[(g.player(player).powerup - 1) as usize] as i32, 0, 16, 16);
                             }
 
                             //Display tanooki powerup if player has it
-                            if player.tanookisuit.is_on() {
+                            if g.player(player).tanookisuit.is_on() {
                                 draw_rect(g, &gp.rm.sprite(gp.rm.spr_storedpowerupsmall), ox + 16, oy + 16, App::screenWidth / 2, 0, 16, 16);
                             }
                         } else {
@@ -1426,22 +1428,22 @@ impl GameplayState {
         if g.game_values.flags.swapplayers {
             for i in 0..g.players.len() {
                 let mut player = g.players[i];
-                player.drawswap(g);
+                g.player(player).drawswap(g);
 
-                let storedpowerupid = g.game_values.gamepowerups[player.get_global_id() as usize];
+                let storedpowerupid = g.game_values.gamepowerups[g.player(player).get_global_id() as usize];
 
                 if storedpowerupid != -1 {
                     let iPowerupX: i16;
                     let iPowerupY: i16;
 
                     if g.game_values.swapstyle == 1 {
-                        iPowerupX = if g.game_values.flags.swapplayersblink { player.iOldPowerupX } else { player.iNewPowerupX };
-                        iPowerupY = if g.game_values.flags.swapplayersblink { player.iOldPowerupY } else { player.iNewPowerupY };
+                        iPowerupX = if g.game_values.flags.swapplayersblink { g.player(player).iOldPowerupX } else { g.player(player).iNewPowerupX };
+                        iPowerupY = if g.game_values.flags.swapplayersblink { g.player(player).iOldPowerupY } else { g.player(player).iNewPowerupY };
                     } else {
-                        iPowerupX = ((((player.iNewPowerupX as i32 - player.iOldPowerupX as i32) as f32 * g.game_values.flags.swapplayersposition) as i16) as i32
-                            + player.iOldPowerupX as i32) as i16;
-                        iPowerupY = ((((player.iNewPowerupY as i32 - player.iOldPowerupY as i32) as f32 * g.game_values.flags.swapplayersposition) as i16) as i32
-                            + player.iOldPowerupY as i32) as i16;
+                        iPowerupX = ((((g.player(player).iNewPowerupX as i32 - g.player(player).iOldPowerupX as i32) as f32 * g.game_values.flags.swapplayersposition) as i16) as i32
+                            + g.player(player).iOldPowerupX as i32) as i16;
+                        iPowerupY = ((((g.player(player).iNewPowerupY as i32 - g.player(player).iOldPowerupY as i32) as f32 * g.game_values.flags.swapplayersposition) as i16) as i32
+                            + g.player(player).iOldPowerupY as i32) as i16;
                     }
 
                     draw_rect(g, &gp.rm.sprite(gp.rm.spr_storedpowerupsmall), iPowerupX as i32, iPowerupY as i32, storedpowerupid as i32 * 16, 0, 16, 16);
@@ -1477,8 +1479,8 @@ impl GameplayState {
                         let player = g.players[i];
                         g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
                             g.rm.spr_fireballexplosion,
-                            (player.left_x() as i32 + HALFPW - 16) as i16,
-                            (player.top_y() as i32 + HALFPH - 16) as i16,
+                            (g.player(player).left_x() as i32 + HALFPW - 16) as i16,
+                            (g.player(player).top_y() as i32 + HALFPH - 16) as i16,
                             3,
                             8,
                         ));
@@ -1510,7 +1512,7 @@ impl GameplayState {
         if !g.game_values.flags.swapplayers {
             for i in 0..g.players.len() {
                 let mut player = g.players[i];
-                player.draw(g);
+                g.player(player).draw(g);
             }
         }
 
@@ -1577,7 +1579,7 @@ impl GameplayState {
         //draw arrows for being above the top of the screen
         for i in 0..g.players.len() {
             let mut player = g.players[i];
-            player.draw_out_of_screen_indicators(g);
+            g.player(player).draw_out_of_screen_indicators(g);
         }
     }
 
@@ -1652,7 +1654,7 @@ pub fn is_exit_allowed(g: &mut Game) -> bool {
     }
 
     for player in g.players.iter() {
-        if g.game_values.playercontrol[player.get_global_id() as usize] == 1 {
+        if g.game_values.playercontrol[g.player(*player).get_global_id() as usize] == 1 {
             return false;
         }
     }
@@ -2038,10 +2040,9 @@ pub fn clean_up(g: &mut Game) {
     let mut gp = g.ptr();
     net_random::end_game(g);
     //delete object list
-    for player in g.players.iter() {
-        player.delete();
+    for player in std::mem::take(&mut *g.players) {
+        g.players.remove(player);
     }
-    g.players.clear();
 
     g.eyecandy[0].clean();
     g.eyecandy[1].clean();
@@ -2382,10 +2383,10 @@ impl GameplayState {
                 if p == g.netplay.remotePlayerNumber as usize {
                     // save the player data that was cause by the input of the previous frame
                     let mut pdata = Net_IndexedPlayerData::new(g.netplay.current_input_counter);
-                    pdata.data.x = player.fx;
-                    pdata.data.y = player.fy;
-                    pdata.data.xvel = player.velx;
-                    pdata.data.yvel = player.vely;
+                    pdata.data.x = g.player(player).fx;
+                    pdata.data.y = g.player(player).fy;
+                    pdata.data.xvel = g.player(player).velx;
+                    pdata.data.yvel = g.player(player).vely;
                     g.netplay.local_playerdata_buffer.push_back(pdata);
                     g.netplay.local_playerdata_store_count = g.netplay.local_playerdata_store_count.wrapping_add(1);
                     let (slot, count) = (g.netplay.current_input_counter as usize, g.netplay.local_playerdata_store_count);
@@ -2428,19 +2429,19 @@ impl GameplayState {
                             g.netplay.local_playerdata_buffer.clear();
 
                             // set confirmed data
-                            player.fx = g.netplay.latest_playerdata.player[p].x;
-                            player.fy = g.netplay.latest_playerdata.player[p].y;
-                            player.velx = g.netplay.latest_playerdata.player[p].xvel;
-                            player.vely = g.netplay.latest_playerdata.player[p].yvel;
+                            g.player(player).fx = g.netplay.latest_playerdata.player[p].x;
+                            g.player(player).fy = g.netplay.latest_playerdata.player[p].y;
+                            g.player(player).velx = g.netplay.latest_playerdata.player[p].xvel;
+                            g.player(player).vely = g.netplay.latest_playerdata.player[p].yvel;
                         }
                     }
                 }
                 // for remote players, interpolate
                 else if g.netplay.gamestate_received {
-                    player.fx = percent_old * g.netplay.previous_playerdata.player[p].x + percent_new * g.netplay.latest_playerdata.player[p].x;
-                    player.fy = percent_old * g.netplay.previous_playerdata.player[p].y + percent_new * g.netplay.latest_playerdata.player[p].y;
-                    player.velx = percent_old * g.netplay.previous_playerdata.player[p].xvel + percent_new * g.netplay.latest_playerdata.player[p].xvel;
-                    player.vely = percent_old * g.netplay.previous_playerdata.player[p].yvel + percent_new * g.netplay.latest_playerdata.player[p].yvel;
+                    g.player(player).fx = percent_old * g.netplay.previous_playerdata.player[p].x + percent_new * g.netplay.latest_playerdata.player[p].x;
+                    g.player(player).fy = percent_old * g.netplay.previous_playerdata.player[p].y + percent_new * g.netplay.latest_playerdata.player[p].y;
+                    g.player(player).velx = percent_old * g.netplay.previous_playerdata.player[p].xvel + percent_new * g.netplay.latest_playerdata.player[p].xvel;
+                    g.player(player).vely = percent_old * g.netplay.previous_playerdata.player[p].yvel + percent_new * g.netplay.latest_playerdata.player[p].yvel;
                 }
             }
 
@@ -2531,7 +2532,7 @@ pub fn update_playerswap(g: &mut Game) {
     if g.game_values.flags.swapplayers {
         for i in 0..g.players.len() {
             let mut player = g.players[i];
-            player.updateswap(g);
+            g.player(player).updateswap(g);
         }
     }
 }
@@ -2572,7 +2573,7 @@ impl GameplayState {
         // Move every player before object collisions, so they test against post-map-collision positions.
         for i in 0..g.players.len() {
             let mut player = g.players[i];
-            player.r#move(g);
+            g.player(player).r#move(g);
         }
 
         play_sfx(g);
@@ -2594,7 +2595,7 @@ impl GameplayState {
         //that the player might have picked up)
         for i in 0..g.players.len() {
             let mut player = g.players[i];
-            player.commit_action(g);
+            g.player(player).commit_action(g);
         }
 
         clean_dead_non_player_objects(g);
@@ -2705,10 +2706,10 @@ impl GameState for GameplayState {
     }
 }
 
-pub fn coldec_player2player(o1: Ptr<CPlayer>, o2: Ptr<CPlayer>) -> bool {
+pub fn coldec_player2player(g: &Game, o1: PlayerId, o2: PlayerId) -> bool {
     let sw = App::screenWidth;
-    let (o1ix, o1iy, o1r, o1b) = (o1.ix as i32, o1.iy as i32, o1.right_x() as i32, o1.bottom_y() as i32);
-    let (o2ix, o2iy, o2r, o2b) = (o2.ix as i32, o2.iy as i32, o2.right_x() as i32, o2.bottom_y() as i32);
+    let (o1ix, o1iy, o1r, o1b) = (g.player(o1).ix as i32, g.player(o1).iy as i32, g.player(o1).right_x() as i32, g.player(o1).bottom_y() as i32);
+    let (o2ix, o2iy, o2r, o2b) = (g.player(o2).ix as i32, g.player(o2).iy as i32, g.player(o2).right_x() as i32, g.player(o2).bottom_y() as i32);
 
     //Special cases to deal with players overlapping the right and left sides of the screen
     if o1r < o2ix {
@@ -2721,9 +2722,9 @@ pub fn coldec_player2player(o1: Ptr<CPlayer>, o2: Ptr<CPlayer>) -> bool {
     }
 }
 
-pub fn coldec_player2obj(o1: Ptr<CPlayer>, o2: Ptr<dyn CObjectTrait>) -> bool {
+pub fn coldec_player2obj(g: &Game, o1: PlayerId, o2: Ptr<dyn CObjectTrait>) -> bool {
     let sw = App::screenWidth;
-    let (o1ix, o1iy, o1r, o1b) = (o1.ix as i32, o1.iy as i32, o1.right_x() as i32, o1.bottom_y() as i32);
+    let (o1ix, o1iy, o1r, o1b) = (g.player(o1).ix as i32, g.player(o1).iy as i32, g.player(o1).right_x() as i32, g.player(o1).bottom_y() as i32);
     let (o2x, o2y, o2w, o2h) = (o2.x(), o2.y(), o2.collision_rect_w() as i32, o2.collision_rect_h() as i32);
 
     //Special cases to deal with players overlapping the right and left sides of the screen
@@ -2756,7 +2757,7 @@ pub fn coldec_obj2obj(o1: Ptr<dyn CObjectTrait>, o2: Ptr<dyn CObjectTrait>) -> b
 }
 
 pub fn swap_players(g: &mut Game, iUsingPlayerID: i16) -> bool {
-    let ready = g.players.iter().filter(|p| p.isready()).count();
+    let ready = g.players.iter().filter(|p| g.player(**p).isready()).count();
     if ready > 1 && net_random::event(g, Ev::MysterySwap, &[iUsingPlayerID as i32]) {
         return true;
     }
@@ -2769,14 +2770,14 @@ pub fn net_mystery_swap(g: &mut Game, iUsingPlayerID: i16) -> bool {
     let mut iNumAvailablePlayers: i16 = 0;
     for i in 0..g.players.len() {
         let mut player = g.players[i];
-        if player.isready() {
+        if g.player(player).isready() {
             iNumAvailablePlayers += 1;
-            player.fOldSwapX = player.left_x() as f32;
-            player.fOldSwapY = player.top_y() as f32;
+            g.player(player).fOldSwapX = g.player(player).left_x() as f32;
+            g.player(player).fOldSwapY = g.player(player).top_y() as f32;
 
-            let teamcount = g.game_values.teamcounts[player.teamID as usize];
-            player.iNewPowerupX = (player.score.x as i32 + scorepowerupoffsets[(teamcount - 1) as usize][player.subTeamID as usize] as i32) as i16;
-            player.iNewPowerupY = (player.score.y as i32 + 25) as i16;
+            let teamcount = g.game_values.teamcounts[g.player(player).teamID as usize];
+            g.player(player).iNewPowerupX = (g.player(player).score.x as i32 + scorepowerupoffsets[(teamcount - 1) as usize][g.player(player).subTeamID as usize] as i32) as i16;
+            g.player(player).iNewPowerupY = (g.player(player).score.y as i32 + 25) as i16;
         }
     }
 
@@ -2803,7 +2804,7 @@ pub fn net_mystery_swap(g: &mut Game, iUsingPlayerID: i16) -> bool {
     for iPlayer in 0..g.players.len() {
         let mut player = g.players[iPlayer];
 
-        if !player.isready() {
+        if !g.player(player).isready() {
             continue;
         }
 
@@ -2814,49 +2815,49 @@ pub fn net_mystery_swap(g: &mut Game, iUsingPlayerID: i16) -> bool {
             if iNewSpot as usize >= g.players.len() {
                 iNewSpot = 0;
             }
-            if !(spots[iNewSpot as usize].fUsed || !g.players[iNewSpot as usize].isready()) {
+            if !(spots[iNewSpot as usize].fUsed || !g.player(g.players[iNewSpot as usize]).isready()) {
                 break;
             }
         }
 
         spots[iNewSpot as usize].fUsed = true;
         let newPlayer = g.players[iNewSpot as usize];
-        spots[iPlayer].set_player(g, newPlayer, g.game_values.gamepowerups[newPlayer.get_global_id() as usize]);
+        spots[iPlayer].set_player(g, newPlayer, g.game_values.gamepowerups[g.player(newPlayer).get_global_id() as usize]);
 
         //Give credit for deaths to the player that used the mystery mushroom
         if iUsingPlayerID == iNewSpot {
-            player.iSuicideCreditPlayerID = newPlayer.globalID;
-            player.iSuicideCreditTimer = 62;
+            g.player(player).iSuicideCreditPlayerID = g.player(newPlayer).globalID;
+            g.player(player).iSuicideCreditTimer = 62;
         }
     }
 
     for iPlayer in 0..g.players.len() {
         let mut player = g.players[iPlayer];
 
-        if !player.isready() {
+        if !g.player(player).isready() {
             continue;
         }
 
-        let gid = player.get_global_id() as usize;
+        let gid = g.player(player).get_global_id() as usize;
         spots[iPlayer].get_player(g, player, &mut gp.game_values.gamepowerups[gid]);
 
         if g.game_values.swapstyle != 1 {
             gp.get().eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
                 gp.get().rm.spr_fireballexplosion,
-                ((player.fNewSwapX as i16) as i32 + HALFPW - 16) as i16,
-                ((player.fNewSwapY as i16) as i32 + HALFPH - 16) as i16,
+                ((g.player(player).fNewSwapX as i16) as i32 + HALFPW - 16) as i16,
+                ((g.player(player).fNewSwapY as i16) as i32 + HALFPH - 16) as i16,
                 3,
                 8,
             ));
         }
 
         if g.game_values.swapstyle == 2 {
-            let (nx, ny) = (player.fNewSwapX, player.fNewSwapY);
-            player.set_xf(nx);
-            player.set_yf(ny);
+            let (nx, ny) = (g.player(player).fNewSwapX, g.player(player).fNewSwapY);
+            g.player(player).set_xf(nx);
+            g.player(player).set_yf(ny);
 
-            if !player.carriedItem.is_null() {
-                player.carriedItem.move_to_owner(g);
+            if !g.player(player).carriedItem.is_null() {
+                g.player(player).carriedItem.move_to_owner(g);
             }
         }
     }

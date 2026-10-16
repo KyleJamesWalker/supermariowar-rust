@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_MysteryMushroomPowerup.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -47,16 +48,16 @@ impl CObjectTrait for PU_MysteryMushroomPowerup {
     fn update(&mut self, g: &mut Game) {
         mo_powerup_update(g, self)
     }
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut gp = g.ptr();
         if self.state > 0 {
             self.dead = true;
 
-            if !swap_players(g, player.localID) {
+            if !swap_players(g, g.player(player).localID) {
                 g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
                     g.rm.spr_fireballexplosion,
-                    (player.ix as i32 + (HALFPW) - 16) as i16,
-                    (player.iy as i32 + (HALFPH) - 16) as i16,
+                    (g.player(player).ix as i32 + (HALFPW) - 16) as i16,
+                    (g.player(player).iy as i32 + (HALFPH) - 16) as i16,
                     3,
                     8,
                 ));

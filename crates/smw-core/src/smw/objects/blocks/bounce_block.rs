@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/BounceBlock.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
@@ -73,9 +74,9 @@ impl IO_BlockTrait for B_BounceBlock {
         self.set_yf(fposy);
     }
 
-    fn collide_player_dir(&mut self, g: &mut Game, player: Ptr<CPlayer>, direction: i16, useBehavior: bool) -> bool {
+    fn collide_player_dir(&mut self, g: &mut Game, player: PlayerId, direction: i16, useBehavior: bool) -> bool {
         if self.hidden {
-            if player.fOldY >= (self.iposy as i32 + self.ih as i32) as f32 && direction == 0 {
+            if g.player(player).fOldY >= (self.iposy as i32 + self.ih as i32) as f32 && direction == 0 {
                 return self.hitbottom_player(g, player, useBehavior);
             }
 
@@ -85,36 +86,36 @@ impl IO_BlockTrait for B_BounceBlock {
         io_block_collide_player_dir(g, self, player, direction, useBehavior)
     }
 
-    fn hittop_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
-        io_block_hittop_player(self, player, useBehavior);
+    fn hittop_player(&mut self, g: &mut Game, mut player: PlayerId, useBehavior: bool) -> bool {
+        io_block_hittop_player(g, self, player, useBehavior);
 
         if self.state == 1 {
             let mut iKillType = PlayerKillType::NonKill;
             if self.iBumpPlayerID >= 0
-                && !player.is_invincible_on_bottom()
-                && (player.teamID != self.iBumpTeamID || g.game_values.teamcollision == TeamCollisionStyle::On)
+                && !g.player(player).is_invincible_on_bottom()
+                && (g.player(player).teamID != self.iBumpTeamID || g.game_values.teamcollision == TeamCollisionStyle::On)
             {
                 iKillType = player_killed_player(g, self.iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
             }
 
             if PlayerKillType::NonKill == iKillType {
-                player.vely = -VELNOTEBLOCKREPEL;
+                g.player(player).vely = -VELNOTEBLOCKREPEL;
             }
         } else if useBehavior {
-            player.vely = GRAVITATION;
+            g.player(player).vely = GRAVITATION;
         }
 
         false
     }
 
-    fn hitbottom_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitbottom_player(&mut self, g: &mut Game, mut player: PlayerId, useBehavior: bool) -> bool {
         //Player bounces off
         if useBehavior {
-            player.vely = cap_falling_velocity(-player.vely * BOUNCESTRENGTH);
-            player.set_yf((self.iposy as i32 + self.ih as i32) as f32 + 0.2f32);
+            g.player(player).vely = cap_falling_velocity(-g.player(player).vely * BOUNCESTRENGTH);
+            g.player(player).set_yf((self.iposy as i32 + self.ih as i32) as f32 + 0.2f32);
 
-            self.iBumpPlayerID = player.globalID;
-            self.iBumpTeamID = player.teamID;
+            self.iBumpPlayerID = g.player(player).globalID;
+            self.iBumpTeamID = g.player(player).teamID;
 
             self.trigger_behavior(g);
 

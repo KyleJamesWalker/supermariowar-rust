@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_BulletBill.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -123,15 +124,15 @@ impl MO_BulletBill {
         }
     }
 
-    pub fn hittop(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    pub fn hittop(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut gp = g.ptr();
         let mut p = player;
-        p.set_yi((self.iy as i32 - PH - 1) as i16);
-        p.bouncejump();
-        p.get().collisions.checktop(g, player.get());
-        p.platform = Ptr::null();
+        g.player(p).set_yi((self.iy as i32 - PH - 1) as i16);
+        g.player(p).bouncejump();
+        g.player(p).collisions.checktop(g, g.player(player));
+        g.player(p).platform = Ptr::null();
 
-        p.add_killer_award(g, Ptr::null(), KillStyle::BulletBill);
+        g.player(p).add_killer_award(g, PlayerId::NONE, KillStyle::BulletBill);
 
         if_sound_on_play(g, &mut gp.rm.sfx_mip);
 
@@ -140,12 +141,12 @@ impl MO_BulletBill {
         false
     }
 
-    pub fn hitother(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
-        if player.is_shielded() || player.globalID == self.iPlayerID {
+    pub fn hitother(&mut self, g: &mut Game, player: PlayerId) -> bool {
+        if g.player(player).is_shielded() || g.player(player).globalID == self.iPlayerID {
             return false;
         }
 
-        if g.game_values.teamcollision != TeamCollisionStyle::On && self.iTeamID == player.teamID {
+        if g.game_values.teamcollision != TeamCollisionStyle::On && self.iTeamID == g.player(player).teamID {
             return false;
         }
 
@@ -193,7 +194,7 @@ impl CObjectTrait for MO_BulletBill {
         }
     }
 
-    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
         let mut gp = g.ptr();
         if self.dead {
             return false;
@@ -203,19 +204,19 @@ impl CObjectTrait for MO_BulletBill {
         let iw = self.iw as i32;
 
         // if the bullet bill is off the screen, don't wrap it to collide
-        if (ix < 0 && self.velx < 0.0 && player.ix as i32 > ix + iw && (player.ix as i32 + PW) < App::screenWidth)
-            || (ix + iw >= App::screenWidth && self.velx > 0.0 && (player.ix as i32 + PW) < ix && player.ix >= 0)
+        if (ix < 0 && self.velx < 0.0 && g.player(player).ix as i32 > ix + iw && (g.player(player).ix as i32 + PW) < App::screenWidth)
+            || (ix + iw >= App::screenWidth && self.velx > 0.0 && (g.player(player).ix as i32 + PW) < ix && g.player(player).ix >= 0)
         {
             return false;
         }
 
-        if player.is_invincible() || player.shyguy {
-            player.add_killer_award(g, Ptr::null(), KillStyle::BulletBill);
+        if g.player(player).is_invincible() || g.player(player).shyguy {
+            g.player(player).add_killer_award(g, PlayerId::NONE, KillStyle::BulletBill);
             if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
 
             self.die(g);
         } else {
-            if player.fOldY + PH as f32 <= self.iy as f32 && player.iy as i32 + PH >= self.iy as i32 {
+            if g.player(player).fOldY + PH as f32 <= self.iy as f32 && g.player(player).iy as i32 + PH >= self.iy as i32 {
                 return self.hittop(g, player);
             } else {
                 return self.hitother(g, player);

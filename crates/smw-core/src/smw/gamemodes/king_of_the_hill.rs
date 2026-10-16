@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/KingOfTheHill.cpp
 
+use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::game_mode::{game_mode_koth, CGameMode, CGameModeTrait};
 use crate::common::player_kill_styles::KillStyle;
@@ -47,22 +48,22 @@ impl CGameModeTrait for CGM_KingOfTheHill {
         gp.get().objectcontainer[2].add(g, obj);
     }
 
-    fn playerkilledplayer(&mut self, g: &mut Game, _inflictor: Ptr<CPlayer>, _other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, _inflictor: PlayerId, _other: PlayerId, _style: KillStyle) -> PlayerKillType {
         PlayerKillType::Normal
     }
 
-    fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
-        gm::cgamemode_playerkilledself(self, player, style)
+    fn playerkilledself(&mut self, g: &mut Game, player: PlayerId, style: KillStyle) -> PlayerKillType {
+        gm::cgamemode_playerkilledself(g, self, player, style)
     }
 
-    fn playerextraguy(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, mut player: PlayerId, iType: i16) {
         if !self.gameover {
-            player.score().adjust_score(g, (5 * iType as i32) as i16);
+            g.player(player).score().adjust_score(g, (5 * iType as i32) as i16);
             self.check_winner(g, player);
         }
     }
 
-    fn check_winner(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> PlayerKillType {
+    fn check_winner(&mut self, g: &mut Game, player: PlayerId) -> PlayerKillType {
         cgm_domination_check_winner(g, self, player)
     }
 }

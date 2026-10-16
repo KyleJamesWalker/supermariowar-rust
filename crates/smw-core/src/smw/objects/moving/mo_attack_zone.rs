@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_AttackZone.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -72,23 +73,23 @@ pub trait MO_AttackZoneTrait: IO_MovingObjectTrait {
     fn az_mut(&mut self) -> &mut MO_AttackZone;
 }
 
-pub fn mo_attack_zone_collide_player<T: MO_AttackZoneTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: Ptr<CPlayer>) -> bool {
+pub fn mo_attack_zone_collide_player<T: MO_AttackZoneTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: PlayerId) -> bool {
     let (dead, iTeamID, iPlayerID, iStyle) = {
         let z = this.az();
         (z.dead, z.iTeamID, z.iPlayerID, z.iStyle)
     };
 
-    if player.is_shielded() || player.is_invincible() || player.shyguy || dead {
+    if g.player(player).is_shielded() || g.player(player).is_invincible() || g.player(player).shyguy || dead {
         return false;
     }
 
-    if g.game_values.teamcollision != TeamCollisionStyle::On && player.teamID == iTeamID {
+    if g.game_values.teamcollision != TeamCollisionStyle::On && g.player(player).teamID == iTeamID {
         return false;
     }
 
     let killer = get_player_from_global_id(g, iPlayerID);
 
-    if !killer.is_null() && killer.globalID == player.globalID {
+    if !killer.is_none() && g.player(killer).globalID == g.player(player).globalID {
         return false;
     }
 
@@ -139,7 +140,7 @@ pub fn mo_attack_zone_collide_object<T: MO_AttackZoneTrait + ?Sized>(g: &mut Gam
 
             if block.frozen {
                 block.shatter_die(g);
-            } else if block.owner.is_null() || block.owner.globalID != iPlayerID {
+            } else if block.owner.is_none() || g.player(block.owner).globalID != iPlayerID {
                 block.die(g);
             }
         } else if r#type == movingobject_throwbox {
@@ -147,7 +148,7 @@ pub fn mo_attack_zone_collide_object<T: MO_AttackZoneTrait + ?Sized>(g: &mut Gam
 
             if r#box.frozen {
                 r#box.shatter_die(g);
-            } else if r#box.owner.is_null() || r#box.owner.globalID != iPlayerID {
+            } else if r#box.owner.is_none() || g.player(r#box.owner).globalID != iPlayerID {
                 r#box.die(g);
             }
         }
@@ -174,7 +175,7 @@ impl CObjectTrait for MO_AttackZone {
     }
     // This is invisible
     fn draw(&mut self, g: &mut Game) {}
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         mo_attack_zone_collide_player(g, self, player)
     }
     fn collide_object(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) {

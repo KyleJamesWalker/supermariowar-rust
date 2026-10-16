@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_CarriedObject.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -21,7 +22,7 @@ pub struct MO_CarriedObject {
 
     pub fCarriedByKuriboShoe: bool,
 
-    pub owner: Ptr<CPlayer>,
+    pub owner: PlayerId,
     pub fSmoking: bool,
 
     pub dKickX: f32,
@@ -29,6 +30,8 @@ pub struct MO_CarriedObject {
     pub iOwnerLeftOffset: i16,
     pub iOwnerRightOffset: i16,
     pub iOwnerUpOffset: i16,
+    /// For `drop`, which clears the owner's `carriedItem`.
+    game: Ptr<Game>,
 }
 impl_base!(MO_CarriedObject => io_moving_object: IO_MovingObject);
 
@@ -79,20 +82,21 @@ impl MO_CarriedObject {
                 iAnimationWidth,
             ),
             fCarriedByKuriboShoe: false,
-            owner: Ptr::null(),
+            owner: PlayerId::NONE,
             fSmoking: false,
             dKickX: 0.0,
             dKickY: 0.0,
             iOwnerLeftOffset: 0,
             iOwnerRightOffset: 0,
             iOwnerUpOffset: 0,
+            game: g.ptr(),
         };
         o.init();
         o
     }
 
     fn init(&mut self) {
-        self.owner = Ptr::null();
+        self.owner = PlayerId::NONE;
         self.fSmoking = false;
 
         self.dKickX = 2.0;
@@ -106,7 +110,7 @@ impl MO_CarriedObject {
     }
 
     pub fn has_owner(&self) -> bool {
-        !self.owner.is_null()
+        !self.owner.is_none()
     }
     pub fn is_carried_by_kuribo_shoe(&self) -> bool {
         self.fCarriedByKuriboShoe
@@ -115,8 +119,8 @@ impl MO_CarriedObject {
 
 impl Drop for MO_CarriedObject {
     fn drop(&mut self) {
-        if !self.owner.is_null() {
-            self.owner.carriedItem = Ptr::null();
+        if let Some(owner) = self.game.players.get(self.owner) {
+            owner.carriedItem = Ptr::null();
         }
     }
 }
@@ -124,9 +128,9 @@ impl Drop for MO_CarriedObject {
 pub fn mo_carried_object_draw<T: MO_CarriedObjectTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let o = this.carried();
     let src = Rect { x: o.drawframe as i32, y: o.animationOffsetY as i32, w: o.iw as i32, h: o.ih as i32 };
-    if !o.owner.is_null() && o.owner.iswarping() {
-        let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(o.owner.get_warp_state() as i32) };
-        g.rm.sprite(o.spr).draw_clip(g, (o.ix - o.collisionOffsetX) as i32, (o.iy - o.collisionOffsetY) as i32, &src, edge, o.owner.get_warp_plane() as i32);
+    if !o.owner.is_none() && g.player(o.owner).iswarping() {
+        let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(g.player(o.owner).get_warp_state() as i32) };
+        g.rm.sprite(o.spr).draw_clip(g, (o.ix - o.collisionOffsetX) as i32, (o.iy - o.collisionOffsetY) as i32, &src, edge, g.player(o.owner).get_warp_plane() as i32);
     } else {
         g.rm.sprite(o.spr).draw_src(g, (o.ix - o.collisionOffsetX) as i32, (o.iy - o.collisionOffsetY) as i32, &src);
     }
@@ -134,11 +138,11 @@ pub fn mo_carried_object_draw<T: MO_CarriedObjectTrait + ?Sized>(g: &mut Game, t
 
 pub fn mo_carried_object_move_to_owner<T: MO_CarriedObjectTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let o = this.carried_mut();
-    if !o.owner.is_null() {
+    if !o.owner.is_none() {
         let owner = o.owner;
-        let xi = (owner.ix as i32 + if owner.is_facing_right(g) { o.iOwnerRightOffset as i32 } else { o.iOwnerLeftOffset as i32 }) as i16;
+        let xi = (g.player(owner).ix as i32 + if g.player(owner).is_facing_right(g) { o.iOwnerRightOffset as i32 } else { o.iOwnerLeftOffset as i32 }) as i16;
         o.set_xi(xi);
-        let yi = (owner.iy as i32 + PH - o.iOwnerUpOffset as i32 + o.collisionOffsetY as i32) as i16;
+        let yi = (g.player(owner).iy as i32 + PH - o.iOwnerUpOffset as i32 + o.collisionOffsetY as i32) as i16;
         o.set_yi(yi);
     }
 }
@@ -146,11 +150,11 @@ pub fn mo_carried_object_move_to_owner<T: MO_CarriedObjectTrait + ?Sized>(g: &mu
 pub fn mo_carried_object_drop<T: MO_CarriedObjectTrait + ?Sized>(g: &mut Game, this: &mut T) {
     {
         let o = this.carried_mut();
-        if !o.owner.is_null() {
-            o.owner.carriedItem = Ptr::null();
+        if !o.owner.is_none() {
+            g.player(o.owner).carriedItem = Ptr::null();
         }
 
-        o.owner = Ptr::null();
+        o.owner = PlayerId::NONE;
     }
 
     io_moving_object_collision_detection_checksides(g, this);
@@ -160,9 +164,9 @@ pub fn mo_carried_object_kick<T: MO_CarriedObjectTrait + ?Sized>(g: &mut Game, t
         let mut gp = g.ptr();
     {
         let o = this.carried_mut();
-        if !o.owner.is_null() {
+        if !o.owner.is_none() {
             let owner = o.owner;
-            o.velx = owner.velx + if owner.is_facing_right(g) { o.dKickX } else { -o.dKickX };
+            o.velx = g.player(owner).velx + if g.player(owner).is_facing_right(g) { o.dKickX } else { -o.dKickX };
             o.vely = -o.dKickY;
             if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
         }

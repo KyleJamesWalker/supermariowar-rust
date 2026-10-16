@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/CaptureTheFlag.cpp
 
+use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::game_mode::*;
 use crate::common::game_values::if_sound_on_play;
@@ -43,11 +44,11 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
 
         for i in 0..g.players.len() {
             let player = g.players[i];
-            let iTeamID: i16 = player.get_team_id();
+            let iTeamID: i16 = g.player(player).get_team_id();
             if !fTeamUsed[iTeamID as usize] {
                 fTeamUsed[iTeamID as usize] = true;
 
-                let iColorID: i16 = player.get_color_id();
+                let iColorID: i16 = g.player(player).get_color_id();
                 let base: Ptr<MO_FlagBase> = Ptr::new_box(MO_FlagBase::new(g, gp.rm.spr_flagbases, iTeamID, iColorID));
                 gp.objectcontainer[0].add(g, base);
 
@@ -64,15 +65,15 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
         }
     }
 
-    fn playerkilledplayer(&mut self, g: &mut Game, _inflictor: Ptr<CPlayer>, _other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, _inflictor: PlayerId, _other: PlayerId, _style: KillStyle) -> PlayerKillType {
         PlayerKillType::Normal
     }
 
-    fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, player: PlayerId, style: KillStyle) -> PlayerKillType {
         let mut gp = g.ptr();
-        cgamemode_playerkilledself(self, player, style);
+        cgamemode_playerkilledself(g, self, player, style);
 
-        let mut item = player.carriedItem;
+        let mut item = g.player(player).carriedItem;
         if !item.is_null() && item.get_moving_object_type() == movingobject_flag {
             item.as_any().downcast_mut::<CO_Flag>().expect("carried flag").place_flag(g);
             if_sound_on_play(g, &mut gp.rm.sfx_transform);
@@ -81,26 +82,26 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
         PlayerKillType::Normal
     }
 
-    fn playerextraguy(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, mut player: PlayerId, iType: i16) {
         if self.gameover {
             return;
         }
 
-        player.score().adjust_score(g, iType);
+        g.player(player).score().adjust_score(g, iType);
         self.check_winner(g, player);
     }
 
-    fn check_winner(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> PlayerKillType {
+    fn check_winner(&mut self, g: &mut Game, mut player: PlayerId) -> PlayerKillType {
         if self.goal > -1 {
-            if player.score().score >= self.goal {
-                player.score().set_score(g, self.goal);
-                self.winningteam = player.get_team_id();
+            if g.player(player).score().score >= self.goal {
+                g.player(player).score().set_score(g, self.goal);
+                self.winningteam = g.player(player).get_team_id();
                 self.gameover = true;
 
                 remove_players_but_team(g, self.winningteam);
                 setup_score_board(g, false);
                 show_score_board(g);
-            } else if player.score().score as i32 >= self.goal as i32 - 2 && !self.playedwarningsound {
+            } else if g.player(player).score().score as i32 >= self.goal as i32 - 2 && !self.playedwarningsound {
                 self.playwarningsound(g);
             }
         }

@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/Eggs.cpp
 
+use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::game_mode::*;
 use crate::common::moving_object_types::movingobject_egg;
@@ -77,14 +78,14 @@ impl CGameModeTrait for CGM_Eggs {
         }
     }
 
-    fn playerkilledplayer(&mut self, g: &mut Game, _inflictor: Ptr<CPlayer>, _other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, _inflictor: PlayerId, _other: PlayerId, _style: KillStyle) -> PlayerKillType {
         PlayerKillType::Normal
     }
 
-    fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
-        cgamemode_playerkilledself(self, player, style);
+    fn playerkilledself(&mut self, g: &mut Game, player: PlayerId, style: KillStyle) -> PlayerKillType {
+        cgamemode_playerkilledself(g, self, player, style);
 
-        let mut item = player.carriedItem;
+        let mut item = g.player(player).carriedItem;
         if !item.is_null() && item.get_moving_object_type() == movingobject_egg {
             item.as_any().downcast_mut::<CO_Egg>().expect("carried egg").place_egg(g);
         }
@@ -92,25 +93,25 @@ impl CGameModeTrait for CGM_Eggs {
         PlayerKillType::Normal
     }
 
-    fn playerextraguy(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, mut player: PlayerId, iType: i16) {
         if !self.gameover {
-            player.score().adjust_score(g, iType);
+            g.player(player).score().adjust_score(g, iType);
             self.check_winner(g, player);
         }
     }
 
-    fn check_winner(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> PlayerKillType {
+    fn check_winner(&mut self, g: &mut Game, mut player: PlayerId) -> PlayerKillType {
         if self.goal > -1 {
-            if player.score().score >= self.goal {
-                player.score().set_score(g, self.goal);
+            if g.player(player).score().score >= self.goal {
+                g.player(player).score().set_score(g, self.goal);
 
-                self.winningteam = player.get_team_id();
+                self.winningteam = g.player(player).get_team_id();
                 self.gameover = true;
 
                 remove_players_but_team(g, self.winningteam);
                 setup_score_board(g, false);
                 show_score_board(g);
-            } else if player.score().score as i32 >= self.goal as i32 - 2 && !self.playedwarningsound {
+            } else if g.player(player).score().score as i32 >= self.goal as i32 - 2 && !self.playedwarningsound {
                 self.playwarningsound(g);
             }
         }

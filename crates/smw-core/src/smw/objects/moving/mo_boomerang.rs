@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_Boomerang.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -123,9 +124,9 @@ impl MO_Boomerang {
         // Penalize player if they did not catch it
         let mut player = get_player_from_global_id(g, self.iPlayerID);
 
-        if !player.is_null() {
-            if player.projectilelimit > 0 {
-                player.decrease_projectile_limit(g);
+        if !player.is_none() {
+            if g.player(player).projectilelimit > 0 {
+                g.player(player).decrease_projectile_limit(g);
             }
         }
     }
@@ -307,13 +308,13 @@ impl CObjectTrait for MO_Boomerang {
                 // Follow the player zelda style
                 let player = get_player_from_global_id(g, self.iPlayerID);
 
-                if !player.is_null() {
+                if !player.is_none() {
                     let mut fWrap = false;
-                    if (player.ix as i32 - self.ix as i32).abs() > 320 {
+                    if (g.player(player).ix as i32 - self.ix as i32).abs() > 320 {
                         fWrap = true;
                     }
 
-                    if (player.ix < self.ix && !fWrap) || (player.ix > self.ix && fWrap)
+                    if (g.player(player).ix < self.ix && !fWrap) || (g.player(player).ix > self.ix && fWrap)
                     // Wrap Boomerang
                     // if (player->ix < ix)  //No Wrap Boomerang
                     {
@@ -330,7 +331,7 @@ impl CObjectTrait for MO_Boomerang {
                         }
                     }
 
-                    if player.iy < self.iy {
+                    if g.player(player).iy < self.iy {
                         self.vely -= 0.2f32;
 
                         if self.vely < -3.0f32 {
@@ -384,18 +385,18 @@ impl CObjectTrait for MO_Boomerang {
         }
     }
 
-    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
-        if self.iPlayerID != player.globalID && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID) {
-            if !player.is_shielded() {
+    fn collide_player(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
+        if self.iPlayerID != g.player(player).globalID && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != g.player(player).teamID) {
+            if !g.player(player).is_shielded() {
                 removeifprojectile(g, self.as_mo_ptr(), false, false);
 
-                if !player.is_invincible() && !player.shyguy {
+                if !g.player(player).is_invincible() && !g.player(player).shyguy {
                     // Find the player that shot this boomerang so we can attribute a kill
                     player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Boomerang, false, false);
                     return true;
                 }
             }
-        } else if self.iPlayerID == player.globalID && self.fFlipped {
+        } else if self.iPlayerID == g.player(player).globalID && self.fFlipped {
             removeifprojectile(g, self.as_mo_ptr(), false, true);
         }
 

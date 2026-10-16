@@ -1,5 +1,6 @@
 //! Port of src/common/ObjectBase.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -233,7 +234,7 @@ pub trait CObjectTrait: Any {
 
     fn draw(&mut self, g: &mut Game) {}
     fn update(&mut self, g: &mut Game);
-    fn collide_player(&mut self, g: &mut Game, _player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, _player: PlayerId) -> bool {
         false
     }
     fn collide_object(&mut self, g: &mut Game, _object: Ptr<dyn IO_MovingObjectTrait>) {}

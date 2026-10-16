@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_Coin.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -105,17 +106,17 @@ impl CObjectTrait for MO_Coin {
         Some(self)
     }
 
-    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
         let mut gp = g.ptr();
-        if self.iUncollectableTime > 0 || (self.iType == 1 && (!g.game_values.gamemodesettings.greed.owncoins && self.iTeam == player.get_team_id())) {
+        if self.iUncollectableTime > 0 || (self.iType == 1 && (!g.game_values.gamemodesettings.greed.owncoins && self.iTeam == g.player(player).get_team_id())) {
             return false;
         }
 
         if !g.game_values.gamemode.gameover {
             if self.iType == 2 {
-                player.score().subscore[0] += 1;
+                g.player(player).score().subscore[0] += 1;
             } else {
-                player.score().adjust_score(g, 1);
+                g.player(player).score().adjust_score(g, 1);
             }
 
             gp.game_values.gamemode.check_winner(g, player);

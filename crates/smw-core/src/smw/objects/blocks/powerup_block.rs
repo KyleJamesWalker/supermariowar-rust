@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/PowerupBlock.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -285,10 +286,10 @@ pub fn b_powerup_block_reset<T: B_PowerupBlockTrait + ?Sized>(this: &mut T) {
     b.state = 0;
 }
 
-pub fn b_powerup_block_collide_player_dir<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, player: Ptr<CPlayer>, direction: i16, useBehavior: bool) -> bool {
+pub fn b_powerup_block_collide_player_dir<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, player: PlayerId, direction: i16, useBehavior: bool) -> bool {
     if this.pb().hidden {
         let b = this.pb();
-        if player.fOldY >= (b.iposy as i32 + b.ih as i32) as f32 && direction == 0 {
+        if g.player(player).fOldY >= (b.iposy as i32 + b.ih as i32) as f32 && direction == 0 {
             return this.hitbottom_player(g, player, useBehavior);
         }
 
@@ -298,31 +299,31 @@ pub fn b_powerup_block_collide_player_dir<T: B_PowerupBlockTrait + ?Sized>(g: &m
     io_block_collide_player_dir(g, this, player, direction, useBehavior)
 }
 
-pub fn b_powerup_block_hittop_player<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
-    io_block_hittop_player(this, player, useBehavior);
+pub fn b_powerup_block_hittop_player<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: PlayerId, useBehavior: bool) -> bool {
+    io_block_hittop_player(g, this, player, useBehavior);
 
     if this.pb().state == 1 {
         let mut iKillType = PlayerKillType::NonKill;
         let (iBumpPlayerID, iBumpTeamID) = (this.pb().iBumpPlayerID, this.pb().iBumpTeamID);
         if iBumpPlayerID >= 0
-            && !player.is_invincible_on_bottom()
-            && (player.teamID != iBumpTeamID || g.game_values.teamcollision == TeamCollisionStyle::On)
+            && !g.player(player).is_invincible_on_bottom()
+            && (g.player(player).teamID != iBumpTeamID || g.game_values.teamcollision == TeamCollisionStyle::On)
         {
             iKillType = player_killed_player(g, iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
         }
 
         if PlayerKillType::NonKill == iKillType {
-            player.vely = -VELNOTEBLOCKREPEL;
+            g.player(player).vely = -VELNOTEBLOCKREPEL;
         }
     } else if useBehavior {
-        player.vely = GRAVITATION;
+        g.player(player).vely = GRAVITATION;
 
         if this.pb().state == 0 {
-            if player.is_super_stomping() {
+            if g.player(player).is_super_stomping() {
                 let b = this.pb_mut();
                 b.state = 1;
                 b.vely = -VELBLOCKBOUNCE;
-                b.side = (player.ix as i32 + HALFPW) < (b.ix as i32 + (b.iw as i32 >> 1));
+                b.side = (g.player(player).ix as i32 + HALFPW) < (b.ix as i32 + (b.iw as i32 >> 1));
             }
         }
     }
@@ -330,19 +331,19 @@ pub fn b_powerup_block_hittop_player<T: B_PowerupBlockTrait + ?Sized>(g: &mut Ga
     false
 }
 
-pub fn b_powerup_block_hitbottom_player<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+pub fn b_powerup_block_hitbottom_player<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: PlayerId, useBehavior: bool) -> bool {
         let mut gp = g.ptr();
     if useBehavior {
         //Player bounces off
-        player.vely = cap_falling_velocity(-player.vely * BOUNCESTRENGTH);
+        g.player(player).vely = cap_falling_velocity(-g.player(player).vely * BOUNCESTRENGTH);
         {
             let b = this.pb();
-            player.set_yf((b.iposy as i32 + b.ih as i32) as f32 + 0.2f32);
+            g.player(player).set_yf((b.iposy as i32 + b.ih as i32) as f32 + 0.2f32);
         }
 
         if this.pb().hidden {
             this.pb_mut().hidden = false;
-            io_block_kill_players_and_objects_inside_block(g, this, player.globalID);
+            io_block_kill_players_and_objects_inside_block(g, this, g.player(player).globalID);
         }
 
         let (col, row) = (this.pb().col, this.pb().row);
@@ -352,12 +353,12 @@ pub fn b_powerup_block_hitbottom_player<T: B_PowerupBlockTrait + ?Sized>(g: &mut
             if_sound_on_play(g, &mut gp.rm.sfx_bump);
 
             let b = this.pb_mut();
-            b.iBumpPlayerID = player.globalID;
-            b.iBumpTeamID = player.teamID;
+            b.iBumpPlayerID = g.player(player).globalID;
+            b.iBumpTeamID = g.player(player).teamID;
 
             b.vely = -VELBLOCKBOUNCE;
             b.state = 1;
-            b.side = (player.ix as i32 + HALFPW) < (b.ix as i32 + (b.iw as i32 >> 1));
+            b.side = (g.player(player).ix as i32 + HALFPW) < (b.ix as i32 + (b.iw as i32 >> 1));
         }
     }
 
@@ -525,7 +526,7 @@ macro_rules! impl_powerup_block_io_block_overrides {
         fn reset(&mut self) {
             $crate::smw::objects::blocks::powerup_block::b_powerup_block_reset(self)
         }
-        fn collide_player_dir(&mut self, g: &mut Game, player: $crate::globals::Ptr<$crate::smw::player::CPlayer>, direction: i16, useBehavior: bool) -> bool {
+        fn collide_player_dir(&mut self, g: &mut Game, player: $crate::smw::players::PlayerId, direction: i16, useBehavior: bool) -> bool {
             $crate::smw::objects::blocks::powerup_block::b_powerup_block_collide_player_dir(g, self, player, direction, useBehavior)
         }
         fn collide_object_dir(
@@ -535,11 +536,11 @@ macro_rules! impl_powerup_block_io_block_overrides {
         ) -> bool {
             $crate::smw::objects::blocks::powerup_block::b_powerup_block_collide_object_dir(g, self, object, direction)
         }
-        fn hittop_player(&mut self, g: &mut Game, player: $crate::globals::Ptr<$crate::smw::player::CPlayer>, useBehavior: bool) -> bool {
+        fn hittop_player(&mut self, g: &mut Game, player: $crate::smw::players::PlayerId, useBehavior: bool) -> bool {
         let mut gp = g.ptr();
             $crate::smw::objects::blocks::powerup_block::b_powerup_block_hittop_player(gp.get(), self, player, useBehavior)
         }
-        fn hitbottom_player(&mut self, g: &mut Game, player: $crate::globals::Ptr<$crate::smw::player::CPlayer>, useBehavior: bool) -> bool {
+        fn hitbottom_player(&mut self, g: &mut Game, player: $crate::smw::players::PlayerId, useBehavior: bool) -> bool {
         let mut gp = g.ptr();
             $crate::smw::objects::blocks::powerup_block::b_powerup_block_hitbottom_player(gp.get(), self, player, useBehavior)
         }

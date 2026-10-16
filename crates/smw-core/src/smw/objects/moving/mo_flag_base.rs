@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_FlagBase.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -112,7 +113,7 @@ impl MO_FlagBase {
         self.set_yi(y);
     }
 
-    pub fn score_flag(&mut self, g: &mut Game, mut flag: Ptr<CO_Flag>, mut player: Ptr<CPlayer>) {
+    pub fn score_flag(&mut self, g: &mut Game, mut flag: Ptr<CO_Flag>, mut player: PlayerId) {
         let mut gp = g.ptr();
         if flag.teamID == self.teamID {
             flag.place_flag(g);
@@ -120,7 +121,7 @@ impl MO_FlagBase {
         } else if !g.game_values.gamemodesettings.flag.homescore || !self.homeflag.is_null() || g.game_values.gamemodesettings.flag.centerflag {
             flag.place_flag(g);
             if !g.game_values.gamemode.gameover {
-                player.score().adjust_score(g, 1);
+                g.player(player).score().adjust_score(g, 1);
                 gp.game_values.gamemode.check_winner(g, player);
             }
 
@@ -156,9 +157,9 @@ impl CObjectTrait for MO_FlagBase {
         Some(self)
     }
 
-    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
-        if self.teamID == player.teamID && !player.carriedItem.is_null() && player.carriedItem.get_moving_object_type() == movingobject_flag {
-            let flag: Ptr<CO_Flag> = Ptr::from_mut(player.carriedItem.as_any().downcast_mut::<CO_Flag>().unwrap());
+    fn collide_player(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
+        if self.teamID == g.player(player).teamID && !g.player(player).carriedItem.is_null() && g.player(player).carriedItem.get_moving_object_type() == movingobject_flag {
+            let flag: Ptr<CO_Flag> = Ptr::from_mut(g.player(player).carriedItem.as_any().downcast_mut::<CO_Flag>().unwrap());
             self.score_flag(g, flag, player);
             self.timer = 0;
         }
@@ -235,8 +236,8 @@ impl CObjectTrait for MO_FlagBase {
             let flag: Ptr<CO_Flag> = Ptr::from_mut(object.as_any().downcast_mut::<CO_Flag>().unwrap());
             let player = flag.owner_throw;
 
-            if !player.is_null() {
-                if self.teamID == player.teamID {
+            if !player.is_none() {
+                if self.teamID == g.player(player).teamID {
                     self.score_flag(g, flag, player);
                 }
             }

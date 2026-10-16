@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_Yoshi.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::game::App;
@@ -136,14 +137,14 @@ impl CObjectTrait for MO_Yoshi {
         io_moving_object_draw(g, self);
     }
 
-    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
         let mut gp = g.ptr();
-        if !player.carriedItem.is_null() && player.carriedItem.get_moving_object_type() == movingobject_egg {
-            let mut egg: Ptr<CO_Egg> = Ptr::from_mut(player.carriedItem.as_any().downcast_mut::<CO_Egg>().unwrap());
+        if !g.player(player).carriedItem.is_null() && g.player(player).carriedItem.get_moving_object_type() == movingobject_egg {
+            let mut egg: Ptr<CO_Egg> = Ptr::from_mut(g.player(player).carriedItem.as_any().downcast_mut::<CO_Egg>().unwrap());
 
             if egg.color == self.color {
                 if !g.game_values.gamemode.gameover {
-                    player.score().adjust_score(g, 1);
+                    g.player(player).score().adjust_score(g, 1);
                     gp.game_values.gamemode.check_winner(g, player);
                 }
 
@@ -172,11 +173,11 @@ impl CObjectTrait for MO_Yoshi {
         if object.get_moving_object_type() == movingobject_egg {
             let mut egg: Ptr<CO_Egg> = Ptr::from_mut(object.as_any().downcast_mut::<CO_Egg>().unwrap());
 
-            if egg.color == self.color && !egg.owner_throw.is_null() {
-                let mut player: Ptr<CPlayer> = egg.owner_throw;
+            if egg.color == self.color && !egg.owner_throw.is_none() {
+                let mut player: PlayerId = egg.owner_throw;
 
                 if !g.game_values.gamemode.gameover {
-                    player.score().adjust_score(g, 1);
+                    g.player(player).score().adjust_score(g, 1);
                     gp.game_values.gamemode.check_winner(g, player);
                 }
 

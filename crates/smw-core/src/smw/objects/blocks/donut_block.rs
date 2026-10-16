@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/DonutBlock.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -92,11 +93,11 @@ impl CObjectTrait for B_DonutBlock {
 impl IO_BlockTrait for B_DonutBlock {
     crate::impl_io_block_plumbing!();
 
-    fn hittop_player(&mut self, g: &mut Game, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
-        io_block_hittop_player(self, player, useBehavior);
+    fn hittop_player(&mut self, g: &mut Game, player: PlayerId, useBehavior: bool) -> bool {
+        io_block_hittop_player(g, self, player, useBehavior);
 
         if useBehavior {
-            self.state = (player.globalID as i32 + 1) as i16;
+            self.state = (g.player(player).globalID as i32 + 1) as i16;
         }
 
         false

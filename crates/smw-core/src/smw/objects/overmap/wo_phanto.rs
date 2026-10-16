@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_Phanto.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::game::App;
@@ -113,17 +114,17 @@ impl CObjectTrait for OMO_Phanto {
         if g.game_values.gamemode.gamemode == game_mode_chase {
             let chasemode: &mut CGM_Chase = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Chase>().unwrap();
 
-            let player: Ptr<CPlayer> = chasemode.get_key_holder();
+            let player: PlayerId = chasemode.get_key_holder();
 
-            if !g.game_values.gamemode.gameover && !player.is_null() {
+            if !g.game_values.gamemode.gameover && !player.is_none() {
                 // Chase the player
                 let mut fWrap = false;
-                if (player.ix as i32 - self.ix as i32).abs() > 320 {
+                if (g.player(player).ix as i32 - self.ix as i32).abs() > 320 {
                     fWrap = true;
                 }
 
                 // Chase wrapped around edge of screen
-                if (player.ix < self.ix && !fWrap) || (player.ix > self.ix && fWrap) {
+                if (g.player(player).ix < self.ix && !fWrap) || (g.player(player).ix > self.ix && fWrap) {
                     self.velx -= self.dReactionSpeed;
 
                     if self.velx < -self.dMaxSpeedX {
@@ -137,7 +138,7 @@ impl CObjectTrait for OMO_Phanto {
                     }
                 }
 
-                if player.iy < self.iy {
+                if g.player(player).iy < self.iy {
                     self.vely -= self.dReactionSpeed;
 
                     if self.vely < -self.dMaxSpeedY {
@@ -179,26 +180,26 @@ impl CObjectTrait for OMO_Phanto {
         }
     }
 
-    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
         let mut gp = g.ptr();
         if self.iy as i32 <= -(self.ih as i32) || self.iy as i32 >= App::screenHeight {
             return false;
         }
 
         // If the player is holding the key, kill him
-        if !player.is_invincible() && !player.is_shielded() {
+        if !g.player(player).is_invincible() && !g.player(player).is_shielded() {
             if self.iType == 2 {
-                player.kill_player_map_hazard(g, false, KillStyle::Phanto, false, -1);
+                g.player(player).kill_player_map_hazard(g, false, KillStyle::Phanto, false, -1);
                 return true;
             } else if g.game_values.gamemode.gamemode == game_mode_chase {
                 let chasemode: &mut CGM_Chase = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Chase>().unwrap();
-                let keyholder: Ptr<CPlayer> = chasemode.get_key_holder();
+                let keyholder: PlayerId = chasemode.get_key_holder();
 
                 if keyholder == player {
-                    player.kill_player_map_hazard(g, false, KillStyle::Phanto, false, -1);
+                    g.player(player).kill_player_map_hazard(g, false, KillStyle::Phanto, false, -1);
 
                     if !g.game_values.gamemode.gameover && self.iType == 1 {
-                        player.score().adjust_score(g, -10);
+                        g.player(player).score().adjust_score(g, -10);
                         if_sound_on_play(g, &mut gp.rm.sfx_stun);
                     }
 

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_FrenzyCard.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -91,11 +92,11 @@ impl CObjectTrait for MO_FrenzyCard {
         Some(self)
     }
 
-    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
         let mut gp = g.ptr();
         let r#type = self.r#type;
         if r#type < 14 || r#type > 17 || g.game_values.gamemodesettings.frenzy.storedshells {
-            player.set_powerup(g, r#type);
+            g.player(player).set_powerup(g, r#type);
             if g.game_values.gamemode.gamemode == game_mode_frenzy {
                 g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Frenzy>().unwrap().set_frenzy_owner(player);
             }

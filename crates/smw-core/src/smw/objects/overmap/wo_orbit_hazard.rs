@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_OrbitHazard.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -106,9 +107,9 @@ impl CObjectTrait for OMO_OrbitHazard {
         self.calculate_position();
     }
 
-    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
-        if !player.is_invincible() && !player.is_shielded() && !player.shyguy {
-            return player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
+    fn collide_player(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
+        if !g.player(player).is_invincible() && !g.player(player).is_shielded() && !g.player(player).shyguy {
+            return g.player(player).kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
         }
 
         false

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/IO_BulletBillCannon.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
@@ -51,7 +52,7 @@ impl CObjectTrait for IO_BulletBillCannon {
         }
     }
 
-    fn collide_player(&mut self, g: &mut Game, _player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, _player: PlayerId) -> bool {
         false
     }
 }

@@ -7,6 +7,7 @@ pub mod map_reader17xx;
 pub mod map_reader18xx;
 pub mod map_reader_constants;
 
+use crate::smw::players::PlayerId;
 use crate::common::gfx::soft_surface::Surface;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -2434,11 +2435,11 @@ impl CMap {
     }
 
     /// `movingPlatformCollision(CPlayer*)`; defined in smw/player.cpp.
-    pub fn moving_platform_collision_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) {
+    pub fn moving_platform_collision_player(&mut self, g: &mut Game, player: PlayerId) {
         for i in 0..self.platforms.len() {
             let mut p = self.platforms[i];
             p.collide_player(g, player);
-            if !player.isready() {
+            if !g.player(player).isready() {
                 return;
             }
         }
@@ -2446,7 +2447,7 @@ impl CMap {
         for i in 0..self.tempPlatforms.len() {
             let mut p = self.tempPlatforms[i];
             p.collide_player(g, player);
-            if !player.isready() {
+            if !g.player(player).isready() {
                 return;
             }
         }

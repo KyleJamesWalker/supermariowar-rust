@@ -145,8 +145,8 @@ impl GameModeSettingsUnion {
 
 /// Not in the C++, which indexes `players` by ID: a client that already removed players at the end of its game
 /// would read past the vector.
-fn net_player(g: &mut Game, id: u8) -> Ptr<crate::smw::player::CPlayer> {
-    g.players.iter().copied().find(|p| p.globalID as u8 == id).unwrap_or(Ptr::null())
+fn net_player(g: &mut Game, id: u8) -> crate::smw::players::PlayerId {
+    g.players.iter().copied().find(|&p| g.player(p).globalID as u8 == id).unwrap_or(crate::smw::players::PlayerId::NONE)
 }
 
 fn ticks(g: &mut Game) -> u32 {
@@ -844,7 +844,7 @@ impl NetClient {
         }
 
         let mut player = net_player(g, pkg.player_id);
-        if player.is_null() {
+        if player.is_none() {
             return;
         }
 
@@ -854,14 +854,14 @@ impl NetClient {
         }
         missed_frames /= WAITTIME as u32;
 
-        player.powerupused = Some(PowerupType::from_u8(pkg.powerup_id));
-        player.powerupradius = 100.0;
+        g.player(player).powerupused = Some(PowerupType::from_u8(pkg.powerup_id));
+        g.player(player).powerupradius = 100.0;
         while missed_frames > 0 {
-            player.powerupradius -= g.game_values.storedpowerupdelay as f32 / 2.0;
+            g.player(player).powerupradius -= g.game_values.storedpowerupdelay as f32 / 2.0;
             missed_frames -= 1;
         }
 
-        player.net_waitingForPowerupTrigger = false;
+        g.player(player).net_waitingForPowerupTrigger = false;
         println!("[net] P{} used powerup {}", pkg.player_id, pkg.powerup_id);
     }
 
@@ -873,31 +873,31 @@ impl NetClient {
         }
 
         let mut player = net_player(g, pkg.player_id);
-        if player.is_null() {
+        if player.is_none() {
             return;
         }
 
-        let temp_px = player.fx;
-        let temp_py = player.fy;
-        let temp_velx = player.velx;
-        let temp_vely = player.vely;
-        player.set_xf(pkg.player_x);
-        player.set_yf(pkg.player_y);
-        player.velx = pkg.player_xvel;
-        player.vely = pkg.player_yvel;
+        let temp_px = g.player(player).fx;
+        let temp_py = g.player(player).fy;
+        let temp_velx = g.player(player).velx;
+        let temp_vely = g.player(player).vely;
+        g.player(player).set_xf(pkg.player_x);
+        g.player(player).set_yf(pkg.player_y);
+        g.player(player).velx = pkg.player_xvel;
+        g.player(player).vely = pkg.player_yvel;
 
         g.netplay.allowMapCollisionEvent = true;
-        player.collision_detection_map(g);
+        g.player(player).collision_detection_map(g);
         g.netplay.allowMapCollisionEvent = false;
 
-        if player.isdead() {
+        if g.player(player).isdead() {
             return;
         }
 
-        player.set_xf(temp_px);
-        player.set_yf(temp_py);
-        player.velx = temp_velx;
-        player.vely = temp_vely;
+        g.player(player).set_xf(temp_px);
+        g.player(player).set_yf(temp_py);
+        g.player(player).velx = temp_velx;
+        g.player(player).vely = temp_vely;
 
         println!("[net] Map block collision!");
     }
@@ -911,19 +911,19 @@ impl NetClient {
 
         let mut player1 = net_player(g, pkg.player_id[0]);
         let mut player2 = net_player(g, pkg.player_id[1]);
-        if player1.is_null() || player2.is_null() {
+        if player1.is_none() || player2.is_none() {
             return;
         }
 
-        player1.set_xf(pkg.player_x[0]);
-        player1.set_yf(pkg.player_y[0]);
-        player1.fOldY = pkg.player_oldy[0];
+        g.player(player1).set_xf(pkg.player_x[0]);
+        g.player(player1).set_yf(pkg.player_y[0]);
+        g.player(player1).fOldY = pkg.player_oldy[0];
 
-        player2.set_xf(pkg.player_x[1]);
-        player2.set_yf(pkg.player_y[1]);
-        player2.fOldY = pkg.player_oldy[1];
+        g.player(player2).set_xf(pkg.player_x[1]);
+        g.player(player2).set_yf(pkg.player_y[1]);
+        g.player(player2).fOldY = pkg.player_oldy[1];
 
-        player1.collides_with_player(g, player2);
+        g.player(player1).collides_with_player(g, player2);
 
         println!("P{} collided with P{}!", pkg.player_id[0], pkg.player_id[1]);
     }
@@ -1422,8 +1422,8 @@ impl NetGameHost {
 
         for p in 0..g.players.len() as u8 {
             let pl = g.players[p as usize];
-            pkg.set_player_coord(p, pl.fx, pl.fy);
-            pkg.set_player_vel(p, pl.velx, pl.vely);
+            pkg.set_player_coord(p, g.player(pl).fx, g.player(pl).fy);
+            pkg.set_player_vel(p, g.player(pl).velx, g.player(pl).vely);
         }
 
         for c in 0..self.expected_client_count as usize {
@@ -1475,11 +1475,11 @@ impl NetGameHost {
 
     pub fn send_powerup_start_by_gh(&mut self, g: &mut Game) {
         let me = g.players[g.netplay.remotePlayerNumber as usize];
-        let pkg = gpkgs::StartPowerup::new(g.netplay.remotePlayerNumber, me.powerupused.unwrap() as u8, 0);
+        let pkg = gpkgs::StartPowerup::new(g.netplay.remotePlayerNumber, g.player(me).powerupused.unwrap() as u8, 0);
         self.send_message_to_my_peers(g, pkg.as_bytes());
 
         let mut me = me;
-        me.net_waitingForPowerupTrigger = false;
+        g.player(me).net_waitingForPowerupTrigger = false;
         println!("[net] P{} (host) used powerup {}", pkg.player_id, pkg.powerup_id);
     }
 
@@ -1497,7 +1497,7 @@ impl NetGameHost {
             return;
         }
 
-        if net_player(g, playerID).is_null() {
+        if net_player(g, playerID).is_none() {
             return;
         }
 

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/NoteBlock.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -136,9 +137,9 @@ impl IO_BlockTrait for B_NoteBlock {
         self.set_yf(fposy);
     }
 
-    fn collide_player_dir(&mut self, g: &mut Game, player: Ptr<CPlayer>, direction: i16, useBehavior: bool) -> bool {
+    fn collide_player_dir(&mut self, g: &mut Game, player: PlayerId, direction: i16, useBehavior: bool) -> bool {
         if self.hidden {
-            if (player.fOldY >= (self.iposy as i32 + self.ih as i32) as f32 || self.state > 1) && direction == 0 {
+            if (g.player(player).fOldY >= (self.iposy as i32 + self.ih as i32) as f32 || self.state > 1) && direction == 0 {
                 return self.hitbottom_player(g, player, useBehavior);
             }
 
@@ -148,14 +149,14 @@ impl IO_BlockTrait for B_NoteBlock {
         io_block_collide_player_dir(g, self, player, direction, useBehavior)
     }
 
-    fn hittop_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hittop_player(&mut self, g: &mut Game, mut player: PlayerId, useBehavior: bool) -> bool {
         let mut gp = g.ptr();
-        io_block_hittop_player(self, player, useBehavior);
+        io_block_hittop_player(g, self, player, useBehavior);
 
         if useBehavior {
-            player.superjumptimer = 4;
-            player.superjumptype = self.iType as i16;
-            player.vely = -VELNOTEBLOCKREPEL;
+            g.player(player).superjumptimer = 4;
+            g.player(player).superjumptype = self.iType as i16;
+            g.player(player).vely = -VELNOTEBLOCKREPEL;
 
             if self.state == 0 {
                 self.vely = VELNOTEBLOCKBOUNCE;
@@ -164,22 +165,23 @@ impl IO_BlockTrait for B_NoteBlock {
 
             if_sound_on_play(g, &mut gp.rm.sfx_bump);
 
-            g.game_values.unlocksecret3part2[player.globalID as usize] += 2;
+            let globalID = g.player(player).globalID as usize;
+            g.game_values.unlocksecret3part2[globalID] += 2;
             check_secret(g, 2);
         }
 
         false
     }
 
-    fn hitbottom_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitbottom_player(&mut self, g: &mut Game, mut player: PlayerId, useBehavior: bool) -> bool {
         let mut gp = g.ptr();
         if useBehavior {
-            player.set_yf((self.iposy as i32 + self.ih as i32) as f32 + 0.2f32);
-            player.vely = VELNOTEBLOCKREPEL;
+            g.player(player).set_yf((self.iposy as i32 + self.ih as i32) as f32 + 0.2f32);
+            g.player(player).vely = VELNOTEBLOCKREPEL;
 
             if self.state == 0 {
-                self.iBumpPlayerID = player.globalID;
-                self.iBumpTeamID = player.teamID;
+                self.iBumpPlayerID = g.player(player).globalID;
+                self.iBumpTeamID = g.player(player).teamID;
 
                 self.vely = -VELNOTEBLOCKBOUNCE;
                 self.state = 3;
@@ -189,7 +191,7 @@ impl IO_BlockTrait for B_NoteBlock {
 
             if self.hidden {
                 self.hidden = false;
-                io_block_kill_players_and_objects_inside_block(g, self, player.globalID);
+                io_block_kill_players_and_objects_inside_block(g, self, g.player(player).globalID);
             }
 
             g.g_map.update_tile_gap(self.col, self.row);
@@ -198,13 +200,13 @@ impl IO_BlockTrait for B_NoteBlock {
         false
     }
 
-    fn hitright_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitright_player(&mut self, g: &mut Game, mut player: PlayerId, useBehavior: bool) -> bool {
         let mut gp = g.ptr();
         if useBehavior {
-            player.set_xf((self.iposx as i32 + self.iw as i32) as f32 + 0.2f32);
-            player.fOldX = player.fx;
-            player.velx = VELNOTEBLOCKREPEL;
-            player.oldvelx = VELNOTEBLOCKREPEL;
+            g.player(player).set_xf((self.iposx as i32 + self.iw as i32) as f32 + 0.2f32);
+            g.player(player).fOldX = g.player(player).fx;
+            g.player(player).velx = VELNOTEBLOCKREPEL;
+            g.player(player).oldvelx = VELNOTEBLOCKREPEL;
 
             if self.state == 0 {
                 self.velx = -VELNOTEBLOCKBOUNCE;
@@ -217,13 +219,13 @@ impl IO_BlockTrait for B_NoteBlock {
         false
     }
 
-    fn hitleft_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, useBehavior: bool) -> bool {
+    fn hitleft_player(&mut self, g: &mut Game, mut player: PlayerId, useBehavior: bool) -> bool {
         let mut gp = g.ptr();
         if useBehavior {
-            player.set_xf((self.iposx as i32 - PW) as f32 - 0.2f32);
-            player.fOldX = player.fx;
-            player.velx = -VELNOTEBLOCKREPEL;
-            player.oldvelx = -VELNOTEBLOCKREPEL;
+            g.player(player).set_xf((self.iposx as i32 - PW) as f32 - 0.2f32);
+            g.player(player).fOldX = g.player(player).fx;
+            g.player(player).velx = -VELNOTEBLOCKREPEL;
+            g.player(player).oldvelx = -VELNOTEBLOCKREPEL;
 
             if self.state == 0 {
                 self.velx = VELNOTEBLOCKBOUNCE;

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/walkingenemy/WE_Koopa.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -74,7 +75,7 @@ impl CObjectTrait for MO_Koopa {
         mo_walking_enemy_update(g, self);
     }
 
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         mo_walking_enemy_collide_player(g, self, player)
     }
 
@@ -103,17 +104,17 @@ impl IO_MovingObjectTrait for MO_Koopa {
 impl MO_WalkingEnemyTrait for MO_Koopa {
     crate::impl_walking_enemy_plumbing!();
 
-    fn hittop_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn hittop_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut gp = g.ptr();
         let mut player = player;
-        player.set_yi((self.iy as i32 - PH - 1) as i16);
-        player.bouncejump();
+        g.player(player).set_yi((self.iy as i32 - PH - 1) as i16);
+        g.player(player).bouncejump();
         let p = player;
-        player.collisions.checktop(g, p.get());
-        player.platform = Ptr::null();
+        g.player(player).collisions.checktop(g, g.player(p));
+        g.player(player).platform = Ptr::null();
 
         if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
-            player.score().adjust_score(g, 1);
+            g.player(player).score().adjust_score(g, 1);
         }
 
         if self.fBouncing {
@@ -128,7 +129,7 @@ impl MO_WalkingEnemyTrait for MO_Koopa {
         } else {
             self.dead = true;
 
-            player.add_killer_award(g, Ptr::null(), KillStyle::Koopa);
+            g.player(player).add_killer_award(g, PlayerId::NONE, KillStyle::Koopa);
 
             self.drop_shell(g, false, false);
         }

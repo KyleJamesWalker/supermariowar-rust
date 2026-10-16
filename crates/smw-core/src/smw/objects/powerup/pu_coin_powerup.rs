@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_CoinPowerup.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -88,13 +89,13 @@ impl CObjectTrait for PU_CoinPowerup {
         }
     }
 
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut gp = g.ptr();
         let mut player = player;
         if self.state > 0 {
             if g.game_values.gamemode.gamemode == game_mode_coins || g.game_values.gamemode.gamemode == game_mode_greed {
                 if !g.game_values.gamemode.gameover {
-                    player.score().adjust_score(g, self.iValue);
+                    g.player(player).score().adjust_score(g, self.iValue);
                     gp.game_values.gamemode.check_winner(g, player);
                 }
             }

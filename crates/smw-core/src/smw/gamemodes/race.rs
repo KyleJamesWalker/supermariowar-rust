@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/Race.cpp
 
+use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::game_mode::{game_mode_race, CGameMode, CGameModeTrait};
 use crate::common::player_kill_styles::KillStyle;
@@ -90,15 +91,15 @@ impl CGM_Race {
     }
 
     //Player loses control of his areas
-    pub fn penalize_race_goals(&mut self, g: &mut Game, player: Ptr<CPlayer>) {
+    pub fn penalize_race_goals(&mut self, g: &mut Game, player: PlayerId) {
         let mut gp = g.ptr();
-        remove_player_race_goals(g, &gp.objectcontainer[2], player.get_team_id(), (self.nextGoal[player.get_team_id() as usize] as i32 - 1) as i16);
+        remove_player_race_goals(g, &gp.objectcontainer[2], g.player(player).get_team_id(), (self.nextGoal[g.player(player).get_team_id() as usize] as i32 - 1) as i16);
 
         if 2 == self.penalty {
-            self.nextGoal[player.get_team_id() as usize] = 0;
+            self.nextGoal[g.player(player).get_team_id() as usize] = 0;
         } else if 1 == self.penalty {
-            if self.nextGoal[player.get_team_id() as usize] > 0 {
-                self.nextGoal[player.get_team_id() as usize] -= 1;
+            if self.nextGoal[g.player(player).get_team_id() as usize] > 0 {
+                self.nextGoal[g.player(player).get_team_id() as usize] -= 1;
             }
         }
     }
@@ -141,36 +142,36 @@ impl CGameModeTrait for CGM_Race {
         }
     }
 
-    fn playerkilledplayer(&mut self, g: &mut Game, _inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, _inflictor: PlayerId, other: PlayerId, _style: KillStyle) -> PlayerKillType {
         self.penalize_race_goals(g, other);
         PlayerKillType::Normal
     }
 
-    fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
-        gm::cgamemode_playerkilledself(self, player, style);
+    fn playerkilledself(&mut self, g: &mut Game, player: PlayerId, style: KillStyle) -> PlayerKillType {
+        gm::cgamemode_playerkilledself(g, self, player, style);
 
         self.penalize_race_goals(g, player);
         PlayerKillType::Normal
     }
 
-    fn playerextraguy(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, mut player: PlayerId, iType: i16) {
         if !self.gameover {
-            player.score().adjust_score(g, 1 + if iType == 5 { 1 } else { 0 });
+            g.player(player).score().adjust_score(g, 1 + if iType == 5 { 1 } else { 0 });
 
             //Don't end the game if the goal is infinite
             if self.goal == -1 {
                 return;
             }
 
-            if player.score().score >= self.goal {
-                player.score().set_score(g, self.goal);
-                self.winningteam = player.get_team_id();
+            if g.player(player).score().score >= self.goal {
+                g.player(player).score().set_score(g, self.goal);
+                self.winningteam = g.player(player).get_team_id();
                 self.gameover = true;
 
                 remove_players_but_team(g, self.winningteam);
                 setup_score_board(g, false);
                 show_score_board(g);
-            } else if player.score().score as i32 >= self.goal as i32 - 1 && !self.playedwarningsound {
+            } else if g.player(player).score().score as i32 >= self.goal as i32 - 1 && !self.playedwarningsound {
                 self.playwarningsound(g);
             }
         }

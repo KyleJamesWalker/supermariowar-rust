@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_BonusHouseChest.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -115,10 +116,10 @@ impl CObjectTrait for MO_BonusHouseChest {
         }
     }
 
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut gp = g.ptr();
-        if self.state == 1 && !g.game_values.gamemode.gameover && player.playerKeys.game_turbo().fPressed {
-            let teamID = player.teamID as usize;
+        if self.state == 1 && !g.game_values.gamemode.gameover && g.player(player).playerKeys.game_turbo().fPressed {
+            let teamID = g.player(player).teamID as usize;
             if (self.bonusitem as i32) < NUM_POWERUPS + NUM_WORLD_POWERUPS {
                 if g.game_values.worldpowerupcount[teamID] < 32 {
                     let idx = g.game_values.worldpowerupcount[teamID] as usize;
@@ -150,7 +151,7 @@ impl CObjectTrait for MO_BonusHouseChest {
 
             g.game_values.flags.forceexittimer = 180;
             g.game_values.gamemode.gameover = true;
-            g.game_values.gamemode.winningteam = player.teamID;
+            g.game_values.gamemode.winningteam = g.player(player).teamID;
         }
 
         false

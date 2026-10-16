@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_PoisonPowerup.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -48,21 +49,21 @@ impl CObjectTrait for PU_PoisonPowerup {
     fn update(&mut self, g: &mut Game) {
         mo_powerup_update(g, self)
     }
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut player = player;
         if self.state > 0 {
-            if player.is_invincible() || player.shyguy {
+            if g.player(player).is_invincible() || g.player(player).shyguy {
                 self.dead = true;
                 return false;
             }
 
-            if player.is_shielded() {
+            if g.player(player).is_shielded() {
                 return false;
             }
 
             self.dead = true;
 
-            return player.kill_player_map_hazard(g, false, KillStyle::PoisonMushroom, false, -1) != PlayerKillType::NonKill;
+            return g.player(player).kill_player_map_hazard(g, false, KillStyle::PoisonMushroom, false, -1) != PlayerKillType::NonKill;
         }
 
         false

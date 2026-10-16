@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_Area.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -28,7 +29,7 @@ pub struct OMO_Area {
     pub frame: i16,
     pub relocatetimer: i16,
     pub totalTouchingPlayers: i16,
-    pub touchingPlayer: Ptr<CPlayer>,
+    pub touchingPlayer: PlayerId,
 }
 impl_base!(OMO_Area => io_over_map_object: IO_OverMapObject);
 
@@ -44,7 +45,7 @@ impl OMO_Area {
             frame: 0,
             relocatetimer: 0,
             totalTouchingPlayers: 0,
-            touchingPlayer: Ptr::null(),
+            touchingPlayer: PlayerId::NONE,
         };
         this.iw = (g.rm.sprite(this.spr).get_width() as i16 as i32 / 5) as i16;
         this.collisionWidth = this.iw;
@@ -90,12 +91,12 @@ impl OMO_Area {
         self.colorID
     }
 
-    pub fn set_owner(&mut self, g: &mut Game, player: Ptr<CPlayer>) {
+    pub fn set_owner(&mut self, g: &mut Game, player: PlayerId) {
         let mut gp = g.ptr();
-        if self.colorID != player.colorID {
-            self.iPlayerID = player.localID;
-            self.iTeamID = player.teamID;
-            self.colorID = player.colorID;
+        if self.colorID != g.player(player).colorID {
+            self.iPlayerID = g.player(player).localID;
+            self.iTeamID = g.player(player).teamID;
+            self.colorID = g.player(player).colorID;
 
             self.frame = ((self.colorID as i32 + 1) * self.iw as i32) as i16;
             if_sound_on_play(g, &mut gp.rm.sfx_areatag);
@@ -112,7 +113,7 @@ impl CObjectTrait for OMO_Area {
 
     fn update(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        if !self.touchingPlayer.is_null() {
+        if !self.touchingPlayer.is_none() {
             let p = self.touchingPlayer;
             self.set_owner(g, p);
         }
@@ -121,7 +122,7 @@ impl CObjectTrait for OMO_Area {
             self.scoretimer += 1;
             if self.scoretimer as i32 >= ((g.game_values.pointspeed as i32) << 1) {
                 self.scoretimer = 0;
-                gp.players[self.iPlayerID as usize].score().adjust_score(g, 1);
+                g.player(gp.players[self.iPlayerID as usize]).score().adjust_score(g, 1);
                 gp.get().game_values.gamemode.check_winner(g, gp.get().players[self.iPlayerID as usize]);
             }
         }
@@ -135,17 +136,17 @@ impl CObjectTrait for OMO_Area {
         }
 
         self.totalTouchingPlayers = 0;
-        self.touchingPlayer = Ptr::null();
+        self.touchingPlayer = PlayerId::NONE;
     }
 
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
-        if player.tanookisuit.not_statue() && !player.isdead() {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
+        if g.player(player).tanookisuit.not_statue() && !g.player(player).isdead() {
             self.totalTouchingPlayers += 1;
 
             if self.totalTouchingPlayers == 1 {
                 self.touchingPlayer = player;
             } else {
-                self.touchingPlayer = Ptr::null();
+                self.touchingPlayer = PlayerId::NONE;
                 self.reset();
             }
         }

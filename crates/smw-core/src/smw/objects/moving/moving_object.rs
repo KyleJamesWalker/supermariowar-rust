@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MovingObject.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -252,7 +253,7 @@ pub fn io_moving_object_animate(o: &mut IO_MovingObject) {
     }
 }
 
-pub fn io_moving_object_collide_player<T: IO_MovingObjectTrait + ?Sized>(this: &mut T, _player: Ptr<CPlayer>) -> bool {
+pub fn io_moving_object_collide_player<T: IO_MovingObjectTrait + ?Sized>(this: &mut T, _player: PlayerId) -> bool {
     this.mo_mut().dead = true;
     false
 }
@@ -890,8 +891,8 @@ pub fn io_moving_object_kill_object_map_hazard<T: IO_MovingObjectTrait + ?Sized>
 
     if movingObjectType == movingobject_fireball {
         let mut player = get_player_from_global_id(g, this.mo().iPlayerID);
-        if !player.is_null() {
-            player.decrease_projectiles_count();
+        if !player.is_none() {
+            g.player(player).decrease_projectiles_count();
         }
 
         if_sound_on_play(g, &mut gp.rm.sfx_hit);
@@ -909,8 +910,8 @@ pub fn io_moving_object_kill_object_map_hazard<T: IO_MovingObjectTrait + ?Sized>
         if_sound_on_play(g, &mut gp.rm.sfx_transform);
     } else if movingObjectType == movingobject_bomb {
         let mut player = get_player_from_global_id(g, this.mo().iPlayerID);
-        if !player.is_null() {
-            player.decrease_projectiles_count();
+        if !player.is_none() {
+            g.player(player).decrease_projectiles_count();
         }
 
         if_sound_on_play(g, &mut gp.rm.sfx_hit);
@@ -932,8 +933,8 @@ pub fn io_moving_object_kill_object_map_hazard<T: IO_MovingObjectTrait + ?Sized>
         if !g.game_values.gamemode.gameover {
             let mut player = get_player_from_global_id(g, playerID);
 
-            if !player.is_null() {
-                player.score.adjust_score(g, 1);
+            if !player.is_none() {
+                g.player(player).score.adjust_score(g, 1);
             }
         }
 

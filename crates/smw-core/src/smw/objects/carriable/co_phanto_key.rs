@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_PhantoKey.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -87,11 +88,11 @@ impl CObjectTrait for CO_PhantoKey {
         Some(self)
     }
 
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut player = player;
-        if self.owner.is_null() && player.isready() {
+        if self.owner.is_none() && g.player(player).isready() {
             let item = self.as_carried_ptr();
-            if player.accept_item(item) {
+            if g.player(player).accept_item(item) {
                 self.owner = player;
             }
         }
@@ -100,7 +101,7 @@ impl CObjectTrait for CO_PhantoKey {
     }
 
     fn update(&mut self, g: &mut Game) {
-        if !self.owner.is_null() {
+        if !self.owner.is_none() {
             self.move_to_owner(g);
             self.relocatetimer = 0;
         } else if {

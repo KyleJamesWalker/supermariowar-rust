@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_SledgeBrother.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -202,12 +203,12 @@ impl MO_SledgeBrother {
         o
     }
 
-    pub fn hit(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
-        if player.is_shielded() {
+    pub fn hit(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
+        if g.player(player).is_shielded() {
             return false;
         }
 
-        player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill
+        g.player(player).kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill
     }
 
     pub fn damage(&mut self, g: &mut Game, playerID: i16) {
@@ -217,9 +218,9 @@ impl MO_SledgeBrother {
         }
 
         // Find the player that shot this projectile so we can attribute a kill
-        let killer: Ptr<CPlayer> = get_player_from_global_id(g, playerID);
+        let killer: PlayerId = get_player_from_global_id(g, playerID);
 
-        if !killer.is_null() {
+        if !killer.is_none() {
             self.hit_points -= 1;
             if self.hit_points <= 0 {
                 self.die(g);
@@ -613,13 +614,13 @@ impl CObjectTrait for MO_SledgeBrother {
         }
     }
 
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut gp = g.ptr();
         if self.iActionState == 0 {
             return false;
         }
 
-        if player.is_invincible() {
+        if g.player(player).is_invincible() {
             if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
             self.die(g);
 

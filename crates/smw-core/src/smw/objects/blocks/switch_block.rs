@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/SwitchBlock.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -68,7 +69,7 @@ impl CObjectTrait for B_SwitchBlock {
 impl IO_BlockTrait for B_SwitchBlock {
     crate::impl_io_block_plumbing!();
 
-    fn collide_player_dir(&mut self, g: &mut Game, player: Ptr<CPlayer>, direction: i16, useBehavior: bool) -> bool {
+    fn collide_player_dir(&mut self, g: &mut Game, player: PlayerId, direction: i16, useBehavior: bool) -> bool {
         if self.state != 0 || !useBehavior {
             return true;
         }
@@ -78,13 +79,13 @@ impl IO_BlockTrait for B_SwitchBlock {
         let iw = self.iw as i32;
         let ih = self.ih as i32;
 
-        if player.fOldY + PH as f32 <= iposy as f32 && direction == 2 {
+        if g.player(player).fOldY + PH as f32 <= iposy as f32 && direction == 2 {
             return self.hittop_player(g, player, useBehavior);
-        } else if player.fOldY >= (iposy + ih) as f32 && direction == 0 {
+        } else if g.player(player).fOldY >= (iposy + ih) as f32 && direction == 0 {
             return self.hitbottom_player(g, player, useBehavior);
-        } else if player.fOldX + PW as f32 <= iposx as f32 && direction == 1 {
+        } else if g.player(player).fOldX + PW as f32 <= iposx as f32 && direction == 1 {
             return self.hitleft_player(g, player, useBehavior);
-        } else if player.fOldX >= (iposx + iw) as f32 && direction == 3 {
+        } else if g.player(player).fOldX >= (iposx + iw) as f32 && direction == 3 {
             return self.hitright_player(g, player, useBehavior);
         }
 
@@ -95,43 +96,43 @@ impl IO_BlockTrait for B_SwitchBlock {
         self.state != 0
     }
 
-    fn hittop_player(&mut self, g: &mut Game, player: Ptr<CPlayer>, useBehavior: bool) -> bool {
-        io_block_hittop_player(self, player, useBehavior);
+    fn hittop_player(&mut self, g: &mut Game, player: PlayerId, useBehavior: bool) -> bool {
+        io_block_hittop_player(g, self, player, useBehavior);
         false
     }
 
-    fn hitbottom_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, _useBehavior: bool) -> bool {
-        player.vely = cap_falling_velocity(-player.vely * BOUNCESTRENGTH);
-        player.set_yf((self.iposy as i32 + self.ih as i32) as f32 + 0.2f32);
+    fn hitbottom_player(&mut self, g: &mut Game, mut player: PlayerId, _useBehavior: bool) -> bool {
+        g.player(player).vely = cap_falling_velocity(-g.player(player).vely * BOUNCESTRENGTH);
+        g.player(player).set_yf((self.iposy as i32 + self.ih as i32) as f32 + 0.2f32);
         self.vely = -VELBLOCKBOUNCE;
         false
     }
 
-    fn hitright_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, _useBehavior: bool) -> bool {
-        player.set_xf((self.iposx as i32 + self.iw as i32) as f32 + 0.2f32);
-        player.fOldX = player.fx;
+    fn hitright_player(&mut self, g: &mut Game, mut player: PlayerId, _useBehavior: bool) -> bool {
+        g.player(player).set_xf((self.iposx as i32 + self.iw as i32) as f32 + 0.2f32);
+        g.player(player).fOldX = g.player(player).fx;
 
-        if player.velx < 0.0f32 {
-            player.velx = 0.0f32;
+        if g.player(player).velx < 0.0f32 {
+            g.player(player).velx = 0.0f32;
         }
 
-        if player.oldvelx < 0.0f32 {
-            player.oldvelx = 0.0f32;
+        if g.player(player).oldvelx < 0.0f32 {
+            g.player(player).oldvelx = 0.0f32;
         }
 
         false
     }
 
-    fn hitleft_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, _useBehavior: bool) -> bool {
-        player.set_xf((self.iposx as i32 - PW) as f32 - 0.2f32);
-        player.fOldX = player.fx;
+    fn hitleft_player(&mut self, g: &mut Game, mut player: PlayerId, _useBehavior: bool) -> bool {
+        g.player(player).set_xf((self.iposx as i32 - PW) as f32 - 0.2f32);
+        g.player(player).fOldX = g.player(player).fx;
 
-        if player.velx > 0.0f32 {
-            player.velx = 0.0f32;
+        if g.player(player).velx > 0.0f32 {
+            g.player(player).velx = 0.0f32;
         }
 
-        if player.oldvelx > 0.0f32 {
-            player.oldvelx = 0.0f32;
+        if g.player(player).oldvelx > 0.0f32 {
+            g.player(player).oldvelx = 0.0f32;
         }
 
         false

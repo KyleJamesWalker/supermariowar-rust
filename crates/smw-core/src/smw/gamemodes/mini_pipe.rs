@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/MiniPipe.cpp
 
+use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::game_mode::{game_mode_pipe_minigame, CGameMode, CGameModeTrait};
 use crate::common::game_values::if_sound_on_play;
@@ -155,35 +156,35 @@ impl CGameModeTrait for CGM_Pipe_MiniGame {
         }
     }
 
-    fn playerkilledplayer(&mut self, g: &mut Game, _player: Ptr<CPlayer>, _other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, _player: PlayerId, _other: PlayerId, _style: KillStyle) -> PlayerKillType {
         //other.Score().AdjustScore(-2);
         PlayerKillType::Normal
     }
 
-    fn playerkilledself(&mut self, g: &mut Game, _player: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, _player: PlayerId, _style: KillStyle) -> PlayerKillType {
         //player.Score().AdjustScore(-2);
         PlayerKillType::Normal
     }
 
-    fn playerextraguy(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, mut player: PlayerId, iType: i16) {
         if !self.gameover {
-            player.score().adjust_score(g, iType);
+            g.player(player).score().adjust_score(g, iType);
             self.check_winner(g, player);
         }
     }
 
-    fn check_winner(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> PlayerKillType {
+    fn check_winner(&mut self, g: &mut Game, mut player: PlayerId) -> PlayerKillType {
         if self.goal > -1 {
-            if player.score().score >= self.goal {
-                player.score().set_score(g, self.goal);
+            if g.player(player).score().score >= self.goal {
+                g.player(player).score().set_score(g, self.goal);
 
-                self.winningteam = player.get_team_id();
+                self.winningteam = g.player(player).get_team_id();
                 self.gameover = true;
 
                 remove_players_but_team(g, self.winningteam);
                 setup_score_board(g, false);
                 show_score_board(g);
-            } else if player.score().score as i32 >= self.goal as i32 - 5 && !self.playedwarningsound {
+            } else if g.player(player).score().score as i32 >= self.goal as i32 - 5 && !self.playedwarningsound {
                 self.playwarningsound(g);
             }
         }

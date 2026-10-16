@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_StarPowerup.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -47,15 +48,15 @@ impl CObjectTrait for PU_StarPowerup {
     fn update(&mut self, g: &mut Game) {
         mo_powerup_update(g, self)
     }
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut player = player;
         if self.state > 0 {
             self.dead = true;
 
-            if !player.is_invincible() && !player.shyguy {
-                player.makeinvincible(g);
+            if !g.player(player).is_invincible() && !g.player(player).shyguy {
+                g.player(player).makeinvincible(g);
             } else {
-                player.set_stored_powerup(g, PowerupType::Star as i16);
+                g.player(player).set_stored_powerup(g, PowerupType::Star as i16);
             }
         }
 

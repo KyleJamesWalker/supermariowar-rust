@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_Fireball.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -111,12 +112,12 @@ impl CObjectTrait for MO_Fireball {
         }
     }
 
-    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
-        if self.iPlayerID != player.get_global_id() && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.get_team_id()) {
-            if !player.is_shielded() {
+    fn collide_player(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
+        if self.iPlayerID != g.player(player).get_global_id() && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != g.player(player).get_team_id()) {
+            if !g.player(player).is_shielded() {
                 removeifprojectile(g, self.as_mo_ptr(), false, false);
 
-                if !player.is_invincible() && !player.shyguy {
+                if !g.player(player).is_invincible() && !g.player(player).shyguy {
                     // Find the player that shot this fireball so we can attribute a kill
                     player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Fireball, false, false);
                     return true;

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_CheepCheep.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -68,18 +69,18 @@ impl MO_CheepCheep {
         o
     }
 
-    pub fn hittop(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    pub fn hittop(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut gp = g.ptr();
         let mut p = player;
-        p.set_yi((self.iy as i32 - PH - 1) as i16);
-        p.bouncejump();
-        p.get().collisions.checktop(g, player.get());
-        p.platform = Ptr::null();
+        g.player(p).set_yi((self.iy as i32 - PH - 1) as i16);
+        g.player(p).bouncejump();
+        g.player(p).collisions.checktop(g, g.player(player));
+        g.player(p).platform = Ptr::null();
 
-        p.add_killer_award(g, Ptr::null(), KillStyle::CheepCheep);
+        g.player(p).add_killer_award(g, PlayerId::NONE, KillStyle::CheepCheep);
 
         if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
-            p.score().adjust_score(g, 1);
+            g.player(p).score().adjust_score(g, 1);
         }
 
         if_sound_on_play(g, &mut gp.rm.sfx_mip);
@@ -89,12 +90,12 @@ impl MO_CheepCheep {
         false
     }
 
-    pub fn hitother(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
-        if player.is_shielded() {
+    pub fn hitother(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
+        if g.player(player).is_shielded() {
             return false;
         }
 
-        player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill
+        g.player(player).kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill
     }
 
     pub fn shatter_die(&mut self, g: &mut Game) {
@@ -151,13 +152,13 @@ impl CObjectTrait for MO_CheepCheep {
         }
     }
 
-    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
         let mut gp = g.ptr();
-        if player.is_invincible() || self.frozen {
-            player.add_killer_award(g, Ptr::null(), KillStyle::CheepCheep);
+        if g.player(player).is_invincible() || self.frozen {
+            g.player(player).add_killer_award(g, PlayerId::NONE, KillStyle::CheepCheep);
 
             if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
-                player.score().adjust_score(g, 1);
+                g.player(player).score().adjust_score(g, 1);
             }
 
             if self.frozen {
@@ -167,7 +168,7 @@ impl CObjectTrait for MO_CheepCheep {
                 self.die(g);
             }
         } else {
-            if player.fOldY + PH as f32 <= self.fOldY && player.iy as i32 + PH >= self.iy as i32 {
+            if g.player(player).fOldY + PH as f32 <= self.fOldY && g.player(player).iy as i32 + PH >= self.iy as i32 {
                 return self.hittop(g, player);
             } else {
                 return self.hitother(g, player);
@@ -209,9 +210,9 @@ impl CObjectTrait for MO_CheepCheep {
                     // Find the player that shot this projectile so we can attribute a kill
                     let mut killer = get_player_from_global_id(g, object.iPlayerID);
 
-                    if !killer.is_null() {
-                        killer.add_killer_award(g, Ptr::null(), KillStyle::CheepCheep);
-                        killer.score().adjust_score(g, 1);
+                    if !killer.is_none() {
+                        g.player(killer).add_killer_award(g, PlayerId::NONE, KillStyle::CheepCheep);
+                        g.player(killer).score().adjust_score(g, 1);
 
                         if r#type == movingobject_shell {
                             object.as_any().downcast_mut::<CO_Shell>().unwrap().add_moving_kill(g, killer);

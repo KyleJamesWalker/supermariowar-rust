@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_Star.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -89,12 +90,12 @@ impl CO_Star {
 
         let star = starmode.getstarplayer(self.iID);
 
-        if !star.is_null() {
-            self.set_xf(star.fx + HALFPW as f32 - 16.0);
-            self.set_yf(star.fy + HALFPH as f32 - 17.0);
+        if !star.is_none() {
+            self.set_xf(g.player(star).fx + HALFPW as f32 - 16.0);
+            self.set_yf(g.player(star).fy + HALFPH as f32 - 17.0);
 
-            self.velx = star.velx;
-            self.vely = star.vely;
+            self.velx = g.player(star).velx;
+            self.vely = g.player(star).vely;
         }
 
         MO_CarriedObjectTrait::drop(self, g);
@@ -107,7 +108,7 @@ impl CObjectTrait for CO_Star {
         Some(self)
     }
 
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut player = player;
         if g.game_values.gamemode.gamemode != game_mode_star {
             return false;
@@ -116,20 +117,20 @@ impl CObjectTrait for CO_Star {
         let mut starmode: Ptr<CGM_Star> = Ptr::from_mut(g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Star>().unwrap());
 
         self.timer = 0;
-        if self.owner.is_null() && player.isready() {
-            if player.throw_star == 0 && player.accept_item(self.as_carried_ptr()) {
+        if self.owner.is_none() && g.player(player).isready() {
+            if g.player(player).throw_star == 0 && g.player(player).accept_item(self.as_carried_ptr()) {
                 self.owner = player;
             }
         }
 
-        if (self.iType == 0 && player.is_invincible()) || player.is_shielded() || starmode.isplayerstar(g, player) || g.game_values.gamemode.gameover {
+        if (self.iType == 0 && g.player(player).is_invincible()) || g.player(player).is_shielded() || starmode.isplayerstar(g, player) || g.game_values.gamemode.gameover {
             return false;
         }
 
         let mut oldstar = starmode.swapplayer(g, self.iID, player);
 
         if self.owner == oldstar {
-            oldstar.throw_star = 30;
+            g.player(oldstar).throw_star = 30;
             self.kick(g);
         }
 
@@ -137,7 +138,7 @@ impl CObjectTrait for CO_Star {
     }
 
     fn update(&mut self, g: &mut Game) {
-        if !self.owner.is_null() {
+        if !self.owner.is_none() {
             self.move_to_owner(g);
             self.timer = 0;
         } else if {
@@ -166,11 +167,11 @@ impl CObjectTrait for CO_Star {
         let mut gp = g.ptr();
         let x = self.ix as i32 - self.collisionOffsetX as i32;
         let y = self.iy as i32 - self.collisionOffsetY as i32;
-        if !self.owner.is_null() {
+        if !self.owner.is_none() {
             let src = Rect { x: 0, y: self.iOffsetY as i32, w: self.iw as i32, h: self.ih as i32 };
-            if self.owner.iswarping() {
-                let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32) };
-                g.rm.sprite(self.spr).draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);
+            if g.player(self.owner).iswarping() {
+                let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(g.player(self.owner).get_warp_state() as i32) };
+                g.rm.sprite(self.spr).draw_clip(g, x, y, &src, edge, g.player(self.owner).get_warp_plane() as i32);
             } else {
                 g.rm.sprite(self.spr).draw_src(g, x, y, &src);
             }
@@ -182,9 +183,9 @@ impl CObjectTrait for CO_Star {
 
         let src = Rect { x: self.sparkledrawframe as i32, y: if self.iType != 0 { 0 } else { 32 }, w: 32, h: 32 };
         unsafe {
-            if !self.owner.is_null() && self.owner.iswarping() {
-                let edge: ClipEdge = std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32);
-                gp.rm.sprite(gp.rm.spr_shinesparkle).draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);
+            if !self.owner.is_none() && g.player(self.owner).iswarping() {
+                let edge: ClipEdge = std::mem::transmute::<i32, ClipEdge>(g.player(self.owner).get_warp_state() as i32);
+                gp.rm.sprite(gp.rm.spr_shinesparkle).draw_clip(g, x, y, &src, edge, g.player(self.owner).get_warp_plane() as i32);
             } else {
                 gp.rm.sprite(gp.rm.spr_shinesparkle).draw_src(g, x, y, &src);
             }

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_Egg.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -28,7 +29,7 @@ pub struct CO_Egg {
     pub explosiondrawframe: i16,
     pub explosiondrawtimer: i16,
 
-    pub owner_throw: Ptr<CPlayer>,
+    pub owner_throw: PlayerId,
     pub owner_throw_timer: i16,
 
     pub sparkleanimationtimer: i16,
@@ -47,7 +48,7 @@ impl CO_Egg {
             relocatetimer: 0,
             explosiondrawframe: 0,
             explosiondrawtimer: 0,
-            owner_throw: Ptr::null(),
+            owner_throw: PlayerId::NONE,
             owner_throw_timer: 0,
             sparkleanimationtimer: 0,
             sparkledrawframe: 0,
@@ -58,7 +59,7 @@ impl CO_Egg {
         o.state = 1;
         o.movingObjectType = movingobject_egg;
 
-        o.owner_throw = Ptr::null();
+        o.owner_throw = PlayerId::NONE;
         o.owner_throw_timer = 0;
 
         o.sparkleanimationtimer = 0;
@@ -123,7 +124,7 @@ impl CO_Egg {
         self.vely = GRAVITATION;
         self.velx = 0.0;
 
-        self.owner_throw = Ptr::null();
+        self.owner_throw = PlayerId::NONE;
         self.owner_throw_timer = 0;
 
         MO_CarriedObjectTrait::drop(self, g);
@@ -136,11 +137,11 @@ impl CObjectTrait for CO_Egg {
         Some(self)
     }
 
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut player = player;
-        if self.owner.is_null() && player.isready() {
+        if self.owner.is_none() && g.player(player).isready() {
             let item = self.as_carried_ptr();
-            if player.accept_item(item) {
+            if g.player(player).accept_item(item) {
                 self.owner = player;
                 self.owner_throw = player;
             }
@@ -152,7 +153,7 @@ impl CObjectTrait for CO_Egg {
     fn update(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let mut rm = g.rm;
-        if !self.owner.is_null() {
+        if !self.owner.is_none() {
             self.move_to_owner(g);
             self.relocatetimer = 0;
             self.owner_throw = self.owner;
@@ -161,14 +162,14 @@ impl CObjectTrait for CO_Egg {
             self.relocatetimer > 1500
         } {
             self.place_egg(g);
-            self.owner_throw = Ptr::null();
+            self.owner_throw = PlayerId::NONE;
         } else {
-            if !self.owner_throw.is_null() && {
+            if !self.owner_throw.is_none() && {
                 self.owner_throw_timer -= 1;
                 self.owner_throw_timer <= 0
             } {
                 self.owner_throw_timer = 0;
-                self.owner_throw = Ptr::null();
+                self.owner_throw = PlayerId::NONE;
             }
 
             self.applyfriction();
@@ -231,9 +232,9 @@ impl CObjectTrait for CO_Egg {
                 let x = self.ix as i32 - self.collisionOffsetX as i32;
                 let y = self.iy as i32 - self.collisionOffsetY as i32;
                 let src = Rect { x: (self.explosiondrawframe as i32) << 5, y: (self.color as i32) << 5, w: 32, h: 32 };
-                if !self.owner.is_null() && self.owner.iswarping() {
-                    let edge: ClipEdge = std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32);
-                    gp.rm.sprite(gp.rm.spr_eggnumbers).draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);
+                if !self.owner.is_none() && g.player(self.owner).iswarping() {
+                    let edge: ClipEdge = std::mem::transmute::<i32, ClipEdge>(g.player(self.owner).get_warp_state() as i32);
+                    gp.rm.sprite(gp.rm.spr_eggnumbers).draw_clip(g, x, y, &src, edge, g.player(self.owner).get_warp_plane() as i32);
                 } else {
                     gp.rm.sprite(gp.rm.spr_eggnumbers).draw_src(g, x, y, &src);
                 }

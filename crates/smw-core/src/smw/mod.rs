@@ -20,6 +20,7 @@ pub mod objectgame;
 pub mod objecthazard;
 pub mod platform;
 pub mod player;
+pub mod players;
 pub mod world;
 pub mod gamemodes;
 pub mod menu;

@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/Health.cpp
 
+use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::game_mode::*;
 use crate::common::game_values::if_sound_on_play;
@@ -41,70 +42,70 @@ impl CGameModeTrait for CGM_Health {
         }
     }
 
-    fn playerkilledplayer(&mut self, g: &mut Game, inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, inflictor: PlayerId, mut other: PlayerId, style: KillStyle) -> PlayerKillType {
         let mut gp = g.ptr();
         if self.gameover {
             return PlayerKillType::Normal;
         }
 
         if style == KillStyle::Bobomb || style == KillStyle::Bomb || style == KillStyle::IceBlast {
-            other.score().subscore[0] -= 2;
+            g.player(other).score().subscore[0] -= 2;
         } else {
-            other.score().subscore[0] -= 1;
+            g.player(other).score().subscore[0] -= 1;
         }
 
-        if other.score().subscore[0] <= 0 {
-            other.score().subscore[0] = 0;
+        if g.player(other).score().subscore[0] <= 0 {
+            g.player(other).score().subscore[0] = 0;
             let iRet = cgm_classic_playerkilledplayer(g, &mut self.cgm_classic, inflictor, other, style);
 
             if iRet == PlayerKillType::Normal {
-                other.score().subscore[0] = other.score().subscore[1];
+                g.player(other).score().subscore[0] = g.player(other).score().subscore[1];
             }
 
             return iRet;
         } else {
             if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
-            other.shield().reset(g);
+            g.player(other).shield().reset(g);
         }
 
         PlayerKillType::NonKill
     }
 
-    fn playerkilledself(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, mut player: PlayerId, style: KillStyle) -> PlayerKillType {
         let mut gp = g.ptr();
         if self.gameover {
             return PlayerKillType::Normal;
         }
 
         if style == KillStyle::Bobomb || style == KillStyle::Bomb || style == KillStyle::Environment {
-            player.score().subscore[0] -= 2;
+            g.player(player).score().subscore[0] -= 2;
         } else {
-            player.score().subscore[0] -= 1;
+            g.player(player).score().subscore[0] -= 1;
         }
 
-        if player.score().subscore[0] <= 0 {
-            player.score().subscore[0] = 0;
+        if g.player(player).score().subscore[0] <= 0 {
+            g.player(player).score().subscore[0] = 0;
             let iRet = cgm_classic_playerkilledself(g, &mut self.cgm_classic, player, style);
 
             if iRet == PlayerKillType::Normal {
-                player.score().subscore[0] = player.score().subscore[1];
+                g.player(player).score().subscore[0] = g.player(player).score().subscore[1];
             }
 
             return iRet;
         } else {
             if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
-            player.shield().reset(g);
+            g.player(player).shield().reset(g);
         }
 
         PlayerKillType::NonKill
     }
 
-    fn playerextraguy(&mut self, g: &mut Game, mut player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, mut player: PlayerId, iType: i16) {
         if !self.gameover {
-            player.score().subscore[0] += iType;
+            g.player(player).score().subscore[0] += iType;
 
-            if player.score().subscore[0] > player.score().subscore[1] {
-                player.score().subscore[0] = player.score().subscore[1];
+            if g.player(player).score().subscore[0] > g.player(player).score().subscore[1] {
+                g.player(player).score().subscore[0] = g.player(player).score().subscore[1];
             }
         }
     }

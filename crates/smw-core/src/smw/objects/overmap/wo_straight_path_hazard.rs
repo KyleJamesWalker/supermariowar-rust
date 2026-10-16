@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_StraightPathHazard.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
@@ -95,8 +96,8 @@ impl CObjectTrait for OMO_StraightPathHazard {
         }
     }
 
-    fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
-        if !player.is_shielded() {
+    fn collide_player(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
+        if !g.player(player).is_shielded() {
             g.eyecandy[2].emplace(EC_SingleAnimation::new(&g.rm, 
                 g.rm.spr_fireballexplosion,
                 (self.ix as i32 + (self.iw as i32 >> 2) - 16) as i16,
@@ -106,8 +107,8 @@ impl CObjectTrait for OMO_StraightPathHazard {
             ));
             self.dead = true;
 
-            if !player.is_invincible() && !player.shyguy {
-                return player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
+            if !g.player(player).is_invincible() && !g.player(player).shyguy {
+                return g.player(player).kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;
             }
         }
 

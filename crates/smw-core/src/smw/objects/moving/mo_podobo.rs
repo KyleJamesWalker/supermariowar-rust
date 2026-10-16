@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_Podobo.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -94,12 +95,12 @@ impl CObjectTrait for MO_Podobo {
         }
     }
 
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
-        if player.globalID != self.iPlayerID
-            && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID)
-            && !player.is_invincible()
-            && !player.is_shielded()
-            && !player.shyguy
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
+        if g.player(player).globalID != self.iPlayerID
+            && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != g.player(player).teamID)
+            && !g.player(player).is_invincible()
+            && !g.player(player).is_shielded()
+            && !g.player(player).shyguy
         {
             // Find the player that made this explosion so we can attribute a kill
             player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Podobo, false, false);

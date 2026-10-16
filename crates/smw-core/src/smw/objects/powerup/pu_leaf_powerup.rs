@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_LeafPowerup.cpp
 
+use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -39,10 +40,10 @@ impl CObjectTrait for PU_LeafPowerup {
     fn update(&mut self, g: &mut Game) {
         pu_feather_powerup_update(self)
     }
-    fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+    fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut player = player;
         if self.state > 0 {
-            player.set_powerup(g, 7);
+            g.player(player).set_powerup(g, 7);
             self.dead = true;
         }
 

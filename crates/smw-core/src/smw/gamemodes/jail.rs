@@ -1,5 +1,6 @@
 //! Port of src/smw/gamemodes/Jail.cpp
 
+use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game_mode::*;
@@ -40,42 +41,42 @@ impl CGM_Jail {
 impl CGameModeTrait for CGM_Jail {
     crate::impl_cgamemode_plumbing!();
 
-    fn playerkilledplayer(&mut self, g: &mut Game, inflictor: Ptr<CPlayer>, other: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledplayer(&mut self, g: &mut Game, inflictor: PlayerId, other: PlayerId, style: KillStyle) -> PlayerKillType {
         cgm_jail_playerkilledplayer(g, self, inflictor, other, style)
     }
-    fn playerkilledself(&mut self, g: &mut Game, player: Ptr<CPlayer>, style: KillStyle) -> PlayerKillType {
+    fn playerkilledself(&mut self, g: &mut Game, player: PlayerId, style: KillStyle) -> PlayerKillType {
         cgm_frag_playerkilledself(g, self, player, style)
     }
-    fn playerextraguy(&mut self, g: &mut Game, player: Ptr<CPlayer>, iType: i16) {
+    fn playerextraguy(&mut self, g: &mut Game, player: PlayerId, iType: i16) {
         cgm_jail_playerextraguy(g, self, player, iType)
     }
-    fn check_winner(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> PlayerKillType {
+    fn check_winner(&mut self, g: &mut Game, player: PlayerId) -> PlayerKillType {
         cgm_frag_check_winner(g, self, player)
     }
 }
 
-fn emplace_poof(g: &mut Game, player: Ptr<CPlayer>) {
+fn emplace_poof(g: &mut Game, player: PlayerId) {
     g.eyecandy[2].emplace(EC_SingleAnimation::new(&g.rm, 
         g.rm.spr_poof,
-        (player.center_x() as i32 - 24) as i16,
-        (player.center_y() as i32 - 24) as i16,
+        (g.player(player).center_x() as i32 - 24) as i16,
+        (g.player(player).center_y() as i32 - 24) as i16,
         4,
         5,
     ));
 }
 
-pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
+pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflictor: PlayerId, mut other: PlayerId, _style: KillStyle) -> PlayerKillType {
         let mut gp = g.ptr();
     if !this.gameover {
         //Penalize killing your teammates
-        if inflictor.get_team_id() == other.get_team_id() {
-            inflictor.score().adjust_score(g, -1);
+        if g.player(inflictor).get_team_id() == g.player(other).get_team_id() {
+            g.player(inflictor).score().adjust_score(g, -1);
         } else {
-            inflictor.score().adjust_score(g, 1);
-            let mut inflictor2 = inflictor;
-            inflictor.jail().escape(g, &mut *inflictor2);
+            g.player(inflictor).score().adjust_score(g, 1);
+            let inflictor2 = g.player(inflictor);
+            g.player(inflictor).jail().escape(g, inflictor2);
 
-            other.jail().lock_in_by(g, &mut *inflictor2);
+            g.player(other).jail().lock_in_by(g, inflictor2);
 
             //Apply rules for "Classic" jail
             if g.game_values.gamemodesettings.jail.style == JailStyle::Classic {
@@ -88,8 +89,8 @@ pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflic
                 //Figure out which teams have been jailed
                 for i in 0..g.players.len() {
                     let mut player = g.players[i];
-                    if player.jail().is_active() {
-                        jailedteams[player.get_team_id() as usize] -= 1;
+                    if g.player(player).jail().is_active() {
+                        jailedteams[g.player(player).get_team_id() as usize] -= 1;
                     }
                 }
 
@@ -115,16 +116,16 @@ pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflic
                     for i in 0..g.players.len() {
                         let mut player = g.players[i];
                         //If they weren't just the one killed and they were jailed, give them a transform cloud
-                        if player != other && player.jail().is_active() {
+                        if player != other && g.player(player).jail().is_active() {
                             emplace_poof(g, player);
                             if_sound_on_play(g, &mut gp.rm.sfx_transform);
                         }
 
-                        if player.jail().is_active() && player.get_team_id() != iTeamPoint {
+                        if g.player(player).jail().is_active() && g.player(player).get_team_id() != iTeamPoint {
                             numjailedplayers += 1;
                         }
 
-                        player.jail().timer = 0;
+                        g.player(player).jail().timer = 0;
                     }
 
                     //Give extra bonus score for being on the non-jailed team
@@ -140,17 +141,17 @@ pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflic
                 //Figure out which teams have been jailed
                 for i in 0..g.players.len() {
                     let mut player = g.players[i];
-                    let piMarker = &mut jailedteams[player.get_team_id() as usize];
+                    let piMarker = &mut jailedteams[g.player(player).get_team_id() as usize];
 
                     if *piMarker == -2 {
                         continue;
                     }
 
-                    if !player.jail().is_active() {
+                    if !g.player(player).jail().is_active() {
                         *piMarker = -2; //Flag that the team is not completely jailed
                     } else if *piMarker == -1 {
-                        *piMarker = player.jail().owner_teamID as i16;
-                    } else if *piMarker != player.jail().owner_teamID as i16 {
+                        *piMarker = g.player(player).jail().owner_teamID as i16;
+                    } else if *piMarker != g.player(player).jail().owner_teamID as i16 {
                         *piMarker = -2; //Flag means team is not completely jailed or jailed by different teams
                     }
                 }
@@ -191,7 +192,7 @@ pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflic
 
                     for i in 0..g.players.len() {
                         let mut player = g.players[i];
-                        if player.jail().is_active() && player.get_team_id() != iTeamPoint {
+                        if g.player(player).jail().is_active() && g.player(player).get_team_id() != iTeamPoint {
                             numjailedplayers += 1;
                         }
                     }
@@ -204,17 +205,17 @@ pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflic
                         for i in 0..g.players.len() {
                             let mut player = g.players[i];
                             //Don't release players that were not jailed by this team
-                            if player.jail().owner_teamID as i16 != iTeamPoint {
+                            if g.player(player).jail().owner_teamID as i16 != iTeamPoint {
                                 continue;
                             }
 
                             //If they weren't just the one killed and they were jailed, give them a transform cloud
-                            if player != other && player.jail().is_active() {
+                            if player != other && g.player(player).jail().is_active() {
                                 emplace_poof(g, player);
                                 if_sound_on_play(g, &mut gp.rm.sfx_transform);
                             }
 
-                            player.jail().timer = 0;
+                            g.player(player).jail().timer = 0;
                         }
                     }
                 }
@@ -226,8 +227,8 @@ pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflic
             return PlayerKillType::Normal;
         }
 
-        if inflictor.score().score >= this.goal {
-            this.winningteam = inflictor.get_team_id();
+        if g.player(inflictor).score().score >= this.goal {
+            this.winningteam = g.player(inflictor).get_team_id();
             this.gameover = true;
 
             remove_players_but_team(g, this.winningteam);
@@ -236,7 +237,7 @@ pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflic
             show_score_board(g);
 
             return PlayerKillType::Removed;
-        } else if inflictor.score().score as i32 >= this.goal as i32 - 3 && !this.playedwarningsound {
+        } else if g.player(inflictor).score().score as i32 >= this.goal as i32 - 3 && !this.playedwarningsound {
             this.playwarningsound(g);
         }
     }
@@ -244,25 +245,25 @@ pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflic
     PlayerKillType::Normal
 }
 
-pub fn cgm_jail_playerextraguy(g: &mut Game, this: &mut CGM_Jail, mut player: Ptr<CPlayer>, iType: i16) {
+pub fn cgm_jail_playerextraguy(g: &mut Game, this: &mut CGM_Jail, mut player: PlayerId, iType: i16) {
     if !this.gameover {
-        player.score().adjust_score(g, iType);
-        player.jail().timer = 0;
+        g.player(player).score().adjust_score(g, iType);
+        g.player(player).jail().timer = 0;
 
         //Don't end the game if the goal is infinite
         if this.goal == -1 {
             return;
         }
 
-        if player.score().score >= this.goal {
-            player.score().set_score(g, this.goal);
-            this.winningteam = player.get_team_id();
+        if g.player(player).score().score >= this.goal {
+            g.player(player).score().set_score(g, this.goal);
+            this.winningteam = g.player(player).get_team_id();
             this.gameover = true;
 
             remove_players_but_team(g, this.winningteam);
             setup_score_board(g, false);
             show_score_board(g);
-        } else if player.score().score as i32 >= this.goal as i32 - 3 && !this.playedwarningsound {
+        } else if g.player(player).score().score as i32 >= this.goal as i32 - 3 && !this.playedwarningsound {
             this.playwarningsound(g);
         }
     }
