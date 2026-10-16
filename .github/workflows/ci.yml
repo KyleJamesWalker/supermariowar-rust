@@ -100,7 +100,16 @@ jobs:
         if: matrix.os == 'ubuntu-24.04' && matrix.profile == 'release'
         env:
           SDL_RENDER_DRIVER: software
+          NET_GAME_WORK: ${{ runner.temp }}/net-games
         run: timeout 20m tools/ref/net_game_interop.sh
+
+      - name: Upload net game logs
+        if: failure() && matrix.os == 'ubuntu-24.04' && matrix.profile == 'release'
+        uses: actions/upload-artifact@v7
+        with:
+          name: net-game-logs
+          path: ${{ runner.temp }}/net-games
+          retention-days: 7
 
   relay:
     runs-on: ubuntu-24.04
