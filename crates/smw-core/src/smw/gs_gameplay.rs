@@ -1040,6 +1040,7 @@ impl GameplayState {
 }
 
 pub fn handle_p2p_collisions(g: &mut Game) {
+    let mut gp = g.ptr();
     unsafe {
         //Player to player collisions
         let mut i: usize = 0;
@@ -1054,7 +1055,7 @@ pub fn handle_p2p_collisions(g: &mut Game) {
                     if player2.state > PlayerState::Dead {
                         if coldec_player2player(player1, player2) {
                             if g.netplay.active {
-                                g.netplay.client.local_gamehost.send_p2p_collision_event(&player1, &player2);
+                                gp.netplay.client.local_gamehost.send_p2p_collision_event(g, &player1, &player2);
                             }
 
                             player1.collides_with_player(g, player2);

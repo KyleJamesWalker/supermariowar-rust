@@ -199,7 +199,7 @@ pub fn hotplug(g: &mut Game) -> bool {
             let js = *g.joysticks.add(index);
             if !js.is_null() && SDL_JoystickGetAttached(js) == SDL_bool::SDL_FALSE {
                 close(g, index);
-                crate::smw::harness::record_device(index, false);
+                crate::smw::harness::record_device(g, index, false);
             }
         }
         let mut added = false;
@@ -216,7 +216,7 @@ pub fn hotplug(g: &mut Game) -> bool {
                 continue;
             };
             if open(g, device, index) {
-                crate::smw::harness::record_device(index, true);
+                crate::smw::harness::record_device(g, index, true);
                 added = true;
             }
         }

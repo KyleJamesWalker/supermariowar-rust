@@ -229,7 +229,7 @@ pub fn listen(
     handler: &mut dyn NetworkEventHandler<Game>,
     live: impl FnOnce(&mut Game, &mut dyn NetworkEventHandler<Game>),
 ) {
-    let frame = harness::frame();
+    let frame = harness::frame(g);
     let poll = next_poll(g, side, frame);
     let mut log = Vec::new();
     let mut recording = Recording { inner: handler, side, frame, poll, log: &mut log };
@@ -244,7 +244,7 @@ pub fn listen(
         live(g, &mut recording);
     }
     for ev in &log {
-        harness::record_line(&ev.line());
+        harness::record_line(g, &ev.line());
     }
 }
 
@@ -253,12 +253,13 @@ pub fn value(g: &mut Game, key: &str, live: impl FnOnce() -> String) -> String {
     let v = if let Some(r) = g.net_record.replay.as_mut() {
         match r.values.get_mut(key).and_then(|q| q.pop_front()) {
             Some(v) => v,
-            None => harness::fail(format!("the replay has no recorded {} for frame {}", key, harness::frame())),
+            None => harness::fail(format!("the replay has no recorded {} for frame {}", key, harness::frame(g))),
         }
     } else {
         live()
     };
-    harness::record_line(&value_line(harness::frame(), key, &v));
+    let frame = harness::frame(g);
+    harness::record_line(g, &value_line(frame, key, &v));
     v
 }
 

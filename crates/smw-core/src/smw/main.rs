@@ -63,7 +63,7 @@ pub fn gameloop(g: &mut Game) {
     unsafe {
         SplashScreenState::instance(g).init(g);
         GameStateManager::instance(g).currentState = Ptr::from_mut(SplashScreenState::instance(g) as &mut dyn GameState);
-        if let Some(segment) = harness::segment_state() {
+        if let Some(segment) = harness::segment_state(g) {
             GameStateManager::instance(g).currentState = Ptr::from_box(Box::new(segment) as Box<dyn GameState>);
         }
 
@@ -84,10 +84,11 @@ pub fn gameloop(g: &mut Game) {
 #[cfg(target_os = "emscripten")]
 unsafe extern "C-unwind" fn gameloop_frame_web() {
     const MAX_CATCH_UP_FRAMES: u32 = 5;
+    let g = game().get();
     let ml = &mut game().get().main_loop;
 
     let frame_ms = game().game_values.framelimiter as f64;
-    if harness::no_limit() || frame_ms <= 0.0 {
+    if harness::no_limit(g) || frame_ms <= 0.0 {
         gameloop_frame();
         web_quit_if_done(game().get());
         return;
@@ -127,7 +128,7 @@ unsafe fn web_quit_if_done(g: &mut Game) {
         return;
     }
     emscripten_cancel_main_loop();
-    harness::finish();
+    harness::finish(g);
     emscripten_run_script(c"Module.onGameQuit && Module.onGameQuit()".as_ptr());
 }
 
@@ -201,7 +202,7 @@ pub fn create_globals(g: &mut Game) {
 pub fn init_joysticks(g: &mut Game) {
     unsafe {
         // Not in upstream: a browser replay opens no pads, so a connected one cannot act in it.
-        if let Some(count) = harness::replay_joysticks() {
+        if let Some(count) = harness::replay_joysticks(g) {
             g.joystickcount = count;
             g.joysticks = Box::leak(vec![null_mut::<SDL_Joystick>(); count.max(0) as usize].into_boxed_slice()).as_mut_ptr();
             SDL_JoystickEventState(SDL_ENABLE as i32);
@@ -218,9 +219,12 @@ pub fn init_joysticks(g: &mut Game) {
 
         SDL_JoystickEventState(SDL_ENABLE as i32);
         #[cfg(not(target_os = "emscripten"))]
-        crate::smw::pad::init(g, !harness::replaying() && std::env::var_os("SMW_PAD_TRANSLATE").is_some());
+        {
+            let translate = !harness::replaying(g) && std::env::var_os("SMW_PAD_TRANSLATE").is_some();
+            crate::smw::pad::init(g, translate);
+        }
         #[cfg(not(target_os = "emscripten"))]
-        crate::smw::touch::init();
+        crate::smw::touch::init(g);
     }
 }
 
@@ -304,7 +308,7 @@ fn assign_hotplugged(g: &mut Game) {
         let mut gp = g.ptr();
     unsafe {
         let pending = &mut gp.main_loop.hotplug_pending;
-        for (index, added) in harness::replay_device_changes() {
+        for (index, added) in harness::replay_device_changes(g) {
             #[cfg(not(target_os = "emscripten"))]
             crate::smw::pad::replay_device(g, index, added);
             #[cfg(target_os = "emscripten")]
@@ -479,7 +483,7 @@ pub fn run(argv: Vec<String>) {
         unsafe { g.RootDataDirectory = cmd.data_root.clone() };
     }
     if !cmd.replay.is_empty() {
-        harness::prepare_watch(&cmd.replay, cmd.replay_speed, cmd.segment);
+        harness::prepare_watch(g, &cmd.replay, cmd.replay_speed, cmd.segment);
     }
 
     // C++ catches `const char*`, `std::string`, `std::exception` and `...` around main_game().
@@ -490,7 +494,7 @@ pub fn run(argv: Vec<String>) {
             .cloned()
             .or_else(|| payload.downcast_ref::<&str>().map(|s| s.to_string()))
             .unwrap_or_default();
-        harness::finish();
+        harness::finish(g);
         gfx_show_catched_error(g, &what);
         std::process::exit(1);
     }
@@ -556,7 +560,7 @@ pub fn main_game() {
             gfx_loadpalette(g, Path::new(&convert_path_pack(game().get(), "gfx/packs/palette.bmp", &pack)));
         }
 
-        srand(harness::libc_seed(time(null_mut()) as u32));
+        srand(harness::libc_seed(g, time(null_mut()) as u32));
 
         //**********************************************************
 
@@ -566,7 +570,7 @@ pub fn main_game() {
 
         println!("\n---------------- shutdown ----------------");
         crate::common::gfx::blit::report_fallbacks();
-        harness::finish();
+        harness::finish(g);
 
         for i in 0..GAMEMODE_LAST as usize {
             g.gamemodes[i].delete();

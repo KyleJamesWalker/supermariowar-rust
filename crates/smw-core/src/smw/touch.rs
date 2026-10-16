@@ -2,6 +2,7 @@
 //! web/touch.js they press player 1's default keys, so recordings hold ordinary key input;
 //! a still tap off the controls is a menu tap.
 
+use crate::game::Game;
 use smw_platform::{Input, InputEvent, Overlay, OverlayImage, OverlayQuad, SCREEN_H, SCREEN_W};
 use std::sync::Arc;
 use crate::common::path::get_home_directory;
@@ -392,15 +393,16 @@ fn save_mode(mode: Mode) {
 }
 
 /// After `init_joysticks`, which `touch_first` depends on.
-pub fn init() {
+pub fn init(g: &mut Game) {
+    let mut gp = g.ptr();
     unsafe {
-        let pads = crate::game::game().joystickcount > 0;
-        let live = std::env::var_os("SMW_TOUCH").is_some() && !crate::smw::harness::replaying();
+        let pads = gp.joystickcount > 0;
+        let live = std::env::var_os("SMW_TOUCH").is_some() && !crate::smw::harness::replaying(g);
         st().debug = std::env::var_os("SMW_DEBUG_INPUT").is_some();
-        st().session_on = live || crate::smw::harness::replay_touch();
+        st().session_on = live || crate::smw::harness::replay_touch(g);
         st().first = st().session_on && !pads;
         if live {
-            crate::smw::harness::record_touch();
+            crate::smw::harness::record_touch(g);
             st().touch = Some(Touch { controls: Controls::new(load_mode(), Layout::default()), visible: !pads, alpha: if pads { 0.0 } else { 1.0 }, cutouts: Vec::new(), images: None, generation: 0 });
             println!("[touch] on, {}", if pads { "hidden while a pad is connected" } else { "player 1" });
         }

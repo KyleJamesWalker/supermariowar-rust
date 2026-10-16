@@ -174,9 +174,10 @@ impl UI_NetRoomMenu {
     }
 
     pub fn start_in_progress(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             if g.netplay.theHostIsMe && g.netplay.currentRoom.player_count() > 1 {
-                g.netplay.client.local_gamehost.send_start_room_message();
+                gp.netplay.client.local_gamehost.send_start_room_message(g);
                 g.netplay.operationInProgress = true;
 
                 self.miNetRoomStartingDialogImage.set_visible(true);

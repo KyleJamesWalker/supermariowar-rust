@@ -454,8 +454,8 @@ pub fn inner_main() {
 
         gfx_init(g, 640, 480, ed().g_fFullScreen);
         g.blitdest = g.screen;
-        editor_harness::init();
-        editor_harness::set_dumper(dump_editor_state);
+        editor_harness::init(g);
+        editor_harness::set_dumper(g, dump_editor_state);
 
         g.rm = Ptr::new_box(CResourceManager::new());
         let mut rm = g.rm;

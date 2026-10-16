@@ -228,6 +228,7 @@ pub fn end_game(g: &mut Game) {
 
 /// True when the caller must not run the site's own code: this function ran it, or the game host decides it.
 pub fn event(g: &mut Game, ev: Ev, args: &[i32]) -> bool {
+    let mut gp = g.ptr();
     unsafe {
         if !g.netplay.active || !random_state().g_inGame || random_state().g_added.is_some() || RandomNumberGenerator::tape_active() {
             return false;
@@ -260,7 +261,7 @@ pub fn event(g: &mut Game, ev: Ev, args: &[i32]) -> bool {
                 }
             }
             let pkg = RandomEvent { kind: ev as u8, context, args, draws };
-            g.netplay.client.local_gamehost.send_message_to_my_peers(&pkg.to_bytes());
+            gp.netplay.client.local_gamehost.send_message_to_my_peers(g, &pkg.to_bytes());
         } else if let Some(i) = random_state().g_pending.iter().position(|(p, _)| p.kind == ev as u8 && same_target(ev, &p.args, args)) {
             let (pkg, _) = random_state().g_pending.remove(i);
             replay(g, &pkg);

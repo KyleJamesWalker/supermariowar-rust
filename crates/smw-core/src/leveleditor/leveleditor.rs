@@ -417,13 +417,13 @@ impl MapPlatform {
 }
 
 /// `SDL_GetKeyboardState(NULL)`, which the replay harness replaces while it is active.
-fn get_keyboard_state() -> *const u8 {
-    editor_harness::keyboard_state()
+fn get_keyboard_state(g: &mut Game) -> *const u8 {
+    editor_harness::keyboard_state(g)
 }
 
 /// `SDL_GetMouseState(NULL, NULL)`, which the replay harness replaces while it is active.
-fn get_mouse_state() -> u32 {
-    editor_harness::mouse_state()
+fn get_mouse_state(g: &mut Game) -> u32 {
+    editor_harness::mouse_state(g)
 }
 
 pub fn check_key(keystate: *const u8, key: SDL_KeyCode) -> bool {
@@ -654,8 +654,8 @@ pub fn inner_main() {
 
         crate::common::game_values::CGameValues::init(&mut game().game_values, g); // Needed for FPSLimiter
 
-        editor_harness::init();
-        editor_harness::set_dumper(dump_editor_state);
+        editor_harness::init(g);
+        editor_harness::set_dumper(g, dump_editor_state);
 
         println!("entering level editor loop...");
         done = false;
@@ -834,7 +834,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
         } else {
             //handle messages
             while poll_event(&mut ed().event) != 0 {
-                let keystate = get_keyboard_state();
+                let keystate = get_keyboard_state(g);
 
                 match ed().event.type_() {
                     SDL_QUIT_EV => return EDITOR_QUIT,
@@ -2035,7 +2035,7 @@ pub fn editor_properties(g: &mut Game, iBlockCol: i16, iBlockRow: i16) -> i32 {
                             iValue = default_powerup_setting(0, iSettingIndex as usize);
                         }
 
-                        let keystate = get_keyboard_state();
+                        let keystate = get_keyboard_state(g);
                         if check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT) {
                             for iSetting in 0..NUM_BLOCK_SETTINGS as usize {
                                 if ed().event.key_sym() == k(SDLK_d) {
@@ -2058,7 +2058,7 @@ pub fn editor_properties(g: &mut Game, iBlockCol: i16, iBlockRow: i16) -> i32 {
                         let piSetting = get_block_property(ed().event.button_x(), ed().event.button_y(), Some(&mut iSettingIndex));
 
                         if let Some(s) = piSetting {
-                            let iMouseState = get_mouse_state() as u8 as u32;
+                            let iMouseState = get_mouse_state(g) as u8 as u32;
                             let setting = &mut g.g_map.objectdata[bc][br].iSettings[s];
 
                             if (ed().event.button_button() == BUTTON_RIGHT && (iMouseState & SDL_BUTTON_LMASK) != 0)
@@ -2599,7 +2599,7 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
                             ed().g_Platforms[ep].types[(ix * MAPHEIGHT + iy) as usize] = ed().set_tiletype;
                         }
                     } else if PLATFORM_EDIT_STATE_PATH == ed().iPlatformEditState {
-                        let keystate = get_keyboard_state();
+                        let keystate = get_keyboard_state(g);
                         if ed().g_Platforms[ep].iPathType == PlatformPathType::Ellipse && (check_key(keystate, SDLK_z) || check_key(keystate, SDLK_x) || check_key(keystate, SDLK_c)) {
                             update_platform_path_radius(
                                 ed().iEditPlatform,
@@ -2624,7 +2624,7 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
                         } else if PLATFORM_EDIT_STATE_TILETYPE == ed().iPlatformEditState {
                             ed().g_Platforms[ep].types[(ix * MAPHEIGHT + iy) as usize] = TileType::NonSolid;
                         } else if PLATFORM_EDIT_STATE_PATH == ed().iPlatformEditState {
-                            let keystate = get_keyboard_state();
+                            let keystate = get_keyboard_state(g);
                             if ed().g_Platforms[ep].iPathType == PlatformPathType::Straight {
                                 update_platform_path_end(ed().iEditPlatform, ed().event.button_x() as i16, ed().event.button_y() as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
                             } else if ed().g_Platforms[ep].iPathType == PlatformPathType::StraightContinuous || ed().g_Platforms[ep].iPathType == PlatformPathType::Ellipse {
@@ -2677,7 +2677,7 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
                     }
                 } else if PLATFORM_EDIT_STATE_PATH == ed().iPlatformEditState {
                     if ed().event.motion_state() == sdl_button(SDL_BUTTON_LEFT) {
-                        let keystate = get_keyboard_state();
+                        let keystate = get_keyboard_state(g);
                         if ed().g_Platforms[ep].iPathType == PlatformPathType::Ellipse && (check_key(keystate, SDLK_z) || check_key(keystate, SDLK_x) || check_key(keystate, SDLK_c)) {
                             update_platform_path_radius(
                                 ed().iEditPlatform,
@@ -2691,7 +2691,7 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
                             update_platform_path_start(ed().iEditPlatform, ed().event.button_x() as i16, ed().event.button_y() as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
                         }
                     } else if ed().event.motion_state() == sdl_button(SDL_BUTTON_RIGHT) {
-                        let keystate = get_keyboard_state();
+                        let keystate = get_keyboard_state(g);
                         if ed().g_Platforms[ep].iPathType == PlatformPathType::Straight {
                             update_platform_path_end(ed().iEditPlatform, ed().event.button_x() as i16, ed().event.button_y() as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
                         } else if ed().g_Platforms[ep].iPathType == PlatformPathType::StraightContinuous || ed().g_Platforms[ep].iPathType == PlatformPathType::Ellipse {
@@ -3298,10 +3298,10 @@ pub fn editor_maphazards(g: &mut Game) -> i32 {
                         let iType = hazard.itype;
                         if iType == 0 {
                             //Edit fireball string
-                            adjust_map_hazard_radius(hazard.get(), iClickX, iClickY);
+                            adjust_map_hazard_radius(g, hazard.get(), iClickX, iClickY);
                         } else if iType == 1 {
                             //rotodisc
-                            adjust_map_hazard_radius(hazard.get(), iClickX, iClickY);
+                            adjust_map_hazard_radius(g, hazard.get(), iClickX, iClickY);
                         }
                     }
                 } else {
@@ -3323,7 +3323,7 @@ pub fn editor_maphazards(g: &mut Game) -> i32 {
                         let hazard = Ptr::from_mut(&mut g.g_map.maphazards[ed().iEditMapHazard as usize]);
                         let iType = hazard.itype;
                         if iType == 0 || iType == 1 {
-                            adjust_map_hazard_radius(hazard.get(), iClickX, iClickY);
+                            adjust_map_hazard_radius(g, hazard.get(), iClickX, iClickY);
                         }
                     }
                 }
@@ -3468,7 +3468,7 @@ pub fn draw_map_hazard_controls(g: &mut Game, hazard: &MapHazard) {
     }
 }
 
-pub fn adjust_map_hazard_radius(hazard: &mut MapHazard, iClickX: i16, iClickY: i16) {
+pub fn adjust_map_hazard_radius(g: &mut Game, hazard: &mut MapHazard, iClickX: i16, iClickY: i16) {
     let iDiffX: i16 = (iClickX as i32 - (((hazard.ix as i32) << 4) + 16)) as i16;
     let iDiffY: i16 = (iClickY as i32 - (((hazard.iy as i32) << 4) + 16)) as i16;
 
@@ -3479,7 +3479,7 @@ pub fn adjust_map_hazard_radius(hazard: &mut MapHazard, iClickX: i16, iClickY: i
         angle += TWO_PI;
     }
 
-    let keystate = get_keyboard_state();
+    let keystate = get_keyboard_state(g);
     if check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT) {
         angle = snap_angle(angle);
     }
@@ -3935,7 +3935,7 @@ pub fn editor_modeitems(g: &mut Game) -> i32 {
             } else if ty == SDL_MOUSEMOTION_EV {
                 bound_mouse_motion_coords();
                 if ed().dragmodeitem >= 0 && ed().event.motion_state() == sdl_button(SDL_BUTTON_LEFT) {
-                    let keystate = get_keyboard_state();
+                    let keystate = get_keyboard_state(g);
                     let fShiftDown = check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT);
 
                     let d = ed().dragmodeitem as usize;
@@ -4523,7 +4523,7 @@ pub fn dialog(g: &mut Game, title: &str, instructions: &str, input: &mut String,
                             //insert character into fileName and onScreenText and increment current char
                             let mut key: u8 = sym as u8;
 
-                            let keystate = get_keyboard_state();
+                            let keystate = get_keyboard_state(g);
                             if check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT) {
                                 if sym == 45 {
                                     key = 95;

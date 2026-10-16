@@ -383,7 +383,7 @@ impl UI_ControlTrait for MI_TextField {
             return self.osk_input(g, playerInput);
         }
 
-        let keystate = crate::smw::harness::keyboard_state();
+        let keystate = crate::smw::harness::keyboard_state(g);
 
         for iPlayer in 0..4usize {
             // NOTE: copied from UI_Menu::SendInput

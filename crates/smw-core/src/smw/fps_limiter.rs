@@ -57,12 +57,12 @@ impl FPSLimiter {
         unsafe {
             self.flipfps = 1000.0f32 / self.ticks as f32;
 
-            if harness::no_limit() {
+            if harness::no_limit(g) {
                 return;
             }
 
             //Sleep for time just under what we need
-            let framelimiter = if harness::speed() == 1.0 { g.game_values.framelimiter as i32 } else { (g.game_values.framelimiter as f32 / harness::speed()) as i32 };
+            let framelimiter = if harness::speed(g) == 1.0 { g.game_values.framelimiter as i32 } else { (g.game_values.framelimiter as f32 / harness::speed(g)) as i32 };
             let mut delay: i16 = (framelimiter as u32).wrapping_sub(crate::services::ticks()).wrapping_add(self.framestart).wrapping_sub(2) as i16;
 
             if delay > 0 {

@@ -325,11 +325,11 @@ unsafe fn add_joysticks(g: &mut Game, field: &mut MI_SelectField<i16>) {
     for iJoystick in 0..game().joystickcount {
         let js = if g.joysticks.is_null() { std::ptr::null_mut() } else { *g.joysticks.add(iJoystick as usize) };
         let p = if js.is_null() { SDL_JoystickNameForIndex(iJoystick as i32) } else { SDL_JoystickName(js) };
-        let name = if harness::replay_joysticks().is_some() {
+        let name = if harness::replay_joysticks(g).is_some() {
             "Virtual Controller".to_string()
         } else if p.is_null() {
             String::new()
-        } else if harness::replaying() {
+        } else if harness::replaying(g) {
             CStr::from_ptr(p).to_string_lossy().into_owned()
         } else {
             let name = CStr::from_ptr(p).to_string_lossy().into_owned();

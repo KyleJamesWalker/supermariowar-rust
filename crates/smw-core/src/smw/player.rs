@@ -1317,7 +1317,7 @@ impl CPlayer {
                     // this on the host side here
                 } else {
                     self.net_waitingForPowerupTrigger = true;
-                    g.netplay.client.send_powerup_request();
+                    gp.netplay.client.send_powerup_request(g);
                 }
             }
         }
@@ -2675,6 +2675,7 @@ impl CPlayer {
     }
 
     pub fn mapcolldet_move_horizontally(&mut self, g: &mut Game, direction: i16) {
+        let mut gp = g.ptr();
         debug_assert!(direction == 1 || direction == 3);
         let counter_direction: i16 = if direction == 1 { 3 } else { 1 };
         let this = self.this();
@@ -2777,7 +2778,7 @@ impl CPlayer {
                 }
 
                 if g.netplay.active && g.netplay.theHostIsMe && collisionresult {
-                    g.netplay.client.local_gamehost.send_map_collision_event();
+                    gp.netplay.client.local_gamehost.send_map_collision_event(g);
                 }
             } else if superDeathTileBehind || (deathTileBehind && !self.is_invincible() && !self.is_shielded() && !self.shyguy) {
                 if PlayerKillType::NonKill != self.kill_player_map_hazard(g, superDeathTileBehind, KillStyle::Environment, false, -1) {
@@ -2814,6 +2815,7 @@ impl CPlayer {
     }
 
     pub fn mapcolldet_move_upward(&mut self, g: &mut Game, txl: i16, txc: i16, txr: i16, alignedBlockX: i16, unAlignedBlockX: i16, unAlignedBlockFX: f32) {
+        let mut gp = g.ptr();
         let this = self.this();
 
         unsafe {
@@ -2851,7 +2853,7 @@ impl CPlayer {
                     }
 
                     if g.netplay.active && g.netplay.theHostIsMe {
-                        g.netplay.client.local_gamehost.send_map_collision_event();
+                        gp.netplay.client.local_gamehost.send_map_collision_event(g);
                     }
 
                     return;
@@ -2899,7 +2901,7 @@ impl CPlayer {
                     }
 
                     if g.netplay.active && g.netplay.theHostIsMe {
-                        g.netplay.client.local_gamehost.send_map_collision_event();
+                        gp.netplay.client.local_gamehost.send_map_collision_event(g);
                     }
 
                     return;
@@ -2920,7 +2922,7 @@ impl CPlayer {
                     }
 
                     if g.netplay.active && g.netplay.theHostIsMe {
-                        g.netplay.client.local_gamehost.send_map_collision_event();
+                        gp.netplay.client.local_gamehost.send_map_collision_event(g);
                     }
 
                     return;
@@ -2960,6 +2962,7 @@ impl CPlayer {
     }
 
     pub fn mapcolldet_move_downward(&mut self, g: &mut Game, txl: i16, _txc: i16, txr: i16, alignedBlockX: i16, unAlignedBlockX: i16, _unAlignedBlockFX: f32) {
+        let mut gp = g.ptr();
         let this = self.this();
 
         unsafe {
@@ -3001,7 +3004,7 @@ impl CPlayer {
                     collisionresult &= leftblock.get().collide_player_dir(g, this, 2, if g.netplay.active { (g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior });
 
                     if g.netplay.active && g.netplay.theHostIsMe && collisionresult {
-                        g.netplay.client.local_gamehost.send_map_collision_event();
+                        gp.netplay.client.local_gamehost.send_map_collision_event(g);
                     }
 
                     //If player was bumped and killed then return
@@ -3016,7 +3019,7 @@ impl CPlayer {
                     collisionresult &= rightblock.get().collide_player_dir(g, this, 2, if g.netplay.active { (g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior });
 
                     if g.netplay.active && g.netplay.theHostIsMe && collisionresult {
-                        g.netplay.client.local_gamehost.send_map_collision_event();
+                        gp.netplay.client.local_gamehost.send_map_collision_event(g);
                     }
 
                     //If player was bumped and killed then return

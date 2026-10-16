@@ -144,7 +144,7 @@ fn main() {
                     seen_players = game().netplay.currentRoom.player_count();
                     if is_host {
                         game().netplay.client.send_chat_message(game().get(), "hello from host");
-                        game().netplay.client.local_gamehost.send_start_room_message();
+                        game().netplay.client.local_gamehost.send_start_room_message(game().get());
                     }
                     stage = 3;
                 }
