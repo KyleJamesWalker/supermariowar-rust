@@ -1534,7 +1534,7 @@ impl GameState for MenuState {
     fn on_enter_state(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         unsafe {
-            sdl2::sys::SDL_ShowCursor(sdl2::sys::SDL_ENABLE as i32);
+            crate::services::services(gp.get()).video.show_cursor(true);
             self.iUnlockMinigameOptionIndex = 0;
 
             self.iTournamentAIStep = 0;
@@ -1674,7 +1674,7 @@ impl GameState for MenuState {
             //handle messages
             #[cfg(target_os = "emscripten")]
             g.frame_events.clear();
-            while let Some(input) = smw_sdl2::events::poll_input() {
+            while let Some(input) = crate::services::services(gp.get()).events.poll() {
                 #[cfg(target_os = "emscripten")]
                 g.frame_events.push(input.clone());
                 if input.event == InputEvent::Quit {

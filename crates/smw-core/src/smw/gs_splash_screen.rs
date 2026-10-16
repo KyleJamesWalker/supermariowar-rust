@@ -70,7 +70,7 @@ impl GameState for SplashScreenState {
             // TODO: move this out of this method maybe
 
             let mut tapped = false;
-            while let Some(input) = smw_sdl2::events::poll_input() {
+            while let Some(input) = crate::services::services(gp.get()).events.poll() {
                 tapped |= input.event.tap().is_some();
                 if input.event == InputEvent::Quit {
                     g.game_values.appstate = AppState::Quit;

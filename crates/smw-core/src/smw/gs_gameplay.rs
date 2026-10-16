@@ -2395,7 +2395,7 @@ impl GameplayState {
             let menu_controls = if g.game_values.flags.exitinggame { 1 } else { 0 };
             g.game_values.playerInput.clear_pressed_keys(menu_controls);
 
-            while let Some(input) = smw_sdl2::events::poll_input() {
+            while let Some(input) = crate::services::services(gp.get()).events.poll() {
                 if input.event == InputEvent::Quit {
                     clean_up(g);
                     g.game_values.appstate = AppState::Quit;
@@ -2735,7 +2735,7 @@ impl GameplayState {
 impl GameState for GameplayState {
     fn on_enter_state(&mut self, g: &mut Game) {
         unsafe {
-            sdl2::sys::SDL_ShowCursor(sdl2::sys::SDL_DISABLE as i32);
+            crate::services::services(g).video.show_cursor(false);
             self.iCountDownState = 0;
             self.iCountDownTimer = 0;
 

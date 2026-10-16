@@ -10,6 +10,15 @@ pub unsafe fn poll(event: *mut SDL_Event) -> i32 {
 }
 
 /// `SDL_PollEvent`, normalized.
+/// The SDL event queue as the game's input.
+pub struct Sdl2Events;
+
+impl smw_platform::Events for Sdl2Events {
+    fn poll(&mut self) -> Option<smw_platform::Input> {
+        poll_input()
+    }
+}
+
 pub fn poll_input() -> Option<smw_platform::Input> {
     unsafe {
         let mut event: SDL_Event = std::mem::zeroed();

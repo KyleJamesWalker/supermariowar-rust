@@ -1220,7 +1220,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
 
             if fExiting {
                 //handle messages
-                while poll_event(&mut ed(gp.get()).event) != 0 {
+                while poll_event(g, &mut ed(gp.get()).event) != 0 {
                     if event_type(g) == T_KEYDOWN {
                         let key = key_sym(g);
 
@@ -1239,7 +1239,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                 }
             } else {
                 //handle messages
-                while poll_event(&mut ed(gp.get()).event) != 0 {
+                while poll_event(g, &mut ed(gp.get()).event) != 0 {
                     match event_type(g) {
                         T_QUIT => {
                             done = true;
@@ -2316,7 +2316,7 @@ pub fn editor_warp(g: &mut Game) -> i32 {
             let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
-            while poll_event(&mut ed(gp.get()).event) != 0 {
+            while poll_event(g, &mut ed(gp.get()).event) != 0 {
                 match event_type(g) {
                     T_QUIT => {
                         done = true;
@@ -2410,7 +2410,7 @@ pub fn editor_start_items(g: &mut Game) -> i32 {
             let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
-            while poll_event(&mut ed(gp.get()).event) != 0 {
+            while poll_event(g, &mut ed(gp.get()).event) != 0 {
                 match event_type(g) {
                     T_QUIT => {
                         done = true;
@@ -2504,7 +2504,7 @@ pub fn editor_boundary(g: &mut Game) -> i32 {
             let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
-            while poll_event(&mut ed(gp.get()).event) != 0 {
+            while poll_event(g, &mut ed(gp.get()).event) != 0 {
                 match event_type(g) {
                     T_QUIT => {
                         done = true;
@@ -2567,7 +2567,7 @@ pub fn editor_type(g: &mut Game) -> i32 {
             let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
-            while poll_event(&mut ed(gp.get()).event) != 0 {
+            while poll_event(g, &mut ed(gp.get()).event) != 0 {
                 match event_type(g) {
                     T_QUIT => {
                         done = true;
@@ -2630,7 +2630,7 @@ pub fn editor_water(g: &mut Game) -> i32 {
             let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
-            while poll_event(&mut ed(gp.get()).event) != 0 {
+            while poll_event(g, &mut ed(gp.get()).event) != 0 {
                 match event_type(g) {
                     T_QUIT => {
                         done = true;
@@ -2688,7 +2688,7 @@ pub fn editor_background(g: &mut Game) -> i32 {
             let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
-            while poll_event(&mut ed(gp.get()).event) != 0 {
+            while poll_event(g, &mut ed(gp.get()).event) != 0 {
                 match event_type(g) {
                     T_QUIT => {
                         done = true;
@@ -2771,7 +2771,7 @@ pub fn editor_stageforeground(g: &mut Game) -> i32 {
             let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
-            while poll_event(&mut ed(gp.get()).event) != 0 {
+            while poll_event(g, &mut ed(gp.get()).event) != 0 {
                 match event_type(g) {
                     T_QUIT => {
                         done = true;
@@ -2838,7 +2838,7 @@ pub fn editor_bridges(g: &mut Game) -> i32 {
             let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
-            while poll_event(&mut ed(gp.get()).event) != 0 {
+            while poll_event(g, &mut ed(gp.get()).event) != 0 {
                 match event_type(g) {
                     T_QUIT => {
                         done = true;
@@ -2893,7 +2893,7 @@ pub fn editor_structureforeground(g: &mut Game) -> i32 {
             let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
-            while poll_event(&mut ed(gp.get()).event) != 0 {
+            while poll_event(g, &mut ed(gp.get()).event) != 0 {
                 match event_type(g) {
                     T_QUIT => {
                         done = true;
@@ -2955,7 +2955,7 @@ pub fn editor_pathsprite(g: &mut Game) -> i32 {
             let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
-            while poll_event(&mut ed(gp.get()).event) != 0 {
+            while poll_event(g, &mut ed(gp.get()).event) != 0 {
                 match event_type(g) {
                     T_QUIT => {
                         done = true;
@@ -3039,7 +3039,7 @@ pub fn editor_vehicles(g: &mut Game) -> i32 {
             let mut code: MenuCodeEnum = MENU_CODE_NONE;
 
             //handle messages
-            while poll_event(&mut ed(gp.get()).event) != 0 {
+            while poll_event(g, &mut ed(gp.get()).event) != 0 {
                 match event_type(g) {
                     T_QUIT => {
                         ed(gp.get()).edit_mode = 5;
@@ -3124,7 +3124,7 @@ pub fn editor_path(g: &mut Game) -> i32 {
             let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
-            while poll_event(&mut ed(gp.get()).event) != 0 {
+            while poll_event(g, &mut ed(gp.get()).event) != 0 {
                 match event_type(g) {
                     T_QUIT => {
                         done = true;
@@ -3638,7 +3638,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
             let mut code: MenuCodeEnum = MENU_CODE_NONE;
 
             //handle messages
-            while poll_event(&mut ed(gp.get()).event) != 0 {
+            while poll_event(g, &mut ed(gp.get()).event) != 0 {
                 match event_type(g) {
                     T_QUIT => {
                         done = true;
@@ -4150,7 +4150,7 @@ pub fn display_help(g: &mut Game) -> i32 {
             let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
-            while poll_event(&mut ed(gp.get()).event) != 0 {
+            while poll_event(g, &mut ed(gp.get()).event) != 0 {
                 match event_type(g) {
                     T_QUIT => return 0,
                     T_KEYDOWN => return 0,
@@ -4210,7 +4210,7 @@ pub fn dialog(g: &mut Game, title: &str, instructions: &str, input: &mut String,
             let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
-            while poll_event(&mut ed(gp.get()).event) != 0 {
+            while poll_event(g, &mut ed(gp.get()).event) != 0 {
                 match event_type(g) {
                     T_QUIT => return false,
 

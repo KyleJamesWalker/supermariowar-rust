@@ -807,7 +807,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
     unsafe {
         if ed(gp.get()).fExiting {
             //handle messages
-            while poll_event(&mut ed(gp.get()).event) != 0 {
+            while poll_event(g, &mut ed(gp.get()).event) != 0 {
                 if ed(gp.get()).event.type_() == SDL_KEYDOWN_EV {
                     let key = ed(gp.get()).event.key_sym();
 
@@ -826,7 +826,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
             }
         } else {
             //handle messages
-            while poll_event(&mut ed(gp.get()).event) != 0 {
+            while poll_event(g, &mut ed(gp.get()).event) != 0 {
                 let keystate = get_keyboard_state(g);
 
                 match ed(gp.get()).event.type_() {
@@ -1831,7 +1831,7 @@ pub fn editor_warp(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     unsafe {
         //handle messages
-        while poll_event(&mut ed(gp.get()).event) != 0 {
+        while poll_event(g, &mut ed(gp.get()).event) != 0 {
             match ed(gp.get()).event.type_() {
                 SDL_QUIT_EV => return EDITOR_QUIT,
 
@@ -1884,7 +1884,7 @@ pub fn editor_eyecandy(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     unsafe {
         //handle messages
-        while poll_event(&mut ed(gp.get()).event) != 0 {
+        while poll_event(g, &mut ed(gp.get()).event) != 0 {
             let ty = ed(gp.get()).event.type_();
             let mut fall = false;
 
@@ -2002,7 +2002,7 @@ pub fn editor_properties(g: &mut Game, iBlockCol: i16, iBlockRow: i16) -> i32 {
         loop {
             FPSLimiter::instance(g).frame_start(g);
             //handle messages
-            while poll_event(&mut ed(gp.get()).event) != 0 {
+            while poll_event(g, &mut ed(gp.get()).event) != 0 {
                 let ty = ed(gp.get()).event.type_();
                 let mut fall = false;
 
@@ -2316,7 +2316,7 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
 
     unsafe {
         //handle messages
-        while poll_event(&mut ed(gp.get()).event) != 0 {
+        while poll_event(g, &mut ed(gp.get()).event) != 0 {
             let ty = ed(gp.get()).event.type_();
             let mut fall = false;
 
@@ -3095,7 +3095,7 @@ pub fn editor_maphazards(g: &mut Game) -> i32 {
 
     unsafe {
         //handle messages
-        while poll_event(&mut ed(gp.get()).event) != 0 {
+        while poll_event(g, &mut ed(gp.get()).event) != 0 {
             let ty = ed(gp.get()).event.type_();
             let mut fall = false;
 
@@ -3535,7 +3535,7 @@ pub fn editor_tiles(g: &mut Game) -> i32 {
 
     unsafe {
         //handle messages
-        while poll_event(&mut ed(gp.get()).event) != 0 {
+        while poll_event(g, &mut ed(gp.get()).event) != 0 {
             match ed(gp.get()).event.type_() {
                 SDL_QUIT_EV => return EDITOR_QUIT,
 
@@ -3736,7 +3736,7 @@ pub fn editor_blocks(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     unsafe {
         //handle messages
-        while poll_event(&mut ed(gp.get()).event) != 0 {
+        while poll_event(g, &mut ed(gp.get()).event) != 0 {
             match ed(gp.get()).event.type_() {
                 SDL_QUIT_EV => return EDITOR_QUIT,
 
@@ -3803,7 +3803,7 @@ pub fn editor_mapitems(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     unsafe {
         //handle messages
-        while poll_event(&mut ed(gp.get()).event) != 0 {
+        while poll_event(g, &mut ed(gp.get()).event) != 0 {
             match ed(gp.get()).event.type_() {
                 SDL_QUIT_EV => return EDITOR_QUIT,
 
@@ -3869,7 +3869,7 @@ pub fn editor_modeitems(g: &mut Game) -> i32 {
 
     unsafe {
         //handle messages
-        while poll_event(&mut ed(gp.get()).event) != 0 {
+        while poll_event(g, &mut ed(gp.get()).event) != 0 {
             let ty = ed(gp.get()).event.type_();
             let mut fall = false;
 
@@ -4007,7 +4007,7 @@ pub fn editor_tiletype(g: &mut Game) -> i32 {
     let mut gp = g.ptr();
     unsafe {
         //handle messages
-        while poll_event(&mut ed(gp.get()).event) != 0 {
+        while poll_event(g, &mut ed(gp.get()).event) != 0 {
             match ed(gp.get()).event.type_() {
                 SDL_QUIT_EV => return EDITOR_QUIT,
 
@@ -4083,7 +4083,7 @@ pub fn editor_backgrounds(g: &mut Game) -> i32 {
 
     unsafe {
         //handle messages
-        while poll_event(&mut ed(gp.get()).event) != 0 {
+        while poll_event(g, &mut ed(gp.get()).event) != 0 {
             match ed(gp.get()).event.type_() {
                 SDL_QUIT_EV => {
                     free_background_surfaces(g);
@@ -4194,7 +4194,7 @@ pub fn editor_animation(g: &mut Game) -> i32 {
 
     unsafe {
         //handle messages
-        while poll_event(&mut ed(gp.get()).event) != 0 {
+        while poll_event(g, &mut ed(gp.get()).event) != 0 {
             let iCol = (ed(gp.get()).event.button_x() / TILESIZE + ed(gp.get()).view_animated_tileset_x) as i16;
             let iRow = (ed(gp.get()).event.button_y() / TILESIZE) as i16;
 
@@ -4451,7 +4451,7 @@ pub fn display_help(g: &mut Game) -> i32 {
         gp.rm.menu_font_small.draw(g, offsetx, offsety, "[alt] + [enter] - Full Screen/Window");
 
         //handle messages
-        while poll_event(&mut ed(gp.get()).event) != 0 {
+        while poll_event(g, &mut ed(gp.get()).event) != 0 {
             match ed(gp.get()).event.type_() {
                 SDL_QUIT_EV => return 0,
                 SDL_KEYDOWN_EV => return 0,
@@ -4508,7 +4508,7 @@ pub fn dialog(g: &mut Game, title: &str, instructions: &str, input: &mut String,
             let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
-            while poll_event(&mut ed(gp.get()).event) != 0 {
+            while poll_event(g, &mut ed(gp.get()).event) != 0 {
                 match ed(gp.get()).event.type_() {
                     SDL_QUIT_EV => return false,
 

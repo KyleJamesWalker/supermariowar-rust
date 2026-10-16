@@ -164,6 +164,10 @@ impl Sdl2Video {
 }
 
 impl Video for Sdl2Video {
+    fn show_cursor(&mut self, on: bool) {
+        unsafe { SDL_ShowCursor(if on { SDL_ENABLE } else { SDL_DISABLE } as i32) };
+    }
+
     fn open(&mut self, fullscreen: bool) {
         unsafe {
             if SDL_Init(SDL_INIT_VIDEO) < 0 {

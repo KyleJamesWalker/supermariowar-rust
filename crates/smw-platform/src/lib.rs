@@ -49,6 +49,13 @@ pub trait Video {
     fn set_fullscreen(&mut self, on: bool);
     fn set_title(&mut self, title: &str);
     fn show_error(&mut self, message: &str);
+    /// Shows or hides the mouse cursor over the window.
+    fn show_cursor(&mut self, on: bool);
+}
+
+pub trait Events {
+    /// The next queued input, or `None` when the queue is empty.
+    fn poll(&mut self) -> Option<Input>;
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -105,6 +112,7 @@ pub struct Services {
     pub storage: Box<dyn Storage>,
     pub video: Box<dyn Video>,
     pub audio: Box<dyn AudioOut>,
+    pub events: Box<dyn Events>,
 }
 
 /// A pad as SDL's events name it (`which`): the device index for added events, the instance ID otherwise. The game
@@ -208,6 +216,13 @@ mod tests {
         fn set_fullscreen(&mut self, _: bool) {}
         fn set_title(&mut self, _: &str) {}
         fn show_error(&mut self, _: &str) {}
+        fn show_cursor(&mut self, _: bool) {}
+    }
+
+    impl Events for Null {
+        fn poll(&mut self) -> Option<Input> {
+            None
+        }
     }
 
     struct Log(Rc<RefCell<Vec<String>>>);
@@ -257,7 +272,7 @@ mod tests {
     #[test]
     fn services_hold_trait_objects() {
         let log = Rc::new(RefCell::new(Vec::new()));
-        let mut services = Services { clock: Box::new(Null), storage: Box::new(Null), video: Box::new(Null), audio: Box::new(Log(log.clone())) };
+        let mut services = Services { clock: Box::new(Null), storage: Box::new(Null), video: Box::new(Null), audio: Box::new(Log(log.clone())), events: Box::new(Null) };
         assert_eq!(services.clock.now_ms(), 1000);
         services.storage.persist();
         assert_eq!(services.storage.root_dir(), PathBuf::from("root"));

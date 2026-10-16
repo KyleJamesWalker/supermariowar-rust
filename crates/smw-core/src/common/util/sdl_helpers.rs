@@ -1,5 +1,6 @@
 //! Port of src/common/util/SdlHelpers.cpp
 
+use crate::game::Game;
 use sdl2::sys::{SDL_DestroyRenderer, SDL_DestroyTexture, SDL_DestroyWindow, SDL_Renderer, SDL_Texture, SDL_Window};
 use std::ptr::null_mut;
 
@@ -55,8 +56,8 @@ sdl_unique_ptr!(SdlRendererPtr, SDL_Renderer, SDL_DestroyRenderer);
 sdl_unique_ptr!(SdlTexturePtr, SDL_Texture, SDL_DestroyTexture);
 
 /// The editors' poll: the last event stays in `event` when the queue runs dry, as sdl2-compat leaves it.
-pub fn poll_event(event: &mut crate::common::editor_event::EditorEvent) -> i32 {
-    match smw_sdl2::events::poll_input() {
+pub fn poll_event(g: &mut Game, event: &mut crate::common::editor_event::EditorEvent) -> i32 {
+    match crate::services::services(g).events.poll() {
         Some(input) => {
             event.set(input);
             1
