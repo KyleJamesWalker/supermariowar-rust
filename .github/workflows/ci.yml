@@ -433,15 +433,15 @@ jobs:
           [[ -s summary.txt ]] || exit 1
           exit $status
 
-      - name: SDL fallbacks
+      - name: Unverified blits
         if: ${{ !cancelled() && matrix.suites }}
         run: |
           dirs=()
           for suite in ${{ matrix.suites }}; do dirs+=("$RUNNER_TEMP/parity/$suite"); done
-          tools/blit_fallbacks.sh "${dirs[@]}" > fallbacks.txt && { cat fallbacks.txt; exit 0; }
-          { echo "### SDL fallbacks"; echo '```'; cat fallbacks.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          cat fallbacks.txt
-          echo "::error::The software blitter handed draws to SDL; see the job summary."
+          tools/blit_unverified.sh "${dirs[@]}" > unverified.txt && { cat unverified.txt; exit 0; }
+          { echo "### Unverified blits"; echo '```'; cat unverified.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          cat unverified.txt
+          echo "::error::The software blitter drew a surface state it is not verified against SDL for; see the job summary."
           exit 1
 
       - name: Determinism manifest
