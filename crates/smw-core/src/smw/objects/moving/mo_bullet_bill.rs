@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_BulletBill.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_FallingObject;
@@ -28,7 +29,7 @@ use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
 pub struct MO_BulletBill {
     pub io_moving_object: IO_MovingObject,
 
-    pub spr_dead: Ptr<gfxSprite>,
+    pub spr_dead: SpriteId,
 
     pub iColorID: i16,
 
@@ -42,10 +43,10 @@ pub struct MO_BulletBill {
 impl_base!(MO_BulletBill => io_moving_object: IO_MovingObject);
 
 impl MO_BulletBill {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, nsprdead: Ptr<gfxSprite>, pos: Vec2s, nspeed: f32, playerID: i16, isspawned: bool) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, nsprdead: SpriteId, pos: Vec2s, nspeed: f32, playerID: i16, isspawned: bool) -> Self {
         let mut o = MO_BulletBill {
             io_moving_object: IO_MovingObject::new(g, nspr, pos, 4, 8, 30, 28, 1, 2, -1, -1, -1, -1),
-            spr_dead: Ptr::null(),
+            spr_dead: SpriteId::NONE,
             iColorID: 0,
             iColorOffsetY: 0,
             iDirectionOffsetY: 0,
@@ -106,7 +107,7 @@ impl MO_BulletBill {
 
     // For preview drawing
     pub fn draw_offset(&mut self, g: &mut Game, iOffsetX: i16, iOffsetY: i16) {
-        let surface = &*self.spr;
+        let surface = g.rm.sprite(self.spr);
         let clipRect = Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: 320, h: 240 };
         let dstX = ((self.ix as i32 >> 1) + iOffsetX as i32) as i16;
         let dstY = ((self.iy as i32 >> 1) + iOffsetY as i32) as i16;
@@ -186,9 +187,9 @@ impl CObjectTrait for MO_BulletBill {
         };
         if self.fIsSpawned {
             let edge = unsafe { std::mem::transmute::<i32, ClipEdge>(self.iHiddenDirection as i32) };
-            self.spr.draw_clip(g, self.ix as i32, self.iy as i32, &src, edge, self.iHiddenPlane as i32);
+            g.rm.sprite(self.spr).draw_clip(g, self.ix as i32, self.iy as i32, &src, edge, self.iHiddenPlane as i32);
         } else {
-            self.spr.draw_src(g, self.ix as i32, self.iy as i32, &src);
+            g.rm.sprite(self.spr).draw_src(g, self.ix as i32, self.iy as i32, &src);
         }
     }
 
@@ -259,7 +260,7 @@ impl CObjectTrait for MO_BulletBill {
 
             let obj = Ptr::new_box(MO_Explosion::new(
                 g,
-                Ptr::from_mut(&mut rm.spr_explosion),
+                rm.spr_explosion,
                 Vec2s::new((iCenterX as i32 - 96) as i16, (iCenterY as i32 - 64) as i16),
                 2,
                 4,
@@ -300,7 +301,7 @@ impl IO_MovingObjectTrait for MO_BulletBill {
 
     fn die(&mut self, g: &mut Game) {
         self.dead = true;
-        g.eyecandy[2].emplace(EC_FallingObject::new(
+        g.eyecandy[2].emplace(EC_FallingObject::new(&g.rm, 
             self.spr_dead,
             self.ix,
             self.iy,

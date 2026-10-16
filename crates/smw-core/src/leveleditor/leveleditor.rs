@@ -394,11 +394,11 @@ impl MapPlatform {
                         crate::common::gfx::blit::upper_blit(gp.g_tilesetmanager.tileset(g, tile.iID as usize).surface(2), src, self.preview.get_surface(), &mut bltrect);
                     } else if tile.iID as i32 == TILESETANIMATED {
                         let src = g.g_tilesetmanager.rect(2, (tile.iCol as i32 * 4) as i16, tile.iRow);
-                        g.rm.spr_tileanimation[2].draw_src_to(&*src, self.preview.get_surface(), &bltrect);
+                        g.rm.sprite(g.rm.spr_tileanimation[2]).draw_src_to(&*src, self.preview.get_surface(), &bltrect);
                     } else if tile.iID as i32 == TILESETUNKNOWN {
                         //Draw unknown tile
                         let src = g.g_tilesetmanager.rect(2, 0, 0);
-                        g.rm.spr_unknowntile[2].draw_src_to(&*src, self.preview.get_surface(), &bltrect);
+                        g.rm.sprite(g.rm.spr_unknowntile[2]).draw_src_to(&*src, self.preview.get_surface(), &bltrect);
                     }
                 }
             }
@@ -518,83 +518,83 @@ pub fn inner_main(g: &mut Game) {
 
     println!("\n---------------- loading graphics ----------------");
 
-    g.rm.spr_tiletypes = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_tile_types.png")).without_color_key().create(g);
-    g.rm.spr_transparenttiles = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_transparent_tiles.png")).with_alpha(160).create(g);
+    *g.rm.sprite(g.rm.spr_tiletypes) = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_tile_types.png")).without_color_key().create(g);
+    *g.rm.sprite(g.rm.spr_transparenttiles) = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_transparent_tiles.png")).with_alpha(160).create(g);
 
-    g.rm.spr_backgroundlevel = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_background_levels.png")).create(g);
-    g.rm.spr_tilesetlevel = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_tileset_levels.png")).create(g);
+    *g.rm.sprite(g.rm.spr_backgroundlevel) = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_background_levels.png")).create(g);
+    *g.rm.sprite(g.rm.spr_tilesetlevel) = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_tileset_levels.png")).create(g);
 
-    g.rm.spr_eyecandy = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_eyecandy.png")).create(g);
+    *g.rm.sprite(g.rm.spr_eyecandy) = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_eyecandy.png")).create(g);
 
     ed(gp.get()).s_platform.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_platform.png")).create(g));
     ed(gp.get()).s_platformpathbuttons.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_pathtype_buttons.png")).create(g));
     ed(gp.get()).s_maphazardbuttons.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_maphazard_buttons.png")).create(g));
 
-    g.rm.spr_warps[0] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp.png")).create(g);
-    g.rm.spr_warps[1] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp_preview.png")).create(g);
-    g.rm.spr_warps[2] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp_thumbnail.png")).create(g);
+    *g.rm.sprite(g.rm.spr_warps[0]) = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp.png")).create(g);
+    *g.rm.sprite(g.rm.spr_warps[1]) = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp_preview.png")).create(g);
+    *g.rm.sprite(g.rm.spr_warps[2]) = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_warp_thumbnail.png")).create(g);
 
-    g.rm.spr_platformpath = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_platform_path.png")).with_alpha(128).create(g);
+    *g.rm.sprite(g.rm.spr_platformpath) = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_platform_path.png")).with_alpha(128).create(g);
 
-    g.rm.spr_selectedtile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_selectedtile.png")).with_color_key(colors::BLACK).with_alpha(128).create(g);
-    g.rm.spr_nospawntile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_nospawntile.png")).with_color_key(colors::BLACK).with_alpha(128).create(g);
-    g.rm.spr_noitemspawntile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_noitemspawntile.png")).with_color_key(colors::BLACK).with_alpha(128).create(g);
-    g.rm.spr_platformstarttile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_platformstarttile.png")).with_color_key(colors::BLACK).with_alpha(64).with_wrapping(640).create(g);
-    g.rm.spr_platformendtile = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_selectedtile.png")).with_color_key(colors::BLACK).with_alpha(64).with_wrapping(640).create(g);
+    *g.rm.sprite(g.rm.spr_selectedtile) = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_selectedtile.png")).with_color_key(colors::BLACK).with_alpha(128).create(g);
+    *g.rm.sprite(g.rm.spr_nospawntile) = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_nospawntile.png")).with_color_key(colors::BLACK).with_alpha(128).create(g);
+    *g.rm.sprite(g.rm.spr_noitemspawntile) = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_noitemspawntile.png")).with_color_key(colors::BLACK).with_alpha(128).create(g);
+    *g.rm.sprite(g.rm.spr_platformstarttile) = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_platformstarttile.png")).with_color_key(colors::BLACK).with_alpha(64).with_wrapping(640).create(g);
+    *g.rm.sprite(g.rm.spr_platformendtile) = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_selectedtile.png")).with_color_key(colors::BLACK).with_alpha(64).with_wrapping(640).create(g);
 
-    g.rm.spr_mapitems[0] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_mapitems.png")).create(g);
-    g.rm.spr_mapitems[1] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_mapitems_preview.png")).create(g);
-    g.rm.spr_mapitems[2] = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_mapitems_thumbnail.png")).create(g);
+    *g.rm.sprite(g.rm.spr_mapitems[0]) = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_mapitems.png")).create(g);
+    *g.rm.sprite(g.rm.spr_mapitems[1]) = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_mapitems_preview.png")).create(g);
+    *g.rm.sprite(g.rm.spr_mapitems[2]) = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_mapitems_thumbnail.png")).create(g);
 
-    g.rm.spr_dialog = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_dialog.png")).with_alpha(255).create(g);
-    g.rm.menu_shade = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_shade.png")).with_alpha(128).create(g);
+    *g.rm.sprite(g.rm.spr_dialog) = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_dialog.png")).with_alpha(255).create(g);
+    *g.rm.sprite(g.rm.menu_shade) = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_shade.png")).with_alpha(128).create(g);
 
-    g.rm.spr_tileanimation[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/tile_animation.png")).create(g);
-    g.rm.spr_tileanimation[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/tile_animation_preview.png")).create(g);
-    g.rm.spr_tileanimation[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/tile_animation_thumbnail.png")).create(g);
+    *g.rm.sprite(g.rm.spr_tileanimation[0]) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/tile_animation.png")).create(g);
+    *g.rm.sprite(g.rm.spr_tileanimation[1]) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/tile_animation_preview.png")).create(g);
+    *g.rm.sprite(g.rm.spr_tileanimation[2]) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/tile_animation_thumbnail.png")).create(g);
 
-    g.rm.spr_blocks[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/blocks.png")).create(g);
-    g.rm.spr_blocks[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/blocks_preview.png")).create(g);
-    g.rm.spr_blocks[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/blocks_thumbnail.png")).create(g);
+    *g.rm.sprite(g.rm.spr_blocks[0]) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/blocks.png")).create(g);
+    *g.rm.sprite(g.rm.spr_blocks[1]) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/blocks_preview.png")).create(g);
+    *g.rm.sprite(g.rm.spr_blocks[2]) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/blocks_thumbnail.png")).create(g);
 
-    g.rm.spr_unknowntile[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/unknown_tile.png")).create(g);
-    g.rm.spr_unknowntile[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/unknown_tile_preview.png")).create(g);
-    g.rm.spr_unknowntile[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/unknown_tile_thumbnail.png")).create(g);
+    *g.rm.sprite(g.rm.spr_unknowntile[0]) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/unknown_tile.png")).create(g);
+    *g.rm.sprite(g.rm.spr_unknowntile[1]) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/unknown_tile_preview.png")).create(g);
+    *g.rm.sprite(g.rm.spr_unknowntile[2]) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/tilesets/unknown_tile_thumbnail.png")).create(g);
 
-    g.rm.spr_powerups = ImageLoader::new(convert_path(g, "gfx/packs/Classic/powerups/large.png")).create(g);
-    g.rm.spr_powerupselector = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_powerup_selector.png")).with_alpha(128).create(g);
-    g.rm.spr_hidden_marker = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_hidden_marker.png")).create(g);
+    *g.rm.sprite(g.rm.spr_powerups) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/powerups/large.png")).create(g);
+    *g.rm.sprite(g.rm.spr_powerupselector) = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_powerup_selector.png")).with_alpha(128).create(g);
+    *g.rm.sprite(g.rm.spr_hidden_marker) = ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_hidden_marker.png")).create(g);
 
-    g.rm.spr_flagbases = ImageLoader::new(convert_path(g, "gfx/packs/Classic/modeobjects/flagbases.png")).create(g);
-    g.rm.spr_racegoals = ImageLoader::new(convert_path(g, "gfx/packs/Classic/modeobjects/racegoal.png")).create(g);
+    *g.rm.sprite(g.rm.spr_flagbases) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/modeobjects/flagbases.png")).create(g);
+    *g.rm.sprite(g.rm.spr_racegoals) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/modeobjects/racegoal.png")).create(g);
 
-    g.rm.spr_hazard_fireball[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/fireball.png")).create(g);
-    g.rm.spr_hazard_fireball[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/fireball_preview.png")).create(g);
-    g.rm.spr_hazard_fireball[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/fireball_thumbnail.png")).create(g);
+    *g.rm.sprite(g.rm.spr_hazard_fireball[0]) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/fireball.png")).create(g);
+    *g.rm.sprite(g.rm.spr_hazard_fireball[1]) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/fireball_preview.png")).create(g);
+    *g.rm.sprite(g.rm.spr_hazard_fireball[2]) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/fireball_thumbnail.png")).create(g);
 
-    g.rm.spr_hazard_rotodisc[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/rotodisc.png")).create(g);
-    g.rm.spr_hazard_rotodisc[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/rotodisc_preview.png")).create(g);
-    g.rm.spr_hazard_rotodisc[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/rotodisc_thumbnail.png")).create(g);
+    *g.rm.sprite(g.rm.spr_hazard_rotodisc[0]) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/rotodisc.png")).create(g);
+    *g.rm.sprite(g.rm.spr_hazard_rotodisc[1]) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/rotodisc_preview.png")).create(g);
+    *g.rm.sprite(g.rm.spr_hazard_rotodisc[2]) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/rotodisc_thumbnail.png")).create(g);
 
-    g.rm.spr_hazard_bulletbill[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/bulletbill.png")).create(g);
-    g.rm.spr_hazard_bulletbill[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/bulletbill_preview.png")).create(g);
-    g.rm.spr_hazard_bulletbill[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/bulletbill_thumbnail.png")).create(g);
+    *g.rm.sprite(g.rm.spr_hazard_bulletbill[0]) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/bulletbill.png")).create(g);
+    *g.rm.sprite(g.rm.spr_hazard_bulletbill[1]) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/bulletbill_preview.png")).create(g);
+    *g.rm.sprite(g.rm.spr_hazard_bulletbill[2]) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/bulletbill_thumbnail.png")).create(g);
 
-    g.rm.spr_hazard_flame[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/flame.png")).create(g);
-    g.rm.spr_hazard_flame[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/flame_preview.png")).create(g);
-    g.rm.spr_hazard_flame[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/flame_thumbnail.png")).create(g);
+    *g.rm.sprite(g.rm.spr_hazard_flame[0]) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/flame.png")).create(g);
+    *g.rm.sprite(g.rm.spr_hazard_flame[1]) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/flame_preview.png")).create(g);
+    *g.rm.sprite(g.rm.spr_hazard_flame[2]) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/flame_thumbnail.png")).create(g);
 
-    g.rm.spr_hazard_pirhanaplant[0] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/pirhanaplant.png")).create(g);
-    g.rm.spr_hazard_pirhanaplant[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/pirhanaplant_preview.png")).create(g);
-    g.rm.spr_hazard_pirhanaplant[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/pirhanaplant_thumbnail.png")).create(g);
+    *g.rm.sprite(g.rm.spr_hazard_pirhanaplant[0]) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/pirhanaplant.png")).create(g);
+    *g.rm.sprite(g.rm.spr_hazard_pirhanaplant[1]) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/pirhanaplant_preview.png")).create(g);
+    *g.rm.sprite(g.rm.spr_hazard_pirhanaplant[2]) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/pirhanaplant_thumbnail.png")).create(g);
 
-    g.rm.spr_number_icons = ImageLoader::new(convert_path(g, "gfx/packs/Classic/awards/killsinrownumbers.png")).create(g);
+    *g.rm.sprite(g.rm.spr_number_icons) = ImageLoader::new(convert_path(g, "gfx/packs/Classic/awards/killsinrownumbers.png")).create(g);
 
     for i in 0..3usize {
-        g.rm.spr_hazard_fireball[i].set_wrap((640 >> i) as i16);
-        g.rm.spr_hazard_rotodisc[i].set_wrap((640 >> i) as i16);
-        g.rm.spr_hazard_flame[i].set_wrap((640 >> i) as i16);
-        g.rm.spr_hazard_pirhanaplant[i].set_wrap((640 >> i) as i16);
+        g.rm.sprite(g.rm.spr_hazard_fireball[i]).set_wrap((640 >> i) as i16);
+        g.rm.sprite(g.rm.spr_hazard_rotodisc[i]).set_wrap((640 >> i) as i16);
+        g.rm.sprite(g.rm.spr_hazard_flame[i]).set_wrap((640 >> i) as i16);
+        g.rm.sprite(g.rm.spr_hazard_pirhanaplant[i]).set_wrap((640 >> i) as i16);
     }
 
 
@@ -915,7 +915,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                         if key == SDLK_g {
                             ed(gp.get()).backgroundlist.next();
 
-                            g.rm.spr_background = ImageLoader::new(ed(gp.get()).backgroundlist.current_path()).without_color_key().create(g);
+                            *g.rm.sprite(g.rm.spr_background) = ImageLoader::new(ed(gp.get()).backgroundlist.current_path()).without_color_key().create(g);
                             g.g_map.szBackgroundFile = get_filename_from_path(&ed(gp.get()).backgroundlist.current_path().to_string_lossy());
 
                             if !check_key(gp.get(), keystate, SDLK_LSHIFT) && !check_key(gp.get(), keystate, SDLK_RSHIFT) {
@@ -1304,13 +1304,13 @@ pub fn editor_edit(g: &mut Game) -> i32 {
 
         //Ask if you are sure you want to exit
         if ed(gp.get()).fExiting {
-            gp.rm.spr_dialog.draw_src(g, 224, 176, &rect(0, 0, 192, 128));
+            gp.rm.sprite(gp.rm.spr_dialog).draw_src(g, 224, 176, &rect(0, 0, 192, 128));
             gp.rm.menu_font_large.draw_centered(g, 320, 195, "Exit");
             gp.rm.menu_font_large.draw_centered(g, 320, 220, "Are You Sure?");
             gp.rm.menu_font_large.draw_centered(g, 282, 254, "Yes");
             gp.rm.menu_font_large.draw_centered(g, 356, 254, "No");
 
-            gp.rm.spr_dialog.draw_src(g, if ed(gp.get()).fSelectedYes { 250 } else { 326 }, 250, &rect(192, 0, 64, 32));
+            gp.rm.sprite(gp.rm.spr_dialog).draw_src(g, if ed(gp.get()).fSelectedYes { 250 } else { 326 }, 250, &rect(192, 0, 64, 32));
         } else {
             if ed(gp.get()).edit_mode == 0 {
                 gp.rm.menu_font_small.draw(g, 0, 0, "Block Mode");
@@ -1346,7 +1346,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                 for kk in 0..MAPHEIGHT {
                     for j in 0..MAPWIDTH {
                         if ed(gp.get()).selectedtiles[j as usize][kk as usize] {
-                            gp.rm.spr_selectedtile.draw(g, (j + ed(gp.get()).move_offset_x) * TILESIZE, (kk + ed(gp.get()).move_offset_y) * TILESIZE);
+                            gp.rm.sprite(gp.rm.spr_selectedtile).draw(g, (j + ed(gp.get()).move_offset_x) * TILESIZE, (kk + ed(gp.get()).move_offset_y) * TILESIZE);
                         }
                     }
                 }
@@ -1361,7 +1361,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                     for kk in top..=bottom {
                         for j in left..=right {
                             if !ed(gp.get()).selectedtiles[j as usize][kk as usize] {
-                                gp.rm.spr_selectedtile.draw(g, j * TILESIZE, kk * TILESIZE);
+                                gp.rm.sprite(gp.rm.spr_selectedtile).draw(g, j * TILESIZE, kk * TILESIZE);
                             }
                         }
                     }
@@ -1378,12 +1378,12 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                 for kk in 0..MH {
                     for j in 0..MW {
                         if g.g_map.nospawn[ed(gp.get()).nospawn_mode as usize][j][kk] {
-                            gp.rm.spr_nospawntile.draw_src(g, j as i32 * TILESIZE, kk as i32 * TILESIZE, &rect(ed(gp.get()).nospawn_mode * 32, 0, 32, 32));
+                            gp.rm.sprite(gp.rm.spr_nospawntile).draw_src(g, j as i32 * TILESIZE, kk as i32 * TILESIZE, &rect(ed(gp.get()).nospawn_mode * 32, 0, 32, 32));
                         }
 
                         if ed(gp.get()).nospawn_mode > 0 {
                             if g.g_map.nospawn[0][j][kk] {
-                                gp.rm.spr_nospawntile.draw_src(g, j as i32 * TILESIZE, kk as i32 * TILESIZE, &rect(0, 0, 32, 32));
+                                gp.rm.sprite(gp.rm.spr_nospawntile).draw_src(g, j as i32 * TILESIZE, kk as i32 * TILESIZE, &rect(0, 0, 32, 32));
                             }
                         }
                     }
@@ -1395,7 +1395,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                 for kk in 0..MH {
                     for j in 0..MW {
                         if g.g_map.nospawn[5][j][kk] {
-                            gp.rm.spr_noitemspawntile.draw(g, j as i32 * TILESIZE, kk as i32 * TILESIZE);
+                            gp.rm.sprite(gp.rm.spr_noitemspawntile).draw(g, j as i32 * TILESIZE, kk as i32 * TILESIZE);
                         }
                     }
                 }
@@ -1405,7 +1405,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                 for kk in 0..MH {
                     for j in 0..MW {
                         if g.g_map.mapdatatop[j][kk] != TileType::NonSolid {
-                            gp.rm.spr_transparenttiles.draw_src(
+                            gp.rm.sprite(gp.rm.spr_transparenttiles).draw_src(
                                 g,
                                 j as i32 * TILESIZE,
                                 kk as i32 * TILESIZE,
@@ -1426,7 +1426,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
             if ed(gp.get()).g_musiccategorydisplaytimer > 0 {
                 ed(gp.get()).g_musiccategorydisplaytimer -= 1;
 
-                gp.rm.spr_dialog.draw_src(g, 224, 176, &rect(0, 0, 192, 128));
+                gp.rm.sprite(gp.rm.spr_dialog).draw_src(g, 224, 176, &rect(0, 0, 192, 128));
                 gp.rm.menu_font_small.draw_centered(g, 320, 195, "Music Category");
                 gp.rm.menu_font_large.draw_centered(g, 320, 220, g_szMusicCategoryNames[g.g_map.musicCategoryID as usize]);
 
@@ -1444,9 +1444,9 @@ pub fn editor_edit(g: &mut Game) -> i32 {
 fn draw_layer_indicator(g: &mut Game) {
         let mut gp = g.ptr();
     if ed(gp.get()).view_only_layer {
-        gp.rm.spr_backgroundlevel.draw_src(g, 2, 18 + (3 - ed(gp.get()).selected_layer) * 18, &rect(ed(gp.get()).selected_layer * 16, (3 - ed(gp.get()).selected_layer) * 18, 16, 16));
+        gp.rm.sprite(gp.rm.spr_backgroundlevel).draw_src(g, 2, 18 + (3 - ed(gp.get()).selected_layer) * 18, &rect(ed(gp.get()).selected_layer * 16, (3 - ed(gp.get()).selected_layer) * 18, 16, 16));
     } else {
-        gp.rm.spr_backgroundlevel.draw_src(g, 2, 18, &rect(ed(gp.get()).selected_layer * 16, 0, 16, 70));
+        gp.rm.sprite(gp.rm.spr_backgroundlevel).draw_src(g, 2, 18, &rect(ed(gp.get()).selected_layer * 16, 0, 16, 70));
     }
 }
 
@@ -1532,7 +1532,7 @@ pub fn draw_message(g: &mut Game) {
     if ed(gp.get()).g_messagedisplaytimer > 0 {
         ed(gp.get()).g_messagedisplaytimer -= 1;
 
-        gp.rm.spr_dialog.draw_src(g, 224, 176, &rect(0, 0, 192, 128));
+        gp.rm.sprite(gp.rm.spr_dialog).draw_src(g, 224, 176, &rect(0, 0, 192, 128));
         gp.rm.menu_font_large.draw_centered(g, 320, 195, &ed(gp.get()).g_szMessageTitle);
         gp.rm.menu_font_large.draw_centered(g, 320, 220, &ed(gp.get()).g_szMessageLine[0]);
         gp.rm.menu_font_large.draw_centered(g, 320, 240, &ed(gp.get()).g_szMessageLine[1]);
@@ -1605,11 +1605,11 @@ pub fn drawlayer(g: &mut Game, layer: i32, fUseCopied: bool, iBlockSize: i16) {
 
                     let src = g.g_tilesetmanager.rect(iTilesetIndex, iSrcCol, iSrcRow);
                     let dst = g.g_tilesetmanager.rect(iTilesetIndex, i, j);
-                    crate::common::gfx::blit::upper_blit(g.rm.spr_tileanimation[iTilesetIndex as usize].get_surface(), src, g.screen, dst);
+                    crate::common::gfx::blit::upper_blit(g.rm.sprite(g.rm.spr_tileanimation[iTilesetIndex as usize]).get_surface(), src, g.screen, dst);
                 } else if tile.iID as i32 == TILESETUNKNOWN {
                     let src = g.g_tilesetmanager.rect(iTilesetIndex, 0, 0);
                     let dst = g.g_tilesetmanager.rect(iTilesetIndex, i, j);
-                    crate::common::gfx::blit::upper_blit(g.rm.spr_unknowntile[iTilesetIndex as usize].get_surface(), src, g.screen, dst);
+                    crate::common::gfx::blit::upper_blit(g.rm.sprite(g.rm.spr_unknowntile[iTilesetIndex as usize]).get_surface(), src, g.screen, dst);
                 }
             }
         }
@@ -1624,9 +1624,9 @@ pub fn drawmap(g: &mut Game, fScreenshot: bool, iBlockSize: i16, fWithPlatforms:
             let srcrect = rect(0, 0, 640, 480);
             let dstrect = rect(0, 0, bs * 20, bs * 15);
 
-            g.rm.spr_background.draw_stretch(&srcrect, g.blitdest, &dstrect);
+            g.rm.sprite(g.rm.spr_background).draw_stretch(&srcrect, g.blitdest, &dstrect);
         } else {
-            gp.rm.spr_background.draw(g, 0, 0);
+            gp.rm.sprite(gp.rm.spr_background).draw(g, 0, 0);
         }
 
         if (ed(gp.get()).view_only_layer && ed(gp.get()).selected_layer == 0) || !ed(gp.get()).view_only_layer {
@@ -1700,7 +1700,7 @@ pub fn drawmap(g: &mut Game, fScreenshot: bool, iBlockSize: i16, fWithPlatforms:
                         }
 
                         let dst = g.g_tilesetmanager.rect(iTilesizeIndex, i as i16, j as i16);
-                        crate::common::gfx::blit::upper_blit(g.rm.spr_blocks[iTilesizeIndex as usize].get_surface(), &rSrcBlock, g.screen, dst);
+                        crate::common::gfx::blit::upper_blit(g.rm.sprite(g.rm.spr_blocks[iTilesizeIndex as usize]).get_surface(), &rSrcBlock, g.screen, dst);
                     }
                 }
             }
@@ -1719,7 +1719,7 @@ pub fn drawmap(g: &mut Game, fScreenshot: bool, iBlockSize: i16, fWithPlatforms:
                 2
             };
             for item in g.g_map.mapitems.clone().iter() {
-                gp.rm.spr_mapitems[idx].draw_src(g, item.ix as i32 * bs, item.iy as i32 * bs, &rect(item.itype as i32 * bs, 0, bs, bs));
+                gp.rm.sprite(gp.rm.spr_mapitems[idx]).draw_src(g, item.ix as i32 * bs, item.iy as i32 * bs, &rect(item.itype as i32 * bs, 0, bs, bs));
             }
 
             if !fScreenshot {
@@ -1737,7 +1737,7 @@ pub fn drawmap(g: &mut Game, fScreenshot: bool, iBlockSize: i16, fWithPlatforms:
                         {
                             let item = ed(gp.get()).copiedtiles[iNewX as usize][iNewY as usize].item;
                             if item >= 0 {
-                                gp.rm.spr_mapitems[0].draw_src(g, i << 5, j << 5, &rect(item << 5, 0, TILESIZE, TILESIZE));
+                                gp.rm.sprite(gp.rm.spr_mapitems[0]).draw_src(g, i << 5, j << 5, &rect(item << 5, 0, TILESIZE, TILESIZE));
                             }
                         }
                     }
@@ -1793,7 +1793,7 @@ pub fn drawmap(g: &mut Game, fScreenshot: bool, iBlockSize: i16, fWithPlatforms:
                         } else {
                             2
                         };
-                        g.rm.spr_warps[idx].draw_src_to(&rSrcWarp, g.screen, &rDstWarp);
+                        g.rm.sprite(g.rm.spr_warps[idx]).draw_src_to(&rSrcWarp, g.screen, &rDstWarp);
                     }
                 }
             }
@@ -1838,14 +1838,14 @@ pub fn editor_warp(g: &mut Game) -> i32 {
     }
 
     drawmap(g, false, TILESIZE as i16, false);
-    gp.rm.menu_shade.draw(g, 0, 0);
+    gp.rm.sprite(gp.rm.menu_shade).draw(g, 0, 0);
 
     ed(gp.get()).r.x = 0;
     ed(gp.get()).r.y = 0;
     ed(gp.get()).r.w = 640;
     ed(gp.get()).r.h = 480;
 
-    g.rm.spr_warps[0].draw_to(g.screen, &ed(gp.get()).r);
+    g.rm.sprite(g.rm.spr_warps[0]).draw_to(g.screen, &ed(gp.get()).r);
     gp.rm.menu_font_small.draw_right_justified(g, 640, 0, gp.maplist.current_filename());
 
     draw_message(g);
@@ -1902,7 +1902,7 @@ pub fn editor_eyecandy(g: &mut Game) -> i32 {
     }
 
     drawmap(g, false, TILESIZE as i16, false);
-    gp.rm.menu_shade.draw(g, 0, 0);
+    gp.rm.sprite(gp.rm.menu_shade).draw(g, 0, 0);
 
     let mut ix: i16 = 165;
     for iLayer in 0..3usize {
@@ -1910,16 +1910,16 @@ pub fn editor_eyecandy(g: &mut Game) -> i32 {
             let iy: i16 = kk * 65 + 20;
 
             if ed(gp.get()).mouse_x >= ix as i32 && ed(gp.get()).mouse_x < ix as i32 + 90 && ed(gp.get()).mouse_y >= iy as i32 && ed(gp.get()).mouse_y < iy as i32 + 52 {
-                gp.rm.spr_powerupselector.draw_src(g, ix as i32, iy as i32, &rect(0, 0, 90, 52));
+                gp.rm.sprite(gp.rm.spr_powerupselector).draw_src(g, ix as i32, iy as i32, &rect(0, 0, 90, 52));
             } else {
-                gp.rm.spr_powerupselector.draw_src(g, ix as i32, iy as i32, &rect(0, 52, 90, 52));
+                gp.rm.sprite(gp.rm.spr_powerupselector).draw_src(g, ix as i32, iy as i32, &rect(0, 52, 90, 52));
             }
 
-            gp.rm.spr_eyecandy.draw_src(g, ix as i32 + 10, iy as i32 + 10, &rect((kk as i32) << 5, 0, 32, 32));
+            gp.rm.sprite(gp.rm.spr_eyecandy).draw_src(g, ix as i32 + 10, iy as i32 + 10, &rect((kk as i32) << 5, 0, 32, 32));
 
             let mask: i16 = 1 << kk;
             if g.g_map.eyecandy[iLayer] & mask != 0 {
-                gp.rm.spr_hidden_marker.draw(g, ix as i32 + 57, iy as i32 + 16);
+                gp.rm.sprite(gp.rm.spr_hidden_marker).draw(g, ix as i32 + 57, iy as i32 + 16);
             }
         }
 
@@ -2070,7 +2070,7 @@ pub fn editor_properties(g: &mut Game, iBlockCol: i16, iBlockRow: i16) -> i32 {
         }
 
         drawmap(g, false, TILESIZE as i16, false);
-        gp.rm.menu_shade.draw(g, 0, 0);
+        gp.rm.sprite(gp.rm.menu_shade).draw(g, 0, 0);
 
         let mut iHiddenCheckboxY: i16 = 0;
 
@@ -2083,12 +2083,12 @@ pub fn editor_properties(g: &mut Game, iBlockCol: i16, iBlockRow: i16) -> i32 {
                 let (ix, iy) = (ix as i32, iy as i32);
 
                 if ed(gp.get()).mouse_x >= ix - 10 && ed(gp.get()).mouse_x < ix + 80 && ed(gp.get()).mouse_y >= iy - 10 && ed(gp.get()).mouse_y < iy + 42 && !fUseGame {
-                    gp.rm.spr_powerupselector.draw_src(g, ix - 10, iy - 10, &rect(0, 0, 90, 52));
+                    gp.rm.sprite(gp.rm.spr_powerupselector).draw_src(g, ix - 10, iy - 10, &rect(0, 0, 90, 52));
                 } else {
-                    gp.rm.spr_powerupselector.draw_src(g, ix - 10, iy - 10, &rect(0, 52, 90, 52));
+                    gp.rm.sprite(gp.rm.spr_powerupselector).draw_src(g, ix - 10, iy - 10, &rect(0, 52, 90, 52));
                 }
 
-                gp.rm.spr_powerups.draw_src(g, ix, iy, &rect((iSetting as i32) << 5, 0, 32, 32));
+                gp.rm.sprite(gp.rm.spr_powerups).draw_src(g, ix, iy, &rect((iSetting as i32) << 5, 0, 32, 32));
 
                 let szNum = if fUseGame { "X".to_string() } else { format!("{}", g.g_map.objectdata[bc][br].iSettings[iSetting as usize]) };
 
@@ -2107,29 +2107,29 @@ pub fn editor_properties(g: &mut Game, iBlockCol: i16, iBlockRow: i16) -> i32 {
 
         let hy = iHiddenCheckboxY as i32;
         if ed(gp.get()).mouse_x >= 270 && ed(gp.get()).mouse_x < 370 && ed(gp.get()).mouse_y >= hy && ed(gp.get()).mouse_y < hy + 52 {
-            gp.rm.spr_powerupselector.draw_src(g, 270, hy, &rect(90, 0, 100, 52));
+            gp.rm.sprite(gp.rm.spr_powerupselector).draw_src(g, 270, hy, &rect(90, 0, 100, 52));
         } else {
-            gp.rm.spr_powerupselector.draw_src(g, 270, hy, &rect(90, 52, 100, 52));
+            gp.rm.sprite(gp.rm.spr_powerupselector).draw_src(g, 270, hy, &rect(90, 52, 100, 52));
         }
 
         gp.rm.menu_font_large.draw_centered(g, 320, hy + 3, "Hidden");
 
         if g.g_map.objectdata[bc][br].fHidden {
-            gp.rm.spr_hidden_marker.draw(g, 310, hy + 27);
+            gp.rm.sprite(gp.rm.spr_hidden_marker).draw(g, 310, hy + 27);
         }
 
         //Display "Use Game" option
         if ed(gp.get()).iBlockType == 1 || ed(gp.get()).iBlockType == 15 {
             if ed(gp.get()).mouse_x >= 390 && ed(gp.get()).mouse_x < 490 && ed(gp.get()).mouse_y >= hy && ed(gp.get()).mouse_y < hy + 52 {
-                gp.rm.spr_powerupselector.draw_src(g, 390, hy, &rect(90, 0, 100, 52));
+                gp.rm.sprite(gp.rm.spr_powerupselector).draw_src(g, 390, hy, &rect(90, 0, 100, 52));
             } else {
-                gp.rm.spr_powerupselector.draw_src(g, 390, hy, &rect(90, 52, 100, 52));
+                gp.rm.sprite(gp.rm.spr_powerupselector).draw_src(g, 390, hy, &rect(90, 52, 100, 52));
             }
 
             gp.rm.menu_font_large.draw_centered(g, 440, hy + 3, "Use Game");
 
             if g.g_map.objectdata[bc][br].iSettings[0] == -1 {
-                gp.rm.spr_hidden_marker.draw(g, 430, hy + 27);
+                gp.rm.sprite(gp.rm.spr_hidden_marker).draw(g, 430, hy + 27);
             }
         }
 
@@ -2678,7 +2678,7 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
 
     if PLATFORM_EDIT_STATE_TEST != ed(gp.get()).iPlatformEditState {
         drawmap(g, false, TILESIZE as i16, false);
-        gp.rm.menu_shade.draw(g, 0, 0);
+        gp.rm.sprite(gp.rm.menu_shade).draw(g, 0, 0);
     }
 
     let ep = ed(gp.get()).iEditPlatform as usize;
@@ -2760,7 +2760,7 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
             gp.rm.menu_font_small.draw(g, 406, 10, "Fast");
         }
 
-        gp.rm.spr_number_icons.draw_src(g, 619, 5, &rect((ed(gp.get()).g_Platforms[ep].iDrawLayer as i32) << 4, 48, 16, 16));
+        gp.rm.sprite(gp.rm.spr_number_icons).draw_src(g, 619, 5, &rect((ed(gp.get()).g_Platforms[ep].iDrawLayer as i32) << 4, 48, 16, 16));
     } else if PLATFORM_EDIT_STATE_PATH == ed(gp.get()).iPlatformEditState {
         let platform = &ed(gp.get()).g_Platforms[ep];
         let tiledata = g.g_map.platforms[ep].iTileData.clone();
@@ -2983,16 +2983,16 @@ pub fn draw_platform_unfinished(g: &mut Game, iPlatform: i16, fDrawTileTypes: bo
 
                     let src = g.g_tilesetmanager.rect(0, iSrcCol, iSrcRow);
                     let dst = g.g_tilesetmanager.rect(0, iCol, iRow);
-                    crate::common::gfx::blit::upper_blit(g.rm.spr_tileanimation[0].get_surface(), src, g.screen, dst);
+                    crate::common::gfx::blit::upper_blit(g.rm.sprite(g.rm.spr_tileanimation[0]).get_surface(), src, g.screen, dst);
                 } else if tile.iID as i32 == TILESETUNKNOWN {
                     let src = g.g_tilesetmanager.rect(0, 0, 0);
                     let dst = g.g_tilesetmanager.rect(0, iCol, iRow);
-                    crate::common::gfx::blit::upper_blit(g.rm.spr_unknowntile[0].get_surface(), src, g.screen, dst);
+                    crate::common::gfx::blit::upper_blit(g.rm.sprite(g.rm.spr_unknowntile[0]).get_surface(), src, g.screen, dst);
                 }
 
                 if fDrawTileTypes {
                     let t = ed(gp.get()).g_Platforms[p].types[idx];
-                    gp.rm.spr_transparenttiles.draw_src(g, iCol as i32 * TILESIZE, iRow as i32 * TILESIZE, &rect(prev_tile_type(t).0 as i32 * TILESIZE, 0, TILESIZE, TILESIZE));
+                    gp.rm.sprite(gp.rm.spr_transparenttiles).draw_src(g, iCol as i32 * TILESIZE, iRow as i32 * TILESIZE, &rect(prev_tile_type(t).0 as i32 * TILESIZE, 0, TILESIZE, TILESIZE));
                 }
             }
         }
@@ -3287,7 +3287,7 @@ pub fn editor_maphazards(g: &mut Game) -> i32 {
     //Draw platform editing
     drawmap(g, false, TILESIZE as i16, false);
 
-    gp.rm.menu_shade.draw(g, 0, 0);
+    gp.rm.sprite(gp.rm.menu_shade).draw(g, 0, 0);
 
     if MAPHAZARD_EDIT_STATE_SELECT == ed(gp.get()).iEditState {
         let s = ed(gp.get()).rBackground[0];
@@ -3651,7 +3651,7 @@ pub fn editor_tiles(g: &mut Game) -> i32 {
             while j < ed(gp.get()).view_tileset_y + 15 && j < ed(gp.get()).tileset.height() as i32 {
                 let t = ed(gp.get()).tileset.tile_type(i as usize, j as usize);
                 if t != TileType::NonSolid {
-                    gp.rm.spr_tiletypes.draw_src(g, (i - ed(gp.get()).view_tileset_x) << 5, (j - ed(gp.get()).view_tileset_y) << 5, &rect((prev_tile_type(t).0 as i32) << 3, 0, 8, 8));
+                    gp.rm.sprite(gp.rm.spr_tiletypes).draw_src(g, (i - ed(gp.get()).view_tileset_x) << 5, (j - ed(gp.get()).view_tileset_y) << 5, &rect((prev_tile_type(t).0 as i32) << 3, 0, 8, 8));
                 }
                 j += 1;
             }
@@ -3661,7 +3661,7 @@ pub fn editor_tiles(g: &mut Game) -> i32 {
         if ed(gp.get()).set_tile_drag {
             for i in ed(gp.get()).set_tile_start_x..=ed(gp.get()).set_tile_end_x {
                 for j in ed(gp.get()).set_tile_start_y..=ed(gp.get()).set_tile_end_y {
-                    gp.rm.spr_selectedtile.draw(g, (i - ed(gp.get()).view_tileset_x) << 5, (j - ed(gp.get()).view_tileset_y) << 5);
+                    gp.rm.sprite(gp.rm.spr_selectedtile).draw(g, (i - ed(gp.get()).view_tileset_x) << 5, (j - ed(gp.get()).view_tileset_y) << 5);
                 }
             }
         }
@@ -3722,13 +3722,13 @@ pub fn editor_blocks(g: &mut Game) -> i32 {
     }
 
     drawmap(g, false, TILESIZE as i16, false);
-    gp.rm.menu_shade.draw(g, 0, 0);
+    gp.rm.sprite(gp.rm.menu_shade).draw(g, 0, 0);
 
-    g.rm.spr_blocks[0].draw_src_to(&rect(0, 0, 224, 32), g.screen, &rect(0, 0, 224, 32));
-    g.rm.spr_blocks[0].draw_src_to(&rect(224, 0, 128, 64), g.screen, &rect(0, 32, 128, 64));
-    g.rm.spr_blocks[0].draw_src_to(&rect(352, 0, 128, 64), g.screen, &rect(128, 32, 128, 64));
-    g.rm.spr_blocks[0].draw_src_to(&rect(0, 32, 160, 32), g.screen, &rect(224, 0, 160, 32));
-    g.rm.spr_blocks[0].draw_src_to(&rect(0, 64, 320, 32), g.screen, &rect(0, 96, 320, 32));
+    g.rm.sprite(g.rm.spr_blocks[0]).draw_src_to(&rect(0, 0, 224, 32), g.screen, &rect(0, 0, 224, 32));
+    g.rm.sprite(g.rm.spr_blocks[0]).draw_src_to(&rect(224, 0, 128, 64), g.screen, &rect(0, 32, 128, 64));
+    g.rm.sprite(g.rm.spr_blocks[0]).draw_src_to(&rect(352, 0, 128, 64), g.screen, &rect(128, 32, 128, 64));
+    g.rm.sprite(g.rm.spr_blocks[0]).draw_src_to(&rect(0, 32, 160, 32), g.screen, &rect(224, 0, 160, 32));
+    g.rm.sprite(g.rm.spr_blocks[0]).draw_src_to(&rect(0, 64, 320, 32), g.screen, &rect(0, 96, 320, 32));
 
     gp.rm.menu_font_small.draw_right_justified(g, 640, 0, gp.maplist.current_filename());
 
@@ -3771,9 +3771,9 @@ pub fn editor_mapitems(g: &mut Game) -> i32 {
     }
 
     drawmap(g, false, TILESIZE as i16, false);
-    gp.rm.menu_shade.draw(g, 0, 0);
+    gp.rm.sprite(gp.rm.menu_shade).draw(g, 0, 0);
 
-    gp.rm.spr_mapitems[0].draw_src(g, 0, 0, &rect(0, 0, 192, 32));
+    gp.rm.sprite(gp.rm.spr_mapitems[0]).draw_src(g, 0, 0, &rect(0, 0, 192, 32));
 
     gp.rm.menu_font_small.draw_right_justified(g, 640, 0, gp.maplist.current_filename());
     gp.rm.menu_font_small.draw_right_justified(g, 0, 480 - g.rm.menu_font_small.get_height(), "Map Items");
@@ -3897,7 +3897,7 @@ pub fn editor_modeitems(g: &mut Game) -> i32 {
     }
 
     drawmap(g, false, TILESIZE as i16, false);
-    gp.rm.menu_shade.draw(g, 0, 0);
+    gp.rm.sprite(gp.rm.menu_shade).draw(g, 0, 0);
 
     //draw race goals
     if ed(gp.get()).modeitemmode == 0 {
@@ -3907,7 +3907,7 @@ pub fn editor_modeitems(g: &mut Game) -> i32 {
         } else {
             for iGoal in 0..g.g_map.iNumRaceGoals {
                 let g = g.g_map.racegoallocations[iGoal as usize];
-                gp.rm.spr_racegoals.draw_src(gp.get(), g.x as i32 - 16, g.y as i32 - 18, &rect(0, 0, 68, 54));
+                gp.rm.sprite(gp.rm.spr_racegoals).draw_src(gp.get(), g.x as i32 - 16, g.y as i32 - 18, &rect(0, 0, 68, 54));
                 let szNum = format!("{}", iGoal + 1);
                 gp.rm.menu_font_large.draw_centered(gp.get(), g.x as i32 + 18, g.y as i32 + 6, &szNum);
             }
@@ -3921,7 +3921,7 @@ pub fn editor_modeitems(g: &mut Game) -> i32 {
         } else {
             for iBase in 0..g.g_map.iNumFlagBases {
                 let b = g.g_map.flagbaselocations[iBase as usize];
-                gp.rm.spr_flagbases.draw_src(g, b.x as i32 - 8, b.y as i32 - 8, &rect(iBase as i32 * 48, 0, 48, 48));
+                gp.rm.sprite(gp.rm.spr_flagbases).draw_src(g, b.x as i32 - 8, b.y as i32 - 8, &rect(iBase as i32 * 48, 0, 48, 48));
             }
         }
 
@@ -3966,9 +3966,9 @@ pub fn editor_tiletype(g: &mut Game) -> i32 {
     }
 
     drawmap(g, false, TILESIZE as i16, false);
-    gp.rm.menu_shade.draw(g, 0, 0);
+    gp.rm.sprite(gp.rm.menu_shade).draw(g, 0, 0);
 
-    gp.rm.spr_transparenttiles.draw(g, 0, 0);
+    gp.rm.sprite(gp.rm.spr_transparenttiles).draw(g, 0, 0);
 
     gp.rm.menu_font_small.draw_right_justified(g, 640, 0, gp.maplist.current_filename());
 
@@ -4050,7 +4050,7 @@ pub fn editor_backgrounds(g: &mut Game) -> i32 {
                             if ed(gp.get()).event.button_x() >= d.x && ed(gp.get()).event.button_x() < d.x + d.w && ed(gp.get()).event.button_y() >= d.y && ed(gp.get()).event.button_y() < d.y + d.h {
                                 ed(gp.get()).backgroundlist.set_current_index((ed(gp.get()).iPage as i32 * 16 + iBackground) as usize);
 
-                                g.rm.spr_background = ImageLoader::new(ed(gp.get()).backgroundlist.current_path()).without_color_key().create(g);
+                                *g.rm.sprite(g.rm.spr_background) = ImageLoader::new(ed(gp.get()).backgroundlist.current_path()).without_color_key().create(g);
                                 g.g_map.szBackgroundFile = get_filename_from_path(&ed(gp.get()).backgroundlist.current_path().to_string_lossy());
 
                                 if ed(gp.get()).event.button_button() == BUTTON_LEFT {
@@ -4245,11 +4245,11 @@ pub fn editor_animation(g: &mut Game) -> i32 {
                 let iSrcX: i16 = iRow << 7;
                 let iSrcY: i16 = iCol << 5;
 
-                gp.rm.spr_tileanimation[0].draw_src(g, iDestX as i32, iDestY as i32, &rect(iSrcX as i32, iSrcY as i32, TILESIZE, TILESIZE));
+                gp.rm.sprite(gp.rm.spr_tileanimation[0]).draw_src(g, iDestX as i32, iDestY as i32, &rect(iSrcX as i32, iSrcY as i32, TILESIZE, TILESIZE));
 
                 let t = ed(gp.get()).animatedtiletypes[(iCol as i32 + ((iRow as i32) << 5)) as usize];
                 if t != TileType::NonSolid {
-                    gp.rm.spr_tiletypes.draw_src(g, iDestX as i32, iDestY as i32, &rect((prev_tile_type(t).0 as i32) << 3, 0, 8, 8));
+                    gp.rm.sprite(gp.rm.spr_tiletypes).draw_src(g, iDestX as i32, iDestY as i32, &rect((prev_tile_type(t).0 as i32) << 3, 0, 8, 8));
                 }
             }
         }
@@ -4257,7 +4257,7 @@ pub fn editor_animation(g: &mut Game) -> i32 {
         if ed(gp.get()).set_tile_drag {
             for i in (ed(gp.get()).set_tile_start_x - ed(gp.get()).view_animated_tileset_x) as i16..=(ed(gp.get()).set_tile_end_x - ed(gp.get()).view_animated_tileset_x) as i16 {
                 for j in ed(gp.get()).set_tile_start_y as i16..=ed(gp.get()).set_tile_end_y as i16 {
-                    gp.rm.spr_selectedtile.draw(g, (i as i32) << 5, (j as i32) << 5);
+                    gp.rm.sprite(gp.rm.spr_selectedtile).draw(g, (i as i32) << 5, (j as i32) << 5);
                 }
             }
         }
@@ -4304,7 +4304,7 @@ pub fn load_background_page(g: &mut Game, iPage_: i16) {
 pub fn display_help(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     drawmap(g, false, TILESIZE as i16, false);
-    gp.rm.menu_shade.draw(g, 0, 0);
+    gp.rm.sprite(gp.rm.menu_shade).draw(g, 0, 0);
 
     let fh = g.rm.menu_font_small.get_height();
     let mut offsety = 10;
@@ -4407,8 +4407,8 @@ pub fn save_as(g: &mut Game) -> i32 {
 fn draw_dialog(g: &mut Game, title: &str, instructions: &str, input: Option<&str>) {
         let mut gp = g.ptr();
     drawmap(g, false, TILESIZE as i16, false);
-    gp.rm.menu_shade.draw(g, 0, 0);
-    gp.rm.spr_dialog.draw_src(g, 224, 176, &rect(0, 0, 192, 128));
+    gp.rm.sprite(gp.rm.menu_shade).draw(g, 0, 0);
+    gp.rm.sprite(gp.rm.spr_dialog).draw_src(g, 224, 176, &rect(0, 0, 192, 128));
     gp.rm.menu_font_large.draw_centered(g, 320, 200, title);
     gp.rm.menu_font_small.draw(g, 240, 235, instructions);
     if let Some(input) = input {
@@ -4555,7 +4555,7 @@ pub fn loadcurrentmap(g: &mut Game) {
         ed(gp.get()).backgroundlist.set_current_path(Path::new("gfx/packs/Classic/backgrounds/Land_Classic.png"));
     }
 
-    g.rm.spr_background = ImageLoader::new(&path).without_color_key().create(g);
+    *g.rm.sprite(g.rm.spr_background) = ImageLoader::new(&path).without_color_key().create(g);
 
     ed(gp.get()).g_iNumPlatforms = g.g_map.platforms.len() as i16;
 
@@ -5020,7 +5020,7 @@ pub fn takescreenshot(g: &mut Game) {
             let iTileSize = iTileSizes[iScreenshotSize as usize];
 
             //Allow wrapping of path dots
-            g.rm.spr_platformpath.set_wrap((640 >> iScreenshotSize) as i16);
+            g.rm.sprite(g.rm.spr_platformpath).set_wrap((640 >> iScreenshotSize) as i16);
 
             //Create new screenshot surface
             let screenshot = gfxSprite::blank(g, iTileSize as u32 * 20, iTileSize as u32 * 15);

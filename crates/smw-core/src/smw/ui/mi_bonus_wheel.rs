@@ -67,7 +67,7 @@ impl MI_BonusWheel {
             let iPowerupX = (x as i32 + 160 + (110.0f32 * cosf(dSelectionSector[iImage])) as i16 as i32) as i16;
             let iPowerupY = (y as i32 + 208 + (110.0f32 * sinf(dSelectionSector[iImage])) as i16 as i32) as i16;
 
-            Box::new(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_storedpoweruplarge), iPowerupX, iPowerupY, 0, 0, 32, 32, 1, 1, 0))
+            Box::new(MI_Image::new(g.rm.spr_storedpoweruplarge, iPowerupX, iPowerupY, 0, 0, 32, 32, 1, 1, 0))
         });
 
         //Fix the last sector to allow correct detection of sector for tick sound
@@ -75,7 +75,7 @@ impl MI_BonusWheel {
 
         let mut miContinueButton = Box::new(MI_Button::new(
             g,
-            Ptr::from_mut(&mut gp.rm.menu_plain_field),
+            gp.rm.menu_plain_field,
             ui_control.m_pos.x + 76,
             ui_control.m_pos.y + 390,
             "Continue",
@@ -167,7 +167,7 @@ impl MI_BonusWheel {
         for iPlayer in 0..self.iNumPlayers as usize {
             let id = g.game_values.teamids[self.iWinningTeam as usize][iPlayer] as usize;
             self.miPlayerImages.push(Box::new(MI_Image::new(
-                Ptr::from_mut(&mut g.rm.spr_player[id][PGFX_JUMPING_R as usize]),
+                g.rm.spr_player[id][PGFX_JUMPING_R as usize],
                 iPlayerX,
                 self.m_pos.y + 210,
                 0,
@@ -378,13 +378,13 @@ impl UI_ControlTrait for MI_BonusWheel {
         let x = self.m_pos.x as i32;
         let y = self.m_pos.y as i32;
 
-        gp.rm.spr_tournament_powerup_splash.draw(g, x, y);
+        gp.rm.sprite(gp.rm.spr_tournament_powerup_splash).draw(g, x, y);
 
         let iSelectorX = (x + 144 + (110.0f32 * cosf(self.dSelectionAngle)) as i16 as i32) as i16;
         let iSelectorY = (y + 190 + (110.0f32 * sinf(self.dSelectionAngle)) as i16 as i32) as i16;
 
         if self.iState > 0 {
-            gp.rm.spr_powerupselector.draw_src(g, iSelectorX as i32, iSelectorY as i32, &Rect { x: self.iSelectorAnimation as i32 * 64, y: 0, w: 64, h: 64 });
+            gp.rm.sprite(gp.rm.spr_powerupselector).draw_src(g, iSelectorX as i32, iSelectorY as i32, &Rect { x: self.iSelectorAnimation as i32 * 64, y: 0, w: 64, h: 64 });
         }
 
         for iImage in 0..NB {

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/NoteBlock.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
@@ -41,7 +42,7 @@ pub struct B_NoteBlock {
 impl_base!(B_NoteBlock => io_block: IO_Block);
 
 impl B_NoteBlock {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, aniSpeed: i16, r#type: NoteBlockType, fHidden: bool) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s, iNumSpr: i16, aniSpeed: i16, r#type: NoteBlockType, fHidden: bool) -> Self {
         let mut b = B_NoteBlock {
             io_block: IO_Block::new(g, nspr, pos),
             iNumSprites: 0,
@@ -52,13 +53,13 @@ impl B_NoteBlock {
             iType: NoteBlockType::Blue,
             iTypeOffsetY: 0,
         };
-        b.iw = (nspr.get_width() as i16) >> 2;
+        b.iw = (g.rm.sprite(nspr).get_width() as i16) >> 2;
         b.ih = TILESIZE as i16;
         b.iNumSprites = iNumSpr;
         b.animationSpeed = aniSpeed;
         b.animationTimer = 0;
         b.drawFrame = 0;
-        b.animationWidth = b.spr.get_width() as i16;
+        b.animationWidth = g.rm.sprite(b.spr).get_width() as i16;
 
         b.hidden = fHidden;
         b.ishiddentype = fHidden;
@@ -80,7 +81,7 @@ impl CObjectTrait for B_NoteBlock {
             return;
         }
 
-        self.spr.draw_src(
+        g.rm.sprite(self.spr).draw_src(
             g,
             self.ix as i32,
             self.iy as i32,

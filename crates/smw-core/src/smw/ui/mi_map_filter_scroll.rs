@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_MapFilterScroll.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -30,7 +31,7 @@ pub struct MI_MapFilterScroll {
     /// Index into `items` (the C++ iterator).
     pub current: usize,
 
-    pub spr: Ptr<gfxSprite>,
+    pub spr: SpriteId,
 
     pub iSelectedColumn: i16,
     pub iNumLines: i16,
@@ -45,7 +46,7 @@ pub struct MI_MapFilterScroll {
 crate::impl_base!(MI_MapFilterScroll => ui_control: UI_Control);
 
 impl MI_MapFilterScroll {
-    pub fn new(nspr: Ptr<gfxSprite>, x: i16, y: i16, width: i16, numlines: i16) -> Self {
+    pub fn new(nspr: SpriteId, x: i16, y: i16, width: i16, numlines: i16) -> Self {
         MI_MapFilterScroll {
             ui_control: UI_Control::new(x, y),
             items: Vec::new(),
@@ -197,10 +198,10 @@ impl UI_ControlTrait for MI_MapFilterScroll {
         let iNumLines = self.iNumLines as i32;
 
         //Draw the background for the map preview
-        gp.rm.menu_dialog.draw_src(g, x, y, &Rect { x: 0, y: 0, w: iWidth - 16, h: iNumLines * 32 + 32 });
-        gp.rm.menu_dialog.draw_src(g, x + iWidth - 16, y, &Rect { x: 496, y: 0, w: 16, h: iNumLines * 32 + 32 });
-        gp.rm.menu_dialog.draw_src(g, x, y + iNumLines * 32 + 32, &Rect { x: 0, y: 464, w: iWidth - 16, h: 16 });
-        gp.rm.menu_dialog.draw_src(g, x + iWidth - 16, y + iNumLines * 32 + 32, &Rect { x: 496, y: 464, w: 16, h: 16 });
+        gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, x, y, &Rect { x: 0, y: 0, w: iWidth - 16, h: iNumLines * 32 + 32 });
+        gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, x + iWidth - 16, y, &Rect { x: 496, y: 0, w: 16, h: iNumLines * 32 + 32 });
+        gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, x, y + iNumLines * 32 + 32, &Rect { x: 0, y: 464, w: iWidth - 16, h: 16 });
+        gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, x + iWidth - 16, y + iNumLines * 32 + 32, &Rect { x: 496, y: 464, w: 16, h: 16 });
 
         gp.rm.menu_font_large.draw_centered(g, x + (iWidth >> 1), y + 5, "Map Filters");
 
@@ -213,8 +214,8 @@ impl UI_ControlTrait for MI_MapFilterScroll {
                 let iHalfLineWidth = ((iWidth - 64) as i16 >> 1) as i32;
                 let iLineWidth = (iWidth - 64) as i16 as i32;
 
-                self.spr.draw_src(g, x + 16, y + 32 + l * 32, &Rect { x: 0, y: if lineSel { 32 } else { 0 }, w: iHalfLineWidth, h: 32 });
-                self.spr.draw_src(
+                g.rm.sprite(self.spr).draw_src(g, x + 16, y + 32 + l * 32, &Rect { x: 0, y: if lineSel { 32 } else { 0 }, w: iHalfLineWidth, h: 32 });
+                g.rm.sprite(self.spr).draw_src(
                     g,
                     x + 16 + iHalfLineWidth,
                     y + 32 + l * 32,
@@ -222,12 +223,12 @@ impl UI_ControlTrait for MI_MapFilterScroll {
                 );
 
                 let colSel = self.iSelectedLine == iLine && self.iSelectedColumn == 1;
-                gp.rm.menu_map_filter.draw_src(g, x + iWidth - 48, y + 32 + l * 32, &Rect { x: 48, y: if colSel { 32 } else { 0 }, w: 32, h: 32 });
+                gp.rm.sprite(gp.rm.menu_map_filter).draw_src(g, x + iWidth - 48, y + 32 + l * 32, &Rect { x: 48, y: if colSel { 32 } else { 0 }, w: 32, h: 32 });
             } else {
                 let iHalfLineWidth = ((iWidth - 32) as i16 >> 1) as i32;
                 let iLineWidth = (iWidth - 32) as i16 as i32;
-                self.spr.draw_src(g, x + 16, y + 32 + l * 32, &Rect { x: 0, y: if lineSel { 32 } else { 0 }, w: iHalfLineWidth, h: 32 });
-                self.spr.draw_src(
+                g.rm.sprite(self.spr).draw_src(g, x + 16, y + 32 + l * 32, &Rect { x: 0, y: if lineSel { 32 } else { 0 }, w: iHalfLineWidth, h: 32 });
+                g.rm.sprite(self.spr).draw_src(
                     g,
                     x + 16 + iHalfLineWidth,
                     y + 32 + l * 32,
@@ -237,12 +238,12 @@ impl UI_ControlTrait for MI_MapFilterScroll {
 
             let item = &self.items[(self.iOffset as i32 + l) as usize];
             if item.fSelected {
-                gp.rm.menu_map_filter.draw_src(g, x + 24, y + 32 + l * 32 + 4, &Rect { x: 24, y: 0, w: 24, h: 24 });
+                gp.rm.sprite(gp.rm.menu_map_filter).draw_src(g, x + 24, y + 32 + l * 32 + 4, &Rect { x: 24, y: 0, w: 24, h: 24 });
             }
 
             gp.rm.menu_font_large.draw_chop_right(g, x + 52, y + 5 + l * 32 + 32, iWidth - 104, &item.sName);
             let icon = item.iIcon as i32;
-            gp.rm.spr_map_filter_icons.draw_src(g, x + 28, y + 32 + l * 32 + 8, &Rect { x: icon % 10 * 16, y: icon / 10 * 16, w: 16, h: 16 });
+            gp.rm.sprite(gp.rm.spr_map_filter_icons).draw_src(g, x + 28, y + 32 + l * 32 + 8, &Rect { x: icon % 10 * 16, y: icon / 10 * 16, w: 16, h: 16 });
             iLine += 1;
         }
     }

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_Spike.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::vec2::Vec2s;
@@ -22,7 +23,7 @@ pub struct CO_Spike {
 impl_base!(CO_Spike => co_spring: CO_Spring);
 
 impl CO_Spike {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s) -> Self {
         let mut o = CO_Spike { co_spring: CO_Spring::new(g, nspr, pos, false) };
 
         o.iw = 32;

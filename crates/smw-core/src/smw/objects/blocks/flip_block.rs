@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/FlipBlock.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_FallingObject;
@@ -44,9 +45,9 @@ pub struct B_FlipBlock {
 impl_base!(B_FlipBlock => io_block: IO_Block);
 
 impl B_FlipBlock {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, fHidden: bool) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s, fHidden: bool) -> Self {
         let mut b = B_FlipBlock { io_block: IO_Block::new(g, nspr, pos), counter: 0, frame: 0, timer: 0, animationWidth: 0 };
-        b.iw = (b.spr.get_width() as i16) >> 2;
+        b.iw = (g.rm.sprite(b.spr).get_width() as i16) >> 2;
         b.collisionWidth = b.iw;
 
         b.hidden = fHidden;
@@ -55,18 +56,18 @@ impl B_FlipBlock {
         b.counter = 0;
         b.frame = 0;
         b.timer = 0;
-        b.animationWidth = b.spr.get_width() as i16;
+        b.animationWidth = g.rm.sprite(b.spr).get_width() as i16;
         b
     }
 
     fn explode(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        let spr = Ptr::from_mut(&mut g.rm.spr_brokenflipblock);
+        let spr = g.rm.spr_brokenflipblock;
         let (ix, iy) = (self.ix, self.iy);
-        g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy, -2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy, 2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix, iy, -2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix + 16, iy, 2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix, iy + 16, -2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
 
         if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
     }
@@ -119,7 +120,7 @@ impl CObjectTrait for B_FlipBlock {
         }
 
         if self.state == 0 || self.state == 1 {
-            self.spr.draw_src(
+            g.rm.sprite(self.spr).draw_src(
                 g,
                 self.ix as i32,
                 self.iy as i32,

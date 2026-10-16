@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_FlagBase.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
@@ -36,7 +37,7 @@ pub struct MO_FlagBase {
 impl_base!(MO_FlagBase => io_moving_object: IO_MovingObject);
 
 impl MO_FlagBase {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, iTeamID: i16, iColorID: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, iTeamID: i16, iColorID: i16) -> Self {
         let mut gp = g.ptr();
         let mut o = MO_FlagBase {
             // use 1280 and 960 so when placing base, it doesn't interfere (look in getClosestObject())
@@ -166,7 +167,7 @@ impl CObjectTrait for MO_FlagBase {
     }
 
     fn draw(&mut self, g: &mut Game) {
-        self.spr.draw_src(
+        g.rm.sprite(self.spr).draw_src(
             g,
             self.ix as i32 - 8,
             self.iy as i32 - 8,

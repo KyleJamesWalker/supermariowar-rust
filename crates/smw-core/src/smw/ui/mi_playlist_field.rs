@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_PlaylistField.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -13,7 +14,7 @@ use crate::globals::*;
 pub struct MI_PlaylistField {
     pub ui_control: UI_Control,
 
-    pub spr: Ptr<gfxSprite>,
+    pub spr: SpriteId,
 
     pub szName: String,
     pub iWidth: i16,
@@ -36,7 +37,7 @@ fn restart_menu_music(g: &mut Game) {
 }
 
 impl MI_PlaylistField {
-    pub fn new(nspr: Ptr<gfxSprite>, x: i16, y: i16, name: impl Into<String>, width: i16, indent: i16) -> Self {
+    pub fn new(nspr: SpriteId, x: i16, y: i16, name: impl Into<String>, width: i16, indent: i16) -> Self {
         let ui_control = UI_Control::new(x, y);
         let (px, py) = (ui_control.m_pos.x, ui_control.m_pos.y);
         let mut miModifyImageLeft = Box::new(MI_Image::new(nspr, px + indent - 26, py + 4, 32, 64, 26, 24, 4, 1, 8));
@@ -112,9 +113,9 @@ impl UI_ControlTrait for MI_PlaylistField {
         let iWidth = self.iWidth as i32;
 
         //Draw the select field background
-        self.spr.draw_src(g, x, y, &Rect { x: 0, y: if self.fSelected { 32 } else { 0 }, w: iIndent - 16, h: 32 });
-        self.spr.draw_src(g, x + iIndent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
-        self.spr.draw_src(g, x + iIndent + 16, y, &Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 32 } else { 0 }, w: iWidth - iIndent - 16, h: 32 });
+        g.rm.sprite(self.spr).draw_src(g, x, y, &Rect { x: 0, y: if self.fSelected { 32 } else { 0 }, w: iIndent - 16, h: 32 });
+        g.rm.sprite(self.spr).draw_src(g, x + iIndent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
+        g.rm.sprite(self.spr).draw_src(g, x + iIndent + 16, y, &Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 32 } else { 0 }, w: iWidth - iIndent - 16, h: 32 });
 
         gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 5, iIndent - 8, &self.szName);
         gp.rm.menu_font_large.draw_chop_right(g, x + iIndent + 8, y + 5, iWidth - iIndent - 24, gp.musiclist.current_name());

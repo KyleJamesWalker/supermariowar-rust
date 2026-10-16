@@ -96,7 +96,7 @@ impl CGameModeTrait for CGM_Chicken {
         if g.game_values.gamemodesettings.chicken.usetarget && !self.gameover && !self.m_chicken.is_null() {
             let chicken = self.m_chicken;
             if chicken.iswarping() {
-                gp.rm.spr_chicken.draw_clip(
+                gp.rm.sprite(gp.rm.spr_chicken).draw_clip(
                     g,
                     chicken.left_x() as i32 - PWOFFSET - 16,
                     chicken.top_y() as i32 - PHOFFSET - 16,
@@ -105,7 +105,7 @@ impl CGameModeTrait for CGM_Chicken {
                     chicken.get_warp_plane() as i32,
                 );
             } else if chicken.isready() {
-                gp.rm.spr_chicken.draw(g, chicken.center_x() as i32 - 32, chicken.center_y() as i32 - 32);
+                gp.rm.sprite(gp.rm.spr_chicken).draw(g, chicken.center_x() as i32 - 32, chicken.center_y() as i32 - 32);
             }
         }
     }
@@ -122,8 +122,8 @@ impl CGameModeTrait for CGM_Chicken {
                 (-(VELJUMP as f64) * 1.5) as f32,
             ));
             //eyecandy[2].emplace<EC_SingleAnimation>(&rm->spr_fireballexplosion, inflictor.centerX() - 16, inflictor.centerY() - 16, 3, 8));
-            g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                Ptr::from_mut(&mut g.rm.spr_poof),
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
+                g.rm.spr_poof,
                 (inflictor.center_x() as i32 - 24) as i16,
                 (inflictor.center_y() as i32 - 24) as i16,
                 4,

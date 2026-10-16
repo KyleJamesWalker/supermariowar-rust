@@ -84,14 +84,14 @@ impl PlayerKuriboShoe {
             if self.exitIndex == 4 && self.exitTimer < 32 {
                 let shoe = Ptr::new_box(CO_KuriboShoe::new(
                     g,
-                    Ptr::from_mut(&mut rm.spr_kuriboshoe),
+                    rm.spr_kuriboshoe,
                     Vec2s::new((player.ix as i32 - PWOFFSET) as i16, (player.iy as i32 - PHOFFSET - 2) as i16),
                     self.r#type == STICKY,
                 ));
                 io_moving_object_collision_detection_checksides(g, shoe.get());
                 gp.objectcontainer[1].add(g, shoe);
-                g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
+                    g.rm.spr_fireballexplosion,
                     (player.center_x() as i32 - 16) as i16,
                     (player.center_y() as i32 - 16) as i16,
                     3,
@@ -144,9 +144,9 @@ impl PlayerKuriboShoe {
                 };
                 if player.iswarping() {
                     let edge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);
-                    gp.rm.spr_kuriboshoe.draw_clip(g, x, y, &src, edge, player.get_warp_plane() as i32);
+                    gp.rm.sprite(gp.rm.spr_kuriboshoe).draw_clip(g, x, y, &src, edge, player.get_warp_plane() as i32);
                 } else {
-                    gp.rm.spr_kuriboshoe.draw_src(g, x, y, &src);
+                    gp.rm.sprite(gp.rm.spr_kuriboshoe).draw_src(g, x, y, &src);
                 }
             }
         }

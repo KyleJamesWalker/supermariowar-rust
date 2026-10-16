@@ -283,7 +283,7 @@ impl WorldPlayer {
 
     pub fn draw(&self, g: &mut Game, iMapOffsetX: i16, iMapOffsetY: i16) {
         let mut gp = g.ptr();
-        gp.rm.spr_player[self.iDrawSprite as usize][(self.iAnimationFrame + self.iDrawDirection) as usize].draw_src(
+        gp.rm.sprite(gp.rm.spr_player[self.iDrawSprite as usize][(self.iAnimationFrame + self.iDrawDirection) as usize]).draw_src(
             g,
             self.pos.x as i32 + iMapOffsetX as i32,
             self.pos.y as i32 + iMapOffsetY as i32,
@@ -488,10 +488,10 @@ impl WorldVehicle {
         let ts = self.iTileSize as i32;
         if fVehiclesSleeping {
             let rDst = Rect { x: self.pos.x as i32 + iWorldOffsetX as i32, y: self.pos.y as i32 + iWorldOffsetY as i32, w: ts, h: ts };
-            g.rm.spr_worldvehicle[self.iTileSheet as usize].draw_src_to(&self.srcRects[4], g.blitdest, &rDst);
+            g.rm.sprite(g.rm.spr_worldvehicle[self.iTileSheet as usize]).draw_src_to(&self.srcRects[4], g.blitdest, &rDst);
         } else {
             let rDst = Rect { x: self.pos.x as i32 + iWorldOffsetX as i32 + self.iPaceOffset as i32, y: self.pos.y as i32 + iWorldOffsetY as i32, w: ts, h: ts };
-            g.rm.spr_worldvehicle[self.iTileSheet as usize].draw_src_to(&self.srcRects[(self.iDrawDirection + self.iAnimationFrame) as usize], g.blitdest, &rDst);
+            g.rm.sprite(g.rm.spr_worldvehicle[self.iTileSheet as usize]).draw_src_to(&self.srcRects[(self.iDrawDirection + self.iAnimationFrame) as usize], g.blitdest, &rDst);
         }
     }
 }
@@ -1323,7 +1323,7 @@ impl WorldMap {
 
         //The solid background tile is not animated, but all the rest are
         if iLayer != 2 {
-            let bg = &g.rm.spr_worldbackground[sheet];
+            let bg = &g.rm.sprite(g.rm.spr_worldbackground[sheet]);
             if iBackgroundSprite == 1 {
                 let rSrc = Rect { x: ts + iBackgroundStyleOffset, y: ts, w: ts, h: ts };
                 bg.draw_src_to(&rSrc, surface, &r);
@@ -1351,12 +1351,12 @@ impl WorldMap {
         }
 
         if iLayer != 1 {
-            let special = &g.rm.spr_worldforegroundspecial[sheet];
+            let special = &g.rm.sprite(g.rm.spr_worldforegroundspecial[sheet]);
             if tile.iCompleted >= 0 {
                 let rSrc = Rect { x: (tile.iCompleted as i32 + 10) << shift, y: 5 << shift, w: ts, h: ts };
                 special.draw_src_to(&rSrc, surface, &r);
             } else if iForegroundSprite >= 0 && iForegroundSprite < WORLD_FOREGROUND_STAGE_OFFSET {
-                let paths = &g.rm.spr_worldpaths[sheet];
+                let paths = &g.rm.sprite(g.rm.spr_worldpaths[sheet]);
                 let iPathStyle = iForegroundSprite / WORLD_PATH_SPRITE_SET_SIZE;
                 let iPathOffsetX = ((iPathStyle as i32 % 4) * (5 << shift)) as i16 as i32;
                 let iPathOffsetY = ((iPathStyle as i32 >> 2) * (10 << shift)) as i16 as i32;
@@ -1397,11 +1397,11 @@ impl WorldMap {
             } else if iForegroundSprite >= WORLD_FOREGROUND_SPRITE_OFFSET && iForegroundSprite <= WORLD_FOREGROUND_SPRITE_OFFSET + 179 {
                 let iSprite = (iForegroundSprite - WORLD_FOREGROUND_SPRITE_OFFSET) as i32;
                 let rSrc = Rect { x: (iSprite % 12) << shift, y: (iSprite / 12) << shift, w: ts, h: ts };
-                g.rm.spr_worldforeground[sheet].draw_src_to(&rSrc, surface, &r);
+                g.rm.sprite(g.rm.spr_worldforeground[sheet]).draw_src_to(&rSrc, surface, &r);
             } else if iForegroundSprite >= WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET && iForegroundSprite <= WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET + 29 {
                 let iSprite = (iForegroundSprite - WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET) as i32;
                 let rSrc = Rect { x: (if iSprite >= 15 { 16 << shift } else { 12 << shift }) + iAnimationFrame, y: (iSprite % 15) << shift, w: ts, h: ts };
-                g.rm.spr_worldforeground[sheet].draw_src_to(&rSrc, surface, &r);
+                g.rm.sprite(g.rm.spr_worldforeground[sheet]).draw_src_to(&rSrc, surface, &r);
             }
 
             //Draw doors

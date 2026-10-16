@@ -319,28 +319,28 @@ impl MenuState {
                         // local player uses local skin
                         println!("  player {} -> local", k);
                         let skin = gp.rm.load_full_skin(g, gp.game_values.skinids[k], gp.game_values.colorids[k]);
-                        g.rm.spr_player[k] = skin;
+                        g.rm.set_strip(g.rm.spr_player[k], skin);
                     } else {
                         let path = format!("{}net_skin{}.bmp", get_home_directory(g), k);
                         println!("  player {} -> {}", k, path);
 
                         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| gp.rm.load_full_skin_path(g, Path::new(&path), k as i16)));
                         match result {
-                            Ok(skin) => g.rm.spr_player[k] = skin,
+                            Ok(skin) => g.rm.set_strip(g.rm.spr_player[k], skin),
                             Err(_) => {
                                 println!("[warning] Could not load netplay skin of player {}, using default", k);
                                 let skin = gp.rm.load_full_skin(g, gp.game_values.skinids[k], gp.game_values.colorids[k]);
-                                g.rm.spr_player[k] = skin;
+                                g.rm.set_strip(g.rm.spr_player[k], skin);
                             }
                         }
                     }
                 } else if g.game_values.randomskin[k] {
                     g.game_values.skinids[k] = RANDOM_INT(gp.get(), g.skinlist.count() as i32) as i16;
                     let skin = gp.rm.load_full_skin(g, gp.game_values.skinids[k], gp.game_values.colorids[k]);
-                    g.rm.spr_player[k] = skin;
+                    g.rm.set_strip(g.rm.spr_player[k], skin);
                 } else {
                     let skin = gp.rm.load_full_skin(g, gp.game_values.skinids[k], gp.game_values.colorids[k]);
-                    g.rm.spr_player[k] = skin;
+                    g.rm.set_strip(g.rm.spr_player[k], skin);
                 }
             }
         }
@@ -446,7 +446,7 @@ impl MenuState {
         let iIcon: i16 = if iControlTeam < 0 { 4 } else { g.game_values.colorids[g.game_values.teamids[iControlTeam as usize][0] as usize] };
         self.mCurrentMenu.eyeCandy.emplace(EC_Announcement::new(
             Ptr::from_mut(&mut g.rm.menu_font_large),
-            Ptr::from_mut(&mut g.rm.spr_announcementicons),
+            g.rm.spr_announcementicons,
             szMessage,
             iIcon,
             120,
@@ -548,7 +548,7 @@ impl MenuState {
                     fErrorReadingTourFile = true;
                 } else {
                     let numGames = g.game_values.tourstops.len() as i16;
-                    self.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(g, gp.score_cnt, numGames, Ptr::from_mut(&mut gp.rm.spr_tour_markers));
+                    self.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(g, gp.score_cnt, numGames, gp.rm.spr_tour_markers);
                 }
             } else if g.game_values.matchtype == MatchType::Tournament {
                 println!("  Match type: Tournament");
@@ -567,7 +567,7 @@ impl MenuState {
                 g.game_values.tournamentnextcontrol = 1; //if round robin is selected, choose the next team next
 
                 let numGames = g.game_values.tournamentgames;
-                self.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(g, gp.score_cnt, numGames, Ptr::from_mut(&mut gp.rm.menu_mode_large));
+                self.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(g, gp.score_cnt, numGames, gp.rm.menu_mode_large);
             } else if g.game_values.matchtype == MatchType::World {
                 println!("  Match type: World");
                 let this = Ptr::from_mut(self);
@@ -575,7 +575,7 @@ impl MenuState {
                     let mut this = this;
                     gp.get().g_worldmap.init(WorldMap::new_path(g, &gp.get().worldlist.at(gp.get().game_values.worldindex as usize).to_string_lossy(), TILESIZE as i16));
 
-                    this.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(g, gp.score_cnt, 0, Ptr::from_mut(&mut gp.rm.spr_tour_markers));
+                    this.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(g, gp.score_cnt, 0, gp.rm.spr_tour_markers);
 
                     gp.g_worldmap.set_initial_powerups(g);
 
@@ -916,11 +916,11 @@ pub fn enter_gameplay_tail(g: &mut Game) {
     g.game_values.appstate = AppState::Game;
     println!("  GS_GAME");
 
-    gp.get().g_map.predrawbackground(g, &gp.get().rm.spr_background, &gp.get().rm.spr_backmap[0]);
-    gp.get().g_map.predrawforeground(g, &gp.get().rm.spr_frontmap[0]);
+    gp.get().g_map.predrawbackground(g, &gp.get().rm.sprite(gp.get().rm.spr_background), &gp.get().rm.sprite(gp.get().rm.spr_backmap[0]));
+    gp.get().g_map.predrawforeground(g, &gp.get().rm.sprite(gp.get().rm.spr_frontmap[0]));
 
-    gp.get().g_map.predrawbackground(g, &gp.get().rm.spr_background, &gp.get().rm.spr_backmap[1]);
-    gp.get().g_map.predrawforeground(g, &gp.get().rm.spr_frontmap[1]);
+    gp.get().g_map.predrawbackground(g, &gp.get().rm.sprite(gp.get().rm.spr_background), &gp.get().rm.sprite(gp.get().rm.spr_backmap[1]));
+    gp.get().g_map.predrawforeground(g, &gp.get().rm.sprite(gp.get().rm.spr_frontmap[1]));
 
     gp.g_map.setup_animated_tiles(g);
     crate::smw::gs_gameplay::load_map_objects(g, false);
@@ -1192,9 +1192,9 @@ impl MenuState {
         } else if MENU_CODE_MENU_GRAPHICS_PACK_CHANGED == code {
             gp.rm.load_menu_graphics(g);
 
-            g.blitdest = g.rm.menu_backdrop.get_surface();
-            g.rm.menu_shade.setalpha(App::menuTransparency as u8);
-            gp.rm.menu_shade.draw(g, 0, 0);
+            g.blitdest = g.rm.sprite(g.rm.menu_backdrop).get_surface();
+            g.rm.sprite(g.rm.menu_shade).setalpha(App::menuTransparency as u8);
+            gp.rm.sprite(gp.rm.menu_shade).draw(g, 0, 0);
             g.blitdest = g.screen;
         } else if MENU_CODE_WORLD_GRAPHICS_PACK_CHANGED == code {
             gp.rm.load_world_graphics(g);
@@ -1747,7 +1747,7 @@ impl GameState for MenuState {
 
             //Don't draw backdrop for world
             if self.mCurrentMenu != menu(self.mWorldMenu) {
-                gp.rm.menu_backdrop.draw(g, 0, 0);
+                gp.rm.sprite(gp.rm.menu_backdrop).draw(g, 0, 0);
             } else {
                 crate::common::gfx::blit::fill_rect(g.screen, std::ptr::null(), (*g.screen).map_rgb(0, 0, 0));
             }
@@ -1756,8 +1756,8 @@ impl GameState for MenuState {
             self.mCurrentMenu.draw(g);
 
             if self.iDisplayError > DISPLAY_ERROR_NONE {
-                gp.rm.spr_selectfield.draw_src(g, 70, 400, &rect(0, 0, 484, 32));
-                gp.rm.spr_selectfield.draw_src(g, 554, 400, &rect(496, 0, 16, 32));
+                gp.rm.sprite(gp.rm.spr_selectfield).draw_src(g, 70, 400, &rect(0, 0, 484, 32));
+                gp.rm.sprite(gp.rm.spr_selectfield).draw_src(g, 554, 400, &rect(496, 0, 16, 32));
 
                 if self.iDisplayError == DISPLAY_ERROR_READ_TOUR_FILE {
                     gp.rm.menu_font_large.draw_centered(g, 320, 405, "Error Reading Tour File!");
@@ -1787,8 +1787,8 @@ impl GameState for MenuState {
             }
 
             if g.game_values.screenfade > 0 {
-                g.rm.menu_shade.setalpha(g.game_values.screenfade as u8);
-                gp.rm.menu_shade.draw(g, 0, 0);
+                g.rm.sprite(g.rm.menu_shade).setalpha(g.game_values.screenfade as u8);
+                gp.rm.sprite(gp.rm.menu_shade).draw(g, 0, 0);
             }
 
             if g.game_values.screenfade == 255 {
@@ -1815,10 +1815,10 @@ impl GameState for MenuState {
             }
 
             if fGenerateMapThumbs {
-                gp.rm.menu_dialog.draw_src(g, 160, 176, &rect(0, 0, 160, 64));
-                gp.rm.menu_dialog.draw_src(g, App::screenWidth / 2, 176, &rect(352, 0, 160, 64));
-                gp.rm.menu_dialog.draw_src(g, 160, 240, &rect(0, 416, 160, 64));
-                gp.rm.menu_dialog.draw_src(g, App::screenWidth / 2, App::screenHeight / 2, &rect(352, 416, 160, 64));
+                gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, 160, 176, &rect(0, 0, 160, 64));
+                gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, App::screenWidth / 2, 176, &rect(352, 0, 160, 64));
+                gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, 160, 240, &rect(0, 416, 160, 64));
+                gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, App::screenWidth / 2, App::screenHeight / 2, &rect(352, 416, 160, 64));
                 gp.rm.menu_font_large.draw_centered(g, App::screenWidth / 2, 215, "Refreshing Map Thumbnails");
                 gp.rm.menu_font_large.draw_centered(g, App::screenWidth / 2, 245, "Please Wait...");
             }

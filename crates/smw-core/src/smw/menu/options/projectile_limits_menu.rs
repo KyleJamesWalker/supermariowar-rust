@@ -56,8 +56,8 @@ impl UI_ProjectileLimitsMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let spr = Ptr::from_mut(&mut g.rm.spr_selectfield);
-            let menu_plain_field = Ptr::from_mut(&mut g.rm.menu_plain_field);
+            let spr = g.rm.spr_selectfield;
+            let menu_plain_field = g.rm.menu_plain_field;
 
             this.miFireballLimitField = select_field(spr, 70, 60, "Fireball Limit", 500, 220, LIMITS, &mut g.game_values.fireballlimit);
             this.miHammerLimitField = select_field(spr, 70, 100, "Hammer Limit", 500, 220, LIMITS, &mut g.game_values.hammerlimit);

@@ -3,6 +3,7 @@
 //! The C++ class template becomes a generic struct. Its virtual bodies are inherent `*_impl` methods so
 //! subclasses (MI_ImageSelectField, MI_SliderField, ...) can call `MI_SelectField<T>::Draw()` and friends.
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -30,7 +31,7 @@ impl<T: Copy> SF_ListItem<T> {
 pub struct MI_SelectField<T: Copy + PartialEq + 'static> {
     pub ui_control: UI_Control,
 
-    pub m_spr: Ptr<gfxSprite>,
+    pub m_spr: SpriteId,
     pub m_name: String,
 
     pub miModifyImageLeft: Box<MI_Image>,
@@ -64,7 +65,7 @@ impl<T: Copy + PartialEq + 'static> std::ops::DerefMut for MI_SelectField<T> {
     }
 }
 
-fn modify_images(spr: Ptr<gfxSprite>, x: i16, y: i16, width: i16, indent: i16) -> (Box<MI_Image>, Box<MI_Image>) {
+fn modify_images(spr: SpriteId, x: i16, y: i16, width: i16, indent: i16) -> (Box<MI_Image>, Box<MI_Image>) {
     let mut left = Box::new(MI_Image::new(spr, x + indent - 26, y + 4, 32, 64, 26, 24, 4, 1, 8));
     left.set_visible(false);
 
@@ -80,7 +81,7 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
         Some(format!("{}: {}", self.m_name, item.name))
     }
 
-    pub fn new(nspr: Ptr<gfxSprite>, x: i16, y: i16, name: impl Into<String>, width: i16, indent: i16) -> Self {
+    pub fn new(nspr: SpriteId, x: i16, y: i16, name: impl Into<String>, width: i16, indent: i16) -> Self {
         let (left, right) = modify_images(nspr, x, y, width, indent);
         MI_SelectField {
             ui_control: UI_Control::new(x, y),
@@ -315,12 +316,12 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
 
         if self.m_indent == 0 {
             let iHalfWidth = (self.m_width / 2) as i32;
-            self.m_spr.draw_src(g, x, y, &Rect { x: 0, y: selY, w: iHalfWidth, h: 32 });
-            self.m_spr.draw_src(g, x + iHalfWidth, y, &Rect { x: 512 - iHalfWidth, y: selY, w: width - iHalfWidth, h: 32 });
+            g.rm.sprite(self.m_spr).draw_src(g, x, y, &Rect { x: 0, y: selY, w: iHalfWidth, h: 32 });
+            g.rm.sprite(self.m_spr).draw_src(g, x + iHalfWidth, y, &Rect { x: 512 - iHalfWidth, y: selY, w: width - iHalfWidth, h: 32 });
         } else {
-            self.m_spr.draw_src(g, x, y, &Rect { x: 0, y: selY, w: indent - 16, h: 32 });
-            self.m_spr.draw_src(g, x + indent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
-            self.m_spr.draw_src(g, x + indent + 16, y, &Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
+            g.rm.sprite(self.m_spr).draw_src(g, x, y, &Rect { x: 0, y: selY, w: indent - 16, h: 32 });
+            g.rm.sprite(self.m_spr).draw_src(g, x + indent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
+            g.rm.sprite(self.m_spr).draw_src(g, x + indent + 16, y, &Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
         }
 
         if self.m_indent > 0 {

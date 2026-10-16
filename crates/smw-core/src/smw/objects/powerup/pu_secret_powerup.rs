@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_SecretPowerup.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_Snow;
@@ -28,7 +29,7 @@ pub struct PU_SecretPowerup {
 impl_base!(PU_SecretPowerup => mo_powerup: MO_Powerup);
 
 impl PU_SecretPowerup {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, r#type: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s, r#type: i16) -> Self {
         let mut o = PU_SecretPowerup {
             mo_powerup: MO_Powerup::new(g, nspr, pos, 4, 8, 30, 30, 1, 1),
             itemtype: r#type,
@@ -87,7 +88,7 @@ impl CObjectTrait for PU_SecretPowerup {
         mo_powerup_draw(g, self);
 
         // Draw sparkles
-        gp.rm.spr_shinesparkle.draw_src(
+        gp.rm.sprite(gp.rm.spr_shinesparkle).draw_src(
             g,
             self.ix as i32 - self.collisionOffsetX as i32,
             self.iy as i32 - self.collisionOffsetY as i32,
@@ -105,7 +106,7 @@ impl CObjectTrait for PU_SecretPowerup {
                 let x = RANDOM_INT(gp.get(), App::screenWidth) as f32;
                 let y = RANDOM_INT(gp.get(), App::screenHeight) as f32;
                 let t = (RANDOM_INT(gp.get(), 4) + 1) as i16;
-                gp.eyecandy[2].emplace(EC_Snow::new(g, Ptr::from_mut(&mut rm.spr_snow), x, y, t));
+                gp.eyecandy[2].emplace(EC_Snow::new(g, rm.spr_snow, x, y, t));
             }
         } else if self.itemtype == 1 {
             g.game_values.spinscreen = true;

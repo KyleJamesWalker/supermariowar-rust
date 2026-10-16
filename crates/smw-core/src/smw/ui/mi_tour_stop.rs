@@ -44,7 +44,7 @@ impl MI_TourStop {
     pub fn new(g: &mut Game, x: i16, y: i16, fWorld: bool) -> Self {
         let mut gp = g.ptr();
         let fIsWorld = fWorld;
-        let spr_disabled = Ptr::from_mut(&mut g.rm.spr_selectfielddisabled);
+        let spr_disabled = g.rm.spr_selectfielddisabled;
 
         let mut miModeField;
         let mut miGoalField;
@@ -55,7 +55,7 @@ impl MI_TourStop {
         let mut miBonusBackground: [Option<Box<MI_Image>>; 10] = Default::default();
 
         if fIsWorld {
-            miModeField = Box::new(MI_ImageSelectField::new(spr_disabled, Ptr::from_mut(&mut g.rm.menu_mode_small), 70, 85, "Mode", 305, 90, 16, 16));
+            miModeField = Box::new(MI_ImageSelectField::new(spr_disabled, g.rm.menu_mode_small, 70, 85, "Mode", 305, 90, 16, 16));
             miGoalField = Box::new(MI_SelectField::<i16>::new(spr_disabled, 380, 85, "Goal", 190, 90));
             miPointsField = Box::new(MI_SelectField::<i16>::new(spr_disabled, 380, 125, "Score", 190, 90));
 
@@ -63,17 +63,17 @@ impl MI_TourStop {
             bonus.disable(true);
             miBonusField = Some(bonus);
 
-            let mut img0 = Box::new(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_worlditemsplace), 54, 201, 0, 20, 80, 248, 1, 1, 0));
+            let mut img0 = Box::new(MI_Image::new(g.rm.spr_worlditemsplace, 54, 201, 0, 20, 80, 248, 1, 1, 0));
             img0.set_visible(false);
             miEndStageImage[0] = Some(img0);
 
-            let mut img1 = Box::new(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_worlditemsplace), 506, 201, 0, 20, 80, 248, 1, 1, 0));
+            let mut img1 = Box::new(MI_Image::new(g.rm.spr_worlditemsplace, 506, 201, 0, 20, 80, 248, 1, 1, 0));
             img1.set_visible(false);
             miEndStageImage[1] = Some(img1);
 
             for iBonus in 0..10i16 {
-                let mut icon = Box::new(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_worlditemssmall), 170 + iBonus * 20, 133, 0, 0, 16, 16, 1, 1, 0));
-                let mut background = Box::new(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_worlditemsplace), 168 + iBonus * 20, 131, 0, 0, 20, 20, 1, 1, 0));
+                let mut icon = Box::new(MI_Image::new(g.rm.spr_worlditemssmall, 170 + iBonus * 20, 133, 0, 0, 16, 16, 1, 1, 0));
+                let mut background = Box::new(MI_Image::new(g.rm.spr_worlditemsplace, 168 + iBonus * 20, 131, 0, 0, 20, 20, 1, 1, 0));
 
                 icon.set_visible(false);
                 background.set_visible(false);
@@ -82,14 +82,14 @@ impl MI_TourStop {
                 miBonusBackground[iBonus as usize] = Some(background);
             }
         } else {
-            miModeField = Box::new(MI_ImageSelectField::new(spr_disabled, Ptr::from_mut(&mut g.rm.menu_mode_small), 70, 85, "Mode", 500, 120, 16, 16));
+            miModeField = Box::new(MI_ImageSelectField::new(spr_disabled, g.rm.menu_mode_small, 70, 85, "Mode", 500, 120, 16, 16));
             miGoalField = Box::new(MI_SelectField::<i16>::new(spr_disabled, 70, 125, "Goal", 246, 120));
             miPointsField = Box::new(MI_SelectField::<i16>::new(spr_disabled, 70 + 254, 125, "Score", 246, 120));
 
             miBonusField = None;
         }
 
-        let mut miStartButton = Box::new(MI_Button::new(g, Ptr::from_mut(&mut gp.rm.spr_selectfield), 70, 45, "Start", 500, TextAlign::LEFT));
+        let mut miStartButton = Box::new(MI_Button::new(g, gp.rm.spr_selectfield, 70, 45, "Start", 500, TextAlign::LEFT));
         miStartButton.set_code(MENU_CODE_TOUR_STOP_CONTINUE);
         miStartButton.select(g, true);
 
@@ -100,8 +100,8 @@ impl MI_TourStop {
         miGoalField.disable(true);
         miPointsField.disable(true);
 
-        let miTourStopLeftHeaderBar = Box::new(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        let miTourStopMenuRightHeaderBar = Box::new(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_plain_field), 320, 0, 192, 0, 320, 32, 1, 1, 0));
+        let miTourStopLeftHeaderBar = Box::new(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
+        let miTourStopMenuRightHeaderBar = Box::new(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
         let miTourStopMenuHeaderText = Box::new(MI_HeaderText::new(g, "Tour Stop", 320, 5));
 
         MI_TourStop {
@@ -206,9 +206,9 @@ impl MI_TourStop {
                     if fShowBonus {
                         let iBonusIcon = tourstop.wsbBonuses[iBonus as usize].iBonus;
                         icon.set_image_source(if (iBonusIcon as i32) < NUM_POWERUPS {
-                            Ptr::from_mut(&mut g.rm.spr_storedpowerupsmall)
+                            g.rm.spr_storedpowerupsmall
                         } else {
-                            Ptr::from_mut(&mut g.rm.spr_worlditemssmall)
+                            g.rm.spr_worlditemssmall
                         });
                         icon.set_image(
                             ((if (iBonusIcon as i32) < NUM_POWERUPS { iBonusIcon as i32 } else { iBonusIcon as i32 - NUM_POWERUPS }) << 4) as i16,

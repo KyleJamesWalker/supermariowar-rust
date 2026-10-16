@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_SuperFireball.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
@@ -32,7 +33,7 @@ impl_base!(MO_SuperFireball => io_moving_object: IO_MovingObject);
 
 impl MO_SuperFireball {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, vel: Vec2f, aniSpeed: i16, iGlobalID: i16, teamID: i16, iColorID: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s, iNumSpr: i16, vel: Vec2f, aniSpeed: i16, iGlobalID: i16, teamID: i16, iColorID: i16) -> Self {
         let mut gp = g.ptr();
         let mut o = MO_SuperFireball {
             io_moving_object: IO_MovingObject::new(
@@ -41,8 +42,8 @@ impl MO_SuperFireball {
                 pos,
                 iNumSpr,
                 aniSpeed,
-                (nspr.get_width() / iNumSpr as i32) as i16,
-                (nspr.get_height() / 10) as i16,
+                (g.rm.sprite(nspr).get_width() / iNumSpr as i32) as i16,
+                (g.rm.sprite(nspr).get_height() / 10) as i16,
                 0,
                 0,
                 -1,
@@ -110,8 +111,8 @@ impl CObjectTrait for MO_SuperFireball {
         let mut gp = g.ptr();
         if !player.is_shielded() {
             self.dead = true;
-            g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
+                g.rm.spr_fireballexplosion,
                 (self.ix as i32 + (self.iw as i32 >> 1) - 16) as i16,
                 (self.iy as i32 + (self.ih as i32 >> 1) - 16) as i16,
                 3,
@@ -128,7 +129,7 @@ impl CObjectTrait for MO_SuperFireball {
     }
 
     fn draw(&mut self, g: &mut Game) {
-        self.spr.draw_src(
+        g.rm.sprite(self.spr).draw_src(
             g,
             self.ix as i32 - self.collisionOffsetX as i32,
             self.iy as i32 - self.collisionOffsetY as i32,

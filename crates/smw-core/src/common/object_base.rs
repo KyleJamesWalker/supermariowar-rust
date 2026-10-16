@@ -1,5 +1,6 @@
 //! Port of src/common/ObjectBase.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::*;
@@ -67,7 +68,7 @@ pub struct CObject {
     pub collisionOffsetX: i16,
     pub collisionOffsetY: i16,
 
-    pub spr: Ptr<gfxSprite>,
+    pub spr: SpriteId,
     pub state: i16,
     pub dead: bool,
 
@@ -95,7 +96,7 @@ fn next_network_id(g: &mut Game) -> i32 {
 }
 
 impl CObject {
-    pub fn new(g: &mut Game, nspr1: Ptr<gfxSprite>, pos: Vec2s) -> Self {
+    pub fn new(g: &mut Game, nspr1: SpriteId, pos: Vec2s) -> Self {
         let mut o = CObject {
             objectType: object_none,
             ix: 0,
@@ -120,9 +121,9 @@ impl CObject {
         o.set_xi(pos.x);
         o.set_yi(pos.y);
 
-        if !o.spr.is_null() {
-            o.iw = o.spr.get_width() as i16;
-            o.ih = o.spr.get_height() as i16;
+        if !o.spr.is_none() {
+            o.iw = g.rm.sprite(o.spr).get_width() as i16;
+            o.ih = g.rm.sprite(o.spr).get_height() as i16;
         }
 
         o.collisionWidth = o.iw;
@@ -187,9 +188,9 @@ impl CObject {
         self.iNetworkID
     }
 
-    pub fn get_wrap(&self) -> bool {
-        if !self.spr.is_null() {
-            self.spr.is_wrapping()
+    pub fn get_wrap(&self, g: &Game) -> bool {
+        if !self.spr.is_none() {
+            g.rm.sprite(self.spr).is_wrapping()
         } else {
             true
         }

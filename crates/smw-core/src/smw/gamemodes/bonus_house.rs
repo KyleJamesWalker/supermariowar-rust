@@ -97,7 +97,7 @@ impl CGameModeTrait for CGM_Bonus {
         //float dx = 288.0f - (dSpacing * (float)(iNumBonuses - 1) / 2.0f);
         for iChest in 0..iNumBonuses {
             let iBonus = self.tsTourStop.wsbBonuses[iChestOrder[iChest as usize] as usize].iBonus;
-            let obj = Ptr::new_box(MO_BonusHouseChest::new(g, Ptr::from_mut(&mut rm.spr_worldbonushouse), Vec2s::new(dx as i16, 384), iBonus));
+            let obj = Ptr::new_box(MO_BonusHouseChest::new(g, rm.spr_worldbonushouse, Vec2s::new(dx as i16, 384), iBonus));
             gp.objectcontainer[0].add(g, obj);
             dx += dSpacing + 64.0f32;
         }
@@ -106,16 +106,16 @@ impl CGameModeTrait for CGM_Bonus {
     fn draw_background(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         //Draw Toad
-        gp.rm.spr_worldbonushouse.draw_src(g, 544, 256, &Rect { x: if gp.players[0].left_x() > 544 { 224 } else { 192 }, y: 0, w: 32, h: 64 });
+        gp.rm.sprite(gp.rm.spr_worldbonushouse).draw_src(g, 544, 256, &Rect { x: if gp.players[0].left_x() > 544 { 224 } else { 192 }, y: 0, w: 32, h: 64 });
 
         //Draw Bonus House Title
-        gp.rm.menu_plain_field.draw_src(g, 0, 0, &Rect { x: 0, y: 0, w: App::screenWidth / 2, h: 32 });
-        gp.rm.menu_plain_field.draw_src(g, App::screenWidth / 2, 0, &Rect { x: 192, y: 0, w: App::screenWidth / 2, h: 32 });
+        gp.rm.sprite(gp.rm.menu_plain_field).draw_src(g, 0, 0, &Rect { x: 0, y: 0, w: App::screenWidth / 2, h: 32 });
+        gp.rm.sprite(gp.rm.menu_plain_field).draw_src(g, App::screenWidth / 2, 0, &Rect { x: 192, y: 0, w: App::screenWidth / 2, h: 32 });
         gp.rm.game_font_large.draw_centered(g, App::screenWidth / 2, 5, &self.tsTourStop.szName);
 
         //Draw Bonus House Text
         if self.tsTourStop.iBonusTextLines > 0 {
-            gp.rm.spr_worldbonushouse.draw_src(g, 128, 128, &Rect { x: 0, y: 64, w: 384, h: 128 });
+            gp.rm.sprite(gp.rm.spr_worldbonushouse).draw_src(g, 128, 128, &Rect { x: 0, y: 64, w: 384, h: 128 });
 
             for iTextLine in 0..self.tsTourStop.iBonusTextLines {
                 gp.rm.game_font_large.draw_chop_centered(g, App::screenWidth / 2, 132 + 24 * iTextLine as i32, 372, &self.tsTourStop.szBonusText[iTextLine as usize]);

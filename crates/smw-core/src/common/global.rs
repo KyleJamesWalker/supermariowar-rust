@@ -27,5 +27,5 @@ pub fn load_current_map_background(g: &mut Game) {
         path = convert_path_pack(g, "gfx/packs/backgrounds/Land_Classic.png", &pack);
     }
 
-    g.rm.spr_background = ImageLoader::new(path).without_color_key().create(g);
+    *g.rm.sprite(g.rm.spr_background) = ImageLoader::new(path).without_color_key().create(g);
 }

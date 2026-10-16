@@ -73,7 +73,7 @@ impl CO_Shell {
     pub fn new(g: &mut Game, r#type: ShellType, pos: Vec2s, dieOnMovingPlayerCollision: bool, dieOnHoldingPlayerCollision: bool, dieOnFire: bool, killBouncePlayer: bool) -> Self {
         let mut rm = g.rm;
         let mut o = CO_Shell {
-            mo_carried_object: MO_CarriedObject::new_anim(g, Ptr::from_mut(&mut rm.spr_shell), pos, 4, 4, 30, 20, 1, 11, 0, (r#type as i32 * 32) as i16, 32, 32),
+            mo_carried_object: MO_CarriedObject::new_anim(g, rm.spr_shell, pos, 4, 4, 30, 20, 1, 11, 0, (r#type as i32 * 32) as i16, 32, 32),
             iShellType: r#type,
             iIgnoreBounceTimer: 0,
             iDestY: 0,
@@ -298,11 +298,11 @@ impl CO_Shell {
 
         let iBrokenIceX = (self.ix as i32 - self.collisionOffsetX as i32) as i16;
         let iBrokenIceY = (self.iy as i32 - self.collisionOffsetY as i32) as i16;
-        let spr = Ptr::from_mut(&mut g.rm.spr_brokeniceblock);
-        g.eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, iBrokenIceY, -1.5, -7.0, 4, 2, 0, 0, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, iBrokenIceY, 1.5, -7.0, 4, 2, 0, 0, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, (iBrokenIceY as i32 + 16) as i16, -1.5, -4.0, 4, 2, 0, 0, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, (iBrokenIceY as i32 + 16) as i16, 1.5, -4.0, 4, 2, 0, 0, 16, 16));
+        let spr = g.rm.spr_brokeniceblock;
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, iBrokenIceX, iBrokenIceY, -1.5, -7.0, 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, (iBrokenIceX as i32 + 16) as i16, iBrokenIceY, 1.5, -7.0, 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, iBrokenIceX, (iBrokenIceY as i32 + 16) as i16, -1.5, -4.0, 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, (iBrokenIceX as i32 + 16) as i16, (iBrokenIceY as i32 + 16) as i16, 1.5, -4.0, 4, 2, 0, 0, 16, 16));
     }
 
     pub fn is_threat(&self) -> bool {
@@ -449,8 +449,8 @@ impl CObjectTrait for CO_Shell {
             self.frozen = true;
             self.frozentimer = 300;
 
-            g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(&g.rm, 
+                g.rm.spr_fireballexplosion,
                 (self.ix as i32 - self.collisionOffsetX as i32) as i16,
                 (self.iy as i32 - self.collisionOffsetY as i32) as i16,
                 3,
@@ -474,8 +474,8 @@ impl CObjectTrait for CO_Shell {
                 self.velx = self.frozenvelocity;
                 self.animationspeed = self.frozenanimationspeed;
 
-                g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
+                    g.rm.spr_fireballexplosion,
                     (self.ix as i32 - self.collisionOffsetX as i32) as i16,
                     (self.iy as i32 - self.collisionOffsetY as i32) as i16,
                     3,
@@ -487,7 +487,7 @@ impl CObjectTrait for CO_Shell {
                 self.iDeathTime += 1;
                 self.iDeathTime >= g.game_values.shellttl
             } {
-                g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, g.rm.spr_fireballexplosion, self.ix, self.iy, 3, 8));
                 self.dead = true;
                 if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
 
@@ -555,26 +555,26 @@ impl CObjectTrait for CO_Shell {
         let y = self.iy as i32 - self.collisionOffsetY as i32;
         if self.state == 0 {
             let h = (self.ih as f32 - self.fy + self.iDestY as f32) as i16;
-            self.spr.draw_src(g, x, y, &Rect { x: 0, y: self.iColorOffsetY as i32, w: self.iw as i32, h: h as i32 });
+            g.rm.sprite(self.spr).draw_src(g, x, y, &Rect { x: 0, y: self.iColorOffsetY as i32, w: self.iw as i32, h: h as i32 });
         } else if !self.owner.is_null() {
             let src = Rect { x: 0, y: self.iColorOffsetY as i32 + self.iFlippedOffset as i32, w: self.iw as i32, h: self.ih as i32 };
             if self.owner.iswarping() {
                 let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32) };
-                self.spr.draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);
+                g.rm.sprite(self.spr).draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);
             } else {
-                self.spr.draw_src(g, x, y, &src);
+                g.rm.sprite(self.spr).draw_src(g, x, y, &src);
             }
         } else if self.state == 2 {
-            self.spr.draw_src(g, x, y, &Rect { x: 0, y: self.iColorOffsetY as i32 + self.iFlippedOffset as i32, w: self.iw as i32, h: self.ih as i32 });
+            g.rm.sprite(self.spr).draw_src(g, x, y, &Rect { x: 0, y: self.iColorOffsetY as i32 + self.iFlippedOffset as i32, w: self.iw as i32, h: self.ih as i32 });
         } else if self.state == 1 {
-            self.spr.draw_src(g, x, y, &Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32 + self.iFlippedOffset as i32, w: self.iw as i32, h: self.ih as i32 });
+            g.rm.sprite(self.spr).draw_src(g, x, y, &Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32 + self.iFlippedOffset as i32, w: self.iw as i32, h: self.ih as i32 });
         }
 
         if self.frozen {
-            gp.rm.spr_iceblock.draw_src(g, x, y, &Rect { x: 0, y: 0, w: 32, h: 32 });
+            gp.rm.sprite(gp.rm.spr_iceblock).draw_src(g, x, y, &Rect { x: 0, y: 0, w: 32, h: 32 });
         } else if self.fSmoking {
-            g.eyecandy[0].emplace(EC_SingleAnimation::new(
-                Ptr::from_mut(&mut g.rm.spr_burnup),
+            g.eyecandy[0].emplace(EC_SingleAnimation::new(&gp.rm, 
+                g.rm.spr_burnup,
                 (x + (self.iw as i32 >> 1) - 16) as i16,
                 (y + (self.ih as i32 >> 1) - 16) as i16,
                 5,
@@ -638,8 +638,8 @@ impl IO_MovingObjectTrait for CO_Shell {
             return;
         }
 
-        g.eyecandy[2].emplace(EC_FallingObject::new(
-            Ptr::from_mut(&mut g.rm.spr_shelldead),
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, 
+            g.rm.spr_shelldead,
             self.ix,
             self.iy,
             -self.velx / 4.0,
@@ -665,8 +665,8 @@ impl IO_MovingObjectTrait for CO_Shell {
         let mut gp = g.ptr();
         if self.state == 1 {
             if self.iBounceCounter == 0 {
-                g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut g.rm.spr_shellbounce),
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
+                    g.rm.spr_shellbounce,
                     (self.ix as i32 + (if self.velx > 0.0 { 0 } else { self.collisionWidth as i32 }) - 21) as i16,
                     (self.iy as i32 + (self.collisionHeight as i32 >> 1) - 20) as i16,
                     4,

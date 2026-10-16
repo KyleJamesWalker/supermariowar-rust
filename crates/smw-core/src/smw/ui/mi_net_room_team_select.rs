@@ -33,7 +33,7 @@ crate::impl_base!(MI_NetRoomTeamSelect => ui_control: UI_Control);
 
 impl MI_NetRoomTeamSelect {
     pub fn new(g: &mut Game, x: i16, y: i16, player_id: i16, on_change_accepted: Box<dyn FnMut(&mut Game)>) -> Self {
-        let sel = Ptr::from_mut(&mut g.rm.menu_player_select);
+        let sel = g.rm.menu_player_select;
         let mut miHoverImage = Box::new(MI_Image::new(sel, x - 6, y - 6, 32 + 18, 128 + 18, 44, 44, 1, 1, 1));
         miHoverImage.set_visible(false);
         let mut miModifyImage = Box::new(MI_Image::new(sel, x - 24, y - 24, 32, 128, 78, 78, 4, 1, 8));
@@ -113,7 +113,7 @@ impl UI_ControlTrait for MI_NetRoomTeamSelect {
 
         let p = self.owner_player as usize;
         let frame = if self.fSelected { self.iAnimationFrame as usize } else { 0 };
-        gp.rm.spr_player[p][frame].draw_src(g, self.x as i32, self.y as i32, &Rect { x: 0, y: 0, w: 32, h: 32 });
+        gp.rm.sprite(gp.rm.spr_player[p][frame]).draw_src(g, self.x as i32, self.y as i32, &Rect { x: 0, y: 0, w: 32, h: 32 });
     }
 
     fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {

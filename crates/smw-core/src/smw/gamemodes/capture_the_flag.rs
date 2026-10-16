@@ -48,18 +48,18 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
                 fTeamUsed[iTeamID as usize] = true;
 
                 let iColorID: i16 = player.get_color_id();
-                let base: Ptr<MO_FlagBase> = Ptr::new_box(MO_FlagBase::new(g, Ptr::from_mut(&mut gp.rm.spr_flagbases), iTeamID, iColorID));
+                let base: Ptr<MO_FlagBase> = Ptr::new_box(MO_FlagBase::new(g, gp.rm.spr_flagbases, iTeamID, iColorID));
                 gp.objectcontainer[0].add(g, base);
 
                 if !g.game_values.gamemodesettings.flag.centerflag {
-                    let flag: Ptr<CO_Flag> = CO_Flag::new(g, Ptr::from_mut(&mut gp.rm.spr_flags), base, iTeamID, iColorID);
+                    let flag: Ptr<CO_Flag> = CO_Flag::new(g, gp.rm.spr_flags, base, iTeamID, iColorID);
                     gp.objectcontainer[1].add(g, flag);
                 }
             }
         }
 
         if g.game_values.gamemodesettings.flag.centerflag {
-            let centerflag: Ptr<CO_Flag> = CO_Flag::new(g, Ptr::from_mut(&mut gp.rm.spr_flags), Ptr::null(), -1, -1);
+            let centerflag: Ptr<CO_Flag> = CO_Flag::new(g, gp.rm.spr_flags, Ptr::null(), -1, -1);
             gp.objectcontainer[1].add(g, centerflag);
         }
     }

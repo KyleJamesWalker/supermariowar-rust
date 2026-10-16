@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_FeatherPowerup.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
@@ -31,7 +32,7 @@ impl_base!(PU_FeatherPowerup => io_moving_object: IO_MovingObject);
 
 impl PU_FeatherPowerup {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, aniSpeed: i16, iCollisionWidth: i16, iCollisionHeight: i16, iCollisionOffsetX: i16, iCollisionOffsetY: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s, iNumSpr: i16, aniSpeed: i16, iCollisionWidth: i16, iCollisionHeight: i16, iCollisionOffsetX: i16, iCollisionOffsetY: i16) -> Self {
         let mut o = PU_FeatherPowerup {
             io_moving_object: IO_MovingObject::new(g, nspr, pos, iNumSpr, aniSpeed, iCollisionWidth, iCollisionHeight, iCollisionOffsetX, iCollisionOffsetY, -1, -1, -1, -1),
             fFloatDirectionRight: true,
@@ -44,7 +45,7 @@ impl PU_FeatherPowerup {
 
         o.movingObjectType = movingobject_powerup;
 
-        o.iw = (nspr.get_width() as i16) >> 1;
+        o.iw = (g.rm.sprite(nspr).get_width() as i16) >> 1;
         o.velx = 0.0f32;
 
         o.fObjectCollidesWithMap = false;
@@ -64,11 +65,11 @@ pub fn pu_feather_powerup_draw<T: PU_FeatherPowerupTrait + ?Sized>(g: &mut Game,
     let x = o.ix as i32 - o.collisionOffsetX as i32;
     let y = o.iy as i32 - o.collisionOffsetY as i32;
     if o.state == 0 {
-        o.spr.draw_src(g, x, y, &Rect { x: 0, y: 0, w: o.iw as i32, h: (o.ih as f32 - o.fy + o.desty) as i16 as i32 });
+        g.rm.sprite(o.spr).draw_src(g, x, y, &Rect { x: 0, y: 0, w: o.iw as i32, h: (o.ih as f32 - o.fy + o.desty) as i16 as i32 });
     } else if o.state == 1 {
-        o.spr.draw_src(g, x, y, &Rect { x: 0, y: 0, w: o.iw as i32, h: o.ih as i32 });
+        g.rm.sprite(o.spr).draw_src(g, x, y, &Rect { x: 0, y: 0, w: o.iw as i32, h: o.ih as i32 });
     } else {
-        o.spr.draw_src(g, x, y, &Rect { x: if o.fFloatDirectionRight { 0 } else { 32 }, y: 0, w: o.iw as i32, h: o.ih as i32 });
+        g.rm.sprite(o.spr).draw_src(g, x, y, &Rect { x: if o.fFloatDirectionRight { 0 } else { 32 }, y: 0, w: o.iw as i32, h: o.ih as i32 });
     }
 }
 

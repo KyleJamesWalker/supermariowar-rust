@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_PirhanaPlant.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
@@ -45,7 +46,7 @@ impl MO_PirhanaPlant {
     pub fn new(g: &mut Game, pos: Vec2s, r#type: i16, freq: i16, direction: i16, preview: bool) -> Self {
         let mut gp = g.ptr();
         let mut o = MO_PirhanaPlant {
-            io_moving_object: IO_MovingObject::new(g, Ptr::null(), pos, 1, 0, -1, -1, -1, -1, -1, -1, -1, -1),
+            io_moving_object: IO_MovingObject::new(g, SpriteId::NONE, pos, 1, 0, -1, -1, -1, -1, -1, -1, -1, -1),
             iType: 0,
             iDirection: 0,
             iFreq: 0,
@@ -116,7 +117,7 @@ impl MO_PirhanaPlant {
         let mut gp = g.ptr();
         if self.state > 0 {
             let rect = &g_rPirhanaRects[self.iType as usize][self.iDirection as usize][self.iFrame as usize];
-            let surface = &gp.rm.spr_hazard_pirhanaplant[1];
+            let surface = &gp.rm.sprite(gp.rm.spr_hazard_pirhanaplant[1]);
             let clipRect = Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: 320, h: 240 };
             let dstX = ((self.ix as i32 >> 1) + iOffsetX as i32) as i16;
             let dstY = ((self.iy as i32 >> 1) + iOffsetY as i32) as i16;
@@ -146,7 +147,7 @@ impl MO_PirhanaPlant {
         if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
         let x = (self.ix as i32 + if self.iDirection == 2 { 0 } else { self.collisionWidth as i32 - 32 }) as i16;
         let y = (self.iy as i32 + if self.iDirection == 0 { 0 } else { self.collisionHeight as i32 - 32 }) as i16;
-        g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), x, y, 3, 4));
+        g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, g.rm.spr_fireballexplosion, x, y, 3, 4));
 
         if self.iDirection == 0 {
             self.iy += self.collisionHeight;
@@ -341,7 +342,7 @@ impl CObjectTrait for MO_PirhanaPlant {
             let angle = self.get_fireball_angle();
             let obj = Ptr::new_box(OMO_StraightPathHazard::new(
                 g,
-                Ptr::from_mut(&mut rm.spr_hazard_fireball[if self.fPreview { 1 } else { 0 }]),
+                rm.spr_hazard_fireball[if self.fPreview { 1 } else { 0 }],
                 pos,
                 angle,
                 3.0f32,
@@ -368,13 +369,13 @@ impl CObjectTrait for MO_PirhanaPlant {
             let (ih, iw) = (self.ih as i32, self.iw as i32);
             let (ch, cw) = (self.collisionHeight as i32, self.collisionWidth as i32);
             if self.iDirection == 0 {
-                gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &Rect { x: rect.x, y: rect.y, w: 32, h: ch });
+                gp.rm.sprite(gp.rm.spr_hazard_pirhanaplant[0]).draw_src(g, ix, iy, &Rect { x: rect.x, y: rect.y, w: 32, h: ch });
             } else if self.iDirection == 1 {
-                gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &Rect { x: rect.x, y: rect.y + ih - ch, w: 32, h: ch });
+                gp.rm.sprite(gp.rm.spr_hazard_pirhanaplant[0]).draw_src(g, ix, iy, &Rect { x: rect.x, y: rect.y + ih - ch, w: 32, h: ch });
             } else if self.iDirection == 2 {
-                gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &Rect { x: rect.x, y: rect.y, w: cw, h: 32 });
+                gp.rm.sprite(gp.rm.spr_hazard_pirhanaplant[0]).draw_src(g, ix, iy, &Rect { x: rect.x, y: rect.y, w: cw, h: 32 });
             } else {
-                gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &Rect { x: rect.x + iw - cw, y: rect.y, w: cw, h: 32 });
+                gp.rm.sprite(gp.rm.spr_hazard_pirhanaplant[0]).draw_src(g, ix, iy, &Rect { x: rect.x + iw - cw, y: rect.y, w: cw, h: 32 });
             }
         }
     }

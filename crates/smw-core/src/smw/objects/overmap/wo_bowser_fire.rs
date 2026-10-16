@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_BowserFire.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
@@ -27,7 +28,7 @@ pub struct OMO_BowserFire {
 impl_base!(OMO_BowserFire => io_over_map_object: IO_OverMapObject);
 
 impl OMO_BowserFire {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, vel: Vec2f, id: i16, teamid: i16, colorid: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s, vel: Vec2f, id: i16, teamid: i16, colorid: i16) -> Self {
         let mut this = OMO_BowserFire {
             io_over_map_object: IO_OverMapObject::new(g, nspr, pos, 3, 6, -1, -1, -1, -1, -1, -1, -1, -1),
             iPlayerID: id,
@@ -62,7 +63,7 @@ impl CObjectTrait for OMO_BowserFire {
     }
 
     fn draw(&mut self, g: &mut Game) {
-        self.spr.draw_src(
+        g.rm.sprite(self.spr).draw_src(
             g,
             self.ix as i32,
             self.iy as i32,

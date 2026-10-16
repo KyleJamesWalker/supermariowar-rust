@@ -1,5 +1,6 @@
 //! Port of src/smw/GSSplashScreen.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::keys::*;
 use crate::game::Game;
 use smw_platform::InputEvent;
@@ -20,7 +21,7 @@ use crate::smw::gs_menu::MenuState;
 //that's a bunch of ugly code, maybe i'll throw it out again
 
 pub struct SplashScreenState {
-    menu_credits: Ptr<gfxSprite>,
+    menu_credits: SpriteId,
     alpha: i32,
     state: i32,
     timer: i32,
@@ -31,7 +32,7 @@ pub struct SplashScreenState {
 impl SplashScreenState {
     fn new() -> Self {
         SplashScreenState { _alias: Aliased::new(),
-            menu_credits: Ptr::null(),
+            menu_credits: SpriteId::NONE,
             alpha: 255,
             state: 7,
             timer: 120,
@@ -46,16 +47,19 @@ impl SplashScreenState {
 
 impl GameState for SplashScreenState {
     fn on_leave_state(&mut self, g: &mut Game) {
-        self.menu_credits.delete();
+        *g.rm.sprite(self.menu_credits) = gfxSprite::new();
     }
 
     fn init(&mut self, g: &mut Game) -> bool {
         let mut gp = g.ptr();
         gp.rm.load_start_graphics(g);
 
-        self.menu_credits = Ptr::new_box(gfxSprite::new());
-        *self.menu_credits =
-            ImageLoader::new(convert_path_pack(g, "gfx/packs/menu/splash_credits.png", &gp.menugraphicspacklist.current_path().to_string_lossy())).create(g);
+        let credits = ImageLoader::new(convert_path_pack(g, "gfx/packs/menu/splash_credits.png", &gp.menugraphicspacklist.current_path().to_string_lossy())).create(g);
+        if self.menu_credits.is_none() {
+            self.menu_credits = gp.rm.add_sprite(credits);
+        } else {
+            *g.rm.sprite(self.menu_credits) = credits;
+        }
 
         true
     }
@@ -99,9 +103,9 @@ impl GameState for SplashScreenState {
                 for iPlayer in 0..4usize {
                     let out = &g.game_values.playerInput.outputControls[iPlayer];
                     if tapped || out.menu_select().fPressed || out.menu_cancel().fPressed || out.menu_random().fPressed {
-                        g.blitdest = g.rm.menu_backdrop.get_surface();
-                        g.rm.menu_shade.setalpha(App::menuTransparency as u8);
-                        gp.rm.menu_shade.draw(g, 0, 0);
+                        g.blitdest = g.rm.sprite(g.rm.menu_backdrop).get_surface();
+                        g.rm.sprite(g.rm.menu_shade).setalpha(App::menuTransparency as u8);
+                        gp.rm.sprite(gp.rm.menu_shade).draw(g, 0, 0);
                         g.blitdest = g.screen;
 
                         g.eyecandy[2].clean();
@@ -120,19 +124,19 @@ impl GameState for SplashScreenState {
             crate::common::gfx::blit::fill_rect(g.screen, std::ptr::null(), 0x0);
 
             if self.state == 6 || self.state == 7 || self.state == 8 {
-                g.rm.menu_backdrop.setalpha(self.alpha as u8);
-                gp.rm.menu_backdrop.draw(g, 0, 0);
+                g.rm.sprite(g.rm.menu_backdrop).setalpha(self.alpha as u8);
+                gp.rm.sprite(gp.rm.menu_backdrop).draw(g, 0, 0);
 
-                g.rm.menu_smw.setalpha(self.alpha as u8);
-                gp.rm.menu_smw.draw(g, App::screenWidth / 2 - ((gp.rm.menu_smw.get_width() as i16 >> 1) as i32), 30); //smw logo
+                g.rm.sprite(g.rm.menu_smw).setalpha(self.alpha as u8);
+                gp.rm.sprite(gp.rm.menu_smw).draw(g, App::screenWidth / 2 - ((gp.rm.sprite(gp.rm.menu_smw).get_width() as i16 >> 1) as i32), 30); //smw logo
 
-                g.rm.menu_version.setalpha(self.alpha as u8);
-                gp.rm.menu_version.draw(g, 628 - gp.rm.menu_version.get_width(), 10); //smw logo
+                g.rm.sprite(g.rm.menu_version).setalpha(self.alpha as u8);
+                gp.rm.sprite(gp.rm.menu_version).draw(g, 628 - gp.rm.sprite(gp.rm.menu_version).get_width(), 10); //smw logo
 
                 g.rm.menu_font_large.set_alpha(self.alpha as u8);
 
-                self.menu_credits.setalpha(self.alpha as u8);
-                self.menu_credits.draw(g, 227, 200);
+                g.rm.sprite(self.menu_credits).setalpha(self.alpha as u8);
+                g.rm.sprite(self.menu_credits).draw(g, 227, 200);
             }
 
             if self.state == 7 {

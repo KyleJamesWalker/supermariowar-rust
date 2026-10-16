@@ -38,8 +38,8 @@ impl UI_NetServersMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
         let mut gp = g.ptr();
         let mut this = Box::<Self>::default();
-        let selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
-        let plain = Ptr::from_mut(&mut g.rm.menu_plain_field);
+        let selectfield = g.rm.spr_selectfield;
+        let plain = g.rm.menu_plain_field;
 
         this.miNetServersBackButton = Ptr::new_box(MI_Button::new(g, selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
         this.miNetServersBackButton.set_code(MENU_CODE_TO_MAIN_MENU);
@@ -85,7 +85,7 @@ impl UI_NetServersMenu {
         this.miNetServersAddRemoveButton = Ptr::new_box(MI_Button::new(g, selectfield, 70, 280, "Add / Remove Server", 640 - 2 * 70, TextAlign::CENTER));
         this.miNetServersAddRemoveButton.set_code(MENU_CODE_TO_NET_ADDREMOVE_SERVER_MENU);
 
-        this.miNetServersConnectingDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
+        this.miNetServersConnectingDialogImage = Ptr::new_box(MI_Image::new(g.rm.spr_dialog, 224, 176, 0, 0, 192, 128, 1, 1, 0));
         this.miNetServersConnectingDialogText = Ptr::new_box(MI_HeaderText::new(g, "Connecting...", 640 / 2, 240 - 12));
 
         this.miNetServersConnectingDialogImage.set_visible(false);

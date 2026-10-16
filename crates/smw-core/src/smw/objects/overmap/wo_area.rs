@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_Area.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
@@ -32,7 +33,7 @@ pub struct OMO_Area {
 impl_base!(OMO_Area => io_over_map_object: IO_OverMapObject);
 
 impl OMO_Area {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, iNumAreas: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, iNumAreas: i16) -> Self {
         let mut this = OMO_Area {
             io_over_map_object: IO_OverMapObject::new(g, nspr, Vec2s::new(1280, 960), 5, 0, -1, -1, -1, -1, -1, -1, -1, -1),
             numareas: iNumAreas,
@@ -45,7 +46,7 @@ impl OMO_Area {
             totalTouchingPlayers: 0,
             touchingPlayer: Ptr::null(),
         };
-        this.iw = (this.spr.get_width() as i16 as i32 / 5) as i16;
+        this.iw = (g.rm.sprite(this.spr).get_width() as i16 as i32 / 5) as i16;
         this.collisionWidth = this.iw;
 
         this.objectType = object_area;
@@ -106,7 +107,7 @@ impl CObjectTrait for OMO_Area {
     crate::impl_cobject_plumbing!();
 
     fn draw(&mut self, g: &mut Game) {
-        self.spr.draw_src(g, self.ix as i32, self.iy as i32, &Rect { x: self.frame as i32, y: 0, w: self.iw as i32, h: self.ih as i32 });
+        g.rm.sprite(self.spr).draw_src(g, self.ix as i32, self.iy as i32, &Rect { x: self.frame as i32, y: 0, w: self.iw as i32, h: self.ih as i32 });
     }
 
     fn update(&mut self, g: &mut Game) {

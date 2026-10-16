@@ -33,8 +33,8 @@ impl UI_NetNewRoomMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
         let mut gp = g.ptr();
         let mut this = Box::<Self>::default();
-        let selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
-        let plain = Ptr::from_mut(&mut g.rm.menu_plain_field);
+        let selectfield = g.rm.spr_selectfield;
+        let plain = g.rm.menu_plain_field;
 
         this.miNetNewRoomNameField = Ptr::new_box(MI_TextField::new(plain, 70, 160, "Room name", 640 - 2 * 70, 230));
         this.miNetNewRoomNameField.set_data(g, &mut gp.netplay.newroom_name, NET_MAX_ROOM_NAME_LENGTH as i16);
@@ -59,7 +59,7 @@ impl UI_NetNewRoomMenu {
         this.add_control(create, pass, back, null, null);
         this.add_control(back, create, name, null, null);
 
-        this.miNetNewRoomCreatingDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
+        this.miNetNewRoomCreatingDialogImage = Ptr::new_box(MI_Image::new(g.rm.spr_dialog, 224, 176, 0, 0, 192, 128, 1, 1, 0));
         this.miNetNewRoomCreatingDialogText = Ptr::new_box(MI_HeaderText::new(g, "Creating...", 320, 240 - 12));
 
         this.miNetNewRoomCreatingDialogImage.set_visible(false);
@@ -69,7 +69,7 @@ impl UI_NetNewRoomMenu {
         this.add_non_control(di);
         this.add_non_control(dt);
 
-        let plain = Ptr::from_mut(&mut g.rm.menu_plain_field);
+        let plain = g.rm.menu_plain_field;
         this.miNetNewRoomLeftHeaderBar = Ptr::new_box(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0));
         this.miNetNewRoomRightHeaderBar = Ptr::new_box(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0));
         this.miNetNewRoomHeaderText = Ptr::new_box(MI_HeaderText::new(g, "New Room Settings Menu", 320, 5));

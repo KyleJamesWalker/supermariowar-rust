@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/BounceBlock.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gameplay_styles::TeamCollisionStyle;
@@ -22,7 +23,7 @@ pub struct B_BounceBlock {
 impl_base!(B_BounceBlock => io_block: IO_Block);
 
 impl B_BounceBlock {
-    pub fn new(g: &mut Game, nspr1: Ptr<gfxSprite>, pos: Vec2s, fHidden: bool) -> Self {
+    pub fn new(g: &mut Game, nspr1: SpriteId, pos: Vec2s, fHidden: bool) -> Self {
         let mut b = B_BounceBlock { io_block: IO_Block::new(g, nspr1, pos) };
         b.hidden = fHidden;
         b.ishiddentype = fHidden;

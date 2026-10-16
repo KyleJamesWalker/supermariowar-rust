@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_PacksField.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::file_list::SimpleFileList;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -18,7 +19,7 @@ crate::impl_base!(MI_PacksField => mi_announcer_field: MI_AnnouncerField);
 
 impl MI_PacksField {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(nspr: Ptr<gfxSprite>, x: i16, y: i16, name: impl Into<String>, width: i16, indent: i16, pList: Ptr<SimpleFileList>, code: MenuCodeEnum) -> Self {
+    pub fn new(nspr: SpriteId, x: i16, y: i16, name: impl Into<String>, width: i16, indent: i16, pList: Ptr<SimpleFileList>, code: MenuCodeEnum) -> Self {
         MI_PacksField { mi_announcer_field: MI_AnnouncerField::new(nspr, x, y, name, width, indent, pList), itemChangedCode: code }
     }
 }

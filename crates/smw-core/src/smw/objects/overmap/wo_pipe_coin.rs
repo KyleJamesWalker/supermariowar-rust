@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_PipeCoin.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
@@ -31,7 +32,7 @@ pub struct OMO_PipeCoin {
 impl_base!(OMO_PipeCoin => io_over_map_object: IO_OverMapObject);
 
 impl OMO_PipeCoin {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, vel: Vec2f, pos: Vec2s, teamid: i16, colorid: i16, uncollectabletime: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, vel: Vec2f, pos: Vec2s, teamid: i16, colorid: i16, uncollectabletime: i16) -> Self {
         let mut this = OMO_PipeCoin {
             io_over_map_object: IO_OverMapObject::new(g, nspr, pos, 4, 8, 30, 30, 1, 1, 0, ((colorid as i32) << 5) as i16, 32, 32),
             iTeamID: teamid,
@@ -109,18 +110,18 @@ impl CObjectTrait for OMO_PipeCoin {
         let sparkleRect = Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 };
 
         if self.iUncollectableTime > 0 {
-            self.spr.draw_clip(g, x, y, &srcRect, ClipEdge::Bottom, 256);
+            g.rm.sprite(self.spr).draw_clip(g, x, y, &srcRect, ClipEdge::Bottom, 256);
 
             // Draw sparkles
             if self.iTeamID == -1 {
-                gp.rm.spr_shinesparkle.draw_clip(g, x, y, &sparkleRect, ClipEdge::Bottom, 256);
+                gp.rm.sprite(gp.rm.spr_shinesparkle).draw_clip(g, x, y, &sparkleRect, ClipEdge::Bottom, 256);
             }
         } else {
-            self.spr.draw_src(g, x, y, &srcRect);
+            g.rm.sprite(self.spr).draw_src(g, x, y, &srcRect);
 
             // Draw sparkles
             if self.iTeamID == -1 {
-                gp.rm.spr_shinesparkle.draw_src(g, x, y, &sparkleRect);
+                gp.rm.sprite(gp.rm.spr_shinesparkle).draw_src(g, x, y, &sparkleRect);
             }
         }
     }
@@ -151,7 +152,7 @@ impl CObjectTrait for OMO_PipeCoin {
             gp.game_values.gamemode.check_winner(g, player);
         }
 
-        g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_coinsparkle), self.ix, self.iy, 7, 4));
+        g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, g.rm.spr_coinsparkle, self.ix, self.iy, 7, 4));
 
         self.dead = true;
         false

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_Podobo.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
@@ -30,7 +31,7 @@ pub struct MO_Podobo {
 impl_base!(MO_Podobo => io_moving_object: IO_MovingObject);
 
 impl MO_Podobo {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, dVelY: f32, playerid: i16, teamid: i16, colorid: i16, isSpawned: bool) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s, dVelY: f32, playerid: i16, teamid: i16, colorid: i16, isSpawned: bool) -> Self {
         let mut o = MO_Podobo {
             io_moving_object: IO_MovingObject::new(g, nspr, pos, 4, 6, -1, -1, -1, -1, -1, -1, -1, -1),
             iColorOffsetY: 0,
@@ -87,9 +88,9 @@ impl CObjectTrait for MO_Podobo {
             h: self.ih as i32,
         };
         if self.fIsSpawned && self.vely < 0.0f32 {
-            self.spr.draw_clip(g, self.ix as i32, self.iy as i32, &srcRect, ClipEdge::Bottom, self.iHiddenPlane as i32);
+            g.rm.sprite(self.spr).draw_clip(g, self.ix as i32, self.iy as i32, &srcRect, ClipEdge::Bottom, self.iHiddenPlane as i32);
         } else {
-            self.spr.draw_src(g, self.ix as i32, self.iy as i32, &srcRect);
+            g.rm.sprite(self.spr).draw_src(g, self.ix as i32, self.iy as i32, &srcRect);
         }
     }
 

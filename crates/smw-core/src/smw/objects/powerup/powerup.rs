@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/Powerup.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -25,7 +26,7 @@ impl_base!(MO_Powerup => io_moving_object: IO_MovingObject);
 impl MO_Powerup {
     /// Pass `-1` for the C++ default arguments.
     #[allow(clippy::too_many_arguments)]
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>,
+    pub fn new(g: &mut Game, nspr: SpriteId,
         pos: Vec2s,
         iNumSpr: i16,
         aniSpeed: i16,
@@ -48,9 +49,9 @@ pub fn mo_powerup_draw<T: MO_PowerupTrait + ?Sized>(g: &mut Game, this: &mut T) 
     let o = this.pu();
     if o.state == 0 {
         let h = (o.ih as f32 - o.fy + o.desty) as i16;
-        o.spr.draw_src(g, (o.ix - o.collisionOffsetX) as i32, (o.iy - o.collisionOffsetY) as i32, &Rect { x: o.drawframe as i32, y: 0, w: o.iw as i32, h: h as i32 });
+        g.rm.sprite(o.spr).draw_src(g, (o.ix - o.collisionOffsetX) as i32, (o.iy - o.collisionOffsetY) as i32, &Rect { x: o.drawframe as i32, y: 0, w: o.iw as i32, h: h as i32 });
     } else {
-        o.spr.draw_src(g, (o.ix - o.collisionOffsetX) as i32, (o.iy - o.collisionOffsetY) as i32, &Rect { x: o.drawframe as i32, y: 0, w: o.iw as i32, h: o.ih as i32 });
+        g.rm.sprite(o.spr).draw_src(g, (o.ix - o.collisionOffsetX) as i32, (o.iy - o.collisionOffsetY) as i32, &Rect { x: o.drawframe as i32, y: 0, w: o.iw as i32, h: o.ih as i32 });
     }
 }
 

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/OnOffSwitchBlock.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
@@ -30,11 +31,11 @@ pub struct B_OnOffSwitchBlock {
 impl_base!(B_OnOffSwitchBlock => io_block: IO_Block);
 
 impl B_OnOffSwitchBlock {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, color: SwitchColor, iState: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s, color: SwitchColor, iState: i16) -> Self {
         let mut b = B_OnOffSwitchBlock { io_block: IO_Block::new(g, nspr, pos), m_color: SwitchColor::Red, iSrcX: 0 };
-        b.iw = (b.spr.get_width() as i16) >> 2;
+        b.iw = (g.rm.sprite(b.spr).get_width() as i16) >> 2;
         b.collisionWidth = b.iw;
-        b.ih = (b.spr.get_height() as i16) >> 2;
+        b.ih = (g.rm.sprite(b.spr).get_height() as i16) >> 2;
         b.collisionHeight = b.ih;
 
         b.m_color = color;
@@ -102,7 +103,7 @@ impl CObjectTrait for B_OnOffSwitchBlock {
     }
 
     fn draw(&mut self, g: &mut Game) {
-        self.spr.draw_src(
+        g.rm.sprite(self.spr).draw_src(
             g,
             self.ix as i32,
             self.iy as i32,

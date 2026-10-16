@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/PowerupBlock.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game_mode::*;
@@ -45,7 +46,7 @@ impl_base!(B_PowerupBlock => io_block: IO_Block);
 
 impl B_PowerupBlock {
     /// `piSettings` must hold at least `NUM_POWERUPS` entries (`objdata.iSettings`).
-    pub fn new(g: &mut Game, nspr1: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, aniSpeed: i16, fHidden: bool, piSettings: &[i16]) -> Self {
+    pub fn new(g: &mut Game, nspr1: SpriteId, pos: Vec2s, iNumSpr: i16, aniSpeed: i16, fHidden: bool, piSettings: &[i16]) -> Self {
         let mut b = B_PowerupBlock {
             io_block: IO_Block::new(g, nspr1, pos),
             iCountWeight: 0,
@@ -59,15 +60,15 @@ impl B_PowerupBlock {
             settings: [0; NUM_POWERUPS as usize],
         };
 
-        b.iw = (b.spr.get_width() as i16) >> 2;
-        b.ih = (b.spr.get_height() as i16) >> 1; //This sprite has two images (unused and used blocks)
+        b.iw = (g.rm.sprite(b.spr).get_width() as i16) >> 2;
+        b.ih = (g.rm.sprite(b.spr).get_height() as i16) >> 1; //This sprite has two images (unused and used blocks)
         b.collisionWidth = b.iw;
         b.timer = 0;
         b.side = true;
         b.iNumSprites = iNumSpr;
         b.animationSpeed = aniSpeed;
         b.animationTimer = 0;
-        b.animationWidth = b.spr.get_width() as i16;
+        b.animationWidth = g.rm.sprite(b.spr).get_width() as i16;
         b.drawFrame = 0;
 
         b.hidden = fHidden;
@@ -147,7 +148,7 @@ macro_rules! impl_powerup_block_plumbing {
 pub fn b_powerup_block_draw<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let b = this.pb();
     if !b.hidden {
-        b.spr.draw_src(
+        g.rm.sprite(b.spr).draw_src(
             g,
             b.ix as i32,
             b.iy as i32,

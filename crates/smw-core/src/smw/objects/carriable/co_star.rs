@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_Star.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
@@ -32,7 +33,7 @@ pub struct CO_Star {
 impl_base!(CO_Star => mo_carried_object: MO_CarriedObject);
 
 impl CO_Star {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, r#type: i16, id: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, r#type: i16, id: i16) -> Self {
         let mut o = CO_Star {
             mo_carried_object: MO_CarriedObject::new(g, nspr, Vec2s::zero(), 8, 8, 30, 30, 1, 1),
             timer: 0,
@@ -169,23 +170,23 @@ impl CObjectTrait for CO_Star {
             let src = Rect { x: 0, y: self.iOffsetY as i32, w: self.iw as i32, h: self.ih as i32 };
             if self.owner.iswarping() {
                 let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32) };
-                self.spr.draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);
+                g.rm.sprite(self.spr).draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);
             } else {
-                self.spr.draw_src(g, x, y, &src);
+                g.rm.sprite(self.spr).draw_src(g, x, y, &src);
             }
         } else if self.velx != 0.0 {
-            self.spr.draw_src(g, x, y, &Rect { x: 0, y: self.iOffsetY as i32, w: self.iw as i32, h: self.ih as i32 }); // keep the star still while it's moving
+            g.rm.sprite(self.spr).draw_src(g, x, y, &Rect { x: 0, y: self.iOffsetY as i32, w: self.iw as i32, h: self.ih as i32 }); // keep the star still while it's moving
         } else {
-            self.spr.draw_src(g, x, y, &Rect { x: self.drawframe as i32, y: self.iOffsetY as i32, w: self.iw as i32, h: self.ih as i32 });
+            g.rm.sprite(self.spr).draw_src(g, x, y, &Rect { x: self.drawframe as i32, y: self.iOffsetY as i32, w: self.iw as i32, h: self.ih as i32 });
         }
 
         let src = Rect { x: self.sparkledrawframe as i32, y: if self.iType != 0 { 0 } else { 32 }, w: 32, h: 32 };
         unsafe {
             if !self.owner.is_null() && self.owner.iswarping() {
                 let edge: ClipEdge = std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32);
-                gp.rm.spr_shinesparkle.draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);
+                gp.rm.sprite(gp.rm.spr_shinesparkle).draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);
             } else {
-                gp.rm.spr_shinesparkle.draw_src(g, x, y, &src);
+                gp.rm.sprite(gp.rm.spr_shinesparkle).draw_src(g, x, y, &src);
             }
         }
     }

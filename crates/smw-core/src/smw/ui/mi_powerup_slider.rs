@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_PowerupSlider.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -12,7 +13,7 @@ use crate::globals::*;
 pub struct MI_PowerupSlider {
     pub mi_slider_field: MI_SliderField,
 
-    pub m_sprPowerup: Ptr<gfxSprite>,
+    pub m_sprPowerup: SpriteId,
     pub m_powerupIndex: i16,
     pub m_halfWidth: i16,
 }
@@ -20,7 +21,7 @@ crate::impl_base!(MI_PowerupSlider => mi_slider_field: MI_SliderField);
 
 impl MI_PowerupSlider {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(nspr: Ptr<gfxSprite>, nsprSlider: Ptr<gfxSprite>, nsprPowerup: Ptr<gfxSprite>, x: i16, y: i16, width: i16, powerupIndex: i16) -> Self {
+    pub fn new(nspr: SpriteId, nsprSlider: SpriteId, nsprPowerup: SpriteId, x: i16, y: i16, width: i16, powerupIndex: i16) -> Self {
         let mut this = MI_PowerupSlider {
             mi_slider_field: MI_SliderField::new(nspr, nsprSlider, x, y, "", width, 0, 0),
             m_sprPowerup: nsprPowerup,
@@ -65,17 +66,17 @@ impl UI_ControlTrait for MI_PowerupSlider {
         let halfWidth = self.m_halfWidth as i32;
         let selY = (if self.fSelected { 32 } else { 0 }) + self.m_adjustmentY as i32;
 
-        self.m_spr.draw_src(g, x + 38, y, &Rect { x: 0, y: selY, w: halfWidth, h: 32 });
-        self.m_spr.draw_src(g, x + 38 + halfWidth, y, &Rect { x: 550 - width + halfWidth, y: selY, w: width - halfWidth - 38, h: 32 });
+        g.rm.sprite(self.m_spr).draw_src(g, x + 38, y, &Rect { x: 0, y: selY, w: halfWidth, h: 32 });
+        g.rm.sprite(self.m_spr).draw_src(g, x + 38 + halfWidth, y, &Rect { x: 550 - width + halfWidth, y: selY, w: width - halfWidth - 38, h: 32 });
 
         let iSpacing: i16 = ((width - 100) / ((self.m_items.len() as i16) as i32 - 1)) as i16;
         let mut iSpot: i16 = 0;
 
         for index in 0..self.m_items.len() as u32 {
             if index < (self.m_items.len() as u32).wrapping_sub(1) {
-                self.m_sprSlider.draw_src(g, x + iSpot as i32 + 56, y + 10, &Rect { x: 0, y: 0, w: iSpacing as i32, h: 13 });
+                g.rm.sprite(self.m_sprSlider).draw_src(g, x + iSpot as i32 + 56, y + 10, &Rect { x: 0, y: 0, w: iSpacing as i32, h: 13 });
             } else {
-                self.m_sprSlider.draw_src(g, x + iSpot as i32 + 56, y + 10, &Rect { x: 164, y: 0, w: 4, h: 13 });
+                g.rm.sprite(self.m_sprSlider).draw_src(g, x + iSpot as i32 + 56, y + 10, &Rect { x: 164, y: 0, w: 4, h: 13 });
             }
 
             iSpot = iSpot.wrapping_add(iSpacing);
@@ -83,9 +84,9 @@ impl UI_ControlTrait for MI_PowerupSlider {
 
         // size_t arithmetic in C++, truncated to int at the call
         let knobX = x.wrapping_add((self.m_index as i32).wrapping_mul(iSpacing as i32)).wrapping_add(54);
-        self.m_sprSlider.draw_src(g, knobX, y + 8, &Rect { x: 168, y: 0, w: 8, h: 16 });
-        self.m_sprSlider.draw_src(g, x + width - 34, y + 8, &Rect { x: self.m_index as i32 * 16, y: 16, w: 16, h: 16 });
-        self.m_sprPowerup.draw_src(g, x, y, &Rect { x: self.m_powerupIndex as i32 * 32, y: 0, w: 32, h: 32 });
+        g.rm.sprite(self.m_sprSlider).draw_src(g, knobX, y + 8, &Rect { x: 168, y: 0, w: 8, h: 16 });
+        g.rm.sprite(self.m_sprSlider).draw_src(g, x + width - 34, y + 8, &Rect { x: self.m_index as i32 * 16, y: 16, w: 16, h: 16 });
+        g.rm.sprite(self.m_sprPowerup).draw_src(g, x, y, &Rect { x: self.m_powerupIndex as i32 * 32, y: 0, w: 32, h: 32 });
 
         let drawLeft = self.m_index > 0;
         if self.m_wraps || drawLeft {

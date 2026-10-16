@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_AttackZone.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
@@ -33,7 +34,7 @@ impl_base!(MO_AttackZone => io_moving_object: IO_MovingObject);
 impl MO_AttackZone {
     pub fn new(g: &mut Game, playerId: i16, teamId: i16, pos: Vec2s, size: Vec2s, time: i16, style: KillStyle, dieoncollision: bool) -> Self {
         let mut o = MO_AttackZone {
-            io_moving_object: IO_MovingObject::new(g, Ptr::null(), pos, 1, 0, size.x, size.y, 0, 0, -1, -1, -1, -1),
+            io_moving_object: IO_MovingObject::new(g, SpriteId::NONE, pos, 1, 0, size.x, size.y, 0, 0, -1, -1, -1, -1),
             fDieOnCollision: false,
             iTimer: 0,
             iStyle: KillStyle::Stomp,

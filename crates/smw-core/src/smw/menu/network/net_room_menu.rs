@@ -46,8 +46,8 @@ impl UI_NetRoomMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
         let mut gp = g.ptr();
         let mut this = Box::<Self>::default();
-        let selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
-        let plain = Ptr::from_mut(&mut g.rm.menu_plain_field);
+        let selectfield = g.rm.spr_selectfield;
+        let plain = g.rm.menu_plain_field;
 
         this.miNetRoomName = Ptr::new_box(MI_Text::new(g, "", 40, 50, 0, true, TextAlign::LEFT));
 
@@ -99,7 +99,7 @@ impl UI_NetRoomMenu {
         this.add_control(send, start, start, field, back);
         this.add_control(back, start, start, send, field);
 
-        this.miNetRoomStartingDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
+        this.miNetRoomStartingDialogImage = Ptr::new_box(MI_Image::new(g.rm.spr_dialog, 224, 176, 0, 0, 192, 128, 1, 1, 0));
         this.miNetRoomStartingDialogText = Ptr::new_box(MI_HeaderText::new(g, "Starting...", 320, 240 - 40));
 
         this.miNetRoomStartingDialogImage.set_visible(false);
@@ -109,7 +109,7 @@ impl UI_NetRoomMenu {
         this.add_non_control(di);
         this.add_non_control(dt);
 
-        let plain = Ptr::from_mut(&mut g.rm.menu_plain_field);
+        let plain = g.rm.menu_plain_field;
         this.miNetRoomLeftHeaderBar = Ptr::new_box(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0));
         this.miNetRoomRightHeaderBar = Ptr::new_box(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0));
         this.miNetRoomHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Multiplayer Room Menu", 320, 5));

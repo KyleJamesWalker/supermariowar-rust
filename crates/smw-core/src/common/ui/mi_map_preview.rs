@@ -1,5 +1,6 @@
 //! Port of src/common/ui/MI_MapPreview.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
@@ -35,7 +36,7 @@ pub(crate) fn copy_map_name(src: &str) -> String {
 pub struct MI_MapPreview {
     pub ui_control: UI_Control,
 
-    pub spr: Ptr<gfxSprite>,
+    pub spr: SpriteId,
 
     pub surfaceMapBackground: gfxSprite,
     pub surfaceMapBlockLayer: gfxSprite,
@@ -51,7 +52,7 @@ pub struct MI_MapPreview {
 crate::impl_base!(MI_MapPreview => ui_control: UI_Control);
 
 impl MI_MapPreview {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, x: i16, y: i16, width: i16, indent: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, x: i16, y: i16, width: i16, indent: i16) -> Self {
         let surfaceMapBackground = gfxSprite::blank(g, (App::screenWidth / 2) as u32, (App::screenHeight / 2) as u32);
         let surfaceMapBlockLayer = gfxSprite::blank(g, (App::screenWidth / 2) as u32, (App::screenHeight / 2) as u32);
         let surfaceMapForeground = gfxSprite::blank(g, (App::screenWidth / 2) as u32, (App::screenHeight / 2) as u32);
@@ -102,10 +103,10 @@ impl MI_MapPreview {
         let y = self.m_pos.y as i32;
 
         //Draw the background for the map preview
-        gp.rm.menu_dialog.draw_src(g, bx, y + 30, &Rect { x: 0, y: 0, w: 336, h: 254 });
-        gp.rm.menu_dialog.draw_src(g, bx + 336, y + 30, &Rect { x: 496, y: 0, w: 16, h: 254 });
-        gp.rm.menu_dialog.draw_src(g, bx, y + 284, &Rect { x: 0, y: 464, w: 336, h: 16 });
-        gp.rm.menu_dialog.draw_src(g, bx + 336, y + 284, &Rect { x: 496, y: 464, w: 16, h: 16 });
+        gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, bx, y + 30, &Rect { x: 0, y: 0, w: 336, h: 254 });
+        gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, bx + 336, y + 30, &Rect { x: 496, y: 0, w: 16, h: 254 });
+        gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, bx, y + 284, &Rect { x: 0, y: 464, w: 336, h: 16 });
+        gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, bx + 336, y + 284, &Rect { x: 496, y: 464, w: 16, h: 16 });
 
         self.rectDst.x = bx + 16;
 
@@ -162,7 +163,7 @@ impl MI_MapPreview {
         load_current_map_background(g);
         small_delay(g);
 
-        gp.get().g_map.pre_draw_preview_background_spr(g, &gp.get().rm.spr_background, self.surfaceMapBackground.get_surface(), false);
+        gp.get().g_map.pre_draw_preview_background_spr(g, &gp.get().rm.sprite(gp.get().rm.spr_background), self.surfaceMapBackground.get_surface(), false);
         small_delay(g);
 
         gp.g_map.pre_draw_preview_blocks(g, self.surfaceMapBlockLayer.get_surface(), false);

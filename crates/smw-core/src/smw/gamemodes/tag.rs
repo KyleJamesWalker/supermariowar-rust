@@ -149,8 +149,8 @@ impl CGameModeTrait for CGM_Tag {
                 "Tagged!".to_string(),
                 (-(VELJUMP as f64) * 1.5) as f32,
             ));
-            g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
+                g.rm.spr_fireballexplosion,
                 (other.center_x() as i32 - 16) as i16,
                 (other.center_y() as i32 - 16) as i16,
                 3,

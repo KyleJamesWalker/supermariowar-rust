@@ -30,7 +30,7 @@ pub fn load_map_hazards(g: &mut Game, fPreview: bool) {
             for iFireball in 0..hazard.iparam[0] {
                 let obj = Ptr::new_box(OMO_OrbitHazard::new(
                     g,
-                    Ptr::from_mut(&mut rm.spr_hazard_fireball[iPreview]),
+                    rm.spr_hazard_fireball[iPreview],
                     pos + Vec2s::new(16, 16),
                     (iFireball as i32 * 24) as f32,
                     hazard.dparam[0],
@@ -58,7 +58,7 @@ pub fn load_map_hazards(g: &mut Game, fPreview: bool) {
 
                 let obj = Ptr::new_box(OMO_OrbitHazard::new(
                     g,
-                    Ptr::from_mut(&mut rm.spr_hazard_rotodisc[iPreview]),
+                    rm.spr_hazard_rotodisc[iPreview],
                     pos + Vec2s::new(16, 16),
                     hazard.dparam[2],
                     hazard.dparam[0],

@@ -66,9 +66,9 @@ impl PlayerAwardEffects {
                 let src = Rect { x: self.awards[k as usize] as i32 * 16, y: 0, w: 16, h: 16 };
                 if player.iswarping() {
                     let edge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);
-                    gp.rm.spr_award.draw_clip(g, awardx as i32, awardy as i32, &src, edge, player.get_warp_plane() as i32);
+                    gp.rm.sprite(gp.rm.spr_award).draw_clip(g, awardx as i32, awardy as i32, &src, edge, player.get_warp_plane() as i32);
                 } else {
-                    gp.rm.spr_award.draw_src(g, awardx as i32, awardy as i32, &src);
+                    gp.rm.sprite(gp.rm.spr_award).draw_src(g, awardx as i32, awardy as i32, &src);
                 }
             }
         }
@@ -97,7 +97,7 @@ impl PlayerAwardEffects {
             let awardvely: f32 = 7.0f32 * sinangle;
 
             g.eyecandy[2].emplace(EC_ExplodingAward::new(
-                Ptr::from_mut(&mut g.rm.spr_awardsolid),
+                g.rm.spr_awardsolid,
                 awardx,
                 awardy,
                 awardvelx,
@@ -124,7 +124,7 @@ impl PlayerAwardEffects {
 
             if numawards as i32 == MAXAWARDS {
                 g.eyecandy[2].emplace(EC_SwirlingAward::new(
-                    Ptr::from_mut(&mut g.rm.spr_awardkillsinrow),
+                    g.rm.spr_awardkillsinrow,
                     (player.center_x() as i32 - 8) as i16,
                     (player.center_y() as i32 - 8) as i16,
                     angle,
@@ -140,7 +140,7 @@ impl PlayerAwardEffects {
                 ));
             } else {
                 g.eyecandy[2].emplace(EC_SwirlingAward::new(
-                    Ptr::from_mut(&mut g.rm.spr_awardkillsinrow),
+                    g.rm.spr_awardkillsinrow,
                     (player.center_x() as i32 - 8) as i16,
                     (player.center_y() as i32 - 8) as i16,
                     angle,
@@ -178,7 +178,7 @@ impl PlayerAwardEffects {
 
             if numawards as i32 == MAXAWARDS {
                 g.eyecandy[2].emplace(EC_RocketAward::new(
-                    Ptr::from_mut(&mut g.rm.spr_awardkillsinrow),
+                    g.rm.spr_awardkillsinrow,
                     (player.center_x() as i32 - 8) as i16,
                     (player.center_y() as i32 - 8) as i16,
                     awardvelx,
@@ -193,7 +193,7 @@ impl PlayerAwardEffects {
                 ));
             } else {
                 g.eyecandy[2].emplace(EC_RocketAward::new(
-                    Ptr::from_mut(&mut g.rm.spr_awardkillsinrow),
+                    g.rm.spr_awardkillsinrow,
                     (player.center_x() as i32 - 8) as i16,
                     (player.center_y() as i32 - 8) as i16,
                     awardvelx,
@@ -214,9 +214,9 @@ impl PlayerAwardEffects {
         if g.game_values.awardstyle == AwardStyle::Halo {
             self.add_exploding(g, player);
         } else if g.game_values.awardstyle == AwardStyle::Souls && player.killsinrow as i32 >= MINAWARDSNEEDED {
-            g.eyecandy[2].emplace(EC_SoulsAward::new(
-                Ptr::from_mut(&mut g.rm.spr_awardsouls),
-                Ptr::from_mut(&mut g.rm.spr_awardsoulspawn),
+            g.eyecandy[2].emplace(EC_SoulsAward::new(&g.rm, 
+                g.rm.spr_awardsouls,
+                g.rm.spr_awardsoulspawn,
                 player.center_x(),
                 player.center_y(),
                 60,
@@ -349,8 +349,8 @@ impl PlayerAwardEffects {
             let awardvelx: f32 = vel * cosf(angle);
             let awardvely: f32 = vel * sinf(angle);
 
-            g.eyecandy[2].emplace(EC_FallingObject::new(
-                Ptr::from_mut(&mut g.rm.spr_bonus),
+            g.eyecandy[2].emplace(EC_FallingObject::new(&g.rm, 
+                g.rm.spr_bonus,
                 (player.center_x() as i32 - 8) as i16,
                 (player.center_y() as i32 - 8) as i16,
                 awardvelx,

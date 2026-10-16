@@ -429,10 +429,11 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
             *song = data_path(g, &song_name).into();
             for k in 0..4 {
                 if gv.playercontrol[k] > 0 {
-                    gp.get().rm.spr_player[k] = match crate::smw::net::net_skin_path(g, k) {
+                    let strip = match crate::smw::net::net_skin_path(g, k) {
                         Some(path) => gp.rm.load_full_skin_path(g, Path::new(&path), k as i16),
                         None => gp.get().rm.load_full_skin(g, gv.skinids[k], gv.colorids[k]),
                     };
+                    gp.rm.set_strip(gp.rm.spr_player[k], strip);
                 }
             }
         }

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_Hammer.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::Spotlight;
@@ -34,9 +35,9 @@ impl_base!(MO_Hammer => io_moving_object: IO_MovingObject);
 
 impl MO_Hammer {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, vel: Vec2f, aniSpeed: i16, iGlobalID: i16, teamID: i16, iColorID: i16, superHammer: bool) -> Self {
-        let iCollisionWidth = (nspr.get_width() as i16 as i32 / iNumSpr as i32) as i16;
-        let iCollisionHeight = ((nspr.get_height() as i16 as i32) >> 2) as i16;
+    pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s, iNumSpr: i16, vel: Vec2f, aniSpeed: i16, iGlobalID: i16, teamID: i16, iColorID: i16, superHammer: bool) -> Self {
+        let iCollisionWidth = (g.rm.sprite(nspr).get_width() as i16 as i32 / iNumSpr as i32) as i16;
+        let iCollisionHeight = ((g.rm.sprite(nspr).get_height() as i16 as i32) >> 2) as i16;
         let mut o = MO_Hammer {
             io_moving_object: IO_MovingObject::new(g, nspr, pos, iNumSpr, aniSpeed, iCollisionWidth, iCollisionHeight, 0, 0, -1, -1, -1, -1),
             colorOffset: 0,
@@ -170,7 +171,7 @@ impl CObjectTrait for MO_Hammer {
     }
 
     fn draw(&mut self, g: &mut Game) {
-        self.spr.draw_src(
+        g.rm.sprite(self.spr).draw_src(
             g,
             self.ix as i32 - self.collisionOffsetX as i32,
             self.iy as i32 - self.collisionOffsetY as i32,

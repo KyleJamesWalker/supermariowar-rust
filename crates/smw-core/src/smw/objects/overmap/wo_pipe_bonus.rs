@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_PipeBonus.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
@@ -28,7 +29,7 @@ pub struct OMO_PipeBonus {
 impl_base!(OMO_PipeBonus => io_over_map_object: IO_OverMapObject);
 
 impl OMO_PipeBonus {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, vel: Vec2f, pos: Vec2s, r#type: i16, duration: i16, uncollectabletime: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, vel: Vec2f, pos: Vec2s, r#type: i16, duration: i16, uncollectabletime: i16) -> Self {
         let mut this = OMO_PipeBonus {
             io_over_map_object: IO_OverMapObject::new(g, nspr, pos, 4, 8, 30, 30, 1, 1, 0, ((r#type as i32) << 5) as i16, 32, 32),
             iType: r#type,
@@ -81,9 +82,9 @@ impl CObjectTrait for OMO_PipeBonus {
         let x = self.ix as i32 - self.collisionOffsetX as i32;
         let y = self.iy as i32 - self.collisionOffsetY as i32;
         if self.iUncollectableTime > 0 {
-            self.spr.draw_clip(g, x, y, &srcRect, ClipEdge::Bottom, 256);
+            g.rm.sprite(self.spr).draw_clip(g, x, y, &srcRect, ClipEdge::Bottom, 256);
         } else {
-            self.spr.draw_src(g, x, y, &srcRect);
+            g.rm.sprite(self.spr).draw_src(g, x, y, &srcRect);
         }
     }
 
@@ -97,8 +98,8 @@ impl CObjectTrait for OMO_PipeBonus {
         if self.iType == 5 {
             if !player.is_shielded() {
                 self.dead = true;
-                g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
+                    g.rm.spr_fireballexplosion,
                     (self.ix as i32 - 1) as i16,
                     (self.iy as i32 - 1) as i16,
                     3,
