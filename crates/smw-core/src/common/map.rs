@@ -7,6 +7,7 @@ pub mod map_reader17xx;
 pub mod map_reader18xx;
 pub mod map_reader_constants;
 
+use crate::common::gfx::soft_surface::Surface;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::file_io::BinaryFile;
@@ -248,11 +249,11 @@ fn get_screen_height(iSize: i32) -> i32 {
 }
 
 #[inline]
-unsafe fn blit(src: *mut SDL_Surface, srcrect: *const Rect, dst: *mut SDL_Surface, dstrect: *mut Rect) -> i32 {
+unsafe fn blit(src: *mut Surface, srcrect: *const Rect, dst: *mut Surface, dstrect: *mut Rect) -> i32 {
     crate::common::gfx::blit::upper_blit(src, srcrect, dst, dstrect)
 }
 
-pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter: bool, dst: *mut SDL_Surface) {
+pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter: bool, dst: *mut Surface) {
         let mut gp = g.ptr();
     unsafe {
         let s = iSize as usize;
@@ -397,7 +398,7 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
     }
 }
 
-unsafe fn blit_platform_tile(g: &mut Game, tile: &TilesetTile, iSize: i16, bltrect: &mut Rect, dst: *mut SDL_Surface) {
+unsafe fn blit_platform_tile(g: &mut Game, tile: &TilesetTile, iSize: i16, bltrect: &mut Rect, dst: *mut Surface) {
     let mut gp = g.ptr();
     if tile.iID >= 0 {
         blit(
@@ -429,7 +430,7 @@ pub fn draw_platform(g: &mut Game,
     iPlatformHeight: i16,
     fDrawPlatform: bool,
     fDrawShadow: bool,
-    dst: *mut SDL_Surface,
+    dst: *mut Surface,
 ) {
         let mut gp = g.ptr();
     unsafe {
@@ -672,12 +673,12 @@ pub struct CMap {
     pub iTileAnimationFrame: i16,
 
     pub iAnimatedBackgroundLayers: i16,
-    pub animatedFrontmapSurface: *mut SDL_Surface,
+    pub animatedFrontmapSurface: *mut Surface,
     pub animatedTilesSurface: gfxSprite,
 
     pub iAnimatedTileCount: i16,
     pub iAnimatedVectorIndices: [i16; NUM_FRAMES_BETWEEN_TILE_ANIMATION as usize + 1],
-    pub animatedBackmapSurface: *mut SDL_Surface,
+    pub animatedBackmapSurface: *mut Surface,
 
     pub platformdrawlayer: [Vec<Ptr<MovingPlatform>>; 5],
 
@@ -1631,8 +1632,7 @@ impl CMap {
 
         //Save the screenshot with the same name as the map file
         unsafe {
-            let c = CString::new(sFile).unwrap();
-            IMG_SavePNG(sThumbnail.get_surface(), c.as_ptr());
+            let _ = (*sThumbnail.get_surface()).save_png(std::path::Path::new(sFile));
         }
     }
 
@@ -1821,7 +1821,7 @@ impl CMap {
         }
     }
 
-    fn draw(&mut self, g: &mut Game, targetSurface: *mut SDL_Surface, layer: i32) {
+    fn draw(&mut self, g: &mut Game, targetSurface: *mut Surface, layer: i32) {
         let mut gp = g.ptr();
         unsafe {
             self.bltrect.x = 0;
@@ -1935,7 +1935,7 @@ impl CMap {
         }
     }
 
-    fn draw_thumbnail_hazards(&mut self, g: &mut Game, targetSurface: *mut SDL_Surface) {
+    fn draw_thumbnail_hazards(&mut self, g: &mut Game, targetSurface: *mut Surface) {
         unsafe {
             for hazard in &self.maphazards {
                 draw_map_hazard(g, hazard, 2, false, targetSurface);
@@ -1943,7 +1943,7 @@ impl CMap {
         }
     }
 
-    fn draw_thumbnail_platforms(&mut self, g: &mut Game, targetSurface: *mut SDL_Surface) {
+    fn draw_thumbnail_platforms(&mut self, g: &mut Game, targetSurface: *mut Surface) {
         unsafe {
             for &platform in &self.platforms {
                 let mut p = platform;
@@ -2014,7 +2014,7 @@ impl CMap {
         }
     }
 
-    pub fn pre_draw_preview_warps(&mut self, g: &mut Game, targetSurface: *mut SDL_Surface, fThumbnail: bool) {
+    pub fn pre_draw_preview_warps(&mut self, g: &mut Game, targetSurface: *mut Surface, fThumbnail: bool) {
         let mut iTileSize: i16 = 16;
         let mut iScreenshotSize: usize = 0;
 
@@ -2040,7 +2040,7 @@ impl CMap {
         }
     }
 
-    pub fn pre_draw_preview_map_items(&mut self, g: &mut Game, targetSurface: *mut SDL_Surface, fThumbnail: bool) {
+    pub fn pre_draw_preview_map_items(&mut self, g: &mut Game, targetSurface: *mut Surface, fThumbnail: bool) {
         let mut iTileSize: i32 = 16;
         let mut iScreenshotSize: usize = 0;
 
@@ -2059,7 +2059,7 @@ impl CMap {
         }
     }
 
-    pub fn pre_draw_preview_background(&mut self, g: &mut Game, targetSurface: *mut SDL_Surface, fThumbnail: bool) {
+    pub fn pre_draw_preview_background(&mut self, g: &mut Game, targetSurface: *mut Surface, fThumbnail: bool) {
         self.draw_preview(g, targetSurface, 0, fThumbnail);
         small_delay(g);
 
@@ -2075,8 +2075,8 @@ impl CMap {
         }
     }
 
-    /// `preDrawPreviewBackground(gfxSprite*, SDL_Surface*, bool)`
-    pub fn pre_draw_preview_background_spr(&mut self, g: &mut Game, background: &gfxSprite, targetSurface: *mut SDL_Surface, fThumbnail: bool) {
+    /// `preDrawPreviewBackground(gfxSprite*, Surface*, bool)`
+    pub fn pre_draw_preview_background_spr(&mut self, g: &mut Game, background: &gfxSprite, targetSurface: *mut Surface, fThumbnail: bool) {
         let srcrect = Rect { x: 0, y: 0, w: App::screenWidth, h: App::screenHeight };
 
         let mut dstrect = Rect { x: 0, y: 0, w: 0, h: 0 };
@@ -2095,11 +2095,11 @@ impl CMap {
         self.pre_draw_preview_background(g, targetSurface, fThumbnail);
     }
 
-    pub fn pre_draw_preview_blocks(&mut self, g: &mut Game, targetSurface: *mut SDL_Surface, fThumbnail: bool) {
+    pub fn pre_draw_preview_blocks(&mut self, g: &mut Game, targetSurface: *mut Surface, fThumbnail: bool) {
         if !fThumbnail {
             unsafe {
-                crate::common::gfx::blit::fill_rect(targetSurface, null(), SDL_MapRGB((*targetSurface).format, 255, 0, 255));
-                SDL_SetColorKey(targetSurface, SDL_bool::SDL_TRUE as i32, SDL_MapRGB((*targetSurface).format, 255, 0, 255));
+                crate::common::gfx::blit::fill_rect(targetSurface, null(), (*targetSurface).map_rgb(255, 0, 255));
+                (*targetSurface).color_key = Some((*targetSurface).map_rgb(255, 0, 255));
             }
             small_delay(g);
         }
@@ -2107,11 +2107,11 @@ impl CMap {
         self.draw_preview_blocks(g, targetSurface, fThumbnail);
     }
 
-    pub fn pre_draw_preview_foreground(&mut self, g: &mut Game, targetSurface: *mut SDL_Surface, fThumbnail: bool) {
+    pub fn pre_draw_preview_foreground(&mut self, g: &mut Game, targetSurface: *mut Surface, fThumbnail: bool) {
         if !fThumbnail {
             unsafe {
-                crate::common::gfx::blit::fill_rect(targetSurface, null(), SDL_MapRGB((*targetSurface).format, 255, 0, 255));
-                SDL_SetColorKey(targetSurface, SDL_bool::SDL_TRUE as i32, SDL_MapRGB((*targetSurface).format, 255, 0, 255));
+                crate::common::gfx::blit::fill_rect(targetSurface, null(), (*targetSurface).map_rgb(255, 0, 255));
+                (*targetSurface).color_key = Some((*targetSurface).map_rgb(255, 0, 255));
             }
             small_delay(g);
         }
@@ -2125,7 +2125,7 @@ impl CMap {
         self.draw_preview(g, targetSurface, 3, fThumbnail);
     }
 
-    fn draw_preview(&mut self, g: &mut Game, targetSurface: *mut SDL_Surface, layer: i32, fThumbnail: bool) {
+    fn draw_preview(&mut self, g: &mut Game, targetSurface: *mut Surface, layer: i32, fThumbnail: bool) {
         let mut gp = g.ptr();
         let mut iTilesetSize: i16 = 1;
 
@@ -2163,7 +2163,7 @@ impl CMap {
         }
     }
 
-    fn draw_preview_blocks(&mut self, g: &mut Game, targetSurface: *mut SDL_Surface, fThumbnail: bool) {
+    fn draw_preview_blocks(&mut self, g: &mut Game, targetSurface: *mut Surface, fThumbnail: bool) {
         let mut iBlockSize: i32 = PREVIEWTILESIZE;
 
         if fThumbnail {
@@ -2242,16 +2242,9 @@ impl CMap {
     pub fn predrawforeground(&mut self, g: &mut Game, foregroundspr: &gfxSprite) {
         unsafe {
             let s = foregroundspr.get_surface();
-            if (*s).flags & SDL_RLEACCEL != 0 {
-                SDL_LockSurface(s);
-            }
 
-            crate::common::gfx::blit::fill_rect(s, null(), SDL_MapRGB((*s).format, 255, 0, 255));
-            SDL_SetColorKey(s, SDL_bool::SDL_TRUE as i32, SDL_MapRGB((*s).format, 255, 0, 255));
-
-            if (*s).flags & SDL_RLEACCEL != 0 {
-                SDL_UnlockSurface(s);
-            }
+            crate::common::gfx::blit::fill_rect(s, null(), (*s).map_rgb(255, 0, 255));
+            (*s).color_key = Some((*s).map_rgb(255, 0, 255));
 
             self.draw(g, s, 2);
             self.draw(g, s, 3);
@@ -2278,7 +2271,7 @@ impl CMap {
                 self.animatedTilesSurface = gfxSprite::blank(g, 1024, 1024);
                 let ats = self.animatedTilesSurface.get_surface();
 
-                let iTransparentColor = SDL_MapRGB((*ats).format, 255, 0, 255);
+                let iTransparentColor = (*ats).map_rgb(255, 0, 255);
 
                 let mut iter = 0usize;
                 let lim = self.animatedtiles.len();
@@ -2796,14 +2789,15 @@ pub(crate) mod tests {
         GLOBALS.lock().unwrap_or_else(|e| e.into_inner())
     }
 
-    /// Brings up the globals `CMap::load_map` touches, against the repository's data/ directory.
-    pub(crate) fn init_map_globals(g: &mut Game) {
-        let mut gp = g.ptr();
+    static GAME: std::sync::atomic::AtomicPtr<Game> = std::sync::atomic::AtomicPtr::new(std::ptr::null_mut());
+
+    /// One game for the map tests, with the state `CMap::load_map` touches, against the repository's data/ directory.
+    pub(crate) fn map_game() -> &'static mut Game {
         INIT.call_once(|| unsafe {
+            let g = Game::create();
+            let mut gp = g.ptr();
             g.RootDataDirectory = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data").to_string();
-            std::env::set_var("SDL_VIDEODRIVER", "dummy");
-            SDL_Init(0);
-            g.screen = SDL_CreateRGBSurface(0, 640, 480, 32, 0, 0, 0, 0);
+            g.screen = crate::common::gfx::soft_surface::alloc_surface(crate::common::gfx::soft_surface::Surface::new_xrgb(640, 480));
             g.blitdest = g.screen;
             g.filterslist = Ptr::new_box(FiltersList::new(g));
             if !g.game_values.is_initialized() {
@@ -2819,7 +2813,9 @@ pub(crate) mod tests {
             }
             gp.g_tilesetmanager = Ptr::new_box(CTilesetManager::new(g, &convert_path(gp.get(), "gfx/packs/Classic")));
             g.g_map = Ptr::from_box(CMap::new());
+            GAME.store(g, std::sync::atomic::Ordering::Release);
         });
+        unsafe { &mut *GAME.load(std::sync::atomic::Ordering::Acquire) }
     }
 
     /// Same text as tools/ref/map_dump.cpp prints after `---`.
@@ -2962,10 +2958,9 @@ pub(crate) mod tests {
 
     #[test]
     fn loads_every_map_without_panicking() {
-        let g = crate::game::Game::create();
+        let g = map_game();
         let mut gp = g.ptr();
         let _g = lock_globals();
-        init_map_globals(g);
         let maps = all_map_files();
         assert!(maps.len() > 400, "found {} maps", maps.len());
         unsafe {
@@ -3063,13 +3058,12 @@ pub(crate) mod tests {
     /// Compares MapList against the original C++ (`tools/ref/map_list_dump.sh`); set `SMW_MAP_LIST_DUMP`.
     #[test]
     fn matches_cpp_map_list_dump() {
-        let g = crate::game::Game::create();
+        let g = map_game();
         let _g = lock_globals();
         let Ok(bin) = std::env::var("SMW_MAP_LIST_DUMP") else {
             eprintln!("SMW_MAP_LIST_DUMP not set; skipping C++ comparison");
             return;
         };
-        init_map_globals(g);
         let data = unsafe { g.RootDataDirectory.clone() };
         let out = std::process::Command::new(&bin).env("SDL_VIDEODRIVER", "dummy").arg(&data).output().unwrap();
         let text = String::from_utf8_lossy(&out.stdout);
@@ -3086,14 +3080,13 @@ pub(crate) mod tests {
     /// binary is absent; set `SMW_MAP_DUMP` to its path.
     #[test]
     fn matches_cpp_map_dump() {
-        let g = crate::game::Game::create();
+        let g = map_game();
         let mut gp = g.ptr();
         let _g = lock_globals();
         let Ok(bin) = std::env::var("SMW_MAP_DUMP") else {
             eprintln!("SMW_MAP_DUMP not set; skipping C++ comparison");
             return;
         };
-        init_map_globals(g);
         let data = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data");
         let mut mismatches = Vec::new();
         unsafe {

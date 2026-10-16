@@ -155,6 +155,18 @@ mod tests {
     use std::ffi::CString;
     use std::path::{Path, PathBuf};
 
+    /// The raw pixel value at (x, y) of an SDL surface, in its own layout.
+    unsafe fn sdl_raw_pixel(surf: *mut SDL_Surface, x: i32, y: i32) -> u32 {
+        let bpp = (*(*surf).format).BytesPerPixel as i32;
+        let p = ((*surf).pixels as *const u8).add((y * (*surf).pitch + x * bpp) as usize);
+        match bpp {
+            1 => *p as u32,
+            2 => (p as *const u16).read_unaligned() as u32,
+            3 => *p as u32 | (*p.add(1) as u32) << 8 | (*p.add(2) as u32) << 16,
+            _ => (p as *const u32).read_unaligned(),
+        }
+    }
+
     fn sdl_pixels(surf: *mut SDL_Surface) -> Vec<u32> {
         unsafe {
             let mut out = Vec::new();
@@ -223,7 +235,7 @@ mod tests {
                     }
                     let (w, h) = image.size();
                     for (x, y) in [(0, 0), (w - 1, 0), (0, h - 1), (w / 2, h / 2)] {
-                        assert_eq!(image.raw_pixel(x, y), crate::common::gfx::get_raw_pixel(raw, x, y), "{} raw pixel", path.display());
+                        assert_eq!(image.raw_pixel(x, y), sdl_raw_pixel(raw, x, y), "{} raw pixel", path.display());
                     }
                     SDL_FreeFormat(fmt);
                     SDL_FreeSurface(conv);

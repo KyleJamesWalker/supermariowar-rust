@@ -6,7 +6,6 @@ use smw::common::gfx::soft_surface::Rect;
 use smw::common::gfx::gfx_font::gfxFont;
 use smw::common::gfx::gfx_sprite::{ClipEdge, ImageLoader};
 use smw::common::gfx::*;
-use smw::globals::*;
 use std::path::Path;
 
 fn main() {

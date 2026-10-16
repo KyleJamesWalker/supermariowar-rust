@@ -2,6 +2,7 @@
 //!
 //! SDL_VIDEODRIVER=dummy cargo run --release --example map_render -- <datadir> <outdir> <mapfile>...
 
+use smw::common::gfx::soft_surface::Surface;
 use smw::common::file_list::{FiltersList, GraphicsList, SkinList};
 use smw::common::game_values::CGameValues;
 use smw::common::gfx::gfx_init;
@@ -10,14 +11,9 @@ use smw::common::map::{read_type_full, CMap};
 use smw::common::resource_manager::CResourceManager;
 use smw::common::tileset_manager::CTilesetManager;
 use smw::globals::*;
-use sdl2::sys::{SDL_FreeSurface, SDL_RWFromFile, SDL_SaveBMP_RW, SDL_Surface};
-use std::ffi::CString;
 
-fn save_bmp(s: *mut SDL_Surface, path: &str) {
-    let c = CString::new(path).unwrap();
-    unsafe {
-        SDL_SaveBMP_RW(s, SDL_RWFromFile(c.as_ptr(), b"wb\0".as_ptr() as *const _), 1);
-    }
+fn save_bmp(s: *mut Surface, path: &str) {
+    unsafe { (*s).save_bmp(std::path::Path::new(path)).expect("save bmp") };
 }
 
 unsafe fn draw_map(g: &mut smw::game::Game) {

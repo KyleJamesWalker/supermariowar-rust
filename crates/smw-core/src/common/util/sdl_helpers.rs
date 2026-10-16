@@ -1,9 +1,6 @@
 //! Port of src/common/util/SdlHelpers.cpp
 
-use sdl2::sys::{
-    SDL_DestroyRenderer, SDL_DestroyTexture, SDL_DestroyWindow, SDL_FreeSurface, SDL_Renderer,
-    SDL_Surface, SDL_Texture, SDL_Window,
-};
+use sdl2::sys::{SDL_DestroyRenderer, SDL_DestroyTexture, SDL_DestroyWindow, SDL_Renderer, SDL_Texture, SDL_Window};
 use std::ptr::null_mut;
 
 macro_rules! sdl_unique_ptr {
@@ -56,7 +53,6 @@ macro_rules! sdl_unique_ptr {
 sdl_unique_ptr!(SdlWindowPtr, SDL_Window, SDL_DestroyWindow);
 sdl_unique_ptr!(SdlRendererPtr, SDL_Renderer, SDL_DestroyRenderer);
 sdl_unique_ptr!(SdlTexturePtr, SDL_Texture, SDL_DestroyTexture);
-sdl_unique_ptr!(SdlSurfacePtr, SDL_Surface, SDL_FreeSurface);
 
 /// The editors' poll: the last event stays in `event` when the queue runs dry, as sdl2-compat leaves it.
 pub fn poll_event(event: &mut crate::common::editor_event::EditorEvent) -> i32 {

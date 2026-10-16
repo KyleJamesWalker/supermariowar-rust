@@ -1,9 +1,10 @@
 //! Port of src/common/gfx/gfxSDL.cpp
 
+use crate::common::gfx::soft_surface::{alloc_surface, free_surface, Surface};
 use crate::game::Game;
 use crate::common::path::convert_path;
 use crate::globals::*;
-use sdl2::sys::image::{IMG_Init, IMG_InitFlags_IMG_INIT_PNG, IMG_Linked_Version, IMG_Quit, IMG_SavePNG};
+use sdl2::sys::image::{IMG_Init, IMG_InitFlags_IMG_INIT_PNG, IMG_Linked_Version, IMG_Quit};
 use sdl2::sys::*;
 use std::ffi::{CStr, CString};
 use crate::services::services;
@@ -45,20 +46,14 @@ unsafe fn quit_sdl() {
     SDL_Quit();
 }
 
-unsafe fn create_screen_surface() -> *mut SDL_Surface {
-    let surface =
-        SDL_CreateRGBSurface(0x0, GFX_SCREEN_W, GFX_SCREEN_H, 32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
-    if surface.is_null() {
-        throw_error(format!("Couldn't create video buffer: {}\n", sdl_error()));
-    }
-
-    surface
+fn create_screen_surface() -> *mut Surface {
+    alloc_surface(Surface::new(GFX_SCREEN_W, GFX_SCREEN_H))
 }
 
 /// The screen surface the game draws on. The window, renderer and texture that show it are the video service's
 /// (smw-sdl2).
 pub struct GraphicsSDL {
-    sdl_screen_surface: *mut SDL_Surface,
+    sdl_screen_surface: *mut Surface,
     pub _alias: Aliased,
 }
 
@@ -71,7 +66,7 @@ impl Default for GraphicsSDL {
 impl Drop for GraphicsSDL {
     fn drop(&mut self) {
         unsafe {
-            SDL_FreeSurface(self.sdl_screen_surface);
+            free_surface(self.sdl_screen_surface);
 
             quit_sdl();
         }
@@ -95,7 +90,7 @@ impl GraphicsSDL {
                 "[gfx] Game window initialized ({}x{}, {}bpp)",
                 (*self.sdl_screen_surface).w,
                 (*self.sdl_screen_surface).h,
-                (*(*self.sdl_screen_surface).format).BitsPerPixel
+                32
             );
 
             g.screen = self.sdl_screen_surface;
@@ -115,11 +110,8 @@ impl GraphicsSDL {
 
     pub fn flip_screen(&self, g: &mut Game) {
         let mut gp = g.ptr();
-        let pixels = unsafe {
-            let s = &*self.sdl_screen_surface;
-            debug_assert_eq!(s.pitch, GFX_SCREEN_W * 4);
-            std::slice::from_raw_parts(s.pixels as *const u32, (GFX_SCREEN_W * GFX_SCREEN_H) as usize)
-        };
+        let screen = unsafe { &*self.sdl_screen_surface };
+        let pixels = &screen.pixels[..];
         #[cfg(not(target_os = "emscripten"))]
         let overlay = crate::smw::touch::overlay(g);
         #[cfg(target_os = "emscripten")]
@@ -137,12 +129,9 @@ impl GraphicsSDL {
         let path_format = "screenshots/%Y-%m-%d_%H%M%S.png";
         let path = convert_path(g, &strftime_local(path_format));
 
-        let cpath = CString::new(path.as_bytes()).unwrap();
-        unsafe {
-            if IMG_SavePNG(self.sdl_screen_surface, cpath.as_ptr()) != 0 {
-                eprintln!("[gfx] Couldn't write the screenshot to file: {}", sdl_error());
-                return;
-            }
+        if let Err(e) = unsafe { (*self.sdl_screen_surface).save_png(std::path::Path::new(&path)) } {
+            eprintln!("[gfx] Couldn't write the screenshot to file: {}", e);
+            return;
         }
 
         println!("[gfx] Screenshot saved to file: {}", path);

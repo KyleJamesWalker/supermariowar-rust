@@ -1,5 +1,6 @@
 //! Port of src/common/TilesetManager.cpp
 
+use crate::common::gfx::soft_surface::{BlendMode, Surface, SurfacePtr};
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::file_io::BinaryFile;
@@ -9,9 +10,7 @@ use crate::common::path::{convert_path, convert_path_pack};
 use crate::common::tile_types::*;
 use crate::common::util::container_helpers;
 use crate::common::util::dir_iterator::SubdirsIterator;
-use crate::common::util::sdl_helpers::SdlSurfacePtr;
 use crate::globals::{Aliased, Ptr};
-use sdl2::sys::{SDL_CreateRGBSurfaceWithFormat, SDL_GetError, SDL_Surface, SDL_UpperBlit};
 use std::collections::HashSet;
 use std::ffi::CStr;
 use std::path::{Path, PathBuf};
@@ -69,17 +68,10 @@ fn load_image_or_downscale(g: &mut Game, path: &Path, largeRes: &gfxSprite) -> g
 
             unsafe {
                 let large = largeRes.get_surface();
-                let format = (*large).format;
-                let surf = SdlSurfacePtr::new(SDL_CreateRGBSurfaceWithFormat(
-                    0,
-                    largeRes.get_width() / 2,
-                    largeRes.get_height() / 2,
-                    (*format).BitsPerPixel as i32,
-                    (*format).format,
-                ));
-                if crate::common::gfx::blit::upper_blit(large, null_mut(), surf.get(), null_mut()) < 0 {
-                    eprintln!("SDL_BlitSurface error: {}", CStr::from_ptr(SDL_GetError()).to_string_lossy());
-                }
+                let alpha = (*large).alpha;
+                let blend = if alpha { BlendMode::Blend } else { BlendMode::None };
+                let surf = SurfacePtr::new(Surface { alpha, blend, ..Surface::new(largeRes.get_width() / 2, largeRes.get_height() / 2) });
+                crate::common::gfx::blit::upper_blit(large, null_mut(), surf.get(), null_mut());
 
                 gfxSprite::from_surface(surf, None)
             }
@@ -164,7 +156,7 @@ impl CTileset {
         }
     }
 
-    pub fn surface(&self, size: usize) -> *mut SDL_Surface {
+    pub fn surface(&self, size: usize) -> *mut Surface {
         self.sprite(size as i16).get_surface()
     }
 
@@ -194,7 +186,7 @@ impl CTileset {
         new_type
     }
 
-    pub fn draw(&self, dstSurface: *mut SDL_Surface, tileSize: i16, srcRect: *mut Rect, dstRect: *mut Rect) {
+    pub fn draw(&self, dstSurface: *mut Surface, tileSize: i16, srcRect: *mut Rect, dstRect: *mut Rect) {
         unsafe {
             crate::common::gfx::blit::upper_blit(self.surface(tileSize as usize), srcRect, dstSurface, dstRect);
         }
@@ -307,7 +299,7 @@ impl CTilesetManager {
 
     #[allow(clippy::too_many_arguments)]
     pub fn draw(
-        &mut self, g: &mut Game, dstSurface: *mut SDL_Surface,
+        &mut self, g: &mut Game, dstSurface: *mut Surface,
         iTilesetID: i16,
         iTileSize: i16,
         iSrcTileCol: i16,

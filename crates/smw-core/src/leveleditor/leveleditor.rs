@@ -32,7 +32,7 @@ use sdl2::sys::image::IMG_SavePNG;
 use crate::common::editor_event::EditorEvent;
 use crate::common::util::sdl_helpers::poll_event;
 use sdl2::sys::SDL_KeyCode::*;
-use sdl2::sys::{SDL_EventType, SDL_FillRect, SDL_GetError, SDL_GetScancodeFromKey, SDL_KeyCode, SDL_Keycode, SDL_MapRGB, SDL_SetColorKey, SDL_Surface, SDL_UpperBlit, SDL_bool, SDL_Keymod, SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT};
+use sdl2::sys::{SDL_EventType, SDL_FillRect, SDL_GetError, SDL_GetScancodeFromKey, SDL_KeyCode, SDL_Keycode, SDL_MapRGB, SDL_SetColorKey, SDL_UpperBlit, SDL_bool, SDL_Keymod, SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT};
 use std::ffi::{CStr, CString};
 use std::io::Write;
 use std::path::Path;
@@ -387,10 +387,10 @@ impl MapPlatform {
         unsafe {
             if self.preview.get_surface().is_null() {
                 self.preview = gfxSprite::blank(g, 160, 120);
-                SDL_SetColorKey(self.preview.get_surface(), SDL_bool::SDL_TRUE as i32, SDL_MapRGB((*self.preview.get_surface()).format, 255, 0, 255));
+                (*self.preview.get_surface()).color_key = Some((*self.preview.get_surface()).map_rgb(255, 0, 255));
             }
 
-            crate::common::gfx::blit::fill_rect(self.preview.get_surface(), null(), SDL_MapRGB((*self.preview.get_surface()).format, 255, 0, 255));
+            crate::common::gfx::blit::fill_rect(self.preview.get_surface(), null(), (*self.preview.get_surface()).map_rgb(255, 0, 255));
 
             for iPlatformX in 0..MAPWIDTH as i16 {
                 for iPlatformY in 0..MAPHEIGHT as i16 {
@@ -711,7 +711,6 @@ pub fn inner_main(g: &mut Game) {
         g.g_tilesetmanager.save_tilesets();
 
         println!("\n---------------- shutdown ----------------");
-        crate::common::gfx::blit::report_fallbacks();
     }
 }
 
@@ -5195,8 +5194,7 @@ pub fn takescreenshot(g: &mut Game) {
             }
 
             szSaveFile.push_str(".png");
-            let c = CString::new(convert_path(g, &szSaveFile)).unwrap();
-            IMG_SavePNG(screenshot.get_surface(), c.as_ptr());
+            let _ = (*screenshot.get_surface()).save_png(std::path::Path::new(&convert_path(g, &szSaveFile)));
 
             println!("Screenshot taken: {}", szSaveFile);
 

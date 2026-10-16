@@ -1,14 +1,12 @@
 //! Port of src/common/gfx/gfxSprite.cpp
 
+use crate::common::gfx::soft_surface::{Surface, SurfacePtr};
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::color::{colors, RGB};
-use crate::common::gfx::{blit, gfx_adjusthiddenrects, rle_enabled, soft_image};
-use crate::common::util::sdl_helpers::SdlSurfacePtr;
+use crate::common::gfx::{blit, gfx_adjusthiddenrects, soft_image};
 use crate::globals::*;
-use sdl2::sys::image::IMG_Load;
-use sdl2::sys::{SDL_BlendMode, SDL_ConvertSurface, SDL_CreateRGBSurfaceWithFormat, SDL_GetError, SDL_MapRGB, SDL_SetColorKey, SDL_SetSurfaceAlphaMod, SDL_SetSurfaceBlendMode, SDL_SetSurfaceRLE, SDL_Surface};
-use std::ffi::{CStr, CString};
+use crate::common::gfx::soft_surface::BlendMode;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::ptr::null;
@@ -22,16 +20,12 @@ pub enum ClipEdge {
     Left,
 }
 
-fn sdl_error() -> String {
-    unsafe { CStr::from_ptr(SDL_GetError()).to_string_lossy().into_owned() }
-}
-
 /// Mirrors the C++ `throw std::format(...)`: loading failures are fatal unless a caller catches them.
 fn throw(msg: String) -> ! {
     panic!("{}", msg)
 }
 
-fn try_load_image(g: &mut Game, path: &Path, optimize: bool, color_key: Option<RGB>, alpha: Option<u8>) -> Result<SdlSurfacePtr, String> {
+fn try_load_image(_g: &mut Game, path: &Path, _optimize: bool, color_key: Option<RGB>, alpha: Option<u8>) -> Result<SurfacePtr, String> {
     let path_str = path.to_string_lossy().into_owned();
 
     let mut out = String::from("loading sprite");
@@ -47,114 +41,76 @@ fn try_load_image(g: &mut Game, path: &Path, optimize: bool, color_key: Option<R
     print!("{}", out);
     let _ = std::io::stdout().flush();
 
-    unsafe {
-        let img = if let Some(image) = blit::decode_for_load(path) {
-            let key = color_key.map(|c| image.map_rgb(c.r, c.g, c.b));
-            SdlSurfacePtr::new(blit::to_sdl_surface(&soft_image::convert_to_screen(&image, key)))
-        } else {
-            let cpath = CString::new(path_str.as_bytes()).unwrap();
-            let raw = SdlSurfacePtr::new(IMG_Load(cpath.as_ptr()));
-            if raw.is_null() {
-                return Err(format!("Couldn't load {}: {}", path_str, sdl_error()));
-            }
-
-            if let Some(color_key) = color_key {
-                let key = SDL_MapRGB(raw.format, color_key.r, color_key.g, color_key.b);
-                if SDL_SetColorKey(raw.get(), 1, key) < 0 {
-                    return Err(format!("Couldn't set color key for {}: {}", path_str, sdl_error()));
-                }
-            }
-
-            SdlSurfacePtr::new(SDL_ConvertSurface(raw.get(), (*g.screen).format, 0))
-        };
-        if img.is_null() {
-            return Err(format!("Couldn't convert {} to the display's pixel format: {}", path_str, sdl_error()));
-        }
-
-        if optimize && rle_enabled() && SDL_SetSurfaceRLE(img.get(), 1) < 0 {
-            return Err(format!("Couldn't set RLE acceleration for {}: {}", path_str, sdl_error()));
-        }
-
-        if let Some(alpha) = alpha {
-            if SDL_SetSurfaceBlendMode(img.get(), SDL_BlendMode::SDL_BLENDMODE_BLEND) < 0 {
-                return Err(format!("Couldn't set blend mode for {}: {}", path_str, sdl_error()));
-            }
-            if SDL_SetSurfaceAlphaMod(img.get(), alpha) < 0 {
-                return Err(format!("Couldn't set alpha modulation for {}: {}", path_str, sdl_error()));
-            }
-        }
-
-        println!(" done");
-        Ok(img)
+    let Some(image) = blit::decode_for_load(path) else {
+        return Err(format!("Couldn't load {}: not a readable PNG", path_str));
+    };
+    let key = color_key.map(|c| image.map_rgb(c.r, c.g, c.b));
+    let mut img = soft_image::convert_to_screen(&image, key);
+    if let Some(alpha) = alpha {
+        img.blend = BlendMode::Blend;
+        img.alpha_mod = alpha;
     }
+
+    println!(" done");
+    Ok(SurfacePtr::new(img))
 }
 
-fn load_image(g: &mut Game, path: &Path, optimize: bool, color_key: Option<RGB>, alpha: Option<u8>) -> SdlSurfacePtr {
+fn load_image(g: &mut Game, path: &Path, optimize: bool, color_key: Option<RGB>, alpha: Option<u8>) -> SurfacePtr {
     try_load_image(g, path, optimize, color_key, alpha).unwrap_or_else(|what| throw(what))
 }
 
 
-unsafe fn blit_surface(src: *mut SDL_Surface, srcArea: *const Rect, dst: *mut SDL_Surface, dstArea: *mut Rect) {
+unsafe fn blit_surface(src: *mut Surface, srcArea: *const Rect, dst: *mut Surface, dstArea: *mut Rect) {
     if crate::common::gfx::blit::upper_blit(src, srcArea, dst, dstArea) < 0 {
-        eprintln!("SDL_BlitSurface error: {}", sdl_error());
+        eprintln!("SDL_BlitSurface error: null surface");
     }
 }
 
 #[derive(Default)]
 pub struct gfxSprite {
-    m_picture: SdlSurfacePtr,
+    m_picture: SurfacePtr,
     m_wrap_x: Option<i32>,
     pub _alias: Aliased,
 }
 
 impl gfxSprite {
     pub const fn new() -> Self {
-        gfxSprite { _alias: Aliased::new(), m_picture: SdlSurfacePtr::null(), m_wrap_x: None }
+        gfxSprite { _alias: Aliased::new(), m_picture: SurfacePtr::null(), m_wrap_x: None }
     }
 
-    /// `gfxSprite(SdlSurfacePtr image, wrap = 640)`
-    pub fn from_surface(image: SdlSurfacePtr, wrap: Option<i32>) -> Self {
+    /// `gfxSprite(SurfacePtr image, wrap = 640)`
+    pub fn from_surface(image: SurfacePtr, wrap: Option<i32>) -> Self {
         gfxSprite { _alias: Aliased::new(), m_picture: image, m_wrap_x: wrap }
     }
 
     /// `gfxSprite::blank(w, h)`: a screen-format surface with blending off.
     pub fn blank(g: &mut Game, w: u32, h: u32) -> Self {
-        unsafe {
-            let sf = (*g.screen).format;
-            let surf = SdlSurfacePtr::new(SDL_CreateRGBSurfaceWithFormat(0x0, w as i32, h as i32, (*sf).BitsPerPixel as i32, (*sf).format));
-            if surf.is_null() {
-                throw(format!("Couldn't create blank surface: {}", sdl_error()));
-            }
-
-            if SDL_SetSurfaceBlendMode(surf.get(), SDL_BlendMode::SDL_BLENDMODE_NONE) < 0 {
-                throw(format!("Couldn't set blend mode for blank surface: {}", sdl_error()));
-            }
-
-            Self::from_surface(surf, Some(640))
-        }
+        let screen_alpha = unsafe { (*g.screen).alpha };
+        let surf = Surface { blend: BlendMode::None, alpha: screen_alpha, ..Surface::new(w as i32, h as i32) };
+        Self::from_surface(SurfacePtr::new(surf), Some(640))
     }
 
-    /// `draw(SDL_Surface* dst, Vec2i dstPos)`: the whole sprite onto `dst`, no camera shake.
-    pub fn draw_to_pos(&self, dst: *mut SDL_Surface, dstX: i32, dstY: i32) {
+    /// `draw(Surface* dst, Vec2i dstPos)`: the whole sprite onto `dst`, no camera shake.
+    pub fn draw_to_pos(&self, dst: *mut Surface, dstX: i32, dstY: i32) {
         self.blit(null(), dst, dstX, dstY);
     }
 
-    /// `draw(SDL_Surface* dst, const Rect& dstRect)`: the whole sprite onto `dst`, no camera shake.
-    pub fn draw_to(&self, dst: *mut SDL_Surface, dstRect: &Rect) {
+    /// `draw(Surface* dst, const Rect& dstRect)`: the whole sprite onto `dst`, no camera shake.
+    pub fn draw_to(&self, dst: *mut Surface, dstRect: &Rect) {
         self.blit(null(), dst, dstRect.x, dstRect.y);
     }
 
-    /// `draw(const Rect& srcRect, SDL_Surface* dst, Vec2i dstPos)`: part of the sprite onto `dst`.
-    pub fn draw_src_to_pos(&self, srcRect: &Rect, dst: *mut SDL_Surface, dstX: i32, dstY: i32) {
+    /// `draw(const Rect& srcRect, Surface* dst, Vec2i dstPos)`: part of the sprite onto `dst`.
+    pub fn draw_src_to_pos(&self, srcRect: &Rect, dst: *mut Surface, dstX: i32, dstY: i32) {
         self.blit(srcRect, dst, dstX, dstY);
     }
 
-    /// `draw(const Rect& srcRect, SDL_Surface* dst, const Rect& dstRect)`: part of the sprite onto `dst`.
-    pub fn draw_src_to(&self, srcRect: &Rect, dst: *mut SDL_Surface, dstRect: &Rect) {
+    /// `draw(const Rect& srcRect, Surface* dst, const Rect& dstRect)`: part of the sprite onto `dst`.
+    pub fn draw_src_to(&self, srcRect: &Rect, dst: *mut Surface, dstRect: &Rect) {
         self.blit(srcRect, dst, dstRect.x, dstRect.y);
     }
 
-    fn blit(&self, srcRect: *const Rect, dst: *mut SDL_Surface, dstPosX: i32, dstPosY: i32) {
+    fn blit(&self, srcRect: *const Rect, dst: *mut Surface, dstPosX: i32, dstPosY: i32) {
         debug_assert!(!self.m_picture.is_null());
 
         unsafe {
@@ -230,13 +186,13 @@ impl gfxSprite {
     }
 
     /// Draw a part of the sprite scaled to a destination area.
-    pub fn draw_stretch(&self, srcRect: &Rect, dst: *mut SDL_Surface, dstRect: &Rect) {
+    pub fn draw_stretch(&self, srcRect: &Rect, dst: *mut Surface, dstRect: &Rect) {
         debug_assert!(!self.m_picture.is_null());
 
         let mut dstRect_w = *dstRect;
         unsafe {
             if blit::upper_blit_scaled(self.m_picture.get(), srcRect, dst, &mut dstRect_w) < 0 {
-                eprintln!("SDL_BlitScaled error: {}", sdl_error());
+                eprintln!("SDL_BlitScaled error: unsupported scaled blit");
             }
         }
     }
@@ -245,14 +201,9 @@ impl gfxSprite {
         debug_assert!(!self.m_picture.is_null());
 
         unsafe {
-            if SDL_SetSurfaceBlendMode(self.m_picture.get(), SDL_BlendMode::SDL_BLENDMODE_BLEND) < 0 {
-                eprintln!("\n ERROR: couldn't set blend mode on sprite: {}", sdl_error());
-                return;
-            }
-            if SDL_SetSurfaceAlphaMod(self.m_picture.get(), alpha) < 0 {
-                eprintln!("\n ERROR: couldn't set alpha on sprite: {}", sdl_error());
-                return;
-            }
+            let pic = &mut *self.m_picture.get();
+            pic.blend = BlendMode::Blend;
+            pic.alpha_mod = alpha;
         }
     }
 
@@ -263,7 +214,7 @@ impl gfxSprite {
         self.m_picture.h
     }
 
-    pub fn get_surface(&self) -> *mut SDL_Surface {
+    pub fn get_surface(&self) -> *mut Surface {
         self.m_picture.get()
     }
 

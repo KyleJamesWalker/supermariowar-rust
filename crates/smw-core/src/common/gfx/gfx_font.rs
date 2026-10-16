@@ -3,20 +3,16 @@
 //! `std::string_view` text is taken as bytes; `char` is signed on the reference platforms, so
 //! bytes >= 0x80 are below `ASCII_FIRST_PRINTABLE` and advance like a space.
 
+use crate::common::gfx::soft_surface::SurfacePtr;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
-use crate::common::gfx::{blit, get_raw_pixel, rle_enabled, soft_image};
+use crate::common::gfx::{blit, soft_image};
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::util::sdl_helpers::SdlSurfacePtr;
 use crate::globals::*;
-use sdl2::sys::image::IMG_Load;
-use sdl2::sys::{SDL_BlendMode, SDL_ConvertSurface, SDL_GetError, SDL_LockSurface, SDL_MapRGB, SDL_SetColorKey, SDL_SetSurfaceAlphaMod, SDL_SetSurfaceBlendMode, SDL_SetSurfaceRLE, SDL_UnlockSurface};
-use std::ffi::{CStr, CString};
 use std::io::Write;
 use std::path::Path;
 
 const ASCII_FIRST_PRINTABLE: i32 = 33;
-const SDL_RLEACCEL: u32 = 0x00000002;
 
 #[derive(Clone, Copy, Default)]
 struct GlyphArea {
@@ -29,10 +25,6 @@ pub struct gfxFont {
     m_sprite: gfxSprite,
     m_glyph_areas: Vec<GlyphArea>,
     pub _alias: Aliased,
-}
-
-fn sdl_error() -> String {
-    unsafe { CStr::from_ptr(SDL_GetError()).to_string_lossy().into_owned() }
 }
 
 fn throw(what: String) -> ! {
@@ -50,55 +42,9 @@ impl gfxFont {
 
         print!("loading font {} ...", path_str);
         let _ = std::io::stdout().flush();
-        if let Some(image) = blit::decode_for_load(Path::new(path)) {
-            return Self::from_decoded(&path_str, &image);
-        }
-        let cpath = CString::new(path_str.as_str()).unwrap();
-        let surf = SdlSurfacePtr::new(unsafe { IMG_Load(cpath.as_ptr()) });
-        if surf.is_null() {
-            throw(format!("Couldn't load {}: {}", path_str, sdl_error()));
-        }
-
-        unsafe {
-            let s = surf.get();
-            let must_lock = (*s).flags & SDL_RLEACCEL != 0;
-            if must_lock {
-                SDL_LockSurface(s);
-            }
-
-            let mut first_row: Vec<u32> = Vec::with_capacity((*s).w as usize);
-            for x in 0..(*s).w {
-                first_row.push(get_raw_pixel(s, x, 0));
-            }
-
-            if must_lock {
-                SDL_UnlockSurface(s);
-            }
-
-            let raw_magenta = SDL_MapRGB((*s).format, 255, 0, 255);
-            let m_glyph_areas = glyph_areas(&first_row, raw_magenta);
-
-            if m_glyph_areas.is_empty() {
-                throw(format!("Didn't find any characters on font image {}", path_str));
-            }
-
-            let color_key = get_raw_pixel(s, 0, 1);
-            if SDL_SetColorKey(s, 1, color_key) < 0 {
-                throw(format!("Couldn't set color key on font image: {}", sdl_error()));
-            }
-
-            let surf_opti = SdlSurfacePtr::new(SDL_ConvertSurface(s, (*g.screen).format, 0));
-            if surf_opti.is_null() {
-                throw(format!("Couldn't convert {} to the display's pixel format: {}", path_str, sdl_error()));
-            }
-
-            if rle_enabled() && SDL_SetSurfaceRLE(surf_opti.get(), 1) < 0 {
-                throw(format!("Couldn't set RLE acceleration for {}: {}", path_str, sdl_error()));
-            }
-
-            let m_sprite = gfxSprite::from_surface(surf_opti, None);
-            println!("done");
-            gfxFont { m_sprite, m_glyph_areas, _alias: Aliased::new() }
+        match blit::decode_for_load(Path::new(path)) {
+            Some(image) => Self::from_decoded(&path_str, &image),
+            None => throw(format!("Couldn't load {}: not a readable PNG", path_str)),
         }
     }
 
@@ -112,15 +58,7 @@ impl gfxFont {
             throw(format!("Didn't find any characters on font image {}", path_str));
         }
         let surface = soft_image::convert_to_screen(image, Some(image.raw_pixel(0, 1)));
-        let surf_opti = SdlSurfacePtr::new(unsafe { blit::to_sdl_surface(&surface) });
-        if surf_opti.is_null() {
-            throw(format!("Couldn't convert {} to the display's pixel format: {}", path_str, sdl_error()));
-        }
-        unsafe {
-            if rle_enabled() && SDL_SetSurfaceRLE(surf_opti.get(), 1) < 0 {
-                throw(format!("Couldn't set RLE acceleration for {}: {}", path_str, sdl_error()));
-            }
-        }
+        let surf_opti = SurfacePtr::new(surface);
         let m_sprite = gfxSprite::from_surface(surf_opti, None);
         println!("done");
         gfxFont { m_sprite, m_glyph_areas, _alias: Aliased::new() }
@@ -188,14 +126,8 @@ impl gfxFont {
     pub fn set_alpha(&mut self, alpha: u8) {
         let surface = self.m_sprite.get_surface();
         unsafe {
-            if SDL_SetSurfaceBlendMode(surface, SDL_BlendMode::SDL_BLENDMODE_BLEND) < 0 {
-                eprintln!("\n ERROR: couldn't set blend mode on font surface: {}", sdl_error());
-                return;
-            }
-            if SDL_SetSurfaceAlphaMod(surface, alpha) < 0 {
-                eprintln!("\n ERROR: couldn't set alpha on font surface: {}", sdl_error());
-                return;
-            }
+            (*surface).blend = crate::common::gfx::soft_surface::BlendMode::Blend;
+            (*surface).alpha_mod = alpha;
         }
     }
 

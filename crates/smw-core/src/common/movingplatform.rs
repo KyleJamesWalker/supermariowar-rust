@@ -29,10 +29,6 @@ const collision_overlap_right: CollisionStyle = 3;
 
 const SW: f32 = App::screenWidth as f32;
 
-fn sdl_error() -> String {
-    unsafe { CStr::from_ptr(SDL_GetError()).to_string_lossy().into_owned() }
-}
-
 /// `(short)f / TILESIZE` as an index.
 #[inline(always)]
 fn tile_of(f: f32) -> i16 {
@@ -153,11 +149,8 @@ impl MovingPlatform {
                 this.sprites[iSurface].set_wrap(640);
 
                 let s = this.sprites[iSurface].get_surface();
-                if SDL_SetColorKey(s, SDL_bool::SDL_TRUE as i32, SDL_MapRGB((*s).format, 255, 0, 255)) < 0 {
-                    print!("\n ERROR: Couldn't set ColorKey for moving platform: {}\n", sdl_error());
-                }
-
-                crate::common::gfx::blit::fill_rect(s, null(), SDL_MapRGB((*s).format, 255, 0, 255));
+                (*s).color_key = Some((*s).map_rgb(255, 0, 255));
+                crate::common::gfx::blit::fill_rect(s, null(), (*s).map_rgb(255, 0, 255));
             }
 
             for iSurface in 0..2 {

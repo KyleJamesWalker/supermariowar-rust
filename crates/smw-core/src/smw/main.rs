@@ -29,7 +29,7 @@ use crate::smw::game_state::{GameState, GameStateManager};
 use crate::smw::gs_splash_screen::SplashScreenState;
 use crate::smw::harness;
 use crate::smw::net::{net_close, net_init};
-use sdl2::sys::{SDL_InitSubSystem, SDL_Joystick, SDL_JoystickEventState, SDL_JoystickOpen, SDL_NumJoysticks, SDL_Surface, SDL_ENABLE, SDL_INIT_JOYSTICK};
+use sdl2::sys::{SDL_InitSubSystem, SDL_Joystick, SDL_JoystickEventState, SDL_JoystickOpen, SDL_NumJoysticks, SDL_ENABLE, SDL_INIT_JOYSTICK};
 use std::path::Path;
 use std::ptr::null_mut;
 
@@ -572,7 +572,6 @@ pub fn main_game(g: &mut Game) {
         //**********************************************************
 
         println!("\n---------------- shutdown ----------------");
-        crate::common::gfx::blit::report_fallbacks();
         harness::finish(g);
 
         for i in 0..GAMEMODE_LAST as usize {

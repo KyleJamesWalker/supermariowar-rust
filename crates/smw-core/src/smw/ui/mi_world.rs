@@ -17,7 +17,6 @@ use crate::smw::gs_gameplay::lookup_team_id;
 use crate::smw::world::{WorldMapTile, WORLD_BRIDGE_SPRITE_OFFSET};
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::trig::{cosf, sinf};
-use sdl2::sys::SDL_Surface;
 
 pub struct MI_World {
     pub ui_control: UI_Control,

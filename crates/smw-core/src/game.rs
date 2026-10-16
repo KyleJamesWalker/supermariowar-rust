@@ -1,5 +1,6 @@
 //! The game's state as one value (docs/ARCHITECTURE_V2.md, Step 2: globals into a `Game` struct).
 
+use crate::common::gfx::soft_surface::Surface;
 use crate::common::eyecandy::{CEyecandyContainer, SpotlightManager};
 use crate::common::game_mode::{CGameModeTrait, GAMEMODE_LAST};
 use crate::common::file_list::{AnnouncerList, FiltersList, GraphicsList, MusicList, SkinList, SoundsList, TourList, WorldList, WorldMusicList};
@@ -102,9 +103,9 @@ pub struct Game {
     #[cfg(target_os = "emscripten")]
     pub frame_events: Vec<smw_platform::Input>,
     pub net_record: NetRecordState,
-    pub screen: *mut sdl2::sys::SDL_Surface,
+    pub screen: *mut Surface,
     /// The destination surface for all drawing; swapped from `screen` to another surface at times.
-    pub blitdest: *mut sdl2::sys::SDL_Surface,
+    pub blitdest: *mut Surface,
     pub fps_limiter: FPSLimiter,
     pub main_loop: MainLoopState,
     pub(crate) harness: Harness,

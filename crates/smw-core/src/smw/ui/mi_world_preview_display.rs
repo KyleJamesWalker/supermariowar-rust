@@ -7,7 +7,6 @@ use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 use crate::smw::world::WorldMap;
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use sdl2::sys::SDL_Surface;
 
 const PTS: i16 = PREVIEWTILESIZE as i16;
 

@@ -386,10 +386,8 @@ pub fn frame_delay(g: &mut Game, delay: u32) {
 
                 if h(gp.get()).shotFrames.contains(&h(gp.get()).frame) {
                     let path = format!("{}/frame_{}.bmp", h(gp.get()).shotDir, h(gp.get()).frame);
-                    let cpath = CString::new(path.as_bytes()).unwrap();
-                    let rw = SDL_RWFromFile(cpath.as_ptr(), b"wb\0".as_ptr() as *const _);
-                    if SDL_SaveBMP_RW(g.screen, rw, 1) != 0 {
-                        eprintln!("[editorharness] cannot save {}: {}", path, CStr::from_ptr(SDL_GetError()).to_string_lossy());
+                    if let Err(e) = (*g.screen).save_bmp(std::path::Path::new(&path)) {
+                        eprintln!("[editorharness] cannot save {}: {}", path, e);
                     }
                 }
             }

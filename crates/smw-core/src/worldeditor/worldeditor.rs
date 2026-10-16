@@ -4,6 +4,7 @@
 //! other game globals the shared code links against; the port reuses the crate's (smw::main,
 //! smw::gs_gameplay) and only defines the editor's own state here.
 
+use crate::common::gfx::soft_surface::Surface;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::cmd_args as cmd;
@@ -44,7 +45,7 @@ use sdl2::sys::image::{IMG_Load, IMG_SavePNG};
 use crate::common::editor_event::EditorEvent;
 use crate::common::util::sdl_helpers::poll_event;
 use sdl2::sys::SDL_KeyCode::*;
-use sdl2::sys::{SDL_CreateRGBSurface, SDL_EventType, SDL_FillRect, SDL_FreeSurface, SDL_GetKeyboardState, SDL_GetScancodeFromKey, SDL_Keycode, SDL_Keymod, SDL_MapRGB, SDL_Surface, SDL_UpperBlit, SDL_BUTTON_LEFT, SDL_BUTTON_RIGHT};
+use sdl2::sys::{SDL_CreateRGBSurface, SDL_EventType, SDL_FillRect, SDL_FreeSurface, SDL_GetKeyboardState, SDL_GetScancodeFromKey, SDL_Keycode, SDL_Keymod, SDL_MapRGB, SDL_UpperBlit, SDL_BUTTON_LEFT, SDL_BUTTON_RIGHT};
 use std::ffi::CString;
 use std::io::Write;
 use std::path::Path;
@@ -90,7 +91,7 @@ const szEditModes: [&str; 10] = [
 
 /// The editor's state, a part of `Game`.
 pub struct WorldEditorState {
-    pub sMapSurface: *mut SDL_Surface,
+    pub sMapSurface: *mut Surface,
     pub rectSrcSurface: Rect,
     pub rectDstSurface: Rect,
     pub fNeedBlackBackground: bool,
@@ -578,7 +579,7 @@ pub fn inner_main(g: &mut Game) {
 
         gp.rm.load_menu_graphics(g);
 
-        ed(gp.get()).sMapSurface = SDL_CreateRGBSurface((*g.screen).flags, 768, 608, (*(*g.screen).format).BitsPerPixel as i32, 0, 0, 0, 0);
+        ed(gp.get()).sMapSurface = crate::common::gfx::soft_surface::alloc_surface(Surface::new_xrgb(768, 608));
 
         let fs = ed(gp.get()).findstring.clone();
         g.worldlist.find(&fs);
@@ -948,7 +949,7 @@ pub fn inner_main(g: &mut Game) {
             }
         }
 
-        SDL_FreeSurface(ed(gp.get()).sMapSurface);
+        crate::common::gfx::soft_surface::free_surface(ed(gp.get()).sMapSurface);
 
         println!("\n---------------- save world ----------------");
 
@@ -968,7 +969,6 @@ pub fn inner_main(g: &mut Game) {
         }
 
         println!("\n---------------- shutdown ----------------");
-        crate::common::gfx::blit::report_fallbacks();
     }
 }
 
@@ -1605,7 +1605,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                     }
                 } else if ed(gp.get()).edit_mode == 8 {
                     //draw boundaries
-                    let color = SDL_MapRGB((*g.blitdest).format, 255, 0, 255);
+                    let color = (*g.blitdest).map_rgb(255, 0, 255);
                     let mut iRow = ed(gp.get()).draw_offset_row as i16;
                     while (iRow as i32) < ed(gp.get()).draw_offset_row + 15 && iRow < ed(gp.get()).iWorldHeight {
                         let mut iCol = ed(gp.get()).draw_offset_col as i16;
@@ -1626,7 +1626,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                     }
                 } else if ed(gp.get()).edit_mode == 9 {
                     //draw stages
-                    let color = SDL_MapRGB((*g.blitdest).format, 0, 0, 255);
+                    let color = (*g.blitdest).map_rgb(0, 0, 255);
                     let mut iRow = ed(gp.get()).draw_offset_row as i16;
                     while (iRow as i32) < ed(gp.get()).draw_offset_row + 15 && iRow < ed(gp.get()).iWorldHeight {
                         let mut iCol = ed(gp.get()).draw_offset_col as i16;
@@ -1653,7 +1653,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
 
                 if ed(gp.get()).edit_mode == 5 || ed(gp.get()).edit_mode == 8 {
                     //draw vehicles
-                    let color = SDL_MapRGB((*g.blitdest).format, 0, 0, 128);
+                    let color = (*g.blitdest).map_rgb(0, 0, 128);
                     for vehicle in ed(gp.get()).vehiclelist.iter() {
                         let ix: i16 = ((vehicle.currentTile.x as i32 - ed(gp.get()).draw_offset_col) * TILESIZE + ed(gp.get()).draw_offset_x) as i16;
                         let iy: i16 = ((vehicle.currentTile.y as i32 - ed(gp.get()).draw_offset_row) * TILESIZE + ed(gp.get()).draw_offset_y) as i16;
@@ -2541,7 +2541,7 @@ pub fn editor_boundary(g: &mut Game) -> i32 {
             drawmap(g, false, TILESIZE as i16);
             ed(gp.get()).menu_shade.draw(g, 0, 0);
 
-            let color = SDL_MapRGB((*g.blitdest).format, 255, 0, 255);
+            let color = (*g.blitdest).map_rgb(255, 0, 255);
             let mut rr = r(0, 0, 320, 320);
             crate::common::gfx::blit::fill_rect(g.blitdest, &mut rr, color);
 
@@ -3951,7 +3951,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
             drawmap(g, false, TILESIZE as i16);
             ed(gp.get()).menu_shade.draw(g, 0, 0);
 
-            let color = SDL_MapRGB((*g.blitdest).format, 0, 0, 255);
+            let color = (*g.blitdest).map_rgb(0, 0, 255);
 
             if iEditStage == -1 {
                 for iStage in 0..g.g_worldmap.iNumStages as i32 {
@@ -4528,7 +4528,7 @@ pub fn takescreenshot(g: &mut Game) {
             g.g_worldmap.get_world_size(&mut w, &mut h);
 
             //Draw most of the world to screenshot
-            let sScreenshot = SDL_CreateRGBSurface((*g.screen).flags, iTileSize as i32 * w as i32, iTileSize as i32 * h as i32, (*(*g.screen).format).BitsPerPixel as i32, 0, 0, 0, 0);
+            let sScreenshot = crate::common::gfx::soft_surface::alloc_surface(Surface::new_xrgb(iTileSize as i32 * w as i32, iTileSize as i32 * h as i32));
             g.blitdest = sScreenshot;
 
             gp.g_worldmap.draw_map_to_surface_full(g, sScreenshot);
@@ -4578,10 +4578,9 @@ pub fn takescreenshot(g: &mut Game) {
             }
 
             szSaveFile += ".png";
-            let c = CString::new(convert_path(g, &szSaveFile)).unwrap();
-            IMG_SavePNG(sScreenshot, c.as_ptr());
+            let _ = (*sScreenshot).save_png(std::path::Path::new(&convert_path(g, &szSaveFile)));
 
-            SDL_FreeSurface(sScreenshot);
+            crate::common::gfx::soft_surface::free_surface(sScreenshot);
         }
 
         let path = g.worldlist.at(g.game_values.worldindex as usize).to_string_lossy().into_owned();

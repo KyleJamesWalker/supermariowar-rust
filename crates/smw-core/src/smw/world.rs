@@ -1,5 +1,6 @@
 //! Port of src/smw/world.cpp
 
+use crate::common::gfx::soft_surface::Surface;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::file_io::throw_runtime_error;
@@ -14,7 +15,6 @@ use crate::common::version::Version;
 use crate::common::world_tour_stop::{parse_tour_stop_line, reset_tour_stops, write_tour_stop_line};
 use crate::globals::*;
 use crate::common::util::grid::Grid;
-use sdl2::sys::SDL_Surface;
 use std::collections::{BTreeMap, VecDeque};
 
 pub const WORLD_BACKGROUND_SPRITE_SET_SIZE: i16 = 60;
@@ -1255,12 +1255,12 @@ impl WorldMap {
         }
     }
 
-    pub fn update_tile(&mut self, g: &mut Game, surface: *mut SDL_Surface, iCol: i16, iRow: i16, iMapDrawOffsetCol: i16, iMapDrawOffsetRow: i16, iAnimationFrame: i16) {
+    pub fn update_tile(&mut self, g: &mut Game, surface: *mut Surface, iCol: i16, iRow: i16, iMapDrawOffsetCol: i16, iMapDrawOffsetRow: i16, iAnimationFrame: i16) {
         self.draw_tile_to_surface(g, surface, iCol, iRow, iMapDrawOffsetCol, iMapDrawOffsetRow, true, iAnimationFrame, 0);
     }
 
-    /// `DrawMapToSurface(SDL_Surface*)`: the whole map in one pass.
-    pub fn draw_map_to_surface_full(&self, g: &mut Game, surface: *mut SDL_Surface) {
+    /// `DrawMapToSurface(Surface*)`: the whole map in one pass.
+    pub fn draw_map_to_surface_full(&self, g: &mut Game, surface: *mut Surface) {
         for iRow in 0..self.iHeight {
             for iCol in 0..self.iWidth {
                 self.draw_tile_to_surface(g, surface, iCol, iRow, 0, 0, true, 0, 0);
@@ -1273,7 +1273,7 @@ impl WorldMap {
         self.iLastDrawCol = 0;
     }
 
-    pub fn draw_map_to_surface(&mut self, g: &mut Game, iCycleIndex: i16, fFullRefresh: bool, surface: *mut SDL_Surface, iMapDrawOffsetCol: i16, iMapDrawOffsetRow: i16, iAnimationFrame: i16) {
+    pub fn draw_map_to_surface(&mut self, g: &mut Game, iCycleIndex: i16, fFullRefresh: bool, surface: *mut Surface, iMapDrawOffsetCol: i16, iMapDrawOffsetRow: i16, iAnimationFrame: i16) {
         let iRowEnd: i16 = if 19 + (iMapDrawOffsetRow as i32) < self.iHeight as i32 { 19 } else { self.iHeight - iMapDrawOffsetRow };
         let iColEnd: i16 = if 24 + (iMapDrawOffsetCol as i32) < self.iWidth as i32 { 24 } else { self.iWidth - iMapDrawOffsetCol };
 
@@ -1312,7 +1312,7 @@ impl WorldMap {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn draw_tile_to_surface(&self, g: &mut Game, surface: *mut SDL_Surface, iCol: i16, iRow: i16, iMapDrawOffsetCol: i16, iMapDrawOffsetRow: i16, fFullRefresh: bool, iAnimationFrame: i16, iLayer: i16) {
+    fn draw_tile_to_surface(&self, g: &mut Game, surface: *mut Surface, iCol: i16, iRow: i16, iMapDrawOffsetCol: i16, iMapDrawOffsetRow: i16, fFullRefresh: bool, iAnimationFrame: i16, iLayer: i16) {
         let tile = self.tiles.at((iCol as i32 + iMapDrawOffsetCol as i32) as usize, (iRow as i32 + iMapDrawOffsetRow as i32) as usize);
 
         if !tile.fAnimated && !fFullRefresh {
