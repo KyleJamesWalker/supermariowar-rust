@@ -1971,7 +1971,7 @@ pub fn load_map_objects(g: &mut Game, fPreview: bool) {
                 g.g_map.blockdata[xu][yu] = block;
 
                 if !block.is_null() {
-                    g.noncolcontainer.add_dyn(block.as_object_ptr());
+                    gp.noncolcontainer.add_dyn(g, block.as_object_ptr());
                 }
 
                 match typeId as i32 {
@@ -2029,7 +2029,8 @@ pub fn load_map_objects(g: &mut Game, fPreview: bool) {
             //If map has less than 5 boxes, then insert coins into map in random locations
             let iExtraCoinsNeeded: i16 = 5 - iThrowBoxCount;
             for _iExtraCoin in 0..iExtraCoinsNeeded {
-                gp.get().objectcontainer[1].add(Ptr::new_box(MO_Coin::new(g, spr(&mut gp.get().rm.spr_coin), Vec2f::zero(), Vec2s::zero(), 2, -1, 2, 0, true)));
+                let obj = Ptr::new_box(MO_Coin::new(g, spr(&mut gp.get().rm.spr_coin), Vec2f::zero(), Vec2s::zero(), 2, -1, 2, 0, true));
+                gp.get().objectcontainer[1].add(g, obj);
             }
         }
 
@@ -2042,15 +2043,20 @@ pub fn load_map_objects(g: &mut Game, fPreview: bool) {
             let pos = Vec2s::new((item.ix as i32 * 32) as i16, (item.iy as i32 * 32) as i16);
 
             if iType == 0 {
-                gp.objectcontainer[1].add(Ptr::new_box(CO_Spring::new(g, spr(&mut rm.spr_spring), pos, false)));
+                let obj = Ptr::new_box(CO_Spring::new(g, spr(&mut rm.spr_spring), pos, false));
+                gp.objectcontainer[1].add(g, obj);
             } else if iType == 1 {
-                gp.objectcontainer[1].add(Ptr::new_box(CO_Spike::new(g, spr(&mut rm.spr_spike), pos)));
+                let obj = Ptr::new_box(CO_Spike::new(g, spr(&mut rm.spr_spike), pos));
+                gp.objectcontainer[1].add(g, obj);
             } else if iType == 2 {
-                gp.objectcontainer[1].add(Ptr::new_box(CO_KuriboShoe::new(g, spr(&mut rm.spr_kuriboshoe), pos, false)));
+                let obj = Ptr::new_box(CO_KuriboShoe::new(g, spr(&mut rm.spr_kuriboshoe), pos, false));
+                gp.objectcontainer[1].add(g, obj);
             } else if iType == 3 {
-                gp.objectcontainer[1].add(Ptr::new_box(CO_Spring::new(g, spr(&mut rm.spr_spring), pos, true)));
+                let obj = Ptr::new_box(CO_Spring::new(g, spr(&mut rm.spr_spring), pos, true));
+                gp.objectcontainer[1].add(g, obj);
             } else if iType == 4 {
-                gp.objectcontainer[1].add(Ptr::new_box(CO_KuriboShoe::new(g, spr(&mut rm.spr_kuriboshoe), pos, true)));
+                let obj = Ptr::new_box(CO_KuriboShoe::new(g, spr(&mut rm.spr_kuriboshoe), pos, true));
+                gp.objectcontainer[1].add(g, obj);
             } else if iType == 5 {
                 let mut iItem: i16 = NO_POWERUP as i16;
                 if !fPreview {
@@ -2085,7 +2091,8 @@ pub fn load_map_objects(g: &mut Game, fPreview: bool) {
                     }
                 }
 
-                gp.objectcontainer[1].add(Ptr::new_box(CO_ThrowBox::new(g, spr(&mut rm.spr_throwbox), pos, iItem)));
+                let obj = Ptr::new_box(CO_ThrowBox::new(g, spr(&mut rm.spr_throwbox), pos, iItem));
+                gp.objectcontainer[1].add(g, obj);
                 iAddThrowBoxIndex += 1;
             }
         }
@@ -2255,7 +2262,7 @@ pub fn net_bullet_bill(g: &mut Game, p: usize) {
         let speed: f32 = ((RANDOM_INT(21) + 20) as f32) / 10.0f32;
         let posy = RANDOM_INT(448) as i16;
         let vel = if RANDOM_INT(2) != 0 { speed } else { -speed };
-        gp.get().objectcontainer[2].add(Ptr::new_box(MO_BulletBill::new(
+        let obj = Ptr::new_box(MO_BulletBill::new(
             g,
             spr(&mut gp.get().rm.spr_bulletbill),
             spr(&mut gp.get().rm.spr_bulletbilldead),
@@ -2263,7 +2270,8 @@ pub fn net_bullet_bill(g: &mut Game, p: usize) {
             vel,
             p as i16,
             false,
-        )));
+        ));
+        gp.get().objectcontainer[2].add(g, obj);
         if_sound_on_play(g, &mut gp.rm.sfx_bulletbillsound);
     }
 }

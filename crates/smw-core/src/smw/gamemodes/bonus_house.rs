@@ -98,7 +98,8 @@ impl CGameModeTrait for CGM_Bonus {
             //float dx = 288.0f - (dSpacing * (float)(iNumBonuses - 1) / 2.0f);
             for iChest in 0..iNumBonuses {
                 let iBonus = self.tsTourStop.wsbBonuses[iChestOrder[iChest as usize] as usize].iBonus;
-                gp.objectcontainer[0].add(Ptr::new_box(MO_BonusHouseChest::new(g, Ptr::from_mut(&mut rm.spr_worldbonushouse), Vec2s::new(dx as i16, 384), iBonus)));
+                let obj = Ptr::new_box(MO_BonusHouseChest::new(g, Ptr::from_mut(&mut rm.spr_worldbonushouse), Vec2s::new(dx as i16, 384), iBonus));
+                gp.objectcontainer[0].add(g, obj);
                 dx += dSpacing + 64.0f32;
             }
         }

@@ -74,7 +74,7 @@ impl MO_FrenzyCard {
                 iAttempts -= 1;
                 a > 0
             } {}
-            if let Some((hx, hy)) = crate::smw::net_random::spawn_position() {
+            if let Some((hx, hy)) = crate::smw::net_random::spawn_position(g) {
                 (x, y) = (hx, hy);
             }
 
@@ -91,6 +91,7 @@ impl CObjectTrait for MO_FrenzyCard {
     }
 
     fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
         unsafe {
             let r#type = self.r#type;
             if r#type < 14 || r#type > 17 || g.game_values.gamemodesettings.frenzy.storedshells {
@@ -102,25 +103,25 @@ impl CObjectTrait for MO_FrenzyCard {
                 match r#type {
                     14 => {
                         let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Green, Vec2s::zero(), true, true, true, false));
-                        if g.objectcontainer[1].add(shell) {
+                        if gp.objectcontainer[1].add(g, shell) {
                             shell.used_as_stored_powerup(g, player);
                         }
                     }
                     15 => {
                         let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Red, Vec2s::zero(), false, true, true, false));
-                        if g.objectcontainer[1].add(shell) {
+                        if gp.objectcontainer[1].add(g, shell) {
                             shell.used_as_stored_powerup(g, player);
                         }
                     }
                     16 => {
                         let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Spiny, Vec2s::zero(), false, false, true, true));
-                        if g.objectcontainer[1].add(shell) {
+                        if gp.objectcontainer[1].add(g, shell) {
                             shell.used_as_stored_powerup(g, player);
                         }
                     }
                     17 => {
                         let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Buzzy, Vec2s::zero(), false, true, false, false));
-                        if g.objectcontainer[1].add(shell) {
+                        if gp.objectcontainer[1].add(g, shell) {
                             shell.used_as_stored_powerup(g, player);
                         }
                     }

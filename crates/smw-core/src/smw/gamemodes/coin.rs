@@ -43,7 +43,8 @@ impl CGameModeTrait for CGM_Coins {
             }
 
             for _iCoin in 0..game().game_values.gamemodesettings.coins.quantity {
-                gp.get().objectcontainer[1].add(Ptr::new_box(MO_Coin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), Vec2f::zero(), Vec2s::zero(), 2, 0, 0, 0, true)));
+                let obj = Ptr::new_box(MO_Coin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), Vec2f::zero(), Vec2s::zero(), 2, 0, 0, 0, true));
+                gp.get().objectcontainer[1].add(g, obj);
             }
         }
     }

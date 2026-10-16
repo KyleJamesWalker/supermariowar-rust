@@ -328,7 +328,7 @@ impl MO_SledgeBrother {
             if self.iType == 0 {
                 let fHammerVelX: f32 = (RANDOM_INT(9) + 2) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 6.0f32 };
                 let pos = Vec2s::new(((if self.face_right { ix + 32 } else { ix }) - self.collisionOffsetX as i32) as i16, self.iy);
-                gp.objectcontainer[2].add(Ptr::new_box(MO_SledgeHammer::new(
+                let obj = Ptr::new_box(MO_SledgeHammer::new(
                     g,
                     Ptr::from_mut(&mut rm.spr_sledgehammer),
                     pos,
@@ -339,13 +339,14 @@ impl MO_SledgeBrother {
                     -1,
                     -1,
                     false,
-                )));
+                ));
+                gp.objectcontainer[2].add(g, obj);
             } else if self.iType == 1 {
                 let fBombVelX: f32 = (RANDOM_INT(5) + 12) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 14.0f32 };
                 let fBombVelY: f32 = -(RANDOM_INT(13) as f32) / 2.0f32 - 6.0f32;
                 let pos = Vec2s::new((if self.face_right { ix + iw - 32 } else { ix - 20 }) as i16, iy as i16);
                 let timetolive = (RANDOM_INT(60) + 120) as i16;
-                gp.objectcontainer[2].add(Ptr::new_box(CO_Bomb::new(
+                let obj = Ptr::new_box(CO_Bomb::new(
                     g,
                     Ptr::from_mut(&mut rm.spr_bomb),
                     pos,
@@ -355,12 +356,13 @@ impl MO_SledgeBrother {
                     -1,
                     -1,
                     timetolive,
-                )));
+                ));
+                gp.objectcontainer[2].add(g, obj);
             } else if self.iType == 2 {
                 let fFireVelX: f32 = (RANDOM_INT(9) + 6) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 10.0f32 };
                 let fFireVelY: f32 = RANDOM_INT(17) as f32 / 2.0f32 - 4.0f32;
                 let pos = Vec2s::new((if self.face_right { ix + iw - 32 } else { ix - 16 }) as i16, iy as i16);
-                gp.objectcontainer[2].add(Ptr::new_box(MO_SuperFireball::new(
+                let obj = Ptr::new_box(MO_SuperFireball::new(
                     g,
                     Ptr::from_mut(&mut rm.spr_superfireball),
                     pos,
@@ -370,7 +372,8 @@ impl MO_SledgeBrother {
                     -1,
                     -1,
                     -1,
-                )));
+                ));
+                gp.objectcontainer[2].add(g, obj);
             }
         }
 
@@ -494,7 +497,8 @@ impl CObjectTrait for MO_SledgeBrother {
                         for _iThwomp in 0..numThwomps {
                             let x = RANDOM_INT(591) as i16;
                             let nspeed = 2.0f32 + RANDOM_INT(20) as f32 / 10.0f32;
-                            gp.objectcontainer[2].add(Ptr::new_box(OMO_Thwomp::new(g, Ptr::from_mut(&mut rm.spr_thwomp), x, nspeed)));
+                            let obj = Ptr::new_box(OMO_Thwomp::new(g, Ptr::from_mut(&mut rm.spr_thwomp), x, nspeed));
+                            gp.objectcontainer[2].add(g, obj);
                         }
                     } else if self.iType == 2 {
                         // Spawn lots of podobos
@@ -505,7 +509,7 @@ impl CObjectTrait for MO_SledgeBrother {
                         for _iPodobo in 0..numPodobos {
                             let x = RANDOM_INT(608) as i16;
                             let dVelY = -(RANDOM_INT(9) as f32 / 2.0f32) - 9.0f32;
-                            gp.objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(
+                            let obj = Ptr::new_box(MO_Podobo::new(
                                 g,
                                 Ptr::from_mut(&mut rm.spr_podobo),
                                 Vec2s::new(x, App::screenHeight as i16),
@@ -514,7 +518,8 @@ impl CObjectTrait for MO_SledgeBrother {
                                 -1,
                                 -1,
                                 false,
-                            )));
+                            ));
+                            gp.objectcontainer[2].add(g, obj);
                         }
                     }
                 }

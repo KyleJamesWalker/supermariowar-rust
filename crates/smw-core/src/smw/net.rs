@@ -2033,6 +2033,6 @@ pub fn checkpoint(g: &mut Game, s: &mut Snap) {
         s.io(&mut g.next_free_client_slot);
         s.io(&mut g.last_processed_input_id);
     }
-    crate::smw::net_random::checkpoint(s);
+    crate::smw::net_random::checkpoint(g, s);
     crate::smw::net_outcomes::checkpoint(g, s);
 }

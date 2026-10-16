@@ -68,12 +68,14 @@ impl CGM_Survival {
             if 0 == self.iSelectedEnemy {
                 let x = RANDOM_INT((App::screenWidth as f32 * 0.92f32) as i32) as i16;
                 let nspeed = g.game_values.gamemodesettings.survival.speed as f32 / 2.0f32 + (RANDOM_INT(20) as f32) / 10.0f32;
-                gp.objectcontainer[2].add(Ptr::new_box(OMO_Thwomp::new(g, Ptr::from_mut(&mut rm.spr_thwomp), x, nspeed)));
+                let obj = Ptr::new_box(OMO_Thwomp::new(g, Ptr::from_mut(&mut rm.spr_thwomp), x, nspeed));
+                gp.objectcontainer[2].add(g, obj);
                 self.timer = (RANDOM_INT(21) - 10 + self.rate as i32) as i16;
             } else if 1 == self.iSelectedEnemy {
                 let x = RANDOM_INT((App::screenWidth as f32 * 0.95f32) as i32) as i16;
                 let nspeed = -((RANDOM_INT(9) as f32) / 2.0f32) - 8.0f32;
-                gp.objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(g, Ptr::from_mut(&mut rm.spr_podobo), Vec2s::new(x, App::screenHeight as i16), nspeed, -1, -1, -1, false)));
+                let obj = Ptr::new_box(MO_Podobo::new(g, Ptr::from_mut(&mut rm.spr_podobo), Vec2s::new(x, App::screenHeight as i16), nspeed, -1, -1, -1, false));
+                gp.objectcontainer[2].add(g, obj);
                 self.timer = (RANDOM_INT(21) - 10 + self.rate as i32 - 20) as i16;
             } else {
                 let dSpeed: f32 = ((RANDOM_INT(21) + 20) as f32) / 10.0f32;
@@ -85,7 +87,8 @@ impl CGM_Survival {
                 }
 
                 let y = RANDOM_INT((App::screenHeight as f32 * 0.93f32) as i32) as i16;
-                gp.objectcontainer[2].add(Ptr::new_box(OMO_BowserFire::new(g, Ptr::from_mut(&mut rm.spr_bowserfire), Vec2s::new(x, y), Vec2f::new(dVel, 0.0f32), -1, -1, -1)));
+                let obj = Ptr::new_box(OMO_BowserFire::new(g, Ptr::from_mut(&mut rm.spr_bowserfire), Vec2s::new(x, y), Vec2f::new(dVel, 0.0f32), -1, -1, -1));
+                gp.objectcontainer[2].add(g, obj);
                 self.timer = (RANDOM_INT(21) - 10 + self.rate as i32) as i16;
             }
         }

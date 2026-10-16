@@ -344,7 +344,7 @@ impl CObjectTrait for MO_PirhanaPlant {
                     (if self.iDirection != 1 { iy + 7 } else { iy + ih - 23 }) as i16,
                 );
                 let angle = self.get_fireball_angle();
-                gp.objectcontainer[1].add(Ptr::new_box(OMO_StraightPathHazard::new(
+                let obj = Ptr::new_box(OMO_StraightPathHazard::new(
                     g,
                     Ptr::from_mut(&mut rm.spr_hazard_fireball[if self.fPreview { 1 } else { 0 }]),
                     pos,
@@ -360,7 +360,8 @@ impl CObjectTrait for MO_PirhanaPlant {
                     if self.iFrame <= 1 { 18 } else { 0 },
                     18,
                     18,
-                )));
+                ));
+                gp.objectcontainer[1].add(g, obj);
             }
         }
     }

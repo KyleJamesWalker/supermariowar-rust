@@ -29,7 +29,7 @@ pub fn load_map_hazards(g: &mut Game, fPreview: bool) {
 
             if hazard.itype == 0 {
                 for iFireball in 0..hazard.iparam[0] {
-                    gp.objectcontainer[1].add(Ptr::new_box(OMO_OrbitHazard::new(
+                    let obj = Ptr::new_box(OMO_OrbitHazard::new(
                         g,
                         Ptr::from_mut(&mut rm.spr_hazard_fireball[iPreview]),
                         pos + Vec2s::new(16, 16),
@@ -46,7 +46,8 @@ pub fn load_map_hazards(g: &mut Game, fPreview: bool) {
                         if hazard.dparam[0] < 0.0 { 18 } else { 0 },
                         18,
                         18,
-                    )));
+                    ));
+                    gp.objectcontainer[1].add(g, obj);
                 }
             } else if hazard.itype == 1 {
                 let dSector: f32 = TWO_PI / hazard.iparam[0] as f32;
@@ -56,7 +57,7 @@ pub fn load_map_hazards(g: &mut Game, fPreview: bool) {
                         dAngle -= TWO_PI;
                     }
 
-                    gp.objectcontainer[1].add(Ptr::new_box(OMO_OrbitHazard::new(
+                    let obj = Ptr::new_box(OMO_OrbitHazard::new(
                         g,
                         Ptr::from_mut(&mut rm.spr_hazard_rotodisc[iPreview]),
                         pos + Vec2s::new(16, 16),
@@ -73,14 +74,18 @@ pub fn load_map_hazards(g: &mut Game, fPreview: bool) {
                         0,
                         32,
                         32,
-                    )));
+                    ));
+                    gp.objectcontainer[1].add(g, obj);
                 }
             } else if hazard.itype == 2 {
-                gp.noncolcontainer.add(Ptr::new_box(IO_BulletBillCannon::new(g, pos, hazard.iparam[0], hazard.dparam[0], fPreview)));
+                let obj = Ptr::new_box(IO_BulletBillCannon::new(g, pos, hazard.iparam[0], hazard.dparam[0], fPreview));
+                gp.noncolcontainer.add(g, obj);
             } else if hazard.itype == 3 {
-                gp.objectcontainer[1].add(Ptr::new_box(IO_FlameCannon::new(g, pos, hazard.iparam[0], hazard.iparam[1])));
+                let obj = Ptr::new_box(IO_FlameCannon::new(g, pos, hazard.iparam[0], hazard.iparam[1]));
+                gp.objectcontainer[1].add(g, obj);
             } else if hazard.itype >= 4 && hazard.itype <= 7 {
-                gp.objectcontainer[1].add(Ptr::new_box(MO_PirhanaPlant::new(g, pos, hazard.itype - 4, hazard.iparam[0], hazard.iparam[1], fPreview)));
+                let obj = Ptr::new_box(MO_PirhanaPlant::new(g, pos, hazard.itype - 4, hazard.iparam[0], hazard.iparam[1], fPreview));
+                gp.objectcontainer[1].add(g, obj);
             }
         }
     }

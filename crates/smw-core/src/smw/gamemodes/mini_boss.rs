@@ -115,7 +115,8 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
             } else {
                 (App::screenWidth / 2) as i16
             };
-            gp.get().objectcontainer[0].add(Ptr::new_box(MO_SledgeBrother::new(g, Ptr::from_mut(&mut gp.get().rm.spr_sledgebrothers), platformY, self.iBossType)));
+            let obj = Ptr::new_box(MO_SledgeBrother::new(g, Ptr::from_mut(&mut gp.get().rm.spr_sledgebrothers), platformY, self.iBossType));
+            gp.get().objectcontainer[0].add(g, obj);
         }
     }
 
@@ -144,7 +145,8 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
                     //Randomly spawn koopas
                     self.enemytimer -= 1;
                     if self.enemytimer <= 0 {
-                        gp.objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(g, Ptr::from_mut(&mut rm.spr_koopa), RANDOM_BOOL(), false, false, true)));
+                        let obj = Ptr::new_box(MO_Koopa::new(g, Ptr::from_mut(&mut rm.spr_koopa), RANDOM_BOOL(), false, false, true));
+                        gp.objectcontainer[0].add(g, obj);
                         self.enemytimer = (RANDOM_INT(120) as i16 as i32 + 120) as i16; //Spawn koopas slowly
                     }
                 } else if self.iBossType == Boss::Bomb {
@@ -155,7 +157,8 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
                         let x = RANDOM_INT((App::screenWidth as f32 * 0.95f32) as i32) as i16;
                         let pos = Vec2s::new(x, App::screenHeight as i16);
                         let nspeed: f32 = -((RANDOM_INT(9) as f32) / 2.0f32) - 9.0f32;
-                        gp.objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(g, Ptr::from_mut(&mut rm.spr_podobo), pos, nspeed, -1, -1, -1, false)));
+                        let obj = Ptr::new_box(MO_Podobo::new(g, Ptr::from_mut(&mut rm.spr_podobo), pos, nspeed, -1, -1, -1, false));
+                        gp.objectcontainer[2].add(g, obj);
                         self.enemytimer = (RANDOM_INT(80) + 60) as i16;
                     }
 
@@ -164,7 +167,8 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
                         self.poweruptimer = (RANDOM_INT(80) + 60) as i16;
 
                         if g.objectcontainer[1].count_types(object_frenzycard) < g.players.len() {
-                            gp.get().objectcontainer[1].add(Ptr::new_box(MO_FrenzyCard::new(g, Ptr::from_mut(&mut gp.get().rm.spr_frenzycards), 0)));
+                            let obj = Ptr::new_box(MO_FrenzyCard::new(g, Ptr::from_mut(&mut gp.get().rm.spr_frenzycards), 0));
+                            gp.get().objectcontainer[1].add(g, obj);
                         }
                     }
                 }

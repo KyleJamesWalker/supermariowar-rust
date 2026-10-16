@@ -90,7 +90,7 @@ impl PlayerKuriboShoe {
                         self.r#type == STICKY,
                     ));
                     io_moving_object_collision_detection_checksides(g, shoe.get());
-                    g.objectcontainer[1].add(shoe);
+                    gp.objectcontainer[1].add(g, shoe);
                     g.eyecandy[2].emplace(EC_SingleAnimation::new(
                         Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
                         (player.center_x() as i32 - 16) as i16,

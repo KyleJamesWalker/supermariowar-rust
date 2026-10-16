@@ -60,23 +60,32 @@ impl CGM_Stomp {
             }
 
             if 0 == self.iSelectedEnemy {
-                gp.objectcontainer[0].add(Ptr::new_box(MO_Goomba::new(g, Ptr::from_mut(&mut rm.spr_goomba), RANDOM_BOOL(), false)));
+                let obj = Ptr::new_box(MO_Goomba::new(g, Ptr::from_mut(&mut rm.spr_goomba), RANDOM_BOOL(), false));
+                gp.objectcontainer[0].add(g, obj);
             } else if 1 == self.iSelectedEnemy {
-                gp.objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(g, Ptr::from_mut(&mut rm.spr_koopa), RANDOM_BOOL(), false, false, true)));
+                let obj = Ptr::new_box(MO_Koopa::new(g, Ptr::from_mut(&mut rm.spr_koopa), RANDOM_BOOL(), false, false, true));
+                gp.objectcontainer[0].add(g, obj);
             } else if 2 == self.iSelectedEnemy {
-                gp.objectcontainer[2].add(Ptr::new_box(MO_CheepCheep::new(g, Ptr::from_mut(&mut rm.spr_cheepcheep))));
+                let obj = Ptr::new_box(MO_CheepCheep::new(g, Ptr::from_mut(&mut rm.spr_cheepcheep)));
+                gp.objectcontainer[2].add(g, obj);
             } else if 3 == self.iSelectedEnemy {
-                gp.objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(g, Ptr::from_mut(&mut rm.spr_redkoopa), RANDOM_BOOL(), true, false, false)));
+                let obj = Ptr::new_box(MO_Koopa::new(g, Ptr::from_mut(&mut rm.spr_redkoopa), RANDOM_BOOL(), true, false, false));
+                gp.objectcontainer[0].add(g, obj);
             } else if 4 == self.iSelectedEnemy {
-                gp.objectcontainer[0].add(Ptr::new_box(MO_Spiny::new(g, Ptr::from_mut(&mut rm.spr_spiny), RANDOM_BOOL())));
+                let obj = Ptr::new_box(MO_Spiny::new(g, Ptr::from_mut(&mut rm.spr_spiny), RANDOM_BOOL()));
+                gp.objectcontainer[0].add(g, obj);
             } else if 5 == self.iSelectedEnemy {
-                gp.objectcontainer[0].add(Ptr::new_box(MO_BuzzyBeetle::new(g, Ptr::from_mut(&mut rm.spr_buzzybeetle), RANDOM_BOOL())));
+                let obj = Ptr::new_box(MO_BuzzyBeetle::new(g, Ptr::from_mut(&mut rm.spr_buzzybeetle), RANDOM_BOOL()));
+                gp.objectcontainer[0].add(g, obj);
             } else if 6 == self.iSelectedEnemy {
-                gp.objectcontainer[0].add(Ptr::new_box(MO_Goomba::new(g, Ptr::from_mut(&mut rm.spr_paragoomba), RANDOM_BOOL(), true)));
+                let obj = Ptr::new_box(MO_Goomba::new(g, Ptr::from_mut(&mut rm.spr_paragoomba), RANDOM_BOOL(), true));
+                gp.objectcontainer[0].add(g, obj);
             } else if 7 == self.iSelectedEnemy {
-                gp.objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(g, Ptr::from_mut(&mut rm.spr_parakoopa), RANDOM_BOOL(), false, true, true)));
+                let obj = Ptr::new_box(MO_Koopa::new(g, Ptr::from_mut(&mut rm.spr_parakoopa), RANDOM_BOOL(), false, true, true));
+                gp.objectcontainer[0].add(g, obj);
             } else {
-                gp.objectcontainer[0].add(Ptr::new_box(MO_Koopa::new(g, Ptr::from_mut(&mut rm.spr_redparakoopa), RANDOM_BOOL(), true, true, true)));
+                let obj = Ptr::new_box(MO_Koopa::new(g, Ptr::from_mut(&mut rm.spr_redparakoopa), RANDOM_BOOL(), true, true, true));
+                gp.objectcontainer[0].add(g, obj);
             }
         }
     }

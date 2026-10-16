@@ -833,7 +833,7 @@ impl CPlayer {
             for _iPodobo in 0..numPodobos {
                 let x = RANDOM_INT((App::screenWidth as f32 * 0.95f32) as i32) as i16;
                 let vy = -((RANDOM_INT(9) as f32) / 2.0f32) - 9.0f32;
-                gp.objectcontainer[2].add(Ptr::new_box(MO_Podobo::new(
+                let obj = Ptr::new_box(MO_Podobo::new(
                     g,
                     Ptr::from_mut(&mut rm.spr_podobo),
                     Vec2s::new(x, App::screenHeight as i16),
@@ -842,7 +842,8 @@ impl CPlayer {
                     self.teamID,
                     self.colorID,
                     false,
-                )));
+                ));
+                gp.objectcontainer[2].add(g, obj);
             }
             if_sound_on_play(g, &mut gp.rm.sfx_thunder);
         }
@@ -851,7 +852,7 @@ impl CPlayer {
     pub fn net_throw_boomerang(&mut self, g: &mut Game, ix: i32, iy: i32, facingRight: bool) {
         let mut gp = g.ptr();
         unsafe {
-            gp.get().objectcontainer[2].add(Ptr::new_box(MO_Boomerang::new(
+            let obj = Ptr::new_box(MO_Boomerang::new(
                 g,
                 Ptr::from_mut(&mut gp.get().rm.spr_boomerang),
                 Vec2s::new(ix as i16, (iy + HALFPH - 16) as i16),
@@ -861,7 +862,8 @@ impl CPlayer {
                 self.globalID,
                 self.teamID,
                 self.colorID,
-            )));
+            ));
+            gp.get().objectcontainer[2].add(g, obj);
             self.projectiles += 1;
 
             if g.game_values.boomeranglimit > 0 {
@@ -893,7 +895,7 @@ impl CPlayer {
                 bomb.get().move_to_owner(g);
             }
 
-            g.objectcontainer[1].add(bomb);
+            gp.objectcontainer[1].add(g, bomb);
             self.projectiles += 1;
 
             self.hammertimer = 90;
@@ -1016,25 +1018,25 @@ impl CPlayer {
                 }
                 PowerupType::ShellGreen => {
                     let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Green, Vec2s::zero(), true, true, true, false));
-                    if g.objectcontainer[1].add(shell) {
+                    if gp.objectcontainer[1].add(g, shell) {
                         shell.used_as_stored_powerup(g, this);
                     }
                 }
                 PowerupType::ShellRed => {
                     let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Red, Vec2s::zero(), false, true, true, false));
-                    if g.objectcontainer[1].add(shell) {
+                    if gp.objectcontainer[1].add(g, shell) {
                         shell.used_as_stored_powerup(g, this);
                     }
                 }
                 PowerupType::ShellSpiny => {
                     let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Spiny, Vec2s::zero(), false, false, true, true));
-                    if g.objectcontainer[1].add(shell) {
+                    if gp.objectcontainer[1].add(g, shell) {
                         shell.used_as_stored_powerup(g, this);
                     }
                 }
                 PowerupType::ShellBuzzy => {
                     let mut shell = Ptr::new_box(CO_Shell::new(g, ShellType::Buzzy, Vec2s::zero(), false, true, false, false));
-                    if g.objectcontainer[1].add(shell) {
+                    if gp.objectcontainer[1].add(g, shell) {
                         shell.used_as_stored_powerup(g, this);
                     }
                 }
@@ -1675,7 +1677,7 @@ impl CPlayer {
             let iy = self.iy as i32;
             if PlayerAction::Bobomb == self.action {
                 self.bobomb = false;
-                gp.objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
+                let obj = Ptr::new_box(MO_Explosion::new(
                     g,
                     Ptr::from_mut(&mut rm.spr_explosion),
                     Vec2s::new((ix + HALFPW - 96) as i16, (iy + HALFPH - 64) as i16),
@@ -1684,10 +1686,11 @@ impl CPlayer {
                     self.globalID,
                     self.teamID,
                     KillStyle::Bobomb,
-                )));
+                ));
+                gp.objectcontainer[2].add(g, obj);
                 if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
             } else if PlayerAction::Fireball == self.action {
-                gp.get().objectcontainer[0].add(Ptr::new_box(MO_Fireball::new(
+                let obj = Ptr::new_box(MO_Fireball::new(
                     g,
                     Ptr::from_mut(&mut gp.get().rm.spr_fireball),
                     Vec2s::new((ix + 6) as i16, iy as i16),
@@ -1697,7 +1700,8 @@ impl CPlayer {
                     self.globalID,
                     self.teamID,
                     self.colorID,
-                )));
+                ));
+                gp.get().objectcontainer[0].add(g, obj);
                 if_sound_on_play(g, &mut gp.rm.sfx_fireball);
 
                 self.projectiles += 1;
@@ -1708,7 +1712,7 @@ impl CPlayer {
             } else if PlayerAction::Hammer == self.action {
                 let vx = if g.game_values.reversewalk { -self.velx } else { self.velx };
                 if self.is_facing_right(g) {
-                    gp.get().objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(
+                    let obj = Ptr::new_box(MO_Hammer::new(
                         g,
                         Ptr::from_mut(&mut gp.get().rm.spr_hammer),
                         Vec2s::new((ix + 8) as i16, iy as i16),
@@ -1719,9 +1723,10 @@ impl CPlayer {
                         self.teamID,
                         self.colorID,
                         false,
-                    )));
+                    ));
+                    gp.get().objectcontainer[2].add(g, obj);
                 } else {
-                    gp.get().objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(
+                    let obj = Ptr::new_box(MO_Hammer::new(
                         g,
                         Ptr::from_mut(&mut gp.get().rm.spr_hammer),
                         Vec2s::new((ix - 14) as i16, iy as i16),
@@ -1732,7 +1737,8 @@ impl CPlayer {
                         self.teamID,
                         self.colorID,
                         false,
-                    )));
+                    ));
+                    gp.get().objectcontainer[2].add(g, obj);
                 }
                 self.projectiles += 1;
 
@@ -1749,7 +1755,7 @@ impl CPlayer {
                 }
             } else if PlayerAction::Iceblast == self.action {
                 if self.is_facing_right(g) {
-                    gp.objectcontainer[2].add(Ptr::new_box(MO_IceBlast::new(
+                    let obj = Ptr::new_box(MO_IceBlast::new(
                         g,
                         Ptr::from_mut(&mut rm.spr_iceblast),
                         Vec2s::new((ix + HALFPW - 2) as i16, (iy + HALFPH - 16) as i16),
@@ -1757,9 +1763,10 @@ impl CPlayer {
                         self.globalID,
                         self.teamID,
                         self.colorID,
-                    )));
+                    ));
+                    gp.objectcontainer[2].add(g, obj);
                 } else {
-                    gp.objectcontainer[2].add(Ptr::new_box(MO_IceBlast::new(
+                    let obj = Ptr::new_box(MO_IceBlast::new(
                         g,
                         Ptr::from_mut(&mut rm.spr_iceblast),
                         Vec2s::new((ix + HALFPW - 30) as i16, (iy + HALFPH - 16) as i16),
@@ -1767,7 +1774,8 @@ impl CPlayer {
                         self.globalID,
                         self.teamID,
                         self.colorID,
-                    )));
+                    ));
+                    gp.objectcontainer[2].add(g, obj);
                 }
 
                 self.projectiles += 1;
@@ -1987,6 +1995,7 @@ impl CPlayer {
     }
 
     pub fn die(&mut self, g: &mut Game, deathStyle: PlayerDeathStyle, fTeamRemoved: bool, fKillCarriedItem: bool) {
+        let mut gp = g.ptr();
         let mut rm = g.rm;
         if !fTeamRemoved {
             crate::smw::net_outcomes::note_death(g, self.globalID, deathStyle as i32, false);
@@ -2064,7 +2073,7 @@ impl CPlayer {
                 ));
                 io_moving_object_collision_detection_checksides(g, shoe.get());
 
-                g.objectcontainer[1].add(shoe);
+                gp.objectcontainer[1].add(g, shoe);
             }
 
             //If the game mode didn't say to remove the team from the game, then respawn the player

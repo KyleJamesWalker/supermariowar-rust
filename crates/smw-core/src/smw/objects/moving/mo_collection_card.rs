@@ -97,7 +97,7 @@ impl MO_CollectionCard {
                 }
             {}
         }
-        if let Some((hx, hy)) = crate::smw::net_random::spawn_position() {
+        if let Some((hx, hy)) = crate::smw::net_random::spawn_position(g) {
             (x, y) = (hx, hy);
         }
 

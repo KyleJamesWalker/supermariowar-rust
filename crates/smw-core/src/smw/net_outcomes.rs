@@ -67,7 +67,7 @@ pub fn note_death(g: &mut Game, player: i16, style: i32, removed: bool) {
 
 /// While true, score changes outside the game host's events are ignored.
 pub fn score_locked(g: &mut Game) -> bool {
-    unsafe { net_random::host_decides(g) && net_random::in_game() && !net_random::in_event() && !outcome_state(g).g_applying }
+    unsafe { net_random::host_decides(g) && net_random::in_game(g) && !net_random::in_event(g) && !outcome_state(g).g_applying }
 }
 
 /// A joiner keeps the game host's game over and winner, whatever its own mode logic concluded.
@@ -87,7 +87,7 @@ pub fn sample(g: &mut Game) {
         if !g.netplay.active || g.game_values.gamemode.is_null() {
             return;
         }
-        if g.netplay.theHostIsMe && net_random::in_game() {
+        if g.netplay.theHostIsMe && net_random::in_game(g) {
             let snapshot = snapshot(g);
             if snapshot != outcome_state(g).g_lastSent {
                 outcome_state(g).g_lastSent = snapshot.clone();

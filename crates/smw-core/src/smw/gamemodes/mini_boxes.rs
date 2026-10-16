@@ -56,7 +56,8 @@ impl CGM_Boxes_MiniGame {
             unsafe {
                 if_sound_on_play(g, &mut gp.rm.sfx_coin);
 
-                gp.get().objectcontainer[1].add(Ptr::new_box(MO_Coin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), vel, pos, 2, -1, 2, 30, false)));
+                let obj = Ptr::new_box(MO_Coin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), vel, pos, 2, -1, 2, 30, false));
+                gp.get().objectcontainer[1].add(g, obj);
             }
         }
     }

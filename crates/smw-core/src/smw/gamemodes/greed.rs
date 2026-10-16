@@ -64,7 +64,8 @@ fn drop_coins(g: &mut Game, player: Ptr<CPlayer>, iDamage: i16, pos: Vec2s) {
             let angle: f32 = -(RANDOM_INT(314) as f32) / 100.0f32;
             let vel: Vec2f = Vec2f::new(speed * cosf(angle), speed * sinf(angle));
 
-            gp.get().objectcontainer[1].add(Ptr::new_box(MO_Coin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), vel, pos, player.get_color_id(), player.get_team_id(), 1, 30, false)));
+            let obj = Ptr::new_box(MO_Coin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), vel, pos, player.get_color_id(), player.get_team_id(), 1, 30, false));
+            gp.get().objectcontainer[1].add(g, obj);
         }
     }
 }

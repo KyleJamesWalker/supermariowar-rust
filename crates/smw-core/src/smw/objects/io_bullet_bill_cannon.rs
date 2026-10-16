@@ -61,7 +61,7 @@ impl IO_BulletBillCannon {
 
         let pos = Vec2s::new((self.ix as i32 + if self.m_vel < 0.0f32 { 32 } else { -32 }) as i16, self.iy);
         unsafe {
-            gp.get().objectcontainer[1].add(Ptr::new_box(MO_BulletBill::new(
+            let obj = Ptr::new_box(MO_BulletBill::new(
                 g,
                 Ptr::from_mut(&mut gp.get().rm.spr_hazard_bulletbill[if self.m_preview { 1 } else { 0 }]),
                 Ptr::from_mut(&mut gp.get().rm.spr_hazard_bulletbilldead),
@@ -69,7 +69,8 @@ impl IO_BulletBillCannon {
                 self.m_vel,
                 0,
                 true,
-            )));
+            ));
+            gp.get().objectcontainer[1].add(g, obj);
             if_sound_on_play(g, &mut gp.rm.sfx_bulletbillsound);
         }
     }

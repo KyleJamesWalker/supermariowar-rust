@@ -142,7 +142,8 @@ pub fn setup_score_board_now(g: &mut Game, fOrderMatters: bool) {
             for iBonus in 0..iNumBonuses {
                 if tourStop.wsbBonuses[iBonus as usize].iWinnerPlace == 0 {
                     let iBonusType: i16 = tourStop.wsbBonuses[iBonus as usize].iBonus;
-                    gp.get().objectcontainer[0].add(Ptr::new_box(PU_TreasureChestBonus::new(g, Ptr::from_mut(&mut gp.get().rm.spr_bonuschest), 1, 0, 30, 30, 1, 1, iBonusType)));
+                    let obj = Ptr::new_box(PU_TreasureChestBonus::new(g, Ptr::from_mut(&mut gp.get().rm.spr_bonuschest), 1, 0, 30, 30, 1, 1, iBonusType));
+                    gp.get().objectcontainer[0].add(g, obj);
                     g.game_values.flags.noexittimer = 0;
                     g.game_values.flags.noexit = false;
                 }

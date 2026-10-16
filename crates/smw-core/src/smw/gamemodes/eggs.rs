@@ -50,7 +50,8 @@ impl CGameModeTrait for CGM_Eggs {
                     }
 
                     fEgg[iEggs as usize] = true;
-                    gp.get().objectcontainer[1].add(Ptr::new_box(CO_Egg::new(g, Ptr::from_mut(&mut gp.get().rm.spr_egg), iEggs)));
+                    let obj = Ptr::new_box(CO_Egg::new(g, Ptr::from_mut(&mut gp.get().rm.spr_egg), iEggs));
+                    gp.get().objectcontainer[1].add(g, obj);
                 }
             }
 
@@ -64,13 +65,16 @@ impl CGameModeTrait for CGM_Eggs {
                         fAtLeastOneMatch = true;
                     }
 
-                    gp.get().objectcontainer[1].add(Ptr::new_box(MO_Yoshi::new(g, Ptr::from_mut(&mut gp.get().rm.spr_yoshi), iYoshis)));
+                    let obj = Ptr::new_box(MO_Yoshi::new(g, Ptr::from_mut(&mut gp.get().rm.spr_yoshi), iYoshis));
+                    gp.get().objectcontainer[1].add(g, obj);
                 }
             }
 
             if !fAtLeastOneMatch {
-                gp.get().objectcontainer[1].add(Ptr::new_box(CO_Egg::new(g, Ptr::from_mut(&mut gp.get().rm.spr_egg), 1)));
-                gp.get().objectcontainer[1].add(Ptr::new_box(MO_Yoshi::new(g, Ptr::from_mut(&mut gp.get().rm.spr_yoshi), 1)));
+                let obj = Ptr::new_box(CO_Egg::new(g, Ptr::from_mut(&mut gp.get().rm.spr_egg), 1));
+                gp.get().objectcontainer[1].add(g, obj);
+                let obj = Ptr::new_box(MO_Yoshi::new(g, Ptr::from_mut(&mut gp.get().rm.spr_yoshi), 1));
+                gp.get().objectcontainer[1].add(g, obj);
             }
         }
     }

@@ -82,7 +82,7 @@ impl CGM_Star {
 
                     self.starItem[iStar as usize] = Ptr::new_box(CO_Star::new(g, Ptr::from_mut(&mut gp.rm.spr_star), 1, iStar));
                     self.starItem[iStar as usize].set_player_color(self.starPlayer[iStar as usize].get_color_id());
-                    g.objectcontainer[1].add(self.starItem[iStar as usize]);
+                    gp.objectcontainer[1].add(g, self.starItem[iStar as usize]);
                     iStar += 1;
                 }
             } else {
@@ -91,7 +91,7 @@ impl CGM_Star {
                 self.starPlayer[0] = self.get_highest_score_player(g, fGetHighest);
 
                 self.starItem[0] = Ptr::new_box(CO_Star::new(g, Ptr::from_mut(&mut gp.rm.spr_star), if self.iCurrentModeType == StarStyle::Ztar { 0 } else { 1 }, 0));
-                g.objectcontainer[1].add(self.starItem[0]);
+                gp.objectcontainer[1].add(g, self.starItem[0]);
             }
         }
     }

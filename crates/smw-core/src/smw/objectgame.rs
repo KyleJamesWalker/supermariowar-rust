@@ -234,7 +234,7 @@ pub fn createpowerup(g: &mut Game, iType: i16, pos: Vec2s, side: bool, spawn: bo
     let mut rm = g.rm;
     unsafe {
         crate::smw::harness::note_powerup_spawn(g, iType, pos.x, pos.y);
-        crate::smw::net_random::note_powerup(iType);
+        crate::smw::net_random::note_powerup(g, iType);
         let specialPos = pos + Vec2s::new(1, -1);
 
         let mut spawned = Spawned::None;
@@ -248,12 +248,12 @@ pub fn createpowerup(g: &mut Game, iType: i16, pos: Vec2s, side: bool, spawn: bo
         match spawned {
             Spawned::Coin(coin) => {
                 if_sound_on_play(g, &mut gp.rm.sfx_coin);
-                if g.objectcontainer[1].add(coin) {
+                if gp.objectcontainer[1].add(g, coin) {
                     return as_moving(coin);
                 }
             }
             Spawned::Powerup(mut powerup) => {
-                if g.objectcontainer[0].add_dyn(Ptr::from_raw(powerup.as_ptr() as *mut dyn CObjectTrait)) {
+                if gp.objectcontainer[0].add_dyn(g, Ptr::from_raw(powerup.as_ptr() as *mut dyn CObjectTrait)) {
                     if !spawn {
                         powerup.nospawn(pos.y);
                         io_moving_object_collision_detection_checksides(g, powerup.get());
@@ -263,7 +263,7 @@ pub fn createpowerup(g: &mut Game, iType: i16, pos: Vec2s, side: bool, spawn: bo
                 }
             }
             Spawned::Shell(mut shell) => {
-                if g.objectcontainer[1].add(shell) {
+                if gp.objectcontainer[1].add(g, shell) {
                     if !spawn {
                         shell.nospawn(pos.y, true);
                         io_moving_object_collision_detection_checksides(g, shell.get());
@@ -273,7 +273,7 @@ pub fn createpowerup(g: &mut Game, iType: i16, pos: Vec2s, side: bool, spawn: bo
                 }
             }
             Spawned::Feather(mut feather) => {
-                if g.objectcontainer[0].add(feather) {
+                if gp.objectcontainer[0].add(g, feather) {
                     if !spawn {
                         feather.nospawn(pos.y);
                     }
@@ -282,7 +282,7 @@ pub fn createpowerup(g: &mut Game, iType: i16, pos: Vec2s, side: bool, spawn: bo
                 }
             }
             Spawned::Leaf(mut leaf) => {
-                if g.objectcontainer[0].add(leaf) {
+                if gp.objectcontainer[0].add(g, leaf) {
                     if !spawn {
                         leaf.nospawn(pos.y);
                     }
@@ -303,7 +303,7 @@ pub fn createpowerup(g: &mut Game, iType: i16, pos: Vec2s, side: bool, spawn: bo
                     -1,
                     true,
                 ));
-                g.objectcontainer[2].add(podobo);
+                gp.objectcontainer[2].add(g, podobo);
                 return as_moving(podobo);
             }
         }

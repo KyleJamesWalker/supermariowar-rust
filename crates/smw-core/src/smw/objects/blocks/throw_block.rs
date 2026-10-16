@@ -53,6 +53,7 @@ impl B_ThrowBlock {
     }
 
     pub fn give_block_to_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) {
+        let mut gp = g.ptr();
         let mut rm = g.rm;
         unsafe {
             let mut block = Ptr::new_box(CO_ThrowBlock::new(g, Ptr::from_mut(&mut rm.spr_blueblock), Vec2s::new(self.ix, self.iy), self.iType));
@@ -64,7 +65,7 @@ impl B_ThrowBlock {
 
                 block.owner = player;
                 block.iPlayerID = player.globalID;
-                g.objectcontainer[1].add(block);
+                gp.objectcontainer[1].add(g, block);
             } else {
                 block.delete();
             }
