@@ -8,7 +8,7 @@ use crate::game::Game;
 use smw_platform::{Input, InputEvent, MouseEvent};
 use crate::common::global_constants::MAX_PLAYERS;
 use crate::globals::*;
-use sdl2::sys::{SDL_Event, SDL_EventType, SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP};
+use sdl2::sys::{SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP};
 
 pub const NUM_KEYS: usize = 8;
 

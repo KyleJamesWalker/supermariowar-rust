@@ -15,7 +15,7 @@ use crate::smw::gs_gameplay::GameplayState;
 use crate::smw::gs_menu::MenuState;
 use crate::smw::gs_splash_screen::SplashScreenState;
 use crate::smw::network::file_compressor::{deflate, inflate, read_maybe_gzip};
-use sdl2::sys::{SDL_Event, SDL_EventType, SDL_GetError, SDL_GetKeyFromName, SDL_GetKeyName, SDL_GetScancodeFromKey, SDL_InitSubSystem, SDL_JoystickAttachVirtual, SDL_JoystickInstanceID, SDL_JoystickType, SDL_SetHint, SDL_INIT_JOYSTICK, SDL_PRESSED, SDL_RELEASED};
+use sdl2::sys::{SDL_Event, SDL_EventType, SDL_GetError, SDL_GetKeyFromName, SDL_GetKeyName, SDL_GetScancodeFromKey, SDL_InitSubSystem, SDL_JoystickAttachVirtual, SDL_JoystickInstanceID, SDL_JoystickType, SDL_SetHint, SDL_INIT_JOYSTICK};
 use smw_platform::{Input, InputEvent, Keycode, PadSlot, SCREEN_H, SCREEN_W};
 use std::ffi::CStr;
 use std::collections::BTreeSet;

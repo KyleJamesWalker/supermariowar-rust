@@ -60,7 +60,6 @@ use crate::smw::menu::network::net_servers_menu::UI_NetServersMenu;
 use crate::common::path::get_home_directory;
 use crate::common_netplay::protocol_definitions::*;
 use crate::smw::net::{net_end_session, net_start_session};
-use sdl2::sys::{SDL_Event, SDL_EventType, SDL_FillRect, SDL_MapRGB};
 use std::ops::DerefMut;
 use std::path::Path;
 

@@ -15,7 +15,6 @@ use crate::common::random_number_generator::{RANDOM_BOOL, RANDOM_INT};
 use crate::common::tile_types::TileType;
 use crate::globals::*;
 use crate::impl_base;
-use sdl2::sys::SDL_FillRect;
 use std::ptr::null;
 
 const screenWidth: i32 = App::screenWidth;

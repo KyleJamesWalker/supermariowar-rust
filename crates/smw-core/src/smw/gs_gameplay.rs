@@ -68,7 +68,6 @@ use crate::smw::objects::mystery_mushroom_temp_player::MysteryMushroomTempPlayer
 use crate::smw::objects::switch_color::SwitchColor;
 use crate::smw::objects::throw_block_type::ThrowBlockType;
 use crate::smw::player::{get_player_from_global_id, player_killed_player, CPlayer, PlayerDeathStyle, PlayerState};
-use sdl2::sys::{SDL_Event, SDL_EventType, SDL_FillRect};
 use std::io::Write;
 
 pub const COUNTDOWN_START_INDEX: i16 = 4;

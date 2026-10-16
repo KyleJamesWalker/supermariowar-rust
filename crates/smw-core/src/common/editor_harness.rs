@@ -8,7 +8,7 @@ use crate::common::keys::*;
 use crate::game::Game;
 use crate::common::random_number_generator::{RandomNumberGenerator, RandomNumberGeneratorType};
 use crate::globals::*;
-use sdl2::sys::{SDL_Event, SDL_EventType, SDL_GetError, SDL_GetKeyFromName, SDL_GetScancodeFromKey, SDL_RWFromFile, SDL_SaveBMP_RW, SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT, SDL_PRESSED, SDL_RELEASED};
+use sdl2::sys::{SDL_Event, SDL_EventType, SDL_GetKeyFromName, SDL_GetScancodeFromKey, SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT, SDL_PRESSED, SDL_RELEASED};
 use std::collections::BTreeSet;
 use std::ffi::{CStr, CString};
 use std::fs::File;

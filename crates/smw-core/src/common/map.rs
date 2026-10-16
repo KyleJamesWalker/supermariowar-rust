@@ -27,7 +27,6 @@ use crate::common::version::Version;
 use crate::globals::{Aliased, Ptr};
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::player::CPlayer;
-use sdl2::sys::image::{IMG_Load, IMG_SavePNG};
 use sdl2::sys::*;
 use std::ffi::{CStr, CString};
 use std::io::Write;

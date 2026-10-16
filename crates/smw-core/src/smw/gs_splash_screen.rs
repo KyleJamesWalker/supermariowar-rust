@@ -13,7 +13,6 @@ use crate::globals::*;
 use crate::smw::game_state::{GameState, GameStateManager};
 use crate::smw::gs_gameplay::{GameplayState};
 use crate::smw::gs_menu::MenuState;
-use sdl2::sys::{SDL_Event, SDL_EventType, SDL_FillRect};
 
 //-----------------------------------------------------------------------------
 // THE LOAD UP SEQUENCE + SPLASH SCREEN
