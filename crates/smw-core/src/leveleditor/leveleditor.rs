@@ -520,14 +520,14 @@ pub fn inner_main() {
         g.blitdest = g.screen;
 
         g.rm = Ptr::new_box(CResourceManager::new());
-        game().g_tilesetmanager = Ptr::new_box(CTilesetManager::new(g, &convert_path(game().get(), "gfx/Classic/tilesets")));
+        gp.g_tilesetmanager = Ptr::new_box(CTilesetManager::new(g, &convert_path(gp.get(), "gfx/Classic/tilesets")));
         g.g_map = Ptr::from_box(CMap::new());
         g.filterslist = Ptr::new_box(crate::common::file_list::FiltersList::new());
         g.maplist = Ptr::new_box(MapList::new(g, false));
         ed(gp.get()).backgroundlist = Ptr::new_box(BackgroundList::new());
 
         //Add all of the maps that are world only so we can edit them
-        game().maplist.add_world_maps(g);
+        gp.maplist.add_world_maps(g);
         let title = format!("{} {}", TITLESTRING, MAPTITLESTRING);
         gfx_settitle(g, &title);
 
@@ -613,8 +613,8 @@ pub fn inner_main() {
         }
 
 
-        game().rm.menu_font_small = gfxFont::from_path(g, &convert_path(game().get(), "gfx/packs/Classic/fonts/font_small.png"));
-        game().rm.menu_font_large = gfxFont::from_path(g, &convert_path(game().get(), "gfx/packs/Classic/fonts/font_large.png"));
+        gp.rm.menu_font_small = gfxFont::from_path(g, &convert_path(gp.get(), "gfx/packs/Classic/fonts/font_small.png"));
+        gp.rm.menu_font_large = gfxFont::from_path(g, &convert_path(gp.get(), "gfx/packs/Classic/fonts/font_large.png"));
 
         println!("\n---------------- load map ----------------");
 
@@ -655,7 +655,7 @@ pub fn inner_main() {
 
         resetselectedtiles(g);
 
-        crate::common::game_values::CGameValues::init(&mut game().game_values, g); // Needed for FPSLimiter
+        crate::common::game_values::CGameValues::init(&mut gp.game_values, g); // Needed for FPSLimiter
 
         editor_harness::init(g);
         editor_harness::set_dumper(g, dump_editor_state);
@@ -699,7 +699,7 @@ pub fn inner_main() {
 
         println!("\n---------------- save map ----------------");
 
-        save_map(g, &convert_path(game().get(), "maps/ZZleveleditor.map"));
+        save_map(g, &convert_path(gp.get(), "maps/ZZleveleditor.map"));
 
         {
             let options_path = get_home_directory() + "leveleditor.bin";
@@ -3255,7 +3255,7 @@ pub fn editor_maphazards(g: &mut Game) -> i32 {
 
                     if MAPHAZARD_EDIT_STATE_SELECT == ed(gp.get()).iEditState {
                         //check clicks on existing platforms
-                        for iMapHazard in 0..game().g_map.maphazards.len() {
+                        for iMapHazard in 0..gp.g_map.maphazards.len() {
                             let ic = ed(gp.get()).rIconRects[iMapHazard][1];
                             if cx >= ic.x && cx < ic.x + ic.w && cy >= ic.y && cy < ic.y + ic.h {
                                 ed(gp.get()).iEditMapHazard = iMapHazard as i16;
@@ -3366,7 +3366,7 @@ pub fn editor_maphazards(g: &mut Game) -> i32 {
 
             gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "Map Hazard Mode: [esc] Exit");
 
-            for iMapHazard in 0..game().g_map.maphazards.len() {
+            for iMapHazard in 0..gp.g_map.maphazards.len() {
                 let s = ed(gp.get()).rIconRects[iMapHazard][0];
                 ed(gp.get()).s_platform.draw_src_to(&s, g.screen, &ed(gp.get()).rIconRects[iMapHazard][1]);
             }
@@ -3931,7 +3931,7 @@ pub fn editor_modeitems(g: &mut Game) -> i32 {
 
                     ed(gp.get()).dragmodeitem = -1;
                     if ed(gp.get()).modeitemmode == 0 {
-                        for iGoal in 0..game().g_map.iNumRaceGoals {
+                        for iGoal in 0..gp.g_map.iNumRaceGoals {
                             let g = g.g_map.racegoallocations[iGoal as usize];
                             if iMouseX >= g.x && (iMouseX as i32) < g.x as i32 + 36 && iMouseY >= g.y && (iMouseY as i32) < g.y as i32 + 36 {
                                 ed(gp.get()).dragmodeitem = iGoal;
@@ -3940,7 +3940,7 @@ pub fn editor_modeitems(g: &mut Game) -> i32 {
                             }
                         }
                     } else if ed(gp.get()).modeitemmode == 1 {
-                        for iBase in 0..game().g_map.iNumFlagBases {
+                        for iBase in 0..gp.g_map.iNumFlagBases {
                             let b = g.g_map.flagbaselocations[iBase as usize];
                             if iMouseX >= b.x && (iMouseX as i32) < b.x as i32 + 32 && iMouseY >= b.y && (iMouseY as i32) < b.y as i32 + 32 {
                                 ed(gp.get()).dragmodeitem = iBase;
@@ -3990,7 +3990,7 @@ pub fn editor_modeitems(g: &mut Game) -> i32 {
                 gp.rm.menu_font_large.draw_centered(g, 320, 200, "Race goals are set to random.");
                 gp.rm.menu_font_large.draw_centered(g, 320, 220, "Press 'R' to manually set them.");
             } else {
-                for iGoal in 0..game().g_map.iNumRaceGoals {
+                for iGoal in 0..gp.g_map.iNumRaceGoals {
                     let g = g.g_map.racegoallocations[iGoal as usize];
                     gp.rm.spr_racegoals.draw_src(gp.get(), g.x as i32 - 16, g.y as i32 - 18, &rect(0, 0, 68, 54));
                     let szNum = format!("{}", iGoal + 1);
@@ -4004,7 +4004,7 @@ pub fn editor_modeitems(g: &mut Game) -> i32 {
                 gp.rm.menu_font_large.draw_centered(g, 320, 200, "Flag bases are set to random.");
                 gp.rm.menu_font_large.draw_centered(g, 320, 220, "Press 'R' to manually set them.");
             } else {
-                for iBase in 0..game().g_map.iNumFlagBases {
+                for iBase in 0..gp.g_map.iNumFlagBases {
                     let b = g.g_map.flagbaselocations[iBase as usize];
                     gp.rm.spr_flagbases.draw_src(g, b.x as i32 - 8, b.y as i32 - 8, &rect(iBase as i32 * 48, 0, 48, 48));
                 }
