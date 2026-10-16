@@ -510,12 +510,18 @@ jobs:
             timeout: 30
             games: net_game_classic net_game_frenzy net_game_stompkill net_game_stompkill_powerup
             run: node tools/web_netplay_test.mjs "$RUNNER_TEMP/web-netplay"
-          - name: replays
+          - name: replays 1
             timeout: 20
             replays: true
-            run: |
-              printf '%s\0' tools/replays/*.txt | xargs -0 -n 1 -P 4 bash -c \
+            shard: 1
+            run: &web-replays |
+              printf '%s\n' tools/replays/*.txt | awk -v k="$SHARD" 'NR % 2 == k % 2' | tr '\n' '\0' | xargs -0 -n 1 -P 4 bash -c \
                 'timeout 5m node tools/web_replay.mjs "$0" "$RUNNER_TEMP/web-replays/$(basename "$0" .txt)" > /dev/null 2>&1 || echo "::warning::web_replay $0 failed"'
+          - name: replays 2
+            timeout: 20
+            replays: true
+            shard: 2
+            run: *web-replays
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
@@ -560,17 +566,18 @@ jobs:
         timeout-minutes: ${{ matrix.timeout }}
         env:
           NET_GAMES: ${{ matrix.games }}
+          SHARD: ${{ matrix.shard }}
         run: ${{ matrix.run }}
 
       - name: Determinism manifest
         if: ${{ !cancelled() && matrix.replays }}
-        run: python3 tools/determinism.py manifest web game "$RUNNER_TEMP/web-replays" > "$RUNNER_TEMP/determinism-web.txt"
+        run: python3 tools/determinism.py manifest web game "$RUNNER_TEMP/web-replays" > "$RUNNER_TEMP/determinism-web-${{ matrix.shard }}.txt"
 
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() && matrix.replays }}
         with:
-          name: determinism-web
-          path: ${{ runner.temp }}/determinism-web.txt
+          name: determinism-web-${{ matrix.shard }}
+          path: ${{ runner.temp }}/determinism-web-${{ matrix.shard }}.txt
           if-no-files-found: ignore
           retention-days: 7
 
