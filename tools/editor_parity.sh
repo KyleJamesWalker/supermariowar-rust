@@ -2,7 +2,7 @@
 # Run the Rust editors on every editor script and diff against the C++ golden output:
 # per-frame dump, screenshots, and every saved file (byte for byte).
 # Usage: editor_parity.sh [editor_replays/<editor>/<x>.txt ...]   (default: all)
-# GOLDEN_ROOT=<dir> reads <dir>/editor_golden/ instead.
+# GOLDEN_ROOT=<dir> reads <dir>/editor_golden/ instead. SMW_NO_BUILD=1 skips cargo.
 # Exit status 1 if anything differs.
 set -uo pipefail
 
@@ -14,7 +14,9 @@ if [[ ${#scripts[@]} -eq 0 ]]; then
     scripts=("$tools"/editor_replays/*/*.txt)
 fi
 
-cargo build --release --quiet --manifest-path "$port/Cargo.toml" || exit 2
+if [[ -z "${SMW_NO_BUILD:-}" ]]; then
+    cargo build --release --quiet --manifest-path "$port/Cargo.toml" || exit 2
+fi
 
 # PNG encoders differ between SDL_image builds; the pixels must not.
 same_file() {
